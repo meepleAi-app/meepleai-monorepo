@@ -14,6 +14,7 @@ import {
 
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { api } from '@/lib/api';
+import { fetchUserGamebooks } from '@/lib/api/gamebooks-list';
 import type { LibraryActivityItem } from '@/lib/api/schemas/library-activity.schemas';
 import type {
   PaginatedLibraryResponse,
@@ -34,6 +35,11 @@ import type {
   PrivateGameDto,
   AddPrivateGameRequest,
 } from '@/lib/api/schemas/private-games.schemas';
+import {
+  libraryFixtures,
+  parseLibraryStateOverride,
+  STATE_OVERRIDE_ENABLED,
+} from '@/lib/library/visual-test-fixture';
 
 import { sharedGamesKeys } from './useSharedGames';
 
@@ -65,6 +71,15 @@ export const libraryKeys = {
  * @param params - Optional filtering and pagination parameters
  * @param enabled - Whether to run the query (default: true)
  * @returns UseQueryResult with paginated library data
+ *
+ * Visual-test fixture hatch (issue #1714): when `STATE_OVERRIDE_ENABLED` and
+ * the URL carries `?fixture=default|empty`, the queryFn returns the matching
+ * fixture instead of hitting `/api/v1/library`. Production builds without
+ * `NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1` constant-fold the gate to
+ * `false`, so the fixture data is dead-code-eliminated.
+ *
+ * Reads `?fixture=` lazily from `window.location.search` inside the queryFn
+ * so the override survives route param changes without triggering a refetch.
  */
 export function useLibrary(
   params?: GetUserLibraryParams,
@@ -73,6 +88,12 @@ export function useLibrary(
   return useQuery({
     queryKey: libraryKeys.list(params),
     queryFn: async (): Promise<PaginatedLibraryResponse> => {
+      if (STATE_OVERRIDE_ENABLED && typeof window !== 'undefined') {
+        const override = parseLibraryStateOverride(new URLSearchParams(window.location.search));
+        if (override !== null) {
+          return libraryFixtures[override];
+        }
+      }
       return api.library.getLibrary(params);
     },
     enabled,
@@ -746,7 +767,7 @@ export function useSharedLibrary(
 /**
  * Combined library game detail for Game Detail page (Issue #3513)
  *
- * Uses the backend's GET /library/games/{gameId} endpoint for efficient
+ * Uses the backend's GET /library/{gameId} endpoint for efficient
  * single-request data fetching with all metadata and play statistics.
  */
 export interface LibraryGameDetail {
@@ -763,6 +784,13 @@ export interface LibraryGameDetail {
   isAvailableForPlay: boolean;
   hasCustomPdf: boolean;
   hasRagAccess: boolean;
+  // Issue #1288 Bug 2 — counter aggregati e KB status derivato.
+  // Popolati via merge con `/api/v1/gamebooks` quando la library entry
+  // qualifica come gamebook (active campaign OR private PDF). Zero/null
+  // negli altri casi.
+  chunkCount?: number;
+  sessionsCount?: number;
+  kbStatus?: 'ready' | 'indexing' | 'error';
   // Game metadata
   gameTitle: string;
   gamePublisher: string | null;
@@ -797,17 +825,74 @@ export interface LibraryGameDetail {
     players: string | null;
     notes: string | null;
   }>;
+  // Issue #1824 L3: user-custom cover R2 key (null if no custom cover)
+  customCoverR2Key?: string | null;
+  // Issue #2034 — ConnectionBar pill counts surfaced from /library/{gameId}.
+  // `agentCount` is cross-user (AgentDefinitions linked to this SharedGame);
+  // `chatThreadCount` is the requesting user's threads for the game. Both
+  // optional + default 0 so legacy BE responses don't break callers.
+  agentCount?: number;
+  chatThreadCount?: number;
+}
+
+/**
+ * Map a PrivateGameDto into the LibraryGameDetail shape so the unified
+ * `/library/[gameId]` route can render private-game ownership (Issue #1068).
+ *
+ * Private games are user-owned game records not present in the shared catalog —
+ * typically dogfood titles (Nanolith) or manually-added entries. They expose a
+ * narrower schema than GameDetailDto (no play stats, no shared metadata), so
+ * the mapper substitutes sentinel/null values for fields the source cannot
+ * provide. `libraryEntryId === ''` is the same sentinel used by the catalog
+ * fallback to signal `heroVariant === 'community'` downstream.
+ */
+function mapPrivateGameToLibraryGameDetail(privateGame: PrivateGameDto): LibraryGameDetail {
+  return {
+    libraryEntryId: '',
+    userId: privateGame.ownerId,
+    gameId: privateGame.id,
+    addedAt: privateGame.createdAt,
+    notes: null,
+    isFavorite: false,
+    currentState: 'Nuovo',
+    stateChangedAt: null,
+    stateNotes: null,
+    isAvailableForPlay: true,
+    hasCustomPdf: false,
+    hasRagAccess: false,
+    gameTitle: privateGame.title,
+    gamePublisher: null,
+    gameYearPublished: privateGame.yearPublished ?? null,
+    gameIconUrl: privateGame.thumbnailUrl ?? null,
+    gameImageUrl: privateGame.imageUrl ?? null,
+    description: privateGame.description ?? null,
+    minPlayers: privateGame.minPlayers,
+    maxPlayers: privateGame.maxPlayers,
+    playingTimeMinutes: privateGame.playingTimeMinutes ?? null,
+    minAge: privateGame.minAge ?? undefined,
+    complexityRating: privateGame.complexityRating ?? null,
+    averageRating: null,
+    timesPlayed: 0,
+    lastPlayed: null,
+    winRate: null,
+    avgDuration: null,
+    bggId: privateGame.bggId ?? null,
+  };
 }
 
 /**
  * Hook to fetch library game detail for Game Detail page (Issue #3513)
  *
- * Uses the efficient GET /library/games/{gameId} endpoint that returns
+ * Uses the efficient GET /library/{gameId} endpoint that returns
  * all game metadata and play statistics in a single request.
  *
  * For extended data (categories, mechanics, designers), fetches SharedGame in parallel.
  *
- * @param gameId - Game UUID (same as SharedGame.id)
+ * Issue #1068: also probes PrivateGame as third source so private-game ownership
+ * (Nanolith dogfood) renders correctly on the unified `/library/[gameId]` route
+ * introduced by PR #1037 IA consolidation.
+ *
+ * @param gameId - Game UUID (SharedGame.id, PrivateGame.id, or library entry UUID)
  * @param enabled - Whether to run the query (default: true)
  * @returns UseQueryResult with combined library game detail
  */
@@ -818,15 +903,88 @@ export function useLibraryGameDetail(
   return useQuery({
     queryKey: libraryKeys.gameDetail(gameId),
     queryFn: async (): Promise<LibraryGameDetail | null> => {
-      // Fetch game detail (efficient single endpoint) and shared game (for extended data) in parallel
-      const [gameDetail, sharedGame] = await Promise.all([
+      // Issue #1068 (WS-B Mockup Conformity): probe three sources in parallel.
+      // After PR #1037 IA consolidation collapsed `/library/games/[id]` →
+      // `/library/[id]`, the same URL must serve shared-library entries,
+      // shared-catalog browse, AND private-game ownership (e.g. Nanolith
+      // dogfood). Without the PrivateGame fallback, page.tsx:76 collapses
+      // owned private games into a misleading "Gioco non trovato" state.
+      const [gameDetail, sharedGame, privateGame, gamebooks] = await Promise.all([
         api.library.getGameDetail(gameId).catch(() => null),
         api.sharedGames.getById(gameId).catch(() => null),
+        api.library.getPrivateGame(gameId).catch(() => null),
+        // Issue #1288 Bug 2 — merge counter aggregati dal nuovo endpoint
+        // /api/v1/gamebooks (popolato solo per entry con campagna attiva o
+        // PDF privato). Catch → null per giochi senza qualifica gamebook.
+        fetchUserGamebooks().catch(() => [] as const),
       ]);
 
+      // Cerca lo stesso gameId nell'elenco gamebooks per estrarre i counter
+      // reali (chunks, sessionsCount, kbStatus).
+      const gamebookMatch = gamebooks.find(g => g.gameId === gameId);
+      const gamebookStats = gamebookMatch
+        ? {
+            chunkCount: gamebookMatch.chunks,
+            sessionsCount: gamebookMatch.sessionsCount,
+            kbStatus: (gamebookMatch.status === 'indexing' || gamebookMatch.status === 'error'
+              ? gamebookMatch.status
+              : 'ready') as 'ready' | 'indexing' | 'error',
+          }
+        : null;
+
       if (!gameDetail) {
-        // Game not in user's library
-        return null;
+        // PrivateGame ownership takes priority over catalog fallback: an owned
+        // private game is more specific than a community-only entry, and
+        // typically a private-game UUID will NOT match shared_games anyway.
+        if (privateGame) {
+          const mapped = mapPrivateGameToLibraryGameDetail(privateGame);
+          return gamebookStats ? { ...mapped, ...gamebookStats } : mapped;
+        }
+        // Game not in user's library → fall back to catalog-only view (G1).
+        // The detail page must render for ANY shared_game so the user can
+        // see metadata and click "Aggiungi alla libreria". The sentinel
+        // libraryEntryId === '' signals heroVariant === 'community' downstream
+        // (GameDetailView uses truthy check on libraryEntryId).
+        if (!sharedGame) {
+          // Genuine not-found: neither library entry nor catalog record.
+          return null;
+        }
+        return {
+          libraryEntryId: '',
+          userId: '',
+          gameId: sharedGame.id,
+          addedAt: '',
+          notes: null,
+          isFavorite: false,
+          currentState: 'Nuovo',
+          stateChangedAt: null,
+          stateNotes: null,
+          isAvailableForPlay: false,
+          hasCustomPdf: false,
+          hasRagAccess: false,
+          gameTitle: sharedGame.title,
+          gamePublisher: sharedGame.publishers?.[0]?.name ?? null,
+          gameYearPublished: sharedGame.yearPublished ?? null,
+          gameIconUrl: sharedGame.thumbnailUrl ?? null,
+          gameImageUrl: sharedGame.imageUrl ?? null,
+          description: sharedGame.description ?? null,
+          minPlayers: sharedGame.minPlayers ?? null,
+          maxPlayers: sharedGame.maxPlayers ?? null,
+          playingTimeMinutes: sharedGame.playingTimeMinutes ?? null,
+          minAge: sharedGame.minAge,
+          complexityRating: sharedGame.complexityRating ?? null,
+          averageRating: sharedGame.averageRating ?? null,
+          timesPlayed: 0,
+          lastPlayed: null,
+          winRate: null,
+          avgDuration: null,
+          categories: sharedGame.categories,
+          mechanics: sharedGame.mechanics,
+          designers: sharedGame.designers,
+          publishers: sharedGame.publishers,
+          bggId: sharedGame.bggId,
+          ...(gamebookStats ?? {}),
+        };
       }
 
       // Map GameDetailDto to LibraryGameDetail
@@ -863,6 +1021,11 @@ export function useLibraryGameDetail(
         avgDuration: gameDetail.avgDuration,
         // Recent sessions
         recentSessions: gameDetail.recentSessions ?? undefined,
+        // Issue #1824 L3: user-custom cover R2 key
+        customCoverR2Key: gameDetail.customCoverR2Key ?? null,
+        // Issue #2034 — ConnectionBar pill counts from BE (zod-defaulted to 0).
+        agentCount: gameDetail.agentCount,
+        chatThreadCount: gameDetail.chatThreadCount,
       };
 
       // Add extended info from SharedGame if available (categories, mechanics, designers)
@@ -873,6 +1036,14 @@ export function useLibraryGameDetail(
         result.designers = sharedGame.designers;
         result.publishers = sharedGame.publishers;
         result.bggId = sharedGame.bggId;
+      }
+
+      // Issue #1288 Bug 2 — merge counter aggregati gamebook se questa
+      // library entry qualifica come gamebook (active campaign OR private PDF).
+      if (gamebookStats) {
+        result.chunkCount = gamebookStats.chunkCount;
+        result.sessionsCount = gamebookStats.sessionsCount;
+        result.kbStatus = gamebookStats.kbStatus;
       }
 
       return result;

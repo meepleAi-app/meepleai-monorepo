@@ -11,6 +11,7 @@ internal static class UserLibraryEndpoints
         UserLibraryPdfEndpoints.Map(group);
         UserLibraryLabelEndpoints.Map(group);
         UserLibraryCollectionEndpoints.Map(group);
+        UserLibraryCoverEndpoints.Map(group);
 
         return group;
     }

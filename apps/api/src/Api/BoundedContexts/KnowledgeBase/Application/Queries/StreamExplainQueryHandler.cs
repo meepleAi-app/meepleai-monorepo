@@ -142,7 +142,6 @@ internal class StreamExplainQueryHandler : IStreamingQueryHandler<StreamExplainQ
     /// <summary>
     /// Searches for topic content and builds citations.
     /// Returns (searchResults, citations) or (null, null) if no results found.
-    /// NOTE: Qdrant dependency removed — always returns null (no results).
     /// </summary>
     private Task<(IReadOnlyList<SearchResultItem>? searchResults, List<Snippet>? citations)> SearchForTopicContentAsync(
         string gameId,
@@ -150,7 +149,7 @@ internal class StreamExplainQueryHandler : IStreamingQueryHandler<StreamExplainQ
         float[] topicEmbedding,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("No vector results for topic {Topic} in game {GameId} — Qdrant removed",
+        _logger.LogInformation("No vector results for topic {Topic} in game {GameId} (legacy path)",
             topic, gameId);
         return Task.FromResult<(IReadOnlyList<SearchResultItem>?, List<Snippet>?)>((null, null));
     }

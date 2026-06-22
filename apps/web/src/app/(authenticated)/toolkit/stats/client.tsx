@@ -41,7 +41,7 @@ export default function SessionStatsPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3" data-testid="kpi-cards">
-        <div className="rounded-xl border bg-white/70 p-5 backdrop-blur-md">
+        <div className="rounded-xl border bg-card/70 p-5 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <Gamepad2 className="h-5 w-5 text-amber-600" />
             <span className="text-sm text-muted-foreground">Total Sessions</span>
@@ -51,7 +51,7 @@ export default function SessionStatsPage() {
           </p>
         </div>
 
-        <div className="rounded-xl border bg-white/70 p-5 backdrop-blur-md">
+        <div className="rounded-xl border bg-card/70 p-5 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <Trophy className="h-5 w-5 text-amber-600" />
             <span className="text-sm text-muted-foreground">Games Played</span>
@@ -61,7 +61,7 @@ export default function SessionStatsPage() {
           </p>
         </div>
 
-        <div className="rounded-xl border bg-white/70 p-5 backdrop-blur-md">
+        <div className="rounded-xl border bg-card/70 p-5 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <Clock className="h-5 w-5 text-amber-600" />
             <span className="text-sm text-muted-foreground">Avg Duration</span>
@@ -80,7 +80,7 @@ export default function SessionStatsPage() {
             {data.mostPlayedGames.map(game => (
               <div
                 key={game.gameId}
-                className="flex items-center justify-between rounded-lg border bg-white/50 px-4 py-3"
+                className="flex items-center justify-between rounded-lg border bg-card/50 px-4 py-3"
               >
                 <span className="font-medium">{game.gameName}</span>
                 <span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-900">
@@ -122,7 +122,7 @@ export default function SessionStatsPage() {
             {data.recentScoreTrends.slice(0, 10).map((score, i) => (
               <div
                 key={`${score.date}-${i}`}
-                className="flex items-center justify-between rounded border bg-white/50 px-4 py-2 text-sm"
+                className="flex items-center justify-between rounded border bg-card/50 px-4 py-2 text-sm"
               >
                 <span className="flex items-center gap-2">
                   <TrendingUp className="h-3 w-3 text-emerald-600" />

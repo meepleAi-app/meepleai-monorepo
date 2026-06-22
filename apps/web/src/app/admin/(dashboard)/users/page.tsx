@@ -17,7 +17,6 @@ import {
   PlusIcon,
   RefreshCwIcon,
   SearchIcon,
-  UsersIcon,
   XIcon,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -26,6 +25,7 @@ import { toast } from 'sonner';
 import { InvitationStatusBadge } from '@/components/admin/invitations/InvitationStatusBadge';
 import { InviteUserDialog } from '@/components/admin/invitations/InviteUserDialog';
 import { InlineRoleSelect } from '@/components/admin/users/InlineRoleSelect';
+import { UserCell } from '@/components/admin/users/UserCell';
 import { Badge } from '@/components/ui/data-display/badge';
 import {
   Select,
@@ -178,28 +178,60 @@ export default function AdminUsersPage() {
       </div>
 
       {/* Search + Filter Bar */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Cerca per nome o email..."
-            value={search}
-            onChange={e => handleSearchChange(e.target.value)}
-            className="pl-9"
-          />
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Cerca per nome o email..."
+              value={search}
+              onChange={e => handleSearchChange(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          {/* Select fallback only on small screens — chips replace it from md+ */}
+          <div className="md:hidden">
+            <Select value={roleFilter} onValueChange={handleRoleChange}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Ruolo" />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLE_OPTIONS.map(role => (
+                  <SelectItem key={role} value={role}>
+                    {role === 'all' ? 'Tutti i ruoli' : displayRole(role)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <Select value={roleFilter} onValueChange={handleRoleChange}>
-          <SelectTrigger className="w-full sm:w-40">
-            <SelectValue placeholder="Ruolo" />
-          </SelectTrigger>
-          <SelectContent>
-            {ROLE_OPTIONS.map(role => (
-              <SelectItem key={role} value={role}>
-                {role === 'all' ? 'Tutti i ruoli' : displayRole(role)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+
+        {/* Filter chips for role — mockup A2 .filter-chip pattern */}
+        <div
+          className="hidden md:flex items-center gap-2 flex-wrap"
+          data-testid="role-filter-chips"
+        >
+          {ROLE_OPTIONS.map(role => {
+            const active = roleFilter === role;
+            const label = role === 'all' ? 'Tutti' : displayRole(role);
+            return (
+              <button
+                key={role}
+                type="button"
+                onClick={() => handleRoleChange(role)}
+                aria-pressed={active}
+                data-testid={`role-chip-${role}`}
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold font-quicksand border transition-colors ${
+                  active
+                    ? 'bg-muted text-foreground border-border'
+                    : 'bg-transparent text-muted-foreground border-border/60 hover:bg-muted/60 hover:text-foreground'
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Table */}
@@ -279,17 +311,14 @@ export default function AdminUsersPage() {
                   className="border-b border-border/50 transition-colors hover:bg-muted/50"
                 >
                   <td className="px-3 py-2">
-                    <Link
-                      href={`/admin/users/${u.id}`}
-                      className="flex items-center gap-2 hover:underline"
-                    >
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                        <UsersIcon className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <div className="font-medium">{u.displayName || u.email}</div>
-                        <div className="text-xs text-muted-foreground">{u.email}</div>
-                      </div>
+                    <Link href={`/admin/users/${u.id}`} className="hover:underline">
+                      <UserCell
+                        user={{
+                          displayName: u.displayName,
+                          email: u.email,
+                          role: u.role,
+                        }}
+                      />
                     </Link>
                   </td>
                   <td className="px-3 py-2">

@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -67,7 +68,7 @@ const TYPE_BADGE_COLORS: Record<AttachmentType, string> = {
   BoardState: 'bg-amber-500/80 text-white',
   CharacterSheet: 'bg-blue-500/80 text-white',
   ResourceInventory: 'bg-emerald-500/80 text-white',
-  Custom: 'bg-slate-500/80 text-white',
+  Custom: 'bg-muted-foreground/80 text-white',
 };
 
 const TYPE_LABELS: Record<AttachmentType, string> = {
@@ -358,7 +359,7 @@ export function SessionPhotoGallery({
           {currentLightboxAttachment && (
             <div className="relative">
               {/* Image */}
-              <div className="relative flex items-center justify-center bg-black min-h-[300px] max-h-[70vh]">
+              <div className="relative flex items-center justify-center bg-foreground min-h-[300px] max-h-[70vh]">
                 {lightboxLoading ? (
                   <Skeleton className="h-64 w-full" />
                 ) : (
@@ -379,7 +380,7 @@ export function SessionPhotoGallery({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-foreground/50 hover:bg-foreground/70 text-white"
                     onClick={() => void navigateLightbox(-1)}
                     aria-label="Previous photo"
                     data-testid="lightbox-prev"
@@ -391,7 +392,7 @@ export function SessionPhotoGallery({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-foreground/50 hover:bg-foreground/70 text-white"
                     onClick={() => void navigateLightbox(1)}
                     aria-label="Next photo"
                     data-testid="lightbox-next"
@@ -404,7 +405,7 @@ export function SessionPhotoGallery({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white"
+                  className="absolute top-2 right-2 bg-foreground/50 hover:bg-foreground/70 text-white"
                   onClick={closeLightbox}
                   aria-label="Close lightbox"
                   data-testid="lightbox-close"

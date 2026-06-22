@@ -4,6 +4,7 @@ using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
 using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.Extensions;
 using Api.Infrastructure.Entities;
+using Api.Helpers;
 using Api.Middleware;
 using Api.Models;
 using MediatR;
@@ -127,7 +128,7 @@ internal static class FeatureFlagEndpoints
             if (!authorized) return error!;
 
             logger.LogInformation("Admin {AdminId} toggling feature flag '{Key}' to {Status}",
-                session!.User!.Id, LogValueSanitizer.Sanitize(key), enabled ? "enabled" : "disabled");
+                session!.Principal!.EffectiveActor.Id, LogSanitizer.Sanitize(key), enabled ? "enabled" : "disabled");
 
             // Get the configuration for this feature flag
             var configQuery = new GetConfigByKeyQuery(key, Environment: null);
@@ -135,7 +136,7 @@ internal static class FeatureFlagEndpoints
 
             if (config == null)
             {
-                logger.LogWarning("Feature flag '{Key}' not found", LogValueSanitizer.Sanitize(key));
+                logger.LogWarning("Feature flag '{Key}' not found", LogSanitizer.Sanitize(key));
                 return Results.NotFound(new { error = $"Feature flag '{key}' not found" });
             }
 
@@ -143,7 +144,7 @@ internal static class FeatureFlagEndpoints
             var updateCommand = new UpdateConfigValueCommand(
                 ConfigId: config.Id,
                 NewValue: enabled.ToString().ToLowerInvariant(),
-                UpdatedByUserId: session!.User!.Id
+                UpdatedByUserId: session!.Principal!.EffectiveActor.Id
             );
             var updatedConfig = await mediator.Send(updateCommand, ct).ConfigureAwait(false);
 
@@ -154,7 +155,7 @@ internal static class FeatureFlagEndpoints
                 updatedConfig = await mediator.Send(toggleCommand, ct).ConfigureAwait(false);
             }
 
-            logger.LogInformation("Feature flag '{Key}' toggled to {Status}", LogValueSanitizer.Sanitize(key), enabled ? "enabled" : "disabled");
+            logger.LogInformation("Feature flag '{Key}' toggled to {Status}", LogSanitizer.Sanitize(key), enabled ? "enabled" : "disabled");
 
             return Results.Json(new
             {
@@ -184,7 +185,7 @@ internal static class FeatureFlagEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            logger.LogInformation("Admin {AdminId} creating feature flag '{Key}'", session!.User!.Id, LogValueSanitizer.Sanitize(request.Key));
+            logger.LogInformation("Admin {AdminId} creating feature flag '{Key}'", session!.Principal!.EffectiveActor.Id, LogSanitizer.Sanitize(request.Key));
 
             // Default to "All" if no environment specified
             var environment = request.Environment ?? "All";
@@ -193,7 +194,7 @@ internal static class FeatureFlagEndpoints
                 Key: request.Key,
                 Value: request.Enabled.ToString().ToLowerInvariant(),
                 ValueType: "bool",
-                CreatedByUserId: session!.User!.Id,
+                CreatedByUserId: session!.Principal!.EffectiveActor.Id,
                 Description: request.Description,
                 Category: "Features",
                 Environment: environment,
@@ -202,7 +203,7 @@ internal static class FeatureFlagEndpoints
 
             var config = await mediator.Send(command, ct).ConfigureAwait(false);
 
-            logger.LogInformation("Feature flag '{Key}' created with ID {Id}", LogValueSanitizer.Sanitize(request.Key), config.Id);
+            logger.LogInformation("Feature flag '{Key}' created with ID {Id}", LogSanitizer.Sanitize(request.Key), config.Id);
 
             return Results.Created($"/api/v1/admin/feature-flags/{request.Key}", new
             {
@@ -238,11 +239,11 @@ internal static class FeatureFlagEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var userId = session!.User!.Id.ToString();
+            var userId = session!.Principal!.EffectiveActor.Id.ToString();
 
             logger.LogInformation(
                 "Admin {AdminId} updating feature flag '{Key}' to {Status} (role={Role}, tier={Tier})",
-                session.User.Id, LogValueSanitizer.Sanitize(key), request.Enabled ? "enabled" : "disabled", LogValueSanitizer.Sanitize(request.Role), LogValueSanitizer.Sanitize(request.Tier));
+                session.Principal!.EffectiveActor.Id, LogSanitizer.Sanitize(key), request.Enabled ? "enabled" : "disabled", LogSanitizer.Sanitize(request.Role), LogSanitizer.Sanitize(request.Tier));
 
             // Parse optional role
             UserRole? role = null;
@@ -269,7 +270,7 @@ internal static class FeatureFlagEndpoints
 
             await mediator.Send(command, ct).ConfigureAwait(false);
 
-            logger.LogInformation("Feature flag '{Key}' updated successfully", LogValueSanitizer.Sanitize(key));
+            logger.LogInformation("Feature flag '{Key}' updated successfully", LogSanitizer.Sanitize(key));
 
             return Results.Json(new
             {
@@ -317,17 +318,17 @@ internal static class FeatureFlagEndpoints
                 return Results.BadRequest(new { error = $"Invalid tier '{tier}'. Valid tiers: free, normal, premium" });
             }
 
-            var userId = session!.User!.Id.ToString();
+            var userId = session!.Principal!.EffectiveActor.Id.ToString();
 
             logger.LogInformation(
                 "Admin {AdminId} enabling feature flag '{Key}' for tier {Tier}",
-                session.User.Id, LogValueSanitizer.Sanitize(key), LogValueSanitizer.Sanitize(tier));
+                session.Principal!.EffectiveActor.Id, LogSanitizer.Sanitize(key), LogSanitizer.Sanitize(tier));
 
             // Use CQRS command to enable the feature for the tier
             var command = new EnableFeatureForTierCommand(key, userTier, userId);
             await mediator.Send(command, ct).ConfigureAwait(false);
 
-            logger.LogInformation("Feature flag '{Key}' enabled for tier {Tier}", LogValueSanitizer.Sanitize(key), LogValueSanitizer.Sanitize(tier));
+            logger.LogInformation("Feature flag '{Key}' enabled for tier {Tier}", LogSanitizer.Sanitize(key), LogSanitizer.Sanitize(tier));
 
             return Results.Json(new
             {
@@ -374,17 +375,17 @@ internal static class FeatureFlagEndpoints
                 return Results.BadRequest(new { error = $"Invalid tier '{tier}'. Valid tiers: free, normal, premium" });
             }
 
-            var userId = session!.User!.Id.ToString();
+            var userId = session!.Principal!.EffectiveActor.Id.ToString();
 
             logger.LogInformation(
                 "Admin {AdminId} disabling feature flag '{Key}' for tier {Tier}",
-                session.User.Id, LogValueSanitizer.Sanitize(key), LogValueSanitizer.Sanitize(tier));
+                session.Principal!.EffectiveActor.Id, LogSanitizer.Sanitize(key), LogSanitizer.Sanitize(tier));
 
             // Use CQRS command to disable the feature for the tier
             var command = new DisableFeatureForTierCommand(key, userTier, userId);
             await mediator.Send(command, ct).ConfigureAwait(false);
 
-            logger.LogInformation("Feature flag '{Key}' disabled for tier {Tier}", LogValueSanitizer.Sanitize(key), LogValueSanitizer.Sanitize(tier));
+            logger.LogInformation("Feature flag '{Key}' disabled for tier {Tier}", LogSanitizer.Sanitize(key), LogSanitizer.Sanitize(tier));
 
             return Results.Json(new
             {

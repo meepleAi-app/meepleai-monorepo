@@ -35,7 +35,7 @@ vi.mock('@/lib/api/clients/sharedGamesClient', () => ({
 }));
 
 vi.mock('@/lib/api/core/httpClient', () => ({
-  HttpClient: vi.fn(() => ({})),
+  HttpClient: class {},
 }));
 
 vi.mock('@/hooks/useSetNavConfig', () => ({

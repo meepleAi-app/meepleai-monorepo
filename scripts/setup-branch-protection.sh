@@ -30,6 +30,20 @@ echo "✅ GitHub CLI authenticated"
 echo ""
 
 # Function to create/update branch protection
+#
+# Required-status-check contexts (2026-05-25, PR #1530):
+# - `ci-success` is the single aggregate gate for ci.yml (PRs into main /
+#   main-staging). It rolls up every ci.yml job, so individual job contexts
+#   must NOT be listed here — they churn on refactor (e.g. the 'frontend' job
+#   was split into frontend-lint/typecheck/test) and a stale context becomes a
+#   check that never reports, permanently blocking merges.
+# - The previously-listed `frontend / Frontend - Build & Test` and
+#   `backend / Backend - Build & Test` contexts were already non-existent
+#   (the jobs are 'frontend'/'backend-unit', and ci.yml does not run on main-dev
+#   PRs at all — dev-fast.yml does). Removed to prevent merge deadlock on re-run.
+# - main-dev (development) gates on `validate-source-branch` only here; its
+#   functional gates (Frontend Fast / Backend Fast from dev-fast.yml) plus
+#   GitGuardian are managed in GitHub settings, not provisioned by this script.
 setup_protection() {
     local BRANCH=$1
     local LEVEL=$2
@@ -46,9 +60,7 @@ setup_protection() {
     "strict": true,
     "contexts": [
       "validate-source-branch",
-      "ci-success",
-      "frontend / Frontend - Build & Test",
-      "backend / Backend - Build & Test"
+      "ci-success"
     ]
   },
   "enforce_admins": true,
@@ -76,9 +88,7 @@ EOF
     "strict": false,
     "contexts": [
       "validate-source-branch",
-      "ci-success",
-      "frontend / Frontend - Build & Test",
-      "backend / Backend - Build & Test"
+      "ci-success"
     ]
   },
   "enforce_admins": false,
@@ -101,9 +111,7 @@ EOF
   "required_status_checks": {
     "strict": false,
     "contexts": [
-      "validate-source-branch",
-      "frontend / Frontend - Build & Test",
-      "backend / Backend - Build & Test"
+      "validate-source-branch"
     ]
   },
   "enforce_admins": false,

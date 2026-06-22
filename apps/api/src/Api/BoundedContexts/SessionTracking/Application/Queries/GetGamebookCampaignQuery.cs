@@ -1,0 +1,6 @@
+using Api.BoundedContexts.SessionTracking.Application.DTOs;
+using MediatR;
+
+namespace Api.BoundedContexts.SessionTracking.Application.Queries;
+
+public sealed record GetGamebookCampaignQuery(Guid CampaignId, Guid CallerUserId) : IRequest<GamebookCampaignDto>;

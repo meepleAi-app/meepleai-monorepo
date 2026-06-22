@@ -45,13 +45,13 @@ internal class GetAdminOverviewStatsQueryHandler : IQueryHandler<GetAdminOvervie
                 var sevenDaysAgo = now.AddDays(-7);
 
                 // Game counts
-                var totalGames = await _dbContext.Games
+                var totalGames = await _dbContext.SharedGames
                     .AsNoTracking()
                     .CountAsync(cancel).ConfigureAwait(false);
 
-                var publishedGames = await _dbContext.Games
+                var publishedGames = await _dbContext.SharedGames
                     .AsNoTracking()
-                    .Where(g => g.IsPublished)
+                    .Where(g => g.Status == 1)
                     .CountAsync(cancel).ConfigureAwait(false);
 
                 // User counts

@@ -57,7 +57,13 @@ const mockXHR = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  global.XMLHttpRequest = vi.fn(() => mockXHR) as unknown as typeof XMLHttpRequest;
+  // Vitest 2+/Node 24 made `global.XMLHttpRequest` read-only via property
+  // descriptor → direct assignment throws. Use vi.stubGlobal() which handles
+  // the assignment via the proper API.
+  vi.stubGlobal(
+    'XMLHttpRequest',
+    vi.fn(() => mockXHR)
+  );
 });
 
 afterEach(() => {

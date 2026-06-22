@@ -46,4 +46,12 @@ internal sealed class KbUserFeedbackRepository : IKbUserFeedbackRepository
             query = query.Where(f => f.CreatedAt >= fromDate.Value);
         return query.CountAsync(cancellationToken);
     }
+
+    public Task<int> CountSinceAsync(DateTime since, CancellationToken cancellationToken = default)
+    {
+        return _db.KbUserFeedbacks
+            .AsNoTracking()
+            .Where(f => f.CreatedAt >= since)
+            .CountAsync(cancellationToken);
+    }
 }

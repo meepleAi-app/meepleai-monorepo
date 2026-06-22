@@ -101,7 +101,7 @@ function CounterToolContent({
 /** Shown for custom tool types not yet fully implemented (e.g. card). */
 function CustomToolPlaceholder({ label }: { label: string }) {
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-3 text-stone-400 dark:text-stone-500">
+    <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
       <Hash className="w-10 h-10" aria-hidden="true" />
       <p className="text-sm font-medium">{label}</p>
       <p className="text-xs">Custom tool — coming soon</p>

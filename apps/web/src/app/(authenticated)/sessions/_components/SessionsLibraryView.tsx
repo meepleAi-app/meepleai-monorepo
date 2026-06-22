@@ -40,7 +40,8 @@ import {
   type SessionCardListLabels,
   type SessionsFiltersLabels,
   type SessionsHeroLabels,
-} from '@/components/v2/sessions';
+} from '@/components/features/sessions';
+import { HubPageContainer } from '@/components/layout/PageContainer';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
 import { useTranslation } from '@/hooks/useTranslation';
 import {
@@ -188,9 +189,14 @@ export function SessionsLibraryView(): ReactElement {
   const gridCardLabels = useMemo<SessionCardGridLabels>(
     () => ({
       ...cardLabels,
-      scoreOverflowTemplate: t('pages.sessions.card.scoreOverflowTemplate'),
+      // Raw template (not t()) — formatted at render time by SessionCardGrid →
+      // ScoringInline when the overflow count is known. Eager t() on a template
+      // with `{count}` placeholder raises FORMAT_ERROR when no value is provided
+      // (see #1155). Pattern matches playerCountTemplate / turnTemplate / openAriaTemplate above.
+      scoreOverflowTemplate:
+        (intl.messages['pages.sessions.card.scoreOverflowTemplate'] as string) ?? '+{count} altri',
     }),
-    [cardLabels, t]
+    [cardLabels, intl.messages]
   );
 
   const emptyLabels = useMemo<EmptySessionsLabels>(
@@ -287,9 +293,9 @@ export function SessionsLibraryView(): ReactElement {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div
+    <HubPageContainer
       data-slot="sessions-library-view"
-      className="flex flex-col gap-6 pb-24"
+      className="gap-6 pb-24"
       id="sessions-content"
     >
       <SessionsHero onNewSession={handleNewSession} labels={heroLabels} />
@@ -311,7 +317,7 @@ export function SessionsLibraryView(): ReactElement {
           <div
             role="region"
             aria-label={t('pages.sessions.a11y.resultsLabel')}
-            className="mx-auto grid w-full max-w-[1280px] grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4 px-4 sm:px-8"
+            className="grid w-full grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4"
           >
             {filtered.map(item => (
               <SessionCardGrid
@@ -326,7 +332,7 @@ export function SessionsLibraryView(): ReactElement {
           <div
             role="region"
             aria-label={t('pages.sessions.a11y.resultsLabel')}
-            className="mx-auto flex w-full max-w-[1280px] flex-col gap-2 px-4 sm:px-8"
+            className="flex w-full flex-col gap-2"
           >
             {filtered.map(item => (
               <SessionCardList
@@ -353,6 +359,6 @@ export function SessionsLibraryView(): ReactElement {
           }
         />
       )}
-    </div>
+    </HubPageContainer>
   );
 }

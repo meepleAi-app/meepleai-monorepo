@@ -13,9 +13,11 @@
  * - Back button calls onBack
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
+
+import { renderWithIntl } from '@/__tests__/fixtures/common-fixtures';
 
 import { CatalogSearchStep } from '../CatalogSearchStep';
 
@@ -23,7 +25,10 @@ import { CatalogSearchStep } from '../CatalogSearchStep';
 
 vi.mock('@/hooks/queries', () => ({
   useSharedGames: vi.fn(),
-  useGameInLibraryStatus: vi.fn(),
+}));
+
+vi.mock('@/hooks/queries/useBatchGameStatus', () => ({
+  useBatchGameStatus: vi.fn(),
 }));
 
 vi.mock('@/hooks/queries/useLibrary', () => ({
@@ -63,13 +68,29 @@ vi.mock('next/image', () => ({
   ),
 }));
 
-import { useSharedGames, useGameInLibraryStatus } from '@/hooks/queries';
+import { useSharedGames } from '@/hooks/queries';
+import { useBatchGameStatus } from '@/hooks/queries/useBatchGameStatus';
 import { useAddGameToLibrary } from '@/hooks/queries/useLibrary';
 import { toast } from '@/components/layout';
 
 const mockUseSharedGames = useSharedGames as Mock;
-const mockUseGameInLibraryStatus = useGameInLibraryStatus as Mock;
+const mockUseBatchGameStatus = useBatchGameStatus as Mock;
 const mockUseAddGameToLibrary = useAddGameToLibrary as Mock;
+
+// #2275 helper — build the {results, totalChecked} shape returned by
+// useBatchGameStatus from a map of `{gameId: inLibrary?}`. Defaults
+// isFavorite/isOwned to false (tests don't currently exercise those).
+function makeBatchStatus(map: Record<string, boolean> = {}) {
+  const ids = Object.keys(map);
+  return {
+    data: {
+      results: Object.fromEntries(
+        ids.map(id => [id, { inLibrary: map[id], isFavorite: false, isOwned: false }])
+      ),
+      totalChecked: ids.length,
+    },
+  };
+}
 
 // ── Shared fixtures ────────────────────────────────────────────────────────────
 
@@ -92,14 +113,56 @@ function makeGamesData(items = [GAME_1, GAME_2], total = 2) {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function renderStep(props: {
-  onSelect?: (id: string, name: string) => void;
-  onBack?: () => void;
-} = {}) {
+// F2.2 #1974 T1: CatalogSearchStep is now i18n-aware; provide the new
+// `pages.library.addGame.catalog.*` keys to the IntlProvider so the
+// EN-default assertion strings below (e.g. "2 games found") still match.
+const I18N_MESSAGES: Record<string, string> = {
+  'pages.library.addGame.catalog.backAriaLabel': 'Back to choice',
+  'pages.library.addGame.catalog.searchPlaceholder': 'Search games…',
+  'pages.library.addGame.catalog.searchAriaLabel': 'Search games',
+  'pages.library.addGame.catalog.noImage': 'No image',
+  'pages.library.addGame.catalog.inLibraryBadge': 'In library',
+  'pages.library.addGame.catalog.alreadyInLibrary': 'Already in library',
+  'pages.library.addGame.catalog.selectCta': 'Select',
+  'pages.library.addGame.catalog.resultCount':
+    '{count, plural, =0 {No games found} =1 {1 game found} other {# games found}}',
+  'pages.library.addGame.catalog.emptyResults': 'No games found for "{search}".',
+  'pages.library.addGame.catalog.emptyResultsHeading': 'No results',
+  'pages.library.addGame.catalog.emptyResultsSubtitle':
+    'Try a different title or check the spelling.',
+  'pages.library.addGame.catalog.toastAdded': '"{gameName}" added to your library!',
+  'pages.library.addGame.catalog.toastError': 'Could not add "{gameName}". Please try again.',
+  // #2269 P0-1 (M1) — empty state bridge to manual step
+  'pages.library.addGame.catalog.emptyManualCta': 'Add manually',
+  // #2269 P0-2 (M2) — already-in-library inline alert
+  'pages.library.addGame.catalog.blockedMessage': 'You already have "{gameTitle}" in your library.',
+  'pages.library.addGame.catalog.blockedCta': 'Go to game page',
+  'pages.library.addGame.catalog.blockedDismiss': 'Dismiss',
+};
+
+function renderStep(
+  props: {
+    onSelect?: (id: string) => void;
+    onBack?: () => void;
+    onGoToManual?: () => void;
+    onNavigateToGame?: (gameId: string) => void;
+  } = {}
+) {
   const onSelect = props.onSelect ?? vi.fn();
   const onBack = props.onBack ?? vi.fn();
-  const result = render(<CatalogSearchStep onSelect={onSelect} onBack={onBack} />);
-  return { onSelect, onBack, ...result };
+  const onGoToManual = props.onGoToManual;
+  const onNavigateToGame = props.onNavigateToGame;
+  const result = renderWithIntl(
+    <CatalogSearchStep
+      onSelect={onSelect}
+      onBack={onBack}
+      onGoToManual={onGoToManual}
+      onNavigateToGame={onNavigateToGame}
+    />,
+    undefined,
+    I18N_MESSAGES
+  );
+  return { onSelect, onBack, onGoToManual, onNavigateToGame, ...result };
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -110,7 +173,7 @@ describe('CatalogSearchStep', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseSharedGames.mockReturnValue({ data: makeGamesData(), isLoading: false });
-    mockUseGameInLibraryStatus.mockReturnValue({ data: { inLibrary: false } });
+    mockUseBatchGameStatus.mockReturnValue(makeBatchStatus());
     mockUseAddGameToLibrary.mockReturnValue({ mutateAsync });
   });
 
@@ -187,6 +250,43 @@ describe('CatalogSearchStep', () => {
       expect(screen.getByTestId('catalog-search-empty')).toBeInTheDocument();
     });
 
+    // #2269 P0-1 (M1) — empty state must bridge to the manual step so users
+    // searching for a game that does not exist in the catalog have an obvious
+    // way to add it manually instead of hitting a dead-end. Mockup ref:
+    // admin-mockups/design_files/sp4-add-game-drawer.jsx:337-378 (CatalogEmpty).
+    it('shows "Add manually" CTA in empty state when onGoToManual is provided', () => {
+      mockUseSharedGames.mockReturnValue({
+        data: makeGamesData([], 0),
+        isLoading: false,
+      });
+      renderStep({ onGoToManual: vi.fn() });
+      expect(screen.getByTestId('catalog-search-empty-manual-cta')).toBeInTheDocument();
+      expect(screen.getByText('Add manually')).toBeInTheDocument();
+    });
+
+    it('does not show "Add manually" CTA in empty state when onGoToManual is omitted', () => {
+      mockUseSharedGames.mockReturnValue({
+        data: makeGamesData([], 0),
+        isLoading: false,
+      });
+      renderStep();
+      expect(screen.queryByTestId('catalog-search-empty-manual-cta')).not.toBeInTheDocument();
+    });
+
+    it('calls onGoToManual when empty-state CTA is clicked', async () => {
+      mockUseSharedGames.mockReturnValue({
+        data: makeGamesData([], 0),
+        isLoading: false,
+      });
+      const onGoToManual = vi.fn();
+      const user = userEvent.setup();
+      renderStep({ onGoToManual });
+
+      await user.click(screen.getByTestId('catalog-search-empty-manual-cta'));
+
+      expect(onGoToManual).toHaveBeenCalledTimes(1);
+    });
+
     it('shows game title on card', () => {
       renderStep();
       expect(screen.getByText('Catan')).toBeInTheDocument();
@@ -217,7 +317,7 @@ describe('CatalogSearchStep', () => {
 
       await waitFor(() => {
         expect(mutateAsync).toHaveBeenCalledWith({ gameId: 'g1' });
-        expect(onSelect).toHaveBeenCalledWith('g1', 'Catan');
+        expect(onSelect).toHaveBeenCalledWith('g1');
       });
     });
 
@@ -247,9 +347,7 @@ describe('CatalogSearchStep', () => {
 
   describe('Already in library', () => {
     it('disables Select button for games already in library', () => {
-      mockUseGameInLibraryStatus.mockImplementation((gameId: string) => ({
-        data: { inLibrary: gameId === 'g1' },
-      }));
+      mockUseBatchGameStatus.mockReturnValue(makeBatchStatus({ g1: true, g2: false }));
       renderStep();
 
       expect(screen.getByTestId('catalog-card-g1-select-btn')).toBeDisabled();
@@ -257,22 +355,107 @@ describe('CatalogSearchStep', () => {
     });
 
     it('shows "Already in library" button label for in-library games', () => {
-      mockUseGameInLibraryStatus.mockReturnValue({ data: { inLibrary: true } });
+      mockUseBatchGameStatus.mockReturnValue(makeBatchStatus({ g1: true, g2: true }));
       renderStep();
 
       expect(screen.getAllByText('Already in library').length).toBeGreaterThan(0);
     });
 
     it('shows "In library" badge on in-library cards', () => {
-      mockUseGameInLibraryStatus.mockImplementation((gameId: string) => ({
-        data: { inLibrary: gameId === 'g1' },
-      }));
+      mockUseBatchGameStatus.mockReturnValue(makeBatchStatus({ g1: true, g2: false }));
       renderStep();
 
       expect(screen.getByTestId('catalog-card-g1-in-library-badge')).toBeInTheDocument();
-      expect(
-        screen.queryByTestId('catalog-card-g2-in-library-badge'),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByTestId('catalog-card-g2-in-library-badge')).not.toBeInTheDocument();
+    });
+
+    // #2269 P0-2 (M2) — clicking on an already-in-library card surfaces a
+    // non-intrusive inline alert with a CTA that navigates to the game
+    // detail page. The alert is opt-in via the optional onNavigateToGame
+    // prop so the routing concern stays at the parent boundary. Mockup ref:
+    // admin-mockups/design_files/sp4-add-game-drawer.jsx:506-541.
+    describe('Blocked: already in library', () => {
+      beforeEach(() => {
+        mockUseBatchGameStatus.mockReturnValue(makeBatchStatus({ g1: true, g2: false }));
+      });
+
+      it('does not show alert by default before any click', () => {
+        renderStep({ onNavigateToGame: vi.fn() });
+        expect(screen.queryByTestId('catalog-blocked-alert')).not.toBeInTheDocument();
+      });
+
+      it('shows alert when an already-in-library card is clicked', async () => {
+        const user = userEvent.setup();
+        renderStep({ onNavigateToGame: vi.fn() });
+
+        await user.click(screen.getByTestId('catalog-card-g1'));
+
+        const alert = screen.getByTestId('catalog-blocked-alert');
+        expect(alert).toBeInTheDocument();
+        expect(alert).toHaveAttribute('role', 'status');
+        expect(alert).toHaveTextContent('Catan');
+      });
+
+      it('does not show alert if onNavigateToGame prop is omitted', async () => {
+        const user = userEvent.setup();
+        renderStep();
+
+        await user.click(screen.getByTestId('catalog-card-g1'));
+
+        expect(screen.queryByTestId('catalog-blocked-alert')).not.toBeInTheDocument();
+      });
+
+      it('does not show alert when a non-blocked card is clicked', async () => {
+        const user = userEvent.setup();
+        renderStep({ onNavigateToGame: vi.fn() });
+
+        // g2 is NOT in library; clicking its body should not pop the alert
+        await user.click(screen.getByTestId('catalog-card-g2'));
+
+        expect(screen.queryByTestId('catalog-blocked-alert')).not.toBeInTheDocument();
+      });
+
+      it('navigates to game detail when alert CTA is clicked', async () => {
+        const user = userEvent.setup();
+        const onNavigateToGame = vi.fn();
+        renderStep({ onNavigateToGame });
+
+        await user.click(screen.getByTestId('catalog-card-g1'));
+        await user.click(screen.getByTestId('catalog-blocked-cta'));
+
+        expect(onNavigateToGame).toHaveBeenCalledWith('g1');
+      });
+
+      it('dismisses alert when close button is clicked', async () => {
+        const user = userEvent.setup();
+        renderStep({ onNavigateToGame: vi.fn() });
+
+        await user.click(screen.getByTestId('catalog-card-g1'));
+        expect(screen.getByTestId('catalog-blocked-alert')).toBeInTheDocument();
+
+        await user.click(screen.getByTestId('catalog-blocked-dismiss'));
+
+        expect(screen.queryByTestId('catalog-blocked-alert')).not.toBeInTheDocument();
+      });
+
+      it('auto-dismisses alert after 4500ms', async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        try {
+          const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
+          renderStep({ onNavigateToGame: vi.fn() });
+
+          await user.click(screen.getByTestId('catalog-card-g1'));
+          expect(screen.getByTestId('catalog-blocked-alert')).toBeInTheDocument();
+
+          vi.advanceTimersByTime(4501);
+
+          await waitFor(() => {
+            expect(screen.queryByTestId('catalog-blocked-alert')).not.toBeInTheDocument();
+          });
+        } finally {
+          vi.useRealTimers();
+        }
+      });
     });
   });
 

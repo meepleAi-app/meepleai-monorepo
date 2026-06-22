@@ -112,10 +112,10 @@ public sealed class UploadPdfForGameExtractionIntegrationTests : IAsyncLifetime
         var filename = Path.GetFileName(result.FilePath!);
         var fileId = filename.Split('_')[0]; // Extract GUID part before underscore
 
-        (await _blobStorageService!.ExistsAsync(fileId, "wizard-temp")).Should().BeTrue();
+        (await _blobStorageService!.ExistsAsync(fileId, BlobCategory.Pdf, "wizard-temp")).Should().BeTrue();
 
         // Verify file can be retrieved
-        using var retrievedStream = await _blobStorageService.RetrieveAsync(fileId, "wizard-temp");
+        using var retrievedStream = await _blobStorageService.RetrieveAsync(fileId, BlobCategory.Pdf, "wizard-temp");
         retrievedStream.Should().NotBeNull();
         retrievedStream!.Length.Should().BeGreaterThan(0);
     }
@@ -139,10 +139,10 @@ public sealed class UploadPdfForGameExtractionIntegrationTests : IAsyncLifetime
         var filename = Path.GetFileName(result.FilePath!);
         var fileId = filename.Split('_')[0];
 
-        (await _blobStorageService!.ExistsAsync(fileId, "wizard-temp")).Should().BeTrue();
+        (await _blobStorageService!.ExistsAsync(fileId, BlobCategory.Pdf, "wizard-temp")).Should().BeTrue();
 
         // Cleanup
-        await _blobStorageService.DeleteAsync(fileId, "wizard-temp");
+        await _blobStorageService.DeleteAsync(fileId, BlobCategory.Pdf, "wizard-temp");
     }
 
     [Fact]
@@ -179,9 +179,9 @@ public sealed class UploadPdfForGameExtractionIntegrationTests : IAsyncLifetime
         var fileId3 = filename3.Split('_')[0];
 
         // Verify all files exist independently
-        (await _blobStorageService!.ExistsAsync(fileId1, "wizard-temp")).Should().BeTrue();
-        (await _blobStorageService.ExistsAsync(fileId2, "wizard-temp")).Should().BeTrue();
-        (await _blobStorageService.ExistsAsync(fileId3, "wizard-temp")).Should().BeTrue();
+        (await _blobStorageService!.ExistsAsync(fileId1, BlobCategory.Pdf, "wizard-temp")).Should().BeTrue();
+        (await _blobStorageService!.ExistsAsync(fileId2, BlobCategory.Pdf, "wizard-temp")).Should().BeTrue();
+        (await _blobStorageService!.ExistsAsync(fileId3, BlobCategory.Pdf, "wizard-temp")).Should().BeTrue();
 
         // Verify unique file IDs
         result1.FileId!.Value.Should().NotBe(result2.FileId!.Value);
@@ -189,9 +189,9 @@ public sealed class UploadPdfForGameExtractionIntegrationTests : IAsyncLifetime
         result1.FileId!.Value.Should().NotBe(result3.FileId!.Value);
 
         // Cleanup
-        await _blobStorageService.DeleteAsync(fileId1, "wizard-temp");
-        await _blobStorageService.DeleteAsync(fileId2, "wizard-temp");
-        await _blobStorageService.DeleteAsync(fileId3, "wizard-temp");
+        await _blobStorageService.DeleteAsync(fileId1, BlobCategory.Pdf, "wizard-temp");
+        await _blobStorageService.DeleteAsync(fileId2, BlobCategory.Pdf, "wizard-temp");
+        await _blobStorageService.DeleteAsync(fileId3, BlobCategory.Pdf, "wizard-temp");
     }
 
     [Fact]
@@ -224,10 +224,10 @@ public sealed class UploadPdfForGameExtractionIntegrationTests : IAsyncLifetime
         var filename = Path.GetFileName(result.FilePath!);
         var fileId = filename.Split('_')[0];
 
-        (await _blobStorageService!.ExistsAsync(fileId, "wizard-temp")).Should().BeTrue();
+        (await _blobStorageService!.ExistsAsync(fileId, BlobCategory.Pdf, "wizard-temp")).Should().BeTrue();
 
         // Cleanup
-        await _blobStorageService.DeleteAsync(fileId, "wizard-temp");
+        await _blobStorageService.DeleteAsync(fileId, BlobCategory.Pdf, "wizard-temp");
     }
 
     #region Helper Methods

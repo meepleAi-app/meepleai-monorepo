@@ -1,0 +1,37 @@
+meta {
+  name: SG2-KB4 — Read PDFs for game (list endpoint shape check)
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{apiBase}}/api/v1/games/{{smokeGameId}}/pdfs
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  // Note: the actual GET /games/{id}/pdfs endpoint returns all PDFs for the game
+  // as { pdfs: [...] } — no pagination parameters are supported at this route.
+  // The smoke test verifies the contract shape and authentication.
+  if (!bru.getVar("smokeGameId")) {
+    throw new Error("smokeGameId not set — run 01-preflight-get-game first");
+  }
+}
+
+tests {
+  test("returns 200 OK", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("body has pdfs array (contract shape)", function() {
+    const body = res.getBody();
+    expect(body).to.have.property("pdfs");
+    expect(Array.isArray(body.pdfs)).to.be.true;
+  });
+
+  test("pdf count is a non-negative integer", function() {
+    const body = res.getBody();
+    expect(body.pdfs.length).to.be.at.least(0);
+  });
+}

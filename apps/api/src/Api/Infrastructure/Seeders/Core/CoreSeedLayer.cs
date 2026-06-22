@@ -34,6 +34,13 @@ internal sealed class CoreSeedLayer : ISeedLayer
         await SafeExecute("staging demo user",
             () => mediator.Send(new SeedStagingDemoUserCommand(), cancellationToken), logger).ConfigureAwait(false);
 
+        // Non-fatal: staging email allowlist (#845, only runs in Staging environment)
+        await SafeExecute("staging allowlist",
+            () => mediator.Send(
+                new Api.BoundedContexts.Administration.Application.Commands.StagingAllowlist.SeedStagingAllowlistCommand(),
+                cancellationToken),
+            logger).ConfigureAwait(false);
+
         // Non-fatal: badsworm demo user (requires SEED_BADSWORM_PASSWORD secret — runs in all envs)
         await SafeExecute("badsworm user",
             () => mediator.Send(new SeedBadswormUserCommand(), cancellationToken), logger).ConfigureAwait(false);

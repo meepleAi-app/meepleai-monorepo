@@ -62,7 +62,7 @@ Remove the entire frontend mock-mode surface. Keep the backend `Api.DevTools` in
 - `apps/api/tests/Api.Tests/DevTools/**` — backend mock tests
 - `apps/web/src/__tests__/mocks/**` — Vitest test infrastructure (independent)
 - `make dev`, `make dev-core`, `make alpha` — standard workflows
-- Alpha mode logic (`NEXT_PUBLIC_ALPHA_MODE`) — separate system
+- ~~Alpha mode logic (`NEXT_PUBLIC_ALPHA_MODE`) — separate system~~ *(retroactive note: ALPHA_MODE removed in PR #949, 2026-05-10)*
 
 ## Consequences
 

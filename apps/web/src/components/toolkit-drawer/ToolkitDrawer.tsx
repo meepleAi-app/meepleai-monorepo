@@ -156,7 +156,7 @@ function ToolkitDrawerInner({ onClose }: { onClose: () => void }) {
       {/* Overlay */}
       <motion.div
         data-testid="toolkit-drawer-overlay"
-        className="fixed inset-0 z-50 bg-black/30"
+        className="fixed inset-0 z-50 bg-foreground/30"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -173,7 +173,7 @@ function ToolkitDrawerInner({ onClose }: { onClose: () => void }) {
         className={cn(
           'fixed inset-x-0 top-0 z-50 flex flex-col',
           'max-h-[85vh]',
-          'bg-white/95 backdrop-blur-xl',
+          'bg-card/95 backdrop-blur-xl',
           'rounded-b-2xl shadow-2xl'
         )}
         initial={{ y: '-100%' }}
@@ -183,12 +183,12 @@ function ToolkitDrawerInner({ onClose }: { onClose: () => void }) {
       >
         {/* Drag handle */}
         <div className="flex justify-center pb-1 pt-3" data-testid="toolkit-drag-handle">
-          <div className="h-1 w-10 rounded-full bg-gray-300" />
+          <div className="h-1 w-10 rounded-full bg-muted" />
         </div>
 
         {/* Tab bar */}
         <div
-          className="flex shrink-0 border-b border-gray-200 px-2"
+          className="flex shrink-0 border-b border-border px-2"
           role="tablist"
           aria-label="Toolkit tabs"
         >
@@ -205,7 +205,7 @@ function ToolkitDrawerInner({ onClose }: { onClose: () => void }) {
                   'flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium transition-colors',
                   isActive
                     ? 'border-b-2 text-[hsl(142,70%,45%)]'
-                    : 'text-gray-500 hover:text-gray-700'
+                    : 'text-muted-foreground hover:text-foreground'
                 )}
                 style={isActive ? { borderBottomColor: 'hsl(142, 70%, 45%)' } : undefined}
               >

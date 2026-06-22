@@ -49,6 +49,13 @@ public class GameNightInvitationEntity
     [Column("responded_by_user_id")]
     public Guid? RespondedByUserId { get; set; }
 
+    /// <summary>
+    /// Optional guest display name captured at RSVP time. Issue #1169.
+    /// </summary>
+    [Column("responded_by_name")]
+    [MaxLength(120)]
+    public string? RespondedByName { get; set; }
+
     [Required]
     [Column("created_at")]
     public DateTimeOffset CreatedAt { get; set; }
@@ -56,4 +63,16 @@ public class GameNightInvitationEntity
     [Required]
     [Column("created_by")]
     public Guid CreatedBy { get; set; }
+
+    /// <summary>Issue #1928 Task B (DEC-B-8) — E2E test seeding scope marker.</summary>
+    [Column("test_run_id")]
+    [MaxLength(64)]
+    public string? TestRunId { get; set; }
+
+    /// <summary>
+    /// Issue #1940 / iso-1 Fix 4: timestamp of the last RSVP confirmation email sent.
+    /// Non-null = handler MUST skip resending on a retried event.
+    /// </summary>
+    [Column("rsvp_confirmation_sent_at")]
+    public DateTimeOffset? RsvpConfirmationSentAt { get; set; }
 }

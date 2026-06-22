@@ -1,11 +1,14 @@
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.EntityRelationships.Application.Commands;
 using Api.BoundedContexts.EntityRelationships.Domain.Enums;
 using Api.BoundedContexts.EntityRelationships.Domain.Exceptions;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Security;
@@ -122,6 +125,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                         {
                             await _blobStorageService.DeleteAsync(
                                 storageResult.FileId,
+                                BlobCategory.Pdf,
                                 (session.PrivateGameId ?? session.GameId)?.ToString() ?? string.Empty,
                                 cancellationToken).ConfigureAwait(false);
                         }
@@ -274,6 +278,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
             storageResult = await _blobStorageService.StoreAsync(
                 assembledStream,
                 sanitizedFileName,
+                BlobCategory.Pdf,
                 (session.PrivateGameId ?? session.GameId)?.ToString() ?? "wizard-temp",
                 cancellationToken).ConfigureAwait(false);
         }
@@ -471,9 +476,22 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 pdfId, pdfGuid, allDocumentChunks, embeddings!, pdfDoc, fullText!, db, scope, cancellationToken).ConfigureAwait(false);
 
             // Mark as completed
-            pdfDoc.ProcessingState = "Ready";
+            pdfDoc.ProcessingState = nameof(PdfProcessingState.Ready);
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                    nameof(CompleteChunkedUploadCommandHandler),
+                    MeepleAiMetrics.PdfConcurrencyCategories.B);
+                _logger.LogWarning(ex,
+                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                    pdfId, nameof(CompleteChunkedUploadCommandHandler));
+                return; // CRITICAL: do not throw — background task must see success
+            }
 
             var totalTime = (_timeProvider.GetUtcNow().UtcDateTime - startTime).TotalSeconds;
             _logger.LogInformation(
@@ -516,10 +534,23 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
 
             if (!extractResult.Success)
             {
-                pdfDoc.ProcessingState = "Failed";
+                pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
                 pdfDoc.ProcessingError = extractResult.ErrorMessage;
                 pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                }
+                catch (DbUpdateConcurrencyException ex)
+                {
+                    MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                        nameof(CompleteChunkedUploadCommandHandler),
+                        MeepleAiMetrics.PdfConcurrencyCategories.B);
+                    _logger.LogWarning(ex,
+                        "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                        pdfId, nameof(CompleteChunkedUploadCommandHandler));
+                    return (false, null, 0);
+                }
                 _logger.LogError("Text extraction failed for {PdfId}: {Error}", pdfId, extractResult.ErrorMessage);
                 return (false, null, 0);
             }
@@ -531,7 +562,20 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
             pdfDoc.ExtractedText = fullText;
             pdfDoc.PageCount = extractResult.TotalPages;
             pdfDoc.CharacterCount = extractResult.TotalCharacters;
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                    nameof(CompleteChunkedUploadCommandHandler),
+                    MeepleAiMetrics.PdfConcurrencyCategories.B);
+                _logger.LogWarning(ex,
+                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                    pdfId, nameof(CompleteChunkedUploadCommandHandler));
+                return (true, fullText, extractResult.TotalPages);
+            }
 
             // Extract structured content (tables, diagrams)
             await ExtractStructuredContentAsync(filePath, pdfDoc, db, scope, cancellationToken).ConfigureAwait(false);
@@ -570,7 +614,19 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         pdfDoc.TableCount = structuredResult.TableCount;
         pdfDoc.DiagramCount = structuredResult.DiagramCount;
         pdfDoc.AtomicRuleCount = structuredResult.AtomicRuleCount;
-        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(CompleteChunkedUploadCommandHandler),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                pdfDoc.Id, nameof(CompleteChunkedUploadCommandHandler));
+        }
     }
 
     /// <summary>
@@ -630,10 +686,23 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
 
         if (!embeddingResult.Success)
         {
-            pdfDoc.ProcessingState = "Failed";
+            pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
             pdfDoc.ProcessingError = embeddingResult.ErrorMessage;
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                    nameof(CompleteChunkedUploadCommandHandler),
+                    MeepleAiMetrics.PdfConcurrencyCategories.B);
+                _logger.LogWarning(ex,
+                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                    pdfId, nameof(CompleteChunkedUploadCommandHandler));
+                return (false, null);
+            }
             _logger.LogError("Embedding generation failed for {PdfId}: {Error}", pdfId, embeddingResult.ErrorMessage);
             return (false, null);
         }
@@ -644,10 +713,23 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         {
             var mismatchMessage = $"Embedding service returned {embeddings.Count} vectors for {allDocumentChunks.Count} chunks";
             _logger.LogWarning("Embedding count mismatch for PDF {PdfId}: {Message}", pdfId, mismatchMessage);
-            pdfDoc.ProcessingState = "Failed";
+            pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
             pdfDoc.ProcessingError = mismatchMessage;
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                    nameof(CompleteChunkedUploadCommandHandler),
+                    MeepleAiMetrics.PdfConcurrencyCategories.B);
+                _logger.LogWarning(ex,
+                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                    pdfId, nameof(CompleteChunkedUploadCommandHandler));
+                return (false, null);
+            }
             return (false, null);
         }
 
@@ -655,7 +737,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
     }
 
     /// <summary>
-    /// Indexes document chunks in Qdrant and saves text chunks to PostgreSQL for hybrid search.
+    /// Indexes document chunks in pgvector and saves text chunks to PostgreSQL for hybrid search.
     /// </summary>
     private async Task IndexAndStoreChunksAsync(
         string pdfId,
@@ -668,51 +750,39 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         IServiceScope scope,
         CancellationToken cancellationToken)
     {
-        // Vector store (Qdrant) has been removed — skip vector indexing.
 
-        // Update vector document with chunk count (no Qdrant indexing)
-        await UpdateOrCreateVectorDocumentAsync(pdfGuid, pdfDoc, fullText, allDocumentChunks.Count, db, cancellationToken).ConfigureAwait(false);
+        // Update vector document with chunk count (no pgvector indexing)
+        await UpdateOrCreateVectorDocumentAsync(pdfGuid, pdfDoc, fullText, allDocumentChunks.Count, db, scope, cancellationToken).ConfigureAwait(false);
 
         // Save text chunks to PostgreSQL for hybrid search (FTS)
-        await SaveTextChunksForHybridSearchAsync(pdfGuid, pdfDoc, allDocumentChunks, db, cancellationToken).ConfigureAwait(false);
+        await SaveTextChunksForHybridSearchAsync(pdfGuid, pdfDoc, allDocumentChunks, db, scope, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
     /// Updates or creates VectorDocument entity after successful indexing.
+    /// Delegates to <see cref="IPdfIndexingPipeline"/> (#2244 / epic #2242) so the
+    /// VectorDocumentIndexedEvent fires structurally. This is the 5th call site
+    /// historically not enumerated in OP #2242 — chunked uploads of >5MB PDFs
+    /// were silently bypassing the projection too.
     /// </summary>
-    private async Task UpdateOrCreateVectorDocumentAsync(
+    private static async Task UpdateOrCreateVectorDocumentAsync(
         Guid pdfGuid,
         PdfDocumentEntity pdfDoc,
         string fullText,
         int indexedCount,
         MeepleAiDbContext db,
+        IServiceScope scope,
         CancellationToken cancellationToken)
     {
-        var vectorDoc = await db.VectorDocuments.FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, cancellationToken).ConfigureAwait(false);
-        if (vectorDoc == null)
-        {
-            vectorDoc = new VectorDocumentEntity
-            {
-                Id = Guid.NewGuid(),
-                GameId = pdfDoc.SharedGameId,
-                SharedGameId = pdfDoc.SharedGameId, // Issue #5185: propagate SharedGameId from PDF
-                PdfDocumentId = pdfGuid,
-                IndexingStatus = "completed",
-                ChunkCount = indexedCount,
-                TotalCharacters = fullText.Length,
-                IndexedAt = _timeProvider.GetUtcNow().UtcDateTime
-            };
-            db.VectorDocuments.Add(vectorDoc);
-        }
-        else
-        {
-            vectorDoc.IndexingStatus = "completed";
-            vectorDoc.ChunkCount = indexedCount;
-            vectorDoc.TotalCharacters = fullText.Length;
-            vectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
-        }
-
-        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        var pipeline = scope.ServiceProvider.GetRequiredService<IPdfIndexingPipeline>();
+        await pipeline.IndexAsync(
+            pdfDocumentId: pdfGuid,
+            gameId: pdfDoc.SharedGameId,
+            sharedGameId: pdfDoc.SharedGameId,
+            chunkCount: indexedCount,
+            totalCharacters: fullText.Length,
+            language: string.IsNullOrWhiteSpace(pdfDoc.Language) ? "en" : pdfDoc.Language,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -723,6 +793,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         PdfDocumentEntity pdfDoc,
         List<DocumentChunkInput> allDocumentChunks,
         MeepleAiDbContext db,
+        IServiceScope scope,
         CancellationToken cancellationToken)
     {
         // Delete existing chunks
@@ -754,8 +825,29 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
             })
             .ToList();
 
+        // Phase D4: classify chunks by GameBookRole before persistence so
+        // text_chunks.role_tags is populated on insert. Resolved from the local
+        // async scope (background task lifetime != original HTTP request scope).
+        var roleClassifier = scope.ServiceProvider
+            .GetService<Api.BoundedContexts.KnowledgeBase.Application.Services.IRoleClassifierService>();
+        await TextChunkRoleClassifier.AssignRoleTagsAsync(
+            roleClassifier, textChunkEntities, allDocumentChunks, _logger, cancellationToken)
+            .ConfigureAwait(false);
+
         db.TextChunks.AddRange(textChunkEntities);
-        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(CompleteChunkedUploadCommandHandler),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on TextChunks for PDF {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                pdfGuid, nameof(CompleteChunkedUploadCommandHandler));
+        }
     }
 
     /// <summary>
@@ -776,12 +868,21 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfGuid }, cancellationToken).ConfigureAwait(false);
                 if (pdfDoc != null)
                 {
-                    pdfDoc.ProcessingState = "Failed";
+                    pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
                     pdfDoc.ProcessingError = ex.Message;
                     pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                     await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 }
             }
+        }
+        catch (DbUpdateConcurrencyException concEx)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(CompleteChunkedUploadCommandHandler),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(concEx,
+                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                pdfId, nameof(CompleteChunkedUploadCommandHandler));
         }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out

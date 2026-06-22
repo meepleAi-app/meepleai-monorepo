@@ -50,6 +50,23 @@ public sealed class UserLibraryDomainEventsTests
         evt.EntryId.Should().Be(entryId);
         evt.UserId.Should().Be(userId);
         evt.GameId.Should().Be(gameId);
+        evt.CustomCoverR2Key.Should().BeNull(); // default — no cover at removal time
+    }
+
+    [Fact]
+    public void GameRemovedFromLibraryEvent_SetsCustomCoverR2Key_WhenProvided()
+    {
+        // Arrange
+        var entryId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var coverKey = $"user-covers/{userId}/{gameId}/cover";
+
+        // Act
+        var evt = new GameRemovedFromLibraryEvent(entryId, userId, gameId, coverKey);
+
+        // Assert
+        evt.CustomCoverR2Key.Should().Be(coverKey);
     }
 
     #endregion

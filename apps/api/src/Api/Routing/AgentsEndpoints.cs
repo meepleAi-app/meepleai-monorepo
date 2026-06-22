@@ -1,7 +1,10 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands.AgentDefinition;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetPopularAgents;
 using Api.Extensions;
+using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -38,6 +41,9 @@ internal static class AgentsEndpoints
         // segment never reaches the GUID-constrained handler. The :guid constraint already
         // disambiguates at the matcher level, but explicit ordering keeps intent obvious.
         MapGetRecentAgentsEndpoint(group);
+        // Popular: same literal-before-{id:guid} ordering rationale as recent.
+        // Wave 3 Phase 1 (#805) — /discover "Popular agents" rail.
+        MapGetPopularAgentsEndpoint(group);
         MapGetAgentByIdEndpoint(group);
         MapGetAgentStatusEndpoint(group);
         MapCreateUserAgentEndpoint(group);
@@ -46,6 +52,12 @@ internal static class AgentsEndpoints
         MapUpdateUserAgentEndpoint(group);
         MapGetAgentConfigurationEndpoint(group);
         MapUpdateAgentConfigurationEndpoint(group);
+        // Issue #904: SG3 — Agent CRUD lifecycle + soft-delete cascade
+        MapSoftDeleteUserAgentEndpoint(group);
+        MapRestoreUserAgentEndpoint(group);
+        MapStartTestingUserAgentEndpoint(group);
+        MapPublishUserAgentEndpoint(group);
+        MapUnpublishUserAgentEndpoint(group);
         return group;
     }
 
@@ -117,16 +129,27 @@ internal static class AgentsEndpoints
         group.MapGet("/agents", async (
             [FromQuery] bool? activeOnly,
             [FromQuery] string? type,
+            [FromQuery] string? scope,
             IMediator mediator,
             HttpContext context,
             CancellationToken ct) =>
         {
-            var (authenticated, _, error) = context.TryGetAuthenticatedUser();
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
             if (!authenticated) return error!;
+
+            // BE-2 #1589: scope=my-library needs the caller's userId; global path does not.
+            Guid? scopeUserId = null;
+            if (string.Equals(scope, "my-library", StringComparison.Ordinal)
+                && session!.Principal?.Subject?.Id is Guid callerId)
+            {
+                scopeUserId = callerId;
+            }
 
             var query = new GetAllAgentsQuery(
                 ActiveOnly: activeOnly,
-                Type: type
+                Type: type,
+                Scope: scope,
+                ScopeUserId: scopeUserId
             );
             var agents = await mediator.Send(query, ct).ConfigureAwait(false);
 
@@ -140,9 +163,10 @@ internal static class AgentsEndpoints
         .RequireAuthenticatedUser()
         .Produces(200)
         .Produces(401)
+        .Produces(422)
         .WithTags("Agents")
         .WithSummary("List all agents")
-        .WithDescription("Returns all agents with optional activeOnly and type filters. Issue #641 Wave B.2 hotfix.")
+        .WithDescription("Returns all agents. ?scope=my-library filters to agents whose game is in the caller's library plus system agents; no scope returns all agents (global). Optional activeOnly + type filters.")
         .WithOpenApi();
     }
 
@@ -193,6 +217,44 @@ internal static class AgentsEndpoints
         .WithTags("Agents")
         .WithSummary("Get recently used agents")
         .WithDescription("Returns active agents ordered by LastInvokedAt desc (limit clamped 1..50, default 10). Powers the dashboard recent-agents widget (frontend useRecentAgents hook). Issue #650 (Phase γ.3).")
+        .WithOpenApi();
+    }
+
+    /// <summary>
+    /// Wave 3 Phase 1 (PR #732 §4.3.3 / Issue #805): expose
+    /// <c>GET /api/v1/agents/popular</c> for the SP4 /discover route's
+    /// "Popular agents" rail (frontend <c>useDiscoverPopularAgents</c>).
+    /// Schema reality v1 carryover: <c>InstallCount</c> always 0 — see
+    /// <see cref="PopularAgentDto"/> for the full Gate B note.
+    /// </summary>
+    private static void MapGetPopularAgentsEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/agents/popular", async (
+            [FromQuery] int? limit,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, _, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            var safeLimit = limit.GetValueOrDefault(10);
+            if (safeLimit < 1) safeLimit = 10;
+            if (safeLimit > 50) safeLimit = 50;
+
+            var query = new GetPopularAgentsQuery(safeLimit);
+            var agents = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(new DiscoverItemsEnvelope<PopularAgentDto>(agents));
+        })
+        .RequireAuthenticatedUser()
+        .Produces<DiscoverItemsEnvelope<PopularAgentDto>>(200)
+        .Produces(401)
+        .WithTags("Discover", "Agents")
+        .WithSummary("Get popular agents")
+        .WithDescription(
+            "Returns active agents sorted by installCount DESC + invocationCount DESC tiebreak "
+            + "(limit clamped 1..50, default 10). Powers the SP4 /discover \"Popular agents\" "
+            + "rail. Cache: 15min via HybridCache. Wave 3 Phase 1 (Issue #805 / PR #732 §4.3.3).")
         .WithOpenApi();
     }
 
@@ -249,6 +311,14 @@ internal static class AgentsEndpoints
                 var dto = await mediator.Send(command, ct).ConfigureAwait(false);
                 return Results.Created($"/api/v1/agents/{dto.Id}", dto);
             }
+            catch (TierQuotaExceededException ex)
+            {
+                return Results.Problem(
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status402PaymentRequired,
+                    title: "Agent Slot Quota Exceeded",
+                    extensions: new Dictionary<string, object?>(StringComparer.Ordinal) { ["errorCode"] = ex.ErrorCode });
+            }
             catch (ArgumentException ex)
             {
                 return Results.BadRequest(new { error = ex.Message });
@@ -262,9 +332,14 @@ internal static class AgentsEndpoints
         .Produces<AgentDto>(201)
         .Produces(400)
         .Produces(401)
+        .Produces(402)
         .WithTags("Agents")
         .WithSummary("Create a user-owned agent")
-        .WithDescription("Creates a custom agent linked to a SharedGame, returning AgentDto with GameName resolved. MVP: documentIds parameter accepted but not linked (deferred); tier/quota validation deferred (Issue #4771). Issue #654 (Phase β.2).")
+        .WithDescription(
+            "Creates a custom agent linked to a SharedGame, returning AgentDto with GameName resolved. " +
+            "MVP: documentIds parameter accepted but not linked (deferred). " +
+            "Returns 402 AGENT_SLOT_QUOTA_EXCEEDED when the user has reached their tier's MaxAgents limit. " +
+            "Issue #654 (Phase β.2). Quota enforcement: Issue #904 SG3.")
         .WithOpenApi();
     }
 
@@ -460,6 +535,239 @@ internal static class AgentsEndpoints
         .WithTags("Agents")
         .WithSummary("Update agent LLM configuration")
         .WithDescription("Partial update (PATCH) of agent LLM configuration: modelId, temperature, maxTokens. Range validation delegated to AgentDefinitionConfig.Create (temperature 0.0-2.0, maxTokens 100-32000). SelectedDocumentIds accepted but not persisted (KB linking deferred). Issue #658.")
+        .WithOpenApi();
+    }
+
+    // ────────────────────────────────────────────────────────────────────────────────
+    // Issue #904: SG3 — Agent CRUD lifecycle + soft-delete cascade
+    // ────────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// DELETE /api/v1/agents/{agentId:guid}
+    /// Soft-deletes a user-owned agent and cascades CloseThread() on all active ChatThreads.
+    /// System agents (IsSystemDefined=true) are rejected with 403.
+    /// Issue #904: SG3.
+    /// </summary>
+    private static void MapSoftDeleteUserAgentEndpoint(RouteGroupBuilder group)
+    {
+        group.MapDelete("/agents/{agentId:guid}", async (
+            Guid agentId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+            if (!UserLibraryCoreEndpoints.TryGetUserId(context, session, out var userId))
+                return Results.Unauthorized();
+
+            try
+            {
+                var command = new SoftDeleteUserAgentCommand(UserId: userId, AgentId: agentId);
+                await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.NoContent();
+            }
+            catch (NotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+            catch (SystemAgentProtectedException ex)
+            {
+                return Results.Problem(
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status403Forbidden,
+                    title: "System Agent Protected",
+                    extensions: new Dictionary<string, object?>(StringComparer.Ordinal) { ["errorCode"] = ex.ErrorCode });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces(204)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404)
+        .WithTags("Agents")
+        .WithSummary("Soft-delete a user-owned agent")
+        .WithDescription(
+            "Soft-deletes an agent (IsDeleted=true). Cascades CloseThread() on all active ChatThreads linked to the agent. " +
+            "System-defined agents (IsSystemDefined=true) return 403 SYSTEM_AGENT_PROTECTED. " +
+            "Issue #904: SG3.")
+        .WithOpenApi();
+    }
+
+    /// <summary>
+    /// POST /api/v1/agents/{agentId:guid}/restore
+    /// Restores a soft-deleted user-owned agent. ChatThreads that were closed on delete remain closed.
+    /// Issue #904: SG3.
+    /// </summary>
+    private static void MapRestoreUserAgentEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/agents/{agentId:guid}/restore", async (
+            Guid agentId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+            if (!UserLibraryCoreEndpoints.TryGetUserId(context, session, out var userId))
+                return Results.Unauthorized();
+
+            try
+            {
+                var command = new RestoreUserAgentCommand(UserId: userId, AgentId: agentId);
+                var dto = await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.Ok(dto);
+            }
+            catch (NotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+            catch (BadRequestException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces<AgentDto>(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Agents")
+        .WithSummary("Restore a soft-deleted agent")
+        .WithDescription(
+            "Restores a previously soft-deleted agent (IsDeleted=false). " +
+            "ChatThreads closed during delete remain closed by design. " +
+            "Returns 404 if the agent ID is not found at all, 400 if the agent is not soft-deleted. " +
+            "Issue #904: SG3.")
+        .WithOpenApi();
+    }
+
+    /// <summary>
+    /// POST /api/v1/agents/{agentId:guid}/start-testing
+    /// Transitions the agent from Draft to Testing status.
+    /// Reuses the existing admin command <see cref="StartTestingAgentDefinitionCommand"/>.
+    /// Issue #904: SG3.
+    /// </summary>
+    private static void MapStartTestingUserAgentEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/agents/{agentId:guid}/start-testing", async (
+            Guid agentId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, _, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            try
+            {
+                // Reuse the existing admin command — no separate user version needed;
+                // the command is a pure state transition without admin-specific logic.
+                await mediator.Send(new StartTestingAgentDefinitionCommand(agentId), ct).ConfigureAwait(false);
+                return Results.NoContent();
+            }
+            catch (NotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces(204)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Agents")
+        .WithSummary("Transition agent Draft → Testing")
+        .WithDescription(
+            "Transitions a Draft agent to Testing status. Returns 400 if the agent is Published " +
+            "(must unpublish first). Returns 404 if not found. Issue #904: SG3.")
+        .WithOpenApi();
+    }
+
+    /// <summary>
+    /// POST /api/v1/agents/{agentId:guid}/publish
+    /// Transitions the agent from Testing to Published status.
+    /// Reuses the existing admin command <see cref="PublishAgentDefinitionCommand"/>.
+    /// Issue #904: SG3.
+    /// </summary>
+    private static void MapPublishUserAgentEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/agents/{agentId:guid}/publish", async (
+            Guid agentId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, _, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            try
+            {
+                await mediator.Send(new PublishAgentDefinitionCommand(agentId), ct).ConfigureAwait(false);
+                return Results.NoContent();
+            }
+            catch (NotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces(204)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Agents")
+        .WithSummary("Transition agent Testing → Published")
+        .WithDescription(
+            "Publishes an agent (makes it visible to all users). Agent must be in Testing status; " +
+            "returns 400 if attempted from Draft directly. Issue #904: SG3.")
+        .WithOpenApi();
+    }
+
+    /// <summary>
+    /// POST /api/v1/agents/{agentId:guid}/unpublish
+    /// Transitions the agent from Published back to Draft status.
+    /// Reuses the existing admin command <see cref="UnpublishAgentDefinitionCommand"/>.
+    /// Issue #904: SG3.
+    /// </summary>
+    private static void MapUnpublishUserAgentEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/agents/{agentId:guid}/unpublish", async (
+            Guid agentId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, _, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            try
+            {
+                await mediator.Send(new UnpublishAgentDefinitionCommand(agentId), ct).ConfigureAwait(false);
+                return Results.NoContent();
+            }
+            catch (NotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces(204)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Agents")
+        .WithSummary("Transition agent Published → Draft")
+        .WithDescription(
+            "Unpublishes an agent, returning it to Draft status and deactivating it. " +
+            "Returns 404 if not found. Issue #904: SG3.")
         .WithOpenApi();
     }
 }

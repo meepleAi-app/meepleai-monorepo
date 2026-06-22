@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -31,7 +32,7 @@ export interface SessionHeaderProps {
 const STATUS_STYLES: Record<SessionHeaderProps['status'], string> = {
   Active: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
   Paused: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-  Finalized: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20',
+  Finalized: 'bg-muted-foreground/10 text-muted-foreground border-border/20',
 };
 
 export function SessionHeader({
@@ -59,12 +60,12 @@ export function SessionHeader({
           className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0"
           aria-hidden="true"
         />
-        <h1 className="font-bold text-lg text-slate-900 dark:text-amber-50 truncate tracking-tight">
+        <h1 className="font-bold text-lg text-foreground truncate tracking-tight">
           {gameName}
         </h1>
 
         {expansions.length > 0 && (
-          <span className="text-sm text-slate-500 dark:text-slate-400 truncate">
+          <span className="text-sm text-muted-foreground truncate">
             + {expansions.join(', ')}
           </span>
         )}
@@ -78,11 +79,11 @@ export function SessionHeader({
       </div>
 
       {/* Row 2: Turn + Phase */}
-      <div className="mt-1 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+      <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
         <span className="font-semibold tabular-nums">Turno {turnNumber}</span>
         {currentPhase && (
           <>
-            <span className="text-slate-300 dark:text-slate-600">&middot;</span>
+            <span className="text-slate-300 dark:text-muted-foreground">&middot;</span>
             <span>Fase: {currentPhase}</span>
           </>
         )}

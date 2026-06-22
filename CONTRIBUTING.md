@@ -69,10 +69,7 @@ Discussion happens in the issue thread before implementation begins.
 
 1. **Fork the repository** (external contributors) or create a feature branch (organization members).
 2. **Branch naming**: `feature/<short-description>` or `feature/issue-<n>-<desc>` for issue work.
-3. **Branch from the correct parent**:
-   - `main-dev` for general work
-   - `frontend-dev` for frontend-only changes
-   - See [`CLAUDE.md`](./CLAUDE.md#git-workflow) §"Git Workflow" for details
+3. **Branch from `main-dev`**: see [`CLAUDE.md`](./CLAUDE.md#git-workflow) §"Git Workflow" for the canonical flow.
 4. **Keep PRs focused** — one logical change per PR. Easier to review, easier to revert.
 5. **Self-review before requesting review**:
    - All tests pass locally
@@ -176,8 +173,8 @@ Husky `commit-msg` hook validates on every commit; CI re-validates.
 | Branch | Purpose |
 |--------|---------|
 | `main` | Production releases |
+| `main-staging` | Pre-production release branch (PRs from `main-dev`) |
 | `main-dev` | Active development integration |
-| `frontend-dev` | Frontend-specific feature integration |
 | `feature/issue-<n>-<desc>` | Issue-driven feature work |
 | `feature/<descriptive-name>` | Non-issue feature work |
 
@@ -196,6 +193,54 @@ After a PR merges, delete the local branch:
 git branch -D feature/issue-123-foo
 git remote prune origin
 ```
+
+### 🔴 Branch Hygiene — Before Creating a Feature Branch
+
+> **Root cause of issue #806** (PR #797 absorbed 17 unrelated commits from issue #730 because the new branch was created from an in-progress branch tip instead of `main-dev`). Multi-terminal AI agentic sessions are particularly prone to this when juggling concurrent branches.
+
+**ALWAYS run this pre-creation safety check before `git checkout -b feature/...`:**
+
+```bash
+# 1. Verify HEAD is on the intended parent (main-dev / main / main-staging),
+#    NOT on another in-progress feature/* branch
+git branch --show-current   # MUST print main-dev (or your intended parent)
+
+# 2. Working tree must be clean (no in-flight changes from another branch)
+git status                  # MUST show "nothing to commit, working tree clean"
+
+# 3. Parent branch must be up-to-date with origin (no divergence)
+git pull --ff-only          # MUST succeed without conflict
+
+# 4. NOW create the feature branch
+git checkout -b feature/issue-<n>-<desc>
+
+# 5. Optionally track parent for explicit lineage on later PRs
+git config branch.feature/issue-<n>-<desc>.parent main-dev
+```
+
+If `git branch --show-current` prints `feature/...`, **STOP**. Switch back first:
+```bash
+git checkout main-dev && git pull
+```
+
+#### ❌ What NOT to do
+
+```bash
+# DON'T: create new branch while still on another feature branch
+git checkout -b feature/issue-200-new   # while HEAD is on feature/issue-100-old
+# → All in-progress commits from #100 get absorbed into #200's ancestry
+# → PR #200 will show #100's commits under #200's title (issue #806)
+```
+
+#### PR opening checklist
+
+When opening a PR, verify:
+
+- [ ] **PR title scope matches commit list** — `feat(scope)` should not include commits from unrelated `feat(other-scope)` work
+- [ ] **PR file count + LOC are proportional** to the title (e.g., `feat(infra)` should not have 30+ files unless explicit doc reorg)
+- [ ] **Commit subjects reference the same issue number** as the branch name (heuristic: `feat(*): #<branch-issue> ...` for each commit, not `feat(*): #<other-issue> ...`)
+
+If any of these red-flag, the branch was likely created on top of an in-progress sibling — fix via `git rebase --onto main-dev <wrong-base> HEAD` before opening the PR.
 
 ---
 

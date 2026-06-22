@@ -205,7 +205,7 @@ internal class AdminStatsService : IAdminStatsService
         CancellationToken cancellationToken)
     {
         // Sequential execution - DbContext is not thread-safe for parallel operations
-        var totalGames = await _dbContext.Games
+        var totalGames = await _dbContext.SharedGames
             .AsNoTracking()
             .CountAsync(cancellationToken).ConfigureAwait(false);
 

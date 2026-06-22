@@ -100,6 +100,29 @@ internal sealed class PhotoBatchUploadRepository : RepositoryBase, IPhotoBatchUp
     }
 
     /// <inheritdoc/>
+    public async Task<(int PageNumber, string? Text)?> GetPageTextByParagraphNumberAsync(
+        Guid uploadId,
+        int paragraphNumber,
+        CancellationToken ct = default)
+    {
+        // Npgsql translates `Array.Contains(x)` on a column-typed `integer[]` to
+        // `x = ANY(paragraph_numbers)` (not `paragraph_numbers @> ARRAY[x]`). The default
+        // `array_ops` GIN index registered in PhotoBatchPageEntityConfiguration accelerates
+        // `@>` / `&&` but not `= ANY()`, so at large row counts this predicate falls back
+        // to a seq-scan. Acceptable while photo_batch_pages is small; revisit if perf AC
+        // tightens (issue #747 PR-C will populate paragraph_numbers densely).
+        var match = await DbContext.PhotoBatchPages
+            .AsNoTracking()
+            .Where(p => p.PhotoBatchUploadId == uploadId && p.ParagraphNumbers.Contains(paragraphNumber))
+            .OrderBy(p => p.PageNumber)
+            .Select(p => new { p.PageNumber, p.ExtractedText })
+            .FirstOrDefaultAsync(ct)
+            .ConfigureAwait(false);
+
+        return match is null ? null : (match.PageNumber, match.ExtractedText);
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> BelongsToUserAsync(Guid uploadId, Guid userId, CancellationToken ct = default)
     {
         return await DbContext.PhotoBatchUploads

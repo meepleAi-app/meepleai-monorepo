@@ -1,3 +1,4 @@
+using Api.Infrastructure.Entities.SharedGameCatalog;
 namespace Api.Infrastructure.Entities.KnowledgeBase;
 
 /// <summary>
@@ -18,5 +19,5 @@ public class GameEntityRelationEntity
     public DateTime ExtractedAt { get; set; }
 
     // Navigation
-    public GameEntity? Game { get; set; }
+    public SharedGameEntity? Game { get; set; }
 }

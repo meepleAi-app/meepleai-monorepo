@@ -294,7 +294,23 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
             OverridesTurnOrder = toolkit.OverridesTurnOrder,
             OverridesScoreboard = toolkit.OverridesScoreboard,
             OverridesDiceSet = toolkit.OverridesDiceSet,
+#pragma warning disable CS0618 // Issue #1144 / spec D-5: paired write — legacy int + new semver in same MapToPersistence call.
             Version = toolkit.Version,
+#pragma warning restore CS0618
+#pragma warning disable S1135 // TODO: architectural breadcrumb — active footgun: see comment below.
+            // TODO(#1458): VersionSemver already has a real producer.
+            // PublishToolkitVersionCommandHandler.cs:137 writes the user-input
+            // semver and DELIBERATELY bypasses GameToolkitRepository.UpdateAsync
+            // (see handler comment at lines 131-136) precisely because this
+            // MapToPersistence synthesis would otherwise overwrite the user
+            // value with "0.{Version}.0". Risk: every OTHER UpdateAsync call
+            // (name rename, config change, future commands) silently overwrites
+            // the column. Fix: surface VersionSemver on the domain aggregate
+            // (separate epic — original paired-write context shipped in #1144
+            // 2026-05-14) so MapToPersistence can read it directly and the
+            // synthesis goes away.
+            VersionSemver = $"0.{toolkit.Version}.0",
+#pragma warning restore S1135
             CreatedByUserId = toolkit.CreatedByUserId,
             IsPublished = toolkit.IsPublished,
             CreatedAt = toolkit.CreatedAt,

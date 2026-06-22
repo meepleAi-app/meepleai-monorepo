@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 'use client';
 
 /**
@@ -76,7 +77,7 @@ export const ChatExtraMeepleCard = React.memo(function ChatExtraMeepleCard({
     <div
       className={cn(
         'flex w-[600px] flex-col rounded-2xl overflow-hidden',
-        'bg-white/70 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-white/20',
+        'bg-card/70 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-border',
         'max-md:w-full',
         className
       )}
@@ -95,7 +96,7 @@ export const ChatExtraMeepleCard = React.memo(function ChatExtraMeepleCard({
         onValueChange={v => setActiveTab(v as ChatTab)}
         className="flex flex-1 flex-col"
       >
-        <TabsList className="mx-4 mt-3 h-10 w-auto justify-start gap-1 bg-slate-100/80 rounded-lg p-1">
+        <TabsList className="mx-4 mt-3 h-10 w-auto justify-start gap-1 bg-muted/80 rounded-lg p-1">
           <EntityTabTrigger
             value="overview"
             icon={MessageCircle}
@@ -155,7 +156,7 @@ export const ChatExtraMeepleCard = React.memo(function ChatExtraMeepleCard({
                 >
                   <Gamepad2 className={cn('h-4 w-4 shrink-0', colors.accent)} aria-hidden="true" />
                   <div className="flex-1 min-w-0">
-                    <p className="font-nunito text-[10px] text-slate-500 uppercase tracking-wider">
+                    <p className="font-nunito text-[10px] text-muted-foreground uppercase tracking-wider">
                       Gioco di contesto
                     </p>
                     <p className={cn('font-quicksand text-sm font-bold truncate', colors.accent)}>
@@ -207,7 +208,7 @@ export const ChatExtraMeepleCard = React.memo(function ChatExtraMeepleCard({
             {data.messages.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-8 text-center">
                 <MessageSquare className="h-8 w-8 text-slate-300" aria-hidden="true" />
-                <p className="font-nunito text-xs text-slate-400">
+                <p className="font-nunito text-xs text-muted-foreground">
                   Nessun messaggio in questo thread
                 </p>
               </div>
@@ -222,7 +223,7 @@ export const ChatExtraMeepleCard = React.memo(function ChatExtraMeepleCard({
                     href={`/chat/${data.id}`}
                     className={cn(
                       'flex items-center justify-center gap-1.5 rounded-lg border py-2 px-3 w-full',
-                      'bg-white border-slate-200 text-violet-700',
+                      'bg-card border-border text-violet-700',
                       'font-nunito text-xs font-medium',
                       'transition-colors duration-150 hover:bg-violet-50',
                       'focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-1'
@@ -242,7 +243,7 @@ export const ChatExtraMeepleCard = React.memo(function ChatExtraMeepleCard({
             <div className="space-y-3">
               {/* Compact game card */}
               {data.gameName && (
-                <div className="flex items-center gap-3 rounded-lg bg-white/60 border border-slate-200/40 p-3">
+                <div className="flex items-center gap-3 rounded-lg bg-card/60 border border-border/40 p-3">
                   {data.gameThumbnailUrl ? (
                     <img
                       src={data.gameThumbnailUrl}
@@ -255,10 +256,10 @@ export const ChatExtraMeepleCard = React.memo(function ChatExtraMeepleCard({
                     </div>
                   )}
                   <div className="min-w-0">
-                    <p className="font-nunito text-[10px] text-slate-400 uppercase tracking-wider">
+                    <p className="font-nunito text-[10px] text-muted-foreground uppercase tracking-wider">
                       Gioco
                     </p>
-                    <p className="font-quicksand text-sm font-semibold text-slate-700 truncate">
+                    <p className="font-quicksand text-sm font-semibold text-foreground truncate">
                       {data.gameName}
                     </p>
                   </div>
@@ -267,19 +268,19 @@ export const ChatExtraMeepleCard = React.memo(function ChatExtraMeepleCard({
 
               {/* Compact agent card */}
               {data.agentName && (
-                <div className="flex items-center gap-3 rounded-lg bg-white/60 border border-slate-200/40 p-3">
+                <div className="flex items-center gap-3 rounded-lg bg-card/60 border border-border/40 p-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100">
                     <Bot className="h-5 w-5 text-blue-600" aria-hidden="true" />
                   </div>
                   <div className="min-w-0">
-                    <p className="font-nunito text-[10px] text-slate-400 uppercase tracking-wider">
+                    <p className="font-nunito text-[10px] text-muted-foreground uppercase tracking-wider">
                       Agente
                     </p>
-                    <p className="font-quicksand text-sm font-semibold text-slate-700 truncate">
+                    <p className="font-quicksand text-sm font-semibold text-foreground truncate">
                       {data.agentName}
                     </p>
                     {data.agentModel && (
-                      <p className="font-nunito text-[10px] text-slate-400 truncate">
+                      <p className="font-nunito text-[10px] text-muted-foreground truncate">
                         {data.agentModel}
                       </p>
                     )}
@@ -289,30 +290,30 @@ export const ChatExtraMeepleCard = React.memo(function ChatExtraMeepleCard({
 
               {/* Session parameters */}
               {(data.temperature != null || data.maxTokens != null || data.systemPrompt) && (
-                <div className="rounded-lg bg-white/60 border border-slate-200/40 p-3 space-y-2">
-                  <p className="font-nunito text-[10px] text-slate-400 uppercase tracking-wider">
+                <div className="rounded-lg bg-card/60 border border-border/40 p-3 space-y-2">
+                  <p className="font-nunito text-[10px] text-muted-foreground uppercase tracking-wider">
                     Parametri sessione
                   </p>
                   {data.temperature != null && (
                     <div className="flex items-center justify-between">
-                      <span className="font-nunito text-xs text-slate-500">Temperatura</span>
-                      <span className="font-quicksand text-xs font-semibold text-slate-700">
+                      <span className="font-nunito text-xs text-muted-foreground">Temperatura</span>
+                      <span className="font-quicksand text-xs font-semibold text-foreground">
                         {data.temperature}
                       </span>
                     </div>
                   )}
                   {data.maxTokens != null && (
                     <div className="flex items-center justify-between">
-                      <span className="font-nunito text-xs text-slate-500">Max token</span>
-                      <span className="font-quicksand text-xs font-semibold text-slate-700">
+                      <span className="font-nunito text-xs text-muted-foreground">Max token</span>
+                      <span className="font-quicksand text-xs font-semibold text-foreground">
                         {data.maxTokens}
                       </span>
                     </div>
                   )}
                   {data.systemPrompt && (
                     <div className="space-y-1">
-                      <p className="font-nunito text-[10px] text-slate-400">System prompt</p>
-                      <p className="font-nunito text-xs text-slate-600 leading-relaxed">
+                      <p className="font-nunito text-[10px] text-muted-foreground">System prompt</p>
+                      <p className="font-nunito text-xs text-muted-foreground leading-relaxed">
                         {data.systemPrompt.length > 150
                           ? `${data.systemPrompt.slice(0, 150)}…`
                           : data.systemPrompt}
@@ -330,7 +331,7 @@ export const ChatExtraMeepleCard = React.memo(function ChatExtraMeepleCard({
                 !data.systemPrompt && (
                   <div className="flex flex-col items-center gap-2 py-8 text-center">
                     <Settings className="h-8 w-8 text-slate-300" aria-hidden="true" />
-                    <p className="font-nunito text-xs text-slate-400">
+                    <p className="font-nunito text-xs text-muted-foreground">
                       Nessun contesto disponibile
                     </p>
                   </div>
@@ -368,7 +369,7 @@ function ChatBubble({ message }: { message: ChatDetailMessage }) {
       <div
         className={cn(
           'flex h-7 w-7 shrink-0 items-center justify-center rounded-full',
-          isUser ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-500'
+          isUser ? 'bg-violet-100 text-violet-700' : 'bg-muted text-muted-foreground'
         )}
       >
         {isUser ? (
@@ -384,11 +385,11 @@ function ChatBubble({ message }: { message: ChatDetailMessage }) {
           'max-w-[75%] rounded-2xl px-3 py-2',
           isUser
             ? 'bg-violet-100 border border-violet-200/60'
-            : 'bg-white/80 border border-slate-200/40'
+            : 'bg-card/80 border border-border/40'
         )}
       >
-        <p className="font-nunito text-xs text-slate-700 leading-relaxed">{text}</p>
-        <p className="font-nunito text-[10px] text-slate-400 mt-1">{relTime}</p>
+        <p className="font-nunito text-xs text-foreground leading-relaxed">{text}</p>
+        <p className="font-nunito text-[10px] text-muted-foreground mt-1">{relTime}</p>
       </div>
     </div>
   );

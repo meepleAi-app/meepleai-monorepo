@@ -12,7 +12,7 @@ internal interface IInfrastructureHealthService
     /// <summary>
     /// Gets the health status of a specific service.
     /// </summary>
-    /// <param name="serviceName">Name of the service (postgres, redis, qdrant, n8n, prometheus)</param>
+    /// <param name="serviceName">Name of the service (postgres, redis, pgvector, n8n, prometheus)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Service health status</returns>
     Task<ServiceHealthStatus> GetServiceHealthAsync(string serviceName, CancellationToken cancellationToken = default);

@@ -249,24 +249,14 @@ export const useAddGameWizardStore = create<AddGameWizardState>()(
             });
 
             // If PDF uploaded, associate it with the library entry
+            // (Fase 3 consolidation — was direct fetch, now via libraryClient)
             if (uploadedPdfId && uploadedPdfName) {
               try {
-                // The PDF was already uploaded to /api/v1/ingest/upload
-                // Now we need to associate it with the library entry
-                // Using the upload custom PDF endpoint
                 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
-
-                // Fetch PDF metadata from the upload response
-                // The uploadedPdfId is the document ID from the ingest service
-                await fetch(`${API_BASE}/api/v1/library/games/${entryGameId}/pdf`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  credentials: 'include',
-                  body: JSON.stringify({
-                    pdfUrl: `${API_BASE}/api/v1/documents/${uploadedPdfId}/download`,
-                    fileSizeBytes: 0, // Size not tracked in wizard state, will be validated server-side
-                    originalFileName: uploadedPdfName,
-                  }),
+                await api.library.uploadCustomGamePdf(entryGameId, {
+                  pdfUrl: `${API_BASE}/api/v1/documents/${uploadedPdfId}/download`,
+                  fileSizeBytes: 0, // Size not tracked in wizard state, validated server-side
+                  originalFileName: uploadedPdfName,
                 });
               } catch (pdfError) {
                 // PDF association failed but game was added - log but don't fail

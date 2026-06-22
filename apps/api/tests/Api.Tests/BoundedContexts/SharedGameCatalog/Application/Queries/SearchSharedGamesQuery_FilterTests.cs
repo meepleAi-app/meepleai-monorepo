@@ -2,10 +2,13 @@ using Api.BoundedContexts.GameToolkit.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.BoundedContexts.SharedGameCatalog.Application;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Services.Pdf;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -36,6 +39,22 @@ public sealed class SearchSharedGamesQuery_FilterTests
     private const int DraftStatus = 0;
 
     private readonly Mock<ILogger<SearchSharedGamesQueryHandler>> _logger = new();
+    private readonly Mock<IBlobStorageService> _blobStorageMock = new();
+    // Issue #2339 (Wave 4 Task 13): identity-passthrough mock — these tests do not
+    // assert translation enrichment, so EnrichAsync just returns the input list as-is
+    // with Translations=null (matching pre-#2339 behavior for SharedGameDto consumers).
+    private readonly Mock<IGameTitleResolver> _titleResolverMock = CreateIdentityResolverMock();
+
+    private static Mock<IGameTitleResolver> CreateIdentityResolverMock()
+    {
+        var mock = new Mock<IGameTitleResolver>();
+        mock.Setup(r => r.EnrichAsync(
+                It.IsAny<IReadOnlyList<SharedGameDto>>(),
+                It.IsAny<CancellationToken>()))
+            .Returns<IReadOnlyList<SharedGameDto>, CancellationToken>(
+                (games, _) => Task.FromResult<IReadOnlyList<SharedGameDto>>(games));
+        return mock;
+    }
 
     // ---------------------------------------------------------------
     // Seed helpers
@@ -60,12 +79,11 @@ public sealed class SearchSharedGamesQuery_FilterTests
         HasKnowledgeBase = false,
     };
 
-    private static GameEntity CreateGame(Guid sharedGameId, int approvalStatus = ApprovedStatus) => new()
+    private static SharedGameEntity CreateGame(Guid sharedGameId, int approvalStatus = ApprovedStatus) => new()
     {
         Id = Guid.NewGuid(),
-        Name = $"Game-{sharedGameId:N}",
-        SharedGameId = sharedGameId,
-        ApprovalStatus = approvalStatus,
+        Title = $"Game-{sharedGameId:N}",
+        Status = 1,
         CreatedAt = DateTime.UtcNow,
     };
 
@@ -171,11 +189,11 @@ public sealed class SearchSharedGamesQuery_FilterTests
         db.SharedGames.AddRange(withToolkit, withoutToolkit);
 
         var game = CreateGame(withToolkit.Id);
-        db.Games.Add(game);
+        db.SharedGames.Add(game);
         db.Toolkits.Add(CreateNonDefaultToolkit(game.Id));
 
         await db.SaveChangesAsync();
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object, _titleResolverMock.Object);
 
         // Act
         var result = await handler.Handle(BuildQuery(hasToolkit: true), CancellationToken.None);
@@ -195,11 +213,11 @@ public sealed class SearchSharedGamesQuery_FilterTests
         var sg = CreateSharedGame("Default Only");
         db.SharedGames.Add(sg);
         var game = CreateGame(sg.Id);
-        db.Games.Add(game);
+        db.SharedGames.Add(game);
         db.Toolkits.Add(CreateDefaultToolkit(game.Id));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object, _titleResolverMock.Object);
 
         var result = await handler.Handle(BuildQuery(hasToolkit: true), CancellationToken.None);
 
@@ -215,11 +233,11 @@ public sealed class SearchSharedGamesQuery_FilterTests
         var sg = CreateSharedGame("Draft Game Toolkit");
         db.SharedGames.Add(sg);
         var game = CreateGame(sg.Id, approvalStatus: DraftStatus);
-        db.Games.Add(game);
+        db.SharedGames.Add(game);
         db.Toolkits.Add(CreateNonDefaultToolkit(game.Id));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object, _titleResolverMock.Object);
 
         var result = await handler.Handle(BuildQuery(hasToolkit: true), CancellationToken.None);
 
@@ -234,11 +252,11 @@ public sealed class SearchSharedGamesQuery_FilterTests
         var withoutToolkit = CreateSharedGame("No Toolkit");
         db.SharedGames.AddRange(withToolkit, withoutToolkit);
         var game = CreateGame(withToolkit.Id);
-        db.Games.Add(game);
+        db.SharedGames.Add(game);
         db.Toolkits.Add(CreateNonDefaultToolkit(game.Id));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object, _titleResolverMock.Object);
 
         var result = await handler.Handle(BuildQuery(hasToolkit: false), CancellationToken.None);
 
@@ -255,7 +273,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
             CreateSharedGame("Game B"));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object, _titleResolverMock.Object);
 
         var result = await handler.Handle(BuildQuery(hasToolkit: null), CancellationToken.None);
 
@@ -274,11 +292,11 @@ public sealed class SearchSharedGamesQuery_FilterTests
         var withoutAgent = CreateSharedGame("No Agent");
         db.SharedGames.AddRange(withAgent, withoutAgent);
         var game = CreateGame(withAgent.Id);
-        db.Games.Add(game);
+        db.SharedGames.Add(game);
         db.AgentDefinitions.Add(CreateAgentForGame(game.Id));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object, _titleResolverMock.Object);
 
         var result = await handler.Handle(BuildQuery(hasAgent: true), CancellationToken.None);
 
@@ -293,11 +311,11 @@ public sealed class SearchSharedGamesQuery_FilterTests
         var sg = CreateSharedGame("Draft Game Agent");
         db.SharedGames.Add(sg);
         var game = CreateGame(sg.Id, approvalStatus: DraftStatus);
-        db.Games.Add(game);
+        db.SharedGames.Add(game);
         db.AgentDefinitions.Add(CreateAgentForGame(game.Id));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object, _titleResolverMock.Object);
 
         var result = await handler.Handle(BuildQuery(hasAgent: true), CancellationToken.None);
 
@@ -312,11 +330,11 @@ public sealed class SearchSharedGamesQuery_FilterTests
         var withoutAgent = CreateSharedGame("No Agent");
         db.SharedGames.AddRange(withAgent, withoutAgent);
         var game = CreateGame(withAgent.Id);
-        db.Games.Add(game);
+        db.SharedGames.Add(game);
         db.AgentDefinitions.Add(CreateAgentForGame(game.Id));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object, _titleResolverMock.Object);
 
         var result = await handler.Handle(BuildQuery(hasAgent: false), CancellationToken.None);
 
@@ -342,7 +360,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
             CreateSharedGame("Unrated", averageRating: null));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object, _titleResolverMock.Object);
 
         var result = await handler.Handle(BuildQuery(isTopRated: true), CancellationToken.None);
 
@@ -361,7 +379,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
             CreateSharedGame("Unrated", averageRating: null));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object, _titleResolverMock.Object);
 
         var result = await handler.Handle(BuildQuery(isTopRated: false), CancellationToken.None);
 
@@ -382,7 +400,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
             CreateSharedGame("Low", averageRating: 3.9m));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(topRatedThreshold: 4.5m), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(topRatedThreshold: 4.5m), _logger.Object, _titleResolverMock.Object);
 
         var result = await handler.Handle(BuildQuery(isTopRated: true), CancellationToken.None);
 
@@ -399,7 +417,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
             CreateSharedGame("Unrated", averageRating: null));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object, _titleResolverMock.Object);
 
         var result = await handler.Handle(BuildQuery(isTopRated: null), CancellationToken.None);
 

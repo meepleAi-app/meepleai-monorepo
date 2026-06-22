@@ -14,13 +14,16 @@ namespace Api.Infrastructure.Seeders.Catalog;
 /// </summary>
 internal static class GameSeeder
 {
-#pragma warning disable S1075 // URIs should not be hardcoded - Acceptable for placeholder images in seed data
-    private const string PlaceholderImageBase = "https://placehold.co";
-#pragma warning restore S1075
-
     /// <summary>
     /// Seeds SharedGame + GameEntity bridge for each game in the manifest.
     /// Idempotent: skips games that already exist (by title or BggId).
+    ///
+    /// Issue #2123 — BGG ToS compliance: cover URLs are NEVER seeded inline.
+    /// <see cref="SharedGameEntity.ImageUrl"/> / <see cref="SharedGameEntity.ThumbnailUrl"/>
+    /// are set to <c>null</c> on every create path; covers are resolved at runtime
+    /// by <see cref="Api.BoundedContexts.SharedGameCatalog.Application.Services.CoverUrlResolver"/>
+    /// from R2-hosted assets (PDF, BGG-reuploaded, Wikidata) populated by the
+    /// catalog enrichment pipeline (#1823 M3-M8).
     /// </summary>
     /// <returns>Dictionary mapping BggId to GameEntity.Id for downstream seeders.</returns>
     public static async Task<Dictionary<int, Guid>> SeedAsync(
@@ -42,6 +45,10 @@ internal static class GameSeeder
         {
             try
             {
+                // Issue #2123: "enhanced" semantic now derived from presence of Description;
+                // the legacy `bggEnhanced` boolean flag has been removed from the manifest model.
+                var hasEnhancedMetadata = !string.IsNullOrWhiteSpace(entry.Description);
+
                 // Check if already exists by title (case-insensitive) OR by BggId
                 var existing = await db.SharedGames
                     .AsTracking()
@@ -57,21 +64,7 @@ internal static class GameSeeder
 
                 if (existing != null)
                 {
-                    // Update image URLs if they're still placeholders
-                    if (existing.ImageUrl.Contains("placehold.co"))
-                    {
-                        var newImage = entry.BggEnhanced ? (entry.ImageUrl ?? entry.FallbackImageUrl) : entry.FallbackImageUrl;
-                        var newThumb = entry.BggEnhanced ? (entry.ThumbnailUrl ?? entry.FallbackThumbnailUrl) : entry.FallbackThumbnailUrl;
-                        if (newImage != null)
-                        {
-                            existing.ImageUrl = newImage;
-                            existing.ThumbnailUrl = newThumb ?? existing.ThumbnailUrl;
-                            await db.SaveChangesAsync(ct).ConfigureAwait(false);
-                            logger.LogInformation("Updated placeholder images for '{GameName}'", entry.Title);
-                        }
-                    }
-
-                    if (entry.BggEnhanced &&
+                    if (hasEnhancedMetadata &&
                         existing.Categories.Count == 0 && existing.Mechanics.Count == 0 &&
                         existing.Designers.Count == 0 && existing.Publishers.Count == 0)
                     {
@@ -84,11 +77,9 @@ internal static class GameSeeder
                         logger.LogDebug("SharedGame '{GameName}' already exists, skipping", entry.Title);
                     }
 
-                    // Ensure GameEntity bridge exists and record in map
-                    var existingBridge = await EnsureGameEntityBridgeAsync(db, existing, entry, systemUserId, ct)
-                        .ConfigureAwait(false);
+                    // Post-Phase2d: gameMap now stores SharedGame.Id directly (no GameEntity bridge)
                     if (entry.BggId is > 0)
-                        gameMap[entry.BggId.Value] = existingBridge.Id;
+                        gameMap[entry.BggId.Value] = existing.Id;
 
                     skippedCount++;
                     continue;
@@ -97,7 +88,7 @@ internal static class GameSeeder
                 // Create game from best available data source
                 SharedGameEntity? sharedGame = null;
 
-                if (entry.BggEnhanced)
+                if (hasEnhancedMetadata)
                 {
                     sharedGame = CreateFromEnhancedData(entry, systemUserId);
                     logger.LogInformation("Created SharedGame '{GameName}' from enhanced YAML data", entry.Title);
@@ -120,17 +111,15 @@ internal static class GameSeeder
                 db.SharedGames.Add(sharedGame);
                 await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
-                if (entry.BggEnhanced)
+                if (hasEnhancedMetadata)
                 {
                     await RelationshipSeeder.SeedRelationshipsAsync(db, sharedGame, entry, caches, logger, ct).ConfigureAwait(false);
                     await db.SaveChangesAsync(ct).ConfigureAwait(false);
                 }
 
-                // Create GameEntity bridge
-                var bridge = await EnsureGameEntityBridgeAsync(db, sharedGame, entry, systemUserId, ct)
-                    .ConfigureAwait(false);
+                // Post-Phase2d: gameMap now stores SharedGame.Id directly (no GameEntity bridge)
                 if (entry.BggId is > 0)
-                    gameMap[entry.BggId.Value] = bridge.Id;
+                    gameMap[entry.BggId.Value] = sharedGame.Id;
 
                 seededCount++;
                 logger.LogInformation("Seeded SharedGame: {GameName} ({Language})", entry.Title, entry.Language);
@@ -152,57 +141,7 @@ internal static class GameSeeder
         return gameMap;
     }
 
-    private static async Task<GameEntity> EnsureGameEntityBridgeAsync(
-        MeepleAiDbContext db,
-        SharedGameEntity sharedGame,
-        SeedManifestGame entry,
-        Guid systemUserId,
-        CancellationToken ct)
-    {
-        // Check by SharedGameId relationship first (fastest path)
-        var existingBridge = await db.Games
-            .FirstOrDefaultAsync(g => g.SharedGameId == sharedGame.Id, ct)
-            .ConfigureAwait(false);
-
-        if (existingBridge != null)
-            return existingBridge;
-
-        // Check by Name (the IX_games_Name unique constraint column) to prevent
-        // duplicate key violations when DB is pre-populated from a snapshot restore
-        var bridgeByName = await db.Games
-            .FirstOrDefaultAsync(g => g.Name == sharedGame.Title, ct)
-            .ConfigureAwait(false);
-
-        if (bridgeByName != null)
-            return bridgeByName;
-
-        var bridge = new GameEntity
-        {
-            Id = Guid.NewGuid(),
-            Name = sharedGame.Title,
-            CreatedAt = DateTime.UtcNow,
-            YearPublished = sharedGame.YearPublished,
-            MinPlayers = sharedGame.MinPlayers,
-            MaxPlayers = sharedGame.MaxPlayers,
-            MinPlayTimeMinutes = sharedGame.PlayingTimeMinutes,
-            MaxPlayTimeMinutes = sharedGame.PlayingTimeMinutes,
-            BggId = sharedGame.BggId,
-            ImageUrl = sharedGame.ImageUrl,
-            IconUrl = sharedGame.ThumbnailUrl,
-            Language = entry.Language,
-            VersionType = "base",
-            VersionNumber = "1.0",
-            SharedGameId = sharedGame.Id,
-            IsPublished = true,
-            ApprovalStatus = (int)GameStatus.Published
-        };
-
-        db.Games.Add(bridge);
-        await db.SaveChangesAsync(ct).ConfigureAwait(false);
-        return bridge;
-    }
-
-    private static SharedGameEntity CreateFromBggData(
+    internal static SharedGameEntity CreateFromBggData(
         BggGameDetailsDto bgg,
         string rulesLanguage,
         Guid systemUserId)
@@ -219,9 +158,13 @@ internal static class GameSeeder
             PlayingTimeMinutes = bgg.PlayingTime ?? bgg.MaxPlayTime ?? 60,
             MinAge = bgg.MinAge ?? 8,
             ComplexityRating = bgg.AverageWeight is > 0 ? (decimal)bgg.AverageWeight.Value : null,
-            AverageRating = bgg.AverageRating.HasValue ? (decimal)bgg.AverageRating.Value : null,
-            ImageUrl = bgg.ImageUrl ?? $"{PlaceholderImageBase}/400x300?text=No+Image",
-            ThumbnailUrl = bgg.ThumbnailUrl ?? $"{PlaceholderImageBase}/150x150?text=No+Image",
+            // Issue #2272: BGG returns AverageRating=0 for games with no votes; the Postgres
+            // constraint chk_shared_games_rating accepts NULL or 1.0..10.0, so normalize 0→null.
+            AverageRating = bgg.AverageRating is > 0 ? (decimal)bgg.AverageRating.Value : null,
+            // Issue #2123: cover URLs are NEVER seeded inline. CoverUrlResolver
+            // resolves at runtime from R2 (PDF / Wikidata) or returns null (FE renders placeholder).
+            ImageUrl = null,
+            ThumbnailUrl = null,
             Status = (int)GameStatus.Published,
             RulesLanguage = rulesLanguage,
             CreatedBy = systemUserId,
@@ -246,9 +189,13 @@ internal static class GameSeeder
             PlayingTimeMinutes = entry.PlayingTime ?? 60,
             MinAge = entry.MinAge ?? 10,
             ComplexityRating = entry.AverageWeight is > 0 ? (decimal)entry.AverageWeight.Value : null,
-            AverageRating = entry.AverageRating.HasValue ? (decimal)entry.AverageRating.Value : null,
-            ImageUrl = entry.ImageUrl ?? entry.FallbackImageUrl ?? $"{PlaceholderImageBase}/400x300?text=" + Uri.EscapeDataString(entry.Title),
-            ThumbnailUrl = entry.ThumbnailUrl ?? entry.FallbackThumbnailUrl ?? $"{PlaceholderImageBase}/150x150?text=" + Uri.EscapeDataString(entry.Title),
+            // Issue #2272: same sentinel-0 normalization as CreateFromBggData (manifest YAML
+            // may also carry averageRating: 0 for games with no votes).
+            AverageRating = entry.AverageRating is > 0 ? (decimal)entry.AverageRating.Value : null,
+            // Issue #2123: cover URLs are NEVER seeded inline. CoverUrlResolver
+            // resolves at runtime from R2 (PDF / Wikidata) or returns null (FE renders placeholder).
+            ImageUrl = null,
+            ThumbnailUrl = null,
             RulesExternalUrl = entry.RulesUrl,
             Status = (int)GameStatus.Published,
             RulesLanguage = entry.Language,
@@ -275,8 +222,10 @@ internal static class GameSeeder
             MinAge = 10,
             ComplexityRating = null,
             AverageRating = null,
-            ImageUrl = entry.FallbackImageUrl ?? $"{PlaceholderImageBase}/400x300?text=" + Uri.EscapeDataString(entry.Title),
-            ThumbnailUrl = entry.FallbackThumbnailUrl ?? $"{PlaceholderImageBase}/150x150?text=" + Uri.EscapeDataString(entry.Title),
+            // Issue #2123: cover URLs are NEVER seeded inline. CoverUrlResolver
+            // resolves at runtime from R2 (PDF / Wikidata) or returns null (FE renders placeholder).
+            ImageUrl = null,
+            ThumbnailUrl = null,
             Status = (int)GameStatus.Published,
             RulesLanguage = entry.Language,
             CreatedBy = systemUserId,

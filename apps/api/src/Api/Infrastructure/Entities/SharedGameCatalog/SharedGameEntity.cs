@@ -18,8 +18,15 @@ public class SharedGameEntity
     public int MinAge { get; set; }
     public decimal? ComplexityRating { get; set; }
     public decimal? AverageRating { get; set; }
-    public string ImageUrl { get; set; } = string.Empty;
-    public string ThumbnailUrl { get; set; } = string.Empty;
+    /// <summary>
+    /// Issue #2123 — BGG ToS compliance: nullable. Covers are resolved at runtime by
+    /// <see cref="Api.BoundedContexts.SharedGameCatalog.Application.Services.CoverUrlResolver"/>
+    /// from R2-hosted assets (PDF, BGG-reuploaded, Wikidata). This column is kept for
+    /// backward-compat with legacy admin tooling but seeders write <c>null</c> here.
+    /// FE consumers MUST prefer <c>SharedGameDto.CoverUrl</c>.
+    /// </summary>
+    public string? ImageUrl { get; set; }
+    public string? ThumbnailUrl { get; set; }
     public int Status { get; set; } // 0=Draft, 1=Published, 2=Archived
     public int GameDataStatus { get; set; } = 5; // Default Complete (5) for existing games
     public string? RulesContent { get; set; }
@@ -48,6 +55,71 @@ public class SharedGameEntity
     /// Spec-panel recommendation C-3.
     /// </summary>
     public byte[]? RowVersion { get; set; }
+
+    /// <summary>
+    /// Issue #1823 (umbrella #1821 L2) — Wikidata/Wikimedia Commons-sourced
+    /// cover image for this catalog game. Stored in R2 at
+    /// <c>covers/wikidata/{Id}/cover.webp</c>. Has lower priority than the
+    /// user-uploaded cover (L3) and PDF-derived cover (L4) but supersedes
+    /// the placeholder (L1). Nullable; populated by the Wikidata enrichment
+    /// job — see issue #1823 for the SPARQL query + license validation rules
+    /// (must be CC0 / CC-BY / CC-BY-SA + attribution stored alongside).
+    /// </summary>
+    public string? WikidataCoverR2Key { get; set; }
+
+    /// <summary>
+    /// Issue #1852 (umbrella #1821 L4) — PDF cover key denormalized from
+    /// PdfDocumentEntity.CoverR2Key via PdfCoverGeneratedEventHandler.
+    /// Stored in R2 at <c>covers/pdf/{SharedGameId}/{key}-preview.webp</c>.
+    /// Has higher priority than Wikidata (L2) and user-uploaded (L3) covers
+    /// but only when a PDF with a valid cover has been uploaded and processed.
+    /// Resolved to BlobCategory.GameImage when computing CoverUrl in DTOs.
+    /// </summary>
+    public string? PdfCoverR2Key { get; set; }
+
+    /// <summary>Source URL on Wikimedia Commons; surfaced in the attribution footer.</summary>
+    public string? WikidataCoverSourceUrl { get; set; }
+
+    /// <summary>License identifier (e.g. "CC-BY-SA-4.0"); restricts the rendered attribution string.</summary>
+    public string? WikidataCoverLicense { get; set; }
+
+    /// <summary>Attribution string ready for display (author + license link).</summary>
+    public string? WikidataCoverAttribution { get; set; }
+
+    /// <summary>
+    /// Issue #1823 Phase B M8 — Wikidata QID (e.g. <c>"Q98056728"</c>) that identifies this
+    /// game on Wikidata. Set by the M9 scheduler (or admin trigger) BEFORE the M8
+    /// enrichment orchestrator runs; the orchestrator reads this column to resolve
+    /// the SPARQL <c>wdt:P18</c> claim. Pattern <c>^Q\d+$</c>; max 32 chars covers
+    /// Q-numbers well past the current Wikidata range (~Q120M as of 2026).
+    /// </summary>
+    public string? WikidataQid { get; set; }
+
+    /// <summary>
+    /// Issue #1823 Phase B M8 (ADR DEC-3i) — timestamp of the last successful
+    /// QID + license re-verification. Used by the M15 quarterly re-verification
+    /// cron to skip recently-verified games and by the M8 orchestrator to detect
+    /// stale entries (&gt;90gg) that need refresh.
+    /// </summary>
+    public DateTime? WikidataQidLastVerifiedAt { get; set; }
+
+    /// <summary>
+    /// Gap G2 (issue: BGG cover re-upload).
+    /// R2 key for cover image downloaded from BGG and re-uploaded to our storage.
+    /// Resolved by CoverUrlResolver L2.5 layer (between L4 PDF and L2 Wikidata).
+    /// Null when no BGG enrichment was applied or download failed.
+    /// </summary>
+    public string? BggCoverR2Key { get; set; }
+
+    /// <summary>
+    /// Issue #1929 Task C Macro 3a (DEC-B-8, DEC-C-8) — E2E test seeding scope marker.
+    /// Explicit column (NOT shadow property) to avoid EF Core 9 + Npgsql null-after-save bug.
+    /// Stamped on insert by SeedTestLibraryGameCommandHandler; consumed by
+    /// CleanupTestEntitiesCommandHandler.ExecuteDeleteAsync for cascade-delete scope.
+    /// </summary>
+    [System.ComponentModel.DataAnnotations.Schema.Column("test_run_id")]
+    [System.ComponentModel.DataAnnotations.MaxLength(64)]
+    public string? TestRunId { get; set; }
 
     // Navigation properties (many-to-many)
     public ICollection<GameDesignerEntity> Designers { get; set; } = new List<GameDesignerEntity>();

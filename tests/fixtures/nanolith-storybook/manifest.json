@@ -1,0 +1,46 @@
+{
+  "$schema": "./manifest.schema.json",
+  "fixture_set": "nanolith-storybook-phase-a",
+  "version": "0.1.0",
+  "created": "2026-05-08",
+  "owner": "badsworm@gmail.com",
+  "copyright_notice": "Storybook narrativo © Side Room Studios. Foto reali in local/ non committate.",
+  "fixtures": [
+    {
+      "id": "nano-§147-happy",
+      "paragraph_id": "§147",
+      "chapter": "Cap.4 — La grotta dei Reaver",
+      "conditions": "light_normal",
+      "expected_segments": ["§146", "§147", "§148"],
+      "expected_match_quality": "exact",
+      "min_ocr_confidence": 0.7,
+      "path_local": "local/happy.jpg",
+      "path_synthetic": null,
+      "notes": "Happy path baseline — luce salotto normale, 3 paragrafi numerati visibili"
+    },
+    {
+      "id": "nano-§147-low-light",
+      "paragraph_id": "§147",
+      "chapter": "Cap.4 — La grotta dei Reaver",
+      "conditions": "light_low",
+      "expected_segments": ["§147"],
+      "expected_match_quality": "partial",
+      "min_ocr_confidence": 0.4,
+      "path_local": "local/low-light.jpg",
+      "path_synthetic": null,
+      "notes": "Edge case — luce ambient bassa, deve trigger banner amber + 3 azioni recovery (N3.2)"
+    },
+    {
+      "id": "nano-dense-no-numbering",
+      "paragraph_id": null,
+      "chapter": "Cap.5 — Il rito",
+      "conditions": "dense_text",
+      "expected_segments": [],
+      "expected_match_quality": "none",
+      "min_ocr_confidence": 0.7,
+      "path_local": "local/dense.jpg",
+      "path_synthetic": null,
+      "notes": "Edge case — pagina densa senza § visibili, deve trigger fallback manual entry (N3.3)"
+    }
+  ]
+}

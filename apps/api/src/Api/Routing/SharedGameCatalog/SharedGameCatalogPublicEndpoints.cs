@@ -100,7 +100,7 @@ internal static class SharedGameCatalogPublicEndpoints
         [FromQuery] string sortBy = "Title",
         [FromQuery] bool sortDescending = false,
         [FromQuery] bool? hasKb = null, // S2 (library-to-game epic) — filter for AI-ready games
-        // Issue #593 (Wave A.3a) — chip filters from `sp3-shared-games.jsx` mockup:
+                                        // Issue #593 (Wave A.3a) — chip filters from `sp3-shared-games.jsx` mockup:
         [FromQuery] bool? hasToolkit = null,
         [FromQuery] bool? hasAgent = null,
         [FromQuery] bool? isTopRated = null,

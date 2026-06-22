@@ -179,7 +179,7 @@ internal static class AiModelAdminEndpoints
 
         logger.LogInformation(
             "Admin {AdminId} creating AI model: {ModelId} ({Provider})",
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             command.ModelId,
             command.Provider
         );
@@ -201,7 +201,7 @@ internal static class AiModelAdminEndpoints
 
         logger.LogInformation(
             "Admin {AdminId} updating AI model: {ModelId}",
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             id
         );
 
@@ -229,7 +229,7 @@ internal static class AiModelAdminEndpoints
 
         logger.LogInformation(
             "Admin {AdminId} deleting AI model: {ModelId}",
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             id
         );
 
@@ -251,7 +251,7 @@ internal static class AiModelAdminEndpoints
 
         logger.LogInformation(
             "Admin {AdminId} updating priority for AI model {ModelId} to {Priority}",
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             id,
             request.NewPriority
         );
@@ -273,7 +273,7 @@ internal static class AiModelAdminEndpoints
 
         logger.LogInformation(
             "Admin {AdminId} toggling active status for AI model: {ModelId}",
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             id
         );
 
@@ -308,7 +308,7 @@ internal static class AiModelAdminEndpoints
 
         logger.LogInformation(
             "Admin {AdminId} updating tier routing for {Tier}: Production={ProductionModel}, Test={TestModel}",
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             request.Tier,
             request.ProductionModelId,
             request.TestModelId

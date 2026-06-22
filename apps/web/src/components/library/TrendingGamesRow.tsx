@@ -63,7 +63,7 @@ export function TrendingGamesRow({ games, className }: TrendingGamesRowProps) {
             'flex w-[110px] flex-shrink-0 flex-col overflow-hidden rounded-xl border-l-[3px] border-l-primary bg-card shadow-warm-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-warm-md';
 
           // Real data: link to game detail. Fallback: link to catalog browse.
-          const href = hasRealData ? `/library/games/${(game as TrendingGame).id}` : '/library';
+          const href = hasRealData ? `/library/${(game as TrendingGame).id}` : '/library';
 
           return (
             <Link key={`trending-${i}`} href={href} role="listitem" className={cardClass}>

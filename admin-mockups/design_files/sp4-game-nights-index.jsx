@@ -2,6 +2,7 @@
    Route: /game-nights
    File: admin-mockups/design_files/sp4-game-nights-index.{html,jsx}
    Pattern: Toggle Calendar / List view (header switch). Palette --c-event con gradient event→session.
+   DEMO-NAV-HINTS: sp7-game-night-new.html sp7-game-night-detail-rsvp.html
 
    v2 nuovi (per impl post-merge):
    - GameNightsHeader      → apps/web/src/components/ui/v2/game-nights-header/
@@ -627,14 +628,14 @@ const ListCard = ({ night, mobile }) => {
               background:'transparent', color:'var(--text)',
               border:'1px solid var(--border-strong)',
               fontFamily:'var(--f-display)', fontSize: 11, fontWeight: 800, cursor:'pointer',
-            }}>Vedi summary →</button>
+            }} onClick={() => { setTimeout(() => { window.location.href = 'sp7-game-night-detail-rsvp.html'; }, 0); /* DEMO-NAV */ }}>Vedi summary →</button>
           ) : isCancelled ? (
             <button type="button" style={{
               padding:'6px 12px', borderRadius:'var(--r-md)',
               background:'transparent', color:'var(--text-muted)',
               border:'1px solid var(--border)',
               fontFamily:'var(--f-display)', fontSize: 11, fontWeight: 700, cursor:'pointer',
-            }}>Riprogramma</button>
+            }} onClick={() => { setTimeout(() => { window.location.href = 'sp7-game-night-detail-rsvp.html'; }, 0); /* DEMO-NAV */ }}>Riprogramma</button>
           ) : isOrg ? (
             <button type="button" style={{
               padding:'6px 12px', borderRadius:'var(--r-md)',
@@ -648,7 +649,7 @@ const ListCard = ({ night, mobile }) => {
                 background: entityHsl('toolkit'), color:'#fff', border:'none',
                 fontFamily:'var(--f-display)', fontSize: 11, fontWeight: 800, cursor:'pointer',
                 lineHeight: 1.4,
-              }}>✓ Partecipo</button>
+              }} onClick={() => { setTimeout(() => { window.location.href = 'sp7-game-night-detail-rsvp.html'; }, 0); /* DEMO-NAV */ }}>✓ Partecipo</button>
               <button type="button" style={{
                 padding:'6px 10px', borderRadius:'var(--r-md)',
                 background:'transparent', color:'var(--text-sec)',
@@ -1014,8 +1015,11 @@ const MobileScreen = (props) => (
   </>
 );
 
-const PhoneShell = ({ label, desc, children }) => (
-  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap: 10 }}>
+const PhoneShell = ({ label, desc, children, conformityMarker }) => (
+  <div
+    style={{ display:'flex', flexDirection:'column', alignItems:'center', gap: 10 }}
+    {...(conformityMarker ? { 'data-conformity-screen': conformityMarker } : {})}
+  >
     <div style={{
       fontFamily:'var(--f-mono)', fontSize: 11, color:'var(--text-sec)',
       textTransform:'uppercase', letterSpacing:'.08em', fontWeight: 700,
@@ -1028,8 +1032,11 @@ const PhoneShell = ({ label, desc, children }) => (
   </div>
 );
 
-const DesktopFrame = ({ label, desc, children }) => (
-  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap: 12, width:'100%' }}>
+const DesktopFrame = ({ label, desc, children, conformityMarker }) => (
+  <div
+    style={{ display:'flex', flexDirection:'column', alignItems:'center', gap: 12, width:'100%' }}
+    {...(conformityMarker ? { 'data-conformity-screen': conformityMarker } : {})}
+  >
     <div style={{
       fontFamily:'var(--f-mono)', fontSize: 11, color:'var(--text-sec)',
       textTransform:'uppercase', letterSpacing:'.08em', fontWeight: 700,
@@ -1120,7 +1127,7 @@ const App = () => {
           </div>
         </div>
         <div style={{ flex: 1 }}/>
-        <button type="button" onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
+        <button type="button" onClick={(e) => { (() => setTheme(t => t === 'light' ? 'dark' : 'light'))(e); setTimeout(() => { window.location.href = 'sp7-game-night-detail-rsvp.html'; }, 0); /* DEMO-NAV */ }}
           style={{
             padding:'8px 14px', borderRadius:'var(--r-md)',
             background:'var(--bg-card)', border:'1px solid var(--border)',
@@ -1156,7 +1163,8 @@ const App = () => {
         </DesktopFrame>
 
         <DesktopFrame label="Desktop · 06 · Empty"
-          desc="Header normale ma body empty state: icona event 80px + h3 + CTA gradient grande '+ Crea la prima serata'.">
+          desc="Header normale ma body empty state: icona event 80px + h3 + CTA gradient grande '+ Crea la prima serata'."
+          conformityMarker="default-desktop">
           <DesktopScreen initialView="calendar" stateOverride="empty"/>
         </DesktopFrame>
 
@@ -1182,8 +1190,12 @@ const App = () => {
         <div style={{
           display:'flex', flexWrap:'wrap', gap: 32, justifyContent:'center',
         }}>
-          {MOBILE_STATES.map(m => (
-            <PhoneShell key={m.id} label={m.label} desc={m.desc}>
+          {MOBILE_STATES.map((m) => (
+            <PhoneShell
+              key={m.id}
+              label={m.label}
+              desc={m.desc}
+              conformityMarker={m.stateOverride === 'empty' ? 'default-mobile' : undefined}>
               <MobileScreen initialView={m.view} initialRole={m.role}
                 stateOverride={m.stateOverride} drawerDay={m.drawerDay}/>
             </PhoneShell>

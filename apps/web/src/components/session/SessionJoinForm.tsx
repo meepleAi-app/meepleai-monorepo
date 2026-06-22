@@ -46,7 +46,7 @@ export function SessionJoinForm({
   return (
     <form onSubmit={handleSubmit} className={`space-y-4 ${className}`}>
       <div>
-        <label htmlFor="session-code" className="mb-1.5 block text-sm font-medium text-gray-700">
+        <label htmlFor="session-code" className="mb-1.5 block text-sm font-medium text-foreground">
           Session Code
         </label>
         <input
@@ -56,7 +56,7 @@ export function SessionJoinForm({
           onChange={e => handleCodeChange(e.target.value)}
           placeholder="ABC123"
           maxLength={6}
-          className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-center font-mono text-2xl tracking-[0.3em] uppercase placeholder:text-gray-300 placeholder:tracking-[0.3em] focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+          className="w-full rounded-lg border border-border px-4 py-2.5 text-center font-mono text-2xl tracking-[0.3em] uppercase placeholder:text-foreground placeholder:tracking-[0.3em] focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
           disabled={isLoading}
           autoComplete="off"
           aria-describedby={error ? 'join-error' : undefined}
@@ -64,7 +64,7 @@ export function SessionJoinForm({
       </div>
 
       <div>
-        <label htmlFor="display-name" className="mb-1.5 block text-sm font-medium text-gray-700">
+        <label htmlFor="display-name" className="mb-1.5 block text-sm font-medium text-foreground">
           Your Name
         </label>
         <input
@@ -74,7 +74,7 @@ export function SessionJoinForm({
           onChange={e => setDisplayName(e.target.value)}
           placeholder="Player name"
           maxLength={50}
-          className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+          className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
           disabled={isLoading}
         />
       </div>

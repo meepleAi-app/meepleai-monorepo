@@ -258,7 +258,7 @@ export function QueueTab() {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <div className="rounded-xl border bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md overflow-x-auto">
+        <div className="rounded-xl border bg-card/70 backdrop-blur-md overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-xs text-muted-foreground">

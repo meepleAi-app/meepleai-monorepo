@@ -1,0 +1,19 @@
+version: 1
+
+checks:
+  - check_name: "Missing owner"
+    severity: warning
+    override_path: exception-comment
+    pre_existing_in_main_dev: false
+
+bot:
+  signature_header: "<!-- release-gate-bot:v1 -->"
+  verdict_emoji:
+    blocker: "X"
+    warning: "X"
+    informational: "X"
+    unknown: "X"
+  fallback_unknown:
+    severity: warning
+    owner: unknown
+    override_path: exception-comment

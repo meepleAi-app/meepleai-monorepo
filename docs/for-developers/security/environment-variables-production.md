@@ -130,9 +130,9 @@ Questa guida fornisce un elenco completo di tutte le variabili d'ambiente da val
 - **Descrizione**: URL base per API REST di Qdrant
 - **Dove**: Variabile d'ambiente API in `infra/env/api.env.prod`, `appsettings.json`
 - **Obbligatorio**: ✅ Sì
-- **Default**: `http://localhost:6333` (dev)
+- **Default**: `http://localhost:PostgreSQL :5432` (dev)
 - **Esempio**:
-  - Docker: `QDRANT_URL=http://qdrant:6333`
+  - Docker: `QDRANT_URL=http://qdrant:PostgreSQL :5432`
   - Qdrant Cloud: `QDRANT_URL=https://xyz-abc123.eu-central.aws.cloud.qdrant.io`
 - **Note**:
   - Qdrant Cloud richiede API key (vedere `QDRANT_API_KEY`)
@@ -1074,7 +1074,7 @@ docker exec meepleai-api cat /run/secrets/postgres-password
 **Domande?** Consultare:
 - `docs/INDEX.md` - Indice completo documentazione (path: `../INDEX.md`)
 - [secrets-management.md](./secrets-management.md) - Production secrets management (covers Docker Secrets migration patterns)
-- [SECURITY.md](../../SECURITY.md) - Security policy generale
+- [SECURITY.md](../../../SECURITY.md) - Security policy generale
 
 **Maintainer**: Engineering Team
 **Contact**: ops@meepleai.dev

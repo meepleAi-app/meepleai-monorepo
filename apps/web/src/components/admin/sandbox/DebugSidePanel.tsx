@@ -138,7 +138,7 @@ export function DebugSidePanel({ messageData }: DebugSidePanelProps) {
 
       {/* Footer summary bar */}
       <div
-        className="shrink-0 border-t bg-white/50 px-3 py-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs font-nunito"
+        className="shrink-0 border-t bg-card/50 px-3 py-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs font-nunito"
         data-testid="debug-footer"
       >
         <div className="flex items-center justify-between">
@@ -152,7 +152,7 @@ export function DebugSidePanel({ messageData }: DebugSidePanelProps) {
             className={`text-[10px] px-1.5 py-0 ${
               appliedConfig.reranking
                 ? 'border-green-300 text-green-700'
-                : 'border-gray-300 text-gray-500'
+                : 'border-border text-muted-foreground'
             }`}
           >
             {appliedConfig.reranking ? 'On' : 'Off'}

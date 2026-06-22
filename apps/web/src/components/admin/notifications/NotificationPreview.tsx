@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin tools chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13d admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 import { BellIcon, MailIcon } from 'lucide-react';
@@ -13,7 +14,7 @@ interface NotificationPreviewProps {
 export function NotificationPreview({ title, message, channels }: NotificationPreviewProps) {
   if (!title && !message) {
     return (
-      <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-dashed">
+      <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-dashed">
         <CardContent className="p-6 text-center text-muted-foreground text-sm">
           Start typing to see a preview
         </CardContent>
@@ -24,7 +25,7 @@ export function NotificationPreview({ title, message, channels }: NotificationPr
   return (
     <div className="space-y-3">
       {channels.includes('inapp') && (
-        <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md">
+        <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <BellIcon className="h-4 w-4 text-teal-500" />
@@ -41,7 +42,7 @@ export function NotificationPreview({ title, message, channels }: NotificationPr
       )}
 
       {channels.includes('email') && (
-        <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md">
+        <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <MailIcon className="h-4 w-4 text-blue-500" />
@@ -49,7 +50,7 @@ export function NotificationPreview({ title, message, channels }: NotificationPr
             </CardTitle>
           </CardHeader>
           <CardContent className="pb-4">
-            <div className="bg-slate-50 dark:bg-zinc-900/50 rounded-lg p-3">
+            <div className="bg-muted dark:bg-zinc-900/50 rounded-lg p-3">
               <p className="text-xs text-muted-foreground">Subject:</p>
               <p className="font-medium text-sm">{title}</p>
               <hr className="my-2 border-border/30" />

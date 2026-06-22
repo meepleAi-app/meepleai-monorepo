@@ -32,7 +32,7 @@ internal static class TestSessionHelper
     /// <summary>
     /// Pre-computed password hash for test users.
     /// Using a static hash avoids expensive PBKDF2 computation in tests.
-    /// Password: "TestPassword123!" hashed with v1.210000 iterations.
+    /// Password: "UniqueT3stPwd!" hashed with v1.210000 iterations.
     /// </summary>
     private const string TestPasswordHash = "v1.210000.AAAAAAAAAAAAAAAAAAAAAA==.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 

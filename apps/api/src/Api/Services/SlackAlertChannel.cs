@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using Api.Helpers;
 using Microsoft.Extensions.Options;
 using System.Globalization;
 
@@ -66,14 +67,14 @@ internal class SlackAlertChannel : IAlertChannel
                 _logger.LogInformation(
                     "Slack alert sent to {Channel} for {AlertType}",
                     resolvedChannel,
-                    alertType);
+                    LogSanitizer.Sanitize(alertType));
                 return true;
             }
 
             _logger.LogWarning(
                 "Slack webhook returned {StatusCode} for {AlertType}",
                 response.StatusCode,
-                alertType);
+                LogSanitizer.Sanitize(alertType));
             return false;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -85,7 +86,7 @@ internal class SlackAlertChannel : IAlertChannel
             // failure status. Throwing would prevent other channels from executing (email, PagerDuty).
             // Caller (AlertingService) tracks per-channel results for graceful degradation.
             // Context: Slack failures are typically external (webhook timeout, API rate limit)
-            _logger.LogError(ex, "Failed to send Slack alert for {AlertType}", alertType);
+            _logger.LogError(ex, "Failed to send Slack alert for {AlertType}", LogSanitizer.Sanitize(alertType));
             return false;
         }
     }

@@ -56,13 +56,6 @@ import {
   type LabelDto,
   type CreateCustomLabelRequest,
 } from '../schemas/library.schemas';
-import {
-  PendingMigrationDtoSchema,
-  MigrationChoiceResponseSchema,
-  type PendingMigrationDto,
-  type MigrationChoiceRequest,
-  type MigrationChoiceResponse,
-} from '../schemas/migrations.schemas';
 import { OwnershipResultSchema, type OwnershipResult } from '../schemas/ownership.schemas';
 import { GamePdfDtoSchema, type GamePdfDto } from '../schemas/pdf.schemas';
 import {
@@ -76,12 +69,6 @@ import {
   type PaginatedPrivateGamesResponse,
   type GetPrivateGamesParams,
 } from '../schemas/private-games.schemas';
-import {
-  ToolkitDashboardDtoSchema,
-  type ToolkitDashboardDto,
-  type OverrideToolkitRequest,
-  type UpdateWidgetRequest,
-} from '../schemas/toolkit.schemas';
 
 import type { HttpClient } from '../core/httpClient';
 
@@ -150,6 +137,27 @@ export interface LibraryClient {
   getGameDetail(gameId: string): Promise<GameDetailDto>;
   // Game State Management (Issue #2868)
   updateGameState(gameId: string, request: UpdateGameStateRequest): Promise<void>;
+  // Game Agent (Fase 3 consolidation — was direct fetch in 2 consumers)
+  createGameAgent(
+    gameId: string,
+    request: { agentDefinitionId: string; strategyName: string; strategyParameters?: string | null }
+  ): Promise<unknown>;
+  // Game Sessions recording (Fase 3 consolidation — was direct fetch in useGameDetail)
+  recordGameSession(
+    gameId: string,
+    request: {
+      playedAt: string;
+      durationMinutes: number;
+      didWin?: boolean | null;
+      players?: string | null;
+      notes?: string | null;
+    }
+  ): Promise<{ sessionId: string }>;
+  // Custom PDF upload (Fase 3 consolidation — was direct fetch in addGameWizardStore)
+  uploadCustomGamePdf(
+    gameId: string,
+    request: { pdfUrl: string; fileSizeBytes: number; originalFileName: string }
+  ): Promise<unknown>;
   // Agent Configuration (Issue #2518)
   getAgentConfig(gameId: string): Promise<AgentConfigDto | null>;
   updateAgentConfig(gameId: string, request: UpdateAgentConfigRequest): Promise<AgentConfigDto>;
@@ -181,12 +189,6 @@ export interface LibraryClient {
   deletePrivateGame(id: string): Promise<void>;
   // PDF Indexing Status (Issue #4946)
   getPdfProcessingStatus(gameId: string): Promise<PdfIndexingStatus>;
-  // Proposal Migrations (Issue #3669)
-  getPendingMigrations(): Promise<PendingMigrationDto[]>;
-  chooseMigration(
-    migrationId: string,
-    request: MigrationChoiceRequest
-  ): Promise<MigrationChoiceResponse>;
   // Game PDFs (Issue #4915)
   getGamePdfs(gameId: string): Promise<GamePdfDto[]>;
   // EntityLinks (Issue #5142 — Epic A)
@@ -199,14 +201,6 @@ export interface LibraryClient {
   sendLoanReminder(gameId: string, customMessage?: string): Promise<void>;
   // Ownership Declaration (RAG Access)
   declareOwnership(gameId: string): Promise<OwnershipResult>;
-  // Toolkit Dashboard (Issue #5147 — Epic B4)
-  getActiveToolkit(gameId: string): Promise<ToolkitDashboardDto | null>;
-  overrideToolkit(gameId: string, request?: OverrideToolkitRequest): Promise<ToolkitDashboardDto>;
-  updateToolkitWidget(
-    gameId: string,
-    widgetType: string,
-    request: UpdateWidgetRequest
-  ): Promise<ToolkitDashboardDto>;
   // Library Downgrade Preview (Library Improvements)
   getLibraryForDowngrade(newQuota: number): Promise<LibraryForDowngradeResponse>;
   bulkRemoveFromLibrary(gameIds: string[]): Promise<void>;
@@ -422,12 +416,59 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
     },
 
     /**
-     * Update game state (Nuovo/InPrestito/Wishlist/Owned) (Issue #2868)
+     * Update game state (Nuovo/InPrestito/Wishlist/Owned) (Issue #2868).
+     * Consolidated under PATCH /library/games/{id} — state fields piggy-back on
+     * the entry update body (NewState/StateNotes). Server applies the state
+     * transition then updates entry fields in a single round-trip.
      * @param gameId - Game UUID to update
      * @param request - New state and optional notes
      */
     async updateGameState(gameId: string, request: UpdateGameStateRequest): Promise<void> {
-      await httpClient.put(`/api/v1/library/games/${gameId}/state`, request);
+      await httpClient.patch(`/api/v1/library/games/${gameId}`, request);
+    },
+
+    /**
+     * Create a per-game AI agent (Fase 3 consolidation).
+     * POST /api/v1/library/games/{gameId}/agent
+     */
+    async createGameAgent(
+      gameId: string,
+      request: { agentDefinitionId: string; strategyName: string; strategyParameters?: string | null }
+    ): Promise<unknown> {
+      return httpClient.post<unknown>(`/api/v1/library/games/${gameId}/agent`, request);
+    },
+
+    /**
+     * Record a played game session (Fase 3 consolidation).
+     * POST /api/v1/library/games/{gameId}/sessions
+     */
+    async recordGameSession(
+      gameId: string,
+      request: {
+        playedAt: string;
+        durationMinutes: number;
+        didWin?: boolean | null;
+        players?: string | null;
+        notes?: string | null;
+      }
+    ): Promise<{ sessionId: string }> {
+      const result = await httpClient.post<{ sessionId: string }>(
+        `/api/v1/library/games/${gameId}/sessions`,
+        request
+      );
+      if (!result) throw new Error('Failed to record game session');
+      return result;
+    },
+
+    /**
+     * Upload a custom PDF rulebook URL (Fase 3 consolidation).
+     * POST /api/v1/library/games/{gameId}/pdf
+     */
+    async uploadCustomGamePdf(
+      gameId: string,
+      request: { pdfUrl: string; fileSizeBytes: number; originalFileName: string }
+    ): Promise<unknown> {
+      return httpClient.post<unknown>(`/api/v1/library/games/${gameId}/pdf`, request);
     },
 
     /**
@@ -774,46 +815,6 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
     // ==================== Proposal Migrations (Issue #3669) ====================
 
     /**
-     * Get pending migration choices for approved proposals
-     * @returns List of pending migrations requiring user decision
-     */
-    async getPendingMigrations(): Promise<PendingMigrationDto[]> {
-      const data = await httpClient.get<PendingMigrationDto[]>(
-        '/api/v1/migrations/pending',
-        z.array(PendingMigrationDtoSchema)
-      );
-
-      if (!data) {
-        throw new Error('Failed to fetch pending migrations');
-      }
-
-      return data;
-    },
-
-    /**
-     * Handle migration choice (keep private vs migrate to shared)
-     * @param migrationId - Migration UUID
-     * @param request - Migration action choice
-     * @returns Migration choice result
-     */
-    async chooseMigration(
-      migrationId: string,
-      request: MigrationChoiceRequest
-    ): Promise<MigrationChoiceResponse> {
-      const data = await httpClient.post<MigrationChoiceResponse>(
-        `/api/v1/migrations/${migrationId}/choose`,
-        request,
-        MigrationChoiceResponseSchema
-      );
-
-      if (!data) {
-        throw new Error('Failed to process migration choice');
-      }
-
-      return data;
-    },
-
-    /**
      * Get PDFs for a game in user's library (custom + catalog)
      * Issue #4915: Agent creation wizard PDF selection
      * @param gameId - Game UUID
@@ -927,53 +928,6 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
     },
 
     // ========== Toolkit Dashboard (Issue #5147 — Epic B4) ==========
-
-    /**
-     * Get the active toolkit for a game (user override or shared default).
-     * Returns null when no toolkit exists yet (204 from API).
-     * GET /api/v1/library/games/{gameId}/toolkit
-     */
-    async getActiveToolkit(gameId: string): Promise<ToolkitDashboardDto | null> {
-      return httpClient.get<ToolkitDashboardDto>(
-        `/api/v1/library/games/${gameId}/toolkit`,
-        ToolkitDashboardDtoSchema
-      );
-    },
-
-    /**
-     * Create or update the user's toolkit override for a game.
-     * PUT /api/v1/library/games/{gameId}/toolkit
-     */
-    async overrideToolkit(
-      gameId: string,
-      request: OverrideToolkitRequest = {}
-    ): Promise<ToolkitDashboardDto> {
-      const data = await httpClient.put<ToolkitDashboardDto>(
-        `/api/v1/library/games/${gameId}/toolkit`,
-        request,
-        ToolkitDashboardDtoSchema
-      );
-      if (!data) throw new Error('Failed to create toolkit override');
-      return data;
-    },
-
-    /**
-     * Enable/disable or reconfigure a single widget in the active toolkit.
-     * PATCH /api/v1/library/games/{gameId}/toolkit/widgets/{widgetType}
-     */
-    async updateToolkitWidget(
-      gameId: string,
-      widgetType: string,
-      request: UpdateWidgetRequest
-    ): Promise<ToolkitDashboardDto> {
-      const data = await httpClient.patch<ToolkitDashboardDto>(
-        `/api/v1/library/games/${gameId}/toolkit/widgets/${widgetType}`,
-        request,
-        ToolkitDashboardDtoSchema
-      );
-      if (!data) throw new Error('Failed to update toolkit widget');
-      return data;
-    },
 
     // ========== Library Downgrade Preview (Library Improvements) ==========
 

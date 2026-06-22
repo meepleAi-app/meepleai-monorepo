@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * AgentSettingsDrawer - Runtime agent configuration drawer
  * Issue #3250 (FRONT-014) — Rewritten to use dynamic models from API
@@ -194,13 +195,13 @@ export function AgentSettingsDrawer({
 
   return (
     <Sheet open={isOpen} onOpenChange={open => !open && onClose()}>
-      <SheetContent side="right" className="w-[400px] flex flex-col bg-slate-900 border-slate-800">
-        <SheetHeader className="border-b border-slate-800 pb-4">
+      <SheetContent side="right" className="w-[400px] flex flex-col bg-card border-border">
+        <SheetHeader className="border-b border-border pb-4">
           <SheetTitle className="flex items-center gap-2 text-white">
             <Settings className="h-5 w-5 text-cyan-400" />
             Impostazioni Agente
           </SheetTitle>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             Le modifiche si applicano alla prossima domanda
           </p>
         </SheetHeader>
@@ -220,7 +221,7 @@ export function AgentSettingsDrawer({
                   value={form.name}
                   onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
                   maxLength={100}
-                  className="bg-slate-800 border-slate-700 text-white"
+                  className="bg-card border-border text-white"
                   data-testid="agent-name-input"
                 />
               </div>
@@ -236,17 +237,17 @@ export function AgentSettingsDrawer({
                   onValueChange={id => setForm(prev => ({ ...prev, modelId: id }))}
                 >
                   <SelectTrigger
-                    className="bg-slate-800 border-slate-700 text-white"
+                    className="bg-card border-border text-white"
                     data-testid="model-selector"
                   >
                     <SelectValue placeholder="Seleziona modello" />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
+                  <SelectContent className="bg-card border-border">
                     {models.map(model => (
                       <SelectItem
                         key={model.id}
                         value={model.id}
-                        className="text-white hover:bg-slate-700"
+                        className="text-white hover:bg-card"
                       >
                         <div className="flex items-center gap-2">
                           <span>{model.name}</span>
@@ -267,7 +268,7 @@ export function AgentSettingsDrawer({
                   </SelectContent>
                 </Select>
                 {selectedModel && (
-                  <div className="flex items-center gap-1 text-[10px] text-slate-500">
+                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                     {selectedModel.description}
                     {costEstimate && Number(costEstimate) > 0 && (
                       <span className="ml-auto flex items-center gap-0.5 text-amber-400">
@@ -299,7 +300,7 @@ export function AgentSettingsDrawer({
                   className="w-full"
                   data-testid="temperature-slider"
                 />
-                <div className="flex justify-between text-[10px] text-slate-500">
+                <div className="flex justify-between text-[10px] text-muted-foreground">
                   <span>Preciso</span>
                   <span>Creativo</span>
                 </div>
@@ -318,21 +319,21 @@ export function AgentSettingsDrawer({
                   min={1}
                   max={32000}
                   step={256}
-                  className="bg-slate-800 border-slate-700 text-white"
+                  className="bg-card border-border text-white"
                   data-testid="max-tokens-input"
                 />
-                <p className="text-[10px] text-slate-500">Range: 1 - 32000</p>
+                <p className="text-[10px] text-muted-foreground">Range: 1 - 32000</p>
               </div>
             </>
           )}
         </div>
 
         {/* Footer Actions */}
-        <SheetFooter className="border-t border-slate-800 pt-4 flex-row gap-3">
+        <SheetFooter className="border-t border-border pt-4 flex-row gap-3">
           <Button
             variant="ghost"
             onClick={handleReset}
-            className="text-slate-400 hover:text-white"
+            className="text-muted-foreground hover:text-white"
             disabled={isPending || isLoading}
           >
             <RotateCcw className="h-4 w-4 mr-2" />

@@ -39,8 +39,8 @@ export function UploadSummary({ stats, onClose, onClearAll }: UploadSummaryProps
           {summaryIcon}
         </div>
         <div>
-          <div className="text-lg font-semibold text-gray-800">Upload Complete</div>
-          <div className="text-sm text-gray-600 mt-0.5">
+          <div className="text-lg font-semibold text-foreground">Upload Complete</div>
+          <div className="text-sm text-muted-foreground mt-0.5">
             {allSucceeded
               ? `All ${stats.total} files uploaded successfully!`
               : `${stats.succeeded} succeeded, ${stats.failed} failed${hasCancelled ? `, ${stats.cancelled} cancelled` : ''}`}
@@ -53,44 +53,44 @@ export function UploadSummary({ stats, onClose, onClearAll }: UploadSummaryProps
         className="grid gap-3 mb-4"
         style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}
       >
-        <div className="text-center p-3 bg-white rounded-md">
-          <div className="text-2xl font-bold text-gray-800">{stats.total}</div>
-          <div className="text-sm text-gray-600 mt-1">Total</div>
+        <div className="text-center p-3 bg-card rounded-md">
+          <div className="text-2xl font-bold text-foreground">{stats.total}</div>
+          <div className="text-sm text-muted-foreground mt-1">Total</div>
         </div>
 
-        <div className="text-center p-3 bg-white rounded-md">
+        <div className="text-center p-3 bg-card rounded-md">
           <div className="text-2xl font-bold text-green-600">{stats.succeeded}</div>
-          <div className="text-sm text-gray-600 mt-1">Succeeded</div>
+          <div className="text-sm text-muted-foreground mt-1">Succeeded</div>
         </div>
 
         {stats.failed > 0 && (
-          <div className="text-center p-3 bg-white rounded-md">
+          <div className="text-center p-3 bg-card rounded-md">
             <div className="text-2xl font-bold text-red-600">{stats.failed}</div>
-            <div className="text-sm text-gray-600 mt-1">Failed</div>
+            <div className="text-sm text-muted-foreground mt-1">Failed</div>
           </div>
         )}
 
         {stats.cancelled > 0 && (
-          <div className="text-center p-3 bg-white rounded-md">
-            <div className="text-2xl font-bold text-gray-600">{stats.cancelled}</div>
-            <div className="text-sm text-gray-600 mt-1">Cancelled</div>
+          <div className="text-center p-3 bg-card rounded-md">
+            <div className="text-2xl font-bold text-muted-foreground">{stats.cancelled}</div>
+            <div className="text-sm text-muted-foreground mt-1">Cancelled</div>
           </div>
         )}
       </div>
 
       {/* Messages */}
       {hasFailures && (
-        <div role="alert" className="p-3 bg-white border border-red-600 rounded-md mb-4">
+        <div role="alert" className="p-3 bg-card border border-red-600 rounded-md mb-4">
           <div className="text-sm font-semibold text-red-600 mb-1">Some uploads failed</div>
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-muted-foreground">
             Review the failed items in the queue and use the Retry button to try again.
           </div>
         </div>
       )}
 
       {allSucceeded && (
-        <div className="p-3 bg-white border border-green-600 rounded-md mb-4">
-          <div className="text-sm text-gray-600">
+        <div className="p-3 bg-card border border-green-600 rounded-md mb-4">
+          <div className="text-sm text-muted-foreground">
             All files have been uploaded and are being processed. You can view them in the Uploaded
             PDFs section below.
           </div>

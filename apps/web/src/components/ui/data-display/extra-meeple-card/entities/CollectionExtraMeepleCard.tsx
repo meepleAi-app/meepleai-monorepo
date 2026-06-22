@@ -58,7 +58,7 @@ export const CollectionExtraMeepleCard = React.memo(function CollectionExtraMeep
     <div
       className={cn(
         'flex w-[600px] flex-col rounded-2xl overflow-hidden',
-        'bg-white/70 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-white/20',
+        'bg-card/70 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-border',
         'max-md:w-full',
         className
       )}
@@ -80,7 +80,7 @@ export const CollectionExtraMeepleCard = React.memo(function CollectionExtraMeep
         onValueChange={v => setActiveTab(v as CollectionTab)}
         className="flex flex-1 flex-col"
       >
-        <TabsList className="mx-4 mt-3 h-10 w-auto justify-start gap-1 bg-slate-100/80 rounded-lg p-1">
+        <TabsList className="mx-4 mt-3 h-10 w-auto justify-start gap-1 bg-muted/80 rounded-lg p-1">
           <EntityTabTrigger
             value="overview"
             icon={Library}
@@ -113,7 +113,7 @@ export const CollectionExtraMeepleCard = React.memo(function CollectionExtraMeep
                 />
               </div>
               {data.description && (
-                <p className="font-nunito text-xs text-slate-600 leading-relaxed">
+                <p className="font-nunito text-xs text-muted-foreground leading-relaxed">
                   {data.description}
                 </p>
               )}
@@ -123,14 +123,14 @@ export const CollectionExtraMeepleCard = React.memo(function CollectionExtraMeep
           <TabsContent value="games" className="mt-0">
             <div className="space-y-2">
               {data.games.length === 0 ? (
-                <p className="font-nunito text-xs text-slate-400 text-center py-8">
+                <p className="font-nunito text-xs text-muted-foreground text-center py-8">
                   No games in collection
                 </p>
               ) : (
                 data.games.map(g => (
                   <div
                     key={g.id}
-                    className="flex items-center gap-3 rounded-lg bg-white/50 border border-slate-200/40 p-2.5"
+                    className="flex items-center gap-3 rounded-lg bg-card/50 border border-border/40 p-2.5"
                   >
                     {g.imageUrl ? (
                       <img
@@ -143,7 +143,7 @@ export const CollectionExtraMeepleCard = React.memo(function CollectionExtraMeep
                         <Gamepad2 className="h-5 w-5 text-teal-400" />
                       </div>
                     )}
-                    <p className="font-nunito text-xs font-medium text-slate-700">{g.title}</p>
+                    <p className="font-nunito text-xs font-medium text-foreground">{g.title}</p>
                   </div>
                 ))
               )}

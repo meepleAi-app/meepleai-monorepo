@@ -47,7 +47,7 @@ internal sealed class GetDocumentOverviewQueryHandler
         var pdfs = await _db.PdfDocuments
             .AsNoTracking()
             .Where(p => p.SharedGameId == query.SharedGameId
-                || _db.Games.Any(g => g.SharedGameId == query.SharedGameId && g.Id == p.PrivateGameId))
+                || _db.SharedGames.Any(g => g.Id == query.SharedGameId && g.Id == p.PrivateGameId))
             .Select(p => new
             {
                 p.Id,

@@ -8,12 +8,17 @@ import { describe, it, expect } from 'vitest';
 import {
   UNIFIED_NAV_ITEMS,
   NAV_ITEMS,
+  TOP_BAR_NAV_IDS,
+  BOTTOM_TAB_NAV_IDS,
+  USER_PILL_NAV_IDS,
+  BOTTOM_TAB_LABEL_OVERRIDES,
   filterNavItemsByRole,
   isUnifiedNavItemActive,
   isNavItemActive,
   getNavItemsForBreakpoint,
   getOverflowNavItems,
   getContextActionSlots,
+  pickNavItemsByIds,
 } from '../navigation';
 
 describe('UNIFIED_NAV_ITEMS', () => {
@@ -191,7 +196,7 @@ describe('isUnifiedNavItemActive', () => {
     const library = UNIFIED_NAV_ITEMS.find(item => item.id === 'library')!;
     expect(isUnifiedNavItemActive(library, '/library')).toBe(true);
     expect(isUnifiedNavItemActive(library, '/library/private')).toBe(true);
-    expect(isUnifiedNavItemActive(library, '/library/proposals')).toBe(true);
+    expect(isUnifiedNavItemActive(library, '/library/wishlist')).toBe(true);
   });
 
   it('matches prefix for chat', () => {
@@ -269,5 +274,57 @@ describe('getContextActionSlots', () => {
 
   it('returns positive number for tablet', () => {
     expect(getContextActionSlots('tablet')).toBeGreaterThan(0);
+  });
+});
+
+describe('sp4 navbar placement', () => {
+  it('includes hub and toolkit items', () => {
+    const hub = UNIFIED_NAV_ITEMS.find(item => item.id === 'hub');
+    const toolkit = UNIFIED_NAV_ITEMS.find(item => item.id === 'toolkit');
+    // Issue #2190: hub now points to /games multi-tab hub (Asse D P2 #1899)
+    expect(hub?.href).toBe('/games');
+    expect(hub?.visibility?.authOnly).toBe(true);
+    expect(toolkit?.href).toBe('/toolkit');
+    expect(toolkit?.group).toBe('strumenti');
+  });
+
+  it('hub voice is labelled "Games" (Issue #2190 full cleanup)', () => {
+    const hub = UNIFIED_NAV_ITEMS.find(item => item.id === 'hub');
+    // Issue #2190: rename "Hub" voice to "Games" to disambiguate from the
+    // legacy /hub/* route family that was retired by Stage 3 #1026.
+    expect(hub?.label).toBe('Games');
+  });
+
+  it('hub activePattern matches /games or /hub routes', () => {
+    const hub = UNIFIED_NAV_ITEMS.find(item => item.id === 'hub')!;
+    // Issue #2190: /games is the canonical hub; /hub/* preserved for legacy bookmarks.
+    expect(isUnifiedNavItemActive(hub, '/games')).toBe(true);
+    expect(isUnifiedNavItemActive(hub, '/games?tab=discover')).toBe(true);
+    expect(isUnifiedNavItemActive(hub, '/hub/games')).toBe(true);
+    expect(isUnifiedNavItemActive(hub, '/hub/agents')).toBe(true);
+    expect(isUnifiedNavItemActive(hub, '/library')).toBe(false);
+  });
+
+  it('toolkit activePattern matches /toolkit but not /toolkits', () => {
+    const toolkit = UNIFIED_NAV_ITEMS.find(item => item.id === 'toolkit')!;
+    expect(isUnifiedNavItemActive(toolkit, '/toolkit')).toBe(true);
+    expect(isUnifiedNavItemActive(toolkit, '/toolkit/history')).toBe(true);
+    expect(isUnifiedNavItemActive(toolkit, '/toolkits')).toBe(false);
+  });
+
+  it('placement id lists reference existing nav items', () => {
+    const ids = new Set(UNIFIED_NAV_ITEMS.map(item => item.id));
+    [...TOP_BAR_NAV_IDS, ...BOTTOM_TAB_NAV_IDS, ...USER_PILL_NAV_IDS].forEach(id => {
+      expect(ids.has(id)).toBe(true);
+    });
+  });
+
+  it('pickNavItemsByIds returns items ordered by ids, skipping missing', () => {
+    const picked = pickNavItemsByIds(UNIFIED_NAV_ITEMS, ['library', 'dashboard', 'does-not-exist']);
+    expect(picked.map(item => item.id)).toEqual(['library', 'dashboard']);
+  });
+
+  it('maps the dashboard bottom tab label to Home', () => {
+    expect(BOTTOM_TAB_LABEL_OVERRIDES.dashboard).toBe('Home');
   });
 });

@@ -25,7 +25,7 @@ internal sealed class Vector : ValueObject
 
     /// <summary>
     /// Creates a placeholder vector for search results where the actual vector values are not needed.
-    /// Use this when mapping Qdrant search results that don't include vector data.
+    /// Use this when mapping pgvector search results that don't include vector data.
     /// </summary>
     /// <param name="dimensions">The vector dimensions (default: 768 for nomic-embed-text)</param>
     public static Vector CreatePlaceholder(int dimensions = 768)

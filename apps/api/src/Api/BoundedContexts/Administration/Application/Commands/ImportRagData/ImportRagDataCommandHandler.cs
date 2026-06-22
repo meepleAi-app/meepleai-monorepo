@@ -69,6 +69,13 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to deserialize manifest at {Path}", manifestPath);
+            // SECURITY (test-guarded): expose only the exception TYPE in the returned
+            // payload. JsonException.Message includes "Path: $.<property> | LineNumber:
+            // N | BytePositionInLine: N" — leaking the manifest schema and file layout
+            // to admin API callers and log shipping pipelines. The full message + stack
+            // trace are preserved server-side by LogError above. The unit test
+            // ImportRagDataCommandHandlerTests.Handle_WhenManifestDeserializationFails_ShouldNotIncludeRawExceptionMessageInError
+            // enforces this contract.
             return new ImportRagDataResult(
                 TotalDocuments: 0,
                 Imported: 0,
@@ -76,7 +83,7 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                 Failed: 0,
                 ReEmbedded: 0,
                 Warnings: warnings,
-                Errors: [$"Failed to deserialize manifest: {ex.Message}"]);
+                Errors: [$"Failed to deserialize manifest ({ex.GetType().Name})"]);
         }
 
         _logger.LogInformation(
@@ -84,13 +91,13 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
             manifest.TotalDocuments, request.SnapshotPath);
 
         // ── 2. Build game slug → GameEntity lookup ────────────────────────────
-        var allGames = await _db.Games
+        var allGames = await _db.SharedGames
             .AsNoTracking()
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         var gameBySlug = allGames
-            .GroupBy(g => RagBackupPathHelper.Slugify(g.Name), StringComparer.OrdinalIgnoreCase)
+            .GroupBy(g => RagBackupPathHelper.Slugify(g.Title), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
         // ── 3. Import each document ───────────────────────────────────────────
@@ -112,20 +119,7 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                     continue;
                 }
 
-                // a.1. Precondition: PdfDocument requires a SharedGameId after the migration.
-                // GameEntity.SharedGameId is nullable (legacy rows may still be unlinked).
-                // Importing without SharedGameId would produce an orphaned PdfDocument
-                // (no SharedGameId and no PrivateGameId), which violates the new invariant.
-                if (game.SharedGameId is null)
-                {
-                    warnings.Add($"Game '{entry.GameSlug}' is not linked to a SharedGame — skipping document {entry.PdfDocumentId} to avoid orphaned import");
-                    _logger.LogWarning(
-                        "ImportRagData: skipping document {PdfDocumentId} — game '{GameSlug}' (Id={GameId}) has no SharedGameId",
-                        entry.PdfDocumentId, entry.GameSlug, game.Id);
-                    skipped++;
-                    continue;
-                }
-
+                // Post-Phase2d: SharedGame.Id is non-nullable; PdfDocument always gets a SharedGameId.
                 // b. Read document metadata.json
                 var metadataPath = $"{entry.Path}/metadata.json";
                 var metadataBytes = await _storage.ReadFileAsync(metadataPath, cancellationToken).ConfigureAwait(false);
@@ -182,8 +176,8 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                 var pdfDocument = new PdfDocumentEntity
                 {
                     Id = pdfDocumentId,
-                    // Guaranteed non-null by guard above (game.SharedGameId is not null).
-                    SharedGameId = game.SharedGameId,
+                    // Guaranteed non-null by guard above (game.Id is not null).
+                    SharedGameId = game.Id,
                     FileName = docInfo.FileName,
                     FilePath = string.Empty,
                     FileSizeBytes = docInfo.FileSizeBytes ?? 0,
@@ -205,6 +199,10 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
 
                 // f. Create VectorDocumentEntity
                 var vectorDocumentId = Guid.NewGuid();
+#pragma warning disable MAI005 // Out-of-scope for the #2244 / P234 refactor — admin RAG data import
+                                // is a separate ingestion path that bulk-imports pre-existing embeddings (no
+                                // domain event needed since this is import, not new indexing). Migrate to
+                                // domain.ToEntity() pattern if/when this path needs to raise events.
                 var vectorDocument = new VectorDocumentEntity
                 {
                     Id = vectorDocumentId,
@@ -218,6 +216,7 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                     EmbeddingModel = metadata.EmbeddingModel,
                     EmbeddingDimensions = metadata.EmbeddingDimensions,
                 };
+#pragma warning restore MAI005
 
                 _db.VectorDocuments.Add(vectorDocument);
 
@@ -290,7 +289,13 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                errors.Add($"Error importing document {entry.PdfDocumentId}: {ex.Message}");
+                // SECURITY (test-guarded): never embed ex.Message in the per-document
+                // error. EF Core / storage exceptions routinely carry SQL fragments,
+                // parameter values, and backend-internal details (bucket names, request
+                // IDs, etc.). Surface only the exception type; full diagnostic detail
+                // is preserved by the LogWarning below. Enforced by
+                // ImportRagDataCommandHandlerTests.Handle_WhenStorageReadDuringImportThrows_ShouldNotIncludeRawExceptionMessageInError.
+                errors.Add($"Error importing document {entry.PdfDocumentId} ({ex.GetType().Name})");
                 failed++;
                 _logger.LogWarning(ex, "ImportRagData: failed to import document {PdfDocumentId}", entry.PdfDocumentId);
                 // Clear any partially-tracked entities so they do not corrupt the next iteration.

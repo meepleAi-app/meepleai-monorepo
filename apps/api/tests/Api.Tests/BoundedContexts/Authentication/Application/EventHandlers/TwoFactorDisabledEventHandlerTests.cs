@@ -6,8 +6,6 @@ using Api.Services;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
-using FluentAssertions;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -16,7 +14,9 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.EventHandlers;
 
 /// <summary>
 /// Unit tests for <see cref="TwoFactorDisabledEventHandler"/>.
-/// Tests audit logging and email notification for 2FA disablement events.
+/// Issue #1534: Audit persistence is now centralised in <c>DomainEventAuditHandler</c> and is covered
+/// by <c>DomainEventAuditHandlerTests</c>. The handler-specific side effect (security alert email)
+/// remains under test here.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class TwoFactorDisabledEventHandlerTests : IDisposable
@@ -42,7 +42,7 @@ public class TwoFactorDisabledEventHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_WithValidUser_CreatesAuditLogAndSendsEmail()
+    public async Task Handle_WithValidUser_SendsSecurityAlertEmail()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -70,14 +70,6 @@ public class TwoFactorDisabledEventHandlerTests : IDisposable
         await _handler.Handle(@event, CancellationToken.None);
 
         // Assert
-        var auditLogs = await _dbContext.AuditLogs.ToListAsync();
-        auditLogs.Should().HaveCount(1);
-
-        var auditLog = auditLogs.First();
-        auditLog.UserId.Should().Be(userId);
-        auditLog.Resource.Should().Be(nameof(TwoFactorDisabledEvent));
-        auditLog.Details.Should().Contain("TwoFactorDisabled");
-
         _mockEmailService.Verify(
             e => e.SendTwoFactorDisabledEmailAsync(
                 "test@example.com",
@@ -123,14 +115,10 @@ public class TwoFactorDisabledEventHandlerTests : IDisposable
                 true, // wasAdminOverride should be true
                 It.IsAny<CancellationToken>()),
             Times.Once);
-
-        var auditLog = await _dbContext.AuditLogs.FirstAsync();
-        auditLog.Details.Should().Contain("WasAdminOverride");
-        auditLog.Details.Should().Contain("true");
     }
 
     [Fact]
-    public async Task Handle_WithNonExistentUser_CreatesAuditLogButNoEmail()
+    public async Task Handle_WithNonExistentUser_DoesNotSendEmail()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -143,11 +131,7 @@ public class TwoFactorDisabledEventHandlerTests : IDisposable
         // Act
         await _handler.Handle(@event, CancellationToken.None);
 
-        // Assert - Audit log should still be created
-        var auditLogs = await _dbContext.AuditLogs.ToListAsync();
-        auditLogs.Should().HaveCount(1);
-
-        // Email should not be sent for non-existent user
+        // Assert - Email should not be sent for non-existent user
         _mockEmailService.Verify(
             e => e.SendTwoFactorDisabledEmailAsync(
                 It.IsAny<string>(),
@@ -158,7 +142,7 @@ public class TwoFactorDisabledEventHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_WhenEmailServiceFails_StillCreatesAuditLog()
+    public async Task Handle_WhenEmailServiceFails_LogsErrorAndSwallowsException()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -185,11 +169,7 @@ public class TwoFactorDisabledEventHandlerTests : IDisposable
         // Act - Should not throw
         await _handler.Handle(@event, CancellationToken.None);
 
-        // Assert - Audit log should still be created
-        var auditLogs = await _dbContext.AuditLogs.ToListAsync();
-        auditLogs.Should().HaveCount(1);
-
-        // Error should be logged
+        // Assert - Error should be logged
         _mockLogger.Verify(
             x => x.Log(
                 LogLevel.Error,
@@ -198,26 +178,6 @@ public class TwoFactorDisabledEventHandlerTests : IDisposable
                 It.IsAny<Exception?>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
-    }
-
-    [Fact]
-    public async Task Handle_CapturesWasAdminOverrideInMetadata()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var @event = new TwoFactorDisabledEvent(userId, wasAdminOverride: false);
-
-        _mockUserRepository
-            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((User?)null);
-
-        // Act
-        await _handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLog = await _dbContext.AuditLogs.FirstAsync();
-        auditLog.Details.Should().Contain("WasAdminOverride");
-        auditLog.Details.Should().Contain("Action");
     }
 
     public void Dispose()

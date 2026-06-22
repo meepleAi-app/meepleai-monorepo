@@ -43,11 +43,11 @@ public class MyPlugin : RagPluginBase
 
 | Document | Description |
 |----------|-------------|
-| [Plugin Development Guide](plugin-development-guide.md) | Complete guide to creating plugins |
-| [Plugin Contract Reference](plugin-contract.md) | IRagPlugin interface documentation |
-| [Pipeline Definition Schema](pipeline-definition.md) | JSON schema for pipeline definitions |
-| [Visual Builder Guide](visual-builder-guide.md) | Using the drag-drop pipeline builder |
-| [Testing Guide](testing-guide.md) | Testing plugins with the test framework |
+| **Plugin Development Guide** _(planned)_ | Complete guide to creating plugins |
+| **Plugin Contract Reference** _(planned)_ | IRagPlugin interface documentation |
+| **Pipeline Definition Schema** _(planned)_ | JSON schema for pipeline definitions |
+| **Visual Builder Guide** _(planned)_ | Using the drag-drop pipeline builder |
+| **Testing Guide** _(planned)_ | Testing plugins with the test framework |
 | [Built-in Plugins](built-in-plugins/) | Reference for included plugins |
 
 ## Architecture Overview
@@ -153,17 +153,17 @@ Pipelines are defined as directed acyclic graphs (DAGs):
 
 ## Getting Started
 
-1. **[Read the Development Guide](plugin-development-guide.md)** - Learn plugin architecture
+1. ****Read the Development Guide** _(planned)_** - Learn plugin architecture
 2. **[Explore Built-in Plugins](built-in-plugins/)** - See real examples
-3. **[Use the Visual Builder](visual-builder-guide.md)** - Create pipelines visually
-4. **[Write Tests](testing-guide.md)** - Ensure quality with the test framework
+3. ****Use the Visual Builder** _(planned)_** - Create pipelines visually
+4. ****Write Tests** _(planned)_** - Ensure quality with the test framework
 
 ## Related Documentation
 
-- [RAG Architecture Overview](../00-overview.md)
-- [Layer 1: Routing](../02-layer1-routing.md)
-- [Layer 2: Caching](../03-layer2-caching.md)
-- [Layer 3: Retrieval](../04-layer3-retrieval.md)
-- [Layer 4: Evaluation](../05-layer4-crag-evaluation.md)
-- [Layer 5: Generation](../06-layer5-generation.md)
-- [Layer 6: Validation](../07-layer6-validation.md)
+- **RAG Architecture Overview** _(planned)_
+- **Layer 1: Routing** _(planned)_
+- **Layer 2: Caching** _(planned)_
+- **Layer 3: Retrieval** _(planned)_
+- **Layer 4: Evaluation** _(planned)_
+- **Layer 5: Generation** _(planned)_
+- **Layer 6: Validation** _(planned)_

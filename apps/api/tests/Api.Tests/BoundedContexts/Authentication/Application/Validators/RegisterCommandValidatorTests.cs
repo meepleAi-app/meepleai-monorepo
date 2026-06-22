@@ -21,7 +21,7 @@ public sealed class RegisterCommandValidatorTests
         // Arrange
         var command = new RegisterCommand(
             Email: "test@example.com",
-            Password: "ValidPassword123!",
+            Password: "ValidUnusualPwd123!",
             DisplayName: "Test User"
         );
 
@@ -40,7 +40,7 @@ public sealed class RegisterCommandValidatorTests
         // Arrange
         var command = new RegisterCommand(
             Email: email!,
-            Password: "ValidPassword123!",
+            Password: "ValidUnusualPwd123!",
             DisplayName: "Test User"
         );
 
@@ -61,7 +61,7 @@ public sealed class RegisterCommandValidatorTests
         // Arrange
         var command = new RegisterCommand(
             Email: email,
-            Password: "ValidPassword123!",
+            Password: "ValidUnusualPwd123!",
             DisplayName: "Test User"
         );
 
@@ -80,7 +80,7 @@ public sealed class RegisterCommandValidatorTests
         var longEmail = new string('a', 250) + "@test.com";
         var command = new RegisterCommand(
             Email: longEmail,
-            Password: "ValidPassword123!",
+            Password: "ValidUnusualPwd123!",
             DisplayName: "Test User"
         );
 
@@ -128,7 +128,7 @@ public sealed class RegisterCommandValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.Password)
-            .WithErrorMessage("Password must be at least 8 characters");
+            .WithErrorMessage("Password must be at least 12 characters");
     }
 
     [Fact]
@@ -180,7 +180,7 @@ public sealed class RegisterCommandValidatorTests
         // Arrange
         var command = new RegisterCommand(
             Email: "test@example.com",
-            Password: "ValidPassword123!",
+            Password: "ValidUnusualPwd123!",
             DisplayName: displayName!
         );
 
@@ -198,7 +198,7 @@ public sealed class RegisterCommandValidatorTests
         // Arrange
         var command = new RegisterCommand(
             Email: "test@example.com",
-            Password: "ValidPassword123!",
+            Password: "ValidUnusualPwd123!",
             DisplayName: "A"
         );
 
@@ -217,7 +217,7 @@ public sealed class RegisterCommandValidatorTests
         var longName = new string('a', 101);
         var command = new RegisterCommand(
             Email: "test@example.com",
-            Password: "ValidPassword123!",
+            Password: "ValidUnusualPwd123!",
             DisplayName: longName
         );
 
@@ -240,7 +240,7 @@ public sealed class RegisterCommandValidatorTests
         // Arrange
         var command = new RegisterCommand(
             Email: "test@example.com",
-            Password: "ValidPassword123!",
+            Password: "ValidUnusualPwd123!",
             DisplayName: displayName
         );
 
@@ -261,7 +261,7 @@ public sealed class RegisterCommandValidatorTests
         // Arrange
         var command = new RegisterCommand(
             Email: "test@example.com",
-            Password: "ValidPassword123!",
+            Password: "ValidUnusualPwd123!",
             DisplayName: displayName
         );
 
@@ -282,7 +282,7 @@ public sealed class RegisterCommandValidatorTests
         // Arrange
         var command = new RegisterCommand(
             Email: "test@example.com",
-            Password: "ValidPassword123!",
+            Password: "ValidUnusualPwd123!",
             DisplayName: "Test User",
             Role: role
         );
@@ -300,7 +300,7 @@ public sealed class RegisterCommandValidatorTests
         // Arrange
         var command = new RegisterCommand(
             Email: "test@example.com",
-            Password: "ValidPassword123!",
+            Password: "ValidUnusualPwd123!",
             DisplayName: "Test User",
             Role: null
         );
@@ -322,7 +322,7 @@ public sealed class RegisterCommandValidatorTests
         // Arrange
         var command = new RegisterCommand(
             Email: "test@example.com",
-            Password: "ValidPassword123!",
+            Password: "ValidUnusualPwd123!",
             DisplayName: "Test User",
             Role: role
         );

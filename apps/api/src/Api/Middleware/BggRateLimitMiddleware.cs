@@ -79,7 +79,7 @@ internal class BggRateLimitMiddleware
             // Extract user identity from active session
             var (authenticated, session, _) = context.TryGetActiveSession();
 
-            if (!authenticated || session?.User is null)
+            if (!authenticated || session?.Principal?.Subject is null)
             {
                 context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
                 await context.Response.WriteAsJsonAsync(new
@@ -90,7 +90,7 @@ internal class BggRateLimitMiddleware
                 return false;
             }
 
-            var user = session.User;
+            var user = session.Principal!.Subject;
             var userRole = Role.Parse(user.Role);
 
             // Admin bypass

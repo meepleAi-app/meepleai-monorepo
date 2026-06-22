@@ -70,7 +70,7 @@ internal static class SessionLimitsConfigEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         logger.LogInformation(
             "Admin {UserId} updating session limits: Free={Free}, Normal={Normal}, Premium={Premium}",
@@ -106,8 +106,8 @@ internal static class SessionLimitsConfigEndpoints
         var (authenticated, session, error) = context.TryGetActiveSession();
         if (!authenticated) return error!;
 
-        var requestingUserId = session!.User!.Id;
-        var requestingRole = Role.Parse(session.User!.Role);
+        var requestingUserId = session!.Principal!.Subject.Id;
+        var requestingRole = Role.Parse(session.Principal!.EffectiveActor.Role);
 
         // Users can only check their own quota, admins can check any user
         if (id != requestingUserId && !requestingRole.IsAdmin())
@@ -126,7 +126,7 @@ internal static class SessionLimitsConfigEndpoints
             return Results.NotFound("User quota lookup for other users not yet implemented");
         }
 
-        var userTier = UserTier.Parse(session.User!.Tier);
+        var userTier = UserTier.Parse(session.Principal!.Subject.Tier);
 
         var quotaInfo = await quotaService.GetQuotaInfoAsync(
             id,

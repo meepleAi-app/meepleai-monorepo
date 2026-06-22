@@ -27,7 +27,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   SharedGamesApiError,
   getSharedGameDetail,
-  type SharedGameDetailV2,
+  type SharedGameDetail,
 } from '@/lib/api/shared-games';
 
 const STALE_MS = 60_000;
@@ -47,11 +47,21 @@ export type SharedGameDetailFsmStatus = 'loading' | 'default' | 'empty' | 'not-f
 export interface UseSharedGameDetailArgs {
   readonly id: string;
   /** SSR seed; passed through to React Query as `initialData`. */
-  readonly initialData?: SharedGameDetailV2;
+  readonly initialData?: SharedGameDetail;
+  /**
+   * Optional external `enabled` gate. ANDed with the internal `id.length > 0`
+   * defensive check, so callers can defer the fetch (e.g. tab-active lazy
+   * loading per #2309 DEC-B) without losing the empty-id guard.
+   *
+   * Default: `true`. Set to `false` while the consuming surface is hidden
+   * (collapsed tab, off-screen pane) to avoid wasted requests for users
+   * who never expand it.
+   */
+  readonly enabled?: boolean;
 }
 
 export interface UseSharedGameDetailResult {
-  readonly data: SharedGameDetailV2 | undefined;
+  readonly data: SharedGameDetail | undefined;
   readonly status: SharedGameDetailFsmStatus;
   readonly isLoading: boolean;
   readonly isFetching: boolean;
@@ -65,7 +75,7 @@ export interface UseSharedGameDetailResult {
  * no agents, no KBs. Matches the spec's `'empty'` UI state, distinct from
  * `'not-found'`: the game exists, but nobody has shared anything yet.
  */
-function isDetailEmpty(detail: SharedGameDetailV2): boolean {
+function isDetailEmpty(detail: SharedGameDetail): boolean {
   return detail.toolkitsCount === 0 && detail.agentsCount === 0 && detail.kbsCount === 0;
 }
 
@@ -76,7 +86,7 @@ function isDetailEmpty(detail: SharedGameDetailV2): boolean {
  * loading.
  */
 function deriveFsmStatus(
-  data: SharedGameDetailV2 | undefined,
+  data: SharedGameDetail | undefined,
   error: Error | null,
   isLoading: boolean
 ): SharedGameDetailFsmStatus {
@@ -101,12 +111,12 @@ function deriveFsmStatus(
 export function useSharedGameDetail(args: UseSharedGameDetailArgs): UseSharedGameDetailResult {
   const queryKey = ['shared-game-detail', args.id] as const;
 
-  const result = useQuery<SharedGameDetailV2, Error>({
+  const result = useQuery<SharedGameDetail, Error>({
     queryKey,
     queryFn: () => getSharedGameDetail(args.id),
     initialData: args.initialData,
     staleTime: STALE_MS,
-    enabled: args.id.length > 0,
+    enabled: args.id.length > 0 && (args.enabled ?? true),
   });
 
   const status = deriveFsmStatus(result.data, result.error, result.isLoading);

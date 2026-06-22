@@ -138,7 +138,7 @@ export function ScoreInput({
 
         {/* Participant Tabs - Mobile Optimized */}
         <div className="space-y-2">
-          <Label className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+          <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
             Player
           </Label>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -150,7 +150,7 @@ export function ScoreInput({
                 className={`relative flex items-center justify-center gap-2 rounded-lg border-2 px-3 py-3 text-sm font-semibold transition-all active:scale-95 ${
                   participantId === p.id
                     ? 'border-amber-600 bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-600/30'
-                    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-amber-600/50'
+                    : 'border-border bg-card text-foreground hover:border-amber-600/50'
                 }`}
               >
                 <span className="truncate">{p.displayName.replace(/\s*\(io\)\s*/i, '')}</span>
@@ -168,7 +168,7 @@ export function ScoreInput({
             <div className="space-y-2">
               <Label
                 htmlFor="round"
-                className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400"
+                className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
               >
                 Round
               </Label>
@@ -178,7 +178,7 @@ export function ScoreInput({
               >
                 <SelectTrigger
                   id="round"
-                  className="h-12 border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-semibold"
+                  className="h-12 border-2 border-border bg-card font-semibold"
                 >
                   <SelectValue />
                 </SelectTrigger>
@@ -199,7 +199,7 @@ export function ScoreInput({
             <div className="space-y-2">
               <Label
                 htmlFor="category"
-                className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400"
+                className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
               >
                 Category
               </Label>
@@ -209,7 +209,7 @@ export function ScoreInput({
               >
                 <SelectTrigger
                   id="category"
-                  className="h-12 border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-semibold"
+                  className="h-12 border-2 border-border bg-card font-semibold"
                 >
                   <SelectValue />
                 </SelectTrigger>
@@ -230,7 +230,7 @@ export function ScoreInput({
         <div className="space-y-3">
           <Label
             htmlFor="score"
-            className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400"
+            className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
           >
             Score
           </Label>
@@ -268,7 +268,7 @@ export function ScoreInput({
               value={scoreValue}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setScoreValue(e.target.value)}
               placeholder="0"
-              className="h-14 flex-1 border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-center font-mono text-2xl font-bold tabular-nums focus:border-amber-600 focus:ring-amber-600"
+              className="h-14 flex-1 border-2 border-border dark:border-border bg-card text-center font-mono text-2xl font-bold tabular-nums focus:border-amber-600 focus:ring-amber-600"
             />
 
             {/* Quick Increment Buttons */}
@@ -313,7 +313,7 @@ export function ScoreInput({
               variant="outline"
               onClick={onUndo}
               disabled={isSubmitting}
-              className="flex-shrink-0 border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition-all"
+              className="flex-shrink-0 border-2 border-border bg-card hover:bg-muted active:scale-95 transition-all"
             >
               <Undo2 className="h-4 w-4 mr-2" />
               Undo

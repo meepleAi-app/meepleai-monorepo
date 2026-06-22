@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { Settings2Icon, Loader2Icon } from 'lucide-react';
@@ -76,7 +77,7 @@ export function ConfigTab() {
 
 function ConfigField({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
-    <div className="rounded-lg border bg-white/50 dark:bg-zinc-800/50 p-3">
+    <div className="rounded-lg border bg-card/50 dark:bg-zinc-800/50 p-3">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className={`text-sm font-medium ${accent ?? 'text-foreground'}`}>{value}</p>
     </div>

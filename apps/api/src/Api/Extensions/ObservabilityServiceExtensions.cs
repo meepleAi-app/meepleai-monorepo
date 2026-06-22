@@ -26,7 +26,6 @@ internal static class ObservabilityServiceExtensions
 
     private static readonly string[] PostgresTags = new[] { "db", "sql", HealthCheckTags.Core, HealthCheckTags.Critical };
     private static readonly string[] RedisTags = new[] { "cache", "redis", HealthCheckTags.Core, HealthCheckTags.Critical };
-    // Qdrant health check tags removed — pgvector is now the sole vector store (no separate health check needed)
     private static readonly string[] N8nTags = new[] { "automation", "workflow" };
     private static readonly string[] SharedCatalogTags = new[] { "database", "fts", "shared-catalog" };
     private static readonly string[] ConfigurationTags = new[] { "configuration", "startup" };
@@ -124,7 +123,7 @@ internal static class ObservabilityServiceExtensions
         AddExternalHealthChecks(healthChecksBuilder, configuration);
 
         // Add comprehensive health checks for AI, External APIs, and Monitoring
-        healthChecksBuilder.AddComprehensiveHealthChecks();
+        healthChecksBuilder.AddComprehensiveHealthChecks(configuration);
 
         return services;
     }
@@ -197,7 +196,6 @@ internal static class ObservabilityServiceExtensions
                 healthCheckRedisConnectionString,
                 name: "redis",
                 tags: RedisTags)
-            // Qdrant health checks removed — pgvector is the sole vector store (health covered by Postgres check)
             .AddCheck<Api.Infrastructure.HealthChecks.SharedGameCatalogHealthCheck>(
                 "shared-catalog-fts",
                 failureStatus: HealthStatus.Degraded,

@@ -23,6 +23,31 @@ public sealed class Session : AggregateRoot<Guid>
     public string? UserAgent { get; private set; }
     public string? DeviceFingerprint { get; private set; } // Issue #3677: Device tracking
 
+    /// <summary>
+    /// Non-null when this session is an active impersonation. Holds the Id of the admin/superadmin
+    /// that initiated the impersonation (the ACTOR). For regular login sessions, this is null.
+    /// SP5 Admin Security S2 — D-S2-2 (dual-principal session).
+    /// </summary>
+    public Guid? ImpersonatedByUserId { get; private set; }
+
+    /// <summary>
+    /// UTC timestamp at which the impersonation auto-expires (D-S2-4). Null for non-impersonate
+    /// sessions. The auth middleware enforces a hard 401 when this is in the past.
+    /// </summary>
+    public DateTime? ImpersonatedUntil { get; private set; }
+
+    /// <summary>
+    /// UTC timestamp of the last successful TOTP verification on this session (login OR step-up).
+    /// Null when no TOTP verification has happened. Read by the strict
+    /// <c>TwoFactorEnforcementBehavior</c> against per-command <c>MaxAgeMinutes</c>. For impersonate
+    /// sessions, inherited from the actor at creation (S3 spike §5).
+    /// SP5 Admin Security S3 — D-S3-3.
+    /// </summary>
+    public DateTime? LastTotpVerifiedAt { get; private set; }
+
+    /// <summary>True when this session is an active impersonation.</summary>
+    public bool IsImpersonation => ImpersonatedByUserId is not null;
+
     // Navigation property for EF Core
     public User? User { get; }
 
@@ -50,7 +75,10 @@ public sealed class Session : AggregateRoot<Guid>
         TimeSpan? lifetime = null,
         string? ipAddress = null,
         string? userAgent = null,
-        TimeProvider? timeProvider = null) : base(id)
+        TimeProvider? timeProvider = null,
+        Guid? impersonatedByUserId = null,
+        DateTime? impersonatedUntil = null,
+        DateTime? lastTotpVerifiedAt = null) : base(id)
     {
         ArgumentNullException.ThrowIfNull(token);
         UserId = userId;
@@ -65,6 +93,18 @@ public sealed class Session : AggregateRoot<Guid>
 
         // Issue #3677: Generate device fingerprint from UserAgent
         DeviceFingerprint = GenerateDeviceFingerprint(userAgent);
+
+        // SP5 Admin Security S2 — impersonation pairing. When both are set, this session
+        // represents an active impersonation (UserId = subject; ImpersonatedByUserId = actor).
+        // For regular login both are null and the session behaves as before.
+        ImpersonatedByUserId = impersonatedByUserId;
+        ImpersonatedUntil = impersonatedUntil;
+
+        // SP5 Admin Security S3 — TOTP recency. Optional; for impersonate sessions this is
+        // INHERITED from the actor's session at creation (spike §5). For login sessions this
+        // is set by the login handler when verification succeeded; for password-only sessions
+        // it stays null and the strict behavior treats the session as needing step-up.
+        LastTotpVerifiedAt = lastTotpVerifiedAt;
     }
 
     /// <summary>
@@ -105,6 +145,31 @@ public sealed class Session : AggregateRoot<Guid>
     public void UpdateLastSeen(TimeProvider? timeProvider = null)
     {
         LastSeenAt = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+    }
+
+    /// <summary>
+    /// Records a successful TOTP verification on this session — login OR step-up. Refreshes the
+    /// recency window read by <c>TwoFactorEnforcementBehavior</c>. SP5 Admin Security S3 — D-S3-4.
+    /// </summary>
+    public void UpdateTotpVerified(TimeProvider? timeProvider = null)
+    {
+        LastTotpVerifiedAt = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+    }
+
+    /// <summary>
+    /// Returns true when the session has a TOTP verification within <paramref name="maxAgeMinutes"/>.
+    /// Used by the strict <c>TwoFactorEnforcementBehavior</c> path (D-S3-1/D-S3-7).
+    /// </summary>
+    public bool IsTotpRecent(int maxAgeMinutes, TimeProvider timeProvider)
+    {
+        ArgumentNullException.ThrowIfNull(timeProvider);
+        if (LastTotpVerifiedAt is null)
+        {
+            return false;
+        }
+
+        var age = timeProvider.GetUtcNow().UtcDateTime - LastTotpVerifiedAt.Value;
+        return age <= TimeSpan.FromMinutes(maxAgeMinutes);
     }
 
     /// <summary>

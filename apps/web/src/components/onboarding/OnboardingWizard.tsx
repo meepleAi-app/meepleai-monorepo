@@ -116,14 +116,14 @@ export function OnboardingWizard({ token, role: _role, startStep = 1 }: Onboardi
       {/* Header with skip link */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-quicksand text-2xl font-bold text-slate-900">Welcome to MeepleAI</h1>
-          <p className="mt-1 text-sm text-slate-600">Set up your account in a few quick steps</p>
+          <h1 className="font-quicksand text-2xl font-bold text-foreground">Welcome to MeepleAI</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Set up your account in a few quick steps</p>
         </div>
         {state.passwordCompleted && (
           <button
             type="button"
             onClick={handleSkipWizard}
-            className="text-sm text-slate-500 hover:text-slate-700 underline"
+            className="text-sm text-muted-foreground hover:text-foreground underline"
             data-testid="skip-wizard"
           >
             Skip wizard
@@ -133,7 +133,7 @@ export function OnboardingWizard({ token, role: _role, startStep = 1 }: Onboardi
 
       {/* Progress bar */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between text-sm text-slate-600">
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>
             Step {state.currentStep} of {totalSteps}
           </span>
@@ -149,7 +149,7 @@ export function OnboardingWizard({ token, role: _role, startStep = 1 }: Onboardi
                   ? 'bg-amber-500'
                   : i === state.currentStep - 1
                     ? 'bg-amber-500'
-                    : 'bg-slate-200'
+                    : 'bg-muted'
               )}
               data-testid={`progress-step-${i + 1}`}
             />
@@ -159,7 +159,7 @@ export function OnboardingWizard({ token, role: _role, startStep = 1 }: Onboardi
 
       {/* Step content */}
       <div
-        className="rounded-xl border bg-white/70 backdrop-blur-md p-6 shadow-sm"
+        className="rounded-xl border bg-card/70 backdrop-blur-md p-6 shadow-sm"
         data-testid="wizard-step-content"
       >
         {state.currentStep === 1 && (
@@ -187,7 +187,7 @@ export function OnboardingWizard({ token, role: _role, startStep = 1 }: Onboardi
             <button
               type="button"
               onClick={goToPrev}
-              className="text-sm font-medium text-slate-600 hover:text-slate-900"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground"
               data-testid="wizard-back"
             >
               Back
@@ -199,7 +199,7 @@ export function OnboardingWizard({ token, role: _role, startStep = 1 }: Onboardi
             <button
               type="button"
               onClick={goToNext}
-              className="text-sm text-slate-500 hover:text-slate-700"
+              className="text-sm text-muted-foreground hover:text-foreground"
               data-testid="wizard-skip"
             >
               Skip

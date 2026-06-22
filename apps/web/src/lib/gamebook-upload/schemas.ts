@@ -27,7 +27,7 @@
  *   - `apps/web/src/lib/gamebook-upload/fsm.ts`
  *   - `apps/web/src/lib/gamebook-upload/visual-test-fixture.ts`
  *   - `apps/web/src/lib/gamebook-upload/idempotency-key.ts`
- *   - `apps/web/src/components/v2/gamebook-upload/*` (Phase C.1.B Task 2)
+ *   - `apps/web/src/components/features/gamebook-upload/*` (Phase C.1.B Task 2)
  *   - `apps/web/src/app/(authenticated)/gamebook/upload/*` (Phase C.1.B Task 3)
  */
 

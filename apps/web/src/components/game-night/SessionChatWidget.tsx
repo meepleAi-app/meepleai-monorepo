@@ -79,8 +79,8 @@ export function SessionChatWidget({
   return (
     <section
       className={cn(
-        'rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden',
-        'bg-white/80 dark:bg-slate-800/60 backdrop-blur-sm',
+        'rounded-xl border border-border overflow-hidden',
+        'bg-card/80 dark:bg-card backdrop-blur-sm',
         className
       )}
       data-testid="session-chat-widget"
@@ -91,7 +91,7 @@ export function SessionChatWidget({
         onClick={() => setExpanded(v => !v)}
         className={cn(
           'w-full flex items-center gap-2 px-3 py-2.5 text-left',
-          'hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors'
+          'hover:bg-muted transition-colors'
         )}
         aria-expanded={expanded}
         data-testid="chat-toggle"
@@ -100,31 +100,31 @@ export function SessionChatWidget({
           className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0"
           aria-hidden="true"
         />
-        <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex-1 truncate">
+        <span className="text-sm font-semibold text-foreground flex-1 truncate">
           Chat regole
         </span>
 
         {!expanded && lastAssistantMsg && (
-          <span className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[50%]">
+          <span className="text-xs text-muted-foreground truncate max-w-[50%]">
             {lastAssistantMsg.content.slice(0, 60)}
             {lastAssistantMsg.content.length > 60 ? '...' : ''}
           </span>
         )}
 
         {expanded ? (
-          <ChevronUp className="h-4 w-4 text-slate-400 flex-shrink-0" aria-hidden="true" />
+          <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" aria-hidden="true" />
         ) : (
-          <ChevronDown className="h-4 w-4 text-slate-400 flex-shrink-0" aria-hidden="true" />
+          <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" aria-hidden="true" />
         )}
       </button>
 
       {/* Expanded body */}
       {expanded && (
-        <div className="border-t border-slate-200 dark:border-slate-700">
+        <div className="border-t border-border">
           {/* Messages list */}
           <div className="max-h-60 overflow-y-auto px-3 py-2 space-y-2" data-testid="chat-messages">
             {messages.length === 0 && (
-              <p className="text-xs text-slate-400 dark:text-slate-500 text-center py-4">
+              <p className="text-xs text-muted-foreground text-center py-4">
                 Chiedi una regola per iniziare...
               </p>
             )}
@@ -136,7 +136,7 @@ export function SessionChatWidget({
                   'text-sm rounded-lg px-3 py-2 max-w-[85%]',
                   msg.role === 'user'
                     ? 'ml-auto bg-amber-600 text-white'
-                    : 'mr-auto bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-100'
+                    : 'mr-auto bg-muted text-foreground'
                 )}
                 data-testid={`chat-message-${msg.role}`}
               >
@@ -145,7 +145,7 @@ export function SessionChatWidget({
             ))}
 
             {isStreaming && (
-              <div className="flex items-center gap-1.5 text-xs text-slate-400 mr-auto">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mr-auto">
                 <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
                 <span>Sta rispondendo...</span>
               </div>
@@ -157,7 +157,7 @@ export function SessionChatWidget({
           {/* Input form */}
           <form
             onSubmit={handleSubmit}
-            className="flex items-center gap-2 border-t border-slate-200 dark:border-slate-700 px-3 py-2"
+            className="flex items-center gap-2 border-t border-border px-3 py-2"
           >
             <Input
               ref={inputRef}

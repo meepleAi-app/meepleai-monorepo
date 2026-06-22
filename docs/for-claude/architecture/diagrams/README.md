@@ -287,12 +287,12 @@ Aggiorna i diagrammi quando:
 ## 📚 Riferimenti
 
 ### Documentazione Correlata
-- [Architecture Overview](../board-game-ai-architecture-overview.md)
-- [API Specification](../../api/board-game-ai-api-specification.md)
-- [ADR-001: Hybrid RAG Architecture](../adr-001-hybrid-rag-architecture.md)
-- [ADR-003: 3-Stage PDF Pipeline](../adr-003-pdf-pipeline-fallback.md)
-- [DDD Status and Roadmap](../../refactoring/ddd-status-and-roadmap.md)
-- [Database Schema](../../database-schema.md)
+- **Architecture Overview** _(planned)_
+- **API Specification** _(planned)_
+- **ADR-001: Hybrid RAG Architecture** _(planned)_
+- **ADR-003: 3-Stage PDF Pipeline** _(planned)_
+- **DDD Status and Roadmap** _(planned)_
+- **Database Schema** _(planned)_
 
 ### External Resources
 - [Mermaid Documentation](https://mermaid.js.org/)

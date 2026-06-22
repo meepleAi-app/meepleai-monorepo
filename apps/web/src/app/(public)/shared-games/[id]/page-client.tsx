@@ -1,5 +1,5 @@
 /**
- * /shared-games/[id] — client body (V2, Wave A.4, Issue #603).
+ * /shared-games/[id] — client body (Issue #603).
  *
  * Owns:
  *   - i18n resolution (single `useTranslation()` call → all labels resolved upfront)
@@ -37,11 +37,12 @@ import {
   tabId,
   tabPanelId,
   type TabKey,
-} from '@/components/ui/v2/shared-game-detail';
+} from '@/components/ui/detail-layout';
 import { useSharedGameDetail } from '@/hooks/useSharedGameDetail';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useUrlHashState } from '@/hooks/useUrlHashState';
-import { type SharedGameDetailV2, type TopContributor } from '@/lib/api/shared-games';
+import { type SharedGameDetail, type TopContributor } from '@/lib/api/shared-games';
+import { useGameTitle } from '@/lib/i18n/use-game-title';
 
 const VALID_TAB_KEYS: ReadonlySet<TabKey> = new Set(TAB_KEYS);
 
@@ -91,14 +92,21 @@ function parseStateOverride(raw: string | null): DetailStateOverride | undefined
 
 export interface SharedGameDetailPageClientProps {
   readonly id: string;
-  readonly detail: SharedGameDetailV2;
+  readonly detail: SharedGameDetail;
   readonly contributors: readonly TopContributor[];
+  /**
+   * Suppress the bottom "Sign in" StickyCta. Default false (public route).
+   * `(authenticated)/hub/games/[id]` passes `true` since the visitor CTA
+   * has no meaning for a user who is already signed in (#2118).
+   */
+  readonly hideStickyCta?: boolean;
 }
 
 export function SharedGameDetailPageClient({
   id,
   detail,
   contributors,
+  hideStickyCta = false,
 }: SharedGameDetailPageClientProps): JSX.Element {
   const { t, formatMessage } = useTranslation();
 
@@ -117,7 +125,14 @@ export function SharedGameDetailPageClient({
 
   // SSR seed guarantees `data` is defined on first paint, but TanStack Query
   // can briefly undefine it during refetch. Fall back to the SSR `detail` prop.
-  const game: SharedGameDetailV2 = data ?? detail;
+  const game: SharedGameDetail = data ?? detail;
+
+  // Issue #2339 — viewer-locale title resolution. The `Hero` primitive does
+  // not currently expose an `aria-label` slot, so the
+  // `common.localizedFromEnglish` hint cannot be wired here; the title text
+  // itself is the resolved viewer-locale value. Track follow-up in the
+  // ESLint warn-rule sweep (Task 7).
+  const { value: resolvedTitle } = useGameTitle(game);
 
   // Override `empty-tab` clears nested arrays so EmptyState renders unobstructed.
   const toolkits = stateOverride === 'empty-tab' ? [] : (game.toolkits ?? []);
@@ -323,7 +338,7 @@ export function SharedGameDetailPageClient({
     >
       <div className="mx-auto flex max-w-[1024px] flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
         <Hero
-          title={game.title}
+          title={resolvedTitle}
           coverUrl={game.imageUrl && game.imageUrl.length > 0 ? game.imageUrl : null}
           year={game.yearPublished > 0 ? game.yearPublished : null}
           minPlayers={game.minPlayers > 0 ? game.minPlayers : null}
@@ -495,7 +510,7 @@ export function SharedGameDetailPageClient({
         </section>
       </div>
 
-      <StickyCta signInHref="/login" labels={stickyCtaLabels} />
+      {!hideStickyCta && <StickyCta signInHref="/login" labels={stickyCtaLabels} />}
     </main>
   );
 }

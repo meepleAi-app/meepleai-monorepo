@@ -9,7 +9,7 @@ internal enum VectorDocumentIndexingStatus
     /// <summary>Queued for processing — not yet started.</summary>
     Pending,
 
-    /// <summary>Chunking, embedding, and storing in Qdrant is in progress.</summary>
+    /// <summary>Chunking, embedding, and storing in pgvector is in progress.</summary>
     Processing,
 
     /// <summary>All chunks embedded and persisted. Equivalent to public "indexed" status.</summary>

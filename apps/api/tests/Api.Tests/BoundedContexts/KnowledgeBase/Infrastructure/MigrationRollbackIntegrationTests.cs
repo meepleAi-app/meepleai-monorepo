@@ -266,4 +266,51 @@ public sealed class MigrationRollbackIntegrationTests : IAsyncLifetime
         var pending = await dbContext1.Database.GetPendingMigrationsAsync(TestCancellationToken);
         pending.Should().BeEmpty();
     }
+
+    [Fact]
+    [Trait("Issue", "2022")]
+    public async Task MigrateUp_PgvectorEmbeddings_ShouldHaveSearchVectorColumnAndGinIndex()
+    {
+        // Arrange — Issue #2022: after the 81-migration squash, search_vector tsvector
+        // (originally added via raw SQL in legacy migrations + PgVectorStoreAdapter.EnsureCollectionExistsAsync)
+        // was lost from InitialCreate because the column is not declared on PgVectorEmbeddingEntity.
+        // Fresh-deploy fails when PgVectorStoreAdapter creates the GIN index on a missing column.
+        using var dbContext = _serviceProvider!.GetRequiredService<MeepleAiDbContext>();
+        await dbContext.Database.MigrateAsync(TestCancellationToken);
+
+        var connection = dbContext.Database.GetDbConnection();
+        await connection.OpenAsync(TestCancellationToken);
+
+        // Act — Check search_vector column
+        var colCommand = connection.CreateCommand();
+        colCommand.CommandText = @"
+            SELECT data_type
+            FROM information_schema.columns
+            WHERE table_name = 'pgvector_embeddings'
+              AND column_name = 'search_vector';
+        ";
+        var columnType = await colCommand.ExecuteScalarAsync(TestCancellationToken);
+
+        // Act — Check GIN index on search_vector
+        var idxCommand = connection.CreateCommand();
+        idxCommand.CommandText = @"
+            SELECT indexdef
+            FROM pg_indexes
+            WHERE schemaname = 'public'
+              AND tablename = 'pgvector_embeddings'
+              AND indexname = 'idx_pgvector_embeddings_search_vector';
+        ";
+        var indexDef = await idxCommand.ExecuteScalarAsync(TestCancellationToken) as string;
+
+        // Assert
+        columnType.Should().NotBeNull(
+            "search_vector tsvector column is required by PgVectorStoreAdapter.EnsureCollectionExistsAsync "
+            + "when it builds the GIN index for hybrid FTS search (issue #2022)");
+        columnType!.ToString().Should().Be("tsvector");
+
+        indexDef.Should().NotBeNullOrEmpty(
+            "GIN index on search_vector enables hybrid full-text search (issue #2022)");
+        indexDef!.Should().Contain("gin", "the index must use GIN access method for tsvector");
+        indexDef.Should().Contain("search_vector", "the index must target the search_vector column");
+    }
 }

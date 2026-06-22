@@ -22,7 +22,7 @@ public sealed class UserEntityLevelTests
             id: Guid.NewGuid(),
             email: new Email("test@test.com"),
             displayName: "Test User",
-            passwordHash: PasswordHash.Create("Password123!"),
+            passwordHash: PasswordHash.Create("UnusualPwd123!"),
             role: Role.User
         );
 
@@ -39,7 +39,7 @@ public sealed class UserEntityLevelTests
             id: Guid.NewGuid(),
             email: new Email("test@test.com"),
             displayName: "Test User",
-            passwordHash: PasswordHash.Create("Password123!"),
+            passwordHash: PasswordHash.Create("UnusualPwd123!"),
             role: Role.User
         );
 
@@ -58,7 +58,7 @@ public sealed class UserEntityLevelTests
             id: Guid.NewGuid(),
             email: new Email("test@test.com"),
             displayName: "Test User",
-            passwordHash: PasswordHash.Create("Password123!"),
+            passwordHash: PasswordHash.Create("UnusualPwd123!"),
             role: Role.User
         );
 
@@ -74,7 +74,7 @@ public sealed class UserEntityLevelTests
             id: Guid.NewGuid(),
             email: new Email("test@test.com"),
             displayName: "Test User",
-            passwordHash: PasswordHash.Create("Password123!"),
+            passwordHash: PasswordHash.Create("UnusualPwd123!"),
             role: Role.User
         );
 
@@ -94,7 +94,7 @@ public sealed class UserEntityLevelTests
             id: Guid.NewGuid(),
             email: new Email("test@test.com"),
             displayName: "Test User",
-            passwordHash: PasswordHash.Create("Password123!"),
+            passwordHash: PasswordHash.Create("UnusualPwd123!"),
             role: Role.User
         );
 
@@ -110,7 +110,7 @@ public sealed class UserEntityLevelTests
             id: Guid.NewGuid(),
             email: new Email("test@test.com"),
             displayName: "Test User",
-            passwordHash: PasswordHash.Create("Password123!"),
+            passwordHash: PasswordHash.Create("UnusualPwd123!"),
             role: Role.User
         );
 
@@ -127,7 +127,7 @@ public sealed class UserEntityLevelTests
             id: Guid.NewGuid(),
             email: new Email("test@test.com"),
             displayName: "Test User",
-            passwordHash: PasswordHash.Create("Password123!"),
+            passwordHash: PasswordHash.Create("UnusualPwd123!"),
             role: Role.User
         );
 
@@ -146,7 +146,7 @@ public sealed class UserEntityLevelTests
             id: Guid.NewGuid(),
             email: new Email("test@test.com"),
             displayName: "Test User",
-            passwordHash: PasswordHash.Create("Password123!"),
+            passwordHash: PasswordHash.Create("UnusualPwd123!"),
             role: Role.User
         );
         user.SetLevel(5);
@@ -168,7 +168,7 @@ public sealed class UserEntityLevelTests
             id: userId,
             email: new Email("test@test.com"),
             displayName: "Test User",
-            passwordHash: PasswordHash.Create("Password123!"),
+            passwordHash: PasswordHash.Create("UnusualPwd123!"),
             role: Role.User
         );
         user.ClearDomainEvents(); // Clear any initial events

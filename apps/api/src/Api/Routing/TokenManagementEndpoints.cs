@@ -151,7 +151,7 @@ internal static class TokenManagementEndpoints
 
         logger.LogInformation(
             "Admin {AdminId} adding token credits: {Amount} {Currency}",
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             request.Amount,
             request.Currency);
 

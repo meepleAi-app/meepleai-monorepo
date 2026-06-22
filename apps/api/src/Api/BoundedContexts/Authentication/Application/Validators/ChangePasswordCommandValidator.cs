@@ -23,11 +23,15 @@ internal sealed class ChangePasswordCommandValidator : AbstractValidator<ChangeP
             .MinimumLength(8)
             .WithMessage("Current password must be at least 8 characters");
 
+        // I7 (auth security fixes): the NEW password must satisfy the
+        // 12-char minimum that PasswordHash.Create enforces. The CurrentPassword
+        // rule above stays at 8 chars because legacy users may still hold an
+        // 8-char hash and need to verify it before changing.
         RuleFor(x => x.NewPassword)
             .NotEmpty()
             .WithMessage("New password is required")
-            .MinimumLength(8)
-            .WithMessage("New password must be at least 8 characters")
+            .MinimumLength(12)
+            .WithMessage("New password must be at least 12 characters")
             .MaximumLength(128)
             .WithMessage("New password must not exceed 128 characters")
             .Matches(@"[A-Z]")

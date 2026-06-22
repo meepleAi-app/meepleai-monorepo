@@ -420,4 +420,120 @@ public sealed class GameNightInvitationTests
     }
 
     #endregion
+
+    #region RespondedByName (Issue #1169)
+
+    [Fact]
+    public void Accept_WithRespondedByName_PersistsTrimmedValue()
+    {
+        var invitation = NewPending();
+
+        invitation.Accept(userId: null, utcNow: Now.AddHours(1), respondedByName: "  Marco  ");
+
+        invitation.RespondedByName.Should().Be("Marco",
+            "leading/trailing whitespace must be trimmed for canonical DB form");
+    }
+
+    [Fact]
+    public void Decline_WithRespondedByName_PersistsTrimmedValue()
+    {
+        var invitation = NewPending();
+
+        invitation.Decline(userId: null, utcNow: Now.AddHours(1), respondedByName: "Anna");
+
+        invitation.RespondedByName.Should().Be("Anna");
+        invitation.Status.Should().Be(GameNightInvitationStatus.Declined);
+    }
+
+    [Fact]
+    public void Accept_WithoutRespondedByName_LeavesNull()
+    {
+        var invitation = NewPending();
+
+        invitation.Accept(userId: null, utcNow: Now.AddHours(1));
+
+        invitation.RespondedByName.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Accept_WithNullOrWhitespaceName_NormalizesToNull(string? raw)
+    {
+        var invitation = NewPending();
+
+        invitation.Accept(userId: null, utcNow: Now.AddHours(1), respondedByName: raw);
+
+        invitation.RespondedByName.Should().BeNull(
+            "empty / whitespace-only names are indistinguishable from 'no name given'");
+    }
+
+    [Fact]
+    public void Accept_WithNameOver120Chars_TruncatesAt120()
+    {
+        // Defense-in-depth: the validator is the primary length gate (400 BadRequest),
+        // but the aggregate also caps so a bypassed call cannot overflow the DB column.
+        var invitation = NewPending();
+        var raw = new string('A', 200);
+
+        invitation.Accept(userId: null, utcNow: Now.AddHours(1), respondedByName: raw);
+
+        invitation.RespondedByName.Should().HaveLength(GameNightInvitation.MaxRespondedByNameLength);
+    }
+
+    [Fact]
+    public void Accept_OnAlreadyAccepted_IdempotentReplay_DoesNotOverwriteName()
+    {
+        // D2(b) idempotency: a second Accept must NOT clobber the prior name.
+        var invitation = NewPending();
+        invitation.Accept(userId: null, utcNow: Now.AddHours(1), respondedByName: "Marco");
+        invitation.ClearDomainEvents();
+
+        var changed = invitation.Accept(userId: null, utcNow: Now.AddHours(2), respondedByName: "Hacker");
+
+        changed.Should().BeFalse();
+        invitation.RespondedByName.Should().Be("Marco",
+            "idempotent replay leaves the first-of-record name intact");
+    }
+
+    [Fact]
+    public void Reconstitute_WithoutRespondedByName_DefaultsToNull()
+    {
+        // Backward-compat: existing callers that omit the new optional param continue to work.
+        var invitation = GameNightInvitation.Reconstitute(
+            id: Guid.NewGuid(),
+            token: "abcdefghijklmnopqrstuv",
+            gameNightId: Guid.NewGuid(),
+            email: "guest@example.com",
+            status: GameNightInvitationStatus.Accepted,
+            expiresAt: OneWeekFromNow,
+            respondedAt: Now.AddHours(1),
+            respondedByUserId: Guid.NewGuid(),
+            createdAt: Now,
+            createdBy: Guid.NewGuid());
+
+        invitation.RespondedByName.Should().BeNull();
+    }
+
+    [Fact]
+    public void Reconstitute_WithRespondedByName_PreservesValue()
+    {
+        var invitation = GameNightInvitation.Reconstitute(
+            id: Guid.NewGuid(),
+            token: "abcdefghijklmnopqrstuv",
+            gameNightId: Guid.NewGuid(),
+            email: "guest@example.com",
+            status: GameNightInvitationStatus.Accepted,
+            expiresAt: OneWeekFromNow,
+            respondedAt: Now.AddHours(1),
+            respondedByUserId: Guid.NewGuid(),
+            createdAt: Now,
+            createdBy: Guid.NewGuid(),
+            respondedByName: "Marco");
+
+        invitation.RespondedByName.Should().Be("Marco");
+    }
+
+    #endregion
 }

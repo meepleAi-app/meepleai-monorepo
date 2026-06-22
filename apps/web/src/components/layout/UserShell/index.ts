@@ -1,10 +1,5 @@
 export { DesktopShell } from './DesktopShell';
 export { UserShell } from './UserShell';
 export { UserShellClient } from './UserShellClient';
-export { TopBar } from './TopBar';
-export { TopBarLogo } from './TopBarLogo';
-export { TopBarNavLinks } from './TopBarNavLinks';
-export { TopBarSearchPill } from './TopBarSearchPill';
-export { TopBarChatButton } from './TopBarChatButton';
 export { MiniNavSlot } from './MiniNavSlot';
 export { RecentsBar } from './RecentsBar';

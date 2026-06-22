@@ -135,7 +135,7 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
 
         var command = new AdminDisable2FACommand(
             AdminUserId: adminUser.Id,
-            TargetUserId: targetUser.Id);
+            TargetUserId: targetUser.Id, AdminPassword: "DefaultUnusualPwd123!");
 
         // Act
         _output("Executing AdminDisable2FACommand...");
@@ -168,6 +168,46 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task AdminDisable2FA_WrongAdminPassword_ReturnsUnauthorized_DoesNotDisable()
+    {
+        // I4 (auth security fixes): admin must re-auth with their own
+        // password before this high-impact action lands. A valid admin
+        // session cookie alone is not enough — the action removes a
+        // security control on another user.
+        _output("Test: admin password mismatch must abort the operation");
+
+        var (adminUser, targetUser) = await SeedAdminAndTargetUserAsync();
+
+        var command = new AdminDisable2FACommand(
+            AdminUserId: adminUser.Id,
+            TargetUserId: targetUser.Id,
+            AdminPassword: "WrongAdminPassword999!");
+
+        var result = await _mediator!.Send(command, TestCancellationToken);
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("re-authentication",
+            "the rejection message must point at the admin password mismatch, " +
+            "not e.g. 'target user not found' (would leak target enumeration).");
+
+        // Target's 2FA must remain enabled.
+        var dbContext = _serviceProvider!.GetRequiredService<MeepleAiDbContext>();
+        var targetEntity = await dbContext.Users.AsNoTracking()
+            .FirstAsync(u => u.Id == targetUser.Id, TestCancellationToken);
+        targetEntity.IsTwoFactorEnabled.Should().BeTrue(
+            "wrong admin password must NOT disable target 2FA — otherwise the " +
+            "re-auth gate is decorative.");
+
+        // No email notification fired (the side effect is bound to the
+        // domain event from the success path).
+        _mockEmailService!.Verify(
+            x => x.SendTwoFactorDisabledEmailAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task AdminDisable2FA_DomainEvent_RaisedWithCorrectMetadata()
     {
         // Arrange
@@ -177,7 +217,7 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
 
         var command = new AdminDisable2FACommand(
             AdminUserId: adminUser.Id,
-            TargetUserId: targetUser.Id);
+            TargetUserId: targetUser.Id, AdminPassword: "DefaultUnusualPwd123!");
 
         // Act
         await _mediator!.Send(command, TestCancellationToken);
@@ -203,7 +243,7 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
 
         var command = new AdminDisable2FACommand(
             AdminUserId: editorUser.Id,
-            TargetUserId: targetUser.Id);
+            TargetUserId: targetUser.Id, AdminPassword: "DefaultUnusualPwd123!");
 
         // Act
         var result = await _mediator!.Send(command, TestCancellationToken);
@@ -243,7 +283,7 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
 
         var command = new AdminDisable2FACommand(
             AdminUserId: nonExistentAdminId,
-            TargetUserId: targetUser.Id);
+            TargetUserId: targetUser.Id, AdminPassword: "DefaultUnusualPwd123!");
 
         // Act
         var result = await _mediator!.Send(command, TestCancellationToken);
@@ -265,7 +305,7 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
 
         var command = new AdminDisable2FACommand(
             AdminUserId: adminUser.Id,
-            TargetUserId: nonExistentTargetId);
+            TargetUserId: nonExistentTargetId, AdminPassword: "DefaultUnusualPwd123!");
 
         // Act
         var result = await _mediator!.Send(command, TestCancellationToken);
@@ -298,7 +338,7 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
 
         var command = new AdminDisable2FACommand(
             AdminUserId: adminUser.Id,
-            TargetUserId: targetUserWithout2FA.Id);
+            TargetUserId: targetUserWithout2FA.Id, AdminPassword: "DefaultUnusualPwd123!");
 
         // Act
         var result = await _mediator!.Send(command, TestCancellationToken);
@@ -330,7 +370,7 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
 
         var command = new AdminDisable2FACommand(
             AdminUserId: adminUser.Id,
-            TargetUserId: adminUser.Id); // Same user
+            TargetUserId: adminUser.Id, AdminPassword: "DefaultUnusualPwd123!"); // Same user
 
         // Act
         var result = await _mediator!.Send(command, TestCancellationToken);

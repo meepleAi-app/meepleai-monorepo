@@ -80,6 +80,7 @@ export function MeepleWishlistCard({
       badge={formatPriorityItalian(item.priority)}
       metadata={metadata}
       actions={actions.length > 0 ? actions : undefined}
+      headingLevel={2}
       data-testid="wishlist-card"
     />
   );

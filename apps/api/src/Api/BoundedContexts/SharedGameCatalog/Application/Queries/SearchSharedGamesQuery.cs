@@ -27,7 +27,7 @@ internal record SearchSharedGamesQuery(
     string SortBy = "Title",
     bool SortDescending = false,
     bool? HasKnowledgeBase = null, // S2 (library-to-game epic) — filter for AI-ready games
-    // Issue #593 (Wave A.3a) — chip filters from `sp3-shared-games.jsx`:
+                                   // Issue #593 (Wave A.3a) — chip filters from `sp3-shared-games.jsx`:
     bool? HasToolkit = null,       // chip "with-toolkit" — at least one non-default Toolkit
     bool? HasAgent = null,         // chip "with-agent" — at least one AgentDefinition
     bool? IsTopRated = null,       // chip "top-rated" — AverageRating >= configured threshold

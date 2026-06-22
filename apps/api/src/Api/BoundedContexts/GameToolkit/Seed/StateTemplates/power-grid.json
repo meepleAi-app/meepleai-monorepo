@@ -1,0 +1,15 @@
+{
+  "ToolkitName": "Power Grid",
+  "DiceTools": [],
+  "CounterTools": [],
+  "TimerTools": [],
+  "ScoringTemplate": null,
+  "TurnTemplate": null,
+  "Overrides": {
+    "OverridesTurnOrder": false,
+    "OverridesScoreboard": false,
+    "OverridesDiceSet": false
+  },
+  "Reasoning": "STUB — pending manual curation by domain expert. Power Grid is a heavy euro auction/network game (2-6 players, ~120 min). Key mechanics to model: 4 phases per round (Player Order → Power Plant Auction → Resource Buying → Building → Bureaucracy), Elektro currency, 4 resource types (coal/oil/garbage/uranium), 3 game steps (1/2/3 triggering board expansion + capacity), end condition: first to power 17 cities. Turn order REVERSES based on cities powered (leader plays last in auctions). Use GenerateToolkitFromKbCommand as bootstrap.",
+  "ExcludedTools": []
+}

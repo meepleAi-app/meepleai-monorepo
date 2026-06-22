@@ -82,7 +82,7 @@ function methodBadgeClass(method: string): string {
     case 'DELETE':
       return 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300';
     default:
-      return 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400';
+      return 'bg-muted text-muted-foreground';
   }
 }
 
@@ -206,7 +206,7 @@ export function ServiceCallHistory() {
 
   return (
     <div
-      className="rounded-xl border bg-white/70 backdrop-blur-md dark:bg-zinc-900/70"
+      className="rounded-xl border bg-card/70 backdrop-blur-md"
       data-testid="service-call-history"
     >
       {/* Filter bar */}

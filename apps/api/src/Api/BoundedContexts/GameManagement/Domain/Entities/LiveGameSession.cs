@@ -64,7 +64,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public AgentSessionMode AgentMode { get; private set; }
     public Guid? ChatSessionId { get; private set; }
     public TurnAdvancePolicy TurnAdvancePolicy { get; private set; }
-    public byte[] RowVersion { get; private set; } = Array.Empty<byte>();
+    public uint Xmin { get; private set; }
 
     // === Read-only collections ===
 
@@ -138,6 +138,97 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         };
 
         session.AddDomainEvent(new LiveSessionCreatedEvent(id, createdByUserId, trimmedName, gameId));
+
+        return session;
+    }
+
+    /// <summary>
+    /// Reconstitutes a <see cref="LiveGameSession"/> from persistence without raising
+    /// domain events. Used by <see cref="Infrastructure.Persistence.LiveSessionRepository"/>
+    /// to materialise an aggregate from the database. NOT for application-level callers —
+    /// use <see cref="Create"/> for new sessions.
+    /// </summary>
+    internal static LiveGameSession Reconstitute(
+        Guid id,
+        string sessionCode,
+        Guid? gameId,
+        string gameName,
+        Guid? toolkitId,
+        Guid createdByUserId,
+        PlayRecordVisibility visibility,
+        Guid? groupId,
+        LiveSessionStatus status,
+        DateTime createdAt,
+        DateTime? startedAt,
+        DateTime? pausedAt,
+        DateTime? completedAt,
+        DateTime updatedAt,
+        DateTime? lastSavedAt,
+        int currentTurnIndex,
+        int currentPhaseIndex,
+        string[] phaseNames,
+        SnapshotTriggerConfig? snapshotTriggerConfig,
+        DateTime? lastSnapshotTimestamp,
+        SessionScoringConfig scoringConfig,
+        JsonDocument? gameState,
+        string? notes,
+        AgentSessionMode agentMode,
+        Guid? chatSessionId,
+        TurnAdvancePolicy turnAdvancePolicy,
+        uint xmin,
+        IEnumerable<LiveSessionPlayer> players,
+        IEnumerable<LiveSessionTeam> teams,
+        IEnumerable<Guid> turnOrder,
+        IEnumerable<RoundScore> roundScores,
+        IEnumerable<TurnRecord> turnRecords,
+        IEnumerable<RuleDisputeEntry> disputes,
+        SetupChecklistData? setupChecklist)
+    {
+        var session = new LiveGameSession
+        {
+            Id = id,
+            SessionCode = sessionCode,
+            GameId = gameId,
+            GameName = gameName,
+            ToolkitId = toolkitId,
+            CreatedByUserId = createdByUserId,
+            Visibility = visibility,
+            GroupId = groupId,
+            Status = status,
+            CreatedAt = createdAt,
+            StartedAt = startedAt,
+            PausedAt = pausedAt,
+            CompletedAt = completedAt,
+            UpdatedAt = updatedAt,
+            LastSavedAt = lastSavedAt,
+            CurrentTurnIndex = currentTurnIndex,
+            CurrentPhaseIndex = currentPhaseIndex,
+            PhaseNames = phaseNames ?? Array.Empty<string>(),
+            SnapshotTriggerConfig = snapshotTriggerConfig,
+            LastSnapshotTimestamp = lastSnapshotTimestamp,
+            ScoringConfig = scoringConfig,
+            GameState = gameState,
+            Notes = notes,
+            AgentMode = agentMode,
+            ChatSessionId = chatSessionId,
+            TurnAdvancePolicy = turnAdvancePolicy,
+            Xmin = xmin
+        };
+
+        if (setupChecklist != null)
+        {
+            session.SetSetupChecklist(setupChecklist);
+        }
+
+        session._players.AddRange(players);
+        session._teams.AddRange(teams);
+        session._turnOrder.AddRange(turnOrder);
+        session._roundScores.AddRange(roundScores);
+        session._turnRecords.AddRange(turnRecords);
+        session._disputes.AddRange(disputes);
+
+        // Critical: Reconstitute MUST NOT raise events (we are not creating anything new).
+        session.ClearDomainEvents();
 
         return session;
     }
@@ -659,13 +750,19 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Updates the game state (free-form JSON).
+    /// Updates the game state (free-form JSON). The previous <see cref="JsonDocument"/>
+    /// (if any) is disposed to release its <see cref="System.Buffers.ArrayPool{T}"/> rental;
+    /// callers must not retain references to the prior value.
     /// </summary>
     public void UpdateGameState(JsonDocument? gameState, TimeProvider? timeProvider = null)
     {
         if (Status == LiveSessionStatus.Completed)
             throw new ConflictException("Cannot update game state on a completed session");
 
+        // Dispose the prior JsonDocument before reassigning. JsonDocument owns pooled buffers
+        // and only releases them on Dispose — repeated assignments without disposal cause
+        // steady ArrayPool starvation visible as LOH growth (auto-save sweep × active sessions).
+        GameState?.Dispose();
         GameState = gameState;
         var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
         UpdatedAt = now;

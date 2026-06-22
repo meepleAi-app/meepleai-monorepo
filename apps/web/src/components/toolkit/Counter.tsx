@@ -52,16 +52,16 @@ export function Counter() {
     <div className="space-y-3" data-testid="counter">
       {/* Counter list */}
       {counters.length === 0 && (
-        <p className="py-4 text-center text-sm text-slate-400">Nessun contatore. Aggiungine uno!</p>
+        <p className="py-4 text-center text-sm text-muted-foreground">Nessun contatore. Aggiungine uno!</p>
       )}
 
       {counters.map(counter => (
         <div
           key={counter.id}
-          className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-3"
+          className="flex items-center gap-2 rounded-lg border border-border bg-card p-3"
           data-testid={`counter-${counter.id}`}
         >
-          <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-700">
+          <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
             {counter.label}
           </span>
 
@@ -76,7 +76,7 @@ export function Counter() {
               −
             </Button>
             <span
-              className="w-10 text-center text-lg font-bold tabular-nums text-slate-800"
+              className="w-10 text-center text-lg font-bold tabular-nums text-foreground"
               aria-label={`${counter.label}: ${counter.value}`}
             >
               {counter.value}
@@ -97,7 +97,7 @@ export function Counter() {
             size="sm"
             onClick={() => reset(counter.id)}
             aria-label={`Reset ${counter.label}`}
-            className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600"
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-muted-foreground"
           >
             <RotateCcw className="h-3.5 w-3.5" />
           </Button>
@@ -107,7 +107,7 @@ export function Counter() {
             size="sm"
             onClick={() => remove(counter.id)}
             aria-label={`Remove ${counter.label}`}
-            className="h-8 w-8 p-0 text-slate-400 hover:text-red-500"
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-red-500"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
@@ -115,7 +115,7 @@ export function Counter() {
       ))}
 
       {/* Add counter */}
-      <div className="flex gap-2 border-t border-slate-100 pt-3">
+      <div className="flex gap-2 border-t border-border pt-3">
         <Input
           value={newLabel}
           onChange={e => setNewLabel(e.target.value)}

@@ -30,11 +30,11 @@ export function CitationSheet({ open, citation, onOpenChange }: CitationSheetPro
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange} title={`Pagina ${citation.pageNumber}`}>
       <div className="flex flex-col gap-4">
-        <blockquote className="rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm italic text-[var(--gaming-text-primary,white)]">
+        <blockquote className="rounded-lg border border-border bg-card/5 px-4 py-3 text-sm italic text-[var(--text,white)]">
           {displaySnippet}
         </blockquote>
 
-        <p className="text-xs text-[var(--gaming-text-secondary,rgba(255,255,255,0.6))]">
+        <p className="text-xs text-[var(--text-sec,rgba(255,255,255,0.6))]">
           Rilevanza: <span className="font-medium text-amber-400">{relevancePercent}%</span>
         </p>
       </div>

@@ -137,14 +137,14 @@ internal static class AdminUserTierLevelBadgesEndpoints
         if (!Guid.TryParse(id, out var userId))
         {
             logger.LogWarning("Admin {AdminId} attempted to update tier with invalid user ID: {UserId}",
-                session!.User!.Id, id);
+                session!.Principal!.EffectiveActor.Id, id);
             return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
         }
 
         // Validate requester ID format
-        if (!Guid.TryParse(session!.User!.Id.ToString(), out var requesterId))
+        if (!Guid.TryParse(session!.Principal!.EffectiveActor.Id.ToString(), out var requesterId))
         {
-            logger.LogError("Invalid requester ID format in session: {RequesterId}", session.User!.Id);
+            logger.LogError("Invalid requester ID format in session: {RequesterId}", session.Principal!.EffectiveActor.Id);
             return Results.BadRequest(new { error = "invalid_session", message = "Invalid session user ID format" });
         }
 
@@ -190,13 +190,13 @@ internal static class AdminUserTierLevelBadgesEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} setting level for user {UserId} to {Level}",
-            session!.User!.Id, userId, request.Level);
+            session!.Principal!.EffectiveActor.Id, userId, request.Level);
 
         var command = new SetUserLevelCommand(userId, request.Level);
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
         logger.LogInformation("User {UserId} level set to {Level} by admin {AdminId}",
-            userId, request.Level, session.User.Id);
+            userId, request.Level, session.Principal!.EffectiveActor.Id);
 
         return Results.Ok(result);
     }
@@ -211,7 +211,7 @@ internal static class AdminUserTierLevelBadgesEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        logger.LogInformation("Admin {AdminId} retrieving library stats for user {UserId}", session!.User!.Id, userId);
+        logger.LogInformation("Admin {AdminId} retrieving library stats for user {UserId}", session!.Principal!.EffectiveActor.Id, userId);
 
         var query = new GetUserLibraryStatsQuery(userId);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -223,7 +223,7 @@ internal static class AdminUserTierLevelBadgesEndpoints
         }
 
         logger.LogInformation("Admin {AdminId} retrieved library stats for user {UserId}: {TotalGames} games, {SessionsPlayed} sessions",
-            session.User.Id, userId, result.TotalGames, result.SessionsPlayed);
+            session.Principal!.EffectiveActor.Id, userId, result.TotalGames, result.SessionsPlayed);
 
         return Results.Ok(result);
     }
@@ -238,14 +238,14 @@ internal static class AdminUserTierLevelBadgesEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        logger.LogInformation("Admin {AdminId} retrieving badges for user {UserId}", session!.User!.Id, userId);
+        logger.LogInformation("Admin {AdminId} retrieving badges for user {UserId}", session!.Principal!.EffectiveActor.Id, userId);
 
         // Reuse existing GetUserBadgesQuery with IncludeHidden: true
         var query = new GetUserBadgesQuery(userId, IncludeHidden: true);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
         logger.LogInformation("Admin {AdminId} retrieved {Count} badges for user {UserId}",
-            session.User.Id, result.Count, userId);
+            session.Principal!.EffectiveActor.Id, result.Count, userId);
 
         return Results.Ok(result);
     }

@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 /**
  * ViewModeToggle — admin↔user view switcher for the top navbar.
  *
@@ -68,7 +69,7 @@ export function ViewModeToggle() {
       {/* Knob */}
       <span
         className={cn(
-          'pointer-events-none absolute top-[1px] h-5 w-5 rounded-full bg-white shadow-sm',
+          'pointer-events-none absolute top-[1px] h-5 w-5 rounded-full bg-card shadow-sm',
           'flex items-center justify-center text-[11px]',
           'transition-transform duration-200',
           isAdmin ? 'translate-x-[18px]' : 'translate-x-[1px]'

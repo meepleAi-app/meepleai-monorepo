@@ -17,6 +17,12 @@ namespace Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
 /// allowing the frontend to skip the action affordance and show a
 /// confirmation surface instead. <c>null</c> for pending invitations.
 /// </para>
+/// <para>
+/// <see cref="RespondedByName"/> (issue #1169) carries the guest-supplied
+/// display name captured at RSVP time. Lets the UI render confirmation
+/// surfaces like "Already responded as 'Marco'." Null for pending
+/// invitations and for historical responses that pre-date the column.
+/// </para>
 /// </remarks>
 public sealed record PublicGameNightInvitationDto(
     string Token,
@@ -37,4 +43,5 @@ public sealed record PublicGameNightInvitationDto(
     Guid? PrimaryGameId,
     string? PrimaryGameName,
     string? PrimaryGameImageUrl,
-    string? AlreadyRespondedAs);
+    string? AlreadyRespondedAs,
+    string? RespondedByName = null);

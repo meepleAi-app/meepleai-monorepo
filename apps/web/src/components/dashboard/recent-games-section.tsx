@@ -70,7 +70,7 @@ function GameListCard({ game }: { game: UserGameDto }) {
 
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <p className="font-quicksand font-bold text-sm text-foreground truncate group-hover:text-[hsl(25,95%,45%)] transition-colors">
+        <p className="font-quicksand font-bold text-sm text-foreground truncate group-hover:text-[hsl(var(--c-game-text))] transition-colors">
           {game.title}
         </p>
         <p className="text-xs text-muted-foreground font-nunito mt-0.5 truncate">
@@ -83,7 +83,7 @@ function GameListCard({ game }: { game: UserGameDto }) {
       {/* Badges */}
       <div className="flex flex-col items-end gap-1 shrink-0">
         {game.isOwned && (
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[hsl(25,95%,92%)] text-[hsl(25,95%,45%)] border border-[hsl(25,95%,45%)]">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[hsl(25,95%,92%)] text-[hsl(var(--c-game-text))] border border-[hsl(25,95%,45%)]">
             Libreria
           </span>
         )}
@@ -120,7 +120,7 @@ function EmptyGames() {
       <p className="text-sm font-nunito">Nessun gioco in libreria</p>
       <Link
         href="/library?action=add"
-        className="text-xs font-semibold text-[hsl(25,95%,45%)] hover:underline"
+        className="text-xs font-semibold text-[hsl(var(--c-game-text))] hover:underline"
       >
         Aggiungi il tuo primo gioco →
       </Link>

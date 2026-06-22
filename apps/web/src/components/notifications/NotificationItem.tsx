@@ -28,6 +28,8 @@ import { useRouter } from 'next/navigation';
 
 import { PdfStatusBadge } from '@/components/pdf';
 import type { NotificationDto } from '@/lib/api';
+import { logger } from '@/lib/logger';
+import { isSafeRelativeLink } from '@/lib/url-safety';
 import { cn } from '@/lib/utils';
 import { useNotificationStore } from '@/stores/notification/store';
 
@@ -45,10 +47,20 @@ export function NotificationItem({ notification }: NotificationItemProps) {
       void markAsRead(notification.id);
     }
 
-    // Navigate to link if exists, otherwise resolve deep link from metadata
+    // Navigate to link if exists, otherwise resolve deep link from metadata.
+    // Issue #2182: guard against open-redirect via untrusted notification.link.
+    // getNotificationDeepLink() always returns relative paths (safe); only
+    // notification.link is the untrusted surface.
     const target = notification.link ?? getNotificationDeepLink(notification);
-    if (target) {
-      router.push(target);
+    if (isSafeRelativeLink(target)) {
+      router.push(target!);
+    } else if (target) {
+      logger.warn('Rejected unsafe target in NotificationItem', {
+        metadata: {
+          linkMasked: target?.slice(0, 32),
+          notificationId: notification.id,
+        },
+      });
     }
   };
 

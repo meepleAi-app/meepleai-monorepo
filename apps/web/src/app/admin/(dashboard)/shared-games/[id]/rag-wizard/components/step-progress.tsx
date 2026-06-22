@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 /**
  * Step 3: Processing — Upload files sequentially and track progress via SSE
  *
@@ -298,7 +299,7 @@ export function StepProgress({ sharedGameId, configs, onComplete }: StepProgress
       {fileStates.map((fs, index) => (
         <div
           key={`${fs.file.name}-${fs.file.size}`}
-          className="rounded-lg border bg-white/60 dark:bg-zinc-800/60 p-4 space-y-2"
+          className="rounded-lg border bg-card/60 dark:bg-zinc-800/60 p-4 space-y-2"
         >
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium truncate">{fs.file.name}</span>

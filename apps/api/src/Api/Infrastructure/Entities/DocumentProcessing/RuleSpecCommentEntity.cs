@@ -1,3 +1,4 @@
+using Api.Infrastructure.Entities.SharedGameCatalog;
 namespace Api.Infrastructure.Entities;
 
 public class RuleSpecCommentEntity
@@ -32,7 +33,7 @@ public class RuleSpecCommentEntity
     public IList<Guid> MentionedUserIds { get; set; } = new List<Guid>();
 
     // Navigation Properties
-    public GameEntity Game { get; set; } = default!;
+    public SharedGameEntity Game { get; set; } = default!;
     public UserEntity User { get; set; } = default!;
 
     // EDIT-05: Threading Navigation Properties

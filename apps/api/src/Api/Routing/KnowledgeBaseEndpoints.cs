@@ -4,15 +4,23 @@ using Api.BoundedContexts.KnowledgeBase.Application.ContextEngineering.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.ContextEngineering.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 
+using Api.BoundedContexts.KnowledgeBase.Application.Commands.UpdateKbDocMetadata;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.CrossGameStreamQa;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGameDocuments;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunkById;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunks;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbDocumentById;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetRecentKbDocs;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.GlobalKbSearch;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.ListUserKbDocs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.SearchKbChunks;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Extensions;
+using Api.Services;
 using Api.Helpers;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Serialization;
 using Api.Middleware;
 using Api.Models;
 using MediatR;
@@ -31,7 +39,9 @@ internal static class KnowledgeBaseEndpoints
     {
         MapStatusEndpoint(group);
         MapSearchEndpoint(group);
+        MapGlobalSearchEndpoint(group);
         MapAskEndpoint(group);
+        MapGlobalAskStreamEndpoint(group);
         MapChatLookupEndpoints(group);
         MapChatHistoryEndpoints(group);
         MapChatLifecycleEndpoints(group);
@@ -44,6 +54,7 @@ internal static class KnowledgeBaseEndpoints
         MapGameDocumentsEndpoint(group);
         MapLinkKbEndpoint(group);
         MapKbDocumentEndpoints(group);
+        MapUserKbDocsEndpoint(group);
 
         return group;
     }
@@ -70,6 +81,79 @@ internal static class KnowledgeBaseEndpoints
         .WithTags("KnowledgeBase");
     }
 
+    private static void MapGlobalSearchEndpoint(RouteGroupBuilder group)
+    {
+        // Issue #1661 (PR-1 Task 5): Cross-game RBAC-filtered knowledge base search.
+        group.MapPost("/knowledge-base/search/global", HandleGlobalSearch)
+            .WithName("GlobalKbSearch")
+            .RequireSession()
+            .WithTags("KnowledgeBase")
+            .WithSummary("Cross-game knowledge base search (RBAC-filtered, optional facets)")
+            .WithDescription(
+                "Searches the knowledge base across all games accessible to the authenticated user " +
+                "(public games + library-owned games). Admins see all games. " +
+                "Returns ranked results with cursor-based pagination (hasMore + nextCursor). " +
+                "\n\n" +
+                "Optional facets narrow within the RBAC-accessible set (Issue #1686 / canonical D-1..D-2):\n" +
+                "- `DocType` (list, max 10): canonical PdfDocumentEntity.DocumentType allowlist " +
+                "{ base, expansion, errata, homerule } — case-insensitive.\n" +
+                "- `GameId` (single Guid): narrows to that single SharedGame.Id if accessible; " +
+                "non-accessible IDs are silently dropped (200 empty, no info leak).\n" +
+                "- `Language` (single string): ISO 639-1 allowlist { en, it, de, fr, es } — case-insensitive.\n" +
+                "Empty list ≡ null (no filter). Combined facets are AND-ed. " +
+                "Unknown values → 422 with allowlist enumerated in the error message.\n\n" +
+                "Example request body (Issue #1731 / D-15):\n" +
+                "```json\n" +
+                "{\n" +
+                "  \"query\": \"movement rules\",\n" +
+                "  \"limit\": 20,\n" +
+                "  \"docType\": [\"base\", \"expansion\"],\n" +
+                "  \"gameId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n" +
+                "  \"language\": \"it\"\n" +
+                "}\n" +
+                "```\n\n" +
+                "Issues: #1661, #1686, #1731.")
+            .Produces<GlobalKbSearchResponseDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status422UnprocessableEntity);
+    }
+
+    private static async Task<IResult> HandleGlobalSearch(
+        GlobalKbSearchRequest request,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session.Principal!.Subject.Id;
+        var role = session.Principal!.EffectiveActor.Role;
+
+        if (!Enum.TryParse<UserRole>(role, ignoreCase: true, out var userRole))
+        {
+            userRole = UserRole.User;
+        }
+
+        logger.LogInformation(
+            "[GlobalKbSearch] Cross-game search from user {UserId} (role={Role}): {Query}",
+            userId, role, request.Query);
+
+        var query = new GlobalKbSearchQuery(
+            Query: request.Query,
+            Limit: request.Limit,
+            Cursor: request.Cursor,
+            Mode: request.Mode ?? SearchMode.Hybrid,
+            MinScore: request.MinScore ?? 0.0,
+            UserId: userId,
+            Role: userRole,
+            DocType: request.DocType,
+            GameId: request.GameId,
+            Language: request.Language);
+
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
     private static void MapAskEndpoint(RouteGroupBuilder group)
     {
         // DDD-PHASE3: RAG Q&amp;A endpoint using MediatR
@@ -77,6 +161,113 @@ internal static class KnowledgeBaseEndpoints
         .WithName("KnowledgeBaseAsk")
         .RequireSession()
         .WithTags("KnowledgeBase");
+    }
+
+    private static void MapGlobalAskStreamEndpoint(RouteGroupBuilder group)
+    {
+        // Issue #1661 PR-2 Task 9: Cross-game SSE ask endpoint.
+        // Streams RagStreamingEvents (StateUpdate → Citations → Token* → Complete) for
+        // a natural-language question across all RBAC-accessible games for the caller.
+        // Emits text/event-stream; honors EC-3 client-disconnect via CancellationToken.
+        group.MapPost("/knowledge-base/ask/global", HandleGlobalAskStream)
+            .WithName("GlobalKbAskStream")
+            .RequireSession()
+            .WithTags("KnowledgeBase")
+            .WithSummary("Cross-game knowledge base SSE ask (RBAC-filtered)")
+            .WithDescription(
+                "Streams a RAG answer to the provided question across all games accessible to the " +
+                "authenticated user (public games + library-owned games). Admins see all games. " +
+                "Emits Server-Sent Events with the RagStreamingEvent wire format: " +
+                "StateUpdate → Citations → Token* → Complete (or Error on failure). " +
+                "Honors EC-3: cancelling the HTTP request stops the LLM stream cleanly. " +
+                "Issue #1661 PR-2.")
+            .Produces(StatusCodes.Status200OK)              // text/event-stream
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status422UnprocessableEntity);
+    }
+
+    private static async Task<IResult> HandleGlobalAskStream(
+        GlobalKbAskRequest request,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session.Principal!.Subject.Id;
+        var role = session.Principal!.EffectiveActor.Role;
+
+        if (!Enum.TryParse<UserRole>(role, ignoreCase: true, out var userRole))
+            userRole = UserRole.User;
+
+        // Minimal validation: query must not be empty
+        if (string.IsNullOrWhiteSpace(request.Query))
+        {
+            return Results.UnprocessableEntity(new { error = "query is required" });
+        }
+
+        logger.LogInformation(
+            "[GlobalKbAsk] Cross-game ask from user {UserId} (role={Role}): {Query}",
+            userId, role, request.Query);
+
+        // Set SSE headers — must be set before writing the body
+        context.Response.Headers["Content-Type"] = "text/event-stream";
+        context.Response.Headers["Cache-Control"] = "no-cache";
+        context.Response.Headers["Connection"] = "keep-alive";
+
+        // EC-3: use HttpContext.RequestAborted so client disconnect stops the LLM stream
+        var streamCt = context.RequestAborted;
+
+        try
+        {
+            var query = new CrossGameStreamQaQuery(
+                Query: request.Query,
+                UserId: userId,
+                Role: userRole,
+                AgentLanguage: request.Language ?? "it",
+                TopK: request.TopK ?? 8);
+
+            await foreach (var evt in mediator.CreateStream(query, streamCt).ConfigureAwait(false))
+            {
+                if (streamCt.IsCancellationRequested)
+                    break;
+
+                var json = System.Text.Json.JsonSerializer.Serialize(evt, SseJsonOptions.Default);
+                await context.Response.WriteAsync($"data: {json}\n\n", streamCt).ConfigureAwait(false);
+                await context.Response.Body.FlushAsync(streamCt).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogInformation(ex,
+                "[GlobalKbAsk] Stream cancelled by client for user {UserId}", userId);
+        }
+#pragma warning disable CA1031 // SSE endpoint must handle all errors gracefully
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "[GlobalKbAsk] Error during ask stream for user {UserId}", userId);
+
+            try
+            {
+                var errorEvent = new RagStreamingEvent(
+                    StreamingEventType.Error,
+                    new StreamingError("An internal error occurred. See server logs for details.", "INTERNAL_ERROR"),
+                    DateTime.UtcNow);
+                var json = System.Text.Json.JsonSerializer.Serialize(errorEvent, SseJsonOptions.Default);
+                await context.Response.WriteAsync($"data: {json}\n\n", CancellationToken.None).ConfigureAwait(false);
+                await context.Response.Body.FlushAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+#pragma warning disable CA1031 // Cleanup: if error event fails, client is disconnected
+            catch
+            {
+                // Client connection broken — nothing more we can do
+            }
+#pragma warning restore CA1031
+        }
+#pragma warning restore CA1031
+
+        return Results.Empty;
     }
 
     private static void MapChatLookupEndpoints(RouteGroupBuilder group)
@@ -201,7 +392,7 @@ internal static class KnowledgeBaseEndpoints
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
         logger.LogDebug("GetKnowledgeBaseStatus for game {GameId} by user {UserId}",
-            gameId, session!.User!.Id);
+            gameId, session!.Principal!.Subject.Id);
 
         var query = new GetKnowledgeBaseStatusQuery(gameId);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -236,7 +427,7 @@ internal static class KnowledgeBaseEndpoints
 
         logger.LogInformation(
             "KnowledgeBase search request from user {UserId} for game {GameId}: {Query}",
-            session!.User!.Id, gameId, req.query);
+            session!.Principal!.Subject.Id, gameId, req.query);
 
         var query = new SearchQuery(
             GameId: gameId,
@@ -245,8 +436,8 @@ internal static class KnowledgeBaseEndpoints
             MinScore: req.minScore ?? 0.55,
             SearchMode: req.searchMode ?? "hybrid",
             Language: req.language ?? "en",
-            UserId: session!.User!.Id,
-            UserRole: session.User!.Role
+            UserId: session!.Principal!.Subject.Id,
+            UserRole: session.Principal!.EffectiveActor.Role
         );
 
         var results = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -275,7 +466,7 @@ internal static class KnowledgeBaseEndpoints
             req.gameId, req.query?.Substring(0, Math.Min(50, req.query?.Length ?? 0)));
 
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        logger.LogDebug("[KnowledgeBase.Ask] Session retrieved - UserId: {UserId}", session?.User?.Id);
+        logger.LogDebug("[KnowledgeBase.Ask] Session retrieved - UserId: {UserId}", session?.Principal?.Subject?.Id);
 
         if (!Guid.TryParse(req.gameId, out var gameId))
         {
@@ -292,15 +483,15 @@ internal static class KnowledgeBaseEndpoints
 
         logger.LogInformation(
             "[KnowledgeBase.Ask] Q&A request from user {UserId} for game {GameId}: {Query}",
-            session!.User!.Id, gameId, req.query);
+            session!.Principal!.Subject.Id, gameId, req.query);
 
         var query = new AskQuestionQuery(
             GameId: gameId,
             Question: req.query!,  // Already validated by QueryValidator above
             Language: req.language ?? "en",
             BypassCache: req.bypassCache ?? false,
-            UserId: session!.User!.Id,
-            UserRole: session.User!.Role
+            UserId: session!.Principal!.Subject.Id,
+            UserRole: session.Principal!.EffectiveActor.Role
         );
 
         logger.LogDebug("[KnowledgeBase.Ask] Sending AskQuestionQuery to mediator...");
@@ -338,7 +529,7 @@ internal static class KnowledgeBaseEndpoints
         const int MAX_SKIP = 10000;
 
         var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
-        if (session?.User?.Id is not Guid userId)
+        if (session?.Principal?.Subject?.Id is not Guid userId)
         {
             logger.LogWarning("GetMyChatHistory called without valid session");
             return Results.Unauthorized();
@@ -394,7 +585,7 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken ct = default)
     {
         var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
-        if (session?.User?.Id is not Guid userId)
+        if (session?.Principal?.Subject?.Id is not Guid userId)
         {
             return Results.Unauthorized();
         }
@@ -433,10 +624,10 @@ internal static class KnowledgeBaseEndpoints
             return Results.NotFound(new { error = "Thread not found" });
         }
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         if (result.UserId != userId &&
-            !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
         {
             return Results.Forbid();
         }
@@ -454,7 +645,7 @@ internal static class KnowledgeBaseEndpoints
 
         if (gameId.HasValue)
         {
-            var userId = session!.User!.Id;
+            var userId = session!.Principal!.Subject.Id;
             var query = new GetChatThreadsByGameQuery(gameId.Value, userId);
             var results = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(new { threads = results, count = results.Count });
@@ -473,7 +664,7 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         logger.LogInformation("Creating chat thread for user {UserId}, game {GameId}", userId, req.GameId);
 
@@ -485,7 +676,7 @@ internal static class KnowledgeBaseEndpoints
             InitialMessage: req.InitialMessage,
             AgentId: req.AgentId,
             AgentType: req.AgentType, // Issue #4362
-            UserRole: session.User!.Role,
+            UserRole: session.Principal!.EffectiveActor.Role,
             SelectedKnowledgeBaseIds: req.SelectedKnowledgeBaseIds
         );
 
@@ -501,7 +692,7 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         var command = new DeleteChatThreadCommand(threadId, userId);
         await mediator.Send(command, ct).ConfigureAwait(false);
@@ -519,7 +710,7 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         // Verify thread ownership before mutation
         var threadQuery = new GetChatThreadByIdQuery(threadId);
@@ -531,7 +722,7 @@ internal static class KnowledgeBaseEndpoints
         }
 
         if (existingThread.UserId != userId &&
-            !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
         {
             logger.LogWarning("User {UserId} denied access to close thread {ThreadId} (owner: {OwnerId})",
                 userId, threadId, existingThread.UserId);
@@ -551,7 +742,7 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         // Verify thread ownership before mutation
         var threadQuery = new GetChatThreadByIdQuery(threadId);
@@ -563,7 +754,7 @@ internal static class KnowledgeBaseEndpoints
         }
 
         if (existingThread.UserId != userId &&
-            !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
         {
             logger.LogWarning("User {UserId} denied access to reopen thread {ThreadId} (owner: {OwnerId})",
                 userId, threadId, existingThread.UserId);
@@ -584,7 +775,7 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         if (string.IsNullOrWhiteSpace(req.Title))
         {
@@ -601,7 +792,7 @@ internal static class KnowledgeBaseEndpoints
         }
 
         if (existingThread.UserId != userId &&
-            !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
         {
             logger.LogWarning("User {UserId} denied access to update thread {ThreadId} (owner: {OwnerId})",
                 userId, threadId, existingThread.UserId);
@@ -625,7 +816,7 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         if (string.IsNullOrWhiteSpace(req.AgentType))
         {
@@ -641,7 +832,7 @@ internal static class KnowledgeBaseEndpoints
         }
 
         if (existingThread.UserId != userId &&
-            !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
         {
             logger.LogWarning("User {UserId} denied access to switch agent on thread {ThreadId} (owner: {OwnerId})",
                 userId, threadId, existingThread.UserId);
@@ -672,7 +863,7 @@ internal static class KnowledgeBaseEndpoints
             return Results.BadRequest(new { error = "Content is required" });
         }
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         // Verify thread ownership before mutation
         var threadQuery = new GetChatThreadByIdQuery(threadId);
@@ -684,7 +875,7 @@ internal static class KnowledgeBaseEndpoints
         }
 
         if (existingThread.UserId != userId &&
-            !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
         {
             logger.LogWarning("User {UserId} denied access to add message to thread {ThreadId} (owner: {OwnerId})",
                 userId, threadId, existingThread.UserId);
@@ -711,7 +902,7 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         if (string.IsNullOrWhiteSpace(req.Content))
         {
@@ -736,8 +927,8 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
-        var isAdmin = string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        var userId = session!.Principal!.Subject.Id;
+        var isAdmin = string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
 
         var command = new DeleteMessageCommand(threadId, messageId, userId, isAdmin);
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -757,7 +948,7 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         // Verify thread ownership before export
         var threadQuery = new GetChatThreadByIdQuery(threadId);
@@ -769,7 +960,7 @@ internal static class KnowledgeBaseEndpoints
         }
 
         if (existingThread.UserId != userId &&
-            !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
         {
             logger.LogWarning("User {UserId} denied access to export thread {ThreadId} (owner: {OwnerId})",
                 userId, threadId, existingThread.UserId);
@@ -822,7 +1013,7 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         var command = new AssembleContextCommand(
             Query: req.Query,
@@ -896,39 +1087,70 @@ internal static class KnowledgeBaseEndpoints
 
     private static void MapKbDocumentEndpoints(RouteGroupBuilder group)
     {
-        // Issue #730: G4 single doc metadata
+        // Wave 3 Phase 1 (#805 / PR #732 §4.3.5): /discover "Recent KB docs" rail.
+        // Registered before the {id:guid} route so the literal "recent" segment is
+        // matched first; the :guid constraint also disambiguates at the matcher
+        // level but explicit ordering keeps intent obvious (mirror /agents/recent).
+        group.MapGet("/kb-docs/recent", HandleGetRecentKbDocs)
+            .WithName("GetRecentKbDocs")
+            .RequireSession()
+            .WithTags("Discover", "KnowledgeBase")
+            .WithSummary("Get recently indexed KB documents")
+            .WithDescription(
+                "Returns the most recently indexed KB documents (ProcessingState == Ready) "
+                + "sorted by lastIngestedAt DESC. Powers the SP4 /discover \"Recent KB docs\" "
+                + "rail. Cache: 5min via HybridCache. Wave 3 Phase 1 (Issue #805 / PR #732 §4.3.5).")
+            .Produces<DiscoverItemsEnvelope<RecentKbDocDto>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status400BadRequest);
+
+        // Wave 3 Phase 3 (Issue #805 / PR #732 §6.3.1): doc detail with 423 Locked.
         group.MapGet("/kb-docs/{id:guid}", HandleGetKbDocumentById)
             .WithName("GetKbDocumentById")
             .RequireSession()
             .WithTags("KnowledgeBase")
-            .WithSummary("Get KB document metadata")
-            .WithDescription("Returns metadata for a single KB document (title, processing state, total chunks, page count). Admin users see additional diagnostic fields.")
-            .Produces<KbDocumentDto>()
+            .WithSummary("Get KB document detail (spec §6.3.1)")
+            .WithDescription(
+                "Returns spec-conformant document detail with gameName + uploaderName joins. "
+                + "Returns 423 Locked when processingStatus != 'ready' (Nygard semantic distinct from 404). "
+                + "Cache: HybridCache 1h per-viewer, tags ['kb', 'kbDoc:{id}'].")
+            .Produces<KbDocumentDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status404NotFound)
-            .Produces(StatusCodes.Status403Forbidden);
+            .Produces(StatusCodes.Status423Locked);
 
-        // Issue #730: G1 paginated chunks list
+        // Wave 3 Phase 3 (Issue #805 / PR #732 §6.3.2): cursor-paginated chunks list.
         group.MapGet("/kb-docs/{id:guid}/chunks", HandleGetKbChunks)
             .WithName("GetKbChunks")
             .RequireSession()
             .WithTags("KnowledgeBase")
-            .WithSummary("Get paginated chunks list with hierarchical headings")
-            .WithDescription("Returns chunks ordered by position with breadcrumb headingPath. Admin users see vectorId, characterCount, elementType, embeddingStatus.")
-            .Produces<KbChunkListDto>()
+            .WithSummary("Get cursor-paginated chunks list (spec §6.3.2)")
+            .WithDescription(
+                "Returns chunks ordered by position with breadcrumb headingPath, opaque cursor "
+                + "pagination ((Position, Id) tuple base64-encoded). nextCursor null on last page. "
+                + "Cache: HybridCache 30min per-viewer.")
+            .Produces<KbChunksListResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status404NotFound)
-            .Produces(StatusCodes.Status403Forbidden);
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound);
 
-        // Issue #730: G2 single chunk full content
+        // Wave 3 Phase 3 (Issue #805 / PR #732 §6.3.3): chunk detail w/ markdown subset.
         group.MapGet("/kb-docs/{id:guid}/chunks/{chunkId:guid}", HandleGetKbChunkById)
             .WithName("GetKbChunkById")
             .RequireSession()
             .WithTags("KnowledgeBase")
-            .WithSummary("Get a single chunk with full content + prev/next navigation")
-            .WithDescription("Returns chunk content as markdown, with hierarchical breadcrumb and prev/next chunk IDs for navigation.")
-            .Produces<KbChunkDetailDto>()
-            .Produces(StatusCodes.Status404NotFound)
-            .Produces(StatusCodes.Status403Forbidden);
+            .WithSummary("Get chunk detail with prev/next navigation (spec §6.3.3)")
+            .WithDescription(
+                "Returns chunk content sanitized to spec markdown subset (H4-H6 demoted, "
+                + "raw HTML stripped, images replaced, footnotes stripped) with prev/nextChunkId "
+                + "navigation. Cache: HybridCache 24h (chunks immutable post-ingest).")
+            .Produces<KbChunkDetailDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound);
 
         // Issue #730: G3 in-document FTS
         group.MapPost("/kb-docs/{id:guid}/chunks/search", HandleSearchKbChunks)
@@ -943,6 +1165,128 @@ internal static class KnowledgeBaseEndpoints
             .Produces(StatusCodes.Status403Forbidden);
     }
 
+    private static void MapUserKbDocsEndpoint(RouteGroupBuilder group)
+    {
+        // BE-1 #1588: paginated cross-game listing of the caller's KB documents.
+        group.MapGet("/kb-docs", HandleListUserKbDocs)
+            .WithName("ListUserKbDocs")
+            .RequireSession()
+            .WithTags("KnowledgeBase")
+            .WithSummary("List the authenticated user's KB documents across all games (paginated).")
+            .WithDescription(
+                "Returns the caller's PDF documents across all games, ordered by ProcessedAt ?? UploadedAt DESC. " +
+                "Use ?state=ready (default) to exclude in-flight or failed docs; ?state=all to include every state. " +
+                "Pagination via ?page= (1-based) and ?pageSize= (1-100, default 20).")
+            .Produces<KbDocsListResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status422UnprocessableEntity);
+
+        // Issue #1687: partial-update PATCH for editable KB doc metadata (KbEditorDesktop).
+        group.MapPatch("/kb-docs/{id:guid}", HandleUpdateKbDocMetadata)
+            .WithName("UpdateKbDocMetadata")
+            .RequireSession()
+            .WithTags("KnowledgeBase")
+            .WithSummary("Update editable metadata (title, documentType, language, tags) for one KB document.")
+            .WithDescription(
+                "PATCH /api/v1/kb-docs/{id}. JSON null on any field = no-op (partial update); empty string clears Title; " +
+                "empty array clears Tags. Owner OR Admin/SuperAdmin only. Returns 404 (NOT 403) when the caller cannot " +
+                "see the doc — anti-info-leak per D-2 of the spec panel.")
+            .Produces<UserKbDocDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status422UnprocessableEntity);
+    }
+
+    private static async Task<IResult> HandleListUserKbDocs(
+        [FromQuery] int? page,
+        [FromQuery] int? pageSize,
+        [FromQuery] string? sortBy,
+        [FromQuery] string? state,
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
+        if (session?.Principal?.Subject?.Id is not Guid userId
+            || userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
+        var safePage = Math.Max(1, page.GetValueOrDefault(1));
+        var safePageSize = Math.Clamp(pageSize.GetValueOrDefault(20), 1, 100);
+
+        var query = new ListUserKbDocsQuery(
+            UserId: userId,
+            Page: safePage,
+            PageSize: safePageSize,
+            SortBy: sortBy,
+            State: state);
+
+        var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    /// <summary>
+    /// Issue #1687: handler for <c>PATCH /api/v1/kb-docs/{id}</c>. Editable metadata
+    /// (title / documentType / language / tags) — partial update via the
+    /// <see cref="UpdateKbDocMetadataCommand"/> + handler pipeline.
+    ///
+    /// Authorization is enforced inside the handler so 404 anti-info-leak (D-2)
+    /// is single-sourced. The endpoint only resolves the session principal and
+    /// the actor role string.
+    /// </summary>
+    private static async Task<IResult> HandleUpdateKbDocMetadata(
+        Guid id,
+        UpdateKbDocMetadataRequest req,
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
+        if (session?.Principal?.Subject?.Id is not Guid userId
+            || userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
+        var role = session.Principal!.EffectiveActor.Role ?? "User";
+
+        var command = new UpdateKbDocMetadataCommand(
+            DocId: id,
+            EditorUserId: userId,
+            EditorRole: role,
+            Title: req.Title,
+            DocumentType: req.DocumentType,
+            Language: req.Language,
+            Tags: req.Tags);
+
+        var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    /// <summary>
+    /// Wave 3 Phase 1 (PR #732 §4.3.5 / Issue #805): handler for
+    /// <c>GET /api/v1/kb-docs/recent</c>. Clamps the <c>limit</c> query
+    /// parameter to <c>[1, 50]</c> with a default of 10. Returns a
+    /// <c>{ items: RecentKbDocDto[] }</c> envelope per PR #732 §3.4 empty-state
+    /// contract (200 with empty array rather than 404 / 204).
+    /// </summary>
+    private static async Task<IResult> HandleGetRecentKbDocs(
+        [FromQuery] int? limit,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var safeLimit = limit.GetValueOrDefault(10);
+        if (safeLimit < 1) safeLimit = 10;
+        if (safeLimit > 50) safeLimit = 50;
+
+        var query = new GetRecentKbDocsQuery(safeLimit);
+        var items = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+
+        return Results.Ok(new DiscoverItemsEnvelope<RecentKbDocDto>(items));
+    }
+
     private static async Task<IResult> HandleGetKbDocumentById(
         Guid id,
         HttpContext context,
@@ -950,33 +1294,51 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken cancellationToken)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session.User!.Id;
-        var userIsAdmin = string.Equals(session.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        var userId = session.Principal!.Subject.Id;
+        var userIsAdmin = string.Equals(session.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
         var query = new GetKbDocumentByIdQuery(id, RequestingUserId: userId, UserIsAdmin: userIsAdmin);
         var dto = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(dto);
     }
 
+    /// <summary>
+    /// Wave 3 Phase 3 handler for cursor-paginated chunks list.
+    /// Decodes opaque cursor; malformed cursor → 400 Bad Request.
+    /// </summary>
     private static async Task<IResult> HandleGetKbChunks(
         Guid id,
-        int? skip,
-        int? take,
+        [FromQuery] string? cursor,
+        [FromQuery] int? limit,
         HttpContext httpContext,
         IMediator mediator,
         CancellationToken cancellationToken)
     {
-        var skipValue = skip ?? 0;
-        var takeValue = take ?? 50;
+        var limitValue = limit ?? 50;
 
-        if (takeValue < 1 || takeValue > 100)
+        if (limitValue < 1 || limitValue > 100)
         {
-            return Results.BadRequest(new { error = "take must be between 1 and 100" });
+            return Results.BadRequest(new { error = "limit must be between 1 and 100" });
+        }
+
+        KbChunksCursor.CursorPayload? decodedCursor;
+        try
+        {
+            decodedCursor = KbChunksCursor.Decode(cursor);
+        }
+        catch (FormatException ex)
+        {
+            return Results.BadRequest(new { error = $"Invalid cursor: {ex.Message}" });
         }
 
         var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
-        var userId = session.User!.Id;
-        var isAdmin = string.Equals(session.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
-        var query = new GetKbChunksQuery(id, RequestingUserId: userId, Skip: skipValue, Take: takeValue, UserIsAdmin: isAdmin);
+        var userId = session.Principal!.Subject.Id;
+        var isAdmin = string.Equals(session.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        var query = new GetKbChunksQuery(
+            id,
+            RequestingUserId: userId,
+            Cursor: decodedCursor,
+            Limit: limitValue,
+            UserIsAdmin: isAdmin);
         var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
@@ -989,9 +1351,9 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken cancellationToken)
     {
         var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
-        var userId = session.User!.Id;
+        var userId = session.Principal!.Subject.Id;
         var isAdmin = string.Equals(
-            session.User!.Role,
+            session.Principal!.EffectiveActor.Role,
             UserRole.Admin.ToString(),
             StringComparison.OrdinalIgnoreCase);
         var query = new GetKbChunkByIdQuery(id, RequestingUserId: userId, ChunkId: chunkId, UserIsAdmin: isAdmin);
@@ -1012,8 +1374,8 @@ internal static class KnowledgeBaseEndpoints
         }
 
         var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
-        var userId = session.User!.Id;
-        var isAdmin = string.Equals(session.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        var userId = session.Principal!.Subject.Id;
+        var isAdmin = string.Equals(session.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
         var query = new SearchKbChunksQuery(id, RequestingUserId: userId, Query: body.Query, Skip: body.Skip ?? 0, Take: body.Take ?? 20, UserIsAdmin: isAdmin);
         var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
@@ -1039,7 +1401,7 @@ internal static class KnowledgeBaseEndpoints
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
         var result = await mediator.Send(new LinkExistingKbToGameCommand(
-            UserId: session.User!.Id,
+            UserId: session.Principal!.Subject.Id,
             TargetGameId: gameId,
             SourcePdfDocumentId: request.PdfDocumentId), ct).ConfigureAwait(false);
 
@@ -1056,7 +1418,7 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken ct)
     {
         var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
-        if (session?.User?.Id is not Guid userId)
+        if (session?.Principal?.Subject?.Id is not Guid userId)
         {
             return Results.Unauthorized();
         }
@@ -1090,6 +1452,24 @@ internal record UpdateChatThreadTitleRequest(
 );
 
 /// <summary>
+/// Issue #1687: Request model for PATCH /api/v1/kb-docs/{id}. Each field is
+/// optional; JSON null means "no-op" (partial update / D-4). Empty string
+/// clears <see cref="Title"/>; empty array clears <see cref="Tags"/>.
+/// </summary>
+/// <param name="Title">User-editable display title; max 200 chars after trim.</param>
+/// <param name="DocumentType">Case-insensitive <c>DocumentCategory</c> enum value
+/// (Rulebook|Expansion|Errata|QuickStart|Reference|PlayerAid|Other).</param>
+/// <param name="Language">Case-insensitive ISO 639-1 code from the LanguageCode whitelist
+/// (en, it, de, fr, es, pt, pl, nl, ja, zh).</param>
+/// <param name="Tags">Replacement tag set; deduped+lowercased+sorted on persist; max 20 / 50 chars.</param>
+internal record UpdateKbDocMetadataRequest(
+    string? Title,
+    string? DocumentType,
+    string? Language,
+    IReadOnlyList<string>? Tags
+);
+
+/// <summary>
 /// Request model for switching agent type on a chat thread (Issue #4465).
 /// </summary>
 internal record SwitchThreadAgentRequest(
@@ -1120,3 +1500,49 @@ internal record LinkKbRequest(Guid PdfDocumentId);
 /// Request body for POST /api/v1/kb-docs/{id}/chunks/search (G3 in-document FTS).
 /// </summary>
 internal sealed record SearchKbChunksRequest(string Query, int? Skip, int? Take);
+
+/// <summary>
+/// Request body for POST /api/v1/knowledge-base/search/global (cross-game search, Issue #1661).
+/// User/Role are NOT in the request — they are resolved from the authenticated session.
+/// Issue #1686 added optional facet fields (DocType, GameId, Language).
+/// </summary>
+/// <param name="Query">Natural-language search query (required, max 500 chars).</param>
+/// <param name="Limit">Max results per page (default 20, hard cap 50).</param>
+/// <param name="Cursor">Opaque pagination cursor from a previous response.</param>
+/// <param name="Mode">Search mode (Hybrid by default).</param>
+/// <param name="MinScore">Minimum hybrid score; results below threshold are discarded.</param>
+/// <param name="DocType">
+/// Optional facet (Issue #1686, canonical D-1): list of <c>PdfDocumentEntity.DocumentType</c> values
+/// from the allowlist <c>{ "base", "expansion", "errata", "homerule" }</c>
+/// (case-insensitive). Hard cap of 10 elements. Null or empty = no filter (D-3 byte-identical legacy).
+/// </param>
+/// <param name="GameId">
+/// Optional facet (Issue #1686, D-5): single SharedGame.Id to narrow results to.
+/// When provided AND accessible, search runs only on that game.
+/// When provided AND NOT accessible, returns 200 empty (no info leak).
+/// </param>
+/// <param name="Language">
+/// Optional facet (Issue #1686, D-2): ISO 639-1 code from the allowlist
+/// <c>{ "en", "it", "de", "fr", "es" }</c> (case-insensitive). Null = no filter.
+/// </param>
+internal sealed record GlobalKbSearchRequest(
+    string Query,
+    int Limit = 20,
+    string? Cursor = null,
+    SearchMode? Mode = null,
+    double? MinScore = null,
+    IReadOnlyList<string>? DocType = null,
+    Guid? GameId = null,
+    string? Language = null);
+
+/// <summary>
+/// Request body for POST /api/v1/knowledge-base/ask/global (cross-game SSE ask, Issue #1661 PR-2).
+/// User/Role are NOT in the request — they are resolved from the authenticated session.
+/// </summary>
+/// <param name="Query">The natural-language question to ask across all accessible games.</param>
+/// <param name="Language">ISO 639-1 language code for the LLM prompt (default: "it").</param>
+/// <param name="TopK">Max chunks to retrieve cross-game (default: 8, capped by handler).</param>
+internal sealed record GlobalKbAskRequest(
+    string Query,
+    string? Language = null,
+    int? TopK = null);

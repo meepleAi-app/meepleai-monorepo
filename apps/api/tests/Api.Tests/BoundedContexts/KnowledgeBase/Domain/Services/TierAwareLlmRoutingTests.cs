@@ -275,7 +275,7 @@ public sealed class TierAwareLlmRoutingTests
     private static AuthUser CreateUser(Role role, UserTier? tier = null)
     {
         var email = Email.Parse($"test.{role.Value}@meepleai.dev");
-        var password = PasswordHash.Create("TestPass123!");
+        var password = PasswordHash.Create("UniqueT3stPwd!");
 
         return new AuthUser(
             Guid.NewGuid(),

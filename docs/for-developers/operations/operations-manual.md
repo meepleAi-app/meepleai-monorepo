@@ -26,6 +26,9 @@
 16. [Storage Services](#16-storage-services)
 17. [Incident Response](#17-incident-response)
 18. [Maintenance & Disaster Recovery](#18-maintenance--disaster-recovery)
+19. [Catalog Seed Pipeline (#1903)](#19-catalog-seed-pipeline-1903)
+20. [Catalog Covers — BGG ToS Compliance (#2123)](#20-catalog-covers--bgg-tos-compliance-2123)
+21. [Self-Hosted Runner Recovery](#21-self-hosted-runner-recovery)
 
 ---
 
@@ -42,7 +45,7 @@
                         │    ▼                                        │
              :8080 ─────┤  api (.NET 9)                               │
                         │    │  ├──► postgres (pgvector)  :5432       │
-                        │    │  ├──► qdrant              :6333/:6334  │
+                        │    │  ├──► qdrant              :PostgreSQL :5432/:6334  │
                         │    │  ├──► redis               :6379        │
                         │    │  └──► orchestration-svc   :8004        │
                         │    │          ├──► embedding    :8000        │
@@ -68,7 +71,7 @@
 | Service | Image | Container | Profile | Port(s) | CPU | RAM |
 |---------|-------|-----------|---------|---------|-----|-----|
 | postgres | pgvector/pgvector:pg16 | meepleai-postgres | core | 5432 | 2.0 | 2G |
-| qdrant | qdrant/qdrant:v1.12.4 | meepleai-qdrant | core | 6333, 6334 | 2.0 | 4G |
+| qdrant | qdrant/qdrant:v1.12.4 | meepleai-qdrant | core | PostgreSQL :5432, 6334 | 2.0 | 4G |
 | redis | redis:7.4.1-alpine3.20 | meepleai-redis | core | 6379 | 1.0 | 1G |
 | api | custom build | meepleai-api | core | 8080 | 2.0 | 4G |
 | web | custom build | meepleai-web | core | 3000 | 1.0 | 1G |
@@ -323,7 +326,7 @@ docker compose ps
 | Admin password | 90 days | Update in `admin.secret` |
 | API keys (BGG, OpenRouter) | On compromise | Third-party service keys |
 | Redis password | 180 days | Restart Redis + all clients |
-| Qdrant API key | 180 days | Restart Qdrant + API |
+| pgvector API key | 180 days | Restart Qdrant + API |
 | All others | 365 days | Low-risk secrets |
 
 ### Security Rules
@@ -622,7 +625,7 @@ docker exec meepleai-postgres psql -U meepleai -c \
 |----------|-------|
 | Image | `qdrant/qdrant:v1.12.4` |
 | Container | `meepleai-qdrant` |
-| Ports | 6333 (HTTP API), 6334 (gRPC) |
+| Ports | PostgreSQL :5432 (HTTP API), 6334 (gRPC) |
 | Volume | `qdrant_data` → `/qdrant/storage` |
 | CPU / RAM Limit | 2.0 / 4G |
 | CPU / RAM Reserved | 1.0 / 2G |
@@ -635,24 +638,24 @@ docker exec meepleai-postgres psql -U meepleai -c \
 
 ```bash
 # Health check
-curl http://localhost:6333/healthz
+curl http://localhost:PostgreSQL :5432/healthz
 
 # Check cluster status
-curl http://localhost:6333/cluster -H "api-key: $QDRANT_API_KEY"
+curl http://localhost:PostgreSQL :5432/cluster -H "api-key: $QDRANT_API_KEY"
 
 # List collections
-curl http://localhost:6333/collections -H "api-key: $QDRANT_API_KEY"
+curl http://localhost:PostgreSQL :5432/collections -H "api-key: $QDRANT_API_KEY"
 
 # Collection details (point count, config)
-curl http://localhost:6333/collections/meepleai_documents \
+curl http://localhost:PostgreSQL :5432/collections/meepleai_documents \
   -H "api-key: $QDRANT_API_KEY"
 
 # Collection size and segment info
-curl http://localhost:6333/collections/meepleai_documents/cluster \
+curl http://localhost:PostgreSQL :5432/collections/meepleai_documents/cluster \
   -H "api-key: $QDRANT_API_KEY"
 
 # Count points in collection
-curl -X POST http://localhost:6333/collections/meepleai_documents/points/count \
+curl -X POST http://localhost:PostgreSQL :5432/collections/meepleai_documents/points/count \
   -H "api-key: $QDRANT_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"exact": true}'
@@ -667,20 +670,20 @@ docker logs meepleai-qdrant --tail=50
 
 ```bash
 # Create snapshot of a collection
-curl -X POST "http://localhost:6333/collections/meepleai_documents/snapshots" \
+curl -X POST "http://localhost:PostgreSQL :5432/collections/meepleai_documents/snapshots" \
   -H "api-key: $QDRANT_API_KEY"
 
 # List snapshots
-curl "http://localhost:6333/collections/meepleai_documents/snapshots" \
+curl "http://localhost:PostgreSQL :5432/collections/meepleai_documents/snapshots" \
   -H "api-key: $QDRANT_API_KEY"
 
 # Download snapshot
-curl "http://localhost:6333/collections/meepleai_documents/snapshots/<snapshot_name>" \
+curl "http://localhost:PostgreSQL :5432/collections/meepleai_documents/snapshots/<snapshot_name>" \
   -H "api-key: $QDRANT_API_KEY" \
   --output qdrant_backup.snapshot
 
 # Full storage snapshot (all collections)
-curl -X POST "http://localhost:6333/snapshots" \
+curl -X POST "http://localhost:PostgreSQL :5432/snapshots" \
   -H "api-key: $QDRANT_API_KEY"
 ```
 
@@ -691,13 +694,13 @@ curl -X POST "http://localhost:6333/snapshots" \
 docker compose stop qdrant
 
 # Upload snapshot to restore
-curl -X POST "http://localhost:6333/collections/meepleai_documents/snapshots/upload" \
+curl -X POST "http://localhost:PostgreSQL :5432/collections/meepleai_documents/snapshots/upload" \
   -H "api-key: $QDRANT_API_KEY" \
   -H "Content-Type: multipart/form-data" \
   -F "snapshot=@qdrant_backup.snapshot"
 
 # Alternatively: restore from full snapshot
-curl -X POST "http://localhost:6333/snapshots/upload" \
+curl -X POST "http://localhost:PostgreSQL :5432/snapshots/upload" \
   -H "api-key: $QDRANT_API_KEY" \
   -F "snapshot=@full_backup.snapshot"
 
@@ -723,7 +726,7 @@ docker compose start qdrant
 #### Enable Memory-Mapped Storage (for large datasets)
 
 ```bash
-curl -X PATCH "http://localhost:6333/collections/meepleai_documents" \
+curl -X PATCH "http://localhost:PostgreSQL :5432/collections/meepleai_documents" \
   -H "api-key: $QDRANT_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -736,7 +739,7 @@ curl -X PATCH "http://localhost:6333/collections/meepleai_documents" \
 #### Enable Scalar Quantization (reduce RAM ~4x)
 
 ```bash
-curl -X PATCH "http://localhost:6333/collections/meepleai_documents" \
+curl -X PATCH "http://localhost:PostgreSQL :5432/collections/meepleai_documents" \
   -H "api-key: $QDRANT_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -753,7 +756,7 @@ curl -X PATCH "http://localhost:6333/collections/meepleai_documents" \
 
 ```bash
 # 1. Create snapshot before upgrade
-curl -X POST "http://localhost:6333/snapshots" -H "api-key: $QDRANT_API_KEY"
+curl -X POST "http://localhost:PostgreSQL :5432/snapshots" -H "api-key: $QDRANT_API_KEY"
 
 # 2. Update image tag in docker-compose.yml
 # image: qdrant/qdrant:v1.13.0
@@ -763,18 +766,18 @@ docker compose pull qdrant
 docker compose up -d qdrant
 
 # 4. Verify
-curl http://localhost:6333/healthz
-curl http://localhost:6333/collections/meepleai_documents -H "api-key: $QDRANT_API_KEY"
+curl http://localhost:PostgreSQL :5432/healthz
+curl http://localhost:PostgreSQL :5432/collections/meepleai_documents -H "api-key: $QDRANT_API_KEY"
 ```
 
 ### Troubleshooting
 
 | Symptom | Diagnosis | Fix |
 |---------|-----------|-----|
-| Health check fails | `curl http://localhost:6333/healthz` | Check logs: `docker logs meepleai-qdrant` |
+| Health check fails | `curl http://localhost:PostgreSQL :5432/healthz` | Check logs: `docker logs meepleai-qdrant` |
 | High memory usage | Collection growing beyond limit | Enable mmap or quantization |
 | Slow search | Large collection, no optimization | Rebuild HNSW index, enable quantization |
-| Collection not found | Wrong collection name | `curl localhost:6333/collections` to list |
+| Collection not found | Wrong collection name | `curl localhost:PostgreSQL :5432/collections` to list |
 | API key rejected | Secret mismatch | Verify `qdrant.secret` |
 | gRPC connection refused | Port 6334 not exposed | Check compose override exposes 6334 |
 
@@ -1802,7 +1805,7 @@ container_memory_usage_bytes / container_spec_memory_limit_bytes * 100
 # PostgreSQL active connections
 pg_stat_activity_count{state="active"}
 
-# Qdrant collection size
+# pgvector table size
 qdrant_collection_vectors_count{collection="meepleai_documents"}
 ```
 
@@ -2167,6 +2170,7 @@ S3_FORCE_PATH_STYLE=false
 | Access denied | Wrong credentials | Check `storage.secret` |
 | Upload fails | S3_FORCE_PATH_STYLE wrong | Set to `true` for MinIO |
 | Console not loading | Port 9001 not exposed | Check compose override |
+| `Could not determine content length` on R2 PUT | Non-seekable stream + R2 strict checksum validation | Fixed in #2271 (PR #2280) — `S3BlobStorageService.StoreAsync` pre-buffers non-seekable streams + sets `Headers.ContentLength` + `DisableDefaultChecksumValidation`. Health-check (`HEAD` bucket only) does not exercise PUT; rely on `make seed-index` smoke run. |
 
 #### Disaster Recovery
 
@@ -2214,16 +2218,20 @@ S3_FORCE_PATH_STYLE=false
    └── If disk full:    docker system prune -f
 
 4. RESOLVE
-   ├── Apply fix (config change, restart, rollback)
+   ├── Apply fix (config change, restart, rollback*)
    ├── Verify health:  docker compose ps
    ├── Check logs:     docker logs <container> --tail=20
    └── Run smoke test: curl http://localhost:8080/
+   * For image-tag rollback procedure see rollback-runbook.md
 
 5. POST-MORTEM
-   ├── Document: what happened, why, how fixed
-   ├── Identify: prevention measures
-   └── Implement: monitoring improvements
+   ├── Document: use post-mortem-template.md (9 sections, < 30 min fill)
+   ├── Storage: post-mortems/YYYY-MM-DD-<slug>.md
+   ├── Identify: prevention measures (5-whys root cause)
+   └── Implement: monitoring improvements (each as action item with owner+date+priority)
 ```
+
+> See [`post-mortem-template.md`](./post-mortem-template.md) for the canonical template and [`post-mortems/2026-05-03-wave-b2-agents-backend-missing.md`](./post-mortems/2026-05-03-wave-b2-agents-backend-missing.md) for a worked example.
 
 ### Quick Response Commands
 
@@ -2278,6 +2286,35 @@ dmesg | grep -i "oom\|killed" | tail -20
 | Data loss suspected | Stop writes, investigate, restore from backup |
 | Security breach suspected | Isolate affected service, rotate all secrets |
 | Infrastructure failure | Consider VPS migration (see DR section) |
+
+### LLM Provider Outage Recovery — Reset Circuit Breakers
+
+**When to use**: All LLM circuits stuck in `Open` after upstream provider outage is resolved. Default cooldown is `circuitBreakerOpenDurationSeconds` (configured in `/admin/ai` LLM config, typically 30s). If you can't wait — or if the cooldown was misconfigured to a high value — manually reset.
+
+> 🟡 **Note (2026-06-03 per #1834 spec-panel review)**: There is NO admin UI button for "Reset all circuit breakers". The Polly circuit breaker state is in-memory per API process — restarting the `api` container is the simplest reset. Direct in-process reset via admin endpoint is tracked separately if/when on-call composition justifies it.
+
+#### Option A — Restart API container (fastest, zero state loss)
+
+```bash
+# Production / staging via SSH
+ssh meepleai-staging
+cd /opt/meepleai
+docker compose restart api
+
+# Verify circuits closed
+curl -s -H "Cookie: <admin-session>" http://localhost:8080/api/v1/admin/circuit-breakers \
+  | jq '.[] | {service: .serviceName, state: .state}'
+```
+
+Trade-off: brief (~5s) API unavailability while container restarts. No data loss (state is in-memory and disposable).
+
+#### Option B — Force-trip a single circuit manually
+
+Not currently supported. If a single provider needs to be ejected from the routing chain (e.g. compromised key suspected), use `/admin/ai` → LLM config → `fallbackChainJson` to remove the entry, save, then restart `api`.
+
+#### Verify recovery
+
+Visit `/admin/providers` (admin role required). The `CircuitBreakerGrid` section should show all chips `closed` (green) and the cooldown bar should disappear. The KPI `Circuit health` in the hero should read `N/N` (all healthy).
 
 ### Communication Template
 
@@ -2340,7 +2377,7 @@ ETA: [When resolution expected]
 |------|--------|----------|-----------|---------------|
 | PostgreSQL | `pg_dumpall` | Daily 3 AM | 7 days | 30-60 min |
 | Redis | BGSAVE + copy | Weekly | 4 weeks | < 5 min (or skip) |
-| Qdrant | Snapshot API | Weekly | 30 days | 15-30 min |
+| pgvector | Snapshot API | Weekly | 30 days | 15-30 min |
 | pdf_uploads | Volume tar.gz | Weekly | 30 days | 10-20 min |
 | Grafana data | Volume tar.gz | Monthly | 90 days | 5 min |
 | Secrets | Encrypted vault | On change | Permanent | 5 min |
@@ -2374,7 +2411,7 @@ echo "Redis: $(du -sh "$BACKUP_DIR/redis.rdb" | cut -f1)"
 
 # Qdrant
 echo "Backing up Qdrant..."
-curl -s -X POST "http://localhost:6333/collections/meepleai_documents/snapshots" \
+curl -s -X POST "http://localhost:PostgreSQL :5432/collections/meepleai_documents/snapshots" \
   -H "api-key: $QDRANT_API_KEY" > "$BACKUP_DIR/qdrant_snapshot_response.json"
 echo "Qdrant snapshot created."
 
@@ -2392,12 +2429,17 @@ echo "=== Backup complete ==="
 
 ### Disaster Recovery Procedures
 
+> **Rollback (image-tag revert)** for a single bad deploy lives in a dedicated runbook:
+> [**rollback-runbook.md**](./rollback-runbook.md) — covers bad image, bad migration, and slow-leak scenarios with RTO ≤ 10 min.
+> Use this section for **infrastructure-level** disasters (VPS loss, DB corruption, ransomware) where rollback alone is insufficient.
+
 #### Recovery Targets
 
-| Metric | Target |
-|--------|--------|
-| **RTO** (Recovery Time Objective) | < 2 hours |
-| **RPO** (Recovery Point Objective) | < 24 hours |
+| Metric | Target | Notes |
+|--------|--------|-------|
+| **RTO** (Recovery Time Objective) — DR scenarios | < 2 hours | This section |
+| **RTO** — single-deploy rollback | < 10 minutes | See [rollback-runbook.md §10](./rollback-runbook.md#10-raci--sla) |
+| **RPO** (Recovery Point Objective) | < 24 hours | Daily `backup.sh` cron |
 
 #### Scenario 1: VPS Failure (Total Loss)
 
@@ -2566,6 +2608,379 @@ For beta (CPX31): ~EUR 22/mo. For full production (CPX51): ~EUR 72/mo.
 
 ---
 
+## 19. Catalog Seed Pipeline (#1903)
+
+The catalog seed pipeline lets admins pre-seed the `SharedGameEntity` catalog
+from Wikidata (primary, CC0) and BoardGameGeek (whitelisted fallback, ToS-constrained).
+Full design reference: [`docs/superpowers/specs/2026-06-04-admin-catalog-seed-design.md`](../../superpowers/specs/2026-06-04-admin-catalog-seed-design.md).
+Legal posture: [ADR-059](../../for-claude/architecture/adr/adr-059-catalog-seed-legal-posture.md).
+
+### Enabling the seed pipeline
+
+The pipeline ships with the runtime feature flag `admin.catalog-seed.enabled` set
+to `false`. **Do NOT enable it in production until the pre-rollout legal checklist
+is complete.**
+
+1. **Pre-rollout checklist** (§8.5.6 of spec, mirrored in ADR-059):
+   - [ ] 1 hour legal consultation completed
+   - [ ] MeepleAI ToS updated with "publicly available data sources" clause
+   - [ ] `abuse@meepleai.app` mailbox active and monitored
+   - [ ] `BggTosWatcherJob` running in staging with alert routing
+   - [ ] `/admin/catalog/seeds/export` audit log export functioning
+2. **Toggle the flag**: navigate to `/admin/config` → General → set
+   `admin.catalog-seed.enabled = true`. Persists via `RuntimeConfigEntity`,
+   same pattern as `RegistrationMode`.
+3. **Verify the fetch job runs**: tail logs for `CatalogSeedFetchJob` (Quartz,
+   every 1 min). The first run after enabling consumes one `Pending` draft
+   if any exists.
+4. **Verify the ToS watcher**: `SELECT * FROM bgg_tos_hashes ORDER BY observed_at DESC LIMIT 5;`
+   should show at least one row. If the most recent `change_kind = 'changed'`,
+   trigger immediate legal review and consider disabling the flag.
+
+### Disabling (kill-switch)
+
+Setting `admin.catalog-seed.enabled = false`:
+
+- `CatalogSeedFetchJob` early-returns without making provider calls.
+- HTTP endpoints under `/api/v1/admin/catalog/seeds` return `503 Service
+  Unavailable` (endpoint filter); the admin UI surfaces this in the
+  `CatalogSeedApiError` 503 path.
+- `BggTosWatcherJob` continues running (compliance audit trail must not lapse).
+- In-flight drafts are NOT cleaned up; they resume on re-enable.
+
+Use this when:
+- BGG sends a takedown notice or `BggTosWatcherJob` flags a change.
+- Wikidata or BGG API rate-limits MeepleAI.
+- Legal posture changes mid-rollout.
+
+### Auditing
+
+Filter `domain_event_logs` by event type:
+
+```sql
+SELECT occurred_at, payload
+FROM domain_event_logs
+WHERE event_type IN (
+  'CatalogSeedFetched',
+  'CatalogSeedApproved',
+  'CatalogSeedRejected',
+  'BggFetchInvoked'
+)
+ORDER BY occurred_at DESC
+LIMIT 200;
+```
+
+Each `CatalogSeedFetched` payload includes the provider used and the source URL
+of every captured field (`FieldProvenance`). This supports GDPR Article 17
+erasure requests (designer name → `DELETE WHERE designer_name = 'X'`).
+
+### Troubleshooting
+
+- **All drafts stay `Pending` indefinitely**: feature flag is OFF, or the
+  Quartz scheduler isn't running. Check `CatalogSeedFetchJob` job state via
+  `/admin/jobs` and `admin.catalog-seed.enabled` value.
+- **All drafts transition to `FetchFailed`**: Wikidata/BGG endpoint
+  unreachable, or User-Agent header missing/invalid. BGG requires a
+  `From:` field with a valid email — verify `Bgg:UserAgent` config.
+- **`BggTosWatcherJob` flags `change_kind = 'changed'`**: STOP. Disable the
+  flag, route the diff to legal review. The watcher snapshots the BGG ToS
+  page; even a benign cosmetic change triggers the alert (false positives
+  are acceptable, false negatives would be a compliance failure).
+- **Bulk enqueue rejects with HTTP 400 "Too many IDs"**: hard cap is 100 IDs
+  per request (`BulkEnqueueCatalogSeedsCommandValidator`). Split the paste.
+- **`CatalogSeedApiError` with status 503 in the FE**: kill-switch is active.
+  See "Disabling" above.
+
+---
+
+## 20. Catalog Covers — BGG ToS Compliance (#2123)
+
+Issue [#2123](https://github.com/meepleAi-app/meepleai-monorepo/issues/2123) and
+ADR-059 §5 ban all browser-side asset traffic to BoardGameGeek hosts
+(`cf.geekdo-images.com`, `*.boardgamegeek.com`, `images.geekdo.com`,
+`geekdo-images.com`). Covers are served from R2 (PDF-derived, BGG re-uploaded
+server-side, or Wikidata/Wikimedia Commons), with a deterministic placeholder
+as the terminal fallback.
+
+### Alert: `meepleai_bgg_url_attempted_render_total > 0`
+
+**Severity**: P1 (legal exposure — possible ToS violation in flight).
+
+**Trigger**: any browser attempted to render an image whose hostname matches
+the BGG block list. The custom Next.js Image loader caught the attempt and
+redirected to the placeholder, but the attempt itself **must** be
+investigated: it means a code path is passing a BGG URL into `<Image>` instead
+of the runtime-resolved `SharedGameDto.CoverUrl`.
+
+**Investigation steps**:
+
+```bash
+# 1. Identify offending route
+# In Grafana:
+sum by (path) (rate(meepleai_bgg_url_attempted_render_total[5m]))
+
+# 2. Check whether DB rows regressed (seed manifests should be clean)
+psql "$PROD_DB_URL" -c "
+  SELECT COUNT(*) FROM shared_games
+  WHERE image_url ILIKE '%geekdo%' OR image_url ILIKE '%boardgamegeek%'
+     OR thumbnail_url ILIKE '%geekdo%' OR thumbnail_url ILIKE '%boardgamegeek%';"
+# Expected: 0. Nonzero ⇒ a seed import or admin tool rewrote a row;
+# run the nullify UPDATE from migration 20260610152201 manually.
+
+# 3. Check FE source for new raw <Image> consumer that bypassed <Cover>
+cd apps/web && pnpm lint:bgg
+```
+
+**Resolution**:
+
+- DB row pollution: `UPDATE shared_games SET image_url = NULL WHERE image_url ILIKE '%geekdo%' OR image_url ILIKE '%boardgamegeek%';` (same for `thumbnail_url`).
+- FE regression: revert raw `<Image>` consumer to `<Cover>` wrapper.
+- Manifest regression: `python scripts/scrub_bgg_manifest.py` + redeploy seeder.
+
+### Cover resolution health
+
+Metric: `meepleai_cover_resolution_total{source}` — label is one of
+`r2_user`, `r2_pdf`, `r2_bgg`, `r2_wikidata`, `placeholder`. Healthy
+distribution depends on the catalog enrichment progress; if `source="placeholder"`
+exceeds **80%** for more than 15 minutes, the QID bootstrap + M8 batch run
+needs to be performed (or the upstream Wikimedia is degraded).
+
+### Periodic Wikidata QID + M8 re-enrichment
+
+Wave 3 M9 BackgroundService scheduler (tracked separately under epic #1823)
+will automate quarterly re-verification. Until then, the manual procedure for
+newly added games is:
+
+```bash
+# 1. Bootstrap QIDs for games with a BggId but no WikidataQid yet
+python scripts/bootstrap_wikidata_qid.py --connection-string "$STAGING_DB_URL"
+
+# 2. Get the ids of QID-populated games still missing a Wikidata cover
+GAME_IDS=$(psql "$STAGING_DB_URL" -At -c "
+  SELECT id FROM shared_games
+  WHERE wikidata_qid IS NOT NULL
+    AND (wikidata_cover_r2_key IS NULL OR wikidata_qid_last_verified_at < NOW() - INTERVAL '90 days')")
+
+# 3. Trigger the M8 batch via admin endpoint (sequential 1 req/sec Wikimedia limit)
+curl -X POST "https://staging.meepleai.app/api/v1/admin/catalog/covers/enrich-batch" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"gameIds\":[$(echo $GAME_IDS | tr ' ' ',')]}"
+```
+
+Expected success rate ≥80% of QID-populated games; the rest will Skip with
+machine-readable reasons (license not whitelisted, image not available on
+Wikidata, etc.) and fall back to the placeholder.
+
+### CI gating
+
+- `Frontend - BGG Lint` runs `pnpm lint:bgg` per PR.
+- `Backend - BGG ToS IT` runs `BggToSComplianceIntegrationTests` (Testcontainers
+  Postgres) per PR.
+
+Either failure blocks merge. Bypassing requires an explicit lift comment from
+@DegrassiAaron AND a follow-up issue tracking the regression.
+
+---
+
+## 21. Self-Hosted Runner Recovery
+
+### Background
+
+A GitHub Actions self-hosted runner (`meepleai-staging`, ARM64, Hetzner CX31)
+runs deploy + nightly workflows. Going offline → workflow runs queue
+indefinitely with no surface alert from GitHub. Issue #2019 (2026-06-08)
+exposed this: the runner was OOM-killed during `pnpm install`, sat down
+for 4h25min before a maintainer noticed.
+
+### Failure mode: OOM kill
+
+The CX31 has 8GB RAM + 4GB swap. Concurrent Docker workload (postgres,
+embedding, reranker, n8n) reserves ~3GB. A `pnpm install` spike pushes
+the runner past the available memory budget; the kernel OOM-killer
+picks the runner over the (much larger) Docker containers because the
+runner unit has no `MemoryMax` cap and no negative `OOMScoreAdjust`.
+
+journal signature:
+
+```
+actions.runner.<owner>-<repo>.<runner>.service: A process of this unit has been killed by the OOM killer.
+actions.runner.*.service: Failed with result 'oom-kill'.
+```
+
+### Mitigation: systemd override
+
+The override at `infra/runner/systemd-overrides/10-memory-limits.conf`
+caps the runner at 3G via cgroup `memory.max` and deprioritizes it as
+an OOM target. When the cap is approached, systemd kills the runner
+cleanly and `Restart=on-failure RestartSec=30s` brings it back online
+automatically within 30 seconds.
+
+```ini
+[Service]
+MemoryMax=3G
+OOMScoreAdjust=-500
+Restart=on-failure
+RestartSec=30s
+```
+
+### Install procedure
+
+Run on the staging host as root (this is reproducible from the repo,
+no manual transcription):
+
+```bash
+ssh meepleai-staging
+sudo bash /opt/meepleai/repo/infra/runner/apply-memory-overrides.sh
+```
+
+The script:
+
+1. Auto-discovers the `actions.runner.*.service` unit name.
+2. Installs the drop-in at
+   `/etc/systemd/system/<unit>.d/10-memory-limits.conf`.
+3. Runs `systemctl daemon-reload + restart <unit>`.
+4. Verifies `MemoryMax=3221225472` (= 3G), `OOMScoreAdjust=-500`,
+   `Restart=on-failure`. Exits non-zero if any property differs.
+
+Idempotent — safe to re-run after a runner reinstall.
+
+### Verify
+
+```bash
+systemctl show <runner-service> -p MemoryMax,OOMScoreAdjust,Restart,RestartSec
+```
+
+Expected:
+
+```
+MemoryMax=3221225472
+OOMScoreAdjust=-500
+Restart=on-failure
+RestartSec=30s
+```
+
+### Recovery from an offline runner
+
+If the alert `RunnerOffline` (Prometheus, 10m threshold) or
+`RunnerOfflineCritical` (30m) fires:
+
+```bash
+# 1. Inspect
+ssh meepleai-staging
+sudo systemctl status actions.runner.*
+
+# 2. Check OOM history (the failure signature that triggered #2019)
+sudo journalctl -u actions.runner.* --since '1 hour ago' | grep -i oom
+
+# 3. Restart (auto-restart should have engaged; this is a manual fallback)
+sudo systemctl restart actions.runner.*
+
+# 4. If repeated kills despite override: check Docker workload
+docker stats --no-stream
+# Consider capping memory on heaviest containers in compose.staging.yml
+```
+
+### Monitoring
+
+| Alert | Severity | Threshold | Source |
+|---|---|---|---|
+| `RunnerOffline` | warning | offline > 10m | `up{job="github_runner_local"} == 0` |
+| `RunnerOfflineCritical` | critical | offline > 30m | same expr, longer `for:` |
+| `RunnerMemoryNearLimit` | warning | mem.current / MemoryMax > 0.8 for 5m | cgroup memory |
+
+Rules: `infra/prometheus/alerts/runner-availability.yml`
+Companion script: `infra/runner/monitor.sh` (textfile collector emits the
+`up{}` gauge from `systemctl is-active <unit>`).
+
+### Refs
+
+- Issue: [#2019](https://github.com/meepleAi-app/meepleai-monorepo/issues/2019)
+- Companion infra: [#1990](https://github.com/meepleAi-app/meepleai-monorepo/issues/1990) (Phase B soak — incident context)
+- Setup script: `infra/runner/setup-runner.sh`
+- Health monitor: `infra/runner/monitor.sh`
+
+---
+
+## 22. Wikidata SSE Subscriber Starvation
+
+### Alert: `WikidataSseSubscriberStarvation`
+
+| Property | Value |
+|---|---|
+| Severity | warning |
+| Subsystem | wikidata-sse |
+| Threshold | `meepleai_wikidata_sse_subscribers == 0 AND meepleai_wikidata_sse_admin_clients_connected > 0` |
+| Sustained for | 15m |
+| Defined in | `infra/prometheus/alerts/wikidata-sse.yml` |
+
+### What it means
+
+An admin has the wikidata dead-letter visibility page open (it is
+heartbeating every 30s, so the `admin_clients_connected` gauge is
+above zero), but the local broadcaster reports **zero SSE subscribers**.
+Live row updates are silently not flowing — the admin sees a stale page
+until they hard-reload.
+
+Background metric contract:
+
+- `meepleai_wikidata_sse_subscribers` — gauge fed by
+  `IWikidataEnrichmentEventBroadcaster.SubscriberCount`.
+- `meepleai_wikidata_sse_admin_clients_connected` — gauge fed by
+  `WikidataAdminClientHeartbeatTracker.GetConnectedCount(now)`. TTL is
+  90 seconds (3 missed FE pings); entries older are GC'd on read.
+
+### Investigation steps
+
+1. **Confirm the alert is real**. In Grafana → dashboard
+   "Wikidata Cover Enrichment — Pipeline Health" → Panels 9 + 12.
+   Panel 9 should read 0; Panel 12 should be ≥ 1 (one or more admins
+   actively watching). If Panel 12 is also 0, the alert is misfiring
+   — file a sub-issue.
+
+2. **Check publisher activity**. Panel 10 (`SSE publish rate`) — if it
+   is also flat at 0, the alert is benign (nothing to deliver). If it
+   is non-zero, every published event is being dropped on this pod.
+
+3. **Search api logs for failure patterns**. SSH to the running pod
+   and grep:
+
+   ```bash
+   docker logs meepleai-api --since 30m 2>&1 | grep -E \
+     "RedisWikidataEnrichmentEventBroadcaster.*(SUBSCRIBE failed|dropped malformed|UNSUBSCRIBE failed)|InMemoryWikidataEnrichmentEventBroadcaster.*dropped event"
+   ```
+
+   - `failed to open SUBSCRIBE` → Redis backplane handshake broken.
+     Verify Redis health (`docker exec meepleai-redis redis-cli PING`).
+   - `dropped malformed message` → schema-version mismatch between pods
+     after a partial deploy.
+   - Nothing in logs → likely a client-side EventSource drop (step 4).
+
+4. **Ask the admin to hard-reload the page**. If the gauge climbs back
+   to ≥ 1 within 30 seconds, the issue was a stale FE EventSource and
+   the alert clears within ~15 min. If the gauge stays at 0, the SSE
+   endpoint is genuinely starving — investigate reverse-proxy /
+   ingress idle-timeout (Traefik, nginx) on `/api/v1/admin/wikidata/enrichment/events`.
+
+### Resolution paths
+
+| Symptom | Fix |
+|---|---|
+| FE EventSource dropped | Admin hard-reload; consider a future client-side auto-reconnect with exponential backoff |
+| Redis SUBSCRIBE failed | `docker restart meepleai-api` (re-runs `EnsureRedisSubscriptionAsync` lazily on next subscriber) |
+| Proxy idle-timeout | Bump the ingress `proxy_read_timeout` / Traefik `transport.respondingTimeouts.readTimeout` above the 30s heartbeat |
+| Malformed-message rate spike | Roll forward to a single deploy version — partial rollout broke the wire schema |
+
+### Refs
+
+- Issue: [#2470](https://github.com/meepleAi-app/meepleai-monorepo/issues/2470)
+- Companion: [#2256](https://github.com/meepleAi-app/meepleai-monorepo/issues/2256) (Redis backplane shipped in PR #2469)
+- Originating SSE endpoint: `apps/api/src/Api/Routing/Admin/AdminWikidataCoverEnrichmentEndpoints.cs` → `HandleEventsStream`
+- Broadcaster: `apps/api/src/Api/BoundedContexts/SharedGameCatalog/Application/Services/*WikidataEnrichmentEventBroadcaster.cs`
+- Heartbeat tracker: `apps/api/src/Api/BoundedContexts/SharedGameCatalog/Application/Services/WikidataAdminClientHeartbeatTracker.cs`
+
+---
+
 ## Appendix A: Complete Command Reference
 
 ### Service Management
@@ -2619,10 +3034,10 @@ docker exec meepleai-redis redis-cli -a "$REDIS_PASSWORD" FLUSHALL    # DANGER
 ### Qdrant
 
 ```bash
-curl http://localhost:6333/healthz
-curl http://localhost:6333/collections -H "api-key: $QDRANT_API_KEY"
-curl http://localhost:6333/collections/meepleai_documents -H "api-key: $QDRANT_API_KEY"
-curl -X POST "http://localhost:6333/snapshots" -H "api-key: $QDRANT_API_KEY"
+curl http://localhost:PostgreSQL :5432/healthz
+curl http://localhost:PostgreSQL :5432/collections -H "api-key: $QDRANT_API_KEY"
+curl http://localhost:PostgreSQL :5432/collections/meepleai_documents -H "api-key: $QDRANT_API_KEY"
+curl -X POST "http://localhost:PostgreSQL :5432/snapshots" -H "api-key: $QDRANT_API_KEY"
 ```
 
 ### EF Core Migrations
@@ -2682,8 +3097,6 @@ Frontend feature flags surface as `NEXT_PUBLIC_*` environment variables. Because
 
 | Flag | Default | Purpose | Owner |
 |------|---------|---------|-------|
-| `NEXT_PUBLIC_ALPHA_MODE` | `false` (dev: `true`) | Alpha Zero feature scope (auth, games, BGG, RAG chat, library). Build-time. | Product |
-| `NEXT_PUBLIC_MOCK_MODE` | `false` (dev: `true`) | Serves MSW mocks when backend is unavailable. | Frontend |
 | `NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED` | `false` (dev: `true`) | ADR-051 M2.1 admin-only Mechanic Extractor AI validation surfaces (`/admin/knowledge-base/mechanic-extractor/{dashboard,golden,review}`). Strict equality on the literal `'true'` — no truthy coercion. When off the routes return 404 and embedded gates render nothing. | Knowledge Base |
 
 To enable a flag in staging without touching `compose.staging.yml`, export it on the host shell before running `make staging`:

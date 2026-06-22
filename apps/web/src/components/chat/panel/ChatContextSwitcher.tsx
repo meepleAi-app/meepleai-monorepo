@@ -51,9 +51,9 @@ export function ChatContextSwitcher({
   return (
     <div
       ref={wrapperRef}
-      className="relative flex flex-shrink-0 flex-wrap items-center gap-2.5 border-b border-[var(--nh-border-default)] bg-[var(--nh-bg-base)] px-5 py-3"
+      className="relative flex flex-shrink-0 flex-wrap items-center gap-2.5 border-b border-[var(--border)] bg-[var(--bg)] px-5 py-3"
     >
-      <span className="mr-0.5 text-[0.7rem] font-extrabold uppercase tracking-wider text-[var(--nh-text-muted)]">
+      <span className="mr-0.5 text-[0.7rem] font-extrabold uppercase tracking-wider text-[var(--text-muted)]">
         Contesto
       </span>
       {gameContext ? (
@@ -74,16 +74,16 @@ export function ChatContextSwitcher({
             🎲
           </span>
           <div className="text-left">
-            <div className="font-quicksand text-[0.82rem] font-extrabold leading-none text-[var(--nh-text-primary)]">
+            <div className="font-quicksand text-[0.82rem] font-extrabold leading-none text-[var(--text)]">
               {gameContext.name}
             </div>
-            <div className="mt-1 text-[0.66rem] font-semibold text-[var(--nh-text-muted)]">
+            <div className="mt-1 text-[0.66rem] font-semibold text-[var(--text-muted)]">
               {gameContext.year ? `${gameContext.year} · ` : ''}
               {gameContext.pdfCount} PDF · KB{' '}
               {gameContext.kbStatus === 'ready' ? 'pronta' : gameContext.kbStatus}
             </div>
           </div>
-          <span aria-hidden className="text-xs text-[var(--nh-text-muted)]">
+          <span aria-hidden className="text-xs text-[var(--text-muted)]">
             ▾
           </span>
         </button>
@@ -91,7 +91,7 @@ export function ChatContextSwitcher({
         <button
           type="button"
           onClick={handlePillClick}
-          className="rounded-full border border-dashed border-[var(--nh-border-default)] bg-[var(--nh-bg-elevated)] px-4 py-2 font-nunito text-[0.78rem] font-semibold text-[var(--nh-text-muted)] hover:bg-white hover:shadow-[var(--shadow-warm-sm)]"
+          className="rounded-full border border-dashed border-[var(--border)] bg-[var(--bg-card)] px-4 py-2 font-nunito text-[0.78rem] font-semibold text-[var(--text-muted)] hover:bg-white hover:shadow-[var(--shadow-warm-sm)]"
         >
           Seleziona gioco
         </button>
@@ -102,7 +102,7 @@ export function ChatContextSwitcher({
         <div
           role="listbox"
           aria-label="Seleziona gioco"
-          className="absolute left-5 top-full z-10 mt-1.5 max-h-52 w-56 overflow-y-auto rounded-2xl border border-[var(--nh-border-default)] bg-[var(--nh-bg-surface)] py-1.5 shadow-[var(--shadow-warm-lg)]"
+          className="absolute left-5 top-full z-10 mt-1.5 max-h-52 w-56 overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] py-1.5 shadow-[var(--shadow-warm-lg)]"
         >
           {availableGames.map(game => (
             <button
@@ -111,7 +111,7 @@ export function ChatContextSwitcher({
               role="option"
               aria-selected={game.id === gameContext?.id}
               onClick={() => handleSelectGame(game.id)}
-              className="w-full px-4 py-2.5 text-left font-nunito text-[0.82rem] font-semibold text-[var(--nh-text-secondary)] transition-colors hover:bg-[var(--nh-bg-elevated)] hover:text-[var(--nh-text-primary)] aria-selected:text-[hsl(25,95%,38%)]"
+              className="w-full px-4 py-2.5 text-left font-nunito text-[0.82rem] font-semibold text-[var(--text-sec)] transition-colors hover:bg-[var(--bg-card)] hover:text-[var(--text)] aria-selected:text-[hsl(25,95%,38%)]"
             >
               {game.name}
             </button>

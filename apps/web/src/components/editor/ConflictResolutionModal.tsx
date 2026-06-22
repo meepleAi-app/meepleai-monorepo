@@ -93,15 +93,15 @@ export function ConflictResolutionModal({
               <h4 className="font-semibold text-blue-700 mb-2">Le Tue Modifiche (Locale)</h4>
               <dl className="text-sm space-y-1">
                 <div className="flex justify-between">
-                  <dt className="text-gray-600">Versione:</dt>
+                  <dt className="text-muted-foreground">Versione:</dt>
                   <dd className="font-mono">{localVersion}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-gray-600">Regole:</dt>
+                  <dt className="text-muted-foreground">Regole:</dt>
                   <dd>{localAtomCount}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-gray-600">Solo locali:</dt>
+                  <dt className="text-muted-foreground">Solo locali:</dt>
                   <dd className="text-blue-600 font-semibold">+{onlyInLocal}</dd>
                 </div>
               </dl>
@@ -112,15 +112,15 @@ export function ConflictResolutionModal({
               <h4 className="font-semibold text-green-700 mb-2">Versione Server (Remoto)</h4>
               <dl className="text-sm space-y-1">
                 <div className="flex justify-between">
-                  <dt className="text-gray-600">Versione:</dt>
+                  <dt className="text-muted-foreground">Versione:</dt>
                   <dd className="font-mono">{remoteVersion}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-gray-600">Regole:</dt>
+                  <dt className="text-muted-foreground">Regole:</dt>
                   <dd>{remoteAtomCount}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-gray-600">Solo remote:</dt>
+                  <dt className="text-muted-foreground">Solo remote:</dt>
                   <dd className="text-green-600 font-semibold">+{onlyInRemote}</dd>
                 </div>
               </dl>
@@ -128,30 +128,30 @@ export function ConflictResolutionModal({
           </div>
 
           {/* Common elements info */}
-          <div className="text-center text-sm text-gray-500">
+          <div className="text-center text-sm text-muted-foreground">
             <span className="font-medium">{inBoth}</span> regole in comune tra le due versioni
           </div>
 
           {/* Resolution Options Description */}
-          <div className="rounded-lg border bg-gray-50 p-4 space-y-3">
-            <h4 className="font-semibold text-gray-700">Opzioni di Risoluzione:</h4>
+          <div className="rounded-lg border bg-muted p-4 space-y-3">
+            <h4 className="font-semibold text-foreground">Opzioni di Risoluzione:</h4>
             <ul className="text-sm space-y-2">
               <li className="flex items-start gap-2">
                 <span className="text-blue-600 font-semibold min-w-[80px]">Locale:</span>
-                <span className="text-gray-600">
+                <span className="text-muted-foreground">
                   Sovrascrive la versione server con le tue modifiche. Le modifiche remote andranno
                   perse.
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-green-600 font-semibold min-w-[80px]">Remoto:</span>
-                <span className="text-gray-600">
+                <span className="text-muted-foreground">
                   Accetta la versione server. Le tue modifiche locali andranno perse.
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-purple-600 font-semibold min-w-[80px]">Unisci:</span>
-                <span className="text-gray-600">
+                <span className="text-muted-foreground">
                   Combina entrambe le versioni. Mantiene tutte le regole uniche da entrambi.
                 </span>
               </li>

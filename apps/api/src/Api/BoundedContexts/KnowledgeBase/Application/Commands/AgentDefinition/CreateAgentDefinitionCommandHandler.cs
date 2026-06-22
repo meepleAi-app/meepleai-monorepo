@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.DTOs.AgentDefinition;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -16,13 +17,16 @@ internal sealed class CreateAgentDefinitionCommandHandler
     : IRequestHandler<CreateAgentDefinitionCommand, AgentDefinitionDto>
 {
     private readonly IAgentDefinitionRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<CreateAgentDefinitionCommandHandler> _logger;
 
     public CreateAgentDefinitionCommandHandler(
         IAgentDefinitionRepository repository,
+        IUnitOfWork unitOfWork,
         ILogger<CreateAgentDefinitionCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -70,8 +74,9 @@ internal sealed class CreateAgentDefinitionCommandHandler
         if (request.KbCardIds is { Count: > 0 })
             agentDefinition.UpdateKbCardIds(request.KbCardIds);
 
-        // Persist
+        // Persist (ADR-056: explicit UoW save)
         await _repository.AddAsync(agentDefinition, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Created AgentDefinition {Id} with name '{Name}'",

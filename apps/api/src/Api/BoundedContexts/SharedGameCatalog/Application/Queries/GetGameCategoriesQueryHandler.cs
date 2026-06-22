@@ -30,10 +30,14 @@ internal sealed class GetGameCategoriesQueryHandler : IRequestHandler<GetGameCat
             cacheKey,
             async cancel =>
             {
+                // Issue #1440: include emoji + color for admin/filter UI surfaces.
+                // GameCount is left null on the public query; admin endpoint
+                // (AdminCategoriesEndpoints) issues a dedicated query that
+                // computes the join count.
                 var categories = await _context.GameCategories
                     .AsNoTracking()
                     .OrderBy(c => c.Name)
-                    .Select(c => new GameCategoryDto(c.Id, c.Name, c.Slug))
+                    .Select(c => new GameCategoryDto(c.Id, c.Name, c.Slug, c.Emoji, c.Color, null))
                     .ToListAsync(cancel)
                     .ConfigureAwait(false);
 

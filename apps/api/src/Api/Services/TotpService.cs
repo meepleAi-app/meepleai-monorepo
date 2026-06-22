@@ -64,7 +64,13 @@ internal class TotpService : ITotpService
     /// </summary>
     public async Task<TotpSetupResponse> GenerateSetupAsync(Guid userId, string userEmail, CancellationToken cancellationToken = default)
     {
-        var user = await _dbContext.Users.FindAsync(userId).ConfigureAwait(false);
+        // Issue #888 + #1628: AsTracking() is REQUIRED — DbContext default is NoTracking
+        // (PERF-06 in InfrastructureServiceExtensions.cs:162), so without it EF won't detect
+        // mutations and SaveChangesAsync returns 0 affected rows. Mirrors UserRepository.UpdateAsync.
+        var user = await _dbContext.Users
+            .AsTracking()
+            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken)
+            .ConfigureAwait(false);
         if (user == null)
         {
             _logger.LogWarning("2FA setup failed: User {UserId} not found", userId);
@@ -81,15 +87,19 @@ internal class TotpService : ITotpService
         // Generate backup codes
         var backupCodes = GenerateBackupCodes();
 
-        // Store encrypted secret (not enabled yet - requires verification)
+        // Store encrypted secret (not enabled yet - requires verification).
         user.TotpSecretEncrypted = encryptedSecret;
         user.IsTwoFactorEnabled = false; // Not enabled until verified
-        await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        // Delete existing backup codes if re-enrolling
+        // Delete existing backup codes if re-enrolling.
+        // AsTracking(): under the global NoTracking default (PERF-06), RemoveRange must operate
+        // on tracked entities; loading detached then RemoveRange relies on EF's implicit
+        // re-attach-as-Deleted, which throws if a conflicting instance is already tracked.
         var existingCodes = await _dbContext.UserBackupCodes
+            .AsTracking()
             .Where(bc => bc.UserId == userId)
-            .ToListAsync().ConfigureAwait(false);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
         if (existingCodes.Count > 0)
         {
             _dbContext.UserBackupCodes.RemoveRange(existingCodes);
@@ -108,7 +118,7 @@ internal class TotpService : ITotpService
                 CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
             });
         }
-        await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         await _auditService.LogAsync(userId.ToString(), "TwoFactorSetup", "TwoFactor", userId.ToString(), "Success",
             "User generated 2FA setup").ConfigureAwait(false);
@@ -130,7 +140,11 @@ internal class TotpService : ITotpService
     /// </summary>
     public async Task<bool> EnableTwoFactorAsync(Guid userId, string totpCode, CancellationToken cancellationToken = default)
     {
-        var user = await _dbContext.Users.FindAsync(userId).ConfigureAwait(false);
+        // Issue #888 + #1628: AsTracking() required because DbContext default is NoTracking (PERF-06).
+        var user = await _dbContext.Users
+            .AsTracking()
+            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken)
+            .ConfigureAwait(false);
         if (user == null)
         {
             _logger.LogWarning("2FA enable failed: User {UserId} not found", userId);
@@ -155,10 +169,10 @@ internal class TotpService : ITotpService
             return false;
         }
 
-        // Enable 2FA
+        // Enable 2FA.
         user.IsTwoFactorEnabled = true;
         user.TwoFactorEnabledAt = _timeProvider.GetUtcNow().UtcDateTime;
-        await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         await _auditService.LogAsync(userId.ToString(), "TwoFactorEnable", "TwoFactor", userId.ToString(), "Success",
             "User enabled 2FA").ConfigureAwait(false);
@@ -238,7 +252,11 @@ internal class TotpService : ITotpService
     /// </summary>
     public async Task DisableTwoFactorAsync(Guid userId, string password, string totpOrBackupCode, CancellationToken cancellationToken = default)
     {
-        var user = await _dbContext.Users.FindAsync(userId).ConfigureAwait(false);
+        // Issue #888 + #1628: AsTracking() required because DbContext default is NoTracking (PERF-06).
+        var user = await _dbContext.Users
+            .AsTracking()
+            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken)
+            .ConfigureAwait(false);
         if (user == null)
         {
             _logger.LogWarning("2FA disable failed: User {UserId} not found", userId);
@@ -276,18 +294,21 @@ internal class TotpService : ITotpService
             throw new UnauthorizedAccessException("Invalid verification code");
         }
 
-        // Disable 2FA and clear all data
+        // Disable 2FA and clear all data.
         user.IsTwoFactorEnabled = false;
         user.TotpSecretEncrypted = null;
         user.TwoFactorEnabledAt = null;
 
-        // Delete all backup codes (used and unused)
+        // Delete all backup codes (used and unused).
+        // AsTracking(): see GenerateSetupAsync — RemoveRange needs tracked entities under the
+        // global NoTracking default (PERF-06).
         var allBackupCodes = await _dbContext.UserBackupCodes
+            .AsTracking()
             .Where(bc => bc.UserId == userId)
-            .ToListAsync().ConfigureAwait(false);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
         _dbContext.UserBackupCodes.RemoveRange(allBackupCodes);
 
-        await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         await _auditService.LogAsync(userId.ToString(), "TwoFactorDisable", "TwoFactor", userId.ToString(), "Success",
             "User disabled 2FA").ConfigureAwait(false);
@@ -318,6 +339,17 @@ internal class TotpService : ITotpService
             EnabledAt = user.TwoFactorEnabledAt,
             UnusedBackupCodesCount = unusedBackupCodes
         };
+    }
+
+    /// <summary>
+    /// SP5 S3 — D-S3-4b: read-only lockout check (does not consume the rate-limit bucket).
+    /// Delegates to the same <see cref="IsAccountLockedOutAsync"/> used internally by
+    /// <see cref="VerifyCodeAsync"/>, so the step-up endpoint and the verify flow share one
+    /// source of truth for the lockout state.
+    /// </summary>
+    public virtual async Task<bool> IsLockedOutAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await IsAccountLockedOutAsync(userId, "totp").ConfigureAwait(false);
     }
 
     // ==================== PRIVATE HELPER METHODS ====================

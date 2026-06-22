@@ -68,7 +68,7 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"arbitro_valid_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         var validatePayload = new
@@ -103,7 +103,7 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"arbitro_invalid_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         var validatePayload = new
@@ -138,7 +138,7 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"arbitro_format_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         var validatePayload = new
@@ -178,7 +178,7 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"arbitro_workflow_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Step 1: Query Tutor agent for setup help
@@ -232,7 +232,7 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"arbitro_multiturn_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         var startingPosition = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -284,7 +284,7 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"arbitro_sla_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         var validatePayload = new
@@ -345,7 +345,7 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"arbitro_error_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         var validatePayload = new
@@ -379,7 +379,7 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"arbitro_unavailable_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         var validatePayload = new

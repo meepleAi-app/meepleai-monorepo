@@ -177,7 +177,7 @@ export function BulkExportTab() {
           return (
             <div
               key={card.id}
-              className="rounded-2xl border border-slate-200/60 dark:border-zinc-700/40 bg-white/70 dark:bg-zinc-800/50 backdrop-blur-sm p-5"
+              className="rounded-2xl border border-border/60 bg-card/70 backdrop-blur-sm p-5"
             >
               <div className="flex items-center gap-3 mb-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100/80 dark:bg-amber-900/30">
@@ -192,7 +192,7 @@ export function BulkExportTab() {
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="rounded-md bg-slate-100 dark:bg-zinc-700/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                   {card.format}
                 </span>
                 <Button

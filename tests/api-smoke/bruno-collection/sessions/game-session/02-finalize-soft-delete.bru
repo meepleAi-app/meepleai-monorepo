@@ -1,0 +1,38 @@
+meta {
+  name: SG4-GS2 — Finalize (complete) GameSession
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{apiBase}}/api/v1/sessions/{{gameSessionId}}/complete
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "winnerName": "Smoke Aaron"
+  }
+}
+
+script:pre-request {
+  // Depends on gameSessionId captured in 01-create-track-finalize.bru
+  if (!bru.getVar("gameSessionId")) {
+    throw new Error("gameSessionId not set — run 01-create-track-finalize first");
+  }
+}
+
+tests {
+  test("returns 200 OK", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("status transitions to Completed", function() {
+    const body = res.getBody();
+    expect(body.status).to.equal("Completed");
+  });
+  test("winnerName is recorded", function() {
+    const body = res.getBody();
+    expect(body.winnerName).to.equal("Smoke Aaron");
+  });
+}

@@ -1,3 +1,4 @@
+using Api.Helpers;
 using Microsoft.Extensions.Options;
 using System.Globalization;
 
@@ -93,7 +94,7 @@ internal class SecurityHeadersMiddleware
             // Log error but don't fail the request - security headers are important but shouldn't break the application
             _logger.LogWarning(ex,
                 "Failed to add security headers to response. Request will continue without security headers. Path: {Path}",
-                LogValueSanitizer.SanitizePath(context.Request.Path));
+                LogSanitizer.SanitizePath(context.Request.Path));
         }
     }
 

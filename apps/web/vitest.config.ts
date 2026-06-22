@@ -15,7 +15,6 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'json-summary', 'html', 'lcov', 'cobertura'],
       reportsDirectory: './coverage',
-      all: true,
       clean: true,
       include: ['src/**/*.{js,jsx,ts,tsx}'],
       exclude: [
@@ -76,7 +75,7 @@ export default defineConfig({
     },
     exclude: [
       '**/node_modules/**',
-      '**/e2e/**',
+      '**/e2e/**/*.spec.{ts,tsx}',
       '**/*.e2e.test.{ts,tsx}',
       '**/.next/**',
       '**/.__tests__/fixtures/**',

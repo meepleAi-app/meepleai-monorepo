@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
@@ -44,7 +45,7 @@ export function ProcessingQueueWidget() {
   return (
     <Link
       href="/admin/knowledge-base/queue"
-      className="flex items-center gap-4 rounded-xl border border-slate-200/60 dark:border-zinc-700/40 bg-white/70 dark:bg-zinc-800/50 backdrop-blur-sm px-4 py-3 hover:border-amber-300 dark:hover:border-amber-700 transition-colors"
+      className="flex items-center gap-4 rounded-xl border border-border/60 dark:border-zinc-700/40 bg-card/70 dark:bg-zinc-800/50 backdrop-blur-sm px-4 py-3 hover:border-amber-300 dark:hover:border-amber-700 transition-colors"
       data-testid="processing-queue-widget"
     >
       <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">

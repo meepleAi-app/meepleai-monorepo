@@ -40,6 +40,25 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
 
     public async Task DispatchAsync(NotificationMessage message, CancellationToken ct = default)
     {
+        // Issue #1937 / CF-1: short-circuit if a Notification already exists for the same
+        // (recipient, source domain event) pair. Guards against duplicate notifications when the
+        // calling event handler is re-dispatched (rolled-back outer tx in #1535, MediatR transient
+        // retry, hand-replay). Per-user scoping preserves legitimate fan-out from a single event
+        // (e.g. notify-all-admins): each admin gets their own Notification row, all sharing the
+        // same SourceEventId but distinct (user_id, source_event_id) UNIQUE pairs. When SourceEventId
+        // is null the dispatcher falls back to legacy behavior (no dedup) — used by hand-triggered
+        // admin notifications without an originating domain event.
+        if (message.SourceEventId is Guid sourceEventId)
+        {
+            if (await _notificationRepository.ExistsBySourceEventIdAsync(message.RecipientUserId, sourceEventId, ct).ConfigureAwait(false))
+            {
+                _logger.LogInformation(
+                    "Skipping duplicate notification dispatch: user={UserId}, type={Type}, sourceEventId={SourceEventId} (already dispatched)",
+                    message.RecipientUserId, message.Type, sourceEventId);
+                return;
+            }
+        }
+
         var correlationId = Guid.NewGuid();
 
         // 1. Always create in-app notification
@@ -56,9 +75,25 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
             message: message.Payload.ToString() ?? string.Empty,
             link: message.DeepLinkPath,
             metadata: metadataJson,
-            correlationId: correlationId);
+            correlationId: correlationId,
+            sourceEventId: message.SourceEventId);
 
-        await _notificationRepository.AddAsync(notification, ct).ConfigureAwait(false);
+        // Issue #2383 / ADR-068/072 follow-up: route the in-app insert through
+        // an atomic add-and-commit so the Postgres 23505 unique_violation that
+        // surfaces when ExistsBySourceEventIdAsync false-negatives under
+        // concurrent dispatch is caught at the repository boundary (mirrors
+        // LedgerEntryRepository.AddAndCommitAsync, CF-2 #1938). 10 of 25
+        // INotificationHandler implementations have no catch-all, so a
+        // bubbling DbUpdateException would surface as an unhandled exception
+        // in the MediatR pipeline.
+        var committed = await _notificationRepository.AddAndCommitAsync(notification, ct).ConfigureAwait(false);
+        if (!committed)
+        {
+            _logger.LogInformation(
+                "Skipping channel dispatch for race-window dedup: user={UserId}, type={Type}, sourceEventId={SourceEventId} (concurrent caller already persisted the in-app row)",
+                message.RecipientUserId, message.Type, message.SourceEventId);
+            return;
+        }
 
         _logger.LogInformation(
             "Created in-app notification {NotificationId} for user {UserId}, type={Type}, correlationId={CorrelationId}",
@@ -90,7 +125,8 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
                     notificationType: message.Type,
                     payload: message.Payload,
                     correlationId: correlationId,
-                    deepLinkPath: message.DeepLinkPath);
+                    deepLinkPath: message.DeepLinkPath,
+                    sourceEventId: message.SourceEventId);
 
                 queueItems.Add(emailItem);
 
@@ -120,7 +156,8 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
                         slackChannelTarget: slackConnection.DmChannelId,
                         slackTeamId: slackConnection.SlackTeamId,
                         correlationId: correlationId,
-                        deepLinkPath: message.DeepLinkPath);
+                        deepLinkPath: message.DeepLinkPath,
+                        sourceEventId: message.SourceEventId);
 
                     queueItems.Add(slackItem);
 
@@ -153,7 +190,8 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
                         slackChannelTarget: settings.WebhookUrl,
                         slackTeamId: teamId,
                         correlationId: correlationId,
-                        deepLinkPath: message.DeepLinkPath);
+                        deepLinkPath: message.DeepLinkPath,
+                        sourceEventId: message.SourceEventId);
 
                     queueItems.Add(teamItem);
 
@@ -196,7 +234,8 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
             || type == NotificationType.AdminStaleShareRequests
             || type == NotificationType.RateLimitReached
             || type == NotificationType.SlackConnectionRevoked
-            || type == NotificationType.MechanicAnalysisRejected)
+            || type == NotificationType.MechanicAnalysisRejected
+            || type == NotificationType.AgentCreationFailed)
             return NotificationSeverity.Warning;
 
         if (type == NotificationType.DocumentReady
@@ -228,6 +267,7 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
         if (type == NotificationType.GameNightReminder) return "Promemoria Serata";
         if (type == NotificationType.GameNightCancelled) return "Serata annullata";
         if (type == NotificationType.AgentReady) return "Agente pronto";
+        if (type == NotificationType.AgentCreationFailed) return "Creazione agent fallita";
         if (type == NotificationType.LoanReminder) return "Promemoria prestito";
         if (type == NotificationType.RateLimitApproaching) return "Quota in avvicinamento";
         if (type == NotificationType.RateLimitReached) return "Quota raggiunta";

@@ -147,9 +147,10 @@ public sealed class MechanicGoldenBggTagRepositoryIntegrationTests : IAsyncLifet
         await _dbContext.SaveChangesAsync();
         _dbContext.ChangeTracker.Clear();
 
+        // EF/Npgsql cannot translate string.Equals(..., StringComparison.Ordinal).
+        // Use the operator overload — PostgreSQL `=` is ordinal/case-sensitive for text.
         var target = await _dbContext.MechanicGoldenBggTags.AsNoTracking()
-            .FirstAsync(t => t.SharedGameId == sharedGameId
-                && string.Equals(t.Name, "Fantasy", StringComparison.Ordinal));
+            .FirstAsync(t => t.SharedGameId == sharedGameId && t.Name == "Fantasy");
 
         // Act
         await _repository.DeleteAsync(target.Id);

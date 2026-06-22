@@ -46,6 +46,20 @@ public sealed class SharedGame : AggregateRoot<Guid>
     private GameStatus _status;
     private GameDataStatus _gameDataStatus = GameDataStatus.Complete;
     private bool _hasUploadedPdf;
+    // Issue #1852: L4 PDF cover key, denormalized from PdfDocumentEntity.CoverR2Key
+    // via PdfCoverGeneratedEventHandler. Set via SetPdfCoverR2Key().
+    private string? _pdfCoverR2Key;
+    // Issue #1823 Phase B M8: Wikidata cover state. Set via SetWikidataCover()
+    // after successful enrichment orchestration (M3 SPARQL + M4 license + M6
+    // WebP + M7 R2 upload). QID itself is set independently via
+    // AssignWikidataQid() (typically by the M9 scheduler resolving from the
+    // catalog seed pipeline).
+    private string? _wikidataQid;
+    private string? _wikidataCoverR2Key;
+    private string? _wikidataCoverLicense;
+    private string? _wikidataCoverAttribution;
+    private string? _wikidataCoverSourceUrl;
+    private DateTime? _wikidataQidLastVerifiedAt;
     private bool _isDeleted;
     private Guid _createdBy;
     private Guid? _modifiedBy;
@@ -154,6 +168,54 @@ public sealed class SharedGame : AggregateRoot<Guid>
     /// Cached flag updated via domain events.
     /// </summary>
     public bool HasUploadedPdf => _hasUploadedPdf;
+
+    /// <summary>
+    /// Gets the R2 key of the generated PDF cover image, if available.
+    /// Denormalized from PdfDocumentEntity.CoverR2Key via PdfCoverGeneratedEventHandler.
+    /// Issue #1852.
+    /// </summary>
+    public string? PdfCoverR2Key => _pdfCoverR2Key;
+
+    /// <summary>
+    /// Gets the Wikidata QID identifying this game on Wikidata (e.g. <c>"Q98056728"</c>).
+    /// Set by <see cref="AssignWikidataQid"/> when the catalog seed pipeline resolves
+    /// a match. Read by the M8 cover enrichment orchestrator to issue the
+    /// <c>wdt:P18</c> SPARQL query. Issue #1823.
+    /// </summary>
+    public string? WikidataQid => _wikidataQid;
+
+    /// <summary>
+    /// Gets the R2 key of the L2 Wikidata-sourced cover image (WITHOUT <c>.webp</c>
+    /// suffix, per the contract enforced by <c>CoverUrlResolver</c>). Issue #1823.
+    /// </summary>
+    public string? WikidataCoverR2Key => _wikidataCoverR2Key;
+
+    /// <summary>
+    /// Gets the whitelisted license identifier persisted alongside the Wikidata
+    /// cover (e.g. <c>"CC BY-SA 4.0"</c>). Issue #1823 ADR DEC-3c.
+    /// </summary>
+    public string? WikidataCoverLicense => _wikidataCoverLicense;
+
+    /// <summary>
+    /// Gets the optional plain-text attribution credit extracted from the Commons
+    /// <c>extmetadata.Artist</c> field. <see langword="null"/> for CC0 / public-domain
+    /// works that omit the Artist field. Issue #1823.
+    /// </summary>
+    public string? WikidataCoverAttribution => _wikidataCoverAttribution;
+
+    /// <summary>
+    /// Gets the canonical Wikidata entity URL used as the attribution back-link
+    /// (e.g. <c>https://www.wikidata.org/wiki/Q98056728</c>). Issue #1823.
+    /// </summary>
+    public string? WikidataCoverSourceUrl => _wikidataCoverSourceUrl;
+
+    /// <summary>
+    /// Gets the timestamp of the last successful enrichment / re-verification of
+    /// the Wikidata cover. Used by the M8 orchestrator to skip recently-enriched
+    /// games (&lt; 90gg) and by the M15 quarterly re-verification cron.
+    /// Issue #1823 ADR DEC-3i.
+    /// </summary>
+    public DateTime? WikidataQidLastVerifiedAt => _wikidataQidLastVerifiedAt;
 
     /// <summary>
     /// Gets whether this game has been soft-deleted.
@@ -300,7 +362,14 @@ public sealed class SharedGame : AggregateRoot<Guid>
         int? bggId = null,
         Guid? agentDefinitionId = null,
         GameDataStatus gameDataStatus = GameDataStatus.Complete,
-        bool hasUploadedPdf = false) : base(id)
+        bool hasUploadedPdf = false,
+        string? pdfCoverR2Key = null,
+        string? wikidataQid = null,
+        string? wikidataCoverR2Key = null,
+        string? wikidataCoverLicense = null,
+        string? wikidataCoverAttribution = null,
+        string? wikidataCoverSourceUrl = null,
+        DateTime? wikidataQidLastVerifiedAt = null) : base(id)
     {
         _id = id;
         _title = title;
@@ -318,6 +387,13 @@ public sealed class SharedGame : AggregateRoot<Guid>
         _status = status;
         _gameDataStatus = gameDataStatus;
         _hasUploadedPdf = hasUploadedPdf;
+        _pdfCoverR2Key = pdfCoverR2Key;
+        _wikidataQid = wikidataQid;
+        _wikidataCoverR2Key = wikidataCoverR2Key;
+        _wikidataCoverLicense = wikidataCoverLicense;
+        _wikidataCoverAttribution = wikidataCoverAttribution;
+        _wikidataCoverSourceUrl = wikidataCoverSourceUrl;
+        _wikidataQidLastVerifiedAt = wikidataQidLastVerifiedAt;
         _isDeleted = isDeleted;
         _createdBy = createdBy;
         _modifiedBy = modifiedBy;
@@ -530,6 +606,121 @@ public sealed class SharedGame : AggregateRoot<Guid>
     public void SetHasUploadedPdf()
     {
         _hasUploadedPdf = true;
+    }
+
+    /// <summary>
+    /// Records the L4 PDF cover R2 key. Called by PdfCoverGeneratedEventHandler.
+    /// Idempotent: returns silently when the supplied key matches the current value.
+    /// Issue #1852.
+    /// </summary>
+    public void SetPdfCoverR2Key(string coverR2Key)
+    {
+        if (string.IsNullOrWhiteSpace(coverR2Key))
+            throw new ArgumentException("Cover R2 key cannot be empty", nameof(coverR2Key));
+
+        if (string.Equals(_pdfCoverR2Key, coverR2Key, StringComparison.Ordinal))
+            return;
+
+        _pdfCoverR2Key = coverR2Key;
+    }
+
+    /// <summary>
+    /// Wikidata QID format guard. <c>^Q\d+$</c>, anchored + compiled + 200ms
+    /// timeout — DoS-safe even on adversarial inputs. Matches the pattern used
+    /// by <c>WikidataCatalogProvider</c>.
+    /// </summary>
+    private static readonly System.Text.RegularExpressions.Regex WikidataQidPattern = new(
+        @"^Q\d+$",
+        System.Text.RegularExpressions.RegexOptions.CultureInvariant
+            | System.Text.RegularExpressions.RegexOptions.Compiled,
+        TimeSpan.FromMilliseconds(200));
+
+    /// <summary>
+    /// Assigns a Wikidata QID to this game. Used by the catalog seed promotion
+    /// pipeline (or admin tooling) to wire a SharedGame to its Wikidata entity
+    /// BEFORE the M8 cover enrichment orchestrator runs.
+    /// Idempotent: returns silently when the supplied QID matches the current value.
+    /// Issue #1823 Phase B.
+    /// </summary>
+    /// <param name="qid">The Wikidata Q-number (e.g. <c>"Q98056728"</c>). Must match <c>^Q\d+$</c>.</param>
+    /// <param name="modifiedBy">The user / system actor performing the assignment.</param>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="qid"/> is null/whitespace, fails the QID
+    /// pattern, exceeds 32 chars, or <paramref name="modifiedBy"/> is <see cref="Guid.Empty"/>.
+    /// </exception>
+    public void AssignWikidataQid(string qid, Guid modifiedBy)
+    {
+        if (string.IsNullOrWhiteSpace(qid))
+            throw new ArgumentException("WikidataQid cannot be empty.", nameof(qid));
+
+        if (qid.Length > 32)
+            throw new ArgumentException("WikidataQid cannot exceed 32 characters.", nameof(qid));
+
+        if (!WikidataQidPattern.IsMatch(qid))
+            throw new ArgumentException("WikidataQid must match ^Q\\d+$.", nameof(qid));
+
+        if (modifiedBy == Guid.Empty)
+            throw new ArgumentException("ModifiedBy cannot be empty.", nameof(modifiedBy));
+
+        if (string.Equals(_wikidataQid, qid, StringComparison.Ordinal))
+            return;
+
+        _wikidataQid = qid;
+        _modifiedBy = modifiedBy;
+        _modifiedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Records the L2 Wikidata-sourced cover image after the M8 enrichment
+    /// orchestrator successfully fetches + license-validates + WebP-encodes +
+    /// uploads to R2. Updates all four cover columns atomically and stamps
+    /// <c>WikidataQidLastVerifiedAt</c> for the M15 quarterly re-verification
+    /// cron (ADR DEC-3i). Issue #1823 Phase B.
+    /// </summary>
+    /// <param name="r2Key">
+    /// Deterministic R2 key WITHOUT the <c>.webp</c> suffix (e.g.
+    /// <c>"covers/{gameId}/cover"</c>). The <c>CoverUrlResolver</c> appends the
+    /// suffix when minting presigned URLs — see <c>CoverUrlResolver.cs:73-79</c>.
+    /// </param>
+    /// <param name="license">Whitelisted license identifier (e.g. <c>"CC BY-SA 4.0"</c>).</param>
+    /// <param name="attribution">Optional plain-text Artist credit; <see langword="null"/> for CC0 / PD works.</param>
+    /// <param name="sourceUrl">Canonical Wikidata entity URL used as the attribution back-link.</param>
+    /// <param name="verifiedAt">UTC timestamp of the successful enrichment / re-verification.</param>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="r2Key"/>, <paramref name="license"/>, or
+    /// <paramref name="sourceUrl"/> are null/whitespace.
+    /// </exception>
+    /// <remarks>
+    /// Treated as a non-audited background flag (consistent with
+    /// <see cref="SetPdfCoverR2Key"/>): does NOT update <c>_modifiedAt</c> /
+    /// <c>_modifiedBy</c>. The dedicated <c>WikidataQidLastVerifiedAt</c> column
+    /// already records the enrichment timestamp — more informative than the
+    /// generic modifiedAt and tied to the M15 quarterly re-verification cron.
+    /// Avoids the half-audit anti-pattern where <c>_modifiedAt</c> would be
+    /// fresh but <c>_modifiedBy</c> stale (no user actor on a system-automated
+    /// pipeline).
+    /// </remarks>
+    public void SetWikidataCover(
+        string r2Key,
+        string license,
+        string? attribution,
+        string sourceUrl,
+        DateTime verifiedAt)
+    {
+        if (string.IsNullOrWhiteSpace(r2Key))
+            throw new ArgumentException("R2 key cannot be empty.", nameof(r2Key));
+
+        if (string.IsNullOrWhiteSpace(license))
+            throw new ArgumentException("License cannot be empty.", nameof(license));
+
+        if (string.IsNullOrWhiteSpace(sourceUrl))
+            throw new ArgumentException("Source URL cannot be empty.", nameof(sourceUrl));
+
+        _wikidataCoverR2Key = r2Key;
+        _wikidataCoverLicense = license;
+        _wikidataCoverAttribution = string.IsNullOrWhiteSpace(attribution) ? null : attribution;
+        _wikidataCoverSourceUrl = sourceUrl;
+        _wikidataQidLastVerifiedAt = verifiedAt;
     }
 
     /// <summary>

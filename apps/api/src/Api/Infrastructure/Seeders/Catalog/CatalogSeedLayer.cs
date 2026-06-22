@@ -1,9 +1,12 @@
+using Api.BoundedContexts.Administration.Application.Commands;
 using Api.Infrastructure.Seeders.Catalog.SeedBlob;
 using Api.Services;
 using Api.Services.Pdf;
+using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Api.Infrastructure.Seeders;
 
 namespace Api.Infrastructure.Seeders.Catalog;
 
@@ -57,5 +60,36 @@ internal sealed class CatalogSeedLayer : ISeedLayer
             embeddingService,
             config,
             manifestNameOverride: manifestOverride).ConfigureAwait(false);
+
+        // Badsworm dogfood persona: 10 library entries (incl. Nanolith) + mock KB
+        // documents for dashboard validation. Runs after CatalogSeeder so the
+        // SharedGames it references are guaranteed to exist. Idempotent.
+        try
+        {
+            var mediator = context.Services.GetRequiredService<IMediator>();
+            await mediator.Send(new SeedBadswormPersonaCommand(), cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            context.Logger.LogError(ex, "[Catalog] Badsworm persona seed failed — continuing");
+        }
+
+        // Issue #1389: seed Nanolith multi-book gamebook aggregates after the
+        // CatalogSeeder + PdfSeeder pipeline runs (SharedGames and PdfDocuments must
+        // already exist). Best-effort: failure must not block the seed pipeline.
+        // Idempotent: skipped on subsequent runs if Nanolith GameBooks are present.
+        // Scope limited to Nanolith (already in catalog manifest); Fighting Fantasy and
+        // Maracaibo require a catalog manifest update and remain follow-up.
+        try
+        {
+            var gameBookSeeder = context.Services.GetRequiredService<GameBookSeeder>();
+            await gameBookSeeder
+                .SeedNanolithIfReadyAsync(context.DbContext, context.SystemUserId, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            context.Logger.LogError(ex, "[Catalog] GameBookSeeder.SeedNanolithIfReadyAsync failed — continuing");
+        }
     }
 }

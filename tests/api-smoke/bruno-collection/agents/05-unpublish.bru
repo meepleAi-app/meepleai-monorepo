@@ -1,0 +1,15 @@
+meta {
+  name: SG3 — Lifecycle: Published → Draft (unpublish)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{apiBase}}/api/v1/agents/{{agentId}}/unpublish
+}
+
+tests {
+  test("returns 204 NoContent", function() {
+    expect(res.getStatus()).to.equal(204);
+  });
+}

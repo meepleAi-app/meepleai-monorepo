@@ -17,6 +17,11 @@ internal interface IProcessingMetricsService
     /// <param name="duration">Duration of the step</param>
     /// <param name="pdfSizeBytes">PDF file size in bytes</param>
     /// <param name="pageCount">Number of pages in the PDF</param>
+    /// <param name="sourceEventId">
+    /// Optional source domain event id used to dedupe at the DB level (issue #1938 / CF-2).
+    /// Propagated to <c>ProcessingMetricEntity.SourceEventId</c>; UNIQUE partial index
+    /// guards against duplicate inserts on event re-dispatch.
+    /// </param>
     /// <param name="cancellationToken">Cancellation token</param>
     Task RecordStepDurationAsync(
         Guid pdfId,
@@ -24,6 +29,7 @@ internal interface IProcessingMetricsService
         TimeSpan duration,
         long pdfSizeBytes,
         int pageCount,
+        Guid? sourceEventId = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

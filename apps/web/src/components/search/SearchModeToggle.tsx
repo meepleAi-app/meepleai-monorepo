@@ -61,7 +61,7 @@ export default function SearchModeToggle({
 
   return (
     <div className={cn('flex flex-col gap-2 mb-4', className)}>
-      <label className="text-sm font-semibold text-gray-700 mb-1">Search Mode:</label>
+      <label className="text-sm font-semibold text-foreground mb-1">Search Mode:</label>
       <div className="mode-buttons" role="group" aria-label="Search mode selection">
         <ToggleGroup
           type="single"

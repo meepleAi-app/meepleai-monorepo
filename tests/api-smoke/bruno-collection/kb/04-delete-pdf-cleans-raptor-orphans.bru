@@ -1,0 +1,39 @@
+meta {
+  name: SG2-KB3 — Cascade verify: list PDFs returns 200 (smoke layer, cascade verified by integration test)
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{apiBase}}/api/v1/games/{{smokeGameId}}/pdfs
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  // NOTE: The actual DELETE PDF → cascade RAPTOR orphan cleanup is verified by the
+  // integration test DeletePdf_CascadeDeletesOrphanRaptorSummaries
+  // (tests/Api.Tests/.../KbReindexIntegrationTests.cs).
+  //
+  // At the smoke layer, we verify only that:
+  //   - The PDFs list endpoint is reachable and authenticated correctly.
+  //   - The response shape contains the expected "pdfs" array key.
+  //
+  // A full DELETE + verify cycle in Bruno would require uploading a real PDF first,
+  // which is out of scope for api-smoke (no file upload fixture currently seeded).
+  if (!bru.getVar("smokeGameId")) {
+    throw new Error("smokeGameId not set — run 01-preflight-get-game first");
+  }
+}
+
+tests {
+  test("returns 200 OK (PDFs endpoint accessible)", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("body contains pdfs array (cascade-ready endpoint alive)", function() {
+    const body = res.getBody();
+    expect(body).to.have.property("pdfs");
+    expect(Array.isArray(body.pdfs)).to.be.true;
+  });
+}

@@ -1,5 +1,6 @@
 using Api.Configuration;
 using Api.Extensions;
+using Api.Helpers;
 using Api.Middleware;
 using Api.Services;
 using MediatR;
@@ -118,7 +119,7 @@ Rate limited to 10 requests per minute per IP address.
             {
                 var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
                 logger.LogWarning("OAuth callback error from {Provider}: {Error} - {Description}",
-                    LogValueSanitizer.Sanitize(provider), LogValueSanitizer.Sanitize(error ?? "missing_code"), LogValueSanitizer.Sanitize(error_description ?? "No authorization code received"));
+                    LogSanitizer.Sanitize(provider), LogSanitizer.Sanitize(error ?? "missing_code"), LogSanitizer.Sanitize(error_description ?? "No authorization code received"));
 
                 var frontendUrl = config["Frontend:BaseUrl"] ?? "http://localhost:3000";
                 var errorParam = Uri.EscapeDataString(error ?? "missing_code");
@@ -210,7 +211,7 @@ Rate limited to 10 requests per minute per IP address.
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var userId = session!.User!.Id;
+            var userId = session!.Principal!.Subject.Id;
             var command = new Api.BoundedContexts.Authentication.Application.Commands.OAuth.UnlinkOAuthAccountCommand
             {
                 UserId = userId,
@@ -222,14 +223,15 @@ Rate limited to 10 requests per minute per IP address.
             if (!result.Success)
             {
                 logger.LogWarning("Failed to unlink OAuth account for user {UserId}, provider {Provider}: {ErrorMessage}",
-                    userId, LogValueSanitizer.Sanitize(provider), LogValueSanitizer.Sanitize(result.ErrorMessage));
+                    userId, LogSanitizer.Sanitize(provider), LogSanitizer.Sanitize(result.ErrorMessage));
                 return Results.BadRequest(new { error = result.ErrorMessage });
             }
 
             logger.LogInformation("Successfully unlinked OAuth account for user {UserId}, provider {Provider}",
-                userId, LogValueSanitizer.Sanitize(provider));
+                userId, LogSanitizer.Sanitize(provider));
             return Results.NoContent();
         })
+        .AddEndpointFilter<Api.Infrastructure.Filters.AntiforgeryEndpointFilter>() // C8: CSRF
         .WithName("UnlinkOAuthAccount")
         .WithTags("Authentication", "OAuth", "User Profile")
         .WithSummary("Unlink OAuth provider from user account")
@@ -260,7 +262,7 @@ User must have at least one authentication method remaining (password or another
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var userId = session!.User!.Id;
+            var userId = session!.Principal!.Subject.Id;
             var query = new Api.BoundedContexts.Authentication.Application.Queries.OAuth.GetLinkedOAuthAccountsQuery
             {
                 UserId = userId

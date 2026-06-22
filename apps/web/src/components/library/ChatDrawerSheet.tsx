@@ -47,7 +47,7 @@ export function ChatDrawerSheet({ open, onOpenChange, gameId, gameTitle }: ChatD
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className={cn('sm:max-w-lg', 'bg-white/80 backdrop-blur-xl')}>
+      <SheetContent side="right" className={cn('sm:max-w-lg', 'bg-card/80 backdrop-blur-xl')}>
         <SheetHeader className="pb-4 border-b border-border/30">
           <SheetTitle className="font-quicksand text-lg">
             <span className="text-[hsl(262,83%,58%)]">Chat</span>{' '}

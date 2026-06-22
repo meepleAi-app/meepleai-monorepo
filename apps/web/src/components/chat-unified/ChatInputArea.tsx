@@ -76,7 +76,7 @@ export function ChatInputArea({
           rows={1}
           className={cn(
             'flex-1 resize-none rounded-xl border border-border/50 px-4 py-3',
-            'bg-white/70 dark:bg-card/70 backdrop-blur-md text-sm font-nunito',
+            'bg-card/70 dark:bg-card/70 backdrop-blur-md text-sm font-nunito',
             'placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/40',
             'max-h-32'
           )}
@@ -115,7 +115,7 @@ export function ChatInputArea({
           data-testid="send-btn"
         >
           {isSending ? (
-            <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            <div className="h-5 w-5 border-2 border-border border-t-white rounded-full animate-spin" />
           ) : (
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path

@@ -1,17 +1,19 @@
 # V2 Migration Component Matrix
 
-> 🔒 **FREEZE 2026-05-06**: SP6 v2 expansion (and any new v2 component using current
-> design tokens) is FROZEN until [#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807)
-> Fase 2 (token redesign) lands. See [#808](https://github.com/meepleAi-app/meepleai-monorepo/issues/808)
-> for the freeze policy. `pending` rows in this matrix are NOT pickable until lift-criteria
-> in #808 are met. Bugfix/perf/tests on existing `done` rows are still allowed.
+> ✅ **FREEZE LIFTED 2026-05-09** (post P2 #807 token redesign — was issued 2026-05-06 via [#808](https://github.com/meepleAi-app/meepleai-monorepo/issues/808)):
+> SP6 v2 expansion e nuovi v2 components ora **pickable**.
+> CSS vars `--c-*` + `--e-*` AA-aligned (audit Iter 2: tutti 18 ratios ≥ 4.5:1 light + dark).
+> Tailwind utilities `text-entity-*`, `bg-entity-event/10`, etc. generano colori AA-compliant.
+> [#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807) e [#808](https://github.com/meepleAi-app/meepleai-monorepo/issues/808) entrambi closed via questa PR.
+> Reference: `docs/for-developers/frontend/v2-token-system.md` + audit `v2-a11y-token-audit.md`.
 
 > Wave A closeout — Step 5 (Issue #573).
-> Pre-requisite for Phase 1+2 of the v2 design migration ([spec](../superpowers/specs/2026-04-26-v2-design-migration.md), section 3.3).
+> Pre-requisite for Phase 1+2 of the v2 design migration ([spec](../specs/2026-04-26-v2-design-migration.md), section 3.3).
 > **Tier classification added 2026-05-04** post spec-panel critique Wave C.1 fail RCA — see [Tier classification](#tier-classification) section.
 
-This matrix is the **single source of truth** for the ~80 v2 feature components that the
-SP4 wave 1 + 2 + 3 + 4 mockups introduced and that do not yet exist in the codebase. Each
+This matrix is the **single source of truth** for the ~83 v2 feature components that the
+SP4 wave 1 + 2 + 3 + 4 mockups + SP6 Nanolith gap-coverage introduced and that do not yet
+exist in the codebase. Each
 row binds a mockup definition to a target component path, route, and acceptance criteria
 so that downstream PRs can pick up an entry and turn it from `pending` → `done` without
 ambiguity. Each route is also classified by **Tier** (S/M/L) to gate dispatch strategy.
@@ -26,24 +28,98 @@ ambiguity. Each route is also classified by **Tier** (S/M/L) to gate dispatch st
 > 35 new components across 6 routes — Wave 3 (5 routes, 31 components: `/players/[id]`
 > · `/toolkits/[id]` · `/kb/[id]` · `/game-nights` · `/discover`) and Wave 4 partial
 > (1 route, 4 components: `/players`). Total grew 45 → 80. Stubs live under
-> `apps/web/src/components/v2/{player-detail,toolkit-detail,kb-detail,game-nights,discover,players}/`
+> `apps/web/src/components/features/{player-detail,toolkit-detail,kb-detail,game-nights,discover,players}/`
 > and `pnpm typecheck` stays green. Wave 4 remaining (E1 toolkits-index · F1 kb-index
-> · G2 game-night-detail) and SP5 admin batch tracked separately — pending Claude Design
-> production resumption (post 2026-05-10).
+> · G2 game-night-detail) and SP5 admin batch tracked separately. Wave 4 G2
+> game-night-detail unblocked 2026-05-15 via SP7 mockup (PR #1171, 6 components
+> shipped — see "SP7 — Game Night detail RSVP" section below). E1/F1 still
+> pending Claude Design production resumption (post 2026-05-10).
+
+> **Updated 2026-05-12** (Nanolith gap-coverage mockups post-storyboard audit, PR #1056): added
+> 3 new components across 1 new route + 1 existing route extension + 1 cross-cutting —
+> `EncounterCheatsheetView` (Tier S, new route `/library/[gameId]/play/[campaignId]/encounter`,
+> BLOCKER §9.1), `LibroGameOnboardingPanel` (**Tier L**, existing route `/library/[gameId]`
+> libro variant prereq gate — Phase 0.5 sub-hook contract OBBLIGATORIA, 3 hook indipendenti),
+> `GamebookErrorBanner` (Tier S primitive-like, cross-cutting chat/translate/encounter).
+> Total grew 80 → 83. All `pending` — gated by Design System De-versioning FREEZE
+> (umbrella #1023) until Stage 2 path-migration lands. Target path
+> `apps/web/src/components/features/gamebook/` (NON `components/v2/gamebook/` per nuove
+> implementazioni post-PR #1025). Storyboard iframe references added to
+> `librogame-game-night-storyboard.html` (step 00 + step 11a + step E4 — file renamed from `nanolith-game-night-storyboard.html` post-IA consolidation #871, sync 2026-06-08 #2025).
+
+> **Updated 2026-05-12 (follow-up cleanup)** post code-review PR #1056: aggiornati
+> count references `~80 → ~83` (intro paragraph L14) e `In scope: 80 → 83` (Scope L48-50)
+> per allineare con totale post gap-coverage. Reclassificato `LibroGameOnboardingPanel`
+> da Tier S blanket erroneo a Tier L (3 hook indipendenti). `MOCKUPS_INDEX.md` synced
+> (page-mock 44→46, component-mock 14→15, Total 68→71).
+
+> **Updated 2026-05-23** (Mockup refinement Aaron core + cross-cutting, Phase 1):
+> added `chat-fullscreen.html` (page-mock, `/chat/[threadId]` + `/chat/new`),
+> `state-matrix.html` (dev-fixture, cross-route states 8×5), e estese 4 mockup
+> esistenti per cluster translate (error-states +6 stati, translate-viewer
+> +loading+reader-mode+multi-lang, glossary-editor +context-aware,
+> photo-upload +manual-mode entry). Spec:
+> `docs/superpowers/specs/2026-05-23-mockup-refinement-aaron-core-design.md`.
+
+> **Updated 2026-05-31 #3** (B19-4b skeleton mockup delivery): generic
+> session skeleton consegnato via Claude Design Web — 7 file in
+> `admin-mockups/design_files/` (`sp4-session-skeleton-{live,renderers,parts,data}.jsx`
+> + `sp4-session-skeleton-live.html` + `sp4-session-summary-skeleton.{html,jsx}`).
+> Renderizza dinamicamente qualsiasi gioco consumando `AiToolkitSuggestionDto`
+> polimorficamente (mirror dei FE renderers `ScoringPanelRenderer` +
+> `TurnIndicatorRenderer` di PR #1763). Demo side-by-side Wingspan
+> (Points + RoundRobin) vs Paleo (BinaryWin + Simultaneous). Hybrid strategy
+> confermata: skeleton copre i 13-14 giochi non-premium, i 6 premium
+> (Wingspan done, Puerto Rico + Catan + Power Grid + Zombicide GH + Paleo
+> + Codenames pending) restano ad-hoc. Closes issue #1750.
+
+> **Updated 2026-05-31 #2** (Sessions sub-routes consolidation via tabs,
+> closes gap N7 audit 2026-05-22): Option B+ hybrid consolidation accettata
+> e shipped — 7 sub-route Sessions confluiscono in `?tab=` deep-link
+> sui mockup canonical esistenti (cluster Live: 4 tabs nuove in
+> `sp4-session-live.jsx` `RightColumnTabs` esteso a 7; cluster Post-game
+> Review: 3 tabs nuove in `sp4-session-summary.jsx` con nuovo
+> `RightColumnTabs`). 4 file mockup nuovi shipped: `sp4-parts-common.jsx`
+> (shared runtime), `sp4-session-live-tabs.jsx` (`window.LiveTabs`),
+> `sp4-session-summary-sections.jsx`, `sp4-session-summary-tabs.jsx`
+> (`window.SummaryReviewTabs`). `/sessions/[id]/join` reuse `sp3-join.html`
+> (no design). 8th sub-route `/sessions/[id]/play` chiusa 2026-06-02 via
+> `sp4-session-play.html` (residuo gap N7, 10 stati, 3-col live view —
+> distinta da `/sessions/[id]/live` spectator). ADR:
+> `claudedocs/2026-05-31-sessions-consolidation-adr.md`.
+> Issue #1492 CLOSED 2026-06-02 — **epic #1475 user-facing UI a 26/26 (100%)**.
+
+> **Updated 2026-05-31** (Documentation reconciliation cross-audit
+> 2026-05-12 + 2026-05-22): the Route → Mockup index now reflects 3 mockup
+> cluster già canonical in `admin-mockups/design_files/` ma precedentemente
+> non mappati — `sp4-dashboard.html` (closes #491 dashboard part, chat-fullscreen
+> consegnato a parte via `chat-fullscreen.html` 2026-05-23),
+> `sp4-play-records-{index,new,detail,edit,stats}.html` + `sp4-play-records-data.js`
+> (copre 5 routes `/play-records/*` gap critico) e `sp5-profile-settings.html`
+> (già mappato a `/profile?tab=settings`, esteso reuse nota a `/profile` root +
+> `/profile/achievements`). Le entry rimangono `pending` per l'implementazione
+> FE (stub di componenti da estrarre — TBD). Critical gaps summary aggiornato:
+> ridotti da 5 a **1 cluster** — `/pricing` resta l'unico gap reale.
+> `/library/playlists/*` rimosso (route inesistenti nel codebase, false-positive
+> confermato da audit 2026-05-22). `#492 community` ha avuto closure
+> false-positive — vedi audit 2026-05-22 per riapertura raccomandata.
+> Sync companion: `admin-mockups/MOCKUPS_INDEX.md` + audit
+> `docs/for-developers/audits/2026-05-12-mockup-gaps.md` (status update inline,
+> con riferimento all'audit più recente 2026-05-22).
 
 ## Scope and ground rules
 
-- **In scope**: 80 feature components extracted from `admin-mockups/design_files/sp4-*.jsx`
-  wave 1 + 2 + 3 + 4 partial (16 mockups). Stubs live under
-  `apps/web/src/components/v2/<feature>/`.
-- **Out of scope**: existing v2 primitives at `apps/web/src/components/ui/v2/` (auth-card,
+- **In scope**: 83 feature components extracted from `admin-mockups/design_files/sp4-*.jsx`
+  wave 1 + 2 + 3 + 4 partial (16 mockups) + SP6 Nanolith gap-coverage (3 mockups).
+  Stubs live under `apps/web/src/components/features/<feature>/`.
+- **Out of scope**: existing v2 primitives at `apps/web/src/components/ui/` (auth-card,
   btn, divider, drawer, entity-card, entity-chip, entity-pip, faq, hero-gradient,
   input-field, invites, join, notification-card, oauth-buttons, pricing-card, pwd-input,
   settings-list, settings-row, shared-game-detail, shared-games, step-progress,
   strength-meter, success-card). These are reused, not re-stubbed.
 - **Path divergence is intentional** (per spec §3.3): primitives stay under
-  `components/ui/v2/`; *feature* compositions for SP4 routes live under
-  `components/v2/<feature>/`. Do not collapse the two trees.
+  `components/ui/`; *feature* compositions for SP4 routes live under
+  `components/features/<feature>/`. Do not collapse the two trees.
 - **Component count**: refined from the spec Appendix A (52 entries) to **45** by
   deferring six entries that are better served by v2 *primitives* once those exist
   (`PauseOverlay`, `EndgameDialog`, `ConnectionLostBanner` → v2 dialog/banner primitives;
@@ -71,7 +147,7 @@ ambiguity. Each route is also classified by **Tier** (S/M/L) to gate dispatch st
 
 ## Tier classification
 
-> Added 2026-05-04 post spec-panel critique Wave C.1 fail (PR #697 closed). See [v2 spec section 3.4](../superpowers/specs/2026-04-26-v2-design-migration.md#34-phase-05--sub-hook-contract-per-tier-l-routes-only) for Phase 0.5 sub-hook contract gate.
+> Added 2026-05-04 post spec-panel critique Wave C.1 fail (PR #697 closed). See [v2 spec section 3.4](../specs/2026-04-26-v2-design-migration.md#34-phase-05--sub-hook-contract-per-tier-l-routes-only) for Phase 0.5 sub-hook contract gate.
 
 Each route is classified by **Tier** (S/M/L) which gates implementation strategy:
 
@@ -83,27 +159,33 @@ Each route is classified by **Tier** (S/M/L) which gates implementation strategy
 
 ### Route Tier mapping
 
-| Route | Tier | Rationale | Status |
-|-------|------|-----------|--------|
-| `/games?tab=library` | **S** | useLibraryGames single hook, 5-state lineare | ✅ done (B.1, PR #635) |
-| `/agents` | **S** | useAgentList single hook, grid pattern | ✅ done (B.2, PR #637) |
-| `/library` | **S** | useLibrary single hook, hybrid grid | ✅ done (B.3, PR #638) |
-| `/players` | **S** | usePlayerStatistics single hook, games-as-players grid (Wave 4 D1) — v1 carryover anti-pattern preserved | ✅ done (Wave 4 D1, PR #717) |
-| `/games/[id]` | **L** | useGame + useAgents/Faqs/KbDocs by gameId — Phase 0.5 contract enforced | ✅ done (Wave C.1, PR #702) — [`docs/for-developers/frontend/contracts/games-id-hooks.md`](contracts/games-id-hooks.md) |
-| `/agents/[id]` | **L** | useAgent + chat history + KB docs cross-resource (2-step chain agent.gameId) | ✅ done (Wave C.2, PR #711) — [`docs/for-developers/frontend/contracts/agents-id-hooks.md`](contracts/agents-id-hooks.md) |
-| `/sessions/[id]/live` | **L+** | Real-time SSE + multi-hook + dialog states | pending — Phase 0.5 + sub-PR split |
-| `/discover` | **L** | Multiple horizontal-row hooks | pending — Phase 0.5 required |
-| `/game-nights` | **L** | Calendar + day-detail drawer + filters | pending — Phase 0.5 required |
-| `/sessions` | **M** | Sessions list + filters composition | pending |
-| `/sessions/[id]` | **M-L** | Post-game summary: podium + KPI + diary + photos + share + tie-group computation | ✅ done (Wave D.3, PR #762) — [`docs/for-developers/frontend/contracts/sessions-id-summary-hooks.md`](contracts/sessions-id-summary-hooks.md) |
-| `/players/[id]` | **M** | usePlayerStatistics single hook (current user only — schema reality v1 carryover) | ✅ done (Wave 3, PR #724) |
-| `/toolkits/[id]` | **M** | Toolkit summary + version timeline | pending |
-| `/gamebook` | **M** | Libro-game index: Hero + QuotaWidget + Card grid + EmptyState | ✅ done (SP6 Phase B, PR #792) |
-| `/gamebook/upload` | **L** | 3-step wizard: game search + camera + indexing — 14-state FSM + camera permission matrix + offline retry | ✅ done (SP6 Phase C, contract PR #794 + Foundation PR #796 + Interactions PR #800) — [`contracts/gamebook-upload-hooks.md`](contracts/gamebook-upload-hooks.md) |
-| `/library/games/[gameId]/translate` | **S** | Nanolith demo — paragraph translate via chat-stream workaround | ✅ done (SP6 Phase A, PR #790) |
-| `/kb/[id]` | **M** | KB header + chunks + search | pending |
+> **Updated 2026-05-12**: added `Primary Mockup` column linking each Tier-classified
+> route to the canonical file in `admin-mockups/design_files/`. See
+> [Route → Mockup index](#route--mockup-index-page-level) below for the full
+> per-route mapping (incl. routes not yet in Tier classification).
 
-**Anti-pattern**: dispatchare implementation subagent senza Phase 0.5 per route Tier L. Wave C.1 PR #697 ha esattamente questo come root cause (vedi [post-mortem](../superpowers/specs/2026-04-26-v2-design-migration.md#34-phase-05--sub-hook-contract-per-tier-l-routes-only)).
+| Route | Tier | Primary Mockup | Rationale | Status |
+|-------|------|---------------|-----------|--------|
+| `/games?tab=library` | **S** | `sp4-games-index.html` | useLibraryGames single hook, 5-state lineare | ✅ done (B.1, PR #635) |
+| `/agents` | **S** | `sp4-agents-index.html` | useAgentList single hook, grid pattern | ✅ done (B.2, PR #637) |
+| `/library` | **S** | `sp4-library-desktop.html` | useLibrary single hook, hybrid grid | ✅ done (B.3, PR #638) |
+| `/players` | **S** | `sp4-players-index.html` | usePlayerStatistics single hook, games-as-players grid (Wave 4 D1) — v1 carryover anti-pattern preserved | ✅ done (Wave 4 D1, PR #717) |
+| `/games/[id]` | **L** | `sp4-game-detail.html` | useGame + useAgents/Faqs/KbDocs by gameId — Phase 0.5 contract enforced | ✅ done (Wave C.1, PR #702) — `contracts/games-id-hooks.md` (TBD) |
+| `/agents/[id]` | **L** | `sp4-agent-detail.html` | useAgent + chat history + KB docs cross-resource (2-step chain agent.gameId) | ✅ done (Wave C.2, PR #711) — `contracts/agents-id-hooks.md` (TBD) |
+| `/sessions/[id]/live` | **L+** | `sp4-session-live.html` + `sp4-session-live-parts.jsx` | Real-time SSE + multi-hook + dialog states | pending — Phase 0.5 + sub-PR split |
+| `/discover` | **L** | `sp4-discover.html` | Multiple horizontal-row hooks | pending — Phase 0.5 required |
+| `/game-nights` | **L** | `sp4-game-nights-index.html` | Calendar + day-detail drawer + filters | ✅ done (Stage 3, PR #1173) |
+| `/sessions` | **M** | `sp4-sessions-index.html` | Sessions list + filters composition | pending |
+| `/sessions/[id]` | **M-L** | `sp4-session-summary.html` + `sp4-session-summary-parts.jsx` | Post-game summary: podium + KPI + diary + photos + share + tie-group computation | ✅ done (Wave D.3, PR #762) — `contracts/sessions-id-summary-hooks.md` (TBD) |
+| `/players/[id]` | **M** | `sp4-player-detail.html` | usePlayerStatistics single hook (current user only — schema reality v1 carryover) | ✅ done (Wave 3, PR #724) |
+| `/toolkits/[id]` | **M** | `sp4-toolkit-detail.html` | Toolkit summary + version timeline | pending |
+| `/gamebook` | **M** | `sp6-libro-game-index.html` | Libro-game index: Hero + QuotaWidget + Card grid + EmptyState | ✅ done (SP6 Phase B, PR #792) |
+| `/gamebook/upload` | **L** | `sp4-upload-wizard-extended.html` + `sp6-libro-game-photo-upload.html` | 3-step wizard: game search + camera + indexing — 14-state FSM + camera permission matrix + offline retry | ✅ done (SP6 Phase C, contract PR #794 + Foundation PR #796 + Interactions PR #800) — [`contracts/gamebook-upload-hooks.md`](contracts/gamebook-upload-hooks.md) |
+| `/library/[gameId]/play/[campaignId]/translate` | **S** | `librogame-runthrough-translate-viewer.html` | Nanolith demo — paragraph translate via chat-stream workaround. Route consolidated from `/library/games/[gameId]/translate` under campaign in IA refactor #871. | ⚠️ Phase A done (PR #790; route refactored in #871); **Aaron CORE refinement 2026-05-23 PENDING** — audit #1556 (61.5% drift, see [translate-gap-report.md](../../../admin-mockups/design_handoff/translate-gap-report.md)) |
+| `/library/[gameId]/play/[campaignId]/encounter` | **S** | `librogame-runthrough-encounter-cheatsheet.html` | Nanolith dogfood — Encounter Book photo→cheatsheet on-demand. Ephemeral parse (no long-term cache, §9.1). Hook `useEncounterParse`, FSM idle→parsing→rendered→error. | ✅ done (parse-centric MVP, PR #1525) — state D (resolution/consequences) deferred (no BE command) |
+| `/kb/[id]` | **M** | `sp4-kb-detail.html` | KB header + chunks + search | **deferred** — pivot legale 2026-05-10, vedi `2026-05-10-citation-pdf-viewer-design.md` (G4 v3) |
+
+**Anti-pattern**: dispatchare implementation subagent senza Phase 0.5 per route Tier L. Wave C.1 PR #697 ha esattamente questo come root cause (vedi [post-mortem](../specs/2026-04-26-v2-design-migration.md#34-phase-05--sub-hook-contract-per-tier-l-routes-only)).
 
 ## Acceptance criteria abbreviations
 
@@ -121,28 +203,33 @@ the PR review.
 
 ## Wave 1 — 29 components
 
-### Games index — `/games` — 5 components — **Tier S**
+### Games index — `/games` → redirect `/library` (#1521) — 5 shelf-ready components — **Tier S**
 
-| Mockup | Component | Path | Route | Status | PR | AC |
-|--------|-----------|------|-------|--------|----|----|
-| `sp4-games-index.jsx` | `GamesHero` | `apps/web/src/components/v2/games/GamesHero.tsx` | `/games` | pending | — | T A M V |
-| `sp4-games-index.jsx` | `GamesFiltersInline` | `apps/web/src/components/v2/games/GamesFiltersInline.tsx` | `/games` | pending | — | T A V |
-| `sp4-games-index.jsx` | `AdvancedFiltersDrawer` | `apps/web/src/components/v2/games/AdvancedFiltersDrawer.tsx` | `/games` | pending | — | T A M V |
-| `sp4-games-index.jsx` | `GamesResultsGrid` | `apps/web/src/components/v2/games/GamesResultsGrid.tsx` | `/games` | pending | — | T A V |
-| `sp4-games-index.jsx` | `GamesEmptyState` | `apps/web/src/components/v2/games/GamesEmptyState.tsx` | `/games` | pending | — | T A V |
+> **Routing decision (#1521)**: `/games` was a multi-tab hub (library/catalog/kb). The `sp4-games-index` mockup IS the **library** view, and `/library` (LibraryHub) is the canonical route for it. `/games` now **redirects to `/library`** (mirrors #1480 `/hub/toolkits` → `/toolkits`); the multi-tab orchestrator `GamesLibraryView` + `AdvancedFiltersDrawer` stub were removed.
+>
+> **#1566 update (2026-05-27)**: 3 of the 5 components were wired into the `games` tab of `LibraryHub` (reachable by clicking the "Giochi" tab) — `GamesFiltersInline` + `GamesResultsGrid` + `GamesEmptyState`. `GamesHero` and `GamesRecentRail` remain **shelf-ready**: `GamesHero` is superseded by the cross-entity `LibraryHeroDesktop` (#1618) in the multi-tab hub, and `GamesRecentRail` belongs to the game-night flow G3 (not `sp4-games-index`) — both deferred per [spec §7](../../superpowers/specs/2026-05-27-1566-library-games-tab-wireup-design.md#7-out-of-scope-tracked-separately).
+
+| Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
+|--------|-----------|------|-------|--------|----|----|----------|
+| `sp4-games-index.jsx` | `GamesHero` | `apps/web/src/components/features/games/GamesHero.tsx` | `/library` (shelf-ready; #1566 deferred §7) | shelf-ready | #635 | T A M V | — |
+| `sp4-games-index.jsx` | `GamesFiltersInline` | `apps/web/src/components/features/games/GamesFiltersInline.tsx` | `/library?tab=games` | done | #1566 | T A V | — |
+| `sp4-games-index.jsx` | `GamesResultsGrid` | `apps/web/src/components/features/games/GamesResultsGrid.tsx` | `/library?tab=games` | done | #1566 | T A V | — |
+| `sp4-games-index.jsx` | `GamesEmptyState` | `apps/web/src/components/features/games/GamesEmptyState.tsx` | `/library?tab=games` | done | #1566 | T A V | — |
+| (extension G3) | `GamesRecentRail` | `apps/web/src/components/features/games/GamesRecentRail.tsx` | `/library` (shelf-ready; #1566 deferred §7) | shelf-ready | #907 | T A V | — |
 
 ### Game detail — `/games/[id]` — 8 components — **Tier L** ⚠️ Phase 0.5 required
 
-| Mockup | Component | Path | Route | Status | PR | AC |
-|--------|-----------|------|-------|--------|----|----|
-| `sp4-game-detail.jsx` | `GameDetailHero` | `apps/web/src/components/v2/game-detail/GameDetailHero.tsx` | `/games/[id]` | done | #702 | T A M V |
-| `sp4-game-detail.jsx` | `GameDetailTabsAnimated` | `apps/web/src/components/v2/game-detail/GameDetailTabsAnimated.tsx` | `/games/[id]` | done | #702 | T A M V |
-| `sp4-game-detail.jsx` | `GameDetailKpiCards` | `apps/web/src/components/v2/game-detail/GameDetailKpiCards.tsx` | `/games/[id]` | done | #702 | T A V |
-| `sp4-game-detail.jsx` | `GameDetailFaqList` | `apps/web/src/components/v2/game-detail/GameDetailFaqList.tsx` | `/games/[id]` | done | #702 | T A V |
-| `sp4-game-detail.jsx` | `GameDetailRulesAccordion` | `apps/web/src/components/v2/game-detail/GameDetailRulesAccordion.tsx` | `/games/[id]` | done | #702 | T A M V |
-| `sp4-game-detail.jsx` | `GameDetailSessionsRail` | `apps/web/src/components/v2/game-detail/GameDetailSessionsRail.tsx` | `/games/[id]` | done | #702 | T A V |
-| `sp4-game-detail.jsx` | `GameDetailAgentsList` | `apps/web/src/components/v2/game-detail/GameDetailAgentsList.tsx` | `/games/[id]` | done | #702 | T A V |
-| `sp4-game-detail.jsx` | `GameDetailKbDocList` | `apps/web/src/components/v2/game-detail/GameDetailKbDocList.tsx` | `/games/[id]` | done | #702 | T A V |
+| Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
+|--------|-----------|------|-------|--------|----|----|----------|
+| `sp4-game-detail.jsx` | `GameDetailHero` | `apps/web/src/components/features/game-detail/GameDetailHero.tsx` | `/games/[id]` | done | #702 | T A M V | #1396 |
+| `sp4-game-detail.jsx` | `GameDetailTabsAnimated` | `apps/web/src/components/features/game-detail/GameDetailTabsAnimated.tsx` | `/games/[id]` | done | #702 | T A M V | #1396 |
+| `sp4-game-detail.jsx` | `GameDetailKpiCards` | `apps/web/src/components/features/game-detail/GameDetailKpiCards.tsx` | `/games/[id]` | done | #702 | T A V | #1396 |
+| `sp4-game-detail.jsx` | `GameDetailFaqList` | `apps/web/src/components/features/game-detail/GameDetailFaqList.tsx` | `/games/[id]` | done | #702 | T A V | #1396 |
+| `sp4-game-detail.jsx` | `GameDetailRulesAccordion` | `apps/web/src/components/features/game-detail/GameDetailRulesAccordion.tsx` | `/games/[id]` | done | #702 | T A M V | #1396 |
+| `sp4-game-detail.jsx` | `GameDetailSessionsRail` | `apps/web/src/components/features/game-detail/GameDetailSessionsRail.tsx` | `/games/[id]` | done | #702 | T A V | #1396 |
+| `sp4-game-detail.jsx` | `GameDetailAgentsList` | `apps/web/src/components/features/game-detail/GameDetailAgentsList.tsx` | `/games/[id]` | done | #702 | T A V | #1396 |
+| `sp4-game-detail.jsx` | `GameDetailKbDocList` | `apps/web/src/components/features/game-detail/GameDetailKbDocList.tsx` | `/games/[id]` | done | #702 | T A V | #1396 |
+| `sp4-game-chat-tab.html` (G1+G5) | `GameChatTabV2 + 11 game-chat components` | `apps/web/src/components/features/game-chat/` | `/library/games/[id]?tab=aiChat` | done | #918 | T A V | — |
 
 ### Agents index — `/agents` — 4 components — **Tier S**
 
@@ -157,49 +244,51 @@ the PR review.
 > `GamesResultsGrid`: CSS Grid 3-col `auto-fit minmax(320px, 1fr)`, riusa `MeepleCard`
 > con `entity="agent"` `variant="grid"` — NO fork).
 
-| Mockup | Component | Path | Route | Status | PR | AC |
-|--------|-----------|------|-------|--------|----|----|
-| `sp4-agents-index.jsx` | `AgentsHero` | `apps/web/src/components/v2/agents/AgentsHero.tsx` | `/agents` | pending | — | T A M V |
-| `sp4-agents-index.jsx` | `AgentFilters` | `apps/web/src/components/v2/agents/AgentFilters.tsx` | `/agents` | pending | — | T A V |
-| `sp4-agents-index.jsx` | `AgentsResultsGrid` | `apps/web/src/components/v2/agents/AgentsResultsGrid.tsx` | `/agents` | pending | — | T A V |
-| `sp4-agents-index.jsx` | `EmptyAgents` | `apps/web/src/components/v2/agents/EmptyAgents.tsx` | `/agents` | pending | — | T A V |
+| Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
+|--------|-----------|------|-------|--------|----|----|----------|
+| `sp4-agents-index.jsx` | `AgentsHero` | `apps/web/src/components/features/agents/AgentsHero.tsx` | `/agents` | done | #637 | T A M V | #1568 |
+| `sp4-agents-index.jsx` | `AgentFilters` | `apps/web/src/components/features/agents/AgentFilters.tsx` | `/agents` | done | #637 | T A V | #1568 |
+| `sp4-agents-index.jsx` | `AgentsResultsGrid` | `apps/web/src/components/features/agents/AgentsResultsGrid.tsx` | `/agents` | done | #637 | T A V | #1568 |
+| `sp4-agents-index.jsx` | `EmptyAgents` | `apps/web/src/components/features/agents/EmptyAgents.tsx` | `/agents` | done | #637 | T A V | #1568 |
+
+> audit_pr #1568: #1522 conformity audit (0% drift) — see [agents-index-gap-report.md](../../../admin-mockups/design_handoff/agents-index-gap-report.md). Components shipped Wave B.2 PR #637; rows were never reconciled from `pending` until this audit.
 
 ### Agent detail — `/agents/[id]` — 7 components — **Tier L** ⚠️ Phase 0.5 required
 
-| Mockup | Component | Path | Route | Status | PR | AC |
-|--------|-----------|------|-------|--------|----|----|
-| `sp4-agent-detail.jsx` | `AgentHero` *(was AgentCharacterSheet stub — renamed per mockup)* | `apps/web/src/components/v2/agent-detail/AgentHero.tsx` | `/agents/[id]` | done | #711 | T A M V |
-| `sp4-agent-detail.jsx` | `PersonaCard` | `apps/web/src/components/v2/agent-detail/PersonaCard.tsx` | `/agents/[id]` | done | #711 | T A V |
-| `sp4-agent-detail.jsx` | `SystemPromptViewer` | `apps/web/src/components/v2/agent-detail/SystemPromptViewer.tsx` | `/agents/[id]` | done | #711 | T A V |
-| `sp4-agent-detail.jsx` | `KbDocList` | `apps/web/src/components/v2/agent-detail/KbDocList.tsx` | `/agents/[id]` | done | #711 | T A V |
-| `sp4-agent-detail.jsx` | `ChatHistoryTimeline` | `apps/web/src/components/v2/agent-detail/ChatHistoryTimeline.tsx` | `/agents/[id]` | done | #711 | T A M V |
-| `sp4-agent-detail.jsx` | `AgentSettingsForm` | `apps/web/src/components/v2/agent-detail/AgentSettingsForm.tsx` | `/agents/[id]` | done | #711 | T A V |
-| `sp4-agent-detail.jsx` | `AgentDangerZone` | `apps/web/src/components/v2/agent-detail/AgentDangerZone.tsx` | `/agents/[id]` | done | #711 | T A V |
+| Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
+|--------|-----------|------|-------|--------|----|----|----------|
+| `sp4-agent-detail.jsx` | `AgentHero` *(was AgentCharacterSheet stub — renamed per mockup)* | `apps/web/src/components/features/agent-detail/AgentHero.tsx` | `/agents/[id]` | done | #711 | T A M V | #1381 |
+| `sp4-agent-detail.jsx` | `PersonaCard` | `apps/web/src/components/features/agent-detail/PersonaCard.tsx` | `/agents/[id]` | done | #711 | T A V | #1381 |
+| `sp4-agent-detail.jsx` | `SystemPromptViewer` | `apps/web/src/components/features/agent-detail/SystemPromptViewer.tsx` | `/agents/[id]` | done | #711 | T A V | #1381 |
+| `sp4-agent-detail.jsx` | `KbDocList` | `apps/web/src/components/features/agent-detail/KbDocList.tsx` | `/agents/[id]` | done | #711 | T A V | #1381 |
+| `sp4-agent-detail.jsx` | `ChatHistoryTimeline` | `apps/web/src/components/features/agent-detail/ChatHistoryTimeline.tsx` | `/agents/[id]` | done | #711 | T A M V | #1381 |
+| `sp4-agent-detail.jsx` | `AgentSettingsForm` | `apps/web/src/components/features/agent-detail/AgentSettingsForm.tsx` | `/agents/[id]` | done | #711 | T A V | #1381 |
+| `sp4-agent-detail.jsx` | `AgentDangerZone` | `apps/web/src/components/features/agent-detail/AgentDangerZone.tsx` | `/agents/[id]` | done | #711 | T A V | #1381 |
 
 ### Library — `/library` — 5 components — **Tier S**
 
-| Mockup | Component | Path | Route | Status | PR | AC |
-|--------|-----------|------|-------|--------|----|----|
-| `sp4-library-desktop.jsx` | `LibraryHeroDesktop` | `apps/web/src/components/v2/library/LibraryHeroDesktop.tsx` | `/library` | done | #574 | T A M V |
-| `sp4-library-desktop.jsx` | `LibraryTabs` | `apps/web/src/components/v2/library/LibraryTabs.tsx` | `/library` | done | #574 | T A M V |
-| `sp4-library-desktop.jsx` | `LibraryHybridGrid` | `apps/web/src/components/v2/library/LibraryHybridGrid.tsx` | `/library` | done | #574 | T A V |
-| `sp4-library-desktop.jsx` | `BulkSelectionBar` | `apps/web/src/components/v2/library/BulkSelectionBar.tsx` | `/library` | done | #574 | T A M V |
-| `sp4-library-desktop.jsx` | `RecentActivityRail` | `apps/web/src/components/v2/library/RecentActivityRail.tsx` | `/library` | done | #574 | T A V |
+| Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
+|--------|-----------|------|-------|--------|----|----|----------|
+| `sp4-library-desktop.jsx` | `LibraryHeroDesktop` | `apps/web/src/components/features/library/LibraryHeroDesktop.tsx` | `/library` | done | #574 | T A M V | #1397 |
+| `sp4-library-desktop.jsx` | `LibraryTabs` | `apps/web/src/components/features/library/LibraryTabs.tsx` | `/library` | done | #574 | T A M V | #1397 |
+| `sp4-library-desktop.jsx` | `LibraryHybridGrid` | `apps/web/src/components/features/library/LibraryHybridGrid.tsx` | `/library` | done | #574 | T A V | #1397 |
+| `sp4-library-desktop.jsx` | `BulkSelectionBar` | `apps/web/src/components/features/library/BulkSelectionBar.tsx` | `/library` | done | #574 | T A M V | #1397 |
+| `sp4-library-desktop.jsx` | `RecentActivityRail` | `apps/web/src/components/features/library/RecentActivityRail.tsx` | `/library` | done | #574 | T A V | #1397 |
 
 ## Wave 2 — 16 components
 
 ### Sessions index — `/sessions` — 8 components — **Tier S** (per spec-panel review PR #734)
 
-| Mockup | Component | Path | Route | Status | PR | AC |
-|--------|-----------|------|-------|--------|----|----|
-| `sp4-sessions-index.jsx` | `SessionsHero` | `apps/web/src/components/v2/sessions/SessionsHero.tsx` | `/sessions` | done | TBD | T A M V |
-| `sp4-sessions-index.jsx` | `SessionsFilters` | `apps/web/src/components/v2/sessions/SessionsFilters.tsx` | `/sessions` | done | TBD | T A V |
-| `sp4-sessions-index.jsx` | `SessionCardList` | `apps/web/src/components/v2/sessions/SessionCardList.tsx` | `/sessions` | done | TBD | T A V |
-| `sp4-sessions-index.jsx` | `SessionCardGrid` | `apps/web/src/components/v2/sessions/SessionCardGrid.tsx` | `/sessions` | done | TBD | T A V |
-| `sp4-sessions-index.jsx` | `EmptySessions` | `apps/web/src/components/v2/sessions/EmptySessions.tsx` | `/sessions` | done | TBD | T A V |
-| `sp4-sessions-index.jsx` | `OutcomeBadge` | `apps/web/src/components/v2/sessions/OutcomeBadge.tsx` | `/sessions` | done | TBD | T A V |
-| `sp4-sessions-index.jsx` | `ScoringInline` | `apps/web/src/components/v2/sessions/ScoringInline.tsx` | `/sessions` | done | TBD | T A V |
-| `sp4-sessions-index.jsx` | `ConnectionChipStripFooter` | `apps/web/src/components/v2/sessions/ConnectionChipStripFooter.tsx` | `/sessions` | done | TBD | T A V |
+| Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
+|--------|-----------|------|-------|--------|----|----|----------|
+| `sp4-sessions-index.jsx` | `SessionsHero` | `apps/web/src/components/features/sessions/SessionsHero.tsx` | `/sessions` | done | TBD | T A M V | #1397 |
+| `sp4-sessions-index.jsx` | `SessionsFilters` | `apps/web/src/components/features/sessions/SessionsFilters.tsx` | `/sessions` | done | TBD | T A V | #1397 |
+| `sp4-sessions-index.jsx` | `SessionCardList` | `apps/web/src/components/features/sessions/SessionCardList.tsx` | `/sessions` | done | TBD | T A V | #1397 |
+| `sp4-sessions-index.jsx` | `SessionCardGrid` | `apps/web/src/components/features/sessions/SessionCardGrid.tsx` | `/sessions` | done | TBD | T A V | #1397 |
+| `sp4-sessions-index.jsx` | `EmptySessions` | `apps/web/src/components/features/sessions/EmptySessions.tsx` | `/sessions` | done | TBD | T A V | #1397 |
+| `sp4-sessions-index.jsx` | `OutcomeBadge` | `apps/web/src/components/features/sessions/OutcomeBadge.tsx` | `/sessions` | done | TBD | T A V | #1397 |
+| `sp4-sessions-index.jsx` | `ScoringInline` | `apps/web/src/components/features/sessions/ScoringInline.tsx` | `/sessions` | done | TBD | T A V | #1397 |
+| `sp4-sessions-index.jsx` | `ConnectionChipStripFooter` | `apps/web/src/components/features/sessions/ConnectionChipStripFooter.tsx` | `/sessions` | done | TBD | T A V | #1397 |
 
 ### Session live — `/sessions/[id]/live` — Tier L+ ⚠️ Phase 0.5 + sub-PR split
 
@@ -207,43 +296,43 @@ the PR review.
 
 #### Foundation sub-PR (7 read-only components — IN REVIEW PR TBD)
 
-| Mockup | Component | Path | Route | Status | PR | AC |
-|--------|-----------|------|-------|--------|----|----|
-| `sp4-session-live-parts.jsx` | `LiveTopBar` | `apps/web/src/components/v2/session-live/LiveTopBar.tsx` | `/sessions/[id]/live` | done | TBD | T A V |
-| `sp4-session-live-parts.jsx` | `TurnIndicator` | `apps/web/src/components/v2/session-live/TurnIndicator.tsx` | `/sessions/[id]/live` | done | TBD | T A M V |
-| `sp4-session-live-parts.jsx` | `PlayerRosterLive` | `apps/web/src/components/v2/session-live/PlayerRosterLive.tsx` | `/sessions/[id]/live` | done | TBD | T A V |
-| `sp4-session-live-parts.jsx` | `LiveScoringPanel` | `apps/web/src/components/v2/session-live/LiveScoringPanel.tsx` | `/sessions/[id]/live` | done | TBD | T A V |
-| `sp4-session-live-parts.jsx` | `ActionLogTimeline` | `apps/web/src/components/v2/session-live/ActionLogTimeline.tsx` | `/sessions/[id]/live` | done | TBD | T A V |
-| `sp4-session-live-parts.jsx` | `DesktopBody` | `apps/web/src/components/v2/session-live/DesktopBody.tsx` | `/sessions/[id]/live` | done | TBD | T A V |
-| `sp4-session-live-parts.jsx` | `MobileBody` | `apps/web/src/components/v2/session-live/MobileBody.tsx` | `/sessions/[id]/live` | done | TBD | T A V |
+| Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
+|--------|-----------|------|-------|--------|----|----|----------|
+| `sp4-session-live-parts.jsx` | `LiveTopBar` | `apps/web/src/components/features/session-live/LiveTopBar.tsx` | `/sessions/[id]/live` | done | TBD | T A V | #1377 |
+| `sp4-session-live-parts.jsx` | `TurnIndicator` | `apps/web/src/components/features/session-live/TurnIndicator.tsx` | `/sessions/[id]/live` | done | TBD | T A M V | #1377 |
+| `sp4-session-live-parts.jsx` | `PlayerRosterLive` | `apps/web/src/components/features/session-live/PlayerRosterLive.tsx` | `/sessions/[id]/live` | done | TBD | T A V | #1377 |
+| `sp4-session-live-parts.jsx` | `LiveScoringPanel` | `apps/web/src/components/features/session-live/LiveScoringPanel.tsx` | `/sessions/[id]/live` | done | TBD | T A V | #1377 |
+| `sp4-session-live-parts.jsx` | `ActionLogTimeline` | `apps/web/src/components/features/session-live/ActionLogTimeline.tsx` | `/sessions/[id]/live` | done | TBD | T A V | #1377 |
+| `sp4-session-live-parts.jsx` | `DesktopBody` | `apps/web/src/components/features/session-live/DesktopBody.tsx` | `/sessions/[id]/live` | done | TBD | T A V | #1377 |
+| `sp4-session-live-parts.jsx` | `MobileBody` | `apps/web/src/components/features/session-live/MobileBody.tsx` | `/sessions/[id]/live` | done | TBD | T A M V | #1377 |
 
 #### Interactions sub-PR (6 interactive + 2 lazy dialogs — PR #750)
 
-| Mockup | Component | Path | Route | Status | PR | AC |
-|--------|-----------|------|-------|--------|----|----|
-| `sp4-session-live.jsx` | `SessionToolsRail` | `apps/web/src/components/v2/session-live/SessionToolsRail.tsx` | `/sessions/[id]/live` | done | #750 | T A V |
-| `sp4-session-live.jsx` | `LiveAgentChat` | `apps/web/src/components/v2/session-live/LiveAgentChat.tsx` | `/sessions/[id]/live` | done | #750 | T A V |
-| `sp4-session-live.jsx` | `LiveSessionNotes` | `apps/web/src/components/v2/session-live/LiveSessionNotes.tsx` | `/sessions/[id]/live` | done | #750 | T A V |
-| `sp4-session-live.jsx` | `RightColumnTabs` | `apps/web/src/components/v2/session-live/RightColumnTabs.tsx` | `/sessions/[id]/live` | done | #750 | T A V |
-| `sp4-session-live.jsx` | `ConnectionLostBanner` | `apps/web/src/components/v2/session-live/ConnectionLostBanner.tsx` | `/sessions/[id]/live` | done | #750 | T A V |
-| `sp4-session-live.jsx` | `PauseOverlay` (lazy) | `apps/web/src/components/v2/session-live/PauseOverlay.tsx` | `/sessions/[id]/live` | done | #750 | T A V dialog |
-| `sp4-session-live.jsx` | `EndgameDialog` (lazy) | `apps/web/src/components/v2/session-live/EndgameDialog.tsx` | `/sessions/[id]/live` | done | #750 | T A V dialog |
+| Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
+|--------|-----------|------|-------|--------|----|----|----------|
+| `sp4-session-live.jsx` | `SessionToolsRail` | `apps/web/src/components/features/session-live/SessionToolsRail.tsx` | `/sessions/[id]/live` | done | #750 | T A V | #1377 |
+| `sp4-session-live.jsx` | `LiveAgentChat` | `apps/web/src/components/features/session-live/LiveAgentChat.tsx` | `/sessions/[id]/live` | done | #750 | T A V | #1377 |
+| `sp4-session-live.jsx` | `LiveSessionNotes` | `apps/web/src/components/features/session-live/LiveSessionNotes.tsx` | `/sessions/[id]/live` | done | #750 | T A V | #1377 |
+| `sp4-session-live.jsx` | `RightColumnTabs` | `apps/web/src/components/features/session-live/RightColumnTabs.tsx` | `/sessions/[id]/live` | done | #750 | T A V | #1377 |
+| `sp4-session-live.jsx` | `ConnectionLostBanner` | `apps/web/src/components/features/session-live/ConnectionLostBanner.tsx` | `/sessions/[id]/live` | done | #750 | T A V | #1377 |
+| `sp4-session-live.jsx` | `PauseOverlay` (lazy) | `apps/web/src/components/features/session-live/PauseOverlay.tsx` | `/sessions/[id]/live` | done | #750 | T A V dialog | #1377 |
+| `sp4-session-live.jsx` | `EndgameDialog` (lazy) | `apps/web/src/components/features/session-live/EndgameDialog.tsx` | `/sessions/[id]/live` | done | #750 | T A V dialog | #1377 |
 
 ### Session summary — `/sessions/[id]` — 11 components — **Tier M-L**
 
-| Mockup | Component | Path | Route | Status | PR | AC |
-|--------|-----------|------|-------|--------|----|----|
-| `sp4-session-summary-parts.jsx` | `SessionSummaryHero` | `apps/web/src/components/v2/session-summary/SessionSummaryHero.tsx` | `/sessions/[id]` | done | #762 | T A M V |
-| `sp4-session-summary-parts.jsx` | `SessionKpiGrid` | `apps/web/src/components/v2/session-summary/SessionKpiGrid.tsx` | `/sessions/[id]` | done | #762 | T A V |
-| `sp4-session-summary-parts.jsx` | `ScoringBreakdownTable` | `apps/web/src/components/v2/session-summary/ScoringBreakdownTable.tsx` | `/sessions/[id]` | done | #762 | T A V |
-| `sp4-session-summary-parts.jsx` | `ConnectionBar` | `apps/web/src/components/v2/session-summary/ConnectionBar.tsx` | `/sessions/[id]` | done | #762 | T A V |
-| `sp4-session-summary-parts.jsx` | `AchievementsCarousel` | `apps/web/src/components/v2/session-summary/AchievementsCarousel.tsx` | `/sessions/[id]` | done | #762 | T A V |
-| `sp4-session-summary.jsx` | `SessionDiaryTimeline` | `apps/web/src/components/v2/session-summary/SessionDiaryTimeline.tsx` | `/sessions/[id]` | done | #762 | T A V |
-| `sp4-session-summary.jsx` | `PhotosGallery` | `apps/web/src/components/v2/session-summary/PhotosGallery.tsx` | `/sessions/[id]` | done | #762 | T A V |
-| `sp4-session-summary.jsx` | `ChatHighlights` | `apps/web/src/components/v2/session-summary/ChatHighlights.tsx` | `/sessions/[id]` | done | #762 | T A V |
-| `sp4-session-summary.jsx` | `SessionShareCard` | `apps/web/src/components/v2/session-summary/SessionShareCard.tsx` | `/sessions/[id]` | done | #762 | T A V |
-| `sp4-session-summary.jsx` | `PlayAgainCta` | `apps/web/src/components/v2/session-summary/PlayAgainCta.tsx` | `/sessions/[id]` | done | #762 | T A V |
-| `sp4-session-summary.jsx` | `Confetti` | `apps/web/src/components/v2/session-summary/Confetti.tsx` | `/sessions/[id]` | done | #762 | T A V |
+| Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
+|--------|-----------|------|-------|--------|----|----|----------|
+| `sp4-session-summary-parts.jsx` | `SessionSummaryHero` | `apps/web/src/components/features/session-summary/SessionSummaryHero.tsx` | `/sessions/[id]` | done | #762 | T A M V | #1384 |
+| `sp4-session-summary-parts.jsx` | `SessionKpiGrid` | `apps/web/src/components/features/session-summary/SessionKpiGrid.tsx` | `/sessions/[id]` | done | #762 | T A V | #1384 |
+| `sp4-session-summary-parts.jsx` | `ScoringBreakdownTable` | `apps/web/src/components/features/session-summary/ScoringBreakdownTable.tsx` | `/sessions/[id]` | done | #762 | T A V | #1384 |
+| `sp4-session-summary-parts.jsx` | `ConnectionBar` | `apps/web/src/components/features/session-summary/ConnectionBar.tsx` | `/sessions/[id]` | done | #762 | T A V | #1384 |
+| `sp4-session-summary-parts.jsx` | `AchievementsCarousel` | `apps/web/src/components/features/session-summary/AchievementsCarousel.tsx` | `/sessions/[id]` | done | #762 | T A V | #1384 |
+| `sp4-session-summary.jsx` | `SessionDiaryTimeline` | `apps/web/src/components/features/session-summary/SessionDiaryTimeline.tsx` | `/sessions/[id]` | done | #762 | T A V | #1384 |
+| `sp4-session-summary.jsx` | `PhotosGallery` | `apps/web/src/components/features/session-summary/PhotosGallery.tsx` | `/sessions/[id]` | done | #762 | T A V | #1384 |
+| `sp4-session-summary.jsx` | `ChatHighlights` | `apps/web/src/components/features/session-summary/ChatHighlights.tsx` | `/sessions/[id]` | done | #762 | T A V | #1384 |
+| `sp4-session-summary.jsx` | `SessionShareCard` | `apps/web/src/components/features/session-summary/SessionShareCard.tsx` | `/sessions/[id]` | done | #762 | T A V | #1384 |
+| `sp4-session-summary.jsx` | `PlayAgainCta` | `apps/web/src/components/features/session-summary/PlayAgainCta.tsx` | `/sessions/[id]` | done | #762 | T A V | #1384 |
+| `sp4-session-summary.jsx` | `Confetti` | `apps/web/src/components/features/session-summary/Confetti.tsx` | `/sessions/[id]` | done | #762 | T A V | #1384 |
 
 ## Wave 3 — 31 components
 
@@ -252,74 +341,268 @@ the PR review.
 
 ### Player detail — `/players/[id]` — 5 components — **Tier M**
 
-| Mockup | Component | Path | Route | Status | PR | AC |
-|--------|-----------|------|-------|--------|----|----|
-| `sp4-player-detail.jsx` | `PlayerHero` | `apps/web/src/components/v2/player-detail/PlayerHero.tsx` | `/players/[id]` | pending | — | T A M V |
-| `sp4-player-detail.jsx` | `PlayerStatsGrid` | `apps/web/src/components/v2/player-detail/PlayerStatsGrid.tsx` | `/players/[id]` | pending | — | T A V |
-| `sp4-player-detail.jsx` | `PlayerLeaderboardCard` | `apps/web/src/components/v2/player-detail/PlayerLeaderboardCard.tsx` | `/players/[id]` | pending | — | T A V |
-| `sp4-player-detail.jsx` | `FavoriteAgentCard` | `apps/web/src/components/v2/player-detail/FavoriteAgentCard.tsx` | `/players/[id]` | pending | — | T A V |
-| `sp4-player-detail.jsx` | `AchievementBadgeGrid` | `apps/web/src/components/v2/player-detail/AchievementBadgeGrid.tsx` | `/players/[id]` | pending | — | T A V |
+| Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
+|--------|-----------|------|-------|--------|----|----|----------|
+| `sp4-player-detail.jsx` | `PlayerHero` | `apps/web/src/components/features/player-detail/PlayerHero.tsx` | `/players/[id]` | done | #1539 | T A M V | #1544 |
+| `sp4-player-detail.jsx` | `PlayerStatsGrid` | `apps/web/src/components/features/player-detail/PlayerStatsGrid.tsx` | `/players/[id]` | done | #1539 | T A V | #1544 |
+| `sp4-player-detail.jsx` | `PlayerLeaderboardCard` | `apps/web/src/components/features/player-detail/PlayerLeaderboardCard.tsx` | `/players/[id]` | done | #1539 | T A V | #1544 |
+| `sp4-player-detail.jsx` | `FavoriteAgentCard` | `apps/web/src/components/features/player-detail/FavoriteAgentCard.tsx` | `/players/[id]` | done | #1539 | T A V | #1544 |
+| `sp4-player-detail.jsx` | `AchievementBadgeGrid` | `apps/web/src/components/features/player-detail/AchievementBadgeGrid.tsx` | `/players/[id]` | done | #1539 | T A V | #1544 |
 
-### Toolkit detail — `/toolkits/[id]` — 6 components — **Tier M**
+### Toolkit detail — `/toolkits/[id]` — 6 components — **Tier M** ✅ done
 
-| Mockup | Component | Path | Route | Status | PR | AC |
-|--------|-----------|------|-------|--------|----|----|
-| `sp4-toolkit-detail.jsx` | `ToolkitSummaryPanel` | `apps/web/src/components/v2/toolkit-detail/ToolkitSummaryPanel.tsx` | `/toolkits/[id]` | pending | — | T A V |
-| `sp4-toolkit-detail.jsx` | `ToolkitIncludesGrid` | `apps/web/src/components/v2/toolkit-detail/ToolkitIncludesGrid.tsx` | `/toolkits/[id]` | pending | — | T A V |
-| `sp4-toolkit-detail.jsx` | `VersionTimeline` | `apps/web/src/components/v2/toolkit-detail/VersionTimeline.tsx` | `/toolkits/[id]` | pending | — | T A V |
-| `sp4-toolkit-detail.jsx` | `RatingBreakdown` | `apps/web/src/components/v2/toolkit-detail/RatingBreakdown.tsx` | `/toolkits/[id]` | pending | — | T A V |
-| `sp4-toolkit-detail.jsx` | `PromptPreviewBlock` | `apps/web/src/components/v2/toolkit-detail/PromptPreviewBlock.tsx` | `/toolkits/[id]` | pending | — | T A V |
-| `sp4-toolkit-detail.jsx` | `Stars` | `apps/web/src/components/v2/toolkit-detail/Stars.tsx` | `/toolkits/[id]` | pending | — | T A V |
+> **Status (#1479, 2026-05-28)**: route fully implemented + wired (orchestrator `ToolkitDetailView` + tab panels). All 6 components shipped via PR #1163 (`Stage 3 FE — DetailPageLayout adoption`, closes #1145) — `VersionTimeline`/`RatingBreakdown`/`PromptPreviewBlock` tested earlier (#1531), `ToolkitSummaryPanel`/`ToolkitIncludesGrid` component tests added 2026-05-28 (23 tests), `Stars` is a thin re-export of the canonical `ui/feedback/Stars` (#1469, covered by the canonical's tests).
+
+| Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
+|--------|-----------|------|-------|--------|----|----|----------|
+| `sp4-toolkit-detail.jsx` | `ToolkitSummaryPanel` | `apps/web/src/components/features/toolkit-detail/ToolkitSummaryPanel.tsx` | `/toolkits/[id]` | done | #1163 | T A V | — |
+| `sp4-toolkit-detail.jsx` | `ToolkitIncludesGrid` | `apps/web/src/components/features/toolkit-detail/ToolkitIncludesGrid.tsx` | `/toolkits/[id]` | done | #1163 | T A V | — |
+| `sp4-toolkit-detail.jsx` | `VersionTimeline` | `apps/web/src/components/features/toolkit-detail/VersionTimeline.tsx` | `/toolkits/[id]` | done | #1531 | T A V | — |
+| `sp4-toolkit-detail.jsx` | `RatingBreakdown` | `apps/web/src/components/features/toolkit-detail/RatingBreakdown.tsx` | `/toolkits/[id]` | done | #1531 | T A V | — |
+| `sp4-toolkit-detail.jsx` | `PromptPreviewBlock` | `apps/web/src/components/features/toolkit-detail/PromptPreviewBlock.tsx` | `/toolkits/[id]` | done | #1531 | T A V | — |
+| `sp4-toolkit-detail.jsx` | `Stars` | `apps/web/src/components/features/toolkit-detail/Stars.tsx` | `/toolkits/[id]` | done | #1469 | T A V | — |
 
 ### KB detail — `/kb/[id]` — 6 components — **Tier M**
 
-| Mockup | Component | Path | Route | Status | PR | AC |
-|--------|-----------|------|-------|--------|----|----|
-| `sp4-kb-detail.jsx` | `KbHeader` | `apps/web/src/components/v2/kb-detail/KbHeader.tsx` | `/kb/[id]` | pending | — | T A V |
-| `sp4-kb-detail.jsx` | `KbChunkListPanel` | `apps/web/src/components/v2/kb-detail/KbChunkListPanel.tsx` | `/kb/[id]` | pending | — | T A V |
-| `sp4-kb-detail.jsx` | `KbChunkPreview` | `apps/web/src/components/v2/kb-detail/KbChunkPreview.tsx` | `/kb/[id]` | pending | — | T A V |
-| `sp4-kb-detail.jsx` | `ChunkSearchBox` | `apps/web/src/components/v2/kb-detail/ChunkSearchBox.tsx` | `/kb/[id]` | pending | — | T A V |
-| `sp4-kb-detail.jsx` | `MarkdownRenderBlock` | `apps/web/src/components/v2/kb-detail/MarkdownRenderBlock.tsx` | `/kb/[id]` | pending | — | T A V |
-| `sp4-kb-detail.jsx` | `KbProcessingState` | `apps/web/src/components/v2/kb-detail/KbProcessingState.tsx` | `/kb/[id]` | pending | — | T A V |
+| Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
+|--------|-----------|------|-------|--------|----|----|----------|
+| `sp4-kb-detail.jsx` | `KbHeader` | `apps/web/src/components/features/kb-detail/KbHeader.tsx` | `/kb/[id]` | deferred (G4 v3) | — | T A V | — |
+| `sp4-kb-detail.jsx` | `KbChunkListPanel` | `apps/web/src/components/features/kb-detail/KbChunkListPanel.tsx` | `/kb/[id]` | deferred (G4 v3) | — | T A V | — |
+| `sp4-kb-detail.jsx` | `KbChunkPreview` | `apps/web/src/components/features/kb-detail/KbChunkPreview.tsx` | `/kb/[id]` | deferred (G4 v3) | — | T A V | — |
+| `sp4-kb-detail.jsx` | `ChunkSearchBox` | `apps/web/src/components/features/kb-detail/ChunkSearchBox.tsx` | `/kb/[id]` | deferred (G4 v3) | — | T A V | — |
+| `sp4-kb-detail.jsx` | `MarkdownRenderBlock` | `apps/web/src/components/features/kb-detail/MarkdownRenderBlock.tsx` | `/kb/[id]` | deferred (G4 v3) | — | T A V | — |
+| `sp4-kb-detail.jsx` | `KbProcessingState` | `apps/web/src/components/features/kb-detail/KbProcessingState.tsx` | `/kb/[id]` | deferred (G4 v3) | — | T A V | — |
 
-### Game nights index — `/game-nights` — 8 components — **Tier L** ⚠️ Phase 0.5 required
+### Game nights index — `/game-nights` — 8 components — **Tier L** ✅ Stage 3 complete
 
-| Mockup | Component | Path | Route | Status | PR | AC |
-|--------|-----------|------|-------|--------|----|----|
-| `sp4-game-nights-index.jsx` | `GameNightsHeader` | `apps/web/src/components/v2/game-nights/GameNightsHeader.tsx` | `/game-nights` | pending | — | T A V |
-| `sp4-game-nights-index.jsx` | `CalendarMonthGrid` | `apps/web/src/components/v2/game-nights/CalendarMonthGrid.tsx` | `/game-nights` | pending | — | T A V |
-| `sp4-game-nights-index.jsx` | `CalendarDayCell` | `apps/web/src/components/v2/game-nights/CalendarDayCell.tsx` | `/game-nights` | pending | — | T A V |
-| `sp4-game-nights-index.jsx` | `GameNightListCard` | `apps/web/src/components/v2/game-nights/GameNightListCard.tsx` | `/game-nights` | pending | — | T A V |
-| `sp4-game-nights-index.jsx` | `DayDetailDrawer` | `apps/web/src/components/v2/game-nights/DayDetailDrawer.tsx` | `/game-nights` | pending | — | T A M V |
-| `sp4-game-nights-index.jsx` | `FilterPillBar` | `apps/web/src/components/v2/game-nights/FilterPillBar.tsx` | `/game-nights` | pending | — | T A V |
-| `sp4-game-nights-index.jsx` | `StatusPill` | `apps/web/src/components/v2/game-nights/StatusPill.tsx` | `/game-nights` | pending | — | T A V |
-| `sp4-game-nights-index.jsx` | `PlayerAvatars` | `apps/web/src/components/v2/game-nights/PlayerAvatars.tsx` | `/game-nights` | pending | — | T A V |
+| Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
+|--------|-----------|------|-------|--------|----|----|----------|
+| `sp4-game-nights-index.jsx` | `GameNightsHeader` | `apps/web/src/components/features/game-nights/GameNightsHeader.tsx` | `/game-nights` | done | #1173 | T A V | #1397 |
+| `sp4-game-nights-index.jsx` | `CalendarMonthGrid` | `apps/web/src/components/features/game-nights/CalendarMonthGrid.tsx` | `/game-nights` | done | #1173 | T A V | #1397 |
+| `sp4-game-nights-index.jsx` | `CalendarDayCell` | `apps/web/src/components/features/game-nights/CalendarDayCell.tsx` | `/game-nights` | done | #1173 | T A V | #1397 |
+| `sp4-game-nights-index.jsx` | `GameNightListCard` | `apps/web/src/components/features/game-nights/GameNightListCard.tsx` | `/game-nights` | done | #1173 | T A V | #1397 |
+| `sp4-game-nights-index.jsx` | `DayDetailDrawer` | `apps/web/src/components/features/game-nights/DayDetailDrawer.tsx` | `/game-nights` | done | #1173 | T A M V | #1397 |
+| `sp4-game-nights-index.jsx` | `FilterPillBar` | `apps/web/src/components/features/game-nights/FilterPillBar.tsx` | `/game-nights` | done | #1173 | T A V | #1397 |
+| `sp4-game-nights-index.jsx` | `StatusPill` | `apps/web/src/components/features/game-nights/StatusPill.tsx` | `/game-nights` | done | #1173 | T A V | #1397 |
+| `sp4-game-nights-index.jsx` | `PlayerAvatars` | `apps/web/src/components/features/game-nights/PlayerAvatars.tsx` | `/game-nights` | done | #1173 | T A V | #1397 |
 
-### Discover — `/discover` — 6 components — **Tier L** ⚠️ Phase 0.5 required
+### Discover — `/discover` — 6 components — **Tier L** ✅ done
 
-| Mockup | Component | Path | Route | Status | PR | AC |
-|--------|-----------|------|-------|--------|----|----|
-| `sp4-discover.jsx` | `DiscoverHero` | `apps/web/src/components/v2/discover/DiscoverHero.tsx` | `/discover` | pending | — | T A M V |
-| `sp4-discover.jsx` | `DiscoverSearchBox` | `apps/web/src/components/v2/discover/DiscoverSearchBox.tsx` | `/discover` | pending | — | T A V |
-| `sp4-discover.jsx` | `EntityFilterPillBar` | `apps/web/src/components/v2/discover/EntityFilterPillBar.tsx` | `/discover` | pending | — | T A V |
-| `sp4-discover.jsx` | `HorizontalRow` | `apps/web/src/components/v2/discover/HorizontalRow.tsx` | `/discover` | pending | — | T A M V |
-| `sp4-discover.jsx` | `RowScroller` | `apps/web/src/components/v2/discover/RowScroller.tsx` | `/discover` | pending | — | T A V |
-| `sp4-discover.jsx` | `FooterCTA` | `apps/web/src/components/v2/discover/FooterCTA.tsx` | `/discover` | pending | — | T A V |
+> **Status (#1483, 2026-05-28)**: route fully implemented via PR #1160 (`feat(discover): 7-row Stage 3 catalog`, closes #1147) + code-split via PR #1213. BE prerequisite #728 closed (5 cross-entity row endpoints; search + nearby-events stay disabled-shell pending follow-up). Component unit tests (86 across 6 files) added 2026-05-28 to close the AC `T` gap — the 5 `useDiscover*` hooks were already tested under `hooks/queries/__tests__/`.
 
-## Wave 4 — 4 components (partial — 1/4 routes)
+| Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
+|--------|-----------|------|-------|--------|----|----|----------|
+| `sp4-discover.jsx` | `DiscoverHero` | `apps/web/src/components/features/discover/DiscoverHero.tsx` | `/discover` | done | #1160 | T A V | — |
+| `sp4-discover.jsx` | `DiscoverSearchBox` | `apps/web/src/components/features/discover/DiscoverSearchBox.tsx` | `/discover` | done | #1160 | T A V | — |
+| `sp4-discover.jsx` | `EntityFilterPillBar` | `apps/web/src/components/features/discover/EntityFilterPillBar.tsx` | `/discover` | done | #1160 | T A V | — |
+| `sp4-discover.jsx` | `HorizontalRow` | `apps/web/src/components/features/discover/HorizontalRow.tsx` | `/discover` | done | #1160 | T A V | — |
+| `sp4-discover.jsx` | `RowScroller` | `apps/web/src/components/features/discover/RowScroller.tsx` | `/discover` | done | #1160 | T A V | — |
+| `sp4-discover.jsx` | `FooterCTA` | `apps/web/src/components/features/discover/FooterCTA.tsx` | `/discover` | done | #1160 | T A V | — |
+
+## Wave 4 — 4 routes + Toolkits/KB extension (D1 ✅ done, G2 ✅ done via SP7, E1/F1 🎨 mockup-ready)
 
 > **Status**: D1 players-index landed via PR #640 mockup batch (2026-05-03).
-> Remaining routes (E1 toolkits-index, F1 kb-index, G2 game-night-detail) blocked
-> until Claude Design production resumes (post 2026-05-10).
+> G2 game-night-detail unblocked 2026-05-15 via SP7 mockup (PR #1171 — see
+> "SP7 — Game Night detail RSVP" section). E1 toolkits-index and F1 kb-index
+> mockups delivered post 2026-05-10 with **evolved naming convention**:
+> `sp4-hub-toolkits.jsx` (E1 hub) and `sp4-kb-hub.jsx` + `sp4-kb-globale.jsx`
+> (F1 split into hub + global-search/editor). Original AC filenames
+> (`sp4-toolkits-index.jsx`, `sp4-kb-index.jsx`) were superseded. Component
+> stubs pending creation at implementation time per canonical path
+> `apps/web/src/components/features/{toolkits-index,kb-hub,kb-globale}/`
+> (post DS-15 deversioning — see [`2026-05-11-design-system-deversioning.md`](../specs/2026-05-11-design-system-deversioning.md)).
+> Tracking: #955.
 
 ### Players index — `/players` — 4 components — **Tier S**
 
-| Mockup | Component | Path | Route | Status | PR | AC |
-|--------|-----------|------|-------|--------|----|----|
-| `sp4-players-index.jsx` | `PlayersHero` | `apps/web/src/components/v2/players/PlayersHero.tsx` | `/players` | done | #717 | T A M V |
-| `sp4-players-index.jsx` | `PlayersFiltersInline` | `apps/web/src/components/v2/players/PlayersFiltersInline.tsx` | `/players` | done | #717 | T A V |
-| `sp4-players-index.jsx` | `PlayersResultsGrid` | `apps/web/src/components/v2/players/PlayersResultsGrid.tsx` | `/players` | done | #717 | T A V |
-| `sp4-players-index.jsx` | `EmptyPlayers` | `apps/web/src/components/v2/players/EmptyPlayers.tsx` | `/players` | done | #717 | T A V |
+| Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
+|--------|-----------|------|-------|--------|----|----|----------|
+| `sp4-players-index.jsx` | `PlayersHero` | `apps/web/src/components/features/players/PlayersHero.tsx` | `/players` | done | #717 | T A M V | #1397 |
+| `sp4-players-index.jsx` | `PlayersFiltersInline` | `apps/web/src/components/features/players/PlayersFiltersInline.tsx` | `/players` | done | #717 | T A V | #1397 |
+| `sp4-players-index.jsx` | `PlayersResultsGrid` | `apps/web/src/components/features/players/PlayersResultsGrid.tsx` | `/players` | done | #717 | T A V | #1397 |
+| `sp4-players-index.jsx` | `EmptyPlayers` | `apps/web/src/components/features/players/EmptyPlayers.tsx` | `/players` | done | #717 | T A V | #1397 |
+
+### Toolkits hub — `/toolkits` (E1) — 7 components — **Tier M**
+
+> Mockup delivered post 2026-05-10 as `sp4-hub-toolkits.jsx` (evolved naming
+> vs original AC `sp4-toolkits-index.jsx`). Mirrors `/players` and `/agents`
+> hub pattern: hero + filter strip + grid. Stubs pending creation at
+> implementation time. Route page already exists at
+> `apps/web/src/app/(authenticated)/toolkits/page.tsx` (placeholder shell).
+
+| Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
+|--------|-----------|------|-------|--------|----|----|----------|
+| `sp4-hub-toolkits.jsx` | `HubToolkitsHero` | `apps/web/src/components/features/toolkits-index/HubToolkitsHero.tsx` | `/toolkits` | done | #1563 | T A V | — |
+| `sp4-hub-toolkits.jsx` | `HubFilters` | `apps/web/src/components/features/toolkits-index/HubFilters.tsx` | `/toolkits` | done | #1563 | T A V | — |
+| `sp4-hub-toolkits.jsx` | `HubToolkitCardGrid` | `apps/web/src/components/features/toolkits-index/HubToolkitCardGrid.tsx` | `/toolkits` | done | #1563 | T A V | — |
+| `sp4-hub-toolkits.jsx` | `HubToolkitsBody` | `apps/web/src/components/features/toolkits-index/HubToolkitsBody.tsx` | `/toolkits` | done | #1563 | T A V | — |
+| `sp4-hub-toolkits.jsx` | `HubEmptyFiltered` | `apps/web/src/components/features/toolkits-index/HubEmptyFiltered.tsx` | `/toolkits` | done | #1563 | T A V | — |
+| `sp4-hub-toolkits.jsx` | `ErrorState` | `apps/web/src/components/features/toolkits-index/ErrorState.tsx` | `/toolkits` | done | #1563 | T A V | — |
+| `sp4-hub-toolkits.jsx` | `SkeletonCard` | `apps/web/src/components/features/toolkits-index/SkeletonCard.tsx` | `/toolkits` | done | #1563 | T A V | — |
+
+### KB hub — `/knowledge-base` (F1a) — 8 components — **Tier M**
+
+> Mockup delivered post 2026-05-10 as `sp4-kb-hub.jsx` (F1 split into hub +
+> global-search/editor — see KB globale below). Original AC `sp4-kb-index.jsx`
+> superseded. Stubs pending creation at implementation time. Route page
+> already exists at `apps/web/src/app/(authenticated)/knowledge-base/page.tsx`
+> (placeholder shell). Parallel to KB hub mockup #913 (SG2) — ensure both
+> cover the entry point story.
+
+| Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
+|--------|-----------|------|-------|--------|----|----|----------|
+| `sp4-kb-hub.jsx` | `KbStatsCard` | `apps/web/src/components/features/kb-hub/KbStatsCard.tsx` | `/library/[gameId]/kb` | done | #1481 | T A V | — |
+| `sp4-kb-hub.jsx` | `PdfRow` | `apps/web/src/components/features/kb-hub/PdfRow.tsx` | `/library/[gameId]/kb` | done | #1481 | T A V | — |
+| `sp4-kb-hub.jsx` | `HubDefault` | `apps/web/src/components/features/kb-hub/HubDefault.tsx` | `/library/[gameId]/kb` | done | #1481 | T A V | — |
+| `sp4-kb-hub.jsx` | `EmptyState` | `apps/web/src/components/features/kb-hub/EmptyState.tsx` | `/library/[gameId]/kb` | done | #1481 | T A V | — |
+| `sp4-kb-hub.jsx` | `ActionsMenu` | `apps/web/src/components/features/kb-hub/ActionsMenu.tsx` | `/library/[gameId]/kb` | done | #1481 | T A V | — |
+| `sp4-kb-hub.jsx` | `ReindexModal` | `apps/web/src/components/features/kb-hub/ReindexModal.tsx` | `/library/[gameId]/kb` | done | #1481 | T A M V | — |
+| `sp4-kb-hub.jsx` | `RaptorPanel` | `apps/web/src/components/features/kb-hub/RaptorPanel.tsx` | `/library/[gameId]/kb` | done | #1481 | T A V | — |
+| `sp4-kb-hub.jsx` | `DeleteDialog` | `apps/web/src/components/features/kb-hub/DeleteDialog.tsx` | `/library/[gameId]/kb` | done | #1481 | T A M V | — |
+
+### KB globale — `/knowledge-base/global` (F1b) — 10 components — **Tier L** ✅ Phase 0.5 contract delivered (#1482) / **Phase 1 Foundation DONE** (PR #1688)
+
+> Mockup delivered post 2026-05-10 as `sp4-kb-globale.jsx`. Global search,
+> doc viewer (desktop + mobile), inline editor, and AI drawer (4-state FSM:
+> idle/streaming/completed/error).
+> **Phase 0.5 sub-hook contract DELIVERED** (#1482): [`contracts/kb-globale-hooks.md`](contracts/kb-globale-hooks.md).
+> **Phase 1 Foundation DELIVERED** (PR #1688): `useGlobalKbSearch` hook + 5 components
+> (HeroSearch, KbHomeDesktop, KbSearchResultsDesktop, KbEmptyState, route shell + orchestrator)
+> + Zod schemas + i18n catalogs + matrix + bundle budget.
+> Route decided: `/knowledge-base/global` (canonical). Dispatch is 2-phase
+> (Foundation: search/home/results/filters/empty + `useGlobalKbSearch` ✅ DONE;
+> Interactions: viewer/editor/AI-drawer + `useKbAskStream` mirroring
+> `useAgentChatStream`, all lazy-split). Reuse verified: `streaming.schemas.ts`
+> (CitationSchema + StreamingEventType), `kb-chunks.schemas.ts`, `useKbDocDetail`,
+> `useKbChunksList`, `useUserKbDocs`. Greenfield: `useGlobalKbSearch` + `useKbAskStream`.
+> **Remaining open questions** (BE cross-game search scope, kb-ask SSE, RBAC, editor scope, facets)
+> must resolve before Interactions dispatch — see contract §7 + follow-up issues #1686 / #1687.
+> FilterAccordion, viewers, editor, drawer deferred to Phase 2.
+
+| Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
+|--------|-----------|------|-------|--------|----|----|----------|
+| `sp4-kb-globale.jsx` | `HeroSearch` | `apps/web/src/components/features/kb-globale/HeroSearch.tsx` | `/knowledge-base/global` | done | #1688 | T A V | — |
+| `sp4-kb-globale.jsx` | `KbHomeDesktop` | `apps/web/src/components/features/kb-globale/KbHomeDesktop.tsx` | `/knowledge-base/global` | done | #1688 | T A V | — |
+| `sp4-kb-globale.jsx` | `KbSearchResultsDesktop` | `apps/web/src/components/features/kb-globale/KbSearchResultsDesktop.tsx` | `/knowledge-base/global` | done | #1688 | T A V | — |
+| `sp4-kb-globale.jsx` | `FilterAccordion` | `apps/web/src/components/features/kb-globale/FilterAccordion.tsx` | `/knowledge-base/global` | done | #1743 | T A V | #1737 |
+| `sp4-kb-globale.jsx` | `KbDocViewerDesktop` | `apps/web/src/components/features/kb-globale/KbDocViewerDesktop.tsx` | `/knowledge-base/global` | done | #TBD | T A M V | — |
+| `sp4-kb-globale.jsx` | `KbDocViewerMobile` | `apps/web/src/components/features/kb-globale/KbDocViewerMobile.tsx` | `/knowledge-base/global` | done | #TBD | T A M V | — |
+| `sp4-kb-globale.jsx` | `KbEditorDesktop` | `apps/web/src/components/features/kb-globale/KbEditorDesktop.tsx` | `/knowledge-base/global` | done | #1743 | T A V | #1737 |
+| `sp4-kb-globale.jsx` | `DrawerShell` (+ `DrawerIdle` / `DrawerStreaming` / `DrawerCompleted` / `DrawerError` states) | `apps/web/src/components/features/kb-globale/Drawer*.tsx` | `/knowledge-base/global` | done | #TBD | T A V | — |
+| `sp4-kb-globale.jsx` | `CitationPill` | `apps/web/src/components/features/kb-globale/CitationPill.tsx` | `/knowledge-base/global` | done | #TBD | T A V | — |
+| `sp4-kb-globale.jsx` | `KbEmptyState` | `apps/web/src/components/features/kb-globale/KbEmptyState.tsx` | `/knowledge-base/global` | done | #1688 | T A V | — |
+| — | Route shell + orchestrator | `apps/web/src/app/(authenticated)/knowledge-base/global/page.tsx` + `_components/KbGlobaleView.tsx` | `/knowledge-base/global` | done | #1688 | — | — |
+
+## SP6 — Nanolith libro-game (Iter 1.B / Iter 4) — 2 components
+
+> Surfaces the Nanolith runthrough dogfood flow on the canonical
+> `/library/[gameId]` page when the game qualifies as a "libro game"
+> (helper at `apps/web/src/lib/games/is-libro-game.ts`). Mockups from the
+> Aaron Iter 1 / Iter 4 storyboard batch (2026-05-07+). Route lives under
+> `/library/[gameId]` after IA consolidation in #871 (was previously planned
+> under `/library/games/[gameId]`).
+
+### Libro-game detail surface — `/library/[gameId]` (libro variant) — 2 components — **Tier M**
+
+| Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
+|--------|-----------|------|-------|--------|----|----|----------|
+| `librogame-runthrough-game-detail.html` | `LibroGameDetailView` | `apps/web/src/components/v2/gamebook/LibroGameDetailView.tsx` | `/library/[gameId]` (libro variant) | done | #1037 | T A V | — |
+| `librogame-runthrough-setup-wizard.html` | `CampaignSetupDrawer` | `apps/web/src/components/v2/gamebook/CampaignSetupDrawer.tsx` | `/library/[gameId]` (libro variant — drawer) | done | #1037 | T A V | — |
+
+### Libro-game checkout flow — `/gamebook` (embedded modal) — 2 components — **Tier M**
+
+> Quota/credits checkout flow triggered from the existing `QuotaWidget`
+> upgrade CTA on `/gamebook`. 100% frontend (no backend, no real Stripe).
+> Pack catalog hardcoded. See spec
+> [`docs/superpowers/specs/2026-05-18-issue-953-gamebook-checkout-modal-design.md`](../../superpowers/specs/2026-05-18-issue-953-gamebook-checkout-modal-design.md).
+
+| Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
+|--------|-----------|------|-------|--------|----|----|----------|
+| `sp6-libro-game-quota-credits.jsx` | `CheckoutModal` (4 step) + `SoftWarningCredits` (toast/modal) | `apps/web/src/components/features/gamebook/{CheckoutModal,SoftWarningCredits}.tsx` | `/gamebook` (embedded) | done | #1291 | T A V | — |
+
+## SP6 — Nanolith libro-game gap-coverage (post-storyboard 2026-05-12) — 3 components
+
+> **Added 2026-05-12** post mockup gap analysis: 3 mockup blocker/nice-to-have aggiunti
+> al runthrough Nanolith per coprire stati non rappresentati nei 14 mockup originali —
+> Encounter Book photo→cheatsheet (BLOCKER §9.1), prerequisiti libro-game (PDF + KB +
+> agente), error states tecnici (timeout/OCR-fail/503/segmentation-fail). Tutti i 3
+> mockup riusano pattern esistenti (translate-viewer camera, game-detail hero, low-conf
+> banner) — zero CSS proprietari, solo `tokens.css`.
+>
+> **🔒 FREEZE NOTE**: Path target post-Stage-2 = `apps/web/src/components/features/gamebook/`
+> (NON più `components/v2/gamebook/` per nuove implementazioni). Status `pending`
+> rimane fino al lift FREEZE Design System De-versioning (umbrella #1023). Le entry
+> precedenti che puntano a `components/v2/gamebook/` (LibroGameDetailView,
+> CampaignSetupDrawer) rimangono in quel path perché pre-FREEZE shipped.
+
+### Libro-game gap-coverage — 3 components — **Mixed Tier (S + L + S-primitive)**
+
+> **Tier note** (refined post code-review PR #1056): originale section header "Tier S" era
+> blanket-incorrect. `LibroGameOnboardingPanel` ha 3 hook indipendenti
+> (`useGamePrerequisites` + `usePdfUpload` + `useKbIndexing`) → per la Tier table del documento
+> richiede **Tier L** + Phase 0.5 sub-hook contract OBBLIGATORIA (vedi linea 83). Reclassificato.
+
+| Mockup | Component | Tier | Path | Route | Status | PR | AC |
+|--------|-----------|------|------|-------|--------|----|----|
+| `librogame-runthrough-encounter-cheatsheet.html` | `EncounterCheatsheetView` | **S** | `apps/web/src/components/features/gamebook/EncounterCheatsheetView.tsx` | `/library/[gameId]/play/[campaignId]/encounter` | ✅ done (parse-centric MVP) | #1525 | T A (M unit; V retired) |
+| `librogame-runthrough-game-onboarding.html` | `LibroGameOnboardingPanel` | **L** ⚠️ | `apps/web/src/components/features/gamebook/LibroGameOnboardingPanel.tsx` | `/library/[gameId]` (libro variant — prereq gate) | pending | — | T A M V |
+| `librogame-runthrough-error-states.html` | `GamebookErrorBanner` | **S** (primitive-like) | `apps/web/src/components/features/gamebook/GamebookErrorBanner.tsx` | cross-cutting (chat, translate, encounter) | pending | — | T A V |
+
+**Stato di copertura** (4 stati ciascuno, mobile + desktop parity):
+
+- **`EncounterCheatsheetView`** (✅ done, PR #1525 · Tier S): parse-centric MVP — FSM `idle` (entry CTA + optional story context) / `parsing` / `rendered` (cheatsheet) / `error` (409 parse-failed · 404 not-found · generic + retry). Hook `useEncounterParse(campaignId, photoId)` → `mutate({paragraphNumber, gameBookId})` (consumes BE #1520). Ephemeral (no long-term cache, §9.1); confidence < 0.6 surfaces manual-verification hint. **State D (resolution/consequences) deferred** — no BE encounter-resolution command; "Risolvi" navigates back to the play session.
+- **`LibroGameOnboardingPanel`** (NICE-TO-HAVE · Tier L): prereq-missing / pdf-uploading / kb-indexing / ready. Replace della CTA "Avvia libro game" quando prerequisiti non soddisfatti. Composition: drop-zone + upload-row + index-detail + step-list primitives. Multi-hook ≥3 (`useGamePrerequisites` + `usePdfUpload` + `useKbIndexing`) → Phase 0.5 sub-hook contract OBBLIGATORIA prima di implementation (vedi `contracts/library-id-onboarding-hooks.md` TBD). Bundle budget < +120 KB.
+- **`GamebookErrorBanner`** (NICE-TO-HAVE · Tier S primitive-like): stream-timeout / ocr-fail / llm-503 / segmentation-fail. Trasversale alle 3 route gamebook (chat, translate, encounter). Cost-note "non addebitato" + ≥2 azioni di recupero + telemetry dogfood. Componente "primitive-like" candidato a `components/ui/error-banner/` se generalizzato post-Iter-1.
+
+## SP7 — Game Night detail RSVP (Issue #951) — 6 components
+
+> **Shipped 2026-05-15** via PR #1171 (commits 94beef71e / b31d95f2d /
+> 21733a339 / ada5eade9 / 70579996c). Out-of-Wave addition delivered alongside
+> the SP4/SP6 sections because the spec-hardening was prompted by audit
+> #951 (G2 game-night-detail row at line 33 / 340 — formerly blocked pending
+> Claude Design resume, unblocked by sp7-game-night-detail-rsvp mockup).
+>
+> **Path discipline** (post-Stage-2 #1025): components landed directly under
+> `apps/web/src/components/features/game-night-detail/` per the canonical
+> path convention — NOT `components/v2/`.
+>
+> **Foundation primitives co-shipped**:
+> - `apps/web/src/lib/game-nights/actor-classification.ts` (host/guest/bystander discriminator, AC-H3)
+> - `apps/web/src/lib/game-nights/rsvp-state-machine.ts` (client-side BE-mirror, AC-H2)
+> - `apps/web/src/lib/hooks/use-optimistic-mutation.ts` (generic React Query optimistic wrapper)
+> - `apps/web/src/hooks/queries/useGameNightDetail.ts` (composed orchestration hook)
+>
+> **Bundle delta** (measured 2026-05-15, `pnpm build` aggregate of
+> `.next/static/chunks/` baseline vs HEAD): **+21,569 bytes (+21 KB)**.
+> Per-route `page_client-reference-manifest.js` for `/game-nights/[id]`:
+> **+113 bytes**. Page RSC entry unchanged (1,234 bytes — thin wrapper).
+>
+> **E2E coverage**: `apps/web/e2e/v2-states/game-night-detail.spec.ts`
+> covers 5 AC-H1 GWT failure modes (capacity / double-rsvp / cancelled /
+> not-found / concurrent-edit) + axe-core WCAG 2.1 AA @ 375/768/1280.
+
+### Game night detail — `/game-nights/[id]` — 6 components — **Tier M**
+
+| Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
+|--------|-----------|------|-------|--------|----|----|----------|
+| `sp7-game-night-detail-rsvp.jsx` | `GameNightAvatar` | `apps/web/src/components/features/game-night-detail/GameNightAvatar.tsx` | `/game-nights/[id]` | done | #1171 | T A V | #1397 |
+| `sp7-game-night-detail-rsvp.jsx` | `GameNightStatusBadge` | `apps/web/src/components/features/game-night-detail/GameNightStatusBadge.tsx` | `/game-nights/[id]` | done | #1171 | T A V | #1397 |
+| `sp7-game-night-detail-rsvp.jsx` | `GameNightRsvpRow` | `apps/web/src/components/features/game-night-detail/GameNightRsvpRow.tsx` | `/game-nights/[id]` · `/join/event/[code]` | done | #1171 · #1169 (`mode='public'`) | T A V | #1397 |
+| `sp7-game-night-detail-rsvp.jsx` | `GameNightRsvpActionBar` | `apps/web/src/components/features/game-night-detail/GameNightRsvpActionBar.tsx` | `/game-nights/[id]` · `/join/event/[code]` | done | #1171 · #1169 (`mode='public'` hides Maybe) | T A V | #1397 |
+| `sp7-game-night-detail-rsvp.jsx` | `GameNightDetailHero` | `apps/web/src/components/features/game-night-detail/GameNightDetailHero.tsx` | `/game-nights/[id]` · `/join/event/[code]` | done | #1171 · #1169 (`mode='public'`) | T A V | #1397 |
+| `sp7-game-night-detail-rsvp.jsx` | `GameNightCancelledBanner` | `apps/web/src/components/features/game-night-detail/GameNightCancelledBanner.tsx` | `/game-nights/[id]` | done | #1171 | T A V | #1397 |
+| `sp7-game-night-join-public.jsx` | `PublicRsvpForm` | `apps/web/src/components/features/game-night-detail/PublicRsvpForm.tsx` | `/join/event/[code]` | done | #1169 | T A V | #1397 |
+| `sp7-game-night-join-public.jsx` | `InvalidTokenError` | `apps/web/src/components/features/game-night-detail/error-states/InvalidTokenError.tsx` | `/join/event/[code]` | done | #1169 | T A V | #1397 |
+| `sp7-game-night-join-public.jsx` | `ExpiredOrCancelledError` | `apps/web/src/components/features/game-night-detail/error-states/ExpiredOrCancelledError.tsx` | `/join/event/[code]` | done | #1169 | T A V | #1397 |
+| `sp7-game-night-join-public.jsx` | `RateLimitedError` | `apps/web/src/components/features/game-night-detail/error-states/RateLimitedError.tsx` | `/join/event/[code]` | done | #1169 | T A V | #1397 |
+| `sp7-game-night-join-public.jsx` | `GenericError` | `apps/web/src/components/features/game-night-detail/error-states/GenericError.tsx` | `/join/event/[code]` | done | #1169 | T A V | #1397 |
+| `sp7-game-night-join-public.jsx` | `PublicJoinEventView` (orchestrator) | `apps/web/src/app/(public)/join/event/[code]/_components/PublicJoinEventView.tsx` | `/join/event/[code]` | done | #1169 | T A V | #1397 |
+
+**Deferred (planned follow-up)**:
+- Tabbed surface (Dettagli / Voting / Chat) — `GameNightDetailTabs`, `GameVoteCard`, `VotingTiedResolver`, `GameNightChatStream` — out of AC-H1..H5 scope (mockup lines 600+).
+- Mobile sticky CTA `GameNightRsvpBottomSheet` — checkpoint decision 3c (deferred polish PR, current inline RsvpActionBar functional).
+- Host-side actor UI (`HostReadyCTA`, `InProgressCTA`, `CompletedCTA`) — present in mockup, awaiting design freeze on host-flow surfaces.
+- Legacy `GameNightActions` / `GameNightSessionsList` / `GameNightDiaryPanel` / `GameNightPlanningLayout` audit — kept under hero for Published/Completed/Draft branches per checkpoint decisions 1a + 2a. Migration to v2 primitives tracked separately.
 
 ## Stub format (informational)
 
@@ -345,8 +628,8 @@ export function <Component>(_props: <Component>Props): ReactElement | null {
 ## Deferred entries
 
 These six components from the spec Appendix A are intentionally **not stubbed** under
-`components/v2/`; they will be implemented as compositions of primitives once the
-relevant primitive lands under `components/ui/v2/`:
+`components/features/`; they will be implemented as compositions of primitives once the
+relevant primitive lands under `components/ui/`:
 
 | Spec name | Reason | Replacement strategy |
 |-----------|--------|----------------------|
@@ -364,10 +647,194 @@ session title) into a single artifact suitable for image export — that is feat
 work, not a primitive composition. The total stays at 46 by dropping `GamesSortBar`
 instead.
 
+## Route → Mockup index (page-level)
+
+> **Added 2026-05-12** post user-page audit (issue #1173). This is the
+> *route-first* counterpart to the per-component matrix above: one row per
+> user-reachable Next.js route (excluding `admin/(dashboard)/**`), linked to
+> the canonical mockup file(s). For machine-readable file classification see
+> [`admin-mockups/MOCKUPS_INDEX.md`](../../../admin-mockups/MOCKUPS_INDEX.md).
+>
+> **Scope**: 84 user-reachable routes inventoried from `apps/web/src/app/`
+> (`(public)`, `(auth)`, `(authenticated)`, `(chat)`). Routes under
+> `app/admin/(dashboard)/**` are intentionally excluded.
+>
+> **Legend**: `—` = no mockup mapped (gap); `↻` = reuse of another route's
+> mockup; `[partial]` = mockup covers a subset of the route's surface.
+
+### Public `(public)/`
+
+| Route | Mockup | Note |
+|-------|--------|------|
+| `/` | `public.html` | Landing |
+| `/about` | — | gap |
+| `/contact` | — | gap |
+| `/cookies` · `/cookie-settings` | `sp3-legal.html` ↻ | Legal hub reuse |
+| `/privacy` · `/terms` | `sp3-legal.html` ↻ | Legal hub reuse |
+| `/faq` | `sp3-faq-enhanced.html` | — |
+| `/how-it-works` | `sp3-how-it-works.html` | — |
+| `/pricing` | — | gap |
+| `/join` | `sp3-join.html` | — |
+| `/join/session/[code]` | — | gap (deep-link session) |
+| `/accept-invite` | `sp3-accept-invite.html` | — |
+| `/invites/[token]` | `sp3-accept-invite.html` ↻ | Token variant |
+| `/shared-games` | `sp3-shared-games.html` + `sp3-library-public.html` | — |
+| `/shared-games/[id]` | `sp3-shared-game-detail.html` | Wave A.3 (PR #600/605/612/630) |
+| `/library/shared/[token]` | `sp3-library-public.html` ↻ | Public library snapshot |
+| `/dev/meeple-card` | `04-design-system.html` | Dev showcase only |
+
+### Auth `(auth)/`
+
+| Route | Mockup | Note |
+|-------|--------|------|
+| `/login` · `/register` · `/reset-password` | `auth-flow.html` | Flow unico |
+| `/oauth-callback` | `auth-flow.html` [partial] | Callback step |
+| `/verify-email` · `/verification-pending` · `/verification-success` | `auth-flow.html` [partial] | Sub-states |
+| `/setup-account` | `auth-flow.html` + `onboarding.html` | Hand-off |
+| `/welcome` | `onboarding.html` | — |
+| `/invitation-expired` | `auth-flow.html` [partial] | Error state |
+
+### Authenticated `(authenticated)/` — Onboarding & Profile
+
+| Route | Mockup | Note |
+|-------|--------|------|
+| `/onboarding` · `/setup` | `onboarding.html` | — |
+| `/dashboard` | `sp4-dashboard.html` | Mockup canonical (forward-design Pre-Stage-3, closes #491); FE stubs pending |
+| `/discover` | `sp4-discover.html` | Tier L, pending |
+| `/profile` · `/profile/achievements` | `sp4-player-detail.html` ↻ + `sp5-profile-settings.html` [partial] | `/profile?tab=settings` coperto da sp5; self-view + achievements via sp4-player-detail reuse |
+| `/settings` (+ `/ai-consent`, `/api-keys`, `/notifications`, `/preferences`, `/profile`, `/security`, `/services`) | `settings.html` | Shell unica per 7 sub-route |
+| `/notifications` · `/notifications/preferences` | `notifications.html` | — |
+| `/versions` | — | gap (changelog) |
+
+### Authenticated — Library
+
+| Route | Mockup | Note |
+|-------|--------|------|
+| `/library` | `sp4-library-desktop.html` + `sp4-library-mobile.html` | Tier S done (PR #574/635/638); mobile variant SP8 brief 2026-05-30 (IA semplificata 3 tab + overflow Più=Agents/KB) |
+| `/library/wishlist` | `sp4-library-wishlist.html` [done] | B16 #1491 · Standalone (Option B vs A variant) · Card grid responsive + priority filter multi-select (Alta/Media/Bassa) + AddToWishlistDialog (game combo + radiogroup + target price + notes), 8 stati |
+| `/library/playlists` · `/[id]` · `/shared/[token]` | n/a | route INESISTENTI nel codebase (false-positive audit 2026-05-12, confermato 2026-05-22) — rimosso dal scope |
+| `/library/private` · `/add` · `/[id]` | `sp4-add-game-pdf-dedup.html` + `sp4-upload-wizard-extended.html` [partial] | — |
+| `/library/private/[id]/toolkit/configure` | `sp4-toolkit-detail.html` ↻ | — |
+| `/library/proposals` · `/propose` | `sp4-add-game-bgg-step.html` | Ingestion proposta |
+| `/library/[gameId]` | `sp4-game-detail.html` + `librogame-runthrough-game-detail.html` + `librogame-runthrough-game-onboarding.html` | IA closes #871 (PR #1037); onboarding gap-coverage 2026-05-12 (pending Stage-2); libro variant audit #1551 → **0% drift** (see [libro-detail-gap-report.md](../../../admin-mockups/design_handoff/libro-detail-gap-report.md)) |
+| `/library/[gameId]/agent` | `sp4-agent-detail.html` + `sp4-game-chat-tab.html` | — |
+| `/library/[gameId]/play` | `librogame-runthrough-resume-picker.html` + `sp6-libro-game-resume-state.html` | Libro-game |
+| `/library/[gameId]/play/[campaignId]` | `librogame-runthrough-play-session.html` | 4 stati v1 congelati + 3 stati SP8 companion (state-05 diary, state-06 paragrafi-drawer, state-07 end-campaign) brief 2026-05-30; nuovo jsx twin con 3 lab interattivi; deviazione narrativa dati documentata (nuovi stati riferiscono §214/Tainted Grail/Niamh, congelati §289/Eldoria/Voidstone). NOTA: precedente reference a `sp6-libro-game-index.html` rimosso 2026-06-08 #2025 (è index `/gamebook` lista manuali, NON play-session) |
+| `/library/[gameId]/play/[campaignId]/translate` | `librogame-runthrough-translate-viewer.html` + `sp6-libro-game-photo-upload.html` | Tier S done (PR #790) |
+| `/library/[gameId]/play/[campaignId]/encounter` | `librogame-runthrough-encounter-cheatsheet.html` | Tier S done (PR #1525, parse-centric MVP; state D deferred) |
+| `/library/[gameId]/toolbox` · `/toolkit` · `/toolkit/[sessionId]` | `sp4-toolkit-detail.html` ↻ | — |
+
+> **Note**: `/library/v2` decommissionata 2026-05-12 (era demo orfana con SEED hard-coded).
+
+### Authenticated — Games & Players
+
+| Route | Mockup | Note |
+|-------|--------|------|
+| `/games` | `sp4-games-index.html` | redirect → `/library` (#1521); mockup = library view. #1566 wired 3/5 components into the `/library` games tab (Filters+Grid+EmptyState); GamesHero+GamesRecentRail deferred (§7) |
+| `/games/[id]` | `sp4-game-detail.html` | Tier L done (PR #702) |
+| `/games/[id]/faqs` | `sp3-faq-enhanced.html` ↻ | Reuse |
+| `/games/[id]/reviews` · `/strategies` · `/rules` | — | gap (sub-tab) |
+| `/games/[id]/sessions` | `sp4-sessions-index.html` ↻ | Filtrato per game |
+| `/players` | `sp4-players-index.html` | Tier S done (PR #717) |
+| `/players/[id]` | `sp4-player-detail.html` | Tier M done (PR #724) |
+| `/players/[id]/{achievements,games,sessions,stats}` | `sp4-player-detail.html` ↻ | Sub-tab unica |
+
+### Authenticated — Sessions & Game Nights
+
+| Route | Mockup | Note |
+|-------|--------|------|
+| `/sessions` | `sp4-sessions-index.html` | — |
+| `/sessions/new` | `librogame-runthrough-setup-wizard.html` | — |
+| `/sessions/join` | `sp3-join.html` ↻ | Reuse |
+| `/sessions/[id]` | `sp4-session-wingspan-summary.html` + `sp4-session-wingspan-summary-{parts,sections,tabs}.jsx` | Tier M-L done (PR #762); 2026-05-31 consolidation +3 tabs `?tab=scoreboard\|notes\|players` (closes gap N7 audit 2026-05-22). ⚠️ **Wingspan-specific demo** — generic skeleton tracked in B19 |
+| `/sessions/[id]/live` | `sp4-session-wingspan-live.html` + `sp4-session-wingspan-live-{parts,tabs}.jsx` + `sp4-parts-common.jsx` | Tier L+ pending impl; 2026-05-31 consolidation +4 tabs `?tab=scores\|photos\|agent\|players` (closes gap N7) — vedi ADR `claudedocs/2026-05-31-sessions-consolidation-adr.md`. ⚠️ **Wingspan-specific demo** — generic skeleton tracked in B19 |
+| `/sessions/[id]/{scoreboard,notes,players}` | `sp4-session-wingspan-summary.html` ↻ tabs | Consolidated 2026-05-31 — route da deletare, redirect 301/308 a `?tab=` equivalente |
+| `/sessions/[id]/{scores,photos,agent,players}` | `sp4-session-wingspan-live.html` ↻ tabs | Consolidated 2026-05-31 — route da deletare, redirect 301/308 a `?tab=` equivalente. NOTA: `/sessions/[id]/players` esiste sia post-game (summary tab) sia live (live tab) — context-dependent |
+| `/sessions/[id]/join` | `sp3-join.html` ↻ | Reuse — non consolidato (flow distinto) |
+| `/sessions/[id]/play` | `sp4-session-play.html` [done] | B17 #1492 · Live play view 3-col (Scoreboard PV inline +/- / Activity feed SSE / Chat agent streaming) + Rules sheet + Score/Dispute modals, 10 stati. **Chiude residuo gap N7 + epic #1475 a 26/26 (100%).** |
+| `/sessions/live/[id]` (+ `/agent`, `/photos`, `/players`, `/scores`) | `sp4-session-live.html` + `librogame-runthrough-session-end.html` | Consolidation 2026-05-31 applicabile (stesso pattern `?tab=`); coexistenza route fisiche da pianificare |
+| `/game-nights` | `sp4-game-nights-index.html` | Tier L pending |
+| `/game-nights/new` | `sp7-game-night-create.html` | Tier L+ DONE (PR #1297 components, PR #1302 orchestrator, PR #1305 W4 E2E + a11y + conformity entry); baseline PNGs auto-generated post-merge via bootstrap workflows |
+| `/game-nights/[id]` · `/[id]/edit` | `sp7-game-night-detail-rsvp.html` + `librogame-game-night-storyboard.html` | Tier M done (PR #1171, RSVP cluster); tabbed/host surfaces pending. NOTA: `nanolith-game-night-storyboard.html` renamed to `librogame-game-night-storyboard.html` post-IA consolidation #871 (sync 2026-06-08 #2025); edit variant gap → vedi B21 #2026 |
+
+### Authenticated — Play Records, Toolkit, Gamebook, Agents, KB
+
+| Route | Mockup | Note |
+|-------|--------|------|
+| `/play-records` · `/new` · `/[id]` · `/[id]/edit` · `/stats` | `sp4-play-records-{index,new,detail,edit,stats}.html` (+ `sp4-play-records-data.js` dev-fixture) | 5 mockup canonical per 5 routes; FE stubs pending |
+| `/toolkit` · `/play` · `/history` · `/stats` · `/templates` · `/[sessionId]` | `sp4-toolkit-detail.html` ↻ | Shell unica |
+| `/gamebook` · `/gamebook/upload` | `sp6-libro-game-index.html` + `sp4-upload-wizard-extended.html` | done (PR #792/794+) |
+| `/agents` · `/agents/[id]` | `sp4-agents-index.html` + `sp4-agent-detail.html` | Tier S+L done |
+| `/knowledge-base` · `/[id]` | `sp4-kb-hub.html` + `sp4-kb-detail.html` | KB-detail deferred (G4 v3) |
+| `/upload` | `sp4-upload-wizard-extended.html` + `sp4-add-game-pdf-dedup.html` | — |
+| `/private-games/[id]` | `sp4-game-detail.html` ↻ | Reuse |
+
+### Chat `(chat)/`
+
+| Route | Mockup | Note |
+|-------|--------|------|
+| `/chat` · `/chat/new` · `/chat/[threadId]` | `chat-fullscreen.html` (page-mock) + `sp4-game-chat-tab.html` + `librogame-runthrough-setup-chat.html` + `nanolith-nav-chat-panel.html` | chat-fullscreen done (#491 partial, 2026-05-23) |
+| `/chat/agents/create` | `sp4-agents-index.html` [partial] | gap dedicato per "create flow" |
+
+### Power-user / editor (utente avanzato, non admin)
+
+| Route | Mockup | Note |
+|-------|--------|------|
+| `/editor` | `sp4-editor-index.html` [done] | B14 #1489 5/5 · RuleSpec atom editor split-view + PDF preview, 11 stati |
+| `/editor/agent-proposals` | `sp4-editor-proposals-index.html` [done] | B14 #1489 · Typology list, 5 status badge, 9 stati |
+| `/editor/agent-proposals/create` | `sp4-editor-proposals-create.html` [done] | B14 #1489 · Form multi-section 5 sezioni, 8 stati |
+| `/editor/agent-proposals/[id]/edit` | `sp4-editor-proposals-edit.html` [done] | B14 #1489 · Edit + 4 status variants + Revisions diff + Audit trail, 10 stati |
+| `/editor/agent-proposals/[id]/test` | `sp4-editor-proposals-test.html` [done] | B14 #1489 · Playground FSM streaming + Trace + Compare, 12 stati |
+| `/pipeline-builder` | — | gap |
+| `/n8n` | — | gap (integration UI) |
+
+### Toolkit standalone sub-pages (cross-game helpers)
+
+| Route | Mockup | Note |
+|-------|--------|------|
+| `/toolkit/stats` | `sp4-toolkit-stats.html` [done] | B15 #1490 1/4 · KPI dashboard analytics 12-mesi (sessioni / giochi / durata) + Most Played top-N + Monthly bar chart + Recent Score Trends, 8 stati |
+| `/toolkit/history` | `sp4-toolkit-history.html` [done] | B15 #1490 2/4 · Lista paginata sessioni finalizzate cross-game con filtri (game/date/winner) + detail modal (classifica/timeline/note/stats), 9 stati |
+| `/toolkit/templates` | `sp4-toolkit-templates.html` [done] | B15 #1490 3/4 · Gallery template grid 4-col con filter categoria (Strategy/Party/CardGames/Cooperative) + Clone CTA + 4 card variants (official/popular/recent/pending), 8 stati |
+| `/toolkit/play` | `sp4-toolkit-play.html` [done] | B15 #1490 4/4 · Toolkit standalone live (4 tool widgets: **Dice Builder full power** con presets+formula parser khN/klN/csN/explosive + Counter + Timer countdown/turn FSM + Randomizer) + log streaming cross-tool, 16 stati |
+
+### Critical gaps summary
+
+> **Updated 2026-05-31** (cross-audit 2026-05-12 + 2026-05-22): 3 dei 5 gap
+> critici originali (audit 2026-05-12) sono riconciliati — `sp4-dashboard.html`
+> (closes #491 dashboard part), `sp4-play-records-*` (5 file canonical) e
+> `sp5-profile-settings.html` (settings tab; `/profile` root +
+> `/profile/achievements` via `sp4-player-detail.html` reuse) sono ora mappati.
+> `/library/playlists/*` (originale gap #4) è **rimosso** — le route non
+> esistono nel codebase (false-positive confermato dall'audit 2026-05-22).
+> Resta **1 cluster** senza mockup canonical né issue B-series dedicata:
+
+1. **`/pricing`** — landing commerciale assente (tier-upgrade funnel). Proposta `[Design v1 · B12]`.
+
+> **Nota**: l'audit più recente `2026-05-22-mockup-gaps.md` identifica
+> ulteriori gap (P1 editor agent-proposals, toolkit sub-pages, wishlist,
+> sessions sub-pages, community follow-up) per cui sono già state aperte
+> issue B11 / B14 / B15 / B16 / B17. La riapertura di #492 (community
+> follow-up false-positive) e #491 chat full-screen (parziale, consegnato
+> via `chat-fullscreen.html`) sono follow-up del maintainer.
+
+Status delle lacune originali è tracciato in
+`docs/for-developers/audits/2026-05-12-mockup-gaps.md` (con status update
+inline 2026-05-31) — vedi anche `2026-05-22-mockup-gaps.md` per la review
+successiva.
+
+### Cross-route state coverage (dev-fixture)
+
+> `state-matrix.html` (dev-fixture, 2026-05-23) mappa gli stati
+> Empty/Error/Loading/Permission/Offline per 8 route critiche (translate, play, chat,
+> game-nights, sessions/live, shared-games, discover, notifications) — 8×5 = 40 cell.
+> Riferimento cross-cutting per Phase 2/3; non page-level, non sostituisce i page-mock per route.
+
 ## References
 
 - Issue #573 — *[V2 Phase 0] Migration contract matrix + 46 component stub*.
 - Wave A umbrella #579.
-- v2 design migration spec: [`docs/for-developers/specs/2026-04-26-v2-design-migration.md`](../superpowers/specs/2026-04-26-v2-design-migration.md).
-- Existing v2 primitives index: [`apps/web/src/components/ui/v2/`](../../apps/web/src/components/ui/v2/).
-- Mockups: [`admin-mockups/design_files/`](../../admin-mockups/design_files/) (sp4-* wave 1+2).
+- v2 design migration spec: [`docs/for-developers/specs/2026-04-26-v2-design-migration.md`](../specs/2026-04-26-v2-design-migration.md).
+- Existing v2 primitives index: [`apps/web/src/components/ui/`](../../../apps/web/src/components/ui/).
+- Mockups: [`admin-mockups/design_files/`](../../../admin-mockups/design_files/) (sp3/sp4/sp6/sp7/nanolith).
+- Mockup file classification: [`admin-mockups/MOCKUPS_INDEX.md`](../../../admin-mockups/MOCKUPS_INDEX.md).
+- Page-level gaps audit: [`docs/for-developers/audits/2026-05-12-mockup-gaps.md`](../audits/2026-05-12-mockup-gaps.md).

@@ -823,7 +823,7 @@ const VersionsTab = ({ tk, mine }) => {
                     background:'transparent', color:'var(--text-sec)',
                     border:'1px solid var(--border)',
                     fontFamily:'var(--f-display)', fontSize: 11, fontWeight: 700, cursor:'pointer',
-                  }}>✎ Modifica note</button>
+                  }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-hub-toolkits.html'; }, 0); /* DEMO-NAV */ }}>✎ Modifica note</button>
                   <button type="button" style={{
                     padding:'5px 10px', borderRadius:'var(--r-sm)',
                     background:'transparent', color: entityHsl('warning'),
@@ -1165,7 +1165,7 @@ const DesktopNav = ({ tk, mine }) => (
       flex: 1, fontFamily:'var(--f-mono)', fontSize: 11, color:'var(--text-muted)',
       marginLeft: 22,
     }}>
-      <a href="#" style={{ color:'inherit' }}>Toolkits</a>
+      <a href="#" style={{ color:'inherit' }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-hub-toolkits.html'; }, 0); /* DEMO-NAV */ }}>Toolkits</a>
       <span aria-hidden="true"> / </span>
       <strong style={{ color:'var(--text-sec)' }}>{tk.title}</strong>
       {mine && (
@@ -1334,7 +1334,7 @@ const App = () => {
           </div>
         </div>
         <div style={{ flex: 1 }}/>
-        <button type="button" onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
+        <button type="button" onClick={(e) => { (() => setTheme(t => t === 'light' ? 'dark' : 'light'))(e); setTimeout(() => { window.location.href = 'sp4-hub-toolkits.html'; }, 0); /* DEMO-NAV */ }}
           style={{
             padding:'8px 14px', borderRadius:'var(--r-md)',
             background:'var(--bg-card)', border:'1px solid var(--border)',

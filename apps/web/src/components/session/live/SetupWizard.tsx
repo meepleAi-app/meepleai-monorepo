@@ -118,7 +118,7 @@ export function SetupWizard({ sessionId, playerCount }: SetupWizardProps) {
     return (
       <div className="flex flex-col items-center justify-center py-10 gap-3">
         <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
-        <p className="text-sm text-gray-500 font-nunito">Generazione checklist di setup...</p>
+        <p className="text-sm text-muted-foreground font-nunito">Generazione checklist di setup...</p>
       </div>
     );
   }
@@ -127,8 +127,8 @@ export function SetupWizard({ sessionId, playerCount }: SetupWizardProps) {
 
   if (error || !checklist) {
     return (
-      <div className="rounded-xl bg-white/70 backdrop-blur-md border border-white/40 p-6 text-center">
-        <p className="text-sm text-gray-500 font-nunito">
+      <div className="rounded-xl bg-card/70 backdrop-blur-md border border-border p-6 text-center">
+        <p className="text-sm text-muted-foreground font-nunito">
           Setup non disponibile — usa la chat per chiedere all&apos;agente
         </p>
       </div>
@@ -145,7 +145,7 @@ export function SetupWizard({ sessionId, playerCount }: SetupWizardProps) {
   return (
     <div className="space-y-4">
       {/* Tab bar */}
-      <div className="flex rounded-lg bg-gray-100 p-1">
+      <div className="flex rounded-lg bg-muted p-1">
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -153,8 +153,8 @@ export function SetupWizard({ sessionId, playerCount }: SetupWizardProps) {
             className={[
               'flex-1 rounded-md px-3 py-1.5 text-sm font-quicksand font-semibold transition-colors',
               activeTab === tab.id
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700',
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground',
             ].join(' ')}
             onClick={() => setActiveTab(tab.id)}
           >

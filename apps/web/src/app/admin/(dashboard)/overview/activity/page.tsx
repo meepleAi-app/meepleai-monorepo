@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState } from 'react';
@@ -101,7 +102,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   games: 'text-amber-600 dark:text-amber-400 bg-amber-100/80 dark:bg-amber-900/30',
   agents: 'text-purple-600 dark:text-purple-400 bg-purple-100/80 dark:bg-purple-900/30',
   documents: 'text-emerald-600 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-900/30',
-  system: 'text-slate-600 dark:text-slate-400 bg-slate-100/80 dark:bg-slate-700/30',
+  system: 'text-muted-foreground bg-muted/80 dark:bg-card',
 };
 
 export default function ActivityLogPage() {
@@ -160,7 +161,7 @@ export default function ActivityLogPage() {
       {/* Timeline */}
       <div className="relative space-y-0">
         {/* Vertical line */}
-        <div className="absolute left-[19px] top-2 bottom-2 w-px bg-slate-200/80 dark:bg-zinc-700/60" />
+        <div className="absolute left-[19px] top-2 bottom-2 w-px bg-muted/80 dark:bg-zinc-700/60" />
 
         {filtered.map(entry => {
           const Icon = entry.icon;

@@ -26,7 +26,7 @@ export interface SessionDrawerSheetProps {
 const statusConfig: Record<string, { label: string; dot: string }> = {
   InProgress: { label: 'In corso', dot: 'bg-blue-500' },
   Completed: { label: 'Completata', dot: 'bg-green-500' },
-  Abandoned: { label: 'Abbandonata', dot: 'bg-slate-400' },
+  Abandoned: { label: 'Abbandonata', dot: 'bg-muted-foreground' },
   Paused: { label: 'In pausa', dot: 'bg-amber-500' },
 };
 
@@ -59,7 +59,7 @@ export function SessionDrawerSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className={cn('sm:max-w-lg', 'bg-white/80 backdrop-blur-xl')}>
+      <SheetContent side="right" className={cn('sm:max-w-lg', 'bg-card/80 backdrop-blur-xl')}>
         <SheetHeader className="pb-4 border-b border-border/30">
           <SheetTitle className="font-quicksand text-lg">
             <span className="text-[hsl(240,60%,55%)]">Sessioni</span>{' '}
@@ -129,7 +129,7 @@ export function SessionDrawerSheet({
             const date = new Date(session.startedAt);
             const status = statusConfig[session.status as keyof typeof statusConfig] ?? {
               label: session.status,
-              dot: 'bg-slate-300',
+              dot: 'bg-muted',
             };
 
             return (

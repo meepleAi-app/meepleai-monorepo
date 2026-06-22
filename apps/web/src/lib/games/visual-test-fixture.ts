@@ -78,6 +78,7 @@ const baseEntry = (
   privateGameId: null,
   isPrivateGame: false,
   canProposeToCatalog: false,
+  timesPlayed: 0,
   ...overrides,
 });
 

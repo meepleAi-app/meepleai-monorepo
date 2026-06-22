@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * Agent Chat Child Card — /sessions/live/[sessionId]/agent
  *
@@ -55,7 +56,7 @@ function MessageBubble({ message }: MessageBubbleProps) {
           'max-w-[80%] rounded-2xl px-4 py-2.5 text-sm font-nunito',
           isUser
             ? 'bg-amber-500 text-white rounded-tr-sm'
-            : 'bg-white/80 backdrop-blur-sm border border-white/60 text-gray-800 rounded-tl-sm shadow-sm',
+            : 'bg-card/80 backdrop-blur-sm border border-border text-foreground rounded-tl-sm shadow-sm',
         ].join(' ')}
       >
         {message.imageUrls && message.imageUrls.length > 0 && (
@@ -65,7 +66,7 @@ function MessageBubble({ message }: MessageBubbleProps) {
                 key={i}
                 src={url}
                 alt={`Allegato ${i + 1}`}
-                className="h-16 w-20 rounded-md border border-white/30 object-cover"
+                className="h-16 w-20 rounded-md border border-border object-cover"
               />
             ))}
           </div>
@@ -261,10 +262,10 @@ export default function AgentPage({ params }: AgentPageProps) {
             <Bot className="h-4 w-4 text-amber-600" />
           </div>
           <div>
-            <h2 className="text-base font-quicksand font-bold text-gray-900 leading-none">
+            <h2 className="text-base font-quicksand font-bold text-foreground leading-none">
               Arbitro AI
             </h2>
-            <p className="text-xs text-gray-500 font-nunito">{gameName || 'Sessione live'}</p>
+            <p className="text-xs text-muted-foreground font-nunito">{gameName || 'Sessione live'}</p>
           </div>
         </div>
 
@@ -283,7 +284,7 @@ export default function AgentPage({ params }: AgentPageProps) {
             <div className="h-7 w-7 rounded-full bg-amber-100 border border-amber-200 flex items-center justify-center shrink-0">
               <Loader2 className="h-4 w-4 text-amber-600 animate-spin" />
             </div>
-            <div className="rounded-2xl rounded-tl-sm bg-white/80 border border-white/60 px-4 py-3 shadow-sm">
+            <div className="rounded-2xl rounded-tl-sm bg-card/80 border border-border px-4 py-3 shadow-sm">
               <div className="flex gap-1 items-center">
                 <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:0ms]" />
                 <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:150ms]" />
@@ -306,7 +307,7 @@ export default function AgentPage({ params }: AgentPageProps) {
                 <img
                   src={img.previewUrl}
                   alt={`Allegato ${idx + 1}`}
-                  className="h-14 w-18 rounded-md border border-white/20 object-cover"
+                  className="h-14 w-18 rounded-md border border-border object-cover"
                 />
                 <button
                   type="button"

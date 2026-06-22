@@ -67,14 +67,15 @@ internal sealed class PdfStateChangedMetricsEventHandler : INotificationHandler<
                 return;
             }
 
-            // Record metric
+            // Record metric (#1938 / CF-2: propagate EventId for DB-level idempotency)
             await _metricsService.RecordStepDurationAsync(
                 notification.PdfDocumentId,
                 notification.PreviousState,
                 duration.Value,
                 pdf.FileSize.Bytes,
                 pdf.PageCount ?? 1,
-                cancellationToken).ConfigureAwait(false);
+                sourceEventId: notification.EventId,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Recorded metric: PdfId={PdfId}, Step={Step}, Duration={Duration}s",

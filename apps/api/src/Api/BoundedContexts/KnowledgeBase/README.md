@@ -6,7 +6,7 @@ Gestisce la knowledge base RAG (Retrieval-Augmented Generation), ricerca ibrida,
 
 ## Funzionalità Principali
 
-- **Hybrid Search**: Combinazione di ricerca vettoriale (Qdrant) e keyword (PostgreSQL FTS)
+- **Hybrid Search**: Combinazione di ricerca vettoriale (pgvector) e keyword (PostgreSQL FTS)
 - **RAG Pipeline**: Retrieval-Augmented Generation con validazione multi-layer
 - **Chat Intelligente**: Conversazioni context-aware con gestione thread
 - **Embedding Management**: Gestione vettori e indicizzazione
@@ -43,9 +43,9 @@ Orchestrazione e casi d'uso (CQRS pattern con MediatR):
 
 ### Infrastructure/
 Implementazioni concrete e adattatori:
-- **Repositories/**: Implementazioni EF Core e Qdrant
+- **Repositories/**: Implementazioni EF Core e pgvector
 - **Services/**:
-  - QdrantVectorStore: Integrazione con Qdrant
+  - PgVectorStore: Integrazione con pgvector (PostgreSQL extension)
   - OpenRouterLLMService: Integrazione con OpenRouter
   - EmbeddingService: Generazione embeddings
   - HybridSearchService: RRF (Reciprocal Rank Fusion)
@@ -61,7 +61,7 @@ Implementazioni concrete e adattatori:
 ## Hybrid Search (ADR-001)
 
 La ricerca ibrida combina:
-- **Vector Search** (Qdrant): Similarity semantica, 70% weight
+- **Vector Search** (pgvector): Similarity semantica, 70% weight
 - **Keyword Search** (PostgreSQL FTS): Exact matches, 30% weight
 - **RRF (Reciprocal Rank Fusion)**: Fusione dei risultati
 
@@ -128,7 +128,7 @@ Vedi `Infrastructure/Entities/KnowledgeBase/`:
 - **Streaming**: Server-Sent Events (SSE)
 
 ### Vector Store
-- **Database**: Qdrant
+- **Database**: PostgreSQL + pgvector
 - **Collection**: game-rules
 - **Distance Metric**: Cosine similarity
 - **Index**: HNSW
@@ -139,19 +139,19 @@ Vedi `Infrastructure/Entities/KnowledgeBase/`:
 - **Query Expansion**: 15-25% recall boost
 - **RRF Fusion**: Better than pure vector or keyword alone
 - **Sentence Chunking**: 20% migliore retrieval quality
-- **Connection Pooling**: Ottimizzazione Qdrant client
+- **Connection Pooling**: Ottimizzazione pgvector connection pooling
 
 ## Testing
 
 - Unit tests per domain logic, scoring, validation
-- Integration tests con Testcontainers (PostgreSQL, Qdrant)
+- Integration tests con Testcontainers (PostgreSQL + pgvector)
 - RAG evaluation tests (P@10, MRR, confidence)
 - Test coverage: >90%
 
 ## Dipendenze
 
 - **EF Core**: Persistence (PostgreSQL)
-- **Qdrant.Client**: Vector database
+- **pgvector**: PostgreSQL extension for vector search
 - **MediatR**: CQRS orchestration
 - **FluentValidation**: Input validation
 - **OpenRouter SDK**: LLM access

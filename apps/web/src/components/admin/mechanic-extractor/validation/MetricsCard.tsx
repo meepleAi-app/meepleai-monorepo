@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin tools chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13d admin scope (--admin-* decision deferred to DS-15). */
 /**
  * Mechanic Extractor — AI Comprehension Validation (ADR-051 Sprint 1 / Task 37)
  *
@@ -42,7 +43,7 @@ const CERTIFICATION_BADGE_CLASS: Record<CertificationStatus, string> = {
   Certified: 'border-green-300 bg-green-50 text-green-800 dark:bg-green-950/30 dark:text-green-300',
   NotCertified: 'border-rose-300 bg-rose-50 text-rose-800 dark:bg-rose-950/30 dark:text-rose-300',
   NotEvaluated:
-    'border-slate-300 bg-slate-50 text-slate-700 dark:bg-zinc-900/40 dark:text-zinc-300',
+    'border-border bg-muted text-foreground dark:bg-zinc-900/40 dark:text-zinc-300',
 };
 
 const CERTIFICATION_LABEL: Record<CertificationStatus, string> = {
@@ -73,7 +74,7 @@ export function MetricsCard({ metrics, currentGoldenVersionHash }: MetricsCardPr
   return (
     <Card
       data-testid="mechanic-metrics-card"
-      className="bg-white/70 backdrop-blur-md border-slate-200/60 dark:bg-zinc-800/70 dark:border-zinc-700/60"
+      className="bg-card/70 backdrop-blur-md border-border/60 dark:bg-zinc-800/70 dark:border-zinc-700/60"
     >
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -139,7 +140,7 @@ function ScorePill({ label, value, testId, emphasis }: ScorePillProps) {
   return (
     <div
       className={
-        'rounded-lg border border-slate-200 bg-white p-3 text-center transition-shadow hover:shadow-sm dark:border-zinc-700 dark:bg-zinc-800'
+        'rounded-lg border border-border bg-card p-3 text-center transition-shadow hover:shadow-sm dark:border-zinc-700 dark:bg-zinc-800'
       }
     >
       <div

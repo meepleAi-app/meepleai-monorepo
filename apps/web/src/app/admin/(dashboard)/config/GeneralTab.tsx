@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { UserCogIcon } from 'lucide-react';
@@ -16,7 +17,7 @@ export function GeneralTab() {
   return (
     <div className="space-y-6">
       {/* Registration Mode */}
-      <Card className="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+      <Card className="bg-card/70 dark:bg-zinc-900/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 font-quicksand">
             <UserCogIcon className="h-5 w-5 text-muted-foreground" aria-hidden="true" />

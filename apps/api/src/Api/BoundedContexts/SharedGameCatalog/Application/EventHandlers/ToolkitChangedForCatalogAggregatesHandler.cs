@@ -92,12 +92,11 @@ internal sealed class ToolkitChangedForCatalogAggregatesHandler
         var sharedGameId = await (
             from t in _context.Toolkits
             where t.Id == toolkitId
-            join g in _context.Games on t.GameId equals g.Id
-            where g.SharedGameId != null
-            select g.SharedGameId
+            join g in _context.SharedGames on t.GameId equals g.Id
+            select g.Id
         ).FirstOrDefaultAsync(ct).ConfigureAwait(false);
 
-        if (sharedGameId is { } sgId && sgId != Guid.Empty)
+        if (sharedGameId is Guid sgId && sgId != Guid.Empty)
         {
             await _retryPolicy.ExecuteAsync(
                 token => _cache.RemoveByTagAsync($"shared-game:{sgId}", token),

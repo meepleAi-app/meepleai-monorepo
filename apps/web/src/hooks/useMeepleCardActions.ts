@@ -63,7 +63,7 @@ export interface UseMeepleCardActionsOptions {
  * | Remove from library | hidden             | hidden             | hidden (via wizard)|
  *
  * On successful direct add (no wizard): show a 2s toast and navigate to
- * `/library/games/{gameId}`. The wizard path remains available via the
+ * `/library/{gameId}`. The wizard path remains available via the
  * `onAddToLibrary` callback.
  */
 function useGameCatalogActions(
@@ -101,7 +101,7 @@ function useGameCatalogActions(
           {
             onSuccess: () => {
               toast.success('Aggiunto alla libreria');
-              router.push(`/library/games/${gameId}`);
+              router.push(`/library/${gameId}`);
             },
             onError: error => {
               const message =
@@ -124,7 +124,7 @@ function useGameCatalogActions(
       icon: ArrowRight,
       label: 'Vai al gioco',
       onClick: () => {
-        router.push(`/library/games/${gameId}`);
+        router.push(`/library/${gameId}`);
       },
       // Only visible for authenticated users who already own the game
       hidden: !isAuthenticated || !isInLibrary,

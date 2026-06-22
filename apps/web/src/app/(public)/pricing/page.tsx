@@ -9,9 +9,9 @@
 
 import { useRouter } from 'next/navigation';
 
+import { HeroGradient } from '@/components/ui/hero-gradient';
+import { PricingCard, type PricingCardProps } from '@/components/ui/pricing-card/pricing-card';
 import { Button } from '@/components/ui/primitives/button';
-import { HeroGradient } from '@/components/ui/v2/hero-gradient';
-import { PricingCard, type PricingCardProps } from '@/components/ui/v2/pricing-card/pricing-card';
 
 type Tier = Omit<PricingCardProps, 'className'>;
 
@@ -70,7 +70,7 @@ export default function PricingPage() {
           <>
             Semplice, trasparente,
             <br />
-            <span style={{ color: 'hsl(var(--e-game))' }}>board-game friendly</span>
+            <span style={{ color: 'hsl(var(--c-game))' }}>board-game friendly</span>
           </>
         }
         subtitle="Nessun contratto. Cancella quando vuoi. Il piano Free rimane gratuito per sempre."

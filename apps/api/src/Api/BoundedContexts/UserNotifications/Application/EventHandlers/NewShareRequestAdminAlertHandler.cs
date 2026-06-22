@@ -60,7 +60,9 @@ internal sealed class NewShareRequestAdminAlertHandler : INotificationHandler<Sh
                     Payload = new GenericPayload(
                         "New Share Request",
                         "A new share request is waiting for review."),
-                    DeepLinkPath = $"/admin/share-requests/{notification.ShareRequestId}"
+                    DeepLinkPath = $"/admin/share-requests/{notification.ShareRequestId}",
+                    // Issue #1937 / CF-1: propagate event id for dispatcher dedup
+                    SourceEventId = notification.EventId
                 }, cancellationToken).ConfigureAwait(false);
             }
 

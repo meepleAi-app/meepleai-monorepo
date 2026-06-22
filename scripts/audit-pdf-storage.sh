@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
-# Audit R2/S3 PDF storage layout to determine whether rebucket-pdfs-s3.sh is required.
+# Audit R2/S3 PDF storage layout. Classifies top-level prefixes under
+# pdf_uploads/ as pdfId-matched, gameId-matched, or unknown (orphan).
 #
 # Layouts:
-#   Legacy (pre 2026-04-19):  pdfs/{gameId}/{pdfId}.pdf
-#   Current (post-migration): pdfs/{pdfId}/{pdfId}.pdf      (uniform — gameId == pdfId)
+#   Current (S3BlobStorageService.cs:271 post-PR #517):
+#     pdf_uploads/{gameId}/{fileId}_{filename}
+#     where gameId == PrivateGameId OR SharedGameId, fileId == pdf_documents.Id
 #
-# Decision:
-#   - If every top-level prefix under pdfs/ is a pdfId present in pdf_documents.Id
-#     → layout is current → rebucket N/A
-#   - If any top-level prefix matches a gameId (PrivateGameId/SharedGameId) but not
-#     a pdfId → legacy entries exist → rebucket required
+# Decision matrix:
+#   - matched_pdf  = top-level prefix found in pdf_documents.Id        → ignore
+#   - matched_game = top-level prefix found in {PrivateGameId,SharedGameId} → live
+#   - unknown      = neither                                           → orphan (cleanup candidate)
 #
 # Usage:
 #   AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... \
@@ -18,14 +19,14 @@
 #   [PG_DSN='postgres://user:pass@host:5432/meepleai_staging'] \
 #   ./scripts/audit-pdf-storage.sh
 #
-# If PG_DSN is omitted the script lists R2 prefixes and lets the operator
-# cross-reference manually.
+# Override PREFIX (default pdf_uploads/) if storage layout changes in future
+# (see issue #520 deferred refactor for {gameId} → {pdfId} epic).
 
 set -euo pipefail
 
 BUCKET="${BUCKET:?BUCKET env var required}"
 ENDPOINT="${S3_ENDPOINT:-}"
-PREFIX="${PREFIX:-pdfs/}"
+PREFIX="${PREFIX:-pdf_uploads/}"
 
 AWS_ARGS=()
 [[ -n "$ENDPOINT" ]] && AWS_ARGS+=(--endpoint-url "$ENDPOINT")
@@ -104,14 +105,15 @@ echo "  legacy-layout (gameId):  $matched_game"
 echo "  unknown:                 $unknown"
 echo
 
-if [[ $matched_game -eq 0 && $unknown -eq 0 ]]; then
-    echo "DECISION: rebucket N/A — all R2 prefixes match current pdfId layout."
+if [[ $unknown -eq 0 ]]; then
+    echo "DECISION: storage clean — zero orphan prefixes under $PREFIX."
     exit 0
-elif [[ $matched_game -gt 0 ]]; then
-    echo "DECISION: rebucket REQUIRED — $matched_game legacy gameId prefixes found."
-    echo "         Run: BUCKET=$BUCKET ./scripts/rebucket-pdfs-s3.sh --dry-run"
+elif [[ $unknown -gt 0 ]]; then
+    echo "DECISION: orphan cleanup AVAILABLE — $unknown prefixes have no matching pdf_documents row."
+    echo "         Dry-run: BUCKET=$BUCKET PG_DSN=... ./scripts/cleanup-orphan-pdfs.sh"
+    echo "         Apply:   BUCKET=$BUCKET PG_DSN=... ./scripts/cleanup-orphan-pdfs.sh --apply"
     exit 2
 else
-    echo "DECISION: INVESTIGATE — $unknown prefixes match neither pdfId nor gameId."
+    echo "DECISION: INVESTIGATE — unexpected classification state."
     exit 3
 fi

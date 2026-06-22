@@ -27,7 +27,9 @@ Questo sub-project chiude il gap: oggi l'admin è un dashboard tabellare generic
 
 Non-loggati / utenti base **non atterrano mai qui**. Mobile è optional (desktop-first obbligatorio).
 
-## Schermate da produrre (14)
+## Schermate da produrre (15)
+
+> 2026-05-08: aggiunta **A5b** (KB Upload Flow) per coverage gap audit Phase 0 plan Nanolith. Count 14 → 15 (+ B9 facoltativo).
 
 ### Gruppo A — Admin Console (`/admin/*`)
 
@@ -132,6 +134,60 @@ Non-loggati / utenti base **non atterrano mai qui**. Mobile è optional (desktop
 **Stati**: default · document-selected · reindex-in-progress (progress bar) · failed (error banner + retry).
 
 **Componenti v2 da progettare**: `KBTree`, `DocumentViewer`, `IngestionLog`, `ChunkTable`.
+
+---
+
+#### A5b. Admin KB Upload Flow — `sp5-kb-upload-flow.{html,jsx}`
+
+> **Origine**: Phase 0 Task 0.1 del plan Iter 1 Nanolith (`docs/superpowers/plans/2026-05-07-libro-game-nanolith-iter1-plan.md`). Risolve audit gap **G12** — il flusso admin di upload+indicizzazione PDF è UI esistente (`/admin/(dashboard)/knowledge-base/upload/page.tsx` con 4 component: `KbIdempotencyGuard` + `UploadZone` + `UploadSettings` + `ProcessingQueue`) senza mockup di reference per il redesign v2 + entity-driven palette.
+>
+> **Scope ≠ A5**: A5 è il browse/inspect KB già indicizzata (tree + chunks + reindex). A5b è il flusso di **acquisizione** (drop → upload → ingestion pipeline → ready), distinto e con FSM diversa (5 stati, non solo "indicizzato/pending/failed" sub-status).
+>
+> **Scope ≠ B4**: B4 è `/upload` user-level con history + bulk + queue su storage personale. A5b è admin-only `/admin/knowledge-base/upload` ed è scoped a 1-N file in transit (no history persistente — la history è A5).
+
+**Route target**: `/admin/(dashboard)/knowledge-base/upload`
+**Pattern**: form-flow desktop (1 colonna max-width 980px) — header + idempotency-guard banner condizionale + drop zone + grid 2 colonne (settings + processing queue).
+
+**Persona**: superadmin / admin operatore (vedi Audience). Single-device desktop. Gestisce 50-200 PDF/anno in batch da datasource locale (BGG download, publisher email, scan rulebook fisici). Vuole vedere a colpo d'occhio: "questo file è già stato caricato?" (idempotency) + "a che punto è la pipeline di ingestion?" (processing queue) + "che modello/lingua/chunking sto usando?" (settings).
+
+**Sezioni** (mappa 1:1 ai component esistenti):
+
+1. **Header**: titolo "Upload & Process" + descrizione 1-line ("Upload and process documents for the knowledge base") — riusa `font-quicksand` text-2xl bold.
+2. **Idempotency guard** (condizionale, visibile solo se `?gameId=...` in URL e KB già esiste per quel game): banner amber con CTA "Vai a KB esistente" + "Sovrascrivi" + "Annulla".
+3. **Upload Zone**: drop area centrale (h-200px), supporta drag&drop multi-file + click-to-pick + game association dropdown (`initialGameId` se passato in URL). Mostra preview filename + size + game chip.
+4. **Settings panel** (grid sx, h-300px): selettori embedder model · language · chunk size · OCR enabled toggle · indexer version. Riusa pattern `settings.jsx` rows.
+5. **Processing Queue** (grid dx, h-300px): tabella file in-flight + chunk-level status (Unstructured → SmolDocling → chunker → embedder → indexer). Live progress per step. Riusa `ProcessingTimeline` component da B4 se possibile.
+
+**Stati canonici (FSM 5 stati)**:
+
+| State anchor | UI snapshot | Trigger |
+|---|---|---|
+| `state-01-empty` | Drop zone vuota, "Trascina PDF qui o clicca per scegliere" + Settings panel readonly + Queue vuota "Nessun upload in corso" | Mount, no file selected, no in-flight |
+| `state-02-uploading` | Drop zone sostituita da progress bar + filename + size + cancel button | File selezionato, multipart POST in-flight |
+| `state-03-processing` | Upload ✅ done, Queue mostra il file con stage progressivo: parsing → chunking → embedding (% per stage, current step highlighted) | POST completed, polling `/pdfs/{id}/progress` |
+| `state-04-complete` | Queue mostra ✅ Ready + chunk count + average confidence score + first 3 chunk preview (expand to view full chunk text) + CTA "Vai a KB" | `currentStep` ∈ Ready/Indexed/Completed |
+| `state-05-error` | Variant: parse error / upload failure (network) / quota exceeded / file too large / not a PDF. Banner danger con causa + CTA retry/download log | HTTP 4xx/5xx, processing failed, validation reject |
+
+**Idempotency guard variants** (sub-stati di state-01/02):
+- `guard-pristine`: nessun KB esistente per gameId → no banner
+- `guard-warn`: KB già presente → banner "Il gioco X ha già {N} documenti. Sovrascrivi?" + 3 CTA
+
+**Token semantic**: usa `var(--c-kb)` (#42857a teal) per accenti del flusso ingestion + `var(--c-warning)` (amber) per idempotency banner + `var(--c-danger)` per error state. Zero pattern HSL hardcoded (FREEZE compliance #807/#808).
+
+**Accessibility notes** (esplicite, mockup deve mostrare):
+- Drop zone keyboard navigable (focusable + Enter/Space pick file)
+- Stage transitions in Processing Queue annunciati via `aria-live="polite"`
+- Progress bar con `role="progressbar"` + `aria-valuenow/min/max`
+- Error banner con `role="alert"` + cause + remediation CTA
+- WCAG AA contrast su tutti gli stati, anche dark mode (vedi `05-dark-mode.html`)
+
+**Componenti v2 da progettare**: `KbIdempotencyBanner`, `KbUploadDropzone`, `KbUploadSettingsForm`, `KbProcessingQueueTable`, `KbProcessingStageRow`. Riusa `ProcessingTimeline` da B4 se compatibile.
+
+**FREEZE-compliance gate post-generazione** (atteso nel grep gate Task 0.2 del plan):
+```bash
+grep -E "hsl\([0-9]+,?\s*89%,\s*48%\)" admin-mockups/design_files/sp5-kb-upload-flow.html
+# Expected: zero match (FREEZE #808 compliance)
+```
 
 ---
 

@@ -108,15 +108,15 @@ function parseTable(lines: string[]): ReactNode {
 
   return (
     <div className="overflow-x-auto my-3">
-      <table className="min-w-full text-sm border-collapse border border-slate-200 dark:border-slate-700">
+      <table className="min-w-full text-sm border-collapse border border-border">
         {headerRows.length > 0 && (
           <thead>
             {headerRows.map((row, ri) => (
-              <tr key={ri} className="bg-slate-50 dark:bg-slate-800/50">
+              <tr key={ri} className="bg-muted">
                 {row.map((cell, ci) => (
                   <th
                     key={ci}
-                    className="px-3 py-2 text-left font-semibold border border-slate-200 dark:border-slate-700"
+                    className="px-3 py-2 text-left font-semibold border border-border"
                   >
                     {parseInline(cell)}
                   </th>
@@ -127,9 +127,9 @@ function parseTable(lines: string[]): ReactNode {
         )}
         <tbody>
           {bodyRows.map((row, ri) => (
-            <tr key={ri} className="even:bg-slate-50/50 dark:even:bg-slate-800/25">
+            <tr key={ri} className="even:bg-muted/50 dark:even:bg-card">
               {row.map((cell, ci) => (
-                <td key={ci} className="px-3 py-2 border border-slate-200 dark:border-slate-700">
+                <td key={ci} className="px-3 py-2 border border-border">
                   {parseInline(cell)}
                 </td>
               ))}
@@ -258,7 +258,7 @@ export function LegalMarkdown({ content, className }: LegalMarkdownProps) {
 
   return (
     <div
-      className={cn('text-slate-600 dark:text-slate-300 leading-relaxed legal-content', className)}
+      className={cn('text-muted-foreground leading-relaxed legal-content', className)}
     >
       {parseBlocks(content)}
     </div>

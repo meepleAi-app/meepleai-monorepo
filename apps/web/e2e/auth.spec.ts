@@ -361,19 +361,20 @@ test.describe('Two-Factor Authentication (2FA) Flows', () => {
   test('should enable 2FA with TOTP and backup codes', async ({ page }) => {
     const authHelper = new AuthHelper(page);
 
-    // Use real authentication for /settings/security access
+    // Use real authentication for /settings/security section access
+    // /settings/security redirects → /profile?tab=settings&section=security
     await authHelper.setupRealSession('admin');
     await page.goto('/settings/security');
     await page.waitForLoadState('networkidle');
 
-    // Click enable 2FA button
-    const enable2FAButton = page
-      .locator('button:has-text("Enable 2FA"), button:has-text("Enable Two-Factor")')
-      .first();
+    // Click enable 2FA button (new section testid)
+    const enable2FAButton = page.getByTestId('enable-2fa');
     await enable2FAButton.click();
 
     // Should show QR code or setup instructions (real API response)
-    await expect(page.locator('text=/scan.*qr|authenticator/i')).toBeVisible({ timeout: 5000 });
+    await expect(
+      page.getByTestId('2fa-qr-code').or(page.locator('text=/scan.*qr|authenticator/i'))
+    ).toBeVisible({ timeout: 5000 });
 
     // Should display backup codes
     await expect(page.locator('text=/backup.*code/i')).toBeVisible({ timeout: 5000 });
@@ -382,12 +383,13 @@ test.describe('Two-Factor Authentication (2FA) Flows', () => {
   test('should verify TOTP code during 2FA setup', async ({ page }) => {
     const authHelper = new AuthHelper(page);
 
-    // Use real authentication for /settings/security access
+    // Use real authentication for /settings/security section access
+    // /settings/security redirects → /profile?tab=settings&section=security
     await authHelper.setupRealSession('admin');
     await page.goto('/settings/security');
     await page.waitForLoadState('networkidle');
 
-    const enable2FAButton = page.locator('button:has-text("Enable 2FA")').first();
+    const enable2FAButton = page.getByTestId('enable-2fa');
 
     // Skip if 2FA setup UI not available yet
     try {
@@ -417,17 +419,16 @@ test.describe('Two-Factor Authentication (2FA) Flows', () => {
   test('should disable 2FA successfully', async ({ page }) => {
     const authHelper = new AuthHelper(page);
 
-    // Use real authentication for /settings/security access
+    // Use real authentication for /settings/security section access
     // Note: This test assumes 2FA is enabled for this user
+    // /settings/security redirects → /profile?tab=settings&section=security
     await authHelper.setupRealSession('admin');
 
     await page.goto('/settings/security');
     await page.waitForLoadState('networkidle');
 
-    // Click disable 2FA
-    const disable2FAButton = page
-      .locator('button:has-text("Disable 2FA"), button:has-text("Turn Off")')
-      .first();
+    // Click disable 2FA (new section testid)
+    const disable2FAButton = page.getByTestId('disable-2fa');
 
     try {
       await expect(disable2FAButton).toBeVisible({ timeout: 2000 });
@@ -459,7 +460,8 @@ test.describe('Two-Factor Authentication (2FA) Flows', () => {
   test('should download backup codes', async ({ page }) => {
     const authHelper = new AuthHelper(page);
 
-    // Use real authentication for /settings/security access
+    // Use real authentication for /settings/security section access
+    // /settings/security redirects → /profile?tab=settings&section=security
     await authHelper.setupRealSession('admin');
 
     await page.goto('/settings/security');
@@ -584,7 +586,8 @@ test.describe('Two-Factor Authentication (2FA) Flows', () => {
   test('should regenerate backup codes', async ({ page }) => {
     const authHelper = new AuthHelper(page);
 
-    // Use real authentication for /settings/security access
+    // Use real authentication for /settings/security section access
+    // /settings/security redirects → /profile?tab=settings&section=security
     await authHelper.setupRealSession('admin');
 
     await page.goto('/settings/security');
@@ -627,12 +630,13 @@ test.describe('Session Management', () => {
   test('should list active sessions', async ({ page }) => {
     const authHelper = new AuthHelper(page);
 
-    // Use real authentication for /settings/sessions access
+    // Active sessions are in the Security section.
+    // /settings/security redirects → /profile?tab=settings&section=security
     await authHelper.setupRealSession('admin');
-    await page.goto('/settings/sessions');
+    await page.goto('/settings/security');
     await page.waitForLoadState('networkidle');
 
-    // Real API should return active sessions list
+    // Real API should return active sessions list (ActiveSessionsCard in security section)
     await expect(page.locator('text=/active.*session|current.*device/i')).toBeVisible({
       timeout: 5000,
     });
@@ -641,13 +645,16 @@ test.describe('Session Management', () => {
   test('should show current session details', async ({ page }) => {
     const authHelper = new AuthHelper(page);
 
-    // Use real authentication for /settings/sessions access
+    // Active sessions are in the Security section.
+    // /settings/security redirects → /profile?tab=settings&section=security
     await authHelper.setupRealSession('admin');
-    await page.goto('/settings/sessions');
+    await page.goto('/settings/security');
     await page.waitForLoadState('networkidle');
 
     // Should display session info: device, IP, last active
-    const sessionInfo = page.locator('[data-testid="session-item"], .session-card').first();
+    const sessionInfo = page
+      .locator('[data-testid="session-item"], [data-testid="session-row"], .session-card')
+      .first();
     if (await sessionInfo.isVisible({ timeout: 2000 }).catch(() => false)) {
       await expect(sessionInfo).toContainText(/windows|mac|linux|chrome|firefox|safari/i);
     }
@@ -656,9 +663,10 @@ test.describe('Session Management', () => {
   test('should revoke specific session', async ({ page }) => {
     const authHelper = new AuthHelper(page);
 
-    // Use real authentication for /settings/sessions access
+    // Active sessions are in the Security section.
+    // /settings/security redirects → /profile?tab=settings&section=security
     await authHelper.setupRealSession('admin');
-    await page.goto('/settings/sessions');
+    await page.goto('/settings/security');
     await page.waitForLoadState('networkidle');
 
     // Find revoke button for a session (not current)
@@ -686,14 +694,17 @@ test.describe('Session Management', () => {
   test('should revoke all other sessions', async ({ page }) => {
     const authHelper = new AuthHelper(page);
 
-    // Use real authentication for /settings/sessions access
+    // Active sessions are in the Security section.
+    // /settings/security redirects → /profile?tab=settings&section=security
     await authHelper.setupRealSession('admin');
-    await page.goto('/settings/sessions');
+    await page.goto('/settings/security');
     await page.waitForLoadState('networkidle');
 
-    // Find "Revoke All" or "Sign Out All Devices" button
+    // Find "Sign out all other sessions" button (ActiveSessionsCard in security section)
     const revokeAllButton = page
-      .locator('button:has-text("Revoke All"), button:has-text("Sign Out All")')
+      .locator(
+        'button:has-text("Revoke All"), button:has-text("Sign Out All"), button:has-text("Sign out all")'
+      )
       .first();
     if (await revokeAllButton.isVisible({ timeout: 2000 }).catch(() => false)) {
       await revokeAllButton.click();
@@ -716,9 +727,10 @@ test.describe('Session Management', () => {
   test('should extend session expiration', async ({ page }) => {
     const authHelper = new AuthHelper(page);
 
-    // Use real authentication for /settings/sessions access
+    // Active sessions are in the Security section.
+    // /settings/security redirects → /profile?tab=settings&section=security
     await authHelper.setupRealSession('admin');
-    await page.goto('/settings/sessions');
+    await page.goto('/settings/security');
     await page.waitForLoadState('networkidle');
 
     // Find extend session button

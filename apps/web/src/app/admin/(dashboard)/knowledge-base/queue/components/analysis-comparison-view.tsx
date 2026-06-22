@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState } from 'react';
@@ -22,7 +23,7 @@ function DiffBadge({ type }: { type: 'added' | 'removed' | 'modified' | 'unchang
     added: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
     removed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
     modified: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-    unchanged: 'bg-slate-100 text-slate-600 dark:bg-slate-800/30 dark:text-slate-400',
+    unchanged: 'bg-muted text-muted-foreground dark:bg-card dark:text-muted-foreground',
   };
   return (
     <span className={cn('px-1.5 py-0.5 rounded text-xs font-medium', styles[type])}>{type}</span>
@@ -36,11 +37,11 @@ function ListDiffSection({ title, diff }: { title: string; diff: ListDiff<string
   if (total === 0) return null;
 
   return (
-    <div className="border border-slate-200/50 dark:border-zinc-700/50 rounded-lg">
+    <div className="border border-border/50 dark:border-zinc-700/50 rounded-lg">
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800/50 rounded-t-lg"
+        className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-muted dark:hover:bg-zinc-800/50 rounded-t-lg"
       >
         <div className="flex items-center gap-2">
           {expanded ? (
@@ -54,7 +55,7 @@ function ListDiffSection({ title, diff }: { title: string; diff: ListDiff<string
           {diff.added.length > 0 && <span className="text-emerald-600">+{diff.added.length}</span>}
           {diff.removed.length > 0 && <span className="text-red-600">-{diff.removed.length}</span>}
           {diff.unchanged.length > 0 && (
-            <span className="text-slate-500">{diff.unchanged.length} unchanged</span>
+            <span className="text-muted-foreground">{diff.unchanged.length} unchanged</span>
           )}
         </div>
       </button>
@@ -101,11 +102,11 @@ function FaqDiffSection({ data }: { data: AnalysisComparisonDto }) {
   if (total === 0) return null;
 
   return (
-    <div className="border border-slate-200/50 dark:border-zinc-700/50 rounded-lg">
+    <div className="border border-border/50 dark:border-zinc-700/50 rounded-lg">
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800/50 rounded-t-lg"
+        className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-muted dark:hover:bg-zinc-800/50 rounded-t-lg"
       >
         <div className="flex items-center gap-2">
           {expanded ? (
@@ -225,12 +226,12 @@ export function AnalysisComparisonView({
 
   const scoreDelta = data.confidenceScoreDelta;
   const scoreColor =
-    scoreDelta > 0 ? 'text-emerald-600' : scoreDelta < 0 ? 'text-red-600' : 'text-slate-500';
+    scoreDelta > 0 ? 'text-emerald-600' : scoreDelta < 0 ? 'text-red-600' : 'text-muted-foreground';
 
   return (
     <div className="space-y-4" data-testid="comparison-view">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-slate-200/50 dark:border-zinc-700/50">
+      <div className="flex items-center justify-between px-4 py-3 bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-border/50 dark:border-zinc-700/50">
         <div className="flex items-center gap-3">
           <div className="text-center">
             <p className="text-xs text-muted-foreground">Version</p>

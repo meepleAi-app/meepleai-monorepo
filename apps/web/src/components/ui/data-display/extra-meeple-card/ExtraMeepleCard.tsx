@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 'use client';
 
 /**
@@ -49,7 +50,7 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string }>
   setup: { label: 'Setup', bg: 'bg-amber-100', text: 'text-amber-800' },
   inProgress: { label: 'In Progress', bg: 'bg-green-100', text: 'text-green-800' },
   paused: { label: 'Paused', bg: 'bg-orange-100', text: 'text-orange-800' },
-  completed: { label: 'Completed', bg: 'bg-slate-100', text: 'text-slate-700' },
+  completed: { label: 'Completed', bg: 'bg-muted', text: 'text-foreground' },
 };
 
 /** Tab definitions */
@@ -143,12 +144,12 @@ export const ExtraMeepleCard = React.memo(function ExtraMeepleCard({
       <div
         className={cn(
           'flex h-[900px] w-[600px] items-center justify-center rounded-2xl',
-          'bg-white/70 backdrop-blur-md shadow-lg border border-white/20',
+          'bg-card/70 backdrop-blur-md shadow-lg border border-border',
           className
         )}
         data-testid={testId}
       >
-        <div className="flex flex-col items-center gap-3 text-slate-400">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
           <Loader2 className="h-8 w-8 animate-spin" />
           <span className="font-nunito text-sm">Loading session...</span>
         </div>
@@ -162,7 +163,7 @@ export const ExtraMeepleCard = React.memo(function ExtraMeepleCard({
       <div
         className={cn(
           'flex h-[900px] w-[600px] items-center justify-center rounded-2xl',
-          'bg-white/70 backdrop-blur-md shadow-lg border border-white/20',
+          'bg-card/70 backdrop-blur-md shadow-lg border border-border',
           className
         )}
         data-testid={testId}
@@ -179,9 +180,9 @@ export const ExtraMeepleCard = React.memo(function ExtraMeepleCard({
     <div
       className={cn(
         'flex w-[600px] flex-col rounded-2xl overflow-hidden',
-        'bg-white/70 backdrop-blur-md',
+        'bg-card/70 backdrop-blur-md',
         'shadow-[0_8px_32px_rgba(0,0,0,0.12)]',
-        'border border-white/20',
+        'border border-border',
         // Responsive: full width on mobile
         'max-md:w-full max-md:max-w-full',
         className
@@ -230,13 +231,13 @@ export const ExtraMeepleCard = React.memo(function ExtraMeepleCard({
               {title}
             </h2>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5 text-white/70 text-sm font-nunito">
+              <div className="flex items-center gap-1.5 text-foreground/80 text-sm font-nunito">
                 <Users className="h-3.5 w-3.5" />
                 <span>
                   {playerCount} player{playerCount !== 1 ? 's' : ''}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 text-white/70 text-sm font-nunito">
+              <div className="flex items-center gap-1.5 text-foreground/80 text-sm font-nunito">
                 <Gamepad2 className="h-3.5 w-3.5" />
                 <span className="font-mono text-xs opacity-60">
                   {sessionId ? sessionId.slice(0, 8) : ''}
@@ -255,7 +256,7 @@ export const ExtraMeepleCard = React.memo(function ExtraMeepleCard({
         <TabsList
           className={cn(
             'mx-4 mt-3 h-10 w-auto justify-start gap-1',
-            'bg-slate-100/80 backdrop-blur-sm',
+            'bg-muted/80 backdrop-blur-sm',
             'rounded-lg p-1',
             // Mobile: horizontal scroll
             'max-md:overflow-x-auto max-md:scrollbar-none'
@@ -270,7 +271,7 @@ export const ExtraMeepleCard = React.memo(function ExtraMeepleCard({
                 value={tab.id}
                 className={cn(
                   'flex items-center gap-1.5 px-3 py-1.5 font-nunito text-xs font-medium',
-                  'data-[state=active]:bg-white data-[state=active]:shadow-sm',
+                  'data-[state=active]:bg-card data-[state=active]:shadow-sm',
                   'data-[state=active]:text-indigo-700',
                   'transition-all duration-200',
                   // Mobile: prevent shrinking

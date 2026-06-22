@@ -58,6 +58,15 @@ class Settings(BaseSettings):
         description="OpenRouter base URL"
     )
 
+    @property
+    def is_llm_configured(self) -> bool:
+        """True when the LLM provider key is present.
+
+        Lifespan startup uses this to fail-fast with an actionable error
+        before langchain emits a cryptic OpenAIError("Missing credentials").
+        """
+        return bool(self.openrouter_api_key.strip())
+
     # LangGraph configuration
     langgraph_timeout: int = Field(default=30, description="Workflow timeout in seconds")
     max_workflow_depth: int = Field(default=10, description="Maximum workflow recursion depth")

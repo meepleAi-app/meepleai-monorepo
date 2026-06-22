@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
@@ -26,6 +27,32 @@ namespace Api.Routing;
 internal static class AiEndpoints
 {
     private static readonly string[] ParagraphSeparators = { "\n\n", "\n" };
+
+    // #1728: Map RAG pipeline snippets to the drill payload chunks shape so
+    // QueryDrillPanel can render the retrieved-chunks list. Snippets without
+    // a `chunkId` (per-game endpoints) fall back to a composite "source#page.line"
+    // identifier — the FE only needs uniqueness within the panel.
+    private static IReadOnlyList<RetrievedChunkDto>? MapSnippetsToChunks(IReadOnlyList<Snippet>? snippets)
+    {
+        if (snippets is null || snippets.Count == 0) return null;
+        var chunks = new List<RetrievedChunkDto>(snippets.Count);
+        foreach (var s in snippets)
+        {
+            chunks.Add(new RetrievedChunkDto
+            {
+                Id = !string.IsNullOrWhiteSpace(s.chunkId)
+                    ? s.chunkId!
+                    : $"{s.source}#{s.page}.{s.line}",
+                Score = s.score,
+                Text = s.text,
+                Page = s.page,
+                ChunkIndex = s.chunkPosition ?? s.line,
+                PdfName = s.source,
+                Used = true,
+            });
+        }
+        return chunks;
+    }
 
     /// <summary>
     /// SSE events must use camelCase to match frontend qaStream parser expectations.
@@ -158,7 +185,7 @@ internal static class AiEndpoints
 
         var startTime = DateTime.UtcNow;
         logger.LogInformation("Streaming QA request from user {UserId} for game {GameId}: {Query}",
-            session.User!.Id, req.gameId, req.query);
+            session.Principal!.Subject.Id, req.gameId, req.query);
 
         // Set SSE headers
         context.Response.Headers["Content-Type"] = "text/event-stream";
@@ -306,7 +333,7 @@ internal static class AiEndpoints
 
         // Log AI request using CQRS - Use CancellationToken.None to ensure logging completes even if request was cancelled
         var logCommand = new Api.BoundedContexts.Administration.Application.Commands.LogAiRequestCommand(
-            UserId: session.User!.Id.ToString(),
+            UserId: session.Principal!.Subject.Id.ToString(),
             GameId: req.gameId,
             Endpoint: "qa-stream",
             Query: req.query,
@@ -318,7 +345,10 @@ internal static class AiEndpoints
             ErrorMessage: streamContext.StreamErrorMessage,
             IpAddress: context.Connection.RemoteIpAddress?.ToString(),
             UserAgent: context.Request.Headers.UserAgent.ToString(),
-            CompletionTokens: streamContext.TotalTokens
+            CompletionTokens: streamContext.TotalTokens,
+            // #1728: drill payload (chunks from retrieved snippets; breakdown
+            // pending pipeline instrumentation)
+            Chunks: MapSnippetsToChunks(streamContext.Snippets)
         );
         await mediator.Send(logCommand, CancellationToken.None).ConfigureAwait(false);
     }
@@ -353,7 +383,7 @@ internal static class AiEndpoints
         }
 
         logger.LogInformation("QA request from user {UserId} for game {GameId}: {Query} (bypassCache: {BypassCache}, generateFollowUps: {GenerateFollowUps})",
-            session.User!.Id, req.gameId, req.query, bypassCache, generateFollowUps);
+            session.Principal!.Subject.Id, req.gameId, req.query, bypassCache, generateFollowUps);
 
         // DDD/CQRS Migration: Use AskQuestionQuery via IMediator instead of IRagService
         if (!Guid.TryParse(req.gameId, out var gameGuid))
@@ -413,7 +443,7 @@ internal static class AiEndpoints
             qualityScores.IsLowQuality);
 
         // ADM-01: Log AI request with AI-11 quality scores (using CQRS)
-        await LogQaRequestAsync(session.User!.Id.ToString(), req.gameId, req.query, resp, latencyMs,
+        await LogQaRequestAsync(session.Principal!.Subject.Id.ToString(), req.gameId, req.query, resp, latencyMs,
             context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             context.Request.Headers.UserAgent.ToString(),
             qualityScores, mediator, ct).ConfigureAwait(false);
@@ -433,7 +463,7 @@ internal static class AiEndpoints
 
         var startTime = DateTime.UtcNow;
         logger.LogInformation("Explain request from user {UserId} for game {GameId}: {Topic}",
-            session.User!.Id, req.gameId, req.topic);
+            session.Principal!.Subject.Id, req.gameId, req.topic);
 
         // DDD/CQRS Migration: Use ExplainQuery via IMediator instead of IRagService
         if (!Guid.TryParse(req.gameId, out var gameGuid))
@@ -484,7 +514,7 @@ internal static class AiEndpoints
 
         // ADM-01: Log AI request using CQRS
         var logCommand = new Api.BoundedContexts.Administration.Application.Commands.LogAiRequestCommand(
-            UserId: session.User!.Id.ToString(),
+            UserId: session.Principal!.Subject.Id.ToString(),
             GameId: req.gameId,
             Endpoint: "explain",
             Query: req.topic,
@@ -499,7 +529,9 @@ internal static class AiEndpoints
             PromptTokens: resp.promptTokens,
             CompletionTokens: resp.completionTokens,
             Model: null,
-            FinishReason: null
+            FinishReason: null,
+            // #1728: drill payload (citations as chunks)
+            Chunks: MapSnippetsToChunks(snippets)
         );
         await mediator.Send(logCommand, ct).ConfigureAwait(false);
 
@@ -531,7 +563,7 @@ internal static class AiEndpoints
 
         var startTime = DateTime.UtcNow;
         logger.LogInformation("Setup guide streaming request from user {UserId} for game {GameId}",
-            session.User!.Id, req.gameId);
+            session.Principal!.Subject.Id, req.gameId);
 
         // Set SSE headers for streaming
         context.Response.Headers["Content-Type"] = "text/event-stream";
@@ -586,7 +618,7 @@ internal static class AiEndpoints
 #pragma warning restore CA1031
 
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
-        await LogSetupGuideRequestAsync(req.gameId, session.User!.Id.ToString(), context, mediator, streamContext, latencyMs, ct).ConfigureAwait(false);
+        await LogSetupGuideRequestAsync(req.gameId, session.Principal!.Subject.Id.ToString(), context, mediator, streamContext, latencyMs, ct).ConfigureAwait(false);
 
         return Results.Empty;
     }
@@ -596,7 +628,7 @@ internal static class AiEndpoints
         // Session validated by RequireSessionFilter
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-        if (!string.Equals(req.userId, session.User!.Id.ToString(), StringComparison.Ordinal))
+        if (!string.Equals(req.userId, session.Principal!.Subject.Id.ToString(), StringComparison.Ordinal))
         {
             return Results.BadRequest(new { error = "Invalid user" });
         }
@@ -612,7 +644,7 @@ internal static class AiEndpoints
         {
             MessageId = req.messageId,
             Endpoint = req.endpoint,
-            UserId = session.User!.Id.ToString(),
+            UserId = session.Principal!.Subject.Id.ToString(),
             Outcome = string.IsNullOrWhiteSpace(req.outcome) ? null : req.outcome,
             GameId = req.gameId,
             Comment = req.comment
@@ -623,7 +655,7 @@ internal static class AiEndpoints
             req.outcome ?? "cleared",
             req.messageId,
             req.endpoint,
-            session.User!.Id);
+            session.Principal!.Subject.Id);
 
         return Results.Json(new { ok = true });
     }
@@ -641,7 +673,7 @@ internal static class AiEndpoints
         var startTime = DateTime.UtcNow;
         logger.LogInformation(
             "Player mode suggestion request from user {UserId} for game {GameId}",
-            session.User!.Id,
+            session.Principal!.Subject.Id,
             req.gameId);
 
         // Send command via MediatR
@@ -673,7 +705,7 @@ internal static class AiEndpoints
         }
 
         logger.LogInformation("Streaming explain request from user {UserId} for game {GameId}: {Topic}",
-            session.User!.Id, req.gameId, req.topic);
+            session.Principal!.Subject.Id, req.gameId, req.topic);
 
         // Set SSE headers
         context.Response.Headers["Content-Type"] = "text/event-stream";
@@ -874,7 +906,9 @@ internal static class AiEndpoints
             CompletionTokens: resp.completionTokens,
             Model: model,
             FinishReason: finishReason,
-            QualityScores: qualityScores
+            QualityScores: qualityScores,
+            // #1728: drill payload (snippets as chunks)
+            Chunks: MapSnippetsToChunks(resp.snippets)
         );
         await mediator.Send(logCommand, ct).ConfigureAwait(false);
     }
@@ -1049,9 +1083,9 @@ internal static class AiEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session.User!.Id;
-        var userTier = session.User!.Tier;
-        var userRole = session.User!.Role;
+        var userId = session.Principal!.Subject.Id;
+        var userTier = session.Principal!.Subject.Tier;
+        var userRole = session.Principal!.EffectiveActor.Role;
 
         var query = new GetUserAgentSlotsQuery(userId, userTier, userRole);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);

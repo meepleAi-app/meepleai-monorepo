@@ -101,12 +101,11 @@ internal sealed class AgentDefinitionChangedForCatalogAggregatesHandler
             from a in _context.AgentDefinitions
             where a.Id == agentDefinitionId
                   && EF.Property<Guid?>(a, "_gameId") != null
-            join g in _context.Games on EF.Property<Guid?>(a, "_gameId") equals g.Id
-            where g.SharedGameId != null
-            select g.SharedGameId
+            join g in _context.SharedGames on EF.Property<Guid?>(a, "_gameId") equals g.Id
+            select g.Id
         ).FirstOrDefaultAsync(ct).ConfigureAwait(false);
 
-        if (sharedGameId is { } sgId && sgId != Guid.Empty)
+        if (sharedGameId is Guid sgId && sgId != Guid.Empty)
         {
             await _retryPolicy.ExecuteAsync(
                 token => _cache.RemoveByTagAsync($"shared-game:{sgId}", token),

@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
@@ -127,15 +128,14 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
 
         // Seed game
         _testGameId = Guid.NewGuid();
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = _testGameId,
-            Name = "Test Game for Resolution",
-            Publisher = "Test Publisher",
+            Title = "Test Game for Resolution",
             YearPublished = 2024,
             CreatedAt = DateTime.UtcNow
         };
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
 
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }
@@ -387,7 +387,7 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
         result.IsResolved.Should().BeTrue();
     }
     [Fact]
-    public async Task ResolveNonExistentComment_ThrowsInvalidOperation()
+    public async Task ResolveNonExistentComment_ThrowsNotFoundException()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -403,8 +403,8 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
         // Act
         Func<Task> act = async () => await handler.Handle(command, TestCancellationToken);
 
-        // Assert
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*not found*");
+        // Assert — see CLAUDE.md #2568: exceptions are NotFoundException (404), never InvalidOperationException (500)
+        await act.Should().ThrowAsync<Api.Middleware.Exceptions.NotFoundException>()
+            .WithMessage("*RuleComment*not found*");
     }
 }

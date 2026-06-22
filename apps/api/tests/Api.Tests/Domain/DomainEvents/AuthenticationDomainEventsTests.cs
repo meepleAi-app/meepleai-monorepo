@@ -20,10 +20,10 @@ public class AuthenticationDomainEventsTests
     {
         // Arrange
         var user = CreateTestUser();
-        var newPasswordHash = PasswordHash.Create("NewPassword123!");
+        var newPasswordHash = PasswordHash.Create("NewUnusualPwd123!");
 
         // Act
-        user.ChangePassword("TestPassword123!", newPasswordHash);
+        user.ChangePassword("UniqueT3stPwd!", newPasswordHash);
 
         // Assert
         user.DomainEvents.Should().HaveCount(1);
@@ -41,7 +41,7 @@ public class AuthenticationDomainEventsTests
     {
         // Arrange
         var user = CreateTestUser();
-        var newPasswordHash = PasswordHash.Create("NewPassword123!");
+        var newPasswordHash = PasswordHash.Create("NewUnusualPwd123!");
 
         // Act
         user.UpdatePassword(newPasswordHash);
@@ -200,7 +200,7 @@ public class AuthenticationDomainEventsTests
             id: Guid.NewGuid(),
             email: Email.Parse("test@example.com"),
             displayName: "Test User",
-            passwordHash: PasswordHash.Create("TestPassword123!"),
+            passwordHash: PasswordHash.Create("UniqueT3stPwd!"),
             role: Role.User
         );
     }

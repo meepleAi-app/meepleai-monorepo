@@ -169,7 +169,7 @@ export const DarkMode: Story = {
   },
   decorators: [
     Story => (
-      <div className="dark p-6 bg-slate-900 min-h-screen">
+      <div className="dark p-6 bg-card min-h-screen">
         <div className="max-w-4xl mx-auto">
           <Story />
         </div>

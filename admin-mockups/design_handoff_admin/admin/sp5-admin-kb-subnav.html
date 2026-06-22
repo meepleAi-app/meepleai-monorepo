@@ -1,0 +1,965 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Knowledge Base · MeepleAI Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<!-- nel repo: <link rel="stylesheet" href="tokens.css"> + components.css + admin-base.css -->
+<style>
+/* ═══════════════ tokens.css ═══════════════ */
+:root {
+  --c-game:    25 95% 45%;
+  --c-player:  262 83% 58%;
+  --c-session: 240 60% 55%;
+  --c-agent:   38 92% 50%;
+  --c-kb:      174 60% 40%;
+  --c-chat:    220 80% 55%;
+  --c-event:   350 89% 60%;
+  --c-toolkit: 142 70% 45%;
+  --c-tool:    195 80% 50%;
+
+  --c-success: 142 70% 45%;
+  --c-warning: 38 92% 50%;
+  --c-danger:  350 89% 60%;
+  --c-info:    220 80% 55%;
+
+  --brand: var(--c-game);
+  --brand-fg: hsl(var(--c-game));
+
+  --f-display: 'Quicksand', system-ui, sans-serif;
+  --f-body:    'Nunito', system-ui, sans-serif;
+  --f-mono:    'JetBrains Mono', ui-monospace, monospace;
+
+  --fs-xs:   11px; --fs-sm:   12px; --fs-base: 14px; --fs-md:   15px;
+  --fs-lg:   17px; --fs-xl:   20px; --fs-2xl:  24px; --fs-3xl:  32px; --fs-4xl:  40px;
+
+  --fw-reg:  400; --fw-med:  500; --fw-semi: 600; --fw-bold: 700; --fw-ext:  800;
+  --lh-tight: 1.2; --lh-snug:  1.35; --lh-body:  1.5; --lh-relax: 1.65;
+
+  --s-0: 0; --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px;
+  --s-6: 24px; --s-7: 32px; --s-8: 40px; --s-9: 48px; --s-10: 64px;
+
+  --r-xs: 4px; --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-xl: 18px; --r-2xl: 24px; --r-pill: 9999px;
+
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --ease-in-out: cubic-bezier(.65, 0, .35, 1);
+  --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+  --dur-xs: 120ms; --dur-sm: 180ms; --dur-md: 280ms; --dur-lg: 400ms; --dur-xl: 600ms;
+
+  --z-base: 0; --z-sticky: 10; --z-nav: 20; --z-overlay: 50; --z-drawer: 51; --z-modal: 60; --z-toast: 70; --z-tooltip: 80;
+}
+
+:root, :root[data-theme="light"] {
+  --bg: #f7f3ee; --bg-card: #ffffff; --bg-muted: #efe6d9; --bg-sunken: #ede2d0;
+  --bg-hover: rgba(180, 130, 80, 0.06);
+  --text: #2b1f12; --text-sec: #5a4a38; --text-muted: #9a8870;
+  --border: rgba(180, 130, 80, 0.18); --border-light: rgba(180, 130, 80, 0.1); --border-strong: rgba(180, 130, 80, 0.32);
+  --shadow-xs: 0 1px 2px rgba(90, 60, 20, 0.06);
+  --shadow-sm: 0 2px 8px rgba(90, 60, 20, 0.08);
+  --shadow-md: 0 4px 16px rgba(90, 60, 20, 0.1);
+  --shadow-lg: 0 12px 36px rgba(90, 60, 20, 0.14);
+  --shadow-drawer: 0 -8px 32px rgba(90, 60, 20, 0.12);
+  --glass-bg: rgba(255, 255, 255, 0.88);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: #14100a; --bg-card: #1e1710; --bg-muted: #241c13; --bg-sunken: #0f0c08;
+  --bg-hover: rgba(255, 200, 130, 0.05);
+  --text: #f0e4d2; --text-sec: #c8b896; --text-muted: #8a7860;
+  --border: rgba(224, 180, 110, 0.14); --border-light: rgba(224, 180, 110, 0.08); --border-strong: rgba(224, 180, 110, 0.28);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.6);
+  --shadow-drawer: 0 -8px 32px rgba(0, 0, 0, 0.5);
+  --glass-bg: rgba(30, 22, 14, 0.85);
+  --glass-border: rgba(224, 180, 110, 0.14);
+  --c-game: 28 95% 58%; --c-player: 262 75% 70%; --c-session: 235 70% 70%;
+  --c-agent: 38 92% 62%; --c-kb: 174 60% 55%; --c-chat: 218 80% 68%;
+  --c-event: 350 85% 70%; --c-toolkit: 142 60% 58%; --c-tool: 195 75% 62%;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--f-body);
+  background: var(--bg); color: var(--text);
+  font-size: var(--fs-base); line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  transition: background var(--dur-md) var(--ease-out), color var(--dur-md) var(--ease-out);
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--f-display); font-weight: var(--fw-bold);
+  letter-spacing: -0.01em; margin: 0; line-height: var(--lh-tight);
+}
+button { font-family: inherit; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+code, kbd { font-family: var(--f-mono); font-size: 0.9em; }
+
+.e-game    { --e: var(--c-game); }
+.e-player  { --e: var(--c-player); }
+.e-session { --e: var(--c-session); }
+.e-agent   { --e: var(--c-agent); }
+.e-kb      { --e: var(--c-kb); }
+.e-chat    { --e: var(--c-chat); }
+.e-event   { --e: var(--c-event); }
+.e-toolkit { --e: var(--c-toolkit); }
+.e-tool    { --e: var(--c-tool); }
+
+.e-fg   { color: hsl(var(--e)); }
+.e-bg   { background: hsl(var(--e)); color: #fff; }
+.e-tint { background: hsl(var(--e) / 0.1); color: hsl(var(--e)); }
+.e-ring { box-shadow: 0 0 0 2px hsl(var(--e) / 0.35); }
+
+/* ═══════════════ components.css ═══════════════ */
+.e-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-radius: var(--r-sm);
+  background: hsl(var(--e) / 0.12); color: hsl(var(--e));
+  font-size: var(--fs-xs); font-weight: var(--fw-bold);
+  font-family: var(--f-display); text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.e-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: hsl(var(--e)); flex-shrink: 0;
+  display: inline-block;
+}
+.card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--r-xl); box-shadow: var(--shadow-sm);
+  transition: transform var(--dur-sm) var(--ease-out),
+              box-shadow var(--dur-sm) var(--ease-out),
+              border-color var(--dur-sm) var(--ease-out);
+}
+.card.interactive { cursor: pointer; }
+.card.interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: hsl(var(--e, var(--c-game)) / 0.4);
+}
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: var(--r-md);
+  font-size: var(--fs-sm); font-weight: var(--fw-bold);
+  font-family: var(--f-display); border: 1px solid transparent;
+  transition: all var(--dur-sm) var(--ease-out);
+  background: var(--bg-muted); color: var(--text);
+}
+.btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-xs); }
+.btn.primary { background: hsl(var(--e, var(--c-game))); color: #fff; }
+.btn.ghost { background: transparent; border-color: var(--border); color: var(--text-sec); }
+.btn.sm { padding: 5px 10px; font-size: var(--fs-xs); }
+
+/* ═══════════════ admin-base.css ═══════════════ */
+.admin-page {
+  background: var(--bg); color: var(--text);
+  min-height: 100vh;
+  font-family: var(--f-body);
+  font-size: var(--fs-sm); line-height: 1.5;
+}
+.admin-shell { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+.admin-shell-3col { display: grid; grid-template-columns: 240px 1fr 360px; min-height: 100vh; }
+
+.admin-nav {
+  background: var(--bg-card);
+  border-right: 1px solid var(--border);
+  padding: 16px 0;
+  display: flex; flex-direction: column; gap: 2px;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+}
+.admin-nav-brand {
+  padding: 4px 16px 16px;
+  display: flex; align-items: center; gap: 8px;
+  border-bottom: 1px solid var(--border-light);
+  margin-bottom: 12px;
+}
+.admin-nav-brand-mark {
+  width: 28px; height: 28px; border-radius: 8px;
+  background: linear-gradient(135deg, hsl(var(--c-game)), hsl(var(--c-event)));
+  color: #fff; display: grid; place-items: center;
+  font-family: var(--f-display); font-weight: 900; font-size: 14px;
+}
+.admin-nav-brand-name { font-family: var(--f-display); font-weight: 800; font-size: 14px; }
+.admin-nav-brand-tag {
+  font-family: var(--f-mono); font-size: 9px; font-weight: 700;
+  color: hsl(var(--c-event)); text-transform: uppercase; letter-spacing: .08em;
+  padding: 2px 6px; border-radius: 4px;
+  background: hsl(var(--c-event) / .12);
+  margin-left: auto;
+}
+.admin-nav-group {
+  padding: 10px 16px 4px;
+  font-family: var(--f-mono); font-size: 9.5px; font-weight: 700;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em;
+}
+.admin-nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 16px;
+  color: var(--text-sec);
+  font-family: var(--f-display); font-size: 13px; font-weight: 600;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  text-decoration: none;
+}
+.admin-nav-item:hover { background: var(--bg-muted); color: var(--text); }
+.admin-nav-item.active {
+  background: hsl(var(--c-event) / .08);
+  color: hsl(var(--c-event));
+  border-left-color: hsl(var(--c-event));
+}
+.admin-nav-item .em { font-size: 14px; opacity: .9; }
+.admin-nav-item .count {
+  margin-left: auto;
+  font-family: var(--f-mono); font-size: 10px;
+  color: var(--text-muted); font-weight: 700;
+}
+.admin-nav-foot {
+  margin-top: auto;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-light);
+  font-family: var(--f-mono); font-size: 10px; color: var(--text-muted);
+  display: flex; align-items: center; gap: 8px;
+}
+.admin-nav-foot .badge {
+  padding: 2px 6px; border-radius: 4px;
+  background: hsl(var(--c-toolkit) / .12); color: hsl(var(--c-toolkit));
+  font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: .05em;
+}
+
+.admin-top {
+  background: var(--bg);
+  border-bottom: 1px solid var(--border-light);
+  padding: 12px 24px;
+  display: flex; align-items: center; gap: 16px;
+  position: sticky; top: 0; z-index: 50;
+  backdrop-filter: blur(12px);
+}
+.admin-top h1 {
+  font-family: var(--f-display); font-size: 20px; font-weight: 800;
+  margin: 0; line-height: 1.2;
+}
+.admin-top .crumbs {
+  font-family: var(--f-mono); font-size: 11px;
+  color: var(--text-muted); margin-top: 2px;
+}
+.admin-top .spacer { flex: 1; }
+.admin-top-actions { display: flex; gap: 8px; align-items: center; }
+
+.admin-search {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: 8px;
+  width: 280px;
+  font-size: 12px;
+}
+.admin-search input {
+  flex: 1; border: 0; background: transparent;
+  color: var(--text); font-family: var(--f-body); font-size: 12.5px;
+  outline: 0;
+}
+.admin-search kbd {
+  padding: 1px 5px; border-radius: 4px;
+  background: var(--bg-muted); border: 1px solid var(--border);
+  font-family: var(--f-mono); font-size: 9px;
+  color: var(--text-muted);
+}
+
+.btn-admin {
+  padding: 6px 12px; border-radius: 6px;
+  font-family: var(--f-display); font-size: 12.5px; font-weight: 700;
+  cursor: pointer; border: 1px solid var(--border);
+  background: var(--bg-card); color: var(--text);
+  display: inline-flex; align-items: center; gap: 6px;
+  white-space: nowrap;
+}
+.btn-admin:hover { background: var(--bg-muted); }
+.btn-admin.primary {
+  background: hsl(var(--c-event));
+  border-color: hsl(var(--c-event));
+  color: #fff;
+  box-shadow: 0 2px 6px hsl(var(--c-event) / .3);
+}
+.btn-admin.primary:hover { filter: brightness(1.08); }
+.btn-admin.danger {
+  background: var(--bg-card); border-color: hsl(var(--c-event) / .5);
+  color: hsl(var(--c-event));
+}
+.btn-admin.success {
+  background: hsl(var(--c-toolkit)); border-color: hsl(var(--c-toolkit)); color: #fff;
+}
+.btn-admin.ghost { background: transparent; border-color: transparent; }
+.btn-admin.icon { padding: 6px; width: 28px; height: 28px; justify-content: center; }
+.btn-admin.sm { padding: 3px 8px; font-size: 11px; }
+.btn-admin kbd {
+  padding: 1px 4px; border-radius: 3px;
+  background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.2);
+  font-family: var(--f-mono); font-size: 9px; margin-left: 4px;
+}
+.btn-admin.primary kbd { background: rgba(0,0,0,.18); border-color: rgba(0,0,0,.25); }
+
+.admin-kpi {
+  background: var(--bg-card); border: 1px solid var(--border-light);
+  border-radius: 10px; padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 4px;
+  min-height: 88px; position: relative;
+}
+.admin-kpi-label {
+  font-family: var(--f-mono); font-size: 10px; font-weight: 700;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em;
+}
+.admin-kpi-value {
+  font-family: var(--f-display); font-size: 28px; font-weight: 800;
+  color: var(--text); line-height: 1.1; font-variant-numeric: tabular-nums;
+}
+.admin-kpi-trend {
+  font-family: var(--f-mono); font-size: 11px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 3px;
+}
+.admin-kpi-trend.up   { color: hsl(var(--c-toolkit)); }
+.admin-kpi-trend.down { color: hsl(var(--c-event)); }
+.admin-kpi-trend.flat { color: var(--text-muted); }
+.admin-kpi-spark { position: absolute; right: 12px; top: 12px; width: 70px; height: 28px; opacity: .85; }
+.admin-kpi-icon  { position: absolute; right: 14px; bottom: 12px; font-size: 22px; opacity: .35; }
+.admin-kpi.e-game    { border-left: 3px solid hsl(var(--c-game)); }
+.admin-kpi.e-player  { border-left: 3px solid hsl(var(--c-player)); }
+.admin-kpi.e-session { border-left: 3px solid hsl(var(--c-session)); }
+.admin-kpi.e-agent   { border-left: 3px solid hsl(var(--c-agent)); }
+.admin-kpi.e-kb      { border-left: 3px solid hsl(var(--c-kb)); }
+.admin-kpi.e-chat    { border-left: 3px solid hsl(var(--c-chat)); }
+.admin-kpi.e-event   { border-left: 3px solid hsl(var(--c-event)); }
+.admin-kpi.e-toolkit { border-left: 3px solid hsl(var(--c-toolkit)); }
+
+.admin-panel {
+  background: var(--bg-card); border: 1px solid var(--border-light);
+  border-radius: 10px; overflow: hidden;
+}
+.admin-panel-head {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-light);
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg);
+}
+.admin-panel-head h3 { margin: 0; font-family: var(--f-display); font-size: 13px; font-weight: 800; }
+.admin-panel-head .meta {
+  font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); margin-left: auto;
+}
+.admin-panel-body { padding: 14px; }
+
+.admin-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.admin-table th {
+  text-align: left; padding: 8px 12px;
+  font-family: var(--f-mono); font-size: 10px; font-weight: 700;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg);
+  position: sticky; top: 0; white-space: nowrap;
+}
+.admin-table th.sort-asc::after  { content: ' ↑'; color: hsl(var(--c-event)); }
+.admin-table th.sort-desc::after { content: ' ↓'; color: hsl(var(--c-event)); }
+.admin-table td { padding: 8px 12px; border-bottom: 1px solid var(--border-light); vertical-align: middle; }
+.admin-table tr:hover td { background: var(--bg-muted); }
+.admin-table tr.selected td { background: hsl(var(--c-event) / .06); }
+.admin-table .checkbox { width: 32px; }
+.admin-table .menu { width: 32px; text-align: right; }
+.admin-table .menu button { background: transparent; border: 0; cursor: pointer; color: var(--text-sec); padding: 4px; border-radius: 4px; }
+.admin-table .menu button:hover { background: var(--bg-muted); color: var(--text); }
+
+.status-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 999px;
+  font-family: var(--f-mono); font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .04em;
+  white-space: nowrap;
+}
+.status-chip::before { content: ''; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.status-chip.healthy { background: hsl(var(--c-toolkit) / .12); color: hsl(var(--c-toolkit)); }
+.status-chip.healthy::before { background: hsl(var(--c-toolkit)); box-shadow: 0 0 0 3px hsl(var(--c-toolkit) / .25); }
+.status-chip.warning { background: hsl(38 90% 56% / .14); color: hsl(38 90% 50%); }
+.status-chip.warning::before { background: hsl(38 90% 50%); }
+.status-chip.danger  { background: hsl(var(--c-event) / .12); color: hsl(var(--c-event)); }
+.status-chip.danger::before { background: hsl(var(--c-event)); }
+.status-chip.muted   { background: var(--bg-muted); color: var(--text-muted); }
+.status-chip.muted::before { background: var(--text-muted); }
+.status-chip.info    { background: hsl(var(--c-chat) / .12); color: hsl(var(--c-chat)); }
+.status-chip.info::before { background: hsl(var(--c-chat)); }
+.status-chip.running::before { animation: admin-pulse 1.4s ease-in-out infinite; }
+@keyframes admin-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: .5; } }
+
+.role-chip {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 999px;
+  font-family: var(--f-mono); font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .04em;
+}
+.role-chip.superadmin { background: hsl(var(--c-event) / .12); color: hsl(var(--c-event)); }
+.role-chip.admin      { background: hsl(var(--c-event) / .08); color: hsl(var(--c-event)); }
+.role-chip.premium    { background: hsl(var(--c-agent) / .14); color: hsl(38 90% 38%); }
+.role-chip.user       { background: hsl(var(--c-player) / .1); color: hsl(var(--c-player)); }
+
+.activity-feed { display: flex; flex-direction: column; gap: 1px; }
+.activity-item {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-light);
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 12.5px;
+}
+.activity-item:last-child { border-bottom: 0; }
+.activity-item:hover { background: var(--bg-muted); }
+.activity-item .em {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 14px; flex-shrink: 0;
+}
+.activity-item .body { flex: 1; min-width: 0; }
+.activity-item .body strong { font-weight: 700; color: var(--text); }
+.activity-item .ts { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
+
+.spark { stroke: currentColor; stroke-width: 1.5; fill: none; }
+.spark-fill { fill: currentColor; opacity: .14; }
+
+.admin-form-row {
+  display: grid; grid-template-columns: 200px 1fr;
+  gap: 16px; align-items: flex-start;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.admin-form-row:last-child { border-bottom: 0; }
+.admin-form-label { font-family: var(--f-display); font-size: 12.5px; font-weight: 700; }
+.admin-form-label .desc {
+  display: block; margin-top: 3px;
+  font-family: var(--f-body); font-size: 11px; font-weight: 400;
+  color: var(--text-muted); line-height: 1.4;
+}
+.admin-input, .admin-select, .admin-textarea {
+  width: 100%; max-width: 360px;
+  padding: 6px 10px;
+  background: var(--bg); color: var(--text);
+  border: 1px solid var(--border); border-radius: 6px;
+  font-family: var(--f-body); font-size: 12.5px;
+}
+.admin-input.mono { font-family: var(--f-mono); }
+.admin-toggle {
+  position: relative; width: 36px; height: 20px;
+  background: var(--bg-muted); border: 1px solid var(--border);
+  border-radius: 999px; cursor: pointer;
+}
+.admin-toggle::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--text-sec); transition: all .2s var(--ease-out);
+}
+.admin-toggle.on { background: hsl(var(--c-toolkit) / .25); border-color: hsl(var(--c-toolkit)); }
+.admin-toggle.on::after { left: 18px; background: hsl(var(--c-toolkit)); }
+
+.bulk-bar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 14px;
+  background: hsl(var(--c-event) / .08);
+  border: 1px solid hsl(var(--c-event) / .25);
+  border-radius: 8px;
+  font-size: 12.5px;
+  margin-bottom: 12px;
+}
+.bulk-bar .count { font-family: var(--f-display); font-weight: 800; color: hsl(var(--c-event)); }
+.bulk-bar .actions { display: flex; gap: 6px; margin-left: auto; }
+
+.admin-tabs {
+  display: flex; gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.admin-tab {
+  padding: 8px 14px;
+  background: transparent; border: 0;
+  font-family: var(--f-display); font-size: 13px; font-weight: 700;
+  color: var(--text-sec); cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  display: inline-flex; align-items: center; gap: 6px;
+  text-decoration: none;
+}
+.admin-tab .count {
+  padding: 1px 6px; border-radius: 999px;
+  background: var(--bg-muted); color: var(--text-muted);
+  font-family: var(--f-mono); font-size: 10px; font-weight: 700;
+}
+.admin-tab:hover { color: var(--text); }
+.admin-tab.active { color: hsl(var(--c-event)); border-bottom-color: hsl(var(--c-event)); }
+.admin-tab.active .count { background: hsl(var(--c-event) / .14); color: hsl(var(--c-event)); }
+
+.alert-banner {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 14px; border-radius: 8px; font-size: 12.5px;
+}
+.alert-banner.warning { background: hsl(38 90% 56% / .1); border: 1px solid hsl(38 90% 56% / .35); color: var(--text); }
+.alert-banner.danger  { background: hsl(var(--c-event) / .08); border: 1px solid hsl(var(--c-event) / .35); color: var(--text); }
+.alert-banner.info    { background: hsl(var(--c-chat) / .08); border: 1px solid hsl(var(--c-chat) / .3); color: var(--text); }
+.alert-banner.success { background: hsl(var(--c-toolkit) / .08); border: 1px solid hsl(var(--c-toolkit) / .3); color: var(--text); }
+.alert-banner .em { font-size: 18px; flex-shrink: 0; }
+.alert-banner .title { font-family: var(--f-display); font-weight: 800; margin-bottom: 2px; font-size: 13px; }
+.alert-banner .actions { margin-left: auto; display: flex; gap: 6px; }
+
+@media (max-width: 880px) {
+  .admin-mobile-fallback {
+    display: flex !important;
+    flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 32px;
+    text-align: center; gap: 16px;
+  }
+  .admin-mobile-fallback .em { font-size: 56px; }
+  .admin-mobile-fallback h2 { margin: 0; font-family: var(--f-display); font-size: 20px; }
+  .admin-mobile-fallback p { color: var(--text-sec); max-width: 320px; margin: 0; line-height: 1.5; }
+  .admin-shell, .admin-shell-3col { display: none; }
+}
+.admin-mobile-fallback { display: none; }
+
+.admin-body { padding: 20px 24px; }
+.admin-body-grid { display: grid; gap: 16px; }
+
+.kbd-hint { display: inline-flex; align-items: center; gap: 4px; font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); }
+.kbd-hint kbd { padding: 1px 5px; border-radius: 4px; background: var(--bg-muted); border: 1px solid var(--border); }
+
+/* ═══════════════ custom: sp5-admin-kb.html ═══════════════ */
+.kb-grid { display: grid; grid-template-columns: 300px 1fr; gap: 16px; align-items: start; min-height: calc(100vh - 80px); }
+.kb-tree {
+  background: var(--bg-card); border: 1px solid var(--border-light);
+  border-radius: 10px; padding: 8px; overflow-y: auto; max-height: calc(100vh - 100px);
+  position: sticky; top: 76px;
+}
+.kb-tree-search { padding: 6px 8px; }
+.kb-tree-game { padding: 6px 8px; border-radius: 6px; font-family: var(--f-display); font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.kb-tree-game:hover { background: var(--bg-muted); }
+.kb-tree-game .em { font-size: 14px; }
+.kb-tree-game .count { margin-left: auto; font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); font-weight: 600; padding: 1px 6px; border-radius: 999px; background: var(--bg-muted); }
+.kb-tree-doc { padding: 5px 8px 5px 30px; font-size: 12px; cursor: pointer; border-radius: 6px; display: flex; align-items: center; gap: 6px; color: var(--text-sec); }
+.kb-tree-doc:hover { background: var(--bg-muted); color: var(--text); }
+.kb-tree-doc.selected { background: hsl(var(--c-kb) / .12); color: hsl(var(--c-kb)); }
+.kb-tree-doc .em { font-size: 11px; }
+.kb-tree-doc .ind { font-family: var(--f-mono); font-size: 9px; margin-left: auto; }
+.kb-tree-doc.failed .ind { color: hsl(var(--c-event)); }
+.kb-tree-doc.pending .ind { color: hsl(38 90% 50%); }
+.kb-tree-doc.indexed .ind { color: hsl(var(--c-toolkit)); }
+
+.doc-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 10px; overflow: hidden; }
+.doc-hero { padding: 16px 20px; border-bottom: 1px solid var(--border-light); background: linear-gradient(180deg, hsl(var(--c-kb) / .08), transparent); }
+.doc-hero .head { display: flex; align-items: flex-start; gap: 14px; }
+.doc-hero h2 { margin: 0; font-family: var(--f-display); font-size: 19px; font-weight: 800; }
+.doc-hero .meta { font-family: var(--f-mono); font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+.doc-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 14px; }
+.doc-stats .s { background: var(--bg); border: 1px solid var(--border-light); border-radius: 8px; padding: 8px 10px; }
+.doc-stats .s-lb { font-family: var(--f-mono); font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+.doc-stats .s-vl { font-family: var(--f-display); font-size: 18px; font-weight: 800; }
+
+.pdf-preview {
+  background: linear-gradient(180deg, var(--bg-muted), var(--bg-sunken));
+  border: 1px solid var(--border-light); border-radius: 8px;
+  padding: 24px; min-height: 320px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  color: var(--text-muted);
+}
+
+.chunk-table-row { display: grid; grid-template-columns: 60px 1fr 60px 70px 30px; gap: 10px; padding: 7px 12px; border-bottom: 1px solid var(--border-light); font-size: 11.5px; align-items: center; }
+.chunk-table-row code { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); }
+.chunk-table-row .preview { color: var(--text-sec); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chunk-table-row .score { text-align: right; font-family: var(--f-mono); font-weight: 700; }
+.chunk-table-row .score.hi { color: hsl(var(--c-kb)); }
+.chunk-table-row .score.md { color: hsl(38 90% 50%); }
+
+.ingestion-log { font-family: var(--f-mono); font-size: 11px; background: var(--bg-sunken); color: var(--text-sec); padding: 12px 14px; border-radius: 6px; line-height: 1.7; max-height: 200px; overflow-y: auto; }
+.ingestion-log .t { color: var(--text-muted); }
+.ingestion-log .ok { color: hsl(var(--c-toolkit)); }
+.ingestion-log .err { color: hsl(var(--c-event)); }
+.ingestion-log .warn { color: hsl(38 90% 50%); }
+
+.filter-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 999px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  font-family: var(--f-mono); font-size: 10px; font-weight: 700;
+  color: var(--text-sec); cursor: pointer;
+}
+.filter-chip.active { background: hsl(var(--c-kb) / .14); border-color: hsl(var(--c-kb) / .4); color: hsl(var(--c-kb)); }
+.filter-chip .x { opacity: .6; font-size: 8px; }
+
+/* ═══════════════ page-local: separator between the two .admin-shell states ═══════════════ */
+.state-divider {
+  background: var(--bg-sunken);
+  border-top: 1px dashed var(--border-strong);
+  border-bottom: 1px dashed var(--border-strong);
+  padding: 14px 24px;
+  font-family: var(--f-mono); font-size: 10px;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: .12em;
+  display: flex; align-items: center; gap: 12px;
+}
+.state-divider .tag {
+  padding: 3px 8px; border-radius: 4px;
+  background: hsl(var(--c-event) / .12); color: hsl(var(--c-event));
+  font-weight: 800; letter-spacing: .08em;
+}
+
+/* Vector Collections placeholder (page-local, not in DS) */
+.vc-placeholder {
+  padding: 48px 24px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; text-align: center;
+  min-height: 320px;
+}
+.vc-placeholder .em {
+  font-size: 36px;
+  width: 64px; height: 64px;
+  display: grid; place-items: center;
+  border-radius: 16px;
+  background: hsl(var(--c-kb) / .12); color: hsl(var(--c-kb));
+}
+.vc-placeholder h3 { font-family: var(--f-display); font-size: 18px; font-weight: 800; margin: 0; }
+.vc-placeholder p { color: var(--text-muted); font-size: 12.5px; max-width: 420px; margin: 0; line-height: 1.5; }
+.vc-placeholder .note {
+  font-family: var(--f-mono); font-size: 10px; color: var(--text-muted);
+  padding: 4px 10px; border: 1px dashed var(--border-strong); border-radius: 6px;
+  text-transform: uppercase; letter-spacing: .06em;
+}
+</style>
+</head>
+<body class="admin-page">
+
+<div class="admin-mobile-fallback">
+  <div class="em">🖥️</div>
+  <h2>Console solo desktop</h2>
+  <p>La console admin è ottimizzata per schermi ≥ 880px. Aprila da desktop.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     STATO: tab Explorer attivo (default)
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="admin-shell">
+
+  <!-- ── Sidebar admin nav (renderAdminNav('kb')) ─────────────── -->
+  <nav class="admin-nav" data-admin-nav-mount>
+    <div class="admin-nav-brand">
+      <div class="admin-nav-brand-mark">M</div>
+      <div class="admin-nav-brand-name">MeepleAI</div>
+      <div class="admin-nav-brand-tag">Admin</div>
+    </div>
+
+    <div class="admin-nav-group">Overview</div>
+    <a href="/admin" class="admin-nav-item"><span class="em">⌂</span> Dashboard</a>
+    <a href="/admin/activity" class="admin-nav-item"><span class="em">⚡</span> Activity <span class="count">128</span></a>
+
+    <div class="admin-nav-group">Catalog</div>
+    <a href="/admin/games" class="admin-nav-item"><span class="em">🎲</span> Games <span class="count">48</span></a>
+    <a href="/admin/players" class="admin-nav-item"><span class="em">👥</span> Players <span class="count">3.2k</span></a>
+    <a href="/admin/sessions" class="admin-nav-item"><span class="em">🃏</span> Sessions <span class="count">912</span></a>
+
+    <div class="admin-nav-group">AI Stack</div>
+    <a href="/admin/agents" class="admin-nav-item"><span class="em">🤖</span> Agents <span class="count">14</span></a>
+    <a href="/admin/knowledge-base" class="admin-nav-item active"><span class="em">📚</span> Knowledge Base <span class="count">247</span></a>
+    <a href="/admin/chats" class="admin-nav-item"><span class="em">💬</span> Chats <span class="count">2.8k</span></a>
+    <a href="/admin/toolkits" class="admin-nav-item"><span class="em">🧰</span> Toolkits <span class="count">9</span></a>
+    <a href="/admin/tools" class="admin-nav-item"><span class="em">🔧</span> Tools <span class="count">41</span></a>
+
+    <div class="admin-nav-group">Observe</div>
+    <a href="/admin/events" class="admin-nav-item"><span class="em">📡</span> Events</a>
+    <a href="/admin/audit" class="admin-nav-item"><span class="em">🛡</span> Audit log</a>
+    <a href="/admin/settings" class="admin-nav-item"><span class="em">⚙</span> Settings</a>
+
+    <div class="admin-nav-foot">
+      <span>v2024.12.04</span>
+      <span class="badge">prod</span>
+    </div>
+  </nav>
+
+  <main>
+    <header class="admin-top">
+      <div>
+        <h1>Knowledge Base</h1>
+        <div class="crumbs">Admin · KB · 247 docs · 18.487 chunks · 2.4TB</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="admin-top-actions">
+        <div class="admin-search"><span>🔍</span><input placeholder="Search docs, chunks, games…"/><kbd>⌘K</kbd></div>
+        <button class="btn-admin">⟳ Refresh <kbd>R</kbd></button>
+        <a href="/admin/knowledge-base/upload" class="btn-admin primary">+ Upload PDF</a>
+      </div>
+    </header>
+
+    <div class="admin-body">
+
+      <!-- ── SUB-NAV orizzontale ─────────────────────────────── -->
+      <div class="admin-tabs" role="tablist" aria-label="Knowledge Base sezioni">
+        <a href="/admin/knowledge-base"            class="admin-tab active" role="tab" aria-selected="true">Explorer</a>
+        <a href="/admin/knowledge-base/vectors"    class="admin-tab" role="tab">Vector Collections</a>
+        <a href="/admin/knowledge-base/queue"      class="admin-tab" role="tab">Processing Queue <span class="count">3</span></a>
+        <a href="/admin/knowledge-base/pipeline"   class="admin-tab" role="tab">RAG Pipeline</a>
+        <a href="/admin/knowledge-base/embedding"  class="admin-tab" role="tab">Embedding</a>
+        <a href="/admin/knowledge-base/feedback"   class="admin-tab" role="tab">Feedback <span class="count">12</span></a>
+        <a href="/admin/knowledge-base/settings"   class="admin-tab" role="tab">Settings</a>
+        <a href="/admin/knowledge-base/snapshots"  class="admin-tab" role="tab">Snapshots</a>
+      </div>
+
+      <!-- ── Tab content: Explorer (master-detail) ──────────── -->
+      <div class="kb-grid">
+
+        <!-- Left: KBTree ──────────────────────────────────── -->
+        <div class="kb-tree">
+          <div class="kb-tree-search">
+            <div class="admin-search" style="width: 100%"><span>🔍</span><input placeholder="Filtra tree…"/></div>
+          </div>
+          <div style="padding: 4px 8px; font-family: var(--f-mono); font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em">8 giochi · 247 docs</div>
+
+          <div class="kb-tree-game"><span>▾</span> <span class="em">🎲</span> Wingspan <span class="count">12</span></div>
+          <div class="kb-tree-doc indexed">📄 Wingspan-Asia-EN.pdf <span class="ind">347ch</span></div>
+          <div class="kb-tree-doc indexed selected">📄 Wingspan-Oceania-EN.pdf <span class="ind">412ch</span></div>
+          <div class="kb-tree-doc indexed">📄 Wingspan-Europa-EN.pdf <span class="ind">298ch</span></div>
+          <div class="kb-tree-doc pending">📄 Wingspan-FAQ.txt <span class="ind">indexing…</span></div>
+          <div class="kb-tree-doc indexed">📄 wingspan-bgg-faq.txt <span class="ind">84ch</span></div>
+          <div class="kb-tree-doc indexed">📄 Errata-2024.pdf <span class="ind">12ch</span></div>
+
+          <div class="kb-tree-game"><span>▾</span> <span class="em">🎲</span> Brass: Birmingham <span class="count">8</span></div>
+          <div class="kb-tree-doc indexed">📄 Brass-Birmingham-Rulebook.pdf <span class="ind">524ch</span></div>
+          <div class="kb-tree-doc failed">📄 brass-faq-thread.txt <span class="ind">⚠ failed</span></div>
+          <div class="kb-tree-doc indexed">📄 Brass-Lancashire-conv.pdf <span class="ind">187ch</span></div>
+
+          <div class="kb-tree-game"><span>▾</span> <span class="em">🎲</span> Tainted Grail <span class="count">14</span></div>
+          <div class="kb-tree-doc indexed">📄 TG-Fall-of-Avalon-IT.pdf <span class="ind">812ch</span></div>
+          <div class="kb-tree-doc indexed">📄 TG-Chapter-Book-Vol1.pdf <span class="ind">2.4kch</span></div>
+          <div class="kb-tree-doc indexed">📄 TG-Chapter-Book-Vol2.pdf <span class="ind">2.8kch</span></div>
+          <div class="kb-tree-doc indexed">📄 TG-Encounters-Cards.pdf <span class="ind">421ch</span></div>
+
+          <div class="kb-tree-game"><span>▸</span> <span class="em">🎲</span> Spirit Island <span class="count">9</span></div>
+          <div class="kb-tree-game"><span>▸</span> <span class="em">🎲</span> Ark Nova <span class="count">11</span></div>
+          <div class="kb-tree-game"><span>▸</span> <span class="em">🎲</span> ISS Vanguard <span class="count">22</span></div>
+          <div class="kb-tree-game"><span>▸</span> <span class="em">🎲</span> Lancaster <span class="count">5</span></div>
+          <div class="kb-tree-game"><span>▸</span> <span class="em">🎲</span> Gloomhaven <span class="count">31</span></div>
+        </div>
+
+        <!-- Right: DocumentViewer ──────────────────────────── -->
+        <div class="doc-card">
+          <div class="doc-hero">
+            <div class="head">
+              <span style="font-size: 36px">📄</span>
+              <div style="flex: 1">
+                <h2>Wingspan-Oceania-EN.pdf</h2>
+                <div class="meta">EntityChip: <span class="role-chip" style="background: hsl(var(--c-game) / .14); color: hsl(var(--c-game))">🎲 Wingspan</span> · uploaded by Aaron · 2024-12-08 14:22 · indexer v2024.11.18</div>
+              </div>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn-admin sm">⟳ Re-index</button>
+                <button class="btn-admin sm">⤓ Download</button>
+                <button class="btn-admin sm danger">🗑 Delete</button>
+              </div>
+            </div>
+
+            <div class="doc-stats">
+              <div class="s"><div class="s-lb">Pagine</div><div class="s-vl">42</div></div>
+              <div class="s"><div class="s-lb">Chunks</div><div class="s-vl">412</div></div>
+              <div class="s"><div class="s-lb">Avg confidence</div><div class="s-vl" style="color: hsl(var(--c-toolkit))">0.87</div></div>
+              <div class="s"><div class="s-lb">Size</div><div class="s-vl">8.4<span style="font-size:12px;color:var(--text-muted)">MB</span></div></div>
+              <div class="s"><div class="s-lb">Status</div><div class="s-vl"><span class="status-chip healthy" style="font-size: 11px">Indicizzato</span></div></div>
+            </div>
+
+            <div style="margin-top: 14px; display: flex; gap: 4px; align-items: center; font-family: var(--f-mono); font-size: 11px; color: var(--text-muted)">
+              <span>🌐 EN</span> · <span>📐 OCR no</span> · <span>🧱 chunk 512 tok</span> · <span>🔄 last reindex 8gg fa</span>
+            </div>
+          </div>
+
+          <div style="padding: 0 20px">
+            <div class="admin-tabs" style="margin-bottom: 0">
+              <button class="admin-tab">Preview</button>
+              <button class="admin-tab active">Chunks <span class="count">412</span></button>
+              <button class="admin-tab">Ingestion log</button>
+              <button class="admin-tab">Used by <span class="count">8</span></button>
+            </div>
+          </div>
+
+          <div style="padding: 16px 20px;">
+
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px">
+              <div class="admin-search" style="width: 320px"><span>🔍</span><input placeholder="Cerca in chunks… (similarity match)" value="predator activation"/></div>
+              <span class="filter-chip active">Score ≥ 0.7 <span class="x">▾</span></span>
+              <span class="filter-chip">Capitolo: tutti <span class="x">▾</span></span>
+              <div style="margin-left: auto; font-family: var(--f-mono); font-size: 11px; color: var(--text-muted)">12 risultati / 412 totali</div>
+            </div>
+
+            <div style="border: 1px solid var(--border-light); border-radius: 8px; overflow: hidden">
+              <div class="chunk-table-row" style="background: var(--bg); font-family: var(--f-mono); font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 700">
+                <div>Chunk ID</div><div>Preview</div><div>Pagina</div><div>Score ↓</div><div></div>
+              </div>
+              <div class="chunk-table-row" style="background: hsl(var(--c-kb) / .04)">
+                <code>c-0218</code>
+                <div class="preview">"Quando più uccelli predatori sono attivati nello stesso turno, l'attivazione segue l'ordine di piazzamento da sinistra a destra…"</div>
+                <code>p.22 §3</code>
+                <div class="score hi">0.84</div>
+                <div>›</div>
+              </div>
+              <div class="chunk-table-row">
+                <code>c-0217</code>
+                <div class="preview">"Un cibo non disponibile sulla mappa cibo viene preso dal banco. Se ci sono più predatori in competizione, il giocatore decide…"</div>
+                <code>p.22 §2</code>
+                <div class="score hi">0.72</div>
+                <div>›</div>
+              </div>
+              <div class="chunk-table-row">
+                <code>c-0142</code>
+                <div class="preview">"Power di tipo predator si attiva su trigger 'when activated'. In espansione Oceania, l'ordine è importante per i power…"</div>
+                <code>p.14 §5</code>
+                <div class="score hi">0.58</div>
+                <div>›</div>
+              </div>
+              <div class="chunk-table-row">
+                <code>c-0086</code>
+                <div class="preview">"Carte uccello con keyword predator hanno priorità sull'attivazione fine round se viene innescato il trigger group…"</div>
+                <code>p.9 §2</code>
+                <div class="score md">0.51</div>
+                <div>›</div>
+              </div>
+              <div class="chunk-table-row">
+                <code>c-0312</code>
+                <div class="preview">"Tabella riepilogativa dei power per habitat: foresta (predator activation), prateria (egg lay), zona umida…"</div>
+                <code>p.31 tbl</code>
+                <div class="score md">0.46</div>
+                <div>›</div>
+              </div>
+              <div class="chunk-table-row">
+                <code>c-0398</code>
+                <div class="preview">"FAQ: caso simultaneo di esaurimento cibo durante attivazione predatori (non trattato nella prima stampa, vedi errata)…"</div>
+                <code>p.40 §1</code>
+                <div class="score md">0.42</div>
+                <div>›</div>
+              </div>
+            </div>
+
+            <h4 style="margin: 18px 0 6px; font-family: var(--f-mono); font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em">Ingestion log (snippet)</h4>
+            <pre class="ingestion-log">
+<span class="t">[14:22:01]</span> <span class="ok">▸ Started</span> Wingspan-Oceania-EN.pdf · 8.4MB · 42 pages
+<span class="t">[14:22:03]</span> <span class="ok">✓ Unstructured.io</span> parsed in 2.18s · 1.247 elements
+<span class="t">[14:22:06]</span> <span class="ok">✓ SmolDocling</span> doc-layout in 2.94s · 86 tables · 12 figures
+<span class="t">[14:22:08]</span> <span class="ok">✓ Chunker</span> 412 chunks @ 512 tok · avg 387
+<span class="t">[14:22:12]</span> <span class="warn">⚠ Embedder</span> retry 1 (rate-limit) → ok in 4.21s
+<span class="t">[14:22:14]</span> <span class="ok">✓ Indexer</span> Pinecone wingspan-v3 · 412 vectors
+<span class="t">[14:22:14]</span> <span class="ok">✓ Done</span> total 13.4s · cost $0.087</pre>
+
+            <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-light); display: flex; flex-wrap: wrap; gap: 6px">
+              <button class="btn-admin">⟳ Re-index with v2024.12 indexer</button>
+              <button class="btn-admin">📋 View embeddings</button>
+              <button class="btn-admin">⤓ Export chunks JSON</button>
+              <button class="btn-admin">🔬 Quality eval</button>
+              <button class="btn-admin">🤖 Used by 7 agents</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     STATO: tab tool attivo  ── Vector Collections
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="state-divider">
+  <span class="tag">Stato 2</span>
+  <span>Stessa pagina · tab «Vector Collections» attivo · placeholder tool-page</span>
+</div>
+
+<div class="admin-shell">
+
+  <!-- Sidebar (identica) ─────────────────────────────────────── -->
+  <nav class="admin-nav" data-admin-nav-mount>
+    <div class="admin-nav-brand">
+      <div class="admin-nav-brand-mark">M</div>
+      <div class="admin-nav-brand-name">MeepleAI</div>
+      <div class="admin-nav-brand-tag">Admin</div>
+    </div>
+
+    <div class="admin-nav-group">Overview</div>
+    <a href="/admin" class="admin-nav-item"><span class="em">⌂</span> Dashboard</a>
+    <a href="/admin/activity" class="admin-nav-item"><span class="em">⚡</span> Activity <span class="count">128</span></a>
+
+    <div class="admin-nav-group">Catalog</div>
+    <a href="/admin/games" class="admin-nav-item"><span class="em">🎲</span> Games <span class="count">48</span></a>
+    <a href="/admin/players" class="admin-nav-item"><span class="em">👥</span> Players <span class="count">3.2k</span></a>
+    <a href="/admin/sessions" class="admin-nav-item"><span class="em">🃏</span> Sessions <span class="count">912</span></a>
+
+    <div class="admin-nav-group">AI Stack</div>
+    <a href="/admin/agents" class="admin-nav-item"><span class="em">🤖</span> Agents <span class="count">14</span></a>
+    <a href="/admin/knowledge-base" class="admin-nav-item active"><span class="em">📚</span> Knowledge Base <span class="count">247</span></a>
+    <a href="/admin/chats" class="admin-nav-item"><span class="em">💬</span> Chats <span class="count">2.8k</span></a>
+    <a href="/admin/toolkits" class="admin-nav-item"><span class="em">🧰</span> Toolkits <span class="count">9</span></a>
+    <a href="/admin/tools" class="admin-nav-item"><span class="em">🔧</span> Tools <span class="count">41</span></a>
+
+    <div class="admin-nav-group">Observe</div>
+    <a href="/admin/events" class="admin-nav-item"><span class="em">📡</span> Events</a>
+    <a href="/admin/audit" class="admin-nav-item"><span class="em">🛡</span> Audit log</a>
+    <a href="/admin/settings" class="admin-nav-item"><span class="em">⚙</span> Settings</a>
+
+    <div class="admin-nav-foot">
+      <span>v2024.12.04</span>
+      <span class="badge">prod</span>
+    </div>
+  </nav>
+
+  <main>
+    <header class="admin-top">
+      <div>
+        <h1>Knowledge Base</h1>
+        <div class="crumbs">Admin · KB · Vector Collections · 9 indici · pgvector 0.7.4</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="admin-top-actions">
+        <div class="admin-search"><span>🔍</span><input placeholder="Search docs, chunks, games…"/><kbd>⌘K</kbd></div>
+        <button class="btn-admin">⟳ Refresh <kbd>R</kbd></button>
+        <a href="/admin/knowledge-base/upload" class="btn-admin primary">+ Upload PDF</a>
+      </div>
+    </header>
+
+    <div class="admin-body">
+
+      <!-- Stessa sub-nav, ma «Vector Collections» .active ───── -->
+      <div class="admin-tabs" role="tablist" aria-label="Knowledge Base sezioni">
+        <a href="/admin/knowledge-base"            class="admin-tab" role="tab">Explorer</a>
+        <a href="/admin/knowledge-base/vectors"    class="admin-tab active" role="tab" aria-selected="true">Vector Collections</a>
+        <a href="/admin/knowledge-base/queue"      class="admin-tab" role="tab">Processing Queue <span class="count">3</span></a>
+        <a href="/admin/knowledge-base/pipeline"   class="admin-tab" role="tab">RAG Pipeline</a>
+        <a href="/admin/knowledge-base/embedding"  class="admin-tab" role="tab">Embedding</a>
+        <a href="/admin/knowledge-base/feedback"   class="admin-tab" role="tab">Feedback <span class="count">12</span></a>
+        <a href="/admin/knowledge-base/settings"   class="admin-tab" role="tab">Settings</a>
+        <a href="/admin/knowledge-base/snapshots"  class="admin-tab" role="tab">Snapshots</a>
+      </div>
+
+      <!-- Tool-page placeholder ──────────────────────────────── -->
+      <section class="admin-panel">
+        <div class="admin-panel-head">
+          <h3>Vector Collections</h3>
+          <span class="status-chip healthy">pgvector · online</span>
+          <span class="meta">/admin/knowledge-base/vectors</span>
+        </div>
+        <div class="admin-panel-body">
+          <div class="vc-placeholder">
+            <div class="em">📦</div>
+            <h3>Vector Collections</h3>
+            <p>Contenuto della tool-page esistente, immutato. Indici pgvector, statistiche dimensionalità, ANN parameters, re-embed bulk.</p>
+            <div class="note">Mockup: contenuto immutato — vedi tool-page corrente</div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script>
+  /* admin-nav.js inlined for mockup — nel repo è un file separato (admin-nav.js).
+     Renderizza la sidebar nei [data-admin-nav-mount]. Qui la sidebar è già scritta
+     inline in entrambi gli .admin-shell, quindi questa funzione è no-op. */
+  window.renderAdminNav = function (activeId) { return activeId; };
+  renderAdminNav('kb');
+</script>
+</body>
+</html>

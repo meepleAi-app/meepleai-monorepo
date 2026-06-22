@@ -152,9 +152,9 @@ internal class RagService : IRagService
         Activity? activity,
         CancellationToken cancellationToken)
     {
-        // Vector store (Qdrant) has been removed — retrieval returns empty results.
+        // Legacy vector-only retrieval is deprecated — pgvector hybrid path is the canonical one.
         // The hybrid search path (AskWithHybridSearchAsync) should be used instead.
-        _logger.LogInformation("Vector retrieval skipped (Qdrant removed), returning empty results for game {GameId}", gameId);
+        _logger.LogInformation("Legacy vector retrieval skipped, returning empty results for game {GameId}", gameId);
         activity?.SetTag("query.variations.count", 0);
         return Task.FromResult(new List<SearchResultItem>());
     }
@@ -341,8 +341,8 @@ internal class RagService : IRagService
         int topK,
         CancellationToken cancellationToken)
     {
-        // Vector store (Qdrant) has been removed — explain retrieval returns empty results.
-        _logger.LogInformation("Vector retrieval skipped (Qdrant removed) for explain, game {GameId}", gameId);
+        // Legacy vector-only explain retrieval is deprecated — pgvector hybrid path is canonical.
+        _logger.LogInformation("Legacy vector retrieval skipped for explain, game {GameId}", gameId);
         return Task.FromResult<List<SearchResultItem>?>(new List<SearchResultItem>());
     }
 
@@ -550,7 +550,7 @@ internal class RagService : IRagService
 
     /// <summary>
     /// AI-14: Answer question using hybrid search (vector + keyword) with configurable search mode.
-    /// Combines Qdrant vector similarity with PostgreSQL full-text search using RRF fusion.
+    /// Combines pgvector vector similarity with PostgreSQL full-text search using RRF fusion.
     /// AI-05: Includes caching support for reduced latency
     /// OPS-02: OpenTelemetry metrics tracking and distributed tracing
     /// AI-09: Multilingual support

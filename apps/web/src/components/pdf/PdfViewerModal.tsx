@@ -119,7 +119,7 @@ export function PdfViewerModal({
             <button
               onClick={() => goToPage(currentPage - 1)}
               disabled={currentPage <= 1}
-              className="px-3 py-1 text-sm rounded border disabled:opacity-50 hover:bg-gray-100"
+              className="px-3 py-1 text-sm rounded border disabled:opacity-50 hover:bg-muted"
             >
               Precedente
             </button>
@@ -129,7 +129,7 @@ export function PdfViewerModal({
             <button
               onClick={() => goToPage(currentPage + 1)}
               disabled={currentPage >= numPages}
-              className="px-3 py-1 text-sm rounded border disabled:opacity-50 hover:bg-gray-100"
+              className="px-3 py-1 text-sm rounded border disabled:opacity-50 hover:bg-muted"
             >
               Successiva
             </button>

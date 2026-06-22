@@ -39,12 +39,12 @@ internal sealed class GetGamesWithKbQueryHandler
                 && !link.IsDeleted
             join pdf in _db.PdfDocuments
                 on link.TargetEntityId equals pdf.Id
-            join game in _db.Games
+            join game in _db.SharedGames
                 on lib.SharedGameId equals game.Id
             select new
             {
                 game.Id,
-                game.Name,
+                game.Title,
                 game.ImageUrl,
                 PdfDocumentId = pdf.Id,
                 pdf.FileName,
@@ -55,7 +55,7 @@ internal sealed class GetGamesWithKbQueryHandler
 
         // Group by game, map to DTOs
         var result = rows
-            .GroupBy(x => new { x.Id, x.Name, x.ImageUrl })
+            .GroupBy(x => new { x.Id, x.Title, x.ImageUrl })
             .Select(g =>
             {
                 var rulebooks = g.Select(r => new RulebookDto(
@@ -72,7 +72,7 @@ internal sealed class GetGamesWithKbQueryHandler
 
                 return new GameWithKbDto(
                     g.Key.Id,
-                    g.Key.Name,
+                    g.Key.Title,
                     g.Key.ImageUrl,
                     overallStatus,
                     rulebooks);

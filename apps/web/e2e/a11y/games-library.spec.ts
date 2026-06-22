@@ -1,12 +1,18 @@
 /**
- * Accessibility tests — /games?tab=library (Wave B.1, Issue #633).
+ * Accessibility tests — games tab of /library (Wave B.1, Issue #633, updated #1566).
+ *
+ * The games surface was previously at /games?tab=library and is now reached by
+ * navigating to /library and clicking the games tab (LibraryHub initializes
+ * to the 'all' tab via useState and does NOT read ?tab= from the URL). The tab
+ * is selected via `data-tab-key="games"` to remain locale-agnostic — the label
+ * is "Giochi" in IT and "Games" in EN; Playwright CI runs default to en-US.
  *
  * Combines:
  *   - axe-core WCAG 2.1 AA scan su default state (results grid populato)
  *   - axe-core WCAG 2.1 AA scan su filtered-empty state (per coprire
  *     CTA + empty-state markup, sezioni che non sono presenti su default)
- *   - prefers-reduced-motion contract: AC-8 spec §5 — verifica che la
- *     route `/games?tab=library` rispetti l'override globale CSS
+ *   - prefers-reduced-motion contract: AC-8 spec §5 — verifica che il
+ *     games tab di `/library` rispetti l'override globale CSS
  *     (`globals.css:388-396` riduce `transition-duration` a 0.01ms !important
  *     sotto `@media (prefers-reduced-motion: reduce)`). Le card hover
  *     transitions su MeepleCard GridCard (default 350ms) devono collassare
@@ -33,17 +39,30 @@ import { seedCookieConsent } from '../_helpers/seedCookieConsent';
 
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
-async function gotoLibraryReady(page: Page, search = '?tab=library'): Promise<void> {
+async function gotoLibraryReady(page: Page, search = '', waitForGrid = true): Promise<void> {
   await seedAuthSession(page);
   await seedCookieConsent(page);
   await mockAuthEndpoints(page);
-  await page.goto(`/games${search}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('[data-slot="games-library-view"]', { timeout: 30_000 });
+  // LibraryHub does not read ?tab= from the URL; navigate to /library then click
+  // the Giochi tab. The optional `search` (e.g. 'state=filtered-empty') is applied
+  // to the /library URL so the dev/visual-test ?state= override still works.
+  const url = search ? `/library?${search.replace(/^\?/, '')}` : '/library';
+  await page.goto(url, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('[data-slot="library-hub-v2"]', { timeout: 30_000 });
+  // Locale-agnostic selector — see games.smoke.spec.ts (#1640) for rationale.
+  await page.locator('[role="tab"][data-tab-key="games"]').click();
+  if (waitForGrid) {
+    await page.waitForSelector('[data-slot="games-results-grid"]', { timeout: 30_000 });
+  } else {
+    await page.waitForSelector('[data-slot="games-empty-state"]', { timeout: 30_000 });
+  }
 }
 
 test.describe('Games library — accessibility @a11y', () => {
+  // Re-activated 2026-05-30 via #1714: useLibrary now short-circuits to a
+  // 12-entry fixture when STATE_OVERRIDE_ENABLED && ?fixture=default.
   test('axe-core: no WCAG 2.1 AA violations on default state', async ({ page }) => {
-    await gotoLibraryReady(page);
+    await gotoLibraryReady(page, 'fixture=default');
     // Default state expects results grid populato — wait for first card.
     await expect(page.locator('[data-slot="games-results-grid-link"]').first()).toBeVisible();
 
@@ -62,7 +81,7 @@ test.describe('Games library — accessibility @a11y', () => {
   });
 
   test('axe-core: no WCAG 2.1 AA violations on filtered-empty state', async ({ page }) => {
-    await gotoLibraryReady(page, '?tab=library&state=filtered-empty');
+    await gotoLibraryReady(page, 'state=filtered-empty', false);
     // Filtered-empty state expects EmptyState con clearFilters CTA visible.
     await expect(
       page.locator('[data-slot="games-empty-state"][data-kind="filtered-empty"]')
@@ -82,12 +101,13 @@ test.describe('Games library — accessibility @a11y', () => {
     expect(results.violations).toEqual([]);
   });
 
+  // Re-activated 2026-05-30 via #1714: same fix as the test above.
   test('prefers-reduced-motion: card hover transitions collapse to sub-ms', async ({ page }) => {
     // Emulate reduced-motion BEFORE goto so the global CSS rule
     // (globals.css:388-396) applies on first paint. Without this the
     // GridCard `transition-all duration-[350ms]` runs full hover animation.
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await gotoLibraryReady(page);
+    await gotoLibraryReady(page, 'fixture=default');
     await expect(page.locator('[data-slot="games-results-grid-link"]').first()).toBeVisible();
 
     // Inspect computed transition-duration on the GridCard element (first child

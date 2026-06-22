@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 'use client';
 
 /**
@@ -22,7 +23,7 @@ function MediaItemCard({ item }: { item: MediaItem }) {
   if (item.type === 'photo') {
     return (
       <div
-        className="group relative aspect-square overflow-hidden rounded-lg bg-slate-100 cursor-pointer"
+        className="group relative aspect-square overflow-hidden rounded-lg bg-muted cursor-pointer"
         data-testid={`media-photo-${item.id}`}
       >
         {item.thumbnailUrl || item.url ? (
@@ -37,7 +38,7 @@ function MediaItemCard({ item }: { item: MediaItem }) {
           </div>
         )}
         {item.turnNumber != null && (
-          <span className="absolute top-1.5 right-1.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] font-bold text-white font-nunito">
+          <span className="absolute top-1.5 right-1.5 rounded-full bg-foreground/60 px-1.5 py-0.5 text-[10px] font-bold text-white font-nunito">
             T{item.turnNumber}
           </span>
         )}
@@ -51,22 +52,22 @@ function MediaItemCard({ item }: { item: MediaItem }) {
   // Note card
   return (
     <div
-      className="rounded-lg border border-slate-200/60 bg-white/50 p-3 space-y-1.5"
+      className="rounded-lg border border-border/60 bg-card/50 p-3 space-y-1.5"
       data-testid={`media-note-${item.id}`}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <FileText className="h-3.5 w-3.5 text-indigo-500" />
-          <span className="font-nunito text-xs font-semibold text-slate-700">
+          <span className="font-nunito text-xs font-semibold text-foreground">
             {item.title || 'Note'}
           </span>
         </div>
         {item.turnNumber != null && (
-          <span className="text-[10px] text-slate-400 font-nunito">Turn {item.turnNumber}</span>
+          <span className="text-[10px] text-muted-foreground font-nunito">Turn {item.turnNumber}</span>
         )}
       </div>
-      <p className="font-nunito text-xs text-slate-600 line-clamp-3">{item.content || ''}</p>
-      <p className="font-nunito text-[10px] text-slate-400">
+      <p className="font-nunito text-xs text-muted-foreground line-clamp-3">{item.content || ''}</p>
+      <p className="font-nunito text-[10px] text-muted-foreground">
         {item.createdBy && `${item.createdBy} · `}
         {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
       </p>
@@ -79,7 +80,7 @@ export function MediaTab({ data }: MediaTabProps) {
 
   if (!data) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
         <Camera className="h-10 w-10 mb-2 opacity-50" />
         <p className="font-nunito text-sm">No media yet</p>
         <p className="font-nunito text-xs mt-1">Photos and notes will appear here</p>
@@ -101,7 +102,7 @@ export function MediaTab({ data }: MediaTabProps) {
       {/* Filter bar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Filter className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+          <Filter className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
           <div className="flex gap-1">
             {(['all', 'photos', 'notes'] as const).map(f => (
               <button
@@ -111,7 +112,7 @@ export function MediaTab({ data }: MediaTabProps) {
                   'rounded-full px-2.5 py-0.5 text-xs font-nunito font-medium transition-colors',
                   filter === f
                     ? 'bg-indigo-100 text-indigo-700'
-                    : 'text-slate-500 hover:bg-slate-100'
+                    : 'text-muted-foreground hover:bg-muted'
                 )}
                 data-testid={`media-filter-${f}`}
               >
@@ -130,7 +131,7 @@ export function MediaTab({ data }: MediaTabProps) {
       {photos.length > 0 && (filter === 'all' || filter === 'photos') && (
         <div>
           {filter === 'all' && (
-            <h3 className="font-quicksand text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+            <h3 className="font-quicksand text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
               Photos
             </h3>
           )}
@@ -146,7 +147,7 @@ export function MediaTab({ data }: MediaTabProps) {
       {notes.length > 0 && (filter === 'all' || filter === 'notes') && (
         <div>
           {filter === 'all' && (
-            <h3 className="font-quicksand text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+            <h3 className="font-quicksand text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
               Notes
             </h3>
           )}
@@ -160,7 +161,7 @@ export function MediaTab({ data }: MediaTabProps) {
 
       {/* Empty filtered state */}
       {filteredItems.length === 0 && (
-        <div className="flex flex-col items-center py-8 text-slate-400">
+        <div className="flex flex-col items-center py-8 text-muted-foreground">
           <p className="font-nunito text-sm">
             No {filter === 'photos' ? 'photos' : filter === 'notes' ? 'notes' : 'media'} found
           </p>

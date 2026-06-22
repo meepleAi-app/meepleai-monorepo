@@ -37,7 +37,7 @@ const registerMessages: Record<string, string> = {
   'auth.meter.strong': 'Ottima',
   'validation.emailRequired': 'Email is required',
   'validation.invalidEmail': 'Invalid email',
-  'validation.passwordMin': 'Password must be at least 8 characters',
+  'validation.passwordMin': 'Password must be at least 12 characters',
   'validation.passwordMax': 'Password must be at most 100 characters',
 };
 

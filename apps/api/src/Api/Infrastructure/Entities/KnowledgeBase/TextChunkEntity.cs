@@ -1,10 +1,12 @@
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using System.ComponentModel.DataAnnotations.Schema;
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 
 namespace Api.Infrastructure.Entities;
 
 /// <summary>
 /// Represents a text chunk extracted from a PDF document for hybrid search.
-/// This table mirrors the data stored in Qdrant vector database but enables PostgreSQL full-text search.
+/// This table mirrors the data stored in pgvector vector database but enables PostgreSQL full-text search.
 /// </summary>
 public class TextChunkEntity
 {
@@ -35,12 +37,29 @@ public class TextChunkEntity
     public short Level { get; set; } = 1;
     public string ElementType { get; set; } = "NarrativeText";
 
+    /// <summary>
+    /// #2311 BE-1 — denormalized counter of distinct assistant messages that cited this chunk.
+    /// Forward-looking metric (start-from-0 per DEC-D2): incremented post-SaveChanges by
+    /// <see cref="Api.BoundedContexts.KnowledgeBase.Application.Commands.IncrementChunkUsageCountsCommand"/>
+    /// inside <see cref="Api.BoundedContexts.KnowledgeBase.Application.Commands.ChatWithSessionAgentCommandHandler"/>.
+    /// Surfaced via <see cref="Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunks.KbChunkSummaryDto.UsedInChats"/>.
+    /// </summary>
+    public int UsageCount { get; set; }
+
     // PostgreSQL full-text search vector (automatically maintained by trigger)
     // This column is populated by the tsvector_update_text_chunks trigger
     [Column("search_vector")]
     public string? SearchVector { get; set; }
 
+    // Phase D — RAG role-aware: multi-label role classification per chunk
+    public GameBookRole RoleTags { get; private set; } = GameBookRole.None;
+
+    public void AssignRoleTags(GameBookRole tags)
+    {
+        RoleTags = tags;
+    }
+
     // Navigation properties
-    public GameEntity Game { get; set; } = default!;
+    public SharedGameEntity Game { get; set; } = default!;
     public PdfDocumentEntity PdfDocument { get; set; } = default!;
 }

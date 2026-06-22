@@ -19,6 +19,8 @@ internal class TempSessionEntityConfiguration : IEntityTypeConfiguration<TempSes
         builder.Property(e => e.ExpiresAt).IsRequired();
         builder.Property(e => e.IsUsed).IsRequired().HasDefaultValue(false);
         builder.Property(e => e.UsedAt);
+        // Auth security fixes (hotfix 2026-05-06): per-temp-session 2FA failure counter (C6 fix)
+        builder.Property(e => e.FailedAttemptCount).IsRequired().HasDefaultValue(0);
         builder.HasOne(e => e.User)
             .WithMany()
             .HasForeignKey(e => e.UserId)

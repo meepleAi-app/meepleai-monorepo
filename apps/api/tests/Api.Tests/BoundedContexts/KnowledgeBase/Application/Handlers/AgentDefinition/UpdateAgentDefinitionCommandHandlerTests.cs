@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
+using Api.SharedKernel.Infrastructure.Persistence;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -20,14 +21,16 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.AgentDefi
 public sealed class UpdateAgentDefinitionCommandHandlerTests
 {
     private readonly Mock<IAgentDefinitionRepository> _mockRepository;
+    private readonly Mock<IUnitOfWork> _mockUnitOfWork;
     private readonly Mock<ILogger<UpdateAgentDefinitionCommandHandler>> _mockLogger;
     private readonly UpdateAgentDefinitionCommandHandler _handler;
 
     public UpdateAgentDefinitionCommandHandlerTests()
     {
         _mockRepository = new Mock<IAgentDefinitionRepository>();
+        _mockUnitOfWork = new Mock<IUnitOfWork>();
         _mockLogger = new Mock<ILogger<UpdateAgentDefinitionCommandHandler>>();
-        _handler = new UpdateAgentDefinitionCommandHandler(_mockRepository.Object, _mockLogger.Object);
+        _handler = new UpdateAgentDefinitionCommandHandler(_mockRepository.Object, _mockUnitOfWork.Object, _mockLogger.Object);
     }
 
     [Fact]

@@ -18,7 +18,7 @@ import { ExternalLinkIcon } from 'lucide-react';
 import Link from 'next/link';
 
 import { CookieConsentBanner } from '@/components/legal/CookieConsentBanner';
-import { MeepleLogo } from '@/components/ui/meeple/meeple-logo';
+import { BrandMark } from '@/components/ui/brand';
 import { cn } from '@/lib/utils';
 
 export interface PublicFooterProps {
@@ -75,7 +75,7 @@ export function PublicFooter({
             {/* Column 1: About */}
             <div>
               <div className="mb-4">
-                <MeepleLogo variant="full" size="sm" />
+                <BrandMark variant="full" size="sm" />
               </div>
               <p className="text-sm text-muted-foreground mb-4">
                 Il tuo assistente AI per le regole dei giochi da tavolo. Impara, gioca e scopri

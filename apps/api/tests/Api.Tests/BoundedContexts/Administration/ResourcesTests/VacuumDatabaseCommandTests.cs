@@ -1,12 +1,12 @@
 using Api.BoundedContexts.Administration.Application.Commands.Resources;
 using Api.Infrastructure;
+using Api.Tests.Infrastructure;
 using FluentAssertions;
 using FluentValidation.TestHelper;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using Testcontainers.PostgreSql;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.Administration.ResourcesTests;
@@ -15,40 +15,40 @@ namespace Api.Tests.BoundedContexts.Administration.ResourcesTests;
 /// Integration tests for VACUUM database command.
 /// Issue #3695: Resources Monitoring - VACUUM database action
 /// </summary>
-[Collection("Sequential")]
+[Collection("SharedTestcontainers")]
 [Trait("Category", "Integration")]
 [Trait("BoundedContext", "Administration")]
 [Trait("Epic", "3685")]
 public class VacuumDatabaseCommandTests : IAsyncLifetime
 {
-    private PostgreSqlContainer? _postgres;
+    private readonly SharedTestcontainersFixture _fixture;
     private ServiceProvider? _serviceProvider;
+
+    public VacuumDatabaseCommandTests(SharedTestcontainersFixture fixture)
+    {
+        _fixture = fixture;
+    }
 
     public async ValueTask InitializeAsync()
     {
-        _postgres = new PostgreSqlBuilder()
-            .WithImage("pgvector/pgvector:pg16")
-            .WithDatabase("test_db")
-            .WithUsername("test_user")
-            .WithPassword("test_pass")
-            .Build();
-
-        await _postgres.StartAsync().ConfigureAwait(false);
+        // Issue #1628 follow-up: use the shared Postgres container with an isolated database
+        // instead of spinning up a dedicated container per test class. VACUUM is per-database.
+        var dbName = $"test_vacuum_{Guid.NewGuid():N}";
+        var connStr = await _fixture.CreateIsolatedDatabaseAsync(dbName).ConfigureAwait(false);
 
         var services = new ServiceCollection();
         services.AddDbContext<MeepleAiDbContext>(options =>
-            options.UseNpgsql(_postgres.GetConnectionString(), o => o.UseVector()));
+            options.UseNpgsql(connStr, o => o.UseVector()));
 
-        // Mock dependencies required by MeepleAiDbContext
         services.AddScoped<IMediator>(_ => Mock.Of<IMediator>());
         services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector>(_ => Mock.Of<Api.SharedKernel.Application.Services.IDomainEventCollector>());
 
         _serviceProvider = services.BuildServiceProvider();
 
-        // Initialize database schema
+        // Apply migrations on the freshly-created empty database (pre-flight Q2).
         using var scope = _serviceProvider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await db.Database.EnsureCreatedAsync().ConfigureAwait(false);
+        await db.Database.MigrateAsync().ConfigureAwait(false);
     }
 
     public async ValueTask DisposeAsync()
@@ -56,11 +56,6 @@ public class VacuumDatabaseCommandTests : IAsyncLifetime
         if (_serviceProvider != null)
         {
             await _serviceProvider.DisposeAsync().ConfigureAwait(false);
-        }
-
-        if (_postgres != null)
-        {
-            await _postgres.DisposeAsync().ConfigureAwait(false);
         }
     }
 

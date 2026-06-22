@@ -1,4 +1,6 @@
+using Api.BoundedContexts.Administration.Application.Behaviors;
 using Api.Infrastructure;
+using Api.Infrastructure.Persistence;
 using Api.SharedKernel.Application.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -39,11 +41,17 @@ internal static class IntegrationWebApplicationFactory
     public static WebApplicationFactory<Program> Create(
         string connectionString,
         string? redisConnectionString = null,
-        Dictionary<string, string?>? extraConfig = null)
+        Dictionary<string, string?>? extraConfig = null,
+        bool enableRateLimiting = false)
     {
-        // Must be set before factory creation — middleware checks these env vars directly
-        Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", "true");
-        Environment.SetEnvironmentVariable("RateLimiting__Enabled", "false");
+        // Must be set before factory creation — middleware checks these env vars directly.
+        // Tests that need rate limiting (e.g., AdminProviderProbe rate-limit verification)
+        // pass enableRateLimiting:true to opt out of the global disable.
+        if (!enableRateLimiting)
+        {
+            Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", "true");
+            Environment.SetEnvironmentVariable("RateLimiting__Enabled", "false");
+        }
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Testing");
 
         return new WebApplicationFactory<Program>()
@@ -74,9 +82,6 @@ internal static class IntegrationWebApplicationFactory
                         ["BoardGameGeek:Enabled"] = "false",
                         ["Embedding:Enabled"] = "false",
                         ["Embedding:Url"] = "http://localhost:8000",
-                        ["Qdrant:Enabled"] = "false",
-                        ["Qdrant:Host"] = "localhost",
-                        ["Qdrant:Port"] = "6333",
                         // Redis
                         ["Redis:Enabled"] = redisConnectionString != null ? "true" : "false",
                         ["Redis:ConnectionString"] = redisConnectionString ?? "localhost:6379",
@@ -84,10 +89,10 @@ internal static class IntegrationWebApplicationFactory
                         ["Authentication:SessionManagement:SessionExpirationDays"] = "30",
                         // Admin seeding
                         ["Admin:Email"] = "admin@test.local",
-                        ["Admin:Password"] = "TestAdmin123!",
+                        ["Admin:Password"] = "TestUnusualAdm123!",
                         ["Admin:DisplayName"] = "Test Admin",
                         ["INITIAL_ADMIN_EMAIL"] = "admin@test.local",
-                        ["INITIAL_ADMIN_PASSWORD"] = "TestAdmin123!",
+                        ["INITIAL_ADMIN_PASSWORD"] = "TestUnusualAdm123!",
                         ["INITIAL_ADMIN_DISPLAY_NAME"] = "Test Admin",
                         // Observability
                         ["Observability:Enabled"] = "false",
@@ -127,6 +132,17 @@ internal static class IntegrationWebApplicationFactory
 
                     services.AddScoped<IDomainEventCollector, DomainEventCollector>();
 
+                    // SP5 Admin Security S1 T3: register the audit snapshot sink + interceptor so that
+                    // AuditLoggingBehavior can resolve ScopedAuditSnapshotSink in HTTP-pipeline integration
+                    // tests. RemoveAll guards against double-registration when the prod path already
+                    // registered them (the "Testing" env guard in AddDatabaseServices skips prod DI).
+                    services.RemoveAll<ScopedAuditSnapshotSink>();
+                    services.RemoveAll<IAuditSnapshotSink>();
+                    services.RemoveAll<AuditingSaveChangesInterceptor>();
+                    services.AddScoped<ScopedAuditSnapshotSink>();
+                    services.AddScoped<IAuditSnapshotSink>(sp => sp.GetRequiredService<ScopedAuditSnapshotSink>());
+                    services.AddScoped<AuditingSaveChangesInterceptor>();
+
                     services.AddDbContext<MeepleAiDbContext>((serviceProvider, options) =>
                     {
                         var configuration = serviceProvider.GetRequiredService<IConfiguration>();
@@ -137,6 +153,11 @@ internal static class IntegrationWebApplicationFactory
                         options.EnableSensitiveDataLogging();
                         options.ConfigureWarnings(warnings =>
                             warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+                        // Issue #1628: align with production (PERF-06, InfrastructureServiceExtensions.cs:162)
+                        // so silent-write bugs (writers that mutate without AsTracking/Update) surface here.
+                        options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+                        // SP5 Admin Security S1 T3: attach the audit interceptor for HTTP integration tests.
+                        options.AddInterceptors(serviceProvider.GetRequiredService<AuditingSaveChangesInterceptor>());
                     });
                 });
 
@@ -201,6 +222,8 @@ internal sealed class TestHybridCacheService : Api.Services.IHybridCacheService
     public Task<int> RemoveByTagAsync(string tag, CancellationToken ct = default) => Task.FromResult(0);
 
     public Task<int> RemoveByTagsAsync(string[] tags, CancellationToken ct = default) => Task.FromResult(0);
+
+    public Task<int> RemoveByTagAcrossReplicasAsync(string tag, CancellationToken ct = default) => Task.FromResult(0);
 
     public Task<Api.Services.HybridCacheStats> GetStatsAsync(CancellationToken ct = default)
         => Task.FromResult(new Api.Services.HybridCacheStats());

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.BoundedContexts.GameManagement.Domain.Exceptions;
 using Api.SharedKernel.Domain.Entities;
 
 namespace Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
@@ -25,6 +26,22 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     public GameNightStatus Status { get; private set; }
     public DateTimeOffset? Reminder24hSentAt { get; private set; }
     public DateTimeOffset? Reminder1hSentAt { get; private set; }
+
+    // RSVP deadline — ADR-074 (#2383 follow-up)
+    /// <summary>
+    /// Optional cutoff after which RSVP submission is rejected by the validator.
+    /// Set by the organiser via <see cref="SetRsvpDeadline"/>. Per ADR-074 Option C
+    /// (lazy validation-time closure check + nullable closed-at timestamp).
+    /// </summary>
+    public DateTimeOffset? RsvpDeadline { get; private set; }
+
+    /// <summary>
+    /// Timestamp at which RSVPs were closed (either by deadline expiry observed at
+    /// validation time, by Hangfire cleanup job, or by manual organiser closure).
+    /// Once set, no further RSVPs are accepted regardless of <see cref="RsvpDeadline"/>.
+    /// </summary>
+    public DateTimeOffset? RsvpClosedAt { get; private set; }
+
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset? UpdatedAt { get; private set; }
     public IReadOnlyList<GameNightRsvp> Rsvps => _rsvps.AsReadOnly();
@@ -318,6 +335,55 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Sets the RSVP deadline. Organiser-only operation. Per ADR-074 Option C,
+    /// the deadline is consulted at validation time (lazy check); a Hangfire job
+    /// observes expired deadlines and calls <see cref="MarkRsvpClosed"/> for audit.
+    /// Pass null to clear (e.g. organiser extends an indefinitely open RSVP window).
+    /// Throws if RSVP is already closed.
+    /// </summary>
+    public void SetRsvpDeadline(DateTimeOffset? deadline)
+    {
+        if (RsvpClosedAt.HasValue)
+            throw new InvalidOperationException(
+                "Cannot change RSVP deadline after RSVP has been closed");
+
+        if (deadline.HasValue && deadline.Value <= DateTimeOffset.UtcNow)
+            throw new ArgumentException(
+                "RSVP deadline must be in the future",
+                nameof(deadline));
+
+        RsvpDeadline = deadline;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Marks RSVPs as closed. Internal entry point — callable only by the repository
+    /// (during Hangfire cleanup job dispatch) or by validator on first-read deadline
+    /// expiry observation, per ADR-074 Option C. Idempotent: subsequent calls are no-ops.
+    /// </summary>
+    internal void MarkRsvpClosed()
+    {
+        if (RsvpClosedAt.HasValue)
+            return; // idempotent
+
+        RsvpClosedAt = DateTimeOffset.UtcNow;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Returns true if RSVPs are no longer accepted (either explicit close, or
+    /// deadline passed). Validator should call this before persisting a new RSVP.
+    /// </summary>
+    public bool IsRsvpClosed(DateTimeOffset utcNow)
+    {
+        if (RsvpClosedAt.HasValue)
+            return true;
+        if (RsvpDeadline.HasValue && utcNow >= RsvpDeadline.Value)
+            return true;
+        return false;
+    }
+
+    /// <summary>
     /// Internal method to restore RSVPs list from persistence.
     /// </summary>
     internal void RestoreRsvps(IEnumerable<GameNightRsvp> rsvps)
@@ -362,10 +428,18 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
 
     /// <summary>
     /// Starts the first pending session.
+    /// Enforces invariante #10 (GameNight/Session domain model): a GameNightEvent
+    /// can have at most 1 GameNightSession in InProgress at a time.
     /// </summary>
+    /// <exception cref="MaxLiveSessionsExceededException">
+    /// Thrown when another session is already in InProgress status on this event.
+    /// </exception>
     public void StartCurrentSession()
     {
         ThrowIfCorrupted();
+
+        if (_sessions.Any(s => s.Status == GameNightSessionStatus.InProgress))
+            throw new MaxLiveSessionsExceededException(Id);
 
         var session = _sessions.FirstOrDefault(s => s.Status == GameNightSessionStatus.Pending)
             ?? throw new InvalidOperationException("No pending session to start.");
@@ -404,6 +478,46 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
         UpdatedAt = DateTimeOffset.UtcNow;
 
         AddDomainEvent(new NightFinalizedEvent(Id, OrganizerId, Title, _sessions.Count));
+    }
+
+    /// <summary>
+    /// Invariante #15 (Asse A semantic alignment, WP2 T3): trigger transition
+    /// Published → InProgress when the first Session in the game night becomes live.
+    ///
+    /// <para>Behavior:
+    /// <list type="bullet">
+    ///   <item>Published → InProgress (typical first-session-started case).</item>
+    ///   <item>InProgress → no-op (idempotent: AdHoc events start as InProgress, or
+    ///         subsequent sessions started after the first don't transition again).</item>
+    ///   <item>Other status (Draft/Cancelled/Completed/Corrupted) → throws.</item>
+    /// </list></para>
+    ///
+    /// <para>Called by <c>GameManagement.SessionStartedHandler</c>
+    /// (MediatR <c>INotificationHandler</c>) when a
+    /// <see cref="Api.BoundedContexts.SessionTracking.Domain.Events.SessionStartedDomainEvent"/>
+    /// is raised by <c>Session.OpenLiveMode()</c>.</para>
+    /// </summary>
+    /// <param name="sessionId">The Session aggregate ID that started (informational for events/logs).</param>
+    /// <exception cref="InvalidOperationException">When status is Draft/Cancelled/Completed/Corrupted.</exception>
+    public void HandleFirstSessionStarted(Guid sessionId)
+    {
+        ThrowIfCorrupted();
+
+        if (Status == GameNightStatus.Published)
+        {
+            Status = GameNightStatus.InProgress;
+            UpdatedAt = DateTimeOffset.UtcNow;
+            return;
+        }
+
+        if (Status == GameNightStatus.InProgress)
+        {
+            return; // idempotent
+        }
+
+        throw new InvalidOperationException(
+            $"Cannot start session {sessionId} on GameNightEvent {Id}: status is {Status}. " +
+            $"Invariant #15 requires Published or InProgress status.");
     }
 
     /// <summary>

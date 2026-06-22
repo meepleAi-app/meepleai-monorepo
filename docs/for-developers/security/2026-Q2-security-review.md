@@ -665,7 +665,7 @@ Q3 review pickup items:
 
 ## Appendix C — References
 
-- [SECURITY.md](../../SECURITY.md) — Top-level security policy
+- [SECURITY.md](../../../SECURITY.md) — Top-level security policy
 - [security-review-template.md](./security-review-template.md) — v2 template (this report's source)
 - [audit-trail.md](./audit-trail.md) — Audit log system documentation
 - [oauth-security.md](./oauth-security.md) — OAuth implementation security

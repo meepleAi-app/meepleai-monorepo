@@ -17,7 +17,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { SharedGameDetailV2 } from '@/lib/api/shared-games';
+import type { SharedGameDetail } from '@/lib/api/shared-games';
 
 vi.mock('@/lib/api/shared-games', async orig => {
   const actual = await orig<typeof import('@/lib/api/shared-games')>();
@@ -43,7 +43,7 @@ function createWrapper() {
 
 const SAMPLE_ID = '11111111-1111-1111-1111-111111111111';
 
-const SAMPLE_DETAIL: SharedGameDetailV2 = {
+const SAMPLE_DETAIL: SharedGameDetail = {
   id: SAMPLE_ID,
   bggId: null,
   title: 'Catan',
@@ -109,6 +109,30 @@ describe('useSharedGameDetail (Wave A.4)', () => {
     expect(result.current.data).toBeUndefined();
   });
 
+  // #2309 DEC-B — lazy fetch on tab-active
+  it('does not fetch when enabled=false (external gate, lazy lazy on tab-active)', () => {
+    renderHook(() => useSharedGameDetail({ id: SAMPLE_ID, enabled: false }), {
+      wrapper: createWrapper(),
+    });
+    expect(mockGet).not.toHaveBeenCalled();
+  });
+
+  it('fetches when enabled=true is passed explicitly (default behaviour preserved)', async () => {
+    mockGet.mockResolvedValue(SAMPLE_DETAIL);
+    const { result } = renderHook(() => useSharedGameDetail({ id: SAMPLE_ID, enabled: true }), {
+      wrapper: createWrapper(),
+    });
+    await waitFor(() => expect(result.current.data).toBeDefined());
+    expect(mockGet).toHaveBeenCalledTimes(1);
+  });
+
+  it('honors id-empty gate even when enabled=true (ANDed precedence)', () => {
+    renderHook(() => useSharedGameDetail({ id: '', enabled: true }), {
+      wrapper: createWrapper(),
+    });
+    expect(mockGet).not.toHaveBeenCalled();
+  });
+
   it('exposes refetch that triggers a new fetch', async () => {
     mockGet.mockResolvedValue(SAMPLE_DETAIL);
     const { result } = renderHook(() => useSharedGameDetail({ id: SAMPLE_ID }), {
@@ -136,7 +160,7 @@ describe('useSharedGameDetail (Wave A.4)', () => {
 
   describe('FSM status (Issue #615)', () => {
     it('derives status="default" when data has nested entities', () => {
-      const populated: SharedGameDetailV2 = {
+      const populated: SharedGameDetail = {
         ...SAMPLE_DETAIL,
         toolkitsCount: 2,
         agentsCount: 0,
@@ -199,9 +223,9 @@ describe('useSharedGameDetail (Wave A.4)', () => {
 
     it('derives status="loading" when no data + no error + first fetch in flight', async () => {
       // Slow promise so loading state is observable
-      let resolveFn: (v: SharedGameDetailV2) => void = () => {};
+      let resolveFn: (v: SharedGameDetail) => void = () => {};
       mockGet.mockReturnValue(
-        new Promise<SharedGameDetailV2>(resolve => {
+        new Promise<SharedGameDetail>(resolve => {
           resolveFn = resolve;
         })
       );

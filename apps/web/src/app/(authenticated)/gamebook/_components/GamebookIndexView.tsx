@@ -5,7 +5,7 @@
  * (`?fixture=`) and renders the `/gamebook` index 6-cell FSM
  * (loading | error | empty | default | quota-soft | quota-hard).
  *
- * v2 brownfield route — pre-Phase-B the path `/gamebook` had no index page
+ * brownfield route — pre-Phase-B the path `/gamebook` had no index page
  * (only `/gamebook/[gameId]` and `/gamebook/upload` existed). This is the
  * first index orchestrator landing under that prefix.
  *
@@ -43,24 +43,31 @@
 
 'use client';
 
-import { useCallback, useMemo, type ReactElement } from 'react';
+import { useCallback, useMemo, useState, type ReactElement } from 'react';
 
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
+  CheckoutModal,
   EmptyGamebooks,
   GamebookCard,
   GamebookCardSkeleton,
   GamebookHero,
   QuotaWidget,
+  SoftWarningCredits,
+  type CheckoutLabels,
   type EmptyGamebooksLabels,
   type GamebookCardLabels,
   type GamebookHeroLabels,
   type QuotaWidgetLabels,
   type QuotaWidgetVariant,
-} from '@/components/v2/gamebook';
+  type SoftWarningCreditsLabels,
+} from '@/components/features/gamebook';
+import { HubPageContainer } from '@/components/layout/PageContainer';
 import { useGamebooks, useQuotaInfo } from '@/hooks/queries/useGamebooks';
 import { useTranslation } from '@/hooks/useTranslation';
+import type { CheckoutPackId } from '@/lib/gamebook/checkout-packs';
+import { useSoftWarningDismissal } from '@/lib/gamebook/hooks/useSoftWarningDismissal';
 import {
   deriveGamebookIndexState,
   gamebookIndexFixtures,
@@ -76,6 +83,86 @@ import {
 // ─── Constants ────────────────────────────────────────────────────────────
 
 const SKELETON_COUNT = 6;
+
+// ─── i18n constants for checkout flow (#953) ──────────────────────────────
+// Inline Italian labels. Future i18n extraction is out-of-scope per spec.
+
+const CHECKOUT_LABELS: CheckoutLabels = {
+  modalTitle: s => `Checkout · passo ${s} di 4`,
+  close: 'Chiudi checkout',
+  stepIndicator: {
+    step1: 'Quota',
+    step2: 'Pacchetto',
+    step3: 'Pagamento',
+    step4: 'Fatto',
+    ariaCurrent: s => `Passo ${s} di 4`,
+  },
+  step1: {
+    heading: 'Quota raggiunta',
+    subheading: 'Hai tradotto 50 paragrafi questo mese. La quota gratuita si resetta il 1° giugno.',
+    quotaLabel: 'Quota mensile',
+    resetIn: 'Reset tra 12 giorni',
+    primaryCta: '💎 Acquista 100 crediti (€5)',
+    secondaryCta: '⏸️ Continua senza traduzione',
+    explainLink: 'Cosa sono i crediti? →',
+  },
+  step2: {
+    heading: 'Scegli il tuo pacchetto',
+    subheading: 'Più paragrafi = miglior prezzo. I crediti non scadono.',
+    disclaimer:
+      'I crediti non scadono. La quota free di 50 paragrafi si resetta automaticamente ogni mese.',
+    totalLabel: 'Totale',
+    continueCta: 'Continua →',
+    packBadges: { popular: 'Più popolare', save: 'Risparmia 30%' },
+    packNames: { starter: 'Starter', mid: 'Mid', pro: 'Pro' },
+    packCreditsSuffix: 'crediti',
+    perParagraphSuffix: '/ paragrafo',
+  },
+  step3: {
+    heading: 'Pagamento',
+    summary: (name, credits, eur) => `Pacchetto ${name} · ${credits} crediti · ${eur}`,
+    fieldLabels: {
+      card: 'Numero carta',
+      expiry: 'Scadenza',
+      cvc: 'CVC',
+      name: 'Nome sulla carta',
+      country: 'Paese',
+    },
+    trustChips: ['SSL secure', 'Stripe powered', 'Politica rimborso 14gg'],
+    payCta: eur => `Paga ${eur}`,
+    loadingCta: 'Elaborazione…',
+    backLink: '← Torna ai pacchetti',
+    failedBanner: {
+      title: 'Pagamento rifiutato',
+      detail: 'Carta scaduta · prova un altro metodo o riscrivi i dati.',
+    },
+    recapLabels: { credits: '100 crediti', vat: 'IVA inclusa', total: 'Totale' },
+  },
+  step4: {
+    title: 'Crediti aggiunti!',
+    subtitle: credits => `${credits} crediti aggiunti al tuo account. Buon gioco!`,
+    recapLabels: {
+      previous: 'Crediti precedenti',
+      purchased: 'Crediti acquistati',
+      balance: 'Bilancio crediti',
+      freeQuotaTitle: 'Quota free questo mese',
+      resetIn: 'Si resetta il 1° giugno',
+      rate: '1 paragrafo = 1 credito',
+    },
+    backToGameCta: '🎯 Torna al gioco →',
+    receiptLink: email =>
+      email ? `Vedi ricevuta · email a ${email}` : 'Vedi ricevuta · email inviata',
+  },
+};
+
+const SOFT_WARNING_LABELS: SoftWarningCreditsLabels = {
+  title: 'Quasi alla fine della quota',
+  subtitle: (used, total, remaining) =>
+    `Hai usato ${used}/${total} paragrafi gratis questo mese. Restano ${remaining}.`,
+  upgradeCta: 'Acquista crediti ora',
+  dismissCta: 'Ok, continua',
+  close: 'Chiudi avviso',
+};
 
 // ─── Component ────────────────────────────────────────────────────────────
 
@@ -171,16 +258,71 @@ export function GamebookIndexView(): ReactElement {
       const gamebooks = extractGamebooks(fsmCell);
       const gamebook = gamebooks.find(g => g.id === gamebookId);
       if (gamebook && gamebook.status === 'ready') {
-        router.push(`/gamebook/${gamebook.gameId}`);
+        // Navigate to the existing play route under /library/[gameId]/play.
+        // The /gamebook/[id] route was never implemented (issue #865) — the play
+        // surface lives under /library/games for historical reasons (PR #794+).
+        router.push(`/library/${gamebook.gameId}/play`);
       }
     },
     [fsmCell, router]
   );
 
+  // ── Checkout modal state (#953) ────────────────────────────────────────
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkoutInitialStep, setCheckoutInitialStep] = useState<1 | 2>(2);
+
+  // Derived quota for soft warning dismissal hook. Use the fsmCell's quota if
+  // available (kinds: empty | default | quota-soft | quota-hard); otherwise
+  // default to (0, 0) which yields shouldShow=false defensively.
+  const fsmQuota = useMemo<QuotaInfo | null>(() => {
+    if (
+      fsmCell.kind === 'empty' ||
+      fsmCell.kind === 'default' ||
+      fsmCell.kind === 'quota-soft' ||
+      fsmCell.kind === 'quota-hard'
+    ) {
+      return fsmCell.quota;
+    }
+    return null;
+  }, [fsmCell]);
+
+  const { shouldShow: showSoftWarning, dismiss: dismissSoftWarning } = useSoftWarningDismissal(
+    fsmQuota?.used ?? 0,
+    fsmQuota?.total ?? 0
+  );
+
   const handleUpgradeClick = useCallback(() => {
-    // Out-of-scope Phase B: wire to billing portal in follow-up.
-    // For now, no-op — keeps the CTA visible without leaking a stub URL.
+    // hard variant: usage is 100%, open at Step 1 (announcement)
+    // soft variant: usage is 90%-99%, skip announcement, open at pack picker
+    const isHard = fsmQuota !== null && fsmQuota.used >= fsmQuota.total;
+    setCheckoutInitialStep(isHard ? 1 : 2);
+    setCheckoutOpen(true);
+  }, [fsmQuota]);
+
+  const openCheckoutFromSoftWarning = useCallback(() => {
+    dismissSoftWarning();
+    setCheckoutInitialStep(2);
+    setCheckoutOpen(true);
+  }, [dismissSoftWarning]);
+
+  const handlePurchaseSuccess = useCallback((_packId: CheckoutPackId, _creditsAdded: number) => {
+    // MVP: no real persistence (visual-only mockup). Future PR will
+    // invalidate the quota query here when the real billing endpoint
+    // lands. Underscore prefix signals intentional unused parameters.
   }, []);
+
+  // Format resetDate from ISO to human-readable Italian ("1 giugno").
+  const formattedResetDate = useMemo(() => {
+    const iso = fsmQuota?.resetDate;
+    if (!iso) return '1° del mese prossimo';
+    try {
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return '1° del mese prossimo';
+      return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'long' }).format(d);
+    } catch {
+      return '1° del mese prossimo';
+    }
+  }, [fsmQuota?.resetDate]);
 
   const handleRetry = useCallback(() => {
     void gamebooksQuery.refetch?.();
@@ -271,7 +413,11 @@ export function GamebookIndexView(): ReactElement {
   // Cell: loading
   if (fsmCell.kind === 'loading') {
     return (
-      <div data-slot="gamebook-index-view" data-ui-state="loading" className="flex flex-col">
+      <HubPageContainer
+        data-slot="gamebook-index-view"
+        data-ui-state="loading"
+        className="flex-col p-0"
+      >
         <GamebookHero
           totalGamebooks={0}
           totalSessions={0}
@@ -283,20 +429,24 @@ export function GamebookIndexView(): ReactElement {
           role="status"
           aria-label={t('gamebook.index.loading.label')}
           aria-live="polite"
-          className="mx-auto grid w-full max-w-[1280px] grid-cols-1 gap-4 px-4 py-4 sm:grid-cols-2 sm:px-8 lg:grid-cols-3"
+          className="grid w-full grid-cols-1 gap-4 py-4 sm:grid-cols-2 lg:grid-cols-3"
         >
           {Array.from({ length: SKELETON_COUNT }).map((_, idx) => (
             <GamebookCardSkeleton key={`gb-skeleton-${idx}`} />
           ))}
         </div>
-      </div>
+      </HubPageContainer>
     );
   }
 
   // Cell: error
   if (fsmCell.kind === 'error') {
     return (
-      <div data-slot="gamebook-index-view" data-ui-state="error" className="flex flex-col">
+      <HubPageContainer
+        data-slot="gamebook-index-view"
+        data-ui-state="error"
+        className="flex-col p-0"
+      >
         <GamebookHero
           totalGamebooks={0}
           totalSessions={0}
@@ -307,10 +457,10 @@ export function GamebookIndexView(): ReactElement {
         <div
           role="alert"
           data-slot="gamebook-index-error"
-          className="mx-auto flex max-w-[1280px] flex-col items-center gap-4 px-4 py-12 text-center sm:px-8"
+          className="flex flex-col items-center gap-4 py-12 text-center"
         >
           <p className="text-lg font-semibold text-foreground">{t('gamebook.index.error.title')}</p>
-          <p className="text-sm text-slate-700">{t('gamebook.index.error.description')}</p>
+          <p className="text-sm text-foreground">{t('gamebook.index.error.description')}</p>
           <button
             type="button"
             onClick={handleRetry}
@@ -320,14 +470,18 @@ export function GamebookIndexView(): ReactElement {
             {t('gamebook.index.error.retry')}
           </button>
         </div>
-      </div>
+      </HubPageContainer>
     );
   }
 
   // Cell: empty (quota always present in this cell per FSM contract)
   if (fsmCell.kind === 'empty') {
     return (
-      <div data-slot="gamebook-index-view" data-ui-state="empty" className="flex flex-col">
+      <HubPageContainer
+        data-slot="gamebook-index-view"
+        data-ui-state="empty"
+        className="flex-col p-0"
+      >
         <GamebookHero
           totalGamebooks={0}
           totalSessions={0}
@@ -335,7 +489,7 @@ export function GamebookIndexView(): ReactElement {
           onAddManualClick={handleAddManualClick}
           labels={heroLabels}
         />
-        <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-6 px-4 py-6 sm:px-8">
+        <div className="flex w-full flex-col gap-6 py-6">
           <QuotaWidget
             quota={fsmCell.quota}
             variant="default"
@@ -344,7 +498,7 @@ export function GamebookIndexView(): ReactElement {
           />
           <EmptyGamebooks onAddManualClick={handleAddManualClick} labels={emptyLabels} />
         </div>
-      </div>
+      </HubPageContainer>
     );
   }
 
@@ -355,7 +509,11 @@ export function GamebookIndexView(): ReactElement {
     fsmCell.kind === 'quota-hard' ? 'hard' : fsmCell.kind === 'quota-soft' ? 'soft' : 'default';
 
   return (
-    <div data-slot="gamebook-index-view" data-ui-state={fsmCell.kind} className="flex flex-col">
+    <HubPageContainer
+      data-slot="gamebook-index-view"
+      data-ui-state={fsmCell.kind}
+      className="flex-col p-0"
+    >
       <GamebookHero
         totalGamebooks={kpiCounts.totalGamebooks}
         totalSessions={kpiCounts.totalSessions}
@@ -384,7 +542,49 @@ export function GamebookIndexView(): ReactElement {
           ))}
         </div>
       </div>
-    </div>
+
+      {/* SP6 Iter 1.B — soft warning (#953). Mobile toast + desktop modal. */}
+      {showSoftWarning && (
+        <>
+          <div className="sm:hidden">
+            <SoftWarningCredits
+              used={quota.used}
+              total={quota.total}
+              variant="toast-mobile"
+              labels={SOFT_WARNING_LABELS}
+              onUpgrade={openCheckoutFromSoftWarning}
+              onDismiss={dismissSoftWarning}
+            />
+          </div>
+          <div className="hidden sm:block">
+            <SoftWarningCredits
+              used={quota.used}
+              total={quota.total}
+              variant="modal-desktop"
+              labels={SOFT_WARNING_LABELS}
+              onUpgrade={openCheckoutFromSoftWarning}
+              onDismiss={dismissSoftWarning}
+            />
+          </div>
+        </>
+      )}
+
+      {/* SP6 Iter 1.B — checkout modal (#953). Visual-only, no real Stripe. */}
+      <CheckoutModal
+        open={checkoutOpen}
+        initialStep={checkoutInitialStep}
+        quota={{
+          used: quota.used,
+          total: quota.total,
+          resetDate: formattedResetDate,
+          previousCredits: 0,
+        }}
+        userEmail=""
+        labels={CHECKOUT_LABELS}
+        onClose={() => setCheckoutOpen(false)}
+        onPurchaseSuccess={handlePurchaseSuccess}
+      />
+    </HubPageContainer>
   );
 }
 

@@ -21,7 +21,7 @@ export const confidenceBadgeStory: ShowcaseStory<ConfidenceBadgeShowcaseProps> =
     return (
       <div className="flex flex-col gap-4 items-start">
         <ConfidenceBadge confidence={confidence} showTooltip={showTooltip} />
-        <div className="text-sm text-muted-foreground bg-white/80 px-3 py-2 rounded-lg border border-border/40">
+        <div className="text-sm text-muted-foreground bg-card/80 px-3 py-2 rounded-lg border border-border/40">
           Score: <strong>{confidence}</strong>
           {confidence >= 80 ? ' → High' : confidence >= 50 ? ' → Medium' : ' → Low'}
         </div>

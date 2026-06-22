@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 /**
  * MeeplePlayerStateCard Component
  * Migrated from PlayerStateCard to use MeepleCard MtG visual styling.

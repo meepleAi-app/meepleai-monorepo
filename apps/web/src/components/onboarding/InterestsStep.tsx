@@ -6,6 +6,10 @@
  *
  * Checkbox grid with 9 board game category options.
  * Selections can be used for personalized recommendations.
+ *
+ * F25 #1976 (audit 2026-06-07): all hardcoded English copy moved to
+ * `pages.onboarding.interests.*` i18n keys (it.json + en.json) so the
+ * wizard renders in Italian for the IT-default user base.
  */
 
 import { FormEvent, useState } from 'react';
@@ -13,6 +17,7 @@ import { FormEvent, useState } from 'react';
 import { toast } from 'sonner';
 
 import { AccessibleButton } from '@/components/accessible';
+import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -21,19 +26,25 @@ export interface InterestsStepProps {
   onSkip: () => void;
 }
 
+/**
+ * Category ids are kept stable (backend contract) but the rendered label
+ * resolves through `pages.onboarding.interests.categories.{id}` at render
+ * time, so adding a new locale doesn't touch this component.
+ */
 const INTEREST_CATEGORIES = [
-  { id: 'strategy', label: 'Strategy', icon: '\u265F' },
-  { id: 'party', label: 'Party', icon: '\u{1F389}' },
-  { id: 'cooperative', label: 'Cooperative', icon: '\u{1F91D}' },
-  { id: 'family', label: 'Family', icon: '\u{1F3E0}' },
-  { id: 'thematic', label: 'Thematic', icon: '\u{1F3AD}' },
-  { id: 'abstract', label: 'Abstract', icon: '\u25B3' },
-  { id: 'card', label: 'Card', icon: '\u{1F0CF}' },
-  { id: 'dice', label: 'Dice', icon: '\u{1F3B2}' },
-  { id: 'miniatures', label: 'Miniatures', icon: '\u2694\uFE0F' },
+  { id: 'strategy', icon: '♟' },
+  { id: 'party', icon: '\u{1F389}' },
+  { id: 'cooperative', icon: '\u{1F91D}' },
+  { id: 'family', icon: '\u{1F3E0}' },
+  { id: 'thematic', icon: '\u{1F3AD}' },
+  { id: 'abstract', icon: '△' },
+  { id: 'card', icon: '\u{1F0CF}' },
+  { id: 'dice', icon: '\u{1F3B2}' },
+  { id: 'miniatures', icon: '⚔️' },
 ] as const;
 
 export function InterestsStep({ onComplete, onSkip }: InterestsStepProps) {
+  const { t } = useTranslation();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
 
@@ -61,7 +72,7 @@ export function InterestsStep({ onComplete, onSkip }: InterestsStepProps) {
     try {
       // Issue #323: Save interests to backend
       await api.auth.saveInterests(Array.from(selected));
-      toast.success(`${selected.size} interests saved!`);
+      toast.success(t('pages.onboarding.interests.toast.saved', { count: selected.size }));
       onComplete();
     } catch {
       // Non-critical step, proceed anyway
@@ -74,16 +85,23 @@ export function InterestsStep({ onComplete, onSkip }: InterestsStepProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-quicksand text-lg font-semibold text-slate-900">What Do You Enjoy?</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Select categories that interest you. This helps us personalize your experience.
+        <h2 className="font-quicksand text-lg font-semibold text-foreground">
+          {t('pages.onboarding.interests.heading')}
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {t('pages.onboarding.interests.subtitle')}
         </p>
       </div>
 
       <form noValidate onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-3 gap-3" role="group" aria-label="Game category interests">
+        <div
+          className="grid grid-cols-3 gap-3"
+          role="group"
+          aria-label={t('pages.onboarding.interests.groupLabel')}
+        >
           {INTEREST_CATEGORIES.map(cat => {
             const isSelected = selected.has(cat.id);
+            const label = t(`pages.onboarding.interests.categories.${cat.id}`);
             return (
               <button
                 key={cat.id}
@@ -96,41 +114,50 @@ export function InterestsStep({ onComplete, onSkip }: InterestsStepProps) {
                   'hover:border-amber-300 hover:bg-amber-50/50',
                   isSelected
                     ? 'border-amber-500 bg-amber-50 text-amber-900'
-                    : 'border-slate-200 bg-white text-slate-700'
+                    : 'border-border bg-card text-foreground'
                 )}
                 data-testid={`interest-${cat.id}`}
               >
                 <span className="text-2xl" aria-hidden="true">
                   {cat.icon}
                 </span>
-                <span className="text-sm font-medium">{cat.label}</span>
+                <span className="text-sm font-medium">{label}</span>
               </button>
             );
           })}
         </div>
 
         {selected.size > 0 && (
-          <p className="text-center text-sm text-slate-500">{selected.size} selected</p>
+          <p className="text-center text-sm text-muted-foreground">
+            {t('pages.onboarding.interests.selectedCount', { count: selected.size })}
+          </p>
         )}
 
+        {/*
+          F27 #1974 (audit 2026-06-07): collapsed the duplicate skip surface.
+          Pre-fix there were two skip affordances on the same row — the
+          primary submit (relabeled "Skip" when nothing was selected) plus a
+          gray text link "Skip for now". The audit flagged this as decision
+          friction: both buttons did the exact same thing (`onSkip`) and the
+          gray link is the conventional secondary affordance, but the orange
+          primary already covers the "no selection → skip" path. We keep the
+          primary submit (it ramps to "Continue" once the user selects
+          anything) and drop the link. `interests-skip` testid is removed
+          along with it; tests should rely on the primary submit's "Skip"
+          label in the empty-selection path.
+        */}
         <div className="flex items-center gap-3">
           <AccessibleButton
             type="submit"
             variant="primary"
             className="flex-1"
             isLoading={isLoading}
-            loadingText="Saving..."
+            loadingText={t('pages.onboarding.interests.loading')}
           >
-            {selected.size > 0 ? 'Continue' : 'Skip'}
+            {selected.size > 0
+              ? t('pages.onboarding.interests.cta.continue')
+              : t('pages.onboarding.interests.cta.skip')}
           </AccessibleButton>
-          <button
-            type="button"
-            onClick={onSkip}
-            className="text-sm text-slate-500 hover:text-slate-700"
-            data-testid="interests-skip"
-          >
-            Skip for now
-          </button>
         </div>
       </form>
     </div>

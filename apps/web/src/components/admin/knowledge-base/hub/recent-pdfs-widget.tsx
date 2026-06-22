@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin KB chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13b admin scope (see token-bridge-map.md for --admin-* decision deferred to DS-15). */
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
@@ -42,7 +43,7 @@ export function RecentPdfsWidget() {
   const pdfs = data?.items ?? [];
 
   return (
-    <Card className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60">
+    <Card className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between text-base">
           <div className="flex items-center gap-2">
@@ -78,11 +79,11 @@ export function RecentPdfsWidget() {
         {pdfs.map(pdf => (
           <div
             key={pdf.id}
-            className="flex items-center gap-3 p-2.5 rounded-lg bg-slate-50/50 dark:bg-zinc-900/50 border border-slate-200/30 dark:border-zinc-700/30"
+            className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/50 dark:bg-zinc-900/50 border border-border/30 dark:border-zinc-700/30"
           >
             <FileTextIcon className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-slate-900 dark:text-zinc-100 truncate">
+              <p className="text-sm font-medium text-foreground dark:text-zinc-100 truncate">
                 {pdf.fileName}
               </p>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">

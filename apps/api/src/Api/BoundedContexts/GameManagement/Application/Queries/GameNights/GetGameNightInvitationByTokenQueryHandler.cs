@@ -3,7 +3,9 @@ using Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.SharedKernel.Application;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Domain.ValueObjects;
 using Microsoft.Extensions.Caching.Hybrid;
 
 namespace Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
@@ -34,20 +36,20 @@ internal sealed class GetGameNightInvitationByTokenQueryHandler
     private readonly IGameNightInvitationRepository _invitationRepository;
     private readonly IGameNightEventRepository _gameNightRepository;
     private readonly IUserRepository _userRepository;
-    private readonly IGameRepository _gameRepository;
+    private readonly IGameCoreDataProvider _gameCoreData;
     private readonly HybridCache _cache;
 
     public GetGameNightInvitationByTokenQueryHandler(
         IGameNightInvitationRepository invitationRepository,
         IGameNightEventRepository gameNightRepository,
         IUserRepository userRepository,
-        IGameRepository gameRepository,
+        IGameCoreDataProvider gameCoreData,
         HybridCache cache)
     {
         _invitationRepository = invitationRepository ?? throw new ArgumentNullException(nameof(invitationRepository));
         _gameNightRepository = gameNightRepository ?? throw new ArgumentNullException(nameof(gameNightRepository));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
-        _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
+        _gameCoreData = gameCoreData ?? throw new ArgumentNullException(nameof(gameCoreData));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
     }
 
@@ -99,13 +101,13 @@ internal sealed class GetGameNightInvitationByTokenQueryHandler
 
         if (primaryGameId.HasValue)
         {
-            var primaryGame = await _gameRepository
-                .GetByIdAsync(primaryGameId.Value, cancellationToken)
+            var primaryGame = await _gameCoreData
+                .GetCoreDataAsync(GameRef.Shared(primaryGameId.Value), cancellationToken)
                 .ConfigureAwait(false);
 
             if (primaryGame is not null)
             {
-                primaryGameName = primaryGame.Title.Value;
+                primaryGameName = primaryGame.Title;
                 primaryGameImageUrl = primaryGame.ImageUrl;
             }
         }
@@ -136,7 +138,8 @@ internal sealed class GetGameNightInvitationByTokenQueryHandler
             PrimaryGameId: primaryGameId,
             PrimaryGameName: primaryGameName,
             PrimaryGameImageUrl: primaryGameImageUrl,
-            AlreadyRespondedAs: MapAlreadyRespondedAs(invitation.Status));
+            AlreadyRespondedAs: MapAlreadyRespondedAs(invitation.Status),
+            RespondedByName: invitation.RespondedByName);
     }
 
     private static string? MapAlreadyRespondedAs(GameNightInvitationStatus status) => status switch

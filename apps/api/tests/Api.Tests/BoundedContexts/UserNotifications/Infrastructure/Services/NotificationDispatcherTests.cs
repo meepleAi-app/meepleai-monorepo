@@ -23,6 +23,18 @@ public class NotificationDispatcherTests
     private readonly Mock<ILogger<NotificationDispatcher>> _loggerMock = new();
     private readonly SlackNotificationConfiguration _slackConfig = new();
 
+    public NotificationDispatcherTests()
+    {
+        // Default to the "won the race" path so existing happy-path tests don't have
+        // to opt in; tests that exercise the lost-race / dedup branch override this
+        // with .ReturnsAsync(false). Mirrors LedgerTrackingServiceTests's default.
+        // Lives here (not in CreateSut) so per-test Setup overrides win — Moq applies
+        // the last matching Setup, and xUnit instantiates this class per test.
+        _notificationRepoMock
+            .Setup(r => r.AddAndCommitAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+    }
+
     private NotificationDispatcher CreateSut()
     {
         return new NotificationDispatcher(
@@ -60,7 +72,7 @@ public class NotificationDispatcherTests
 
         // Assert
         _notificationRepoMock.Verify(
-            r => r.AddAsync(It.Is<Notification>(n =>
+            r => r.AddAndCommitAsync(It.Is<Notification>(n =>
                 n.UserId == message.RecipientUserId &&
                 n.Type == message.Type &&
                 n.Link == "/test/path"),
@@ -175,7 +187,7 @@ public class NotificationDispatcherTests
 
         // Assert — in-app notification always created
         _notificationRepoMock.Verify(
-            r => r.AddAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()),
+            r => r.AddAndCommitAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()),
             Times.Once);
 
         // Email queue item should be added (null preferences defaults to email enabled)
@@ -290,9 +302,9 @@ public class NotificationDispatcherTests
 
         Notification? captured = null;
         _notificationRepoMock
-            .Setup(r => r.AddAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.AddAndCommitAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()))
             .Callback<Notification, CancellationToken>((n, _) => captured = n)
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(true);
 
         var sut = CreateSut();
 
@@ -322,9 +334,9 @@ public class NotificationDispatcherTests
 
         Notification? captured = null;
         _notificationRepoMock
-            .Setup(r => r.AddAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.AddAndCommitAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()))
             .Callback<Notification, CancellationToken>((n, _) => captured = n)
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(true);
 
         var sut = CreateSut();
 
@@ -387,5 +399,217 @@ public class NotificationDispatcherTests
         // Assert — no SlackUser channel items for admin types
         capturedItems?.Any(i => i.ChannelType == NotificationChannelType.SlackUser)
             .Should().BeFalse($"admin type '{typeValue}' should not be delivered via Slack DM");
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Issue #1937 / CF-1 — SourceEventId idempotency
+    // ─────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task DispatchAsync_WithSourceEventId_ShortCircuits_WhenAlreadyDispatched()
+    {
+        // Arrange — repo reports an existing notification for this source event id
+        var sourceEventId = Guid.NewGuid();
+        var message = CreateMessage() with { SourceEventId = sourceEventId };
+
+        _notificationRepoMock
+            .Setup(r => r.ExistsBySourceEventIdAsync(It.IsAny<Guid>(), sourceEventId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.DispatchAsync(message);
+
+        // Assert — no AddAndCommitAsync, no AddRangeAsync (dispatcher short-circuited)
+        _notificationRepoMock.Verify(
+            r => r.AddAndCommitAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _queueRepoMock.Verify(
+            r => r.AddRangeAsync(It.IsAny<IEnumerable<NotificationQueueItem>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_WithSourceEventId_PropagatesIdToNotification_WhenNotYetDispatched()
+    {
+        // Arrange — repo reports no prior notification for this source event id
+        var sourceEventId = Guid.NewGuid();
+        var message = CreateMessage() with { SourceEventId = sourceEventId };
+
+        _notificationRepoMock
+            .Setup(r => r.ExistsBySourceEventIdAsync(It.IsAny<Guid>(), sourceEventId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.DispatchAsync(message);
+
+        // Assert — Notification persisted with SourceEventId = the one from the message
+        _notificationRepoMock.Verify(
+            r => r.AddAndCommitAsync(
+                It.Is<Notification>(n => n.SourceEventId == sourceEventId),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_WithSourceEventId_PropagatesIdToQueueItems_WhenNotYetDispatched()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var sourceEventId = Guid.NewGuid();
+        var message = CreateMessage(recipientUserId: userId) with { SourceEventId = sourceEventId };
+
+        _notificationRepoMock
+            .Setup(r => r.ExistsBySourceEventIdAsync(It.IsAny<Guid>(), sourceEventId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _prefsRepoMock
+            .Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NotificationPreferences(userId));
+
+        IEnumerable<NotificationQueueItem>? capturedItems = null;
+        _queueRepoMock
+            .Setup(r => r.AddRangeAsync(It.IsAny<IEnumerable<NotificationQueueItem>>(), It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<NotificationQueueItem>, CancellationToken>((items, _) => capturedItems = items)
+            .Returns(Task.CompletedTask);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.DispatchAsync(message);
+
+        // Assert — every persisted queue item carries the SourceEventId from the message
+        capturedItems.Should().NotBeNull();
+        capturedItems!.Should().NotBeEmpty();
+        capturedItems!.All(i => i.SourceEventId == sourceEventId).Should().BeTrue(
+            "every queue item must carry the source event id so the composite UNIQUE constraint can dedupe at the DB level");
+    }
+
+    [Fact]
+    public async Task DispatchAsync_WithoutSourceEventId_FallsBackToLegacyBehavior_NoDedupLookup()
+    {
+        // Arrange — message has no SourceEventId; repo should NOT be queried for ExistsBy
+        var message = CreateMessage();
+        var sut = CreateSut();
+
+        // Act
+        await sut.DispatchAsync(message);
+
+        // Assert — ExistsBySourceEventIdAsync never invoked; AddAsync fires once
+        _notificationRepoMock.Verify(
+            r => r.ExistsBySourceEventIdAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _notificationRepoMock.Verify(
+            r => r.AddAndCommitAsync(
+                It.Is<Notification>(n => n.SourceEventId == null),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    // ----- Race-window dedup (#2383 P1) ---------------------------------------
+    //
+    // Issue #2383 / ADR-068/072 follow-up: when the pre-check
+    // ExistsBySourceEventIdAsync returns false but a concurrent caller wins the
+    // INSERT race, EF SaveChangesAsync surfaces a Postgres 23505 unique-violation.
+    // The dispatcher MUST detect this signal and swallow it (dedup is the intent),
+    // not let the exception bubble up through the MediatR notification pipeline
+    // where 10 of 25 INotificationHandler implementations have no catch-all.
+    //
+    // The fix routes the in-app insert through the repository's atomic
+    // AddAndCommitAsync entry point (same pattern as
+    // LedgerEntryRepository.AddAndCommitAsync, CF-2 #1938). It returns:
+    //   - true  → row committed; proceed with channel queue items
+    //   - false → race detected; log Information, skip queue items, return cleanly
+
+    [Fact]
+    public async Task DispatchAsync_WhenAddAndCommitWinsRace_ProcessesChannelQueueItems()
+    {
+        // Arrange — happy path: AddAndCommitAsync returns true (we committed first)
+        var userId = Guid.NewGuid();
+        var sourceEventId = Guid.NewGuid();
+        var message = CreateMessage(recipientUserId: userId) with { SourceEventId = sourceEventId };
+
+        _notificationRepoMock
+            .Setup(r => r.ExistsBySourceEventIdAsync(userId, sourceEventId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _notificationRepoMock
+            .Setup(r => r.AddAndCommitAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.DispatchAsync(message);
+
+        // Assert — AddAndCommitAsync called once, queue items added (we won the race)
+        _notificationRepoMock.Verify(
+            r => r.AddAndCommitAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        _queueRepoMock.Verify(
+            r => r.AddRangeAsync(It.IsAny<IEnumerable<NotificationQueueItem>>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_WhenAddAndCommitLosesRace_SwallowsAndSkipsQueueItems()
+    {
+        // Arrange — race-window: pre-check passes, but a concurrent caller commits
+        // first; AddAndCommitAsync detects 23505 internally and returns false.
+        var userId = Guid.NewGuid();
+        var sourceEventId = Guid.NewGuid();
+        var message = CreateMessage(recipientUserId: userId) with { SourceEventId = sourceEventId };
+
+        _notificationRepoMock
+            .Setup(r => r.ExistsBySourceEventIdAsync(userId, sourceEventId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _notificationRepoMock
+            .Setup(r => r.AddAndCommitAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var sut = CreateSut();
+
+        // Act — MUST NOT throw; the lost race is the intended dedup outcome
+        var act = async () => await sut.DispatchAsync(message);
+        await act.Should().NotThrowAsync(
+            "23505 surfacing in the calling MediatR handler is exactly the bug we are fixing");
+
+        // Assert — channel queue items skipped (no notification was committed for this caller)
+        _queueRepoMock.Verify(
+            r => r.AddRangeAsync(It.IsAny<IEnumerable<NotificationQueueItem>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_WhenAddAndCommitLosesRace_LogsDedupReasonAtInformation()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var sourceEventId = Guid.NewGuid();
+        var message = CreateMessage(recipientUserId: userId) with { SourceEventId = sourceEventId };
+
+        _notificationRepoMock
+            .Setup(r => r.ExistsBySourceEventIdAsync(userId, sourceEventId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _notificationRepoMock
+            .Setup(r => r.AddAndCommitAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.DispatchAsync(message);
+
+        // Assert — a single Information-level log entry mentions the race-window
+        // reason so operators can distinguish this from a normal dedup short-circuit.
+        _loggerMock.Verify(
+            l => l.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("race-window")),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 }

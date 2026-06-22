@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 import { Loader2, History } from 'lucide-react';
@@ -42,10 +43,10 @@ export function HistoryTab() {
       )}
 
       {history && history.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-slate-200/60 dark:border-zinc-700/40">
+        <div className="overflow-x-auto rounded-lg border border-border/60 dark:border-zinc-700/40">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200/60 dark:border-zinc-700/40 bg-slate-50/50 dark:bg-zinc-800/50">
+              <tr className="border-b border-border/60 dark:border-zinc-700/40 bg-muted/50 dark:bg-zinc-800/50">
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Timestamp</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Action</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Resource</th>
@@ -57,7 +58,7 @@ export function HistoryTab() {
               {history.map((entry, i) => (
                 <tr
                   key={`${entry.createdAt}-${i}`}
-                  className="border-b border-slate-200/40 dark:border-zinc-700/30 last:border-b-0"
+                  className="border-b border-border/40 dark:border-zinc-700/30 last:border-b-0"
                 >
                   <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
                     {new Date(entry.createdAt).toLocaleString()}

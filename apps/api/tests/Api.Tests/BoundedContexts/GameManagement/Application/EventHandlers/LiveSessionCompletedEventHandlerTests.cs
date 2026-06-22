@@ -16,6 +16,9 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.EventHandlers;
 /// <summary>
 /// Unit tests for LiveSessionCompletedEventHandler.
 /// Issue #4748: Verifies PlayRecord generation from completed live game sessions.
+/// Issue #1534: Audit persistence is now centralised in <c>DomainEventAuditHandler</c> and is covered
+/// by <c>DomainEventAuditHandlerTests</c>; handler-side effects (PlayRecord repository write + logging)
+/// remain under test here.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "GameManagement")]
@@ -80,44 +83,6 @@ public sealed class LiveSessionCompletedEventHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithGameLinkedSession_CreatesAuditLog()
-    {
-        // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var handler = CreateHandler(dbContext);
-
-        var gameId = Guid.NewGuid();
-        var @event = CreateCompletedEvent(gameId: gameId);
-
-        // Act
-        await handler.Handle(@event, CancellationToken.None);
-
-        // Assert - audit log is created by base class
-        var auditLog = dbContext.AuditLogs.FirstOrDefault(a =>
-            a.Action.Contains("LiveSessionCompletedEvent"));
-        auditLog.Should().NotBeNull();
-        auditLog.Details.Should().Contain("LiveSessionCompleted_PlayRecordGenerated");
-    }
-
-    [Fact]
-    public async Task Handle_WithFreeFormSession_CreatesAuditLog()
-    {
-        // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var handler = CreateHandler(dbContext);
-
-        var @event = CreateCompletedEvent(gameId: null); // No game linked
-
-        // Act
-        await handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLog = dbContext.AuditLogs.FirstOrDefault(a =>
-            a.Action.Contains("LiveSessionCompletedEvent"));
-        auditLog.Should().NotBeNull();
-    }
-
-    [Fact]
     public async Task Handle_DoesNotThrow_EvenWhenInternalErrorOccurs()
     {
         // Arrange
@@ -134,34 +99,6 @@ public sealed class LiveSessionCompletedEventHandlerTests
 
         // Assert
         exception.Should().BeNull();
-    }
-
-    [Fact]
-    public async Task Handle_AuditMetadata_ContainsSessionDetails()
-    {
-        // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var handler = CreateHandler(dbContext);
-
-        var sessionId = Guid.NewGuid();
-        var players = new List<CompletedPlayerSnapshot>
-        {
-            new(Guid.NewGuid(), Guid.NewGuid(), "Alice", 10, 1),
-            new(Guid.NewGuid(), null, "Bob", 5, 2),
-            new(Guid.NewGuid(), Guid.NewGuid(), "Charlie", 3, 3)
-        };
-        var @event = CreateCompletedEvent(sessionId: sessionId, players: players);
-
-        // Act
-        await handler.Handle(@event, CancellationToken.None);
-
-        // Assert - audit log details contain expected metadata
-        var auditLog = dbContext.AuditLogs.FirstOrDefault(a =>
-            a.Action.Contains("LiveSessionCompletedEvent"));
-        auditLog.Should().NotBeNull();
-        auditLog.Details.Should().Contain(sessionId.ToString());
-        auditLog.Details.Should().Contain("\"PlayerCount\":3");
-        auditLog.Details.Should().Contain("\"TotalTurns\":5");
     }
 
     [Fact]

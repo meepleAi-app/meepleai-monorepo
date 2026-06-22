@@ -60,14 +60,14 @@ jobs:
       url: https://meepleai.app
     steps:
       - name: Login to GHCR
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4.2.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Rollback Staging via SSH
-        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262  # v1.0.3
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
@@ -90,8 +90,8 @@ jobs:
             export API_IMAGE="${{ env.API_IMAGE }}:${{ inputs.image_tag }}"
             export WEB_IMAGE="${{ env.WEB_IMAGE }}:${{ inputs.image_tag }}"
 
-            # Rollback containers
-            docker compose -f docker-compose.yml -f compose.staging.yml -f compose.staging-traefik.yml \
+            # Rollback containers (post-PR #738 — Traefik decommissioned, edge=CF Tunnel)
+            docker compose -f docker-compose.yml -f compose.staging.yml \
               --profile minimal up -d --no-deps api web
 
             # Health check
@@ -125,14 +125,14 @@ jobs:
       name: production-rollback
     steps:
       - name: Login to GHCR
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4.2.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Rollback Production via SSH
-        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262  # v1.0.3
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
         with:
           host: ${{ secrets.PRODUCTION_HOST }}
           username: ${{ secrets.PRODUCTION_USER }}

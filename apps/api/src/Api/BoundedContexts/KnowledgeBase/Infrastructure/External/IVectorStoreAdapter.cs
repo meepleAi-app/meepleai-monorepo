@@ -49,6 +49,19 @@ internal interface IVectorStoreAdapter
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Performs vector similarity search and returns each result paired with its cosine-similarity
+    /// score.  Additive method — does NOT replace <see cref="SearchAsync"/>.
+    /// Issue #1653: F3-FU-4 — per-document scored similarity-search.
+    /// </summary>
+    Task<List<ScoredEmbedding>> SearchWithScoresAsync(
+        Guid gameId,
+        Vector queryVector,
+        int topK,
+        double minScore,
+        IReadOnlyList<Guid>? documentIds = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Checks if vector data exists for the given game.
     /// </summary>
     Task<bool> CollectionExistsAsync(

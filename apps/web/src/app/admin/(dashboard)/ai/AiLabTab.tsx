@@ -22,28 +22,28 @@ export function AiLabTab() {
           icon={<FlaskConical />}
           label="Agent Playground"
           description="Interactive chat testing with any agent definition"
-          accent="bg-violet-500/10 text-violet-600 dark:text-violet-400"
+          accent="bg-entity-player/12 text-entity-player"
         />
         <AdminHubQuickLink
           href="/admin/agents/debug-chat"
           icon={<MessageSquare />}
           label="Debug Chat"
           description="Send RAG-instrumented queries with full pipeline trace"
-          accent="bg-blue-500/10 text-blue-600 dark:text-blue-400"
+          accent="bg-entity-session/12 text-entity-session"
         />
         <AdminHubQuickLink
           href="/admin/agents/debug"
           icon={<Bug />}
           label="Debug Console"
           description="RAG pipeline debug console with waterfall visualization"
-          accent="bg-rose-500/10 text-rose-600 dark:text-rose-400"
+          accent="bg-entity-event/12 text-entity-event"
         />
         <AdminHubQuickLink
           href="/admin/agents/pipeline"
           icon={<Workflow />}
           label="Pipeline Explorer"
           description="Visual RAG pipeline diagram with step timings"
-          accent="bg-amber-500/10 text-amber-600 dark:text-amber-400"
+          accent="bg-entity-agent/12 text-entity-agent"
         />
       </div>
     </div>

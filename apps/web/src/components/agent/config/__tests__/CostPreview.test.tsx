@@ -287,7 +287,8 @@ describe('CostPreview', () => {
         wrapper: createWrapper(),
       });
 
-      const card = container.querySelector('.border-slate-700');
+      // Low warning uses semantic border (post DS-15: border-slate-700 → border-border)
+      const card = container.querySelector('.border-border');
       expect(card).toBeInTheDocument();
     });
 

@@ -509,7 +509,7 @@ export function EmailTemplatesContent() {
               title="Anteprima email"
               srcDoc={previewHtml}
               sandbox="allow-same-origin"
-              className="border rounded-lg bg-white"
+              className="border rounded-lg bg-card"
               style={{
                 width: previewWidth === 'desktop' ? '100%' : '375px',
                 maxWidth: '100%',

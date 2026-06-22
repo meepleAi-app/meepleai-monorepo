@@ -248,7 +248,7 @@ export function WhiteboardWidget({
           ref={canvasRef}
           width={600}
           height={300}
-          className="w-full cursor-crosshair rounded-md border bg-white"
+          className="w-full cursor-crosshair rounded-md border bg-card"
           style={{ touchAction: 'none' }}
           onPointerDown={startDraw}
           onPointerMove={draw}

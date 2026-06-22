@@ -4,10 +4,13 @@ import { BookPlus, Clock, Users, Star, Brain, CalendarDays } from 'lucide-react'
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
+import { toast } from '@/components/layout/Toast';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/primitives/button';
-import { useAddGameToLibrary } from '@/hooks/queries';
+import { useAddGameToLibrary, useGameInLibraryStatus } from '@/hooks/queries';
+import { useTranslation } from '@/hooks/useTranslation';
 import type { SharedGameDetail } from '@/lib/api/schemas/shared-games.schemas';
+import { useGameTitle } from '@/lib/i18n/use-game-title';
 
 interface GameDiscoverHeroProps {
   game: SharedGameDetail;
@@ -16,11 +19,37 @@ interface GameDiscoverHeroProps {
 export function GameDiscoverHero({ game }: GameDiscoverHeroProps) {
   const router = useRouter();
   const addToLibrary = useAddGameToLibrary();
+  // G1 idempotency · se già in libreria, CTA diventa "Vai al gioco"
+  const { data: status } = useGameInLibraryStatus(game.id);
+  const isInLibrary = status?.inLibrary ?? false;
+
+  // Issue #2339 — viewer-locale title resolution. `game.title` (canonical EN)
+  // remains the source of truth for aria-label fallback per DEC-FE-9.
+  const { value: title, source } = useGameTitle(game);
+  const { t } = useTranslation();
+  const titleAriaLabel =
+    source === 'translation'
+      ? t('common.localizedFromEnglish', { localizedTitle: title, originalTitle: game.title })
+      : undefined;
 
   function handleAddToLibrary() {
+    if (isInLibrary) {
+      router.push(`/library/${game.id}`);
+      return;
+    }
     addToLibrary.mutate(
       { gameId: game.id },
-      { onSuccess: () => router.push(`/library/games/${game.id}`) }
+      {
+        onSuccess: () => {
+          toast.success(`${title} aggiunto alla tua libreria.`);
+          router.push(`/library/${game.id}`);
+        },
+        onError: error => {
+          toast.error(
+            error instanceof Error ? error.message : 'Impossibile aggiungere il gioco. Riprova.'
+          );
+        },
+      }
     );
   }
 
@@ -35,7 +64,7 @@ export function GameDiscoverHero({ game }: GameDiscoverHeroProps) {
           {game.imageUrl ? (
             <Image
               src={game.imageUrl}
-              alt={game.title}
+              alt={title}
               fill
               className="object-cover"
               sizes="(max-width: 640px) 192px, 224px"
@@ -53,8 +82,11 @@ export function GameDiscoverHero({ game }: GameDiscoverHeroProps) {
       <div className="flex flex-1 flex-col gap-4">
         {/* Title + year */}
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            {game.title}
+          <h1
+            className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
+            aria-label={titleAriaLabel}
+          >
+            {title}
           </h1>
           {game.yearPublished > 0 && (
             <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -118,9 +150,14 @@ export function GameDiscoverHero({ game }: GameDiscoverHeroProps) {
             disabled={addToLibrary.isPending}
             size="lg"
             className="gap-2"
+            data-testid="add-to-library-button"
           >
             <BookPlus className="h-4 w-4" />
-            {addToLibrary.isPending ? 'Aggiunta in corso…' : 'Aggiungi alla Libreria'}
+            {addToLibrary.isPending
+              ? 'Aggiunta in corso…'
+              : isInLibrary
+                ? 'Vai al gioco'
+                : 'Aggiungi alla Libreria'}
           </Button>
         </div>
       </div>

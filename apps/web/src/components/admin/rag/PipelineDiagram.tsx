@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin tools chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13d admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 import React from 'react';
@@ -76,7 +77,7 @@ function PipelineNode({ step, isActive, onClick }: PipelineNodeProps): React.JSX
     <div
       className={`
         relative flex min-w-[130px] cursor-pointer flex-col items-center
-        gap-2 rounded-xl border-2 bg-white/90 px-5 py-4
+        gap-2 rounded-xl border-2 bg-card/90 px-5 py-4
         backdrop-blur-md transition-all duration-300
         hover:-translate-y-1 hover:border-primary hover:shadow-lg
         hover:shadow-amber-100/50 dark:bg-zinc-800/90
@@ -84,7 +85,7 @@ function PipelineNode({ step, isActive, onClick }: PipelineNodeProps): React.JSX
         ${
           isActive
             ? 'border-primary bg-amber-100/80 shadow-lg shadow-amber-100/40 dark:bg-amber-900/20 dark:shadow-amber-900/40'
-            : 'border-black/10 dark:border-white/10'
+            : 'border-black/10 dark:border-border'
         }
       `}
       onClick={onClick}
@@ -173,7 +174,7 @@ function LatencyBar({ steps, totalLatency }: LatencyBarProps): React.JSX.Element
       </div>
 
       {/* Bar */}
-      <div className="flex h-2.5 overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
+      <div className="flex h-2.5 overflow-hidden rounded-full bg-foreground/10 dark:bg-card/10">
         {steps.map((step, index) => {
           const percentage = calculatePercentage(step.latencyMs, totalLatency);
           const color = step.color || getDefaultStepColor(percentage);
@@ -199,7 +200,7 @@ function LatencyBar({ steps, totalLatency }: LatencyBarProps): React.JSX.Element
           return (
             <div
               key={index}
-              className="font-mono text-[10px] text-zinc-400 dark:text-zinc-500"
+              className="font-mono text-[10px] text-muted-foreground dark:text-muted-foreground"
               style={{ width: `${percentage}%` }}
             >
               <span className="text-center">

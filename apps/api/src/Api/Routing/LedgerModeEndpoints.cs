@@ -43,7 +43,7 @@ internal static class LedgerModeEndpoints
             var command = new ParseLedgerMessageCommand(
                 SessionId: sessionId,
                 Message: req.Message,
-                UserId: session!.User!.Id
+                UserId: session!.Principal!.Subject.Id
             );
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -85,7 +85,7 @@ internal static class LedgerModeEndpoints
             var command = new ConfirmStateChangeCommand(
                 SessionId: sessionId,
                 StateChanges: req.StateChanges,
-                UserId: session!.User!.Id,
+                UserId: session!.Principal!.Subject.Id,
                 Description: req.Description
             );
 

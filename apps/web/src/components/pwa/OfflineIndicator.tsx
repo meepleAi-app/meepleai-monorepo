@@ -162,7 +162,7 @@ export function OfflineIndicator({
                   variant="ghost"
                   size="sm"
                   onClick={handleSync}
-                  className="h-8 px-2 text-current hover:bg-white/20"
+                  className="h-8 px-2 text-current hover:bg-card/20"
                 >
                   <RefreshCw className="h-4 w-4 mr-1" />
                   Sync

@@ -62,11 +62,33 @@ rotate_logs() {
     log "Rotated maintenance log"
   fi
 
-  # Rotate runner logs
-  local runner_dir="/home/ubuntu/actions-runner"
-  if [ -d "$runner_dir/_diag" ]; then
-    find "$runner_dir/_diag" -name "*.log" -mtime +7 -delete 2>/dev/null || true
-    log "Cleaned runner diagnostic logs older than 7 days"
+  # Rotate runner logs — auto-detect runner_dir
+  # (legacy hardcode was /home/ubuntu/actions-runner; on meepleai-staging the
+  # runner runs as user `deploy`, so the legacy path silently matched nothing
+  # and 14 GB of _diag accumulated unnoticed — see issue #1575).
+  local runner_dir=""
+  for candidate in /home/deploy/actions-runner /home/ubuntu/actions-runner /home/runner/actions-runner; do
+    if [ -d "$candidate/_diag" ]; then
+      runner_dir="$candidate"
+      break
+    fi
+  done
+  if [ -n "$runner_dir" ]; then
+    # Top-level Runner_*.log / Worker_*.log: keep 7 days (audit window).
+    local logs_before
+    logs_before=$(find "$runner_dir/_diag" -maxdepth 1 -name "*.log" -mtime +7 2>/dev/null | wc -l)
+    find "$runner_dir/_diag" -maxdepth 1 -name "*.log" -mtime +7 -delete 2>/dev/null || true
+    # blocks/ + pages/ are per-job streaming buffers — every entry > 1 day old
+    # belongs to a long-finished job (typical job duration: minutes to an hour).
+    # This was the main offender in #1575 (14 GB across 6810 block files).
+    local blocks_before pages_before
+    blocks_before=$(find "$runner_dir/_diag/blocks" -type f -mtime +1 2>/dev/null | wc -l)
+    pages_before=$(find "$runner_dir/_diag/pages" -type f -mtime +1 2>/dev/null | wc -l)
+    find "$runner_dir/_diag/blocks" -type f -mtime +1 -delete 2>/dev/null || true
+    find "$runner_dir/_diag/pages" -type f -mtime +1 -delete 2>/dev/null || true
+    log "Cleaned runner _diag: $runner_dir (top-level logs >7d: $logs_before, blocks >1d: $blocks_before, pages >1d: $pages_before)"
+  else
+    log "WARN: no runner _diag directory found under /home/{deploy,ubuntu,runner}/actions-runner"
   fi
 }
 
@@ -98,8 +120,21 @@ install_cron() {
 # Every 5 min: Health check
 */5 * * * * ${SCRIPT_DIR}/monitor.sh --check >> /dev/null 2>&1 || echo \"[ALERT] Runner unhealthy at \$(date)\" >> /var/log/runner-alerts.log
 "
-  echo "$cron_content" | sudo crontab -u ubuntu -
-  echo "Cron jobs installed. Verify with: crontab -l"
+  # Install cron under the user that actually runs the runner.
+  # Legacy code targeted `ubuntu`; meepleai-staging uses `deploy`.
+  local cron_user=""
+  for u in deploy ubuntu runner; do
+    if id "$u" >/dev/null 2>&1 && [ -d "/home/$u/actions-runner" ]; then
+      cron_user="$u"
+      break
+    fi
+  done
+  if [ -z "$cron_user" ]; then
+    echo "ERROR: no runner user found (looked for deploy, ubuntu, runner)"
+    exit 1
+  fi
+  echo "$cron_content" | sudo crontab -u "$cron_user" -
+  echo "Cron jobs installed for user '$cron_user'. Verify with: sudo crontab -u $cron_user -l"
 }
 
 # Main dispatcher

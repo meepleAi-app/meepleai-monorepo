@@ -18,7 +18,7 @@ import { useSearchParams } from 'next/navigation';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { useTranslation } from '@/hooks/useTranslation';
-import { searchSharedGames, type SharedGameV2 } from '@/lib/api/shared-games';
+import { searchSharedGames, type SharedGame } from '@/lib/api/shared-games';
 
 import { PhotoUploader } from './PhotoUploader';
 
@@ -29,7 +29,7 @@ type Step = 'pick-game' | 'upload';
 // ── Sub-component: game picker ────────────────────────────────────────────────
 
 interface GamePickerProps {
-  onSelect: (game: SharedGameV2) => void;
+  onSelect: (game: SharedGame) => void;
 }
 
 function GamePicker({ onSelect }: GamePickerProps): JSX.Element {
@@ -113,6 +113,7 @@ function GamePicker({ onSelect }: GamePickerProps): JSX.Element {
                 title={game.title}
                 subtitle={game.yearPublished ? String(game.yearPublished) : undefined}
                 imageUrl={game.imageUrl || undefined}
+                headingLevel={2}
               />
             </button>
           ))}
@@ -147,7 +148,7 @@ export function GamebookUploadClient(): JSX.Element {
   const [gameId, setGameId] = useState<string | null>(initialGameId);
   const [gameTitle, setGameTitle] = useState<string | null>(null);
 
-  const handleGameSelect = useCallback((game: SharedGameV2) => {
+  const handleGameSelect = useCallback((game: SharedGame) => {
     setGameId(game.id);
     setGameTitle(game.title);
     setStep('upload');
@@ -168,6 +169,18 @@ export function GamebookUploadClient(): JSX.Element {
   }
 
   // ── Step 2: photo upload ─────────────────────────────────────────────────
+  // Defensive guard: `step === 'upload'` always implies `gameId` is set
+  // (either from URL `initialGameId` or via `handleGameSelect`). This early
+  // return both narrows the type for `<PhotoUploader>` and protects against
+  // any future regression that would invalidate the invariant.
+  if (gameId == null) {
+    return (
+      <div className="space-y-6" data-testid="gamebook-wizard-pick">
+        <GamePicker onSelect={handleGameSelect} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6" data-testid="gamebook-wizard-upload">
       {/* Back + game title */}
@@ -198,7 +211,7 @@ export function GamebookUploadClient(): JSX.Element {
         </p>
       </div>
 
-      <PhotoUploader gameId={gameId!} />
+      <PhotoUploader gameId={gameId} />
     </div>
   );
 }

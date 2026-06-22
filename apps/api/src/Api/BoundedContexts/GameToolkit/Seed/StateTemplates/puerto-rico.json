@@ -1,0 +1,15 @@
+{
+  "ToolkitName": "Puerto Rico",
+  "DiceTools": [],
+  "CounterTools": [],
+  "TimerTools": [],
+  "ScoringTemplate": null,
+  "TurnTemplate": null,
+  "Overrides": {
+    "OverridesTurnOrder": false,
+    "OverridesScoreboard": false,
+    "OverridesDiceSet": false
+  },
+  "Reasoning": "STUB — pending manual curation by domain expert. Puerto Rico is a heavy euro role-selection game (3-5 players, ~120 min). Key mechanics to model: 8 role cards (Settler/Mayor/Builder/Craftsman/Trader/Captain/Prospector + privilege effect for chooser), 6 buildings types, doubloons + colonists + corn/indigo/sugar/tobacco/coffee resources, victory points from buildings + shipped goods. End condition: end-game trigger when colonists/VP exhausted. Use GenerateToolkitFromKbCommand with rulebook PDF as bootstrap helper, then refine.",
+  "ExcludedTools": []
+}

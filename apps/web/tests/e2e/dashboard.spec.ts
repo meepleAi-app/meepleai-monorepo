@@ -1,291 +1,135 @@
 /**
- * Dashboard Page E2E Tests (Issue #1836: PAGE-002)
+ * Dashboard Page E2E Tests — Gaming Hub restyle
  *
- * Test Coverage:
- * - Authentication middleware protection
- * - TanStack Query data fetching
- * - BottomNav active state
- * - Component rendering (Greeting, Recent Games, Chat History, QuickActions)
- * - Loading states
- * - Error states
- * - Responsive design
+ * Spec: docs/for-developers/specs/2026-05-12-dashboard-restyle-design.md
  *
- * @see docs/04-frontend/wireframes-playful-boardroom.md
+ * Coverage:
+ * - Authentication & middleware
+ * - Hero, StatsRow, EntityZones, DiscoverCarousel, ToolkitGrid rendering
+ * - Responsive (mobile/desktop)
+ * - Accessibility (axe light + dark)
  */
 
+import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from '@playwright/test';
 
-test.describe('Dashboard Page', () => {
-  test.beforeEach(async ({ page }) => {
-    // Navigate to homepage (will redirect to dashboard if authenticated)
-    await page.goto('/');
+const AUTH_COOKIE = {
+  name: 'meepleai_session',
+  value: 'mock-session-token',
+  domain: 'localhost',
+  path: '/',
+  httpOnly: true,
+  secure: false,
+  sameSite: 'Lax' as const,
+};
+
+test.describe('Dashboard — Auth & middleware', () => {
+  test('redirects unauthenticated users to /login', async ({ page, context }) => {
+    await context.clearCookies();
+    await page.goto('/dashboard');
+    await expect(page).toHaveURL(/\/login\?from=%2Fdashboard/);
   });
 
-  test.describe('Authentication & Middleware', () => {
-    test('redirects unauthenticated users to login', async ({ page, context }) => {
-      // Clear auth cookies
-      await context.clearCookies();
+  test('allows authenticated access', async ({ page, context }) => {
+    await context.addCookies([AUTH_COOKIE]);
+    await page.goto('/dashboard');
+    await expect(page).toHaveURL('/dashboard');
+  });
+});
 
-      // Navigate to dashboard
-      await page.goto('/dashboard');
-
-      // Should redirect to login with 'from' parameter
-      await expect(page).toHaveURL(/\/login\?from=%2Fdashboard/);
-    });
-
-    test('allows authenticated users to access dashboard', async ({ page, context }) => {
-      // Set mock auth cookie (assumes test user exists)
-      await context.addCookies([
-        {
-          name: 'meepleai_session',
-          value: 'mock-session-token',
-          domain: 'localhost',
-          path: '/',
-          httpOnly: true,
-          secure: false,
-          sameSite: 'Lax',
-        },
-      ]);
-
-      // Navigate to dashboard
-      await page.goto('/dashboard');
-
-      // Should stay on dashboard (no redirect)
-      await expect(page).toHaveURL('/dashboard');
-    });
-
-    test('redirects authenticated users from homepage to dashboard', async ({ page, context }) => {
-      // Set mock auth cookie
-      await context.addCookies([
-        {
-          name: 'meepleai_session',
-          value: 'mock-session-token',
-          domain: 'localhost',
-          path: '/',
-          httpOnly: true,
-          secure: false,
-          sameSite: 'Lax',
-        },
-      ]);
-
-      // Navigate to homepage
-      await page.goto('/');
-
-      // Should redirect to dashboard
-      await expect(page).toHaveURL('/dashboard');
-    });
+test.describe('Dashboard — Component rendering', () => {
+  test.beforeEach(async ({ context }) => {
+    await context.addCookies([AUTH_COOKIE]);
   });
 
-  test.describe('Component Rendering (Authenticated)', () => {
-    test.beforeEach(async ({ context }) => {
-      // Set mock auth cookie for all tests in this group
-      await context.addCookies([
-        {
-          name: 'meepleai_session',
-          value: 'mock-session-token',
-          domain: 'localhost',
-          path: '/',
-          httpOnly: true,
-          secure: false,
-          sameSite: 'Lax',
-        },
-      ]);
-    });
-
-    test('displays greeting section with user name', async ({ page }) => {
-      await page.goto('/dashboard');
-
-      // Wait for TanStack Query to load user data
-      await page.waitForSelector('h1:has-text("Ciao")', { timeout: 5000 });
-
-      // Check greeting exists (time-based, so just check for "Ciao")
-      const greeting = page.locator('h1');
-      await expect(greeting).toContainText(/Buon|Ciao/);
-
-      // Check subtitle exists
-      await expect(page.locator('text=Benvenuto nel tuo dashboard')).toBeVisible();
-    });
-
-    test('displays recent games section', async ({ page }) => {
-      await page.goto('/dashboard');
-
-      // Check section title
-      await expect(page.locator('h2:has-text("Giochi Recenti")')).toBeVisible();
-
-      // Wait for games to load (either games or empty state)
-      await page.waitForSelector(
-        'div[role="button"][aria-label*="Game:"], text=Nessun Gioco Ancora',
-        { timeout: 5000 }
-      );
-
-      // Check "Vedi Tutti" link exists
-      await expect(page.locator('a:has-text("Vedi Tutti")')).toHaveAttribute('href', '/giochi');
-    });
-
-    test('displays chat history section', async ({ page }) => {
-      await page.goto('/dashboard');
-
-      // Check section title
-      await expect(page.locator('h2:has-text("Cronologia Chat")')).toBeVisible();
-
-      // Check placeholder card (MVP)
-      await expect(page.locator('text=Chat Recenti')).toBeVisible();
-      await expect(page.locator('text=Apri Chat')).toBeVisible();
-
-      // Check "Vedi Tutte" link exists
-      await expect(page.locator('a:has-text("Vedi Tutte")')).toHaveAttribute('href', '/chat');
-    });
-
-    test('displays quick actions section', async ({ page }) => {
-      await page.goto('/dashboard');
-
-      // Check section title
-      await expect(page.locator('h2:has-text("Azioni Rapide")')).toBeVisible();
-
-      // Wait for QuickActions component (buttons may load async)
-      await page.waitForSelector('[role="region"][aria-label="Quick actions"]', { timeout: 5000 });
-
-      // QuickActions component should render (default actions)
-      const quickActions = page.locator('[role="region"][aria-label="Quick actions"]');
-      await expect(quickActions).toBeVisible();
-    });
-
-    test('displays BottomNav with dashboard active', async ({ page }) => {
-      await page.goto('/dashboard');
-
-      // Check BottomNav exists (mobile only, but visible in small viewport)
-      const bottomNav = page.locator('nav[aria-label="Primary mobile navigation"]');
-      await expect(bottomNav).toBeVisible();
-
-      // Check dashboard link is active
-      const dashboardLink = bottomNav.locator('a[href="/dashboard"]');
-      await expect(dashboardLink).toHaveAttribute('aria-current', 'page');
-    });
+  test('DashboardHero h1 with user name visible', async ({ page }) => {
+    await page.goto('/dashboard');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(/Ciao,/);
   });
 
-  test.describe('Loading States', () => {
-    test('displays skeleton loaders while fetching data', async ({ page, context }) => {
-      // Set auth cookie
-      await context.addCookies([
-        {
-          name: 'meepleai_session',
-          value: 'mock-session-token',
-          domain: 'localhost',
-          path: '/',
-          httpOnly: true,
-          secure: false,
-          sameSite: 'Lax',
-        },
-      ]);
-
-      // Navigate with network slow-down to catch loading state
-      await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
-
-      // Check for skeleton elements (may be brief, but should exist)
-      // Note: This test may be flaky on fast connections
-      const skeletons = page.locator('[class*="skeleton"]');
-      const skeletonCount = await skeletons.count();
-
-      // If skeletons exist, verify they're visible
-      if (skeletonCount > 0) {
-        await expect(skeletons.first()).toBeVisible();
-      }
-    });
+  test('DashboardStatsRow renders 4 entity-tagged stat cards', async ({ page }) => {
+    await page.goto('/dashboard');
+    const nav = page.getByRole('navigation', { name: 'Statistiche personali' });
+    await expect(nav).toBeVisible();
+    const cards = nav.locator('[data-entity]');
+    await expect(cards).toHaveCount(4);
   });
 
-  test.describe('Responsive Design', () => {
-    test('renders correctly on mobile viewport', async ({ page, context }) => {
-      // Set auth cookie
-      await context.addCookies([
-        {
-          name: 'meepleai_session',
-          value: 'mock-session-token',
-          domain: 'localhost',
-          path: '/',
-          httpOnly: true,
-          secure: false,
-          sameSite: 'Lax',
-        },
-      ]);
-
-      // Set mobile viewport
-      await page.setViewportSize({ width: 375, height: 667 });
-
-      await page.goto('/dashboard');
-
-      // BottomNav should be visible on mobile
-      const bottomNav = page.locator('nav[aria-label="Primary mobile navigation"]');
-      await expect(bottomNav).toBeVisible();
-
-      // Recent games should show 2-column grid
-      const gamesSection = page.locator('section[aria-label="Recent games"]');
-      if (await gamesSection.isVisible()) {
-        const grid = gamesSection.locator('.grid-cols-2');
-        await expect(grid).toBeVisible();
-      }
-    });
-
-    test('renders correctly on desktop viewport', async ({ page, context }) => {
-      // Set auth cookie
-      await context.addCookies([
-        {
-          name: 'meepleai_session',
-          value: 'mock-session-token',
-          domain: 'localhost',
-          path: '/',
-          httpOnly: true,
-          secure: false,
-          sameSite: 'Lax',
-        },
-      ]);
-
-      // Set desktop viewport
-      await page.setViewportSize({ width: 1920, height: 1080 });
-
-      await page.goto('/dashboard');
-
-      // BottomNav should be hidden on desktop (md:hidden)
-      const bottomNav = page.locator('nav[aria-label="Primary mobile navigation"]');
-      await expect(bottomNav).toBeHidden();
-
-      // Recent games should show 3-column grid
-      const gamesSection = page.locator('section[aria-label="Recent games"]');
-      if (await gamesSection.isVisible()) {
-        const grid = gamesSection.locator('.md\\:grid-cols-3');
-        await expect(grid).toBeVisible();
-      }
-    });
+  test('each EntityZone has aria-labelledby on its section', async ({ page }) => {
+    await page.goto('/dashboard');
+    const sections = page.locator('section[aria-labelledby]');
+    await expect(sections.first()).toBeVisible();
+    expect(await sections.count()).toBeGreaterThanOrEqual(4);
   });
 
-  test.describe('Accessibility', () => {
-    test('has proper ARIA labels and semantic HTML', async ({ page, context }) => {
-      // Set auth cookie
-      await context.addCookies([
-        {
-          name: 'meepleai_session',
-          value: 'mock-session-token',
-          domain: 'localhost',
-          path: '/',
-          httpOnly: true,
-          secure: false,
-          sameSite: 'Lax',
-        },
-      ]);
+  test('Sessions zone renders DiscoverCarousel region when sessions exist', async ({ page }) => {
+    await page.goto('/dashboard');
+    const sessionEmpty = page.getByText(/Nessuna sessione/i);
+    if (await sessionEmpty.isVisible()) {
+      // empty state, no carousel expected
+      return;
+    }
+    await expect(page.getByRole('region', { name: /Carosello sessioni/i })).toBeVisible();
+  });
+});
 
-      await page.goto('/dashboard');
+test.describe('Dashboard — Responsive', () => {
+  test.beforeEach(async ({ context }) => {
+    await context.addCookies([AUTH_COOKIE]);
+  });
 
-      // Check ARIA labels
-      await expect(page.locator('section[aria-label="Greeting"]')).toBeVisible();
-      await expect(page.locator('section[aria-label="Recent games"]')).toBeVisible();
-      await expect(page.locator('section[aria-label="Chat history"]')).toBeVisible();
-      await expect(page.locator('section[aria-label="Quick actions"]')).toBeVisible();
+  test('mobile 375x667: stat-row visible', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/dashboard');
+    await expect(page.getByRole('navigation', { name: 'Statistiche personali' })).toBeVisible();
+  });
 
-      // Check heading hierarchy (h1 → h2)
-      const h1 = page.locator('h1');
-      await expect(h1).toHaveCount(1);
+  test('desktop 1280x800: stat-row visible', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/dashboard');
+    await expect(page.getByRole('navigation', { name: 'Statistiche personali' })).toBeVisible();
+  });
+});
 
-      const h2s = page.locator('h2');
-      await expect(h2s).toHaveCount.greaterThanOrEqual(3); // At least 3 sections
+test.describe('Dashboard — Accessibility', () => {
+  test.beforeEach(async ({ context }) => {
+    await context.addCookies([AUTH_COOKIE]);
+  });
+
+  test('axe: light theme has no critical/serious violations', async ({ page }) => {
+    await page.goto('/dashboard');
+    await page.waitForSelector('h1');
+    const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+    const critical = results.violations.filter(v =>
+      ['critical', 'serious'].includes(v.impact ?? '')
+    );
+    expect(critical).toEqual([]);
+  });
+
+  test('axe: dark theme has no critical/serious violations', async ({ page }) => {
+    await page.goto('/dashboard');
+    await page.waitForSelector('h1');
+    await page.evaluate(() => {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.documentElement.classList.add('dark');
     });
+    await page.waitForTimeout(300);
+    const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+    const critical = results.violations.filter(v =>
+      ['critical', 'serious'].includes(v.impact ?? '')
+    );
+    expect(critical).toEqual([]);
+  });
+
+  test('keyboard: Tab traverses focusable controls', async ({ page }) => {
+    await page.goto('/dashboard');
+    await page.waitForSelector('h1');
+    await page.keyboard.press('Tab');
+    const focused1 = await page.evaluate(() => document.activeElement?.tagName);
+    expect(['A', 'BUTTON']).toContain(focused1);
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    const focused3 = await page.evaluate(() => document.activeElement?.tagName);
+    expect(['A', 'BUTTON', 'DIV', 'INPUT']).toContain(focused3);
   });
 });

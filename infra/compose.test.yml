@@ -74,7 +74,6 @@ services:
     build:
       args:
         NEXT_PUBLIC_API_BASE: http://localhost:8080
-        NEXT_PUBLIC_ALPHA_MODE: "false"
     environment:
       NODE_ENV: test
       API_BASE_URL: http://api:8080

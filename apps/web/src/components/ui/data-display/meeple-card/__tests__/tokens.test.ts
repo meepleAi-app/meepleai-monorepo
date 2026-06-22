@@ -72,8 +72,11 @@ describe('entityColors', () => {
     expect(color.l).toMatch(/%$/);
   });
 
-  it('has exactly 9 entity types', () => {
-    expect(Object.keys(entityColors)).toHaveLength(9);
+  it('has exactly 10 entity types', () => {
+    // Updated post Macro 2 sessione 41 (#1948): MeepleEntityType union extended
+    // with 'gameNightEvent' (10th type). See P191 entity-type-union-extension
+    // downstream fanout pattern.
+    expect(Object.keys(entityColors)).toHaveLength(10);
   });
 });
 

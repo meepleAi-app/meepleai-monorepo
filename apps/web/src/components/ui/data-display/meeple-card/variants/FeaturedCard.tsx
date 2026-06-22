@@ -17,6 +17,7 @@ export function FeaturedCard(props: MeepleCardProps) {
   const {
     entity,
     title,
+    id,
     subtitle,
     imageUrl,
     rating,
@@ -28,6 +29,7 @@ export function FeaturedCard(props: MeepleCardProps) {
     showQuickActions,
     onClick,
     className = '',
+    headingLevel,
   } = props;
   const testId = props['data-testid'];
 
@@ -45,7 +47,7 @@ export function FeaturedCard(props: MeepleCardProps) {
     >
       <AccentBorder entity={entity} />
       <div className="relative">
-        <Cover entity={entity} variant="featured" imageUrl={imageUrl} alt={title} />
+        <Cover entity={entity} variant="featured" imageUrl={imageUrl} alt={title} gameId={id} />
         {/* Top-left badge stack — see GridCard for rationale */}
         <div
           className="absolute left-2.5 top-2 z-10 flex flex-col items-start gap-1"
@@ -58,12 +60,17 @@ export function FeaturedCard(props: MeepleCardProps) {
       </div>
       <div className="flex flex-1 flex-col gap-1 px-4 py-3">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-[var(--font-quicksand)] text-[1.1rem] font-bold leading-tight text-[var(--mc-text-primary)]">
-            {title}
-          </h3>
+          {(() => {
+            const HeadingTag = `h${headingLevel ?? 3}` as 'h2' | 'h3' | 'h4';
+            return (
+              <HeadingTag className="font-[var(--font-quicksand)] text-[1.1rem] font-bold leading-tight text-[var(--mc-text-primary)]">
+                {title}
+              </HeadingTag>
+            );
+          })()}
           {badge && (
             <span
-              className="shrink-0 rounded-full border border-[var(--mc-border)] bg-black/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--mc-text-primary)] dark:bg-white/15"
+              className="shrink-0 rounded-full border border-[var(--mc-border)] bg-foreground/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--mc-text-primary)] dark:bg-card/15"
               data-slot="badge"
             >
               {badge}

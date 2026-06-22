@@ -4,6 +4,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { GameDetailsDrawer } from '../GameDetailsDrawer';
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    replace: vi.fn(),
+    push: vi.fn(),
+    refresh: vi.fn(),
+  }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 vi.mock('@/hooks/queries/useLibrary', () => ({
   useLibraryGameDetail: () => ({ data: null, isLoading: false, isError: false }),
 }));
@@ -35,9 +44,10 @@ describe('GameDetailsDrawer', () => {
 
   it('switches tabs when clicked', () => {
     render(<GameDetailsDrawer open={true} onOpenChange={() => {}} gameId="game-1" />);
-    const aiChatTab = screen.getByRole('tab', { name: /ai chat/i });
-    fireEvent.click(aiChatTab);
-    expect(aiChatTab).toHaveAttribute('aria-selected', 'true');
+    // Label is "Agente" (Newman Strategy 1 — #2010); the underlying tab id is `aiChat`.
+    const agentTab = screen.getByRole('tab', { name: /agente/i });
+    fireEvent.click(agentTab);
+    expect(agentTab).toHaveAttribute('aria-selected', 'true');
   });
 
   it('respects initialTab prop', () => {

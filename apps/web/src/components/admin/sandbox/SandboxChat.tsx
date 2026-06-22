@@ -214,10 +214,10 @@ export function SandboxChat({ selectedMessageId, onSelectMessage }: SandboxChatP
               className={`max-w-[85%] rounded-lg px-3 py-2 font-nunito text-sm cursor-pointer transition-all ${
                 msg.role === 'user'
                   ? 'bg-blue-50 border border-blue-200 text-blue-900'
-                  : `bg-white border text-foreground ${
+                  : `bg-card border text-foreground ${
                       selectedMessageId === msg.id
                         ? 'ring-2 ring-amber-400 border-amber-300'
-                        : 'border-gray-200'
+                        : 'border-border'
                     }`
               }`}
               onClick={() => msg.role === 'assistant' && onSelectMessage(msg.id)}
@@ -248,7 +248,7 @@ export function SandboxChat({ selectedMessageId, onSelectMessage }: SandboxChatP
         {/* Streaming response in-progress */}
         {streamState.isStreaming && streamState.currentAnswer && (
           <div className="flex justify-start">
-            <div className="max-w-[85%] rounded-lg px-3 py-2 bg-white border border-gray-200 font-nunito text-sm">
+            <div className="max-w-[85%] rounded-lg px-3 py-2 bg-card border border-border font-nunito text-sm">
               <p className="whitespace-pre-wrap">{streamState.currentAnswer}</p>
               <div className="mt-1 text-xs text-muted-foreground animate-pulse">
                 {streamState.statusMessage || 'Generazione in corso...'}
@@ -260,11 +260,11 @@ export function SandboxChat({ selectedMessageId, onSelectMessage }: SandboxChatP
         {/* Typing indicator */}
         {streamState.isStreaming && !streamState.currentAnswer && (
           <div className="flex justify-start">
-            <div className="rounded-lg border border-gray-200 bg-white px-3 py-2">
+            <div className="rounded-lg border border-border bg-card px-3 py-2">
               <div className="flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-gray-400 animate-bounce [animation-delay:0ms]" />
-                <span className="h-2 w-2 rounded-full bg-gray-400 animate-bounce [animation-delay:150ms]" />
-                <span className="h-2 w-2 rounded-full bg-gray-400 animate-bounce [animation-delay:300ms]" />
+                <span className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce [animation-delay:0ms]" />
+                <span className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce [animation-delay:150ms]" />
+                <span className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce [animation-delay:300ms]" />
               </div>
             </div>
           </div>
@@ -274,7 +274,7 @@ export function SandboxChat({ selectedMessageId, onSelectMessage }: SandboxChatP
       </div>
 
       {/* Input area */}
-      <div className="border-t bg-white/50 p-3">
+      <div className="border-t bg-card/50 p-3">
         <div className="flex items-end gap-2">
           <TooltipProvider>
             <Tooltip>
@@ -283,7 +283,7 @@ export function SandboxChat({ selectedMessageId, onSelectMessage }: SandboxChatP
                   <textarea
                     ref={textareaRef}
                     data-testid="chat-input"
-                    className="w-full resize-none rounded-lg border bg-white px-3 py-2 font-nunito text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-400/50 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="w-full resize-none rounded-lg border bg-card px-3 py-2 font-nunito text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-400/50 disabled:cursor-not-allowed disabled:opacity-50"
                     placeholder={isDisabled ? 'Pipeline non pronta' : 'Scrivi un messaggio...'}
                     value={input}
                     onChange={e => setInput(e.target.value)}

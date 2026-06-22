@@ -2,7 +2,10 @@ name: Backend E2E Tests
 
 on:
   pull_request:
-    branches: [main, main-staging]
+    # Scope to prod-promotion only (main-staging → main). Real-API E2E checks
+    # produce noise on dev releases (main-dev → main-staging). See companion
+    # change in api-smoke.yml + #979 release-PR triage.
+    branches: [main]
     paths:
       - 'apps/api/**'
       - 'tests/Api.Tests/E2E/**'
@@ -57,12 +60,16 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: Cache NuGet packages
+        # Issue #850 AC-3: tight key fingerprint includes Directory.Packages.props
+        # and global.json so SDK/centralized-package changes also invalidate.
+        # AC-7: `vars.CACHE_VERSION` is the global emergency-invalidation knob:
+        # `gh variable set CACHE_VERSION --body v2` flushes all caches at once.
         uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
-          key: ${{ runner.os }}-${{ runner.arch }}-nuget-${{ hashFiles('**/*.csproj') }}
+          key: nuget-${{ vars.CACHE_VERSION || 'v1' }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/*.csproj', '**/Directory.Packages.props', 'global.json') }}
           restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-nuget-
+            nuget-${{ vars.CACHE_VERSION || 'v1' }}-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Restore Dependencies
         working-directory: apps/api
@@ -97,7 +104,7 @@ jobs:
 
       - name: Publish Test Results
         if: always()
-        uses: EnricoMi/publish-unit-test-result-action@2ceeed2b8f26e15b06c3846719f75354febd9e7b  # v2
+        uses: EnricoMi/publish-unit-test-result-action@c950f6fb443cb5af20a377fd0dfaa78838901040  # v2
         with:
           files: apps/api/TestResults/**/*.trx
           check_name: Backend E2E Test Results

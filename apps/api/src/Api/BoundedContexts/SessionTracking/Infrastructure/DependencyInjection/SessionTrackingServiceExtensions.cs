@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
+using Api.BoundedContexts.SessionTracking.Domain.Scoring;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Health;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
@@ -35,6 +36,11 @@ internal static class SessionTrackingServiceExtensions
         services.AddScoped<ISessionEventRepository, SessionEventRepository>(); // ISSUE-276: Session Diary / Timeline
         services.AddScoped<ISessionCheckpointRepository, SessionCheckpointRepository>(); // ISSUE-278: Session Checkpoint / Deep Save
         services.AddScoped<IVisionSnapshotRepository, VisionSnapshotRepository>(); // Session Vision AI
+        services.AddScoped<IGamebookCampaignSessionRepository, GamebookCampaignSessionRepository>(); // Iter 1.A — Libro Game gamebook campaigns
+        services.AddScoped<IGamebookPhotoArtifactRepository, GamebookPhotoArtifactRepository>(); // Iter 1.B
+        services.AddScoped<ITranslatedParagraphRepository, TranslatedParagraphRepository>(); // Iter 1.B
+        services.AddScoped<IGamebookGlossaryRepository, GamebookGlossaryRepository>(); // Iter 1.B
+        services.AddScoped<ISessionBookProgressRepository, SessionBookProgressRepository>(); // Task C1 — gamebook multi-book generalization
 
         // Register Unit of Work
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
@@ -65,6 +71,25 @@ internal static class SessionTrackingServiceExtensions
 
         // Session Vision AI
         services.AddScoped<IGameStateExtractor, GameStateExtractor>();
+
+        // Iter 1.B — Libro Game photo storage (EXIF strip adapter over IBlobStorageService)
+        services.AddScoped<IGamebookPhotoStorage, GamebookPhotoStorageService>(); // Iter 1.B
+
+        // Issue #1415 — Campaign ownership guard for SSE pre-flight + handler ownership checks
+        services.AddScoped<ICampaignOwnershipGuard, CampaignOwnershipGuard>();
+
+        // Iter 1.B — Tesseract OCR engine (singleton: engine is thread-safe, pages are per-call)
+        services.AddSingleton<IOcrService, TesseractOcrService>(); // Iter 1.B
+
+        // #1559: NLP lang detection (NTextCat heuristic, ~5-15ms per text).
+        // Singleton: NTextCatLanguageDetectionService loads ~2.4MB profile once at startup
+        // and is thread-safe (RankedLanguageIdentifier is read-only post-construction).
+        services.AddSingleton<ILanguageDetectionService, NTextCatLanguageDetectionService>();
+
+        // Asse A semantic alignment #1896 (T10, DEC-1): polymorphic scoring strategy factory.
+        // Singleton — instantiates stateless strategies on demand (no internal state, thread-safe).
+        // Consumed by UpdateSessionScoresCommandValidator + UpdateSessionScoresCommandHandler.
+        services.AddSingleton<ScoringStrategyFactory>();
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 

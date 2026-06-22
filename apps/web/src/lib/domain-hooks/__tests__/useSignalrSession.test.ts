@@ -38,13 +38,21 @@ const mockWithAutomaticReconnect = vi.fn().mockReturnThis();
 const mockConfigureLogging = vi.fn().mockReturnThis();
 const mockBuild = vi.fn().mockReturnValue(mockConnection);
 
+// #1972 M4 batch: vitest v4 rejects arrow-mock used with `new`. Regular function
+// (not arrow) is `new`-compatible because `this` is bound. Class approach fails here
+// due to hoisted `vi.mock` factory referencing spy consts before initialization.
 vi.mock('@microsoft/signalr', () => ({
-  HubConnectionBuilder: vi.fn().mockImplementation(() => ({
-    withUrl: mockWithUrl,
-    withAutomaticReconnect: mockWithAutomaticReconnect,
-    configureLogging: mockConfigureLogging,
-    build: mockBuild,
-  })),
+  HubConnectionBuilder: vi.fn().mockImplementation(function (this: {
+    withUrl: () => unknown;
+    withAutomaticReconnect: () => unknown;
+    configureLogging: () => unknown;
+    build: () => unknown;
+  }) {
+    this.withUrl = mockWithUrl;
+    this.withAutomaticReconnect = mockWithAutomaticReconnect;
+    this.configureLogging = mockConfigureLogging;
+    this.build = mockBuild;
+  }),
   HubConnectionState: {
     Connected: 'Connected',
     Connecting: 'Connecting',
@@ -87,15 +95,6 @@ describe('useLiveSessionStore', () => {
     expect(state.status).toBe('InProgress');
   });
 
-  it('updateScore updates score for the given player', () => {
-    useLiveSessionStore.getState().updateScore('Alice', 42);
-    useLiveSessionStore.getState().updateScore('Bob', 18);
-
-    const { scores } = useLiveSessionStore.getState();
-    expect(scores['Alice']).toBe(42);
-    expect(scores['Bob']).toBe(18);
-  });
-
   it('addDispute appends to the disputes array', () => {
     const dispute = {
       id: 'd-1',
@@ -115,7 +114,10 @@ describe('useLiveSessionStore', () => {
   it('reset clears all state to initial values', () => {
     // Dirty the store
     useLiveSessionStore.getState().setSession({ sessionId: 'sess-1', gameName: 'Test' });
-    useLiveSessionStore.getState().updateScore('Alice', 100);
+    useLiveSessionStore.getState().setScoringConfig({
+      scoringType: 'Points',
+      scoreData: { scores: [{ playerId: 'p1', points: 100 }] },
+    });
     useLiveSessionStore.getState().addProposal({
       id: 'p-1',
       playerName: 'Alice',
@@ -129,7 +131,8 @@ describe('useLiveSessionStore', () => {
     const state = useLiveSessionStore.getState();
     expect(state.sessionId).toBeNull();
     expect(state.gameName).toBe('');
-    expect(state.scores).toEqual({});
+    expect(state.scoringType).toBeNull();
+    expect(state.scoreData).toBeNull();
     expect(state.pendingProposals).toEqual([]);
     expect(state.disputes).toEqual([]);
     expect(state.isConnected).toBe(false);
@@ -187,5 +190,89 @@ describe('useSignalRSession', () => {
     });
 
     expect(mockStop).toHaveBeenCalled();
+  });
+});
+
+// ──────────────────────────────────────────────────────────
+// Block A #2389 — ScoringConfigured consumer
+// ──────────────────────────────────────────────────────────
+
+describe('useSignalRSession — Block A #2389 ScoringConfigured', () => {
+  const sessionId = 'session-123';
+
+  beforeEach(() => {
+    useLiveSessionStore.getState().reset();
+    vi.clearAllMocks();
+    mockStart.mockResolvedValue(undefined);
+    mockStop.mockResolvedValue(undefined);
+    mockInvoke.mockResolvedValue(undefined);
+    mockConnection.state = 'Connected';
+  });
+
+  /**
+   * Helper: locate the handler registered for a given hub event name.
+   * Mirrors the way tests in this file inspect `mockOn` after the hook mounts.
+   */
+  function getRegisteredHandler(eventName: string): ((payload: unknown) => void) | undefined {
+    const call = mockOn.mock.calls.find(c => c[0] === eventName);
+    return call?.[1] as ((payload: unknown) => void) | undefined;
+  }
+
+  it('calls store.setScoringConfig when receiving ScoringConfigured event', async () => {
+    const { unmount } = renderHook(() => useSignalRSession(sessionId));
+
+    await act(async () => {
+      await new Promise(r => setTimeout(r, 0));
+    });
+
+    const handler = getRegisteredHandler('ScoringConfigured');
+    expect(handler).toBeDefined();
+
+    const payload = {
+      sessionId,
+      scoringType: 'Points' as const,
+      scoreData: JSON.stringify({ scores: [{ playerId: 'p1', points: 3 }] }),
+    };
+
+    act(() => {
+      handler!(payload);
+    });
+
+    const state = useLiveSessionStore.getState();
+    expect(state.scoringType).toBe('Points');
+    expect(state.scoreData).toEqual({ scores: [{ playerId: 'p1', points: 3 }] });
+
+    unmount();
+  });
+
+  it('does not crash and leaves store untouched when scoreData is malformed JSON', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const { unmount } = renderHook(() => useSignalRSession(sessionId));
+
+    await act(async () => {
+      await new Promise(r => setTimeout(r, 0));
+    });
+
+    const handler = getRegisteredHandler('ScoringConfigured');
+    expect(handler).toBeDefined();
+
+    const badPayload = {
+      sessionId,
+      scoringType: 'Points' as const,
+      scoreData: '{not valid json',
+    };
+
+    act(() => {
+      handler!(badPayload);
+    });
+
+    const state = useLiveSessionStore.getState();
+    expect(state.scoringType).toBeNull();
+    expect(state.scoreData).toBeNull();
+    expect(warnSpy).toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+    unmount();
   });
 });

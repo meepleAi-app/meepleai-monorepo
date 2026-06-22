@@ -161,7 +161,7 @@ graph TB
     subgraph "Infrastructure Layer"
         RepoImpl[Repository Implementations<br/>EF Core]
         DbContext[AppDbContext<br/>Entity mappings]
-        ExternalServices[External Services<br/>Qdrant, Ollama, etc.]
+        ExternalServices[External Services<br/>pgvector, Ollama, etc.]
     end
 
     subgraph "Cross-Cutting"
@@ -353,7 +353,7 @@ graph TB
     Services -->|AddDbContext| EF[Entity Framework]
     Services -->|AddInfrastructure| Infra[Infrastructure Services]
 
-    Infra --> Qdrant[Qdrant Client]
+    Infra --> pgvector[pgvector (PostgreSQL extension)]
     Infra --> Redis[Redis Client]
     Infra --> Ollama[Ollama Client]
 

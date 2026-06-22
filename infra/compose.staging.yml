@@ -36,6 +36,14 @@ services:
 
   api:
     restart: always
+    # Staging must NEVER fall back to the local `meepleai-api:latest` image
+    # (built by compose.dev.yml). Manual restarts (`make staging-minimal`)
+    # would otherwise silently run stale code. The deploy workflow injects
+    # API_IMAGE from `needs.build.outputs.api_image`; for manual recovery on
+    # the VPS use:
+    #   export API_IMAGE=ghcr.io/meepleai-app/meepleai-monorepo/api:staging-<sha>
+    image: ${API_IMAGE:?API_IMAGE env var required for staging — set to GHCR tag}
+    pull_policy: always
     # CF Tunnel exposure: bind 8080 on localhost (IPv4 + IPv6 dual-stack)
     # cloudflared resolves localhost → ::1 first; without IPv6 binding it returns 502.
     ports:
@@ -56,6 +64,13 @@ services:
       ASPNETCORE_ENVIRONMENT: Staging
       ASPNETCORE_URLS: http://+:8080
       SEED_PROFILE: Staging
+      # F4 (hotfix #818): DataProtection keys must persist across container
+      # restarts. Without persisted keys every API restart invalidates every
+      # meepleai_user_role_v2 cookie. Path matches the named volume mount below.
+      DATAPROTECTION__KEYSPATH: /app/dataprotection
+      # DevOps wave 1: STAGING_ALLOWED_EMAILS loaded from admin.secret env_file above.
+      # Empty value = open access (warning logged at startup). To populate:
+      # echo "STAGING_ALLOWED_EMAILS=badsworm@gmail.com" >> infra/secrets/admin.secret
       SEED_BUCKET_NAME: ${SEED_BUCKET_NAME:-}
       SEED_BUCKET_ENDPOINT: ${SEED_BUCKET_ENDPOINT:-}
       SEED_BUCKET_REGION: ${SEED_BUCKET_REGION:-auto}
@@ -85,6 +100,10 @@ services:
       PdfProcessing__Extractor__Unstructured__ApiUrl: "http://unstructured-service:8001"
     volumes:
       - ./secrets:/app/infra/secrets:ro
+      # F4: persisted DataProtection key ring (see DATAPROTECTION__KEYSPATH above).
+      # Dedicated named volume — must NOT share with /app/pdf_uploads which is
+      # rotated when uploads are pruned.
+      - dataprotection-keys-staging:/app/dataprotection
     # Traefik labels removed — staging now via Cloudflare Tunnel (cloudflared service on VPS).
     # Routes meepleai.app/* and api.meepleai.app/* are configured in CF dashboard tunnel public hostnames.
     logging:
@@ -93,6 +112,9 @@ services:
 
   web:
     restart: always
+    # Same rationale as api.image above — explicit GHCR image required.
+    image: ${WEB_IMAGE:?WEB_IMAGE env var required for staging — set to GHCR tag}
+    pull_policy: always
     # CF Tunnel exposure: bind 3000 on localhost (IPv4 + IPv6 dual-stack)
     # cloudflared resolves localhost → ::1 first; without IPv6 binding it returns 502.
     ports:
@@ -123,12 +145,17 @@ services:
       options: { max-size: "10m", max-file: "3" }
 
   # ===========================================================================
-  # AI Services — Traefik basic auth for integration access
+  # AI Services — internal-only (post-PR #738: CF Tunnel handles edge, no public exposure)
   # Resource limits are reduced vs base compose (CAX21 has 8GB total).
   # Use 'make staging' only when AI features are needed; prefer 'make staging-core' otherwise.
   # ===========================================================================
 
   embedding-service:
+    # Issue #1578: hard-required GHCR image (no stale-local fallback) + force
+    # pull. pull_policy: always guarantees the VPS PULLS the arm64 image built
+    # in CI and NEVER builds torch locally (avoids the disk-full/swap incident).
+    image: ${EMBEDDING_IMAGE:?EMBEDDING_IMAGE env var required for staging — set to GHCR tag}
+    pull_policy: always
     restart: always
     deploy:
       resources:
@@ -141,6 +168,9 @@ services:
     # Traefik labels removed (post CF Tunnel cutover). Internal service exposed only on docker network.
 
   reranker-service:
+    # Issue #1578: see embedding-service note above.
+    image: ${RERANKER_IMAGE:?RERANKER_IMAGE env var required for staging — set to GHCR tag}
+    pull_policy: always
     restart: always
     deploy:
       resources:
@@ -181,7 +211,16 @@ services:
     # Traefik labels removed (post CF Tunnel cutover). Internal service exposed only on docker network.
 
   orchestration-service:
+    # Issue #1578: publish-only. Soft default (not :?) — orchestration is not in
+    # the ai-essential deploy profile, so it is not started in staging. If a
+    # future --profile tutor-agents activates it, it pulls from GHCR (not build).
+    image: ${ORCHESTRATION_IMAGE:-ghcr.io/meepleai-app/meepleai-monorepo/orchestration-service:staging-latest}
+    pull_policy: always
     restart: always
+    env_file:
+      - ./secrets/database.secret
+      - ./secrets/redis.secret
+      - ./secrets/openrouter.secret
     deploy:
       resources:
         limits:
@@ -200,7 +239,7 @@ services:
     profiles: [ollama-local-dev-only]
 
   # ===========================================================================
-  # Monitoring — Traefik basic auth
+  # Monitoring — exposed via CF Tunnel ingress (configured separately on VPS)
   # ===========================================================================
 
   grafana:
@@ -234,6 +273,12 @@ services:
     volumes:
       - ./prometheus.staging.yml:/etc/prometheus/prometheus.yml:ro  # staging-specific labels
       - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
+      # Issue #2019 — runner availability alerts (referenced from staging
+      # config rule_files; mount kept in parity with docker-compose.yml so
+      # Prometheus startup does not log a missing-rule-file warning).
+      - ./prometheus/alerts/runner-availability.yml:/etc/prometheus/runner-availability.yml:ro
+      # Issue #2470 — Wikidata SSE plane starvation alert.
+      - ./prometheus/alerts/wikidata-sse.yml:/etc/prometheus/wikidata-sse.yml:ro
       - prometheus-staging:/prometheus
 
   alertmanager:
@@ -242,12 +287,9 @@ services:
   n8n:
     restart: always
 
-  # ===========================================================================
-  # Traefik overrides — basic auth middleware + staging config mount
-  # ===========================================================================
-
-# Traefik service definition removed (post CF Tunnel cutover, T18 Phase 6).
-# For rollback see docs/operations/cf-tunnel-rollback.md (compose.traefik.yml is preserved).
+# Traefik service definition removed (PR #738, post CF Tunnel cutover, T18 Phase 6).
+# Edge is now Cloudflare Tunnel (cloudflared on VPS). For rollback see
+# docs/operations/cf-tunnel-rollback.md (compose.traefik.yml backup in /tmp/traefik-backup-*.tgz on VPS).
 
 # =============================================================================
 # Preserve existing staging volume names to avoid data loss
@@ -261,3 +303,10 @@ volumes:
     name: meepleai-prometheus-staging
   grafana-staging:
     name: meepleai-grafana-staging
+  # F4 (hotfix #818): persistent DataProtection key ring for the API.
+  # Mounted at /app/dataprotection in the api service and read via
+  # DATAPROTECTION__KEYSPATH. Must survive container recreate; no PII inside,
+  # but rotation is non-trivial — invalidates all meepleai_user_role_v2
+  # cookies in the wild.
+  dataprotection-keys-staging:
+    name: meepleai-dataprotection-keys-staging

@@ -20,7 +20,7 @@ public class UserOnboardingTests
             Guid.NewGuid(),
             new Email("test@example.com"),
             "Test User",
-            PasswordHash.Create("TestPassword123!"),
+            PasswordHash.Create("UniqueT3stPwd!"),
             Role.User
         );
     }

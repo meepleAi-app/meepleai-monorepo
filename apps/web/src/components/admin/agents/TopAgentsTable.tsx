@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin CRUD chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13c admin scope (--admin-* decision deferred to DS-15). */
 /**
  * TopAgentsTable Component
  * Issue #3382: Agent Metrics Dashboard

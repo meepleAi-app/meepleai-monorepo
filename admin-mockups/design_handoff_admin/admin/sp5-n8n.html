@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SP5 B3 · n8n Integrations · /n8n</title>
+<!-- @v2 IntegrationStatusHero · WorkflowTable · WebhookTable · LogStream reuse -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/><link rel="stylesheet" href="components.css"/><link rel="stylesheet" href="admin-base.css"/>
+<style>
+  .n8n-hero { background: linear-gradient(135deg, hsl(var(--c-chat) / .14), hsl(var(--c-toolkit) / .08)); border: 1px solid hsl(var(--c-chat) / .3); border-radius: 12px; padding: 20px 24px; display: grid; grid-template-columns: 1fr 280px; gap: 24px; align-items: center; }
+  .n8n-hero h2 { margin: 0 0 6px; font-family: var(--f-display); font-size: 22px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+  .n8n-hero .endpoint { font-family: var(--f-mono); font-size: 12px; color: var(--text-sec); padding: 4px 8px; background: var(--bg-card); border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; }
+  .wf-row { display: grid; grid-template-columns: 32px 1fr 110px 110px 80px 70px 60px; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--border-light); align-items: center; font-size: 12px; }
+  .wf-row .em { font-size: 18px; }
+  .wf-row .name { font-family: var(--f-display); font-weight: 700; }
+  .wf-row .meta { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+  .wf-row .stat { font-family: var(--f-mono); font-size: 11px; }
+  .rate { display: inline-flex; gap: 1px; }
+  .rate .b { width: 2px; height: 16px; background: hsl(var(--c-toolkit)); border-radius: 1px; }
+  .rate .b.b0 { background: var(--bg-muted); }
+</style>
+</head>
+<body class="admin-page">
+<div class="admin-mobile-fallback"><span class="em">🖥️</span><h2>Console solo desktop</h2></div>
+<div class="admin-shell">
+  <div data-admin-nav-mount></div>
+  <main>
+    <header class="admin-top">
+      <div><h1>n8n Integrations</h1><div class="crumbs">Tools · n8n · 14 workflow · 8 webhook · 24h health</div></div>
+      <div class="spacer"></div>
+      <div class="admin-top-actions">
+        <button class="btn-admin">⤓ Export events</button>
+        <button class="btn-admin">⚡ Apri n8n</button>
+      </div>
+    </header>
+
+    <div class="admin-body" style="display: flex; flex-direction: column; gap: 14px">
+
+      <div class="n8n-hero">
+        <div>
+          <h2>⚡ n8n self-hosted <span class="status-chip healthy" style="font-size: 11px">Connected</span></h2>
+          <div style="font-size: 13px; color: var(--text-sec)">Automazioni esterne · webhook bidirezionali · API key gestione</div>
+          <div class="endpoint">🔗 <code>n8n.meeple.io/api/v1</code> · auth: <code>Bearer ●●●●●</code> · last ping 12s ago</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <button class="btn-admin">📡 Test connection</button>
+          <button class="btn-admin">🔑 Rotate API key</button>
+          <button class="btn-admin danger">⏸ Disconnect</button>
+        </div>
+      </div>
+
+      <div class="admin-tabs">
+        <button class="admin-tab active">🔄 Workflows <span class="count">14</span></button>
+        <button class="admin-tab">📨 Webhooks in entrata <span class="count">8</span></button>
+        <button class="admin-tab">📜 Logs eventi <span class="count">487</span></button>
+        <button class="admin-tab">🔑 API keys <span class="count">2</span></button>
+      </div>
+
+      <div class="admin-panel">
+        <div class="admin-panel-head"><h3>Workflows attivi</h3><span class="meta" style="margin-left: auto">avg success rate 94.8% (24h)</span></div>
+        <div>
+          <div class="wf-row" style="background: var(--bg); font-family: var(--f-mono); font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 700">
+            <div></div><div>Workflow</div><div>Trigger</div><div>Last run</div><div style="text-align: right">Runs 24h</div><div style="text-align: right">Success</div><div></div>
+          </div>
+
+          <div class="wf-row">
+            <div class="em">📧</div>
+            <div>
+              <div class="name">game-night-invite-email</div>
+              <div class="meta">workflow_id: wf-gn-invite · sends transactional emails for RSVP</div>
+            </div>
+            <div class="stat">webhook<br/><span style="color: var(--text-muted)">/game-nights/...</span></div>
+            <div class="stat">14:21:38<br/><span style="color: var(--text-muted)">2m fa</span></div>
+            <div class="stat" style="text-align: right">147</div>
+            <div style="text-align: right; font-weight: 700; color: hsl(var(--c-toolkit))">100%</div>
+            <div style="text-align: right"><span class="rate"><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span></span></div>
+          </div>
+
+          <div class="wf-row">
+            <div class="em">🤖</div>
+            <div>
+              <div class="name">agent-finetune-job-watcher</div>
+              <div class="meta">wf-finetune-watch · monitor OpenAI fine-tune jobs · notifica Slack</div>
+            </div>
+            <div class="stat">cron<br/><span style="color: var(--text-muted)">*/15 * * * *</span></div>
+            <div class="stat">14:15:00<br/><span style="color: var(--text-muted)">8m fa</span></div>
+            <div class="stat" style="text-align: right">96</div>
+            <div style="text-align: right; font-weight: 700; color: hsl(var(--c-toolkit))">98.9%</div>
+            <div style="text-align: right"><span class="rate"><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b b0"></span></span></div>
+          </div>
+
+          <div class="wf-row">
+            <div class="em">📚</div>
+            <div>
+              <div class="name">bgg-weekly-sync</div>
+              <div class="meta">wf-bgg-sync · ingest BGG nuovi giochi e errata</div>
+            </div>
+            <div class="stat">cron<br/><span style="color: var(--text-muted)">0 2 * * 0</span></div>
+            <div class="stat">dom 02:00<br/><span style="color: var(--text-muted)">5gg fa</span></div>
+            <div class="stat" style="text-align: right">1</div>
+            <div style="text-align: right; font-weight: 700; color: hsl(var(--c-toolkit))">100%</div>
+            <div style="text-align: right"><span class="rate"><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span></span></div>
+          </div>
+
+          <div class="wf-row">
+            <div class="em">💳</div>
+            <div>
+              <div class="name">stripe-webhook-handler</div>
+              <div class="meta">wf-stripe · subscription events · churn alert</div>
+            </div>
+            <div class="stat">webhook<br/><span style="color: var(--text-muted)">/stripe/events</span></div>
+            <div class="stat">14:22:11<br/><span style="color: var(--text-muted)">1m fa</span></div>
+            <div class="stat" style="text-align: right">38</div>
+            <div style="text-align: right; font-weight: 700; color: hsl(var(--c-toolkit))">100%</div>
+            <div style="text-align: right"><span class="rate"><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span></span></div>
+          </div>
+
+          <div class="wf-row" style="background: hsl(var(--c-event) / .04)">
+            <div class="em" style="color: hsl(var(--c-event))">⚠️</div>
+            <div>
+              <div class="name">discord-game-night-reminder</div>
+              <div class="meta">wf-discord-rem · Discord bot notif · token scaduto, rinnova</div>
+            </div>
+            <div class="stat" style="color: hsl(var(--c-event))">webhook<br/><span style="color: hsl(var(--c-event))">DEAD</span></div>
+            <div class="stat">14:08:42<br/><span style="color: var(--text-muted)">15m fa</span></div>
+            <div class="stat" style="text-align: right">42</div>
+            <div style="text-align: right; font-weight: 700; color: hsl(var(--c-event))">61.9%</div>
+            <div style="text-align: right"><span class="rate"><span class="b"></span><span class="b b0"></span><span class="b"></span><span class="b b0"></span><span class="b"></span><span class="b b0"></span><span class="b"></span></span></div>
+          </div>
+
+          <div class="wf-row">
+            <div class="em">📊</div>
+            <div>
+              <div class="name">weekly-analytics-digest</div>
+              <div class="meta">wf-digest · email weekly stats agli admin</div>
+            </div>
+            <div class="stat">cron<br/><span style="color: var(--text-muted)">0 9 * * 1</span></div>
+            <div class="stat">lun 09:00<br/><span style="color: var(--text-muted)">3gg fa</span></div>
+            <div class="stat" style="text-align: right">1</div>
+            <div style="text-align: right; font-weight: 700; color: hsl(var(--c-toolkit))">100%</div>
+            <div style="text-align: right"><span class="rate"><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span></span></div>
+          </div>
+
+          <div class="wf-row">
+            <div class="em" style="color: var(--text-muted)">+8</div>
+            <div style="color: var(--text-muted); font-family: var(--f-display)">Altri 8 workflow — scroll per vedere</div>
+            <div></div><div></div><div></div><div></div><div></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px">
+        <div class="admin-panel">
+          <div class="admin-panel-head"><h3>📨 Webhook in entrata · ultimi eventi</h3></div>
+          <div class="event-log" style="border: 0; max-height: 220px; font-family: var(--f-mono); font-size: 11px; background: var(--bg-sunken); border-radius: 0 0 10px 10px">
+            <div style="padding: 6px 14px; border-bottom: 1px solid var(--border-light); color: hsl(var(--c-toolkit))">▸ POST /webhooks/stripe · subscription.updated · 200 · 12s</div>
+            <div style="padding: 6px 14px; border-bottom: 1px solid var(--border-light); color: hsl(var(--c-chat))">▸ POST /webhooks/bgg-thread · new_reply · 200 · 1m</div>
+            <div style="padding: 6px 14px; border-bottom: 1px solid var(--border-light); color: hsl(var(--c-event))">▸ POST /webhooks/discord-bot · 401 unauth · 15m</div>
+            <div style="padding: 6px 14px; border-bottom: 1px solid var(--border-light); color: hsl(var(--c-toolkit))">▸ POST /webhooks/openai-finetune · status.completed · 200 · 18m</div>
+            <div style="padding: 6px 14px; border-bottom: 1px solid var(--border-light); color: hsl(var(--c-chat))">▸ POST /webhooks/typeform · response · 200 · 22m</div>
+            <div style="padding: 6px 14px; color: var(--text-muted)">+ 482 eventi 24h …</div>
+          </div>
+        </div>
+
+        <div class="admin-panel">
+          <div class="admin-panel-head"><h3>🔑 API keys</h3><button class="btn-admin sm" style="margin-left: auto">+ Genera</button></div>
+          <div style="padding: 12px 14px">
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <div style="padding: 8px 12px; border-radius: 6px; background: var(--bg-muted); font-family: var(--f-mono); font-size: 11px">
+                <div style="display: flex; align-items: center; gap: 8px"><strong style="font-family: var(--f-display)">n8n-prod-master</strong><span style="margin-left: auto" class="status-chip healthy">Active</span></div>
+                <div style="color: var(--text-muted); margin-top: 4px">key: <code>n8n_••••••••••••a8f3</code> · expires 2026-09-12 · scope: read+write</div>
+              </div>
+              <div style="padding: 8px 12px; border-radius: 6px; background: var(--bg-muted); font-family: var(--f-mono); font-size: 11px">
+                <div style="display: flex; align-items: center; gap: 8px"><strong style="font-family: var(--f-display)">n8n-readonly-dashboard</strong><span style="margin-left: auto" class="status-chip warning">Expiring</span></div>
+                <div style="color: var(--text-muted); margin-top: 4px">key: <code>n8n_••••••••••••e3f7</code> · expires 2026-06-08 · scope: read-only</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+<script src="admin-nav.js"></script><script>renderAdminNav('n8n');</script>
+</body></html>

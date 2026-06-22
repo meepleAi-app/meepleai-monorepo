@@ -1,6 +1,9 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure;
+using Api.Observability;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
@@ -14,11 +17,16 @@ internal sealed class PurgeStaleDocumentsCommandHandler
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly TimeProvider _timeProvider;
+    private readonly ILogger<PurgeStaleDocumentsCommandHandler> _logger;
 
-    public PurgeStaleDocumentsCommandHandler(MeepleAiDbContext dbContext, TimeProvider timeProvider)
+    public PurgeStaleDocumentsCommandHandler(
+        MeepleAiDbContext dbContext,
+        TimeProvider timeProvider,
+        ILogger<PurgeStaleDocumentsCommandHandler> logger)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<PurgeStaleResult> Handle(
@@ -38,7 +46,7 @@ internal sealed class PurgeStaleDocumentsCommandHandler
         foreach (var doc in staleDocs)
         {
             var originalState = doc.ProcessingState;
-            doc.ProcessingState = "Failed";
+            doc.ProcessingState = nameof(PdfProcessingState.Failed);
             doc.ProcessingError = "Processing timed out (stale) - purged by admin";
             doc.ErrorCategory = "Service";
             doc.FailedAtState = originalState;
@@ -47,7 +55,23 @@ internal sealed class PurgeStaleDocumentsCommandHandler
 
         if (staleDocs.Count > 0)
         {
-            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                _logger.LogInformation(
+                    "Maintenance batch completed: {Count} items processed",
+                    staleDocs.Count);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                    nameof(PurgeStaleDocumentsCommandHandler),
+                    MeepleAiMetrics.PdfConcurrencyCategories.C);
+                _logger.LogDebug(ex,
+                    "Concurrency conflict in {Handler} (Category C) — some items mutated concurrently by admin; batch partially applied",
+                    nameof(PurgeStaleDocumentsCommandHandler));
+                // No re-throw. Maintenance job is best-effort. Caller treats this as success.
+            }
         }
 
         return new PurgeStaleResult(staleDocs.Count);

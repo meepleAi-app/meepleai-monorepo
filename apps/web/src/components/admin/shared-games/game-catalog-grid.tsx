@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin CRUD chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13c admin scope (--admin-* decision deferred to DS-15). */
 /**
  * GameCatalogGrid - Admin Shared Games Catalog
  * Issue #4909 - Uniform MeepleCard UI across dashboard, /games and admin
@@ -154,6 +155,7 @@ function AdminGameCard({
       badge={STATUS_LABELS[game.status]}
       onClick={() => router.push(`/admin/shared-games/${game.id}`)}
       actions={actions}
+      showQuickActions
       data-testid={`admin-game-card-${game.id}`}
     />
   );
@@ -424,20 +426,20 @@ export function GameCatalogGrid({
       {/* Stats Summary + View Toggle */}
       <div className="flex items-end justify-between gap-4">
         <div className="grid grid-cols-3 gap-4 flex-1">
-          <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-slate-200/50 dark:border-zinc-700/50">
-            <div className="text-sm text-slate-600 dark:text-zinc-400">Totale</div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-zinc-100">
+          <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-border/50 dark:border-zinc-700/50">
+            <div className="text-sm text-muted-foreground dark:text-muted-foreground">Totale</div>
+            <div className="text-2xl font-bold text-foreground dark:text-zinc-100">
               {isLoading ? '—' : total}
             </div>
           </div>
-          <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-slate-200/50 dark:border-zinc-700/50">
-            <div className="text-sm text-slate-600 dark:text-zinc-400">Pubblicati</div>
+          <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-border/50 dark:border-zinc-700/50">
+            <div className="text-sm text-muted-foreground dark:text-muted-foreground">Pubblicati</div>
             <div className="text-2xl font-bold text-green-600 dark:text-green-400">
               {isLoading ? '—' : published}
             </div>
           </div>
-          <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-slate-200/50 dark:border-zinc-700/50">
-            <div className="text-sm text-slate-600 dark:text-zinc-400">Bozze</div>
+          <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-border/50 dark:border-zinc-700/50">
+            <div className="text-sm text-muted-foreground dark:text-muted-foreground">Bozze</div>
             <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
               {isLoading ? '—' : draft}
             </div>
@@ -445,7 +447,7 @@ export function GameCatalogGrid({
         </div>
 
         {/* View Toggle */}
-        <div className="flex items-center rounded-lg border border-slate-200/60 dark:border-zinc-700/40 bg-white/70 dark:bg-zinc-800/70 p-1">
+        <div className="flex items-center rounded-lg border border-border/60 dark:border-zinc-700/40 bg-card/70 dark:bg-zinc-800/70 p-1">
           <Button
             variant={viewMode === 'grid' ? 'default' : 'ghost'}
             size="icon"
@@ -519,7 +521,7 @@ export function GameCatalogGrid({
                 className={`absolute ${viewMode === 'list' ? 'top-1/2 -translate-y-1/2 left-2' : 'top-2 left-2'} z-10 flex h-6 w-6 items-center justify-center rounded border transition-colors ${
                   selectedIds.has(game.id)
                     ? 'bg-primary border-primary text-primary-foreground'
-                    : 'bg-white/80 dark:bg-zinc-800/80 border-slate-300 dark:border-zinc-600 hover:border-primary'
+                    : 'bg-card/80 dark:bg-zinc-800/80 border-border dark:border-zinc-600 hover:border-primary'
                 }`}
                 aria-label={`Seleziona ${game.title}`}
               >

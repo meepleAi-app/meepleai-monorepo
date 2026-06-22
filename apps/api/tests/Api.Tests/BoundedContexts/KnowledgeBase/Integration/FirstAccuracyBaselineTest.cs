@@ -26,7 +26,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Integration;
 ///
 /// Prerequisites:
 /// - API must be running at http://localhost:8080
-/// - PostgreSQL, Qdrant, Redis services must be available
+/// - PostgreSQL, pgvector, Redis services must be available
 /// - Game rulebooks must be indexed in vector store
 /// - OpenRouter API key configured for LLM calls
 ///
@@ -554,7 +554,7 @@ public class FirstAccuracyBaselineTest
             _output.WriteLine($"❌ API not available at {ApiBaseUrl}");
             _output.WriteLine("Prerequisites:");
             _output.WriteLine("  1. Start API: cd apps/api/src/Api && dotnet run");
-            _output.WriteLine("  2. Ensure services running: docker compose up postgres qdrant redis");
+            _output.WriteLine("  2. Ensure services running: docker compose up postgres redis");
             throw new InvalidOperationException($"API not available at {ApiBaseUrl}. Ensure services are running.", ex);
         }
 
@@ -624,7 +624,7 @@ public class FirstAccuracyBaselineTest
     private async Task AuthenticateAsync()
     {
         var email = Environment.GetEnvironmentVariable("BASELINE_TEST_EMAIL") ?? "admin@meepleai.dev";
-        var password = Environment.GetEnvironmentVariable("BASELINE_TEST_PASSWORD") ?? "Admin123!ChangeMe";
+        var password = Environment.GetEnvironmentVariable("BASELINE_TEST_PASSWORD") ?? "UnusualAdm123!ChangeMe";
 
         var loginRequest = new { email, password };
 
@@ -657,7 +657,7 @@ public class FirstAccuracyBaselineTest
             _output.WriteLine($"❌ Authentication failed for {email}: {ex.Message}");
             _output.WriteLine("Prerequisites:");
             _output.WriteLine("  - Set BASELINE_TEST_EMAIL and BASELINE_TEST_PASSWORD environment variables");
-            _output.WriteLine("  - Or ensure admin@meepleai.dev/Admin123!ChangeMe user exists (default)");
+            _output.WriteLine("  - Or ensure admin@meepleai.dev/UnusualAdm123!ChangeMe user exists (default)");
             throw new InvalidOperationException($"Authentication failed. Ensure valid credentials are configured.", ex);
         }
     }

@@ -180,7 +180,7 @@ export function DiffViewerEnhanced({
         <h3>Modifiche ({changesToShow.length})</h3>
         <div className="flex flex-col gap-3">
           {changesToShow.length === 0 ? (
-            <div className="p-4 bg-gray-100 rounded text-center text-gray-600">
+            <div className="p-4 bg-muted rounded text-center text-muted-foreground">
               Nessuna modifica da visualizzare
             </div>
           ) : (
@@ -216,7 +216,7 @@ export function DiffViewerEnhanced({
         <h3>Modifiche ({changesToShow.length})</h3>
         <div className="flex flex-col gap-3">
           {changesToShow.length === 0 ? (
-            <div className="p-4 bg-gray-100 rounded text-center text-gray-600">
+            <div className="p-4 bg-muted rounded text-center text-muted-foreground">
               Nessuna modifica da visualizzare
             </div>
           ) : (

@@ -14,9 +14,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import * as z from 'zod';
 
-import { Btn } from '@/components/ui/v2/btn';
-import { InputField } from '@/components/ui/v2/input-field';
-import { PwdInput } from '@/components/ui/v2/pwd-input';
+import { Btn } from '@/components/ui/btn';
+import { InputField } from '@/components/ui/input-field';
+import { PwdInput } from '@/components/ui/pwd-input';
 import { useTranslation } from '@/hooks/useTranslation';
 
 // ============================================================================
@@ -67,7 +67,7 @@ export function RegisterForm({
 
   const registerSchema = z.object({
     email: z.string().min(1, t('validation.emailRequired')).email(t('validation.invalidEmail')),
-    password: z.string().min(8, t('validation.passwordMin')).max(100, t('validation.passwordMax')),
+    password: z.string().min(12, t('validation.passwordMin')).max(128, t('validation.passwordMax')),
     termsAccepted: z
       .boolean()
       .refine(v => v === true, { message: t('auth.register.termsRequired') }),

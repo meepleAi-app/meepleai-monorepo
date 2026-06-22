@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useCallback, useState } from 'react';
@@ -65,7 +66,7 @@ export function QueueControlBar() {
   const eta = status?.estimatedWaitMinutes ?? 0;
 
   return (
-    <div className="flex flex-wrap items-center gap-4 px-4 py-3 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-slate-200/50 dark:border-zinc-700/50">
+    <div className="flex flex-wrap items-center gap-4 px-4 py-3 bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-border/50 dark:border-zinc-700/50">
       {/* Pause/Resume */}
       <Button
         variant={isPaused ? 'default' : 'outline'}

@@ -6,11 +6,14 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.TwoFactor;
 /// <summary>
 /// Command to disable two-factor authentication for a user via admin override.
 /// DDD CQRS: Admin-only operation for users who lost authenticator + backup codes.
-/// Does not require password or 2FA code verification.
+/// I4 (auth security fixes): the admin must supply their own current password
+/// — re-authentication on a high-impact action is required even when the
+/// admin already holds a valid session cookie.
 /// </summary>
 internal sealed record AdminDisable2FACommand(
     Guid AdminUserId,
-    Guid TargetUserId
+    Guid TargetUserId,
+    string AdminPassword
 ) : ICommand<AdminDisable2FAResult>;
 
 /// <summary>

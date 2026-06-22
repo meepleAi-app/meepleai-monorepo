@@ -1,3 +1,4 @@
+using Api.Infrastructure.Entities.SharedGameCatalog;
 namespace Api.Infrastructure.Entities.GameManagement;
 
 /// <summary>
@@ -15,5 +16,5 @@ public class GamePhaseTemplateEntity
     public DateTime UpdatedAt { get; set; }
 
     // Navigation
-    public GameEntity? Game { get; set; }
+    public SharedGameEntity? Game { get; set; }
 }

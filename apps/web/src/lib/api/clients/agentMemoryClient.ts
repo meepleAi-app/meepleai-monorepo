@@ -12,6 +12,9 @@ import type { HttpClient } from '../core/httpClient';
 // --- Zod Schemas ---
 
 export const HouseRuleDtoSchema = z.object({
+  // #1464: stable id used by PATCH/DELETE endpoints. Server backfills empty
+  // legacy values at restore time, so id is always present in responses.
+  id: z.string().uuid(),
   description: z.string(),
   addedAt: z.string(),
   source: z.string(),
@@ -120,6 +123,21 @@ export function createAgentMemoryClient({ httpClient }: CreateAgentMemoryClientP
 
     async addHouseRule(gameId: string, description: string): Promise<void> {
       await httpClient.post(`${BASE}/games/${gameId}/memory/house-rules`, { description });
+    },
+
+    /** Issue #1464: update an existing house rule's description. */
+    async updateHouseRule(gameId: string, ruleId: string, description: string): Promise<void> {
+      await httpClient.patch(
+        `${BASE}/games/${encodeURIComponent(gameId)}/memory/house-rules/${encodeURIComponent(ruleId)}`,
+        { description }
+      );
+    },
+
+    /** Issue #1464: remove a house rule by id. */
+    async removeHouseRule(gameId: string, ruleId: string): Promise<void> {
+      await httpClient.delete(
+        `${BASE}/games/${encodeURIComponent(gameId)}/memory/house-rules/${encodeURIComponent(ruleId)}`
+      );
     },
 
     async addNote(gameId: string, content: string): Promise<void> {

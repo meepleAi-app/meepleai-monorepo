@@ -2,9 +2,10 @@
 
 import { useConnectionSource } from '../hooks/useConnectionSource';
 import { ConnectionChipStrip } from '../parts/ConnectionChipStrip';
+import { Cover } from '../parts/Cover';
 import { MetaChips } from '../parts/MetaChips';
 import { Rating } from '../parts/Rating';
-import { entityHsl, entityIcon } from '../tokens';
+import { entityHsl } from '../tokens';
 
 import type { MeepleCardProps } from '../types';
 
@@ -12,6 +13,7 @@ export function ListCard(props: MeepleCardProps) {
   const {
     entity,
     title,
+    id,
     subtitle,
     imageUrl,
     rating,
@@ -20,6 +22,7 @@ export function ListCard(props: MeepleCardProps) {
     badge,
     onClick,
     className = '',
+    headingLevel,
   } = props;
   const testId = props['data-testid'];
 
@@ -43,25 +46,21 @@ export function ListCard(props: MeepleCardProps) {
         style={{ background: entityHsl(entity) }}
       />
       <div className="h-[52px] w-[52px] flex-shrink-0 overflow-hidden rounded-lg">
-        {imageUrl ? (
-          <img src={imageUrl} alt={title} className="h-full w-full object-cover" loading="lazy" />
-        ) : (
-          <div
-            className="flex h-full w-full items-center justify-center text-xl opacity-50"
-            style={{ background: entityHsl(entity, 0.08) }}
-          >
-            {entityIcon[entity]}
-          </div>
-        )}
+        <Cover entity={entity} variant="compact" imageUrl={imageUrl} alt={title} gameId={id} />
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex items-center gap-2">
-          <h3 className="truncate font-[var(--font-quicksand)] text-[0.88rem] font-bold text-[var(--mc-text-primary)]">
-            {title}
-          </h3>
+          {(() => {
+            const HeadingTag = `h${headingLevel ?? 3}` as 'h2' | 'h3' | 'h4';
+            return (
+              <HeadingTag className="truncate font-[var(--font-quicksand)] text-[0.88rem] font-bold text-[var(--mc-text-primary)]">
+                {title}
+              </HeadingTag>
+            );
+          })()}
           {badge && (
             <span
-              className="shrink-0 rounded-full border border-[var(--mc-border)] bg-black/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-[var(--mc-text-primary)] dark:bg-white/15"
+              className="shrink-0 rounded-full border border-[var(--mc-border)] bg-foreground/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-[var(--mc-text-primary)] dark:bg-card/15"
               data-slot="badge"
             >
               {badge}

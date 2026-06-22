@@ -15,13 +15,21 @@ public static class HealthCheckServiceExtensions
     /// Registers all comprehensive health checks for Core, AI, External, and Monitoring services.
     /// </summary>
     /// <param name="builder">Health checks builder</param>
+    /// <param name="configuration">Application configuration used to skip registration of optional providers that are not selected</param>
     /// <returns>The builder for chaining</returns>
-    public static IHealthChecksBuilder AddComprehensiveHealthChecks(this IHealthChecksBuilder builder)
+    /// <remarks>
+    /// Optional providers (Unstructured, SmolDocling, Ollama) are registered conditionally based on
+    /// runtime configuration. When a provider is not the active selection, its health check is not
+    /// registered at all — this prevents the global /health endpoint from reporting Degraded for
+    /// services that are intentionally not deployed (avoiding alert fatigue and SLA noise).
+    /// </remarks>
+    public static IHealthChecksBuilder AddComprehensiveHealthChecks(
+        this IHealthChecksBuilder builder,
+        IConfiguration configuration)
     {
         // Core Infrastructure (Critical)
         // PostgreSQL, Redis already registered in ObservabilityServiceExtensions
         // with tags: "db", "cache" - we add critical tag in ObservabilityServiceExtensions
-        // Note: Qdrant removed — pgvector is the sole vector store (covered by Postgres health check)
 
         // AI Services
         builder.AddCheck<OpenRouterHealthCheck>(
@@ -56,17 +64,36 @@ public static class HealthCheckServiceExtensions
             tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
             timeout: TimeSpan.FromSeconds(5));
 
-        builder.AddCheck<UnstructuredHealthCheck>(
-            "unstructured",
-            HealthStatus.Degraded,
-            tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
-            timeout: TimeSpan.FromSeconds(5));
+        // Conditional: PDF extractor providers — only register the check when the
+        // provider is actually in use. The "Orchestrator" provider routes to both
+        // Unstructured and SmolDocling; explicit single-provider settings register
+        // only that one. Other values (e.g. "Docnet") register neither.
+        // Null/empty/whitespace falls back to "Orchestrator" to keep dev defaults
+        // working when the key is absent or blank in configuration.
+        var pdfProviderRaw = configuration["PdfProcessing:Extractor:Provider"];
+        var pdfProvider = string.IsNullOrWhiteSpace(pdfProviderRaw) ? "Orchestrator" : pdfProviderRaw;
+        var registerUnstructured = pdfProvider.Equals("Orchestrator", StringComparison.OrdinalIgnoreCase) ||
+                                   pdfProvider.Equals("Unstructured", StringComparison.OrdinalIgnoreCase);
+        var registerSmolDocling = pdfProvider.Equals("Orchestrator", StringComparison.OrdinalIgnoreCase) ||
+                                  pdfProvider.Equals("SmolDocling", StringComparison.OrdinalIgnoreCase);
 
-        builder.AddCheck<SmolDoclingHealthCheck>(
-            "smoldocling",
-            HealthStatus.Degraded,
-            tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
-            timeout: TimeSpan.FromSeconds(5));
+        if (registerUnstructured)
+        {
+            builder.AddCheck<UnstructuredHealthCheck>(
+                "unstructured",
+                HealthStatus.Degraded,
+                tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical, HealthCheckTags.Optional },
+                timeout: TimeSpan.FromSeconds(5));
+        }
+
+        if (registerSmolDocling)
+        {
+            builder.AddCheck<SmolDoclingHealthCheck>(
+                "smoldocling",
+                HealthStatus.Degraded,
+                tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical, HealthCheckTags.Optional },
+                timeout: TimeSpan.FromSeconds(5));
+        }
 
         builder.AddCheck<OrchestrationHealthCheck>(
             "orchestrator",
@@ -74,11 +101,16 @@ public static class HealthCheckServiceExtensions
             tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
             timeout: TimeSpan.FromSeconds(5));
 
-        builder.AddCheck<OllamaHealthCheck>(
-            "ollama",
-            HealthStatus.Degraded,
-            tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
-            timeout: TimeSpan.FromSeconds(5));
+        // Conditional: Ollama is opt-in — register only when OLLAMA_URL is set.
+        var ollamaUrl = configuration["OLLAMA_URL"];
+        if (!string.IsNullOrWhiteSpace(ollamaUrl))
+        {
+            builder.AddCheck<OllamaHealthCheck>(
+                "ollama",
+                HealthStatus.Degraded,
+                tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical, HealthCheckTags.Optional },
+                timeout: TimeSpan.FromSeconds(5));
+        }
 
         // External APIs
         builder.AddCheck<BggApiHealthCheck>(
@@ -137,6 +169,24 @@ public static class HealthCheckServiceExtensions
             "slack_queue",
             HealthStatus.Degraded,
             tags: new[] { HealthCheckTags.External, HealthCheckTags.NonCritical },
+            timeout: TimeSpan.FromSeconds(5));
+
+        // Seed / RAG state (#2126 D3). NonCritical so it never breaks
+        // /health/ready (which is the Critical predicate); the field lives on
+        // /health/seed and is also surfaced via the Data dictionary so the
+        // top-level /health endpoint readers can inspect it without extra calls.
+        builder.AddCheck<SeedStateHealthCheck>(
+            "seed_state",
+            HealthStatus.Degraded,
+            tags: new[] { HealthCheckTags.Seed, HealthCheckTags.NonCritical },
+            timeout: TimeSpan.FromSeconds(5));
+
+        // Live Session persistence (#2097 / ADR-060 Phase 4). NonCritical — a slow
+        // live_game_sessions table degrades the experience but does not block startup.
+        builder.AddCheck<LiveSessionPersistenceHealthCheck>(
+            "live_sessions_persistence",
+            HealthStatus.Degraded,
+            tags: new[] { HealthCheckTags.Core, HealthCheckTags.NonCritical, "live-sessions" },
             timeout: TimeSpan.FromSeconds(5));
 
         return builder;

@@ -109,8 +109,8 @@ public class RequireSessionFilterTests
         context.HttpContext.Items.ContainsKey(nameof(SessionStatusDto)).Should().BeTrue();
         var sessionInContext = context.HttpContext.Items[nameof(SessionStatusDto)] as SessionStatusDto;
         sessionInContext.Should().NotBeNull();
-        sessionInContext.User.Should().NotBeNull();
-        sessionInContext.User.Id.Should().Be(testSession.User!.Id);
+        sessionInContext.Principal.Should().NotBeNull();
+        sessionInContext.Principal!.Subject.Id.Should().Be(testSession.Principal!.Subject.Id);
     }
 
     [Fact]
@@ -184,7 +184,7 @@ public class RequireSessionFilterTests
         );
         return new SessionStatusDto(
             IsValid: true,
-            User: userDto,
+            Principal: new Principal(userDto, Actor: null),
             ExpiresAt: DateTime.UtcNow.AddHours(1),
             LastSeenAt: DateTime.UtcNow
         );

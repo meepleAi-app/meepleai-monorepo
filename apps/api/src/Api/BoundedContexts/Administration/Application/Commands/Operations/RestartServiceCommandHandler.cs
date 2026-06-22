@@ -63,7 +63,7 @@ internal sealed class RestartServiceCommandHandler
             _logger.LogWarning(
                 "⚠️ SECURITY: Non-SuperAdmin {UserId} attempted to restart service",
                 command.AdminUserId);
-            throw new ConflictException("Only SuperAdmin can restart services");
+            throw new ForbiddenException("Only SuperAdmin can restart services");
         }
 
         // Create audit log

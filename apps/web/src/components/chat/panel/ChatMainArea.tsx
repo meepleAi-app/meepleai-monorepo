@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 import type { ChatMessageRole } from '@/components/chat/shared';
@@ -32,7 +33,7 @@ export function ChatMainArea({
   const isEmpty = messages.length === 0;
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col bg-[var(--nh-bg-base)]">
+    <div className="flex min-w-0 flex-1 flex-col bg-[var(--bg)]">
       <div className="flex-1 overflow-y-auto px-6 py-6">
         {isEmpty ? (
           <div className="mx-auto flex h-full max-w-md flex-col items-center justify-center text-center">
@@ -45,10 +46,10 @@ export function ChatMainArea({
             >
               🤖
             </div>
-            <h3 className="mb-2 font-quicksand text-xl font-extrabold text-[var(--nh-text-primary)]">
+            <h3 className="mb-2 font-quicksand text-xl font-extrabold text-[var(--text)]">
               Ciao! Sono il tuo assistente AI
             </h3>
-            <p className="mb-6 text-sm text-[var(--nh-text-muted)]">
+            <p className="mb-6 text-sm text-[var(--text-muted)]">
               {gameName
                 ? `Chiedimi qualsiasi cosa sulle regole di ${gameName}.`
                 : 'Chiedimi qualsiasi cosa sui regolamenti dei tuoi giochi da tavolo.'}
@@ -60,7 +61,7 @@ export function ChatMainArea({
                     key={q}
                     type="button"
                     onClick={() => onSend(q)}
-                    className="rounded-full border border-[var(--nh-border-default)] bg-[var(--nh-bg-elevated)] px-3.5 py-2 font-nunito text-[0.76rem] font-bold text-[var(--nh-text-secondary)] transition-all hover:-translate-y-px hover:bg-white hover:shadow-[var(--shadow-warm-sm)]"
+                    className="rounded-full border border-[var(--border)] bg-[var(--bg-card)] px-3.5 py-2 font-nunito text-[0.76rem] font-bold text-[var(--text-sec)] transition-all hover:-translate-y-px hover:bg-card hover:shadow-[var(--shadow-warm-sm)]"
                   >
                     {q}
                   </button>

@@ -116,7 +116,7 @@ internal static class AccessRequestEndpoints
             if (!authorized) return error!;
 
             await mediator.Send(
-                new ApproveAccessRequestCommand(id, session!.User!.Id), ct).ConfigureAwait(false);
+                new ApproveAccessRequestCommand(id, session!.Principal!.Subject.Id), ct).ConfigureAwait(false);
             return Results.Ok(new { status = "approved" });
         }).WithName("ApproveAccessRequest")
           .RequireAdminSession();
@@ -132,7 +132,7 @@ internal static class AccessRequestEndpoints
             if (!authorized) return error!;
 
             await mediator.Send(
-                new RejectAccessRequestCommand(id, session!.User!.Id, payload?.Reason), ct)
+                new RejectAccessRequestCommand(id, session!.Principal!.Subject.Id, payload?.Reason), ct)
                 .ConfigureAwait(false);
             return Results.Ok(new { status = "rejected" });
         }).WithName("RejectAccessRequest")
@@ -149,7 +149,7 @@ internal static class AccessRequestEndpoints
             if (!authorized) return error!;
 
             var result = await mediator.Send(
-                new BulkApproveAccessRequestsCommand(payload.Ids, session!.User!.Id), ct)
+                new BulkApproveAccessRequestsCommand(payload.Ids, session!.Principal!.Subject.Id), ct)
                 .ConfigureAwait(false);
             return Results.Ok(result);
         }).WithName("BulkApproveAccessRequests")
@@ -166,7 +166,7 @@ internal static class AccessRequestEndpoints
             if (!authorized) return error!;
 
             await mediator.Send(
-                new SetRegistrationModeCommand(payload.Enabled, session!.User!.Id), ct)
+                new SetRegistrationModeCommand(payload.Enabled, session!.Principal!.Subject.Id), ct)
                 .ConfigureAwait(false);
             return Results.Ok(new { publicRegistrationEnabled = payload.Enabled });
         }).WithName("SetRegistrationMode")

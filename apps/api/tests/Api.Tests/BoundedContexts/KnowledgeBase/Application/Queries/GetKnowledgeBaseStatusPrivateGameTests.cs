@@ -77,7 +77,6 @@ public sealed class GetKnowledgeBaseStatusPrivateGameTests : IDisposable
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            SharedGameId = PrivateGameId,
             PrivateGameId = null,
             FileName = "shared.pdf",
             FilePath = "/uploads/shared.pdf",
@@ -101,7 +100,7 @@ public sealed class GetKnowledgeBaseStatusPrivateGameTests : IDisposable
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            SharedGameId = sharedGameId,
+            SharedGameId = sharedGameId, // Handler filters PDFs by SharedGameId when IsPrivateGame=false
             PrivateGameId = null,
             FileName = "shared.pdf",
             FilePath = "/uploads/shared.pdf",

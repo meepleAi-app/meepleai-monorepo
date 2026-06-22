@@ -1,0 +1,87 @@
+# MeepleAI canonical sanitizers (ADR-058, issue #1181 Phase 1.4)
+#
+# Registers DataMasking.Mask* and LogSanitizer.* methods as taint barriers
+# for C# data-flow queries. CodeQL CLI 2.25.4 uses `barrierModel` (not
+# summaryModel with kind=value) for the "this method makes its return
+# value safe for threat-model X" use case.
+#
+# C# barrierModel tuple format (9 columns):
+#   namespace, type, subtypes, method, signature, ext, output, kind, provenance
+#   (note: no `input` column — the entire ReturnValue is a barrier)
+#
+# Threat-model kinds verified against CodeQL source (commit on main, 2026-05-16):
+#   - "log-injection": csharp/.../LogForgingQuery.qll line 76 — used by cs/log-forging
+#   - "file-content-store": csharp/.../flowsinks/ExternalLocationSink.qll —
+#     used by cs/exposure-of-sensitive-information and similar PII queries
+#
+# IMPORTANT — log-injection barrier eligibility (PR #1189 code review):
+#   A method is a valid `log-injection` barrier ONLY if its output
+#   GUARANTEES no \r, \n, \t characters. Sub-slicing or pattern-replace
+#   over a tainted input PRESERVES non-matched CRLF characters and is
+#   therefore NOT a CRLF-safety barrier. Audit of DataMasking on
+#   2026-05-16:
+#     - MaskCreditCard: STRIPS all non-digits via Where(char.IsDigit).
+#       Output is `****-****-****-XXXX` with X always digit. SAFE. ✓
+#     - MaskEmail: slices `email.Split('@')[0]` raw. PRESERVES CRLF if
+#       in local-part. UNSAFE for log-injection. ✗
+#     - MaskString: slices `value[..n]` and `value[^n..]`. PRESERVES
+#       CRLF if in prefix/suffix. UNSAFE. ✗
+#     - MaskJwt: `token[..20]...***`. PRESERVES CRLF in first 20 chars.
+#       UNSAFE. ✗
+#     - MaskIpAddress: interpolates `parts[0..2]` raw. PRESERVES CRLF
+#       if input was non-IP. UNSAFE. ✗
+#     - RedactConnectionString: regex replace inside the value; non-
+#       password segments of the connection string passthrough verbatim.
+#       PRESERVES CRLF outside password value. UNSAFE. ✗
+#     - MaskResponseBody: same pattern as RedactConnectionString —
+#       redacts matched patterns only, non-matched body preserved.
+#       UNSAFE. ✗
+#   The methods marked UNSAFE are barriers ONLY for `file-content-store`
+#   (the threat model where the masking transforms PII content, regardless
+#   of CRLF). For `log-injection` defense, callers must wrap with
+#   `LogSanitizer.Sanitize(...)` separately.
+#
+# References:
+# - ADR-058 §1.4 Implementation plan
+# - https://codeql.github.com/docs/codeql-language-guides/customizing-library-models-for-csharp
+# - Reference example: homelabforge/mygarage `.github/codeql/<scope>/<name>/qlpack.yml`
+extensions:
+  - addsTo:
+      pack: codeql/csharp-all
+      extensible: barrierModel
+    data:
+      # ----------------------------------------------------------------
+      # LogSanitizer (Api.Helpers) — log-forging integrity sanitizer
+      # Strips \r\n\t before logging to prevent CWE-117 injection.
+      # Barrier for BOTH log-injection (CRLF stripping) AND
+      # file-content-store (the sanitizer transforms attacker-controlled
+      # string content into a CRLF-free form that CodeQL's PII-flow
+      # query treats as no-longer-sensitive — see comment §audit below).
+      # The 12 alert-channel residuals on cs/exposure-of-sensitive-information
+      # (PR #1189, run 25965594733) require file-content-store coverage
+      # because their alertType arg is wrapped via LogSanitizer.Sanitize
+      # but the query uses file-content-store kind, not log-injection.
+      # ----------------------------------------------------------------
+      - ["Api.Helpers", "LogSanitizer", false, "Sanitize", "(System.String)", "", "ReturnValue", "log-injection", "manual"]
+      - ["Api.Helpers", "LogSanitizer", false, "Sanitize", "(System.String)", "", "ReturnValue", "file-content-store", "manual"]
+      - ["Api.Helpers", "LogSanitizer", false, "Sanitize", "(System.String,System.Int32)", "", "ReturnValue", "log-injection", "manual"]
+      - ["Api.Helpers", "LogSanitizer", false, "Sanitize", "(System.String,System.Int32)", "", "ReturnValue", "file-content-store", "manual"]
+      - ["Api.Helpers", "LogSanitizer", false, "SanitizePath", "(Microsoft.AspNetCore.Http.PathString)", "", "ReturnValue", "log-injection", "manual"]
+      - ["Api.Helpers", "LogSanitizer", false, "SanitizePath", "(Microsoft.AspNetCore.Http.PathString)", "", "ReturnValue", "file-content-store", "manual"]
+
+      # ----------------------------------------------------------------
+      # DataMasking (Api.Infrastructure.Security) — PII confidentiality masking
+      # Irreversibly transforms PII for safe logging (GDPR Art. 32).
+      # All methods are file-content-store barriers (PII exposure).
+      # ONLY MaskCreditCard is additionally a log-injection barrier
+      # (its output is guaranteed digit-only). Other methods preserve
+      # CRLF in non-masked portions — see audit comment above.
+      # ----------------------------------------------------------------
+      - ["Api.Infrastructure.Security", "DataMasking", false, "MaskEmail", "(System.String)", "", "ReturnValue", "file-content-store", "manual"]
+      - ["Api.Infrastructure.Security", "DataMasking", false, "MaskString", "(System.String,System.Int32)", "", "ReturnValue", "file-content-store", "manual"]
+      - ["Api.Infrastructure.Security", "DataMasking", false, "MaskJwt", "(System.String)", "", "ReturnValue", "file-content-store", "manual"]
+      - ["Api.Infrastructure.Security", "DataMasking", false, "MaskCreditCard", "(System.String)", "", "ReturnValue", "file-content-store", "manual"]
+      - ["Api.Infrastructure.Security", "DataMasking", false, "MaskCreditCard", "(System.String)", "", "ReturnValue", "log-injection", "manual"]
+      - ["Api.Infrastructure.Security", "DataMasking", false, "MaskIpAddress", "(System.String)", "", "ReturnValue", "file-content-store", "manual"]
+      - ["Api.Infrastructure.Security", "DataMasking", false, "RedactConnectionString", "(System.String)", "", "ReturnValue", "file-content-store", "manual"]
+      - ["Api.Infrastructure.Security", "DataMasking", false, "MaskResponseBody", "(System.String,System.Int32)", "", "ReturnValue", "file-content-store", "manual"]

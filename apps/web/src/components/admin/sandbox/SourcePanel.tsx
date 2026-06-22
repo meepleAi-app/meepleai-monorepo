@@ -75,7 +75,7 @@ export function SourcePanel() {
   );
 
   return (
-    <div className="flex h-full flex-col gap-4 rounded-xl border bg-white/70 backdrop-blur-md p-4">
+    <div className="flex h-full flex-col gap-4 rounded-xl border bg-card/70 backdrop-blur-md p-4">
       {/* Panel Header */}
       <div className="flex items-center gap-2">
         <Gamepad2 className="h-5 w-5 text-amber-600" />
@@ -144,7 +144,7 @@ export function SourcePanel() {
 
       {/* Upload Zone */}
       {selectedGame && (
-        <div className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/25 bg-white/30 py-6 transition-colors hover:border-amber-400/50 hover:bg-amber-50/30 cursor-pointer">
+        <div className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/25 bg-card/30 py-6 transition-colors hover:border-amber-400/50 hover:bg-amber-50/30 cursor-pointer">
           <Upload className="h-6 w-6 text-muted-foreground/50" />
           <p className="font-nunito text-sm text-muted-foreground">
             Trascina un PDF o clicca per caricare

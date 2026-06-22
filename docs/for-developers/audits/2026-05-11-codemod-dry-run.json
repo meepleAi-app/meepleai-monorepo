@@ -1,0 +1,2107 @@
+{
+  "generated_at": "2026-05-11T15:29:46.772Z",
+  "mode": "apply",
+  "audit_source": "docs/for-developers/audits/2026-05-11-mockup-conformity.json",
+  "counts": {
+    "rename_planned": 322,
+    "delete_planned": 3,
+    "collisions_total": 26,
+    "collisions_blocker": 0,
+    "collisions_warning": 26,
+    "collisions_info": 0,
+    "imports_rewritten": 388,
+    "files_touched_by_imports": 77
+  },
+  "verdict": "safe-to-apply",
+  "renames": [
+    {
+      "source": "apps/web/src/components/v2/agent-detail/AgentDangerZone.tsx",
+      "target": "apps/web/src/components/features/agent-detail/AgentDangerZone.tsx",
+      "cluster": "agent-detail"
+    },
+    {
+      "source": "apps/web/src/components/v2/agent-detail/AgentHero.tsx",
+      "target": "apps/web/src/components/features/agent-detail/AgentHero.tsx",
+      "cluster": "agent-detail"
+    },
+    {
+      "source": "apps/web/src/components/v2/agent-detail/AgentSettingsForm.tsx",
+      "target": "apps/web/src/components/features/agent-detail/AgentSettingsForm.tsx",
+      "cluster": "agent-detail"
+    },
+    {
+      "source": "apps/web/src/components/v2/agent-detail/ChatHistoryTimeline.tsx",
+      "target": "apps/web/src/components/features/agent-detail/ChatHistoryTimeline.tsx",
+      "cluster": "agent-detail"
+    },
+    {
+      "source": "apps/web/src/components/v2/agent-detail/KbDocList.tsx",
+      "target": "apps/web/src/components/features/agent-detail/KbDocList.tsx",
+      "cluster": "agent-detail"
+    },
+    {
+      "source": "apps/web/src/components/v2/agent-detail/PersonaCard.tsx",
+      "target": "apps/web/src/components/features/agent-detail/PersonaCard.tsx",
+      "cluster": "agent-detail"
+    },
+    {
+      "source": "apps/web/src/components/v2/agent-detail/SystemPromptViewer.tsx",
+      "target": "apps/web/src/components/features/agent-detail/SystemPromptViewer.tsx",
+      "cluster": "agent-detail"
+    },
+    {
+      "source": "apps/web/src/components/v2/agents/AgentFilters.tsx",
+      "target": "apps/web/src/components/features/agents/AgentFilters.tsx",
+      "cluster": "agents"
+    },
+    {
+      "source": "apps/web/src/components/v2/agents/AgentsResultsGrid.tsx",
+      "target": "apps/web/src/components/features/agents/AgentsResultsGrid.tsx",
+      "cluster": "agents"
+    },
+    {
+      "source": "apps/web/src/components/v2/agents/EmptyAgents.tsx",
+      "target": "apps/web/src/components/features/agents/EmptyAgents.tsx",
+      "cluster": "agents"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/ActionCard.tsx",
+      "target": "apps/web/src/components/features/gamebook/ActionCard.tsx",
+      "cluster": "gamebook"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/CameraViewfinder.tsx",
+      "target": "apps/web/src/components/features/gamebook/CameraViewfinder.tsx",
+      "cluster": "gamebook"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/CancelModal.tsx",
+      "target": "apps/web/src/components/features/gamebook/CancelModal.tsx",
+      "cluster": "gamebook"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/ConfidenceBadge.tsx",
+      "target": "apps/web/src/components/features/gamebook/ConfidenceBadge.tsx",
+      "cluster": "gamebook"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/DesktopDropFallback.tsx",
+      "target": "apps/web/src/components/features/gamebook/DesktopDropFallback.tsx",
+      "cluster": "gamebook"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/EmptyGamebooks.tsx",
+      "target": "apps/web/src/components/features/gamebook/EmptyGamebooks.tsx",
+      "cluster": "gamebook"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/GamebookCard.tsx",
+      "target": "apps/web/src/components/features/gamebook/GamebookCard.tsx",
+      "cluster": "gamebook"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/GamebookCardSkeleton.tsx",
+      "target": "apps/web/src/components/features/gamebook/GamebookCardSkeleton.tsx",
+      "cluster": "gamebook"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/GamebookHero.tsx",
+      "target": "apps/web/src/components/features/gamebook/GamebookHero.tsx",
+      "cluster": "gamebook"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/GamebookPlayShell.tsx",
+      "target": "apps/web/src/components/features/gamebook/GamebookPlayShell.tsx",
+      "cluster": "gamebook"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/GameSearchBar.tsx",
+      "target": "apps/web/src/components/features/gamebook/GameSearchBar.tsx",
+      "cluster": "gamebook"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/GameSearchCard.tsx",
+      "target": "apps/web/src/components/features/gamebook/GameSearchCard.tsx",
+      "cluster": "gamebook"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/NoResultsPanel.tsx",
+      "target": "apps/web/src/components/features/gamebook/NoResultsPanel.tsx",
+      "cluster": "gamebook"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/OfflineBanner.tsx",
+      "target": "apps/web/src/components/features/gamebook/OfflineBanner.tsx",
+      "cluster": "gamebook"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/PageThumb.tsx",
+      "target": "apps/web/src/components/features/gamebook/PageThumb.tsx",
+      "cluster": "gamebook"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/QuotaWidget.tsx",
+      "target": "apps/web/src/components/features/gamebook/QuotaWidget.tsx",
+      "cluster": "gamebook"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/SegmentPicker.tsx",
+      "target": "apps/web/src/components/features/gamebook/SegmentPicker.tsx",
+      "cluster": "gamebook"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/StepIndicator.tsx",
+      "target": "apps/web/src/components/features/gamebook/StepIndicator.tsx",
+      "cluster": "gamebook"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/TranslateParagraphDemo.tsx",
+      "target": "apps/web/src/components/features/gamebook/TranslateParagraphDemo.tsx",
+      "cluster": "gamebook"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/TranslateViewer.tsx",
+      "target": "apps/web/src/components/features/gamebook/TranslateViewer.tsx",
+      "cluster": "gamebook"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/TranslationPane.tsx",
+      "target": "apps/web/src/components/features/gamebook/TranslationPane.tsx",
+      "cluster": "gamebook"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/ChatBubble.tsx",
+      "target": "apps/web/src/components/features/game-chat/ChatBubble.tsx",
+      "cluster": "game-chat"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/ChatBubbleSkeleton.tsx",
+      "target": "apps/web/src/components/features/game-chat/ChatBubbleSkeleton.tsx",
+      "cluster": "game-chat"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/ChatHistoryBanner.tsx",
+      "target": "apps/web/src/components/features/game-chat/ChatHistoryBanner.tsx",
+      "cluster": "game-chat"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/ChatInputBar.tsx",
+      "target": "apps/web/src/components/features/game-chat/ChatInputBar.tsx",
+      "cluster": "game-chat"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/CitationChip.tsx",
+      "target": "apps/web/src/components/features/game-chat/CitationChip.tsx",
+      "cluster": "game-chat"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/CitationModal.tsx",
+      "target": "apps/web/src/components/features/game-chat/CitationModal.tsx",
+      "cluster": "game-chat"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/CitationOwnershipUpsell.tsx",
+      "target": "apps/web/src/components/features/game-chat/CitationOwnershipUpsell.tsx",
+      "cluster": "game-chat"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/CitationPdfTab.tsx",
+      "target": "apps/web/src/components/features/game-chat/CitationPdfTab.tsx",
+      "cluster": "game-chat"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/ConfidenceBadge.tsx",
+      "target": "apps/web/src/components/features/game-chat/ConfidenceBadge.tsx",
+      "cluster": "game-chat"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/GameChatHeader.tsx",
+      "target": "apps/web/src/components/features/game-chat/GameChatHeader.tsx",
+      "cluster": "game-chat"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/GameChatSidebar.tsx",
+      "target": "apps/web/src/components/features/game-chat/GameChatSidebar.tsx",
+      "cluster": "game-chat"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/GameChatTabV2.tsx",
+      "target": "apps/web/src/components/features/game-chat/GameChatTab.tsx",
+      "cluster": "game-chat"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/LowConfidenceDisclaimer.tsx",
+      "target": "apps/web/src/components/features/game-chat/LowConfidenceDisclaimer.tsx",
+      "cluster": "game-chat"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/OutOfContextActions.tsx",
+      "target": "apps/web/src/components/features/game-chat/OutOfContextActions.tsx",
+      "cluster": "game-chat"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/SuggestedPrompts.tsx",
+      "target": "apps/web/src/components/features/game-chat/SuggestedPrompts.tsx",
+      "cluster": "game-chat"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/TypingIndicator.tsx",
+      "target": "apps/web/src/components/features/game-chat/TypingIndicator.tsx",
+      "cluster": "game-chat"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-detail/GameDetailAgentsList.tsx",
+      "target": "apps/web/src/components/features/game-detail/GameDetailAgentsList.tsx",
+      "cluster": "game-detail"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-detail/GameDetailFaqList.tsx",
+      "target": "apps/web/src/components/features/game-detail/GameDetailFaqList.tsx",
+      "cluster": "game-detail"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-detail/GameDetailHero.tsx",
+      "target": "apps/web/src/components/features/game-detail/GameDetailHero.tsx",
+      "cluster": "game-detail"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-detail/GameDetailKbDocList.tsx",
+      "target": "apps/web/src/components/features/game-detail/GameDetailKbDocList.tsx",
+      "cluster": "game-detail"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-detail/GameDetailKpiCards.tsx",
+      "target": "apps/web/src/components/features/game-detail/GameDetailKpiCards.tsx",
+      "cluster": "game-detail"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-detail/GameDetailRulesAccordion.tsx",
+      "target": "apps/web/src/components/features/game-detail/GameDetailRulesAccordion.tsx",
+      "cluster": "game-detail"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-detail/GameDetailSessionsRail.tsx",
+      "target": "apps/web/src/components/features/game-detail/GameDetailSessionsRail.tsx",
+      "cluster": "game-detail"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-detail/GameDetailTabsAnimated.tsx",
+      "target": "apps/web/src/components/features/game-detail/GameDetailTabsAnimated.tsx",
+      "cluster": "game-detail"
+    },
+    {
+      "source": "apps/web/src/components/v2/games/GamesEmptyState.tsx",
+      "target": "apps/web/src/components/features/games/GamesEmptyState.tsx",
+      "cluster": "games"
+    },
+    {
+      "source": "apps/web/src/components/v2/games/GamesFiltersInline.tsx",
+      "target": "apps/web/src/components/features/games/GamesFiltersInline.tsx",
+      "cluster": "games"
+    },
+    {
+      "source": "apps/web/src/components/v2/games/GamesHero.tsx",
+      "target": "apps/web/src/components/features/games/GamesHero.tsx",
+      "cluster": "games"
+    },
+    {
+      "source": "apps/web/src/components/v2/games/GamesRecentRail.tsx",
+      "target": "apps/web/src/components/features/games/GamesRecentRail.tsx",
+      "cluster": "games"
+    },
+    {
+      "source": "apps/web/src/components/v2/games/GamesResultsGrid.tsx",
+      "target": "apps/web/src/components/features/games/GamesResultsGrid.tsx",
+      "cluster": "games"
+    },
+    {
+      "source": "apps/web/src/components/v2/library/BulkSelectionBar.tsx",
+      "target": "apps/web/src/components/features/library/BulkSelectionBar.tsx",
+      "cluster": "library"
+    },
+    {
+      "source": "apps/web/src/components/v2/library/LibraryHeroDesktop.tsx",
+      "target": "apps/web/src/components/features/library/LibraryHeroDesktop.tsx",
+      "cluster": "library"
+    },
+    {
+      "source": "apps/web/src/components/v2/library/LibraryHybridGrid.tsx",
+      "target": "apps/web/src/components/features/library/LibraryHybridGrid.tsx",
+      "cluster": "library"
+    },
+    {
+      "source": "apps/web/src/components/v2/library/LibraryTabs.tsx",
+      "target": "apps/web/src/components/features/library/LibraryTabs.tsx",
+      "cluster": "library"
+    },
+    {
+      "source": "apps/web/src/components/v2/library/RecentActivityRail.tsx",
+      "target": "apps/web/src/components/features/library/RecentActivityRail.tsx",
+      "cluster": "library"
+    },
+    {
+      "source": "apps/web/src/components/v2/player-detail/AchievementBadgeGrid.tsx",
+      "target": "apps/web/src/components/features/player-detail/AchievementBadgeGrid.tsx",
+      "cluster": "player-detail"
+    },
+    {
+      "source": "apps/web/src/components/v2/player-detail/FavoriteAgentCard.tsx",
+      "target": "apps/web/src/components/features/player-detail/FavoriteAgentCard.tsx",
+      "cluster": "player-detail"
+    },
+    {
+      "source": "apps/web/src/components/v2/player-detail/PlayerHero.tsx",
+      "target": "apps/web/src/components/features/player-detail/PlayerHero.tsx",
+      "cluster": "player-detail"
+    },
+    {
+      "source": "apps/web/src/components/v2/player-detail/PlayerLeaderboardCard.tsx",
+      "target": "apps/web/src/components/features/player-detail/PlayerLeaderboardCard.tsx",
+      "cluster": "player-detail"
+    },
+    {
+      "source": "apps/web/src/components/v2/player-detail/PlayerStatsGrid.tsx",
+      "target": "apps/web/src/components/features/player-detail/PlayerStatsGrid.tsx",
+      "cluster": "player-detail"
+    },
+    {
+      "source": "apps/web/src/components/v2/players/EmptyPlayers.tsx",
+      "target": "apps/web/src/components/features/players/EmptyPlayers.tsx",
+      "cluster": "players"
+    },
+    {
+      "source": "apps/web/src/components/v2/players/PlayersFiltersInline.tsx",
+      "target": "apps/web/src/components/features/players/PlayersFiltersInline.tsx",
+      "cluster": "players"
+    },
+    {
+      "source": "apps/web/src/components/v2/players/PlayersHero.tsx",
+      "target": "apps/web/src/components/features/players/PlayersHero.tsx",
+      "cluster": "players"
+    },
+    {
+      "source": "apps/web/src/components/v2/players/PlayersResultsGrid.tsx",
+      "target": "apps/web/src/components/features/players/PlayersResultsGrid.tsx",
+      "cluster": "players"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-live/ActionLogTimeline.tsx",
+      "target": "apps/web/src/components/features/session-live/ActionLogTimeline.tsx",
+      "cluster": "session-live"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-live/ConnectionLostBanner.tsx",
+      "target": "apps/web/src/components/features/session-live/ConnectionLostBanner.tsx",
+      "cluster": "session-live"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-live/DesktopBody.tsx",
+      "target": "apps/web/src/components/features/session-live/DesktopBody.tsx",
+      "cluster": "session-live"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-live/EndgameDialog.tsx",
+      "target": "apps/web/src/components/features/session-live/EndgameDialog.tsx",
+      "cluster": "session-live"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-live/LiveAgentChat.tsx",
+      "target": "apps/web/src/components/features/session-live/LiveAgentChat.tsx",
+      "cluster": "session-live"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-live/LiveScoringPanel.tsx",
+      "target": "apps/web/src/components/features/session-live/LiveScoringPanel.tsx",
+      "cluster": "session-live"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-live/LiveSessionNotes.tsx",
+      "target": "apps/web/src/components/features/session-live/LiveSessionNotes.tsx",
+      "cluster": "session-live"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-live/LiveTopBar.tsx",
+      "target": "apps/web/src/components/features/session-live/LiveTopBar.tsx",
+      "cluster": "session-live"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-live/MobileBody.tsx",
+      "target": "apps/web/src/components/features/session-live/MobileBody.tsx",
+      "cluster": "session-live"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-live/PauseOverlay.tsx",
+      "target": "apps/web/src/components/features/session-live/PauseOverlay.tsx",
+      "cluster": "session-live"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-live/PlayerRosterLive.tsx",
+      "target": "apps/web/src/components/features/session-live/PlayerRosterLive.tsx",
+      "cluster": "session-live"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-live/RightColumnTabs.tsx",
+      "target": "apps/web/src/components/features/session-live/RightColumnTabs.tsx",
+      "cluster": "session-live"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-live/SessionToolsRail.tsx",
+      "target": "apps/web/src/components/features/session-live/SessionToolsRail.tsx",
+      "cluster": "session-live"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-live/TurnIndicator.tsx",
+      "target": "apps/web/src/components/features/session-live/TurnIndicator.tsx",
+      "cluster": "session-live"
+    },
+    {
+      "source": "apps/web/src/components/v2/sessions/ConnectionChipStripFooter.tsx",
+      "target": "apps/web/src/components/features/sessions/ConnectionChipStripFooter.tsx",
+      "cluster": "sessions"
+    },
+    {
+      "source": "apps/web/src/components/v2/sessions/EmptySessions.tsx",
+      "target": "apps/web/src/components/features/sessions/EmptySessions.tsx",
+      "cluster": "sessions"
+    },
+    {
+      "source": "apps/web/src/components/v2/sessions/OutcomeBadge.tsx",
+      "target": "apps/web/src/components/features/sessions/OutcomeBadge.tsx",
+      "cluster": "sessions"
+    },
+    {
+      "source": "apps/web/src/components/v2/sessions/ScoringInline.tsx",
+      "target": "apps/web/src/components/features/sessions/ScoringInline.tsx",
+      "cluster": "sessions"
+    },
+    {
+      "source": "apps/web/src/components/v2/sessions/SessionCardGrid.tsx",
+      "target": "apps/web/src/components/features/sessions/SessionCardGrid.tsx",
+      "cluster": "sessions"
+    },
+    {
+      "source": "apps/web/src/components/v2/sessions/SessionCardList.tsx",
+      "target": "apps/web/src/components/features/sessions/SessionCardList.tsx",
+      "cluster": "sessions"
+    },
+    {
+      "source": "apps/web/src/components/v2/sessions/SessionsFilters.tsx",
+      "target": "apps/web/src/components/features/sessions/SessionsFilters.tsx",
+      "cluster": "sessions"
+    },
+    {
+      "source": "apps/web/src/components/v2/sessions/SessionsHero.tsx",
+      "target": "apps/web/src/components/features/sessions/SessionsHero.tsx",
+      "cluster": "sessions"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-summary/AchievementsCarousel.tsx",
+      "target": "apps/web/src/components/features/session-summary/AchievementsCarousel.tsx",
+      "cluster": "session-summary"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-summary/ChatHighlights.tsx",
+      "target": "apps/web/src/components/features/session-summary/ChatHighlights.tsx",
+      "cluster": "session-summary"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-summary/Confetti.tsx",
+      "target": "apps/web/src/components/features/session-summary/Confetti.tsx",
+      "cluster": "session-summary"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-summary/PhotosGallery.tsx",
+      "target": "apps/web/src/components/features/session-summary/PhotosGallery.tsx",
+      "cluster": "session-summary"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-summary/PlayAgainCta.tsx",
+      "target": "apps/web/src/components/features/session-summary/PlayAgainCta.tsx",
+      "cluster": "session-summary"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-summary/ScoringBreakdownTable.tsx",
+      "target": "apps/web/src/components/features/session-summary/ScoringBreakdownTable.tsx",
+      "cluster": "session-summary"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-summary/SessionDiaryTimeline.tsx",
+      "target": "apps/web/src/components/features/session-summary/SessionDiaryTimeline.tsx",
+      "cluster": "session-summary"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-summary/SessionKpiGrid.tsx",
+      "target": "apps/web/src/components/features/session-summary/SessionKpiGrid.tsx",
+      "cluster": "session-summary"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-summary/SessionShareCard.tsx",
+      "target": "apps/web/src/components/features/session-summary/SessionShareCard.tsx",
+      "cluster": "session-summary"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-summary/SessionSummaryHero.tsx",
+      "target": "apps/web/src/components/features/session-summary/SessionSummaryHero.tsx",
+      "cluster": "session-summary"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/auth-card/auth-card.tsx",
+      "target": "apps/web/src/components/ui/auth-card/auth-card.tsx",
+      "cluster": "ui-primitives"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/btn/btn.tsx",
+      "target": "apps/web/src/components/ui/btn/btn.tsx",
+      "cluster": "ui-primitives"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/divider/divider.tsx",
+      "target": "apps/web/src/components/ui/divider/divider.tsx",
+      "cluster": "ui-primitives"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/drawer/drawer.tsx",
+      "target": "apps/web/src/components/ui/drawer/drawer.tsx",
+      "cluster": "ui-primitives"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/entity-chip/entity-chip.tsx",
+      "target": "apps/web/src/components/ui/entity-chip/entity-chip.tsx",
+      "cluster": "ui-primitives"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/entity-pip/entity-pip.tsx",
+      "target": "apps/web/src/components/ui/entity-pip/entity-pip.tsx",
+      "cluster": "ui-primitives"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/faq/",
+      "target": "apps/web/src/components/ui/faq/",
+      "cluster": "ui-primitives"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/hero-gradient/hero-gradient.tsx",
+      "target": "apps/web/src/components/ui/hero-gradient/hero-gradient.tsx",
+      "cluster": "ui-primitives"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/input-field/input-field.tsx",
+      "target": "apps/web/src/components/ui/input-field/input-field.tsx",
+      "cluster": "ui-primitives"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/invites/",
+      "target": "apps/web/src/components/ui/invites/",
+      "cluster": "ui-primitives"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/join/",
+      "target": "apps/web/src/components/ui/join/",
+      "cluster": "ui-primitives"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/notification-card/notification-card.tsx",
+      "target": "apps/web/src/components/ui/notification-card/notification-card.tsx",
+      "cluster": "ui-primitives"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/oauth-buttons/oauth-buttons.tsx",
+      "target": "apps/web/src/components/ui/oauth-buttons/oauth-buttons.tsx",
+      "cluster": "ui-primitives"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/pricing-card/pricing-card.tsx",
+      "target": "apps/web/src/components/ui/pricing-card/pricing-card.tsx",
+      "cluster": "ui-primitives"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/pwd-input/pwd-input.tsx",
+      "target": "apps/web/src/components/ui/pwd-input/pwd-input.tsx",
+      "cluster": "ui-primitives"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/settings-list/settings-list.tsx",
+      "target": "apps/web/src/components/ui/settings-list/settings-list.tsx",
+      "cluster": "ui-primitives"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/settings-row/settings-row.tsx",
+      "target": "apps/web/src/components/ui/settings-row/settings-row.tsx",
+      "cluster": "ui-primitives"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/shared-game-detail/",
+      "target": "apps/web/src/components/ui/detail-layout/",
+      "cluster": "ui-primitives"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/shared-games/",
+      "target": "apps/web/src/components/ui/shared-games/",
+      "cluster": "ui-primitives"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/step-progress/step-progress.tsx",
+      "target": "apps/web/src/components/ui/step-progress/step-progress.tsx",
+      "cluster": "ui-primitives"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/strength-meter/strength-meter.tsx",
+      "target": "apps/web/src/components/ui/strength-meter/strength-meter.tsx",
+      "cluster": "ui-primitives"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/success-card/success-card.tsx",
+      "target": "apps/web/src/components/ui/success-card/success-card.tsx",
+      "cluster": "ui-primitives"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/theme-toggle/theme-toggle.tsx",
+      "target": "apps/web/src/components/ui/theme-toggle/theme-toggle.tsx",
+      "cluster": "ui-primitives"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/toggle-switch/toggle-switch.tsx",
+      "target": "apps/web/src/components/ui/toggle-switch/toggle-switch.tsx",
+      "cluster": "ui-primitives"
+    },
+    {
+      "source": "apps/web/src/components/v2/agent-detail/AgentTabs.tsx",
+      "target": "apps/web/src/components/features/agent-detail/AgentTabs.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/agent-detail/index.ts",
+      "target": "apps/web/src/components/features/agent-detail/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/agent-detail/__tests__/AgentDangerZone.test.tsx",
+      "target": "apps/web/src/components/features/agent-detail/__tests__/AgentDangerZone.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/agent-detail/__tests__/AgentHero.test.tsx",
+      "target": "apps/web/src/components/features/agent-detail/__tests__/AgentHero.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/agent-detail/__tests__/AgentSettingsForm.test.tsx",
+      "target": "apps/web/src/components/features/agent-detail/__tests__/AgentSettingsForm.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/agent-detail/__tests__/AgentTabs.test.tsx",
+      "target": "apps/web/src/components/features/agent-detail/__tests__/AgentTabs.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/agent-detail/__tests__/ChatHistoryTimeline.test.tsx",
+      "target": "apps/web/src/components/features/agent-detail/__tests__/ChatHistoryTimeline.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/agent-detail/__tests__/KbDocList.test.tsx",
+      "target": "apps/web/src/components/features/agent-detail/__tests__/KbDocList.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/agent-detail/__tests__/PersonaCard.test.tsx",
+      "target": "apps/web/src/components/features/agent-detail/__tests__/PersonaCard.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/agent-detail/__tests__/SystemPromptViewer.test.tsx",
+      "target": "apps/web/src/components/features/agent-detail/__tests__/SystemPromptViewer.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/agents/AgentsHero.tsx",
+      "target": "apps/web/src/components/features/agents/AgentsHero.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/agents/index.ts",
+      "target": "apps/web/src/components/features/agents/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/agents/__tests__/AgentFilters.test.tsx",
+      "target": "apps/web/src/components/features/agents/__tests__/AgentFilters.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/agents/__tests__/AgentsHero.test.tsx",
+      "target": "apps/web/src/components/features/agents/__tests__/AgentsHero.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/agents/__tests__/AgentsResultsGrid.test.tsx",
+      "target": "apps/web/src/components/features/agents/__tests__/AgentsResultsGrid.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/agents/__tests__/EmptyAgents.test.tsx",
+      "target": "apps/web/src/components/features/agents/__tests__/EmptyAgents.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/discover/DiscoverHero.tsx",
+      "target": "apps/web/src/components/features/discover/DiscoverHero.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/discover/DiscoverSearchBox.tsx",
+      "target": "apps/web/src/components/features/discover/DiscoverSearchBox.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/discover/EntityFilterPillBar.tsx",
+      "target": "apps/web/src/components/features/discover/EntityFilterPillBar.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/discover/FooterCTA.tsx",
+      "target": "apps/web/src/components/features/discover/FooterCTA.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/discover/HorizontalRow.tsx",
+      "target": "apps/web/src/components/features/discover/HorizontalRow.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/discover/RowScroller.tsx",
+      "target": "apps/web/src/components/features/discover/RowScroller.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/index.ts",
+      "target": "apps/web/src/components/features/game-chat/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/__tests__/ChatBubble.test.tsx",
+      "target": "apps/web/src/components/features/game-chat/__tests__/ChatBubble.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/__tests__/ChatBubbleSkeleton.test.tsx",
+      "target": "apps/web/src/components/features/game-chat/__tests__/ChatBubbleSkeleton.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/__tests__/ChatHistoryBanner.test.tsx",
+      "target": "apps/web/src/components/features/game-chat/__tests__/ChatHistoryBanner.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/__tests__/ChatInputBar.test.tsx",
+      "target": "apps/web/src/components/features/game-chat/__tests__/ChatInputBar.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/__tests__/CitationChip.test.tsx",
+      "target": "apps/web/src/components/features/game-chat/__tests__/CitationChip.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/__tests__/CitationModal.test.tsx",
+      "target": "apps/web/src/components/features/game-chat/__tests__/CitationModal.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/__tests__/CitationOwnershipUpsell.test.tsx",
+      "target": "apps/web/src/components/features/game-chat/__tests__/CitationOwnershipUpsell.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/__tests__/CitationPdfTab.test.tsx",
+      "target": "apps/web/src/components/features/game-chat/__tests__/CitationPdfTab.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/__tests__/ConfidenceBadge.test.tsx",
+      "target": "apps/web/src/components/features/game-chat/__tests__/ConfidenceBadge.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/__tests__/GameChatHeader.test.tsx",
+      "target": "apps/web/src/components/features/game-chat/__tests__/GameChatHeader.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/__tests__/GameChatSidebar.test.tsx",
+      "target": "apps/web/src/components/features/game-chat/__tests__/GameChatSidebar.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/__tests__/GameChatTabV2.test.tsx",
+      "target": "apps/web/src/components/features/game-chat/__tests__/GameChatTabV2.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/__tests__/LowConfidenceDisclaimer.test.tsx",
+      "target": "apps/web/src/components/features/game-chat/__tests__/LowConfidenceDisclaimer.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/__tests__/OutOfContextActions.test.tsx",
+      "target": "apps/web/src/components/features/game-chat/__tests__/OutOfContextActions.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/__tests__/SuggestedPrompts.test.tsx",
+      "target": "apps/web/src/components/features/game-chat/__tests__/SuggestedPrompts.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-chat/__tests__/TypingIndicator.test.tsx",
+      "target": "apps/web/src/components/features/game-chat/__tests__/TypingIndicator.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-detail/index.ts",
+      "target": "apps/web/src/components/features/game-detail/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-detail/__tests__/GameDetailAgentsList.test.tsx",
+      "target": "apps/web/src/components/features/game-detail/__tests__/GameDetailAgentsList.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-detail/__tests__/GameDetailFaqList.test.tsx",
+      "target": "apps/web/src/components/features/game-detail/__tests__/GameDetailFaqList.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-detail/__tests__/GameDetailHero.test.tsx",
+      "target": "apps/web/src/components/features/game-detail/__tests__/GameDetailHero.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-detail/__tests__/GameDetailKbDocList.test.tsx",
+      "target": "apps/web/src/components/features/game-detail/__tests__/GameDetailKbDocList.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-detail/__tests__/GameDetailKpiCards.test.tsx",
+      "target": "apps/web/src/components/features/game-detail/__tests__/GameDetailKpiCards.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-detail/__tests__/GameDetailRulesAccordion.test.tsx",
+      "target": "apps/web/src/components/features/game-detail/__tests__/GameDetailRulesAccordion.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-detail/__tests__/GameDetailSessionsRail.test.tsx",
+      "target": "apps/web/src/components/features/game-detail/__tests__/GameDetailSessionsRail.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-detail/__tests__/GameDetailTabsAnimated.test.tsx",
+      "target": "apps/web/src/components/features/game-detail/__tests__/GameDetailTabsAnimated.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-nights/CalendarDayCell.tsx",
+      "target": "apps/web/src/components/features/game-nights/CalendarDayCell.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-nights/CalendarMonthGrid.tsx",
+      "target": "apps/web/src/components/features/game-nights/CalendarMonthGrid.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-nights/DayDetailDrawer.tsx",
+      "target": "apps/web/src/components/features/game-nights/DayDetailDrawer.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-nights/FilterPillBar.tsx",
+      "target": "apps/web/src/components/features/game-nights/FilterPillBar.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-nights/GameNightListCard.tsx",
+      "target": "apps/web/src/components/features/game-nights/GameNightListCard.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-nights/GameNightsHeader.tsx",
+      "target": "apps/web/src/components/features/game-nights/GameNightsHeader.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-nights/PlayerAvatars.tsx",
+      "target": "apps/web/src/components/features/game-nights/PlayerAvatars.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/game-nights/StatusPill.tsx",
+      "target": "apps/web/src/components/features/game-nights/StatusPill.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/index.ts",
+      "target": "apps/web/src/components/features/gamebook/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/NanolithCampaignCTA.tsx",
+      "target": "apps/web/src/components/features/gamebook/NanolithCampaignCTA.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/NewCampaignDialog.tsx",
+      "target": "apps/web/src/components/features/gamebook/NewCampaignDialog.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/__tests__/ActionCard.test.tsx",
+      "target": "apps/web/src/components/features/gamebook/__tests__/ActionCard.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/__tests__/CameraViewfinder.test.tsx",
+      "target": "apps/web/src/components/features/gamebook/__tests__/CameraViewfinder.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/__tests__/CancelModal.test.tsx",
+      "target": "apps/web/src/components/features/gamebook/__tests__/CancelModal.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/__tests__/ConfidenceBadge.test.tsx",
+      "target": "apps/web/src/components/features/gamebook/__tests__/ConfidenceBadge.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/__tests__/DesktopDropFallback.test.tsx",
+      "target": "apps/web/src/components/features/gamebook/__tests__/DesktopDropFallback.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/__tests__/EmptyGamebooks.test.tsx",
+      "target": "apps/web/src/components/features/gamebook/__tests__/EmptyGamebooks.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/__tests__/GamebookCard.test.tsx",
+      "target": "apps/web/src/components/features/gamebook/__tests__/GamebookCard.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/__tests__/GamebookCardSkeleton.test.tsx",
+      "target": "apps/web/src/components/features/gamebook/__tests__/GamebookCardSkeleton.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/__tests__/GamebookHero.test.tsx",
+      "target": "apps/web/src/components/features/gamebook/__tests__/GamebookHero.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/__tests__/GamebookPlayShell.test.tsx",
+      "target": "apps/web/src/components/features/gamebook/__tests__/GamebookPlayShell.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/__tests__/GameSearchBar.test.tsx",
+      "target": "apps/web/src/components/features/gamebook/__tests__/GameSearchBar.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/__tests__/GameSearchCard.test.tsx",
+      "target": "apps/web/src/components/features/gamebook/__tests__/GameSearchCard.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/__tests__/NewCampaignDialog.test.tsx",
+      "target": "apps/web/src/components/features/gamebook/__tests__/NewCampaignDialog.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/__tests__/NoResultsPanel.test.tsx",
+      "target": "apps/web/src/components/features/gamebook/__tests__/NoResultsPanel.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/__tests__/OfflineBanner.test.tsx",
+      "target": "apps/web/src/components/features/gamebook/__tests__/OfflineBanner.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/__tests__/PageThumb.test.tsx",
+      "target": "apps/web/src/components/features/gamebook/__tests__/PageThumb.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/__tests__/QuotaWidget.test.tsx",
+      "target": "apps/web/src/components/features/gamebook/__tests__/QuotaWidget.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/__tests__/SegmentPicker.test.tsx",
+      "target": "apps/web/src/components/features/gamebook/__tests__/SegmentPicker.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/__tests__/StepIndicator.test.tsx",
+      "target": "apps/web/src/components/features/gamebook/__tests__/StepIndicator.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/__tests__/TranslateParagraphDemo.test.tsx",
+      "target": "apps/web/src/components/features/gamebook/__tests__/TranslateParagraphDemo.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/__tests__/TranslateViewer.test.tsx",
+      "target": "apps/web/src/components/features/gamebook/__tests__/TranslateViewer.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/gamebook/__tests__/TranslationPane.test.tsx",
+      "target": "apps/web/src/components/features/gamebook/__tests__/TranslationPane.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/games/AdvancedFiltersDrawer.tsx",
+      "target": "apps/web/src/components/features/games/AdvancedFiltersDrawer.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/games/index.ts",
+      "target": "apps/web/src/components/features/games/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/games/__tests__/GamesEmptyState.test.tsx",
+      "target": "apps/web/src/components/features/games/__tests__/GamesEmptyState.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/games/__tests__/GamesFiltersInline.test.tsx",
+      "target": "apps/web/src/components/features/games/__tests__/GamesFiltersInline.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/games/__tests__/GamesHero.test.tsx",
+      "target": "apps/web/src/components/features/games/__tests__/GamesHero.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/games/__tests__/GamesRecentRail.test.tsx",
+      "target": "apps/web/src/components/features/games/__tests__/GamesRecentRail.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/games/__tests__/GamesResultsGrid.test.tsx",
+      "target": "apps/web/src/components/features/games/__tests__/GamesResultsGrid.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/kb-detail/ChunkSearchBox.tsx",
+      "target": "apps/web/src/components/features/kb-detail/ChunkSearchBox.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/kb-detail/KbChunkListPanel.tsx",
+      "target": "apps/web/src/components/features/kb-detail/KbChunkListPanel.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/kb-detail/KbChunkPreview.tsx",
+      "target": "apps/web/src/components/features/kb-detail/KbChunkPreview.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/kb-detail/KbHeader.tsx",
+      "target": "apps/web/src/components/features/kb-detail/KbHeader.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/kb-detail/KbProcessingState.tsx",
+      "target": "apps/web/src/components/features/kb-detail/KbProcessingState.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/kb-detail/MarkdownRenderBlock.tsx",
+      "target": "apps/web/src/components/features/kb-detail/MarkdownRenderBlock.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/library/EmptyLibrary.tsx",
+      "target": "apps/web/src/components/features/library/EmptyLibrary.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/library/index.ts",
+      "target": "apps/web/src/components/features/library/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/library/__tests__/BulkSelectionBar.test.tsx",
+      "target": "apps/web/src/components/features/library/__tests__/BulkSelectionBar.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/library/__tests__/EmptyLibrary.test.tsx",
+      "target": "apps/web/src/components/features/library/__tests__/EmptyLibrary.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/library/__tests__/LibraryHeroDesktop.test.tsx",
+      "target": "apps/web/src/components/features/library/__tests__/LibraryHeroDesktop.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/library/__tests__/LibraryHybridGrid.test.tsx",
+      "target": "apps/web/src/components/features/library/__tests__/LibraryHybridGrid.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/library/__tests__/LibraryTabs.test.tsx",
+      "target": "apps/web/src/components/features/library/__tests__/LibraryTabs.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/library/__tests__/RecentActivityRail.test.tsx",
+      "target": "apps/web/src/components/features/library/__tests__/RecentActivityRail.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/player-detail/index.ts",
+      "target": "apps/web/src/components/features/player-detail/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/player-detail/__tests__/AchievementBadgeGrid.test.tsx",
+      "target": "apps/web/src/components/features/player-detail/__tests__/AchievementBadgeGrid.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/player-detail/__tests__/FavoriteAgentCard.test.tsx",
+      "target": "apps/web/src/components/features/player-detail/__tests__/FavoriteAgentCard.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/player-detail/__tests__/PlayerHero.test.tsx",
+      "target": "apps/web/src/components/features/player-detail/__tests__/PlayerHero.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/player-detail/__tests__/PlayerLeaderboardCard.test.tsx",
+      "target": "apps/web/src/components/features/player-detail/__tests__/PlayerLeaderboardCard.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/player-detail/__tests__/PlayerStatsGrid.test.tsx",
+      "target": "apps/web/src/components/features/player-detail/__tests__/PlayerStatsGrid.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/players/index.ts",
+      "target": "apps/web/src/components/features/players/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/players/__tests__/EmptyPlayers.test.tsx",
+      "target": "apps/web/src/components/features/players/__tests__/EmptyPlayers.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/players/__tests__/PlayersFiltersInline.test.tsx",
+      "target": "apps/web/src/components/features/players/__tests__/PlayersFiltersInline.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/players/__tests__/PlayersHero.test.tsx",
+      "target": "apps/web/src/components/features/players/__tests__/PlayersHero.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/players/__tests__/PlayersResultsGrid.test.tsx",
+      "target": "apps/web/src/components/features/players/__tests__/PlayersResultsGrid.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-live/index.ts",
+      "target": "apps/web/src/components/features/session-live/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-live/__tests__/ConnectionLostBanner.test.tsx",
+      "target": "apps/web/src/components/features/session-live/__tests__/ConnectionLostBanner.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-live/__tests__/EndgameDialog.test.tsx",
+      "target": "apps/web/src/components/features/session-live/__tests__/EndgameDialog.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-live/__tests__/LiveAgentChat.test.tsx",
+      "target": "apps/web/src/components/features/session-live/__tests__/LiveAgentChat.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-live/__tests__/LiveSessionNotes.test.tsx",
+      "target": "apps/web/src/components/features/session-live/__tests__/LiveSessionNotes.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-live/__tests__/PauseOverlay.test.tsx",
+      "target": "apps/web/src/components/features/session-live/__tests__/PauseOverlay.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-live/__tests__/RightColumnTabs.test.tsx",
+      "target": "apps/web/src/components/features/session-live/__tests__/RightColumnTabs.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-live/__tests__/SessionToolsRail.test.tsx",
+      "target": "apps/web/src/components/features/session-live/__tests__/SessionToolsRail.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-summary/ConnectionBar.tsx",
+      "target": "apps/web/src/components/features/session-summary/ConnectionBar.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-summary/index.ts",
+      "target": "apps/web/src/components/features/session-summary/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-summary/__tests__/AchievementsCarousel.test.tsx",
+      "target": "apps/web/src/components/features/session-summary/__tests__/AchievementsCarousel.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-summary/__tests__/ChatHighlights.test.tsx",
+      "target": "apps/web/src/components/features/session-summary/__tests__/ChatHighlights.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-summary/__tests__/Confetti.test.tsx",
+      "target": "apps/web/src/components/features/session-summary/__tests__/Confetti.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-summary/__tests__/ConnectionBar.test.tsx",
+      "target": "apps/web/src/components/features/session-summary/__tests__/ConnectionBar.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-summary/__tests__/PhotosGallery.test.tsx",
+      "target": "apps/web/src/components/features/session-summary/__tests__/PhotosGallery.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-summary/__tests__/PlayAgainCta.test.tsx",
+      "target": "apps/web/src/components/features/session-summary/__tests__/PlayAgainCta.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-summary/__tests__/ScoringBreakdownTable.test.tsx",
+      "target": "apps/web/src/components/features/session-summary/__tests__/ScoringBreakdownTable.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-summary/__tests__/SessionDiaryTimeline.test.tsx",
+      "target": "apps/web/src/components/features/session-summary/__tests__/SessionDiaryTimeline.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-summary/__tests__/SessionKpiGrid.test.tsx",
+      "target": "apps/web/src/components/features/session-summary/__tests__/SessionKpiGrid.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-summary/__tests__/SessionShareCard.test.tsx",
+      "target": "apps/web/src/components/features/session-summary/__tests__/SessionShareCard.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/session-summary/__tests__/SessionSummaryHero.test.tsx",
+      "target": "apps/web/src/components/features/session-summary/__tests__/SessionSummaryHero.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/sessions/index.ts",
+      "target": "apps/web/src/components/features/sessions/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/sessions/__tests__/ConnectionChipStripFooter.test.tsx",
+      "target": "apps/web/src/components/features/sessions/__tests__/ConnectionChipStripFooter.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/sessions/__tests__/EmptySessions.test.tsx",
+      "target": "apps/web/src/components/features/sessions/__tests__/EmptySessions.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/sessions/__tests__/OutcomeBadge.test.tsx",
+      "target": "apps/web/src/components/features/sessions/__tests__/OutcomeBadge.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/sessions/__tests__/ScoringInline.test.tsx",
+      "target": "apps/web/src/components/features/sessions/__tests__/ScoringInline.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/sessions/__tests__/SessionCardGrid.test.tsx",
+      "target": "apps/web/src/components/features/sessions/__tests__/SessionCardGrid.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/sessions/__tests__/SessionCardList.test.tsx",
+      "target": "apps/web/src/components/features/sessions/__tests__/SessionCardList.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/sessions/__tests__/SessionsFilters.test.tsx",
+      "target": "apps/web/src/components/features/sessions/__tests__/SessionsFilters.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/sessions/__tests__/SessionsHero.test.tsx",
+      "target": "apps/web/src/components/features/sessions/__tests__/SessionsHero.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/toolkit-detail/PromptPreviewBlock.tsx",
+      "target": "apps/web/src/components/features/toolkit-detail/PromptPreviewBlock.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/toolkit-detail/RatingBreakdown.tsx",
+      "target": "apps/web/src/components/features/toolkit-detail/RatingBreakdown.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/toolkit-detail/Stars.tsx",
+      "target": "apps/web/src/components/features/toolkit-detail/Stars.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/toolkit-detail/ToolkitIncludesGrid.tsx",
+      "target": "apps/web/src/components/features/toolkit-detail/ToolkitIncludesGrid.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/toolkit-detail/ToolkitSummaryPanel.tsx",
+      "target": "apps/web/src/components/features/toolkit-detail/ToolkitSummaryPanel.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/v2/toolkit-detail/VersionTimeline.tsx",
+      "target": "apps/web/src/components/features/toolkit-detail/VersionTimeline.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/auth-card/auth-card.test.tsx",
+      "target": "apps/web/src/components/ui/auth-card/auth-card.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/auth-card/index.ts",
+      "target": "apps/web/src/components/ui/auth-card/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/btn/btn.test.tsx",
+      "target": "apps/web/src/components/ui/btn/btn.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/btn/index.ts",
+      "target": "apps/web/src/components/ui/btn/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/divider/divider.test.tsx",
+      "target": "apps/web/src/components/ui/divider/divider.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/divider/index.ts",
+      "target": "apps/web/src/components/ui/divider/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/drawer/drawer.test.tsx",
+      "target": "apps/web/src/components/ui/drawer/drawer.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/drawer/index.ts",
+      "target": "apps/web/src/components/ui/drawer/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/drawer/use-drawer-breakpoint.test.ts",
+      "target": "apps/web/src/components/ui/drawer/use-drawer-breakpoint.test.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/drawer/use-drawer-breakpoint.ts",
+      "target": "apps/web/src/components/ui/drawer/use-drawer-breakpoint.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/entity-card/entity-card.test.tsx",
+      "target": "apps/web/src/components/ui/entity-card/entity-card.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/entity-card/entity-card.tsx",
+      "target": "apps/web/src/components/ui/entity-card/entity-card.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/entity-card/index.ts",
+      "target": "apps/web/src/components/ui/entity-card/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/entity-chip/entity-chip.test.tsx",
+      "target": "apps/web/src/components/ui/entity-chip/entity-chip.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/entity-pip/entity-pip.test.tsx",
+      "target": "apps/web/src/components/ui/entity-pip/entity-pip.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/entity-pip/index.ts",
+      "target": "apps/web/src/components/ui/entity-pip/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/entity-tokens.test.ts",
+      "target": "apps/web/src/components/ui/entity-tokens.test.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/entity-tokens.ts",
+      "target": "apps/web/src/components/ui/entity-tokens.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/hero-gradient/hero-gradient.test.tsx",
+      "target": "apps/web/src/components/ui/hero-gradient/hero-gradient.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/hero-gradient/index.ts",
+      "target": "apps/web/src/components/ui/hero-gradient/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/input-field/index.ts",
+      "target": "apps/web/src/components/ui/input-field/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/input-field/input-field.test.tsx",
+      "target": "apps/web/src/components/ui/input-field/input-field.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/notification-card/index.ts",
+      "target": "apps/web/src/components/ui/notification-card/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/notification-card/notification-card.test.tsx",
+      "target": "apps/web/src/components/ui/notification-card/notification-card.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/oauth-buttons/index.ts",
+      "target": "apps/web/src/components/ui/oauth-buttons/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/oauth-buttons/oauth-buttons.test.tsx",
+      "target": "apps/web/src/components/ui/oauth-buttons/oauth-buttons.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/pricing-card/index.ts",
+      "target": "apps/web/src/components/ui/pricing-card/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/pricing-card/pricing-card.test.tsx",
+      "target": "apps/web/src/components/ui/pricing-card/pricing-card.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/pwd-input/index.ts",
+      "target": "apps/web/src/components/ui/pwd-input/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/pwd-input/pwd-input.test.tsx",
+      "target": "apps/web/src/components/ui/pwd-input/pwd-input.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/settings-list/index.ts",
+      "target": "apps/web/src/components/ui/settings-list/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/settings-list/settings-list.test.tsx",
+      "target": "apps/web/src/components/ui/settings-list/settings-list.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/settings-row/index.ts",
+      "target": "apps/web/src/components/ui/settings-row/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/settings-row/settings-row.test.tsx",
+      "target": "apps/web/src/components/ui/settings-row/settings-row.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/step-progress/index.ts",
+      "target": "apps/web/src/components/ui/step-progress/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/step-progress/step-progress.test.tsx",
+      "target": "apps/web/src/components/ui/step-progress/step-progress.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/strength-meter/index.ts",
+      "target": "apps/web/src/components/ui/strength-meter/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/strength-meter/strength-meter.test.tsx",
+      "target": "apps/web/src/components/ui/strength-meter/strength-meter.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/success-card/index.ts",
+      "target": "apps/web/src/components/ui/success-card/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/success-card/success-card.test.tsx",
+      "target": "apps/web/src/components/ui/success-card/success-card.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/theme-toggle/theme-toggle.test.tsx",
+      "target": "apps/web/src/components/ui/theme-toggle/theme-toggle.test.tsx",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/toggle-switch/index.ts",
+      "target": "apps/web/src/components/ui/toggle-switch/index.ts",
+      "cluster": "sweep:components"
+    },
+    {
+      "source": "apps/web/src/components/ui/v2/toggle-switch/toggle-switch.test.tsx",
+      "target": "apps/web/src/components/ui/toggle-switch/toggle-switch.test.tsx",
+      "cluster": "sweep:components"
+    }
+  ],
+  "deletes": [
+    {
+      "source": "apps/web/src/components/v2/agent-detail/AgentCharacterSheet.tsx",
+      "cluster": "agent-detail",
+      "reason": "TODO stub (return null). Orphan: matrix renamed this entry to AgentHero (PR #711). No canonical successor."
+    },
+    {
+      "source": "apps/web/src/components/v2/agents/AgentDetailPanel.tsx",
+      "cluster": "agents",
+      "reason": "TODO stub. Removed from /agents scope per matrix B.2 review (grid not master-detail). Orphan candidate."
+    },
+    {
+      "source": "apps/web/src/components/v2/agents/AgentsSidebarList.tsx",
+      "cluster": "agents",
+      "reason": "TODO stub. Removed from /agents scope per matrix B.2 review. Orphan."
+    }
+  ],
+  "collisions": [
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/v2/gamebook/ConfidenceBadge.tsx",
+      "target": "apps/web/src/components/features/gamebook/ConfidenceBadge.tsx",
+      "detail": "Basename 'ConfidenceBadge' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/v2/gamebook/StepIndicator.tsx",
+      "target": "apps/web/src/components/features/gamebook/StepIndicator.tsx",
+      "detail": "Basename 'StepIndicator' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/v2/game-chat/ConfidenceBadge.tsx",
+      "target": "apps/web/src/components/features/game-chat/ConfidenceBadge.tsx",
+      "detail": "Basename 'ConfidenceBadge' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/v2/game-chat/TypingIndicator.tsx",
+      "target": "apps/web/src/components/features/game-chat/TypingIndicator.tsx",
+      "detail": "Basename 'TypingIndicator' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/v2/session-summary/SessionDiaryTimeline.tsx",
+      "target": "apps/web/src/components/features/session-summary/SessionDiaryTimeline.tsx",
+      "detail": "Basename 'SessionDiaryTimeline' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/ui/v2/btn/btn.tsx",
+      "target": "apps/web/src/components/ui/btn/btn.tsx",
+      "detail": "Basename 'btn' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/ui/v2/drawer/drawer.tsx",
+      "target": "apps/web/src/components/ui/drawer/drawer.tsx",
+      "detail": "Basename 'drawer' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/ui/v2/input-field/input-field.tsx",
+      "target": "apps/web/src/components/ui/input-field/input-field.tsx",
+      "detail": "Basename 'input-field' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/ui/v2/step-progress/step-progress.tsx",
+      "target": "apps/web/src/components/ui/step-progress/step-progress.tsx",
+      "detail": "Basename 'step-progress' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/ui/v2/toggle-switch/toggle-switch.tsx",
+      "target": "apps/web/src/components/ui/toggle-switch/toggle-switch.tsx",
+      "detail": "Basename 'toggle-switch' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/v2/session-summary/ConnectionBar.tsx",
+      "target": "apps/web/src/components/features/session-summary/ConnectionBar.tsx",
+      "detail": "Basename 'ConnectionBar' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/ui/v2/btn/btn.test.tsx",
+      "target": "apps/web/src/components/ui/btn/btn.test.tsx",
+      "detail": "Basename 'btn.test' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/ui/v2/btn/index.ts",
+      "target": "apps/web/src/components/ui/btn/index.ts",
+      "detail": "Basename 'index' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/ui/v2/drawer/drawer.test.tsx",
+      "target": "apps/web/src/components/ui/drawer/drawer.test.tsx",
+      "detail": "Basename 'drawer.test' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/ui/v2/drawer/index.ts",
+      "target": "apps/web/src/components/ui/drawer/index.ts",
+      "detail": "Basename 'index' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/ui/v2/drawer/use-drawer-breakpoint.test.ts",
+      "target": "apps/web/src/components/ui/drawer/use-drawer-breakpoint.test.ts",
+      "detail": "Basename 'use-drawer-breakpoint.test' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/ui/v2/drawer/use-drawer-breakpoint.ts",
+      "target": "apps/web/src/components/ui/drawer/use-drawer-breakpoint.ts",
+      "detail": "Basename 'use-drawer-breakpoint' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/ui/v2/entity-card/entity-card.test.tsx",
+      "target": "apps/web/src/components/ui/entity-card/entity-card.test.tsx",
+      "detail": "Basename 'entity-card.test' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/ui/v2/entity-card/entity-card.tsx",
+      "target": "apps/web/src/components/ui/entity-card/entity-card.tsx",
+      "detail": "Basename 'entity-card' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/ui/v2/entity-card/index.ts",
+      "target": "apps/web/src/components/ui/entity-card/index.ts",
+      "detail": "Basename 'index' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/ui/v2/input-field/index.ts",
+      "target": "apps/web/src/components/ui/input-field/index.ts",
+      "detail": "Basename 'index' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/ui/v2/input-field/input-field.test.tsx",
+      "target": "apps/web/src/components/ui/input-field/input-field.test.tsx",
+      "detail": "Basename 'input-field.test' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/ui/v2/step-progress/index.ts",
+      "target": "apps/web/src/components/ui/step-progress/index.ts",
+      "detail": "Basename 'index' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/ui/v2/step-progress/step-progress.test.tsx",
+      "target": "apps/web/src/components/ui/step-progress/step-progress.test.tsx",
+      "detail": "Basename 'step-progress.test' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/ui/v2/toggle-switch/index.ts",
+      "target": "apps/web/src/components/ui/toggle-switch/index.ts",
+      "detail": "Basename 'index' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    },
+    {
+      "kind": "name-watchlist",
+      "source": "apps/web/src/components/ui/v2/toggle-switch/toggle-switch.test.tsx",
+      "target": "apps/web/src/components/ui/toggle-switch/toggle-switch.test.tsx",
+      "detail": "Basename 'toggle-switch.test' matches Stage 2 known-collision watchlist. Different cluster directories prevent FS conflict, but import disambiguation matters.",
+      "severity": "warning",
+      "recommendation": "After rename, audit consumer imports for ambiguous re-exports or aliasing."
+    }
+  ],
+  "imports_sample": [
+    {
+      "file": "apps/web/src/lib/color-utils.ts",
+      "oldSpecifier": "@/components/ui/v2/entity-tokens",
+      "newSpecifier": "@/components/ui/entity-tokens"
+    },
+    {
+      "file": "apps/web/src/hooks/queries/useGameChat.ts",
+      "oldSpecifier": "@/components/v2/game-chat/GameChatHeader",
+      "newSpecifier": "@/components/features/game-chat/GameChatHeader"
+    },
+    {
+      "file": "apps/web/src/app/(authenticated)/notifications/page.tsx",
+      "oldSpecifier": "@/components/ui/v2/entity-tokens",
+      "newSpecifier": "@/components/ui/entity-tokens"
+    },
+    {
+      "file": "apps/web/src/app/(public)/faq/page.tsx",
+      "oldSpecifier": "@/components/ui/v2/faq",
+      "newSpecifier": "@/components/ui/faq"
+    },
+    {
+      "file": "apps/web/src/app/(public)/join/page-client.tsx",
+      "oldSpecifier": "@/components/ui/v2/join",
+      "newSpecifier": "@/components/ui/join"
+    },
+    {
+      "file": "apps/web/src/app/(public)/join/page-client.tsx",
+      "oldSpecifier": "@/components/ui/v2/join",
+      "newSpecifier": "@/components/ui/join"
+    },
+    {
+      "file": "apps/web/src/app/(public)/pricing/page.tsx",
+      "oldSpecifier": "@/components/ui/v2/pricing-card/pricing-card",
+      "newSpecifier": "@/components/ui/pricing-card/pricing-card"
+    },
+    {
+      "file": "apps/web/src/app/(public)/shared-games/page-client.tsx",
+      "oldSpecifier": "@/components/ui/v2/shared-games",
+      "newSpecifier": "@/components/ui/shared-games"
+    },
+    {
+      "file": "apps/web/src/components/library/v2/GameDrawerContent.tsx",
+      "oldSpecifier": "@/components/ui/v2/entity-tokens",
+      "newSpecifier": "@/components/ui/entity-tokens"
+    },
+    {
+      "file": "apps/web/src/components/library/v2/LibraryDesktop.tsx",
+      "oldSpecifier": "@/components/ui/v2/entity-card/entity-card",
+      "newSpecifier": "@/components/ui/entity-card/entity-card"
+    },
+    {
+      "file": "apps/web/src/components/library/v2/LibraryMobile.tsx",
+      "oldSpecifier": "@/components/ui/v2/entity-card/entity-card",
+      "newSpecifier": "@/components/ui/entity-card/entity-card"
+    },
+    {
+      "file": "apps/web/src/components/v2/agent-detail/index.ts",
+      "oldSpecifier": "./AgentHero",
+      "newSpecifier": "@/components/features/agent-detail/AgentHero"
+    },
+    {
+      "file": "apps/web/src/components/v2/agent-detail/index.ts",
+      "oldSpecifier": "./AgentTabs",
+      "newSpecifier": "@/components/features/agent-detail/AgentTabs"
+    },
+    {
+      "file": "apps/web/src/components/v2/agent-detail/index.ts",
+      "oldSpecifier": "./PersonaCard",
+      "newSpecifier": "@/components/features/agent-detail/PersonaCard"
+    },
+    {
+      "file": "apps/web/src/components/v2/agent-detail/index.ts",
+      "oldSpecifier": "./SystemPromptViewer",
+      "newSpecifier": "@/components/features/agent-detail/SystemPromptViewer"
+    },
+    {
+      "file": "apps/web/src/components/v2/agent-detail/index.ts",
+      "oldSpecifier": "./KbDocList",
+      "newSpecifier": "@/components/features/agent-detail/KbDocList"
+    },
+    {
+      "file": "apps/web/src/components/v2/agent-detail/index.ts",
+      "oldSpecifier": "./ChatHistoryTimeline",
+      "newSpecifier": "@/components/features/agent-detail/ChatHistoryTimeline"
+    },
+    {
+      "file": "apps/web/src/components/v2/agent-detail/index.ts",
+      "oldSpecifier": "./AgentSettingsForm",
+      "newSpecifier": "@/components/features/agent-detail/AgentSettingsForm"
+    },
+    {
+      "file": "apps/web/src/components/v2/agent-detail/index.ts",
+      "oldSpecifier": "./AgentDangerZone",
+      "newSpecifier": "@/components/features/agent-detail/AgentDangerZone"
+    },
+    {
+      "file": "apps/web/src/components/v2/agents/index.ts",
+      "oldSpecifier": "./AgentsHero",
+      "newSpecifier": "@/components/features/agents/AgentsHero"
+    },
+    {
+      "file": "apps/web/src/components/v2/agents/index.ts",
+      "oldSpecifier": "./AgentsHero",
+      "newSpecifier": "@/components/features/agents/AgentsHero"
+    },
+    {
+      "file": "apps/web/src/components/v2/agents/index.ts",
+      "oldSpecifier": "./AgentFilters",
+      "newSpecifier": "@/components/features/agents/AgentFilters"
+    },
+    {
+      "file": "apps/web/src/components/v2/agents/index.ts",
+      "oldSpecifier": "./AgentFilters",
+      "newSpecifier": "@/components/features/agents/AgentFilters"
+    },
+    {
+      "file": "apps/web/src/components/v2/agents/index.ts",
+      "oldSpecifier": "./AgentsResultsGrid",
+      "newSpecifier": "@/components/features/agents/AgentsResultsGrid"
+    },
+    {
+      "file": "apps/web/src/components/v2/agents/index.ts",
+      "oldSpecifier": "./AgentsResultsGrid",
+      "newSpecifier": "@/components/features/agents/AgentsResultsGrid"
+    },
+    {
+      "file": "apps/web/src/components/v2/agents/index.ts",
+      "oldSpecifier": "./EmptyAgents",
+      "newSpecifier": "@/components/features/agents/EmptyAgents"
+    },
+    {
+      "file": "apps/web/src/components/v2/agents/index.ts",
+      "oldSpecifier": "./EmptyAgents",
+      "newSpecifier": "@/components/features/agents/EmptyAgents"
+    },
+    {
+      "file": "apps/web/src/components/v2/game-chat/CitationModal.tsx",
+      "oldSpecifier": "./CitationPdfTab",
+      "newSpecifier": "@/components/features/game-chat/CitationPdfTab"
+    },
+    {
+      "file": "apps/web/src/components/v2/game-chat/CitationPdfTab.tsx",
+      "oldSpecifier": "./CitationOwnershipUpsell",
+      "newSpecifier": "@/components/features/game-chat/CitationOwnershipUpsell"
+    },
+    {
+      "file": "apps/web/src/components/v2/game-chat/GameChatSidebar.tsx",
+      "oldSpecifier": "./GameChatHeader",
+      "newSpecifier": "@/components/features/game-chat/GameChatHeader"
+    },
+    {
+      "file": "apps/web/src/components/v2/game-chat/GameChatTabV2.tsx",
+      "oldSpecifier": "./ChatBubble",
+      "newSpecifier": "@/components/features/game-chat/ChatBubble"
+    },
+    {
+      "file": "apps/web/src/components/v2/game-chat/GameChatTabV2.tsx",
+      "oldSpecifier": "./ChatBubbleSkeleton",
+      "newSpecifier": "@/components/features/game-chat/ChatBubbleSkeleton"
+    },
+    {
+      "file": "apps/web/src/components/v2/game-chat/GameChatTabV2.tsx",
+      "oldSpecifier": "./ChatHistoryBanner",
+      "newSpecifier": "@/components/features/game-chat/ChatHistoryBanner"
+    },
+    {
+      "file": "apps/web/src/components/v2/game-chat/GameChatTabV2.tsx",
+      "oldSpecifier": "./ChatInputBar",
+      "newSpecifier": "@/components/features/game-chat/ChatInputBar"
+    },
+    {
+      "file": "apps/web/src/components/v2/game-chat/GameChatTabV2.tsx",
+      "oldSpecifier": "./CitationChip",
+      "newSpecifier": "@/components/features/game-chat/CitationChip"
+    },
+    {
+      "file": "apps/web/src/components/v2/game-chat/GameChatTabV2.tsx",
+      "oldSpecifier": "./CitationModal",
+      "newSpecifier": "@/components/features/game-chat/CitationModal"
+    },
+    {
+      "file": "apps/web/src/components/v2/game-chat/GameChatTabV2.tsx",
+      "oldSpecifier": "./ConfidenceBadge",
+      "newSpecifier": "@/components/features/game-chat/ConfidenceBadge"
+    },
+    {
+      "file": "apps/web/src/components/v2/game-chat/GameChatTabV2.tsx",
+      "oldSpecifier": "./GameChatHeader",
+      "newSpecifier": "@/components/features/game-chat/GameChatHeader"
+    },
+    {
+      "file": "apps/web/src/components/v2/game-chat/GameChatTabV2.tsx",
+      "oldSpecifier": "./GameChatSidebar",
+      "newSpecifier": "@/components/features/game-chat/GameChatSidebar"
+    },
+    {
+      "file": "apps/web/src/components/v2/game-chat/GameChatTabV2.tsx",
+      "oldSpecifier": "./LowConfidenceDisclaimer",
+      "newSpecifier": "@/components/features/game-chat/LowConfidenceDisclaimer"
+    },
+    {
+      "file": "apps/web/src/components/v2/game-chat/GameChatTabV2.tsx",
+      "oldSpecifier": "./OutOfContextActions",
+      "newSpecifier": "@/components/features/game-chat/OutOfContextActions"
+    },
+    {
+      "file": "apps/web/src/components/v2/game-chat/GameChatTabV2.tsx",
+      "oldSpecifier": "./SuggestedPrompts",
+      "newSpecifier": "@/components/features/game-chat/SuggestedPrompts"
+    },
+    {
+      "file": "apps/web/src/components/v2/game-chat/GameChatTabV2.tsx",
+      "oldSpecifier": "./TypingIndicator",
+      "newSpecifier": "@/components/features/game-chat/TypingIndicator"
+    },
+    {
+      "file": "apps/web/src/components/v2/game-chat/index.ts",
+      "oldSpecifier": "./CitationChip",
+      "newSpecifier": "@/components/features/game-chat/CitationChip"
+    },
+    {
+      "file": "apps/web/src/components/v2/game-chat/index.ts",
+      "oldSpecifier": "./CitationChip",
+      "newSpecifier": "@/components/features/game-chat/CitationChip"
+    },
+    {
+      "file": "apps/web/src/components/v2/game-chat/index.ts",
+      "oldSpecifier": "./CitationModal",
+      "newSpecifier": "@/components/features/game-chat/CitationModal"
+    },
+    {
+      "file": "apps/web/src/components/v2/game-chat/index.ts",
+      "oldSpecifier": "./CitationModal",
+      "newSpecifier": "@/components/features/game-chat/CitationModal"
+    },
+    {
+      "file": "apps/web/src/components/v2/game-chat/index.ts",
+      "oldSpecifier": "./ConfidenceBadge",
+      "newSpecifier": "@/components/features/game-chat/ConfidenceBadge"
+    },
+    {
+      "file": "apps/web/src/components/v2/game-chat/index.ts",
+      "oldSpecifier": "./ConfidenceBadge",
+      "newSpecifier": "@/components/features/game-chat/ConfidenceBadge"
+    },
+    {
+      "file": "apps/web/src/components/v2/game-chat/index.ts",
+      "oldSpecifier": "./LowConfidenceDisclaimer",
+      "newSpecifier": "@/components/features/game-chat/LowConfidenceDisclaimer"
+    }
+  ]
+}

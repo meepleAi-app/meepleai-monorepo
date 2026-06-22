@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState } from 'react';
@@ -71,7 +72,7 @@ function ChangeTypeBadge({ type }: { type: string }) {
   };
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${styles[type] ?? 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300'}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${styles[type] ?? 'bg-muted text-foreground dark:bg-card dark:text-slate-300'}`}
     >
       {type.replace(/_/g, ' ')}
     </span>
@@ -102,7 +103,7 @@ function ModelHealthTable({ models }: { models: ModelHealthDto[] }) {
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-slate-200 dark:border-zinc-700">
+          <tr className="border-b border-border dark:border-zinc-700">
             <th className="text-left py-3 px-4 font-medium text-muted-foreground">Model</th>
             <th className="text-left py-3 px-4 font-medium text-muted-foreground">Provider</th>
             <th className="text-left py-3 px-4 font-medium text-muted-foreground">Status</th>
@@ -115,7 +116,7 @@ function ModelHealthTable({ models }: { models: ModelHealthDto[] }) {
           {models.map(model => (
             <tr
               key={model.modelId}
-              className="border-b border-slate-100 dark:border-zinc-800 hover:bg-slate-50/50 dark:hover:bg-zinc-800/50 transition-colors"
+              className="border-b border-border dark:border-zinc-800 hover:bg-muted/50 dark:hover:bg-zinc-800/50 transition-colors"
             >
               <td className="py-3 px-4">
                 <div className="font-medium text-foreground">
@@ -165,7 +166,7 @@ function ChangeHistoryTable({ changes }: { changes: ModelChangeHistoryDto[] }) {
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-slate-200 dark:border-zinc-700">
+          <tr className="border-b border-border dark:border-zinc-700">
             <th className="text-left py-3 px-4 font-medium text-muted-foreground">When</th>
             <th className="text-left py-3 px-4 font-medium text-muted-foreground">Type</th>
             <th className="text-left py-3 px-4 font-medium text-muted-foreground">Model</th>
@@ -178,7 +179,7 @@ function ChangeHistoryTable({ changes }: { changes: ModelChangeHistoryDto[] }) {
           {changes.map(change => (
             <tr
               key={change.id}
-              className="border-b border-slate-100 dark:border-zinc-800 hover:bg-slate-50/50 dark:hover:bg-zinc-800/50 transition-colors"
+              className="border-b border-border dark:border-zinc-800 hover:bg-muted/50 dark:hover:bg-zinc-800/50 transition-colors"
             >
               <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
                 {timeAgo(change.occurredAt)}
@@ -291,21 +292,21 @@ export function AgentModelsTabContent() {
       {/* Status Summary */}
       {!healthLoading && !healthError && models.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-sm rounded-xl border border-slate-200/60 dark:border-zinc-700/40 p-4">
+          <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-sm rounded-xl border border-border/60 dark:border-zinc-700/40 p-4">
             <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="h-5 w-5" />
               <span className="text-2xl font-bold">{availableCount}</span>
             </div>
             <p className="text-xs text-muted-foreground mt-1">Available Models</p>
           </div>
-          <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-sm rounded-xl border border-slate-200/60 dark:border-zinc-700/40 p-4">
+          <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-sm rounded-xl border border-border/60 dark:border-zinc-700/40 p-4">
             <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
               <AlertTriangle className="h-5 w-5" />
               <span className="text-2xl font-bold">{deprecatedCount}</span>
             </div>
             <p className="text-xs text-muted-foreground mt-1">Deprecated Models</p>
           </div>
-          <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-sm rounded-xl border border-slate-200/60 dark:border-zinc-700/40 p-4">
+          <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-sm rounded-xl border border-border/60 dark:border-zinc-700/40 p-4">
             <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
               <XCircle className="h-5 w-5" />
               <span className="text-2xl font-bold">{unavailableCount}</span>
@@ -328,12 +329,12 @@ export function AgentModelsTabContent() {
       )}
 
       {/* Models Table */}
-      <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-sm rounded-2xl border border-slate-200/60 dark:border-zinc-700/40">
-        <div className="px-6 py-4 border-b border-slate-200/60 dark:border-zinc-700/40">
+      <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-sm rounded-2xl border border-border/60 dark:border-zinc-700/40">
+        <div className="px-6 py-4 border-b border-border/60 dark:border-zinc-700/40">
           <h2 className="font-quicksand text-lg font-semibold text-foreground">Tracked Models</h2>
         </div>
         {healthLoading ? (
-          <div className="h-[200px] animate-pulse bg-slate-100/50 dark:bg-zinc-700/30 rounded-b-2xl" />
+          <div className="h-[200px] animate-pulse bg-muted/50 dark:bg-zinc-700/30 rounded-b-2xl" />
         ) : healthError ? (
           <div className="flex items-center gap-2 p-6 text-red-500">
             <AlertTriangle className="h-5 w-5" />
@@ -345,15 +346,15 @@ export function AgentModelsTabContent() {
       </div>
 
       {/* Change History */}
-      <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-sm rounded-2xl border border-slate-200/60 dark:border-zinc-700/40">
-        <div className="px-6 py-4 border-b border-slate-200/60 dark:border-zinc-700/40">
+      <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-sm rounded-2xl border border-border/60 dark:border-zinc-700/40">
+        <div className="px-6 py-4 border-b border-border/60 dark:border-zinc-700/40">
           <h2 className="font-quicksand text-lg font-semibold text-foreground">Change History</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
             Audit trail of model swaps, deprecations, and automatic fallbacks
           </p>
         </div>
         {historyLoading ? (
-          <div className="h-[200px] animate-pulse bg-slate-100/50 dark:bg-zinc-700/30 rounded-b-2xl" />
+          <div className="h-[200px] animate-pulse bg-muted/50 dark:bg-zinc-700/30 rounded-b-2xl" />
         ) : historyError ? (
           <div className="flex items-center gap-2 p-6 text-red-500">
             <AlertTriangle className="h-5 w-5" />

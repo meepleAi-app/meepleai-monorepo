@@ -1,0 +1,155 @@
+[
+  {
+    "mockup_path": "admin-mockups/design_files/state-matrix.html",
+    "design_intent": "current",
+    "confidence": 0.95,
+    "reasoning": "Dev-fixture explicitly labeled 'Type: dev-fixture (companion a 01-screens.html)' in header comment. Cross-route state coverage grid (8 routes x 5 states) for design reference, no markers found. Not mapped to user-reachable route.",
+    "sub_components": [],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/nanolith-nav-topbar.html",
+    "design_intent": "current",
+    "confidence": 0.95,
+    "reasoning": "Nav primitive dev-fixture for N1 top-bar pattern implementing decisions D5/D8. Pattern reference, not a user-reachable route. No forward-refactor or obsolete markers found.",
+    "sub_components": [],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/nanolith-nav-chat-panel.html",
+    "design_intent": "current",
+    "confidence": 0.95,
+    "reasoning": "Nav primitive dev-fixture for N3 global chat panel slide-over pattern implementing decisions D4/D7. Pattern reference compatibile con ChatSlideOverPanel esistente (PR #344). No forward-refactor or obsolete markers found.",
+    "sub_components": [],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/nanolith-nav-bottom-mobile.html",
+    "design_intent": "current",
+    "confidence": 0.95,
+    "reasoning": "Nav primitive dev-fixture for N2 bottom-nav mobile pattern implementing decisions D6/D8. Pattern reference, not a user-reachable route. No forward-refactor or obsolete markers found.",
+    "sub_components": [],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/index.html",
+    "design_intent": "current",
+    "confidence": 0.95,
+    "reasoning": "Dev navigation helper: meta-refresh redirect to sp4-dashboard.html, not a design surface. No markers found. Not mapped to user-reachable route.",
+    "sub_components": [],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/05-dark-mode.html",
+    "design_intent": "current",
+    "confidence": 0.95,
+    "reasoning": "SP4 design system gallery page demonstrating dark/light theme switching. Dev-fixture pattern reference, no markers found. Not mapped to user-reachable route.",
+    "sub_components": [],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/04-design-system.html",
+    "design_intent": "current",
+    "confidence": 0.95,
+    "reasoning": "SP4 design system tokens gallery (entity palette, typography, spacing). Dev-fixture documentation page for the design system, no markers found. Not mapped to user-reachable route.",
+    "sub_components": [],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/03-drawer-variants.html",
+    "design_intent": "current",
+    "confidence": 0.95,
+    "reasoning": "SP4 design system gallery showing drawer pattern variants. Dev-fixture pattern reference, no markers found. Not mapped to user-reachable route.",
+    "sub_components": [],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/02-desktop-patterns.html",
+    "design_intent": "current",
+    "confidence": 0.95,
+    "reasoning": "SP4 design system gallery showing desktop layout patterns inside a scaled browser frame. Dev-fixture pattern reference, no markers found. Not mapped to user-reachable route.",
+    "sub_components": [],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/01-screens.html",
+    "design_intent": "current",
+    "confidence": 0.95,
+    "reasoning": "SP4 mobile screens gallery (React/Babel-standalone in-browser). Dev-fixture playground showcasing phone-frame patterns, no markers found. Not mapped to user-reachable route.",
+    "sub_components": [],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/00-hub.html",
+    "design_intent": "current",
+    "confidence": 0.95,
+    "reasoning": "SP4 design system v1 hub landing page (entry index to the gallery). Dev-fixture navigation page, no markers found. Not mapped to user-reachable route.",
+    "sub_components": [],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/mobile-app.jsx",
+    "design_intent": "current",
+    "confidence": 0.95,
+    "reasoning": "JSX prototype 'Mobile app — interactive screens with drawer, navigation between entities, session mode'. Dev-fixture interactive playground consumed by 01-screens.html via Babel standalone. No markers found.",
+    "sub_components": [],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/tokens.css",
+    "design_intent": "current",
+    "confidence": 0.95,
+    "reasoning": "Design system source of truth: 'MeepleAI Design System v1 - Design Tokens. Source of truth for all colors, spacing, type, motion.' Active token file referenced by all mockup pages and runtime via design-tokens-canonical.css. No markers found.",
+    "sub_components": [],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/scaffold.css",
+    "design_intent": "current",
+    "confidence": 0.95,
+    "reasoning": "Shared mockup gallery scaffold CSS providing page chrome (.stage / .phone / .theme-toggle) and SP7 patterns. Dev-fixture support file, no markers found. Not mapped to user-reachable route.",
+    "sub_components": [],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/components.css",
+    "design_intent": "current",
+    "confidence": 0.95,
+    "reasoning": "Shared mockup gallery component CSS (theme-toggle, entity chips/dots, cards, buttons) using tokens.css variables. Dev-fixture support file labeled 'MeepleAI Design System v1 - Shared components & layout', no markers found.",
+    "sub_components": [],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp4-play-records-data.js",
+    "design_intent": "current",
+    "confidence": 0.95,
+    "reasoning": "Fake dataset extension for SP4 play-records mockups: 'window.DS extension' with fixture record/stats data. Dev-fixture support file, no markers found. Not mapped to user-reachable route.",
+    "sub_components": [],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/data.js",
+    "design_intent": "current",
+    "confidence": 0.95,
+    "reasoning": "Shared fake dataset for the deliverable mockups: 'Fake data with coherent cross-references between entities. Attached to window.DS for all pages to read.' Dev-fixture support file, no markers found.",
+    "sub_components": [],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  }
+]

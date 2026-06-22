@@ -20,7 +20,6 @@ export const BREADCRUMB_LABELS: Record<string, string> = {
   // Library sub-sections
   private: 'Giochi Privati',
   wishlist: 'Wishlist',
-  proposals: 'Proposte',
   history: 'Cronologia',
 
   // Admin sub-sections

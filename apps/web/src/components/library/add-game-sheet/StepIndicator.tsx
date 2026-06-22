@@ -28,7 +28,7 @@ export function StepIndicator({ currentStep, steps }: StepIndicatorProps) {
                   'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors',
                   isCompleted && 'bg-teal-500/20 text-teal-400',
                   isActive && 'bg-teal-500 text-white',
-                  !isActive && !isCompleted && 'bg-slate-800 text-slate-500'
+                  !isActive && !isCompleted && 'bg-slate-800 text-muted-foreground'
                 )}
               >
                 {isCompleted ? '✓' : stepNumber}
@@ -37,7 +37,7 @@ export function StepIndicator({ currentStep, steps }: StepIndicatorProps) {
                 className={cn(
                   'text-xs font-medium truncate transition-colors',
                   isActive && 'text-slate-200',
-                  !isActive && 'text-slate-500'
+                  !isActive && 'text-muted-foreground'
                 )}
               >
                 {step.label}

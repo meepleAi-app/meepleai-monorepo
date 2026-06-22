@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
+using Api.Infrastructure.Security;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -87,13 +88,13 @@ internal class JoinWaitlistCommandHandler : ICommandHandler<JoinWaitlistCommand,
                 _logger.LogError(
                     ex,
                     "Waitlist unique-violation race: post-rollback re-query found no row for {Email}",
-                    normalizedEmail);
+                    DataMasking.MaskEmail(normalizedEmail));
                 throw;
             }
 
             _logger.LogInformation(
                 "Waitlist concurrent-duplicate race resolved for {Email} → existing position {Position}",
-                normalizedEmail,
+                DataMasking.MaskEmail(normalizedEmail),
                 raceWinner.Position);
 
             return new JoinWaitlistResult(

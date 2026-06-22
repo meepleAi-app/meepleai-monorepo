@@ -34,7 +34,7 @@ interface PasswordValidation {
 }
 
 function validatePassword(password: string): PasswordValidation {
-  const minLength = password.length >= 8;
+  const minLength = password.length >= 12;
   const hasUppercase = /[A-Z]/.test(password);
   const hasLowercase = /[a-z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
@@ -127,10 +127,10 @@ export function PasswordStep({ token, onComplete }: PasswordStepProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-quicksand text-lg font-semibold text-slate-900">
+        <h2 className="font-quicksand text-lg font-semibold text-foreground">
           Create Your Password
         </h2>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm text-muted-foreground">
           Choose a strong password for your new account.
         </p>
       </div>
@@ -160,10 +160,10 @@ export function PasswordStep({ token, onComplete }: PasswordStepProps) {
         {password && (
           <div className="space-y-2" data-testid="password-strength">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600">Password strength:</span>
+              <span className="text-sm text-muted-foreground">Password strength:</span>
               <span className={`text-sm font-medium ${config.textColor}`}>{config.text}</span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+            <div className="h-2 overflow-hidden rounded-full bg-muted">
               <motion.div
                 className={`h-full ${config.color}`}
                 initial={{ width: 0 }}
@@ -178,7 +178,7 @@ export function PasswordStep({ token, onComplete }: PasswordStepProps) {
         {password && (
           <div className="space-y-1 text-sm" data-testid="password-rules">
             {[
-              { key: 'minLength', label: 'At least 8 characters' },
+              { key: 'minLength', label: 'At least 12 characters' },
               { key: 'hasUppercase', label: 'At least 1 uppercase letter' },
               { key: 'hasLowercase', label: 'At least 1 lowercase letter' },
               { key: 'hasNumber', label: 'At least 1 number' },
@@ -186,7 +186,7 @@ export function PasswordStep({ token, onComplete }: PasswordStepProps) {
               <div
                 key={key}
                 className={`flex items-center gap-2 ${
-                  validation[key as keyof PasswordValidation] ? 'text-green-600' : 'text-slate-500'
+                  validation[key as keyof PasswordValidation] ? 'text-green-600' : 'text-muted-foreground'
                 }`}
               >
                 <span aria-hidden="true">

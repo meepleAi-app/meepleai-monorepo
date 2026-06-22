@@ -67,6 +67,10 @@ internal class LedgerEntryEntityConfiguration : IEntityTypeConfiguration<LedgerE
         builder.Property(e => e.UpdatedAt)
             .IsRequired(false);
 
+        // Issue #1938 / CF-2: source domain event id (nullable, UNIQUE partial).
+        builder.Property(e => e.SourceEventId)
+            .HasColumnName("source_event_id");
+
         // Indexes for common query patterns
         builder.HasIndex(e => e.Date)
             .HasDatabaseName("IX_LedgerEntries_Date")
@@ -88,5 +92,13 @@ internal class LedgerEntryEntityConfiguration : IEntityTypeConfiguration<LedgerE
         // Composite index for date range + type queries
         builder.HasIndex(e => new { e.Date, e.Type })
             .HasDatabaseName("IX_LedgerEntries_Date_Type");
+
+        // Issue #1938 / CF-2: SourceEventId UNIQUE (partial — only when not null).
+        // Guards against duplicate ledger entries when an event handler is re-dispatched
+        // (rolled-back outer tx in #1535, MediatR transient retry, hand-replay).
+        builder.HasIndex(e => e.SourceEventId)
+            .IsUnique()
+            .HasDatabaseName("UX_ledger_entries_source_event_id")
+            .HasFilter("source_event_id IS NOT NULL");
     }
 }

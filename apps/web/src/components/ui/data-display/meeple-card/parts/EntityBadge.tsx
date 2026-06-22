@@ -1,4 +1,5 @@
-import { entityHsl, entityLabel } from '../tokens';
+/* eslint-disable local/no-hardcoded-color-utility -- glass bg-white/85 follows the mockup .e-bg pattern; entity color text via inline style. DS-12 primitive — see token-bridge-map.md for migration plan. */
+import { entityHslText, entityIcon, entityLabel } from '../tokens';
 
 import type { MeepleEntityType } from '../types';
 
@@ -18,9 +19,10 @@ export function EntityBadge({ entity, className = '', stacked = false }: EntityB
   return (
     <span
       data-slot="meeple-card-entity-badge"
-      className={`${positioning} rounded-md px-2 py-0.5 font-[var(--font-quicksand)] text-[9px] font-extrabold uppercase tracking-wide text-white shadow-sm ${className}`}
-      style={{ background: entityHsl(entity) }}
+      className={`${positioning} inline-flex items-center gap-1 rounded-md bg-white/85 px-2 py-0.5 font-[var(--font-quicksand)] text-[9px] font-extrabold uppercase tracking-wide shadow-sm backdrop-blur-md ${className}`}
+      style={{ color: entityHslText(entity) }}
     >
+      <span aria-hidden="true">{entityIcon[entity]}</span>
       {entityLabel[entity]}
     </span>
   );

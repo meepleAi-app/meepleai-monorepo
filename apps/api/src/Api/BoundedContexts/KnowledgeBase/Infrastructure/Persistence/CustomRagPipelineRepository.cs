@@ -79,7 +79,10 @@ internal sealed class CustomRagPipelineRepository : RepositoryBase, ICustomRagPi
         string[] tags,
         CancellationToken cancellationToken = default)
     {
+        // #930: explicit AsTracking() — DbContext default is NoTracking (PERF-06),
+        // without this the property mutations below would not be persisted.
         var entity = await DbContext.Set<CustomRagPipelineEntity>()
+            .AsTracking()
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
             .ConfigureAwait(false);
 

@@ -1,4 +1,4 @@
-import { apiClient } from "./client";
+import { apiClient } from './client';
 
 export interface WishlistItem {
   id: string;
@@ -11,7 +11,7 @@ export interface WishlistItem {
 }
 
 export async function getWishlistHighlights(): Promise<WishlistItem[]> {
-  const response = await apiClient.get<WishlistItem[]>("/wishlist/highlights");
+  const response = await apiClient.get<WishlistItem[]>('/api/v1/wishlist/highlights');
   if (!response) return [];
   return response;
 }

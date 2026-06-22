@@ -16,9 +16,33 @@ import type {
   AddPlayerRequest,
   RecordScoreRequest,
   UpdatePlayRecordRequest,
+  ShareLinkResponse,
+  PlayRecordVersion,
 } from '@/lib/api/schemas/play-records.schemas';
 
-const BASE_URL = '/api/v1/play-records';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+const BASE_URL = `${API_BASE}/api/v1/play-records`;
+
+// #2437-1: Typed error for updateRecord — consumers can narrow on `kind` for conflict UI.
+export class UpdatePlayRecordError extends Error {
+  constructor(
+    message: string,
+    public readonly kind: 'conflict' | 'forbidden' | 'validation' | 'server',
+    public readonly status: number,
+    public readonly warningCode?: string
+  ) {
+    super(message);
+    this.name = 'UpdatePlayRecordError';
+  }
+}
+
+export interface UploadPlayRecordPhotoResult {
+  photoId: string;
+  photoUrl: string;
+  thumbnailUrl: string | null;
+  ocrText: string | null;
+  wasDeduplicated: boolean;
+}
 
 /**
  * Play Records API Client
@@ -33,6 +57,7 @@ export const playRecordsApi = {
     const res = await fetch(BASE_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(data),
     });
     if (!res.ok) {
@@ -49,6 +74,7 @@ export const playRecordsApi = {
     const res = await fetch(`${BASE_URL}/${recordId}/players`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(player),
     });
     if (!res.ok) {
@@ -64,6 +90,7 @@ export const playRecordsApi = {
     const res = await fetch(`${BASE_URL}/${recordId}/scores`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(score),
     });
     if (!res.ok) {
@@ -78,6 +105,7 @@ export const playRecordsApi = {
   async startRecord(recordId: string): Promise<void> {
     const res = await fetch(`${BASE_URL}/${recordId}/start`, {
       method: 'POST',
+      credentials: 'include',
     });
     if (!res.ok) {
       const error = await res.json().catch(() => ({ message: 'Failed to start record' }));
@@ -91,6 +119,7 @@ export const playRecordsApi = {
   async completeRecord(recordId: string): Promise<void> {
     const res = await fetch(`${BASE_URL}/${recordId}/complete`, {
       method: 'POST',
+      credentials: 'include',
     });
     if (!res.ok) {
       const error = await res.json().catch(() => ({ message: 'Failed to complete record' }));
@@ -99,18 +128,71 @@ export const playRecordsApi = {
   },
 
   /**
-   * Update play record details
+   * Update play record details.
+   * #2437-1: Sends optional `xmin` for optimistic-concurrency; throws `UpdatePlayRecordError`
+   * with `kind='conflict'` on 409 + `X-Warning-Code: concurrent-edit`.
    */
   async updateRecord(recordId: string, updates: UpdatePlayRecordRequest): Promise<void> {
     const res = await fetch(`${BASE_URL}/${recordId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(updates),
     });
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({ message: 'Failed to update record' }));
-      throw new Error(error.message || 'Failed to update record');
+    if (res.ok) return;
+    const warningCode = res.headers.get('X-Warning-Code') ?? undefined;
+    if (res.status === 409) {
+      throw new UpdatePlayRecordError(
+        'Modifica concorrente rilevata.',
+        'conflict',
+        409,
+        warningCode
+      );
     }
+    if (res.status === 403) {
+      throw new UpdatePlayRecordError(
+        'Non hai i permessi per modificare.',
+        'forbidden',
+        403,
+        warningCode
+      );
+    }
+    if (res.status === 400) {
+      throw new UpdatePlayRecordError('Dati non validi.', 'validation', 400, warningCode);
+    }
+    const err = await res.json().catch(() => ({ message: 'Failed to update record' }));
+    throw new UpdatePlayRecordError(
+      err.message || 'Failed to update record',
+      'server',
+      res.status,
+      warningCode
+    );
+  },
+
+  /**
+   * Upload a photo to an existing play record (multipart). #2436 PR-C.
+   * Raw fetch — httpClient does not support multipart FormData.
+   */
+  async uploadPhoto(
+    recordId: string,
+    file: Blob,
+    opts: { caption?: string; extractScoreFromPhoto?: boolean } = {}
+  ): Promise<UploadPlayRecordPhotoResult> {
+    const form = new FormData();
+    form.append('file', file, file instanceof File ? file.name : 'photo.jpg');
+    if (opts.extractScoreFromPhoto) form.append('extractScoreFromPhoto', 'true');
+    if (opts.caption) form.append('caption', opts.caption);
+
+    const res = await fetch(`${BASE_URL}/${recordId}/photos`, {
+      method: 'POST',
+      body: form,
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ message: 'Failed to upload photo' }));
+      throw new Error(error.error || error.message || 'Failed to upload photo');
+    }
+    return res.json();
   },
 
   // ========== Queries ==========
@@ -119,7 +201,7 @@ export const playRecordsApi = {
    * Get full play record details
    */
   async getRecord(id: string): Promise<PlayRecordDto> {
-    const res = await fetch(`${BASE_URL}/${id}`);
+    const res = await fetch(`${BASE_URL}/${id}`, { credentials: 'include' });
     if (!res.ok) {
       if (res.status === 404) throw new Error('Play record not found');
       const error = await res.json().catch(() => ({ message: 'Failed to get record' }));
@@ -149,7 +231,9 @@ export const playRecordsApi = {
     if (params.dateFrom) searchParams.set('dateFrom', params.dateFrom);
     if (params.dateTo) searchParams.set('dateTo', params.dateTo);
 
-    const res = await fetch(`${BASE_URL}/history?${searchParams.toString()}`);
+    const res = await fetch(`${BASE_URL}/history?${searchParams.toString()}`, {
+      credentials: 'include',
+    });
     if (!res.ok) {
       const error = await res.json().catch(() => ({ message: 'Failed to get history' }));
       throw new Error(error.message || 'Failed to get history');
@@ -158,13 +242,116 @@ export const playRecordsApi = {
   },
 
   /**
-   * Get player statistics across all games
+   * Get player statistics across all games. Optional date range narrows the
+   * window; the BE binds startDate/endDate case-insensitively (#2438).
    */
-  async getPlayerStatistics(): Promise<PlayerStatistics> {
-    const res = await fetch(`${BASE_URL}/statistics`);
+  async getPlayerStatistics(
+    params: { startDate?: string; endDate?: string } = {}
+  ): Promise<PlayerStatistics> {
+    const search = new URLSearchParams();
+    if (params.startDate) search.set('startDate', params.startDate);
+    if (params.endDate) search.set('endDate', params.endDate);
+    const qs = search.toString();
+    const res = await fetch(`${BASE_URL}/statistics${qs ? `?${qs}` : ''}`, {
+      credentials: 'include',
+    });
     if (!res.ok) {
       const error = await res.json().catch(() => ({ message: 'Failed to get statistics' }));
       throw new Error(error.message || 'Failed to get statistics');
+    }
+    return res.json();
+  },
+
+  /**
+   * Delete a play record by ID (AC-4.6)
+   */
+  async deleteRecord(recordId: string): Promise<void> {
+    const res = await fetch(`${BASE_URL}/${recordId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ message: 'Failed to delete record' }));
+      throw new Error(error.message || 'Failed to delete record');
+    }
+  },
+
+  // ========== Share Token (#2437-2) ==========
+
+  /**
+   * Generate (or rotate) a share token for a play record.
+   * Creator-only. Returns { shareToken, shareUrl }.
+   */
+  async generateShareToken(recordId: string): Promise<ShareLinkResponse> {
+    const res = await fetch(`${BASE_URL}/${recordId}/share`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({ message: 'Failed to generate share link' }));
+      throw new Error(e.message || e.error || 'Failed to generate share link');
+    }
+    return res.json();
+  },
+
+  /**
+   * Revoke the share token for a play record (DELETE).
+   * Creator-only. Returns 204 No Content on success.
+   */
+  async revokeShareToken(recordId: string): Promise<void> {
+    const res = await fetch(`${BASE_URL}/${recordId}/share`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({ message: 'Failed to revoke share link' }));
+      throw new Error(e.message || e.error || 'Failed to revoke share link');
+    }
+  },
+
+  // ========== Version History (#2437-3) ==========
+
+  /**
+   * Fetch the last-5 audit versions for a play record (creator-only).
+   * Returns an array ordered DESC by versionNumber.
+   */
+  async getVersions(recordId: string): Promise<PlayRecordVersion[]> {
+    const res = await fetch(`${BASE_URL}/${recordId}/versions`, { credentials: 'include' });
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({ message: 'Failed to load versions' }));
+      throw new Error(e.message || e.error || 'Failed to load versions');
+    }
+    return res.json();
+  },
+
+  /**
+   * Restore a play record to a previous version (creator-only).
+   * Returns 204 No Content on success.
+   */
+  async restoreVersion(recordId: string, versionNumber: number): Promise<void> {
+    const res = await fetch(`${BASE_URL}/${recordId}/restore/${versionNumber}`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({ message: 'Failed to restore version' }));
+      throw new Error(e.message || e.error || 'Failed to restore version');
+    }
+  },
+
+  /**
+   * Fetch a publicly shared play record by its share token (no auth required).
+   * Returns 404 when the token is invalid or the record is unshared.
+   */
+  async getSharedRecord(token: string): Promise<PlayRecordDto> {
+    // Public endpoint (AllowAnonymous): NO credentials — sending them forces a credentialed
+    // CORS preflight that anonymous cross-origin visitors (the core share-link use-case)
+    // can't satisfy. #2437-2.
+    const res = await fetch(`${BASE_URL}/shared/${token}`);
+    if (!res.ok) {
+      if (res.status === 404) throw new Error('Shared play record not found');
+      const e = await res.json().catch(() => ({ message: 'Failed to load shared record' }));
+      throw new Error(e.message || 'Failed to load shared record');
     }
     return res.json();
   },

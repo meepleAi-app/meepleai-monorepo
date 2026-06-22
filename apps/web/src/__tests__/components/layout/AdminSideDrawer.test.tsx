@@ -20,6 +20,7 @@ vi.mock('@/hooks/queries/useCurrentUser', () => ({
 }));
 
 import { AdminSideDrawer } from '@/components/layout/AdminSideDrawer/AdminSideDrawer';
+import { ADMIN_NAV_GROUPS } from '@/components/layout/admin-nav/admin-nav-config';
 
 describe('AdminSideDrawer', () => {
   const defaultProps = {
@@ -41,40 +42,28 @@ describe('AdminSideDrawer', () => {
     expect(link).toBeDefined();
   });
 
-  it('renders admin sections Overview, Content, AI, Users', () => {
+  it('renders the four admin nav group labels (SP5 consolidation, #1496)', () => {
     render(<AdminSideDrawer {...defaultProps} />);
-    expect(screen.getByText('Overview')).toBeDefined();
-    expect(screen.getByText('Content')).toBeDefined();
-    expect(screen.getByText('AI')).toBeDefined();
-    expect(screen.getByText('Users')).toBeDefined();
+    for (const group of ADMIN_NAV_GROUPS) {
+      expect(screen.getByText(group.label)).toBeDefined();
+    }
   });
 
-  it('renders items inside Overview section', () => {
+  it('renders every nav item an admin is allowed to see', () => {
     render(<AdminSideDrawer {...defaultProps} />);
-    expect(screen.getByText('Dashboard')).toBeDefined();
-    expect(screen.getByText('Activity Feed')).toBeDefined();
-    expect(screen.getByText('System Health')).toBeDefined();
+    // The mocked user is a plain admin; only superadmin-gated items are hidden.
+    const adminVisibleItems = ADMIN_NAV_GROUPS.flatMap(g => g.items).filter(
+      item => item.minRole !== 'superadmin'
+    );
+    for (const item of adminVisibleItems) {
+      expect(screen.getByText(item.label)).toBeDefined();
+    }
   });
 
-  it('renders items inside Content section', () => {
+  it('hides superadmin-only items from an admin user', () => {
     render(<AdminSideDrawer {...defaultProps} />);
-    expect(screen.getByText('Giochi')).toBeDefined();
-    expect(screen.getByText('Knowledge Base')).toBeDefined();
-    expect(screen.getByText('Email Templates')).toBeDefined();
-  });
-
-  it('renders items inside AI section', () => {
-    render(<AdminSideDrawer {...defaultProps} />);
-    expect(screen.getByText('Mission Control')).toBeDefined();
-    expect(screen.getByText('RAG Inspector')).toBeDefined();
-    expect(screen.getByText('Agent Definitions')).toBeDefined();
-  });
-
-  it('renders items inside Users section', () => {
-    render(<AdminSideDrawer {...defaultProps} />);
-    expect(screen.getByText('Tutti gli utenti')).toBeDefined();
-    expect(screen.getByText('Invitations')).toBeDefined();
-    expect(screen.getByText('Ruoli & Permessi')).toBeDefined();
+    // "Staging Access" (group C) requires superadmin; an admin must not see it.
+    expect(screen.queryByText('Staging Access')).toBeNull();
   });
 
   it('does not render when closed', () => {
@@ -121,18 +110,5 @@ describe('AdminSideDrawer', () => {
     // The role badge renders the role value; use getAllByText since "admin" appears in multiple places
     const adminElements = screen.getAllByText(/admin/i);
     expect(adminElements.length).toBeGreaterThan(0);
-  });
-
-  it('AI Altro sub-menu is collapsed by default when not on an Altro route', () => {
-    render(<AdminSideDrawer {...defaultProps} />);
-    // These items belong to the AI "Altro" collapsible
-    expect(screen.queryByText('Config')).toBeNull();
-    expect(screen.queryByText('Usage')).toBeNull();
-  });
-
-  it('Users Altro sub-menu is collapsed by default when not on an Altro route', () => {
-    render(<AdminSideDrawer {...defaultProps} />);
-    expect(screen.queryByText('Access Requests')).toBeNull();
-    expect(screen.queryByText('Activity')).toBeNull();
   });
 });

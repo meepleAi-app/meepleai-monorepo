@@ -98,7 +98,7 @@ export function EventDrawerContent({ entityId }: EventDrawerContentProps) {
         onValueChange={v => setActiveTab(v as EventTab)}
         className="flex flex-1 flex-col"
       >
-        <TabsList className="mx-4 mt-3 h-10 w-auto justify-start gap-1 bg-slate-100/80 rounded-lg p-1">
+        <TabsList className="mx-4 mt-3 h-10 w-auto justify-start gap-1 bg-muted/80 rounded-lg p-1">
           <EntityTabTrigger
             value="overview"
             icon={CalendarDays}
@@ -144,9 +144,9 @@ export function EventDrawerContent({ entityId }: EventDrawerContentProps) {
               )}
 
               {/* Location row */}
-              <div className="flex items-center gap-2 rounded-lg bg-white/50 border border-slate-200/40 p-3">
+              <div className="flex items-center gap-2 rounded-lg bg-card/50 border border-border/40 p-3">
                 <MapPin className="h-4 w-4 shrink-0 text-rose-500" aria-hidden="true" />
-                <span className="font-nunito text-sm text-slate-700">{locationDisplay}</span>
+                <span className="font-nunito text-sm text-foreground">{locationDisplay}</span>
               </div>
 
               {/* Attendees stat */}
@@ -154,11 +154,11 @@ export function EventDrawerContent({ entityId }: EventDrawerContentProps) {
 
               {/* Description */}
               {data.description && (
-                <div className="rounded-lg bg-white/50 border border-slate-200/40 p-3">
-                  <p className="font-nunito text-[10px] text-slate-500 uppercase tracking-wider mb-1">
+                <div className="rounded-lg bg-card/50 border border-border/40 p-3">
+                  <p className="font-nunito text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
                     Descrizione
                   </p>
-                  <p className="font-nunito text-sm text-slate-700 leading-relaxed">
+                  <p className="font-nunito text-sm text-foreground leading-relaxed">
                     {data.description}
                   </p>
                 </div>
@@ -170,18 +170,18 @@ export function EventDrawerContent({ entityId }: EventDrawerContentProps) {
           <TabsContent value="programma" className="mt-0">
             <div className="space-y-2">
               {data.schedule.length === 0 ? (
-                <p className="font-nunito text-xs text-slate-400 text-center py-8">
+                <p className="font-nunito text-xs text-muted-foreground text-center py-8">
                   Nessuna attività programmata
                 </p>
               ) : (
                 data.schedule.map(item => (
                   <div
                     key={item.id}
-                    className="rounded-lg bg-white/50 border border-slate-200/40 p-2.5"
+                    className="rounded-lg bg-card/50 border border-border/40 p-2.5"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className="font-nunito text-xs font-medium text-slate-700 truncate">
+                        <p className="font-nunito text-xs font-medium text-foreground truncate">
                           {item.title}
                         </p>
                         {item.gameName && (
@@ -190,7 +190,7 @@ export function EventDrawerContent({ entityId }: EventDrawerContentProps) {
                           </p>
                         )}
                       </div>
-                      <p className="font-nunito text-[10px] text-slate-400 shrink-0">
+                      <p className="font-nunito text-[10px] text-muted-foreground shrink-0">
                         {new Date(item.scheduledAt).toLocaleTimeString('it-IT', {
                           hour: '2-digit',
                           minute: '2-digit',

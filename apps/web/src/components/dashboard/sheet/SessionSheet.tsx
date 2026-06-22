@@ -25,7 +25,7 @@ export function SessionSheet({ isOpen, onClose, children }: SessionSheetProps) {
       {/* Backdrop (mobile only) */}
       <div
         data-testid="sheet-overlay"
-        className="absolute inset-0 bg-black/40 md:hidden"
+        className="absolute inset-0 bg-foreground/40 md:hidden"
         onClick={onClose}
         aria-hidden="true"
       />

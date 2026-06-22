@@ -308,10 +308,10 @@ export function MultiFileUpload({
         >
           📁
         </div>
-        <div className="text-base font-semibold text-gray-900 mb-2">
+        <div className="text-base font-semibold text-foreground mb-2">
           {isDragging ? 'Drop files here' : 'Drag and drop PDF files here'}
         </div>
-        <div className="text-sm text-gray-600 mb-4">
+        <div className="text-sm text-muted-foreground mb-4">
           or click to browse (up to {MAX_FILES_PER_BATCH} files, max 100 MB each)
         </div>
         <Button

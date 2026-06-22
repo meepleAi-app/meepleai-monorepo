@@ -1,6 +1,8 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Services;
 using Api.Models;
@@ -205,6 +207,22 @@ internal sealed class BggImportQueueBackgroundService : BackgroundService
                 _logger.LogInformation(
                     "Successfully imported BGG game: QueueId={QueueId}, BggId={BggId}, CreatedGameId={CreatedGameId}",
                     queueItemId, bggId, createdGameId.Value);
+
+                // #1907 — Persist EnrichmentAttempt row + cascade MarkProcessed on any pending
+                // EnrichmentQueueEntry for the same shared game. Only for enrichment jobs;
+                // import jobs (new game creation) don't have a paired EnrichmentQueueEntry row.
+                if (jobType == BggQueueJobType.Enrichment && sharedGameId.HasValue)
+                {
+                    await RecordEnrichmentOutcomeAsync(
+                        updateScope.ServiceProvider,
+                        sharedGameId.Value,
+                        catalogSyncRunId: null,
+                        retryCount: retryCount,
+                        success: true,
+                        errorCode: null,
+                        errorDetail: null,
+                        cancellationToken).ConfigureAwait(false);
+                }
             }
             else if (importException is InvalidOperationException { Message: var msg } && msg.Contains("already exists"))
             {
@@ -238,6 +256,32 @@ internal sealed class BggImportQueueBackgroundService : BackgroundService
                     "Failed to import BGG game: QueueId={QueueId}, BggId={BggId}, Attempt={Attempt}/{MaxAttempts}",
                     queueItemId, bggId, retryCount + 1, _config.MaxRetryAttempts);
 
+                // #1907 — Persist EnrichmentAttempt failure row only on the terminal attempt
+                // (intermediate retries don't produce admin-visible rows; the next retry will
+                // either succeed or hit the terminal path itself). Cascade MarkProcessed too.
+                var isTerminalFailure = retryCount + 1 >= _config.MaxRetryAttempts;
+                if (isTerminalFailure
+                    && jobType == BggQueueJobType.Enrichment
+                    && sharedGameId.HasValue)
+                {
+                    var classifiedCode = ErrorCodeClassifier.Classify(importException);
+                    var detail = importException.Message;
+                    if (detail.Length > 500)
+                    {
+                        detail = detail.Substring(0, 500);
+                    }
+
+                    await RecordEnrichmentOutcomeAsync(
+                        updateScope.ServiceProvider,
+                        sharedGameId.Value,
+                        catalogSyncRunId: null,
+                        retryCount: retryCount,
+                        success: false,
+                        errorCode: classifiedCode,
+                        errorDetail: detail,
+                        cancellationToken).ConfigureAwait(false);
+                }
+
                 if (retryCount + 1 < _config.MaxRetryAttempts)
                 {
                     var backoffDelay = TimeSpan.FromSeconds(
@@ -251,6 +295,68 @@ internal sealed class BggImportQueueBackgroundService : BackgroundService
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Persists an <see cref="EnrichmentAttempt"/> row plus cascades <c>MarkProcessed</c> on every
+    /// pending <see cref="EnrichmentQueueEntry"/> for the same shared game (#1907). Called on
+    /// both terminal outcomes (success or max-retry failure) of an enrichment iteration.
+    /// </summary>
+    /// <remarks>
+    /// Failures here are swallowed deliberately — the attempt log is best-effort observability
+    /// for the admin Failed Items panel, not on the critical path. The outer scope already
+    /// recorded the queue outcome via <c>MarkAsCompletedAsync</c> / <c>MarkAsFailedAsync</c>,
+    /// so any persistence problem here cannot retroactively roll the queue back.
+    /// </remarks>
+    private async Task RecordEnrichmentOutcomeAsync(
+        IServiceProvider serviceProvider,
+        Guid sharedGameId,
+        Guid? catalogSyncRunId,
+        int retryCount,
+        bool success,
+        string? errorCode,
+        string? errorDetail,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var attemptRepo = serviceProvider.GetRequiredService<IEnrichmentAttemptRepository>();
+            var queueRepo = serviceProvider.GetRequiredService<IEnrichmentQueueRepository>();
+            var unitOfWork = serviceProvider.GetRequiredService<IUnitOfWork>();
+
+            var attempt = success
+                ? EnrichmentAttempt.RecordSuccess(sharedGameId, catalogSyncRunId, retryCount)
+                : EnrichmentAttempt.RecordFailure(sharedGameId, catalogSyncRunId, errorCode!, errorDetail!, retryCount);
+
+            await attemptRepo.AddAsync(attempt, cancellationToken).ConfigureAwait(false);
+
+            // Cascade MarkProcessed onto every pending EnrichmentQueueEntry for this game.
+            // Multiple entries can coexist (admin Normal-priority + skeleton-sweep Stale-priority);
+            // a terminal outcome collapses all of them so the queue doesn't keep re-firing.
+            var pending = await queueRepo.GetPendingForGameAsync(sharedGameId, cancellationToken).ConfigureAwait(false);
+            foreach (var entry in pending)
+            {
+                entry.MarkProcessed();
+                await queueRepo.UpdateAsync(entry, cancellationToken).ConfigureAwait(false);
+            }
+
+            await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "Recorded EnrichmentAttempt {AttemptId} for SharedGameId={SharedGameId} (Success={Success}, RetryCount={RetryCount}) + collapsed {PendingCount} queue entries",
+                attempt.Id, sharedGameId, success, retryCount, pending.Count);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        catch (Exception ex)
+        {
+            // Best-effort observability — never fail the queue iteration because of attempt-log persistence.
+            _logger.LogError(
+                ex,
+                "Failed to persist EnrichmentAttempt for SharedGameId={SharedGameId} (Success={Success}). " +
+                "Queue outcome already recorded; admin Failed Items panel may be missing this row.",
+                sharedGameId, success);
+        }
+#pragma warning restore CA1031
     }
 
     /// <summary>

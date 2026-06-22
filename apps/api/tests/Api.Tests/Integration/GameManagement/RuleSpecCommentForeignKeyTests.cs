@@ -1,5 +1,6 @@
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.Authentication;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
@@ -47,10 +48,10 @@ public class RuleSpecCommentForeignKeyTests : IAsyncLifetime
         var userId = Guid.NewGuid();
         var user = new UserEntity { Id = userId, Email = "commenter@test.com", DisplayName = "Commenter", Role = "User" };
         var gameId = Guid.NewGuid();
-        var game = new GameEntity { Id = gameId, Name = "Catan" };
+        var game = new SharedGameEntity { Id = gameId, Title = "Catan" };
 
         _dbContext!.Users.Add(user);
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var comment = new RuleSpecCommentEntity
@@ -88,10 +89,10 @@ public class RuleSpecCommentForeignKeyTests : IAsyncLifetime
         var userId = Guid.NewGuid();
         var user = new UserEntity { Id = userId, Email = "user@test.com", DisplayName = "User", Role = "User" };
         var gameId = Guid.NewGuid();
-        var game = new GameEntity { Id = gameId, Name = "Wingspan" };
+        var game = new SharedGameEntity { Id = gameId, Title = "Wingspan" };
 
         _dbContext!.Users.Add(user);
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var commentId = Guid.NewGuid();
@@ -110,7 +111,7 @@ public class RuleSpecCommentForeignKeyTests : IAsyncLifetime
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act - Delete game (cascades to comments)
-        _dbContext.Games.Remove(game);
+        _dbContext.SharedGames.Remove(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert - Comment deleted via cascade
@@ -125,10 +126,10 @@ public class RuleSpecCommentForeignKeyTests : IAsyncLifetime
         var userId = Guid.NewGuid();
         var user = new UserEntity { Id = userId, Email = "user@test.com", DisplayName = "User", Role = "User" };
         var gameId = Guid.NewGuid();
-        var game = new GameEntity { Id = gameId, Name = "Azul" };
+        var game = new SharedGameEntity { Id = gameId, Title = "Azul" };
 
         _dbContext!.Users.Add(user);
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var commentId = Guid.NewGuid();
@@ -154,7 +155,7 @@ public class RuleSpecCommentForeignKeyTests : IAsyncLifetime
         var remainingUser = await _dbContext.Users.FindAsync(userId);
         remainingUser.Should().NotBeNull();
 
-        var remainingGame = await _dbContext.Games.FindAsync(gameId);
+        var remainingGame = await _dbContext.SharedGames.FindAsync(gameId);
         remainingGame.Should().NotBeNull();
     }
 
@@ -165,10 +166,10 @@ public class RuleSpecCommentForeignKeyTests : IAsyncLifetime
         var userId = Guid.NewGuid();
         var user = new UserEntity { Id = userId, Email = "user@test.com", DisplayName = "User", Role = "User" };
         var gameId = Guid.NewGuid();
-        var game = new GameEntity { Id = gameId, Name = "Root" };
+        var game = new SharedGameEntity { Id = gameId, Title = "Root" };
 
         _dbContext!.Users.Add(user);
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var parentCommentId = Guid.NewGuid();

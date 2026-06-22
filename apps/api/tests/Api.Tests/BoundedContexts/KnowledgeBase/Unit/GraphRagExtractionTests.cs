@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Services;
 using Api.Services.Pdf;
@@ -67,7 +68,7 @@ public sealed class GraphRagExtractionTests : IDisposable
     public async Task ProcessAsync_WithEntityExtractor_CallsExtractAndSavesRelations()
     {
         // Arrange
-        SeedPdfDocument("Uploading");
+        SeedPdfDocument("Pending");
         var longText = new string('A', 300); // >= 200 char threshold
         SetupExtractorToReturn(longText, 4);
         SetupChunkingToReturn(4);
@@ -117,7 +118,7 @@ public sealed class GraphRagExtractionTests : IDisposable
     public async Task ProcessAsync_WithoutEntityExtractor_DoesNotThrow()
     {
         // Arrange
-        SeedPdfDocument("Uploading");
+        SeedPdfDocument("Pending");
         SetupExtractorToReturn(new string('A', 300), 4);
         SetupChunkingToReturn(4);
         SetupEmbeddingsToReturn(4);
@@ -141,7 +142,7 @@ public sealed class GraphRagExtractionTests : IDisposable
     public async Task ProcessAsync_WhenEntityExtractionThrows_ContinuesProcessing()
     {
         // Arrange
-        SeedPdfDocument("Uploading");
+        SeedPdfDocument("Pending");
         SetupExtractorToReturn(new string('A', 300), 4);
         SetupChunkingToReturn(4);
         SetupEmbeddingsToReturn(4);
@@ -168,7 +169,7 @@ public sealed class GraphRagExtractionTests : IDisposable
     public async Task ProcessAsync_WithShortText_SkipsEntityExtraction()
     {
         // Arrange — text shorter than 200 chars
-        SeedPdfDocument("Uploading");
+        SeedPdfDocument("Pending");
         SetupExtractorToReturn("Short text.", 1);
         SetupChunkingToReturn(1);
         SetupEmbeddingsToReturn(1);
@@ -192,7 +193,7 @@ public sealed class GraphRagExtractionTests : IDisposable
     public async Task ProcessAsync_WithEmptyExtractionResult_DoesNotSaveRelations()
     {
         // Arrange
-        SeedPdfDocument("Uploading");
+        SeedPdfDocument("Pending");
         SetupExtractorToReturn(new string('A', 300), 4);
         SetupChunkingToReturn(4);
         SetupEmbeddingsToReturn(4);
@@ -223,7 +224,7 @@ public sealed class GraphRagExtractionTests : IDisposable
     public async Task ProcessAsync_TruncatesTextTo8000Chars()
     {
         // Arrange
-        SeedPdfDocument("Uploading");
+        SeedPdfDocument("Pending");
         var longText = new string('A', 15000); // Much longer than 8000
         SetupExtractorToReturn(longText, 4);
         SetupChunkingToReturn(4);
@@ -260,6 +261,7 @@ public sealed class GraphRagExtractionTests : IDisposable
 
         return new PdfProcessingPipelineService(
             _db,
+            new Api.Tests.TestHelpers.InMemoryPdfClaimService(_db),
             _pdfTextExtractorMock.Object,
             _tableExtractorMock.Object,
             _chunkingServiceMock.Object,
@@ -269,6 +271,7 @@ public sealed class GraphRagExtractionTests : IDisposable
             _logger,
             languageDetectorMock.Object,
             Mock.Of<IChunkTranslationService>(),
+            Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.IPdfIndexingPipeline>(),
             raptorIndexer: null,
             entityExtractor: withEntityExtractor ? _entityExtractorMock.Object : null,
             vectorStore: null,
@@ -277,6 +280,19 @@ public sealed class GraphRagExtractionTests : IDisposable
 
     private void SeedPdfDocument(string state)
     {
+        // Issue #890: PdfGameIdResolver looks up Games by SharedGameId. Without a matching
+        // GameEntity, the resolver returns null and the pipeline skips entity extraction —
+        // which makes any Verify(_gameId) on the entity-extractor mock fail. Seed the Game
+        // with distinct Id (_gameId) and SharedGameId (_sharedGameId) so the resolver path
+        // games.Where(g => g.SharedGameId == pdf.SharedGameId).Select(g => g.Id) is
+        // exercised — not collapsed via Guid identity (review feedback on PR #891).
+        var game = new SharedGameEntity
+        {
+            Id = _gameId,
+            Title = "Catan",
+        };
+        _db.SharedGames.Add(game);
+
         var pdfDoc = new PdfDocumentEntity
         {
             Id = _pdfDocumentId,
@@ -296,7 +312,7 @@ public sealed class GraphRagExtractionTests : IDisposable
     private void SetupBlobStorageToReturn()
     {
         _blobStorageServiceMock
-            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 })); // %PDF header
     }
 

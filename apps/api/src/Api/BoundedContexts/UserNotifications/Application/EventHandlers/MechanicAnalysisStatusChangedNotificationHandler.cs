@@ -89,7 +89,9 @@ internal sealed class MechanicAnalysisStatusChangedNotificationHandler
             Type = notificationType,
             RecipientUserId = analysis.CreatedBy,
             Payload = new GenericPayload(title, body),
-            DeepLinkPath = $"/admin/mechanic-analyses/{domainEvent.AnalysisId}/review"
+            DeepLinkPath = $"/admin/mechanic-analyses/{domainEvent.AnalysisId}/review",
+            // Issue #1937 / CF-1: propagate event id for dispatcher dedup
+            SourceEventId = domainEvent.EventId
         }, cancellationToken).ConfigureAwait(false);
 
         Logger.LogInformation(

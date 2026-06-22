@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -117,14 +118,14 @@ public sealed class ConversationMemoryRetrievalQualityTests : IAsyncLifetime
         _dbContext!.Users.Add(user);
 
         // Create test game
-        var game = new Api.Infrastructure.Entities.GameEntity
+        var game = new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = "Test Board Game",
+            Title = "Test Board Game",
             CreatedAt = DateTime.UtcNow
         };
         _gameId = game.Id;
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Create multiple sessions with varied conversation data

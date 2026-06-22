@@ -46,7 +46,7 @@ internal static class SessionValidationExtensions
         if (!hasSessionItem ||
             value is not SessionStatusDto session ||
             !session.IsValid ||
-            session.User == null)
+            session.Principal?.Subject == null)
         {
             return (false, default!, Results.Unauthorized());
         }
@@ -76,7 +76,7 @@ internal static class SessionValidationExtensions
         var hasSession = context.Items.TryGetValue(nameof(SessionStatusDto), out var value) &&
                         value is SessionStatusDto session &&
                         session.IsValid &&
-                        session.User != null;
+                        session.Principal?.Subject != null;
 
         if (!hasSession)
         {
@@ -105,8 +105,8 @@ internal static class SessionValidationExtensions
     public static (bool IsAuthorized, IResult? ErrorResult)
         RequireRole(this SessionStatusDto session, UserRole requiredRole)
     {
-        if (session.User == null ||
-            !Enum.TryParse<UserRole>(session.User.Role, ignoreCase: true, out var userRole) ||
+        if (session.Principal?.Subject == null ||
+            !Enum.TryParse<UserRole>(session.Principal!.EffectiveActor.Role, ignoreCase: true, out var userRole) ||
             !HasSufficientRole(userRole, requiredRole))
         {
             return (false, Results.Forbid());

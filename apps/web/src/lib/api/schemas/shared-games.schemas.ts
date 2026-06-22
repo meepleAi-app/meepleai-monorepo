@@ -158,6 +158,37 @@ export const GamePublisherSchema = z.object({
 
 export type GamePublisher = z.infer<typeof GamePublisherSchema>;
 
+// ========== Translations (Issue #2339 sub-PR 2/3) ==========
+
+/**
+ * Translation source provider, mirroring backend `TranslationSource` enum.
+ *
+ * - `manual` — admin-curated translation (highest quality).
+ * - `auto-openrouter` — machine-translated via OpenRouter (DeepSeek V3).
+ * - `community` — community-sourced (future feature, no moderation in MVP).
+ *
+ * See `useGameTitle()` hook (apps/web/src/hooks/useGameTitle.ts) for the
+ * source priority chain (manual > auto-openrouter > community).
+ */
+export const TranslationProviderSchema = z.enum(['manual', 'auto-openrouter', 'community']);
+export type TranslationProvider = z.infer<typeof TranslationProviderSchema>;
+
+/**
+ * Single non-EN game title localization (Issue #2339).
+ *
+ * Returned by 4 SharedGameCatalog query handlers (GetAllSharedGames,
+ * SearchSharedGames, GetFilteredSharedGames, GetPendingApprovalGames) enriched
+ * via `IGameTitleResolver`. Canonical EN remains on `SharedGameDto.title`.
+ */
+export const SharedGameTranslationDtoSchema = z.object({
+  locale: z.string().min(2).max(10), // 'it', 'en-GB', etc. (ISO 639-1 + optional region)
+  title: z.string().min(1).max(500),
+  description: z.string().nullable(),
+  source: TranslationProviderSchema,
+});
+
+export type SharedGameTranslationDto = z.infer<typeof SharedGameTranslationDtoSchema>;
+
 // ========== Shared Game DTOs ==========
 
 /**
@@ -182,9 +213,90 @@ export const SharedGameSchema = z.object({
   hasKnowledgeBase: z.boolean().default(false), // S2 — true when game has indexed KB (AI-ready)
   createdAt: z.string(), // Accept any datetime format from .NET serialization
   modifiedAt: z.string().nullable(),
+  // Wave A.3a aggregate counts (Issue #593) — backend SharedGameDto extension
+  toolkitsCount: z.number().int().nonnegative().default(0),
+  agentsCount: z.number().int().nonnegative().default(0),
+  kbsCount: z.number().int().nonnegative().default(0),
+  newThisWeekCount: z.number().int().nonnegative().default(0),
+  contributorsCount: z.number().int().nonnegative().default(0),
+  isTopRated: z.boolean().default(false),
+  isNew: z.boolean().default(false),
+  // Issue #2123 — R2-resolved cover URL. Preferred over imageUrl/thumbnailUrl,
+  // which are kept as legacy tombstones (#2123 [Obsolete] on SharedGameDto).
+  // Null when the catalog enrichment pipeline (#1823 M3-M8) has not yet
+  // populated a cover for this game; consumers MUST fall back to a
+  // deterministic placeholder via `lib/games/cover-utils.ts`.
+  coverUrl: z.string().url().nullable().optional(),
+  // Issue #2339 — see SharedGameTranslationDtoSchema docstring above.
+  translations: z
+    .array(SharedGameTranslationDtoSchema)
+    .nullable()
+    .default([])
+    .transform(v => v ?? []),
+  // Issue #2055 Phase G AC-G6 — Wikidata cover attribution (plain text, HTML-stripped BE-side per DEC-G6-1).
+  // FE component <MeepleCardAttributionFooter> renders only when wikidataCoverLicense is non-null.
+  wikidataCoverLicense: z.string().nullable().default(null),
+  wikidataCoverAttribution: z.string().nullable().default(null),
+  wikidataCoverSourceUrl: z.string().url().nullable().default(null),
 });
 
 export type SharedGame = z.infer<typeof SharedGameSchema>;
+
+// ========== Top Contributors (Wave A.3 — Issue #596) ==========
+
+/**
+ * Top contributor preview DTO (community catalog leaderboard).
+ */
+export const TopContributorSchema = z.object({
+  userId: z.string().uuid(),
+  displayName: z.string().min(1),
+  avatarUrl: z.string().nullable(),
+  totalSessions: z.number().int().nonnegative(),
+  totalWins: z.number().int().nonnegative(),
+  score: z.number().int().nonnegative(),
+});
+
+export type TopContributor = z.infer<typeof TopContributorSchema>;
+
+// ========== Published Previews (Wave A.4 — Issue #603) ==========
+
+/**
+ * Published toolkit preview nested in SharedGameDetail.
+ * Excludes default toolkits per BR-02 Issue #5144.
+ */
+export const PublishedToolkitPreviewSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1),
+  ownerId: z.string().uuid(),
+  ownerName: z.string().min(1),
+  lastUpdatedAt: z.string(),
+});
+
+export type PublishedToolkitPreview = z.infer<typeof PublishedToolkitPreviewSchema>;
+
+/**
+ * Published agent definition preview nested in SharedGameDetail.
+ */
+export const PublishedAgentPreviewSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1),
+  invocationCount: z.number().int().nonnegative(),
+  lastUpdatedAt: z.string(),
+});
+
+export type PublishedAgentPreview = z.infer<typeof PublishedAgentPreviewSchema>;
+
+/**
+ * Published KB document preview nested in SharedGameDetail.
+ */
+export const PublishedKbPreviewSchema = z.object({
+  id: z.string().uuid(),
+  language: z.string(),
+  totalChunks: z.number().int().nonnegative(),
+  indexedAt: z.string(),
+});
+
+export type PublishedKbPreview = z.infer<typeof PublishedKbPreviewSchema>;
 
 /**
  * Shared game detail DTO (single game view with full info)
@@ -217,6 +329,40 @@ export const SharedGameDetailSchema = z.object({
   publishers: z.array(GamePublisherSchema),
   categories: z.array(GameCategorySchema),
   mechanics: z.array(GameMechanicSchema),
+  // Wave A.4 published previews + aggregates (Issue #603)
+  toolkits: z
+    .array(PublishedToolkitPreviewSchema)
+    .nullable()
+    .default([])
+    .transform(v => v ?? []),
+  agents: z
+    .array(PublishedAgentPreviewSchema)
+    .nullable()
+    .default([])
+    .transform(v => v ?? []),
+  kbs: z
+    .array(PublishedKbPreviewSchema)
+    .nullable()
+    .default([])
+    .transform(v => v ?? []),
+  toolkitsCount: z.number().int().nonnegative().default(0),
+  agentsCount: z.number().int().nonnegative().default(0),
+  kbsCount: z.number().int().nonnegative().default(0),
+  contributorsCount: z.number().int().nonnegative().default(0),
+  hasKnowledgeBase: z.boolean().default(false),
+  isTopRated: z.boolean().default(false),
+  isNew: z.boolean().default(false),
+  // Issue #2339 — see SharedGameTranslationDtoSchema docstring above.
+  translations: z
+    .array(SharedGameTranslationDtoSchema)
+    .nullable()
+    .default([])
+    .transform(v => v ?? []),
+  // Issue #2055 Phase G AC-G6 — Wikidata cover attribution (plain text, HTML-stripped BE-side per DEC-G6-1).
+  // FE component <MeepleCardAttributionFooter> renders only when wikidataCoverLicense is non-null.
+  wikidataCoverLicense: z.string().nullable().default(null),
+  wikidataCoverAttribution: z.string().nullable().default(null),
+  wikidataCoverSourceUrl: z.string().url().nullable().default(null),
 });
 
 export type SharedGameDetail = z.infer<typeof SharedGameDetailSchema>;

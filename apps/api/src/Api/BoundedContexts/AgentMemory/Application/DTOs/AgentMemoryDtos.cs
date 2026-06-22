@@ -14,6 +14,7 @@ internal record GameMemoryDto(
 /// DTO representing a single house rule.
 /// </summary>
 internal record HouseRuleDto(
+    Guid Id,
     string Description,
     DateTime AddedAt,
     string Source);

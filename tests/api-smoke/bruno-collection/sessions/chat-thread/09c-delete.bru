@@ -1,0 +1,23 @@
+meta {
+  name: SG4-CT3c — ChatThread delete
+  type: http
+  seq: 15
+}
+
+delete {
+  url: {{apiBase}}/api/v1/chat-threads/{{chatThreadId}}
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  if (!bru.getVar("chatThreadId")) {
+    throw new Error("chatThreadId not set — run 07-auto-create first");
+  }
+}
+
+tests {
+  test("returns 204 No Content on delete", function() {
+    expect(res.getStatus()).to.equal(204);
+  });
+}

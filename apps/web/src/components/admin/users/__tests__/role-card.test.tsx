@@ -55,7 +55,7 @@ describe('RoleCard', () => {
     );
 
     const card = container.firstChild as HTMLElement;
-    expect(card).toHaveClass('bg-white/70');
+    expect(card).toHaveClass('bg-card/70'); // post DS-15 semantic token
     expect(card).toHaveClass('backdrop-blur-md');
   });
 });

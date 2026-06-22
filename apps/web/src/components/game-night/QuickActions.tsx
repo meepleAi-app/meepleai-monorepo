@@ -104,8 +104,8 @@ export function QuickActions({
             onClick={action.onClick}
             className={cn(
               'h-11 gap-2 text-sm font-semibold',
-              'border-2 border-slate-200 dark:border-slate-700',
-              'bg-white dark:bg-slate-800',
+              'border-2 border-border',
+              'bg-card',
               'hover:border-amber-600/50 hover:bg-amber-50 dark:hover:bg-amber-950/20',
               'active:scale-95 transition-all'
             )}

@@ -20,6 +20,7 @@ import {
   LogLevel,
 } from '@microsoft/signalr';
 
+import type { ScoreDataByType, ScoreType } from '@/components/sessions/score-strategies/types';
 import { logger } from '@/lib/logger';
 import {
   useLiveSessionStore,
@@ -28,11 +29,6 @@ import {
 } from '@/lib/stores/live-session-store';
 
 // -------- Hub event payload shapes --------
-
-interface ScoreUpdatedPayload {
-  playerName: string;
-  score: number;
-}
 
 interface DisputeResolvedPayload {
   id: string;
@@ -50,6 +46,13 @@ interface ProposeScorePayload {
   timestamp: number;
 }
 
+interface ScoringConfiguredPayload {
+  sessionId: string;
+  scoringType: ScoreType;
+  /** JSON-stringified `ScoreDataByType[scoringType]` (BE serializes the column verbatim). */
+  scoreData: string;
+}
+
 // -------- Hook return type --------
 
 export interface UseSignalRSessionReturn {
@@ -57,8 +60,6 @@ export interface UseSignalRSessionReturn {
   connection: HubConnection | null;
   /** Whether the hub is currently connected */
   isConnected: boolean;
-  /** Notify all clients that a player's total score changed */
-  sendScore: (playerName: string, score: number) => Promise<void>;
   /** Propose a score delta that the host must confirm */
   proposeScore: (playerName: string, delta: number) => Promise<void>;
   /** Signal that this client went to the background (mobile PWA pause) */
@@ -92,10 +93,6 @@ export function useSignalRSession(sessionId: string | null): UseSignalRSessionRe
 
     // ---- Register incoming event handlers ----
 
-    conn.on('ScoreUpdated', (data: ScoreUpdatedPayload) => {
-      store.getState().updateScore(data.playerName, data.score);
-    });
-
     conn.on('DisputeResolved', (data: DisputeResolvedPayload) => {
       const dispute: RuleDispute = {
         id: data.id,
@@ -128,6 +125,21 @@ export function useSignalRSession(sessionId: string | null): UseSignalRSessionRe
         timestamp: data.timestamp,
       };
       store.getState().addProposal(proposal);
+    });
+
+    // #2389 Block A — polymorphic scoring config broadcast.
+    // BE serializes the raw column (string); we parse defensively so a malformed
+    // payload from a future server version doesn't crash the hub.
+    conn.on('ScoringConfigured', (data: ScoringConfiguredPayload) => {
+      try {
+        const parsed = JSON.parse(data.scoreData) as ScoreDataByType[ScoreType];
+        store.getState().setScoringConfig({
+          scoringType: data.scoringType,
+          scoreData: parsed,
+        });
+      } catch (err) {
+        console.warn('[useSignalRSession] failed to parse ScoringConfigured payload', err);
+      }
     });
 
     // ---- Connection lifecycle ----
@@ -182,12 +194,6 @@ export function useSignalRSession(sessionId: string | null): UseSignalRSessionRe
 
   // ---- Outbound methods ----
 
-  const sendScore = async (playerName: string, score: number): Promise<void> => {
-    const conn = connectionRef.current;
-    if (!conn || conn.state !== HubConnectionState.Connected) return;
-    await conn.invoke('NotifyScoreUpdated', sessionId, { playerName, score });
-  };
-
   const proposeScore = async (playerName: string, delta: number): Promise<void> => {
     const conn = connectionRef.current;
     if (!conn || conn.state !== HubConnectionState.Connected) return;
@@ -203,7 +209,6 @@ export function useSignalRSession(sessionId: string | null): UseSignalRSessionRe
   return {
     connection,
     isConnected,
-    sendScore,
     proposeScore,
     appBackgrounded,
   };

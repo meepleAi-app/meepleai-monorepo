@@ -1,0 +1,39 @@
+meta {
+  name: SG4-CS1 — ChatSession lifecycle (create + message + get + delete)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{apiBase}}/api/v1/chat/sessions
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "gameId": "{{smokeGameId}}",
+    "title": "Smoke SG4 Chat Session"
+  }
+}
+
+script:post-response {
+  // Capture chatSessionId for subsequent message + delete steps in this file.
+  // Because Bruno .bru files are single-request, the full lifecycle
+  // (create → add message → get → delete) across 4 HTTP calls is split into
+  // sequential files: 04, 04b, 04c, 04d. This file covers the CREATE step.
+  const body = res.getBody();
+  if (body && body.sessionId) {
+    bru.setVar("chatSessionId", body.sessionId);
+  }
+}
+
+tests {
+  test("returns 201 Created", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+  test("body contains sessionId", function() {
+    const body = res.getBody();
+    expect(body).to.have.property("sessionId");
+  });
+}

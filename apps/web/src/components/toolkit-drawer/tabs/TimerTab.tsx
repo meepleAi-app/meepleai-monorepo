@@ -82,7 +82,7 @@ export function TimerTab() {
           type="button"
           onClick={handleMinus}
           disabled={remaining <= 0}
-          className="w-12 rounded-xl bg-gray-100 py-2 text-sm font-bold text-gray-600 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
+          className="w-12 rounded-xl bg-muted py-2 text-sm font-bold text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
           aria-label="Rimuovi 1 minuto"
           data-testid="timer-minus-1m"
         >
@@ -108,7 +108,7 @@ export function TimerTab() {
         <button
           type="button"
           onClick={handlePlus}
-          className="w-12 rounded-xl bg-gray-100 py-2 text-sm font-bold text-gray-600 hover:bg-gray-200 transition-colors"
+          className="w-12 rounded-xl bg-muted py-2 text-sm font-bold text-muted-foreground hover:bg-muted transition-colors"
           aria-label="Aggiungi 1 minuto"
           data-testid="timer-plus-1m"
         >
@@ -120,14 +120,14 @@ export function TimerTab() {
       <button
         type="button"
         onClick={handleReset}
-        className="text-xs text-gray-400 underline-offset-2 hover:text-gray-600 hover:underline"
+        className="text-xs text-muted-foreground underline-offset-2 hover:text-muted-foreground hover:underline"
         data-testid="timer-reset"
       >
         Reset
       </button>
 
       {/* Auto-reset on turn toggle */}
-      <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5">
+      <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-muted px-4 py-2.5">
         <input
           type="checkbox"
           checked={autoReset}
@@ -135,7 +135,7 @@ export function TimerTab() {
           className="h-4 w-4 accent-[hsl(142,70%,45%)]"
           data-testid="timer-auto-reset-checkbox"
         />
-        <span className="text-xs text-gray-600">Reset automatico al cambio turno</span>
+        <span className="text-xs text-muted-foreground">Reset automatico al cambio turno</span>
       </label>
     </div>
   );

@@ -4,9 +4,11 @@ using PdfFileName = Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects.F
 using PdfFileSize = Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects.FileSize;
 using PdfLanguageCode = Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects.LanguageCode;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Models;
 using Api.Services;
 using Api.SharedKernel.Application.Services;
@@ -34,6 +36,7 @@ public sealed class CreateSharedGameFromPdfCommandHandlerTests : IDisposable
     private readonly Mock<IPdfDocumentRepository> _pdfRepositoryMock;
     private readonly Mock<ISharedGameRepository> _gameRepositoryMock;
     private readonly Mock<IBggApiService> _bggApiServiceMock;
+    private readonly Mock<IBggCoverDownloader> _bggCoverDownloaderMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<ILogger<CreateSharedGameFromPdfCommandHandler>> _loggerMock;
@@ -46,6 +49,13 @@ public sealed class CreateSharedGameFromPdfCommandHandlerTests : IDisposable
         _bggApiServiceMock = new Mock<IBggApiService>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _loggerMock = new Mock<ILogger<CreateSharedGameFromPdfCommandHandler>>();
+
+        // Default: downloader returns null (no-op fallback) for all calls.
+        // Tests that verify cover upload success set up explicit returns.
+        _bggCoverDownloaderMock = new Mock<IBggCoverDownloader>();
+        _bggCoverDownloaderMock
+            .Setup(d => d.DownloadAndUploadAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
 
         // InMemory database for duplicate check query (uses _dbContext.Set<SharedGameEntity>())
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
@@ -61,6 +71,7 @@ public sealed class CreateSharedGameFromPdfCommandHandlerTests : IDisposable
             _pdfRepositoryMock.Object,
             _gameRepositoryMock.Object,
             _bggApiServiceMock.Object,
+            _bggCoverDownloaderMock.Object,
             _unitOfWorkMock.Object,
             _dbContext,
             _loggerMock.Object);
@@ -498,6 +509,102 @@ public sealed class CreateSharedGameFromPdfCommandHandlerTests : IDisposable
         result.ApprovalStatus.Should().Be("Published");
         result.DuplicateWarning.Should().BeFalse(); // empty DB = no duplicates
         result.DuplicateTitles.Should().BeEmpty();
+    }
+
+    #endregion
+
+    #region BGG Cover Re-upload (Gap G2)
+
+    [Fact]
+    public async Task Handle_WithBggIdAndCoverDownloadSuccess_SetsBggCoverR2KeyOnEntity()
+    {
+        // Arrange
+        var pdfId = Guid.NewGuid();
+        var bggId = 13;
+        var expectedR2Key = "bgg-cover-13";
+        var command = CreateValidCommand(pdfDocumentId: pdfId, title: "Catan", selectedBggId: bggId);
+
+        SetupPdfFound(pdfId);
+        SetupBggDetails(bggId, CreateBggDetails(bggId: bggId, imageUrl: "https://cf.geekdo-images.com/abc.jpg"));
+
+        // The mock AddAsync callback seeds the entity into InMemory DbContext so the handler
+        // can find it when setting BggCoverR2Key via FirstOrDefaultAsync.
+        _gameRepositoryMock
+            .Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()))
+            .Returns<SharedGame, CancellationToken>(async (g, ct) =>
+            {
+                var entity = new SharedGameEntity
+                {
+                    Id = g.Id,
+                    Title = g.Title,
+                    Description = g.Description,
+                    YearPublished = g.YearPublished,
+                    MinPlayers = g.MinPlayers,
+                    MaxPlayers = g.MaxPlayers,
+                    PlayingTimeMinutes = g.PlayingTimeMinutes,
+                    MinAge = g.MinAge,
+                    ImageUrl = g.ImageUrl,
+                    ThumbnailUrl = g.ThumbnailUrl,
+                    CreatedBy = g.CreatedBy,
+                    CreatedAt = DateTime.UtcNow
+                };
+                await _dbContext.Set<SharedGameEntity>().AddAsync(entity, ct);
+                await _dbContext.SaveChangesAsync(ct);
+            });
+
+        _bggCoverDownloaderMock
+            .Setup(d => d.DownloadAndUploadAsync(bggId, "https://cf.geekdo-images.com/abc.jpg", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedR2Key);
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.BggEnrichmentApplied.Should().BeTrue();
+
+        // Verify BggCoverR2Key was set on the EF-tracked entity.
+        // Note: _unitOfWork.SaveChangesAsync is mocked, but EF InMemory change tracking
+        // reflects the modification in-memory. We look up the entity by its saved ID.
+        var savedEntity = _dbContext.ChangeTracker.Entries<SharedGameEntity>()
+            .FirstOrDefault(e => e.Entity.BggCoverR2Key == expectedR2Key)?.Entity;
+        savedEntity.Should().NotBeNull("downloader should have set BggCoverR2Key on the tracked entity");
+        savedEntity!.BggCoverR2Key.Should().Be(expectedR2Key);
+
+        // Polish: also verify the value survives a full DbContext round-trip query
+        var persistedEntity = await _dbContext.Set<SharedGameEntity>()
+            .FirstAsync(e => e.Id == result.GameId);
+        persistedEntity.BggCoverR2Key.Should().Be(expectedR2Key);
+
+        // ImageUrl remains BGG direct URL (convention F4 — CoverUrlResolver is authoritative display source)
+        savedEntity.ImageUrl.Should().Be("https://cf.geekdo-images.com/abc.jpg");
+    }
+
+    [Fact]
+    public async Task Handle_WithBggIdAndCoverDownloadFailure_FallsBackToDirectUrl()
+    {
+        // Arrange
+        var pdfId = Guid.NewGuid();
+        var bggId = 13;
+        var command = CreateValidCommand(pdfDocumentId: pdfId, title: "Catan", selectedBggId: bggId);
+
+        SetupPdfFound(pdfId);
+        SetupBggDetails(bggId, CreateBggDetails(bggId: bggId, imageUrl: "https://cf.geekdo-images.com/abc.jpg"));
+
+        _gameRepositoryMock
+            .Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Downloader returns null (failure / already configured as default no-op)
+
+        // Act — should not throw; fallback is silent
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.BggEnrichmentApplied.Should().BeTrue();
+        result.GameId.Should().NotBe(Guid.Empty);
+        _bggCoverDownloaderMock.Verify(
+            d => d.DownloadAndUploadAsync(bggId, It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     #endregion

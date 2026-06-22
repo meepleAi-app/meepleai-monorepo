@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 import { useState } from 'react';
@@ -23,7 +24,7 @@ function MigrationTable({
   variant: 'common' | 'local' | 'staging';
 }) {
   const colorMap = {
-    common: 'bg-slate-50/50 dark:bg-zinc-800/30',
+    common: 'bg-muted/50 dark:bg-zinc-800/30',
     local: 'bg-blue-50/50 dark:bg-blue-900/10',
     staging: 'bg-amber-50/50 dark:bg-amber-900/10',
   };
@@ -36,10 +37,10 @@ function MigrationTable({
       {migrations.length === 0 ? (
         <p className="text-sm text-muted-foreground">None</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-slate-200/60 dark:border-zinc-700/40">
+        <div className="overflow-x-auto rounded-lg border border-border/60 dark:border-zinc-700/40">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200/60 dark:border-zinc-700/40 bg-slate-50/50 dark:bg-zinc-800/50">
+              <tr className="border-b border-border/60 dark:border-zinc-700/40 bg-muted/50 dark:bg-zinc-800/50">
                 <th className="px-4 py-2 text-left font-medium text-muted-foreground">
                   Migration ID
                 </th>
@@ -53,7 +54,7 @@ function MigrationTable({
               {migrations.map(m => (
                 <tr
                   key={m.migrationId}
-                  className={`border-b border-slate-200/40 dark:border-zinc-700/30 last:border-b-0 ${colorMap[variant]}`}
+                  className={`border-b border-border/40 dark:border-zinc-700/30 last:border-b-0 ${colorMap[variant]}`}
                 >
                   <td className="px-4 py-2 font-mono text-xs text-foreground">{m.migrationId}</td>
                   <td className="px-4 py-2 text-muted-foreground">{m.productVersion}</td>

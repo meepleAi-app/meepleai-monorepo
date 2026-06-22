@@ -15,10 +15,10 @@ export function ChatEmptyState() {
       </div>
 
       <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold text-[var(--gaming-text-primary,white)]">
+        <h2 className="text-lg font-semibold text-[var(--text,white)]">
           Nessuna conversazione
         </h2>
-        <p className="text-sm text-[var(--gaming-text-secondary,rgba(255,255,255,0.6))]">
+        <p className="text-sm text-[var(--text-sec,rgba(255,255,255,0.6))]">
           Vai alla libreria e chiedi qualcosa sulle regole di un gioco!
         </p>
       </div>

@@ -73,6 +73,10 @@ internal sealed class TierEnforcementService : ITierEnforcementService
         if (action == TierAction.SaveSession)
             return limits.SessionSaveEnabled;
 
+        // Boolean-based actions: RAPTOR rebuild is premium-only (blocked for free tier)
+        if (action == TierAction.RaptorRebuild)
+            return limits.RaptorRebuildEnabled;
+
         // Rate-based actions — check Redis counter
         var currentUsage = await GetRedisCounterAsync(userId, action).ConfigureAwait(false);
         var maxAllowed = GetMaxForAction(limits, action);
@@ -236,6 +240,8 @@ internal sealed class TierEnforcementService : ITierEnforcementService
         TierAction.SessionAgentQuery => limits.MaxSessionQueries,
         TierAction.UploadSessionPhoto => limits.MaxPhotosPerSession,
         TierAction.ProposeToSharedCatalog => limits.MaxCatalogProposalsPerWeek,
+        // RaptorRebuild is handled separately as a boolean gate — this path is never reached.
+        TierAction.RaptorRebuild => int.MaxValue,
         _ => int.MaxValue
     };
 }

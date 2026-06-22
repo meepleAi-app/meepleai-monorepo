@@ -1,9 +1,17 @@
-using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using System.Text.Json;
 using Api.BoundedContexts.GameToolkit.Application.DTOs;
+using Api.BoundedContexts.GameToolkit.Application.Validators;
+using Api.BoundedContexts.GameToolkit.Domain.Entities;
+using Api.BoundedContexts.GameToolkit.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Infrastructure.Entities;
 using Api.Middleware.Exceptions;
+using Api.Observability;
 using Api.Services;
+using Api.SharedKernel.Application;
+using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Infrastructure.Persistence;
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -31,24 +39,41 @@ internal class GenerateToolkitFromKbHandler
         "turn order round phases sequence players"
     ];
 
+    private static readonly JsonSerializerOptions CacheJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false
+    };
+
     private readonly IHybridSearchService _hybridSearchService;
     private readonly ILlmService _llmService;
     private readonly IRagAccessService _ragAccessService;
-    private readonly IGameRepository _gameRepository;
+    private readonly IGameCoreDataProvider _gameCoreData;
+    private readonly IValidator<AiToolkitSuggestionDto> _suggestionValidator;
     private readonly ILogger<GenerateToolkitFromKbHandler> _logger;
+    private readonly IAiToolkitSuggestionCacheRepository? _cacheRepository;
+    private readonly IUnitOfWork? _unitOfWork;
 
     public GenerateToolkitFromKbHandler(
         IHybridSearchService hybridSearchService,
         ILlmService llmService,
         IRagAccessService ragAccessService,
-        IGameRepository gameRepository,
-        ILogger<GenerateToolkitFromKbHandler> logger)
+        IGameCoreDataProvider gameCoreData,
+        ILogger<GenerateToolkitFromKbHandler> logger,
+        IValidator<AiToolkitSuggestionDto>? suggestionValidator = null,
+        IAiToolkitSuggestionCacheRepository? cacheRepository = null,
+        IUnitOfWork? unitOfWork = null)
     {
         _hybridSearchService = hybridSearchService ?? throw new ArgumentNullException(nameof(hybridSearchService));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
-        _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
+        _gameCoreData = gameCoreData ?? throw new ArgumentNullException(nameof(gameCoreData));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        // Validator is optional with default fallback to allow legacy DI registrations
+        // (existing tests didn't pass a validator). Use AiToolkitSuggestionValidator as default.
+        _suggestionValidator = suggestionValidator ?? new AiToolkitSuggestionValidator();
+        _cacheRepository = cacheRepository; // null = cache disabled (legacy/test mode)
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<AiToolkitSuggestionDto> Handle(
@@ -57,12 +82,37 @@ internal class GenerateToolkitFromKbHandler
     {
         ArgumentNullException.ThrowIfNull(command);
 
+        // ADR-069 (#2383): Cache-aside read. Errors are swallowed — cache infra must not
+        // degrade LLM generation UX.
+        if (_cacheRepository is not null)
+        {
+            try
+            {
+                var cached = await _cacheRepository.GetByGameIdAsync(command.GameId, cancellationToken)
+                    .ConfigureAwait(false);
+                if (cached is not null)
+                {
+                    _logger.LogInformation("AiToolkit cache HIT for game {GameId}", command.GameId);
+                    MeepleAiMetrics.RecordAiToolkitCacheHit();
+                    return JsonSerializer.Deserialize<AiToolkitSuggestionDto>(cached.SuggestionJson, CacheJsonOptions)!;
+                }
+                MeepleAiMetrics.RecordAiToolkitCacheMiss();
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning(ex,
+                    "AiToolkit cache GET failed for game {GameId}; falling back to LLM",
+                    command.GameId);
+                MeepleAiMetrics.RecordAiToolkitCacheMiss();
+            }
+        }
+
         // 1. Validate game exists
-        var game = await _gameRepository
-            .GetByIdAsync(command.GameId, cancellationToken)
+        var coreData = await _gameCoreData
+            .GetCoreDataAsync(GameRef.Shared(command.GameId), cancellationToken)
             .ConfigureAwait(false);
 
-        if (game is null)
+        if (coreData is null)
             throw new NotFoundException("Game", command.GameId.ToString());
 
         // 2. Resolve accessible KB card IDs for this user/game
@@ -98,7 +148,7 @@ internal class GenerateToolkitFromKbHandler
             uniqueChunks.Count, command.GameId);
 
         // 5. Build prompts
-        var gameTitle = game.Title.Value;
+        var gameTitle = coreData.Title;
         var userPrompt = BuildUserPrompt(gameTitle, uniqueChunks);
 
         // 6. Call LLM (primary attempt)
@@ -126,25 +176,79 @@ internal class GenerateToolkitFromKbHandler
             throw new InvalidOperationException(
                 $"LLM failed to generate a valid toolkit suggestion for game {command.GameId} after retry.");
 
+        // 7b. Validate LLM output against schema invariants (issue #1747 B19-3c).
+        // We do NOT throw on validation failure — we log, force human review, and return the
+        // suggestion anyway so an admin can correct it via ApplyAiToolkitSuggestionCommand.
+        var validation = await _suggestionValidator
+            .ValidateAsync(suggestion, cancellationToken)
+            .ConfigureAwait(false);
+
+        var validationFailed = !validation.IsValid;
+        if (validationFailed)
+        {
+            var errors = string.Join(" | ",
+                validation.Errors.Select(e => $"{e.PropertyName}: {e.ErrorMessage}"));
+            _logger.LogWarning(
+                "AI toolkit suggestion failed schema validation for game {GameId}. Errors: {ValidationErrors}. Forcing RequiresHumanReview=true.",
+                command.GameId, errors);
+        }
+
         // 8. Compute confidence metrics
         var avgScore = uniqueChunks.Count > 0
             ? uniqueChunks.Average(c => c.HybridScore)
             : 0f;
         var coverageFactor = Math.Min(1f, (float)uniqueChunks.Count / MinChunksForFullConfidence);
         var confidenceScore = avgScore * coverageFactor;
-        var requiresHumanReview = confidenceScore < ConfidenceThreshold;
+        // Force review if either confidence is low OR schema validation failed.
+        var requiresHumanReview = confidenceScore < ConfidenceThreshold || validationFailed;
 
         _logger.LogInformation(
-            "GenerateToolkitFromKb: game={GameId} chunks={Chunks} avgScore={AvgScore:F2} confidence={Confidence:F2} requiresReview={RequiresReview}",
-            command.GameId, uniqueChunks.Count, avgScore, confidenceScore, requiresHumanReview);
+            "GenerateToolkitFromKb: game={GameId} chunks={Chunks} avgScore={AvgScore:F2} confidence={Confidence:F2} validationOk={ValidationOk} requiresReview={RequiresReview}",
+            command.GameId, uniqueChunks.Count, avgScore, confidenceScore, !validationFailed, requiresHumanReview);
 
-        return suggestion with
+        var result = suggestion with
         {
             ConfidenceScore = confidenceScore,
             ChunksAnalyzed = uniqueChunks.Count,
             KbCoveragePercent = coverageFactor * 100f,
             RequiresHumanReview = requiresHumanReview
         };
+
+        // ADR-069 (#2383): Cache write-back. Errors are swallowed — the caller
+        // must receive the generated result even when the cache layer is unavailable.
+        //
+        // PR #2409 open question #2 resolution (transaction safety, brainstorm 2026-06-16):
+        // The SaveChangesAsync call below commits the cache entry. This handler is a pure
+        // read+generate flow: it does not stage any other writes to the UoW prior to this
+        // point, so the SaveChangesAsync commits ONLY the cache entry — no risk of
+        // committing partial outer-transaction state.
+        //
+        // INVARIANT: do NOT add any AddAsync / UpdateAsync calls earlier in this Handle
+        // method without also moving the cache write-back into a separate transaction
+        // (or refactoring to a domain-event-driven write-back). Adding new writes earlier
+        // would cause the SaveChangesAsync here to commit them too, breaking the
+        // "cache failure doesn't affect business state" guarantee.
+        if (_cacheRepository is not null)
+        {
+            try
+            {
+                var entry = AiToolkitSuggestionCacheEntry.Create(
+                    command.GameId,
+                    JsonSerializer.Serialize(result, CacheJsonOptions),
+                    kbVersion: null); // KbVersion tracking deferred per ADR-069 spec §"Out of scope"
+                await _cacheRepository.UpsertAsync(entry, cancellationToken).ConfigureAwait(false);
+                if (_unitOfWork is not null)
+                    await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning(ex,
+                    "AiToolkit cache UPSERT failed for game {GameId}; result returned without caching",
+                    command.GameId);
+            }
+        }
+
+        return result;
     }
 
     private static string BuildUserPrompt(string gameTitle, IReadOnlyList<HybridSearchResult> chunks)

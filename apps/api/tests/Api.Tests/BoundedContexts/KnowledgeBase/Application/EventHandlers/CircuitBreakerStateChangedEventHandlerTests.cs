@@ -44,8 +44,8 @@ public sealed class CircuitBreakerStateChangedEventHandlerTests : IDisposable
         _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
         _notificationRepoMock = new Mock<INotificationRepository>();
         _notificationRepoMock
-            .Setup(r => r.AddAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .Setup(r => r.AddBatchAndCommitAsync(It.IsAny<IEnumerable<Notification>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
 
         _handler = new CircuitBreakerStateChangedEventHandler(
             _notificationRepoMock.Object,
@@ -88,7 +88,7 @@ public sealed class CircuitBreakerStateChangedEventHandlerTests : IDisposable
 
         // Assert
         _notificationRepoMock.Verify(
-            r => r.AddAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()),
+            r => r.AddBatchAndCommitAsync(It.IsAny<IEnumerable<Notification>>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -101,18 +101,19 @@ public sealed class CircuitBreakerStateChangedEventHandlerTests : IDisposable
         await SeedAdminAsync();
         var evt = MakeEvent(newState);
 
-        Notification? captured = null;
+        List<Notification>? captured = null;
         _notificationRepoMock
-            .Setup(r => r.AddAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()))
-            .Callback<Notification, CancellationToken>((n, _) => captured = n)
-            .Returns(Task.CompletedTask);
+            .Setup(r => r.AddBatchAndCommitAsync(It.IsAny<IEnumerable<Notification>>(), It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<Notification>, CancellationToken>((ns, _) => captured = ns.ToList())
+            .ReturnsAsync(1);
 
         await _handler.Handle(evt, CancellationToken.None);
 
         captured.Should().NotBeNull();
-        captured!.Severity.Should().Be(expectedSeverity);
-        captured.Type.Should().Be(NotificationType.AdminSystemHealthAlert);
-        captured.Link.Should().Be("/admin/agents/usage");
+        captured!.Should().ContainSingle();
+        captured[0].Severity.Should().Be(expectedSeverity);
+        captured[0].Type.Should().Be(NotificationType.AdminSystemHealthAlert);
+        captured[0].Link.Should().Be("/admin/agents/usage");
     }
 
     [Fact]
@@ -136,18 +137,19 @@ public sealed class CircuitBreakerStateChangedEventHandlerTests : IDisposable
         await SeedAdminAsync();
         var evt = MakeEvent(CircuitState.Open, provider: "openrouter");
 
-        Notification? captured = null;
+        List<Notification>? captured = null;
         _notificationRepoMock
-            .Setup(r => r.AddAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()))
-            .Callback<Notification, CancellationToken>((n, _) => captured = n)
-            .Returns(Task.CompletedTask);
+            .Setup(r => r.AddBatchAndCommitAsync(It.IsAny<IEnumerable<Notification>>(), It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<Notification>, CancellationToken>((ns, _) => captured = ns.ToList())
+            .ReturnsAsync(1);
 
         // Act
         await _handler.Handle(evt, CancellationToken.None);
 
         // Assert
-        captured!.Title.Should().Contain("OPENED");
-        captured.Title.Should().Contain("openrouter");
+        captured!.Should().ContainSingle();
+        captured[0].Title.Should().Contain("OPENED");
+        captured[0].Title.Should().Contain("openrouter");
     }
 
     [Fact]
@@ -157,18 +159,19 @@ public sealed class CircuitBreakerStateChangedEventHandlerTests : IDisposable
         await SeedAdminAsync();
         var evt = MakeEvent(CircuitState.Closed, provider: "ollama");
 
-        Notification? captured = null;
+        List<Notification>? captured = null;
         _notificationRepoMock
-            .Setup(r => r.AddAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()))
-            .Callback<Notification, CancellationToken>((n, _) => captured = n)
-            .Returns(Task.CompletedTask);
+            .Setup(r => r.AddBatchAndCommitAsync(It.IsAny<IEnumerable<Notification>>(), It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<Notification>, CancellationToken>((ns, _) => captured = ns.ToList())
+            .ReturnsAsync(1);
 
         // Act
         await _handler.Handle(evt, CancellationToken.None);
 
         // Assert
-        captured!.Title.Should().ContainEquivalentOf("recovered");
-        captured.Title.Should().Contain("ollama");
+        captured!.Should().ContainSingle();
+        captured[0].Title.Should().ContainEquivalentOf("recovered");
+        captured[0].Title.Should().Contain("ollama");
     }
 
     // ── Message equals reason ─────────────────────────────────────────────────
@@ -181,17 +184,18 @@ public sealed class CircuitBreakerStateChangedEventHandlerTests : IDisposable
         const string reason = "Provider returned 503 three consecutive times";
         var evt = MakeEvent(CircuitState.Open, reason: reason);
 
-        Notification? captured = null;
+        List<Notification>? captured = null;
         _notificationRepoMock
-            .Setup(r => r.AddAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()))
-            .Callback<Notification, CancellationToken>((n, _) => captured = n)
-            .Returns(Task.CompletedTask);
+            .Setup(r => r.AddBatchAndCommitAsync(It.IsAny<IEnumerable<Notification>>(), It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<Notification>, CancellationToken>((ns, _) => captured = ns.ToList())
+            .ReturnsAsync(1);
 
         // Act
         await _handler.Handle(evt, CancellationToken.None);
 
         // Assert
-        captured!.Message.Should().Be(reason);
+        captured!.Should().ContainSingle();
+        captured[0].Message.Should().Be(reason);
     }
 
     // ── Multiple admins ────────────────────────────────────────────────────────
@@ -206,13 +210,17 @@ public sealed class CircuitBreakerStateChangedEventHandlerTests : IDisposable
 
         var evt = MakeEvent(CircuitState.Open);
 
+        List<Notification>? captured = null;
+        _notificationRepoMock
+            .Setup(r => r.AddBatchAndCommitAsync(It.IsAny<IEnumerable<Notification>>(), It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<Notification>, CancellationToken>((ns, _) => captured = ns.ToList())
+            .ReturnsAsync(2);
+
         // Act
         await _handler.Handle(evt, CancellationToken.None);
 
         // Assert
-        _notificationRepoMock.Verify(
-            r => r.AddAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()),
-            Times.Exactly(2));
+        captured!.Should().HaveCount(2);
     }
 
     [Fact]
@@ -225,11 +233,11 @@ public sealed class CircuitBreakerStateChangedEventHandlerTests : IDisposable
 
         var evt = MakeEvent(CircuitState.Open);
 
-        var capturedUserIds = new List<Guid>();
+        List<Guid>? capturedUserIds = null;
         _notificationRepoMock
-            .Setup(r => r.AddAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()))
-            .Callback<Notification, CancellationToken>((n, _) => capturedUserIds.Add(n.UserId))
-            .Returns(Task.CompletedTask);
+            .Setup(r => r.AddBatchAndCommitAsync(It.IsAny<IEnumerable<Notification>>(), It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<Notification>, CancellationToken>((ns, _) => capturedUserIds = ns.Select(n => n.UserId).ToList())
+            .ReturnsAsync(2);
 
         // Act
         await _handler.Handle(evt, CancellationToken.None);
@@ -247,7 +255,7 @@ public sealed class CircuitBreakerStateChangedEventHandlerTests : IDisposable
         // Arrange
         await SeedAdminAsync();
         _notificationRepoMock
-            .Setup(r => r.AddAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.AddBatchAndCommitAsync(It.IsAny<IEnumerable<Notification>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("DB failure"));
 
         var evt = MakeEvent(CircuitState.Open);

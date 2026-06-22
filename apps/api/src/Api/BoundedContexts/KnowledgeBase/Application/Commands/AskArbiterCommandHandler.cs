@@ -306,9 +306,9 @@ internal sealed class AskArbiterCommandHandler : IRequestHandler<AskArbiterComma
     private async Task<string?> ResolveGameNameAsync(Guid? gameId, CancellationToken ct)
     {
         if (!gameId.HasValue || gameId == Guid.Empty) return null;
-        return await _dbContext.Games
+        return await _dbContext.SharedGames
             .Where(g => g.Id == gameId.Value)
-            .Select(g => g.Name)
+            .Select(g => g.Title)
             .FirstOrDefaultAsync(ct)
             .ConfigureAwait(false);
     }

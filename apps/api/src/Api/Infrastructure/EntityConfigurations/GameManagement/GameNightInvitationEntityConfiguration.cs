@@ -42,6 +42,9 @@ internal class GameNightInvitationEntityConfiguration
         builder.Property(i => i.ExpiresAt).HasColumnName("expires_at").IsRequired();
         builder.Property(i => i.RespondedAt).HasColumnName("responded_at");
         builder.Property(i => i.RespondedByUserId).HasColumnName("responded_by_user_id");
+        builder.Property(i => i.RespondedByName)
+            .HasColumnName("responded_by_name")
+            .HasMaxLength(120);
         builder.Property(i => i.CreatedAt).HasColumnName("created_at").IsRequired();
         builder.Property(i => i.CreatedBy).HasColumnName("created_by").IsRequired();
 

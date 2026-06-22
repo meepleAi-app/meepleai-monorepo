@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 'use client';
 
 /**
@@ -88,6 +89,14 @@ export const ENTITY_COLORS = {
     accentBorder: 'border-cyan-200/60',
     activeAccent: 'data-[state=active]:text-cyan-700',
   },
+  // #1929 WP2: GameNight-specific entity, reuses event/rose palette
+  gameNightEvent: {
+    hsl: '350 89% 60%',
+    accent: 'text-rose-700',
+    accentBg: 'bg-rose-100',
+    accentBorder: 'border-rose-200/60',
+    activeAccent: 'data-[state=active]:text-rose-700',
+  },
 } as const;
 
 export type EntityVariant = keyof typeof ENTITY_COLORS;
@@ -133,10 +142,10 @@ export function EntityHeader({
             <h2 className="font-quicksand text-xl font-bold text-white leading-tight line-clamp-2">
               {title}
             </h2>
-            {subtitle && <p className="font-nunito text-sm text-white/70">{subtitle}</p>}
+            {subtitle && <p className="font-nunito text-sm text-foreground/80">{subtitle}</p>}
           </div>
           {badge && (
-            <div className="flex items-center gap-1 rounded-full bg-white/20 backdrop-blur-sm px-2.5 py-1">
+            <div className="flex items-center gap-1 rounded-full bg-card/20 backdrop-blur-sm px-2.5 py-1">
               {badgeIcon}
               <span className="font-quicksand text-sm font-bold text-white">{badge}</span>
             </div>
@@ -169,7 +178,7 @@ export function EntityTabTrigger({
       value={value}
       className={cn(
         'flex items-center gap-1.5 px-3 py-1.5 font-nunito text-xs font-medium',
-        'data-[state=active]:bg-white data-[state=active]:shadow-sm',
+        'data-[state=active]:bg-card data-[state=active]:shadow-sm',
         activeAccent,
         'transition-all duration-200'
       )}
@@ -177,7 +186,7 @@ export function EntityTabTrigger({
       <Icon className="h-3.5 w-3.5" />
       <span>{label}</span>
       {badge != null && (
-        <span className="ml-0.5 rounded-full bg-slate-200/80 px-1.5 py-0.5 font-nunito text-[9px] font-bold text-slate-700 leading-none">
+        <span className="ml-0.5 rounded-full bg-muted/80 px-1.5 py-0.5 font-nunito text-[9px] font-bold text-foreground leading-none">
           {badge}
         </span>
       )}
@@ -205,7 +214,7 @@ export function StatCard({
     <div className={cn('rounded-lg border p-2.5', colors.accentBorder, `${colors.accentBg}/30`)}>
       <div className="flex items-center gap-1.5 mb-1">
         <Icon className={cn('h-3.5 w-3.5', colors.accent)} />
-        <span className="font-nunito text-[10px] text-slate-500">{label}</span>
+        <span className="font-nunito text-[10px] text-muted-foreground">{label}</span>
       </div>
       <p className={cn('font-quicksand text-sm font-bold', colors.accent)}>{value}</p>
     </div>
@@ -221,13 +230,13 @@ export function EntityLoadingState({ className, testId }: { className?: string; 
     <div
       className={cn(
         'flex h-[600px] w-[600px] items-center justify-center rounded-2xl',
-        'bg-white/70 backdrop-blur-md shadow-lg border border-white/20',
+        'bg-card/70 backdrop-blur-md shadow-lg border border-border',
         'max-md:w-full',
         className
       )}
       data-testid={testId}
     >
-      <div className="flex flex-col items-center gap-3 text-slate-400">
+      <div className="flex flex-col items-center gap-3 text-muted-foreground">
         <Loader2 className="h-8 w-8 animate-spin" />
         <span className="font-nunito text-sm">Loading...</span>
       </div>
@@ -252,7 +261,7 @@ export function EntityErrorState({
     <div
       className={cn(
         'flex h-[600px] w-[600px] items-center justify-center rounded-2xl',
-        'bg-white/70 backdrop-blur-md shadow-lg border border-white/20',
+        'bg-card/70 backdrop-blur-md shadow-lg border border-border',
         'max-md:w-full',
         className
       )}

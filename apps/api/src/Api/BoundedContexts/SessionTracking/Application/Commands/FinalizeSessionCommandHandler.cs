@@ -81,6 +81,47 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
         // Update participant final ranks (need to access through persistence for now)
         // For now, this is a known limitation that will be addressed in refactoring
 
+        // BE-3 #1590: emit session.finalized domain event BEFORE UpdateAsync so it is collected
+        // (SessionRepository.UpdateAsync calls CollectDomainEvents — Task 5) and durably logged to
+        // domain_event_logs atomically with the session update + the session_events diary row below.
+        // This MediatR dispatch ALSO activates the previously-dormant KnowledgeBase
+        // SessionFinalizedEventHandler cascade cleanup (it was raised for SSE only until now).
+        var winnerIdForEvent = request.FinalRanks.FirstOrDefault(kvp => kvp.Value == 1).Key;
+        var winnerNameForEvent = winnerIdForEvent != Guid.Empty
+            ? session.Participants.FirstOrDefault(p => p.Id == winnerIdForEvent)?.DisplayName
+            : null;
+        var finalizedAtForEvent = session.FinalizedAt ?? _timeProvider.GetUtcNow().UtcDateTime;
+        var durationMinutesForEvent = Math.Max(0, (int)(finalizedAtForEvent - session.SessionDate).TotalMinutes);
+        string? gameNameForEvent = null;
+        if (session.GameId != Guid.Empty)
+        {
+            gameNameForEvent = await _db.SharedGames
+                .AsNoTracking()
+                .Where(g => g.Id == session.GameId)
+                .Select(g => g.Title)
+                .FirstOrDefaultAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+        // #1642: construct the event once and reuse the same instance for both the
+        // domain-event pipeline (AddDomainEvent → collector → MediatR via SaveChangesAsync)
+        // and the SSE broadcast (PublishEventAsync).  Previously two separate instances were
+        // built; the second (SSE path) was sparse — missing UserId/GameId/GameName/PlayerCount/
+        // WinnerName — and introduced latent risk if a non-idempotent handler were added later.
+        var sessionFinalizedEvent = new SessionFinalizedEvent
+        {
+            SessionId = session.Id,
+            UserId = session.UserId,
+            GameId = session.GameId,
+            GameName = gameNameForEvent,
+            PlayerCount = session.Participants.Count,
+            WinnerId = winnerIdForEvent != Guid.Empty ? winnerIdForEvent : null,
+            WinnerName = winnerNameForEvent,
+            FinalRanks = request.FinalRanks,
+            DurationMinutes = durationMinutesForEvent,
+            Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
+        };
+        session.AddDomainEvent(sessionFinalizedEvent);
+
         // Save session (adds tracked changes; SaveChangesAsync below flushes)
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
 
@@ -148,22 +189,37 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
             // CreateGamesPlayedCommand integration
         }
 
-        // GST-003: Publish SSE event for session finalization
-        var durationMinutes = (int)(_timeProvider.GetUtcNow().UtcDateTime - session.SessionDate).TotalMinutes;
+        // GST-003: Publish SSE event for session finalization.
+        // #1642: reuse the single sessionFinalizedEvent instance (full payload) instead of
+        // constructing a sparse second instance.  PublishEventAsync writes to an in-memory
+        // Channel — it does NOT go through MediatR — so there is no dual-dispatch risk.
+        await _syncService.PublishEventAsync(request.SessionId, sessionFinalizedEvent, cancellationToken).ConfigureAwait(false);
 
-        var evt = new SessionFinalizedEvent
+        // Invariante #13 (#1896 WP2 T4): detect a coexisting live session linked to the same
+        // GameNightEvent. When present, the response will carry X-Warning-Code:
+        // SAVED_WHILE_LIVE_ACTIVE so the FE can surface a non-blocking toast informing the
+        // user that draft+live siblings coexist. The operation itself is NOT blocked — 200 OK.
+        // Reuses gameNightId already resolved on line 150 (avoids a second round-trip).
+        // IsLive == (StartedAt != null && FinalizedAt == null). We exclude the current session
+        // by Id (its FinalizedAt was just set, but explicit exclusion is defensive against
+        // tracking-state ambiguity in InMemory provider used by unit tests).
+        bool liveActiveWarning = false;
+        if (gameNightId is not null)
         {
-            SessionId = request.SessionId,
-            WinnerId = winnerId != Guid.Empty ? winnerId : null,
-            FinalRanks = request.FinalRanks,
-            DurationMinutes = durationMinutes,
-            Timestamp = _timeProvider.GetUtcNow().UtcDateTime
-        };
-        await _syncService.PublishEventAsync(request.SessionId, evt, cancellationToken).ConfigureAwait(false);
+            liveActiveWarning = await _db.SessionTrackingSessions
+                .AsNoTracking()
+                .Where(s => s.Id != session.Id)
+                .Where(s => s.StartedAt != null && s.FinalizedAt == null)
+                .Where(s => _db.GameNightSessions.Any(link =>
+                    link.SessionId == s.Id && link.GameNightEventId == gameNightId))
+                .AnyAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
 
         return new FinalizeSessionResult(
             winnerId != Guid.Empty ? winnerId : null,
-            finalScores
+            finalScores,
+            LiveActiveWarning: liveActiveWarning
         );
     }
 }

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Helpers;
 using Api.Middleware;
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
@@ -50,7 +51,7 @@ internal class AlertingService : IAlertingService
     {
         if (!_config.Enabled)
         {
-            _logger.LogWarning("Alerting is disabled. Alert not sent: {AlertType}", alertType);
+            _logger.LogWarning("Alerting is disabled. Alert not sent: {AlertType}", LogSanitizer.Sanitize(alertType));
             throw new InvalidOperationException("Alerting system is disabled");
         }
 
@@ -82,8 +83,8 @@ internal class AlertingService : IAlertingService
 
         _logger.LogInformation(
             "Alert {AlertType} created with severity {Severity}. Channels: {Channels}",
-            alertType,
-            severity,
+            LogSanitizer.Sanitize(alertType),
+            LogSanitizer.Sanitize(severity),
             string.Join(", ", channelResults.Where(c => c.Value).Select(c => c.Key)));
 
         return MapToDto(alertEntity);
@@ -98,7 +99,7 @@ internal class AlertingService : IAlertingService
 
         _logger.LogInformation(
             "Alert {AlertType} is throttled. Skipping send (throttle window: {ThrottleMinutes} minutes)",
-            alertType,
+            LogSanitizer.Sanitize(alertType),
             _config.ThrottleMinutes);
 
         var existingAlert = await _dbContext.Alerts
@@ -136,7 +137,7 @@ internal class AlertingService : IAlertingService
             // FAIL-OPEN PATTERN: Alert channel failures must not stop other alert channels
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error sending alert {AlertType} via {Channel}", alertType, channel.ChannelName);
+                _logger.LogError(ex, "Error sending alert {AlertType} via {Channel}", LogSanitizer.Sanitize(alertType), channel.ChannelName);
                 channelResults[channel.ChannelName] = false;
             }
 #pragma warning restore CA1031
@@ -149,11 +150,11 @@ internal class AlertingService : IAlertingService
     {
         if (success)
         {
-            _logger.LogInformation("Alert {AlertType} sent successfully via {Channel}", alertType, channelName);
+            _logger.LogInformation("Alert {AlertType} sent successfully via {Channel}", LogSanitizer.Sanitize(alertType), channelName);
         }
         else
         {
-            _logger.LogWarning("Failed to send alert {AlertType} via {Channel}", alertType, channelName);
+            _logger.LogWarning("Failed to send alert {AlertType} via {Channel}", LogSanitizer.Sanitize(alertType), channelName);
         }
     }
 
@@ -167,7 +168,7 @@ internal class AlertingService : IAlertingService
 
         if (activeAlerts.Count == 0)
         {
-            _logger.LogInformation("No active alerts found for type {AlertType}", LogValueSanitizer.Sanitize(alertType));
+            _logger.LogInformation("No active alerts found for type {AlertType}", LogSanitizer.Sanitize(alertType));
             return false;
         }
 
@@ -182,7 +183,7 @@ internal class AlertingService : IAlertingService
         _logger.LogInformation(
             "Resolved {Count} alert(s) for type {AlertType}",
             activeAlerts.Count,
-            LogValueSanitizer.Sanitize(alertType));
+            LogSanitizer.Sanitize(alertType));
 
         return true;
     }

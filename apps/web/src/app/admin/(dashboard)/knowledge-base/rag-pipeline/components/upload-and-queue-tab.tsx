@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -77,7 +78,7 @@ export function UploadAndQueueTab() {
   return (
     <div className="space-y-4">
       {/* Stats Bar */}
-      <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-slate-200/50 dark:border-zinc-700/50 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-slate-200/50 dark:divide-zinc-700/50">
+      <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-border/50 dark:border-zinc-700/50 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-slate-200/50 dark:divide-zinc-700/50">
         <StatCell
           label="Queued"
           value={stats.queued}
@@ -129,7 +130,7 @@ export function UploadAndQueueTab() {
           </div>
 
           {/* Queue List */}
-          <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-slate-200/50 dark:border-zinc-700/50 min-h-[300px]">
+          <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-border/50 dark:border-zinc-700/50 min-h-[300px]">
             <QueueList
               data={queueData}
               isLoading={isLoading}

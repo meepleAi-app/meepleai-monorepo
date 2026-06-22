@@ -92,32 +92,32 @@ public sealed class KbChunkEndpointsIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task GetKbChunks_NestedHeadings_ReturnsHeadingPath()
     {
-        // Arrange — seed a doc with 3 chained chunks
+        // Wave 3 Phase 3: spec §6.3.2 — `items` envelope, cursor pagination
+        // (no skip/take query params), nextCursor null on last page.
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        // Create a real user first — PdfDocument.UploadedByUserId has a FK constraint to users
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
         var docId = await SeedDocWithNestedChunksAsync(dbContext, uploadedByUserId: userId);
 
         var request = TestSessionHelper.CreateAuthenticatedRequest(
             HttpMethod.Get,
-            $"/api/v1/kb-docs/{docId}/chunks?skip=0&take=10",
+            $"/api/v1/kb-docs/{docId}/chunks?limit=10",
             sessionToken);
 
-        // Act
         var response = await _client.SendAsync(request);
 
-        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var json = await response.Content.ReadAsStringAsync();
         using var doc = System.Text.Json.JsonDocument.Parse(json);
-        var chunks = doc.RootElement.GetProperty("chunks");
-        chunks.GetArrayLength().Should().Be(3);
+        var items = doc.RootElement.GetProperty("items");
+        items.GetArrayLength().Should().Be(3);
 
-        // Leaf is the chunk at position (ChunkIndex) 2
-        var leaf = chunks.EnumerateArray()
+        // Spec §6.3.2: `nextCursor` is null on last page.
+        doc.RootElement.GetProperty("nextCursor").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
+
+        var leaf = items.EnumerateArray()
             .Single(c => c.GetProperty("position").GetInt32() == 2);
 
         var headingPath = leaf.GetProperty("headingPath")
@@ -128,32 +128,84 @@ public sealed class KbChunkEndpointsIntegrationTests : IAsyncLifetime
         headingPath.Should().BeEquivalentTo(
             new[] { "Setup", "Players", "Distribution" },
             options => options.WithStrictOrdering());
+
+        // VectorId always present for all viewers (spec §6.3.2 de-gating).
+        leaf.GetProperty("vectorId").GetString().Should().NotBeNullOrEmpty();
     }
 
     /// <summary>
-    /// Verifies the endpoint returns 400 Bad Request when take exceeds the maximum of 100.
-    /// The take validation happens before the document lookup, so no seed is required.
-    /// An unauthenticated client will get 401 before the handler runs; use an authenticated
-    /// request so the validation code path is exercised.
+    /// Wave 3 Phase 3: spec §6.3.2 — limit validation 1..100 fires before doc lookup.
     /// </summary>
     [Fact]
-    public async Task GetKbChunks_TakeExceedsLimit_Returns400()
+    public async Task GetKbChunks_LimitExceedsMaximum_Returns400()
     {
-        // Arrange — create an authenticated session so we reach the validation code
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
         var request = TestSessionHelper.CreateAuthenticatedRequest(
             HttpMethod.Get,
-            $"/api/v1/kb-docs/{Guid.NewGuid()}/chunks?take=500",
+            $"/api/v1/kb-docs/{Guid.NewGuid()}/chunks?limit=500",
             sessionToken);
 
-        // Act
         var response = await _client.SendAsync(request);
 
-        // Assert — 400 because take=500 > 100 (validation fires before document lookup)
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    /// <summary>
+    /// Wave 3 Phase 3: spec §6.3.2 — malformed cursor → 400 Bad Request.
+    /// </summary>
+    [Fact]
+    public async Task GetKbChunks_MalformedCursor_Returns400()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            $"/api/v1/kb-docs/{Guid.NewGuid()}/chunks?cursor=not-base64!",
+            sessionToken);
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    /// <summary>
+    /// Wave 3 Phase 3: spec §6.3.1 — 423 Locked when processingStatus != 'ready'.
+    /// </summary>
+    [Fact]
+    public async Task GetKbDocument_NotReady_Returns423Locked()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var docId = Guid.NewGuid();
+        dbContext.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = docId,
+            FileName = $"in-progress-{docId:N}.pdf",
+            ProcessingState = "Embedding", // not Ready
+            UploadedAt = DateTime.UtcNow,
+            Language = "en",
+            DocumentCategory = "Rulebook",
+            UploadedByUserId = userId,
+            FilePath = $"/tmp/inprog-{docId:N}.pdf",
+            IsPublic = true
+        });
+        await dbContext.SaveChangesAsync();
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            $"/api/v1/kb-docs/{docId}",
+            sessionToken);
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Locked);
     }
 
     // ========================================

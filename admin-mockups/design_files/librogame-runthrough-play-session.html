@@ -1,0 +1,1641 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MeepleAI — Librogame Runthrough · Play Session Shell</title>
+<!--
+  Mockup: librogame-runthrough-play-session
+  Route:  /library/librogame/play/{campaignId}
+  Scope:  Phase A runthrough — shell runtime durante la sessione game night.
+          Tabbed mobile fullscreen / Split-view desktop (left 380px context, right flex content).
+          Sostituisce sp6-libro-game-play-session.html (persona Sara → Aaron, IA consolidata).
+  Stati:  state-01-story-tab        (paragrafo §214 corrente + photo CTA + chat panel laterale)
+          state-02-encounter-tab    (encounter §218 stats nemico + dice CTA + glossary inline)
+          state-03-chat-overlay     (query agent in corso, typing + streaming citation)
+          state-04-glossary-inline  (sheet glossary aperto, add term "Goblin")
+  UI:     MeepleCard entity refs in context panel + ManaPips canonical header
+  Persona: Aaron (badsworm@gmail.com), §289 Cap 4 "La grotta dei Goblin", gruppo A.
+  Vincolo SMART A3: paragrafo translate ≤ 6s, Q&A regola ≤ 8s, encounter resolve ≤ 30s.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+
+<style>
+  body { background: var(--bg); color: var(--text); font-family: var(--f-body); margin: 0; }
+
+  .top { position: sticky; top: 0; z-index: var(--z-sticky); backdrop-filter: blur(12px); background: var(--glass-bg); border-bottom: 1px solid var(--border); padding: var(--s-4) var(--s-6); display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap; }
+  .top h1 { font-family: var(--f-display); font-size: var(--fs-lg); margin: 0; font-weight: var(--fw-bold); }
+  .top .route { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); padding: 2px var(--s-2); border-radius: var(--r-sm); background: var(--bg-muted); }
+  .top .spacer { flex: 1; }
+  .top button { background: var(--bg-card); border: 1px solid var(--border); color: var(--text); border-radius: var(--r-pill); padding: var(--s-1) var(--s-3); font-family: var(--f-mono); font-size: var(--fs-xs); cursor: pointer; }
+
+  .stage { padding: var(--s-7) var(--s-6); max-width: 1700px; margin: 0 auto; }
+  .state-section { margin-bottom: var(--s-10); }
+  .state-section .label { display: inline-block; padding: var(--s-1) var(--s-3); background: hsl(var(--c-session) / 0.12); color: hsl(var(--c-session)); border-radius: var(--r-pill); font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--s-2); }
+  .state-section .label .cmp { margin-left: var(--s-2); padding: 1px var(--s-2); background: var(--bg); color: hsl(var(--c-session)); border-radius: var(--r-sm); font-size: 10px; }
+  .state-section h2 { font-family: var(--f-display); font-size: var(--fs-2xl); font-weight: var(--fw-bold); margin: 0 0 var(--s-2); }
+  .state-section .desc { color: var(--text-sec); margin: 0 0 var(--s-6); font-size: var(--fs-md); }
+  .frames { display: flex; gap: var(--s-9); flex-wrap: wrap; align-items: flex-start; }
+
+  .phone { width: 375px; min-height: 740px; background: var(--bg); border-radius: 36px; overflow: hidden; border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; position: relative; }
+  .phone-sbar { height: 32px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 6px 22px 0; font-size: 12px; font-weight: var(--fw-bold); font-family: var(--f-display); color: var(--text-sec); }
+  .phone .frame-label, .desktop .frame-label { position: absolute; top: -28px; left: 50%; transform: translateX(-50%); font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); }
+  .desktop { width: 920px; height: 620px; background: var(--bg); border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; position: relative; }
+  .desktop .frame-label { left: 0; transform: none; }
+  .desktop .titlebar { height: 28px; background: var(--bg-muted); flex-shrink: 0; display: flex; align-items: center; padding: 0 var(--s-3); gap: 6px; border-bottom: 1px solid var(--border-light); }
+  .desktop .titlebar .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .desktop .titlebar .dot.r { background: #ff605c; }
+  .desktop .titlebar .dot.y { background: #ffbd44; }
+  .desktop .titlebar .dot.g { background: #00ca4e; }
+  .desktop .titlebar .url { margin-left: var(--s-3); padding: 2px var(--s-3); background: var(--bg-card); border-radius: var(--r-sm); font-family: var(--f-mono); font-size: 11px; color: var(--text-muted); flex: 1; }
+
+  /* ─── Session header (compact, sticky) ─── */
+  .session-h { display: flex; align-items: center; gap: var(--s-2); padding: var(--s-2) var(--s-3); border-bottom: 1px solid var(--border-light); background: var(--bg-card); flex-shrink: 0; }
+  .session-h .crumbs { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); flex: 1; min-width: 0; }
+  .session-h .crumbs strong { color: var(--text-sec); font-weight: var(--fw-semi); }
+  .session-h .crumbs .para { color: hsl(var(--c-session)); font-weight: var(--fw-bold); }
+  .session-h .menu { width: 28px; height: 28px; border-radius: 50%; background: var(--bg-muted); border: 0; font-size: 14px; cursor: pointer; }
+
+  /* ManaPips inline header */
+  .header-pips { display: flex; align-items: center; gap: 4px; padding: var(--s-1) var(--s-3); border-bottom: 1px solid var(--border-light); background: var(--bg-card); flex-shrink: 0; }
+  .manapip { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .manapip .badge { position: absolute; top: -7px; left: 50%; transform: translateX(-50%); min-width: 14px; padding: 0 3px; height: 11px; line-height: 11px; border-radius: var(--r-pill); color: #fff; font-family: var(--f-mono); font-size: 8px; font-weight: var(--fw-bold); text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+  .manapip.kb      { background: hsl(var(--c-kb)); }       .manapip.kb .badge      { background: hsl(var(--c-kb)); }
+  .manapip.chat    { background: hsl(var(--c-chat)); }     .manapip.chat .badge    { background: hsl(var(--c-chat)); }
+  .manapip.session { background: hsl(var(--c-session)); }  .manapip.session .badge { background: hsl(var(--c-session)); }
+  .manapip.event   { background: hsl(var(--c-event)); }    .manapip.event .badge   { background: hsl(var(--c-event)); }
+  .manapip.toolkit { background: hsl(var(--c-toolkit)); }  .manapip.toolkit .badge { background: hsl(var(--c-toolkit)); }
+  .header-pips .lbl-mini { font-family: var(--f-mono); font-size: 9px; color: var(--text-muted); margin-left: var(--s-1); }
+
+  /* ─── Tabs (mobile main nav) ─── */
+  .tabs { display: flex; border-bottom: 1px solid var(--border-light); background: var(--bg-card); flex-shrink: 0; }
+  .tab { flex: 1; padding: var(--s-3) var(--s-2); background: transparent; border: 0; font-family: var(--f-display); font-size: var(--fs-sm); font-weight: var(--fw-semi); color: var(--text-sec); cursor: pointer; position: relative; }
+  .tab[aria-selected="true"] { color: hsl(var(--c-session)); }
+  .tab[aria-selected="true"]::after { content: ''; position: absolute; bottom: -1px; left: 20%; right: 20%; height: 2px; background: hsl(var(--c-session)); border-radius: var(--r-pill); }
+  .tab .em { margin-right: 4px; }
+
+  /* ─── Content area ─── */
+  .content { flex: 1; overflow-y: auto; padding: var(--s-4); position: relative; }
+
+  /* ─── Story paragraph card ─── */
+  .para-card {
+    border: 1px solid var(--border-light); border-radius: var(--r-lg);
+    background: var(--bg-card); padding: var(--s-4); margin-bottom: var(--s-3);
+  }
+  .para-card .num-row { display: flex; align-items: center; gap: var(--s-2); margin-bottom: var(--s-3); }
+  .para-card .num {
+    font-family: var(--f-mono); font-size: var(--fs-lg); font-weight: var(--fw-bold);
+    color: hsl(var(--c-session)); padding: var(--s-1) var(--s-2);
+    background: hsl(var(--c-session) / 0.1); border-radius: var(--r-sm);
+  }
+  .para-card .chap { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); }
+  .para-card .lang-badge { margin-left: auto; padding: 2px var(--s-2); border-radius: var(--r-pill); background: hsl(var(--c-kb) / 0.12); color: hsl(var(--c-kb)); font-family: var(--f-mono); font-size: 9px; font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: 0.06em; }
+  .para-card .text {
+    font-family: var(--f-body); font-size: var(--fs-md); line-height: var(--lh-relax);
+    color: var(--text); margin: 0;
+  }
+  .para-card .text .gloss {
+    background: hsl(var(--c-toolkit) / 0.15); color: hsl(var(--c-toolkit));
+    padding: 1px 4px; border-radius: var(--r-xs); cursor: pointer; font-weight: var(--fw-semi);
+    text-decoration: underline dotted; text-underline-offset: 2px;
+  }
+  .para-card .text .gloss:hover { background: hsl(var(--c-toolkit) / 0.25); }
+
+  /* ─── Action toolbar ─── */
+  .actions { display: flex; gap: var(--s-2); flex-wrap: wrap; margin-bottom: var(--s-3); }
+  .action-btn {
+    flex: 1; min-width: 120px; padding: var(--s-3); border-radius: var(--r-md);
+    background: var(--bg-card); border: 1px solid var(--border); cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: var(--s-1);
+    font-family: var(--f-display); font-size: var(--fs-xs); font-weight: var(--fw-semi); color: var(--text-sec);
+    transition: transform var(--dur-sm) var(--ease-out), border-color var(--dur-sm) var(--ease-out);
+  }
+  .action-btn:hover { transform: translateY(-1px); border-color: hsl(var(--c-session) / 0.45); }
+  .action-btn .em { font-size: 22px; }
+  .action-btn.photo { border-color: hsl(var(--c-kb) / 0.35); }
+  .action-btn.photo .em { color: hsl(var(--c-kb)); }
+  .action-btn.encounter { border-color: hsl(var(--c-event) / 0.35); }
+  .action-btn.encounter .em { color: hsl(var(--c-event)); }
+  .action-btn.glossary { border-color: hsl(var(--c-toolkit) / 0.35); }
+  .action-btn.glossary .em { color: hsl(var(--c-toolkit)); }
+
+  /* ─── Chat strip (mobile collapsed) ─── */
+  .chat-strip {
+    border-radius: var(--r-md); background: hsl(var(--c-chat) / 0.06);
+    border: 1px solid hsl(var(--c-chat) / 0.2); padding: var(--s-3);
+    display: flex; align-items: center; gap: var(--s-2); cursor: pointer;
+  }
+  .chat-strip .ico { width: 32px; height: 32px; border-radius: 50%; background: hsl(var(--c-chat) / 0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .chat-strip .info { flex: 1; min-width: 0; }
+  .chat-strip .info .ti { font-family: var(--f-display); font-weight: var(--fw-bold); color: hsl(var(--c-chat)); font-size: var(--fs-sm); }
+  .chat-strip .info .sub { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+  .chat-strip .arrow { color: hsl(var(--c-chat)); font-size: 18px; }
+
+  /* ─── Encounter view ─── */
+  .encounter-card {
+    border: 1px solid hsl(var(--c-event) / 0.35); border-radius: var(--r-lg);
+    background: linear-gradient(135deg, hsl(var(--c-event) / 0.06), transparent);
+    padding: var(--s-4); margin-bottom: var(--s-3);
+  }
+  .encounter-card .e-head { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-3); }
+  .encounter-card .e-head .ico { width: 44px; height: 44px; border-radius: var(--r-md); background: hsl(var(--c-event) / 0.18); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .encounter-card .e-head .info { flex: 1; }
+  .encounter-card .e-head .ti { font-family: var(--f-display); font-size: var(--fs-lg); font-weight: var(--fw-bold); color: hsl(var(--c-event)); margin: 0; }
+  .encounter-card .e-head .sub { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px; }
+  .stats-mini { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-2); margin-bottom: var(--s-3); }
+  .stats-mini .st { padding: var(--s-2); border-radius: var(--r-sm); background: var(--bg); text-align: center; }
+  .stats-mini .st .v { font-family: var(--f-mono); font-size: var(--fs-lg); font-weight: var(--fw-bold); color: var(--text); font-variant-numeric: tabular-nums; line-height: 1; }
+  .stats-mini .st .l { font-family: var(--f-mono); font-size: 9px; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .encounter-card .dice-cta {
+    width: 100%; padding: var(--s-3); border-radius: var(--r-md);
+    background: hsl(var(--c-event)); color: #fff; border: 0;
+    font-family: var(--f-display); font-size: var(--fs-md); font-weight: var(--fw-bold);
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: var(--s-2);
+    box-shadow: 0 4px 14px hsl(var(--c-event) / 0.3);
+  }
+
+  /* ─── Chat overlay (state 03) ─── */
+  .chat-overlay {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: var(--z-drawer);
+    background: var(--bg-card); border-top: 1px solid var(--border);
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+    box-shadow: var(--shadow-drawer); max-height: 75%; display: flex; flex-direction: column;
+  }
+  .chat-overlay .handle { width: 36px; height: 4px; background: var(--border); border-radius: var(--r-pill); margin: var(--s-2) auto var(--s-1); }
+  .chat-overlay .c-h { display: flex; align-items: center; gap: var(--s-2); padding: var(--s-2) var(--s-3); border-bottom: 1px solid var(--border-light); }
+  .chat-overlay .c-h .ag { width: 28px; height: 28px; border-radius: 50%; background: hsl(var(--c-agent) / 0.18); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .chat-overlay .c-h .nm { flex: 1; font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-sm); }
+  .chat-overlay .c-h .live { padding: 2px 6px; border-radius: var(--r-pill); background: hsl(var(--c-success) / 0.15); color: hsl(var(--c-success)); font-family: var(--f-mono); font-size: 9px; font-weight: var(--fw-bold); }
+  .chat-overlay .messages { flex: 1; overflow-y: auto; padding: var(--s-3); display: flex; flex-direction: column; gap: var(--s-2); }
+  .bubble { padding: var(--s-2) var(--s-3); border-radius: var(--r-md); font-size: var(--fs-sm); max-width: 85%; line-height: var(--lh-snug); }
+  .bubble.user { align-self: flex-end; background: hsl(var(--c-session)); color: #fff; }
+  .bubble.agent { align-self: flex-start; background: var(--bg-muted); color: var(--text); border: 1px solid var(--border-light); }
+  .bubble.agent.typing { display: inline-flex; gap: 4px; padding: var(--s-3); }
+  .bubble.agent.typing span { width: 6px; height: 6px; border-radius: 50%; background: hsl(var(--c-agent)); animation: typing 1.4s ease-in-out infinite; }
+  .bubble.agent.typing span:nth-child(2) { animation-delay: 0.2s; }
+  .bubble.agent.typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typing { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+  .citation {
+    margin-top: var(--s-2); padding: var(--s-2); border-radius: var(--r-sm);
+    background: var(--bg-card); border-left: 3px solid hsl(var(--c-kb));
+    font-family: var(--f-mono); font-size: 10px; color: var(--text-sec);
+  }
+  .citation strong { color: hsl(var(--c-kb)); font-weight: var(--fw-bold); }
+  .conf-badge { display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px; border-radius: var(--r-pill); font-family: var(--f-mono); font-size: 9px; font-weight: var(--fw-bold); margin-left: var(--s-1); }
+  .conf-badge.high { background: hsl(var(--c-success) / 0.15); color: hsl(var(--c-success)); }
+  .chat-overlay .input-row { padding: var(--s-2) var(--s-3); border-top: 1px solid var(--border-light); display: flex; gap: var(--s-2); align-items: center; }
+  .chat-overlay .input-row input { flex: 1; padding: var(--s-2) var(--s-3); border: 1px solid var(--border); border-radius: var(--r-pill); background: var(--bg); font-family: var(--f-body); font-size: var(--fs-sm); outline: 0; }
+  .chat-overlay .send { width: 36px; height: 36px; border-radius: 50%; background: hsl(var(--c-chat)); color: #fff; border: 0; font-size: 16px; cursor: pointer; flex-shrink: 0; }
+
+  /* ─── Glossary inline sheet (state 04) ─── */
+  .gloss-sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: var(--z-drawer);
+    background: var(--bg-card); border-top: 1px solid var(--border);
+    border-radius: var(--r-xl) var(--r-xl) 0 0; box-shadow: var(--shadow-drawer);
+    max-height: 60%; display: flex; flex-direction: column;
+  }
+  .gloss-sheet .handle { width: 36px; height: 4px; background: var(--border); border-radius: var(--r-pill); margin: var(--s-2) auto var(--s-1); }
+  .gloss-sheet .g-h { display: flex; align-items: center; gap: var(--s-2); padding: var(--s-2) var(--s-3); border-bottom: 1px solid var(--border-light); }
+  .gloss-sheet .g-h .ico { width: 28px; height: 28px; border-radius: 50%; background: hsl(var(--c-toolkit) / 0.18); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .gloss-sheet .g-h .ti { flex: 1; font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-sm); }
+  .gloss-sheet .g-body { padding: var(--s-3); flex: 1; overflow-y: auto; }
+  .gloss-field { margin-bottom: var(--s-3); }
+  .gloss-field label { display: block; font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--s-1); }
+  .gloss-field input { width: 100%; padding: var(--s-2) var(--s-3); border: 1px solid var(--border); border-radius: var(--r-md); background: var(--bg); font-family: var(--f-body); font-size: var(--fs-md); outline: 0; }
+  .gloss-field input:focus { border-color: hsl(var(--c-toolkit)); box-shadow: 0 0 0 3px hsl(var(--c-toolkit) / 0.18); }
+  .gloss-existing { padding: var(--s-2) var(--s-3); border-radius: var(--r-md); background: var(--bg-muted); margin-bottom: var(--s-2); font-size: var(--fs-sm); }
+  .gloss-existing .term { font-family: var(--f-display); font-weight: var(--fw-bold); color: hsl(var(--c-toolkit)); }
+  .gloss-existing .trans { font-family: var(--f-body); color: var(--text-sec); margin-left: var(--s-2); }
+  .gloss-actions { display: flex; gap: var(--s-2); padding: var(--s-3); border-top: 1px solid var(--border-light); }
+  .btn-out { flex: 1; padding: var(--s-2) var(--s-3); border-radius: var(--r-md); background: var(--bg); border: 1px solid var(--border); color: var(--text-sec); font-family: var(--f-display); font-weight: var(--fw-semi); cursor: pointer; font-size: var(--fs-sm); }
+  .btn-fill { flex: 2; padding: var(--s-2) var(--s-3); border-radius: var(--r-md); background: hsl(var(--c-toolkit)); border: 0; color: #fff; font-family: var(--f-display); font-weight: var(--fw-bold); cursor: pointer; font-size: var(--fs-sm); }
+
+  /* ─── Desktop split-view ─── */
+  .d-body { display: flex; flex: 1; overflow: hidden; }
+  .d-side { width: 320px; flex-shrink: 0; border-right: 1px solid var(--border-light); padding: var(--s-3); overflow-y: auto; background: var(--bg-card); }
+  .d-main { flex: 1; overflow-y: auto; padding: var(--s-4); position: relative; }
+  .d-chat { width: 320px; flex-shrink: 0; border-left: 1px solid var(--border-light); display: flex; flex-direction: column; background: var(--bg-card); }
+  .side-card { padding: var(--s-3); border-radius: var(--r-md); background: var(--bg); border: 1px solid var(--border-light); margin-bottom: var(--s-3); }
+  .side-card h4 { font-family: var(--f-display); font-size: var(--fs-xs); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 0 0 var(--s-2); }
+  .side-card .row { display: flex; justify-content: space-between; align-items: center; padding: var(--s-1) 0; font-size: var(--fs-sm); }
+  .side-card .row .k { color: var(--text-muted); font-family: var(--f-mono); font-size: 10px; }
+  .side-card .row .v { font-family: var(--f-display); font-weight: var(--fw-semi); }
+
+  /* Pchip (player) */
+  .pchip { display: inline-flex; align-items: center; gap: var(--s-1); padding: 2px var(--s-2); border-radius: var(--r-pill); background: hsl(var(--c-player) / 0.12); color: hsl(var(--c-player)); font-family: var(--f-mono); font-size: 10px; font-weight: var(--fw-semi); margin: 2px 4px 2px 0; }
+  .pchip.host { background: hsl(var(--c-session) / 0.15); color: hsl(var(--c-session)); }
+
+  *:focus-visible { outline: 2px solid hsl(var(--c-session)); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .bubble.agent.typing span { animation: none; } }
+</style>
+</head>
+
+<body>
+
+<header class="top">
+  <h1>Librogame Runthrough · Play Session Shell</h1>
+  <span class="route">/library/librogame/play/{campaignId}</span>
+  <span class="spacer"></span>
+  <button id="theme-btn">🌗 Tema</button>
+</header>
+
+<main class="stage">
+
+  <!-- STATO 01 · STORY TAB (default) -->
+  <section class="state-section" aria-labelledby="s1">
+    <span class="label">Stato 01 · Story Tab<span class="cmp">PlaySessionShell · StoryView</span></span>
+    <h2 id="s1">Paragrafo §289 corrente — photo CTA + chat strip + glossary pill</h2>
+    <p class="desc">Default runtime. Aaron sta leggendo §289 Cap 4 al tavolo. Top breadcrumb sticky con percorso completo. ManaPips header live (kb 142 · chat 12 · session 1 · event 3 · toolkit 34). Glossary pill inline su "Goblin" già tradotto. CTA primary: 📷 fotografa pag successiva.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile · story tab">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>22:14</span><span>📶 🔋 64%</span></div>
+        <div class="session-h">
+          <span class="crumbs"><strong>Libreria</strong> · Eldoria · <span class="para">§289</span></span>
+          <button class="menu">⋯</button>
+        </div>
+        <div class="header-pips">
+          <span class="manapip kb"><span class="badge">142</span></span>
+          <span class="manapip chat"><span class="badge">12</span></span>
+          <span class="manapip session"><span class="badge">1</span></span>
+          <span class="manapip event"><span class="badge">3</span></span>
+          <span class="manapip toolkit"><span class="badge">34</span></span>
+          <span class="lbl-mini">· Cap 4 · 3h 17m</span>
+        </div>
+        <div class="tabs" role="tablist">
+          <button class="tab" role="tab" aria-selected="true"><span class="em">📖</span>Story</button>
+          <button class="tab" role="tab" aria-selected="false"><span class="em">⚔️</span>Encounter</button>
+          <button class="tab" role="tab" aria-selected="false"><span class="em">📚</span>Glossario</button>
+        </div>
+        <div class="content">
+          <div class="para-card">
+            <div class="num-row">
+              <span class="num">§289</span>
+              <span class="chap">Cap 4 · La grotta dei Goblin</span>
+              <span class="lang-badge">IT</span>
+            </div>
+            <p class="text">L'aria nella caverna si fa pesante. Davanti a voi, tre <span class="gloss" title="Voidstone → Pietra del Vuoto">Pietre del Vuoto</span> emettono un bagliore violaceo. Il vostro gruppo deve decidere: profanare l'altare e ottenere un'arma <span class="gloss" title="Goblin → Razziatore">Razziatrice</span>, oppure aggirare in silenzio per evitare il combattimento. Tirate Furtività se aggirate (§291), Forza se profanate (§294).</p>
+          </div>
+          <div class="actions">
+            <button class="action-btn photo"><span class="em">📷</span>Fotografa pag</button>
+            <button class="action-btn encounter"><span class="em">⚔️</span>Encounter</button>
+            <button class="action-btn glossary"><span class="em">📚</span>Glossary</button>
+          </div>
+          <div class="chat-strip" role="button">
+            <div class="ico">💬</div>
+            <div class="info"><div class="ti">Game Tutor</div><div class="sub">Pronto · ultima Q&A 8 min fa · 12 oggi</div></div>
+            <span class="arrow">›</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop · story tab">
+        <span class="frame-label">Desktop · 1440px (scaled)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/abc123</span></div>
+        <div class="d-body">
+          <aside class="d-side">
+            <div class="side-card">
+              <h4>Campagna</h4>
+              <div class="row"><span class="k">Nome</span><span class="v">Con i ragazzi</span></div>
+              <div class="row"><span class="k">Capitolo</span><span class="v">4 · Grotta Goblin</span></div>
+              <div class="row"><span class="k">Tempo</span><span class="v">3h 17m</span></div>
+            </div>
+            <div class="side-card">
+              <h4>Party</h4>
+              <span class="pchip host">⭐ Aaron</span>
+              <span class="pchip">Marco</span>
+              <span class="pchip">Giulia</span>
+              <span class="pchip">Luca</span>
+            </div>
+            <div class="side-card">
+              <h4>Entità</h4>
+              <div style="display: flex; align-items: center; gap: 6px; padding: 4px 0;">
+                <span class="manapip kb"><span class="badge">142</span></span><span style="font-family: var(--f-mono); font-size: 10px; color: hsl(var(--c-kb));">kb · pagine</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px; padding: 4px 0;">
+                <span class="manapip chat"><span class="badge">12</span></span><span style="font-family: var(--f-mono); font-size: 10px; color: hsl(var(--c-chat));">chat · query</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px; padding: 4px 0;">
+                <span class="manapip event"><span class="badge">3</span></span><span style="font-family: var(--f-mono); font-size: 10px; color: hsl(var(--c-event));">event · encounter</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px; padding: 4px 0;">
+                <span class="manapip toolkit"><span class="badge">34</span></span><span style="font-family: var(--f-mono); font-size: 10px; color: hsl(var(--c-toolkit));">glossario</span>
+              </div>
+            </div>
+          </aside>
+          <div class="d-main">
+            <div class="para-card">
+              <div class="num-row"><span class="num">§289</span><span class="chap">Cap 4 · La grotta dei Goblin</span><span class="lang-badge">IT da EN</span></div>
+              <p class="text">L'aria nella caverna si fa pesante. Davanti a voi, tre <span class="gloss">Pietre del Vuoto</span> emettono un bagliore violaceo. Il vostro gruppo deve decidere: profanare l'altare e ottenere un'arma <span class="gloss">Razziatrice</span>, oppure aggirare in silenzio per evitare il combattimento. Tirate Furtività se aggirate (§291), Forza se profanate (§294).</p>
+            </div>
+            <div class="actions">
+              <button class="action-btn photo"><span class="em">📷</span>Fotografa pag successiva</button>
+              <button class="action-btn encounter"><span class="em">⚔️</span>Vai a encounter</button>
+              <button class="action-btn glossary"><span class="em">📚</span>Apri glossario (34)</button>
+            </div>
+          </div>
+          <div class="d-chat">
+            <div class="c-h" style="padding: var(--s-2) var(--s-3); border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: var(--s-2);">
+              <div class="ag" style="width: 28px; height: 28px; border-radius: 50%; background: hsl(var(--c-agent) / 0.18); display: flex; align-items: center; justify-content: center; font-size: 14px;">🤖</div>
+              <span style="flex: 1; font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-sm);">Game Tutor</span>
+              <span class="live">● live</span>
+            </div>
+            <div class="messages" style="flex: 1; overflow-y: auto; padding: var(--s-3); display: flex; flex-direction: column; gap: var(--s-2);">
+              <div class="bubble agent">Ciao Aaron! Pronto a continuare. Cosa serve?</div>
+              <div class="bubble user">Marco chiede se può usare l'oggetto raccolto a §271 ora</div>
+              <div class="bubble agent">Sì, gli oggetti di consumo non perdibili (vedi Rules p.42) possono essere usati in qualsiasi momento di non-combattimento. <div class="citation"><strong>Rules p.42</strong> · §3.7 · accuracy 94%</div><span class="conf-badge high">● alta conf</span></div>
+            </div>
+            <div style="padding: var(--s-2) var(--s-3); border-top: 1px solid var(--border-light); display: flex; gap: var(--s-2);">
+              <input type="text" placeholder="Chiedi all'agente…" style="flex: 1; padding: var(--s-2); border: 1px solid var(--border); border-radius: var(--r-pill); background: var(--bg); font-size: var(--fs-sm); outline: 0;">
+              <button style="width: 32px; height: 32px; border-radius: 50%; background: hsl(var(--c-chat)); color: #fff; border: 0; cursor: pointer;">➤</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATO 02 · ENCOUNTER TAB -->
+  <section class="state-section" aria-labelledby="s2">
+    <span class="label">Stato 02 · Encounter Tab<span class="cmp">PlaySessionShell · EncounterView</span></span>
+    <h2 id="s2">Encounter §218 — stats nemico Goblin + dice CTA</h2>
+    <p class="desc">Marco/Giulia/Luca hanno scelto di profanare l'altare. Encounter §294 spawn 2 Goblin. Stats parsed dalla pagina foto (HP/AC/DMG). Dice CTA primary entity=event. ManaPips header: event sale a 4.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile · encounter tab">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>22:31</span><span>📶 🔋 61%</span></div>
+        <div class="session-h"><span class="crumbs"><strong>Eldoria</strong> · <span class="para">§294</span> · encounter</span><button class="menu">⋯</button></div>
+        <div class="header-pips">
+          <span class="manapip kb"><span class="badge">142</span></span>
+          <span class="manapip chat"><span class="badge">14</span></span>
+          <span class="manapip session"><span class="badge">1</span></span>
+          <span class="manapip event"><span class="badge">4</span></span>
+          <span class="manapip toolkit"><span class="badge">34</span></span>
+        </div>
+        <div class="tabs">
+          <button class="tab" aria-selected="false"><span class="em">📖</span>Story</button>
+          <button class="tab" aria-selected="true"><span class="em">⚔️</span>Encounter</button>
+          <button class="tab" aria-selected="false"><span class="em">📚</span>Glossario</button>
+        </div>
+        <div class="content">
+          <div class="encounter-card">
+            <div class="e-head">
+              <div class="ico">⚔️</div>
+              <div class="info"><h3 class="ti">2 × Goblin</h3><div class="sub">Encounter §294 · livello 3</div></div>
+            </div>
+            <div class="stats-mini">
+              <div class="st"><div class="v">14</div><div class="l">HP</div></div>
+              <div class="st"><div class="v">12</div><div class="l">AC</div></div>
+              <div class="st"><div class="v">2d6</div><div class="l">DMG</div></div>
+            </div>
+            <div style="padding: var(--s-2) var(--s-3); background: hsl(var(--c-warning) / 0.08); border: 1px solid hsl(var(--c-warning) / 0.25); border-radius: var(--r-sm); margin-bottom: var(--s-3); font-size: var(--fs-xs); color: var(--text-sec);">
+              <strong style="color: hsl(var(--c-warning));">⚠ Abilità speciale:</strong> al colpo critico, Goblin droppa una <span class="gloss" style="color: hsl(var(--c-toolkit)); text-decoration: underline dotted;">Pietra del Vuoto</span> raccoglibile (vedi §297).
+            </div>
+            <button class="dice-cta" onclick="window.location.href='librogame-runthrough-game-onboarding.html'" /* DEMO-NAV */>🎲 Tira iniziativa party (4d20)</button>
+          </div>
+          <div class="chat-strip">
+            <div class="ico">💬</div>
+            <div class="info"><div class="ti">Chiedi al Tutor</div><div class="sub">Es. "il Goblin può attaccare 2 volte?"</div></div>
+            <span class="arrow">›</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop · encounter">
+        <span class="frame-label">Desktop · 1440px (scaled)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/abc123?tab=encounter</span></div>
+        <div class="d-body">
+          <aside class="d-side">
+            <div class="side-card"><h4>Encounter corrente</h4><div class="row"><span class="k">Paragrafo</span><span class="v">§294</span></div><div class="row"><span class="k">Tipo</span><span class="v">Combat</span></div><div class="row"><span class="k">Difficoltà</span><span class="v">Media</span></div></div>
+            <div class="side-card"><h4>Party iniziativa</h4>
+              <div class="row"><span class="pchip host">⭐ Aaron</span><span class="v">—</span></div>
+              <div class="row"><span class="pchip">Marco</span><span class="v">—</span></div>
+              <div class="row"><span class="pchip">Giulia</span><span class="v">—</span></div>
+              <div class="row"><span class="pchip">Luca</span><span class="v">—</span></div>
+            </div>
+          </aside>
+          <div class="d-main">
+            <div class="encounter-card">
+              <div class="e-head"><div class="ico">⚔️</div><div class="info"><h3 class="ti">2 × Goblin</h3><div class="sub">Encounter §294 · livello 3</div></div></div>
+              <div class="stats-mini"><div class="st"><div class="v">14</div><div class="l">HP</div></div><div class="st"><div class="v">12</div><div class="l">AC</div></div><div class="st"><div class="v">2d6</div><div class="l">DMG</div></div></div>
+              <div style="padding: var(--s-2) var(--s-3); background: hsl(var(--c-warning) / 0.08); border: 1px solid hsl(var(--c-warning) / 0.25); border-radius: var(--r-sm); margin-bottom: var(--s-3); font-size: var(--fs-sm);"><strong style="color: hsl(var(--c-warning));">⚠ Abilità:</strong> critico → drop Pietra del Vuoto (§297)</div>
+              <button class="dice-cta">🎲 Tira iniziativa party (4d20)</button>
+            </div>
+          </div>
+          <div class="d-chat" style="background: var(--bg-card);">
+            <div style="padding: var(--s-2) var(--s-3); border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: var(--s-2);"><div style="width: 28px; height: 28px; border-radius: 50%; background: hsl(var(--c-agent) / 0.18); display: flex; align-items: center; justify-content: center;">🤖</div><span style="flex: 1; font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-sm);">Tutor</span><span class="live">● live</span></div>
+            <div style="flex: 1; padding: var(--s-3); display: flex; flex-direction: column; gap: var(--s-2);">
+              <div class="bubble agent">Encounter caricato. Vuoi i suggerimenti tattici?</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATO 03 · CHAT OVERLAY ACTIVE -->
+  <section class="state-section" aria-labelledby="s3">
+    <span class="label">Stato 03 · Chat Overlay<span class="cmp">PlaySessionShell · ChatActiveOverlay</span></span>
+    <h2 id="s3">Query agente in corso — streaming + citation</h2>
+    <p class="desc">Marco chiede regola complessa. Aaron tappa chat strip → slide-up overlay 75% height. Bubble user + agent typing dots streaming. Quando completa: citation Rules p.94 + confidence badge alta. Paragrafo sotto visible per riferimento.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile · chat overlay">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>22:33</span><span>📶 🔋 60%</span></div>
+        <div class="session-h"><span class="crumbs"><strong>Eldoria</strong> · <span class="para">§294</span></span><button class="menu">⋯</button></div>
+        <div class="header-pips"><span class="manapip kb"><span class="badge">142</span></span><span class="manapip chat"><span class="badge">15</span></span><span class="manapip event"><span class="badge">4</span></span></div>
+        <div class="tabs"><button class="tab" aria-selected="false"><span class="em">📖</span>Story</button><button class="tab" aria-selected="true"><span class="em">⚔️</span>Encounter</button><button class="tab" aria-selected="false"><span class="em">📚</span>Glossario</button></div>
+        <div class="content" style="overflow: hidden; opacity: 0.4;">
+          <div class="encounter-card" style="opacity: 0.5;">
+            <div class="e-head"><div class="ico">⚔️</div><div class="info"><h3 class="ti">2 × Goblin</h3></div></div>
+          </div>
+        </div>
+        <div class="chat-overlay" role="dialog" aria-label="Chat Tutor">
+          <div class="handle"></div>
+          <div class="c-h">
+            <div class="ag">🤖</div>
+            <span class="nm">Game Tutor</span>
+            <span class="live">● live · 8s</span>
+          </div>
+          <div class="messages">
+            <div class="bubble user">Se ho 2 ferite il malus -2 si cumula con quello del Goblin?</div>
+            <div class="bubble agent">I malus di ferita cumulano solo con malus situazionali (oscurità, distanza). Il malus inflitto dal Goblin è considerato condizione attiva, non cumula. Quindi tirate al peggior malus tra i due (−2).
+              <div class="citation"><strong>Rules p.94</strong> · §6.3.2 "Malus stacking" · accuracy 96%</div>
+              <span class="conf-badge high">● alta · 7.2s</span>
+            </div>
+            <div class="bubble agent typing" aria-label="agente sta scrivendo"><span></span><span></span><span></span></div>
+          </div>
+          <div class="input-row">
+            <input type="text" placeholder="Chiedi al Tutor…">
+            <button class="send" aria-label="invia">➤</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop · chat focus">
+        <span class="frame-label">Desktop · 1440px (scaled)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/abc123?focus=chat</span></div>
+        <div class="d-body">
+          <aside class="d-side">
+            <div class="side-card"><h4>Encounter</h4><div class="row"><span class="k">Paragrafo</span><span class="v">§294</span></div><div class="row"><span class="k">Nemici</span><span class="v">2 × Goblin</span></div></div>
+          </aside>
+          <div class="d-main">
+            <div class="encounter-card" style="opacity: 0.4;">
+              <div class="e-head"><div class="ico">⚔️</div><div class="info"><h3 class="ti">2 × Goblin</h3><div class="sub">§294</div></div></div>
+              <div class="stats-mini"><div class="st"><div class="v">14</div><div class="l">HP</div></div><div class="st"><div class="v">12</div><div class="l">AC</div></div><div class="st"><div class="v">2d6</div><div class="l">DMG</div></div></div>
+            </div>
+          </div>
+          <div class="d-chat" style="border-left: 2px solid hsl(var(--c-chat));">
+            <div style="padding: var(--s-2) var(--s-3); border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: var(--s-2); background: hsl(var(--c-chat) / 0.05);">
+              <div style="width: 28px; height: 28px; border-radius: 50%; background: hsl(var(--c-agent) / 0.18); display: flex; align-items: center; justify-content: center;">🤖</div>
+              <span style="flex: 1; font-family: var(--f-display); font-weight: var(--fw-bold);">Tutor · streaming</span>
+              <span class="live">● 8s</span>
+            </div>
+            <div style="flex: 1; padding: var(--s-3); display: flex; flex-direction: column; gap: var(--s-2); overflow-y: auto;">
+              <div class="bubble user">Se ho 2 ferite il malus −2 si cumula?</div>
+              <div class="bubble agent">I malus cumulano solo con situazionali. Tirate al peggior malus (−2).<div class="citation"><strong>Rules p.94</strong> · §6.3.2 · 96%</div><span class="conf-badge high">● alta · 7.2s</span></div>
+              <div class="bubble agent typing"><span></span><span></span><span></span></div>
+            </div>
+            <div style="padding: var(--s-2) var(--s-3); border-top: 1px solid var(--border-light); display: flex; gap: var(--s-2);"><input type="text" placeholder="Chiedi…" style="flex: 1; padding: var(--s-2); border: 1px solid var(--border); border-radius: var(--r-pill); font-size: var(--fs-sm); outline: 0;"><button style="width: 32px; height: 32px; border-radius: 50%; background: hsl(var(--c-chat)); color: #fff; border: 0;">➤</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATO 04 · GLOSSARY INLINE SHEET -->
+  <section class="state-section" aria-labelledby="s4">
+    <span class="label">Stato 04 · Glossary Inline<span class="cmp">PlaySessionShell · GlossarySheet</span></span>
+    <h2 id="s4">Aaron aggiunge "Goblin → Razziatore" al glossario</h2>
+    <p class="desc">Aaron tappa la pill gloss "Razziatrice" nel paragrafo. Slide-up sheet glossary editor con term + traduzione. Lista esistente (Voidstone, Architect, …) sopra. Save toolkit-color, contatore glossario +1.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile · glossary">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>22:18</span><span>📶 🔋 63%</span></div>
+        <div class="session-h"><span class="crumbs"><strong>Eldoria</strong> · <span class="para">§289</span> · glossary</span><button class="menu">⋯</button></div>
+        <div class="header-pips"><span class="manapip kb"><span class="badge">142</span></span><span class="manapip toolkit"><span class="badge">34</span></span><span class="lbl-mini">· +1 in arrivo</span></div>
+        <div class="tabs"><button class="tab" aria-selected="true"><span class="em">📖</span>Story</button><button class="tab" aria-selected="false"><span class="em">⚔️</span>Encounter</button><button class="tab" aria-selected="false"><span class="em">📚</span>Glossario</button></div>
+        <div class="content" style="opacity: 0.4;">
+          <div class="para-card">
+            <div class="num-row"><span class="num">§289</span></div>
+            <p class="text">…tre <span class="gloss">Pietre del Vuoto</span> emettono un bagliore, un'arma <span class="gloss">Razziatrice</span>…</p>
+          </div>
+        </div>
+        <div class="gloss-sheet" role="dialog" aria-label="Aggiungi termine glossario">
+          <div class="handle"></div>
+          <div class="g-h"><div class="ico">📚</div><span class="ti">Aggiungi al glossario</span><span class="lbl-mini" style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted);">34 termini</span></div>
+          <div class="g-body">
+            <div class="gloss-field">
+              <label>Termine (EN)</label>
+              <input type="text" value="Goblin" readonly/>
+            </div>
+            <div class="gloss-field">
+              <label>Traduzione (IT)</label>
+              <input type="text" value="Razziatore" autofocus/>
+            </div>
+            <h4 style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin: var(--s-3) 0 var(--s-2);">Glossario esistente · ultimi 3</h4>
+            <div class="gloss-existing"><span class="term">Voidstone</span><span class="trans">→ Pietra del Vuoto</span></div>
+            <div class="gloss-existing"><span class="term">Architect</span><span class="trans">→ Architetto</span></div>
+            <div class="gloss-existing"><span class="term">Press Start</span><span class="trans">→ Inizia</span></div>
+          </div>
+          <div class="gloss-actions">
+            <button class="btn-out">Annulla</button>
+            <button class="btn-fill">📚 Salva termine</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop · glossary">
+        <span class="frame-label">Desktop · 1440px (scaled)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/abc123?glossary=add</span></div>
+        <div class="d-body">
+          <aside class="d-side">
+            <div class="side-card">
+              <h4>Glossario · 34 + 1</h4>
+              <div class="gloss-existing"><span class="term">Voidstone</span><span class="trans">Pietra del Vuoto</span></div>
+              <div class="gloss-existing"><span class="term">Architect</span><span class="trans">Architetto</span></div>
+              <div class="gloss-existing" style="background: hsl(var(--c-toolkit) / 0.18); border: 1px dashed hsl(var(--c-toolkit) / 0.5);"><span class="term">Goblin</span><span class="trans">Razziatore (nuovo)</span></div>
+            </div>
+          </aside>
+          <div class="d-main">
+            <div class="para-card">
+              <div class="num-row"><span class="num">§289</span><span class="chap">Cap 4 · Goblin</span></div>
+              <p class="text">…tre <span class="gloss">Pietre del Vuoto</span>, un'arma <span class="gloss" style="background: hsl(var(--c-toolkit) / 0.4);">Razziatrice</span>…</p>
+            </div>
+          </div>
+          <div class="d-chat">
+            <div style="padding: var(--s-3); border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: var(--s-2); background: hsl(var(--c-toolkit) / 0.06);">
+              <div style="width: 28px; height: 28px; border-radius: 50%; background: hsl(var(--c-toolkit) / 0.18); display: flex; align-items: center; justify-content: center;">📚</div>
+              <span style="font-family: var(--f-display); font-weight: var(--fw-bold);">Glossary editor</span>
+            </div>
+            <div style="flex: 1; padding: var(--s-3); display: flex; flex-direction: column; gap: var(--s-3);">
+              <div class="gloss-field"><label>EN</label><input type="text" value="Goblin" readonly/></div>
+              <div class="gloss-field"><label>IT</label><input type="text" value="Razziatore"/></div>
+            </div>
+            <div class="gloss-actions" style="padding: var(--s-3); border-top: 1px solid var(--border-light); display: flex; gap: var(--s-2);">
+              <button class="btn-out">Annulla</button>
+              <button class="btn-fill">📚 Salva</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── state-05-diary-tab ─── -->
+  <!-- SP8 · Function #4 Note/diary utente. Append-only: i 4 stati sopra restano congelati.
+       Tab system esteso (+ Diary = 4a tab). Tutti i classi nuove sono prefissate .dy- per evitare collisioni.
+       Mapping: entry = session base + player accent · §badge = kb · CTA nuova nota = session.
+       Dati: Tainted Grail "La grotta dei Goblin", Cap 4, §214 corrente. NB: gli stati congelati usano §289/Eldoria
+       (vedi nota deviazione) — i nuovi stati usano i dati canonici del brief SP8 (§214, glossario Niamh/Korak). -->
+  <style id="sp8-diary-styles">
+    /* tab esteso: con 4 tab restiamo entro 375px; scroll-x di sicurezza se servisse */
+    .tabs.dy-scroll { overflow-x: auto; scrollbar-width: none; }
+    .tabs.dy-scroll::-webkit-scrollbar { display: none; }
+    .tabs.dy-scroll .tab { flex: 1 0 auto; min-width: 84px; }
+    .tab[aria-selected="true"].dy-diary { color: hsl(var(--c-session)); }
+
+    /* CTA nuova nota (entity=session) */
+    .dy-newcta { width: 100%; padding: var(--s-3); border-radius: var(--r-md); background: hsl(var(--c-session)); color: #fff; border: 0; font-family: var(--f-display); font-size: var(--fs-md); font-weight: var(--fw-bold); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: var(--s-2); box-shadow: 0 4px 14px hsl(var(--c-session) / 0.28); margin-bottom: var(--s-4); }
+    .dy-newcta:hover { transform: translateY(-1px); }
+
+    /* timeline note (newest-first) */
+    .dy-timeline { display: flex; flex-direction: column; gap: var(--s-3); }
+    .dy-entry { position: relative; border: 1px solid var(--border-light); border-left: 3px solid hsl(var(--c-player) / 0.55); border-radius: var(--r-lg); background: var(--bg-card); padding: var(--s-3) var(--s-4); }
+    .dy-entry .dy-meta { display: flex; align-items: center; gap: var(--s-2); margin-bottom: var(--s-2); flex-wrap: wrap; }
+    .dy-pin { display: inline-flex; align-items: center; gap: 4px; padding: 2px var(--s-2); border-radius: var(--r-pill); background: hsl(var(--c-kb) / 0.14); color: hsl(var(--c-kb)); font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-bold); }
+    .dy-time { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); }
+    .dy-body { font-family: var(--f-body); font-size: 18px; line-height: var(--lh-snug); color: var(--text); margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .dy-body.dy-full { -webkit-line-clamp: unset; }
+    .dy-body strong { font-weight: var(--fw-bold); }
+    .dy-body .dy-ref { color: hsl(var(--c-kb)); font-family: var(--f-mono); font-weight: var(--fw-semi); background: hsl(var(--c-kb) / 0.1); padding: 0 4px; border-radius: var(--r-xs); }
+    .dy-expand { background: none; border: 0; color: hsl(var(--c-session)); font-family: var(--f-display); font-weight: var(--fw-semi); font-size: var(--fs-sm); cursor: pointer; padding: 2px 0; margin-top: 2px; }
+    .dy-acts { display: flex; gap: var(--s-3); margin-top: var(--s-3); padding-top: var(--s-2); border-top: 1px solid var(--border-light); }
+    .dy-act { display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; color: var(--text-muted); font-family: var(--f-display); font-weight: var(--fw-semi); font-size: var(--fs-sm); cursor: pointer; }
+    .dy-act:hover { color: var(--text-sec); }
+    .dy-act.dy-del:hover { color: hsl(var(--c-event)); }
+
+    /* editor full-screen (mobile) */
+    .dy-editor { position: absolute; inset: 0; z-index: var(--z-drawer); background: var(--bg); display: flex; flex-direction: column; }
+    .dy-ed-top { display: flex; align-items: center; gap: var(--s-2); padding: var(--s-3); border-bottom: 1px solid var(--border-light); background: var(--bg-card); flex-shrink: 0; }
+    .dy-ed-top .dy-cancel { background: none; border: 0; color: var(--text-sec); font-family: var(--f-display); font-weight: var(--fw-semi); font-size: var(--fs-sm); cursor: pointer; }
+    .dy-ed-top .dy-ed-ti { flex: 1; text-align: center; font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-sm); color: var(--text); }
+    .dy-ed-top .dy-save { background: hsl(var(--c-session)); color: #fff; border: 0; border-radius: var(--r-pill); padding: var(--s-1) var(--s-4); font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-sm); cursor: pointer; }
+    .dy-ed-top .dy-save:disabled { background: var(--bg-muted); color: var(--text-muted); cursor: not-allowed; }
+    .dy-toolbar { display: flex; align-items: center; gap: var(--s-1); padding: var(--s-2) var(--s-3); border-bottom: 1px solid var(--border-light); background: var(--bg-card); flex-shrink: 0; }
+    .dy-tool { width: 32px; height: 32px; border-radius: var(--r-sm); background: var(--bg-muted); border: 1px solid var(--border-light); color: var(--text-sec); font-family: var(--f-mono); font-size: var(--fs-sm); font-weight: var(--fw-bold); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+    .dy-tool:hover { border-color: hsl(var(--c-session) / 0.4); }
+    .dy-tool.dy-pintool { color: hsl(var(--c-kb)); }
+    .dy-toolbar .dy-draft { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); }
+    .dy-toolbar .dy-draft .dot { width: 7px; height: 7px; border-radius: 50%; background: hsl(var(--c-toolkit)); }
+    .dy-textarea { width: 100%; flex: 0 0 auto; min-height: 120px; border: 0; outline: 0; resize: none; background: transparent; padding: var(--s-4); font-family: var(--f-body); font-size: 18px; line-height: var(--lh-relax); color: var(--text); }
+    .dy-textarea::placeholder { color: var(--text-muted); }
+    .dy-preview { border-top: 1px dashed var(--border); margin: 0 var(--s-4); padding: var(--s-3) 0; flex: 1; overflow-y: auto; }
+    .dy-preview .dy-pv-lbl { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--s-2); }
+    .dy-preview .dy-body { display: block; -webkit-line-clamp: unset; }
+
+    /* empty / banners / skeleton */
+    .dy-empty { text-align: center; padding: var(--s-9) var(--s-5); display: flex; flex-direction: column; align-items: center; gap: var(--s-3); }
+    .dy-empty .dy-ill { width: 76px; height: 76px; border-radius: var(--r-2xl); background: hsl(var(--c-session) / 0.12); display: flex; align-items: center; justify-content: center; font-size: 38px; }
+    .dy-empty h3 { font-family: var(--f-display); font-size: var(--fs-xl); color: var(--text); }
+    .dy-empty p { color: var(--text-sec); font-size: var(--fs-md); margin: 0; max-width: 240px; }
+    .dy-banner { display: flex; align-items: flex-start; gap: var(--s-2); padding: var(--s-3); border-radius: var(--r-md); margin-bottom: var(--s-3); font-size: var(--fs-sm); line-height: var(--lh-snug); }
+    .dy-banner .dy-bic { flex-shrink: 0; font-size: var(--fs-lg); }
+    .dy-banner .dy-btx { flex: 1; }
+    .dy-banner .dy-btx strong { display: block; font-family: var(--f-display); font-weight: var(--fw-bold); margin-bottom: 2px; }
+    .dy-banner .dy-btx .dy-sub { color: var(--text-sec); font-size: var(--fs-xs); }
+    .dy-banner .dy-retry { background: none; border: 1px solid currentColor; border-radius: var(--r-pill); padding: 3px var(--s-3); font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-xs); cursor: pointer; align-self: center; }
+    .dy-banner.err { background: hsl(var(--c-event) / 0.1); border: 1px solid hsl(var(--c-event) / 0.3); color: hsl(var(--c-event)); }
+    .dy-banner.off { background: hsl(var(--c-tool) / 0.1); border: 1px solid hsl(var(--c-tool) / 0.3); color: hsl(var(--c-tool)); }
+    .dy-banner .dy-btx, .dy-banner .dy-sub { color: var(--text-sec); }
+    .dy-localsave { display: inline-flex; align-items: center; gap: 5px; font-family: var(--f-mono); font-size: var(--fs-xs); color: hsl(var(--c-toolkit)); margin-top: 4px; }
+    .dy-localsave .dot { width: 7px; height: 7px; border-radius: 50%; background: hsl(var(--c-toolkit)); }
+    .dy-skel { border: 1px solid var(--border-light); border-radius: var(--r-lg); background: var(--bg-card); padding: var(--s-3) var(--s-4); margin-bottom: var(--s-3); }
+    .dy-skel .ln { height: 12px; border-radius: var(--r-pill); background: var(--bg-muted); margin-bottom: var(--s-2); }
+    .dy-shimmer { background: linear-gradient(90deg, var(--bg-muted) 25%, var(--bg-hover) 37%, var(--bg-muted) 63%); background-size: 400% 100%; animation: dyShimmer 1.4s ease infinite; }
+    @keyframes dyShimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+    @media (prefers-reduced-motion: reduce) { .dy-shimmer { animation: none; } }
+
+    /* desktop diary: nav entry nella left panel + content */
+    .dy-navitem { display: flex; align-items: center; gap: var(--s-2); width: 100%; padding: var(--s-2) var(--s-3); border-radius: var(--r-md); background: none; border: 0; color: var(--text-sec); font-family: var(--f-display); font-weight: var(--fw-semi); font-size: var(--fs-sm); cursor: pointer; text-align: left; }
+    .dy-navitem .em { width: 18px; text-align: center; }
+    .dy-navitem .cnt { margin-left: auto; font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); }
+    .dy-navitem[aria-selected="true"] { background: hsl(var(--c-session) / 0.12); color: hsl(var(--c-session)); }
+    .dy-navitem[aria-selected="true"] .cnt { color: hsl(var(--c-session)); }
+    .dy-d-foot { margin-top: auto; padding-top: var(--s-3); border-top: 1px solid var(--border-light); }
+    .dy-endbtn { width: 100%; padding: var(--s-2) var(--s-3); border-radius: var(--r-md); background: var(--bg); border: 1px solid var(--border); color: var(--text-sec); font-family: var(--f-display); font-weight: var(--fw-semi); font-size: var(--fs-sm); cursor: pointer; }
+
+    /* lab controls (interactive section, sotto la gallery statica) */
+    .dy-lab-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); margin-bottom: var(--s-6); }
+    .dy-lab-bar .grp { display: inline-flex; align-items: center; gap: 4px; padding: 4px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-pill); }
+    .dy-lab-bar .grp .lbl { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); padding: 0 var(--s-2); text-transform: uppercase; letter-spacing: 0.06em; }
+    .dy-seg { padding: var(--s-1) var(--s-3); border-radius: var(--r-pill); background: transparent; border: 0; color: var(--text-sec); font-family: var(--f-display); font-weight: var(--fw-semi); font-size: var(--fs-xs); cursor: pointer; }
+    .dy-seg.on { background: hsl(var(--c-session)); color: #fff; }
+  </style>
+
+  <section class="state-section" aria-labelledby="s5">
+    <span class="label">Stato 05 · Diary Tab<span class="cmp">PlaySessionShell · DiaryView (v2)</span></span>
+    <h2 id="s5">Note diary §214 — markdown editor + timeline newest-first</h2>
+    <p class="desc">Function #4 companion. Aaron annota la partita al §214 Cap 4. Nuova 4a tab <strong>Diary</strong> nel tab system (Story · Encounter · Glossario · Diary). Note free-form markdown, text-only, auto-pin del paragrafo corrente (📌 §214), salvataggio draft-local continuo + commit esplicito. Gallery statica: tutti gli stati (default · editor pristine · editor typed · empty · loading · error save · offline). Versione interattiva nella sezione "Diary Lab" più in basso.</p>
+
+    <div class="frames">
+
+      <!-- Mobile · default (3 note newest-first) -->
+      <div class="phone" role="region" aria-label="Mobile · diary default">
+        <span class="frame-label">Mobile · default</span>
+        <div class="phone-sbar"><span>22:36</span><span>📶 🔋 58%</span></div>
+        <div class="session-h"><span class="crumbs"><strong>Avalon</strong> · La grotta dei Goblin · <span class="para">§214</span></span><button class="menu" aria-label="Menu sessione">⋯</button></div>
+        <div class="header-pips">
+          <span class="manapip kb"><span class="badge">47</span></span>
+          <span class="manapip chat"><span class="badge">15</span></span>
+          <span class="manapip session"><span class="badge">1</span></span>
+          <span class="manapip toolkit"><span class="badge">12</span></span>
+          <span class="lbl-mini">· Cap 4 · note 12</span>
+        </div>
+        <div class="tabs dy-scroll" role="tablist">
+          <button class="tab" role="tab" aria-selected="false"><span class="em">📖</span>Story</button>
+          <button class="tab" role="tab" aria-selected="false"><span class="em">⚔️</span>Encounter</button>
+          <button class="tab" role="tab" aria-selected="false"><span class="em">📚</span>Glossario</button>
+          <button class="tab dy-diary" role="tab" aria-selected="true"><span class="em">📓</span>Diary</button>
+        </div>
+        <div class="content">
+          <button class="dy-newcta">＋ Nuova nota</button>
+          <div class="dy-timeline">
+            <div class="dy-entry">
+              <div class="dy-meta"><span class="dy-pin">📌 §214</span><span class="dy-time">5 min fa</span></div>
+              <p class="dy-body">Goblin liberati senza combattere — bonus reputazione <strong>+2</strong>. Niamh sembra fidarsi di più del gruppo adesso.</p>
+              <div class="dy-acts"><button class="dy-act">✏️ Modifica</button><button class="dy-act dy-del">🗑️ Elimina</button></div>
+            </div>
+            <div class="dy-entry">
+              <div class="dy-meta"><span class="dy-pin">📌 §198</span><span class="dy-time">ieri 21:34</span></div>
+              <p class="dy-body">NPC <strong>Korak</strong> mi deve un favore, citato a <span class="dy-ref">§134</span>. Da rigiocare se serve un passaggio sicuro.</p>
+              <div class="dy-acts"><button class="dy-act">✏️ Modifica</button><button class="dy-act dy-del">🗑️ Elimina</button></div>
+            </div>
+            <div class="dy-entry">
+              <div class="dy-meta"><span class="dy-pin">📌 §134</span><span class="dy-time">12 mag 21:34</span></div>
+              <p class="dy-body">Tesoro nella grotta non preso, tornare dopo <span class="dy-ref">§340</span>. La Spada di Avalon è ancora là.</p>
+              <div class="dy-acts"><button class="dy-act">✏️ Modifica</button><button class="dy-act dy-del">🗑️ Elimina</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile · editor pristine -->
+      <div class="phone" role="region" aria-label="Mobile · diary editor pristine">
+        <span class="frame-label">Mobile · editor pristine</span>
+        <div class="phone-sbar"><span>22:37</span><span>📶 🔋 58%</span></div>
+        <div class="session-h"><span class="crumbs"><strong>Avalon</strong> · <span class="para">§214</span> · diary</span><button class="menu" aria-label="Menu sessione">⋯</button></div>
+        <div class="header-pips"><span class="manapip kb"><span class="badge">47</span></span><span class="manapip session"><span class="badge">1</span></span><span class="manapip toolkit"><span class="badge">12</span></span></div>
+        <div class="tabs dy-scroll"><button class="tab" aria-selected="false"><span class="em">📖</span>Story</button><button class="tab" aria-selected="false"><span class="em">⚔️</span>Encounter</button><button class="tab" aria-selected="false"><span class="em">📚</span>Glossario</button><button class="tab dy-diary" aria-selected="true"><span class="em">📓</span>Diary</button></div>
+        <div class="content" style="padding: 0; position: relative;">
+          <div class="dy-editor" role="dialog" aria-label="Nuova nota §214">
+            <div class="dy-ed-top"><button class="dy-cancel">← Annulla</button><span class="dy-ed-ti">Nota §214</span><button class="dy-save" disabled>Salva</button></div>
+            <div class="dy-toolbar">
+              <button class="dy-tool" aria-label="Grassetto">B</button>
+              <button class="dy-tool" style="font-style: italic;" aria-label="Corsivo">I</button>
+              <button class="dy-tool" style="text-decoration: underline;" aria-label="Sottolineato">U</button>
+              <button class="dy-tool dy-pintool" aria-label="Collega paragrafo">📌</button>
+              <button class="dy-tool" aria-label="Link">🔗</button>
+              <span class="dy-draft"><span class="dot"></span>Bozza salvata</span>
+            </div>
+            <textarea class="dy-textarea" placeholder="Scrivi quello che vuoi ricordare… (markdown)" aria-label="Testo nota" aria-multiline="true"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile · editor typed + live preview -->
+      <div class="phone" role="region" aria-label="Mobile · diary editor typed">
+        <span class="frame-label">Mobile · editor typed</span>
+        <div class="phone-sbar"><span>22:38</span><span>📶 🔋 57%</span></div>
+        <div class="session-h"><span class="crumbs"><strong>Avalon</strong> · <span class="para">§214</span> · diary</span><button class="menu" aria-label="Menu sessione">⋯</button></div>
+        <div class="header-pips"><span class="manapip kb"><span class="badge">47</span></span><span class="manapip session"><span class="badge">1</span></span><span class="manapip toolkit"><span class="badge">12</span></span></div>
+        <div class="tabs dy-scroll"><button class="tab" aria-selected="false"><span class="em">📖</span>Story</button><button class="tab" aria-selected="false"><span class="em">⚔️</span>Encounter</button><button class="tab" aria-selected="false"><span class="em">📚</span>Glossario</button><button class="tab dy-diary" aria-selected="true"><span class="em">📓</span>Diary</button></div>
+        <div class="content" style="padding: 0; position: relative;">
+          <div class="dy-editor" role="dialog" aria-label="Nuova nota §214">
+            <div class="dy-ed-top"><button class="dy-cancel">← Annulla</button><span class="dy-ed-ti">Nota §214</span><button class="dy-save">Salva</button></div>
+            <div class="dy-toolbar">
+              <button class="dy-tool" aria-label="Grassetto">B</button>
+              <button class="dy-tool" style="font-style: italic;" aria-label="Corsivo">I</button>
+              <button class="dy-tool" style="text-decoration: underline;" aria-label="Sottolineato">U</button>
+              <button class="dy-tool dy-pintool" aria-label="Collega paragrafo">📌</button>
+              <button class="dy-tool" aria-label="Link">🔗</button>
+              <span class="dy-draft"><span class="dot"></span>Bozza salvata</span>
+            </div>
+            <textarea class="dy-textarea" aria-label="Testo nota" aria-multiline="true">Combattuto i 2 Goblin a §214. **Korak** è caduto al secondo turno — Giulia ha usato la Pietra Spettrale per finirlo. Loot: 14 oro, vedi §340.</textarea>
+            <div class="dy-preview">
+              <div class="dy-pv-lbl">Anteprima</div>
+              <p class="dy-body">Combattuto i 2 Goblin a <span class="dy-ref">§214</span>. <strong>Korak</strong> è caduto al secondo turno — Giulia ha usato la Pietra Spettrale per finirlo. Loot: 14 oro, vedi <span class="dy-ref">§340</span>.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile · empty -->
+      <div class="phone" role="region" aria-label="Mobile · diary empty">
+        <span class="frame-label">Mobile · empty</span>
+        <div class="phone-sbar"><span>22:40</span><span>📶 🔋 57%</span></div>
+        <div class="session-h"><span class="crumbs"><strong>Avalon</strong> · <span class="para">§214</span></span><button class="menu" aria-label="Menu sessione">⋯</button></div>
+        <div class="header-pips"><span class="manapip kb"><span class="badge">47</span></span><span class="manapip session"><span class="badge">1</span></span><span class="manapip toolkit"><span class="badge">12</span></span><span class="lbl-mini">· note 0</span></div>
+        <div class="tabs dy-scroll"><button class="tab" aria-selected="false"><span class="em">📖</span>Story</button><button class="tab" aria-selected="false"><span class="em">⚔️</span>Encounter</button><button class="tab" aria-selected="false"><span class="em">📚</span>Glossario</button><button class="tab dy-diary" aria-selected="true"><span class="em">📓</span>Diary</button></div>
+        <div class="content">
+          <div class="dy-empty">
+            <div class="dy-ill">📓</div>
+            <h3>Nessuna nota ancora</h3>
+            <p>Scrivi quello che vuoi ricordare — scelte, NPC, tesori lasciati indietro.</p>
+            <button class="dy-newcta" style="margin-bottom: 0; max-width: 220px;">✍️ Scrivi la prima</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile · loading -->
+      <div class="phone" role="region" aria-label="Mobile · diary loading">
+        <span class="frame-label">Mobile · loading</span>
+        <div class="phone-sbar"><span>22:41</span><span>📶 🔋 56%</span></div>
+        <div class="session-h"><span class="crumbs"><strong>Avalon</strong> · <span class="para">§214</span></span><button class="menu" aria-label="Menu sessione">⋯</button></div>
+        <div class="header-pips"><span class="manapip kb"><span class="badge">47</span></span><span class="manapip session"><span class="badge">1</span></span><span class="manapip toolkit"><span class="badge">12</span></span></div>
+        <div class="tabs dy-scroll"><button class="tab" aria-selected="false"><span class="em">📖</span>Story</button><button class="tab" aria-selected="false"><span class="em">⚔️</span>Encounter</button><button class="tab" aria-selected="false"><span class="em">📚</span>Glossario</button><button class="tab dy-diary" aria-selected="true"><span class="em">📓</span>Diary</button></div>
+        <div class="content" aria-busy="true">
+          <button class="dy-newcta" style="opacity: 0.5;">＋ Nuova nota</button>
+          <div class="dy-skel"><div class="ln dy-shimmer" style="width: 35%;"></div><div class="ln dy-shimmer" style="width: 90%;"></div><div class="ln dy-shimmer" style="width: 70%; margin-bottom: 0;"></div></div>
+          <div class="dy-skel"><div class="ln dy-shimmer" style="width: 35%;"></div><div class="ln dy-shimmer" style="width: 80%;"></div><div class="ln dy-shimmer" style="width: 55%; margin-bottom: 0;"></div></div>
+        </div>
+      </div>
+
+      <!-- Mobile · error save -->
+      <div class="phone" role="region" aria-label="Mobile · diary error save">
+        <span class="frame-label">Mobile · error save</span>
+        <div class="phone-sbar"><span>22:42</span><span>📶 🔋 56%</span></div>
+        <div class="session-h"><span class="crumbs"><strong>Avalon</strong> · <span class="para">§214</span> · diary</span><button class="menu" aria-label="Menu sessione">⋯</button></div>
+        <div class="header-pips"><span class="manapip kb"><span class="badge">47</span></span><span class="manapip session"><span class="badge">1</span></span><span class="manapip toolkit"><span class="badge">12</span></span></div>
+        <div class="tabs dy-scroll"><button class="tab" aria-selected="false"><span class="em">📖</span>Story</button><button class="tab" aria-selected="false"><span class="em">⚔️</span>Encounter</button><button class="tab" aria-selected="false"><span class="em">📚</span>Glossario</button><button class="tab dy-diary" aria-selected="true"><span class="em">📓</span>Diary</button></div>
+        <div class="content">
+          <div class="dy-banner err" role="alert">
+            <span class="dy-bic">⚠️</span>
+            <div class="dy-btx"><strong style="color: hsl(var(--c-event));">Errore salvataggio — riprova</strong><span class="dy-sub">La nota non è arrivata al server.</span><span class="dy-localsave"><span class="dot"></span>Salvata in locale · nessuna perdita</span></div>
+            <button class="dy-retry">↻ Riprova</button>
+          </div>
+          <div class="dy-timeline">
+            <div class="dy-entry">
+              <div class="dy-meta"><span class="dy-pin">📌 §214</span><span class="dy-time">ora · non sincr.</span></div>
+              <p class="dy-body">Combattuto i 2 Goblin a §214. <strong>Korak</strong> è caduto al secondo turno — loot 14 oro.</p>
+              <div class="dy-acts"><button class="dy-act">✏️ Modifica</button><button class="dy-act dy-del">🗑️ Elimina</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile · offline -->
+      <div class="phone" role="region" aria-label="Mobile · diary offline">
+        <span class="frame-label">Mobile · offline</span>
+        <div class="phone-sbar"><span>22:44</span><span>✈️ 🔋 55%</span></div>
+        <div class="session-h"><span class="crumbs"><strong>Avalon</strong> · <span class="para">§214</span> · diary</span><button class="menu" aria-label="Menu sessione">⋯</button></div>
+        <div class="header-pips"><span class="manapip kb"><span class="badge">47</span></span><span class="manapip session"><span class="badge">1</span></span><span class="manapip toolkit"><span class="badge">12</span></span></div>
+        <div class="tabs dy-scroll"><button class="tab" aria-selected="false"><span class="em">📖</span>Story</button><button class="tab" aria-selected="false"><span class="em">⚔️</span>Encounter</button><button class="tab" aria-selected="false"><span class="em">📚</span>Glossario</button><button class="tab dy-diary" aria-selected="true"><span class="em">📓</span>Diary</button></div>
+        <div class="content">
+          <div class="dy-banner off" role="status">
+            <span class="dy-bic">📴</span>
+            <div class="dy-btx"><strong style="color: hsl(var(--c-tool));">Offline</strong><span class="dy-sub">La nota sarà salvata appena torni online.</span><span class="dy-localsave" style="color: hsl(var(--c-tool));"><span class="dot" style="background: hsl(var(--c-tool));"></span>1 in coda</span></div>
+          </div>
+          <button class="dy-newcta">＋ Nuova nota</button>
+          <div class="dy-timeline">
+            <div class="dy-entry">
+              <div class="dy-meta"><span class="dy-pin">📌 §214</span><span class="dy-time">5 min fa</span></div>
+              <p class="dy-body">Goblin liberati senza combattere — bonus reputazione <strong>+2</strong>. Niamh si fida di più.</p>
+              <div class="dy-acts"><button class="dy-act">✏️ Modifica</button><button class="dy-act dy-del">🗑️ Elimina</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop · diary default (left context panel + content) -->
+      <div class="desktop" role="region" aria-label="Desktop · diary default">
+        <span class="frame-label">Desktop · 1440px (scaled)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/camp-avalon-1?tab=diary</span></div>
+        <div class="d-body">
+          <aside class="d-side" style="width: 260px; display: flex; flex-direction: column;">
+            <div class="side-card" style="margin-bottom: var(--s-2);">
+              <h4>Campagna</h4>
+              <div class="row"><span class="k">Nome</span><span class="v">Grotta Goblin</span></div>
+              <div class="row"><span class="k">Capitolo</span><span class="v">4 · §214</span></div>
+            </div>
+            <nav aria-label="Sezioni sessione" style="display: flex; flex-direction: column; gap: 2px; margin-bottom: var(--s-3);">
+              <button class="dy-navitem"><span class="em">📖</span>Story<span class="cnt">§214</span></button>
+              <button class="dy-navitem"><span class="em">⚔️</span>Encounter<span class="cnt">—</span></button>
+              <button class="dy-navitem"><span class="em">📚</span>Glossario<span class="cnt">12</span></button>
+              <button class="dy-navitem" aria-selected="true"><span class="em">📓</span>Diary<span class="cnt">12</span></button>
+            </nav>
+            <div class="dy-d-foot"><button class="dy-endbtn">🏁 Chiudi campagna</button></div>
+          </aside>
+          <div class="d-main">
+            <button class="dy-newcta" style="max-width: 200px;">＋ Nuova nota</button>
+            <div class="dy-timeline">
+              <div class="dy-entry">
+                <div class="dy-meta"><span class="dy-pin">📌 §214</span><span class="dy-time">5 min fa</span></div>
+                <p class="dy-body dy-full">Goblin liberati senza combattere — bonus reputazione <strong>+2</strong>. Niamh sembra fidarsi di più del gruppo adesso.</p>
+                <div class="dy-acts"><button class="dy-act">✏️ Modifica</button><button class="dy-act dy-del">🗑️ Elimina</button></div>
+              </div>
+              <div class="dy-entry">
+                <div class="dy-meta"><span class="dy-pin">📌 §198</span><span class="dy-time">ieri 21:34</span></div>
+                <p class="dy-body dy-full">NPC <strong>Korak</strong> mi deve un favore, citato a <span class="dy-ref">§134</span>. Da rigiocare se serve un passaggio sicuro.</p>
+                <div class="dy-acts"><button class="dy-act">✏️ Modifica</button><button class="dy-act dy-del">🗑️ Elimina</button></div>
+              </div>
+              <div class="dy-entry">
+                <div class="dy-meta"><span class="dy-pin">📌 §134</span><span class="dy-time">12 mag 21:34</span></div>
+                <p class="dy-body dy-full">Tesoro nella grotta non preso, tornare dopo <span class="dy-ref">§340</span>. La Spada di Avalon è ancora là.</p>
+                <div class="dy-acts"><button class="dy-act">✏️ Modifica</button><button class="dy-act dy-del">🗑️ Elimina</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop · editor inline-expand -->
+      <div class="desktop" role="region" aria-label="Desktop · diary editor">
+        <span class="frame-label">Desktop · editor inline-expand</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/camp-avalon-1?tab=diary&edit=new</span></div>
+        <div class="d-body">
+          <aside class="d-side" style="width: 260px; display: flex; flex-direction: column;">
+            <nav aria-label="Sezioni sessione" style="display: flex; flex-direction: column; gap: 2px;">
+              <button class="dy-navitem"><span class="em">📖</span>Story<span class="cnt">§214</span></button>
+              <button class="dy-navitem"><span class="em">⚔️</span>Encounter<span class="cnt">—</span></button>
+              <button class="dy-navitem"><span class="em">📚</span>Glossario<span class="cnt">12</span></button>
+              <button class="dy-navitem" aria-selected="true"><span class="em">📓</span>Diary<span class="cnt">12</span></button>
+            </nav>
+          </aside>
+          <div class="d-main">
+            <div class="dy-editor" style="position: relative; inset: auto; border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; height: 100%;">
+              <div class="dy-ed-top"><button class="dy-cancel">← Annulla</button><span class="dy-ed-ti">Nota §214</span><button class="dy-save">Salva</button></div>
+              <div class="dy-toolbar">
+                <button class="dy-tool" aria-label="Grassetto">B</button>
+                <button class="dy-tool" style="font-style: italic;" aria-label="Corsivo">I</button>
+                <button class="dy-tool" style="text-decoration: underline;" aria-label="Sottolineato">U</button>
+                <button class="dy-tool dy-pintool" aria-label="Collega paragrafo">📌</button>
+                <button class="dy-tool" aria-label="Link">🔗</button>
+                <span class="dy-draft"><span class="dot"></span>Bozza salvata</span>
+              </div>
+              <textarea class="dy-textarea" aria-label="Testo nota" aria-multiline="true">Combattuto i 2 Goblin a §214. **Korak** è caduto al secondo turno — Giulia ha usato la Pietra Spettrale per finirlo. Loot: 14 oro, vedi §340.</textarea>
+              <div class="dy-preview">
+                <div class="dy-pv-lbl">Anteprima live</div>
+                <p class="dy-body">Combattuto i 2 Goblin a <span class="dy-ref">§214</span>. <strong>Korak</strong> è caduto al secondo turno — Giulia ha usato la Pietra Spettrale per finirlo. Loot: 14 oro, vedi <span class="dy-ref">§340</span>.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ─── state-05 · DIARY LAB (interattivo, carica librogame-runthrough-play-session.jsx) ─── -->
+  <section class="state-section" aria-labelledby="s5lab">
+    <span class="label">Stato 05 · Diary Lab (interattivo)<span class="cmp">React · Babel standalone</span></span>
+    <h2 id="s5lab">Diary interattivo — scrivi, salva, cambia stato</h2>
+    <p class="desc">Versione runnable di state-05. Cambia stato dal selettore; "＋ Nuova nota" apre l'editor (typing → live preview + Salva attivo + bozza locale). Tema controllato dal bottone 🌗 in alto. Sorgente: <code>librogame-runthrough-play-session.jsx</code>.</p>
+    <div id="diary-lab-root"></div>
+  </section>
+
+  <!-- ─── state-06-paragrafi-drawer ─── -->
+  <!-- SP8 · Function #5 Lista paragrafi visitati. Append-only. Drawer canonico:
+       bottom-sheet 75% (mobile, da 03-drawer-variants V1) / side-panel slide-from-left (desktop).
+       Trigger mobile: 🕰 history nella session-h. Trigger desktop: voce "History" left panel.
+       Classi nuove prefissate .hy- . Search scope v1 = solo §numero/capitolo (full-text rimandato:
+       l'app ha il testo completo SOLO per paragrafi tradotti → vedi nota deviazione).
+       Jump-back: §214 resta in history (no cancellazione), save-state → target, drawer chiude. -->
+  <style id="sp8-history-styles">
+    /* 🕰 history trigger nella session header */
+    .session-h .hy-trigger { width: 28px; height: 28px; border-radius: 50%; background: hsl(var(--c-session) / 0.12); border: 0; font-size: 14px; cursor: pointer; color: hsl(var(--c-session)); display: inline-flex; align-items: center; justify-content: center; }
+
+    /* scrim + bottom-sheet (mobile) */
+    .hy-scrim { position: absolute; inset: 0; z-index: var(--z-drawer); background: rgba(0,0,0,0.4); display: flex; flex-direction: column; justify-content: flex-end; }
+    .hy-sheet { height: 75%; background: var(--bg-card); border-radius: var(--r-2xl) var(--r-2xl) 0 0; box-shadow: 0 -10px 30px rgba(0,0,0,0.25); display: flex; flex-direction: column; overflow: hidden; animation: hySlideUp var(--dur-md, 0.32s) var(--ease-out); }
+    @keyframes hySlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .hy-drag { width: 40px; height: 4px; border-radius: var(--r-pill); background: var(--border-strong); margin: var(--s-2) auto 0; flex-shrink: 0; }
+    .hy-head { display: flex; align-items: center; gap: var(--s-2); padding: var(--s-3) var(--s-4); flex-shrink: 0; }
+    .hy-head .hy-title { flex: 1; font-family: var(--f-display); font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--text); }
+    .hy-head .hy-x { width: 30px; height: 30px; border-radius: 50%; background: var(--bg-muted); border: 0; font-size: 13px; color: var(--text-sec); cursor: pointer; }
+
+    /* search (scope §numero/capitolo) */
+    .hy-search { padding: 0 var(--s-4) var(--s-2); flex-shrink: 0; }
+    .hy-search .hy-field { display: flex; align-items: center; gap: var(--s-2); padding: var(--s-2) var(--s-3); border: 1px solid var(--border); border-radius: var(--r-md); background: var(--bg); }
+    .hy-search .hy-field .ic { color: var(--text-muted); font-size: var(--fs-sm); }
+    .hy-search .hy-field input { flex: 1; border: 0; outline: 0; background: transparent; font-family: var(--f-body); font-size: var(--fs-md); color: var(--text); }
+    .hy-search .hy-field input::placeholder { color: var(--text-muted); }
+    .hy-search .hy-scope { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin-top: 4px; padding-left: 2px; }
+
+    /* current paragraph sticky (entity=session) */
+    .hy-current { margin: 0 var(--s-4) var(--s-3); padding: var(--s-3); border-radius: var(--r-md); background: hsl(var(--c-session) / 0.1); border: 1px solid hsl(var(--c-session) / 0.3); display: flex; align-items: center; gap: var(--s-2); flex-shrink: 0; }
+    .hy-current .hy-now-pin { display: inline-flex; align-items: center; gap: 4px; padding: 3px var(--s-2); border-radius: var(--r-pill); background: hsl(var(--c-session)); color: #fff; font-family: var(--f-mono); font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+    .hy-current .hy-now-meta { font-family: var(--f-mono); font-size: var(--fs-xs); color: hsl(var(--c-session)); font-weight: var(--fw-semi); }
+    .hy-current .hy-now-tag { margin-left: auto; font-family: var(--f-mono); font-size: var(--fs-xs); color: hsl(var(--c-session)); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* list newest-first */
+    .hy-list { flex: 1; overflow-y: auto; padding: 0 var(--s-4) var(--s-4); display: flex; flex-direction: column; gap: var(--s-2); }
+    .hy-row { border: 1px solid var(--border-light); border-radius: var(--r-lg); background: var(--bg); padding: var(--s-3); display: flex; flex-direction: column; gap: var(--s-2); }
+    .hy-row .hy-r-top { display: flex; align-items: center; gap: var(--s-2); }
+    .hy-row .hy-para { display: inline-flex; align-items: center; gap: 4px; padding: 2px var(--s-2); border-radius: var(--r-pill); background: hsl(var(--c-kb) / 0.14); color: hsl(var(--c-kb)); font-family: var(--f-mono); font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+    .hy-row .hy-when { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); }
+    .hy-row .hy-chap { margin-left: auto; font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-sec); padding: 1px var(--s-2); background: var(--bg-muted); border-radius: var(--r-sm); }
+    .hy-row .hy-snip { font-family: var(--f-body); font-size: 18px; line-height: var(--lh-snug); color: var(--text-sec); margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .hy-row .hy-goto { align-self: flex-start; padding: var(--s-1) var(--s-3); border-radius: var(--r-pill); background: hsl(var(--c-session)); color: #fff; border: 0; font-family: var(--f-display); font-size: var(--fs-sm); font-weight: var(--fw-bold); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+    .hy-row .hy-goto:hover { transform: translateY(-1px); }
+    .hy-row .hy-goto:disabled { background: var(--bg-muted); color: var(--text-muted); cursor: not-allowed; }
+    .hy-row .hy-goto-wrap { position: relative; align-self: flex-start; }
+    .hy-row .hy-tip { position: absolute; bottom: calc(100% + 6px); left: 0; white-space: nowrap; padding: 3px var(--s-2); border-radius: var(--r-sm); background: var(--text); color: var(--bg); font-family: var(--f-mono); font-size: var(--fs-xs); opacity: 0; pointer-events: none; transition: opacity var(--dur-sm) var(--ease-out); }
+    .hy-row .hy-goto-wrap:hover .hy-tip, .hy-row.hy-show-tip .hy-tip { opacity: 1; }
+
+    /* empty / loading / banners */
+    .hy-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s-3); padding: var(--s-7) var(--s-5); text-align: center; }
+    .hy-empty .hy-ill { width: 72px; height: 72px; border-radius: var(--r-2xl); background: hsl(var(--c-kb) / 0.12); display: flex; align-items: center; justify-content: center; font-size: 36px; }
+    .hy-empty h3 { font-family: var(--f-display); font-size: var(--fs-lg); color: var(--text); margin: 0; }
+    .hy-empty p { color: var(--text-sec); font-size: var(--fs-md); margin: 0; max-width: 230px; }
+    .hy-skel { border: 1px solid var(--border-light); border-radius: var(--r-lg); background: var(--bg); padding: var(--s-3); }
+    .hy-skel .ln { height: 12px; border-radius: var(--r-pill); background: var(--bg-muted); margin-bottom: var(--s-2); }
+    .hy-banner { display: flex; align-items: flex-start; gap: var(--s-2); margin: 0 var(--s-4) var(--s-3); padding: var(--s-3); border-radius: var(--r-md); font-size: var(--fs-sm); line-height: var(--lh-snug); flex-shrink: 0; }
+    .hy-banner .hy-bic { flex-shrink: 0; font-size: var(--fs-lg); }
+    .hy-banner .hy-btx { flex: 1; }
+    .hy-banner .hy-btx strong { display: block; font-family: var(--f-display); font-weight: var(--fw-bold); margin-bottom: 2px; }
+    .hy-banner .hy-btx .hy-sub { color: var(--text-sec); font-size: var(--fs-xs); }
+    .hy-banner .hy-retry { background: none; border: 1px solid currentColor; border-radius: var(--r-pill); padding: 3px var(--s-3); font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-xs); cursor: pointer; align-self: center; }
+    .hy-banner.err { background: hsl(var(--c-event) / 0.1); border: 1px solid hsl(var(--c-event) / 0.3); color: hsl(var(--c-event)); }
+    .hy-banner.off { background: hsl(var(--c-tool) / 0.1); border: 1px solid hsl(var(--c-tool) / 0.3); color: hsl(var(--c-tool)); }
+
+    /* jump-back confirmation (alertdialog) */
+    .hy-confirm-scrim { position: absolute; inset: 0; z-index: calc(var(--z-drawer) + 5); background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; padding: var(--s-5); }
+    .hy-confirm { width: 100%; max-width: 320px; background: var(--bg-card); border-radius: var(--r-xl); box-shadow: var(--shadow-lg); padding: var(--s-5); animation: hyPop var(--dur-md, 0.28s) var(--ease-out); }
+    @keyframes hyPop { from { transform: scale(0.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .hy-confirm .hy-c-icon { width: 44px; height: 44px; border-radius: var(--r-lg); background: hsl(var(--c-session) / 0.14); display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: var(--s-3); }
+    .hy-confirm h3 { font-family: var(--f-display); font-size: var(--fs-xl); font-weight: var(--fw-bold); color: var(--text); margin: 0 0 var(--s-2); }
+    .hy-confirm p { font-family: var(--f-body); font-size: var(--fs-md); line-height: var(--lh-snug); color: var(--text-sec); margin: 0 0 var(--s-4); }
+    .hy-confirm p .hy-ref { color: hsl(var(--c-kb)); font-family: var(--f-mono); font-weight: var(--fw-semi); }
+    .hy-confirm .hy-c-acts { display: flex; gap: var(--s-2); }
+    .hy-confirm .hy-c-acts button { flex: 1; padding: var(--s-3); border-radius: var(--r-md); font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-md); cursor: pointer; }
+    .hy-confirm .hy-c-cancel { background: var(--bg-muted); border: 1px solid var(--border); color: var(--text-sec); }
+    .hy-confirm .hy-c-go { background: hsl(var(--c-session)); border: 0; color: #fff; }
+    .hy-confirm .hy-c-go:hover { transform: translateY(-1px); }
+
+    /* desktop side-panel (slide from left) */
+    .hy-side-host { position: absolute; inset: 0; z-index: var(--z-drawer); display: flex; }
+    .hy-side-scrim { flex: 1; background: rgba(0,0,0,0.35); }
+    .hy-side { width: 380px; max-width: 70%; background: var(--bg-card); border-right: 1px solid var(--border); box-shadow: 10px 0 30px rgba(0,0,0,0.18); display: flex; flex-direction: column; order: -1; animation: hySlideRight var(--dur-md, 0.32s) var(--ease-out); }
+    @keyframes hySlideRight { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+    /* desktop left-panel "History" secondary action */
+    .dy-navitem.hy-secondary { color: hsl(var(--c-kb)); }
+    .dy-navitem.hy-secondary[aria-selected="true"] { background: hsl(var(--c-kb) / 0.12); color: hsl(var(--c-kb)); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .hy-sheet, .hy-side, .hy-confirm { animation: none; }
+    }
+  </style>
+
+  <section class="state-section" aria-labelledby="s6">
+    <span class="label">Stato 06 · Paragrafi Drawer<span class="cmp">PlaySessionShell · VisitedParagraphsDrawer</span></span>
+    <h2 id="s6">History paragrafi visitati — drawer + jump-back confirm</h2>
+    <p class="desc">Function #5. Aaron tocca 🕰 nella header per rivedere dove è stato. Bottom-sheet 75% (mobile, pattern canonico <code>03-drawer-variants</code> V1) / side-panel da sinistra (desktop). Paragrafo corrente §214 in sticky top (entity=session), lista newest-first con snippet + <strong>[→ vai qui]</strong>. Tap jump-back apre conferma <code>role="alertdialog"</code>: §214 resta in history, nessuna cancellazione. Search v1 = solo §numero/capitolo. Stati: default · confirm · empty · loading · error · offline (history cached, [vai qui] disabilitato).</p>
+
+    <div class="frames">
+
+      <!-- Mobile · default (drawer open, current + 3 entries) -->
+      <div class="phone" role="region" aria-label="Mobile · history default">
+        <span class="frame-label">Mobile · default</span>
+        <div class="phone-sbar"><span>22:46</span><span>📶 🔋 55%</span></div>
+        <div class="session-h"><span class="crumbs"><strong>Avalon</strong> · La grotta dei Goblin · <span class="para">§214</span></span><button class="hy-trigger" aria-label="Paragrafi visitati">🕰</button></div>
+        <div class="header-pips"><span class="manapip kb"><span class="badge">47</span></span><span class="manapip session"><span class="badge">1</span></span><span class="manapip toolkit"><span class="badge">12</span></span><span class="lbl-mini">· Cap 4</span></div>
+        <div class="tabs"><button class="tab" aria-selected="true"><span class="em">📖</span>Story</button><button class="tab" aria-selected="false"><span class="em">⚔️</span>Encounter</button><button class="tab" aria-selected="false"><span class="em">📚</span>Glossario</button></div>
+        <div class="content" aria-hidden="true" style="filter: blur(1px); opacity: 0.5;"><div class="para-card"><div class="num-row"><span class="num">§214</span><span class="chap">Cap 4</span></div><p class="text">La grotta si apre davanti a te…</p></div></div>
+        <div class="hy-scrim" role="dialog" aria-modal="true" aria-label="Paragrafi visitati">
+          <div class="hy-sheet">
+            <div class="hy-drag"></div>
+            <div class="hy-head"><span class="hy-title">🕰 Paragrafi visitati</span><button class="hy-x" aria-label="Chiudi">✕</button></div>
+            <div class="hy-search"><div class="hy-field"><span class="ic">🔍</span><input placeholder="Cerca per numero o capitolo…" aria-label="Cerca paragrafo"/></div><div class="hy-scope">Cerca per §numero o capitolo</div></div>
+            <div class="hy-current"><span class="hy-now-pin">📍 §214</span><span class="hy-now-meta">Cap 4</span><span class="hy-now-tag">ora</span></div>
+            <div class="hy-list">
+              <div class="hy-row">
+                <div class="hy-r-top"><span class="hy-para">§198</span><span class="hy-when">22 min fa</span><span class="hy-chap">Cap 4</span></div>
+                <p class="hy-snip">Entri nel corridoio buio, una corrente d'aria spegne la torcia. In fondo senti un raschiare metallico.</p>
+                <button class="hy-goto">→ vai qui</button>
+              </div>
+              <div class="hy-row">
+                <div class="hy-r-top"><span class="hy-para">§189</span><span class="hy-when">1h fa</span><span class="hy-chap">Cap 4</span></div>
+                <p class="hy-snip">Il ponte di corda oscilla sul precipizio. Niamh ti fa cenno di aspettare prima di attraversare.</p>
+                <button class="hy-goto">→ vai qui</button>
+              </div>
+              <div class="hy-row">
+                <div class="hy-r-top"><span class="hy-para">§134</span><span class="hy-when">2h fa</span><span class="hy-chap">Cap 3</span></div>
+                <p class="hy-snip">Korak ti porge la mano: "Ti devo un favore. Cercami quando avrai bisogno di passare il valico."</p>
+                <button class="hy-goto">→ vai qui</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile · jump-back confirm -->
+      <div class="phone" role="region" aria-label="Mobile · history jump-back confirm">
+        <span class="frame-label">Mobile · jump-back confirm</span>
+        <div class="phone-sbar"><span>22:47</span><span>📶 🔋 55%</span></div>
+        <div class="session-h"><span class="crumbs"><strong>Avalon</strong> · <span class="para">§214</span></span><button class="hy-trigger" aria-label="Paragrafi visitati">🕰</button></div>
+        <div class="header-pips"><span class="manapip kb"><span class="badge">47</span></span><span class="manapip session"><span class="badge">1</span></span><span class="manapip toolkit"><span class="badge">12</span></span></div>
+        <div class="tabs"><button class="tab" aria-selected="true"><span class="em">📖</span>Story</button><button class="tab" aria-selected="false"><span class="em">⚔️</span>Encounter</button><button class="tab" aria-selected="false"><span class="em">📚</span>Glossario</button></div>
+        <div class="content" aria-hidden="true" style="filter: blur(1px); opacity: 0.4;"></div>
+        <div class="hy-scrim" style="background: rgba(0,0,0,0.5);" aria-hidden="true">
+          <div class="hy-sheet" style="filter: blur(1px);">
+            <div class="hy-drag"></div>
+            <div class="hy-head"><span class="hy-title">🕰 Paragrafi visitati</span><button class="hy-x">✕</button></div>
+          </div>
+        </div>
+        <div class="hy-confirm-scrim" role="alertdialog" aria-modal="true" aria-labelledby="hyc-ti" aria-describedby="hyc-bd">
+          <div class="hy-confirm">
+            <div class="hy-c-icon">↩️</div>
+            <h3 id="hyc-ti">Tornare al §189?</h3>
+            <p id="hyc-bd">Perderai la posizione corrente <span class="hy-ref">§214</span>. Il §214 resterà comunque visitato nella history.</p>
+            <div class="hy-c-acts"><button class="hy-c-cancel">Annulla</button><button class="hy-c-go" autofocus>Sì, torna</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile · empty (only §1) -->
+      <div class="phone" role="region" aria-label="Mobile · history empty">
+        <span class="frame-label">Mobile · empty</span>
+        <div class="phone-sbar"><span>20:02</span><span>📶 🔋 88%</span></div>
+        <div class="session-h"><span class="crumbs"><strong>Avalon</strong> · <span class="para">§1</span></span><button class="hy-trigger">🕰</button></div>
+        <div class="header-pips"><span class="manapip session"><span class="badge">1</span></span><span class="lbl-mini">· Cap 1</span></div>
+        <div class="tabs"><button class="tab" aria-selected="true"><span class="em">📖</span>Story</button><button class="tab" aria-selected="false"><span class="em">⚔️</span>Encounter</button><button class="tab" aria-selected="false"><span class="em">📚</span>Glossario</button></div>
+        <div class="content" aria-hidden="true" style="opacity: 0.4;"></div>
+        <div class="hy-scrim" role="dialog" aria-modal="true" aria-label="Paragrafi visitati">
+          <div class="hy-sheet">
+            <div class="hy-drag"></div>
+            <div class="hy-head"><span class="hy-title">🕰 Paragrafi visitati</span><button class="hy-x">✕</button></div>
+            <div class="hy-current"><span class="hy-now-pin">📍 §1</span><span class="hy-now-meta">Cap 1</span><span class="hy-now-tag">ora</span></div>
+            <div class="hy-empty">
+              <div class="hy-ill">🧭</div>
+              <h3>Sei appena partito</h3>
+              <p>Continua a leggere per popolare la history dei paragrafi visitati.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile · loading -->
+      <div class="phone" role="region" aria-label="Mobile · history loading">
+        <span class="frame-label">Mobile · loading</span>
+        <div class="phone-sbar"><span>22:48</span><span>📶 🔋 54%</span></div>
+        <div class="session-h"><span class="crumbs"><strong>Avalon</strong> · <span class="para">§214</span></span><button class="hy-trigger">🕰</button></div>
+        <div class="header-pips"><span class="manapip kb"><span class="badge">47</span></span><span class="manapip session"><span class="badge">1</span></span></div>
+        <div class="tabs"><button class="tab" aria-selected="true"><span class="em">📖</span>Story</button><button class="tab" aria-selected="false"><span class="em">⚔️</span>Encounter</button><button class="tab" aria-selected="false"><span class="em">📚</span>Glossario</button></div>
+        <div class="content" aria-hidden="true" style="opacity: 0.4;"></div>
+        <div class="hy-scrim" role="dialog" aria-modal="true" aria-busy="true" aria-label="Paragrafi visitati">
+          <div class="hy-sheet">
+            <div class="hy-drag"></div>
+            <div class="hy-head"><span class="hy-title">🕰 Paragrafi visitati</span><button class="hy-x">✕</button></div>
+            <div class="hy-current"><span class="hy-now-pin">📍 §214</span><span class="hy-now-meta">Cap 4</span><span class="hy-now-tag">ora</span></div>
+            <div class="hy-list">
+              <div class="hy-skel"><div class="ln dy-shimmer" style="width: 45%;"></div><div class="ln dy-shimmer" style="width: 95%;"></div><div class="ln dy-shimmer" style="width: 30%; margin-bottom: 0;"></div></div>
+              <div class="hy-skel"><div class="ln dy-shimmer" style="width: 45%;"></div><div class="ln dy-shimmer" style="width: 80%;"></div><div class="ln dy-shimmer" style="width: 30%; margin-bottom: 0;"></div></div>
+              <div class="hy-skel"><div class="ln dy-shimmer" style="width: 45%;"></div><div class="ln dy-shimmer" style="width: 70%;"></div><div class="ln dy-shimmer" style="width: 30%; margin-bottom: 0;"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile · error -->
+      <div class="phone" role="region" aria-label="Mobile · history error">
+        <span class="frame-label">Mobile · error</span>
+        <div class="phone-sbar"><span>22:49</span><span>📶 🔋 54%</span></div>
+        <div class="session-h"><span class="crumbs"><strong>Avalon</strong> · <span class="para">§214</span></span><button class="hy-trigger">🕰</button></div>
+        <div class="header-pips"><span class="manapip kb"><span class="badge">47</span></span><span class="manapip session"><span class="badge">1</span></span></div>
+        <div class="tabs"><button class="tab" aria-selected="true"><span class="em">📖</span>Story</button><button class="tab" aria-selected="false"><span class="em">⚔️</span>Encounter</button><button class="tab" aria-selected="false"><span class="em">📚</span>Glossario</button></div>
+        <div class="content" aria-hidden="true" style="opacity: 0.4;"></div>
+        <div class="hy-scrim" role="dialog" aria-modal="true" aria-label="Paragrafi visitati">
+          <div class="hy-sheet">
+            <div class="hy-drag"></div>
+            <div class="hy-head"><span class="hy-title">🕰 Paragrafi visitati</span><button class="hy-x">✕</button></div>
+            <div class="hy-banner err" role="alert">
+              <span class="hy-bic">⚠️</span>
+              <div class="hy-btx"><strong style="color: hsl(var(--c-event));">Impossibile caricare la history</strong><span class="hy-sub">Controlla la connessione e riprova.</span></div>
+              <button class="hy-retry">↻ Riprova</button>
+            </div>
+            <div class="hy-current" style="opacity: 0.55;"><span class="hy-now-pin">📍 §214</span><span class="hy-now-meta">Cap 4</span><span class="hy-now-tag">ora</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile · offline (cached read-only, [vai qui] disabled + tip) -->
+      <div class="phone" role="region" aria-label="Mobile · history offline">
+        <span class="frame-label">Mobile · offline</span>
+        <div class="phone-sbar"><span>22:51</span><span>✈️ 🔋 53%</span></div>
+        <div class="session-h"><span class="crumbs"><strong>Avalon</strong> · <span class="para">§214</span></span><button class="hy-trigger">🕰</button></div>
+        <div class="header-pips"><span class="manapip kb"><span class="badge">47</span></span><span class="manapip session"><span class="badge">1</span></span></div>
+        <div class="tabs"><button class="tab" aria-selected="true"><span class="em">📖</span>Story</button><button class="tab" aria-selected="false"><span class="em">⚔️</span>Encounter</button><button class="tab" aria-selected="false"><span class="em">📚</span>Glossario</button></div>
+        <div class="content" aria-hidden="true" style="opacity: 0.4;"></div>
+        <div class="hy-scrim" role="dialog" aria-modal="true" aria-label="Paragrafi visitati">
+          <div class="hy-sheet">
+            <div class="hy-drag"></div>
+            <div class="hy-head"><span class="hy-title">🕰 Paragrafi visitati</span><button class="hy-x">✕</button></div>
+            <div class="hy-banner off" role="status">
+              <span class="hy-bic">📴</span>
+              <div class="hy-btx"><strong style="color: hsl(var(--c-tool));">Offline — history in sola lettura</strong><span class="hy-sub">Il salto sarà disponibile quando torni online.</span></div>
+            </div>
+            <div class="hy-current"><span class="hy-now-pin">📍 §214</span><span class="hy-now-meta">Cap 4</span><span class="hy-now-tag">ora</span></div>
+            <div class="hy-list">
+              <div class="hy-row hy-show-tip">
+                <div class="hy-r-top"><span class="hy-para">§198</span><span class="hy-when">22 min fa</span><span class="hy-chap">Cap 4</span></div>
+                <p class="hy-snip">Entri nel corridoio buio, una corrente d'aria spegne la torcia.</p>
+                <div class="hy-goto-wrap"><span class="hy-tip">Disponibile online</span><button class="hy-goto" disabled>→ vai qui</button></div>
+              </div>
+              <div class="hy-row">
+                <div class="hy-r-top"><span class="hy-para">§189</span><span class="hy-when">1h fa</span><span class="hy-chap">Cap 4</span></div>
+                <p class="hy-snip">Il ponte di corda oscilla sul precipizio.</p>
+                <div class="hy-goto-wrap"><button class="hy-goto" disabled>→ vai qui</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop · default (side-panel from left) -->
+      <div class="desktop" role="region" aria-label="Desktop · history default">
+        <span class="frame-label">Desktop · 1440px (scaled)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/camp-avalon-1?history=open</span></div>
+        <div class="d-body" style="position: relative;">
+          <aside class="d-side" style="width: 260px; display: flex; flex-direction: column;">
+            <div class="side-card" style="margin-bottom: var(--s-2);"><h4>Campagna</h4><div class="row"><span class="k">Capitolo</span><span class="v">4 · §214</span></div></div>
+            <nav aria-label="Sezioni sessione" style="display: flex; flex-direction: column; gap: 2px;">
+              <button class="dy-navitem"><span class="em">📖</span>Story<span class="cnt">§214</span></button>
+              <button class="dy-navitem"><span class="em">⚔️</span>Encounter<span class="cnt">—</span></button>
+              <button class="dy-navitem"><span class="em">📚</span>Glossario<span class="cnt">12</span></button>
+              <button class="dy-navitem"><span class="em">📓</span>Diary<span class="cnt">12</span></button>
+              <button class="dy-navitem hy-secondary" aria-selected="true"><span class="em">🕰</span>History<span class="cnt">47</span></button>
+            </nav>
+          </aside>
+          <div class="d-main" aria-hidden="true" style="opacity: 0.5;"><div class="para-card"><div class="num-row"><span class="num">§214</span><span class="chap">Cap 4</span></div><p class="text">La grotta si apre davanti a te, l'aria sa di muschio e metallo…</p></div></div>
+          <div class="hy-side-host">
+            <div class="hy-side">
+              <div class="hy-head"><span class="hy-title">🕰 Paragrafi visitati</span><button class="hy-x" aria-label="Chiudi">✕</button></div>
+              <div class="hy-search"><div class="hy-field"><span class="ic">🔍</span><input placeholder="Cerca per numero o capitolo…"/></div><div class="hy-scope">Cerca per §numero o capitolo</div></div>
+              <div class="hy-current"><span class="hy-now-pin">📍 §214</span><span class="hy-now-meta">Cap 4</span><span class="hy-now-tag">ora</span></div>
+              <div class="hy-list">
+                <div class="hy-row">
+                  <div class="hy-r-top"><span class="hy-para">§198</span><span class="hy-when">22 min fa</span><span class="hy-chap">Cap 4</span></div>
+                  <p class="hy-snip">Entri nel corridoio buio, una corrente d'aria spegne la torcia. In fondo senti un raschiare metallico.</p>
+                  <button class="hy-goto">→ vai qui</button>
+                </div>
+                <div class="hy-row">
+                  <div class="hy-r-top"><span class="hy-para">§189</span><span class="hy-when">1h fa</span><span class="hy-chap">Cap 4</span></div>
+                  <p class="hy-snip">Il ponte di corda oscilla sul precipizio. Niamh ti fa cenno di aspettare.</p>
+                  <button class="hy-goto">→ vai qui</button>
+                </div>
+                <div class="hy-row">
+                  <div class="hy-r-top"><span class="hy-para">§134</span><span class="hy-when">2h fa</span><span class="hy-chap">Cap 3</span></div>
+                  <p class="hy-snip">Korak ti porge la mano: "Ti devo un favore."</p>
+                  <button class="hy-goto">→ vai qui</button>
+                </div>
+              </div>
+            </div>
+            <div class="hy-side-scrim"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop · jump-back confirm -->
+      <div class="desktop" role="region" aria-label="Desktop · history confirm">
+        <span class="frame-label">Desktop · jump-back confirm</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/camp-avalon-1?history=open&jump=189</span></div>
+        <div class="d-body" style="position: relative;">
+          <aside class="d-side" style="width: 260px;"><div class="side-card"><h4>Campagna</h4><div class="row"><span class="k">Capitolo</span><span class="v">4 · §214</span></div></div></aside>
+          <div class="d-main" aria-hidden="true" style="opacity: 0.4;"></div>
+          <div class="hy-side-host"><div class="hy-side" style="filter: blur(1px);"><div class="hy-head"><span class="hy-title">🕰 Paragrafi visitati</span><button class="hy-x">✕</button></div></div><div class="hy-side-scrim"></div></div>
+          <div class="hy-confirm-scrim" role="alertdialog" aria-modal="true" aria-labelledby="hyc2-ti" aria-describedby="hyc2-bd">
+            <div class="hy-confirm">
+              <div class="hy-c-icon">↩️</div>
+              <h3 id="hyc2-ti">Tornare al §189?</h3>
+              <p id="hyc2-bd">Perderai la posizione corrente <span class="hy-ref">§214</span>. Il §214 resterà comunque visitato nella history.</p>
+              <div class="hy-c-acts"><button class="hy-c-cancel">Annulla</button><button class="hy-c-go" autofocus>Sì, torna</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ─── state-06 · HISTORY LAB (interattivo) ─── -->
+  <section class="state-section" aria-labelledby="s6lab">
+    <span class="label">Stato 06 · History Lab (interattivo)<span class="cmp">React · Babel standalone</span></span>
+    <h2 id="s6lab">History interattiva — apri drawer, cerca, salta indietro</h2>
+    <p class="desc">Versione runnable di state-06. 🕰 apre il drawer; la search filtra per §numero/capitolo client-side; <strong>[→ vai qui]</strong> apre la conferma jump-back (Sì → §214 resta in history, drawer chiude, story va al target). Stato dal selettore. Sorgente: <code>librogame-runthrough-play-session.jsx</code>.</p>
+    <div id="history-lab-root"></div>
+  </section>
+
+  <!-- ─── state-07-end-campaign ─── -->
+  <!-- SP8 · Function #8 End campaign / mark complete. Append-only. Classi nuove .ec- .
+       Trigger mobile: kebab ⋮ session-h. Trigger desktop: "Chiudi campagna" left-panel footer.
+       Dialog 3-vie SOFT (Completata / Archivia / Abbandona) → side effects differenziati.
+       Nota Socratica: reopen Abbandona = SINGLE confirm (riaprire è non-distruttivo).
+       Post-close: PDF CTA SOLO per Completata (server-side gen async, placeholder qui). -->
+  <style id="sp8-endcampaign-styles">
+    /* kebab menu (role=menu) */
+    .ec-kebab { position: absolute; top: 56px; right: var(--s-3); z-index: calc(var(--z-drawer) + 2); min-width: 210px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); padding: var(--s-2); animation: ecPop var(--dur-sm, 0.18s) var(--ease-out); transform-origin: top right; }
+    @keyframes ecPop { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .ec-kebab .ec-k-lbl { font-family: var(--f-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); padding: var(--s-2) var(--s-2) 4px; font-weight: var(--fw-bold); }
+    .ec-kebab .ec-k-div { height: 1px; background: var(--border-light); margin: 4px var(--s-2); }
+    .ec-kitem { display: flex; align-items: center; gap: var(--s-2); width: 100%; min-height: 44px; padding: var(--s-2); border-radius: var(--r-md); border: 0; background: transparent; cursor: pointer; text-align: left; font-family: var(--f-display); font-size: var(--fs-md); font-weight: var(--fw-semi); color: var(--text); }
+    .ec-kitem:hover { background: var(--bg-hover); }
+    .ec-kitem .ic { width: 30px; text-align: center; font-size: 16px; }
+    .ec-kitem.ec-target { color: hsl(var(--c-session)); font-weight: var(--fw-bold); }
+    .ec-kitem.ec-target:hover { background: hsl(var(--c-session) / 0.1); }
+
+    /* 3-vie dialog */
+    .ec-scrim { position: absolute; inset: 0; z-index: var(--z-drawer); background: rgba(0,0,0,0.5); display: flex; align-items: flex-end; }
+    .ec-scrim.ec-center { align-items: center; justify-content: center; padding: var(--s-5); }
+    .ec-dialog { width: 100%; background: var(--bg-card); border-radius: var(--r-2xl) var(--r-2xl) 0 0; box-shadow: var(--shadow-lg); padding: var(--s-4) var(--s-4) var(--s-5); display: flex; flex-direction: column; animation: ecSlideUp var(--dur-md, 0.3s) var(--ease-out); max-height: 92%; overflow-y: auto; }
+    .ec-scrim.ec-center .ec-dialog { max-width: 420px; border-radius: var(--r-2xl); animation: ecPop var(--dur-md, 0.28s) var(--ease-out); }
+    @keyframes ecSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .ec-grab { width: 40px; height: 4px; border-radius: var(--r-pill); background: var(--border-strong); margin: 0 auto var(--s-3); flex-shrink: 0; }
+    .ec-dialog h3 { font-family: var(--f-display); font-size: var(--fs-xl); font-weight: var(--fw-bold); color: var(--text); margin: 0 0 var(--s-1); }
+    .ec-dialog .ec-d-sub { font-family: var(--f-body); font-size: var(--fs-md); color: var(--text-sec); margin: 0 0 var(--s-4); line-height: var(--lh-snug); }
+
+    .ec-choices { display: flex; flex-direction: column; gap: var(--s-2); margin-bottom: var(--s-4); }
+    .ec-choice { display: flex; align-items: flex-start; gap: var(--s-3); padding: var(--s-3); border-radius: var(--r-lg); border: 1.5px solid var(--border); background: var(--bg); cursor: pointer; text-align: left; transition: border-color var(--dur-sm) var(--ease-out), background var(--dur-sm) var(--ease-out); }
+    .ec-choice:hover { border-color: hsl(var(--e) / 0.5); }
+    .ec-choice[aria-pressed="true"] { border-color: hsl(var(--e)); background: hsl(var(--e) / 0.08); }
+    .ec-choice .ec-c-ic { width: 42px; height: 42px; border-radius: var(--r-md); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; background: hsl(var(--e) / 0.15); color: hsl(var(--e)); }
+    .ec-choice .ec-c-tx { flex: 1; min-width: 0; }
+    .ec-choice .ec-c-tx .ec-c-ti { font-family: var(--f-display); font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--text); display: flex; align-items: center; gap: var(--s-2); }
+    .ec-choice .ec-c-tx .ec-c-ds { font-family: var(--f-body); font-size: var(--fs-sm); color: var(--text-sec); margin-top: 2px; line-height: var(--lh-snug); }
+    .ec-choice .ec-c-radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border-strong); flex-shrink: 0; align-self: center; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; }
+    .ec-choice[aria-pressed="true"] .ec-c-radio { background: hsl(var(--e)); border-color: hsl(var(--e)); }
+    .ec-choice .ec-c-note { display: inline-block; margin-top: var(--s-2); padding: 2px var(--s-2); border-radius: var(--r-sm); background: hsl(var(--e) / 0.12); color: hsl(var(--e)); font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-semi); }
+
+    .ec-d-acts { display: flex; gap: var(--s-2); }
+    .ec-d-acts button { flex: 1; min-height: 48px; border-radius: var(--r-md); font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-md); cursor: pointer; }
+    .ec-d-cancel { background: var(--bg-muted); border: 1px solid var(--border); color: var(--text-sec); flex: 0 0 auto !important; padding: 0 var(--s-5); }
+    .ec-d-confirm { background: hsl(var(--e, var(--c-session))); border: 0; color: #fff; }
+    .ec-d-confirm:disabled { background: var(--bg-muted); color: var(--text-muted); cursor: not-allowed; }
+    .ec-d-confirm:not(:disabled):hover { transform: translateY(-1px); }
+
+    /* loading overlay (BE state transition) */
+    .ec-loading { position: absolute; inset: 0; z-index: calc(var(--z-drawer) + 4); background: var(--glass-bg); backdrop-filter: blur(8px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s-3); }
+    .ec-spinner { width: 46px; height: 46px; border-radius: 50%; border: 4px solid hsl(var(--c-session) / 0.2); border-top-color: hsl(var(--c-session)); animation: ecSpin 0.8s linear infinite; }
+    @keyframes ecSpin { to { transform: rotate(360deg); } }
+    .ec-loading .ec-l-tx { font-family: var(--f-display); font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--text); }
+    .ec-loading .ec-l-sub { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); }
+
+    /* error banner */
+    .ec-error { margin: var(--s-4); padding: var(--s-4); border-radius: var(--r-lg); border: 1px solid hsl(var(--c-event) / 0.35); background: hsl(var(--c-event) / 0.08); }
+    .ec-error .ec-e-top { display: flex; gap: var(--s-2); align-items: flex-start; }
+    .ec-error .ec-e-ic { font-size: 22px; flex-shrink: 0; }
+    .ec-error h4 { font-family: var(--f-display); font-size: var(--fs-md); color: hsl(var(--c-event)); margin: 0 0 2px; }
+    .ec-error p { font-size: var(--fs-sm); color: var(--text-sec); line-height: var(--lh-snug); margin: 0; }
+    .ec-error .ec-e-acts { display: flex; gap: var(--s-2); margin-top: var(--s-3); }
+    .ec-error .ec-e-acts button { min-height: 40px; padding: 0 var(--s-4); border-radius: var(--r-sm); font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-sm); cursor: pointer; }
+    .ec-error .ec-e-retry { background: hsl(var(--c-event)); color: #fff; border: 0; }
+    .ec-error .ec-e-force { background: transparent; border: 1px solid var(--border-strong); color: var(--text-sec); }
+
+    /* post-close summary */
+    .ec-summary { display: flex; flex-direction: column; align-items: center; text-align: center; padding: var(--s-6) var(--s-5) var(--s-5); flex: 1; overflow-y: auto; }
+    .ec-summary .ec-s-badge { width: 76px; height: 76px; border-radius: var(--r-2xl); display: flex; align-items: center; justify-content: center; font-size: 40px; margin-bottom: var(--s-4); }
+    .ec-summary.ec-done .ec-s-badge { background: hsl(var(--c-toolkit) / 0.15); }
+    .ec-summary.ec-arch .ec-s-badge { background: hsl(var(--c-session) / 0.15); }
+    .ec-summary .ec-s-kick { font-family: var(--f-mono); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.1em; font-weight: var(--fw-bold); }
+    .ec-summary.ec-done .ec-s-kick { color: hsl(var(--c-toolkit)); }
+    .ec-summary.ec-arch .ec-s-kick { color: hsl(var(--c-session)); }
+    .ec-summary h2 { font-family: var(--f-display); font-size: var(--fs-2xl); font-weight: var(--fw-bold); color: var(--text); margin: var(--s-1) 0 var(--s-2); }
+    .ec-summary .ec-s-camp { font-family: var(--f-body); font-size: var(--fs-md); color: var(--text-sec); margin: 0 0 var(--s-5); }
+    .ec-stats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); width: 100%; margin-bottom: var(--s-5); }
+    .ec-stat { padding: var(--s-3); border-radius: var(--r-md); background: var(--bg); border: 1px solid var(--border-light); text-align: left; }
+    .ec-stat .ec-st-v { font-family: var(--f-display); font-size: var(--fs-xl); font-weight: var(--fw-ext); color: var(--text); }
+    .ec-stat .ec-st-k { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+    .ec-stat.ec-wide { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; }
+    .ec-stat.ec-wide .ec-st-v { font-size: var(--fs-md); }
+    .ec-cta-col { display: flex; flex-direction: column; gap: var(--s-2); width: 100%; }
+    .ec-btn-pdf { min-height: 50px; border-radius: var(--r-md); background: hsl(var(--c-kb)); color: #fff; border: 0; font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-md); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: var(--s-2); box-shadow: 0 4px 14px hsl(var(--c-kb) / 0.28); }
+    .ec-btn-pdf:hover { transform: translateY(-1px); }
+    .ec-btn-reopen { min-height: 48px; border-radius: var(--r-md); background: hsl(var(--c-session) / 0.12); color: hsl(var(--c-session)); border: 1px solid hsl(var(--c-session) / 0.3); font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-md); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: var(--s-2); }
+    .ec-btn-lib { min-height: 48px; border-radius: var(--r-md); background: transparent; color: var(--text-sec); border: 1px solid var(--border-strong); font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-md); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: var(--s-2); }
+    .ec-pdf-note { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin-top: var(--s-1); }
+    .ec-pending { display: inline-flex; align-items: center; gap: 5px; margin-top: var(--s-2); padding: 3px var(--s-3); border-radius: var(--r-pill); background: hsl(var(--c-tool) / 0.12); color: hsl(var(--c-tool)); font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-bold); }
+    .ec-pending .dot { width: 7px; height: 7px; border-radius: 50%; background: hsl(var(--c-tool)); }
+
+    /* confetti (reduced-motion safe) */
+    .ec-confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; }
+    .ec-confetti i { position: absolute; top: -10px; width: 8px; height: 8px; border-radius: 1px; animation: ecFall 2.6s var(--ease-out) forwards; }
+    @keyframes ecFall { to { transform: translateY(720px) rotate(540deg); opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) {
+      .ec-kebab, .ec-dialog, .ec-summary { animation: none; }
+      .ec-spinner { animation: ecSpin 1.6s linear infinite; }
+      .ec-confetti { display: none; }
+    }
+  </style>
+
+  <section class="state-section" aria-labelledby="s7">
+    <span class="label">Stato 07 · End Campaign<span class="cmp">PlaySessionShell · EndCampaignFlow</span></span>
+    <h2 id="s7">Chiudi campagna — kebab → dialog 3-vie → summary</h2>
+    <p class="desc">Function #8. Kebab ⋮ (mobile) / "Chiudi campagna" left-panel (desktop) → dialog 3-vie soft: <strong>✅ Completata</strong> (toolkit, lock + PDF server-side + "Completate") · <strong>📥 Archivia</strong> (session, no lock/PDF, "Riapri") · <strong>❌ Abbandona</strong> (event, lock, reopen <em>single-confirm</em>). Post-close summary con stats; CTA PDF <strong>solo</strong> per Completata. Stati: kebab · dialog · loading · error (+forza chiusura locale) · offline (pending sync) · post-close Completata · post-close Archivia. Light+dark, mobile+desktop.</p>
+
+    <div class="frames">
+
+      <!-- Mobile · kebab aperto -->
+      <div class="phone" role="region" aria-label="Mobile · kebab menu">
+        <span class="frame-label">Mobile · kebab menu</span>
+        <div class="phone-sbar"><span>23:02</span><span>📶 🔋 50%</span></div>
+        <div class="session-h"><span class="crumbs"><strong>Avalon</strong> · La grotta dei Goblin · <span class="para">§214</span></span><button class="menu" aria-label="Menu sessione" aria-expanded="true">⋮</button></div>
+        <div class="header-pips"><span class="manapip kb"><span class="badge">47</span></span><span class="manapip session"><span class="badge">1</span></span><span class="manapip toolkit"><span class="badge">12</span></span></div>
+        <div class="tabs"><button class="tab" aria-selected="true"><span class="em">📖</span>Story</button><button class="tab" aria-selected="false"><span class="em">⚔️</span>Encounter</button><button class="tab" aria-selected="false"><span class="em">📚</span>Glossario</button></div>
+        <div class="content" aria-hidden="true" style="opacity: 0.45;"><div class="para-card"><div class="num-row"><span class="num">§214</span><span class="chap">Cap 4</span></div><p class="text">La grotta si apre davanti a te…</p></div></div>
+        <div class="ec-kebab" role="menu" aria-label="Impostazioni sessione">
+          <div class="ec-k-lbl">Impostazioni sessione</div>
+          <button class="ec-kitem" role="menuitem"><span class="ic">📦</span>Esporta dati</button>
+          <div class="ec-k-div"></div>
+          <button class="ec-kitem ec-target" role="menuitem"><span class="ic">🏁</span>Chiudi campagna</button>
+          <button class="ec-kitem" role="menuitem"><span class="ic">⚙️</span>Preferenze</button>
+        </div>
+      </div>
+
+      <!-- Mobile · dialog 3-vie -->
+      <div class="phone" role="region" aria-label="Mobile · dialog 3-vie">
+        <span class="frame-label">Mobile · dialog 3-vie</span>
+        <div class="phone-sbar"><span>23:03</span><span>📶 🔋 50%</span></div>
+        <div class="session-h"><span class="crumbs"><strong>Avalon</strong> · <span class="para">§214</span></span><button class="menu">⋮</button></div>
+        <div class="header-pips"><span class="manapip kb"><span class="badge">47</span></span><span class="manapip session"><span class="badge">1</span></span><span class="manapip toolkit"><span class="badge">12</span></span></div>
+        <div class="tabs"><button class="tab" aria-selected="true"><span class="em">📖</span>Story</button><button class="tab" aria-selected="false"><span class="em">⚔️</span>Encounter</button><button class="tab" aria-selected="false"><span class="em">📚</span>Glossario</button></div>
+        <div class="content" aria-hidden="true" style="opacity: 0.3;"></div>
+        <div class="ec-scrim" role="alertdialog" aria-modal="true" aria-labelledby="ec-d1-ti">
+          <div class="ec-dialog">
+            <div class="ec-grab"></div>
+            <h3 id="ec-d1-ti">Come vuoi chiudere?</h3>
+            <p class="ec-d-sub">"La grotta dei Goblin" · Cap 4 · §214</p>
+            <div class="ec-choices">
+              <button class="ec-choice" style="--e: var(--c-toolkit);" aria-pressed="true">
+                <span class="ec-c-ic">✅</span>
+                <span class="ec-c-tx"><span class="ec-c-ti">Completata</span><span class="ec-c-ds">Ho finito la storia. Genero il PDF riassunto.</span></span>
+                <span class="ec-c-radio">✓</span>
+              </button>
+              <button class="ec-choice" style="--e: var(--c-session);" aria-pressed="false">
+                <span class="ec-c-ic">📥</span>
+                <span class="ec-c-tx"><span class="ec-c-ti">Archivia</span><span class="ec-c-ds">Chiudo per ora, posso riaprire quando voglio.</span></span>
+                <span class="ec-c-radio"></span>
+              </button>
+              <button class="ec-choice" style="--e: var(--c-event);" aria-pressed="false">
+                <span class="ec-c-ic">❌</span>
+                <span class="ec-c-tx"><span class="ec-c-ti">Abbandona</span><span class="ec-c-ds">Chiudo definitivamente.</span><span class="ec-c-note">Riapri con un solo tap</span></span>
+                <span class="ec-c-radio"></span>
+              </button>
+            </div>
+            <div class="ec-d-acts"><button class="ec-d-cancel">Annulla</button><button class="ec-d-confirm" style="--e: var(--c-toolkit);">Completa campagna</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile · loading -->
+      <div class="phone" role="region" aria-label="Mobile · closing loading">
+        <span class="frame-label">Mobile · loading</span>
+        <div class="phone-sbar"><span>23:03</span><span>📶 🔋 49%</span></div>
+        <div class="session-h"><span class="crumbs"><strong>Avalon</strong> · <span class="para">§214</span></span><button class="menu">⋮</button></div>
+        <div class="header-pips"><span class="manapip kb"><span class="badge">47</span></span><span class="manapip session"><span class="badge">1</span></span></div>
+        <div class="tabs"><button class="tab" aria-selected="true"><span class="em">📖</span>Story</button><button class="tab" aria-selected="false"><span class="em">⚔️</span>Encounter</button><button class="tab" aria-selected="false"><span class="em">📚</span>Glossario</button></div>
+        <div class="content" aria-hidden="true" style="opacity: 0.3;"></div>
+        <div class="ec-loading" role="status" aria-live="polite">
+          <div class="ec-spinner"></div>
+          <span class="ec-l-tx">Chiudendo la campagna…</span>
+          <span class="ec-l-sub">Genero il riassunto e blocco i paragrafi</span>
+        </div>
+      </div>
+
+      <!-- Mobile · error -->
+      <div class="phone" role="region" aria-label="Mobile · close error">
+        <span class="frame-label">Mobile · error</span>
+        <div class="phone-sbar"><span>23:04</span><span>📶 🔋 49%</span></div>
+        <div class="session-h"><span class="crumbs"><strong>Avalon</strong> · <span class="para">§214</span></span><button class="menu">⋮</button></div>
+        <div class="header-pips"><span class="manapip kb"><span class="badge">47</span></span><span class="manapip session"><span class="badge">1</span></span></div>
+        <div class="tabs"><button class="tab" aria-selected="true"><span class="em">📖</span>Story</button><button class="tab" aria-selected="false"><span class="em">⚔️</span>Encounter</button><button class="tab" aria-selected="false"><span class="em">📚</span>Glossario</button></div>
+        <div class="content">
+          <div class="ec-error" role="alert">
+            <div class="ec-e-top"><span class="ec-e-ic">⚠️</span><div><h4>Impossibile chiudere — riprova</h4><p>Il server non ha risposto. La tua partita è al sicuro, niente è andato perso.</p></div></div>
+            <div class="ec-e-acts"><button class="ec-e-retry">↻ Riprova</button><button class="ec-e-force">Forza chiusura locale</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile · offline (pending sync) -->
+      <div class="phone" role="region" aria-label="Mobile · close offline">
+        <span class="frame-label">Mobile · offline (pending sync)</span>
+        <div class="phone-sbar"><span>23:06</span><span>✈️ 🔋 48%</span></div>
+        <div class="session-h"><span class="crumbs"><strong>Avalon</strong> · La grotta dei Goblin</span><button class="menu">⋮</button></div>
+        <div class="header-pips"><span class="manapip kb"><span class="badge">47</span></span><span class="manapip session"><span class="badge">1</span></span></div>
+        <div class="tabs"><button class="tab" aria-selected="false"><span class="em">📖</span>Story</button><button class="tab" aria-selected="false"><span class="em">⚔️</span>Encounter</button><button class="tab" aria-selected="false"><span class="em">📚</span>Glossario</button></div>
+        <div class="content">
+          <div class="ec-summary ec-arch">
+            <div class="ec-s-badge">📥</div>
+            <span class="ec-s-kick">Archiviata · in coda</span>
+            <h2>Chiusura segnata</h2>
+            <p class="ec-s-camp">"La grotta dei Goblin"</p>
+            <span class="ec-pending"><span class="dot"></span>Pending sync · si completa online</span>
+            <div class="ec-cta-col" style="margin-top: var(--s-5);">
+              <button class="ec-btn-lib">🏠 Torna alla libreria</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile · post-close Completata -->
+      <div class="phone" role="region" aria-label="Mobile · post-close completata">
+        <span class="frame-label">Mobile · post-close · Completata</span>
+        <div class="phone-sbar"><span>23:04</span><span>📶 🔋 49%</span></div>
+        <div class="session-h"><span class="crumbs"><strong>Avalon</strong> · La grotta dei Goblin</span></div>
+        <div class="content" style="padding: 0;">
+          <div class="ec-confetti" aria-hidden="true">
+            <i style="left: 12%; background: hsl(var(--c-toolkit)); animation-delay: 0s;"></i>
+            <i style="left: 28%; background: hsl(var(--c-session)); animation-delay: 0.2s;"></i>
+            <i style="left: 46%; background: hsl(var(--c-kb)); animation-delay: 0.1s;"></i>
+            <i style="left: 64%; background: hsl(var(--c-game)); animation-delay: 0.35s;"></i>
+            <i style="left: 82%; background: hsl(var(--c-chat)); animation-delay: 0.15s;"></i>
+          </div>
+          <div class="ec-summary ec-done">
+            <div class="ec-s-badge">🏆</div>
+            <span class="ec-s-kick">Completata</span>
+            <h2>Hai finito la storia!</h2>
+            <p class="ec-s-camp">"La grotta dei Goblin" · Tainted Grail</p>
+            <div class="ec-stats">
+              <div class="ec-stat"><div class="ec-st-v">3h 24m</div><div class="ec-st-k">Durata</div></div>
+              <div class="ec-stat"><div class="ec-st-v">47</div><div class="ec-st-k">Paragrafi visitati</div></div>
+              <div class="ec-stat"><div class="ec-st-v">12</div><div class="ec-st-k">Note diary</div></div>
+              <div class="ec-stat"><div class="ec-st-v">8</div><div class="ec-st-k">Foto translate</div></div>
+              <div class="ec-stat ec-wide"><span class="ec-st-k" style="margin: 0;">Chat regola</span><span class="ec-st-v">15</span></div>
+            </div>
+            <div class="ec-cta-col">
+              <button class="ec-btn-pdf">📄 Scarica PDF riassunto</button>
+              <span class="ec-pdf-note">Il PDF viene generato sul server · ~10s</span>
+              <button class="ec-btn-lib">🏠 Torna alla libreria</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile · post-close Archivia -->
+      <div class="phone" role="region" aria-label="Mobile · post-close archivia">
+        <span class="frame-label">Mobile · post-close · Archivia</span>
+        <div class="phone-sbar"><span>23:05</span><span>📶 🔋 49%</span></div>
+        <div class="session-h"><span class="crumbs"><strong>Avalon</strong> · La grotta dei Goblin</span></div>
+        <div class="content" style="padding: 0;">
+          <div class="ec-summary ec-arch">
+            <div class="ec-s-badge">📥</div>
+            <span class="ec-s-kick">Archiviata</span>
+            <h2>Campagna messa via</h2>
+            <p class="ec-s-camp">"La grotta dei Goblin" · la riprendi quando vuoi</p>
+            <div class="ec-stats">
+              <div class="ec-stat"><div class="ec-st-v">3h 24m</div><div class="ec-st-k">Giocato finora</div></div>
+              <div class="ec-stat"><div class="ec-st-v">§214</div><div class="ec-st-k">Ultimo paragrafo</div></div>
+              <div class="ec-stat"><div class="ec-st-v">47</div><div class="ec-st-k">Paragrafi visitati</div></div>
+              <div class="ec-stat"><div class="ec-st-v">12</div><div class="ec-st-k">Note diary</div></div>
+            </div>
+            <div class="ec-cta-col">
+              <button class="ec-btn-reopen">▶️ Riapri campagna</button>
+              <button class="ec-btn-lib">🏠 Torna alla libreria</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop · dialog 3-vie -->
+      <div class="desktop" role="region" aria-label="Desktop · dialog 3-vie">
+        <span class="frame-label">Desktop · dialog 3-vie</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/camp-avalon-1?close=1</span></div>
+        <div class="d-body" style="position: relative;">
+          <aside class="d-side" style="width: 260px; display: flex; flex-direction: column;">
+            <div class="side-card" style="margin-bottom: var(--s-2);"><h4>Campagna</h4><div class="row"><span class="k">Capitolo</span><span class="v">4 · §214</span></div></div>
+            <nav style="display: flex; flex-direction: column; gap: 2px;"><button class="dy-navitem"><span class="em">📖</span>Story<span class="cnt">§214</span></button><button class="dy-navitem"><span class="em">📓</span>Diary<span class="cnt">12</span></button><button class="dy-navitem"><span class="em">🕰</span>History<span class="cnt">47</span></button></nav>
+            <div class="dy-d-foot"><button class="dy-endbtn" style="background: hsl(var(--c-session) / 0.12); color: hsl(var(--c-session)); border-color: hsl(var(--c-session) / 0.3);">🏁 Chiudi campagna</button></div>
+          </aside>
+          <div class="d-main" aria-hidden="true" style="opacity: 0.4;"></div>
+          <div class="ec-scrim ec-center" role="alertdialog" aria-modal="true" aria-labelledby="ec-d2-ti">
+            <div class="ec-dialog">
+              <h3 id="ec-d2-ti">Come vuoi chiudere?</h3>
+              <p class="ec-d-sub">"La grotta dei Goblin" · Cap 4 · §214</p>
+              <div class="ec-choices">
+                <button class="ec-choice" style="--e: var(--c-toolkit);" aria-pressed="true"><span class="ec-c-ic">✅</span><span class="ec-c-tx"><span class="ec-c-ti">Completata</span><span class="ec-c-ds">Ho finito la storia. Genero il PDF riassunto.</span></span><span class="ec-c-radio">✓</span></button>
+                <button class="ec-choice" style="--e: var(--c-session);" aria-pressed="false"><span class="ec-c-ic">📥</span><span class="ec-c-tx"><span class="ec-c-ti">Archivia</span><span class="ec-c-ds">Chiudo per ora, posso riaprire quando voglio.</span></span><span class="ec-c-radio"></span></button>
+                <button class="ec-choice" style="--e: var(--c-event);" aria-pressed="false"><span class="ec-c-ic">❌</span><span class="ec-c-tx"><span class="ec-c-ti">Abbandona</span><span class="ec-c-ds">Chiudo definitivamente.</span><span class="ec-c-note">Riapri con un solo tap</span></span><span class="ec-c-radio"></span></button>
+              </div>
+              <div class="ec-d-acts"><button class="ec-d-cancel">Annulla</button><button class="ec-d-confirm" style="--e: var(--c-toolkit);">Completa campagna</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop · post-close Completata -->
+      <div class="desktop" role="region" aria-label="Desktop · post-close completata">
+        <span class="frame-label">Desktop · post-close · Completata</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/camp-avalon-1/summary</span></div>
+        <div class="d-body" style="justify-content: center; align-items: center; position: relative;">
+          <div class="ec-confetti" aria-hidden="true"><i style="left: 20%; background: hsl(var(--c-toolkit));"></i><i style="left: 40%; background: hsl(var(--c-session)); animation-delay: 0.2s;"></i><i style="left: 60%; background: hsl(var(--c-kb)); animation-delay: 0.1s;"></i><i style="left: 78%; background: hsl(var(--c-game)); animation-delay: 0.3s;"></i></div>
+          <div class="ec-summary ec-done" style="max-width: 460px; overflow: visible;">
+            <div class="ec-s-badge">🏆</div>
+            <span class="ec-s-kick">Completata</span>
+            <h2>Hai finito la storia!</h2>
+            <p class="ec-s-camp">"La grotta dei Goblin" · Tainted Grail</p>
+            <div class="ec-stats" style="grid-template-columns: repeat(3, 1fr);">
+              <div class="ec-stat"><div class="ec-st-v">3h 24m</div><div class="ec-st-k">Durata</div></div>
+              <div class="ec-stat"><div class="ec-st-v">47</div><div class="ec-st-k">Paragrafi</div></div>
+              <div class="ec-stat"><div class="ec-st-v">12</div><div class="ec-st-k">Note diary</div></div>
+              <div class="ec-stat"><div class="ec-st-v">8</div><div class="ec-st-k">Foto translate</div></div>
+              <div class="ec-stat"><div class="ec-st-v">15</div><div class="ec-st-k">Chat regola</div></div>
+              <div class="ec-stat"><div class="ec-st-v">100%</div><div class="ec-st-k">Storia</div></div>
+            </div>
+            <div class="ec-cta-col" style="flex-direction: row;">
+              <button class="ec-btn-pdf" style="flex: 1;">📄 Scarica PDF riassunto</button>
+              <button class="ec-btn-lib" style="flex: 1;">🏠 Libreria</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ─── state-07 · END CAMPAIGN LAB (interattivo) ─── -->
+  <section class="state-section" aria-labelledby="s7lab">
+    <span class="label">Stato 07 · End Campaign Lab (interattivo)<span class="cmp">React · Babel standalone</span></span>
+    <h2 id="s7lab">Flusso chiusura — kebab → scegli → conferma → summary</h2>
+    <p class="desc">Versione runnable di state-07. Apri il kebab ⋮ → "Chiudi campagna" → scegli una delle 3 vie (il CTA e l'accent cambiano) → conferma: parte il loading e arriva il summary corretto (PDF solo per Completata, Riapri per Archivia/Abbandona). Il selettore "Esito server" forza loading/error/offline alla conferma. Sorgente: <code>librogame-runthrough-play-session.jsx</code>.</p>
+    <div id="endcampaign-lab-root"></div>
+  </section>
+
+</main>
+
+<!-- DEMO-NAV flow links: other librogame screens reachable from this shell -->
+<nav aria-hidden="true" style="display:none">
+  <a href="librogame-runthrough-encounter-cheatsheet.html" onclick="return false;">Encounter Cheatsheet</a>
+  <a href="librogame-runthrough-error-states.html" onclick="return false;">Error States</a>
+  <a href="librogame-runthrough-game-detail.html" onclick="return false;">Game Detail</a>
+  <a href="librogame-runthrough-glossary-editor.html" onclick="return false;">Glossary Editor</a>
+  <a href="librogame-runthrough-library-search.html" onclick="return false;">Library Search</a>
+  <a href="librogame-runthrough-quota-credits.html" onclick="return false;">Quota Credits</a>
+  <a href="librogame-runthrough-session-end.html" onclick="return false;">Session End</a>
+  <a href="librogame-runthrough-setup-chat.html" onclick="return false;">Setup Chat</a>
+  <a href="librogame-runthrough-translate-viewer.html" onclick="return false;">Translate Viewer</a>
+  <a href="sp6-libro-game-index.html" onclick="return false;">SP6 Libro Game Index</a>
+  <a href="sp6-libro-game-photo-upload.html" onclick="return false;">SP6 Photo Upload</a>
+  <a href="sp6-libro-game-resume-state.html" onclick="return false;">SP6 Resume State</a>
+  <a href="librogame-game-night-storyboard.html" onclick="return false;">Game Night Storyboard</a>
+</nav>
+<script>
+  document.getElementById('theme-btn').addEventListener('click', () => {
+    const r = document.documentElement;
+    r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark';
+  });
+</script>
+
+<!-- ─── SP8 interactive lab loaders (append-only, below freeze line) ─── -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="librogame-runthrough-play-session.jsx"></script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+name: Release-gate Auto-Revert (Phase 2b)
+
+# Phase 2b (#1445) — auto-revert bot for main-staging post-merge blockers.
+# Cron */5min + workflow_dispatch. Kill-switched off until operator flips
+# bot.phase2b.enabled=true in .github/release-gates.yml.
+#
+# Spec: docs/superpowers/specs/2026-06-21-issue-1445-release-gate-auto-revert-phase-2b-design.md
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: release-gate-auto-revert
+  cancel-in-progress: false
+
+permissions:
+  contents: write           # for state-branch commit + revert branch
+  pull-requests: write      # for gh pr create + merge
+  checks: read              # for Checks API
+  actions: read             # for workflow runs context
+  # NO actions:write — AC-9 prevents self-modification
+  # NO id-token:write — no OIDC needed
+
+jobs:
+  decide:
+    name: Auto-revert decision tick
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa  # v4
+        with:
+          version: 9
+
+      - name: Install release-gate deps
+        working-directory: scripts/release-gate
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure git author
+        run: |
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+
+      - name: Run auto-revert decision
+        working-directory: scripts/release-gate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SLACK_RELEASE_WEBHOOK_URL: ${{ secrets.SLACK_RELEASE_WEBHOOK_URL }}
+        run: node run-auto-revert.mjs

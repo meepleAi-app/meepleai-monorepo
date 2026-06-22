@@ -87,7 +87,7 @@ export function TypingIndicator({ visible, agentName, className = '' }: TypingIn
           animate="animate"
           exit="exit"
           transition={{ duration: 0.2 }}
-          className={`flex items-center space-x-1 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-2xl w-fit ${className}`}
+          className={`flex items-center space-x-1 px-4 py-2 bg-muted rounded-2xl w-fit ${className}`}
         >
           {/* Screen reader text */}
           <span className="sr-only">{agentName} is typing...</span>
@@ -101,7 +101,7 @@ export function TypingIndicator({ visible, agentName, className = '' }: TypingIn
                 initial="initial"
                 animate="animate"
                 transition={getDotTransition(delay)}
-                className="w-2 h-2 bg-slate-500 dark:bg-slate-400 rounded-full"
+                className="w-2 h-2 bg-muted-foreground dark:bg-muted-foreground rounded-full"
               />
             ))}
           </div>

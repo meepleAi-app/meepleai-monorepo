@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin tools chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13d admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 import { Loader2, X } from 'lucide-react';
@@ -13,7 +14,7 @@ const DEP_STATUS_DOT: Record<string, string> = {
   Healthy: 'bg-green-500',
   Degraded: 'bg-yellow-500',
   Down: 'bg-red-500',
-  Unknown: 'bg-gray-400',
+  Unknown: 'bg-muted-foreground',
 };
 
 interface ServiceDetailPanelProps {
@@ -25,7 +26,7 @@ interface ServiceDetailPanelProps {
 function DependencyRow({ dep }: { dep: ServiceDependency }) {
   const dotColor = DEP_STATUS_DOT[dep.status] ?? DEP_STATUS_DOT.Unknown;
   return (
-    <div className="flex items-center justify-between rounded-md border border-slate-200/40 dark:border-zinc-700/40 px-3 py-2">
+    <div className="flex items-center justify-between rounded-md border border-border/40 dark:border-zinc-700/40 px-3 py-2">
       <div className="flex items-center gap-2">
         <span className={`h-2 w-2 rounded-full ${dotColor}`} />
         <span className="text-sm">{dep.displayName}</span>
@@ -45,7 +46,7 @@ export function ServiceDetailPanel({
   const deps = depsData?.dependencies ?? [];
 
   return (
-    <div className="rounded-lg border border-slate-200/60 dark:border-zinc-700/60 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl p-4">
+    <div className="rounded-lg border border-border/60 dark:border-zinc-700/60 bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl p-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold">{serviceName}</h3>

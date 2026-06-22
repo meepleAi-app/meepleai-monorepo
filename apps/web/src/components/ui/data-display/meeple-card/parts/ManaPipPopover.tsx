@@ -62,7 +62,7 @@ export function ManaPipPopover({
                 <Link
                   href={item.href}
                   onClick={() => onOpenChange(false)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-white/5 transition-colors"
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-card/5 transition-colors"
                   style={{ color: 'var(--mc-text, inherit)' }}
                 >
                   <span aria-hidden="true" className="shrink-0 text-base leading-none">

@@ -562,7 +562,7 @@
   <a href="index.html" class="brand" style="color:inherit;"><span class="brand-mark">M</span><span>MeepleAI</span></a>
   <span style="font-size:11px;padding:3px 8px;border-radius:6px;background:var(--bg-muted);font-family:var(--f-mono);color:var(--text-muted);">02 · Desktop Patterns</span>
   <div class="spacer"></div>
-  <a href="01-screens.html">← Screens</a>
+  <a href="01-screens.html" /* DEMO-NAV */>← Screens</a>
   <a href="index.html">Hub</a>
   <a href="03-drawer-variants.html">Drawer →</a>
 </nav>
@@ -606,7 +606,7 @@
           <div class="dtop">
             <div class="dbrand"><span class="dbrand-mark">M</span><span>MeepleAI</span></div>
             <div class="dsearch"><input placeholder="Cerca in tutto..."></div>
-            <button class="btn sm" style="background:hsl(var(--c-game));color:#fff;">+ Nuovo</button>
+            <button class="btn sm" style="background:hsl(var(--c-game));color:#fff;" onclick="window.location.href='03-drawer-variants.html'" /* DEMO-NAV */>+ Nuovo</button>
             <div class="davatar">MR</div>
           </div>
           <div class="pA-body">
@@ -701,8 +701,8 @@
                 </div>
               </div>
               <div class="acts">
-                <button class="b">🤖 Chiedi AI</button>
-                <button class="b">🔧 Setup</button>
+                <button class="b" onclick="window.location.href='03-drawer-variants.html'" /* DEMO-NAV */>🤖 Chiedi AI</button>
+                <button class="b" onclick="window.location.href='librogame-runthrough-setup-wizard.html'" /* DEMO-NAV */>🔧 Setup</button>
                 <button class="b pri">▶️ Gioca</button>
               </div>
             </div>
@@ -712,7 +712,7 @@
             <div class="pC-tab e-kb" style="--e:var(--c-kb);">📄 KB <span class="b">3</span></div>
             <div class="pC-tab e-agent" style="--e:var(--c-agent);">🤖 Agenti <span class="b">1</span></div>
             <div class="pC-tab e-chat" style="--e:var(--c-chat);">💬 Chat <span class="b">2</span></div>
-            <div class="pC-tab e-session" style="--e:var(--c-session);">🎯 Sessioni <span class="b">2</span></div>
+            <div class="pC-tab e-session" style="--e:var(--c-session);" onclick="window.location.href='sp4-session-live.html'" /* DEMO-NAV */>🎯 Sessioni <span class="b">2</span></div>
             <div class="pC-tab e-toolkit" style="--e:var(--c-toolkit);">🧰 Toolkit <span class="b">1</span></div>
             <div class="pC-tab">📊 Stats</div>
             <div class="pC-tab">📜 Storico</div>
@@ -937,7 +937,7 @@
       </div>
       <div class="dt">
         <div class="dt-tab act">📋 Live</div>
-        <div class="dt-tab">🔧 Toolkit <span class="b">${s.toolCount}</span></div>
+        <div class="dt-tab" onclick="window.location.href='sp4-hub-toolkits.html'" /* DEMO-NAV */>🔧 Toolkit <span class="b">${s.toolCount}</span></div>
         <div class="dt-tab">🕒 Timeline</div>
       </div>
       <div class="dc">
@@ -964,7 +964,7 @@
         `).join('')}
       </div>
       <div class="dfoot">
-        <button class="b pri">▶️ Riprendi</button>
+        <button class="b pri" onclick="window.location.href='librogame-runthrough-resume-picker.html'" /* DEMO-NAV */>▶️ Riprendi</button>
         <button class="b sec">📊</button>
         <button class="b sec">↗️</button>
       </div>

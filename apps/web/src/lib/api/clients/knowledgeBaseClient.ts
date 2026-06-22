@@ -247,5 +247,23 @@ export function createKnowledgeBaseClient({ httpClient }: CreateKnowledgeBaseCli
       );
       return result ?? [];
     },
+
+    /**
+     * KB Hub (#1481): Trigger full KB re-index for a game
+     * Returns a job ID for async progress polling (status endpoint TBD in MVP).
+     * @param gameId Game ID (GUID format)
+     */
+    async reindexKb(gameId: string): Promise<void> {
+      await httpClient.post(`/api/v1/games/${encodeURIComponent(gameId)}/kb/reindex`, {});
+    },
+
+    /**
+     * KB Hub (#1481): Trigger RAPTOR hierarchical clustering rebuild
+     * Available for Pro tier only (backend enforces). Returns job ID.
+     * @param gameId Game ID (GUID format)
+     */
+    async rebuildRaptor(gameId: string): Promise<void> {
+      await httpClient.post(`/api/v1/games/${encodeURIComponent(gameId)}/kb/raptor/rebuild`, {});
+    },
   };
 }

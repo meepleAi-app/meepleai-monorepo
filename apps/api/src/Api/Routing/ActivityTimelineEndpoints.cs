@@ -69,7 +69,7 @@ internal static class ActivityTimelineEndpoints
         var skip = (clampedPage - 1) * clampedPageSize;
 
         var query = new GetActivityTimelineQuery(
-            UserId: session.User!.Id,
+            UserId: session.Principal!.Subject.Id,
             Types: types,
             SearchTerm: search,
             DateFrom: dateFrom,

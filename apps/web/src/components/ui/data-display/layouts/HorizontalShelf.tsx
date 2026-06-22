@@ -34,7 +34,7 @@ export function HorizontalShelf({
         <span className="font-quicksand text-[13px] font-bold" style={{ color: colorStr }}>
           {title}
         </span>
-        <span className="text-[10px] text-[var(--nh-text-muted,#555)]">{count}</span>
+        <span className="text-[10px] text-[var(--text-muted,#555)]">{count}</span>
       </div>
       <div
         className="flex gap-4 overflow-x-auto pb-2 scroll-smooth [scroll-snap-type:x_mandatory] [-webkit-overflow-scrolling:touch]"

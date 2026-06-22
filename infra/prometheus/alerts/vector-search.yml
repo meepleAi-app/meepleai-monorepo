@@ -1,8 +1,0 @@
-# Vector Search Monitoring Rules
-# Vector search now uses pgvector (PostgreSQL extension) — monitored via PostgreSQL alerts
-# Qdrant container removed in favor of pgvector for MVP stack simplification
-
-groups:
-  - name: vector_search_alerts
-    interval: 30s
-    rules: []

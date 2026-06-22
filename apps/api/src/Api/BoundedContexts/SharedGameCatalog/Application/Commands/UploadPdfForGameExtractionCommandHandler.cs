@@ -66,7 +66,8 @@ internal sealed class UploadPdfForGameExtractionCommandHandler
             var storageResult = await _blobStorageService.StoreAsync(
                 fileStream,
                 sanitizedFileName,
-                gameId: "wizard-temp",
+                category: BlobCategory.Pdf,
+                resourceKey: "wizard-temp",
                 ct: cancellationToken).ConfigureAwait(false);
 
             if (!storageResult.Success)

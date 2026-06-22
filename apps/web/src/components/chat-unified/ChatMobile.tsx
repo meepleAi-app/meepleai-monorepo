@@ -16,7 +16,12 @@ import { useRouter } from 'next/navigation';
 import { MobileHeader } from '@/components/ui/navigation/MobileHeader';
 import { useAgentChatStream } from '@/hooks/useAgentChatStream';
 import { api } from '@/lib/api';
-import { qaStream, QA_EVENT_TYPES, type InlineCitationMatch, type ContinuationData } from '@/lib/api/clients/chatClient';
+import {
+  qaStream,
+  QA_EVENT_TYPES,
+  type InlineCitationMatch,
+  type ContinuationData,
+} from '@/lib/api/clients/chatClient';
 import type { ChatThreadDto, ChatThreadMessageDto } from '@/lib/api/schemas/chat.schemas';
 import { cn } from '@/lib/utils';
 
@@ -37,6 +42,8 @@ interface LocalMessage {
   inlineCitations?: InlineCitationMatch[];
   snippets?: Array<{ text: string; source: string; page: number; line: number; score: number }>;
   continuationToken?: string;
+  /** True when this assistant message was set from an SSE Error event (#1814). */
+  isError?: boolean;
 }
 
 interface CitationItem {
@@ -77,8 +84,10 @@ function MessageBubble({
         className={cn(
           'max-w-[85%] rounded-2xl px-4 py-2.5 text-sm font-nunito',
           isUser
-            ? 'bg-[var(--gaming-bg-elevated)] text-white rounded-br-md'
-            : 'bg-[var(--gaming-bg-glass)] backdrop-blur-sm border border-[var(--gaming-border-glass)] text-[var(--gaming-text-primary)] rounded-bl-md'
+            ? 'bg-[var(--bg-card)] text-white rounded-br-md'
+            : message.isError
+              ? 'bg-red-500/10 border border-red-500/30 text-red-400 rounded-bl-md'
+              : 'bg-[var(--glass-bg)] backdrop-blur-sm border border-[var(--glass-border)] text-[var(--text)] rounded-bl-md'
         )}
       >
         {!isUser && message.inlineCitations && message.inlineCitations.length > 0 ? (
@@ -105,13 +114,18 @@ function MessageBubble({
             excludeIndices={new Set(message.inlineCitations?.map(c => c.snippetIndex) ?? [])}
           />
         )}
-        {/* Continue button */}
-        {!isUser && message.continuationToken && onContinue && (
-          <ContinueButton
-            onContinue={() => onContinue(message.continuationToken!)}
-            isLoading={isSending ?? false}
-          />
-        )}
+        {/* Continue button — bind the token to a const so the closure captures
+            a non-null value (TypeScript can't preserve the narrow into the
+            arrow function body). */}
+        {!isUser &&
+          message.continuationToken &&
+          onContinue &&
+          (() => {
+            const token = message.continuationToken;
+            return (
+              <ContinueButton onContinue={() => onContinue(token)} isLoading={isSending ?? false} />
+            );
+          })()}
       </div>
     </div>
   );
@@ -125,7 +139,7 @@ function StreamingBubble({ content }: { content: string }) {
       <div
         className={cn(
           'max-w-[85%] rounded-2xl rounded-bl-md px-4 py-2.5 text-sm font-nunito',
-          'bg-[var(--gaming-bg-glass)] backdrop-blur-sm border border-[var(--gaming-border-glass)] text-[var(--gaming-text-primary)]'
+          'bg-[var(--glass-bg)] backdrop-blur-sm border border-[var(--glass-border)] text-[var(--text)]'
         )}
       >
         <p className="whitespace-pre-wrap break-words">{content}</p>
@@ -140,14 +154,14 @@ function StreamingBubble({ content }: { content: string }) {
 function StreamingLoadingDots({ message }: { message: string }) {
   return (
     <div className="flex justify-start">
-      <div className="max-w-[85%] rounded-2xl rounded-bl-md px-4 py-3 bg-[var(--gaming-bg-glass)] border border-[var(--gaming-border-glass)]">
+      <div className="max-w-[85%] rounded-2xl rounded-bl-md px-4 py-3 bg-[var(--glass-bg)] border border-[var(--glass-border)]">
         <div className="flex items-center gap-2">
           <div className="flex gap-1">
             <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-bounce" />
             <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-bounce [animation-delay:0.15s]" />
             <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-bounce [animation-delay:0.3s]" />
           </div>
-          <span className="text-xs text-[var(--gaming-text-secondary)] font-nunito">{message}</span>
+          <span className="text-xs text-[var(--text-sec)] font-nunito">{message}</span>
         </div>
       </div>
     </div>
@@ -266,18 +280,24 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
             abortController.signal
           )) {
             if (event.type === QA_EVENT_TYPES.TOKEN) {
-              const token = typeof event.data === 'string' ? event.data : ((event.data as { token?: string })?.token ?? '');
+              const token =
+                typeof event.data === 'string'
+                  ? event.data
+                  : ((event.data as { token?: string })?.token ?? '');
               if (token) {
                 appendedContent += token;
                 const content = appendedContent;
                 setMessages(prev =>
-                  prev.map(m => m.id === lastAssistant.id ? { ...m, content, continuationToken: undefined } : m)
+                  prev.map(m =>
+                    m.id === lastAssistant.id ? { ...m, content, continuationToken: undefined } : m
+                  )
                 );
               }
             }
           }
-        } catch { /* handled */ }
-        finally {
+        } catch {
+          /* handled */
+        } finally {
           setIsSending(false);
           qaAbortRef.current = null;
         }
@@ -311,6 +331,10 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
 
       // QA stream path: game context available → use RAG QA streaming
       if (thread?.gameId) {
+        // Capture gameId in a const so the async closure below preserves the
+        // narrow (TypeScript can't keep the `thread?.gameId` narrow alive
+        // across the async IIFE boundary).
+        const gameId = thread.gameId;
         setIsSending(true);
         const assistantMsgId = `assistant-${Date.now()}`;
         setMessages(prev => [
@@ -333,7 +357,7 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
             await api.chat.addMessage(threadId, { content: text, role: 'user' });
 
             for await (const event of qaStream(
-              { gameId: thread.gameId!, query: text, chatId: threadId, responseStyle: 'concise' },
+              { gameId, query: text, chatId: threadId, responseStyle: 'concise' },
               abortController.signal
             )) {
               switch (event.type) {
@@ -341,7 +365,9 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
                   const data = event.data as { citations: InlineCitationMatch[] };
                   if (data.citations) {
                     setMessages(prev =>
-                      prev.map(m => m.id === assistantMsgId ? { ...m, inlineCitations: data.citations } : m)
+                      prev.map(m =>
+                        m.id === assistantMsgId ? { ...m, inlineCitations: data.citations } : m
+                      )
                     );
                   }
                   break;
@@ -350,16 +376,30 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
                   const data = event.data as ContinuationData;
                   if (data.continuationToken) {
                     setMessages(prev =>
-                      prev.map(m => m.id === assistantMsgId ? { ...m, continuationToken: data.continuationToken } : m)
+                      prev.map(m =>
+                        m.id === assistantMsgId
+                          ? { ...m, continuationToken: data.continuationToken }
+                          : m
+                      )
                     );
                   }
                   break;
                 }
                 case QA_EVENT_TYPES.CITATIONS: {
-                  const data = event.data as { citations?: Array<{ text: string; source: string; page: number; line: number; score: number }> };
+                  const data = event.data as {
+                    citations?: Array<{
+                      text: string;
+                      source: string;
+                      page: number;
+                      line: number;
+                      score: number;
+                    }>;
+                  };
                   if (data.citations) {
                     setMessages(prev =>
-                      prev.map(m => m.id === assistantMsgId ? { ...m, snippets: data.citations } : m)
+                      prev.map(m =>
+                        m.id === assistantMsgId ? { ...m, snippets: data.citations } : m
+                      )
                     );
                   }
                   break;
@@ -399,15 +439,24 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
                   break;
                 }
                 case QA_EVENT_TYPES.ERROR: {
-                  const errData = event.data as { message?: string };
+                  // BE sends `{ errorMessage, errorCode }` (Models/Contracts.cs StreamingErrorEvent).
+                  // Read both names defensively in case future emitters use the shorter `message`.
+                  // #1814: previously fell through to the post-loop finalize block which overwrote
+                  // `content` with the empty `finalAnswer`, hiding the error from the user.
+                  const errData = event.data as {
+                    errorMessage?: string;
+                    errorCode?: string;
+                    message?: string;
+                  };
+                  const errorMsg =
+                    errData?.errorMessage ?? errData?.message ?? 'Errore nella risposta';
                   setMessages(prev =>
                     prev.map(m =>
-                      m.id === assistantMsgId
-                        ? { ...m, content: errData?.message ?? 'Errore nella risposta' }
-                        : m
+                      m.id === assistantMsgId ? { ...m, content: errorMsg, isError: true } : m
                     )
                   );
-                  break;
+                  abortController.abort();
+                  return;
                 }
               }
             }
@@ -484,7 +533,7 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
   // Loading
   if (isLoading) {
     return (
-      <div className="flex flex-col h-dvh bg-[var(--gaming-bg-base)]">
+      <div className="flex flex-col h-dvh bg-[var(--bg)]">
         <MobileHeader title="Caricamento..." onBack={() => router.push('/chat')} />
         <div className="flex-1 flex items-center justify-center">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-500" />
@@ -496,7 +545,7 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
   // Load error
   if (loadError) {
     return (
-      <div className="flex flex-col h-dvh bg-[var(--gaming-bg-base)]">
+      <div className="flex flex-col h-dvh bg-[var(--bg)]">
         <MobileHeader title="Errore" onBack={() => router.push('/chat')} />
         <div className="flex-1 flex items-center justify-center px-6">
           <div className="text-center">
@@ -514,20 +563,25 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
   }
 
   return (
-    <div className="flex flex-col h-dvh bg-[var(--gaming-bg-base)]">
+    <div className="flex flex-col h-dvh bg-[var(--bg)]">
       {/* Header */}
       <MobileHeader title={headerTitle} onBack={() => router.push('/chat')} />
 
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3">
         {messages.length === 0 && !streamState.isStreaming && (
-          <div className="text-center py-12 text-[var(--gaming-text-secondary)] font-nunito">
+          <div className="text-center py-12 text-[var(--text-sec)] font-nunito">
             <p className="text-sm">Inizia la conversazione inviando un messaggio.</p>
           </div>
         )}
 
         {messages.map(msg => (
-          <MessageBubble key={msg.id} message={msg} onContinue={handleContinue} isSending={isSending} />
+          <MessageBubble
+            key={msg.id}
+            message={msg}
+            onContinue={handleContinue}
+            isSending={isSending}
+          />
         ))}
 
         {/* Streaming states */}
@@ -559,7 +613,7 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
       )}
 
       {/* Input area */}
-      <div className="border-t border-[var(--gaming-border-glass)] px-3 py-3 bg-[var(--gaming-bg-elevated)] backdrop-blur-sm">
+      <div className="border-t border-[var(--glass-border)] px-3 py-3 bg-[var(--bg-card)] backdrop-blur-sm">
         <div className="flex items-end gap-2">
           <textarea
             value={inputValue}
@@ -568,12 +622,13 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
             placeholder="Scrivi un messaggio..."
             rows={1}
             className={cn(
-              'flex-1 resize-none rounded-xl border border-[var(--gaming-border-glass)] px-4 py-2.5',
-              'bg-[var(--gaming-bg-glass)] text-sm font-nunito',
-              'placeholder:text-[var(--gaming-text-secondary)] focus:outline-none focus:ring-2 focus:ring-amber-500/40',
+              'flex-1 resize-none rounded-xl border border-[var(--glass-border)] px-4 py-2.5',
+              'bg-[var(--glass-bg)] text-sm font-nunito',
+              'placeholder:text-[var(--text-sec)] focus:outline-none focus:ring-2 focus:ring-amber-500/40',
               'max-h-24'
             )}
             disabled={streamState.isStreaming}
+            data-testid="message-input"
           />
           <button
             onClick={() => handleSend()}
@@ -582,12 +637,13 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
               'p-2.5 rounded-xl transition-all duration-200 shrink-0',
               inputValue.trim() && !streamState.isStreaming
                 ? 'bg-amber-500 hover:bg-amber-600 text-white'
-                : 'bg-[var(--gaming-bg-glass)] text-[var(--gaming-text-secondary)]'
+                : 'bg-[var(--glass-bg)] text-[var(--text-sec)]'
             )}
             aria-label="Invia messaggio"
+            data-testid="send-btn"
           >
             {streamState.isStreaming ? (
-              <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <div className="h-5 w-5 border-2 border-border border-t-white rounded-full animate-spin" />
             ) : (
               <Send className="h-5 w-5" />
             )}

@@ -25,11 +25,13 @@ internal static class AdminUserSearchCrudEndpoints
         // User search endpoint (authenticated users)
         group.MapGet("/users/search", HandleSearchUsers)
         .RequireSession() // Issue #1446: Automatic session validation
+        .RequireRateLimiting("UsersSearch") // Issue #950 (W1-PR2): bound enumeration
         .WithName("SearchUsers")
         .WithTags("Users")
-        .WithDescription("Search users by display name or email for @mention autocomplete (max 10 results)")
+        .WithDescription("Search users by display name or email (Issue #950 W1-PR2: player invite autocomplete; default limit=10, max=50, rate-limited 10 req/s per user)")
         .Produces<IEnumerable<UserSearchResultDto>>(StatusCodes.Status200OK)
-        .Produces(StatusCodes.Status401Unauthorized);
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status429TooManyRequests);
     }
 
     private static void MapUserCrudEndpoints(RouteGroupBuilder group)
@@ -56,15 +58,24 @@ internal static class AdminUserSearchCrudEndpoints
         IMediator mediator,
         HttpContext context,
         ILogger<Program> logger,
-        CancellationToken ct)
+        CancellationToken ct,
+        int? limit = null)
     {
         // Session validated by RequireSessionFilter
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-        logger.LogInformation("User {UserId} searching for users with query: {Query}", session!.User!.Id, LogSanitizer.Sanitize(query));
+        // Issue #950 (W1-PR2): clamp limit to [1, 50]. Default 10 preserves legacy
+        // @mention autocomplete behavior; the wizard's invite picker (spec §7b.1)
+        // can request up to 50 for richer suggestions.
+        var clamped = Math.Clamp(limit ?? 10, 1, 50);
 
-        // Use CQRS Query for user search
-        var searchQuery = new SearchUsersQuery(query, MaxResults: 10);
+        logger.LogInformation(
+            "User {UserId} searching for users with query: {Query}, limit: {Limit}",
+            session!.Principal!.Subject.Id,
+            LogSanitizer.Sanitize(query),
+            clamped);
+
+        var searchQuery = new SearchUsersQuery(query, MaxResults: clamped);
         var users = await mediator.Send(searchQuery, ct).ConfigureAwait(false);
 
         return Results.Ok(users);
@@ -101,7 +112,7 @@ internal static class AdminUserSearchCrudEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        logger.LogInformation("Admin {AdminId} creating new user with email {Email}", session!.User!.Id, DataMasking.MaskEmail(request.Email));
+        logger.LogInformation("Admin {AdminId} creating new user with email {Email}", session!.Principal!.Subject.Id, DataMasking.MaskEmail(request.Email));
         var command = new CreateUserCommand(request.Email, request.Password, request.DisplayName, request.Role ?? "user");
         var user = await mediator.Send(command, ct).ConfigureAwait(false);
         logger.LogInformation("User {UserId} created successfully", user.Id);
@@ -119,7 +130,7 @@ internal static class AdminUserSearchCrudEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        logger.LogInformation("Admin {AdminId} updating user {UserId}", session!.User!.Id, LogSanitizer.Sanitize(id));
+        logger.LogInformation("Admin {AdminId} updating user {UserId}", session!.Principal!.Subject.Id, LogSanitizer.Sanitize(id));
         var command = new UpdateUserCommand(id, request.Email, request.DisplayName, request.Role);
         var user = await mediator.Send(command, ct).ConfigureAwait(false);
         logger.LogInformation("User {UserId} updated successfully", LogSanitizer.Sanitize(id));
@@ -136,8 +147,8 @@ internal static class AdminUserSearchCrudEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        logger.LogInformation("Admin {AdminId} deleting user {UserId}", session!.User!.Id, LogSanitizer.Sanitize(id));
-        var command = new DeleteUserCommand(id, session.User!.Id.ToString());
+        logger.LogInformation("Admin {AdminId} deleting user {UserId}", session!.Principal!.Subject.Id, LogSanitizer.Sanitize(id));
+        var command = new DeleteUserCommand(id, session.Principal!.Subject.Id.ToString());
         await mediator.Send(command, ct).ConfigureAwait(false);
         logger.LogInformation("User {UserId} deleted successfully", LogSanitizer.Sanitize(id));
         return Results.NoContent();

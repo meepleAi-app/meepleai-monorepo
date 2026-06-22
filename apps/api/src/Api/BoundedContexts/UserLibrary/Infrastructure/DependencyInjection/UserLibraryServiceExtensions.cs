@@ -22,6 +22,7 @@ internal static class UserLibraryServiceExtensions
         services.AddScoped<ILibraryShareLinkRepository, LibraryShareLinkRepository>();
         services.AddScoped<IGameLabelRepository, GameLabelRepository>();
         services.AddScoped<IPrivateGameRepository, PrivateGameRepository>(); // Issue #3662: Private games
+        services.AddScoped<IUserGamebookViewRepository, UserGamebookViewRepository>(); // Issue #1288: gamebook index view
         services.AddScoped<IProposalMigrationRepository, ProposalMigrationRepository>(); // Issue #3666: Migration choice flow
         services.AddScoped<IWishlistRepository, WishlistRepository>(); // Issue #3917: Wishlist management
         services.AddScoped<IUserCollectionRepository, UserCollectionRepository>(); // Issue #4263: Generic user collections

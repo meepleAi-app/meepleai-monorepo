@@ -3,14 +3,14 @@ using Api.SharedKernel.Domain.ValueObjects;
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Indexing;
 
 /// <summary>
-/// ADR-016 Phase 3: Payload structure for Qdrant points.
+/// ADR-016 Phase 3: Payload structure for pgvector points.
 /// Contains metadata for filtering, parent/child relationships, and context retrieval.
 /// Value Object - immutable, equality by value.
 /// </summary>
 internal sealed class ChunkPayload : ValueObject
 {
     /// <summary>
-    /// Game identifier for filtering (stored as string for Qdrant keyword index).
+    /// Game identifier for filtering (stored as string for pgvector keyword index).
     /// </summary>
     public string GameId { get; }
 

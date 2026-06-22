@@ -37,7 +37,7 @@ function AddNoteForm({ type, onAdd }: AddNoteFormProps) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-2 w-full rounded-lg border border-dashed border-gray-300 py-2 text-xs text-gray-500 hover:border-[hsl(142,70%,45%)] hover:text-[hsl(142,70%,45%)]"
+        className="mt-2 w-full rounded-lg border border-dashed border-border py-2 text-xs text-muted-foreground hover:border-[hsl(142,70%,45%)] hover:text-[hsl(142,70%,45%)]"
         data-testid={`add-note-${type}-btn`}
       >
         + Aggiungi nota {type === 'shared' ? 'condivisa' : 'privata'}
@@ -53,7 +53,7 @@ function AddNoteForm({ type, onAdd }: AddNoteFormProps) {
         autoFocus
         rows={2}
         placeholder={type === 'shared' ? 'Nota visibile a tutti...' : 'Nota visibile solo a te...'}
-        className="w-full resize-none rounded-lg border border-gray-300 p-2 text-sm outline-none focus:border-[hsl(142,70%,45%)]"
+        className="w-full resize-none rounded-lg border border-border p-2 text-sm outline-none focus:border-[hsl(142,70%,45%)]"
         data-testid={`add-note-${type}-input`}
       />
       <div className="flex justify-end gap-2">
@@ -63,7 +63,7 @@ function AddNoteForm({ type, onAdd }: AddNoteFormProps) {
             setContent('');
             setOpen(false);
           }}
-          className="rounded-lg px-3 py-1 text-xs text-gray-500 hover:bg-gray-100"
+          className="rounded-lg px-3 py-1 text-xs text-muted-foreground hover:bg-muted"
         >
           Annulla
         </button>
@@ -71,7 +71,7 @@ function AddNoteForm({ type, onAdd }: AddNoteFormProps) {
           type="button"
           onClick={handleSubmit}
           disabled={!content.trim()}
-          className="rounded-lg bg-[hsl(142,70%,45%)] px-3 py-1 text-xs font-medium text-white disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
+          className="rounded-lg bg-[hsl(142,70%,45%)] px-3 py-1 text-xs font-medium text-white disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
           data-testid={`add-note-${type}-submit`}
         >
           Aggiungi
@@ -145,12 +145,12 @@ export function NotesTab() {
     <div className="flex flex-col gap-4" data-testid="notes-tab">
       {/* Shared notes */}
       <section>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Condivise
         </h3>
         <div className="flex flex-col gap-2">
           {sharedNotes.length === 0 ? (
-            <p className="text-xs italic text-gray-400">Nessuna nota condivisa</p>
+            <p className="text-xs italic text-muted-foreground">Nessuna nota condivisa</p>
           ) : (
             sharedNotes.map(note => (
               <NoteCard
@@ -166,16 +166,16 @@ export function NotesTab() {
         </div>
       </section>
 
-      <hr className="border-gray-200" />
+      <hr className="border-border" />
 
       {/* Private notes */}
       <section>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           🔒 Le mie note
         </h3>
         <div className="flex flex-col gap-2">
           {privateNotes.length === 0 ? (
-            <p className="text-xs italic text-gray-400">Nessuna nota privata</p>
+            <p className="text-xs italic text-muted-foreground">Nessuna nota privata</p>
           ) : (
             privateNotes.map(note => (
               <NoteCard

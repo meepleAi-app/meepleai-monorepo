@@ -1,4 +1,5 @@
 using Api.SharedKernel.Domain.Entities;
+using TimeZoneConverter;
 
 namespace Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 
@@ -37,6 +38,27 @@ internal sealed class NotificationPreferences : AggregateRoot<Guid>
     public bool EmailOnGameNightReminder { get; private set; } = true;
     public bool PushOnGameNightReminder { get; private set; } = true;
 
+    // Quiet hours - ADR-076 (#2383 follow-up)
+    /// <summary>
+    /// IANA timezone identifier (e.g. "Europe/Rome", "America/New_York") used to
+    /// compute local time for quiet-hours gating. Defaults to "UTC".
+    /// Resolved cross-platform via <see cref="TimeZoneConverter"/> on Linux hosts.
+    /// </summary>
+    public string TimeZone { get; private set; } = "UTC";
+
+    /// <summary>
+    /// Optional start of daily quiet-hours window (local time per <see cref="TimeZone"/>).
+    /// When set together with <see cref="QuietHoursEnd"/>, email + Slack channels
+    /// are gated server-side. In-app channels are NEVER suppressed (records persisted).
+    /// </summary>
+    public TimeOnly? QuietHoursStart { get; private set; }
+
+    /// <summary>
+    /// Optional end of daily quiet-hours window. May be earlier than <see cref="QuietHoursStart"/>
+    /// (window crosses midnight, e.g. 22:00 → 08:00).
+    /// </summary>
+    public TimeOnly? QuietHoursEnd { get; private set; }
+
     // Slack - Issue #slack-notification-system
     public bool SlackEnabled { get; private set; } = true;
     public bool SlackOnDocumentReady { get; private set; } = true;
@@ -72,12 +94,16 @@ internal sealed class NotificationPreferences : AggregateRoot<Guid>
         bool slackEnabled = true, bool slackOnDocumentReady = true, bool slackOnDocumentFailed = true,
         bool slackOnRetryAvailable = false, bool slackOnGameNightInvitation = true,
         bool slackOnGameNightReminder = true, bool slackOnShareRequestCreated = true,
-        bool slackOnShareRequestApproved = true, bool slackOnBadgeEarned = true)
+        bool slackOnShareRequestApproved = true, bool slackOnBadgeEarned = true,
+        string timeZone = "UTC", TimeOnly? quietHoursStart = null, TimeOnly? quietHoursEnd = null)
     {
         return new NotificationPreferences
         {
             Id = id,
             UserId = userId,
+            TimeZone = string.IsNullOrWhiteSpace(timeZone) ? "UTC" : timeZone,
+            QuietHoursStart = quietHoursStart,
+            QuietHoursEnd = quietHoursEnd,
             EmailOnDocumentReady = emailReady,
             EmailOnDocumentFailed = emailFailed,
             EmailOnRetryAvailable = emailRetry,
@@ -178,5 +204,50 @@ internal sealed class NotificationPreferences : AggregateRoot<Guid>
         UpdateEmailPreferences(emailReady, emailFailed, emailRetry);
         UpdatePushPreferences(pushReady, pushFailed, pushRetry);
         UpdateInAppPreferences(inAppReady, inAppFailed, inAppRetry);
+    }
+
+    /// <summary>
+    /// Updates timezone + quiet-hours window. Per ADR-076, gating applies only to
+    /// email + Slack channels server-side. In-app records persist regardless.
+    /// Pass null start/end to disable quiet hours.
+    /// </summary>
+    public void UpdateQuietHours(string timeZone, TimeOnly? start, TimeOnly? end)
+    {
+        if (string.IsNullOrWhiteSpace(timeZone))
+            throw new ArgumentException("Time zone cannot be empty", nameof(timeZone));
+
+        if (start.HasValue != end.HasValue)
+            throw new ArgumentException(
+                "Quiet hours start and end must both be set or both be null",
+                nameof(start));
+
+        TimeZone = timeZone;
+        QuietHoursStart = start;
+        QuietHoursEnd = end;
+    }
+
+    /// <summary>
+    /// Returns true if the given UTC timestamp falls inside the user's quiet-hours
+    /// window. Window may cross midnight (start > end, e.g. 22:00 → 08:00 local).
+    /// Returns false if quiet hours not configured.
+    /// </summary>
+    public bool IsQuietHoursActive(DateTimeOffset utcNow)
+    {
+        if (!QuietHoursStart.HasValue || !QuietHoursEnd.HasValue)
+            return false;
+
+        var tzInfo = TZConvert.GetTimeZoneInfo(TimeZone);
+        var localNow = TimeOnly.FromDateTime(
+            TimeZoneInfo.ConvertTimeFromUtc(utcNow.UtcDateTime, tzInfo));
+
+        var start = QuietHoursStart.Value;
+        var end = QuietHoursEnd.Value;
+
+        // Window crosses midnight (e.g. 22:00 → 08:00): active if localNow >= start OR localNow < end
+        if (start > end)
+            return localNow >= start || localNow < end;
+
+        // Normal window (e.g. 09:00 → 17:00): active if start <= localNow < end
+        return localNow >= start && localNow < end;
     }
 }

@@ -1,5 +1,7 @@
 # SP6 Libro Game Migration Implementation Plan
 
+**Status**: 🟡 IN PROGRESS — Iter 1.A/1.B done; SP6 Iter 1B follow-ups OPEN (#950-#954)
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Migrate libro-game (game-book) modality to v2 design. Ship Nanolith self-demo + `/gamebook` index Tier M + `/gamebook/upload` Tier L wizard. Add SP6 routes to v2-migration-matrix.md.
@@ -714,7 +716,7 @@ Verdict transitions: ⚠️ APPROVE WITH AMENDMENTS → ✅ APPROVED FOR EXECUTI
 ## Refs
 
 - SP6 mockups: [`sp6-libro-game-index.html`](../../../admin-mockups/design_files/sp6-libro-game-index.html) + [`sp6-libro-game-photo-upload.html`](../../../admin-mockups/design_files/sp6-libro-game-photo-upload.html)
-- [v2-migration-matrix.md](../../frontend/v2-migration-matrix.md)
+- [v2-migration-matrix.md](../frontend/v2-migration-matrix.md)
 - Pattern parents:
   - PR #717 Wave 4 D1 (Tier S blueprint, single-shot)
   - PR #724 Wave 3 (Tier M `/players/[id]` blueprint)

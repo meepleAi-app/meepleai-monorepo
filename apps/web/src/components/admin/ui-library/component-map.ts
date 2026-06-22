@@ -117,14 +117,12 @@ import { ChatMainArea } from '@/components/chat/panel/ChatMainArea';
 import { ChatMessageBubble } from '@/components/chat/panel/ChatMessageBubble';
 import { ChatPanelHeader } from '@/components/chat/panel/ChatPanelHeader';
 import { ChatSidebar } from '@/components/chat/panel/ChatSidebar';
-import { TopBarChatButton } from '@/components/layout/UserShell/TopBarChatButton';
-import { TopBarLogo } from '@/components/layout/UserShell/TopBarLogo';
-import { TopBarSearchPill } from '@/components/layout/UserShell/TopBarSearchPill';
 import { AdminConfirmationDialog } from '@/components/ui/admin/admin-confirmation-dialog';
 import { AgentStatusBadge } from '@/components/ui/agent/AgentStatusBadge';
 import { FadeIn } from '@/components/ui/animations/FadeIn';
 import { StaggerChildren } from '@/components/ui/animations/StaggerChildren';
 import { BackgroundTexture } from '@/components/ui/BackgroundTexture';
+import { BrandMark } from '@/components/ui/brand';
 import { Accordion } from '@/components/ui/data-display/accordion';
 import { ActivityList } from '@/components/ui/data-display/activity-list/activity-list';
 import { Avatar } from '@/components/ui/data-display/avatar';
@@ -184,7 +182,6 @@ import { DateRangePicker } from '@/components/ui/inputs/date-range-picker';
 import { ChatMessage } from '@/components/ui/meeple/chat-message';
 import { FeedbackButtons } from '@/components/ui/meeple/feedback-buttons';
 import { MeepleAvatar } from '@/components/ui/meeple/meeple-avatar';
-import { MeepleLogo } from '@/components/ui/meeple/meeple-logo';
 import { MotionButton } from '@/components/ui/meeple/motion-button';
 import { ActionGrid } from '@/components/ui/navigation/action-grid';
 import { Command } from '@/components/ui/navigation/command';
@@ -369,7 +366,7 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   'chat-message': ChatMessage,
   'feedback-buttons': FeedbackButtons,
   'meeple-avatar': MeepleAvatar,
-  'meeple-logo': MeepleLogo,
+  'brand-mark': BrandMark,
   'motion-button': MotionButton,
 
   // Agent
@@ -512,11 +509,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   'bulk-actions-toolbar': BulkActionsToolbar,
   'service-health-matrix': ServiceHealthMatrix,
   'ai-models-table': AiModelsTable,
-
-  // Desktop UX Redesign — Shell atomics
-  'top-bar-logo': TopBarLogo,
-  'top-bar-search-pill': TopBarSearchPill,
-  'top-bar-chat-button': TopBarChatButton,
 
   // Desktop UX Redesign — Chat slide-over panel
   'chat-panel-header': ChatPanelHeader,

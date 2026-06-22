@@ -98,9 +98,9 @@ internal static class AdminUserInvitationEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} sending invitation to {Email} with role {Role}",
-            session!.User!.Id, DataMasking.MaskEmail(request.Email), request.Role);
+            session!.Principal!.EffectiveActor.Id, DataMasking.MaskEmail(request.Email), request.Role);
 
-        var command = new SendInvitationCommand(request.Email, request.Role, session.User.Id);
+        var command = new SendInvitationCommand(request.Email, request.Role, session.Principal!.EffectiveActor.Id);
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
         logger.LogInformation("Invitation {InvitationId} sent to {Email}", result.Id, DataMasking.MaskEmail(request.Email));
@@ -128,9 +128,9 @@ internal static class AdminUserInvitationEndpoints
         var csvContent = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
 
         logger.LogInformation("Admin {AdminId} bulk-sending invitations from CSV ({Size} bytes)",
-            session!.User!.Id, file.Length);
+            session!.Principal!.EffectiveActor.Id, file.Length);
 
-        var command = new BulkSendInvitationsCommand(csvContent, session.User.Id);
+        var command = new BulkSendInvitationsCommand(csvContent, session.Principal!.EffectiveActor.Id);
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
         logger.LogInformation("Bulk invitation: {SuccessCount} sent, {FailCount} failed",
@@ -154,9 +154,9 @@ internal static class AdminUserInvitationEndpoints
         }
 
         logger.LogInformation("Admin {AdminId} resending invitation {InvitationId}",
-            session!.User!.Id, invitationId);
+            session!.Principal!.EffectiveActor.Id, invitationId);
 
-        var command = new ResendInvitationCommand(invitationId, session.User.Id);
+        var command = new ResendInvitationCommand(invitationId, session.Principal!.EffectiveActor.Id);
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
         logger.LogInformation("Invitation {InvitationId} resent successfully", result.Id);
@@ -203,11 +203,11 @@ internal static class AdminUserInvitationEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} revoking invitation {InvitationId}",
-            session!.User!.Id, id);
+            session!.Principal!.EffectiveActor.Id, id);
 
         var command = new RevokeInvitationCommand(
             InvitationId: id,
-            AdminUserId: session.User.Id
+            AdminUserId: session.Principal!.EffectiveActor.Id
         );
 
         var success = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -232,7 +232,7 @@ internal static class AdminUserInvitationEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} provisioning and inviting {Email} with role {Role}",
-            session!.User!.Id, DataMasking.MaskEmail(request.Email), request.Role);
+            session!.Principal!.EffectiveActor.Id, DataMasking.MaskEmail(request.Email), request.Role);
 
         var command = new ProvisionAndInviteUserCommand(
             Email: request.Email,
@@ -242,7 +242,7 @@ internal static class AdminUserInvitationEndpoints
             CustomMessage: request.CustomMessage,
             ExpiresInDays: request.ExpiresInDays ?? 7,
             GameSuggestions: request.GameSuggestions ?? new List<GameSuggestionDto>(),
-            InvitedByUserId: session.User.Id);
+            InvitedByUserId: session.Principal!.EffectiveActor.Id);
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
@@ -290,9 +290,9 @@ internal static class AdminUserInvitationEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} resending invitation {InvitationId} (new path)",
-            session!.User!.Id, id);
+            session!.Principal!.EffectiveActor.Id, id);
 
-        var command = new ResendInvitationCommand(id, session.User.Id);
+        var command = new ResendInvitationCommand(id, session.Principal!.EffectiveActor.Id);
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
         logger.LogInformation("Invitation {InvitationId} resent successfully (new path)", result.Id);
@@ -310,11 +310,11 @@ internal static class AdminUserInvitationEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} revoking invitation {InvitationId} (new path)",
-            session!.User!.Id, id);
+            session!.Principal!.EffectiveActor.Id, id);
 
         var command = new RevokeInvitationCommand(
             InvitationId: id,
-            AdminUserId: session.User.Id);
+            AdminUserId: session.Principal!.EffectiveActor.Id);
 
         var success = await mediator.Send(command, ct).ConfigureAwait(false);
 

@@ -73,7 +73,7 @@ internal static class AdminEmailTemplateEndpoints
         CancellationToken cancellationToken = default)
     {
         var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         var id = await mediator.Send(
             new CreateEmailTemplateCommand(request.Name, request.Locale, request.Subject, request.HtmlBody, userId),
@@ -90,7 +90,7 @@ internal static class AdminEmailTemplateEndpoints
         CancellationToken cancellationToken = default)
     {
         var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         var result = await mediator.Send(
             new UpdateEmailTemplateCommand(id, request.Subject, request.HtmlBody, userId),

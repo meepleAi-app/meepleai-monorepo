@@ -30,6 +30,14 @@ public sealed class ProcessingMetricEntity
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
 
+    /// <summary>
+    /// Optional source domain event id used to dedupe at the DB level (issue #1938 / CF-2).
+    /// UNIQUE (partial — only when not null) so that re-dispatch from a retried/rolled-back
+    /// event handler does not insert duplicate metric rows.
+    /// </summary>
+    [Column("source_event_id")]
+    public Guid? SourceEventId { get; set; }
+
     // Navigation property
     public PdfDocumentEntity? PdfDocument { get; set; }
 }

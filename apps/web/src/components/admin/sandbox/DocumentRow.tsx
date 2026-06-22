@@ -54,7 +54,7 @@ const STATUS_CONFIG: Record<
   },
   Pending: {
     label: 'In attesa',
-    className: 'bg-gray-100 text-gray-700 border-gray-200',
+    className: 'bg-muted text-foreground border-border',
     showSpinner: false,
   },
 };
@@ -70,7 +70,7 @@ export function DocumentRow({ doc, onReindex, onDelete }: DocumentRowProps) {
   const isProcessing = config.showSpinner;
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border bg-white/50 px-3 py-2.5">
+    <div className="flex items-center gap-3 rounded-lg border bg-card/50 px-3 py-2.5">
       <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
 
       <div className="flex flex-col min-w-0 flex-1">

@@ -2,8 +2,6 @@ using Api.BoundedContexts.Authentication.Application.EventHandlers;
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
-using FluentAssertions;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -12,7 +10,8 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.EventHandlers;
 
 /// <summary>
 /// Unit tests for <see cref="PasswordResetEventHandler"/>.
-/// Tests audit logging for password reset events (admin-initiated).
+/// Issue #1534: Audit persistence is now centralised in <c>DomainEventAuditHandler</c> and is covered
+/// by <c>DomainEventAuditHandlerTests</c>. Handler-specific tests only verify logging hooks here.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class PasswordResetEventHandlerTests : IDisposable
@@ -30,66 +29,7 @@ public class PasswordResetEventHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_WithAdminReset_CreatesAuditLogEntry()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var adminUserId = Guid.NewGuid();
-        var @event = new PasswordResetEvent(userId, adminUserId);
-
-        // Act
-        await _handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLogs = await _dbContext.AuditLogs.ToListAsync();
-        auditLogs.Should().HaveCount(1);
-
-        var auditLog = auditLogs.First();
-        auditLog.UserId.Should().Be(userId);
-        auditLog.Resource.Should().Be(nameof(PasswordResetEvent));
-        auditLog.Action.Should().Contain("PasswordResetEvent");
-        auditLog.Result.Should().Be("Success");
-        auditLog.Details.Should().Contain("PasswordReset");
-        auditLog.Details.Should().Contain(adminUserId.ToString());
-    }
-
-    [Fact]
-    public async Task Handle_WithSelfReset_CreatesAuditLogWithNullResetBy()
-    {
-        // Arrange - User initiated password reset (no admin)
-        var userId = Guid.NewGuid();
-        var @event = new PasswordResetEvent(userId, resetByUserId: null);
-
-        // Act
-        await _handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLog = await _dbContext.AuditLogs.FirstAsync();
-        auditLog.UserId.Should().Be(userId);
-        auditLog.Details.Should().Contain("PasswordReset");
-        auditLog.Details.Should().Contain("ResetByUserId");
-    }
-
-    [Fact]
-    public async Task Handle_CapturesUserIdAndResetByUserId()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var adminUserId = Guid.NewGuid();
-        var @event = new PasswordResetEvent(userId, adminUserId);
-
-        // Act
-        await _handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLog = await _dbContext.AuditLogs.FirstAsync();
-        auditLog.Details.Should().Contain(userId.ToString());
-        auditLog.Details.Should().Contain(adminUserId.ToString());
-        auditLog.Details.Should().Contain("Action");
-    }
-
-    [Fact]
-    public async Task Handle_LogsSuccessfulEventHandling()
+    public async Task Handle_LogsHandlingInformation()
     {
         // Arrange
         var @event = new PasswordResetEvent(Guid.NewGuid(), Guid.NewGuid());

@@ -28,6 +28,10 @@ internal class SystemConfigurationEntityConfiguration : IEntityTypeConfiguration
         builder.Property(e => e.UpdatedByUserId).HasMaxLength(64);
         builder.Property(e => e.LastToggledAt);
 
+        // Auth security fixes (hotfix 2026-05-06): single-use bootstrap-admin marker (C5 fix)
+        builder.Property(e => e.BootstrapAdminCreated).IsRequired().HasDefaultValue(false);
+        builder.Property(e => e.BootstrapAdminCreatedAt);
+
         // Relationships
         builder.HasOne(e => e.CreatedBy)
             .WithMany()

@@ -97,7 +97,7 @@ internal sealed partial class ReportGeneratorService
 
     private async Task<SystemContentMetrics> GetSystemContentMetricsAsync(DateTime since, CancellationToken ct)
     {
-        var totalGames = await _dbContext.Games.CountAsync(ct).ConfigureAwait(false);
+        var totalGames = await _dbContext.SharedGames.CountAsync(ct).ConfigureAwait(false);
         var totalPdfs = await _dbContext.PdfDocuments.CountAsync(ct).ConfigureAwait(false);
         var recentPdfs = await _dbContext.PdfDocuments
             .CountAsync(p => p.UploadedAt >= since, ct)

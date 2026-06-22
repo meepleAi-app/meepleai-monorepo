@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SP5 A1 · Admin Overview · /admin/overview</title>
+<!--
+  @route /admin/overview
+  @pattern Dashboard grid: 4 KPI row · activity feed + alerts row · 4 charts row · quick actions sidebar
+  @persona Aaron superadmin · density alta · dark mode default
+  @v2 components: AdminKPICard · AdminAlertBanner · AdminChartPanel · AdminActivityFeed · QuickActionsPanel
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+<link rel="stylesheet" href="components.css"/>
+<link rel="stylesheet" href="admin-base.css"/>
+<style>
+  .overview-grid {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 16px;
+  }
+  .overview-main { display: flex; flex-direction: column; gap: 16px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .feed-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .charts-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+  .chart-panel { height: 180px; padding: 12px 14px; }
+  .chart-panel .chart-title { font-family: var(--f-display); font-size: 12px; font-weight: 700; color: var(--text-sec); }
+  .chart-panel .chart-value { font-family: var(--f-display); font-size: 24px; font-weight: 800; line-height: 1.1; margin-top: 2px; }
+  .chart-panel .chart-svg { width: 100%; height: 100px; margin-top: 6px; }
+  .chart-panel .chart-foot { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+
+  .quick-actions { display: flex; flex-direction: column; gap: 1px; }
+  .quick-actions .qa-btn {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; background: var(--bg-card);
+    border: 0; border-bottom: 1px solid var(--border-light);
+    color: var(--text); cursor: pointer;
+    font-family: var(--f-display); font-size: 12.5px; font-weight: 600;
+    text-align: left; width: 100%;
+  }
+  .quick-actions .qa-btn:hover { background: var(--bg-muted); }
+  .quick-actions .qa-btn:last-child { border-bottom: 0; }
+  .quick-actions .qa-btn .em { font-size: 16px; }
+  .quick-actions .qa-btn .desc {
+    display: block; font-family: var(--f-body); font-size: 10.5px;
+    color: var(--text-muted); font-weight: 400; margin-top: 1px;
+  }
+
+  .meeple-pulse {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: hsl(var(--c-toolkit));
+    box-shadow: 0 0 0 4px hsl(var(--c-toolkit) / .2);
+    animation: admin-pulse 2s ease-in-out infinite;
+  }
+
+  @media (max-width: 1280px) {
+    .overview-grid { grid-template-columns: 1fr; }
+    .charts-row { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body class="admin-page">
+
+<!-- Mobile fallback ──────────────────────────────────── -->
+<div class="admin-mobile-fallback">
+  <span class="em">🖥️</span>
+  <h2>Console solo desktop</h2>
+  <p>L'Admin Console di MeepleAI richiede uno schermo desktop (≥1280px). Apri questa pagina dal tuo computer per accedere a tutte le funzioni.</p>
+</div>
+
+<!-- Desktop shell ──────────────────────────────────── -->
+<div class="admin-shell">
+  <div data-admin-nav-mount></div>
+
+  <main>
+    <!-- Topbar ──────────────────────────────────────── -->
+    <header class="admin-top">
+      <div>
+        <h1>Overview sistema</h1>
+        <div class="crumbs">Admin · Overview · ultimo refresh 14:23:08 UTC</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="admin-top-actions">
+        <div class="kbd-hint"><kbd>g</kbd>+<kbd>o</kbd> torna qui</div>
+        <button class="btn-admin">⟳ Refresh all <kbd>R</kbd></button>
+        <button class="btn-admin icon" title="Cambia tema" onclick="toggleAdminTheme()">🌗</button>
+      </div>
+    </header>
+
+    <div class="admin-body">
+
+      <!-- Alert banner — degraded state ─────────────── -->
+      <div class="alert-banner warning" role="alert" style="margin-bottom: 16px;">
+        <span class="em" aria-hidden="true">⚠️</span>
+        <div style="flex:1">
+          <div class="title">Indexing pipeline degradata</div>
+          <div>SmolDocling: 47% rate ridotto. Ultime 12 ingestion in coda. ETA recovery ~18 min.</div>
+        </div>
+        <div class="actions">
+          <button class="btn-admin sm">Apri runbook</button>
+          <button class="btn-admin sm primary">Vai a queue</button>
+        </div>
+      </div>
+
+      <div class="overview-grid">
+        <div class="overview-main">
+
+          <!-- KPI Row 1 ─────────────────────────────── -->
+          <div class="kpi-row">
+            <div class="admin-kpi e-player">
+              <div class="admin-kpi-label">Utenti totali</div>
+              <div class="admin-kpi-value">12.487</div>
+              <div class="admin-kpi-trend up">↗ +148 oggi · +2.3% 7gg</div>
+              <span class="admin-kpi-icon" aria-hidden="true">👥</span>
+            </div>
+            <div class="admin-kpi e-session">
+              <div class="admin-kpi-label">Partite attive ora</div>
+              <div class="admin-kpi-value">847</div>
+              <div class="admin-kpi-trend up">↗ +18% vs. ora media</div>
+              <span class="admin-kpi-icon" aria-hidden="true">🎯</span>
+            </div>
+            <div class="admin-kpi e-agent">
+              <div class="admin-kpi-label">Agenti live</div>
+              <div class="admin-kpi-value">312</div>
+              <div class="admin-kpi-trend flat">→ 312 · stabile</div>
+              <span class="admin-kpi-icon" aria-hidden="true">🤖</span>
+            </div>
+            <div class="admin-kpi e-kb">
+              <div class="admin-kpi-label">Storage KB</div>
+              <div class="admin-kpi-value">2.4<span style="font-size:14px;color:var(--text-muted)">TB</span></div>
+              <div class="admin-kpi-trend up">↗ +47GB ultima settimana</div>
+              <span class="admin-kpi-icon" aria-hidden="true">📚</span>
+            </div>
+          </div>
+
+          <!-- Feed Row ──────────────────────────────── -->
+          <div class="feed-row">
+            <!-- Activity feed -->
+            <section class="admin-panel">
+              <div class="admin-panel-head">
+                <h3>Activity feed</h3>
+                <span class="meta">ultime 24h · 487 eventi</span>
+              </div>
+              <div class="activity-feed">
+                <div class="activity-item">
+                  <span class="em" style="background: hsl(var(--c-player) / .15); color: hsl(var(--c-player))">👤</span>
+                  <div class="body"><strong>Marco Rossi</strong> ha aggiornato il ruolo di <strong>Giulia Bianchi</strong> in <span class="role-chip admin">Admin</span></div>
+                  <span class="ts">2m</span>
+                </div>
+                <div class="activity-item">
+                  <span class="em" style="background: hsl(var(--c-kb) / .15); color: hsl(var(--c-kb))">📚</span>
+                  <div class="body"><strong>Wingspan Asia EN</strong> indicizzato · 347 chunks · 12.4s</div>
+                  <span class="ts">5m</span>
+                </div>
+                <div class="activity-item">
+                  <span class="em" style="background: hsl(var(--c-event) / .15); color: hsl(var(--c-event))">⚠️</span>
+                  <div class="body">Rate-limit superato per IP <code style="font-family:var(--f-mono);font-size:11px">82.84.211.x</code> — bloccato 15m</div>
+                  <span class="ts">8m</span>
+                </div>
+                <div class="activity-item">
+                  <span class="em" style="background: hsl(var(--c-agent) / .15); color: hsl(var(--c-agent))">🤖</span>
+                  <div class="body">Agente <strong>Brass Rules Expert v3.1</strong> deployato in prod · A/B 50/50</div>
+                  <span class="ts">14m</span>
+                </div>
+                <div class="activity-item">
+                  <span class="em" style="background: hsl(var(--c-session) / .15); color: hsl(var(--c-session))">🎯</span>
+                  <div class="body">Session <code style="font-family:var(--f-mono);font-size:11px">s-spirit-island-3-marco</code> chiusa · 3h 24m · winner Marco</div>
+                  <span class="ts">22m</span>
+                </div>
+                <div class="activity-item">
+                  <span class="em" style="background: hsl(var(--c-toolkit) / .15); color: hsl(var(--c-toolkit))">🧰</span>
+                  <div class="body">Toolkit <strong>OCR-PDF-v2</strong> bumpato a v2.1.0 · breaking change rilevato</div>
+                  <span class="ts">38m</span>
+                </div>
+              </div>
+              <div style="padding: 10px 14px; border-top: 1px solid var(--border-light); text-align: center">
+                <a href="sp5-admin-monitor.html" style="font-family: var(--f-mono); font-size: 11px; color: hsl(var(--c-event)); text-decoration: none; font-weight: 700">Vedi tutti gli eventi →</a>
+              </div>
+            </section>
+
+            <!-- Alerts -->
+            <section class="admin-panel">
+              <div class="admin-panel-head">
+                <h3>Health alerts</h3>
+                <span class="meta">3 attivi · 1 critical</span>
+              </div>
+              <div class="activity-feed">
+                <div class="activity-item" style="border-left: 3px solid hsl(var(--c-event));">
+                  <span class="em" style="background: hsl(var(--c-event) / .15); color: hsl(var(--c-event))">🚨</span>
+                  <div class="body">
+                    <strong>SmolDocling rate ridotto al 47%</strong><br/>
+                    <span style="font-size: 11px; color: var(--text-sec)">12 PDF in coda · ETA recovery 18 min · auto-scale triggered</span>
+                  </div>
+                  <span class="ts">crit</span>
+                </div>
+                <div class="activity-item" style="border-left: 3px solid hsl(38 90% 50%);">
+                  <span class="em" style="background: hsl(38 90% 50% / .15); color: hsl(38 90% 50%)">⚠️</span>
+                  <div class="body">
+                    <strong>API P95 sopra soglia (380ms)</strong><br/>
+                    <span style="font-size: 11px; color: var(--text-sec)">SLO 250ms · degrado durato 12 min · ora 320ms</span>
+                  </div>
+                  <span class="ts">warn</span>
+                </div>
+                <div class="activity-item" style="border-left: 3px solid hsl(38 90% 50%);">
+                  <span class="em" style="background: hsl(38 90% 50% / .15); color: hsl(38 90% 50%)">⚠️</span>
+                  <div class="body">
+                    <strong>Costi AI giornalieri al 87% del budget</strong><br/>
+                    <span style="font-size: 11px; color: var(--text-sec)">$348.20 / $400.00 · proiezione mensile +14%</span>
+                  </div>
+                  <span class="ts">warn</span>
+                </div>
+                <div class="activity-item">
+                  <span class="em" style="background: hsl(var(--c-toolkit) / .15); color: hsl(var(--c-toolkit))">✅</span>
+                  <div class="body"><strong>Tutti i deploy verificati</strong> · last canary 23m fa</div>
+                  <span class="ts">ok</span>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <!-- Charts row ────────────────────────────── -->
+          <div class="charts-row">
+            <div class="admin-panel chart-panel" style="color: hsl(var(--c-toolkit))">
+              <div class="chart-title">Uptime 7gg</div>
+              <div class="chart-value">99.94<span style="font-size:14px;color:var(--text-muted)">%</span></div>
+              <svg class="chart-svg" viewBox="0 0 140 60" preserveAspectRatio="none">
+                <polyline class="spark" points="0,12 14,10 28,11 42,8 56,18 70,9 84,7 98,8 112,9 126,8 140,9"/>
+                <polygon class="spark-fill" points="0,12 14,10 28,11 42,8 56,18 70,9 84,7 98,8 112,9 126,8 140,9 140,60 0,60"/>
+              </svg>
+              <div class="chart-foot">SLO 99.9% · margine 0.04%</div>
+            </div>
+
+            <div class="admin-panel chart-panel" style="color: hsl(var(--c-chat))">
+              <div class="chart-title">Requests/min</div>
+              <div class="chart-value">3.8<span style="font-size:14px;color:var(--text-muted)">k</span></div>
+              <svg class="chart-svg" viewBox="0 0 140 60" preserveAspectRatio="none">
+                <polyline class="spark" points="0,40 14,38 28,32 42,28 56,24 70,18 84,22 98,16 112,14 126,12 140,10"/>
+                <polygon class="spark-fill" points="0,40 14,38 28,32 42,28 56,24 70,18 84,22 98,16 112,14 126,12 140,10 140,60 0,60"/>
+              </svg>
+              <div class="chart-foot">picco oggi 4.1k · h 14:00</div>
+            </div>
+
+            <div class="admin-panel chart-panel" style="color: hsl(var(--c-event))">
+              <div class="chart-title">Error rate</div>
+              <div class="chart-value">0.18<span style="font-size:14px;color:var(--text-muted)">%</span></div>
+              <svg class="chart-svg" viewBox="0 0 140 60" preserveAspectRatio="none">
+                <polyline class="spark" points="0,50 14,48 28,52 42,46 56,42 70,40 84,46 98,50 112,52 126,54 140,52"/>
+                <polygon class="spark-fill" points="0,50 14,48 28,52 42,46 56,42 70,40 84,46 98,50 112,52 126,54 140,52 140,60 0,60"/>
+              </svg>
+              <div class="chart-foot">soglia 1.0% · 0 burst alert</div>
+            </div>
+
+            <div class="admin-panel chart-panel" style="color: hsl(var(--c-agent))">
+              <div class="chart-title">AI cost oggi</div>
+              <div class="chart-value">$348.<span style="font-size:14px;color:var(--text-muted)">20</span></div>
+              <svg class="chart-svg" viewBox="0 0 140 60" preserveAspectRatio="none">
+                <polyline class="spark" points="0,52 14,46 28,40 42,32 56,28 70,22 84,18 98,14 112,12 126,10 140,9"/>
+                <polygon class="spark-fill" points="0,52 14,46 28,40 42,32 56,28 70,22 84,18 98,14 112,12 126,10 140,9 140,60 0,60"/>
+              </svg>
+              <div class="chart-foot">87% budget · alert al 95%</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions sidebar dx ─────────────────── -->
+        <aside style="display: flex; flex-direction: column; gap: 12px;">
+          <div class="admin-panel">
+            <div class="admin-panel-head">
+              <h3>Quick actions</h3>
+              <span class="meta">superadmin only</span>
+            </div>
+            <div class="quick-actions">
+              <button class="qa-btn">
+                <span class="em">🎭</span>
+                <span><strong>Impersonate user</strong><span class="desc">Apri sessione con role utente</span></span>
+              </button>
+              <button class="qa-btn">
+                <span class="em">⏱️</span>
+                <span><strong>Reset rate limit</strong><span class="desc">Sblocca IP / user / endpoint</span></span>
+              </button>
+              <button class="qa-btn">
+                <span class="em">💨</span>
+                <span><strong>Force cache flush</strong><span class="desc">Redis · CDN · React Query</span></span>
+              </button>
+              <button class="qa-btn">
+                <span class="em">🚦</span>
+                <span><strong>Pausa ingestion</strong><span class="desc">Freeze pipeline tutta</span></span>
+              </button>
+              <button class="qa-btn">
+                <span class="em">📡</span>
+                <span><strong>Broadcast banner</strong><span class="desc">Avviso a tutti gli utenti loggati</span></span>
+              </button>
+              <button class="qa-btn">
+                <span class="em">🧨</span>
+                <span><strong>Emergency shutdown</strong><span class="desc">Modalità manutenzione totale</span></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="admin-panel">
+            <div class="admin-panel-head">
+              <h3>Status deployment</h3>
+              <span class="meta">last 24h</span>
+            </div>
+            <div class="admin-panel-body" style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 8px; font-size: 12px;">
+                <span class="meeple-pulse"></span>
+                <span style="flex:1">prod</span>
+                <span class="status-chip healthy">Healthy</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; font-size: 12px;">
+                <span class="meeple-pulse"></span>
+                <span style="flex:1">staging</span>
+                <span class="status-chip healthy">Healthy</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; font-size: 12px;">
+                <span class="meeple-pulse" style="background: hsl(38 90% 50%); box-shadow: 0 0 0 4px hsl(38 90% 50% / .2);"></span>
+                <span style="flex:1">workers</span>
+                <span class="status-chip warning">Degraded</span>
+              </div>
+              <div style="margin-top:6px; padding-top: 10px; border-top: 1px solid var(--border-light); font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">
+                Last deploy: <strong>4h 12m fa</strong><br/>
+                Build: <code>web-2026.05.24-a8f3c</code><br/>
+                Commit: <code>e3f7a1c</code> by Marco
+              </div>
+            </div>
+          </div>
+
+          <div class="admin-panel">
+            <div class="admin-panel-head">
+              <h3>Keyboard shortcuts</h3>
+            </div>
+            <div class="admin-panel-body" style="display: flex; flex-direction: column; gap: 6px; font-size: 12px;">
+              <div style="display:flex; align-items:center;"><span style="flex:1">Search globale</span><span class="kbd-hint"><kbd>⌘</kbd><kbd>K</kbd></span></div>
+              <div style="display:flex; align-items:center;"><span style="flex:1">Go to Users</span><span class="kbd-hint"><kbd>g</kbd>+<kbd>u</kbd></span></div>
+              <div style="display:flex; align-items:center;"><span style="flex:1">Go to AI / RAG</span><span class="kbd-hint"><kbd>g</kbd>+<kbd>a</kbd></span></div>
+              <div style="display:flex; align-items:center;"><span style="flex:1">Refresh all</span><span class="kbd-hint"><kbd>R</kbd></span></div>
+              <div style="display:flex; align-items:center;"><span style="flex:1">Cambia tema</span><span class="kbd-hint"><kbd>⌘</kbd><kbd>D</kbd></span></div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="admin-nav.js"></script>
+<script>renderAdminNav('overview');</script>
+</body>
+</html>

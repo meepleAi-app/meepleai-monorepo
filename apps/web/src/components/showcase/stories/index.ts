@@ -10,6 +10,7 @@ import { actionGridStory } from './action-grid.story';
 import { agentStatusBadgeStory } from './agent-status-badge.story';
 import { alertStory } from './alert.story';
 import { badgeStory } from './badge.story';
+import { brandMarkStory } from './brand-mark.story';
 import { buttonStory } from './button.story';
 import { chatMessageStory } from './chat-message.story';
 import { checkboxStory } from './checkbox.story';
@@ -23,7 +24,6 @@ import { inputStory } from './input.story';
 import { kpiCardsStory } from './kpi-cards.story';
 import { meepleAvatarStory } from './meeple-avatar.story';
 import { meepleCardStory } from './meeple-card.story';
-import { meepleLogoStory } from './meeple-logo.story';
 import { popoverStory } from './popover.story';
 import { progressStory } from './progress.story';
 import { radioGroupStory } from './radio-group.story';
@@ -105,7 +105,7 @@ export const ALL_STORIES: ShowcaseStory<any>[] = [
 
   // Meeple
   meepleAvatarStory,
-  meepleLogoStory,
+  brandMarkStory,
   chatMessageStory,
 
   // Agent

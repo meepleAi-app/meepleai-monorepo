@@ -77,6 +77,24 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     // Issue #5447: User-editable version label (e.g., "2nd Edition", "v1.3 Errata")
     public string? VersionLabel { get; private set; }
 
+    // Issue #1687: User-editable display title (distinct from immutable FileName).
+    // Null = fall back to FileName for FE display.
+    public string? Title { get; private set; }
+
+    // Issue #1687: User-curated tags. Read-only collection; mutated only via SetTags.
+    private readonly List<string> _tags = new();
+    public IReadOnlyList<string> Tags => _tags.AsReadOnly();
+
+    // Issue #1687: Audit columns recording the last user-driven metadata edit (D-3 last-write-wins).
+    public DateTime? UpdatedAt { get; private set; }
+    public Guid? UpdatedBy { get; private set; }
+
+    // Issue #1852: L4 PDF cover extraction state (mirrors PdfDocumentEntity columns).
+    public string? CoverR2Key { get; private set; }
+    public PdfCoverGenerationStatus CoverGenerationStatus { get; private set; } = PdfCoverGenerationStatus.Pending;
+    public int? CoverPageIndex { get; private set; }
+    public string? CoverGenerationError { get; private set; }
+
     // Issue #4219: Per-state timing tracking for metrics and ETA
     public DateTime? UploadingStartedAt { get; private set; }
     public DateTime? ExtractingStartedAt { get; private set; }
@@ -113,6 +131,13 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             throw new ArgumentException("Sort order cannot be negative", nameof(sortOrder));
 
         GameId = gameId;
+        // Post-Phase 2d (issue #1320 + #1345): GameEntity is gone and the
+        // canonical PdfDocument FK to shared_games is SharedGameId. Repositories
+        // (FindByGameIdAsync, …) filter on SharedGameId, so the legacy ctor
+        // mirrors GameId into SharedGameId to keep them in sync when the caller
+        // is constructing a shared-game PDF. Private-game PDFs go through the
+        // Create() factory which sets sharedGameId/privateGameId explicitly.
+        SharedGameId = gameId;
         FileName = fileName;
         FilePath = filePath;
         FileSize = fileSize;
@@ -180,7 +205,15 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         bool isActiveForRag = true,
         string? versionLabel = null,
         double? languageConfidence = null,
-        string? languageOverride = null)
+        string? languageOverride = null,
+        string? title = null,
+        IReadOnlyList<string>? tags = null,
+        DateTime? updatedAt = null,
+        Guid? updatedBy = null,
+        string? coverR2Key = null,
+        string? coverGenerationStatus = null,
+        int? coverPageIndex = null,
+        string? coverGenerationError = null)
     {
         var document = new PdfDocument
         {
@@ -241,13 +274,56 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
 
             // E5-1: Language confidence and override
             LanguageConfidence = languageConfidence,
-            LanguageOverride = languageOverride
+            LanguageOverride = languageOverride,
+
+            // Issue #1687: editable metadata + audit columns
+            Title = title,
+            UpdatedAt = updatedAt,
+            UpdatedBy = updatedBy,
+
+            // Issue #1852: cover state round-trip
+            CoverR2Key = coverR2Key,
+            CoverGenerationStatus = string.IsNullOrEmpty(coverGenerationStatus)
+                ? PdfCoverGenerationStatus.Pending
+                : Enum.Parse<PdfCoverGenerationStatus>(coverGenerationStatus, ignoreCase: true),
+            CoverPageIndex = coverPageIndex,
+            CoverGenerationError = coverGenerationError
         };
+
+        if (tags is { Count: > 0 })
+        {
+            document._tags.AddRange(tags);
+        }
 
         // Issue #4219: Calculate ETA after reconstitution
         document.UpdateETA();
 
         return document;
+    }
+
+    /// <summary>
+    /// Records the moment when the document finished processing (transition to Ready).
+    /// Pure audit field setter — does NOT raise a domain event because:
+    /// (1) ProcessedAt is metadata, not a state-change consumers care about beyond the
+    ///     Ready transition itself; (2) TransitionTo(Ready) already raises
+    ///     PdfStateChangedEvent + KbDocIndexedEvent which carry the meaningful signal.
+    ///
+    /// Invariant: caller MUST call this only after the aggregate has transitioned to
+    /// Ready (i.e., the pipeline's structural finalization is complete). Throws if
+    /// called from any other state.
+    ///
+    /// #2284 follow-up: replaces the legacy `pdfDoc.ProcessedAt = now` EF mutation
+    /// that survived PR #2297 in FinalizeProcessingAsync.
+    /// </summary>
+    /// <param name="processedAt">The wall-clock time when processing completed.</param>
+    public void MarkProcessed(DateTime processedAt)
+    {
+        if (ProcessingState != PdfProcessingState.Ready)
+        {
+            throw new InvalidOperationException(
+                $"MarkProcessed can only be called after TransitionTo(Ready); current state is {ProcessingState}.");
+        }
+        ProcessedAt = processedAt;
     }
 
     // Issue #4215: Deprecated methods - use TransitionTo() instead
@@ -373,6 +449,23 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
 
         // Emit domain event for real-time updates (Issue #4218)
         AddDomainEvent(new PdfStateChangedEvent(Id, previousState, newState, UploadedByUserId));
+
+        // BE-3 #1590 B2: when entering Ready, also raise a dedicated KbDocIndexedEvent for the
+        // activity log. PdfStateChangedEvent stays for internal handlers (cache, metrics, UI
+        // real-time); KbDocIndexedEvent is the user-meaningful "doc indexed" milestone for the
+        // activity rail. gameName is null — resolved query-time by the activity endpoint via
+        // SharedGameRepository (pure domain method has no repository access).
+        if (newState == PdfProcessingState.Ready)
+        {
+            AddDomainEvent(new KbDocIndexedEvent(
+                aggregateId: Id,
+                userId: UploadedByUserId,
+                fileName: FileName.Value,
+                gameId: SharedGameId,
+                gameName: null,
+                pageCount: PageCount
+            ));
+        }
     }
 
     /// <summary>
@@ -539,7 +632,7 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
 
     /// <summary>
     /// Sets whether this document is active for RAG search.
-    /// Issue #5446: Deactivated docs remain in Qdrant but excluded from search.
+    /// Issue #5446: Deactivated docs remain in pgvector but excluded from search.
     /// </summary>
     public void SetActiveForRag(bool isActive)
     {
@@ -580,6 +673,137 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         SetVersionLabel(versionLabel);
     }
 
+    // ── Issue #1687: editable metadata mutators (KbEditorDesktop PATCH endpoint) ──
+
+    /// <summary>
+    /// Sets the user-editable display title. Null, empty, or whitespace input clears the title.
+    /// Issue #1687 D-5: distinct from immutable FileName.
+    /// </summary>
+    /// <exception cref="ArgumentException">Thrown when the editor id is empty, or the trimmed title exceeds 200 characters.</exception>
+    public void SetTitle(string? title, Guid editorId)
+    {
+        EnsureValidEditorId(editorId);
+
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            Title = null;
+        }
+        else
+        {
+            var trimmed = title.Trim();
+            if (trimmed.Length > 200)
+                throw new ArgumentException("Title cannot exceed 200 characters", nameof(title));
+
+            Title = trimmed;
+        }
+
+        StampAudit(editorId);
+    }
+
+    /// <summary>
+    /// Sets the user-curated tags. Normalizes (trim + lowercase + filter-empty + dedup + sort)
+    /// before storage so equality semantics are deterministic.
+    /// Issue #1687 D-8: max 20 tags / 50 chars each.
+    /// </summary>
+    /// <exception cref="ArgumentException">Thrown when the editor id is empty, more than 20 tags are supplied, or any tag exceeds 50 chars after trim.</exception>
+    public void SetTags(IEnumerable<string> tags, Guid editorId)
+    {
+        ArgumentNullException.ThrowIfNull(tags);
+        EnsureValidEditorId(editorId);
+
+        var raw = tags.ToList();
+        if (raw.Count > 20)
+            throw new ArgumentException("Tags cannot contain more than 20 items", nameof(tags));
+
+        var normalized = new List<string>(raw.Count);
+        foreach (var tag in raw)
+        {
+            if (string.IsNullOrWhiteSpace(tag))
+                continue;
+
+            var trimmed = tag.Trim();
+            if (trimmed.Length > 50)
+                throw new ArgumentException("Each tag cannot exceed 50 characters", nameof(tags));
+
+            normalized.Add(trimmed.ToLowerInvariant());
+        }
+
+        var sorted = normalized
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(t => t, StringComparer.Ordinal)
+            .ToList();
+
+        _tags.Clear();
+        _tags.AddRange(sorted);
+
+        StampAudit(editorId);
+    }
+
+    /// <summary>
+    /// Sets the document category without clobbering the base-document linkage or version label
+    /// (in contrast to <see cref="Reclassify"/> which is admin-grade and mutates all three).
+    /// Issue #1687 D-6 / Task 4 alt: SRP-narrow mutator for KbEditorDesktop.
+    /// </summary>
+    /// <exception cref="ArgumentException">Thrown when the editor id is empty.</exception>
+    public void SetCategory(DocumentCategory category, Guid editorId)
+    {
+        EnsureValidEditorId(editorId);
+
+        DocumentCategory = category;
+        StampAudit(editorId);
+    }
+
+    /// <summary>
+    /// Editor-driven language override. Reuses the existing detection-pipeline path
+    /// (<see cref="OverrideLanguage"/>) and additionally records the audit columns.
+    /// Issue #1687 D-7: validator gates the whitelist before this call.
+    /// </summary>
+    /// <exception cref="ArgumentException">Thrown when the editor id is empty.</exception>
+    public void OverrideLanguageByEditor(string? languageCode, Guid editorId)
+    {
+        EnsureValidEditorId(editorId);
+
+        OverrideLanguage(languageCode);
+        StampAudit(editorId);
+    }
+
+    private void StampAudit(Guid editorId)
+    {
+        UpdatedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
+        UpdatedBy = editorId;
+    }
+
+    private static void EnsureValidEditorId(Guid editorId)
+    {
+        if (editorId == Guid.Empty)
+            throw new ArgumentException("Editor id cannot be empty", nameof(editorId));
+    }
+
+    /// <summary>
+    /// Raises a <see cref="PdfMetadataChangedEvent"/> with the supplied change diff. Intended for the
+    /// <c>UpdateKbDocMetadataCommandHandler</c> only — it knows the cross-field diff (old/new tuples)
+    /// while individual aggregate mutators only see their own field.
+    /// Issue #1687 D-9 / Task 6.
+    /// </summary>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="changes"/> is empty.</exception>
+    public void RaiseMetadataChangedEvent(IReadOnlyList<MetadataChange> changes, Guid editorId, string editorRole)
+    {
+        ArgumentNullException.ThrowIfNull(changes);
+        if (changes.Count == 0)
+            throw new ArgumentException("At least one change must be present to emit the metadata-changed event", nameof(changes));
+
+        EnsureValidEditorId(editorId);
+        if (string.IsNullOrWhiteSpace(editorRole))
+            throw new ArgumentException("Editor role must be non-empty", nameof(editorRole));
+
+        AddDomainEvent(new PdfMetadataChangedEvent(
+            AggregateId: Id,
+            UserId: editorId,
+            EditorRole: editorRole,
+            Changes: changes,
+            GameId: SharedGameId));
+    }
+
     // Issue #2029: Update detected language after processing
     public void UpdateLanguage(LanguageCode languageCode)
     {
@@ -610,6 +834,52 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     public void OverrideLanguage(string? languageCode)
     {
         LanguageOverride = string.IsNullOrWhiteSpace(languageCode) ? null : languageCode;
+    }
+
+    /// <summary>
+    /// Records successful PDF cover extraction and raises <see cref="PdfCoverGeneratedEvent"/>
+    /// so SharedGame catalog can propagate the key. Issue #1852 (Gap A).
+    /// </summary>
+    public void MarkCoverGenerated(string coverR2Key, int pageIndex)
+    {
+        if (string.IsNullOrWhiteSpace(coverR2Key))
+            throw new ArgumentException("Cover R2 key cannot be empty", nameof(coverR2Key));
+        if (pageIndex < 0)
+            throw new ArgumentException("Page index must be non-negative", nameof(pageIndex));
+
+        CoverR2Key = coverR2Key;
+        CoverGenerationStatus = PdfCoverGenerationStatus.Generated;
+        CoverPageIndex = pageIndex;
+        CoverGenerationError = null;
+
+        AddDomainEvent(new PdfCoverGeneratedEvent(Id, SharedGameId, coverR2Key, pageIndex));
+    }
+
+    /// <summary>
+    /// Records that the cover-extraction heuristic rejected all candidate pages
+    /// (typically text-only PDFs). No event is raised — there is no L4 to propagate.
+    /// Issue #1852.
+    /// </summary>
+    public void MarkCoverSkipped()
+    {
+        CoverGenerationStatus = PdfCoverGenerationStatus.Skipped;
+        CoverR2Key = null;
+        CoverPageIndex = null;
+        CoverGenerationError = null;
+    }
+
+    /// <summary>
+    /// Records a cover-extraction failure (extractor exception, R2 unreachable, etc.).
+    /// Error is truncated to 512 chars to fit the DB column. No event is raised.
+    /// Issue #1852.
+    /// </summary>
+    public void MarkCoverFailed(string error)
+    {
+        if (string.IsNullOrWhiteSpace(error))
+            throw new ArgumentException("Error message cannot be empty", nameof(error));
+
+        CoverGenerationStatus = PdfCoverGenerationStatus.Failed;
+        CoverGenerationError = error.Length > 512 ? error[..512] : error;
     }
 
     // Issue #2051: Assign document to collection

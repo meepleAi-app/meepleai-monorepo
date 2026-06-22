@@ -204,7 +204,7 @@ export const DarkMode: Story = {
   },
   decorators: [
     Story => (
-      <div className="dark bg-slate-950 p-8">
+      <div className="dark bg-card p-8">
         <Story />
       </div>
     ),
@@ -269,15 +269,15 @@ export const InvalidPageNumber: Story = {
   render: () => (
     <div className="flex flex-col gap-4 p-4">
       <div>
-        <p className="text-sm text-gray-600 mb-2">Valid: pageNumber=5</p>
+        <p className="text-sm text-muted-foreground mb-2">Valid: pageNumber=5</p>
         <CitationLink pageNumber={5} onClick={fn()} />
       </div>
       <div>
-        <p className="text-sm text-gray-600 mb-2">Invalid: pageNumber=0 (renders null)</p>
+        <p className="text-sm text-muted-foreground mb-2">Invalid: pageNumber=0 (renders null)</p>
         <CitationLink pageNumber={0} onClick={fn()} />
       </div>
       <div>
-        <p className="text-sm text-gray-600 mb-2">Invalid: pageNumber=-5 (renders null)</p>
+        <p className="text-sm text-muted-foreground mb-2">Invalid: pageNumber=-5 (renders null)</p>
         <CitationLink pageNumber={-5} onClick={fn()} />
       </div>
     </div>

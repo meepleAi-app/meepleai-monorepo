@@ -36,7 +36,7 @@ jobs:
       issues: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0   # need history to diff against base
 
@@ -58,9 +58,14 @@ jobs:
             echo "Mode: PR-diff scan (base=$BASE_SHA head=$HEAD_SHA)"
             git diff --name-only --diff-filter=AM "$BASE_SHA" "$HEAD_SHA" -- 'docs/**/*.md' 'CLAUDE.md' > .lychee-targets.txt || true
           fi
-          # Always exclude .docs-archive/ — those files are dead by definition.
+          # Exclude legitimate archive trees only (dead by definition).
+          # The 6-tree exclusion previously here (#1013, #1002) was retired by
+          # #1014 — all broken refs in docs/for-developers/{deployment,security,
+          # testing,plans}/, docs/for-claude/, and docs/superpowers/ (non-archive)
+          # have been fixed or stripped. See `scripts/quality/scan-broken-links.py`
+          # for the local equivalent of this gate.
           if [[ -f .lychee-targets.txt ]]; then
-            grep -v '^\.docs-archive/' .lychee-targets.txt > .lychee-targets.filtered.txt || true
+            grep -vE '^\.docs-archive/|^docs/superpowers/.*archive/' .lychee-targets.txt > .lychee-targets.filtered.txt || true
             mv .lychee-targets.filtered.txt .lychee-targets.txt
           fi
           count=$(wc -l < .lychee-targets.txt)
@@ -74,7 +79,7 @@ jobs:
 
       - name: Restore lychee cache
         if: steps.files.outputs.count != '0'
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .lycheecache
           key: cache-lychee-${{ github.sha }}
@@ -97,12 +102,17 @@ jobs:
             --
             $(cat .lychee-targets.txt | tr '\n' ' ')
           fail: true
+          # failIfEmpty must be false under --offline: external HTTP links
+          # are skipped, so docs that contain only http(s) URLs legitimately
+          # produce a 0-link report. The check should fail only on real
+          # broken links, not on the absence of relative-path links.
+          failIfEmpty: false
           format: markdown
           output: ./lychee-report.md
 
       - name: Upload report
         if: always() && steps.files.outputs.count != '0'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lychee-report
           path: ./lychee-report.md

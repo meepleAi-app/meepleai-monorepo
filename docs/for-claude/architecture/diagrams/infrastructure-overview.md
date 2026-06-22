@@ -15,7 +15,7 @@ graph TB
 
     subgraph "Data Layer"
         PG[(PostgreSQL<br/>:5432<br/>Game + User Data)]
-        Qdrant[(Qdrant<br/>:6333<br/>Vector Store)]
+        pgvector[(pgvector<br/>:5432<br/>Vector Store via PostgreSQL)]
         Redis[(Redis<br/>:6379<br/>Cache + Sessions)]
     end
 
@@ -39,7 +39,7 @@ graph TB
     Web -->|REST API<br/>Cookie + API Key Auth| API
 
     API -->|EF Core<br/>Connection Pool| PG
-    API -->|Vector Search| Qdrant
+    API -->|Vector Search| pgvector
     API -->|HybridCache L1+L2| Redis
 
     API -->|HTTP Client<br/>Stage 1 Extraction| Unstructured
@@ -59,7 +59,7 @@ graph TB
     style Web fill:#4fc3f7,color:#000
     style API fill:#29b6f6,color:#000
     style PG fill:#66bb6a,color:#000
-    style Qdrant fill:#ab47bc,color:#000
+    style pgvector fill:#ab47bc,color:#000
     style Redis fill:#ef5350,color:#000
     style Unstructured fill:#ffa726,color:#000
     style SmolDocling fill:#ff7043,color:#000
@@ -79,7 +79,7 @@ graph TB
 | **Web App** | 3000 | Next.js 16 + React 19 | Frontend UI |
 | **API** | 8080 | ASP.NET Core 9 | Backend REST API |
 | **PostgreSQL** | 5432 | PostgreSQL 16 | Database principale |
-| **Qdrant** | 6333 | Qdrant | Vector database per RAG |
+| **pgvector** | PostgreSQL :5432 | extension | Vector database per RAG |
 | **Redis** | 6379 | Redis 7 | Cache L2 + Sessions |
 | **Unstructured** | 8001 | Python FastAPI | PDF extraction Stage 1 |
 | **SmolDocling** | 8002 | Python + VLM | PDF extraction Stage 2 |
@@ -118,7 +118,7 @@ Browser → Web → API → PostgreSQL (PdfDocument entity)
                  ↓
             Chunking → Ollama (Embedding)
                  ↓
-            Qdrant (Vector Indexing)
+            pgvector (Vector Indexing)
 ```
 
 ### 3. RAG Query (Hybrid Search)
@@ -128,7 +128,7 @@ Browser → Web → API
     Query Expansion (4 variations)
          ↓
     Parallel Search:
-    ├─ Qdrant (Vector Search)
+    ├─ pgvector (Vector Search)
     └─ PostgreSQL (Keyword FTS)
          ↓
     RRF Fusion (70/30 weights)
@@ -171,7 +171,7 @@ graph LR
 - **ORM**: Entity Framework Core 9
 - **Database**: PostgreSQL 16
 - **Cache**: Redis 7 + HybridCache
-- **Vector DB**: Qdrant
+- **Vector DB**: pgvector (PostgreSQL extension)
 
 ### Frontend
 - **Framework**: Next.js 16 (App Router)

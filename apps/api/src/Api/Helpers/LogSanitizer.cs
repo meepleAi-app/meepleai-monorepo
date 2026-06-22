@@ -1,13 +1,18 @@
+using System.Web;
+using Microsoft.AspNetCore.Http;
+
 namespace Api.Helpers;
 
 /// <summary>
-/// Sanitizes user-provided values before logging to prevent log-forging attacks (CodeQL cs/log-forging).
-/// Strips newlines, carriage returns, and control characters that could inject fake log entries.
+/// Canonical sanitizer for log-forging prevention (CWE-117, CodeQL cs/log-forging).
+/// Strips carriage returns, line feeds, and tab characters that could inject fake log entries.
+///
+/// See ADR-058. For PII confidentiality masking use <see cref="Api.Infrastructure.Security.DataMasking"/>.
 /// </summary>
 public static class LogSanitizer
 {
     /// <summary>
-    /// Sanitize a string value for safe logging. Removes newlines and control characters.
+    /// Sanitize a string value for safe logging. Removes newlines and replaces tabs with spaces.
     /// </summary>
     public static string Sanitize(string? value)
     {
@@ -29,5 +34,15 @@ public static class LogSanitizer
         return sanitized.Length > maxLength
             ? sanitized[..maxLength] + "..."
             : sanitized;
+    }
+
+    /// <summary>
+    /// Sanitize a request path before logging. URL-decodes first so encoded control characters
+    /// (<c>%0D</c>, <c>%0A</c>) become detectable, then strips them via <see cref="Sanitize(string)"/>.
+    /// </summary>
+    public static string SanitizePath(PathString path)
+    {
+        var decoded = HttpUtility.UrlDecode(path.ToString());
+        return Sanitize(decoded);
     }
 }

@@ -13,14 +13,24 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 
 /// <summary>
 /// Handler for SeedBadswormUserCommand.
-/// Creates demo user (badsworm@alice.it) with password from SEED_BADSWORM_PASSWORD secret.
-/// Idempotent: Only executes if user doesn't exist.
+/// Creates project owner account (badsworm@gmail.com, role=SuperAdmin) with
+/// password from SEED_BADSWORM_PASSWORD secret. Used for Nanolith demo runthrough
+/// (docs/superpowers/specs/2026-05-07-libro-game-nanolith-demo-design.md) and as
+/// the staging allowlist whitelisted user (DevOps wave 1, devops-policy.md §4).
+///
+/// Idempotent with password sync (issue #870):
+/// - User missing → create with secret password.
+/// - User exists, password matches secret → skip (no DB write).
+/// - User exists, password differs from secret → admin-style password reset
+///   so the secret remains the source of truth across rotations and dev DB
+///   restores.
+///
 /// Runs in all environments (Dev, Staging, Prod) when SEED_BADSWORM_PASSWORD secret is present.
 /// Remove or leave the secret absent in environments where this account should not exist.
 /// </summary>
 internal sealed class SeedBadswormUserCommandHandler : ICommandHandler<SeedBadswormUserCommand>
 {
-    private const string BadswormEmail = "badsworm@alice.it";
+    private const string BadswormEmail = "badsworm@gmail.com";
     private const string BadswormDisplayName = "Badsworm";
 
     private readonly IUserRepository _userRepository;
@@ -60,7 +70,21 @@ internal sealed class SeedBadswormUserCommandHandler : ICommandHandler<SeedBadsw
         var existingUser = await _userRepository.GetByEmailAsync(emailValue, cancellationToken).ConfigureAwait(false);
         if (existingUser != null)
         {
-            _logger.LogInformation("Badsworm user already exists. Skipping seed.");
+            // Issue #870: keep the secret as source of truth. If the secret has
+            // been rotated since user creation (or the dev DB was seeded with
+            // a stale value), sync the password so manual login still works.
+            if (existingUser.VerifyPassword(password))
+            {
+                _logger.LogInformation("Badsworm user already exists with matching password. Skipping seed.");
+                return;
+            }
+
+            existingUser.UpdatePassword(PasswordHash.Create(password));
+            await _userRepository.UpdateAsync(existingUser, cancellationToken).ConfigureAwait(false);
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation(
+                "Badsworm user password synced from SEED_BADSWORM_PASSWORD secret: {Email}",
+                DataMasking.MaskEmail(BadswormEmail));
             return;
         }
 
@@ -69,7 +93,7 @@ internal sealed class SeedBadswormUserCommandHandler : ICommandHandler<SeedBadsw
             email: emailValue,
             displayName: BadswormDisplayName,
             passwordHash: PasswordHash.Create(password),
-            role: Role.User
+            role: Role.SuperAdmin
         );
         user.VerifyEmail(); // Developer account: pre-verified, no email flow required
 

@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Api.BoundedContexts.SharedGameCatalog.Application;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.AddRagToSharedGame;
@@ -10,6 +11,7 @@ using Api.Middleware.Exceptions;
 using Api.Models;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace Api.Routing;
 
@@ -250,15 +252,80 @@ internal static class SharedGameCatalogWizardEndpoints
     /// <summary>
     /// Handler for wizard game creation endpoint (final step).
     /// Creates SharedGame from extracted metadata with optional BGG enrichment.
+    /// G5: Supports Idempotency-Key header (UUID) for double-submit protection.
+    /// Cache key: wizard:create:{userId}:{idempotencyKey}, TTL 5 min.
+    /// Body hash (SHA256) stored in envelope to detect key-reuse with different payload (IETF §2.6).
     /// </summary>
     private static async Task<IResult> HandleWizardCreateGame(
         CreateGameFromPdfRequest request,
         HttpContext context,
         IMediator mediator,
+        IDistributedCache cache,
         ILogger<Program> logger,
         CancellationToken ct)
     {
         var userId = context.User.GetUserId();
+
+        // G5: Idempotency-Key support
+        string? idempotencyKey = null;
+        if (context.Request.Headers.TryGetValue("Idempotency-Key", out var keyValues) && keyValues.Count > 0)
+        {
+            idempotencyKey = keyValues[0];
+        }
+
+        // F2 (review finding, IETF draft-ietf-httpapi-idempotency-key §2.6): hash body to detect
+        // key-reuse with a different payload before executing the command.
+        string? requestBodyHash = null;
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            var bodyJson = System.Text.Json.JsonSerializer.Serialize(request);
+            var hashBytes = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(bodyJson));
+            requestBodyHash = Convert.ToHexString(hashBytes);
+        }
+
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            var cacheKey = $"wizard:create:{userId}:{idempotencyKey}";
+            var cachedBytes = await cache.GetAsync(cacheKey, ct).ConfigureAwait(false);
+            if (cachedBytes is { Length: > 0 })
+            {
+                var cachedEnvelopeJson = System.Text.Encoding.UTF8.GetString(cachedBytes);
+                var cached = System.Text.Json.JsonSerializer.Deserialize<IdempotencyCachedEnvelope>(cachedEnvelopeJson);
+                if (cached is not null)
+                {
+                    // F2: mismatch on body hash → 422 (IETF draft-ietf-httpapi-idempotency-key §2.6)
+                    if (!string.Equals(cached.BodyHash, requestBodyHash, StringComparison.Ordinal))
+                    {
+                        logger.LogWarning(
+                            "Idempotency-Key reused with different body: Key={Key}, UserId={UserId}",
+                            idempotencyKey, userId);
+                        return Results.UnprocessableEntity(new
+                        {
+                            error = "idempotency_key_body_mismatch",
+                            message = "Idempotency-Key was previously used with a different request body."
+                        });
+                    }
+
+                    logger.LogInformation(
+                        "Idempotency-Key hit: returning cached gameId={GameId} for key={Key}",
+                        cached.GameId, idempotencyKey);
+
+                    // F1: restore real status from cache so client sees true Draft/Published
+                    return Results.Created(
+                        $"/api/v1/admin/shared-games/{cached.GameId}",
+                        new CreateGameFromPdfResult
+                        {
+                            GameId = cached.GameId,
+                            ApprovalStatus = cached.ApprovalStatus,
+                            QualityScore = 0.0,
+                            DuplicateWarning = false,
+                            DuplicateTitles = [],
+                            BggEnrichmentApplied = cached.BggEnrichmentApplied,
+                            EnrichedWithBggId = cached.EnrichedWithBggId
+                        });
+                }
+            }
+        }
 
         // Determine if user is Admin (auto-publish) or Editor (requires approval)
         var isAdmin = context.User.IsInRole("Admin");
@@ -286,6 +353,40 @@ internal static class SharedGameCatalogWizardEndpoints
             logger.LogInformation(
                 "Wizard game created successfully: GameId={GameId}, Status={Status}, BggEnriched={BggEnriched}",
                 result.GameId, result.ApprovalStatus, result.BggEnrichmentApplied);
+
+            // G5: Persist idempotency envelope in cache after successful create.
+            // F1+F2: envelope includes ApprovalStatus + BggEnrichment + BodyHash for safe replay.
+            if (!string.IsNullOrWhiteSpace(idempotencyKey) && !string.IsNullOrWhiteSpace(requestBodyHash))
+            {
+                var cacheKey = $"wizard:create:{userId}:{idempotencyKey}";
+                var envelope = new IdempotencyCachedEnvelope
+                {
+                    GameId = result.GameId,
+                    ApprovalStatus = result.ApprovalStatus,
+                    BggEnrichmentApplied = result.BggEnrichmentApplied,
+                    EnrichedWithBggId = result.EnrichedWithBggId,
+                    BodyHash = requestBodyHash
+                };
+                var envelopeJson = System.Text.Json.JsonSerializer.Serialize(envelope);
+                var envelopeBytes = System.Text.Encoding.UTF8.GetBytes(envelopeJson);
+                var cacheOptions = new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+                };
+                // Final review F2: swallow transient cache failures so the 201 still reaches the client.
+                // If we propagated, the game would be persisted but the caller would see 500 + retry would
+                // create a duplicate (cache cold, no envelope). Standard IETF idempotency-key pattern.
+                try
+                {
+                    await cache.SetAsync(cacheKey, envelopeBytes, cacheOptions, ct).ConfigureAwait(false);
+                }
+                catch (Exception cacheEx) when (cacheEx is not OperationCanceledException)
+                {
+                    logger.LogError(cacheEx,
+                        "Idempotency cache write failed for key={Key}, gameId={GameId} — created 201 still returned, but future retries with same key will re-execute",
+                        idempotencyKey, result.GameId);
+                }
+            }
 
             return Results.Created($"/api/v1/admin/shared-games/{result.GameId}", result);
         }
@@ -347,7 +448,7 @@ internal static class SharedGameCatalogWizardEndpoints
             documentType,
             version,
             tags,
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             isAdmin);
 
         logger.LogInformation(
@@ -394,7 +495,7 @@ internal static class SharedGameCatalogWizardEndpoints
         }
 
         var isAdmin = context.User.IsInRole("Admin");
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
         var items = new List<AddRagToSharedGameCommand>();
 
         for (var i = 0; i < sharedGameIdStrings.Count; i++)
@@ -433,4 +534,19 @@ internal static class SharedGameCatalogWizardEndpoints
 
         return Results.Ok(result);
     }
+}
+
+/// <summary>
+/// G5: envelope persisted in Redis/in-memory cache for Idempotency-Key replay.
+/// Stores the gameId + status fields needed to replay HTTP 201 truthfully (F1),
+/// plus the SHA256 of the original request body for IETF idempotency-key
+/// body-mismatch detection (F2 — RFC draft-ietf-httpapi-idempotency-key §2.6).
+/// </summary>
+internal sealed record IdempotencyCachedEnvelope
+{
+    public Guid GameId { get; init; }
+    public string ApprovalStatus { get; init; } = string.Empty;
+    public bool BggEnrichmentApplied { get; init; }
+    public int? EnrichedWithBggId { get; init; }
+    public string BodyHash { get; init; } = string.Empty;
 }

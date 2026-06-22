@@ -1,6 +1,8 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.PlayRecords;
 using Api.BoundedContexts.GameManagement.Application.DTOs.PlayRecords;
 using Api.BoundedContexts.GameManagement.Application.Queries.PlayRecords;
+using ShareLinkResponse = Api.BoundedContexts.GameManagement.Application.DTOs.PlayRecords.ShareLinkResponse;
+using PlayRecordVersionDto = Api.BoundedContexts.GameManagement.Application.DTOs.PlayRecords.PlayRecordVersionDto;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Extensions;
 using MediatR;
@@ -31,6 +33,7 @@ internal static class PlayRecordEndpoints
             .Produces(204)
             .Produces(404)
             .Produces(401)
+            .Produces(StatusCodes.Status403Forbidden)
             .WithTags("PlayRecords")
             .WithSummary("Add player to play record")
             .WithDescription("Adds a registered user or guest player to a play record.");
@@ -40,6 +43,7 @@ internal static class PlayRecordEndpoints
             .Produces(204)
             .Produces(404)
             .Produces(401)
+            .Produces(StatusCodes.Status403Forbidden)
             .WithTags("PlayRecords")
             .WithSummary("Record a score")
             .WithDescription("Records a score for a player in a play record. Supports multi-dimensional scoring.");
@@ -50,6 +54,7 @@ internal static class PlayRecordEndpoints
             .Produces(404)
             .Produces(409)
             .Produces(401)
+            .Produces(StatusCodes.Status403Forbidden)
             .WithTags("PlayRecords")
             .WithSummary("Start play record")
             .WithDescription("Marks a play record as in-progress.");
@@ -60,6 +65,7 @@ internal static class PlayRecordEndpoints
             .Produces(404)
             .Produces(409)
             .Produces(401)
+            .Produces(StatusCodes.Status403Forbidden)
             .WithTags("PlayRecords")
             .WithSummary("Complete play record")
             .WithDescription("Completes a play record with optional manual duration.");
@@ -69,16 +75,69 @@ internal static class PlayRecordEndpoints
             .Produces(204)
             .Produces(404)
             .Produces(401)
+            .Produces(StatusCodes.Status403Forbidden)
             .WithTags("PlayRecords")
             .WithSummary("Update play record details")
             .WithDescription("Updates play record details. Allowed even after completion.");
 
+        group.MapDelete("/play-records/{recordId}", HandleDeleteRecord)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(404)
+            .Produces(401)
+            .Produces(StatusCodes.Status403Forbidden)
+            .WithTags("PlayRecords")
+            .WithSummary("Delete play record")
+            .WithDescription("Soft-deletes a play record. Creator-only.");
+
+        group.MapPost("/play-records/{recordId:guid}/photos", HandleUploadPhoto)
+            .RequireAuthenticatedUser()
+            .DisableAntiforgery()
+            .Produces<PlayRecordPhotoUploadResult>(201)
+            .Produces(400).Produces(401).Produces(StatusCodes.Status403Forbidden).Produces(404)
+            .WithTags("PlayRecords")
+            .WithSummary("Upload a photo to a play record (creator-only, ≤5MB, opt-in OCR)")
+            .WithOpenApi();
+
+        group.MapPost("/play-records/{recordId:guid}/share", HandleGenerateShareLink)
+            .RequireAuthenticatedUser()
+            .Produces<ShareLinkResponse>(200)
+            .Produces(401).Produces(StatusCodes.Status403Forbidden).Produces(404)
+            .WithTags("PlayRecords")
+            .WithSummary("Generate a public share link (creator-only)");
+
+        group.MapDelete("/play-records/{recordId:guid}/share", HandleRevokeShareLink)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(401).Produces(StatusCodes.Status403Forbidden).Produces(404)
+            .WithTags("PlayRecords")
+            .WithSummary("Revoke the share link (creator-only)");
+
+        group.MapPost("/play-records/{recordId:guid}/restore/{versionNumber:int}", HandleRestoreVersion)
+            .RequireAuthenticatedUser()
+            .Produces(204).Produces(401).Produces(StatusCodes.Status403Forbidden).Produces(404)
+            .WithTags("PlayRecords").WithSummary("Restore a play record to a previous version (creator-only)");
+
+        // Public (anonymous) query — must be registered BEFORE the authenticated /{recordId} route
+        // to avoid the router matching "shared" as a Guid and routing to HandleGetPlayRecord.
+        group.MapGet("/play-records/shared/{token}", HandleGetSharedPlayRecord)
+            .AllowAnonymous()
+            .Produces<PlayRecordDto>(200).Produces(404)
+            .WithTags("PlayRecords")
+            .WithSummary("Get a shared play record by token (public, no auth)");
+
         // Queries
+        group.MapGet("/play-records/{recordId:guid}/versions", HandleGetVersions)
+            .RequireAuthenticatedUser()
+            .Produces<IReadOnlyList<PlayRecordVersionDto>>(200).Produces(401).Produces(StatusCodes.Status403Forbidden)
+            .WithTags("PlayRecords").WithSummary("Get a play record's version history (creator-only, last 5)");
+
         group.MapGet("/play-records/{recordId}", HandleGetPlayRecord)
             .RequireAuthenticatedUser()
             .Produces<PlayRecordDto>(200)
             .Produces(404)
             .Produces(401)
+            .Produces(StatusCodes.Status403Forbidden)
             .WithTags("PlayRecords")
             .WithSummary("Get play record by ID")
             .WithDescription("Retrieves full details of a play record including players and scores.");
@@ -123,16 +182,17 @@ internal static class PlayRecordEndpoints
             request.DimensionUnits);
 
         var recordId = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
-        return Results.Created($"/api/v1/game-management/play-records/{recordId}", recordId);
+        return Results.Created($"/api/v1/play-records/{recordId}", recordId);
     }
 
     private static async Task<IResult> HandleAddPlayer(
         Guid recordId,
         [FromBody] AddPlayerRequest request,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var command = new AddPlayerToRecordCommand(recordId, request.UserId, request.DisplayName);
+        var command = new AddPlayerToRecordCommand(recordId, httpContext.User.GetUserId(), request.UserId, request.DisplayName);
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
@@ -141,9 +201,10 @@ internal static class PlayRecordEndpoints
         Guid recordId,
         [FromBody] RecordScoreRequest request,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var command = new RecordScoreCommand(recordId, request.PlayerId, request.Dimension, request.Value, request.Unit);
+        var command = new RecordScoreCommand(recordId, httpContext.User.GetUserId(), request.PlayerId, request.Dimension, request.Value, request.Unit);
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
@@ -151,9 +212,10 @@ internal static class PlayRecordEndpoints
     private static async Task<IResult> HandleStartRecord(
         Guid recordId,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var command = new StartPlayRecordCommand(recordId);
+        var command = new StartPlayRecordCommand(recordId, httpContext.User.GetUserId());
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
@@ -162,9 +224,10 @@ internal static class PlayRecordEndpoints
         Guid recordId,
         [FromBody] CompleteRecordRequest? request,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var command = new CompletePlayRecordCommand(recordId, request?.ManualDuration);
+        var command = new CompletePlayRecordCommand(recordId, httpContext.User.GetUserId(), request?.ManualDuration);
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
@@ -173,10 +236,85 @@ internal static class PlayRecordEndpoints
         Guid recordId,
         [FromBody] UpdateRecordRequest request,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var command = new UpdatePlayRecordCommand(recordId, request.SessionDate, request.Notes, request.Location);
+        var command = new UpdatePlayRecordCommand(recordId, httpContext.User.GetUserId(), request.SessionDate, request.Notes, request.Location, request.Xmin);
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleDeleteRecord(
+        Guid recordId,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var command = new DeletePlayRecordCommand(recordId, httpContext.User.GetUserId());
+        await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleUploadPhoto(
+        Guid recordId,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var form = await httpContext.Request.ReadFormAsync(cancellationToken).ConfigureAwait(false);
+        var file = form.Files.GetFile("file");
+        if (file is null || file.Length == 0)
+            return Results.BadRequest(new { error = "File is required" });
+
+        var extractScore = form.TryGetValue("extractScoreFromPhoto", out var raw)
+            && bool.TryParse(raw.ToString(), out var b) && b;
+        var caption = form.TryGetValue("caption", out var cap) ? cap.ToString() : null;
+
+        using var stream = file.OpenReadStream();
+        var command = new UploadPlayRecordPhotoCommand(
+            recordId, httpContext.User.GetUserId(), stream, file.Length, file.ContentType, extractScore, caption);
+
+        // Let exceptions propagate to ApiExceptionHandlerMiddleware for a consistent
+        // ProblemDetails envelope (ForbiddenException→403, NotFoundException→404,
+        // ValidationException→400) — matching every other handler in this file.
+        var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.Created($"/api/v1/play-records/{recordId}/photos/{result.PhotoId}", result);
+    }
+
+    private static async Task<IResult> HandleGenerateShareLink(
+        Guid recordId,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(
+            new GeneratePlayRecordShareTokenCommand(recordId, httpContext.User.GetUserId()),
+            cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleRevokeShareLink(
+        Guid recordId,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        await mediator.Send(
+            new RevokePlayRecordShareTokenCommand(recordId, httpContext.User.GetUserId()),
+            cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleRestoreVersion(
+        Guid recordId,
+        int versionNumber,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        await mediator.Send(
+            new RestorePlayRecordVersionCommand(recordId, versionNumber, httpContext.User.GetUserId()),
+            cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
 
@@ -184,12 +322,34 @@ internal static class PlayRecordEndpoints
 
     #region Query Handlers
 
-    private static async Task<IResult> HandleGetPlayRecord(
+    private static async Task<IResult> HandleGetVersions(
         Guid recordId,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(
+            new GetPlayRecordVersionsQuery(recordId, httpContext.User.GetUserId()),
+            cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetSharedPlayRecord(
+        string token,
         [FromServices] IMediator mediator,
         CancellationToken cancellationToken)
     {
-        var query = new GetPlayRecordQuery(recordId);
+        var result = await mediator.Send(new GetPlayRecordByShareTokenQuery(token), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetPlayRecord(
+        Guid recordId,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var query = new GetPlayRecordQuery(recordId, httpContext.User.GetUserId());
         var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
@@ -237,7 +397,10 @@ internal static class PlayRecordEndpoints
 
     private sealed record CompleteRecordRequest(TimeSpan? ManualDuration);
 
-    private sealed record UpdateRecordRequest(DateTime? SessionDate, string? Notes, string? Location);
+    // Xmin: optional Postgres xmin token captured by the client on read.
+    // When present, EF raises DbUpdateConcurrencyException on stale-form writes → 409.
+    // Omit to retain legacy fresh-load behaviour (no concurrency check). #2437-1.
+    private sealed record UpdateRecordRequest(DateTime? SessionDate, string? Notes, string? Location, uint? Xmin = null);
 
     private sealed record GetHistoryQueryParams(int Page = 1, int PageSize = 20, Guid? GameId = null);
 

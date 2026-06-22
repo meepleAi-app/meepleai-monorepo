@@ -4,6 +4,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.Services;
 using Api.Tests.Constants;
 using MediatR;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -31,9 +32,13 @@ public class FeatureFlagTierHierarchyTests
         _mockMediator = new Mock<IMediator>();
         _mockLogger = new Mock<ILogger<FeatureFlagService>>();
 
+        var environment = new Mock<IWebHostEnvironment>();
+        environment.Setup(e => e.EnvironmentName).Returns("Production");
+
         _service = new FeatureFlagService(
             _mockConfigService.Object,
             _mockMediator.Object,
+            environment.Object,
             _mockLogger.Object);
     }
 
@@ -272,7 +277,7 @@ public class FeatureFlagTierHierarchyTests
             id: Guid.NewGuid(),
             email: new Email($"test-{Guid.NewGuid():N}@example.com"),
             displayName: "Test User",
-            passwordHash: PasswordHash.Create("Test123!"),
+            passwordHash: PasswordHash.Create("T3stPwd1234!"),
             role: role,
             tier: tier
         );

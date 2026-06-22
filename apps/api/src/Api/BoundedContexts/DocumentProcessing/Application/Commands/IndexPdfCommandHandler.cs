@@ -1,11 +1,13 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Configuration;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.KnowledgeBase;
+using Api.Observability;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -33,6 +35,10 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
     private readonly ILogger<IndexPdfCommandHandler> _logger;
     private readonly TimeProvider _timeProvider;
     private readonly ISemanticResponseCache _semanticCache;
+    // Phase D4 (gamebook multi-book): optional role classifier for tagging chunks at ingest.
+    // Optional so unit tests that pre-date Phase D continue to compile without updates.
+    private readonly IRoleClassifierService? _roleClassifier;
+    private readonly IPdfIndexingPipeline _pipeline;
 
     public IndexPdfCommandHandler(
         MeepleAiDbContext db,
@@ -41,7 +47,9 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         ILogger<IndexPdfCommandHandler> logger,
         IOptions<IndexingSettings> indexingSettings,
         ISemanticResponseCache semanticCache,
-        TimeProvider? timeProvider = null)
+        IPdfIndexingPipeline pipeline,
+        TimeProvider? timeProvider = null,
+        IRoleClassifierService? roleClassifier = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _chunkingService = chunkingService ?? throw new ArgumentNullException(nameof(chunkingService));
@@ -49,7 +57,9 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _indexingSettings = indexingSettings?.Value ?? throw new ArgumentNullException(nameof(indexingSettings));
         _semanticCache = semanticCache ?? throw new ArgumentNullException(nameof(semanticCache));
+        _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
         _timeProvider = timeProvider ?? TimeProvider.System;
+        _roleClassifier = roleClassifier;
     }
 
     public async Task<IndexingResultDto> Handle(IndexPdfCommand command, CancellationToken cancellationToken)
@@ -69,16 +79,29 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             }
 
             // Track processing state: mark as Indexing (covers chunk + embed + index phases)
-            pdf!.ProcessingState = "Indexing";
+            pdf!.ProcessingState = nameof(PdfProcessingState.Indexing);
             pdf.IndexingStartedAt = _timeProvider.GetUtcNow().UtcDateTime;
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                    nameof(IndexPdfCommandHandler),
+                    MeepleAiMetrics.PdfConcurrencyCategories.B);
+                _logger.LogWarning(ex,
+                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                    pdfId, nameof(IndexPdfCommandHandler));
+                return IndexingResultDto.CreateFailure("Concurrency conflict; please retry", PdfIndexingErrorCode.UnexpectedError);
+            }
 
             // Step 2: Chunk text and generate embeddings
             var (chunkingSuccess, documentChunks, chunkingError, chunkErrorCode) = await ChunkAndEmbedTextAsync(
                 pdfId, pdf.ExtractedText!, cancellationToken).ConfigureAwait(false);
             if (!chunkingSuccess)
             {
-                pdf.ProcessingState = "Failed";
+                pdf.ProcessingState = nameof(PdfProcessingState.Failed);
                 return await MarkIndexingFailedAsync(vectorDoc!, chunkingError!, chunkErrorCode!.Value, cancellationToken).ConfigureAwait(false);
             }
 
@@ -90,9 +113,22 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                 pdfId, effectiveGameId.ToString(), pdf.ExtractedText!, documentChunks!, vectorDoc!, cancellationToken).ConfigureAwait(false);
             if (!indexingSuccess)
             {
-                pdf.ProcessingState = "Failed";
+                pdf.ProcessingState = nameof(PdfProcessingState.Failed);
                 return await MarkIndexingFailedAsync(vectorDoc!, "Vector indexing failed", PdfIndexingErrorCode.VectorIndexingFailed, cancellationToken).ConfigureAwait(false);
             }
+
+            // Transition VectorDocument processing → completed via the centralised pipeline
+            // (#2244 / epic #2242). The pipeline raises VectorDocumentIndexedEvent on the
+            // transition so has_knowledge_base is flipped projection-side. Replaces the
+            // inline mutation that previously lived inside IndexChunksInVectorStoreAsync.
+            await _pipeline.IndexAsync(
+                pdfDocumentId: Guid.Parse(pdfId),
+                gameId: pdf.PrivateGameId ?? pdf.SharedGameId,
+                sharedGameId: pdf.SharedGameId,
+                chunkCount: documentChunks!.Count,
+                totalCharacters: pdf.ExtractedText!.Length,
+                language: string.IsNullOrWhiteSpace(pdf.Language) ? "en" : pdf.Language,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
 
             // Step 4: Save text chunks to PostgreSQL for hybrid search
             // text_chunks.GameId is FK to games.Id (NOT shared_games.id) — resolve via PdfGameIdResolver.
@@ -100,11 +136,24 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             await SaveTextChunksToPostgresAsync(pdfId, chunkGameId, pdf.SharedGameId, documentChunks!, cancellationToken).ConfigureAwait(false);
 
             // Mark processing complete
-            pdf.ProcessingState = "Ready";
+            pdf.ProcessingState = nameof(PdfProcessingState.Ready);
             pdf.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
             pdf.IsActiveForRag = true; // Auto-enable after successful indexing so vectors are searchable
 
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                    nameof(IndexPdfCommandHandler),
+                    MeepleAiMetrics.PdfConcurrencyCategories.B);
+                _logger.LogWarning(ex,
+                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                    pdfId, nameof(IndexPdfCommandHandler));
+                return IndexingResultDto.CreateFailure("Concurrency conflict; please retry", PdfIndexingErrorCode.UnexpectedError);
+            }
 
             // Invalidate semantic response cache so stale answers are not served after re-index
             await _semanticCache.InvalidateGameAsync(effectiveGameId, cancellationToken).ConfigureAwait(false);
@@ -115,7 +164,11 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             return IndexingResultDto.CreateSuccess(
                 vectorDoc!.Id.ToString(),
                 documentChunks.Count,
-                vectorDoc.IndexedAt!.Value);
+                // IndexedAt timestamp is the moment "this call" completed indexing.
+                // The pipeline persists its own IndexedAt to the DB; we emit ours
+                // to the DTO so callers don't have to re-read after we just
+                // wrote — keeps the return self-contained.
+                _timeProvider.GetUtcNow().UtcDateTime);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out
@@ -140,9 +193,21 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                     .FirstOrDefaultAsync(p => p.Id.ToString() == pdfId, CancellationToken.None).ConfigureAwait(false);
                 if (failedPdf != null)
                 {
-                    failedPdf.ProcessingState = "Failed";
+                    failedPdf.ProcessingState = nameof(PdfProcessingState.Failed);
                     failedPdf.ProcessingError = $"Unexpected error: {ex.Message}";
-                    await _db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+                    try
+                    {
+                        await _db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+                    }
+                    catch (DbUpdateConcurrencyException concEx)
+                    {
+                        MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                            nameof(IndexPdfCommandHandler),
+                            MeepleAiMetrics.PdfConcurrencyCategories.B);
+                        _logger.LogWarning(concEx,
+                            "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                            pdfId, nameof(IndexPdfCommandHandler));
+                    }
                 }
             }
             catch (Exception dbEx)
@@ -193,13 +258,33 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             // Update existing entity status to "processing"
             existingVectorDoc.IndexingStatus = "processing";
             existingVectorDoc.IndexingError = null;
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                    nameof(IndexPdfCommandHandler),
+                    MeepleAiMetrics.PdfConcurrencyCategories.B);
+                _logger.LogWarning(ex,
+                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                    pdfId, nameof(IndexPdfCommandHandler));
+                return (false, null, null, "Concurrency conflict; please retry", PdfIndexingErrorCode.UnexpectedError);
+            }
         }
         else
         {
-            // Create new VectorDocumentEntity
+            // Create new VectorDocumentEntity in "processing" state. IPdfIndexingPipeline.IndexAsync
+            // (called downstream by the Handler) transitions it to "completed" and raises
+            // VectorDocumentIndexedEvent structurally via the VectorDocument domain aggregate.
+            // The intermediate "processing" entity exists so the PgVectorEmbedding rows have
+            // a stable VectorDocumentId FK to reference during embedding generation.
             var embeddingDimensions = _embeddingService.GetEmbeddingDimensions();
 
+#pragma warning disable MAI005 // Two-phase create: this entity is the placeholder for the
+                                // FK during embedding generation; pipeline.IndexAsync later
+                                // owns the structural event raising (see #2244 / P234).
             existingVectorDoc = new VectorDocumentEntity
             {
                 Id = Guid.NewGuid(),
@@ -210,8 +295,22 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                 EmbeddingModel = _embeddingService.GetModelName(),
                 EmbeddingDimensions = embeddingDimensions
             };
+#pragma warning restore MAI005
             _db.Set<VectorDocumentEntity>().Add(existingVectorDoc);
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                    nameof(IndexPdfCommandHandler),
+                    MeepleAiMetrics.PdfConcurrencyCategories.B);
+                _logger.LogWarning(ex,
+                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                    pdfId, nameof(IndexPdfCommandHandler));
+                return (false, null, null, "Concurrency conflict; please retry", PdfIndexingErrorCode.UnexpectedError);
+            }
         }
 
         return (true, pdf, existingVectorDoc, null, null);
@@ -351,15 +450,27 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             }).ToList();
 
             await _db.PgVectorEmbeddings.AddRangeAsync(entities, cancellationToken).ConfigureAwait(false);
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                    nameof(IndexPdfCommandHandler),
+                    MeepleAiMetrics.PdfConcurrencyCategories.B);
+                _logger.LogWarning(ex,
+                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                    pdfId, nameof(IndexPdfCommandHandler));
+                return false;
+            }
         }
 
-        // Update VectorDocument
-        vectorDoc.IndexingStatus = "completed";
-        vectorDoc.ChunkCount = documentChunks.Count;
-        vectorDoc.TotalCharacters = extractedText.Length;
-        vectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
-        vectorDoc.IndexingError = null;
+        // VectorDocument transition processing → completed is centralised in
+        // IPdfIndexingPipeline (called by the Handle method right after this
+        // function returns true). Kept out of here so the domain event
+        // (VectorDocumentIndexedEvent) is raised from a single code path —
+        // see epic #2242 / #2244.
 
         _logger.LogInformation("✅ [REINDEX] PDF {PdfId}: {Count} chunks indexed in pgvector", pdfId, documentChunks.Count);
         return true;
@@ -407,6 +518,12 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             })
             .ToList();
 
+        // Phase D4: classify chunks by GameBookRole before persistence so
+        // text_chunks.role_tags is populated on insert.
+        await TextChunkRoleClassifier.AssignRoleTagsAsync(
+            _roleClassifier, textChunkEntities, documentChunks, _logger, cancellationToken)
+            .ConfigureAwait(false);
+
         _db.TextChunks.AddRange(textChunkEntities);
         _logger.LogInformation("Saved {ChunkCount} text chunks to PostgreSQL for hybrid search (PDF {PdfId})",
             textChunkEntities.Count, pdfId);
@@ -420,7 +537,20 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
     {
         vectorDoc.IndexingStatus = "failed";
         vectorDoc.IndexingError = errorMessage;
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(IndexPdfCommandHandler),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on VectorDocument in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                nameof(IndexPdfCommandHandler));
+            return IndexingResultDto.CreateFailure(errorMessage, errorCode);
+        }
 
         return IndexingResultDto.CreateFailure(errorMessage, errorCode);
     }

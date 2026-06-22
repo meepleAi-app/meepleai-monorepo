@@ -1,6 +1,7 @@
 using Api.Infrastructure;
 using Api.Tests.TestHelpers;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Models;
 using Api.Services;
 using Api.SharedKernel.Application.Services;
@@ -492,13 +493,13 @@ public class ChatExportServiceTests
         };
         context.Users.Add(user);
 
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = gameName,
+            Title = gameName,
             CreatedAt = DateTime.UtcNow
         };
-        context.Games.Add(game);
+        context.SharedGames.Add(game);
 
         // Agent system removed (Task 10) — use random Guid, FK dropped in migration
         var chat = new ChatEntity

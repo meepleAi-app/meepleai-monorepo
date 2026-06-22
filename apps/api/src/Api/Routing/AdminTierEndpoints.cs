@@ -89,7 +89,7 @@ internal static class AdminTierEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         logger.LogInformation(
             "Admin {UserId} creating tier definition '{TierName}'",
@@ -126,7 +126,7 @@ internal static class AdminTierEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         logger.LogInformation(
             "Admin {UserId} updating tier definition '{TierName}'",

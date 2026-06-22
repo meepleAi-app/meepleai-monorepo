@@ -29,7 +29,7 @@ internal class TxtExportFormatter : IExportFormatter
         var sb = new StringBuilder();
 
         // Header
-        var gameName = chat.Game?.Name ?? "Unknown Game";
+        var gameName = chat.Game?.Title ?? "Unknown Game";
         sb.AppendLine(CultureInfo.InvariantCulture, $"========================================");
         sb.AppendLine(CultureInfo.InvariantCulture, $"Chat Export: {gameName}");
         sb.AppendLine(CultureInfo.InvariantCulture, $"Exported: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");

@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { GameDetailDesktop } from '../GameDetailDesktop';
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 import type { LibraryGameDetail } from '@/hooks/queries/useLibrary';
 
 // Mockable stub for the library game detail hook
@@ -11,14 +12,34 @@ const mockHookState = {
   isError: false,
 };
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    replace: vi.fn(),
+    push: vi.fn(),
+    refresh: vi.fn(),
+  }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 vi.mock('@/hooks/queries/useLibrary', () => ({
   useLibraryGameDetail: () => mockHookState,
 }));
 
-// Stub the MeepleCard so we don't need its full render tree
-vi.mock('@/components/ui/data-display/meeple-card/MeepleCard', () => ({
-  MeepleCard: (props: { title?: string }) => (
-    <div data-testid="meeple-card">{props.title ?? 'no title'}</div>
+// Stub GameHero (#2100 M1 replaced legacy MeepleCard hero). F3 #1974
+// regression tests need to assert on the metadata strip; render each
+// metadata `label` inside the stub so `toHaveTextContent` can match
+// without pulling the full primitive (includes Next/Image which needs
+// extra mocking).
+vi.mock('@/components/game-detail/GameHero', () => ({
+  GameHero: (props: { title?: string; metadata?: Array<{ label: string }> }) => (
+    <div data-testid="game-detail-hero-card">
+      {props.title ?? 'no title'}
+      {props.metadata?.map((m, i) => (
+        <span key={`meta-${i}`} data-testid={`game-hero-meta-${i}`}>
+          {m.label}
+        </span>
+      ))}
+    </div>
   ),
 }));
 
@@ -78,35 +99,63 @@ describe('GameDetailDesktop', () => {
 
   it('renders loading state while data is loading', () => {
     mockHookState.isLoading = true;
-    render(<GameDetailDesktop gameId={GAME_ID} />);
+    renderWithQuery(<GameDetailDesktop gameId={GAME_ID} />);
     expect(screen.getByTestId('game-detail-desktop-loading')).toBeInTheDocument();
   });
 
   it('renders error state when the hook reports an error', () => {
     mockHookState.isError = true;
-    render(<GameDetailDesktop gameId={GAME_ID} />);
+    renderWithQuery(<GameDetailDesktop gameId={GAME_ID} />);
     expect(screen.getByTestId('game-detail-desktop-error')).toBeInTheDocument();
   });
 
-  it('renders MeepleCard hero and tabs panel when game is loaded', () => {
+  it('renders GameHero v2 and tabs panel when game is loaded', () => {
     mockHookState.data = createGame();
-    render(<GameDetailDesktop gameId={GAME_ID} />);
-    expect(screen.getByTestId('meeple-card')).toHaveTextContent('Catan');
+    renderWithQuery(<GameDetailDesktop gameId={GAME_ID} />);
+    expect(screen.getByTestId('game-detail-hero-card')).toHaveTextContent('Catan');
     expect(screen.getByRole('tablist', { name: /dettagli gioco/i })).toBeInTheDocument();
   });
 
   it('renders connection-bar with session pip when game has sessions played', () => {
     mockHookState.data = createGame({ timesPlayed: 3 });
-    render(<GameDetailDesktop gameId={GAME_ID} />);
+    renderWithQuery(<GameDetailDesktop gameId={GAME_ID} />);
     expect(screen.getByTestId('connection-bar')).toBeInTheDocument();
   });
 
   it('renders with fallback title when game is not in library', () => {
     mockHookState.data = null;
     // isLoading false, isError false, data null → isNotInLibrary path
-    render(<GameDetailDesktop gameId={GAME_ID} />);
-    expect(screen.getByTestId('meeple-card')).toHaveTextContent(/non in libreria/i);
+    renderWithQuery(<GameDetailDesktop gameId={GAME_ID} />);
+    expect(screen.getByTestId('game-detail-hero-card')).toHaveTextContent(/non in libreria/i);
     // Tabs still render (they handle isNotInLibrary internally)
     expect(screen.getByRole('tablist', { name: /dettagli gioco/i })).toBeInTheDocument();
+  });
+
+  it('extends the hero meta strip with designer + complexity when surfaced by the BE (F3 #1974)', () => {
+    // F3 partial: the live page used to show only "anno · giocatori · durata".
+    // The mockup ships the full identifier strip "designer · anno · durata
+    // · giocatori · complessità". This test asserts the additive labels are
+    // present when the catalog fallback enriches the library detail with the
+    // shared-game payload.
+    mockHookState.data = createGame({
+      designers: [{ id: 'd1', name: 'Klaus Teuber' }],
+      complexityRating: 2.3,
+    });
+    renderWithQuery(<GameDetailDesktop gameId={GAME_ID} />);
+    const hero = screen.getByTestId('game-detail-hero-card');
+    expect(hero).toHaveTextContent('Klaus Teuber');
+    expect(hero).toHaveTextContent(/Complessit.*2\.3/);
+  });
+
+  it('skips the designer entry when the BE payload omits it (catalog fallback miss)', () => {
+    // Private games / non-catalog entries don't ship designers — the strip
+    // must degrade gracefully (no empty label, no crash).
+    mockHookState.data = createGame({ designers: undefined });
+    renderWithQuery(<GameDetailDesktop gameId={GAME_ID} />);
+    const hero = screen.getByTestId('game-detail-hero-card');
+    expect(hero).not.toHaveTextContent('Klaus Teuber');
+    // The other strip items still render.
+    expect(hero).toHaveTextContent('1995');
+    expect(hero).toHaveTextContent('90 min');
   });
 });

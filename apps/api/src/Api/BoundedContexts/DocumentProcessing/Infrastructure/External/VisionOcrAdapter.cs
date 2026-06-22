@@ -4,17 +4,17 @@ using System.Text.Json.Serialization;
 using Api.Infrastructure;
 using Docnet.Core;
 using Docnet.Core.Models;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.PixelFormats;
+using ImageMagick;
 
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 
 /// <summary>
 /// Cross-platform OCR service using OpenRouter Vision API.
-/// Renders PDF pages to JPEG via Docnet + ImageSharp, then sends to a vision model
-/// (e.g. google/gemini-2.0-flash-lite) for text extraction.
+/// Renders PDF pages to JPEG via Docnet + Magick.NET 14.x, then sends to a vision
+/// model (e.g. google/gemini-2.0-flash-lite) for text extraction.
 /// Replaces TesseractOcrAdapter on Linux/ARM where System.Drawing is unavailable.
+/// ADR DEC-3d-1 (issue #2055 Phase G): migrated from SixLabors.ImageSharp to
+/// Magick.NET (Apache 2.0) to drop the Six Labors Split License dependency.
 /// </summary>
 internal sealed class VisionOcrAdapter : IOcrService, IDisposable
 {
@@ -163,8 +163,9 @@ internal sealed class VisionOcrAdapter : IOcrService, IDisposable
     }
 
     /// <summary>
-    /// Renders a single PDF page to a JPEG base64 string using Docnet + ImageSharp.
+    /// Renders a single PDF page to a JPEG base64 string using Docnet + Magick.NET.
     /// Cross-platform: no System.Drawing dependency.
+    /// ADR DEC-3d-1 (issue #2055 Phase G): Magick.NET 14.x replaces ImageSharp.
     /// </summary>
     private static string RenderPageToJpegBase64(string pdfPath, int pageIndex)
     {
@@ -184,10 +185,24 @@ internal sealed class VisionOcrAdapter : IOcrService, IDisposable
         var height = pageReader.GetPageHeight();
         var rawBytes = pageReader.GetImage(); // BGRA format
 
-        // Convert BGRA raw bytes → JPEG using ImageSharp (cross-platform)
-        using var image = Image.LoadPixelData<Bgra32>(rawBytes, width, height);
+        // Convert BGRA raw bytes → JPEG using Magick.NET (cross-platform).
+        // ReadSettings expresses the input as raw pixel data; Format=Bgra,
+        // ColorSpace=sRGB, Width/Height match the Docnet output.
+        var readSettings = new MagickReadSettings
+        {
+            Format = MagickFormat.Bgra,
+            Width = (uint)width,
+            Height = (uint)height,
+            ColorSpace = ColorSpace.sRGB,
+            Depth = 8,
+        };
+
+        using var image = new MagickImage(rawBytes, readSettings);
+        image.Format = MagickFormat.Jpeg;
+        image.Quality = 80;
+
         using var ms = new MemoryStream();
-        image.Save(ms, new JpegEncoder { Quality = 80 });
+        image.Write(ms);
 
         return Convert.ToBase64String(ms.ToArray());
     }

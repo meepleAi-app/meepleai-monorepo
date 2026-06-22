@@ -10,15 +10,14 @@ import { z } from 'zod';
 import {
   AcquireLockResultSchema,
   AgentDtoSchema,
+  SessionContributorDtoSchema,
   EditorLockSchema,
   GameFAQSchema,
+  GameLeaderboardResponseSchema,
   GameSchema,
   GameSessionDtoSchema,
-  GameReviewDtoSchema,
   GetGameFAQsResultSchema,
   GetSimilarGamesResultSchema,
-  PagedStrategiesResultSchema,
-  PagedReviewsResultSchema,
   PaginatedGamesResponseSchema,
   QuickQuestionSchema,
   RuleSpecDiffSchema,
@@ -27,15 +26,14 @@ import {
   VersionTimelineSchema,
   type AcquireLockResult,
   type AgentDto,
+  type SessionContributorDto,
   type EditorLock,
   type Game,
   type GameFAQ,
-  type GameReviewDto,
+  type GameLeaderboardResponse,
   type GameSessionDto,
   type GetGameFAQsResult,
   type GetSimilarGamesResult,
-  type PagedStrategiesResult,
-  type PagedReviewsResult,
   type PaginatedGamesResponse,
   type PdfDocumentDto,
   type QuickQuestion,
@@ -285,6 +283,46 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
       const url = `/api/v1/games/${encodeURIComponent(gameId)}/sessions${queryString}`;
       const response = await httpClient.get(url, z.array(GameSessionDtoSchema));
       return response ?? [];
+    },
+
+    /**
+     * Get the top session contributors (registered users with finalized
+     * sessions) for a game (Issue #2036). Public endpoint — no auth required.
+     * The BE handler clamps `limit` to [1, 50]; the FE default and mockup
+     * show 8. The path uses the literal "session-contributors" to avoid
+     * ambiguity with the sharing-based contributors endpoint at
+     * `/shared-games/{id}/contributors` (Issue #2746).
+     */
+    async getSessionContributors(
+      gameId: string,
+      limit: number = 8
+    ): Promise<SessionContributorDto[]> {
+      const params = new URLSearchParams();
+      params.append('limit', limit.toString());
+      const url = `/api/v1/games/${encodeURIComponent(gameId)}/session-contributors?${params.toString()}`;
+      const response = await httpClient.get(url, z.array(SessionContributorDtoSchema));
+      return response ?? [];
+    },
+
+    /**
+     * Get the social leaderboard for a game (Issue #1467)
+     * GET /api/v1/games/{gameId}/leaderboard?since=&limit=
+     *
+     * Returns the top registered players ranked by wins across the play records
+     * visible to the caller (own records plus records of the caller's groups).
+     * @param gameId Game ID (GUID format)
+     * @param options Optional `since` (ISO date) and `limit` (1..50, default 10)
+     */
+    async getLeaderboard(
+      gameId: string,
+      options?: { since?: string; limit?: number }
+    ): Promise<GameLeaderboardResponse | null> {
+      const params = new URLSearchParams();
+      if (options?.since) params.append('since', options.since);
+      if (options?.limit) params.append('limit', options.limit.toString());
+      const queryString = params.toString() ? `?${params.toString()}` : '';
+      const url = `/api/v1/games/${encodeURIComponent(gameId)}/leaderboard${queryString}`;
+      return httpClient.get(url, GameLeaderboardResponseSchema);
     },
 
     /**
@@ -648,65 +686,19 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
       return result ?? { games: [], sourceGameId: gameId, sourceGameTitle: '' };
     },
 
-    // ========== Game Strategies (Issue #4903) ==========
+    // ========== Game Strategies (user-side) — REMOVED by ADR-061 (#2204) ==========
+    // getStrategies method (user-side) deleted along with the
+    // /games/[id]/strategies route per ADR-061 (Opzione B). The admin-side
+    // strategy management (StrategyEditor, adminConfigClient) is unaffected
+    // and continues to use PagedStrategiesResult + GameStrategyDto schemas.
 
-    /**
-     * Get paginated strategies for a game
-     * GET /api/v1/games/{gameId}/strategies?pageNumber=1&pageSize=10
-     * Issue #4903: Game strategies API endpoint
-     */
-    async getStrategies(
-      gameId: string,
-      pageNumber: number = 1,
-      pageSize: number = 10
-    ): Promise<PagedStrategiesResult> {
-      const params = new URLSearchParams();
-      params.append('pageNumber', pageNumber.toString());
-      params.append('pageSize', pageSize.toString());
-      const url = `/api/v1/games/${encodeURIComponent(gameId)}/strategies?${params.toString()}`;
-      const result = await httpClient.get(url, PagedStrategiesResultSchema);
-      return result ?? { items: [], total: 0, page: pageNumber, pageSize };
-    },
-
-    // ========== Game Reviews (Issue #4904) ==========
-
-    /**
-     * Get paginated reviews for a game
-     * GET /api/v1/games/{gameId}/reviews?pageNumber=1&pageSize=10
-     * Issue #4904: Game reviews API endpoint
-     */
-    async getReviews(
-      gameId: string,
-      pageNumber: number = 1,
-      pageSize: number = 10
-    ): Promise<PagedReviewsResult> {
-      const params = new URLSearchParams();
-      params.append('pageNumber', pageNumber.toString());
-      params.append('pageSize', pageSize.toString());
-      const url = `/api/v1/games/${encodeURIComponent(gameId)}/reviews?${params.toString()}`;
-      const result = await httpClient.get(url, PagedReviewsResultSchema);
-      return result ?? { items: [], total: 0, page: pageNumber, pageSize };
-    },
-
-    /**
-     * Create a review for a game
-     * POST /api/v1/games/{gameId}/reviews
-     * Issue #4904: Game reviews API endpoint
-     */
-    async createReview(
-      gameId: string,
-      request: { authorName: string; rating: number; content: string }
-    ): Promise<GameReviewDto> {
-      const result = await httpClient.post(
-        `/api/v1/games/${encodeURIComponent(gameId)}/reviews`,
-        request,
-        GameReviewDtoSchema
-      );
-      if (!result) {
-        throw new Error('Failed to create review: no response from server');
-      }
-      return result;
-    },
+    // ========== Game Reviews — REMOVED by ADR-061 (#2204) ==========
+    // getReviews + createReview methods deleted along with the
+    // /games/[id]/reviews route per ADR-061 (Opzione B). The backend
+    // endpoints `/api/v1/games/{gameId}/reviews` (GET + POST) were never
+    // implemented and returned 404 (issue #2195 scope-cancelled by ADR-061).
+    // If reviews are revived, restore via a follow-up ADR + BE endpoint
+    // design — not by pulling these methods back into the client.
 
     // ========== Phase Templates (Game Session Flow v2.0) ==========
 
@@ -749,10 +741,7 @@ export type { QuickQuestion } from '../schemas';
 // Re-export Similar Games types for convenience
 export type { SimilarGameDto, GetSimilarGamesResult } from '../schemas';
 
-// Re-export Strategies and Reviews types for convenience (Issue #4889)
-export type {
-  GameStrategyDto,
-  PagedStrategiesResult,
-  GameReviewDto,
-  PagedReviewsResult,
-} from '../schemas';
+// Re-export Strategy types for admin surface (StrategyEditor + adminConfigClient).
+// User-side Reviews types removed by ADR-061 (#2204) along with the deleted
+// /games/[id]/{reviews,strategies} routes — see deletion comment above.
+export type { GameStrategyDto } from '../schemas';

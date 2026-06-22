@@ -4,6 +4,8 @@ using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Application.Queries.UserStats;
 using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.GameManagement.Application.DTOs;
+using Api.BoundedContexts.GameManagement.Application.Queries.Dashboard;
 using Api.BoundedContexts.GameManagement.Application.Queries.Sessions;
 using Api.BoundedContexts.UserLibrary.Application.Queries.Games;
 using Api.Extensions;
@@ -210,6 +212,48 @@ Feedback is used to calculate accuracy metrics (target: >75% relevance).
         .Produces<PagedResult<UserGameDto>>()
         .ProducesValidationProblem()
         .ProducesProblem(StatusCodes.Status401Unauthorized);
+
+        // Asse C (#1898) WP1 T1 DEC-2: Friends activity feed
+        // Powers the dashboard "Cosa fanno i tuoi" section. Friend qualification
+        // (MAJ-5): User-linked players sharing at least one GameNight with the
+        // current user in the last 90 days.
+        group.MapGet("/dashboard/friends-activity", async (
+            HttpContext context,
+            IMediator mediator,
+            [FromQuery] int? limit,
+            CancellationToken ct) =>
+        {
+            var userId = context.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetFriendsActivityQuery(userId, limit ?? 10);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthorization()
+        .WithTags("Dashboard", "Gaming Hub")
+        .WithName("GetFriendsActivity")
+        .WithSummary("Friend activity feed for dashboard 'Cosa fanno i tuoi' section")
+        .WithDescription(@"Returns the recent activity feed for friends of the current user.
+
+**Friend qualification**: User-linked players sharing at least one GameNight
+with the current user scheduled within the last 90 days.
+
+**Activity verbs**:
+- `created`: friend organized a GameNight that is not yet completed.
+- `completed`: friend organized a GameNight that is completed.
+- `joined`: friend accepted an RSVP for someone else's GameNight.
+
+**Query parameters**:
+- `limit` (optional, default 10, max 50): max activities returned.
+
+**Authorization**: Requires authenticated session.")
+        .Produces<IReadOnlyList<FriendActivityDto>>(StatusCodes.Status200OK)
+        .ProducesValidationProblem()
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
     }
 
     /// <summary>
@@ -224,7 +268,7 @@ Feedback is used to calculate accuracy metrics (target: >75% relevance).
         {
             // Session validated by RequireSession filter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            var userId = session.User!.Id;
+            var userId = session.Principal!.Subject.Id;
 
             // Get event stream via CQRS query
             IAsyncEnumerable<MediatR.INotification> eventStream;
@@ -242,7 +286,7 @@ Feedback is used to calculate accuracy metrics (target: >75% relevance).
             context.Response.Headers.Append("Content-Type", "text/event-stream");
             context.Response.Headers.Append("Cache-Control", "no-cache");
             context.Response.Headers.Append("Connection", "keep-alive");
-            context.Response.Headers.Append("X-Accel-Buffering", "no"); // Disable nginx/Traefik buffering
+            context.Response.Headers.Append("X-Accel-Buffering", "no"); // Disable reverse proxy buffering (CF Tunnel, nginx, etc.)
 
             // Create heartbeat task for keep-alive (30s interval)
             using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -321,7 +365,7 @@ eventSource.addEventListener('DashboardStatsUpdatedEvent', (e) => {
         // Session validated by RequireSession filter
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-        var query = new GetDashboardQuery(session.User!.Id);
+        var query = new GetDashboardQuery(session.Principal!.Subject.Id);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
         return Results.Json(result);
@@ -354,7 +398,7 @@ eventSource.addEventListener('DashboardStatsUpdatedEvent', (e) => {
             : SortDirection.Descending;
 
         var query = new GetActivityTimelineQuery(
-            UserId: session.User!.Id,
+            UserId: session.Principal!.Subject.Id,
             Types: types,
             SearchTerm: search,
             DateFrom: dateFrom,
@@ -376,7 +420,7 @@ eventSource.addEventListener('DashboardStatsUpdatedEvent', (e) => {
         // Session validated by RequireSession filter
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-        var query = new GetDashboardInsightsQuery(session.User!.Id);
+        var query = new GetDashboardInsightsQuery(session.Principal!.Subject.Id);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
         return Results.Json(result);
@@ -404,7 +448,7 @@ eventSource.addEventListener('DashboardStatsUpdatedEvent', (e) => {
 
         var command = new SubmitInsightFeedbackCommand
         {
-            UserId = session.User!.Id,
+            UserId = session.Principal!.Subject.Id,
             InsightId = request.InsightId,
             InsightType = request.InsightType,
             IsRelevant = request.IsRelevant,

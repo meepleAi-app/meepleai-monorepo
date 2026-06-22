@@ -38,7 +38,9 @@ internal static class AdministrationServiceExtensions
         services.AddScoped<IAlertRepository, AlertRepository>();
         services.AddScoped<IAlertConfigurationRepository, AlertConfigurationRepository>();  // Issue #2112: Missing DI registration
         services.AddScoped<IAlertRuleRepository, AlertRuleRepository>();  // Issue #2112: Missing DI registration
+        services.AddScoped<IAlertChannelRepository, AlertChannelRepository>();  // Issue #1840 SP5 F4-C7: Per-channel alert config
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+        services.AddScoped<IStagingAllowlistRepository, StagingAllowlistRepository>();  // #845: DevOps Wave 1
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
 
         // ISSUE-916: Reporting repositories
@@ -154,6 +156,27 @@ internal static class AdministrationServiceExtensions
             .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
                 "Prometheus", sp.GetService<ICircuitBreakerStateTracker>()));
 
+        // Issue #1840 SP5 F4-C7: Slack webhook client for per-channel alert dispatch.
+        // Separate from the legacy IAlertChannel-based SlackAlertChannel (OPS-07) — this
+        // client accepts the webhook URL as an argument so configuration can come from
+        // the AlertChannel aggregate rather than appsettings.json. Retry/CB policies
+        // mirror the Prometheus client.
+        services.AddHttpClient<ISlackWebhookClient, SlackWebhookClient>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(10);
+            })
+            .AddPolicyHandler(GetRetryPolicy())
+            .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
+                "SlackWebhook", sp.GetService<ICircuitBreakerStateTracker>()));
+
+        // Issue #1840 SP5 F4-C7: Prometheus labels passthrough — separate HttpClient
+        // from PrometheusHttpClient because the labels endpoint uses different cache
+        // semantics (60s static list vs per-query window for PromQL).
+        services.AddHttpClient<IPrometheusLabelsClient, PrometheusLabelsClient>()
+            .AddPolicyHandler(GetRetryPolicy())
+            .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
+                "PrometheusLabels", sp.GetService<ICircuitBreakerStateTracker>()));
+
         // Issue #894: Infrastructure details orchestration service
         services.AddScoped<IInfrastructureDetailsService, InfrastructureDetailsService>();
 
@@ -172,6 +195,11 @@ internal static class AdministrationServiceExtensions
         services.AddScoped<ISeedLayer, MechanicGoldenSeedLayer>();
         // ADR-051 Sprint 2 / Task 3: Puerto Rico golden claims (75 claims) — BGG tags follow in Task 4.
         services.AddScoped<ISeedLayer, BoundedContexts.SharedGameCatalog.Infrastructure.Seeding.PuertoRicoGoldenSeeder>();
+        // Gamebook multi-book generalization (2026-05-19) Phase F: seeder for Nanolith + FF + Maracaibo.
+        // Registered as itself (no ISeedLayer interface) because orchestrator wiring is deferred —
+        // resolved on-demand from admin endpoints / E2E test fixtures that already know the
+        // SharedGameId + PdfDocument id mappings.
+        services.AddScoped<GameBookSeeder>();
         services.AddScoped<SeedOrchestrator>();
 
         // Issue #3916: AI insights service for personalized dashboard recommendations

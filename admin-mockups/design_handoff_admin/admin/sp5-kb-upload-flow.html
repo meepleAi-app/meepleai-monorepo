@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SP5 A5b · KB Upload Flow · /admin/knowledge-base/upload</title>
+<!-- @FSM 5 stati: empty · uploading · processing · complete · error · idempotency-warn (sub) -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/><link rel="stylesheet" href="components.css"/><link rel="stylesheet" href="admin-base.css"/>
+<style>
+  .upload-flow { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+
+  /* State navigation tabs (only in showcase, hidden in real prod) */
+  .state-nav { display: flex; gap: 6px; padding: 6px; background: var(--bg-muted); border-radius: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .state-nav button { padding: 5px 10px; border-radius: 6px; background: transparent; border: 0; cursor: pointer; font-family: var(--f-mono); font-size: 11px; color: var(--text-sec); }
+  .state-nav button.active { background: hsl(var(--c-event)); color: #fff; font-weight: 700; }
+
+  .state-block { display: none; flex-direction: column; gap: 14px; }
+  .state-block.active { display: flex; }
+
+  .upload-grid { display: grid; grid-template-columns: 320px 1fr; gap: 14px; align-items: start; }
+
+  /* Idempotency banner */
+  .idem-banner {
+    background: hsl(38 90% 56% / .1);
+    border: 1px solid hsl(38 90% 56% / .4);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .idem-banner .em { font-size: 22px; }
+  .idem-banner .title { font-family: var(--f-display); font-weight: 800; font-size: 14px; margin-bottom: 3px; color: hsl(38 90% 50%); }
+  .idem-banner .actions { margin-left: auto; display: flex; gap: 6px; }
+
+  /* Dropzone */
+  .dropzone {
+    background: var(--bg-card); border: 2px dashed hsl(var(--c-kb) / .5);
+    border-radius: 12px;
+    padding: 40px 24px;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    text-align: center;
+    min-height: 200px; justify-content: center;
+  }
+  .dropzone .em { font-size: 48px; }
+  .dropzone .title { font-family: var(--f-display); font-size: 16px; font-weight: 800; }
+  .dropzone .desc { font-size: 12px; color: var(--text-sec); max-width: 400px; line-height: 1.4; }
+  .dropzone .or { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); margin: 6px 0; }
+  .dropzone.uploading { border-style: solid; border-color: hsl(var(--c-kb)); padding: 24px; }
+  .dropzone.error { border-color: hsl(var(--c-event)); }
+
+  /* Settings card */
+  .settings-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 10px; padding: 14px; }
+  .settings-card h3 { margin: 0 0 10px; font-family: var(--f-display); font-size: 13px; font-weight: 800; }
+  .sf-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+  .sf-label { font-family: var(--f-mono); font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+  .sf-control { display: flex; gap: 4px; align-items: center; }
+
+  /* Processing queue */
+  .queue-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 10px; }
+  .queue-head { padding: 10px 14px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: 8px; }
+  .queue-head h3 { margin: 0; font-family: var(--f-display); font-size: 13px; font-weight: 800; }
+  .queue-row { padding: 12px 14px; border-bottom: 1px solid var(--border-light); }
+  .queue-row:last-child { border-bottom: 0; }
+  .queue-row .filename { display: flex; align-items: center; gap: 8px; font-family: var(--f-display); font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+  .queue-row .filename .size { margin-left: auto; font-family: var(--f-mono); font-size: 11px; color: var(--text-muted); font-weight: 500; }
+
+  /* Stage progress */
+  .stages { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; align-items: center; }
+  .stage {
+    padding: 6px 8px; border-radius: 6px;
+    background: var(--bg-muted); border: 1px solid var(--border-light);
+    display: flex; flex-direction: column; gap: 3px;
+    position: relative;
+  }
+  .stage .stg-name { font-family: var(--f-mono); font-size: 9.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+  .stage .stg-state { font-family: var(--f-display); font-size: 11px; font-weight: 700; }
+  .stage.done { background: hsl(var(--c-toolkit) / .14); border-color: hsl(var(--c-toolkit) / .35); }
+  .stage.done .stg-state { color: hsl(var(--c-toolkit)); }
+  .stage.running { background: hsl(var(--c-kb) / .14); border-color: hsl(var(--c-kb) / .5); }
+  .stage.running .stg-state { color: hsl(var(--c-kb)); }
+  .stage.running::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: hsl(var(--c-kb)); border-radius: 0 0 5px 5px; animation: progress-shimmer 1.5s linear infinite; transform-origin: left; }
+  .stage.queued .stg-state { color: var(--text-muted); }
+  .stage.error { background: hsl(var(--c-event) / .14); border-color: hsl(var(--c-event) / .5); }
+  .stage.error .stg-state { color: hsl(var(--c-event)); }
+  @keyframes progress-shimmer { 0% { transform: scaleX(0.3); } 100% { transform: scaleX(1); } }
+
+  .progress-bar { height: 8px; background: var(--bg-muted); border-radius: 999px; overflow: hidden; margin-top: 8px; }
+  .progress-bar .fill { height: 100%; background: hsl(var(--c-kb)); border-radius: 999px; transition: width var(--dur-md) var(--ease-out); }
+  .progress-bar .fill.success { background: hsl(var(--c-toolkit)); }
+  .progress-bar .fill.error { background: hsl(var(--c-event)); }
+</style>
+</head>
+<body class="admin-page">
+
+<div class="admin-mobile-fallback"><span class="em">🖥️</span><h2>Console solo desktop</h2><p>Upload KB richiede desktop.</p></div>
+
+<div class="admin-shell">
+  <div data-admin-nav-mount></div>
+
+  <main>
+    <header class="admin-top">
+      <div><h1>Upload &amp; Process</h1><div class="crumbs">Admin · Knowledge Base · Upload</div></div>
+      <div class="spacer"></div>
+      <div class="admin-top-actions">
+        <button class="btn-admin">📋 History</button>
+        <button class="btn-admin">⚙ Defaults</button>
+      </div>
+    </header>
+
+    <div class="admin-body">
+      <div class="upload-flow">
+
+        <!-- State navigation (showcase only) -->
+        <div class="state-nav" role="tablist">
+          <button class="active" onclick="showState('s1')">01 · Empty</button>
+          <button onclick="showState('s2')">02 · Uploading</button>
+          <button onclick="showState('s3')">03 · Processing</button>
+          <button onclick="showState('s4')">04 · Complete</button>
+          <button onclick="showState('s5')">05 · Error</button>
+          <button onclick="showState('s6')">guard · Warn</button>
+        </div>
+
+        <!-- ═══ STATE 01 — Empty ═══════════════════════════════════ -->
+        <div class="state-block active" id="s1">
+          <div class="upload-grid">
+            <div>
+              <div class="dropzone" tabindex="0" role="button" aria-label="Trascina o seleziona PDF">
+                <span class="em">📁</span>
+                <div class="title">Trascina PDF qui</div>
+                <div class="desc">PDF · max 100MB · multi-file ammessi</div>
+                <div class="or">— oppure —</div>
+                <button class="btn-admin primary">Scegli file</button>
+                <div style="margin-top: 8px; font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">Drop, Enter o Space</div>
+              </div>
+            </div>
+
+            <div>
+              <div class="settings-card">
+                <h3>⚙️ Settings ingestion <span style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); font-weight: 400; margin-left: 6px">readonly fino al primo file</span></h3>
+                <div class="sf-row">
+                  <span class="sf-label">Gioco</span>
+                  <select class="admin-select" disabled><option>— scegli un gioco —</option></select>
+                </div>
+                <div class="sf-row">
+                  <span class="sf-label">Lingua</span>
+                  <select class="admin-select"><option>Auto-detect</option><option>EN</option><option>IT</option></select>
+                </div>
+                <div class="sf-row">
+                  <span class="sf-label">Embedder</span>
+                  <select class="admin-select"><option>text-embedding-3-large (default)</option><option>text-embedding-3-small</option><option>cohere-embed-multilingual-v3.0</option></select>
+                </div>
+                <div class="sf-row">
+                  <span class="sf-label">Chunk size (tokens)</span>
+                  <input class="admin-input mono" value="512">
+                </div>
+                <div class="sf-row" style="display: flex; flex-direction: row; align-items: center; gap: 10px">
+                  <div class="admin-toggle" role="switch"></div>
+                  <span class="sf-label" style="text-transform: none; font-family: var(--f-display); font-size: 12px; color: var(--text)">OCR per pagine scannerizzate</span>
+                </div>
+                <div class="sf-row" style="display: flex; flex-direction: row; align-items: center; gap: 10px">
+                  <div class="admin-toggle on" role="switch"></div>
+                  <span class="sf-label" style="text-transform: none; font-family: var(--f-display); font-size: 12px; color: var(--text)">SmolDocling layout-aware</span>
+                </div>
+                <div class="sf-row">
+                  <span class="sf-label">Indexer</span>
+                  <select class="admin-select"><option>v2024.11.18 (stable)</option><option>v2024.12.beta</option></select>
+                </div>
+              </div>
+
+              <div class="queue-card" style="margin-top: 14px">
+                <div class="queue-head">
+                  <h3>Processing queue</h3>
+                  <span class="status-chip muted" style="margin-left: auto">Vuota</span>
+                </div>
+                <div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 12px">
+                  Nessun upload in corso.<br/>
+                  <span style="font-family: var(--f-mono); font-size: 11px">Trascina un file per iniziare.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ STATE 02 — Uploading ═══════════════════════════════ -->
+        <div class="state-block" id="s2">
+          <div class="upload-grid">
+            <div>
+              <div class="dropzone uploading">
+                <span class="em">📄</span>
+                <div class="title" style="font-size: 14px; font-family: var(--f-mono); word-break: break-all">Wingspan-Oceania-EN.pdf</div>
+                <div style="font-family: var(--f-mono); font-size: 11px; color: var(--text-muted)">8.4 MB · 42 pages (preview)</div>
+                <div class="progress-bar" style="width: 100%"><div class="fill" style="width: 67%"></div></div>
+                <div style="font-family: var(--f-mono); font-size: 11px; color: hsl(var(--c-kb)); font-weight: 700">↑ Uploading 67% · 2.1 MB/s · ETA 1s</div>
+                <button class="btn-admin sm danger">Annulla</button>
+              </div>
+            </div>
+            <div>
+              <div class="settings-card">
+                <h3>⚙️ Settings ingestion</h3>
+                <div class="sf-row">
+                  <span class="sf-label">Gioco</span>
+                  <select class="admin-select"><option>🎲 Wingspan (auto-detect)</option></select>
+                </div>
+                <div style="font-family: var(--f-mono); font-size: 11px; color: var(--text-muted); padding: 8px; background: var(--bg-muted); border-radius: 6px; line-height: 1.4">
+                  Settings lock al via dell'upload. Le impostazioni applicate sono quelle correnti.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ STATE 03 — Processing ══════════════════════════════ -->
+        <div class="state-block" id="s3">
+          <div class="upload-grid">
+            <div>
+              <div class="dropzone" style="border-style: solid; padding: 24px;">
+                <span class="em">✓</span>
+                <div class="title" style="font-size: 14px; color: hsl(var(--c-toolkit))">Upload completato</div>
+                <div style="font-family: var(--f-mono); font-size: 11px; color: var(--text-muted)">Pipeline in corso · vedi queue →</div>
+                <button class="btn-admin">+ Aggiungi altro file</button>
+              </div>
+            </div>
+            <div>
+              <div class="queue-card">
+                <div class="queue-head">
+                  <h3>Processing queue</h3>
+                  <span class="status-chip info running" style="margin-left: auto">1 in corso</span>
+                </div>
+                <div class="queue-row">
+                  <div class="filename">
+                    <span style="font-size: 18px">📄</span>
+                    <span>Wingspan-Oceania-EN.pdf</span>
+                    <span class="size">8.4 MB · 42 pages</span>
+                  </div>
+                  <div style="font-family: var(--f-mono); font-size: 10.5px; color: var(--text-muted); margin-bottom: 8px">EntityChip · 🎲 Wingspan · started 12s fa</div>
+
+                  <div class="stages" role="progressbar" aria-live="polite">
+                    <div class="stage done">
+                      <span class="stg-name">1. Upload</span>
+                      <span class="stg-state">✓ Done · 6.2s</span>
+                    </div>
+                    <div class="stage done">
+                      <span class="stg-name">2. Parse</span>
+                      <span class="stg-state">✓ Unstructured 2.1s</span>
+                    </div>
+                    <div class="stage running">
+                      <span class="stg-name">3. Layout</span>
+                      <span class="stg-state">⟳ SmolDocling 58%</span>
+                    </div>
+                    <div class="stage queued">
+                      <span class="stg-name">4. Embed</span>
+                      <span class="stg-state">⋯ in coda</span>
+                    </div>
+                    <div class="stage queued">
+                      <span class="stg-name">5. Index</span>
+                      <span class="stg-state">⋯ in coda</span>
+                    </div>
+                  </div>
+
+                  <div style="margin-top: 12px; display: flex; gap: 8px; font-family: var(--f-mono); font-size: 11px; align-items: center">
+                    <span style="color: var(--text-muted)">Stage corrente:</span>
+                    <span style="color: hsl(var(--c-kb)); font-weight: 700">parsing tabelle pag.22-31</span>
+                    <span style="margin-left: auto; color: var(--text-muted)">ETA totale ~14s</span>
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-top: 12px; padding: 10px 12px; background: var(--bg-muted); border-radius: 8px; font-family: var(--f-mono); font-size: 11px; color: var(--text-sec)">
+                <strong style="color: var(--text)">💡 Suggerimento</strong> — Puoi chiudere questa pagina, la pipeline continua in background. Una notifica ti avviserà al completamento.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ STATE 04 — Complete ════════════════════════════════ -->
+        <div class="state-block" id="s4">
+          <div class="alert-banner success">
+            <span class="em">✅</span>
+            <div style="flex: 1">
+              <div class="title">Wingspan-Oceania-EN.pdf indicizzato con successo</div>
+              <div>412 chunks generati · 13.4s totali · cost $0.087 · avg confidence <strong>0.87</strong></div>
+            </div>
+            <div class="actions">
+              <button class="btn-admin sm">View chunks</button>
+              <a href="sp5-admin-kb.html" class="btn-admin sm primary">Vai a KB</a>
+            </div>
+          </div>
+
+          <div class="upload-grid">
+            <div>
+              <div class="dropzone">
+                <span class="em">📁</span>
+                <div class="title">Altro PDF?</div>
+                <div class="desc">Trascina o scegli per continuare ad arricchire la KB Wingspan</div>
+                <button class="btn-admin primary">+ Scegli file</button>
+              </div>
+            </div>
+            <div>
+              <div class="queue-card">
+                <div class="queue-head">
+                  <h3>Processing queue · history</h3>
+                  <span class="status-chip healthy" style="margin-left: auto">Done</span>
+                </div>
+                <div class="queue-row">
+                  <div class="filename">
+                    <span style="font-size: 18px; color: hsl(var(--c-toolkit))">✓</span>
+                    <span>Wingspan-Oceania-EN.pdf</span>
+                    <span class="size">412ch · 13.4s · $0.087</span>
+                  </div>
+                  <div class="stages">
+                    <div class="stage done"><span class="stg-name">1. Upload</span><span class="stg-state">✓ 6.2s</span></div>
+                    <div class="stage done"><span class="stg-name">2. Parse</span><span class="stg-state">✓ 2.1s</span></div>
+                    <div class="stage done"><span class="stg-name">3. Layout</span><span class="stg-state">✓ 2.9s</span></div>
+                    <div class="stage done"><span class="stg-name">4. Embed</span><span class="stg-state">✓ 4.2s</span></div>
+                    <div class="stage done"><span class="stg-name">5. Index</span><span class="stg-state">✓ 0.4s</span></div>
+                  </div>
+
+                  <div style="margin-top: 14px; padding: 10px 12px; background: var(--bg-muted); border-radius: 6px; font-size: 11.5px; line-height: 1.5">
+                    <strong style="font-family: var(--f-display)">First 3 chunks preview:</strong><br/>
+                    <span style="font-family: var(--f-mono); color: var(--text-muted)">c-0001 p.1</span> · "Wingspan Oceania Expansion · Rules supplement…"<br/>
+                    <span style="font-family: var(--f-mono); color: var(--text-muted)">c-0002 p.2</span> · "Setup variants — 2 to 5 players, mixed with base game…"<br/>
+                    <span style="font-family: var(--f-mono); color: var(--text-muted)">c-0003 p.3</span> · "New bird types: nectar feeders. Special power activation…"<br/>
+                    <a href="sp5-admin-kb.html" style="color: hsl(var(--c-event)); text-decoration: none; font-weight: 700">+ vedi altri 409 chunks →</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ STATE 05 — Error ══════════════════════════════════ -->
+        <div class="state-block" id="s5">
+          <div class="alert-banner danger" role="alert">
+            <span class="em">🚨</span>
+            <div style="flex: 1">
+              <div class="title">Errore parsing · Tainted-Grail-IT-scan.pdf</div>
+              <div>OCR ha fallito sulla pagina 47 (immagine corrotta · risoluzione 72dpi sotto soglia 150dpi).<br/>
+                <span style="font-family: var(--f-mono); font-size: 11px; color: var(--text-muted)">Error code: <code>OCR_LOW_RES_E47</code> · request_id: <code>req-4f8a2b1c</code></span>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="btn-admin sm">📋 Copy log</button>
+              <button class="btn-admin sm">⤓ Download log</button>
+              <button class="btn-admin sm primary">↻ Retry (skip p.47)</button>
+            </div>
+          </div>
+
+          <div class="upload-grid">
+            <div>
+              <div class="dropzone error">
+                <span class="em">⚠️</span>
+                <div class="title" style="color: hsl(var(--c-event))">Pipeline fallita</div>
+                <div class="desc">Il file è stato uploaded ma il parsing è fallito. Puoi riprovare con setting diversi.</div>
+                <button class="btn-admin">↻ Retry con OCR off</button>
+                <button class="btn-admin danger">🗑 Rimuovi file</button>
+              </div>
+            </div>
+            <div>
+              <div class="queue-card">
+                <div class="queue-head">
+                  <h3>Processing queue</h3>
+                  <span class="status-chip danger" style="margin-left: auto">Failed</span>
+                </div>
+                <div class="queue-row">
+                  <div class="filename">
+                    <span style="font-size: 18px; color: hsl(var(--c-event))">✕</span>
+                    <span>Tainted-Grail-IT-scan.pdf</span>
+                    <span class="size">42 MB · 184 pages</span>
+                  </div>
+                  <div class="stages">
+                    <div class="stage done"><span class="stg-name">1. Upload</span><span class="stg-state">✓ 21s</span></div>
+                    <div class="stage done"><span class="stg-name">2. Parse</span><span class="stg-state">✓ 12s</span></div>
+                    <div class="stage error"><span class="stg-name">3. OCR</span><span class="stg-state">✕ p.47 fail</span></div>
+                    <div class="stage queued"><span class="stg-name">4. Embed</span><span class="stg-state">— skip</span></div>
+                    <div class="stage queued"><span class="stg-name">5. Index</span><span class="stg-state">— skip</span></div>
+                  </div>
+                  <pre class="ingestion-log" style="margin-top: 12px; font-family: var(--f-mono); font-size: 10.5px; background: var(--bg-sunken); padding: 10px 12px; border-radius: 6px; max-height: 130px; overflow-y: auto; color: hsl(var(--c-event)); line-height: 1.6">[14:24:48] ✕ OCR_LOW_RES_E47 on page 47 (72dpi)
+[14:24:48] Aborting pipeline, partial state discarded
+[14:24:48] Suggestion: re-upload at min 150dpi or run with OCR=off</pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ guard · Warn (sub-state) ═══════════════════════════ -->
+        <div class="state-block" id="s6">
+          <div class="idem-banner" role="alert">
+            <span class="em">⚠️</span>
+            <div style="flex: 1">
+              <div class="title">KB già presente per questo gioco</div>
+              <div style="font-size: 12.5px; line-height: 1.5">
+                <strong>🎲 Wingspan</strong> ha già <strong>12 documenti</strong> indicizzati (avg confidence 0.84). Vuoi davvero aggiungere "Wingspan-Asia-EN.pdf"?<br/>
+                <span style="font-family: var(--f-mono); font-size: 11px; color: var(--text-muted)">File hash <code>sha256:8c0f…a2c7</code> matched 1 existing doc al 96% — potenziale duplicate.</span>
+              </div>
+            </div>
+            <div class="actions" style="flex-direction: column; gap: 6px">
+              <a href="sp5-admin-kb.html" class="btn-admin sm">Vai a KB esistente</a>
+              <button class="btn-admin sm">Sovrascrivi</button>
+              <button class="btn-admin sm primary">Aggiungi come nuovo</button>
+              <button class="btn-admin sm ghost">Annulla</button>
+            </div>
+          </div>
+
+          <div class="upload-grid" style="opacity: .4; pointer-events: none">
+            <div>
+              <div class="dropzone">
+                <span class="em">📁</span>
+                <div class="title">Drop zone (locked)</div>
+                <div class="desc">Risolvi l'avviso sopra per procedere</div>
+              </div>
+            </div>
+            <div>
+              <div class="settings-card"><h3>⚙️ Settings</h3>
+                <div style="font-size: 11px; color: var(--text-muted)">In attesa di conferma idempotency…</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="admin-nav.js"></script>
+<script>
+  renderAdminNav('kb-upload');
+  function showState(id) {
+    document.querySelectorAll('.state-block').forEach(b => b.classList.toggle('active', b.id === id));
+    document.querySelectorAll('.state-nav button').forEach(b => b.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+  }
+</script>
+</body></html>

@@ -97,7 +97,7 @@ public class StreamSetupGuideQueryHandlerTests
     [Fact]
     public async Task Handle_LlmGeneratesSteps_QdrantRemoved_ReturnsDefaultSteps()
     {
-        // Arrange — After Qdrant removal, SearchSetupContextAsync always returns false,
+        // Arrange — After legacy vector removal, SearchSetupContextAsync always returns false,
         // so the LLM is never called. Default steps are returned instead of LLM-parsed steps.
         var gameId = "game123";
         var query = new StreamSetupGuideQuery(gameId);
@@ -129,7 +129,7 @@ public class StreamSetupGuideQueryHandlerTests
     [Fact]
     public async Task Handle_OptionalSteps_QdrantRemoved_ReturnsDefaultStepsAllRequired()
     {
-        // Arrange — After Qdrant removal, SearchSetupContextAsync always returns false,
+        // Arrange — After legacy vector removal, SearchSetupContextAsync always returns false,
         // so the LLM is never called. Default steps are returned (all non-optional).
         var gameId = "game123";
         var query = new StreamSetupGuideQuery(gameId);
@@ -201,7 +201,7 @@ public class StreamSetupGuideQueryHandlerTests
     [Fact]
     public async Task Handle_NoVectorResults_ReturnsDefaultSteps()
     {
-        // Arrange — Qdrant removed; handler always gets no vector results
+        // Arrange — legacy vector path; handler always gets no vector results
         var gameId = "game123";
         var query = new StreamSetupGuideQuery(gameId);
 
@@ -275,7 +275,7 @@ public class StreamSetupGuideQueryHandlerTests
     [Fact]
     public async Task Handle_ExceptionDuringGeneration_ReturnsDefaultSteps()
     {
-        // Arrange — Qdrant removed; embedding failure triggers graceful degradation
+        // Arrange — legacy vector path; embedding failure triggers graceful degradation
         var gameId = "game123";
         var query = new StreamSetupGuideQuery(gameId);
 
@@ -394,7 +394,7 @@ public class StreamSetupGuideQueryHandlerTests
     [Fact]
     public async Task Handle_PromptDatabaseEnabled_QdrantRemoved_ReturnsDefaultSteps()
     {
-        // Arrange — After Qdrant removal, SearchSetupContextAsync always returns false,
+        // Arrange — After legacy vector removal, SearchSetupContextAsync always returns false,
         // so the LLM is never called and default steps are returned regardless of prompt config.
         var gameId = "game123";
         var query = new StreamSetupGuideQuery(gameId);
@@ -425,7 +425,7 @@ public class StreamSetupGuideQueryHandlerTests
             events.Add(evt);
         }
 
-        // Assert — Qdrant removed, so search always fails → default steps, LLM never called
+        // Assert — legacy vector removed, so search always fails → default steps, LLM never called
         var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
         stepEvents.Count.Should().Be(5); // Default steps
 
@@ -438,7 +438,7 @@ public class StreamSetupGuideQueryHandlerTests
     [Fact]
     public async Task Handle_PromptDatabaseDisabled_QdrantRemoved_ReturnsDefaultSteps()
     {
-        // Arrange — After Qdrant removal, SearchSetupContextAsync always returns false,
+        // Arrange — After legacy vector removal, SearchSetupContextAsync always returns false,
         // so the LLM is never called and default steps are returned.
         var gameId = "game123";
         var query = new StreamSetupGuideQuery(gameId);
@@ -454,7 +454,7 @@ public class StreamSetupGuideQueryHandlerTests
             events.Add(evt);
         }
 
-        // Assert — Qdrant removed, so search always fails → default steps, LLM never called
+        // Assert — legacy vector removed, so search always fails → default steps, LLM never called
         var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
         stepEvents.Count.Should().Be(5); // Default steps
 
@@ -472,7 +472,7 @@ public class StreamSetupGuideQueryHandlerTests
     [Fact]
     public async Task Handle_PromptTemplateFails_QdrantRemoved_ReturnsDefaultSteps()
     {
-        // Arrange — After Qdrant removal, SearchSetupContextAsync always returns false,
+        // Arrange — After legacy vector removal, SearchSetupContextAsync always returns false,
         // so the LLM is never called and default steps are returned regardless of prompt template failures.
         var gameId = "game123";
         var query = new StreamSetupGuideQuery(gameId);
@@ -502,7 +502,7 @@ public class StreamSetupGuideQueryHandlerTests
             events.Add(evt);
         }
 
-        // Assert — Qdrant removed, so search always fails → default steps, LLM never called
+        // Assert — legacy vector removed, so search always fails → default steps, LLM never called
         var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
         stepEvents.Count.Should().Be(5); // Default steps
 
@@ -539,7 +539,7 @@ public class StreamSetupGuideQueryHandlerTests
     [Fact]
     public async Task Handle_MultipleSteps_QdrantRemoved_DefaultStepsCalculateTimeCorrectly()
     {
-        // Arrange — After Qdrant removal, SearchSetupContextAsync always returns false,
+        // Arrange — After legacy vector removal, SearchSetupContextAsync always returns false,
         // so the LLM is never called. Default steps (5) are returned.
         // 5 steps * 2 min/step = 10 minutes.
         var gameId = "game123";

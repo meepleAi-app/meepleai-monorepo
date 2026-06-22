@@ -16,7 +16,8 @@ warn() { echo -e "${YELLOW}[$(date '+%H:%M:%S')] WARNING:${NC} $1"; }
 err()  { echo -e "${RED}[$(date '+%H:%M:%S')] ERROR:${NC} $1"; }
 
 INFRA_DIR="/opt/meepleai/repo/infra"
-COMPOSE_FILES="-f docker-compose.yml -f compose.staging.yml -f compose.staging-traefik.yml"
+# Post-PR #738: Traefik decommissioned, edge=CF Tunnel
+COMPOSE_FILES="-f docker-compose.yml -f compose.staging.yml"
 BACKUP_DIR="/backups"
 
 # Volumes to DELETE (user data)

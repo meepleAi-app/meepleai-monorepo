@@ -90,7 +90,7 @@ User B: "What's the food token count for Wingspan?"
 ```python
 async def retrieve_fast(query) -> list[Document]:
     embedding = await embed_minilm(query)  # 14.7ms
-    results = await qdrant.search(embedding, limit=3)
+    results = await vectorStore.search(embedding, limit=3)
     return results  # ~1,500 tokens (3 × 500t chunks)
 ```
 
@@ -104,8 +104,8 @@ async def retrieve_balanced(query, game_id) -> list[Document]:
     embedding = await embed_e5_base(query)  # 79ms, 83-85% accuracy
 
     # Parallel retrieval
-    vector = await qdrant.search(embedding, limit=10)
-    keyword = await qdrant.search_bm25(query, limit=10)
+    vector = await vectorStore.search(embedding, limit=10)
+    keyword = await pgvector.fts_search(query, limit=10)
 
     # Metadata filter
     if game_id:
@@ -125,11 +125,11 @@ async def retrieve_balanced(query, game_id) -> list[Document]:
 ```python
 async def retrieve_precise(query) -> list[Document]:
     # Hop 1: Broad initial (20 chunks, 5,000t)
-    hop1 = await qdrant.search(query, limit=20)
+    hop1 = await vectorStore.search(query, limit=20)
 
     # Hop 2: Entity expansion (extract "combat", "resources")
     entities = extract_entities(hop1)
-    hop2 = [await qdrant.search(e, limit=5) for e in entities[:5]]  # +3,000t
+    hop2 = [await vectorStore.search(e, limit=5) for e in entities[:5]]  # +3,000t
 
     # Hop 3: Cross-reference validation
     hop3 = await retrieve_related(extract_rules(hop1 + hop2))  # +2,000t
@@ -701,4 +701,4 @@ def answer_query(query, user):
 
 ---
 
-**Back to**: [RAG Overview](00-overview.md) | [Dashboard](index.html)
+**Back to**: **RAG Overview** _(planned)_ | **Dashboard** _(planned)_

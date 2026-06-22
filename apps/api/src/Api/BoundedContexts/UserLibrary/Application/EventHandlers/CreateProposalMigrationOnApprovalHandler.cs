@@ -95,13 +95,27 @@ internal sealed class CreateProposalMigrationOnApprovalHandler : DomainEventHand
         }
 
         // Create the ProposalMigration
+        // Issue #1938 / CF-2: propagate EventId so the resulting row carries the source
+        // event id and the UNIQUE partial index blocks duplicate inserts on retry/replay.
         var migration = ProposalMigration.Create(
             shareRequestId: shareRequest.Id,
             privateGameId: libraryEntry.PrivateGameId.Value,
             sharedGameId: domainEvent.TargetSharedGameId.Value,
-            userId: shareRequest.UserId);
+            userId: shareRequest.UserId,
+            sourceEventId: domainEvent.EventId);
 
-        await _migrationRepo.AddAsync(migration, cancellationToken).ConfigureAwait(false);
+        // CF-2 / #1938 deferred follow-up: AddAndCommitAsync wraps AddAsync + an
+        // inline SaveChangesAsync with a 23505 catch. Returns false when an outbox
+        // replay (#1535 at-least-once delivery) or concurrent pod already wrote the
+        // row keyed by this EventId — log and skip silently so the legitimate
+        // replay doesn't surface as an alarm.
+        if (!await _migrationRepo.AddAndCommitAsync(migration, cancellationToken).ConfigureAwait(false))
+        {
+            Logger.LogInformation(
+                "Skipping duplicate ProposalMigration for ShareRequest {ShareRequestId}: SourceEventId={SourceEventId} (already recorded)",
+                shareRequest.Id, domainEvent.EventId);
+            return;
+        }
 
         Logger.LogInformation(
             "Created ProposalMigration {MigrationId} for ShareRequest {ShareRequestId}: PrivateGame {PrivateGameId} → SharedGame {SharedGameId}",

@@ -128,7 +128,7 @@ internal static class BatchJobEndpoints
             return Results.BadRequest(new { message = "Invalid job type" });
         }
 
-        var command = new CreateBatchJobCommand(jobType, request.Parameters, session!.User!.Id);
+        var command = new CreateBatchJobCommand(jobType, request.Parameters, session!.Principal!.Subject.Id);
         var jobId = await mediator.Send(command, ct).ConfigureAwait(false);
 
         return Results.Created($"/api/v1/admin/operations/batch-jobs/{jobId}", new CreateBatchJobResponse(jobId));

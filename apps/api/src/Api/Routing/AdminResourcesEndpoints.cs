@@ -134,7 +134,7 @@ internal static class AdminResourcesEndpoints
         .ProducesProblem(401)
         .ProducesProblem(403);
 
-        // Rebuild Vector Index — disabled (Qdrant replaced by pgvector)
+        // Rebuild Vector Index — disabled (pgvector indexes are managed natively by PostgreSQL)
         group.MapPost("/resources/vectors/rebuild", (
             HttpContext context,
             string collectionName,
@@ -143,7 +143,7 @@ internal static class AdminResourcesEndpoints
             var sessionResult = context.RequireAdminSession();
             if (!sessionResult.IsAuthorized) return sessionResult.ErrorResult!;
 
-            return Results.BadRequest(new { error = "Vector index rebuild not available — Qdrant replaced by pgvector" });
+            return Results.BadRequest(new { error = "Vector index rebuild not available — pgvector indexes are managed by PostgreSQL" });
         })
         .WithName("RebuildVectorIndex")
         .WithTags("Admin", "Resources", "Dangerous")

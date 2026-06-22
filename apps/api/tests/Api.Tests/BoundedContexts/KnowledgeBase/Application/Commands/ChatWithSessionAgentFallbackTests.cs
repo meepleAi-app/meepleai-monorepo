@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
-using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.SharedKernel.Application;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -132,7 +133,7 @@ public class ChatWithSessionAgentFallbackTests
             sessionRepository: Mock.Of<IAgentSessionRepository>(),
             definitionRepository: Mock.Of<IAgentDefinitionRepository>(),
             chatThreadRepository: Mock.Of<IChatThreadRepository>(),
-            gameRepository: Mock.Of<IGameRepository>(),
+            gameCoreData: Mock.Of<IGameCoreDataProvider>(),
             liveSessionRepository: Mock.Of<ILiveSessionRepository>(),
             unitOfWork: Mock.Of<IUnitOfWork>(),
             ragPromptService: Mock.Of<IRagPromptAssemblyService>(),

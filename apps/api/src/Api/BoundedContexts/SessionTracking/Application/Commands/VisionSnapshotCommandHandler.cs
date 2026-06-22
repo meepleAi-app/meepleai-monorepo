@@ -93,7 +93,7 @@ internal sealed class CreateVisionSnapshotCommandHandler
                 var fileName = imageUpload.FileName ?? $"snapshot_{snapshot.Id:N}_{snapshot.Images.Count}.jpg";
 
                 var storageResult = await _blobStorageService
-                    .StoreAsync(stream, fileName, gameIdForStorage, cancellationToken)
+                    .StoreAsync(stream, fileName, BlobCategory.VisionSnapshot, gameIdForStorage, cancellationToken)
                     .ConfigureAwait(false);
 
                 if (!storageResult.Success || storageResult.FileId is null)

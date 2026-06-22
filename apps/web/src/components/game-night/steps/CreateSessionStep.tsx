@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -119,7 +120,7 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
   return (
     <div className="space-y-4" data-testid="create-session-step">
       <div>
-        <h3 className="font-quicksand font-bold text-lg text-slate-900 dark:text-slate-100">
+        <h3 className="font-quicksand font-bold text-lg text-foreground">
           Giocatori
         </h3>
         <p className="text-sm text-muted-foreground mt-1">

@@ -157,7 +157,7 @@ export function AddEntityLinkModal({
                   onClick={() => handleLinkTypeSelect(lt)}
                   className={cn(
                     'rounded-full transition-all duration-150',
-                    'focus:outline-none focus:ring-2 focus:ring-slate-300',
+                    'focus:outline-none focus:ring-2 focus:ring-border',
                     selectedLinkType === lt
                       ? 'ring-2 ring-offset-1 ring-slate-400'
                       : 'opacity-70 hover:opacity-100'
@@ -187,7 +187,7 @@ export function AddEntityLinkModal({
                       className={cn(
                         'inline-flex items-center gap-1 rounded-full px-2.5 py-1',
                         'text-xs font-medium font-nunito transition-all duration-150',
-                        'focus:outline-none focus:ring-2 focus:ring-slate-300',
+                        'focus:outline-none focus:ring-2 focus:ring-border',
                         targetEntityType === et
                           ? 'ring-2 ring-offset-1 ring-slate-400'
                           : 'opacity-70 hover:opacity-100'
@@ -226,7 +226,7 @@ export function AddEntityLinkModal({
                   'w-full rounded-lg border border-border/60 bg-background',
                   'px-3 py-2 text-sm font-mono text-foreground',
                   'placeholder:text-muted-foreground/40',
-                  'focus:border-border focus:outline-none focus:ring-2 focus:ring-slate-300',
+                  'focus:border-border focus:outline-none focus:ring-2 focus:ring-border',
                   'transition-colors duration-150'
                 )}
               />
@@ -252,7 +252,7 @@ export function AddEntityLinkModal({
                   'w-full rounded-lg border border-border/60 bg-background',
                   'px-3 py-2 text-sm text-foreground',
                   'placeholder:text-muted-foreground/40',
-                  'focus:border-border focus:outline-none focus:ring-2 focus:ring-slate-300',
+                  'focus:border-border focus:outline-none focus:ring-2 focus:ring-border',
                   'transition-colors duration-150'
                 )}
               />
@@ -275,7 +275,7 @@ export function AddEntityLinkModal({
               'rounded-lg border border-border/60 px-4 py-2',
               'text-sm font-medium text-muted-foreground',
               'hover:bg-muted transition-colors duration-150',
-              'focus:outline-none focus:ring-2 focus:ring-slate-300'
+              'focus:outline-none focus:ring-2 focus:ring-border'
             )}
           >
             Cancel

@@ -95,7 +95,7 @@ internal sealed class ExportRagDataCommandHandler : IRequestHandler<ExportRagDat
 #pragma warning disable CA1031 // Service boundary: export must continue on individual document errors
             try
             {
-                var gameName = vectorDoc.Game?.Name ?? "unknown-game";
+                var gameName = vectorDoc.Game?.Title ?? "unknown-game";
                 var gameSlug = RagBackupPathHelper.Slugify(gameName);
                 var pdfDoc = vectorDoc.PdfDocument;
 
@@ -150,7 +150,13 @@ internal sealed class ExportRagDataCommandHandler : IRequestHandler<ExportRagDat
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                errors.Add($"Error exporting document {vectorDoc.PdfDocumentId}: {ex.Message}");
+                // SECURITY (test-guarded): never embed ex.Message in the per-document
+                // error. Storage backend (dual-write S3 + local) and EF Core exceptions
+                // routinely carry bucket names, credential fragments, SQL parameters,
+                // and request IDs. Surface only the exception type; full diagnostic
+                // detail is preserved by the LogWarning below. Enforced by
+                // ExportRagDataCommandHandlerTests.Handle_WhenExportServiceThrows_ShouldNotIncludeRawExceptionMessageInError.
+                errors.Add($"Error exporting document {vectorDoc.PdfDocumentId} ({ex.GetType().Name})");
                 failed++;
                 _logger.LogWarning(ex, "Failed to export document {PdfDocumentId}", vectorDoc.PdfDocumentId);
             }

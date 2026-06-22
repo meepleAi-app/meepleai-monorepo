@@ -89,7 +89,7 @@ export function KbSelectionStep({
                     'h-8 w-8 rounded-lg flex items-center justify-center shrink-0',
                     isSelected
                       ? 'bg-amber-500/20 text-amber-500'
-                      : 'bg-slate-200 dark:bg-slate-700 text-muted-foreground'
+                      : 'bg-muted dark:bg-card text-muted-foreground'
                   )}
                 >
                   <BookOpen className="h-4 w-4" />
@@ -98,7 +98,7 @@ export function KbSelectionStep({
                 {/* Title + badge */}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{displayTitle}</p>
-                  <span className="inline-block text-[10px] uppercase tracking-wide font-semibold text-muted-foreground bg-slate-100 dark:bg-slate-800 rounded px-1.5 py-0.5 mt-0.5">
+                  <span className="inline-block text-[10px] uppercase tracking-wide font-semibold text-muted-foreground bg-muted rounded px-1.5 py-0.5 mt-0.5">
                     {categoryLabel}
                   </span>
                 </div>

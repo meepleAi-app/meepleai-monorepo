@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure.Entities;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -13,21 +14,25 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// <summary>
 /// Handler for CreateChatSessionCommand.
 /// Issue #3483: Chat Session Persistence Service.
+/// BE-3 #1590: ISharedGameRepository injected to resolve gameName for ChatSessionCreatedEvent payload.
 /// </summary>
 internal sealed class CreateChatSessionCommandHandler : IRequestHandler<CreateChatSessionCommand, Guid>
 {
     private readonly IChatSessionRepository _sessionRepository;
+    private readonly ISharedGameRepository _sharedGameRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IRagAccessService _ragAccessService;
     private readonly ILogger<CreateChatSessionCommandHandler> _logger;
 
     public CreateChatSessionCommandHandler(
         IChatSessionRepository sessionRepository,
+        ISharedGameRepository sharedGameRepository,
         IUnitOfWork unitOfWork,
         IRagAccessService ragAccessService,
         ILogger<CreateChatSessionCommandHandler> logger)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -81,6 +86,18 @@ internal sealed class CreateChatSessionCommandHandler : IRequestHandler<CreateCh
             }
         }
 
+        // Resolve gameName for the ChatSessionCreatedEvent payload (BE-3 #1590 H2).
+        // The event must carry gameName so the activity rail can show a meaningful title
+        // without a secondary join at read time.
+        string? gameName = null;
+        if (request.GameId != Guid.Empty)
+        {
+            var names = await _sharedGameRepository
+                .GetNamesByIdsAsync(new[] { request.GameId }, cancellationToken)
+                .ConfigureAwait(false);
+            names.TryGetValue(request.GameId, out gameName);
+        }
+
         var sessionId = Guid.NewGuid();
 
         var session = new ChatSession(
@@ -93,7 +110,8 @@ internal sealed class CreateChatSessionCommandHandler : IRequestHandler<CreateCh
             agentConfigJson: request.AgentConfigJson,
             agentId: request.AgentId,
             agentType: request.AgentType,
-            agentName: request.AgentName);
+            agentName: request.AgentName,
+            gameName: gameName);
 
         await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

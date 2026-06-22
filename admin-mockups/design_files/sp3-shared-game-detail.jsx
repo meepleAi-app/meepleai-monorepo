@@ -64,8 +64,6 @@ const PUB_KBS = [
   { id:'kb-wing-faq', title:'wingspan-faq-bgg.md', kind:'MD',  pages: 8,  lang:'EN', size:'180 KB' },
   { id:'kb-wing-asia', title:'wingspan-asia-rules.pdf', kind:'PDF', pages: 12, lang:'EN', size:'2.1 MB' },
   { id:'kb-wing-europe', title:'wingspan-europe.pdf', kind:'PDF', pages: 8, lang:'EN', size:'1.4 MB' },
-  { id:'kb-wing-bgg', title:'BoardGameGeek FAQ', kind:'URL', pages: null, lang:'EN', size:null,
-    url:'boardgamegeek.com/wingspan/faq' },
   { id:'kb-wing-errata', title:'wingspan-errata-2024.pdf', kind:'PDF', pages: 4, lang:'EN', size:'320 KB' },
 ];
 
@@ -624,7 +622,7 @@ const KBPublicDocItem = ({ kb }) => {
         color:'var(--text-sec)',
         fontFamily:'var(--f-display)', fontSize: 11, fontWeight: 700,
         cursor:'pointer', flexShrink: 0,
-      }}>Apri ↗</button>
+      }} onClick={() => { setTimeout(() => { window.location.href = 'sp3-shared-games.html'; }, 0); /* DEMO-NAV */ }}>Apri ↗</button>
     </article>
   );
 };
@@ -764,7 +762,7 @@ const SharedGameDetailBody = ({ stateOverride, compact }) => {
 
         {isNoContent && (
           <Banner tone="info" action={
-            <a href="#" onClick={e=>e.preventDefault()} style={{
+            <a href="#" onClick={(e) => { (e=>e.preventDefault())(e); setTimeout(() => { window.location.href = 'sp3-shared-games.html'; }, 0); /* DEMO-NAV */ }} style={{
               padding:'5px 10px', borderRadius:'var(--r-md)',
               background:'hsl(var(--c-info))', color:'#fff',
               fontFamily:'var(--f-display)', fontSize: 11, fontWeight: 700,
@@ -844,7 +842,7 @@ const StickyCTAMobile = () => (
       background:'hsl(var(--c-game))', color:'#fff',
       boxShadow:'0 6px 20px hsl(var(--c-game) / .4)',
       cursor:'pointer',
-    }}>🔒 Accedi per installare</button>
+    }} onClick={() => { setTimeout(() => { window.location.href = 'sp3-join.html'; }, 0); /* DEMO-NAV */ }}>🔒 Accedi per installare</button>
   </div>
 );
 
@@ -870,7 +868,7 @@ const FloatingCTADesktop = () => (
       border:'none', fontFamily:'var(--f-display)', fontSize: 12, fontWeight: 700,
       cursor:'pointer',
       boxShadow:'0 3px 10px hsl(var(--c-game) / .35)',
-    }}>Accedi →</button>
+    }} onClick={() => { setTimeout(() => { window.location.href = 'sp3-join.html'; }, 0); /* DEMO-NAV */ }}>Accedi →</button>
   </div>
 );
 
@@ -954,11 +952,11 @@ const DesktopNav = () => (
       flex: 1, fontFamily:'var(--f-mono)', fontSize: 11, color:'var(--text-muted)',
       marginLeft: 22,
     }}>
-      <a href="#" style={{ color:'inherit' }}>Catalogo</a>
+      <a href="#" style={{ color:'inherit' }} onClick={() => { setTimeout(() => { window.location.href = 'sp3-shared-games.html'; }, 0); /* DEMO-NAV */ }}>Catalogo</a>
       <span aria-hidden="true"> / </span>
       <strong style={{ color:'var(--text-sec)' }}>{GAME.title}</strong>
     </div>
-    <a href="#" onClick={e=>e.preventDefault()} style={{
+    <a href="#" onClick={(e) => { (e=>e.preventDefault())(e); setTimeout(() => { window.location.href = 'sp3-join.html'; }, 0); /* DEMO-NAV */ }} style={{
       padding:'7px 14px', borderRadius:'var(--r-md)',
       color:'#fff', fontSize: 13, fontWeight: 700, fontFamily:'var(--f-display)',
       background:'hsl(var(--c-game))',

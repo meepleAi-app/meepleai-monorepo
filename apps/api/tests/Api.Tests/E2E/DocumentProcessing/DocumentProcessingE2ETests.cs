@@ -67,7 +67,7 @@ public sealed class DocumentProcessingE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"doc_upload_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Create a minimal PDF content (simplified PDF structure)
@@ -124,7 +124,7 @@ public sealed class DocumentProcessingE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"doc_invalid_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Create a text file pretending to be PDF
@@ -153,7 +153,7 @@ public sealed class DocumentProcessingE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"doc_empty_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         using var content = new MultipartFormDataContent();
@@ -182,7 +182,7 @@ public sealed class DocumentProcessingE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"doc_progress_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Upload a PDF first
@@ -223,7 +223,7 @@ public sealed class DocumentProcessingE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"doc_progress_nf_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         var invalidId = Guid.NewGuid();
@@ -244,7 +244,7 @@ public sealed class DocumentProcessingE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"doc_text_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Upload a PDF first
@@ -293,7 +293,7 @@ public sealed class DocumentProcessingE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"doc_list_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Act
@@ -311,7 +311,7 @@ public sealed class DocumentProcessingE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"doc_list_nf_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         var invalidGameId = Guid.NewGuid();
@@ -332,7 +332,7 @@ public sealed class DocumentProcessingE2ETests : E2ETestBase
     {
         // Step 1: Register user
         var email = $"doc_journey_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Step 2: Create PDF content

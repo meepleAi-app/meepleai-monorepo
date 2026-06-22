@@ -1,31 +1,40 @@
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using MediatR;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 
 /// <summary>
 /// Handler for GetAllAgentsQuery — returns lightweight AgentDto list for user-facing endpoints.
-/// Used by GET /api/v1/games/{id}/agents (chat panel agent resolution).
+/// Used by GET /api/v1/games/{id}/agents (chat panel agent resolution) and GET /agents.
 /// </summary>
 /// <remarks>
 /// Issue #660: AgentDto.GameName populated via single bulk lookup against SharedGame catalog
 /// (avoids N+1 queries when listing all agents).
+/// Issue #1589 (BE-2): scope=my-library filters to agents whose GameId is in the caller's
+/// library (via IUserLibraryRepository) plus system agents (GameId == null).
 /// </remarks>
 internal sealed class GetAllAgentsQueryHandler
     : IRequestHandler<GetAllAgentsQuery, List<AgentDto>>
 {
+    private const string MyLibraryScope = "my-library";
+
     private readonly IAgentDefinitionRepository _repository;
     private readonly ISharedGameRepository _sharedGameRepository;
+    private readonly IUserLibraryRepository _userLibraryRepository;
 
     public GetAllAgentsQueryHandler(
         IAgentDefinitionRepository repository,
-        ISharedGameRepository sharedGameRepository)
+        ISharedGameRepository sharedGameRepository,
+        IUserLibraryRepository userLibraryRepository)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _sharedGameRepository = sharedGameRepository
             ?? throw new ArgumentNullException(nameof(sharedGameRepository));
+        _userLibraryRepository = userLibraryRepository
+            ?? throw new ArgumentNullException(nameof(userLibraryRepository));
     }
 
     public async Task<List<AgentDto>> Handle(
@@ -37,6 +46,25 @@ internal sealed class GetAllAgentsQueryHandler
         var agents = request.ActiveOnly == true
             ? await _repository.GetAllActiveAsync(cancellationToken).ConfigureAwait(false)
             : await _repository.GetAllAsync(cancellationToken).ConfigureAwait(false);
+
+        // BE-2 #1589: scope=my-library — agents in the caller's library games + system agents.
+        if (string.Equals(request.Scope, MyLibraryScope, StringComparison.Ordinal)
+            && request.ScopeUserId.HasValue)
+        {
+            var libraryGames = await _userLibraryRepository
+                .GetUserGamesAsync(request.ScopeUserId.Value, null, cancellationToken)
+                .ConfigureAwait(false);
+
+            var libraryGameIds = libraryGames
+                .Select(e => e.GameId)
+                .Where(id => id != Guid.Empty)
+                .Distinct()
+                .ToHashSet();
+
+            agents = agents
+                .Where(a => !a.GameId.HasValue || libraryGameIds.Contains(a.GameId.Value))
+                .ToList();
+        }
 
         // Apply optional Type filter
         if (!string.IsNullOrWhiteSpace(request.Type))
@@ -52,7 +80,7 @@ internal sealed class GetAllAgentsQueryHandler
             agents = agents.Where(a => a.GameId == request.GameId.Value).ToList();
         }
 
-        // Issue #660: Bulk-fetch game names for all agents linked to a game (single query, no N+1)
+        // Issue #660: Bulk-fetch game names (single query, no N+1)
         var gameIds = agents
             .Where(a => a.GameId.HasValue)
             .Select(a => a.GameId!.Value)

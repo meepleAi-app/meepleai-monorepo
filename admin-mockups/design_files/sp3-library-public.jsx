@@ -555,7 +555,7 @@ const FooterCTA = ({ isMobile }) => (
             fontFamily: 'var(--f-display)', fontWeight: 700, fontSize: 15.5,
             letterSpacing: '-0.01em',
             boxShadow: '0 8px 20px -6px hsl(var(--c-game) / 0.5)',
-          }}>
+          }} onClick={() => { setTimeout(() => { window.location.href = 'settings.html'; }, 0); /* DEMO-NAV */ }}>
             Crea account gratis
             <span aria-hidden="true">→</span>
           </a>
@@ -563,7 +563,7 @@ const FooterCTA = ({ isMobile }) => (
             fontFamily: 'var(--f-body)', fontSize: 14.5,
             color: 'var(--text-sec)',
             textDecoration: 'none',
-          }}>
+          }} onClick={() => { setTimeout(() => { window.location.href = 'settings.html'; }, 0); /* DEMO-NAV */ }}>
             Hai già un account? <span style={{
               color: 'hsl(var(--c-game))',
               textDecoration: 'underline',
@@ -713,7 +713,7 @@ const App = () => {
           }}>Default popolato + Loading skeleton · Desktop 1440 · Mobile 375 · Light/Dark</div>
         </div>
         <div style={{ marginLeft: 'auto' }}>
-          <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          <button onClick={(e) => { (() => setTheme(theme === 'light' ? 'dark' : 'light'))(e); setTimeout(() => { window.location.href = 'sp3-shared-game-detail.html'; }, 0); /* DEMO-NAV */ }}
             style={{
               padding: '8px 14px', borderRadius: 999,
               border: '1px solid ' + (theme === 'dark' ? 'rgba(224,180,110,0.28)' : 'rgba(180,130,80,0.32)'),

@@ -282,7 +282,7 @@ export function MeepleInfoCard({
                         key={doc.id}
                         className="flex items-center gap-3 rounded-xl bg-[rgba(45,42,38,0.04)] p-4 transition-colors hover:bg-[rgba(45,42,38,0.06)]"
                       >
-                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-white shadow-sm">
+                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-card shadow-sm">
                           <FileText className="h-5 w-5 text-[hsl(25,95%,38%)]" />
                         </div>
                         <div className="min-w-0 flex-1">
@@ -405,7 +405,7 @@ export function MeepleInfoCard({
                         rel="noopener noreferrer"
                         className="flex items-center gap-3 rounded-xl bg-[rgba(45,42,38,0.04)] p-4 transition-colors hover:bg-[hsla(262,83%,62%,0.08)]"
                       >
-                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-white shadow-sm">
+                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-card shadow-sm">
                           <IconComponent className="h-5 w-5 text-[hsl(262,83%,62%)]" />
                         </div>
                         <div className="min-w-0 flex-1">

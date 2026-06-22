@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SharedGameCatalog.Application;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.AddRagToSharedGame;
+using Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatalogCoverBatch;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.RemoveRagFromSharedGame;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
@@ -325,7 +326,7 @@ internal static class SharedGameCatalogAdminEndpoints
             .RequireAuthorization("AdminPolicy")
             .WithName("RemoveRagFromSharedGame")
             .WithSummary("Remove document with full PDF cleanup (Admin only)")
-            .WithDescription("Removes SharedGameDocument link and deletes PDF with cascade cleanup (VectorDoc, TextChunks, Qdrant, blob).")
+            .WithDescription("Removes SharedGameDocument link and deletes PDF with cascade cleanup (VectorDoc, TextChunks, pgvector, blob).")
             .Produces(StatusCodes.Status204NoContent);
 
         // Game State Template Management (Issue #2400)
@@ -421,6 +422,20 @@ internal static class SharedGameCatalogAdminEndpoints
             .WithDescription("Runs SmolDocling + LLM pipeline on an orphaned PDF to extract game metadata for wizard step 2.")
             .Produces<GameMetadataDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status404NotFound);
+
+        // Issue #2123 Phase B — one-shot M8 batch enrichment for QID-populated games.
+        // Run after the QID bootstrap script (scripts/bootstrap_wikidata_qid.py) seeded
+        // SharedGame.WikidataQid for the catalog. Admin-only, rate-limited.
+        group.MapPost("/admin/catalog/covers/enrich-batch", HandleEnrichCoversBatch)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("EnrichCatalogCoversBatch")
+            .WithSummary("Run M8 Wikidata cover enrichment for a batch of games (Admin only)")
+            .WithDescription("Dispatches one EnrichCatalogCoverCommand per game id, sequentially honouring the Wikimedia 1 req/sec SPARQL rate limit. Cap: 200 ids per batch. Idempotent — re-running on an already-enriched game is a no-op via the ADR DEC-3i 90-day freshness window.")
+            .Produces<EnrichCatalogCoverBatchResult>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
     }
 #pragma warning restore MA0051
 
@@ -453,7 +468,7 @@ internal static class SharedGameCatalogAdminEndpoints
             ),
             PdfDocumentId: request.PdfDocumentId,
             CoverImageUrl: request.CoverImageUrl,
-            RequestedBy: session!.User!.Id
+            RequestedBy: session!.Principal!.Subject.Id
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -469,7 +484,7 @@ internal static class SharedGameCatalogAdminEndpoints
         var (authenticated, session, error) = context.TryGetActiveSession();
         if (!authenticated) return error!;
 
-        var query = new ExtractGameMetadataFromPdfByPdfIdQuery(pdfId, session!.User!.Id);
+        var query = new ExtractGameMetadataFromPdfByPdfIdQuery(pdfId, session!.Principal!.Subject.Id);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);
     }
@@ -561,7 +576,7 @@ internal static class SharedGameCatalogAdminEndpoints
             request.ImageUrl,
             request.ThumbnailUrl,
             request.Rules,
-            session!.User!.Id);
+            session!.Principal!.Subject.Id);
 
         try
         {
@@ -587,7 +602,7 @@ internal static class SharedGameCatalogAdminEndpoints
         var (authorized, session, error) = context.RequireAdminOrEditorSession();
         if (!authorized) return error!;
 
-        var command = new SubmitSharedGameForApprovalCommand(id, session!.User!.Id);
+        var command = new SubmitSharedGameForApprovalCommand(id, session!.Principal!.Subject.Id);
 
         try
         {
@@ -609,7 +624,7 @@ internal static class SharedGameCatalogAdminEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var command = new ApproveSharedGamePublicationCommand(id, session!.User!.Id);
+        var command = new ApproveSharedGamePublicationCommand(id, session!.Principal!.Subject.Id);
 
         try
         {
@@ -631,7 +646,7 @@ internal static class SharedGameCatalogAdminEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var command = new QuickPublishSharedGameCommand(id, session!.User!.Id);
+        var command = new QuickPublishSharedGameCommand(id, session!.Principal!.Subject.Id);
 
         try
         {
@@ -658,7 +673,7 @@ internal static class SharedGameCatalogAdminEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var command = new RejectSharedGamePublicationCommand(id, session!.User!.Id, request.Reason);
+        var command = new RejectSharedGamePublicationCommand(id, session!.Principal!.Subject.Id, request.Reason);
 
         try
         {
@@ -702,7 +717,7 @@ internal static class SharedGameCatalogAdminEndpoints
 
         var command = new BatchApproveGamesCommand(
             request.GameIds,
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             request.Note);
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -734,7 +749,7 @@ internal static class SharedGameCatalogAdminEndpoints
 
         var command = new BatchRejectGamesCommand(
             request.GameIds,
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             request.Reason);
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -754,7 +769,7 @@ internal static class SharedGameCatalogAdminEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var command = new ArchiveSharedGameCommand(id, session!.User!.Id);
+        var command = new ArchiveSharedGameCommand(id, session!.Principal!.Subject.Id);
 
         try
         {
@@ -896,7 +911,7 @@ internal static class SharedGameCatalogAdminEndpoints
         var command = new UpdateSharedGameFromBggCommand(
             id,
             request.BggId,
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             request.FieldsToUpdate);
 
         try
@@ -1238,7 +1253,7 @@ internal static class SharedGameCatalogAdminEndpoints
             request.Version,
             request.Tags,
             request.SetAsActive,
-            session!.User!.Id);
+            session!.Principal!.Subject.Id);
 
         try
         {
@@ -1300,7 +1315,7 @@ internal static class SharedGameCatalogAdminEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var command = new RemoveRagFromSharedGameCommand(id, documentId, session!.User!.Id);
+        var command = new RemoveRagFromSharedGameCommand(id, documentId, session!.Principal!.Subject.Id);
         await mediator.Send(command, ct).ConfigureAwait(false);
         return Results.NoContent();
     }
@@ -1347,7 +1362,7 @@ internal static class SharedGameCatalogAdminEndpoints
         var command = new GenerateGameStateTemplateCommand(
             id,
             request.Name,
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             request.SetAsActive);
 
         try
@@ -1438,7 +1453,30 @@ internal static class SharedGameCatalogAdminEndpoints
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             filename);
     }
+
+    /// <summary>
+    /// Issue #2123 Phase B — handler for the admin-only batch enrichment endpoint.
+    /// Validates input via the standard MediatR validation pipeline (FluentValidation
+    /// behaviour rejects empty / too-large / duplicate-id payloads with 400), then
+    /// dispatches the batch command.
+    /// </summary>
+    private static async Task<IResult> HandleEnrichCoversBatch(
+        [FromBody] EnrichCatalogCoverBatchRequest body,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(body);
+        var result = await mediator
+            .Send(new EnrichCatalogCoverBatchCommand(body.GameIds ?? Array.Empty<Guid>()), cancellationToken)
+            .ConfigureAwait(false);
+        return Results.Ok(result);
+    }
 }
+
+/// <summary>
+/// Request body for <c>POST /admin/catalog/covers/enrich-batch</c> (issue #2123).
+/// </summary>
+internal sealed record EnrichCatalogCoverBatchRequest(IReadOnlyList<Guid>? GameIds);
 
 /// <summary>
 /// Request body for POST /admin/shared-games/import-from-pdf

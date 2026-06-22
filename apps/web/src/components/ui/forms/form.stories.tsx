@@ -122,7 +122,10 @@ export const Default: Story = {
 const registrationSchema = z
   .object({
     email: z.string().email('Please enter a valid email address'),
-    password: z.string().min(8, 'Password must be at least 8 characters'),
+    password: z
+      .string()
+      .min(12, 'Password must be at least 12 characters')
+      .max(128, 'Password must not exceed 128 characters'),
     confirmPassword: z.string(),
   })
   .refine(data => data.password === data.confirmPassword, {

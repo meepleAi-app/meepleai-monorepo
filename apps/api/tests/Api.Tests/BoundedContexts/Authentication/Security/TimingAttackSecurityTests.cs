@@ -50,7 +50,7 @@ public class TimingAttackSecurityTests
     public void PasswordVerification_ValidVsInvalid_ShouldBeConstantTime()
     {
         // Arrange
-        var password = "Secure@Password123!";
+        var password = "Secure@UnusualPwd123!";
         var storedHash = _passwordHashingService.HashSecret(password);
 
         var validTimings = new List<long>();
@@ -102,7 +102,7 @@ public class TimingAttackSecurityTests
     public void PasswordVerification_CloseVsFar_ShouldNotLeakInformation()
     {
         // Arrange
-        var password = "Secure@Password123!";
+        var password = "Secure@UnusualPwd123!";
         var storedHash = _passwordHashingService.HashSecret(password);
 
         // "Close" passwords (differ by 1 char) vs "far" passwords (completely different)
@@ -154,7 +154,7 @@ public class TimingAttackSecurityTests
     public void PasswordVerification_DifferentLengths_ShouldBeConstantTime()
     {
         // Arrange
-        var password = "Secure@Password123!";
+        var password = "Secure@UnusualPwd123!";
         var storedHash = _passwordHashingService.HashSecret(password);
 
         var shortPassword = "x";

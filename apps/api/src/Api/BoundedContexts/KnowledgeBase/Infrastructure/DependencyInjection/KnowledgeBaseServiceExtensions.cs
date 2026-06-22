@@ -410,6 +410,9 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<ILlmCostLogRepository, LlmCostLogRepository>(); // ISSUE-960: Cost tracking
         services.AddScoped<ILlmRequestLogRepository, LlmRequestLogRepository>(); // ISSUE-5072: Detailed request logging with 30-day retention
         services.AddScoped<IAgentDefinitionRepository, AgentDefinitionRepository>(); // Issue #3808: AgentDefinition for AI Lab
+        services.AddScoped<IKbReindexJobRepository, KbReindexJobRepository>(); // Issue #941 / ADR-057: async reindex job
+        services.AddSingleton<Application.Channels.KbReindexChannel>(); // Issue #941 / ADR-057: in-process queue
+        services.AddHostedService<Api.Infrastructure.BackgroundServices.KbReindexProcessorService>(); // Issue #941 / ADR-057
         services.AddScoped<IAgentSessionRepository, AgentSessionRepository>(); // Issue #3184 (AGT-010): Agent session lifecycle
         services.AddScoped<IChatSessionRepository, ChatSessionRepository>(); // Issue #3483: Chat session persistence
         services.AddScoped<IAgentTestResultRepository, AgentTestResultRepository>(); // Issue #3379: Agent test results
@@ -474,6 +477,16 @@ internal static class KnowledgeBaseServiceExtensions
         // Ownership/RAG access: cascading access check (admin → public → ownership)
         services.AddScoped<IRagAccessService, RagAccessService>();
 
+        // PDF indexing pipeline (#2244 / epic #2242): single write path for marking
+        // a PDF "indexed in the vector store". Replaces 5 EF-direct call sites in
+        // DocumentProcessing handlers so VectorDocumentIndexedEvent fires structurally
+        // and has_knowledge_base no longer drifts to false.
+        services.AddScoped<IPdfIndexingPipeline, PdfIndexingPipeline>();
+
+        // Issue #1661: cross-game hybrid search — parallel orchestration wrapper
+        // Scoped because IHybridSearchService (its dependency) is Scoped.
+        services.AddScoped<IMultiGameHybridSearchService, MultiGameHybridSearchService>();
+
         // RAG enhancements orchestrator — feature flag integration for advanced RAG features
         services.AddScoped<IRagEnhancementService, RagEnhancementService>();
 
@@ -498,6 +511,14 @@ internal static class KnowledgeBaseServiceExtensions
         // Phase 2 Task 2.3b: Pricing engine — NullPricingEngine stub (always allows).
         // PHASE 3 REPLACE with CreditBasedPricingEngine in Phase 3 Task 3.2.
         services.AddScoped<IPricingEngine, NullPricingEngine>();
+
+        // Phase D (2026-05-19 multi-book gamebook plan): rule-based + LLM-fallback
+        // role classifier for ingestion-time text_chunks.role_tags population.
+        services.AddScoped<IRoleClassifierService, RoleClassifierService>();
+
+        // Phase D5 (2026-05-19 multi-book gamebook plan): query-time intent classifier
+        // (regex-only, no LLM). Consumed by D6 retrieval boost.
+        services.AddScoped<IIntentClassifierService, IntentClassifierService>();
     }
 
     private static void AddChunkingAndRerankingServices(IServiceCollection services, IConfiguration? configuration)

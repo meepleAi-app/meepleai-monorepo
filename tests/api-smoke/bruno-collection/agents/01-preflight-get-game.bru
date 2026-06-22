@@ -1,0 +1,26 @@
+meta {
+  name: SG3 — Preflight: fetch a shared game ID
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{apiBase}}/api/v1/shared-games?pageNumber=1&pageSize=1
+}
+
+script:post-response {
+  const body = res.getBody();
+  if (body && body.items && body.items.length > 0) {
+    bru.setVar("smokeGameId", body.items[0].id);
+  }
+}
+
+tests {
+  test("preflight returns 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("captured smokeGameId for subsequent scenarios", function() {
+    const body = res.getBody();
+    expect(body.items.length).to.be.greaterThan(0);
+  });
+}

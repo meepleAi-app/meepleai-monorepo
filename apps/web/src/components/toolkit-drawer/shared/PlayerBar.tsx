@@ -40,7 +40,7 @@ export function PlayerBar() {
 
   return (
     <div
-      className="shrink-0 border-t border-gray-200 bg-white/90 px-3 py-2"
+      className="shrink-0 border-t border-border bg-card/90 px-3 py-2"
       data-testid="player-bar"
     >
       {/* Add player form (inline, above the bar) */}
@@ -80,8 +80,8 @@ export function PlayerBar() {
             type="button"
             onClick={() => setShowAddForm(prev => !prev)}
             className={cn(
-              'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-gray-300',
-              'text-gray-400 transition-colors hover:border-gray-400 hover:text-gray-500'
+              'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-border',
+              'text-muted-foreground transition-colors hover:border-border hover:text-muted-foreground'
             )}
             aria-label="Aggiungi giocatore"
             data-testid="add-player-btn"
@@ -97,7 +97,7 @@ export function PlayerBar() {
             onClick={() => {
               // Placeholder for session upgrade flow
             }}
-            className="shrink-0 rounded-lg border border-gray-300 px-2 py-1 text-[10px] font-medium text-gray-600 transition-colors hover:bg-gray-100"
+            className="shrink-0 rounded-lg border border-border px-2 py-1 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-muted"
             data-testid="session-upgrade-btn"
           >
             Sessione

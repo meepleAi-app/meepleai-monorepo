@@ -1,5 +1,6 @@
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.Authentication;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -95,10 +96,10 @@ public sealed class PerformanceQueryTests : IAsyncLifetime
         }).ToList();
 
         // Create 100 games
-        var games = Enumerable.Range(1, 100).Select(i => new GameEntity
+        var games = Enumerable.Range(1, 100).Select(i => new SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = $"Game {i:D3}",
+            Title = $"Game {i:D3}",
             MinPlayers = 2,
             MaxPlayers = 6,
             YearPublished = 2000 + i % 24
@@ -121,7 +122,7 @@ public sealed class PerformanceQueryTests : IAsyncLifetime
         }
 
         _dbContext!.Users.AddRange(users);
-        _dbContext.Games.AddRange(games);
+        _dbContext.SharedGames.AddRange(games);
         _dbContext.PdfDocuments.AddRange(pdfs);
 
         await _dbContext.SaveChangesAsync(TestCancellationToken);
@@ -203,7 +204,7 @@ public sealed class PerformanceQueryTests : IAsyncLifetime
         var pdfsWithGames = await _dbContext.PdfDocuments
             .Where(p => pdfIds.Contains(p.Id))
             .Join(
-                _dbContext.Games,
+                _dbContext.SharedGames,
                 p => p.SharedGameId,
                 g => g.Id,
                 (p, g) => new { Pdf = p, Game = g })
@@ -217,7 +218,7 @@ public sealed class PerformanceQueryTests : IAsyncLifetime
         pdfsWithGames.Should().AllSatisfy(pair =>
         {
             pair.Game.Should().NotBeNull("Game should be loaded via Join");
-            pair.Game.Name.Should().NotBeNullOrEmpty();
+            pair.Game.Title.Should().NotBeNullOrEmpty();
         });
 
         stopwatch.ElapsedMilliseconds.Should().BeLessThan(500, "Join should prevent N+1 with single JOIN query");
@@ -239,7 +240,7 @@ public sealed class PerformanceQueryTests : IAsyncLifetime
         // Note: EF Core doesn't support lazy loading by default without proxies,
         // so we simulate by querying games separately
         var gameIds = pdfs.Select(p => p.SharedGameId).Where(id => id != null).Select(id => id!.Value).Distinct().ToList();
-        var games = await _dbContext.Games
+        var games = await _dbContext.SharedGames
             .Where(g => gameIds.Contains(g.Id))
             .AsNoTracking()
             .ToListAsync(TestCancellationToken);

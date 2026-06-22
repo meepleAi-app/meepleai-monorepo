@@ -293,7 +293,7 @@ export function ProgressModal({
 
           {/* Metrics Display */}
           {!hasError && (
-            <div className="grid grid-cols-3 gap-4 rounded-lg bg-white/70 dark:bg-white/5 backdrop-blur-md p-4 border border-border/50">
+            <div className="grid grid-cols-3 gap-4 rounded-lg bg-card/70 dark:bg-card/5 backdrop-blur-md p-4 border border-border/50">
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground font-nunito">Pages Processed</p>
                 <p className="text-lg font-semibold font-quicksand text-amber-600 dark:text-amber-400">

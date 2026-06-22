@@ -67,7 +67,7 @@ export function UploadQueueItem({ item, onCancel, onRetry, onRemove }: UploadQue
   return (
     <div
       data-testid={`upload-queue-item-${id}`}
-      className="p-4 border border-gray-300 rounded-md mb-3 transition-colors duration-300"
+      className="p-4 border border-border rounded-md mb-3 transition-colors duration-300"
       style={{
         backgroundColor: statusBgColor,
       }}
@@ -76,12 +76,12 @@ export function UploadQueueItem({ item, onCancel, onRetry, onRemove }: UploadQue
       <div className="flex justify-between items-start mb-2">
         <div className="flex-1 min-w-0">
           <div
-            className="text-sm font-semibold text-gray-900 overflow-hidden text-ellipsis whitespace-nowrap"
+            className="text-sm font-semibold text-foreground overflow-hidden text-ellipsis whitespace-nowrap"
             title={file.name}
           >
             {file.name}
           </div>
-          <div className="text-xs text-gray-600 mt-0.5">
+          <div className="text-xs text-muted-foreground mt-0.5">
             {formatFileSize(file.size)}
             {retryCount > 0 && ` • Retry ${retryCount}`}
           </div>
@@ -107,7 +107,7 @@ export function UploadQueueItem({ item, onCancel, onRetry, onRemove }: UploadQue
             className="h-2 mb-2"
             aria-label={`Upload progress for ${file.name}`}
           />
-          <div className="text-xs text-gray-600 mb-2">{progress}% complete</div>
+          <div className="text-xs text-muted-foreground mb-2">{progress}% complete</div>
         </>
       )}
 
@@ -116,7 +116,7 @@ export function UploadQueueItem({ item, onCancel, onRetry, onRemove }: UploadQue
         <div
           role="alert"
           data-testid={`upload-error-${id}`}
-          className="text-xs text-red-600 p-2 bg-white border border-red-600 rounded mb-2"
+          className="text-xs text-red-600 p-2 bg-card border border-red-600 rounded mb-2"
         >
           <div>Error: {error}</div>
           {correlationId && <div className="mt-1 text-[11px]">Error ID: {correlationId}</div>}

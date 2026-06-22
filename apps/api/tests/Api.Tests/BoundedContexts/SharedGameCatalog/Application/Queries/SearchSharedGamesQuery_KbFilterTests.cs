@@ -1,6 +1,9 @@
+using Api.BoundedContexts.SharedGameCatalog.Application;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Services.Pdf;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -24,6 +27,22 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Queries;
 public sealed class SearchSharedGamesQuery_KbFilterTests
 {
     private readonly Mock<ILogger<SearchSharedGamesQueryHandler>> _logger = new();
+    private readonly Mock<IBlobStorageService> _blobStorageMock = new();
+    // Issue #2339 (Wave 4 Task 13): identity-passthrough mock — these tests do not
+    // assert translation enrichment, so EnrichAsync just returns the input list as-is
+    // with Translations=null (matching pre-#2339 behavior for SharedGameDto consumers).
+    private readonly Mock<IGameTitleResolver> _titleResolverMock = CreateIdentityResolverMock();
+
+    private static Mock<IGameTitleResolver> CreateIdentityResolverMock()
+    {
+        var mock = new Mock<IGameTitleResolver>();
+        mock.Setup(r => r.EnrichAsync(
+                It.IsAny<IReadOnlyList<SharedGameDto>>(),
+                It.IsAny<CancellationToken>()))
+            .Returns<IReadOnlyList<SharedGameDto>, CancellationToken>(
+                (games, _) => Task.FromResult<IReadOnlyList<SharedGameDto>>(games));
+        return mock;
+    }
 
     private static SharedGameEntity CreateGame(string title, bool hasKb) => new()
     {
@@ -87,7 +106,7 @@ public sealed class SearchSharedGamesQuery_KbFilterTests
             CreateGame("Without KB", hasKb: false));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object, _titleResolverMock.Object);
 
         // Act
         var result = await handler.Handle(BuildQuery(hasKnowledgeBase: null), CancellationToken.None);
@@ -107,7 +126,7 @@ public sealed class SearchSharedGamesQuery_KbFilterTests
             CreateGame("Monopoly", hasKb: false));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object, _titleResolverMock.Object);
 
         // Act
         var result = await handler.Handle(BuildQuery(hasKnowledgeBase: true), CancellationToken.None);
@@ -129,7 +148,7 @@ public sealed class SearchSharedGamesQuery_KbFilterTests
             CreateGame("Risk", hasKb: false));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object, _titleResolverMock.Object);
 
         // Act
         var result = await handler.Handle(BuildQuery(hasKnowledgeBase: false), CancellationToken.None);
@@ -147,7 +166,7 @@ public sealed class SearchSharedGamesQuery_KbFilterTests
         db.SharedGames.Add(CreateGame("Azul", hasKb: true));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, _blobStorageMock.Object, CreateHybridCache(), CreateConfiguration(), _logger.Object, _titleResolverMock.Object);
 
         // Act
         var result = await handler.Handle(BuildQuery(hasKnowledgeBase: null), CancellationToken.None);

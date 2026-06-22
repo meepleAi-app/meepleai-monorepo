@@ -14,6 +14,24 @@ import importPlugin from "eslint-plugin-import";
 import noIncompleteSanitization from "./eslint-rules/no-incomplete-sanitization.js";
 // V2 design system rule (Issue #572)
 import noHardcodedHex from "./eslint-rules/no-hardcoded-hex.js";
+// V2 entity HSL regression guard (P2 Issue #807 Task 9)
+import noInlineHslV2 from "./eslint-rules/no-inline-hsl-v2.js";
+// DS-2 token canonicalization — forbids hardcoded Tailwind neutral classes
+// (spec: docs/for-developers/specs/2026-05-12-token-canonicalization.md)
+import noHardcodedColorUtility from "./eslint-rules/no-hardcoded-color-utility.js";
+// API proxy guard — apiClient.{get,post,...} paths must start with /api/v1/
+// (post-#1229 regression preventer; rationale in rule docstring)
+import apiClientV1Prefix from "./eslint-rules/api-client-v1-prefix.js";
+import noBggHost from "./eslint-rules/no-bgg-host.js";
+// Game detail orphan routes guard — ADR-061 removed
+// /games/[id]/{reviews,strategies,chat}; restoration requires a follow-up ADR.
+import noGameDetailOrphanRoutes from "./eslint-rules/no-game-detail-orphan-routes.js";
+// Session live store scores deprecation guard — Issue #2389 Block A.7
+// Forbids direct reads of `useLiveSessionStore(s => s.scores)`; consumers
+// must use `useSessionScores()` from @/lib/domain-hooks/useSessionScores.
+import noStoreScoresDirect from "./eslint-rules/no-store-scores-direct.js";
+// Issue #2339 sub-PR 2/3 — encourage useGameTitle() adoption (warn-only).
+import preferUseGameTitle from "./eslint-rules/prefer-use-game-title.js";
 
 export default [
   {
@@ -94,6 +112,17 @@ export default [
         rules: {
           "no-incomplete-sanitization": noIncompleteSanitization,
           "no-hardcoded-hex": noHardcodedHex,
+          "no-inline-hsl-v2": noInlineHslV2,
+          "no-hardcoded-color-utility": noHardcodedColorUtility,
+          "api-client-v1-prefix": apiClientV1Prefix,
+          // Issue #2123 — BGG ToS compliance hard ban on user-side BGG asset traffic.
+          "no-bgg-host": noBggHost,
+          // ADR-061 — game detail orphan routes removed; re-scaffolding requires a follow-up ADR.
+          "no-game-detail-orphan-routes": noGameDetailOrphanRoutes,
+          // Issue #2389 Block A.7 — useLiveSessionStore.scores is deprecated; use useSessionScores() instead.
+          "no-store-scores-direct": noStoreScoresDirect,
+          // Issue #2339 sub-PR 2/3 — encourage useGameTitle() adoption (warn-only per DEC-FE-8).
+          "prefer-use-game-title": preferUseGameTitle,
         },
       },
     },
@@ -242,6 +271,35 @@ export default [
       // SEC-008: Prevent incomplete sanitization (CWE-116)
       // Custom rule to detect unsafe .replace() patterns that don't escape backslashes
       "local/no-incomplete-sanitization": "error",
+
+      // API proxy guard — every apiClient.{get,post,put,patch,delete,head,options}
+      // path literal MUST start with `/api/v1/`. Regression preventer for the
+      // class of bug fixed in PR #1229 (refs #1160). Rationale in the rule's
+      // docstring at eslint-rules/api-client-v1-prefix.js.
+      "local/api-client-v1-prefix": "error",
+
+      // Issue #2123 — BGG ToS compliance: NO BGG hostname literals in user-side
+      // source. ADR-059 §5 forbids user-side asset traffic to BoardGameGeek.
+      // Admin server-to-server callers, Storybook fixtures, E2E tests, and the
+      // BGG host blocklist itself (cover-utils.ts) get path-based overrides
+      // further down in this config — see the `local/no-bgg-host: off` blocks.
+      "local/no-bgg-host": "error",
+      // ADR-061 — /games/[id]/{reviews,strategies,chat} were removed; restoration
+      // requires a follow-up ADR superseding ADR-061 (not gap-fix scaffolding).
+      "local/no-game-detail-orphan-routes": "error",
+      // Issue #2389 Block A.7 — `useLiveSessionStore(s => s.scores)` is the legacy
+      // store-level read; new consumers must use `useSessionScores()` from
+      // @/lib/domain-hooks/useSessionScores. Severity is `warn` so the legacy
+      // call in ScoreBoard.tsx surfaces without breaking CI; Block C will
+      // migrate ScoreBoard, promote to `error`, then remove the store field.
+      // Block C promotion 2026-06-19: ScoreBoard migrated, store.scores removed; severity raised to `error`.
+      "local/no-store-scores-direct": "error",
+      // Issue #2339 sub-PR 2/3 — surfaces direct `game.title` JSX access that
+      // bypasses `useGameTitle()` locale + source priority resolution. WARN-only
+      // per DEC-FE-8 until 14gg of trajectory verde on main-dev; follow-up PR
+      // promotes to `error`. Allow-list: aria-label values (DEC-FE-9), test
+      // files, stories, lib/i18n/.
+      "local/prefer-use-game-title": "warn",
     },
     settings: {
       react: {
@@ -272,6 +330,16 @@ export default [
     plugins: {
       react: react,
       "react-hooks": reactHooks,
+      // PR #1230 review #2 follow-up: register the `local` plugin in the
+      // JS/JSX block too so any future *.{js,jsx} API client cannot
+      // silently bypass the /api/v1/ proxy guard. Today no JS API
+      // consumer exists, but the gate must be uniform across file
+      // extensions to remain meaningful.
+      "local": {
+        rules: {
+          "api-client-v1-prefix": apiClientV1Prefix,
+        },
+      },
     },
     rules: {
       "no-console": ["warn", { allow: ["warn", "error"] }],
@@ -282,6 +350,9 @@ export default [
       "react/prop-types": "off",
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
+      // Same gate as the TS block (line 263); see rule docstring at
+      // eslint-rules/api-client-v1-prefix.js for the rationale.
+      "local/api-client-v1-prefix": "error",
     },
     settings: {
       react: {
@@ -514,16 +585,67 @@ export default [
       ],
     },
   },
-  // V2 design system: forbid hardcoded color literals in v2 components.
-  // V2 components must consume design tokens via entityHsl() or hsl(var(--c-*)).
+  // Design-system: forbid hardcoded color literals in ex-v2 UI primitives.
+  // Components must consume design tokens via entityHsl() or hsl(var(--c-*)).
   // Issue #572 — see docs/frontend/token-audit-2026-04-26.md.
-  // The rule does not apply outside src/components/ui/v2/ — V1 components,
-  // app routes, and admin pages may still contain hex/hsl literals pending
-  // Phase 1+ migrations.
+  // Scope was originally src/components/ui/v2/**; after Stage 2 de-versioning
+  // (#1025) the v2/ prefix was dropped, so the glob enumerates the ex-v2
+  // primitive subdirs explicitly. Pre-existing src/components/ui/ subdirs
+  // (data-display, cards, etc.) remain unaffected — they may still contain
+  // hex/hsl literals pending Phase 1+ migrations.
   {
-    files: ["src/components/ui/v2/**/*.{ts,tsx}"],
+    files: [
+      "src/components/ui/auth-card/**/*.{ts,tsx}",
+      "src/components/ui/btn/**/*.{ts,tsx}",
+      "src/components/ui/detail-layout/**/*.{ts,tsx}",
+      "src/components/ui/divider/**/*.{ts,tsx}",
+      "src/components/ui/drawer/**/*.{ts,tsx}",
+      "src/components/ui/entity-card/**/*.{ts,tsx}",
+      "src/components/ui/entity-chip/**/*.{ts,tsx}",
+      "src/components/ui/entity-pip/**/*.{ts,tsx}",
+      "src/components/ui/entity-tokens.{ts,tsx}",
+      "src/components/ui/entity-tokens.test.{ts,tsx}",
+      "src/components/ui/faq/**/*.{ts,tsx}",
+      "src/components/ui/hero-gradient/**/*.{ts,tsx}",
+      "src/components/ui/input-field/**/*.{ts,tsx}",
+      "src/components/ui/invites/**/*.{ts,tsx}",
+      "src/components/ui/join/**/*.{ts,tsx}",
+      "src/components/ui/notification-card/**/*.{ts,tsx}",
+      "src/components/ui/oauth-buttons/**/*.{ts,tsx}",
+      "src/components/ui/pricing-card/**/*.{ts,tsx}",
+      "src/components/ui/pwd-input/**/*.{ts,tsx}",
+      "src/components/ui/settings-list/**/*.{ts,tsx}",
+      "src/components/ui/settings-row/**/*.{ts,tsx}",
+      "src/components/ui/shared-games/**/*.{ts,tsx}",
+      "src/components/ui/step-progress/**/*.{ts,tsx}",
+      "src/components/ui/strength-meter/**/*.{ts,tsx}",
+      "src/components/ui/success-card/**/*.{ts,tsx}",
+      "src/components/ui/theme-toggle/**/*.{ts,tsx}",
+      "src/components/ui/toggle-switch/**/*.{ts,tsx}",
+    ],
     rules: {
       "local/no-hardcoded-hex": "error",
+    },
+  },
+  // V2 entity HSL regression guard: forbid inline hsl()/hsla() literals whose
+  // hue matches a known entity color signature in v2 feature compositions.
+  // Applies to src/components/features/** (feature comps, distinct from ui/ primitives).
+  // Use getEntityToken() from @/components/ui/entity-tokens or Tailwind utilities
+  // (text-entity-game, bg-entity-event/10) instead.
+  // Unavoidable JS style props (multi-entity alpha gradients) must be silenced with:
+  //   // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- <reason>
+  // P2 Issue #807 Task 9 — see docs/for-developers/frontend/v2-token-system.md.
+  {
+    files: ["src/components/features/**/*.{ts,tsx}"],
+    plugins: {
+      "meepleai": {
+        rules: {
+          "no-inline-hsl-v2": noInlineHslV2,
+        },
+      },
+    },
+    rules: {
+      "meepleai/no-inline-hsl-v2": "error",
     },
   },
   // Configuration for components rendering user-uploaded images.
@@ -544,6 +666,119 @@ export default [
     ],
     rules: {
       "@next/next/no-img-element": "off",
+    },
+  },
+  // DS-15 (token canonicalization finalization, 2026-05-12):
+  // Forbid hardcoded Tailwind neutral-greyscale utilities (bg-white, bg-slate-*,
+  // text-gray-*, …) in src/. Components must consume semantic tokens from the
+  // canonical design system (bg-background, bg-card, text-muted-foreground, …)
+  // so the mockup palette flows through every surface uniformly.
+  //
+  // Mode: `error` — enforced after DS-4..DS-14 migrated all 5710 violations.
+  // File-level eslint-disable comments are allowed only for the documented
+  // mockup `.e-bg` pattern (white text on style-prop colored backgrounds);
+  // surgical line-level suppressions preferred where feasible.
+  //
+  // Spec: docs/for-developers/specs/2026-05-12-token-canonicalization.md
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    rules: {
+      "local/no-hardcoded-color-utility": "error",
+    },
+  },
+  // Issue #2123 — BGG ToS compliance path-based overrides for local/no-bgg-host.
+  //
+  // The rule is `error` everywhere by default. The following file globs are the
+  // ONLY legitimate places where a BGG host literal may appear:
+  //
+  //   1. Storybook fixtures (*.stories.tsx, *.story.tsx)
+  //      Design-review-only, not runtime. Tracked for cleanup in follow-up F2
+  //      (spec §9). Re-enabling the rule here would require regenerating ~10
+  //      storybook fixtures with new mock cover URLs — a separate concern.
+  //
+  //   2. Admin server-to-server BGG paths
+  //      `src/app/admin/(dashboard)/**` and `src/components/admin/**` host the
+  //      admin BGG XML API consumer (ADR-059 §2). The BGG fetcher legitimately
+  //      surfaces BGG URLs in admin-only UI (e.g. BggSearchPanel) for the admin
+  //      to manually pick a game to import. Never user-facing.
+  //
+  //   3. E2E test suite (`e2e/**`)
+  //      Tests assert the admin BGG-import flow and the user-side BGG ban; both
+  //      need to reference BGG hosts literally.
+  //
+  //   4. The BGG host blocklist itself (lib/games/cover-utils.ts)
+  //      The `BLOCKED_IMAGE_HOSTS` array contains the BGG hostnames as data,
+  //      not as URLs to render. Handled with per-line eslint-disable comments
+  //      inside the file rather than a path override, to keep the override
+  //      blast radius minimal.
+  {
+    files: [
+      "**/*.stories.{ts,tsx,js,jsx}",
+      "**/*.story.{ts,tsx,js,jsx}",
+      "src/app/admin/**/*.{ts,tsx}",
+      "src/components/admin/**/*.{ts,tsx}",
+      "e2e/**/*.{ts,tsx,js,jsx}",
+    ],
+    rules: {
+      "local/no-bgg-host": "off",
+    },
+  },
+  // Composite no-restricted-imports block for src/**.
+  //
+  // 1. StatePreviewProvider tree-shake guarantee (Asse B WP5 T5, Issue #1897):
+  //    Direct import of state-preview-provider bypasses the
+  //    dynamic({ssr:false}) loader, which is the mechanism that guarantees the
+  //    provider implementation tree-shakes out of production chunks
+  //    (DEC-4 + CRIT-5). Consumers MUST use the barrel
+  //    `@/components/ui/state-preview`, which re-exports the loader.
+  //
+  //    Scope excludes the state-preview folder itself: (a) the loader is the
+  //    only sanctioned import site of the provider impl, (b) unit tests must
+  //    wrap the SUT in the provider tree directly without dynamic indirection.
+  //
+  //    Spec: docs/superpowers/plans/2026-06-04-asse-b-ui-shell-pattern.md WP5 T5
+  //
+  // 2. Legacy PageHeader deprecation (Issue #2158 Fix #2 bis):
+  //    `components/layout/PageHeader.tsx` was the pre-Asse-B header
+  //    (h1 + tabs + primaryAction). It is superseded by `useMiniNavConfig`
+  //    (MiniNavSlot) for breadcrumb+tabs and by inline page-specific headers
+  //    for CTAs. The component is kept around as `@deprecated` so the type
+  //    surface does not vanish before any in-flight branch can rebase, but
+  //    new imports are forbidden so the migration cannot regress.
+  //
+  //    Scope excludes the PageHeader folder itself (the component still
+  //    exports its types) and its own test file.
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: [
+      "src/components/ui/state-preview/**",
+      "src/components/layout/PageHeader.tsx",
+      "src/__tests__/components/layout/PageHeader.test.tsx",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "**/state-preview/state-preview-provider",
+                "@/components/ui/state-preview/state-preview-provider",
+              ],
+              message:
+                "Use '@/components/ui/state-preview' barrel (which uses dynamic({ssr:false}) for tree-shake guarantee). Direct import of state-preview-provider bypasses dev-only isolation.",
+            },
+            {
+              group: [
+                "**/components/layout/PageHeader",
+                "@/components/layout/PageHeader",
+              ],
+              message:
+                "PageHeader is deprecated (#2158). Use `useMiniNavConfig` for breadcrumb+tabs and an inline page-specific header for the CTA. See docs/for-developers/frontend or the Fix #2 codemod in #2158 for examples.",
+            },
+          ],
+        },
+      ],
     },
   },
 ];

@@ -3,6 +3,7 @@ using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
+using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
@@ -10,6 +11,8 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
@@ -55,7 +58,6 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IGameRepository, GameRepository>();
         services.RemoveAll<Api.BoundedContexts.GameManagement.Domain.Repositories.IGameSessionRepository>();
         services.AddScoped<IGameSessionRepository, GameSessionRepository>();
         services.AddScoped<IChatThreadRepository, ChatThreadRepository>();
@@ -131,26 +133,20 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         await ResetDatabaseAsync();
 
         var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
-        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
         var chatThreadRepository = ServiceProvider.GetRequiredService<IChatThreadRepository>();
 
         var user = CreateTestUser("chatuser@meepleai.dev", "Chat User");
         await userRepository.AddAsync(user, TestCancellationToken);
 
-        var game = new Game(
-            Guid.NewGuid(),
-            new GameTitle("Wingspan"),
-            playerCount: new PlayerCount(1, 5),
-            playTime: new PlayTime(40, 70)
-        );
-        await gameRepository.AddAsync(game, TestCancellationToken);
-        await _dbContext!.SaveChangesAsync(TestCancellationToken);
+        var gameEntity = CreateGameEntity("Wingspan");
+        _dbContext!.SharedGames.Add(gameEntity);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
         var chatThread = new ChatThread(
             Guid.NewGuid(),
             user.Id,
-            game.Id,
+            gameEntity.Id,
             "Wingspan Rules Questions"
         );
         chatThread.AddUserMessage("How does bird feeding work?");
@@ -163,13 +159,13 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         var loadedThread = await chatThreadRepository.GetByIdAsync(chatThread.Id, TestCancellationToken);
         loadedThread.Should().NotBeNull();
         loadedThread!.UserId.Should().Be(user.Id);
-        loadedThread.GameId.Should().Be(game.Id);
+        loadedThread.GameId.Should().Be(gameEntity.Id);
         loadedThread.Title.Should().Be("Wingspan Rules Questions");
         loadedThread.MessageCount.Should().Be(2);
 
-        var loadedGame = await gameRepository.GetByIdAsync(game.Id, TestCancellationToken);
-        loadedGame.Should().NotBeNull();
-        loadedGame!.Title.Value.Should().Be("Wingspan");
+        var loadedGameEntity = await _dbContext.SharedGames.FindAsync(new object[] { gameEntity.Id }, TestCancellationToken);
+        loadedGameEntity.Should().NotBeNull();
+        loadedGameEntity!.Title.Should().Be("Wingspan");
     }
 
     [Fact]
@@ -179,36 +175,30 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         await ResetDatabaseAsync();
 
         var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
-        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
         var gameSessionRepository = ServiceProvider.GetRequiredService<IGameSessionRepository>();
         var chatThreadRepository = ServiceProvider.GetRequiredService<IChatThreadRepository>();
 
         var user = CreateTestUser("player@meepleai.dev", "Active Player");
         await userRepository.AddAsync(user, TestCancellationToken);
 
-        var game = new Game(
-            Guid.NewGuid(),
-            new GameTitle("Terraforming Mars"),
-            playerCount: new PlayerCount(1, 5),
-            playTime: new PlayTime(120, 180)
-        );
-        await gameRepository.AddAsync(game, TestCancellationToken);
+        var gameEntity = CreateGameEntity("Terraforming Mars");
+        _dbContext!.SharedGames.Add(gameEntity);
 
         var players = new List<SessionPlayer>
         {
             new SessionPlayer("Active Player", 1),
             new SessionPlayer("Alice", 2)
         };
-        var gameSession = new GameSession(Guid.NewGuid(), game.Id, players);
+        var gameSession = new GameSession(Guid.NewGuid(), gameEntity.Id, players);
         gameSession.Start();
         await gameSessionRepository.AddAsync(gameSession, TestCancellationToken);
-        await _dbContext!.SaveChangesAsync(TestCancellationToken);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
         var chatThread = new ChatThread(
             Guid.NewGuid(),
             user.Id,
-            game.Id,
+            gameEntity.Id,
             "Terraforming Mars - Mid-game Questions"
         );
         chatThread.AddUserMessage("Can I place an ocean tile adjacent to another ocean?");
@@ -224,7 +214,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
 
         var loadedThread = await chatThreadRepository.GetByIdAsync(chatThread.Id, TestCancellationToken);
         loadedThread.Should().NotBeNull();
-        loadedThread!.GameId.Should().Be(game.Id);
+        loadedThread!.GameId.Should().Be(gameEntity.Id);
         loadedThread.Status.IsActive.Should().BeTrue();
     }
 
@@ -235,7 +225,6 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         await ResetDatabaseAsync();
 
         var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
-        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
         var chatThreadRepository = ServiceProvider.GetRequiredService<IChatThreadRepository>();
 
         var users = new List<User>();
@@ -248,14 +237,9 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
             users.Add(user);
         }
 
-        var game = new Game(
-            Guid.NewGuid(),
-            new GameTitle("Gloomhaven"),
-            playerCount: new PlayerCount(1, 4),
-            playTime: new PlayTime(90, 150)
-        );
-        await gameRepository.AddAsync(game, TestCancellationToken);
-        await _dbContext!.SaveChangesAsync(TestCancellationToken);
+        var gameEntity = CreateGameEntity("Gloomhaven");
+        _dbContext!.SharedGames.Add(gameEntity);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act - Each user creates their own thread
         var threadIds = new List<Guid>();
@@ -264,7 +248,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
             var thread = new ChatThread(
                 Guid.NewGuid(),
                 users[i].Id,
-                game.Id,
+                gameEntity.Id,
                 $"{userNames[i]}'s Gloomhaven Questions"
             );
             thread.AddUserMessage($"Question from {userNames[i]}");
@@ -278,7 +262,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         {
             var thread = await chatThreadRepository.GetByIdAsync(threadIds[i], TestCancellationToken);
             thread.Should().NotBeNull();
-            thread!.GameId.Should().Be(game.Id);
+            thread!.GameId.Should().Be(gameEntity.Id);
             thread.UserId.Should().Be(users[i].Id);
             thread.MessageCount.Should().BeGreaterThanOrEqualTo(1);
         }
@@ -291,24 +275,18 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         await ResetDatabaseAsync();
 
         var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
-        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
         var gameSessionRepository = ServiceProvider.GetRequiredService<IGameSessionRepository>();
         var chatThreadRepository = ServiceProvider.GetRequiredService<IChatThreadRepository>();
 
         var user = CreateTestUser("finisher@meepleai.dev", "Game Finisher");
         await userRepository.AddAsync(user, TestCancellationToken);
 
-        var game = new Game(
-            Guid.NewGuid(),
-            new GameTitle("Scythe"),
-            playerCount: new PlayerCount(1, 5),
-            playTime: new PlayTime(90, 120)
-        );
-        await gameRepository.AddAsync(game, TestCancellationToken);
+        var gameEntity = CreateGameEntity("Scythe");
+        _dbContext!.SharedGames.Add(gameEntity);
 
         var gameSession = new GameSession(
             Guid.NewGuid(),
-            game.Id,
+            gameEntity.Id,
             new List<SessionPlayer> { new SessionPlayer("Game Finisher", 1) }
         );
         gameSession.Start();
@@ -317,7 +295,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         var chatThread = new ChatThread(
             Guid.NewGuid(),
             user.Id,
-            game.Id,
+            gameEntity.Id,
             "Scythe Combat Questions"
         );
         chatThread.AddUserMessage("How does combat work?");
@@ -326,7 +304,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         chatThread.AddAssistantMessage("When players have equal power, the attacker wins...");
 
         await chatThreadRepository.AddAsync(chatThread, TestCancellationToken);
-        await _dbContext!.SaveChangesAsync(TestCancellationToken);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act - Complete game and close thread (reload to avoid tracking conflicts)
         var reloadedGameSession = await gameSessionRepository.GetByIdAsync(gameSession.Id, TestCancellationToken);
@@ -364,6 +342,16 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
             PasswordHash.Create("SecurePass123!"),
             Role.User
         );
+    }
+
+    private static SharedGameEntity CreateGameEntity(string name, string? publisher = null)
+    {
+        return new SharedGameEntity
+        {
+            Id = Guid.NewGuid(),
+            Title = name,
+            CreatedAt = DateTime.UtcNow
+        };
     }
 
     private static async Task EnsureCreatedWithRetry(MeepleAiDbContext context)

@@ -22,5 +22,15 @@ internal class AuditLogEntityConfiguration : IEntityTypeConfiguration<AuditLogEn
         builder.Property(e => e.CreatedAt).IsRequired();
         builder.HasIndex(e => e.CreatedAt);
         builder.HasIndex(e => e.UserId);
+
+        // SP5 Admin Security S1: snapshot + traceability columns
+        builder.Property(e => e.BeforeJson).HasColumnName("before_json").HasColumnType("jsonb");
+        builder.Property(e => e.AfterJson).HasColumnName("after_json").HasColumnType("jsonb");
+        builder.Property(e => e.ImpersonatedUserId).HasColumnName("impersonated_user_id");
+        builder.Property(e => e.StepUpTokenId).HasColumnName("step_up_token_id");
+
+        builder.HasIndex(e => e.ImpersonatedUserId)
+            .HasDatabaseName("ix_audit_logs_impersonated_user_id")
+            .HasFilter(@"""impersonated_user_id"" IS NOT NULL");
     }
 }

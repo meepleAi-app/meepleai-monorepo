@@ -40,4 +40,13 @@ internal interface IProcessingJobRepository : IRepository<ProcessingJob, Guid>
     /// Issue #5455: Concurrency control.
     /// </summary>
     Task<int> CountProcessingAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Count jobs whose status is in the supplied set.
+    /// Returns 0 if the set is empty.
+    /// Issue #1655: KbSubNav count badges.
+    /// </summary>
+    Task<int> CountByStatusesAsync(
+        IReadOnlyList<JobStatus> statuses,
+        CancellationToken cancellationToken = default);
 }

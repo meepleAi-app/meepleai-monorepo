@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 'use client';
 
 /**
@@ -31,7 +32,7 @@ function formatTime(seconds: number): string {
 
 /** Timer status colors */
 const STATUS_STYLES: Record<TimerStatus, { ring: string; text: string; bg: string }> = {
-  idle: { ring: 'stroke-slate-300', text: 'text-slate-500', bg: 'bg-slate-50' },
+  idle: { ring: 'stroke-slate-300', text: 'text-muted-foreground', bg: 'bg-muted' },
   running: { ring: 'stroke-indigo-500', text: 'text-indigo-700', bg: 'bg-indigo-50' },
   paused: { ring: 'stroke-amber-400', text: 'text-amber-700', bg: 'bg-amber-50' },
   warning: { ring: 'stroke-orange-500', text: 'text-orange-700', bg: 'bg-orange-50' },
@@ -120,7 +121,7 @@ function PlayerTimerRow({
     <div
       className={cn(
         'flex items-center justify-between rounded-lg px-3 py-2 transition-colors',
-        isActive ? styles.bg : 'bg-white/40'
+        isActive ? styles.bg : 'bg-card/40'
       )}
       data-testid={`player-timer-${playerId}`}
     >
@@ -129,7 +130,7 @@ function PlayerTimerRow({
         <span
           className={cn(
             'font-nunito text-xs font-medium',
-            isActive ? 'text-slate-800 font-semibold' : 'text-slate-500'
+            isActive ? 'text-foreground font-semibold' : 'text-muted-foreground'
           )}
         >
           {playerName}
@@ -138,7 +139,7 @@ function PlayerTimerRow({
       <span
         className={cn(
           'font-mono text-sm font-bold tabular-nums',
-          isActive ? styles.text : 'text-slate-400'
+          isActive ? styles.text : 'text-muted-foreground'
         )}
       >
         {formatTime(remainingSeconds)}
@@ -150,7 +151,7 @@ function PlayerTimerRow({
 export function InteractiveTimer({ state, actions, playerNames }: InteractiveTimerProps) {
   if (!state) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 text-slate-400">
+      <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
         <Timer className="h-8 w-8 mb-2 opacity-50" />
         <p className="font-nunito text-sm">No timer active</p>
       </div>
@@ -165,8 +166,8 @@ export function InteractiveTimer({ state, actions, playerNames }: InteractiveTim
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <Timer className="h-3.5 w-3.5 text-indigo-500" />
-          <span className="font-nunito text-xs font-bold text-slate-700">{state.toolName}</span>
-          <span className="font-nunito text-[10px] text-slate-400">{state.timerType}</span>
+          <span className="font-nunito text-xs font-bold text-foreground">{state.toolName}</span>
+          <span className="font-nunito text-[10px] text-muted-foreground">{state.timerType}</span>
         </div>
         <span
           className={cn(
@@ -229,7 +230,7 @@ export function InteractiveTimer({ state, actions, playerNames }: InteractiveTim
         {actions?.onReset && state.status !== 'idle' && (
           <button
             onClick={actions.onReset}
-            className="flex items-center gap-1 rounded-full bg-slate-100 px-4 py-1.5 font-nunito text-xs font-medium text-slate-600 hover:bg-slate-200 transition-colors"
+            className="flex items-center gap-1 rounded-full bg-muted px-4 py-1.5 font-nunito text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
             data-testid="timer-action-reset"
           >
             <RotateCcw className="h-3 w-3" />
@@ -241,7 +242,7 @@ export function InteractiveTimer({ state, actions, playerNames }: InteractiveTim
       {/* Per-player timers */}
       {state.isPerPlayer && state.playerTimers && (
         <div>
-          <h4 className="mb-1.5 font-nunito text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+          <h4 className="mb-1.5 font-nunito text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
             Player Timers
           </h4>
           <div className="space-y-1">

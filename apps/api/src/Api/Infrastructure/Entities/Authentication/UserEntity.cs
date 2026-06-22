@@ -1,14 +1,26 @@
+using Api.Infrastructure.Persistence;
+
 namespace Api.Infrastructure.Entities;
 
 /// <summary>
 /// User entity - persistence model.
 /// DDD-PHASE2: Converted to Guid IDs and string Role for domain alignment.
 /// </summary>
+/// <remarks>
+/// SP5 Admin Security S1: marked <see cref="AuditableAttribute"/> so that
+/// <see cref="AuditingSaveChangesInterceptor"/> captures before/after snapshots on every
+/// mutation of this entity. Credential scalar properties are marked
+/// <see cref="SensitiveDataAttribute"/> so their values are redacted to
+/// <see cref="AuditingSaveChangesInterceptor.RedactedPlaceholder"/> ("***REDACTED***") in the snapshot.
+/// </remarks>
+[Auditable]
 public class UserEntity
 {
     required public Guid Id { get; set; }
     required public string Email { get; set; }
     public string? DisplayName { get; set; }
+
+    [SensitiveData]
     public string? PasswordHash { get; set; } // Nullable for OAuth-only users
     public string Role { get; set; } = "user"; // DDD-PHASE2: Changed from enum to string
     public string Tier { get; set; } = "free"; // User subscription tier (free, normal, premium)
@@ -22,6 +34,7 @@ public class UserEntity
     public int DataRetentionDays { get; set; } = 90;
 
     // Two-Factor Authentication
+    [SensitiveData]
     public string? TotpSecretEncrypted { get; set; }
     public bool IsTwoFactorEnabled { get; set; }
     public DateTime? TwoFactorEnabledAt { get; set; }
@@ -49,6 +62,14 @@ public class UserEntity
     public int FailedLoginAttempts { get; set; }
     public DateTime? LockedUntil { get; set; }
 
+    /// <summary>
+    /// Issue #1940 / iso-1 Fix 3: dedup key for AccountLockedEvent email + audit-log emission.
+    /// Handler MUST early-exit when equal to the incoming AccountLockedEvent.EventId to avoid
+    /// double-firing the lockout email and writing duplicate audit rows on a retried event.
+    /// </summary>
+    [System.ComponentModel.DataAnnotations.Schema.Column("last_lockout_event_id")]
+    public Guid? LastLockoutEventId { get; set; }
+
     // D3: Contributor flag — contributors get premium tier access
     public bool IsContributor { get; set; }
 
@@ -69,6 +90,11 @@ public class UserEntity
     // Admin Invitation Flow: tracks who invited this user and when the invitation expires
     public Guid? InvitedByUserId { get; set; }
     public DateTime? InvitationExpiresAt { get; set; }
+
+    /// <summary>Issue #1928 Task B (DEC-B-8) — E2E test seeding scope marker.</summary>
+    [System.ComponentModel.DataAnnotations.Schema.Column("test_run_id")]
+    [System.ComponentModel.DataAnnotations.MaxLength(64)]
+    public string? TestRunId { get; set; }
 
     // Navigation properties
     public ICollection<UserSessionEntity> Sessions { get; set; } = new List<UserSessionEntity>();

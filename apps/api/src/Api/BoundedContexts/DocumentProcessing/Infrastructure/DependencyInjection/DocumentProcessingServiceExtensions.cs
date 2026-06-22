@@ -149,8 +149,19 @@ internal static class DocumentProcessingServiceExtensions
         services.AddScoped<IDocumentChunker, PageTextChunker>();
         services.AddScoped<IKnowledgeBaseIndexer, KnowledgeBaseIndexer>();
 
+        // Issue #747 PR-C: narrative paragraph-number extraction from OCR text.
+        // Stateless + compiled regex → safe as Singleton; reused across all batches.
+        services.AddSingleton<IParagraphNumberExtractor, RegexParagraphNumberExtractor>();
+
         // Libro Game AI Assistant MVP Phase 1 — Task 1.6: parallel photo batch processor
         services.AddScoped<IPhotoBatchProcessor, PhotoBatchProcessor>();
+
+        // Issue #892: Atomic PDF claim service — raw SQL UPDATE against PostgreSQL
+        // for production. Tests inject the InMemoryPdfClaimService helper directly.
+        services.AddScoped<IPdfClaimService, RelationalPdfClaimService>();
+
+        // Issue #1831 (umbrella #1821 L4) — PDF first-page cover extraction
+        services.AddScoped<IPdfCoverExtractor, PdfCoverExtractor>();
 
         // Shared PDF processing pipeline (used by recovery job and future handler consolidation)
         services.AddScoped<IPdfProcessingPipelineService, PdfProcessingPipelineService>();
@@ -170,7 +181,67 @@ internal static class DocumentProcessingServiceExtensions
         // Issue #4730: Register Quartz job for PDF processing queue (every 10 seconds)
         RegisterPdfProcessingQueueJob(services);
 
+        // Issue #1831: Register Quartz job for L4 PDF cover backfill (every 30 minutes)
+        RegisterBackfillPdfCoversJob(services);
+
+        // Issue #1831 follow-up: Register Quartz job for orphan cover recovery (daily at 03:00 UTC)
+        RegisterPdfCoverOrphanRecoveryJob(services);
+
+        // Issue #2248 (epic #2242, Sub #6 Block B): periodic audit for the
+        // "Ready ⇒ HasKnowledgeBase" invariant. Runs every 10 minutes.
+        RegisterKbFlagDriftAuditJob(services);
+
         return services;
+    }
+
+    /// <summary>
+    /// Issue #1831 — registers <see cref="Api.BoundedContexts.DocumentProcessing.Application.Jobs.BackfillPdfCoversJob"/>
+    /// with the Quartz scheduler. Runs every 30 minutes to pick up PDFs that
+    /// completed ingestion before the L4 cover stack shipped (or whose cover
+    /// step was deferred) and generate their cover image lazily.
+    /// </summary>
+    private static void RegisterBackfillPdfCoversJob(IServiceCollection services)
+    {
+        services.AddQuartz(q =>
+        {
+            var jobKey = new Quartz.JobKey("BackfillPdfCoversJob", "DocumentProcessing");
+
+            q.AddJob<Api.BoundedContexts.DocumentProcessing.Application.Jobs.BackfillPdfCoversJob>(opts =>
+                opts.WithIdentity(jobKey));
+
+            q.AddTrigger(opts => opts
+                .ForJob(jobKey)
+                .WithIdentity("BackfillPdfCoversTrigger", "DocumentProcessing")
+                .WithSimpleSchedule(x => x
+                    .WithIntervalInMinutes(30)
+                    .RepeatForever())
+                .WithDescription("Backfills L4 PDF covers for PDFs whose ingestion completed without a cover")
+            );
+        });
+    }
+
+    /// <summary>
+    /// Issue #1831 follow-up — registers <see cref="Api.BoundedContexts.DocumentProcessing.Application.Jobs.PdfCoverOrphanRecoveryJob"/>
+    /// with the Quartz scheduler. Runs daily at 03:00 UTC to scan PDFs with
+    /// <c>CoverGenerationStatus=Generated</c> whose R2 object is missing and
+    /// reset them to <c>Pending</c> for re-generation by <see cref="Api.BoundedContexts.DocumentProcessing.Application.Jobs.BackfillPdfCoversJob"/>.
+    /// </summary>
+    private static void RegisterPdfCoverOrphanRecoveryJob(IServiceCollection services)
+    {
+        services.AddQuartz(q =>
+        {
+            var jobKey = new Quartz.JobKey("PdfCoverOrphanRecoveryJob", "DocumentProcessing");
+
+            q.AddJob<Api.BoundedContexts.DocumentProcessing.Application.Jobs.PdfCoverOrphanRecoveryJob>(opts =>
+                opts.WithIdentity(jobKey));
+
+            q.AddTrigger(opts => opts
+                .ForJob(jobKey)
+                .WithIdentity("PdfCoverOrphanRecoveryTrigger", "DocumentProcessing")
+                .WithCronSchedule("0 0 3 * * ?") // Daily at 03:00 UTC
+                .WithDescription("Detects Generated PDF covers whose R2 object is missing and resets them to Pending for re-generation")
+            );
+        });
     }
 
     /// <summary>
@@ -242,6 +313,33 @@ internal static class DocumentProcessingServiceExtensions
                     .WithIntervalInSeconds(10)
                     .RepeatForever())
                 .WithDescription("Picks up and processes the next queued PDF every 10 seconds")
+            );
+        });
+    }
+
+    /// <summary>
+    /// Issue #2248 (epic #2242 Sub #6 Block B): periodic guard against the
+    /// silent-failure mode where PdfDocument.ProcessingState=Ready but
+    /// SharedGame.HasKnowledgeBase=false. Increments
+    /// <c>meepleai.pdf.indexed.no.kb.flag.total</c> for each drifted row.
+    /// SLO=0; any increment is a P1 alert.
+    /// </summary>
+    private static void RegisterKbFlagDriftAuditJob(IServiceCollection services)
+    {
+        // Only register job definition here — AddQuartzHostedService is bootstrapped
+        // once in the Administration context.
+        services.AddQuartz(q =>
+        {
+            var jobKey = new Quartz.JobKey("KbFlagDriftAuditJob", "DocumentProcessing");
+
+            q.AddJob<Api.BoundedContexts.DocumentProcessing.Application.Jobs.KbFlagDriftAuditJob>(opts =>
+                opts.WithIdentity(jobKey));
+
+            q.AddTrigger(opts => opts
+                .ForJob(jobKey)
+                .WithIdentity("KbFlagDriftAuditTrigger", "DocumentProcessing")
+                .WithCronSchedule("0 */10 * * * ?") // Every 10 minutes
+                .WithDescription("Audits Ready PDFs against SharedGame.HasKnowledgeBase invariant (#2248)")
             );
         });
     }

@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 import { useState } from 'react';
 
 import { AlertDialog } from './alert-dialog';
@@ -242,7 +243,7 @@ export const AllVariants: Story = {
         </button>
         <button
           onClick={() => setActiveVariant('loading')}
-          className="rounded-md bg-gray-600 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+          className="rounded-md bg-gray-600 px-4 py-2 text-sm font-medium text-white hover:bg-card"
         >
           Loading
         </button>

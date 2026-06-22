@@ -51,25 +51,42 @@ function mockFetch(status: number, body: unknown) {
 
 // ── tests ──────────────────────────────────────────────────────────────────────
 
+// ── MockEventSource class (Vitest v4: arrow constructor mocks are not called as constructors) ──
+
+interface MockEventSourceInstance {
+  url: string;
+  withCredentials: boolean;
+  close: ReturnType<typeof vi.fn>;
+  addEventListener: ReturnType<typeof vi.fn>;
+  removeEventListener: ReturnType<typeof vi.fn>;
+  readyState: number;
+}
+
+let mockEventSourceInstances: MockEventSourceInstance[] = [];
+
+class MockEventSource {
+  url: string;
+  withCredentials: boolean;
+  close = vi.fn();
+  addEventListener = vi.fn();
+  removeEventListener = vi.fn();
+  readyState = 0; // CONNECTING
+
+  constructor(url: string, options?: { withCredentials?: boolean }) {
+    this.url = url;
+    this.withCredentials = options?.withCredentials ?? false;
+    mockEventSourceInstances.push(this as MockEventSourceInstance);
+  }
+}
+
 describe('useTurnOrder', () => {
-  let mockEventSource: {
-    close: ReturnType<typeof vi.fn>;
-    addEventListener: ReturnType<typeof vi.fn>;
-    removeEventListener: ReturnType<typeof vi.fn>;
-    readyState: number;
-  };
+  // Convenience alias for the most-recently-created instance
+  let mockEventSource: MockEventSourceInstance;
 
   beforeEach(() => {
-    mockEventSource = {
-      close: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      readyState: 0, // CONNECTING
-    };
-
-    global.EventSource = vi
-      .fn()
-      .mockImplementation(() => mockEventSource) as unknown as typeof EventSource;
+    mockEventSourceInstances = [];
+    // Vitest v4: assign the class directly — do NOT wrap in vi.fn(() => new …)
+    global.EventSource = MockEventSource as unknown as typeof EventSource;
   });
 
   afterEach(() => {
@@ -322,10 +339,12 @@ describe('useTurnOrder', () => {
 
       renderHook(() => useTurnOrder({ sessionId: 'sess-123', apiBaseUrl: '' }));
 
-      expect(global.EventSource).toHaveBeenCalledWith(
-        expect.stringContaining('/api/v1/game-sessions/sess-123/stream/v2'),
-        expect.objectContaining({ withCredentials: true })
+      // Vitest v4: assert via instance properties, not vi.fn call tracking
+      expect(mockEventSourceInstances).toHaveLength(1);
+      expect(mockEventSourceInstances[0]?.url).toContain(
+        '/api/v1/game-sessions/sess-123/stream/v2'
       );
+      expect(mockEventSourceInstances[0]?.withCredentials).toBe(true);
     });
 
     it('closes the EventSource on unmount', async () => {
@@ -335,7 +354,7 @@ describe('useTurnOrder', () => {
 
       unmount();
 
-      expect(mockEventSource.close).toHaveBeenCalled();
+      expect(mockEventSourceInstances[0]?.close).toHaveBeenCalled();
     });
 
     it('registers a session:toolkit event listener', async () => {
@@ -343,7 +362,7 @@ describe('useTurnOrder', () => {
 
       renderHook(() => useTurnOrder({ sessionId: 'sess-123', apiBaseUrl: '' }));
 
-      expect(mockEventSource.addEventListener).toHaveBeenCalledWith(
+      expect(mockEventSourceInstances[0]?.addEventListener).toHaveBeenCalledWith(
         'session:toolkit',
         expect.any(Function)
       );

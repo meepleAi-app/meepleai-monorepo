@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -75,7 +76,7 @@ export function LiveScoreboard({ players, isRealTime = false, className }: LiveS
       <TrendingUp className="h-3 w-3 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
     ),
     down: <TrendingDown className="h-3 w-3 text-red-600 dark:text-red-400" aria-hidden="true" />,
-    neutral: <Minus className="h-3 w-3 text-slate-400" aria-hidden="true" />,
+    neutral: <Minus className="h-3 w-3 text-muted-foreground" aria-hidden="true" />,
   };
 
   return (
@@ -97,14 +98,14 @@ export function LiveScoreboard({ players, isRealTime = false, className }: LiveS
               'flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all',
               isLeader
                 ? 'bg-amber-100/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 shadow-sm'
-                : 'bg-white/60 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/40',
+                : 'bg-card/60 dark:bg-card border border-border/60 dark:border-border/40',
               player.isCurrentUser && !isLeader && 'ring-1 ring-amber-400/40',
               isAnimating && 'animate-pulse'
             )}
           >
             {/* Avatar */}
             <div
-              className="h-8 w-8 flex-shrink-0 rounded-lg flex items-center justify-center text-xs font-bold text-white shadow-sm ring-1 ring-black/10"
+              className="h-8 w-8 flex-shrink-0 rounded-lg flex items-center justify-center text-xs font-bold text-white shadow-sm ring-1 ring-border"
               style={{
                 background: `linear-gradient(135deg, ${player.avatarColor} 0%, ${player.avatarColor}dd 100%)`,
               }}
@@ -121,7 +122,7 @@ export function LiveScoreboard({ players, isRealTime = false, className }: LiveS
             {/* Name + trend */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate">
+                <span className="font-semibold text-sm text-foreground truncate">
                   {player.displayName}
                 </span>
                 {isLeader && (
@@ -138,12 +139,12 @@ export function LiveScoreboard({ players, isRealTime = false, className }: LiveS
                   'font-mono text-base font-black tabular-nums',
                   isLeader
                     ? 'text-amber-900 dark:text-amber-400'
-                    : 'text-slate-700 dark:text-slate-300'
+                    : 'text-foreground'
                 )}
               >
                 {player.totalScore}
               </span>
-              <span className="text-xs text-slate-400">pts</span>
+              <span className="text-xs text-muted-foreground">pts</span>
             </div>
           </div>
         );

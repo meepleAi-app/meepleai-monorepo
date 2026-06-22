@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Api.Analyzers.Tests</RootNamespace>
+    <!--
+      Tests are isolated from the Api.csproj analyzer suite (Sonar/Net/Meziantou)
+      to keep the analyzer focus on what THIS project tests, not on test-suite
+      cleanliness. Mirror the codebase NoWarn list for the analyzers that DO
+      run by default.
+    -->
+    <NoWarn>$(NoWarn);1591;xUnit1000;xUnit1051;CA1707;CA1711;CA2007;CA2000;CS0060;MA0048</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <!--
+      Roslyn analyzer testing uses the same packages the analyzer itself
+      depends on (Microsoft.CodeAnalysis.CSharp 4.8.0). We assert diagnostics
+      directly via CSharpCompilation.WithAnalyzers, without an external
+      verifier framework — Microsoft.CodeAnalysis.CSharp.Analyzer.Testing.XUnit
+      1.1.2 (latest stable) pins Roslyn 1.0.1 transitively which conflicts
+      with the analyzer's 4.8.0 binding. Direct API usage avoids the conflict.
+    -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
+    <!-- CodeFixProvider tests need CodeActions / CodeFixes / Workspace APIs. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.8.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Api.Analyzers\Api.Analyzers.csproj" />
+  </ItemGroup>
+
+</Project>

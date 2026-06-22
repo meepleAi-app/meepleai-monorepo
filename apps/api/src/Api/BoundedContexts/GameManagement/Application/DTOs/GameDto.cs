@@ -28,7 +28,11 @@ internal record GameDto(
     Guid? SharedGameId = null,
     bool IsPublished = false,
     string? ApprovalStatus = null,
-    DateTime? PublishedAt = null
+    DateTime? PublishedAt = null,
+    // Issue #2243 (epic #2242) Block C: expose the denormalized HasKnowledgeBase flag so
+    // /api/v1/games clients (admin grid + user library) can render "agente pronto" badges
+    // without a second round-trip to /api/v1/shared-games. Default false for backward-compat.
+    bool HasKnowledgeBase = false
 );
 
 /// <summary>
@@ -87,7 +91,12 @@ internal record GameDetailsDto(
     string? IconUrl = null,
     string? ImageUrl = null,
     // SharedGameCatalog integration
-    Guid? SharedGameId = null
+    Guid? SharedGameId = null,
+    // Issue #2243 (epic #2242) Block C: expose HasKnowledgeBase + KbsCount so
+    // game detail pages can render "agente pronto" badge and "chunks indexed" stats
+    // without a second /api/v1/shared-games round-trip.
+    bool HasKnowledgeBase = false,
+    int KbsCount = 0
 );
 
 /// <summary>

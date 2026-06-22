@@ -1,12 +1,16 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.PlayRecords;
-using Api.BoundedContexts.GameManagement.Domain.Entities;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
-using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Application;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
@@ -14,7 +18,6 @@ using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
@@ -54,7 +57,13 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         services.AddScoped<IPlayRecordRepository, PlayRecordRepository>();
-        services.AddScoped<IGameRepository, GameRepository>();
+        services.AddScoped<PlayRecordPermissionChecker>();
+        // #2349: IGameCoreDataProvider is required by CreatePlayRecordCommandHandler.
+        // Register the real SharedGameRepository (only needs DbContext + IDomainEventCollector,
+        // both provided by CreateBase) and the real GameCoreDataProvider.
+        // IPrivateGameRepository is already mocked in IntegrationServiceCollectionBuilder.CreateBase.
+        services.AddScoped<ISharedGameRepository, SharedGameRepository>();
+        services.AddScoped<IGameCoreDataProvider, GameCoreDataProvider>();
         services.AddSingleton<TimeProvider>(_timeProvider);
 
         _serviceProvider = services.BuildServiceProvider();
@@ -84,12 +93,12 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
     public async Task CreatePlayRecordCommand_WithCatalogGame_CreatesSuccessfully()
     {
         // Arrange
-        var game = await CreateTestGameAsync();
+        var (gameId, gameTitle) = await CreateTestGameAsync();
         var userId = await SeedTestUserAsync();
         var command = new CreatePlayRecordCommand(
             userId,
-            game.Id,
-            game.Title.Value,
+            gameId,
+            gameTitle,
             _timeProvider.UtcNow.AddDays(-1),
             PlayRecordVisibility.Private);
 
@@ -102,8 +111,8 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var record = await db.PlayRecords.FirstOrDefaultAsync(r => r.Id == recordId, TestCancellationToken);
         record.Should().NotBeNull();
-        record!.GameId.Should().Be(game.Id);
-        record.GameName.Should().Be(game.Title.Value);
+        record!.GameId.Should().Be(gameId);
+        record.GameName.Should().Be(gameTitle);
         record.CreatedByUserId.Should().Be(userId);
     }
 
@@ -165,9 +174,10 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
     public async Task AddPlayerToRecordCommand_RegisteredUser_AddsSuccessfully()
     {
         // Arrange
-        var recordId = await CreateTestRecordAsync();
+        var creatorId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
         var userId = await SeedTestUserAsync(); // FK constraint: record_players.UserId references users
-        var command = new AddPlayerToRecordCommand(recordId, userId, "Alice");
+        var command = new AddPlayerToRecordCommand(recordId, creatorId, userId, "Alice");
 
         // Act
         await SendInScopeAsync(command);
@@ -188,8 +198,9 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
     public async Task AddPlayerToRecordCommand_Guest_AddsSuccessfully()
     {
         // Arrange
-        var recordId = await CreateTestRecordAsync();
-        var command = new AddPlayerToRecordCommand(recordId, null, "Bob");
+        var creatorId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
+        var command = new AddPlayerToRecordCommand(recordId, creatorId, null, "Bob");
 
         // Act
         await SendInScopeAsync(command);
@@ -206,6 +217,20 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         players[0].DisplayName.Should().Be("Bob");
     }
 
+    [Fact]
+    public async Task AddPlayerToRecordCommand_UserIsNotCreator_ThrowsForbiddenException()
+    {
+        // Arrange — record created by user A, add-player attempted by user B
+        var creatorId = await SeedTestUserAsync();
+        var otherUserId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
+        var command = new AddPlayerToRecordCommand(recordId, otherUserId, null, "Hijack");
+
+        // Act & Assert
+        var act = () => SendInScopeAsync(command);
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
     #endregion
 
     #region RecordScoreCommand Tests
@@ -214,10 +239,11 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
     public async Task RecordScoreCommand_ValidScore_RecordsSuccessfully()
     {
         // Arrange
-        var recordId = await CreateTestRecordAsync();
-        var playerId = await AddTestPlayerAsync(recordId);
+        var creatorId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
+        var playerId = await AddTestPlayerAsync(recordId, creatorId);
 
-        var command = new RecordScoreCommand(recordId, playerId, "points", 42, "pts");
+        var command = new RecordScoreCommand(recordId, creatorId, playerId, "points", 42, "pts");
 
         // Act
         await SendInScopeAsync(command);
@@ -234,6 +260,21 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         scores[0].Value.Should().Be(42);
     }
 
+    [Fact]
+    public async Task RecordScoreCommand_UserIsNotCreator_ThrowsForbiddenException()
+    {
+        // Arrange — record created by user A, score attempted by user B
+        var creatorId = await SeedTestUserAsync();
+        var otherUserId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
+        var playerId = await AddTestPlayerAsync(recordId, creatorId);
+        var command = new RecordScoreCommand(recordId, otherUserId, playerId, "points", 99);
+
+        // Act & Assert
+        var act = () => SendInScopeAsync(command);
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
     #endregion
 
     #region StartPlayRecordCommand Tests
@@ -242,8 +283,9 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
     public async Task StartPlayRecordCommand_PlannedRecord_StartsSuccessfully()
     {
         // Arrange
-        var recordId = await CreateTestRecordAsync();
-        var command = new StartPlayRecordCommand(recordId);
+        var creatorId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
+        var command = new StartPlayRecordCommand(recordId, creatorId);
 
         // Act
         await SendInScopeAsync(command);
@@ -261,14 +303,29 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
     public async Task StartPlayRecordCommand_NonPlannedRecord_ThrowsConflictException()
     {
         // Arrange
-        var recordId = await CreateTestRecordAsync();
-        var startCommand = new StartPlayRecordCommand(recordId);
+        var creatorId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
+        var startCommand = new StartPlayRecordCommand(recordId, creatorId);
 
         await SendInScopeAsync(startCommand);
 
         // Act & Assert
         var act = () => SendInScopeAsync(startCommand);
         await act.Should().ThrowAsync<ConflictException>();
+    }
+
+    [Fact]
+    public async Task StartPlayRecordCommand_UserIsNotCreator_ThrowsForbiddenException()
+    {
+        // Arrange — record created by user A, start attempted by user B
+        var creatorId = await SeedTestUserAsync();
+        var otherUserId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
+        var command = new StartPlayRecordCommand(recordId, otherUserId);
+
+        // Act & Assert
+        var act = () => SendInScopeAsync(command);
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 
     #endregion
@@ -279,9 +336,10 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
     public async Task CompletePlayRecordCommand_WithManualDuration_CompletesSuccessfully()
     {
         // Arrange
-        var recordId = await CreateTestRecordAsync();
+        var creatorId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
         var duration = TimeSpan.FromHours(2);
-        var command = new CompletePlayRecordCommand(recordId, duration);
+        var command = new CompletePlayRecordCommand(recordId, creatorId, duration);
 
         // Act
         await SendInScopeAsync(command);
@@ -300,13 +358,41 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
     #region UpdatePlayRecordCommand Tests
 
     [Fact]
+    public async Task UpdatePlayRecordCommand_UserIsNotCreator_ThrowsForbiddenException()
+    {
+        // Arrange — record created by user A, update attempted by user B
+        var creatorId = await SeedTestUserAsync();
+        var otherUserId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
+        var command = new UpdatePlayRecordCommand(recordId, otherUserId, Notes: "hijack");
+
+        // Act & Assert
+        var act = () => SendInScopeAsync(command);
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task CompletePlayRecordCommand_UserIsNotCreator_ThrowsForbiddenException()
+    {
+        var creatorId = await SeedTestUserAsync();
+        var otherUserId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
+        var command = new CompletePlayRecordCommand(recordId, otherUserId);
+
+        var act = () => SendInScopeAsync(command);
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
     public async Task UpdatePlayRecordCommand_ValidData_UpdatesSuccessfully()
     {
         // Arrange
-        var recordId = await CreateTestRecordAsync();
+        var creatorId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
         var newDate = _timeProvider.UtcNow.AddDays(-2);
         var command = new UpdatePlayRecordCommand(
             recordId,
+            creatorId,
             SessionDate: newDate,
             Notes: "Great game!",
             Location: "Home");
@@ -326,22 +412,99 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
 
     #endregion
 
+    #region DeletePlayRecordCommand Tests
+
+    [Fact]
+    public async Task DeletePlayRecordCommand_AsCreator_SoftDeletesAndHidesRecord()
+    {
+        // Arrange
+        var creatorId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
+
+        // Act
+        await SendInScopeAsync(new DeletePlayRecordCommand(recordId, creatorId));
+
+        // Assert — hidden by query filter, but persisted with is_deleted=true
+        using var scope = ServiceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var visible = await db.PlayRecords
+            .FirstOrDefaultAsync(r => r.Id == recordId, TestCancellationToken);
+        visible.Should().BeNull("the soft-delete query filter must hide the record");
+
+        var raw = await db.PlayRecords
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(r => r.Id == recordId, TestCancellationToken);
+        raw.Should().NotBeNull();
+        raw!.IsDeleted.Should().BeTrue();
+        raw.DeletedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task DeletePlayRecordCommand_UserIsNotCreator_ThrowsForbiddenException()
+    {
+        // Arrange — record created by user A, delete attempted by user B
+        var creatorId = await SeedTestUserAsync();
+        var otherUserId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
+        var command = new DeletePlayRecordCommand(recordId, otherUserId);
+
+        // Act & Assert
+        var act = () => SendInScopeAsync(command);
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task DeletePlayRecordCommand_NonExistentRecord_ThrowsNotFoundException()
+    {
+        // Arrange
+        var command = new DeletePlayRecordCommand(Guid.NewGuid(), Guid.NewGuid());
+
+        // Act & Assert
+        var act = () => SendInScopeAsync(command);
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task DeletePlayRecordCommand_AlreadyDeleted_ThrowsNotFoundException()
+    {
+        // Arrange — a second delete resolves to NotFound because the query filter hides the row
+        var creatorId = await SeedTestUserAsync();
+        var recordId = await CreateTestRecordAsync(creatorId);
+        await SendInScopeAsync(new DeletePlayRecordCommand(recordId, creatorId));
+
+        // Act & Assert
+        var act = () => SendInScopeAsync(new DeletePlayRecordCommand(recordId, creatorId));
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    #endregion
+
     #region Helper Methods
 
-    private async Task<Game> CreateTestGameAsync()
+    /// <summary>
+    /// Seeds a SharedGameEntity row directly via MeepleAiDbContext (IGameRepository removed by #1320 P2c).
+    /// Returns (Id, Title) tuple for use by play-record commands.
+    /// </summary>
+    private async Task<(Guid Id, string Title)> CreateTestGameAsync()
     {
-        var game = new Game(
-            Guid.NewGuid(),
-            new GameTitle("Test Game"),
-            new Publisher("Test Publisher"));
+        var id = Guid.NewGuid();
+        const string title = "Test Game";
 
-        var repository = ServiceProvider.GetRequiredService<IGameRepository>();
-        await repository.AddAsync(game, TestCancellationToken);
+        using var scope = ServiceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        db.SharedGames.Add(new SharedGameEntity
+        {
+            Id = id,
+            Title = title,
+            MinPlayers = 1,
+            MaxPlayers = 4,
+            PlayingTimeMinutes = 60,
+            CreatedAt = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync(TestCancellationToken);
 
-        var unitOfWork = ServiceProvider.GetRequiredService<IUnitOfWork>();
-        await unitOfWork.SaveChangesAsync(TestCancellationToken);
-
-        return game;
+        return (id, title);
     }
 
     /// <summary>
@@ -384,23 +547,37 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
 
     private async Task<Guid> CreateTestRecordAsync()
     {
-        var game = await CreateTestGameAsync();
+        var (gameId, gameTitle) = await CreateTestGameAsync();
         var userId = await SeedTestUserAsync();
 
         var command = new CreatePlayRecordCommand(
             userId,
-            game.Id,
-            game.Title.Value,
+            gameId,
+            gameTitle,
             _timeProvider.UtcNow.AddHours(-1),
             PlayRecordVisibility.Private);
 
         return await SendInScopeAsync(command);
     }
 
-    private async Task<Guid> AddTestPlayerAsync(Guid recordId)
+    private async Task<Guid> CreateTestRecordAsync(Guid creatorUserId)
+    {
+        var (gameId, gameTitle) = await CreateTestGameAsync();
+
+        var command = new CreatePlayRecordCommand(
+            creatorUserId,
+            gameId,
+            gameTitle,
+            _timeProvider.UtcNow.AddHours(-1),
+            PlayRecordVisibility.Private);
+
+        return await SendInScopeAsync(command);
+    }
+
+    private async Task<Guid> AddTestPlayerAsync(Guid recordId, Guid callerUserId)
     {
         var playerUserId = await SeedTestUserAsync(); // FK constraint: record_players.UserId references users
-        var command = new AddPlayerToRecordCommand(recordId, playerUserId, "TestPlayer");
+        var command = new AddPlayerToRecordCommand(recordId, callerUserId, playerUserId, "TestPlayer");
         await SendInScopeAsync(command);
 
         using var scope = ServiceProvider.CreateScope();

@@ -1,8 +1,10 @@
 using Api.BoundedContexts.Authentication.Application.Commands;
 using Api.BoundedContexts.Authentication.Application.Commands.OAuth;
 using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -35,13 +37,18 @@ public sealed class OAuthStateValidationTests : IDisposable
     public OAuthStateValidationTests()
     {
         _helper = new OAuthIntegrationTestBase();
+        var userRepository = new UserRepository(
+            _helper.DbContext,
+            TestDbContextFactory.CreateMockEventCollector().Object);
+
         _handler = new HandleOAuthCallbackCommandHandler(
             _helper.OAuthServiceMock.Object,
             _helper.MediatorMock.Object,
             _helper.CallbackLoggerMock.Object,
             _helper.EncryptionServiceMock.Object,
             _helper.TimeProviderMock.Object,
-            _helper.DbContext);
+            _helper.DbContext,
+            userRepository);
     }
 
     #region Invalid State Tests
@@ -314,13 +321,17 @@ public sealed class OAuthStateValidationTests : IDisposable
         var result1 = await _handler.Handle(command1, CancellationToken.None);
 
         // Create second handler instance (simulating concurrent request)
+        var userRepository2 = new UserRepository(
+            _helper.DbContext,
+            TestDbContextFactory.CreateMockEventCollector().Object);
         var handler2 = new HandleOAuthCallbackCommandHandler(
             _helper.OAuthServiceMock.Object,
             _helper.MediatorMock.Object,
             _helper.CallbackLoggerMock.Object,
             _helper.EncryptionServiceMock.Object,
             _helper.TimeProviderMock.Object,
-            _helper.DbContext);
+            _helper.DbContext,
+            userRepository2);
 
         var command2 = _helper.CreateTestCallbackCommand(
             provider: "google",

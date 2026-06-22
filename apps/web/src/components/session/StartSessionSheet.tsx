@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -202,11 +203,11 @@ export function StartSessionSheet({
       <div className="flex items-center gap-2 mb-4 -mt-1" data-testid="step-indicator">
         {(['players', 'order'] as SheetStep[]).map((s, i) => (
           <div key={s} className="flex items-center gap-2">
-            {i > 0 && <div className="h-px w-6 bg-white/20" />}
+            {i > 0 && <div className="h-px w-6 bg-card/20" />}
             <div
               className={cn(
                 'flex items-center gap-1.5 text-xs font-medium',
-                step === s ? 'text-white' : 'text-white/40'
+                step === s ? 'text-white' : 'text-muted-foreground'
               )}
             >
               <span
@@ -215,8 +216,8 @@ export function StartSessionSheet({
                   step === s
                     ? 'bg-[hsl(142,70%,45%)] text-white'
                     : s === 'players' && step === 'order'
-                      ? 'bg-white/20 text-white/60'
-                      : 'bg-white/10 text-white/40'
+                      ? 'bg-card/20 text-foreground/80'
+                      : 'bg-card/10 text-muted-foreground'
                 )}
               >
                 {i + 1}
@@ -235,7 +236,7 @@ export function StartSessionSheet({
             {players.map(p => (
               <div
                 key={p.id}
-                className="flex items-center gap-2 rounded-xl bg-white/5 px-3 py-2.5"
+                className="flex items-center gap-2 rounded-xl bg-card/5 px-3 py-2.5"
                 data-testid={`player-row-${p.id}`}
               >
                 {/* Name */}
@@ -251,7 +252,7 @@ export function StartSessionSheet({
                       onClick={() => setColor(p.id, c.value)}
                       className={cn(
                         'h-5 w-5 rounded-full transition-transform',
-                        p.color === c.value ? 'scale-125 ring-2 ring-white/60' : 'opacity-60'
+                        p.color === c.value ? 'scale-125 ring-2 ring-ring/30' : 'opacity-60'
                       )}
                       style={{ backgroundColor: c.hex }}
                     />
@@ -264,7 +265,7 @@ export function StartSessionSheet({
                   onClick={() => removePlayer(p.id)}
                   disabled={players.length <= 1}
                   aria-label={`Rimuovi ${p.name}`}
-                  className="text-white/40 hover:text-red-400 disabled:opacity-20"
+                  className="text-muted-foreground hover:text-red-400 disabled:opacity-20"
                   data-testid={`remove-player-${p.id}`}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -282,7 +283,7 @@ export function StartSessionSheet({
                 if (e.key === 'Enter') addPlayer();
               }}
               placeholder="Nome giocatore…"
-              className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/40"
+              className="flex-1 bg-card/10 border-border text-white placeholder:text-muted-foreground"
               data-testid="new-player-input"
             />
             <Button
@@ -292,7 +293,7 @@ export function StartSessionSheet({
               onClick={addPlayer}
               disabled={!newName.trim()}
               aria-label="Aggiungi giocatore"
-              className="border-white/20 text-white hover:bg-white/10"
+              className="border-border text-white hover:bg-card/10"
               data-testid="add-player-btn"
             >
               <Plus className="h-4 w-4" />
@@ -314,7 +315,7 @@ export function StartSessionSheet({
       {/* ── Step 2: Turn order ── */}
       {step === 'order' && (
         <div className="flex flex-col gap-4" data-testid="order-step">
-          <p className="text-xs text-white/50">
+          <p className="text-xs text-foreground/80">
             Trascina per cambiare l&apos;ordine dei turni. Il primo in lista inizia.
           </p>
 
@@ -330,12 +331,12 @@ export function StartSessionSheet({
                   onDragOver={handleDragOver}
                   onDrop={() => handleDrop(idx)}
                   className={cn(
-                    'flex items-center gap-3 rounded-xl bg-white/5 px-3 py-3 cursor-grab',
+                    'flex items-center gap-3 rounded-xl bg-card/5 px-3 py-3 cursor-grab',
                     dragIndex === idx && 'opacity-40'
                   )}
                   data-testid={`order-row-${p.id}`}
                 >
-                  <span className="text-sm font-bold tabular-nums text-white/40 w-4">
+                  <span className="text-sm font-bold tabular-nums text-muted-foreground w-4">
                     {idx + 1}
                   </span>
                   <span
@@ -343,7 +344,7 @@ export function StartSessionSheet({
                     style={{ backgroundColor: colorHex }}
                   />
                   <span className="flex-1 text-sm font-medium text-white">{p.name}</span>
-                  <GripVertical className="h-4 w-4 text-white/30" />
+                  <GripVertical className="h-4 w-4 text-muted-foreground" />
                 </div>
               );
             })}
@@ -360,7 +361,7 @@ export function StartSessionSheet({
             <Button
               type="button"
               variant="outline"
-              className="border-white/20 text-white hover:bg-white/10"
+              className="border-border text-white hover:bg-card/10"
               onClick={() => setStep('players')}
               data-testid="back-btn"
             >

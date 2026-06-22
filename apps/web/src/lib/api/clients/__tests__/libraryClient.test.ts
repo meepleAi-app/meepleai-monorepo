@@ -319,13 +319,13 @@ describe('LibraryClient - Issue #3026', () => {
   });
 
   describe('updateGameState', () => {
-    it('should update game state', async () => {
-      vi.mocked(mockHttpClient.put).mockResolvedValue(undefined);
+    it('should update game state via consolidated PATCH endpoint', async () => {
+      vi.mocked(mockHttpClient.patch).mockResolvedValue(undefined);
 
       const client = createLibraryClient({ httpClient: mockHttpClient });
       await client.updateGameState('game-456', { state: 'Wishlist', notes: 'Birthday gift idea' });
 
-      expect(mockHttpClient.put).toHaveBeenCalledWith('/api/v1/library/games/game-456/state', {
+      expect(mockHttpClient.patch).toHaveBeenCalledWith('/api/v1/library/games/game-456', {
         state: 'Wishlist',
         notes: 'Birthday gift idea',
       });

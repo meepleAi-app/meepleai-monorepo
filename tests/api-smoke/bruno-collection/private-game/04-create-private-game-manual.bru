@@ -1,0 +1,40 @@
+meta {
+  name: SG1 — Create private game (manual source — happy path baseline)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{apiBase}}/api/v1/private-games
+  body: json
+}
+
+body:json {
+  {
+    "source": "Manual",
+    "title": "SG1 Smoke Test Game {{$randomInt}}",
+    "minPlayers": 2,
+    "maxPlayers": 4,
+    "yearPublished": 2024,
+    "description": "Smoke test private game"
+  }
+}
+
+script:post-response {
+  const body = res.getBody();
+  if (body && body.id) {
+    bru.setVar("smokePrivateGameId", body.id);
+  }
+}
+
+tests {
+  // Strict assertion enabled by #943 Phase A — pre-request reset wipes the
+  // user's private games, so this happy-path create MUST succeed (quota fresh).
+  test("returns 201 Created", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+  test("body has privateGameId", function() {
+    const body = res.getBody();
+    expect(body).to.have.property("id");
+  });
+}

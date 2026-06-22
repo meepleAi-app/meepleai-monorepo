@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExtractor;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.MechanicExtractor;
 using Api.Filters;
+using Api.Helpers;
 using Api.Middleware;
 using MediatR;
 
@@ -80,7 +81,7 @@ internal static class AdminMechanicExtractorEndpoints
             logger.LogInformation(
                 "Admin requesting AI assist for draft {DraftId}, section {Section}",
                 request.DraftId,
-                LogValueSanitizer.Sanitize(request.Section));
+                LogSanitizer.Sanitize(request.Section));
 
             var command = new AiAssistMechanicDraftCommand(
                 request.DraftId,
@@ -106,7 +107,7 @@ internal static class AdminMechanicExtractorEndpoints
             logger.LogInformation(
                 "Admin accepting draft for {DraftId}, section {Section}",
                 request.DraftId,
-                LogValueSanitizer.Sanitize(request.Section));
+                LogSanitizer.Sanitize(request.Section));
 
             var command = new AcceptMechanicDraftCommand(
                 request.DraftId,

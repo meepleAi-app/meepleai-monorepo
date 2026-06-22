@@ -1,0 +1,24 @@
+{
+  "_comment": "Phase 2.5 audit: forward-refactor-obsolete vs Asse C #1898. Story migration SKIPPED. Tracking issue #2114.",
+  "mockup": {
+    "source": "admin-mockups/design_files/sp4-dashboard.html",
+    "states": ["default", "empty", "loading"]
+  },
+  "acceptance": {
+    "visual_diff_max_px": 5,
+    "color_delta_e_max": 3,
+    "tokens_used": "canonical_only",
+    "legacy_token_names_forbidden": true,
+    "states_covered": ["default", "empty", "loading"],
+    "a11y_axe": "AA",
+    "a11y_violations_max": 0,
+    "responsive_breakpoints": [375, 768, 1024, 1440],
+    "designer_approved_by": "",
+    "designer_approved_on": "",
+    "story_path": "",
+    "fixtures_path": "",
+    "design_intent": "forward-refactor-obsolete",
+    "viewports": ["desktop"],
+    "obsolete_tracking_issue": "#2114"
+  }
+}

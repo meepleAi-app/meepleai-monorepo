@@ -42,7 +42,7 @@ internal class RequireFeatureFilter : IEndpointFilter
 
         // Get session from HttpContext.Items (set by RequireSessionFilter)
         var session = httpContext.Items[nameof(SessionStatusDto)] as SessionStatusDto;
-        if (session?.User == null)
+        if (session?.Principal?.Subject == null)
         {
             return Results.Json(
                 new { error = "Authentication required to access this feature" },
@@ -55,11 +55,11 @@ internal class RequireFeatureFilter : IEndpointFilter
         var logger = httpContext.RequestServices.GetRequiredService<ILogger<RequireFeatureFilter>>();
 
         // Get the full user entity for combined role+tier check
-        var user = await userRepository.GetByIdAsync(session.User.Id).ConfigureAwait(false);
+        var user = await userRepository.GetByIdAsync(session.Principal!.Subject.Id).ConfigureAwait(false);
         if (user == null)
         {
             logger.LogWarning("User {UserId} not found during feature check for {Feature}",
-                session.User.Id, _featureName);
+                session.Principal!.Subject.Id, _featureName);
             return Results.Json(
                 new { error = "User not found" },
                 statusCode: StatusCodes.Status401Unauthorized);

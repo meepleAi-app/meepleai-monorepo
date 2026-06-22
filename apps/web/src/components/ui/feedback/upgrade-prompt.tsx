@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 /**
  * Upgrade Prompt Component
  * Epic #4068 - Issue #4179
@@ -109,7 +110,7 @@ function ModalUpgradePrompt({
       className={cn(
         'absolute inset-0 z-30',
         'flex items-center justify-center',
-        'bg-black/40 backdrop-blur-sm',
+        'bg-foreground/40 backdrop-blur-sm',
         'rounded-xl',
         'opacity-0 group-hover:opacity-100',
         'transition-opacity duration-300',

@@ -1,0 +1,20 @@
+{
+  "name": "@meepleai/codemod",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Codemod scripts for de-versioning the design system (issue #1025).",
+  "type": "module",
+  "scripts": {
+    "codemod": "tsx drop-v2-prefix.ts",
+    "codemod:apply": "tsx drop-v2-prefix.ts --apply",
+    "codemod:reverse": "tsx drop-v2-prefix.ts --reverse --apply",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "ts-morph": "^24.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "picocolors": "^1.1.1",
+    "@types/node": "^22.10.0"
+  }
+}

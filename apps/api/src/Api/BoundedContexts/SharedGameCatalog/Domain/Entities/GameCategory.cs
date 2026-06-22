@@ -11,6 +11,8 @@ public sealed class GameCategory : Entity<Guid>
     private Guid _id;
     private readonly string _name = string.Empty;
     private readonly string _slug = string.Empty;
+    private readonly string? _emoji;
+    private readonly string? _color;
 
     /// <summary>
     /// Gets the unique identifier of this category.
@@ -28,6 +30,16 @@ public sealed class GameCategory : Entity<Guid>
     public string Slug => _slug;
 
     /// <summary>
+    /// Gets the optional emoji glyph used as visual marker (#1440).
+    /// </summary>
+    public string? Emoji => _emoji;
+
+    /// <summary>
+    /// Gets the optional 6-digit hex color (#RRGGBB) for chip rendering (#1440).
+    /// </summary>
+    public string? Color => _color;
+
+    /// <summary>
     /// Parameterless constructor for EF Core.
     /// </summary>
     private GameCategory() : base()
@@ -37,17 +49,19 @@ public sealed class GameCategory : Entity<Guid>
     /// <summary>
     /// Internal constructor for reconstitution from persistence.
     /// </summary>
-    internal GameCategory(Guid id, string name, string slug) : base(id)
+    internal GameCategory(Guid id, string name, string slug, string? emoji = null, string? color = null) : base(id)
     {
         _id = id;
         _name = name;
         _slug = slug;
+        _emoji = emoji;
+        _color = color;
     }
 
     /// <summary>
     /// Creates a new GameCategory with validation.
     /// </summary>
-    public static GameCategory Create(string name, string slug)
+    public static GameCategory Create(string name, string slug, string? emoji = null, string? color = null)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Category name is required", nameof(name));
@@ -61,6 +75,6 @@ public sealed class GameCategory : Entity<Guid>
         if (slug.Length > 100)
             throw new ArgumentException("Category slug cannot exceed 100 characters", nameof(slug));
 
-        return new GameCategory(Guid.NewGuid(), name, slug);
+        return new GameCategory(Guid.NewGuid(), name, slug, emoji, color);
     }
 }

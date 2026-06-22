@@ -33,7 +33,7 @@ Workflows are organized by category with consistent naming prefixes:
 ## Core CI/CD
 
 ### ci.yml - Main CI Pipeline
-- **Triggers**: PR to main, main-dev, main-staging, frontend-dev, backend-dev
+- **Triggers**: PR to main, main-dev, main-staging
 - **Jobs**: Frontend (lint, typecheck, test, build), Backend (build, test), E2E critical paths
 - **Features**: Path-based filtering, parallel execution, Codecov integration, dynamic runner selection (self-hosted for staging/prod PRs, GitHub-hosted for dev PRs)
 
@@ -88,7 +88,7 @@ Workflows are organized by category with consistent naming prefixes:
 ### auto-branch-policy.yml - Branch Protection
 - **Triggers**: PR to main, main-staging, main-dev
 - **Jobs**: Validate source branch matches policy
-- **Policy**: main ← main-staging only; main-staging ← main-dev only; main-dev ← frontend-dev, backend-dev, feature/*, fix/*, etc.
+- **Policy**: main ← main-staging only; main-staging ← main-dev only; main-dev ← feature/*, fix/*, hotfix/*, docs/*, refactor/*, chore/*, etc.
 
 ### auto-dependabot.yml - Dependabot Auto-merge
 - **Triggers**: Dependabot PRs with `automerge` label
@@ -157,7 +157,7 @@ Workflows use a tiered runner selection strategy to balance cost and concurrency
 
 | Branch target | Runner | Rationale |
 |--------------|--------|-----------|
-| `main-dev`, `frontend-dev`, `backend-dev` | `ubuntu-latest` | High PR concurrency, no queue |
+| `main-dev` | `ubuntu-latest` | High PR concurrency, no queue |
 | `main-staging`, `main` | Self-hosted (ARM64) | Low frequency, saves GH Actions minutes |
 | Deploy workflows | Self-hosted (ARM64) | Always staging/prod, free compute |
 

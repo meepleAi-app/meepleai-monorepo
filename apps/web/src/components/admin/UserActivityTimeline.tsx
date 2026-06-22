@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin tools chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13d admin scope (--admin-* decision deferred to DS-15). */
 /**
  * UserActivityTimeline Component - Issue #911
  *

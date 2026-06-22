@@ -55,4 +55,72 @@ $AWS_S3 ls "s3://$SEED_BLOB_BUCKET/$PREFIX/" \
         $AWS_S3 rm "s3://$SEED_BLOB_BUCKET/$PREFIX/$old_base.meta.json"   || true
       done
 
+# ───────────────────────────────────────────────────────────────────────
+# Audit trail (#2126 D6).
+#
+# Append-only markdown row per successful publish. Lives in
+# `data/snapshots/AUDIT.md` and is committable — git blame + git log answer
+# "who published what, when, against which commit, with what counts" in
+# 30 seconds. Written here (AFTER the upload + retention rotation) so the
+# trail tracks what is REALLY in the bucket: a failed upload exits earlier
+# via `set -e` and no entry is appended → no divergence between markdown
+# and bucket.
+#
+# The header is created on the first call so a fresh data/snapshots/
+# directory bootstraps without ceremony.
+# ───────────────────────────────────────────────────────────────────────
+AUDIT_FILE="$OUT_DIR/AUDIT.md"
+META_PATH="$OUT_DIR/$BASENAME.meta.json"
+
+if [ ! -f "$AUDIT_FILE" ]; then
+    log "creating audit trail header at $AUDIT_FILE"
+    cat > "$AUDIT_FILE" <<'HEADER'
+# Seed snapshot publish audit (#2126 D6)
+
+Append-only trail of `make seed-index-publish` runs that completed an upload
+to the seed blob bucket. Each row is written by
+`infra/scripts/seed-index-publish.sh` *after* the dump, sha, sidecar, and
+`latest.txt` are all in the bucket (failure exits earlier and writes no row,
+so this trail matches the bucket).
+
+Use `git blame` to answer "who published this snapshot" and `git log
+data/snapshots/AUDIT.md` for the chronological sequence.
+
+| Published at | Basename | App commit | EF migration | seed_schema | PDFs | Chunks | Embeddings | Model | Published by |
+|---|---|---|---|---|---|---|---|---|---|
+HEADER
+fi
+
+# Resolve "who" — in CI we have GITHUB_ACTOR / GITHUB_RUN_ID; locally we fall
+# back to git user.email, then to `whoami`. Never expose tokens; this is just
+# a human-readable label.
+PUBLISHED_BY="${GITHUB_ACTOR:-}"
+if [ -z "$PUBLISHED_BY" ]; then
+    PUBLISHED_BY=$(git config user.email 2>/dev/null || echo "")
+fi
+if [ -z "$PUBLISHED_BY" ]; then
+    PUBLISHED_BY=$(whoami 2>/dev/null || echo "unknown")
+fi
+if [ -n "${GITHUB_RUN_ID:-}" ]; then
+    PUBLISHED_BY="$PUBLISHED_BY (GHA run $GITHUB_RUN_ID)"
+fi
+
+# Read sidecar fields for the row; default values stay friendly when an old
+# sidecar predates the field (e.g. seed_table_schema_version on snapshots
+# baked before #2126 D9).
+PUBLISHED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+APP_COMMIT=$(jq -r '.app_commit // "?"' "$META_PATH")
+EF_HEAD=$(jq -r '.ef_migration_head // "?"' "$META_PATH")
+SEED_SCHEMA=$(jq -r '.seed_table_schema_version // 0' "$META_PATH")
+PDF_COUNT=$(jq -r '.pdf_count // 0' "$META_PATH")
+CHUNK_COUNT=$(jq -r '.chunk_count // 0' "$META_PATH")
+EMB_COUNT=$(jq -r '.embedding_count // 0' "$META_PATH")
+EMB_MODEL=$(jq -r '.embedding_model // "?"' "$META_PATH")
+
+log "appending audit row → $AUDIT_FILE"
+printf '| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n' \
+    "$PUBLISHED_AT" "$BASENAME" "$APP_COMMIT" "$EF_HEAD" "$SEED_SCHEMA" \
+    "$PDF_COUNT" "$CHUNK_COUNT" "$EMB_COUNT" "$EMB_MODEL" "$PUBLISHED_BY" \
+    >> "$AUDIT_FILE"
+
 log "OK"

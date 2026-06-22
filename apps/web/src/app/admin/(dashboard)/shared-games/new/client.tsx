@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 /**
  * New Game Client Component - New Admin Dashboard
  *
@@ -195,7 +196,7 @@ export function NewGameClient() {
       </div>
 
       {/* Cross-link to Import flow (#255) */}
-      <div className="rounded-lg border border-dashed border-slate-300 dark:border-zinc-600 bg-slate-50/50 dark:bg-zinc-800/30 px-4 py-3 flex items-center gap-3">
+      <div className="rounded-lg border border-dashed border-border dark:border-zinc-600 bg-muted/50 dark:bg-zinc-800/30 px-4 py-3 flex items-center gap-3">
         <FileUp className="h-4 w-4 text-muted-foreground shrink-0" />
         <p className="text-sm text-muted-foreground">
           Have a PDF rulebook?{' '}
@@ -222,7 +223,7 @@ export function NewGameClient() {
       </div>
 
       {/* Form card */}
-      <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/50 dark:border-zinc-700/50">
+      <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/50 dark:border-zinc-700/50">
         <CardHeader>
           <CardTitle className="font-quicksand">Game Details</CardTitle>
           <CardDescription>

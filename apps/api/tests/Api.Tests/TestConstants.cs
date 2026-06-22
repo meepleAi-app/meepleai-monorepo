@@ -12,7 +12,7 @@ public static class TestConstants
     public static class Users
     {
         public const string DefaultEmail = "test@example.com";
-        public const string DefaultPassword = "TestPassword123!";
+        public const string DefaultPassword = "UniqueT3stPwd!";
         public const string DefaultDisplayName = "Test User";
 
         // Test fixture emails (not seeded in database - used for mock testing only)

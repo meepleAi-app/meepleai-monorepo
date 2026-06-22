@@ -48,19 +48,16 @@ internal sealed class GetKbReadinessQueryHandler : IQueryHandler<GetKbReadinessQ
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        // Step 1: resolve to both legacy (private) game id and shared game id.
-        // Accept both shapes: caller may pass the SharedGame id or the legacy game id directly.
-        var gameIds = await _db.Games
+        // Post-Phase2d: GameEntity is gone; request.GameId is always a SharedGameId directly.
+        var sharedGameExists = await _db.SharedGames
             .AsNoTracking()
-            .Where(g => g.Id == request.GameId || g.SharedGameId == request.GameId)
-            .Select(g => new { g.Id, g.SharedGameId })
-            .FirstOrDefaultAsync(cancellationToken)
+            .AnyAsync(g => g.Id == request.GameId, cancellationToken)
             .ConfigureAwait(false);
 
-        Guid? legacyGameId = gameIds?.Id;
-        Guid? sharedGameId = gameIds?.SharedGameId ?? request.GameId;
+        Guid? legacyGameId = null;
+        Guid? sharedGameId = sharedGameExists ? request.GameId : null;
 
-        if (legacyGameId is null && sharedGameId is null)
+        if (sharedGameId is null)
         {
             return new KbReadinessDto(false, "None", 0, 0, Array.Empty<string>());
         }

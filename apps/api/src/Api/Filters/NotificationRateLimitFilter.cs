@@ -112,9 +112,9 @@ internal class NotificationRateLimitFilter : IEndpointFilter
         // Check for session authentication first
         if (httpContext.Items.TryGetValue(nameof(SessionStatusDto), out var sessionObj) &&
             sessionObj is SessionStatusDto session &&
-            session.User is not null)
+            session.Principal?.Subject is not null)
         {
-            return $"notifications:{session.User.Id}";
+            return $"notifications:{session.Principal!.Subject.Id}";
         }
 
         // Check for API key authentication

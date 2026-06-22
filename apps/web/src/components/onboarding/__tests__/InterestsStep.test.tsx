@@ -33,7 +33,9 @@ describe('InterestsStep', () => {
   it('renders all 9 category options', () => {
     renderWithQuery(<InterestsStep onComplete={onComplete} onSkip={onSkip} />);
 
-    expect(screen.getByText('What Do You Enjoy?')).toBeInTheDocument();
+    // F25 #1976: heading driven by `pages.onboarding.interests.heading`
+    // (renderWithQuery loads en.json messages — IT fallback exercised separately).
+    expect(screen.getByText(/what do you enjoy/i)).toBeInTheDocument();
     expect(screen.getByTestId('interest-strategy')).toBeInTheDocument();
     expect(screen.getByTestId('interest-party')).toBeInTheDocument();
     expect(screen.getByTestId('interest-cooperative')).toBeInTheDocument();
@@ -70,10 +72,15 @@ describe('InterestsStep', () => {
     expect(screen.getByText('3 selected')).toBeInTheDocument();
   });
 
-  it('calls onSkip when skip button clicked', async () => {
+  it('calls onSkip when the primary CTA shows "Skip" (no selection) and is clicked', async () => {
+    // F27 #1974: the legacy `interests-skip` text-link was removed because it
+    // duplicated the primary submit's no-selection skip action. Coverage
+    // moves to the primary submit; the no-selection submit path still
+    // delegates to `onSkip` so the wizard never traps the user.
     renderWithQuery(<InterestsStep onComplete={onComplete} onSkip={onSkip} />);
 
-    await user.click(screen.getByTestId('interests-skip'));
+    expect(screen.queryByTestId('interests-skip')).toBeNull();
+    await user.click(screen.getByRole('button', { name: /^skip$/i }));
 
     expect(onSkip).toHaveBeenCalled();
   });

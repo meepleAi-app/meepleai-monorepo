@@ -52,10 +52,10 @@ internal class SessionQuotaMiddleware
             // Extract user identity from active session
             var (authenticated, session, _) = context.TryGetActiveSession();
 
-            if (!authenticated || session?.User is null)
+            if (!authenticated || session?.Principal?.Subject is null)
                 return;
 
-            var user = session.User;
+            var user = session.Principal!.Subject;
 
             // Parse tier and role from strings to value objects
             var userTier = UserTier.Parse(user.Tier);

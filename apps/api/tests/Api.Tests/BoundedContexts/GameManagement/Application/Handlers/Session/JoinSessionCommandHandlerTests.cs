@@ -65,7 +65,7 @@ public sealed class JoinSessionCommandHandlerTests
             Visibility = 0,
             AgentMode = 0,
             ScoringConfigJson = "{}",
-            RowVersion = new byte[] { 1 }
+            Xmin = 1u
         });
 
         _dbContext.SessionInvites.Add(new SessionInviteEntity

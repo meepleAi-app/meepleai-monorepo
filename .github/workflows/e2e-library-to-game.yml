@@ -38,10 +38,10 @@ jobs:
           - mobile-safari
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
 
@@ -55,12 +55,16 @@ jobs:
         run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
       - name: Cache pnpm store
-        uses: actions/cache@v4
+        # Issue #850 AC-3: include `.npmrc` in hash so registry/config changes
+        # also invalidate. AC-7: `vars.CACHE_VERSION` is the global
+        # emergency-invalidation knob: `gh variable set CACHE_VERSION --body v2`
+        # flushes all caches at once.
+        uses: actions/cache@v5
         with:
           path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: pnpm-${{ vars.CACHE_VERSION || 'v1' }}-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', '.npmrc') }}
           restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+            pnpm-${{ vars.CACHE_VERSION || 'v1' }}-${{ runner.os }}-
 
       - name: Install dependencies
         working-directory: apps/web
@@ -96,7 +100,7 @@ jobs:
 
       - name: Upload library-to-game screenshots
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: library-to-game-screenshots-${{ matrix.project }}
           path: apps/web/test-results/library-to-game-happy-path/
@@ -105,7 +109,7 @@ jobs:
 
       - name: Upload Playwright HTML report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report-library-to-game-${{ matrix.project }}
           path: apps/web/playwright-report/
@@ -114,7 +118,7 @@ jobs:
 
       - name: Upload test-results (failures + traces)
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results-library-to-game-${{ matrix.project }}
           path: apps/web/test-results/

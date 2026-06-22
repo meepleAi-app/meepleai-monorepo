@@ -45,7 +45,25 @@ public interface ISessionRepository
     Task UpdateLastSeenAsync(Guid sessionId, DateTime lastSeenAt, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// SP5 S3 — D-S3-4: records a successful TOTP step-up by setting <c>LastTotpVerifiedAt</c> on
+    /// the session via a single-column SQL UPDATE (no change-tracking). Returns the number of rows
+    /// affected — 0 when the session no longer exists (revoked/expired between auth and step-up).
+    /// </summary>
+    Task<int> UpdateLastTotpVerifiedAtAsync(Guid sessionId, DateTime lastTotpVerifiedAt, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Revokes all sessions for a user.
     /// </summary>
     Task RevokeAllUserSessionsAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// C7: revokes every session for the user except the one identified by
+    /// <paramref name="excludedSessionId"/>. Used by the password-change flow
+    /// to invalidate other devices while keeping the user logged in on the
+    /// device that issued the change.
+    /// </summary>
+    Task RevokeAllUserSessionsExceptAsync(
+        Guid userId,
+        Guid excludedSessionId,
+        CancellationToken cancellationToken = default);
 }

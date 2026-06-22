@@ -1,0 +1,36 @@
+meta {
+  name: SG3 — Create user-agent (lifecycle starts at Draft)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{apiBase}}/api/v1/agents/user
+  body: json
+}
+
+body:json {
+  {
+    "name": "SG3 Smoke Agent {{$randomInt}}",
+    "description": "Created by SG3 Bruno smoke test",
+    "gameId": "{{smokeGameId}}"
+  }
+}
+
+script:post-response {
+  const body = res.getBody();
+  if (body && body.id) {
+    bru.setVar("agentId", body.id);
+  }
+}
+
+tests {
+  test("returns 201 Created", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+  test("returns agent with status=Draft", function() {
+    const body = res.getBody();
+    expect(body).to.have.property("id");
+    expect(body.status).to.equal("Draft");
+  });
+}

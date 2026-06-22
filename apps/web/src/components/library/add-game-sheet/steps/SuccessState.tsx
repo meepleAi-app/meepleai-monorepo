@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -75,7 +76,7 @@ function PdfProcessingBanner() {
                 ? 'text-teal-400'
                 : i === stageIndex
                   ? 'text-amber-200 font-medium'
-                  : 'text-slate-500'
+                  : 'text-muted-foreground'
             }`}
           >
             {i < stageIndex ? (
@@ -85,7 +86,7 @@ function PdfProcessingBanner() {
             ) : i === stageIndex && isDone ? (
               <CheckCircle2 className="h-3 w-3 text-teal-400 shrink-0" />
             ) : (
-              <span className="h-3 w-3 shrink-0 rounded-full border border-slate-600 inline-block" />
+              <span className="h-3 w-3 shrink-0 rounded-full border border-border inline-block" />
             )}
             {stage.label}
           </li>
@@ -161,7 +162,7 @@ export function SuccessState({
       <h3 className="text-lg font-semibold text-slate-100 mb-1.5">
         Gioco aggiunto alla tua collezione!
       </h3>
-      <p className="text-sm text-slate-400 max-w-xs mb-8">
+      <p className="text-sm text-muted-foreground max-w-xs mb-8">
         <span className="font-medium text-slate-300">{gameTitle}</span> è ora nella tua libreria.
       </p>
 
@@ -179,7 +180,7 @@ export function SuccessState({
 
         {gameId && (
           <Button variant="outline" className="w-full gap-2" asChild>
-            <Link href={`/library/games/${gameId}`}>
+            <Link href={`/library/${gameId}`}>
               <ExternalLink className="h-4 w-4" />
               Vedi dettaglio gioco
             </Link>
@@ -188,7 +189,7 @@ export function SuccessState({
 
         <Button
           variant="ghost"
-          className="w-full gap-2 text-slate-400 hover:text-slate-200"
+          className="w-full gap-2 text-muted-foreground hover:text-slate-200"
           onClick={onAddAnother}
           data-testid="add-another-button"
         >

@@ -30,8 +30,8 @@ public static class TestcontainersWaitHelpers
     public static async Task WaitForPostgresReadyAsync(
         string connectionString,
         ITestOutputHelper? output = null,
-        int maxRetries = 10,
-        int initialDelayMs = 500)
+        int maxRetries = 20,
+        int initialDelayMs = 1000)
     {
         var delay = initialDelayMs;
         Exception? lastException = null;
@@ -45,21 +45,22 @@ public static class TestcontainersWaitHelpers
                 output?.WriteLine($"[Testcontainers] PostgreSQL ready after {i + 1} attempt(s)");
                 return; // Connection successful
             }
-            catch (NpgsqlException ex)
+            catch (Exception ex) when (
+                ex is NpgsqlException ||
+                ex is TimeoutException ||
+                ex is System.Net.Sockets.SocketException ||
+                ex is System.IO.IOException ||
+                ex is System.IO.EndOfStreamException ||
+                (ex.InnerException != null && (
+                    ex.InnerException is System.IO.IOException ||
+                    ex.InnerException is System.IO.EndOfStreamException ||
+                    ex.InnerException is System.Net.Sockets.SocketException)))
             {
-                // Transient error - retry
+                // Transient startup error — Postgres container still initializing; retry
                 lastException = ex;
-                output?.WriteLine($"[Testcontainers] PostgreSQL not ready (attempt {i + 1}/{maxRetries}): {ex.Message}");
+                output?.WriteLine($"[Testcontainers] PostgreSQL not ready (attempt {i + 1}/{maxRetries}): {ex.GetType().Name}: {ex.Message}");
                 await Task.Delay(delay);
                 delay = Math.Min(delay * 2, 5000); // Exponential backoff, max 5s
-            }
-            catch (Exception ex) when (ex is TimeoutException || ex is System.Net.Sockets.SocketException)
-            {
-                // Network-level transient error - retry
-                lastException = ex;
-                output?.WriteLine($"[Testcontainers] PostgreSQL connection failed (attempt {i + 1}/{maxRetries}): {ex.Message}");
-                await Task.Delay(delay);
-                delay = Math.Min(delay * 2, 5000);
             }
         }
 

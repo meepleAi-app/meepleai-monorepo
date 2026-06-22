@@ -1,706 +1,366 @@
+/**
+ * DashboardClient — Asse C priority-driven orchestrator for `/dashboard` (Issue #1898).
+ *
+ * REFACTOR replacement of Stage 3 cluster (5 entity sections Games/Players/Agents/
+ * Sessions/Events) with 4 priority slots in fixed order:
+ *
+ *   1. ProssimiSection      → upcoming GameNights (Published + InProgress, ASC by date)
+ *   2. RecentiSection       → completed GameNights (DESC by date)
+ *   3. SuggestedSection     → "Potresti giocare" game suggestions (MVP fixture)
+ *   4. FriendsActivitySection → recent friend activities (verbs: completed/created/joined)
+ *
+ * DEC-1 (locked plan v2): in-place refactor of /dashboard, no alternative route.
+ * Hero block (DashboardHero) is preserved as the entry surface; KPI grid still
+ * exposes games / sessions / hoursPlayed / winRate (the latter two still
+ * unexposed by the backend, displayed as "—").
+ *
+ * State derivation per section:
+ *   loading → query.isLoading
+ *   error   → query.isError
+ *   empty   → derived (length === 0)
+ *   default → otherwise
+ *
+ * Note on mockup divergence (#2114): `admin-mockups/design_files/sp4-dashboard.{html,jsx}`
+ * is the legacy Pre-Stage-3 design with 5 entity sections — it is intentionally
+ * NOT the design target for this component. The mockup is classified
+ * `forward-refactor-obsolete` in its fidelity.json companion; the codebase
+ * supersedes it via the Asse C refactor. There is no current pixel-faithful
+ * mockup for the priority-driven layout; the spec lives in the plan archived
+ * under `docs/superpowers/plans/` (2026-06-05 Asse C session).
+ */
+
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, type ReactElement } from 'react';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 import { useAuth } from '@/components/auth/AuthProvider';
-import { EntityZone } from '@/components/dashboard/EntityZone';
-import { GreetingStrip } from '@/components/dashboard/GreetingStrip';
-import { OwnershipConfirmDialog } from '@/components/dialogs/OwnershipConfirmDialog';
-import { HubLayout, type FilterChip } from '@/components/layout/HubLayout';
+import { CascadeDrawerHost } from '@/components/dashboard/CascadeDrawerHost';
+import { HubPageContainer } from '@/components/layout/PageContainer';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import type { MeepleCardProps, MeepleEntityType } from '@/components/ui/data-display/meeple-card';
-import type { ManaPip } from '@/components/ui/data-display/meeple-card/parts/ManaPips';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
-import { useAgents } from '@/hooks/queries/useAgents';
-import { useBatchGameStatus } from '@/hooks/queries/useBatchGameStatus';
-import { useGames } from '@/hooks/queries/useGames';
-import { useAddGameToLibrary, useLibrary } from '@/hooks/queries/useLibrary';
-import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
-import { useRecentsStore } from '@/stores/use-recents';
+import { useCompletedGameNights, useUpcomingGameNights } from '@/hooks/queries/useGameNights';
+import { useLibrary, useLibraryStats } from '@/hooks/queries/useLibrary';
+import { useFriendsActivity } from '@/hooks/use-friends-activity';
+import { useTranslation } from '@/hooks/useTranslation';
 
-// ---------------------------------------------------------------------------
-// Filter chip definitions
-// ---------------------------------------------------------------------------
+import { DashboardHero, type DashboardHeroKpi } from './_components/DashboardHero';
+import {
+  FriendsActivitySection,
+  type FriendsActivitySectionState,
+  ProssimiSection,
+  type ProssimiGameNightCard,
+  type ProssimiSectionState,
+  type ProssimiStatus,
+  RecentiSection,
+  type RecentiGameNightCard,
+  type RecentiSectionState,
+  SuggestedSection,
+  type SuggestedGameCard,
+  type SuggestedSectionState,
+} from './_components/sections';
 
-const GAMES_FILTERS: FilterChip[] = [
-  { id: 'all', label: 'Tutti' },
-  { id: 'recent', label: 'Recenti' },
-];
-
-// Catalog view (new-user) has no server-side sort by date — only "Tutti" makes sense
-const CATALOG_FILTERS: FilterChip[] = [{ id: 'all', label: 'Tutti' }];
-
-const SESSIONS_FILTERS: FilterChip[] = [
-  { id: 'all', label: 'Tutte' },
-  { id: 'active', label: 'Attive' },
-  { id: 'recent', label: 'Recenti' },
-];
-
-const AGENTS_FILTERS: FilterChip[] = [
-  { id: 'all', label: 'Tutti' },
-  { id: 'active', label: 'Attivi' },
-];
-
-// ---------------------------------------------------------------------------
-// Toolkit tools (static — no API required)
-// ---------------------------------------------------------------------------
-
-const TOOLKIT_TOOLS = [
-  { id: 'dice', icon: '🎲', name: 'Dado', desc: 'Lancia d4–d20' },
-  { id: 'timer', icon: '⏳', name: 'Clessidra', desc: 'Timer per turno' },
-  { id: 'score', icon: '📊', name: 'Scoreboard', desc: 'Punteggi multi-player' },
-  { id: 'token', icon: '🪙', name: 'Token', desc: 'Contatori risorse' },
-] as const;
-
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
-
-function LoadingSkeleton({ count }: { count: number }) {
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-      {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="h-40 rounded-xl bg-muted animate-pulse" />
-      ))}
-    </div>
-  );
+/**
+ * Derive a 4-state lifecycle (loading | error | empty | default) from
+ * a TanStack Query result + a derived item count.
+ */
+function deriveSectionState(
+  isLoading: boolean,
+  isError: boolean,
+  itemCount: number
+): 'loading' | 'error' | 'empty' | 'default' {
+  if (isLoading) return 'loading';
+  if (isError) return 'error';
+  if (itemCount === 0) return 'empty';
+  return 'default';
 }
 
-// CTA for empty sections (sessions, agents)
-interface CtaAction {
-  label: string;
-  href: string;
-  primary?: boolean;
-}
-
-function EmptyCTA({
-  icon,
-  title,
-  sub,
-  actions,
-}: {
-  icon: string;
-  title: string;
-  sub: string;
-  actions: CtaAction[];
-}) {
-  return (
-    <div
-      className="flex flex-col items-center gap-3 py-6 px-4 text-center
-                 rounded-xl border border-dashed border-[rgba(180,130,80,0.25)] dark:border-[rgba(180,130,80,0.4)]
-                 bg-card"
-    >
-      <span className="text-3xl">{icon}</span>
-      <div>
-        <p className="font-[Quicksand] font-bold text-sm text-foreground">{title}</p>
-        <p className="text-xs text-muted-foreground/60 mt-1 max-w-[240px] mx-auto leading-relaxed">
-          {sub}
-        </p>
-      </div>
-      <div className="flex gap-2 flex-wrap justify-center">
-        {actions.map(a => (
-          <Link
-            key={a.href}
-            href={a.href}
-            className={
-              a.primary
-                ? 'inline-flex items-center gap-1 px-4 py-1.5 rounded-xl text-xs font-bold font-[Quicksand] bg-amber-600 text-white shadow-[0_2px_8px_rgba(180,100,20,.25)]'
-                : 'inline-flex items-center gap-1 px-4 py-1.5 rounded-xl text-xs font-bold font-[Quicksand] border border-amber-600 text-amber-600'
-            }
-          >
-            {a.label}
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function MeepleCardGrid({
-  items,
-  isLoading,
-  emptyNode,
-}: {
-  items: MeepleCardProps[];
-  isLoading: boolean;
-  emptyNode?: React.ReactNode;
-}) {
-  if (isLoading) return <LoadingSkeleton count={6} />;
-  if (items.length === 0) {
-    if (emptyNode) return <>{emptyNode}</>;
-    return (
-      <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground/60">
-        <p className="text-sm font-medium">Nessun elemento.</p>
-      </div>
-    );
-  }
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-      {items.map(item => (
-        <MeepleCard key={item.id ?? item.title} {...item} />
-      ))}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Catalog games for new user — with "Aggiungi" button overlay
-// ---------------------------------------------------------------------------
-
-function CatalogGameCard({
-  game,
-  inLibrary,
-  onAdd,
-  adding,
-  hasKb,
-}: {
-  game: {
-    id: string;
-    title: string;
-    publisher?: string | null;
-    imageUrl?: string | null;
-    averageRating?: number | null;
-  };
-  inLibrary: boolean;
-  onAdd: (gameId: string) => void;
-  adding: boolean;
-  hasKb?: boolean;
-}) {
-  return (
-    <div
-      className="bg-card border border-border
-                 rounded-xl shadow-sm overflow-hidden flex flex-col"
-    >
-      {/* Thumbnail */}
-      <div className="relative h-[68px] flex items-center justify-center bg-gradient-to-br from-[#fdf0e0] to-[#fce8cc] dark:from-[hsl(25,20%,18%)] dark:to-[hsl(30,15%,15%)] overflow-hidden flex-shrink-0">
-        {game.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={game.imageUrl} alt={game.title} className="w-full h-full object-cover" />
-        ) : (
-          <span className="text-3xl select-none">🎲</span>
-        )}
-        {hasKb !== undefined && (
-          <span
-            className={`absolute top-1 right-1 px-1.5 py-0.5 rounded text-[8px] font-extrabold font-[Quicksand] text-white leading-none ${hasKb ? 'bg-green-500' : 'bg-muted-foreground/60'}`}
-          >
-            {hasKb ? 'KB ✓' : 'KB –'}
-          </span>
-        )}
-      </div>
-
-      {/* Info */}
-      <div className="px-2 pt-1.5 pb-1 flex-1 min-h-0">
-        <p
-          className="font-[Quicksand] font-bold text-[11px] leading-tight
-                     overflow-hidden line-clamp-2 text-foreground"
-        >
-          {game.title}
-        </p>
-        {game.publisher && (
-          <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{game.publisher}</p>
-        )}
-      </div>
-
-      {/* Add button */}
-      <button
-        onClick={() => !inLibrary && !adding && onAdd(game.id)}
-        disabled={inLibrary || adding}
-        aria-label={
-          inLibrary ? `${game.title} già in libreria` : `Aggiungi ${game.title} alla libreria`
-        }
-        className={
-          inLibrary
-            ? 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-muted text-muted-foreground/60 cursor-default'
-            : adding
-              ? 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-black/20 dark:bg-white/20 text-white cursor-wait'
-              : 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-amber-600 text-white hover:opacity-90 active:scale-95 transition-transform'
-        }
-      >
-        <span className="text-xs leading-none">＋</span>
-        {inLibrary ? 'In libreria' : adding ? '…' : 'Aggiungi'}
-      </button>
-    </div>
-  );
-}
-
-function NewUserGamesBlock({
-  search,
-  onSearchChange,
-  filter,
-  onFilterChange,
-}: {
-  search: string;
-  onSearchChange: (v: string) => void;
-  filter: string;
-  onFilterChange: (v: string) => void;
-}) {
-  const { data: catalogData, isLoading } = useGames(undefined, undefined, 1, 20);
-  // Sort client-side by rating descending, take top 12
-  const games = useMemo(
-    () =>
-      [...(catalogData?.games ?? [])]
-        .sort((a, b) => {
-          // KB completeness first (spec annotation 1: "ordinati per KB completeness")
-          const aKb = a.hasKnowledgeBase ? 1 : 0;
-          const bKb = b.hasKnowledgeBase ? 1 : 0;
-          if (bKb !== aKb) return bKb - aKb;
-          return (b.averageRating ?? 0) - (a.averageRating ?? 0);
-        })
-        .slice(0, 12),
-    [catalogData]
-  );
-
-  const gameIds = useMemo(() => games.map(g => g.id), [games]);
-  const { data: batchStatus } = useBatchGameStatus(gameIds, gameIds.length > 0);
-
-  const addMutation = useAddGameToLibrary();
-  const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
-  const [confirmGame, setConfirmGame] = useState<{ id: string; title: string } | null>(null);
-  const router = useRouter();
-
-  const handleAdd = (gameId: string) => {
-    const game = games.find(g => g.id === gameId);
-    if (!game) return;
-    setConfirmGame({ id: game.id, title: game.title });
-  };
-
-  const handleConfirmOwnership = () => {
-    if (!confirmGame) return;
-    setAddingIds(prev => new Set(prev).add(confirmGame.id));
-    addMutation.mutate(
-      { gameId: confirmGame.id },
-      {
-        onSuccess: () => {
-          setAddingIds(prev => {
-            const next = new Set(prev);
-            next.delete(confirmGame.id);
-            return next;
-          });
-          setConfirmGame(null);
-          router.push(`/games/${confirmGame.id}`);
-        },
-        onError: () => {
-          setAddingIds(prev => {
-            const next = new Set(prev);
-            next.delete(confirmGame.id);
-            return next;
-          });
-        },
-      }
-    );
-  };
-
-  const filtered = useMemo(() => {
-    if (!search.trim()) return games;
-    const q = search.toLowerCase();
-    return games.filter(
-      g => g.title.toLowerCase().includes(q) || g.publisher?.toLowerCase().includes(q)
-    );
-  }, [games, search]);
-
-  return (
-    <HubLayout
-      searchPlaceholder="Cerca giochi..."
-      searchValue={search}
-      onSearchChange={onSearchChange}
-      filterChips={CATALOG_FILTERS}
-      activeFilterId={filter}
-      onFilterChange={onFilterChange}
-    >
-      {isLoading ? (
-        <LoadingSkeleton count={6} />
-      ) : (
-        <>
-          <p className="text-xs text-muted-foreground/60 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/50 rounded-lg px-3 py-2 mb-3 font-medium">
-            💡 Libreria vuota — ecco i top giochi dal catalogo. Aggiungili per iniziare!
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            {filtered.map(game => {
-              const status = batchStatus?.results?.[game.id];
-              const inLibrary = status?.inLibrary ?? false;
-              return (
-                <CatalogGameCard
-                  key={game.id}
-                  game={game}
-                  inLibrary={inLibrary}
-                  onAdd={handleAdd}
-                  adding={addingIds.has(game.id)}
-                  hasKb={game.hasKnowledgeBase}
-                />
-              );
-            })}
-          </div>
-        </>
-      )}
-      <OwnershipConfirmDialog
-        open={!!confirmGame}
-        onOpenChange={open => {
-          if (!open) setConfirmGame(null);
-        }}
-        gameTitle={confirmGame?.title ?? ''}
-        onConfirm={handleConfirmOwnership}
-        confirming={addMutation.isPending}
-      />
-    </HubLayout>
-  );
-}
-
-function ToolkitGrid() {
-  return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {TOOLKIT_TOOLS.map(tool => (
-        <Link
-          key={tool.id}
-          href={`/toolkit?tool=${tool.id}`}
-          className="flex flex-col items-center gap-1.5 rounded-xl border border-[hsl(142,30%,88%)] bg-[hsl(142,30%,96%)] p-4 text-center transition-all hover:-translate-y-0.5 hover:border-[hsl(142,70%,45%)] hover:shadow-md dark:border-[hsl(142,30%,25%)] dark:bg-[hsl(142,20%,12%)] dark:hover:border-[hsl(142,70%,40%)]"
-        >
-          <span className="text-[28px]">{tool.icon}</span>
-          <span className="font-quicksand text-[13px] font-bold text-[hsl(142,50%,30%)] dark:text-[hsl(142,50%,65%)]">
-            {tool.name}
-          </span>
-          <span className="text-[11px] text-muted-foreground">{tool.desc}</span>
-        </Link>
-      ))}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Main DashboardClient
-// ---------------------------------------------------------------------------
-
-export function DashboardClient() {
+export function DashboardClient(): ReactElement {
+  const { t } = useTranslation();
   const { user } = useAuth();
-  const router = useRouter();
-  const displayName = user?.displayName ?? 'giocatore';
 
-  const [gamesSearch, setGamesSearch] = useState('');
-  const [gamesFilter, setGamesFilter] = useState('all');
+  // ── Data hooks (re-used from Stage 3 + asse-C additions) ─────────────────
+  const upcomingGNQuery = useUpcomingGameNights();
+  // F20 #1974: dashboard "Recenti" slot — recently completed game nights.
+  const completedGNQuery = useCompletedGameNights({ limit: 5 });
+  const sessionsQuery = useActiveSessions(10);
+  // Issue #2176: SuggestedSection renders "Potresti giocare" cards from the
+  // user's OWN library (UserLibrary), NOT from the shared catalog (SharedGames).
+  // The previous useGames(undefined,…,20) call read SharedGames system-wide,
+  // which created a silent inconsistency: KPI "GIOCHI N" (useLibraryStats →
+  // UserLibrary) and the suggested cards (useGames → SharedGames) drew from
+  // different sources, so the section could render community catalog items
+  // even when the user owned 0 games, or hide when the user owned N games
+  // but the catalog query was throttled.
+  const libraryQuery = useLibrary({ page: 1, pageSize: 20 });
+  const statsQuery = useLibraryStats();
+  const friendsActivityQuery = useFriendsActivity();
 
-  const [sessionsSearch, setSessionsSearch] = useState('');
-  const [sessionsFilter, setSessionsFilter] = useState('all');
+  // ── Slot #1: Prossimi (upcoming GameNights, Published + InProgress) ──────
+  const prossimiCards = useMemo<ReadonlyArray<ProssimiGameNightCard>>(() => {
+    const data = upcomingGNQuery.data ?? [];
+    return (
+      data
+        .filter(gn => gn.status === 'Published' || gn.status === 'Draft')
+        // Treat "Draft" as future "Published" for the upcoming surface? No — only
+        // Published / InProgress should appear. The backend `getUpcoming()` already
+        // filters server-side, but we re-assert here so a relaxed BE doesn't leak
+        // stale Cancelled/Completed rows.
+        // (InProgress isn't a status emitted by the upcoming endpoint today, but
+        // when asse-A WP1 + #15 lands and the BE starts emitting it on a started
+        // session, the UX is ready.)
+        .filter(gn => gn.status === 'Published')
+        .slice(0, 3)
+        .map<ProssimiGameNightCard>(gn => ({
+          id: gn.id,
+          title: gn.title,
+          date: gn.scheduledAt,
+          status: 'Published' as ProssimiStatus,
+          rsvpConfirmedCount: gn.acceptedCount,
+          rsvpPendingCount: gn.pendingCount,
+          rsvpTotalCount: gn.totalInvited,
+        }))
+    );
+  }, [upcomingGNQuery.data]);
 
-  const [agentsSearch, setAgentsSearch] = useState('');
-  const [agentsFilter, setAgentsFilter] = useState('all');
-
-  useMiniNavConfig(
-    useMemo(
-      () => ({
-        breadcrumb: 'Home',
-        tabs: [{ id: 'overview', label: 'Overview', href: '/dashboard' }],
-        activeTabId: 'overview',
-      }),
-      []
-    )
+  const prossimiState: ProssimiSectionState = deriveSectionState(
+    upcomingGNQuery.isLoading,
+    upcomingGNQuery.isError,
+    prossimiCards.length
   );
 
-  // Register this page in recents for cross-page context memory
-  useEffect(() => {
-    useRecentsStore.getState().push({
-      id: 'section-dashboard',
-      entity: 'game',
-      title: 'Home',
-      href: '/dashboard',
-    });
-  }, []);
+  // ── Slot #2: Recenti (completed GameNights) ──────────────────────────────
+  // F20 #1974 (audit 2026-06-07): wires the BE `/game-nights/completed`
+  // endpoint shipped alongside this PR. Projection mirrors `prossimiCards`:
+  // map the BE `GameNightDto` to the `RecentiGameNightCard` contract that
+  // `RecentiSection` expects. `sessionCount` defaults to 0 until the BE
+  // surfaces it on the DTO; mini cover thumbnails are not yet exposed
+  // server-side so we pass an empty array (the card primitive already
+  // hides the cover stack in that case).
+  const recentiCards = useMemo<ReadonlyArray<RecentiGameNightCard>>(() => {
+    const data = completedGNQuery.data ?? [];
+    return data.slice(0, 3).map<RecentiGameNightCard>(gn => ({
+      id: gn.id,
+      title: gn.title,
+      date: gn.scheduledAt,
+      sessionCount: 0,
+      gamePreviewThumbnails: [],
+    }));
+  }, [completedGNQuery.data]);
 
-  // Data fetching
-  const { data: libraryData, isLoading: libraryLoading } = useLibrary({ page: 1, pageSize: 12 });
-  const { data: sessionsData, isLoading: sessionsLoading } = useActiveSessions();
-  const { data: agentsData, isLoading: agentsLoading } = useAgents({ activeOnly: false });
+  const recentiState: RecentiSectionState = deriveSectionState(
+    completedGNQuery.isLoading,
+    completedGNQuery.isError,
+    recentiCards.length
+  );
 
-  // Detect new user: library loaded with no items
-  const isNewUser = !libraryLoading && (libraryData?.items ?? []).length === 0;
-
-  // ---------------------------------------------------------------------------
-  // Library → MeepleCardProps
-  // ---------------------------------------------------------------------------
-
-  const gameItems: MeepleCardProps[] = useMemo(() => {
-    const entries = libraryData?.items ?? [];
-    return entries.map(entry => {
-      const gameId = entry.gameId;
-      const manaPips: ManaPip[] = [
-        {
-          entityType: 'session',
-          count: 0,
-          onCreate: () =>
-            router.push(
-              `/sessions/new?gameId=${gameId}&gameName=${encodeURIComponent(entry.gameTitle)}`
-            ),
-          createLabel: 'Nuova sessione',
-        },
-        {
-          entityType: 'kb',
-          count: 0,
-          onCreate: () => router.push(`/games/${gameId}`),
-          createLabel: 'Carica documento',
-        },
-        {
-          entityType: 'agent',
-          count: 0,
-          onCreate: () => router.push(`/chat?gameId=${gameId}`),
-          createLabel: 'Crea agente',
-        },
-      ];
-      return {
-        id: entry.id,
-        entity: 'game' as MeepleEntityType,
-        title: entry.gameTitle,
-        subtitle: entry.gamePublisher ?? undefined,
-        imageUrl: entry.gameImageUrl ?? undefined,
-        rating: entry.averageRating ?? undefined,
-        variant: 'grid',
-        manaPips,
-      };
-    });
-  }, [libraryData, router]);
-
-  const filteredGameItems = useMemo(() => {
-    let result = gameItems;
-    if (gamesSearch.trim()) {
-      const q = gamesSearch.toLowerCase();
-      result = result.filter(
-        g => g.title.toLowerCase().includes(q) || g.subtitle?.toLowerCase().includes(q)
-      );
-    }
-    return result;
-  }, [gameItems, gamesSearch]);
-
-  // ---------------------------------------------------------------------------
-  // Sessions → MeepleCardProps
-  // ---------------------------------------------------------------------------
-
-  const sessionItems: MeepleCardProps[] = useMemo(() => {
-    const sessions = sessionsData?.sessions ?? [];
-    return sessions.map(session => {
-      const manaPips: ManaPip[] = [
-        {
-          entityType: 'game',
-          count: 1,
-          items: [
-            {
-              id: session.gameId,
-              label: session.gameId.slice(0, 8),
-              href: `/games/${session.gameId}`,
-            },
-          ],
-        },
-        {
-          entityType: 'player',
-          count: session.playerCount ?? 0,
-          items: (session.players ?? []).map(p => ({
-            id: p.playerName,
-            label: p.playerName,
-            href: `/sessions/${session.id}`,
-          })),
-        },
-      ];
-      return {
-        id: session.id,
-        entity: 'session' as MeepleEntityType,
-        title: `Sessione ${session.id.slice(0, 8)}`,
-        subtitle: session.status,
-        variant: 'grid',
-        manaPips,
-        status:
-          session.status.toLowerCase() === 'inprogress'
-            ? ('inprogress' as const)
-            : session.status.toLowerCase() === 'paused'
-              ? ('paused' as const)
-              : session.status.toLowerCase() === 'setup'
-                ? ('setup' as const)
-                : undefined,
-      };
-    });
-  }, [sessionsData]);
-
-  const filteredSessionItems = useMemo(() => {
-    let result = sessionItems;
-    if (sessionsSearch.trim()) {
-      const q = sessionsSearch.toLowerCase();
-      result = result.filter(s => s.title.toLowerCase().includes(q));
-    }
-    if (sessionsFilter === 'active') {
-      result = result.filter(s => s.status === 'inprogress' || s.status === 'setup');
-    }
-    return result;
-  }, [sessionItems, sessionsSearch, sessionsFilter]);
-
-  // ---------------------------------------------------------------------------
-  // Agents → MeepleCardProps
-  // ---------------------------------------------------------------------------
-
-  const agentItems: MeepleCardProps[] = useMemo(() => {
-    const agents: Array<{
-      id: string;
-      name: string;
-      type: string;
-      isActive: boolean;
-      gameId?: string | null;
-      gameName?: string | null;
-    }> = Array.isArray(agentsData) ? agentsData : [];
-    return agents.map(agent => {
-      const manaPips: ManaPip[] = [];
-      if (agent.gameId) {
-        manaPips.push({
-          entityType: 'game',
-          count: 1,
-          items: [
-            {
-              id: agent.gameId,
-              label: agent.gameName ?? agent.gameId.slice(0, 8),
-              href: `/games/${agent.gameId}`,
-            },
-          ],
-        });
-      }
-      manaPips.push({
-        entityType: 'chat',
-        count: 0,
-        onCreate: () => router.push(`/chat?agentId=${agent.id}`),
-        createLabel: 'Avvia chat',
+  // ── Slot #3: Suggested ("Potresti giocare") ──────────────────────────────
+  // MVP algorithm: surface up to 6 OWNED games from the user's UserLibrary.
+  // Future BE endpoint `GET /dashboard/suggestions` will refine to
+  // "owned NOT played last 30d sorted by play count DESC" + collaborative
+  // filtering (plan §"MIN-2"). Source is UserLibrary (not SharedGames) —
+  // see #2176 for why this matters.
+  const suggestedCards = useMemo<ReadonlyArray<SuggestedGameCard>>(() => {
+    const entries = libraryQuery.data?.items ?? [];
+    return entries
+      .filter(entry => entry.currentState === 'Owned' || entry.currentState === 'Nuovo')
+      .slice(0, 6)
+      .map<SuggestedGameCard>(entry => {
+        const min = entry.minPlayers ?? 0;
+        const max = entry.maxPlayers ?? 0;
+        const playerCount =
+          min > 0 && max > 0 && min !== max
+            ? `${min}-${max}`
+            : min > 0
+              ? `${min}`
+              : max > 0
+                ? `${max}`
+                : '—';
+        const durationMin = entry.playingTimeMinutes ?? 60;
+        return {
+          id: entry.gameId,
+          title: entry.gameTitle,
+          coverImageUrl: entry.coverUrl ?? entry.gameImageUrl ?? undefined,
+          playerCount,
+          durationMin,
+        };
       });
-      return {
-        id: agent.id,
-        entity: 'agent' as MeepleEntityType,
-        title: agent.name,
-        subtitle: agent.type,
-        variant: 'grid',
-        manaPips,
-        status: agent.isActive ? ('active' as const) : ('idle' as const),
-      };
-    });
-  }, [agentsData, router]);
+  }, [libraryQuery.data]);
 
-  const filteredAgentItems = useMemo(() => {
-    let result = agentItems;
-    if (agentsSearch.trim()) {
-      const q = agentsSearch.toLowerCase();
-      result = result.filter(
-        a => a.title.toLowerCase().includes(q) || a.subtitle?.toLowerCase().includes(q)
+  const suggestedState: SuggestedSectionState = deriveSectionState(
+    libraryQuery.isLoading,
+    libraryQuery.isError,
+    suggestedCards.length
+  );
+
+  // Issue #2176 observability: detect cross-endpoint drift when stats reports
+  // owned games but the library list returned 0 mappable entries. Fires once
+  // per state transition (React StrictMode double-mount produces 2 warns in
+  // dev, expected). Logged via console.warn in non-production builds —
+  // production emits this as a Prometheus counter from the backend audit
+  // layer instead.
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+    if (!statsQuery.data || libraryQuery.isLoading || libraryQuery.isError) return;
+    if (statsQuery.data.totalGames > 0 && suggestedCards.length === 0) {
+      console.warn(
+        '[Dashboard] cross-endpoint drift: useLibraryStats.totalGames > 0 but SuggestedSection rendered 0 cards. ' +
+          `stats=${statsQuery.data.totalGames}, libraryItems=${libraryQuery.data?.items.length ?? 0}, ` +
+          'check filter (Owned/Nuovo) or useLibrary pagination.'
       );
     }
-    if (agentsFilter === 'active') {
-      result = result.filter(a => a.status === 'active');
-    }
-    return result;
-  }, [agentItems, agentsSearch, agentsFilter]);
+  }, [
+    statsQuery.data,
+    libraryQuery.isLoading,
+    libraryQuery.isError,
+    libraryQuery.data,
+    suggestedCards.length,
+  ]);
 
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
+  // ── Block C (#2289 / #2247 follow-up): Agenti pronti ─────────────────────
+  // Surfaces the user's library entries that already have an indexed KB
+  // (`hasKb=true`, mapped from `UserLibraryEntry`). Mirrors the at-a-glance
+  // chip wired on `/library` so the dashboard's headline answer to "which of
+  // my games already have a chat-ready agent?" is one fold above the
+  // suggested cards. The section is hidden when the list is empty so first-
+  // login users with no KB-ready games still see a clean dashboard.
+  const agentiProntiEntries = useMemo(
+    () => (libraryQuery.data?.items ?? []).filter(entry => entry.hasKb).slice(0, 6),
+    [libraryQuery.data]
+  );
 
-  // Build stats for greeting strip
-  const stats = {
-    games: gameItems.length,
-    sessions: sessionItems.length,
-    agents: agentItems.length,
+  // ── Slot #4: Friends Activity ────────────────────────────────────────────
+  const friendsActivities = friendsActivityQuery.data ?? [];
+  const friendsState: FriendsActivitySectionState = deriveSectionState(
+    friendsActivityQuery.isLoading,
+    friendsActivityQuery.isError,
+    friendsActivities.length
+  );
+
+  // ── KPI assembly (preserved from Stage 3 — hero KPIs are independent of
+  //    the 4 priority slots and remain meaningful as a snapshot at the top) ──
+  const kpi = useMemo<DashboardHeroKpi>(
+    () => ({
+      games: statsQuery.data?.totalGames ?? 0,
+      sessions: sessionsQuery.data?.total ?? undefined,
+      hoursPlayed: undefined, // not yet exposed by backend
+      winRate: undefined, // not yet exposed by backend
+    }),
+    [statsQuery.data, sessionsQuery.data]
+  );
+
+  // ── Hero labels (i18n-mediated) ──────────────────────────────────────────
+  const heroLabels = {
+    greetingMorning: t('pages.dashboard.hero.greetingMorning'),
+    greetingAfternoon: t('pages.dashboard.hero.greetingAfternoon'),
+    greetingEvening: t('pages.dashboard.hero.greetingEvening'),
+    subtitle: t('pages.dashboard.hero.subtitle'),
+    kpiGames: t('pages.dashboard.hero.kpiGames'),
+    kpiSessions: t('pages.dashboard.hero.kpiSessions'),
+    kpiHours: t('pages.dashboard.hero.kpiHours'),
+    kpiWinRate: t('pages.dashboard.hero.kpiWinRate'),
   };
 
   return (
-    <div className="mx-auto flex max-w-[1200px] flex-col gap-7 px-4 pb-24 pt-4">
-      <GreetingStrip displayName={displayName} stats={stats} />
+    <main data-slot="dashboard-client" className="flex w-full flex-col">
+      <DashboardHero
+        userName={user?.displayName ?? user?.email ?? t('pages.dashboard.hero.guestName')}
+        kpi={kpi}
+        labels={heroLabels}
+      />
 
-      {/* Games zone (orange) */}
-      <EntityZone entity="game" title="Giochi" count={gameItems.length} viewAllHref="/games">
-        {isNewUser ? (
-          <NewUserGamesBlock
-            search={gamesSearch}
-            onSearchChange={setGamesSearch}
-            filter={gamesFilter}
-            onFilterChange={setGamesFilter}
-          />
-        ) : (
-          <HubLayout
-            searchPlaceholder="Cerca giochi..."
-            searchValue={gamesSearch}
-            onSearchChange={setGamesSearch}
-            filterChips={GAMES_FILTERS}
-            activeFilterId={gamesFilter}
-            onFilterChange={setGamesFilter}
+      <HubPageContainer data-slot="dashboard-priority-sections" className="gap-8 py-8 pb-16">
+        <ProssimiSection
+          state={prossimiState}
+          gameNights={prossimiCards}
+          onRetry={() => {
+            void upcomingGNQuery.refetch();
+          }}
+        />
+
+        <RecentiSection
+          state={recentiState}
+          gameNights={recentiCards}
+          onRetry={() => {
+            // F20 #1974: wired to the completed-GN endpoint.
+            void completedGNQuery.refetch();
+          }}
+        />
+
+        <SuggestedSection
+          state={suggestedState}
+          games={suggestedCards}
+          onRetry={() => {
+            void libraryQuery.refetch();
+          }}
+        />
+
+        {/* Block C (#2289 / #2247): inline section because the dashboard
+            already adopts the "filter → render-if-non-empty → MeepleCard grid"
+            pattern (see SuggestedSection internals) and a dedicated section
+            primitive here would add a `Section/Empty/Error/Loading` family
+            that's outside the scope of this follow-up — `hasKb` data piggy-
+            backs on `libraryQuery`, so loading/error states are already
+            covered upstream by SuggestedSection rendering. */}
+        {agentiProntiEntries.length > 0 ? (
+          <section
+            data-slot="dashboard-agenti-pronti"
+            aria-label="Giochi con agente pronto"
+            className="flex flex-col gap-4"
           >
-            <MeepleCardGrid items={filteredGameItems} isLoading={libraryLoading} />
-          </HubLayout>
-        )}
-      </EntityZone>
-
-      {/* Sessions zone (indigo) — horizontal scroll */}
-      <EntityZone
-        entity="session"
-        title="Sessioni"
-        count={sessionItems.length}
-        viewAllHref="/sessions"
-      >
-        <HubLayout
-          searchPlaceholder="Filtra per stato..."
-          searchValue={sessionsSearch}
-          onSearchChange={setSessionsSearch}
-          filterChips={SESSIONS_FILTERS}
-          activeFilterId={sessionsFilter}
-          onFilterChange={setSessionsFilter}
-        >
-          {sessionsLoading ? (
-            <LoadingSkeleton count={4} />
-          ) : filteredSessionItems.length === 0 ? (
-            <EmptyCTA
-              icon="🎯"
-              title="Nessuna sessione"
-              sub="Inizia una nuova partita e traccia i tuoi progressi in tempo reale."
-              actions={[{ label: '＋ Crea sessione', href: '/sessions/new', primary: true }]}
-            />
-          ) : (
-            <div
-              role="region"
-              aria-label="Sessioni recenti"
-              tabIndex={0}
-              className="flex gap-3.5 overflow-x-auto pb-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg"
+            <header className="flex items-baseline justify-between gap-3">
+              <h2 className="font-display text-[18px] font-extrabold text-foreground">
+                Giochi con agente pronto
+              </h2>
+              <Link
+                href="/library?hasKb=true"
+                className="font-display text-[12px] font-bold text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Vedi tutti →
+              </Link>
+            </header>
+            <ul
+              role="list"
+              className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
             >
-              {filteredSessionItems.map(item => (
-                <div key={item.id ?? item.title} className="w-[260px] shrink-0">
-                  <MeepleCard {...item} />
-                </div>
+              {agentiProntiEntries.map(entry => (
+                <li key={entry.id} role="listitem">
+                  <Link
+                    href={`/library/${entry.gameId}`}
+                    className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <MeepleCard
+                      entity="game"
+                      variant="compact"
+                      id={entry.id}
+                      title={entry.gameTitle}
+                      subtitle={entry.gamePublisher ?? undefined}
+                      imageUrl={entry.coverUrl ?? entry.gameImageUrl ?? undefined}
+                      rating={entry.averageRating ?? undefined}
+                      ratingMax={10}
+                      metadata={[
+                        {
+                          label:
+                            entry.kbCardCount > 1
+                              ? `📄 ${entry.kbIndexedCount}/${entry.kbCardCount} KB`
+                              : '📄 KB',
+                        },
+                      ]}
+                      headingLevel={3}
+                    />
+                  </Link>
+                </li>
               ))}
-            </div>
-          )}
-        </HubLayout>
-      </EntityZone>
+            </ul>
+          </section>
+        ) : null}
 
-      {/* Agents zone (amber) */}
-      <EntityZone entity="agent" title="Agenti AI" count={agentItems.length} viewAllHref="/agents">
-        <HubLayout
-          searchPlaceholder="Cerca agenti..."
-          searchValue={agentsSearch}
-          onSearchChange={setAgentsSearch}
-          filterChips={AGENTS_FILTERS}
-          activeFilterId={agentsFilter}
-          onFilterChange={setAgentsFilter}
-        >
-          <MeepleCardGrid
-            items={filteredAgentItems}
-            isLoading={agentsLoading}
-            emptyNode={
-              <EmptyCTA
-                icon="🤖"
-                title="Nessun agente attivo"
-                sub="Avvia una chat con un agente AI per ricevere aiuto durante la partita."
-                actions={[
-                  { label: '💬 Avvia chat', href: '/chat', primary: true },
-                  { label: '＋ Crea agente', href: '/agents/new' },
-                ]}
-              />
-            }
-          />
-        </HubLayout>
-      </EntityZone>
+        <FriendsActivitySection state={friendsState} activities={friendsActivities} />
+      </HubPageContainer>
 
-      {/* Toolkit zone (green) */}
-      <EntityZone entity="toolkit" title="Strumenti" count={TOOLKIT_TOOLS.length}>
-        <ToolkitGrid />
-      </EntityZone>
-    </div>
+      {/* #1929 WP5: cascade-store driven drawer renderer for dashboard card clicks */}
+      <CascadeDrawerHost />
+    </main>
   );
 }

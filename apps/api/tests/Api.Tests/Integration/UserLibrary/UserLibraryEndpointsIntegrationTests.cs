@@ -389,9 +389,9 @@ public sealed class UserLibraryEndpointsIntegrationTests : IAsyncLifetime
         // Arrange
         var gameId = Guid.NewGuid();
 
-        // Act
-        var response = await _client.PutAsJsonAsync(
-            $"/api/v1/library/games/{gameId}/state",
+        // Act — consolidated under PATCH /library/games/{id} (Fase 3 consolidation)
+        var response = await _client.PatchAsJsonAsync(
+            $"/api/v1/library/games/{gameId}",
             new { NewState = "playing" });
 
         // Assert

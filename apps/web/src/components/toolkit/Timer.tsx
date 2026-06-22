@@ -163,11 +163,11 @@ export function Timer({ name, defaultSeconds, type, onAction, sessionId }: Timer
   };
 
   return (
-    <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-      <div className="text-center text-sm font-semibold text-slate-700">{name}</div>
+    <div className="space-y-3 rounded-lg border border-border bg-card p-4">
+      <div className="text-center text-sm font-semibold text-foreground">{name}</div>
       <div
         className={`text-center text-5xl font-bold tabular-nums transition-colors ${
-          isWarning ? 'text-red-500' : isExpired ? 'text-slate-300' : 'text-slate-800'
+          isWarning ? 'text-red-500' : isExpired ? 'text-slate-300' : 'text-foreground'
         }`}
         data-testid="timer-display"
       >

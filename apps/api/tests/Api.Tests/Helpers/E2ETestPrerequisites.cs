@@ -50,10 +50,10 @@ public static class E2ETestPrerequisites
     }
 
     /// <summary>
-    /// Checks if Qdrant vector database is running and accessible.
+    /// Checks if pgvector vector database is running and accessible.
     /// </summary>
-    /// <param name="baseUrl">Qdrant base URL (default: http://localhost:6333)</param>
-    /// <returns>True if Qdrant is accessible, false otherwise</returns>
+    /// <param name="baseUrl">pgvector base URL (default: http://localhost:6333)</param>
+    /// <returns>True if pgvector is accessible, false otherwise</returns>
     public static async Task<bool> IsQdrantAvailableAsync(string? baseUrl = null)
     {
         var url = baseUrl ?? QdrantUrl;
@@ -111,17 +111,17 @@ public static class E2ETestPrerequisites
                 $"❌ API not available at {url}\n" +
                 "Prerequisites:\n" +
                 "  1. Start API: cd apps/api/src/Api && dotnet run\n" +
-                "  2. Ensure services running: docker compose up postgres qdrant redis\n" +
+                "  2. Ensure services running: docker compose up postgres redis\n" +
                 "  3. Verify API health: curl http://localhost:8080/health"
             );
         }
     }
 
     /// <summary>
-    /// Skips the test if Qdrant is not available.
+    /// Skips the test if pgvector is not available.
     /// </summary>
-    /// <param name="baseUrl">Qdrant base URL (default: http://localhost:6333)</param>
-    /// <exception cref="SkipException">Thrown when Qdrant is not available</exception>
+    /// <param name="baseUrl">pgvector base URL (default: http://localhost:6333)</param>
+    /// <exception cref="SkipException">Thrown when pgvector is not available</exception>
     public static async Task SkipIfQdrantNotAvailableAsync(string? baseUrl = null)
     {
         var url = baseUrl ?? QdrantUrl;
@@ -161,7 +161,7 @@ public static class E2ETestPrerequisites
 
     /// <summary>
     /// Skips the test if any required E2E infrastructure is unavailable.
-    /// Checks API, Qdrant, and Redis.
+    /// Checks API, pgvector, and Redis.
     /// </summary>
     /// <exception cref="SkipException">Thrown when any required service is not available</exception>
     public static async Task SkipIfE2EInfrastructureNotAvailableAsync()

@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState } from 'react';
@@ -276,7 +277,7 @@ export default function DocumentsLibraryPage() {
 
       {/* Analytics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+        <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
@@ -290,7 +291,7 @@ export default function DocumentsLibraryPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+        <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
@@ -306,7 +307,7 @@ export default function DocumentsLibraryPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+        <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
@@ -325,11 +326,11 @@ export default function DocumentsLibraryPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+        <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-zinc-700/50 flex items-center justify-center">
-                <HardDriveIcon className="h-5 w-5 text-slate-600 dark:text-zinc-400" />
+              <div className="h-10 w-10 rounded-lg bg-muted dark:bg-zinc-700/50 flex items-center justify-center">
+                <HardDriveIcon className="h-5 w-5 text-muted-foreground dark:text-muted-foreground" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Storage</p>
@@ -344,7 +345,7 @@ export default function DocumentsLibraryPage() {
 
       {/* Storage Health Bar */}
       {storageHealth && (
-        <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg border border-slate-200/60 dark:border-zinc-700/40 p-4">
+        <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg border border-border/60 dark:border-zinc-700/40 p-4">
           <div className="flex items-center gap-6 text-sm">
             <div className="flex items-center gap-2">
               <DatabaseIcon className="h-4 w-4 text-blue-500" />
@@ -397,7 +398,7 @@ export default function DocumentsLibraryPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="pl-9 w-64 bg-white/70 dark:bg-zinc-800/70"
+              className="pl-9 w-64 bg-card/70 dark:bg-zinc-800/70"
             />
           </div>
           <Select
@@ -407,7 +408,7 @@ export default function DocumentsLibraryPage() {
               setPage(1);
             }}
           >
-            <SelectTrigger className="w-40 bg-white/70 dark:bg-zinc-800/70">
+            <SelectTrigger className="w-40 bg-card/70 dark:bg-zinc-800/70">
               <SelectValue placeholder="Status filter" />
             </SelectTrigger>
             <SelectContent>
@@ -469,11 +470,11 @@ export default function DocumentsLibraryPage() {
       )}
 
       {/* Documents Table */}
-      <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-zinc-700/40 overflow-hidden">
+      <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-border/60 dark:border-zinc-700/40 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200/60 dark:border-zinc-700/40">
+              <tr className="border-b border-border/60 dark:border-zinc-700/40">
                 <th className="text-left p-3 w-10">
                   <input
                     type="checkbox"
@@ -481,7 +482,7 @@ export default function DocumentsLibraryPage() {
                       filteredItems.length > 0 && selectedIds.length === filteredItems.length
                     }
                     onChange={toggleSelectAll}
-                    className="rounded border-slate-300 dark:border-zinc-600"
+                    className="rounded border-border dark:border-zinc-600"
                   />
                 </th>
                 <th className="text-left p-3 font-medium text-muted-foreground">Document</th>
@@ -497,7 +498,7 @@ export default function DocumentsLibraryPage() {
             <tbody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i} className="border-b border-slate-100 dark:border-zinc-800/60">
+                  <tr key={i} className="border-b border-border dark:border-zinc-800/60">
                     <td className="p-3">
                       <Skeleton className="h-4 w-4" />
                     </td>
@@ -539,14 +540,14 @@ export default function DocumentsLibraryPage() {
                 filteredItems.map((item: PdfListItem) => (
                   <tr
                     key={item.id}
-                    className="border-b border-slate-100 dark:border-zinc-800/60 hover:bg-slate-50/50 dark:hover:bg-zinc-700/30"
+                    className="border-b border-border dark:border-zinc-800/60 hover:bg-muted/50 dark:hover:bg-zinc-700/30"
                   >
                     <td className="p-3">
                       <input
                         type="checkbox"
                         checked={selectedIds.includes(item.id)}
                         onChange={() => toggleSelect(item.id)}
-                        className="rounded border-slate-300 dark:border-zinc-600"
+                        className="rounded border-border dark:border-zinc-600"
                       />
                     </td>
                     <td className="p-3">
@@ -643,7 +644,7 @@ export default function DocumentsLibraryPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200/60 dark:border-zinc-700/40">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border/60 dark:border-zinc-700/40">
             <p className="text-sm text-muted-foreground">
               Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total}
             </p>

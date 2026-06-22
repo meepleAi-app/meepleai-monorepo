@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
@@ -350,6 +351,63 @@ public class PdfDocumentTests
         document.ProcessingState.Should().Be(PdfProcessingState.Chunking);
     }
 
+    // #2284 follow-up: TD1 — MarkProcessed domain method
+    [Fact]
+    public void MarkProcessed_FromReadyState_SetsProcessedAt()
+    {
+        // Arrange — advance the document fully to Ready first.
+        var document = CreateTestDocument(LanguageCode.English);
+        document.TransitionTo(PdfProcessingState.Uploading);
+        document.TransitionTo(PdfProcessingState.Extracting);
+        document.TransitionTo(PdfProcessingState.Chunking);
+        document.TransitionTo(PdfProcessingState.Embedding);
+        document.TransitionTo(PdfProcessingState.Indexing);
+        document.TransitionTo(PdfProcessingState.Ready);
+        var expected = new DateTime(2026, 6, 13, 12, 0, 0, DateTimeKind.Utc);
+
+        // Act
+        document.MarkProcessed(expected);
+
+        // Assert
+        document.ProcessedAt.Should().Be(expected);
+        document.ProcessingState.Should().Be(PdfProcessingState.Ready,
+            "MarkProcessed is a pure audit setter — state must remain Ready");
+    }
+
+    [Fact]
+    public void MarkProcessed_FromNonReadyState_Throws()
+    {
+        var document = CreateTestDocument(LanguageCode.English);
+        document.TransitionTo(PdfProcessingState.Uploading);
+
+        var act = () => document.MarkProcessed(DateTime.UtcNow);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*Ready*");
+    }
+
+    [Fact]
+    public void MarkProcessed_DoesNotRaiseDomainEvent()
+    {
+        // MarkProcessed is intentionally a pure audit setter — no event raised.
+        // Consumers receive PdfStateChangedEvent + KbDocIndexedEvent from
+        // TransitionTo(Ready) instead.
+        var document = CreateTestDocument(LanguageCode.English);
+        document.TransitionTo(PdfProcessingState.Uploading);
+        document.TransitionTo(PdfProcessingState.Extracting);
+        document.TransitionTo(PdfProcessingState.Chunking);
+        document.TransitionTo(PdfProcessingState.Embedding);
+        document.TransitionTo(PdfProcessingState.Indexing);
+        document.TransitionTo(PdfProcessingState.Ready);
+
+        var eventsBeforeMark = document.DomainEvents.Count;
+
+        document.MarkProcessed(DateTime.UtcNow);
+
+        document.DomainEvents.Count.Should().Be(eventsBeforeMark,
+            "MarkProcessed must NOT add a new domain event");
+    }
+
     [Fact]
     public void MarkAsFailed_WithCategory_SetsAllFields()
     {
@@ -432,6 +490,36 @@ public class PdfDocumentTests
         document.MarkAsCompleted(10);
         document.ProcessingState.Should().Be(PdfProcessingState.Ready);
         document.CanRetry().Should().BeFalse(); // Can't retry completed document
+    }
+
+    [Fact]
+    public void TransitionTo_Ready_FromIndexing_RaisesExactlyTwoDomainEvents_Tripwire()
+    {
+        // TRIPWIRE (#2284): pins the event count raised by PdfDocument.TransitionTo(Ready) at 2.
+        // The Ready transition raises BOTH PdfStateChangedEvent (consumed by 4 handlers:
+        // cache-invalidation, notification, metrics, auto-agent-creation) AND KbDocIndexedEvent
+        // (activity rail milestone, BE-3 #1590 B2).
+        //
+        // If a future change adds a third event to TransitionTo(Ready), this test fails and
+        // forces the developer to wire the new event into the appropriate downstream handlers
+        // before merging — preventing silent drift between domain emission and handler coverage.
+        var document = CreateDefaultDocument();
+        document.TransitionTo(PdfProcessingState.Uploading);
+        document.TransitionTo(PdfProcessingState.Extracting);
+        document.TransitionTo(PdfProcessingState.Chunking);
+        document.TransitionTo(PdfProcessingState.Embedding);
+        document.TransitionTo(PdfProcessingState.Indexing);
+        document.ClearDomainEvents();
+
+        document.TransitionTo(PdfProcessingState.Ready);
+
+        document.DomainEvents.Should().HaveCount(2,
+            because: "PdfDocument.TransitionTo(Ready) is documented to raise exactly " +
+                     "PdfStateChangedEvent + KbDocIndexedEvent. Adding a third event without " +
+                     "wiring its handlers breaks the structural-dispatch contract used by " +
+                     "FinalizeProcessingAsync (#2284 PR C and follow-ups).");
+        document.DomainEvents.Should().ContainSingle(e => e is PdfStateChangedEvent);
+        document.DomainEvents.Should().ContainSingle(e => e is KbDocIndexedEvent);
     }
 
     #region BaseDocumentId Tests (Issue #5444)
@@ -538,4 +626,127 @@ public class PdfDocumentTests
     }
 
     #endregion
+
+    // ===== Cover Generation Tests (Issue #1852) =====
+
+    private static PdfDocument CreateValidPdf()
+    {
+        return new PdfDocument(
+            id: Guid.NewGuid(),
+            gameId: Guid.NewGuid(),
+            fileName: new FileName("rulebook.pdf"),
+            filePath: "pdfs/test.pdf",
+            fileSize: new FileSize(1024),
+            uploadedByUserId: Guid.NewGuid());
+    }
+
+    [Fact]
+    public void MarkCoverGenerated_SetsFieldsAndRaisesEvent()
+    {
+        var pdf = CreateValidPdf();
+        pdf.ClearDomainEvents();
+
+        pdf.MarkCoverGenerated("pdf-cover-xyz", pageIndex: 0);
+
+        pdf.CoverR2Key.Should().Be("pdf-cover-xyz");
+        pdf.CoverGenerationStatus.Should().Be(PdfCoverGenerationStatus.Generated);
+        pdf.CoverPageIndex.Should().Be(0);
+        pdf.CoverGenerationError.Should().BeNull();
+
+        pdf.DomainEvents.Should().ContainSingle(e => e is PdfCoverGeneratedEvent);
+        var evt = (PdfCoverGeneratedEvent)pdf.DomainEvents.Single(e => e is PdfCoverGeneratedEvent);
+        evt.PdfDocumentId.Should().Be(pdf.Id);
+        evt.CoverR2Key.Should().Be("pdf-cover-xyz");
+        evt.CoverPageIndex.Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void MarkCoverGenerated_EmptyKey_Throws(string? key)
+    {
+        var pdf = CreateValidPdf();
+
+        Action act = () => pdf.MarkCoverGenerated(key!, 0);
+
+        act.Should().Throw<ArgumentException>().WithParameterName("coverR2Key");
+    }
+
+    [Fact]
+    public void MarkCoverGenerated_NegativePageIndex_Throws()
+    {
+        var pdf = CreateValidPdf();
+
+        Action act = () => pdf.MarkCoverGenerated("key", -1);
+
+        act.Should().Throw<ArgumentException>().WithParameterName("pageIndex");
+    }
+
+    [Fact]
+    public void MarkCoverSkipped_SetsStatusOnly_NoEvent()
+    {
+        var pdf = CreateValidPdf();
+        pdf.ClearDomainEvents();
+
+        pdf.MarkCoverSkipped();
+
+        pdf.CoverGenerationStatus.Should().Be(PdfCoverGenerationStatus.Skipped);
+        pdf.CoverR2Key.Should().BeNull();
+        pdf.CoverPageIndex.Should().BeNull();
+        pdf.CoverGenerationError.Should().BeNull();
+        pdf.DomainEvents.Should().NotContain(e => e is PdfCoverGeneratedEvent);
+    }
+
+    [Fact]
+    public void MarkCoverFailed_SetsErrorAndTruncates()
+    {
+        var pdf = CreateValidPdf();
+        pdf.ClearDomainEvents();
+        var longError = new string('x', 600);
+
+        pdf.MarkCoverFailed(longError);
+
+        pdf.CoverGenerationStatus.Should().Be(PdfCoverGenerationStatus.Failed);
+        pdf.CoverGenerationError.Should().HaveLength(512);
+        pdf.DomainEvents.Should().NotContain(e => e is PdfCoverGeneratedEvent);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void MarkCoverFailed_EmptyError_Throws(string? err)
+    {
+        var pdf = CreateValidPdf();
+
+        Action act = () => pdf.MarkCoverFailed(err!);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void Reconstitute_RoundTripsCoverFields()
+    {
+        var pdf = PdfDocument.Reconstitute(
+            id: Guid.NewGuid(),
+            gameId: Guid.NewGuid(),
+            fileName: new FileName("rulebook.pdf"),
+            filePath: "pdfs/test.pdf",
+            fileSize: new FileSize(1024),
+            uploadedByUserId: Guid.NewGuid(),
+            uploadedAt: DateTime.UtcNow,
+            processedAt: null,
+            pageCount: 10,
+            processingError: null,
+            language: LanguageCode.English,
+            coverR2Key: "pdf-cover-xyz",
+            coverGenerationStatus: "Generated",
+            coverPageIndex: 1,
+            coverGenerationError: null);
+
+        pdf.CoverR2Key.Should().Be("pdf-cover-xyz");
+        pdf.CoverGenerationStatus.Should().Be(PdfCoverGenerationStatus.Generated);
+        pdf.CoverPageIndex.Should().Be(1);
+    }
 }

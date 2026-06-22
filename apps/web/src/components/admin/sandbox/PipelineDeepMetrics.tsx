@@ -95,7 +95,7 @@ function ChunkDistributionChart({ buckets }: { buckets: ChunkSizeBucket[] }) {
               <span className="w-20 shrink-0 font-mono text-xs text-muted-foreground text-right">
                 {bucket.rangeLabel}
               </span>
-              <div className="flex-1 h-5 bg-gray-100 rounded overflow-hidden">
+              <div className="flex-1 h-5 bg-muted rounded overflow-hidden">
                 <div
                   data-testid={`bar-${bucket.rangeLabel}`}
                   className="h-full bg-amber-400 rounded transition-all"
@@ -119,7 +119,7 @@ function VectorStatsCard({ stats }: { stats: VectorStats }) {
       <h4 className="font-quicksand text-sm font-semibold">Statistiche pgvector</h4>
       <div
         data-testid="vector-stats"
-        className="grid grid-cols-3 gap-3 rounded-lg border bg-white/50 p-3"
+        className="grid grid-cols-3 gap-3 rounded-lg border bg-card/50 p-3"
       >
         <div className="text-center">
           <p className="font-mono text-lg font-bold" data-testid="vectors-count">

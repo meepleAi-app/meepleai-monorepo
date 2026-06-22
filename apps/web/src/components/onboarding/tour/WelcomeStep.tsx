@@ -1,6 +1,6 @@
 import type { JSX } from 'react';
 
-import { Btn } from '@/components/ui/v2/btn';
+import { Btn } from '@/components/ui/btn';
 
 export interface WelcomeStepProps {
   readonly userName: string | null;

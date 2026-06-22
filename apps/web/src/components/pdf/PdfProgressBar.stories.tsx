@@ -190,7 +190,7 @@ export const AnimatedProgress: Story = {
 export const DarkMode: Story = {
   name: 'All States (Dark Mode)',
   render: () => (
-    <div className="dark bg-gray-900 p-6 rounded-lg space-y-6 max-w-md">
+    <div className="dark bg-card p-6 rounded-lg space-y-6 max-w-md">
       <PdfProgressBar state="uploading" />
       <PdfProgressBar state="extracting" progress={45} />
       <PdfProgressBar state="embedding" progress={75} />

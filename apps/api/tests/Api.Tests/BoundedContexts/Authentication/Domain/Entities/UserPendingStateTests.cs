@@ -126,7 +126,7 @@ public sealed class UserPendingStateTests
             timeProvider);
         user.ClearDomainEvents();
 
-        var passwordHash = PasswordHash.Create("SecurePassword123!");
+        var passwordHash = PasswordHash.Create("SecureUnusualPwd123!");
 
         // Act
         user.ActivateFromInvitation(passwordHash, timeProvider);
@@ -147,11 +147,11 @@ public sealed class UserPendingStateTests
             Guid.NewGuid(),
             Email.Parse("active@example.com"),
             "Active User",
-            PasswordHash.Create("SecurePassword123!"),
+            PasswordHash.Create("SecureUnusualPwd123!"),
             Role.User,
             UserTier.Free);
 
-        var passwordHash = PasswordHash.Create("NewPassword123!");
+        var passwordHash = PasswordHash.Create("NewUnusualPwd123!");
         var timeProvider = new FakeTimeProvider();
 
         // Act & Assert
@@ -176,7 +176,7 @@ public sealed class UserPendingStateTests
             timeProvider);
         user.ClearDomainEvents(); // Clear the provisioned event
 
-        var passwordHash = PasswordHash.Create("SecurePassword123!");
+        var passwordHash = PasswordHash.Create("SecureUnusualPwd123!");
 
         // Act
         user.ActivateFromInvitation(passwordHash, timeProvider);

@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 'use client';
 
 /**
@@ -25,9 +26,9 @@ import type {
 // ============================================================================
 
 function PlayerAvatar({ player }: { player: SessionPlayerInfo }) {
-  const bgColor = PLAYER_COLOR_BG[player.color] ?? 'bg-slate-400';
+  const bgColor = PLAYER_COLOR_BG[player.color] ?? 'bg-muted-foreground';
   return (
-    <div className="flex items-center gap-2.5 rounded-lg bg-white/60 p-2">
+    <div className="flex items-center gap-2.5 rounded-lg bg-card/60 p-2">
       <div
         className={cn(
           'flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white',
@@ -37,10 +38,10 @@ function PlayerAvatar({ player }: { player: SessionPlayerInfo }) {
         {player.displayName.charAt(0).toUpperCase()}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate font-nunito text-sm font-semibold text-slate-800">
+        <p className="truncate font-nunito text-sm font-semibold text-foreground">
           {player.displayName}
         </p>
-        <p className="text-xs text-slate-500 capitalize">{player.role}</p>
+        <p className="text-xs text-muted-foreground capitalize">{player.role}</p>
       </div>
       {player.totalScore !== undefined && (
         <span className="font-mono text-sm font-bold text-indigo-600">{player.totalScore}</span>
@@ -59,11 +60,11 @@ function StatItem({
   value: string;
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg bg-white/50 px-3 py-2">
+    <div className="flex items-center gap-2 rounded-lg bg-card/50 px-3 py-2">
       <Icon className="h-4 w-4 text-indigo-400 flex-shrink-0" />
       <div className="min-w-0">
-        <p className="text-[10px] uppercase tracking-wider text-slate-400 font-nunito">{label}</p>
-        <p className="text-sm font-semibold text-slate-700 font-nunito truncate">{value}</p>
+        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-nunito">{label}</p>
+        <p className="text-sm font-semibold text-foreground font-nunito truncate">{value}</p>
       </div>
     </div>
   );
@@ -88,7 +89,7 @@ function ActionButton({
         'flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium font-nunito transition-colors',
         variant === 'primary' && 'bg-indigo-500 text-white hover:bg-indigo-600',
         variant === 'danger' && 'bg-red-50 text-red-600 hover:bg-red-100',
-        variant === 'default' && 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+        variant === 'default' && 'bg-muted text-foreground hover:bg-muted'
       )}
     >
       <Icon className="h-3.5 w-3.5" aria-hidden="true" />
@@ -110,7 +111,7 @@ interface OverviewTabProps {
 export function OverviewTab({ data, status, actions }: OverviewTabProps) {
   if (!data) {
     return (
-      <div className="flex h-48 items-center justify-center text-sm text-slate-400 font-nunito">
+      <div className="flex h-48 items-center justify-center text-sm text-muted-foreground font-nunito">
         No session data available
       </div>
     );
@@ -153,7 +154,7 @@ export function OverviewTab({ data, status, actions }: OverviewTabProps) {
       <div>
         <div className="mb-2 flex items-center gap-1.5">
           <Users className="h-3.5 w-3.5 text-indigo-500" />
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 font-nunito">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-nunito">
             Players ({data.players.length})
           </h3>
         </div>
@@ -166,7 +167,7 @@ export function OverviewTab({ data, status, actions }: OverviewTabProps) {
 
       {/* Actions */}
       {actions && (
-        <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+        <div className="flex flex-wrap gap-2 border-t border-border pt-3">
           {status === 'setup' && (
             <>
               <ActionButton icon={Play} label="Start" onClick={actions.onStart} variant="primary" />

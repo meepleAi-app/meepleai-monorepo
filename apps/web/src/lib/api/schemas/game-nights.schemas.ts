@@ -48,8 +48,38 @@ export const CreateGameNightInputSchema = z.object({
   maxPlayers: z.number().min(2).max(50).optional(),
   gameIds: z.array(z.string().uuid()).max(20).optional(),
   invitedUserIds: z.array(z.string().uuid()).max(49).optional(),
+  // Issue #950 W1-PR1: email invitees feeding the token-based
+  // GameNightInvitation flow (#607 Wave A.5a).
+  invitedEmails: z.array(z.string().email().max(200)).max(49).optional(),
 });
 export type CreateGameNightInput = z.infer<typeof CreateGameNightInputSchema>;
+
+// ──────────────────────────────────────────────────────────────────────
+// Issue #950 W1-PR2 — wizard hooks payloads
+// ──────────────────────────────────────────────────────────────────────
+
+export const RegularDtoSchema = z.object({
+  id: z.string().uuid(),
+  displayName: z.string(),
+  email: z.string(),
+  eventCount: z.number().int().nonnegative(),
+  lastInvitedAt: z.string(),
+});
+export type RegularDto = z.infer<typeof RegularDtoSchema>;
+
+export const ConflictEntryDtoSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  scheduledAt: z.string(),
+  role: z.enum(['organizer', 'invitee']),
+});
+export type ConflictEntryDto = z.infer<typeof ConflictEntryDtoSchema>;
+
+export const ConflictCheckDtoSchema = z.object({
+  hasConflict: z.boolean(),
+  conflicts: z.array(ConflictEntryDtoSchema),
+});
+export type ConflictCheckDto = z.infer<typeof ConflictCheckDtoSchema>;
 
 export const UpdateGameNightInputSchema = z.object({
   title: z.string().min(3).max(200),

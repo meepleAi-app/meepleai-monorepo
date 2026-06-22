@@ -41,9 +41,9 @@ function levelBadgeClass(level: string): string {
     case 'debug':
       return 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300';
     case 'verbose':
-      return 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400';
+      return 'bg-muted text-muted-foreground';
     default:
-      return 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400';
+      return 'bg-muted text-muted-foreground';
   }
 }
 
@@ -204,10 +204,7 @@ export function AppLogViewer() {
   const remainingCount = data?.remainingCount ?? 0;
 
   return (
-    <div
-      className="rounded-xl border bg-white/70 backdrop-blur-md dark:bg-zinc-900/70"
-      data-testid="app-log-viewer"
-    >
+    <div className="rounded-xl border bg-card/70 backdrop-blur-md" data-testid="app-log-viewer">
       {/* Filter bar */}
       <div className="flex flex-wrap items-end gap-2 border-b px-4 py-3">
         <div className="relative min-w-[180px] flex-1">

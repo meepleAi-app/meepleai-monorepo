@@ -260,6 +260,21 @@ internal static partial class MeepleAiMetrics
         description: "Count of system prompts that include the copyright paraphrase instruction");
 
     /// <summary>
+    /// Counter for LLM responses inspected for inline citation markers ([N]).
+    /// Issue #1703 D-1703-E — tracks production compliance with the BE prompt
+    /// instruction. Tag <c>compliant=true</c> when the response contains at least
+    /// one well-formed [N] marker whose N is within citations bounds; <c>false</c>
+    /// otherwise.
+    /// Increment site deferred: a follow-up PR will wire increment either via FE
+    /// helper or a BE post-processor scanning assembled token text at Complete-event time.
+    /// Tags: compliant (bool), agent_typology (string).
+    /// </summary>
+    public static readonly Counter<long> CitationMarkersEmittedTotal = Meter.CreateCounter<long>(
+        name: "meepleai.rag.citation_markers.emitted_total",
+        unit: "responses",
+        description: "Count of LLM responses inspected for inline [N] citation markers");
+
+    /// <summary>
     /// Counter for detected verbatim runs exceeding the configured threshold.
     /// #447 observability — drives false-positive calibration.
     /// Tags: run_length (int), document_id (string).
@@ -287,4 +302,53 @@ internal static partial class MeepleAiMetrics
         name: "meepleai.rag.copyright.guard.scan_duration",
         unit: "ms",
         description: "Duration of copyright leak guard scans in milliseconds");
+
+    // === Issue #1686 / #1731 KB Global Search Facets (D-14) ===
+
+    /// <summary>
+    /// Counter for facet usage on /knowledge-base/search/global.
+    /// Issue #1731 / D-14 — tracks 30-day adoption of docType/gameId/language facets.
+    /// Tags: facet (docType|gameId|language, bounded set), state (applied|rejected, bounded set).
+    /// NO label of facet value (would explode cardinality with gameId UUIDs).
+    /// </summary>
+    public static readonly Counter<long> KbGlobalSearchFacetTotal = Meter.CreateCounter<long>(
+        name: "meepleai.kb.global_search.facet.total",
+        unit: "activations",
+        description: "Count of facet activations on /knowledge-base/search/global");
+
+    /// <summary>
+    /// Stable identifiers for facet types on /knowledge-base/search/global.
+    /// Bounded set to prevent Prometheus label cardinality explosion.
+    /// </summary>
+    public static class KbGlobalSearchFacetTypes
+    {
+        public const string DocType = "docType";
+        public const string GameId = "gameId";
+        public const string Language = "language";
+    }
+
+    /// <summary>
+    /// State of a facet activation on /knowledge-base/search/global.
+    /// applied = facet provided AND survived RBAC intersection.
+    /// rejected = facet provided but rejected by RBAC (D-5 silent drop → 200 empty).
+    /// </summary>
+    public static class KbGlobalSearchFacetStates
+    {
+        public const string Applied = "applied";
+        public const string Rejected = "rejected";
+    }
+
+    /// <summary>
+    /// Records a facet activation event on /knowledge-base/search/global.
+    /// Tags: facet (bounded set, see KbGlobalSearchFacetTypes), state (KbGlobalSearchFacetStates).
+    /// </summary>
+    public static void RecordKbGlobalSearchFacet(string facet, string state)
+    {
+        var tags = new TagList
+        {
+            { "facet", facet },
+            { "state", state }
+        };
+        KbGlobalSearchFacetTotal.Add(1, tags);
+    }
 }

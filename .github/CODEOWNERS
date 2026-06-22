@@ -54,8 +54,13 @@
 /apps/api/*.csproj                  @meepleAi-app
 /apps/api/appsettings*.json         @meepleAi-app
 
-# Database Migrations (requires careful review)
-/apps/api/src/Api/Migrations/       @meepleAi-app
+# Database Migrations (requires careful review per rollback-runbook section 8)
+# Issue #1087: every migration goes through the safety gate in dev-fast.yml;
+# any use of the `-- safe: <rationale>` directive is logged as a PR artifact
+# and requires explicit backend-lead approval before merge.
+/apps/api/src/Api/Infrastructure/Migrations/    @meepleAi-app
+/infra/scripts/check-migration-safety.py        @meepleAi-app
+/infra/scripts/test_check_migration_safety.py   @meepleAi-app
 
 # ============================================
 # Infrastructure & DevOps

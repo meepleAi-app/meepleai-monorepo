@@ -50,7 +50,7 @@ const meta = {
   },
   decorators: [
     Story => (
-      <div className="w-full max-w-md p-6 bg-white dark:bg-slate-800 rounded-lg shadow-lg">
+      <div className="w-full max-w-md p-6 bg-card rounded-lg shadow-lg">
         <Story />
       </div>
     ),
@@ -194,7 +194,7 @@ export const InvalidEmailValidation: Story = {
 };
 
 /**
- * Password too short - minimum 8 characters
+ * Password too short - minimum 12 characters
  */
 export const PasswordTooShortValidation: Story = {
   args: {
@@ -205,7 +205,7 @@ export const PasswordTooShortValidation: Story = {
   parameters: {
     docs: {
       description: {
-        story: 'Password must be at least 8 characters. Shows inline validation error.',
+        story: 'Password must be at least 12 characters. Shows inline validation error.',
       },
     },
   },
@@ -388,7 +388,7 @@ export const DarkMode: Story = {
   },
   decorators: [
     Story => (
-      <div className="dark w-full max-w-md p-6 bg-slate-900 rounded-lg shadow-lg">
+      <div className="dark w-full max-w-md p-6 bg-card rounded-lg shadow-lg">
         <Story />
       </div>
     ),
@@ -409,7 +409,7 @@ export const DarkModeWithRoleSelector: Story = {
   },
   decorators: [
     Story => (
-      <div className="dark w-full max-w-md p-6 bg-slate-900 rounded-lg shadow-lg">
+      <div className="dark w-full max-w-md p-6 bg-card rounded-lg shadow-lg">
         <Story />
       </div>
     ),

@@ -9,7 +9,15 @@ on:
     # K6: Run nightly at 2 AM UTC (only on main branch)
     - cron: '0 2 * * *'
   pull_request:
-    branches: [main, main-staging]
+    # Issue #1587: dropped main-staging from branches. Release PRs (main-dev →
+    # main-staging) no longer trigger Performance Tests because the deploy-staging
+    # workflow already runs `Snapshot Performance Baseline` + `Compare Performance
+    # Baseline` post-deploy on the live staging environment. Running perf on the
+    # release PR was redundant AND held the single self-hosted runner — when a
+    # post-step log-upload hung (split-brain GHA token expiry), it starved the
+    # Deploy to Staging job that needed the same runner (incident 2026-05-26).
+    # Perf on PRs to main (production release) is preserved.
+    branches: [main]
     paths:
       - 'apps/web/**'
       - 'apps/api/src/Api/Routing/**'
@@ -73,6 +81,11 @@ jobs:
   changes:
     name: Detect Changes
     runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
+    # Issue #1587: explicit timeout so this self-hosted job (checkout +
+    # paths-filter) can never tie up the single runner in a stuck teardown.
+    # Completes the "timeout on every perf job" coverage started in #1594
+    # (which pinned lighthouse-* and added their timeouts).
+    timeout-minutes: 10
     outputs:
       web: ${{ steps.filter.outputs.web || 'true' }}
       api: ${{ steps.filter.outputs.api || 'true' }}
@@ -131,7 +144,7 @@ jobs:
         ports:
           - 6379:6379
 
-    # Note: Qdrant removed (Issue #4861) - vector search uses pgvector inside PostgreSQL.
+    # Note: pgvector removed (Issue #4861) - vector search uses pgvector inside PostgreSQL.
 
     steps:
       - name: Checkout code
@@ -372,7 +385,13 @@ jobs:
   # ============================================
   lighthouse-build:
     name: Build Next.js (Lighthouse)
-    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
+    # Issue #1587: pinned to ubuntu-latest (was: vars.RUNNER fallback). This
+    # job is a pure Next.js production build — it doesn't touch staging and has
+    # no reason to compete with deploy-staging for the single self-hosted runner.
+    # timeout-minutes: 30 added so a hang (Node OOM, network stall) can't tie up
+    # the runner indefinitely.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: changes
     if: |
       (github.event_name == 'workflow_dispatch' && inputs.run_lighthouse != 'false') ||
@@ -421,7 +440,12 @@ jobs:
 
   lighthouse-ci:
     name: Lighthouse CI
-    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
+    # Issue #1587: pinned to ubuntu-latest + explicit timeout. Lighthouse autorun
+    # operates on the build artifact served via lhci local server — no staging
+    # dependency. Same rationale as lighthouse-build: no reason to share the
+    # single self-hosted runner used by deploy-staging.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [changes, lighthouse-build]
     continue-on-error: true
     defaults:
@@ -584,6 +608,8 @@ jobs:
   notify-failure:
     name: Notify on Failure
     runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
+    # Issue #1587: explicit timeout — completes the "every perf job" coverage.
+    timeout-minutes: 10
     needs: [k6-tests, lighthouse-ci]
     if: failure() && github.event_name == 'schedule'
     permissions:

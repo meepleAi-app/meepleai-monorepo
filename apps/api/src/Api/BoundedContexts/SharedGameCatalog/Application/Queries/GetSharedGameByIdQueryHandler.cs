@@ -1,9 +1,12 @@
 using System.Diagnostics;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Infrastructure;
 using Api.Observability;
 using Api.Services;
+using Api.Services.Pdf;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
@@ -59,6 +62,7 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
 
     private readonly ISharedGameRepository _repository;
     private readonly MeepleAiDbContext _context;
+    private readonly IBlobStorageService _blobStorage;
     private readonly HybridCache _cache;
     private readonly ILogger<GetSharedGameByIdQueryHandler> _logger;
     private readonly decimal _topRatedThreshold;
@@ -67,12 +71,14 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
     public GetSharedGameByIdQueryHandler(
         ISharedGameRepository repository,
         MeepleAiDbContext context,
+        IBlobStorageService blobStorage,
         HybridCache cache,
         IConfiguration configuration,
         ILogger<GetSharedGameByIdQueryHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _context = context ?? throw new ArgumentNullException(nameof(context));
+        _blobStorage = blobStorage ?? throw new ArgumentNullException(nameof(blobStorage));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         ArgumentNullException.ThrowIfNull(configuration);
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -187,7 +193,7 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
         // Capture DbContext sets once so the LINQ tree closes over stable locals.
         // Soft-delete note: Toolkit / AgentDefinition / VectorDocument do NOT have
         // IsDeleted columns (mirrors A.3a §6 comment in SearchSharedGamesQueryHandler).
-        var ctxGames = _context.Games;
+        var ctxGames = _context.SharedGames;
         var ctxToolkits = _context.Toolkits;
         var ctxAgents = _context.AgentDefinitions;
         var ctxVectors = _context.VectorDocuments;
@@ -210,8 +216,8 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
                     t.OwnerUserId != null &&
                     ctxGames.Any(g =>
                         g.Id == t.GameId &&
-                        g.SharedGameId == gameId &&
-                        g.ApprovalStatus == ApprovedStatus))
+                        g.Id == gameId &&
+                        g.Status == ApprovedStatus))
                 .OrderByDescending(t => t.UpdatedAt)
                 .Take(MaxToolkitPreviews)
                 .Select(t => new PublishedToolkitPreviewDto(
@@ -249,8 +255,8 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
                     EF.Property<Guid?>(a, "_gameId") != null &&
                     ctxGames.Any(g =>
                         g.Id == EF.Property<Guid?>(a, "_gameId") &&
-                        g.SharedGameId == gameId &&
-                        g.ApprovalStatus == ApprovedStatus))
+                        g.Id == gameId &&
+                        g.Status == ApprovedStatus))
                 .OrderByDescending(a => a.UpdatedAt ?? a.CreatedAt)
                 .Take(MaxAgentPreviews)
                 .Select(a => new PublishedAgentPreviewDto(
@@ -313,14 +319,14 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
                     !t.IsDefault &&
                     ctxGames.Any(game =>
                         game.Id == t.GameId &&
-                        game.SharedGameId == g.Id &&
-                        game.ApprovalStatus == ApprovedStatus)),
+                        game.Id == g.Id &&
+                        game.Status == ApprovedStatus)),
                 AgentsCount = ctxAgents.Count(a =>
                     EF.Property<Guid?>(a, "_gameId") != null &&
                     ctxGames.Any(game =>
                         game.Id == EF.Property<Guid?>(a, "_gameId") &&
-                        game.SharedGameId == g.Id &&
-                        game.ApprovalStatus == ApprovedStatus)),
+                        game.Id == g.Id &&
+                        game.Status == ApprovedStatus)),
                 KbsCount = ctxVectors.Count(vd =>
                     vd.SharedGameId == g.Id &&
                     vd.IndexingStatus == "completed"),
@@ -334,8 +340,8 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
                         t.OwnerUserId != null &&
                         ctxGames.Any(game =>
                             game.Id == t.GameId &&
-                            game.SharedGameId == g.Id &&
-                            game.ApprovalStatus == ApprovedStatus))
+                            game.Id == g.Id &&
+                            game.Status == ApprovedStatus))
                     .Select(t => t.OwnerUserId)
                     .Distinct()
                     .Count(),
@@ -348,15 +354,15 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
                         t.CreatedAt >= newCutoff &&
                         ctxGames.Any(game =>
                             game.Id == t.GameId &&
-                            game.SharedGameId == g.Id &&
-                            game.ApprovalStatus == ApprovedStatus)) +
+                            game.Id == g.Id &&
+                            game.Status == ApprovedStatus)) +
                     ctxAgents.Count(a =>
                         EF.Property<Guid?>(a, "_gameId") != null &&
                         a.CreatedAt >= newCutoff &&
                         ctxGames.Any(game =>
                             game.Id == EF.Property<Guid?>(a, "_gameId") &&
-                            game.SharedGameId == g.Id &&
-                            game.ApprovalStatus == ApprovedStatus)) +
+                            game.Id == g.Id &&
+                            game.Status == ApprovedStatus)) +
                     ctxVectors.Count(vd =>
                         vd.SharedGameId == g.Id &&
                         vd.IndexedAt >= newCutoff)
@@ -375,6 +381,23 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
         // IsNew uses the same `>= 2` threshold as the index chip (mockup
         // sp3-shared-games.jsx:127) for cross-page consistency.
         var isNew = newThisWeekCount >= 2;
+
+        // Issue #1852 (Gap A): CoverUrlResolver requires the EF entity (carries both
+        // PdfCoverR2Key and WikidataCoverR2Key). The domain aggregate only exposes
+        // PdfCoverR2Key, so we load the entity here from the already-open DbContext.
+        // _context.SharedGames is already queried above (aggregates query), so EF's
+        // identity map will typically satisfy this from its first-level cache.
+        var sharedGameEntity = await _context.SharedGames
+            .AsNoTracking()
+            .Where(g => g.Id == gameId)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var coverUrl = sharedGameEntity is not null
+            ? await CoverUrlResolver
+                .ResolvePublicAsync(sharedGameEntity, _blobStorage)
+                .ConfigureAwait(false)
+            : null;
 
         return new SharedGameDetailDto(
             game.Id,
@@ -412,6 +435,11 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
             contributorsCount,
             hasKnowledgeBase,
             isTopRated,
-            isNew);
+            isNew,
+            CoverUrl: coverUrl,
+            // Issue #2055 Phase G AC-G6 — Wikidata cover attribution (HTML-stripped per DEC-G6-1).
+            WikidataCoverLicense: game.WikidataCoverLicense,
+            WikidataCoverAttribution: AttributionTextExtractor.Strip(game.WikidataCoverAttribution),
+            WikidataCoverSourceUrl: game.WikidataCoverSourceUrl);
     }
 }

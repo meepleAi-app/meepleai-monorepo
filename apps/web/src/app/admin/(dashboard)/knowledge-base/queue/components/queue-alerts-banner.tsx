@@ -49,7 +49,7 @@ function AlertItem({ alert, onDismiss }: { alert: QueueAlertDto; onDismiss: () =
       <button
         type="button"
         onClick={onDismiss}
-        className="shrink-0 p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10"
+        className="shrink-0 p-0.5 rounded hover:bg-foreground/10 dark:hover:bg-card/10"
         aria-label="Dismiss alert"
       >
         <XIcon className="h-3.5 w-3.5" />

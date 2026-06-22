@@ -3,6 +3,9 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.UserLibrary.Domain.Entities;
+using Api.BoundedContexts.UserLibrary.Domain.Repositories;
+using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Moq;
@@ -20,17 +23,30 @@ public sealed class GetAllAgentsQueryHandlerTests
 {
     private readonly Mock<IAgentDefinitionRepository> _mockRepository;
     private readonly Mock<ISharedGameRepository> _mockSharedGameRepository;
+    private readonly Mock<IUserLibraryRepository> _mockLibraryRepository;
     private readonly GetAllAgentsQueryHandler _handler;
 
     public GetAllAgentsQueryHandlerTests()
     {
         _mockRepository = new Mock<IAgentDefinitionRepository>();
         _mockSharedGameRepository = new Mock<ISharedGameRepository>();
+        _mockLibraryRepository = new Mock<IUserLibraryRepository>();
+
         // Default: no agents have a GameId, so handler should not call GetNamesByIdsAsync at all.
         // Tests that exercise the GameName population path override this setup explicitly.
+
+        // Default: library returns empty — scope branch is a no-op unless overridden.
+        _mockLibraryRepository
+            .Setup(r => r.GetUserGamesAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<GameStateType?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<UserLibraryEntry>());
+
         _handler = new GetAllAgentsQueryHandler(
             _mockRepository.Object,
-            _mockSharedGameRepository.Object);
+            _mockSharedGameRepository.Object,
+            _mockLibraryRepository.Object);
     }
 
     [Fact]
@@ -169,6 +185,86 @@ public sealed class GetAllAgentsQueryHandlerTests
         _mockSharedGameRepository.Verify(
             r => r.GetNamesByIdsAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    // ========== BE-2 #1589: scope=my-library tests ==========
+
+    [Fact]
+    public async Task Handle_NoScope_DoesNotCallLibraryRepository()
+    {
+        // Arrange: query has no Scope set — library repo must never be consulted.
+        _mockRepository
+            .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AgentDefinitionEntity>());
+
+        var query = new GetAllAgentsQuery();
+
+        // Act
+        await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        _mockLibraryRepository.Verify(
+            r => r.GetUserGamesAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<GameStateType?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_ScopeMyLibrary_ReturnsLibraryGamesPlusSystemAgents()
+    {
+        // Arrange (BE-2 #1589): 3 agents — one in library, one NOT in library, one system (no GameId).
+        // Only the library agent + system agent should be returned.
+        var catanId = Guid.NewGuid();
+        var azulId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        var a1Catan = CreateAgent("Catan Helper");
+        a1Catan.SetGameId(catanId);
+
+        var a2Azul = CreateAgent("Azul Helper");
+        a2Azul.SetGameId(azulId);
+
+        var a3System = CreateAgent("Global Rules Agent"); // GameId = null (system agent)
+
+        _mockRepository
+            .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AgentDefinitionEntity> { a1Catan, a2Azul, a3System });
+
+        // Library contains ONLY Catan, NOT Azul
+        var catanEntry = new UserLibraryEntry(Guid.NewGuid(), userId, catanId);
+        _mockLibraryRepository
+            .Setup(r => r.GetUserGamesAsync(
+                userId,
+                It.IsAny<GameStateType?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<UserLibraryEntry> { catanEntry });
+
+        _mockSharedGameRepository
+            .Setup(r => r.GetNamesByIdsAsync(
+                It.IsAny<IReadOnlyCollection<Guid>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, string> { [catanId] = "Catan" });
+
+        var query = new GetAllAgentsQuery(Scope: "my-library", ScopeUserId: userId);
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert: a1 (Catan, in library) + a3 (system, no GameId) — NOT a2 (Azul, not in library)
+        result.Should().HaveCount(2);
+        result.Select(a => a.GameId).Should()
+            .BeEquivalentTo(new Guid?[] { catanId, null });
+        result.First(a => a.GameId == catanId).GameName.Should().Be("Catan");
+        result.First(a => a.GameId == null).GameName.Should().BeNull();
+
+        _mockLibraryRepository.Verify(
+            r => r.GetUserGamesAsync(
+                userId,
+                It.IsAny<GameStateType?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     private static AgentDefinitionEntity CreateAgent(string name)

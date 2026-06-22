@@ -77,14 +77,29 @@ public sealed class AgentDefinitionRepository : RepositoryBase, IAgentDefinition
 
     public async Task AddAsync(AgentDefinition agentDefinition, CancellationToken cancellationToken = default)
     {
+        // ADR-056: repository methods mutate the change-tracker only.
+        // Callers are responsible for invoking IUnitOfWork.SaveChangesAsync(ct).
         await DbContext.Set<AgentDefinition>().AddAsync(agentDefinition, cancellationToken).ConfigureAwait(false);
-        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        // Collect domain events raised on the aggregate before or at AddAsync time so that
+        // MeepleAiDbContext.SaveChangesAsync can read them from _eventCollector.PeekEvents()
+        // and write domain_event_logs rows atomically with the agent row.
+        // BE-3 #1590: supports agent.created event raised via RaiseUserCreatedEvent().
+        CollectDomainEvents(agentDefinition);
     }
 
-    public async Task UpdateAsync(AgentDefinition agentDefinition, CancellationToken cancellationToken = default)
+    public Task UpdateAsync(AgentDefinition agentDefinition, CancellationToken cancellationToken = default)
     {
+        // Avoid IdentityConflict: another entity with same Id may already be tracked from prior reads
+        // (test seeding, EF caching). Detach it before re-attaching the modified version.
+        var tracked = DbContext.ChangeTracker.Entries<AgentDefinition>()
+            .FirstOrDefault(e => e.Entity.Id == agentDefinition.Id);
+        if (tracked != null && !ReferenceEquals(tracked.Entity, agentDefinition))
+        {
+            tracked.State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+        }
         DbContext.Set<AgentDefinition>().Update(agentDefinition);
-        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        // ADR-056: caller persists via IUnitOfWork.SaveChangesAsync.
+        return Task.CompletedTask;
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
@@ -93,7 +108,7 @@ public sealed class AgentDefinitionRepository : RepositoryBase, IAgentDefinition
         if (agentDefinition != null)
         {
             DbContext.Set<AgentDefinition>().Remove(agentDefinition);
-            await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            // ADR-056: caller persists via IUnitOfWork.SaveChangesAsync.
         }
     }
 
@@ -102,5 +117,59 @@ public sealed class AgentDefinitionRepository : RepositoryBase, IAgentDefinition
         return await DbContext.Set<AgentDefinition>()
             .AsNoTracking()
             .AnyAsync(a => a.Name == name, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task<AgentDefinition?> GetByIdIgnoreDeletedAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        // IgnoreQueryFilters bypasses the global HasQueryFilter(a => !a.IsDeleted) filter,
+        // allowing restore operations to fetch soft-deleted aggregates.
+        return await DbContext.Set<AgentDefinition>()
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(a => a.Id == id, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> CountActiveByGameIdsAsync(IReadOnlyList<Guid> gameIds, CancellationToken cancellationToken = default)
+    {
+        if (gameIds is null || gameIds.Count == 0)
+            return 0;
+
+        // Count agents linked to any of the provided gameIds.
+        // The global HasQueryFilter ensures soft-deleted agents are excluded automatically.
+        // EF.Property<Guid?>(a, "_gameId") is the canonical translation pattern for
+        // the AgentDefinition backing field — `a.GameId` is a computed getter on the
+        // domain entity (=> _gameId) and EF Core cannot translate it to SQL directly.
+        // Mirrors the pattern used in SearchSharedGamesQueryHandler.cs:249-256.
+        return await DbContext.Set<AgentDefinition>()
+            .AsNoTracking()
+            .CountAsync(
+                a => EF.Property<Guid?>(a, "_gameId") != null
+                    && gameIds.Contains(EF.Property<Guid?>(a, "_gameId")!.Value),
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<AgentDefinition>> GetByConsumedDocumentAsync(
+        Guid documentId, CancellationToken cancellationToken = default)
+    {
+        if (documentId == Guid.Empty)
+            return Array.Empty<AgentDefinition>();
+
+        // JSONB containment: agents whose kb_card_ids array contains documentId.
+        // is_deleted = false is asserted explicitly in SQL — the global query filter
+        // is not guaranteed to compose over FromSqlInterpolated.
+        var docIdJsonLiteral = $"[\"{documentId}\"]";
+
+        return await DbContext.Set<AgentDefinition>()
+            .FromSqlInterpolated(
+                $@"SELECT * FROM knowledge_base.agent_definitions
+                   WHERE kb_card_ids @> {docIdJsonLiteral}::jsonb
+                   AND is_deleted = false")
+            .AsNoTracking()
+            .OrderBy(a => a.Name)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

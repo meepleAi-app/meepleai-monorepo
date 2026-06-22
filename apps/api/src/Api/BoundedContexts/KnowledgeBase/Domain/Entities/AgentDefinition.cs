@@ -37,6 +37,8 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
     private Guid? _gameId;
     private int _invocationCount;
     private DateTime? _lastInvokedAt;
+    private bool _isDeleted;
+    private DateTime? _deletedAt;
 
     /// <summary>
     /// Gets the agent name.
@@ -139,6 +141,18 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
 
     /// <summary>Timestamp of last invocation.</summary>
     public DateTime? LastInvokedAt => _lastInvokedAt;
+
+    /// <summary>
+    /// Gets whether the agent is soft-deleted (invisible to normal queries).
+    /// Issue #904: SG3 — agent lifecycle soft-delete.
+    /// </summary>
+    public bool IsDeleted => _isDeleted;
+
+    /// <summary>
+    /// Gets the timestamp when the agent was soft-deleted.
+    /// Issue #904: SG3 — agent lifecycle soft-delete.
+    /// </summary>
+    public DateTime? DeletedAt => _deletedAt;
 
     /// <summary>
     /// Gets the chat language preference for this agent.
@@ -532,5 +546,65 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
         AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, gameId.HasValue
             ? $"GameId set to '{gameId.Value}'"
             : "GameId cleared"));
+    }
+
+    /// <summary>
+    /// Soft-deletes the agent definition.
+    /// The agent becomes invisible to normal queries (filtered out by EF Core global query filter)
+    /// but its data is preserved for audit purposes.
+    /// Issue #904: SG3 — agent lifecycle soft-delete + cascade ChatThread/ChatSession.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown if the agent is a system-defined agent (protected).</exception>
+    public void SoftDelete()
+    {
+        if (_isSystemDefined)
+            throw new InvalidOperationException("System-defined agents cannot be deleted.");
+
+        if (_isDeleted)
+            return;
+
+        _isDeleted = true;
+        _deletedAt = DateTime.UtcNow;
+        _isActive = false;
+        _updatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, "Soft-deleted"));
+    }
+
+    /// <summary>
+    /// Restores a soft-deleted agent definition.
+    /// The agent becomes visible again but ChatThreads that were closed on delete remain closed
+    /// (per spec: caller must explicitly reopen threads if desired).
+    /// Issue #904: SG3 — agent lifecycle restore.
+    /// </summary>
+    public void Restore()
+    {
+        if (!_isDeleted)
+            return;
+
+        _isDeleted = false;
+        _deletedAt = null;
+        _updatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, "Restored from soft-delete"));
+    }
+
+    /// <summary>
+    /// Raises <see cref="AgentCreatedEvent"/> for durable activity-log persistence.
+    /// Call ONLY from <c>CreateUserAgentCommandHandler</c> (user-facing flow).
+    /// NOT called from <c>CreateAgentDefinitionCommandHandler</c> (admin/AI-Lab) — see BE-3 #1590 decision H1.
+    /// </summary>
+    /// <param name="userId">The authenticated user who triggered the creation.</param>
+    /// <param name="gameName">Resolved game name; non-null when <see cref="GameId"/> is set.</param>
+    public void RaiseUserCreatedEvent(Guid userId, string? gameName)
+    {
+        AddDomainEvent(new AgentCreatedEvent(
+            aggregateId: Id,
+            userId: userId,
+            agentType: _typeValue,
+            isActive: _isActive,
+            gameId: _gameId,
+            gameName: gameName,
+            agentName: _name));
     }
 }

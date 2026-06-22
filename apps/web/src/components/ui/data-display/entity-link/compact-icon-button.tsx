@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 'use client';
 
 import { cn } from '@/lib/utils';
@@ -32,7 +33,7 @@ export function CompactIconButton({
         'group/ib relative flex h-9 w-9 items-center justify-center rounded-[10px]',
         'border border-transparent bg-transparent',
         'cursor-pointer transition-all duration-200',
-        'hover:-translate-y-0.5 hover:bg-white/60 hover:shadow-[var(--shadow-warm-sm)]',
+        'hover:-translate-y-0.5 hover:bg-card/60 hover:shadow-[var(--shadow-warm-sm)]',
         'active:scale-[0.92]',
         className
       )}

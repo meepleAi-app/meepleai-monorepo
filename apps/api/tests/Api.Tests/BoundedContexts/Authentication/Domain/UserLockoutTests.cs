@@ -24,7 +24,7 @@ public class UserLockoutTests
             id: Guid.NewGuid(),
             email: new Email("test@example.com"),
             displayName: "Test User",
-            passwordHash: PasswordHash.Create("SecurePassword123!"),
+            passwordHash: PasswordHash.Create("SecureUnusualPwd123!"),
             role: Role.User
         );
     }

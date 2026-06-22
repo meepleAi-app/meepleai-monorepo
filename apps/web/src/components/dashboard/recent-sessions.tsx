@@ -25,7 +25,7 @@ export function RecentSessions({
 }: RecentSessionsProps) {
   if (isLoading) {
     return (
-      <Card className="bg-white/70 backdrop-blur-md">
+      <Card className="bg-card/70 backdrop-blur-md">
         <CardHeader className="flex flex-row items-center justify-between">
           <h2 className="text-xl font-quicksand font-semibold">🕐 Sessioni Recenti</h2>
         </CardHeader>
@@ -39,7 +39,7 @@ export function RecentSessions({
   }
 
   return (
-    <Card className="bg-white/70 backdrop-blur-md">
+    <Card className="bg-card/70 backdrop-blur-md">
       <CardHeader className="flex flex-row items-center justify-between">
         <h2 className="text-xl font-quicksand font-semibold">🕐 Sessioni Recenti</h2>
         <div className="flex gap-2">

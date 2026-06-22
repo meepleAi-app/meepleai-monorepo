@@ -19,6 +19,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Observability;
+using Api.Services.Pdf;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -39,6 +40,7 @@ public sealed class GetSharedGameByIdQueryHandlerMetricsTests
 {
     private readonly Mock<ISharedGameRepository> _repositoryMock = new();
     private readonly Mock<ILogger<GetSharedGameByIdQueryHandler>> _loggerMock = new();
+    private readonly Mock<IBlobStorageService> _blobStorageMock = new();
 
     private static HybridCache CreateHybridCache()
     {
@@ -54,7 +56,7 @@ public sealed class GetSharedGameByIdQueryHandlerMetricsTests
         new ConfigurationBuilder().AddInMemoryCollection().Build();
 
     private GetSharedGameByIdQueryHandler CreateHandler(MeepleAiDbContext db, HybridCache cache) =>
-        new(_repositoryMock.Object, db, cache, CreateConfiguration(), _loggerMock.Object);
+        new(_repositoryMock.Object, db, _blobStorageMock.Object, cache, CreateConfiguration(), _loggerMock.Object);
 
     private static SharedGame CreateGame() =>
         SharedGame.Create(

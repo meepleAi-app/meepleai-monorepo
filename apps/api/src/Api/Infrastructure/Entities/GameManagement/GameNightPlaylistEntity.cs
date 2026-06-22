@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace Api.Infrastructure.Entities.GameManagement;
 
 /// <summary>
@@ -10,13 +8,11 @@ public class GameNightPlaylistEntity
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
-    [MaxLength(200)]
     public string Name { get; set; } = string.Empty;
 
     public DateTime? ScheduledDate { get; set; }
     public Guid CreatorUserId { get; set; }
 
-    [MaxLength(50)]
     public string? ShareToken { get; set; }
 
     public bool IsShared { get; set; }
@@ -31,6 +27,8 @@ public class GameNightPlaylistEntity
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-    [Timestamp]
-    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+    // Optimistic concurrency via PostgreSQL's xmin system column (Issue #2306).
+    // Replaces the silently-disabled byte[] RowVersion (no trigger populated it).
+    // Server-owned: Postgres assigns xmin = transaction-id-of-last-write per row.
+    public uint Xmin { get; set; }
 }

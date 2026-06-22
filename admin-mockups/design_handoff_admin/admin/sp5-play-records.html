@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SP5 B5 · Play Records · /play-records</title>
+<!-- @v2 PlayRecordTable · PlayRecordCalendar · PersonalStatsChart -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/><link rel="stylesheet" href="components.css"/><link rel="stylesheet" href="admin-base.css"/>
+<style>
+  .pr-row { display: grid; grid-template-columns: 90px 1fr 180px 80px 70px 1fr 24px; gap: 12px; padding: 8px 14px; border-bottom: 1px solid var(--border-light); align-items: center; font-size: 12px; }
+  .pr-row:hover { background: var(--bg-muted); }
+  .pr-row .date { font-family: var(--f-mono); font-size: 11px; }
+  .pr-row .game { font-family: var(--f-display); font-weight: 700; }
+  .pr-row .players { font-family: var(--f-mono); font-size: 10.5px; color: var(--text-sec); }
+  .pr-row .winner { font-family: var(--f-display); font-weight: 700; color: hsl(var(--c-toolkit)); }
+  .pr-row .notes { font-family: var(--f-body); font-size: 11.5px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-style: italic; }
+</style>
+</head>
+<body class="admin-page">
+<div class="admin-mobile-fallback"><span class="em">🖥️</span><h2>Console solo desktop</h2></div>
+<div class="admin-shell">
+  <div data-admin-nav-mount></div>
+  <main>
+    <header class="admin-top">
+      <div><h1>Play Records</h1><div class="crumbs">Tools · Play records · 247 partite · 12 anni storia · Aaron's personal</div></div>
+      <div class="spacer"></div>
+      <div class="admin-top-actions">
+        <div class="admin-search"><span>🔍</span><input placeholder="Cerca per gioco, giocatore…"></div>
+        <button class="btn-admin">⤓ Export CSV</button>
+        <button class="btn-admin primary">+ Aggiungi record</button>
+      </div>
+    </header>
+
+    <div class="admin-body" style="display: flex; flex-direction: column; gap: 14px">
+
+      <div class="admin-tabs">
+        <button class="admin-tab active">📋 List <span class="count">247</span></button>
+        <button class="admin-tab">📅 Calendar</button>
+        <button class="admin-tab">📊 Analytics</button>
+      </div>
+
+      <!-- Filter chip row -->
+      <div style="display: flex; gap: 6px; flex-wrap: wrap">
+        <span class="filter-chip active">Gioco: tutti <span class="x">▾</span></span>
+        <span class="filter-chip active">Periodo: 2026 <span class="x">▾</span></span>
+        <span class="filter-chip">Player: tutti <span class="x">▾</span></span>
+        <span class="filter-chip">Winner: tutti <span class="x">▾</span></span>
+        <span class="filter-chip">Durata: tutte <span class="x">▾</span></span>
+        <span class="filter-chip">Location: casa Marco <span class="x">×</span></span>
+        <span style="margin-left: auto; font-family: var(--f-mono); font-size: 11px; color: var(--text-muted)">42 risultati</span>
+      </div>
+
+      <!-- Quick analytics row -->
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px">
+        <div class="admin-kpi e-game"><div class="admin-kpi-label">Partite 2026</div><div class="admin-kpi-value">42</div><div class="admin-kpi-trend up">↗ +8 vs 2025</div></div>
+        <div class="admin-kpi e-toolkit"><div class="admin-kpi-label">Win rate</div><div class="admin-kpi-value">38<span style="font-size:13px;color:var(--text-muted)">%</span></div><div class="admin-kpi-trend up">↗ +4% sul 2025</div></div>
+        <div class="admin-kpi e-session"><div class="admin-kpi-label">Durata media</div><div class="admin-kpi-value">2h <span style="font-size:13px;color:var(--text-muted)">12m</span></div><div class="admin-kpi-trend flat">→ stabile</div></div>
+        <div class="admin-kpi e-player"><div class="admin-kpi-label">Opponent top</div><div class="admin-kpi-value" style="font-size: 18px">Marco</div><div class="admin-kpi-trend flat">→ 18 partite insieme</div></div>
+      </div>
+
+      <div class="admin-panel">
+        <div class="admin-panel-head"><h3>Storico partite 2026 · ordina per data</h3><span class="meta" style="margin-left: auto">42 record</span></div>
+        <div>
+          <div class="pr-row" style="background: var(--bg); font-family: var(--f-mono); font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 700">
+            <div>Data ↓</div><div>Gioco</div><div>Giocatori</div><div>Durata</div><div>Winner</div><div>Note</div><div></div>
+          </div>
+
+          <div class="pr-row">
+            <div class="date">22 mag<br/><span style="color: var(--text-muted)">2026</span></div>
+            <div><div class="game">🦅 Wingspan: Oceania</div><div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">expansion · base 4p</div></div>
+            <div class="players">Aaron · Marco · Giulia · Davide</div>
+            <div style="font-family: var(--f-mono)">1h 48m</div>
+            <div class="winner">Aaron 78</div>
+            <div class="notes">"Strategia nidi+bonus carte, decisive 12pt fine round"</div>
+            <div>›</div>
+          </div>
+
+          <div class="pr-row">
+            <div class="date">15 mag<br/><span style="color: var(--text-muted)">2026</span></div>
+            <div><div class="game">🏰 Brass: Birmingham</div><div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">base · 4p</div></div>
+            <div class="players">Marco · Davide · Luca · Aaron</div>
+            <div style="font-family: var(--f-mono)">3h 24m</div>
+            <div class="winner">Marco 167</div>
+            <div class="notes">"Cattedrale + ferro rete Walsall. Tight finish (167 vs 158)"</div>
+            <div>›</div>
+          </div>
+
+          <div class="pr-row">
+            <div class="date">11 mag<br/><span style="color: var(--text-muted)">2026</span></div>
+            <div><div class="game">🌌 Spirit Island</div><div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">Branch &amp; Claw · 3 spirit</div></div>
+            <div class="players">Aaron · Sara · Marco</div>
+            <div style="font-family: var(--f-mono)">2h 56m</div>
+            <div class="winner" style="color: hsl(var(--c-event))">PERSO (turn 8)</div>
+            <div class="notes">"Sclerotic Earth + sweep spirits. Fast attack inglesi, non in tempo"</div>
+            <div>›</div>
+          </div>
+
+          <div class="pr-row">
+            <div class="date">04 mag<br/><span style="color: var(--text-muted)">2026</span></div>
+            <div><div class="game">🦖 Ark Nova</div><div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">base · 4p</div></div>
+            <div class="players">Marco · Giulia · Elena · Aaron</div>
+            <div style="font-family: var(--f-mono)">2h 38m</div>
+            <div class="winner">Elena 184</div>
+            <div class="notes">"Combo università + zoo grande. Elena prima volta che gioca!"</div>
+            <div>›</div>
+          </div>
+
+          <div class="pr-row">
+            <div class="date">28 apr<br/><span style="color: var(--text-muted)">2026</span></div>
+            <div><div class="game">📖 Tainted Grail FoA</div><div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">Cap.7 - La Grotta dei Goblin</div></div>
+            <div class="players">Aaron (solo · Beor)</div>
+            <div style="font-family: var(--f-mono)">1h 18m</div>
+            <div class="winner">Survived ✓</div>
+            <div class="notes">"Scelta diff Trentino, paragrafo §218 evitato di poco. Magic 3 left"</div>
+            <div>›</div>
+          </div>
+
+          <div class="pr-row">
+            <div class="date">22 apr<br/><span style="color: var(--text-muted)">2026</span></div>
+            <div><div class="game">🦅 Wingspan</div><div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">Europa expansion · 5p</div></div>
+            <div class="players">Marco · Davide · Aaron · Giulia · Luca</div>
+            <div style="font-family: var(--f-mono)">1h 22m</div>
+            <div class="winner">Davide 91</div>
+            <div class="notes">"Power foresta sfruttato bene da Davide, house rule mano 8 attiva"</div>
+            <div>›</div>
+          </div>
+
+          <div class="pr-row">
+            <div class="date">15 apr<br/><span style="color: var(--text-muted)">2026</span></div>
+            <div><div class="game">🏰 Brass: Birmingham</div><div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">base · 3p</div></div>
+            <div class="players">Aaron · Marco · Luca</div>
+            <div style="font-family: var(--f-mono)">2h 48m</div>
+            <div class="winner">Aaron 142</div>
+            <div class="notes">"Birra+porto rete sud. Marco -8 a fine partita per cotton sprecato"</div>
+            <div>›</div>
+          </div>
+
+          <div class="pr-row" style="background: var(--bg); color: var(--text-muted); justify-content: center; font-family: var(--f-mono); font-size: 11px; padding: 14px">
+            + 35 partite più vecchie · scroll per caricare
+          </div>
+        </div>
+      </div>
+
+      <!-- Mini analytics chart preview at bottom -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px">
+        <div class="admin-panel">
+          <div class="admin-panel-head"><h3>Wins per gioco · 2026</h3></div>
+          <div style="padding: 14px; display: flex; flex-direction: column; gap: 8px; font-family: var(--f-mono); font-size: 12px">
+            <div style="display: grid; grid-template-columns: 110px 1fr 30px; gap: 8px; align-items: center"><span>🏰 Brass</span><div style="background: var(--bg-muted); border-radius: 4px; height: 16px; overflow: hidden"><div style="background: hsl(var(--c-toolkit)); height: 100%; width: 80%"></div></div><span style="text-align: right">8</span></div>
+            <div style="display: grid; grid-template-columns: 110px 1fr 30px; gap: 8px; align-items: center"><span>🦅 Wingspan</span><div style="background: var(--bg-muted); border-radius: 4px; height: 16px; overflow: hidden"><div style="background: hsl(var(--c-toolkit)); height: 100%; width: 60%"></div></div><span style="text-align: right">6</span></div>
+            <div style="display: grid; grid-template-columns: 110px 1fr 30px; gap: 8px; align-items: center"><span>🌌 Spirit Island</span><div style="background: var(--bg-muted); border-radius: 4px; height: 16px; overflow: hidden"><div style="background: hsl(var(--c-toolkit)); height: 100%; width: 30%"></div></div><span style="text-align: right">3</span></div>
+            <div style="display: grid; grid-template-columns: 110px 1fr 30px; gap: 8px; align-items: center"><span>🦖 Ark Nova</span><div style="background: var(--bg-muted); border-radius: 4px; height: 16px; overflow: hidden"><div style="background: hsl(var(--c-toolkit)); height: 100%; width: 20%"></div></div><span style="text-align: right">2</span></div>
+            <div style="display: grid; grid-template-columns: 110px 1fr 30px; gap: 8px; align-items: center"><span>📖 Tainted Grail</span><div style="background: var(--bg-muted); border-radius: 4px; height: 16px; overflow: hidden"><div style="background: hsl(var(--c-toolkit)); height: 100%; width: 50%"></div></div><span style="text-align: right">5 surv.</span></div>
+          </div>
+        </div>
+
+        <div class="admin-panel">
+          <div class="admin-panel-head"><h3>Top opponents</h3></div>
+          <div style="padding: 14px; display: flex; flex-direction: column; gap: 10px; font-size: 12.5px">
+            <div style="display: flex; align-items: center; gap: 10px"><div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, hsl(262, 83%, 58%), hsl(290, 75%, 50%)); display: grid; place-items: center; color: #fff; font-family: var(--f-display); font-weight: 800; font-size: 13px">MR</div><div style="flex: 1"><strong>Marco Rossi</strong><div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">18 partite · 7 wins tuoi · 8 suoi · 3 altri</div></div><span style="font-family: var(--f-mono); font-weight: 700">39%</span></div>
+            <div style="display: flex; align-items: center; gap: 10px"><div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, hsl(220, 80%, 55%), hsl(195, 80%, 50%)); display: grid; place-items: center; color: #fff; font-family: var(--f-display); font-weight: 800; font-size: 13px">DC</div><div style="flex: 1"><strong>Davide Conte</strong><div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">14 partite · 5 wins tuoi · 6 suoi · 3 altri</div></div><span style="font-family: var(--f-mono); font-weight: 700">36%</span></div>
+            <div style="display: flex; align-items: center; gap: 10px"><div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, hsl(348, 78%, 52%), hsl(28, 84%, 55%)); display: grid; place-items: center; color: #fff; font-family: var(--f-display); font-weight: 800; font-size: 13px">GB</div><div style="flex: 1"><strong>Giulia Bianchi</strong><div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">11 partite · 6 wins tuoi · 3 suoi · 2 altri</div></div><span style="font-family: var(--f-mono); font-weight: 700">55%</span></div>
+            <div style="display: flex; align-items: center; gap: 10px"><div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, hsl(168, 60%, 38%), hsl(142, 54%, 42%)); display: grid; place-items: center; color: #fff; font-family: var(--f-display); font-weight: 800; font-size: 13px">LM</div><div style="flex: 1"><strong>Luca Mancini</strong><div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">8 partite · 3 wins tuoi · 4 suoi · 1 altri</div></div><span style="font-family: var(--f-mono); font-weight: 700">38%</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+<script src="admin-nav.js"></script><script>renderAdminNav('play-records');</script>
+</body></html>

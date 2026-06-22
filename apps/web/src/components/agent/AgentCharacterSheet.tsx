@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -139,7 +140,7 @@ export const AgentCharacterSheet = React.memo(function AgentCharacterSheet({
         {/* Linked game */}
         {data.gameName && data.gameId && (
           <a
-            href={`/library/games/${data.gameId}`}
+            href={`/library/${data.gameId}`}
             className="flex items-center gap-2 text-blue-400 hover:text-blue-400 transition-colors"
             data-testid="agent-game-link"
           >
@@ -194,7 +195,7 @@ export const AgentCharacterSheet = React.memo(function AgentCharacterSheet({
         {/* Configura button */}
         {data.gameId && (
           <a
-            href={`/library/games/${data.gameId}/agent`}
+            href={`/library/${data.gameId}/agent`}
             className={cn(
               'flex items-center justify-center gap-2 rounded-xl border py-2.5 px-4',
               'bg-[#21262d] border-blue-500/30 text-blue-400',
@@ -241,7 +242,7 @@ export const AgentCharacterSheet = React.memo(function AgentCharacterSheet({
               message="Equipaggia il tuo agente — carica un regolamento"
               cta={
                 <a
-                  href={`/library/games/${data.gameId}/agent`}
+                  href={`/library/${data.gameId}/agent`}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-600 text-white font-nunito text-xs font-semibold hover:bg-blue-700 transition-colors"
                   data-testid="cta-carica-pdf"
                 >

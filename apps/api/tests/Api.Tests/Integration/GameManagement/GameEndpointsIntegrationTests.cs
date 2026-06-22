@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
@@ -184,7 +185,7 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         // Act
         var response = await _client.PostAsJsonAsync("/api/v1/games", new
         {
-            Name = "Test Game",
+            Title = "Test Game",
             MinPlayers = 2,
             MaxPlayers = 4
         });
@@ -205,7 +206,7 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
             HttpMethod.Post,
             "/api/v1/games",
             sessionToken,
-            new { Name = "Test Game", MinPlayers = 2, MaxPlayers = 4 });
+            new { Title = "Test Game", MinPlayers = 2, MaxPlayers = 4 });
 
         // Act
         var response = await _client.SendAsync(request);
@@ -229,7 +230,7 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         // Act
         var response = await _client.PutAsJsonAsync($"/api/v1/games/{gameId}", new
         {
-            Name = "Updated Game Name"
+            Title = "Updated Game Name"
         });
 
         // Assert
@@ -513,7 +514,7 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         // Act
         var response = await _client.PostAsJsonAsync($"/api/v1/games/sessions/{sessionId}/players", new
         {
-            Name = "Player 1"
+            Title = "Player 1"
         });
 
         // Assert - Non-existent session may return NotFound or Unauthorized
@@ -582,10 +583,10 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
         var gameId = Guid.NewGuid();
-        dbContext.Games.Add(new GameEntity
+        dbContext.SharedGames.Add(new SharedGameEntity
         {
             Id = gameId,
-            Name = "Test Game For Agents",
+            Title = "Test Game For Agents",
             CreatedAt = DateTime.UtcNow
         });
         await dbContext.SaveChangesAsync();

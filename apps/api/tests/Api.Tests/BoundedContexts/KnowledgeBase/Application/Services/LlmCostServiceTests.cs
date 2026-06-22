@@ -82,7 +82,7 @@ public sealed class LlmCostServiceTests
     private static User CreateUser()
     {
         var email = Email.Parse($"test-{Guid.NewGuid():N}@meepleai.dev");
-        var password = PasswordHash.Create("TestPass123!");
+        var password = PasswordHash.Create("UniqueT3stPwd!");
         return new User(Guid.NewGuid(), email, "TestUser", password, Role.User);
     }
 

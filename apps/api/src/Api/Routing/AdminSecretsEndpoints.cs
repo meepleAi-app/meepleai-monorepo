@@ -35,7 +35,7 @@ internal static class AdminSecretsEndpoints
         ["monitoring.secret"] = "Monitoring",
         ["storage.secret"] = "Storage",
         ["slack.secret"] = "Slack",
-        ["traefik.secret"] = "Traefik",
+        // ["traefik.secret"] removed (PR #738 cutover to CF Tunnel)
         ["n8n.secret"] = "n8n",
     };
 
@@ -96,7 +96,7 @@ internal static class AdminSecretsEndpoints
             })
             .ToList();
 
-        logger.LogInformation("Admin {UserId} viewed secrets ({FileCount} files)", session!.User!.Id, files.Count);
+        logger.LogInformation("Admin {UserId} viewed secrets ({FileCount} files)", session!.Principal!.Subject.Id, files.Count);
         return Results.Ok(new { secretsDirectory = secretsDir, files });
     }
 
@@ -159,7 +159,7 @@ internal static class AdminSecretsEndpoints
             updatedFiles.Add(update.FileName);
 
             logger.LogInformation("Admin {UserId} updated secret {Key} in {File}",
-                session!.User!.Id, update.Key, update.FileName);
+                session!.Principal!.Subject.Id, update.Key, update.FileName);
         }
 
         return Results.Ok(new { updatedFiles = updatedFiles.ToList(), updatedKeys = body.Updates.Count });
@@ -171,7 +171,7 @@ internal static class AdminSecretsEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        logger.LogWarning("Admin {UserId} initiated API restart via secrets management", session!.User!.Id);
+        logger.LogWarning("Admin {UserId} initiated API restart via secrets management", session!.Principal!.Subject.Id);
 
         _ = Task.Run(async () =>
         {

@@ -16,6 +16,7 @@ import { Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { useAuth } from '@/components/auth/AuthProvider';
+import { HubPageContainer } from '@/components/layout/PageContainer';
 import { Button } from '@/components/ui/primitives/button';
 
 import { ProposalsList } from './_components/ProposalsList';
@@ -25,25 +26,29 @@ import { ProposalsList } from './_components/ProposalsList';
  * TODO: Create proper EditorAuthGuard component
  * For now, check role === 'Editor' or 'Admin'
  */
-function EditorAuthGuard({ children, loading, user }: {
+function EditorAuthGuard({
+  children,
+  loading,
+  user,
+}: {
   children: React.ReactNode;
   loading: boolean;
   user: { role: string } | null;
 }) {
   if (loading) {
-    return <div className="container mx-auto p-6">Loading...</div>;
+    return <HubPageContainer className="p-6">Loading...</HubPageContainer>;
   }
 
   if (!user || (user.role !== 'Editor' && user.role !== 'Admin')) {
     return (
-      <div className="container mx-auto p-6">
+      <HubPageContainer className="p-6">
         <div className="text-center p-12">
           <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
           <p className="text-muted-foreground">
             This page is only accessible to Editors and Administrators.
           </p>
         </div>
-      </div>
+      </HubPageContainer>
     );
   }
 
@@ -60,7 +65,7 @@ export function ProposalsClient() {
 
   return (
     <EditorAuthGuard loading={authLoading} user={user}>
-      <div className="container mx-auto p-6 max-w-7xl">
+      <HubPageContainer className="p-6">
         <div className="mb-6 flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">My Typology Proposals</h1>
@@ -77,7 +82,7 @@ export function ProposalsClient() {
         </div>
 
         <ProposalsList />
-      </div>
+      </HubPageContainer>
     </EditorAuthGuard>
   );
 }

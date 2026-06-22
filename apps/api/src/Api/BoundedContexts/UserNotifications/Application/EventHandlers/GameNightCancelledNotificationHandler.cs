@@ -56,7 +56,9 @@ internal sealed class GameNightCancelledNotificationHandler : INotificationHandl
                             notification.Title,
                             scheduledAt.UtcDateTime,
                             organizerName),
-                        DeepLinkPath = $"/game-nights/{notification.GameNightEventId}"
+                        DeepLinkPath = $"/game-nights/{notification.GameNightEventId}",
+                        // Issue #1937 / CF-1: propagate event id for dispatcher dedup
+                        SourceEventId = notification.EventId
                     }, cancellationToken).ConfigureAwait(false);
                 }
 #pragma warning disable CA1031

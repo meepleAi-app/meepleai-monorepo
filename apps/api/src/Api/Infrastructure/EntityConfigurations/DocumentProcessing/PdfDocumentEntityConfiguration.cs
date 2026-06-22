@@ -48,7 +48,15 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         builder.Property(e => e.ExtractedTables).HasColumnType("text");
         builder.Property(e => e.ExtractedDiagrams).HasColumnType("text");
         builder.Property(e => e.AtomicRules).HasColumnType("text");
-        builder.Property(e => e.SharedGameId).IsRequired(false);
+        // Issue #1885: align with BC SharedGameCatalog convention (all other entities use
+        // snake_case column names explicitly via HasColumnName). Without this mapping, EF
+        // generated the column as PascalCase "SharedGameId", breaking the snake_case SQL
+        // identifiers in migration 20260603120937. The companion migration
+        // RenamePdfDocumentsSharedGameIdToSnakeCase performs the physical rename for
+        // existing databases.
+        builder.Property(e => e.SharedGameId)
+            .HasColumnName("shared_game_id")
+            .IsRequired(false);
 
         builder.HasOne<SharedGameEntity>()
             .WithMany()
@@ -57,7 +65,7 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasIndex(e => new { e.SharedGameId, e.UploadedAt })
-            .HasDatabaseName("IX_pdf_documents_SharedGameId_UploadedAt");
+            .HasDatabaseName("ix_pdf_documents_shared_game_id_uploaded_at");
 
         builder.HasOne(e => e.UploadedBy)
             .WithMany()
@@ -165,6 +173,20 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
             .HasColumnName("version_label")
             .IsRequired(false);
 
+        // Issue #1673: Pipeline indexer version (nullable; backfilled to 'v0').
+        builder.Property(e => e.IndexerVersion)
+            .HasMaxLength(32)
+            .HasColumnName("indexer_version")
+            .IsRequired(false);
+
+        builder.HasIndex(e => e.IndexerVersion)
+            .HasDatabaseName("ix_pdf_documents_indexer_version");
+
+        // Issue #1802: Optimistic concurrency via xmin (PostgreSQL system column).
+        // Pattern matches RuleSpecEntityConfiguration:38-39 — Npgsql auto-maps to xmin.
+        builder.Property(e => e.RowVersion)
+            .IsRowVersion();
+
         // E5-1: Language confidence and override
         builder.Property(e => e.LanguageConfidence)
             .HasColumnName("language_confidence")
@@ -186,5 +208,68 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
 
         builder.HasIndex(e => new { e.ContentHash, e.PrivateGameId })
             .HasDatabaseName("ix_pdf_documents_content_hash_private_game_id");
+
+        // BE-1 #1588: composite index for cross-game per-user paginated listing
+        // (GET /api/v1/kb-docs). Without this, the user-scoped query degrades to
+        // a sequential scan on a multi-million-row table. The DESCENDING order on
+        // ProcessedAt matches the sortBy=recent default (coalesced with UploadedAt
+        // at query time; the index covers ProcessedAt only and Postgres handles
+        // the COALESCE in the filter step).
+        builder.HasIndex(e => new { e.UploadedByUserId, e.ProcessedAt })
+            .IsDescending(false, true)
+            .HasDatabaseName("ix_pdf_documents_uploaded_by_user_id_processed_at_desc");
+
+        // Issue #1687: User-editable display title (varchar(200) NULL).
+        builder.Property(e => e.Title)
+            .HasMaxLength(200)
+            .HasColumnName("title")
+            .IsRequired(false);
+
+        // Issue #1687: Tags stored as PG text[] for native array operators
+        // (@>, &&, ANY). Forward-compat with #1686 server-side facets.
+        builder.Property(e => e.Tags)
+            .HasColumnName("tags")
+            .HasColumnType("text[]")
+            .IsRequired()
+            .HasDefaultValueSql("'{}'::text[]");
+
+        // Issue #1687: Audit columns (last-write-wins per D-3, no RowVersion in v1).
+        builder.Property(e => e.UpdatedAt)
+            .HasColumnName("updated_at")
+            .IsRequired(false);
+
+        builder.Property(e => e.UpdatedBy)
+            .HasColumnName("updated_by")
+            .IsRequired(false);
+
+        // Issue #1687: GIN index on tags array for fast containment queries.
+        // Forward-compat with #1686 facets (?tags=strategy filter) — cheap to add now.
+        builder.HasIndex(e => e.Tags)
+            .HasDatabaseName("IX_pdf_documents_tags_gin")
+            .HasMethod("gin");
+
+        // Issue #1831 — L4 PDF first-page cover extraction (umbrella #1821).
+        builder.Property(e => e.CoverR2Key)
+            .HasMaxLength(512)
+            .HasColumnName("cover_r2_key")
+            .IsRequired(false);
+
+        builder.Property(e => e.CoverGenerationStatus)
+            .IsRequired()
+            .HasMaxLength(32)
+            .HasColumnName("cover_generation_status")
+            .HasDefaultValue("Pending");
+
+        builder.Property(e => e.CoverPageIndex)
+            .HasColumnName("cover_page_index")
+            .IsRequired(false);
+
+        builder.Property(e => e.CoverGenerationError)
+            .HasMaxLength(512)
+            .HasColumnName("cover_generation_error")
+            .IsRequired(false);
+
+        builder.HasIndex(e => e.CoverGenerationStatus)
+            .HasDatabaseName("ix_pdf_documents_cover_generation_status");
     }
 }

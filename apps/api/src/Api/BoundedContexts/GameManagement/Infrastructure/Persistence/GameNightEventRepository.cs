@@ -89,6 +89,31 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
         return entities.Select(MapToDomain).ToList();
     }
 
+    public async Task<IReadOnlyList<GameNightEvent>> GetCompletedAsync(int limit, CancellationToken cancellationToken = default)
+    {
+        // F20 #1974: dashboard "Recenti" slot. Sources events whose Status is
+        // "Completed" OR a published event whose scheduled date has already
+        // passed (the BE does not auto-mark Published → Completed on a
+        // scheduler, so we treat past Published events as effectively
+        // completed for the dashboard surface). Ordered DESC by ScheduledAt
+        // since the entity has no explicit CompletedAt column today. The
+        // 50-cap mirrors GetUpcomingAsync; the call-site requests fewer.
+        var cap = Math.Clamp(limit, 1, 50);
+        var now = DateTimeOffset.UtcNow;
+
+        var entities = await DbContext.GameNightEvents
+            .AsNoTracking()
+            .Include(e => e.Rsvps)
+            .Include(e => e.Sessions)
+            .Where(e => e.Status == nameof(GameNightStatus.Completed)
+                || (e.Status == nameof(GameNightStatus.Published) && e.ScheduledAt < now))
+            .OrderByDescending(e => e.ScheduledAt)
+            .Take(cap)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
     public async Task<IReadOnlyList<GameNightEvent>> GetByUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var entities = await DbContext.GameNightEvents
@@ -150,6 +175,23 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .AnyAsync(e => e.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<GameNightEvent?> FindByLinkedSessionIdAsync(
+        Guid sessionId, CancellationToken cancellationToken = default)
+    {
+        // No AsNoTracking — the caller (SessionStartedHandler, invariante #15) mutates
+        // the aggregate via HandleFirstSessionStarted and persists via UpdateAsync,
+        // so the entity must be tracked end-to-end for change detection on Status/UpdatedAt.
+        var entity = await DbContext.GameNightEvents
+            .Include(e => e.Rsvps)
+            .Include(e => e.Sessions)
+            .FirstOrDefaultAsync(
+                e => e.Sessions.Any(s => s.SessionId == sessionId),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return entity != null ? MapToDomain(entity) : null;
+    }
+
     private static GameNightEventEntity MapToPersistence(GameNightEvent domain)
     {
         ArgumentNullException.ThrowIfNull(domain);
@@ -167,6 +209,8 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             Status = domain.Status.ToString(),
             Reminder24hSentAt = domain.Reminder24hSentAt,
             Reminder1hSentAt = domain.Reminder1hSentAt,
+            RsvpDeadline = domain.RsvpDeadline,
+            RsvpClosedAt = domain.RsvpClosedAt,
             CreatedAt = domain.CreatedAt,
             UpdatedAt = domain.UpdatedAt
         };
@@ -242,6 +286,12 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
 
         var reminder1hProp = typeof(GameNightEvent).GetProperty(nameof(GameNightEvent.Reminder1hSentAt));
         reminder1hProp?.SetValue(evt, entity.Reminder1hSentAt);
+
+        var rsvpDeadlineProp = typeof(GameNightEvent).GetProperty(nameof(GameNightEvent.RsvpDeadline));
+        rsvpDeadlineProp?.SetValue(evt, entity.RsvpDeadline);
+
+        var rsvpClosedAtProp = typeof(GameNightEvent).GetProperty(nameof(GameNightEvent.RsvpClosedAt));
+        rsvpClosedAtProp?.SetValue(evt, entity.RsvpClosedAt);
 
         // Restore RSVPs
         var rsvps = entity.Rsvps.Select(r => GameNightRsvp.Reconstitute(

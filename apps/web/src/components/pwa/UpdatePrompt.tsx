@@ -43,7 +43,7 @@ export function UpdatePrompt({ className }: UpdatePromptProps) {
         <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600/90 to-blue-500/90 p-4 text-white shadow-xl backdrop-blur-sm">
           <div className="flex items-start gap-4">
             {/* Icon */}
-            <div className="flex-shrink-0 rounded-lg bg-white/20 p-2">
+            <div className="flex-shrink-0 rounded-lg bg-card/20 p-2">
               <Sparkles className="h-6 w-6" />
             </div>
 
@@ -68,8 +68,8 @@ export function UpdatePrompt({ className }: UpdatePromptProps) {
           </div>
 
           {/* Decorative elements */}
-          <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/10" />
-          <div className="absolute -bottom-2 -left-2 h-16 w-16 rounded-full bg-white/5" />
+          <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-card/10" />
+          <div className="absolute -bottom-2 -left-2 h-16 w-16 rounded-full bg-card/5" />
         </div>
       </motion.div>
     </AnimatePresence>

@@ -90,7 +90,6 @@ public class GetAllPdfsQueryHandlerTests
         ctx.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            SharedGameId = sharedGameId,
             FileName = "ready.pdf",
             FilePath = "/tmp/ready.pdf",
             UploadedByUserId = Guid.NewGuid(),
@@ -99,7 +98,6 @@ public class GetAllPdfsQueryHandlerTests
         ctx.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            SharedGameId = sharedGameId,
             FileName = "pending.pdf",
             FilePath = "/tmp/pending.pdf",
             UploadedByUserId = Guid.NewGuid(),
@@ -108,7 +106,6 @@ public class GetAllPdfsQueryHandlerTests
         ctx.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            SharedGameId = sharedGameId,
             FileName = "failed.pdf",
             FilePath = "/tmp/failed.pdf",
             UploadedByUserId = Guid.NewGuid(),
@@ -181,7 +178,6 @@ public class GetAllPdfsQueryHandlerTests
         ctx.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            SharedGameId = null,
             PrivateGameId = Guid.NewGuid(),
             FileName = "private.pdf",
             FilePath = "/tmp/private.pdf",

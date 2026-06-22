@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// Handles GetVectorStatsQuery.
 /// Aggregates VectorDocument records from pgvector grouped by SharedGameId,
 /// computing chunk counts and health percentages per game.
-/// Task 3: Qdrant → pgvector migration.
+/// Task 3: pgvector vector search.
 /// </summary>
 internal sealed class GetVectorStatsQueryHandler : IQueryHandler<GetVectorStatsQuery, VectorStatsDto>
 {

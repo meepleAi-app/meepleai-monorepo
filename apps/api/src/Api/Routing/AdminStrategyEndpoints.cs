@@ -69,7 +69,7 @@ internal static class AdminStrategyEndpoints
                 request.Name,
                 request.Description ?? string.Empty,
                 request.StepsJson,
-                session!.User!.Id);
+                session!.Principal!.Subject.Id);
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
             return Results.Created($"/api/v1/admin/strategies/{result.Id}", result);
@@ -98,7 +98,7 @@ internal static class AdminStrategyEndpoints
                     request.Name,
                     request.Description ?? string.Empty,
                     request.StepsJson,
-                    session!.User!.Id);
+                    session!.Principal!.Subject.Id);
 
                 var result = await mediator.Send(command, ct).ConfigureAwait(false);
                 return Results.Ok(result);
@@ -126,7 +126,7 @@ internal static class AdminStrategyEndpoints
             if (!authorized) return error!;
 
             var deleted = await mediator.Send(
-                new DeleteAdminStrategyCommand(id, session!.User!.Id), ct).ConfigureAwait(false);
+                new DeleteAdminStrategyCommand(id, session!.Principal!.Subject.Id), ct).ConfigureAwait(false);
 
             return deleted
                 ? Results.NoContent()

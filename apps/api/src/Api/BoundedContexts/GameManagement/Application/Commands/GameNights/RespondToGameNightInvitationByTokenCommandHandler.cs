@@ -65,8 +65,10 @@ internal sealed class RespondToGameNightInvitationByTokenCommandHandler
         {
             transitioned = command.Response switch
             {
-                GameNightInvitationStatus.Accepted => invitation.Accept(command.ResponderUserId, utcNow),
-                GameNightInvitationStatus.Declined => invitation.Decline(command.ResponderUserId, utcNow),
+                GameNightInvitationStatus.Accepted => invitation.Accept(
+                    command.ResponderUserId, utcNow, command.ResponderDisplayName),
+                GameNightInvitationStatus.Declined => invitation.Decline(
+                    command.ResponderUserId, utcNow, command.ResponderDisplayName),
                 _ => throw new ArgumentOutOfRangeException(
                     nameof(command),
                     $"Unsupported response status: {command.Response}"),

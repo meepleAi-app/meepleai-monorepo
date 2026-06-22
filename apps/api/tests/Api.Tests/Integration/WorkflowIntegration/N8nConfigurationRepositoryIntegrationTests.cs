@@ -114,7 +114,7 @@ public sealed class N8nConfigurationRepositoryIntegrationTests : IAsyncLifetime
             id: TestUserId,
             email: new Email("testuser@example.com"),
             displayName: "Test User",
-            passwordHash: PasswordHash.Create("TestPassword123!"),
+            passwordHash: PasswordHash.Create("UniqueT3stPwd!"),
             role: Role.Admin
         );
 

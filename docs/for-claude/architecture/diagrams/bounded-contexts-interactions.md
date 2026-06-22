@@ -314,7 +314,7 @@ classDiagram
         -IPdfTextExtractor extractor
         -ITextChunkingService chunking
         -IEmbeddingService embedding
-        -IQdrantService qdrant
+        -IVectorStoreAdapter vectorStore
     }
 
     EnhancedPdfProcessingOrchestrator --> UnstructuredPdfTextExtractor
@@ -448,7 +448,7 @@ classDiagram
     class HybridSearchService {
         <<Service>>
         +SearchAsync(query, mode) HybridSearchResult
-        -IQdrantService qdrant
+        -IVectorStoreAdapter vectorStore
         -IKeywordSearchService keyword
         -RrfFusionDomainService rrfFusion
     }
@@ -513,7 +513,7 @@ sequenceDiagram
     participant RAG as RagService
     participant QueryExp as QueryExpansionService
     participant Hybrid as HybridSearchService
-    participant Vector as QdrantService
+    participant Vector as VectorStoreAdapter
     participant Keyword as KeywordSearchService
     participant RRF as RrfFusionDomainService
     participant LLM as HybridLlmService

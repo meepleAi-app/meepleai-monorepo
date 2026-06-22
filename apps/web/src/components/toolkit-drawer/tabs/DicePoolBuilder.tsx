@@ -80,10 +80,10 @@ export function DicePoolBuilder({ onRoll }: DicePoolBuilderProps) {
           return (
             <div
               key={die.sides}
-              className="flex items-center justify-between rounded-lg border border-gray-200 px-2 py-1.5"
+              className="flex items-center justify-between rounded-lg border border-border px-2 py-1.5"
               data-testid={`die-stepper-${die.label}`}
             >
-              <span className="text-xs font-semibold text-gray-600">{die.label}</span>
+              <span className="text-xs font-semibold text-muted-foreground">{die.label}</span>
               <div className="flex items-center gap-1">
                 <button
                   type="button"
@@ -92,8 +92,8 @@ export function DicePoolBuilder({ onRoll }: DicePoolBuilderProps) {
                   className={cn(
                     'flex h-5 w-5 items-center justify-center rounded text-xs font-bold transition-colors',
                     count === 0
-                      ? 'cursor-not-allowed text-gray-300'
-                      : 'text-gray-600 hover:bg-gray-100'
+                      ? 'cursor-not-allowed text-foreground'
+                      : 'text-muted-foreground hover:bg-muted'
                   )}
                   aria-label={`Rimuovi ${die.label}`}
                 >
@@ -103,7 +103,7 @@ export function DicePoolBuilder({ onRoll }: DicePoolBuilderProps) {
                 <button
                   type="button"
                   onClick={() => updateDie(die.sides, 1)}
-                  className="flex h-5 w-5 items-center justify-center rounded text-xs font-bold text-gray-600 transition-colors hover:bg-gray-100"
+                  className="flex h-5 w-5 items-center justify-center rounded text-xs font-bold text-muted-foreground transition-colors hover:bg-muted"
                   aria-label={`Aggiungi ${die.label}`}
                 >
                   +
@@ -116,12 +116,12 @@ export function DicePoolBuilder({ onRoll }: DicePoolBuilderProps) {
 
       {/* Modifier */}
       <div className="flex items-center gap-2">
-        <span className="text-xs font-medium text-gray-500">Modificatore:</span>
+        <span className="text-xs font-medium text-muted-foreground">Modificatore:</span>
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => setModifier(m => m - 1)}
-            className="flex h-5 w-5 items-center justify-center rounded text-xs font-bold text-gray-600 hover:bg-gray-100"
+            className="flex h-5 w-5 items-center justify-center rounded text-xs font-bold text-muted-foreground hover:bg-muted"
             aria-label="Riduci modificatore"
           >
             -
@@ -132,7 +132,7 @@ export function DicePoolBuilder({ onRoll }: DicePoolBuilderProps) {
           <button
             type="button"
             onClick={() => setModifier(m => m + 1)}
-            className="flex h-5 w-5 items-center justify-center rounded text-xs font-bold text-gray-600 hover:bg-gray-100"
+            className="flex h-5 w-5 items-center justify-center rounded text-xs font-bold text-muted-foreground hover:bg-muted"
             aria-label="Aumenta modificatore"
           >
             +
@@ -143,7 +143,7 @@ export function DicePoolBuilder({ onRoll }: DicePoolBuilderProps) {
       {/* Current formula display */}
       {hasDice && (
         <div
-          className="text-center text-sm font-medium text-gray-700"
+          className="text-center text-sm font-medium text-foreground"
           data-testid="dice-formula-display"
         >
           {formula}
@@ -159,7 +159,7 @@ export function DicePoolBuilder({ onRoll }: DicePoolBuilderProps) {
           'rounded-xl py-2.5 text-sm font-bold transition-colors',
           hasDice
             ? 'bg-[hsl(142,70%,45%)] text-white hover:bg-[hsl(142,70%,40%)] active:scale-[0.98]'
-            : 'cursor-not-allowed bg-gray-200 text-gray-400'
+            : 'cursor-not-allowed bg-muted text-muted-foreground'
         )}
         data-testid="dice-roll-btn"
       >

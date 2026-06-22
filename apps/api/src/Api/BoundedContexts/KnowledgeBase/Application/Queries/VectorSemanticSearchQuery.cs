@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// <summary>
 /// Query to perform semantic vector search over pgvector embeddings.
 /// Supports single-game and cross-game search.
-/// Task 4: Qdrant → pgvector migration.
+/// Task 4: pgvector vector search.
 /// </summary>
 internal sealed record VectorSemanticSearchQuery(
     string Query,

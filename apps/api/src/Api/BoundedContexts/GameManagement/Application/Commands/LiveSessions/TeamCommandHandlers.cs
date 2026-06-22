@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 
@@ -13,13 +14,16 @@ internal class CreateLiveSessionTeamCommandHandler : ICommandHandler<CreateLiveS
 {
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly TimeProvider _timeProvider;
+    private readonly IUnitOfWork _unitOfWork;
 
     public CreateLiveSessionTeamCommandHandler(
         ILiveSessionRepository sessionRepository,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IUnitOfWork unitOfWork)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task<Guid> Handle(CreateLiveSessionTeamCommand command, CancellationToken cancellationToken)
@@ -32,6 +36,7 @@ internal class CreateLiveSessionTeamCommandHandler : ICommandHandler<CreateLiveS
 
         var team = session.CreateTeam(command.Name, command.Color, _timeProvider);
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return team.Id;
     }
@@ -45,13 +50,16 @@ internal class AssignPlayerToTeamCommandHandler : ICommandHandler<AssignPlayerTo
 {
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly TimeProvider _timeProvider;
+    private readonly IUnitOfWork _unitOfWork;
 
     public AssignPlayerToTeamCommandHandler(
         ILiveSessionRepository sessionRepository,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IUnitOfWork unitOfWork)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task Handle(AssignPlayerToTeamCommand command, CancellationToken cancellationToken)
@@ -64,5 +72,6 @@ internal class AssignPlayerToTeamCommandHandler : ICommandHandler<AssignPlayerTo
 
         session.AssignPlayerToTeam(command.PlayerId, command.TeamId, _timeProvider);
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

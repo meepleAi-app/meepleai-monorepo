@@ -66,14 +66,16 @@ internal class SharedGameEntityConfiguration : IEntityTypeConfiguration<SharedGa
             .HasColumnName("average_rating")
             .HasColumnType("decimal(4,2)");
 
+        // Issue #2123 — BGG ToS compliance: image_url + thumbnail_url are now
+        // nullable. The seeder writes NULL on every create path; covers are
+        // resolved at runtime via CoverUrlResolver from R2 (PDF / Wikidata)
+        // and the frontend renders a deterministic placeholder when null.
         builder.Property(e => e.ImageUrl)
             .HasColumnName("image_url")
-            .IsRequired()
             .HasMaxLength(1000);
 
         builder.Property(e => e.ThumbnailUrl)
             .HasColumnName("thumbnail_url")
-            .IsRequired()
             .HasMaxLength(1000);
 
         builder.Property(e => e.Status)
@@ -124,6 +126,53 @@ internal class SharedGameEntityConfiguration : IEntityTypeConfiguration<SharedGa
         builder.Property(e => e.RowVersion)
             .HasColumnName("row_version")
             .IsRowVersion();
+
+        // Issue #1823 (umbrella #1821 L2) — Wikidata cover columns.
+        builder.Property(e => e.WikidataCoverR2Key)
+            .HasMaxLength(512)
+            .HasColumnName("wikidata_cover_r2_key")
+            .IsRequired(false);
+
+        // Issue #1852 (umbrella #1821 L4) — PDF cover key denormalized from PdfDocumentEntity.
+        builder.Property(e => e.PdfCoverR2Key)
+            .HasMaxLength(512)
+            .HasColumnName("pdf_cover_r2_key")
+            .IsRequired(false);
+
+        // Gap G2 (BGG cover re-upload) — BGG-sourced cover image re-uploaded to our storage.
+        builder.Property(e => e.BggCoverR2Key)
+            .HasMaxLength(256)
+            .HasColumnName("bgg_cover_r2_key")
+            .IsRequired(false);
+
+        builder.Property(e => e.WikidataCoverSourceUrl)
+            .HasMaxLength(2048)
+            .HasColumnName("wikidata_cover_source_url")
+            .IsRequired(false);
+
+        builder.Property(e => e.WikidataCoverLicense)
+            .HasMaxLength(64)
+            .HasColumnName("wikidata_cover_license")
+            .IsRequired(false);
+
+        builder.Property(e => e.WikidataCoverAttribution)
+            .HasMaxLength(512)
+            .HasColumnName("wikidata_cover_attribution")
+            .IsRequired(false);
+
+        // Issue #1823 Phase B M8 — Wikidata QID resolved against shared_games
+        // before the cover-enrichment orchestrator runs (ADR DEC-3a). Max 32
+        // chars covers Q-numbers well past the current Wikidata range.
+        builder.Property(e => e.WikidataQid)
+            .HasMaxLength(32)
+            .HasColumnName("wikidata_qid")
+            .IsRequired(false);
+
+        // Issue #1823 Phase B M8 (ADR DEC-3i) — quarterly re-verification
+        // timestamp. NULL until the M8 orchestrator first enriches successfully.
+        builder.Property(e => e.WikidataQidLastVerifiedAt)
+            .HasColumnName("wikidata_qid_last_verified_at")
+            .IsRequired(false);
 
         // Global query filter for soft deletes
         builder.HasQueryFilter(e => !e.IsDeleted);

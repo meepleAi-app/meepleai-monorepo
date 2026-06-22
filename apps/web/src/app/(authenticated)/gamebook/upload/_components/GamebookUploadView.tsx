@@ -84,9 +84,11 @@ import {
   type OfflineBannerLabels,
   type PageThumbLabels,
   type StepIndicatorLabels,
-} from '@/components/v2/gamebook';
+} from '@/components/features/gamebook';
+import { DetailPageContainer } from '@/components/layout/PageContainer';
 import { useBggSearch } from '@/hooks/queries/useBggSearch';
 import { useGames } from '@/hooks/queries/useGames';
+import { useAdminRole } from '@/hooks/useAdminRole';
 import { useTranslation } from '@/hooks/useTranslation';
 import { usePhotoBatchStatus } from '@/lib/gamebook/hooks/usePhotoBatchStatus';
 import { usePhotoBatchUpload } from '@/lib/gamebook/hooks/usePhotoBatchUpload';
@@ -160,6 +162,12 @@ export function GamebookUploadView(): ReactElement {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+
+  // Admin-only BGG integration (spec 2026-05-22 Phase 2):
+  // BGG tab + ActionCard are hidden for non-admin users. Default conservative
+  // (hide during loading to avoid flash-of-bgg).
+  const { isAdminOrAbove, isLoading: isAdminLoading } = useAdminRole();
+  const showBggIntegration = isAdminOrAbove && !isAdminLoading;
 
   // ── URL state SSOT (Foundation: read-only) ──────────────────────────────
   const stepParam = parseStep(searchParams.get('step'));
@@ -809,10 +817,10 @@ export function GamebookUploadView(): ReactElement {
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <div
+    <DetailPageContainer
       data-slot="gamebook-upload-view"
       data-ui-state={cell.kind}
-      className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-4xl flex-col"
+      className="min-h-[calc(100vh-4rem)] p-0"
     >
       <StepIndicator currentStep={currentStep} labels={stepIndicatorLabels} />
 
@@ -829,6 +837,7 @@ export function GamebookUploadView(): ReactElement {
         onCreateNew: handleCreateNew,
         onSearchBgg: handleSearchBgg,
         onAddPrivate: handleAddPrivate,
+        showBggIntegration,
         // Step 2 wiring
         videoStream: streamRef.current,
         streamReady,
@@ -867,7 +876,7 @@ export function GamebookUploadView(): ReactElement {
         onDismiss={handleCancelDismiss}
         labels={cancelModalLabels}
       />
-    </div>
+    </DetailPageContainer>
   );
 }
 
@@ -886,6 +895,7 @@ interface CellRenderInput {
   readonly onCreateNew: () => void;
   readonly onSearchBgg: () => void;
   readonly onAddPrivate: () => void;
+  readonly showBggIntegration: boolean;
   // Step 2
   readonly videoStream: MediaStream | null;
   readonly streamReady: boolean;
@@ -966,6 +976,7 @@ function renderCell(input: CellRenderInput): ReactElement {
               onSearchBgg={input.onSearchBgg}
               onAddPrivate={input.onAddPrivate}
               labels={input.noResultsLabels(cell.query)}
+              showBggCard={input.showBggIntegration}
             />
           )}
         />
@@ -990,7 +1001,7 @@ function renderCell(input: CellRenderInput): ReactElement {
               <p className="text-sm font-semibold text-foreground">
                 {input.t('gamebook.upload.wizard.step1.bggLoadingTitle')}
               </p>
-              <p className="text-xs text-slate-700">
+              <p className="text-xs text-foreground">
                 {input.t('gamebook.upload.wizard.step1.bggLoadingSubtitle')}
               </p>
             </div>
@@ -1140,13 +1151,13 @@ function renderCell(input: CellRenderInput): ReactElement {
               role="dialog"
               aria-modal="true"
               aria-label={input.t('gamebook.upload.wizard.cancelModal.title')}
-              className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4"
+              className="fixed inset-0 z-20 flex items-center justify-center bg-foreground/40 p-4"
             >
               <div className="w-full max-w-sm rounded-xl bg-card p-6 shadow-xl">
                 <p className="text-base font-bold text-foreground">
                   {input.t('gamebook.upload.wizard.cancelModal.title')}
                 </p>
-                <p className="mt-2 text-sm text-slate-700">
+                <p className="mt-2 text-sm text-foreground">
                   {input.t('gamebook.upload.wizard.step3.cancelButton')}
                 </p>
               </div>
@@ -1186,6 +1197,7 @@ interface Step1ShellProps {
   readonly onQueryChange: (q: string) => void;
   readonly onTabChange: (tab: GameSearchTab) => void;
   readonly renderResults: () => ReactElement;
+  readonly showBggIntegration: boolean;
 }
 
 function Step1Shell({
@@ -1196,6 +1208,7 @@ function Step1Shell({
   onQueryChange,
   onTabChange,
   renderResults,
+  showBggIntegration,
 }: Step1ShellProps): ReactElement {
   return (
     <section data-slot="step1-shell" className="flex flex-1 flex-col gap-4 px-4 py-6 sm:px-6">
@@ -1206,6 +1219,7 @@ function Step1Shell({
         onTabChange={onTabChange}
         isPending={tabPending}
         labels={searchBarLabels}
+        showBggTab={showBggIntegration}
       />
       <div data-slot="step1-results">{renderResults()}</div>
     </section>
@@ -1240,7 +1254,7 @@ function CatalogGrid({
         <span aria-hidden="true" className="text-3xl">
           📚
         </span>
-        <p className="text-sm text-slate-700">Nessun gioco da mostrare.</p>
+        <p className="text-sm text-foreground">Nessun gioco da mostrare.</p>
       </div>
     );
   }
@@ -1313,7 +1327,7 @@ function Step2Placeholder({
             ? t('gamebook.upload.wizard.step2.unsupportedTitle')
             : t('gamebook.upload.wizard.step2.deniedTitle')}
         </p>
-        <p className="max-w-sm text-sm text-slate-700">
+        <p className="max-w-sm text-sm text-foreground">
           {permissionState === 'unsupported'
             ? t('gamebook.upload.wizard.step2.unsupportedSubtitle')
             : t('gamebook.upload.wizard.step2.deniedSubtitle')}
@@ -1395,7 +1409,7 @@ function Step3Body({
         {kind === 'step3-complete' ? '✅' : kind === 'step3-offline' ? '📡' : '⚙️'}
       </span>
       <p className="text-base font-bold text-foreground">{t(titleKey)}</p>
-      <p className="text-sm text-slate-700">
+      <p className="text-sm text-foreground">
         {kind === 'step3-offline' ? t('gamebook.upload.wizard.offline.bannerTitle') : progressLabel}
       </p>
 

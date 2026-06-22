@@ -2,7 +2,7 @@ name: Dependabot Auto-merge
 
 on:
   pull_request:
-    branches: [main, main-dev, main-staging]
+    branches: [main, main-staging]
     types: [opened, synchronize, reopened]
 
 # Ensure only one auto-merge workflow runs per PR

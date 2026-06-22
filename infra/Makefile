@@ -4,11 +4,13 @@ COMPOSE := docker compose -f docker-compose.yml
 # === Environments ===
 
 dev: ## Start full local development (all profiles)
+	@bash scripts/seed-status.sh --brief || true
 	$(COMPOSE) -f compose.dev.yml \
 		--profile ai --profile monitoring --profile automation \
 		--profile proxy --profile storage up -d
 
 dev-core: ## Start core only (postgres, redis, api, web)
+	@bash scripts/seed-status.sh --brief || true
 	$(COMPOSE) -f compose.dev.yml up -d
 
 dev-down: ## Stop dev environment
@@ -50,9 +52,9 @@ smoke-staging: ## Run automated smoke set against staging (https://meepleai.app)
 smoke-pg-readback: ## Run pg-readback.sh DB-direct migration validation (requires open tunnel)
 	bash scripts/pg-readback.sh
 
-staging: ## Deploy staging — core + AI + monitoring (CAX31+ recommended, ~14GB reservation)
-	$(COMPOSE) -f compose.staging.yml -f compose.traefik.yml \
-		--profile ai --profile monitoring --profile proxy up -d
+staging: ## Deploy staging — core + AI + monitoring (CAX31+ recommended, ~14GB reservation, edge via CF Tunnel)
+	$(COMPOSE) -f compose.staging.yml \
+		--profile ai --profile monitoring up -d
 
 staging-minimal: ## Deploy staging single-tester profile (~3GB RAM) — edge via Cloudflare Tunnel (cloudflared on VPS, not Traefik)
 	$(COMPOSE) -f compose.staging.yml \
@@ -67,21 +69,21 @@ staging-tutor-down: ## Stop only orchestration-service (keep rest of staging run
 	$(COMPOSE) -f compose.staging.yml --profile tutor-agents rm -f orchestration-service
 
 staging-core: ## (Deprecated, use staging-minimal) Deploy staging core only — no AI services
-	$(COMPOSE) -f compose.staging.yml -f compose.traefik.yml \
-		--profile monitoring --profile proxy up -d
+	$(COMPOSE) -f compose.staging.yml \
+		--profile monitoring up -d
 
 staging-down: ## Stop staging (all profiles)
-	$(COMPOSE) -f compose.staging.yml -f compose.traefik.yml \
-		--profile ai --profile monitoring --profile proxy down
+	$(COMPOSE) -f compose.staging.yml \
+		--profile ai --profile monitoring down
 
-prod: ## Deploy production (requires PROD_DOMAIN env var)
+prod: ## Deploy production (requires PROD_DOMAIN env var, edge via CF Tunnel)
 	@test -n "$(PROD_DOMAIN)" || (echo "Error: PROD_DOMAIN is required" && exit 1)
-	$(COMPOSE) -f compose.prod.yml -f compose.traefik.yml \
-		--profile ai --profile monitoring --profile proxy up -d
+	$(COMPOSE) -f compose.prod.yml \
+		--profile ai --profile monitoring up -d
 
 prod-down: ## Stop production
-	$(COMPOSE) -f compose.prod.yml -f compose.traefik.yml \
-		--profile ai --profile monitoring --profile proxy down
+	$(COMPOSE) -f compose.prod.yml \
+		--profile ai --profile monitoring down
 
 # === Secrets ===
 
@@ -105,6 +107,40 @@ restore-local: ## Restore local dev DB from latest snapshot (requires make dev r
 seed-games: ## Seed test games on staging via API (requires SSH access)
 	bash scripts/seed-all-games-staging.sh
 
+seed-nanolith-demo: ## Sprint -1: seed Nanolith libro game demo (account + game + 2 KBs + agent), against local stack
+	bash scripts/seed-nanolith-demo.sh local
+
+seed-nanolith-demo-staging: ## Same, against staging tunnel (requires SSH key + INITIAL_ADMIN_* secrets)
+	bash scripts/seed-nanolith-demo.sh staging
+
+# === SP4 dataset seed (full mockup-faithful dataset for visual review) ===
+
+seed-sp4: ## Seed full SP4 dataset on local stack (5 users + 8 games + KB + agents + toolkits + sessions + records + events + chats)
+	bash scripts/seed-sp4/seed-sp4.sh --target local
+
+seed-sp4-staging: ## Same against staging (requires SSH tunnel open)
+	bash scripts/seed-sp4/seed-sp4.sh --target staging
+
+seed-sp4-step: ## Run a single SP4 seed step (usage: make seed-sp4-step STEP=30)
+	bash scripts/seed-sp4/seed-sp4.sh --target local --step $(STEP)
+
+seed-sp4-from: ## Run SP4 seed from a given step onwards (usage: make seed-sp4-from FROM=40)
+	bash scripts/seed-sp4/seed-sp4.sh --target local --from $(FROM)
+
+seed-sp4-reset: ## Delete all SP4 seeded data via API (local only by default)
+	bash scripts/seed-sp4/seed-sp4.sh --target local --reset
+
+seed-sp4-reset-staging: ## Reset SP4 data on staging — requires explicit confirmation
+	bash scripts/seed-sp4/seed-sp4.sh --target staging --reset --confirm
+
+# === Demo Runthrough Phase A ===
+
+demo-smoke-local: ## Stadio 1 G1: smoke test 7 endpoint /api/v1/* contro stack locale (richiede make dev + make seed-nanolith-demo)
+	bash scripts/demo-smoke-local.sh local
+
+demo-smoke-staging: ## Stadio 3 G3: smoke test 7 endpoint contro https://meepleai.app (richiede seed-nanolith-demo-staging eseguito)
+	bash scripts/demo-smoke-local.sh staging
+
 # === RAG Backup ===
 rag-export: ## Full RAG export (one-shot for production go-live)
 	@echo "📦 Running full RAG data export..."
@@ -123,17 +159,6 @@ rag-snapshots: ## List all available RAG backup snapshots
 	curl -s "http://localhost:8080/admin/rag-backup/snapshots" | python3 -m json.tool
 
 .PHONY: rag-export rag-export-dry rag-backup-status rag-snapshots
-
-# === Alpha Zero ===
-
-alpha: ## Start Alpha Zero with AI services
-	$(COMPOSE) -f compose.dev.yml -f compose.alpha.yml --profile ai up -d
-
-alpha-core: ## Start Alpha Zero core only (no AI services)
-	$(COMPOSE) -f compose.dev.yml -f compose.alpha.yml up -d
-
-alpha-down: ## Stop Alpha Zero environment
-	$(COMPOSE) -f compose.dev.yml -f compose.alpha.yml --profile ai down
 
 # === Backup & Disaster Recovery ===
 
@@ -210,6 +235,9 @@ logs-ui: ## Open Grafana log explorer in browser (staging)
 # Seed snapshot lifecycle (bake + consume)
 # See docs/development/snapshot-seed-workflow.md
 # ================================================================
+
+seed-status: ## Report local snapshot freshness (age, schema drift, embedding model)
+	@bash scripts/seed-status.sh
 
 seed-index: ## Bake: indicizza tutti i PDF e produce snapshot locale
 	@bash scripts/seed-index-preflight.sh
@@ -345,6 +373,49 @@ validate-workflows: ## Validate GitHub Actions workflows — mirrors auto-valida
 	node $(ROOT)/scripts/validate-workflows.js
 	@echo "✅ Workflows valid"
 
+# === Game entity reset (issue #1320) ===
+# Scripts live in infra/scripts/game-reset/
+
+game-reset-help: ## Show game-reset workflow help
+	@echo "Game entity reset (#1320) — usage:"
+	@echo "  make game-reset-backup ENV=dev              # 1. pg_dump + vector count baseline"
+	@echo "  make game-reset-mapping ENV=dev             # 2. export bridge CSV (requires backup)"
+	@echo "  make game-reset-relink ENV=dev              # 3. UPDATE pgvector_embeddings.game_id"
+	@echo "  make game-reset-verify ENV=dev              # 6. run 5 verification gates (post-migration)"
+	@echo "  make game-reset-rollback-rehearse           # disposable docker test of rollback"
+	@echo ""
+	@echo "Full sequence per env: backup -> mapping -> relink (--dry-run first) -> apply migration -> verify"
+	@echo "See infra/scripts/game-reset/runbook-{dev,staging,prod}.md for end-to-end runbooks."
+	@echo ""
+	@echo "For prod, pass IMEANIT=--i-mean-it (production safety guard):"
+	@echo "  make game-reset-backup ENV=prod IMEANIT=--i-mean-it"
+	@echo "  make game-reset-relink ENV=prod EXTRA='--i-mean-it'"
+	@echo ""
+	@echo "Per env, create infra/scripts/game-reset/.env.<ENV> from .env.example."
+
+game-reset-backup: ## Pre-flight DB backup (ENV=dev|staging|prod)
+	@test -n "$(ENV)" || (echo "ENV required: make game-reset-backup ENV=dev" && exit 64)
+	@test -f scripts/game-reset/.env.$(ENV) || (echo "Missing scripts/game-reset/.env.$(ENV) — copy from .env.example" && exit 66)
+	./scripts/game-reset/01-backup.sh scripts/game-reset/.env.$(ENV) $(IMEANIT)
+
+game-reset-mapping: ## Export mapping CSV (ENV=dev|staging|prod, requires backup first)
+	@test -n "$(ENV)" || (echo "ENV required: make game-reset-mapping ENV=dev" && exit 64)
+	@test -f scripts/game-reset/.env.$(ENV) || (echo "Missing scripts/game-reset/.env.$(ENV) — copy from .env.example" && exit 66)
+	./scripts/game-reset/02-export-mapping.sh scripts/game-reset/.env.$(ENV) $(IMEANIT)
+
+game-reset-relink: ## Re-link pgvector_embeddings (ENV=dev|staging|prod, requires backup + mapping; pass EXTRA='--dry-run' for preview)
+	@test -n "$(ENV)" || (echo "ENV required: make game-reset-relink ENV=dev" && exit 64)
+	@test -f scripts/game-reset/.env.$(ENV) || (echo "Missing scripts/game-reset/.env.$(ENV) — copy from .env.example" && exit 66)
+	./scripts/game-reset/03-relink-vectors.sh scripts/game-reset/.env.$(ENV) $(EXTRA)
+
+game-reset-verify: ## Run verification gates after EF migration applied (ENV=dev|staging|prod)
+	@test -n "$(ENV)" || (echo "ENV required: make game-reset-verify ENV=dev" && exit 64)
+	@test -f scripts/game-reset/.env.$(ENV) || (echo "Missing scripts/game-reset/.env.$(ENV) — copy from .env.example" && exit 66)
+	./scripts/game-reset/04-verify-gates.sh scripts/game-reset/.env.$(ENV)
+
+game-reset-rollback-rehearse: ## Run disposable docker rollback rehearsal
+	../tests/scripts/game-reset/rehearse-rollback.sh
+
 .PHONY: dev dev-core dev-down \
         tunnel tunnel-stop tunnel-status integration-check integration \
         integration-down work work-stop smoke smoke-staging smoke-pg-readback staging staging-minimal staging-with-tutor staging-tutor-down staging-core staging-down prod prod-down \
@@ -355,4 +426,5 @@ validate-workflows: ## Validate GitHub Actions workflows — mirrors auto-valida
         ci ci-fe ci-be-unit ci-be-integration ci-be-e2e ci-all \
         sec-scan sec-pentest security-audit test-e2e test-visual test-perf validate-workflows \
         backup backup-verify backup-restore-test backup-status backup-cron-install backup-cron-show \
-        db-snapshot db-snapshot-sanitized db-reset-migrations db-restore-snapshot db-rollback-safetynet
+        db-snapshot db-snapshot-sanitized db-reset-migrations db-restore-snapshot db-rollback-safetynet \
+        game-reset-help game-reset-backup game-reset-mapping game-reset-relink game-reset-verify game-reset-rollback-rehearse

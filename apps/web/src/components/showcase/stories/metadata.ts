@@ -282,10 +282,11 @@ export const STORY_METADATA: StoryMeta[] = [
     presetCount: 5,
   },
   {
-    id: 'meeple-logo',
-    title: 'MeepleLogo',
+    id: 'brand-mark',
+    title: 'BrandMark',
     category: 'Meeple',
-    description: 'Brand logo with full, icon, and wordmark variants. Supports light/dark themes.',
+    description:
+      'Canonical MeepleAI brand mark (icon + wordmark) with sm/md/lg sizing and optional Admin badge. Used by AppTopBar, UnifiedHeader, AuthLayout, PublicFooter.',
     controlCount: 3,
     presetCount: 5,
   },

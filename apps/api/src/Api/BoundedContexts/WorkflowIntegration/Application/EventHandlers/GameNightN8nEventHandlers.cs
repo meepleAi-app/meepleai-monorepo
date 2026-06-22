@@ -26,6 +26,10 @@ internal sealed class GameNightPublishedN8nHandler : INotificationHandler<GameNi
 
         await _n8nClient.TriggerWorkflowAsync("game-night-published", new
         {
+            // Issue #1942 / iso-3: domainEventId is the dedup key for n8n side workflows.
+            // Receiving workflows MUST dedup on this field to avoid re-running on rolled-back/retried
+            // domain events. See docs/for-developers/integrations/n8n-idempotency-contract.md.
+            domainEventId = notification.EventId,
             eventId = notification.GameNightEventId,
             organizerId = notification.OrganizerId,
             title = notification.Title,
@@ -52,6 +56,8 @@ internal sealed class GameNightCancelledN8nHandler : INotificationHandler<GameNi
 
         await _n8nClient.TriggerWorkflowAsync("game-night-cancelled", new
         {
+            // Issue #1942 / iso-3: domainEventId is the dedup key for n8n side workflows.
+            domainEventId = notification.EventId,
             eventId = notification.GameNightEventId,
             organizerId = notification.OrganizerId,
             title = notification.Title,
@@ -77,6 +83,8 @@ internal sealed class GameNightRsvpN8nHandler : INotificationHandler<GameNightRs
 
         await _n8nClient.TriggerWorkflowAsync("game-night-rsvp-changed", new
         {
+            // Issue #1942 / iso-3: domainEventId is the dedup key for n8n side workflows.
+            domainEventId = notification.EventId,
             eventId = notification.GameNightEventId,
             userId = notification.UserId,
             rsvpStatus = notification.RsvpStatus.ToString(),

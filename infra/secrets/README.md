@@ -12,7 +12,6 @@
 | **database.secret** | 🔴 CRITICAL | `POSTGRES_USER`<br>`POSTGRES_PASSWORD`<br>`POSTGRES_DB` | `meepleai`<br>`change_me_strong_password...`<br>`meepleai_db` | `infra/secrets/database.secret` |
 | **embedding-service.secret** | 🔴 CRITICAL | `EMBEDDING_SERVICE_API_KEY` | `change_me_embedding_service...` | `infra/secrets/embedding-service.secret` |
 | **jwt.secret** | 🔴 CRITICAL | `JWT_SECRET_KEY`<br>`JWT_ISSUER`<br>`JWT_AUDIENCE` | `change_me_use_openssl...`<br>`meepleai-api`<br>`meepleai-web` | `infra/secrets/jwt.secret` |
-| ~~**qdrant.secret**~~ | ~~🔴 CRITICAL~~ | ~~`QDRANT_API_KEY`~~ | Removed — pgvector uses PostgreSQL | — |
 | **redis.secret** | 🔴 CRITICAL | `REDIS_PASSWORD` | `change_me_strong_redis...` | `infra/secrets/redis.secret` |
 | **bgg.secret** | 🟡 IMPORTANT | `BGG_USERNAME`<br>`BGG_PASSWORD` | `your_bgg_username`<br>`your_bgg_password` | `infra/secrets/bgg.secret` |
 | **openrouter.secret** | 🟡 IMPORTANT | `OPENROUTER_API_KEY`<br>`OPENROUTER_DEFAULT_MODEL` | `sk-or-v1-change_me...`<br>`meta-llama/llama-3.3-70b-instruct:free` | `infra/secrets/openrouter.secret` |
@@ -23,7 +22,7 @@
 | **reranker-service.secret** | 🟢 OPTIONAL | `RERANKER_API_KEY` | `change_me_reranker...` | `infra/secrets/reranker-service.secret` |
 | **smoldocling-service.secret** | 🟢 OPTIONAL | `SMOLDOCLING_API_KEY` | `change_me_smoldocling...` | `infra/secrets/smoldocling-service.secret` |
 | **storage.secret** | 🟢 OPTIONAL | `S3_ACCESS_KEY`<br>`S3_SECRET_KEY`<br>`S3_BUCKET_NAME`<br>`S3_REGION` | `your_s3_access_key`<br>`your_s3_secret_key`<br>`meepleai-uploads`<br>`us-east-1` | `infra/secrets/storage.secret` |
-| **traefik.secret** | 🟢 OPTIONAL | `TRAEFIK_DASHBOARD_USER`<br>`TRAEFIK_DASHBOARD_PASSWORD` | `admin`<br>`change_me_traefik...` | `infra/secrets/traefik.secret` |
+<!-- traefik.secret removed (PR #738 cutover to CF Tunnel) -->
 
 ---
 
@@ -658,7 +657,6 @@ The `setup-secrets.ps1` script **automatically generates** secure values for the
 | Variable | File | Type | Strength |
 |----------|------|------|----------|
 | `JWT_SECRET_KEY` | jwt.secret | Base64 (64 bytes) | 512 bits |
-| ~~`QDRANT_API_KEY`~~ | ~~qdrant.secret~~ | Removed — pgvector uses PostgreSQL | — |
 | `EMBEDDING_SERVICE_API_KEY` | embedding-service.secret | Base64 (32 bytes) | 256 bits |
 | `RERANKER_API_KEY` | reranker-service.secret | Base64 (32 bytes) | 256 bits |
 | `SMOLDOCLING_API_KEY` | smoldocling-service.secret | Base64 (32 bytes) | 256 bits |
@@ -673,7 +671,7 @@ The `setup-secrets.ps1` script **automatically generates** secure values for the
 | `ADMIN_PASSWORD` | admin.secret | 16 chars | Upper + digit + symbol |
 | `GRAFANA_ADMIN_PASSWORD` | monitoring.secret | 16 chars | Upper + digit + symbol |
 | `PROMETHEUS_PASSWORD` | monitoring.secret | 16 chars | Upper + digit + symbol |
-| `TRAEFIK_DASHBOARD_PASSWORD` | traefik.secret | 16 chars | Upper + digit + symbol |
+<!-- TRAEFIK_DASHBOARD_PASSWORD removed (PR #738 cutover to CF Tunnel) -->
 
 ### 📋 Manual Configuration Still Required
 
@@ -720,7 +718,7 @@ BoardGameGeek integration disabled. Game catalog limited to manual entries.
 ```
 
 ### 🟢 OPTIONAL - Info Logged
-**Files**: `email.secret`, `monitoring.secret`, `oauth.secret`, `reranker-service.secret`, `smoldocling-service.secret`, `storage.secret`, `traefik.secret`
+**Files**: `email.secret`, `monitoring.secret`, `oauth.secret`, `reranker-service.secret`, `smoldocling-service.secret`, `storage.secret`
 
 **Behavior**:
 - Application **STARTS** normally with fallback defaults
@@ -965,18 +963,7 @@ S3_REGION=us-east-1                       # AWS region
 
 **Fallback**: If missing, uses local file storage in `uploads/` directory
 
-#### traefik.secret
-**Purpose**: Traefik reverse proxy dashboard access
-
-**Variables**:
-```bash
-TRAEFIK_DASHBOARD_USER=admin              # Dashboard username
-TRAEFIK_DASHBOARD_PASSWORD=your_password  # Dashboard password
-```
-
-**Validation**:
-- Username: Non-empty string
-- Password: ≥8 chars
+<!-- traefik.secret section removed (PR #738 cutover to CF Tunnel — edge ingress now via cloudflared on VPS, no traefik dashboard) -->
 
 ---
 

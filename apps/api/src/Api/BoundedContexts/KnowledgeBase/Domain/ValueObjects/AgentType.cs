@@ -47,6 +47,12 @@ public sealed record AgentType
     /// </summary>
     public static AgentType Narrator => new("Narrator", "Storyteller for immersive game narrative and lore");
 
+    /// <summary>
+    /// Tutor agent: Learning-focused assistant for teaching game rules and onboarding.
+    /// BE-3 #1590 / Issue #659 Phase δ.1: quick-create default type.
+    /// </summary>
+    public static AgentType Tutor => new("Tutor", "Learning-focused assistant for teaching game rules and onboarding");
+
     public string Value { get; }
     public string Description { get; }
 
@@ -82,6 +88,7 @@ public sealed record AgentType
             "CONVERSATION" => ConversationAgent,
             "STRATEGIST" => Strategist,
             "NARRATOR" => Narrator,
+            "TUTOR" => Tutor,
             "DECISORE" => Strategist, // Backward-compatible alias
             _ => throw new ArgumentException($"Unknown AgentType: {value}", nameof(value))
         };

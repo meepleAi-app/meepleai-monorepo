@@ -1,3 +1,4 @@
+using Api.Infrastructure.Entities.SharedGameCatalog;
 namespace Api.Infrastructure.Entities;
 
 /// <summary>
@@ -27,6 +28,6 @@ public class ChunkedUploadSessionEntity
     public string ReceivedChunkIndices { get; set; } = "[]";
 
     // Navigation properties
-    public GameEntity? Game { get; set; }
+    public SharedGameEntity? Game { get; set; }
     public UserEntity User { get; set; } = default!;
 }

@@ -16,6 +16,12 @@ public record TierLimits
     public int MaxPhotosPerSession { get; init; }
     public bool SessionSaveEnabled { get; init; }
     public int MaxCatalogProposalsPerWeek { get; init; }
+    /// <summary>
+    /// Whether the user's tier allows triggering a RAPTOR summary tree rebuild.
+    /// Free-tier = false, Premium/Admin = true.
+    /// Issue #903: SG2 — KB lifecycle tier gating.
+    /// </summary>
+    public bool RaptorRebuildEnabled { get; init; }
 
     private TierLimits() { }
 
@@ -24,7 +30,8 @@ public record TierLimits
         long maxPdfSizeBytes, int maxAgents,
         int maxAgentQueriesPerDay, int maxSessionQueries,
         int maxSessionPlayers, int maxPhotosPerSession,
-        bool sessionSaveEnabled, int maxCatalogProposalsPerWeek)
+        bool sessionSaveEnabled, int maxCatalogProposalsPerWeek,
+        bool raptorRebuildEnabled = false)
     {
         if (maxPrivateGames < 0)
             throw new ArgumentException("Cannot be negative", nameof(maxPrivateGames));
@@ -56,7 +63,8 @@ public record TierLimits
             MaxSessionPlayers = maxSessionPlayers,
             MaxPhotosPerSession = maxPhotosPerSession,
             SessionSaveEnabled = sessionSaveEnabled,
-            MaxCatalogProposalsPerWeek = maxCatalogProposalsPerWeek
+            MaxCatalogProposalsPerWeek = maxCatalogProposalsPerWeek,
+            RaptorRebuildEnabled = raptorRebuildEnabled
         };
     }
 
@@ -64,13 +72,13 @@ public record TierLimits
     public static TierLimits Unlimited => Create(
         int.MaxValue, int.MaxValue, 500L * 1024 * 1024,
         int.MaxValue, int.MaxValue, int.MaxValue,
-        12, int.MaxValue, true, int.MaxValue);
+        12, int.MaxValue, true, int.MaxValue, raptorRebuildEnabled: true);
 
     /// <summary>Free tier defaults.</summary>
     public static TierLimits FreeTier => Create(
-        3, 3, 50L * 1024 * 1024, 1, 20, 30, 6, 5, false, 1);
+        3, 3, 50L * 1024 * 1024, 1, 20, 30, 6, 5, false, 1, raptorRebuildEnabled: false);
 
     /// <summary>Premium tier defaults.</summary>
     public static TierLimits PremiumTier => Create(
-        15, 15, 200L * 1024 * 1024, 10, 200, 150, 12, 20, true, 5);
+        15, 15, 200L * 1024 * 1024, 10, 200, 150, 12, 20, true, 5, raptorRebuildEnabled: true);
 }

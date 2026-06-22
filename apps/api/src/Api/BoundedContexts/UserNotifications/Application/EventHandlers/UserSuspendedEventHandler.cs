@@ -55,7 +55,9 @@ internal sealed class UserSuspendedEventHandler : INotificationHandler<UserSuspe
                 Payload = new GenericPayload(
                     "Account Suspended",
                     $"Your account has been suspended. Reason: {notification.Reason}"),
-                DeepLinkPath = "/account/suspended"
+                DeepLinkPath = "/account/suspended",
+                // Issue #1937 / CF-1: propagate event id for dispatcher dedup
+                SourceEventId = notification.EventId
             }, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(

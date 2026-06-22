@@ -46,22 +46,22 @@ function ChatBubble({ message }: { message: AIChatMessage }) {
         className={cn(
           'max-w-[80%] rounded-xl px-3 py-2',
           isUser
-            ? 'bg-indigo-50 text-slate-800'
-            : 'bg-white/80 border border-slate-200/60 text-slate-700'
+            ? 'bg-indigo-50 text-foreground'
+            : 'bg-card/80 border border-border/60 text-foreground'
         )}
       >
         <p className="font-nunito text-xs leading-relaxed whitespace-pre-wrap">{message.content}</p>
 
         {/* Source citations */}
         {message.sources && message.sources.length > 0 && (
-          <div className="mt-2 space-y-1 border-t border-slate-200/40 pt-1.5">
+          <div className="mt-2 space-y-1 border-t border-border/40 pt-1.5">
             {message.sources.map(source => (
               <SourceCitation key={source.title} source={source} />
             ))}
           </div>
         )}
 
-        <span className="mt-1 block text-[10px] text-slate-400 font-nunito">
+        <span className="mt-1 block text-[10px] text-muted-foreground font-nunito">
           {new Date(message.timestamp).toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit',
@@ -75,11 +75,11 @@ function ChatBubble({ message }: { message: AIChatMessage }) {
 /** Source citation badge */
 function SourceCitation({ source }: { source: AISource }) {
   return (
-    <div className="flex items-start gap-1.5 rounded bg-slate-50 px-2 py-1">
+    <div className="flex items-start gap-1.5 rounded bg-muted px-2 py-1">
       <Quote className="h-3 w-3 flex-shrink-0 text-amber-500 mt-0.5" />
       <div>
-        <p className="font-nunito text-[10px] font-semibold text-slate-600">{source.title}</p>
-        <p className="font-nunito text-[10px] text-slate-400 line-clamp-1">{source.snippet}</p>
+        <p className="font-nunito text-[10px] font-semibold text-muted-foreground">{source.title}</p>
+        <p className="font-nunito text-[10px] text-muted-foreground line-clamp-1">{source.snippet}</p>
       </div>
     </div>
   );
@@ -131,7 +131,7 @@ export function AITab({ data, onSendMessage }: AITabProps) {
 
   if (!data) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
         <Bot className="h-10 w-10 mb-2 opacity-50" />
         <p className="font-nunito text-sm">AI Assistant</p>
         <p className="font-nunito text-xs mt-1">Connect a RAG agent to get started</p>
@@ -163,7 +163,7 @@ export function AITab({ data, onSendMessage }: AITabProps) {
       {/* Chat messages */}
       <div className="flex-1 overflow-y-auto space-y-3 pr-1">
         {!hasMessages && (
-          <div className="flex flex-col items-center justify-center py-8 text-slate-400">
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
             <Sparkles className="h-8 w-8 mb-2 text-amber-300" />
             <p className="font-nunito text-xs">Ask anything about this game session</p>
           </div>
@@ -174,7 +174,7 @@ export function AITab({ data, onSendMessage }: AITabProps) {
         ))}
 
         {data.isLoading && (
-          <div className="flex items-center gap-2 text-slate-400" data-testid="ai-loading">
+          <div className="flex items-center gap-2 text-muted-foreground" data-testid="ai-loading">
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100">
               <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-600" />
             </div>
@@ -199,7 +199,7 @@ export function AITab({ data, onSendMessage }: AITabProps) {
       )}
 
       {/* Input area */}
-      <div className="flex items-end gap-2 border-t border-slate-200/40 pt-2 mt-auto">
+      <div className="flex items-end gap-2 border-t border-border/40 pt-2 mt-auto">
         <textarea
           value={inputValue}
           onChange={e => setInputValue(e.target.value)}
@@ -207,9 +207,9 @@ export function AITab({ data, onSendMessage }: AITabProps) {
           placeholder="Ask about rules, scores, strategy..."
           rows={1}
           className={cn(
-            'flex-1 resize-none rounded-lg border border-slate-200/60',
-            'bg-white/60 px-3 py-2 font-nunito text-xs text-slate-700',
-            'placeholder:text-slate-400',
+            'flex-1 resize-none rounded-lg border border-border/60',
+            'bg-card/60 px-3 py-2 font-nunito text-xs text-foreground',
+            'placeholder:text-muted-foreground',
             'focus:outline-none focus:ring-1 focus:ring-indigo-300'
           )}
           data-testid="ai-input"

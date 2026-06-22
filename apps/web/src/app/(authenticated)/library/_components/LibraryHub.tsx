@@ -1,0 +1,579 @@
+/**
+ * LibraryHub — Phase 2a (#1605): hybrid multi-entity hub orchestrator.
+ *
+ * Migrated from the Wave B.3 games-only view. Tab state is `HybridHubTab`
+ * (6 tabs); the 3 ready sources (games/sessions/chat) are orchestrated by
+ * `useHybridHubItems` and merged/filtered/sorted by `deriveHybridItems`.
+ * Agents + KB are stubbed `[]` until BE-2 #1589 / BE-1 #1588 (Phase 2b).
+ *
+ * Game-state filters (ex-`loaned`/`kb` tabs) live in the `CrossEntityFilters`
+ * STATO chip, applied to the games source before merge. Selection mode is
+ * game-scoped: forced to `browse` outside the `games` tab. FSM degrades on
+ * partial failure: `error` only when all ready sources fail.
+ */
+
+'use client';
+
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
+
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+
+import {
+  GamesEmptyState,
+  GamesFiltersInline,
+  GamesResultsGrid,
+  type GamesEmptyKind,
+  type GamesEmptyStateLabels,
+  type GamesFiltersInlineLabels,
+  type GamesResultsView,
+  type GamesSortKey,
+  type GamesStatusKey,
+  type GamesViewKey,
+} from '@/components/features/games';
+import {
+  AdvancedFiltersDrawer,
+  BulkSelectionBar,
+  CrossEntityFilters,
+  EmptyLibrary,
+  LibraryHeroDesktop,
+  LibraryHybridGrid,
+  LibraryTabs,
+  RecentActivityRail,
+  countActiveFilters,
+  type ActivityItem,
+  type BulkSelectionBarLabels,
+  type EmptyLibraryLabels,
+  type GameStateFilter,
+  type LibraryFilters,
+  type LibraryHeroDesktopLabels,
+  type LibraryHeroStat,
+  type LibrarySelectionMode,
+  type LibraryTabConfig,
+  type LibraryViewMode,
+} from '@/components/features/library';
+import { HubPageContainer } from '@/components/layout/PageContainer';
+import { useHybridHubItems } from '@/hooks/queries/useHybridHubItems';
+import { useLibrary, useRemoveGameFromLibrary } from '@/hooks/queries/useLibrary';
+import { useActivityFeed } from '@/hooks/useActivityFeed';
+import { useAdminRole } from '@/hooks/useAdminRole';
+import { useTranslation } from '@/hooks/useTranslation';
+import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
+import { deriveGamesTabEntries } from '@/lib/library/games-tab-filters';
+import {
+  deriveHybridItems,
+  type HybridHubSources,
+  type HybridHubTab,
+} from '@/lib/library/hybrid-hub.derive';
+import type { HybridHubItem } from '@/lib/library/hybrid-hub.types';
+import type { LibrarySortKey } from '@/lib/library/library-filters';
+import { useLibraryView } from '@/lib/library/use-library-view';
+import { IS_VISUAL_TEST_BUILD } from '@/lib/library/visual-test-fixture';
+
+// ─── State override hatch (dev / visual-test only) ─────────────────────────
+
+const VALID_OVERRIDES = ['loading', 'empty', 'filtered-empty', 'error'] as const;
+type StateOverride = (typeof VALID_OVERRIDES)[number];
+const STATE_OVERRIDE_ENABLED = process.env.NODE_ENV !== 'production' || IS_VISUAL_TEST_BUILD;
+function parseStateOverride(raw: string | null): StateOverride | null {
+  if (!STATE_OVERRIDE_ENABLED || raw == null) return null;
+  return (VALID_OVERRIDES as readonly string[]).includes(raw) ? (raw as StateOverride) : null;
+}
+type SurfaceKind = 'default' | 'loading' | 'empty' | 'filtered-empty' | 'error';
+
+const HUB_TABS: readonly HybridHubTab[] = ['all', 'games', 'agents', 'kb', 'sessions', 'chat'];
+
+/**
+ * SP4 mockup icon mapping (admin-mockups/design_files/sp4-library-desktop.jsx:142,155,172).
+ * Each tab carries an emoji rendered before the label inside the tab button.
+ */
+const TAB_ICONS: Record<HybridHubTab, string> = {
+  all: '⌗',
+  games: '🎲',
+  agents: '🤖',
+  kb: '📚',
+  sessions: '🎯',
+  chat: '💬',
+};
+
+/**
+ * SP4 mockup entity accent mapping (jsx:142/155). The 'all' tab falls back
+ * to the game accent so the indicator + active background read as the
+ * "primary library hue" when no entity filter is engaged.
+ */
+const TAB_ENTITY: Record<HybridHubTab, 'game' | 'agent' | 'kb' | 'session' | 'chat'> = {
+  all: 'game',
+  games: 'game',
+  agents: 'agent',
+  kb: 'kb',
+  sessions: 'session',
+  chat: 'chat',
+};
+
+export function LibraryHub(): ReactElement {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // F2 (#1975): BGG import is admin-only (BGG ToS — see AddGameDrawer.tsx:18 note).
+  // Gate the CTA visibility behind admin role; non-admins get `undefined` callbacks
+  // which collapse the CTA buttons in LibraryHeroDesktop + EmptyLibrary.
+  const { isAdminOrAbove } = useAdminRole();
+
+  const [tab, setTab] = useState<HybridHubTab>('all');
+  const [selectionMode, setSelectionMode] = useState<LibrarySelectionMode>('browse');
+  const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
+  const [query, setQuery] = useState('');
+  // SORT chip is currently a non-interactive visual stub (mockup admin-mockups/
+  // design_files/sp4-library-desktop.jsx:213). Until the chip-popover lands
+  // we pass a literal 'recent' down to CrossEntityFilters; the LibrarySortKey
+  // type import below documents the contract for the follow-up wiring.
+  // TODO(#1585-followup): wire sortKey state + setter when SORT chip popover ships.
+  const SORT_KEY_STUB: LibrarySortKey = 'recent';
+  const [gameStateFilter, setGameStateFilter] = useState<GameStateFilter>({
+    states: [],
+    withKb: false,
+  });
+  const { view, setView } = useLibraryView('grid');
+
+  // ─── games-tab local state (#1566) ───
+  const [gamesStatus, setGamesStatus] = useState<GamesStatusKey>('all');
+  const [gamesSort, setGamesSort] = useState<GamesSortKey>('last-played');
+  const [gamesQuery, setGamesQuery] = useState('');
+  const [gamesView, setGamesView] = useState<GamesViewKey>('grid');
+
+  // AdvancedFiltersDrawer cross-entity hub-level state (#1585-followup Task 3.3).
+  // Refactored from scope-conditional (one filter shape per tab) to a single
+  // cross-entity `LibraryFilters` that survives tab switches — matches the
+  // mockup hub-level filter surface.
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<LibraryFilters>({});
+
+  const activeFiltersCount = useMemo(() => countActiveFilters(activeFilters), [activeFilters]);
+
+  const stateOverride = parseStateOverride(searchParams.get('state'));
+
+  const hub = useHybridHubItems();
+
+  // #1566: dedicated library fetch for the games tab. Identical key to the call
+  // inside useHybridHubItems (useHybridHubItems.ts:41-46) → TanStack dedups to a
+  // single network request; this is 1 fetch, 2 references (not a double fetch).
+  const libraryQuery = useLibrary({
+    page: 1,
+    pageSize: 50,
+    sortBy: 'addedAt',
+    sortDescending: true,
+  });
+  const gameEntries = useMemo<readonly UserLibraryEntry[]>(
+    () => libraryQuery.data?.items ?? [],
+    [libraryQuery.data]
+  );
+  const gamesFiltered = useMemo<readonly UserLibraryEntry[]>(
+    () => deriveGamesTabEntries(gameEntries, gamesStatus, gamesQuery, gamesSort),
+    [gameEntries, gamesStatus, gamesQuery, gamesSort]
+  );
+  const gamesKind = useMemo<GamesEmptyKind | 'default'>(() => {
+    if (libraryQuery.isLoading) return 'loading';
+    if (libraryQuery.isError) return 'error';
+    if (gameEntries.length === 0) return 'empty';
+    if (gamesFiltered.length === 0) return 'filtered-empty';
+    return 'default';
+  }, [libraryQuery.isLoading, libraryQuery.isError, gameEntries.length, gamesFiltered.length]);
+  const gamesEffectiveKind: GamesEmptyKind | 'default' =
+    (stateOverride as GamesEmptyKind | null) ?? gamesKind;
+
+  const removeMutation = useRemoveGameFromLibrary();
+  const activityQuery = useActivityFeed(20);
+
+  // Selection mode is game-scoped — force browse when leaving the games tab.
+  useEffect(() => {
+    if (tab !== 'games' && selectionMode === 'select') {
+      setSelectionMode('browse');
+      setSelected(new Set());
+    }
+  }, [tab, selectionMode]);
+
+  // Apply game-state filters (ex-loaned/kb tabs) to the games source before merge.
+  const filteredSources = useMemo<HybridHubSources>(() => {
+    const { states, withKb } = gameStateFilter;
+    if (states.length === 0 && !withKb) return hub.sources;
+    const games = hub.sources.games.filter(item => {
+      if (item.entity !== 'game') return true;
+      const stateOk = states.length === 0 || (item.state != null && states.includes(item.state));
+      const kbOk = !withKb || item.hasKb === true; // Task 0 added hasKb to GameHubItem (optional)
+      return stateOk && kbOk;
+    });
+    return { ...hub.sources, games };
+  }, [hub.sources, gameStateFilter]);
+
+  const merged = useMemo<HybridHubItem[]>(
+    () => deriveHybridItems(filteredSources, tab, query, SORT_KEY_STUB),
+    [filteredSources, tab, query]
+  );
+
+  // Hero stats: hybrid counts (games/agents/docs/chats) from pre-filter totals.
+  const heroStats = useMemo(
+    () => ({
+      games: hub.totalCounts.games,
+      agents: hub.totalCounts.agents,
+      docs: hub.totalCounts.kb,
+      chats: hub.totalCounts.chat,
+    }),
+    [hub.totalCounts]
+  );
+
+  const activityItems = useMemo<readonly ActivityItem[]>(
+    () => activityQuery.data?.items ?? [],
+    [activityQuery.data]
+  );
+
+  // ─── Labels ───
+  const heroLabels = useMemo<LibraryHeroDesktopLabels>(
+    () => ({
+      title: t('pages.library.hero.title'),
+      subtitle: t('pages.library.hero.subtitle'),
+      eyebrow: t('pages.library.hero.eyebrow'),
+      ctaAdd: t('pages.library.hero.cta.add'),
+      // F2: label kept (i18n stable) — visibility gated by `onImportBgg` prop in hero.
+      ctaImportBgg: t('pages.library.hero.cta.importBgg'),
+      ctaExportAriaLabel: t('pages.library.hero.cta.exportAriaLabel'),
+    }),
+    [t]
+  );
+
+  const heroStatRows = useMemo<readonly LibraryHeroStat[]>(
+    () => [
+      {
+        key: 'totalGames',
+        label: t('pages.library.hero.stats.totalGames'),
+        value: heroStats.games,
+        entity: 'game',
+      },
+      {
+        key: 'agents',
+        label: t('pages.library.hero.stats.agents'),
+        value: heroStats.agents,
+        entity: 'agent',
+      },
+      {
+        key: 'docs',
+        label: t('pages.library.hero.stats.docs'),
+        value: heroStats.docs,
+        entity: 'kb',
+      },
+      {
+        key: 'chats',
+        label: t('pages.library.hero.stats.chats'),
+        value: heroStats.chats,
+        entity: 'chat',
+      },
+    ],
+    [t, heroStats]
+  );
+
+  const tabsConfig = useMemo<readonly LibraryTabConfig<HybridHubTab>[]>(() => {
+    const countFor = (tk: HybridHubTab): number => {
+      if (tk === 'all') return Object.values(hub.totalCounts).reduce((a, b) => a + b, 0);
+      if (tk === 'games') return hub.totalCounts.games;
+      if (tk === 'agents') return hub.totalCounts.agents;
+      if (tk === 'kb') return hub.totalCounts.kb;
+      if (tk === 'sessions') return hub.totalCounts.sessions;
+      return hub.totalCounts.chat;
+    };
+    return HUB_TABS.map(tk => ({
+      key: tk,
+      label: t(`pages.library.hubTabs.${tk}`),
+      count: countFor(tk),
+      icon: TAB_ICONS[tk],
+      entity: TAB_ENTITY[tk],
+    }));
+  }, [t, hub.totalCounts]);
+
+  const emptyLabels = useMemo<EmptyLibraryLabels>(
+    () => ({
+      empty: {
+        title: t('pages.library.emptyState.empty.title'),
+        subtitle: t('pages.library.emptyState.empty.subtitle'),
+        cta: t('pages.library.emptyState.empty.cta'),
+        // F2 (#1975): only render the BGG secondary CTA for admin users.
+        ctaImportBgg: isAdminOrAbove ? t('pages.library.emptyState.empty.ctaImportBgg') : undefined,
+        suggestions: {
+          heading: t('pages.library.emptyState.empty.suggestions.heading'),
+        },
+      },
+      filteredEmpty: {
+        title: t('pages.library.emptyState.filteredEmpty.title'),
+        subtitle: t('pages.library.emptyState.filteredEmpty.subtitle'),
+        cta: t('pages.library.emptyState.filteredEmpty.cta'),
+      },
+      error: {
+        title: t('pages.library.emptyState.error.title'),
+        subtitle: t('pages.library.emptyState.error.subtitle'),
+        cta: t('pages.library.emptyState.error.cta'),
+      },
+    }),
+    [t, isAdminOrAbove]
+  );
+
+  const bulkLabels = useMemo<BulkSelectionBarLabels>(() => {
+    const count = selected.size;
+    return {
+      regionLabel: t('pages.library.selectionMode.selectedCount', { count }),
+      counter: t('pages.library.bulk.counter', { count }),
+      counterCompact: t('pages.library.bulk.counterCompact'),
+      closeAriaLabel: t('pages.library.bulk.closeAriaLabel'),
+      archive: t('pages.library.bulk.actions.archive'),
+      tag: t('pages.library.bulk.actions.tag'),
+      exportLabel: t('pages.library.bulk.actions.export'),
+      confirmTitle: t('pages.library.bulk.confirm.deleteTitle', { count }),
+      confirmDescription: t('pages.library.bulk.confirm.deleteMessage'),
+      confirmCta: t('pages.library.bulk.confirm.confirmCta'),
+      cancelCta: t('pages.library.bulk.confirm.cancelCta'),
+    };
+  }, [t, selected]);
+
+  const gamesFiltersLabels = useMemo<GamesFiltersInlineLabels>(
+    () => ({
+      search: {
+        placeholder: t('pages.library.gamesTab.filters.search.placeholder'),
+        ariaLabel: t('pages.library.gamesTab.filters.search.ariaLabel'),
+        clearAriaLabel: t('pages.library.gamesTab.filters.search.clearAriaLabel'),
+      },
+      status: {
+        label: t('pages.library.gamesTab.filters.status.label'),
+        options: {
+          all: t('pages.library.gamesTab.filters.status.options.all'),
+          owned: t('pages.library.gamesTab.filters.status.options.owned'),
+          wishlist: t('pages.library.gamesTab.filters.status.options.wishlist'),
+          played: t('pages.library.gamesTab.filters.status.options.played'),
+        },
+      },
+      sort: {
+        label: t('pages.library.gamesTab.filters.sort.label'),
+        options: {
+          'last-played': t('pages.library.gamesTab.filters.sort.options.last-played'),
+          rating: t('pages.library.gamesTab.filters.sort.options.rating'),
+          title: t('pages.library.gamesTab.filters.sort.options.title'),
+          year: t('pages.library.gamesTab.filters.sort.options.year'),
+        },
+      },
+      view: {
+        label: t('pages.library.gamesTab.filters.view.label'),
+        options: {
+          grid: t('pages.library.gamesTab.filters.view.options.grid'),
+          list: t('pages.library.gamesTab.filters.view.options.list'),
+        },
+      },
+      resultCount: (count: number) => t('pages.library.gamesTab.filters.resultCount', { count }),
+    }),
+    [t]
+  );
+
+  const gamesEmptyLabels = useMemo<GamesEmptyStateLabels>(
+    () => ({
+      empty: {
+        title: t('pages.library.gamesTab.emptyState.empty.title'),
+        subtitle: t('pages.library.gamesTab.emptyState.empty.subtitle'),
+        cta: t('pages.library.gamesTab.emptyState.empty.cta'),
+      },
+      filteredEmpty: {
+        title: t('pages.library.gamesTab.emptyState.filteredEmpty.title'),
+        subtitle: t('pages.library.gamesTab.emptyState.filteredEmpty.subtitle'),
+        cta: t('pages.library.gamesTab.emptyState.filteredEmpty.cta'),
+      },
+      error: {
+        title: t('pages.library.gamesTab.emptyState.error.title'),
+        subtitle: t('pages.library.gamesTab.emptyState.error.subtitle'),
+        cta: t('pages.library.gamesTab.emptyState.error.cta'),
+      },
+    }),
+    [t]
+  );
+
+  // ─── FSM (partial-failure aware) ───
+  const realKind = useMemo<SurfaceKind>(() => {
+    if (hub.allFailed) return 'error';
+    if (hub.isLoading) return 'loading';
+    const totalAll = Object.values(hub.totalCounts).reduce((a, b) => a + b, 0);
+    if (totalAll === 0) return 'empty';
+    if (merged.length === 0) return 'filtered-empty';
+    return 'default';
+  }, [hub.allFailed, hub.isLoading, hub.totalCounts, merged.length]);
+
+  const effectiveKind: SurfaceKind = stateOverride ?? realKind;
+
+  // ─── Callbacks ───
+  const handleAddGame = useCallback(() => router.push('/library?action=add'), [router]);
+  const handleImportBgg = useCallback(() => router.push('/library?action=import-bgg'), [router]);
+
+  const handleCardClick = useCallback(
+    (itemId: string) => {
+      if (selectionMode === 'select') {
+        setSelected(prev => {
+          const n = new Set(prev);
+          if (n.has(itemId)) n.delete(itemId);
+          else n.add(itemId);
+          return n;
+        });
+        return;
+      }
+      const item = merged.find(i => i.id === itemId);
+      if (item) router.push(item.href);
+    },
+    [router, selectionMode, merged]
+  );
+
+  const handleEnterSelectMode = useCallback(
+    (itemId?: string) => {
+      if (tab !== 'games') return; // game-scoped guard
+      setSelectionMode('select');
+      if (itemId)
+        setSelected(prev => {
+          const n = new Set(prev);
+          n.add(itemId);
+          return n;
+        });
+    },
+    [tab]
+  );
+
+  const handleExitSelectMode = useCallback(() => {
+    setSelectionMode('browse');
+    setSelected(new Set());
+  }, []);
+
+  // #1566: retained for re-wiring (spec §3.5) — unreachable until enter-select-mode is restored.
+  const handleBulkDelete = useCallback(async () => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    // ids are HybridHubItem ids in the games tab; the games source id IS the library entry id.
+    await Promise.allSettled(ids.map(id => removeMutation.mutateAsync(id)));
+    setSelected(new Set());
+    setSelectionMode('browse');
+  }, [selected, removeMutation]);
+
+  const handleRetry = useCallback(() => {
+    /* per-source refetch handled by TanStack; no-op surfaces retry CTA */
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    setQuery('');
+    setTab('all');
+    setGameStateFilter({ states: [], withKb: false });
+    if (stateOverride != null) router.push(pathname);
+  }, [stateOverride, router, pathname]);
+
+  const handleGamesClearFilters = useCallback(() => {
+    setGamesQuery('');
+    setGamesStatus('all');
+    if (stateOverride != null) router.push(pathname);
+  }, [stateOverride, router, pathname]);
+
+  // ─── Render ───
+  // #2158 — MiniNavSlot config rimossa: LibraryHub ha già 6 tab interne (HUB_TABS)
+  // e il CTA "+ Aggiungi gioco" vive in LibraryHeroDesktop. Registrare anche
+  // breadcrumb/tabs/primaryAction sul MiniNavSlot creava duplicazione visiva e
+  // ridondanza semantica (Hub/Wishlist non aggiungono nulla rispetto alle hub tabs).
+  return (
+    <HubPageContainer
+      data-slot="library-hub-v2"
+      data-state={effectiveKind}
+      className="gap-6 p-6 pb-24 sm:p-7"
+    >
+      <LibraryHeroDesktop
+        labels={heroLabels}
+        stats={heroStatRows}
+        onAddGame={handleAddGame}
+        onImportBgg={isAdminOrAbove ? handleImportBgg : undefined}
+      />
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+        <div className="flex flex-1 flex-col gap-4">
+          <LibraryTabs<HybridHubTab> tabs={tabsConfig} active={tab} onChange={setTab} />
+          {tab === 'games' ? (
+            <>
+              <GamesFiltersInline
+                labels={gamesFiltersLabels}
+                query={gamesQuery}
+                onQueryChange={setGamesQuery}
+                status={gamesStatus}
+                onStatusChange={setGamesStatus}
+                sort={gamesSort}
+                onSortChange={setGamesSort}
+                view={gamesView}
+                onViewChange={setGamesView}
+                resultCount={gamesFiltered.length}
+                onMoreFilters={() => setDrawerOpen(true)}
+                activeFiltersCount={activeFiltersCount}
+              />
+              {gamesEffectiveKind === 'default' ? (
+                <GamesResultsGrid entries={gamesFiltered} view={gamesView as GamesResultsView} />
+              ) : (
+                <GamesEmptyState
+                  kind={gamesEffectiveKind}
+                  labels={gamesEmptyLabels}
+                  onAddGame={handleAddGame}
+                  onClearFilters={handleGamesClearFilters}
+                  onRetry={handleRetry}
+                />
+              )}
+            </>
+          ) : (
+            <>
+              <CrossEntityFilters
+                tab={tab}
+                gameStateFilter={gameStateFilter}
+                onGameStateFilterChange={setGameStateFilter}
+                onMoreFilters={() => setDrawerOpen(true)}
+                activeFiltersCount={activeFiltersCount}
+                search={query}
+                onSearchChange={setQuery}
+                view={view as LibraryViewMode}
+                onViewChange={setView}
+                sortKey={SORT_KEY_STUB}
+              />
+              {effectiveKind === 'default' ? (
+                <LibraryHybridGrid
+                  items={merged}
+                  view={view as LibraryViewMode}
+                  selectionMode={selectionMode}
+                  selected={selected}
+                  onCardClick={handleCardClick}
+                  onLongPressEnter={handleEnterSelectMode}
+                />
+              ) : (
+                <EmptyLibrary
+                  kind={effectiveKind}
+                  labels={emptyLabels}
+                  onAddGame={handleAddGame}
+                  onImportBgg={isAdminOrAbove ? handleImportBgg : undefined}
+                  onClearFilters={handleClearFilters}
+                  onRetry={handleRetry}
+                />
+              )}
+            </>
+          )}
+        </div>
+        <RecentActivityRail
+          items={activityItems}
+          isLoading={activityQuery.isLoading}
+          error={activityQuery.error}
+        />
+      </div>
+      {tab === 'games' && selectionMode === 'select' ? (
+        <BulkSelectionBar
+          selectedCount={selected.size}
+          labels={bulkLabels}
+          onExitSelectMode={handleExitSelectMode}
+          onArchive={handleBulkDelete}
+          disabled={selected.size === 0 || removeMutation.isPending}
+        />
+      ) : null}
+      <AdvancedFiltersDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        activeFilters={activeFilters}
+        onApply={setActiveFilters}
+        onClear={() => setActiveFilters({})}
+      />
+    </HubPageContainer>
+  );
+}

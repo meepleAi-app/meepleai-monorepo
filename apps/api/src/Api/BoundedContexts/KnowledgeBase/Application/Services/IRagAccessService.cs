@@ -33,4 +33,19 @@ public interface IRagAccessService
         Guid userId, Guid gameId, UserRole role,
         List<Guid>? selectedIds,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the SharedGame IDs accessible to the given user for cross-game KB operations.
+    /// RBAC rules:
+    /// 1. Admin or SuperAdmin → all non-deleted SharedGame IDs.
+    /// 2. Otherwise → union of:
+    ///    - SharedGames where IsRagPublic == true and IsDeleted == false.
+    ///    - SharedGames in the user's library where OwnershipDeclaredAt != null (EC-8).
+    /// Result is deduplicated. Returns an empty list (EC-1) if no games are accessible.
+    /// Issue #1661: RBAC foundation for cross-game search (PR-1) and SSE ask (PR-2).
+    /// </summary>
+    Task<IReadOnlyList<Guid>> GetAccessibleGameIdsAsync(
+        Guid userId,
+        UserRole role,
+        CancellationToken cancellationToken = default);
 }

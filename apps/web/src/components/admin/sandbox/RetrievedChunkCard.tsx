@@ -31,7 +31,7 @@ export function RetrievedChunkCard({
 }: RetrievedChunkCardProps) {
   return (
     <div
-      className="rounded-lg border bg-white p-3 transition-all hover:shadow-sm"
+      className="rounded-lg border bg-card p-3 transition-all hover:shadow-sm"
       data-testid="chunk-card"
     >
       {/* Score bar + numeric */}

@@ -25,8 +25,9 @@ import { useEffect, useState, useRef } from 'react';
 
 import { CheckCircle2, ArrowRight } from 'lucide-react';
 
-import { Btn } from '@/components/ui/v2/btn';
+import { Btn } from '@/components/ui/btn';
 import { useTranslation } from '@/hooks/useTranslation';
+import { assertSafeRelativeOrFallback } from '@/lib/url-safety';
 
 export interface VerificationSuccessProps {
   /** The verified email address */
@@ -47,12 +48,18 @@ export interface VerificationSuccessProps {
 
 export function VerificationSuccess({
   email,
-  redirectUrl = '/library',
+  redirectUrl: rawRedirectUrl = '/library',
   autoRedirectSeconds = 3,
   onRedirect,
   'data-testid': testId,
 }: VerificationSuccessProps) {
   const { t } = useTranslation();
+  // Issue #2217: defensive validation at the component boundary. The prop
+  // is typed `string` with no compile-time safety contract — current
+  // callers pass hardcoded literals but a future caller could pass a
+  // user-controlled URL. Reject 14 attack vectors via the shared helper
+  // and fall back to /library when unsafe.
+  const redirectUrl = assertSafeRelativeOrFallback(rawRedirectUrl, '/library');
   const [countdown, setCountdown] = useState(autoRedirectSeconds);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const hasRedirectedRef = useRef(false);

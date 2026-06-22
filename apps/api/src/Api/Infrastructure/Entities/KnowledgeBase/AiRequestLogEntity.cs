@@ -32,4 +32,12 @@ public class AiRequestLogEntity
     public double? CitationQuality { get; set; }
     public double? OverallConfidence { get; set; }
     public bool IsLowQuality { get; set; }
+
+    // #1728: Drill payload (jsonb). Both nullable — legacy rows + pipelines
+    // without instrumentation surface as "limited drill" / "breakdown
+    // unavailable" on the FE QueryDrillPanel (degrade graceful).
+    // ChunksJson: serialized JSON array of {id, score, text, page, chunkIndex, pdfName, used}
+    // BreakdownJson: serialized JSON object {retrievalMs, rerankMs, llmMs, postMs}
+    public string? ChunksJson { get; set; }
+    public string? BreakdownJson { get; set; }
 }

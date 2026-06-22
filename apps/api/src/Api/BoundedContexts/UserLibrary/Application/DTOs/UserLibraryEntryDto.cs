@@ -36,5 +36,9 @@ internal record UserLibraryEntryDto(
     bool IsPrivateGame = false,      // Issue #3663: Computed flag
     bool CanProposeToCatalog = false, // Issue #3663: Can propose private game to catalog
     DateTime? OwnershipDeclaredAt = null, // Ownership/RAG access: when user declared ownership of this game
-    bool HasRagAccess = false             // Ownership/RAG access: computed from admin/public/ownership rules
+    bool HasRagAccess = false,            // Ownership/RAG access: computed from admin/public/ownership rules
+    int TimesPlayed = 0,                  // #1566: gameplay count for games-tab 'played' filter
+    DateTime? LastPlayed = null,          // #1566: last play timestamp for games-tab 'last-played' sort
+                                          // Issue #1852 (Gap A): cover URL resolved via L3 → L4 → L2 priority; null if no cover available.
+    string? CoverUrl = null
 );

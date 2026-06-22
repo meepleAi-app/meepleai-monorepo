@@ -68,6 +68,7 @@ export function HomeFeed() {
                 subtitle={`${session.playerCount} giocatori`}
                 badge={session.status}
                 metadata={[{ label: `${session.durationMinutes} min` }]}
+                headingLevel={2}
                 onClick={() => {
                   if (session.status === 'Setup' || session.status === 'Paused') {
                     router.push(`/sessions/live/${session.id}`);

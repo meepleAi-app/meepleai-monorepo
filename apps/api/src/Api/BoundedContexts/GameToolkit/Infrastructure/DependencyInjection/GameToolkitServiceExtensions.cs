@@ -18,6 +18,8 @@ internal static class GameToolkitServiceExtensions
         // Register repositories
         services.AddScoped<IGameToolkitRepository, GameToolkitRepository>();
         services.AddScoped<IToolkitRepository, ToolkitRepository>();
+        services.AddScoped<IToolkitVersionRepository, ToolkitVersionRepository>();
+        services.AddScoped<IAiToolkitSuggestionCacheRepository, AiToolkitSuggestionCacheRepository>(); // ADR-069 (#2383)
 
         // Register Unit of Work (shared across bounded contexts)
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();

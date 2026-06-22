@@ -12,8 +12,9 @@
 
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileUp, X, FileText, CheckCircle2, AlertCircle, Loader2, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -77,59 +78,63 @@ export function PdfUploadSection({
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Processing status polling (Issue #5196)
+  // Processing status polling (Issue #5196 → refactored to useQuery in #2246 Block B)
   const [processingDoc, setProcessingDoc] = useState<PdfDocumentDto | null>(null);
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const queryClient = useQueryClient();
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
+  // Backend PdfProcessingState terminals (must match enum exactly)
   const TERMINAL_STATES = new Set(['Ready', 'Failed']);
+  const hasInProgressUpload = !!(
+    processingDoc && !TERMINAL_STATES.has(processingDoc.processingState)
+  );
 
-  // Poll document processing status after upload (Issue #5196)
+  // Issue #2246 Block A: invalidate admin caches after upload completes so
+  // freshly-uploaded documents appear immediately in all six admin surfaces.
+  const invalidateAdminCaches = useCallback(
+    (targetGameId: string) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'pdfs'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-game-kb-documents', targetGameId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-game-kb-statuses'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'queue'] });
+      queryClient.invalidateQueries({
+        queryKey: ['admin', 'shared-games', targetGameId, 'documents'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['admin', 'shared-games', targetGameId, 'kb-cards'],
+      });
+    },
+    [queryClient]
+  );
+
+  // Issue #2246 Block B: useQuery + refetchInterval replaces direct fetch+setInterval polling.
+  // Polling only runs while a document upload is in a non-terminal state.
+  const { data: polledPdfs } = useQuery({
+    queryKey: ['admin', 'pdfs', gameId],
+    queryFn: async (): Promise<PdfDocumentDto[]> => {
+      const res = await fetch(`/api/v1/games/${gameId}/pdfs`, { credentials: 'include' });
+      if (!res.ok) throw new Error('fetch failed');
+      const json = (await res.json()) as { pdfs?: PdfDocumentDto[] } | PdfDocumentDto[];
+      return Array.isArray(json) ? json : (json.pdfs ?? []);
+    },
+    enabled: !!gameId && hasInProgressUpload,
+    refetchInterval: hasInProgressUpload ? 3000 : false,
+  });
+
   useEffect(() => {
-    if (!processingDoc || !gameId || TERMINAL_STATES.has(processingDoc.processingState)) {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
+    if (!polledPdfs || !processingDoc) return;
+    const doc = polledPdfs.find(p => p.id === processingDoc.id);
+    if (!doc) return;
+    setProcessingDoc(doc);
+    if (TERMINAL_STATES.has(doc.processingState) && doc.processingState === 'Ready') {
+      toast.success('PDF indicizzato con successo!');
+      if (gameId) {
+        invalidateAdminCaches(gameId);
       }
-      return;
     }
-
-    const poll = async () => {
-      try {
-        const res = await fetch(`/api/v1/games/${gameId}/pdfs`, { credentials: 'include' });
-        if (!res.ok) return;
-        const json = (await res.json()) as { pdfs?: PdfDocumentDto[] } | PdfDocumentDto[];
-        const pdfs: PdfDocumentDto[] = Array.isArray(json) ? json : (json.pdfs ?? []);
-        const doc = pdfs.find(p => p.id === processingDoc.id);
-        if (doc) {
-          setProcessingDoc(doc);
-          if (TERMINAL_STATES.has(doc.processingState)) {
-            if (pollingRef.current) {
-              clearInterval(pollingRef.current);
-              pollingRef.current = null;
-            }
-            if (doc.processingState === 'Ready') {
-              toast.success('PDF indicizzato con successo!');
-            }
-          }
-        }
-      } catch {
-        // ignore transient errors
-      }
-    };
-
-    pollingRef.current = setInterval(() => {
-      void poll();
-    }, 3000);
-    return () => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
-      }
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [processingDoc?.id, processingDoc?.processingState, gameId]);
+  }, [polledPdfs, processingDoc?.id, gameId]);
 
   // Validate file selection
   const validateFile = useCallback((selectedFile: File): boolean => {
@@ -294,6 +299,9 @@ export function PdfUploadSection({
       // If we have a gameId, link the PDF to the game and start polling
       if (gameId) {
         await linkPdfToGame(gameId, result.documentId);
+        // Issue #2246 Block A: invalidate admin caches immediately so the
+        // freshly-uploaded document shows up in admin lists / queue / KB cards.
+        invalidateAdminCaches(gameId);
         // Start processing status polling (Issue #5196)
         setProcessingDoc({
           id: result.documentId,
@@ -328,7 +336,7 @@ export function PdfUploadSection({
     } finally {
       setUploading(false);
     }
-  }, [file, gameId, onPdfUploaded, linkPdfToGame, priority]);
+  }, [file, gameId, onPdfUploaded, linkPdfToGame, priority, invalidateAdminCaches]);
 
   // Remove uploaded PDF
   const handleRemove = useCallback(() => {

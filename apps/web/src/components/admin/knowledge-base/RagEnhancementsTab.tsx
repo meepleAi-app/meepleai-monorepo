@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin KB chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13b admin scope (see token-bridge-map.md for --admin-* decision deferred to DS-15). */
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -69,13 +70,13 @@ const TIER_ICONS: Record<Tier, React.ReactNode> = {
 };
 
 const TIER_COLORS: Record<Tier, string> = {
-  Free: 'text-slate-600 dark:text-slate-400',
+  Free: 'text-muted-foreground',
   Basic: 'text-blue-600 dark:text-blue-400',
   Pro: 'text-amber-600 dark:text-amber-400',
 };
 
 const TIER_SWITCH_COLORS: Record<Tier, string> = {
-  Free: 'data-[state=checked]:bg-slate-500',
+  Free: 'data-[state=checked]:bg-muted-foreground',
   Basic: 'data-[state=checked]:bg-blue-500',
   Pro: 'data-[state=checked]:bg-amber-500',
 };
@@ -84,7 +85,7 @@ function EnhancementSkeleton() {
   return (
     <div className="space-y-4">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="h-36 bg-white/40 dark:bg-zinc-800/40 rounded-xl animate-pulse" />
+        <div key={i} className="h-36 bg-card/40 dark:bg-zinc-800/40 rounded-xl animate-pulse" />
       ))}
     </div>
   );
@@ -190,8 +191,8 @@ export function RagEnhancementsTab() {
 
   if (!enhancements || enhancements.length === 0) {
     return (
-      <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-slate-200/50 dark:border-zinc-700/50">
-        <p className="text-sm text-slate-600 dark:text-zinc-400">
+      <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-border/50 dark:border-zinc-700/50">
+        <p className="text-sm text-muted-foreground dark:text-muted-foreground">
           No RAG enhancements configured. They will appear here once the backend is set up.
         </p>
       </div>
@@ -200,12 +201,12 @@ export function RagEnhancementsTab() {
 
   return (
     <TooltipProvider>
-      <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-slate-200/50 dark:border-zinc-700/50">
+      <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-border/50 dark:border-zinc-700/50">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
             <Brain className="h-5 w-5 text-purple-500" />
-            <h3 className="font-semibold text-slate-900 dark:text-zinc-100">RAG Enhancements</h3>
+            <h3 className="font-semibold text-foreground dark:text-zinc-100">RAG Enhancements</h3>
             <Badge variant="outline" className="text-xs">
               {enhancements.filter(e => e.isGloballyEnabled).length}/{enhancements.length} active
             </Badge>
@@ -238,7 +239,7 @@ export function RagEnhancementsTab() {
                   'rounded-lg border p-4 transition-colors',
                   enhancement.isGloballyEnabled
                     ? 'border-purple-200/50 dark:border-purple-800/50 bg-purple-50/30 dark:bg-purple-900/10'
-                    : 'border-slate-200/50 dark:border-zinc-700/50 bg-slate-50/30 dark:bg-zinc-900/20'
+                    : 'border-border/50 dark:border-zinc-700/50 bg-muted/30 dark:bg-zinc-900/20'
                 )}
               >
                 {/* Top row: Icon + Name + Global toggle */}
@@ -248,12 +249,12 @@ export function RagEnhancementsTab() {
                       className={cn(
                         enhancement.isGloballyEnabled
                           ? 'text-purple-600 dark:text-purple-400'
-                          : 'text-slate-400 dark:text-zinc-500'
+                          : 'text-muted-foreground dark:text-muted-foreground'
                       )}
                     >
                       {meta.icon}
                     </span>
-                    <span className="font-medium text-slate-900 dark:text-zinc-100">
+                    <span className="font-medium text-foreground dark:text-zinc-100">
                       {enhancement.name}
                     </span>
                   </div>
@@ -269,11 +270,11 @@ export function RagEnhancementsTab() {
                 </div>
 
                 {/* Description */}
-                <p className="text-sm text-slate-600 dark:text-zinc-400 mb-3">{meta.description}</p>
+                <p className="text-sm text-muted-foreground dark:text-muted-foreground mb-3">{meta.description}</p>
 
                 {/* Tier Access row */}
                 <div className="flex items-center gap-4 mb-3">
-                  <span className="text-xs font-medium text-slate-500 dark:text-zinc-500">
+                  <span className="text-xs font-medium text-muted-foreground dark:text-muted-foreground">
                     Tier Access:
                   </span>
                   <div className="flex items-center gap-3">
@@ -323,7 +324,7 @@ export function RagEnhancementsTab() {
                     <TooltipTrigger asChild>
                       <Badge
                         variant="outline"
-                        className="text-xs text-slate-600 dark:text-zinc-400"
+                        className="text-xs text-muted-foreground dark:text-muted-foreground"
                       >
                         +{enhancement.extraCreditsFast} credits (FAST)
                       </Badge>
@@ -336,7 +337,7 @@ export function RagEnhancementsTab() {
                     <TooltipTrigger asChild>
                       <Badge
                         variant="outline"
-                        className="text-xs text-slate-600 dark:text-zinc-400"
+                        className="text-xs text-muted-foreground dark:text-muted-foreground"
                       >
                         +{enhancement.extraCreditsBalanced} credits (BALANCED)
                       </Badge>
@@ -355,11 +356,11 @@ export function RagEnhancementsTab() {
         </div>
 
         {/* Help text */}
-        <div className="mt-6 bg-slate-50/70 dark:bg-zinc-900/50 rounded-lg p-4 border border-slate-200/30 dark:border-zinc-700/30">
-          <h4 className="text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
+        <div className="mt-6 bg-muted/70 dark:bg-zinc-900/50 rounded-lg p-4 border border-border/30 dark:border-zinc-700/30">
+          <h4 className="text-sm font-medium text-foreground dark:text-zinc-300 mb-2">
             RAG Enhancements Guide
           </h4>
-          <ul className="text-xs text-slate-500 dark:text-zinc-500 space-y-1">
+          <ul className="text-xs text-muted-foreground dark:text-muted-foreground space-y-1">
             <li>Toggle enhancements globally, then control per-tier access</li>
             <li>Tier toggles are disabled when the enhancement is globally off</li>
             <li>Credits show the extra cost per query for each mode (FAST vs BALANCED)</li>

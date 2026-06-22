@@ -16,7 +16,7 @@ public class AlertRuleEntity
     public required string Name { get; set; }
 
     /// <summary>
-    /// Type of alert (e.g., "HighErrorRate", "HighLatency", "QdrantDown")
+    /// Type of alert (e.g., "HighErrorRate", "HighLatency", "VectorStoreDown")
     /// Maps to predefined alert types in the system.
     /// </summary>
     public required string AlertType { get; set; }

@@ -33,7 +33,7 @@ public sealed class NotificationsE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"notify_list_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Act
@@ -66,7 +66,7 @@ public sealed class NotificationsE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"notify_page_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Act
@@ -96,7 +96,7 @@ public sealed class NotificationsE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"notify_filter_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Act
@@ -128,7 +128,7 @@ public sealed class NotificationsE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"notify_unread_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Act
@@ -147,7 +147,7 @@ public sealed class NotificationsE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"notify_zero_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Act
@@ -171,7 +171,7 @@ public sealed class NotificationsE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"notify_mark_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // First get notifications to find one
@@ -217,7 +217,7 @@ public sealed class NotificationsE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"notify_invalid_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         var invalidId = Guid.NewGuid();
@@ -234,7 +234,7 @@ public sealed class NotificationsE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"notify_all_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Act
@@ -271,7 +271,7 @@ public sealed class NotificationsE2ETests : E2ETestBase
     {
         // Step 1: Register user
         var email = $"notify_journey_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Step 2: Get initial unread count

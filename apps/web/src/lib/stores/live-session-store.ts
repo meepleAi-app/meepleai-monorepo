@@ -10,9 +10,17 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
+import type { ScoreDataByType, ScoreType } from '@/components/sessions/score-strategies/types';
+
 export interface PlayerInfo {
   id: string;
   name: string;
+  /**
+   * Optional user-facing label (#2389 Block A). Adapters should prefer
+   * `displayName ?? name` when rendering rosters. Becomes required once all
+   * SignalR/REST adapters populate it consistently (Block A finalization).
+   */
+  displayName?: string;
   isHost: boolean;
   isOnline: boolean;
 }
@@ -48,7 +56,17 @@ interface LiveSessionState {
   currentTurn: number;
   currentPhase: string | null;
   players: PlayerInfo[];
-  scores: Record<string, number>;
+  scoringType: ScoreType | null;
+  scoreData: ScoreDataByType[ScoreType] | null;
+  /**
+   * Rate-limit deadline (Unix timestamp in ms). `null` when not rate-limited.
+   * Set by `ScoreTabContent` on 429 response (Date.now() + 30000).
+   * Persists across tab change (ScoreTabContent unmount/remount) so the
+   * countdown UI continues from the correct remaining time.
+   * Cleared on natural expiry, store reset(), or explicit setRateLimitedUntil(null).
+   * Issue #2430 Block B+.
+   */
+  rateLimitedUntil: number | null;
   pendingProposals: ScoreProposal[];
   disputes: RuleDispute[];
   isConnected: boolean;
@@ -57,7 +75,11 @@ interface LiveSessionState {
 
   // Actions
   setSession: (data: Partial<LiveSessionState>) => void;
-  updateScore: (playerName: string, score: number) => void;
+  setScoringConfig: <T extends ScoreType>(args: {
+    scoringType: T;
+    scoreData: ScoreDataByType[T];
+  }) => void;
+  setRateLimitedUntil: (ts: number | null) => void;
   addProposal: (proposal: ScoreProposal) => void;
   resolveProposal: (proposalId: string, accepted: boolean) => void;
   addDispute: (dispute: RuleDispute) => void;
@@ -69,7 +91,8 @@ interface LiveSessionState {
 const initialState: Omit<
   LiveSessionState,
   | 'setSession'
-  | 'updateScore'
+  | 'setScoringConfig'
+  | 'setRateLimitedUntil'
   | 'addProposal'
   | 'resolveProposal'
   | 'addDispute'
@@ -83,7 +106,9 @@ const initialState: Omit<
   currentTurn: 1,
   currentPhase: null,
   players: [],
-  scores: {},
+  scoringType: null,
+  scoreData: null,
+  rateLimitedUntil: null,
   pendingProposals: [],
   disputes: [],
   isConnected: false,
@@ -98,14 +123,10 @@ export const useLiveSessionStore = create<LiveSessionState>()(
 
       setSession: data => set(data as Partial<LiveSessionState>, false, 'setSession'),
 
-      updateScore: (playerName, score) =>
-        set(
-          state => ({
-            scores: { ...state.scores, [playerName]: score },
-          }),
-          false,
-          'updateScore'
-        ),
+      setScoringConfig: ({ scoringType, scoreData }) =>
+        set({ scoringType, scoreData }, false, 'setScoringConfig'),
+
+      setRateLimitedUntil: ts => set({ rateLimitedUntil: ts }, false, 'setRateLimitedUntil'),
 
       addProposal: proposal =>
         set(
@@ -116,25 +137,20 @@ export const useLiveSessionStore = create<LiveSessionState>()(
           'addProposal'
         ),
 
-      resolveProposal: (proposalId, accepted) => {
+      /**
+       * Removes a proposal from the pending queue. The `accepted` flag is
+       * preserved on the signature for SignalR adapter compatibility, but
+       * Block C (#2389) no longer mutates a legacy `scores` map here —
+       * actual score application lives in the polymorphic `scoreData`
+       * pipeline (see `PolymorphicScoreEditor` + `UpdateSessionScoresCommand`).
+       */
+      resolveProposal: (proposalId, _accepted) => {
         const proposal = get().pendingProposals.find(p => p.id === proposalId);
         if (!proposal) return;
-
         set(
-          state => {
-            const pendingProposals = state.pendingProposals.filter(p => p.id !== proposalId);
-            if (!accepted) {
-              return { pendingProposals };
-            }
-            const currentScore = state.scores[proposal.playerName] ?? 0;
-            return {
-              pendingProposals,
-              scores: {
-                ...state.scores,
-                [proposal.playerName]: currentScore + proposal.delta,
-              },
-            };
-          },
+          state => ({
+            pendingProposals: state.pendingProposals.filter(p => p.id !== proposalId),
+          }),
           false,
           'resolveProposal'
         );

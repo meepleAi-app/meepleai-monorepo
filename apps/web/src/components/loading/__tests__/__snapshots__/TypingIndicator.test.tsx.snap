@@ -7,7 +7,7 @@ exports[`TypingIndicator > Snapshot test > should match snapshot when visible 1`
   animate="animate"
   aria-label="AI Assistant is typing"
   aria-live="polite"
-  class="flex items-center space-x-1 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-2xl w-fit "
+  class="flex items-center space-x-1 px-4 py-2 bg-muted rounded-2xl w-fit "
   exit="exit"
   initial="initial"
   role="status"
@@ -26,21 +26,21 @@ exports[`TypingIndicator > Snapshot test > should match snapshot when visible 1`
   >
     <span
       animate="animate"
-      class="w-2 h-2 bg-slate-500 dark:bg-slate-400 rounded-full"
+      class="w-2 h-2 bg-muted-foreground dark:bg-muted-foreground rounded-full"
       initial="initial"
       transition="[object Object]"
       variants="[object Object]"
     />
     <span
       animate="animate"
-      class="w-2 h-2 bg-slate-500 dark:bg-slate-400 rounded-full"
+      class="w-2 h-2 bg-muted-foreground dark:bg-muted-foreground rounded-full"
       initial="initial"
       transition="[object Object]"
       variants="[object Object]"
     />
     <span
       animate="animate"
-      class="w-2 h-2 bg-slate-500 dark:bg-slate-400 rounded-full"
+      class="w-2 h-2 bg-muted-foreground dark:bg-muted-foreground rounded-full"
       initial="initial"
       transition="[object Object]"
       variants="[object Object]"

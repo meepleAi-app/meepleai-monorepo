@@ -274,7 +274,7 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
                     new StreamingStateUpdate("Document search unavailable. Answering without game context."));
             }
 
-            // API trace: vector search (embedding + Qdrant) - only if not already added by error handler
+            // API trace: vector search (embedding + pgvector) - only if not already added by error handler
             if (searchError == null)
             {
                 apiTraces.Add(new PlaygroundApiTrace(

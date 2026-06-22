@@ -52,25 +52,25 @@ export function StatsRow() {
         icon={<Gamepad2 className="w-4 h-4" />}
         value={stats ? String(stats.totalGames) : '—'}
         label="giochi in libreria"
-        colorClass="text-[hsl(var(--e-game))]"
+        colorClass="text-[hsl(var(--c-game))]"
       />
       <StatCard
         icon={<Play className="w-4 h-4" />}
         value={stats ? String(stats.monthlyPlays) : '—'}
         label="partite questo mese"
-        colorClass="text-[hsl(var(--e-session))]"
+        colorClass="text-[hsl(var(--c-session))]"
       />
       <StatCard
         icon={<Clock className="w-4 h-4" />}
         value={parsePlayTime(stats?.weeklyPlayTime)}
         label="ore questa settimana"
-        colorClass="text-[hsl(var(--e-agent))]"
+        colorClass="text-[hsl(var(--c-agent))]"
       />
       <StatCard
         icon={<TrendingUp className="w-4 h-4" />}
         value={changeLabel}
         label="vs mese scorso"
-        colorClass="text-[hsl(var(--e-chat))]"
+        colorClass="text-[hsl(var(--c-chat))]"
       />
     </section>
   );

@@ -1,4 +1,5 @@
 using Api.Extensions;
+using Api.Infrastructure.Security;
 using System.Text.Json;
 
 namespace Api.Middleware;
@@ -86,10 +87,10 @@ internal class EmailVerificationMiddleware
             // Extract user identity from active session
             var (authenticated, session, _) = context.TryGetActiveSession();
 
-            if (!authenticated || session?.User is null)
+            if (!authenticated || session?.Principal?.Subject is null)
                 return null;
 
-            var user = session.User;
+            var user = session.Principal!.Subject;
 
             // Admin, SuperAdmin, and Editor roles are always exempt from email verification
             if (user.Role.Equals("superadmin", StringComparison.OrdinalIgnoreCase) ||
@@ -116,7 +117,7 @@ internal class EmailVerificationMiddleware
             _logger.LogWarning(
                 "Blocking request for unverified user {UserId} (email: {Email}, grace period ended: {GracePeriodEnded})",
                 user.Id,
-                user.Email,
+                DataMasking.MaskEmail(user.Email),
                 gracePeriodEndsAt?.ToString("O") ?? "never set");
 
             return new

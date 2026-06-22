@@ -1,0 +1,744 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Mechanic Extractor · MeepleAI Admin</title>
+<!-- D1 · AI Tooling & Data Quality → 'mechanic-extractor' (NAV_ID non ancora presente in
+     admin-nav.js; verrà aggiunto nel gruppo "AI Tooling & Data Quality"). -->
+<!-- @v1 RunAnalysisBar · CostCap · AnalysisTable · DetailDrawer (Sezioni/Meccaniche/Log/Validazione)
+     · ConfidenceChip · SectionProgress reuse
+     Endpoints: GET /api/v1/admin/mechanic-analyses
+                POST /api/v1/admin/mechanic-extractor/run
+                GET /api/v1/admin/mechanic-extractor/validation
+     Role: admin -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+
+<!-- ═══════════════════ INLINED DS (tokens + components + admin-base) ═══════════════════ -->
+<style>
+/* ── tokens.css ─────────────────────────────────────────────────── */
+:root{
+  --c-game:25 95% 45%;--c-player:262 83% 58%;--c-session:240 60% 55%;--c-agent:38 92% 50%;
+  --c-kb:174 60% 40%;--c-chat:220 80% 55%;--c-event:350 89% 60%;--c-toolkit:142 70% 45%;--c-tool:195 80% 50%;
+  --c-success:142 70% 45%;--c-warning:38 92% 50%;--c-danger:350 89% 60%;--c-info:220 80% 55%;
+  --brand:var(--c-game);--brand-fg:hsl(var(--c-game));
+  --f-display:'Quicksand',system-ui,sans-serif;--f-body:'Nunito',system-ui,sans-serif;--f-mono:'JetBrains Mono',ui-monospace,monospace;
+  --fs-xs:11px;--fs-sm:12px;--fs-base:14px;--fs-md:15px;--fs-lg:17px;--fs-xl:20px;--fs-2xl:24px;--fs-3xl:32px;--fs-4xl:40px;
+  --fw-reg:400;--fw-med:500;--fw-semi:600;--fw-bold:700;--fw-ext:800;
+  --lh-tight:1.2;--lh-snug:1.35;--lh-body:1.5;--lh-relax:1.65;
+  --r-xs:4px;--r-sm:6px;--r-md:10px;--r-lg:14px;--r-xl:18px;--r-pill:9999px;
+  --ease-out:cubic-bezier(.16,1,.3,1);--dur-sm:180ms;--dur-md:280ms;
+}
+:root,:root[data-theme="light"]{
+  --bg:#f7f3ee;--bg-card:#fff;--bg-muted:#efe6d9;--bg-sunken:#ede2d0;
+  --text:#2b1f12;--text-sec:#5a4a38;--text-muted:#9a8870;
+  --border:rgba(180,130,80,.18);--border-light:rgba(180,130,80,.1);--border-strong:rgba(180,130,80,.32);
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#14100a;--bg-card:#1e1710;--bg-muted:#241c13;--bg-sunken:#0f0c08;
+  --text:#f0e4d2;--text-sec:#c8b896;--text-muted:#8a7860;
+  --border:rgba(224,180,110,.14);--border-light:rgba(224,180,110,.08);--border-strong:rgba(224,180,110,.28);
+  --c-game:28 95% 58%;--c-player:262 75% 70%;--c-session:235 70% 70%;--c-agent:38 92% 62%;--c-kb:174 60% 55%;
+  --c-chat:218 80% 68%;--c-event:350 85% 70%;--c-toolkit:142 60% 58%;--c-tool:195 75% 62%;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}html,body{margin:0;padding:0}
+body{font-family:var(--f-body);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4,h5{font-family:var(--f-display);font-weight:700;letter-spacing:-.01em;margin:0;line-height:1.2}
+button{font-family:inherit;cursor:pointer}a{color:inherit;text-decoration:none}
+code,kbd{font-family:var(--f-mono);font-size:.9em}
+.e-game{--e:var(--c-game)}.e-player{--e:var(--c-player)}.e-session{--e:var(--c-session)}.e-agent{--e:var(--c-agent)}
+.e-kb{--e:var(--c-kb)}.e-chat{--e:var(--c-chat)}.e-event{--e:var(--c-event)}.e-toolkit{--e:var(--c-toolkit)}.e-tool{--e:var(--c-tool)}
+.e-fg{color:hsl(var(--e))}.e-tint{background:hsl(var(--e)/.1);color:hsl(var(--e))}
+.spark{stroke:currentColor;stroke-width:1.5;fill:none}.spark-fill{fill:currentColor;opacity:.14}
+
+/* ── admin-base.css ─────────────────────────────────────────────── */
+.admin-page{background:var(--bg);color:var(--text);min-height:100vh;font-family:var(--f-body);font-size:12px;line-height:1.5}
+.admin-shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+.admin-nav{background:var(--bg-card);border-right:1px solid var(--border);padding:16px 0;display:flex;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.admin-nav-brand{padding:4px 16px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border-light);margin-bottom:12px}
+.admin-nav-brand-mark{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,hsl(var(--c-game)),hsl(var(--c-event)));color:#fff;display:grid;place-items:center;font-family:var(--f-display);font-weight:900;font-size:14px}
+.admin-nav-brand-name{font-family:var(--f-display);font-weight:800;font-size:14px}
+.admin-nav-brand-tag{font-family:var(--f-mono);font-size:9px;font-weight:700;color:hsl(var(--c-event));text-transform:uppercase;letter-spacing:.08em;padding:2px 6px;border-radius:4px;background:hsl(var(--c-event)/.12);margin-left:auto}
+.admin-nav-group{padding:10px 16px 4px;font-family:var(--f-mono);font-size:9.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}
+.admin-nav-item{display:flex;align-items:center;gap:10px;padding:7px 16px;color:var(--text-sec);font-family:var(--f-display);font-size:13px;font-weight:600;cursor:pointer;border-left:2px solid transparent}
+.admin-nav-item:hover{background:var(--bg-muted);color:var(--text)}
+.admin-nav-item.active{background:hsl(var(--c-event)/.08);color:hsl(var(--c-event));border-left-color:hsl(var(--c-event))}
+.admin-nav-item .em{font-size:14px}
+.admin-nav-item .count{margin-left:auto;font-family:var(--f-mono);font-size:10px;color:var(--text-muted);font-weight:700}
+.admin-nav-foot{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border-light);font-family:var(--f-mono);font-size:10px;color:var(--text-muted)}
+.admin-top{background:var(--bg);border-bottom:1px solid var(--border-light);padding:12px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:50;backdrop-filter:blur(12px)}
+.admin-top h1{font-family:var(--f-display);font-size:20px;font-weight:800}
+.admin-top .crumbs{font-family:var(--f-mono);font-size:11px;color:var(--text-muted);margin-top:2px}
+.admin-top .spacer{flex:1}.admin-top-actions{display:flex;gap:8px;align-items:center}
+.admin-search{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;width:280px;font-size:12px}
+.admin-search input{flex:1;border:0;background:transparent;color:var(--text);font-family:var(--f-body);font-size:12.5px;outline:0}
+.admin-search kbd{padding:1px 5px;border-radius:4px;background:var(--bg-muted);border:1px solid var(--border);font-family:var(--f-mono);font-size:9px;color:var(--text-muted)}
+.btn-admin{padding:6px 12px;border-radius:6px;font-family:var(--f-display);font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--bg-card);color:var(--text);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-admin:hover{background:var(--bg-muted)}
+.btn-admin.primary{background:hsl(var(--c-event));border-color:hsl(var(--c-event));color:#fff;box-shadow:0 2px 6px hsl(var(--c-event)/.3)}
+.btn-admin.primary:hover{filter:brightness(1.08)}
+.btn-admin.danger{background:var(--bg-card);border-color:hsl(var(--c-event)/.5);color:hsl(var(--c-event))}
+.btn-admin.success{background:hsl(var(--c-toolkit));border-color:hsl(var(--c-toolkit));color:#fff}
+.btn-admin.ghost{background:transparent;border-color:transparent}
+.btn-admin.icon{padding:6px;width:28px;height:28px;justify-content:center}
+.btn-admin.sm{padding:3px 8px;font-size:11px}
+.btn-admin kbd{padding:1px 4px;border-radius:3px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);font-family:var(--f-mono);font-size:9px;margin-left:4px}
+.btn-admin.primary kbd{background:rgba(0,0,0,.18);border-color:rgba(0,0,0,.25)}
+.admin-kpi{background:var(--bg-card);border:1px solid var(--border-light);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-height:88px;position:relative}
+.admin-kpi-label{font-family:var(--f-mono);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em}
+.admin-kpi-value{font-family:var(--f-display);font-size:28px;font-weight:800;color:var(--text);line-height:1.1;font-variant-numeric:tabular-nums}
+.admin-kpi-trend{font-family:var(--f-mono);font-size:11px;font-weight:600}
+.admin-kpi-trend.up{color:hsl(var(--c-toolkit))}.admin-kpi-trend.down{color:hsl(var(--c-event))}.admin-kpi-trend.flat{color:var(--text-muted)}
+.admin-kpi-spark{position:absolute;right:12px;top:12px;width:70px;height:28px;opacity:.85}
+.admin-kpi.e-tool{border-left:3px solid hsl(var(--c-tool))}
+.admin-kpi.e-event{border-left:3px solid hsl(var(--c-event))}
+.admin-kpi.e-kb{border-left:3px solid hsl(var(--c-kb))}
+.admin-panel{background:var(--bg-card);border:1px solid var(--border-light);border-radius:10px;overflow:hidden}
+.admin-panel-head{padding:10px 14px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:10px;background:var(--bg)}
+.admin-panel-head h3{margin:0;font-family:var(--f-display);font-size:13px;font-weight:800}
+.admin-panel-head .meta{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);margin-left:auto}
+.admin-panel-body{padding:14px}
+.admin-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.admin-table th{text-align:left;padding:8px 12px;font-family:var(--f-mono);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border-light);background:var(--bg);position:sticky;top:0;white-space:nowrap}
+.admin-table td{padding:9px 12px;border-bottom:1px solid var(--border-light);vertical-align:middle}
+.admin-table tr:hover td{background:var(--bg-muted)}
+.admin-table tr.selected td{background:hsl(var(--c-event)/.07)}
+.admin-table tr.selected td:first-child{box-shadow:inset 3px 0 0 hsl(var(--c-event))}
+.status-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-family:var(--f-mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.status-chip::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.status-chip.healthy{background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit))}
+.status-chip.healthy::before{background:hsl(var(--c-toolkit));box-shadow:0 0 0 3px hsl(var(--c-toolkit)/.25)}
+.status-chip.warning{background:hsl(38 90% 56%/.14);color:hsl(38 90% 50%)}
+.status-chip.warning::before{background:hsl(38 90% 50%)}
+.status-chip.danger{background:hsl(var(--c-event)/.12);color:hsl(var(--c-event))}
+.status-chip.danger::before{background:hsl(var(--c-event))}
+.status-chip.muted{background:var(--bg-muted);color:var(--text-muted)}
+.status-chip.muted::before{background:var(--text-muted)}
+.status-chip.info{background:hsl(var(--c-chat)/.12);color:hsl(var(--c-chat))}
+.status-chip.info::before{background:hsl(var(--c-chat))}
+.status-chip.running{background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit))}
+.status-chip.running::before{background:hsl(var(--c-toolkit));animation:admin-pulse 1.4s ease-in-out infinite}
+@keyframes admin-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.5}}
+.admin-input,.admin-select{padding:6px 10px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;font-family:var(--f-body);font-size:12.5px}
+.admin-input.mono{font-family:var(--f-mono)}
+.admin-toggle{position:relative;width:34px;height:18px;background:var(--bg-muted);border:1px solid var(--border);border-radius:999px;cursor:pointer;display:inline-block;flex-shrink:0}
+.admin-toggle::after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:var(--text-sec);transition:.18s var(--ease-out)}
+.admin-toggle.on{background:hsl(var(--c-event)/.25);border-color:hsl(var(--c-event))}
+.admin-toggle.on::after{left:18px;background:hsl(var(--c-event))}
+.admin-tabs{display:flex;gap:0;border-bottom:1px solid var(--border-light);padding:0 14px;background:var(--bg)}
+.admin-tab{padding:8px 12px;font-family:var(--f-display);font-size:12px;font-weight:700;color:var(--text-sec);cursor:pointer;border-bottom:2px solid transparent;display:inline-flex;align-items:center;gap:6px;background:transparent;border-top:0;border-left:0;border-right:0}
+.admin-tab:hover{color:var(--text)}
+.admin-tab.active{color:hsl(var(--c-event));border-bottom-color:hsl(var(--c-event))}
+.admin-tab .count{font-family:var(--f-mono);font-size:9px;background:var(--bg-muted);padding:1px 5px;border-radius:99px;color:var(--text-sec);font-weight:700}
+.admin-tab.active .count{background:hsl(var(--c-event)/.14);color:hsl(var(--c-event))}
+@media (max-width:880px){
+  .admin-mobile-fallback{display:flex !important;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;text-align:center;gap:16px}
+  .admin-mobile-fallback .em{font-size:56px}
+  .admin-mobile-fallback h2{margin:0;font-family:var(--f-display);font-size:20px}
+  .admin-mobile-fallback p{color:var(--text-sec);max-width:320px;margin:0}
+  .admin-shell{display:none}
+}
+.admin-mobile-fallback{display:none}
+.admin-body{padding:20px 24px}
+
+/* ── Page-specific ──────────────────────────────────────────────── */
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.kpi-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.head-cluster{display:inline-flex;align-items:center;gap:10px;margin-left:auto}
+.head-cluster .sep{width:1px;height:14px;background:var(--border-light)}
+
+/* ── Run bar ────────────────────────────────────────────────────── */
+.run-bar{background:var(--bg-card);border:1px solid var(--border-light);border-left:3px solid hsl(var(--c-agent));border-radius:10px;padding:14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.run-bar .field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.run-bar .field .lbl{font-family:var(--f-mono);font-size:9.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em}
+.run-bar .field select,.run-bar .field input{font-size:12px;padding:5px 8px}
+.run-bar .field.f-game select{width:170px}
+.run-bar .field.f-pdf select{width:240px;font-family:var(--f-mono);font-size:11.5px}
+.run-bar .field.f-cap input{width:110px;font-family:var(--f-mono);text-align:right}
+.run-bar .field.f-cap .cur{position:relative}
+.run-bar .field.f-cap .cur::before{content:'$';position:absolute;left:10px;top:50%;transform:translateY(-50%);font-family:var(--f-mono);font-size:11.5px;color:var(--text-muted);pointer-events:none}
+.run-bar .field.f-cap input{padding-left:22px;text-align:left}
+.run-bar .override{display:flex;align-items:center;gap:6px;padding:0 6px;border-left:1px dashed var(--border);border-right:1px dashed var(--border);height:44px}
+.run-bar .override .ov-lbl{font-family:var(--f-display);font-weight:700;font-size:12px;color:hsl(var(--c-event));display:inline-flex;align-items:center;gap:5px}
+.run-bar .override .ov-lbl .lock{font-size:11px}
+.run-bar .override .ov-sub{font-family:var(--f-mono);font-size:9px;color:var(--text-muted);display:block;margin-top:1px;text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+.run-bar .spacer{flex:1}
+.run-bar .est{font-family:var(--f-mono);font-size:10.5px;color:var(--text-muted);text-align:right;display:flex;flex-direction:column;gap:2px}
+.run-bar .est .v{color:var(--text);font-weight:700;font-size:12px}
+
+/* ── Layout drill ───────────────────────────────────────────────── */
+.drill-grid{display:grid;grid-template-columns:1fr 380px;gap:14px;align-items:start}
+
+/* Game cell */
+.game-cell{display:flex;align-items:center;gap:10px}
+.game-cover{width:30px;height:38px;border-radius:5px;background:hsl(var(--e)/.14);border:1px solid hsl(var(--e)/.3);display:grid;place-items:center;font-size:14px;color:hsl(var(--e));flex-shrink:0;font-family:var(--f-display);font-weight:800}
+.game-info{display:flex;flex-direction:column;line-height:1.2;min-width:0}
+.game-name{font-family:var(--f-display);font-weight:800;font-size:13px;color:var(--text)}
+.game-id{font-family:var(--f-mono);font-size:9.5px;color:var(--text-muted);font-weight:700;margin-top:1px;letter-spacing:.02em}
+
+.pdf-cell{font-family:var(--f-mono);font-size:11.5px;color:var(--text-sec);background:var(--bg-sunken,var(--bg));padding:2px 7px;border-radius:5px;border:1px solid var(--border-light);display:inline-block;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.sec-progress-tiny{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:11px;color:var(--text);font-weight:600}
+.sec-progress-tiny .v{color:var(--text-muted);font-size:10px}
+.sec-progress-tiny .bar{display:inline-block;width:60px;height:4px;border-radius:99px;background:hsl(var(--c-event)/.12);overflow:hidden;position:relative;vertical-align:middle}
+.sec-progress-tiny .bar i{position:absolute;left:0;top:0;bottom:0;background:hsl(var(--c-event));border-radius:99px;animation:bar-pulse 1.4s ease-in-out infinite}
+@keyframes bar-pulse{0%,100%{opacity:.7}50%{opacity:1}}
+
+.cost-cell{font-family:var(--f-mono);font-size:11.5px;font-weight:700;color:var(--text);text-align:right;font-variant-numeric:tabular-nums}
+.cost-cell.over{color:hsl(var(--c-event))}
+.cost-cell .sub{display:block;color:var(--text-muted);font-weight:500;font-size:9.5px;margin-top:1px}
+
+.row-actions{display:flex;gap:4px;justify-content:flex-end;align-items:center}
+.row-actions .btn-admin.sm{padding:3px 7px;font-size:10.5px}
+
+/* ── Drill panel ───────────────────────────────────────────────── */
+.drill-panel{position:sticky;top:80px}
+.drill-hero{padding:14px 16px;display:flex;flex-direction:column;gap:8px;border-left:3px solid hsl(var(--c-game));background:linear-gradient(180deg, hsl(var(--c-game)/.05), transparent 80%)}
+.drill-hero .hh{display:flex;align-items:center;gap:10px}
+.drill-hero .hh .cover{width:40px;height:50px;border-radius:6px;background:hsl(var(--c-game)/.16);border:1px solid hsl(var(--c-game)/.3);display:grid;place-items:center;font-size:18px;color:hsl(var(--c-game));flex-shrink:0;font-family:var(--f-display);font-weight:800}
+.drill-hero h2{font-family:var(--f-display);font-size:17px;font-weight:800;color:var(--text);line-height:1.2}
+.drill-hero .sub{font-family:var(--f-mono);font-size:10.5px;color:var(--text-muted);margin-top:1px;font-weight:600}
+.drill-hero .chips{display:flex;gap:6px;flex-wrap:wrap;padding-top:2px}
+.drill-hero .runinfo{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-family:var(--f-mono);font-size:10.5px;border-top:1px dashed var(--border-light);padding-top:8px}
+.drill-hero .runinfo .lbl{color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-size:9px;font-weight:700}
+.drill-hero .runinfo .v{color:var(--text);font-weight:700;margin-top:2px;display:block}
+.drill-hero .runinfo .v.over{color:hsl(var(--c-event))}
+
+.section-runs{padding:6px 14px 14px;display:flex;flex-direction:column;gap:6px}
+.section-runs .sr{display:flex;flex-direction:column;gap:4px;padding:8px 10px;background:var(--bg);border:1px solid var(--border-light);border-radius:7px}
+.section-runs .sr-row{display:flex;align-items:center;gap:8px;font-size:12px}
+.section-runs .sr-row .nm{flex:1;font-family:var(--f-display);font-weight:700;color:var(--text);font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.section-runs .sr-row .pg{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);font-weight:700}
+.section-runs .sr-row .pct{font-family:var(--f-mono);font-size:10.5px;font-weight:700;color:var(--text);min-width:32px;text-align:right}
+.section-runs .sr-row .pct.muted{color:var(--text-muted)}
+.section-runs .sr-bar{height:5px;border-radius:99px;background:hsl(var(--e)/.12);overflow:hidden;position:relative}
+.section-runs .sr-bar i{position:absolute;left:0;top:0;bottom:0;background:hsl(var(--e));border-radius:99px;transition:width .25s var(--ease-out)}
+.section-runs .sr.running .sr-bar i{animation:bar-pulse 1.4s ease-in-out infinite}
+.section-runs .sr-meta{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:9.5px;color:var(--text-muted)}
+.section-runs .sr-meta .cost{color:var(--text-sec);font-weight:700}
+
+.subhead{display:flex;align-items:center;gap:8px;padding:8px 14px 4px;border-top:1px solid var(--border-light);background:var(--bg)}
+.subhead h4{font-family:var(--f-display);font-weight:800;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted)}
+.subhead .right{margin-left:auto;font-family:var(--f-mono);font-size:9.5px;color:var(--text-muted)}
+
+.mech-table{width:100%;border-collapse:collapse;font-size:12px}
+.mech-table th{padding:6px 14px;font-family:var(--f-mono);font-size:9.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border-light);text-align:left;background:var(--bg)}
+.mech-table td{padding:7px 14px;border-bottom:1px solid var(--border-light);vertical-align:middle}
+.mech-table tr:hover td{background:var(--bg-muted)}
+.mech-name{font-family:var(--f-display);font-weight:700;font-size:12.5px;color:var(--text)}
+.mech-pages{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);font-weight:600}
+.conf-cell{display:inline-flex;align-items:center;gap:6px;justify-content:flex-end;width:100%}
+.conf-cell .v{font-family:var(--f-mono);font-size:11px;font-weight:700;color:var(--text);min-width:34px;text-align:right;font-variant-numeric:tabular-nums}
+
+/* Empty state (commented in DOM, defined for completeness) */
+.empty{padding:36px 24px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;color:var(--text-muted)}
+.empty .em{font-size:36px}
+.empty h3{font-family:var(--f-display);font-size:14px;color:var(--text)}
+.empty p{max-width:300px;font-size:11.5px;line-height:1.5;margin:0}
+</style>
+</head>
+<body class="admin-page">
+
+  <div class="admin-mobile-fallback">
+    <div class="em">🖥️</div>
+    <h2>Console solo desktop</h2>
+    <p>La console admin è ottimizzata per schermi ≥ 880px. Aprila da desktop.</p>
+  </div>
+
+  <div class="admin-shell">
+    <div data-admin-nav-mount></div>
+
+    <main>
+      <header class="admin-top">
+        <div>
+          <h1>Mechanic Extractor</h1>
+          <div class="crumbs">Admin › AI Tooling &amp; Data Quality › Mechanic Extractor · 2 in volo · aggiornato 14:23:08</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="admin-top-actions">
+          <div class="admin-search"><span>🔍</span><input placeholder="Cerca gioco, PDF, meccanica…"/><kbd>⌘K</kbd></div>
+          <button class="btn-admin">⟳ Refresh <kbd>R</kbd></button>
+          <button class="btn-admin">📊 Validazione globale</button>
+          <button class="btn-admin icon" title="Tema">🌗</button>
+        </div>
+      </header>
+
+      <div class="admin-body" style="display:flex;flex-direction:column;gap:14px">
+
+        <!-- ────────── 1) Run bar ────────── -->
+        <section class="run-bar">
+          <div class="field f-game">
+            <span class="lbl">Gioco</span>
+            <select class="admin-select">
+              <option>Catan</option>
+              <option selected>Wingspan</option>
+              <option>Terraforming Mars</option>
+              <option>Brass: Birmingham</option>
+              <option>Ark Nova</option>
+            </select>
+          </div>
+
+          <div class="field f-pdf">
+            <span class="lbl">PDF regolamento</span>
+            <select class="admin-select">
+              <option selected>wingspan-rules-en.pdf · 12 pag · 1.8 MB</option>
+              <option>wingspan-rules-it.pdf · 12 pag · 1.7 MB</option>
+              <option>wingspan-european-expansion.pdf · 4 pag · 0.6 MB</option>
+            </select>
+          </div>
+
+          <div class="field f-cap">
+            <span class="lbl">Cost cap</span>
+            <div class="cur"><input class="admin-input mono" value="1.50" /></div>
+          </div>
+
+          <div class="override">
+            <span class="admin-toggle" role="switch" aria-checked="false"></span>
+            <div>
+              <span class="ov-lbl"><span class="lock">🔒</span>Override cap</span>
+              <span class="ov-sub">richiede conferma</span>
+            </div>
+          </div>
+
+          <div class="spacer"></div>
+
+          <div class="est">
+            <span class="v">≈ $0.62 · 4m 30s</span>
+            <span>14 sezioni · claude-3.5-sonnet · v2.4</span>
+          </div>
+
+          <button class="btn-admin primary">▶ Avvia analisi <kbd>↵</kbd></button>
+        </section>
+
+        <!-- ────────── 2) KPI strip ────────── -->
+        <section class="kpi-strip">
+          <div class="admin-kpi e-tool">
+            <div class="admin-kpi-label">Analisi totali</div>
+            <div class="admin-kpi-value">48<span style="font-size:14px;color:var(--text-muted);font-weight:600"> · ultimi 30g</span></div>
+            <div class="admin-kpi-trend up">▲ 8 vs mese scorso · 2 in volo</div>
+            <svg class="admin-kpi-spark e-tool" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,22 L8,20 L16,18 L24,18 L32,16 L40,14 L48,12 L56,12 L64,10 L70,8 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,22 L8,20 L16,18 L24,18 L32,16 L40,14 L48,12 L56,12 L64,10 L70,8"/>
+            </svg>
+          </div>
+
+          <div class="admin-kpi e-event">
+            <div class="admin-kpi-label">Costo medio / analisi</div>
+            <div class="admin-kpi-value"><span style="font-size:18px;color:var(--text-muted);font-weight:700">$</span>0.47</div>
+            <div class="admin-kpi-trend down">▼ -$0.08 vs cap medio $1.20</div>
+            <svg class="admin-kpi-spark e-event" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,8 L8,10 L16,12 L24,11 L32,14 L40,15 L48,16 L56,17 L64,18 L70,19 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,8 L8,10 L16,12 L24,11 L32,14 L40,15 L48,16 L56,17 L64,18 L70,19"/>
+            </svg>
+          </div>
+
+          <div class="admin-kpi e-kb">
+            <div class="admin-kpi-label">Meccaniche estratte</div>
+            <div class="admin-kpi-value">418<span style="font-size:14px;color:var(--text-muted);font-weight:600"> · 92 high-conf</span></div>
+            <div class="admin-kpi-trend up">▲ 78% conf ≥ 0.80 · 22% review</div>
+            <svg class="admin-kpi-spark e-kb" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,22 L8,20 L16,17 L24,15 L32,13 L40,10 L48,9 L56,7 L64,6 L70,4 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,22 L8,20 L16,17 L24,15 L32,13 L40,10 L48,9 L56,7 L64,6 L70,4"/>
+            </svg>
+          </div>
+        </section>
+
+        <!-- ────────── 3) Grid: Analisi (sx) + Dettaglio (dx) ────────── -->
+        <div class="drill-grid">
+
+          <!-- ░░ Analisi table ░░ -->
+          <section class="admin-panel">
+            <div class="admin-panel-head">
+              <h3>Analisi</h3>
+              <span class="status-chip running">2 running</span>
+              <span class="status-chip muted">1 queued</span>
+              <span class="status-chip healthy">44 completate</span>
+              <span class="status-chip danger">1 failed</span>
+              <div class="head-cluster">
+                <span class="meta">model: claude-3.5-sonnet · prompt v2.4</span>
+                <button class="btn-admin sm ghost">⤓ Export</button>
+              </div>
+            </div>
+
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th style="width:22%">Gioco</th>
+                  <th style="width:23%">PDF</th>
+                  <th style="width:12%">Stato</th>
+                  <th style="width:13%">Sezioni</th>
+                  <th style="width:10%;text-align:right">Costo</th>
+                  <th style="width:13%">Avviata</th>
+                  <th style="width:80px;text-align:right">Azioni</th>
+                </tr>
+              </thead>
+              <tbody>
+
+                <!-- ░ Selected · running -->
+                <tr class="selected">
+                  <td>
+                    <div class="game-cell e-game">
+                      <div class="game-cover">W</div>
+                      <div class="game-info"><span class="game-name">Wingspan</span><span class="game-id">game_wing01 · v2 ed.</span></div>
+                    </div>
+                  </td>
+                  <td><span class="pdf-cell" title="wingspan-rules-en.pdf">wingspan-rules-en.pdf</span></td>
+                  <td><span class="status-chip running">running · 64%</span></td>
+                  <td>
+                    <div class="sec-progress-tiny">
+                      <span class="bar"><i style="width:64%"></i></span>
+                      <span class="v">9 / 14</span>
+                    </div>
+                  </td>
+                  <td class="cost-cell">$0.42<span class="sub">cap $1.50</span></td>
+                  <td class="mono" style="font-size:11.5px">14:18:42<span style="display:block;color:var(--text-muted);font-size:9.5px;margin-top:1px">4m 26s fa</span></td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="btn-admin sm ghost" title="Apri dettaglio">↗</button>
+                      <button class="btn-admin sm ghost" title="Pause">⏸</button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- ░ Catan · completed -->
+                <tr>
+                  <td>
+                    <div class="game-cell e-game">
+                      <div class="game-cover">C</div>
+                      <div class="game-info"><span class="game-name">Catan</span><span class="game-id">game_ctn01 · base 5th ed.</span></div>
+                    </div>
+                  </td>
+                  <td><span class="pdf-cell">catan-rules-en-v5.pdf</span></td>
+                  <td><span class="status-chip healthy">completed</span></td>
+                  <td><span class="mono" style="font-size:11.5px">11 / 11 · 38 meccaniche</span></td>
+                  <td class="cost-cell">$0.43<span class="sub">cap $1.50</span></td>
+                  <td class="mono" style="font-size:11.5px">oggi 09:14:08<span style="display:block;color:var(--text-muted);font-size:9.5px;margin-top:1px">5h fa</span></td>
+                  <td><div class="row-actions"><button class="btn-admin sm ghost">↗</button></div></td>
+                </tr>
+
+                <!-- ░ Terraforming Mars · running second -->
+                <tr>
+                  <td>
+                    <div class="game-cell e-game">
+                      <div class="game-cover">T</div>
+                      <div class="game-info"><span class="game-name">Terraforming Mars</span><span class="game-id">game_tfm01 · base</span></div>
+                    </div>
+                  </td>
+                  <td><span class="pdf-cell">tfm-rules-en.pdf</span></td>
+                  <td><span class="status-chip running">running · 28%</span></td>
+                  <td><div class="sec-progress-tiny"><span class="bar"><i style="width:28%"></i></span><span class="v">5 / 18</span></div></td>
+                  <td class="cost-cell">$0.18<span class="sub">cap $2.00</span></td>
+                  <td class="mono" style="font-size:11.5px">14:21:01<span style="display:block;color:var(--text-muted);font-size:9.5px;margin-top:1px">2m 07s fa</span></td>
+                  <td><div class="row-actions"><button class="btn-admin sm ghost">↗</button><button class="btn-admin sm ghost">⏸</button></div></td>
+                </tr>
+
+                <!-- ░ Brass · queued -->
+                <tr>
+                  <td>
+                    <div class="game-cell e-game">
+                      <div class="game-cover">B</div>
+                      <div class="game-info"><span class="game-name">Brass: Birmingham</span><span class="game-id">game_brs02</span></div>
+                    </div>
+                  </td>
+                  <td><span class="pdf-cell">brass-birmingham-rules.pdf</span></td>
+                  <td><span class="status-chip muted">queued · pos 1</span></td>
+                  <td class="mono" style="font-size:11.5px;color:var(--text-muted)">— · stima 22 sez.</td>
+                  <td class="cost-cell" style="color:var(--text-muted)">—<span class="sub">cap $1.50</span></td>
+                  <td class="mono" style="font-size:11.5px">14:22:55<span style="display:block;color:var(--text-muted);font-size:9.5px;margin-top:1px">13s fa</span></td>
+                  <td><div class="row-actions"><button class="btn-admin sm ghost">↗</button><button class="btn-admin sm ghost">✕</button></div></td>
+                </tr>
+
+                <!-- ░ Ark Nova · failed (cost cap) -->
+                <tr>
+                  <td>
+                    <div class="game-cell e-game">
+                      <div class="game-cover">A</div>
+                      <div class="game-info"><span class="game-name">Ark Nova</span><span class="game-id">game_ark01</span></div>
+                    </div>
+                  </td>
+                  <td><span class="pdf-cell">ark-nova-rules-en.pdf</span></td>
+                  <td><span class="status-chip danger">failed · cap reached</span></td>
+                  <td class="mono" style="font-size:11.5px;color:var(--text-muted)">14 / 24 (interrotta)</td>
+                  <td class="cost-cell over">$1.51<span class="sub">cap $1.50</span></td>
+                  <td class="mono" style="font-size:11.5px">ieri 22:14:12<span style="display:block;color:var(--text-muted);font-size:9.5px;margin-top:1px">16h fa</span></td>
+                  <td><div class="row-actions"><button class="btn-admin sm ghost">↗</button><button class="btn-admin sm">↻ Retry</button></div></td>
+                </tr>
+
+                <!-- ░ Spirit Island · completed older -->
+                <tr>
+                  <td>
+                    <div class="game-cell e-game">
+                      <div class="game-cover">S</div>
+                      <div class="game-info"><span class="game-name">Spirit Island</span><span class="game-id">game_spi01</span></div>
+                    </div>
+                  </td>
+                  <td><span class="pdf-cell">spirit-island-rules.pdf</span></td>
+                  <td><span class="status-chip healthy">completed</span></td>
+                  <td class="mono" style="font-size:11.5px">19 / 19 · 51 meccaniche</td>
+                  <td class="cost-cell">$0.71<span class="sub">cap $1.50</span></td>
+                  <td class="mono" style="font-size:11.5px">22 mag 18:42<span style="display:block;color:var(--text-muted);font-size:9.5px;margin-top:1px">2g fa</span></td>
+                  <td><div class="row-actions"><button class="btn-admin sm ghost">↗</button></div></td>
+                </tr>
+
+                <!-- ░ Gloomhaven JotL · completed older -->
+                <tr>
+                  <td>
+                    <div class="game-cell e-game">
+                      <div class="game-cover">G</div>
+                      <div class="game-info"><span class="game-name">Gloomhaven: JotL</span><span class="game-id">game_glo04</span></div>
+                    </div>
+                  </td>
+                  <td><span class="pdf-cell">gh-jotl-learn-to-play.pdf</span></td>
+                  <td><span class="status-chip warning">completed · 4 low-conf</span></td>
+                  <td class="mono" style="font-size:11.5px">9 / 9 · 22 meccaniche</td>
+                  <td class="cost-cell">$0.38<span class="sub">cap $1.50</span></td>
+                  <td class="mono" style="font-size:11.5px">21 mag 11:03<span style="display:block;color:var(--text-muted);font-size:9.5px;margin-top:1px">3g fa</span></td>
+                  <td><div class="row-actions"><button class="btn-admin sm ghost">↗</button></div></td>
+                </tr>
+
+              </tbody>
+            </table>
+          </section>
+
+          <!-- ░░ Drill: Dettaglio analisi (Wingspan running) ░░ -->
+          <aside class="admin-panel drill-panel">
+            <div class="drill-hero">
+              <div class="hh">
+                <div class="cover">W</div>
+                <div style="flex:1;min-width:0">
+                  <h2>Wingspan</h2>
+                  <div class="sub">analysis_8f3a21 · v2 ed. · prompt v2.4</div>
+                </div>
+                <span class="status-chip running">running · 64%</span>
+              </div>
+              <div class="chips">
+                <span class="status-chip info">claude-3.5-sonnet</span>
+                <span class="status-chip muted">12 pag · 1.8 MB</span>
+                <span class="status-chip muted">SSE · live</span>
+              </div>
+              <div class="runinfo">
+                <div><span class="lbl">Costo</span><span class="v">$0.42</span></div>
+                <div><span class="lbl">Cap</span><span class="v">$1.50</span></div>
+                <div><span class="lbl">Eta</span><span class="v">1m 38s</span></div>
+              </div>
+            </div>
+
+            <div class="admin-tabs">
+              <button class="admin-tab active">Sezioni <span class="count">14</span></button>
+              <button class="admin-tab">Meccaniche <span class="count">22</span></button>
+              <button class="admin-tab">Log</button>
+              <button class="admin-tab">Validazione <span class="count">3</span></button>
+            </div>
+
+            <div class="section-runs">
+
+              <div class="sr e-kb">
+                <div class="sr-row"><span class="nm">Setup &amp; Components</span><span class="pg">p. 2–3</span><span class="pct">100%</span></div>
+                <div class="sr-bar"><i style="width:100%"></i></div>
+                <div class="sr-meta"><span>3 meccaniche · 38s</span><span class="cost">$0.04</span></div>
+              </div>
+
+              <div class="sr e-kb">
+                <div class="sr-row"><span class="nm">Turn Structure</span><span class="pg">p. 4</span><span class="pct">100%</span></div>
+                <div class="sr-bar"><i style="width:100%"></i></div>
+                <div class="sr-meta"><span>4 meccaniche · 41s</span><span class="cost">$0.05</span></div>
+              </div>
+
+              <div class="sr e-kb">
+                <div class="sr-row"><span class="nm">Action: Gain Food</span><span class="pg">p. 5</span><span class="pct">100%</span></div>
+                <div class="sr-bar"><i style="width:100%"></i></div>
+                <div class="sr-meta"><span>2 meccaniche · 29s</span><span class="cost">$0.03</span></div>
+              </div>
+
+              <div class="sr e-kb">
+                <div class="sr-row"><span class="nm">Action: Lay Eggs</span><span class="pg">p. 5</span><span class="pct">100%</span></div>
+                <div class="sr-bar"><i style="width:100%"></i></div>
+                <div class="sr-meta"><span>3 meccaniche · 32s</span><span class="cost">$0.04</span></div>
+              </div>
+
+              <div class="sr e-kb">
+                <div class="sr-row"><span class="nm">Action: Draw Cards</span><span class="pg">p. 6</span><span class="pct">100%</span></div>
+                <div class="sr-bar"><i style="width:100%"></i></div>
+                <div class="sr-meta"><span>2 meccaniche · 28s</span><span class="cost">$0.03</span></div>
+              </div>
+
+              <div class="sr e-kb">
+                <div class="sr-row"><span class="nm">Action: Play a Bird</span><span class="pg">p. 6–7</span><span class="pct">100%</span></div>
+                <div class="sr-bar"><i style="width:100%"></i></div>
+                <div class="sr-meta"><span>5 meccaniche · 52s</span><span class="cost">$0.07</span></div>
+              </div>
+
+              <div class="sr e-kb">
+                <div class="sr-row"><span class="nm">Bird Powers</span><span class="pg">p. 8</span><span class="pct">100%</span></div>
+                <div class="sr-bar"><i style="width:100%"></i></div>
+                <div class="sr-meta"><span>3 meccaniche · 47s</span><span class="cost">$0.06</span></div>
+              </div>
+
+              <div class="sr e-kb">
+                <div class="sr-row"><span class="nm">End of Round Goals</span><span class="pg">p. 9</span><span class="pct">100%</span></div>
+                <div class="sr-bar"><i style="width:100%"></i></div>
+                <div class="sr-meta"><span>1 meccanica · 22s</span><span class="cost">$0.03</span></div>
+              </div>
+
+              <div class="sr e-event running">
+                <div class="sr-row"><span class="nm">Scoring &amp; End Game</span><span class="pg">p. 10</span><span class="pct">58%</span></div>
+                <div class="sr-bar"><i style="width:58%"></i></div>
+                <div class="sr-meta"><span>in corso · estrazione meccaniche…</span><span class="cost">$0.07</span></div>
+              </div>
+
+              <div class="sr e-toolkit">
+                <div class="sr-row"><span class="nm">Solo Mode</span><span class="pg">p. 11</span><span class="pct muted">queued</span></div>
+                <div class="sr-bar"><i style="width:0"></i></div>
+                <div class="sr-meta"><span>in attesa</span><span class="cost">—</span></div>
+              </div>
+
+              <div class="sr e-toolkit">
+                <div class="sr-row"><span class="nm">Appendix · Bird List</span><span class="pg">p. 12</span><span class="pct muted">queued</span></div>
+                <div class="sr-bar"><i style="width:0"></i></div>
+                <div class="sr-meta"><span>in attesa</span><span class="cost">—</span></div>
+              </div>
+
+            </div>
+
+            <div class="subhead">
+              <h4>Meccaniche estratte</h4>
+              <span class="right">22 · sort by confidence ↓</span>
+            </div>
+
+            <table class="mech-table">
+              <thead>
+                <tr>
+                  <th style="width:55%">Meccanica</th>
+                  <th style="width:18%">Sez.</th>
+                  <th style="text-align:right">Conf.</th>
+                </tr>
+              </thead>
+              <tbody>
+
+                <tr>
+                  <td>
+                    <span class="mech-name">Engine Building</span>
+                    <span class="mech-pages" style="display:block">classify · p. 6–8</span>
+                  </td>
+                  <td class="mono" style="font-size:10.5px;color:var(--text-sec)">Play a Bird</td>
+                  <td>
+                    <div class="conf-cell">
+                      <span class="status-chip healthy">high</span>
+                      <span class="v">0.92</span>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td>
+                    <span class="mech-name">Hand Management</span>
+                    <span class="mech-pages" style="display:block">classify · p. 6</span>
+                  </td>
+                  <td class="mono" style="font-size:10.5px;color:var(--text-sec)">Draw Cards</td>
+                  <td>
+                    <div class="conf-cell">
+                      <span class="status-chip healthy">high</span>
+                      <span class="v">0.88</span>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td>
+                    <span class="mech-name">Variable Player Powers</span>
+                    <span class="mech-pages" style="display:block">classify · p. 8</span>
+                  </td>
+                  <td class="mono" style="font-size:10.5px;color:var(--text-sec)">Bird Powers</td>
+                  <td>
+                    <div class="conf-cell">
+                      <span class="status-chip healthy">high</span>
+                      <span class="v">0.84</span>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td>
+                    <span class="mech-name">Dice Rolling</span>
+                    <span class="mech-pages" style="display:block">classify · p. 5</span>
+                  </td>
+                  <td class="mono" style="font-size:10.5px;color:var(--text-sec)">Gain Food</td>
+                  <td>
+                    <div class="conf-cell">
+                      <span class="status-chip healthy">high</span>
+                      <span class="v">0.81</span>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td>
+                    <span class="mech-name">Push-Your-Luck</span>
+                    <span class="mech-pages" style="display:block">classify · p. 5</span>
+                  </td>
+                  <td class="mono" style="font-size:10.5px;color:var(--text-sec)">Gain Food</td>
+                  <td>
+                    <div class="conf-cell">
+                      <span class="status-chip healthy">high</span>
+                      <span class="v">0.76</span>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td>
+                    <span class="mech-name">Set Collection</span>
+                    <span class="mech-pages" style="display:block">classify · p. 9</span>
+                  </td>
+                  <td class="mono" style="font-size:10.5px;color:var(--text-sec)">End of Round Goals</td>
+                  <td>
+                    <div class="conf-cell">
+                      <span class="status-chip warning">review</span>
+                      <span class="v">0.61</span>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td>
+                    <span class="mech-name">Area Control</span>
+                    <span class="mech-pages" style="display:block">classify · p. 2</span>
+                  </td>
+                  <td class="mono" style="font-size:10.5px;color:var(--text-sec)">Setup</td>
+                  <td>
+                    <div class="conf-cell">
+                      <span class="status-chip warning">review</span>
+                      <span class="v">0.42</span>
+                    </div>
+                  </td>
+                </tr>
+
+              </tbody>
+            </table>
+          </aside>
+
+        </div>
+
+        <!-- ─── EMPTY STATE (commentato) ───
+        <section class="admin-panel">
+          <div class="empty">
+            <div class="em">🪶</div>
+            <h3>Nessuna analisi ancora</h3>
+            <p>Avvia la prima estrazione meccaniche scegliendo gioco + PDF in alto. Il primo run su un titolo costa in media $0.40–$0.70.</p>
+            <button class="btn-admin primary" style="margin-top:6px">▶ Avvia analisi</button>
+          </div>
+        </section>
+        ─── /EMPTY STATE ─── -->
+
+      </div>
+    </main>
+  </div>
+
+  <script src="admin-nav.js"></script>
+  <script>renderAdminNav('mechanic-extractor');</script>
+</body>
+</html>

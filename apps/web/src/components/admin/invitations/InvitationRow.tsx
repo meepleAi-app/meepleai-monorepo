@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin tools chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13d admin scope (--admin-* decision deferred to DS-15). */
 /**
  * InvitationRow Component (Issue #132)
  *
@@ -47,7 +48,7 @@ export function InvitationRow({
   const isPending = invitation.status === 'Pending';
 
   return (
-    <tr className="border-b border-slate-100 dark:border-zinc-800/60 hover:bg-slate-50/50 dark:hover:bg-zinc-700/30">
+    <tr className="border-b border-border dark:border-zinc-800/60 hover:bg-muted/50 dark:hover:bg-zinc-700/30">
       <td className="p-3 align-middle">{invitation.email}</td>
       <td className="p-3 align-middle">
         <Badge variant="secondary">{invitation.role}</Badge>

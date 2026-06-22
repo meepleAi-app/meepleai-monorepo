@@ -60,10 +60,10 @@ export function CardDeckTool({
   };
 
   return (
-    <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+    <div className="space-y-3 rounded-lg border border-border bg-card p-4">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-slate-700">{deck.name}</span>
-        <span className="text-xs text-slate-500">{deck.drawPile.length} carte</span>
+        <span className="text-sm font-semibold text-foreground">{deck.name}</span>
+        <span className="text-xs text-muted-foreground">{deck.drawPile.length} carte</span>
       </div>
 
       {deck.lastDrawnCard && (
@@ -75,7 +75,7 @@ export function CardDeckTool({
         </div>
       )}
 
-      {isEmpty && <p className="text-center text-xs text-slate-400">Mazzo esaurito</p>}
+      {isEmpty && <p className="text-center text-xs text-muted-foreground">Mazzo esaurito</p>}
 
       <div className="flex gap-2">
         <Button
@@ -102,7 +102,7 @@ export function CardDeckTool({
         </Button>
       </div>
 
-      <p className="text-center text-xs text-slate-400">Scarti: {deck.discardPile.length}</p>
+      <p className="text-center text-xs text-muted-foreground">Scarti: {deck.discardPile.length}</p>
     </div>
   );
 }

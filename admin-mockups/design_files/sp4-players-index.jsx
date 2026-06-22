@@ -538,7 +538,7 @@ const App = () => {
           }}>Mirror Games Wave B.1 · 4 stati · Desktop 1440 + Mobile 375 · Light/Dark</div>
         </div>
         <div style={{ marginLeft: 'auto' }}>
-          <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          <button onClick={(e) => { (() => setTheme(theme === 'light' ? 'dark' : 'light'))(e); setTimeout(() => { window.location.href = 'sp4-player-detail.html'; }, 0); /* DEMO-NAV */ }}
             style={{
               padding: '8px 14px', borderRadius: 999,
               border: '1px solid ' + (theme === 'dark' ? 'rgba(224,180,110,0.28)' : 'rgba(180,130,80,0.32)'),

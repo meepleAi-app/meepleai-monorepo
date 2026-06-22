@@ -30,7 +30,7 @@ function OnlineDot({ isOnline }: OnlineDotProps) {
     <span
       className={[
         'h-2.5 w-2.5 rounded-full shrink-0',
-        isOnline ? 'bg-green-400 shadow-sm shadow-green-200' : 'bg-gray-300',
+        isOnline ? 'bg-green-400 shadow-sm shadow-green-200' : 'bg-muted',
       ].join(' ')}
       aria-label={isOnline ? 'Online' : 'Offline'}
     />
@@ -43,10 +43,10 @@ interface PlayerRowProps {
 
 function PlayerRow({ player }: PlayerRowProps) {
   return (
-    <div className="flex items-center gap-3 rounded-xl bg-white/70 backdrop-blur-md border border-white/40 shadow-sm px-4 py-3">
+    <div className="flex items-center gap-3 rounded-xl bg-card/70 backdrop-blur-md border border-border shadow-sm px-4 py-3">
       <OnlineDot isOnline={player.isOnline} />
 
-      <span className="flex-1 font-nunito text-sm font-medium text-gray-900 truncate">
+      <span className="flex-1 font-nunito text-sm font-medium text-foreground truncate">
         {player.name}
       </span>
 
@@ -61,7 +61,7 @@ function PlayerRow({ player }: PlayerRowProps) {
       )}
 
       {!player.isHost && (
-        <span className="text-xs text-gray-400 font-nunito">
+        <span className="text-xs text-muted-foreground font-nunito">
           {player.isOnline ? 'Online' : 'Offline'}
         </span>
       )}
@@ -88,8 +88,8 @@ export function PlayerList({ sessionId: _sessionId, inviteCode, shareLink }: Pla
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-quicksand font-bold text-gray-900">Giocatori</h2>
-          <p className="text-xs text-gray-500 font-nunito mt-0.5">
+          <h2 className="text-xl font-quicksand font-bold text-foreground">Giocatori</h2>
+          <p className="text-xs text-muted-foreground font-nunito mt-0.5">
             {onlineCount}/{players.length} online
           </p>
         </div>
@@ -107,7 +107,7 @@ export function PlayerList({ sessionId: _sessionId, inviteCode, shareLink }: Pla
 
       {/* Player list */}
       {players.length === 0 ? (
-        <p className="text-sm text-gray-500 font-nunito text-center py-8">
+        <p className="text-sm text-muted-foreground font-nunito text-center py-8">
           Nessun giocatore registrato.
         </p>
       ) : (

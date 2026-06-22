@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.AgentDefinition;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Tests.Constants;
+using Api.SharedKernel.Infrastructure.Persistence;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -21,17 +22,20 @@ public sealed class CreateAgentDefinitionCommandHandlerKbCardsTests
     private static readonly Guid _kbCard2 = Guid.NewGuid();
 
     private readonly Mock<IAgentDefinitionRepository> _mockRepository;
+    private readonly Mock<IUnitOfWork> _mockUnitOfWork;
     private readonly CreateAgentDefinitionCommandHandler _handler;
 
     public CreateAgentDefinitionCommandHandlerKbCardsTests()
     {
         _mockRepository = new Mock<IAgentDefinitionRepository>();
+        _mockUnitOfWork = new Mock<IUnitOfWork>();
         _mockRepository
             .Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
         _handler = new CreateAgentDefinitionCommandHandler(
             _mockRepository.Object,
+            _mockUnitOfWork.Object,
             new Mock<ILogger<CreateAgentDefinitionCommandHandler>>().Object);
     }
 

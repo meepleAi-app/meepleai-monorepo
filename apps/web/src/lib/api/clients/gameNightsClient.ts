@@ -6,19 +6,25 @@
 import { z } from 'zod';
 
 import {
+  ConflictCheckDtoSchema,
   GameNightDtoSchema,
   GameNightRsvpDtoSchema,
+  RegularDtoSchema,
+  type ConflictCheckDto,
+  type CreateGameNightInput,
   type GameNightDto,
   type GameNightRsvpDto,
-  type CreateGameNightInput,
-  type UpdateGameNightInput,
+  type RegularDto,
   type RsvpStatus,
+  type UpdateGameNightInput,
 } from '../schemas/game-nights.schemas';
 
 import type { HttpClient } from '../core/httpClient';
 
 export interface GameNightsClient {
   getUpcoming(): Promise<GameNightDto[]>;
+  // F20 #1974: dashboard "Recenti" slot — recently completed game nights.
+  getCompleted(limit?: number): Promise<GameNightDto[]>;
   getMine(): Promise<GameNightDto[]>;
   getById(id: string): Promise<GameNightDto>;
   getRsvps(id: string): Promise<GameNightRsvpDto[]>;
@@ -28,6 +34,9 @@ export interface GameNightsClient {
   cancel(id: string): Promise<void>;
   invite(id: string, userIds: string[]): Promise<void>;
   rsvp(id: string, response: RsvpStatus): Promise<void>;
+  // Issue #950 W1-PR2 wizard hooks
+  getRegulars(limit?: number): Promise<RegularDto[]>;
+  checkConflict(at: string): Promise<ConflictCheckDto>;
 }
 
 export function createGameNightsClient({
@@ -38,6 +47,18 @@ export function createGameNightsClient({
   return {
     async getUpcoming() {
       const data = await httpClient.get<GameNightDto[]>('/api/v1/game-nights');
+      return z.array(GameNightDtoSchema).parse(data ?? []);
+    },
+
+    async getCompleted(limit) {
+      // F20 #1974: dashboard "Recenti" slot. `limit` is forwarded as a
+      // query param; the BE clamps to [1, 50] and defaults to 5 when
+      // omitted.
+      const url =
+        limit != null
+          ? `/api/v1/game-nights/completed?limit=${limit}`
+          : '/api/v1/game-nights/completed';
+      const data = await httpClient.get<GameNightDto[]>(url);
       return z.array(GameNightDtoSchema).parse(data ?? []);
     },
 
@@ -78,6 +99,19 @@ export function createGameNightsClient({
 
     async rsvp(id, response) {
       await httpClient.post(`/api/v1/game-nights/${id}/rsvp`, { response });
+    },
+
+    async getRegulars(limit) {
+      const query = limit !== undefined ? `?limit=${limit}` : '';
+      const data = await httpClient.get<RegularDto[]>(`/api/v1/game-nights/regulars${query}`);
+      return z.array(RegularDtoSchema).parse(data ?? []);
+    },
+
+    async checkConflict(at) {
+      const data = await httpClient.get<ConflictCheckDto>(
+        `/api/v1/game-nights/check-conflict?at=${encodeURIComponent(at)}`
+      );
+      return ConflictCheckDtoSchema.parse(data);
     },
   };
 }

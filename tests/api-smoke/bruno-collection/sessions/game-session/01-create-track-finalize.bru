@@ -1,0 +1,50 @@
+meta {
+  name: SG4-GS1 — Create GameSession + track score + finalize
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{apiBase}}/api/v1/sessions
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "gameId": "{{smokeGameId}}",
+    "players": [
+      { "playerName": "Smoke Aaron", "playerOrder": 1 },
+      { "playerName": "Player Two", "playerOrder": 2 }
+    ]
+  }
+}
+
+script:pre-request {
+  if (!bru.getVar("smokeGameId")) {
+    throw new Error("smokeGameId not set — run 01-preflight-get-game first (shared games must be seeded)");
+  }
+}
+
+script:post-response {
+  // Capture sessionId for subsequent finalize step
+  const body = res.getBody();
+  if (body && body.id) {
+    bru.setVar("gameSessionId", body.id);
+  }
+}
+
+tests {
+  test("returns 201 Created", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+  test("body contains id and status=InProgress", function() {
+    const body = res.getBody();
+    expect(body).to.have.property("id");
+    expect(body.status).to.equal("InProgress");
+  });
+  test("playerCount equals 2", function() {
+    const body = res.getBody();
+    expect(body.playerCount).to.equal(2);
+  });
+}

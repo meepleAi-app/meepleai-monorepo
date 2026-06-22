@@ -1,6 +1,6 @@
 import type { JSX } from 'react';
 
-import { ToggleSwitch } from '@/components/ui/v2/toggle-switch';
+import { ToggleSwitch } from '@/components/ui/toggle-switch';
 
 import { AGENTS } from './data';
 
@@ -17,7 +17,7 @@ export function AgentToggleStep({ agentStates, onToggle }: AgentToggleStepProps)
     <div className="flex flex-col gap-5 px-4 py-6">
       <div className="text-center">
         <h2 className="font-quicksand text-xl font-bold">
-          Attiva i tuoi <span className="text-[hsl(var(--e-agent))]">assistenti</span>
+          Attiva i tuoi <span className="text-[hsl(var(--c-agent))]">assistenti</span>
         </h2>
         <p className="mt-1 font-nunito text-sm text-muted-foreground">
           Ogni agente è specializzato in un tipo di domanda. Puoi modificarli in qualsiasi momento.

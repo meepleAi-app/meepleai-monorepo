@@ -1,3 +1,4 @@
+using Api.Infrastructure.Entities.SharedGameCatalog;
 namespace Api.Infrastructure.Entities;
 
 /// <summary>
@@ -31,5 +32,5 @@ public class ChatThreadEntity
 
     // Navigation properties
     public UserEntity? User { get; set; }
-    public GameEntity? Game { get; set; }
+    public SharedGameEntity? Game { get; set; }
 }

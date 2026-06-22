@@ -1,3 +1,4 @@
+using Api.Infrastructure.Entities.SharedGameCatalog;
 namespace Api.Infrastructure.Entities.KnowledgeBase;
 
 /// <summary>
@@ -25,5 +26,5 @@ public class ChatSessionEntity
 
     // Navigation properties
     public UserEntity? User { get; set; }
-    public GameEntity? Game { get; set; }
+    public SharedGameEntity? Game { get; set; }
 }

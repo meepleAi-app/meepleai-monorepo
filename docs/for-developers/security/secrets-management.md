@@ -1,15 +1,15 @@
 # Secrets Management Guide
 
 > **Last Updated**: 2026-01-17 (restored 2026-05-06 from `03dc2872a^:docs/for-developers/deployment/secrets-management.md`; relative paths re-rooted from `docs/for-developers/deployment/` → `docs/for-developers/security/`)
-> **Related ADR**: [ADR-021 - Auto-Configuration System](../architecture/adr/adr-021-auto-configuration-system.md)
-> **Detailed Reference**: [infra/secrets/README.md](../../infra/secrets/README.md)
+> **Related ADR**: [ADR-021 - Auto-Configuration System](../../for-claude/architecture/adr/adr-021-auto-configuration-system.md)
+> **Detailed Reference**: [infra/secrets/README.md](../../../infra/secrets/README.md)
 
 ## Overview
 
 This guide covers **production-grade secret management** for MeepleAI deployment, including rotation strategies, cloud integration, backup/recovery, and security compliance.
 
-For **development setup**, see [Auto-Configuration Guide](../deployment/auto-configuration-guide.md).
-For **complete secret file reference**, see [infra/secrets/README.md](../../infra/secrets/README.md).
+For **development setup**, see **Auto-Configuration Guide** _(planned)_.
+For **complete secret file reference**, see [infra/secrets/README.md](../../../infra/secrets/README.md).
 
 **Scope**:
 - 🏢 Production deployment patterns
@@ -601,9 +601,9 @@ git push origin --force --tags
 
 ## Related Documentation
 
-- **Architecture Decision**: [ADR-021 - Auto-Configuration System](../architecture/adr/adr-021-auto-configuration-system.md)
-- **Deployment Guide**: [Auto-Configuration Guide](../deployment/auto-configuration-guide.md)
-- **Complete Reference**: [infra/secrets/README.md](../../infra/secrets/README.md)
+- **Architecture Decision**: [ADR-021 - Auto-Configuration System](../../for-claude/architecture/adr/adr-021-auto-configuration-system.md)
+- **Deployment Guide**: **Auto-Configuration Guide** _(planned)_
+- **Complete Reference**: [infra/secrets/README.md](../../../infra/secrets/README.md)
 - **Health Check System**: `docs/for-developers/deployment/health-checks.md` (pending restoration)
 
 ---

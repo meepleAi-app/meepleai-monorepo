@@ -77,7 +77,7 @@ export function LogViewer() {
     return (
       <div
         data-testid="log-viewer-empty"
-        className="rounded-xl border bg-white/70 p-8 text-center backdrop-blur-md dark:bg-zinc-900/70"
+        className="rounded-xl border bg-card/70 p-8 text-center backdrop-blur-md"
       >
         <p className="text-muted-foreground">
           No containers found. Make sure Docker Socket Proxy is running.
@@ -100,7 +100,7 @@ export function LogViewer() {
         {/* Container sidebar */}
         <div
           data-testid="container-list"
-          className="w-64 shrink-0 space-y-2 rounded-xl border bg-white/70 p-4 backdrop-blur-md dark:bg-zinc-900/70"
+          className="w-64 shrink-0 space-y-2 rounded-xl border bg-card/70 p-4 backdrop-blur-md"
         >
           <h3 className="mb-3 text-sm font-semibold text-muted-foreground">Containers</h3>
           {containers.map(container => (
@@ -127,7 +127,7 @@ export function LogViewer() {
         </div>
 
         {/* Log output panel */}
-        <div className="min-w-0 flex-1 rounded-xl border bg-white/70 backdrop-blur-md dark:bg-zinc-900/70">
+        <div className="min-w-0 flex-1 rounded-xl border bg-card/70 backdrop-blur-md">
           {logs ? (
             <div className="flex h-full flex-col">
               <div className="flex items-center justify-between border-b px-4 py-3">

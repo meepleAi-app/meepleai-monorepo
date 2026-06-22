@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin tools chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13d admin scope (--admin-* decision deferred to DS-15). */
 /**
  * Dashboard Header Component - Issue #2784
  *
@@ -184,12 +185,12 @@ export function DashboardHeader({
             <MeepleDecoration className="h-8 w-8 text-white" />
           </div>
           <div>
-            <p className="text-sm text-stone-400">Bentornato,</p>
+            <p className="text-sm text-muted-foreground">Bentornato,</p>
             <h1 className="font-quicksand text-2xl font-bold" data-testid="admin-name">
               {adminName}
             </h1>
             {mounted && currentTime && (
-              <p className="text-sm text-stone-400">
+              <p className="text-sm text-muted-foreground">
                 {formatDate(currentTime)} ·{' '}
                 <span className="font-mono text-orange-400" data-testid="current-time">
                   {formatTime(currentTime)}
@@ -197,7 +198,7 @@ export function DashboardHeader({
               </p>
             )}
             {!mounted && (
-              <p className="text-sm text-stone-400">
+              <p className="text-sm text-muted-foreground">
                 <span className="animate-pulse">Caricamento...</span>
               </p>
             )}
@@ -209,7 +210,7 @@ export function DashboardHeader({
           {/* Search form */}
           <form onSubmit={handleSearchSubmit} className="relative">
             <Search
-              className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-500"
+              className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
               aria-hidden="true"
             />
             <input
@@ -217,7 +218,7 @@ export function DashboardHeader({
               placeholder="Cerca utenti, giochi, log..."
               value={searchQuery}
               onChange={handleSearchChange}
-              className="h-10 w-64 rounded-lg border border-stone-700 bg-stone-800/50 pl-10 pr-4 text-sm text-white placeholder-stone-500 backdrop-blur-sm transition-all focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+              className="h-10 w-64 rounded-lg border border-border bg-card pl-10 pr-4 text-sm text-white placeholder-stone-500 backdrop-blur-sm transition-all focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
               aria-label="Cerca nel pannello admin"
               data-testid="search-input"
             />
@@ -226,7 +227,7 @@ export function DashboardHeader({
           {/* Notifications button */}
           <Link
             href="/admin/notifications"
-            className="relative flex h-10 w-10 items-center justify-center rounded-lg border border-stone-700 bg-stone-800/50 text-stone-400 transition-all hover:border-orange-500 hover:text-orange-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+            className="relative flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-all hover:border-orange-500 hover:text-orange-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
             aria-label={`Notifiche${unreadCount > 0 ? ` (${unreadCount} non lette)` : ''}`}
             data-testid="notifications-button"
           >

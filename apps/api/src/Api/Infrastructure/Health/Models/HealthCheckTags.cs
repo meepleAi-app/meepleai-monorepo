@@ -7,7 +7,7 @@ public static class HealthCheckTags
 {
     // Service categories
     /// <summary>
-    /// Core infrastructure services (PostgreSQL, Redis, Qdrant).
+    /// Core infrastructure services (PostgreSQL, Redis).
     /// </summary>
     public const string Core = "core";
 
@@ -31,6 +31,14 @@ public static class HealthCheckTags
     /// </summary>
     public const string Storage = "storage";
 
+    /// <summary>
+    /// Seed-data / RAG indexing pipeline (#2126 D3). The
+    /// <c>SeedStateHealthCheck</c> reports whether the DB is
+    /// <c>empty</c>, <c>indexing</c>, <c>partial_failed</c>, or <c>ready</c>
+    /// for RAG queries — orthogonal to whether external services are up.
+    /// </summary>
+    public const string Seed = "seed";
+
     // Criticality levels
     /// <summary>
     /// Critical service - application cannot function without it.
@@ -43,4 +51,11 @@ public static class HealthCheckTags
     /// Failure results in overall status = Degraded.
     /// </summary>
     public const string NonCritical = "non-critical";
+
+    /// <summary>
+    /// Optional service - registered only when an opt-in provider is selected at runtime.
+    /// Used by readiness/liveness predicates to exclude pluggable providers from probe
+    /// aggregation, so swapping the active backend does not pollute the global health signal.
+    /// </summary>
+    public const string Optional = "optional";
 }

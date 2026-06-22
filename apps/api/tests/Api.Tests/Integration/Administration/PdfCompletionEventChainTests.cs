@@ -6,6 +6,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
@@ -106,11 +107,10 @@ public sealed class PdfCompletionEventChainTests : IAsyncLifetime
             Tier = "premium",
             Role = "admin",
         });
-        _dbContext.Games.Add(new GameEntity { Id = GameId, Name = "Gloomhaven" });
+        _dbContext.SharedGames.Add(new SharedGameEntity { Id = GameId, Title = "Gloomhaven" });
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            SharedGameId = GameId,
             FileName = "gloomhaven.pdf",
             FilePath = "/uploads/gloomhaven.pdf",
             UploadedByUserId = UserId,

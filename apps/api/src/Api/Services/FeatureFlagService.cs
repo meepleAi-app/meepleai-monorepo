@@ -3,9 +3,11 @@ using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.Infrastructure.Entities;
+using Api.Helpers;
 using Api.Middleware;
 using Api.Models;
 using MediatR;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Api.Services;
@@ -34,6 +36,7 @@ internal class FeatureFlagService : IFeatureFlagService
 {
     private readonly IConfigurationService _configService;
     private readonly IMediator _mediator;
+    private readonly IWebHostEnvironment _environment;
     private readonly ILogger<FeatureFlagService> _logger;
     private const string FeatureFlagCategory = "FeatureFlags";
     private const string TierPrefix = "Tier";
@@ -41,10 +44,12 @@ internal class FeatureFlagService : IFeatureFlagService
     public FeatureFlagService(
         IConfigurationService configService,
         IMediator mediator,
+        IWebHostEnvironment environment,
         ILogger<FeatureFlagService> logger)
     {
         _configService = configService;
         _mediator = mediator;
+        _environment = environment;
         _logger = logger;
     }
 
@@ -63,7 +68,7 @@ internal class FeatureFlagService : IFeatureFlagService
             if (roleSpecificFlag.HasValue)
             {
                 _logger.LogDebug("Feature {FeatureName} for role {Role}: {Enabled} (role-specific)",
-                    LogValueSanitizer.Sanitize(featureName), role.Value, roleSpecificFlag.Value);
+                    LogSanitizer.Sanitize(featureName), role.Value, roleSpecificFlag.Value);
                 return roleSpecificFlag.Value;
             }
         }
@@ -73,12 +78,12 @@ internal class FeatureFlagService : IFeatureFlagService
 
         if (globalFlag.HasValue)
         {
-            _logger.LogDebug("Feature {FeatureName}: {Enabled} (global)", LogValueSanitizer.Sanitize(featureName), globalFlag.Value);
+            _logger.LogDebug("Feature {FeatureName}: {Enabled} (global)", LogSanitizer.Sanitize(featureName), globalFlag.Value);
             return globalFlag.Value;
         }
 
         // Default: feature disabled (fail-safe)
-        _logger.LogDebug("Feature {FeatureName}: false (default - not found)", LogValueSanitizer.Sanitize(featureName));
+        _logger.LogDebug("Feature {FeatureName}: false (default - not found)", LogSanitizer.Sanitize(featureName));
         return false;
     }
 
@@ -97,7 +102,7 @@ internal class FeatureFlagService : IFeatureFlagService
         if (tierSpecificFlag.HasValue)
         {
             _logger.LogDebug("Feature {FeatureName} for tier {Tier}: {Enabled} (tier-specific)",
-                LogValueSanitizer.Sanitize(featureName), tier.Value, tierSpecificFlag.Value);
+                LogSanitizer.Sanitize(featureName), LogSanitizer.Sanitize(tier.Value), tierSpecificFlag.Value);
             return tierSpecificFlag.Value;
         }
 
@@ -106,12 +111,12 @@ internal class FeatureFlagService : IFeatureFlagService
 
         if (globalFlag.HasValue)
         {
-            _logger.LogDebug("Feature {FeatureName}: {Enabled} (global)", LogValueSanitizer.Sanitize(featureName), globalFlag.Value);
+            _logger.LogDebug("Feature {FeatureName}: {Enabled} (global)", LogSanitizer.Sanitize(featureName), globalFlag.Value);
             return globalFlag.Value;
         }
 
         // Default: feature enabled for tier (backward compatibility - all tiers allowed by default)
-        _logger.LogDebug("Feature {FeatureName} for tier {Tier}: true (default - not found)", LogValueSanitizer.Sanitize(featureName), tier.Value);
+        _logger.LogDebug("Feature {FeatureName} for tier {Tier}: true (default - not found)", LogSanitizer.Sanitize(featureName), LogSanitizer.Sanitize(tier.Value));
         return true;
     }
 
@@ -129,7 +134,7 @@ internal class FeatureFlagService : IFeatureFlagService
         if (user.Role.IsAdmin())
         {
             _logger.LogDebug("Feature {FeatureName} granted for admin user {UserId} (tier bypass)",
-                LogValueSanitizer.Sanitize(featureName), user.Id);
+                LogSanitizer.Sanitize(featureName), user.Id);
             return true;
         }
 
@@ -141,7 +146,7 @@ internal class FeatureFlagService : IFeatureFlagService
         if (!roleAccess)
         {
             _logger.LogDebug("Feature {FeatureName} denied for user {UserId}: role-based access denied",
-                LogValueSanitizer.Sanitize(featureName), user.Id);
+                LogSanitizer.Sanitize(featureName), user.Id);
             return false;
         }
 
@@ -150,12 +155,12 @@ internal class FeatureFlagService : IFeatureFlagService
         if (!tierAccess)
         {
             _logger.LogDebug("Feature {FeatureName} denied for user {UserId}: tier-based access denied",
-                LogValueSanitizer.Sanitize(featureName), user.Id);
+                LogSanitizer.Sanitize(featureName), user.Id);
             return false;
         }
 
         _logger.LogDebug("Feature {FeatureName} granted for user {UserId} (role={Role}, tier={Tier})",
-            LogValueSanitizer.Sanitize(featureName), user.Id, user.Role, user.Tier);
+            LogSanitizer.Sanitize(featureName), user.Id, user.Role, user.Tier);
         return true;
     }
 
@@ -176,8 +181,13 @@ internal class FeatureFlagService : IFeatureFlagService
     {
         var key = role.HasValue ? $"{featureName}.{role.Value}" : featureName;
 
-        // Check if configuration exists
-        var existing = await _configService.GetConfigurationByKeyAsync(key).ConfigureAwait(false);
+        // Bug #2162 (same pattern as #2116): pass the current environment to the
+        // lookup so it stays symmetric with the CREATE branch below. Without it
+        // the lookup falls back to _environment.EnvironmentName via the
+        // ConfigurationService default, while the CREATE used to hardcode
+        // "Production" — the asymmetry caused 23505 collisions in non-Production.
+        var environmentName = _environment.EnvironmentName;
+        var existing = await _configService.GetConfigurationByKeyAsync(key, environmentName).ConfigureAwait(false);
 
         var userGuid = userId != null && Guid.TryParse(userId, out var parsed) ? parsed : Guid.Empty;
 
@@ -197,7 +207,7 @@ internal class FeatureFlagService : IFeatureFlagService
             await _mediator.Send(command).ConfigureAwait(false);
 
             _logger.LogInformation("Feature {FeatureName} enabled{RoleInfo} by {UserId}",
-                LogValueSanitizer.Sanitize(featureName), role.HasValue ? $" for {role.Value}" : "", LogValueSanitizer.Sanitize(userId ?? "system"));
+                LogSanitizer.Sanitize(featureName), role.HasValue ? $" for {role.Value}" : "", LogSanitizer.Sanitize(userId ?? "system"));
         }
         else
         {
@@ -209,13 +219,13 @@ internal class FeatureFlagService : IFeatureFlagService
                 CreatedByUserId: userGuid,
                 Description: $"Feature flag: {featureName}",
                 Category: FeatureFlagCategory,
-                Environment: "Production",
+                Environment: environmentName,
                 RequiresRestart: false);
 
             await _mediator.Send(command).ConfigureAwait(false);
 
             _logger.LogInformation("Feature {FeatureName} created and enabled{RoleInfo} by {UserId}",
-                LogValueSanitizer.Sanitize(featureName), role.HasValue ? $" for {role.Value}" : "", LogValueSanitizer.Sanitize(userId ?? "system"));
+                LogSanitizer.Sanitize(featureName), role.HasValue ? $" for {role.Value}" : "", LogSanitizer.Sanitize(userId ?? "system"));
         }
     }
 
@@ -226,8 +236,9 @@ internal class FeatureFlagService : IFeatureFlagService
     {
         var key = role.HasValue ? $"{featureName}.{role.Value}" : featureName;
 
-        // Check if configuration exists
-        var existing = await _configService.GetConfigurationByKeyAsync(key).ConfigureAwait(false);
+        // Bug #2162: symmetric lookup + CREATE per environment. See EnableFeatureAsync.
+        var environmentName = _environment.EnvironmentName;
+        var existing = await _configService.GetConfigurationByKeyAsync(key, environmentName).ConfigureAwait(false);
 
         var userGuid = userId != null && Guid.TryParse(userId, out var parsed) ? parsed : Guid.Empty;
 
@@ -247,7 +258,7 @@ internal class FeatureFlagService : IFeatureFlagService
             await _mediator.Send(command).ConfigureAwait(false);
 
             _logger.LogInformation("Feature {FeatureName} disabled{RoleInfo} by {UserId}",
-                LogValueSanitizer.Sanitize(featureName), role.HasValue ? $" for {role.Value}" : "", LogValueSanitizer.Sanitize(userId ?? "system"));
+                LogSanitizer.Sanitize(featureName), role.HasValue ? $" for {role.Value}" : "", LogSanitizer.Sanitize(userId ?? "system"));
         }
         else
         {
@@ -259,13 +270,13 @@ internal class FeatureFlagService : IFeatureFlagService
                 CreatedByUserId: userGuid,
                 Description: $"Feature flag: {featureName}",
                 Category: FeatureFlagCategory,
-                Environment: "Production",
+                Environment: environmentName,
                 RequiresRestart: false);
 
             await _mediator.Send(command).ConfigureAwait(false);
 
             _logger.LogInformation("Feature {FeatureName} created and disabled{RoleInfo} by {UserId}",
-                LogValueSanitizer.Sanitize(featureName), role.HasValue ? $" for {role.Value}" : "", LogValueSanitizer.Sanitize(userId ?? "system"));
+                LogSanitizer.Sanitize(featureName), role.HasValue ? $" for {role.Value}" : "", LogSanitizer.Sanitize(userId ?? "system"));
         }
     }
 
@@ -277,8 +288,9 @@ internal class FeatureFlagService : IFeatureFlagService
         ArgumentNullException.ThrowIfNull(tier);
         var key = $"{featureName}.{TierPrefix}.{tier.Value}";
 
-        // Check if configuration exists
-        var existing = await _configService.GetConfigurationByKeyAsync(key).ConfigureAwait(false);
+        // Bug #2162: symmetric lookup + CREATE per environment. See EnableFeatureAsync.
+        var environmentName = _environment.EnvironmentName;
+        var existing = await _configService.GetConfigurationByKeyAsync(key, environmentName).ConfigureAwait(false);
 
         var userGuid = userId != null && Guid.TryParse(userId, out var parsed) ? parsed : Guid.Empty;
 
@@ -298,7 +310,7 @@ internal class FeatureFlagService : IFeatureFlagService
             await _mediator.Send(command).ConfigureAwait(false);
 
             _logger.LogInformation("Feature {FeatureName} enabled for tier {Tier} by {UserId}",
-                LogValueSanitizer.Sanitize(featureName), tier.Value, LogValueSanitizer.Sanitize(userId ?? "system"));
+                LogSanitizer.Sanitize(featureName), LogSanitizer.Sanitize(tier.Value), LogSanitizer.Sanitize(userId ?? "system"));
         }
         else
         {
@@ -310,13 +322,13 @@ internal class FeatureFlagService : IFeatureFlagService
                 CreatedByUserId: userGuid,
                 Description: $"Feature flag: {featureName} (tier: {tier.Value})",
                 Category: FeatureFlagCategory,
-                Environment: "Production",
+                Environment: environmentName,
                 RequiresRestart: false);
 
             await _mediator.Send(command).ConfigureAwait(false);
 
             _logger.LogInformation("Feature {FeatureName} created and enabled for tier {Tier} by {UserId}",
-                LogValueSanitizer.Sanitize(featureName), tier.Value, LogValueSanitizer.Sanitize(userId ?? "system"));
+                LogSanitizer.Sanitize(featureName), LogSanitizer.Sanitize(tier.Value), LogSanitizer.Sanitize(userId ?? "system"));
         }
     }
 
@@ -328,8 +340,9 @@ internal class FeatureFlagService : IFeatureFlagService
         ArgumentNullException.ThrowIfNull(tier);
         var key = $"{featureName}.{TierPrefix}.{tier.Value}";
 
-        // Check if configuration exists
-        var existing = await _configService.GetConfigurationByKeyAsync(key).ConfigureAwait(false);
+        // Bug #2162: symmetric lookup + CREATE per environment. See EnableFeatureAsync.
+        var environmentName = _environment.EnvironmentName;
+        var existing = await _configService.GetConfigurationByKeyAsync(key, environmentName).ConfigureAwait(false);
 
         var userGuid = userId != null && Guid.TryParse(userId, out var parsed) ? parsed : Guid.Empty;
 
@@ -349,7 +362,7 @@ internal class FeatureFlagService : IFeatureFlagService
             await _mediator.Send(command).ConfigureAwait(false);
 
             _logger.LogInformation("Feature {FeatureName} disabled for tier {Tier} by {UserId}",
-                LogValueSanitizer.Sanitize(featureName), tier.Value, LogValueSanitizer.Sanitize(userId ?? "system"));
+                LogSanitizer.Sanitize(featureName), LogSanitizer.Sanitize(tier.Value), LogSanitizer.Sanitize(userId ?? "system"));
         }
         else
         {
@@ -361,13 +374,13 @@ internal class FeatureFlagService : IFeatureFlagService
                 CreatedByUserId: userGuid,
                 Description: $"Feature flag: {featureName} (tier: {tier.Value})",
                 Category: FeatureFlagCategory,
-                Environment: "Production",
+                Environment: environmentName,
                 RequiresRestart: false);
 
             await _mediator.Send(command).ConfigureAwait(false);
 
             _logger.LogInformation("Feature {FeatureName} created and disabled for tier {Tier} by {UserId}",
-                LogValueSanitizer.Sanitize(featureName), tier.Value, LogValueSanitizer.Sanitize(userId ?? "system"));
+                LogSanitizer.Sanitize(featureName), LogSanitizer.Sanitize(tier.Value), LogSanitizer.Sanitize(userId ?? "system"));
         }
     }
 

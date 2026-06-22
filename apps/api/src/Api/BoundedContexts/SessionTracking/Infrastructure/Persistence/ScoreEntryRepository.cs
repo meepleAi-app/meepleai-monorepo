@@ -68,8 +68,11 @@ public class ScoreEntryRepository : RepositoryBase, IScoreEntryRepository
     {
         ArgumentNullException.ThrowIfNull(entry);
 
-        // Retrieve existing entity to preserve EF Core tracking
+        // Retrieve existing entity to preserve EF Core tracking.
+        // #930: explicit AsTracking() — DbContext default is NoTracking (PERF-06),
+        // without this the property mutations below would not be persisted.
         var existing = await DbContext.SessionTrackingScoreEntries
+            .AsTracking()
             .FirstOrDefaultAsync(e => e.Id == entry.Id, ct)
             .ConfigureAwait(false);
 

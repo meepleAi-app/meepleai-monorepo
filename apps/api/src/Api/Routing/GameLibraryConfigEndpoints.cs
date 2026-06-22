@@ -58,7 +58,7 @@ internal static class GameLibraryConfigEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         logger.LogInformation(
             "Admin {UserId} updating game library limits: Free={Free}, Normal={Normal}, Premium={Premium}",

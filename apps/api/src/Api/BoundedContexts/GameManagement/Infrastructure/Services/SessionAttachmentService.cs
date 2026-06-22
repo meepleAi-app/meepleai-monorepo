@@ -1,9 +1,8 @@
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Application.Validators;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment;
+using Api.Helpers;
 using Api.Services.Pdf;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
 
 namespace Api.BoundedContexts.GameManagement.Infrastructure.Services;
 
@@ -16,8 +15,6 @@ internal sealed class SessionAttachmentService : ISessionAttachmentService
     private readonly IBlobStorageService _blobStorage;
     private readonly ILogger<SessionAttachmentService> _logger;
 
-    private const int ThumbnailMaxDimension = 300;
-    private const int ThumbnailJpegQuality = 80;
     private const int DownloadUrlExpirySeconds = 3600; // 1 hour
 
     public SessionAttachmentService(
@@ -66,7 +63,7 @@ internal sealed class SessionAttachmentService : ISessionAttachmentService
 
         // Upload original
         var originalResult = await _blobStorage.StoreAsync(
-            fileStream, photoFileName, storageFolder, ct).ConfigureAwait(false);
+            fileStream, photoFileName, BlobCategory.SessionPhoto, storageFolder, ct).ConfigureAwait(false);
 
         if (!originalResult.Success)
         {
@@ -90,7 +87,7 @@ internal sealed class SessionAttachmentService : ISessionAttachmentService
             {
                 var thumbFileName = $"{playerId:N}_{Guid.NewGuid():N}_thumb.jpg";
                 var thumbResult = await _blobStorage.StoreAsync(
-                    thumbnailStream, thumbFileName, storageFolder, ct).ConfigureAwait(false);
+                    thumbnailStream, thumbFileName, BlobCategory.SessionPhoto, storageFolder, ct).ConfigureAwait(false);
 
                 if (thumbResult.Success)
                 {
@@ -134,7 +131,7 @@ internal sealed class SessionAttachmentService : ISessionAttachmentService
         if (fileId != null && folder != null)
         {
             var presignedUrl = await _blobStorage.GetPresignedDownloadUrlAsync(
-                fileId, folder, DownloadUrlExpirySeconds).ConfigureAwait(false);
+                fileId, BlobCategory.SessionPhoto, folder, DownloadUrlExpirySeconds).ConfigureAwait(false);
             if (presignedUrl != null)
             {
                 return presignedUrl;
@@ -162,7 +159,7 @@ internal sealed class SessionAttachmentService : ISessionAttachmentService
         var (fileId, folder) = ParseBlobPath(blobPath);
         if (fileId != null && folder != null)
         {
-            var deleted = await _blobStorage.DeleteAsync(fileId, folder).ConfigureAwait(false);
+            var deleted = await _blobStorage.DeleteAsync(fileId, BlobCategory.SessionPhoto, folder).ConfigureAwait(false);
             if (!deleted)
             {
                 _logger.LogWarning("Failed to delete blob at path: {Path}", blobPath);
@@ -174,44 +171,13 @@ internal sealed class SessionAttachmentService : ISessionAttachmentService
         }
     }
 
-    internal static async Task<MemoryStream?> GenerateThumbnailAsync(Stream sourceStream, CancellationToken ct = default)
-    {
-        using var image = await Image.LoadAsync(sourceStream, ct).ConfigureAwait(false);
-
-        // Calculate new dimensions maintaining aspect ratio
-        var (newWidth, newHeight) = CalculateThumbnailDimensions(image.Width, image.Height);
-
-        image.Mutate(ctx => ctx.Resize(newWidth, newHeight));
-
-        var outputStream = new MemoryStream();
-        var encoder = new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder
-        {
-            Quality = ThumbnailJpegQuality
-        };
-        await image.SaveAsync(outputStream, encoder, ct).ConfigureAwait(false);
-        outputStream.Position = 0;
-        return outputStream;
-    }
+    // Issue #2055 Phase G + #2436 PR-B: delegates to shared ImageThumbnailHelper
+    // (Magick.NET-Q8-AnyCPU 14.x, Apache 2.0, post DEC-3d-1 migration).
+    internal static Task<MemoryStream?> GenerateThumbnailAsync(Stream sourceStream, CancellationToken ct = default)
+        => ImageThumbnailHelper.GenerateThumbnailAsync(sourceStream, ct);
 
     internal static (int width, int height) CalculateThumbnailDimensions(int originalWidth, int originalHeight)
-    {
-        if (originalWidth <= ThumbnailMaxDimension && originalHeight <= ThumbnailMaxDimension)
-        {
-            return (originalWidth, originalHeight);
-        }
-
-        double ratio;
-        if (originalWidth >= originalHeight)
-        {
-            ratio = (double)ThumbnailMaxDimension / originalWidth;
-        }
-        else
-        {
-            ratio = (double)ThumbnailMaxDimension / originalHeight;
-        }
-
-        return (Math.Max(1, (int)(originalWidth * ratio)), Math.Max(1, (int)(originalHeight * ratio)));
-    }
+        => ImageThumbnailHelper.CalculateThumbnailDimensions(originalWidth, originalHeight);
 
     private static bool IsAllowedContentType(string contentType)
     {

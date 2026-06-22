@@ -377,14 +377,14 @@ const HorizontalRow = ({ title, emoji, count, items, renderCard, mobile }) => {
           background:'transparent', color:'var(--text-sec)',
           border:'none', cursor:'pointer',
           fontFamily:'var(--f-display)', fontSize: 12, fontWeight: 700,
-        }}>Vedi tutti →</button>
+        }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-game-detail.html'; }, 0); /* DEMO-NAV */ }}>Vedi tutti →</button>
       </header>
 
       <div style={{ position:'relative' }}>
         {/* Left arrow — desktop only on hover */}
         {!mobile && scrollState.left && (
           <button type="button" aria-label="Scorri a sinistra"
-            onClick={() => scroll(-1)}
+            onClick={(e) => { (() => scroll(-1))(e); setTimeout(() => { window.location.href = 'sp4-game-detail.html'; }, 0); /* DEMO-NAV */ }}
             className="mai-row-arrow mai-row-arrow-left"
             style={{
               position:'absolute', top:'50%', left: 12, transform:'translateY(-50%)',
@@ -396,7 +396,7 @@ const HorizontalRow = ({ title, emoji, count, items, renderCard, mobile }) => {
         )}
         {!mobile && scrollState.right && (
           <button type="button" aria-label="Scorri a destra"
-            onClick={() => scroll(1)}
+            onClick={(e) => { (() => scroll(1))(e); setTimeout(() => { window.location.href = 'sp4-game-detail.html'; }, 0); /* DEMO-NAV */ }}
             className="mai-row-arrow mai-row-arrow-right"
             style={{
               position:'absolute', top:'50%', right: 12, transform:'translateY(-50%)',
@@ -414,7 +414,7 @@ const HorizontalRow = ({ title, emoji, count, items, renderCard, mobile }) => {
           scrollSnapType:'x mandatory',
           scrollbarWidth:'none',
           WebkitOverflowScrolling:'touch',
-        }} className="mai-row-track">
+        }} className="mai-row-track" onClick={() => { setTimeout(() => { window.location.href = 'sp4-game-detail.html'; }, 0); /* DEMO-NAV */ }}>
           {items.map((item, i) => (
             <React.Fragment key={item.entity?.id || i}>
               {renderCard(item, i)}
@@ -550,7 +550,7 @@ const DiscoverHero = ({ filter, onFilter, mobile, onOpenAdvanced }) => {
               return (
                 <button key={f.id} type="button"
                   ref={el => { refs.current[f.id] = el; }}
-                  onClick={() => onFilter(f.id)}
+                  onClick={(e) => { (() => onFilter(f.id))(e); setTimeout(() => { window.location.href = 'sp4-game-detail.html'; }, 0); /* DEMO-NAV */ }}
                   role="tab" aria-selected={isActive}
                   style={{
                     padding: mobile ? '8px 12px' : '10px 14px',
@@ -752,7 +752,7 @@ const AdvancedFiltersDrawer = ({ onClose, mobile }) => (
           background:'transparent', color:'var(--text-sec)',
           border:'1px solid var(--border-strong)',
           fontFamily:'var(--f-display)', fontSize: 13, fontWeight: 700, cursor:'pointer',
-        }}>Reimposta</button>
+        }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-game-detail.html'; }, 0); /* DEMO-NAV */ }}>Reimposta</button>
         <button type="button" style={{
           flex: 2, padding:'10px', borderRadius:'var(--r-md)',
           background:`linear-gradient(135deg, ${entityHsl('event')}, ${entityHsl('agent')})`,
@@ -923,7 +923,7 @@ const EmptyFilter = ({ filter, mobile, onClear }) => {
         <p style={{
           fontSize: 12.5, color:'var(--text-muted)', margin:'0 0 14px', lineHeight: 1.6,
         }}>Prova a rimuovere il filtro o cerca per parola chiave.</p>
-        <button type="button" onClick={onClear} style={{
+        <button type="button" onClick={(e) => { (onClear)(e); setTimeout(() => { window.location.href = 'sp4-game-detail.html'; }, 0); /* DEMO-NAV */ }} style={{
           padding:'8px 18px', borderRadius:'var(--r-md)',
           background:'var(--bg)', color:'var(--text)',
           border:'1px solid var(--border-strong)',
@@ -1003,7 +1003,7 @@ const ErrorState = ({ mobile }) => (
           background:'transparent', color:'var(--text)',
           border:'1px solid var(--border-strong)',
           fontFamily:'var(--f-display)', fontSize: 12, fontWeight: 800, cursor:'pointer',
-        }}>Vai alla libreria</button>
+        }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-library-desktop.html'; }, 0); /* DEMO-NAV */ }}>Vai alla libreria</button>
       </div>
     </div>
   </div>
@@ -1224,7 +1224,7 @@ const App = () => {
           fontFamily:'var(--f-mono)', fontSize: 10, fontWeight: 800,
           textTransform:'uppercase', letterSpacing:'.08em',
         }}>Wave 3 · 5/5 conclusivo</span>
-        <button type="button" onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
+        <button type="button" onClick={(e) => { (() => setTheme(t => t === 'light' ? 'dark' : 'light'))(e); setTimeout(() => { window.location.href = 'sp4-game-detail.html'; }, 0); /* DEMO-NAV */ }}
           style={{
             padding:'8px 14px', borderRadius:'var(--r-md)',
             background:'var(--bg-card)', border:'1px solid var(--border)',

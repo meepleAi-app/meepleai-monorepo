@@ -94,6 +94,17 @@ public class SessionRepository : RepositoryBase, ISessionRepository
                 cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<int> UpdateLastTotpVerifiedAtAsync(Guid sessionId, DateTime lastTotpVerifiedAt, CancellationToken cancellationToken = default)
+    {
+        // Single-column SQL UPDATE — atomic, no change-tracking, returns rows affected so the
+        // caller can detect a vanished session. SP5 S3 — D-S3-4.
+        return await DbContext.UserSessions
+            .Where(s => s.Id == sessionId)
+            .ExecuteUpdateAsync(setters =>
+                setters.SetProperty(s => s.LastTotpVerifiedAt, lastTotpVerifiedAt),
+                cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task RevokeAllUserSessionsAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
@@ -123,6 +134,44 @@ public class SessionRepository : RepositoryBase, ISessionRepository
             // Concurrency conflict: another process already revoked the session(s)
             // This is expected and acceptable for concurrent revocations (idempotent operation)
             // The session is already revoked by another process, so we can safely ignore this
+        }
+    }
+
+    /// <summary>
+    /// C7: revoke every active session for the user except the one identified
+    /// by <paramref name="excludedSessionId"/>. Used by the password-change
+    /// flow so the user remains logged in on the device they initiated the
+    /// change from while every other device is invalidated.
+    /// </summary>
+    public async Task RevokeAllUserSessionsExceptAsync(
+        Guid userId,
+        Guid excludedSessionId,
+        CancellationToken cancellationToken = default)
+    {
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+        var sessionsToRevoke = await DbContext.UserSessions
+            .Where(s => s.UserId == userId && s.RevokedAt == null && s.Id != excludedSessionId)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        if (sessionsToRevoke.Count == 0)
+        {
+            return; // Nothing else to revoke (idempotent)
+        }
+
+        foreach (var session in sessionsToRevoke)
+        {
+            session.RevokedAt = now;
+            DbContext.Entry(session).State = EntityState.Modified;
+        }
+
+        try
+        {
+            _ = await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Same idempotent semantics as RevokeAllUserSessionsAsync.
         }
     }
 
@@ -162,6 +211,17 @@ public class SessionRepository : RepositoryBase, ISessionRepository
         var userAgentProp = typeof(Session).GetProperty("UserAgent");
         userAgentProp?.SetValue(session, entity.UserAgent);
 
+        // SP5 Admin Security S2 — hydrate dual-principal fields. Reflection is the existing
+        // pattern in this mapper because Session's properties are `private set`.
+        var impersonatedByUserIdProp = typeof(Session).GetProperty("ImpersonatedByUserId");
+        impersonatedByUserIdProp?.SetValue(session, entity.ImpersonatedByUserId);
+        var impersonatedUntilProp = typeof(Session).GetProperty("ImpersonatedUntil");
+        impersonatedUntilProp?.SetValue(session, entity.ImpersonatedUntil);
+
+        // SP5 Admin Security S3 — hydrate TOTP recency.
+        var lastTotpVerifiedAtProp = typeof(Session).GetProperty("LastTotpVerifiedAt");
+        lastTotpVerifiedAtProp?.SetValue(session, entity.LastTotpVerifiedAt);
+
         return session;
     }
 
@@ -181,6 +241,11 @@ public class SessionRepository : RepositoryBase, ISessionRepository
             RevokedAt = domainEntity.RevokedAt,
             IpAddress = domainEntity.IpAddress,
             UserAgent = domainEntity.UserAgent,
+            // SP5 Admin Security S2 — propagate dual-principal fields end-to-end.
+            ImpersonatedByUserId = domainEntity.ImpersonatedByUserId,
+            ImpersonatedUntil = domainEntity.ImpersonatedUntil,
+            // SP5 Admin Security S3 — propagate TOTP recency.
+            LastTotpVerifiedAt = domainEntity.LastTotpVerifiedAt,
             User = null! // Required navigation property, will be loaded by EF Core
         };
     }

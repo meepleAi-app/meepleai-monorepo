@@ -2,20 +2,26 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-describe('globals.css entity tokens (Tailwind 4 @theme)', () => {
+/**
+ * Verifies the canonical entity-token schema in globals.css post DS-15/16:
+ * - `--c-*` are the canonical raw HSL tokens (renamed from `--e-*` in DS-16
+ *   CSS variable migration + bridge removal)
+ * - `--color-entity-*` are the Tailwind 4 @theme utilities consuming `--c-*`
+ */
+describe('globals.css entity tokens (Tailwind 4 @theme, post DS-16)', () => {
   const css = readFileSync(resolve(__dirname, '../styles/globals.css'), 'utf8');
 
-  it('defines raw HSL --e-* vars for all 9 entities in :root', () => {
+  it('defines canonical raw HSL --c-* vars for all 9 entities in :root', () => {
     const rawTokens = [
-      '--e-game',
-      '--e-player',
-      '--e-session',
-      '--e-agent',
-      '--e-document',
-      '--e-chat',
-      '--e-event',
-      '--e-toolkit',
-      '--e-tool',
+      '--c-game',
+      '--c-player',
+      '--c-session',
+      '--c-agent',
+      '--c-kb',
+      '--c-chat',
+      '--c-event',
+      '--c-toolkit',
+      '--c-tool',
     ];
     rawTokens.forEach(t => expect(css).toContain(t));
   });
@@ -35,7 +41,7 @@ describe('globals.css entity tokens (Tailwind 4 @theme)', () => {
     utilityTokens.forEach(t => expect(css).toContain(t));
   });
 
-  it('maps --color-entity-kb to --e-document (alias)', () => {
-    expect(css).toMatch(/--color-entity-kb:\s*hsl\(var\(--e-document\)\)/);
+  it('maps --color-entity-kb to --c-kb (post DS-16: bridge removed, e-document → c-kb)', () => {
+    expect(css).toMatch(/--color-entity-kb:\s*hsl\(var\(--c-kb\)\)/);
   });
 });

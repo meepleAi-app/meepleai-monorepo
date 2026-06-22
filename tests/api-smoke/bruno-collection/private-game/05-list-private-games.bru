@@ -1,0 +1,20 @@
+meta {
+  name: SG1 — List own private games (paginated)
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{apiBase}}/api/v1/private-games?page=1&pageSize=10
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("response is paginated array", function() {
+    const body = res.getBody();
+    expect(body).to.have.property("items");
+    expect(Array.isArray(body.items)).to.be.true;
+  });
+}

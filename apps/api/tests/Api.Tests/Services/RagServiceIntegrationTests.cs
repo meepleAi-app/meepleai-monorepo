@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
@@ -107,8 +108,8 @@ public sealed class RagServiceIntegrationTests : IDisposable
     }
 
     /// <summary>
-    /// Test02: Verify ExplainAsync returns empty response after Qdrant removal
-    /// Vector retrieval was removed (Qdrant decommissioned), so ExplainAsync now
+    /// Test02: Verify ExplainAsync returns empty response after pgvector removal
+    /// Vector retrieval was removed (pgvector decommissioned), so ExplainAsync now
     /// returns an empty explain response indicating no relevant information found.
     /// </summary>
     [Fact]
@@ -127,7 +128,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
         // Act
         var result = await ragService.ExplainAsync(gameId, topic, cancellationToken: TestCancellationToken);
 
-        // Assert - After Qdrant removal, vector retrieval returns empty results,
+        // Assert - After legacy vector removal, vector retrieval returns empty results,
         // so ExplainAsync returns an empty explain response with a message.
         result.Should().NotBeNull();
         result.outline.Should().NotBeNull();
@@ -349,6 +350,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
                 It.IsAny<float>(),
                 It.IsAny<float>(),
                 It.IsAny<double>(),
+                It.IsAny<GameBookRole>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(dummyResults);
     }

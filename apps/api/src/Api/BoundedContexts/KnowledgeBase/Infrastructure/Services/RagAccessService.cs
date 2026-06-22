@@ -83,4 +83,48 @@ internal sealed class RagAccessService : IRagAccessService
         var selectedSet = new HashSet<Guid>(selectedIds);
         return allAccessible.Where(id => selectedSet.Contains(id)).ToList();
     }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<Guid>> GetAccessibleGameIdsAsync(
+        Guid userId,
+        UserRole role,
+        CancellationToken cancellationToken = default)
+    {
+        // Rule 1: Admin / SuperAdmin → all non-deleted SharedGame IDs.
+        if (role is UserRole.Admin or UserRole.SuperAdmin)
+        {
+            return await _dbContext.SharedGames
+                .AsNoTracking()
+                .Where(sg => !sg.IsDeleted)
+                .Select(sg => sg.Id)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        // Rule 2 (non-admin): public games ∪ library games with declared ownership.
+        // Both branches apply !IsDeleted to prevent deleted games leaking into the result.
+        var publicGames = _dbContext.SharedGames
+            .AsNoTracking()
+            .Where(sg => !sg.IsDeleted && sg.IsRagPublic)
+            .Select(sg => sg.Id);
+
+        // Join UserLibraryEntries with SharedGames to enforce IsDeleted exclusion (EC-8 + deleted-game rule).
+        var ownedGames = _dbContext.UserLibraryEntries
+            .AsNoTracking()
+            .Where(e => e.UserId == userId
+                     && e.OwnershipDeclaredAt != null
+                     && e.SharedGameId != null)
+            .Join(
+                _dbContext.SharedGames.AsNoTracking().Where(sg => !sg.IsDeleted),
+                e => e.SharedGameId!.Value,
+                sg => sg.Id,
+                (e, sg) => sg.Id);
+
+        // Union deduplicates at the database level; Distinct is a safety net.
+        return await publicGames
+            .Union(ownedGames)
+            .Distinct()
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
 }

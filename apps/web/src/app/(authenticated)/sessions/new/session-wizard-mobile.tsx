@@ -299,7 +299,7 @@ export function SessionWizardMobile({
                 'flex items-center justify-center h-10 w-10 rounded-full transition-all',
                 isActive && 'bg-amber-500 text-white shadow-md scale-110',
                 isDone && !isActive && 'bg-amber-500/20 text-amber-600',
-                !isActive && !isDone && 'bg-slate-200 dark:bg-slate-700 text-slate-400',
+                !isActive && !isDone && 'bg-muted dark:bg-card text-muted-foreground',
                 s === 1 && !!prefilledGameId && 'opacity-50'
               )}
               aria-label={`Passo ${s}`}
@@ -368,7 +368,7 @@ export function SessionWizardMobile({
                           className="h-16 w-16 rounded-lg object-cover"
                         />
                       ) : (
-                        <div className="h-16 w-16 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
+                        <div className="h-16 w-16 rounded-lg bg-muted dark:bg-card flex items-center justify-center">
                           <Gamepad2 className="h-6 w-6 text-muted-foreground" />
                         </div>
                       )}
@@ -431,7 +431,7 @@ export function SessionWizardMobile({
                     <div
                       className={cn(
                         'h-8 w-8 rounded-full shrink-0',
-                        colorInfo?.className ?? 'bg-gray-400'
+                        colorInfo?.className ?? 'bg-muted-foreground'
                       )}
                     />
 
@@ -543,7 +543,7 @@ export function SessionWizardMobile({
                     <div
                       className={cn(
                         'h-7 w-7 rounded-full shrink-0',
-                        colorInfo?.className ?? 'bg-gray-400'
+                        colorInfo?.className ?? 'bg-muted-foreground'
                       )}
                     />
 
@@ -563,7 +563,7 @@ export function SessionWizardMobile({
                           'p-1 rounded transition-colors',
                           isFirst
                             ? 'opacity-20 cursor-not-allowed text-muted-foreground'
-                            : 'text-muted-foreground hover:bg-white/10 hover:text-white'
+                            : 'text-muted-foreground hover:bg-card/10 hover:text-white'
                         )}
                       >
                         <ChevronUp className="h-4 w-4" />
@@ -577,7 +577,7 @@ export function SessionWizardMobile({
                           'p-1 rounded transition-colors',
                           isLast
                             ? 'opacity-20 cursor-not-allowed text-muted-foreground'
-                            : 'text-muted-foreground hover:bg-white/10 hover:text-white'
+                            : 'text-muted-foreground hover:bg-card/10 hover:text-white'
                         )}
                       >
                         <ChevronDown className="h-4 w-4" />
@@ -639,7 +639,7 @@ export function SessionWizardMobile({
                 {/* Phase list */}
                 <div className="space-y-2" role="list" aria-label="Fasi del turno">
                   {phases.length === 0 && (
-                    <div className="flex items-center justify-center py-8 rounded-xl border border-dashed border-white/20">
+                    <div className="flex items-center justify-center py-8 rounded-xl border border-dashed border-border">
                       <p className="text-sm text-muted-foreground">
                         Nessuna fase. Aggiungine una o salta.
                       </p>
@@ -649,7 +649,7 @@ export function SessionWizardMobile({
                     <div
                       key={phase.localId}
                       role="listitem"
-                      className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2"
+                      className="flex items-center gap-2 rounded-xl border border-border bg-card/5 px-3 py-2"
                     >
                       <span className="text-xs font-mono text-muted-foreground w-4 shrink-0">
                         {idx + 1}
@@ -722,12 +722,12 @@ export function SessionWizardMobile({
                     return (
                       <div
                         key={player.id}
-                        className="flex items-center gap-1.5 rounded-full bg-slate-100 dark:bg-slate-800 px-3 py-1"
+                        className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1"
                       >
                         <div
                           className={cn(
                             'h-3 w-3 rounded-full',
-                            colorInfo?.className ?? 'bg-gray-400'
+                            colorInfo?.className ?? 'bg-muted-foreground'
                           )}
                         />
                         <span className="text-xs font-medium">{player.displayName}</span>
@@ -747,13 +747,13 @@ export function SessionWizardMobile({
                       return (
                         <div
                           key={player.id}
-                          className="flex items-center gap-1.5 rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1"
+                          className="flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1"
                         >
                           <span className="text-[10px] font-bold text-amber-500">{index + 1}°</span>
                           <div
                             className={cn(
                               'h-2.5 w-2.5 rounded-full',
-                              colorInfo?.className ?? 'bg-gray-400'
+                              colorInfo?.className ?? 'bg-muted-foreground'
                             )}
                           />
                           <span className="text-xs font-medium">{player.displayName}</span>

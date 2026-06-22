@@ -12,20 +12,35 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Events;
 public sealed class KnowledgeBaseDomainEventsTests
 {
     #region AgentCreatedEvent Tests
+    // BE-3 #1590: AgentCreatedEvent extended with UserId, GameId, GameName, IsActive, AggregateId.
+    // Constructor signature: (aggregateId, userId, agentType, isActive, gameId, gameName, agentName).
 
     [Fact]
     public void AgentCreatedEvent_SetsProperties()
     {
         // Arrange
         var agentId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
 
         // Act
-        var evt = new AgentCreatedEvent(agentId, "RulesAgent", "Catan Rules Helper");
+        var evt = new AgentCreatedEvent(
+            aggregateId: agentId,
+            userId: userId,
+            agentType: "RulesAgent",
+            isActive: true,
+            gameId: gameId,
+            gameName: "Catan",
+            agentName: "Catan Rules Helper");
 
         // Assert
-        evt.AgentId.Should().Be(agentId);
-        evt.Type.Should().Be("RulesAgent");
-        evt.Name.Should().Be("Catan Rules Helper");
+        evt.AggregateId.Should().Be(agentId);
+        evt.UserId.Should().Be(userId);
+        evt.AgentType.Should().Be("RulesAgent");
+        evt.IsActive.Should().BeTrue();
+        evt.GameId.Should().Be(gameId);
+        evt.GameName.Should().Be("Catan");
+        evt.AgentName.Should().Be("Catan Rules Helper");
     }
 
     [Fact]
@@ -34,16 +49,17 @@ public sealed class KnowledgeBaseDomainEventsTests
         // Arrange
         var agentId1 = Guid.NewGuid();
         var agentId2 = Guid.NewGuid();
+        var userId = Guid.NewGuid();
 
         // Act
-        var evt1 = new AgentCreatedEvent(agentId1, "RulesAgent", "Rules Helper");
-        var evt2 = new AgentCreatedEvent(agentId2, "StrategyAgent", "Strategy Guide");
+        var evt1 = new AgentCreatedEvent(agentId1, userId, "RulesAgent", true, null, null, "Rules Helper");
+        var evt2 = new AgentCreatedEvent(agentId2, userId, "StrategyAgent", true, null, null, "Strategy Guide");
 
         // Assert
-        evt1.Type.Should().Be("RulesAgent");
-        evt1.Name.Should().Be("Rules Helper");
-        evt2.Type.Should().Be("StrategyAgent");
-        evt2.Name.Should().Be("Strategy Guide");
+        evt1.AgentType.Should().Be("RulesAgent");
+        evt1.AgentName.Should().Be("Rules Helper");
+        evt2.AgentType.Should().Be("StrategyAgent");
+        evt2.AgentName.Should().Be("Strategy Guide");
     }
 
     [Fact]
@@ -51,12 +67,13 @@ public sealed class KnowledgeBaseDomainEventsTests
     {
         // Arrange
         var agentId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
 
         // Act
-        var evt = new AgentCreatedEvent(agentId, "TestAgent", "");
+        var evt = new AgentCreatedEvent(agentId, userId, "TestAgent", false, null, null, "");
 
         // Assert
-        evt.Name.Should().BeEmpty();
+        evt.AgentName.Should().BeEmpty();
     }
 
     #endregion

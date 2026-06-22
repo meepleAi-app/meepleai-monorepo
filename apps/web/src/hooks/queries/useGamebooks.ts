@@ -1,26 +1,12 @@
 /**
- * useGamebooks — SP6 Phase B v1 carryover STUB hooks (Issue #788).
+ * useGamebooks — SP6 Phase B hooks (Issue #788; backend wired in #869).
  *
- * Schema reality v1 carryover (Gate B):
- *   The backend `GET /api/v1/gamebooks` endpoint and `GET /api/v1/users/me/quota`
- *   (or equivalent) DO NOT exist on main-dev. Verified via:
- *     grep -rn "MapGet.*gamebook\|MapGet.*GameBook" apps/api/src/Api/Routing/
- *     grep -rn "MapGet.*quota\|MapGet.*Quota" apps/api/src/Api/Routing/
- *
- *   To unblock the orchestrator (Phase B Task 3) without coupling to a
- *   non-existent endpoint, this module exposes 2 hooks that resolve via the
- *   canonical visual-test fixture data. Both queries report `isPending=false`
- *   immediately so the FSM never gets stuck in the `loading` cell during real
- *   data flows (the orchestrator simulates the loading cell via the
- *   `?fixture=loading` URL override gated by `STATE_OVERRIDE_ENABLED`).
- *
- *   Real backend integration is deferred to a follow-up issue post-Phase B
- *   that will:
- *     1. Expose `GET /api/v1/gamebooks` returning the canonical
- *        `GamebookCardData[]` shape (or an adapter from the actual DTO).
- *     2. Expose `GET /api/v1/users/me/quota` returning `QuotaInfo`.
- *     3. Replace the fixture-data `queryFn` with `api.gamebooks.list()` and
- *        `api.users.quota()` (or equivalent client paths).
+ * Issue #869 status:
+ *   - `useGamebooks`  → wired to `GET /api/v1/gamebooks` (real data)
+ *   - `useQuotaInfo`  → STILL STUB pending follow-up (`GET /api/v1/users/me/quota`
+ *                       not yet exposed). The stub returns canonical fixture
+ *                       data so the orchestrator FSM keeps rendering correctly
+ *                       until the quota endpoint lands.
  *
  * Used by:
  *   - `apps/web/src/app/(authenticated)/gamebook/_components/GamebookIndexView.tsx`
@@ -30,6 +16,7 @@
 
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
+import { fetchUserGamebooks } from '@/lib/api/gamebooks-list';
 import { gamebookIndexFixtures, type GamebookCardData, type QuotaInfo } from '@/lib/gamebook-index';
 
 /**
@@ -47,19 +34,17 @@ export const gamebookKeys = {
 /**
  * Hook to fetch the current user's gamebook library.
  *
- * v1 carryover: returns the canonical fixture data via `gamebookIndexFixtures.default`.
- * The backend `GET /api/v1/gamebooks` endpoint is NOT exposed; integration
- * deferred to a follow-up issue.
+ * Wired to `GET /api/v1/gamebooks` via `fetchUserGamebooks`. The endpoint
+ * returns 200 with `[]` when the user has no gamebooks; 401 when the
+ * session is invalid (TanStack Query surfaces the error and the
+ * orchestrator renders the `error` FSM cell).
  *
  * @returns UseQueryResult with the readonly array of gamebooks.
  */
 export function useGamebooks(): UseQueryResult<readonly GamebookCardData[], Error> {
   return useQuery({
     queryKey: gamebookKeys.myGamebooks(),
-    queryFn: async (): Promise<readonly GamebookCardData[]> => {
-      // v1 carryover stub — return canonical fixture data.
-      return gamebookIndexFixtures.default.gamebooks;
-    },
+    queryFn: ({ signal }) => fetchUserGamebooks(signal),
     staleTime: 60_000,
   });
 }
@@ -69,7 +54,7 @@ export function useGamebooks(): UseQueryResult<readonly GamebookCardData[], Erro
  *
  * v1 carryover: returns the canonical fixture data via `gamebookIndexFixtures.default`.
  * The backend `GET /api/v1/users/me/quota` endpoint is NOT exposed; integration
- * deferred to a follow-up issue.
+ * deferred to a follow-up (issue #869b — split from #869 to keep PR small).
  *
  * @returns UseQueryResult with the QuotaInfo object.
  */

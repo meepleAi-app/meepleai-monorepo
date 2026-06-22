@@ -93,27 +93,27 @@ export default function RichTextEditor({
   const { characters, words } = getCharacterCount();
 
   if (!editor) {
-    return <div className="p-3 text-gray-400">Caricamento editor...</div>;
+    return <div className="p-3 text-muted-foreground">Caricamento editor...</div>;
   }
 
   return (
     <div
       className={`
-        flex flex-col h-full rounded bg-white
-        ${isValid ? 'border-2 border-gray-300' : 'border-2 border-red-500'}
+        flex flex-col h-full rounded bg-card
+        ${isValid ? 'border-2 border-border' : 'border-2 border-red-500'}
       `}
     >
       <EditorToolbar editor={editor} />
 
-      <div className="flex-1 overflow-y-auto border-t border-gray-200">
+      <div className="flex-1 overflow-y-auto border-t border-border">
         <EditorContent editor={editor} />
       </div>
 
-      <div className="px-3 py-2 border-t border-gray-200 bg-gray-50 text-xs text-gray-600 flex justify-between items-center">
+      <div className="px-3 py-2 border-t border-border bg-muted text-xs text-muted-foreground flex justify-between items-center">
         <span>
           {characters} caratteri • {words} parole
         </span>
-        <span className="text-[11px] text-gray-400">
+        <span className="text-[11px] text-muted-foreground">
           Usa Ctrl+Z per annullare, Ctrl+Shift+Z per ripetere
         </span>
       </div>

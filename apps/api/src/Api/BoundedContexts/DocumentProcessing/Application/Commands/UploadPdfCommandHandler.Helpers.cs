@@ -69,28 +69,6 @@ internal partial class UploadPdfCommandHandler
         }
     }
 
-    /// <summary>
-    /// Best-effort enqueue into the Quartz-based processing queue.
-    /// If the fire-and-forget Task.Run fails silently, the Quartz job acts as a reliable fallback.
-    /// Conflicts (PDF already queued) are expected and silently ignored.
-    /// </summary>
-    private async Task EnqueueForProcessingSafelyAsync(Guid pdfDocumentId, Guid userId, CancellationToken cancellationToken)
-    {
-        try
-        {
-            await _mediator.Send(
-                new Queue.EnqueuePdfCommand(pdfDocumentId, userId, Priority: (int)ProcessingPriority.Normal),
-                cancellationToken).ConfigureAwait(false);
-            _logger.LogInformation("PDF {PdfId} enqueued for Quartz processing as fallback", pdfDocumentId);
-        }
-#pragma warning disable CA1031 // Best-effort enqueue — conflicts and cancellations are expected
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Could not enqueue PDF {PdfId} for Quartz processing (may already be queued or request cancelled)", pdfDocumentId);
-        }
-#pragma warning restore CA1031
-    }
-
     private async Task InvalidateCacheSafelyAsync(string gameId, string operation, CancellationToken cancellationToken)
     {
         try

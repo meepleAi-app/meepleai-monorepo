@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin KB chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13b admin scope (see token-bridge-map.md for --admin-* decision deferred to DS-15). */
 'use client';
 
 import { ArrowRightIcon, Upload } from 'lucide-react';
@@ -35,7 +36,7 @@ export function UploadForGameDrawer({ game, open, onClose }: UploadForGameDrawer
         side="right"
         className="flex w-[420px] flex-col gap-0 p-0 sm:w-[480px] sm:max-w-[480px]"
       >
-        <SheetHeader className="border-b border-slate-200 px-6 py-4 dark:border-zinc-700">
+        <SheetHeader className="border-b border-border px-6 py-4 dark:border-zinc-700">
           <SheetTitle className="text-base font-semibold">Upload PDF — {game.title}</SheetTitle>
         </SheetHeader>
 
@@ -58,9 +59,9 @@ export function UploadForGameDrawer({ game, open, onClose }: UploadForGameDrawer
             ]}
           />
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:border-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-300">
+          <div className="rounded-xl border border-border bg-muted p-4 text-sm text-foreground dark:border-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-300">
             <p className="font-medium">Come procedere</p>
-            <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">
+            <p className="mt-1 text-xs text-muted-foreground dark:text-muted-foreground">
               Aprirai il flusso di upload principale con il gioco già selezionato. Carica uno o più
               PDF: l&apos;estrazione e l&apos;indicizzazione RAG partono automaticamente una volta
               completato l&apos;upload.
@@ -68,7 +69,7 @@ export function UploadForGameDrawer({ game, open, onClose }: UploadForGameDrawer
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4 dark:border-zinc-700">
+        <div className="flex justify-end gap-3 border-t border-border px-6 py-4 dark:border-zinc-700">
           <Button variant="outline" onClick={onClose}>
             Annulla
           </Button>

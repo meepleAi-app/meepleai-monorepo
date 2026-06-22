@@ -1,0 +1,144 @@
+name: Spec Debt False-Positive Handler
+
+# WS-E.2b (issue #1071, umbrella #1066) — AC-E.8 false-positive override.
+#
+# When a `mockup-spec-debt` issue receives the `spec-debt-false-positive`
+# label, this workflow:
+#   1. Extracts `dedup_key` from the issue body header marker.
+#   2. Closes the issue (`state_reason: not_planned`) with a tracking comment.
+#   3. Opens an auto-PR appending the dedup key to
+#      `docs/for-developers/audits/spec-debt-false-positive-allowlist.json`.
+#
+# The next `mockup-spec-sync.yml` run reads the allowlist and skips constraints
+# whose `dedup_key` is listed. To re-enable, edit the allowlist (remove the
+# key) via PR; the next workflow run will re-open a debt issue.
+
+on:
+  issues:
+    types:
+      - labeled
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: spec-debt-fp-handler-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  handle:
+    name: Add to false-positive allowlist
+    runs-on: ubuntu-22.04
+    if: ${{ github.event.label.name == 'spec-debt-false-positive' }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Extract dedup_key from issue body
+        id: extract
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const body = context.payload.issue.body ?? '';
+            const m = body.match(/<!--\s*spec-debt-key:\s*([a-f0-9]+);/);
+            if (!m) {
+              core.setFailed(
+                `Issue #${context.payload.issue.number} body has no spec-debt-key marker. ` +
+                `This label should only be applied to auto-generated mockup-spec-debt issues.`
+              );
+              return;
+            }
+            core.setOutput('key', m[1]);
+            core.info(`Extracted dedup_key=${m[1]} from issue #${context.payload.issue.number}.`);
+
+      - name: Update allowlist JSON
+        env:
+          DEDUP_KEY: ${{ steps.extract.outputs.key }}
+        run: |
+          set -euo pipefail
+          ALLOW='docs/for-developers/audits/spec-debt-false-positive-allowlist.json'
+          if [ ! -f "$ALLOW" ]; then
+            echo '{"version":1,"keys":[]}' > "$ALLOW"
+          fi
+          # Add key idempotently.
+          node - <<'EOF'
+          const fs = require('node:fs');
+          const path = 'docs/for-developers/audits/spec-debt-false-positive-allowlist.json';
+          const key = process.env.DEDUP_KEY;
+          const data = JSON.parse(fs.readFileSync(path, 'utf8'));
+          if (!data.keys.includes(key)) {
+            data.keys.push(key);
+            data.keys.sort();
+          }
+          fs.writeFileSync(path, JSON.stringify(data, null, 2) + '\n');
+          console.log(`Allowlist now has ${data.keys.length} entries.`);
+          EOF
+
+      - name: Close debt issue
+        uses: actions/github-script@v8
+        env:
+          DEDUP_KEY: ${{ steps.extract.outputs.key }}
+        with:
+          script: |
+            const issueNumber = context.payload.issue.number;
+            const key = process.env.DEDUP_KEY;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body:
+                `closed_by: false-positive allowlist hook.\n\n` +
+                `Dedup key \`${key}\` will be skipped by \`mockup-spec-sync.yml\` going forward. ` +
+                `To re-enable: open a PR removing this key from ` +
+                `\`docs/for-developers/audits/spec-debt-false-positive-allowlist.json\`. ` +
+                `The next sync run will re-open a fresh debt issue.`,
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              state: 'closed',
+              state_reason: 'not_planned',
+            });
+
+      - name: Open auto-PR with allowlist update
+        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: bot/spec-debt-fp-${{ steps.extract.outputs.key }}
+          base: main-dev
+          commit-message: |
+            chore(audit): add ${{ steps.extract.outputs.key }} to spec-debt FP allowlist (#1071)
+
+            Triggered by `spec-debt-false-positive` label on issue
+            #${{ github.event.issue.number }}.
+          title: 'chore(audit): spec-debt false-positive allowlist (#${{ github.event.issue.number }})'
+          body: |
+            ## Spec-debt false-positive override
+
+            Issue #${{ github.event.issue.number }} was labelled
+            `spec-debt-false-positive`. This PR appends its dedup key
+            `${{ steps.extract.outputs.key }}` to the allowlist so future
+            `mockup-spec-sync.yml` runs skip it.
+
+            ### Reviewer checklist
+
+            - [ ] Confirm the constraint is genuinely implemented (or out of scope)
+            - [ ] Add a brief rationale comment on the closed issue (#${{ github.event.issue.number }}) for audit trail
+            - [ ] Merge to activate the override
+
+            To re-enable auto-issue creation later: open a PR removing this
+            key from `docs/for-developers/audits/spec-debt-false-positive-allowlist.json`.
+
+            ### Refs
+
+            - Umbrella: #1066
+            - WS-E issue: #1071
+            - AC-E.8 false-positive override
+          labels: |
+            conformity
+            automation
+            documentation
+          add-paths: |
+            docs/for-developers/audits/spec-debt-false-positive-allowlist.json

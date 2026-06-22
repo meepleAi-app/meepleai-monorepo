@@ -66,7 +66,7 @@ public sealed class ChatE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"chat_create_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         var createPayload = new
@@ -114,7 +114,7 @@ public sealed class ChatE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"chat_invalid_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         var createPayload = new
@@ -143,7 +143,7 @@ public sealed class ChatE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"chat_list_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Create a thread first (optional - list should work even with empty result)
@@ -169,7 +169,7 @@ public sealed class ChatE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"chat_get_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Create a thread
@@ -205,7 +205,7 @@ public sealed class ChatE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"chat_get_nf_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Act
@@ -224,7 +224,7 @@ public sealed class ChatE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"chat_msg_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Create a thread
@@ -265,7 +265,7 @@ public sealed class ChatE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"chat_empty_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Create a thread
@@ -305,7 +305,7 @@ public sealed class ChatE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"chat_update_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Create a thread
@@ -347,7 +347,7 @@ public sealed class ChatE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"chat_close_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Create a thread
@@ -379,7 +379,7 @@ public sealed class ChatE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"chat_reopen_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Create and close a thread
@@ -416,7 +416,7 @@ public sealed class ChatE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"chat_delete_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Create a thread
@@ -452,7 +452,7 @@ public sealed class ChatE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"chat_delete_nf_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Act
@@ -471,7 +471,7 @@ public sealed class ChatE2ETests : E2ETestBase
     {
         // Step 1: Register user
         var email = $"chat_journey_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Step 2: Create chat thread
@@ -535,7 +535,7 @@ public sealed class ChatE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"chat_history_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Create a chat thread (optional - may not be needed for empty history)

@@ -45,6 +45,36 @@ internal sealed class GroupMemoryRepository : RepositoryBase, IGroupMemoryReposi
         return entities.Select(MapToDomain).ToList();
     }
 
+    public async Task<IReadOnlyList<Guid>> GetGroupIdsForUserAsync(Guid userId, CancellationToken ct = default)
+    {
+        if (userId == Guid.Empty)
+        {
+            return Array.Empty<Guid>();
+        }
+
+        // Members are persisted as a JSONB blob (MembersJson), not a relational table, so
+        // membership cannot be filtered in SQL. Load candidate groups and filter in-memory.
+        // Acceptable for MVP volumes; revisit with a JSONB containment query if group counts grow.
+        var candidates = await DbContext.GroupMemories
+            .AsNoTracking()
+            .Where(e => e.MembersJson != null)
+            .Select(e => new { e.Id, e.MembersJson })
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        var groupIds = new List<Guid>();
+        foreach (var candidate in candidates)
+        {
+            var members = JsonSerializer.Deserialize<List<GroupMemberDto>>(candidate.MembersJson!);
+            if (members != null && members.Any(m => m.UserId == userId))
+            {
+                groupIds.Add(candidate.Id);
+            }
+        }
+
+        return groupIds;
+    }
+
     public async Task AddAsync(GroupMemory memory, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(memory);
@@ -74,6 +104,7 @@ internal sealed class GroupMemoryRepository : RepositoryBase, IGroupMemoryReposi
         // Restore Id and CreatedAt via reflection (factory generates new ones)
         SetPrivateProperty(memory, nameof(GroupMemory.Id), entity.Id);
         SetPrivateProperty(memory, nameof(GroupMemory.CreatedAt), entity.CreatedAt);
+        SetPrivateProperty(memory, nameof(GroupMemory.LastProcessedEventId), entity.LastProcessedEventId);
 
         // Restore members from JSONB
         if (entity.MembersJson != null)
@@ -143,6 +174,7 @@ internal sealed class GroupMemoryRepository : RepositoryBase, IGroupMemoryReposi
             Name = memory.Name,
             CreatorId = memory.CreatorId,
             CreatedAt = memory.CreatedAt,
+            LastProcessedEventId = memory.LastProcessedEventId,
         };
 
         // Serialize members to JSONB

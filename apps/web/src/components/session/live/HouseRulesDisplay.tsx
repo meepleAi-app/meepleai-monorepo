@@ -77,28 +77,28 @@ export function HouseRulesDisplay({ gameId, rules, onAddRule }: HouseRulesDispla
 
   return (
     <div
-      className="rounded-xl border border-white/40 bg-white/70 backdrop-blur-md shadow-sm p-4 space-y-3"
+      className="rounded-xl border border-border bg-card/70 backdrop-blur-md shadow-sm p-4 space-y-3"
       data-testid="house-rules-display"
       data-game-id={gameId}
     >
       {/* Header */}
       <div className="flex items-center gap-2">
         <BookOpen className="h-4 w-4 text-amber-600" />
-        <h3 className="font-quicksand font-semibold text-sm text-gray-900">House Rules</h3>
-        <span className="text-xs text-gray-500 font-nunito">({rules.length})</span>
+        <h3 className="font-quicksand font-semibold text-sm text-foreground">House Rules</h3>
+        <span className="text-xs text-muted-foreground font-nunito">({rules.length})</span>
       </div>
 
       {/* Rules list */}
       {rules.length === 0 ? (
-        <p className="text-sm text-gray-500 font-nunito italic">No house rules yet</p>
+        <p className="text-sm text-muted-foreground font-nunito italic">No house rules yet</p>
       ) : (
         <ul className="space-y-2" role="list">
           {rules.map((rule, index) => (
             <li
               key={`${rule.description}-${index}`}
-              className="flex items-start gap-2 rounded-lg bg-white/50 px-3 py-2"
+              className="flex items-start gap-2 rounded-lg bg-card/50 px-3 py-2"
             >
-              <span className="flex-1 text-sm text-gray-800 font-nunito">{rule.description}</span>
+              <span className="flex-1 text-sm text-foreground font-nunito">{rule.description}</span>
               <SourceBadge source={rule.source} />
             </li>
           ))}

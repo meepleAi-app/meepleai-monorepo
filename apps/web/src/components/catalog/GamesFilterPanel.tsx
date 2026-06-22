@@ -317,7 +317,7 @@ export function GamesFilterPanel({ isCollapsed }: GamesFilterPanelProps) {
 
         setHasFetchedRefData(true);
       } catch {
-        // Mark as fetched so loading message doesn't persist forever
+        if (cancelled) return;
         setHasFetchedRefData(true);
       }
     }
@@ -527,8 +527,15 @@ export function GamesFilterPanel({ isCollapsed }: GamesFilterPanelProps) {
         isActive={isRecent}
         isCollapsed={isCollapsed}
       />
+      {/*
+        Block D of #2289 / #2247: target the catalogo hub (`/games?hasKb=true`)
+        rather than the user's own library — "AI Ready" is an exploratory
+        filter over the public catalog, not a personal collection slice.
+        Default tab on `/games` is Discover, which inherits the `hasKb`
+        searchParam end-to-end.
+       */}
       <FilterLink
-        href="/library?hasKb=true"
+        href="/games?hasKb=true"
         icon={Sparkles}
         label="AI Ready"
         isActive={isAiReady}

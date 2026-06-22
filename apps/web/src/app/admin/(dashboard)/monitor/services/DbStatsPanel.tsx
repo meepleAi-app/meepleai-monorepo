@@ -86,7 +86,7 @@ function ConnectionBar({ active, max }: { active: number; max: number }) {
         </span>
       </div>
       <div
-        className="h-1.5 w-full rounded-full bg-slate-200 dark:bg-zinc-700 overflow-hidden"
+        className="h-1.5 w-full rounded-full bg-muted overflow-hidden"
         data-testid="db-connections-bar"
       >
         <div
@@ -104,11 +104,11 @@ function TopTablesTable({ tables }: { tables: TableSize[] }) {
 
   return (
     <div
-      className="rounded-xl border bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md overflow-hidden"
+      className="rounded-xl border bg-card/70 backdrop-blur-md overflow-hidden"
       data-testid="db-top-tables"
     >
       <button
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
         onClick={() => setOpen(!open)}
         data-testid="db-top-tables-toggle"
       >
@@ -313,7 +313,7 @@ export function DbStatsPanel() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3" data-testid="db-kpi-row">
         {/* Total Size */}
         <div
-          className="rounded-xl border bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-3"
+          className="rounded-xl border bg-card/70 backdrop-blur-md p-3"
           data-testid="db-kpi-size"
         >
           <div className="flex items-center gap-1.5 mb-1">
@@ -330,7 +330,7 @@ export function DbStatsPanel() {
 
         {/* Active Connections */}
         <div
-          className="rounded-xl border bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-3"
+          className="rounded-xl border bg-card/70 backdrop-blur-md p-3"
           data-testid="db-kpi-connections"
         >
           <p className="text-xs text-muted-foreground mb-1">Active Connections</p>
@@ -339,7 +339,7 @@ export function DbStatsPanel() {
 
         {/* Transactions */}
         <div
-          className="rounded-xl border bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-3"
+          className="rounded-xl border bg-card/70 backdrop-blur-md p-3"
           data-testid="db-kpi-transactions"
         >
           <p className="text-xs text-muted-foreground mb-1">Transactions</p>
@@ -361,7 +361,7 @@ export function DbStatsPanel() {
 
         {/* Last Measured */}
         <div
-          className="rounded-xl border bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-3"
+          className="rounded-xl border bg-card/70 backdrop-blur-md p-3"
           data-testid="db-kpi-measured"
         >
           <p className="text-xs text-muted-foreground mb-1">Last Measured</p>

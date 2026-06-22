@@ -58,19 +58,25 @@ import {
   createGameNightBggClient,
   createTierClient,
   createSessionInviteClient,
-  createPlaylistsClient,
   createWishlistClient,
   createPlayRecordsClient,
   createFeatureFlagsClient,
   createSandboxClient,
   createOnboardingClient,
   createAccessRequestsClient,
+  createStagingAllowlistClient,
   createAdminNotificationsClient,
   createContactClient,
   createAgentMemoryClient,
   createAgentDocumentsClient,
   createInfrastructureClient,
   createSessionFlowClient,
+  createKbDocsClient,
+  createKbQualityClient,
+  createActivityClient,
+  type KbDocsClient,
+  type KbQualityClient,
+  type ActivityClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -109,13 +115,13 @@ import {
   type GameNightBggClient,
   type TierClient,
   type SessionInviteClient,
-  type PlaylistsClient,
   type WishlistClient,
   type PlayRecordsClient,
   type FeatureFlagsClient,
   type SandboxClient,
   type OnboardingClient,
   type AccessRequestsClient,
+  type StagingAllowlistClient,
   type AdminNotificationsClient,
   type ContactClient,
   type AgentMemoryClient,
@@ -324,9 +330,6 @@ export interface ApiClient {
   /** Session Invites (Game Night Improvvisata) */
   sessionInvites: SessionInviteClient;
 
-  /** Game Night Playlists — Gap Closure */
-  playlists: PlaylistsClient;
-
   /** Wishlist */
   wishlist: WishlistClient;
 
@@ -345,6 +348,9 @@ export interface ApiClient {
   /** Access Requests — invite-only registration */
   accessRequests: AccessRequestsClient;
 
+  /** Staging Allowlist — DevOps Wave 1 (#845) */
+  stagingAllowlist: StagingAllowlistClient;
+
   /** Admin manual notification dispatch */
   adminNotifications: AdminNotificationsClient;
 
@@ -362,6 +368,15 @@ export interface ApiClient {
 
   /** Session Flow v2.1 — lifecycle, turns, scores, diary */
   sessionFlow: SessionFlowClient;
+
+  /** Cross-game per-user KB documents listing (Issue #1592 Phase 2b) */
+  kbDocs: KbDocsClient;
+
+  /** Per-doc KB quality evaluation runs (Issue #1675) */
+  kbQuality: KbQualityClient;
+
+  /** Cross-entity activity feed (Issue #1593 Phase 3b) */
+  activity: ActivityClient;
 
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
@@ -451,19 +466,22 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     gameNightBgg: createGameNightBggClient({ httpClient }), // Game Night Improvvisata
     tiers: createTierClient({ httpClient }), // Game Night Improvvisata — Tier & Usage
     sessionInvites: createSessionInviteClient({ httpClient }), // Game Night Improvvisata — Session Invites
-    playlists: createPlaylistsClient({ httpClient }), // Gap Closure — Playlists
     wishlist: createWishlistClient({ httpClient }), // Wishlist
     playRecords: createPlayRecordsClient({ httpClient }), // Play Records
     featureFlags: createFeatureFlagsClient({ httpClient }), // User Feature Flags
     sandbox: createSandboxClient({ httpClient }), // RAG Sandbox Dashboard
     onboarding: createOnboardingClient({ httpClient }), // First-time user onboarding
     accessRequests: createAccessRequestsClient({ httpClient }), // Invite-only registration
+    stagingAllowlist: createStagingAllowlistClient({ httpClient }), // #845 DevOps Wave 1
     adminNotifications: createAdminNotificationsClient({ httpClient }), // Admin manual notifications
     contact: createContactClient({ httpClient }), // Public contact form
     agentMemory: createAgentMemoryClient({ httpClient }), // AgentMemory
     agentDocuments: createAgentDocumentsClient({ httpClient }), // User agent document selection
     infrastructure: createInfrastructureClient({ httpClient }), // AI Infrastructure Dashboard
     sessionFlow: createSessionFlowClient({ httpClient }), // Session Flow v2.1
+    kbDocs: createKbDocsClient({ httpClient }), // Issue #1592 Phase 2b
+    kbQuality: createKbQualityClient({ httpClient }), // Issue #1675 — per-doc quality eval
+    activity: createActivityClient({ httpClient }), // Issue #1593 Phase 3b
     delete: (path: string) => httpClient.delete(path),
   };
 

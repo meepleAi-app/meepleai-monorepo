@@ -235,11 +235,11 @@ export function PdfLimitsConfig() {
       <AdminAuthGuard
         loading={authLoading}
         user={user}
-        backgroundClass="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900"
+        backgroundClass="min-h-dvh flex items-center justify-center bg-muted"
       >
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
-          <p className="text-slate-600 dark:text-slate-400">
+          <p className="text-muted-foreground">
             Loading PDF upload limits...
           </p>
         </div>
@@ -257,7 +257,7 @@ export function PdfLimitsConfig() {
       <AdminAuthGuard
         loading={authLoading}
         user={user}
-        backgroundClass="min-h-dvh bg-slate-50 dark:bg-slate-900"
+        backgroundClass="min-h-dvh bg-muted"
       >
         <div className="container mx-auto px-4 py-8">
           <ErrorDisplay error={error} onRetry={loadLimits} />
@@ -270,15 +270,15 @@ export function PdfLimitsConfig() {
     <AdminAuthGuard
       loading={authLoading}
       user={user}
-      backgroundClass="min-h-dvh bg-slate-50 dark:bg-slate-900"
+      backgroundClass="min-h-dvh bg-muted"
     >
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+          <h1 className="text-3xl font-bold text-foreground">
             PDF Upload Limits
           </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-2">
+          <p className="text-muted-foreground mt-2">
             Configure restrictions for PDF document uploads
           </p>
         </div>
@@ -339,7 +339,7 @@ export function PdfLimitsConfig() {
                     {errors.fileSizeValue.message}
                   </p>
                 )}
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-muted-foreground">
                   Maximum allowed file size for PDF uploads
                 </p>
               </div>
@@ -365,7 +365,7 @@ export function PdfLimitsConfig() {
                     {errors.maxPagesPerDocument.message}
                   </p>
                 )}
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-muted-foreground">
                   Maximum number of pages allowed per PDF document (1-10,000)
                 </p>
               </div>
@@ -391,7 +391,7 @@ export function PdfLimitsConfig() {
                     {errors.maxDocumentsPerGame.message}
                   </p>
                 )}
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-muted-foreground">
                   Maximum number of PDF documents allowed per game (1-1,000)
                 </p>
               </div>
@@ -401,7 +401,7 @@ export function PdfLimitsConfig() {
                 <Label className="text-base font-semibold">
                   Allowed MIME Types
                 </Label>
-                <div className="border rounded-md p-4 space-y-3 bg-slate-50 dark:bg-slate-800">
+                <div className="border rounded-md p-4 space-y-3 bg-muted">
                   {AVAILABLE_MIME_TYPES.map((mimeType) => (
                     <div
                       key={mimeType.value}
@@ -428,7 +428,7 @@ export function PdfLimitsConfig() {
                     {errors.allowedMimeTypes.message}
                   </p>
                 )}
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-muted-foreground">
                   Select which MIME types are accepted for PDF uploads
                 </p>
               </div>
@@ -461,7 +461,7 @@ export function PdfLimitsConfig() {
                 </div>
 
                 {limits && (
-                  <div className="text-sm text-slate-500">
+                  <div className="text-sm text-muted-foreground">
                     Last updated: {new Date(limits.lastUpdatedAt).toLocaleString()}
                     {limits.lastUpdatedByUserId && (
                       <span className="ml-2">
@@ -480,7 +480,7 @@ export function PdfLimitsConfig() {
           <CardHeader>
             <CardTitle className="text-lg">About PDF Upload Limits</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
+          <CardContent className="space-y-2 text-sm text-muted-foreground">
             <p>
               <strong>Maximum File Size:</strong> The largest PDF file that can
               be uploaded. Consider storage and processing capacity.

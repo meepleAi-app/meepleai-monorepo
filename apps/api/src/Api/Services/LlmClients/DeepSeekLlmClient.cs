@@ -3,11 +3,14 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Helpers;
 using Api.Infrastructure;
 using Api.Infrastructure.Security;
+using Api.Middleware.Exceptions;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.Services.LlmClients;
 
@@ -19,13 +22,22 @@ namespace Api.Services.LlmClients;
 /// DeepSeek provides an OpenAI-compatible API for their models (deepseek-chat, deepseek-reasoner, etc.)
 /// Used as an alternative to routing through OpenRouter for DeepSeek models.
 /// Includes usage metadata in streaming responses by default (no explicit usage.include needed).
+///
+/// Issue #1859: API key is resolved at call time via <see cref="IProviderCredentialResolver"/>
+/// (DB → env-var cascade with 5-min cache). The client is registered as a singleton, so the
+/// resolver is fetched from a fresh scope via <see cref="IServiceScopeFactory"/> per HTTP send.
+/// When neither DB row nor env var is configured the resolver throws
+/// <see cref="ProviderCredentialNotConfiguredException"/>; the call paths convert this into a
+/// graceful failure (return-failure for completion, yield-break for streaming).
 /// </remarks>
 internal class DeepSeekLlmClient : ILlmClient
 {
+    internal const string ProviderKey = "deepseek";
+
     private readonly HttpClient _httpClient;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<DeepSeekLlmClient> _logger;
     private readonly ILlmCostCalculator _costCalculator;
-    private readonly bool _isConfigured;
 
     // Hardcoded defaults
     private const int DefaultTimeoutSeconds = 60;
@@ -34,11 +46,17 @@ internal class DeepSeekLlmClient : ILlmClient
 
     public DeepSeekLlmClient(
         IHttpClientFactory httpClientFactory,
-        IConfiguration config,
+        IServiceScopeFactory scopeFactory,
         ILlmCostCalculator costCalculator,
         ILogger<DeepSeekLlmClient> logger)
     {
+        ArgumentNullException.ThrowIfNull(httpClientFactory);
+        ArgumentNullException.ThrowIfNull(scopeFactory);
+        ArgumentNullException.ThrowIfNull(costCalculator);
+        ArgumentNullException.ThrowIfNull(logger);
+
         _httpClient = httpClientFactory.CreateClient("DeepSeek");
+        _scopeFactory = scopeFactory;
         _logger = logger;
         _costCalculator = costCalculator;
 
@@ -47,24 +65,10 @@ internal class DeepSeekLlmClient : ILlmClient
         const string DeepSeekApiBaseUrl = "https://api.deepseek.com/";
 #pragma warning restore S1075
 
-        // Read API key from Docker Secret file or direct config — optional provider
-        var apiKey = SecretsHelper.GetSecretOrValue(config, "DEEPSEEK_API_KEY", logger, required: false);
-
-        if (string.IsNullOrWhiteSpace(apiKey))
-        {
-            _logger.LogWarning("DEEPSEEK_API_KEY not configured — DeepSeek provider will be unavailable");
-            _isConfigured = false;
-            return;
-        }
-
-        _isConfigured = true;
-
-        // Configure HttpClient
         _httpClient.BaseAddress = new Uri(DeepSeekApiBaseUrl);
-        _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
         _httpClient.Timeout = TimeSpan.FromSeconds(DefaultTimeoutSeconds);
 
-        _logger.LogInformation("DeepSeekLlmClient initialized with cost tracking");
+        _logger.LogInformation("DeepSeekLlmClient initialized with cost tracking (key resolved on demand)");
     }
 
     /// <inheritdoc/>
@@ -83,19 +87,26 @@ internal class DeepSeekLlmClient : ILlmClient
         int maxTokens,
         CancellationToken ct = default)
     {
-        if (!_isConfigured)
-        {
-            return LlmCompletionResult.CreateFailure("DeepSeek provider is not configured (missing API key)");
-        }
-
         if (string.IsNullOrWhiteSpace(userPrompt))
         {
             return LlmCompletionResult.CreateFailure("No user prompt provided");
         }
 
+        string apiKey;
+        try
+        {
+            apiKey = await ResolveApiKeyAsync(ct).ConfigureAwait(false);
+        }
+        catch (ProviderCredentialNotConfiguredException ex)
+        {
+            _logger.LogWarning(ex, "DeepSeek provider is not configured (no DB row and no env var)");
+            return LlmCompletionResult.CreateFailure("DeepSeek provider is not configured (missing API key)");
+        }
+
         try
         {
             using var httpRequest = CreateChatRequest(model, systemPrompt, userPrompt, temperature, maxTokens, stream: false);
+            ApplyAuthorization(httpRequest, apiKey);
 
             _logger.LogInformation("Generating DeepSeek completion using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
                 model, temperature, maxTokens);
@@ -254,19 +265,26 @@ internal class DeepSeekLlmClient : ILlmClient
         int maxTokens,
         CancellationToken ct = default)
     {
-        if (!_isConfigured)
-        {
-            return LlmCompletionResult.CreateFailure("DeepSeek provider is not configured (missing API key)");
-        }
-
         if (messages == null || messages.Count == 0)
         {
             return LlmCompletionResult.CreateFailure("No messages provided");
         }
 
+        string apiKey;
+        try
+        {
+            apiKey = await ResolveApiKeyAsync(ct).ConfigureAwait(false);
+        }
+        catch (ProviderCredentialNotConfiguredException ex)
+        {
+            _logger.LogWarning(ex, "DeepSeek provider is not configured (no DB row and no env var)");
+            return LlmCompletionResult.CreateFailure("DeepSeek provider is not configured (missing API key)");
+        }
+
         try
         {
             using var httpRequest = CreateMultimodalChatRequest(model, messages, temperature, maxTokens, stream: false);
+            ApplyAuthorization(httpRequest, apiKey);
 
             _logger.LogInformation("Generating DeepSeek multimodal completion using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
                 model, temperature, maxTokens);
@@ -309,15 +327,15 @@ internal class DeepSeekLlmClient : ILlmClient
         int maxTokens,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        if (!_isConfigured)
-        {
-            _logger.LogWarning("DeepSeek provider is not configured — multimodal streaming unavailable");
-            yield break;
-        }
-
         if (messages == null || messages.Count == 0)
         {
             _logger.LogWarning("No messages provided for DeepSeek multimodal streaming");
+            yield break;
+        }
+
+        var apiKey = await ResolveApiKeyOrLogAsync(ct).ConfigureAwait(false);
+        if (apiKey is null)
+        {
             yield break;
         }
 
@@ -331,6 +349,7 @@ internal class DeepSeekLlmClient : ILlmClient
         for (var attempt = 0; attempt <= maxRetries; attempt++)
         {
             using var httpRequest = CreateMultimodalChatRequest(model, messages, temperature, maxTokens, stream: true);
+            ApplyAuthorization(httpRequest, apiKey);
             response = null;
 
             try
@@ -460,14 +479,21 @@ internal class DeepSeekLlmClient : ILlmClient
     /// <inheritdoc/>
     public async Task<bool> CheckHealthAsync(CancellationToken ct = default)
     {
-        if (!_isConfigured)
+        string apiKey;
+        try
+        {
+            apiKey = await ResolveApiKeyAsync(ct).ConfigureAwait(false);
+        }
+        catch (ProviderCredentialNotConfiguredException)
         {
             return false;
         }
 
         try
         {
-            using var response = await _httpClient.GetAsync("models", ct).ConfigureAwait(false);
+            using var request = new HttpRequestMessage(HttpMethod.Get, "models");
+            ApplyAuthorization(request, apiKey);
+            using var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex)
@@ -486,15 +512,15 @@ internal class DeepSeekLlmClient : ILlmClient
         int maxTokens,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        if (!_isConfigured)
-        {
-            _logger.LogWarning("DeepSeek provider is not configured — streaming unavailable");
-            yield break;
-        }
-
         if (string.IsNullOrWhiteSpace(userPrompt))
         {
             _logger.LogWarning("Empty user prompt provided for DeepSeek streaming");
+            yield break;
+        }
+
+        var apiKey = await ResolveApiKeyOrLogAsync(ct).ConfigureAwait(false);
+        if (apiKey is null)
+        {
             yield break;
         }
 
@@ -511,6 +537,7 @@ internal class DeepSeekLlmClient : ILlmClient
         for (var attempt = 0; attempt <= maxRetries; attempt++)
         {
             using var httpRequest = CreateChatRequest(model, systemPrompt, userPrompt, temperature, maxTokens, stream: true);
+            ApplyAuthorization(httpRequest, apiKey);
             response = null;
 
             try
@@ -693,5 +720,38 @@ internal class DeepSeekLlmClient : ILlmClient
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Resolves the DeepSeek API key via a fresh DI scope (resolver is Scoped, this client is Singleton).
+    /// Throws <see cref="ProviderCredentialNotConfiguredException"/> when neither DB row nor env var exists.
+    /// </summary>
+    private async Task<string> ResolveApiKeyAsync(CancellationToken ct)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var resolver = scope.ServiceProvider.GetRequiredService<IProviderCredentialResolver>();
+        return await resolver.ResolveAsync(ProviderKey, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Streaming-friendly variant of <see cref="ResolveApiKeyAsync"/>: returns <c>null</c> instead of
+    /// throwing when the provider is not configured, allowing callers to <c>yield break</c> cleanly.
+    /// </summary>
+    private async Task<string?> ResolveApiKeyOrLogAsync(CancellationToken ct)
+    {
+        try
+        {
+            return await ResolveApiKeyAsync(ct).ConfigureAwait(false);
+        }
+        catch (ProviderCredentialNotConfiguredException ex)
+        {
+            _logger.LogWarning(ex, "DeepSeek provider is not configured — streaming unavailable");
+            return null;
+        }
+    }
+
+    private static void ApplyAuthorization(HttpRequestMessage request, string apiKey)
+    {
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
     }
 }

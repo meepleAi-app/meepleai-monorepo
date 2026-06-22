@@ -1,5 +1,5 @@
 /**
- * /join — client body (V2, Wave A.2, Issue #589).
+ * /join — client body (Issue #589).
  *
  * Owns:
  *   - i18n resolution (one `useTranslation()` call → all labels resolved upfront,
@@ -18,8 +18,8 @@ import { useMemo, type JSX } from 'react';
 
 import { useSearchParams } from 'next/navigation';
 
-import { JoinForm, JoinHero } from '@/components/ui/v2/join';
-import type { JoinFormLabels, JoinHeroFeature } from '@/components/ui/v2/join';
+import { JoinForm, JoinHero } from '@/components/ui/join';
+import type { JoinFormLabels, JoinHeroFeature } from '@/components/ui/join';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useWaitlistSubmit } from '@/hooks/useWaitlistSubmit';
 import type { JoinFormState } from '@/hooks/useWaitlistSubmit';

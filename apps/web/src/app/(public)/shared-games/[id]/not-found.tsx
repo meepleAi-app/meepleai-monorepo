@@ -13,7 +13,7 @@
 
 import type { JSX } from 'react';
 
-import { NotFoundState } from '@/components/ui/v2/shared-game-detail';
+import { NotFoundState } from '@/components/ui/detail-layout';
 
 export default function SharedGameDetailNotFound(): JSX.Element {
   return (

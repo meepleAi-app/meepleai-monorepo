@@ -1,0 +1,114 @@
+{
+  "generatedAt": "2026-05-13T15:57:21Z",
+  "totalMockups": 61,
+  "totalConstraints": 8,
+  "byMetricType": {
+    "ux-constraint": 2,
+    "performance": 1,
+    "latency": 3,
+    "coverage": 1,
+    "confidence": 1
+  },
+  "constraints": [
+    {
+      "mockup": "sp4-citation-pdf-viewer.html",
+      "id": "G4.2",
+      "text": "tab \"PDF originale\" sempre visibile (anche non-owner)",
+      "metric_type": "ux-constraint",
+      "target_value": null,
+      "applies_to": [
+        "sp4-citation-pdf-viewer.html"
+      ]
+    },
+    {
+      "mockup": "sp4-citation-pdf-viewer.html",
+      "id": "G4.3",
+      "text": "upsell render <100ms (no fetch)",
+      "metric_type": "performance",
+      "target_value": {
+        "comparator": "<",
+        "value": 100,
+        "unit": "ms"
+      },
+      "applies_to": [
+        "sp4-citation-pdf-viewer.html"
+      ]
+    },
+    {
+      "mockup": "sp4-citation-pdf-viewer.html",
+      "id": "G4.4",
+      "text": "PDF caricato + seek to pageNumber < 3s su 4G",
+      "metric_type": "latency",
+      "target_value": {
+        "comparator": "<",
+        "value": 3,
+        "unit": "s"
+      },
+      "applies_to": [
+        "sp4-citation-pdf-viewer.html"
+      ]
+    },
+    {
+      "mockup": "sp4-citation-pdf-viewer.html",
+      "id": "G4.5",
+      "text": "niente download button visibile, no link diretto a /download endpoint",
+      "metric_type": "ux-constraint",
+      "target_value": null,
+      "applies_to": [
+        "sp4-citation-pdf-viewer.html"
+      ]
+    },
+    {
+      "mockup": "sp4-game-chat-tab.html",
+      "id": null,
+      "text": "90% query con citazione esplicita (pagina+sezione)",
+      "metric_type": "coverage",
+      "target_value": {
+        "comparator": "≥",
+        "value": 90,
+        "unit": "%"
+      },
+      "applies_to": [
+        "sp4-game-chat-tab.html"
+      ]
+    },
+    {
+      "mockup": "sp4-game-chat-tab.html",
+      "id": null,
+      "text": "confidence < 70% → marker incertezza obbligatorio",
+      "metric_type": "confidence",
+      "target_value": null,
+      "applies_to": [
+        "sp4-game-chat-tab.html"
+      ]
+    },
+    {
+      "mockup": "sp4-game-chat-tab.html",
+      "id": null,
+      "text": "latency P95 ≤ 10s con spinner accettabile",
+      "metric_type": "latency",
+      "target_value": {
+        "comparator": "≤",
+        "value": 10,
+        "unit": "s"
+      },
+      "applies_to": [
+        "sp4-game-chat-tab.html"
+      ]
+    },
+    {
+      "mockup": "sp4-game-chat-tab.html",
+      "id": null,
+      "text": "chat handoff <3s (G2 — non coperto qui ma compatibile con UX)",
+      "metric_type": "latency",
+      "target_value": {
+        "comparator": "<",
+        "value": 3,
+        "unit": "s"
+      },
+      "applies_to": [
+        "sp4-game-chat-tab.html"
+      ]
+    }
+  ]
+}

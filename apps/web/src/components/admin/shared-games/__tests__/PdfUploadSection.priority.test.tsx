@@ -61,7 +61,13 @@ beforeEach(() => {
     responseText: JSON.stringify({ documentId: 'doc-123', fileName: 'rules.pdf' }),
   };
   vi.clearAllMocks();
-  global.XMLHttpRequest = vi.fn(() => mockXHR) as unknown as typeof XMLHttpRequest;
+  // Vitest v4 fix: arrow/plain function constructors don't bind `this` to the
+  // instance, so open/send etc. are set on a throwaway object and never tracked.
+  // Use a function-with-this constructor + Object.assign so the instance shares
+  // the same vi.fn() references as mockXHR (mirror of M2 canary fix).
+  vi.stubGlobal('XMLHttpRequest', function (this: any) {
+    Object.assign(this, mockXHR);
+  });
 });
 
 afterEach(() => {

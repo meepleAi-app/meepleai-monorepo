@@ -1313,4 +1313,75 @@ public sealed class SharedGameTests
     }
 
     #endregion
+
+    #region SetPdfCoverR2Key Tests (Issue #1852)
+
+    [Fact]
+    public void SetPdfCoverR2Key_HappyPath_SetsKey()
+    {
+        // Arrange
+        var game = CreateValidGame();
+
+        // Act
+        game.SetPdfCoverR2Key("pdf-cover-abc");
+
+        // Assert
+        game.PdfCoverR2Key.Should().Be("pdf-cover-abc");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void SetPdfCoverR2Key_EmptyKey_Throws(string? key)
+    {
+        // Arrange
+        var game = CreateValidGame();
+
+        // Act
+        Action act = () => game.SetPdfCoverR2Key(key!);
+
+        // Assert
+        act.Should().Throw<ArgumentException>().WithParameterName("coverR2Key");
+    }
+
+    [Fact]
+    public void SetPdfCoverR2Key_SameKeyTwice_IsNoOp()
+    {
+        // Arrange
+        var game = CreateValidGame();
+        game.SetPdfCoverR2Key("key-1");
+
+        // Act — second call with same key should not throw
+        game.SetPdfCoverR2Key("key-1");
+
+        // Assert
+        game.PdfCoverR2Key.Should().Be("key-1");
+    }
+
+    [Fact]
+    public void SetPdfCoverR2Key_DifferentKey_Overwrites()
+    {
+        // Arrange
+        var game = CreateValidGame();
+        game.SetPdfCoverR2Key("key-1");
+
+        // Act
+        game.SetPdfCoverR2Key("key-2");
+
+        // Assert
+        game.PdfCoverR2Key.Should().Be("key-2");
+    }
+
+    [Fact]
+    public void PdfCoverR2Key_DefaultsToNull()
+    {
+        // Act
+        var game = CreateValidGame();
+
+        // Assert
+        game.PdfCoverR2Key.Should().BeNull();
+    }
+
+    #endregion
 }

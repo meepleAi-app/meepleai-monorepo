@@ -72,7 +72,7 @@ internal class SessionAuthenticationHandler : AuthenticationHandler<Authenticati
             var query = new ValidateSessionQuery(SessionToken: token);
             var result = await _mediator.Send(query).ConfigureAwait(false);
 
-            if (!result.IsValid || result.User == null)
+            if (!result.IsValid || result.Principal?.Subject == null)
             {
                 // Invalid/expired session - return NoResult (allows proper 401)
                 return AuthenticateResult.NoResult();
@@ -81,14 +81,14 @@ internal class SessionAuthenticationHandler : AuthenticationHandler<Authenticati
             // Create claims from validated session
             var claims = new List<Claim>
             {
-                new(ClaimTypes.NameIdentifier, result.User.Id.ToString()),
-                new(ClaimTypes.Email, result.User.Email),
-                new(ClaimTypes.Role, NormalizeRoleClaim(result.User.Role))
+                new(ClaimTypes.NameIdentifier, result.Principal!.Subject.Id.ToString()),
+                new(ClaimTypes.Email, result.Principal!.Subject.Email),
+                new(ClaimTypes.Role, NormalizeRoleClaim(result.Principal!.Subject.Role))
             };
 
-            if (!string.IsNullOrWhiteSpace(result.User.DisplayName))
+            if (!string.IsNullOrWhiteSpace(result.Principal!.Subject.DisplayName))
             {
-                claims.Add(new Claim(ClaimTypes.Name, result.User.DisplayName));
+                claims.Add(new Claim(ClaimTypes.Name, result.Principal!.Subject.DisplayName));
             }
 
             var identity = new ClaimsIdentity(claims, Scheme.Name);
@@ -132,21 +132,21 @@ internal class SessionAuthenticationHandler : AuthenticationHandler<Authenticati
 
     private static AuthenticationTicket CreateTicketFromSessionStatus(SessionStatusDto sessionStatus, string schemeName)
     {
-        if (sessionStatus.User == null)
+        if (sessionStatus.Principal?.Subject == null)
         {
             throw new InvalidOperationException("Cannot create ticket from session status without user information");
         }
 
         var claims = new List<Claim>
         {
-            new(ClaimTypes.NameIdentifier, sessionStatus.User.Id.ToString()),
-            new(ClaimTypes.Email, sessionStatus.User.Email),
-            new(ClaimTypes.Role, NormalizeRoleClaim(sessionStatus.User.Role))
+            new(ClaimTypes.NameIdentifier, sessionStatus.Principal!.Subject.Id.ToString()),
+            new(ClaimTypes.Email, sessionStatus.Principal!.Subject.Email),
+            new(ClaimTypes.Role, NormalizeRoleClaim(sessionStatus.Principal!.Subject.Role))
         };
 
-        if (!string.IsNullOrWhiteSpace(sessionStatus.User.DisplayName))
+        if (!string.IsNullOrWhiteSpace(sessionStatus.Principal!.Subject.DisplayName))
         {
-            claims.Add(new Claim(ClaimTypes.Name, sessionStatus.User.DisplayName));
+            claims.Add(new Claim(ClaimTypes.Name, sessionStatus.Principal!.Subject.DisplayName));
         }
 
         var identity = new ClaimsIdentity(claims, schemeName);

@@ -62,11 +62,11 @@ export function GroupMemoryPanel({ groupId }: GroupMemoryPanelProps) {
   if (loading) {
     return (
       <div
-        className="rounded-xl border border-white/40 bg-white/70 backdrop-blur-md shadow-sm p-4 flex items-center justify-center gap-2"
+        className="rounded-xl border border-border bg-card/70 backdrop-blur-md shadow-sm p-4 flex items-center justify-center gap-2"
         data-testid="group-memory-panel"
       >
-        <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-        <span className="text-sm text-gray-500 font-nunito">Loading group...</span>
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        <span className="text-sm text-muted-foreground font-nunito">Loading group...</span>
       </div>
     );
   }
@@ -84,18 +84,18 @@ export function GroupMemoryPanel({ groupId }: GroupMemoryPanelProps) {
 
   return (
     <div
-      className="rounded-xl border border-white/40 bg-white/70 backdrop-blur-md shadow-sm p-4 space-y-3"
+      className="rounded-xl border border-border bg-card/70 backdrop-blur-md shadow-sm p-4 space-y-3"
       data-testid="group-memory-panel"
     >
       {/* Group name */}
       <div className="flex items-center gap-2">
         <Users className="h-4 w-4 text-amber-600" />
-        <h3 className="font-quicksand font-semibold text-sm text-gray-900">{group.name}</h3>
+        <h3 className="font-quicksand font-semibold text-sm text-foreground">{group.name}</h3>
       </div>
 
       {/* Members */}
       <div className="space-y-1">
-        <span className="text-xs text-gray-500 font-nunito uppercase tracking-wide">Members</span>
+        <span className="text-xs text-muted-foreground font-nunito uppercase tracking-wide">Members</span>
         <div className="flex flex-wrap gap-1.5">
           {group.members.map((member, index) => (
             <Badge
@@ -104,7 +104,7 @@ export function GroupMemoryPanel({ groupId }: GroupMemoryPanelProps) {
               className={
                 member.guestName
                   ? 'bg-purple-50 border-purple-200 text-purple-700 text-xs font-nunito'
-                  : 'bg-gray-50 border-gray-200 text-gray-700 text-xs font-nunito'
+                  : 'bg-muted border-border text-foreground text-xs font-nunito'
               }
             >
               {member.guestName ?? member.userId?.slice(0, 8) ?? 'Unknown'}
@@ -117,24 +117,24 @@ export function GroupMemoryPanel({ groupId }: GroupMemoryPanelProps) {
       {/* Preferences */}
       {group.preferences && (
         <div className="space-y-1">
-          <span className="text-xs text-gray-500 font-nunito uppercase tracking-wide">
+          <span className="text-xs text-muted-foreground font-nunito uppercase tracking-wide">
             Preferences
           </span>
-          <div className="text-sm text-gray-700 font-nunito space-y-0.5">
+          <div className="text-sm text-foreground font-nunito space-y-0.5">
             {group.preferences.preferredComplexity && (
               <p>
-                <Gamepad2 className="inline h-3 w-3 mr-1 text-gray-400" />
+                <Gamepad2 className="inline h-3 w-3 mr-1 text-muted-foreground" />
                 Complexity: {group.preferences.preferredComplexity}
               </p>
             )}
             {group.preferences.maxDuration && (
               <p>
-                <Clock className="inline h-3 w-3 mr-1 text-gray-400" />
+                <Clock className="inline h-3 w-3 mr-1 text-muted-foreground" />
                 Max duration: {group.preferences.maxDuration}
               </p>
             )}
             {group.preferences.customNotes && (
-              <p className="italic text-gray-500">{group.preferences.customNotes}</p>
+              <p className="italic text-muted-foreground">{group.preferences.customNotes}</p>
             )}
           </div>
         </div>
@@ -143,13 +143,13 @@ export function GroupMemoryPanel({ groupId }: GroupMemoryPanelProps) {
       {/* Stats */}
       {group.stats && (
         <div className="space-y-1">
-          <span className="text-xs text-gray-500 font-nunito uppercase tracking-wide">Stats</span>
+          <span className="text-xs text-muted-foreground font-nunito uppercase tracking-wide">Stats</span>
           <div className="flex gap-4 text-sm font-nunito">
-            <span className="text-gray-700">
+            <span className="text-foreground">
               <strong className="font-quicksand">{group.stats.totalSessions}</strong> sessions
             </span>
             {group.stats.lastPlayedAt && (
-              <span className="text-gray-500">
+              <span className="text-muted-foreground">
                 Last: {new Date(group.stats.lastPlayedAt).toLocaleDateString()}
               </span>
             )}

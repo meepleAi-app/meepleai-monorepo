@@ -18,7 +18,7 @@ internal static class AdminPdfStorageEndpoints
 
         group.MapGet("/health", GetStorageHealth)
             .WithName("GetPdfStorageHealth")
-            .WithSummary("Get PDF storage health across PG, Qdrant, and file storage");
+            .WithSummary("Get PDF storage health across PG (pgvector), and file storage");
     }
 
     private static async Task<IResult> GetStorageHealth(

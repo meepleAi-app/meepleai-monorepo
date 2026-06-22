@@ -41,7 +41,7 @@ async function setupRememberMeMocks(
   const isExpired = expiresAt.getTime() < Date.now();
 
   // Mock login endpoint
-  await page.route(`${API_BASE}/api/v1/auth/login`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/login`, async route => {
     const body = await route.request().postDataJSON();
     const useRememberMe = body?.rememberMe ?? false;
 
@@ -79,7 +79,7 @@ async function setupRememberMeMocks(
   });
 
   // Mock auth/me endpoint
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     if (isExpired) {
       await route.fulfill({
         status: 401,
@@ -109,7 +109,7 @@ async function setupRememberMeMocks(
   });
 
   // Mock session info endpoint
-  await page.route(`${API_BASE}/api/v1/users/me/session-info`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/users/me/session-info`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -125,7 +125,7 @@ async function setupRememberMeMocks(
   });
 
   // Mock common endpoints
-  await page.route(`${API_BASE}/api/v1/games**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -213,6 +213,7 @@ test.describe('AUTH-13: Remember Me', () => {
     test('should show extended session indicator when remember me enabled', async ({ page }) => {
       await setupRememberMeMocks(page, { rememberMe: true });
 
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 
@@ -233,7 +234,7 @@ test.describe('AUTH-13: Remember Me', () => {
       const rememberMeCheckbox = page
         .getByRole('checkbox', { name: /remember/i })
         .or(page.getByLabel(/remember/i));
-      if (await rememberMeCheckbox.isVisible() && (await rememberMeCheckbox.isChecked())) {
+      if ((await rememberMeCheckbox.isVisible()) && (await rememberMeCheckbox.isChecked())) {
         await rememberMeCheckbox.uncheck();
       }
 
@@ -249,6 +250,7 @@ test.describe('AUTH-13: Remember Me', () => {
     test('should show standard session indicator when remember me disabled', async ({ page }) => {
       await setupRememberMeMocks(page, { rememberMe: false });
 
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 
@@ -269,7 +271,9 @@ test.describe('AUTH-13: Remember Me', () => {
       await page.waitForLoadState('networkidle');
 
       // Should redirect to login or show session expired message
-      await expect(page.getByText(/session.*expired|login.*again|sign.*in/i).or(page)).toBeVisible();
+      await expect(
+        page.getByText(/session.*expired|login.*again|sign.*in/i).or(page)
+      ).toBeVisible();
     });
 
     test('should show session expiration warning', async ({ page }) => {
@@ -297,6 +301,7 @@ test.describe('AUTH-13: Remember Me', () => {
     test('should show session details in settings', async ({ page }) => {
       await setupRememberMeMocks(page, { rememberMe: true });
 
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 

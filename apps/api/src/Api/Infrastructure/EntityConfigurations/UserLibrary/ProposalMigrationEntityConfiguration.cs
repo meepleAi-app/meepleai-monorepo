@@ -44,6 +44,10 @@ public class ProposalMigrationEntityConfiguration : IEntityTypeConfiguration<Pro
             .IsConcurrencyToken()
             .ValueGeneratedOnAddOrUpdate();
 
+        // Issue #1938 / CF-2: source domain event id (nullable, UNIQUE partial).
+        builder.Property(e => e.SourceEventId)
+            .HasColumnName("source_event_id");
+
         // Indexes
         builder.HasIndex(e => e.ShareRequestId)
             .IsUnique()
@@ -57,6 +61,14 @@ public class ProposalMigrationEntityConfiguration : IEntityTypeConfiguration<Pro
 
         builder.HasIndex(e => e.SharedGameId)
             .HasDatabaseName("IX_ProposalMigrations_SharedGameId");
+
+        // Issue #1938 / CF-2: SourceEventId UNIQUE (partial — only when not null).
+        // Guards against duplicate migration rows when an event handler is re-dispatched
+        // (rolled-back outer tx in #1535, MediatR transient retry, hand-replay).
+        builder.HasIndex(e => e.SourceEventId)
+            .IsUnique()
+            .HasDatabaseName("UX_proposal_migrations_source_event_id")
+            .HasFilter("source_event_id IS NOT NULL");
 
         // Navigation
         builder.HasOne(e => e.PrivateGame)

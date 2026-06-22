@@ -74,7 +74,7 @@ export function GuestSessionView({ code }: GuestSessionViewProps) {
       <main className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-4">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
-          <p className="font-nunito text-gray-600 dark:text-gray-400">Caricamento sessione...</p>
+          <p className="font-nunito text-muted-foreground">Caricamento sessione...</p>
         </div>
       </main>
     );
@@ -89,10 +89,10 @@ export function GuestSessionView({ code }: GuestSessionViewProps) {
           <div className="h-16 w-16 mx-auto rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
             <Users className="h-8 w-8 text-red-500" />
           </div>
-          <h1 className="text-xl font-quicksand font-bold text-gray-900 dark:text-gray-100">
+          <h1 className="text-xl font-quicksand font-bold text-foreground">
             Sessione non trovata
           </h1>
-          <p className="text-sm font-nunito text-gray-600 dark:text-gray-400">
+          <p className="text-sm font-nunito text-muted-foreground">
             {errorMessage ?? 'Il codice potrebbe essere scaduto o non valido.'}
           </p>
           <Button onClick={() => loadSession()} variant="outline" className="w-full">
@@ -134,10 +134,10 @@ export function GuestSessionView({ code }: GuestSessionViewProps) {
           <div className="h-14 w-14 mx-auto rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-3">
             <Gamepad2 className="h-7 w-7 text-amber-600 dark:text-amber-400" />
           </div>
-          <h1 className="text-2xl font-quicksand font-bold text-gray-900 dark:text-gray-100">
+          <h1 className="text-2xl font-quicksand font-bold text-foreground">
             {session.gameName}
           </h1>
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full text-xs font-medium">
               <Clock className="h-3 w-3" />
               {statusLabel}
@@ -173,7 +173,7 @@ export function GuestSessionView({ code }: GuestSessionViewProps) {
             {activePlayers.map(player => (
               <div
                 key={player.id}
-                className="flex items-center gap-1.5 rounded-full bg-white/60 dark:bg-white/10 px-3 py-1"
+                className="flex items-center gap-1.5 rounded-full bg-card/60 dark:bg-card/10 px-3 py-1"
               >
                 <div
                   className="h-3 w-3 rounded-full"
@@ -187,7 +187,7 @@ export function GuestSessionView({ code }: GuestSessionViewProps) {
 
         {/* No registration message */}
         <div className="text-center py-4">
-          <p className="text-xs text-gray-400 dark:text-gray-500">
+          <p className="text-xs text-muted-foreground">
             Non serve registrazione per visualizzare questa partita.
           </p>
         </div>

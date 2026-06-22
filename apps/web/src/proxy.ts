@@ -41,19 +41,48 @@ import type { NextRequest } from 'next/server';
 /**
  * Protected routes that require authentication
  * Unauthenticated users will be redirected to /login
+ *
+ * Kept alphabetised so the diff is easy to read and additions are mechanical.
+ * Sources of truth for what belongs here:
+ *   - any top-level path under `src/app/(authenticated)/` whose Server Component
+ *     should not render for an anonymous visitor
+ *   - any path under `src/app/(chat)/`
+ *   - `/admin` (its own (dashboard) subtree)
+ *
+ * `#2118` sweep: added the remaining `(authenticated)` top-levels that were
+ * silently missing from this list. Before the sweep, anonymous users hitting
+ * `/hub/games`, `/dashboard`, `/profile`, etc. saw the authenticated chrome
+ * (`UserShell` / `AppTopBar`) with an empty session and relied on each page
+ * hook to surface a 401 — which produced a flash of broken UI.
  */
 const PROTECTED_ROUTES = [
-  '/library',
-  '/chat',
-  '/upload',
   '/admin',
-  '/editor',
-  '/settings',
-  '/games',
   '/agents',
-  '/sessions',
-  '/play-records',
+  '/chat',
+  '/dashboard',
+  '/discover',
+  '/editor',
   '/game-nights',
+  '/gamebook',
+  '/games',
+  '/hub',
+  '/knowledge-base',
+  '/library',
+  '/n8n',
+  '/notifications',
+  '/onboarding',
+  '/pipeline-builder',
+  '/play-records',
+  '/players',
+  '/private-games',
+  '/profile',
+  '/sessions',
+  '/settings',
+  '/setup',
+  '/toolkit',
+  '/toolkits',
+  '/upload',
+  '/versions',
 ];
 
 /**
@@ -74,10 +103,22 @@ const PUBLIC_AUTH_ROUTES = ['/login', '/register'];
 const SESSION_COOKIE_NAME = 'meepleai_session';
 
 /**
- * User role cookie name
- * Used to check authorization for protected routes
+ * User role cookies.
+ * - V1 (legacy plaintext): readable directly from the edge during the grace
+ *   period so existing sessions don't get bounced through /auth/me on the
+ *   first hit after deploy.
+ * - V2 (HMAC-protected via ASP.NET Data Protection): only the API can read
+ *   this; the edge cannot decrypt it. When v2 is the only role cookie
+ *   present, the role is sourced from /auth/me (via session validation
+ *   cache below) instead.
+ *
+ * V1 sunset must stay aligned with CookieHelpers.UserRoleCookieV1SunsetUtc.
  */
-const USER_ROLE_COOKIE = 'meepleai_user_role';
+const USER_ROLE_COOKIE_V1 = 'meepleai_user_role';
+// V2 is intentionally referenced only by name in comments here — the value is
+// HMAC-protected and only the API can decrypt it. The middleware never reads
+// it directly, but documenting the constant keeps future readers honest.
+const USER_ROLE_COOKIE_V1_SUNSET = Date.UTC(2026, 4, 13); // 2026-05-13 UTC (month is 0-indexed)
 
 // ============================================================================
 // Proxy Function
@@ -86,9 +127,12 @@ const USER_ROLE_COOKIE = 'meepleai_user_role';
 // Cache API origin at module level for performance (only computed once)
 let cachedApiOrigin: string | null = null;
 
-// Simple session validation cache so we don't call the API on every request
+// Simple session validation cache so we don't call the API on every request.
+// C4: also caches the user role so we don't have to read the (now HMAC-only)
+// v2 role cookie on the edge — the cookie value is opaque base64 from here.
 type SessionValidationEntry = {
   valid: boolean;
+  role: string | null;
   expiresAt: number;
 };
 
@@ -96,11 +140,12 @@ const SESSION_CACHE_TTL_MS = 120 * 1000; // 2 minutes (optimized for performance
 const SESSION_CACHE_LIMIT = 200;
 const sessionValidationCache = new Map<string, SessionValidationEntry>();
 
-function cacheSessionValidation(cookieValue: string, valid: boolean) {
+function cacheSessionValidation(cookieValue: string, valid: boolean, role: string | null = null) {
   if (!cookieValue) return;
 
   sessionValidationCache.set(cookieValue, {
     valid,
+    role,
     expiresAt: Date.now() + SESSION_CACHE_TTL_MS,
   });
 
@@ -110,6 +155,15 @@ function cacheSessionValidation(cookieValue: string, valid: boolean) {
       sessionValidationCache.delete(oldestKey);
     }
   }
+}
+
+function getCachedRole(cookieValue: string | undefined | null): string | null {
+  if (!cookieValue) return null;
+  const cached = sessionValidationCache.get(cookieValue);
+  if (cached && cached.expiresAt > Date.now() && cached.valid) {
+    return cached.role;
+  }
+  return null;
 }
 
 async function isSessionCookieValid(request: NextRequest, cookieValue: string): Promise<boolean> {
@@ -158,7 +212,23 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
         metrics.recordValidationFailure();
       }
 
-      cacheSessionValidation(cookieValue, response.ok);
+      // C4: extract role from the /auth/me payload so the middleware doesn't
+      // need to read the v2 (HMAC-protected) role cookie. The role coming
+      // back is already lower-cased by the API.
+      let role: string | null = null;
+      if (response.ok) {
+        try {
+          const payload = (await response.json()) as { user?: { role?: string } };
+          if (typeof payload?.user?.role === 'string') {
+            role = payload.user.role.toLowerCase();
+          }
+        } catch {
+          // Non-JSON or unexpected shape — treat as authenticated but role-less;
+          // the proxy default ('user') will still be applied downstream.
+        }
+      }
+
+      cacheSessionValidation(cookieValue, response.ok, role);
       return response.ok;
     } catch (fetchError) {
       clearTimeout(timeoutId);
@@ -272,8 +342,11 @@ function getSecurityHeaders(requestOrigin?: string) {
     // XSS filter for legacy browsers
     'X-XSS-Protection': '1; mode=block',
 
-    // Referrer policy
-    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    // Referrer policy — Issue #2168 defense in depth: `strict-origin` sends
+    // only the origin (no path/query) on ALL requests (same- and cross-origin),
+    // preventing query-param exfiltration (e.g. `?from=` or session tokens)
+    // via the Referer header. Stricter than `strict-origin-when-cross-origin`.
+    'Referrer-Policy': 'strict-origin',
 
     // Permissions policy
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
@@ -311,7 +384,10 @@ export async function proxy(request: NextRequest) {
   if (hostname === '127.0.0.1') {
     const normalizedUrl = new URL(request.url);
     normalizedUrl.hostname = 'localhost';
-    return NextResponse.redirect(normalizedUrl);
+    // Issue #2168: apply security headers (including Referrer-Policy) on this
+    // early-exit redirect path, same as all other return sites below.
+    const normalizeResponse = NextResponse.redirect(normalizedUrl);
+    return addSecurityHeaders(normalizeResponse, requestOrigin);
   }
 
   // Check if user has a session cookie
@@ -348,9 +424,26 @@ export async function proxy(request: NextRequest) {
     isAuthenticated = await isSessionCookieValid(request, sessionCookieValue);
   }
 
-  // Check user role (only trusted when we know the session is valid)
-  const userRoleCookie = request.cookies.get(USER_ROLE_COOKIE);
-  const userRole = isAuthenticated ? (userRoleCookie?.value ?? 'user') : 'user';
+  // Check user role (only trusted when we know the session is valid).
+  // C4 cookie-versioning resolution order:
+  //   1. /auth/me cache (populated by isSessionCookieValid above) — the
+  //      authoritative source post-deploy. The v2 cookie value is HMAC-only
+  //      and cannot be decoded at the edge.
+  //   2. v1 plaintext cookie — kept as a fast path during the grace period
+  //      so existing browsers don't have to wait for the cache to warm up.
+  //   3. Default 'user' — never elevate privileges by guessing.
+  let userRole: string = 'user';
+  if (isAuthenticated) {
+    const cachedRole = getCachedRole(sessionCookieValue);
+    if (cachedRole) {
+      userRole = cachedRole;
+    } else if (Date.now() < USER_ROLE_COOKIE_V1_SUNSET) {
+      const v1 = request.cookies.get(USER_ROLE_COOKIE_V1)?.value;
+      if (v1) {
+        userRole = v1;
+      }
+    }
+  }
   const isAdmin = isAuthenticated && isAdminRole(userRole);
 
   // Read view mode cookie — admin users can switch to 'user' shell via toggle.
@@ -406,61 +499,6 @@ export async function proxy(request: NextRequest) {
   if (isHomePage && isAuthenticated && !isAdmin) {
     const response = NextResponse.redirect(new URL('/library', request.url));
     return addSecurityHeaders(response, requestOrigin);
-  }
-
-  // ============================================================================
-  // Alpha Zero Route Guard
-  // ============================================================================
-  // When NEXT_PUBLIC_ALPHA_MODE=true, only alpha-allowed routes are accessible.
-  // Non-alpha routes redirect to /dashboard. This prevents users from reaching
-  // features that are not yet ready for alpha testing.
-  const IS_ALPHA_MODE = process.env.NEXT_PUBLIC_ALPHA_MODE === 'true';
-
-  if (IS_ALPHA_MODE && isAuthenticated) {
-    const ALPHA_ROUTE_PREFIXES = [
-      '/dashboard',
-      '/library',
-      '/chat',
-      '/discover',
-      '/games',
-      '/profile',
-      '/settings',
-      '/admin', // admin root redirects to /admin/overview via page.tsx
-      '/admin/overview',
-      '/admin/shared-games',
-      '/admin/knowledge-base',
-      '/admin/content',
-      '/admin/users',
-      '/onboarding',
-      '/upload',
-      '/setup',
-      '/join',
-      '/agents',
-      '/sessions',
-      '/play-records',
-      '/game-nights',
-    ];
-
-    const isAlphaRoute = ALPHA_ROUTE_PREFIXES.some(prefix => pathname.startsWith(prefix));
-    const isAuthRoute =
-      pathname.startsWith('/login') ||
-      pathname.startsWith('/register') ||
-      pathname.startsWith('/reset-password') ||
-      pathname.startsWith('/verify-email') ||
-      pathname.startsWith('/oauth-callback') ||
-      pathname.startsWith('/setup-account') ||
-      pathname.startsWith('/welcome');
-    const isPublicRoute =
-      pathname === '/' ||
-      pathname.startsWith('/api/') ||
-      pathname.startsWith('/health') ||
-      pathname.startsWith('/offline') ||
-      pathname.startsWith('/_next/');
-
-    if (!isAlphaRoute && !isAuthRoute && !isPublicRoute) {
-      const response = NextResponse.redirect(new URL('/dashboard', request.url));
-      return addSecurityHeaders(response, requestOrigin);
-    }
   }
 
   // Allow the request to continue with security headers

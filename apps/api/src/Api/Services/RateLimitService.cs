@@ -1,4 +1,5 @@
 using System.Globalization;
+using Api.Helpers;
 using Api.Middleware;
 using Api.Models;
 using Microsoft.Extensions.Options;
@@ -125,7 +126,7 @@ internal class RateLimitService : IRateLimitService
             if (!allowed)
             {
                 _logger.LogWarning("Rate limit exceeded for key {Key}. Retry after {RetryAfter}s",
-                    LogValueSanitizer.Sanitize(key), retryAfter);
+                    LogSanitizer.Sanitize(key), retryAfter);
             }
 
             return new RateLimitResult(allowed, tokensRemaining, retryAfter);
@@ -143,7 +144,7 @@ internal class RateLimitService : IRateLimitService
             // strict rate enforcement during infrastructure failures. Monitoring alerts on this
             // error enable operators to detect and resolve Redis issues without impacting users.
             // Context: Redis failures are typically transient (network blip, container restart)
-            _logger.LogError(ex, "Rate limit check failed for key {Key}. Allowing request (fail-open)", LogValueSanitizer.Sanitize(key));
+            _logger.LogError(ex, "Rate limit check failed for key {Key}. Allowing request (fail-open)", LogSanitizer.Sanitize(key));
             return new RateLimitResult(true, maxTokens, 0);
         }
 #pragma warning restore CA1031

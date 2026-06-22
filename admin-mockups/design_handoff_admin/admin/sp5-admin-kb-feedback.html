@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Feedback · Knowledge Base · MeepleAI Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+/* ═══════════════ tokens.css ═══════════════ */
+:root {
+  --c-game: 25 95% 45%; --c-player: 262 83% 58%; --c-session: 240 60% 55%;
+  --c-agent: 38 92% 50%; --c-kb: 174 60% 40%; --c-chat: 220 80% 55%;
+  --c-event: 350 89% 60%; --c-toolkit: 142 70% 45%; --c-tool: 195 80% 50%;
+  --f-display: 'Quicksand', system-ui, sans-serif;
+  --f-body: 'Nunito', system-ui, sans-serif;
+  --f-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --fs-xs: 11px; --fs-sm: 12px; --fs-base: 14px;
+  --r-sm: 6px; --r-md: 10px; --r-pill: 9999px;
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+}
+:root, :root[data-theme="light"] {
+  --bg: #f7f3ee; --bg-card: #ffffff; --bg-muted: #efe6d9; --bg-sunken: #ede2d0;
+  --text: #2b1f12; --text-sec: #5a4a38; --text-muted: #9a8870;
+  --border: rgba(180, 130, 80, 0.18); --border-light: rgba(180, 130, 80, 0.1); --border-strong: rgba(180, 130, 80, 0.32);
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: #14100a; --bg-card: #1e1710; --bg-muted: #241c13; --bg-sunken: #0f0c08;
+  --text: #f0e4d2; --text-sec: #c8b896; --text-muted: #8a7860;
+  --border: rgba(224, 180, 110, 0.14); --border-light: rgba(224, 180, 110, 0.08); --border-strong: rgba(224, 180, 110, 0.28);
+  --c-game: 28 95% 58%; --c-player: 262 75% 70%; --c-session: 235 70% 70%;
+  --c-agent: 38 92% 62%; --c-kb: 174 60% 55%; --c-chat: 218 80% 68%;
+  --c-event: 350 85% 70%; --c-toolkit: 142 60% 58%; --c-tool: 195 75% 62%;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { font-family: var(--f-body); background: var(--bg); color: var(--text); font-size: var(--fs-base); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+h1, h2, h3, h4 { font-family: var(--f-display); font-weight: 700; letter-spacing: -.01em; margin: 0; line-height: 1.2; }
+button { font-family: inherit; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+code, kbd { font-family: var(--f-mono); font-size: .9em; }
+
+.e-game{--e:var(--c-game);} .e-kb{--e:var(--c-kb);} .e-event{--e:var(--c-event);}
+.e-toolkit{--e:var(--c-toolkit);} .e-chat{--e:var(--c-chat);} .e-agent{--e:var(--c-agent);}
+.e-fg{color:hsl(var(--e));} .e-dot{width:8px;height:8px;border-radius:50%;background:hsl(var(--e));flex-shrink:0;display:inline-block;}
+
+/* ═══════════════ admin-base.css ═══════════════ */
+.admin-page { background: var(--bg); color: var(--text); min-height: 100vh; font-family: var(--f-body); font-size: var(--fs-sm); line-height: 1.5; }
+.admin-shell { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+
+.admin-nav { background: var(--bg-card); border-right: 1px solid var(--border); padding: 16px 0; display: flex; flex-direction: column; gap: 2px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+.admin-nav-brand { padding: 4px 16px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border-light); margin-bottom: 12px; }
+.admin-nav-brand-mark { width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, hsl(var(--c-game)), hsl(var(--c-event))); color: #fff; display: grid; place-items: center; font-family: var(--f-display); font-weight: 900; font-size: 14px; }
+.admin-nav-brand-name { font-family: var(--f-display); font-weight: 800; font-size: 14px; }
+.admin-nav-brand-tag { font-family: var(--f-mono); font-size: 9px; font-weight: 700; color: hsl(var(--c-event)); text-transform: uppercase; letter-spacing: .08em; padding: 2px 6px; border-radius: 4px; background: hsl(var(--c-event) / .12); margin-left: auto; }
+.admin-nav-group { padding: 10px 16px 4px; font-family: var(--f-mono); font-size: 9.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; }
+.admin-nav-item { display: flex; align-items: center; gap: 10px; padding: 7px 16px; color: var(--text-sec); font-family: var(--f-display); font-size: 13px; font-weight: 600; cursor: pointer; border-left: 2px solid transparent; text-decoration: none; }
+.admin-nav-item:hover { background: var(--bg-muted); color: var(--text); }
+.admin-nav-item.active { background: hsl(var(--c-event) / .08); color: hsl(var(--c-event)); border-left-color: hsl(var(--c-event)); }
+.admin-nav-item .em { font-size: 14px; opacity: .9; }
+.admin-nav-item .count { margin-left: auto; font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); font-weight: 700; }
+.admin-nav-foot { margin-top: auto; padding: 12px 16px; border-top: 1px solid var(--border-light); font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+.admin-nav-foot .badge { padding: 2px 6px; border-radius: 4px; background: hsl(var(--c-toolkit) / .12); color: hsl(var(--c-toolkit)); font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: .05em; }
+
+.admin-top { background: var(--bg); border-bottom: 1px solid var(--border-light); padding: 12px 24px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 50; backdrop-filter: blur(12px); }
+.admin-top h1 { font-family: var(--f-display); font-size: 20px; font-weight: 800; margin: 0; line-height: 1.2; }
+.admin-top .crumbs { font-family: var(--f-mono); font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.admin-top .spacer { flex: 1; }
+.admin-top-actions { display: flex; gap: 8px; align-items: center; }
+
+.admin-search { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; width: 280px; font-size: 12px; }
+.admin-search input { flex: 1; border: 0; background: transparent; color: var(--text); font-family: var(--f-body); font-size: 12.5px; outline: 0; }
+.admin-search kbd { padding: 1px 5px; border-radius: 4px; background: var(--bg-muted); border: 1px solid var(--border); font-family: var(--f-mono); font-size: 9px; color: var(--text-muted); }
+
+.btn-admin { padding: 6px 12px; border-radius: 6px; font-family: var(--f-display); font-size: 12.5px; font-weight: 700; cursor: pointer; border: 1px solid var(--border); background: var(--bg-card); color: var(--text); display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.btn-admin:hover { background: var(--bg-muted); }
+.btn-admin:disabled { opacity: .4; cursor: not-allowed; }
+.btn-admin.primary { background: hsl(var(--c-event)); border-color: hsl(var(--c-event)); color: #fff; box-shadow: 0 2px 6px hsl(var(--c-event) / .3); }
+.btn-admin.primary:hover { filter: brightness(1.08); }
+.btn-admin.sm { padding: 3px 8px; font-size: 11px; }
+.btn-admin.ghost { background: transparent; border-color: transparent; }
+.btn-admin kbd { padding: 1px 4px; border-radius: 3px; background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.2); font-family: var(--f-mono); font-size: 9px; margin-left: 4px; }
+.btn-admin.primary kbd { background: rgba(0,0,0,.18); border-color: rgba(0,0,0,.25); }
+
+.admin-panel { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 10px; overflow: hidden; }
+.admin-panel-head { padding: 10px 14px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: 10px; background: var(--bg); }
+.admin-panel-head h3 { margin: 0; font-family: var(--f-display); font-size: 13px; font-weight: 800; }
+.admin-panel-head .meta { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); margin-left: auto; }
+.admin-panel-body { padding: 14px; }
+
+.status-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-family: var(--f-mono); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+.status-chip::before { content: ''; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.status-chip.healthy { background: hsl(var(--c-toolkit) / .12); color: hsl(var(--c-toolkit)); }
+.status-chip.healthy::before { background: hsl(var(--c-toolkit)); }
+.status-chip.danger { background: hsl(var(--c-event) / .12); color: hsl(var(--c-event)); }
+.status-chip.danger::before { background: hsl(var(--c-event)); }
+.status-chip.muted { background: var(--bg-muted); color: var(--text-muted); }
+.status-chip.muted::before { background: var(--text-muted); }
+.status-chip.info { background: hsl(var(--c-chat) / .12); color: hsl(var(--c-chat)); }
+.status-chip.info::before { background: hsl(var(--c-chat)); }
+
+.admin-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.admin-tab { padding: 8px 14px; background: transparent; border: 0; font-family: var(--f-display); font-size: 13px; font-weight: 700; color: var(--text-sec); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+.admin-tab .count { padding: 1px 6px; border-radius: 999px; background: var(--bg-muted); color: var(--text-muted); font-family: var(--f-mono); font-size: 10px; font-weight: 700; }
+.admin-tab:hover { color: var(--text); }
+.admin-tab.active { color: hsl(var(--c-event)); border-bottom-color: hsl(var(--c-event)); }
+.admin-tab.active .count { background: hsl(var(--c-event) / .14); color: hsl(var(--c-event)); }
+
+.admin-form-row { display: grid; grid-template-columns: 200px 1fr; gap: 16px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--border-light); }
+.admin-form-row:last-child { border-bottom: 0; }
+.admin-form-label { font-family: var(--f-display); font-size: 12.5px; font-weight: 700; }
+.admin-form-label .desc { display: block; margin-top: 3px; font-family: var(--f-body); font-size: 11px; font-weight: 400; color: var(--text-muted); line-height: 1.4; }
+.admin-input, .admin-select { width: 100%; max-width: 360px; padding: 6px 10px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; font-family: var(--f-body); font-size: 12.5px; }
+.admin-input.mono { font-family: var(--f-mono); }
+.admin-input:focus, .admin-select:focus { outline: 0; border-color: hsl(var(--c-event)); box-shadow: 0 0 0 3px hsl(var(--c-event) / .14); }
+.admin-input.valid { border-color: hsl(var(--c-toolkit) / .55); }
+
+@media (max-width: 880px) {
+  .admin-mobile-fallback { display: flex !important; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 32px; text-align: center; gap: 16px; }
+  .admin-mobile-fallback .em { font-size: 56px; }
+  .admin-mobile-fallback h2 { margin: 0; font-family: var(--f-display); font-size: 20px; }
+  .admin-mobile-fallback p { color: var(--text-sec); max-width: 320px; margin: 0; line-height: 1.5; }
+  .admin-shell { display: none; }
+}
+.admin-mobile-fallback { display: none; }
+
+.admin-body { padding: 20px 24px; max-width: 1100px; }
+
+.endpoint-note { display: inline-flex; align-items: center; gap: 6px; font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); background: var(--bg-sunken); border: 1px dashed var(--border); padding: 2px 8px; border-radius: 4px; }
+.endpoint-note code { color: hsl(var(--c-kb)); font-weight: 700; }
+
+/* ═══════════════ page-local: Feedback ═══════════════ */
+.input-with-suffix { position: relative; max-width: 420px; }
+.input-with-suffix .admin-input { padding-right: 80px; max-width: 100%; }
+.input-with-suffix .suffix { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center; gap: 6px; }
+.input-with-suffix .suffix .status-chip { font-size: 9px; }
+.input-hint { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-family: var(--f-mono); font-size: 10.5px; color: var(--text-muted); }
+.input-hint .ok { color: hsl(var(--c-toolkit)); font-weight: 700; }
+.input-hint .game-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 7px; border-radius: 999px;
+  background: hsl(var(--c-game) / .12); color: hsl(var(--c-game));
+  font-weight: 700;
+}
+.uuid-presets { display: inline-flex; gap: 4px; margin-left: auto; }
+.uuid-presets .preset {
+  font-family: var(--f-mono); font-size: 10px; font-weight: 700;
+  padding: 2px 7px; border-radius: 4px;
+  background: var(--bg-muted); color: var(--text-sec);
+  border: 1px solid var(--border-light);
+  cursor: pointer;
+}
+.uuid-presets .preset:hover { background: var(--bg-sunken); color: var(--text); }
+
+/* Toolbar */
+.feedback-toolbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg-card); border: 1px solid var(--border-light);
+  border-radius: 10px;
+  margin: 18px 0 14px;
+  flex-wrap: wrap;
+}
+.feedback-toolbar .lab { font-family: var(--f-mono); font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+.feedback-toolbar .chip-group { display: inline-flex; gap: 4px; }
+.filter-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 11px; border-radius: 999px;
+  background: var(--bg); border: 1px solid var(--border);
+  font-family: var(--f-mono); font-size: 11px; font-weight: 700;
+  color: var(--text-sec); cursor: pointer;
+}
+.filter-chip:hover { background: var(--bg-muted); color: var(--text); }
+.filter-chip.active { background: hsl(var(--c-event) / .14); border-color: hsl(var(--c-event) / .4); color: hsl(var(--c-event)); }
+.filter-chip .em { font-size: 11px; line-height: 1; }
+.filter-chip .num {
+  font-size: 10px; opacity: .7;
+  padding-left: 4px; border-left: 1px solid currentColor;
+  margin-left: 2px;
+}
+.feedback-toolbar .right { margin-left: auto; display: inline-flex; align-items: center; gap: 10px; }
+.feedback-toolbar .count-tot { font-family: var(--f-mono); font-size: 11.5px; color: var(--text); font-weight: 700; }
+.feedback-toolbar .count-tot .muted { color: var(--text-muted); font-weight: 500; }
+.feedback-toolbar .page-size { display: inline-flex; align-items: center; gap: 4px; font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); }
+.feedback-toolbar .page-size select { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 2px 4px; font-family: var(--f-mono); font-size: 10.5px; color: var(--text); }
+
+/* Feedback list */
+.feedback-list { display: flex; flex-direction: column; gap: 8px; }
+.feedback-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 12px 14px 12px 16px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  position: relative;
+  border-left: 3px solid hsl(var(--e, var(--c-toolkit)));
+}
+.feedback-item.useful   { --e: var(--c-toolkit); }
+.feedback-item.notuseful { --e: var(--c-event); }
+
+.feedback-item .esito {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  min-width: 70px;
+}
+.feedback-item .esito .em-big {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 18px; line-height: 1;
+  background: hsl(var(--e) / .14);
+  color: hsl(var(--e));
+}
+.feedback-item.useful .esito .em-big { color: hsl(var(--c-toolkit)); }
+.feedback-item.notuseful .esito .em-big { color: hsl(var(--c-event)); }
+
+.feedback-item .body { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.feedback-item .body .row1 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.feedback-item .body .msgid {
+  font-family: var(--f-mono); font-size: 11px; font-weight: 700;
+  background: var(--bg); border: 1px solid var(--border-light);
+  padding: 2px 7px; border-radius: 4px;
+  color: hsl(var(--c-kb));
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.feedback-item .body .msgid .em { opacity: .55; font-size: 10px; }
+.feedback-item .body .date {
+  font-family: var(--f-mono); font-size: 10.5px;
+  color: var(--text-muted);
+}
+.feedback-item .body .date .rel { color: var(--text-sec); margin-left: 6px; }
+.feedback-item .body .src {
+  font-family: var(--f-mono); font-size: 10px;
+  color: var(--text-muted);
+}
+.feedback-item .body .src .agent-pill {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 1px 6px; border-radius: 4px;
+  background: hsl(var(--c-agent) / .14); color: hsl(var(--c-agent));
+  font-weight: 700; margin-right: 4px;
+}
+.feedback-item .body .comment {
+  font-family: var(--f-body); font-size: 12.5px;
+  color: var(--text);
+  background: var(--bg);
+  border-left: 2px solid hsl(var(--e) / .5);
+  padding: 7px 10px;
+  border-radius: 0 6px 6px 0;
+  line-height: 1.5;
+}
+.feedback-item .body .comment::before {
+  content: '"';
+  color: hsl(var(--e) / .6);
+  font-family: var(--f-display); font-size: 18px; font-weight: 800;
+  margin-right: 2px;
+  vertical-align: -3px;
+}
+.feedback-item .body .comment::after {
+  content: '"';
+  color: hsl(var(--e) / .6);
+  font-family: var(--f-display); font-size: 18px; font-weight: 800;
+  margin-left: 2px;
+  vertical-align: -3px;
+}
+.feedback-item .body .nocomment {
+  font-family: var(--f-mono); font-size: 10.5px;
+  color: var(--text-muted); font-style: italic;
+}
+.feedback-item .actions { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; flex-shrink: 0; }
+.feedback-item .actions .row { display: flex; gap: 4px; }
+.feedback-item .actions .ts { font-family: var(--f-mono); font-size: 9.5px; color: var(--text-muted); margin-top: 4px; }
+
+/* Pagination */
+.pagination {
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 0 4px;
+  margin-top: 16px;
+  border-top: 1px solid var(--border-light);
+}
+.pagination .lab {
+  font-family: var(--f-mono); font-size: 11px;
+  color: var(--text-muted);
+}
+.pagination .lab strong { color: var(--text); font-weight: 700; }
+.pagination .pages { display: inline-flex; gap: 4px; margin-left: auto; align-items: center; }
+.pagination .pages .btn-admin.sm.active {
+  background: hsl(var(--c-event)); color: #fff; border-color: hsl(var(--c-event));
+  box-shadow: 0 2px 4px hsl(var(--c-event) / .3);
+}
+.pagination .pages .ellipsis {
+  padding: 0 4px;
+  font-family: var(--f-mono); color: var(--text-muted); font-weight: 700;
+}
+</style>
+</head>
+<body class="admin-page">
+
+<div class="admin-mobile-fallback">
+  <div class="em">🖥️</div>
+  <h2>Console solo desktop</h2>
+  <p>La console admin è ottimizzata per schermi ≥ 880px.</p>
+</div>
+
+<div class="admin-shell">
+
+  <!-- ── Sidebar nav ─────────────────────────────────────────── -->
+  <nav class="admin-nav" data-admin-nav-mount>
+    <div class="admin-nav-brand">
+      <div class="admin-nav-brand-mark">M</div>
+      <div class="admin-nav-brand-name">MeepleAI</div>
+      <div class="admin-nav-brand-tag">Admin</div>
+    </div>
+
+    <div class="admin-nav-group">Overview</div>
+    <a href="/admin" class="admin-nav-item"><span class="em">⌂</span> Dashboard</a>
+    <a href="/admin/activity" class="admin-nav-item"><span class="em">⚡</span> Activity <span class="count">128</span></a>
+
+    <div class="admin-nav-group">Catalog</div>
+    <a href="/admin/games" class="admin-nav-item"><span class="em">🎲</span> Games <span class="count">48</span></a>
+    <a href="/admin/players" class="admin-nav-item"><span class="em">👥</span> Players <span class="count">3.2k</span></a>
+    <a href="/admin/sessions" class="admin-nav-item"><span class="em">🃏</span> Sessions <span class="count">912</span></a>
+
+    <div class="admin-nav-group">AI Stack</div>
+    <a href="/admin/agents" class="admin-nav-item"><span class="em">🤖</span> Agents <span class="count">14</span></a>
+    <a href="/admin/knowledge-base" class="admin-nav-item active"><span class="em">📚</span> Knowledge Base <span class="count">247</span></a>
+    <a href="/admin/chats" class="admin-nav-item"><span class="em">💬</span> Chats <span class="count">2.8k</span></a>
+    <a href="/admin/toolkits" class="admin-nav-item"><span class="em">🧰</span> Toolkits <span class="count">9</span></a>
+    <a href="/admin/tools" class="admin-nav-item"><span class="em">🔧</span> Tools <span class="count">41</span></a>
+
+    <div class="admin-nav-group">Observe</div>
+    <a href="/admin/events" class="admin-nav-item"><span class="em">📡</span> Events</a>
+    <a href="/admin/audit" class="admin-nav-item"><span class="em">🛡</span> Audit log</a>
+    <a href="/admin/settings" class="admin-nav-item"><span class="em">⚙</span> Settings</a>
+
+    <div class="admin-nav-foot">
+      <span>v2024.12.04</span>
+      <span class="badge">prod</span>
+    </div>
+  </nav>
+
+  <main>
+    <!-- ── Banda di sezione condivisa ─────────────────────── -->
+    <header class="admin-top">
+      <div>
+        <h1>Knowledge Base</h1>
+        <div class="crumbs">Admin · KB · Feedback · 12 risultati · gioco Wingspan</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="admin-top-actions">
+        <div class="admin-search"><span>🔍</span><input placeholder="Search docs, chunks, games…"/><kbd>⌘K</kbd></div>
+        <a href="/admin/knowledge-base/upload" class="btn-admin primary">+ Upload PDF</a>
+      </div>
+    </header>
+
+    <div class="admin-body" data-screen-label="kb-feedback">
+
+      <!-- ── Sub-nav KB — Feedback .active ── -->
+      <div class="admin-tabs" role="tablist" aria-label="Knowledge Base sezioni">
+        <a href="/admin/knowledge-base"            class="admin-tab" role="tab">Explorer</a>
+        <a href="/admin/knowledge-base/vectors"    class="admin-tab" role="tab">Vector Collections</a>
+        <a href="/admin/knowledge-base/queue"      class="admin-tab" role="tab">Processing Queue <span class="count">3</span></a>
+        <a href="/admin/knowledge-base/pipeline"   class="admin-tab" role="tab">RAG Pipeline</a>
+        <a href="/admin/knowledge-base/embedding"  class="admin-tab" role="tab">Embedding</a>
+        <a href="/admin/knowledge-base/feedback"   class="admin-tab active" role="tab" aria-selected="true">Feedback <span class="count">12</span></a>
+        <a href="/admin/knowledge-base/settings"   class="admin-tab" role="tab">Settings</a>
+        <a href="/admin/knowledge-base/snapshots"  class="admin-tab" role="tab">Snapshots</a>
+      </div>
+
+      <!-- ══ 1. Game ID form ══ -->
+      <section class="admin-panel" style="margin-bottom: 4px">
+        <div class="admin-panel-head">
+          <h3>🎯 Filtra per gioco</h3>
+          <span class="endpoint-note"><code>GET</code> getAdminKbFeedback(gameId, &#123;outcome, page, pageSize&#125;)</span>
+        </div>
+        <div class="admin-panel-body">
+          <div class="admin-form-row" style="border-bottom: 0; padding: 4px 0">
+            <div class="admin-form-label">
+              Game ID
+              <span class="desc">UUID v4 del gioco di cui revisionare i feedback. Obbligatorio.</span>
+            </div>
+            <div>
+              <div class="input-with-suffix">
+                <input class="admin-input mono valid" type="text"
+                  value="b3f7c218-4d11-4b9e-9a1c-7f218e4a3c0d"
+                  placeholder="es. 00000000-0000-4000-8000-000000000000"
+                  spellcheck="false"
+                  aria-label="Game ID UUID"/>
+                <span class="suffix">
+                  <span class="status-chip healthy">UUID ok</span>
+                </span>
+              </div>
+              <div class="input-hint">
+                <span class="ok">✓</span>
+                <span>UUID v4 valido · gioco risolto: <span class="game-pill">🎲 Wingspan</span></span>
+                <span class="uuid-presets">
+                  <span class="preset">recenti ▾</span>
+                  <span class="preset">Wingspan</span>
+                  <span class="preset">Brass: Birm.</span>
+                  <span class="preset">Tainted Grail</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ 2. Toolbar filtri ══ -->
+      <div class="feedback-toolbar">
+        <span class="lab">Esito</span>
+        <div class="chip-group" role="tablist" aria-label="Filtra esito">
+          <button class="filter-chip active" role="tab" aria-selected="true">
+            <span class="em">●</span> Tutti <span class="num">12</span>
+          </button>
+          <button class="filter-chip" role="tab">
+            <span class="em">👍</span> Utili <span class="num">8</span>
+          </button>
+          <button class="filter-chip" role="tab">
+            <span class="em">👎</span> Non utili <span class="num">4</span>
+          </button>
+        </div>
+
+        <div class="right">
+          <span class="page-size">
+            <span>per pagina</span>
+            <select aria-label="Risultati per pagina">
+              <option>10</option>
+              <option selected>20</option>
+              <option>50</option>
+            </select>
+          </span>
+          <span class="count-tot">12 <span class="muted">risultati</span></span>
+        </div>
+      </div>
+
+      <!-- ══ 3. Lista feedback ══ -->
+      <div class="feedback-list">
+
+        <!-- 1. utile + commento -->
+        <article class="feedback-item useful">
+          <div class="esito">
+            <div class="em-big" aria-hidden="true">👍</div>
+            <span class="status-chip healthy">Utile</span>
+          </div>
+          <div class="body">
+            <div class="row1">
+              <span class="msgid"><span class="em">#</span>a3f7c218</span>
+              <span class="date">2024-12-08 14:22:18 CET <span class="rel">· 3 ore fa</span></span>
+            </div>
+            <div class="src">
+              <span class="agent-pill">🤖 RuleExpert v3</span>
+              su domanda «Come si attivano gli uccelli predatori in Wingspan Oceania?»
+            </div>
+            <div class="comment">Risposta molto chiara, ha citato direttamente la regola a pag. 22 e ha distinto bene il caso base dall'espansione. Mi ha tolto il dubbio nel mezzo della partita.</div>
+          </div>
+          <div class="actions">
+            <div class="row">
+              <button class="btn-admin sm">💬 Vedi chat</button>
+              <button class="btn-admin sm">⋮</button>
+            </div>
+            <span class="ts">player · u-2841</span>
+          </div>
+        </article>
+
+        <!-- 2. non utile + commento lungo -->
+        <article class="feedback-item notuseful">
+          <div class="esito">
+            <div class="em-big" aria-hidden="true">👎</div>
+            <span class="status-chip danger">Non utile</span>
+          </div>
+          <div class="body">
+            <div class="row1">
+              <span class="msgid"><span class="em">#</span>b81e09f2</span>
+              <span class="date">2024-12-08 11:47:02 CET <span class="rel">· 6 ore fa</span></span>
+            </div>
+            <div class="src">
+              <span class="agent-pill">🤖 RuleExpert v3</span>
+              su domanda «Si possono giocare cibo dal bonus card durante l'attivazione predatori?»
+            </div>
+            <div class="comment">La risposta confonde la regola base con quella di Oceania. Ho dovuto rileggermi il rulebook per capire. Il chunk citato (c-0398) è di una FAQ non ufficiale, non della rulebook.</div>
+          </div>
+          <div class="actions">
+            <div class="row">
+              <button class="btn-admin sm">💬 Vedi chat</button>
+              <button class="btn-admin sm">🔬 Apri chunk</button>
+              <button class="btn-admin sm">⋮</button>
+            </div>
+            <span class="ts">player · u-1098</span>
+          </div>
+        </article>
+
+        <!-- 3. utile senza commento -->
+        <article class="feedback-item useful">
+          <div class="esito">
+            <div class="em-big" aria-hidden="true">👍</div>
+            <span class="status-chip healthy">Utile</span>
+          </div>
+          <div class="body">
+            <div class="row1">
+              <span class="msgid"><span class="em">#</span>4c2a18d7</span>
+              <span class="date">2024-12-08 09:33:41 CET <span class="rel">· 8 ore fa</span></span>
+            </div>
+            <div class="src">
+              <span class="agent-pill">🤖 SetupCoach v2</span>
+              su domanda «Setup per 5 giocatori con Oceania?»
+            </div>
+            <div class="nocomment">— nessun commento dal player —</div>
+          </div>
+          <div class="actions">
+            <div class="row">
+              <button class="btn-admin sm">💬 Vedi chat</button>
+              <button class="btn-admin sm">⋮</button>
+            </div>
+            <span class="ts">player · u-3214</span>
+          </div>
+        </article>
+
+        <!-- 4. non utile + commento breve -->
+        <article class="feedback-item notuseful">
+          <div class="esito">
+            <div class="em-big" aria-hidden="true">👎</div>
+            <span class="status-chip danger">Non utile</span>
+          </div>
+          <div class="body">
+            <div class="row1">
+              <span class="msgid"><span class="em">#</span>e1d40a92</span>
+              <span class="date">2024-12-07 22:14:09 CET <span class="rel">· ieri</span></span>
+            </div>
+            <div class="src">
+              <span class="agent-pill">🤖 RuleExpert v3</span>
+              su domanda «Quanti punti vale Pelecanus crispus a fine partita?»
+            </div>
+            <div class="comment">Risposta sbagliata: ha detto 5 punti, ma sulla carta sono 6. Forse ha pescato un chunk vecchio prima dell'errata 2024.</div>
+          </div>
+          <div class="actions">
+            <div class="row">
+              <button class="btn-admin sm">💬 Vedi chat</button>
+              <button class="btn-admin sm">🔬 Apri chunk</button>
+              <button class="btn-admin sm">⋮</button>
+            </div>
+            <span class="ts">player · u-0742</span>
+          </div>
+        </article>
+
+        <!-- 5. utile + commento -->
+        <article class="feedback-item useful">
+          <div class="esito">
+            <div class="em-big" aria-hidden="true">👍</div>
+            <span class="status-chip healthy">Utile</span>
+          </div>
+          <div class="body">
+            <div class="row1">
+              <span class="msgid"><span class="em">#</span>7a2c98f4</span>
+              <span class="date">2024-12-07 18:51:33 CET <span class="rel">· ieri</span></span>
+            </div>
+            <div class="src">
+              <span class="agent-pill">🤖 RuleExpert v3</span>
+              su domanda «Differenze fra obiettivi round e fine partita?»
+            </div>
+            <div class="comment">Ottima sintesi, ha fatto anche un esempio coi pesi rosa-blu-bianco-giallo. Perfetto per spiegarlo a un nuovo giocatore.</div>
+          </div>
+          <div class="actions">
+            <div class="row">
+              <button class="btn-admin sm">💬 Vedi chat</button>
+              <button class="btn-admin sm">⋮</button>
+            </div>
+            <span class="ts">player · u-1845</span>
+          </div>
+        </article>
+
+        <!-- 6. utile senza commento -->
+        <article class="feedback-item useful">
+          <div class="esito">
+            <div class="em-big" aria-hidden="true">👍</div>
+            <span class="status-chip healthy">Utile</span>
+          </div>
+          <div class="body">
+            <div class="row1">
+              <span class="msgid"><span class="em">#</span>91b3c0a8</span>
+              <span class="date">2024-12-07 14:08:21 CET <span class="rel">· ieri</span></span>
+            </div>
+            <div class="src">
+              <span class="agent-pill">🤖 SetupCoach v2</span>
+              su domanda «Espansioni compatibili tra loro?»
+            </div>
+            <div class="nocomment">— nessun commento dal player —</div>
+          </div>
+          <div class="actions">
+            <div class="row">
+              <button class="btn-admin sm">💬 Vedi chat</button>
+              <button class="btn-admin sm">⋮</button>
+            </div>
+            <span class="ts">player · u-2841</span>
+          </div>
+        </article>
+
+      </div>
+
+      <!-- ══ 4. Paginazione ══ -->
+      <div class="pagination">
+        <span class="lab">
+          Mostrati <strong>1–6</strong> di <strong>12</strong> · pagina <strong>1 / 2</strong>
+        </span>
+        <span class="pages">
+          <button class="btn-admin sm" disabled aria-label="Pagina precedente">‹ Prev</button>
+          <button class="btn-admin sm active" aria-current="page">1</button>
+          <button class="btn-admin sm">2</button>
+          <button class="btn-admin sm" aria-label="Pagina successiva">Next ›</button>
+        </span>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+  /* admin-nav.js — nel repo è un file separato (src="admin-nav.js").
+     Qui inlined per mockup standalone: la sidebar è già scritta inline,
+     quindi questa funzione è no-op. */
+  window.renderAdminNav = function (activeId) { return activeId; };
+  renderAdminNav('kb');
+</script>
+</body>
+</html>

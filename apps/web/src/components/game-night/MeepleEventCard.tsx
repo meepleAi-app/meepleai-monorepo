@@ -92,6 +92,7 @@ export function MeepleEventCard({
       connections={connections}
       onClick={onClick ? () => onClick(event.id) : undefined}
       className={className}
+      headingLevel={2}
       data-testid={`event-card-${event.id}`}
     />
   );

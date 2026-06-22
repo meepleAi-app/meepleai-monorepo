@@ -178,7 +178,7 @@ internal static class PdfProcessingEndpoints
 
         logger.LogInformation(
             "Admin {UserId} triggered batch PDF processing: {Triggered}/{Total} PDFs triggered, {Failed} failed",
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             result.Triggered,
             result.TotalPending,
             result.Failed);
@@ -205,11 +205,11 @@ internal static class PdfProcessingEndpoints
         var (authenticated, session, error) = context.TryGetActiveSession();
         if (!authenticated) return error!;
 
-        bool isAdmin = string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        bool isAdmin = string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
 
         var command = new RetryPdfProcessingCommand(
             PdfId: pdfId,
-            UserId: session!.User!.Id,
+            UserId: session!.Principal!.Subject.Id,
             IsAdmin: isAdmin
         );
 
@@ -236,7 +236,7 @@ internal static class PdfProcessingEndpoints
 
         logger.LogInformation(
             "User {UserId} initiated retry for PDF {PdfId}: {Message}",
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             pdfId,
             result.Message);
 
@@ -259,10 +259,10 @@ internal static class PdfProcessingEndpoints
             return Results.NotFound(new { error = "PDF not found" });
         }
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         if (pdf.UploadedByUserId != userId &&
-            !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
         {
             return Results.Forbid();
         }
@@ -290,8 +290,8 @@ internal static class PdfProcessingEndpoints
     {
         // Issue #4218: Real-time PDF status updates via Server-Sent Events
         var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
-        var userId = session.User!.Id;
-        bool isAdmin = string.Equals(session.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        var userId = session.Principal!.Subject.Id;
+        bool isAdmin = string.Equals(session.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
 
         // Set SSE headers
         httpContext.Response.ContentType = "text/event-stream";
@@ -322,8 +322,8 @@ internal static class PdfProcessingEndpoints
     {
         // Get authenticated user
         var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
-        var userId = session.User!.Id;
-        bool isAdmin = string.Equals(session.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        var userId = session.Principal!.Subject.Id;
+        bool isAdmin = string.Equals(session.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
 
         // Set SSE headers
         httpContext.Response.ContentType = "text/event-stream";
@@ -368,8 +368,8 @@ internal static class PdfProcessingEndpoints
     private static async Task<IResult> HandleCancelPdfProcessing(Guid pdfId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
-        bool isAdmin = string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        var userId = session!.Principal!.Subject.Id;
+        bool isAdmin = string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
 
         // DDD Migration Phase 4: Use CancelPdfProcessingCommand via IMediator
         var command = new CancelPdfProcessingCommand(
@@ -402,13 +402,13 @@ internal static class PdfProcessingEndpoints
         var (authenticated, session, error) = context.TryGetActiveSession();
         if (!authenticated) return error!;
 
-        if (!string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(session!.User!.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
         {
             return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
 
-        logger.LogInformation("User {UserId} generating RuleSpec from PDF {PdfId}", session!.User!.Id, pdfId);
+        logger.LogInformation("User {UserId} generating RuleSpec from PDF {PdfId}", session!.Principal!.Subject.Id, pdfId);
 
         try
         {
@@ -428,14 +428,14 @@ internal static class PdfProcessingEndpoints
         var (authenticated, session, error) = context.TryGetActiveSession();
         if (!authenticated) return error!;
 
-        if (!string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(session!.User!.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
         {
-            logger.LogWarning("User {UserId} with role {Role} attempted to index PDF without permission", session!.User!.Id, session!.User!.Role);
+            logger.LogWarning("User {UserId} with role {Role} attempted to index PDF without permission", session!.Principal!.Subject.Id, session!.Principal!.EffectiveActor.Role);
             return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
 
-        logger.LogInformation("User {UserId} indexing PDF {PdfId}", session!.User!.Id, pdfId);
+        logger.LogInformation("User {UserId} indexing PDF {PdfId}", session!.Principal!.Subject.Id, pdfId);
 
         var result = await mediator.Send(new IndexPdfCommand(pdfId.ToString()), ct).ConfigureAwait(false);
 
@@ -467,14 +467,14 @@ internal static class PdfProcessingEndpoints
         var (authenticated, session, error) = context.TryGetActiveSession();
         if (!authenticated) return error!;
 
-        if (!string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(session!.User!.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
         {
-            logger.LogWarning("User {UserId} with role {Role} attempted to extract PDF text without permission", session!.User!.Id, session!.User!.Role);
+            logger.LogWarning("User {UserId} with role {Role} attempted to extract PDF text without permission", session!.Principal!.Subject.Id, session!.Principal!.EffectiveActor.Role);
             return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
 
-        logger.LogInformation("User {UserId} extracting text from PDF {PdfId}", session!.User!.Id, pdfId);
+        logger.LogInformation("User {UserId} extracting text from PDF {PdfId}", session!.Principal!.Subject.Id, pdfId);
 
         var result = await mediator.Send(new ExtractPdfTextCommand(pdfId), ct).ConfigureAwait(false);
 

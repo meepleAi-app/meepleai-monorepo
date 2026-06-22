@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { getServerUser } from '@/lib/auth/server';
 import type { LokiLogEntry, LokiQueryRangeResponse, LogsApiResponse } from '@/lib/loki/types';
 import { isAdminRole } from '@/lib/utils/roles';
 
@@ -26,9 +27,13 @@ function nsToIso(ns: string): string {
   return new Date(ms).toISOString();
 }
 
-export async function GET(request: NextRequest): Promise<NextResponse<LogsApiResponse>> {
-  const userRole = request.cookies.get('meepleai_user_role')?.value ?? null;
-  if (!isAdminRole(userRole)) {
+export async function GET(_request: NextRequest): Promise<NextResponse<LogsApiResponse>> {
+  // C4: source the role from /auth/me instead of the (now HMAC-protected)
+  // meepleai_user_role_v2 cookie — the cookie value is opaque base64 from
+  // here. getServerUser performs the authenticated lookup with the session
+  // cookie and returns the canonical role.
+  const user = await getServerUser();
+  if (!user || !isAdminRole(user.role)) {
     return NextResponse.json({ entries: [] }, { status: 401 });
   }
 

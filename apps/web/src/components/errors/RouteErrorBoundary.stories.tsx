@@ -41,7 +41,7 @@ const ErrorThrower = ({ errorMessage }: { errorMessage: string }) => {
 const WorkingComponent = () => (
   <div className="p-8 text-center">
     <h2 className="text-2xl font-bold mb-4">Route Content Loaded Successfully</h2>
-    <p className="text-gray-600">No errors detected. Route is functioning normally.</p>
+    <p className="text-muted-foreground">No errors detected. Route is functioning normally.</p>
   </div>
 );
 
@@ -132,10 +132,10 @@ export const CustomFallback: Story = {
   args: {
     routeName: 'custom-route',
     fallbackRender: (error, reset) => (
-      <div className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+      <div className="min-h-dvh flex items-center justify-center bg-muted">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-red-600 mb-4">Custom Error UI</h1>
-          <p className="text-gray-600 mb-6">{error.message}</p>
+          <p className="text-muted-foreground mb-6">{error.message}</p>
           <Button onClick={reset}>Try Again</Button>
         </div>
       </div>

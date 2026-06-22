@@ -21,7 +21,7 @@ internal static class NotificationPreferencesEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var query = new GetNotificationPreferencesQuery(session!.User!.Id);
+            var query = new GetNotificationPreferencesQuery(session!.Principal!.Subject.Id);
             var prefs = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(prefs);
         })
@@ -37,7 +37,7 @@ internal static class NotificationPreferencesEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var updatedCommand = command with { UserId = session!.User!.Id };
+            var updatedCommand = command with { UserId = session!.Principal!.Subject.Id };
             await mediator.Send(updatedCommand, ct).ConfigureAwait(false);
             return Results.NoContent();
         })
@@ -54,7 +54,7 @@ internal static class NotificationPreferencesEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var updatedCommand = command with { UserId = session!.User!.Id };
+            var updatedCommand = command with { UserId = session!.Principal!.Subject.Id };
             await mediator.Send(updatedCommand, ct).ConfigureAwait(false);
             return Results.NoContent();
         })
@@ -69,7 +69,7 @@ internal static class NotificationPreferencesEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var command = new UnsubscribePushNotificationsCommand(session!.User!.Id);
+            var command = new UnsubscribePushNotificationsCommand(session!.Principal!.Subject.Id);
             await mediator.Send(command, ct).ConfigureAwait(false);
             return Results.NoContent();
         })
@@ -85,7 +85,7 @@ internal static class NotificationPreferencesEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var command = new SendTestPushNotificationCommand(session!.User!.Id);
+            var command = new SendTestPushNotificationCommand(session!.Principal!.Subject.Id);
             await mediator.Send(command, ct).ConfigureAwait(false);
             return Results.Ok(new { message = "Test notification sent" });
         })
@@ -111,7 +111,7 @@ internal static class NotificationPreferencesEndpoints
             if (!authenticated) return error!;
 
             var query = new GetEmailHistoryQuery(
-                session!.User!.Id,
+                session!.Principal!.Subject.Id,
                 request.Skip ?? 0,
                 request.Take ?? 20);
             var result = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -130,7 +130,7 @@ internal static class NotificationPreferencesEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var command = new ResendFailedEmailCommand(emailId, session!.User!.Id);
+            var command = new ResendFailedEmailCommand(emailId, session!.Principal!.Subject.Id);
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
             return result ? Results.Ok() : Results.NotFound();
         })

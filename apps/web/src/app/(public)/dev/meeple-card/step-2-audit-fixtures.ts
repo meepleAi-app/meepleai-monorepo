@@ -41,11 +41,6 @@ export const STEP_2_AUDIT_ROWS: AuditRow[] = [
     path: 'components/collection/CollectionGameGrid.tsx',
   },
   {
-    componentName: 'MeeplePlaylistCard',
-    bc: 'GameManagement',
-    path: 'components/playlists/MeeplePlaylistCard.tsx',
-  },
-  {
     componentName: 'MeepleSessionCard',
     bc: 'SessionTracking',
     path: 'components/session/MeepleSessionCard.tsx',
@@ -102,9 +97,11 @@ export const STEP_2_AUDIT_ROWS: AuditRow[] = [
   },
 ];
 
-if (STEP_2_AUDIT_ROWS.length !== 17) {
-  // This is a guard — spec §3.1 says exactly 17 call-sites.
+if (STEP_2_AUDIT_ROWS.length !== 16) {
+  // Guard — spec §3.1 originally listed 17 call-sites. PR #1423
+  // ("feat(dashboard,v2): Fase 1 orphan removal") removed 1 orphan
+  // component, bringing the active fixture set to 16. See #1434.
   throw new Error(
-    `STEP_2_AUDIT_ROWS must have 17 entries (one per spec §3.1 call-site), got ${STEP_2_AUDIT_ROWS.length}`
+    `STEP_2_AUDIT_ROWS must have 16 entries (one per spec §3.1 call-site), got ${STEP_2_AUDIT_ROWS.length}`
   );
 }

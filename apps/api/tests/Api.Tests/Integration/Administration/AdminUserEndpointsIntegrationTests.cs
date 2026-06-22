@@ -111,17 +111,17 @@ public sealed class AdminUserEndpointsIntegrationTests : IAsyncLifetime
     }
 
     [Fact(Timeout = 30000)]
-    public async Task GetAllUsers_WithSearchTerm_ThrowsQueryTranslationError()
+    public async Task GetAllUsers_WithSearchTerm_ReturnsMatchingUsers()
     {
-        // Arrange - Handler uses string.Contains with StringComparison.InvariantCultureIgnoreCase
-        // which cannot be translated to PostgreSQL SQL. This test documents the known issue.
-        // Fix: Handler should use EF.Functions.ILike() for PostgreSQL case-insensitive search.
+        // Handler uses EF.Functions.ILike() in UserProfileRepository for PostgreSQL
+        // case-insensitive search — the previous translation-error issue is fixed.
         await SeedSpecificUserAsync("searchable_unique@example.com", "Searchable User");
         var query = new GetAllUsersQuery(SearchTerm: "searchable_unique", Page: 1, Limit: 20);
 
-        // Act & Assert - documents known query translation issue
-        var act = async () => await _mediator!.Send(query, TestCancellationToken);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        var result = await _mediator!.Send(query, TestCancellationToken);
+
+        result.Should().NotBeNull();
+        result.Items.Should().Contain(u => u.Email == "searchable_unique@example.com");
     }
 
     [Fact(Timeout = 30000)]

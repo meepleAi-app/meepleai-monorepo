@@ -45,7 +45,7 @@ export function QueueStatusPanel() {
       </CardHeader>
       <CardContent className="flex items-center gap-4 text-sm">
         <div className="flex items-center gap-1.5">
-          <Badge variant="outline" className="bg-slate-100">
+          <Badge variant="outline" className="bg-muted">
             {status.totalQueued}
           </Badge>
           <span className="text-muted-foreground">queued</span>

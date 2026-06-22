@@ -79,6 +79,12 @@ public sealed class AgentDefinitionConfiguration : IEntityTypeConfiguration<Agen
             .HasDefaultValue("[]")
             .IsRequired();
 
+        // Issue #1651: GIN index on kb_card_ids to support `@>` containment query
+        // for the Used-by tab (agents that consume a given PDF document).
+        builder.HasIndex("_kbCardIdsJson")
+            .HasDatabaseName("ix_agent_definitions_kb_card_ids")
+            .HasMethod("gin");
+
         // ChatLanguage (E5-3) - ISO 639-1 code or "auto"
         builder.Property(a => a.ChatLanguage)
             .HasColumnName("chat_language")
@@ -125,5 +131,17 @@ public sealed class AgentDefinitionConfiguration : IEntityTypeConfiguration<Agen
             .HasColumnName("last_invoked_at");
 
         builder.HasIndex("_typologySlug").HasDatabaseName("ix_agent_definitions_typology_slug");
+
+        // Soft-delete support (Issue #904: SG3 — agent lifecycle)
+        // HasQueryFilter automatically excludes soft-deleted agents from all normal queries.
+        builder.Property(a => a.IsDeleted)
+            .HasColumnName("is_deleted")
+            .HasDefaultValue(false)
+            .IsRequired();
+
+        builder.Property(a => a.DeletedAt)
+            .HasColumnName("deleted_at");
+
+        builder.HasQueryFilter(a => !a.IsDeleted);
     }
 }

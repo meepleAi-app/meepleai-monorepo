@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import type { ComponentType } from 'react';
@@ -55,7 +56,7 @@ const STATUS_CONFIG: Record<
   },
   Cancelled: {
     icon: BanIcon,
-    badge: 'bg-slate-100 text-slate-900 dark:bg-zinc-700/50 dark:text-zinc-300',
+    badge: 'bg-muted text-foreground dark:bg-zinc-700/50 dark:text-zinc-300',
     label: 'Cancelled',
   },
 };
@@ -104,14 +105,14 @@ export function QueueItem({ job, isSelected, onSelect, etaSeconds }: QueueItemPr
           'flex items-center gap-2 w-full rounded-lg border transition-all px-4 py-3',
           isSelected
             ? 'bg-amber-50/80 dark:bg-amber-900/20 border-amber-300/60 dark:border-amber-600/40'
-            : 'bg-white/50 dark:bg-zinc-800/50 border-slate-200/50 dark:border-zinc-700/50 hover:bg-slate-50/80 dark:hover:bg-zinc-800/80'
+            : 'bg-card/50 dark:bg-zinc-800/50 border-border/50 dark:border-zinc-700/50 hover:bg-muted/80 dark:hover:bg-zinc-800/80'
         )}
       >
         {/* Drag Handle - separate button for Queued items */}
         {isDraggable ? (
           <button
             type="button"
-            className="flex items-center justify-center cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-slate-200/60 dark:hover:bg-zinc-600/60 shrink-0 touch-none"
+            className="flex items-center justify-center cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-muted/60 dark:hover:bg-zinc-600/60 shrink-0 touch-none"
             aria-label={`Drag to reorder ${job.pdfFileName}`}
             {...listeners}
           >

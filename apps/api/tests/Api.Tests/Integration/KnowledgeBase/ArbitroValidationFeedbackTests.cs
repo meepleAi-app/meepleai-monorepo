@@ -7,6 +7,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -86,10 +87,10 @@ public sealed class ArbitroValidationFeedbackTests : IAsyncLifetime
 
         // Seed a test game (FK requirement for GameSession)
         _testGameId = Guid.NewGuid();
-        _dbContext.Games.Add(new GameEntity
+        _dbContext.SharedGames.Add(new SharedGameEntity
         {
             Id = _testGameId,
-            Name = "Test Game",
+            Title = "Test Game",
             CreatedAt = DateTime.UtcNow
         });
         await _dbContext.SaveChangesAsync();

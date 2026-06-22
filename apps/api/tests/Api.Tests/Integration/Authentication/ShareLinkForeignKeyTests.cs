@@ -1,5 +1,6 @@
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.Authentication;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
@@ -47,10 +48,10 @@ public class ShareLinkForeignKeyTests : IAsyncLifetime
         var userId = Guid.NewGuid();
         var user = new UserEntity { Id = userId, Email = "creator@test.com", DisplayName = "Creator", Role = "User" };
         var gameId = Guid.NewGuid();
-        var game = new GameEntity { Id = gameId, Name = "7 Wonders" };
+        var game = new SharedGameEntity { Id = gameId, Title = "7 Wonders" };
 
         _dbContext!.Users.Add(user);
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var threadId = Guid.NewGuid();
@@ -98,10 +99,10 @@ public class ShareLinkForeignKeyTests : IAsyncLifetime
         var userId = Guid.NewGuid();
         var user = new UserEntity { Id = userId, Email = "creator@test.com", DisplayName = "Creator", Role = "User" };
         var gameId = Guid.NewGuid();
-        var game = new GameEntity { Id = gameId, Name = "Catan" };
+        var game = new SharedGameEntity { Id = gameId, Title = "Catan" };
 
         _dbContext!.Users.Add(user);
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var threadId = Guid.NewGuid();
@@ -140,10 +141,10 @@ public class ShareLinkForeignKeyTests : IAsyncLifetime
         var userId = Guid.NewGuid();
         var user = new UserEntity { Id = userId, Email = "creator@test.com", DisplayName = "Creator", Role = "User" };
         var gameId = Guid.NewGuid();
-        var game = new GameEntity { Id = gameId, Name = "Pandemic" };
+        var game = new SharedGameEntity { Id = gameId, Title = "Pandemic" };
 
         _dbContext!.Users.Add(user);
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var threadId = Guid.NewGuid();
@@ -187,10 +188,10 @@ public class ShareLinkForeignKeyTests : IAsyncLifetime
         var userId = Guid.NewGuid();
         var user = new UserEntity { Id = userId, Email = "creator@test.com", DisplayName = "Creator", Role = "User" };
         var gameId = Guid.NewGuid();
-        var game = new GameEntity { Id = gameId, Name = "Azul" };
+        var game = new SharedGameEntity { Id = gameId, Title = "Azul" };
 
         _dbContext!.Users.Add(user);
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var threadId = Guid.NewGuid();

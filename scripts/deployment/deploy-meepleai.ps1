@@ -35,10 +35,9 @@ $ScriptDir = Split-Path -Parent $PSCommandPath
 $ProjectRoot = Split-Path -Parent (Split-Path -Parent $ScriptDir)
 $InfraDir = Join-Path $ProjectRoot 'infra'
 
-# Compose files
+# Compose files (post-PR #738 — Traefik decommissioned, edge=CF Tunnel)
 $ComposeFiles = @(
     '-f', 'docker-compose.yml',
-    '-f', 'compose.traefik.yml',
     '-f', 'compose.prod.yml',
     '-f', 'compose.meepleai.yml'
 )
@@ -93,31 +92,14 @@ function Test-Prerequisites {
         exit 1
     }
 
-    # Check Traefik config exists
-    if (-not (Test-Path "traefik/traefik.prod.yml")) {
-        Write-ErrorMsg "Traefik production config not found: traefik/traefik.prod.yml"
-        exit 1
-    }
-
     Write-Success "Prerequisites check passed"
 }
 
 function New-RequiredDirectories {
     Write-Info "Creating required directories..."
-
-    $dirs = @('traefik/letsencrypt', 'traefik/logs')
-    foreach ($dir in $dirs) {
-        if (-not (Test-Path $dir)) {
-            New-Item -ItemType Directory -Path $dir -Force | Out-Null
-        }
-    }
-
-    # Set permissions (Windows: no-op, Linux: chmod 600)
-    if ($IsLinux -or $IsMacOS) {
-        chmod 600 traefik/letsencrypt 2>$null
-    }
-
-    Write-Success "Directories created"
+    # Post-PR #738: Traefik decommissioned, no traefik/letsencrypt or traefik/logs dirs needed.
+    # CF Tunnel handles TLS termination upstream.
+    Write-Success "No directories required (CF Tunnel edge)"
 }
 
 function Start-Services {
@@ -171,7 +153,7 @@ function Show-Status {
     Write-Host "  🌐 Website:    https://www.meepleai.io"
     Write-Host "  🔌 API:        https://api.meepleai.io"
     Write-Host "  📊 Grafana:    https://grafana.meepleai.io"
-    Write-Host "  🚦 Traefik:    https://traefik.meepleai.io"
+    Write-Host "  ☁️  Edge:       Cloudflare Tunnel (cloudflared on VPS)"
     Write-Host ""
 }
 
@@ -183,13 +165,9 @@ function Backup-Databases {
     New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
 
     # PostgreSQL backup
-    Write-Info "Backing up PostgreSQL..."
+    Write-Info "Backing up PostgreSQL (includes pgvector data)..."
     docker compose @ComposeFiles exec -T postgres pg_dumpall -U meeple |
         Out-File -FilePath "$backupDir/postgres_backup.sql" -Encoding UTF8
-
-    # Qdrant backup note
-    Write-Info "Backing up Qdrant..."
-    Write-Warning "Qdrant CLI backup requires manual configuration"
 
     Write-Success "Backup completed: $backupDir"
 }

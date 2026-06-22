@@ -247,7 +247,7 @@ internal static class RuleSpecEndpoints
             return Results.BadRequest(new { error = "gameId in URL does not match gameId in RuleSpec" });
         }
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
         logger.LogInformation("User {UserId} updating RuleSpec for game {GameId}", userId, gameId);
@@ -380,7 +380,7 @@ internal static class RuleSpecEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         logger.LogInformation("User {UserId} creating comment on RuleSpec {GameId} version {Version}", userId, gameId, version);
         var command = new CreateRuleCommentCommand(gameId, version, request.LineNumber, request.CommentText, userId);
@@ -398,7 +398,7 @@ internal static class RuleSpecEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         logger.LogInformation("User {UserId} replying to comment {CommentId}", userId, commentId);
         var command = new ReplyToRuleCommentCommand(commentId, request.CommentText, userId);
@@ -417,7 +417,7 @@ internal static class RuleSpecEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         logger.LogInformation("User {UserId} fetching comments for RuleSpec {GameId} version {Version} (includeResolved: {IncludeResolved})",
             userId, gameId, version, includeResolved);
@@ -437,7 +437,7 @@ internal static class RuleSpecEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         logger.LogInformation("User {UserId} fetching comments for RuleSpec {GameId} version {Version} line {LineNumber}",
             userId, gameId, version, lineNumber);
@@ -458,11 +458,11 @@ internal static class RuleSpecEndpoints
         var (authorized, session, error) = context.RequireAdminOrEditorSession();
         if (!authorized) return error!;
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
         logger.LogInformation("User {UserId} resolving comment {CommentId} (resolveReplies: {ResolveReplies})",
             userId, commentId, resolveReplies);
 
-        var isAdmin = string.Equals(session!.User.Role, "admin", StringComparison.Ordinal);
+        var isAdmin = string.Equals(session!.Principal!.EffectiveActor.Role, "admin", StringComparison.Ordinal);
         var command = new ResolveRuleCommentCommand(commentId, userId, isAdmin, resolveReplies);
         var comment = await mediator.Send(command, ct).ConfigureAwait(false);
         logger.LogInformation("Comment {CommentId} resolved successfully", commentId);
@@ -480,11 +480,11 @@ internal static class RuleSpecEndpoints
         var (authorized, session, error) = context.RequireAdminOrEditorSession();
         if (!authorized) return error!;
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
         logger.LogInformation("User {UserId} unresolving comment {CommentId} (unresolveParent: {UnresolveParent})",
             userId, commentId, unresolveParent);
 
-        var isAdmin = string.Equals(session!.User.Role, "admin", StringComparison.Ordinal);
+        var isAdmin = string.Equals(session!.Principal!.EffectiveActor.Role, "admin", StringComparison.Ordinal);
         var command = new UnresolveRuleCommentCommand(commentId, userId, isAdmin, unresolveParent);
         var comment = await mediator.Send(command, ct).ConfigureAwait(false);
         logger.LogInformation("Comment {CommentId} unresolved successfully", commentId);
@@ -502,7 +502,7 @@ internal static class RuleSpecEndpoints
         var (authorized, session, error) = context.RequireAdminOrEditorSession();
         if (!authorized) return error!;
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
         logger.LogInformation("User {UserId} updating comment {CommentId}", userId, commentId);
 
         var command = new UpdateRuleCommentCommand(commentId, request.CommentText, userId);
@@ -520,8 +520,8 @@ internal static class RuleSpecEndpoints
         var (authorized, session, error) = context.RequireAdminOrEditorSession();
         if (!authorized) return error!;
 
-        var userId = session!.User!.Id;
-        var isAdmin = string.Equals(session.User.Role, "Admin", StringComparison.Ordinal);
+        var userId = session!.Principal!.Subject.Id;
+        var isAdmin = string.Equals(session.Principal!.EffectiveActor.Role, "Admin", StringComparison.Ordinal);
         logger.LogInformation("User {UserId} deleting comment {CommentId}", userId, commentId);
 
         var command = new DeleteRuleCommentCommand(commentId, userId, isAdmin);
@@ -545,7 +545,7 @@ internal static class RuleSpecEndpoints
             throw new BadRequestException("At least one rule spec ID must be provided");
         }
 
-        logger.LogInformation("User {UserId} exporting {Count} rule specs", session!.User!.Id, request.RuleSpecIds.Count);
+        logger.LogInformation("User {UserId} exporting {Count} rule specs", session!.Principal!.Subject.Id, request.RuleSpecIds.Count);
 
         var gameIds = new List<Guid>();
         foreach (var id in request.RuleSpecIds)
@@ -576,8 +576,8 @@ internal static class RuleSpecEndpoints
         var (authorized, session, error) = context.RequireAdminOrEditorSession();
         if (!authorized) return error!;
 
-        var userId = session!.User!.Id;
-        var userEmail = session.User.Email ?? "unknown@user.com";
+        var userId = session!.Principal!.Subject.Id;
+        var userEmail = session.Principal!.Subject.Email ?? "unknown@user.com";
 
         logger.LogInformation("User {UserId} attempting to acquire lock for game {GameId}", userId, gameId);
 
@@ -604,7 +604,7 @@ internal static class RuleSpecEndpoints
         var (authorized, session, error) = context.RequireAdminOrEditorSession();
         if (!authorized) return error!;
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         logger.LogInformation("User {UserId} releasing lock for game {GameId}", userId, gameId);
 
@@ -630,7 +630,7 @@ internal static class RuleSpecEndpoints
         var (authorized, session, error) = context.RequireAdminOrEditorSession();
         if (!authorized) return error!;
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         var command = new RefreshEditorLockCommand(gameId, userId);
         var refreshed = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -654,7 +654,7 @@ internal static class RuleSpecEndpoints
         var (authorized, session, error) = context.RequireAdminOrEditorSession();
         if (!authorized) return error!;
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         var query = new GetEditorLockStatusQuery(gameId, userId);
         var status = await mediator.Send(query, ct).ConfigureAwait(false);

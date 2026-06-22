@@ -198,8 +198,8 @@ describe("EditorToolbar", () => {
   it("renders toolbar dividers for visual grouping", () => {
     const { container } = render(<EditorToolbar editor={mockEditor as Editor} />);
 
-    // Dividers now use Tailwind classes (bg-gray-200)
-    const dividers = container.querySelectorAll("div.bg-gray-200");
+    // Dividers now use Tailwind semantic class (post DS-15)
+    const dividers = container.querySelectorAll("div.bg-muted");
     expect(dividers.length).toBeGreaterThan(0);
   });
 });

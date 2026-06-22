@@ -392,3 +392,13 @@ export type KbSnapshotInfo = z.infer<typeof KbSnapshotInfoSchema>;
 export type KbSnapshotList = z.infer<typeof KbSnapshotListSchema>;
 export type KbExportResult = z.infer<typeof KbExportResultSchema>;
 export type KbImportResult = z.infer<typeof KbImportResultSchema>;
+
+// ─── KB SubNav Counts (Issue #1655) ──────────────────────────────────────────
+
+export const KbNavCountsDtoSchema = z.object({
+  processingQueue: z.number().int().nonnegative(),
+  feedback7d: z.number().int().nonnegative(),
+  asOf: z.string(),
+});
+
+export type KbNavCountsDto = z.infer<typeof KbNavCountsDtoSchema>;

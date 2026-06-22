@@ -65,7 +65,7 @@ internal class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComm
 
     private async Task ValidateGameAndUserAsync(Guid gameId, Guid userId, CancellationToken cancellationToken)
     {
-        var game = await _dbContext.Games
+        var game = await _dbContext.SharedGames
             .FirstOrDefaultAsync(g => g.Id == gameId, cancellationToken).ConfigureAwait(false);
 
         if (game is null)

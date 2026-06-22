@@ -57,7 +57,7 @@ export function MauDashboard() {
 
   if (error) {
     return (
-      <Card className="rounded-xl border bg-white/70 backdrop-blur-md dark:bg-zinc-900/70">
+      <Card className="rounded-xl border bg-card/70 backdrop-blur-md">
         <CardContent className="p-6">
           <p className="text-red-600">{error}</p>
           <Button className="mt-2" variant="outline" onClick={() => fetchData(period)}>
@@ -121,7 +121,7 @@ export function MauDashboard() {
 
       {/* Daily Trend */}
       {data && data.dailyBreakdown.length > 0 && (
-        <Card className="rounded-xl border bg-white/70 backdrop-blur-md dark:bg-zinc-900/70">
+        <Card className="rounded-xl border bg-card/70 backdrop-blur-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5" />
@@ -146,7 +146,7 @@ export function MauDashboard() {
                 <tbody>
                   {data.dailyBreakdown.slice(-period).map(day => (
                     <tr key={day.date} className="border-b last:border-0">
-                      <td className="p-2 text-zinc-600 dark:text-zinc-400">
+                      <td className="p-2 text-muted-foreground dark:text-muted-foreground">
                         {new Date(day.date).toLocaleDateString(undefined, {
                           month: 'short',
                           day: 'numeric',
@@ -183,19 +183,19 @@ function KpiCard({
   isLoading: boolean;
 }) {
   return (
-    <Card className="rounded-xl border bg-white/70 backdrop-blur-md dark:bg-zinc-900/70">
+    <Card className="rounded-xl border bg-card/70 backdrop-blur-md">
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs text-zinc-500">{title}</p>
+            <p className="text-xs text-muted-foreground">{title}</p>
             <p className="mt-1 text-2xl font-bold">
               {isLoading ? (
-                <span className="inline-block h-7 w-12 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
+                <span className="inline-block h-7 w-12 animate-pulse rounded bg-muted" />
               ) : (
                 (value ?? 0).toLocaleString()
               )}
             </p>
-            <p className="mt-0.5 text-xs text-zinc-400">{description}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
           </div>
           {icon}
         </div>

@@ -40,6 +40,7 @@ import { useGameInLibraryStatus } from '@/hooks/queries';
 import type { GameStatusSimple } from '@/hooks/queries/useBatchGameStatus';
 import { api } from '@/lib/api';
 import type { SharedGame, SharedGameDetail } from '@/lib/api';
+import { useGameTitle } from '@/lib/i18n/use-game-title';
 
 // Dynamic imports to avoid DOMMatrix SSR error on statically generated pages
 const KbDrawerSheet = dynamic(
@@ -127,6 +128,13 @@ export function MeepleGameCatalogCard({
   className,
   libraryStatus,
 }: MeepleGameCatalogCardProps) {
+  // Issue #2339 — viewer-locale title resolution. MeepleCard primitive does
+  // not currently expose an `aria-label` slot, so the
+  // `common.localizedFromEnglish` hint cannot be wired here; the title text
+  // itself is the resolved viewer-locale value. Track follow-up in the
+  // ESLint warn-rule sweep (Task 7) when MeepleCard gains a slot.
+  const { value: title } = useGameTitle(game);
+
   // Issue #4822: Open wizard instead of direct add
   const { openWizard } = useAddGameWizard();
   const handleAddToCollection = useCallback(() => {
@@ -134,7 +142,7 @@ export function MeepleGameCatalogCard({
       { type: 'fromGameCard', sharedGameId: game.id },
       {
         gameId: game.id,
-        title: game.title,
+        title,
         imageUrl: game.imageUrl || undefined,
         thumbnailUrl: game.thumbnailUrl || undefined,
         minPlayers: game.minPlayers ?? undefined,
@@ -147,7 +155,7 @@ export function MeepleGameCatalogCard({
         source: 'catalog',
       }
     );
-  }, [openWizard, game]);
+  }, [openWizard, game, title]);
 
   // Check if game is already in user's library
   const { data: individualStatus, isLoading: statusLoading } = useGameInLibraryStatus(
@@ -190,9 +198,6 @@ export function MeepleGameCatalogCard({
   const subtitleParts: string[] = [];
   if (game.yearPublished) {
     subtitleParts.push(String(game.yearPublished));
-  }
-  if (game.bggId) {
-    subtitleParts.push(`ID: ${game.bggId}`);
   }
   const subtitle = subtitleParts.length > 0 ? subtitleParts.join(' · ') : 'N/A';
 
@@ -249,7 +254,7 @@ export function MeepleGameCatalogCard({
       <MeepleCard
         entity="game"
         variant={variant}
-        title={game.title}
+        title={title}
         subtitle={subtitle}
         imageUrl={game.imageUrl || undefined}
         rating={game.averageRating ?? 0}
@@ -259,6 +264,7 @@ export function MeepleGameCatalogCard({
         status={inLibrary ? 'owned' : undefined}
         actions={actions}
         connections={connections}
+        headingLevel={2}
         onClick={onClick ? () => onClick(game.id) : undefined}
         className={className}
         data-testid={`catalog-game-card-${game.id}`}

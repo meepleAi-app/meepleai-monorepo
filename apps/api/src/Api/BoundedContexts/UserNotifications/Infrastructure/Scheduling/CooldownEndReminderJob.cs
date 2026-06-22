@@ -4,8 +4,6 @@ using Api.BoundedContexts.SystemConfiguration.Domain.Services;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
-using Api.Infrastructure;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Quartz;
 
@@ -21,7 +19,6 @@ internal sealed class CooldownEndReminderJob : IJob
     private readonly IShareRequestRepository _shareRequestRepository;
     private readonly IRateLimitEvaluator _rateLimitEvaluator;
     private readonly INotificationRepository _notificationRepository;
-    private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<CooldownEndReminderJob> _logger;
 
     // Look ahead window - notify users whose cooldown ends within this timeframe
@@ -31,13 +28,11 @@ internal sealed class CooldownEndReminderJob : IJob
         IShareRequestRepository shareRequestRepository,
         IRateLimitEvaluator rateLimitEvaluator,
         INotificationRepository notificationRepository,
-        MeepleAiDbContext dbContext,
         ILogger<CooldownEndReminderJob> logger)
     {
         _shareRequestRepository = shareRequestRepository ?? throw new ArgumentNullException(nameof(shareRequestRepository));
         _rateLimitEvaluator = rateLimitEvaluator ?? throw new ArgumentNullException(nameof(rateLimitEvaluator));
         _notificationRepository = notificationRepository ?? throw new ArgumentNullException(nameof(notificationRepository));
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -68,7 +63,9 @@ internal sealed class CooldownEndReminderJob : IJob
                 })
                 .ToList();
 
-            var remindersCreated = 0;
+            // Issue #2392: collect reminders then commit as one batch with POST-save
+            // side-effects, replacing the previous foreach-AddAsync + conditional save.
+            var pendingReminders = new List<Notification>();
 
             foreach (var userInfo in usersWithRecentRejections)
             {
@@ -85,8 +82,7 @@ internal sealed class CooldownEndReminderJob : IJob
                 // Check if cooldown ends within the look-ahead window
                 if (status.CooldownEndsAt.Value > now && status.CooldownEndsAt.Value <= windowEnd)
                 {
-                    // Cooldown is about to end - create reminder notification
-                    var notification = new Notification(
+                    pendingReminders.Add(new Notification(
                         id: Guid.NewGuid(),
                         userId: userInfo.UserId,
                         type: NotificationType.CooldownEnded,
@@ -100,24 +96,18 @@ internal sealed class CooldownEndReminderJob : IJob
                             remainingMonthly = status.RemainingMonthlyRequests,
                             remainingPending = status.RemainingPendingRequests,
                             tier = status.Tier.ToString()
-                        }));
-
-                    await _notificationRepository.AddAsync(notification, cancellationToken)
-                        .ConfigureAwait(false);
-
-                    remindersCreated++;
+                        })));
 
                     _logger.LogInformation(
-                        "Created cooldown end reminder for user {UserId}. Cooldown ends at {CooldownEndsAt}",
+                        "Queued cooldown end reminder for user {UserId}. Cooldown ends at {CooldownEndsAt}",
                         userInfo.UserId,
                         status.CooldownEndsAt.Value);
                 }
             }
 
-            if (remindersCreated > 0)
-            {
-                await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            }
+            var remindersCreated = await _notificationRepository
+                .AddBatchAndCommitAsync(pendingReminders, cancellationToken)
+                .ConfigureAwait(false);
 
             _logger.LogInformation(
                 "CooldownEndReminderJob completed. Created {Count} reminders",

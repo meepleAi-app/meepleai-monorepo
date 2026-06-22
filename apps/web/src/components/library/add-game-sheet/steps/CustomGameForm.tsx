@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * CustomGameForm - Inline form for manual game creation.
  * Issue #4819: AddGameSheet Step 1 - Game Source
@@ -82,12 +83,12 @@ export function CustomGameForm({ onSubmit, onCancel, submitting = false }: Custo
   }, [validate, onSubmit, title, minPlayers, maxPlayers, playingTime, description]);
 
   return (
-    <div className="space-y-4 rounded-xl border border-slate-700 bg-slate-900/50 p-4">
+    <div className="space-y-4 rounded-xl border border-border bg-card p-4">
       <h4 className="text-sm font-semibold text-slate-200">Crea gioco personalizzato</h4>
 
       {/* Title */}
       <div className="space-y-1.5">
-        <Label htmlFor="custom-game-title" className="text-xs text-slate-400">
+        <Label htmlFor="custom-game-title" className="text-xs text-muted-foreground">
           Nome gioco *
         </Label>
         <Input
@@ -95,7 +96,7 @@ export function CustomGameForm({ onSubmit, onCancel, submitting = false }: Custo
           value={title}
           onChange={e => setTitle(e.target.value)}
           placeholder="Es. Catan, Ticket to Ride..."
-          className="bg-slate-800 border-slate-700"
+          className="bg-card border-border"
           disabled={submitting}
         />
         {errors.title && <p className="text-xs text-red-400">{errors.title}</p>}
@@ -104,7 +105,7 @@ export function CustomGameForm({ onSubmit, onCancel, submitting = false }: Custo
       {/* Players Row */}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label htmlFor="custom-game-min" className="text-xs text-slate-400">
+          <Label htmlFor="custom-game-min" className="text-xs text-muted-foreground">
             Min giocatori *
           </Label>
           <Input
@@ -115,13 +116,13 @@ export function CustomGameForm({ onSubmit, onCancel, submitting = false }: Custo
             value={minPlayers}
             onChange={e => setMinPlayers(e.target.value)}
             placeholder="1"
-            className="bg-slate-800 border-slate-700"
+            className="bg-card border-border"
             disabled={submitting}
           />
           {errors.minPlayers && <p className="text-xs text-red-400">{errors.minPlayers}</p>}
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="custom-game-max" className="text-xs text-slate-400">
+          <Label htmlFor="custom-game-max" className="text-xs text-muted-foreground">
             Max giocatori *
           </Label>
           <Input
@@ -132,7 +133,7 @@ export function CustomGameForm({ onSubmit, onCancel, submitting = false }: Custo
             value={maxPlayers}
             onChange={e => setMaxPlayers(e.target.value)}
             placeholder="4"
-            className="bg-slate-800 border-slate-700"
+            className="bg-card border-border"
             disabled={submitting}
           />
           {errors.maxPlayers && <p className="text-xs text-red-400">{errors.maxPlayers}</p>}
@@ -141,7 +142,7 @@ export function CustomGameForm({ onSubmit, onCancel, submitting = false }: Custo
 
       {/* Playing Time */}
       <div className="space-y-1.5">
-        <Label htmlFor="custom-game-time" className="text-xs text-slate-400">
+        <Label htmlFor="custom-game-time" className="text-xs text-muted-foreground">
           Tempo di gioco (minuti)
         </Label>
         <Input
@@ -152,7 +153,7 @@ export function CustomGameForm({ onSubmit, onCancel, submitting = false }: Custo
           value={playingTime}
           onChange={e => setPlayingTime(e.target.value)}
           placeholder="Es. 60"
-          className="bg-slate-800 border-slate-700"
+          className="bg-card border-border"
           disabled={submitting}
         />
         {errors.playingTime && <p className="text-xs text-red-400">{errors.playingTime}</p>}
@@ -160,7 +161,7 @@ export function CustomGameForm({ onSubmit, onCancel, submitting = false }: Custo
 
       {/* Description */}
       <div className="space-y-1.5">
-        <Label htmlFor="custom-game-desc" className="text-xs text-slate-400">
+        <Label htmlFor="custom-game-desc" className="text-xs text-muted-foreground">
           Descrizione
         </Label>
         <Textarea
@@ -169,7 +170,7 @@ export function CustomGameForm({ onSubmit, onCancel, submitting = false }: Custo
           onChange={e => setDescription(e.target.value)}
           placeholder="Breve descrizione del gioco..."
           rows={2}
-          className="bg-slate-800 border-slate-700 resize-none"
+          className="bg-card border-border resize-none"
           disabled={submitting}
         />
       </div>

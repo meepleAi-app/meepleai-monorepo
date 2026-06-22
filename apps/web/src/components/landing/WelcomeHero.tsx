@@ -1,4 +1,4 @@
-import { HeroGradient } from '@/components/ui/v2/hero-gradient';
+import { HeroGradient } from '@/components/ui/hero-gradient';
 
 export function WelcomeHero() {
   return (

@@ -73,6 +73,7 @@ internal sealed class GameMemoryRepository : RepositoryBase, IGameMemoryReposito
         // Restore Id and CreatedAt via reflection (factory generates new ones)
         SetPrivateProperty(memory, nameof(GameMemory.Id), entity.Id);
         SetPrivateProperty(memory, nameof(GameMemory.CreatedAt), entity.CreatedAt);
+        SetPrivateProperty(memory, nameof(GameMemory.LastProcessedEventId), entity.LastProcessedEventId);
 
         // Restore house rules from JSONB
         if (entity.HouseRulesJson != null)
@@ -88,7 +89,7 @@ internal sealed class GameMemoryRepository : RepositoryBase, IGameMemoryReposito
 
                 foreach (var rule in houseRules)
                 {
-                    rules.Add(HouseRule.Restore(rule.Description, rule.AddedAt, (HouseRuleSource)rule.Source));
+                    rules.Add(HouseRule.Restore(rule.Id, rule.Description, rule.AddedAt, (HouseRuleSource)rule.Source));
                 }
             }
         }
@@ -155,6 +156,7 @@ internal sealed class GameMemoryRepository : RepositoryBase, IGameMemoryReposito
             GameId = memory.GameId,
             OwnerId = memory.OwnerId,
             CreatedAt = memory.CreatedAt,
+            LastProcessedEventId = memory.LastProcessedEventId,
         };
 
         // Serialize house rules to JSONB
@@ -162,6 +164,7 @@ internal sealed class GameMemoryRepository : RepositoryBase, IGameMemoryReposito
         {
             var dtos = memory.HouseRules.Select(r => new HouseRuleDto
             {
+                Id = r.Id,
                 Description = r.Description,
                 AddedAt = r.AddedAt,
                 Source = (int)r.Source,
@@ -216,6 +219,9 @@ internal sealed class GameMemoryRepository : RepositoryBase, IGameMemoryReposito
     /// <summary>DTO for JSON serialization of HouseRule.</summary>
     private sealed class HouseRuleDto
     {
+        // #1464: Stable Id. Defaults to Guid.Empty when the JSON predates #1464; the
+        // HouseRule.Restore factory then assigns a fresh Guid (lazy migration).
+        public Guid Id { get; set; }
         public string Description { get; set; } = string.Empty;
         public DateTime AddedAt { get; set; }
         public int Source { get; set; }

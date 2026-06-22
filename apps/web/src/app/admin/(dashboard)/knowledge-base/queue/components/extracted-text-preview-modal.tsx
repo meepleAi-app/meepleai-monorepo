@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- pre-existing pattern: array/object access guarded by length/key check or by upstream validator; assertion is correct by construction. Cleanup tracked for follow-up audit. */
 
@@ -98,7 +99,7 @@ export function ExtractedTextPreviewModal({
                   <CopyIcon className="h-4 w-4" />
                 )}
               </Button>
-              <ScrollArea className="h-[50vh] w-full rounded-lg border bg-slate-50 dark:bg-zinc-900 p-4">
+              <ScrollArea className="h-[50vh] w-full rounded-lg border bg-muted dark:bg-zinc-900 p-4">
                 {data.extractedText ? (
                   <pre className="text-xs font-mono whitespace-pre-wrap text-foreground">
                     {data.extractedText}

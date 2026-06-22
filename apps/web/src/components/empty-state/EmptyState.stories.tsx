@@ -266,31 +266,31 @@ export const SecondaryAction: Story = {
 export const AllVariants: Story = {
   render: () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
-      <div className="border border-slate-200 dark:border-slate-700 rounded-lg">
+      <div className="border border-border rounded-lg">
         <EmptyState
           title="Default"
           description="Default variant with inbox icon"
           variant="default"
         />
       </div>
-      <div className="border border-slate-200 dark:border-slate-700 rounded-lg">
+      <div className="border border-border rounded-lg">
         <EmptyState title="No Data" description="For empty collections" variant="noData" />
       </div>
-      <div className="border border-slate-200 dark:border-slate-700 rounded-lg">
+      <div className="border border-border rounded-lg">
         <EmptyState
           title="No Results"
           description="For search with no matches"
           variant="noResults"
         />
       </div>
-      <div className="border border-slate-200 dark:border-slate-700 rounded-lg">
+      <div className="border border-border rounded-lg">
         <EmptyState
           title="No Access"
           description="For permission-restricted content"
           variant="noAccess"
         />
       </div>
-      <div className="border border-slate-200 dark:border-slate-700 rounded-lg md:col-span-2">
+      <div className="border border-border rounded-lg md:col-span-2">
         <EmptyState
           title="Error"
           description="For error states"
@@ -319,13 +319,13 @@ export const AllVariants: Story = {
 export const CustomIconsGallery: Story = {
   render: () => (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl">
-      <div className="border border-slate-200 dark:border-slate-700 rounded-lg">
+      <div className="border border-border rounded-lg">
         <EmptyState title="No Files" description="Upload files to continue" icon={Upload} />
       </div>
-      <div className="border border-slate-200 dark:border-slate-700 rounded-lg">
+      <div className="border border-border rounded-lg">
         <EmptyState title="Empty Folder" description="No files in this folder" icon={FolderOpen} />
       </div>
-      <div className="border border-slate-200 dark:border-slate-700 rounded-lg">
+      <div className="border border-border rounded-lg">
         <EmptyState title="No Games" description="Add games to your collection" icon={Gamepad2} />
       </div>
     </div>
@@ -389,7 +389,7 @@ export const WithCustomStyling: Story = {
 export const Responsive: Story = {
   render: () => (
     <div className="space-y-8">
-      <div className="w-64 border border-slate-200 dark:border-slate-700 rounded-lg">
+      <div className="w-64 border border-border rounded-lg">
         <EmptyState
           title="Small width"
           description="Testing at 256px width"
@@ -399,7 +399,7 @@ export const Responsive: Story = {
           }}
         />
       </div>
-      <div className="w-96 border border-slate-200 dark:border-slate-700 rounded-lg">
+      <div className="w-96 border border-border rounded-lg">
         <EmptyState
           title="Medium width"
           description="Testing at 384px width with longer description text that may wrap."
@@ -409,7 +409,7 @@ export const Responsive: Story = {
           }}
         />
       </div>
-      <div className="w-full max-w-2xl border border-slate-200 dark:border-slate-700 rounded-lg">
+      <div className="w-full max-w-2xl border border-border rounded-lg">
         <EmptyState
           title="Full width"
           description="Testing at full width with even longer description text that demonstrates how the component handles extended content gracefully."

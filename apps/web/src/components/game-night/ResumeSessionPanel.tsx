@@ -65,7 +65,7 @@ export function ResumeSessionPanel({ sessionId, onResume, className }: ResumeSes
     >
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="font-quicksand font-bold text-base sm:text-lg text-slate-900 dark:text-slate-100">
+        <h3 className="font-quicksand font-bold text-base sm:text-lg text-foreground">
           {context.gameTitle}
         </h3>
         <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -88,7 +88,7 @@ export function ResumeSessionPanel({ sessionId, onResume, className }: ResumeSes
                 'text-xs sm:text-sm px-2 py-0.5 rounded-full',
                 p.rank === 1
                   ? 'bg-amber-200/60 dark:bg-amber-500/20 text-amber-900 dark:text-amber-300 font-medium'
-                  : 'bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300'
+                  : 'bg-muted text-foreground'
               )}
             >
               {p.rank === 1 && <Trophy className="inline h-3 w-3 mr-0.5" aria-hidden="true" />}
@@ -106,7 +106,7 @@ export function ResumeSessionPanel({ sessionId, onResume, className }: ResumeSes
             {context.photos.slice(0, 4).map(photo => (
               <div
                 key={photo.attachmentId}
-                className="h-10 w-10 rounded bg-slate-200 dark:bg-slate-700 overflow-hidden"
+                className="h-10 w-10 rounded bg-muted dark:bg-card overflow-hidden"
               >
                 {photo.thumbnailUrl && (
                   <img

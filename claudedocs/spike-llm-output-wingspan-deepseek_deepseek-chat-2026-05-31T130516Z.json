@@ -1,0 +1,122 @@
+{
+  "metadata": {
+    "model": "deepseek/deepseek-chat",
+    "timestamp_utc": "2026-05-31T130516Z",
+    "elapsed_seconds": 29.77,
+    "usage": {
+      "prompt_tokens": 1737,
+      "completion_tokens": 559,
+      "total_tokens": 2296,
+      "cost": 0.00105335,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.00105335,
+        "upstream_inference_prompt_cost": 0.00055584,
+        "upstream_inference_completions_cost": 0.00049751
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "parse_success": true,
+    "parse_error": null
+  },
+  "input": {
+    "system_prompt_chars": 4329,
+    "prompt_version": "v2",
+    "user_prompt_chars": 2002,
+    "excerpts_count": 5
+  },
+  "raw_content": "{\n  \"ToolkitName\": \"Wingspan\",\n  \"DiceTools\": [\n    {\n      \"Name\": \"Birdfeeder Food Dice\",\n      \"DiceType\": \"Custom\",\n      \"Quantity\": 5,\n      \"CustomFaces\": [\"invertebrate\", \"seed\", \"fruit\", \"fish\", \"rodent\", \"wild\"],\n      \"IsInteractive\": true,\n      \"Color\": null\n    }\n  ],\n  \"CounterTools\": [\n    {\n      \"Name\": \"Eggs\",\n      \"MinValue\": 0,\n      \"MaxValue\": 6,\n      \"DefaultValue\": 0,\n      \"IsPerPlayer\": true,\n      \"Icon\": null,\n      \"Color\": null\n    },\n    {\n      \"Name\": \"Food Tokens\",\n      \"MinValue\": 0,\n      \"MaxValue\": 99,\n      \"DefaultValue\": 0,\n      \"IsPerPlayer\": true,\n      \"Icon\": null,\n      \"Color\": null\n    },\n    {\n      \"Name\": \"Action Cubes\",\n      \"MinValue\": 0,\n      \"MaxValue\": 8,\n      \"DefaultValue\": 8,\n      \"IsPerPlayer\": true,\n      \"Icon\": null,\n      \"Color\": null\n    }\n  ],\n  \"TimerTools\": [],\n  \"ScoringTemplate\": {\n    \"Dimensions\": [\"Birds\", \"Bonus cards\", \"End-of-round goals\", \"Eggs\", \"Food cached\", \"Tucked cards\"],\n    \"DefaultUnit\": \"points\",\n    \"ScoreType\": \"Points\"\n  },\n  \"TurnTemplate\": {\n    \"TurnOrderType\": \"RoundRobin\",\n    \"Phases\": [\"Round 1\", \"Round 2\", \"Round 3\", \"Round 4\"]\n  },\n  \"Overrides\": {\n    \"OverridesTurnOrder\": false,\n    \"OverridesScoreboard\": false,\n    \"OverridesDiceSet\": true\n  },\n  \"Reasoning\": \"The game includes 5 custom 6-sided food dice with specific faces [excerpt 1]. Players track eggs, food tokens, and action cubes individually on their player mats [excerpt 2]. There are no timers in the game [excerpt 3]. Scoring is done at game end across 6 categories [excerpt 4]. The game is played over 4 rounds with a round-robin turn order [excerpt 5].\",\n  \"ExcludedTools\": [\n    {\n      \"ToolType\": \"Timer\",\n      \"Reason\": \"The rules state there is no time limit per turn or per round [excerpt 3]\"\n    }\n  ]\n}",
+  "parsed_json": {
+    "ToolkitName": "Wingspan",
+    "DiceTools": [
+      {
+        "Name": "Birdfeeder Food Dice",
+        "DiceType": "Custom",
+        "Quantity": 5,
+        "CustomFaces": [
+          "invertebrate",
+          "seed",
+          "fruit",
+          "fish",
+          "rodent",
+          "wild"
+        ],
+        "IsInteractive": true,
+        "Color": null
+      }
+    ],
+    "CounterTools": [
+      {
+        "Name": "Eggs",
+        "MinValue": 0,
+        "MaxValue": 6,
+        "DefaultValue": 0,
+        "IsPerPlayer": true,
+        "Icon": null,
+        "Color": null
+      },
+      {
+        "Name": "Food Tokens",
+        "MinValue": 0,
+        "MaxValue": 99,
+        "DefaultValue": 0,
+        "IsPerPlayer": true,
+        "Icon": null,
+        "Color": null
+      },
+      {
+        "Name": "Action Cubes",
+        "MinValue": 0,
+        "MaxValue": 8,
+        "DefaultValue": 8,
+        "IsPerPlayer": true,
+        "Icon": null,
+        "Color": null
+      }
+    ],
+    "TimerTools": [],
+    "ScoringTemplate": {
+      "Dimensions": [
+        "Birds",
+        "Bonus cards",
+        "End-of-round goals",
+        "Eggs",
+        "Food cached",
+        "Tucked cards"
+      ],
+      "DefaultUnit": "points",
+      "ScoreType": "Points"
+    },
+    "TurnTemplate": {
+      "TurnOrderType": "RoundRobin",
+      "Phases": [
+        "Round 1",
+        "Round 2",
+        "Round 3",
+        "Round 4"
+      ]
+    },
+    "Overrides": {
+      "OverridesTurnOrder": false,
+      "OverridesScoreboard": false,
+      "OverridesDiceSet": true
+    },
+    "Reasoning": "The game includes 5 custom 6-sided food dice with specific faces [excerpt 1]. Players track eggs, food tokens, and action cubes individually on their player mats [excerpt 2]. There are no timers in the game [excerpt 3]. Scoring is done at game end across 6 categories [excerpt 4]. The game is played over 4 rounds with a round-robin turn order [excerpt 5].",
+    "ExcludedTools": [
+      {
+        "ToolType": "Timer",
+        "Reason": "The rules state there is no time limit per turn or per round [excerpt 3]"
+      }
+    ]
+  }
+}

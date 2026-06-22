@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -151,7 +152,7 @@ export function KnowledgeBaseStep() {
           <BookOpen className="h-5 w-5 text-teal-400" />
           <h3 className="text-base font-semibold text-slate-100">Knowledge Base</h3>
         </div>
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-muted-foreground">
           I PDF del regolamento vengono usati dall&apos;AI per rispondere alle tue domande sul
           gioco.
           {!hasDocuments && !loadingDocs && ' Puoi caricare un PDF o saltare questo passaggio.'}
@@ -161,7 +162,7 @@ export function KnowledgeBaseStep() {
       {/* Existing PDFs */}
       {(hasDocuments || loadingDocs) && (
         <div>
-          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             PDF disponibili
           </h4>
           <PdfList documents={existingDocs} loading={loadingDocs} />
@@ -175,7 +176,7 @@ export function KnowledgeBaseStep() {
             gameId={gameId}
             gameName={selectedGame?.title}
             enabled
-            className="border-slate-700 bg-slate-800/50"
+            className="border-border bg-card"
           />
         </div>
       )}
@@ -187,15 +188,15 @@ export function KnowledgeBaseStep() {
             type="button"
             onClick={() => (disclaimerAccepted ? setShowUpload(true) : setShowDisclaimer(true))}
             className={cn(
-              'flex w-full items-center gap-3 rounded-lg border border-dashed border-slate-700 px-4 py-3',
-              'text-left transition-colors hover:border-teal-500/50 hover:bg-slate-800/30'
+              'flex w-full items-center gap-3 rounded-lg border border-dashed border-border px-4 py-3',
+              'text-left transition-colors hover:border-teal-500/50 hover:bg-card'
             )}
             data-testid="show-upload-button"
           >
-            <Upload className="h-5 w-5 text-slate-500" />
+            <Upload className="h-5 w-5 text-muted-foreground" />
             <div>
               <p className="text-sm font-medium text-slate-300">Carica un PDF personalizzato</p>
-              <p className="text-xs text-slate-500">Aggiungi il regolamento o un manuale privato</p>
+              <p className="text-xs text-muted-foreground">Aggiungi il regolamento o un manuale privato</p>
             </div>
           </button>
         ) : customPdfUploaded && !showUpload ? (
@@ -214,7 +215,7 @@ export function KnowledgeBaseStep() {
       </div>
 
       {/* Info: step is optional */}
-      <p className="text-xs text-slate-500 text-center" data-testid="skip-info">
+      <p className="text-xs text-muted-foreground text-center" data-testid="skip-info">
         Questo passaggio è opzionale. Puoi procedere senza caricare PDF.
       </p>
 

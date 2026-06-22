@@ -16,6 +16,7 @@ import { AccessibleSkipLink } from '@/components/accessible';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { ErrorBoundary, RouteErrorBoundary } from '@/components/errors';
 import { KeyboardShortcutsHelp, LayoutProvider } from '@/components/layout';
+import { CommandPalette } from '@/components/layout/CommandPalette';
 import { CookieConsentBanner } from '@/components/legal';
 import { AddGameWizardProvider } from '@/components/library/add-game-sheet/AddGameWizardProvider';
 import { SessionWarningModal } from '@/components/modals';
@@ -23,6 +24,7 @@ import { IntlProvider } from '@/components/providers/IntlProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { PWAProvider } from '@/components/pwa';
 import { Toaster } from '@/components/ui/feedback/sonner';
+import { StatePreviewProvider } from '@/components/ui/state-preview';
 import { useGlobalKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { api } from '@/lib/api';
@@ -40,7 +42,24 @@ function AppContent({ children }: { children: ReactNode }) {
 
   // Issue #1100: Keyboard shortcuts system
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
-  const [_showCommandPalette, setShowCommandPalette] = useState(false);
+  // Issue #2320: wire CommandPalette into the providers tree so the keyboard
+  // shortcut (Cmd/Ctrl+K, registered by useGlobalKeyboardShortcuts below)
+  // actually surfaces the palette. The SearchPill button in `AppTopBar`
+  // calls into the same state via the `meeple:command-palette:open` event hub
+  // (see useEffect below). Keeps providers.tsx + AppTopBar decoupled —
+  // no React context plumbing required.
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+
+  // Issue #2320: listen for `meeple:command-palette:open` from the
+  // SearchPill trigger button in `AppTopBar`. Decouples the trigger from
+  // the modal state without introducing a new context layer.
+  useEffect(() => {
+    function handleOpen() {
+      setShowCommandPalette(true);
+    }
+    window.addEventListener('meeple:command-palette:open', handleOpen);
+    return () => window.removeEventListener('meeple:command-palette:open', handleOpen);
+  }, []);
 
   // Enable axe-core accessibility checks in development (UI-05, Issue #841)
   // Moved to useEffect to avoid page crashes during Playwright tests
@@ -124,6 +143,18 @@ function AppContent({ children }: { children: ReactNode }) {
         isOpen={showShortcutsHelp}
         onClose={() => setShowShortcutsHelp(false)}
       />
+
+      {/* Issue #2320 (#1101 v1): mount CommandPalette so Cmd/Ctrl+K and the
+          AppTopBar SearchPill trigger an actual modal. v1 ships with empty
+          dataSources — the cmdk index renders correctly (graceful empty
+          state) while a follow-up issue wires per-domain React Query hooks
+          (messages / chats / games / agents) or a unified global-search BE
+          endpoint. The keyboard shortcut + open/close UX is testable today. */}
+      <CommandPalette
+        isOpen={showCommandPalette}
+        onClose={() => setShowCommandPalette(false)}
+        dataSources={{}}
+      />
     </PWAProvider>
   );
 }
@@ -155,7 +186,18 @@ export function AppProviders({ children }: AppProvidersProps) {
               >
                 <RouteErrorBoundary routeName="AppContent">
                   <AddGameWizardProvider>
-                    <AppContent>{children}</AppContent>
+                    {/*
+                      Asse B (#1897) WP5 T5 — StatePreviewProvider via dynamic loader.
+                      DEC-4: `dynamic({ssr:false, loading:() => null})` guarantees the
+                      provider impl is tree-shaken from production chunks (verified by
+                      apps/web/__tests__/state-preview-tree-shake.test.ts). In prod the
+                      loader renders `null` and the provider impl never lands in entry
+                      chunks. In dev, the StatePreviewToggle is mounted by consumers
+                      that opt in via `useStatePreview`.
+                    */}
+                    <StatePreviewProvider>
+                      <AppContent>{children}</AppContent>
+                    </StatePreviewProvider>
                   </AddGameWizardProvider>
                 </RouteErrorBoundary>
               </ErrorBoundary>

@@ -83,7 +83,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
         // Apply migrations with simple retry to handle transient container readiness
-        await MigrateWithRetry(_dbContext);
+        await TestMigrationHelper.MigrateWithRetryAsync(_dbContext, TestCancellationToken, onRetry: _output);
         _output("Database migrations applied");
     }
 
@@ -531,21 +531,5 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
 
         persistedUser.Should().NotBeNull();
         persistedUser.Tier.Should().Be(UserTier.Free.Value); // Should still be Free
-    }
-    private static async Task MigrateWithRetry(MeepleAiDbContext context)
-    {
-        const int maxAttempts = 3;
-        for (var attempt = 1; attempt <= maxAttempts; attempt++)
-        {
-            try
-            {
-                await context.Database.MigrateAsync(TestCancellationToken);
-                return;
-            }
-            catch (NpgsqlException) when (attempt < maxAttempts)
-            {
-                await Task.Delay(TestConstants.Timing.RetryDelay, TestCancellationToken);
-            }
-        }
     }
 }

@@ -34,6 +34,14 @@ import { test, expect, type Page } from '@playwright/test';
 import { mockAuthEndpoints, seedAuthSession } from '../_helpers/seedAuthSession';
 import { seedCookieConsent } from '../_helpers/seedCookieConsent';
 
+// next-themes (defaultTheme="dark", enableSystem) honors prefers-color-scheme on
+// first paint. Playwright defaults to colorScheme=light, so without this override
+// next-themes applies `.light` and the `--e-*` AA-on-dark overrides (globals.css
+// .dark block) never activate — but the bg is always dark (gaming-bg-base in
+// :root), producing the color-contrast violations seen in CI run 25693769790.
+// See #807/#876 follow-up.
+test.use({ colorScheme: 'dark' });
+
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] as const;
 
 async function gotoSessionsReady(page: Page, search = ''): Promise<void> {

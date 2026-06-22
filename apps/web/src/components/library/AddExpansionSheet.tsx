@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
@@ -169,7 +170,7 @@ export function AddExpansionSheet({
   return (
     <Sheet open={open} onOpenChange={o => !o && handleClose()}>
       <SheetContent side="right" className="w-full sm:max-w-[480px] flex flex-col p-0">
-        <SheetHeader className="border-b border-slate-800 px-6 pt-6 pb-4">
+        <SheetHeader className="border-b border-border px-6 pt-6 pb-4">
           <div className="flex items-center justify-between">
             <SheetTitle className="text-lg font-semibold text-slate-100">
               Aggiungi espansione
@@ -177,14 +178,14 @@ export function AddExpansionSheet({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-slate-400 hover:text-slate-200"
+              className="h-8 w-8 text-muted-foreground hover:text-slate-200"
               onClick={handleClose}
             >
               <X className="h-4 w-4" />
               <span className="sr-only">Chiudi</span>
             </Button>
           </div>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Aggiungi un&apos;espansione per:{' '}
             <span className="text-slate-200 font-medium">{baseGameTitle}</span>
           </p>
@@ -199,7 +200,7 @@ export function AddExpansionSheet({
             >
               <CheckCircle className="h-12 w-12 text-green-500" />
               <p className="text-lg font-semibold text-slate-100">Espansione aggiunta!</p>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-muted-foreground">
                 L&apos;espansione è stata aggiunta alla tua libreria e collegata al gioco base.
               </p>
               <Button onClick={handleClose} className="mt-2">
@@ -210,7 +211,7 @@ export function AddExpansionSheet({
             <>
               {/* Search input */}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Cerca espansione nel catalogo..."
                   value={searchTerm}
@@ -233,7 +234,7 @@ export function AddExpansionSheet({
 
               {/* Searching indicator */}
               {status === 'searching' && (
-                <div className="flex items-center gap-2 text-sm text-slate-400">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Ricerca in corso...
                 </div>
@@ -250,12 +251,12 @@ export function AddExpansionSheet({
                       className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left ${
                         selectedResult?.id === result.id
                           ? 'bg-amber-500/20 border border-amber-500/40'
-                          : 'hover:bg-slate-800/60'
+                          : 'hover:bg-card'
                       }`}
                       data-testid={`result-item-${result.id}`}
                     >
                       {/* Thumbnail */}
-                      <div className="w-10 h-10 rounded bg-slate-800 overflow-hidden flex-shrink-0">
+                      <div className="w-10 h-10 rounded bg-card overflow-hidden flex-shrink-0">
                         {result.thumbnailUrl ? (
                           <img
                             src={result.thumbnailUrl}
@@ -276,7 +277,7 @@ export function AddExpansionSheet({
                           {result.title}
                         </p>
                         {result.yearPublished && (
-                          <p className="text-xs text-slate-500">{result.yearPublished}</p>
+                          <p className="text-xs text-muted-foreground">{result.yearPublished}</p>
                         )}
                       </div>
                     </button>
@@ -286,16 +287,16 @@ export function AddExpansionSheet({
 
               {/* No results -- only shown after at least one search has completed */}
               {hasSearched && results.length === 0 && status === 'idle' && (
-                <p className="text-sm text-slate-500 text-center py-4">
+                <p className="text-sm text-muted-foreground text-center py-4">
                   Nessun risultato trovato. Prova con un termine diverso.
                 </p>
               )}
 
               {/* Add button */}
               {selectedResult && (
-                <div className="pt-2 border-t border-slate-800">
+                <div className="pt-2 border-t border-border">
                   <div className="mb-3">
-                    <p className="text-xs text-slate-400 mb-1">Espansione selezionata:</p>
+                    <p className="text-xs text-muted-foreground mb-1">Espansione selezionata:</p>
                     <p className="text-sm font-medium text-slate-200">{selectedResult.title}</p>
                   </div>
                   <Button

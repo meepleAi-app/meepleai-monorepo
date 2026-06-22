@@ -121,8 +121,8 @@ describe("RichTextEditor", () => {
       />
     );
 
-    // Border now uses Tailwind classes (border-2 border-gray-300)
-    const editorWrapper = container.querySelector("div.border-2.border-gray-300");
+    // Border now uses Tailwind semantic token (border-2 border-border, post DS-15)
+    const editorWrapper = container.querySelector("div.border-2.border-border");
     expect(editorWrapper).toBeInTheDocument();
   });
 

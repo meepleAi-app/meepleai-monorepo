@@ -29,7 +29,6 @@ Infrastructure/
 ├── Telemetry/               OpenTelemetry, logging, metrics setup
 ├── MeepleAiDbContext.cs     EF Core DbContext principale
 ├── MeepleAiDbContextFactory.cs  Design-time factory per migrations
-├── QdrantHealthCheck.cs     Health check per Qdrant
 └── SecretsHelper.cs         Helper per gestione secrets
 ```
 
@@ -317,21 +316,20 @@ public class MeepleAiDbContextFactory : IDesignTimeDbContextFactory<MeepleAiDbCo
 }
 ```
 
-## QdrantHealthCheck
+## Health Checks
 
-**Responsabilità**: Health check per Qdrant vector database.
+**Responsabilità**: PostgreSQL (incluso pgvector) + Redis health monitoring.
 
 ### Registration
 ```csharp
 services.AddHealthChecks()
-    .AddCheck<QdrantHealthCheck>("qdrant")
     .AddNpgSql(configuration.GetConnectionString("Postgres")!, name: "postgres")
     .AddRedis(configuration.GetConnectionString("Redis")!, name: "redis");
 ```
 
 ### Endpoints
 - `/health/live`: Liveness probe (sempre healthy se app è running)
-- `/health/ready`: Readiness probe (checks Postgres, Redis, Qdrant)
+- `/health/ready`: Readiness probe (checks Postgres + pgvector, Redis)
 
 ## SecretsHelper
 
@@ -381,8 +379,7 @@ dotnet ef database update --project src/Api
 {
   "ConnectionStrings": {
     "Postgres": "Host=localhost;Port=5432;Database=meepleai;Username=meepleai;Password=dev123",
-    "Redis": "localhost:6379",
-    "Qdrant": "http://localhost:6333"
+    "Redis": "localhost:6379"
   }
 }
 ```

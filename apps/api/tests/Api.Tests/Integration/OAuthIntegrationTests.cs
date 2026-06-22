@@ -102,7 +102,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
 
         // Apply migrations
         _output("Applying migrations...");
-        await MigrateWithRetry(_dbContext);
+        await TestMigrationHelper.MigrateWithRetryAsync(_dbContext, TestCancellationToken, onRetry: _output);
         _output("✓ Migrations applied");
 
         // Create test data (users for linking tests)
@@ -156,7 +156,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             userId,
             email,
             "New OAuth User",
-            PasswordHash.Create("TempPassword123!"), // Temp password for new OAuth users
+            PasswordHash.Create("TempUnusualPwd123!"), // Temp password for new OAuth users
             Role.User);
 
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -208,7 +208,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             userId,
             email,
             "Existing User",
-            PasswordHash.Create("ExistingPassword123!"),
+            PasswordHash.Create("ExistingUnusualPwd123!"),
             Role.User);
 
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -261,7 +261,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             userId,
             email,
             "Unlink Test User",
-            PasswordHash.Create("Password123!"), // Has password as fallback
+            PasswordHash.Create("UnusualPwd123!"), // Has password as fallback
             Role.User);
 
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -337,7 +337,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             userId,
             email,
             "Single OAuth User",
-            PasswordHash.Create("Password123!"),
+            PasswordHash.Create("UnusualPwd123!"),
             Role.User);
 
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -391,7 +391,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             userId,
             email,
             "Multi OAuth User",
-            PasswordHash.Create("Password123!"),
+            PasswordHash.Create("UnusualPwd123!"),
             Role.User);
 
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -485,7 +485,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             userId,
             email,
             "Progressive OAuth User",
-            PasswordHash.Create("Password123!"),
+            PasswordHash.Create("UnusualPwd123!"),
             Role.User);
 
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -578,7 +578,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             Guid.Parse("00000000-0000-0000-0000-000000000001"),
             new Email("preexisting@test.meepleai.dev"),
             "Pre-existing Test User",
-            PasswordHash.Create("TestPassword123!"),
+            PasswordHash.Create("UniqueT3stPwd!"),
             Role.User);
 
         await scopedUserRepository.AddAsync(testUser, TestCancellationToken);
@@ -623,23 +623,6 @@ public class OAuthIntegrationTests : IAsyncLifetime
 
         // Recreate test data after reset
         await CreateTestDataAsync();
-    }
-
-    private static async Task MigrateWithRetry(MeepleAiDbContext context)
-    {
-        const int maxAttempts = 3;
-        for (var attempt = 1; attempt <= maxAttempts; attempt++)
-        {
-            try
-            {
-                await context.Database.MigrateAsync(TestCancellationToken);
-                return;
-            }
-            catch (NpgsqlException) when (attempt < maxAttempts)
-            {
-                await Task.Delay(TestConstants.Timing.RetryDelay, TestCancellationToken);
-            }
-        }
     }
 
     private static string SanitizeIdentifier(string identifier)

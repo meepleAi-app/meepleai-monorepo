@@ -110,7 +110,7 @@ function ContatoreTool() {
           type="button"
           onClick={() => setCount(c => Math.max(0, c - 1))}
           aria-label="Decrementa"
-          className="h-14 w-14 rounded-full bg-white/10 text-3xl font-bold flex items-center justify-center hover:bg-white/20 active:scale-95"
+          className="h-14 w-14 rounded-full bg-card/10 text-3xl font-bold flex items-center justify-center hover:bg-card/20 active:scale-95"
         >
           −
         </button>
@@ -186,7 +186,7 @@ function TimerTool() {
           type="button"
           onClick={reset}
           aria-label="Reset"
-          className="px-6 py-2 rounded-xl bg-white/10 text-sm font-semibold hover:bg-white/20"
+          className="px-6 py-2 rounded-xl bg-card/10 text-sm font-semibold hover:bg-card/20"
         >
           Reset
         </button>

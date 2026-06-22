@@ -19,7 +19,7 @@
 
 import { useEffect, type JSX } from 'react';
 
-import { ErrorState } from '@/components/ui/v2/shared-game-detail';
+import { ErrorState } from '@/components/ui/detail-layout';
 import { logger } from '@/lib/logger';
 
 interface SharedGameDetailErrorProps {

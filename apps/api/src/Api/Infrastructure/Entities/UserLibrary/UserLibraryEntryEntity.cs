@@ -144,6 +144,25 @@ public class UserLibraryEntryEntity
     /// </summary>
     public byte[]? RowVersion { get; set; }
 
+    /// <summary>
+    /// Issue #1824 (umbrella #1821 L3) — user-uploaded custom cover image for
+    /// this game. Stored in R2 at <c>covers/user/{UserId}/{GameId}/cover.webp</c>.
+    /// Has highest priority in the FE cover-resolution chain (overrides
+    /// PDF-derived cover from L4 and Wikidata from L2).
+    /// Nullable; when null the chain falls through to L4 → L2 → L1.
+    /// </summary>
+    public string? CustomCoverR2Key { get; set; }
+
+    /// <summary>
+    /// Issue #1929 Task C Macro 3a (DEC-B-8, DEC-C-8) — E2E test seeding scope marker.
+    /// Explicit column (NOT shadow property) to avoid EF Core 9 + Npgsql null-after-save bug.
+    /// Stamped on insert by SeedTestLibraryGameCommandHandler; consumed by
+    /// CleanupTestEntitiesCommandHandler.ExecuteDeleteAsync for cascade-delete scope.
+    /// </summary>
+    [System.ComponentModel.DataAnnotations.Schema.Column("test_run_id")]
+    [System.ComponentModel.DataAnnotations.MaxLength(64)]
+    public string? TestRunId { get; set; }
+
     // Navigation properties
     public UserEntity? User { get; set; }
 

@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SP5 A4 · Admin AI / RAG Quality · /admin/ai</title>
+<!--
+  @route /admin/ai + /admin/rag-quality
+  @pattern Split-view: metriche aggregate left 58% · query drill-down right 42%
+  @v2 components: QueryDrillDown · RetrievalChunkList · LatencyBreakdownBar · AdminMetricsPanel
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+<link rel="stylesheet" href="components.css"/>
+<link rel="stylesheet" href="admin-base.css"/>
+<style>
+  .ai-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; align-items: start; }
+  .ai-left { display: flex; flex-direction: column; gap: 16px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .admin-kpi.compact { min-height: 70px; padding: 10px 12px; }
+  .admin-kpi.compact .admin-kpi-value { font-size: 22px; }
+  .admin-kpi.compact .admin-kpi-icon { font-size: 18px; right: 10px; bottom: 8px; }
+
+  .trend-chart {
+    height: 200px; padding: 12px 14px;
+    display: flex; flex-direction: column;
+  }
+  .trend-chart-svg { flex: 1; width: 100%; }
+  .trend-chart-svg .grid line { stroke: var(--border-light); stroke-dasharray: 2 4; }
+  .trend-chart-svg .axis text { font-family: var(--f-mono); font-size: 9px; fill: var(--text-muted); }
+  .trend-chart-svg .ln { fill: none; stroke-width: 2; }
+  .trend-chart-svg .ln-p50 { stroke: hsl(var(--c-chat)); }
+  .trend-chart-svg .ln-p95 { stroke: hsl(var(--c-agent)); }
+  .trend-chart-svg .ln-err { stroke: hsl(var(--c-event)); }
+
+  .legend { display: flex; gap: 12px; font-family: var(--f-mono); font-size: 10px; align-items: center; }
+  .legend-item { display: inline-flex; align-items: center; gap: 5px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+  /* Query drill-down right */
+  .drill {
+    background: var(--bg-card);
+    border: 1px solid hsl(var(--c-agent) / .4);
+    border-radius: 10px;
+    overflow: hidden;
+    position: sticky; top: 76px;
+    max-height: calc(100vh - 100px);
+    display: flex; flex-direction: column;
+  }
+  .drill-head {
+    padding: 12px 14px;
+    background: linear-gradient(180deg, hsl(var(--c-agent) / .12), transparent);
+    border-bottom: 1px solid var(--border-light);
+  }
+  .drill-head .qtag {
+    font-family: var(--f-mono); font-size: 10px; font-weight: 700;
+    color: hsl(var(--c-event)); text-transform: uppercase; letter-spacing: .06em;
+    margin-bottom: 4px;
+  }
+  .drill-head .qtext {
+    font-family: var(--f-display); font-size: 14px; font-weight: 700; line-height: 1.4;
+  }
+  .drill-head .qmeta {
+    font-family: var(--f-mono); font-size: 11px; color: var(--text-muted);
+    margin-top: 6px;
+    display: flex; flex-wrap: wrap; gap: 4px 12px;
+  }
+  .drill-body { padding: 14px; overflow-y: auto; flex: 1; }
+  .drill-section { margin-bottom: 16px; }
+  .drill-section h4 {
+    margin: 0 0 6px;
+    font-family: var(--f-mono); font-size: 10px; font-weight: 700;
+    color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  /* Chunk list */
+  .chunk-row {
+    padding: 10px 12px;
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    margin-bottom: 6px;
+    font-size: 12px;
+    position: relative;
+  }
+  .chunk-row.matched {
+    border-color: hsl(var(--c-kb) / .5);
+    background: hsl(var(--c-kb) / .06);
+  }
+  .chunk-row .crow-top {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 4px;
+  }
+  .chunk-row .src {
+    font-family: var(--f-mono); font-size: 10px;
+    color: hsl(var(--c-kb)); font-weight: 700;
+  }
+  .chunk-row .score {
+    margin-left: auto;
+    font-family: var(--f-mono); font-size: 10px;
+    padding: 1px 6px; border-radius: 4px;
+    background: hsl(var(--c-kb) / .14);
+    color: hsl(var(--c-kb)); font-weight: 700;
+  }
+  .chunk-row .text {
+    color: var(--text-sec); line-height: 1.5;
+  }
+  .chunk-row .text mark {
+    background: hsl(var(--c-agent) / .35);
+    color: var(--text); padding: 0 2px; border-radius: 2px;
+  }
+  .chunk-row .text code {
+    font-family: var(--f-mono); font-size: 11px;
+    background: var(--bg-muted); padding: 0 4px; border-radius: 3px;
+  }
+
+  /* Latency breakdown bar */
+  .latency-bar {
+    height: 28px; display: flex;
+    border-radius: 6px; overflow: hidden;
+    background: var(--bg-muted);
+    border: 1px solid var(--border-light);
+  }
+  .latency-bar .seg {
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--f-mono); font-size: 10px; font-weight: 700;
+    color: #fff; white-space: nowrap; padding: 0 4px;
+  }
+  .latency-bar .seg.retrieval { background: hsl(var(--c-kb)); }
+  .latency-bar .seg.rerank    { background: hsl(var(--c-toolkit)); }
+  .latency-bar .seg.llm       { background: hsl(var(--c-agent)); }
+  .latency-bar .seg.post      { background: hsl(var(--c-chat)); }
+  .latency-table {
+    width: 100%; font-size: 11.5px; margin-top: 8px;
+  }
+  .latency-table td { padding: 3px 0; }
+  .latency-table td:first-child {
+    display: flex; align-items: center; gap: 6px;
+  }
+  .latency-table td:last-child {
+    text-align: right;
+    font-family: var(--f-mono); font-weight: 700;
+  }
+  .latency-table .swatch { width: 10px; height: 10px; border-radius: 2px; }
+
+  /* Worst queries table */
+  .worst-row {
+    display: grid;
+    grid-template-columns: 1fr 70px 70px 70px;
+    gap: 12px; padding: 8px 12px;
+    border-bottom: 1px solid var(--border-light);
+    align-items: center;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .worst-row:last-child { border-bottom: 0; }
+  .worst-row.selected { background: hsl(var(--c-event) / .08); }
+  .worst-row:hover { background: var(--bg-muted); }
+  .worst-row .q {
+    font-family: var(--f-body);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .worst-row .stat {
+    font-family: var(--f-mono); font-size: 11px; text-align: right;
+    color: var(--text-sec); font-weight: 700;
+  }
+  .worst-row .stat.bad { color: hsl(var(--c-event)); }
+  .worst-row .stat.warn { color: hsl(38 90% 50%); }
+</style>
+</head>
+<body class="admin-page">
+
+<div class="admin-mobile-fallback">
+  <span class="em">🖥️</span><h2>Console solo desktop</h2><p>Il drill-down RAG richiede schermo wide.</p>
+</div>
+
+<div class="admin-shell">
+  <div data-admin-nav-mount></div>
+
+  <main>
+    <header class="admin-top">
+      <div>
+        <h1>AI / RAG Quality</h1>
+        <div class="crumbs">Admin · AI · ultime 24h · live polling 5s</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="admin-top-actions">
+        <div class="filter-chip active">Tutti agent <span class="x">▾</span></div>
+        <div class="filter-chip">24h <span class="x">▾</span></div>
+        <button class="btn-admin">⤓ Export</button>
+        <button class="btn-admin primary">+ Nuovo eval</button>
+      </div>
+    </header>
+
+    <div class="admin-body">
+      <div class="ai-grid">
+
+        <!-- Left: aggregate metrics ─────────────────────────── -->
+        <div class="ai-left">
+
+          <!-- KPI row 5 -->
+          <div class="kpi-row">
+            <div class="admin-kpi compact e-chat">
+              <div class="admin-kpi-label">Query / day</div>
+              <div class="admin-kpi-value">14.2<span style="font-size:13px;color:var(--text-muted)">k</span></div>
+              <div class="admin-kpi-trend up">↗ +6%</div>
+              <span class="admin-kpi-icon">💬</span>
+            </div>
+            <div class="admin-kpi compact e-session">
+              <div class="admin-kpi-label">Avg latency</div>
+              <div class="admin-kpi-value">1.32<span style="font-size:13px;color:var(--text-muted)">s</span></div>
+              <div class="admin-kpi-trend down">↗ +180ms</div>
+              <span class="admin-kpi-icon">⏱️</span>
+            </div>
+            <div class="admin-kpi compact e-event">
+              <div class="admin-kpi-label">P95 latency</div>
+              <div class="admin-kpi-value">3.84<span style="font-size:13px;color:var(--text-muted)">s</span></div>
+              <div class="admin-kpi-trend down">↗ sopra SLO 3.0s</div>
+              <span class="admin-kpi-icon">⚠️</span>
+            </div>
+            <div class="admin-kpi compact e-agent">
+              <div class="admin-kpi-label">Cost / day</div>
+              <div class="admin-kpi-value">$348</div>
+              <div class="admin-kpi-trend down">↗ +14%</div>
+              <span class="admin-kpi-icon">💸</span>
+            </div>
+            <div class="admin-kpi compact e-kb">
+              <div class="admin-kpi-label">Hallucination rate</div>
+              <div class="admin-kpi-value">2.4<span style="font-size:13px;color:var(--text-muted)">%</span></div>
+              <div class="admin-kpi-trend up">↘ -0.6%</div>
+              <span class="admin-kpi-icon">🪄</span>
+            </div>
+          </div>
+
+          <!-- Trend chart 7gg -->
+          <section class="admin-panel trend-chart">
+            <div class="admin-panel-head" style="margin: -12px -14px 8px; padding: 8px 14px;">
+              <h3>Latency P50 / P95 / Error rate · ultimi 7gg</h3>
+              <div class="legend">
+                <span class="legend-item"><span class="legend-dot" style="background: hsl(var(--c-chat))"></span>P50</span>
+                <span class="legend-item"><span class="legend-dot" style="background: hsl(var(--c-agent))"></span>P95</span>
+                <span class="legend-item"><span class="legend-dot" style="background: hsl(var(--c-event))"></span>Error % (×10)</span>
+              </div>
+            </div>
+            <svg class="trend-chart-svg" viewBox="0 0 700 160" preserveAspectRatio="none">
+              <g class="grid">
+                <line x1="0" y1="40" x2="700" y2="40"/>
+                <line x1="0" y1="80" x2="700" y2="80"/>
+                <line x1="0" y1="120" x2="700" y2="120"/>
+              </g>
+              <polyline class="ln ln-p50" points="0,110 100,108 200,112 300,105 400,108 500,102 600,104 700,100"/>
+              <polyline class="ln ln-p95" points="0,55 100,60 200,52 300,48 400,38 500,42 600,30 700,28"/>
+              <polyline class="ln ln-err" points="0,140 100,135 200,138 300,142 400,128 500,130 600,132 700,135"/>
+              <g class="axis">
+                <text x="0" y="158">17 mag</text>
+                <text x="100" y="158">18</text>
+                <text x="200" y="158">19</text>
+                <text x="300" y="158">20</text>
+                <text x="400" y="158">21</text>
+                <text x="500" y="158">22</text>
+                <text x="600" y="158">23</text>
+                <text x="680" y="158">oggi</text>
+                <text x="0" y="42">3s</text>
+                <text x="0" y="82">2s</text>
+                <text x="0" y="122">1s</text>
+              </g>
+            </svg>
+          </section>
+
+          <!-- Worst queries -->
+          <section class="admin-panel">
+            <div class="admin-panel-head">
+              <h3>Top 10 worst queries</h3>
+              <span class="meta">low rating · high latency · low confidence</span>
+            </div>
+            <div style="padding: 0 0 4px">
+              <div class="worst-row" style="background: var(--bg); border-bottom: 1px solid var(--border-light); padding: 6px 12px; font-family: var(--f-mono); font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em;">
+                <div>Query</div>
+                <div class="stat" style="color: var(--text-muted)">Latency</div>
+                <div class="stat" style="color: var(--text-muted)">Conf</div>
+                <div class="stat" style="color: var(--text-muted)">Rating</div>
+              </div>
+              <div class="worst-row selected">
+                <div class="q">Se due uccelli predatori finiscono entrambi le carte cibo nello stesso turno, chi viene attivato per primo?</div>
+                <div class="stat bad">4.82s</div>
+                <div class="stat warn">0.42</div>
+                <div class="stat bad">👎</div>
+              </div>
+              <div class="worst-row">
+                <div class="q">Posso giocare due workers nella stessa azione nel turno 4 di Brass Birmingham?</div>
+                <div class="stat warn">3.21s</div>
+                <div class="stat warn">0.54</div>
+                <div class="stat bad">👎</div>
+              </div>
+              <div class="worst-row">
+                <div class="q">Come si calcola il VP della cattedrale a Lancaster in espansione "Nobles"?</div>
+                <div class="stat bad">5.18s</div>
+                <div class="stat bad">0.38</div>
+                <div class="stat bad">👎</div>
+              </div>
+              <div class="worst-row">
+                <div class="q">Lancio dadi simultaneo in Tainted Grail capitolo 7 — cosa succede al pareggio?</div>
+                <div class="stat warn">2.84s</div>
+                <div class="stat warn">0.51</div>
+                <div class="stat warn">👎🤷</div>
+              </div>
+              <div class="worst-row">
+                <div class="q">ISS Vanguard scelta turno comandante con malus equipaggio sotto 3</div>
+                <div class="stat warn">2.94s</div>
+                <div class="stat warn">0.49</div>
+                <div class="stat bad">👎</div>
+              </div>
+              <div class="worst-row">
+                <div class="q">Wingspan power "guadagna 2 cibo se tutti gli avversari hanno meno di 3 uccelli"</div>
+                <div class="stat warn">2.18s</div>
+                <div class="stat warn">0.58</div>
+                <div class="stat warn">👎🤷</div>
+              </div>
+              <div class="worst-row">
+                <div class="q">Ark Nova: zone climatiche delle carte habitat che si sovrappongono</div>
+                <div class="stat bad">4.02s</div>
+                <div class="stat warn">0.46</div>
+                <div class="stat bad">👎</div>
+              </div>
+              <div class="worst-row">
+                <div class="q">Spirit Island: difensori coordinati spirito Vital Strength of the Earth</div>
+                <div class="stat warn">2.62s</div>
+                <div class="stat warn">0.55</div>
+                <div class="stat warn">👎🤷</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Top agents by usage -->
+          <section class="admin-panel">
+            <div class="admin-panel-head">
+              <h3>Top 5 agenti per uso · 24h</h3>
+              <span class="meta">14.247 query totali</span>
+            </div>
+            <div style="padding: 12px 14px">
+              <div style="display: flex; flex-direction: column; gap: 10px">
+                <div style="display:grid; grid-template-columns: 1fr 60px 80px; align-items:center; gap: 8px; font-size: 12px">
+                  <div style="display:flex; align-items: center; gap: 8px">
+                    <span style="font-size:14px">🤖</span>
+                    <span><strong>Wingspan Rules Expert v3</strong> · agent <code style="font-family: var(--f-mono); font-size: 10px">a-wingspan-rules</code></span>
+                  </div>
+                  <div style="font-family: var(--f-mono); font-size: 11px; text-align: right; font-weight: 700">3.847</div>
+                  <div style="background: var(--bg-muted); border-radius: 4px; height: 8px; overflow: hidden"><div style="background: hsl(var(--c-agent)); height: 100%; width: 100%"></div></div>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 60px 80px; align-items:center; gap: 8px; font-size: 12px">
+                  <div style="display:flex; align-items: center; gap: 8px">
+                    <span style="font-size:14px">🤖</span>
+                    <span><strong>Brass Birmingham Rules</strong> · <code style="font-family: var(--f-mono); font-size: 10px">a-brass-rules</code></span>
+                  </div>
+                  <div style="font-family: var(--f-mono); font-size: 11px; text-align: right; font-weight: 700">2.214</div>
+                  <div style="background: var(--bg-muted); border-radius: 4px; height: 8px; overflow: hidden"><div style="background: hsl(var(--c-agent)); height: 100%; width: 58%"></div></div>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 60px 80px; align-items:center; gap: 8px; font-size: 12px">
+                  <div style="display:flex; align-items: center; gap: 8px">
+                    <span style="font-size:14px">🤖</span>
+                    <span><strong>Tainted Grail Companion</strong> · <code style="font-family: var(--f-mono); font-size: 10px">a-tainted-grail</code></span>
+                  </div>
+                  <div style="font-family: var(--f-mono); font-size: 11px; text-align: right; font-weight: 700">1.802</div>
+                  <div style="background: var(--bg-muted); border-radius: 4px; height: 8px; overflow: hidden"><div style="background: hsl(var(--c-agent)); height: 100%; width: 47%"></div></div>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 60px 80px; align-items:center; gap: 8px; font-size: 12px">
+                  <div style="display:flex; align-items: center; gap: 8px">
+                    <span style="font-size:14px">🤖</span>
+                    <span><strong>Spirit Island Strategist</strong> · <code style="font-family: var(--f-mono); font-size: 10px">a-spirit-island</code></span>
+                  </div>
+                  <div style="font-family: var(--f-mono); font-size: 11px; text-align: right; font-weight: 700">1.387</div>
+                  <div style="background: var(--bg-muted); border-radius: 4px; height: 8px; overflow: hidden"><div style="background: hsl(var(--c-agent)); height: 100%; width: 36%"></div></div>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 60px 80px; align-items:center; gap: 8px; font-size: 12px">
+                  <div style="display:flex; align-items: center; gap: 8px">
+                    <span style="font-size:14px">🤖</span>
+                    <span><strong>ISS Vanguard Operations</strong> · <code style="font-family: var(--f-mono); font-size: 10px">a-iss-vanguard</code></span>
+                  </div>
+                  <div style="font-family: var(--f-mono); font-size: 11px; text-align: right; font-weight: 700">982</div>
+                  <div style="background: var(--bg-muted); border-radius: 4px; height: 8px; overflow: hidden"><div style="background: hsl(var(--c-agent)); height: 100%; width: 26%"></div></div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Right: Query drill-down ────────────────────────── -->
+        <aside class="drill">
+          <div class="drill-head">
+            <div class="qtag">⚠️ Low confidence · 0.42</div>
+            <div class="qtext">"Se due uccelli predatori finiscono entrambi le carte cibo nello stesso turno, chi viene attivato per primo?"</div>
+            <div class="qmeta">
+              <span>👤 Marco Rossi</span>
+              <span>🤖 Wingspan Rules Expert v3</span>
+              <span>🕒 2026-05-24 14:08:42</span>
+              <span>🆔 <code>q-7f8a2c</code></span>
+            </div>
+          </div>
+
+          <div class="drill-body">
+
+            <!-- Retrieval -->
+            <div class="drill-section">
+              <h4>📚 Retrieval · 4 chunks dal top-10</h4>
+              <div class="chunk-row matched">
+                <div class="crow-top">
+                  <span class="src">📄 Wingspan-Asia-EN.pdf · p.22</span>
+                  <span class="score">0.84 ✓</span>
+                </div>
+                <div class="text">"<mark>Quando più uccelli predatori sono attivati nello stesso turno</mark>, l'attivazione segue l'ordine di piazzamento da sinistra a destra…"</div>
+              </div>
+              <div class="chunk-row matched">
+                <div class="crow-top">
+                  <span class="src">📄 Wingspan-Asia-EN.pdf · p.22</span>
+                  <span class="score">0.72</span>
+                </div>
+                <div class="text">"…un cibo non disponibile sulla mappa cibo viene preso dal banco. Se ci sono <mark>più predatori in competizione</mark>, il giocatore decide…"</div>
+              </div>
+              <div class="chunk-row">
+                <div class="crow-top">
+                  <span class="src">📄 Wingspan-Oceania-EN.pdf · p.14</span>
+                  <span class="score">0.58</span>
+                </div>
+                <div class="text">"Power di tipo <code>predator</code> si attiva su trigger when activated. In espansione Oceania, l'ordine è importante per i power con interferenza…"</div>
+              </div>
+              <div class="chunk-row">
+                <div class="crow-top">
+                  <span class="src">📄 wingspan-faq-bgg-thread.txt · p.1</span>
+                  <span class="score">0.41 ⚠</span>
+                </div>
+                <div class="text">"Domanda community: 'Cosa succede se due predatori falliscono insieme?' — risposta non ufficiale di Elizabeth Hargrave su BGG…"</div>
+              </div>
+            </div>
+
+            <!-- Response -->
+            <div class="drill-section">
+              <h4>💬 Response · confidence 0.42</h4>
+              <div style="padding: 10px 12px; background: var(--bg-muted); border-left: 3px solid hsl(var(--c-agent)); border-radius: 6px; font-size: 12px; line-height: 1.5">
+                "<strong>Non sono sicuro</strong> — questa specifica casistica non è trattata esplicitamente nel manuale. Il testo a p.22 spiega l'ordine di attivazione standard ma non il caso di esaurimento cibo <em>simultaneo</em>. Confidence bassa (0.42)."
+              </div>
+              <div style="margin-top: 6px; display: flex; gap: 6px; align-items: center; font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">
+                <span>Feedback utente:</span>
+                <span class="status-chip danger">👎 Non utile</span>
+                <span>"Non ha risposto"</span>
+              </div>
+            </div>
+
+            <!-- Latency breakdown -->
+            <div class="drill-section">
+              <h4>⏱ Latency breakdown · 4.82s totali</h4>
+              <div class="latency-bar">
+                <div class="seg retrieval" style="width: 28%">1.35s</div>
+                <div class="seg rerank" style="width: 8%">0.4</div>
+                <div class="seg llm" style="width: 56%">2.7s</div>
+                <div class="seg post" style="width: 8%">0.4</div>
+              </div>
+              <table class="latency-table">
+                <tr><td><span class="swatch" style="background: hsl(var(--c-kb))"></span> Retrieval (Pinecone)</td><td>1.35s</td></tr>
+                <tr><td><span class="swatch" style="background: hsl(var(--c-toolkit))"></span> Rerank (Cohere)</td><td>0.40s</td></tr>
+                <tr><td><span class="swatch" style="background: hsl(var(--c-agent))"></span> LLM (GPT-4o-mini)</td><td>2.70s</td></tr>
+                <tr><td><span class="swatch" style="background: hsl(var(--c-chat))"></span> Postprocess + stream</td><td>0.37s</td></tr>
+              </table>
+            </div>
+
+            <!-- Debug -->
+            <div class="drill-section">
+              <h4>🔬 Debug</h4>
+              <dl class="kv-grid" style="display: grid; grid-template-columns: 100px 1fr; gap: 4px 10px; font-size: 11.5px; font-family: var(--f-mono)">
+                <dt style="color: var(--text-muted)">Tokens IN</dt><dd>2.847 (sys 412 · ret 2.218 · q 217)</dd>
+                <dt style="color: var(--text-muted)">Tokens OUT</dt><dd>184</dd>
+                <dt style="color: var(--text-muted)">Cost</dt><dd>$0.0042</dd>
+                <dt style="color: var(--text-muted)">Cache hit</dt><dd>no (cold)</dd>
+                <dt style="color: var(--text-muted)">Reranker</dt><dd>cohere-rerank-3.5</dd>
+                <dt style="color: var(--text-muted)">Embedding</dt><dd>text-embedding-3-large</dd>
+                <dt style="color: var(--text-muted)">Index version</dt><dd>v2024.11.18</dd>
+              </dl>
+            </div>
+
+            <!-- Actions -->
+            <div class="drill-section" style="display: flex; gap: 6px; flex-wrap: wrap">
+              <button class="btn-admin sm primary">▶ Re-run con KB attuale</button>
+              <button class="btn-admin sm">▶ Re-run con KB beta</button>
+              <button class="btn-admin sm">🚩 Flag hallucination</button>
+              <button class="btn-admin sm">📋 Copia query</button>
+              <button class="btn-admin sm">📨 Notifica autore</button>
+            </div>
+
+          </div>
+        </aside>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="admin-nav.js"></script>
+<script>renderAdminNav('ai');</script>
+</body>
+</html>

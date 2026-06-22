@@ -6,6 +6,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using MediatR;
@@ -604,18 +605,17 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
     private async Task CreateTestChatThreadAsync(Guid threadId, Guid userId, Guid gameId)
     {
         // First create a game if it doesn't exist
-        var game = await _dbContext!.Games.FindAsync([gameId], TestCancellationToken);
+        var game = await _dbContext!.SharedGames.FindAsync([gameId], TestCancellationToken);
         if (game == null)
         {
-            game = new GameEntity
+            game = new SharedGameEntity
             {
                 Id = gameId,
-                Name = $"Test Game {gameId:N}",
-                Publisher = "Test Publisher",
+                Title = $"Test Game {gameId:N}",
                 YearPublished = 2024,
                 CreatedAt = DateTime.UtcNow
             };
-            _dbContext.Games.Add(game);
+            _dbContext.SharedGames.Add(game);
             await _dbContext.SaveChangesAsync(TestCancellationToken);
         }
 

@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.UserLibrary.Application.EventHandlers;
 /// <summary>
 /// Handles PrivatePdfRemovedEvent to cleanup vectors from private_rules collection.
 /// Issue #3651: Ensures vector data isolation is maintained when private PDFs are removed.
-/// NOTE: Vector store (Qdrant) has been removed — this handler is now a no-op.
+/// NOTE: Legacy vector cleanup handler — pgvector cleanup is handled inline in DeletePdf.
 /// </summary>
 internal sealed class PrivatePdfRemovedEventHandler : INotificationHandler<PrivatePdfRemovedEvent>
 {
@@ -20,9 +20,8 @@ internal sealed class PrivatePdfRemovedEventHandler : INotificationHandler<Priva
 
     public Task Handle(PrivatePdfRemovedEvent notification, CancellationToken cancellationToken)
     {
-        // Vector store (Qdrant) has been removed — vector cleanup is no longer needed.
         _logger.LogInformation(
-            "PrivatePdfRemovedEvent received: User={UserId}, PDF={PdfId}, LibraryEntry={EntryId} (vector cleanup skipped — Qdrant removed)",
+            "PrivatePdfRemovedEvent received: User={UserId}, PDF={PdfId}, LibraryEntry={EntryId} (vector cleanup skipped  (legacy path))",
             notification.UserId, notification.PdfDocumentId, notification.LibraryEntryId);
 
         return Task.CompletedTask;

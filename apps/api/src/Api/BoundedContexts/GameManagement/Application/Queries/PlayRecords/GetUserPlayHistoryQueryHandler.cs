@@ -1,6 +1,8 @@
 using Api.BoundedContexts.GameManagement.Application.DTOs.PlayRecords;
 using Api.BoundedContexts.GameManagement.Application.Queries.PlayRecords;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities.GameManagement;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -42,24 +44,39 @@ internal class GetUserPlayHistoryQueryHandler : IQueryHandler<GetUserPlayHistory
         // Get total count
         var totalCount = await dbQuery.CountAsync(cancellationToken).ConfigureAwait(false);
 
-        // Apply pagination and projection
-        var records = await dbQuery
+        // Materialize with players+scores so we can compute WinnerPlayerIds and OutcomeType.
+        // Single Include chain — no N+1 (EF loads scores in a single subsequent query per page).
+        var rawRecords = await dbQuery
             .OrderByDescending(r => r.SessionDate)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(r => new PlayRecordSummaryDto(
-                r.Id,
-                r.GameName,
-                r.SessionDate,
-                r.Duration,
-                (Domain.Enums.PlayRecordStatus)r.Status,
-                r.Players.Count
-            ))
+            .Include(r => r.Players)
+                .ThenInclude(p => p.Scores)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+
+        var records = rawRecords
+            .Select(r => MapToSummary(r))
+            .ToList();
 
         var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 
         return new PlayHistoryResponse(records, totalCount, page, pageSize, totalPages);
     }
+
+    /// <summary>
+    /// Maps an entity to <see cref="PlayRecordSummaryDto"/>, computing outcome fields via the shared helper.
+    /// </summary>
+    private static PlayRecordSummaryDto MapToSummary(PlayRecordEntity r) =>
+        new(
+            r.Id,
+            r.GameName,
+            r.SessionDate,
+            r.Duration,
+            (Domain.Enums.PlayRecordStatus)r.Status,
+            r.Players.Count,
+            r.GameId,
+            PlayRecordOutcomeCalculator.WinnerPlayerIds(r.Players),
+            PlayRecordOutcomeCalculator.OutcomeType(r.Players)
+        );
 }

@@ -1,0 +1,124 @@
+# Self-Hosted GitHub Actions Runner Availability Alerts
+#
+# Issue #2019 — staging runner OOM-killed during pnpm install on 2026-06-08.
+# Background: a self-hosted runner going offline causes workflow runs to
+# queue indefinitely. GitHub does not surface offline runners as alerts.
+# Until 2026-06-08 the only signal was a maintainer manually noticing the
+# deploy was stuck — discovery latency was 4h25min.
+#
+# These alerts close that observability gap:
+#   - RunnerOffline (warning, 10m): the systemd unit reports inactive.
+#   - RunnerOfflineCritical (critical, 30m): the runner has been down so
+#     long that scheduled cron workflows have started to queue up.
+#   - RunnerMemoryNearLimit (warning): the runner's cgroup memory.current
+#     is within 80% of MemoryMax (set to 3G by the systemd override).
+#
+# Prerequisites:
+#   - node_exporter scraped from infra/runner/prometheus-runner.yml.
+#   - cAdvisor / cgroup-v2 metrics for `container_memory_*` on the runner
+#     service (already enabled via the runner-side monitoring stack).
+#
+# Tied to:
+#   - infra/runner/systemd-overrides/10-memory-limits.conf (MemoryMax=3G)
+#   - infra/runner/monitor.sh (canary script, exports `runner_active{}` gauge)
+
+groups:
+  - name: runner_availability_warning
+    interval: 1m
+    rules:
+      # WARNING: self-hosted runner offline for >10 min.
+      # `up{job="github_runner_local"}` is emitted by the node_exporter
+      # textfile collector configured to read monitor.sh JSON output.
+      # If the runner service is `inactive` or `failed`, the gauge is 0.
+      - alert: RunnerOffline
+        expr: |
+          up{job="github_runner_local"} == 0
+        for: 10m
+        labels:
+          severity: warning
+          service: github-runner
+          category: ci
+          component: infrastructure
+        annotations:
+          summary: "Self-hosted runner offline >10min"
+          description: |
+            The GitHub Actions self-hosted runner `{{ $labels.instance }}` has been
+            offline for >10 minutes. Workflow runs requiring this runner are queued
+            indefinitely and will not surface as failures in GitHub.
+
+            Immediate actions:
+              1. SSH to the runner host: `ssh meepleai-staging`
+              2. Inspect the service: `sudo systemctl status actions.runner.*`
+              3. If killed by OOM: check journalctl for `oom-kill` events.
+              4. Recovery: `sudo systemctl start actions.runner.*` (auto-restart
+                 is now configured but may not engage if oom-score is wrong).
+              5. Long-term: verify `infra/runner/systemd-overrides/10-memory-limits.conf`
+                 is installed (Issue #2019).
+
+            Refs:
+              - Issue: https://github.com/meepleAi-app/meepleai-monorepo/issues/2019
+              - Recovery runbook: docs/for-developers/operations/operations-manual.md
+                                 § Self-Hosted Runner Recovery
+          dashboard_url: "http://localhost:3001/d/runner"
+
+      # WARNING: runner memory at >80% of MemoryMax for >5min.
+      # The override caps MemoryMax at 3G (= 3221225472 bytes). If memory.current
+      # holds above 2.4GB the next pnpm install spike will hit the cap and
+      # systemd will kill the runner. Restart=on-failure will bring it back in
+      # 30s, but this alert lets us tune the cap or shed Docker load *before*
+      # the kill.
+      - alert: RunnerMemoryNearLimit
+        expr: |
+          (container_memory_working_set_bytes{name=~"actions.runner.*"}
+           / container_spec_memory_limit_bytes{name=~"actions.runner.*"}) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: github-runner
+          category: resources
+          component: infrastructure
+        annotations:
+          summary: "Self-hosted runner memory >80% of MemoryMax"
+          description: |
+            Runner cgroup memory usage: {{ $value | humanizePercentage }} of MemoryMax (3G).
+            The next pnpm install spike will likely trip the cgroup kill.
+            Investigate concurrent Docker workload on the host:
+              ssh meepleai-staging "docker stats --no-stream"
+          dashboard_url: "http://localhost:3001/d/runner"
+
+  # CRITICAL: separate group so the route can match severity=critical and
+  # send immediate notification (alertmanager.yml routes critical with
+  # group_wait=0s).
+  - name: runner_availability_critical
+    interval: 30s
+    rules:
+      # CRITICAL: runner offline for >30 min. By this point at least one
+      # scheduled cron workflow (nightly smoke, weekly bake) has missed its
+      # window. Page on-call.
+      - alert: RunnerOfflineCritical
+        expr: |
+          up{job="github_runner_local"} == 0
+        for: 30m
+        labels:
+          severity: critical
+          service: github-runner
+          category: ci
+          component: infrastructure
+        annotations:
+          summary: "Self-hosted runner offline >30min — scheduled workflows missing"
+          description: |
+            The runner has been offline for >30 minutes. At this point at least
+            one scheduled cron workflow (nightly smoke or weekly bake) has
+            missed its window. CI/CD pipeline is effectively halted for any
+            workflow requiring the self-hosted runner.
+
+            This is the failure mode that took 4h25min to detect on 2026-06-08
+            (incident #2019). The systemd override + monitor.sh + this alert
+            close that detection gap to <30 min.
+
+            Immediate actions:
+              1. SSH and restart: `ssh meepleai-staging "sudo systemctl restart actions.runner.*"`
+              2. If restart fails: page #incident channel; check disk free
+                 (`df -h`) and OOM journal (`journalctl -u actions.runner.* --since '1 hour ago' | grep -i oom`).
+              3. Open follow-up issue if root cause differs from #2019.
+          dashboard_url: "http://localhost:3001/d/runner"

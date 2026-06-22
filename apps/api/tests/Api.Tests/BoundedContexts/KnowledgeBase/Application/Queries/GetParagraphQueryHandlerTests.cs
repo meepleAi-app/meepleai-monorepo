@@ -15,9 +15,11 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Queries;
 /// Unit tests for <see cref="GetParagraphQueryHandler"/>.
 ///
 /// Coverage:
-///   - Happy path: numbered lookup returns text directly (no fallback).
+///   - Happy path (ByPage): numbered lookup returns text directly (no fallback).
+///   - Happy path (ByParagraph): paragraph-number lookup returns matching page text (#747 PR-B).
+///   - Dispatch: handler routes ByParagraphNumber to the correct repo method.
 ///   - Authorization: batch not owned by the requesting user → <see cref="NotFoundException"/>.
-///   - Validation: page number &lt; 1 → <see cref="ArgumentOutOfRangeException"/> (eager guard).
+///   - Validation: page/paragraph number &lt; 1 → <see cref="ArgumentOutOfRangeException"/> (eager guard).
 ///   - Page overflow: page number exceeds batch total → <see cref="ArgumentOutOfRangeException"/>.
 ///
 /// NOT covered here (deferred to integration tests):
@@ -28,7 +30,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Queries;
 ///     tests against a real DB + embedding service instead.
 ///     See: docs/superpowers/plans/2026-05-04-libro-game-assistant-phase3-detailed.md §G4.
 ///
-/// Libro Game AI Assistant MVP Phase 3 — G4.
+/// Libro Game AI Assistant MVP Phase 3 — G4. Issue #747 PR-B.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
@@ -37,11 +39,11 @@ public sealed class GetParagraphQueryHandlerTests
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     // -----------------------------------------------------------------------
-    // Happy path — numbered lookup returns OCR text without fallback
+    // Happy path — ByPageNumber numbered lookup returns OCR text without fallback
     // -----------------------------------------------------------------------
 
     [Fact]
-    public async Task Handle_ValidPageWithText_ReturnsParagraphWithoutFallback()
+    public async Task Handle_ByPage_ValidPageWithText_ReturnsParagraphWithoutFallback()
     {
         // Arrange
         var uploadId = Guid.NewGuid();
@@ -61,7 +63,7 @@ public sealed class GetParagraphQueryHandlerTests
 
         // Act
         var result = await sut.Handle(
-            new GetParagraphQuery(uploadId, pageNumber, userId),
+            GetParagraphQuery.ByPage(uploadId, pageNumber, userId),
             Token);
 
         // Assert
@@ -69,8 +71,53 @@ public sealed class GetParagraphQueryHandlerTests
         result.Text.Should().Be(expectedText);
         result.FallbackUsed.Should().BeFalse();
         result.FallbackMethod.Should().BeNull();
+        result.ParagraphNumber.Should().BeNull("ByPage lookups do not surface a paragraph number");
 
         // GetByIdAsync must NOT be called when numbered text is found — no extra round-trip.
+        repoMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+        // ByPage lookup must NOT touch the paragraph-number repo path.
+        repoMock.Verify(r => r.GetPageTextByParagraphNumberAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // -----------------------------------------------------------------------
+    // Happy path — ByParagraphNumber dispatches to the new repo method (#747)
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task Handle_ByParagraph_MatchingParagraph_ReturnsPageTextWithParagraphNumber()
+    {
+        // Arrange
+        var uploadId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        const int paragraphNumber = 42;
+        const int matchingPhysicalPage = 7;
+        const string expectedText = "Paragrafo 42: nei boschi di Avalon ti imbatti in un cavaliere.";
+
+        var repoMock = new Mock<IPhotoBatchUploadRepository>();
+        repoMock
+            .Setup(r => r.BelongsToUserAsync(uploadId, userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        repoMock
+            .Setup(r => r.GetPageTextByParagraphNumberAsync(uploadId, paragraphNumber, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((matchingPhysicalPage, (string?)expectedText));
+
+        var sut = CreateHandler(repoMock.Object);
+
+        // Act
+        var result = await sut.Handle(
+            GetParagraphQuery.ByParagraph(uploadId, paragraphNumber, userId),
+            Token);
+
+        // Assert
+        result.PageNumber.Should().Be(matchingPhysicalPage, "the response surfaces the physical page that contained the matched paragraph");
+        result.ParagraphNumber.Should().Be(paragraphNumber, "ByParagraph lookups echo the requested paragraph number for the client");
+        result.Text.Should().Be(expectedText);
+        result.FallbackUsed.Should().BeFalse();
+        result.FallbackMethod.Should().BeNull();
+
+        // ByParagraph lookup must NOT touch the page-number repo path.
+        repoMock.Verify(r => r.GetPageTextAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+        // Numbered match short-circuits the semantic fallback (no GetByIdAsync call).
         repoMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -94,7 +141,7 @@ public sealed class GetParagraphQueryHandlerTests
 
         // Act
         Func<Task> act = () => sut.Handle(
-            new GetParagraphQuery(uploadId, 1, userId),
+            GetParagraphQuery.ByPage(uploadId, 1, userId),
             Token);
 
         // Assert
@@ -103,6 +150,7 @@ public sealed class GetParagraphQueryHandlerTests
 
         // No page text lookup should occur after the ownership check fails.
         repoMock.Verify(r => r.GetPageTextAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+        repoMock.Verify(r => r.GetPageTextByParagraphNumberAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     // -----------------------------------------------------------------------
@@ -113,17 +161,35 @@ public sealed class GetParagraphQueryHandlerTests
     [InlineData(0)]
     [InlineData(-1)]
     [InlineData(int.MinValue)]
-    public async Task Handle_InvalidPageNumber_ThrowsArgumentOutOfRange(int invalidPage)
+    public async Task Handle_ByPage_InvalidPageNumber_ThrowsArgumentOutOfRange(int invalidPage)
     {
         // Arrange — repo is never reached, so no setup required.
         var sut = CreateHandler(new Mock<IPhotoBatchUploadRepository>().Object);
 
         // Act
         Func<Task> act = () => sut.Handle(
-            new GetParagraphQuery(Guid.NewGuid(), invalidPage, Guid.NewGuid()),
+            GetParagraphQuery.ByPage(Guid.NewGuid(), invalidPage, Guid.NewGuid()),
             Token);
 
-        // Assert — ArgumentOutOfRangeException.ThrowIfLessThan produces a message containing the value.
+        // Assert
+        await act.Should().ThrowAsync<ArgumentOutOfRangeException>();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(int.MinValue)]
+    public async Task Handle_ByParagraph_InvalidParagraphNumber_ThrowsArgumentOutOfRange(int invalidParagraph)
+    {
+        // Arrange
+        var sut = CreateHandler(new Mock<IPhotoBatchUploadRepository>().Object);
+
+        // Act
+        Func<Task> act = () => sut.Handle(
+            GetParagraphQuery.ByParagraph(Guid.NewGuid(), invalidParagraph, Guid.NewGuid()),
+            Token);
+
+        // Assert
         await act.Should().ThrowAsync<ArgumentOutOfRangeException>();
     }
 
@@ -132,7 +198,7 @@ public sealed class GetParagraphQueryHandlerTests
     // -----------------------------------------------------------------------
 
     [Fact]
-    public async Task Handle_PageExceedsBatchTotal_ThrowsArgumentOutOfRange()
+    public async Task Handle_ByPage_PageExceedsBatchTotal_ThrowsArgumentOutOfRange()
     {
         // Arrange
         var uploadId = Guid.NewGuid();
@@ -157,7 +223,7 @@ public sealed class GetParagraphQueryHandlerTests
 
         // Act
         Func<Task> act = () => sut.Handle(
-            new GetParagraphQuery(uploadId, outOfRangePage, userId),
+            GetParagraphQuery.ByPage(uploadId, outOfRangePage, userId),
             Token);
 
         // Assert — ThrowIfGreaterThan produces a message containing the out-of-range value.
@@ -175,8 +241,8 @@ public sealed class GetParagraphQueryHandlerTests
     ///
     /// The <c>SearchQueryHandler</c> parameter is a concrete class; see class-level doc for
     /// why its semantic-fallback invocation is deferred to integration tests.
-    /// The handler is passed as <c>null!</c> and should not be reached by any of the four
-    /// covered unit-test paths (all terminate before reaching the semantic-search call site).
+    /// The handler is passed as <c>null!</c> and should not be reached by any of the covered
+    /// unit-test paths.
     /// </summary>
     private static GetParagraphQueryHandler CreateHandler(IPhotoBatchUploadRepository repo)
     {

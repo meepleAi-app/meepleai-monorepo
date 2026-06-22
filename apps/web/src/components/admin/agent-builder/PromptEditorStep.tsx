@@ -7,13 +7,8 @@
 
 import { useState } from 'react';
 
-import dynamic from 'next/dynamic';
-
-const Editor = dynamic(() => import('@monaco-editor/react'), {
-  ssr: false,
-  loading: () => <div className="h-64 animate-pulse rounded-lg bg-muted" />,
-});
 import { Plus, Trash2 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import {
@@ -25,6 +20,11 @@ import {
 } from '@/components/ui/overlays/select';
 import { Label } from '@/components/ui/primitives/label';
 import type { AgentForm, PromptTemplate } from '@/lib/schemas/agent-definition-schema';
+
+const Editor = dynamic(() => import('@monaco-editor/react'), {
+  ssr: false,
+  loading: () => <div className="h-64 animate-pulse rounded-lg bg-muted" />,
+});
 
 interface PromptEditorStepProps {
   agent: AgentForm;

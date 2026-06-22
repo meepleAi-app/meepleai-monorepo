@@ -45,7 +45,7 @@ export function RagAccessBadge({ hasRagAccess, isRagPublic }: RagAccessBadgeProp
 
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600"
+      className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
       data-testid="rag-badge-locked"
       title="Dichiara il possesso per sbloccare"
     >

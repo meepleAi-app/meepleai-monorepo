@@ -27,7 +27,7 @@ const loginMessages: Record<string, string> = {
   'auth.visibility.hide': 'Nascondi password',
   'validation.emailRequired': 'Email is required',
   'validation.invalidEmail': 'Invalid email',
-  'validation.passwordMin': 'Password must be at least 8 characters',
+  'validation.passwordMin': 'Password must be at least 12 characters',
   'validation.passwordMax': 'Password must be at most 100 characters',
 };
 
@@ -61,13 +61,13 @@ describe('LoginForm (v2 primitives)', () => {
     renderWithIntl(<LoginForm onSubmit={handleSubmit} />);
 
     await user.type(screen.getByLabelText(/email/i), 'user@example.com');
-    await user.type(screen.getByLabelText('Password'), 'SecurePass1');
+    await user.type(screen.getByLabelText('Password'), 'SecurePassword1');
     await user.click(screen.getByRole('button', { name: /accedi/i }));
 
     await waitFor(() => {
       expect(handleSubmit).toHaveBeenCalledWith({
         email: 'user@example.com',
-        password: 'SecurePass1',
+        password: 'SecurePassword1',
       });
     });
   });

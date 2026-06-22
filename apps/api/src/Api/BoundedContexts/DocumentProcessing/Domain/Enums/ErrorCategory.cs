@@ -25,7 +25,7 @@ public enum ErrorCategory
     Quota = 3,
 
     /// <summary>
-    /// External service unavailable: embedding service down, Qdrant unreachable.
+    /// External service unavailable: embedding service down, pgvector unreachable.
     /// Retry strategy: Wait for service recovery, medium success rate.
     /// </summary>
     Service = 4,

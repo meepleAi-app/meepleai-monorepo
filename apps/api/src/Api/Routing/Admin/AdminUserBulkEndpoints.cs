@@ -132,14 +132,14 @@ internal static class AdminUserBulkEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("SuperAdmin {AdminId} initiating bulk password reset for {Count} users",
-            session!.User!.Id, request.UserIds.Count);
+            session!.Principal!.EffectiveActor.Id, request.UserIds.Count);
 
         try
         {
             var command = new BulkPasswordResetCommand(
                 request.UserIds,
                 request.NewPassword,
-                session.User!.Id
+                session.Principal!.EffectiveActor.Id
             );
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -147,7 +147,7 @@ internal static class AdminUserBulkEndpoints
         }
         catch (ForbiddenException ex)
         {
-            logger.LogWarning(ex, "Forbidden: bulk password reset denied for {AdminId}", session.User!.Id);
+            logger.LogWarning(ex, "Forbidden: bulk password reset denied for {AdminId}", session.Principal!.EffectiveActor.Id);
             return Results.Json(new { error = "forbidden", message = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
         }
     }
@@ -163,14 +163,14 @@ internal static class AdminUserBulkEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} initiating bulk role change for {Count} users to role {Role}",
-            session!.User!.Id, request.UserIds.Count, request.NewRole);
+            session!.Principal!.EffectiveActor.Id, request.UserIds.Count, request.NewRole);
 
         try
         {
             var command = new BulkRoleChangeCommand(
                 request.UserIds,
                 request.NewRole,
-                session.User!.Id
+                session.Principal!.EffectiveActor.Id
             );
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -178,7 +178,7 @@ internal static class AdminUserBulkEndpoints
         }
         catch (ForbiddenException ex)
         {
-            logger.LogWarning(ex, "Forbidden: bulk role change denied for {AdminId}", session.User!.Id);
+            logger.LogWarning(ex, "Forbidden: bulk role change denied for {AdminId}", session.Principal!.EffectiveActor.Id);
             return Results.Json(new { error = "forbidden", message = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
         }
     }
@@ -197,11 +197,11 @@ internal static class AdminUserBulkEndpoints
         var csvContent = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
 
         logger.LogInformation("Admin {AdminId} initiating bulk user import from CSV",
-            session!.User!.Id);
+            session!.Principal!.EffectiveActor.Id);
 
         var command = new BulkImportUsersCommand(
             csvContent,
-            session.User!.Id
+            session.Principal!.EffectiveActor.Id
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -220,7 +220,7 @@ internal static class AdminUserBulkEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} exporting users to CSV with filters: Role={Role}, Search={Search}",
-            session!.User!.Id, role, search);
+            session!.Principal!.EffectiveActor.Id, role, search);
 
         var query = new BulkExportUsersQuery(role, search);
         var csv = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -239,10 +239,10 @@ internal static class AdminUserBulkEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        logger.LogInformation("Admin {AdminId} suspending user {UserId}", session!.User!.Id, id);
+        logger.LogInformation("Admin {AdminId} suspending user {UserId}", session!.Principal!.EffectiveActor.Id, id);
 
-        // Issue #2886: Get admin ID for audit logging (session.User.Id is already Guid)
-        var requesterId = session.User.Id;
+        // Issue #2886: Get admin ID for audit logging (session.Principal!.EffectiveActor.Id is already Guid)
+        var requesterId = session.Principal!.EffectiveActor.Id;
 
         try
         {
@@ -268,10 +268,10 @@ internal static class AdminUserBulkEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        logger.LogInformation("Admin {AdminId} unsuspending user {UserId}", session!.User!.Id, id);
+        logger.LogInformation("Admin {AdminId} unsuspending user {UserId}", session!.Principal!.EffectiveActor.Id, id);
 
-        // Issue #2886: Get admin ID for audit logging (session.User.Id is already Guid)
-        var requesterId = session.User.Id;
+        // Issue #2886: Get admin ID for audit logging (session.Principal!.EffectiveActor.Id is already Guid)
+        var requesterId = session.Principal!.EffectiveActor.Id;
 
         try
         {
@@ -303,13 +303,13 @@ internal static class AdminUserBulkEndpoints
             return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
         }
 
-        logger.LogInformation("Admin {AdminId} unlocking account {UserId}", session!.User!.Id, userId);
+        logger.LogInformation("Admin {AdminId} unlocking account {UserId}", session!.Principal!.EffectiveActor.Id, userId);
 
         try
         {
-            var command = new UnlockAccountCommand(userId, session.User.Id);
+            var command = new UnlockAccountCommand(userId, session.Principal!.EffectiveActor.Id);
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
-            logger.LogInformation("Account {UserId} unlocked successfully by admin {AdminId}", userId, session.User.Id);
+            logger.LogInformation("Account {UserId} unlocked successfully by admin {AdminId}", userId, session.Principal!.EffectiveActor.Id);
             return Results.Ok(result);
         }
         catch (NotFoundException ex)
@@ -340,7 +340,7 @@ internal static class AdminUserBulkEndpoints
             return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
         }
 
-        logger.LogInformation("Admin {AdminId} checking lockout status for user {UserId}", session!.User!.Id, userId);
+        logger.LogInformation("Admin {AdminId} checking lockout status for user {UserId}", session!.Principal!.EffectiveActor.Id, userId);
 
         try
         {

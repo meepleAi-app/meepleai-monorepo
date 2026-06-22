@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 'use client';
 
 /**
@@ -45,21 +46,21 @@ export function EntityLinkBadge({
         // Glass morphism style matching design spec
         'inline-flex items-center gap-1',
         'rounded-full px-2 py-0.5',
-        'bg-white/80 backdrop-blur-[8px]',
-        'border border-white/50',
+        'bg-card/80 backdrop-blur-[8px]',
+        'border border-border',
         'shadow-sm',
         // Typography
-        'text-xs font-semibold font-nunito text-slate-700',
+        'text-xs font-semibold font-nunito text-foreground',
         // Interaction
         'cursor-pointer transition-all duration-200',
-        'hover:scale-105 hover:shadow-md hover:bg-white/90',
+        'hover:scale-105 hover:shadow-md hover:bg-card/90',
         'focus:outline-none focus:ring-2 focus:ring-slate-400/50 focus:ring-offset-1',
         className
       )}
       aria-label={`${count} connection${count !== 1 ? 's' : ''} — view links`}
       data-testid={testId ?? 'entity-link-badge'}
     >
-      <LinkIcon className="h-3 w-3 text-slate-500" aria-hidden="true" />
+      <LinkIcon className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
       <span>{count}</span>
     </button>
   );

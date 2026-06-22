@@ -71,7 +71,7 @@ internal sealed class AddRulebookCommandHandler : ICommandHandler<AddRulebookCom
         var gameId = command.GameId;
 
         // Step 0: Validate game exists and user owns it
-        var game = await _db.Games
+        var game = await _db.SharedGames
             .AsNoTracking()
             .FirstOrDefaultAsync(g => g.Id == gameId, cancellationToken)
             .ConfigureAwait(false);
@@ -208,7 +208,7 @@ internal sealed class AddRulebookCommandHandler : ICommandHandler<AddRulebookCom
         using (var stream = file.OpenReadStream())
         {
             storageResult = await _blobStorageService
-                .StoreAsync(stream, fileName, gameId.ToString(), cancellationToken)
+                .StoreAsync(stream, fileName, BlobCategory.Pdf, gameId.ToString(), cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -264,7 +264,7 @@ internal sealed class AddRulebookCommandHandler : ICommandHandler<AddRulebookCom
             // Clean up on quota failure
             try
             {
-                await _blobStorageService.DeleteAsync(storageResult.FileId!, gameId.ToString(), cancellationToken).ConfigureAwait(false);
+                await _blobStorageService.DeleteAsync(storageResult.FileId!, BlobCategory.Pdf, gameId.ToString(), cancellationToken).ConfigureAwait(false);
                 _db.PdfDocuments.Remove(pdfDoc);
                 await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             }

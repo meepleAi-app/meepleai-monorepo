@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 /**
  * RequireRole Client Component
  *
@@ -139,7 +140,7 @@ export function RequireRole({
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-gray-600">Verifica autorizzazioni...</p>
+          <p className="text-muted-foreground">Verifica autorizzazioni...</p>
         </div>
       </div>
     );

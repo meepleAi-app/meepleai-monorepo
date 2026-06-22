@@ -28,9 +28,9 @@ internal sealed class GetGameKbStatusesQueryHandler
         CancellationToken cancellationToken)
     {
         // ── 1. Get all games ──────────────────────────────────────────────────
-        var games = await _db.Games
+        var games = await _db.SharedGames
             .AsNoTracking()
-            .Select(g => new { g.Id, g.Name })
+            .Select(g => new { g.Id, g.Title })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -64,7 +64,7 @@ internal sealed class GetGameKbStatusesQueryHandler
                 {
                     return new GameKbStatusDto(
                         GameId: g.Id,
-                        GameName: g.Name,
+                        GameName: g.Title,
                         KbStatus: "none",
                         DocumentCount: 0,
                         TotalChunks: 0,
@@ -80,7 +80,7 @@ internal sealed class GetGameKbStatusesQueryHandler
 
                 return new GameKbStatusDto(
                     GameId: g.Id,
-                    GameName: g.Name,
+                    GameName: g.Title,
                     KbStatus: status,
                     DocumentCount: stats.CompletedDocs,
                     TotalChunks: stats.TotalChunks,

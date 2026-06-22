@@ -18,6 +18,13 @@ internal sealed record DeleteRequestDto(
 /// Issue #593 (Wave A.3a): Extended with aggregate counts and flags for V2 /shared-games mockup.
 /// New fields are defaulted to preserve backwards compatibility with existing callers that
 /// don't need aggregates (e.g. internal admin queries, legacy API consumers).
+///
+/// Issue #2123 (BGG ToS compliance): <see cref="ImageUrl"/> and <see cref="ThumbnailUrl"/>
+/// are tombstone fields — always emitted as empty string post-Phase A; FE consumers
+/// MUST read <see cref="CoverUrl"/> instead (R2 presigned URL resolved server-side by
+/// <c>CoverUrlResolver</c>). The fields are kept on the DTO for binary-compat with
+/// external SDK consumers and will be removed in a follow-up PR after one release
+/// cycle of deprecation telemetry.
 /// </summary>
 public sealed record SharedGameDto(
     Guid Id,
@@ -31,8 +38,12 @@ public sealed record SharedGameDto(
     int MinAge,
     decimal? ComplexityRating,
     decimal? AverageRating,
+#pragma warning disable S1133 // Removal scheduled after a deprecation telemetry window — see #2123 follow-up.
+    [property: Obsolete("Issue #2123 — read CoverUrl instead. ImageUrl is now always empty post-Phase A nullify migration; the property is kept for binary backwards compat only.", error: false)]
     string ImageUrl,
+    [property: Obsolete("Issue #2123 — read CoverUrl instead. ThumbnailUrl is now always empty post-Phase A nullify migration; the property is kept for binary backwards compat only.", error: false)]
     string ThumbnailUrl,
+#pragma warning restore S1133
     GameStatus Status,
     DateTime CreatedAt,
     DateTime? ModifiedAt,
@@ -44,7 +55,20 @@ public sealed record SharedGameDto(
     int NewThisWeekCount = 0,
     int ContributorsCount = 0,
     bool IsTopRated = false,
-    bool IsNew = false);
+    bool IsNew = false,
+    // Issue #1852 (Gap A): cover URL resolved via L4 → L2 priority; null when no cover available or storage unavailable.
+    string? CoverUrl = null,
+    // Issue #2339 (sub-PR 1/3): non-EN translations; null defaults treated as empty by FE consumers.
+    // Enriched by GameTitleResolver in list query handlers; raw list handlers may emit null when
+    // the resolver is not on the pipeline (e.g. admin endpoints that don't surface translations).
+    IReadOnlyList<SharedGameTranslationDto>? Translations = null,
+    // Issue #2055 Phase G AC-G6: Wikidata cover license + attribution (plain text,
+    // HTML-stripped upstream by AttributionTextExtractor per DEC-G6-1). Null when
+    // the game lacks a Wikidata cover or the attempt is pending. FE renders only
+    // when WikidataCoverLicense is non-null.
+    string? WikidataCoverLicense = null,
+    string? WikidataCoverAttribution = null,
+    string? WikidataCoverSourceUrl = null);
 
 /// <summary>
 /// Data transfer object for game rules.
@@ -184,8 +208,12 @@ public sealed record SharedGameDetailDto(
     int MinAge,
     decimal? ComplexityRating,
     decimal? AverageRating,
+#pragma warning disable S1133 // Removal scheduled after a deprecation telemetry window — see #2123 follow-up.
+    [property: Obsolete("Issue #2123 — read CoverUrl instead. ImageUrl is now always empty post-Phase A nullify migration; the property is kept for binary backwards compat only.", error: false)]
     string ImageUrl,
+    [property: Obsolete("Issue #2123 — read CoverUrl instead. ThumbnailUrl is now always empty post-Phase A nullify migration; the property is kept for binary backwards compat only.", error: false)]
     string ThumbnailUrl,
+#pragma warning restore S1133
     GameRulesDto? Rules,
     GameStatus Status,
     Guid CreatedBy,
@@ -208,7 +236,16 @@ public sealed record SharedGameDetailDto(
     int ContributorsCount = 0,
     bool HasKnowledgeBase = false,
     bool IsTopRated = false,
-    bool IsNew = false);
+    bool IsNew = false,
+    // Issue #1852 (Gap A): cover URL resolved via L4 → L2 priority; null when no cover available or storage unavailable.
+    string? CoverUrl = null,
+    // Issue #2055 Phase G AC-G6: Wikidata cover license + attribution (plain text,
+    // HTML-stripped upstream by AttributionTextExtractor per DEC-G6-1). Null when
+    // the game lacks a Wikidata cover or the attempt is pending. FE renders only
+    // when WikidataCoverLicense is non-null.
+    string? WikidataCoverLicense = null,
+    string? WikidataCoverAttribution = null,
+    string? WikidataCoverSourceUrl = null);
 
 /// <summary>
 /// Data transfer object for approval queue items.

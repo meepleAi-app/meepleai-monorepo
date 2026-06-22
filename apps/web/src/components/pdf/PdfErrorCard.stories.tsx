@@ -70,7 +70,7 @@ export const UnknownError: Story = {
 
 export const DarkMode: Story = {
   render: () => (
-    <div className="dark bg-gray-900 p-6 rounded-lg space-y-4 max-w-md">
+    <div className="dark bg-card p-6 rounded-lg space-y-4 max-w-md">
       <PdfErrorCard category="network" error="Network connection lost during upload." canRetry onRetry={() => {}} />
       <PdfErrorCard category="parsing" error="PDF parsing failed." canRetry={false} />
     </div>

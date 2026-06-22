@@ -136,7 +136,7 @@ export function TwoFactorSetup({
         <CardContent className="space-y-4">
           {/* QR Code Display */}
           <div
-            className="flex justify-center p-4 bg-white rounded-lg border border-border"
+            className="flex justify-center p-4 bg-card rounded-lg border border-border"
             data-testid="qr-code-container"
           >
             <QRCodeSVG

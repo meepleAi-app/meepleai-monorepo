@@ -7,15 +7,24 @@
 
 import type { AlertConfiguration, UpdateAlertConfiguration } from '../schemas/alert-config.schemas';
 
-// Mock HttpClient before import
+// Mock HttpClient before import.
+// #1972 M2 PoC canary (sess.46g): vitest v4 rejects arrow-mock used with `new` keyword
+// (`() => ({})` not a constructor). Replace `vi.fn().mockImplementation(() => ({}))` with
+// a real `class MockHttpClient` so `new HttpClient(...)` resolves correctly under both
+// vitest v2.x and v4.x. The mocked `get`/`put` are shared closure refs so per-test
+// `mockResolvedValueOnce` chains keep working.
 const mockGet = vi.fn();
 const mockPut = vi.fn();
 
+class MockHttpClient {
+  // ESLint local rule + readability: instance fields so each `new HttpClient()` exposes
+  // the same shared spies. Constructor-arg shape ignored — caller-side stub.
+  get = mockGet;
+  put = mockPut;
+}
+
 vi.mock('../core/httpClient', () => ({
-  HttpClient: vi.fn().mockImplementation(() => ({
-    get: mockGet,
-    put: mockPut,
-  })),
+  HttpClient: MockHttpClient,
 }));
 
 // Import after mock
@@ -41,7 +50,7 @@ describe('alertConfigApi', () => {
 
       const result = await alertConfigApi.getAll();
 
-      expect(mockGet).toHaveBeenCalledWith('/admin/alert-configuration');
+      expect(mockGet).toHaveBeenCalledWith('/api/v1/admin/alert-configuration');
       expect(result).toEqual(mockConfigs);
     });
 
@@ -67,7 +76,7 @@ describe('alertConfigApi', () => {
 
       const result = await alertConfigApi.getByCategory('Security');
 
-      expect(mockGet).toHaveBeenCalledWith('/admin/alert-configuration/Security');
+      expect(mockGet).toHaveBeenCalledWith('/api/v1/admin/alert-configuration/Security');
       expect(result).toEqual(mockConfig);
     });
 
@@ -93,7 +102,7 @@ describe('alertConfigApi', () => {
 
       const result = await alertConfigApi.update(updateData);
 
-      expect(mockPut).toHaveBeenCalledWith('/admin/alert-configuration', updateData);
+      expect(mockPut).toHaveBeenCalledWith('/api/v1/admin/alert-configuration', updateData);
       expect(result).toEqual(mockResponse);
     });
 

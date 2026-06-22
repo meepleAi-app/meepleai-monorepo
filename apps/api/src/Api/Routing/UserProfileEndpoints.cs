@@ -65,12 +65,12 @@ internal static class UserProfileEndpoints
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            var query = new DddGetUserProfileQuery { UserId = session!.User!.Id };
+            var query = new DddGetUserProfileQuery { UserId = session!.Principal!.Subject.Id };
             var profile = await mediator.Send(query, ct).ConfigureAwait(false);
 
             if (profile == null)
             {
-                logger.LogWarning("Profile not found for user {UserId}", session.User.Id);
+                logger.LogWarning("Profile not found for user {UserId}", session.Principal!.Subject.Id);
                 return Results.NotFound(new { error = "Profile not found" });
             }
 
@@ -106,7 +106,7 @@ internal static class UserProfileEndpoints
 
             var command = new DddUpdateUserProfileCommand
             {
-                UserId = session!.User!.Id,
+                UserId = session!.Principal!.Subject.Id,
                 DisplayName = payload.DisplayName,
                 Email = payload.Email,
                 AvatarUrl = payload.AvatarUrl,
@@ -114,7 +114,7 @@ internal static class UserProfileEndpoints
             };
 
             await mediator.Send(command, ct).ConfigureAwait(false);
-            logger.LogInformation("Profile updated for user {UserId}", session.User.Id);
+            logger.LogInformation("Profile updated for user {UserId}", session.Principal!.Subject.Id);
 
             return Results.Json(new { ok = true, message = "Profile updated successfully" });
         })
@@ -155,16 +155,21 @@ internal static class UserProfileEndpoints
 
             var command = new DddChangePasswordCommand
             {
-                UserId = session!.User!.Id,
+                UserId = session!.Principal!.Subject.Id,
                 CurrentPassword = payload.CurrentPassword,
-                NewPassword = payload.NewPassword
+                NewPassword = payload.NewPassword,
+                // C7: forward the active session id so the handler can revoke
+                // every other session for the user while preserving this one.
+                CurrentSessionId = session.SessionId,
+                IncludeCurrentInRevoke = payload.LogoutEverywhere ?? false,
             };
 
             await mediator.Send(command, ct).ConfigureAwait(false);
-            logger.LogInformation("Password changed for user {UserId}", session.User.Id);
+            logger.LogInformation("Password changed for user {UserId}", session.Principal!.Subject.Id);
 
             return Results.Json(new { ok = true, message = "Password changed successfully" });
         })
+        .AddEndpointFilter<Api.Infrastructure.Filters.AntiforgeryEndpointFilter>() // C8: CSRF
         .RequireSession() // Issue #1446: Automatic session validation
         .RequireAuthorization()
         .WithName("ChangePassword")
@@ -201,8 +206,8 @@ internal static class UserProfileEndpoints
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            // session.User.Id is already a Guid from SessionStatusDto
-            var userId = session!.User!.Id;
+            // session.Principal!.Subject.Id is already a Guid from SessionStatusDto
+            var userId = session!.Principal!.Subject.Id;
 
             var query = new GetUserUploadQuotaQuery(userId);
             var quotaInfo = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -255,7 +260,7 @@ internal static class UserProfileEndpoints
 
             var command = new DddUpdatePreferencesCommand
             {
-                UserId = session!.User!.Id,
+                UserId = session!.Principal!.Subject.Id,
                 Language = payload.Language,
                 Theme = payload.Theme,
                 EmailNotifications = payload.EmailNotifications,
@@ -266,7 +271,7 @@ internal static class UserProfileEndpoints
             };
 
             var updatedProfile = await mediator.Send(command, ct).ConfigureAwait(false);
-            logger.LogInformation("Preferences updated for user {UserId}", session.User.Id);
+            logger.LogInformation("Preferences updated for user {UserId}", session.Principal!.Subject.Id);
 
             return Results.Json(updatedProfile);
         })
@@ -301,11 +306,11 @@ internal static class UserProfileEndpoints
 
             var query = new DddGetUserProfileQuery
             {
-                UserId = session!.User!.Id
+                UserId = session!.Principal!.Subject.Id
             };
 
             var userProfile = await mediator.Send(query, ct).ConfigureAwait(false);
-            logger.LogInformation("Preferences retrieved for user {UserId}", session.User.Id);
+            logger.LogInformation("Preferences retrieved for user {UserId}", session.Principal!.Subject.Id);
 
             // Extract preferences from full profile
             var preferences = new
@@ -353,7 +358,7 @@ internal static class UserProfileEndpoints
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             var query = new Api.BoundedContexts.Administration.Application.Queries.GetUserActivityQuery(
-                UserId: session!.User!.Id,
+                UserId: session!.Principal!.Subject.Id,
                 ActionFilter: actionFilter,
                 ResourceFilter: resourceFilter,
                 StartDate: startDate,
@@ -362,7 +367,7 @@ internal static class UserProfileEndpoints
             );
 
             var result = await mediator.Send(query, ct).ConfigureAwait(false);
-            logger.LogInformation("Activity timeline retrieved for user {UserId}: {Count} activities", session.User.Id, result.Activities.Count);
+            logger.LogInformation("Activity timeline retrieved for user {UserId}: {Count} activities", session.Principal!.Subject.Id, result.Activities.Count);
 
             return Results.Json(result);
         })
@@ -402,7 +407,7 @@ internal static class UserProfileEndpoints
         {
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            var userId = session!.User!.Id;
+            var userId = session!.Principal!.Subject.Id;
 
             var endDate = DateOnly.FromDateTime(DateTime.UtcNow);
             var startDate = endDate.AddDays(-days);
@@ -445,7 +450,7 @@ internal static class UserProfileEndpoints
             CancellationToken ct = default) =>
         {
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            var query = new GetMyAiUsageSummaryQuery(session!.User!.Id);
+            var query = new GetMyAiUsageSummaryQuery(session!.Principal!.Subject.Id);
             return Results.Ok(await mediator.Send(query, ct).ConfigureAwait(false));
         })
         .RequireSession()
@@ -465,7 +470,7 @@ internal static class UserProfileEndpoints
         {
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
             var clampedDays = Math.Clamp(days, 1, 90);
-            var query = new GetMyAiUsageDistributionsQuery(session!.User!.Id, clampedDays);
+            var query = new GetMyAiUsageDistributionsQuery(session!.Principal!.Subject.Id, clampedDays);
             return Results.Ok(await mediator.Send(query, ct).ConfigureAwait(false));
         })
         .RequireSession()
@@ -485,7 +490,7 @@ internal static class UserProfileEndpoints
             CancellationToken ct = default) =>
         {
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            var query = new GetMyAiUsageRecentQuery(session!.User!.Id, page, pageSize);
+            var query = new GetMyAiUsageRecentQuery(session!.Principal!.Subject.Id, page, pageSize);
             return Results.Ok(await mediator.Send(query, ct).ConfigureAwait(false));
         })
         .RequireSession()
@@ -508,7 +513,7 @@ internal static class UserProfileEndpoints
         {
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            var userId = session!.User!.Id;
+            var userId = session!.Principal!.Subject.Id;
 
             logger.LogInformation("Retrieving available features for user {UserId}", userId);
 
@@ -549,13 +554,13 @@ internal static class UserProfileEndpoints
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             var command = new Api.BoundedContexts.Authentication.Application.Commands.Onboarding.CompleteOnboardingCommand(
-                UserId: session!.User!.Id,
+                UserId: session!.Principal!.Subject.Id,
                 Skipped: payload.Skipped
             );
 
             await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("Onboarding {Status} for user {UserId}",
-                payload.Skipped ? "skipped" : "completed", session.User.Id);
+                payload.Skipped ? "skipped" : "completed", session.Principal!.Subject.Id);
 
             return Results.Json(new { ok = true, message = payload.Skipped ? "Onboarding skipped" : "Onboarding completed" });
         })
@@ -587,13 +592,13 @@ internal static class UserProfileEndpoints
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             var command = new Api.BoundedContexts.Authentication.Application.Commands.UserProfile.SaveUserInterestsCommand(
-                UserId: session!.User!.Id,
+                UserId: session!.Principal!.Subject.Id,
                 Interests: payload.Interests
             );
 
             await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("Saved {Count} interests for user {UserId}",
-                payload.Interests?.Count ?? 0, session.User.Id);
+                payload.Interests?.Count ?? 0, session.Principal!.Subject.Id);
 
             return Results.Json(new { ok = true, message = "Interests saved successfully" });
         })
@@ -633,8 +638,15 @@ internal record UpdateProfilePayload(string? DisplayName, string? Email, string?
 
 /// <summary>
 /// Payload for changing password.
+/// C7: <paramref name="LogoutEverywhere"/> opts the user into revoking the
+/// current session along with every other one (default behaviour preserves
+/// the current session so the user isn't kicked off the device they just
+/// changed the password from).
 /// </summary>
-internal record ChangePasswordPayload(string CurrentPassword, string NewPassword);
+internal record ChangePasswordPayload(
+    string CurrentPassword,
+    string NewPassword,
+    bool? LogoutEverywhere = null);
 
 /// <summary>
 /// Payload for updating user preferences.

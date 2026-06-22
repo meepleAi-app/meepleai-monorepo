@@ -43,7 +43,7 @@ export function SessionToolLayout({
   return (
     <div
       className={cn(
-        'flex flex-col min-h-screen bg-stone-100 dark:bg-stone-950 session-toolkit-layout',
+        'flex flex-col min-h-screen bg-muted dark:bg-card session-toolkit-layout',
         className,
       )}
     >

@@ -28,11 +28,11 @@ internal static class AdminAbTestEndpoints
 
             logger.LogInformation(
                 "Admin {UserId} creating A/B test with {ModelCount} models",
-                session!.User!.Id,
+                session!.Principal!.EffectiveActor.Id,
                 request.ModelIds.Count);
 
             var command = new CreateAbTestCommand(
-                CreatedBy: session.User.Id,
+                CreatedBy: session.Principal!.EffectiveActor.Id,
                 Query: request.Query,
                 ModelIds: request.ModelIds,
                 KnowledgeBaseId: request.KnowledgeBaseId);
@@ -42,7 +42,7 @@ internal static class AdminAbTestEndpoints
             logger.LogInformation(
                 "A/B test session {SessionId} created by admin {UserId}",
                 result.Id,
-                session.User.Id);
+                session.Principal!.EffectiveActor.Id);
 
             return Results.Created($"/api/v1/admin/ab-tests/{result.Id}", result);
         })
@@ -69,7 +69,7 @@ internal static class AdminAbTestEndpoints
             if (!authorized) return error!;
 
             var query = new GetAbTestsQuery(
-                UserId: session!.User!.Id,
+                UserId: session!.Principal!.EffectiveActor.Id,
                 Page: page,
                 PageSize: pageSize,
                 Status: status);
@@ -156,13 +156,13 @@ internal static class AdminAbTestEndpoints
 
             logger.LogInformation(
                 "Admin {UserId} evaluating A/B test {SessionId} with {EvalCount} evaluations",
-                session!.User!.Id,
+                session!.Principal!.EffectiveActor.Id,
                 id,
                 request.Evaluations.Count);
 
             var command = new EvaluateAbTestCommand(
                 SessionId: id,
-                EvaluatorId: session.User.Id,
+                EvaluatorId: session.Principal!.EffectiveActor.Id,
                 Evaluations: request.Evaluations.Select(e => new VariantEvaluationInput(
                     Label: e.Label,
                     Accuracy: e.Accuracy,
@@ -176,7 +176,7 @@ internal static class AdminAbTestEndpoints
             logger.LogInformation(
                 "A/B test {SessionId} evaluated by admin {UserId}",
                 id,
-                session.User.Id);
+                session.Principal!.EffectiveActor.Id);
 
             return Results.Ok(result);
         })

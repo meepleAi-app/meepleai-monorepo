@@ -1,7 +1,13 @@
 # ==============================================================================
 # Stage 1: Dependencies - Install all dependencies
 # ==============================================================================
-FROM node:20.18-alpine3.21 AS deps
+# ARM64 cross-compile (2026-05-25, Onda B): deps + builder pinned to
+# $BUILDPLATFORM (x64 runner) → pnpm install + next build run native, not
+# under QEMU. The runner stage stays on the arm64 target. The .next/standalone
+# output is pure JS (arch-independent); the only native module, canvas, is
+# test-only (transitive via jsdom devDependency) and is NOT in the standalone
+# bundle, so node arm64 runs the portable JS without it.
+FROM --platform=$BUILDPLATFORM node:20.18-alpine3.21 AS deps
 WORKDIR /app
 
 # Install build dependencies for canvas package (Issue #4168)
@@ -28,7 +34,7 @@ RUN pnpm install --frozen-lockfile
 # ==============================================================================
 # Stage 2: Builder - Build the Next.js application
 # ==============================================================================
-FROM node:20.18-alpine3.21 AS builder
+FROM --platform=$BUILDPLATFORM node:20.18-alpine3.21 AS builder
 WORKDIR /app
 
 # Copy dependencies from deps stage and install pnpm
@@ -45,12 +51,10 @@ ENV NODE_ENV=production
 ARG NEXT_PUBLIC_API_BASE=http://localhost:8080
 ARG NEXT_PUBLIC_APP_URL=http://localhost:3000
 ARG NEXT_PUBLIC_SITE_URL=http://localhost:3000
-ARG NEXT_PUBLIC_ALPHA_MODE=false
 ARG NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED=false
 ENV NEXT_PUBLIC_API_BASE=$NEXT_PUBLIC_API_BASE
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
-ENV NEXT_PUBLIC_ALPHA_MODE=$NEXT_PUBLIC_ALPHA_MODE
 ENV NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED=$NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED
 
 # Ensure public directory exists (Next.js may need it)

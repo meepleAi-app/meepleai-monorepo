@@ -3,13 +3,16 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Helpers;
 using Api.Infrastructure;
 using Api.Infrastructure.Security;
+using Api.Middleware.Exceptions;
 using Api.Models;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.Services.LlmClients;
 
@@ -21,10 +24,20 @@ namespace Api.Services.LlmClients;
 /// OpenRouter provides access to multiple LLM providers (OpenAI, Anthropic, Google, etc.)
 /// through a unified API. Used for authenticated/premium users requiring high-quality responses.
 /// Models: openai/gpt-4o-mini, anthropic/claude-3.5-sonnet, deepseek/deepseek-chat-v3.1, etc.
+///
+/// Issue #1859: API key is resolved at call time via <see cref="IProviderCredentialResolver"/>
+/// (DB → env-var cascade with 5-min cache). The client is registered as a singleton, so the
+/// resolver is fetched from a fresh scope via <see cref="IServiceScopeFactory"/> per HTTP send.
+/// When neither DB row nor env var is configured the resolver throws
+/// <see cref="ProviderCredentialNotConfiguredException"/>; the call paths convert this into a
+/// graceful failure (return-failure for completion, yield-break for streaming).
 /// </remarks>
 internal class OpenRouterLlmClient : ILlmClient
 {
+    internal const string ProviderKey = "openrouter";
+
     private readonly HttpClient _httpClient;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<OpenRouterLlmClient> _logger;
     private readonly ILlmCostCalculator _costCalculator;
 
@@ -35,11 +48,17 @@ internal class OpenRouterLlmClient : ILlmClient
 
     public OpenRouterLlmClient(
         IHttpClientFactory httpClientFactory,
-        IConfiguration config,
+        IServiceScopeFactory scopeFactory,
         ILlmCostCalculator costCalculator,
         ILogger<OpenRouterLlmClient> logger)
     {
+        ArgumentNullException.ThrowIfNull(httpClientFactory);
+        ArgumentNullException.ThrowIfNull(scopeFactory);
+        ArgumentNullException.ThrowIfNull(costCalculator);
+        ArgumentNullException.ThrowIfNull(logger);
+
         _httpClient = httpClientFactory.CreateClient("OpenRouter");
+        _scopeFactory = scopeFactory;
         _logger = logger;
         _costCalculator = costCalculator;
 
@@ -48,17 +67,11 @@ internal class OpenRouterLlmClient : ILlmClient
         const string OpenRouterApiBaseUrl = "https://openrouter.ai/api/v1/";
 #pragma warning restore S1075
 
-        // SEC-708: Read API key from Docker Secret file or direct config (S1450: local scope)
-        var apiKey = SecretsHelper.GetSecretOrValue(config, "OPENROUTER_API_KEY", logger, required: true)
-            ?? throw new InvalidOperationException("OPENROUTER_API_KEY not configured");
-
-        // Configure HttpClient
         _httpClient.BaseAddress = new Uri(OpenRouterApiBaseUrl);
-        _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
         _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://meepleai.app");
         _httpClient.Timeout = TimeSpan.FromSeconds(DefaultTimeoutSeconds);
 
-        _logger.LogInformation("OpenRouterLlmClient initialized with cost tracking");
+        _logger.LogInformation("OpenRouterLlmClient initialized with cost tracking (key resolved on demand)");
     }
 
     /// <inheritdoc/>
@@ -82,9 +95,21 @@ internal class OpenRouterLlmClient : ILlmClient
             return LlmCompletionResult.CreateFailure("No user prompt provided");
         }
 
+        string apiKey;
+        try
+        {
+            apiKey = await ResolveApiKeyAsync(ct).ConfigureAwait(false);
+        }
+        catch (ProviderCredentialNotConfiguredException ex)
+        {
+            _logger.LogError(ex, "OpenRouter provider is not configured (no DB row and no env var)");
+            return LlmCompletionResult.CreateFailure("OpenRouter provider is not configured (missing API key)");
+        }
+
         try
         {
             using var httpRequest = CreateChatRequest(model, systemPrompt, userPrompt, temperature, maxTokens, stream: false);
+            ApplyAuthorization(httpRequest, apiKey);
 
             _logger.LogInformation("Generating OpenRouter completion using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
                 model, temperature, maxTokens);
@@ -277,9 +302,21 @@ internal class OpenRouterLlmClient : ILlmClient
             return LlmCompletionResult.CreateFailure("No messages provided");
         }
 
+        string apiKey;
+        try
+        {
+            apiKey = await ResolveApiKeyAsync(ct).ConfigureAwait(false);
+        }
+        catch (ProviderCredentialNotConfiguredException ex)
+        {
+            _logger.LogError(ex, "OpenRouter provider is not configured (no DB row and no env var)");
+            return LlmCompletionResult.CreateFailure("OpenRouter provider is not configured (missing API key)");
+        }
+
         try
         {
             using var httpRequest = CreateMultimodalChatRequest(model, messages, temperature, maxTokens, stream: false);
+            ApplyAuthorization(httpRequest, apiKey);
 
             _logger.LogInformation("Generating OpenRouter multimodal completion using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
                 model, temperature, maxTokens);
@@ -328,6 +365,12 @@ internal class OpenRouterLlmClient : ILlmClient
             yield break;
         }
 
+        var apiKey = await ResolveApiKeyOrLogAsync(ct).ConfigureAwait(false);
+        if (apiKey is null)
+        {
+            yield break;
+        }
+
         _logger.LogInformation("Starting OpenRouter multimodal streaming using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
             model, temperature, maxTokens);
 
@@ -338,6 +381,7 @@ internal class OpenRouterLlmClient : ILlmClient
         for (var attempt = 0; attempt <= maxRetries; attempt++)
         {
             using var httpRequest = CreateMultimodalChatRequest(model, messages, temperature, maxTokens, stream: true);
+            ApplyAuthorization(httpRequest, apiKey);
             response = null;
 
             try
@@ -470,9 +514,21 @@ internal class OpenRouterLlmClient : ILlmClient
     /// <inheritdoc/>
     public async Task<bool> CheckHealthAsync(CancellationToken ct = default)
     {
+        string apiKey;
         try
         {
-            using var response = await _httpClient.GetAsync("models", ct).ConfigureAwait(false);
+            apiKey = await ResolveApiKeyAsync(ct).ConfigureAwait(false);
+        }
+        catch (ProviderCredentialNotConfiguredException)
+        {
+            return false;
+        }
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, "models");
+            ApplyAuthorization(request, apiKey);
+            using var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex)
@@ -497,6 +553,12 @@ internal class OpenRouterLlmClient : ILlmClient
             yield break;
         }
 
+        var apiKey = await ResolveApiKeyOrLogAsync(ct).ConfigureAwait(false);
+        if (apiKey is null)
+        {
+            yield break;
+        }
+
         _logger.LogInformation("Starting OpenRouter streaming completion using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
             model, temperature, maxTokens);
 
@@ -510,6 +572,7 @@ internal class OpenRouterLlmClient : ILlmClient
         for (var attempt = 0; attempt <= maxRetries; attempt++)
         {
             using var httpRequest = CreateChatRequest(model, systemPrompt, userPrompt, temperature, maxTokens, stream: true);
+            ApplyAuthorization(httpRequest, apiKey);
             response = null;
 
             try
@@ -692,5 +755,38 @@ internal class OpenRouterLlmClient : ILlmClient
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Resolves the OpenRouter API key via a fresh DI scope (resolver is Scoped, this client is Singleton).
+    /// Throws <see cref="ProviderCredentialNotConfiguredException"/> when neither DB row nor env var exists.
+    /// </summary>
+    private async Task<string> ResolveApiKeyAsync(CancellationToken ct)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var resolver = scope.ServiceProvider.GetRequiredService<IProviderCredentialResolver>();
+        return await resolver.ResolveAsync(ProviderKey, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Streaming-friendly variant of <see cref="ResolveApiKeyAsync"/>: returns <c>null</c> instead of
+    /// throwing when the provider is not configured, allowing callers to <c>yield break</c> cleanly.
+    /// </summary>
+    private async Task<string?> ResolveApiKeyOrLogAsync(CancellationToken ct)
+    {
+        try
+        {
+            return await ResolveApiKeyAsync(ct).ConfigureAwait(false);
+        }
+        catch (ProviderCredentialNotConfiguredException ex)
+        {
+            _logger.LogError(ex, "OpenRouter provider is not configured — streaming unavailable");
+            return null;
+        }
+    }
+
+    private static void ApplyAuthorization(HttpRequestMessage request, string apiKey)
+    {
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
     }
 }

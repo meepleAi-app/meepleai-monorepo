@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -23,21 +24,21 @@ export function ReviewConfirm() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900 dark:text-white mb-2">
+        <h2 className="text-2xl font-semibold text-foreground dark:text-white mb-2">
           Review & Confirm
         </h2>
-        <p className="text-slate-600 dark:text-slate-400">
+        <p className="text-muted-foreground">
           Review your game details before adding to your collection
         </p>
       </div>
 
       {/* Game Summary Card */}
-      <Card className="p-6 bg-slate-50 dark:bg-slate-800/50 transition-all duration-300 hover:shadow-md">
+      <Card className="p-6 bg-muted transition-all duration-300 hover:shadow-md">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
             <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+          <h3 className="text-lg font-semibold text-foreground dark:text-white">
             Game Information
           </h3>
         </div>
@@ -45,9 +46,9 @@ export function ReviewConfirm() {
         <div className="space-y-3">
           {/* Game Name */}
           <div className="flex justify-between">
-            <span className="text-slate-600 dark:text-slate-400">Name:</span>
+            <span className="text-muted-foreground">Name:</span>
             <div className="text-right">
-              <span className="font-medium text-slate-900 dark:text-white">
+              <span className="font-medium text-foreground dark:text-white">
                 {reviewSummary.gameName}
               </span>
               {reviewSummary.isCustom && (
@@ -61,8 +62,8 @@ export function ReviewConfirm() {
           {/* Players (Custom only) */}
           {reviewSummary.players && (
             <div className="flex justify-between">
-              <span className="text-slate-600 dark:text-slate-400">Players:</span>
-              <span className="font-medium text-slate-900 dark:text-white">
+              <span className="text-muted-foreground">Players:</span>
+              <span className="font-medium text-foreground dark:text-white">
                 {reviewSummary.players}
               </span>
             </div>
@@ -71,8 +72,8 @@ export function ReviewConfirm() {
           {/* Play Time (Custom only) */}
           {reviewSummary.playTime && (
             <div className="flex justify-between">
-              <span className="text-slate-600 dark:text-slate-400">Play Time:</span>
-              <span className="font-medium text-slate-900 dark:text-white">
+              <span className="text-muted-foreground">Play Time:</span>
+              <span className="font-medium text-foreground dark:text-white">
                 {reviewSummary.playTime}
               </span>
             </div>
@@ -81,22 +82,22 @@ export function ReviewConfirm() {
           {/* Complexity (Custom only) */}
           {reviewSummary.complexity && (
             <div className="flex justify-between">
-              <span className="text-slate-600 dark:text-slate-400">Complexity:</span>
-              <span className="font-medium text-slate-900 dark:text-white">
+              <span className="text-muted-foreground">Complexity:</span>
+              <span className="font-medium text-foreground dark:text-white">
                 {reviewSummary.complexity}
               </span>
             </div>
           )}
 
           {/* Divider */}
-          <div className="border-t border-slate-200 dark:border-slate-700 my-4" />
+          <div className="border-t border-border my-4" />
 
           {/* PDF Status */}
           <div className="flex justify-between">
-            <span className="text-slate-600 dark:text-slate-400">Private PDF:</span>
+            <span className="text-muted-foreground">Private PDF:</span>
             {reviewSummary.hasPdf ? (
               <div className="text-right">
-                <span className="font-medium text-slate-900 dark:text-white">
+                <span className="font-medium text-foreground dark:text-white">
                   {reviewSummary.pdfName}
                 </span>
                 <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
@@ -104,7 +105,7 @@ export function ReviewConfirm() {
                 </span>
               </div>
             ) : (
-              <span className="text-slate-500 dark:text-slate-400 italic">No PDF uploaded</span>
+              <span className="text-muted-foreground italic">No PDF uploaded</span>
             )}
           </div>
         </div>

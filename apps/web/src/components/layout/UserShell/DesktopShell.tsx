@@ -2,37 +2,87 @@
 
 import { useState, type ReactNode } from 'react';
 
-import { ChatSlideOverPanel } from '@/components/chat/panel/ChatSlideOverPanel';
-import { MobileCTAPill } from '@/components/layout/MobileCTAPill';
-import { SearchOverlay } from '@/components/layout/SearchOverlay';
-import { SideDrawer } from '@/components/layout/SideDrawer/SideDrawer';
+import { usePathname } from 'next/navigation';
 
+import { ChatSlideOverPanel } from '@/components/chat/panel/ChatSlideOverPanel';
+import { AppTopBar } from '@/components/layout/AppNav/AppTopBar';
+import { isImmersiveRoute } from '@/components/layout/AppNav/immersive-routes';
+import { MobileBottomBar } from '@/components/layout/AppNav/MobileBottomBar';
+import { MobileTopBar } from '@/components/layout/AppNav/MobileTopBar';
+import { SideDrawer } from '@/components/layout/SideDrawer/SideDrawer';
+import { cn } from '@/lib/utils';
+
+import { EmailVerificationBanner } from './EmailVerificationBanner';
+import { MiniNavSlot } from './MiniNavSlot';
 import { SessionBanner } from './SessionBanner';
-import { TopBarV2 } from './TopBarV2';
 
 interface DesktopShellProps {
   children: ReactNode;
 }
 
+/**
+ * Authenticated user shell (sp4-dashboard navbar).
+ * Desktop/tablet: {@link AppTopBar}. Mobile: {@link MobileTopBar} (☰ → drawer) +
+ * {@link MobileBottomBar}. The hamburger drawer holds the secondary destinations
+ * ("tutto il resto"); the bottom bar holds the 5 primary tabs.
+ *
+ * #1977 (audit follow-up of umbrella #1974, finding F18): MainSidebar mount on
+ * lg+ removed — Asse B (#1897) WP7 T7 had introduced a persistent left sidebar
+ * mirroring `AdminSidebar`, but it duplicated the AppTopBar nav items already
+ * present at the top of the page. Design owner directive: topbar is the single
+ * source-of-truth for primary navigation on desktop. The mobile hamburger
+ * drawer (`SideDrawer` below) uses `SideDrawerItems` (sourced from
+ * `useNavigationItems` → UNIFIED_NAV_ITEMS) for the secondary destinations on
+ * `<lg` viewports.
+ *
+ * #2158 (Fix #4): the orphaned `MainSidebar/` + `main-nav/` modules were
+ * deleted; no remaining consumer existed outside of the dead `MainSidebar`
+ * itself.
+ *
+ * The bottom-bar clearance padding is dropped on immersive routes, where the
+ * bottom bar hides itself (kept in sync via {@link isImmersiveRoute}).
+ */
 export function DesktopShell({ children }: DesktopShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
+  const pathname = usePathname();
+  const immersive = isImmersiveRoute(pathname);
 
   return (
-    <div className="min-h-dvh flex flex-col bg-[var(--bg-base)]">
-      <TopBarV2
-        onHamburgerClick={() => setDrawerOpen(true)}
-        onSearchClick={() => setSearchOpen(true)}
-      />
+    <div className="min-h-dvh flex flex-col bg-[var(--bg)]">
+      <AppTopBar />
+      <MobileTopBar onHamburgerClick={() => setDrawerOpen(true)} />
+
+      {/*
+        F23a #1974 (audit 2026-06-07): mount MiniNavSlot so pages that call
+        `useMiniNavConfig(...)` (e.g. `/games`, `/library`, `/discover`) get
+        their tab strip rendered. The component is a no-op when no page has
+        registered a config — safe to keep mounted globally. Pre-fix, the
+        store was being updated but no consumer rendered it.
+      */}
+      <MiniNavSlot />
+
+      {/*
+        F1 #1974 (audit 2026-06-07): render the verify-email banner while the
+        BE-reported `emailVerified` flag is `false`. Hidden when the field is
+        true, undefined, or the user query is still loading.
+      */}
+      <EmailVerificationBanner />
 
       <SessionBanner />
 
-      <main className="flex-1 overflow-y-auto overflow-x-clip">{children}</main>
+      <main
+        id="main-content"
+        className={cn(
+          'flex-1 overflow-y-auto overflow-x-clip min-w-0',
+          !immersive && 'pb-16 md:pb-0'
+        )}
+      >
+        {children}
+      </main>
 
-      <MobileCTAPill />
       <ChatSlideOverPanel />
+      <MobileBottomBar />
       <SideDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
   );
 }

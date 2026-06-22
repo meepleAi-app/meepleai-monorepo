@@ -118,30 +118,39 @@ const nextConfig = {
   output: 'standalone', // Enable Docker-optimized output
   compress: false, // Disable compression to prevent ERR_CONTENT_DECODING_FAILED in proxy
 
-  // Issue #2209: Next.js Image optimization - configure remote image domains
+  // Issue #2209: Next.js Image optimization — configure remote image domains.
+  //
+  // Issue #2123 — BGG ToS compliance:
+  //   - Removed `cf.geekdo-images.com` and `**.boardgamegeek.com` from the
+  //     allowlist. ADR-059 §5 bans user-side BGG asset traffic.
+  //   - Removed the catch-all `{ hostname: '**' }`. Without it, every new
+  //     legitimate hostname requires an explicit PR review — this is the
+  //     true fail-closed posture the previous allowlist only pretended to
+  //     have.
+  //
+  // To add a new image host: append an entry below + justify in PR description.
+  // Adding `geekdo` or `boardgamegeek` is blocked by the `pnpm lint:bgg` CI gate
+  // and by the ESLint custom rule `local/no-bgg-host`.
   images: {
+    // Issue #2123 — custom loader runtime guard. Redirects any BGG-host src to
+    // the static placeholder + fires a beacon to /api/metrics/bgg-attempt so
+    // ops can observe the (must-be-zero) `meepleai_bgg_url_attempted_render_total`
+    // counter. See src/lib/images/safe-loader.ts for the implementation rationale.
+    loader: 'custom',
+    loaderFile: './src/lib/images/safe-loader.ts',
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'picsum.photos',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'cf.geekdo-images.com',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: '**.boardgamegeek.com',
-        pathname: '/**',
-      },
-      // Wildcard catch-all for user-provided / admin-provided image URLs
-      // (badge iconUrl, game cover images from arbitrary CDNs, etc.)
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
+      // Storybook + dev placeholder service
+      { protocol: 'https', hostname: 'picsum.photos', pathname: '/**' },
+      { protocol: 'https', hostname: 'placehold.co', pathname: '/**' },
+      // Cloudflare R2 — production cover assets (covers/{gameId}/cover.webp)
+      { protocol: 'https', hostname: '**.r2.cloudflarestorage.com', pathname: '/**' },
+      { protocol: 'https', hostname: '*.r2.dev', pathname: '/**' },
+      // Wikimedia Commons — attribution back-link target + canonical asset host
+      { protocol: 'https', hostname: 'commons.wikimedia.org', pathname: '/**' },
+      { protocol: 'https', hostname: 'upload.wikimedia.org', pathname: '/**' },
+      // Self-hosted assets on the production domain
+      { protocol: 'https', hostname: 'meepleai.app', pathname: '/**' },
+      { protocol: 'https', hostname: 'staging.meepleai.app', pathname: '/**' },
     ],
   },
 
@@ -188,7 +197,35 @@ const nextConfig = {
         destination: '/library/:id?tab=strategies',
         permanent: true,
       },
-      { source: '/library/games/:id', destination: '/library/:id', permanent: true },
+      // ── Issue #871 (closed): SP6 libro-game play routes consolidation ────
+      // `/library/games/:id/play/**` legacy paths from PR #794+ are bookmarkable
+      // dogfood URLs; redirect to the new shorter canonical path under
+      // `/library/:id/play/**`. Map deepest first so Next.js matches them
+      // before any prefix-only rule.
+      {
+        source: '/library/games/:id/play/:campaignId/translate',
+        destination: '/library/:id/play/:campaignId/translate',
+        permanent: true,
+      },
+      {
+        source: '/library/games/:id/play/:campaignId',
+        destination: '/library/:id/play/:campaignId',
+        permanent: true,
+      },
+      {
+        source: '/library/games/:id/play',
+        destination: '/library/:id/play',
+        permanent: true,
+      },
+      // Issue #1004: removed `/library/games/:id` → `/library/:id` redirect.
+      // The legacy `/library/[gameId]/layout.tsx` only knows 4 tabs
+      // (Dettagli/Agente/Toolkit/FAQ) and silently falls back to a CTA when an
+      // unknown `?tab=aiChat` arrives. After #871 the canonical 5-tab surface
+      // (incl. aiChat) lives at `/library/[gameId]/page.tsx` directly; the
+      // intermediate `/library/games/[gameId]/page.tsx` path is gone. Keep
+      // sub-route redirects above (they map specific tab paths) but do not
+      // add a catch-all here — rely on the explicit list to avoid the
+      // aiChat regression that motivated #1004.
       { source: '/library/wishlist', destination: '/library?tab=wishlist', permanent: true },
       { source: '/library/private', destination: '/library?tab=private', permanent: true },
       { source: '/library/proposals', destination: '/discover?tab=proposals', permanent: true },
@@ -205,6 +242,31 @@ const nextConfig = {
       {
         source: '/settings/security',
         destination: '/profile?tab=settings&section=security',
+        permanent: true,
+      },
+      {
+        source: '/settings/ai-consent',
+        destination: '/profile?tab=settings&section=ai-consent',
+        permanent: true,
+      },
+      {
+        source: '/settings/profile',
+        destination: '/profile?tab=settings&section=profile',
+        permanent: true,
+      },
+      {
+        source: '/settings/preferences',
+        destination: '/profile?tab=settings&section=preferences',
+        permanent: true,
+      },
+      {
+        source: '/settings/api-keys',
+        destination: '/profile?tab=settings&section=api-keys',
+        permanent: true,
+      },
+      {
+        source: '/settings/services',
+        destination: '/profile?tab=settings&section=services',
         permanent: true,
       },
       { source: '/settings', destination: '/profile?tab=settings', permanent: true },
@@ -240,6 +302,14 @@ const nextConfig = {
       //   '/games/:id/strategies'  → '/discover/:id?tab=strategies'
 
       // ── Legacy redirects (pre-Issue #5039) ───────────────────────────────
+      // Issue #2190 (2026-06-13): retire /hub/games list page in favor of the
+      // canonical multi-tab hub at /games (Asse D P2 #1899, default tab=discover).
+      // The detail sub-route /hub/games/[id] remains in place (out of scope, #2118).
+      {
+        source: '/hub/games',
+        destination: '/games?tab=discover',
+        permanent: true,
+      },
       // Issue #3843: Redirect old /giochi route to new /games route
       {
         source: '/giochi/:id*',
@@ -530,8 +600,13 @@ const nextConfig = {
   },
 
   // SEC-09: Security headers for Next.js responses (static assets bypass API middleware)
+  // #1816 P2-3 — CSP `manifest-src` widened to include CF Access subdomain ONLY
+  // on staging (where `/manifest.json` is gated by Cloudflare Access). Prod
+  // builds keep `manifest-src 'self'`. Flag: `NEXT_PUBLIC_CSP_ALLOW_CF_ACCESS=true`.
   async headers() {
+    const { buildCspHeader, isCfAccessAllowed } = require('./lib/security/csp');
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+    const allowCfAccess = isCfAccessAllowed(process.env.NEXT_PUBLIC_CSP_ALLOW_CF_ACCESS);
     return [
       {
         source: '/(.*)',
@@ -545,17 +620,7 @@ const nextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-inline'",
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: https:",
-              "font-src 'self' data:",
-              `connect-src 'self' ${apiBaseUrl}`,
-              "frame-ancestors 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-            ].join('; '),
+            value: buildCspHeader({ apiBaseUrl, allowCfAccess }),
           },
         ],
       },

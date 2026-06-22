@@ -38,11 +38,11 @@ export function TurnPhaseIndicator({ state }: TurnPhaseIndicatorProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <GitBranch className="h-3.5 w-3.5 text-indigo-500" />
-          <span className="font-nunito text-xs font-bold text-slate-700">
+          <span className="font-nunito text-xs font-bold text-foreground">
             Turn {state.currentTurnNumber}
           </span>
           {state.totalTurns != null && (
-            <span className="font-nunito text-[10px] text-slate-400">of {state.totalTurns}</span>
+            <span className="font-nunito text-[10px] text-muted-foreground">of {state.totalTurns}</span>
           )}
         </div>
         <span className="font-nunito text-[10px] font-semibold text-indigo-600">
@@ -78,16 +78,16 @@ export function TurnPhaseIndicator({ state }: TurnPhaseIndicatorProps) {
                   isCurrent &&
                     cn(color.bg, 'ring-2 ring-offset-1', color.border.replace('border-', 'ring-')),
                   isCompleted && cn(color.bg, 'opacity-60'),
-                  isFuture && 'bg-slate-200'
+                  isFuture && 'bg-muted'
                 )}
               />
               {/* Phase label */}
               <p
                 className={cn(
                   'mt-1 font-nunito text-[10px] truncate text-center',
-                  isCurrent && 'font-bold text-slate-700',
-                  isCompleted && 'font-medium text-slate-500',
-                  isFuture && 'text-slate-400'
+                  isCurrent && 'font-bold text-foreground',
+                  isCompleted && 'font-medium text-muted-foreground',
+                  isFuture && 'text-muted-foreground'
                 )}
               >
                 {phase}

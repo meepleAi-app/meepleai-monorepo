@@ -2,7 +2,10 @@ name: E2E Tests
 
 on:
   pull_request:
-    branches: [main, main-staging]
+    # Scope to prod-promotion only (main-staging → main). Real-API E2E checks
+    # produce noise on dev releases (main-dev → main-staging). See companion
+    # change in api-smoke.yml + #979 release-PR triage.
+    branches: [main]
     paths:
       - 'apps/web/**'
       - 'apps/api/**'
@@ -85,7 +88,7 @@ jobs:
         ports:
           - 6379:6379
 
-    # Note: Qdrant removed (Issue #4861) - vector search uses pgvector inside PostgreSQL.
+    # Note: pgvector removed (Issue #4861) - vector search uses pgvector inside PostgreSQL.
 
     strategy:
       fail-fast: false
@@ -175,12 +178,16 @@ jobs:
           working-directory: apps/web
 
       - name: Cache Playwright Browsers
+        # Issue #850 AC-3: hash `apps/web/package.json` (NOT lock-file) so
+        # Playwright version bumps invalidate cache even before lock regen.
+        # AC-7: `vars.CACHE_VERSION` is the global emergency-invalidation knob:
+        # `gh variable set CACHE_VERSION --body v2` flushes all caches at once.
         uses: actions/cache@v5
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-${{ runner.arch }}-playwright-${{ hashFiles('apps/web/pnpm-lock.yaml') }}
+          key: playwright-${{ vars.CACHE_VERSION || 'v1' }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/web/package.json') }}
           restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-playwright-
+            playwright-${{ vars.CACHE_VERSION || 'v1' }}-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Install Playwright Browsers
         working-directory: apps/web
@@ -338,7 +345,7 @@ jobs:
 
       - name: Upload Merged Coverage
         if: always()
-        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe  # v5
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2  # v6.0.0
         with:
           files: coverage-merged/lcov.info
           flags: e2e
@@ -415,7 +422,7 @@ jobs:
         ports:
           - 6379:6379
 
-    # Note: Qdrant removed (Issue #4861) - vector search uses pgvector inside PostgreSQL.
+    # Note: pgvector removed (Issue #4861) - vector search uses pgvector inside PostgreSQL.
 
     strategy:
       fail-fast: false

@@ -1,6 +1,9 @@
 using System.Security.Claims;
 using System.Diagnostics;
+using Api.BoundedContexts.Authentication.Application.Services;
+using Api.BoundedContexts.Authentication.Infrastructure.Middleware;
 using Api.Middleware;
+using Microsoft.Extensions.DependencyInjection;
 using Scalar.AspNetCore;
 using Serilog;
 
@@ -142,6 +145,14 @@ internal static class WebApplicationExtensions
         // AUTH-03: Authorization middleware (must be after all authentication middleware)
         app.UseAuthorization();
 
+        // C8: antiforgery middleware. Must come after auth so token validation
+        // runs against an already-authenticated request, but before rate
+        // limiting so a missing CSRF token short-circuits with 400 without
+        // burning the rate-limit budget. AntiforgeryEndpointFilter actually
+        // performs the per-endpoint validation; UseAntiforgery wires the
+        // cookie/token plumbing.
+        app.UseAntiforgery();
+
         // ISSUE #2424: Rate limiting middleware (must be after authorization)
         app.UseRateLimiter();
 
@@ -153,6 +164,31 @@ internal static class WebApplicationExtensions
 
         // ISSUE #3672: Email verification enforcement middleware (must be after session quota)
         app.UseEmailVerificationEnforcement();
+
+        // DevOps wave 1 (2026-05-08): staging email allowlist gate.
+        // Active only when ASPNETCORE_ENVIRONMENT=Staging to match compose.staging.yml.
+        // Empty allowlist = pass-through (default safe). Logs warning at startup if
+        // Staging+empty (misconfiguration window detection). See devops-policy.md §4.
+        if (app.Environment.IsEnvironment("Staging"))
+        {
+            // Resolve singleton directly from root container — no scope needed since
+            // IStagingAccessGuard is registered as Singleton with a 60s memory cache (#845).
+            // The hot-path uses a scope factory for DB access; startup probe stays lightweight.
+            // Empty allowlist now FAIL-CLOSED in Staging (denies all) — the previous
+            // "empty = pass-through" semantics were a latent landmine if the bootstrap
+            // seed failed silently.
+            var guard = app.Services.GetRequiredService<IStagingAccessGuard>();
+            var hasEntries = guard.HasNonEmptyAllowlistAsync().AsTask().GetAwaiter().GetResult();
+            if (!hasEntries)
+            {
+                app.Logger.LogWarning(
+                    "STAGING_ACCESS: middleware active but staging_allowlist is empty — " +
+                    "all authenticated requests will be denied (fail-closed). " +
+                    "Bootstrap seed should have inserted badsworm@gmail.com; " +
+                    "check SeedStagingAllowlistCommand execution.");
+            }
+            app.UseStagingAccessGuard();
+        }
 
         // Reset body stream position for [FromBody] parameter binding.
         // .NET 9 issue: the body stream position may advance during the middleware pipeline

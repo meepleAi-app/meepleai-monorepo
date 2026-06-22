@@ -37,7 +37,7 @@ function AddCategoryButton({ onAdd }: { onAdd: (name: string) => void }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg border border-dashed border-gray-300 px-2 py-1 text-[10px] font-semibold text-gray-400 hover:border-[hsl(142,70%,45%)] hover:text-[hsl(142,70%,45%)]"
+        className="rounded-lg border border-dashed border-border px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:border-[hsl(142,70%,45%)] hover:text-[hsl(142,70%,45%)]"
         data-testid="add-category-btn"
       >
         + Aggiungi
@@ -167,7 +167,7 @@ export function ScoreboardTab() {
   if (players.length === 0) {
     return (
       <div className="py-8 text-center" data-testid="scoreboard-tab">
-        <p className="text-sm italic text-gray-400">
+        <p className="text-sm italic text-muted-foreground">
           Aggiungi giocatori dalla barra in basso per iniziare
         </p>
       </div>
@@ -178,7 +178,7 @@ export function ScoreboardTab() {
     <div className="flex flex-col gap-3" data-testid="scoreboard-tab">
       {/* Categories row */}
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Partite</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Partite</h3>
         <AddCategoryButton onAdd={handleAddCategory} />
       </div>
 
@@ -187,7 +187,7 @@ export function ScoreboardTab() {
         <table className="w-full border-collapse">
           <thead>
             <tr>
-              <th className="border-b border-gray-200 px-1 pb-1 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
+              <th className="border-b border-border px-1 pb-1 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                 Giocatore
               </th>
               {scoreCategories.map(cat => (
@@ -197,7 +197,7 @@ export function ScoreboardTab() {
                   onRemove={() => handleRemoveCategory(cat)}
                 />
               ))}
-              <th className="border-b border-gray-200 px-1 pb-1 text-center text-[10px] font-bold uppercase tracking-wider text-[hsl(142,70%,45%)]">
+              <th className="border-b border-border px-1 pb-1 text-center text-[10px] font-bold uppercase tracking-wider text-[hsl(142,70%,45%)]">
                 Totale
               </th>
             </tr>
@@ -213,12 +213,12 @@ export function ScoreboardTab() {
                   onDragStart={() => handleDragStart(idx)}
                   onDragOver={handleDragOver}
                   onDrop={() => handleDrop(idx)}
-                  className={cn('border-b border-gray-100', dragIndex === idx && 'opacity-50')}
+                  className={cn('border-b border-border', dragIndex === idx && 'opacity-50')}
                   data-testid={`score-row-${player.id}`}
                 >
                   <td className="py-1.5 pr-1">
                     <div className="flex items-center gap-1.5">
-                      <span className="cursor-grab text-[10px] text-gray-300" title="Trascina">
+                      <span className="cursor-grab text-[10px] text-foreground" title="Trascina">
                         ⠿
                       </span>
                       <button
@@ -235,7 +235,7 @@ export function ScoreboardTab() {
                           className="h-3 w-3 rounded-full"
                           style={{ backgroundColor: player.color }}
                         />
-                        <span className="max-w-[72px] truncate text-gray-800">{player.name}</span>
+                        <span className="max-w-[72px] truncate text-foreground">{player.name}</span>
                       </button>
                     </div>
                   </td>
@@ -269,7 +269,7 @@ export function ScoreboardTab() {
         <button
           type="button"
           onClick={handleReset}
-          className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:border-red-400 hover:text-red-500"
+          className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:border-red-400 hover:text-red-500"
           data-testid="reset-scores-btn"
         >
           🔄 Reset

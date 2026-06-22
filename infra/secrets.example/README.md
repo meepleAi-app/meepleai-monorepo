@@ -28,7 +28,6 @@ This directory contains **template files** for the secret management system.
 - `jwt.secret` - JWT signing key
 - `admin.secret` - Initial admin user
 - `embedding-service.secret` - Embedding service API key
-- ~~`qdrant.secret`~~ - **Removed** (Issue #4861): pgvector uses PostgreSQL — no separate key needed
 
 ### 🟡 IMPORTANT (Warning logged if missing)
 - `openrouter.secret` - OpenRouter API key
@@ -40,7 +39,6 @@ This directory contains **template files** for the secret management system.
 - `email.secret` - SMTP server settings
 - `storage.secret` - S3-compatible storage credentials
 - `monitoring.secret` - Grafana/Prometheus passwords
-- `traefik.secret` - Traefik dashboard credentials
 - `smoldocling-service.secret` - Document intelligence API key
 - `reranker-service.secret` - Reranker API key
 

@@ -50,8 +50,8 @@ export function ProfileStep({ onComplete, onSkip }: ProfileStepProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-quicksand text-lg font-semibold text-slate-900">Set Up Your Profile</h2>
-        <p className="mt-1 text-sm text-slate-600">
+        <h2 className="font-quicksand text-lg font-semibold text-foreground">Set Up Your Profile</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           Choose a display name so other players can find you.
         </p>
       </div>
@@ -90,7 +90,7 @@ export function ProfileStep({ onComplete, onSkip }: ProfileStepProps) {
           <button
             type="button"
             onClick={onSkip}
-            className="text-sm text-slate-500 hover:text-slate-700"
+            className="text-sm text-muted-foreground hover:text-foreground"
             data-testid="profile-skip"
           >
             Skip for now

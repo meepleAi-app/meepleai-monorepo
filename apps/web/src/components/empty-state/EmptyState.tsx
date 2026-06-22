@@ -95,8 +95,8 @@ const VARIANT_ICONS: Record<NonNullable<EmptyStateProps['variant']>, LucideIcon>
  * Variant-specific icon colors
  */
 const VARIANT_ICON_COLORS: Record<NonNullable<EmptyStateProps['variant']>, string> = {
-  default: 'text-slate-400 dark:text-slate-500',
-  noData: 'text-slate-400 dark:text-slate-500',
+  default: 'text-muted-foreground',
+  noData: 'text-muted-foreground',
   noResults: 'text-blue-400 dark:text-blue-500',
   noAccess: 'text-yellow-400 dark:text-yellow-500',
   error: 'text-red-400 dark:text-red-500',
@@ -136,7 +136,7 @@ export function EmptyState({
       <div
         className={cn(
           'mb-4 p-4 rounded-full',
-          'bg-slate-100 dark:bg-slate-800',
+          'bg-muted',
           !shouldReduceMotion && 'transition-transform duration-200 hover:scale-105'
         )}
         aria-hidden="true"
@@ -145,13 +145,13 @@ export function EmptyState({
       </div>
 
       {/* Title */}
-      <h3 className={cn('text-lg font-semibold', 'text-slate-900 dark:text-slate-100', 'mb-2')}>
+      <h3 className={cn('text-lg font-semibold', 'text-foreground', 'mb-2')}>
         {title}
       </h3>
 
       {/* Description */}
       {description && (
-        <p className={cn('text-sm', 'text-slate-600 dark:text-slate-400', 'max-w-sm mb-4')}>
+        <p className={cn('text-sm', 'text-muted-foreground', 'max-w-sm mb-4')}>
           {description}
         </p>
       )}
@@ -168,9 +168,9 @@ export function EmptyState({
             !shouldReduceMotion && 'transition-colors duration-200',
             action.variant === 'secondary'
               ? [
-                  'bg-slate-100 dark:bg-slate-800',
-                  'text-slate-700 dark:text-slate-300',
-                  'hover:bg-slate-200 dark:hover:bg-slate-700',
+                  'bg-muted',
+                  'text-foreground',
+                  'hover:bg-muted dark:hover:bg-card',
                   'focus:ring-slate-500',
                 ]
               : [

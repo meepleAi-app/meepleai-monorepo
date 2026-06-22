@@ -88,7 +88,7 @@ internal static class AdminUserCrudEndpoints
         // Session validated by RequireSessionFilter
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-        logger.LogInformation("User {UserId} searching for users with query: {Query}", session!.User!.Id, LogSanitizer.Sanitize(query));
+        logger.LogInformation("User {UserId} searching for users with query: {Query}", session!.Principal!.EffectiveActor.Id, LogSanitizer.Sanitize(query));
 
         // Use CQRS Query for user search
         var searchQuery = new SearchUsersQuery(query, MaxResults: 10);
@@ -128,7 +128,7 @@ internal static class AdminUserCrudEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        logger.LogInformation("Admin {AdminId} creating new user with email {Email}", session!.User!.Id, DataMasking.MaskEmail(request.Email));
+        logger.LogInformation("Admin {AdminId} creating new user with email {Email}", session!.Principal!.EffectiveActor.Id, DataMasking.MaskEmail(request.Email));
         var command = new CreateUserCommand(request.Email, request.Password, request.DisplayName, request.Role ?? "user");
         var user = await mediator.Send(command, ct).ConfigureAwait(false);
         logger.LogInformation("User {UserId} created successfully", user.Id);
@@ -146,7 +146,7 @@ internal static class AdminUserCrudEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        logger.LogInformation("Admin {AdminId} updating user {UserId}", session!.User!.Id, LogSanitizer.Sanitize(id));
+        logger.LogInformation("Admin {AdminId} updating user {UserId}", session!.Principal!.EffectiveActor.Id, LogSanitizer.Sanitize(id));
         var command = new UpdateUserCommand(id, request.Email, request.DisplayName, request.Role);
         var user = await mediator.Send(command, ct).ConfigureAwait(false);
         logger.LogInformation("User {UserId} updated successfully", LogSanitizer.Sanitize(id));
@@ -163,8 +163,8 @@ internal static class AdminUserCrudEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        logger.LogInformation("Admin {AdminId} deleting user {UserId}", session!.User!.Id, LogSanitizer.Sanitize(id));
-        var command = new DeleteUserCommand(id, session.User!.Id.ToString());
+        logger.LogInformation("Admin {AdminId} deleting user {UserId}", session!.Principal!.EffectiveActor.Id, LogSanitizer.Sanitize(id));
+        var command = new DeleteUserCommand(id, session.Principal!.EffectiveActor.Id.ToString());
         await mediator.Send(command, ct).ConfigureAwait(false);
         logger.LogInformation("User {UserId} deleted successfully", LogSanitizer.Sanitize(id));
         return Results.NoContent();
@@ -181,7 +181,7 @@ internal static class AdminUserCrudEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} retrieving details for user {UserId}",
-            session!.User!.Id, userId);
+            session!.Principal!.EffectiveActor.Id, userId);
 
         var query = new Api.BoundedContexts.Authentication.Application.Queries.GetUserByIdQuery(userId);
         var user = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -193,7 +193,7 @@ internal static class AdminUserCrudEndpoints
         }
 
         logger.LogInformation("Admin {AdminId} retrieved details for user {UserId}",
-            session.User.Id, userId);
+            session.Principal!.EffectiveActor.Id, userId);
 
         return Results.Ok(user);
     }

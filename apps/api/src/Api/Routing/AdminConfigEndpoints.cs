@@ -120,7 +120,7 @@ internal static class AdminConfigEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         logger.LogInformation(
             "Admin {UserId} updating PDF limits for tier {Tier}: MaxPerDay={MaxPerDay}, MaxPerWeek={MaxPerWeek}, MaxPerGame={MaxPerGame}",

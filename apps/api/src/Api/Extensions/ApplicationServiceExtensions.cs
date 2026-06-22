@@ -10,10 +10,12 @@ using Api.BoundedContexts.GameToolkit.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders;
 using Api.Helpers;
+using Api.Infrastructure;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.Services.Rag;
 using Api.Observability;
+using Api.SharedKernel.Application;
 using FluentValidation;
 
 namespace Api.Extensions;
@@ -42,6 +44,9 @@ internal static class ApplicationServiceExtensions
         // Issue #1185: RuleSpecService migrated to CQRS pattern in GameManagement bounded context
         // Issue #1189: RuleSpec Comment/Diff services migrated to CQRS pattern
         services.AddScoped<Api.BoundedContexts.GameManagement.Domain.Services.RuleSpecDiffDomainService>();
+
+        // Issue #1320: Cross-BC game data resolver (SharedGame + PrivateGame dual-source lookup)
+        services.AddScoped<IGameCoreDataProvider, GameCoreDataProvider>();
 
         // CONFIG-01: Dynamic configuration service (still used by legacy services/helpers)
         services.AddScoped<IConfigurationService, ConfigurationService>();
@@ -105,16 +110,56 @@ internal static class ApplicationServiceExtensions
         services.AddScoped<AuditService>();
         // AiRequestLogService migrated to CQRS (LogAiRequestCommand)
 
+        // SP5 Admin Security S1 T4: register the audit outbox processor as both a hosted
+        // background service (production drain loop) and a singleton (for integration tests
+        // that invoke RunOnceAsync deterministically without depending on the poll interval).
+        // T4b: register the health tracker singleton consumed by the processor + observable gauges.
+        services.AddSingleton<
+            Api.BoundedContexts.Administration.Infrastructure.Health.IAuditOutboxHealthTracker,
+            Api.BoundedContexts.Administration.Infrastructure.Health.AuditOutboxHealthTracker>();
+        services.AddSingleton<Api.BoundedContexts.Administration.Infrastructure.BackgroundJobs.AuditOutboxProcessor>();
+        services.AddHostedService(sp =>
+            sp.GetRequiredService<Api.BoundedContexts.Administration.Infrastructure.BackgroundJobs.AuditOutboxProcessor>());
+
+        // Issue #1535 T6: register the domain_event_outbox health tracker singleton here
+        // (NOT inside the Testing-gated AddDatabaseServices block) so Program.cs's
+        // RegisterDomainEventOutboxGauges resolve call succeeds in both production AND
+        // HTTP integration tests. The tracker holds the latest aggregate-counter snapshot
+        // used by the /metrics ObservableGauges and the admin dashboard.
+        services.AddSingleton<
+            Api.Infrastructure.DomainEventOutbox.IDomainEventOutboxHealthTracker,
+            Api.Infrastructure.DomainEventOutbox.DomainEventOutboxHealthTracker>();
+
+        // SP5 Admin Security S2 T7: impersonation active-count health tracker + periodic refresh
+        // service feeding the meepleai.security.impersonation.active.count gauge.
+        services.AddSingleton<
+            Api.BoundedContexts.Administration.Infrastructure.Health.IImpersonationHealthTracker,
+            Api.BoundedContexts.Administration.Infrastructure.Health.ImpersonationHealthTracker>();
+        services.AddHostedService<Api.BoundedContexts.Administration.Infrastructure.BackgroundJobs.ImpersonationMetricsRefreshService>();
+
         return services;
     }
 
-    internal static IServiceCollection AddPdfServices(this IServiceCollection services)
+    internal static IServiceCollection AddPdfServices(this IServiceCollection services, IConfiguration? configuration = null)
     {
         // PDF sub-services (SOLID refactoring - Phase 3)
         services.AddScoped<ITableDetectionService, TableDetectionService>();
         services.AddScoped<ITableCellParser, TableCellParser>();
         services.AddScoped<ITableStructureAnalyzer, TableStructureAnalyzer>();
         services.AddScoped<IPdfMetadataExtractor, PdfMetadataExtractor>();
+
+        // Issue #1314 PR 2 + #1399 Phase 4 cleanup: only the MigrationEnabled
+        // toggle remains on StorageLayoutOptions, driving the outbox drainer.
+        // Bound via Options pattern so the background service can resolve it.
+        if (configuration is not null)
+        {
+            services.Configure<StorageLayoutOptions>(configuration.GetSection(StorageLayoutOptions.SectionName));
+        }
+        else
+        {
+            services.Configure<StorageLayoutOptions>(_ => { });
+        }
+
         // Issue #2703: Factory pattern for storage provider selection (local or S3)
         services.AddScoped<IBlobStorageService>(sp => BlobStorageServiceFactory.Create(sp));
 

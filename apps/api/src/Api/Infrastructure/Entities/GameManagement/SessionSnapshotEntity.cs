@@ -28,4 +28,10 @@ public class SessionSnapshotEntity
     public int? PhaseIndex { get; set; }
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     public Guid? CreatedByPlayerId { get; set; }
+
+    /// <summary>
+    /// Optional source domain event id used to dedupe at the DB level (issue #1938 / CF-2).
+    /// UNIQUE partial — only when not null.
+    /// </summary>
+    public Guid? SourceEventId { get; set; }
 }

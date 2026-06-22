@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Commands.Operations;
+using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Queries.Operations;
 using Api.Extensions;
 using Api.Infrastructure.Authorization;
@@ -93,7 +94,7 @@ internal static class AdminOperationsEndpoints
 
             var command = new RestartServiceCommand(
                 ServiceName: request.ServiceName,
-                AdminUserId: session!.User!.Id
+                AdminUserId: session!.Principal!.Subject.Id
             );
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -104,6 +105,10 @@ internal static class AdminOperationsEndpoints
             ConfirmationLevel.Level2,
             "Restart API Service",
             "This will restart the API service. All active sessions will be terminated. Estimated downtime: 30-60 seconds."))
+        .Produces<RestartServiceResponseDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces(StatusCodes.Status404NotFound)
         .WithSummary("Restart API service")
         .WithDescription("Triggers graceful shutdown; orchestrator handles restart. SuperAdmin only, Level 2 confirmation required.");
 
@@ -117,10 +122,10 @@ internal static class AdminOperationsEndpoints
             var (authorized, session, error) = context.RequireSuperAdminSession();
             if (!authorized) return error!;
 
-            var command = new ImpersonateUserCommand(
+            var command = new ImpersonationStartCommand(
                 TargetUserId: request.TargetUserId,
-                AdminUserId: session!.User!.Id,
-                Reason: "Operations panel impersonation"
+                RequestingUserId: session!.Principal!.Subject.Id,
+                Reason: "Operations panel impersonation request"
             );
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -131,6 +136,11 @@ internal static class AdminOperationsEndpoints
             ConfirmationLevel.Level2,
             "Impersonate User",
             "You will gain full access to this user's account. All actions will be audited."))
+        .Produces<ImpersonationStartResponseDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces(StatusCodes.Status404NotFound)
+        .Produces(StatusCodes.Status409Conflict)
         .WithSummary("Impersonate user")
         .WithDescription("Creates session as target user for debugging. SuperAdmin only, Level 2 confirmation required.");
 
@@ -144,9 +154,9 @@ internal static class AdminOperationsEndpoints
             var (authorized, session, error) = context.RequireSuperAdminSession();
             if (!authorized) return error!;
 
-            var command = new Administration.Application.Commands.EndImpersonationCommand(
+            var command = new Administration.Application.Commands.ImpersonationEndCommand(
                 SessionId: request.SessionId,
-                AdminUserId: session!.User!.Id
+                RequestingUserId: session!.Principal!.Subject.Id
             );
 
             var success = await mediator.Send(command, ct).ConfigureAwait(false);

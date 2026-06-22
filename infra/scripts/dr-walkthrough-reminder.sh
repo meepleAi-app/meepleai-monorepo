@@ -19,7 +19,9 @@ if [ -f "${SECRETS_DIR}/backup.secret" ]; then
 fi
 
 WEBHOOK_URL="${BACKUP_WEBHOOK_URL:-}"
-LOG_FILE="${SCRIPT_DIR}/../../docs/operations/dr-walkthrough-log.md"
+# Log path moved when docs/operations/ was inlined into for-developers/operations
+# (see PR#791 reorg and docs/for-developers/operations/rollback-runbook.md §13).
+LOG_FILE="${SCRIPT_DIR}/../../docs/for-developers/operations/dr-walkthrough-log.md"
 
 # Check last walkthrough date from log file
 LAST_WALKTHROUGH=$(grep -oE '^\| [0-9]{4}-[0-9]{2}-[0-9]{2}' "$LOG_FILE" 2>/dev/null | head -1 | tr -d '|' | xargs || echo "")
@@ -34,11 +36,14 @@ PAYLOAD=$(cat <<EOF
 {
   "status": "action_required",
   "task": "DR runbook walkthrough due",
-  "runbook": "docs/operations/disaster-recovery-runbook.md",
-  "log_file": "docs/operations/dr-walkthrough-log.md",
+  "runbooks": [
+    "docs/for-developers/operations/rollback-runbook.md",
+    "docs/for-developers/operations/operations-manual.md#18-maintenance--disaster-recovery"
+  ],
+  "log_file": "docs/for-developers/operations/dr-walkthrough-log.md",
   "last_walkthrough": "${LAST_WALKTHROUGH:-never}",
   "days_since": "${DAYS_SINCE}",
-  "instructions": "Read the runbook end-to-end. Verify each step still matches the current infrastructure. Add an entry to dr-walkthrough-log.md."
+  "instructions": "Read the rollback runbook end-to-end. Execute one §6 scenario as dry-run on staging. Verify each step still matches current infrastructure. Add an entry to dr-walkthrough-log.md and update Last verified header."
 }
 EOF
 )

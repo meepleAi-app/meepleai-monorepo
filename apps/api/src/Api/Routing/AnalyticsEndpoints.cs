@@ -38,6 +38,97 @@ internal static class AnalyticsEndpoints
         group.MapGet("/admin/requests", HandleGetRequests);
 
         group.MapGet("/admin/stats", HandleGetStats);
+
+        // #1728: per-query drill (chunks + per-stage breakdown) for QueryDrillPanel
+        group.MapGet("/admin/ai/queries/{id:guid}/drill", HandleGetAiQueryDrill)
+            .WithName("GetAiQueryDrill")
+            .WithTags("Admin", "AI")
+            .WithSummary("Get retrieved chunks + per-stage latency breakdown for a single AI request")
+            .WithDescription("Returns the AI request log together with retrieved chunks (when the pipeline recorded them) and per-stage latency breakdown (retrieval/rerank/llm/post). Empty arrays / null breakdown surface as 'limited drill' on the FE.")
+            .Produces<object>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // #1729: AI metrics trend (p50/p95/error per bucket) for AiTrendChart.
+        group.MapGet("/admin/ai/metrics", HandleGetAiMetricsTrend)
+            .WithName("GetAiMetricsTrend")
+            .WithTags("Admin", "AI")
+            .WithSummary("Get AI metrics trend (latency p50/p95 + error rate) per bucket for a time range")
+            .WithDescription("Returns continuous per-bucket datapoints for the requested time range. Range values: Live (1h, 1m buckets), 1h (1m), 24h (15m), 7d (1h). Buckets without traffic surface as zeros to keep the FE chart series continuous.")
+            .Produces<object>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+    }
+
+    // #1728: Endpoint handler for per-query drill.
+    private static async Task<IResult> HandleGetAiQueryDrill(
+        HttpContext context,
+        IMediator mediator,
+        Guid id,
+        CancellationToken ct = default)
+    {
+        var (authorized, _, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var query = new GetAiQueryDrillQuery(id);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        if (result is null)
+        {
+            return Results.NotFound(new { error = "not_found" });
+        }
+
+        var r = result.Request;
+        return Results.Json(new
+        {
+            request = new
+            {
+                id = r.Id,
+                userId = r.UserId,
+                gameId = r.GameId,
+                endpoint = r.Endpoint,
+                query = r.Query,
+                responseSnippet = r.ResponseSnippet,
+                latencyMs = r.LatencyMs,
+                tokenCount = r.TokenCount,
+                promptTokens = r.PromptTokens,
+                completionTokens = r.CompletionTokens,
+                confidence = r.Confidence,
+                status = r.Status,
+                errorMessage = r.ErrorMessage,
+                ipAddress = r.IpAddress,
+                userAgent = r.UserAgent,
+                createdAt = r.CreatedAt,
+                model = r.Model,
+                finishReason = r.FinishReason,
+            },
+            chunks = result.Chunks,
+            breakdown = result.Breakdown,
+        });
+    }
+
+    // #1729: Endpoint handler for AI metrics trend.
+    private static async Task<IResult> HandleGetAiMetricsTrend(
+        HttpContext context,
+        IMediator mediator,
+        string? range = "7d",
+        CancellationToken ct = default)
+    {
+        var (authorized, _, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        try
+        {
+            var query = new GetAiMetricsTrendQuery(range ?? "7d");
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Json(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return Results.BadRequest(new { error = "invalid_range", message = ex.Message });
+        }
     }
 
     private static void MapLlmHealthEndpoints(RouteGroupBuilder group)

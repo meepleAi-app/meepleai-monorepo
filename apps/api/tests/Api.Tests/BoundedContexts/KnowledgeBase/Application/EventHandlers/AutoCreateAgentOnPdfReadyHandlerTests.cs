@@ -102,10 +102,10 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests : IDisposable
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            SharedGameId = GameId,
             FileName = "rulebook.pdf",
             FilePath = "/uploads/rulebook.pdf",
             UploadedByUserId = UserId,
+            SharedGameId = GameId,
             ProcessingPriority = "Admin",
         });
         await _dbContext.SaveChangesAsync();
@@ -118,10 +118,10 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests : IDisposable
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            SharedGameId = GameId,
             FileName = "rulebook.pdf",
             FilePath = "/uploads/rulebook.pdf",
             UploadedByUserId = UserId,
+            SharedGameId = GameId,
             ProcessingPriority = "Normal",
         });
         await _dbContext.SaveChangesAsync();
@@ -206,22 +206,73 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests : IDisposable
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // Guard: non-admin processing priority
+    // Issue #2245 (epic #2242 Sub #3): the ProcessingPriority="Admin" guard was REMOVED so user
+    // uploads (Newman flow NW1) trigger agent auto-creation too. The next two tests pin this
+    // behavior so a regression of the guard would surface immediately.
     // ────────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task Handle_WhenPdfIsNormalPriority_SkipsAutoAgentCreation()
+    [Trait("Issue", "2245")]
+    public async Task Handle_WhenPdfIsNormalPriority_AlsoTriggersAgentCreation()
     {
-        // Arrange
+        // Arrange — user upload (ProcessingPriority="Normal")
         var pdfId = await AddNormalPdfAsync();
+        await AddUserAsync();
+        SetupActiveDefinition();
+
+        _mockMediator
+            .Setup(m => m.Send(It.IsAny<CreateGameAgentCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateFakeAgentResult());
+
         var evt = CreateReadyEvent(pdfId);
 
         // Act
         await _handler.Handle(evt, CancellationToken.None);
 
-        // Assert — definition lookup never reached
-        _mockDefinitionRepo.Verify(r => r.GetAllAsync(It.IsAny<CancellationToken>()), Times.Never);
-        _mockMediator.Verify(m => m.Send(It.IsAny<CreateGameAgentCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+        // Assert — Issue #2245: even Normal priority must reach CreateGameAgent now
+        _mockDefinitionRepo.Verify(r => r.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _mockMediator.Verify(
+            m => m.Send(It.Is<CreateGameAgentCommand>(c => c.GameId == GameId), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Theory]
+    [Trait("Issue", "2245")]
+    [InlineData("Normal")]
+    [InlineData("Admin")]
+    [InlineData("UserUpload")]
+    [InlineData("")]
+    public async Task Handle_AnyProcessingPriority_TriggersAgentCreation(string priority)
+    {
+        // Issue #2245: priority must be IGNORED for the auto-create decision.
+        // Arrange
+        var pdfId = Guid.NewGuid();
+        _dbContext.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = pdfId,
+            FileName = "rulebook.pdf",
+            FilePath = "/uploads/rulebook.pdf",
+            UploadedByUserId = UserId,
+            SharedGameId = GameId,
+            ProcessingPriority = priority,
+        });
+        await _dbContext.SaveChangesAsync();
+        await AddUserAsync();
+        SetupActiveDefinition();
+
+        _mockMediator
+            .Setup(m => m.Send(It.IsAny<CreateGameAgentCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateFakeAgentResult());
+
+        var evt = CreateReadyEvent(pdfId);
+
+        // Act
+        await _handler.Handle(evt, CancellationToken.None);
+
+        // Assert — regardless of priority value, CreateGameAgent must be dispatched
+        _mockMediator.Verify(
+            m => m.Send(It.IsAny<CreateGameAgentCommand>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     // ────────────────────────────────────────────────────────────────────────

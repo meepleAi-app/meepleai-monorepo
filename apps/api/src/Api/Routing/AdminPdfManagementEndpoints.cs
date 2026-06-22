@@ -17,6 +17,11 @@ internal static class AdminPdfManagementEndpoints
             .WithTags("Admin - PDF Management")
             .AddEndpointFilter<RequireAdminSessionFilter>();
 
+        // Issue #1653: Admin KB document delete (agent-cascade + audit)
+        group.MapDelete("/{pdfId:guid}", DeleteKbDocument)
+            .WithName("DeleteKbDocument")
+            .WithSummary("Delete a KB document (cascade: detach from agents, remove chunks/vectors/blob, audited)");
+
         // Phase 4: Bulk operations
         group.MapPost("/bulk/delete", BulkDelete)
             .WithName("BulkDeletePdfs")
@@ -53,11 +58,13 @@ internal static class AdminPdfManagementEndpoints
 
     private static async Task<IResult> ReindexDocument(
         Guid pdfId,
+        ReindexDocumentRequest? request,
         IMediator mediator,
         CancellationToken cancellationToken)
     {
-        await mediator.Send(new ReindexDocumentCommand(pdfId), cancellationToken)
-            .ConfigureAwait(false);
+        await mediator.Send(
+            new ReindexDocumentCommand(pdfId, request?.IndexerVersion),
+            cancellationToken).ConfigureAwait(false);
         return Results.Ok(new { success = true, message = "Document queued for reindexing" });
     }
 
@@ -87,6 +94,16 @@ internal static class AdminPdfManagementEndpoints
             .ConfigureAwait(false);
         return Results.Ok(result);
     }
+
+    private static async Task<IResult> DeleteKbDocument(
+        Guid pdfId,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        await mediator.Send(new DeleteKbDocumentCommand(pdfId), cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
 }
 
 internal record BulkDeletePdfsRequest(List<Guid> PdfIds);
+internal record ReindexDocumentRequest(string? IndexerVersion);

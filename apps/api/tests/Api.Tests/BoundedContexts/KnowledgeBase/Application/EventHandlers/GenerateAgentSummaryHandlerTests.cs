@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.EventHandlers;
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
@@ -30,6 +31,7 @@ public sealed class GenerateAgentSummaryHandlerTests
         "Quando avete messo in pausa la partita, il turno 5 era appena iniziato.";
 
     private readonly Mock<IAgentDefinitionRepository> _agentRepoMock;
+    private readonly Mock<IPauseSnapshotRepository> _pauseSnapshotRepoMock;
     private readonly Mock<ILlmService> _llmServiceMock;
     private readonly Mock<IPublisher> _publisherMock;
     private readonly GenerateAgentSummaryHandler _sut;
@@ -37,8 +39,14 @@ public sealed class GenerateAgentSummaryHandlerTests
     public GenerateAgentSummaryHandlerTests()
     {
         _agentRepoMock = new Mock<IAgentDefinitionRepository>();
+        _pauseSnapshotRepoMock = new Mock<IPauseSnapshotRepository>();
         _llmServiceMock = new Mock<ILlmService>();
         _publisherMock = new Mock<IPublisher>();
+
+        // CF-3 default: PauseSnapshot does NOT yet have a summary — handler runs the LLM call.
+        _pauseSnapshotRepoMock
+            .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Api.BoundedContexts.GameManagement.Domain.Entities.PauseSnapshot.PauseSnapshot?)null);
 
         // Default: agent definition returns null (not found is gracefully handled)
         _agentRepoMock
@@ -58,6 +66,7 @@ public sealed class GenerateAgentSummaryHandlerTests
 
         _sut = new GenerateAgentSummaryHandler(
             _agentRepoMock.Object,
+            _pauseSnapshotRepoMock.Object,
             _llmServiceMock.Object,
             _publisherMock.Object,
             NullLogger<GenerateAgentSummaryHandler>.Instance);

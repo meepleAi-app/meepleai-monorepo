@@ -8,14 +8,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { buildOAuthUrl } from '@/components/auth/oauth-url';
 import { RegisterForm, type RegisterSubmitPayload } from '@/components/auth/RegisterForm';
 import { RequestAccessForm } from '@/components/auth/RequestAccessForm';
-import { AuthCard } from '@/components/ui/v2/auth-card';
-import { Divider } from '@/components/ui/v2/divider';
-import { OAuthButton } from '@/components/ui/v2/oauth-buttons';
+import { AuthCard } from '@/components/ui/auth-card';
+import { Divider } from '@/components/ui/divider';
+import { OAuthButton } from '@/components/ui/oauth-buttons';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/hooks/useTranslation';
 import { trackSignUp } from '@/lib/analytics/flywheel-events';
 import { useApiClient } from '@/lib/api/context';
-import { logger } from '@/lib/logger';
 
 // ============================================================================
 // Types
@@ -30,7 +29,7 @@ type RegistrationMode = 'loading' | 'public' | 'invite-only';
 export function RegisterFallback() {
   const { t } = useTranslation();
   return (
-    <main className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300">
+    <main className="min-h-dvh flex items-center justify-center bg-muted text-muted-foreground">
       {t('auth.register.loadingMessage')}
     </main>
   );
@@ -53,6 +52,10 @@ export function RegisterPageContent() {
   const [error, setError] = useState<string>('');
 
   const oauthDisabled = searchParams?.get('oauth_disabled') === 'true';
+  // Audit (#2168): register does NOT read ?from=. Post-registration redirect is
+  // hardcoded to /verification-pending (line below in handleRegister). If a
+  // ?from= param is ever introduced here, use assertSafeRelativeOrFallback from
+  // @/lib/url-safety before passing it to router.push().
 
   // Fetch registration mode on mount
   useEffect(() => {
@@ -94,11 +97,13 @@ export function RegisterPageContent() {
         // (matches AuthModal.handleRegister behavior)
         await new Promise(resolve => setTimeout(resolve, 100));
 
+        // #2168 audit: hardcoded redirect target — see header comment.
         await router.push(`/verification-pending?email=${encodeURIComponent(data.email)}`);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : t('auth.register.genericError');
         setError(errorMessage);
-        logger.error('Registration failed:', err);
+        // Issue #2171: HttpClient already calls logApiError on failed responses —
+        // re-logging here produced duplicate console.error noise.
       } finally {
         setIsAuthenticating(false);
       }
@@ -117,7 +122,12 @@ export function RegisterPageContent() {
         className="min-h-dvh flex items-center justify-center bg-background text-foreground"
         data-testid="register-loading"
       >
-        <div className="animate-pulse">{t('auth.register.loadingMessage')}</div>
+        {/* motion-reduce:animate-none — pairs with reducedMotion:'reduce' in
+            accessibility.spec.ts. Without this, axe captures mid-pulse alpha
+            and produces a spurious 4.09:1 AA fail (#1094 follow-up to #1231) */}
+        <div className="animate-pulse motion-reduce:animate-none">
+          {t('auth.register.loadingMessage')}
+        </div>
       </div>
     );
   }

@@ -22,19 +22,19 @@ export function SplitViewLayout({ chatPanel, pdfPanel }: SplitViewLayoutProps) {
     <>
       {/* Desktop: Split View */}
       <div className="hidden lg:grid lg:grid-cols-2 lg:gap-4 h-full">
-        <div className="border-r border-slate-800">{chatPanel}</div>
+        <div className="border-r border-border">{chatPanel}</div>
         <div>{pdfPanel}</div>
       </div>
 
       {/* Mobile: Tabs */}
       <div className="lg:hidden flex flex-col h-full">
-        <div className="flex border-b border-slate-800">
+        <div className="flex border-b border-border">
           <button
             onClick={() => setActiveTab('chat')}
             className={`flex-1 py-3 text-sm font-medium transition-colors ${
               activeTab === 'chat'
                 ? 'text-cyan-400 border-b-2 border-cyan-400'
-                : 'text-slate-400'
+                : 'text-muted-foreground'
             }`}
           >
             Chat
@@ -44,7 +44,7 @@ export function SplitViewLayout({ chatPanel, pdfPanel }: SplitViewLayoutProps) {
             className={`flex-1 py-3 text-sm font-medium transition-colors ${
               activeTab === 'pdf'
                 ? 'text-cyan-400 border-b-2 border-cyan-400'
-                : 'text-slate-400'
+                : 'text-muted-foreground'
             }`}
           >
             PDF

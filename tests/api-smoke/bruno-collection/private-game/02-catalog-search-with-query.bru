@@ -1,0 +1,19 @@
+meta {
+  name: SG1 — Catalog search with query string (#893)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{apiBase}}/api/v1/shared-games?search=Catan&pageNumber=1&pageSize=10
+}
+
+tests {
+  test("returns 200 with search applied", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("response is well-formed", function() {
+    const body = res.getBody();
+    expect(body).to.have.property("items");
+  });
+}

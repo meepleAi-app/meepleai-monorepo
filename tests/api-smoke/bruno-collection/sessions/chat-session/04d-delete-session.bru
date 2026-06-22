@@ -1,0 +1,23 @@
+meta {
+  name: SG4-CS1d — ChatSession delete (soft-delete)
+  type: http
+  seq: 7
+}
+
+delete {
+  url: {{apiBase}}/api/v1/chat/sessions/{{chatSessionId}}
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  if (!bru.getVar("chatSessionId")) {
+    throw new Error("chatSessionId not set — run 04-lifecycle-create first");
+  }
+}
+
+tests {
+  test("returns 204 No Content", function() {
+    expect(res.getStatus()).to.equal(204);
+  });
+}

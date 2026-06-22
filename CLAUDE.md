@@ -9,10 +9,10 @@
 | Start Dev (full) | `make dev` | `infra/` |
 | Start Dev (core) | `make dev-core` | `infra/` |
 | Dev from Snapshot | `make dev-from-snapshot` | `infra/` — [guide](./docs/for-developers/workflows/snapshot-seed-workflow.md) |
-| Alpha Mode | `make alpha` | `infra/` |
 | Bake Snapshot | `make seed-index` | `infra/` — raro, indicizza tutti i PDF |
 | Integration | `make tunnel && make integration` | `infra/` — **Git Bash only (Windows)** |
 | Deploy Staging | `make staging` | `infra/` (on server) |
+| Game Reset (#1320) | `make game-reset-help` | `infra/` — workflow help, see [spec](./docs/for-developers/specs/2026-05-19-game-entity-reset.md) |
 | Setup Secrets | `make secrets-setup && make secrets-sync` | `infra/` |
 | Stop / Logs | `make dev-down` / `make logs s=api` | `infra/` |
 | All commands | `make help` | `infra/` |
@@ -26,16 +26,9 @@
 - **Docker commands**: always use `pwsh -c "docker logs meepleai-api --tail=50"` — piping in bash breaks
 - **Integration scripts**: run in **Git Bash** (not PowerShell/CMD). Requires SSH key `~/.ssh/meepleai-staging`
 
-### Alpha Mode
+### Invite-only Registration
 
-Set `ALPHA_MODE=true` (backend) and `NEXT_PUBLIC_ALPHA_MODE=true` (frontend) to enable Alpha Zero.
-`NEXT_PUBLIC_ALPHA_MODE` is **build-time** — requires rebuild, not just restart.
-
-| Aspect | Alpha Scope |
-|--------|------------|
-| Features | Auth → Games + BGG → PDF upload → RAG Chat → Library |
-| Active BCs | Authentication, GameManagement, DocumentProcessing, KnowledgeBase, UserLibrary |
-| Admin | Overview, Users, Content (trimmed) only |
+Controlled at runtime via admin toggle (`/admin/config` → General → Registration Mode), backed by `RegistrationMode` config (DB-persisted). When `publicRegistrationEnabled=false`, `/register` shows the request-access popup (`RequestAccessForm`) instead of the standard form. No env var, no redeploy.
 
 ## Stack
 
@@ -74,7 +67,7 @@ app.MapPost("/api/v1/auth/register", async (RegisterCommand cmd, IAuthService sv
 | DocumentProcessing | PDF upload, extraction, chunking |
 | EntityRelationships | Cross-entity links (EntityLink aggregates) |
 | Gamification | Achievements, badges, leaderboards |
-| GameManagement | Catalog, sessions, FAQs, specs |
+| GameManagement | Catalog, sessions, FAQs, specs, game books (multi-role 1..N per game) |
 | GameToolbox | Card decks, phases, session tool templates |
 | GameToolkit | AI toolkit generation, KB-based suggestions |
 | KnowledgeBase | RAG, AI agents, chat, vector search |
@@ -122,33 +115,39 @@ cd ../../infra && make dev        # All services (make dev-core = no AI/monitori
 
 ### Git Workflow
 
-**Branches**: `main-dev` (dev) | `frontend-dev` (frontend) | `main` (prod) | `feature/issue-{n}-{desc}`
+> **Reference**: full rationale in [ADR-054 — DevOps Multi-Branch Strategy](./docs/for-claude/architecture/adr/adr-054-devops-multi-branch-strategy.md). Tracking epic: [#842](https://github.com/meepleAi-app/meepleai-monorepo/issues/842).
 
-**🔴 PR Target Rule**: Feature branches MUST merge to their parent branch
+**Branches**: `main-dev` (dev) | `main-staging` (release) | `main` (prod) | `feature/issue-{n}-{desc}`
+
+**🔴 PR Target Rule**: Feature branches MUST merge to their parent branch (typically `main-dev`)
 
 ```bash
-git checkout frontend-dev && git pull
+git checkout main-dev && git pull
 git checkout -b feature/issue-123-desc
-git config branch.feature/issue-123-desc.parent frontend-dev
+git config branch.feature/issue-123-desc.parent main-dev
 # work → commit → test → push
 git push -u origin feature/issue-123-desc
-# PR to frontend-dev (NOT main!) → merge → git branch -D feature/issue-123-desc
+# PR to main-dev → merge (auto-deletes branch on merge)
 ```
+
+> **Note**: `frontend-dev` and `backend-dev` were retired on 2026-05-09 (issue #897). All feature branches now target `main-dev` directly. Auto-delete on merge is enabled at repo level — no need to `git branch -D` after PR merge.
 
 **🔴 Branch Hygiene Rule** (issue #806): ALWAYS switch to the parent branch BEFORE creating a feature branch. Never run `git checkout -b feature/...` while HEAD is on another in-progress feature branch — it absorbs the other branch's commits into your new branch's ancestry. Concurrent multi-terminal workflows (incl. AI agentic sessions) are particularly prone to this.
 
 **Pre-creation safety check** — run before `git checkout -b`:
 
 ```bash
-# Verify HEAD is on the intended parent (main-dev / frontend-dev / main),
+# Verify HEAD is on the intended parent (main-dev / main),
 # NOT on another feature/* branch
-git branch --show-current  # MUST print main-dev, frontend-dev, or main
+git branch --show-current  # MUST print main-dev or main
 git status                 # MUST show clean tree
 git pull --ff-only         # MUST succeed (no divergence)
 git checkout -b feature/issue-{n}-{desc}
 ```
 
 If `git branch --show-current` prints `feature/...`, STOP. Run `git checkout main-dev && git pull` first.
+
+See also: [CONTRIBUTING.md § Branch Hygiene](./CONTRIBUTING.md#-branch-hygiene--before-creating-a-feature-branch) for the human-facing version (includes opening-PR checklist + recovery via `git rebase --onto`).
 
 **Commits**: `feat|fix|docs|refactor|test|chore(scope): description`
 
@@ -260,18 +259,78 @@ tests/Api.Tests/          # Backend test suite
 | Snapshot drift | `make seed-index` (rigenera) or `make dev` (fallback) — [workflow](./docs/for-developers/workflows/snapshot-seed-workflow.md#compat-gate--exit-codes) |
 | Full ops reference | [docs/for-developers/operations/operations-manual.md](./docs/for-developers/operations/operations-manual.md) |
 
+## Known Flaky Tests
+
+Tests confirmed failing on `main-dev` baseline independently of any specific PR.
+Triage history: #1349 (closed, Phase 2d carryover) → #1422 (2026-05-21, 12 SharedGameId/PDF cluster resolved) → 2026-05-22 (4 baseline failures cleared; S3Storage entry was stale) → 2026-06-09 (#1887 PdfDocument_SevenStateProgression cleared via PR #2038, baseline now empty) → 2026-06-12 (#2270 cleared orphan `asse-b-axe.test.tsx` left behind by PR #2161 layout-shell dedupe; baseline clean again) → 2026-06-13 (#2266 cleared 2 nav-test follow-ups from PR #2279 #2190 cleanup — `AppTopBar.test.tsx` + `MobileBottomBar.test.tsx` still expecting label "Hub" after rename to "Games"; baseline clean again).
+
+| Test | File | First observed | Reason | Action |
+|---|---|---|---|---|
+| _(none — baseline currently clean)_ | | | | |
+
+**Resolved 2026-06-12 (#2270)**: `apps/web/__tests__/asse-b-axe.test.tsx` — Frontend Tests shard 2/3 fail with `Failed to resolve import "@/components/layout/main-nav/MainNavList"`. Orphan test left behind by PR [#2161](https://github.com/meepleAi-app/meepleai-monorepo/pull/2161) "refactor(frontend): dedupe layout shell + retire PageHeader legacy", which deleted 8 source files (`MainSidebar.tsx`, `MainNavList.tsx`, `main-nav-config.ts`, `filter-nav-by-permission.ts` + their tests) but missed the asse-B axe smoke test that imported `MainNavList` + `MAIN_NAV_ITEMS` + `WizardModal`. `WizardModal` survives but the nav surface is gone, so the test is unsalvageable as a smoke; deleted outright in this PR. Fix shipped as a one-file `chore(tests)` follow-up alongside the #2269 AddGameDrawer parity work — would otherwise have blocked the PR with a baseline-regression CI red.
+
+**Resolved 2026-06-09 (#1887)**: `PdfDocument_SevenStateProgression_ShouldAdvanceThroughAllStates` (fix PR [#2038](https://github.com/meepleAi-app/meepleai-monorepo/pull/2038)) — assertion split into `HaveCount(7)` + typed `OfType<>()` (6 `PdfStateChangedEvent` + 1 `KbDocIndexedEvent` raised on the Ready transition for the activity rail, per BE-3 #1590 B2). The previous baseline entry misattributed the 7th event to PR #1873's `PdfDocumentDeleted` — actual extra event is `KbDocIndexedEvent` from `TransitionTo()` (`PdfDocument.cs:433-443`).
+
+**Resolved 2026-05-22**: 3 documented baseline failures fixed + 1 stale entry removed.
+- `Should_Fail_When_GameId_Is_Empty` — fixed by adding `Cascade(CascadeMode.Stop)` to `CreateRuleConflictFaqCommandValidator.RuleFor(x => x.GameId)` so the async `GameExists` check (which calls `GameRef.Shared(Guid.Empty)` → `ArgumentException`) is skipped when `NotEmpty()` already failed.
+- `Handle_EmptyGuid_ReturnsNull` (in `GetGameByIdQueryHandlerTests`) — fixed by short-circuiting the handler on `Guid.Empty` before constructing `GameRef.Shared(...)`; the test now also asserts the provider is never consulted. The 4 same-named tests in `DocumentProcessing` were never failing (they mock `repository.GetByIdAsync(Guid)` directly without going through `GameRef`).
+- `Handle_WithSearchFilter_ReturnsMatchingGames` — moved to `Integration/GameManagement/GetAllGamesQueryHandlerIntegrationTests.cs` (Testcontainers Postgres), where `EF.Functions.ILike` translates to SQL `ILIKE`. The Unit class retained the non-search scenarios.
+- `*_S3Storage_*` (2 tests) — entry was stale: all unit tests in `S3BlobStorageServiceTests` pass; the 11 skipped tests in `S3BlobStorageIntegrationTests` only require Docker.
+
+**Resolved in #1422 (2026-05-21)**: 12 undocumented SharedGameId/PDF cluster failures triaged and cleared.
+Root cause: regression from PR #1345/#1347 (Phase 2d delete `GameEntity` + drop `games` table, 2026-05-20). Test fixtures still relied on the dropped `pdf_documents.GameId` column → handlers filtering on `SharedGameId` returned 0 items. Resolution: **11 fixed** via fixture drift correction (add `SharedGameId` to `PdfDocumentEntity`/`TextChunkEntity` setups + `Publisher = "Kosmos"` on `DegradedAgentContext` full-metadata test) + **1 deleted** (`Handle_WithSharedGameId_ResolvesToActualGameId` — Post-Phase 2d the resolver step in `CreateChatThreadCommandHandler:46-54` is a degenerate identity lookup; cross-table resolution no longer exists).
+
+**Policy**: PRs MUST NOT cause the unit-test fail count to grow above this baseline (currently zero). Future regressions: either fix the root cause or skip with `[Trait("Skip", "<issue#>")]` and add a row here in the same PR.
+
 ## AI Assistant Rules
 
 ### 🔒 Active Freezes
 
-**SP6 v2 expansion FREEZE** (issued 2026-05-06, see [#808](https://github.com/meepleAi-app/meepleai-monorepo/issues/808))
+**BGG user-side asset ban — 2026-06-10** (issue [#2123](https://github.com/meepleAi-app/meepleai-monorepo/issues/2123)) — Hard ban on browser requests to `cf.geekdo-images.com`, `*.boardgamegeek.com`, `images.geekdo.com`, `geekdo-images.com`. Three-layer enforcement: (1) data plane (seed manifests + `SeedManifestGame` C# model stripped of image properties + DB columns nullable + nullify migration `20260610152201`); (2) resolution plane (`SharedGameDto.CoverUrl` is the single FE source, deterministic placeholder fallback via `cover-utils.ts`); (3) network plane (`next.config.js` explicit allowlist with no `**` catch-all + custom ESLint rule `local/no-bgg-host` + `pnpm lint:bgg` grep gate). Prometheus metric `meepleai_bgg_url_attempted_render_total` has SLO=0; any nonzero increment is P1. See [ADR-059 §5](./docs/for-claude/architecture/adr/adr-059-catalog-seed-legal-posture.md) and [operations manual § 20](./docs/for-developers/operations/operations-manual.md). Admin server-to-server BGG paths (`apps/web/src/app/admin/**`, `apps/web/src/components/admin/**`) remain legitimate per ADR-059 §2.
 
-- ❌ NO new components under `apps/web/src/components/v2/**` using `hsl(*, 89%, 48%)` + `hsla(*, 89%, *, 0.10)` token pattern
-- ❌ NO new SP6 v2 routes (`/gamebook/**`, `/agents/**`) until A11y token redesign ([#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807) Fase 2) lands on `main-dev`
-- ❌ NO migration of legacy components to current v2 design tokens
-- ✅ ALLOWED: bugfix on existing v2 surfaces, performance, tests, i18n, docs, A11y fixes
-- 🟡 CASE-BY-CASE: bugfix that *adds* new v2 component (e.g. error boundary), hot-fix
-- A11y CI job (`Frontend - A11y E2E`) is now `continue-on-error: true` until token redesign — restore blocking when [#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807) Fase 2 completes
+**Design System De-versioning — COMPLETE 2026-05-18** (umbrella #1023 closed, Stage 3 #1026 closed)
+
+All 3 stages shipped (Stage 1 audit #1024 → Stage 2 path-migration #1025/PR #1032 → Stage 3 conformity fixes #1026). Canonical paths are active:
+- Feature compositions → `apps/web/src/components/features/<feature>/`
+- Primitives → `apps/web/src/components/ui/<primitive>/`
+
+The legacy directories `apps/web/src/components/v2/**` and `apps/web/src/components/ui/v2/**` are empty post-codemod; do not re-introduce them.
+
+Stage 3 conformity fixes shipped per cluster (player-detail, toolkit-detail BE+FE, discover, dashboard REFACTOR-FORWARD, hub/<entity> 3-routes, game-nights runtime) + DetailPageLayout primitive (PR #1112) cross-cutting. Spec: [`docs/for-developers/specs/2026-05-11-design-system-deversioning.md`](./docs/for-developers/specs/2026-05-11-design-system-deversioning.md).
+
+**Visual Gate REMOVED 2026-05-20** — the entire mockup/visual-regression test suite (`apps/web/e2e/visual-conformity/`, `visual-migrated/`, `v2-states/`, `visual-mockups/`) was retired along with the 9 supporting workflows (conformity-* / mockup-* / visual-regression-*) and Playwright projects. False-positive rate (locale drift, font flake, mockup-vs-live divergence) outweighed pickup value; replacement = manual designer review on PRs. Issues #1066 (umbrella WS-C) / #1069 (Phase 3) / #1269 (waiver) closed by the removal PR.
+
+> **Historical**: SP6 v2 expansion FREEZE (issued 2026-05-06 per [#808](https://github.com/meepleAi-app/meepleai-monorepo/issues/808), tied to A11y audit [#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807)) was **lifted on 2026-05-10** by PR #876 (token redesign — AA-compliant CSS vars + entity Tailwind utilities). Issues #807 and #808 are both CLOSED. **A11y CI restore COMPLETE 2026-05-18** via [#1094](https://github.com/meepleAi-app/meepleai-monorepo/issues/1094) Phase D gate flip: `Frontend - A11y E2E` is now **blocking** (`continue-on-error` removed in `ci.yml`, job in required-jobs list). Final v11 axe run: **0 color-contrast + 0 ARIA violations** across 96 a11y tests (trajectory v4 baseline 103+11 → v11 0, -100% via 17 PRs #1219, #1224-#1260). Companion [#1015](https://github.com/meepleAi-app/meepleai-monorepo/issues/1015) (release-level baseline-diff) also CLOSED COMPLETED 2026-05-18. Original blocker #752 closed 2026-05-12 via #876; supersedes #1179 (duplicate). Audit: [`docs/for-developers/audits/a11y-color-contrast-restoration.md`](./docs/for-developers/audits/a11y-color-contrast-restoration.md). Any axe AA fail now = real regression — investigate, do not skip.
+
+**Token Canonicalization** — Tier 1+2+3+4 complete, 0 project-wide violations (2026-05-12, spec [`2026-05-12-token-canonicalization.md`](./docs/for-developers/specs/2026-05-12-token-canonicalization.md)).
+
+The runtime imports `admin-mockups/design_files/tokens.css` as `apps/web/src/styles/design-tokens-canonical.css`. Legacy v1 names (`--bg-base`, `--gaming-bg-*`, `--nh-bg-*`, `--e-*`) are still aliased via `token-bridge.css` because ~120 CSS-side consumers reference them directly via `var(--*)` literals. The bridge will be removed in **DS-16** (CSS variable migration codemod), separate from this token-class migration.
+
+Theming uses `[data-theme="light|dark"]` (next-themes applies both `class="dark"` AND `data-theme="dark"`). **Default theme is light** (mockup cream `#f7f3ee`), dark accessible via user toggle.
+
+When writing new components:
+- ✅ Use semantic tokens: `bg-background`, `bg-card`, `bg-muted`, `text-foreground`, `text-muted-foreground`, `border-border`, `border-border-strong`.
+- ✅ Use entity utilities: `bg-entity-game`, `text-entity-session`, `ring-entity-event/30`, etc.
+- ❌ Forbidden by ESLint rule `local/no-hardcoded-color-utility` (mode: **error** since DS-15): `bg-white`, `bg-slate-*`, `text-gray-*`, `border-zinc-*`, etc. (full neutral palette).
+
+Exemption: `text-white` / `border-white` / `ring-white` ARE allowed when the same className declares a colored bg (entity utility, gradient, arbitrary `bg-[hsl(…)]`, hue palette, semantic `bg-primary/secondary/accent`). This is the mockup `.e-bg` pattern.
+
+Run `pnpm lint:tokens` to regenerate the inventory in `audits/2026-05-12-token-violations.md`.
+
+**Mockup legacy token guard — DS-17-2 (#2070)** — `pnpm lint:tokens:mockups` scans `admin-mockups/**/*.{html,jsx,css}` for forbidden CSS literals (`var(--bg-base)`, `var(--gaming-*)`, `var(--nh-*)`, `var(--e-*)`) and writes `audits/2026-06-09-mockup-token-violations.{json,md}`. CI runs `--strict --max-baseline 1500` as a whitelist-incremental gate: existing literals are tolerated until DS-16 unwinds the bridge, but a NEW occurrence introduced by a mockup edit fails the build. Use canonical semantic tokens for new mockup CSS (`--background`, `--foreground`, `--card`, `--border`, `--primary`, …). Spec: [`docs/superpowers/specs/2026-06-09-mockup-to-app-drift-spec-panel-review.md`](./docs/superpowers/specs/2026-06-09-mockup-to-app-drift-spec-panel-review.md). Umbrella: [#2063](https://github.com/meepleAi-app/meepleai-monorepo/issues/2063).
+
+**Mockup migration pattern — DS-17 Phase 2.5+ (#2113)** — every page-mock migrated uses **1 story per mockup con argTypes matrix** (DEC-P3-3). Stage frame del mockup esportate come `FrameNN_ShortName` stories con mockup label name mirror. fidelity.json companion con `design_intent` (`current` | `forward-refactor` | `forward-refactor-obsolete`) + `viewports` (Desktop default; Mobile opt-in deferred a Phase 4 per `@storybook/addon-viewport` install). Mockup obsoleti SKIP migration + tracking issue (Dashboard tracking #2114, deleted Phase 2.5). Pilot shipped: Library 9 Desktop frames + GameDetail 3 Desktop frames (12 total stories). **Baseline 12 PNGs captured** (Library 9 + GameDetail 3) post DS-17 Phase 4 prelude #2120 — actual root cause was NOT dual react-intl modules but duplicate `preview.{ts,tsx}` files (legacy `preview.ts` loaded instead of Phase 2.5 `preview.tsx`) + missing `staticDirs`/MSW Service Worker + missing `parameters.nextjs.navigation` global mock. CI gate `continue-on-error: true` (`--blocking` flip post 14gg stable trajectory). Fix log: [`docs/for-developers/frontend/page-mock-story-pattern.md`](./docs/for-developers/frontend/page-mock-story-pattern.md) § Fix log Phase 4 prelude.
+
+**Mockup audit — DS-17 Phase B (#2127)** — every mockup in `admin-mockups/design_files/` carries a `<name>.fidelity.json` stub with `design_intent` ∈ `{current, forward-refactor, forward-refactor-obsolete}` classified via sequential cluster-by-cluster AI audit (6 clusters: dev-fixtures, auth, sp3, sp4-core, sp4-sessions, sp6-7-nano). For new mockups, copy `docs/for-developers/frontend/templates/examples/sp4-library-desktop.fidelity.json` and update `design_intent` + `obsolete_tracking_issue`. Run `pnpm lint:fidelity` to validate (accepts `PENDING` sentinel for obsoletes pre-signoff). Audit output: `audits/2026-06-10-mockup-design-intent-audit.{json,md}`. Designer review queue: `docs/for-developers/frontend/mockup-designer-review-queue.md`. 5 obsoletes flagged: sp4-dashboard (#2114), sp4-hub-games/agents/toolkits (Pre-Stage-3 retired), sp4-add-game-bgg-step (BGG ToS #1903).
+
+**Mockup annotation pattern — DS-17-1 (#2069) + sweep (#2084)** — every user-reachable `apps/web/src/app/.../page.tsx` mapped in `admin-mockups/MOCKUPS_INDEX.md` carries a `@mockup` JSDoc block. Inject via `pnpm mockup-annotations:inject --apply` (idempotent via `MOCKUP-ANNOTATION` marker); audit via `pnpm mockup-annotations:audit --denominator mappable`. CI runs `--denominator mappable --threshold 80` as a **blocking** gate (current state: 100% / 68/68 mappable routes). The `mappable` denominator counts only routes with an INDEX mapping — admin/api/internal routes are excluded because they have no design surface. Don't hand-edit the JSDoc block — fix `MOCKUPS_INDEX.md` and re-run the injector. Pattern docs: [`docs/for-developers/frontend/mockup-annotation-pattern.md`](./docs/for-developers/frontend/mockup-annotation-pattern.md).
+
+**Deferred decisions** (planned for DS-16):
+- `--admin-*` token family (admin inline gradients still file-level eslint-disable).
+- `--mc-*` MeepleCard palette consolidation.
+- CSS variable migration (`var(--bg-base)` → `var(--bg)`) — bridge removal.
+- Audit of file-level `eslint-disable local/no-hardcoded-color-utility` directives; convert to line-level or refactor via primitives where feasible.
 
 ### DDD Rules
 
@@ -281,6 +340,48 @@ tests/Api.Tests/          # Backend test suite
 - ❌ Domain services directly in endpoints
 - ❌ Shared models between commands/queries
 - ❌ Direct service injection in endpoints (use MediatR)
+
+### Domain Model — GameNight / Session
+
+**Reference**: [`docs/for-developers/specs/2026-06-04-gamenight-session-domain-model.md`](./docs/for-developers/specs/2026-06-04-gamenight-session-domain-model.md) — 20 invarianti consolidate (9 fatti + 11 derivate), 5 tensioni risolte 2026-06-04. **Vedi anche § Backend Mapping** per la riconciliazione term demo ↔ backend (`GameNightEvent` aggregate, `Session` aggregate, `GameNightRsvp` vs `GameNightInvitation`).
+
+Quando tocchi i bounded context **`SessionTracking`** o **`GameManagement`** (sub-aggregate GameNight `GameNightEvent`), questo spec è la source of truth per:
+- Cardinalità GameNight 1→N Session
+- 3 timestamp Session distinti (createdAt always, startedAt/completedAt nullable)
+- State machine GameNight (planned → in-progress via first Session, → completed manuale)
+- Player identity mix (User-linked + guest free)
+- Tagging vs RSVP a 5 fasi (tag silente → "Invia inviti" esplicito → pending → confermato)
+- Invariante max 1 live per GameNight (parallel play out of scope MVP)
+- Sidebar 2 voci game-related: Library (personale) + Games (catalogo, Discover come default tab)
+
+**Asse A v2 implementation** (umbrella #1895 sub-issue #1896): plan TDD in [`docs/superpowers/plans/2026-06-04-asse-a-semantic-alignment.md`](./docs/superpowers/plans/2026-06-04-asse-a-semantic-alignment.md). Plan v2.1 effort ~10.5gg dopo discovery WP4 già shipped upstream (#2053+#1629+#5005). **Stato shipped 2026-06-05 sessione 32**: WP1 (max 1 live) + WP2 (Session.StartedAt+invariante #15+X-Warning-Code+mapping doc) + WP3 (polymorphic ScoreType 4 strategies + UpdateSessionScoresCommand + IDOR guard) + WP4 audit-only + WP5 acceptance. Branch `feature/issue-1896-semantic-alignment` con ~15 commit (12 feat + 2 fix + 3 docs/audit). ~80+ unit test added, 0 regression. Security: 1 HIGH IDOR finding identificato post-merge T10 + fixato in `c1efb4fb6`.
+
+**Backend semantic mapping** (sezione "Backend Mapping" nel domain model spec): demo "GameNight" ↔ backend `GameNightEvent`, demo "tagged player" ↔ `GameNightEvent.PreInvite` (Draft, no event), demo "invited player" ↔ `Publish()` (raises events → email via `GameNightEmailService`), demo `Session.IsLive` ↔ `StartedAt != null && FinalizedAt == null`. Invariante #10 enforcement via `GameNightEvent.StartCurrentSession()` guard → `MaxLiveSessionsExceededException` (HTTP 409 via middleware). Invariante #15 wire via `SessionStartedHandler : INotificationHandler<SessionStartedDomainEvent>`.
+
+Companion: [gap report demo Claude Design](./docs/for-developers/audits/2026-06-04-claude-design-gap-report.md) (38 gap classificati 5-cat: ROUTE/STATE/CTA/ENTITY/TOKEN).
+
+### Asse B — UI Shell + Navigation Pattern (#1897)
+
+**Asse B v2 implementation** (umbrella #1895 sub-issue #1897): plan TDD in [`docs/superpowers/plans/2026-06-04-asse-b-ui-shell-pattern.md`](./docs/superpowers/plans/2026-06-04-asse-b-ui-shell-pattern.md). Plan v2 effort ~6gg dopo discovery (cascade-store + Drawer + sonner già shipped upstream). **Stato shipped 2026-06-05 sessione 33**: WP1 token additions + WP2 MainSidebar 8 voci replicating AdminSidebar pattern + WP3 cascade-store generic DrawerStack semantics + Drawer prefers-reduced-motion + WP4 WizardModal primitive sync/async validate normalize + WP5 StatePreview dev-tool `dynamic({ssr:false})` (tree-shake guaranteed, verified by `apps/web/__tests__/state-preview-tree-shake.test.ts`) + WP6 useNotificationsCounter SSE consumer + WP7 final integration (MainSidebar mounted in `DesktopShell.tsx` `lg+`, StatePreviewProvider wrapped in `app/providers.tsx`). ~120+ unit test, 0 regression. E2E + axe AA gate skeleton in `apps/web/e2e/asse-b-drawer-stack-flow.spec.ts` + `apps/web/__tests__/asse-b-axe.test.tsx`.
+
+**⚠️ Desktop MainSidebar rolled back — #1977 + #2158** (#2080 doc drift fix 2026-06-16): the original Asse B WP2/WP7 design mounted `MainSidebar` (8 voci replicating `AdminSidebar`) persistently on `lg+` viewports inside `DesktopShell.tsx`. This was **rolled back** in #1977 (umbrella #1974, finding F18) per design-owner directive: `AppTopBar` is the **single source-of-truth for primary navigation on desktop** because the sidebar duplicated the topbar nav items. The orphaned `MainSidebar/` + `main-nav/` modules were subsequently deleted in #2158 (Fix #4). Current desktop nav surface is the 5-id `TOP_BAR_NAV_IDS` (`apps/web/src/config/navigation.ts:425`) + Altro overflow inside `AppTopBar`. The `MainSidebar` component name still exists but is only mounted inside the mobile hamburger `SideDrawer` (`<lg`), not the desktop shell. When writing new layout/nav code, do NOT re-introduce a persistent desktop sidebar — use the topbar pattern.
+
+### Asse C — Dashboard priority-driven (#1898)
+
+**Asse C v2 implementation** (umbrella #1895 sub-issue #1898): plan TDD in [`docs/superpowers/plans/2026-06-05-asse-c-dashboard-priority-driven.md`](./docs/superpowers/plans/2026-06-05-asse-c-dashboard-priority-driven.md). Effort actual ~6gg (vs v1 stima ~4gg, +2gg post-discovery). **Stato shipped 2026-06-05 sessione 34**: WP1 BE FriendsActivity endpoint (`GET /api/v1/dashboard/friends-activity?limit=10` → `FriendActivityDto[]`) + WP2 ProssimiSection (upcoming GameNights Published+InProgress ASC, "+ Nuova" CTA inline) + WP3 RecentiSection (completed GameNights DESC, MVP/mini-cover thumbnails, "Vedi tutti i completati" footer) + WP4 SuggestedSection (4-6 "Potresti giocare" cards, silent fallback empty/error per MAJ-6 matrix) + WP5 FriendsActivitySection (verbs completed/created/joined, avatar drawer asse-B `openDrawer('player', friendUserId)`) + WP6 GameNightDrawerContent (props-based, asse-B cascade) + WP7 DashboardClient refactor in-place (DEC-1 lockata: 5 entity sections legacy → 4 priority sections in fixed order; DashboardHero + KPI grid preserved). ~75 unit test, 0 regression. E2E skeleton in `apps/web/e2e/dashboard-priority-flow.spec.ts`. Note: Recenti BE endpoint per completed-GN list non yet wired (RecentiSection renderable con empty `null` silent fallback fino al BE wave successivo).
+
+**Asse D follow-up P1 implementation** (umbrella #1895 sub-issue #1899 follow-up): plan TDD in [`docs/superpowers/plans/2026-06-05-asse-d-p1-polymorphic-score-editor.md`](./docs/superpowers/plans/2026-06-05-asse-d-p1-polymorphic-score-editor.md). Polymorphic ScoreType editor primitive (Points/BinaryWin/Objectives/Ranking) wires asse A backend `UpdateSessionScoresCommand`. **Stato shipped 2026-06-05 sessione 35**: T1 types + T2 PointsEditor + BinaryWinEditor + T3 ObjectivesEditor + RankingEditor (`@dnd-kit/sortable`) + T4 dispatcher (tagged `ScoreChangePayload` discriminated union) + T5 `useUpdateSessionScores` mutation hook (`UpdateSessionScoresError` with `kind: 'forbidden' | 'validation' | 'server'`) + T6 wire scores page (backward-compat: `Points` + non-host → legacy `ScoreBoard`; host or non-`Points` → `PolymorphicScoreEditor` + inline `useDebouncedCallback` 500ms autosave) + T7 E2E skeleton in `apps/web/e2e/asse-d-p1-polymorphic-scoring.spec.ts`. ~36 unit test, 0 regression. Known follow-ups: `scoringType` selector + `displayName` field on `PlayerInfo` not yet on `useLiveSessionStore` (T6 hardcodes `'Points'` and adapts `PlayerInfo.name → PlayerOption.displayName`); `MVP_OBJECTIVES_CATALOGUE` is a placeholder array pending game-catalogue wiring.
+
+**Asse D follow-up P2 implementation** (umbrella #1895 sub-issue #1899 follow-up): `/games` hub multi-tab refactor con Discover come default tab (invariante #20 strict). Replaces incondizionato redirect a `/library` (#1521) — risolve broken sidebar link `MainSidebar` `/games?tab=discover`. **Stato shipped 2026-06-05 sessione 36**: DiscoverHub component extracted da `/discover/page.tsx` in `apps/web/src/components/features/discover/DiscoverHub.tsx` (pure render-only, accetta optional `pathnameOverride` per URL writes scoping) + `/games/page.tsx` refactor incondizionato `redirect('/library')` → multi-tab hub orchestrator (DEC-1 lockato: Opt A refactor `/games` come hub multi-tab) con 4 tab (`discover` default / `catalogo` / `trending` / `community`) + 3 ComingSoon placeholder tabs + parseTab fallback su tab invalido (default Discover) + miniNav config 4 tabs strip + `/discover` standalone route preserved per backward compat (existing bookmarks) + unit tests 15 nuovi (11 page hub + 4 DiscoverHub smoke) + E2E skeleton in `apps/web/e2e/asse-d-p2-games-discover-hub.spec.ts` (7 scenari: default route + discover/catalogo/trending/community tabs + invalid fallback + `/discover` backward-compat). 0 regression (159 test discover+games pass). Risolve broken-link issue su `MainSidebar` voice Games → `/games?tab=discover`.
+
+**Asse D follow-up P3 implementation** (umbrella #1895 sub-issue #1899 follow-up): `/onboarding` 3-step generic wizard refactor usando `WizardModal` asse-B (replaces legacy `OnboardingTourClient` 5-step page-flow). Riusa `InterestsStep` + `FirstGameStep` esistenti (Issue #132) come step 1 e 2; step 3 `InviteFriendComingSoonStep` placeholder (feature deferred a sub-issue futura). BGG legal constraint (#1903 ADR): user-side BGG access bloccato per ToS compliance — `FirstGameStep` usa catalog interno (`api.games.getAll`) NON `useSearchBggGames` (admin-only). Invited-user `OnboardingWizard` 5-step token-based (`/accept-invite`) NON toccato. **Stato shipped 2026-06-05 sessione 37**: `OnboardingGenericWizard` orchestrator (gate `validate` su `interestsCompleted` / `firstGameCompleted` flag interno) + `InviteFriendComingSoonStep` skip-only placeholder + `/onboarding/page.tsx` mounts new wizard + deleted deprecated `OnboardingTourClient.tsx` + relativi test. 13 unit test nuovi (9 wizard + 4 placeholder), 91 component test invariati 0 regression. E2E skeleton in `apps/web/e2e/asse-d-p3-onboarding-wizard.spec.ts`.
+
+### Session live shell (epic #2354)
+
+- **G1 layout — Issue #2374**: SessionLiveView desktop refactored 2026-06-15 to 2-col 60/40 grid (LEFT chat+log, RIGHT polymorphic tabs Score/Turn/Widget/Notes). ChatAgentPanel primitive shipped as the LEFT slot; G3 (#2375) will add accordion always-visible semantics. Legacy URL `?tab=tools|chat|notes` back-compat preserved via `parseLiveTab` alias map (tools→widget, chat→score, notes→notes). Mobile bottom-sheet drawer (T9, in-progress) follows in the same PR per spec-panel DEC-4. Plan: [`docs/superpowers/plans/2026-06-15-issue-2374-session-live-g1-3-col-layout.md`](./docs/superpowers/plans/2026-06-15-issue-2374-session-live-g1-3-col-layout.md).
+- **G5a polymorphic wire — Issue #2389**: Block A (PR #2428, merged 2026-06-17) shipped the polymorphic store contract + SignalR `ScoringConfigured` event + `useSessionScores` hook extension + `setScoringConfig` action + ESLint rule `local/no-store-scores-direct` (warn). Block B (2026-06-19) wires `SessionLiveView` to consume `scoringType`+`scoreData` via the new `mapScoreDataToPanelData` adapter (`apps/web/src/lib/session-live/score-data-to-panel-data.ts`), with REST hydration race guard, `console.warn` on malformed JSON, and an `aria-live` placeholder for the null window. Block C scheduled +14 days post-Block-B merge to `main-dev` to delete the deprecated `scores: Record<string, number>` field and promote the ESLint rule from `warn` to `error`. Spec: [`2026-06-19-issue-2389-block-b-renderer-wire-up-design.md`](./docs/superpowers/specs/2026-06-19-issue-2389-block-b-renderer-wire-up-design.md). Plan: [`2026-06-19-issue-2389-block-b-renderer-wire-up.md`](./docs/superpowers/plans/2026-06-19-issue-2389-block-b-renderer-wire-up.md).
+- **G5a polymorphic wire (Block B+) — Issue #2430**: Block B+ (2026-06-19) extracts a new `ScoreTabContent` component (`apps/web/src/app/(authenticated)/sessions/[id]/live/_components/ScoreTabContent.tsx`) that owns ALL polymorphic scoring logic for the score tab — Block B's read-only path PLUS the mutable host editor. `viewerRole === 'Host'` mounts `PolymorphicScoreEditor` wired through `useUpdateSessionScores` with 500ms trailing debounce (`useDebouncedCallback` hoisted to `lib/session-live/use-debounced-callback.ts` with `[fn, flush]` tuple) plus flush-on-role-change-or-unmount. Player + Spectator mount `ScoringPanelRenderer` unchanged. 5-class error matrix (403 freeze / 429 + 30s countdown / 400 inline / 5xx + retry / network + retry) via `sonner` with deterministic ids. 30s rate-limit deadline persists in `useLiveSessionStore.rateLimitedUntil` so it survives tab change. Spec: [`2026-06-19-issue-2430-editor-host-swap-design.md`](./docs/superpowers/specs/2026-06-19-issue-2430-editor-host-swap-design.md). Plan: [`2026-06-19-issue-2430-editor-host-swap.md`](./docs/superpowers/plans/2026-06-19-issue-2430-editor-host-swap.md).
+- **G5a polymorphic cleanup — Issue #2389 Block C**: 2026-06-19 — finalizes the polymorphic scoring migration by removing the backward-compat field `scores: Record<string, number>` + `updateScore` action from `useLiveSessionStore`, the legacy `ScoreUpdated` SignalR handler + `sendScore`/`NotifyScoreUpdated` invoke from `useSignalrSession`, and refactoring `ScoreBoard.tsx` from playerName-keyed (already broken post-B+) to playerId-keyed read-only display via `useSessionScores().scoreData`. `UseSessionScoresReturn.leader` promoted to `playerId | null` derived from `scoreData` Points. ESLint rule `local/no-store-scores-direct` promoted from `warn` to `error`. 16 nested scoring panel labels + 7 aria template keys added to it.json/en.json (catalog completion). Plan: [`2026-06-19-issue-2389-block-c-cleanup.md`](./docs/superpowers/plans/2026-06-19-issue-2389-block-c-cleanup.md). Out of scope (deferred): BE `NotifyScoreUpdated` hub method removal; proposal flow rationalization (still in use by guest).
 
 ### Known Pitfalls (Issues)
 
@@ -292,7 +393,10 @@ tests/Api.Tests/          # Backend test suite
 | #2593 | Kill testhost before running tests; use culture-independent `$"{val*100:0}%"` |
 | #2600 | OAuth: Defensive validation + InMemory transaction + manual rollback |
 | #2620 | FK constraints: seed dependent entities first; HybridCache needs `IHybridCacheService` for event handlers |
+| [ADR-062](./docs/for-claude/architecture/adr/adr-062-config-environment-field-semantics.md) | Config `Environment` field: default to `"All"` for global keys; per-env per-row only when value diverges by environment design. Decision tree in the ADR. |
+| [ADR-060](./docs/for-claude/architecture/adr/adr-060-live-session-persistence.md) | LiveSession is EF-backed (no more `ConcurrentDictionary`). Every Command handler that calls `_sessionRepository.AddAsync`/`UpdateAsync` MUST also call `await _unitOfWork.SaveChangesAsync(ct)`. Domain events dispatch post-SaveChanges only. Optimistic concurrency uses Postgres `xmin` system column (Issues #2097 → #2305) — no trigger, no client-side RowVersion. Same xmin pattern on `game_night_playlists` and `mechanic_drafts` (Issue #2306 fixed silently-disabled concurrency). |
+| [ADR-078](./docs/for-claude/architecture/adr/adr-078-auto-issue-noise-thresholds.md) | **GH Actions monitor workflow convention** (advisory, #2383 brainstorm 2026-06-16): every `.github/workflows/*-monitor.yml` (or any workflow that calls GH Issues Search API on a cron) MUST declare a `concurrency: group: monitor-<type>-${{ github.ref }}` block to serialize concurrent runs and stay under the 1k req/h Search API rate limit. >16 monitor workflows running simultaneously can exhaust the budget. Not CI-enforced (advisory) — escalate to lint gate if >1 rate-limit incident observed. |
 
 ---
 
-**Last Updated**: 2026-04-11 | **License**: Proprietary
+**Last Updated**: 2026-06-14 | **License**: Proprietary

@@ -4,6 +4,7 @@ using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Infrastructure.Entities.UserLibrary;
 using Api.Middleware.Exceptions;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +27,28 @@ public sealed class ProposalMigrationRepository : RepositoryBase, IProposalMigra
     {
         var entity = MapToEntity(migration);
         await DbContext.Set<ProposalMigrationEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> AddAndCommitAsync(ProposalMigration migration, CancellationToken cancellationToken = default)
+    {
+        var entity = MapToEntity(migration);
+        await DbContext.Set<ProposalMigrationEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            return true;
+        }
+        catch (DbUpdateException ex) when (CounterTableIdempotency.IsUniqueViolation(ex))
+        {
+            // CF-2 / #1938: outbox replay or concurrent pod already inserted the row.
+            // Detach so the next SaveChanges on this scoped context doesn't retry,
+            // and signal the caller to skip downstream work.
+            _ = ex;
+            DbContext.Entry(entity).State = EntityState.Detached;
+            return false;
+        }
     }
 
     public async Task<ProposalMigration?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -89,7 +112,8 @@ public sealed class ProposalMigrationRepository : RepositoryBase, IProposalMigra
             UserId = migration.UserId,
             Choice = (int)migration.Choice,
             CreatedAt = migration.CreatedAt,
-            ChoiceAt = migration.ChoiceAt
+            ChoiceAt = migration.ChoiceAt,
+            SourceEventId = migration.SourceEventId
         };
     }
 
@@ -114,6 +138,8 @@ public sealed class ProposalMigrationRepository : RepositoryBase, IProposalMigra
             .SetValue(migration, entity.CreatedAt);
         typeof(ProposalMigration).GetProperty(nameof(ProposalMigration.ChoiceAt))!
             .SetValue(migration, entity.ChoiceAt);
+        typeof(ProposalMigration).GetProperty(nameof(ProposalMigration.SourceEventId))!
+            .SetValue(migration, entity.SourceEventId);
 
         return migration;
     }

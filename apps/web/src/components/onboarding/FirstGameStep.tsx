@@ -102,8 +102,8 @@ export function FirstGameStep({ onComplete, onSkip, onGameAdded }: FirstGameStep
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-quicksand text-lg font-semibold text-slate-900">Add Your First Game</h2>
-        <p className="mt-1 text-sm text-slate-600">
+        <h2 className="font-quicksand text-lg font-semibold text-foreground">Add Your First Game</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           Search for a board game to add to your library. You can always add more later.
         </p>
       </div>
@@ -132,14 +132,14 @@ export function FirstGameStep({ onComplete, onSkip, onGameAdded }: FirstGameStep
         />
         {isSearching && (
           <div className="absolute right-3 top-9">
-            <Search className="h-4 w-4 animate-pulse text-slate-400" aria-hidden="true" />
+            <Search className="h-4 w-4 animate-pulse text-muted-foreground" aria-hidden="true" />
           </div>
         )}
 
         {/* Search results dropdown */}
         {results.length > 0 && !selectedGame && (
           <ul
-            className="absolute z-10 mt-1 w-full rounded-lg border bg-white shadow-lg max-h-60 overflow-y-auto"
+            className="absolute z-10 mt-1 w-full rounded-lg border bg-card shadow-lg max-h-60 overflow-y-auto"
             role="listbox"
             aria-label="Game search results"
             data-testid="game-search-results"
@@ -151,9 +151,9 @@ export function FirstGameStep({ onComplete, onSkip, onGameAdded }: FirstGameStep
                   onClick={() => handleSelectGame(game)}
                   className="w-full px-4 py-3 text-left hover:bg-amber-50 transition-colors border-b last:border-b-0"
                 >
-                  <div className="font-medium text-slate-900">{game.title}</div>
+                  <div className="font-medium text-foreground">{game.title}</div>
                   {(game.publisher || game.yearPublished) && (
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-muted-foreground">
                       {[game.publisher, game.yearPublished].filter(Boolean).join(' \u2022 ')}
                     </div>
                   )}
@@ -173,9 +173,9 @@ export function FirstGameStep({ onComplete, onSkip, onGameAdded }: FirstGameStep
           data-testid="selected-game"
         >
           <div>
-            <div className="font-medium text-slate-900">{selectedGame.title}</div>
+            <div className="font-medium text-foreground">{selectedGame.title}</div>
             {selectedGame.publisher && (
-              <div className="text-xs text-slate-500">{selectedGame.publisher}</div>
+              <div className="text-xs text-muted-foreground">{selectedGame.publisher}</div>
             )}
           </div>
           <button
@@ -184,7 +184,7 @@ export function FirstGameStep({ onComplete, onSkip, onGameAdded }: FirstGameStep
               setSelectedGame(null);
               setQuery('');
             }}
-            className="text-sm text-slate-500 hover:text-slate-700"
+            className="text-sm text-muted-foreground hover:text-foreground"
             aria-label={`Remove ${selectedGame.title}`}
           >
             Change
@@ -210,7 +210,7 @@ export function FirstGameStep({ onComplete, onSkip, onGameAdded }: FirstGameStep
         <button
           type="button"
           onClick={onSkip}
-          className="text-sm text-slate-500 hover:text-slate-700"
+          className="text-sm text-muted-foreground hover:text-foreground"
           data-testid="game-skip"
         >
           Skip for now

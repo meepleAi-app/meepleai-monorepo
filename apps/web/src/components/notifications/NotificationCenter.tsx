@@ -42,6 +42,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/na
 import { Button } from '@/components/ui/primitives/button';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { NotificationDto } from '@/lib/api';
+import { logger } from '@/lib/logger';
+import { isSafeRelativeLink, assertSafeRelativeOrFallback } from '@/lib/url-safety';
 import { cn } from '@/lib/utils';
 import { useNotificationStore, selectNotifications } from '@/stores/notification/store';
 
@@ -228,9 +230,16 @@ function NotificationCenterItem({ notification, isUnread, onClose }: Notificatio
     if (!notification.isRead) {
       void markAsRead(notification.id);
     }
-    if (notification.link) {
-      router.push(notification.link);
+    if (isSafeRelativeLink(notification.link)) {
+      router.push(notification.link!);
       onClose();
+    } else if (notification.link) {
+      logger.warn('Rejected unsafe notification.link in NotificationCenter handleClick', {
+        metadata: {
+          linkMasked: notification.link.slice(0, 32),
+          notificationId: notification.id,
+        },
+      });
     }
   };
 
@@ -282,7 +291,7 @@ function NotificationCenterItem({ notification, isUnread, onClose }: Notificatio
       {isKbReady && notification.link && (
         <div className="mt-2 ml-7">
           <Link
-            href={notification.link}
+            href={assertSafeRelativeOrFallback(notification.link, '/notifications')}
             onClick={() => {
               if (!notification.isRead) void markAsRead(notification.id);
               onClose();

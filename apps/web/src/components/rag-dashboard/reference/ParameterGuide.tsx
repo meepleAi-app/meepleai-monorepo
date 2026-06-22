@@ -302,7 +302,7 @@ function StatusBadge({ status }: { status: ImplementationStatus }) {
   const config = {
     implemented: { label: 'POC', className: 'bg-green-100 text-green-700 border-green-300' },
     partial: { label: 'Partial', className: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
-    planned: { label: 'Planned', className: 'bg-gray-100 text-gray-600 border-gray-300' },
+    planned: { label: 'Planned', className: 'bg-muted text-muted-foreground border-border' },
   };
   const { label, className } = config[status];
   return <Badge className={cn('text-xs', className)}>{label}</Badge>;
@@ -311,7 +311,7 @@ function StatusBadge({ status }: { status: ImplementationStatus }) {
 function _EffectIndicator({ effect }: { effect: 'positive' | 'negative' | 'neutral' }) {
   if (effect === 'positive') return <TrendingUp className="h-4 w-4 text-green-500" />;
   if (effect === 'negative') return <TrendingDown className="h-4 w-4 text-red-500" />;
-  return <Minus className="h-4 w-4 text-gray-400" />;
+  return <Minus className="h-4 w-4 text-muted-foreground" />;
 }
 
 // =============================================================================
@@ -626,7 +626,7 @@ function LayerPipelineVisualization() {
                       {isUsed ? (
                         <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" />
                       ) : (
-                        <Circle className="h-4 w-4 text-gray-300 mx-auto" />
+                        <Circle className="h-4 w-4 text-foreground mx-auto" />
                       )}
                     </td>
                   );

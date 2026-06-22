@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Alerting Config · MeepleAI Admin</title>
+<!-- C7 · Platform & Operations → 'alerts' (NAV_ID non ancora presente in admin-nav.js;
+     verrà aggiunto nel gruppo "Platform & Operations"). -->
+<!-- @v1 AlertRulesTable · MetricSelector · ChannelChip · AlertActivityFeed · TestAlert reuse
+     Endpoints: GET/POST/PUT/DELETE /api/v1/admin/alert-rules
+                GET /api/v1/admin/alert-config
+                POST /api/v1/alerts/prometheus (webhook)
+     Role: admin -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+
+<!-- ═══════════════════ INLINED DS (tokens + components + admin-base) ═══════════════════ -->
+<style>
+/* ── tokens.css ─────────────────────────────────────────────────── */
+:root{
+  --c-game:25 95% 45%;--c-player:262 83% 58%;--c-session:240 60% 55%;--c-agent:38 92% 50%;
+  --c-kb:174 60% 40%;--c-chat:220 80% 55%;--c-event:350 89% 60%;--c-toolkit:142 70% 45%;--c-tool:195 80% 50%;
+  --c-success:142 70% 45%;--c-warning:38 92% 50%;--c-danger:350 89% 60%;--c-info:220 80% 55%;
+  --brand:var(--c-game);--brand-fg:hsl(var(--c-game));
+  --f-display:'Quicksand',system-ui,sans-serif;--f-body:'Nunito',system-ui,sans-serif;--f-mono:'JetBrains Mono',ui-monospace,monospace;
+  --fs-xs:11px;--fs-sm:12px;--fs-base:14px;--fs-md:15px;--fs-lg:17px;--fs-xl:20px;--fs-2xl:24px;--fs-3xl:32px;--fs-4xl:40px;
+  --fw-reg:400;--fw-med:500;--fw-semi:600;--fw-bold:700;--fw-ext:800;
+  --lh-tight:1.2;--lh-snug:1.35;--lh-body:1.5;--lh-relax:1.65;
+  --s-0:0;--s-1:4px;--s-2:8px;--s-3:12px;--s-4:16px;--s-5:20px;--s-6:24px;--s-7:32px;--s-8:40px;--s-9:48px;--s-10:64px;
+  --r-xs:4px;--r-sm:6px;--r-md:10px;--r-lg:14px;--r-xl:18px;--r-2xl:24px;--r-pill:9999px;
+  --ease-out:cubic-bezier(.16,1,.3,1);--ease-in-out:cubic-bezier(.65,0,.35,1);--ease-spring:cubic-bezier(.34,1.56,.64,1);
+  --dur-xs:120ms;--dur-sm:180ms;--dur-md:280ms;--dur-lg:400ms;--dur-xl:600ms;
+  --z-base:0;--z-sticky:10;--z-nav:20;--z-overlay:50;--z-drawer:51;--z-modal:60;--z-toast:70;--z-tooltip:80;
+}
+:root,:root[data-theme="light"]{
+  --bg:#f7f3ee;--bg-card:#fff;--bg-muted:#efe6d9;--bg-sunken:#ede2d0;--bg-hover:rgba(180,130,80,.06);
+  --text:#2b1f12;--text-sec:#5a4a38;--text-muted:#9a8870;
+  --border:rgba(180,130,80,.18);--border-light:rgba(180,130,80,.1);--border-strong:rgba(180,130,80,.32);
+  --shadow-xs:0 1px 2px rgba(90,60,20,.06);--shadow-sm:0 2px 8px rgba(90,60,20,.08);--shadow-md:0 4px 16px rgba(90,60,20,.1);
+  --shadow-lg:0 12px 36px rgba(90,60,20,.14);--shadow-drawer:0 -8px 32px rgba(90,60,20,.12);
+  --glass-bg:rgba(255,255,255,.88);--glass-border:rgba(255,255,255,.6);color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#14100a;--bg-card:#1e1710;--bg-muted:#241c13;--bg-sunken:#0f0c08;--bg-hover:rgba(255,200,130,.05);
+  --text:#f0e4d2;--text-sec:#c8b896;--text-muted:#8a7860;
+  --border:rgba(224,180,110,.14);--border-light:rgba(224,180,110,.08);--border-strong:rgba(224,180,110,.28);
+  --shadow-xs:0 1px 2px rgba(0,0,0,.3);--shadow-sm:0 2px 8px rgba(0,0,0,.4);--shadow-md:0 4px 16px rgba(0,0,0,.5);
+  --shadow-lg:0 12px 36px rgba(0,0,0,.6);--shadow-drawer:0 -8px 32px rgba(0,0,0,.5);
+  --glass-bg:rgba(30,22,14,.85);--glass-border:rgba(224,180,110,.14);
+  --c-game:28 95% 58%;--c-player:262 75% 70%;--c-session:235 70% 70%;--c-agent:38 92% 62%;--c-kb:174 60% 55%;
+  --c-chat:218 80% 68%;--c-event:350 85% 70%;--c-toolkit:142 60% 58%;--c-tool:195 75% 62%;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}html,body{margin:0;padding:0}
+body{font-family:var(--f-body);background:var(--bg);color:var(--text);font-size:var(--fs-base);line-height:var(--lh-body);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;transition:background var(--dur-md) var(--ease-out),color var(--dur-md) var(--ease-out)}
+h1,h2,h3,h4,h5,h6{font-family:var(--f-display);font-weight:var(--fw-bold);letter-spacing:-.01em;margin:0;line-height:var(--lh-tight)}
+button{font-family:inherit;cursor:pointer}a{color:inherit;text-decoration:none}
+code,kbd{font-family:var(--f-mono);font-size:.9em}
+.e-game{--e:var(--c-game)}.e-player{--e:var(--c-player)}.e-session{--e:var(--c-session)}.e-agent{--e:var(--c-agent)}
+.e-kb{--e:var(--c-kb)}.e-chat{--e:var(--c-chat)}.e-event{--e:var(--c-event)}.e-toolkit{--e:var(--c-toolkit)}.e-tool{--e:var(--c-tool)}
+.e-fg{color:hsl(var(--e))}.e-bg{background:hsl(var(--e));color:#fff}
+.e-tint{background:hsl(var(--e)/.1);color:hsl(var(--e))}.e-ring{box-shadow:0 0 0 2px hsl(var(--e)/.35)}
+.spark{stroke:currentColor;stroke-width:1.5;fill:none}.spark-fill{fill:currentColor;opacity:.14}
+
+/* ── admin-base.css ─────────────────────────────────────────────── */
+.admin-page{background:var(--bg);color:var(--text);min-height:100vh;font-family:var(--f-body);font-size:var(--fs-sm);line-height:1.5}
+.admin-shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+.admin-nav{background:var(--bg-card);border-right:1px solid var(--border);padding:16px 0;display:flex;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.admin-nav-brand{padding:4px 16px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border-light);margin-bottom:12px}
+.admin-nav-brand-mark{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,hsl(var(--c-game)),hsl(var(--c-event)));color:#fff;display:grid;place-items:center;font-family:var(--f-display);font-weight:900;font-size:14px}
+.admin-nav-brand-name{font-family:var(--f-display);font-weight:800;font-size:14px}
+.admin-nav-brand-tag{font-family:var(--f-mono);font-size:9px;font-weight:700;color:hsl(var(--c-event));text-transform:uppercase;letter-spacing:.08em;padding:2px 6px;border-radius:4px;background:hsl(var(--c-event)/.12);margin-left:auto}
+.admin-nav-group{padding:10px 16px 4px;font-family:var(--f-mono);font-size:9.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}
+.admin-nav-item{display:flex;align-items:center;gap:10px;padding:7px 16px;color:var(--text-sec);font-family:var(--f-display);font-size:13px;font-weight:600;cursor:pointer;border-left:2px solid transparent;text-decoration:none}
+.admin-nav-item:hover{background:var(--bg-muted);color:var(--text)}
+.admin-nav-item.active{background:hsl(var(--c-event)/.08);color:hsl(var(--c-event));border-left-color:hsl(var(--c-event))}
+.admin-nav-item .em{font-size:14px;opacity:.9}
+.admin-nav-item .count{margin-left:auto;font-family:var(--f-mono);font-size:10px;color:var(--text-muted);font-weight:700}
+.admin-nav-foot{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border-light);font-family:var(--f-mono);font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:8px}
+.admin-nav-foot .badge{padding:2px 6px;border-radius:4px;background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit));font-weight:700;font-size:9px;text-transform:uppercase;letter-spacing:.05em}
+.admin-top{background:var(--bg);border-bottom:1px solid var(--border-light);padding:12px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:50;backdrop-filter:blur(12px)}
+.admin-top h1{font-family:var(--f-display);font-size:20px;font-weight:800;margin:0;line-height:1.2}
+.admin-top .crumbs{font-family:var(--f-mono);font-size:11px;color:var(--text-muted);margin-top:2px}
+.admin-top .spacer{flex:1}.admin-top-actions{display:flex;gap:8px;align-items:center}
+.admin-search{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;width:280px;font-size:12px}
+.admin-search input{flex:1;border:0;background:transparent;color:var(--text);font-family:var(--f-body);font-size:12.5px;outline:0}
+.admin-search kbd{padding:1px 5px;border-radius:4px;background:var(--bg-muted);border:1px solid var(--border);font-family:var(--f-mono);font-size:9px;color:var(--text-muted)}
+.btn-admin{padding:6px 12px;border-radius:6px;font-family:var(--f-display);font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--bg-card);color:var(--text);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-admin:hover{background:var(--bg-muted)}
+.btn-admin.primary{background:hsl(var(--c-event));border-color:hsl(var(--c-event));color:#fff;box-shadow:0 2px 6px hsl(var(--c-event)/.3)}
+.btn-admin.primary:hover{filter:brightness(1.08)}
+.btn-admin.danger{background:var(--bg-card);border-color:hsl(var(--c-event)/.5);color:hsl(var(--c-event))}
+.btn-admin.success{background:hsl(var(--c-toolkit));border-color:hsl(var(--c-toolkit));color:#fff}
+.btn-admin.ghost{background:transparent;border-color:transparent}
+.btn-admin.icon{padding:6px;width:28px;height:28px;justify-content:center}
+.btn-admin.sm{padding:3px 8px;font-size:11px}
+.btn-admin kbd{padding:1px 4px;border-radius:3px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);font-family:var(--f-mono);font-size:9px;margin-left:4px}
+.btn-admin.primary kbd{background:rgba(0,0,0,.18);border-color:rgba(0,0,0,.25)}
+.admin-kpi{background:var(--bg-card);border:1px solid var(--border-light);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-height:88px;position:relative}
+.admin-kpi-label{font-family:var(--f-mono);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em}
+.admin-kpi-value{font-family:var(--f-display);font-size:28px;font-weight:800;color:var(--text);line-height:1.1;font-variant-numeric:tabular-nums}
+.admin-kpi-trend{font-family:var(--f-mono);font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:3px}
+.admin-kpi-trend.up{color:hsl(var(--c-toolkit))}.admin-kpi-trend.down{color:hsl(var(--c-event))}.admin-kpi-trend.flat{color:var(--text-muted)}
+.admin-kpi-spark{position:absolute;right:12px;top:12px;width:70px;height:28px;opacity:.85}
+.admin-kpi.e-tool{border-left:3px solid hsl(var(--c-tool))}
+.admin-kpi.e-event{border-left:3px solid hsl(var(--c-event))}
+.admin-kpi.e-chat{border-left:3px solid hsl(var(--c-chat))}
+.admin-panel{background:var(--bg-card);border:1px solid var(--border-light);border-radius:10px;overflow:hidden}
+.admin-panel-head{padding:10px 14px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:10px;background:var(--bg)}
+.admin-panel-head h3{margin:0;font-family:var(--f-display);font-size:13px;font-weight:800}
+.admin-panel-head .meta{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);margin-left:auto}
+.admin-panel-body{padding:14px}
+.admin-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.admin-table th{text-align:left;padding:8px 12px;font-family:var(--f-mono);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border-light);background:var(--bg);position:sticky;top:0;white-space:nowrap}
+.admin-table td{padding:9px 12px;border-bottom:1px solid var(--border-light);vertical-align:middle}
+.admin-table tr:hover td{background:var(--bg-muted)}
+.status-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-family:var(--f-mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.status-chip::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.status-chip.healthy{background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit))}
+.status-chip.healthy::before{background:hsl(var(--c-toolkit));box-shadow:0 0 0 3px hsl(var(--c-toolkit)/.25)}
+.status-chip.warning{background:hsl(38 90% 56%/.14);color:hsl(38 90% 50%)}
+.status-chip.warning::before{background:hsl(38 90% 50%)}
+.status-chip.danger{background:hsl(var(--c-event)/.12);color:hsl(var(--c-event))}
+.status-chip.danger::before{background:hsl(var(--c-event))}
+.status-chip.muted{background:var(--bg-muted);color:var(--text-muted)}
+.status-chip.muted::before{background:var(--text-muted)}
+.status-chip.info{background:hsl(var(--c-chat)/.12);color:hsl(var(--c-chat))}
+.status-chip.info::before{background:hsl(var(--c-chat))}
+.status-chip.running{background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit))}
+.status-chip.running::before{background:hsl(var(--c-toolkit));animation:admin-pulse 1.4s ease-in-out infinite}
+@keyframes admin-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.5}}
+.admin-form-row{display:grid;grid-template-columns:200px 1fr;gap:16px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border-light)}
+.admin-form-row:last-child{border-bottom:0}
+.admin-form-label{font-family:var(--f-display);font-size:12.5px;font-weight:700}
+.admin-form-label .desc{display:block;margin-top:3px;font-family:var(--f-body);font-size:11px;font-weight:400;color:var(--text-muted);line-height:1.4}
+.admin-input,.admin-select,.admin-textarea{width:100%;max-width:360px;padding:6px 10px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;font-family:var(--f-body);font-size:12.5px}
+.admin-input.mono{font-family:var(--f-mono)}
+.admin-toggle{position:relative;width:36px;height:20px;background:var(--bg-muted);border:1px solid var(--border);border-radius:999px;cursor:pointer;flex-shrink:0;display:inline-block}
+.admin-toggle::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--text-sec);transition:all .2s var(--ease-out)}
+.admin-toggle.on{background:hsl(var(--c-toolkit)/.25);border-color:hsl(var(--c-toolkit))}
+.admin-toggle.on::after{left:18px;background:hsl(var(--c-toolkit))}
+.activity-feed{display:flex;flex-direction:column;gap:1px}
+.activity-item{padding:10px 14px;border-bottom:1px solid var(--border-light);display:flex;align-items:flex-start;gap:10px;font-size:12.5px}
+.activity-item:last-child{border-bottom:0}
+.activity-item:hover{background:var(--bg-muted)}
+.activity-item .em{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:14px;flex-shrink:0}
+.activity-item .body{flex:1;min-width:0}
+.activity-item .body strong{font-weight:700;color:var(--text)}
+.activity-item .ts{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);flex-shrink:0}
+@media (max-width:880px){
+  .admin-mobile-fallback{display:flex !important;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;text-align:center;gap:16px}
+  .admin-mobile-fallback .em{font-size:56px}
+  .admin-mobile-fallback h2{margin:0;font-family:var(--f-display);font-size:20px}
+  .admin-mobile-fallback p{color:var(--text-sec);max-width:320px;margin:0;line-height:1.5}
+  .admin-shell{display:none}
+}
+.admin-mobile-fallback{display:none}
+.admin-body{padding:20px 24px}
+
+/* ── Page-specific ──────────────────────────────────────────────── */
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.kpi-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.head-cluster{display:inline-flex;align-items:center;gap:10px;margin-left:auto}
+.head-cluster .sep{width:1px;height:14px;background:var(--border-light)}
+
+/* ── Rule name cell ─────────────────────────────────────────────── */
+.rule-cell{display:flex;align-items:center;gap:10px}
+.rule-mark{width:28px;height:28px;border-radius:7px;background:hsl(var(--e)/.12);color:hsl(var(--e));display:grid;place-items:center;font-size:14px;flex-shrink:0;border:1px solid hsl(var(--e)/.25)}
+.rule-info{display:flex;flex-direction:column;line-height:1.2;min-width:0}
+.rule-name{font-family:var(--f-display);font-weight:800;font-size:13px;color:var(--text)}
+.rule-id{font-family:var(--f-mono);font-size:9.5px;color:var(--text-muted);font-weight:700;margin-top:2px;letter-spacing:.02em}
+
+/* Metric / condition cells */
+.metric-chip{font-family:var(--f-mono);font-size:11px;color:var(--text);background:var(--bg-sunken,var(--bg));padding:2px 7px;border-radius:5px;border:1px solid var(--border-light);font-weight:600;display:inline-block}
+.metric-chip .ns{color:var(--text-muted)}
+.cond-cell{font-family:var(--f-mono);font-size:11.5px;color:var(--text);font-weight:700}
+.cond-cell .op{padding:1px 5px;border-radius:4px;background:hsl(var(--c-event)/.1);color:hsl(var(--c-event));margin:0 3px;font-weight:700}
+.win-cell{font-family:var(--f-mono);font-size:11.5px;font-weight:600;color:var(--text-sec)}
+
+/* Channel chip */
+.chan-chip{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:6px;font-family:var(--f-mono);font-size:10.5px;font-weight:700;letter-spacing:.02em;border:1px solid hsl(var(--e)/.25);background:hsl(var(--e)/.08);color:hsl(var(--e))}
+.chan-chip .em-ico{font-size:11px}
+.chan-stack{display:flex;flex-wrap:wrap;gap:4px}
+
+/* Row actions */
+.row-actions{display:flex;gap:4px;justify-content:flex-end;align-items:center}
+.row-actions .btn-admin.sm{padding:3px 8px;font-size:10.5px}
+.lock-mini{color:hsl(var(--c-event));font-size:10px}
+
+/* Nuova regola form grid */
+.new-rule-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 24px;padding:8px 20px 0}
+.new-rule-grid .admin-form-row{grid-template-columns:150px 1fr;padding:10px 0}
+.new-rule-grid .admin-input,.new-rule-grid .admin-select{max-width:none;width:100%}
+.cond-row{display:grid;grid-template-columns:1fr 80px 1fr;gap:8px;align-items:center}
+.cond-row .op-sel{font-family:var(--f-mono);font-weight:700;text-align:center}
+.preview-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;background:hsl(var(--c-event)/.06);border:1px dashed hsl(var(--c-event)/.35);border-radius:6px;font-family:var(--f-mono);font-size:11px;color:var(--text);margin-top:6px}
+.preview-pill .k{color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-size:9px;font-weight:700}
+.preview-pill .v{color:hsl(var(--c-event));font-weight:700}
+.new-rule-foot{display:flex;align-items:center;gap:12px;padding:12px 20px;border-top:1px solid var(--border-light);background:var(--bg)}
+.new-rule-foot .grow{flex:1}
+.new-rule-foot .helper{font-family:var(--f-mono);font-size:10px;color:var(--text-muted)}
+
+/* Activity feed customizations */
+.activity-feed .activity-item .em.danger{background:hsl(var(--c-event)/.14);color:hsl(var(--c-event))}
+.activity-feed .activity-item .em.warning{background:hsl(38 90% 56%/.14);color:hsl(38 90% 50%)}
+.activity-feed .activity-item .em.info{background:hsl(var(--c-chat)/.14);color:hsl(var(--c-chat))}
+.activity-feed .activity-item .body .msg{margin-top:1px;color:var(--text-sec);font-size:11.5px}
+.activity-feed .activity-item .body .msg .val{font-family:var(--f-mono);color:var(--text);font-weight:700;padding:1px 5px;background:var(--bg-muted);border-radius:4px}
+.activity-feed .activity-item .body .head-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.activity-feed .activity-item .body .rule{font-family:var(--f-display);font-weight:800;color:var(--text);font-size:13px}
+.activity-feed .activity-item .right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
+.dur-pill{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);background:var(--bg-muted);border-radius:99px;padding:1px 7px;font-weight:700}
+</style>
+</head>
+<body class="admin-page">
+
+  <div class="admin-mobile-fallback">
+    <div class="em">🖥️</div>
+    <h2>Console solo desktop</h2>
+    <p>La console admin è ottimizzata per schermi ≥ 880px. Aprila da desktop.</p>
+  </div>
+
+  <div class="admin-shell">
+    <div data-admin-nav-mount></div>
+
+    <main>
+      <header class="admin-top">
+        <div>
+          <h1>Alerting Config</h1>
+          <div class="crumbs">Admin › Platform &amp; Operations › Alerts · 6 regole · prom-pushgateway · aggiornato 14:23:08</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="admin-top-actions">
+          <div class="admin-search"><span>🔍</span><input placeholder="Cerca regola, metrica…"/><kbd>⌘K</kbd></div>
+          <button class="btn-admin">⟳ Refresh <kbd>R</kbd></button>
+          <button class="btn-admin">⚙ Canali</button>
+          <button class="btn-admin primary">＋ Nuova regola</button>
+          <button class="btn-admin icon" title="Tema">🌗</button>
+        </div>
+      </header>
+
+      <div class="admin-body" style="display:flex;flex-direction:column;gap:14px">
+
+        <!-- ────────── 1) KPI strip ────────── -->
+        <section class="kpi-strip">
+          <div class="admin-kpi e-tool">
+            <div class="admin-kpi-label">Regole attive</div>
+            <div class="admin-kpi-value">6<span style="font-size:14px;color:var(--text-muted);font-weight:600">/7</span></div>
+            <div class="admin-kpi-trend flat">▬ 4 warning · 2 danger · 1 disattivata</div>
+            <svg class="admin-kpi-spark e-tool" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,20 L8,20 L16,18 L24,18 L32,14 L40,14 L48,12 L56,12 L64,10 L70,10 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,20 L8,20 L16,18 L24,18 L32,14 L40,14 L48,12 L56,12 L64,10 L70,10"/>
+            </svg>
+          </div>
+
+          <div class="admin-kpi e-event">
+            <div class="admin-kpi-label">Alert oggi</div>
+            <div class="admin-kpi-value">3<span style="font-size:14px;color:var(--text-muted);font-weight:600"> · 2 risolti</span></div>
+            <div class="admin-kpi-trend up">▲ vs media 7g (1.4) · 1 attivo</div>
+            <svg class="admin-kpi-spark e-event" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,22 L8,20 L16,22 L24,18 L32,20 L40,16 L48,18 L56,12 L64,14 L70,10 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,22 L8,20 L16,22 L24,18 L32,20 L40,16 L48,18 L56,12 L64,14 L70,10"/>
+            </svg>
+          </div>
+
+          <div class="admin-kpi e-chat">
+            <div class="admin-kpi-label">Canali configurati</div>
+            <div class="admin-kpi-value">4</div>
+            <div class="admin-kpi-trend flat">▬ 2 slack · 2 email · 0 pagerduty</div>
+            <svg class="admin-kpi-spark e-chat" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,16 L14,16 L14,12 L28,12 L28,18 L42,18 L42,10 L56,10 L56,14 L70,14 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,16 L14,16 L14,12 L28,12 L28,18 L42,18 L42,10 L56,10 L56,14 L70,14"/>
+            </svg>
+          </div>
+        </section>
+
+        <!-- ────────── 2) Regole di alerting ────────── -->
+        <section class="admin-panel">
+          <div class="admin-panel-head">
+            <h3>Regole di alerting</h3>
+            <span class="status-chip danger">2 danger</span>
+            <span class="status-chip warning">4 warning</span>
+            <span class="status-chip muted">1 disattiva</span>
+            <div class="head-cluster">
+              <span class="meta">prom-pushgateway · scrape 30s · webhook POST /alerts/prometheus</span>
+              <button class="btn-admin sm ghost">⤓ Export YAML</button>
+            </div>
+          </div>
+
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th style="width:24%">Regola</th>
+                <th style="width:16%">Metrica</th>
+                <th style="width:14%">Condizione</th>
+                <th style="width:8%">Finestra</th>
+                <th style="width:9%">Severità</th>
+                <th style="width:14%">Canale</th>
+                <th style="width:6%">Attiva</th>
+                <th style="width:170px;text-align:right">Azioni</th>
+              </tr>
+            </thead>
+            <tbody>
+
+              <tr class="e-event">
+                <td>
+                  <div class="rule-cell">
+                    <div class="rule-mark">⚠</div>
+                    <div class="rule-info"><span class="rule-name">Error rate alto</span><span class="rule-id">rule_alrt_84a1 · v3</span></div>
+                  </div>
+                </td>
+                <td><span class="metric-chip"><span class="ns">rag.</span>error_rate</span></td>
+                <td class="cond-cell"><span class="op">&gt;</span> 1.0%</td>
+                <td class="win-cell">5m</td>
+                <td><span class="status-chip danger">danger</span></td>
+                <td><div class="chan-stack"><span class="chan-chip e-chat"><span class="em-ico">💬</span>slack · #ops</span></div></td>
+                <td><span class="admin-toggle on" role="switch" aria-checked="true"></span></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-admin sm ghost">✎ Modifica</button>
+                    <button class="btn-admin sm ghost">🔔 Test</button>
+                    <button class="btn-admin sm ghost" title="Elimina (ConfirmModal)">🗑</button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr class="e-agent">
+                <td>
+                  <div class="rule-cell">
+                    <div class="rule-mark">⏱</div>
+                    <div class="rule-info"><span class="rule-name">Latenza p95 alta</span><span class="rule-id">rule_alrt_84a2 · v2</span></div>
+                  </div>
+                </td>
+                <td><span class="metric-chip"><span class="ns">llm.</span>latency_p95</span></td>
+                <td class="cond-cell"><span class="op">&gt;</span> 2000 ms</td>
+                <td class="win-cell">10m</td>
+                <td><span class="status-chip warning">warning</span></td>
+                <td><div class="chan-stack"><span class="chan-chip e-chat"><span class="em-ico">💬</span>slack · #ops</span></div></td>
+                <td><span class="admin-toggle on" role="switch" aria-checked="true"></span></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-admin sm ghost">✎ Modifica</button>
+                    <button class="btn-admin sm ghost">🔔 Test</button>
+                    <button class="btn-admin sm ghost">🗑</button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr class="e-agent">
+                <td>
+                  <div class="rule-cell">
+                    <div class="rule-mark">💰</div>
+                    <div class="rule-info"><span class="rule-name">Costo giornaliero</span><span class="rule-id">rule_alrt_84a3 · v1</span></div>
+                  </div>
+                </td>
+                <td><span class="metric-chip"><span class="ns">cost.</span>daily_usd</span></td>
+                <td class="cond-cell"><span class="op">&gt;</span> $40.00</td>
+                <td class="win-cell">1d</td>
+                <td><span class="status-chip warning">warning</span></td>
+                <td><div class="chan-stack"><span class="chan-chip e-agent"><span class="em-ico">📧</span><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="214e5152614c4444514d4440480f405151">[email&#160;protected]</a></span></div></td>
+                <td><span class="admin-toggle on" role="switch" aria-checked="true"></span></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-admin sm ghost">✎ Modifica</button>
+                    <button class="btn-admin sm ghost">🔔 Test</button>
+                    <button class="btn-admin sm ghost">🗑</button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr class="e-agent">
+                <td>
+                  <div class="rule-cell">
+                    <div class="rule-mark">📦</div>
+                    <div class="rule-info"><span class="rule-name">Coda job profonda</span><span class="rule-id">rule_alrt_84a4 · v2</span></div>
+                  </div>
+                </td>
+                <td><span class="metric-chip"><span class="ns">queue.</span>depth</span></td>
+                <td class="cond-cell"><span class="op">&gt;</span> 50 job</td>
+                <td class="win-cell">15m</td>
+                <td><span class="status-chip warning">warning</span></td>
+                <td><div class="chan-stack"><span class="chan-chip e-chat"><span class="em-ico">💬</span>slack · #alerts</span></div></td>
+                <td><span class="admin-toggle on" role="switch" aria-checked="true"></span></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-admin sm ghost">✎ Modifica</button>
+                    <button class="btn-admin sm ghost">🔔 Test</button>
+                    <button class="btn-admin sm ghost">🗑</button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr class="e-session">
+                <td>
+                  <div class="rule-cell">
+                    <div class="rule-mark">🔌</div>
+                    <div class="rule-info"><span class="rule-name">Tunnel staging down</span><span class="rule-id">rule_alrt_84a5 · v1</span></div>
+                  </div>
+                </td>
+                <td><span class="metric-chip"><span class="ns">infra.</span>tunnel.staging</span></td>
+                <td class="cond-cell"><span class="op">==</span> "down"</td>
+                <td class="win-cell">1m</td>
+                <td><span class="status-chip danger">danger</span></td>
+                <td><div class="chan-stack"><span class="chan-chip e-chat"><span class="em-ico">💬</span>slack · #ops</span><span class="chan-chip e-agent"><span class="em-ico">📧</span>ops@</span></div></td>
+                <td><span class="admin-toggle on" role="switch" aria-checked="true"></span></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-admin sm ghost">✎ Modifica</button>
+                    <button class="btn-admin sm ghost">🔔 Test</button>
+                    <button class="btn-admin sm ghost">🗑</button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr class="e-kb">
+                <td>
+                  <div class="rule-cell">
+                    <div class="rule-mark">💾</div>
+                    <div class="rule-info"><span class="rule-name">Disco basso</span><span class="rule-id">rule_alrt_84a6 · v3</span></div>
+                  </div>
+                </td>
+                <td><span class="metric-chip"><span class="ns">infra.</span>disk_free_pct</span></td>
+                <td class="cond-cell"><span class="op">&lt;</span> 10%</td>
+                <td class="win-cell">5m</td>
+                <td><span class="status-chip danger">danger</span></td>
+                <td><div class="chan-stack"><span class="chan-chip e-agent"><span class="em-ico">📧</span><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="8de2fdfecde0e8e8fde1e8ece4a3ecfdfd">[email&#160;protected]</a></span></div></td>
+                <td><span class="admin-toggle on" role="switch" aria-checked="true"></span></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-admin sm ghost">✎ Modifica</button>
+                    <button class="btn-admin sm ghost">🔔 Test</button>
+                    <button class="btn-admin sm ghost">🗑</button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr class="e-toolkit" style="opacity:.62">
+                <td>
+                  <div class="rule-cell">
+                    <div class="rule-mark">🪝</div>
+                    <div class="rule-info"><span class="rule-name">n8n flow failure</span><span class="rule-id">rule_alrt_84a7 · v1 · paused</span></div>
+                  </div>
+                </td>
+                <td><span class="metric-chip"><span class="ns">n8n.</span>flow_fail_rate</span></td>
+                <td class="cond-cell"><span class="op">&gt;</span> 5%</td>
+                <td class="win-cell">30m</td>
+                <td><span class="status-chip info">info</span></td>
+                <td><div class="chan-stack"><span class="chan-chip e-chat"><span class="em-ico">💬</span>slack · #alerts</span></div></td>
+                <td><span class="admin-toggle" role="switch" aria-checked="false"></span></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-admin sm ghost">✎ Modifica</button>
+                    <button class="btn-admin sm ghost">🔔 Test</button>
+                    <button class="btn-admin sm ghost">🗑</button>
+                  </div>
+                </td>
+              </tr>
+
+            </tbody>
+          </table>
+        </section>
+
+        <!-- ────────── 3) Nuova regola ────────── -->
+        <section class="admin-panel">
+          <div class="admin-panel-head">
+            <h3>Nuova regola</h3>
+            <span class="status-chip info">draft · 0 unsaved</span>
+            <div class="head-cluster">
+              <span class="meta">expression engine v1.4 · validated client-side</span>
+              <button class="btn-admin sm ghost">📋 Da template…</button>
+            </div>
+          </div>
+
+          <div class="new-rule-grid">
+
+            <div class="admin-form-row">
+              <span class="admin-form-label">Nome<span class="desc">Identificatore umano</span></span>
+              <input class="admin-input" placeholder="Es. Embedding queue saturata" />
+            </div>
+
+            <div class="admin-form-row">
+              <span class="admin-form-label">Metrica<span class="desc">Sorgente Prometheus / push</span></span>
+              <select class="admin-select">
+                <option>rag.error_rate</option>
+                <option>llm.latency_p95</option>
+                <option>llm.latency_p99</option>
+                <option>cost.daily_usd</option>
+                <option>cost.monthly_usd</option>
+                <option>queue.depth</option>
+                <option>queue.failed_count</option>
+                <option>infra.tunnel.staging</option>
+                <option>infra.disk_free_pct</option>
+                <option>infra.cpu_avg_pct</option>
+                <option>infra.ram_used_pct</option>
+              </select>
+            </div>
+
+            <div class="admin-form-row" style="grid-column:span 2">
+              <span class="admin-form-label">Condizione<span class="desc">Operatore + soglia</span></span>
+              <div>
+                <div class="cond-row">
+                  <select class="admin-select"><option>rag.error_rate</option></select>
+                  <select class="admin-select op-sel"><option>&gt;</option><option>&lt;</option><option>&gt;=</option><option>&lt;=</option><option>==</option><option>!=</option></select>
+                  <input class="admin-input mono" value="1.0" placeholder="soglia" />
+                </div>
+                <div class="preview-pill"><span class="k">Preview</span><span class="v">rag.error_rate &gt; 1.0%</span></div>
+              </div>
+            </div>
+
+            <div class="admin-form-row">
+              <span class="admin-form-label">Finestra<span class="desc">Durata sostenuta della condizione</span></span>
+              <select class="admin-select">
+                <option>1m</option>
+                <option>5m</option>
+                <option>10m</option>
+                <option>15m</option>
+                <option>30m</option>
+                <option>1h</option>
+                <option>1d</option>
+              </select>
+            </div>
+
+            <div class="admin-form-row">
+              <span class="admin-form-label">Severità<span class="desc">Determina colore e canale di default</span></span>
+              <select class="admin-select">
+                <option>info — solo log</option>
+                <option>warning — canale ops</option>
+                <option>danger — canale ops + email</option>
+              </select>
+            </div>
+
+            <div class="admin-form-row" style="grid-column:span 2;border-bottom:0">
+              <span class="admin-form-label">Canali<span class="desc">Dove inviare la notifica</span></span>
+              <select class="admin-select" multiple size="3" style="height:auto">
+                <option selected>slack · #ops</option>
+                <option>slack · #alerts</option>
+                <option>email · <template class="__cf_email__" data-cfemail="1e716e6d5e737b7b6e727b7f77307f6e6e">[email&#160;protected]</template></option>
+                <option>email · <template class="__cf_email__" data-cfemail="3c5d5d4e53527c5159594c50595d55125d4c4c">[email&#160;protected]</template></option>
+                <option>webhook · n8n/incident-flow</option>
+              </select>
+            </div>
+
+          </div>
+
+          <div class="new-rule-foot">
+            <span class="helper">⏱ Validazione live · debouncer 30s prima del primo invio · cooldown ripetuto 10m</span>
+            <span class="grow"></span>
+            <button class="btn-admin">🔔 Test invio</button>
+            <button class="btn-admin">Annulla</button>
+            <button class="btn-admin primary">＋ Crea regola <kbd>↵</kbd></button>
+          </div>
+        </section>
+
+        <!-- ────────── 4) Alert recenti (activity feed) ────────── -->
+        <section class="admin-panel">
+          <div class="admin-panel-head">
+            <h3>Alert recenti</h3>
+            <span class="status-chip running">● 1 attivo</span>
+            <div class="head-cluster">
+              <span class="meta">ultimi 7 giorni · MTTR medio 4m 12s · ack rate 92%</span>
+              <button class="btn-admin sm ghost">⤓ Export</button>
+              <button class="btn-admin sm ghost">📜 Audit log</button>
+            </div>
+          </div>
+
+          <div class="activity-feed">
+
+            <div class="activity-item">
+              <span class="em danger">⚠</span>
+              <div class="body">
+                <div class="head-row">
+                  <span class="rule">Latenza p95 alta</span>
+                  <span class="metric-chip"><span class="ns">llm.</span>latency_p95</span>
+                  <span class="chan-chip e-chat"><span class="em-ico">💬</span>slack · #ops</span>
+                </div>
+                <div class="msg">Soglia <span class="val">&gt; 2000ms</span> superata · valore corrente <span class="val">2148 ms</span> · provider <strong>OpenAI</strong> · azione raccomandata: verifica circuit breaker.</div>
+              </div>
+              <div class="right">
+                <span class="status-chip running">attivo</span>
+                <span class="ts">14:22:45 · 23s fa</span>
+              </div>
+            </div>
+
+            <div class="activity-item">
+              <span class="em warning">📦</span>
+              <div class="body">
+                <div class="head-row">
+                  <span class="rule">Coda job profonda</span>
+                  <span class="metric-chip"><span class="ns">queue.</span>depth</span>
+                  <span class="chan-chip e-chat"><span class="em-ico">💬</span>slack · #alerts</span>
+                </div>
+                <div class="msg">Coda salita a <span class="val">62</span> &gt; soglia <span class="val">50</span> per 16m · risolto automaticamente quando ingestion ha drenato.</div>
+              </div>
+              <div class="right">
+                <span class="status-chip healthy">risolto</span>
+                <span class="dur-pill">durata 18m 02s</span>
+                <span class="ts">oggi 11:08:14</span>
+              </div>
+            </div>
+
+            <div class="activity-item">
+              <span class="em danger">⚠</span>
+              <div class="body">
+                <div class="head-row">
+                  <span class="rule">Error rate alto</span>
+                  <span class="metric-chip"><span class="ns">rag.</span>error_rate</span>
+                  <span class="chan-chip e-chat"><span class="em-ico">💬</span>slack · #ops</span>
+                </div>
+                <div class="msg">Error rate <span class="val">1.42%</span> &gt; soglia <span class="val">1.0%</span> · root cause: timeout reranker-service.</div>
+              </div>
+              <div class="right">
+                <span class="status-chip healthy">risolto</span>
+                <span class="dur-pill">durata 3m 18s</span>
+                <span class="ts">oggi 09:42:01</span>
+              </div>
+            </div>
+
+            <div class="activity-item">
+              <span class="em warning">💰</span>
+              <div class="body">
+                <div class="head-row">
+                  <span class="rule">Costo giornaliero</span>
+                  <span class="metric-chip"><span class="ns">cost.</span>daily_usd</span>
+                  <span class="chan-chip e-agent"><span class="em-ico">📧</span><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="95fae5e6d5f8f0f0e5f9f0f4fcbbf4e5e5">[email&#160;protected]</a></span>
+                </div>
+                <div class="msg">Spesa giornaliera <span class="val">$42.08</span> &gt; soglia <span class="val">$40.00</span> · picco 12 mag dovuto a reindex Wingspan.</div>
+              </div>
+              <div class="right">
+                <span class="status-chip muted">silenziato 24h</span>
+                <span class="ts">12 mag · 23:55:02</span>
+              </div>
+            </div>
+
+            <div class="activity-item">
+              <span class="em danger">🔌</span>
+              <div class="body">
+                <div class="head-row">
+                  <span class="rule">Tunnel staging down</span>
+                  <span class="metric-chip"><span class="ns">infra.</span>tunnel.staging</span>
+                  <span class="chan-chip e-chat"><span class="em-ico">💬</span>slack · #ops</span>
+                  <span class="chan-chip e-agent"><span class="em-ico">📧</span>ops@</span>
+                </div>
+                <div class="msg">Tunnel ssh <span class="val">== "down"</span> · sync prod→staging non eseguito · ripristino manuale da bastion-prod.</div>
+              </div>
+              <div class="right">
+                <span class="status-chip healthy">risolto</span>
+                <span class="dur-pill">durata 8m 41s</span>
+                <span class="ts">21 mag · 03:14:08</span>
+              </div>
+            </div>
+
+            <div class="activity-item">
+              <span class="em info">⏱</span>
+              <div class="body">
+                <div class="head-row">
+                  <span class="rule">Latenza p95 alta</span>
+                  <span class="metric-chip"><span class="ns">llm.</span>latency_p95</span>
+                  <span class="chan-chip e-chat"><span class="em-ico">💬</span>slack · #ops</span>
+                </div>
+                <div class="msg">Soglia superata per <span class="val">11m</span> · flap su OpenRouter, fallback su DeepSeek.</div>
+              </div>
+              <div class="right">
+                <span class="status-chip healthy">risolto</span>
+                <span class="dur-pill">durata 12m 02s</span>
+                <span class="ts">20 mag · 17:28:55</span>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="admin-nav.js"></script>
+  <script>renderAdminNav('alerts');</script>
+</body>
+</html>

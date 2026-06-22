@@ -1,0 +1,201 @@
+/* MeepleAI Design System v1 — Design Tokens
+   Source of truth for all colors, spacing, type, motion.
+   Light & dark variants via [data-theme] attr on <html>. */
+
+:root {
+  /* ─── Entity Colors (HSL triplets for alpha composability) ─── */
+  --c-game:    25 95% 45%;
+  --c-player:  262 83% 58%;
+  --c-session: 240 60% 55%;
+  --c-agent:   38 92% 50%;
+  --c-kb:      174 60% 40%;
+  --c-chat:    220 80% 55%;
+  --c-event:   350 89% 60%;
+  --c-toolkit: 142 70% 45%;
+  --c-tool:    195 80% 50%;
+
+  /* ─── Semantic Colors ─── */
+  --c-success: 142 70% 45%;
+  --c-warning: 38 92% 50%;
+  --c-danger:  350 89% 60%;
+  --c-info:    220 80% 55%;
+
+  /* ─── Brand ─── */
+  --brand: var(--c-game);
+  --brand-fg: hsl(var(--c-game));
+
+  /* ─── Typography ─── */
+  --f-display: 'Quicksand', system-ui, sans-serif;
+  --f-body:    'Nunito', system-ui, sans-serif;
+  --f-mono:    'JetBrains Mono', ui-monospace, monospace;
+
+  --fs-xs:   11px;
+  --fs-sm:   12px;
+  --fs-base: 14px;
+  --fs-md:   15px;
+  --fs-lg:   17px;
+  --fs-xl:   20px;
+  --fs-2xl:  24px;
+  --fs-3xl:  32px;
+  --fs-4xl:  40px;
+
+  --fw-reg:  400;
+  --fw-med:  500;
+  --fw-semi: 600;
+  --fw-bold: 700;
+  --fw-ext:  800;
+
+  --lh-tight: 1.2;
+  --lh-snug:  1.35;
+  --lh-body:  1.5;
+  --lh-relax: 1.65;
+
+  /* ─── Spacing (4px grid) ─── */
+  --s-0: 0;
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-7: 32px;
+  --s-8: 40px;
+  --s-9: 48px;
+  --s-10: 64px;
+
+  /* ─── Radius ─── */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+  --r-2xl: 24px;
+  --r-pill: 9999px;
+
+  /* ─── Motion ─── */
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --ease-in-out: cubic-bezier(.65, 0, .35, 1);
+  --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+  --dur-xs: 120ms;
+  --dur-sm: 180ms;
+  --dur-md: 280ms;
+  --dur-lg: 400ms;
+  --dur-xl: 600ms;
+
+  /* ─── Z-index ─── */
+  --z-base: 0;
+  --z-sticky: 10;
+  --z-nav: 20;
+  --z-overlay: 50;
+  --z-drawer: 51;
+  --z-modal: 60;
+  --z-toast: 70;
+  --z-tooltip: 80;
+}
+
+/* ─── LIGHT THEME (default) ─── */
+:root, :root[data-theme="light"] {
+  --bg:        #f7f3ee;
+  --bg-card:   #ffffff;
+  --bg-muted:  #efe6d9;
+  --bg-sunken: #ede2d0;
+  --bg-hover:  rgba(180, 130, 80, 0.06);
+
+  --text:       #2b1f12;
+  --text-sec:   #5a4a38;
+  --text-muted: #9a8870;
+
+  --border:       rgba(180, 130, 80, 0.18);
+  --border-light: rgba(180, 130, 80, 0.1);
+  --border-strong: rgba(180, 130, 80, 0.32);
+
+  --shadow-xs: 0 1px 2px rgba(90, 60, 20, 0.06);
+  --shadow-sm: 0 2px 8px rgba(90, 60, 20, 0.08);
+  --shadow-md: 0 4px 16px rgba(90, 60, 20, 0.1);
+  --shadow-lg: 0 12px 36px rgba(90, 60, 20, 0.14);
+  --shadow-drawer: 0 -8px 32px rgba(90, 60, 20, 0.12);
+
+  --glass-bg: rgba(255, 255, 255, 0.88);
+  --glass-border: rgba(255, 255, 255, 0.6);
+
+  color-scheme: light;
+}
+
+/* ─── DARK THEME ─── */
+:root[data-theme="dark"] {
+  --bg:        #14100a;
+  --bg-card:   #1e1710;
+  --bg-muted:  #241c13;
+  --bg-sunken: #0f0c08;
+  --bg-hover:  rgba(255, 200, 130, 0.05);
+
+  --text:       #f0e4d2;
+  --text-sec:   #c8b896;
+  --text-muted: #8a7860;
+
+  --border:       rgba(224, 180, 110, 0.14);
+  --border-light: rgba(224, 180, 110, 0.08);
+  --border-strong: rgba(224, 180, 110, 0.28);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.6);
+  --shadow-drawer: 0 -8px 32px rgba(0, 0, 0, 0.5);
+
+  --glass-bg: rgba(30, 22, 14, 0.85);
+  --glass-border: rgba(224, 180, 110, 0.14);
+
+  /* lighter entity colors for dark bg contrast */
+  --c-game:    28 95% 58%;
+  --c-player:  262 75% 70%;
+  --c-session: 235 70% 70%;
+  --c-agent:   38 92% 62%;
+  --c-kb:      174 60% 55%;
+  --c-chat:    218 80% 68%;
+  --c-event:   350 85% 70%;
+  --c-toolkit: 142 60% 58%;
+  --c-tool:    195 75% 62%;
+
+  color-scheme: dark;
+}
+
+/* ─── Reset / Base ─── */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--f-body);
+  background: var(--bg);
+  color: var(--text);
+  font-size: var(--fs-base);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background var(--dur-md) var(--ease-out), color var(--dur-md) var(--ease-out);
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--f-display);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.01em;
+  margin: 0;
+  line-height: var(--lh-tight);
+}
+button { font-family: inherit; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+code, kbd { font-family: var(--f-mono); font-size: 0.9em; }
+
+/* ─── Entity utility classes ─── */
+.e-game    { --e: var(--c-game); }
+.e-player  { --e: var(--c-player); }
+.e-session { --e: var(--c-session); }
+.e-agent   { --e: var(--c-agent); }
+.e-kb      { --e: var(--c-kb); }
+.e-chat    { --e: var(--c-chat); }
+.e-event   { --e: var(--c-event); }
+.e-toolkit { --e: var(--c-toolkit); }
+.e-tool    { --e: var(--c-tool); }
+
+.e-fg   { color: hsl(var(--e)); }
+.e-bg   { background: hsl(var(--e)); color: #fff; }
+.e-tint { background: hsl(var(--e) / 0.1); color: hsl(var(--e)); }
+.e-ring { box-shadow: 0 0 0 2px hsl(var(--e) / 0.35); }

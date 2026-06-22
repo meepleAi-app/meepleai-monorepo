@@ -45,7 +45,7 @@ interface SummaryCardProps {
 
 function SummaryCard({ title, value, icon, isLoading }: SummaryCardProps) {
   return (
-    <Card className="bg-white/70 backdrop-blur-md">
+    <Card className="bg-card/70 backdrop-blur-md">
       <CardContent className="flex items-center gap-4 p-6">
         <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
           {icon}
@@ -73,7 +73,7 @@ function EnabledIcon({ enabled }: { enabled: boolean }) {
   return enabled ? (
     <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-label="Enabled" />
   ) : (
-    <XCircle className="h-4 w-4 text-gray-300" aria-label="Disabled" />
+    <XCircle className="h-4 w-4 text-foreground" aria-label="Disabled" />
   );
 }
 
@@ -148,7 +148,7 @@ export function RagQualityDashboard() {
       </div>
 
       {/* Top Games by Chunk Count */}
-      <Card className="bg-white/70 backdrop-blur-md">
+      <Card className="bg-card/70 backdrop-blur-md">
         <CardHeader>
           <CardTitle className="font-quicksand text-sm font-semibold">
             Top Games by Chunk Count
@@ -199,7 +199,7 @@ export function RagQualityDashboard() {
       </Card>
 
       {/* Enhancement Flags */}
-      <Card className="bg-white/70 backdrop-blur-md">
+      <Card className="bg-card/70 backdrop-blur-md">
         <CardHeader>
           <CardTitle className="font-quicksand text-sm font-semibold">
             Enhancement Feature Flags

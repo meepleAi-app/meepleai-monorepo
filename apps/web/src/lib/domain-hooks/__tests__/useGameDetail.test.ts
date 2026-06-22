@@ -19,6 +19,16 @@ import { createTestQueryClient } from '@/__tests__/utils/query-test-utils';
 
 global.fetch = vi.fn();
 
+// Mock api.library — useRecordGameSession routes through api.library.recordGameSession
+// post Fase 3 consolidation (no longer direct fetch).
+vi.mock('@/lib/api', () => ({
+  api: {
+    library: {
+      recordGameSession: vi.fn(),
+    },
+  },
+}));
+
 const mockGameDetail: GameDetail = {
   id: 'lib-123',
   userId: 'user-123',
@@ -184,10 +194,8 @@ describe('useRecordGameSession', () => {
   });
 
   it('records session successfully', async () => {
-    vi.mocked(global.fetch).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ sessionId: 'session-123' }),
-    } as Response);
+    const { api } = await import('@/lib/api');
+    vi.mocked(api.library.recordGameSession).mockResolvedValueOnce({ sessionId: 'session-123' });
 
     const { result } = renderHook(() => useRecordGameSession('game-456'), {
       wrapper: createWrapper(),
@@ -200,17 +208,20 @@ describe('useRecordGameSession', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(global.fetch).toHaveBeenCalledWith(
-      '/api/v1/library/games/game-456/sessions',
-      expect.objectContaining({ method: 'POST' })
+    expect(api.library.recordGameSession).toHaveBeenCalledWith(
+      'game-456',
+      expect.objectContaining({
+        durationMinutes: 90,
+        playedAt: expect.any(String),
+      })
     );
   });
 
   it('handles recording error', async () => {
-    vi.mocked(global.fetch).mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-    } as Response);
+    const { api } = await import('@/lib/api');
+    vi.mocked(api.library.recordGameSession).mockRejectedValueOnce(
+      new Error('Failed to record session')
+    );
 
     const { result } = renderHook(() => useRecordGameSession('game-456'), {
       wrapper: createWrapper(),

@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * GameSourceStep - Step 1: Search catalog or create custom game.
  * Issue #4819: AddGameSheet Step 1 - Game Source
@@ -168,7 +169,7 @@ export function GameSourceStep() {
     <div className="space-y-4">
       <div>
         <h3 className="text-base font-semibold text-slate-200 mb-1">Scegli Sorgente Gioco</h3>
-        <p className="text-sm text-slate-500">Cerca nel catalogo o crea manualmente</p>
+        <p className="text-sm text-muted-foreground">Cerca nel catalogo o crea manualmente</p>
       </div>
 
       {/* Selected game indicator */}
@@ -176,7 +177,7 @@ export function GameSourceStep() {
         <div className="flex items-center gap-3 rounded-lg border border-teal-500/30 bg-teal-500/10 p-3">
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-teal-300 truncate">{selectedGame.title}</p>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-muted-foreground">
               {selectedGame.source === 'catalog' ? 'Dal catalogo' : 'Personalizzato'}
             </p>
           </div>
@@ -189,14 +190,14 @@ export function GameSourceStep() {
       {/* Search Input */}
       {!showCustomForm && (
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             ref={inputRef}
             type="search"
             placeholder="Cerca un gioco..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="pl-10 pr-10 bg-slate-800 border-slate-700"
+            className="pl-10 pr-10 bg-card border-border"
             aria-label="Cerca giochi"
           />
           {searchTerm && (
@@ -204,7 +205,7 @@ export function GameSourceStep() {
               variant="ghost"
               size="sm"
               onClick={handleClear}
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 text-slate-500"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 text-muted-foreground"
               aria-label="Cancella ricerca"
             >
               <X className="h-4 w-4" />
@@ -224,7 +225,7 @@ export function GameSourceStep() {
       {/* No results after search */}
       {!loading && !error && results.length === 0 && debouncedTerm.trim() && !showCustomForm && (
         <div className="text-center py-4">
-          <p className="text-sm text-slate-500">Nessun risultato per &quot;{debouncedTerm}&quot;</p>
+          <p className="text-sm text-muted-foreground">Nessun risultato per &quot;{debouncedTerm}&quot;</p>
         </div>
       )}
 
@@ -242,14 +243,14 @@ export function GameSourceStep() {
         <button
           type="button"
           onClick={() => setShowCustomForm(true)}
-          className="w-full flex items-center gap-3 p-3 rounded-lg border border-dashed border-slate-700 hover:border-slate-600 hover:bg-slate-800/40 transition-colors text-left"
+          className="w-full flex items-center gap-3 p-3 rounded-lg border border-dashed border-border hover:border-border hover:bg-card transition-colors text-left"
         >
-          <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
-            <Plus className="h-5 w-5 text-slate-400" />
+          <div className="w-10 h-10 rounded-lg bg-card flex items-center justify-center flex-shrink-0">
+            <Plus className="h-5 w-5 text-muted-foreground" />
           </div>
           <div>
             <p className="text-sm font-medium text-slate-300">Crea gioco personalizzato</p>
-            <p className="text-xs text-slate-500">Non trovi il gioco? Crealo manualmente</p>
+            <p className="text-xs text-muted-foreground">Non trovi il gioco? Crealo manualmente</p>
           </div>
         </button>
       )}

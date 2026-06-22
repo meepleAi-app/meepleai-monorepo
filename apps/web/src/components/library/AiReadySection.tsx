@@ -27,9 +27,9 @@ export function AiReadySection({
       <GlassCard className="p-4">
         <div className="flex items-center gap-3 mb-3">
           <Sparkles className="h-5 w-5 text-purple-400" />
-          <h3 className="text-sm font-semibold text-[var(--gaming-text-primary)]">Regole & AI</h3>
+          <h3 className="text-sm font-semibold text-[var(--text)]">Regole & AI</h3>
         </div>
-        <p className="mb-3 text-sm text-[var(--gaming-text-secondary)]">
+        <p className="mb-3 text-sm text-[var(--text-sec)]">
           Carica il regolamento per chiedere all&apos;AI come si gioca
         </p>
         <GradientButton fullWidth onClick={onUploadClick}>
@@ -45,9 +45,9 @@ export function AiReadySection({
       <GlassCard className="p-4">
         <div className="flex items-center gap-3 mb-2">
           <Loader2 className="h-5 w-5 animate-spin text-amber-400" />
-          <h3 className="text-sm font-semibold text-[var(--gaming-text-primary)]">Regole & AI</h3>
+          <h3 className="text-sm font-semibold text-[var(--text)]">Regole & AI</h3>
         </div>
-        <p className="text-sm text-[var(--gaming-text-secondary)]">
+        <p className="text-sm text-[var(--text-sec)]">
           Elaborazione del regolamento in corso...
         </p>
       </GlassCard>
@@ -60,7 +60,7 @@ export function AiReadySection({
         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500/20">
           <Sparkles className="h-3.5 w-3.5 text-green-400" />
         </div>
-        <h3 className="text-sm font-semibold text-[var(--gaming-text-primary)]">AI Pronta</h3>
+        <h3 className="text-sm font-semibold text-[var(--text)]">AI Pronta</h3>
       </div>
       <Link
         href={`/chat?gameId=${gameId}`}

@@ -51,7 +51,7 @@
  * Gate A (ICU plural): all label strings resolved here via `useTranslation().t()`
  *   with `valuesOrDefault`. Pure components receive pre-resolved strings.
  *
- * Gate C (MeepleCard fit): all 11 v2 components DIVERGE per Task 2 audit.
+ * Gate C (MeepleCard fit): all 11 feature components DIVERGE per Task 2 audit.
  *
  * Pattern blueprint: Wave D.2 SessionLiveView orchestrator (read+write+lazy).
  * D.3 differs in: 4-hook compose (vs 1-hook D.2 Foundation), brownfield FORK
@@ -92,7 +92,7 @@ import {
   type SessionSummaryHeroLabels,
   type ShareCardTheme,
   type ShareChannel,
-} from '@/components/v2/session-summary';
+} from '@/components/features/session-summary';
 import { useSessionDetail } from '@/hooks/queries/useSessionDetail';
 import { useSessionDiaryQuery } from '@/hooks/queries/useSessionFlow';
 import { useSessionVisionSnapshots } from '@/hooks/queries/useSessionSnapshots';
@@ -289,11 +289,16 @@ function NotFoundShell({
   description,
   ctaBack,
   onBack,
+  ctaNewSession,
+  onNewSession,
 }: {
   title: string;
   description: string;
   ctaBack: string;
   onBack: () => void;
+  /** Issue #2088: optional primary CTA to start a new session. */
+  ctaNewSession?: string;
+  onNewSession?: () => void;
 }): ReactElement {
   return (
     <div
@@ -302,15 +307,27 @@ function NotFoundShell({
       className="mx-auto flex max-w-[1200px] flex-col items-center justify-center gap-4 px-4 py-12 text-center"
     >
       <p className="text-lg font-semibold text-foreground">{title}</p>
-      <p className="text-sm text-muted-foreground">{description}</p>
-      <button
-        type="button"
-        onClick={onBack}
-        data-slot="session-summary-not-found-cta"
-        className="rounded-lg bg-[hsl(240,60%,38%)] px-6 py-2 text-sm font-semibold text-white hover:bg-[hsl(240,60%,32%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        {ctaBack}
-      </button>
+      {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        {ctaNewSession && onNewSession ? (
+          <button
+            type="button"
+            onClick={onNewSession}
+            data-slot="session-summary-not-found-new-cta"
+            className="rounded-lg bg-[hsl(25,95%,38%)] px-6 py-2 text-sm font-semibold text-white hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {ctaNewSession}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={onBack}
+          data-slot="session-summary-not-found-cta"
+          className="rounded-lg border border-border bg-background px-6 py-2 text-sm font-semibold text-foreground hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {ctaBack}
+        </button>
+      </div>
     </div>
   );
 }
@@ -843,9 +860,11 @@ export function SessionSummaryView({
       <div data-slot="session-summary-view" data-ui-state="not-found">
         <NotFoundShell
           title={t('pages.sessionSummary.states.notFound.title')}
-          description=""
+          description={t('pages.sessionSummary.states.notFound.description')}
           ctaBack={t('pages.sessionSummary.states.notFound.backToSessions')}
           onBack={handleBack}
+          ctaNewSession={t('pages.sessionSummary.states.notFound.newSession')}
+          onNewSession={() => router.push('/sessions/new')}
         />
       </div>
     );

@@ -38,4 +38,23 @@ public abstract class RepositoryBase
             aggregate.ClearDomainEvents();
         }
     }
+
+    /// <summary>
+    /// Collects domain events from a domain object that implements
+    /// <see cref="IDomainEventSource"/> but is not a full <see cref="IAggregateRoot"/>
+    /// subclass (e.g. <c>Session</c> in SessionTracking BC — BE-3 #1590).
+    /// Because <see cref="IDomainEventSource"/> extends <see cref="IAggregateRoot"/> the
+    /// existing <see cref="IDomainEventCollector.CollectEventsFrom"/> overload is reused
+    /// without any modification to the collector.
+    /// </summary>
+    protected void CollectDomainEvents(IDomainEventSource source)
+    {
+        if (source == null) return;
+
+        if (source.DomainEvents.Count > 0)
+        {
+            EventCollector.CollectEventsFrom(source);
+            source.ClearDomainEvents();
+        }
+    }
 }

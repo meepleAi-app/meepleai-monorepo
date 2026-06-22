@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin CRUD chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13c admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 /**
@@ -47,7 +48,7 @@ export function GameDetailsStep({ selectedGame, onBack, onGameCreated }: GameDet
   return (
     <div className="space-y-6">
       {/* Selected game card */}
-      <Card className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60">
+      <Card className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60">
         <CardHeader>
           <CardTitle className="flex items-center gap-3 text-lg">
             {selectedGame.thumbnailUrl ? (
@@ -57,10 +58,10 @@ export function GameDetailsStep({ selectedGame, onBack, onGameCreated }: GameDet
                 width={80}
                 height={80}
                 unoptimized
-                className="h-20 w-20 rounded-lg object-cover shrink-0 bg-slate-100 dark:bg-zinc-700"
+                className="h-20 w-20 rounded-lg object-cover shrink-0 bg-muted dark:bg-zinc-700"
               />
             ) : (
-              <div className="h-20 w-20 rounded-lg shrink-0 bg-slate-100 dark:bg-zinc-700 flex items-center justify-center">
+              <div className="h-20 w-20 rounded-lg shrink-0 bg-muted dark:bg-zinc-700 flex items-center justify-center">
                 <span className="text-3xl">🎲</span>
               </div>
             )}

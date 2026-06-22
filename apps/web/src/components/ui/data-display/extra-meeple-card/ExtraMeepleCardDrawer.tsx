@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 'use client';
 
 /**
@@ -43,6 +44,7 @@ import { DrawerLoadingSkeleton, DrawerErrorState } from './drawer-states';
 import { DRAWER_TEST_IDS } from './drawer-test-ids';
 import { AgentChatDrawerLayout } from './entities/AgentChatDrawerLayout';
 import { EventDrawerContent } from './entities/EventDrawerContent';
+import { GameNightEventDrawerContent } from './entities/GameNightEventDrawerContent';
 import { PlayerDrawerContent } from './entities/PlayerDrawerContent';
 import { SessionDrawerContent } from './entities/SessionDrawerContent';
 import { ToolDrawerContent } from './entities/ToolDrawerContent';
@@ -119,6 +121,8 @@ const ENTITY_CONFIG: Record<
   event: { label: 'Dettaglio Evento', color: '350 89% 60%', Icon: Calendar },
   toolkit: { label: 'Dettaglio Toolkit', color: '142 70% 45%', Icon: ToolCase },
   tool: { label: 'Dettaglio Strumento', color: '195 80% 50%', Icon: Wrench },
+  // #1929 WP2: GameNight-specific drawer entity (reuses rose/event palette)
+  gameNightEvent: { label: 'Dettaglio Game Night', color: '350 89% 60%', Icon: Calendar },
 };
 
 // ============================================================================
@@ -182,7 +186,7 @@ export const ExtraMeepleCardDrawer = React.memo(function ExtraMeepleCardDrawer({
             <button
               type="button"
               onClick={popDrawer}
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-white transition-colors hover:bg-white/30"
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-card/20 text-white transition-colors hover:bg-card/30"
               aria-label="Indietro"
               data-testid={DRAWER_TEST_IDS.BACK_BUTTON}
             >
@@ -200,7 +204,7 @@ export const ExtraMeepleCardDrawer = React.memo(function ExtraMeepleCardDrawer({
           {/* Session context badge */}
           {inSessionContext && (
             <span
-              className="ml-auto mr-8 rounded-full bg-white/20 px-2 py-0.5 text-xs font-medium text-white"
+              className="ml-auto mr-8 rounded-full bg-card/20 px-2 py-0.5 text-xs font-medium text-white"
               data-testid="drawer-session-badge"
             >
               In sessione
@@ -212,8 +216,8 @@ export const ExtraMeepleCardDrawer = React.memo(function ExtraMeepleCardDrawer({
             className={cn(
               'absolute right-4 top-1/2 -translate-y-1/2',
               'flex h-7 w-7 items-center justify-center rounded-full',
-              'bg-white/20 text-white transition-colors duration-150',
-              'hover:bg-white/30 focus:outline-none focus:ring-2 focus:ring-white/50'
+              'bg-card/20 text-white transition-colors duration-150',
+              'hover:bg-card/30 focus:outline-none focus:ring-2 focus:ring-ring/30'
             )}
             aria-label="Chiudi pannello"
           >
@@ -279,6 +283,8 @@ function DrawerEntityRouter({
       return <SessionDrawerContent entityId={entityId} initialTabId={activeTabId ?? undefined} />;
     case 'event':
       return <EventDrawerContent entityId={entityId} />;
+    case 'gameNightEvent':
+      return <GameNightEventDrawerContent entityId={entityId} />;
     case 'toolkit':
       return <ToolkitDrawerContent entityId={entityId} />;
     case 'tool':

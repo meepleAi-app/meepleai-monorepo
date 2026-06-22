@@ -40,6 +40,8 @@ const ENTITY_BORDER_COLORS: Record<MeepleEntityType, string> = {
   event: 'border-l-[hsl(350,89%,60%)]',
   toolkit: 'border-l-[hsl(142,70%,45%)]',
   tool: 'border-l-[hsl(195,80%,50%)]',
+  // #1929 WP2: GameNight reuses event/rose palette
+  gameNightEvent: 'border-l-[hsl(350,89%,60%)]',
 };
 
 // ============================================================================

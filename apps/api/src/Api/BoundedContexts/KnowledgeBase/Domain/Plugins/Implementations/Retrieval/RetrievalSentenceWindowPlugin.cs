@@ -161,7 +161,7 @@ public sealed class RetrievalSentenceWindowPlugin : RagPluginBase
         SentenceWindowConfig config,
         CancellationToken cancellationToken)
     {
-        // Simulate sentence-level retrieval (production integrates with Qdrant sentence index)
+        // Simulate sentence-level retrieval (production integrates with pgvector sentence index)
         await Task.Delay(20, cancellationToken).ConfigureAwait(false);
 
         var results = new List<RetrievedSentence>();
@@ -522,7 +522,7 @@ public sealed class RetrievalSentenceWindowPlugin : RagPluginBase
                 },
                 "collection": {
                     "type": "string",
-                    "description": "Qdrant collection to search",
+                    "description": "pgvector collection to search",
                     "default": "default"
                 },
                 "windowSize": {

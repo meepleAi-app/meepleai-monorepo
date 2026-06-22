@@ -233,13 +233,13 @@ export function DiceRoller({
               </div>
               <ScrollArea className="h-64">
                 {rollHistory.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-slate-500">No rolls yet</div>
+                  <div className="p-4 text-center text-sm text-muted-foreground">No rolls yet</div>
                 ) : (
                   <div className="p-2 space-y-2">
                     {rollHistory.map(roll => (
                       <div
                         key={roll.id}
-                        className="p-2 rounded-lg bg-white/50 dark:bg-slate-800/50 border border-amber-900/10"
+                        className="p-2 rounded-lg bg-card/50 dark:bg-card border border-amber-900/10"
                       >
                         <div className="flex items-center justify-between">
                           <span className="font-medium text-sm">{roll.participantName}</span>
@@ -248,7 +248,7 @@ export function DiceRoller({
                           </Badge>
                         </div>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-slate-500">
+                          <span className="text-xs text-muted-foreground">
                             [{roll.rolls.join(', ')}]
                             {roll.modifier !== 0 && (
                               <span
@@ -263,7 +263,7 @@ export function DiceRoller({
                           </span>
                         </div>
                         {roll.label && (
-                          <div className="text-xs text-slate-500 mt-1 italic">{roll.label}</div>
+                          <div className="text-xs text-muted-foreground mt-1 italic">{roll.label}</div>
                         )}
                       </div>
                     ))}
@@ -286,7 +286,7 @@ export function DiceRoller({
               className={`h-12 w-12 p-0 transition-all ${
                 selectedDice === type
                   ? 'ring-2 ring-amber-500 ring-offset-2'
-                  : 'hover:bg-amber-50 dark:hover:bg-slate-800'
+                  : 'hover:bg-amber-50 dark:hover:bg-card'
               }`}
               onClick={() => {
                 setSelectedDice(type);
@@ -305,7 +305,7 @@ export function DiceRoller({
         <div className="grid grid-cols-2 gap-3">
           {/* Dice Count */}
           <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Count</label>
+            <label className="text-xs font-medium text-muted-foreground">Count</label>
             <div className="flex items-center gap-1">
               <Button
                 variant="outline"
@@ -341,7 +341,7 @@ export function DiceRoller({
 
           {/* Modifier */}
           <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+            <label className="text-xs font-medium text-muted-foreground">
               Modifier
             </label>
             <div className="flex items-center gap-1">
@@ -380,7 +380,7 @@ export function DiceRoller({
 
         {/* Custom Formula Input */}
         <div className="space-y-1">
-          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+          <label className="text-xs font-medium text-muted-foreground">
             Custom Formula
           </label>
           <div className="flex items-center gap-2">
@@ -406,7 +406,7 @@ export function DiceRoller({
 
         {/* Label Input */}
         <div className="space-y-1">
-          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+          <label className="text-xs font-medium text-muted-foreground">
             Label (optional)
           </label>
           <Input
@@ -443,7 +443,7 @@ export function DiceRoller({
               className="p-4 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 dark:from-slate-800 dark:to-slate-700 border border-amber-900/20 shadow-inner"
             >
               <div className="text-center">
-                <div className="text-sm text-slate-600 dark:text-slate-400 mb-1">
+                <div className="text-sm text-muted-foreground mb-1">
                   {lastRoll.participantName} rolled {lastRoll.formula}
                   {lastRoll.label && <span className="italic"> - {lastRoll.label}</span>}
                 </div>
@@ -454,7 +454,7 @@ export function DiceRoller({
                       initial={{ rotateY: 180, scale: 0 }}
                       animate={{ rotateY: 0, scale: 1 }}
                       transition={{ delay: idx * 0.1, type: 'spring' }}
-                      className="inline-flex items-center justify-center h-10 w-10 rounded-lg bg-white dark:bg-slate-900 border-2 border-amber-600/30 font-mono font-bold text-lg shadow-sm"
+                      className="inline-flex items-center justify-center h-10 w-10 rounded-lg bg-card border-2 border-amber-600/30 font-mono font-bold text-lg shadow-sm"
                     >
                       {roll}
                     </motion.span>

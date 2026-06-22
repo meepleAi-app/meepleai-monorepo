@@ -1,8 +1,0 @@
-paths-ignore:
-  - "**/launchSettings.json"
-  - "**/appsettings.Development.json"
-  - "**/*.example"
-  - "**/*.sample"
-  - "**/__tests__/**"
-  - "**/*.test.ts"
-  - "**/*.test.tsx"

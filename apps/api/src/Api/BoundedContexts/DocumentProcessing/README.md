@@ -15,7 +15,7 @@ The DocumentProcessing bounded context manages the complete lifecycle of PDF rul
 1. **Upload** → Validation (file type, size, PDF integrity)
 2. **Extraction** → 3-stage pipeline (Unstructured → SmolDocling → Docnet)
 3. **Quality Assessment** → 4-metric scoring system
-4. **Indexing** → Text chunking + embedding generation + Qdrant storage
+4. **Indexing** → Text chunking + embedding generation + pgvector storage
 5. **Retrieval** → Query by game, fetch extracted text, manage documents
 
 **Key Metric**: 80% Stage 1 success rate, 1.3s avg processing time, ≥0.80 quality threshold
@@ -76,7 +76,7 @@ The DocumentProcessing bounded context manages the complete lifecycle of PDF rul
         │ IndexPdfCommandHandler (CQRS)      │
         │ 1. Chunk text (semantic chunking)  │
         │ 2. Generate embeddings             │
-        │ 3. Index to Qdrant                 │
+        │ 3. Index to pgvector               │
         │ 4. Update VectorDocumentEntity     │
         └────────────────────────────────────┘
 ```
@@ -115,7 +115,7 @@ The DocumentProcessing bounded context manages the complete lifecycle of PDF rul
 
 **Commands**:
 - `IndexPdfCommand` → `IndexPdfCommandHandler`
-  - Orchestrates chunking, embedding, Qdrant indexing
+  - Orchestrates chunking, embedding, pgvector indexing
   - Returns `IndexingResultDto` with status and metadata
 
 **Queries**:
@@ -188,7 +188,7 @@ IndexPdfCommandHandler
     ├─→ 2. Validate extracted text exists
     ├─→ 3. Chunk text (ITextChunkingService)
     ├─→ 4. Generate embeddings (IEmbeddingService)
-    ├─→ 5. Index in Qdrant (IQdrantService)
+    ├─→ 5. Index in pgvector (PostgreSQL)
     ├─→ 6. Update VectorDocumentEntity status
     │
     ▼
@@ -232,7 +232,7 @@ HTTP Response JSON
 
 ### Upstream (Depends On)
 
-- **KnowledgeBase Context**: Provides `IEmbeddingService`, `IQdrantService` for vector indexing
+- **KnowledgeBase Context**: Provides `IEmbeddingService` for vector indexing (pgvector storage in PostgreSQL)
 - **GameManagement Context**: Validates `gameId` exists before PDF association
 - **SystemConfiguration Context**: Feature flags (`Features.PdfUpload`), quality thresholds
 
@@ -246,7 +246,7 @@ HTTP Response JSON
 - **Unstructured Python Service** (Port 8001): Stage 1 extractor
 - **SmolDocling Python Service** (Port 8002): Stage 2 extractor
 - **PostgreSQL**: Persistent storage for `PdfDocumentEntity`, `VectorDocumentEntity`
-- **Qdrant** (Port 6333): Vector storage for semantic search
+- **pgvector**: vector storage extension on PostgreSQL
 - **File System**: Physical PDF storage (`data/pdfs/`)
 
 ---
@@ -305,19 +305,18 @@ PdfDocument
 
 1. **Docker running**: Unstructured + SmolDocling services
 2. **PostgreSQL**: Database for entities
-3. **Qdrant**: Vector storage (port 6333)
+3. **pgvector**: vector storage on PostgreSQL
 
 ### Start Services
 
 ```bash
 # From repository root
 cd infra
-docker compose up -d meepleai-unstructured meepleai-smoldocling meepleai-qdrant meepleai-postgres
+docker compose up -d meepleai-unstructured meepleai-smoldocling meepleai-postgres
 
 # Verify health
 curl http://localhost:8001/health  # Unstructured
 curl http://localhost:8002/health  # SmolDocling
-curl http://localhost:6333/healthz # Qdrant
 ```
 
 ### Upload and Process PDF
@@ -347,8 +346,7 @@ curl -X POST http://localhost:8080/api/v1/ingest/pdf/abc-123-def/index \
 ### Verify Indexing
 
 ```bash
-# Check Qdrant collection
-curl http://localhost:6333/collections/meepleai-rules
+# Vector storage now in PostgreSQL pgvector — query via psql
 
 # Query vectors
 curl http://localhost:8080/api/v1/search?q=costruire+strade&gameId=<game-guid>

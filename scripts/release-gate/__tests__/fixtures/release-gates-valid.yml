@@ -1,0 +1,55 @@
+version: 1
+
+checks:
+  - check_name: "Backend - Unit Tests"
+    severity: blocker
+    owner: backend-dev
+    override_path: fix-forward
+    pre_existing_in_main_dev: false
+    notes: "xUnit suite."
+
+  - check_name: "Frontend - A11y E2E"
+    severity: warning
+    owner: qa
+    override_path: baseline-update
+    pre_existing_in_main_dev: true
+    notes: "#1094 baseline."
+
+  - check_name: "Lychee Link Check"
+    severity: informational
+    owner: devops
+    override_path: exception-comment
+    pre_existing_in_main_dev: true
+    notes: "Link rot."
+
+fallback_patterns:
+  - pattern: "^Backend - "
+    severity: blocker
+    owner: backend-dev
+    override_path: fix-forward
+    notes: "Catch-all backend integration."
+
+  - pattern: "(?i)security|codeql"
+    severity: blocker
+    owner: devops
+    override_path: revert
+    notes: "Catch-all security."
+
+bot:
+  signature_header: "<!-- release-gate-bot:v1 -->"
+  verdict_emoji:
+    blocker: "❌"
+    warning: "⚠️"
+    informational: "ℹ️"
+    unknown: "🆕"
+  fallback_unknown:
+    severity: warning
+    owner: unknown
+    override_path: exception-comment
+
+  # Phase 2a (#1444) — integration tests in __tests__/integration.test.mjs
+  # expect the verdict to publish (enabled: true). The runtime config in
+  # .github/release-gates.yml pins this to false until the dispatch gate
+  # opens 2026-06-08 — see Phase 2 overview spec.
+  phase2a:
+    enabled: true

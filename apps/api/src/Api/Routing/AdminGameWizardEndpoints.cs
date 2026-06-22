@@ -142,26 +142,8 @@ internal static class AdminGameWizardEndpoints
         httpContext.Response.Headers.Append("Connection", "keep-alive");
         httpContext.Response.Headers.Append("X-Accel-Buffering", "no");
 
-        // Resolve to SharedGameId: after the 2026-04-19 migration, PdfDocuments reference SharedGameId directly
-        // (no longer GameEntity.Id). The wizard may pass either a SharedGameId or a GameEntity.Id; normalise
-        // here so the PDF query below always filters by SharedGameId.
+        // Post-Phase2d: GameEntity is gone; gameId is now always a SharedGameId directly.
         var resolvedSharedGameId = gameId;
-        var sharedGameExistsDirectly = await dbContext.SharedGames
-            .AnyAsync(sg => sg.Id == gameId, cancellationToken)
-            .ConfigureAwait(false);
-
-        if (!sharedGameExistsDirectly)
-        {
-            var game = await dbContext.Games
-                .FirstOrDefaultAsync(g => g.Id == gameId, cancellationToken)
-                .ConfigureAwait(false);
-
-            if (game?.SharedGameId is Guid sharedId)
-            {
-                resolvedSharedGameId = sharedId;
-                logger.LogInformation("SSE: Resolved GameEntity {GameId} to SharedGameId {SharedGameId}", gameId, resolvedSharedGameId);
-            }
-        }
 
         var consecutiveIdlePolls = 0;
         const int maxIdlePolls = 5;

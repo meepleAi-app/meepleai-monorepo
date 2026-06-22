@@ -8,6 +8,7 @@ using Api.BoundedContexts.UserLibrary.Domain.Events;
 using Api.Configuration;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Models;
 using Api.Services;
 using Api.Services.Qdrant;
@@ -90,15 +91,15 @@ public sealed class PrivatePdfUploadIntegrationTests : IAsyncLifetime
             CreatedAt = DateTime.UtcNow
         };
 
-        var game = new Api.Infrastructure.Entities.GameEntity
+        var game = new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
         {
             Id = TestGameId,
-            Name = "Test Game for Private PDF",
+            Title = "Test Game for Private PDF",
             CreatedAt = DateTime.UtcNow
         };
 
         _dbContext!.Set<UserEntity>().Add(user);
-        _dbContext.Set<Api.Infrastructure.Entities.GameEntity>().Add(game);
+        _dbContext.Set<Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity>().Add(game);
         await _dbContext.SaveChangesAsync(TestCancellationToken).ConfigureAwait(false);
     }
 

@@ -1,0 +1,54 @@
+# Issue #2470 — Wikidata SSE plane alerts.
+#
+# Metric sources (apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.WikidataEnrichment.cs):
+#   - meepleai_wikidata_sse_subscribers (ObservableGauge)
+#     Live SSE subscriber count for the wikidata-dead-letters admin page,
+#     resolved via the broadcaster SubscriberCount property.
+#   - meepleai_wikidata_sse_admin_clients_connected (ObservableGauge)
+#     Distinct admin sessions that have hit the heartbeat endpoint in the
+#     last 90s. Acts as the "admin is actually watching" sentinel for
+#     starvation alerts (DEC-C).
+#   - meepleai_wikidata_sse_messages_published_total (Counter)
+#     Tick per broadcaster.Publish call — useful for sanity-checking that
+#     the M9 scheduler / M12 admin trigger is still producing events.
+#   - meepleai_wikidata_sse_messages_received_total (Counter)
+#     Tick per per-subscriber local delivery.
+#
+# Backplane assumption: single-pod (ADR DEC-3e, HPA=1). Multi-pod fan-out
+# via the Redis backplane (#2256) is already wired but tagged out-of-scope
+# for these alerts until DEC-3e is revisited; the metrics + dashboard
+# already split per-pod via the Prometheus `instance` label so a future
+# HPA>1 lift does not require alert changes.
+
+groups:
+  - name: meepleai_wikidata_sse_alerts
+    rules:
+      - alert: WikidataSseSubscriberStarvation
+        expr: |
+          meepleai_wikidata_sse_subscribers == 0
+          and
+          meepleai_wikidata_sse_admin_clients_connected > 0
+        for: 15m
+        labels:
+          severity: warning
+          subsystem: wikidata-sse
+        annotations:
+          summary: "Wikidata SSE: admin online but no live subscribers ({{ $labels.instance }})"
+          description: |
+            An admin is actively watching the wikidata dead-letter page
+            (admin_clients_connected={{ $value }}) but the local broadcaster
+            reports 0 SSE subscribers for 15 minutes. Live row updates are
+            not flowing — the admin sees a stale page.
+
+            Likely causes (most → least common):
+              1. Frontend EventSource connection dropped silently — admin
+                 hard-reload usually restores it.
+              2. RedisWikidataEnrichmentEventBroadcaster SUBSCRIBE failed
+                 to open on this pod (multi-pod only; check api logs for
+                 'RedisWikidataEnrichmentEventBroadcaster: failed to open
+                 SUBSCRIBE on channel').
+              3. Reverse-proxy / ingress closing long-lived SSE connections
+                 mid-flight (Traefik / nginx idle-timeout settings).
+
+            Resolution path is in the runbook below.
+          runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#22-wikidata-sse-subscriber-starvation"

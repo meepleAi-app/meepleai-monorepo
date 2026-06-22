@@ -1,22 +1,31 @@
 /**
  * @vitest-environment jsdom
  *
- * useGamebooks / useQuotaInfo unit tests — SP6 Phase B Task 3 (Issue #788).
+ * useGamebooks / useQuotaInfo unit tests — SP6 Phase B Task 3 (Issue #788),
+ * updated for backend wiring (Issue #869).
  *
  * Coverage:
  *   - Stable queryKey contract (gamebookKeys)
- *   - useGamebooks resolves to canonical fixture data
- *   - useQuotaInfo resolves to canonical fixture data
- *   - Hooks remain in sync with `gamebookIndexFixtures.default`
+ *   - useGamebooks fetches via `fetchUserGamebooks` and surfaces the response
+ *   - useGamebooks propagates fetch errors to the query state
+ *   - useQuotaInfo still returns canonical fixture data (Gate B carryover —
+ *     backend GET /api/v1/users/me/quota deferred to follow-up)
  */
 
 import { type ReactNode } from 'react';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { gamebookIndexFixtures } from '@/lib/gamebook-index';
+import { gamebookIndexFixtures, type GamebookCardData } from '@/lib/gamebook-index';
+
+const fetchUserGamebooksMock =
+  vi.fn<(signal?: AbortSignal) => Promise<readonly GamebookCardData[]>>();
+
+vi.mock('@/lib/api/gamebooks-list', () => ({
+  fetchUserGamebooks: (signal?: AbortSignal) => fetchUserGamebooksMock(signal),
+}));
 
 import { gamebookKeys, useGamebooks, useQuotaInfo } from '../useGamebooks';
 
@@ -28,6 +37,10 @@ function createWrapper() {
     return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
   };
 }
+
+beforeEach(() => {
+  fetchUserGamebooksMock.mockReset();
+});
 
 describe('gamebookKeys', () => {
   it('returns stable key for myGamebooks', () => {
@@ -44,22 +57,36 @@ describe('gamebookKeys', () => {
 });
 
 describe('useGamebooks', () => {
-  it('returns canonical fixture gamebooks on success', async () => {
+  it('returns the gamebooks resolved by fetchUserGamebooks', async () => {
+    fetchUserGamebooksMock.mockResolvedValue(gamebookIndexFixtures.default.gamebooks);
+
     const { result } = renderHook(() => useGamebooks(), { wrapper: createWrapper() });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
+    expect(fetchUserGamebooksMock).toHaveBeenCalledTimes(1);
     expect(result.current.data).toEqual(gamebookIndexFixtures.default.gamebooks);
   });
 
-  it('exposes 4 fixture gamebooks (1 ready Nanolith, 1 ready Brass, 1 indexing, 1 error)', async () => {
+  it('returns an empty list without throwing when the user has no gamebooks', async () => {
+    fetchUserGamebooksMock.mockResolvedValue([]);
+
     const { result } = renderHook(() => useGamebooks(), { wrapper: createWrapper() });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(result.current.data).toHaveLength(4);
-    const statuses = (result.current.data ?? []).map(gb => gb.status);
-    expect(statuses).toEqual(['ready', 'ready', 'indexing', 'error']);
+    expect(result.current.data).toEqual([]);
+  });
+
+  it('exposes the fetch error to the query state', async () => {
+    const failure = new Error('Gamebooks list API error 500: oops');
+    fetchUserGamebooksMock.mockRejectedValue(failure);
+
+    const { result } = renderHook(() => useGamebooks(), { wrapper: createWrapper() });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(result.current.error).toBe(failure);
   });
 });
 

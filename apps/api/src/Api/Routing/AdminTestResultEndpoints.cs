@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Extensions;
+using Api.Helpers;
 using MediatR;
 
 namespace Api.Routing;
@@ -32,7 +33,7 @@ internal static class AdminTestResultEndpoints
 
             logger.LogInformation(
                 "Admin {UserId} saving test result for typology {TypologyId}",
-                session.User!.Id,
+                session.Principal!.EffectiveActor.Id,
                 request.TypologyId);
 
             var command = new SaveTestResultCommand(
@@ -44,7 +45,7 @@ internal static class AdminTestResultEndpoints
                 TokensUsed: request.TokensUsed,
                 CostEstimate: request.CostEstimate,
                 LatencyMs: request.LatencyMs,
-                ExecutedBy: session.User.Id,
+                ExecutedBy: session.Principal!.EffectiveActor.Id,
                 StrategyOverride: request.StrategyOverride,
                 CitationsJson: request.CitationsJson);
 
@@ -53,7 +54,7 @@ internal static class AdminTestResultEndpoints
             logger.LogInformation(
                 "Test result {TestResultId} saved by admin {UserId}",
                 resultId,
-                session.User.Id);
+                session.Principal!.EffectiveActor.Id);
 
             return Results.Created($"/api/v1/admin/test-results/{resultId}", new { id = resultId });
         })
@@ -85,8 +86,8 @@ internal static class AdminTestResultEndpoints
 
             logger.LogDebug(
                 "Admin {UserId} getting test results - TypologyId: {TypologyId}, SavedOnly: {SavedOnly}",
-                session.User!.Id,
-                typologyId,
+                session.Principal!.EffectiveActor.Id,
+                LogSanitizer.Sanitize(typologyId?.ToString()),
                 savedOnly);
 
             var query = new GetTestResultsQuery(
@@ -124,7 +125,7 @@ internal static class AdminTestResultEndpoints
 
             logger.LogDebug(
                 "Admin {UserId} getting test result {TestResultId}",
-                session.User!.Id,
+                session.Principal!.EffectiveActor.Id,
                 id);
 
             var query = new GetTestResultByIdQuery(id);
@@ -160,10 +161,10 @@ internal static class AdminTestResultEndpoints
 
             logger.LogInformation(
                 "Admin {UserId} deleting test result {TestResultId}",
-                session.User!.Id,
+                session.Principal!.EffectiveActor.Id,
                 id);
 
-            var command = new DeleteTestResultCommand(id, session.User.Id);
+            var command = new DeleteTestResultCommand(id, session.Principal!.EffectiveActor.Id);
             var deleted = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (!deleted)
@@ -174,7 +175,7 @@ internal static class AdminTestResultEndpoints
             logger.LogInformation(
                 "Test result {TestResultId} deleted by admin {UserId}",
                 id,
-                session.User.Id);
+                session.Principal!.EffectiveActor.Id);
 
             return Results.NoContent();
         })

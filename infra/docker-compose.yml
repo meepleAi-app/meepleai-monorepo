@@ -181,6 +181,10 @@ services:
     build:
       context: ../apps/embedding-service
       dockerfile: ./Dockerfile
+    # Issue #1578: staging pulls this from GHCR (compose.staging.yml sets
+    # EMBEDDING_IMAGE + pull_policy: always). Dev leaves the var unset → builds
+    # locally as meepleai-embedding (mirrors api/web).
+    image: ${EMBEDDING_IMAGE:-meepleai-embedding}
     container_name: meepleai-embedding
     restart: unless-stopped
     profiles: [ai, ai-essential]
@@ -262,6 +266,8 @@ services:
     build:
       context: ../apps/reranker-service
       dockerfile: ./Dockerfile
+    # Issue #1578: see embedding-service note above.
+    image: ${RERANKER_IMAGE:-meepleai-reranker}
     container_name: meepleai-reranker
     restart: unless-stopped
     profiles: [ai, ai-essential]
@@ -288,6 +294,9 @@ services:
     build:
       context: ../apps/orchestration-service
       dockerfile: ./Dockerfile
+    # Issue #1578: publish-only. Image built+pushed to GHCR but not activated
+    # in staging (stays out of the ai-essential deploy profile).
+    image: ${ORCHESTRATION_IMAGE:-meepleai-orchestrator}
     container_name: meepleai-orchestrator
     restart: unless-stopped
     profiles: [ai, tutor-agents]
@@ -335,6 +344,9 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
+      # Issue #2019 — additional rule file for self-hosted GitHub Actions
+      # runner availability (referenced from prometheus.yml + prometheus.staging.yml).
+      - ./prometheus/alerts/runner-availability.yml:/etc/prometheus/runner-availability.yml:ro
       - prometheus_data:/prometheus
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
@@ -491,7 +503,7 @@ services:
           cpus: '0.25'
           memory: 256M
 
-  # docker-socket-proxy is defined in compose.traefik.yml (Linux-only, staging/prod)
+  # docker-socket-proxy: previously defined in compose.traefik.yml (removed PR #738, edge migrated to CF Tunnel)
 
   # ---------------------------------------------------------------------------
   # Automation services (profile: automation)

@@ -4,6 +4,7 @@ using Api.BoundedContexts.BusinessSimulations.Domain.Repositories;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.BusinessSimulations.Infrastructure.Persistence;
@@ -44,6 +45,31 @@ internal class LedgerEntryRepository : RepositoryBase, ILedgerEntryRepository
         await DbContext.LedgerEntries
             .AddAsync(entity, cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> AddAndCommitAsync(LedgerEntry entry, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        CollectDomainEvents(entry);
+
+        await DbContext.LedgerEntries
+            .AddAsync(entry, cancellationToken)
+            .ConfigureAwait(false);
+
+        try
+        {
+            await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            return true;
+        }
+        catch (DbUpdateException ex) when (CounterTableIdempotency.IsUniqueViolation(ex))
+        {
+            // CF-2 / #1938: outbox replay or concurrent pod already inserted the
+            // row keyed by source_event_id. Detach and signal the caller to skip.
+            _ = ex;
+            DbContext.Entry(entry).State = EntityState.Detached;
+            return false;
+        }
     }
 
     public Task UpdateAsync(LedgerEntry entity, CancellationToken cancellationToken = default)

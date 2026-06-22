@@ -46,10 +46,8 @@ export function QuickActionCards({ onSearchClick }: QuickActionCardsProps) {
             <GlassCard className="flex flex-col gap-2 p-4">
               <Icon className={`h-6 w-6 ${action.iconColor}`} />
               <div>
-                <p className="text-sm font-semibold text-[var(--gaming-text-primary)]">
-                  {action.label}
-                </p>
-                <p className="text-xs text-[var(--gaming-text-secondary)]">{action.description}</p>
+                <p className="text-sm font-semibold text-[var(--text)]">{action.label}</p>
+                <p className="text-xs text-[var(--text-sec)]">{action.description}</p>
               </div>
             </GlassCard>
           </Link>
@@ -59,8 +57,8 @@ export function QuickActionCards({ onSearchClick }: QuickActionCardsProps) {
         <GlassCard className="flex items-center gap-3 p-4 text-left">
           <Search className="h-6 w-6 text-blue-400" />
           <div>
-            <p className="text-sm font-semibold text-[var(--gaming-text-primary)]">Esplora</p>
-            <p className="text-xs text-[var(--gaming-text-secondary)]">Cerca nel catalogo BGG</p>
+            <p className="text-sm font-semibold text-[var(--text)]">Esplora</p>
+            <p className="text-xs text-[var(--text-sec)]">Cerca nel catalogo</p>
           </div>
         </GlassCard>
       </button>

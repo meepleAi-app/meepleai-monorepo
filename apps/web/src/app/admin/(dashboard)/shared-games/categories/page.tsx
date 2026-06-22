@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 import { Suspense } from 'react';
 
 import { type Metadata } from 'next';
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 function CardSkeleton({ height = 'h-[600px]' }: { height?: string }) {
   return (
     <div
-      className={`${height} bg-white/40 dark:bg-zinc-800/40 backdrop-blur-sm rounded-2xl border border-slate-200/60 dark:border-zinc-700/40 animate-pulse`}
+      className={`${height} bg-card/40 dark:bg-zinc-800/40 backdrop-blur-sm rounded-2xl border border-border/60 dark:border-zinc-700/40 animate-pulse`}
     />
   );
 }

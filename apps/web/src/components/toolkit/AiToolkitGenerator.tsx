@@ -163,7 +163,7 @@ export function AiToolkitGenerator({
 
         {/* Reasoning */}
         {suggestion.reasoning && (
-          <p className="text-sm italic text-stone-500 dark:text-stone-400">
+          <p className="text-sm italic text-muted-foreground">
             {suggestion.reasoning}
           </p>
         )}
@@ -171,10 +171,10 @@ export function AiToolkitGenerator({
         {/* Counter details */}
         {counterCount > 0 && (
           <div className="space-y-1">
-            <p className="text-xs font-medium text-stone-600 dark:text-stone-300">
+            <p className="text-xs font-medium text-muted-foreground">
               Dettagli contatori:
             </p>
-            <ul className="text-xs text-stone-500 dark:text-stone-400 space-y-0.5 pl-4 list-disc">
+            <ul className="text-xs text-muted-foreground space-y-0.5 pl-4 list-disc">
               {suggestion.counterTools.map(c => (
                 <li key={c.name}>
                   <span className="font-medium">{c.name}</span> ({c.minValue}–{c.maxValue}, default{' '}

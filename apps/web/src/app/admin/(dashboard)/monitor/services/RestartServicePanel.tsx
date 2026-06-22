@@ -201,7 +201,7 @@ function ServiceRow({ service, cooldown, onRestart }: ServiceRowProps) {
   return (
     <div
       data-testid={`service-row-${service.id}`}
-      className="rounded-lg border border-border/40 bg-white/50 p-4 transition-colors dark:bg-zinc-800/50"
+      className="rounded-lg border border-border/40 bg-card/50 p-4 transition-colors"
     >
       <div className="flex items-center justify-between">
         <div className="min-w-0 flex-1">
@@ -342,7 +342,7 @@ export function RestartServicePanel() {
   return (
     <section
       data-testid="restart-service-panel"
-      className="rounded-xl border bg-white/70 p-6 backdrop-blur-md dark:bg-zinc-900/70"
+      className="rounded-xl border bg-card/70 p-6 backdrop-blur-md"
     >
       {/* Header */}
       <div className="mb-5 flex items-center gap-3">

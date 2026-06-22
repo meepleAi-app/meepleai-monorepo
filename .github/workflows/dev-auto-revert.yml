@@ -1,0 +1,276 @@
+# Dev Auto-Revert — main-dev red-state recovery bot
+#
+# Per ADR-055 and issue #843: polls the latest `Dev Async` run on main-dev,
+# classifies the failure mode, and (in active mode) opens a revert PR if the
+# branch has been red for >= 30min.
+#
+# Phase 1 — SHADOW MODE (this workflow file): bot classifies + logs only.
+#   * Verdict + reasoning => step summary every run
+#   * Slack alert => only when verdict=real-failure crosses the threshold
+#     (the "would-revert" event). Preventive T-10/T-20 notifications and
+#     idempotency ledger are deferred to Phase 2 together with the revert path.
+#   * Read-only permissions; cannot revert even if `vars.AUTO_REVERT_ENABLED=true`
+#     until Phase 2 lands.
+#
+# Failure-mode catalog (issue #843):
+#   success                                   => green, no-op
+#   failure + real test/job failure           => revert candidate
+#   failure + only network/setup errors       => infra flake, alert-only
+#   cancelled + "exceeded max execution time" => infra flake, alert-only
+#   cancelled + concurrency-cancelled         => green-pending, no-op
+#   cancelled + manual cancel                 => operator override, no-op
+#   timed_out                                 => infra flake, alert-only
+#   skipped / neutral / action_required       => log only
+
+name: Dev Auto-Revert
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # Phase 1: */15. Tightens to */5 in Phase 2.
+  workflow_dispatch:
+    inputs:
+      force_notify:
+        description: 'Emit Slack notification even when the threshold has not been crossed (debug)'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: dev-auto-revert-main-dev
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+jobs:
+  classify:
+    name: Classify Dev Async on main-dev HEAD
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      TARGET_WORKFLOW_FILE: dev-async.yml
+      TARGET_BRANCH: main-dev
+      THRESHOLD_MINUTES: ${{ vars.AUTO_REVERT_THRESHOLD_MINUTES || '30' }}
+      FORCE_NOTIFY: ${{ inputs.force_notify || 'false' }}
+      AUTO_REVERT_ENABLED: ${{ vars.AUTO_REVERT_ENABLED || 'false' }}
+      GH_TOKEN: ${{ github.token }}
+    outputs:
+      verdict: ${{ steps.gate.outputs.verdict }}
+      mode: ${{ steps.gate.outputs.mode }}
+      head_short: ${{ steps.head.outputs.short }}
+      head_sha: ${{ steps.head.outputs.sha }}
+      would_revert: ${{ steps.gate.outputs.would_revert }}
+      notify: ${{ steps.gate.outputs.notify }}
+      run_url: ${{ steps.target_run.outputs.run_url }}
+      age_minutes: ${{ steps.target_run.outputs.age_minutes }}
+      reason: ${{ steps.classify.outputs.reason }}
+    steps:
+      - name: Determine target HEAD on main-dev
+        id: head
+        run: |
+          set -euo pipefail
+          head_sha=$(gh api "repos/${GITHUB_REPOSITORY}/branches/${TARGET_BRANCH}" --jq '.commit.sha')
+          head_short=$(printf '%s' "$head_sha" | cut -c1-7)
+          echo "sha=${head_sha}" >>"$GITHUB_OUTPUT"
+          echo "short=${head_short}" >>"$GITHUB_OUTPUT"
+          echo "${TARGET_BRANCH} HEAD = ${head_short}"
+
+      - name: Fetch latest Dev Async run on HEAD
+        id: target_run
+        env:
+          HEAD_SHA: ${{ steps.head.outputs.sha }}
+          HEAD_SHORT: ${{ steps.head.outputs.short }}
+        run: |
+          set -euo pipefail
+          runs_json=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/${TARGET_WORKFLOW_FILE}/runs?branch=${TARGET_BRANCH}&per_page=10" \
+            --jq '.workflow_runs')
+
+          matched=$(printf '%s' "$runs_json" | jq -c --arg sha "$HEAD_SHA" \
+            '[.[] | select(.head_sha == $sha)] | first // null')
+
+          if [ "$matched" = "null" ] || [ -z "$matched" ]; then
+            echo "verdict_early=no-run-for-head" >>"$GITHUB_OUTPUT"
+            echo "No Dev Async run yet for ${TARGET_BRANCH} HEAD ${HEAD_SHORT}."
+            exit 0
+          fi
+
+          run_id=$(printf '%s' "$matched" | jq -r '.id')
+          status=$(printf '%s' "$matched" | jq -r '.status')
+          conclusion=$(printf '%s' "$matched" | jq -r '.conclusion // "null"')
+          created_at=$(printf '%s' "$matched" | jq -r '.created_at')
+          run_url=$(printf '%s' "$matched" | jq -r '.html_url')
+
+          echo "run_id=${run_id}" >>"$GITHUB_OUTPUT"
+          echo "status=${status}" >>"$GITHUB_OUTPUT"
+          echo "conclusion=${conclusion}" >>"$GITHUB_OUTPUT"
+          echo "created_at=${created_at}" >>"$GITHUB_OUTPUT"
+          echo "run_url=${run_url}" >>"$GITHUB_OUTPUT"
+
+          now_epoch=$(date -u +%s)
+          run_epoch=$(date -u -d "$created_at" +%s)
+          age_minutes=$(( (now_epoch - run_epoch) / 60 ))
+          echo "age_minutes=${age_minutes}" >>"$GITHUB_OUTPUT"
+          echo "Run ${run_id}: status=${status} conclusion=${conclusion} age=${age_minutes}min"
+
+      - name: Classify run conclusion + annotations
+        id: classify
+        if: steps.target_run.outputs.verdict_early != 'no-run-for-head' && steps.target_run.outputs.status == 'completed'
+        env:
+          CONCLUSION: ${{ steps.target_run.outputs.conclusion }}
+          HEAD_SHA: ${{ steps.head.outputs.sha }}
+        run: |
+          set -euo pipefail
+          # check-runs API exposes annotation summaries that the Actions API
+          # alone does not (we need text like "exceeded the maximum execution
+          # time" to distinguish infra flakes from real failures).
+          check_runs=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/check-runs?per_page=50" \
+            --jq '[.check_runs[]
+                   | select(.app.slug == "github-actions")
+                   | {name, conclusion, summary: (.output.summary // "")}]' \
+            2>/dev/null || echo '[]')
+
+          verdict='unknown'
+          reason=''
+          case "$CONCLUSION" in
+            success)
+              verdict='green'
+              reason='Dev Async completed successfully'
+              ;;
+            skipped|neutral)
+              verdict='green-equivalent'
+              reason="Dev Async conclusion=${CONCLUSION}"
+              ;;
+            cancelled)
+              if printf '%s' "$check_runs" | jq -e '.[] | select(.summary | test("exceeded the maximum execution time"; "i"))' >/dev/null 2>&1; then
+                verdict='infra-flake'
+                reason='Job exceeded the maximum execution time (runner cap)'
+              elif printf '%s' "$check_runs" | jq -e '.[] | select(.summary | test("concurrency"; "i"))' >/dev/null 2>&1; then
+                verdict='green-pending'
+                reason='Run cancelled by concurrency policy'
+              else
+                verdict='operator-override'
+                reason='Run cancelled (likely manual)'
+              fi
+              ;;
+            timed_out)
+              verdict='infra-flake'
+              reason='Run timed out at workflow level'
+              ;;
+            action_required)
+              verdict='configuration-error'
+              reason='Run requires manual action'
+              ;;
+            failure)
+              if printf '%s' "$check_runs" | jq -e '.[] | select(.conclusion == "failure") | select(.summary | test("could not resolve|network error|EAI_AGAIN|ETIMEDOUT|503 service|502 bad gateway"; "i"))' >/dev/null 2>&1; then
+                verdict='infra-flake'
+                reason='Job failed with network/resolution error'
+              else
+                verdict='real-failure'
+                reason='Job(s) reported test or build failure'
+              fi
+              ;;
+            *)
+              verdict='unknown'
+              reason="Unrecognised conclusion: ${CONCLUSION}"
+              ;;
+          esac
+
+          echo "verdict=${verdict}" >>"$GITHUB_OUTPUT"
+          echo "reason=${reason}" >>"$GITHUB_OUTPUT"
+          echo "Classifier: ${verdict} — ${reason}"
+
+      - name: Gate decision (would-revert / notify / mode)
+        id: gate
+        if: always()
+        env:
+          EARLY: ${{ steps.target_run.outputs.verdict_early }}
+          STATUS: ${{ steps.target_run.outputs.status }}
+          CLASSIFIED_VERDICT: ${{ steps.classify.outputs.verdict }}
+          AGE: ${{ steps.target_run.outputs.age_minutes }}
+        run: |
+          set -euo pipefail
+          verdict="${CLASSIFIED_VERDICT:-pending}"
+          age="${AGE:-0}"
+          threshold="${THRESHOLD_MINUTES}"
+          enabled="${AUTO_REVERT_ENABLED}"
+          force="${FORCE_NOTIFY}"
+
+          if [ "$EARLY" = 'no-run-for-head' ]; then
+            verdict='no-run-for-head'
+          elif [ "$STATUS" != 'completed' ]; then
+            verdict='pending'
+          fi
+
+          would_revert='false'
+          if [ "$verdict" = 'real-failure' ] && [ "$age" -ge "$threshold" ]; then
+            would_revert='true'
+          fi
+
+          mode='SHADOW'
+          if [ "$enabled" = 'true' ]; then
+            mode='SHADOW (Phase 1 — active path not implemented)'
+          fi
+
+          # Slack only on actionable events:
+          # - would-revert crossed
+          # - operator-triggered force_notify (debug)
+          notify='false'
+          if [ "$would_revert" = 'true' ] || [ "$force" = 'true' ]; then
+            notify='true'
+          fi
+
+          echo "verdict=${verdict}" >>"$GITHUB_OUTPUT"
+          echo "mode=${mode}" >>"$GITHUB_OUTPUT"
+          echo "would_revert=${would_revert}" >>"$GITHUB_OUTPUT"
+          echo "notify=${notify}" >>"$GITHUB_OUTPUT"
+
+      - name: Step summary
+        if: always()
+        env:
+          VERDICT: ${{ steps.gate.outputs.verdict }}
+          MODE: ${{ steps.gate.outputs.mode }}
+          WOULD_REVERT: ${{ steps.gate.outputs.would_revert }}
+          HEAD_SHORT: ${{ steps.head.outputs.short }}
+          RUN_URL: ${{ steps.target_run.outputs.run_url }}
+          CONCLUSION: ${{ steps.target_run.outputs.conclusion }}
+          AGE: ${{ steps.target_run.outputs.age_minutes }}
+          REASON: ${{ steps.classify.outputs.reason }}
+        run: |
+          {
+            echo "## Dev Auto-Revert classifier"
+            echo ""
+            echo "| field | value |"
+            echo "|-------|-------|"
+            echo "| HEAD | ${HEAD_SHORT:-unknown} |"
+            echo "| Dev Async run | ${RUN_URL:-—} |"
+            echo "| conclusion | ${CONCLUSION:-—} |"
+            echo "| age | ${AGE:-0} min (threshold ${THRESHOLD_MINUTES}) |"
+            echo "| verdict | **${VERDICT}** |"
+            echo "| reason | ${REASON:-—} |"
+            echo "| would revert? | ${WOULD_REVERT} |"
+            echo "| mode | ${MODE} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  notify-shadow:
+    name: Slack — would-revert intent (shadow)
+    needs: classify
+    if: needs.classify.outputs.notify == 'true'
+    uses: ./.github/workflows/notify-slack.yml
+    with:
+      event: failed
+      workflow_name: "Dev Auto-Revert (shadow)"
+      environment: automation
+      is_critical: false
+      branch: main-dev
+      actor: github-actions[bot]
+      commit_sha: ${{ needs.classify.outputs.head_sha }}
+      commit_message: "SHADOW: would revert HEAD ${{ needs.classify.outputs.head_short }} — Dev Async red for ${{ needs.classify.outputs.age_minutes }}min (verdict=${{ needs.classify.outputs.verdict }})"
+      run_url: ${{ needs.classify.outputs.run_url }}
+      job_list: '["classify"]'
+      caller_workflow_id: ${{ github.workflow }}
+    secrets:
+      SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}

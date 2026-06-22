@@ -3,6 +3,8 @@
 /**
  * RestartAllPanel — Dependency-ordered sequential restart of all services.
  * Issue #145 — Restart All with dependency order.
+ * Issue #1854 — Replace inline confirmation with Radix-backed `AdminConfirmationDialog`
+ *               (role=dialog + aria-labelledby + focus trap + Escape, axe-clean).
  *
  * Restart order: infrastructure first (postgres + pgvector, redis) → services (embedding, reranker,
  * unstructured, smoldocling) → application (api).
@@ -10,13 +12,16 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { AlertTriangle, Check, Loader2, RefreshCw, Shield, X } from 'lucide-react';
+import { Check, Loader2, RefreshCw, Shield, X } from 'lucide-react';
 
+import {
+  AdminConfirmationDialog,
+  AdminConfirmationLevel,
+} from '@/components/ui/admin/admin-confirmation-dialog';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { useToast } from '@/hooks/useToast';
 import { api } from '@/lib/api';
-import { cn } from '@/lib/utils';
 
 /* ------------------------------------------------------------------ */
 /*  Types & Constants                                                  */
@@ -54,6 +59,8 @@ interface ServiceProgress {
   status: RestartStatus;
   message?: string;
 }
+
+const RESTART_CONFIRM_PHRASE = 'RESTART ALL';
 
 /* ------------------------------------------------------------------ */
 /*  Sub-components                                                     */
@@ -93,7 +100,6 @@ function ServiceProgressRow({ service }: { service: ServiceProgress }) {
 export function RestartAllPanel() {
   const { toast } = useToast();
   const [showConfirm, setShowConfirm] = useState(false);
-  const [confirmText, setConfirmText] = useState('');
   const [isRestarting, setIsRestarting] = useState(false);
   const [progress, setProgress] = useState<ServiceProgress[]>([]);
   const mountedRef = useRef(true);
@@ -104,12 +110,14 @@ export function RestartAllPanel() {
     };
   }, []);
 
-  const isConfirmMatch = confirmText === 'RESTART ALL';
-
   const executeRestartAll = useCallback(async () => {
-    setIsRestarting(true);
+    // Close the confirmation dialog immediately so the admin can watch the
+    // ServiceProgressRow stream live. `AdminConfirmationDialog.handleConfirm`
+    // awaits `onConfirm` *before* calling `onClose`, so without this the
+    // dialog would stay open (in "Elaborazione…" state) for the full 5+ s
+    // restart loop, hiding the per-service progress underneath.
     setShowConfirm(false);
-    setConfirmText('');
+    setIsRestarting(true);
 
     // Initialize progress
     const initial: ServiceProgress[] = SERVICE_TIERS.map(s => ({
@@ -174,7 +182,7 @@ export function RestartAllPanel() {
   return (
     <section
       data-testid="restart-all-panel"
-      className="rounded-xl border bg-white/70 p-6 backdrop-blur-md dark:bg-zinc-900/70"
+      className="rounded-xl border bg-card/70 p-6 backdrop-blur-md"
     >
       {/* Header */}
       <div className="mb-5 flex items-center gap-3">
@@ -207,79 +215,8 @@ export function RestartAllPanel() {
         </div>
       )}
 
-      {/* Confirmation */}
-      {showConfirm && !isRestarting && (
-        <div
-          data-testid="restart-all-confirm"
-          className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4 dark:border-destructive/40 dark:bg-destructive/10"
-        >
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <span>Level 2 Confirmation Required</span>
-          </div>
-
-          <p className="mb-3 text-sm text-muted-foreground">
-            Type{' '}
-            <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs font-bold text-foreground">
-              RESTART ALL
-            </code>{' '}
-            to confirm restarting all services.
-          </p>
-
-          <input
-            autoFocus
-            data-testid="restart-all-confirm-input"
-            type="text"
-            value={confirmText}
-            onChange={e => setConfirmText(e.target.value)}
-            placeholder='Type "RESTART ALL" to confirm'
-            className={cn(
-              'mb-3 w-full rounded-md border bg-background px-3 py-2 text-sm outline-none transition-colors',
-              'placeholder:text-muted-foreground/60',
-              'focus:border-destructive/50 focus:ring-1 focus:ring-destructive/30',
-              isConfirmMatch &&
-                'border-green-500/50 focus:border-green-500/50 focus:ring-green-500/30'
-            )}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && isConfirmMatch) {
-                executeRestartAll();
-              }
-              if (e.key === 'Escape') {
-                setShowConfirm(false);
-                setConfirmText('');
-              }
-            }}
-          />
-
-          <div className="flex items-center gap-2">
-            <Button
-              data-testid="restart-all-cancel"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setShowConfirm(false);
-                setConfirmText('');
-              }}
-            >
-              <X className="mr-1 h-3 w-3" />
-              Cancel
-            </Button>
-            <Button
-              data-testid="restart-all-execute"
-              variant="destructive"
-              size="sm"
-              disabled={!isConfirmMatch}
-              onClick={executeRestartAll}
-            >
-              <RefreshCw className="mr-1 h-3 w-3" />
-              Confirm Restart All
-            </Button>
-          </div>
-        </div>
-      )}
-
       {/* Action button */}
-      {!showConfirm && !isRestarting && (
+      {!isRestarting && (
         <Button
           data-testid="restart-all-btn"
           variant="destructive"
@@ -297,6 +234,26 @@ export function RestartAllPanel() {
           <span>Restarting services in dependency order...</span>
         </div>
       )}
+
+      {/*
+        #1854 — Confirmation surfaced via Radix `Dialog` (role=dialog +
+        aria-labelledby + focus trap + Escape handler built-in). Level 2
+        enforces typed-confirm ("RESTART ALL"). Replaces the previous inline
+        `<div>` flow which was invisible to screen readers and lacked focus
+        management.
+      */}
+      <AdminConfirmationDialog
+        isOpen={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        onConfirm={executeRestartAll}
+        level={AdminConfirmationLevel.Level2}
+        confirmPhrase={RESTART_CONFIRM_PHRASE}
+        title="Restart All Services"
+        message="This will sequentially restart all AI/processing services and the API in dependency order."
+        warningMessage="Estimated downtime: 30-60s. All in-flight requests will fail during the rolling restart."
+        confirmText="Confirm Restart All"
+        cancelText="Cancel"
+      />
     </section>
   );
 }

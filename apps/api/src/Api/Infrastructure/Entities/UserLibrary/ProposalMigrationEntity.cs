@@ -49,6 +49,12 @@ public class ProposalMigrationEntity
     /// </summary>
     public byte[]? RowVersion { get; set; }
 
+    /// <summary>
+    /// Optional source domain event id used to dedupe at the DB level (issue #1938 / CF-2).
+    /// UNIQUE partial — only when not null.
+    /// </summary>
+    public Guid? SourceEventId { get; set; }
+
     // Navigation properties
     public PrivateGameEntity? PrivateGame { get; set; }
 }

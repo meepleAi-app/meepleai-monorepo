@@ -1,5 +1,11 @@
 /**
- * Loading State — Library Game Detail (Consolidated Route)
- * Issue #5039 — Consolidate User Routes
+ * Loading State for Library Game Detail Page
+ *
+ * Uses the Game Table skeleton that mirrors the zone-based layout.
  */
-export { default } from '../games/[gameId]/loading';
+
+import { GameTableSkeleton } from '@/components/library/game-table';
+
+export default function LibraryGameDetailLoading() {
+  return <GameTableSkeleton />;
+}

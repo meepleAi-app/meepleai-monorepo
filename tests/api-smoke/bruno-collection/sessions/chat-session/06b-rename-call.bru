@@ -1,0 +1,33 @@
+meta {
+  name: SG4-CS3b — ChatSession rename POST /chat/sessions/{id}/rename
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{apiBase}}/api/v1/chat/sessions/{{renameTargetSessionId}}/rename
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "title": "Renamed by SG4 smoke"
+  }
+}
+
+script:pre-request {
+  if (!bru.getVar("renameTargetSessionId")) {
+    throw new Error("renameTargetSessionId not set — run 06-rename first");
+  }
+}
+
+tests {
+  test("returns 200 OK", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("title updated in response", function() {
+    const body = res.getBody();
+    expect(body.title).to.equal("Renamed by SG4 smoke");
+  });
+}

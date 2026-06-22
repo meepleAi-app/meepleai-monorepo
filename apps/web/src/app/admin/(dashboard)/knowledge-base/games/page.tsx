@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 /**
@@ -53,7 +54,7 @@ function KbStatusBadge({ status }: { status: GameKbStatusItem['kbStatus'] }) {
     );
   }
   return (
-    <Badge className="bg-slate-100 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400 border-slate-200 dark:border-zinc-700">
+    <Badge className="bg-muted text-muted-foreground dark:bg-zinc-800 dark:text-muted-foreground border-border dark:border-zinc-700">
       <CircleIcon className="h-3 w-3 mr-1" />
       Nessuna KB
     </Badge>
@@ -70,7 +71,7 @@ function GameKbRow({ item }: { item: GameKbStatusItem }) {
     : null;
 
   return (
-    <div className="flex items-center gap-4 py-3 px-4 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors">
+    <div className="flex items-center gap-4 py-3 px-4 rounded-xl hover:bg-muted dark:hover:bg-zinc-800/50 transition-colors">
       {/* Status badge */}
       <div className="w-28 flex-shrink-0">
         <KbStatusBadge status={item.kbStatus} />
@@ -78,11 +79,11 @@ function GameKbRow({ item }: { item: GameKbStatusItem }) {
 
       {/* Game name */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-slate-900 dark:text-zinc-100 truncate">
+        <p className="text-sm font-medium text-foreground dark:text-zinc-100 truncate">
           {item.gameName}
         </p>
         {item.kbStatus !== 'none' && (
-          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+          <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-0.5">
             {item.documentCount} {item.documentCount === 1 ? 'documento' : 'documenti'} •{' '}
             {item.totalChunks.toLocaleString('it-IT')} chunks
           </p>
@@ -90,14 +91,14 @@ function GameKbRow({ item }: { item: GameKbStatusItem }) {
       </div>
 
       {/* Last indexed */}
-      <div className="hidden md:flex items-center gap-1.5 text-xs text-slate-500 dark:text-zinc-400 w-32 flex-shrink-0">
+      <div className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground dark:text-muted-foreground w-32 flex-shrink-0">
         {indexedDate ? (
           <>
             <ClockIcon className="h-3 w-3" />
             {indexedDate}
           </>
         ) : (
-          <span className="text-slate-400 dark:text-zinc-500">—</span>
+          <span className="text-muted-foreground dark:text-muted-foreground">—</span>
         )}
       </div>
 
@@ -108,7 +109,7 @@ function GameKbRow({ item }: { item: GameKbStatusItem }) {
             ✓ Backup
           </span>
         ) : (
-          <span className="text-xs text-slate-400 dark:text-zinc-500">—</span>
+          <span className="text-xs text-muted-foreground dark:text-muted-foreground">—</span>
         )}
       </div>
 
@@ -174,10 +175,10 @@ export default function KbGamesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-zinc-100">
+          <h1 className="text-2xl font-bold text-foreground dark:text-zinc-100">
             Knowledge Base per Gioco
           </h1>
-          <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">
+          <p className="text-sm text-muted-foreground dark:text-muted-foreground mt-1">
             Stato KB e snapshot per ogni gioco. I giochi con backup non richiedono ri-elaborazione.
           </p>
         </div>
@@ -197,7 +198,7 @@ export default function KbGamesPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {(
           [
-            { key: 'all', label: 'Totale giochi', color: 'text-slate-700 dark:text-zinc-300' },
+            { key: 'all', label: 'Totale giochi', color: 'text-foreground dark:text-zinc-300' },
             {
               key: 'complete',
               label: 'KB completa',
@@ -208,7 +209,7 @@ export default function KbGamesPage() {
               label: 'KB parziale',
               color: 'text-amber-600 dark:text-amber-400',
             },
-            { key: 'none', label: 'Senza KB', color: 'text-slate-400 dark:text-zinc-500' },
+            { key: 'none', label: 'Senza KB', color: 'text-muted-foreground dark:text-muted-foreground' },
           ] as const
         ).map(({ key, label, color }) => (
           <button
@@ -217,18 +218,18 @@ export default function KbGamesPage() {
             className={`rounded-xl border p-3 text-left transition-all ${
               filter === key
                 ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-700'
-                : 'border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/60 hover:border-slate-300 dark:hover:border-zinc-600'
+                : 'border-border dark:border-zinc-700 bg-white dark:bg-zinc-800/60 hover:border-border dark:hover:border-zinc-600'
             }`}
           >
             <p className={`text-2xl font-bold ${color}`}>{counts[key]}</p>
-            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{label}</p>
+            <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-0.5">{label}</p>
           </button>
         ))}
       </div>
 
       {/* Filter & search */}
       <div className="relative">
-        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Cerca gioco..."
           value={search}
@@ -238,12 +239,12 @@ export default function KbGamesPage() {
       </div>
 
       {/* Games list */}
-      <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+      <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <DatabaseIcon className="h-4 w-4 text-blue-500" />
             {filter === 'all' ? 'Tutti i giochi' : `Giochi — ${filter}`}
-            <span className="ml-auto text-sm font-normal text-slate-400 dark:text-zinc-500">
+            <span className="ml-auto text-sm font-normal text-muted-foreground dark:text-muted-foreground">
               {filtered.length} risultati
             </span>
           </CardTitle>
@@ -258,7 +259,7 @@ export default function KbGamesPage() {
               {Array.from({ length: 6 }).map((_, i) => (
                 <div
                   key={i}
-                  className="h-14 rounded-xl bg-slate-100 dark:bg-zinc-700/50 animate-pulse"
+                  className="h-14 rounded-xl bg-muted dark:bg-zinc-700/50 animate-pulse"
                 />
               ))}
             </div>
@@ -268,7 +269,7 @@ export default function KbGamesPage() {
               <span className="text-sm">Errore nel caricamento dei dati</span>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-12 text-slate-400 dark:text-zinc-500">
+            <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground dark:text-muted-foreground">
               <FileTextIcon className="h-8 w-8" />
               <p className="text-sm">Nessun gioco trovato</p>
             </div>

@@ -646,7 +646,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
     private static User CreateUser(Role role)
     {
         var email = Email.Parse($"test.{role.Value}@meepleai.dev");
-        var password = PasswordHash.Create("TestPass123!");
+        var password = PasswordHash.Create("UniqueT3stPwd!");
 
         return new User(
             Guid.NewGuid(),

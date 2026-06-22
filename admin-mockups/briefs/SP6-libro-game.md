@@ -986,3 +986,115 @@ Quando SP6 completo, tabella handoff finale + lista master componenti.
 **Prioritizza percepito velocità**: ogni mockup deve mostrare **almeno** 1 stato di feedback immediato sotto 1 sec (skeleton, typing, optimistic UI). La vision §4.1 target P95 5 sec — il mockup mostra fiducia che roba sta succedendo subito.
 
 Buon lavoro. SP6 chiude il primo mile della Phase 1 lato design — post-merge si passa a sprint implementation con i 5-6 mesi calendar revisionati.
+
+---
+
+# Capitolo 2 — Iter 1 Dogfooding Extension (mockup G + H)
+
+> **Scope esteso del 2026-05-07**: oltre ai 6 mockup A-F per vision Phase 1 (persona Sara), introduciamo **2 mockup aggiuntivi G + H** per supportare la **demo dogfooding** del project owner Aaron. Riferimento: [`docs/superpowers/specs/2026-05-07-libro-game-nanolith-demo-design.md`](../../docs/superpowers/specs/2026-05-07-libro-game-nanolith-demo-design.md).
+
+## Persona Aaron (estensione di Sara)
+
+**Aaron, project owner di MeepleAI** (`badsworm@gmail.com`, superadmin). Possiede Nanolith fisico, ha pre-indicizzato Rules + Press Start, ha pre-creato un agente Nanolith Tutor. Vuole giocare 1 campagna mista con 3-4 amici al tavolo.
+
+**Aaron è un'istanza specifica della family Sara** con queste differenze rilevanti UX:
+- **Privilegi superadmin**: bypass quota free tier (N3.6) — cost indicator visibile ma NON blocca, NO paywall flow
+- **Single-user dogfooding**: usa l'app **come Sara la userebbe**, ma con account elevato. Tono UI resta warm/casual (NON "admin tecnico")
+- **Quality bar dogfooding**: «non rovinare la sera con gli amici» — failure mode tollerabile = visibile, mai silenzioso
+
+**Tono UI per G+H**: identico a Sara (warm, accogliente, paritario). Aaron non vuole "un'esperienza diversa", vuole l'app di Sara con bypass quota.
+
+## Differenze scope vision vs dogfooding Iter 1
+
+| Vision G_N (Sara) | Dogfooding N_N (Aaron Iter 1) | Delta |
+|---|---|---|
+| G1 acquire manual via foto | ❌ skip — KB già pre-indicizzato | Iter 1.A NON usa B mockup |
+| G4 translate paragraph from KB | ✅ ribattezzato N3 — translate-on-the-fly da foto live (no KB) | Stesso flusso UX di B+D ma **photo NON persistita al KB** |
+| G2 setup wizard checklist (deferred) | ✅ ridotto a Q&A chat su Press Start (riuso esistente) | Nessun nuovo mockup |
+| G3 Q&A regole | ✅ N2 idem | Nessun nuovo mockup |
+| Save/resume cross-day deferred MVP-1 | ✅ **promosso a MVP** Iter 1.B (N4) | **Nuovo mockup G** |
+| Encounter Book UX | ❌ deferred Iter 2 | Nessun mockup ora |
+| Glossario inline edit | ✅ N3.5 inline pill editor | **Nuovo mockup H** |
+
+## Mockup G — `sp6-libro-game-resume-state`
+
+**Coverage**: scenari N4.1 (resume) + N4.4 (multi-campagna) + N4.5 (stale > 90 giorni) del design doc.
+
+**Route**: `/library/games/[gameId]/play` (entry point shell, **estende/sostituisce** mockup A index con resume awareness).
+
+**Pattern**: Mobile-first single-device card stack. Desktop split-view facoltativo (riusa pattern desktop-frame da C).
+
+**Stati richiesti** (4 mobile + 2 desktop variants):
+
+| Stato | Anchor id | Scenario | Note UX |
+|---|---|---|---|
+| 01 | `state-01-first-time` | Aaron nuovo user, mai giocato Nanolith | Hero "Inizia la tua prima campagna" + CTA "Crea nuova" + empty illustrato |
+| 02 | `state-02-single-resume` | 1 campagna attiva, ultima sessione 7gg fa | Hero card "Riprendi: ultimo §289 · 12 termini glossario · 4 personaggi · 7gg fa" + CTA primary "Riprendi" + secondary "Nuova" + glossary preview cluster top-5 termini |
+| 03 | `state-03-multi-campaign` | 2 campagne parallele attive | Header "Le tue campagne attive (2)" + 2 card stack distinguibili per accent color (game vs agent token), ciascuna con metadata + Riprendi |
+| 04 | `state-04-stale-warning` | 1 campagna ultima sessione 100gg fa | Card resume con warning amber prominent "⚠️ Ultima sessione 100 giorni fa" + CTA primary "Riprendi (potrebbe essere disorientante)" + secondary "Archivia e ricomincia" (soft-delete) — tono rispettoso, no blame |
+
+**Desktop variants**:
+- Stato 02 split-view: lista campagne sinistra 380px + dettaglio party/glossary destra
+- Stato 03 desktop: 2-column grid invece di stack mobile
+
+**Componenti riusati** (tutti FREEZE-compliant):
+- `.phone-sp6` frame (light/dark/sepia)
+- `auth-card`, `btn` primary/secondary/ghost
+- `chip`/`pill` per glossary preview cluster
+- `entityHsl('game', alpha)` accent campagna principale
+- `entityHsl('agent', alpha)` accent campagna secondaria nello stato 03
+- `var(--c-warning)` per stale alert
+
+**Output atteso**:
+- `admin-mockups/design_files/sp6-libro-game-resume-state.html`
+- `admin-mockups/design_files/sp6-libro-game-resume-state.jsx`
+- ~1500-2500 righe ciascuno (pattern A-E)
+
+## Mockup H — `sp6-libro-game-glossary-editor`
+
+**Coverage**: scenario N3.5 inline pill edit del design doc.
+
+**Route**: modale popup che si apre **sopra** il viewer D `sp6-libro-game-translation-viewer` quando Aaron tappa una glossary pill cliccabile inline al testo.
+
+**Pattern**: Modal (mobile fullscreen sheet, desktop centered overlay 480px width).
+
+**Stati richiesti** (4 mobile + 2 desktop):
+
+| Stato | Anchor id | Scenario | Note UX |
+|---|---|---|---|
+| 01 | `state-01-edit-pristine` | Aaron tappa pill "Voidstone → Pietra del Vuoto" | Modal mostra: term_en read-only "Voidstone" + input editable "Pietra del Vuoto" + first_seen_paragraph "§147" + buttons [Cancel, Salva] |
+| 02 | `state-02-edited` | Aaron modifica "Pietra del Vuoto" → "Pietra del Caos" | Bottone Salva enabled (era disabled in 01), preview "Verrà applicato a 12 termini in traduzioni future" |
+| 03 | `state-03-save-error` | Save fallisce (network error) | Banner amber "Errore salvataggio. Riprova." + retry button + Aaron resta in modal con value preservato (no perdita) |
+| 04 | `state-04-collision` | Aaron prova a salvare "Razziatore" ma esiste già per term_en "Reaver" | Banner red "Questo termine italiano è già usato per 'Reaver'. Conferma per sovrascrivere o cambia traduzione." + 2 CTA |
+
+**Desktop variants**:
+- Modal centered 480px width
+- ESC + click-outside per close (preserve unsaved con confirm)
+
+**Componenti riusati**:
+- Modal/dialog primitive (riuso pattern `.cancel-modal` da B photo-upload)
+- `auth-card` content
+- `input` text con focus state
+- `btn` primary/secondary
+- `var(--c-warning)` (stato 03), `var(--c-game)` save success, `var(--c-event)` collision danger
+
+**Output atteso**:
+- `admin-mockups/design_files/sp6-libro-game-glossary-editor.html`
+- `admin-mockups/design_files/sp6-libro-game-glossary-editor.jsx`
+- ~800-1200 righe ciascuno (più snello di G perché modale single-purpose)
+
+## Constraint FREEZE v2 (issue #807, #808) — applicabile a G + H
+
+NO pattern `hsl(<num>, 89%, 48%)` o `hsla(<num>, 89%, *, 0.10)` hardcoded. Solo token semantici `var(--c-game)`, `var(--c-agent)`, `var(--c-kb)`, `var(--c-warning)`, `var(--c-event)` o `entityHsl(entity, alpha)` helper. Verifica grep post-generazione obbligatoria:
+
+```bash
+grep -E "hsl\([0-9]+,?\s*89%,\s*48%\)|hsla\([0-9]+,?\s*89%" \
+  admin-mockups/design_files/sp6-libro-game-{resume-state,glossary-editor}.html
+# Expected output: empty (zero match)
+```
+
+## Sequenza generazione
+
+G prima (più completo, 4 stati base) → H dopo (modal single-purpose) → commit + FREEZE check.
+
+Dopo G+H committati, il design doc 2026-05-07 entra in fase **writing-plans** per produrre l'implementation plan Iter 1.A + 1.B.

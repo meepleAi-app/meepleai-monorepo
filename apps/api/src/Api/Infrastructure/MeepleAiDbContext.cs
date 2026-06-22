@@ -1,4 +1,10 @@
+using Api.Infrastructure.DomainEventLog;
+using Api.Infrastructure.DomainEventOutbox;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.DomainEventOutbox;
+using Api.Observability;
+using Microsoft.Extensions.Options;
+using System.Text.Json;
 using Api.Infrastructure.Entities.Administration;
 using Api.Infrastructure.Entities.Authentication;
 using Api.Infrastructure.Entities.DocumentProcessing;
@@ -15,27 +21,61 @@ using Api.SharedKernel.Domain.Interfaces;
 using MediatR;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Pgvector; // Issue #3547: Value converter for float[] → Vector mapping
 
 namespace Api.Infrastructure;
 
 public class MeepleAiDbContext : DbContext
 {
+    /// <summary>
+    /// F4: AsyncLocal recursion depth counter for the Hybrid-mode inline-dispatch loop.
+    /// When the processor drains an outbox row and the dispatched handler mutates an
+    /// aggregate then calls <c>_db.SaveChangesAsync</c>, the override re-enters with the
+    /// SAME ambient async context — so this counter is incremented at the top of
+    /// SaveChangesAsync and decremented in a finally. Depth &gt; 1 in Hybrid mode SKIPS
+    /// the inline dispatch and relies on the outbox row alone, preventing unbounded
+    /// recursion inside the processor's open transaction. Static + AsyncLocal so it
+    /// survives the scope-per-call pattern that DI typically uses.
+    /// </summary>
+    private static readonly AsyncLocal<int> SaveChangesRecursionDepth = new();
+
     private readonly IMediator _mediator;
     private readonly IDomainEventCollector _eventCollector;
     private readonly IDataProtectionProvider? _dataProtectionProvider;
+    private readonly ILogger<MeepleAiDbContext>? _logger;
     private readonly bool _isInMemoryDatabase;
+    private readonly DomainEventDispatchMode _dispatchMode;
+    private readonly TimeProvider _timeProvider;
 
     public MeepleAiDbContext(
         DbContextOptions<MeepleAiDbContext> options,
         IMediator mediator,
         IDomainEventCollector eventCollector,
-        IDataProtectionProvider? dataProtectionProvider = null)
+        IDataProtectionProvider? dataProtectionProvider = null,
+        ILogger<MeepleAiDbContext>? logger = null,
+        IOptions<DomainEventOutboxOptions>? domainEventOutboxOptions = null,
+        TimeProvider? timeProvider = null)
         : base(options)
     {
         _mediator = mediator;
         _eventCollector = eventCollector;
         _dataProtectionProvider = dataProtectionProvider;
+        _logger = logger;
+        // Issue #1535: when constructed without IOptions, fall back to Hybrid (dual-write
+        // outbox row + inline MediatR.Publish). The DI-bound default is OutboxOnly post-T9
+        // cutover, BUT legacy test fixtures construct MeepleAiDbContext directly — without
+        // the IOptions wiring — and rely on the inline-publish pre-#1535 behaviour to assert
+        // handler invocations. Switching this fallback to OutboxOnly would silently break
+        // those fixtures (no exception, just zero handler dispatches inside SaveChangesAsync).
+        // The divergence is INTENTIONAL: SaveChangesAsyncRoutingTests.Default_mode_when_options_null_is_Hybrid
+        // pins this contract.
+        _dispatchMode = domainEventOutboxOptions?.Value.Mode ?? DomainEventDispatchMode.Hybrid;
+        // Issue #1535 T6 code review: EnqueueOutboxRows used DateTimeOffset.UtcNow directly,
+        // breaking test determinism (the processor uses TimeProvider). Default to
+        // TimeProvider.System so production behaviour is unchanged; tests can inject a
+        // FakeTimeProvider to make EnqueuedAt deterministic across the writer + reader paths.
+        _timeProvider = timeProvider ?? TimeProvider.System;
 
         // Issue #3578: Detect InMemory provider for unit tests
         // Check extensions to see if InMemory provider is being used
@@ -46,10 +86,12 @@ public class MeepleAiDbContext : DbContext
     public DbSet<UserEntity> Users => Set<UserEntity>();
     public DbSet<UserSessionEntity> UserSessions => Set<UserSessionEntity>();
     public DbSet<OAuthAccountEntity> OAuthAccounts => Set<OAuthAccountEntity>(); // AUTH-06
-    public DbSet<GameEntity> Games => Set<GameEntity>();
+    public DbSet<BoundedContexts.GameManagement.Domain.Entities.GameBook> GameBooks => Set<BoundedContexts.GameManagement.Domain.Entities.GameBook>(); // Gamebook multi-book generalization (2026-05-19)
     public DbSet<GameSessionEntity> GameSessions => Set<GameSessionEntity>(); // DDD-PHASE2: GameSession aggregate
     public DbSet<PlayRecordEntity> PlayRecords => Set<PlayRecordEntity>(); // ISSUE-3888: Play history tracking
     public DbSet<RecordPlayerEntity> RecordPlayers => Set<RecordPlayerEntity>(); // ISSUE-3888: Play record players
+    public DbSet<PlayRecordPhotoEntity> PlayRecordPhotos => Set<PlayRecordPhotoEntity>(); // #2436 PR-B: Photos attached to PlayRecords
+    public DbSet<PlayRecordVersionEntity> PlayRecordVersions => Set<PlayRecordVersionEntity>(); // #2437-3: Version history + restore for PlayRecords
     public DbSet<RuleConflictFAQEntity> RuleConflictFAQs => Set<RuleConflictFAQEntity>(); // ISSUE-3761: Conflict resolution FAQ
     public DbSet<GameReviewEntity> GameReviews => Set<GameReviewEntity>(); // ISSUE-4904: Game reviews API
     public DbSet<GameStrategyEntity> GameStrategies => Set<GameStrategyEntity>(); // ISSUE-4903: Game strategies API
@@ -57,8 +99,15 @@ public class MeepleAiDbContext : DbContext
     public DbSet<RecordScoreEntity> RecordScores => Set<RecordScoreEntity>(); // ISSUE-3888: Play record scores
     public DbSet<LiveGameSessionEntity> LiveGameSessions => Set<LiveGameSessionEntity>(); // ISSUE-4750: Live game sessions
     public DbSet<GameToolkitEntity> GameToolkits => Set<GameToolkitEntity>(); // ISSUE-4753: Game toolkit configs
+    public DbSet<ToolkitVersionEntity> ToolkitVersions => Set<ToolkitVersionEntity>(); // ISSUE-822: Phase 5 marketplace version history
+    public DbSet<AiToolkitSuggestionCacheEntity> AiToolkitSuggestionCache => Set<AiToolkitSuggestionCacheEntity>(); // ADR-069 follow-up (#2383): cache-aside for toolkit suggestions
     public DbSet<BoundedContexts.GameToolkit.Domain.Entities.Toolkit> Toolkits => Set<BoundedContexts.GameToolkit.Domain.Entities.Toolkit>(); // ISSUE-5144: Epic B — user toolkit dashboard
     public DbSet<BoundedContexts.SessionTracking.Domain.Entities.ToolkitSessionState> ToolkitSessionStates => Set<BoundedContexts.SessionTracking.Domain.Entities.ToolkitSessionState>(); // ISSUE-5148: Epic B5 — toolkit session state
+    public DbSet<BoundedContexts.SessionTracking.Domain.Entities.GamebookCampaignSession> GamebookCampaignSessions => Set<BoundedContexts.SessionTracking.Domain.Entities.GamebookCampaignSession>(); // Iter 1.A — Libro Game gamebook campaigns
+    public DbSet<BoundedContexts.SessionTracking.Domain.Entities.GamebookPhotoArtifact> GamebookPhotoArtifacts => Set<BoundedContexts.SessionTracking.Domain.Entities.GamebookPhotoArtifact>(); // Iter 1.B — photo upload artifacts (24h retention)
+    public DbSet<BoundedContexts.SessionTracking.Domain.Entities.TranslatedParagraph> TranslatedParagraphs => Set<BoundedContexts.SessionTracking.Domain.Entities.TranslatedParagraph>(); // Iter 1.B — translated paragraph history
+    public DbSet<BoundedContexts.SessionTracking.Domain.Entities.GamebookGlossaryEntry> GamebookGlossaryEntries => Set<BoundedContexts.SessionTracking.Domain.Entities.GamebookGlossaryEntry>(); // Iter 1.B — per-campaign glossary
+    public DbSet<BoundedContexts.SessionTracking.Domain.Entities.SessionBookProgress> SessionBookProgresses => Set<BoundedContexts.SessionTracking.Domain.Entities.SessionBookProgress>(); // Task C1 — per-campaign, per-book progress marker (gamebook multi-book generalization)
     public DbSet<SessionParticipantEntity> SessionParticipants => Set<SessionParticipantEntity>(); // Game Night: Multi-device session participants
     public DbSet<SessionInviteEntity> SessionInvites => Set<SessionInviteEntity>(); // E3-1: Session invite links/PINs
     public DbSet<SessionPlayerEntity> SessionPlayers => Set<SessionPlayerEntity>(); // ISSUE-4750: Live session players
@@ -85,6 +134,15 @@ public class MeepleAiDbContext : DbContext
     public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.UserBudget> UserBudgets => Set<BoundedContexts.BusinessSimulations.Domain.Entities.UserBudget>(); // Phase 6: Budget/tier projection
     public DbSet<BoundedContexts.SystemConfiguration.Domain.Entities.UserPreferences> UserPreferences => Set<BoundedContexts.SystemConfiguration.Domain.Entities.UserPreferences>(); // Phase 6: User preferences projection
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
+    public DbSet<AuditOutboxEntity> AuditOutbox => Set<AuditOutboxEntity>(); // SP5 Admin Security S1: audit outbox pattern
+    // Issue #661: append-only domain-event durability log (atomic with aggregate save)
+    public DbSet<Api.Infrastructure.Entities.DomainEventLog.DomainEventLogEntity> DomainEventLogs
+        => Set<Api.Infrastructure.Entities.DomainEventLog.DomainEventLogEntity>();
+    // Issue #1535: post-commit event dispatch via durable outbox
+    public DbSet<DomainEventOutboxEntity> DomainEventOutbox => Set<DomainEventOutboxEntity>();
+    // Auth security fifs (hotfix 2026-05-06): SecurityAudit BC immutable event log (I10 prep)
+    public DbSet<BoundedContexts.SecurityAudit.Infrastructure.Entities.AuditLogEntity> SecurityAuditLogs
+        => Set<BoundedContexts.SecurityAudit.Infrastructure.Entities.AuditLogEntity>();
     public DbSet<AiRequestLogEntity> AiRequestLogs => Set<AiRequestLogEntity>();
     public DbSet<AgentFeedbackEntity> AgentFeedbacks => Set<AgentFeedbackEntity>();
     public DbSet<AgentSessionEntity> AgentSessions => Set<AgentSessionEntity>(); // ISSUE-3183: Agent session state persistence
@@ -104,7 +162,10 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ValidationAccuracyBaselineEntity> ValidationAccuracyBaselines => Set<ValidationAccuracyBaselineEntity>();
     public DbSet<AlertEntity> Alerts => Set<AlertEntity>(); // OPS-07
     public DbSet<AlertRuleEntity> AlertRules => Set<AlertRuleEntity>(); // ISSUE-921: Dynamic alert rules
+    public DbSet<StagingAllowlistEntity> StagingAllowlist => Set<StagingAllowlistEntity>(); // #845: DevOps Wave 1 staging email allowlist
     public DbSet<AlertConfigurationEntity> AlertConfigurations => Set<AlertConfigurationEntity>(); // ISSUE-921: Dynamic alert config
+    public DbSet<AlertChannelEntity> AlertChannels => Set<AlertChannelEntity>(); // Issue #1840 SP5 F4-C7: Per-channel alert notification config
+    public DbSet<HealthStatusAlertSentEntity> HealthStatusAlertsSent => Set<HealthStatusAlertSentEntity>(); // Issue #1941 / iso-2 Fix 2: dedup for HealthStatusChangedEvent dispatch
     public DbSet<ServiceHealthStateEntity> ServiceHealthStates => Set<ServiceHealthStateEntity>(); // ISSUE-448: Service health monitoring
     public DbSet<DatabaseMetricsSnapshotEntity> DatabaseMetricsSnapshots => Set<DatabaseMetricsSnapshotEntity>(); // Database growth tracking
     public DbSet<UserBackupCodeEntity> UserBackupCodes => Set<UserBackupCodeEntity>(); // AUTH-07
@@ -119,6 +180,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ReportExecutionEntity> ReportExecutions => Set<ReportExecutionEntity>(); // ISSUE-916: Report execution history
     public DbSet<DocumentCollectionEntity> DocumentCollections => Set<DocumentCollectionEntity>(); // ISSUE-2051: Multi-document collections
     public DbSet<ChatThreadCollectionEntity> ChatThreadCollections => Set<ChatThreadCollectionEntity>(); // ISSUE-2051: Chat-collection junction
+    public DbSet<ChatMessageChunkCitationEntity> ChatMessageChunkCitations => Set<ChatMessageChunkCitationEntity>(); // ISSUE-2324: DEC-D2 distinct-thread citation junction
     public DbSet<ShareLinkEntity> ShareLinks => Set<ShareLinkEntity>(); // ISSUE-2052: Shareable chat links
     public DbSet<InvitationTokenEntity> InvitationTokens => Set<InvitationTokenEntity>(); // ISSUE-124: Admin invitation tokens
     public DbSet<InvitationGameSuggestionEntity> InvitationGameSuggestions => Set<InvitationGameSuggestionEntity>(); // Admin Invitation Flow: game suggestions on invitations
@@ -127,6 +189,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<WaitlistEntryEntity> WaitlistEntries => Set<WaitlistEntryEntity>(); // ISSUE-589: Public Alpha waitlist (Wave A.2)
     public DbSet<NotificationEntity> Notifications => Set<NotificationEntity>(); // ISSUE-2053: User notifications
     public DbSet<SharedGameEntity> SharedGames => Set<SharedGameEntity>(); // ISSUE-2370: Shared game catalog
+    public DbSet<SharedGameTranslationEntity> SharedGameTranslations => Set<SharedGameTranslationEntity>(); // ISSUE-2339: Shared game translations (non-EN)
     public DbSet<GameDesignerEntity> GameDesigners => Set<GameDesignerEntity>(); // ISSUE-2370: Game designers
     public DbSet<GamePublisherEntity> GamePublishers => Set<GamePublisherEntity>(); // ISSUE-2370: Game publishers
     public DbSet<GameCategoryEntity> GameCategories => Set<GameCategoryEntity>(); // ISSUE-2370: Game categories taxonomy
@@ -135,6 +198,8 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameErrataEntity> GameErrata => Set<GameErrataEntity>(); // ISSUE-2370: Game errata
     public DbSet<SharedGameDeleteRequestEntity> SharedGameDeleteRequests => Set<SharedGameDeleteRequestEntity>(); // ISSUE-2370: Delete requests
     public DbSet<SharedGameDocumentEntity> SharedGameDocuments => Set<SharedGameDocumentEntity>(); // ISSUE-2391: Sprint 1 - PDF association
+    public DbSet<CatalogSeedDraftEntity> CatalogSeedDrafts => Set<CatalogSeedDraftEntity>(); // ISSUE-1903: Admin catalog seed workflow M1.3
+    public DbSet<BggTosHashEntity> BggTosHashes => Set<BggTosHashEntity>(); // ISSUE-1903: Admin catalog seed workflow M7.1 (BGG ToS hash watcher)
     public DbSet<GameStateTemplateEntity> GameStateTemplates => Set<GameStateTemplateEntity>(); // ISSUE-2400: Sprint 3 - Game state templates
     public DbSet<RulebookAnalysisEntity> RulebookAnalyses => Set<RulebookAnalysisEntity>(); // ISSUE-2402: Sprint 3 - Rulebook analysis service
     public DbSet<MechanicDraftEntity> MechanicDrafts => Set<MechanicDraftEntity>(); // Mechanic Extractor: Variant C draft workspace
@@ -149,6 +214,10 @@ public class MeepleAiDbContext : DbContext
     public DbSet<MechanicAnalysisMetricsEntity> MechanicAnalysisMetrics => Set<MechanicAnalysisMetricsEntity>(); // ADR-051 Sprint 1 / M2.0: per-run scoring snapshot
     public DbSet<CertificationThresholdsConfigEntity> CertificationThresholdsConfigs => Set<CertificationThresholdsConfigEntity>(); // ADR-051 Sprint 1 / M2.0: singleton thresholds config
     public DbSet<MechanicRecalcJobEntity> MechanicRecalcJobs => Set<MechanicRecalcJobEntity>(); // ADR-051 Sprint 2 / M2.1: async recalc pipeline jobs
+    public DbSet<CatalogSyncRunEntity> CatalogSyncRuns => Set<CatalogSyncRunEntity>(); // #1861: F4-A6 catalog sync run history (BGG / CSV / Manual)
+    public DbSet<EnrichmentQueueEntryEntity> EnrichmentQueueEntries => Set<EnrichmentQueueEntryEntity>(); // #1874: queued BGG enrichment requests
+    public DbSet<EnrichmentAttemptEntity> EnrichmentAttempts => Set<EnrichmentAttemptEntity>(); // #1874: BGG enrichment outcome history
+    public DbSet<WikidataCoverEnrichmentAttemptEntity> WikidataCoverEnrichmentAttempts => Set<WikidataCoverEnrichmentAttemptEntity>(); // #1823 M9: Wikidata cover enrichment outcome history
     public DbSet<QuickQuestionEntity> QuickQuestions => Set<QuickQuestionEntity>(); // ISSUE-2401: Sprint 3 - Quick questions AI generation
     public DbSet<UserLibraryEntryEntity> UserLibraryEntries => Set<UserLibraryEntryEntity>(); // User Library feature
     public DbSet<WishlistItemEntity> WishlistItems => Set<WishlistItemEntity>(); // ISSUE-3917: Wishlist management
@@ -161,6 +230,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameStateSnapshotEntity> GameStateSnapshots => Set<GameStateSnapshotEntity>(); // ISSUE-2403: Sprint 4 - State snapshots
     public DbSet<AiModelConfigurationEntity> AiModelConfigurations => Set<AiModelConfigurationEntity>(); // ISSUE-2512: Auto-configuration pipeline - AI model seed
     public DbSet<LlmSystemConfigEntity> LlmSystemConfigs => Set<LlmSystemConfigEntity>(); // ISSUE-5498: LLM system config in DB
+    public DbSet<IncidentBannerStateEntity> IncidentBannerStates => Set<IncidentBannerStateEntity>(); // Issue #1089: Global incident/status banner singleton
     public DbSet<BadgeEntity> Badges => Set<BadgeEntity>(); // ISSUE-2731: Badge gamification system
     public DbSet<UserBadgeEntity> UserBadges => Set<UserBadgeEntity>(); // ISSUE-2731: User badge awards
     public DbSet<ShareRequestLimitConfigEntity> ShareRequestLimitConfigs => Set<ShareRequestLimitConfigEntity>(); // ISSUE-2730: Rate limit config
@@ -190,12 +260,15 @@ public class MeepleAiDbContext : DbContext
     public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.LedgerEntry> LedgerEntries => Set<BoundedContexts.BusinessSimulations.Domain.Entities.LedgerEntry>(); // ISSUE-3720: Financial Ledger
     public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.CostScenario> CostScenarios => Set<BoundedContexts.BusinessSimulations.Domain.Entities.CostScenario>(); // ISSUE-3725: Agent Cost Calculator
     public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.ResourceForecast> ResourceForecasts => Set<BoundedContexts.BusinessSimulations.Domain.Entities.ResourceForecast>(); // ISSUE-3726: Resource Forecasting Simulator
+    public DbSet<Entities.BusinessSimulations.AppBudgetEntity> AppBudgets => Set<Entities.BusinessSimulations.AppBudgetEntity>(); // Issue #1838 SP5 F4-C5: Singleton global app spend budget
     public DbSet<BoundedContexts.KnowledgeBase.Domain.Entities.PlaygroundTestScenario> PlaygroundTestScenarios => Set<BoundedContexts.KnowledgeBase.Domain.Entities.PlaygroundTestScenario>(); // ISSUE-4396: Playground Test Scenarios
     public DbSet<BoundedContexts.EntityRelationships.Domain.Aggregates.EntityLink> EntityLinks => Set<BoundedContexts.EntityRelationships.Domain.Aggregates.EntityLink>(); // ISSUE-5132: Entity relationships
     public DbSet<BoundedContexts.SystemConfiguration.Domain.Entities.TierDefinition> TierDefinitions => Set<BoundedContexts.SystemConfiguration.Domain.Entities.TierDefinition>(); // D3: Tier system definitions
     public DbSet<RaptorSummaryEntity> RaptorSummaries => Set<RaptorSummaryEntity>(); // RAG Enhancement: RAPTOR hierarchical summaries
+    public DbSet<Entities.KnowledgeBase.KbReindexJobEntity> KbReindexJobs => Set<Entities.KnowledgeBase.KbReindexJobEntity>(); // ISSUE-941 / ADR-057: KB reindex async
     public DbSet<GameEntityRelationEntity> GameEntityRelations => Set<GameEntityRelationEntity>(); // RAG Enhancement: Graph RAG entity relations
     public DbSet<BoundedContexts.Administration.Domain.Entities.ServiceCallLogEntry> ServiceCallLogs => Set<BoundedContexts.Administration.Domain.Entities.ServiceCallLogEntry>(); // Admin logging: external service call history
+    internal DbSet<BoundedContexts.Administration.Domain.Aggregates.ProviderProbeAudit.ProviderProbeAuditEntry> ProviderProbeAuditEntries => Set<BoundedContexts.Administration.Domain.Aggregates.ProviderProbeAudit.ProviderProbeAuditEntry>(); // ISSUE-936: Provider token probe audit log
 
     // GST-001: SessionTracking bounded context (persistence entities)
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEntity> SessionTrackingSessions => Set<Api.Infrastructure.Entities.SessionTracking.SessionEntity>();
@@ -235,6 +308,14 @@ public class MeepleAiDbContext : DbContext
     // Issue #4417: Email notification queue
     public DbSet<Api.Infrastructure.Entities.UserNotifications.EmailQueueEntity> EmailQueueItems => Set<Api.Infrastructure.Entities.UserNotifications.EmailQueueEntity>();
 
+    // Auth security fixes (hotfix 2026-05-06): outbox pattern for idempotent transactional mail (I5 prep)
+    public DbSet<BoundedContexts.UserNotifications.Infrastructure.Entities.EmailOutboxEntity> EmailOutbox
+        => Set<BoundedContexts.UserNotifications.Infrastructure.Entities.EmailOutboxEntity>();
+
+    // Issue #1314 PR 2: outbox pattern for storage layout migration (legacy → categorized).
+    public DbSet<BoundedContexts.DocumentProcessing.Infrastructure.Entities.StorageOperationOutboxEntity> StorageOperationOutbox
+        => Set<BoundedContexts.DocumentProcessing.Infrastructure.Entities.StorageOperationOutboxEntity>();
+
     // Issue #52: Email template admin management
     public DbSet<Api.Infrastructure.Entities.UserNotifications.EmailTemplateEntity> EmailTemplates => Set<Api.Infrastructure.Entities.UserNotifications.EmailTemplateEntity>();
 
@@ -254,6 +335,13 @@ public class MeepleAiDbContext : DbContext
 
     // KB-06: User feedback on KB chat responses
     public DbSet<BoundedContexts.KnowledgeBase.Domain.Entities.KbUserFeedback> KbUserFeedbacks => Set<BoundedContexts.KnowledgeBase.Domain.Entities.KbUserFeedback>();
+
+    // Issue #1675: KbQuality bounded context (per-doc quality eval) — Task 2
+    public DbSet<BoundedContexts.KbQuality.Domain.Evaluation.DocumentEvaluationRun> DocumentEvaluationRuns => Set<BoundedContexts.KbQuality.Domain.Evaluation.DocumentEvaluationRun>();
+    public DbSet<BoundedContexts.KbQuality.Domain.Budget.KbQualityBudgetCounter> KbQualityBudgetCounters => Set<BoundedContexts.KbQuality.Domain.Budget.KbQualityBudgetCounter>();
+
+    // Issue #1859: Provider key rotation — DB-backed credential store (encrypted via IDataProtector)
+    public DbSet<BoundedContexts.Administration.Domain.Aggregates.ProviderCredentials.ProviderCredential> ProviderCredentials => Set<BoundedContexts.Administration.Domain.Aggregates.ProviderCredentials.ProviderCredential>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -330,9 +418,10 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.UserNotifications.Domain.Aggregates.Notification>(); // ISSUE-2053
         modelBuilder.Ignore<BoundedContexts.UserNotifications.Domain.Aggregates.NotificationQueueItem>(); // Slack notification queue
         modelBuilder.Ignore<BoundedContexts.UserNotifications.Domain.Aggregates.SlackConnection>(); // Slack connection aggregate
-        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.Game>();
+        // NOTE: Game domain aggregate removed by #1320 (P2c) - modelBuilder.Ignore<Game>() no longer needed
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.PlayRecord>(); // ISSUE-3888
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.RecordPlayer>(); // ISSUE-3888
+        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.PlayRecordPhoto>(); // #2436 PR-B
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveGameSession>(); // ISSUE-4747
         modelBuilder.Ignore<BoundedContexts.GameToolkit.Domain.Entities.GameToolkit>(); // ISSUE-4753
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.ToolState.ToolState>(); // ISSUE-4754
@@ -382,30 +471,219 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.ProcessingJob>();
         modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.ProcessingStep>();
         modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.StepLogEntry>();
+
+        // Issue #1928 Task B (DEC-B-8) — TestRunId column now explicit property on 5 persistence
+        // entities (see xxxEntity.cs files). Shadow property approach abandoned sessione 40 fase 1
+        // due to EF Core 9 + Npgsql null-after-save gotcha. Explicit column is production-proven.
     }
 
     /// <summary>
     /// Saves all changes made in this context to the database and dispatches domain events.
-    /// Domain events are collected by repositories via IDomainEventCollector before SaveChangesAsync.
-    /// After successful save, collected events are dispatched via MediatR.
+    ///
+    /// Issue #661: events that opt in via <see cref="EventTypeRegistry"/> are
+    /// persisted into <c>domain_event_logs</c> ATOMICALLY with the aggregate
+    /// state (single <c>base.SaveChangesAsync</c> call, EF Core transaction).
+    /// Events NOT in the registry continue to flow through MediatR.Publish only —
+    /// zero behavior change for existing in-memory consumers.
+    ///
+    /// Flow:
+    /// 1. <see cref="IDomainEventCollector.PeekEvents"/> — non-destructive snapshot
+    /// 2. Map registered events to <see cref="Entities.DomainEventLog.DomainEventLogEntity"/> rows
+    /// 3. Single <c>base.SaveChangesAsync</c> commits aggregate + log rows atomically
+    /// 4. Drain the collector AFTER successful save (events stay queued on failure)
+    /// 5. Dispatch each event via MediatR; handler failures log ERROR but don't
+    ///    rollback the durable record (it's already committed).
     /// </summary>
+    /// <summary>
+    /// Issue #1535 T6 code review (F11): admin-side handlers that mutate
+    /// <c>domain_event_outbox</c> rows (e.g. <c>RetryEventOutboxRowCommandHandler</c>)
+    /// should NOT route through the overridden <see cref="SaveChangesAsync"/> — its
+    /// step 2b would enqueue any incidentally-collected scoped event as a phantom
+    /// outbox row. This wrapper exposes the BASE DbContext save so the admin path
+    /// commits the rearm without re-firing the routing pipeline.
+    ///
+    /// <para>Visible to <c>Api.Tests</c> via <c>[InternalsVisibleTo]</c>; intentionally
+    /// non-public so general application code is steered toward the standard override.</para>
+    /// </summary>
+    internal Task<int> SaveChangesWithoutDomainEventDispatchAsync(CancellationToken cancellationToken = default)
+        => base.SaveChangesAsync(cancellationToken);
+
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        // Save changes first
-        var result = await base.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-        // Get collected domain events from repositories
-        var events = _eventCollector.GetAndClearEvents();
-
-        // Dispatch domain events after successful save
-        if (events != null)
+        // F4: track recursion depth so the Hybrid-mode inline dispatch (step 5) can
+        // SKIP when re-entered from a handler. The outbox row is still committed in
+        // step 2b so the post-commit processor will dispatch the nested event.
+        SaveChangesRecursionDepth.Value++;
+        try
         {
-            foreach (var domainEvent in events)
+            return await SaveChangesAsyncCore(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            SaveChangesRecursionDepth.Value--;
+        }
+    }
+
+    private async Task<int> SaveChangesAsyncCore(CancellationToken cancellationToken)
+    {
+        // Step 1: snapshot events from the collector (non-destructive).
+        // Guard against unconfigured Mock collectors in test code paths that
+        // return null from PeekEvents() (Mock.Of default behavior).
+        var pendingEvents = _eventCollector.PeekEvents() ?? Array.Empty<IDomainEvent>();
+
+        // Step 2a: materialize log entities for registered events (Issue #661 — unchanged).
+        // Unregistered events return null from the mapper and are silently skipped — they
+        // still get dispatched via MediatR below (or via the outbox processor post-commit).
+        if (pendingEvents.Count > 0)
+        {
+            foreach (var domainEvent in pendingEvents)
             {
-                await _mediator.Publish(domainEvent, cancellationToken).ConfigureAwait(false);
+                var logEntity = DomainEventLogMapper.Map(domainEvent);
+                if (logEntity is not null)
+                {
+                    DomainEventLogs.Add(logEntity);
+                    // G1 (#1590 AC7): one counter tick per durable row added.
+                    MeepleAiMetrics.DomainEventsInserted.Add(
+                        1,
+                        new KeyValuePair<string, object?>("event_type", logEntity.EventType));
+                }
+            }
+
+            // Step 2b (Issue #1535): materialize outbox rows for ALL events when the routing
+            // mode requires it. The DomainEventOutboxProcessor BackgroundService drains these
+            // rows post-commit and invokes MediatR.Publish — so a rolled-back transaction
+            // never causes a side-effect to escape.
+            if (_dispatchMode is DomainEventDispatchMode.Hybrid or DomainEventDispatchMode.OutboxOnly)
+            {
+                EnqueueOutboxRows(pendingEvents);
             }
         }
 
+        // Step 3: single SaveChangesAsync — aggregate state + log rows + outbox rows commit atomically.
+        var result = await base.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Step 4: drain the collector ONLY after successful save.
+        _eventCollector.Clear();
+
+        // Step 5 (Issue #1535): inline dispatch via MediatR — only in Hybrid mode (the
+        // documented rollback path). OutboxOnly mode delegates dispatch entirely to the
+        // DomainEventOutboxProcessor BackgroundService. T10 cleanup removed the
+        // InlineOnly mode (was a rollback safety net pre-Phase B; now redundant).
+        if (_dispatchMode == DomainEventDispatchMode.OutboxOnly)
+        {
+            return result;
+        }
+
+        // F4: in Hybrid mode, SKIP the inline dispatch when re-entered from a handler.
+        // The outbox row was already added in step 2b → the processor will dispatch the
+        // nested event post-commit. Without this guard, a handler that mutates an aggregate
+        // and calls SaveChangesAsync triggers unbounded recursion INSIDE the processor's
+        // open transaction, holding row-level locks and risking stack overflow on a long
+        // handler chain.
+        if (_dispatchMode == DomainEventDispatchMode.Hybrid && SaveChangesRecursionDepth.Value > 1)
+        {
+            _logger?.LogDebug(
+                "Skipping inline MediatR.Publish at SaveChangesAsync recursion depth {Depth}: {EventCount} event(s) will dispatch via the outbox processor instead",
+                SaveChangesRecursionDepth.Value, pendingEvents.Count);
+            return result;
+        }
+
+        foreach (var domainEvent in pendingEvents)
+        {
+            try
+            {
+                await _mediator.Publish(domainEvent, cancellationToken).ConfigureAwait(false);
+            }
+#pragma warning disable CA1031 // Do not catch general exception types
+            catch (Exception ex)
+            {
+                // AC-13: structured ERROR log preserves the link between the
+                // durable log row and the (failed) downstream handler.
+                _logger?.LogError(ex,
+                    "MediatR.Publish failed for domain event {EventType} (EventId={EventId}); log row already committed",
+                    domainEvent.GetType().Name, domainEvent.EventId);
+
+                // G2 (#1590 AC7): expose the otherwise-silent handler crash.
+                // event_type uses EventTypeRegistry.ResolveOrFullName so it JOINS with the G1
+                // inserted.total counter AND the #1535 outbox counters on the SAME label value
+                // for the same event class (registered alias OR FullName fallback). Issue #1535
+                // T6 review fixed a divergence here where this path used GetType().Name but the
+                // outbox path used FullName — breaking the JOIN for unregistered events.
+                var eventAlias = EventTypeRegistry.ResolveOrFullName(domainEvent);
+                MeepleAiMetrics.DomainEventDispatchFailures.Add(
+                    1,
+                    new KeyValuePair<string, object?>("event_type", eventAlias),
+                    new KeyValuePair<string, object?>("handler_name", domainEvent.GetType().Name));
+            }
+#pragma warning restore CA1031
+        }
+
         return result;
+    }
+
+    /// <summary>
+    /// Issue #1535 — materialises a <see cref="DomainEventOutboxEntity"/> for every collected
+    /// event so the post-commit processor can dispatch them out-of-band. <see cref="EventTypeRegistry"/>
+    /// alias is used when registered (#661 stable identifier); CLR <c>FullName</c> is the long-tail fallback.
+    /// </summary>
+    private void EnqueueOutboxRows(IReadOnlyList<IDomainEvent> events)
+    {
+        // Use the injected TimeProvider (defaults to System) so the EnqueuedAt timestamp
+        // is deterministic in FakeTimeProvider-based tests — matching the processor's use
+        // of TimeProvider for NextAttemptAt comparisons.
+        var now = _timeProvider.GetUtcNow();
+        foreach (var domainEvent in events)
+        {
+            var clrType = domainEvent.GetType();
+            var eventType = EventTypeRegistry.ResolveOrFullName(domainEvent);
+            string payloadJson;
+            bool isPoisonPayload = false;
+            string? poisonReason = null;
+            try
+            {
+                payloadJson = JsonSerializer.Serialize(domainEvent, clrType, DomainEventJsonOptions.Default);
+            }
+#pragma warning disable CA1031 // F7: poison-payload row instead of silent skip
+            catch (Exception ex)
+#pragma warning restore CA1031
+            {
+                // F7 code review: pre-fix, OutboxOnly mode silently dropped events whose
+                // payload failed to serialize (line continue + no inline fallback). The row
+                // is now persisted with status=Failed + a synthetic empty payload + a
+                // LastError marker, so the event is IMMEDIATELY visible on
+                // /admin/event-outbox/failed instead of vanishing into the log.
+                _logger?.LogError(ex,
+                    "Failed to serialize domain event {EventType} (EventId={EventId}) — persisting a Failed outbox row so ops can triage via /admin/event-outbox/failed.",
+                    clrType.Name, domainEvent.EventId);
+                isPoisonPayload = true;
+                poisonReason = $"Payload serialization failed: {ex.GetType().Name}: {ex.Message}";
+                payloadJson = "{}";
+            }
+
+            var outboxRow = DomainEventOutboxEntity.Enqueue(
+                ev: domainEvent,
+                eventType: eventType,
+                payloadJson: payloadJson,
+                payloadVersion: 1,
+                correlationId: System.Diagnostics.Activity.Current?.Id,
+                now: now);
+
+            if (isPoisonPayload)
+            {
+                // Immediately mark Failed so the processor never tries to dispatch the
+                // synthetic empty payload. The LastError carries the original exception
+                // type + message for ops triage.
+                outboxRow.MarkFailed(poisonReason!, now);
+            }
+
+            DomainEventOutbox.Add(outboxRow);
+
+            // Issue #1535 T6: arrival-rate counter, tagged by event_type so the dashboard
+            // can JOIN this against DomainEventOutboxDispatched on the same label value to
+            // surface a widening enqueue↔dispatch gap (backlog growing).
+            MeepleAiMetrics.DomainEventOutboxEnqueued.Add(
+                1,
+                new KeyValuePair<string, object?>("event_type", eventType));
+        }
     }
 }

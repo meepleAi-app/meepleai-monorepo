@@ -6,6 +6,7 @@ using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Infrastructure.Entities.SessionTracking;
 using Api.SharedKernel.Application.Services;
@@ -187,13 +188,13 @@ public sealed class SessionFinalizedEventHandlerIntegrationTests : IAsyncLifetim
     private async Task<(Guid agentDefinitionId, Guid userId, Guid gameId)> SeedParentEntitiesAsync(Guid gameSessionId)
     {
         // Create Game (EF Core entity)
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = "Test Game",
+            Title = "Test Game",
             CreatedAt = DateTime.UtcNow
         };
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
 
         // Create User (EF Core entity)
         var user = new UserEntity

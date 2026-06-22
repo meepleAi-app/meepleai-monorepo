@@ -33,6 +33,9 @@ internal static class SystemConfigurationServiceExtensions
         // Issue #5498: LLM system config repository (Scoped - uses DbContext)
         services.AddScoped<ILlmSystemConfigRepository, EfLlmSystemConfigRepository>();
 
+        // Issue #1089: Incident/status banner singleton
+        services.AddScoped<IIncidentBannerRepository, IncidentBannerRepository>();
+
         // Issue #5498: LLM system config provider (Singleton - uses IServiceScopeFactory for DB, 60s cache)
         services.AddSingleton<ILlmSystemConfigProvider, LlmSystemConfigProvider>();
 

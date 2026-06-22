@@ -1,5 +1,6 @@
 using System.Text;
 using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Services;
@@ -22,17 +23,20 @@ internal sealed class GenerateAgentSummaryHandler : INotificationHandler<Session
     private const int MaxMessages = 50;
 
     private readonly IAgentDefinitionRepository _agentRepo;
+    private readonly IPauseSnapshotRepository _pauseSnapshotRepo;
     private readonly ILlmService _llmService;
     private readonly IPublisher _publisher;
     private readonly ILogger<GenerateAgentSummaryHandler> _logger;
 
     public GenerateAgentSummaryHandler(
         IAgentDefinitionRepository agentRepo,
+        IPauseSnapshotRepository pauseSnapshotRepo,
         ILlmService llmService,
         IPublisher publisher,
         ILogger<GenerateAgentSummaryHandler> logger)
     {
         _agentRepo = agentRepo ?? throw new ArgumentNullException(nameof(agentRepo));
+        _pauseSnapshotRepo = pauseSnapshotRepo ?? throw new ArgumentNullException(nameof(pauseSnapshotRepo));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -44,6 +48,23 @@ internal sealed class GenerateAgentSummaryHandler : INotificationHandler<Session
 
         try
         {
+            // Issue #1939 / CF-3: pre-flight idempotency check — skip the (costly) LLM call
+            // if the PauseSnapshot already carries an agent summary. Guards against duplicate
+            // LLM cost when the event is re-dispatched on rollback-after-publish in #1535 or
+            // a MediatR transient retry. UpdateSnapshotSummaryHandler persists the summary in
+            // the same SaveChanges as the snapshot row, so this check is durable.
+            var snapshot = await _pauseSnapshotRepo
+                .GetByIdAsync(notification.PauseSnapshotId, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (snapshot is { AgentConversationSummary: not null })
+            {
+                _logger.LogDebug(
+                    "GenerateAgentSummary: SnapshotId={SnapshotId} already has a summary; skipping LLM call (CF-3).",
+                    notification.PauseSnapshotId);
+                return;
+            }
+
             // 1. Load the agent definition (to get the agent's name/context for the prompt)
             var agentDefinition = await _agentRepo
                 .GetByIdAsync(notification.AgentDefinitionId, cancellationToken)

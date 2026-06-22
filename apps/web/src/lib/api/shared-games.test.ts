@@ -225,6 +225,17 @@ describe('getSharedGameDetail', () => {
     status: 'Published',
     createdAt: '2026-04-15T00:00:00Z',
     modifiedAt: null,
+    // Canonical SharedGameDetail fields (Issue #2373 — required on the wire)
+    rules: null,
+    createdBy: '00000000-0000-4000-8000-000000000abc',
+    modifiedBy: null,
+    faqs: [],
+    erratas: [],
+    designers: [],
+    publishers: [],
+    categories: [],
+    mechanics: [],
+    // Wave A.4 extension (toolkits/agents/kbs + counts/flags)
     toolkits: null,
     agents: null,
     kbs: null,

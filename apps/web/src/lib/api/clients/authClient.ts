@@ -211,14 +211,16 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
     // ========== User Search ==========
 
     /**
-     * Search users by query
-     * GET /api/v1/users/search?query={query}
+     * Search users by query.
+     * GET /api/v1/users/search?query={query}&limit={limit}
      *
-     * Issue #1977: Added UserSearchResultSchema validation
+     * Issue #1977: Added UserSearchResultSchema validation.
+     * Issue #950 W1-PR2: optional `limit` query param (server clamps to [1,50]).
      */
-    async searchUsers(query: string): Promise<UserSearchResult[]> {
+    async searchUsers(query: string, limit?: number): Promise<UserSearchResult[]> {
+      const limitParam = limit !== undefined ? `&limit=${limit}` : '';
       const result = await httpClient.get(
-        `/api/v1/users/search?query=${encodeURIComponent(query)}`,
+        `/api/v1/users/search?query=${encodeURIComponent(query)}${limitParam}`,
         UserSearchResultSchema.array()
       );
       return result ?? [];

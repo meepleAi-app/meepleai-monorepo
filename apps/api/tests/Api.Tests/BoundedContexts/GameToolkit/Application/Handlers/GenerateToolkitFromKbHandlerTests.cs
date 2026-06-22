@@ -1,11 +1,11 @@
-using Api.BoundedContexts.GameManagement.Domain.Entities;
-using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.GameToolkit.Application.Commands;
 using Api.BoundedContexts.GameToolkit.Application.DTOs;
 using Api.BoundedContexts.GameToolkit.Domain.Enums;
 using Api.Infrastructure.Entities;
 using Api.Services;
+using Api.SharedKernel.Application;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
@@ -14,6 +14,10 @@ using Xunit;
 
 namespace Api.Tests.BoundedContexts.GameToolkit.Application.Handlers;
 
+/// <summary>
+/// Unit tests for GenerateToolkitFromKbHandler.
+/// Issue #1320 (P2c): Migrated from IGameRepository to IGameCoreDataProvider.
+/// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "GameToolkit")]
 public class GenerateToolkitFromKbHandlerTests
@@ -21,7 +25,7 @@ public class GenerateToolkitFromKbHandlerTests
     private readonly Mock<IHybridSearchService> _hybridSearchMock;
     private readonly Mock<ILlmService> _llmMock;
     private readonly Mock<Api.BoundedContexts.KnowledgeBase.Application.Services.IRagAccessService> _ragAccessMock;
-    private readonly Mock<IGameRepository> _gameRepoMock;
+    private readonly Mock<IGameCoreDataProvider> _gameCoreDataMock;
     private readonly Mock<ILogger<GenerateToolkitFromKbHandler>> _loggerMock;
     private readonly GenerateToolkitFromKbHandler _handler;
 
@@ -34,14 +38,14 @@ public class GenerateToolkitFromKbHandlerTests
         _hybridSearchMock = new Mock<IHybridSearchService>();
         _llmMock = new Mock<ILlmService>();
         _ragAccessMock = new Mock<Api.BoundedContexts.KnowledgeBase.Application.Services.IRagAccessService>();
-        _gameRepoMock = new Mock<IGameRepository>();
+        _gameCoreDataMock = new Mock<IGameCoreDataProvider>();
         _loggerMock = new Mock<ILogger<GenerateToolkitFromKbHandler>>();
 
         _handler = new GenerateToolkitFromKbHandler(
             _hybridSearchMock.Object,
             _llmMock.Object,
             _ragAccessMock.Object,
-            _gameRepoMock.Object,
+            _gameCoreDataMock.Object,
             _loggerMock.Object);
     }
 
@@ -55,9 +59,9 @@ public class GenerateToolkitFromKbHandlerTests
     [Fact]
     public async Task Handle_GameNotFound_ThrowsNotFoundException()
     {
-        _gameRepoMock
-            .Setup(r => r.GetByIdAsync(GameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Game?)null);
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(GameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GameCoreData?)null);
 
         var command = new GenerateToolkitFromKbCommand(GameId, UserId);
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -68,7 +72,7 @@ public class GenerateToolkitFromKbHandlerTests
     [Fact]
     public async Task Handle_NoAccessibleKbCards_ThrowsInvalidOperationException()
     {
-        SetupGameRepo("Catan");
+        SetupGameCoreData("Catan");
         _ragAccessMock
             .Setup(r => r.GetAccessibleKbCardsAsync(UserId, GameId, UserRole.Admin, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Guid>());
@@ -83,7 +87,7 @@ public class GenerateToolkitFromKbHandlerTests
     [Fact]
     public async Task Handle_HappyPath_ReturnsSuggestionWithConfidenceFields()
     {
-        SetupGameRepo("Catan");
+        SetupGameCoreData("Catan");
         SetupRagAccess([KbCardId]);
         SetupHybridSearch(new HybridSearchResult
         {
@@ -129,7 +133,7 @@ public class GenerateToolkitFromKbHandlerTests
     [Fact]
     public async Task Handle_LlmReturnsNull_RetriesAndThrowsIfBothFail()
     {
-        SetupGameRepo("Catan");
+        SetupGameCoreData("Catan");
         SetupRagAccess([KbCardId]);
         SetupHybridSearch(new HybridSearchResult
         {
@@ -165,7 +169,7 @@ public class GenerateToolkitFromKbHandlerTests
     [Fact]
     public async Task Handle_HighConfidence_SetsRequiresHumanReviewFalse()
     {
-        SetupGameRepo("Catan");
+        SetupGameCoreData("Catan");
         SetupRagAccess([KbCardId]);
 
         // 8 unique chunks with high scores → confidence >= 0.6
@@ -185,6 +189,7 @@ public class GenerateToolkitFromKbHandlerTests
                 It.IsAny<string>(), GameId, SearchMode.Hybrid, It.IsAny<int>(),
                 It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(),
                 It.IsAny<double>(),
+                It.IsAny<GameBookRole>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(chunks);
 
@@ -192,8 +197,12 @@ public class GenerateToolkitFromKbHandlerTests
             .Setup(l => l.GenerateJsonAsync<AiToolkitSuggestionDto>(
                 It.IsAny<string>(), It.IsAny<string>(),
                 RequestSource.RagPipeline, It.IsAny<CancellationToken>()))
+            // Updated 2026-05-31 (B19-3c #1747): Overrides must be provided
+            // (validator enforces it). High-confidence path requires schema-valid output.
             .ReturnsAsync(new AiToolkitSuggestionDto(
-                "Catan", [], [], [], null, null, null, "High coverage."));
+                "Catan", [], [], [], null, null,
+                new AiOverrideSuggestion(false, false, false),
+                "High coverage."));
 
         var result = await _handler.Handle(
             new GenerateToolkitFromKbCommand(GameId, UserId),
@@ -205,12 +214,12 @@ public class GenerateToolkitFromKbHandlerTests
 
     // ---- Helpers ----
 
-    private void SetupGameRepo(string title)
+    private void SetupGameCoreData(string title)
     {
-        var game = new Game(GameId, new GameTitle(title));
-        _gameRepoMock
-            .Setup(r => r.GetByIdAsync(GameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(game);
+        var coreData = GameCoreData.Create(title, 1995, 3, 4, 90, 10);
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(GameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(coreData);
     }
 
     private void SetupRagAccess(List<Guid> cardIds)
@@ -227,6 +236,7 @@ public class GenerateToolkitFromKbHandlerTests
                 It.IsAny<string>(), GameId, SearchMode.Hybrid, It.IsAny<int>(),
                 It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(),
                 It.IsAny<double>(),
+                It.IsAny<GameBookRole>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult> { chunk });
     }

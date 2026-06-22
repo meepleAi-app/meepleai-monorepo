@@ -27,7 +27,7 @@ internal static class MeepleAiActivitySources
 
     /// <summary>
     /// Activity Source for vector search operations.
-    /// Used to trace Qdrant vector database queries and indexing.
+    /// Used to trace pgvector vector database queries and indexing.
     /// </summary>
     public const string VectorSearchSourceName = "MeepleAI.VectorSearch";
 

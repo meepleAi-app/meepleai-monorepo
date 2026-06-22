@@ -183,6 +183,22 @@ internal class ProcessingJobRepository : RepositoryBase, IProcessingJobRepositor
             .ConfigureAwait(false);
     }
 
+    public async Task<int> CountByStatusesAsync(
+        IReadOnlyList<JobStatus> statuses,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(statuses);
+        if (statuses.Count == 0)
+            return 0;
+
+        var statusStrings = statuses.Select(s => s.ToString()).ToArray();
+        return await DbContext.ProcessingJobs
+            .AsNoTracking()
+            .Where(j => statusStrings.Contains(j.Status))
+            .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     private static ProcessingJob MapToDomain(ProcessingJobEntity entity)
     {
         var steps = entity.Steps

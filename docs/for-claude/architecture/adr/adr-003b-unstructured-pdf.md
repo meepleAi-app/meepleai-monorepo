@@ -416,8 +416,8 @@ Provider: "Orchestrator"
 1. [Unstructured GitHub](https://github.com/Unstructured-IO/unstructured)
 2. [Benchmark Article](https://docs.google.com/document/benchmark-2025)
 3. [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0)
-4. [pdf-extraction-opensource-alternatives.md](./pdf-extraction-opensource-alternatives.md)
-5. [solo-developer-execution-plan.md](../org/solo-developer-execution-plan.md)
+4. **pdf-extraction-opensource-alternatives.md** _(planned)_
+5. **solo-developer-execution-plan.md** _(planned)_
 
 ---
 

@@ -34,7 +34,7 @@ export function SessionHeader({ session, onPause, onFinalize, onShare }: Session
   const statusColors = {
     Active: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
     Paused: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-    Finalized: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20',
+    Finalized: 'bg-muted-foreground/10 text-muted-foreground border-border-strong/20',
   };
 
   return (
@@ -53,7 +53,7 @@ export function SessionHeader({ session, onPause, onFinalize, onShare }: Session
             )}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="font-bold text-lg sm:text-xl text-slate-900 dark:text-amber-50 truncate tracking-tight">
+                <h1 className="font-bold text-lg sm:text-xl text-foreground truncate tracking-tight">
                   {session.sessionType === 'GameSpecific' && session.gameName
                     ? session.gameName
                     : 'Game Session'}
@@ -65,7 +65,7 @@ export function SessionHeader({ session, onPause, onFinalize, onShare }: Session
                   {session.status}
                 </Badge>
               </div>
-              <div className="flex items-center gap-3 mt-1 text-xs text-slate-600 dark:text-slate-400">
+              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                 <time className="font-medium tabular-nums">
                   {session.sessionDate.toLocaleDateString('en-US', {
                     month: 'short',
@@ -87,7 +87,7 @@ export function SessionHeader({ session, onPause, onFinalize, onShare }: Session
             {/* Session Code */}
             <button
               onClick={copySessionCode}
-              className="group relative flex items-center gap-2 rounded-lg border border-amber-900/20 bg-white/80 dark:bg-slate-800/80 px-3 py-2 backdrop-blur-sm transition-all hover:border-amber-600/40 hover:bg-white dark:hover:bg-slate-800 hover:shadow-md active:scale-95"
+              className="group relative flex items-center gap-2 rounded-lg border border-amber-900/20 bg-card/80 dark:bg-card px-3 py-2 backdrop-blur-sm transition-all hover:border-amber-600/40 hover:bg-card hover:shadow-md active:scale-95"
               aria-label="Copy session code"
             >
               <span className="font-mono text-sm font-bold tracking-wider text-amber-900 dark:text-amber-400">
@@ -96,10 +96,10 @@ export function SessionHeader({ session, onPause, onFinalize, onShare }: Session
               {copied ? (
                 <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               ) : (
-                <Copy className="h-4 w-4 text-slate-400 transition-colors group-hover:text-amber-600 dark:group-hover:text-amber-400" />
+                <Copy className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-amber-600 dark:group-hover:text-amber-400" />
               )}
               {copied && (
-                <span className="absolute -top-8 left-1/2 -translate-x-1/2 rounded bg-slate-900 dark:bg-slate-100 px-2 py-1 text-xs text-white dark:text-slate-900 shadow-lg animate-in fade-in slide-in-from-bottom-2">
+                <span className="absolute -top-8 left-1/2 -translate-x-1/2 rounded bg-card dark:bg-muted px-2 py-1 text-xs text-primary-foreground shadow-lg animate-in fade-in slide-in-from-bottom-2">
                   Copied!
                 </span>
               )}
@@ -111,14 +111,14 @@ export function SessionHeader({ session, onPause, onFinalize, onShare }: Session
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-9 w-9 border-amber-900/20 bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 hover:border-amber-600/40 active:scale-95 transition-all"
+                  className="h-9 w-9 border-amber-900/20 bg-card/80 dark:bg-card hover:bg-card hover:border-amber-600/40 active:scale-95 transition-all"
                 >
-                  <MoreVertical className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                  <MoreVertical className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className="w-48 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-amber-900/20"
+                className="w-48 bg-card/95 dark:bg-card backdrop-blur-xl border-amber-900/20"
               >
                 {session.status === 'Active' && onPause && (
                   <DropdownMenuItem onClick={onPause} className="gap-2">

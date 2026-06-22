@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 'use client';
 
 /**
@@ -114,7 +115,7 @@ export const KbExtraMeepleCard = React.memo(function KbExtraMeepleCard({
     <div
       className={cn(
         'flex w-[600px] flex-col rounded-2xl overflow-hidden',
-        'bg-white/70 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-white/20',
+        'bg-card/70 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-border',
         'max-md:w-full',
         className
       )}
@@ -139,7 +140,7 @@ export const KbExtraMeepleCard = React.memo(function KbExtraMeepleCard({
         onValueChange={v => setActiveTab(v as KbTab)}
         className="flex flex-1 flex-col"
       >
-        <TabsList className="mx-4 mt-3 h-10 w-auto justify-start gap-1 bg-slate-100/80 rounded-lg p-1">
+        <TabsList className="mx-4 mt-3 h-10 w-auto justify-start gap-1 bg-muted/80 rounded-lg p-1">
           <EntityTabTrigger
             value="overview"
             icon={FileText}
@@ -168,18 +169,18 @@ export const KbExtraMeepleCard = React.memo(function KbExtraMeepleCard({
           {/* Filename chip */}
           <div className="flex items-center gap-2 rounded-lg border border-teal-200/40 bg-teal-50/60 px-3 py-2">
             <File className="h-4 w-4 shrink-0 text-teal-600" aria-hidden="true" />
-            <span className="font-nunito text-sm font-medium text-slate-700 truncate">
+            <span className="font-nunito text-sm font-medium text-foreground truncate">
               {data.fileName}
             </span>
           </div>
 
           {/* Game chip */}
           {data.gameName && (
-            <div className="flex items-center gap-2.5 rounded-xl border border-slate-200/40 bg-slate-50/80 px-3 py-2.5">
-              <Gamepad2 className="h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
+            <div className="flex items-center gap-2.5 rounded-xl border border-border/40 bg-muted/80 px-3 py-2.5">
+              <Gamepad2 className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
               <div className="min-w-0">
-                <p className="font-nunito text-[10px] text-slate-400">Gioco</p>
-                <p className="font-quicksand text-sm font-semibold text-slate-700 truncate">
+                <p className="font-nunito text-[10px] text-muted-foreground">Gioco</p>
+                <p className="font-quicksand text-sm font-semibold text-foreground truncate">
                   {data.gameName}
                 </p>
               </div>
@@ -232,10 +233,10 @@ export const KbExtraMeepleCard = React.memo(function KbExtraMeepleCard({
 
           {/* Delete action */}
           {data.status !== 'processing' && onDelete && (
-            <div className="pt-1 border-t border-slate-200/40">
+            <div className="pt-1 border-t border-border/40">
               {confirmingDelete ? (
                 <div className="flex items-center gap-2" role="alert">
-                  <span className="font-nunito text-xs text-slate-600">
+                  <span className="font-nunito text-xs text-muted-foreground">
                     Eliminare definitivamente?
                   </span>
                   <button
@@ -250,7 +251,7 @@ export const KbExtraMeepleCard = React.memo(function KbExtraMeepleCard({
                   </button>
                   <button
                     onClick={() => setConfirmingDelete(false)}
-                    className="font-nunito text-xs text-slate-500 hover:text-slate-700 rounded px-2 py-1 hover:bg-slate-100 transition-colors"
+                    className="font-nunito text-xs text-muted-foreground hover:text-foreground rounded px-2 py-1 hover:bg-muted transition-colors"
                     data-testid="kb-action-delete-cancel"
                   >
                     Annulla
@@ -273,7 +274,7 @@ export const KbExtraMeepleCard = React.memo(function KbExtraMeepleCard({
         {/* ── Content ────────────────────────────────────────────── */}
         <TabsContent value="content" className="flex-1 overflow-hidden p-4">
           {data.status !== 'indexed' ? (
-            <div className="flex h-full flex-col items-center justify-center gap-3 text-slate-400 py-8">
+            <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground py-8">
               <Loader2 className="h-8 w-8 animate-spin text-teal-400" aria-hidden="true" />
               <p className="font-nunito text-sm text-center max-w-[240px]">
                 Il contenuto sarà disponibile al termine dell&apos;indicizzazione
@@ -282,13 +283,13 @@ export const KbExtraMeepleCard = React.memo(function KbExtraMeepleCard({
           ) : !data.extractedContent ? (
             <div className="flex h-full flex-col items-center justify-center gap-2 py-8">
               <BookOpen className="h-8 w-8 text-slate-300" aria-hidden="true" />
-              <p className="font-nunito text-sm text-slate-400">Nessun testo estratto</p>
+              <p className="font-nunito text-sm text-muted-foreground">Nessun testo estratto</p>
             </div>
           ) : (
             <div className="relative h-full overflow-hidden">
               <div className="h-full overflow-y-auto pr-1">
                 <div
-                  className="font-nunito text-xs text-slate-600 leading-relaxed whitespace-pre-wrap break-words"
+                  className="font-nunito text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap break-words"
                   data-testid="kb-extracted-content"
                 >
                   {data.extractedContent}
@@ -344,7 +345,7 @@ export const KbExtraMeepleCard = React.memo(function KbExtraMeepleCard({
               >
                 <div className="h-full rounded-full bg-teal-500 animate-[pulse_1.5s_ease-in-out_infinite] w-2/3" />
               </div>
-              <p className="font-nunito text-xs text-slate-500">Elaborazione in corso…</p>
+              <p className="font-nunito text-xs text-muted-foreground">Elaborazione in corso…</p>
             </div>
           )}
 
@@ -357,7 +358,7 @@ export const KbExtraMeepleCard = React.memo(function KbExtraMeepleCard({
               {onRetryIndexing && (
                 <button
                   onClick={onRetryIndexing}
-                  className="flex items-center gap-1.5 font-nunito text-xs font-semibold text-red-600 hover:text-red-700 rounded-lg border border-red-200/60 bg-white/60 px-3 py-1.5 transition-colors hover:bg-red-50"
+                  className="flex items-center gap-1.5 font-nunito text-xs font-semibold text-red-600 hover:text-red-700 rounded-lg border border-red-200/60 bg-card/60 px-3 py-1.5 transition-colors hover:bg-red-50"
                   data-testid="kb-action-retry-indexing"
                 >
                   <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
@@ -382,10 +383,10 @@ const KB_TIMELINE_CONFIG: Record<
     labelClass: string;
   }
 > = {
-  done: { Icon: CheckCircle2, iconClass: 'text-teal-500', labelClass: 'text-slate-700' },
-  active: { Icon: Loader2, iconClass: 'text-blue-500', labelClass: 'text-slate-700' },
-  pending: { Icon: Circle, iconClass: 'text-slate-300', labelClass: 'text-slate-400' },
-  failed: { Icon: XCircle, iconClass: 'text-red-500', labelClass: 'text-slate-700' },
+  done: { Icon: CheckCircle2, iconClass: 'text-teal-500', labelClass: 'text-foreground' },
+  active: { Icon: Loader2, iconClass: 'text-blue-500', labelClass: 'text-foreground' },
+  pending: { Icon: Circle, iconClass: 'text-slate-300', labelClass: 'text-muted-foreground' },
+  failed: { Icon: XCircle, iconClass: 'text-red-500', labelClass: 'text-foreground' },
 };
 
 function KbTimelineStep({
@@ -407,7 +408,7 @@ function KbTimelineStep({
       <div className="flex-1 min-w-0">
         <p className={cn('font-nunito text-sm', labelClass)}>{label}</p>
         {timestamp && status === 'done' && (
-          <p className="font-nunito text-[10px] text-slate-400">
+          <p className="font-nunito text-[10px] text-muted-foreground">
             {new Date(timestamp).toLocaleDateString('it-IT', {
               day: '2-digit',
               month: '2-digit',

@@ -42,18 +42,21 @@ export * from './invitationsClient'; // Issue #132 — User Invitations
 export * from './gameNightBggClient'; // Game Night Improvvisata
 export * from './tierClient'; // Game Night Improvvisata — Tier & Usage
 export * from './sessionInviteClient'; // Game Night Improvvisata — Session Invites
-export * from './playlistsClient'; // Gap Closure — Playlists
 export * from './wishlistClient'; // Wishlist
 export * from './playRecordsClient'; // Play Records
 export * from './featureFlagsClient'; // User Feature Flags
 export * from './sandboxClient'; // RAG Sandbox Dashboard
 export * from './onboardingClient'; // First-time user onboarding
 export * from './accessRequestsClient'; // Invite-only registration
+export * from './stagingAllowlistClient'; // #845 DevOps Wave 1
 export * from './adminNotificationsClient'; // Admin manual notifications
 export * from './contactClient'; // Public contact form
 export * from './agentMemoryClient'; // AgentMemory — groups, game memory, player stats
 export * from './agentDocumentsClient'; // User-scoped agent document selection
 export * from './infrastructureClient'; // AI Infrastructure Dashboard
+export * from './kbDocsClient'; // Issue #1592 Phase 2b — cross-game per-user KB docs listing
+export * from './kbQualityClient'; // Issue #1675 — Per-doc KB quality evaluations
+export * from './activityClient'; // Issue #1593 Phase 3b — cross-entity activity feed
 export * from './toolkit'; // Default Game Toolkit — session events & dice presets
 export * from './sessionSnapshotsClient'; // Session Vision AI — snapshot CRUD
 export * from '../session-flow'; // Session Flow v2.1 — typed client + DTOs

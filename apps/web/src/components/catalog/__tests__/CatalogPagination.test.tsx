@@ -12,10 +12,17 @@
  * - Results info display (#2876)
  */
 
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+import { renderWithIntl } from '../../../__tests__/fixtures/common-fixtures';
 import { CatalogPagination } from '../CatalogPagination';
+
+// #1816 P3-6 — pagination aria-labels migrated from hardcoded EN to i18n keys
+// (`pages.library.catalogPagination.*`). Tests use `renderWithIntl` which loads
+// `allTestMessages` (EN values) so existing 'First page'/'Previous page'/...
+// assertions remain valid.
+const render = renderWithIntl;
 
 describe('CatalogPagination', () => {
   const mockOnPageChange = vi.fn();
@@ -30,13 +37,7 @@ describe('CatalogPagination', () => {
 
   describe('Basic Rendering', () => {
     it('renders all navigation buttons', () => {
-      render(
-        <CatalogPagination
-          currentPage={1}
-          totalPages={10}
-          onPageChange={mockOnPageChange}
-        />
-      );
+      render(<CatalogPagination currentPage={1} totalPages={10} onPageChange={mockOnPageChange} />);
 
       expect(screen.getByLabelText('First page')).toBeInTheDocument();
       expect(screen.getByLabelText('Previous page')).toBeInTheDocument();
@@ -45,13 +46,7 @@ describe('CatalogPagination', () => {
     });
 
     it('displays current page number', () => {
-      render(
-        <CatalogPagination
-          currentPage={5}
-          totalPages={10}
-          onPageChange={mockOnPageChange}
-        />
-      );
+      render(<CatalogPagination currentPage={5} totalPages={10} onPageChange={mockOnPageChange} />);
 
       const currentPageButton = screen.getByLabelText('Page 5');
       expect(currentPageButton).toBeInTheDocument();
@@ -65,13 +60,7 @@ describe('CatalogPagination', () => {
 
   describe('Page Number Display', () => {
     it('shows all pages when total is 5 or less', () => {
-      render(
-        <CatalogPagination
-          currentPage={3}
-          totalPages={5}
-          onPageChange={mockOnPageChange}
-        />
-      );
+      render(<CatalogPagination currentPage={3} totalPages={5} onPageChange={mockOnPageChange} />);
 
       for (let i = 1; i <= 5; i++) {
         expect(screen.getByLabelText(`Page ${i}`)).toBeInTheDocument();
@@ -81,13 +70,7 @@ describe('CatalogPagination', () => {
     });
 
     it('shows ellipsis at end when near start (page 2)', () => {
-      render(
-        <CatalogPagination
-          currentPage={2}
-          totalPages={10}
-          onPageChange={mockOnPageChange}
-        />
-      );
+      render(<CatalogPagination currentPage={2} totalPages={10} onPageChange={mockOnPageChange} />);
 
       // Should show 1, 2, 3, 4, ..., 10
       expect(screen.getByLabelText('Page 1')).toBeInTheDocument();
@@ -99,13 +82,7 @@ describe('CatalogPagination', () => {
     });
 
     it('shows ellipsis at start when near end (page 9)', () => {
-      render(
-        <CatalogPagination
-          currentPage={9}
-          totalPages={10}
-          onPageChange={mockOnPageChange}
-        />
-      );
+      render(<CatalogPagination currentPage={9} totalPages={10} onPageChange={mockOnPageChange} />);
 
       // Should show 1, ..., 7, 8, 9, 10
       expect(screen.getByLabelText('Page 1')).toBeInTheDocument();
@@ -117,13 +94,7 @@ describe('CatalogPagination', () => {
     });
 
     it('shows ellipsis on both sides when in middle (page 5)', () => {
-      render(
-        <CatalogPagination
-          currentPage={5}
-          totalPages={10}
-          onPageChange={mockOnPageChange}
-        />
-      );
+      render(<CatalogPagination currentPage={5} totalPages={10} onPageChange={mockOnPageChange} />);
 
       // Should show 1, ..., 4, 5, 6, ..., 10
       expect(screen.getByLabelText('Page 1')).toBeInTheDocument();
@@ -141,65 +112,35 @@ describe('CatalogPagination', () => {
 
   describe('Navigation', () => {
     it('calls onPageChange with correct page when clicking page number', () => {
-      render(
-        <CatalogPagination
-          currentPage={1}
-          totalPages={5}
-          onPageChange={mockOnPageChange}
-        />
-      );
+      render(<CatalogPagination currentPage={1} totalPages={5} onPageChange={mockOnPageChange} />);
 
       fireEvent.click(screen.getByLabelText('Page 3'));
       expect(mockOnPageChange).toHaveBeenCalledWith(3);
     });
 
     it('navigates to first page', () => {
-      render(
-        <CatalogPagination
-          currentPage={5}
-          totalPages={10}
-          onPageChange={mockOnPageChange}
-        />
-      );
+      render(<CatalogPagination currentPage={5} totalPages={10} onPageChange={mockOnPageChange} />);
 
       fireEvent.click(screen.getByLabelText('First page'));
       expect(mockOnPageChange).toHaveBeenCalledWith(1);
     });
 
     it('navigates to previous page', () => {
-      render(
-        <CatalogPagination
-          currentPage={5}
-          totalPages={10}
-          onPageChange={mockOnPageChange}
-        />
-      );
+      render(<CatalogPagination currentPage={5} totalPages={10} onPageChange={mockOnPageChange} />);
 
       fireEvent.click(screen.getByLabelText('Previous page'));
       expect(mockOnPageChange).toHaveBeenCalledWith(4);
     });
 
     it('navigates to next page', () => {
-      render(
-        <CatalogPagination
-          currentPage={5}
-          totalPages={10}
-          onPageChange={mockOnPageChange}
-        />
-      );
+      render(<CatalogPagination currentPage={5} totalPages={10} onPageChange={mockOnPageChange} />);
 
       fireEvent.click(screen.getByLabelText('Next page'));
       expect(mockOnPageChange).toHaveBeenCalledWith(6);
     });
 
     it('navigates to last page', () => {
-      render(
-        <CatalogPagination
-          currentPage={5}
-          totalPages={10}
-          onPageChange={mockOnPageChange}
-        />
-      );
+      render(<CatalogPagination currentPage={5} totalPages={10} onPageChange={mockOnPageChange} />);
 
       fireEvent.click(screen.getByLabelText('Last page'));
       expect(mockOnPageChange).toHaveBeenCalledWith(10);
@@ -212,13 +153,7 @@ describe('CatalogPagination', () => {
 
   describe('Boundary Conditions', () => {
     it('disables first and previous buttons on first page', () => {
-      render(
-        <CatalogPagination
-          currentPage={1}
-          totalPages={10}
-          onPageChange={mockOnPageChange}
-        />
-      );
+      render(<CatalogPagination currentPage={1} totalPages={10} onPageChange={mockOnPageChange} />);
 
       expect(screen.getByLabelText('First page')).toBeDisabled();
       expect(screen.getByLabelText('Previous page')).toBeDisabled();
@@ -228,11 +163,7 @@ describe('CatalogPagination', () => {
 
     it('disables next and last buttons on last page', () => {
       render(
-        <CatalogPagination
-          currentPage={10}
-          totalPages={10}
-          onPageChange={mockOnPageChange}
-        />
+        <CatalogPagination currentPage={10} totalPages={10} onPageChange={mockOnPageChange} />
       );
 
       expect(screen.getByLabelText('First page')).not.toBeDisabled();
@@ -242,13 +173,7 @@ describe('CatalogPagination', () => {
     });
 
     it('disables all navigation when only one page', () => {
-      render(
-        <CatalogPagination
-          currentPage={1}
-          totalPages={1}
-          onPageChange={mockOnPageChange}
-        />
-      );
+      render(<CatalogPagination currentPage={1} totalPages={1} onPageChange={mockOnPageChange} />);
 
       expect(screen.getByLabelText('First page')).toBeDisabled();
       expect(screen.getByLabelText('Previous page')).toBeDisabled();
@@ -263,13 +188,7 @@ describe('CatalogPagination', () => {
 
   describe('Accessibility', () => {
     it('has accessible button labels', () => {
-      render(
-        <CatalogPagination
-          currentPage={3}
-          totalPages={5}
-          onPageChange={mockOnPageChange}
-        />
-      );
+      render(<CatalogPagination currentPage={3} totalPages={5} onPageChange={mockOnPageChange} />);
 
       // All buttons should have aria-label
       expect(screen.getByLabelText('First page')).toBeInTheDocument();
@@ -281,13 +200,7 @@ describe('CatalogPagination', () => {
     });
 
     it('marks current page with aria-current', () => {
-      render(
-        <CatalogPagination
-          currentPage={3}
-          totalPages={5}
-          onPageChange={mockOnPageChange}
-        />
-      );
+      render(<CatalogPagination currentPage={3} totalPages={5} onPageChange={mockOnPageChange} />);
 
       const currentButton = screen.getByLabelText('Page 3');
       expect(currentButton).toHaveAttribute('aria-current', 'page');
@@ -298,13 +211,7 @@ describe('CatalogPagination', () => {
     });
 
     it('applies different variant to current page button', () => {
-      render(
-        <CatalogPagination
-          currentPage={3}
-          totalPages={5}
-          onPageChange={mockOnPageChange}
-        />
-      );
+      render(<CatalogPagination currentPage={3} totalPages={5} onPageChange={mockOnPageChange} />);
 
       // Current page should have the default variant (visually distinct)
       const currentButton = screen.getByLabelText('Page 3');
@@ -321,13 +228,7 @@ describe('CatalogPagination', () => {
 
   describe('Results Info Display', () => {
     it('displays page info without results when totalResults not provided', () => {
-      render(
-        <CatalogPagination
-          currentPage={3}
-          totalPages={10}
-          onPageChange={mockOnPageChange}
-        />
-      );
+      render(<CatalogPagination currentPage={3} totalPages={10} onPageChange={mockOnPageChange} />);
 
       expect(screen.getByText('Pagina 3 di 10')).toBeInTheDocument();
     });

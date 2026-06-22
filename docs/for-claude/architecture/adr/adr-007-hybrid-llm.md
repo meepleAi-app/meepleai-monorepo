@@ -244,10 +244,10 @@ services.AddScoped<ILlmService, HybridLlmService>();
 
 ## References
 
-- **Model Reference**: [OpenRouter Guide](../components/agent-lightning/openrouter-guide.md)
+- **Model Reference**: **OpenRouter Guide** _(planned)_
 - **Issue**: #958 - BGAI-016 LLM Strategy Evaluation
 - **ADR-003**: 3-Stage PDF Processing Pipeline (quality threshold precedent)
-- **Related**: [ADR-004b: Hybrid LLM](adr-004b-hybrid-llm.md) - Multi-model consensus implementation
+- **Related**: **ADR-004b: Hybrid LLM** _(planned)_ - Multi-model consensus implementation
 
 ---
 

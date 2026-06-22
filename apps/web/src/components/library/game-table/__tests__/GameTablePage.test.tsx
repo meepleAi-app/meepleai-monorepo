@@ -46,13 +46,13 @@ vi.mock('@/components/game-detail/GameDetailDesktop', () => ({
   ),
 }));
 
-vi.mock('../../../../app/(authenticated)/library/games/[gameId]/game-detail-mobile', () => ({
+vi.mock('../../../../app/(authenticated)/library/[gameId]/game-detail-mobile', () => ({
   default: ({ gameId }: { gameId: string }) => (
     <div data-testid="game-detail-mobile-stub">{gameId}</div>
   ),
 }));
 
-import LibraryGameDetailPage from '@/app/(authenticated)/library/games/[gameId]/page';
+import LibraryGameDetailPage from '@/app/(authenticated)/library/[gameId]/page';
 
 const mockGame: LibraryGameDetail = {
   libraryEntryId: 'entry-1',

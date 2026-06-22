@@ -1,0 +1,69 @@
+'use client';
+
+import { useCallback } from 'react';
+
+import type { IngestionLog } from '@/lib/api/schemas/ingestion-log.schemas';
+
+import { downloadAsFile } from '../utils/downloadAsFile';
+
+interface IngestionActionsProps {
+  readonly log: IngestionLog;
+  readonly onRetry: (jobId: string) => void;
+}
+
+function buildLogText(log: IngestionLog): string {
+  return log.steps
+    .flatMap(s => s.logEntries.map(e => ({ ...e, step: s.stepName })))
+    .sort((a, b) => a.timestamp.localeCompare(b.timestamp))
+    .map(e => `[${e.timestamp}] [${e.level.toUpperCase()}] [${e.step}] ${e.message}`)
+    .join('\n');
+}
+
+/**
+ * Footer with up to 3 actions for the ingestion log tab:
+ *   - Download log (always)
+ *   - Copy job ID (always)
+ *   - Re-enqueue (only when canRetry === true)
+ * Issue #1650.
+ */
+export function IngestionActions({ log, onRetry }: IngestionActionsProps) {
+  const handleDownload = useCallback(() => {
+    downloadAsFile(buildLogText(log), `ingestion-${log.id}.log`);
+  }, [log]);
+
+  const handleCopy = useCallback(() => {
+    void navigator.clipboard.writeText(log.id);
+  }, [log.id]);
+
+  const handleRetry = useCallback(() => {
+    onRetry(log.id);
+  }, [log.id, onRetry]);
+
+  return (
+    <div className="mt-3 flex flex-wrap gap-1.5">
+      <button
+        type="button"
+        onClick={handleDownload}
+        className="px-3 py-1.5 text-xs font-medium border border-border rounded-md hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        ⤓ Download log
+      </button>
+      <button
+        type="button"
+        onClick={handleCopy}
+        className="px-3 py-1.5 text-xs font-medium border border-border rounded-md hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        📋 Copy job ID
+      </button>
+      {log.canRetry && (
+        <button
+          type="button"
+          onClick={handleRetry}
+          className="px-3 py-1.5 text-xs font-medium border border-amber-500/50 text-amber-700 dark:text-amber-300 rounded-md hover:bg-amber-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          ⟳ Re-enqueue
+        </button>
+      )}
+    </div>
+  );
+}

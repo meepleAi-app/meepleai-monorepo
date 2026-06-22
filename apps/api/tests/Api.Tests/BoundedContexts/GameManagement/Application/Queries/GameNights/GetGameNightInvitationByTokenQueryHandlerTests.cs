@@ -4,7 +4,8 @@ using Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
-using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.SharedKernel.Application;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Caching.Distributed;
@@ -34,7 +35,7 @@ public sealed class GetGameNightInvitationByTokenQueryHandlerTests
     private readonly Mock<IGameNightInvitationRepository> _invitationRepoMock = new();
     private readonly Mock<IGameNightEventRepository> _gameNightRepoMock = new();
     private readonly Mock<IUserRepository> _userRepoMock = new();
-    private readonly Mock<IGameRepository> _gameRepoMock = new();
+    private readonly Mock<IGameCoreDataProvider> _gameCoreDataMock = new();
     private readonly HybridCache _cache = CreateHybridCache();
     private readonly GetGameNightInvitationByTokenQueryHandler _sut;
 
@@ -44,7 +45,7 @@ public sealed class GetGameNightInvitationByTokenQueryHandlerTests
             _invitationRepoMock.Object,
             _gameNightRepoMock.Object,
             _userRepoMock.Object,
-            _gameRepoMock.Object,
+            _gameCoreDataMock.Object,
             _cache);
     }
 
@@ -175,10 +176,14 @@ public sealed class GetGameNightInvitationByTokenQueryHandlerTests
         var primaryGameId = Guid.NewGuid();
         var invitation = Reconstitute(GameNightInvitationStatus.Pending);
         var gameNight = CreateGameNight(Guid.NewGuid(), gameIds: new List<Guid> { primaryGameId });
-        var game = new Api.BoundedContexts.GameManagement.Domain.Entities.Game(
-            id: primaryGameId,
-            title: new GameTitle("Catan"));
-        game.SetImages(iconUrl: null, imageUrl: "https://cdn.example/catan.jpg");
+        var coreData = GameCoreData.Create(
+            title: "Catan",
+            yearPublished: 1995,
+            minPlayers: 3,
+            maxPlayers: 4,
+            playingTimeMinutes: 90,
+            minAge: 10,
+            imageUrl: "https://cdn.example/catan.jpg");
 
         _invitationRepoMock
             .Setup(r => r.GetByTokenAsync(Token, It.IsAny<CancellationToken>()))
@@ -186,9 +191,9 @@ public sealed class GetGameNightInvitationByTokenQueryHandlerTests
         _gameNightRepoMock
             .Setup(r => r.GetByIdAsync(invitation.GameNightId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(gameNight);
-        _gameRepoMock
-            .Setup(r => r.GetByIdAsync(primaryGameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(game);
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(primaryGameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(coreData);
 
         var result = await _sut.Handle(
             new GetGameNightInvitationByTokenQuery(Token), CancellationToken.None);

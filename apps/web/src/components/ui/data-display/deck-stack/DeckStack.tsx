@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 'use client';
 import { memo, useEffect, useCallback } from 'react';
 
@@ -128,7 +129,7 @@ export const DeckStack = memo(function DeckStack({
           <button
             type="button"
             onClick={onClose}
-            className="text-[10px] text-slate-400 hover:text-white ml-1 whitespace-nowrap"
+            className="text-[10px] text-muted-foreground hover:text-white ml-1 whitespace-nowrap"
           >
             View all {items.length}
           </button>

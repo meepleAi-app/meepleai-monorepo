@@ -124,7 +124,7 @@ export function AlertHistoryTab() {
       <div
         className={cn(
           'overflow-hidden rounded-xl border border-border/60',
-          'bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md'
+          'bg-card/70 backdrop-blur-md'
         )}
       >
         {filtered.length === 0 ? (

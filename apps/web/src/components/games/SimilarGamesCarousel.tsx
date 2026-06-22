@@ -78,7 +78,7 @@ export function SimilarGamesCarousel({
   isLoading = false,
   sourceGameTitle,
   className,
-  getLinkHref = gameId => `/library/games/${gameId}`,
+  getLinkHref = gameId => `/library/${gameId}`,
 }: SimilarGamesCarouselProps) {
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = React.useState(false);

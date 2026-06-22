@@ -73,15 +73,15 @@ export function Scoreboard() {
 
       {/* Table */}
       {players.length === 0 ? (
-        <p className="py-4 text-center text-sm text-slate-400">Nessun giocatore. Aggiungine uno!</p>
+        <p className="py-4 text-center text-sm text-muted-foreground">Nessun giocatore. Aggiungine uno!</p>
       ) : (
-        <div className="rounded-lg border border-slate-200 overflow-hidden">
+        <div className="rounded-lg border border-border overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50">
+            <thead className="bg-muted">
               <tr>
-                <th className="px-3 py-2 text-left font-medium text-slate-600">#</th>
-                <th className="px-3 py-2 text-left font-medium text-slate-600">Giocatore</th>
-                <th className="px-3 py-2 text-right font-medium text-slate-600">
+                <th className="px-3 py-2 text-left font-medium text-muted-foreground">#</th>
+                <th className="px-3 py-2 text-left font-medium text-muted-foreground">Giocatore</th>
+                <th className="px-3 py-2 text-right font-medium text-muted-foreground">
                   <button
                     onClick={toggleSort}
                     className="inline-flex items-center gap-1 hover:text-amber-600 transition-colors"
@@ -91,7 +91,7 @@ export function Scoreboard() {
                     <ArrowUpDown className="h-3 w-3" />
                   </button>
                 </th>
-                <th className="px-3 py-2 text-right font-medium text-slate-600">Azioni</th>
+                <th className="px-3 py-2 text-right font-medium text-muted-foreground">Azioni</th>
                 <th className="w-8" />
               </tr>
             </thead>
@@ -99,12 +99,12 @@ export function Scoreboard() {
               {sorted.map((player, idx) => (
                 <tr
                   key={player.id}
-                  className="border-t border-slate-100 hover:bg-slate-50 transition-colors"
+                  className="border-t border-border hover:bg-muted transition-colors"
                   data-testid={`player-row-${player.id}`}
                 >
-                  <td className="px-3 py-2 text-slate-400 tabular-nums">{idx + 1}</td>
-                  <td className="px-3 py-2 font-medium text-slate-800">{player.name}</td>
-                  <td className="px-3 py-2 text-right font-bold tabular-nums text-slate-800">
+                  <td className="px-3 py-2 text-muted-foreground tabular-nums">{idx + 1}</td>
+                  <td className="px-3 py-2 font-medium text-foreground">{player.name}</td>
+                  <td className="px-3 py-2 text-right font-bold tabular-nums text-foreground">
                     {player.score}
                   </td>
                   <td className="px-3 py-2">
@@ -135,7 +135,7 @@ export function Scoreboard() {
                       size="sm"
                       onClick={() => removePlayer(player.id)}
                       aria-label={`Remove ${player.name}`}
-                      className="h-6 w-6 p-0 text-slate-400 hover:text-red-500"
+                      className="h-6 w-6 p-0 text-muted-foreground hover:text-red-500"
                     >
                       <X className="h-3 w-3" />
                     </Button>

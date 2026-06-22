@@ -17,6 +17,6 @@ internal sealed class DefaultCopyrightFallbackMessageProvider : ICopyrightFallba
     public string GetMessage(string language) => language switch
     {
         "it" => ItalianMessage,
-        _    => EnglishMessage
+        _ => EnglishMessage
     };
 }

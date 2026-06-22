@@ -94,7 +94,7 @@ public class CommonValidatorsTests
         result.Error.Should().NotBeNull();
     }
     [Theory]
-    [InlineData("Test123!")]
+    [InlineData("T3stPwd1234!")]
     [InlineData("SecureP@ssw0rd")]
     [InlineData("Abcd1234!")]
     public void IsValidPassword_WithValidPassword_ReturnsSuccess(string password)

@@ -14,7 +14,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// <summary>
 /// Tests for StreamExplainQueryHandler.
 /// Tests streaming RAG explain flow with progressive SSE events.
-/// NOTE: Qdrant removed — handler always returns NO_RESULTS after embedding.
+/// NOTE: Legacy vector retrieval deprecated — handler always returns NO_RESULTS after embedding.
 /// Coverage: validation, embedding failures, no-results behavior.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
@@ -42,7 +42,7 @@ public class StreamExplainQueryHandlerTests
     [Fact]
     public async Task Handle_ValidInput_ReturnsNoResultsAfterEmbedding()
     {
-        // Arrange — Qdrant removed; handler always returns NO_RESULTS
+        // Arrange — legacy vector path; handler always returns NO_RESULTS
         var gameId = "game123";
         var topic = "setup rules";
         var query = new StreamExplainQuery(gameId, topic);
@@ -68,7 +68,7 @@ public class StreamExplainQueryHandlerTests
         var stateUpdate2 = events[1].Data.Should().BeOfType<StreamingStateUpdate>().Which;
         stateUpdate2.message.Should().Be("Searching vector database for relevant content...");
 
-        // NO_RESULTS error (Qdrant removed)
+        // NO_RESULTS error (legacy vector path)
         var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
         errorEvent.Should().NotBeNull();
         var error = errorEvent.Data.Should().BeOfType<StreamingError>().Which;
@@ -195,7 +195,7 @@ public class StreamExplainQueryHandlerTests
     [Fact]
     public async Task Handle_SuccessfulEmbedding_ReturnsNoResultsSinceQdrantRemoved()
     {
-        // Arrange — Qdrant removed; even with valid embedding, handler returns NO_RESULTS
+        // Arrange — legacy vector path; even with valid embedding, handler returns NO_RESULTS
         var query = new StreamExplainQuery("game123", "test topic");
         SetupEmbeddingMock();
 
@@ -206,7 +206,7 @@ public class StreamExplainQueryHandlerTests
             events.Add(evt);
         }
 
-        // Assert — NO_RESULTS since Qdrant is removed
+        // Assert — NO_RESULTS since legacy vector retrieval is removed
         var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
         errorEvent.Should().NotBeNull();
         var error = errorEvent.Data.Should().BeOfType<StreamingError>().Which;

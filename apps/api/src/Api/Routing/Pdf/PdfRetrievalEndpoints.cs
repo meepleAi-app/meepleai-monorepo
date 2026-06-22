@@ -4,6 +4,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetPdfCleanupPreview;
 using Api.Extensions;
 using Api.Infrastructure.Entities;
 using Api.Services;
@@ -69,6 +70,26 @@ internal static class PdfRetrievalEndpoints
         MapPdfDeletionEndpoints(group);
         MapPdfVisibilityEndpoints(group);
         MapPdfLanguageEndpoints(group);
+        MapPdfCleanupPreviewEndpoint(group); // Issue #1529
+    }
+
+    /// <summary>
+    /// Issue #1529: Cleanup preview — returns the blast radius of deleting a PDF
+    /// (chunks, RAPTOR summaries, graph edges, source PDF file size) so the FE
+    /// confirm-delete drawer can show "you are about to wipe N MB + M chunks".
+    /// Authorization mirrors <c>HandleDeletePdf</c>: owner or admin only.
+    /// </summary>
+    private static void MapPdfCleanupPreviewEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/pdf/{pdfId:guid}/cleanup-preview", HandleGetPdfCleanupPreview)
+            .RequireSession()
+            .WithName("GetPdfCleanupPreview")
+            .WithTags("PDF")
+            .WithSummary("Preview the artifacts that would be removed by deleting this PDF")
+            .WithDescription("Returns chunk count, RAPTOR summary count, graph edge count, and the PDF file size. Owner or admin only. Issue #1529.")
+            .Produces(401)
+            .Produces(403)
+            .Produces(404);
     }
 
     private static void MapPdfLanguageEndpoints(RouteGroupBuilder group)
@@ -154,7 +175,7 @@ internal static class PdfRetrievalEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         var result = await mediator.Send(
             new GetPdfPageTextQuery(pdfId, pageNumber, userId), ct).ConfigureAwait(false);
@@ -165,8 +186,8 @@ internal static class PdfRetrievalEndpoints
     private static async Task<IResult> HandleDownloadPdf(Guid pdfId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
-        bool isAdmin = string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        var userId = session!.Principal!.Subject.Id;
+        bool isAdmin = string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
 
         // DDD Migration Phase 4: Use DownloadPdfQuery via IMediator
         var query = new DownloadPdfQuery(
@@ -217,12 +238,12 @@ internal static class PdfRetrievalEndpoints
             return Results.NotFound(new { error = "PDF not found" });
         }
 
-        if (!CheckPdfAuthorization(session.User!, pdf))
+        if (!CheckPdfAuthorization(session.Principal!.Subject, pdf))
         {
-            await LogPdfAccessDeniedAsync(auditService, session.User!.Id.ToString(), "DELETE", pdfId.ToString(), session.User!.Role ?? "Unknown", pdf.UploadedByUserId, ct).ConfigureAwait(false);
+            await LogPdfAccessDeniedAsync(auditService, session.Principal!.Subject.Id.ToString(), "DELETE", pdfId.ToString(), session.Principal!.EffectiveActor.Role ?? "Unknown", pdf.UploadedByUserId, ct).ConfigureAwait(false);
 
             logger.LogWarning("User {UserId} with role {Role} denied access to delete PDF {PdfId} (owner: {OwnerId})",
-                session.User!.Id, session.User!.Role, pdfId, pdf.UploadedByUserId);
+                session.Principal!.Subject.Id, session.Principal!.EffectiveActor.Role, pdfId, pdf.UploadedByUserId);
 
             return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
@@ -235,15 +256,15 @@ internal static class PdfRetrievalEndpoints
             return Results.BadRequest(new { error = result.Message });
         }
 
-        logger.LogInformation("User {UserId} deleted PDF {PdfId}", session.User!.Id, pdfId);
+        logger.LogInformation("User {UserId} deleted PDF {PdfId}", session.Principal!.Subject.Id, pdfId);
 
         await auditService.LogAsync(
-            session.User!.Id.ToString(),
+            session.Principal!.Subject.Id.ToString(),
             "DELETE",
             "PdfDocument",
             pdfId.ToString(),
             "Success",
-            $"PDF deleted successfully by user with role: {session.User!.Role}",
+            $"PDF deleted successfully by user with role: {session.Principal!.EffectiveActor.Role}",
             null,
             null,
             ct).ConfigureAwait(false);
@@ -261,7 +282,7 @@ internal static class PdfRetrievalEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         var pdf = await mediator.Send(new GetPdfOwnershipQuery(pdfId), ct).ConfigureAwait(false);
 
@@ -270,9 +291,9 @@ internal static class PdfRetrievalEndpoints
             return Results.NotFound(new { error = "PDF not found" });
         }
 
-        if (!CheckPdfAuthorization(session.User!, pdf))
+        if (!CheckPdfAuthorization(session.Principal!.Subject, pdf))
         {
-            await LogPdfAccessDeniedAsync(auditService, userId.ToString(), "change visibility of", pdfId.ToString(), session.User!.Role ?? "Unknown", pdf.UploadedByUserId, ct).ConfigureAwait(false);
+            await LogPdfAccessDeniedAsync(auditService, userId.ToString(), "change visibility of", pdfId.ToString(), session.Principal!.EffectiveActor.Role ?? "Unknown", pdf.UploadedByUserId, ct).ConfigureAwait(false);
 
             logger.LogWarning("User {UserId} denied access to change visibility of PDF {PdfId} (owner: {OwnerId})",
                 userId, pdfId, pdf.UploadedByUserId);
@@ -296,7 +317,7 @@ internal static class PdfRetrievalEndpoints
             "PdfDocument",
             pdfId.ToString(),
             "Success",
-            $"PDF visibility changed to {(request.IsPublic ? "public" : "private")} by user with role: {session!.User!.Role}",
+            $"PDF visibility changed to {(request.IsPublic ? "public" : "private")} by user with role: {session!.Principal!.EffectiveActor.Role}",
             null,
             null,
             ct).ConfigureAwait(false);
@@ -314,7 +335,7 @@ internal static class PdfRetrievalEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         var result = await mediator.Send(new AcceptCopyrightDisclaimerCommand(userId, pdfId), ct).ConfigureAwait(false);
 
@@ -409,6 +430,41 @@ internal static class PdfRetrievalEndpoints
         logger.LogInformation("PDF {PdfId} language override set to {LanguageCode}", pdfId, request.LanguageCode ?? "(cleared)");
 
         return Results.Ok(new { success = true, languageCode = request.LanguageCode });
+    }
+
+    /// <summary>
+    /// Issue #1529 handler — owner-or-admin check via <see cref="GetPdfOwnershipQuery"/>,
+    /// then dispatches <see cref="GetPdfCleanupPreviewQuery"/> via MediatR.
+    /// Returns 404 when the PDF does not exist (also when the caller is not authorized,
+    /// to avoid leaking existence). Returns 403 when found but caller is not owner/admin.
+    /// </summary>
+    private static async Task<IResult> HandleGetPdfCleanupPreview(
+        Guid pdfId,
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+        var pdf = await mediator.Send(new GetPdfOwnershipQuery(pdfId), ct).ConfigureAwait(false);
+        if (pdf is null)
+        {
+            return Results.NotFound(new { error = "PDF not found" });
+        }
+
+        if (!CheckPdfAuthorization(session.Principal!.Subject, pdf))
+        {
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        var result = await mediator.Send(new GetPdfCleanupPreviewQuery(pdfId), ct).ConfigureAwait(false);
+        if (result is null)
+        {
+            // Race: PDF was deleted between the ownership query and the preview query.
+            return Results.NotFound(new { error = "PDF not found" });
+        }
+
+        return Results.Ok(result);
     }
 
     // Helpers

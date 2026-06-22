@@ -100,6 +100,18 @@ public class SystemConfigurationEntity
     /// </summary>
     public DateTime? LastToggledAt { get; set; }
 
+    /// <summary>
+    /// Single-use bootstrap-admin flag (C5 fix).
+    /// When true, the bootstrap admin account has already been created and the
+    /// bootstrap endpoint must reject further attempts.
+    /// </summary>
+    public bool BootstrapAdminCreated { get; set; }
+
+    /// <summary>
+    /// When the bootstrap admin was first created (UTC). Null until bootstrap runs (C5 fix).
+    /// </summary>
+    public DateTime? BootstrapAdminCreatedAt { get; set; }
+
     // Navigation properties
     public UserEntity CreatedBy { get; set; } = default!;
     public UserEntity? UpdatedBy { get; set; }

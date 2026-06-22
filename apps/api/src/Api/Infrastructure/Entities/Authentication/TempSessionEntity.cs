@@ -16,6 +16,12 @@ public class TempSessionEntity
     public bool IsUsed { get; set; }
     public DateTime? UsedAt { get; set; }
 
+    /// <summary>
+    /// Number of failed 2FA verification attempts against this temp session (C6 fix).
+    /// Used to throttle brute-force attempts before the 5-minute window expires.
+    /// </summary>
+    public int FailedAttemptCount { get; set; }
+
     // Navigation
     public UserEntity User { get; set; } = null!;
 }

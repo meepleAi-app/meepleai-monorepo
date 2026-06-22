@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Application.DTOs.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 
 namespace Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
@@ -18,15 +19,18 @@ internal class AdvanceLiveSessionPhaseCommandHandler : ICommandHandler<AdvanceLi
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly TimeProvider _timeProvider;
     private readonly IMediator _mediator;
+    private readonly IUnitOfWork _unitOfWork;
 
     public AdvanceLiveSessionPhaseCommandHandler(
         ILiveSessionRepository sessionRepository,
         TimeProvider timeProvider,
-        IMediator mediator)
+        IMediator mediator,
+        IUnitOfWork unitOfWork)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task Handle(AdvanceLiveSessionPhaseCommand command, CancellationToken cancellationToken)
@@ -39,6 +43,7 @@ internal class AdvanceLiveSessionPhaseCommandHandler : ICommandHandler<AdvanceLi
 
         session.AdvancePhase(_timeProvider);
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Auto-trigger snapshot on phase change if configured
         var triggerConfig = session.SnapshotTriggerConfig;
@@ -62,13 +67,16 @@ internal class ConfigureLiveSessionPhasesCommandHandler : ICommandHandler<Config
 {
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly TimeProvider _timeProvider;
+    private readonly IUnitOfWork _unitOfWork;
 
     public ConfigureLiveSessionPhasesCommandHandler(
         ILiveSessionRepository sessionRepository,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IUnitOfWork unitOfWork)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task Handle(ConfigureLiveSessionPhasesCommand command, CancellationToken cancellationToken)
@@ -81,6 +89,7 @@ internal class ConfigureLiveSessionPhasesCommandHandler : ICommandHandler<Config
 
         session.ConfigurePhases(command.PhaseNames, _timeProvider);
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }
 
@@ -95,15 +104,18 @@ internal class TriggerEventSnapshotCommandHandler
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly IMediator _mediator;
     private readonly TimeProvider _timeProvider;
+    private readonly IUnitOfWork _unitOfWork;
 
     public TriggerEventSnapshotCommandHandler(
         ILiveSessionRepository sessionRepository,
         IMediator mediator,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IUnitOfWork unitOfWork)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task<SessionSnapshotDto?> Handle(
@@ -135,6 +147,7 @@ internal class TriggerEventSnapshotCommandHandler
         // Record the snapshot timestamp for debounce
         session.RecordSnapshotTimestamp(now);
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return result;
     }

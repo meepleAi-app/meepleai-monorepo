@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using Api.Helpers;
 using Microsoft.Extensions.Options;
 using System.Globalization;
 
@@ -80,7 +81,7 @@ internal class PagerDutyAlertChannel : IAlertChannel
             {
                 _logger.LogInformation(
                     "PagerDuty incident created for {AlertType}",
-                    alertType);
+                    LogSanitizer.Sanitize(alertType));
                 return true;
             }
 
@@ -107,7 +108,7 @@ internal class PagerDutyAlertChannel : IAlertChannel
             // failure status. Throwing would prevent other channels from executing (email, Slack).
             // Caller (AlertingService) tracks per-channel results for graceful degradation.
             // Context: PagerDuty failures are typically external (API timeout, rate limit, auth)
-            _logger.LogError(ex, "Failed to send PagerDuty alert for {AlertType}", alertType);
+            _logger.LogError(ex, "Failed to send PagerDuty alert for {AlertType}", LogSanitizer.Sanitize(alertType));
             return false;
         }
     }

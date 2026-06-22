@@ -35,12 +35,12 @@ public class Disable2FACommandHandlerTests
     public async Task Handle_WithValidCredentials_ShouldDisable2FA()
     {
         // Arrange
-        var command = new Disable2FACommand(TestUserId, "Password123!", "123456");
+        var command = new Disable2FACommand(TestUserId, "UnusualPwd123!", "123456");
 
         _mockTotpService
             .Setup(s => s.DisableTwoFactorAsync(
                 TestUserId,
-                "Password123!",
+                "UnusualPwd123!",
                 "123456",
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -54,7 +54,7 @@ public class Disable2FACommandHandlerTests
         result.ErrorMessage.Should().BeNull();
 
         _mockTotpService.Verify(
-            s => s.DisableTwoFactorAsync(TestUserId, "Password123!", "123456", It.IsAny<CancellationToken>()),
+            s => s.DisableTwoFactorAsync(TestUserId, "UnusualPwd123!", "123456", It.IsAny<CancellationToken>()),
             Times.Once
         );
     }
@@ -86,12 +86,12 @@ public class Disable2FACommandHandlerTests
     public async Task Handle_WithInvalidBackupCode_ShouldReturnUnauthorized()
     {
         // Arrange
-        var command = new Disable2FACommand(TestUserId, "Password123!", "invalid_backup_code");
+        var command = new Disable2FACommand(TestUserId, "UnusualPwd123!", "invalid_backup_code");
 
         _mockTotpService
             .Setup(s => s.DisableTwoFactorAsync(
                 TestUserId,
-                "Password123!",
+                "UnusualPwd123!",
                 "invalid_backup_code",
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new UnauthorizedAccessException("Invalid backup code"));
@@ -108,12 +108,12 @@ public class Disable2FACommandHandlerTests
     public async Task Handle_WhenServiceThrowsGenericException_ShouldReturnFailure()
     {
         // Arrange
-        var command = new Disable2FACommand(TestUserId, "Password123!", "123456");
+        var command = new Disable2FACommand(TestUserId, "UnusualPwd123!", "123456");
 
         _mockTotpService
             .Setup(s => s.DisableTwoFactorAsync(
                 TestUserId,
-                "Password123!",
+                "UnusualPwd123!",
                 "123456",
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Database connection failed"));

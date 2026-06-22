@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 'use client';
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- pre-existing pattern: array/object access guarded by length/key check or by upstream validator; assertion is correct by construction. Cleanup tracked for follow-up audit. */
 
@@ -38,7 +39,7 @@ function CardPile({
       <div
         className={cn(
           'relative flex h-20 w-14 items-center justify-center rounded-lg border-2 border-dashed',
-          count > 0 ? accent : 'border-slate-200 bg-slate-50'
+          count > 0 ? accent : 'border-border bg-muted'
         )}
         data-testid={`card-pile-${label.toLowerCase()}`}
       >
@@ -46,14 +47,14 @@ function CardPile({
           <>
             {/* Stack effect */}
             {count > 2 && (
-              <div className="absolute -top-1 -left-0.5 h-full w-full rounded-lg border border-slate-200 bg-slate-100" />
+              <div className="absolute -top-1 -left-0.5 h-full w-full rounded-lg border border-border bg-muted" />
             )}
             {count > 1 && (
-              <div className="absolute -top-0.5 -left-0.5 h-full w-full rounded-lg border border-slate-200 bg-slate-50" />
+              <div className="absolute -top-0.5 -left-0.5 h-full w-full rounded-lg border border-border bg-muted" />
             )}
-            <div className="relative z-10 flex h-full w-full items-center justify-center rounded-lg bg-white border border-slate-200 shadow-sm">
+            <div className="relative z-10 flex h-full w-full items-center justify-center rounded-lg bg-card border border-border shadow-sm">
               {topCard?.faceUp ? (
-                <span className="font-nunito text-[10px] font-semibold text-slate-600 text-center px-1 line-clamp-2">
+                <span className="font-nunito text-[10px] font-semibold text-muted-foreground text-center px-1 line-clamp-2">
                   {topCard.name}
                 </span>
               ) : (
@@ -66,10 +67,10 @@ function CardPile({
         )}
       </div>
       <div className="text-center">
-        <p className="font-nunito text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+        <p className="font-nunito text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
           {label}
         </p>
-        <p className="font-nunito text-xs font-bold text-slate-700">{count}</p>
+        <p className="font-nunito text-xs font-bold text-foreground">{count}</p>
       </div>
     </div>
   );
@@ -91,15 +92,15 @@ function HandCard({
 }) {
   return (
     <div
-      className="group flex items-center justify-between rounded-lg bg-white/70 border border-slate-200/60 px-2.5 py-1.5"
+      className="group flex items-center justify-between rounded-lg bg-card/70 border border-border/60 px-2.5 py-1.5"
       data-testid={`hand-card-${card.id}`}
     >
-      <span className="font-nunito text-xs font-medium text-slate-700 truncate">{card.name}</span>
+      <span className="font-nunito text-xs font-medium text-foreground truncate">{card.name}</span>
       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         {allowReturn && onReturnToDeck && (
           <button
             onClick={onReturnToDeck}
-            className="rounded p-0.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 transition-colors"
+            className="rounded p-0.5 text-muted-foreground hover:text-indigo-500 hover:bg-indigo-50 transition-colors"
             aria-label={`Return ${card.name} to deck`}
           >
             <ArrowUp className="h-3 w-3" />
@@ -108,7 +109,7 @@ function HandCard({
         {allowDiscard && onDiscard && (
           <button
             onClick={onDiscard}
-            className="rounded p-0.5 text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+            className="rounded p-0.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
             aria-label={`Discard ${card.name}`}
           >
             <Trash2 className="h-3 w-3" />
@@ -122,7 +123,7 @@ function HandCard({
 export function InteractiveCardDeck({ state, actions }: InteractiveCardDeckProps) {
   if (!state) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 text-slate-400">
+      <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
         <Layers className="h-8 w-8 mb-2 opacity-50" />
         <p className="font-nunito text-sm">No card deck active</p>
       </div>
@@ -140,8 +141,8 @@ export function InteractiveCardDeck({ state, actions }: InteractiveCardDeckProps
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <Layers className="h-3.5 w-3.5 text-indigo-500" />
-          <span className="font-nunito text-xs font-bold text-slate-700">{state.toolName}</span>
-          <span className="font-nunito text-[10px] text-slate-400">{state.deckType}</span>
+          <span className="font-nunito text-xs font-bold text-foreground">{state.toolName}</span>
+          <span className="font-nunito text-[10px] text-muted-foreground">{state.deckType}</span>
         </div>
       </div>
 
@@ -177,7 +178,7 @@ export function InteractiveCardDeck({ state, actions }: InteractiveCardDeckProps
         {state.shuffleable && actions?.onShuffle && state.deckCount > 1 && (
           <button
             onClick={actions.onShuffle}
-            className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 font-nunito text-xs font-medium text-slate-600 hover:bg-slate-200 transition-colors"
+            className="flex items-center gap-1 rounded-full bg-muted px-3 py-1.5 font-nunito text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
             data-testid="card-action-shuffle"
           >
             <Shuffle className="h-3 w-3" />
@@ -187,7 +188,7 @@ export function InteractiveCardDeck({ state, actions }: InteractiveCardDeckProps
         {state.allowPeek && actions?.onPeek && state.deckCount > 0 && (
           <button
             onClick={actions.onPeek}
-            className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 font-nunito text-xs font-medium text-slate-600 hover:bg-slate-200 transition-colors"
+            className="flex items-center gap-1 rounded-full bg-muted px-3 py-1.5 font-nunito text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
             data-testid="card-action-peek"
           >
             <Eye className="h-3 w-3" />
@@ -201,7 +202,7 @@ export function InteractiveCardDeck({ state, actions }: InteractiveCardDeckProps
         <div>
           <div className="mb-1.5 flex items-center gap-1.5">
             <Hand className="h-3 w-3 text-indigo-500" />
-            <h4 className="font-nunito text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+            <h4 className="font-nunito text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
               Hand ({handCards.length})
             </h4>
           </div>
@@ -224,7 +225,7 @@ export function InteractiveCardDeck({ state, actions }: InteractiveCardDeckProps
 
       {/* Empty hand message */}
       {handCards.length === 0 && (
-        <p className="text-center font-nunito text-xs text-slate-400">No cards in hand</p>
+        <p className="text-center font-nunito text-xs text-muted-foreground">No cards in hand</p>
       )}
     </div>
   );

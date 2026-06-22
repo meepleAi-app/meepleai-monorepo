@@ -39,7 +39,7 @@ public class CreateUserCommandHandlerTests
         // Arrange
         var command = new CreateUserCommand(
             "newuser@example.com",
-            "SecurePassword123!",
+            "SecureUnusualPwd123!",
             "Test User",
             Role.User.Value
         );
@@ -70,7 +70,7 @@ public class CreateUserCommandHandlerTests
         // Arrange
         var command = new CreateUserCommand(
             "admin@example.com",
-            "SecurePassword123!",
+            "SecureUnusualPwd123!",
             "Admin User",
             Role.Admin.Value
         );
@@ -96,7 +96,7 @@ public class CreateUserCommandHandlerTests
         // Arrange
         var command = new CreateUserCommand(
             "existing@example.com",
-            "SecurePassword123!",
+            "SecureUnusualPwd123!",
             "Test User",
             Role.User.Value
         );
@@ -105,7 +105,7 @@ public class CreateUserCommandHandlerTests
             Guid.NewGuid(),
             new Email("existing@example.com"),
             "Existing User",
-            PasswordHash.Create("OldPassword123!"),
+            PasswordHash.Create("OldUnusualPwd123!"),
             Role.User
         );
 
@@ -133,7 +133,7 @@ public class CreateUserCommandHandlerTests
         // Arrange
         var command = new CreateUserCommand(
             "editor@example.com",
-            "SecurePassword123!",
+            "SecureUnusualPwd123!",
             "Editor User",
             Role.Editor.Value
         );
@@ -156,7 +156,7 @@ public class CreateUserCommandHandlerTests
         // Arrange
         var command = new CreateUserCommand(
             "user@example.com",
-            "SecurePassword123!",
+            "SecureUnusualPwd123!",
             "  Test User  ", // Whitespace to be trimmed
             Role.User.Value
         );
@@ -187,7 +187,7 @@ public class CreateUserCommandHandlerTests
     public async Task Handle_EmptyEmail_ThrowsValidationException(string emptyEmail)
     {
         // Arrange
-        var command = new CreateUserCommand(emptyEmail, "Password123!", "Test User", "User");
+        var command = new CreateUserCommand(emptyEmail, "UnusualPwd123!", "Test User", "User");
 
         // Act & Assert
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -202,7 +202,7 @@ public class CreateUserCommandHandlerTests
     {
         // Arrange
         var longEmail = new string('a', 300) + "@example.com";
-        var command = new CreateUserCommand(longEmail, "TestPassword123!", "Test User", "User");
+        var command = new CreateUserCommand(longEmail, "UniqueT3stPwd!", "Test User", "User");
 
         // Act & Assert
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -220,7 +220,7 @@ public class CreateUserCommandHandlerTests
     public async Task Handle_InvalidEmailFormat_ThrowsValidationException(string invalidEmail)
     {
         // Arrange
-        var command = new CreateUserCommand(invalidEmail, "TestPassword123!", "Test User", "User");
+        var command = new CreateUserCommand(invalidEmail, "UniqueT3stPwd!", "Test User", "User");
 
         // Act & Assert
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -233,7 +233,7 @@ public class CreateUserCommandHandlerTests
     public async Task Handle_InvalidRole_ThrowsValidationException()
     {
         // Arrange
-        var command = new CreateUserCommand("user@example.com", "TestPassword123!", "Test User", "InvalidRole");
+        var command = new CreateUserCommand("user@example.com", "UniqueT3stPwd!", "Test User", "InvalidRole");
 
         // Act & Assert
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);

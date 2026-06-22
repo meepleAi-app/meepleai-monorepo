@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Validators;
 /// <summary>
 /// Validator for VectorSemanticSearchQuery.
 /// Ensures the query string is provided and the result limit is within acceptable bounds.
-/// Task 4: Qdrant → pgvector migration.
+/// Task 4: pgvector vector search.
 /// </summary>
 internal sealed class VectorSemanticSearchQueryValidator : AbstractValidator<VectorSemanticSearchQuery>
 {

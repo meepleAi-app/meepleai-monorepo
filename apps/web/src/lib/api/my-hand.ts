@@ -17,7 +17,7 @@ export interface UpdateHandSlotPayload {
 }
 
 export async function getMyHand(): Promise<HandSlotDto[]> {
-  const result = await apiClient.get<HandSlotDto[]>('/users/me/hand');
+  const result = await apiClient.get<HandSlotDto[]>('/api/v1/users/me/hand');
   return result ?? [];
 }
 
@@ -25,9 +25,9 @@ export async function updateHandSlot(
   slotType: string,
   payload: UpdateHandSlotPayload
 ): Promise<HandSlotDto> {
-  return apiClient.put<HandSlotDto>(`/users/me/hand/${slotType}`, payload);
+  return apiClient.put<HandSlotDto>(`/api/v1/users/me/hand/${slotType}`, payload);
 }
 
 export async function clearHandSlot(slotType: string): Promise<void> {
-  await apiClient.delete(`/users/me/hand/${slotType}`);
+  await apiClient.delete(`/api/v1/users/me/hand/${slotType}`);
 }

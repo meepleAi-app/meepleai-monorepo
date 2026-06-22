@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 'use client';
 
 /**
@@ -38,24 +39,24 @@ function SnapshotCard({ snapshot }: { snapshot: SnapshotInfo }) {
   });
 
   return (
-    <div className="flex items-start gap-2.5 rounded-lg bg-white/60 px-3 py-2">
+    <div className="flex items-start gap-2.5 rounded-lg bg-card/60 px-3 py-2">
       <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 flex-shrink-0">
         <Icon className="h-3 w-3 text-indigo-600" />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
-          <span className="text-xs font-bold text-slate-700 font-nunito">
+          <span className="text-xs font-bold text-foreground font-nunito">
             #{snapshot.snapshotNumber}
           </span>
           {snapshot.turnNumber != null && (
-            <span className="text-[10px] text-slate-400">Turn {snapshot.turnNumber}</span>
+            <span className="text-[10px] text-muted-foreground">Turn {snapshot.turnNumber}</span>
           )}
         </div>
-        <p className="text-xs text-slate-600 font-nunito line-clamp-1">
+        <p className="text-xs text-muted-foreground font-nunito line-clamp-1">
           {snapshot.description}
         </p>
       </div>
-      <span className="text-[10px] text-slate-400 tabular-nums flex-shrink-0">
+      <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
         {formattedTime}
       </span>
     </div>
@@ -67,7 +68,7 @@ const EVENT_TYPE_STYLES: Record<string, { dot: string; text: string }> = {
   score: { dot: 'bg-amber-400', text: 'text-amber-600' },
   action: { dot: 'bg-green-400', text: 'text-green-600' },
   media: { dot: 'bg-purple-400', text: 'text-purple-600' },
-  system: { dot: 'bg-slate-400', text: 'text-slate-500' },
+  system: { dot: 'bg-muted-foreground', text: 'text-muted-foreground' },
 };
 
 function TimelineItem({ event }: { event: SessionTimelineEvent }) {
@@ -90,7 +91,7 @@ function TimelineItem({ event }: { event: SessionTimelineEvent }) {
           {event.label}
         </p>
       </div>
-      <span className="text-[10px] text-slate-400 tabular-nums flex-shrink-0">
+      <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
         {formattedTime}
       </span>
     </div>
@@ -108,7 +109,7 @@ interface HistoryTabProps {
 export function HistoryTab({ data }: HistoryTabProps) {
   if (!data || (data.snapshots.length === 0 && data.timeline.length === 0)) {
     return (
-      <div className="flex h-48 flex-col items-center justify-center gap-2 text-slate-400">
+      <div className="flex h-48 flex-col items-center justify-center gap-2 text-muted-foreground">
         <History className="h-8 w-8 opacity-30" />
         <span className="font-nunito text-sm">No history yet</span>
       </div>
@@ -122,7 +123,7 @@ export function HistoryTab({ data }: HistoryTabProps) {
         <div>
           <div className="mb-2 flex items-center gap-1.5">
             <Camera className="h-3.5 w-3.5 text-indigo-500" />
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 font-nunito">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-nunito">
               Snapshots ({data.snapshots.length})
             </h3>
           </div>
@@ -136,10 +137,10 @@ export function HistoryTab({ data }: HistoryTabProps) {
 
       {/* Timeline */}
       {data.timeline.length > 0 && (
-        <div className={data.snapshots.length > 0 ? 'border-t border-slate-100 pt-3' : ''}>
+        <div className={data.snapshots.length > 0 ? 'border-t border-border pt-3' : ''}>
           <div className="mb-2 flex items-center gap-1.5">
             <Clock className="h-3.5 w-3.5 text-indigo-500" />
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 font-nunito">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-nunito">
               Timeline ({data.timeline.length})
             </h3>
           </div>

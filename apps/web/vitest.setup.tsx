@@ -618,7 +618,23 @@ beforeAll(() => {
     ) {
       return;
     }
-    originalError.call(console, ...args);
+    // #2421: native Node `console.error(<Error>)` throws `RangeError: Invalid
+    // string length` inside the vitest stderr-intercept code path when an
+    // Error originates from deep in React's render tree (the .stack contains
+    // react-dom/react-intl/Vite frames that explode source-map resolution).
+    // Workaround: stringify args via util.format first; pass as plain string.
+    try {
+      originalError.call(console, require('util').format(...args));
+    } catch (callErr) {
+      try {
+        originalError.call(
+          console,
+          `[vitest.setup.tsx] suppressed log due to console.error failure: ${String(callErr).slice(0, 200)}`
+        );
+      } catch {
+        /* swallow — last resort */
+      }
+    }
   };
 });
 

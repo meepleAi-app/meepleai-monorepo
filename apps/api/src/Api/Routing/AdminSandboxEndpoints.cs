@@ -37,7 +37,7 @@ internal static class AdminSandboxEndpoints
         sandboxGroup.MapDelete("/pdfs/{id:guid}", HandleDeletePdf)
             .WithName("DeleteSandboxPdf")
             .WithSummary("Delete a PDF document (Admin Sandbox)")
-            .WithDescription("Permanently deletes a PDF document and its associated vectors from Qdrant. Used for admin sandbox cleanup.")
+            .WithDescription("Permanently deletes a PDF document and its associated vectors from pgvector. Used for admin sandbox cleanup.")
             .Produces<PdfDeleteResult>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -88,7 +88,7 @@ internal static class AdminSandboxEndpoints
         if (!authorized) return error!;
 
         var command = new ApplySandboxConfigCommand(
-            AdminUserId: session!.User!.Id,
+            AdminUserId: session!.Principal!.Subject.Id,
             GameId: request.GameId,
             Config: new SandboxConfigOverrideDto(
                 Strategy: request.Strategy,

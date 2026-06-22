@@ -68,12 +68,12 @@ export function SessionLobby({
       {/* Header */}
       <div className="text-center">
         {sessionName && (
-          <div className="mb-1 flex items-center justify-center gap-1.5 text-sm text-gray-500">
+          <div className="mb-1 flex items-center justify-center gap-1.5 text-sm text-muted-foreground">
             <Gamepad2 className="h-4 w-4" />
             {sessionName}
           </div>
         )}
-        <h2 className="font-quicksand text-xl font-bold text-gray-800">Session Lobby</h2>
+        <h2 className="font-quicksand text-xl font-bold text-foreground">Session Lobby</h2>
         <ConnectionStatusBadge
           status={connectionStatus}
           reconnectCount={reconnectCount}
@@ -82,8 +82,8 @@ export function SessionLobby({
       </div>
 
       {/* Share Code */}
-      <div className="rounded-xl bg-white/70 p-4 shadow-sm backdrop-blur-md">
-        <p className="mb-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
+      <div className="rounded-xl bg-card/70 p-4 shadow-sm backdrop-blur-md">
+        <p className="mb-2 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
           Share this code
         </p>
         <div className="flex items-center justify-center gap-2">
@@ -92,7 +92,7 @@ export function SessionLobby({
           </span>
           <button
             onClick={copyCode}
-            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-muted-foreground"
             aria-label={copied ? 'Copied!' : 'Copy session code'}
           >
             {copied ? <Check className="h-5 w-5 text-emerald-500" /> : <Copy className="h-5 w-5" />}
@@ -102,7 +102,7 @@ export function SessionLobby({
 
       {/* Participants */}
       <div>
-        <div className="mb-2 flex items-center gap-1.5 text-sm text-gray-500">
+        <div className="mb-2 flex items-center gap-1.5 text-sm text-muted-foreground">
           <Users className="h-4 w-4" />
           <span>
             {participants.length} {participants.length === 1 ? 'player' : 'players'} joined
@@ -113,7 +113,7 @@ export function SessionLobby({
           {participants.map(p => (
             <div
               key={p.id}
-              className="flex items-center gap-2 rounded-md bg-white/50 px-3 py-2 text-sm"
+              className="flex items-center gap-2 rounded-md bg-card/50 px-3 py-2 text-sm"
             >
               <span
                 className="inline-block h-3 w-3 rounded-full"
@@ -125,13 +125,13 @@ export function SessionLobby({
                   Host
                 </span>
               )}
-              {p.isCurrentUser && <span className="text-xs text-gray-400">(you)</span>}
+              {p.isCurrentUser && <span className="text-xs text-muted-foreground">(you)</span>}
             </div>
           ))}
         </div>
 
         {participants.length === 0 && (
-          <p className="text-center text-sm text-gray-400">Waiting for players to join...</p>
+          <p className="text-center text-sm text-muted-foreground">Waiting for players to join...</p>
         )}
       </div>
     </div>

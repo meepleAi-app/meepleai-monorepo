@@ -35,9 +35,9 @@ public class DegradedAgentServiceTests
             PlayTimeMinutes = 90,
             ComplexityWeight = 2.3m,
             YearPublished = "1995",
+            Publisher = "Kosmos",
             Categories = new List<string> { "Strategy", "Economic" },
             Mechanics = new List<string> { "Dice Rolling", "Trading" },
-            Publisher = "Kosmos",
             Designer = "Klaus Teuber"
         };
 

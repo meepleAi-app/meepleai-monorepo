@@ -1,0 +1,277 @@
+{
+  "generatedAt": "2026-05-13T16:45:27Z",
+  "totalConstraints": 8,
+  "byTier": {
+    "verified": 0,
+    "likely-implemented": 2,
+    "manual-review": 2,
+    "unknown": 4,
+    "missing": 0
+  },
+  "checks": [
+    {
+      "constraint": {
+        "mockup": "sp4-citation-pdf-viewer.html",
+        "id": "G4.2",
+        "text": "tab \"PDF originale\" sempre visibile (anche non-owner)",
+        "metric_type": "ux-constraint",
+        "target_value": null,
+        "applies_to": [
+          "sp4-citation-pdf-viewer.html"
+        ]
+      },
+      "tier": "manual-review",
+      "evidence": [],
+      "dedup_key": "2b12dde5a76c9ffa",
+      "evaluated_at": "2026-05-13T16:45:27Z"
+    },
+    {
+      "constraint": {
+        "mockup": "sp4-citation-pdf-viewer.html",
+        "id": "G4.3",
+        "text": "upsell render <100ms (no fetch)",
+        "metric_type": "performance",
+        "target_value": {
+          "comparator": "<",
+          "value": 100,
+          "unit": "ms"
+        },
+        "applies_to": [
+          "sp4-citation-pdf-viewer.html"
+        ]
+      },
+      "tier": "unknown",
+      "evidence": [],
+      "dedup_key": "509a3f1312ace31e",
+      "evaluated_at": "2026-05-13T16:45:27Z"
+    },
+    {
+      "constraint": {
+        "mockup": "sp4-citation-pdf-viewer.html",
+        "id": "G4.4",
+        "text": "PDF caricato + seek to pageNumber < 3s su 4G",
+        "metric_type": "latency",
+        "target_value": {
+          "comparator": "<",
+          "value": 3,
+          "unit": "s"
+        },
+        "applies_to": [
+          "sp4-citation-pdf-viewer.html"
+        ]
+      },
+      "tier": "unknown",
+      "evidence": [],
+      "dedup_key": "acfce5ad1867cb23",
+      "evaluated_at": "2026-05-13T16:45:27Z"
+    },
+    {
+      "constraint": {
+        "mockup": "sp4-citation-pdf-viewer.html",
+        "id": "G4.5",
+        "text": "niente download button visibile, no link diretto a /download endpoint",
+        "metric_type": "ux-constraint",
+        "target_value": null,
+        "applies_to": [
+          "sp4-citation-pdf-viewer.html"
+        ]
+      },
+      "tier": "manual-review",
+      "evidence": [],
+      "dedup_key": "55d8fee364cb54c3",
+      "evaluated_at": "2026-05-13T16:45:27Z"
+    },
+    {
+      "constraint": {
+        "mockup": "sp4-game-chat-tab.html",
+        "id": null,
+        "text": "90% query con citazione esplicita (pagina+sezione)",
+        "metric_type": "coverage",
+        "target_value": {
+          "comparator": "≥",
+          "value": 90,
+          "unit": "%"
+        },
+        "applies_to": [
+          "sp4-game-chat-tab.html"
+        ]
+      },
+      "tier": "likely-implemented",
+      "evidence": [
+        {
+          "kind": "pattern",
+          "file": ".worktrees/admin-rag-dashboard/apps/web/__tests__/lib/utils/export.test.ts",
+          "line": 8,
+          "snippet": "import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';"
+        },
+        {
+          "kind": "pattern",
+          "file": ".worktrees/feature/game-session-flow/apps/web/__tests__/lib/utils/export.test.ts",
+          "line": 8,
+          "snippet": "import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';"
+        },
+        {
+          "kind": "pattern",
+          "file": ".worktrees/feature/profile-edit/apps/web/__tests__/lib/utils/export.test.ts",
+          "line": 8,
+          "snippet": "import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';"
+        },
+        {
+          "kind": "pattern",
+          "file": ".worktrees/fix-agent-chat-flow/apps/web/__tests__/lib/utils/export.test.ts",
+          "line": 8,
+          "snippet": "import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';"
+        },
+        {
+          "kind": "pattern",
+          "file": ".worktrees/value-proposition/apps/web/__tests__/lib/utils/export.test.ts",
+          "line": 8,
+          "snippet": "import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';"
+        },
+        {
+          "kind": "pattern",
+          "file": "apps/web/src/components/ui/data-display/meeple-card/__tests__/tokens.test.ts",
+          "line": 1,
+          "snippet": "import { describe, it, expect } from 'vitest';"
+        },
+        {
+          "kind": "pattern",
+          "file": "apps/web/__tests__/lib/utils/export.test.ts",
+          "line": 8,
+          "snippet": "import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';"
+        },
+        {
+          "kind": "pattern",
+          "file": ".worktrees/feature/game-session-flow/apps/web/e2e/oauth-flows.spec.ts",
+          "line": 30,
+          "snippet": "import { test, expect } from './fixtures';"
+        },
+        {
+          "kind": "pattern",
+          "file": ".worktrees/feature/game-session-flow/apps/web/e2e/test.ts",
+          "line": 10,
+          "snippet": " * import { test, expect } from './test';"
+        },
+        {
+          "kind": "pattern",
+          "file": ".worktrees/feature/profile-edit/apps/web/e2e/oauth-flows.spec.ts",
+          "line": 30,
+          "snippet": "import { test, expect } from './fixtures';"
+        },
+        {
+          "kind": "pattern",
+          "file": ".worktrees/feature/profile-edit/apps/web/e2e/test.ts",
+          "line": 10,
+          "snippet": " * import { test, expect } from './test';"
+        },
+        {
+          "kind": "pattern",
+          "file": ".worktrees/fix-agent-chat-flow/apps/web/e2e/oauth-flows.spec.ts",
+          "line": 30,
+          "snippet": "import { test, expect } from './fixtures';"
+        },
+        {
+          "kind": "pattern",
+          "file": ".worktrees/fix-agent-chat-flow/apps/web/e2e/test.ts",
+          "line": 10,
+          "snippet": " * import { test, expect } from './test';"
+        },
+        {
+          "kind": "pattern",
+          "file": ".worktrees/value-proposition/apps/web/e2e/oauth-flows.spec.ts",
+          "line": 30,
+          "snippet": "import { test, expect } from './fixtures';"
+        },
+        {
+          "kind": "pattern",
+          "file": ".worktrees/value-proposition/apps/web/e2e/test.ts",
+          "line": 10,
+          "snippet": " * import { test, expect } from './test';"
+        },
+        {
+          "kind": "pattern",
+          "file": "apps/web/e2e/oauth-flows.spec.ts",
+          "line": 30,
+          "snippet": "import { test, expect } from './fixtures';"
+        },
+        {
+          "kind": "pattern",
+          "file": "apps/web/e2e/test.ts",
+          "line": 10,
+          "snippet": " * import { test, expect } from './test';"
+        }
+      ],
+      "dedup_key": "6676116faee5b17e",
+      "evaluated_at": "2026-05-13T16:45:27Z"
+    },
+    {
+      "constraint": {
+        "mockup": "sp4-game-chat-tab.html",
+        "id": null,
+        "text": "confidence < 70% → marker incertezza obbligatorio",
+        "metric_type": "confidence",
+        "target_value": null,
+        "applies_to": [
+          "sp4-game-chat-tab.html"
+        ]
+      },
+      "tier": "likely-implemented",
+      "evidence": [
+        {
+          "kind": "pattern",
+          "file": "apps/web/src/components/features/gamebook/PageThumb.tsx",
+          "line": 43,
+          "snippet": " * data-slot=\"page-thumb\" + data-page-number + data-confidence-level +"
+        },
+        {
+          "kind": "pattern",
+          "file": "apps/web/src/components/features/gamebook/__tests__/PageThumb.test.tsx",
+          "line": 5,
+          "snippet": " *   - data-slot=\"page-thumb\" + data-page-number + data-confidence-level"
+        }
+      ],
+      "dedup_key": "d1a23abad9e39394",
+      "evaluated_at": "2026-05-13T16:45:27Z"
+    },
+    {
+      "constraint": {
+        "mockup": "sp4-game-chat-tab.html",
+        "id": null,
+        "text": "latency P95 ≤ 10s con spinner accettabile",
+        "metric_type": "latency",
+        "target_value": {
+          "comparator": "≤",
+          "value": 10,
+          "unit": "s"
+        },
+        "applies_to": [
+          "sp4-game-chat-tab.html"
+        ]
+      },
+      "tier": "unknown",
+      "evidence": [],
+      "dedup_key": "8b48b34613fe9086",
+      "evaluated_at": "2026-05-13T16:45:27Z"
+    },
+    {
+      "constraint": {
+        "mockup": "sp4-game-chat-tab.html",
+        "id": null,
+        "text": "chat handoff <3s (G2 — non coperto qui ma compatibile con UX)",
+        "metric_type": "latency",
+        "target_value": {
+          "comparator": "<",
+          "value": 3,
+          "unit": "s"
+        },
+        "applies_to": [
+          "sp4-game-chat-tab.html"
+        ]
+      },
+      "tier": "unknown",
+      "evidence": [],
+      "dedup_key": "806c05171ca52d08",
+      "evaluated_at": "2026-05-13T16:45:27Z"
+    }
+  ]
+}

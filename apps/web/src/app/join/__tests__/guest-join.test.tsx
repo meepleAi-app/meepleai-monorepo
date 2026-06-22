@@ -53,7 +53,7 @@ vi.mock('@/lib/api/core/secureStorage', () => ({
   clearEncryptionKey: () => undefined,
 }));
 
-import { GuestJoinView } from '../[inviteToken]/GuestJoinView';
+import { GuestJoinView } from '../[token]/GuestJoinView';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -64,7 +64,6 @@ const SESSION_RESPONSE = {
   status: 'InProgress',
   currentTurn: 1,
   players: [{ id: 'host-1', displayName: 'Mario', isHost: true, isOnline: true }],
-  scores: { Mario: 10 },
 };
 
 function setupFetch(opts: { sessionOk?: boolean; tokenValid?: boolean; joinOk?: boolean } = {}) {
@@ -109,13 +108,13 @@ describe('GuestJoinView', () => {
 
   it('shows loading state initially', () => {
     setupFetch();
-    render(<GuestJoinView inviteToken="ABC123" />);
+    render(<GuestJoinView token="ABC123" />);
     expect(screen.getByTestId('loading-text')).toBeInTheDocument();
   });
 
   it('renders name input after session loads', async () => {
     setupFetch();
-    render(<GuestJoinView inviteToken="ABC123" />);
+    render(<GuestJoinView token="ABC123" />);
 
     await waitFor(() => {
       expect(screen.getByLabelText(/il tuo nome/i)).toBeInTheDocument();
@@ -127,7 +126,7 @@ describe('GuestJoinView', () => {
 
   it('disables submit button when name is empty', async () => {
     setupFetch();
-    render(<GuestJoinView inviteToken="ABC123" />);
+    render(<GuestJoinView token="ABC123" />);
 
     await waitFor(() => {
       expect(screen.getByLabelText(/il tuo nome/i)).toBeInTheDocument();
@@ -141,7 +140,7 @@ describe('GuestJoinView', () => {
   it('shows validation error for whitespace-only name via aria-label', async () => {
     setupFetch();
     const user = userEvent.setup();
-    render(<GuestJoinView inviteToken="ABC123" />);
+    render(<GuestJoinView token="ABC123" />);
 
     await waitFor(() => {
       expect(screen.getByLabelText(/il tuo nome/i)).toBeInTheDocument();
@@ -161,7 +160,7 @@ describe('GuestJoinView', () => {
   it('joins session and shows scoreboard after submitting valid name', async () => {
     setupFetch();
     const user = userEvent.setup();
-    render(<GuestJoinView inviteToken="ABC123" />);
+    render(<GuestJoinView token="ABC123" />);
 
     await waitFor(() => {
       expect(screen.getByLabelText(/il tuo nome/i)).toBeInTheDocument();
@@ -180,7 +179,7 @@ describe('GuestJoinView', () => {
 
   it('shows error state when session fetch fails', async () => {
     setupFetch({ sessionOk: false });
-    render(<GuestJoinView inviteToken="INVALID" />);
+    render(<GuestJoinView token="INVALID" />);
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /sessione non trovata/i })).toBeInTheDocument();
@@ -192,7 +191,7 @@ describe('GuestJoinView', () => {
     localStorage.setItem('improvvisata_guest_name', 'SavedUser');
     setupFetch({ tokenValid: true });
 
-    render(<GuestJoinView inviteToken="ABC123" />);
+    render(<GuestJoinView token="ABC123" />);
 
     await waitFor(() => {
       expect(screen.getByTestId('scoreboard')).toBeInTheDocument();

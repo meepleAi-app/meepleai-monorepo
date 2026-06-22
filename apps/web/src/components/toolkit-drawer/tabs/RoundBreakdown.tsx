@@ -21,11 +21,11 @@ export function RoundBreakdown({ currentRound, onAdvanceRound }: RoundBreakdownP
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-gray-50" data-testid="round-breakdown">
+    <div className="rounded-lg border border-border bg-muted" data-testid="round-breakdown">
       <button
         type="button"
         onClick={() => setExpanded(v => !v)}
-        className="flex w-full items-center justify-between px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100"
+        className="flex w-full items-center justify-between px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted"
         data-testid="round-breakdown-toggle"
       >
         <span className="flex items-center gap-1">
@@ -34,8 +34,8 @@ export function RoundBreakdown({ currentRound, onAdvanceRound }: RoundBreakdownP
         </span>
       </button>
       {expanded && (
-        <div className="border-t border-gray-200 p-3">
-          <p className="mb-2 text-[11px] text-gray-500">
+        <div className="border-t border-border p-3">
+          <p className="mb-2 text-[11px] text-muted-foreground">
             Round corrente: <strong>R{currentRound}</strong>
           </p>
           <button

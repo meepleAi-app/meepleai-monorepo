@@ -8,19 +8,9 @@
 
 import { useState, useCallback } from 'react';
 
-import {
-  Check,
-  ChevronDown,
-  Copy,
-  Download,
-  Facebook,
-  FileText,
-  Link2,
-  Loader2,
-  Share2,
-  Twitter,
-} from 'lucide-react';
+import { Check, ChevronDown, Copy, Download, FileText, Link2, Loader2, Share2 } from 'lucide-react';
 
+import { FacebookIcon, TwitterIcon } from '@/components/icons/brand-icons';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -353,12 +343,12 @@ export function ExportSession({
 
           {/* Social Share */}
           <DropdownMenuItem onClick={handleShareTwitter} disabled={!shareLink} className="gap-2">
-            <Twitter className="h-4 w-4" />
+            <TwitterIcon className="h-4 w-4" />
             Share on Twitter
           </DropdownMenuItem>
 
           <DropdownMenuItem onClick={handleShareFacebook} disabled={!shareLink} className="gap-2">
-            <Facebook className="h-4 w-4" />
+            <FacebookIcon className="h-4 w-4" />
             Share on Facebook
           </DropdownMenuItem>
 

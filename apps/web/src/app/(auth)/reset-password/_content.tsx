@@ -17,11 +17,11 @@ import { useEffect, useState, type FormEvent, type JSX } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { AuthCard } from '@/components/ui/v2/auth-card';
-import { Btn } from '@/components/ui/v2/btn';
-import { InputField } from '@/components/ui/v2/input-field';
-import { PwdInput } from '@/components/ui/v2/pwd-input';
-import { SuccessCard } from '@/components/ui/v2/success-card';
+import { AuthCard } from '@/components/ui/auth-card';
+import { Btn } from '@/components/ui/btn';
+import { InputField } from '@/components/ui/input-field';
+import { PwdInput } from '@/components/ui/pwd-input';
+import { SuccessCard } from '@/components/ui/success-card';
 import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
@@ -46,7 +46,7 @@ interface PasswordValidation {
 }
 
 function validatePassword(password: string): PasswordValidation {
-  const minLength = password.length >= 8;
+  const minLength = password.length >= 12;
   const hasUppercase = /[A-Z]/.test(password);
   const hasLowercase = /[a-z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
@@ -66,7 +66,7 @@ function validatePassword(password: string): PasswordValidation {
 export function ResetPasswordFallback(): JSX.Element {
   const { t } = useTranslation();
   return (
-    <main className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300">
+    <main className="min-h-dvh flex items-center justify-center bg-muted text-muted-foreground">
       <div className="animate-pulse" data-testid="reset-password-loading">
         {t('auth.resetPassword.loadingTitle')}
       </div>
@@ -85,6 +85,10 @@ export function ResetPasswordPageContent(): JSX.Element | null {
 
   const token = searchParams?.get('token') ?? null;
   const mode: 'request' | 'reset' = token ? 'reset' : 'request';
+  // Note (#2168): all redirect targets in this file are hardcoded (/chat, /, /reset-password).
+  // Do NOT introduce ?from= here without using assertSafeRelativeOrFallback
+  // from @/lib/url-safety — open-redirect guard is mandatory for any
+  // query-param-driven navigation.
 
   // Auth state
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);

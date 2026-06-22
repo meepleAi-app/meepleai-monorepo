@@ -340,10 +340,13 @@ psql -f ../../../docs/05-testing/shared-catalog-fts-performance-validation.sql
 ## Architecture Decisions
 
 - **ADR-016**: Bounded Context Separation (SharedGameCatalog vs GameManagement)
-- **ADR-018**: PostgreSQL FTS Technology Choice (vs Elasticsearch/Qdrant)
+- **ADR-018**: PostgreSQL FTS Technology Choice (vs Elasticsearch)
 - **ADR-019**: Two-Step Delete Workflow Governance
+- **ADR Wikidata 2026-06-09**: Wikidata enrichment architecture (DEC-3a..3j, L2 cover pipeline)
+- **ADR-059**: Catalog seed legal posture (license whitelist, BGG ToS compliance)
+- **ADR-082**: External Media Enrichment ports/adapters layout (Proposed — Phase G #2055). Codifies BC-internal port pattern for `IWikidataCoverEnrichmentRunner` + `IWikimediaCommonsClient` and the promotion ladder for future cross-BC adapter reuse.
 
-See: `docs/01-architecture/adr/`
+See: `docs/for-claude/architecture/adr/`
 
 ---
 
@@ -457,7 +460,7 @@ See: `docs/05-testing/performance/pdf-wizard-performance-report.md`
 
 ## Future Enhancements
 
-- **Semantic Search**: "Find similar games" using Qdrant vector similarity
+- **Semantic Search**: "Find similar games" using pgvector vector similarity
 - **Advanced Filters**: Designer, publisher, year range, complexity rating
 - **User Contributions**: Allow users to suggest FAQs/errata for admin review
 - **Localization**: Multi-language support (EN, IT, DE, FR)
@@ -502,5 +505,5 @@ curl https://boardgamegeek.com/xmlapi2/thing?id=13
 
 ---
 
-**Last Updated**: 2026-02-16
+**Last Updated**: 2026-06-20
 **Maintainer**: MeepleAI Development Team

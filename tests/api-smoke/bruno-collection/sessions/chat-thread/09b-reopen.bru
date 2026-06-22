@@ -1,0 +1,27 @@
+meta {
+  name: SG4-CT3b — ChatThread reopen (status transition)
+  type: http
+  seq: 14
+}
+
+post {
+  url: {{apiBase}}/api/v1/chat-threads/{{chatThreadId}}/reopen
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  if (!bru.getVar("chatThreadId")) {
+    throw new Error("chatThreadId not set — run 07-auto-create first");
+  }
+}
+
+tests {
+  test("returns 200 OK on reopen", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("status transitions back to active", function() {
+    const body = res.getBody();
+    expect(body.status).to.equal("active");
+  });
+}

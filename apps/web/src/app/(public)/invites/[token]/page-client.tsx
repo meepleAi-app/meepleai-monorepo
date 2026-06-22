@@ -1,5 +1,5 @@
 /**
- * /invites/[token] — client body (V2, Wave A.5b, Issue #611).
+ * /invites/[token] — client body (Issue #611).
  *
  * Owns:
  *   - i18n resolution via `useTranslation()`
@@ -34,7 +34,7 @@ import {
   InviteHostCard,
   SessionMetaGrid,
   type SessionMetaItem,
-} from '@/components/ui/v2/invites';
+} from '@/components/ui/invites';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { useGameNightInvitation } from '@/hooks/useGameNightInvitation';
 import { useRespondToInvitation } from '@/hooks/useRespondToInvitation';
@@ -109,7 +109,19 @@ export function InvitesTokenPageClient({
 
   // Mutation FSM.
   const respond = useRespondToInvitation({ token });
-  const mutationKind = respond.result?.kind ?? null;
+  // Issue #1169 widened `respond.result.kind` with `'rate-limited'` and
+  // `'invalid-display-name'` for the public /join/event/[code] surface.
+  // The legacy /invites/[token] route doesn't expose displayName entry and
+  // calls into the older `deriveState` that only knows 3 kinds — narrow
+  // here so the type matches the original contract (the new kinds cannot be
+  // produced from this route's single-arg `submit` call site).
+  const rawMutationKind = respond.result?.kind ?? null;
+  const mutationKind: 'success' | 'conflict-state-switch' | 'gone' | null =
+    rawMutationKind === 'success' ||
+    rawMutationKind === 'conflict-state-switch' ||
+    rawMutationKind === 'gone'
+      ? rawMutationKind
+      : null;
   const [lastSubmittedAction, setLastSubmittedAction] = useState<RsvpAction | null>(null);
 
   const handleAccept = useCallback(async (): Promise<void> => {

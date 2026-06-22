@@ -7,6 +7,7 @@ using Api.Models;
 using Api.Services;
 using Api.Tests.Constants;
 using MediatR;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -24,6 +25,7 @@ public class FeatureFlagServiceTests
 {
     private readonly Mock<IConfigurationService> _mockConfigService;
     private readonly Mock<IMediator> _mockMediator;
+    private readonly Mock<IWebHostEnvironment> _mockEnvironment;
     private readonly Mock<ILogger<FeatureFlagService>> _mockLogger;
     private readonly FeatureFlagService _service;
 
@@ -31,11 +33,14 @@ public class FeatureFlagServiceTests
     {
         _mockConfigService = new Mock<IConfigurationService>();
         _mockMediator = new Mock<IMediator>();
+        _mockEnvironment = new Mock<IWebHostEnvironment>();
+        _mockEnvironment.Setup(e => e.EnvironmentName).Returns("Production");
         _mockLogger = new Mock<ILogger<FeatureFlagService>>();
 
         _service = new FeatureFlagService(
             _mockConfigService.Object,
             _mockMediator.Object,
+            _mockEnvironment.Object,
             _mockLogger.Object);
     }
 
@@ -160,7 +165,7 @@ public class FeatureFlagServiceTests
         var expectedKey = $"{featureName}.Tier.{tier.Value}";
         var userId = Guid.NewGuid().ToString();
 
-        _mockConfigService.Setup(c => c.GetConfigurationByKeyAsync(expectedKey, null, It.IsAny<CancellationToken>()))
+        _mockConfigService.Setup(c => c.GetConfigurationByKeyAsync(expectedKey, "Production", It.IsAny<CancellationToken>()))
             .ReturnsAsync((SystemConfigurationDto?)null);
 
         // Act
@@ -188,7 +193,7 @@ public class FeatureFlagServiceTests
 
         var existingConfig = CreateSystemConfigDto(configId.ToString(), expectedKey, "false");
 
-        _mockConfigService.Setup(c => c.GetConfigurationByKeyAsync(expectedKey, null, It.IsAny<CancellationToken>()))
+        _mockConfigService.Setup(c => c.GetConfigurationByKeyAsync(expectedKey, "Production", It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingConfig);
 
         // Act
@@ -223,7 +228,7 @@ public class FeatureFlagServiceTests
         var expectedKey = $"{featureName}.Tier.{tier.Value}";
         var userId = Guid.NewGuid().ToString();
 
-        _mockConfigService.Setup(c => c.GetConfigurationByKeyAsync(expectedKey, null, It.IsAny<CancellationToken>()))
+        _mockConfigService.Setup(c => c.GetConfigurationByKeyAsync(expectedKey, "Production", It.IsAny<CancellationToken>()))
             .ReturnsAsync((SystemConfigurationDto?)null);
 
         // Act
@@ -250,7 +255,7 @@ public class FeatureFlagServiceTests
 
         var existingConfig = CreateSystemConfigDto(configId.ToString(), expectedKey, "true");
 
-        _mockConfigService.Setup(c => c.GetConfigurationByKeyAsync(expectedKey, null, It.IsAny<CancellationToken>()))
+        _mockConfigService.Setup(c => c.GetConfigurationByKeyAsync(expectedKey, "Production", It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingConfig);
 
         // Act
@@ -261,6 +266,226 @@ public class FeatureFlagServiceTests
             It.Is<UpdateConfigValueCommand>(cmd =>
                 cmd.ConfigId == configId &&
                 cmd.NewValue == "false"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    #endregion
+
+    #region #2162 regression — Environment asymmetry (mirror of #2116 / PR #2159)
+
+    // For each of the 4 mutating methods, three regression tests guard against
+    // re-introducing the hardcoded Environment="Production" literal:
+    //   1. In Development env, the CREATE branch persists Environment="Development".
+    //   2. In Production env, the CREATE branch persists Environment="Production"
+    //      (derived from IWebHostEnvironment, NOT a literal).
+    //   3. The LOOKUP and the CREATE pass the SAME environment string (symmetric).
+
+    [Fact]
+    public async Task EnableFeatureAsync_InDevelopmentEnv_CreatesConfigWithDevelopmentEnvironment()
+    {
+        _mockEnvironment.Setup(e => e.EnvironmentName).Returns("Development");
+        const string featureName = "Features.NewFlag";
+        _mockConfigService.Setup(c => c.GetConfigurationByKeyAsync(featureName, "Development", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SystemConfigurationDto?)null);
+
+        await _service.EnableFeatureAsync(featureName, null, Guid.NewGuid().ToString());
+
+        _mockMediator.Verify(m => m.Send(
+            It.Is<CreateConfigurationCommand>(cmd =>
+                cmd.Key == featureName &&
+                cmd.Value == "true" &&
+                cmd.Environment == "Development"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task EnableFeatureAsync_InProductionEnv_PassesProductionDerivedFromIWebHostEnvironment()
+    {
+        // Regression guard: prevent re-introducing a hardcoded "Production" string literal.
+        _mockEnvironment.Setup(e => e.EnvironmentName).Returns("Production");
+        const string featureName = "Features.AnotherFlag";
+        _mockConfigService.Setup(c => c.GetConfigurationByKeyAsync(featureName, "Production", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SystemConfigurationDto?)null);
+
+        await _service.EnableFeatureAsync(featureName);
+
+        _mockMediator.Verify(m => m.Send(
+            It.Is<CreateConfigurationCommand>(cmd => cmd.Environment == "Production"),
+            It.IsAny<CancellationToken>()), Times.Once);
+        _mockEnvironment.Verify(e => e.EnvironmentName, Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task EnableFeatureAsync_LookupAndCreate_PassTheSameEnvironmentString()
+    {
+        // Symmetric lookup + create: any non-Production env exposes the asymmetry.
+        _mockEnvironment.Setup(e => e.EnvironmentName).Returns("Staging");
+        const string featureName = "Features.Symmetric";
+        _mockConfigService.Setup(c => c.GetConfigurationByKeyAsync(featureName, "Staging", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SystemConfigurationDto?)null);
+
+        await _service.EnableFeatureAsync(featureName);
+
+        _mockConfigService.Verify(c => c.GetConfigurationByKeyAsync(featureName, "Staging", It.IsAny<CancellationToken>()), Times.Once);
+        _mockMediator.Verify(m => m.Send(
+            It.Is<CreateConfigurationCommand>(cmd => cmd.Environment == "Staging"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DisableFeatureAsync_InDevelopmentEnv_CreatesConfigWithDevelopmentEnvironment()
+    {
+        _mockEnvironment.Setup(e => e.EnvironmentName).Returns("Development");
+        const string featureName = "Features.OffFlag";
+        _mockConfigService.Setup(c => c.GetConfigurationByKeyAsync(featureName, "Development", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SystemConfigurationDto?)null);
+
+        await _service.DisableFeatureAsync(featureName);
+
+        _mockMediator.Verify(m => m.Send(
+            It.Is<CreateConfigurationCommand>(cmd =>
+                cmd.Value == "false" &&
+                cmd.Environment == "Development"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DisableFeatureAsync_InProductionEnv_PassesProductionDerivedFromIWebHostEnvironment()
+    {
+        _mockEnvironment.Setup(e => e.EnvironmentName).Returns("Production");
+        const string featureName = "Features.ProdOff";
+        _mockConfigService.Setup(c => c.GetConfigurationByKeyAsync(featureName, "Production", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SystemConfigurationDto?)null);
+
+        await _service.DisableFeatureAsync(featureName);
+
+        _mockMediator.Verify(m => m.Send(
+            It.Is<CreateConfigurationCommand>(cmd => cmd.Environment == "Production"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DisableFeatureAsync_LookupAndCreate_PassTheSameEnvironmentString()
+    {
+        _mockEnvironment.Setup(e => e.EnvironmentName).Returns("Staging");
+        const string featureName = "Features.SymOff";
+        _mockConfigService.Setup(c => c.GetConfigurationByKeyAsync(featureName, "Staging", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SystemConfigurationDto?)null);
+
+        await _service.DisableFeatureAsync(featureName);
+
+        _mockConfigService.Verify(c => c.GetConfigurationByKeyAsync(featureName, "Staging", It.IsAny<CancellationToken>()), Times.Once);
+        _mockMediator.Verify(m => m.Send(
+            It.Is<CreateConfigurationCommand>(cmd => cmd.Environment == "Staging"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task EnableFeatureForTierAsync_InDevelopmentEnv_CreatesConfigWithDevelopmentEnvironment()
+    {
+        _mockEnvironment.Setup(e => e.EnvironmentName).Returns("Development");
+        const string featureName = "Features.TierOn";
+        var tier = UserTier.Premium;
+        var key = $"{featureName}.Tier.{tier.Value}";
+        _mockConfigService.Setup(c => c.GetConfigurationByKeyAsync(key, "Development", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SystemConfigurationDto?)null);
+
+        await _service.EnableFeatureForTierAsync(featureName, tier);
+
+        _mockMediator.Verify(m => m.Send(
+            It.Is<CreateConfigurationCommand>(cmd =>
+                cmd.Key == key &&
+                cmd.Value == "true" &&
+                cmd.Environment == "Development"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task EnableFeatureForTierAsync_InProductionEnv_PassesProductionDerivedFromIWebHostEnvironment()
+    {
+        _mockEnvironment.Setup(e => e.EnvironmentName).Returns("Production");
+        const string featureName = "Features.TierProd";
+        var tier = UserTier.Normal;
+        var key = $"{featureName}.Tier.{tier.Value}";
+        _mockConfigService.Setup(c => c.GetConfigurationByKeyAsync(key, "Production", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SystemConfigurationDto?)null);
+
+        await _service.EnableFeatureForTierAsync(featureName, tier);
+
+        _mockMediator.Verify(m => m.Send(
+            It.Is<CreateConfigurationCommand>(cmd => cmd.Environment == "Production"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task EnableFeatureForTierAsync_LookupAndCreate_PassTheSameEnvironmentString()
+    {
+        _mockEnvironment.Setup(e => e.EnvironmentName).Returns("Staging");
+        const string featureName = "Features.TierSym";
+        var tier = UserTier.Free;
+        var key = $"{featureName}.Tier.{tier.Value}";
+        _mockConfigService.Setup(c => c.GetConfigurationByKeyAsync(key, "Staging", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SystemConfigurationDto?)null);
+
+        await _service.EnableFeatureForTierAsync(featureName, tier);
+
+        _mockConfigService.Verify(c => c.GetConfigurationByKeyAsync(key, "Staging", It.IsAny<CancellationToken>()), Times.Once);
+        _mockMediator.Verify(m => m.Send(
+            It.Is<CreateConfigurationCommand>(cmd => cmd.Environment == "Staging"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DisableFeatureForTierAsync_InDevelopmentEnv_CreatesConfigWithDevelopmentEnvironment()
+    {
+        _mockEnvironment.Setup(e => e.EnvironmentName).Returns("Development");
+        const string featureName = "Features.TierOff";
+        var tier = UserTier.Premium;
+        var key = $"{featureName}.Tier.{tier.Value}";
+        _mockConfigService.Setup(c => c.GetConfigurationByKeyAsync(key, "Development", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SystemConfigurationDto?)null);
+
+        await _service.DisableFeatureForTierAsync(featureName, tier);
+
+        _mockMediator.Verify(m => m.Send(
+            It.Is<CreateConfigurationCommand>(cmd =>
+                cmd.Value == "false" &&
+                cmd.Environment == "Development"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DisableFeatureForTierAsync_InProductionEnv_PassesProductionDerivedFromIWebHostEnvironment()
+    {
+        _mockEnvironment.Setup(e => e.EnvironmentName).Returns("Production");
+        const string featureName = "Features.TierProdOff";
+        var tier = UserTier.Normal;
+        var key = $"{featureName}.Tier.{tier.Value}";
+        _mockConfigService.Setup(c => c.GetConfigurationByKeyAsync(key, "Production", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SystemConfigurationDto?)null);
+
+        await _service.DisableFeatureForTierAsync(featureName, tier);
+
+        _mockMediator.Verify(m => m.Send(
+            It.Is<CreateConfigurationCommand>(cmd => cmd.Environment == "Production"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DisableFeatureForTierAsync_LookupAndCreate_PassTheSameEnvironmentString()
+    {
+        _mockEnvironment.Setup(e => e.EnvironmentName).Returns("Staging");
+        const string featureName = "Features.TierSymOff";
+        var tier = UserTier.Free;
+        var key = $"{featureName}.Tier.{tier.Value}";
+        _mockConfigService.Setup(c => c.GetConfigurationByKeyAsync(key, "Staging", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SystemConfigurationDto?)null);
+
+        await _service.DisableFeatureForTierAsync(featureName, tier);
+
+        _mockConfigService.Verify(c => c.GetConfigurationByKeyAsync(key, "Staging", It.IsAny<CancellationToken>()), Times.Once);
+        _mockMediator.Verify(m => m.Send(
+            It.Is<CreateConfigurationCommand>(cmd => cmd.Environment == "Staging"),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 

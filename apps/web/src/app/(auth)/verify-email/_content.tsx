@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 import { VerificationError } from '@/components/auth/VerificationError';
 import { VerificationSuccess } from '@/components/auth/VerificationSuccess';
-import { AuthCard } from '@/components/ui/v2/auth-card';
+import { AuthCard } from '@/components/ui/auth-card';
 import { useEmailVerification } from '@/hooks/useEmailVerification';
 import { useTranslation } from '@/hooks/useTranslation';
 

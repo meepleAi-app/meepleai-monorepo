@@ -145,7 +145,7 @@ internal static class AdminQueueEndpoints
     {
         // Filter already validates admin session; extract user ID from session
         var (_, session, _) = context.RequireAdminSession();
-        var userId = session.User!.Id;
+        var userId = session.Principal!.Subject.Id;
 
         var command = new EnqueuePdfCommand(request.PdfDocumentId, userId, request.Priority);
         var jobId = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -317,7 +317,7 @@ internal static class AdminQueueEndpoints
         CancellationToken ct)
     {
         var (_, session, _) = context.RequireAdminSession();
-        var userId = session.User!.Id;
+        var userId = session.Principal!.Subject.Id;
 
         await mediator.Send(
             new UpdateQueueConfigCommand(userId, request.IsPaused, request.MaxConcurrentWorkers), ct)
@@ -331,7 +331,7 @@ internal static class AdminQueueEndpoints
         CancellationToken ct)
     {
         var (_, session, _) = context.RequireAdminSession();
-        var userId = session.User!.Id;
+        var userId = session.Principal!.Subject.Id;
 
         var result = await mediator.Send(new BulkReindexFailedCommand(userId), ct).ConfigureAwait(false);
         return Results.Ok(result);

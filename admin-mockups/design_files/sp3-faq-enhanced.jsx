@@ -48,7 +48,7 @@ const FAQS = [
     popular: true, popularRank: 2 },
   { id:'q5', cat:'games', q:'Posso aggiungere un gioco non presente nel catalogo?',
     short:'Durante l\'alpha solo gli admin possono aggiungere giochi. Suggerisci nuovi giochi via /contact.',
-    long:'Durante l\'**alpha privata**, l\'aggiunta di nuovi giochi al catalogo è ristretta agli admin per garantire qualità delle KB.\n\nPuoi **suggerire un gioco** via `/contact`: indicaci titolo, editore, anno e link BoardGameGeek. Valutiamo le richieste settimanalmente. Post-alpha, gli utenti potranno proporre giochi self-service con approvazione moderata.',
+    long:'Durante l\'**alpha privata**, l\'aggiunta di nuovi giochi al catalogo è ristretta agli admin per garantire qualità delle KB.\n\nPuoi **suggerire un gioco** via `/contact`: indicaci titolo, editore, anno e link della fonte ufficiale. Valutiamo le richieste settimanalmente. Post-alpha, gli utenti potranno proporre giochi self-service con approvazione moderata.',
     popular: false },
   { id:'q6', cat:'games', q:'Come funziona la mia libreria personale?',
     short:'La libreria contiene i giochi che possiedi o segui. Aggiungi giochi dal catalogo con il pulsante "Possiedo".',
@@ -492,7 +492,7 @@ const ContactFooterCard = () => (
       fontSize: 13.5, color:'var(--text-sec)', maxWidth: 420,
       margin:'0 0 6px', lineHeight: 1.6,
     }}>Il nostro team risponde entro 24 ore. Scrivici per richieste, bug o feedback sulla piattaforma.</p>
-    <a href="#" onClick={e=>e.preventDefault()} style={{
+    <a href="#" onClick={(e) => { (e=>e.preventDefault())(e); setTimeout(() => { window.location.href = 'sp3-faq-enhanced.html'; }, 0); /* DEMO-NAV */ }} style={{
       padding:'10px 20px', borderRadius:'var(--r-pill)',
       background:'hsl(var(--c-game))', color:'#fff',
       fontFamily:'var(--f-display)', fontSize: 14, fontWeight: 700,
@@ -674,7 +674,7 @@ const FAQPageBody = ({ stateOverride, compact }) => {
 
         {showNoResults && (
           <Banner tone="info" action={
-            <a href="#" onClick={e=>e.preventDefault()} style={{
+            <a href="#" onClick={(e) => { (e=>e.preventDefault())(e); setTimeout(() => { window.location.href = 'sp3-faq-enhanced.html'; }, 0); /* DEMO-NAV */ }} style={{
               padding:'6px 12px', borderRadius:'var(--r-md)',
               background:'hsl(var(--c-game))', color:'#fff',
               fontFamily:'var(--f-display)', fontSize: 12, fontWeight: 700,
@@ -828,10 +828,10 @@ const DesktopNav = () => (
     <nav style={{ flex: 1, display:'flex', gap: 18, marginLeft: 24,
       fontFamily:'var(--f-display)', fontSize: 13, fontWeight: 600,
       color:'var(--text-sec)' }}>
-      <a href="#" style={{ color:'inherit' }}>Catalogo</a>
-      <a href="#" style={{ color:'inherit' }}>Shared games</a>
+      <a href="#" style={{ color:'inherit' }} onClick={() => { setTimeout(() => { window.location.href = 'sp3-faq-enhanced.html'; }, 0); /* DEMO-NAV */ }}>Catalogo</a>
+      <a href="#" style={{ color:'inherit' }} onClick={() => { setTimeout(() => { window.location.href = 'sp3-shared-games.html'; }, 0); /* DEMO-NAV */ }}>Shared games</a>
       <a href="#" style={{ color:'hsl(var(--c-game))', fontWeight: 700 }}>FAQ</a>
-      <a href="#" style={{ color:'inherit' }}>Privacy</a>
+      <a href="#" style={{ color:'inherit' }} onClick={() => { setTimeout(() => { window.location.href = 'sp3-legal.html'; }, 0); /* DEMO-NAV */ }}>Privacy</a>
     </nav>
     <a href="#" onClick={e=>e.preventDefault()} style={{
       padding:'7px 14px', borderRadius:'var(--r-md)',

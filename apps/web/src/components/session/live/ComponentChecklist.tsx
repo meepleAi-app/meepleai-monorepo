@@ -33,19 +33,19 @@ export function ComponentChecklist({ components, onToggle }: ComponentChecklistP
             'flex items-center gap-3 rounded-xl border p-3 cursor-pointer transition-shadow',
             component.checked
               ? 'bg-amber-50 border-amber-300 shadow-sm'
-              : 'bg-white/70 backdrop-blur-md border-white/40 shadow-sm hover:shadow-md',
+              : 'bg-card/70 backdrop-blur-md border-border shadow-sm hover:shadow-md',
           ].join(' ')}
         >
           <input
             type="checkbox"
             checked={component.checked}
             onChange={() => onToggle(index)}
-            className="h-4 w-4 rounded border-gray-300 text-amber-500 focus:ring-amber-400"
+            className="h-4 w-4 rounded border-border text-amber-500 focus:ring-amber-400"
           />
           <span
             className={[
               'text-sm font-nunito',
-              component.checked ? 'text-gray-500 line-through' : 'text-gray-900',
+              component.checked ? 'text-muted-foreground line-through' : 'text-foreground',
             ].join(' ')}
           >
             {component.name} (x{component.quantity})

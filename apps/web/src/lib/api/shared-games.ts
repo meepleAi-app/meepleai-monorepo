@@ -1,181 +1,62 @@
 /**
- * SharedGames v2 API client — Wave A.3b (Issue #596).
+ * SharedGames public catalog API client.
  *
  * Public, unauthenticated endpoints exposed by `SharedGameCatalogPublicEndpoints`:
  *   - GET /api/v1/shared-games          (paged list w/ filter chips, genre, sort)
  *   - GET /api/v1/shared-games/top-contributors?limit=5
  *   - GET /api/v1/shared-games/categories  (used to map UI genre name → categoryId Guid)
+ *   - GET /api/v1/shared-games/{id}     (detail with nested toolkits/agents/kbs)
  *
- * Why a v2 module rather than reusing `schemas/shared-games.schemas.ts`:
- *  - Wave A.3a extended `SharedGameDto` with 7 new fields (`toolkitsCount`,
- *    `agentsCount`, `kbsCount`, `newThisWeekCount`, `contributorsCount`,
- *    `isTopRated`, `isNew`). The legacy schema (used by /shared-games/[id])
- *    is kept untouched to avoid breaking other call-sites.
- *  - Public surface — no shared `apiClient` indirection, mirrors the
- *    `waitlist.ts` direct-fetch pattern so failures stay local and explicit.
+ * Schemas live in `@/lib/api/schemas/shared-games.schemas` (canonical). This
+ * module provides the public-surface client (no shared `apiClient` indirection,
+ * mirrors the `waitlist.ts` direct-fetch pattern so failures stay local and
+ * explicit), plus a typed `SharedGamesApiError` for the `useSharedGameDetail`
+ * FSM to map exceptions to UI status.
  */
 
 import { z } from 'zod';
 
 import { getApiBase } from './core/httpClient';
+import {
+  GameCategorySchema,
+  PagedSharedGamesSchema,
+  PublishedAgentPreviewSchema,
+  PublishedKbPreviewSchema,
+  PublishedToolkitPreviewSchema,
+  SharedGameDetailSchema,
+  SharedGameSchema,
+  TopContributorSchema,
+  type GameCategory,
+  type PagedSharedGames,
+  type PublishedAgentPreview,
+  type PublishedKbPreview,
+  type PublishedToolkitPreview,
+  type SharedGame,
+  type SharedGameDetail,
+  type TopContributor,
+} from './schemas/shared-games.schemas';
 
-// ========== Schemas ==========
-
-/**
- * Extended SharedGameDto (post-Wave A.3a). Mirrors backend
- * `SharedGameDto` record exactly — JSON camelCase serialization.
- */
-export const SharedGameV2Schema = z.object({
-  id: z.string().uuid(),
-  bggId: z.number().int().nullable(),
-  title: z.string().min(1),
-  yearPublished: z.number().int(),
-  description: z.string(),
-  minPlayers: z.number().int().nonnegative(),
-  maxPlayers: z.number().int().nonnegative(),
-  playingTimeMinutes: z.number().int().nonnegative(),
-  minAge: z.number().int().nonnegative(),
-  complexityRating: z.number().nullable(),
-  averageRating: z.number().nullable(),
-  imageUrl: z.string().catch(''),
-  thumbnailUrl: z.string().catch(''),
-  status: z.string(),
-  createdAt: z.string(),
-  modifiedAt: z.string().nullable(),
-  isRagPublic: z.boolean().default(false),
-  hasKnowledgeBase: z.boolean().default(false),
-  // Wave A.3a additions:
-  toolkitsCount: z.number().int().nonnegative().default(0),
-  agentsCount: z.number().int().nonnegative().default(0),
-  kbsCount: z.number().int().nonnegative().default(0),
-  newThisWeekCount: z.number().int().nonnegative().default(0),
-  contributorsCount: z.number().int().nonnegative().default(0),
-  isTopRated: z.boolean().default(false),
-  isNew: z.boolean().default(false),
-});
-
-export type SharedGameV2 = z.infer<typeof SharedGameV2Schema>;
-
-export const PagedSharedGamesV2Schema = z.object({
-  items: z.array(SharedGameV2Schema),
-  total: z.number().int().nonnegative(),
-  page: z.number().int().positive(),
-  pageSize: z.number().int().positive(),
-});
-
-export type PagedSharedGamesV2 = z.infer<typeof PagedSharedGamesV2Schema>;
-
-export const TopContributorSchema = z.object({
-  userId: z.string().uuid(),
-  displayName: z.string().min(1),
-  avatarUrl: z.string().nullable(),
-  totalSessions: z.number().int().nonnegative(),
-  totalWins: z.number().int().nonnegative(),
-  score: z.number().int().nonnegative(),
-});
-
-export type TopContributor = z.infer<typeof TopContributorSchema>;
-
-export const GameCategoryV2Schema = z.object({
-  id: z.string().uuid(),
-  name: z.string().min(1),
-  slug: z.string(),
-});
-
-export type GameCategoryV2 = z.infer<typeof GameCategoryV2Schema>;
-
-// ========== Detail (Wave A.4 — Issue #603) ==========
-
-/**
- * Mirrors backend `PublishedToolkitPreviewDto` (Issue #603 §3.2).
- * Simplified shape: spec's `version`/`downloadCount` deferred until domain model
- * exposes them — frontend renders sensible fallbacks via i18n.
- */
-export const PublishedToolkitPreviewSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string().min(1),
-  ownerId: z.string().uuid(),
-  ownerName: z.string(),
-  lastUpdatedAt: z.string(),
-});
-
-export type PublishedToolkitPreview = z.infer<typeof PublishedToolkitPreviewSchema>;
-
-/**
- * Mirrors backend `PublishedAgentPreviewDto`. `invocationCount` is the real
- * popularity proxy from runtime telemetry; rating system not implemented yet.
- */
-export const PublishedAgentPreviewSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string().min(1),
-  invocationCount: z.number().int().nonnegative(),
-  lastUpdatedAt: z.string(),
-});
-
-export type PublishedAgentPreview = z.infer<typeof PublishedAgentPreviewSchema>;
-
-/**
- * Mirrors backend `PublishedKbPreviewDto`. `totalChunks` is a coarse "size"
- * indicator until PdfDocument metadata (filename/title/pages) is wired through
- * to KB queries.
- */
-export const PublishedKbPreviewSchema = z.object({
-  id: z.string().uuid(),
-  language: z.string(),
-  totalChunks: z.number().int().nonnegative(),
-  indexedAt: z.string(),
-});
-
-export type PublishedKbPreview = z.infer<typeof PublishedKbPreviewSchema>;
-
-/**
- * Mirrors backend `SharedGameDetailDto` post-Wave A.4 extension.
- * Nested toolkit/agent/kb arrays are nullable on the wire — schema normalises
- * to empty arrays so consumers don't need to null-check.
- */
-export const SharedGameDetailV2Schema = z.object({
-  id: z.string().uuid(),
-  bggId: z.number().int().nullable(),
-  title: z.string().min(1),
-  yearPublished: z.number().int(),
-  description: z.string(),
-  minPlayers: z.number().int().nonnegative(),
-  maxPlayers: z.number().int().nonnegative(),
-  playingTimeMinutes: z.number().int().nonnegative(),
-  minAge: z.number().int().nonnegative(),
-  complexityRating: z.number().nullable(),
-  averageRating: z.number().nullable(),
-  imageUrl: z.string().catch(''),
-  thumbnailUrl: z.string().catch(''),
-  status: z.string(),
-  createdAt: z.string(),
-  modifiedAt: z.string().nullable(),
-  // Wave A.4 extension fields:
-  toolkits: z
-    .array(PublishedToolkitPreviewSchema)
-    .nullable()
-    .default([])
-    .transform(v => v ?? []),
-  agents: z
-    .array(PublishedAgentPreviewSchema)
-    .nullable()
-    .default([])
-    .transform(v => v ?? []),
-  kbs: z
-    .array(PublishedKbPreviewSchema)
-    .nullable()
-    .default([])
-    .transform(v => v ?? []),
-  toolkitsCount: z.number().int().nonnegative().default(0),
-  agentsCount: z.number().int().nonnegative().default(0),
-  kbsCount: z.number().int().nonnegative().default(0),
-  contributorsCount: z.number().int().nonnegative().default(0),
-  hasKnowledgeBase: z.boolean().default(false),
-  isTopRated: z.boolean().default(false),
-  isNew: z.boolean().default(false),
-});
-
-export type SharedGameDetailV2 = z.infer<typeof SharedGameDetailV2Schema>;
+// Re-export so consumers can keep importing from `@/lib/api/shared-games`.
+export {
+  GameCategorySchema,
+  PagedSharedGamesSchema,
+  PublishedAgentPreviewSchema,
+  PublishedKbPreviewSchema,
+  PublishedToolkitPreviewSchema,
+  SharedGameDetailSchema,
+  SharedGameSchema,
+  TopContributorSchema,
+};
+export type {
+  GameCategory,
+  PagedSharedGames,
+  PublishedAgentPreview,
+  PublishedKbPreview,
+  PublishedToolkitPreview,
+  SharedGame,
+  SharedGameDetail,
+  TopContributor,
+};
 
 // ========== Search args ==========
 
@@ -200,7 +81,7 @@ export interface SearchSharedGamesArgs {
 // ========== Errors ==========
 
 /**
- * Typed error for SharedGames v2 API failures. Carries enough context for the
+ * Typed error for SharedGames API failures. Carries enough context for the
  * `useSharedGameDetail` FSM to map an exception to a UI status:
  *   - `kind='http'` + `httpStatus===404` → `'not-found'`
  *   - `kind='http'` + 5xx                → `'error'`
@@ -228,7 +109,7 @@ export class SharedGamesApiError extends Error {
 // ========== Fetch helpers ==========
 
 /**
- * Extended init type for SharedGames v2 fetches. `timeoutMs` triggers an
+ * Extended init type for SharedGames fetches. `timeoutMs` triggers an
  * AbortController abort after the specified delay — used by the SSR path
  * (page.tsx sets `timeoutMs: 2000`) to keep the public detail page from
  * hanging the Next.js render. Client-side callers omit it; abort is owned
@@ -334,9 +215,9 @@ async function getJson<T>(
 export async function searchSharedGames(
   args: SearchSharedGamesArgs,
   init?: SharedGamesRequestInit
-): Promise<PagedSharedGamesV2> {
+): Promise<PagedSharedGames> {
   const url = buildSearchUrl(args);
-  return getJson(url, PagedSharedGamesV2Schema, init);
+  return getJson(url, PagedSharedGamesSchema, init);
 }
 
 export async function getTopContributors(
@@ -350,9 +231,9 @@ export async function getTopContributors(
 
 export async function getCategories(
   init?: SharedGamesRequestInit
-): Promise<readonly GameCategoryV2[]> {
+): Promise<readonly GameCategory[]> {
   const url = `${getApiBase()}/api/v1/shared-games/categories`;
-  return getJson(url, z.array(GameCategoryV2Schema), init);
+  return getJson(url, z.array(GameCategorySchema), init);
 }
 
 /**
@@ -368,7 +249,7 @@ export async function getCategories(
 export async function getSharedGameDetail(
   id: string,
   init?: SharedGamesRequestInit
-): Promise<SharedGameDetailV2> {
+): Promise<SharedGameDetail> {
   const url = `${getApiBase()}/api/v1/shared-games/${encodeURIComponent(id)}`;
-  return getJson(url, SharedGameDetailV2Schema, init);
+  return getJson(url, SharedGameDetailSchema, init);
 }

@@ -59,6 +59,7 @@ internal sealed class AccessRequestRepository : RepositoryBase, IAccessRequestRe
         existing.ReviewedBy = entity.ReviewedBy;
         existing.RejectionReason = entity.RejectionReason;
         existing.InvitationId = entity.InvitationId;
+        existing.LastNotifiedEventId = entity.LastNotifiedEventId;
     }
 
     public async Task DeleteAsync(AccessRequest entity, CancellationToken cancellationToken = default)
@@ -139,7 +140,8 @@ internal sealed class AccessRequestRepository : RepositoryBase, IAccessRequestRe
             reviewedAt: entity.ReviewedAt,
             reviewedBy: entity.ReviewedBy,
             rejectionReason: entity.RejectionReason,
-            invitationId: entity.InvitationId);
+            invitationId: entity.InvitationId,
+            lastNotifiedEventId: entity.LastNotifiedEventId);
 
         return request;
     }
@@ -158,7 +160,8 @@ internal sealed class AccessRequestRepository : RepositoryBase, IAccessRequestRe
             ReviewedAt = domain.ReviewedAt,
             ReviewedBy = domain.ReviewedBy,
             RejectionReason = domain.RejectionReason,
-            InvitationId = domain.InvitationId
+            InvitationId = domain.InvitationId,
+            LastNotifiedEventId = domain.LastNotifiedEventId
         };
     }
 }

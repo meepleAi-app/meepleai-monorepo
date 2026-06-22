@@ -95,13 +95,10 @@ describe('VectorCollectionsPage', () => {
     mockGetVectorStats.mockResolvedValue(MOCK_VECTOR_STATS);
   });
 
-  it('should render page header', async () => {
+  it('should render Semantic Search panel', () => {
     renderWithQuery(<VectorStorePage />);
 
-    expect(screen.getByText('Vector Store')).toBeInTheDocument();
-    expect(
-      screen.getByText('pgvector knowledge base — embeddings health and semantic search')
-    ).toBeInTheDocument();
+    expect(screen.getByText('Semantic Search')).toBeInTheDocument();
   });
 
   it('should render stats cards with calculated values', async () => {

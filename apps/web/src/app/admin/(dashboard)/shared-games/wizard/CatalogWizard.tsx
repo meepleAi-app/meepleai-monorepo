@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 /**
  * CatalogWizard - 5-Step Guided Wizard for Shared Game Content
  *
@@ -181,7 +182,7 @@ export function CatalogWizard() {
               className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium sm:h-8 sm:w-8 sm:text-sm ${
                 step >= s.number
                   ? 'bg-orange-500 text-white'
-                  : 'bg-zinc-200 text-zinc-500 dark:bg-zinc-700 dark:text-zinc-400'
+                  : 'bg-zinc-200 text-muted-foreground dark:bg-zinc-700 dark:text-muted-foreground'
               }`}
             >
               {step > s.number ? <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : s.number}
@@ -190,7 +191,7 @@ export function CatalogWizard() {
               className={`hidden text-xs sm:inline sm:text-sm ${
                 step >= s.number
                   ? 'font-medium text-zinc-900 dark:text-zinc-100'
-                  : 'text-zinc-500 dark:text-zinc-400'
+                  : 'text-muted-foreground dark:text-muted-foreground'
               }`}
             >
               {s.label}
@@ -214,7 +215,7 @@ export function CatalogWizard() {
 
       {/* Step 1: Select Game */}
       {step === 1 && (
-        <Card className="rounded-xl border bg-white/70 backdrop-blur-md dark:bg-zinc-900/70">
+        <Card className="rounded-xl border bg-card/70 backdrop-blur-md dark:bg-zinc-900/70">
           <CardHeader>
             <CardTitle>Select a Game</CardTitle>
             <CardDescription>
@@ -257,7 +258,7 @@ export function CatalogWizard() {
 
       {/* Step 2: Upload PDFs */}
       {step === 2 && selectedGame && (
-        <Card className="rounded-xl border bg-white/70 backdrop-blur-md dark:bg-zinc-900/70">
+        <Card className="rounded-xl border bg-card/70 backdrop-blur-md dark:bg-zinc-900/70">
           <CardHeader>
             <CardTitle>Upload PDFs for {selectedGame.title}</CardTitle>
             <CardDescription>
@@ -277,8 +278,8 @@ export function CatalogWizard() {
               tabIndex={0}
               onKeyDown={e => e.key === 'Enter' && fileInputRef.current?.click()}
             >
-              <FileUp className="mb-2 h-8 w-8 text-zinc-400" />
-              <span className="text-sm text-zinc-600 dark:text-zinc-400">
+              <FileUp className="mb-2 h-8 w-8 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground dark:text-muted-foreground">
                 Click to select PDF files
               </span>
               <input
@@ -300,7 +301,7 @@ export function CatalogWizard() {
                   >
                     <div>
                       <span className="text-sm font-medium">{file.name}</span>
-                      <span className="ml-2 text-xs text-zinc-500">
+                      <span className="ml-2 text-xs text-muted-foreground">
                         {(file.size / 1024 / 1024).toFixed(1)} MB
                       </span>
                     </div>
@@ -333,7 +334,7 @@ export function CatalogWizard() {
 
       {/* Step 3: Review Upload Results */}
       {step === 3 && uploadResult && (
-        <Card className="rounded-xl border bg-white/70 backdrop-blur-md dark:bg-zinc-900/70">
+        <Card className="rounded-xl border bg-card/70 backdrop-blur-md dark:bg-zinc-900/70">
           <CardHeader>
             <CardTitle>Upload Complete</CardTitle>
             <CardDescription>
@@ -352,10 +353,10 @@ export function CatalogWizard() {
                 <div className="text-xs text-red-700 dark:text-red-400">Failed</div>
               </div>
               <div className="rounded-lg bg-zinc-50 p-3 text-center dark:bg-zinc-800">
-                <div className="text-2xl font-bold text-zinc-600 dark:text-zinc-300">
+                <div className="text-2xl font-bold text-muted-foreground dark:text-zinc-300">
                   {uploadResult.totalRequested}
                 </div>
-                <div className="text-xs text-zinc-500">Total</div>
+                <div className="text-xs text-muted-foreground">Total</div>
               </div>
             </div>
             {uploadResult.items.length > 0 && (
@@ -432,7 +433,7 @@ export function CatalogWizard() {
       {/* Step 5: RAG Testing */}
       {step === 5 && (
         <div className="space-y-4">
-          <Card className="rounded-xl border bg-white/70 backdrop-blur-md dark:bg-zinc-900/70">
+          <Card className="rounded-xl border bg-card/70 backdrop-blur-md dark:bg-zinc-900/70">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5" />

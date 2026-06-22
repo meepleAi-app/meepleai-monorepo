@@ -1,0 +1,271 @@
+/* ============================================================================
+ * MeepleAI Design Tokens — CANONICAL (mockup-faithful)
+ *
+ * Single source of truth: admin-mockups/design_files/tokens.css
+ * Date imported: 2026-05-12 (DS-1, spec: 2026-05-12-token-canonicalization.md)
+ *
+ * IMPORTANT — DS-1 transitional state:
+ *   This file is the authoritative token source. Legacy tokens in
+ *   `globals.css` / `design-tokens.css` / `premium-gaming.css` are now
+ *   bridged aliases pointing here (see token-bridge.css).
+ *   Bridge layer will be removed in DS-12 once all clusters are migrated.
+ *
+ * Theming mechanism: [data-theme="light|dark"] attribute on <html>
+ * (set by next-themes; SSR default = "light" — mockup convention).
+ *
+ * Reset / typography base rules from the mockup are OMITTED here to avoid
+ * conflicts with globals.css base layer. Only token declarations are kept.
+ * ============================================================================ */
+
+:root {
+  /* ─── Entity Colors (HSL triplets for alpha composability) ─── */
+  --c-game:    25 95% 45%;
+  --c-player:  262 83% 58%;
+  --c-session: 240 60% 55%;
+  --c-agent:   38 92% 50%;
+  --c-kb:      174 60% 40%;
+  --c-chat:    220 80% 55%;
+  --c-event:   350 89% 60%;
+  --c-toolkit: 142 70% 45%;
+  --c-tool:    195 80% 50%;
+
+  /* ─── Entity Color TEXT variants (darker — for AA 4.5:1 text contrast) ─── *
+   * Entity colors above are sized for non-text usage (borders, backgrounds,
+   * decorative accents — pass WCAG AA 3:1 against light surfaces). When
+   * rendered as TEXT on cream/off-white surfaces (#f7f3ee / #f9eee6 / #f1e3d7),
+   * the lightness needs to drop ~13% to clear the AA 4.5:1 text threshold.
+   * Math verified via sRGB linearization + WCAG relative-luminance formula.
+   *   --c-game-text  hsl(25 95% 32%) ≈ #9e3a05 vs #f7f3ee = 6.14:1 ✅
+   *   Refs: #1094 Real-C-B, audit doc §2.5 v3, precedent #2026-05-12-dashboard-contrast.md
+   *
+   * Only --c-game-text is introduced today (covers the 76-node violation cluster
+   * captured by Phase A.live v3). Other entity-text variants will be added on
+   * demand as violations surface for them.
+   */
+  --c-game-text: 25 95% 32%;
+  --c-kb-text:   174 60% 28%; /* Real-C-F: hsl(174 60% 28%) ≈ #1d7268 vs #f7f3ee = 4.95:1 ✅ — replaces hardcoded #4ecdc4 (1.75:1 fail) */
+  --c-toolkit-text: 142 70% 24%; /* Real-C-E gamebook: hsl(142 70% 24%) ≈ #0f5d2b vs #e3f0e8 = ~5.6:1 ✅ — replaces text-entity-toolkit (4.16:1 fail on toolkit/12 bg) */
+  --c-session-text: 240 60% 35%; /* PR #1721 follow-up: light theme value = same as --c-session (already 12.22:1 AA on cream). Defined as a token so callers can use --c-session-text consistently across themes; dark theme overrides this to 235 85% 85% for AA on dark surfaces. */
+
+  /* AAA contrast token (#1561 J — Aaron CORE spec 2026-05-23 §1b)
+   * Light: hsl(32 36% 4%) ≈ #0f0a05 vs cream #f7f3ee = 15.1:1 (AAA-large + AAA-normal)
+   * Dark:  hsl(0 0% 100%) = #ffffff vs dark bg #14100a = 18.4:1 (AAA-large + AAA-normal)
+   * Use via: color: hsl(var(--c-text-high-contrast))
+   */
+  --c-text-high-contrast: 32 36% 4%;
+
+  /* ─── Semantic Colors ─── */
+  --c-success: 142 70% 45%;
+  --c-warning: 38 92% 50%;
+  --c-danger:  350 89% 60%;
+  --c-info:    220 80% 55%;
+
+  /* Gap #37 — warning shade dark for AA contrast on cream surfaces (4.5:1 text)
+   * --c-warning (38 92% 50%) ≈ #f1a417 passes AA only as decorative/border on cream.
+   * As TEXT on cream (#f7f3ee) it fails 4.5:1 (~2.6:1). Darker shade required.
+   *   --c-warning-ink  hsl(38 92% 32%) ≈ #ad5c00 vs #f7f3ee = ~5.2:1 ✅
+   * Refs: Claude Design demo 2026-06-04 baseline MAJ-9 gap #37
+   */
+  --c-warning-ink: 38 92% 32%;
+
+  /* Gap #38 — overlay/scrim tokens (drawer/modal backdrop + hero gradient end)
+   * --c-overlay-scrim uses built-in alpha channel pattern `H S% L% / 0.6`
+   * for `hsla(var(--c-overlay-scrim))` or `hsl(var(--c-overlay-scrim))` consumers.
+   * --c-overlay-gradient-end remains pure HSL triplet so Tailwind/CSS can apply
+   * alpha composability (e.g. `hsl(var(--c-overlay-gradient-end) / 0.8)`).
+   * Refs: Claude Design demo 2026-06-04 baseline MAJ-9 gap #38
+   */
+  --c-overlay-scrim: 0 0% 0% / 0.6;
+  --c-overlay-gradient-end: 25 95% 38%;
+
+  /* ─── Brand ─── */
+  --brand: var(--c-game);
+  --brand-fg: hsl(var(--c-game));
+
+  /* ─── Typography ─── */
+  --f-display: 'Quicksand', system-ui, sans-serif;
+  --f-body:    'Nunito', system-ui, sans-serif;
+  /* Post DS-step 2a (2026-05-24): JetBrains Mono loaded via next/font/google
+   * in app/layout.tsx exposes the `--font-jetbrains-mono` CSS variable.
+   * Bridge it into the canonical `--f-mono` token to make the dependency
+   * explicit (mirrors `--font-quicksand` -> `--f-display` / `--font-nunito`
+   * -> `--f-body` pattern intent). Falls back to ui-monospace if the variable
+   * is not set (e.g. in unit-test setups without next/font hydration).
+   */
+  --f-mono:    var(--font-jetbrains-mono), 'JetBrains Mono', ui-monospace, monospace;
+
+  --fs-xs:   11px;
+  --fs-sm:   12px;
+  --fs-base: 14px;
+  --fs-md:   15px;
+  --fs-lg:   17px;
+  --fs-xl:   20px;
+  --fs-2xl:  24px;
+  --fs-3xl:  32px;
+  --fs-4xl:  40px;
+
+  --fw-reg:  400;
+  --fw-med:  500;
+  --fw-semi: 600;
+  --fw-bold: 700;
+  --fw-ext:  800;
+
+  --lh-tight: 1.2;
+  --lh-snug:  1.35;
+  --lh-body:  1.5;
+  --lh-relax: 1.65;
+
+  /* ─── Spacing (4px grid) ─── */
+  --s-0: 0;
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-7: 32px;
+  --s-8: 40px;
+  --s-9: 48px;
+  --s-10: 64px;
+
+  /* ─── Radius ─── */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+  --r-2xl: 24px;
+  --r-pill: 9999px;
+
+  /* ─── Motion ─── */
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --ease-in-out: cubic-bezier(.65, 0, .35, 1);
+  --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+  --dur-xs: 120ms;
+  --dur-sm: 180ms;
+  --dur-md: 280ms;
+  --dur-lg: 400ms;
+  --dur-xl: 600ms;
+
+  /* ─── Z-index ─── */
+  --z-base: 0;
+  --z-sticky: 10;
+  --z-nav: 20;
+  --z-overlay: 50;
+  --z-drawer: 51;
+  --z-modal: 60;
+  --z-toast: 70;
+  --z-tooltip: 80;
+}
+
+/* ─── LIGHT THEME (default) ─── */
+:root,
+:root[data-theme="light"] {
+  --bg:        #f7f3ee;
+  --bg-card:   #ffffff;
+  --bg-muted:  #efe6d9;
+  --bg-sunken: #ede2d0;
+  --bg-hover:  rgba(180, 130, 80, 0.06);
+
+  --text:       #2b1f12;
+  --text-sec:   #5a4a38;
+  --text-muted: #9a8870;
+
+  --border:       rgba(180, 130, 80, 0.18);
+  --border-light: rgba(180, 130, 80, 0.1);
+  --border-strong: rgba(180, 130, 80, 0.32);
+
+  --shadow-xs: 0 1px 2px rgba(90, 60, 20, 0.06);
+  --shadow-sm: 0 2px 8px rgba(90, 60, 20, 0.08);
+  --shadow-md: 0 4px 16px rgba(90, 60, 20, 0.1);
+  --shadow-lg: 0 12px 36px rgba(90, 60, 20, 0.14);
+  --shadow-drawer: 0 -8px 32px rgba(90, 60, 20, 0.12);
+
+  --glass-bg: rgba(255, 255, 255, 0.88);
+  --glass-border: rgba(255, 255, 255, 0.6);
+
+  color-scheme: light;
+}
+
+/* ─── DARK THEME ─── */
+/* DS: dark tokens apply both on :root (global theme) AND on any container
+   carrying data-theme="dark" (e.g. AdminShell), enabling per-section dark scope
+   without touching <html>. See SP5 F0c plan. */
+:root[data-theme="dark"],
+[data-theme="dark"] {
+  --bg:        #14100a;
+  --bg-card:   #1e1710;
+  --bg-muted:  #241c13;
+  --bg-sunken: #0f0c08;
+  --bg-hover:  rgba(255, 200, 130, 0.05);
+
+  --text:       #f0e4d2;
+  --text-sec:   #c8b896;
+  --text-muted: #8a7860;
+
+  --border:       rgba(224, 180, 110, 0.14);
+  --border-light: rgba(224, 180, 110, 0.08);
+  --border-strong: rgba(224, 180, 110, 0.28);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.6);
+  --shadow-drawer: 0 -8px 32px rgba(0, 0, 0, 0.5);
+
+  --glass-bg: rgba(30, 22, 14, 0.85);
+  --glass-border: rgba(224, 180, 110, 0.14);
+
+  /* lighter entity colors for dark bg contrast */
+  --c-game:    28 95% 58%;
+  --c-player:  262 75% 70%;
+  --c-session: 235 70% 70%;
+  --c-agent:   38 92% 62%;
+  --c-kb:      174 60% 55%;
+  --c-chat:    218 80% 68%;
+  --c-event:   350 85% 70%;
+  --c-toolkit: 142 60% 58%;
+  --c-tool:    195 75% 62%;
+
+  /* TEXT variants for dark theme: lighter to clear AA on dark bg.
+   *   --c-game-text  hsl(28 95% 70%) ≈ #fdb775 vs #14100a = 11.2:1 ✅
+   *   --c-kb-text    hsl(174 60% 55%) ≈ #4ecdc4 vs #14100a = 9.87:1 ✅
+   *     (= --c-kb dark value; already AA-safe on dark — the violation
+   *      was solely the light-theme rendering of this dark-shade hex)
+   *   Refs: #1094 Real-C-B + Real-C-F
+   */
+  --c-game-text: 28 95% 70%;
+  --c-kb-text:   174 60% 55%;
+  --c-toolkit-text: 142 60% 72%; /* Real-C-E gamebook dark: lighter variant for AA on dark bg */
+  --c-session-text: 235 85% 85%; /* PR #1721 follow-up: lighter variant — hsl(235 85% 85%) ≈ #cdd1f9 hits AA ≥ 4.5:1 on dark `--card` + `--c-session/14` overlay (was --c-session 235 70% 70% ≈ #7d86e8 → 3.85:1 fail). Used by SessionShareCard theme toggle (line 189) and other components rendering text-entity-session text on dark surfaces. */
+
+  /* AAA contrast dark — see :root docblock */
+  --c-text-high-contrast: 0 0% 100%;
+
+  /* Gap #37 dark — warning-ink lighter for AA contrast on dark surfaces
+   *   --c-warning-ink hsl(38 92% 60%) ≈ #f4b95a vs #14100a = ~10.4:1 ✅
+   */
+  --c-warning-ink: 38 92% 60%;
+
+  /* Gap #38 dark — heavier scrim + lighter gradient end for dark theme */
+  --c-overlay-scrim: 0 0% 0% / 0.75;
+  --c-overlay-gradient-end: 25 95% 50%;
+
+  color-scheme: dark;
+}
+
+/* ─── Entity utility classes (mockup) ─── */
+.e-game    { --e: var(--c-game); }
+.e-player  { --e: var(--c-player); }
+.e-session { --e: var(--c-session); }
+.e-agent   { --e: var(--c-agent); }
+.e-kb      { --e: var(--c-kb); }
+.e-chat    { --e: var(--c-chat); }
+.e-event   { --e: var(--c-event); }
+.e-toolkit { --e: var(--c-toolkit); }
+.e-tool    { --e: var(--c-tool); }
+
+.e-fg   { color: hsl(var(--e)); }
+.e-bg   { background: hsl(var(--e)); color: #fff; }
+.e-tint { background: hsl(var(--e) / 0.1); color: hsl(var(--e)); }
+.e-ring { box-shadow: 0 0 0 2px hsl(var(--e) / 0.35); }

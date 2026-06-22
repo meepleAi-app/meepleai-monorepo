@@ -141,8 +141,11 @@ test.describe('Feature Flags — Admin Config Tab', () => {
     await mockCatchAllAdmin(page);
   });
 
-  test('FF-01: Toggle global feature flag (active → inactive)', async ({ page }) => {
-    // Intercept PUT for PdfUpload and capture request body
+  test('FF-01: Toggle global feature flag (active → inactive) via batch Apply', async ({
+    page,
+  }) => {
+    // Issue #1836: toggle no longer fires a PUT immediately — changes accumulate
+    // in the DirtyStateBar and are persisted only when Apply is clicked.
     let capturedBody: Record<string, unknown> | null = null;
 
     await page
@@ -165,17 +168,25 @@ test.describe('Feature Flags — Admin Config Tab', () => {
     const pdfRow = page.locator('tr', { hasText: 'PdfUpload' });
     await expect(pdfRow.getByText('Enabled')).toBeVisible({ timeout: 8000 });
 
-    // Click the global toggle for PdfUpload
+    // Click the global toggle for PdfUpload — stages the change but doesn't PUT yet.
     const globalToggle = page.locator('[aria-label="Toggle Features:PdfUpload"]');
     await expect(globalToggle).toBeVisible({ timeout: 5000 });
     await globalToggle.click();
 
-    // Wait for the PUT request to complete and verify body
+    // The DirtyStateBar must appear and the row must show the Modified badge.
+    const dirtyBar = page.getByTestId('feature-flags-dirty-bar');
+    await expect(dirtyBar).toBeVisible({ timeout: 5000 });
+    expect(capturedBody).toBeNull();
+
+    // Click Apply to commit the batch.
+    await page.getByTestId('feature-flags-dirty-bar-apply').click();
+
+    // Wait for the PUT request and verify body
     await expect.poll(() => capturedBody, { timeout: 5000 }).toBeTruthy();
     expect(capturedBody).toMatchObject({ value: 'false' });
 
-    // Verify toast appears with "disabled"
-    await expect(page.getByText(/disabled/i)).toBeVisible({ timeout: 5000 });
+    // Verify the batch success toast.
+    await expect(page.getByText(/Applied 1 feature flag/i)).toBeVisible({ timeout: 5000 });
   });
 
   test('FF-03: Enable feature for Free tier', async ({ page }) => {
@@ -215,8 +226,11 @@ test.describe('Feature Flags — Admin Config Tab', () => {
     await expect(page.getByText(/Free tier enabled/i)).toBeVisible({ timeout: 5000 });
   });
 
-  test('FF-06: Critical flag confirmation dialog — cancel prevents API call', async ({ page }) => {
-    // Track whether PUT is called
+  test('FF-06: Critical flag confirmation dialog — cancel at Apply prevents API call', async ({
+    page,
+  }) => {
+    // Issue #1836: the critical-flag confirm fires at Apply time (batch),
+    // not on toggle anymore. A bare toggle stages the change silently.
     let putCalled = false;
 
     await page
@@ -250,17 +264,24 @@ test.describe('Feature Flags — Admin Config Tab', () => {
     await expect(ragRow).toBeVisible({ timeout: 8000 });
     await expect(ragRow.getByText('⚠️ Restart')).toBeVisible();
 
-    // Click the global toggle for RagCaching (critical flag)
+    // Click the global toggle for RagCaching — this only stages a change.
     const ragToggle = page.locator('[aria-label="Toggle Features:RagCaching"]');
     await expect(ragToggle).toBeVisible({ timeout: 5000 });
     await ragToggle.click();
 
+    // Sanity: bare toggle must NOT fire the dialog nor the PUT.
+    expect(dialogAppeared).toBe(false);
+    expect(putCalled).toBe(false);
+
+    // DirtyStateBar surfaces the pending change → Apply triggers the confirm.
+    await expect(page.getByTestId('feature-flags-dirty-bar')).toBeVisible({ timeout: 5000 });
+    await page.getByTestId('feature-flags-dirty-bar-apply').click();
+
     // Wait for the dialog event to fire
     await expect.poll(() => dialogAppeared, { timeout: 5000 }).toBe(true);
     expect(dialogMessage).toContain('RagCaching');
-    expect(dialogMessage).toContain('Are you sure');
 
-    // Assert the PUT API was NOT called because user cancelled
+    // Admin cancelled, so PUT must not have run.
     expect(putCalled).toBe(false);
   });
 });

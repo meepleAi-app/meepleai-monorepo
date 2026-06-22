@@ -18,7 +18,7 @@ internal sealed class EstimateResourceForecastQueryHandler
     private const decimal DbCostPerGbMonth = 0.10m;       // PostgreSQL managed ~$0.10/GB/month
     private const decimal TokenCostPer1MTokens = 0.50m;   // Average LLM cost per 1M tokens
     private const decimal CacheCostPerGbMonth = 0.50m;    // Redis managed ~$0.50/GB/month
-    private const decimal VectorCostPer1MEntries = 5.00m; // Qdrant managed ~$5/1M entries/month
+    private const decimal VectorCostPer1MEntries = 5.00m; // pgvector storage cost estimate: PostgreSQL row + index overhead
 
     // Threshold limits for recommendations
     private const decimal DbWarningGb = 50m;
@@ -229,7 +229,7 @@ internal sealed class EstimateResourceForecastQueryHandler
                 TriggerMonth: month,
                 Severity: "critical",
                 Message: $"Vector entries projected to reach {vectorEntries:N0} by month {month}",
-                Action: "Scale Qdrant cluster or implement vector pruning strategy"));
+                Action: "Scale PostgreSQL/pgvector or implement vector pruning strategy"));
         }
         else if (vectorEntries >= VectorWarningCount)
         {

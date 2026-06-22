@@ -56,10 +56,10 @@ export function FirstAgentStep({ gameId, gameName, onComplete, onSkip }: FirstAg
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-quicksand text-lg font-semibold text-slate-900">
+        <h2 className="font-quicksand text-lg font-semibold text-foreground">
           Create Your AI Assistant
         </h2>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm text-muted-foreground">
           Set up an AI agent for <strong>{gameName}</strong> to help you with rules and strategies.
         </p>
       </div>
@@ -106,7 +106,7 @@ export function FirstAgentStep({ gameId, gameName, onComplete, onSkip }: FirstAg
           <button
             type="button"
             onClick={onSkip}
-            className="text-sm text-slate-500 hover:text-slate-700"
+            className="text-sm text-muted-foreground hover:text-foreground"
             data-testid="agent-skip"
           >
             Skip for now

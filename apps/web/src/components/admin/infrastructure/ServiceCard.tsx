@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin tools chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13d admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 import { Database, RefreshCw, Server, Settings, Stethoscope } from 'lucide-react';
@@ -16,7 +17,7 @@ const STATUS_DOT: Record<string, string> = {
   Degraded: 'bg-yellow-500',
   Down: 'bg-red-500',
   Restarting: 'bg-blue-500',
-  Unknown: 'bg-gray-400',
+  Unknown: 'bg-muted-foreground',
 };
 
 interface ServiceCardProps {
@@ -58,7 +59,7 @@ export function ServiceCard({
 
   return (
     <div
-      className="group relative cursor-pointer rounded-lg border border-slate-200/60 dark:border-zinc-700/60 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl p-4 transition-shadow hover:shadow-md"
+      className="group relative cursor-pointer rounded-lg border border-border/60 dark:border-zinc-700/60 bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl p-4 transition-shadow hover:shadow-md"
       onClick={() => onSelect(service.name)}
       role="button"
       tabIndex={0}

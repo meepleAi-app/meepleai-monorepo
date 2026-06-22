@@ -84,7 +84,7 @@ export const VersionTimeline: React.FC<VersionTimelineProps> = ({ gameId, onVers
 
   if (versions.length === 0) {
     return (
-      <div className="text-center p-8 text-gray-500">
+      <div className="text-center p-8 text-muted-foreground">
         No version history available for this game.
       </div>
     );
@@ -110,8 +110,8 @@ export const VersionTimeline: React.FC<VersionTimelineProps> = ({ gameId, onVers
   };
 
   return (
-    <div className="version-timeline-container bg-white rounded-lg shadow p-6">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">Version Timeline</h2>
+    <div className="version-timeline-container bg-card rounded-lg shadow p-6">
+      <h2 className="text-2xl font-bold mb-6 text-foreground">Version Timeline</h2>
       <div style={{ width: '100%', height: '600px' }}>
         <Chrono
           items={items}

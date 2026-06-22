@@ -17,7 +17,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Queries;
 /// <summary>
 /// Unit tests for VectorSemanticSearchQueryHandler.
 /// Verifies embedding failure propagation, single-game search, and multi-game aggregation.
-/// Task 4: Qdrant → pgvector migration.
+/// Task 4: pgvector vector search.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public sealed class VectorSemanticSearchQueryHandlerTests

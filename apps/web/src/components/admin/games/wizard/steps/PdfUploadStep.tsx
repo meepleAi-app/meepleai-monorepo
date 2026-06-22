@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin CRUD chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13c admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 /**
@@ -61,7 +62,7 @@ export function PdfUploadStep({ gameId, gameTitle, onPdfUploaded }: PdfUploadSte
 
   return (
     <div className="space-y-4">
-      <Card className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60">
+      <Card className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <FileTextIcon className="h-5 w-5 text-amber-500" />

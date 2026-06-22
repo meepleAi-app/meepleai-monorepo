@@ -4,7 +4,7 @@
  * Mirrors Wave B.1 GamesLibraryView tests: stub `useAgents` + `next/navigation`
  * search params + i18n via IntlProvider seeded with the actual `pages.agents.*`
  * keys from `it.json`. The orchestrator is the only stateful piece — the 4
- * v2 components (AgentsHero, AgentFilters, AgentsResultsGrid, EmptyAgents) are
+ * feature components (AgentsHero, AgentFilters, AgentsResultsGrid, EmptyAgents) are
  * pure label-driven (covered separately).
  *
  * Contract under test (spec §3.4 + plan §5.1):
@@ -17,6 +17,7 @@
  */
 
 import { render, screen, fireEvent, within } from '@testing-library/react';
+import { axe } from 'jest-axe';
 import { IntlProvider } from 'react-intl';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactElement } from 'react';
@@ -342,5 +343,37 @@ describe('AgentsLibraryView (Wave B.2)', () => {
     // only place this label appears (EmptyAgents not rendered).
     fireEvent.click(screen.getByRole('button', { name: 'Crea agente' }));
     expect(onCreateAgent).toHaveBeenCalledTimes(1);
+  });
+
+  // ─── jest-axe a11y coverage (#1569) ────────────────────────────────────
+
+  // T12: heading-order rule re-enabled — all 20 consumers now pass headingLevel prop
+  it('passes axe a11y scan in default state with 6 agents', async () => {
+    const { container } = renderWithIntl(<AgentsLibraryView />);
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('passes axe a11y scan in empty state (no agents)', async () => {
+    useAgentsMock.mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    const { container } = renderWithIntl(<AgentsLibraryView />);
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('passes axe a11y scan in error state', async () => {
+    useAgentsMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new Error('boom'),
+      refetch: vi.fn(),
+    });
+    const { container } = renderWithIntl(<AgentsLibraryView />);
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

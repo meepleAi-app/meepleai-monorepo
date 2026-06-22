@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Api.Infrastructure.Security;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using MediatR;
@@ -44,7 +45,7 @@ internal sealed class InitiateOAuthLoginCommandHandler : ICommandHandler<Initiat
 
             _logger.LogInformation("OAuth login initiated for provider {Provider}, IP: {IpAddress}",
                 provider,
-                command.IpAddress ?? "unknown");
+                DataMasking.MaskIpAddress(command.IpAddress ?? "unknown"));
 
             return new InitiateOAuthLoginResult
             {

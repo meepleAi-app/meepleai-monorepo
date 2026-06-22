@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin CRUD chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13c admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 import { useState } from 'react';
@@ -43,7 +44,7 @@ export function ActivityFilters({
   };
 
   return (
-    <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border border-amber-200/50 dark:border-zinc-700/50 rounded-lg p-4">
+    <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border border-amber-200/50 dark:border-zinc-700/50 rounded-lg p-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* User Search */}
         <div>

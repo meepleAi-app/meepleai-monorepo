@@ -15,16 +15,39 @@ import type {
 export const gameNightKeys = {
   all: ['game-nights'] as const,
   upcoming: () => [...gameNightKeys.all, 'upcoming'] as const,
+  // F20 #1974: dashboard "Recenti" key; `limit` belongs to the key so
+  // different page sizes don't collide on the React Query cache.
+  completed: (limit?: number) => [...gameNightKeys.all, 'completed', limit ?? 5] as const,
   mine: () => [...gameNightKeys.all, 'mine'] as const,
   detail: (id: string) => [...gameNightKeys.all, id] as const,
   rsvps: (id: string) => [...gameNightKeys.all, id, 'rsvps'] as const,
 };
 
-export function useUpcomingGameNights(enabled: boolean = true) {
+export function useUpcomingGameNights(
+  options: { enabled?: boolean; retry?: number | boolean } = {}
+) {
+  const { enabled = true, retry } = options;
   return useQuery({
     queryKey: gameNightKeys.upcoming(),
     queryFn: () => api.gameNights.getUpcoming(),
     enabled,
+    ...(retry !== undefined ? { retry } : {}),
+  });
+}
+
+/**
+ * F20 #1974 (audit 2026-06-07): dashboard "Recenti" slot — recently
+ * completed game nights for the Asse C P2 dashboard surface.
+ */
+export function useCompletedGameNights(
+  options: { limit?: number; enabled?: boolean; retry?: number | boolean } = {}
+) {
+  const { limit, enabled = true, retry } = options;
+  return useQuery({
+    queryKey: gameNightKeys.completed(limit),
+    queryFn: () => api.gameNights.getCompleted(limit),
+    enabled,
+    ...(retry !== undefined ? { retry } : {}),
   });
 }
 

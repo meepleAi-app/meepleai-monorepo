@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * Cost Preview - Display estimated cost before agent launch
  * Issue #3383: Cost Estimation Preview Before Launch
@@ -55,15 +56,15 @@ export function CostPreview({
   // Loading state
   if (isLoading) {
     return (
-      <Card className={cn('border-slate-700 bg-slate-800/50', className)}>
+      <Card className={cn('border-border bg-card', className)}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm font-medium text-slate-200">
-            <Calculator className="h-4 w-4 text-slate-400" />
+            <Calculator className="h-4 w-4 text-muted-foreground" />
             Cost Preview
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-sm text-slate-500 italic">Calculating costs...</div>
+          <div className="text-sm text-muted-foreground italic">Calculating costs...</div>
         </CardContent>
       </Card>
     );
@@ -72,15 +73,15 @@ export function CostPreview({
   // No estimate available
   if (!estimate?.costEstimate) {
     return (
-      <Card className={cn('border-slate-700 bg-slate-800/50', className)}>
+      <Card className={cn('border-border bg-card', className)}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm font-medium text-slate-200">
-            <Calculator className="h-4 w-4 text-slate-400" />
+            <Calculator className="h-4 w-4 text-muted-foreground" />
             Cost Preview
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-sm text-slate-500 italic">
+          <div className="text-sm text-muted-foreground italic">
             Select a configuration to see cost estimate
           </div>
         </CardContent>
@@ -98,14 +99,14 @@ export function CostPreview({
       ? 'border-red-500/50'
       : warningLevel === 'medium'
         ? 'border-yellow-500/50'
-        : 'border-slate-700';
+        : 'border-border';
 
   const bgColor =
     warningLevel === 'high'
       ? 'bg-red-500/10'
       : warningLevel === 'medium'
         ? 'bg-yellow-500/10'
-        : 'bg-slate-800/50';
+        : 'bg-card';
 
   if (!activeagentDefinitionId) {
     return null;
@@ -116,7 +117,7 @@ export function CostPreview({
       <CardHeader>
         <CardTitle className="flex items-center justify-between text-sm font-medium text-slate-200">
           <div className="flex items-center gap-2">
-            <Calculator className="h-4 w-4 text-slate-400" />
+            <Calculator className="h-4 w-4 text-muted-foreground" />
             Cost Preview
           </div>
           {warningLevel === 'high' && <AlertTriangle className="h-4 w-4 text-red-400" />}
@@ -129,7 +130,7 @@ export function CostPreview({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="flex items-center gap-1 text-sm text-slate-400 cursor-help">
+                <div className="flex items-center gap-1 text-sm text-muted-foreground cursor-help">
                   <span>Per query</span>
                   <Info className="h-3 w-3" />
                 </div>
@@ -157,13 +158,13 @@ export function CostPreview({
 
         {/* Per-Session Cost */}
         <div className="flex justify-between items-center text-sm">
-          <span className="text-slate-500">Per session ({estimatedQueriesPerSession} queries)</span>
+          <span className="text-muted-foreground">Per session ({estimatedQueriesPerSession} queries)</span>
           <span className="text-slate-300">${sessionCost.toFixed(3)}</span>
         </div>
 
         {/* Monthly Cost (10K queries) */}
         <div className="flex justify-between items-center text-sm">
-          <span className="text-slate-500">Monthly (10K queries)</span>
+          <span className="text-muted-foreground">Monthly (10K queries)</span>
           <span
             className={cn(
               'font-medium',

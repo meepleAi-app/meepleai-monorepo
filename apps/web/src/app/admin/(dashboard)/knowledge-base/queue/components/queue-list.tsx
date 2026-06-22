@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useCallback, useState, useMemo } from 'react';
@@ -217,7 +218,7 @@ export function QueueList({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between px-3 py-2 border-t border-slate-200/50 dark:border-zinc-700/50">
+        <div className="flex items-center justify-between px-3 py-2 border-t border-border/50 dark:border-zinc-700/50">
           <span className="text-xs text-muted-foreground">
             {data?.total ?? 0} total &middot; Page {page}/{totalPages}
           </span>

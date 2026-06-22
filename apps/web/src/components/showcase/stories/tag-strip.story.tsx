@@ -38,7 +38,7 @@ export const tagStripStory: ShowcaseStory<TagStripShowcaseProps> = {
   component: function TagStripStory({ variant, maxVisible, tagSet }: TagStripShowcaseProps) {
     const tags = tagSet === 'agent' ? AGENT_TAGS : GAME_TAGS;
     return (
-      <div className="w-80 bg-white p-4 rounded-xl border border-border/40">
+      <div className="w-80 bg-card p-4 rounded-xl border border-border/40">
         <TagStrip
           tags={tags}
           variant={variant as TagVariant}

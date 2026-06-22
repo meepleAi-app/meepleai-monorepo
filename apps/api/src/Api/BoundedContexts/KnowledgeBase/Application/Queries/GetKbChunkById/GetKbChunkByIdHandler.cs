@@ -1,35 +1,48 @@
 using Api.Infrastructure;
+using Api.Infrastructure.Services;
 using Api.Middleware.Exceptions;
+using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunkById;
 
 /// <summary>
-/// Handles <see cref="GetKbChunkByIdQuery"/>.
-///
-/// Returns the full content of a single text chunk identified by (DocumentId, ChunkId).
-/// A 404 is thrown when the chunk does not exist or belongs to a different document —
-/// preventing cross-document chunk enumeration leakage.
-///
-/// Prev/next navigation IDs are resolved by looking for chunks at ChunkIndex ± 1 in the
-/// same document. This is a simple indexed lookup (one extra query each), consistent with
-/// the offset-pagination approach used by <c>GetKbChunksHandler</c>.
-///
-/// <c>HeadingPath</c> is built by walking up <c>ParentChunkId</c> via a single recursive
-/// CTE on PostgreSQL (one SQL round-trip). When the database is the InMemory provider
-/// (unit tests), the CTE is skipped and an empty array is returned — matching the pattern
-/// established in <c>GetKbChunksHandler.LoadHeadingPathsAsync</c>.
+/// Handler for <see cref="GetKbChunkByIdQuery"/> — Wave 3 Phase 3 spec-conformant
+/// rewrite of <c>GET /api/v1/kb-docs/{id}/chunks/{chunkId}</c> per PR #732
+/// §6.3.3 verbatim.
 /// </summary>
+/// <remarks>
+/// <para>
+/// <b>Prev/next navigation</b>: derived by lookup at <c>ChunkIndex - 1</c> and
+/// <c>ChunkIndex + 1</c> within the same document. First chunk → <c>PrevChunkId == null</c>;
+/// last chunk → <c>NextChunkId == null</c>.
+/// </para>
+///
+/// <para>
+/// <b>Markdown sanitization</b>: applied server-side via
+/// <see cref="MarkdownSubsetSanitizer.Sanitize"/> before emission. The raw
+/// content is preserved in the database — sanitization is presentation-layer.
+/// </para>
+///
+/// <para>
+/// <b>Caching</b>: 24h HybridCache. Chunks are immutable post-ingest, so the
+/// cache is keyed only by <c>(docId, chunkId)</c> — no per-viewer dimension.
+/// Access control is still enforced inside the factory before any data flows
+/// into the cache, so per-viewer 403 cannot leak (a denied viewer would see a
+/// fresh <c>ForbiddenException</c> on every request, never a cached payload).
+/// </para>
+///
+/// <para>
+/// <b>HeadingPath</b>: recursive CTE on PostgreSQL, empty array on InMemory
+/// (mirrors <c>GetKbChunksHandler</c>).
+/// </para>
+/// </remarks>
 internal sealed class GetKbChunkByIdHandler : IQueryHandler<GetKbChunkByIdQuery, KbChunkDetailDto>
 {
-    /// <summary>Maximum ancestor depth traversed by the recursive CTE.</summary>
     private const int MaxCteDepth = 10;
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromHours(24);
 
-    // Recursive CTE that climbs the parent_chunk_id chain for a single seed chunk
-    // and collects non-null headings ordered from root to leaf (depth DESC).
-    // Column names are PascalCase — EF Core convention matches the migration
-    // 20260506111654_AddChunkHierarchyToTextChunkEntity.
     private static readonly string HeadingPathCte = @"
         WITH RECURSIVE chunk_path(id, ""Heading"", parent_chunk_id, depth) AS (
           SELECT
@@ -55,11 +68,16 @@ internal sealed class GetKbChunkByIdHandler : IQueryHandler<GetKbChunkByIdQuery,
         ORDER BY depth DESC;";
 
     private readonly MeepleAiDbContext _dbContext;
+    private readonly IHybridCacheService _cache;
     private readonly ILogger<GetKbChunkByIdHandler> _logger;
 
-    public GetKbChunkByIdHandler(MeepleAiDbContext dbContext, ILogger<GetKbChunkByIdHandler> logger)
+    public GetKbChunkByIdHandler(
+        MeepleAiDbContext dbContext,
+        IHybridCacheService cache,
+        ILogger<GetKbChunkByIdHandler> logger)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -71,7 +89,25 @@ internal sealed class GetKbChunkByIdHandler : IQueryHandler<GetKbChunkByIdQuery,
             "Fetching KB chunk {ChunkId} from doc {DocId} (admin={IsAdmin})",
             query.ChunkId, query.DocumentId, query.UserIsAdmin);
 
-        // Issue #730 final review: enforce access control — check document ownership before chunk fetch.
+        // Access control runs OUTSIDE the cache so a denied viewer never receives
+        // a cached success payload. The cache key omits the viewer dimension —
+        // chunk content is immutable post-ingest, no per-viewer derivation.
+        await EnforceAccessControlAsync(query, cancellationToken).ConfigureAwait(false);
+
+        var cacheKey = $"kb:chunk:{query.DocumentId:N}:{query.ChunkId:N}";
+
+        return await _cache.GetOrCreateAsync(
+            cacheKey,
+            async ct => await ComputeAsync(query, ct).ConfigureAwait(false),
+            tags: ["kb", $"kbDoc:{query.DocumentId:N}", $"kbChunks:{query.DocumentId:N}"],
+            expiration: CacheTtl,
+            ct: cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task EnforceAccessControlAsync(
+        GetKbChunkByIdQuery query,
+        CancellationToken cancellationToken)
+    {
         var docAccess = await _dbContext.PdfDocuments.AsNoTracking()
             .Where(p => p.Id == query.DocumentId)
             .Select(p => new { p.IsPublic, p.UploadedByUserId })
@@ -89,8 +125,12 @@ internal sealed class GetKbChunkByIdHandler : IQueryHandler<GetKbChunkByIdQuery,
         {
             throw new ForbiddenException($"Access denied to document {query.DocumentId}");
         }
+    }
 
-        // Primary fetch — also validates that the chunk belongs to the requested document.
+    private async Task<KbChunkDetailDto> ComputeAsync(
+        GetKbChunkByIdQuery query,
+        CancellationToken cancellationToken)
+    {
         var chunk = await _dbContext.TextChunks.AsNoTracking()
             .Where(c => c.Id == query.ChunkId && c.PdfDocumentId == query.DocumentId)
             .Select(c => new
@@ -98,12 +138,7 @@ internal sealed class GetKbChunkByIdHandler : IQueryHandler<GetKbChunkByIdQuery,
                 c.Id,
                 c.Content,
                 c.PageNumber,
-                c.ChunkIndex,
-                c.Level,
-                c.Heading,
-                c.ParentChunkId,
-                c.CharacterCount,
-                c.ElementType
+                c.ChunkIndex
             })
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -114,7 +149,6 @@ internal sealed class GetKbChunkByIdHandler : IQueryHandler<GetKbChunkByIdQuery,
                 $"Chunk {query.ChunkId} not found in document {query.DocumentId}");
         }
 
-        // Prev/next navigation — look for chunks at ChunkIndex ± 1 in the same document.
         var prevChunkId = await _dbContext.TextChunks.AsNoTracking()
             .Where(c => c.PdfDocumentId == query.DocumentId && c.ChunkIndex == chunk.ChunkIndex - 1)
             .Select(c => (Guid?)c.Id)
@@ -131,34 +165,23 @@ internal sealed class GetKbChunkByIdHandler : IQueryHandler<GetKbChunkByIdQuery,
             .ConfigureAwait(false);
 
         return new KbChunkDetailDto(
-            ChunkId: chunk.Id,
-            Content: chunk.Content,
-            PageNumber: chunk.PageNumber,
+            Id: chunk.Id,
+            DocId: query.DocumentId,
             Position: chunk.ChunkIndex,
-            Level: chunk.Level,
             HeadingPath: headingPath,
+            Content: MarkdownSubsetSanitizer.Sanitize(chunk.Content),
+            PageNumber: chunk.PageNumber,
             PrevChunkId: prevChunkId,
             NextChunkId: nextChunkId,
-            VectorId: query.UserIsAdmin ? chunk.Id : (Guid?)null,
-            CharacterCount: query.UserIsAdmin ? chunk.CharacterCount : (int?)null,
-            ElementType: query.UserIsAdmin ? chunk.ElementType : null,
-            EmbeddingStatus: null,  // Issue #730: source field not yet in TextChunkEntity (follow-up)
-            ParentChunkId: query.UserIsAdmin ? chunk.ParentChunkId : null
+            // Gate B v1 carryover — TextChunkEntity has no Metadata column.
+            Metadata: new Dictionary<string, object>(StringComparer.Ordinal)
         );
     }
 
-    /// <summary>
-    /// Executes a recursive CTE on PostgreSQL to build the heading path for a single chunk
-    /// in a single round-trip.  Returns an empty list when running against the EF InMemory
-    /// provider (unit-test context) because raw SQL is not supported there.
-    /// </summary>
     private async Task<IReadOnlyList<string>> LoadHeadingPathAsync(
         Guid chunkId,
         CancellationToken cancellationToken)
     {
-        // InMemory provider does not support raw SQL — return empty paths so unit tests pass.
-        // Use string comparison (same pattern as GetKbChunksHandler) because the InMemory
-        // package is not referenced by the main project, making IsInMemory() unavailable.
         if (string.Equals(
                 _dbContext.Database.ProviderName,
                 "Microsoft.EntityFrameworkCore.InMemory",
@@ -175,6 +198,5 @@ internal sealed class GetKbChunkByIdHandler : IQueryHandler<GetKbChunkByIdQuery,
         return rows.Select(r => r.Value).ToList();
     }
 
-    /// <summary>Projection type for the scalar heading-path CTE result.</summary>
     private sealed record HeadingPathRow(string Value);
 }

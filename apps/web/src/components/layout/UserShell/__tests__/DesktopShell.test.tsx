@@ -1,17 +1,16 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('next/navigation', () => ({
-  usePathname: () => '/',
-  useRouter: () => ({ push: vi.fn() }),
+vi.mock('@/components/layout/AppNav/AppTopBar', () => ({
+  AppTopBar: () => <div data-testid="app-top-bar" />,
 }));
 
-vi.mock('@/components/notifications', () => ({
-  NotificationBell: () => <button aria-label="Notifications">🔔</button>,
+vi.mock('@/components/layout/AppNav/MobileTopBar', () => ({
+  MobileTopBar: () => <div data-testid="mobile-top-bar" />,
 }));
 
-vi.mock('@/components/layout/UserMenuDropdown', () => ({
-  UserMenuDropdown: () => <button aria-label="User menu">MR</button>,
+vi.mock('@/components/layout/AppNav/MobileBottomBar', () => ({
+  MobileBottomBar: () => <div data-testid="mobile-bottom-bar" />,
 }));
 
 vi.mock('@/components/chat/panel/ChatSlideOverPanel', () => ({
@@ -22,25 +21,50 @@ vi.mock('@/components/layout/SideDrawer/SideDrawer', () => ({
   SideDrawer: () => null,
 }));
 
-vi.mock('@/components/layout/SearchOverlay', () => ({
-  SearchOverlay: () => null,
+// #1977 (audit follow-up of umbrella #1974, finding F18): MainSidebar mount
+// was removed from DesktopShell to dedupe primary navigation with the
+// AppTopBar. The component is no longer imported by the shell, so no stub
+// is needed here. #2158 (Fix #4): the orphan `MainSidebar/` and the unused
+// `main-nav/` module (MAIN_NAV_ITEMS + MainNavList) were deleted; the mobile
+// drawer uses `SideDrawerItems` (useNavigationItems → UNIFIED_NAV_ITEMS).
+
+vi.mock('@/components/layout/UserShell/SessionBanner', () => ({
+  SessionBanner: () => null,
 }));
 
-vi.mock('@/components/layout/MobileCTAPill', () => ({
-  MobileCTAPill: () => null,
+vi.mock('@/components/layout/UserShell/MiniNavSlot', () => ({
+  MiniNavSlot: () => <div data-testid="mini-nav-slot" />,
+}));
+
+vi.mock('@/components/layout/UserShell/EmailVerificationBanner', () => ({
+  EmailVerificationBanner: () => <div data-testid="email-verification-banner-stub" />,
+}));
+
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/dashboard',
 }));
 
 import { DesktopShell } from '../DesktopShell';
 
 describe('DesktopShell', () => {
-  it('renders top bar and children', () => {
+  it('renders the desktop and mobile top bars plus children', () => {
     render(
       <DesktopShell>
         <div data-testid="content">hello</div>
       </DesktopShell>
     );
-    expect(screen.getByTestId('top-bar')).toBeInTheDocument();
+    expect(screen.getByTestId('app-top-bar')).toBeInTheDocument();
+    expect(screen.getByTestId('mobile-top-bar')).toBeInTheDocument();
     expect(screen.getByTestId('content')).toBeInTheDocument();
+  });
+
+  it('renders the mobile bottom bar', () => {
+    render(
+      <DesktopShell>
+        <div>child</div>
+      </DesktopShell>
+    );
+    expect(screen.getByTestId('mobile-bottom-bar')).toBeInTheDocument();
   });
 
   it('wraps children in a main landmark', () => {
@@ -50,5 +74,40 @@ describe('DesktopShell', () => {
       </DesktopShell>
     );
     expect(screen.getByRole('main')).toBeInTheDocument();
+  });
+
+  it('applies bottom-bar clearance padding on non-immersive routes', () => {
+    render(
+      <DesktopShell>
+        <div>child</div>
+      </DesktopShell>
+    );
+    expect(screen.getByRole('main').className).toContain('pb-16');
+  });
+
+  it('mounts the MiniNavSlot so per-page useMiniNavConfig renders (F23a #1974)', () => {
+    // F23a regression guard: routes like /games + /library register a
+    // mini-nav config via `useMiniNavConfig`, but pre-fix the shell never
+    // mounted any consumer of that store, so the tab strip was silently
+    // dropped. MiniNavSlot is a no-op when no page has registered, so the
+    // shell can keep it mounted unconditionally.
+    render(
+      <DesktopShell>
+        <div>child</div>
+      </DesktopShell>
+    );
+    expect(screen.getByTestId('mini-nav-slot')).toBeInTheDocument();
+  });
+
+  it('mounts the EmailVerificationBanner so unverified users see the prompt (F1 #1974)', () => {
+    // F1 regression guard: the banner is no-op when the BE flag is true or
+    // missing, so it's safe to keep mounted globally. This test asserts the
+    // shell wires the component; the banner's own suite covers behaviour.
+    render(
+      <DesktopShell>
+        <div>child</div>
+      </DesktopShell>
+    );
+    expect(screen.getByTestId('email-verification-banner-stub')).toBeInTheDocument();
   });
 });

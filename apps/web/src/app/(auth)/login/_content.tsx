@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -11,14 +11,14 @@ import {
   TwoFactorVerification,
   type TwoFactorVerificationData,
 } from '@/components/auth/TwoFactorVerification';
-import { AuthCard } from '@/components/ui/v2/auth-card';
-import { Divider } from '@/components/ui/v2/divider';
-import { OAuthButton } from '@/components/ui/v2/oauth-buttons';
+import { AuthCard } from '@/components/ui/auth-card';
+import { Divider } from '@/components/ui/divider';
+import { OAuthButton } from '@/components/ui/oauth-buttons';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 import { logger } from '@/lib/logger';
-import { isAdminRole } from '@/lib/utils/roles';
+import { assertSafeRelativeOrFallback } from '@/lib/url-safety';
 
 // ============================================================================
 // Fallback (Suspense boundary)
@@ -27,7 +27,7 @@ import { isAdminRole } from '@/lib/utils/roles';
 export function LoginFallback() {
   const { t } = useTranslation();
   return (
-    <main className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300">
+    <main className="min-h-dvh flex items-center justify-center bg-muted text-muted-foreground">
       {t('auth.login.loadingMessage')}
     </main>
   );
@@ -43,8 +43,23 @@ export function LoginPageContent() {
   const { t } = useTranslation();
   const { loadCurrentUser } = useAuth();
 
-  const from = searchParams?.get('from') ?? '/library';
+  // Issue #2168: validate ?from= against open-redirect attack vectors.
+  // `assertSafeRelativeOrFallback` rejects 8 attack vectors and falls back to /library.
+  const rawFrom = searchParams?.get('from');
+  const from = assertSafeRelativeOrFallback(rawFrom, '/library');
   const isSessionExpired = searchParams?.get('reason') === 'session_expired';
+
+  // Log when the input was unsafe so we can detect attack attempts.
+  // Wrapped in useEffect to fire once on mount (not on every re-render).
+  // State cycles during login (setIsAuthenticating) would otherwise emit
+  // 3+ warns per login attempt, polluting the remote log queue.
+  useEffect(() => {
+    if (typeof rawFrom === 'string' && rawFrom.length > 0 && rawFrom !== from) {
+      logger.warn('Rejected unsafe ?from= redirect target on login', {
+        metadata: { fromMasked: rawFrom.slice(0, 32) },
+      });
+    }
+  }, [rawFrom, from]);
 
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [error, setError] = useState<string>('');
@@ -55,8 +70,12 @@ export function LoginPageContent() {
   const [twoFactorError, setTwoFactorError] = useState<string>('');
 
   const redirectAfterAuth = useCallback(
-    async (role: string | null | undefined) => {
-      const targetUrl = isAdminRole(role ?? undefined) ? '/admin' : from;
+    async (_role: string | null | undefined) => {
+      // Issue #893 demo follow-up: admins/superadmins land on the user app by
+      // default (consistent with role experience). Admin pages remain
+      // accessible via the navigation menu. Honors `?from=` redirect when
+      // present (set by middleware on protected-route login bounces).
+      const targetUrl = from;
       // Small delay to ensure session cookie is persisted before navigation
       await new Promise(resolve => setTimeout(resolve, 100));
       router.refresh();
@@ -91,7 +110,9 @@ export function LoginPageContent() {
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : t('auth.login.genericError');
         setError(errorMessage);
-        logger.error('Login failed:', err);
+        // Issue #2171: HttpClient already calls logApiError on failed responses
+        // (apps/web/src/lib/api/core/httpClient.ts) → re-logging here produced
+        // duplicate console.error noise. UX feedback is preserved via setError.
       } finally {
         setIsAuthenticating(false);
       }
@@ -120,7 +141,7 @@ export function LoginPageContent() {
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : t('auth.twoFactor.error');
         setTwoFactorError(errorMessage);
-        logger.error('2FA verification failed:', err);
+        // Issue #2171: HttpClient already logs API failures — see comment in handleLogin.
       } finally {
         setIsAuthenticating(false);
       }

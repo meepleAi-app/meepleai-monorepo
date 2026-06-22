@@ -142,7 +142,7 @@ function DiaryEventForm({
 
   return (
     <div
-      className="flex flex-col gap-2.5 rounded-xl border border-gray-200 bg-gray-50 p-3"
+      className="flex flex-col gap-2.5 rounded-xl border border-border bg-muted p-3"
       data-testid="diary-event-form"
     >
       {/* Type selector */}
@@ -156,7 +156,7 @@ function DiaryEventForm({
               'flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold transition-colors',
               selectedType === opt.type
                 ? 'bg-[hsl(142,70%,45%)] text-white'
-                : 'border border-gray-300 text-gray-600 hover:border-[hsl(142,70%,45%)]'
+                : 'border border-border text-muted-foreground hover:border-[hsl(142,70%,45%)]'
             )}
             data-testid={`diary-form-type-${opt.type}`}
           >
@@ -171,7 +171,7 @@ function DiaryEventForm({
         <select
           value={selectedPlayerId}
           onChange={e => setSelectedPlayerId(e.target.value)}
-          className="rounded-lg border border-gray-300 px-2 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
+          className="rounded-lg border border-border px-2 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
           data-testid="diary-form-player"
         >
           <option value="">— nessun giocatore —</option>
@@ -194,7 +194,7 @@ function DiaryEventForm({
             if (e.key === 'Enter' && canSubmit) handleSubmit();
           }}
           autoFocus
-          className="rounded-lg border border-gray-300 px-2 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
+          className="rounded-lg border border-border px-2 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
           data-testid="diary-form-note-text"
         />
       )}
@@ -206,7 +206,7 @@ function DiaryEventForm({
             placeholder="Formula (es. 3d6+6)"
             value={diceFormula}
             onChange={e => setDiceFormula(e.target.value)}
-            className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
+            className="flex-1 rounded-lg border border-border px-2 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
             data-testid="diary-form-dice-formula"
           />
           <input
@@ -214,7 +214,7 @@ function DiaryEventForm({
             placeholder="Totale"
             value={diceTotal}
             onChange={e => setDiceTotal(e.target.value)}
-            className="w-20 rounded-lg border border-gray-300 px-2 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
+            className="w-20 rounded-lg border border-border px-2 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
             data-testid="diary-form-dice-total"
           />
         </div>
@@ -226,7 +226,7 @@ function DiaryEventForm({
             <select
               value={scoreCategory}
               onChange={e => setScoreCategory(e.target.value)}
-              className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
+              className="flex-1 rounded-lg border border-border px-2 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
               data-testid="diary-form-score-category"
             >
               {scoreCategories.map(cat => (
@@ -241,7 +241,7 @@ function DiaryEventForm({
               placeholder="Categoria"
               value={scoreCategory}
               onChange={e => setScoreCategory(e.target.value)}
-              className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
+              className="flex-1 rounded-lg border border-border px-2 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
               data-testid="diary-form-score-category"
             />
           )}
@@ -250,7 +250,7 @@ function DiaryEventForm({
             placeholder="±punti"
             value={scoreDelta}
             onChange={e => setScoreDelta(e.target.value)}
-            className="w-20 rounded-lg border border-gray-300 px-2 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
+            className="w-20 rounded-lg border border-border px-2 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
             data-testid="diary-form-score-delta"
           />
         </div>
@@ -260,7 +260,7 @@ function DiaryEventForm({
         <select
           value={nextPlayerId}
           onChange={e => setNextPlayerId(e.target.value)}
-          className="rounded-lg border border-gray-300 px-2 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
+          className="rounded-lg border border-border px-2 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
           data-testid="diary-form-turn-next"
         >
           {players.map(p => (
@@ -272,7 +272,7 @@ function DiaryEventForm({
       )}
 
       {selectedType === 'round_advance' && (
-        <p className="text-xs text-gray-500">Registra inizio Round {currentRound + 1}</p>
+        <p className="text-xs text-muted-foreground">Registra inizio Round {currentRound + 1}</p>
       )}
 
       {/* Actions */}
@@ -280,7 +280,7 @@ function DiaryEventForm({
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 rounded-lg border border-gray-300 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100"
+          className="flex-1 rounded-lg border border-border py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
           data-testid="diary-form-cancel"
         >
           Annulla
@@ -293,7 +293,7 @@ function DiaryEventForm({
             'flex-1 rounded-lg py-1.5 text-xs font-medium transition-colors',
             canSubmit
               ? 'bg-[hsl(142,70%,45%)] text-white hover:bg-[hsl(142,70%,40%)]'
-              : 'cursor-not-allowed bg-gray-200 text-gray-400'
+              : 'cursor-not-allowed bg-muted text-muted-foreground'
           )}
           data-testid="diary-form-submit"
         >
@@ -401,12 +401,12 @@ export function EventDiaryTab() {
       {/* Event list */}
       <div className="flex-1 overflow-y-auto">
         {groups.length === 0 ? (
-          <p className="py-4 text-center text-xs italic text-gray-400">Nessun evento nel diario</p>
+          <p className="py-4 text-center text-xs italic text-muted-foreground">Nessun evento nel diario</p>
         ) : (
           groups.map((group, idx) => (
             <div key={idx} className="mb-2">
               {group.round !== null && (
-                <div className="mb-1 mt-2 text-center text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                <div className="mb-1 mt-2 text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   ── Round {group.round} ──
                 </div>
               )}
@@ -428,7 +428,7 @@ export function EventDiaryTab() {
           onCancel={() => setShowStructuredForm(false)}
         />
       ) : (
-        <div className="flex flex-col gap-1.5 border-t border-gray-200 pt-2">
+        <div className="flex flex-col gap-1.5 border-t border-border pt-2">
           {/* Quick text note */}
           <div className="flex items-center gap-2">
             <input
@@ -439,14 +439,14 @@ export function EventDiaryTab() {
                 if (e.key === 'Enter') handleSubmitQuick();
               }}
               placeholder="✍️ Nota rapida…"
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
+              className="flex-1 rounded-lg border border-border px-3 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
               data-testid="diary-manual-input"
             />
             <button
               type="button"
               onClick={handleSubmitQuick}
               disabled={!quickText.trim()}
-              className="rounded-lg bg-[hsl(142,70%,45%)] px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
+              className="rounded-lg bg-[hsl(142,70%,45%)] px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
               data-testid="diary-manual-submit"
             >
               +
@@ -456,7 +456,7 @@ export function EventDiaryTab() {
           <button
             type="button"
             onClick={() => setShowStructuredForm(true)}
-            className="text-center text-[10px] text-gray-400 underline-offset-2 hover:text-gray-600 hover:underline"
+            className="text-center text-[10px] text-muted-foreground underline-offset-2 hover:text-muted-foreground hover:underline"
             data-testid="diary-structured-form-btn"
           >
             + Registra evento strutturato

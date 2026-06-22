@@ -1,8 +1,8 @@
-import { apiClient } from "./client";
+import { apiClient } from './client';
 
 export interface AIInsight {
   id: string;
-  type: "backlog" | "rulesReminder" | "recommendation" | "streak";
+  type: 'backlog' | 'rulesReminder' | 'recommendation' | 'streak';
   icon: string;
   title: string;
   description: string;
@@ -18,7 +18,7 @@ export interface DashboardInsightsResponse {
 }
 
 export async function getAIInsights(): Promise<DashboardInsightsResponse> {
-  const response = await apiClient.get<DashboardInsightsResponse>("/dashboard/insights");
+  const response = await apiClient.get<DashboardInsightsResponse>('/api/v1/dashboard/insights');
   if (!response) throw new Error('Failed to fetch AI insights');
   return response;
 }

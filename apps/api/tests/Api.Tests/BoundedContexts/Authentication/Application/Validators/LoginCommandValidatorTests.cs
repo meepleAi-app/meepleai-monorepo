@@ -21,7 +21,7 @@ public sealed class LoginCommandValidatorTests
         // Arrange
         var command = new LoginCommand(
             Email: "test@example.com",
-            Password: "ValidPassword123!"
+            Password: "ValidUnusualPwd123!"
         );
 
         // Act
@@ -40,7 +40,7 @@ public sealed class LoginCommandValidatorTests
         // Arrange
         var command = new LoginCommand(
             Email: email!,
-            Password: "ValidPassword123!"
+            Password: "ValidUnusualPwd123!"
         );
 
         // Act
@@ -60,7 +60,7 @@ public sealed class LoginCommandValidatorTests
         // Arrange
         var command = new LoginCommand(
             Email: email,
-            Password: "ValidPassword123!"
+            Password: "ValidUnusualPwd123!"
         );
 
         // Act
@@ -78,7 +78,7 @@ public sealed class LoginCommandValidatorTests
         var longEmail = new string('a', 250) + "@test.com"; // 259 characters
         var command = new LoginCommand(
             Email: longEmail,
-            Password: "ValidPassword123!"
+            Password: "ValidUnusualPwd123!"
         );
 
         // Act
@@ -134,7 +134,7 @@ public sealed class LoginCommandValidatorTests
         // Arrange
         var command = new LoginCommand(
             Email: "test@example.com",
-            Password: "ValidPassword123!",
+            Password: "ValidUnusualPwd123!",
             IpAddress: "192.168.1.1",
             UserAgent: "Mozilla/5.0"
         );
@@ -152,7 +152,7 @@ public sealed class LoginCommandValidatorTests
         // Arrange
         var command = new LoginCommand(
             Email: "test@example.com",
-            Password: "ValidPassword123!",
+            Password: "ValidUnusualPwd123!",
             IpAddress: null,
             UserAgent: null
         );

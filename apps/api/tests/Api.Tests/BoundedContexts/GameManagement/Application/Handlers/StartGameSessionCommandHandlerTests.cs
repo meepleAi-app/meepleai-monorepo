@@ -1,12 +1,11 @@
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
-using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.Services;
-using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Application;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
@@ -18,12 +17,13 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Comprehensive tests for StartGameSessionCommandHandler.
 /// Tests game session creation and lifecycle management.
+/// Issue #1320 (P2c): Migrated from IGameRepository to IGameCoreDataProvider.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class StartGameSessionCommandHandlerTests
 {
     private readonly Mock<IGameSessionRepository> _sessionRepositoryMock;
-    private readonly Mock<IGameRepository> _gameRepositoryMock;
+    private readonly Mock<IGameCoreDataProvider> _gameCoreDataMock;
     private readonly Mock<ISessionQuotaService> _quotaServiceMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly StartGameSessionCommandHandler _handler;
@@ -36,7 +36,7 @@ public class StartGameSessionCommandHandlerTests
     public StartGameSessionCommandHandlerTests()
     {
         _sessionRepositoryMock = new Mock<IGameSessionRepository>();
-        _gameRepositoryMock = new Mock<IGameRepository>();
+        _gameCoreDataMock = new Mock<IGameCoreDataProvider>();
         _quotaServiceMock = new Mock<ISessionQuotaService>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
 
@@ -47,19 +47,20 @@ public class StartGameSessionCommandHandlerTests
 
         _handler = new StartGameSessionCommandHandler(
             _sessionRepositoryMock.Object,
-            _gameRepositoryMock.Object,
+            _gameCoreDataMock.Object,
             _quotaServiceMock.Object,
             _unitOfWorkMock.Object);
     }
+
     [Fact]
     public async Task Handle_WithTwoPlayers_CreatesAndStartsSession()
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        var game = CreateTestGame(gameId);
-        _gameRepositoryMock
-            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(game);
+        var coreData = CreateTestCoreData(minPlayers: 2, maxPlayers: 4);
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(coreData);
 
         var command = CreateCommand(
             gameId: gameId,
@@ -87,11 +88,11 @@ public class StartGameSessionCommandHandlerTests
 
         // Verify captured session
         capturedSession.Should().NotBeNull();
-        capturedSession.GameId.Should().Be(gameId);
+        capturedSession!.GameId.Should().Be(gameId);
 
         // Verify repository interactions
-        _gameRepositoryMock.Verify(
-            r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()),
+        _gameCoreDataMock.Verify(
+            r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()),
             Times.Once);
         _sessionRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()),
@@ -106,10 +107,10 @@ public class StartGameSessionCommandHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        var game = CreateTestGame(gameId, minPlayers: 2, maxPlayers: 6);
-        _gameRepositoryMock
-            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(game);
+        var coreData = CreateTestCoreData(minPlayers: 2, maxPlayers: 6);
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(coreData);
 
         var command = CreateCommand(
             gameId: gameId,
@@ -138,10 +139,10 @@ public class StartGameSessionCommandHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        var game = CreateTestGame(gameId);
-        _gameRepositoryMock
-            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(game);
+        var coreData = CreateTestCoreData();
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(coreData);
 
         var command = CreateCommand(
             gameId: gameId,
@@ -165,10 +166,10 @@ public class StartGameSessionCommandHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        var game = CreateTestGame(gameId);
-        _gameRepositoryMock
-            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(game);
+        var coreData = CreateTestCoreData();
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(coreData);
 
         var command = CreateCommand(
             gameId: gameId,
@@ -200,8 +201,7 @@ public class StartGameSessionCommandHandlerTests
             });
 
         // Act & Assert
-        var act =
-            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _sessionRepositoryMock.Verify(r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -212,19 +212,17 @@ public class StartGameSessionCommandHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        var game = CreateTestGame(gameId);
-
-        _gameRepositoryMock
-            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(game);
+        var coreData = CreateTestCoreData();
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(coreData);
 
         var command = CreateCommand(
             gameId: gameId,
             players: new List<SessionPlayerRequest>());
 
         // Act & Assert
-        var act =
-            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _sessionRepositoryMock.Verify(r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -235,11 +233,10 @@ public class StartGameSessionCommandHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        var game = CreateTestGame(gameId, minPlayers: 2, maxPlayers: 4);
-
-        _gameRepositoryMock
-            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(game);
+        var coreData = CreateTestCoreData(minPlayers: 2, maxPlayers: 4);
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(coreData);
 
         // 5 players when game max is 4
         var command = CreateCommand(
@@ -254,43 +251,10 @@ public class StartGameSessionCommandHandlerTests
             });
 
         // Act & Assert
-        var act =
-            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _sessionRepositoryMock.Verify(r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    private static Game CreateTestGame(Guid id, int minPlayers = 2, int maxPlayers = 4)
-    {
-        var title = new GameTitle("Test Game");
-        var playerCount = new PlayerCount(minPlayers, maxPlayers);
-        return new Game(
-            id: id,
-            title: title,
-            publisher: null,
-            yearPublished: null,
-            playerCount: playerCount,
-            playTime: null
-        );
-    }
-
-    /// <summary>
-    /// Helper method to create StartGameSessionCommand with required parameters (Issue #3070).
-    /// </summary>
-    private static StartGameSessionCommand CreateCommand(
-        Guid gameId,
-        IEnumerable<SessionPlayerRequest> players,
-        Guid? userId = null,
-        UserTier? userTier = null,
-        Role? userRole = null)
-    {
-        return new StartGameSessionCommand(
-            GameId: gameId,
-            Players: players.ToList().AsReadOnly(),
-            UserId: userId ?? DefaultUserId,
-            UserTier: userTier ?? DefaultUserTier,
-            UserRole: userRole ?? DefaultUserRole);
     }
 
     [Fact]
@@ -298,9 +262,9 @@ public class StartGameSessionCommandHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        _gameRepositoryMock
-            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Game?)null);
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GameCoreData?)null);
 
         var command = CreateCommand(
             gameId: gameId,
@@ -311,8 +275,7 @@ public class StartGameSessionCommandHandlerTests
             });
 
         // Act & Assert
-        var act =
-            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
         exception.Message.Should().ContainEquivalentOf(gameId.ToString());
@@ -328,10 +291,10 @@ public class StartGameSessionCommandHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        var game = CreateTestGame(gameId, minPlayers: 2, maxPlayers: 6);
-        _gameRepositoryMock
-            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(game);
+        var coreData = CreateTestCoreData(minPlayers: 2, maxPlayers: 6);
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(coreData);
 
         var command = CreateCommand(
             gameId: gameId,
@@ -350,15 +313,16 @@ public class StartGameSessionCommandHandlerTests
         result.Players[1].PlayerName.Should().Be("First");
         result.Players[2].PlayerName.Should().Be("Second");
     }
+
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepositories()
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        var game = CreateTestGame(gameId);
-        _gameRepositoryMock
-            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(game);
+        var coreData = CreateTestCoreData();
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(coreData);
 
         var command = CreateCommand(
             gameId: gameId,
@@ -375,8 +339,8 @@ public class StartGameSessionCommandHandlerTests
         await _handler.Handle(command, cancellationToken);
 
         // Assert
-        _gameRepositoryMock.Verify(
-            r => r.GetByIdAsync(gameId, cancellationToken),
+        _gameCoreDataMock.Verify(
+            r => r.GetCoreDataAsync(GameRef.Shared(gameId), cancellationToken),
             Times.Once);
         _sessionRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<GameSession>(), cancellationToken),
@@ -385,15 +349,16 @@ public class StartGameSessionCommandHandlerTests
             u => u.SaveChangesAsync(cancellationToken),
             Times.Once);
     }
+
     [Fact]
     public async Task Handle_SessionStartsImmediately()
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        var game = CreateTestGame(gameId);
-        _gameRepositoryMock
-            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(game);
+        var coreData = CreateTestCoreData();
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(coreData);
 
         var command = CreateCommand(
             gameId: gameId,
@@ -409,5 +374,27 @@ public class StartGameSessionCommandHandlerTests
         // Assert - Session should be InProgress after Start() is called
         result.Status.Should().Be("InProgress");
     }
-}
 
+    // ---- Helpers ----
+
+    private static GameCoreData CreateTestCoreData(int minPlayers = 2, int maxPlayers = 4) =>
+        GameCoreData.Create("Test Game", 2020, minPlayers, maxPlayers, 60, 10);
+
+    /// <summary>
+    /// Helper method to create StartGameSessionCommand with required parameters (Issue #3070).
+    /// </summary>
+    private static StartGameSessionCommand CreateCommand(
+        Guid gameId,
+        IEnumerable<SessionPlayerRequest> players,
+        Guid? userId = null,
+        UserTier? userTier = null,
+        Role? userRole = null)
+    {
+        return new StartGameSessionCommand(
+            GameId: gameId,
+            Players: players.ToList().AsReadOnly(),
+            UserId: userId ?? DefaultUserId,
+            UserTier: userTier ?? DefaultUserTier,
+            UserRole: userRole ?? DefaultUserRole);
+    }
+}

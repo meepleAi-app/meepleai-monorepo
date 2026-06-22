@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * Template Carousel - Horizontal scroll template selector
  * Issue #3239 (FRONT-003)
@@ -47,7 +48,7 @@ export function TemplateCarousel() {
                 ${
                   selectedagentDefinitionId === template.id
                     ? 'border-cyan-400 bg-cyan-500/10 shadow-[0_0_20px_rgba(0,255,255,0.3)] agent-pulse-cyan'
-                    : 'border-slate-700 bg-slate-900 hover:border-slate-600'
+                    : 'border-border bg-card hover:border-border'
                 }
               `}
             >

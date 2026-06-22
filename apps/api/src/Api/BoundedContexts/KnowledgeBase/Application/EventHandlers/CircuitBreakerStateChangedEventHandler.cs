@@ -76,9 +76,12 @@ internal sealed class CircuitBreakerStateChangedEventHandler
                 occurredAt = notification.OccurredAt
             });
 
-            foreach (var adminId in adminIds)
-            {
-                var n = new Notification(
+            // Issue #2392: collect notifications and commit them atomically with
+            // POST-save side-effects, replacing the previous foreach-AddAsync + manual
+            // SaveChangesAsync pair (which broadcast/recorded the metric BEFORE the
+            // rows were durably stored — phantom-broadcast risk if SaveChanges failed).
+            var notifications = adminIds
+                .Select(adminId => new Notification(
                     id: Guid.NewGuid(),
                     userId: adminId,
                     type: NotificationType.AdminSystemHealthAlert,
@@ -86,12 +89,10 @@ internal sealed class CircuitBreakerStateChangedEventHandler
                     title: title,
                     message: notification.Reason,
                     link: "/admin/agents/usage",
-                    metadata: metadata);
+                    metadata: metadata))
+                .ToList();
 
-                await _notificationRepository.AddAsync(n, cancellationToken).ConfigureAwait(false);
-            }
-
-            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await _notificationRepository.AddBatchAndCommitAsync(notifications, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "CircuitBreakerStateChangedEvent: notified {Count} admins — {Provider} {Prev}→{New}",

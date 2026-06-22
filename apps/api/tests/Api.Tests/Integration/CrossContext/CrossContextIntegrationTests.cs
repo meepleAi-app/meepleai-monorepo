@@ -1,11 +1,9 @@
-using Api.BoundedContexts.GameManagement.Application.IntegrationEvents;
-using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Events;
-using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.WorkflowIntegration.Application.IntegrationEventHandlers;
 using Api.Infrastructure;
 using Api.Tests.TestHelpers;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
@@ -22,7 +20,8 @@ namespace Api.Tests.Integration.CrossContext;
 /// <summary>
 /// Integration tests for cross-context event dispatch and handling.
 /// Tests GameManagement → WorkflowIntegration integration event flow.
-/// Issue #2307: Week 3 - Cross-context integration testing
+/// Issue #2307: Week 3 - Cross-context integration testing.
+/// Issue #1320 (P2c): Removed Game aggregate usage; events constructed directly.
 /// </summary>
 [Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
@@ -86,44 +85,33 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task GameCreated_ShouldDispatchToWorkflowIntegration()
     {
-        // Arrange - Create game that raises GameCreatedEvent
-        var game = new Game(
-            id: Guid.NewGuid(),
-            title: new GameTitle("Catan"),
-            publisher: new Publisher("Catan Studio"),
-            yearPublished: new YearPublished(1995),
-            playerCount: new PlayerCount(3, 4),
-            playTime: new PlayTime(60, 120)
-        );
+        // Arrange — seed SharedGameEntity and inject GameCreatedEvent directly
+        var gameId = Guid.NewGuid();
+        const string gameName = "Catan";
 
-        game.DomainEvents.Should().HaveCount(1);
-        game.DomainEvents.Should().ContainSingle(e => e is GameCreatedEvent);
+        var gameEntity = CreateGameEntity(gameId, gameName, "Catan Studio");
+        _dbContext.SharedGames.Add(gameEntity);
 
-        // Map to persistence entity
-        var gameEntity = MapGameToEntity(game);
-        _dbContext.Games.Add(gameEntity);
-
-        // Collect domain events before save
-        _eventCollector.CollectEventsFrom(game);
-        game.ClearDomainEvents();
+        var @event = new GameCreatedEvent(gameId, gameName);
+        _eventCollector.Collect(@event);
 
         // Act - SaveChangesAsync should dispatch events
-        // Flow: GameCreatedEvent → GameCreatedEventHandler → GameCreatedIntegrationEvent → GameCreatedIntegrationEventHandler
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
-        // Assert - Audit log created by domain event handler
-        var auditLog = await _dbContext.AuditLogs
-            .FirstOrDefaultAsync(a => a.Resource == "GameCreatedEvent", TestCancellationToken);
+        // Assert - audit_outbox row created by DomainEventAuditHandler<GameCreatedEvent>
+        // (Issue #1534: single canonical write path → audit_outbox)
+        var allOutbox = await _dbContext.AuditOutbox.ToListAsync(TestCancellationToken);
+        var outboxRow = allOutbox.FirstOrDefault(o => o.PayloadJson.Contains("\"Resource\":\"GameCreatedEvent\""));
 
-        auditLog.Should().NotBeNull();
-        auditLog!.Action.Should().Contain("GameCreatedEvent");
-        auditLog.Result.Should().Be("Success");
-        auditLog.Details.Should().Contain(game.Id.ToString());
+        outboxRow.Should().NotBeNull();
+        outboxRow!.PayloadJson.Should().Contain("\"Action\":\"DomainEvent.GameCreatedEvent\"");
+        outboxRow.PayloadJson.Should().Contain("\"Result\":\"Success\"");
+        outboxRow.PayloadJson.Should().Contain(gameId.ToString());
 
         // Verify game persisted
-        var savedGame = await _dbContext.Games.FindAsync(new object[] { game.Id }, TestCancellationToken);
+        var savedGame = await _dbContext.SharedGames.FindAsync(new object[] { gameId }, TestCancellationToken);
         savedGame.Should().NotBeNull();
-        savedGame!.Name.Should().Be("Catan");
+        savedGame!.Title.Should().Be(gameName);
     }
 
     /// <summary>
@@ -133,41 +121,32 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task GameLinkedToBgg_ShouldDispatchToWorkflowIntegration()
     {
-        // Arrange - Create game and link to BGG
-        var game = new Game(
-            id: Guid.NewGuid(),
-            title: new GameTitle("Wingspan"),
-            publisher: new Publisher("Stonemaier Games")
-        );
+        // Arrange — seed SharedGameEntity and inject GameLinkedToBggEvent directly
+        var gameId = Guid.NewGuid();
+        var gameEntity = CreateGameEntity(gameId, "Wingspan", "Stonemaier Games");
+        gameEntity.BggId = 266192;
+        gameEntity.BggRawData = "Wingspan BGG metadata";
+        _dbContext.SharedGames.Add(gameEntity);
 
-        game.ClearDomainEvents(); // Clear creation event
-        game.LinkToBgg(bggId: 266192, metadata: "Wingspan BGG metadata");
-
-        game.DomainEvents.Should().HaveCount(1);
-        game.DomainEvents.Should().ContainSingle(e => e is GameLinkedToBggEvent);
-
-        var gameEntity = MapGameToEntity(game);
-        _dbContext.Games.Add(gameEntity);
-
-        _eventCollector.CollectEventsFrom(game);
-        game.ClearDomainEvents();
+        var @event = new GameLinkedToBggEvent(gameId, 266192);
+        _eventCollector.Collect(@event);
 
         // Act
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
-        // Assert - Audit log from GameLinkedToBggEvent
-        var auditLog = await _dbContext.AuditLogs
-            .FirstOrDefaultAsync(a => a.Resource == "GameLinkedToBggEvent", TestCancellationToken);
+        // Assert - audit_outbox row from GameLinkedToBggEvent
+        var allOutbox = await _dbContext.AuditOutbox.ToListAsync(TestCancellationToken);
+        var outboxRow = allOutbox.FirstOrDefault(o => o.PayloadJson.Contains("\"Resource\":\"GameLinkedToBggEvent\""));
 
-        auditLog.Should().NotBeNull();
-        auditLog!.Details.Should().Contain("266192");
-        auditLog.Details.Should().Contain(game.Id.ToString());
+        outboxRow.Should().NotBeNull();
+        outboxRow!.PayloadJson.Should().Contain("266192");
+        outboxRow.PayloadJson.Should().Contain(gameId.ToString());
 
         // Verify BGG metadata persisted
-        var savedGame = await _dbContext.Games.FindAsync(new object[] { game.Id }, TestCancellationToken);
+        var savedGame = await _dbContext.SharedGames.FindAsync(new object[] { gameId }, TestCancellationToken);
         savedGame.Should().NotBeNull();
         savedGame!.BggId.Should().Be(266192);
-        savedGame.BggMetadata.Should().Be("Wingspan BGG metadata");
+        savedGame.BggRawData.Should().Be("Wingspan BGG metadata");
     }
 
     /// <summary>
@@ -178,50 +157,35 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
     public async Task MultipleGamesCreated_ShouldDispatchIndependentEvents()
     {
         // Arrange - Create multiple games
-        var games = new[]
+        var gameData = new[]
         {
-            new Game(
-                id: Guid.NewGuid(),
-                title: new GameTitle("Azul"),
-                publisher: new Publisher("Plan B Games")
-            ),
-            new Game(
-                id: Guid.NewGuid(),
-                title: new GameTitle("Ticket to Ride"),
-                publisher: new Publisher("Days of Wonder")
-            ),
-            new Game(
-                id: Guid.NewGuid(),
-                title: new GameTitle("Pandemic"),
-                publisher: new Publisher("Z-Man Games")
-            )
+            (Id: Guid.NewGuid(), Name: "Azul"),
+            (Id: Guid.NewGuid(), Name: "Ticket to Ride"),
+            (Id: Guid.NewGuid(), Name: "Pandemic")
         };
 
-        foreach (var game in games)
+        foreach (var (id, name) in gameData)
         {
-            var gameEntity = MapGameToEntity(game);
-            _dbContext.Games.Add(gameEntity);
-            _eventCollector.CollectEventsFrom(game);
-            game.ClearDomainEvents();
+            _dbContext.SharedGames.Add(CreateGameEntity(id, name));
+            _eventCollector.Collect(new GameCreatedEvent(id, name));
         }
 
         // Act - All events dispatched in single transaction
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
-        // Assert - Audit log for each game
-        var auditLogs = await _dbContext.AuditLogs
-            .Where(a => a.Resource == "GameCreatedEvent")
-            .ToListAsync(TestCancellationToken);
+        // Assert - audit_outbox row for each game
+        var allOutbox = await _dbContext.AuditOutbox.ToListAsync(TestCancellationToken);
+        var outboxRows = allOutbox.Where(o => o.PayloadJson.Contains("\"Resource\":\"GameCreatedEvent\"")).ToList();
 
-        auditLogs.Should().HaveCount(3);
-        auditLogs.Should().AllSatisfy(log =>
+        outboxRows.Should().HaveCount(3);
+        outboxRows.Should().AllSatisfy(row =>
         {
-            log.Result.Should().Be("Success");
-            log.Action.Should().Contain("GameCreatedEvent");
+            row.PayloadJson.Should().Contain("\"Result\":\"Success\"");
+            row.PayloadJson.Should().Contain("\"Action\":\"DomainEvent.GameCreatedEvent\"");
         });
 
         // Verify all games persisted
-        var savedGames = await _dbContext.Games.ToListAsync(TestCancellationToken);
+        var savedGames = await _dbContext.SharedGames.ToListAsync(TestCancellationToken);
         savedGames.Should().HaveCount(3);
     }
 
@@ -233,42 +197,34 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
     public async Task GameMetadataUpdated_ShouldDispatchUpdateEvents()
     {
         // Arrange - Create and save initial game
-        var game = new Game(
-            id: Guid.NewGuid(),
-            title: new GameTitle("Gloomhaven"),
-            publisher: new Publisher("Cephalofair Games")
-        );
-
-        var gameEntity = MapGameToEntity(game);
-        _dbContext.Games.Add(gameEntity);
-        _eventCollector.CollectEventsFrom(game);
-        game.ClearDomainEvents();
-
+        var gameId = Guid.NewGuid();
+        var gameEntity = CreateGameEntity(gameId, "Gloomhaven", "Cephalofair Games");
+        _dbContext.SharedGames.Add(gameEntity);
+        _eventCollector.Collect(new GameCreatedEvent(gameId, "Gloomhaven"));
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act - Update game with BGG link (generates new event)
-        var savedGameEntity = await _dbContext.Games.FindAsync(new object[] { game.Id }, TestCancellationToken);
+        var savedGameEntity = await _dbContext.SharedGames.FindAsync(new object[] { gameId }, TestCancellationToken);
         savedGameEntity.Should().NotBeNull();
 
-        game.LinkToBgg(bggId: 174430, metadata: "Gloomhaven BGG data");
-
         savedGameEntity!.BggId = 174430;
-        savedGameEntity.BggMetadata = "Gloomhaven BGG data";
+        savedGameEntity.BggRawData = "Gloomhaven BGG data";
 
-        _eventCollector.CollectEventsFrom(game);
-        game.ClearDomainEvents();
+        _eventCollector.Collect(new GameLinkedToBggEvent(gameId, 174430));
 
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
-        // Assert - Both creation and update events logged
-        var auditLogs = await _dbContext.AuditLogs
-            .Where(a => a.Details != null && a.Details.Contains(game.Id.ToString()))
-            .OrderBy(a => a.CreatedAt)
-            .ToListAsync(TestCancellationToken);
+        // Assert - Both creation and update events logged to audit_outbox
+        // PayloadJson contains the full AuditOutboxPayload (incl. Resource + serialized event Details with GameId)
+        var allOutbox = await _dbContext.AuditOutbox.ToListAsync(TestCancellationToken);
+        var outboxRows = allOutbox
+            .Where(o => o.PayloadJson.Contains(gameId.ToString()))
+            .OrderBy(o => o.CreatedAt)
+            .ToList();
 
-        auditLogs.Should().HaveCountGreaterThanOrEqualTo(2);
-        auditLogs.Should().Contain(log => log.Resource == "GameCreatedEvent");
-        auditLogs.Should().Contain(log => log.Resource == "GameLinkedToBggEvent");
+        outboxRows.Should().HaveCountGreaterThanOrEqualTo(2);
+        outboxRows.Should().Contain(row => row.PayloadJson.Contains("\"Resource\":\"GameCreatedEvent\""));
+        outboxRows.Should().Contain(row => row.PayloadJson.Contains("\"Resource\":\"GameLinkedToBggEvent\""));
     }
 
     /// <summary>
@@ -281,55 +237,38 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
         // Note: MeepleAI's event handlers catch and log exceptions rather than propagating
         // This test verifies that game creation succeeds even if handlers encounter issues
 
-        // Arrange - Create game with potentially problematic data
-        var game = new Game(
-            id: Guid.NewGuid(),
-            title: new GameTitle("Test Game With Issues"),
-            publisher: new Publisher("Test Publisher")
-        );
-
-        var gameEntity = MapGameToEntity(game);
-        _dbContext.Games.Add(gameEntity);
-
-        _eventCollector.CollectEventsFrom(game);
-        game.ClearDomainEvents();
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var gameEntity = CreateGameEntity(gameId, "Test Game With Issues", "Test Publisher");
+        _dbContext.SharedGames.Add(gameEntity);
+        _eventCollector.Collect(new GameCreatedEvent(gameId, "Test Game With Issues"));
 
         // Act - SaveChangesAsync executes without throwing (handlers log errors)
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert - Game persisted despite potential handler issues
-        var savedGame = await _dbContext.Games.FindAsync(new object[] { game.Id }, TestCancellationToken);
+        var savedGame = await _dbContext.SharedGames.FindAsync(new object[] { gameId }, TestCancellationToken);
         savedGame.Should().NotBeNull();
 
-        // Audit log still created (handlers are resilient)
-        var auditLog = await _dbContext.AuditLogs
-            .FirstOrDefaultAsync(a => a.Resource == "GameCreatedEvent" &&
-                                     a.Details != null && a.Details.Contains(game.Id.ToString()), TestCancellationToken);
+        // audit_outbox row still created (handlers are resilient)
+        var allOutbox = await _dbContext.AuditOutbox.ToListAsync(TestCancellationToken);
+        var outboxRow = allOutbox.FirstOrDefault(o => o.PayloadJson.Contains("\"Resource\":\"GameCreatedEvent\"") &&
+                                                       o.PayloadJson.Contains(gameId.ToString()));
 
-        auditLog.Should().NotBeNull();
+        outboxRow.Should().NotBeNull();
     }
 
     #endregion
 
     #region Helper Methods
 
-    private static GameEntity MapGameToEntity(Game game)
+    private static SharedGameEntity CreateGameEntity(Guid id, string name, string? publisher = null)
     {
-        return new GameEntity
+        return new SharedGameEntity
         {
-            Id = game.Id,
-            Name = game.Title.Value,
-            Publisher = game.Publisher?.ToString(),
-            YearPublished = game.YearPublished?.Value,
-            MinPlayers = game.PlayerCount?.Min,
-            MaxPlayers = game.PlayerCount?.Max,
-            MinPlayTimeMinutes = game.PlayTime?.MinMinutes,
-            MaxPlayTimeMinutes = game.PlayTime?.MaxMinutes,
-            BggId = game.BggId,
-            BggMetadata = game.BggMetadata,
-            IconUrl = game.IconUrl,
-            ImageUrl = game.ImageUrl,
-            CreatedAt = game.CreatedAt
+            Id = id,
+            Title = name,
+            CreatedAt = DateTime.UtcNow
         };
     }
 

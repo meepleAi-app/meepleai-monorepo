@@ -147,6 +147,9 @@ internal sealed class VectorReembeddingService
                 var textChunk = textChunks[chunkIndex];
                 var vector = new Vector(result.Embeddings[j]);
 
+                // Issue #1391: propagate text_chunks.role_tags into the denormalized
+                // pgvector_embeddings.role_tags column so semantic-mode searches can
+                // apply the role-match boost. SourceChunkId pins the sync invariant.
                 embeddings.Add(new Embedding(
                     id: Guid.NewGuid(),
                     vectorDocumentId: doc.Id,
@@ -154,7 +157,9 @@ internal sealed class VectorReembeddingService
                     vector: vector,
                     model: _embeddingService.GetModelName(),
                     chunkIndex: chunkIndex,
-                    pageNumber: Math.Max(1, textChunk.PageNumber ?? 1)));
+                    pageNumber: Math.Max(1, textChunk.PageNumber ?? 1),
+                    sourceChunkId: textChunk.Id,
+                    roleTags: (int)textChunk.RoleTags));
             }
         }
 

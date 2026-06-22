@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SP5 Admin Console — Index</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/><link rel="stylesheet" href="components.css"/><link rel="stylesheet" href="admin-base.css"/>
+<style>
+  body { padding: 32px 48px; max-width: 1100px; margin: 0 auto; }
+  h1 { font-family: var(--f-display); font-size: 32px; font-weight: 800; margin: 0 0 6px; }
+  .lede { font-size: 14px; color: var(--text-sec); margin: 0 0 28px; max-width: 700px; line-height: 1.55; }
+  .grp-title { font-family: var(--f-mono); font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; margin: 28px 0 12px; }
+  .pages { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .page-card { display: block; padding: 14px 16px; background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 10px; color: var(--text); text-decoration: none; }
+  .page-card:hover { border-color: hsl(var(--c-event) / .4); transform: translateY(-1px); }
+  .page-card .tag { font-family: var(--f-mono); font-size: 9.5px; font-weight: 700; color: hsl(var(--c-event)); text-transform: uppercase; letter-spacing: .06em; }
+  .page-card h3 { margin: 4px 0 6px; font-family: var(--f-display); font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+  .page-card .desc { font-size: 12px; color: var(--text-sec); line-height: 1.5; }
+  .page-card .route { display: inline-block; margin-top: 8px; font-family: var(--f-mono); font-size: 10.5px; color: var(--text-muted); padding: 2px 6px; background: var(--bg-muted); border-radius: 4px; }
+</style>
+</head>
+<body class="admin-page">
+
+<h1>🎲 MeepleAI · SP5 Admin Console</h1>
+<p class="lede">15 mockup admin + power-user tools. Desktop-first 1440px, density alta, dark-mode preferito. Aaron superadmin. <strong>Indipendenti dal demo principale</strong>: ognuno è una pagina standalone.</p>
+
+<div class="grp-title">🛡 Admin Console (10 schermate)</div>
+<div class="pages">
+  <a href="sp5-admin-overview.html" class="page-card"><span class="tag">A1</span><h3>📊 Overview</h3><div class="desc">Dashboard health: 4 KPI, activity feed, alerts, 4 charts, quick actions</div><span class="route">/admin/overview</span></a>
+  <a href="sp5-admin-users.html" class="page-card"><span class="tag">A2</span><h3>👥 Utenti</h3><div class="desc">Tabella utenti + bulk actions + drill-down profile + audit log + danger zone</div><span class="route">/admin/users</span></a>
+  <a href="sp5-admin-content.html" class="page-card"><span class="tag">A3</span><h3>📦 Content moderation</h3><div class="desc">Queue moderazione giochi · commenti flagged · approve/reject workflow</div><span class="route">/admin/content</span></a>
+  <a href="sp5-admin-ai.html" class="page-card"><span class="tag">A4</span><h3>🤖 AI / RAG Quality</h3><div class="desc">5 KPI · trend chart · worst queries · query drill-down · latency breakdown</div><span class="route">/admin/ai</span></a>
+  <a href="sp5-admin-kb.html" class="page-card"><span class="tag">A5</span><h3>📚 Knowledge Base</h3><div class="desc">Tree giochi+docs · document viewer · chunk table · ingestion log</div><span class="route">/admin/knowledge-base</span></a>
+  <a href="sp5-kb-upload-flow.html" class="page-card"><span class="tag">A5b</span><h3>⤴️ KB Upload Flow</h3><div class="desc">FSM 5 stati: empty · uploading · processing · complete · error + idempotency guard</div><span class="route">/admin/knowledge-base/upload</span></a>
+  <a href="sp5-admin-catalog.html" class="page-card"><span class="tag">A6</span><h3>🔄 Catalog ingestion</h3><div class="desc">BGG sync hero · history runs · queue pending · failed items retry</div><span class="route">/admin/catalog-ingestion</span></a>
+  <a href="sp5-admin-config.html" class="page-card"><span class="tag">A7</span><h3>⚙️ Config / Flags</h3><div class="desc">Feature flags + envs + dirty-state bar Apply/Revert</div><span class="route">/admin/config</span></a>
+  <a href="sp5-admin-monitor.html" class="page-card"><span class="tag">A8</span><h3>📈 Monitor</h3><div class="desc">6 KPI sparklines · 4 big charts · live event log SSE</div><span class="route">/admin/monitor</span></a>
+  <a href="sp5-admin-notifications.html" class="page-card"><span class="tag">A9</span><h3>📨 Notifications</h3><div class="desc">Template list · editor markdown · live preview email · variables helper</div><span class="route">/admin/notifications</span></a>
+</div>
+
+<div class="grp-title">🛠 Power-User Tools (8 schermate)</div>
+<div class="pages">
+  <a href="sp5-editor.html" class="page-card"><span class="tag">B1</span><h3>✏️ Editor</h3><div class="desc">3-col tree · block editor · preview live · metadata · version history</div><span class="route">/editor</span></a>
+  <a href="sp5-pipeline-builder.html" class="page-card"><span class="tag">B2</span><h3>🔗 Pipeline Builder</h3><div class="desc">Canvas node-based · palette · node config · test output JSON</div><span class="route">/pipeline-builder</span></a>
+  <a href="sp5-n8n.html" class="page-card"><span class="tag">B3</span><h3>⚡ n8n Integrations</h3><div class="desc">Connection hero · workflows table · webhook log · API keys</div><span class="route">/n8n</span></a>
+  <a href="sp5-upload-advanced.html" class="page-card"><span class="tag">B4</span><h3>📤 Upload avanzato</h3><div class="desc">Dropzone · queue · history · processing timeline 5 stages</div><span class="route">/upload</span></a>
+  <a href="sp5-play-records.html" class="page-card"><span class="tag">B5</span><h3>🎲 Play Records</h3><div class="desc">Storico partite personale · stats wins/gioco · top opponents</div><span class="route">/play-records</span></a>
+  <a href="sp5-versions.html" class="page-card"><span class="tag">B6</span><h3>🔢 Versions</h3><div class="desc">Timeline versioni artefatti · diff viewer · compare selector</div><span class="route">/versions</span></a>
+  <a href="sp5-private-games.html" class="page-card"><span class="tag">B7</span><h3>🔒 Private Games</h3><div class="desc">Grid card private · publish checklist · review workflow</div><span class="route">/private-games</span></a>
+  <a href="sp5-dev-tools.html" class="page-card"><span class="tag">B8</span><h3>🛠️ Dev Tools</h3><div class="desc">MSW scenarios · auth role switcher · runtime flags · cache/store inspector · reset</div><span class="route">/dev (dev-only)</span></a>
+</div>
+
+<div class="grp-title">↩ Torna al demo principale</div>
+<div class="pages">
+  <a href="../demo.html" class="page-card"><span class="tag">DEMO</span><h3>🎯 Demo principale (utente authenticated)</h3><div class="desc">71 step tour del prodotto end-user · Marco/Aaron/Davide flow</div></a>
+</div>
+
+</body></html>

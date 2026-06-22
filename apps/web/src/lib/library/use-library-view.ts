@@ -1,16 +1,11 @@
 'use client';
 
 /**
- * View-mode hook for the `/library` desktop v2 surface (Issue #574, Wave B.3).
+ * View-mode hook for the `/library` desktop surface (Issue #574, Wave B.3).
  *
- * Extends the legacy 'grid' | 'list' duo (`components/library/v2/LibraryViewToggle.tsx`)
- * with a new 'compact' option to support the hybrid grid's three layouts. The hook
- * persists the choice in `localStorage` so the user keeps their preferred density
- * across sessions.
- *
- * The legacy `LibraryViewToggle` component will re-export this hook for backwards
- * compatibility and be deleted in Commit 3 of the Wave B.3 migration. New code
- * should import from `@/lib/library/use-library-view` directly.
+ * 'grid' | 'list' | 'compact' — the third option supports the hybrid grid's
+ * three layouts. The hook persists the choice in `localStorage` so the user
+ * keeps their preferred density across sessions.
  */
 
 import { useCallback, useEffect, useState } from 'react';

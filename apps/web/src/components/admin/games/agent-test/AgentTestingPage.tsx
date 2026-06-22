@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin CRUD chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13c admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 /**
@@ -49,7 +50,7 @@ export function AgentTestingPage({ gameId, gameTitle }: AgentTestingPageProps) {
       </div>
 
       {/* Tab Bar */}
-      <div className="flex gap-1 rounded-lg bg-slate-100 dark:bg-zinc-800 p-1">
+      <div className="flex gap-1 rounded-lg bg-muted dark:bg-zinc-800 p-1">
         <button
           onClick={() => setActiveTab('auto-test')}
           className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${

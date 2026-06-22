@@ -19,19 +19,37 @@ export const AuthUserSchema = z.object({
   role: z.string().min(1),
   onboardingCompleted: z.boolean().default(false), // Issue #323
   onboardingSkipped: z.boolean().default(false), // Issue #323
+  // F1 #1974 (audit 2026-06-07): expose the BE `EmailVerified` field on
+  // `/auth/me` so the UI can render the verify-email banner while the user
+  // is in the registration grace period. Optional/default-false so legacy
+  // payloads (BE not yet redeployed, OAuth callback, etc.) parse without
+  // throwing — the banner just won't show in that case.
+  emailVerified: z.boolean().default(false),
 });
 
 export type AuthUser = z.infer<typeof AuthUserSchema>;
 
 /**
  * Schema for login response
- * Supports both normal login and 2FA challenge flow
+ * Supports both normal login and 2FA challenge flow.
+ *
+ * The BE serializes the temp 2FA token as `sessionToken` (Models/TwoFactorDto.cs:62),
+ * while the FE historically reads it as `tempSessionToken`. Accept both field names
+ * and normalize to `tempSessionToken` so callers don't have to know which one the BE
+ * sent. See issue #1811 for the regression context.
  */
-export const LoginResponseSchema = z.object({
-  user: AuthUserSchema.nullable().optional(),
-  requiresTwoFactor: z.boolean().default(false),
-  tempSessionToken: z.string().nullable().optional(),
-});
+export const LoginResponseSchema = z
+  .object({
+    user: AuthUserSchema.nullable().optional(),
+    requiresTwoFactor: z.boolean().default(false),
+    tempSessionToken: z.string().nullable().optional(),
+    sessionToken: z.string().nullable().optional(),
+  })
+  .transform(r => ({
+    user: r.user ?? null,
+    requiresTwoFactor: r.requiresTwoFactor,
+    tempSessionToken: r.tempSessionToken ?? r.sessionToken ?? null,
+  }));
 
 export type LoginResponse = z.infer<typeof LoginResponseSchema>;
 

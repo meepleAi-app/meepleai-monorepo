@@ -357,7 +357,7 @@ export const DarkModeLogin: Story = {
   },
   decorators: [
     Story => (
-      <div className="dark min-h-screen bg-slate-900">
+      <div className="dark min-h-screen bg-card">
         <Story />
       </div>
     ),
@@ -378,7 +378,7 @@ export const DarkModeRegister: Story = {
   },
   decorators: [
     Story => (
-      <div className="dark min-h-screen bg-slate-900">
+      <div className="dark min-h-screen bg-card">
         <Story />
       </div>
     ),
@@ -399,7 +399,7 @@ export const DarkModeSessionExpired: Story = {
   },
   decorators: [
     Story => (
-      <div className="dark min-h-screen bg-slate-900">
+      <div className="dark min-h-screen bg-card">
         <Story />
       </div>
     ),

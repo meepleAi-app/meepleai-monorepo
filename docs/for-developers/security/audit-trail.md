@@ -249,9 +249,9 @@ Documented gaps as of 2026-05-06 (open for follow-up issues):
 
 ## Related Documentation
 
-- [SECURITY.md](../../SECURITY.md) - Top-level security policy
+- [SECURITY.md](../../../SECURITY.md) - Top-level security policy
 - [`docs/for-developers/security/oauth-security.md`](./oauth-security.md) - Authentication audit context
-- [`apps/api/src/Api/BoundedContexts/Administration/README.md`](../../apps/api/src/Api/BoundedContexts/Administration/README.md) - Administration BC overview
+- [`apps/api/src/Api/BoundedContexts/Administration/README.md`](../../../apps/api/src/Api/BoundedContexts/Administration/README.md) - Administration BC overview
 - Issue #3691 - Audit Log System (origin)
 - Issue #4652 - Admin Dashboard extension (added user info to DTO)
 - Issue #124 - Per-user audit log endpoint

@@ -1,4 +1,4 @@
-
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Service with Configuration classes
 namespace Api.Services;
@@ -72,6 +72,12 @@ internal record KeywordSearchResult
     /// Matched search terms highlighted in the content.
     /// </summary>
     public List<string> MatchedTerms { get; init; } = new List<string>();
+
+    /// <summary>
+    /// Phase D (D6): role classification of the text chunk (multi-label bitflag from text_chunks.role_tags).
+    /// <see cref="GameBookRole.None"/> when the chunk has not been classified.
+    /// </summary>
+    public GameBookRole RoleTags { get; init; } = GameBookRole.None;
 }
 
 /// <summary>

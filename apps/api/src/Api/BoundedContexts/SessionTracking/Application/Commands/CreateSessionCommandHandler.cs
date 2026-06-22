@@ -6,6 +6,7 @@ using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
+using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Exceptions;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
@@ -81,6 +82,15 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
 
         var sessionType = Enum.Parse<SessionType>(request.SessionType);
 
+        // BE-3 #1590: resolve the game title ONCE (invariant across retries) — reused for both
+        // the domain event snapshot (session.created) and the GameNight link entity below.
+        var gameTitle = await _db.SharedGames
+            .AsNoTracking()
+            .Where(g => g.Id == request.GameId)
+            .Select(g => g.Title)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false) ?? "Unknown Game";
+
         // Create session with retry for unique code
         Session session;
         const int maxRetries = 3;
@@ -126,17 +136,25 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                 }
             }
 
+            // BE-3 #1590: emit session.created BEFORE AddAsync so the durable domain_event_logs
+            // row is collected (SessionRepository.AddAsync calls CollectDomainEvents) and committed
+            // atomically with the session + the session_events diary row in one SaveChangesAsync.
+            // Timestamp uses _timeProvider (same clock as the diary row) so the AC5.b cross-table
+            // proximity assertion holds even under a fake test clock.
+            session.AddDomainEvent(new SessionCreatedEvent
+            {
+                SessionId = session.Id,
+                UserId = request.UserId,
+                SessionCode = session.SessionCode,
+                GameId = request.GameId,
+                GameName = gameTitle,
+                PlayerCount = session.Participants.Count,
+                Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
+            });
+
             try
             {
                 await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);
-
-                // Session Flow v2.1 — T4: Link session to the GameNight envelope.
-                var gameTitle = await _db.SharedGames
-                    .AsNoTracking()
-                    .Where(g => g.Id == request.GameId)
-                    .Select(g => g.Title)
-                    .FirstOrDefaultAsync(cancellationToken)
-                    .ConfigureAwait(false) ?? "Unknown Game";
 
                 // I2 fix: enforce max 5 sessions per GameNight (domain invariant bypass guard)
                 var existingSessionCount = await _db.GameNightSessions

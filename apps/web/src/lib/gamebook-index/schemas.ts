@@ -27,7 +27,7 @@
  * Used by:
  *   - `apps/web/src/lib/gamebook-index/fsm.ts` (cell input)
  *   - `apps/web/src/lib/gamebook-index/visual-test-fixture.ts`
- *   - `apps/web/src/components/v2/gamebook/*` (Task 2)
+ *   - `apps/web/src/components/features/gamebook/*` (Task 2)
  *   - `apps/web/src/app/(authenticated)/gamebook/_components/GamebookIndexView.tsx` (Task 3)
  */
 

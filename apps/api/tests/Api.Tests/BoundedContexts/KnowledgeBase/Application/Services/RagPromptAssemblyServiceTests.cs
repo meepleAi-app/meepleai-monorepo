@@ -133,12 +133,12 @@ public class RagPromptAssemblyServiceTests
         };
     }
 
-    #region AssemblePromptAsync - With Chunks (FTS-only after Qdrant removal)
+    #region AssemblePromptAsync - With Chunks (FTS-only post pgvector migration)
 
     [Fact]
     public async Task AssemblePrompt_WithChunks_FtsOnlyScoresBelowThreshold_ReturnsEmptyContext()
     {
-        // Arrange — After Qdrant removal, FTS results go through RRF scoring.
+        // Arrange — After legacy vector removal, FTS results go through RRF scoring.
         // With no vector results, RRF-normalized FTS scores max out at ~0.49,
         // which is below the DefaultMinScore (0.55), so all chunks are filtered out.
         SetupSuccessfulEmbedding();
@@ -167,7 +167,7 @@ public class RagPromptAssemblyServiceTests
     [Fact]
     public async Task AssemblePrompt_WithChunks_FtsOnlyScoresBelowThreshold_CreateNoCitations()
     {
-        // Arrange — After Qdrant removal, FTS-only RRF scores are below MinScore threshold.
+        // Arrange — After legacy vector removal, FTS-only RRF scores are below MinScore threshold.
         SetupSuccessfulEmbedding();
         SetupTextSearchResults(
             CreateChunk("doc1", 0, 0.90f, "Pawns move forward one square.", page: 5),
@@ -392,7 +392,7 @@ public class RagPromptAssemblyServiceTests
     [Fact]
     public async Task AssemblePrompt_RerankerFails_FtsOnlyScoresBelowThreshold_ReturnsEmptyContext()
     {
-        // Arrange — After Qdrant removal, FTS results go through RRF scoring only.
+        // Arrange — After legacy vector removal, FTS results go through RRF scoring only.
         // RRF-normalized FTS scores are below the 0.55 threshold, so reranker
         // is never reached (no chunks pass the filter to be reranked).
         SetupSuccessfulEmbedding();
@@ -593,7 +593,7 @@ public class RagPromptAssemblyServiceTests
 
         // Assert - embedding called for original + 2 expansions = 3 times
         _embeddingMock.Verify(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
-        // After Qdrant removal, FTS-only RRF scores are below threshold — no citations
+        // After legacy vector removal, FTS-only RRF scores are below threshold — no citations
         result.Citations.Should().BeEmpty();
     }
 
@@ -619,7 +619,7 @@ public class RagPromptAssemblyServiceTests
 
         // Assert - should still work with original query only
         _embeddingMock.Verify(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
-        // After Qdrant removal, FTS-only RRF scores are below threshold — no citations
+        // After legacy vector removal, FTS-only RRF scores are below threshold — no citations
         result.Citations.Should().BeEmpty();
     }
 
@@ -630,7 +630,7 @@ public class RagPromptAssemblyServiceTests
     [Fact]
     public async Task AssemblePrompt_DuplicateChunks_DeduplicatedAfterRrfFusion()
     {
-        // Arrange — After Qdrant removal, FTS results go through RRF-only scoring.
+        // Arrange — After legacy vector removal, FTS results go through RRF-only scoring.
         // Duplicate FTS entries for the same PdfId+ChunkIndex cause double-counting in RRF,
         // which can boost the normalized score above the 0.55 MinScore threshold.
         // After deduplication, only unique PdfId+ChunkIndex combinations remain.
@@ -926,7 +926,7 @@ public class RagPromptAssemblyServiceTests
     [Fact]
     public async Task AssemblePrompt_WithExpansions_SearchesBaseGame()
     {
-        // Arrange — After Qdrant removal, the hybrid search still calls FTS for the base game.
+        // Arrange — After legacy vector removal, the hybrid search still calls FTS for the base game.
         // Expansion game FTS is no longer triggered because the expansion search was
         // part of the vector search loop which has been removed.
         var expansionGameId = Guid.NewGuid();
@@ -1012,9 +1012,170 @@ public class RagPromptAssemblyServiceTests
             "tutor", "Catan", null, "Question?",
             TestGameId, null, null, "it", CancellationToken.None);
 
-        // Assert — After Qdrant removal, FTS-only RRF scores are below threshold
+        // Assert — After legacy vector removal, FTS-only RRF scores are below threshold
         result.Citations.Should().BeEmpty();
         result.SystemPrompt.Should().NotContain("Expansion Priority");
+    }
+
+    #endregion
+
+    #region Task 8a — AssembleFromContextAsync + ChunkCitation.GameId (cross-game)
+
+    [Fact]
+    public void ChunkCitation_GameId_DefaultsToNull_BackwardCompat()
+    {
+        // Arrange & Act — created with the OLD positional-ctor shape (no GameId)
+        var citation = new ChunkCitation("doc1", 1, 0.9f, "preview");
+
+        // Assert — GameId must default to null so existing call-sites don't break
+        citation.GameId.Should().BeNull();
+    }
+
+    [Fact]
+    public void ChunkCitation_GameId_CanBeSetViaInitProperty()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+
+        // Act — set via init-only property (cross-game path)
+        var citation = new ChunkCitation("doc1", 1, 0.9f, "preview")
+        {
+            GameId = gameId
+        };
+
+        // Assert
+        citation.GameId.Should().Be(gameId);
+    }
+
+    [Fact]
+    public async Task AssembleFromContextAsync_BuildsPromptFromChunks_WithoutRetrieval()
+    {
+        // Arrange — 3 pre-retrieved chunks from different games
+        var game1Id = Guid.NewGuid();
+        var game2Id = Guid.NewGuid();
+        var game3Id = Guid.NewGuid();
+
+        var preRetrievedChunks = new List<ChunkCitation>
+        {
+            new ChunkCitation("doc-game1", 1, 0.92f, "Rule text from game 1") { GameId = game1Id },
+            new ChunkCitation("doc-game2", 2, 0.88f, "Rule text from game 2") { GameId = game2Id },
+            new ChunkCitation("doc-game3", 3, 0.85f, "Rule text from game 3") { GameId = game3Id }
+        };
+
+        var service = CreateService();
+
+        // Act
+        var result = await service.AssembleFromContextAsync(
+            agentTypology: "tutor",
+            gameTitle: "la tua libreria",
+            userQuestion: "How do I win?",
+            preRetrievedChunks: preRetrievedChunks,
+            chatThread: null,
+            userTier: null,
+            agentLanguage: "it",
+            cancellationToken: CancellationToken.None);
+
+        // Assert — prompt assembled without calling retrieval services
+        result.Should().NotBeNull();
+        result.Citations.Should().HaveCount(3);
+
+        // No retrieval services should have been invoked
+        _embeddingMock.Verify(
+            e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "AssembleFromContextAsync must not call embedding service");
+        _textSearchMock.Verify(
+            t => t.FullTextSearchAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "AssembleFromContextAsync must not call text search service");
+    }
+
+    [Fact]
+    public async Task AssembleFromContextAsync_PreservesAllChunkGameIds()
+    {
+        // Arrange — chunks with distinct GameIds (cross-game scenario)
+        var game1Id = Guid.NewGuid();
+        var game2Id = Guid.NewGuid();
+
+        var preRetrievedChunks = new List<ChunkCitation>
+        {
+            new ChunkCitation("doc-A", 1, 0.90f, "Snippet A") { GameId = game1Id },
+            new ChunkCitation("doc-B", 2, 0.80f, "Snippet B") { GameId = game2Id }
+        };
+
+        var service = CreateService();
+
+        // Act
+        var result = await service.AssembleFromContextAsync(
+            agentTypology: "arbitro",
+            gameTitle: "cross-game",
+            userQuestion: "Any rule?",
+            preRetrievedChunks: preRetrievedChunks,
+            chatThread: null,
+            userTier: null,
+            agentLanguage: "en",
+            cancellationToken: CancellationToken.None);
+
+        // Assert — citations carry the original GameIds
+        result.Citations.Should().HaveCount(2);
+        result.Citations.Should().Contain(c => c.GameId == game1Id);
+        result.Citations.Should().Contain(c => c.GameId == game2Id);
+    }
+
+    [Fact]
+    public async Task AssembleFromContextAsync_EmptyChunks_ProducesValidPromptWithNoContext()
+    {
+        // Arrange — empty pre-retrieved context (EC-1 scenario: user has 0 accessible games)
+        var service = CreateService();
+
+        // Act
+        var result = await service.AssembleFromContextAsync(
+            agentTypology: "tutor",
+            gameTitle: "la tua libreria",
+            userQuestion: "What games do I own?",
+            preRetrievedChunks: new List<ChunkCitation>(),
+            chatThread: null,
+            userTier: null,
+            agentLanguage: "it",
+            cancellationToken: CancellationToken.None);
+
+        // Assert — no crash; prompt contains "no documentation" notice; citations empty
+        result.Should().NotBeNull();
+        result.Citations.Should().BeEmpty();
+        result.SystemPrompt.Should().Contain("No game documentation is currently available");
+        result.EstimatedTokens.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task AssembleFromContextAsync_CitationsMatchInputChunks_ExactSet()
+    {
+        // Arrange — verify the citations in the output are exactly the input chunks (no extra, no missing)
+        var chunks = new List<ChunkCitation>
+        {
+            new ChunkCitation("doc1", 1, 0.95f, "First rule"),
+            new ChunkCitation("doc2", 3, 0.70f, "Second rule")
+        };
+
+        var service = CreateService();
+
+        // Act
+        var result = await service.AssembleFromContextAsync(
+            agentTypology: "tutor",
+            gameTitle: "multi-game",
+            userQuestion: "Question?",
+            preRetrievedChunks: chunks,
+            chatThread: null,
+            userTier: null,
+            agentLanguage: "it",
+            cancellationToken: CancellationToken.None);
+
+        // Assert — citations are exactly the pre-retrieved chunks, preserving all fields
+        result.Citations.Should().HaveCount(2);
+        result.Citations[0].DocumentId.Should().Be("doc1");
+        result.Citations[0].PageNumber.Should().Be(1);
+        result.Citations[0].RelevanceScore.Should().Be(0.95f);
+        result.Citations[1].DocumentId.Should().Be("doc2");
+        result.Citations[1].PageNumber.Should().Be(3);
     }
 
     #endregion

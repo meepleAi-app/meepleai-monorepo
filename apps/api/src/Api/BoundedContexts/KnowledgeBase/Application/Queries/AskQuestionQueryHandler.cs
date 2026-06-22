@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
@@ -7,11 +8,13 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Mappers;
+using Api.Configuration;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Translation;
 using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
+using Microsoft.Extensions.Options;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 
@@ -49,6 +52,8 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     private readonly IHouseRuleMatcher _houseRuleMatcher;
     private readonly IPricingEngine _pricingEngine;
     private readonly IGenericTranslationService _genericTranslationService;
+    private readonly IIntentClassifierService _intentClassifier;
+    private readonly IOptionsMonitor<LlmQueryComplexityRoutingOptions> _routingOptions;
     private readonly ILogger<AskQuestionQueryHandler> _logger;
 
     public AskQuestionQueryHandler(
@@ -68,6 +73,8 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         IHouseRuleMatcher houseRuleMatcher,
         IPricingEngine pricingEngine,
         IGenericTranslationService genericTranslationService,
+        IIntentClassifierService intentClassifier,
+        IOptionsMonitor<LlmQueryComplexityRoutingOptions> routingOptions,
         ILogger<AskQuestionQueryHandler> logger)
     {
         _searchQueryHandler = searchQueryHandler ?? throw new ArgumentNullException(nameof(searchQueryHandler));
@@ -86,6 +93,8 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _houseRuleMatcher = houseRuleMatcher ?? throw new ArgumentNullException(nameof(houseRuleMatcher));
         _pricingEngine = pricingEngine ?? throw new ArgumentNullException(nameof(pricingEngine));
         _genericTranslationService = genericTranslationService ?? throw new ArgumentNullException(nameof(genericTranslationService));
+        _intentClassifier = intentClassifier ?? throw new ArgumentNullException(nameof(intentClassifier));
+        _routingOptions = routingOptions ?? throw new ArgumentNullException(nameof(routingOptions));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -102,10 +111,18 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _logger.LogDebug(
             "[AskQuestionHandler] QueryComplexityAnalyzer: Question={Question}, RoutingTier={RoutingTier}",
             query.Question, queryRoutingTier);
-#pragma warning disable S1135, MA0026 // Deferred: requires ILlmService per-call model-override support (not yet available)
-        // TODO: Pass queryRoutingTier to ILlmService for model selection when per-call model-override support is available.
-        // Currently the tier is captured in RagQueryMetrics.Strategy for observability only.
-#pragma warning restore S1135, MA0026
+
+        // Issue #562: tier → model override resolved from `LlmRouting:QueryComplexityModels`.
+        // When the per-tier value is empty/null the handler keeps using the default model
+        // selected by ILlmService (backward-compatible no-op). Otherwise the routing
+        // dispatches through ILlmService.GenerateCompletionWithModelAsync (Issue #4332).
+        var modelOverride = _routingOptions.CurrentValue.ResolveOverride(queryRoutingTier);
+        if (modelOverride is not null)
+        {
+            _logger.LogDebug(
+                "[AskQuestionHandler] Per-tier model override active: Tier={Tier}, Model={Model}",
+                queryRoutingTier, modelOverride);
+        }
 
         // RAG access enforcement
         if (query.UserId.HasValue)
@@ -303,7 +320,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _logger.LogDebug("[AskQuestionHandler] Step 4: Generating LLM answer...");
         var sw4 = System.Diagnostics.Stopwatch.StartNew();
         var (llmResponse, llmResult) = await GenerateLlmAnswerAndRecordMetricsAsync(
-            systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
+            systemPrompt, userPrompt, modelOverride, cancellationToken).ConfigureAwait(false);
         sw4.Stop();
         _logger.LogInformation("[AskQuestionHandler] Step 4 DONE: LLM generation completed in {ElapsedMs}ms - Response: {ResponseLength} chars",
             sw4.ElapsedMilliseconds, llmResponse?.Length ?? 0);
@@ -397,6 +414,14 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         float[]? precomputedQueryVector,
         CancellationToken cancellationToken)
     {
+        // Phase D (D7): classify user intent into GameBookRole tag(s) so the hybrid re-ranker
+        // can boost chunks whose role_tags overlap (D6). The classifier is rule-based, sync,
+        // and cheap (~µs); failure modes default to RulesReference.
+        var queryRoleHint = _intentClassifier.ClassifyIntent(query.Question);
+        _logger.LogDebug(
+            "[AskQuestionHandler] Intent classification: Question={Question}, RoleHint={RoleHint}",
+            query.Question, queryRoleHint);
+
         var searchQuery = new SearchQuery(
             GameId: query.GameId,
             Query: query.Question,
@@ -404,7 +429,8 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
             MinScore: 0.55,
             SearchMode: query.SearchMode ?? "hybrid",
             Language: query.Language,
-            QueryVector: precomputedQueryVector // Issue #563: reuse cache-lookup vector when available
+            QueryVector: precomputedQueryVector, // Issue #563: reuse cache-lookup vector when available
+            QueryRoleHint: queryRoleHint // Phase D (D6): bias re-ranker toward role-matching chunks
         );
 
         var searchResults = await _searchQueryHandler.Handle(searchQuery, cancellationToken).ConfigureAwait(false);
@@ -468,13 +494,25 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     private async Task<(string llmResponse, LlmCompletionResult llmResult)> GenerateLlmAnswerAndRecordMetricsAsync(
         string systemPrompt,
         string userPrompt,
+        string? modelOverride,
         CancellationToken cancellationToken)
     {
-        var llmResult = await _llmService.GenerateCompletionAsync(
-            systemPrompt,
-            userPrompt,
-            RequestSource.RagPipeline,
-            cancellationToken).ConfigureAwait(false);
+        // Issue #562: when modelOverride is provided (from LlmRouting:QueryComplexityModels),
+        // dispatch through GenerateCompletionWithModelAsync (Issue #4332). Otherwise
+        // fall back to the default model selection on ILlmService.
+        var llmResult = modelOverride is not null
+            ? await _llmService.GenerateCompletionWithModelAsync(
+                modelOverride,
+                systemPrompt,
+                userPrompt,
+                RequestSource.RagPipeline,
+                maxTokens: null,
+                cancellationToken).ConfigureAwait(false)
+            : await _llmService.GenerateCompletionAsync(
+                systemPrompt,
+                userPrompt,
+                RequestSource.RagPipeline,
+                cancellationToken).ConfigureAwait(false);
 
         var llmResponse = llmResult.Response;
 

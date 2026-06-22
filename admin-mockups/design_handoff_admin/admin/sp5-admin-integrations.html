@@ -1,0 +1,759 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Integrations: Slack &amp; Email · MeepleAI Admin</title>
+<!-- D6 · AI Tooling & Data Quality → 'integrations' (NAV_ID non ancora presente in admin-nav.js;
+     verrà aggiunto nel gruppo "AI Tooling & Data Quality"). -->
+<!-- @v1 SlackConnection · ChannelRouter · MessageFeed · EmailTemplateEditor · EmailPreviewFrame ·
+     TestSendForm reuse
+     Endpoints: GET/POST /api/v1/admin/slack, POST /api/v1/admin/slack/test
+                GET/PUT /api/v1/admin/email-templates
+                POST /api/v1/admin/email-templates/{id}/{preview|test-send}
+     Role: admin (Disconnect Slack = superadmin) -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+
+<!-- ═══════════════════ INLINED DS (tokens + components + admin-base) ═══════════════════ -->
+<style>
+/* ── tokens.css ─────────────────────────────────────────────────── */
+:root{
+  --c-game:25 95% 45%;--c-player:262 83% 58%;--c-session:240 60% 55%;--c-agent:38 92% 50%;
+  --c-kb:174 60% 40%;--c-chat:220 80% 55%;--c-event:350 89% 60%;--c-toolkit:142 70% 45%;--c-tool:195 80% 50%;
+  --f-display:'Quicksand',system-ui,sans-serif;--f-body:'Nunito',system-ui,sans-serif;--f-mono:'JetBrains Mono',ui-monospace,monospace;
+  --r-xs:4px;--r-sm:6px;--r-md:10px;--r-lg:14px;--r-pill:9999px;
+  --ease-out:cubic-bezier(.16,1,.3,1);--dur-sm:180ms;
+}
+:root,:root[data-theme="light"]{
+  --bg:#f7f3ee;--bg-card:#fff;--bg-muted:#efe6d9;--bg-sunken:#ede2d0;
+  --text:#2b1f12;--text-sec:#5a4a38;--text-muted:#9a8870;
+  --border:rgba(180,130,80,.18);--border-light:rgba(180,130,80,.1);--border-strong:rgba(180,130,80,.32);
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#14100a;--bg-card:#1e1710;--bg-muted:#241c13;--bg-sunken:#0f0c08;
+  --text:#f0e4d2;--text-sec:#c8b896;--text-muted:#8a7860;
+  --border:rgba(224,180,110,.14);--border-light:rgba(224,180,110,.08);--border-strong:rgba(224,180,110,.28);
+  --c-game:28 95% 58%;--c-player:262 75% 70%;--c-session:235 70% 70%;--c-agent:38 92% 62%;--c-kb:174 60% 55%;
+  --c-chat:218 80% 68%;--c-event:350 85% 70%;--c-toolkit:142 60% 58%;--c-tool:195 75% 62%;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}html,body{margin:0;padding:0}
+body{font-family:var(--f-body);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--f-display);font-weight:700;letter-spacing:-.01em;margin:0;line-height:1.2}
+button{font-family:inherit;cursor:pointer}a{color:inherit;text-decoration:none}
+code,kbd{font-family:var(--f-mono);font-size:.9em}
+.e-game{--e:var(--c-game)}.e-player{--e:var(--c-player)}.e-session{--e:var(--c-session)}.e-agent{--e:var(--c-agent)}
+.e-kb{--e:var(--c-kb)}.e-chat{--e:var(--c-chat)}.e-event{--e:var(--c-event)}.e-toolkit{--e:var(--c-toolkit)}.e-tool{--e:var(--c-tool)}
+.e-fg{color:hsl(var(--e))}.e-bg{background:hsl(var(--e));color:#fff}
+.e-tint{background:hsl(var(--e)/.1);color:hsl(var(--e))}
+
+/* ── admin-base.css ─────────────────────────────────────────────── */
+.admin-page{background:var(--bg);color:var(--text);min-height:100vh;font-family:var(--f-body);font-size:12px;line-height:1.5}
+.admin-shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+.admin-nav{background:var(--bg-card);border-right:1px solid var(--border);padding:16px 0;display:flex;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.admin-nav-brand{padding:4px 16px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border-light);margin-bottom:12px}
+.admin-nav-brand-mark{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,hsl(var(--c-game)),hsl(var(--c-event)));color:#fff;display:grid;place-items:center;font-family:var(--f-display);font-weight:900;font-size:14px}
+.admin-nav-brand-name{font-family:var(--f-display);font-weight:800;font-size:14px}
+.admin-nav-brand-tag{font-family:var(--f-mono);font-size:9px;font-weight:700;color:hsl(var(--c-event));text-transform:uppercase;letter-spacing:.08em;padding:2px 6px;border-radius:4px;background:hsl(var(--c-event)/.12);margin-left:auto}
+.admin-nav-group{padding:10px 16px 4px;font-family:var(--f-mono);font-size:9.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}
+.admin-nav-item{display:flex;align-items:center;gap:10px;padding:7px 16px;color:var(--text-sec);font-family:var(--f-display);font-size:13px;font-weight:600;cursor:pointer;border-left:2px solid transparent}
+.admin-nav-item:hover{background:var(--bg-muted);color:var(--text)}
+.admin-nav-item.active{background:hsl(var(--c-event)/.08);color:hsl(var(--c-event));border-left-color:hsl(var(--c-event))}
+.admin-nav-item .em{font-size:14px}
+.admin-nav-item .count{margin-left:auto;font-family:var(--f-mono);font-size:10px;color:var(--text-muted);font-weight:700}
+.admin-nav-foot{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border-light);font-family:var(--f-mono);font-size:10px;color:var(--text-muted)}
+.admin-top{background:var(--bg);border-bottom:1px solid var(--border-light);padding:12px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:50;backdrop-filter:blur(12px)}
+.admin-top h1{font-family:var(--f-display);font-size:20px;font-weight:800}
+.admin-top .crumbs{font-family:var(--f-mono);font-size:11px;color:var(--text-muted);margin-top:2px}
+.admin-top .spacer{flex:1}.admin-top-actions{display:flex;gap:8px;align-items:center}
+.admin-search{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;width:280px;font-size:12px}
+.admin-search input{flex:1;border:0;background:transparent;color:var(--text);font-family:var(--f-body);font-size:12.5px;outline:0}
+.admin-search kbd{padding:1px 5px;border-radius:4px;background:var(--bg-muted);border:1px solid var(--border);font-family:var(--f-mono);font-size:9px;color:var(--text-muted)}
+.btn-admin{padding:6px 12px;border-radius:6px;font-family:var(--f-display);font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--bg-card);color:var(--text);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-admin:hover{background:var(--bg-muted)}
+.btn-admin.primary{background:hsl(var(--c-event));border-color:hsl(var(--c-event));color:#fff;box-shadow:0 2px 6px hsl(var(--c-event)/.3)}
+.btn-admin.primary:hover{filter:brightness(1.08)}
+.btn-admin.danger{background:var(--bg-card);border-color:hsl(var(--c-event)/.5);color:hsl(var(--c-event))}
+.btn-admin.danger:hover{background:hsl(var(--c-event)/.08)}
+.btn-admin.success{background:hsl(var(--c-toolkit));border-color:hsl(var(--c-toolkit));color:#fff}
+.btn-admin.ghost{background:transparent;border-color:transparent}
+.btn-admin.icon{padding:6px;width:28px;height:28px;justify-content:center}
+.btn-admin.sm{padding:3px 8px;font-size:11px}
+.btn-admin kbd{padding:1px 4px;border-radius:3px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);font-family:var(--f-mono);font-size:9px;margin-left:4px}
+.btn-admin.primary kbd{background:rgba(0,0,0,.18);border-color:rgba(0,0,0,.25)}
+.admin-panel{background:var(--bg-card);border:1px solid var(--border-light);border-radius:10px;overflow:hidden}
+.admin-panel-head{padding:10px 14px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:10px;background:var(--bg)}
+.admin-panel-head h3{margin:0;font-family:var(--f-display);font-size:13px;font-weight:800}
+.admin-panel-head .meta{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);margin-left:auto}
+.admin-panel-body{padding:14px}
+.admin-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.admin-table th{text-align:left;padding:8px 12px;font-family:var(--f-mono);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border-light);background:var(--bg);white-space:nowrap}
+.admin-table td{padding:9px 12px;border-bottom:1px solid var(--border-light);vertical-align:middle}
+.admin-table tr:hover td{background:var(--bg-muted)}
+.admin-table tr.selected td{background:hsl(var(--c-event)/.07)}
+.admin-table tr.selected td:first-child{box-shadow:inset 3px 0 0 hsl(var(--c-event))}
+.admin-input,.admin-select,.admin-textarea{width:100%;padding:6px 10px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;font-family:var(--f-body);font-size:12.5px}
+.admin-input.mono,.admin-textarea.mono{font-family:var(--f-mono)}
+.admin-tabs{display:flex;gap:0;border-bottom:1px solid var(--border-light);padding:0 14px;background:var(--bg);border-radius:10px 10px 0 0}
+.admin-tab{padding:9px 14px;font-family:var(--f-display);font-size:12.5px;font-weight:700;color:var(--text-sec);cursor:pointer;border-bottom:2px solid transparent;display:inline-flex;align-items:center;gap:6px;background:transparent;border-top:0;border-left:0;border-right:0}
+.admin-tab:hover{color:var(--text)}
+.admin-tab.active{color:hsl(var(--c-event));border-bottom-color:hsl(var(--c-event))}
+.admin-tab .count{font-family:var(--f-mono);font-size:9px;background:var(--bg-muted);padding:1px 5px;border-radius:99px;color:var(--text-sec);font-weight:700}
+.admin-tab.active .count{background:hsl(var(--c-event)/.14);color:hsl(var(--c-event))}
+.status-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-family:var(--f-mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.status-chip::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.status-chip.healthy{background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit))}
+.status-chip.healthy::before{background:hsl(var(--c-toolkit));box-shadow:0 0 0 3px hsl(var(--c-toolkit)/.25)}
+.status-chip.warning{background:hsl(38 90% 56%/.14);color:hsl(38 90% 50%)}
+.status-chip.warning::before{background:hsl(38 90% 50%)}
+.status-chip.danger{background:hsl(var(--c-event)/.12);color:hsl(var(--c-event))}
+.status-chip.danger::before{background:hsl(var(--c-event))}
+.status-chip.muted{background:var(--bg-muted);color:var(--text-muted)}
+.status-chip.muted::before{background:var(--text-muted)}
+.status-chip.info{background:hsl(var(--c-chat)/.12);color:hsl(var(--c-chat))}
+.status-chip.info::before{background:hsl(var(--c-chat))}
+.activity-feed{display:flex;flex-direction:column;gap:1px}
+.activity-item{padding:10px 14px;border-bottom:1px solid var(--border-light);display:flex;align-items:flex-start;gap:10px;font-size:12.5px}
+.activity-item:last-child{border-bottom:0}
+.activity-item:hover{background:var(--bg-muted)}
+.activity-item .em{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:14px;flex-shrink:0}
+.activity-item .em.danger{background:hsl(var(--c-event)/.14);color:hsl(var(--c-event))}
+.activity-item .em.warning{background:hsl(38 90% 56%/.14);color:hsl(38 90% 50%)}
+.activity-item .em.info{background:hsl(var(--c-chat)/.14);color:hsl(var(--c-chat))}
+.activity-item .em.success{background:hsl(var(--c-toolkit)/.14);color:hsl(var(--c-toolkit))}
+.activity-item .body{flex:1;min-width:0}
+.activity-item .ts{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);flex-shrink:0}
+@media (max-width:880px){
+  .admin-mobile-fallback{display:flex !important;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;text-align:center;gap:16px}
+  .admin-mobile-fallback .em{font-size:56px}
+  .admin-mobile-fallback h2{margin:0;font-family:var(--f-display);font-size:20px}
+  .admin-mobile-fallback p{color:var(--text-sec);max-width:320px;margin:0}
+  .admin-shell{display:none}
+}
+.admin-mobile-fallback{display:none}
+.admin-body{padding:18px 22px}
+
+/* ── Page-specific ──────────────────────────────────────────────── */
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.head-cluster{display:inline-flex;align-items:center;gap:10px;margin-left:auto}
+.head-cluster .sep{width:1px;height:14px;background:var(--border-light)}
+.sensitive-note{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px}
+.sensitive-note .lock{color:hsl(var(--c-event))}
+
+/* Tab wrap */
+.tab-wrap{background:var(--bg-card);border:1px solid var(--border-light);border-radius:10px;display:flex;flex-direction:column}
+
+/* ── Tab Slack ──────────────────────────────────────────────────── */
+.slack-grid{display:flex;flex-direction:column;gap:14px;padding:14px}
+
+/* Connection panel */
+.conn-body{padding:16px 20px;display:grid;grid-template-columns:1.05fr 1fr auto;gap:18px;align-items:center}
+.conn-left{display:flex;align-items:center;gap:14px}
+.conn-mark{width:48px;height:48px;border-radius:10px;background:hsl(var(--c-event)/.12);color:hsl(var(--c-event));display:grid;place-items:center;font-family:var(--f-display);font-weight:900;font-size:22px;border:1px solid hsl(var(--c-event)/.25);flex-shrink:0}
+.conn-info .name{font-family:var(--f-display);font-weight:800;font-size:16px;color:var(--text);display:flex;align-items:center;gap:8px}
+.conn-info .desc{font-family:var(--f-mono);font-size:10.5px;color:var(--text-muted);margin-top:2px;font-weight:600}
+.conn-meta{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-family:var(--f-mono);font-size:10.5px}
+.conn-meta .k{color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-size:9px;font-weight:700}
+.conn-meta .v{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}
+.conn-actions{display:flex;gap:8px;flex-shrink:0}
+
+.webhook-row{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--bg);border-top:1px solid var(--border-light);font-family:var(--f-mono);font-size:11px}
+.webhook-row .lbl{color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:9.5px}
+.webhook-row .masked{flex:1;background:var(--bg-sunken,var(--bg));border:1px solid var(--border-light);padding:4px 10px;border-radius:6px;color:var(--text-sec);font-weight:600;letter-spacing:.04em}
+.webhook-row .masked .url{color:var(--text-muted);font-weight:500}
+.webhook-row .masked .dots{color:var(--text);font-weight:700}
+.webhook-row .right{font-family:var(--f-mono);font-size:9.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px}
+.webhook-row .right .lock{color:hsl(var(--c-event))}
+
+/* Event chips */
+.evt-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:6px;font-family:var(--f-mono);font-size:10px;font-weight:700;letter-spacing:.02em;border:1px solid hsl(var(--e)/.25);background:hsl(var(--e)/.1);color:hsl(var(--e))}
+.evt-chip::before{content:'';width:5px;height:5px;border-radius:50%;background:hsl(var(--e))}
+.evt-stack{display:flex;gap:4px;flex-wrap:wrap}
+
+/* Channel name cell */
+.chan-cell{font-family:var(--f-mono);font-size:12.5px;color:var(--text);font-weight:700}
+.chan-cell .hash{color:hsl(var(--c-chat));font-weight:800}
+
+/* Add channel inline form */
+.add-channel-form{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg);border-bottom:1px solid var(--border-light)}
+.add-channel-form .admin-input{max-width:240px;font-family:var(--f-mono);font-size:11.5px}
+.add-channel-form .admin-select{max-width:none;font-size:11.5px;flex:1}
+.add-channel-form label{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-right:2px}
+
+/* Row actions */
+.row-actions{display:flex;gap:4px;justify-content:flex-end;align-items:center}
+.row-actions .btn-admin.sm{padding:3px 8px;font-size:10.5px}
+
+/* Slack-style message body */
+.activity-item .body .msg-head{display:flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:10px;color:var(--text-muted);font-weight:700}
+.activity-item .body .msg-head .ch{color:hsl(var(--c-chat));font-weight:800;font-size:11px}
+.activity-item .body .msg-body{margin-top:3px;color:var(--text);font-size:12.5px;line-height:1.5}
+.activity-item .body .msg-body strong{font-weight:800}
+.activity-item .body .msg-body .v-mono{font-family:var(--f-mono);background:var(--bg-muted);padding:1px 5px;border-radius:4px;font-size:11px}
+.activity-item .body .msg-foot{margin-top:3px;font-family:var(--f-mono);font-size:9.5px;color:var(--text-muted);font-weight:700;display:flex;gap:10px}
+
+/* ── Tab divider (since we show both views) ─────────────────────── */
+.tab-divider{margin:34px 0 14px;display:flex;align-items:center;gap:10px;color:var(--text-muted);font-family:var(--f-mono);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.tab-divider::before,.tab-divider::after{content:'';flex:1;height:1px;background:var(--border-light)}
+.tab-divider .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border:1px dashed var(--border-strong);border-radius:99px;color:var(--text-sec)}
+.tab-divider .pill .v{color:hsl(var(--c-event));font-weight:800}
+
+/* ── Tab Email · 3-col grid ─────────────────────────────────────── */
+.email-grid{display:grid;grid-template-columns:280px minmax(0,1fr) 360px;gap:14px;padding:14px}
+
+/* Template name cell */
+.tpl-name-cell{font-family:var(--f-display);font-weight:800;font-size:12.5px;color:var(--text);display:flex;align-items:center;gap:8px}
+.tpl-name-cell .ico{width:24px;height:24px;border-radius:6px;background:hsl(var(--e)/.12);color:hsl(var(--e));display:grid;place-items:center;font-size:12px;border:1px solid hsl(var(--e)/.25);flex-shrink:0}
+.subj-cell{font-family:var(--f-mono);font-size:10.5px;color:var(--text-sec);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+.subj-cell .var{color:hsl(var(--c-kb));font-weight:700}
+
+/* Editor */
+.email-editor-head{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border-light);background:var(--bg)}
+.email-editor-head .nm{font-family:var(--f-display);font-weight:800;font-size:14px;color:var(--text)}
+.email-editor-head .sub{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);font-weight:700}
+.email-editor-toolbar{display:flex;align-items:center;gap:6px;padding:7px 14px;border-bottom:1px solid var(--border-light);background:var(--bg);font-family:var(--f-mono);font-size:11px;color:var(--text-muted);flex-wrap:wrap}
+.email-editor-toolbar .var-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:99px;font-family:var(--f-mono);font-size:10px;font-weight:700;background:hsl(var(--c-kb)/.12);color:hsl(var(--c-kb));border:1px solid hsl(var(--c-kb)/.25);cursor:pointer}
+.email-editor-toolbar .var-pill:hover{background:hsl(var(--c-kb)/.18)}
+.email-editor-toolbar .sep{width:1px;height:16px;background:var(--border-light);margin:0 4px}
+.email-editor-toolbar .spacer{flex:1}
+.email-editor-toolbar .stats{display:inline-flex;gap:10px;color:var(--text-muted)}
+.email-editor-toolbar .stats .v{color:var(--text);font-weight:700}
+
+.email-subject-row{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--border-light);background:var(--bg-card)}
+.email-subject-row .lbl{font-family:var(--f-mono);font-size:9.5px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;min-width:60px}
+.email-subject-row .admin-input{padding:5px 9px;font-family:var(--f-mono);font-size:12px}
+.email-body-wrap{background:var(--bg-sunken,var(--bg));max-height:430px;overflow:auto}
+.hb-source{margin:0;padding:14px 18px;font-family:var(--f-mono);font-size:12.5px;line-height:1.7;color:var(--text);white-space:pre-wrap;tab-size:2;min-height:100%}
+.hb-source .ln{display:inline-block;width:22px;color:var(--text-muted);user-select:none;font-size:10px;text-align:right;padding-right:8px;font-weight:600;opacity:.7}
+.hb-source .var{display:inline-flex;align-items:center;padding:0 4px;border-radius:4px;background:hsl(var(--c-kb)/.14);color:hsl(var(--c-kb));border:1px solid hsl(var(--c-kb)/.25);font-weight:700;font-size:11.5px;cursor:pointer}
+.hb-source .helper{color:hsl(var(--c-toolkit));font-weight:700}
+.hb-source .comment{color:var(--text-muted);font-style:italic;opacity:.85}
+.hb-source .html-tag{color:hsl(var(--c-event))}
+
+.email-editor-foot{display:flex;align-items:center;gap:8px;padding:9px 14px;border-top:1px solid var(--border-light);background:var(--bg)}
+.email-editor-foot .autosave{display:inline-flex;align-items:center;gap:5px;font-family:var(--f-mono);font-size:10px;color:var(--text-muted)}
+.email-editor-foot .autosave .dot{width:6px;height:6px;border-radius:50%;background:hsl(var(--c-agent));animation:admin-pulse 1.4s ease-in-out infinite}
+@keyframes admin-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.5}}
+.email-editor-foot .spacer{flex:1}
+
+/* ── Preview frame (renders the email like a real inbox) ────────── */
+.preview-head{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--border-light);background:var(--bg)}
+.preview-head .nm{font-family:var(--f-display);font-weight:800;font-size:13px;color:var(--text);flex:1}
+.preview-frame{margin:14px;padding:0;background:var(--bg-card);border:1px solid var(--border-strong);border-radius:8px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+.inbox-header{padding:10px 14px;background:var(--bg-muted);border-bottom:1px solid var(--border-light);display:flex;flex-direction:column;gap:4px;font-family:var(--f-mono);font-size:10.5px}
+.inbox-header .row{display:flex;align-items:center;gap:6px}
+.inbox-header .lbl{color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-size:9px;font-weight:700;min-width:34px}
+.inbox-header .v{color:var(--text);font-weight:600}
+.inbox-header .v strong{color:hsl(var(--c-kb));font-weight:800}
+.inbox-header .subject{font-family:var(--f-display);font-size:13.5px;font-weight:800;color:var(--text);margin-top:4px;line-height:1.3}
+.inbox-header .subject .injected{color:hsl(var(--c-kb))}
+
+.inbox-body{padding:18px 18px 16px;font-family:'Nunito',system-ui,sans-serif;font-size:12.5px;line-height:1.6;color:var(--text-sec);background:var(--bg-card)}
+.inbox-body h1{font-family:'Quicksand',sans-serif;font-size:18px;font-weight:800;color:var(--text);margin-bottom:10px;letter-spacing:-.01em}
+.inbox-body p{margin:0 0 10px 0}
+.inbox-body strong{color:var(--text);font-weight:700}
+.inbox-body .game-tile{display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg);border:1px solid var(--border-light);border-radius:8px;margin:10px 0}
+.inbox-body .game-tile .cover{width:44px;height:54px;border-radius:5px;background:hsl(var(--c-game)/.16);border:1px solid hsl(var(--c-game)/.3);color:hsl(var(--c-game));display:grid;place-items:center;font-family:'Quicksand',sans-serif;font-weight:800;font-size:18px;flex-shrink:0}
+.inbox-body .game-tile .gi{display:flex;flex-direction:column;line-height:1.25}
+.inbox-body .game-tile .gn{font-family:'Quicksand',sans-serif;font-weight:800;color:var(--text);font-size:13.5px}
+.inbox-body .game-tile .gs{font-size:10.5px;color:var(--text-muted)}
+.inbox-body .cta{display:inline-block;background:hsl(var(--c-event));color:#fff;font-family:'Quicksand',sans-serif;font-weight:800;font-size:12.5px;padding:8px 14px;border-radius:6px;margin:4px 0 6px;text-decoration:none}
+.inbox-body .footer{margin-top:14px;padding-top:10px;border-top:1px solid var(--border-light);font-size:10px;color:var(--text-muted);line-height:1.4}
+
+.test-send{padding:12px 14px;display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--border-light);background:var(--bg)}
+.test-send .label{font-family:var(--f-mono);font-size:9.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em}
+.test-send .row{display:flex;gap:6px}
+.test-send .row .admin-input{flex:1;font-family:var(--f-mono);font-size:11.5px}
+.test-send .helper{font-family:var(--f-mono);font-size:9.5px;color:var(--text-muted)}
+
+/* Email tab grid: ensure left panel scrolls */
+.email-grid > .admin-panel{align-self:stretch;display:flex;flex-direction:column;overflow:hidden}
+.email-grid .tpl-list-wrap{flex:1;overflow:auto}
+</style>
+</head>
+<body class="admin-page">
+
+  <div class="admin-mobile-fallback">
+    <div class="em">🖥️</div>
+    <h2>Console solo desktop</h2>
+    <p>La console admin è ottimizzata per schermi ≥ 880px. Aprila da desktop.</p>
+  </div>
+
+  <div class="admin-shell">
+    <div data-admin-nav-mount></div>
+
+    <main>
+      <header class="admin-top">
+        <div>
+          <h1>Integrations · Slack &amp; Email</h1>
+          <div class="crumbs">Admin › AI Tooling &amp; Data Quality › Integrations · 2 integrazioni · aggiornato 14:23:08</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="admin-top-actions">
+          <div class="admin-search"><span>🔍</span><input placeholder="Cerca canale, template…"/><kbd>⌘K</kbd></div>
+          <button class="btn-admin">⟳ Refresh <kbd>R</kbd></button>
+          <button class="btn-admin icon" title="Tema">🌗</button>
+        </div>
+      </header>
+
+      <div class="admin-body">
+
+        <!-- ═══════════════════ TAB SLACK (attiva) ═══════════════════ -->
+        <div class="tab-wrap">
+
+          <div class="admin-tabs">
+            <button class="admin-tab active">📣 Slack <span class="count">8 msg/24h</span></button>
+            <button class="admin-tab">✉ Email templates <span class="count">5</span></button>
+          </div>
+
+          <div class="slack-grid">
+
+            <!-- ── Connessione ── -->
+            <section class="admin-panel" style="border-left:3px solid hsl(var(--c-toolkit))">
+              <div class="admin-panel-head">
+                <h3>Connessione</h3>
+                <span class="status-chip healthy">connesso</span>
+                <div class="head-cluster">
+                  <span class="sensitive-note"><span class="lock">🔒</span> Disconnetti → ConfirmModal · superadmin</span>
+                  <span class="meta" style="margin-left:0">Slack v2 · workspace owner aaron@</span>
+                </div>
+              </div>
+
+              <div class="conn-body">
+                <div class="conn-left">
+                  <div class="conn-mark">⌘</div>
+                  <div class="conn-info">
+                    <span class="name">meepleai <span class="status-chip muted">workspace</span></span>
+                    <span class="desc">workspace · meepleai.slack.com · 14 membri · 9 canali pubblici</span>
+                  </div>
+                </div>
+                <div class="conn-meta">
+                  <span class="k">Connesso</span><span class="v">14 mar 2026 11:04</span>
+                  <span class="k">Bot user</span><span class="v">@meepleai-ops</span>
+                  <span class="k">Eventi inviati</span><span class="v">412 · 7g</span>
+                  <span class="k">Ultimo invio</span><span class="v">2m 04s fa</span>
+                </div>
+                <div class="conn-actions">
+                  <button class="btn-admin">🔔 Test message</button>
+                  <button class="btn-admin danger">⤬ Disconnetti</button>
+                </div>
+              </div>
+
+              <div class="webhook-row">
+                <span class="lbl">webhook</span>
+                <span class="masked"><span class="url">https://hooks.slack.com/services/</span><span class="dots">••••••••••••/••••••••••••/••••••••••••••••••••••••</span></span>
+                <span class="right"><span class="lock">🔒</span>step-up 2FA per reveal</span>
+                <button class="btn-admin sm ghost">👁 Reveal</button>
+                <button class="btn-admin sm ghost">⤿ Rotate</button>
+              </div>
+            </section>
+
+            <!-- ── Canali instradati ── -->
+            <section class="admin-panel">
+              <div class="admin-panel-head">
+                <h3>Canali instradati</h3>
+                <span class="status-chip healthy">3 attivi</span>
+                <div class="head-cluster">
+                  <span class="meta">routing rules · ordered top-down</span>
+                </div>
+              </div>
+
+              <div class="add-channel-form">
+                <label>Aggiungi</label>
+                <input class="admin-input" placeholder="#nuovo-canale" />
+                <select class="admin-select" style="max-width:240px" multiple size="1">
+                  <option>alert</option>
+                  <option>deploy</option>
+                  <option>error</option>
+                  <option>info</option>
+                </select>
+                <button class="btn-admin primary">＋ Aggiungi canale</button>
+              </div>
+
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th style="width:22%">Canale</th>
+                    <th style="width:28%">Eventi</th>
+                    <th style="width:13%">Stato</th>
+                    <th>Note</th>
+                    <th style="width:170px;text-align:right">Azioni</th>
+                  </tr>
+                </thead>
+                <tbody>
+
+                  <tr>
+                    <td class="chan-cell"><span class="hash">#</span>ops</td>
+                    <td>
+                      <div class="evt-stack">
+                        <span class="evt-chip e-event">alert</span>
+                        <span class="evt-chip e-toolkit">deploy</span>
+                        <span class="evt-chip e-event">error</span>
+                      </div>
+                    </td>
+                    <td><span class="status-chip healthy">attivo</span></td>
+                    <td class="mono" style="font-size:10.5px;color:var(--text-muted)">priorità default · @meepleai-ops</td>
+                    <td>
+                      <div class="row-actions">
+                        <button class="btn-admin sm ghost">🔔 Test</button>
+                        <button class="btn-admin sm ghost">✎ Modifica</button>
+                        <button class="btn-admin sm ghost" title="ConfirmModal">🗑</button>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td class="chan-cell"><span class="hash">#</span>alerts</td>
+                    <td>
+                      <div class="evt-stack">
+                        <span class="evt-chip e-event">alert</span>
+                        <span class="evt-chip e-event">error</span>
+                      </div>
+                    </td>
+                    <td><span class="status-chip healthy">attivo</span></td>
+                    <td class="mono" style="font-size:10.5px;color:var(--text-muted)">solo warning + danger · @here mention</td>
+                    <td>
+                      <div class="row-actions">
+                        <button class="btn-admin sm ghost">🔔 Test</button>
+                        <button class="btn-admin sm ghost">✎ Modifica</button>
+                        <button class="btn-admin sm ghost">🔇 Silenzia</button>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td class="chan-cell"><span class="hash">#</span>deploys</td>
+                    <td>
+                      <div class="evt-stack">
+                        <span class="evt-chip e-toolkit">deploy</span>
+                        <span class="evt-chip e-chat">info</span>
+                      </div>
+                    </td>
+                    <td><span class="status-chip healthy">attivo</span></td>
+                    <td class="mono" style="font-size:10.5px;color:var(--text-muted)">CI/CD · webhook github + n8n</td>
+                    <td>
+                      <div class="row-actions">
+                        <button class="btn-admin sm ghost">🔔 Test</button>
+                        <button class="btn-admin sm ghost">✎ Modifica</button>
+                        <button class="btn-admin sm ghost">🗑</button>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <tr style="opacity:.6">
+                    <td class="chan-cell"><span class="hash">#</span>random</td>
+                    <td>
+                      <div class="evt-stack">
+                        <span class="evt-chip e-chat">info</span>
+                      </div>
+                    </td>
+                    <td><span class="status-chip muted">silenziato</span></td>
+                    <td class="mono" style="font-size:10.5px;color:var(--text-muted)">memes &amp; promo · silenziato fino al 30 mag</td>
+                    <td>
+                      <div class="row-actions">
+                        <button class="btn-admin sm ghost">🔊 Riattiva</button>
+                        <button class="btn-admin sm ghost">✎ Modifica</button>
+                        <button class="btn-admin sm ghost">🗑</button>
+                      </div>
+                    </td>
+                  </tr>
+
+                </tbody>
+              </table>
+            </section>
+
+            <!-- ── Messaggi recenti ── -->
+            <section class="admin-panel">
+              <div class="admin-panel-head">
+                <h3>Messaggi recenti</h3>
+                <span class="status-chip info">ultimi 8</span>
+                <div class="head-cluster">
+                  <span class="meta">412 invii 7g · 0 fallimenti · delivery rate 100%</span>
+                  <button class="btn-admin sm ghost">📜 Audit log</button>
+                </div>
+              </div>
+
+              <div class="activity-feed">
+
+                <div class="activity-item">
+                  <span class="em danger">⚠</span>
+                  <div class="body">
+                    <div class="msg-head"><span class="ch">#ops</span>· bot <strong>@meepleai-ops</strong></div>
+                    <div class="msg-body"><strong>⚠ Error rate alto</strong> · rag.error_rate <span class="v-mono">1.42% &gt; 1.0%</span> su provider <strong>OpenAI</strong> per 4m. <em>azione raccomandata: verifica circuit breaker.</em></div>
+                    <div class="msg-foot"><span>delivery 218ms · ack ✓</span><span>thread · 3 reply</span></div>
+                  </div>
+                  <div class="ts">oggi 14:22:45<br/>23s fa</div>
+                </div>
+
+                <div class="activity-item">
+                  <span class="em success">✓</span>
+                  <div class="body">
+                    <div class="msg-head"><span class="ch">#deploys</span>· bot <strong>@meepleai-ops</strong> · CI #842</div>
+                    <div class="msg-body"><strong>✓ Deploy main-dev OK</strong> · commit <span class="v-mono">a8f3c21</span> · 2 service ricostruiti (api, embedding) · downtime <span class="v-mono">0s</span> · canary 5min ok.</div>
+                    <div class="msg-foot"><span>delivery 142ms · ack ✓</span><span><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="234242514c4d634e4646534f46424a0d425353">[email&#160;protected]</a></span></div>
+                  </div>
+                  <div class="ts">oggi 11:03:18<br/>3h 20m fa</div>
+                </div>
+
+                <div class="activity-item">
+                  <span class="em warning">📦</span>
+                  <div class="body">
+                    <div class="msg-head"><span class="ch">#alerts</span>· bot <strong>@meepleai-ops</strong></div>
+                    <div class="msg-body"><strong>Coda job profonda</strong> · queue.depth <span class="v-mono">62 &gt; 50</span> per 16m · risolto automaticamente.</div>
+                    <div class="msg-foot"><span>delivery 198ms · ack ✓</span><span>autoresolve</span></div>
+                  </div>
+                  <div class="ts">oggi 11:08:14</div>
+                </div>
+
+                <div class="activity-item">
+                  <span class="em danger">🔌</span>
+                  <div class="body">
+                    <div class="msg-head"><span class="ch">#ops</span>· bot <strong>@meepleai-ops</strong></div>
+                    <div class="msg-body"><strong>🔌 Tunnel staging down</strong> · sync prod→staging non eseguito · ripristino manuale da bastion-prod.</div>
+                    <div class="msg-foot"><span>delivery 154ms · ack ✓</span><span>thread · 6 reply · risolto 8m 41s</span></div>
+                  </div>
+                  <div class="ts">21 mag 03:14<br/>3g fa</div>
+                </div>
+
+                <div class="activity-item">
+                  <span class="em success">✓</span>
+                  <div class="body">
+                    <div class="msg-head"><span class="ch">#deploys</span>· bot <strong>@meepleai-ops</strong> · CI #841</div>
+                    <div class="msg-body"><strong>✓ Deploy prod</strong> · tag <span class="v-mono">v1.8.2</span> · 4 service · canary green · rollout completato.</div>
+                    <div class="msg-foot"><span>delivery 132ms · ack ✓</span><span><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="224343504d4c624f4747524e47434b0c435252">[email&#160;protected]</a></span></div>
+                  </div>
+                  <div class="ts">21 mag 09:42</div>
+                </div>
+
+                <div class="activity-item">
+                  <span class="em info">💰</span>
+                  <div class="body">
+                    <div class="msg-head"><span class="ch">#alerts</span>· bot <strong>@meepleai-ops</strong></div>
+                    <div class="msg-body"><strong>Spesa giornaliera alta</strong> · cost.daily_usd <span class="v-mono">$42.08 &gt; $40</span> · picco dovuto a reindex Wingspan.</div>
+                    <div class="msg-foot"><span>delivery 178ms · ack ✓</span><span>silenziato 24h</span></div>
+                  </div>
+                  <div class="ts">12 mag 23:55</div>
+                </div>
+
+              </div>
+            </section>
+
+          </div>
+        </div>
+
+        <!-- ═══════════════════ TAB EMAIL (seconda vista documentata) ═══════════════════ -->
+        <div class="tab-divider">
+          <span class="pill">↓ Tab successiva · <span class="v">Email templates</span> · vista documentata per handoff</span>
+        </div>
+
+        <div class="tab-wrap">
+
+          <div class="admin-tabs">
+            <button class="admin-tab">📣 Slack <span class="count">8 msg/24h</span></button>
+            <button class="admin-tab active">✉ Email templates <span class="count">5</span></button>
+          </div>
+
+          <div class="email-grid">
+
+            <!-- ░░ LEFT: Templates list ░░ -->
+            <aside class="admin-panel">
+              <div class="admin-panel-head">
+                <h3>Template</h3>
+                <button class="btn-admin sm ghost" style="margin-left:auto">＋ Nuovo</button>
+              </div>
+              <div class="tpl-list-wrap">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th style="width:90px;text-align:right">Modificato</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+
+                    <tr>
+                      <td>
+                        <div class="tpl-name-cell e-player"><div class="ico">👋</div>Benvenuto</div>
+                        <div class="subj-cell" style="margin-top:3px;padding-left:32px">"Benvenuto su MeepleAI, <span class="var">{{user.name}}</span>!"</div>
+                      </td>
+                      <td class="mono" style="font-size:10px;color:var(--text-muted);text-align:right">14g fa</td>
+                    </tr>
+
+                    <tr>
+                      <td>
+                        <div class="tpl-name-cell e-event"><div class="ico">🔑</div>Reset password</div>
+                        <div class="subj-cell" style="margin-top:3px;padding-left:32px">"Reset della tua password"</div>
+                      </td>
+                      <td class="mono" style="font-size:10px;color:var(--text-muted);text-align:right">38g fa</td>
+                    </tr>
+
+                    <tr class="selected">
+                      <td>
+                        <div class="tpl-name-cell e-game"><div class="ico">🎲</div>Gioco pronto</div>
+                        <div class="subj-cell" style="margin-top:3px;padding-left:32px">"Il tuo gioco <span class="var">{{game.title}}</span> è pronto!"</div>
+                      </td>
+                      <td class="mono" style="font-size:10px;color:var(--text-muted);text-align:right">2g fa</td>
+                    </tr>
+
+                    <tr>
+                      <td>
+                        <div class="tpl-name-cell e-session"><div class="ico">🎉</div>Invito game night</div>
+                        <div class="subj-cell" style="margin-top:3px;padding-left:32px">"<span class="var">{{host.name}}</span> ti invita a una serata di gioco"</div>
+                      </td>
+                      <td class="mono" style="font-size:10px;color:var(--text-muted);text-align:right">5g fa</td>
+                    </tr>
+
+                    <tr>
+                      <td>
+                        <div class="tpl-name-cell e-chat"><div class="ico">📊</div>Report settimanale</div>
+                        <div class="subj-cell" style="margin-top:3px;padding-left:32px">"La tua settimana su MeepleAI · <span class="var">{{week.label}}</span>"</div>
+                      </td>
+                      <td class="mono" style="font-size:10px;color:var(--text-muted);text-align:right">7g fa</td>
+                    </tr>
+
+                  </tbody>
+                </table>
+              </div>
+            </aside>
+
+            <!-- ░░ CENTER: Editor ░░ -->
+            <section class="admin-panel">
+              <div class="email-editor-head">
+                <div style="flex:1;min-width:0">
+                  <div class="nm">Gioco pronto</div>
+                  <div class="sub">email_tpl_game_ready · transactional · channel:email · v3</div>
+                </div>
+                <span class="status-chip warning">unsaved</span>
+                <button class="btn-admin sm">📋 Duplica</button>
+              </div>
+
+              <div class="email-subject-row">
+                <span class="lbl">Subject</span>
+                <input class="admin-input mono" value='🎲 Il tuo gioco {{game.title}} è pronto!' />
+              </div>
+
+              <div class="email-editor-toolbar">
+                <button class="btn-admin sm">＋ Inserisci ▾</button>
+                <span class="var-pill">{{user.name}}</span>
+                <span class="var-pill">{{game.title}}</span>
+                <span class="var-pill">{{link}}</span>
+                <span class="sep"></span>
+                <button class="btn-admin sm">⊟ Formatta</button>
+                <button class="btn-admin sm">↪ Plain text</button>
+                <span class="spacer"></span>
+                <span class="stats">
+                  <span>L <span class="v">26</span></span>
+                  <span>var <span class="v">5</span></span>
+                  <span>est. <span class="v">~140w</span></span>
+                </span>
+              </div>
+
+              <div class="email-body-wrap">
+                <pre class="hb-source" contenteditable="false" spellcheck="false"><span class="ln"> 1</span> <span class="html-tag">&lt;h1&gt;</span>Ciao <span class="var">{{user.name}}</span>!<span class="html-tag">&lt;/h1&gt;</span>
+<span class="ln"> 2</span>
+<span class="ln"> 3</span> <span class="html-tag">&lt;p&gt;</span>Buone notizie 🎲 — il regolamento e la knowledge base di
+<span class="ln"> 4</span> <span class="html-tag">&lt;strong&gt;</span><span class="var">{{game.title}}</span><span class="html-tag">&lt;/strong&gt;</span> sono stati elaborati e l'assistente AI
+<span class="ln"> 5</span> è pronto per rispondere alle tue domande.<span class="html-tag">&lt;/p&gt;</span>
+<span class="ln"> 6</span>
+<span class="ln"> 7</span> <span class="comment">{{!-- Game tile card · injected by renderer --}}</span>
+<span class="ln"> 8</span> <span class="html-tag">&lt;div&gt;</span>
+<span class="ln"> 9</span>   <span class="html-tag">&lt;strong&gt;</span><span class="var">{{game.title}}</span><span class="html-tag">&lt;/strong&gt;</span>
+<span class="ln">10</span>   · {{game.player_count}} giocatori · {{game.complexity}}
+<span class="ln">11</span> <span class="html-tag">&lt;/div&gt;</span>
+<span class="ln">12</span>
+<span class="ln">13</span> <span class="html-tag">&lt;a</span> href=<span class="var">"{{link}}"</span><span class="html-tag">&gt;</span>Apri la chat con l'assistente →<span class="html-tag">&lt;/a&gt;</span>
+<span class="ln">14</span>
+<span class="ln">15</span> <span class="helper">{{#if</span> <span class="var">tips.length</span><span class="helper">}}</span>
+<span class="ln">16</span> <span class="html-tag">&lt;h3&gt;</span>3 cose da chiedere subito<span class="html-tag">&lt;/h3&gt;</span>
+<span class="ln">17</span> <span class="html-tag">&lt;ul&gt;</span>
+<span class="ln">18</span>   <span class="helper">{{#each</span> <span class="var">tips</span><span class="helper">}}</span>
+<span class="ln">19</span>     <span class="html-tag">&lt;li&gt;</span><span class="var">{{this}}</span><span class="html-tag">&lt;/li&gt;</span>
+<span class="ln">20</span>   <span class="helper">{{/each}}</span>
+<span class="ln">21</span> <span class="html-tag">&lt;/ul&gt;</span>
+<span class="ln">22</span> <span class="helper">{{/if}}</span>
+<span class="ln">23</span>
+<span class="ln">24</span> <span class="html-tag">&lt;p&gt;</span>Buon gioco!<span class="html-tag">&lt;br&gt;</span>il team di MeepleAI<span class="html-tag">&lt;/p&gt;</span>
+<span class="ln">25</span>
+<span class="ln">26</span> <span class="comment">{{!-- Footer · CAN-SPAM block injected --}}</span></pre>
+              </div>
+
+              <div class="email-editor-foot">
+                <span class="autosave"><span class="dot"></span>Auto-save in 18s</span>
+                <span class="spacer"></span>
+                <button class="btn-admin">⟲ Reset</button>
+                <button class="btn-admin primary">💾 Salva template <kbd>⌘S</kbd></button>
+              </div>
+            </section>
+
+            <!-- ░░ RIGHT: Preview + test ░░ -->
+            <aside class="admin-panel" style="overflow:hidden">
+              <div class="preview-head">
+                <span class="nm">Anteprima</span>
+                <select class="admin-select" style="max-width:120px;font-size:11px;padding:4px 8px">
+                  <option selected>HTML</option>
+                  <option>Plain text</option>
+                  <option>Dark client</option>
+                </select>
+                <button class="btn-admin sm ghost">↻</button>
+              </div>
+
+              <div class="preview-frame">
+                <div class="inbox-header">
+                  <div class="row"><span class="lbl">Da</span><span class="v"><strong>MeepleAI</strong> &lt;<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="523a373e3e3d123f3737223e37333b7c332222">[email&#160;protected]</a>&gt;</span></div>
+                  <div class="row"><span class="lbl">A</span><span class="v"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="bbdadac9d4d5fbd6dedecbd7dedad295dacbcb">[email&#160;protected]</a></span></div>
+                  <div class="subject">🎲 Il tuo gioco <span class="injected">Wingspan</span> è pronto!</div>
+                </div>
+
+                <div class="inbox-body">
+                  <h1>Ciao Aaron!</h1>
+                  <p>Buone notizie 🎲 — il regolamento e la knowledge base di <strong>Wingspan</strong> sono stati elaborati e l'assistente AI è pronto per rispondere alle tue domande.</p>
+
+                  <div class="game-tile">
+                    <div class="cover">W</div>
+                    <div class="gi">
+                      <span class="gn">Wingspan</span>
+                      <span class="gs">1–5 giocatori · complessità media · 40–70 min</span>
+                    </div>
+                  </div>
+
+                  <a href="#" class="cta">Apri la chat con l'assistente →</a>
+
+                  <p style="margin-top:14px"><strong>3 cose da chiedere subito</strong></p>
+                  <p style="margin:0;padding-left:14px">
+                    • Quanti uccelli posso giocare per turno?<br/>
+                    • Come funziona l'azione "Lay Eggs"?<br/>
+                    • Setup base per 2 giocatori?
+                  </p>
+
+                  <p style="margin-top:14px">Buon gioco!<br/>il team di MeepleAI</p>
+
+                  <div class="footer">
+                    MeepleAI · Milano, IT · <a href="#" style="color:hsl(var(--c-chat))">Disiscriviti</a> · <a href="#" style="color:hsl(var(--c-chat))">Gestisci preferenze</a>
+                  </div>
+                </div>
+              </div>
+
+              <div class="test-send">
+                <span class="label">Invia un test</span>
+                <div class="row">
+                  <input class="admin-input mono" value="aaron@meepleai.app" />
+                  <button class="btn-admin primary">▶ Invia test</button>
+                </div>
+                <span class="helper">render server-side · variabili compilate da sample fixture · max 10 invii/h</span>
+              </div>
+            </aside>
+
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="admin-nav.js"></script>
+  <script>renderAdminNav('integrations');</script>
+</body>
+</html>

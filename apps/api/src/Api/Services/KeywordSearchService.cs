@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Helpers;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -86,6 +87,8 @@ internal class KeywordSearchService : IKeywordSearchService
             // Using FromSqlRaw for complex tsvector queries (EF Core limitation with tsvector operators)
             // Issue #423: Add minScore filter to exclude low-relevance keyword matches (e.g., ToC entries)
             // Perf: subquery avoids double ts_rank_cd evaluation (computed once in inner SELECT, filtered in outer WHERE)
+            // Phase D (D6): include role_tags in the projection so the hybrid re-ranker can
+            // apply a role-match boost without an extra round-trip.
             var sql = @"
                 SELECT * FROM (
                     SELECT
@@ -95,6 +98,7 @@ internal class KeywordSearchService : IKeywordSearchService
                         ""GameId"",
                         ""ChunkIndex"",
                         ""PageNumber"",
+                        role_tags AS ""RoleTags"",
                         ts_rank_cd(search_vector, to_tsquery(@textSearchConfig::regconfig, @tsQuery), @normalization) AS ""RelevanceScore""
                     FROM text_chunks
                     WHERE
@@ -136,7 +140,9 @@ internal class KeywordSearchService : IKeywordSearchService
                 ChunkIndex = r.ChunkIndex,
                 PageNumber = r.PageNumber,
                 RelevanceScore = r.RelevanceScore,
-                MatchedTerms = matchedTerms
+                MatchedTerms = matchedTerms,
+                // Phase D (D6): SQL projects role_tags as int; cast to flag enum.
+                RoleTags = (GameBookRole)r.RoleTags
             }).ToList();
 
             _logger.LogInformation(
@@ -360,6 +366,12 @@ internal class KeywordSearchRawResult
     public int ChunkIndex { get; set; }
     public int? PageNumber { get; set; }
     public float RelevanceScore { get; set; }
+
+    /// <summary>
+    /// Phase D (D6): role_tags column from text_chunks (stored as int per <see cref="GameBookRole"/> bitflag).
+    /// Defaults to 0 (None) when the chunk has not been classified.
+    /// </summary>
+    public int RoleTags { get; set; }
 }
 
 /// <summary>

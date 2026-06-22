@@ -12,7 +12,7 @@
  * - WCAG 2.1 AA compliant
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 import { AlertTriangle, ShieldAlert } from 'lucide-react';
 
@@ -70,6 +70,12 @@ export interface AdminConfirmationDialogProps {
 
   /** Whether to show loading state on confirm button */
   isLoading?: boolean;
+
+  /**
+   * Phrase the user must type to enable confirm on Level2.
+   * Defaults to 'CONFIRM' when omitted (backward-compatible).
+   */
+  confirmPhrase?: string;
 }
 
 /**
@@ -86,11 +92,30 @@ export function AdminConfirmationDialog({
   confirmText,
   cancelText = 'Annulla',
   isLoading = false,
+  confirmPhrase,
 }: AdminConfirmationDialogProps) {
   const [typedConfirmation, setTypedConfirmation] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isLevel2 = level === AdminConfirmationLevel.Level2;
-  const isConfirmDisabled = isLevel2 && typedConfirmation !== 'CONFIRM';
+  const requiredPhrase = confirmPhrase ?? 'CONFIRM';
+  const isConfirmDisabled = isLevel2 && typedConfirmation !== requiredPhrase;
+
+  // PR #2428 — Guard `setIsSubmitting(false)` in `handleConfirm`'s `finally`
+  // against the post-unmount race. The typical flow is:
+  //   1. await onConfirm()  // host may setState that flips `isOpen` to false
+  //   2. onClose()           // host's onOpenChange unmounts the Dialog tree
+  //   3. finally { setIsSubmitting(false) }  // ← would fire on torn-down node
+  // React 19's dispatchSetState eagerly resolves update priority via `window`,
+  // and jsdom may have cleared `window` by the time the finally runs, surfacing
+  // as `ReferenceError: window is not defined`. The canonical fix is a mount
+  // sentinel that short-circuits the late setState.
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Reset typed confirmation and submission state when dialog opens
   useEffect(() => {
@@ -107,7 +132,9 @@ export function AdminConfirmationDialog({
       await onConfirm();
       onClose();
     } finally {
-      setIsSubmitting(false);
+      if (isMountedRef.current) {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -119,7 +146,9 @@ export function AdminConfirmationDialog({
   };
 
   const Icon = isLevel2 ? ShieldAlert : AlertTriangle;
-  const iconColor = isLevel2 ? 'text-red-600 dark:text-red-500' : 'text-yellow-600 dark:text-yellow-500';
+  const iconColor = isLevel2
+    ? 'text-red-600 dark:text-red-500'
+    : 'text-yellow-600 dark:text-yellow-500';
   const defaultConfirmText = isLevel2 ? 'Conferma Azione Critica' : 'Conferma';
 
   return (
@@ -135,35 +164,48 @@ export function AdminConfirmationDialog({
               {title}
             </DialogTitle>
           </div>
-          <DialogDescription className="pt-3 space-y-2">
-            <p className="text-base">{message}</p>
-            {warningMessage && (
-              <p className="text-sm text-yellow-600 dark:text-yellow-500 font-medium">
-                ⚠️ {warningMessage}
-              </p>
-            )}
+          {/*
+            #1854-review — `DialogDescription` is rendered as `<p>` by Radix.
+            Wrapping the message + warning paragraphs in another `<p>` triggers
+            "<p> cannot contain a nested <p>" hydration warnings. `asChild`
+            re-roots the description as the `<div>` below so the two children
+            stay valid `<p>` elements without nesting.
+          */}
+          <DialogDescription className="pt-3 space-y-2" asChild>
+            <div>
+              <p className="text-base">{message}</p>
+              {warningMessage && (
+                <p className="text-sm text-yellow-600 dark:text-yellow-500 font-medium">
+                  ⚠️ {warningMessage}
+                </p>
+              )}
+            </div>
           </DialogDescription>
         </DialogHeader>
 
         {isLevel2 && (
           <div className="space-y-2 pt-2">
             <Label htmlFor="confirm-input" className="text-sm font-medium">
-              Digita <span className="font-mono font-bold text-red-600 dark:text-red-500">CONFIRM</span> per procedere:
+              Digita{' '}
+              <span className="font-mono font-bold text-red-600 dark:text-red-500">
+                {requiredPhrase}
+              </span>{' '}
+              per procedere:
             </Label>
             <Input
               id="confirm-input"
               type="text"
               value={typedConfirmation}
-              onChange={(e) => setTypedConfirmation(e.target.value)}
-              placeholder="CONFIRM"
+              onChange={e => setTypedConfirmation(e.target.value)}
+              placeholder={requiredPhrase}
               className="font-mono"
               autoFocus
               disabled={isLoading || isSubmitting}
-              aria-label="Type CONFIRM to proceed with critical action"
+              aria-label={`Type ${requiredPhrase} to proceed with critical action`}
             />
-            {typedConfirmation && typedConfirmation !== 'CONFIRM' && (
+            {typedConfirmation && typedConfirmation !== requiredPhrase && (
               <p className="text-xs text-red-600 dark:text-red-500">
-                La parola deve corrispondere esattamente: CONFIRM
+                La parola deve corrispondere esattamente: {requiredPhrase}
               </p>
             )}
           </div>

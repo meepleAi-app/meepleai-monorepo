@@ -1,4 +1,6 @@
 using System;
+using Api.BoundedContexts.SessionTracking.Domain.Exceptions;
+using Api.Helpers;
 using Api.Middleware.Exceptions;
 using Api.Observability;
 using Api.SharedKernel.Domain.Exceptions;
@@ -57,12 +59,12 @@ internal class ApiExceptionHandlerMiddleware
     private async Task HandleExceptionAsync(HttpContext context, Exception ex)
     {
         // Log the exception with full details
-        var sanitizedPath = SanitizePath(context.Request.Path);
+        var sanitizedPath = LogSanitizer.SanitizePath(context.Request.Path);
 
         _logger.LogError(ex,
             "Unhandled exception in API endpoint. Path: {Path}, Method: {Method}, TraceId: {TraceId}",
             sanitizedPath,
-            LogValueSanitizer.Sanitize(context.Request.Method),
+            LogSanitizer.Sanitize(context.Request.Method),
             context.TraceIdentifier);
 
         // Special handling for FluentValidation exceptions (Issue #1449)
@@ -76,6 +78,39 @@ internal class ApiExceptionHandlerMiddleware
         if (ex is TierLimitExceededException tierLimitEx)
         {
             await HandleTierLimitExceptionAsync(context, tierLimitEx).ConfigureAwait(false);
+            return;
+        }
+
+        // Issue #1312: glossary termIt collision — returns 409 with collidingEntryId
+        // + collidingTermEn so the FE can render the collision banner.
+        if (ex is GlossaryTermCollisionException glossaryCollisionEx)
+        {
+            await HandleGlossaryCollisionAsync(context, glossaryCollisionEx).ConfigureAwait(false);
+            return;
+        }
+
+        // SP5 Admin Security S3 — D-S3-2: TwoFactorRequiredException maps to 401 + structured
+        // body (error + subcode + optional retryAfterSeconds) + WWW-Authenticate header so the
+        // FE can distinguish step-up-required from session-invalid 401 and open the right modal.
+        if (ex is TwoFactorRequiredException twoFactorEx)
+        {
+            await HandleTwoFactorRequiredAsync(context, twoFactorEx).ConfigureAwait(false);
+            return;
+        }
+
+        // SP5 S3 — D-S3-4 (Option B): TwoFactorUnavailableException maps to 503 (transient) so the FE
+        // shows a retryable error toast, not a step-up/enroll signal or a generic 500.
+        if (ex is TwoFactorUnavailableException twoFactorUnavailableEx)
+        {
+            await HandleTwoFactorUnavailableAsync(context, twoFactorUnavailableEx).ConfigureAwait(false);
+            return;
+        }
+
+        // #2436 PR-B / #2437-1: optimistic-concurrency conflict (xmin mismatch) → 409 with
+        // X-Warning-Code: concurrent-edit so the FE can render a "reload & retry" prompt.
+        if (ex is Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException concurrencyEx)
+        {
+            await HandleConcurrencyConflictAsync(context, concurrencyEx).ConfigureAwait(false);
             return;
         }
 
@@ -182,6 +217,141 @@ internal class ApiExceptionHandlerMiddleware
     }
 
     /// <summary>
+    /// Handles <see cref="GlossaryTermCollisionException"/> with HTTP 409 and a
+    /// body carrying the colliding entry's identifiers so the FE collision UI
+    /// can render the recovery actions. Issue #1312.
+    /// </summary>
+    private async Task HandleGlossaryCollisionAsync(
+        HttpContext context,
+        GlossaryTermCollisionException glossaryCollisionException)
+    {
+        var endpoint = GetRoutePattern(context) ?? context.Request.Path.ToString();
+
+        MeepleAiMetrics.RecordApiError(
+            exception: glossaryCollisionException,
+            httpStatusCode: StatusCodes.Status409Conflict,
+            endpoint: endpoint,
+            isUnhandled: true);
+
+        context.Response.StatusCode = StatusCodes.Status409Conflict;
+        context.Response.ContentType = "application/json";
+
+        var errorResponse = new
+        {
+            error = "glossary_term_collision",
+            message = glossaryCollisionException.Message,
+            collidingEntryId = glossaryCollisionException.CollidingEntryId,
+            collidingTermEn = glossaryCollisionException.CollidingTermEn,
+            correlationId = context.TraceIdentifier,
+            timestamp = DateTime.UtcNow
+        };
+
+        await context.Response.WriteAsJsonAsync(errorResponse).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Handles <see cref="TwoFactorRequiredException"/> with HTTP 401 + structured body
+    /// (<c>error="two_factor_required"</c>, <c>subcode</c>, optional <c>retryAfterSeconds</c>)
+    /// + <c>WWW-Authenticate: TOTP-StepUp realm="meepleai-admin"</c> header. The FE consumes
+    /// the <c>subcode</c> to route to step-up modal / enroll prompt / locked-out toast.
+    /// SP5 Admin Security S3 — D-S3-2 + spec <c>docs/api/2fa-step-up-protocol.md</c>.
+    /// </summary>
+    private async Task HandleTwoFactorRequiredAsync(
+        HttpContext context,
+        TwoFactorRequiredException twoFactorException)
+    {
+        var endpoint = GetRoutePattern(context) ?? context.Request.Path.ToString();
+
+        MeepleAiMetrics.RecordApiError(
+            exception: twoFactorException,
+            httpStatusCode: StatusCodes.Status401Unauthorized,
+            endpoint: endpoint,
+            isUnhandled: false);   // handled by design (security gate, not a bug)
+
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        context.Response.ContentType = "application/json";
+        // RFC 7235 challenge header — distinguishes step-up requirement from password auth 401.
+        context.Response.Headers["WWW-Authenticate"] = "TOTP-StepUp realm=\"meepleai-admin\"";
+
+        var errorResponse = new
+        {
+            error = "two_factor_required",
+            subcode = twoFactorException.SubcodeWire,
+            message = twoFactorException.Message,
+            retryAfterSeconds = twoFactorException.RetryAfterSeconds,
+            correlationId = context.TraceIdentifier,
+            timestamp = DateTime.UtcNow
+        };
+
+        await context.Response.WriteAsJsonAsync(errorResponse).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Handles <see cref="TwoFactorUnavailableException"/> with HTTP 503 + structured body
+    /// (<c>error="two_factor_unavailable"</c>). Raised by the step-up endpoint when the TOTP store /
+    /// rate-limit backend is unreachable; the FE treats this as a transient error (retryable toast)
+    /// rather than a failed code or a step-up signal. SP5 Admin Security S3 — D-S3-4 (Option B).
+    /// </summary>
+    private async Task HandleTwoFactorUnavailableAsync(
+        HttpContext context,
+        TwoFactorUnavailableException exception)
+    {
+        var endpoint = GetRoutePattern(context) ?? context.Request.Path.ToString();
+
+        MeepleAiMetrics.RecordApiError(
+            exception: exception,
+            httpStatusCode: StatusCodes.Status503ServiceUnavailable,
+            endpoint: endpoint,
+            isUnhandled: false);
+
+        context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+        context.Response.ContentType = "application/json";
+
+        var errorResponse = new
+        {
+            error = "two_factor_unavailable",
+            message = exception.Message,
+            correlationId = context.TraceIdentifier,
+            timestamp = DateTime.UtcNow
+        };
+
+        await context.Response.WriteAsJsonAsync(errorResponse).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Handles <see cref="Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException"/> with HTTP 409
+    /// and a body carrying <c>error="concurrent_edit"</c> so the FE can render a
+    /// "reload and retry" prompt. The xmin token mismatch means another request already mutated
+    /// the same row between our read and our write. ADR-060. #2436 PR-B / #2437-1.
+    /// </summary>
+    private async Task HandleConcurrencyConflictAsync(
+        HttpContext context,
+        Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException exception)
+    {
+        var endpoint = GetRoutePattern(context) ?? context.Request.Path.ToString();
+
+        MeepleAiMetrics.RecordApiError(
+            exception: exception,
+            httpStatusCode: StatusCodes.Status409Conflict,
+            endpoint: endpoint,
+            isUnhandled: true);
+
+        context.Response.StatusCode = StatusCodes.Status409Conflict;
+        context.Response.Headers["X-Warning-Code"] = "concurrent-edit";
+        context.Response.ContentType = "application/json";
+
+        var errorResponse = new
+        {
+            error = "concurrent_edit",
+            message = "The resource was modified by another request. Reload and retry.",
+            correlationId = context.TraceIdentifier,
+            timestamp = DateTime.UtcNow
+        };
+
+        await context.Response.WriteAsJsonAsync(errorResponse).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Extracts the route pattern from the HttpContext to avoid high cardinality metrics.
     /// Returns route template like "/api/v1/games/{id}" instead of "/api/v1/games/abc-123".
     /// </summary>
@@ -196,19 +366,6 @@ internal class ApiExceptionHandlerMiddleware
 
         // Fallback to request path if route pattern not available
         return null;
-    }
-
-    private static string SanitizePath(PathString path)
-    {
-        var rawPath = path.ToString();
-
-        if (string.IsNullOrEmpty(rawPath))
-        {
-            return rawPath;
-        }
-
-        return rawPath.Replace("\r", string.Empty, StringComparison.Ordinal)
-            .Replace("\n", string.Empty, StringComparison.Ordinal);
     }
 
     private static (int StatusCode, string ErrorType, string Message) MapExceptionToResponse(Exception ex)

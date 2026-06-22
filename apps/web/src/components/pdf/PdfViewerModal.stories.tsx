@@ -215,7 +215,7 @@ export const CitationClickWorkflow: Story = {
         </div>
 
         {/* Simulated chat message with citations */}
-        <div className="bg-slate-50 rounded-lg p-4 w-full">
+        <div className="bg-muted rounded-lg p-4 w-full">
           <p className="text-sm mb-3">
             According to the rulebook, setup requires 5 steps. See{' '}
             <button

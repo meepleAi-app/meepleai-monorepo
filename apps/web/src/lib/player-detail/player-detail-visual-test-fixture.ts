@@ -37,6 +37,14 @@ export const IS_VISUAL_TEST_BUILD = process.env.NEXT_PUBLIC_VISUAL_TEST_FIXTURE_
 /** The two states the fixture can simulate for visual-regression purposes. */
 export type PlayerDetailFixtureState = 'default' | 'not-found';
 
+// Re-export component-owned contracts so the fixture and the orchestrator share
+// a single source of truth without coupling production code to this test-fixture
+// module's lifecycle.
+export type { TopGameItem } from '@/components/features/player-detail/PlayerTopGamesCard';
+export type { MonthlyWinRatePoint } from '@/components/features/player-detail/PlayerTrendCard';
+import type { TopGameItem } from '@/components/features/player-detail/PlayerTopGamesCard';
+import type { MonthlyWinRatePoint } from '@/components/features/player-detail/PlayerTrendCard';
+
 /** Shape of a player profile for display in the v2 player detail view. */
 export interface PlayerProfileFixture {
   /** URL slug / decoded display id — mirrors the URL param. */
@@ -57,6 +65,17 @@ export interface PlayerProfileFixture {
   achievementCount: number;
   /** Leaderboard rank among all users, or null if unranked. */
   leaderboardRank: number | null;
+  /**
+   * Ranked top-N games (desc by playCount). Empty array when no games played.
+   * The orchestrator slices to `maxItems` (default 5) inside the card.
+   */
+  topGames: ReadonlyArray<TopGameItem>;
+  /**
+   * Win-rate trend per ISO month (last 6 months sliding window). Empty array
+   * when there are no completed sessions in the window. Ordered ascending
+   * by month string (YYYY-MM lexicographic == chronological for ISO format).
+   */
+  trendPoints: ReadonlyArray<MonthlyWinRatePoint>;
 }
 
 /**
@@ -73,6 +92,21 @@ const FIXTURE_DEFAULT: PlayerProfileFixture = {
   favoriteAgentName: 'Mago di Wingspan',
   achievementCount: 12,
   leaderboardRank: 3,
+  topGames: [
+    { gameId: null, gameName: 'Wingspan', playCount: 22, winCount: 14 },
+    { gameId: null, gameName: 'Terraforming Mars', playCount: 12, winCount: 7 },
+    { gameId: null, gameName: 'Catan', playCount: 8, winCount: 4 },
+    { gameId: null, gameName: 'Carcassonne', playCount: 3, winCount: 2 },
+    { gameId: null, gameName: 'Azul', playCount: 2, winCount: 1 },
+  ],
+  trendPoints: [
+    { month: '2026-01', winRate: 0.42 },
+    { month: '2026-02', winRate: 0.55 },
+    { month: '2026-03', winRate: 0.48 },
+    { month: '2026-04', winRate: 0.62 },
+    { month: '2026-05', winRate: 0.58 },
+    { month: '2026-06', winRate: 0.71 },
+  ],
 };
 
 /**

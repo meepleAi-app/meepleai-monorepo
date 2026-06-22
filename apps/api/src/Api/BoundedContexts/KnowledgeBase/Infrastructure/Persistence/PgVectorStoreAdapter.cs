@@ -43,7 +43,7 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         // pgvector <=> returns cosine distance (0 = identical, 2 = opposite).
         // Similarity = 1 - distance.
         var sql = $"""
-            SELECT id, vector_document_id, text_content, model, chunk_index, page_number,
+            SELECT id, vector_document_id, text_content, model, chunk_index, page_number, role_tags,
                    1 - (vector <=> @queryVector) AS similarity
             FROM {TableName}
             WHERE game_id = @gameId
@@ -90,6 +90,8 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                     var model = reader.GetString(3);
                     var chunkIndex = reader.GetInt32(4);
                     var pageNumber = reader.GetInt32(5);
+                    // Issue #1391: denormalized role_tags (mirrors text_chunks.role_tags).
+                    var roleTags = reader.GetInt32(6);
 
                     // Use placeholder vector for search results (actual vector not needed by callers)
                     var placeholderVector = DomainVector.CreatePlaceholder(queryVector.Dimensions);
@@ -100,7 +102,8 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                         vector: placeholderVector,
                         model: model,
                         chunkIndex: chunkIndex,
-                        pageNumber: Math.Max(1, pageNumber));
+                        pageNumber: Math.Max(1, pageNumber),
+                        roleTags: roleTags);
 
                     results.Add(embedding);
                 }
@@ -108,6 +111,100 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
 
             _logger.LogInformation(
                 "pgvector search returned {ResultCount} results for gameId={GameId} (minScore={MinScore}, topK={TopK})",
+                results.Count, gameId, minScore, topK);
+
+            return results;
+        }
+    }
+
+    /// <summary>
+    /// Score-returning variant of <see cref="SearchAsync"/>.
+    /// Copies the same SQL and reader loop but ALSO reads the <c>similarity</c> column (index 7)
+    /// and returns <see cref="ScoredEmbedding"/> pairs.
+    /// The existing <see cref="SearchAsync"/> is NOT modified (other RAG callers depend on it).
+    /// Issue #1653: F3-FU-4 — per-document scored similarity-search.
+    /// </summary>
+    public async Task<List<ScoredEmbedding>> SearchWithScoresAsync(
+        Guid gameId,
+        DomainVector queryVector,
+        int topK,
+        double minScore,
+        IReadOnlyList<Guid>? documentIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        var connection = _context.Database.GetDbConnection();
+        await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
+
+        // Identical SQL to SearchAsync — similarity column is at index 7 and is now surfaced.
+        var sql = $"""
+            SELECT id, vector_document_id, text_content, model, chunk_index, page_number, role_tags,
+                   1 - (vector <=> @queryVector) AS similarity
+            FROM {TableName}
+            WHERE game_id = @gameId
+              AND 1 - (vector <=> @queryVector) >= @minScore
+            """;
+
+        if (documentIds is { Count: > 0 })
+        {
+            sql += "\n  AND vector_document_id = ANY(@documentIds)";
+        }
+
+        sql += $"""
+
+            ORDER BY vector <=> @queryVector
+            LIMIT @topK
+            """;
+
+        var command = (NpgsqlCommand)connection.CreateCommand();
+        await using (command.ConfigureAwait(false))
+        {
+            command.CommandText = sql;
+
+            var pgVector = new Pgvector.Vector(queryVector.Values);
+            command.Parameters.AddWithValue("@queryVector", pgVector);
+            command.Parameters.AddWithValue("@gameId", gameId);
+            command.Parameters.AddWithValue("@minScore", minScore);
+            command.Parameters.AddWithValue("@topK", topK);
+
+            if (documentIds is { Count: > 0 })
+            {
+                command.Parameters.AddWithValue("@documentIds", documentIds.ToArray());
+            }
+
+            var results = new List<ScoredEmbedding>();
+
+            var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            await using (reader.ConfigureAwait(false))
+            {
+                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    var id = reader.GetGuid(0);
+                    var vectorDocumentId = reader.GetGuid(1);
+                    var textContent = reader.GetString(2);
+                    var model = reader.GetString(3);
+                    var chunkIndex = reader.GetInt32(4);
+                    var pageNumber = reader.GetInt32(5);
+                    var roleTags = reader.GetInt32(6);
+                    // Column 7: similarity = 1 - (vector <=> @queryVector)
+                    var score = reader.GetDouble(7);
+
+                    var placeholderVector = DomainVector.CreatePlaceholder(queryVector.Dimensions);
+                    var embedding = new Embedding(
+                        id: id,
+                        vectorDocumentId: vectorDocumentId,
+                        textContent: textContent,
+                        vector: placeholderVector,
+                        model: model,
+                        chunkIndex: chunkIndex,
+                        pageNumber: Math.Max(1, pageNumber),
+                        roleTags: roleTags);
+
+                    results.Add(new ScoredEmbedding(embedding, score));
+                }
+            }
+
+            _logger.LogInformation(
+                "pgvector scored search returned {ResultCount} results for gameId={GameId} (minScore={MinScore}, topK={TopK})",
                 results.Count, gameId, minScore, topK);
 
             return results;
@@ -131,7 +228,7 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
 
         // Build SQL with IN clause for multiple game_ids
         var sql = $"""
-            SELECT id, vector_document_id, text_content, model, chunk_index, page_number,
+            SELECT id, vector_document_id, text_content, model, chunk_index, page_number, role_tags,
                    1 - (vector <=> @queryVector) AS similarity
             FROM {TableName}
             WHERE game_id = ANY(@gameIds)
@@ -178,6 +275,7 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                     var model = reader.GetString(3);
                     var chunkIndex = reader.GetInt32(4);
                     var pageNumber = reader.GetInt32(5);
+                    var roleTags = reader.GetInt32(6);
 
                     var placeholderVector = DomainVector.CreatePlaceholder(queryVector.Dimensions);
                     var embedding = new Embedding(
@@ -187,7 +285,8 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                         vector: placeholderVector,
                         model: model,
                         chunkIndex: chunkIndex,
-                        pageNumber: Math.Max(1, pageNumber));
+                        pageNumber: Math.Max(1, pageNumber),
+                        roleTags: roleTags);
 
                     results.Add(embedding);
                 }
@@ -220,12 +319,14 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         await using (lookupCmd.ConfigureAwait(false))
         {
             // Resolve game_id for embeddings: prefer SharedGameId (for RAG search by shared game),
-            // fall back to GameId. Join with games table to resolve SharedGameId when not set on vector_documents.
+            // fall back to GameId. NB: the legacy LEFT JOIN to the 'games' table was removed
+            // after Phase 2d (#1345) dropped that table; resolution now relies on the modern
+            // vd.shared_game_id column populated by post-Phase 2d ingestion, with a defensive
+            // fallback to vd.GameId for legacy rows.
             lookupCmd.CommandText = """
                 SELECT vd."Id",
-                       COALESCE(vd.shared_game_id, g."SharedGameId", vd."GameId") AS resolved_game_id
+                       COALESCE(vd.shared_game_id, vd."GameId") AS resolved_game_id
                 FROM vector_documents vd
-                LEFT JOIN games g ON g."Id" = vd."GameId"
                 WHERE vd."Id" = ANY(@ids)
                 """;
             lookupCmd.Parameters.AddWithValue("@ids", vectorDocumentIds.ToArray());
@@ -243,8 +344,10 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         // Use COPY for efficient bulk insert via Npgsql binary import
         var npgsqlConnection = (NpgsqlConnection)connection;
 
+        // Issue #1391: role_tags appended after is_translation in the COPY column list
+        // to keep the binary import in sync with PgVectorEmbeddingEntity + EnsureCollectionExistsAsync.
         var writer = await npgsqlConnection.BeginBinaryImportAsync(
-            $"COPY {TableName} (id, vector_document_id, game_id, text_content, vector, model, chunk_index, page_number, created_at, lang, source_chunk_id, is_translation) FROM STDIN (FORMAT BINARY)",
+            $"COPY {TableName} (id, vector_document_id, game_id, text_content, vector, model, chunk_index, page_number, created_at, lang, source_chunk_id, is_translation, role_tags) FROM STDIN (FORMAT BINARY)",
             cancellationToken).ConfigureAwait(false);
         await using (writer.ConfigureAwait(false))
         {
@@ -277,6 +380,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                 else
                     await writer.WriteNullAsync(cancellationToken).ConfigureAwait(false);
                 await writer.WriteAsync(embedding.IsTranslation, NpgsqlDbType.Boolean, cancellationToken).ConfigureAwait(false);
+
+                // Issue #1391: denormalized RoleTags (mirrors text_chunks.role_tags for SourceChunkId).
+                await writer.WriteAsync(embedding.RoleTags, NpgsqlDbType.Integer, cancellationToken).ConfigureAwait(false);
             }
 
             await writer.CompleteAsync(cancellationToken).ConfigureAwait(false);
@@ -375,7 +481,10 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                     search_vector tsvector GENERATED ALWAYS AS (to_tsvector('english', text_content)) STORED,
                     lang VARCHAR(5) NOT NULL DEFAULT 'en',
                     source_chunk_id UUID NULL,
-                    is_translation BOOLEAN NOT NULL DEFAULT false
+                    is_translation BOOLEAN NOT NULL DEFAULT false,
+                    -- Issue #1391: denormalized from text_chunks.role_tags so semantic-mode
+                    -- hybrid search can boost role-matching chunks without joining.
+                    role_tags INTEGER NOT NULL DEFAULT 0
                 )
                 """;
             await tableCmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
@@ -467,6 +576,26 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                 END $$
                 """;
             await langColCmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        // Issue #1391: add role_tags column if table was created before this fix.
+        // Sync invariant — same column added by AddRoleTagsToPgVectorEmbeddings EF migration.
+        var roleTagsColCmd = (NpgsqlCommand)connection.CreateCommand();
+        await using (roleTagsColCmd.ConfigureAwait(false))
+        {
+            roleTagsColCmd.CommandText = $"""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = '{TableName}' AND column_name = 'role_tags'
+                    ) THEN
+                        ALTER TABLE {TableName}
+                        ADD COLUMN role_tags INTEGER NOT NULL DEFAULT 0;
+                    END IF;
+                END $$
+                """;
+            await roleTagsColCmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
 
         _logger.LogInformation(

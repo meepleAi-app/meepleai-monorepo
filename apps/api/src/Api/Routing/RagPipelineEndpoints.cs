@@ -28,7 +28,7 @@ internal static class RagPipelineEndpoints
             var (authorized, session, error) = context.TryGetActiveSession();
             if (!authorized) return error!;
 
-            var query = new ListUserPipelinesQuery(session!.User!.Id);
+            var query = new ListUserPipelinesQuery(session!.Principal!.Subject.Id);
             var pipelines = await mediator.Send(query, ct).ConfigureAwait(false);
 
             return Results.Ok(pipelines);
@@ -76,7 +76,7 @@ internal static class RagPipelineEndpoints
                 Name = request.Name,
                 Description = request.Description,
                 Pipeline = request.Pipeline,
-                UserId = session!.User!.Id,
+                UserId = session!.Principal!.Subject.Id,
                 IsPublished = false,
                 Tags = request.Tags ?? [],
             };
@@ -101,7 +101,7 @@ internal static class RagPipelineEndpoints
             var (authorized, session, error) = context.TryGetActiveSession();
             if (!authorized) return error!;
 
-            var command = new DeleteCustomPipelineCommand(id, session!.User!.Id);
+            var command = new DeleteCustomPipelineCommand(id, session!.Principal!.Subject.Id);
             var deleted = await mediator.Send(command, ct).ConfigureAwait(false);
 
             return deleted

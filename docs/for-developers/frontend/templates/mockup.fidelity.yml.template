@@ -1,0 +1,87 @@
+# mockup.fidelity.yml — Acceptance criteria template (DS-17-4)
+#
+# Copy this file as <mockup-name>.fidelity.yml (or .json) co-located with the
+# Storybook story (Phase 2+) or in admin-mockups/design_files/ (Phase 1 standalone).
+#
+# Validation: pnpm lint:fidelity (or node apps/web/scripts/mockup-annotations/validate-fidelity.mjs <file>)
+#
+# YAML mode: requires `yaml` devDep in apps/web (not installed by default in Phase 1).
+# JSON mode: works out-of-the-box. Copy this template, convert to JSON, rename to .json.
+#
+# Schema authority: apps/web/scripts/mockup-annotations/validate-fidelity.mjs (FidelitySchema zod)
+# Spec: docs/superpowers/specs/2026-06-09-mockup-to-app-drift-spec-panel-review.md
+# Issue: #2072 (DS-17-4) / Umbrella: #2063
+
+mockup:
+  # Path to canonical mockup file (relative to repo root)
+  source: admin-mockups/design_files/sp4-EXAMPLE.html
+  # Which states this mockup covers. Must match acceptance.states_covered exactly.
+  # Valid values: default | empty | loading | error | sse | offline
+  states:
+    - default
+    - empty
+    - loading
+    - error
+
+acceptance:
+  # ===== Visual diff (Phase 4 visual-gate-scoped, DS-17-14) =====
+  # Max pixel delta tolerated per block-level diff. Lower = stricter.
+  visual_diff_max_px: 5
+  # Max color Delta-E (CIEDE2000) tolerated. <3 = imperceptible to most humans.
+  color_delta_e_max: 3
+
+  # ===== Token discipline (DS-17-2 lint:tokens + DS-16 bridge removal) =====
+  # canonical_only: var(--bg), var(--bg-card), ecc. (post-DS-15 names)
+  # mixed_legacy_allowed: TEMPORARY waiver — only for mockup pre-Phase 3 cleanup
+  tokens_used: canonical_only
+  # If true, lint blocks --bg-base, --gaming-*, --nh-*, --e-* legacy names
+  legacy_token_names_forbidden: true
+
+  # ===== State coverage (Adzic CRIT-2 enforcement) =====
+  # MUST be set-equal to mockup.states above. Validator enforces.
+  states_covered:
+    - default
+    - empty
+    - loading
+    - error
+
+  # ===== Accessibility (axe-core) =====
+  # AA (WCAG 2.1 Level AA) is project default per CLAUDE.md "A11y restore COMPLETE 2026-05-18"
+  a11y_axe: AA
+  # Max violations tolerated. 0 = strict mode (default).
+  a11y_violations_max: 0
+
+  # ===== Responsive (Storybook viewports + Playwright Phase 4) =====
+  # Default 4 breakpoints. Add 320 if mobile-first or 2560 if 4K-relevant.
+  responsive_breakpoints:
+    - 375   # mobile
+    - 768   # tablet
+    - 1024  # desktop
+    - 1440  # wide
+
+  # ===== Designer sign-off (DEC-3 spec-panel review checklist) =====
+  # Required for Phase 3+ stories pre-merge. Empty in Phase 1 is OK.
+  designer_approved_by: ""   # GitHub handle, e.g. "@design-lead"
+  designer_approved_on: ""   # ISO date YYYY-MM-DD
+
+  # ===== Story metadata (populated in Phase 2+ when Storybook lands) =====
+  # Empty in Phase 1 is OK; validator skips cross-reference if empty.
+  story_path: ""              # e.g. apps/web/src/components/features/dashboard/dashboard.stories.tsx
+  fixtures_path: ""           # e.g. apps/web/src/components/features/dashboard/dashboard.fixtures.ts
+
+  # ===== DEC-P3-1+2 (2026-06-10): Design intent classification =====
+  # 'current' = mockup matches codebase TODAY → migrate normally
+  # 'forward-refactor' = mockup is target of pending refactor, aligned to roadmap
+  # 'forward-refactor-obsolete' = mockup is obsolete target, codebase diverged → SKIP migration
+  design_intent: current
+
+  # ===== DEC-P3-4 (2026-06-10): Viewport opt-in =====
+  # Default Desktop 1440x900. Mobile opt-in requires @storybook/addon-viewport
+  # + Playwright viewport project (Phase 4 hardening).
+  viewports:
+    - desktop
+    # - mobile  # opt-in quando mockup ha PhoneShell distinct
+
+  # Required when design_intent = 'forward-refactor-obsolete'
+  # Open a GitHub issue tracking mockup rewrite OR component rollback.
+  obsolete_tracking_issue: ""  # '#1234' format

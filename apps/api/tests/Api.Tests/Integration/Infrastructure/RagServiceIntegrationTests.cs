@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Models;
 using Api.Services;
@@ -24,7 +25,7 @@ namespace Api.Tests.Integration.Infrastructure;
 /// 3. Cache Integration: Redis L2 cache, invalidation
 /// 4. Chunk Retrieval: Query expansion, reranking, snippet generation
 ///
-/// Infrastructure: PostgreSQL + Redis via SharedTestcontainersFixture, Qdrant mocked
+/// Infrastructure: PostgreSQL + Redis via SharedTestcontainersFixture, pgvector mocked
 /// Coverage Target: ≥90% for RagService core logic
 /// Execution Time Target: <15s
 /// </summary>
@@ -228,7 +229,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
         };
 
         _hybridSearchServiceMock
-            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), SearchMode.Hybrid, 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), SearchMode.Hybrid, 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(hybridResults);
 
         _llmServiceMock
@@ -282,7 +283,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
         };
 
         _hybridSearchServiceMock
-            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), SearchMode.Semantic, 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), SearchMode.Semantic, 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(semanticResults);
 
         _llmServiceMock
@@ -334,7 +335,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
         };
 
         _hybridSearchServiceMock
-            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), SearchMode.Keyword, 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), SearchMode.Keyword, 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(keywordResults);
 
         _llmServiceMock
@@ -405,7 +406,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// Test 5: AskAsync with no vector retrieval (Qdrant removed) - returns "Not specified" with no snippets.
+    /// Test 5: AskAsync with no vector retrieval (pgvector removed) - returns "Not specified" with no snippets.
     /// </summary>
     [Fact]
     public async Task AskAsync_WithNoVectorRetrieval_ReturnsNotSpecified()
@@ -454,7 +455,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
         };
 
         _hybridSearchServiceMock
-            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), SearchMode.Hybrid, 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), SearchMode.Hybrid, 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(hybridResults);
 
         _llmServiceMock
@@ -503,7 +504,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
         };
 
         _hybridSearchServiceMock
-            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), SearchMode.Hybrid, 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), SearchMode.Hybrid, 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(hybridResults);
 
         var callCount = 0;
@@ -558,7 +559,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
         };
 
         _hybridSearchServiceMock
-            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), It.IsAny<SearchMode>(), 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), It.IsAny<SearchMode>(), 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(hybridResults);
 
         var callCount = 0;
@@ -592,7 +593,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
     #region Test 9-10: Query Expansion and Reranking
 
     /// <summary>
-    /// Test 9: AskAsync with no vector retrieval (Qdrant removed) - query expansion is not called.
+    /// Test 9: AskAsync with no vector retrieval (pgvector removed) - query expansion is not called.
     /// </summary>
     [Fact]
     public async Task AskAsync_WithQueryExpansion_ReturnsNotSpecifiedWhenNoVectorStore()
@@ -621,7 +622,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// Test 10: AskAsync with no vector retrieval (Qdrant removed) - reranker is not called.
+    /// Test 10: AskAsync with no vector retrieval (pgvector removed) - reranker is not called.
     /// </summary>
     [Fact]
     public async Task AskAsync_WithReranker_ReturnsNotSpecifiedWhenNoVectorStore()
@@ -660,7 +661,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
         var query = "Non-existent rule";
 
         _hybridSearchServiceMock
-            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), SearchMode.Hybrid, 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), SearchMode.Hybrid, 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>());
 
         // Act

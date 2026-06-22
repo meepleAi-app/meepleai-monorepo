@@ -46,7 +46,7 @@ public class UpdatePreferencesCommandHandlerTests
             id: TestUserId,
             email: new Email("user@test.com"),
             displayName: "Test User",
-            passwordHash: PasswordHash.Create("Password123!"),
+            passwordHash: PasswordHash.Create("UnusualPwd123!"),
             role: Role.User,
             tier: UserTier.Free
         );

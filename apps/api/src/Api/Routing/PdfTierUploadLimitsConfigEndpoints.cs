@@ -58,7 +58,7 @@ internal static class PdfTierUploadLimitsConfigEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         logger.LogInformation(
             "Admin {UserId} updating PDF tier upload limits: Free={FreeDL}/{FreeWL}, Normal={NormalDL}/{NormalWL}, Premium={PremiumDL}/{PremiumWL}",

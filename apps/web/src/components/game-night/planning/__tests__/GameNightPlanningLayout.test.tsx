@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { axe } from 'jest-axe';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 import { useGameNightStore } from '@/stores/game-night';
@@ -50,5 +51,11 @@ describe('GameNightPlanningLayout', () => {
   it('renders AI suggestion card in left column', () => {
     render(<GameNightPlanningLayout title="Test" />);
     expect(screen.getByText(/suggerimenti ai/i)).toBeInTheDocument();
+  });
+
+  it('passes heading-order axe rule (#1842)', async () => {
+    const { container } = render(<GameNightPlanningLayout title="Friday Night" />);
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Domain.Services;
+using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.External;
@@ -43,6 +44,24 @@ internal class InfrastructureHealthService : IInfrastructureHealthService
 
             if (entryPair.Key is null)
             {
+                // A known service (in ServiceRegistry) that has no active health check is an
+                // intentionally-deselected optional provider — e.g. Unstructured/SmolDocling
+                // when PdfProcessing:Extractor:Provider=Docnet, or Ollama when OLLAMA_URL is
+                // unset. Treat as Healthy with an explanatory description so the admin UI does
+                // not flag a configuration choice as a failure (issue #883 follow-up).
+                if (ServiceRegistry.IsKnownService(serviceName))
+                {
+                    _logger.LogDebug(
+                        "Service {ServiceName} is a known optional provider with no active health check (deselected at registration time)",
+                        serviceName);
+                    return new ServiceHealthStatus(
+                        serviceName,
+                        HealthState.Healthy,
+                        $"Service '{serviceName}' not active (alternative provider selected)",
+                        DateTime.UtcNow,
+                        DateTime.UtcNow - startTime);
+                }
+
                 _logger.LogWarning("Service {ServiceName} not found in health checks", serviceName);
                 return new ServiceHealthStatus(
                     serviceName,

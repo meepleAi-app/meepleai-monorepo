@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { CheckCircle2Icon, LoaderIcon, CircleIcon, XCircleIcon } from 'lucide-react';
@@ -42,7 +43,7 @@ export function JobStepTimeline({ steps }: JobStepTimelineProps) {
             {/* Vertical line + icon */}
             <div className="flex flex-col items-center">
               <div className="pt-0.5">{getStepIcon(step.status)}</div>
-              {!isLast && <div className="w-px flex-1 bg-slate-200 dark:bg-zinc-700 my-1" />}
+              {!isLast && <div className="w-px flex-1 bg-muted dark:bg-zinc-700 my-1" />}
             </div>
 
             {/* Content */}

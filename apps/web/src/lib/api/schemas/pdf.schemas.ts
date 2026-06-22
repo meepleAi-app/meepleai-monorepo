@@ -59,6 +59,12 @@ export const GamePdfDtoSchema = z.object({
   uploadedAt: z.string().datetime({ offset: true }),
   source: z.string(), // "Custom" or "Catalog"
   language: z.string().nullable().optional(),
+  // F6 #1974 (audit 2026-06-07): the BE `GamePdfDto` ships
+  // `ProcessingState` (Pending|Uploading|Extracting|Chunking|Embedding|
+  // Indexing|Ready|Failed) but the FE was discarding it, so PdfRow had
+  // no per-doc status badge. Default "Pending" keeps legacy / not-yet-
+  // redeployed BE payloads parsing without throwing.
+  processingState: z.string().default('Pending'),
 });
 
 export type GamePdfDto = z.infer<typeof GamePdfDtoSchema>;

@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
@@ -18,6 +19,8 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
     private readonly IUserLibraryRepository _libraryRepository;
     private readonly ISharedGameRepository _sharedGameRepository;
     private readonly IGameLabelRepository _labelRepository;
+    private readonly IAgentDefinitionRepository _agentDefinitionRepository;
+    private readonly IChatThreadRepository _chatThreadRepository;
     private readonly HybridCache _cache;
     private readonly ILogger<GetGameDetailQueryHandler> _logger;
 
@@ -31,12 +34,16 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
         IUserLibraryRepository libraryRepository,
         ISharedGameRepository sharedGameRepository,
         IGameLabelRepository labelRepository,
+        IAgentDefinitionRepository agentDefinitionRepository,
+        IChatThreadRepository chatThreadRepository,
         HybridCache cache,
         ILogger<GetGameDetailQueryHandler> logger)
     {
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
         _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
         _labelRepository = labelRepository ?? throw new ArgumentNullException(nameof(labelRepository));
+        _agentDefinitionRepository = agentDefinitionRepository ?? throw new ArgumentNullException(nameof(agentDefinitionRepository));
+        _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -137,6 +144,18 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
                     CreatedAt: l.CreatedAt
                 )).ToArray();
 
+                // Issue #2034 — ConnectionBar pill counts. AgentCount is cross-user
+                // (AgentDefinition.GameId points to the shared catalog game), while
+                // ChatThreadCount is scoped to the requesting user.
+                var agentCount = await _agentDefinitionRepository
+                    .CountActiveByGameIdsAsync(new[] { query.GameId }, cancel)
+                    .ConfigureAwait(false);
+
+                var userThreads = await _chatThreadRepository
+                    .FindByUserIdAndGameIdAsync(query.UserId, query.GameId, cancel)
+                    .ConfigureAwait(false);
+                var chatThreadCount = userThreads.Count;
+
                 _logger.LogInformation("Retrieved game detail for {GameId} for user {UserId}", query.GameId, query.UserId);
 
                 return new GameDetailDto(
@@ -179,7 +198,22 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
                     Checklist: checklist,
                     CustomAgentConfig: customAgentConfig,
                     CustomPdf: customPdf,
-                    Labels: labelsDto
+                    Labels: labelsDto,
+
+                    // Issue #1824 L3: user-custom cover key (null if no custom cover uploaded)
+                    CustomCoverR2Key: entry.CustomCoverR2Key,
+
+                    // Issue #2035: Designer names from the SharedGame catalog M:N relation.
+                    // Always materialised to a list (possibly empty) so the FE consumer
+                    // (GameDetailDesktop.tsx) can safely read `game.designers?.[0]?.name`.
+                    Designers: sharedGame.Designers
+                        .Select(d => d.Name)
+                        .Where(name => !string.IsNullOrWhiteSpace(name))
+                        .ToList(),
+
+                    // Issue #2034: ConnectionBar pill counts.
+                    AgentCount: agentCount,
+                    ChatThreadCount: chatThreadCount
                 );
             },
             options: CacheOptions,

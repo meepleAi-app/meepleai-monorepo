@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 /**
  * Admin Config Hub
  * Issue #5040 — Consolidate Admin Routes
@@ -9,10 +10,11 @@
 
 import { Suspense } from 'react';
 
-import { Settings, Gauge, Flag, ShieldCheck } from 'lucide-react';
+import { Settings, Gauge, Flag, ShieldCheck, Megaphone } from 'lucide-react';
 
 import { AdminHubTabBar, type HubTab } from '@/components/admin/layout/AdminHubTabBar';
 import { AdminTabPersistence } from '@/components/admin/layout/AdminTabPersistence';
+import { StatusBannerAdmin } from '@/components/features/status-banner';
 
 import { FeatureFlagsWrapper } from './FeatureFlagsWrapper';
 import { GeneralTab } from './GeneralTab';
@@ -33,6 +35,7 @@ const TABS: readonly HubTab[] = [
     href: '/admin/config?tab=rate-limits',
     icon: <ShieldCheck />,
   },
+  { id: 'banner', label: 'Banner', href: '/admin/config?tab=banner', icon: <Megaphone /> },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -40,10 +43,10 @@ type TabId = (typeof TABS)[number]['id'];
 function TabSkeleton() {
   return (
     <div className="space-y-3 pt-2">
-      <div className="h-10 w-48 rounded-lg bg-white/40 dark:bg-zinc-800/40 animate-pulse" />
+      <div className="h-10 w-48 rounded-lg bg-card/40 dark:bg-zinc-800/40 animate-pulse" />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {[1, 2, 3].map(i => (
-          <div key={i} className="h-24 rounded-xl bg-white/40 dark:bg-zinc-800/40 animate-pulse" />
+          <div key={i} className="h-24 rounded-xl bg-card/40 dark:bg-zinc-800/40 animate-pulse" />
         ))}
       </div>
     </div>
@@ -74,6 +77,12 @@ function renderTabContent(tab: TabId) {
       return (
         <Suspense fallback={<TabSkeleton />}>
           <RateLimitsTab />
+        </Suspense>
+      );
+    case 'banner':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <StatusBannerAdmin />
         </Suspense>
       );
     default:

@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -7,6 +9,8 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 
 internal class LogAiRequestCommandHandler : ICommandHandler<LogAiRequestCommand>
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     private readonly MeepleAiDbContext _db;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<LogAiRequestCommandHandler> _logger;
@@ -51,7 +55,16 @@ internal class LogAiRequestCommandHandler : ICommandHandler<LogAiRequestCommand>
                 LlmConfidence = command.QualityScores?.LlmConfidence,
                 CitationQuality = command.QualityScores?.CitationQuality,
                 OverallConfidence = command.QualityScores?.OverallConfidence,
-                IsLowQuality = command.QualityScores?.IsLowQuality ?? false
+                IsLowQuality = command.QualityScores?.IsLowQuality ?? false,
+                // #1728: Serialize drill payload into jsonb columns. Null when
+                // the caller did not pass chunks/breakdown — surfaces as
+                // "limited drill" / "breakdown unavailable" on the FE.
+                ChunksJson = command.Chunks is { Count: > 0 }
+                    ? JsonSerializer.Serialize(command.Chunks, JsonOptions)
+                    : null,
+                BreakdownJson = command.Breakdown is not null
+                    ? JsonSerializer.Serialize(command.Breakdown, JsonOptions)
+                    : null,
             };
 
             _db.AiRequestLogs.Add(log);

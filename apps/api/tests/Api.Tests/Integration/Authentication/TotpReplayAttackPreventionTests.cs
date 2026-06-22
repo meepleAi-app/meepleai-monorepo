@@ -60,7 +60,7 @@ public sealed class TotpReplayAttackPreventionTests : IAsyncLifetime
 
     // Test data constants
     private const string TestUserEmail = "security-test@meepleai.dev";
-    private const string TestPassword = "SecurePassword123!";
+    private const string TestPassword = "SecureUnusualPwd123!";
 
     public TotpReplayAttackPreventionTests(SharedTestcontainersFixture fixture)
     {

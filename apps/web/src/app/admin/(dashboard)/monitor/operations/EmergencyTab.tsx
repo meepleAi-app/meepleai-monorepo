@@ -178,7 +178,7 @@ export function EmergencyTab() {
           )}
 
           {/* Activate New Override */}
-          <div className="rounded-xl border bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-4">
+          <div className="rounded-xl border bg-card/70 backdrop-blur-md p-4">
             <div className="flex items-center gap-2 mb-4">
               <AlertTriangle className="h-4 w-4 text-amber-600" />
               <h3 className="font-quicksand font-semibold text-sm">Activate Emergency Override</h3>

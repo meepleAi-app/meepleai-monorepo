@@ -1,9 +1,9 @@
 # Log aggregation stack — Linux only (staging/prod servers)
 # Dev on Windows: use 'make logs s=<service>' for local log viewing.
 #
-# Usage (with staging):
-#   docker compose -f docker-compose.yml -f compose.staging.yml -f compose.traefik.yml -f compose.logging.yml \
-#     --profile ai --profile monitoring --profile logging --profile proxy up -d
+# Usage (with staging) — post-PR #738 (edge=CF Tunnel, no traefik):
+#   docker compose -f docker-compose.yml -f compose.staging.yml -f compose.logging.yml \
+#     --profile ai --profile monitoring --profile logging up -d
 
 services:
   loki:

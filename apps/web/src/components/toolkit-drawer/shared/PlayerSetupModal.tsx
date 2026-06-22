@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 /**
@@ -60,7 +61,7 @@ export function PlayerSetupModal({ onClose }: PlayerSetupModalProps) {
 
   return (
     <div
-      className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-3 shadow-sm"
+      className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 shadow-sm"
       data-testid="player-setup-form"
     >
       {/* Name input */}
@@ -71,7 +72,7 @@ export function PlayerSetupModal({ onClose }: PlayerSetupModalProps) {
         onChange={e => setName(e.target.value)}
         onKeyDown={handleKeyDown}
         autoFocus
-        className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-[hsl(142,70%,45%)] focus:ring-1 focus:ring-[hsl(142,70%,45%)]"
+        className="rounded-lg border border-border px-3 py-1.5 text-sm outline-none focus:border-[hsl(142,70%,45%)] focus:ring-1 focus:ring-[hsl(142,70%,45%)]"
         data-testid="player-name-input"
       />
 
@@ -98,7 +99,7 @@ export function PlayerSetupModal({ onClose }: PlayerSetupModalProps) {
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg px-3 py-1 text-xs text-gray-500 hover:bg-gray-100"
+          className="rounded-lg px-3 py-1 text-xs text-muted-foreground hover:bg-muted"
         >
           Annulla
         </button>
@@ -110,7 +111,7 @@ export function PlayerSetupModal({ onClose }: PlayerSetupModalProps) {
             'rounded-lg px-3 py-1 text-xs font-medium text-white transition-colors',
             canConfirm
               ? 'bg-[hsl(142,70%,45%)] hover:bg-[hsl(142,70%,40%)]'
-              : 'cursor-not-allowed bg-gray-300'
+              : 'cursor-not-allowed bg-muted'
           )}
           data-testid="player-confirm-btn"
         >

@@ -59,6 +59,12 @@ internal sealed class InvitationTokenRepository : RepositoryBase, IInvitationTok
         existingEntity.AcceptedAt = entity.AcceptedAt;
         existingEntity.AcceptedByUserId = entity.AcceptedByUserId;
         existingEntity.RevokedAt = entity.RevokedAt;
+
+        // Issue #1633: the DbContext default is QueryTrackingBehavior.NoTracking
+        // (PERF-06, InfrastructureServiceExtensions.cs:162), so the entity returned by
+        // FindAsync is NOT tracked and the field mutations above would be silently lost
+        // by SaveChanges. Mark it modified explicitly (mirrors the #1627 TotpService fix).
+        DbContext.InvitationTokens.Update(existingEntity);
     }
 
     public async Task DeleteAsync(InvitationToken entity, CancellationToken cancellationToken = default)

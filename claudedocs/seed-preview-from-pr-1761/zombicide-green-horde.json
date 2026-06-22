@@ -1,0 +1,67 @@
+{
+  "ToolkitName": "Zombicide Green Horde",
+  "DiceTools": [
+    {
+      "Name": "Combat dice (D6, hit on 4+)",
+      "DiceType": "D6",
+      "Quantity": 6,
+      "CustomFaces": null,
+      "IsInteractive": true,
+      "Color": "#27ae60"
+    }
+  ],
+  "CounterTools": [
+    { "Name": "Wounds (Survivor HP, 2 = death)", "MinValue": 0, "MaxValue": 2, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "heart-crack", "Color": "#c0392b" },
+    { "Name": "Experience (XP)", "MinValue": 0, "MaxValue": 99, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "star", "Color": "#3498db" },
+    { "Name": "Action points this turn", "MinValue": 0, "MaxValue": 6, "DefaultValue": 3, "IsPerPlayer": true, "Icon": "lightning", "Color": "#f39c12" },
+    { "Name": "Equipment slots (hand+body+backpack)", "MinValue": 0, "MaxValue": 5, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "backpack", "Color": null },
+    { "Name": "Walkers on board", "MinValue": 0, "MaxValue": 99, "DefaultValue": 0, "IsPerPlayer": false, "Icon": "zombie", "Color": "#16a085" },
+    { "Name": "Walker Orcs on board", "MinValue": 0, "MaxValue": 99, "DefaultValue": 0, "IsPerPlayer": false, "Icon": "orc", "Color": "#27ae60" },
+    { "Name": "Runners on board", "MinValue": 0, "MaxValue": 30, "DefaultValue": 0, "IsPerPlayer": false, "Icon": "zombie-fast", "Color": "#16a085" },
+    { "Name": "Fatties on board", "MinValue": 0, "MaxValue": 20, "DefaultValue": 0, "IsPerPlayer": false, "Icon": "zombie-fat", "Color": "#16a085" },
+    { "Name": "Abominations on board", "MinValue": 0, "MaxValue": 5, "DefaultValue": 0, "IsPerPlayer": false, "Icon": "skull-boss", "Color": "#7d3c98" },
+    { "Name": "Necromancers active", "MinValue": 0, "MaxValue": 5, "DefaultValue": 0, "IsPerPlayer": false, "Icon": "necromancer", "Color": "#5b2c6f" }
+  ],
+  "TimerTools": [],
+  "ScoringTemplate": {
+    "Dimensions": ["Mission success", "Survivors alive", "Total XP earned"],
+    "DefaultUnit": "result",
+    "ScoreType": "BinaryWin",
+    "Categories": [
+      { "Id": "mission-success", "Label": "Mission objectives completed", "Computation": "Custom", "Weight": 1, "Description": "Scenario-specific: each scenario defines win conditions (rescue X, escape, kill all necromancers, etc.)." },
+      { "Id": "survivors-alive", "Label": "Survivors alive at end", "Computation": "Count", "Weight": 1, "Description": "Some scenarios require all survivors alive; others tolerate losses." },
+      { "Id": "total-xp", "Label": "Total XP earned (informational)", "Computation": "Sum", "Weight": 0, "Description": "XP across all survivors — drives skill progression, not scoring." }
+    ]
+  },
+  "TurnTemplate": {
+    "TurnOrderType": "Sequential",
+    "Phases": [
+      "Players phase (each survivor uses action points clockwise)",
+      "Zombies phase (existing zombies activate per type rules)",
+      "End phase (zombie spawn by Danger Level, draw spawn cards)"
+    ],
+    "Rounds": null,
+    "TurnsPerRound": null,
+    "TurnActions": [
+      "move",
+      "attack-melee",
+      "attack-ranged",
+      "open-door",
+      "search",
+      "trade",
+      "objective-action",
+      "use-skill"
+    ],
+    "Direction": "clockwise"
+  },
+  "Overrides": {
+    "OverridesTurnOrder": true,
+    "OverridesScoreboard": true,
+    "OverridesDiceSet": true
+  },
+  "Reasoning": "Curated 2026-06-01 from Zombicide Green Horde base game (1-6 players, ~60-90 min/scenario). Co-op miniatures dungeon-crawler. NO traditional scoring (BinaryWin: mission complete OR all survivors dead OR scenario fail conditions). Per-survivor: wounds (0-2, 2 = dead), XP (drives Blue→Yellow→Orange→Red skill levels), action points (3 base + skill bonuses), equipment slots (2 hands + body + backpack). Board state: zombie counts per type (Walker, Runner, Fatty, Abomination, Walker Orc, Necromancer). 3-phase round: Players (clockwise) → Zombies activate → End (spawn by Danger Level). Combat: D6 hit 4+ but weapon-dependent (pistol short range, shotgun area). XP per kill drives progression: 0-6 Blue, 7-18 Yellow, 19-42 Orange, 43+ Red. Each level grants +1 skill choice. Loss: all survivors dead OR scenario timeout (zombie horde max) OR objective failure.",
+  "ExcludedTools": [
+    { "ToolType": "Timer", "Reason": "No real-time timer per turn (asynchronous co-op planning)." },
+    { "ToolType": "CardDeck (generic)", "Reason": "Zombie spawn cards + equipment cards have specialized handling (multiple decks per scenario)." }
+  ]
+}

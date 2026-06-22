@@ -26,10 +26,11 @@ describe('KPIStatsRow', () => {
     expect(screen.getByTestId('kpi-users-value')).toHaveTextContent('150');
   });
 
-  it('hides pending card when pendingApprovals is 0', () => {
+  it('renders pending card with 0 when no approvals are queued (4-up layout)', () => {
     render(<KPIStatsRow {...baseProps} pendingApprovals={0} />);
 
-    expect(screen.queryByTestId('kpi-pending')).not.toBeInTheDocument();
+    expect(screen.getByTestId('kpi-pending')).toBeInTheDocument();
+    expect(screen.getByTestId('kpi-pending-value')).toHaveTextContent('0');
   });
 
   it('shows pending card when pendingApprovals > 0', () => {
@@ -40,10 +41,11 @@ describe('KPIStatsRow', () => {
     expect(screen.getByTestId('kpi-pending-value')).toHaveTextContent('5');
   });
 
-  it('hides documents card when totalDocuments is not provided', () => {
+  it('renders documents card with 0 fallback when totalDocuments is not provided (backend gap)', () => {
     render(<KPIStatsRow {...baseProps} />);
 
-    expect(screen.queryByTestId('kpi-documents')).not.toBeInTheDocument();
+    expect(screen.getByTestId('kpi-documents')).toBeInTheDocument();
+    expect(screen.getByTestId('kpi-documents-value')).toHaveTextContent('0');
   });
 
   it('shows documents card when totalDocuments is provided', () => {
@@ -85,12 +87,12 @@ describe('KPIStatsRow', () => {
     expect(screen.getByTestId('kpi-pending')).toBeInTheDocument();
   });
 
-  it('renders only games and users cards by default', () => {
+  it('always renders the four cards (Giochi · Documenti · Utenti · Pendenti) in 4-up layout', () => {
     render(<KPIStatsRow totalGames={10} totalUsers={200} pendingApprovals={0} />);
 
     expect(screen.getByTestId('kpi-games')).toBeInTheDocument();
+    expect(screen.getByTestId('kpi-documents')).toBeInTheDocument();
     expect(screen.getByTestId('kpi-users')).toBeInTheDocument();
-    expect(screen.queryByTestId('kpi-documents')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('kpi-pending')).not.toBeInTheDocument();
+    expect(screen.getByTestId('kpi-pending')).toBeInTheDocument();
   });
 });

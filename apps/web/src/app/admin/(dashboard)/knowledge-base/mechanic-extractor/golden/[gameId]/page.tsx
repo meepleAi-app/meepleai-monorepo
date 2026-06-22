@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 /**
@@ -120,7 +121,7 @@ export default function GoldenForGamePage({ params }: GoldenForGamePageProps) {
         onOpenChange={setBggImporterOpen}
       />
 
-      <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/60">
+      <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/60">
         <CardContent className="pt-6">
           {goldenQuery.isLoading && (
             <div className="space-y-3">

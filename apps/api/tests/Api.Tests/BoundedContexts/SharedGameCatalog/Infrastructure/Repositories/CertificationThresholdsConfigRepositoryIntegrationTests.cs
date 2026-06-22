@@ -79,9 +79,10 @@ public sealed class CertificationThresholdsConfigRepositoryIntegrationTests : IA
     [Fact]
     public async Task UpdateAsync_PersistsNewThresholdsAndAuditFields()
     {
-        // Arrange
+        // Arrange: migration M2_0 declares updated_by_user_id REFERENCES users(Id) ON DELETE SET NULL,
+        // so the actor user must exist before SaveChanges runs.
+        var actor = await SeedUserAsync(_dbContext);
         var loaded = await _repository.GetAsync();
-        var actor = Guid.NewGuid();
         var newThresholds = CertificationThresholds.Create(
             minCoveragePct: 85m,
             maxPageTolerance: 5,
@@ -136,6 +137,9 @@ public sealed class CertificationThresholdsConfigRepositoryIntegrationTests : IA
     public async Task ConcurrentUpdate_ThrowsDbUpdateConcurrencyException()
     {
         // Arrange: open two parallel contexts against the same row.
+        // FK updated_by_user_id REFERENCES users(Id) — seed a real user shared by both writes.
+        var actorId = await SeedUserAsync(_dbContext);
+
         await using var ctxA = _fixture.CreateDbContext(_connectionString);
         await using var ctxB = _fixture.CreateDbContext(_connectionString);
 
@@ -150,8 +154,8 @@ public sealed class CertificationThresholdsConfigRepositoryIntegrationTests : IA
         var copyA = await repoA.GetAsync();
         var copyB = await repoB.GetAsync();
 
-        copyA.Update(CertificationThresholds.Create(75m, 8, 82m, 65m), Guid.NewGuid());
-        copyB.Update(CertificationThresholds.Create(88m, 3, 92m, 78m), Guid.NewGuid());
+        copyA.Update(CertificationThresholds.Create(75m, 8, 82m, 65m), actorId);
+        copyB.Update(CertificationThresholds.Create(88m, 3, 92m, 78m), actorId);
 
         // Act: first write wins — xmin advances; second write sees stale xmin.
         await repoA.UpdateAsync(copyA);
@@ -162,5 +166,17 @@ public sealed class CertificationThresholdsConfigRepositoryIntegrationTests : IA
 
         // Assert
         await act.Should().ThrowAsync<DbUpdateConcurrencyException>();
+    }
+
+    private static async Task<Guid> SeedUserAsync(MeepleAiDbContext ctx)
+    {
+        var userId = Guid.NewGuid();
+        ctx.Users.Add(new Api.Infrastructure.Entities.UserEntity
+        {
+            Id = userId,
+            Email = $"actor-{userId:N}@test.local",
+        });
+        await ctx.SaveChangesAsync();
+        return userId;
     }
 }

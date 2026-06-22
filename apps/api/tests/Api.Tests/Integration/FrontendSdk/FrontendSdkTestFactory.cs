@@ -97,7 +97,11 @@ public class FrontendSdkTestFactory : WebApplicationFactory<Program>, IAsyncLife
     private async Task InitializeDatabaseAsync()
     {
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseNpgsql(_connectionString, o => o.UseVector()) // Issue #3547: Enable pgvector type mapping
+            .UseNpgsql(_connectionString, o =>
+            {
+                o.UseVector(); // Issue #3547: Enable pgvector type mapping
+                o.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorCodesToAdd: null);
+            })
             .Options;
 
         var mockMediator = new Mock<MediatR.IMediator>();
@@ -171,7 +175,18 @@ public class FrontendSdkTestFactory : WebApplicationFactory<Program>, IAsyncLife
 
             services.AddDbContext<MeepleAiDbContext>(options =>
             {
-                options.UseNpgsql(_connectionString, o => o.UseVector()); // Issue #3547: Enable pgvector type mapping
+                options.UseNpgsql(_connectionString, o =>
+                {
+                    o.UseVector(); // Issue #3547: Enable pgvector type mapping
+                    // Issue #4301: Testcontainers on Docker Desktop Windows can produce transient
+                    // EndOfStreamException/NpgsqlException during container warm-up and
+                    // under load. EnableRetryOnFailure makes EF re-open the connection
+                    // automatically instead of surfacing a 500 to the test assertions.
+                    o.EnableRetryOnFailure(
+                        maxRetryCount: 5,
+                        maxRetryDelay: TimeSpan.FromSeconds(10),
+                        errorCodesToAdd: null);
+                });
                 options.EnableSensitiveDataLogging(); // Better error messages
             });
 
@@ -189,7 +204,7 @@ public class FrontendSdkTestFactory : WebApplicationFactory<Program>, IAsyncLife
 
             // Mock cache service
             services.RemoveAll(typeof(IHybridCacheService));
-            services.AddScoped<IHybridCacheService>(_ => Mock.Of<IHybridCacheService>());
+            services.AddSingleton<IHybridCacheService>(_ => Mock.Of<IHybridCacheService>());
 
             // Mock configuration service: enable public registration and return defaults for other keys.
             // Moq matches in reverse setup order (last wins), so general fallbacks are set first.

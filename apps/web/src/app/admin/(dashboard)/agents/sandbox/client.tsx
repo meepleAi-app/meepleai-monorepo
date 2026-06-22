@@ -10,19 +10,19 @@ export function SandboxClient() {
   return (
     <SandboxProviders>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 h-[calc(100vh-4rem)]">
-        <div className="rounded-xl border bg-white/70 backdrop-blur-md p-4 overflow-y-auto">
+        <div className="rounded-xl border bg-card/70 backdrop-blur-md p-4 overflow-y-auto">
           <SourcePanel />
         </div>
 
-        <div className="rounded-xl border bg-white/70 backdrop-blur-md p-4 overflow-y-auto">
+        <div className="rounded-xl border bg-card/70 backdrop-blur-md p-4 overflow-y-auto">
           <PipelinePanel />
         </div>
 
-        <div className="rounded-xl border bg-white/70 backdrop-blur-md p-4 overflow-y-auto">
+        <div className="rounded-xl border bg-card/70 backdrop-blur-md p-4 overflow-y-auto">
           <AgentConfigPanel />
         </div>
 
-        <div className="rounded-xl border bg-white/70 backdrop-blur-md p-0 overflow-hidden">
+        <div className="rounded-xl border bg-card/70 backdrop-blur-md p-0 overflow-hidden">
           <TestChatPanel />
         </div>
       </div>

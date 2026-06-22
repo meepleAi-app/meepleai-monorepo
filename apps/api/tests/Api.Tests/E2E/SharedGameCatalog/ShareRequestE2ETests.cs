@@ -65,7 +65,7 @@ public sealed class ShareRequestE2ETests : E2ETestBase
     {
         // Arrange - Register and authenticate user
         var email = $"share_user_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, userId) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, userId) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
         // userId stored in database for test assertions
 
@@ -124,7 +124,7 @@ public sealed class ShareRequestE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"share_list_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Act
@@ -161,7 +161,7 @@ public sealed class ShareRequestE2ETests : E2ETestBase
     {
         // Arrange - Create user and submit share request
         var userEmail = $"share_approve_{Guid.NewGuid():N}@example.com";
-        var (userToken, userId) = await RegisterUserAsync(userEmail, "ValidPassword123!");
+        var (userToken, userId) = await RegisterUserAsync(userEmail, "ValidUnusualPwd123!");
         SetSessionCookie(userToken);
 
         // Add game to library first
@@ -213,7 +213,7 @@ public sealed class ShareRequestE2ETests : E2ETestBase
     {
         // Arrange - Create user and submit share request
         var userEmail = $"share_reject_{Guid.NewGuid():N}@example.com";
-        var (userToken, _) = await RegisterUserAsync(userEmail, "ValidPassword123!");
+        var (userToken, _) = await RegisterUserAsync(userEmail, "ValidUnusualPwd123!");
         SetSessionCookie(userToken);
 
         // Add game to library
@@ -258,7 +258,7 @@ public sealed class ShareRequestE2ETests : E2ETestBase
     {
         // Arrange - Create user and submit share request
         var userEmail = $"share_changes_{Guid.NewGuid():N}@example.com";
-        var (userToken, _) = await RegisterUserAsync(userEmail, "ValidPassword123!");
+        var (userToken, _) = await RegisterUserAsync(userEmail, "ValidUnusualPwd123!");
         SetSessionCookie(userToken);
 
         // Add game to library
@@ -311,7 +311,7 @@ public sealed class ShareRequestE2ETests : E2ETestBase
     {
         // Step 1: User registers and adds game to library
         var userEmail = $"share_journey_{Guid.NewGuid():N}@example.com";
-        var (userToken, userId) = await RegisterUserAsync(userEmail, "ValidPassword123!");
+        var (userToken, userId) = await RegisterUserAsync(userEmail, "ValidUnusualPwd123!");
         SetSessionCookie(userToken);
 
         // Add game to library
@@ -380,14 +380,14 @@ public sealed class ShareRequestE2ETests : E2ETestBase
 
     /// <summary>
     /// Logs in as the admin user configured in E2ETestFixture.
-    /// Admin credentials: admin@test.local / TestAdmin123!
+    /// Admin credentials: admin@test.local / TestUnusualAdm123!
     /// </summary>
     private async Task<(string SessionToken, Guid UserId)> LoginAsAdminAsync()
     {
         var payload = new
         {
             email = "admin@test.local",
-            password = "TestAdmin123!"
+            password = "TestUnusualAdm123!"
         };
 
         var response = await Client.PostAsJsonAsync("/api/v1/auth/login", payload);
@@ -398,7 +398,7 @@ public sealed class ShareRequestE2ETests : E2ETestBase
             var registerPayload = new
             {
                 email = "admin@test.local",
-                password = "TestAdmin123!",
+                password = "TestUnusualAdm123!",
                 displayName = "Test Admin"
             };
 

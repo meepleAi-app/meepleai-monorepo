@@ -38,6 +38,27 @@
       "tagToInvalidate": "Tag da invalidare",
       "title": "Cache"
     },
+    "catalogSeed": {
+      "title": "Coda seed catalogo",
+      "subtitle": "Admin · Catalogo · Pipeline seed (Wikidata + BGG)",
+      "kpi": {
+        "pending": "In attesa",
+        "fetched": "Recuperati",
+        "approved": "Approvati",
+        "rejected": "Rifiutati"
+      },
+      "actions": {
+        "enqueue": "Accoda",
+        "approve": "Approva",
+        "reject": "Rifiuta",
+        "search": "Cerca",
+        "addToQueue": "Aggiungi alla coda"
+      },
+      "filters": {
+        "all": "Tutti",
+        "failedOnly": "Solo falliti"
+      }
+    },
     "configuration": {
       "aiLlm": "Configurazione AI / LLM",
       "rag": "Configurazione RAG",
@@ -74,7 +95,7 @@
       "users": "utenti",
       "validationDisplayName": "Nome visualizzato richiesto",
       "validationEmail": "Email valida richiesta",
-      "validationPassword": "La password deve essere di almeno 8 caratteri"
+      "validationPassword": "La password deve essere di almeno 12 caratteri"
     },
     "workflows": "Flussi di lavoro"
   },
@@ -198,11 +219,21 @@
       "error": "Codice non valido. Riprova.",
       "submit": "Verifica",
       "title": "Autenticazione a due fattori",
-      "verificationSubtitle": "Inserisci il codice dell'app di autenticazione per continuare."
+      "verificationSubtitle": "Inserisci il codice dell'app di autenticazione per continuare.",
+      "submitting": "Verifica in corso...",
+      "codeRequired": "Inserisci un codice a 6 cifre",
+      "codeInvalid": "Codice non valido",
+      "rememberDevice": "Ricorda questo dispositivo per 30 giorni"
     },
     "emailVerification": {
       "pageTitle": "Verifica email",
       "verifying": "Verifica email in corso...",
+      "banner": {
+        "title": "Verifica la tua email",
+        "description": "Conferma la tua email per sbloccare tutte le funzionalità di MeepleAI.",
+        "cta": "Verifica ora",
+        "dismissAriaLabel": "Chiudi banner"
+      },
       "pending": {
         "title": "Controlla la tua email",
         "description": "Ti abbiamo inviato un link di verifica al tuo indirizzo email.",
@@ -289,7 +320,14 @@
     "send": "Invia",
     "sources": "Fonti",
     "thinking": "Sto pensando...",
-    "title": "Chat AI"
+    "title": "Chat AI",
+    "infoPanel": {
+      "linkedGameLabel": "Gioco collegato",
+      "citationsHeading": "Citazioni ({count})",
+      "suggestedQuestionsHeading": "Domande suggerite",
+      "agentSectionHeading": "Agente",
+      "agentTypeLabel": "Tipo"
+    }
   },
   "common": {
     "all": "Tutti",
@@ -310,6 +348,7 @@
     "filter": "Filtra",
     "import": "Importa",
     "loading": "Caricamento...",
+    "localizedFromEnglish": "{localizedTitle} (tradotto da: {originalTitle})",
     "loginRequired": "Accesso richiesto per continuare.",
     "next": "Avanti",
     "no": "No",
@@ -327,7 +366,46 @@
     "submit": "Invia",
     "success": "Successo",
     "upload": "Carica",
-    "yes": "Sì"
+    "yes": "Sì",
+    "statusBanner": {
+      "dismiss": "Chiudi",
+      "severityLabel": {
+        "info": "Informazione",
+        "warning": "Avviso",
+        "critical": "Critico"
+      },
+      "admin": {
+        "title": "Banner di stato",
+        "tabLabel": "Banner",
+        "messageLabel": "Messaggio",
+        "messagePlaceholder": "Inserisci il messaggio del banner...",
+        "severityLabel": "Severità",
+        "isActiveLabel": "Banner attivo",
+        "startsAtLabel": "Inizio (opzionale)",
+        "endsAtLabel": "Fine (opzionale)",
+        "saveButton": "Salva banner",
+        "saving": "Salvataggio...",
+        "savedSuccess": "Banner aggiornato con successo",
+        "saveError": "Errore durante il salvataggio del banner",
+        "loadError": "Errore nel caricamento del banner",
+        "loading": "Caricamento...",
+        "templates": {
+          "title": "Template rapidi",
+          "investigating": "Incidente in corso",
+          "resolved": "Incidente risolto"
+        }
+      }
+    },
+    "entity": {
+      "game": "Gioco",
+      "agent": "Agente",
+      "session": "Sessione",
+      "kb": "KB",
+      "player": "Giocatori",
+      "chat": "Chat",
+      "event": "Eventi",
+      "toolkit": "Toolkit"
+    }
   },
   "comments": {
     "addComment": "Aggiungi Commento",
@@ -616,8 +694,8 @@
     "passwordComplexity": "La password deve contenere almeno una lettera maiuscola, una minuscola e un numero",
     "passwordConfirmRequired": "Conferma la tua password",
     "passwordMatch": "Le password non coincidono",
-    "passwordMax": "La password non può superare 100 caratteri",
-    "passwordMin": "La password deve essere di almeno 8 caratteri",
+    "passwordMax": "La password non può superare 128 caratteri",
+    "passwordMin": "La password deve essere di almeno 12 caratteri",
     "required": "Questo campo è obbligatorio"
   },
   "privateGames": {
@@ -1154,7 +1232,7 @@
         "q5": {
           "question": "Posso aggiungere un gioco non presente nel catalogo?",
           "short": "Durante l'alpha solo gli admin possono aggiungere giochi. Suggerisci nuovi giochi via /contact.",
-          "long": "Durante l'**alpha privata**, l'aggiunta di nuovi giochi al catalogo è ristretta agli admin per garantire qualità delle KB.\n\nPuoi **suggerire un gioco** via `/contact`: indicaci titolo, editore, anno e link BoardGameGeek. Valutiamo le richieste settimanalmente. Post-alpha, gli utenti potranno proporre giochi self-service con approvazione moderata."
+          "long": "Durante l'**alpha privata**, l'aggiunta di nuovi giochi al catalogo è ristretta agli admin per garantire qualità delle KB.\n\nPuoi **suggerire un gioco** via `/contact`: indicaci titolo, editore, anno e un link a un database giochi di riferimento. Valutiamo le richieste settimanalmente. Post-alpha, gli utenti potranno proporre giochi self-service con approvazione moderata."
         },
         "q6": {
           "question": "Come funziona la mia libreria personale?",
@@ -1289,6 +1367,72 @@
           "respondFailed": "invite.respond_failed"
         }
       }
+    },
+    "gameNightJoin": {
+      "metadata": {
+        "title": "RSVP serata gioco — MeepleAI",
+        "description": "Conferma o declina la tua partecipazione alla serata di gioco."
+      },
+      "publicBanner": "Stai vedendo un invito pubblico. La tua risposta verrà condivisa con l'organizzatore.",
+      "hero": {
+        "invitedBy": "{hostName} ti ha invitato a",
+        "scheduledLabel": "Quando",
+        "locationLabel": "Dove",
+        "locationMissing": "Luogo da definire"
+      },
+      "form": {
+        "sectionTitle": "La tua risposta",
+        "displayNameLabel": "Il tuo nome (opzionale)",
+        "displayNamePlaceholder": "Es. Marco",
+        "displayNameHelper": "Aiuta l'organizzatore a riconoscerti. Massimo 120 caratteri.",
+        "displayNameTooLong": "Il nome deve essere di 120 caratteri o meno.",
+        "accept": "Confermo",
+        "decline": "Non posso",
+        "submitting": "Invio risposta…",
+        "submitSuccess": "Risposta inviata!",
+        "alreadyRespondedHeading": "Hai già risposto",
+        "alreadyRespondedAnonymousAccepted": "Hai confermato la partecipazione.",
+        "alreadyRespondedAnonymousDeclined": "Hai declinato l'invito.",
+        "alreadyRespondedNamedAccepted": "Hai confermato come \"{name}\".",
+        "alreadyRespondedNamedDeclined": "Hai declinato come \"{name}\".",
+        "changeResponse": "Cambia risposta"
+      },
+      "error": {
+        "invalidToken": {
+          "heading": "Invito non trovato",
+          "body": "Questo link non corrisponde a nessun invito attivo. Controlla che sia completo e riprova.",
+          "homeCta": "Vai alla home"
+        },
+        "expired": {
+          "heading": "Invito scaduto",
+          "body": "Questo invito non è più valido. Chiedi all'organizzatore di rimandartelo."
+        },
+        "cancelled": {
+          "heading": "Serata annullata",
+          "body": "L'organizzatore ha annullato questa serata. Niente di personale!"
+        },
+        "requestNewInviteCta": "Richiedi un nuovo invito",
+        "homeCta": "Vai alla home",
+        "rateLimited": {
+          "heading": "Troppe richieste",
+          "body": "Hai inviato troppe risposte in poco tempo. Attendi qualche secondo prima di riprovare.",
+          "countdown": "Riprova tra {seconds, plural, one {1 secondo} other {# secondi}}",
+          "retryCta": "Riprova adesso"
+        },
+        "generic": {
+          "heading": "Qualcosa è andato storto",
+          "body": "Non siamo riusciti a contattare il server. Controlla la connessione e riprova.",
+          "retryCta": "Riprova"
+        }
+      },
+      "cta": {
+        "createAccount": {
+          "title": "Vuoi tenere traccia delle tue serate?",
+          "body": "Crea un account gratuito per gestire i tuoi inviti, vedere le statistiche e ricevere promemoria.",
+          "button": "Crea account"
+        }
+      },
+      "loading": "Caricamento invito…"
     },
     "join": {
       "metadata": {
@@ -1515,17 +1659,23 @@
         "description": "La tua collezione di giochi: knowledge base, prestiti, wishlist e attività recenti."
       },
       "hero": {
-        "title": "La mia libreria",
-        "subtitle": "Tutta la tua collezione, gli agenti AI e le partite recenti in un colpo d'occhio.",
+        "title": "La tua libreria",
+        "subtitle": "Tutti i tuoi giochi, agenti e documenti in un posto.",
+        "eyebrow": "Library · power-user view",
         "stats": {
           "totalGames": "Giochi totali",
           "kbReady": "Knowledge base",
           "wishlist": "Wishlist",
-          "loaned": "In prestito"
+          "loaned": "In prestito",
+          "agents": "Agenti",
+          "docs": "Documenti",
+          "chats": "Chat"
         },
         "cta": {
-          "add": "Aggiungi gioco",
-          "addAriaLabel": "Aggiungi un nuovo gioco alla libreria"
+          "add": "+ Aggiungi gioco",
+          "addAriaLabel": "Aggiungi un nuovo gioco alla libreria",
+          "importBgg": "↓ Importa BGG",
+          "exportAriaLabel": "Esporta"
         }
       },
       "tabs": {
@@ -1534,6 +1684,66 @@
         "kb": "Knowledge base",
         "loaned": "In prestito",
         "count": "{count, plural, =0 {nessuno} =1 {1} other {#}}"
+      },
+      "hubTabs": {
+        "all": "Tutti",
+        "games": "Giochi",
+        "agents": "Agenti",
+        "kb": "KB",
+        "sessions": "Sessioni",
+        "chat": "Chat"
+      },
+      "gamesTab": {
+        "filters": {
+          "search": {
+            "placeholder": "Cerca per titolo…",
+            "ariaLabel": "Cerca giochi nella tua libreria",
+            "clearAriaLabel": "Pulisci ricerca"
+          },
+          "status": {
+            "label": "Stato",
+            "options": {
+              "all": "Tutti",
+              "owned": "Posseduti",
+              "wishlist": "Wishlist",
+              "played": "Giocati"
+            }
+          },
+          "sort": {
+            "label": "Ordina",
+            "options": {
+              "last-played": "Ultima partita",
+              "rating": "Rating",
+              "title": "Titolo A-Z",
+              "year": "Anno"
+            }
+          },
+          "view": {
+            "label": "Vista",
+            "options": {
+              "grid": "Griglia",
+              "list": "Lista"
+            }
+          },
+          "resultCount": "{count, plural, one {# gioco} other {# giochi}}"
+        },
+        "emptyState": {
+          "empty": {
+            "title": "Aggiungi il tuo primo gioco",
+            "subtitle": "Costruisci la tua libreria per iniziare.",
+            "cta": "Aggiungi gioco"
+          },
+          "filteredEmpty": {
+            "title": "Nessun risultato",
+            "subtitle": "Prova ad allargare i filtri o azzerarli.",
+            "cta": "Azzera filtri"
+          },
+          "error": {
+            "title": "Errore di caricamento",
+            "subtitle": "Impossibile recuperare la libreria.",
+            "cta": "Riprova"
+          }
+        }
       },
       "selectionMode": {
         "enter": "Seleziona",
@@ -1544,9 +1754,103 @@
       },
       "filters": {
         "search": {
-          "placeholder": "Cerca per titolo, editore o anno…",
-          "ariaLabel": "Cerca nella libreria",
-          "clearAriaLabel": "Cancella la ricerca"
+          "placeholder": "Cerca in libreria... (premi /)",
+          "ariaLabel": "Cerca in libreria",
+          "clearAriaLabel": "Cancella la ricerca",
+          "keyboardHintAriaLabel": "Scorciatoia tastiera"
+        },
+        "title": "Più filtri",
+        "advanced": {
+          "label": "Filtri avanzati"
+        },
+        "chips": {
+          "stato": "STATO",
+          "gioco": "GIOCO",
+          "data": "DATA",
+          "sort": "SORT",
+          "value": {
+            "all": "Tutti",
+            "always": "Sempre"
+          }
+        },
+        "description": "Filtra la libreria per dimensioni specifiche dell'entità.",
+        "closeAriaLabel": "Chiudi pannello filtri",
+        "header": {
+          "subtitle": "{count, plural, =0 {Nessun filtro · scope: library} =1 {1 attivo · scope: library} other {# attivi · scope: library}}"
+        },
+        "apply": "Applica",
+        "applyWithCount": "Applica ({count})",
+        "clear": "Reimposta",
+        "reset": "Reset",
+        "section": {
+          "status": {
+            "title": "Stato",
+            "options": {
+              "owned": "Posseduto",
+              "wishlist": "Wishlist",
+              "setup": "In setup",
+              "archived": "Archiviato"
+            }
+          },
+          "entity": {
+            "title": "Tipo entità",
+            "options": {
+              "game": "Giochi",
+              "agent": "Agenti",
+              "kb": "Documenti KB",
+              "session": "Sessioni",
+              "chat": "Chat"
+            }
+          },
+          "game": {
+            "title": "Gioco",
+            "placeholder": "Filtra per gioco specifico...",
+            "empty": "Nessun gioco disponibile dalla libreria corrente."
+          },
+          "period": {
+            "title": "Periodo",
+            "options": {
+              "7d": "Ultimi 7 giorni",
+              "30d": "Ultimi 30 giorni",
+              "1y": "Ultimo anno",
+              "all": "Sempre",
+              "range": "Range personalizzato..."
+            }
+          },
+          "tags": {
+            "title": "Tag",
+            "options": {
+              "family": "Family",
+              "strategy": "Strategy",
+              "coop": "Coop",
+              "engine": "Engine builder",
+              "auction": "Auction",
+              "rollAndWrite": "Roll & Write",
+              "cardDriven": "Card driven",
+              "tableau": "Tableau"
+            }
+          },
+          "rating": {
+            "title": "Rating",
+            "minAriaLabel": "Rating minimo",
+            "maxAriaLabel": "Rating massimo"
+          },
+          "weight": {
+            "title": "Complessità",
+            "options": {
+              "light": "Light · 1.0–2.0",
+              "medium": "Medium · 2.0–3.0",
+              "heavy": "Heavy · 3.0–4.0",
+              "extra": "Extra heavy · 4.0+"
+            }
+          }
+        },
+        "stato": {
+          "label": "Stato",
+          "owned": "Posseduti",
+          "wishlist": "Wishlist",
+          "loaned": "In prestito",
+          "withKb": "Con Knowledge Base"
         }
       },
       "sort": {
@@ -1565,7 +1869,14 @@
         "compact": "Compatta"
       },
       "bulk": {
+        "counter": "{count, plural, =1 {selezionato} other {selezionati}}",
+        "counterCompact": "sel.",
+        "closeAriaLabel": "Annulla selezione",
         "actions": {
+          "archive": "Archivia",
+          "archiveAriaLabel": "Archivia gli elementi selezionati",
+          "tag": "Tag",
+          "tagAriaLabel": "Aggiungi tag agli elementi selezionati",
           "delete": "Elimina",
           "deleteAriaLabel": "Elimina gli elementi selezionati",
           "favorite": "Aggiungi ai preferiti",
@@ -1585,17 +1896,36 @@
         "clearSelectionAriaLabel": "Deseleziona tutti gli elementi"
       },
       "activityRail": {
-        "title": "Attività recente",
+        "title": "Ultime modifiche",
         "subtitle": "Le ultime aggiunte e modifiche alla tua libreria.",
         "empty": "Nessuna attività recente.",
         "viewAll": "Vedi tutto",
-        "viewAllAriaLabel": "Vai allo storico completo dell'attività"
+        "viewAllAriaLabel": "Vai allo storico completo dell'attività",
+        "collapseAriaLabel": "Comprimi pannello",
+        "error": "Impossibile caricare l'attività.",
+        "fallback": {
+          "agent": "Nuovo agent creato",
+          "chat": "Nuova chat",
+          "kbIndexed": "Documento indicizzato",
+          "play": "Sessione",
+          "removed": "Rimosso dalla libreria"
+        },
+        "shortcuts": {
+          "heading": "Shortcuts",
+          "focusSearch": "focus search",
+          "advancedFilters": "filtri avanzati",
+          "allShortcuts": "tutte le scorciatoie"
+        }
       },
       "emptyState": {
-        "default": {
+        "empty": {
           "title": "La tua libreria è vuota",
-          "subtitle": "Aggiungi il tuo primo gioco per iniziare a costruire la collezione.",
-          "cta": "Aggiungi gioco"
+          "subtitle": "Inizia aggiungendo il tuo primo gioco. Importa la collezione da BoardGameGeek o cerca per titolo.",
+          "cta": "+ Aggiungi il tuo primo gioco",
+          "ctaImportBgg": "↓ Importa da BGG",
+          "suggestions": {
+            "heading": "Suggerimenti dalla community"
+          }
         },
         "filteredEmpty": {
           "title": "Nessun risultato",
@@ -1607,6 +1937,541 @@
           "subtitle": "Si è verificato un errore. Riprova tra qualche istante.",
           "cta": "Riprova"
         }
+      },
+      "gameDetail": {
+        "kb": {
+          "metadata": {
+            "title": "{gameTitle} · Knowledge Base — MeepleAI",
+            "description": "Gestisci PDF, indicizzazione e RAPTOR per la knowledge base di {gameTitle}."
+          },
+          "header": {
+            "titleSuffix": "Knowledge Base",
+            "uploadCta": "+ Carica PDF",
+            "reindexAllCta": "⟳ Re-index all",
+            "dropZoneCta": "Trascina un PDF qui o clicca per caricarlo"
+          },
+          "stats": {
+            "docs": "{count, plural, =0 {Nessun documento} =1 {1 documento} other {# documenti}}",
+            "docsLabel": "Documenti",
+            "chunksLabel": "Chunks",
+            "chunksTemplate": "{count} chunks",
+            "embeddingsLabel": "Embeddings",
+            "embeddingsTemplate": "{count} embeddings",
+            "lastReindexLabel": "Ultima idx.",
+            "lastReindexTemplate": "ultima reindex {relative}",
+            "raptorLabel": "RAPTOR last",
+            "coverageLabel": "Copertura",
+            "coverageStripLabel": "Copertura: {level}",
+            "coverage": {
+              "None": "Nessuna",
+              "Basic": "Base",
+              "Standard": "Standard",
+              "Complete": "Completa"
+            },
+            "cardTitle": "KB Coverage Stats",
+            "cardSubtitle": "Metriche indicizzazione",
+            "lifetimeCostLabel": "Costo lifetime token",
+            "sparklineLabel": "Consumo token · ultimi 7 gg",
+            "sparklineStart": "-7gg",
+            "sparklineEnd": "oggi",
+            "columnHeaders": {
+              "document": "Documento",
+              "status": "Stato",
+              "uploaded": "Caricato"
+            },
+            "indexingBadge": "⏳ Indicizzazione in corso",
+            "indexingDescription": "Il documento è caricato ma non ancora ricercabile dalla chat."
+          },
+          "empty": {
+            "title": "Nessun PDF indicizzato",
+            "description": "Carica il primo documento PDF per indicizzare le regole di {gameTitle} e abilitare il RAG chat con l'AI agent.",
+            "ctaLabel": "Carica primo documento",
+            "supportedFormats": "Formati supportati: PDF · Max 200 MB per file"
+          },
+          "pdfRow": {
+            "openCta": "Apri dettaglio",
+            "openAria": "Apri dettaglio {pdfName}",
+            "chunksTemplate": "{count} chunks",
+            "status": {
+              "ready": "Ready",
+              "indexing": "Indexing",
+              "stale": "Stale",
+              "failed": "Failed"
+            }
+          },
+          "actionsMenu": {
+            "headerSubtitle": "{size} · {date}",
+            "open": {
+              "label": "Apri dettaglio",
+              "description": "Visualizza chunks e preview",
+              "icon": "↗"
+            },
+            "reindex": {
+              "label": "Re-index",
+              "description": "Rielabora embedding PDF",
+              "icon": "⟳"
+            },
+            "cost": {
+              "label": "Statistiche costo",
+              "description": "Token consumati e costo",
+              "icon": "📋"
+            },
+            "move": {
+              "label": "Sposta in altro gioco",
+              "description": "Sposta in altra scheda KB",
+              "icon": "📦"
+            },
+            "delete": {
+              "label": "Elimina",
+              "description": "Rimuovi PDF e cleanup",
+              "icon": "🗑"
+            }
+          },
+          "reindexModal": {
+            "title": "Re-index full KB",
+            "subtitle": "{gameTitle} · {docCount} documenti",
+            "costHeader": "Stima costo operazione",
+            "description": "Questa operazione rielabora tutti i chunk e rigenera gli embedding. Le chat esistenti continueranno a funzionare durante il processo.",
+            "reindexCta": "⟳ Re-index",
+            "cancelCta": "Annulla",
+            "runningTitle": "Re-index in corso…",
+            "jobIdLabel": "Job ID",
+            "progressTemplate": "{processed} / {total} chunks",
+            "doneTitle": "Re-index completato",
+            "doneSummaryTemplate": "{chunks} chunks · {embeddings} embeddings · costo reale {cost}",
+            "closeCta": "Chiudi",
+            "costRows": {
+              "chunksToReembed": "Chunks da re-embed",
+              "tokensPerChunk": "Tokens per chunk (avg)",
+              "tokensTotal": "Tokens totali stimati",
+              "costPer1M": "Costo per 1M tokens",
+              "estimatedCost": "Costo stimato",
+              "estimatedDuration": "Durata stimata"
+            }
+          },
+          "raptor": {
+            "title": "RAPTOR Rebuild",
+            "description": "Recursive Abstractive Processing Tree Of Retrieval",
+            "lockedBadge": "🔒 PRO",
+            "activeBadge": "PRO ✓",
+            "lockedNote": "RAPTOR richiede piano Pro. Abilita clustering gerarchico per retrieval Q&A avanzato.",
+            "upgradeCta": "🔒 Rebuild RAPTOR — Upgrade to Pro",
+            "upgradeLink": "Scopri piano Pro",
+            "rebuildCta": "🦅 Rebuild RAPTOR",
+            "metrics": {
+              "lastRebuild": "Ultimo rebuild",
+              "summaries": "Summaries generate"
+            },
+            "estimateLabel": "Stima operazione",
+            "estimateDescription": "~{chunks} chunks → summaries gerarchici"
+          },
+          "delete": {
+            "title": "Confermi eliminazione PDF?",
+            "subtitlePrefix": "PDF:",
+            "listHeader": "Verrà eliminato definitivamente:",
+            "warning": "Operazione irreversibile — nessun backup disponibile",
+            "deleteCta": "🗑 Elimina definitivamente",
+            "cancelCta": "Annulla"
+          },
+          "errors": {
+            "loadFailed": "Impossibile caricare la knowledge base. Riprova.",
+            "reindexFailed": "Re-index fallito. Riprova tra qualche istante.",
+            "raptorFailed": "Rebuild RAPTOR fallito.",
+            "deleteFailed": "Impossibile eliminare il PDF."
+          }
+        },
+        "h1": {
+          "loading": "Caricamento gioco…",
+          "notFound": "Gioco non trovato"
+        },
+        "documentTitle": {
+          "format": "{gameName} · MeepleAI",
+          "loading": "Caricamento gioco — MeepleAI",
+          "notFound": "Gioco non trovato — MeepleAI"
+        }
+      },
+      "addGame": {
+        "drawerTitle": "Aggiungi un gioco",
+        "manualTitle": "Aggiungi gioco manualmente",
+        "catalogTitle": "Aggiungi da catalogo",
+        "question": "Come vuoi aggiungere il tuo gioco?",
+        "manualLabel": "Aggiungi manualmente",
+        "manualDescription": "Inserisci i dettagli del gioco. Potrai caricare il regolamento e configurare l'agente AI dalla pagina di dettaglio.",
+        "catalogLabel": "Da catalogo condiviso",
+        "catalogDescription": "Cerca nel catalogo della community e aggiungi un gioco con un click. Regolamento e setup agente in seguito.",
+        "catalog": {
+          "backAriaLabel": "Torna alla scelta",
+          "searchPlaceholder": "Cerca giochi…",
+          "searchAriaLabel": "Cerca giochi",
+          "noImage": "Nessuna immagine",
+          "inLibraryBadge": "In libreria",
+          "alreadyInLibrary": "Già in libreria",
+          "selectCta": "Seleziona",
+          "resultCount": "{count, plural, =0 {Nessun gioco trovato} =1 {1 gioco trovato} other {# giochi trovati}}",
+          "emptyResults": "Nessun gioco trovato per «{search}».",
+          "emptyResultsHeading": "Nessun risultato",
+          "emptyResultsSubtitle": "Prova con un titolo diverso o controlla l'ortografia.",
+          "toastAdded": "«{gameName}» aggiunto alla tua libreria!",
+          "toastError": "Impossibile aggiungere «{gameName}». Riprova.",
+          "emptyManualCta": "Aggiungi manualmente",
+          "blockedMessage": "Hai già «{gameTitle}» in libreria.",
+          "blockedCta": "Vai alla scheda",
+          "blockedDismiss": "Chiudi"
+        }
+      },
+      "catalogPagination": {
+        "firstPage": "Prima pagina",
+        "previousPage": "Pagina precedente",
+        "nextPage": "Pagina successiva",
+        "lastPage": "Ultima pagina",
+        "pageNumber": "Pagina {n}"
+      }
+    },
+    "onboarding": {
+      "interests": {
+        "heading": "Cosa ti piace giocare?",
+        "subtitle": "Seleziona le categorie che ti interessano. Useremo le tue scelte per personalizzare i suggerimenti.",
+        "groupLabel": "Categorie di giochi preferite",
+        "categories": {
+          "strategy": "Strategia",
+          "party": "Festa",
+          "cooperative": "Cooperativo",
+          "family": "Famiglia",
+          "thematic": "Tematico",
+          "abstract": "Astratto",
+          "card": "Carte",
+          "dice": "Dadi",
+          "miniatures": "Miniature"
+        },
+        "selectedCount": "{count} selezionate",
+        "cta": {
+          "continue": "Continua",
+          "skip": "Salta",
+          "skipForNow": "Salta per ora"
+        },
+        "loading": "Salvataggio in corso…",
+        "toast": {
+          "saved": "{count} interessi salvati!"
+        }
+      }
+    },
+    "discover": {
+      "miniNav": {
+        "breadcrumb": "Scopri",
+        "tabAll": "Scopri"
+      },
+      "hero": {
+        "title": "Scopri la community",
+        "subtitle": "Esplora giochi, agenti, toolkit, KB e contributor. Filtra per entità o cerca tra il catalogo."
+      },
+      "search": {
+        "placeholder": "Cerca giochi, agenti, toolkit…",
+        "disabledTooltip": "Ricerca disponibile in Phase 0.5"
+      },
+      "filters": {
+        "ariaLabel": "Filtra per entità",
+        "all": "Tutti",
+        "games": "Giochi",
+        "agents": "Agenti",
+        "toolkits": "Toolkit",
+        "kbs": "KB",
+        "people": "Persone",
+        "events": "Eventi"
+      },
+      "rows": {
+        "trending": {
+          "title": "Trending",
+          "subtitle": "I giochi più giocati questa settimana"
+        },
+        "newGames": {
+          "title": "Giochi nuovi",
+          "subtitle": "Ultimi titoli aggiunti al catalogo"
+        },
+        "popularAgents": {
+          "title": "Agenti più installati",
+          "subtitle": "Agenti AI con il maggior numero di invocazioni"
+        },
+        "recommendedToolkits": {
+          "title": "Toolkit consigliati",
+          "subtitle": "Bundle di strumenti popolari nella community"
+        },
+        "recentKbDocs": {
+          "title": "KB recenti",
+          "subtitle": "Documenti indicizzati negli ultimi giorni"
+        },
+        "topContributors": {
+          "title": "Top contributor",
+          "subtitle": "Utenti che hanno arricchito di più il catalogo"
+        },
+        "nearbyEvents": {
+          "title": "Eventi vicini",
+          "subtitle": "Game night e tornei nella tua zona"
+        }
+      },
+      "common": {
+        "viewAll": "Vedi tutto",
+        "retry": "Riprova",
+        "empty": "Nessun elemento disponibile al momento.",
+        "disabledPhase05": "Disponibile in Phase 0.5"
+      },
+      "footer": {
+        "title": "Pronto a giocare?",
+        "description": "Aggiungi giochi alla tua libreria o invita amici per pianificare una serata.",
+        "primaryCta": "Esplora la libreria",
+        "secondaryCta": "Invita amici"
+      }
+    },
+    "hub": {
+      "common": {
+        "searchPlaceholder": "Cerca per titolo o autore…",
+        "filterAriaLabel": "Filtri catalogo",
+        "filters": {
+          "all": "Tutti",
+          "featured": "In evidenza",
+          "new": "Nuovi",
+          "top": "Top"
+        },
+        "filteredEmptyTitle": "Nessun risultato",
+        "filteredEmptyBody": "Prova a modificare i filtri o la ricerca.",
+        "errorTitle": "Errore di caricamento",
+        "errorBody": "Si è verificato un errore. Riprova fra qualche istante.",
+        "retry": "Riprova",
+        "resultsCountTemplate": "{filtered} di {total} risultati"
+      },
+      "games": {
+        "badge": "Games · /games · Community",
+        "title": "Catalogo giochi della community",
+        "subtitle": "Esplora i giochi indicizzati dalla community.",
+        "kpi": {
+          "total": "Giochi totali",
+          "featured": "In evidenza",
+          "recent": "Recenti"
+        },
+        "emptyTitle": "Catalogo vuoto",
+        "emptyBody": "Nessun gioco è ancora stato aggiunto al catalogo della community."
+      },
+      "agents": {
+        "badge": "Hub · /agents",
+        "title": "Agenti community",
+        "subtitle": "Scopri agenti AI condivisi dalla community per i tuoi giochi preferiti.",
+        "installLabel": "Installa agente",
+        "invocationsTemplate": "{count} invocazioni",
+        "kpi": {
+          "total": "Agenti",
+          "popular": "Popolari",
+          "gameAgents": "Game-specific"
+        },
+        "emptyTitle": "Nessun agente disponibile",
+        "emptyBody": "La community non ha ancora pubblicato agenti AI."
+      },
+      "toolkits": {
+        "badge": "Hub · /toolkits",
+        "title": "Toolkit community",
+        "subtitle": "Toolkit di strumenti condivisi dalla community per arricchire le tue sessioni.",
+        "installLabel": "Installa toolkit",
+        "toolsTemplate": "{count} strumenti",
+        "installsTemplate": "{count} installazioni",
+        "kpi": {
+          "total": "Toolkit",
+          "featured": "In evidenza",
+          "installs": "Installazioni totali"
+        },
+        "emptyTitle": "Nessun toolkit disponibile",
+        "emptyBody": "La community non ha ancora pubblicato toolkit."
+      }
+    },
+    "toolkitsHub": {
+      "eyebrow": "Hub · /toolkits",
+      "title": "Catalogo toolkit community",
+      "subtitle": "Bundle pronti all'uso di strumenti (timer, dadi, counter, deck) per i tuoi giochi. Ogni toolkit è versionato e pubblicato dalla community.",
+      "heroStats": {
+        "toolkits": "Toolkit",
+        "installs": "Installazioni",
+        "featured": "Featured",
+        "totalTools": "Strumenti totali"
+      },
+      "searchClearAriaLabel": "Pulisci ricerca",
+      "statusTablistAriaLabel": "Filtra toolkit per status",
+      "statusOptions": {
+        "all": "Tutti",
+        "featured": "Featured",
+        "new": "Nuovi",
+        "top": "Top 100"
+      },
+      "sortLabel": "Ordina",
+      "sortOptions": {
+        "popular": "Popolarità",
+        "rating": "Rating",
+        "title": "Titolo A-Z",
+        "uses": "Uses"
+      },
+      "countTemplate": "{count} toolkit",
+      "emptyTitle": "Nessun toolkit trovato",
+      "emptyBody": "Nessun toolkit corrisponde ai filtri attuali. Prova a modificare la ricerca.",
+      "gameRefFallback": "Universale (multi-game)",
+      "installAriaLabel": "Installa {title}",
+      "toolsLabel": "Strumenti:",
+      "usesLabel": "Uses:",
+      "resetFilters": "Azzera filtri",
+      "resetFiltersAriaLabel": "Azzera tutti i filtri di ricerca",
+      "retryAriaLabel": "Riprova a caricare il catalogo"
+    },
+    "dashboard": {
+      "hero": {
+        "guestName": "amico",
+        "greetingMorning": "Buongiorno",
+        "greetingAfternoon": "Buon pomeriggio",
+        "greetingEvening": "Buonasera",
+        "subtitle": "Ecco una panoramica di tutto: giochi in libreria, gruppo di gioco, agenti AI, sessioni e prossimi eventi.",
+        "kpiGames": "Giochi",
+        "kpiSessions": "Sessioni",
+        "kpiHours": "Ore giocate",
+        "kpiWinRate": "Win rate"
+      },
+      "sections": {
+        "games": {
+          "title": "Giochi",
+          "viewAll": "Vedi libreria",
+          "emptyTitle": "Nessun gioco in libreria.",
+          "emptyCta": "+ Aggiungi gioco"
+        },
+        "players": {
+          "title": "Gruppo di gioco",
+          "viewAll": "Tutti i giocatori",
+          "countTemplate": "{visible} di {total}",
+          "emptyTitle": "Nessun gruppo di gioco ancora.",
+          "emptyCta": "+ Invita amici"
+        },
+        "agents": {
+          "title": "Agenti AI",
+          "viewAll": "Tutti",
+          "statusActive": "Attivo",
+          "statusIdle": "Inattivo",
+          "callsTemplate": "{count} call",
+          "emptyTitle": "Nessun agente AI attivo.",
+          "emptyCta": "Esplora /agents"
+        },
+        "sessions": {
+          "title": "Sessioni",
+          "liveBadge": "Live",
+          "viewAll": "Tutte",
+          "playerCountTemplate": "{count} giocatori",
+          "minutesTemplate": "{count} min",
+          "untitled": "Sessione",
+          "emptyTitle": "Nessuna sessione attiva o recente.",
+          "emptyCta": "+ Crea sessione",
+          "statusLive": "Live",
+          "statusCompleted": "Conclusa",
+          "statusPaused": "In pausa",
+          "statusSetup": "In preparazione",
+          "statusAbandoned": "Abbandonata"
+        },
+        "events": {
+          "title": "Prossime serate",
+          "viewAll": "Calendario",
+          "participantsTemplate": "{confirmed}/{total} conferme",
+          "emptyTitle": "Nessuna serata gioco pianificata.",
+          "emptyCta": "+ Pianifica serata"
+        }
+      },
+      "error": {
+        "title": "Impossibile caricare la dashboard",
+        "message": "Si è verificato un errore di rete. Verifica la connessione e riprova.",
+        "retry": "Riprova"
+      }
+    },
+    "toolkitDetail": {
+      "loading": {
+        "ariaLabel": "Caricamento toolkit…"
+      },
+      "error": {
+        "title": "Impossibile caricare il toolkit",
+        "description": "Si è verificato un errore di rete. Riprova o torna al catalogo.",
+        "retry": "Riprova"
+      },
+      "notFound": {
+        "title": "Toolkit non trovato",
+        "description": "Il toolkit richiesto non esiste o è stato rimosso."
+      },
+      "hero": {
+        "authorChipPrefix": "di",
+        "gameChipPrefix": "per",
+        "statsHeading": "Statistiche del toolkit",
+        "installCount": "Installazioni",
+        "rating": "Valutazione",
+        "version": "Versione",
+        "noRatings": "Nessuna valutazione"
+      },
+      "tabs": {
+        "ariaLabel": "Sezioni del toolkit",
+        "overview": "Panoramica",
+        "agent": "Agente",
+        "kb": "Knowledge Base",
+        "tools": "Strumenti",
+        "versions": "Versioni",
+        "ratings": "Recensioni",
+        "disabledTooltip": "Disponibile in Phase 5"
+      },
+      "connectionBar": {
+        "ariaLabel": "Entità collegate al toolkit",
+        "emptyHint": "Dato non ancora disponibile"
+      },
+      "pips": {
+        "agent": "Agente",
+        "kb": "KB",
+        "tools": "Strumenti",
+        "game": "Gioco",
+        "author": "Autore",
+        "sessions": "Sessioni"
+      },
+      "overview": {
+        "descriptionHeading": "Descrizione",
+        "metaHeading": "Dettagli",
+        "meta": {
+          "license": "Licenza",
+          "version": "Versione",
+          "size": "Dimensione",
+          "published": "Pubblicato il",
+          "unknown": "—"
+        },
+        "includesHeading": "Cosa include"
+      },
+      "includes": {
+        "agent": "Agente",
+        "kbDocs": "Documenti KB",
+        "tools": "Strumenti"
+      },
+      "tools": {
+        "heading": "Strumenti inclusi",
+        "description": "Il toolkit include i seguenti strumenti utilizzabili nelle sessioni.",
+        "countTemplate": "{count} strumenti",
+        "emptyTitle": "Nessuno strumento",
+        "emptyBody": "Questo toolkit non contiene strumenti configurati."
+      },
+      "disabled": {
+        "phase5Badge": "Disponibile in Phase 5",
+        "agent": {
+          "title": "Dettagli agente",
+          "description": "I dettagli del system prompt dell'agente saranno disponibili in una versione successiva (#822)."
+        },
+        "kb": {
+          "title": "Documenti KB",
+          "description": "L'elenco dei documenti KB associati sarà disponibile in una versione successiva (#822)."
+        },
+        "versions": {
+          "title": "Storico versioni",
+          "description": "La timeline delle versioni e i changelog saranno disponibili in una versione successiva (#822)."
+        },
+        "ratings": {
+          "title": "Valutazioni e recensioni",
+          "description": "Le recensioni della community saranno disponibili in una versione successiva (#819)."
+        }
+      },
+      "footer": {
+        "editAction": "Modifica toolkit",
+        "publishAction": "Pubblica nuova versione",
+        "installAction": "Installa toolkit",
+        "shareAction": "Condividi"
       }
     },
     "sessions": {
@@ -1689,11 +2554,11 @@
     "players": {
       "metadata": {
         "title": "Giocatori — MeepleAI",
-        "description": "Riepilogo delle tue partite: giochi giocati, sessioni e vittorie."
+        "description": "I compagni di gioco con cui hai giocato, con sessioni e vittorie."
       },
       "hero": {
-        "title": "Le tue partite",
-        "subtitle": "Riepilogo dei giochi che hai giocato, con sessioni e vittorie.",
+        "title": "I tuoi compagni di gioco",
+        "subtitle": "Vedi con chi hai giocato di più, le sessioni condivise e i risultati al tavolo.",
         "totalPlays": "Sessioni totali",
         "distinctGames": "Giochi distinti"
       },
@@ -1746,16 +2611,30 @@
       },
       "sections": {
         "stats": {
-          "title": "Statistiche"
+          "title": "Statistiche",
+          "sessions": "Sessioni",
+          "wins": "Vittorie",
+          "winRate": "Win rate",
+          "achievements": "Achievement"
         },
         "leaderboard": {
           "title": "Classifica",
           "rank": "Posizione #{rank}",
-          "ariaLabel": "Posizione in classifica: {rank}"
+          "ariaLabel": "Posizione in classifica: {rank}",
+          "noRank": "Non ancora classificato"
         },
         "favoriteAgent": {
           "title": "Agente Preferito",
-          "none": "Nessun agente usato ancora"
+          "none": "Nessun agente usato ancora",
+          "ariaLabel": "Apri {agentName}"
+        },
+        "topGames": {
+          "title": "Top giochi",
+          "playsLabel": "{count} partite",
+          "playsLabelWithWins": "{count} partite · {wins} vittorie",
+          "winRateLabel": "WIN RATE",
+          "rankAriaLabel": "Posizione {rank}",
+          "empty": "Nessun gioco giocato ancora"
         },
         "achievements": {
           "title": "Achievement",
@@ -1784,6 +2663,39 @@
         "games": "Giochi giocati",
         "sessions": "Sessioni",
         "stats": "Statistiche dettagliate"
+      },
+      "connections": {
+        "topGames": "Top giochi",
+        "sessions": "Partite",
+        "gameNights": "Game Nights",
+        "agents": "Agenti usati",
+        "toolkits": "Toolkit",
+        "chats": "Chat"
+      },
+      "tabs": {
+        "ariaLabel": "Sezioni del giocatore",
+        "sessions": {
+          "label": "Partite",
+          "title": "Sessioni recenti",
+          "viewAll": "Vedi tutte",
+          "empty": "Nessuna partita registrata",
+          "totalLabel": "Totale partite"
+        },
+        "games": {
+          "label": "Giochi",
+          "title": "Giochi giocati",
+          "viewAll": "Vedi tutti",
+          "empty": "Nessun gioco giocato",
+          "playsSuffix": "partite"
+        },
+        "toolkits": {
+          "label": "Toolkit",
+          "title": "Toolkit",
+          "comingSoon": "I toolkit del giocatore arriveranno presto"
+        },
+        "achievements": {
+          "label": "Achievement"
+        }
       }
     },
     "agentDetail": {
@@ -1916,7 +2828,7 @@
         "metaPlayersSingle": "{count} giocatori",
         "metaDuration": "{minutes} min",
         "metaWeight": "Complessità {value}/5",
-        "metaRating": "BGG {value}",
+        "metaRating": "Community {value}",
         "ctaPlay": "Gioca ora",
         "ctaEdit": "Modifica",
         "ctaShare": "Condividi",
@@ -1931,6 +2843,7 @@
         "rules": "Regole",
         "faqs": "FAQ",
         "sessions": "Partite",
+        "stats": "Statistiche",
         "agents": "Agenti",
         "documents": "Documenti"
       },
@@ -1955,7 +2868,12 @@
         "specsAge": "Età",
         "specsCategories": "Categorie",
         "specsMechanics": "Meccaniche",
-        "specsBgg": "BGG ID",
+        "specsBgg": "Catalog ID",
+        "specsPlayers": "Giocatori",
+        "specsDuration": "Durata",
+        "specsComplexity": "Complessità",
+        "specsRatingBgg": "Rating BGG",
+        "specsMinutesUnit": "min",
         "noDescription": "Nessuna descrizione disponibile per questo gioco."
       },
       "faqs": {
@@ -2255,13 +3173,29 @@
         "pauseCta": "Pausa",
         "resumeCta": "Riprendi",
         "endgameCta": "Termina sessione",
-        "exitAriaLabel": "Esci dalla sessione"
+        "exitAriaLabel": "Esci dalla sessione",
+        "elapsedTimeAriaLabel": "Tempo trascorso",
+        "connectionStateConnected": "Connessione attiva",
+        "connectionStateReconnecting": "Riconnessione in corso",
+        "connectionStateFailed": "Connessione persa"
       },
       "turnIndicator": {
         "currentTurnAriaLabel": "Turno {current} di {total}",
         "activePlayerLabel": "{playerName}",
         "yourTurnLabel": "Il tuo turno",
-        "waitingLabel": "Aspetta il tuo turno"
+        "waitingLabel": "Aspetta il tuo turno",
+        "roundRobinHeading": "Turno attivo",
+        "sequentialHeading": "Fasi",
+        "simultaneousHeading": "Tutti giocano",
+        "realtimeHeading": "Tempo reale",
+        "noneHeading": "Gioco libero",
+        "customHeading": "Sequenza custom",
+        "firstPlayerTokenHeading": "Token primo giocatore",
+        "unknownTitle": "Tipo di turno non supportato",
+        "unknownBody": "Aggiorna l'app per supportare questa modalità.",
+        "roundCountTemplate": "Round {current} di {total}",
+        "playOrderHeading": "Ordine di gioco",
+        "firstPlayerTokenHolderTemplate": "Token primo giocatore: {playerName}"
       },
       "roster": {
         "title": "Giocatori",
@@ -2281,7 +3215,52 @@
         "incrementAriaLabel": "Aumenta punteggio di {playerName}",
         "decrementAriaLabel": "Diminuisci punteggio di {playerName}",
         "scoreInputAriaLabel": "Inserisci punteggio per {playerName}",
-        "playerCount": "{count, plural, =0 {Nessun giocatore} =1 {1 giocatore} other {# giocatori}}"
+        "playerCount": "{count, plural, =0 {Nessun giocatore} =1 {1 giocatore} other {# giocatori}}",
+        "loadingLabel": "Caricamento punteggi…",
+        "forbiddenToast": "Permesso negato: solo l'host può modificare i punteggi",
+        "rateLimitedTemplate": "Limite raggiunto, riprova tra {seconds}s",
+        "rateLimitedToast": "Hai aggiornato i punteggi troppo velocemente. Aspetta {seconds}s.",
+        "validationFailedTemplate": "Validazione fallita: {message}",
+        "serverErrorToast": "Errore server, riprova",
+        "networkErrorToast": "Connessione persa, riprova",
+        "retryCta": "Riprova",
+        "scoreAriaTemplate": "Punteggio di {name}",
+        "rankAriaTemplate": "Posizione di {name}",
+        "firstPlaceBadgeLabel": "primo posto",
+        "outcomeAriaTemplate": "{name}: {result}",
+        "completedAriaTemplate": "Completati da {name}",
+        "doneAriaTemplate": "{label} (completato)",
+        "pendingAriaTemplate": "{label} (non completato)",
+        "points": {
+          "title": "Punteggi",
+          "leaderLabel": "in testa",
+          "columns": {
+            "player": "Giocatore",
+            "score": "Punteggio"
+          }
+        },
+        "ranking": {
+          "title": "Posizioni",
+          "columns": {
+            "rank": "Posizione",
+            "player": "Giocatore",
+            "score": "Punteggio"
+          }
+        },
+        "binaryWin": {
+          "title": "Esito",
+          "winLabel": "Vince",
+          "loseLabel": "Perde",
+          "pendingLabel": "Partita in corso"
+        },
+        "objectives": {
+          "title": "Obiettivi",
+          "completedLabel": "Completato",
+          "pendingLabel": "In attesa",
+          "columns": {
+            "player": "Giocatore"
+          }
+        }
       },
       "actionLog": {
         "title": "Eventi",
@@ -2319,9 +3298,12 @@
       },
       "rightColumn": {
         "tabsAriaLabel": "Pannelli sessione",
+        "tabScore": "Score",
+        "tabTurn": "Turni",
+        "tabWidget": "Widget",
+        "tabNotes": "Note",
         "tabTools": "Strumenti",
-        "tabChat": "Chat",
-        "tabNotes": "Note"
+        "tabChat": "Chat"
       },
       "tools": {
         "title": "Strumenti",
@@ -2337,7 +3319,23 @@
         "sendAriaLabel": "Invia messaggio",
         "visibilityPrivate": "Privato",
         "visibilityShared": "Condiviso",
-        "emptyMessage": "Nessun messaggio ancora."
+        "emptyMessage": "Nessun messaggio ancora.",
+        "newMessagesToast": "{count, plural, one {# nuovo messaggio} other {# nuovi messaggi}}",
+        "newMessagesToastAriaLabel": "Nuovi messaggi disponibili — clic per scorrere in fondo"
+      },
+      "chatAgent": {
+        "title": "ChatAgent",
+        "onlineLabel": "Online",
+        "latencyAriaLabel": "Latenza {ms}ms",
+        "agentNameAriaLabel": "Nome agente {name}",
+        "collapsedAriaLabel": "ChatAgent collassato — clic per espandere",
+        "expandedAriaLabel": "ChatAgent espanso — clic per collassare"
+      },
+      "mobile": {
+        "openSheetCta": "Apri pannello",
+        "closeSheetAriaLabel": "Chiudi pannello",
+        "drawerTitle": "Strumenti sessione",
+        "tabsAriaLabel": "Tab strumenti"
       },
       "notes": {
         "title": "Note",
@@ -2358,6 +3356,51 @@
         "winnerLabel": "Vincitore",
         "acknowledgeCta": "Ho capito",
         "viewSummaryCta": "Vedi riepilogo"
+      },
+      "toolkitRenderer": {
+        "title": "Strumenti",
+        "emptyTitle": "Nessun widget attivo",
+        "emptyBody": "Abilita i widget dal toolkit per usarli durante la sessione.",
+        "unknownTitle": "Widget non supportato",
+        "unknownBody": "Aggiorna l'app per supportare questo tipo di widget.",
+        "expandAriaTemplate": "Espandi widget {name}",
+        "collapseAriaTemplate": "Collassa widget {name}",
+        "randomGenerator": {
+          "heading": "Generatore",
+          "rollLabel": "Genera",
+          "lastLabel": "Ultimo"
+        },
+        "turnManager": {
+          "heading": "Gestore turni",
+          "prevLabel": "Prec",
+          "nextLabel": "Succ",
+          "turnOfLabel": "Turno di",
+          "phaseLabel": "Fase"
+        },
+        "scoreTracker": {
+          "heading": "Punteggio",
+          "incrementAriaTemplate": "Aumenta punteggio {name}",
+          "decrementAriaTemplate": "Diminuisci punteggio {name}"
+        },
+        "resourceManager": {
+          "heading": "Risorse",
+          "sharedHeading": "Risorse condivise",
+          "incrementAriaTemplate": "Aumenta {label}",
+          "decrementAriaTemplate": "Diminuisci {label}"
+        },
+        "noteManager": {
+          "heading": "Note",
+          "inputAriaLabel": "Scrivi una nota condivisa",
+          "savingLabel": "Salvataggio…",
+          "savedLabel": "Salvato"
+        },
+        "whiteboard": {
+          "heading": "Lavagna",
+          "toolPenLabel": "Penna",
+          "toolEraserLabel": "Gomma",
+          "toolCircleLabel": "Cerchio",
+          "placeholderLabel": "Area disegno condivisa"
+        }
       }
     },
     "sessionSummary": {
@@ -2436,7 +3479,9 @@
           "continueLive": "Vai alla sessione live"
         },
         "notFound": {
-          "title": "Sessione non trovata",
+          "title": "Nessuna sessione attiva",
+          "description": "La sessione richiesta non esiste o non è ancora stata creata.",
+          "newSession": "Inizia nuova sessione",
           "backToSessions": "Torna alle sessioni"
         }
       }
@@ -2579,6 +3624,56 @@
         }
       }
     },
+    "glossaryEditor": {
+      "title": "Modifica voce di glossario",
+      "termEnLabel": "Termine originale",
+      "termItLabel": "Traduzione italiana",
+      "save": "Salva",
+      "close": "Chiudi",
+      "retry": "Riprova",
+      "error": {
+        "saveFailed": "Salvataggio fallito. Riprova."
+      },
+      "collision": {
+        "title": "Traduzione già in uso",
+        "body": "Un'altra voce ({termEn}) usa già questa traduzione italiana.",
+        "overwrite": "Sovrascrivi",
+        "changeTranslation": "Cambia traduzione",
+        "sidePanelLabel": "Voce in conflitto"
+      }
+    },
+    "encounter": {
+      "meta": {
+        "title": "Encounter Book | MeepleAI",
+        "description": "Cheatsheet on-demand dell'Encounter Book per la sessione libro game"
+      },
+      "entryStoryMeta": "Storybook · ultimo paragrafo letto",
+      "entryRefTitle": "→ Encounter {paragraph}",
+      "entryRefHint": "Servono stats e opzioni — fotografa l'Encounter Book",
+      "entryCta": "Fotografa Encounter {paragraph}",
+      "entryCtaHint": "card pronta in pochi secondi · nessun salvataggio long-term",
+      "loadingTitle": "Sto analizzando l'encounter",
+      "loadingHint": "Estraggo nome nemico, stats di combattimento e opzioni",
+      "cancel": "Annulla",
+      "optionsTitle": "Le tue opzioni",
+      "conditionsWin": "🏆 Vittoria",
+      "conditionsLoss": "💀 Sconfitta",
+      "parseConfidence": "parse",
+      "lowConfidenceHint": "Affidabilità bassa su alcuni campi — verifica manualmente sull'Encounter Book.",
+      "ephemeralNote": "Card temporanea (solo questa sessione) — l'Encounter Book non viene salvato.",
+      "retake": "🔄 Rifotografa",
+      "glossary": "📒 Glossario",
+      "resolve": "✓ Risolvi →",
+      "errorParseFailed": "Non sono riuscito a leggere l'encounter dalla foto. Riprova o rifotografa la pagina.",
+      "errorNotFound": "Foto o paragrafo non trovati. Rifotografa la pagina dell'Encounter Book.",
+      "errorGeneric": "Qualcosa è andato storto durante l'analisi. Riprova.",
+      "retry": "Riprova",
+      "confidence": {
+        "high": "Affidabilità alta",
+        "medium": "Affidabilità media",
+        "low": "Affidabilità bassa"
+      }
+    },
     "play": {
       "loading": "Caricamento...",
       "pageNumber": "Pagina {num}",
@@ -2639,6 +3734,744 @@
         "title": "Impossibile caricare la libreria",
         "description": "Connessione instabile. Riprova fra un momento.",
         "retry": "🔄 Riprova"
+      }
+    }
+  },
+  "gameNightDetail": {
+    "hero": {
+      "scheduledOn": "{date}",
+      "organizedBy": "Organizzata da {name}",
+      "location": "{location}",
+      "capacity": "{accepted} confermati di {max}",
+      "capacityUncapped": "{accepted} confermati",
+      "pendingCount": "· {count} in attesa"
+    },
+    "status": {
+      "draft": "Bozza",
+      "published": "Attiva",
+      "completed": "Completata",
+      "cancelled": "Annullata",
+      "inProgress": "In corso"
+    },
+    "rsvp": {
+      "sectionTitle": "La tua risposta",
+      "accept": "Partecipo",
+      "maybe": "Forse",
+      "decline": "Non partecipo",
+      "saving": "Salvataggio…",
+      "confirmedToast": "Partecipazione confermata",
+      "declinedToast": "Risposta registrata",
+      "maybeToast": "Risposta registrata",
+      "errors": {
+        "generic": "Impossibile inviare la risposta.",
+        "capacityExceeded": "Capacity raggiunta — non ci sono più posti disponibili.",
+        "directConflict": "Modifica la tua risposta a 'Forse' prima di cambiare tra accettato/declinato.",
+        "cancelledGone": "La serata è stata cancellata — la tua risposta non può essere registrata.",
+        "timeout": "Connessione lenta, riprova fra un momento."
+      }
+    },
+    "actor": {
+      "host": {
+        "edit": "Modifica",
+        "cancel": "Annulla serata",
+        "publish": "Pubblica",
+        "kickGuest": "Rimuovi",
+        "publishedToast": "Serata pubblicata",
+        "publishedToastDescription": "Gli invitati riceveranno una notifica.",
+        "cancelledToast": "Serata annullata"
+      },
+      "bystander": {
+        "privateTitle": "Serata privata",
+        "privateBody": "Solo gli invitati possono vedere i dettagli di questa serata.",
+        "requestInvite": "Richiedi invito"
+      }
+    },
+    "tabs": {
+      "details": "Dettagli",
+      "voting": "Voting",
+      "chat": "Chat"
+    },
+    "participants": {
+      "sectionTitle": "Partecipanti ({count})",
+      "hostLabel": "host",
+      "rsvpStatus": {
+        "accepted": "Confermato",
+        "declined": "Declinato",
+        "maybe": "Forse",
+        "pending": "In attesa"
+      }
+    },
+    "cancelled": {
+      "title": "Serata cancellata",
+      "meta": "Cancellata da {organizer}",
+      "reasonLabel": "Motivo:",
+      "ctaLabel": "Crea nuova serata"
+    },
+    "errors": {
+      "notFound": {
+        "title": "Serata non trovata",
+        "body": "La serata che cerchi non esiste o è stata rimossa.",
+        "cta": "Torna al calendario"
+      },
+      "loadFailed": {
+        "title": "Impossibile caricare la serata",
+        "body": "Connessione instabile. Riprova fra un momento.",
+        "retry": "Riprova"
+      },
+      "concurrentEdit": {
+        "title": "Modifiche aggiornate",
+        "body": "Qualcuno ha aggiornato la serata mentre stavi guardando. Ricarica per vedere le ultime modifiche.",
+        "reload": "Ricarica",
+        "dismiss": "Annulla"
+      }
+    }
+  },
+  "gameNightsIndex": {
+    "header": {
+      "kicker": "Game nights",
+      "title": "Serate di gioco",
+      "countLine": "{total} serate questo mese · {confirmed} confermate",
+      "ctaNew": "Nuova serata"
+    },
+    "view": {
+      "tablistAriaLabel": "Vista serate",
+      "calendar": "Calendario",
+      "list": "Lista"
+    },
+    "filter": {
+      "ariaLabel": "Filtra per ruolo",
+      "all": "Tutte",
+      "organizing": "Organizzo",
+      "invited": "Invitato",
+      "completed": "Concluse"
+    },
+    "status": {
+      "confirmed": "Confermata",
+      "planned": "In programma",
+      "cancelled": "Annullata",
+      "completed": "Conclusa"
+    },
+    "calendar": {
+      "prevMonth": "Mese precedente",
+      "nextMonth": "Mese successivo",
+      "today": "Oggi",
+      "todayBadge": "Oggi",
+      "dayLabels": "Lun,Mar,Mer,Gio,Ven,Sab,Dom",
+      "dayAriaLabel": "Giorno {day}{events, plural, =0 {} =1 {, 1 evento} other {, # eventi}}",
+      "overflow": "+{count} altri",
+      "footerCount": "{total} serate · {cancelled} annullate",
+      "legend": {
+        "event": "Serata",
+        "cancelled": "Annullata",
+        "today": "Oggi"
+      }
+    },
+    "list": {
+      "groupSubCurrent": "Mese corrente",
+      "groupSubPast": "Storico",
+      "groupCount": "{count} {count, plural, =1 {serata} other {serate}}",
+      "participants": "{count} {count, plural, =1 {partecipante} other {partecipanti}}",
+      "organizingBadge": "● Organizzo",
+      "cta": {
+        "edit": "Modifica",
+        "viewSummary": "Vedi summary →",
+        "reschedule": "Riprogramma",
+        "accept": "✓ Partecipo",
+        "maybe": "Forse"
+      }
+    },
+    "drawer": {
+      "title": "{day} {month} {year}",
+      "subtitle": "{count} {count, plural, =1 {serata} other {serate}} in programma",
+      "close": "Chiudi",
+      "addOnDay": "+ Aggiungi serata in questo giorno"
+    },
+    "states": {
+      "empty": {
+        "title": "Nessuna serata in programma",
+        "body": "Crea la prima serata per organizzare le tue partite, invitare il gruppo e tenere traccia di chi gioca a cosa.",
+        "cta": "+ Crea la prima serata"
+      },
+      "filteredEmpty": {
+        "title": "Nessuna serata in questo filtro",
+        "body": "Cambia filtro o crea una nuova serata."
+      },
+      "error": {
+        "title": "Impossibile caricare le serate",
+        "body": "C'è stato un problema. Riprova fra un momento.",
+        "retry": "Riprova"
+      }
+    }
+  },
+  "gameNightCreate": {
+    "title": "Nuova serata",
+    "subtitle": "Pianifica una serata di gioco in 4 step.",
+    "nav": {
+      "back": "Indietro",
+      "next": "Avanti",
+      "submit": "Crea evento",
+      "saveDraft": "Salva bozza e esci",
+      "cancel": "Annulla"
+    },
+    "steps": {
+      "step1": "Quando",
+      "step2": "Dove",
+      "step3": "Chi",
+      "step4": "Cosa",
+      "progress": "Step {current} di {total}"
+    },
+    "step1": {
+      "label": "Data e ora",
+      "placeholder": "Seleziona data",
+      "helper": "Almeno 1 ora nel futuro.",
+      "calendarLabel": "Calendario",
+      "timeLabel": "Orario",
+      "conflictWarningTitle": "Hai già un impegno",
+      "conflictWarningBody": "{count, plural, =1 {Un evento si sovrappone} other {{count} eventi si sovrappongono}} a questo orario.",
+      "conflictListLabel": "Eventi sovrapposti",
+      "conflictRoleOrganizer": "Organizzi",
+      "conflictRoleInvitee": "Invitato",
+      "continueAnyway": "Continua comunque",
+      "changeDate": "Cambia data",
+      "checking": "Verifica conflitti in corso…"
+    },
+    "step2": {
+      "label": "Dove giocate",
+      "kindHome": "Casa mia",
+      "kindFriend": "Casa di un amico",
+      "kindOnline": "Online",
+      "kindTbd": "Da definire",
+      "detailsLabel": "Dettagli",
+      "detailsPlaceholder": "Indirizzo, link Zoom, indicazioni…",
+      "detailsHelper": "Visibili solo agli invitati."
+    },
+    "step3": {
+      "label": "Chi invitare",
+      "searchPlaceholder": "Cerca un giocatore o digita un'email…",
+      "searchAriaLabel": "Cerca un giocatore",
+      "emptyStateTitle": "Aggiungi i primi invitati",
+      "emptyStateBody": "Cerca per nome o email. I tuoi compagni di gioco abituali appaiono qui sotto.",
+      "regularsTitle": "I tuoi abituali",
+      "regularsHelper": "Ordinati per frequenza nelle ultime serate.",
+      "regularsEmpty": "Nessun giocatore abituale ancora.",
+      "addRegular": "Aggiungi",
+      "addedChipLabel": "{name} aggiunto agli invitati",
+      "remove": "Rimuovi",
+      "addEmail": "Invita per email",
+      "emailLabel": "Email del nuovo invitato",
+      "emailPlaceholder": "email@esempio.com",
+      "emailInvalid": "Email non valida",
+      "emailDuplicate": "Email già aggiunta",
+      "inviteeCount": "{count} {count, plural, =1 {invitato} other {invitati}}",
+      "limitWarning": "Massimo {max} invitati totali.",
+      "limitExceeded": "Hai raggiunto il limite di {max} invitati.",
+      "searching": "Ricerca in corso…"
+    },
+    "step4": {
+      "label": "Cosa giocate",
+      "decideAtGroupLabel": "Lascia decidere al gruppo",
+      "decideAtGroupHelper": "Decideremo i giochi insieme la sera.",
+      "selectedCount": "{count} {count, plural, =1 {gioco selezionato} other {giochi selezionati}}",
+      "libraryHeader": "Dalla tua libreria",
+      "libraryEmpty": "La tua libreria è vuota. Aggiungi giochi per consigliarli.",
+      "selectGame": "Seleziona {name}",
+      "deselectGame": "Deseleziona {name}",
+      "limitWarning": "Massimo {max} giochi per serata."
+    },
+    "preview": {
+      "title": "Anteprima invito",
+      "subtitle": "Quello che vedranno gli invitati.",
+      "rsvpCta": "RSVP",
+      "rsvpAccept": "✓ Partecipo",
+      "rsvpDecline": "✗ Non posso",
+      "noDate": "Data da scegliere",
+      "noLocation": "Luogo da definire",
+      "gamesTbd": "Giochi: da decidere al gruppo",
+      "gamesNone": "Nessun gioco selezionato",
+      "sectionWhen": "Quando",
+      "sectionWhere": "Dove",
+      "sectionWhat": "Cosa",
+      "sectionWho": "Chi",
+      "kindHome": "Casa mia",
+      "kindFriend": "Casa di un amico",
+      "kindOnline": "Online"
+    },
+    "submit": {
+      "creating": "Creazione in corso…",
+      "successToast": "Evento creato",
+      "errorTitle": "Creazione fallita",
+      "errorBody": "Qualcosa è andato storto. Riprova fra un momento.",
+      "retry": "Riprova",
+      "saveDraft": "Salva bozza e esci",
+      "retryAttempt": "Tentativo {attempt} di {max}"
+    },
+    "draft": {
+      "savedAt": "Bozza salvata {time}",
+      "savedStatus": "Salvato",
+      "savingStatus": "Salvataggio…",
+      "errorStatus": "Errore di salvataggio",
+      "restoredBanner": "Bozza ripristinata",
+      "discardDraft": "Scarta bozza",
+      "discardConfirm": "Vuoi scartare la bozza salvata? Questa azione non può essere annullata.",
+      "discardConfirmCancel": "Annulla",
+      "discardConfirmConfirm": "Scarta"
+    },
+    "a11y": {
+      "wizardLabel": "Wizard creazione serata",
+      "stepperLabel": "Avanzamento creazione serata",
+      "inviteesListLabel": "Lista invitati",
+      "gamesListLabel": "Lista giochi proposti",
+      "previewLabel": "Anteprima invito"
+    }
+  },
+  "playRecords": {
+    "stats": {
+      "badge": {
+        "statistics": "Statistiche · /play-records/stats"
+      },
+      "title": "Le tue statistiche",
+      "subtitle": "Una panoramica delle partite registrate: quante ne hai giocate, i giochi preferiti e il tuo win-rate.",
+      "kpi": {
+        "sessions": "Partite",
+        "uniqueGames": "Giochi",
+        "winRate": "Win rate",
+        "winRateWins": "vittorie",
+        "favorite": "Preferito"
+      },
+      "mostPlayed": {
+        "title": "Giochi più giocati",
+        "meta": "top {count}",
+        "plays": "partite"
+      },
+      "winByGame": {
+        "title": "Win-rate per gioco",
+        "meta": "ordinato per %"
+      },
+      "empty": {
+        "noGames": "Nessuna partita registrata. Le statistiche appariranno qui.",
+        "noWins": "Nessun esito registrato. Gioca per vedere il tuo win-rate."
+      },
+      "cta": {
+        "newRecord": "Registra partita"
+      },
+      "headerTitle": "Statistiche",
+      "error": {
+        "title": "Impossibile caricare le statistiche",
+        "description": "Si è verificato un errore di rete. Verifica la connessione e riprova."
+      },
+      "trend": {
+        "title": "Andamento win rate",
+        "empty": "Dati insufficienti per l'andamento",
+        "month": "Mese",
+        "winRate": "Win rate"
+      },
+      "range": {
+        "label": "Filtra periodo",
+        "all": "Tutto",
+        "30d": "30g",
+        "90d": "90g",
+        "12m": "12 mesi"
+      }
+    },
+    "new": {
+      "pageTitle": "Registra partita",
+      "pageSubtitle": "Wizard passo-passo per registrare una partita",
+      "stepIndicatorLabel": "Step {current} di 3",
+      "step1Label": "Gioco",
+      "step2Label": "Quando",
+      "step3Label": "Punteggi",
+      "step1": {
+        "title": "Quale gioco avete giocato?",
+        "subtitle": "Scegli dalla tua libreria. Il punteggio e i giocatori si adattano al gioco.",
+        "searchPlaceholder": "Cerca nella libreria…",
+        "emptyLibraryHint": "↑ Seleziona un gioco per continuare",
+        "freeformLabel": "Nome gioco (testo libero)",
+        "freeformPlaceholder": "Es. Catan, Puerto Rico…",
+        "freeformHint": "Inserisci il nome del gioco se non è in catalogo"
+      },
+      "step2": {
+        "title": "Quando l'avete giocata?",
+        "subtitle": "Data, ora di inizio e durata. La durata è opzionale.",
+        "dateLabel": "Data",
+        "timeLabel": "Ora di inizio",
+        "durationLabel": "Durata (opzionale)",
+        "locationLabel": "Luogo (opzionale)",
+        "locationPlaceholder": "Es. Casa di Marco",
+        "notesLabel": "Note (opzionale)",
+        "notesPlaceholder": "Aggiungi un commento sulla partita…",
+        "durationHint": "Approssimativa — usa per le statistiche ore"
+      },
+      "step3": {
+        "title": "Chi ha giocato e con che punteggio?",
+        "subtitle": "Inserisci i punteggi: il vincitore è calcolato automaticamente dal punteggio più alto.",
+        "playersLabel": "Giocatori e punteggi ({count})",
+        "addPlayerPlaceholder": "Nome giocatore…",
+        "addPlayerButton": "Aggiungi giocatore",
+        "winnerBadge": "Vincitore",
+        "noPlayersHint": "Aggiungi almeno un giocatore per salvare la partita"
+      },
+      "preview": {
+        "sectionLabel": "Anteprima live · Record partita",
+        "noGameSelected": "Seleziona un gioco",
+        "rankingLabel": "Classifica · {count} giocatori",
+        "tip": "Il vincitore è calcolato dal punteggio più alto. Si aggiorna in tempo reale mentre compili."
+      },
+      "actions": {
+        "next": "Avanti →",
+        "back": "← Indietro",
+        "save": "✓ Salva partita",
+        "saving": "Salvataggio…",
+        "cancel": "Annulla",
+        "draft": "Bozza"
+      },
+      "draft": {
+        "saving": "Salvataggio…",
+        "saved": "Bozza salvata {time}"
+      },
+      "success": {
+        "toast": "Partita registrata",
+        "toastDescription": "La partita è stata registrata correttamente"
+      },
+      "error": {
+        "saveFailed": "Salvataggio non riuscito",
+        "saveFailedDescription": "Impossibile salvare la partita. Riprova fra un momento.",
+        "retry": "↻ Riprova salvataggio"
+      },
+      "loading": {
+        "library": "Caricamento libreria…"
+      },
+      "a11y": {
+        "wizardLabel": "Wizard registrazione partita",
+        "stepIndicatorLabel": "Avanzamento registrazione",
+        "backButton": "Torna al passo precedente",
+        "closeButton": "Chiudi",
+        "previewLabel": "Anteprima live record partita",
+        "backToList": "Torna alle partite"
+      }
+    },
+    "index": {
+      "hero": {
+        "title": "Le tue partite",
+        "subtitle": "Storico, esiti e classifiche delle partite registrate.",
+        "label": "Play records",
+        "cta": "+ Registra partita",
+        "stats": {
+          "games": "partite",
+          "wins": "vittorie",
+          "count": "giochi",
+          "hours": "totali"
+        }
+      },
+      "filters": {
+        "searchPlaceholder": "Cerca partita o gioco...",
+        "statusAll": "Tutte",
+        "statusInProgress": "● In corso",
+        "statusCompleted": "✓ Completate",
+        "statusPlanned": "📅 Pianificate",
+        "dropdownGame": "GIOCO",
+        "dropdownDate": "DATA",
+        "dropdownOutcome": "ESITO",
+        "dropdownSort": "SORT",
+        "viewList": "List · default",
+        "viewGrid": "Grid",
+        "toggleArchivedLabel": "Mostra archiviate"
+      },
+      "card": {
+        "duration": "Durata",
+        "players": "giocatori",
+        "winner": "Vincitore",
+        "resume": "▶ Riprendi",
+        "launch": "Avvia ora"
+      },
+      "empty": {
+        "firstRunTitle": "Nessuna partita registrata",
+        "firstRunMessage": "Registra la tua prima partita per tracciare punteggi, esiti e classifiche del gruppo.",
+        "firstRunCta": "+ Registra prima partita",
+        "filterTitle": "Nessuna partita per questi filtri",
+        "filterMessage": "Prova a rimuovere alcuni vincoli o cambiare periodo.",
+        "resetButton": "↻ Reset filtri"
+      },
+      "error": {
+        "title": "Errore caricamento",
+        "message": "Impossibile recuperare le partite. Verifica la connessione.",
+        "retry": "↻ Riprova"
+      },
+      "a11y": {
+        "searchRole": "search",
+        "resultsLive": "polite"
+      },
+      "headerTitle": "Partite Giocate",
+      "viewStatsLabel": "Vai alle statistiche"
+    },
+    "detail": {
+      "hero": {
+        "won": "🏆 Vittoria",
+        "tied": "🤝 Pareggio",
+        "cooperative": "🤝 Cooperativa",
+        "inprogress": "In corso",
+        "planned": "📅 Pianificata",
+        "bannerWon": "{winnerName} vince {gameName}",
+        "bannerTied": "Pareggio a {score} punti",
+        "bannerCooperative": "Partita cooperativa di {gameName}",
+        "bannerInProgress": "{gameName} in corso",
+        "bannerPlanned": "{gameName} pianificata",
+        "metaPlayers": "{count} giocatori",
+        "ctaStart": "Avvia partita"
+      },
+      "connectionBar": {
+        "label": "Collegamenti",
+        "playerCount": "{count} giocatori",
+        "chatCount": "{count} messaggi",
+        "noChat": "Nessuna chat"
+      },
+      "kpi": {
+        "title": "Statistiche partita",
+        "duration": "Durata",
+        "topScore": "Punteggio top",
+        "avg": "Media",
+        "spread": "Distacco"
+      },
+      "classifica": {
+        "title": "Classifica",
+        "winnerBadge": "Vincitore"
+      },
+      "scoreBreakdown": {
+        "title": "Dettaglio punteggi",
+        "toggleLabel": "Mostra dettaglio punteggi"
+      },
+      "loading": "Caricamento...",
+      "notFound": "Partita non trovata",
+      "retry": "Riprova",
+      "backToList": "Torna alle partite"
+    },
+    "edit": {
+      "pageTitle": "Modifica partita",
+      "pageSubtitle": "Aggiorna i dettagli della partita",
+      "banner": {
+        "gateTitle": "Modifica limitata",
+        "gateDescription": "Per modificare giocatori o punteggi, elimina e ricrea la partita",
+        "deleteAction": "Cancella partita"
+      },
+      "fields": {
+        "sessionDate": "Data partita",
+        "location": "Luogo (opzionale)",
+        "notes": "Note (opzionale)",
+        "game": "Gioco",
+        "players": "Giocatori",
+        "scores": "Punteggi"
+      },
+      "delete": {
+        "title": "Elimina partita?",
+        "description": "Questa azione non può essere annullata. La partita e tutti i dati associati verranno eliminati.",
+        "confirm": "Elimina",
+        "cancel": "Annulla"
+      },
+      "success": {
+        "toast": "Partita aggiornata",
+        "toastDescription": "Le modifiche sono state salvate",
+        "deleteToast": "Partita eliminata",
+        "deleteToastDescription": "La partita è stata eliminata correttamente"
+      },
+      "conflict": {
+        "title": "Modifica concorrente",
+        "description": "Qualcuno ha modificato questa partita mentre la stavi modificando. Ricarica i dati aggiornati o sovrascrivi con le tue modifiche.",
+        "reload": "Ricarica",
+        "overwrite": "Sovrascrivi comunque",
+        "stillConflict": "Anche il tuo salvataggio è stato battuto da un'altra modifica. Riprova."
+      },
+      "error": {
+        "loadFailed": "Impossibile caricare la partita",
+        "updateFailed": "Aggiornamento non riuscito",
+        "deleteFailed": "Eliminazione non riuscita"
+      },
+      "a11y": {
+        "formLabel": "Modulo modifica partita",
+        "readonlyFieldsLabel": "Campi non modificabili",
+        "ariaReadonly": "Questo campo non è modificabile"
+      },
+      "actions": {
+        "save": "Salva modifiche",
+        "saving": "Salvataggio…",
+        "delete": "Elimina",
+        "cancel": "Annulla",
+        "back": "← Indietro"
+      }
+    },
+    "share": {
+      "button": "Condividi",
+      "dialogTitle": "Condividi partita",
+      "dialogDescription": "Genera un link pubblico per condividere questa partita con chiunque.",
+      "generate": "Genera link",
+      "generating": "Generazione…",
+      "urlLabel": "Link di condivisione",
+      "copy": "Copia",
+      "copied": "Link copiato",
+      "revoke": "Revoca",
+      "revoking": "Revoca…",
+      "notShared": "Non ancora condivisa",
+      "errorGenerate": "Impossibile generare il link. Riprova.",
+      "errorRevoke": "Impossibile revocare il link. Riprova."
+    },
+    "photos": {
+      "sectionTitle": "Foto della partita",
+      "addButton": "Aggiungi foto",
+      "dialogTitle": "Carica foto",
+      "dialogDescription": "JPG, PNG, WebP o HEIC · max 5MB · fino a 10 foto.",
+      "selectLabel": "Seleziona foto",
+      "captionLabel": "Didascalia (opzionale)",
+      "captionPlaceholder": "Es. tabellone finale",
+      "extractScoreLabel": "Estrai il punteggio dalla foto (OCR)",
+      "ocrResultTitle": "Testo rilevato",
+      "uploadCta": "Carica",
+      "uploading": "Caricamento…",
+      "emptyTitle": "Nessuna foto",
+      "emptyDescription": "Carica una foto del tabellone o del tavolo.",
+      "photoAltFallback": "Foto della partita",
+      "dedupToast": "Questa foto è già presente.",
+      "uploadError": "Caricamento foto non riuscito.",
+      "tooLarge": "File troppo grande, massimo 5MB.",
+      "tooMany": "Massimo 10 foto per partita.",
+      "badFormat": "Formato non supportato. Usa JPG, PNG, WebP o HEIC.",
+      "heicFailed": "Conversione HEIC fallita. Riprova con JPEG o PNG.",
+      "lightboxClose": "Chiudi",
+      "lightboxPrev": "Precedente",
+      "lightboxNext": "Successiva"
+    },
+    "history": {
+      "button": "Cronologia",
+      "dialogTitle": "Cronologia modifiche",
+      "dialogDescription": "Ultime 5 versioni precedenti. Puoi ripristinare qualsiasi versione.",
+      "versionLabel": "v{n}",
+      "restore": "Ripristina",
+      "restoring": "Ripristino…",
+      "empty": "Nessuna versione precedente",
+      "restored": "Versione ripristinata",
+      "errorRestore": "Impossibile ripristinare la versione. Riprova."
+    },
+    "kbGlobale": {
+      "hero": {
+        "placeholder": "Cerca nella knowledge base…",
+        "submit": "Cerca",
+        "clear": "Cancella",
+        "modeLabel": "Modalità di ricerca",
+        "modeOptions": {
+          "Semantic": "Semantica"
+        }
+      },
+      "home": {
+        "heading": "Documenti recenti",
+        "empty": {
+          "title": "Nessun documento ancora",
+          "description": "Carica un PDF dalla libreria per iniziare.",
+          "cta": "Vai alla libreria"
+        },
+        "errorTitle": "Impossibile caricare i documenti",
+        "errorDescription": "Si è verificato un errore. Riprova tra qualche istante.",
+        "retry": "Riprova"
+      },
+      "results": {
+        "loadMore": "Carica altri",
+        "loadingMore": "Caricamento…",
+        "empty": {
+          "title": "Nessun risultato",
+          "description": "Prova con termini diversi o controlla l'ortografia."
+        },
+        "errorTitle": "Errore nella ricerca",
+        "errorDescription": "La ricerca non è riuscita. Riprova tra qualche istante.",
+        "retry": "Riprova"
+      },
+      "viewer": {
+        "pageLabel": "Pagina {n}",
+        "zoomIn": "Zoom in",
+        "zoomOut": "Zoom out",
+        "zoomReset": "Reset",
+        "thumbnailsLabel": "Pagine",
+        "closeLabel": "Chiudi",
+        "pageOfTotal": "{cur} / {total}"
+      },
+      "filters": {
+        "heading": "Filtri",
+        "docTypeLabel": "Tipo documento",
+        "gameIdLabel": "Gioco",
+        "languageLabel": "Lingua",
+        "clearAll": "Cancella filtri",
+        "docTypeOptions": {
+          "Rulebook": "Regolamento",
+          "Expansion": "Espansione",
+          "Errata": "Errata",
+          "QuickStart": "Quick Start",
+          "Reference": "Riferimento",
+          "PlayerAid": "Aiuto giocatore",
+          "Other": "Altro"
+        },
+        "languageOptions": {
+          "en": "English",
+          "it": "Italiano",
+          "de": "Deutsch",
+          "fr": "Français",
+          "es": "Español"
+        }
+      },
+      "editor": {
+        "heading": "Modifica metadati",
+        "titleLabel": "Titolo",
+        "documentTypeLabel": "Tipo documento",
+        "languageLabel": "Lingua",
+        "tagsLabel": "Tag",
+        "saveLabel": "Salva",
+        "cancelLabel": "Annulla",
+        "notFoundError": "Documento non trovato",
+        "genericError": "Errore generico, riprova."
+      },
+      "drawer": {
+        "title": "Ask the Meeple",
+        "subtitle": "Knowledge Base",
+        "closeLabel": "Chiudi",
+        "idle": {
+          "welcomeTitle": "Chiedimi qualsiasi cosa sui tuoi giochi",
+          "welcomeBody": "Cerco nei tuoi PDF e cito le pagine esatte.",
+          "suggestionsLabel": "Suggerimenti",
+          "placeholder": "Chiedi al Meeple…",
+          "sendLabel": "Invia"
+        },
+        "streaming": {
+          "statusLabel": "STREAMING",
+          "stopLabel": "Stop streaming"
+        },
+        "completed": {
+          "completedLabel": "COMPLETED",
+          "copyLabel": "Copia",
+          "regenerateLabel": "Rigenera",
+          "inlineCitationAriaLabelTemplate": "Citazione {n}, documento {docId}, pagina {page}"
+        },
+        "empty": {
+          "title": "Nessun documento nella tua libreria",
+          "body": "Carica un PDF dalla libreria per iniziare a chiedere.",
+          "cta": "Vai alla libreria"
+        },
+        "error": {
+          "connection": {
+            "title": "Connessione persa",
+            "body": "Retry automatico in corso…",
+            "action": "Riprova ora"
+          },
+          "timeout": {
+            "title": "Risposta lenta",
+            "body": "Vuoi continuare ad aspettare?",
+            "action": "Continua attesa",
+            "alt": "Cancella"
+          },
+          "partial": {
+            "title": "Risposta incompleta",
+            "body": "Lo stream si è interrotto.",
+            "action": "Ripeti query"
+          },
+          "server": {
+            "title": "Errore del server",
+            "body": "Riprova tra qualche istante.",
+            "action": "Riprova"
+          }
+        }
       }
     }
   }

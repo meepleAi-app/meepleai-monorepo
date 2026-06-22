@@ -163,7 +163,14 @@ export const useCascadeNavigationStore = create<CascadeNavigationState>()(
           return;
         }
         const stack = [...current.drawerStack];
-        const prev = stack.pop()!;
+        const prev = stack.pop();
+        if (!prev) {
+          // Defensive: the length check above (`drawerStack.length === 0`)
+          // already guarantees the stack is non-empty, but TypeScript can't
+          // preserve that invariant across the copy. Bail out gracefully
+          // instead of crashing the popDrawer action.
+          return;
+        }
         set(
           {
             state: 'drawer',
@@ -180,3 +187,16 @@ export const useCascadeNavigationStore = create<CascadeNavigationState>()(
     { name: 'CascadeNavigationStore' }
   )
 );
+
+// ============================================================================
+// E2E bridge (dev/test only, NOT production)
+// ============================================================================
+// Issue #1929 Task C Macro 2 — Expose store as window-level hook for Playwright
+// deterministic state assertions. Stripped from production via NODE_ENV check.
+if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+  (
+    window as unknown as {
+      __cascadeStoreForE2E?: typeof useCascadeNavigationStore;
+    }
+  ).__cascadeStoreForE2E = useCascadeNavigationStore;
+}

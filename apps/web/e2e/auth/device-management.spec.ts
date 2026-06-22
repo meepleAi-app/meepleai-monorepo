@@ -103,7 +103,7 @@ async function setupDeviceManagementMocks(
   let activeSessions = [...mockSessions];
 
   // Mock auth
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -120,7 +120,7 @@ async function setupDeviceManagementMocks(
   });
 
   // Mock sessions list endpoint
-  await page.route(`${API_BASE}/api/v1/users/me/sessions`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/users/me/sessions`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -132,13 +132,13 @@ async function setupDeviceManagementMocks(
   });
 
   // Mock revoke single session endpoint
-  await page.route(`${API_BASE}/api/v1/auth/sessions/*/revoke`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/sessions/*/revoke`, async route => {
     const url = route.request().url();
     const sessionIdMatch = url.match(/sessions\/([^/]+)\/revoke/);
     const sessionId = sessionIdMatch?.[1];
 
     if (sessionId) {
-      activeSessions = activeSessions.filter((s) => s.id !== sessionId);
+      activeSessions = activeSessions.filter(s => s.id !== sessionId);
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -154,8 +154,8 @@ async function setupDeviceManagementMocks(
   });
 
   // Mock revoke all sessions endpoint
-  await page.route(`${API_BASE}/api/v1/auth/sessions/revoke-all`, async (route) => {
-    activeSessions = activeSessions.filter((s) => s.isCurrent);
+  await page.route(`${API_BASE}/api/v1/auth/sessions/revoke-all`, async route => {
+    activeSessions = activeSessions.filter(s => s.isCurrent);
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -167,7 +167,7 @@ async function setupDeviceManagementMocks(
   });
 
   // Mock common endpoints
-  await page.route(`${API_BASE}/api/v1/games**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -203,19 +203,19 @@ test.describe('AUTH-12: Device Management', () => {
     test('should display all active sessions', async ({ page }) => {
       await setupDeviceManagementMocks(page, { sessionCount: 3 });
 
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 
       // Should show multiple sessions
       const sessionCards = page.locator('[data-testid*="session"], .device-card, .session-item');
-      await expect(
-        sessionCards.or(page.getByText(/chrome|safari|firefox/i).first())
-      ).toBeVisible();
+      await expect(sessionCards.or(page.getByText(/chrome|safari|firefox/i).first())).toBeVisible();
     });
 
     test('should highlight current session', async ({ page }) => {
       await setupDeviceManagementMocks(page, { sessionCount: 3 });
 
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 
@@ -232,6 +232,7 @@ test.describe('AUTH-12: Device Management', () => {
     test('should display browser information', async ({ page }) => {
       await setupDeviceManagementMocks(page, { sessionCount: 2 });
 
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 
@@ -242,6 +243,7 @@ test.describe('AUTH-12: Device Management', () => {
     test('should display operating system', async ({ page }) => {
       await setupDeviceManagementMocks(page, { sessionCount: 2 });
 
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 
@@ -252,6 +254,7 @@ test.describe('AUTH-12: Device Management', () => {
     test('should display location information', async ({ page }) => {
       await setupDeviceManagementMocks(page, { sessionCount: 2 });
 
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 
@@ -262,6 +265,7 @@ test.describe('AUTH-12: Device Management', () => {
     test('should display last active time', async ({ page }) => {
       await setupDeviceManagementMocks(page, { sessionCount: 2 });
 
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 
@@ -272,6 +276,7 @@ test.describe('AUTH-12: Device Management', () => {
     test('should show device type icons', async ({ page }) => {
       await setupDeviceManagementMocks(page, { sessionCount: 3, includeMultipleDeviceTypes: true });
 
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 
@@ -289,6 +294,7 @@ test.describe('AUTH-12: Device Management', () => {
     test('should show revoke button for non-current sessions', async ({ page }) => {
       await setupDeviceManagementMocks(page, { sessionCount: 3 });
 
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 
@@ -301,6 +307,7 @@ test.describe('AUTH-12: Device Management', () => {
     test('should not show revoke button for current session', async ({ page }) => {
       await setupDeviceManagementMocks(page, { sessionCount: 1 });
 
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 
@@ -319,12 +326,11 @@ test.describe('AUTH-12: Device Management', () => {
     test('should confirm before revoking session', async ({ page }) => {
       await setupDeviceManagementMocks(page, { sessionCount: 3 });
 
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 
-      const revokeButton = page
-        .getByRole('button', { name: /revoke|remove|terminate/i })
-        .first();
+      const revokeButton = page.getByRole('button', { name: /revoke|remove|terminate/i }).first();
 
       if (await revokeButton.isVisible()) {
         await revokeButton.click();
@@ -341,12 +347,11 @@ test.describe('AUTH-12: Device Management', () => {
     test('should successfully revoke session', async ({ page }) => {
       const mocks = await setupDeviceManagementMocks(page, { sessionCount: 3 });
 
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 
-      const revokeButton = page
-        .getByRole('button', { name: /revoke|remove|terminate/i })
-        .first();
+      const revokeButton = page.getByRole('button', { name: /revoke|remove|terminate/i }).first();
 
       if (await revokeButton.isVisible()) {
         await revokeButton.click();
@@ -367,6 +372,7 @@ test.describe('AUTH-12: Device Management', () => {
     test('should show revoke all button', async ({ page }) => {
       await setupDeviceManagementMocks(page, { sessionCount: 3 });
 
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 
@@ -378,6 +384,7 @@ test.describe('AUTH-12: Device Management', () => {
     test('should confirm before revoking all sessions', async ({ page }) => {
       await setupDeviceManagementMocks(page, { sessionCount: 3 });
 
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 
@@ -389,15 +396,14 @@ test.describe('AUTH-12: Device Management', () => {
         await revokeAllButton.click();
 
         // Should show confirmation
-        await expect(
-          page.getByText(/confirm|are.*you.*sure|all.*other.*device/i)
-        ).toBeVisible();
+        await expect(page.getByText(/confirm|are.*you.*sure|all.*other.*device/i)).toBeVisible();
       }
     });
 
     test('should keep current session after revoking all', async ({ page }) => {
       await setupDeviceManagementMocks(page, { sessionCount: 3 });
 
+      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 

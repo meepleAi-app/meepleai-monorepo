@@ -41,9 +41,9 @@ internal sealed class SeedManifest
             if (string.IsNullOrWhiteSpace(game.Language))
                 game.Language = "en";
 
-            // Validate bggEnhanced entries have minimum required data
-            if (game.BggEnhanced && string.IsNullOrWhiteSpace(game.Description))
-                errors.Add($"Game '{game.Title}' has bggEnhanced=true but no description");
+            // Issue #2123: "bggEnhanced" flag retired in favor of presence/absence of Description.
+            // No invariant check needed: an entry without description is a legitimate minimal
+            // entry handled by GameSeeder.CreateMinimalGame.
         }
 
         if (Catalog.Games.Any(g => g.SeedAgent) && Catalog.DefaultAgent is null)
@@ -74,13 +74,23 @@ internal sealed class SeedManifestGame
     public string Language { get; set; } = "en";
     public string? Pdf { get; set; }
     public bool SeedAgent { get; set; }
-    public string? FallbackImageUrl { get; set; }
-    public string? FallbackThumbnailUrl { get; set; }
 
-    // Enhancement gate — set by bgg-fetcher tool
-    public bool BggEnhanced { get; set; }
+    // Issue #2123 — BGG ToS compliance: image URL properties removed.
+    // The catalog covers pipeline (#1823 M3-M8) produces R2-hosted covers
+    // resolved at runtime via CoverUrlResolver. Seed manifests no longer
+    // carry cover URLs; SharedGameEntity.ImageUrl/ThumbnailUrl are nullable
+    // and stay null until M8 populates WikidataCoverR2Key or a PDF upload
+    // populates PdfCoverR2Key. Frontend renders deterministic placeholders
+    // (cover-utils.ts) when CoverUrl is null.
+    //
+    // Removed properties (would silently re-introduce BGG URLs):
+    //   - BggEnhanced       → semantically replaced by presence of Description
+    //   - ImageUrl
+    //   - ThumbnailUrl
+    //   - FallbackImageUrl
+    //   - FallbackThumbnailUrl
 
-    // Enhanced BGG fields (all optional, populated by bgg-fetcher)
+    // Enhanced metadata fields (all optional, populated by bgg-fetcher tool or manual editing)
     public string? Description { get; set; }
     public int? YearPublished { get; set; }
     public int? MinPlayers { get; set; }
@@ -89,15 +99,13 @@ internal sealed class SeedManifestGame
     public int? MinAge { get; set; }
     public double? AverageRating { get; set; }
     public double? AverageWeight { get; set; }
-    public string? ImageUrl { get; set; }
-    public string? ThumbnailUrl { get; set; }
     public string? RulesUrl { get; set; }
     public List<string>? Categories { get; set; }
     public List<string>? Mechanics { get; set; }
     public List<string>? Designers { get; set; }
     public List<string>? Publishers { get; set; }
 
-    // Blob-based PDF seeding (new)
+    // Blob-based PDF seeding
     public string? PdfBlobKey { get; set; }
     public string? PdfSha256 { get; set; }
     public string? PdfVersion { get; set; }

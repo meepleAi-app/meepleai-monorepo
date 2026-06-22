@@ -116,14 +116,14 @@
   <div class="brand"><span class="brand-mark">M</span><span>MeepleAI</span></div>
   <span style="font-size:11px;padding:3px 8px;border-radius:6px;background:var(--bg-muted);font-family:var(--f-mono);color:var(--text-muted);">Design System v1</span>
   <div class="spacer"></div>
-  <a href="01-screens.html">Screens</a>
+  <a href="01-screens.html" /* DEMO-NAV */>Screens</a>
   <a href="02-desktop-patterns.html">Desktop</a>
   <a href="03-drawer-variants.html">Drawer</a>
   <a href="04-design-system.html">Tokens</a>
-  <a href="05-dark-mode.html">Dark Mode</a>
+  <a href="05-dark-mode.html" /* DEMO-NAV */>Dark Mode</a>
   <a href="auth-flow.html">Auth</a>
   <a href="settings.html">Settings</a>
-  <a href="notifications.html">Notifications</a>
+  <a href="notifications.html" /* DEMO-NAV */>Notifications</a>
   <a href="public.html">Public</a>
   <a href="onboarding.html">Onboarding</a>
 </nav>
@@ -227,12 +227,164 @@
     <div class="tags"><span class="tag">5 screen</span><span class="tag">Multi-entity</span><span class="tag">Progress</span></div>
   </a>
 
-  <a class="hub-card e-game" href="../index.html">
+  <a class="hub-card e-game" href="index.html">
     <div class="arrow">↗</div>
     <div class="num">00 · Codebase</div>
     <h3>App React esistente</h3>
     <p>L'app React desktop/mobile già in corso: Dashboard, Library, Detail, Graph, Chat, Session. Punto di partenza — il design system qui documentato la estende e raffina.</p>
     <div class="tags"><span class="tag">React</span><span class="tag">Tweakable</span><span class="tag">Baseline</span></div>
+  </a>
+
+  <a class="hub-card e-game" href="sp4-add-game-bgg-step.html">
+    <div class="arrow">→</div>
+    <div class="num">SG · #911</div>
+    <h3>AddGameDrawer — BGG search step</h3>
+    <p>6 stati per la ricerca BoardGameGeek nel wizard PrivateGame: empty, loading, results (6 card), throttled HTTP 202 con countdown, auto-redirect a SharedGameCatalog, tier-quota lock free-tier 3/3. Consumer SG1 #902 smoke test.</p>
+    <div class="tags"><span class="tag">6 stati</span><span class="tag">BGG sync</span><span class="tag">Tier-quota</span></div>
+  </a>
+
+  <a class="hub-card e-kb" href="sp4-add-game-pdf-dedup.html">
+    <div class="arrow">→</div>
+    <div class="num">SG · #912</div>
+    <h3>AddGameDrawer — PDF dedup/riuso</h3>
+    <p>6 stati per dedup SHA256 hash PDF: source shared catalog / propria libreria / altro utente (privacy-safe), confirm reuse, force re-upload con progress 4-stage, AGENT_CREATION_FAILED toast. Consumer SG1 #902.</p>
+    <div class="tags"><span class="tag">6 stati</span><span class="tag">SHA256 dedup</span><span class="tag">Privacy</span></div>
+  </a>
+
+  <a class="hub-card e-kb" href="sp4-kb-hub.html">
+    <div class="arrow">→</div>
+    <div class="num">SG · #913</div>
+    <h3>KB hub overview (per game)</h3>
+    <p>7 stati gestione KB: hub default 5 PDF rows con status badge, empty state, row actions menu, re-index modal con cost preview, RAPTOR rebuild free vs pro tier-locked, coverage stats card riusabile, delete dialog con cleanup orfani RAPTOR+graph. Consumer SG2 #903.</p>
+    <div class="tags"><span class="tag">7 stati</span><span class="tag">RAPTOR rebuild</span><span class="tag">Cleanup orfani</span></div>
+  </a>
+
+  <a class="hub-card e-kb" href="sp4-kb-globale.html">
+    <div class="arrow">→</div>
+    <div class="num">B4 · #488</div>
+    <h3>KB Globale — search · viewer · editor</h3>
+    <p>7 screen Knowledge Base cross-game (route /kb): KB Home con hero search + library grid, Search Results con sidebar filtri, Document Viewer split-view (citations panel + jump-to-citation glow), Document Viewer mobile (bottom sheet), KB Editor curator (chunking preview + test query), Ask the Agent drawer con SSE streaming (4 stati + 3 error variants, data-testid wired), Empty state onboarding.</p>
+    <div class="tags"><span class="tag">7 screen</span><span class="tag">SSE streaming</span><span class="tag">Split-view</span></div>
+  </a>
+
+  <a class="hub-card e-kb" href="sp4-upload-wizard-extended.html">
+    <div class="arrow">→</div>
+    <div class="num">SG · #914</div>
+    <h3>Upload wizard estensione</h3>
+    <p>4 stati extra wizard upload: source picker 4 card (file/BGG/riusa/URL coming-soon), pre-upload dedup check con hash SHA256, cost preview con 3 provider option (OpenAI/Cohere/local), indexing async progress 5-step timeline + failed variant retry. Consumer SG1 #902 + SG2 #903.</p>
+    <div class="tags"><span class="tag">4 stati</span><span class="tag">Cost preview</span><span class="tag">Async progress</span></div>
+  </a>
+
+  <a class="hub-card e-game" href="sp4-editor-index.html">
+    <div class="arrow">→</div>
+    <div class="num">B14 · #1489 · 1/5</div>
+    <h3>Editor regole — atom + PDF split</h3>
+    <p>RuleSpec atom editor split-view 60/40: pane sinistro accordion section-grouped con card atom inline-editable (text + page/line metadata + select-to-sync), pane destro PDF preview con highlight overlay sync. 11 stati: default / editing / saving / saved / validation-error / conflict / published / lock-acquiring / lock-held-by-other / loading / empty. Mobile stack con bottom-sheet drawer PDF.</p>
+    <div class="tags"><span class="tag">11 stati</span><span class="tag">Split-view</span><span class="tag">PDF preview</span></div>
+  </a>
+
+  <a class="hub-card e-agent" href="sp4-editor-proposals-index.html">
+    <div class="arrow">→</div>
+    <div class="num">B14 · #1489 · 2/5</div>
+    <h3>Typology proposals — list</h3>
+    <p>Lista typology AI agent proposals con filtri search + status chips, table desktop + cards mobile, 5 status badges (Draft/PendingReview/Approved/Rejected/Live), 9 stati: default / empty / loading / error / filter-search / filter-status / filter-empty / rejected-row-expanded / mobile-cards. Action buttons per-status (Edit/Test/Submit/View).</p>
+    <div class="tags"><span class="tag">9 stati</span><span class="tag">Table+Cards</span><span class="tag">Status badges</span></div>
+  </a>
+
+  <a class="hub-card e-agent" href="sp4-editor-proposals-create.html">
+    <div class="arrow">→</div>
+    <div class="num">B14 · #1489 · 3/5</div>
+    <h3>Create proposal — form multi-section</h3>
+    <p>Form full-page multi-section per creare nuova typology AI agent proposal: 5 sezioni accordion (Identità / Capabilities / System prompt con highlight {var} / Test config / Game scope), validation realtime con required indicators, unique-name check inline, draft autosave + submit-for-review modal. 8 stati: default-empty / partial-filled / all-valid / validation-errors / saving / draft-saved / submitting / submit-success.</p>
+    <div class="tags"><span class="tag">8 stati</span><span class="tag">5-section form</span><span class="tag">Code highlight</span></div>
+  </a>
+
+  <a class="hub-card e-agent" href="sp4-editor-proposals-edit.html">
+    <div class="arrow">→</div>
+    <div class="num">B14 · #1489 · 4/5</div>
+    <h3>Edit proposal — status-variant + revisions + audit</h3>
+    <p>Edit typology proposal con 4 status variants profondi (Draft editable / PendingReview locked / Approved read-only+live / Rejected con alert feedback admin). 7 sezioni: 5 form S3 (riusate) + Revisions diff inline vs versione approvata + Audit trail timeline (8 evento tipi). 10 stati: draft-edit / draft-edit-dirty / pending-review / approved-readonly / approved-with-stats / rejected-fresh / rejected-addressing / revisions-expanded / audit-trail-expanded / submitting-update. Dirty-field tracking per re-submission post-rejection.</p>
+    <div class="tags"><span class="tag">10 stati</span><span class="tag">4 status modes</span><span class="tag">Diff + Audit</span></div>
+  </a>
+
+  <a class="hub-card e-agent" href="sp4-editor-proposals-test.html">
+    <div class="arrow">→</div>
+    <div class="num">B14 · #1489 · 5/5</div>
+    <h3>Test playground — FSM streaming + trace</h3>
+    <p>Playground streaming per testare typology pre-submit: split-view (config sidebar 320px + chat body fluid), FSM streaming 4 stati (idle / streaming con cursor blink animato / completed / error con 3 variant rate-limit/timeout/network), trace drawer destra con token count + latency + cost + tool calls + RAG sources, compare mode v3 Draft vs v2 Approved side-by-side. 12 stati totali: idle-empty / typing-input / streaming-active / streaming-stop-clicked / completed-single / completed-multi / error-rate-limit / error-timeout / error-network / trace-drawer-open / compare-mode / mobile-stack.</p>
+    <div class="tags"><span class="tag">12 stati</span><span class="tag">FSM streaming</span><span class="tag">Trace + Compare</span></div>
+  </a>
+
+  <a class="hub-card e-toolkit" href="sp4-toolkit-stats.html">
+    <div class="arrow">→</div>
+    <div class="num">B15 · #1490 · 1/4</div>
+    <h3>Toolkit stats — KPI dashboard</h3>
+    <p>Dashboard analytics cross-game (/toolkit/stats): 3 KPI card (sessioni · giochi · durata media con trend YoY), Most Played top-N con progress bar, Monthly Activity bar chart 12 mesi (toggle sessioni/durata + tooltip), Recent Score Trends con variance vs media gioco. 8 stati con state picker: default / empty-no-sessions / empty-partial / loading / error / range-3m / range-all (24 barre) / mobile-stack.</p>
+    <div class="tags"><span class="tag">8 stati</span><span class="tag">KPI cards</span><span class="tag">Bar chart</span></div>
+  </a>
+
+  <a class="hub-card e-toolkit" href="sp4-toolkit-history.html">
+    <div class="arrow">→</div>
+    <div class="num">B15 · #1490 · 2/4</div>
+    <h3>Toolkit history — lista sessioni</h3>
+    <p>Storico paginato cross-game (/toolkit/history): tabella desktop + cards mobile, filtri search · giochi (multi-select) · date range · vincitore, sort + view toggle, detail modal (classifica · timeline · note · stats partita), pagination 156 sessioni / 8 pagine. 9 stati: default / filter-game / filter-multi / filter-0-match / pagination-p3 / modal-detail / loading / error / mobile-cards.</p>
+    <div class="tags"><span class="tag">9 stati</span><span class="tag">Table+Cards</span><span class="tag">Detail modal</span></div>
+  </a>
+
+  <a class="hub-card e-toolkit" href="sp4-toolkit-templates.html">
+    <div class="arrow">→</div>
+    <div class="num">B15 · #1490 · 3/4</div>
+    <h3>Toolkit templates — gallery</h3>
+    <p>Gallery dei preset toolkit approvati (/toolkit/templates): grid 4-col con card composizione tool (dadi · carte · timer · contatori), filtro categoria single-select (Strategy · Party · Card Games · Cooperative), search con debounce, sort + view toggle, rating a stelle, varianti card (ufficiale · popolare · nuovo · in approvazione) e clone modal con gioco target. 8 stati: default / filter-strategy / filter-0-match / tablet-3col / clone-modal / loading / error / mobile-stack.</p>
+    <div class="tags"><span class="tag">8 stati</span><span class="tag">Gallery grid</span><span class="tag">Clone CTA</span></div>
+  </a>
+
+  <a class="hub-card e-toolkit" href="sp4-toolkit-play.html">
+    <div class="arrow">→</div>
+    <div class="num">B15 · #1490 · 4/4</div>
+    <h3>Toolkit play — live session panel</h3>
+    <p>Toolkit standalone live (/toolkit/play) per assistere le partite fisiche al tavolo: 4 tool widget interattivi — un <strong>Dice Builder</strong> completo (preset, builder visivo tipo/quantità/modificatore, modificatori avanzati khN/klN/csN/rN/esplosivi, parser formula con feedback live e storico ri-tirabile), contatori +/− con pop, timer countdown/turno con FSM (running/pause/finishing/expired) e randomizer con estrazione a decay — più un log streaming cross-tool con filtri, sort e clear. Actor chip --c-player, keyframes per ogni animazione. 16 stati incl. 7 dice-* (idle / building / preset / formula / rolling / result / invalid) + timer-running / timer-expired / counter+1 / randomizer-picking / filter-log / clear-log / mobile-stack.</p>
+    <div class="tags"><span class="tag">16 stati</span><span class="tag">Dice Builder</span><span class="tag">FSM + Live log</span></div>
+  </a>
+
+  <a class="hub-card e-game" href="sp4-library-wishlist.html">
+    <div class="arrow">→</div>
+    <div class="num">B16 · #1491</div>
+    <h3>Library wishlist — saved games + add dialog</h3>
+    <p>Lista personale dei giochi desiderati (/library/wishlist), distinta da /library posseduti: grid responsive di card con priorità (Alta --c-danger · Media --c-warning · Bassa muted), target price, note, meta BGG e azioni Modifica/Rimuovi. Filtro priorità multi-select + search debounce + sort, e AddToWishlistDialog con game combo, radiogroup priorità, prezzo target e note con counter. 8 stati: default / filter-priority-alta / filter-search-active / empty-no-items / loading / error / add-dialog-open / mobile-stack.</p>
+    <div class="tags"><span class="tag">8 stati</span><span class="tag">Card grid</span><span class="tag">Add dialog</span></div>
+  </a>
+
+  <a class="hub-card e-session" href="sp4-session-play.html">
+    <div class="arrow">→</div>
+    <div class="num">B17 · #1492 · 1/1</div>
+    <h3>Session play — live game session view</h3>
+    <p>Vista live durante la partita (/sessions/[id]/play, active play mode — distinta da /live spectator): header sticky con status FSM (Attiva/In pausa/Conclusa) + turno corrente + durata live, layout 3-col desktop (Scoreboard PV con inline +/− e breakdown / Activity feed SSE con filtri multi-select / Chat agent rules con streaming) e stack mobile con chat bottom-sheet. Score &amp; Dispute modal, Rules sheet slide-over, dispute handling, finalize prompt. 10 stati: active-default / paused / dispute / score-modal / dispute-modal / rules-sheet / agent-streaming / sse-disconnected / finalize / mobile-stack. Chiude epic #1475 (gap N7).</p>
+    <div class="tags"><span class="tag">10 stati</span><span class="tag">3-col + Live FSM</span><span class="tag">SSE · Chat · Dispute</span></div>
+  </a>
+
+  <a class="hub-card e-event" href="sp7-game-night-live.html">
+    <div class="arrow">→</div>
+    <div class="num">SP7 · K · #487</div>
+    <h3>Game Night Live Hub</h3>
+    <p>10 stati per l'hub centrale durante la serata: 3-pane desktop (planned games | current game | cross-game diary) / mobile swipeable tabs. Auto-save toast ogni 60s, diary widget esportato come sub-component embeddable. Acceptance criterion issue #487.</p>
+    <div class="tags"><span class="tag">10 stati</span><span class="tag">3-pane</span><span class="tag">Auto-save 60s</span></div>
+  </a>
+
+  <a class="hub-card e-event" href="sp7-game-night-transition.html">
+    <div class="arrow">→</div>
+    <div class="num">SP7 · L · #487</div>
+    <h3>Game Transition Dialog</h3>
+    <p>6 stati per il modal tra game e game: 2-col split recap (winner top-3) + preview prossimo (KB rules quick-glance + setup checklist). Fallback graceful KB offline, submodal nested per skip/end. Aperto dalla toolbar di K.</p>
+    <div class="tags"><span class="tag">6 stati</span><span class="tag">Modal 600×500</span><span class="tag">KB fallback</span></div>
+  </a>
+
+  <a class="hub-card e-event" href="sp7-game-night-summary.html">
+    <div class="arrow">→</div>
+    <div class="num">SP7 · M · #487</div>
+    <h3>Night Summary post-end</h3>
+    <p>6 stati per il recap full-screen post-serata: hero MVP + KPI grid 4 stat + cross-game timeline collapsed + per-game recap (co-op variant) + foto gallery (empty state) + share/archive CTA. MVP heuristic da definire backend-side.</p>
+    <div class="tags"><span class="tag">6 stati</span><span class="tag">MVP banner</span><span class="tag">Co-op variant</span></div>
   </a>
 </div>
 

@@ -59,13 +59,18 @@ public sealed class HandleOAuthCallbackCommandHandlerTests : IDisposable
         // Setup TimeProvider default
         _timeProviderMock.Setup(t => t.GetUtcNow()).Returns(DateTimeOffset.UtcNow);
 
+        var userRepository = new UserRepository(
+            _dbContext,
+            TestDbContextFactory.CreateMockEventCollector().Object);
+
         _handler = new HandleOAuthCallbackCommandHandler(
             _oauthServiceMock.Object,
             _mediatorMock.Object,
             _loggerMock.Object,
             _encryptionServiceMock.Object,
             _timeProviderMock.Object,
-            _dbContext);
+            _dbContext,
+            userRepository);
     }
 
     public void Dispose()

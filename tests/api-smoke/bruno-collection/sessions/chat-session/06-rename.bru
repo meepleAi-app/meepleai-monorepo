@@ -1,0 +1,35 @@
+meta {
+  name: SG4-CS3 — ChatSession rename (NEW endpoint #905)
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{apiBase}}/api/v1/chat/sessions
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "gameId": "{{smokeGameId}}",
+    "title": "Session to be renamed"
+  }
+}
+
+script:post-response {
+  // Create a fresh session then rename it in the next request (06b-rename-call.bru)
+  const body = res.getBody();
+  if (body && body.sessionId) {
+    bru.setVar("renameTargetSessionId", body.sessionId);
+  }
+}
+
+tests {
+  test("create returns 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+  test("renameTargetSessionId captured", function() {
+    expect(bru.getVar("renameTargetSessionId")).to.exist;
+  });
+}

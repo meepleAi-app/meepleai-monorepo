@@ -61,7 +61,7 @@ public class WizardFailureScenarioTests
         var mockFile = CreateValidMockPdfFile("game-rules.pdf", 1_000_000);
 
         _blobStorageMock
-            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(
                 Success: false,
                 FileId: null,
@@ -88,7 +88,7 @@ public class WizardFailureScenarioTests
         var mockFile = CreateValidMockPdfFile("game-rules.pdf", 1_000_000);
 
         _blobStorageMock
-            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ThrowsAsync(new IOException("Network connection lost"));
 
         var result = await handler.Handle(
@@ -197,7 +197,7 @@ public class WizardFailureScenarioTests
             NullLogger<ExtractGameMetadataFromPdfQueryHandler>.Instance);
 
         _blobStorageMock
-            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ReturnsAsync((Stream?)null);
 
         var result = await handler.Handle(
@@ -217,7 +217,7 @@ public class WizardFailureScenarioTests
             NullLogger<ExtractGameMetadataFromPdfQueryHandler>.Instance);
 
         _blobStorageMock
-            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MemoryStream(new byte[100]));
 
         _pdfExtractorMock
@@ -241,7 +241,7 @@ public class WizardFailureScenarioTests
             NullLogger<ExtractGameMetadataFromPdfQueryHandler>.Instance);
 
         _blobStorageMock
-            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MemoryStream(new byte[100]));
 
         _pdfExtractorMock
@@ -275,7 +275,7 @@ public class WizardFailureScenarioTests
             NullLogger<ExtractGameMetadataFromPdfQueryHandler>.Instance);
 
         _blobStorageMock
-            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MemoryStream(new byte[100]));
 
         _pdfExtractorMock

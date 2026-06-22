@@ -6,7 +6,7 @@
  * backend in CI → the surface stays in `loading` forever → no screenshot.
  *
  * **Contract**: when env var `NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED === '1'`
- * is baked into the build, the orchestrator (GameDetailViewV2) substitutes the
+ * is baked into the build, the orchestrator (GameDetailView) substitutes the
  * fixture for the real fetch and renders deterministic data.
  *
  * **Production safety**: production builds do NOT set the env var. The

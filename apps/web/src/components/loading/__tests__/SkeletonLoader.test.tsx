@@ -131,7 +131,7 @@ describe('SkeletonLoader', () => {
       const { container } = render(<SkeletonLoader variant="games" className="text-red-500" />);
       const skeleton = container.querySelector('[role="status"]');
       expect(skeleton).toHaveClass('text-red-500');
-      expect(skeleton).toHaveClass('bg-slate-200'); // Base class
+      expect(skeleton).toHaveClass('bg-muted'); // Base class (post DS-15 semantic token)
     });
   });
 

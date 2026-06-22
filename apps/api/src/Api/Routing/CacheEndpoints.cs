@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Extensions;
+using Api.Helpers;
 using Api.Middleware;
 using Api.Services;
 using MediatR;
@@ -43,10 +44,10 @@ internal static class CacheEndpoints
             var game = await mediator.Send(new GetGameByIdQuery(gameId), ct).ConfigureAwait(false);
             if (game == null)
             {
-                logger.LogWarning("Admin {AdminId} invalidating cache for non-existent game {GameId} (idempotent)", session!.User!.Id, gameId);
+                logger.LogWarning("Admin {AdminId} invalidating cache for non-existent game {GameId} (idempotent)", session!.Principal!.Subject.Id, gameId);
             }
 
-            logger.LogInformation("Admin {AdminId} invalidating cache for game {GameId}", session!.User!.Id, gameId);
+            logger.LogInformation("Admin {AdminId} invalidating cache for game {GameId}", session!.Principal!.Subject.Id, gameId);
 
             // DDD Migration Phase 3.2: Use InvalidateGameCacheCommand via IMediator
             var command = new InvalidateGameCacheCommand(GameId: gameId);
@@ -75,13 +76,13 @@ internal static class CacheEndpoints
                 return Results.BadRequest(new { error = "tag is required" });
             }
 
-            logger.LogInformation("Admin {AdminId} invalidating cache by tag {Tag}", session!.User!.Id, LogValueSanitizer.Sanitize(tag));
+            logger.LogInformation("Admin {AdminId} invalidating cache by tag {Tag}", session!.Principal!.Subject.Id, LogSanitizer.Sanitize(tag));
 
             // DDD Migration Phase 3.2: Use InvalidateCacheByTagCommand via IMediator
             var command = new InvalidateCacheByTagCommand(Tag: tag);
             await mediator.Send(command, ct).ConfigureAwait(false);
 
-            logger.LogInformation("Successfully invalidated cache by tag {Tag}", LogValueSanitizer.Sanitize(tag));
+            logger.LogInformation("Successfully invalidated cache by tag {Tag}", LogSanitizer.Sanitize(tag));
             return Results.Json(new { ok = true, message = $"Cache invalidated for tag '{tag}'" });
         })
         .WithName("InvalidateCacheByTag")

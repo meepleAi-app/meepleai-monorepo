@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 /**
@@ -235,10 +236,10 @@ export function GameCreationStep({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900 dark:text-white mb-2">
+        <h2 className="text-2xl font-semibold text-foreground dark:text-white mb-2">
           Crea il Gioco
         </h2>
-        <p className="text-slate-600 dark:text-slate-400">
+        <p className="text-muted-foreground">
           {pdfFileName
             ? `Inserisci i dettagli del gioco. Il PDF "${pdfFileName}" verra' associato a questo gioco.`
             : 'Inserisci i dettagli del gioco. Potrai aggiungere un PDF in seguito.'}

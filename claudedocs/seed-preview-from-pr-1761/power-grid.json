@@ -1,0 +1,57 @@
+{
+  "ToolkitName": "Power Grid",
+  "DiceTools": [],
+  "CounterTools": [
+    { "Name": "Elektro", "MinValue": 0, "MaxValue": 999, "DefaultValue": 50, "IsPerPlayer": true, "Icon": "coin", "Color": "#f1c40f" },
+    { "Name": "Cities owned (on map)", "MinValue": 0, "MaxValue": 25, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "city", "Color": null },
+    { "Name": "Cities powered this round", "MinValue": 0, "MaxValue": 17, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "lightbulb", "Color": "#f39c12" },
+    { "Name": "Coal (on plants + stockpile)", "MinValue": 0, "MaxValue": 24, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "coal", "Color": "#2c3e50" },
+    { "Name": "Oil", "MinValue": 0, "MaxValue": 24, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "drop", "Color": "#34495e" },
+    { "Name": "Garbage", "MinValue": 0, "MaxValue": 24, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "trash", "Color": "#7d6608" },
+    { "Name": "Uranium", "MinValue": 0, "MaxValue": 12, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "atom", "Color": "#27ae60" },
+    { "Name": "Power plants owned", "MinValue": 0, "MaxValue": 3, "DefaultValue": 0, "IsPerPlayer": true, "Icon": "plant", "Color": null }
+  ],
+  "TimerTools": [],
+  "ScoringTemplate": {
+    "Dimensions": ["Cities powered (primary)", "Elektro remaining (tiebreaker)", "Plants capacity (tiebreaker 2)"],
+    "DefaultUnit": "cities",
+    "ScoreType": "Custom",
+    "Categories": [
+      { "Id": "cities-powered", "Label": "Cities powered (final round)", "Computation": "Count", "Weight": 1, "Description": "Primary win condition: most cities powered in the final Bureaucracy phase. Game ends when first player reaches 17 cities built." },
+      { "Id": "elektro-remaining", "Label": "Elektro (tiebreaker 1)", "Computation": "Sum", "Weight": 1, "Description": "Most Elektro remaining wins ties on cities powered." },
+      { "Id": "plants-capacity", "Label": "Plants total capacity (tiebreaker 2)", "Computation": "Sum", "Weight": 1, "Description": "If still tied, sum of city capacity across owned plants (cosmetic)." }
+    ]
+  },
+  "TurnTemplate": {
+    "TurnOrderType": "Sequential",
+    "Phases": [
+      "1. Player Order (recalculate by cities)",
+      "2. Power Plant Auction (1-2 plants per turn)",
+      "3. Resource Buying (market price)",
+      "4. Building (place new cities)",
+      "5. Bureaucracy (power cities + income + restock + step transition)"
+    ],
+    "Rounds": null,
+    "TurnsPerRound": null,
+    "TurnActions": [
+      "auction-bid",
+      "auction-pass",
+      "buy-resources",
+      "build-city",
+      "power-cities",
+      "discard-plant"
+    ],
+    "Direction": "custom-reverse"
+  },
+  "Overrides": {
+    "OverridesTurnOrder": true,
+    "OverridesScoreboard": true,
+    "OverridesDiceSet": false
+  },
+  "Reasoning": "Curated 2026-05-31 from Power Grid base game (2-6 players, ~120 min). NO dice (deterministic auction + market). Heavy euro: 5 distinct phases per round, leader plays LAST in auction/resource phases (REVERSE turn order based on cities powered, this is the critical mechanic). 4 resource types with dynamic market scarcity (coal/oil/garbage/uranium). Elektro currency, plants storage max 3, network building on country map. 3 game Steps (1/2/3) triggered by city count, each expanding board area + plant market + adding constraints. End-game: first player builds 17th city → final Bureaucracy round, then most cities powered wins (Elektro tiebreaker).",
+  "ExcludedTools": [
+    { "ToolType": "Dice", "Reason": "Power Grid is deterministic auction + market, no dice involved." },
+    { "ToolType": "Timer", "Reason": "No time limit per turn." },
+    { "ToolType": "CardDeck", "Reason": "Power plant market is a face-up grid (Current Market + Future Market), not a shuffled deck. Special handling required." }
+  ]
+}

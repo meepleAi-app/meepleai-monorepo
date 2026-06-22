@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.AgentDefinition;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -14,13 +15,16 @@ internal sealed class DeleteAgentDefinitionCommandHandler
     : IRequestHandler<DeleteAgentDefinitionCommand>
 {
     private readonly IAgentDefinitionRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<DeleteAgentDefinitionCommandHandler> _logger;
 
     public DeleteAgentDefinitionCommandHandler(
         IAgentDefinitionRepository repository,
+        IUnitOfWork unitOfWork,
         ILogger<DeleteAgentDefinitionCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -38,6 +42,7 @@ internal sealed class DeleteAgentDefinitionCommandHandler
         // Delete
         await _repository.DeleteAsync(request.Id, cancellationToken).ConfigureAwait(false);
 
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         _logger.LogInformation(
             "Deleted AgentDefinition {Id}",
             request.Id);

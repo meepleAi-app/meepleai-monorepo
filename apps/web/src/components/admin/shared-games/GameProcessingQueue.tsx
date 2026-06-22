@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin CRUD chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13c admin scope (--admin-* decision deferred to DS-15). */
 /**
  * GameProcessingQueue — Mini-widget showing active/queued processing jobs for a game.
  *
@@ -73,7 +74,7 @@ export function GameProcessingQueue({ gameId }: GameProcessingQueueProps) {
   const jobs = gameQueue?.jobs ?? [];
 
   return (
-    <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/50 dark:border-zinc-700/50">
+    <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/50 dark:border-zinc-700/50">
       <CardHeader className="pb-3">
         <CardTitle className="font-quicksand text-base">Coda elaborazione</CardTitle>
         <CardDescription>

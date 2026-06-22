@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 import { AlertCircle, FileQuestion, Loader2 } from 'lucide-react';
@@ -28,7 +29,7 @@ export function AiLoadingState({
 }: AiLoadingStateProps) {
   if (state === 'loading') {
     return (
-      <div className="flex items-center gap-3 text-sm text-[var(--gaming-text-secondary,rgba(255,255,255,0.6))]">
+      <div className="flex items-center gap-3 text-sm text-[var(--text-sec,rgba(255,255,255,0.6))]">
         <Loader2 className="h-4 w-4 animate-spin text-amber-400 flex-shrink-0" />
         <span>{statusMessage ?? 'Sto cercando nelle regole...'}</span>
       </div>
@@ -46,7 +47,7 @@ export function AiLoadingState({
           <button
             type="button"
             onClick={onRetry}
-            className="self-start rounded-md bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20 transition-colors"
+            className="self-start rounded-md bg-card/10 px-3 py-1.5 text-sm text-white hover:bg-card/20 transition-colors"
           >
             Riprova
           </button>
@@ -57,7 +58,7 @@ export function AiLoadingState({
 
   if (state === 'no-results') {
     return (
-      <p className="text-sm text-[var(--gaming-text-secondary,rgba(255,255,255,0.6))]">
+      <p className="text-sm text-[var(--text-sec,rgba(255,255,255,0.6))]">
         {statusMessage ??
           'Nessun risultato trovato nelle regole. Rispondo usando la mia conoscenza generale.'}
       </p>
@@ -67,7 +68,7 @@ export function AiLoadingState({
   // no-pdf
   return (
     <div className="flex flex-col items-start gap-3">
-      <div className="flex items-center gap-2 text-sm text-[var(--gaming-text-secondary,rgba(255,255,255,0.6))]">
+      <div className="flex items-center gap-2 text-sm text-[var(--text-sec,rgba(255,255,255,0.6))]">
         <FileQuestion className="h-4 w-4 flex-shrink-0 text-amber-400" />
         <span>{statusMessage ?? 'Carica il regolamento per risposte più precise.'}</span>
       </div>

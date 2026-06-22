@@ -21,6 +21,8 @@ alerting:
 
 rule_files:
   - '/etc/prometheus/prometheus-rules.yml'
+  # Issue #2470 — Wikidata SSE plane starvation alerts.
+  - '/etc/prometheus/wikidata-sse.yml'
 
 scrape_configs:
   - job_name: 'prometheus'
@@ -111,10 +113,4 @@ scrape_configs:
           service: 'node-exporter'
           component: 'host-metrics'
 
-  - job_name: 'traefik'
-    scrape_interval: 30s
-    static_configs:
-      - targets: ['traefik:8080']
-        labels:
-          service: 'traefik'
-          component: 'proxy'
+  # Traefik scrape job removed (PR #738 cutover to CF Tunnel — no traefik service to scrape).

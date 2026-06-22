@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -64,7 +65,7 @@ function CategoryBadge({ category }: { category: string }) {
     Reference: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
   };
 
-  const colorClass = colorMap[category] ?? 'bg-slate-500/15 text-slate-300 border-slate-500/30';
+  const colorClass = colorMap[category] ?? 'bg-muted-foreground/15 text-slate-300 border-border/30';
 
   return (
     <span
@@ -93,7 +94,7 @@ function StateBadge({ state }: { state: string }) {
         isReady && 'bg-green-500/15 text-green-300',
         isProcessing && 'bg-blue-500/15 text-blue-300',
         isFailed && 'bg-red-500/15 text-red-300',
-        !isReady && !isProcessing && !isFailed && 'bg-slate-500/15 text-slate-400'
+        !isReady && !isProcessing && !isFailed && 'bg-muted-foreground/15 text-muted-foreground'
       )}
     >
       {isProcessing && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
@@ -202,7 +203,7 @@ export function PdfVersionManager({ gameId, gameName }: PdfVersionManagerProps) 
   if (isLoading) {
     return (
       <div
-        className="flex items-center justify-center p-8 text-slate-400"
+        className="flex items-center justify-center p-8 text-muted-foreground"
         data-testid="pdf-version-manager-loading"
       >
         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -224,7 +225,7 @@ export function PdfVersionManager({ gameId, gameName }: PdfVersionManagerProps) 
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-slate-200">
-          Versioni PDF — <span className="text-slate-400">{gameName}</span>
+          Versioni PDF — <span className="text-muted-foreground">{gameName}</span>
         </h3>
         {!showUploadForm && (
           <Button
@@ -242,14 +243,14 @@ export function PdfVersionManager({ gameId, gameName }: PdfVersionManagerProps) 
       {/* Upload Form */}
       {showUploadForm && (
         <div
-          className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 space-y-4"
+          className="rounded-xl border border-border bg-card p-4 space-y-4"
           data-testid="upload-form"
         >
           <h4 className="text-sm font-medium text-slate-200">Nuova versione</h4>
 
           {/* Version Label */}
           <div className="space-y-1.5">
-            <Label htmlFor="version-label" className="text-xs text-slate-400">
+            <Label htmlFor="version-label" className="text-xs text-muted-foreground">
               Etichetta versione
             </Label>
             <Input
@@ -257,21 +258,21 @@ export function PdfVersionManager({ gameId, gameName }: PdfVersionManagerProps) 
               placeholder="es. 2a Edizione"
               value={versionLabel}
               onChange={e => setVersionLabel(e.target.value)}
-              className="bg-slate-900/50 border-slate-600 text-slate-200 placeholder:text-slate-500"
+              className="bg-card border-border text-slate-200 placeholder:text-muted-foreground"
               data-testid="version-label-input"
             />
           </div>
 
           {/* Category Select */}
           <div className="space-y-1.5">
-            <Label htmlFor="document-category" className="text-xs text-slate-400">
+            <Label htmlFor="document-category" className="text-xs text-muted-foreground">
               Categoria
             </Label>
             <select
               id="document-category"
               value={category}
               onChange={e => setCategory(e.target.value as DocumentCategory)}
-              className="w-full rounded-md border border-slate-600 bg-slate-900/50 px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/50"
+              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/50"
               data-testid="category-select"
             >
               {DOCUMENT_CATEGORIES.map(cat => (
@@ -299,7 +300,7 @@ export function PdfVersionManager({ gameId, gameName }: PdfVersionManagerProps) 
                 setVersionLabel('');
                 setCategory('Rulebook');
               }}
-              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+              className="border-border text-slate-300 hover:bg-card"
             >
               Annulla
             </Button>
@@ -310,47 +311,47 @@ export function PdfVersionManager({ gameId, gameName }: PdfVersionManagerProps) 
       {/* PDF List */}
       {pdfs.length === 0 && !showUploadForm ? (
         <div
-          className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-700 py-10 text-center"
+          className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-10 text-center"
           data-testid="pdf-version-manager-empty"
         >
-          <FileText className="mb-2 h-8 w-8 text-slate-600" />
-          <p className="text-sm font-medium text-slate-400">Nessun regolamento caricato</p>
-          <p className="mt-1 text-xs text-slate-600">
+          <FileText className="mb-2 h-8 w-8 text-muted-foreground" />
+          <p className="text-sm font-medium text-muted-foreground">Nessun regolamento caricato</p>
+          <p className="mt-1 text-xs text-muted-foreground">
             Clicca "Carica nuova versione" per aggiungere un PDF.
           </p>
         </div>
       ) : (
         pdfs.length > 0 && (
-          <div className="overflow-hidden rounded-xl border border-slate-700">
+          <div className="overflow-hidden rounded-xl border border-border">
             <table className="w-full text-sm" data-testid="pdf-list-table">
               <thead>
-                <tr className="border-b border-slate-700 bg-slate-800/50">
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-slate-400">File</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-slate-400">
+                <tr className="border-b border-border bg-card">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">File</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
                     Versione
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-slate-400">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
                     Categoria
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-slate-400">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
                     Stato
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-slate-400">RAG</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">RAG</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
                 {pdfs.map(pdf => (
-                  <tr key={pdf.id} className="hover:bg-slate-800/30 transition-colors">
+                  <tr key={pdf.id} className="hover:bg-card transition-colors">
                     <td className="px-4 py-3 text-slate-200">
                       <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 shrink-0 text-slate-500" />
+                        <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
                         <span className="truncate max-w-[180px]" title={pdf.fileName}>
                           {pdf.fileName}
                         </span>
                       </div>
                     </td>
                     <td
-                      className="px-4 py-3 text-slate-400"
+                      className="px-4 py-3 text-muted-foreground"
                       data-testid={`version-label-${pdf.id}`}
                     >
                       {pdf.versionLabel ?? '—'}
@@ -371,7 +372,7 @@ export function PdfVersionManager({ gameId, gameName }: PdfVersionManagerProps) 
                           'h-7 rounded-full px-3 text-xs font-medium transition-colors',
                           pdf.isActiveForRag
                             ? 'bg-teal-500/20 text-teal-300 hover:bg-teal-500/30'
-                            : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                            : 'bg-card text-muted-foreground hover:bg-slate-600'
                         )}
                         aria-label={pdf.isActiveForRag ? 'Attivo' : 'Inattivo'}
                         data-testid={`rag-toggle-${pdf.id}`}
@@ -403,7 +404,7 @@ export function PdfVersionManager({ gameId, gameName }: PdfVersionManagerProps) 
             <Button
               variant="outline"
               onClick={handleKeepBoth}
-              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+              className="border-border text-slate-300 hover:bg-card"
               data-testid="keep-both-button"
             >
               Tieni entrambi

@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 /**
  * MeepleAI Animations & Transitions - Storybook Documentation
  *
@@ -35,7 +36,7 @@ export const PulseAnimation: Story = {
         <h2 className="text-2xl font-bold font-heading text-meeple-dark mb-4">
           Pulse Animation (Status Indicators)
         </h2>
-        <p className="text-gray-600 font-body mb-8">
+        <p className="text-muted-foreground font-body mb-8">
           2s infinite pulse for status dots, service health, and live indicators.
         </p>
       </div>
@@ -60,7 +61,7 @@ export const PulseAnimation: Story = {
         </div>
 
         {/* Large Status Indicator */}
-        <div className="flex items-center gap-3 bg-white rounded-full px-6 py-3 border border-meeple-border">
+        <div className="flex items-center gap-3 bg-card rounded-full px-6 py-3 border border-meeple-border">
           <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse-meeple" />
           <span className="text-sm font-bold font-heading">Sistema Attivo</span>
         </div>
@@ -85,23 +86,23 @@ export const CardHoverEffects: Story = {
       <h2 className="text-2xl font-bold font-heading text-meeple-dark mb-4">
         Card Hover Effects
       </h2>
-      <p className="text-gray-600 font-body mb-8">
+      <p className="text-muted-foreground font-body mb-8">
         Cards lift slightly on hover with shadow enhancement (300ms smooth transition).
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Standard Hover Card */}
-        <div className="hover-card bg-white border border-meeple-border rounded-2xl p-6 cursor-pointer">
-          <div className="text-sm text-gray-600 font-semibold mb-2">Total Users</div>
+        <div className="hover-card bg-card border border-meeple-border rounded-2xl p-6 cursor-pointer">
+          <div className="text-sm text-muted-foreground font-semibold mb-2">Total Users</div>
           <div className="text-4xl font-bold font-heading text-meeple-dark">2,847</div>
           <div className="text-sm text-green-600 font-bold mt-2">↗ +12%</div>
-          <p className="text-xs text-gray-500 mt-4 font-body">
+          <p className="text-xs text-muted-foreground mt-4 font-body">
             Hover to see lift + shadow
           </p>
         </div>
 
         {/* Service Card with Border Accent */}
-        <div className="hover-card bg-white border-l-4 border-l-green-500 border border-meeple-border rounded-xl p-6 cursor-pointer">
+        <div className="hover-card bg-card border-l-4 border-l-green-500 border border-meeple-border rounded-xl p-6 cursor-pointer">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse-meeple" />
             <span className="text-sm font-bold text-green-600">Operativo</span>
@@ -140,7 +141,7 @@ export const ButtonHoverEffects: Story = {
       <h2 className="text-2xl font-bold font-heading text-meeple-dark mb-4">
         Button Hover Effects
       </h2>
-      <p className="text-gray-600 font-body mb-8">
+      <p className="text-muted-foreground font-body mb-8">
         Buttons lift slightly on hover with shadow (200ms quick transition).
       </p>
 
@@ -157,7 +158,7 @@ export const ButtonHoverEffects: Story = {
           Accent Action
         </button>
 
-        <button className="hover-button bg-white text-meeple-dark border-2 border-meeple-border px-7 py-3 rounded-xl font-bold font-heading">
+        <button className="hover-button bg-card text-meeple-dark border-2 border-meeple-border px-7 py-3 rounded-xl font-bold font-heading">
           Secondary
         </button>
 
@@ -186,23 +187,23 @@ export const HoverLiftUtilities: Story = {
       <h2 className="text-2xl font-bold font-heading text-meeple-dark mb-4">
         Hover Lift Utilities
       </h2>
-      <p className="text-gray-600 font-body mb-8">
+      <p className="text-muted-foreground font-body mb-8">
         Granular control over hover lift distance: small (4px) or medium (8px).
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="hover-lift-sm bg-white border border-meeple-border rounded-xl p-6 cursor-pointer">
-          <div className="text-sm text-gray-600 font-semibold mb-2">Lift Small</div>
+        <div className="hover-lift-sm bg-card border border-meeple-border rounded-xl p-6 cursor-pointer">
+          <div className="text-sm text-muted-foreground font-semibold mb-2">Lift Small</div>
           <div className="text-3xl font-bold font-heading text-meeple-dark">-4px</div>
-          <p className="text-sm text-gray-500 mt-2 font-body">
+          <p className="text-sm text-muted-foreground mt-2 font-body">
             Subtle lift for list items, tags
           </p>
         </div>
 
-        <div className="hover-lift-md bg-white border border-meeple-border rounded-xl p-6 cursor-pointer">
-          <div className="text-sm text-gray-600 font-semibold mb-2">Lift Medium</div>
+        <div className="hover-lift-md bg-card border border-meeple-border rounded-xl p-6 cursor-pointer">
+          <div className="text-sm text-muted-foreground font-semibold mb-2">Lift Medium</div>
           <div className="text-3xl font-bold font-heading text-meeple-dark">-8px</div>
-          <p className="text-sm text-gray-500 mt-2 font-body">
+          <p className="text-sm text-muted-foreground mt-2 font-body">
             Pronounced lift for cards, features
           </p>
         </div>
@@ -229,7 +230,7 @@ export const ShadowHoverEffect: Story = {
       <h2 className="text-2xl font-bold font-heading text-meeple-dark mb-4">
         MeepleAI Shadow Hover
       </h2>
-      <p className="text-gray-600 font-body mb-8">
+      <p className="text-muted-foreground font-body mb-8">
         Warm brown shadow (rgba(139, 90, 60, 0.12)) on hover for brand consistency.
       </p>
 
@@ -237,12 +238,12 @@ export const ShadowHoverEffect: Story = {
         {Array.from({ length: 4 }, (_, i) => (
           <div
             key={i}
-            className="hover-shadow-meeple bg-white border border-meeple-border rounded-xl p-4 cursor-pointer"
+            className="hover-shadow-meeple bg-card border border-meeple-border rounded-xl p-4 cursor-pointer"
           >
             <div className="text-2xl font-bold font-heading text-meeple-dark">
               {(i + 1) * 250}
             </div>
-            <p className="text-xs text-gray-500 mt-1 font-body">Metric {i + 1}</p>
+            <p className="text-xs text-muted-foreground mt-1 font-body">Metric {i + 1}</p>
           </div>
         ))}
       </div>
@@ -266,19 +267,19 @@ export const CombinedEffects: Story = {
       <h2 className="text-2xl font-bold font-heading text-meeple-dark mb-4">
         Combined Animations
       </h2>
-      <p className="text-gray-600 font-body mb-8">
+      <p className="text-muted-foreground font-body mb-8">
         Pulse animations combined with hover effects for rich interactions.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Service Card with Pulse + Hover */}
-        <div className="hover-card hover-shadow-meeple bg-white border-l-4 border-l-green-500 border border-meeple-border rounded-xl p-6 cursor-pointer">
+        <div className="hover-card hover-shadow-meeple bg-card border-l-4 border-l-green-500 border border-meeple-border rounded-xl p-6 cursor-pointer">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse-meeple" />
               <span className="text-sm font-bold text-green-600">Healthy</span>
             </div>
-            <span className="text-xs text-gray-500">10s ago</span>
+            <span className="text-xs text-muted-foreground">10s ago</span>
           </div>
           <div className="text-xl font-bold font-heading text-meeple-dark mb-1">
             Database Service
@@ -293,7 +294,7 @@ export const CombinedEffects: Story = {
               <div className="w-3 h-3 rounded-full bg-yellow-500 animate-pulse-meeple" />
               <span className="text-sm font-bold text-yellow-600">Warning</span>
             </div>
-            <span className="text-xs text-gray-500">15s ago</span>
+            <span className="text-xs text-muted-foreground">15s ago</span>
           </div>
           <div className="text-xl font-bold font-heading text-meeple-dark mb-1">
             API Service
@@ -324,45 +325,45 @@ export const AccessibilityReducedMotion: Story = {
         <h2 className="text-2xl font-bold font-heading text-meeple-dark mb-4">
           Accessibility: Reduced Motion
         </h2>
-        <p className="text-gray-600 font-body mb-4">
-          When <code className="bg-gray-100 px-2 py-1 rounded">prefers-reduced-motion</code> is enabled,
+        <p className="text-muted-foreground font-body mb-4">
+          When <code className="bg-muted px-2 py-1 rounded">prefers-reduced-motion</code> is enabled,
           all animations are disabled for accessibility.
         </p>
-        <p className="text-sm text-gray-500 font-body">
+        <p className="text-sm text-muted-foreground font-body">
           Test: Enable "Reduce motion" in your OS accessibility settings and reload.
         </p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-meeple-border p-6">
+      <div className="bg-card rounded-2xl border border-meeple-border p-6">
         <h3 className="font-semibold font-heading mb-4">Animation Behavior</h3>
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-200">
+            <tr className="border-b border-border">
               <th className="text-left py-2 font-heading">Animation</th>
               <th className="text-left py-2 font-heading">Normal</th>
               <th className="text-left py-2 font-heading">Reduced Motion</th>
             </tr>
           </thead>
           <tbody className="font-body">
-            <tr className="border-b border-gray-100">
+            <tr className="border-b border-border">
               <td className="py-2">Pulse (status dots)</td>
               <td className="py-2 text-green-600">2s infinite</td>
-              <td className="py-2 text-gray-500">Disabled</td>
+              <td className="py-2 text-muted-foreground">Disabled</td>
             </tr>
-            <tr className="border-b border-gray-100">
+            <tr className="border-b border-border">
               <td className="py-2">Hover lift</td>
               <td className="py-2 text-green-600">300ms transform</td>
-              <td className="py-2 text-gray-500">No transform</td>
+              <td className="py-2 text-muted-foreground">No transform</td>
             </tr>
-            <tr className="border-b border-gray-100">
+            <tr className="border-b border-border">
               <td className="py-2">Fade in</td>
               <td className="py-2 text-green-600">500ms opacity</td>
-              <td className="py-2 text-gray-500">Instant (0.01ms)</td>
+              <td className="py-2 text-muted-foreground">Instant (0.01ms)</td>
             </tr>
             <tr>
               <td className="py-2">Transitions</td>
               <td className="py-2 text-green-600">200-300ms</td>
-              <td className="py-2 text-gray-500">Instant (0.01ms)</td>
+              <td className="py-2 text-muted-foreground">Instant (0.01ms)</td>
             </tr>
           </tbody>
         </table>
@@ -388,45 +389,45 @@ export const PerformanceGuide: Story = {
       <h2 className="text-2xl font-bold font-heading text-meeple-dark mb-4">
         Animation Performance
       </h2>
-      <p className="text-gray-600 font-body mb-8">
+      <p className="text-muted-foreground font-body mb-8">
         All MeepleAI animations are GPU-accelerated for 60fps smooth performance.
       </p>
 
-      <div className="bg-white rounded-2xl border border-meeple-border p-6 space-y-6">
+      <div className="bg-card rounded-2xl border border-meeple-border p-6 space-y-6">
         <div>
           <h3 className="font-semibold font-heading mb-3">GPU-Accelerated Properties</h3>
           <div className="grid grid-cols-2 gap-4 text-sm font-body">
             <div className="flex items-center gap-2">
               <span className="text-green-500">✓</span>
-              <code className="bg-gray-100 px-2 py-1 rounded">transform</code>
+              <code className="bg-muted px-2 py-1 rounded">transform</code>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-green-500">✓</span>
-              <code className="bg-gray-100 px-2 py-1 rounded">opacity</code>
+              <code className="bg-muted px-2 py-1 rounded">opacity</code>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-green-500">✓</span>
-              <code className="bg-gray-100 px-2 py-1 rounded">filter</code>
+              <code className="bg-muted px-2 py-1 rounded">filter</code>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-green-500">✓</span>
-              <code className="bg-gray-100 px-2 py-1 rounded">box-shadow</code>
+              <code className="bg-muted px-2 py-1 rounded">box-shadow</code>
             </div>
           </div>
         </div>
 
-        <div className="border-t border-gray-200 pt-4">
+        <div className="border-t border-border pt-4">
           <h3 className="font-semibold font-heading mb-3">Timing Functions</h3>
-          <ul className="space-y-2 text-sm font-body text-gray-600">
-            <li><code className="bg-gray-100 px-2 py-1 rounded">ease-in-out</code> - Smooth start and end</li>
-            <li><code className="bg-gray-100 px-2 py-1 rounded">ease-out</code> - Quick start, slow end (hover effects)</li>
-            <li><code className="bg-gray-100 px-2 py-1 rounded">cubic-bezier(0.4, 0, 0.6, 1)</code> - Custom easing (pulse)</li>
+          <ul className="space-y-2 text-sm font-body text-muted-foreground">
+            <li><code className="bg-muted px-2 py-1 rounded">ease-in-out</code> - Smooth start and end</li>
+            <li><code className="bg-muted px-2 py-1 rounded">ease-out</code> - Quick start, slow end (hover effects)</li>
+            <li><code className="bg-muted px-2 py-1 rounded">cubic-bezier(0.4, 0, 0.6, 1)</code> - Custom easing (pulse)</li>
           </ul>
         </div>
 
-        <div className="border-t border-gray-200 pt-4">
+        <div className="border-t border-border pt-4">
           <h3 className="font-semibold font-heading mb-3">Performance Targets</h3>
-          <ul className="space-y-2 text-sm font-body text-gray-600">
+          <ul className="space-y-2 text-sm font-body text-muted-foreground">
             <li><strong>60fps:</strong> All animations run at 60fps (16.67ms per frame)</li>
             <li><strong>No jank:</strong> GPU acceleration prevents frame drops</li>
             <li><strong>Smooth:</strong> 200-300ms transitions feel natural</li>
@@ -448,72 +449,72 @@ export const CompleteReference: Story = {
       <h2 className="text-3xl font-bold font-heading text-meeple-dark mb-2">
         MeepleAI Animation Library
       </h2>
-      <p className="text-gray-600 font-body mb-8">
+      <p className="text-muted-foreground font-body mb-8">
         Complete reference of all available animations and transitions.
       </p>
 
       <div className="space-y-8">
         {/* Pulse Animations */}
-        <div className="bg-white rounded-2xl border border-meeple-border p-6">
+        <div className="bg-card rounded-2xl border border-meeple-border p-6">
           <h3 className="text-xl font-bold font-heading mb-4">Pulse Animations</h3>
           <div className="grid grid-cols-2 gap-4 text-sm font-body">
             <div>
-              <code className="bg-gray-100 px-2 py-1 rounded">animate-pulse-meeple</code>
-              <p className="text-xs text-gray-500 mt-1">2s infinite (status dots)</p>
+              <code className="bg-muted px-2 py-1 rounded">animate-pulse-meeple</code>
+              <p className="text-xs text-muted-foreground mt-1">2s infinite (status dots)</p>
             </div>
             <div>
-              <code className="bg-gray-100 px-2 py-1 rounded">animate-pulse-slow</code>
-              <p className="text-xs text-gray-500 mt-1">3s infinite (subtle pulse)</p>
+              <code className="bg-muted px-2 py-1 rounded">animate-pulse-slow</code>
+              <p className="text-xs text-muted-foreground mt-1">3s infinite (subtle pulse)</p>
             </div>
           </div>
         </div>
 
         {/* Hover Utilities */}
-        <div className="bg-white rounded-2xl border border-meeple-border p-6">
+        <div className="bg-card rounded-2xl border border-meeple-border p-6">
           <h3 className="text-xl font-bold font-heading mb-4">Hover Effects</h3>
           <div className="grid grid-cols-2 gap-4 text-sm font-body">
             <div>
-              <code className="bg-gray-100 px-2 py-1 rounded">hover-card</code>
-              <p className="text-xs text-gray-500 mt-1">Lift + shadow (300ms)</p>
+              <code className="bg-muted px-2 py-1 rounded">hover-card</code>
+              <p className="text-xs text-muted-foreground mt-1">Lift + shadow (300ms)</p>
             </div>
             <div>
-              <code className="bg-gray-100 px-2 py-1 rounded">hover-button</code>
-              <p className="text-xs text-gray-500 mt-1">Quick lift + shadow (200ms)</p>
+              <code className="bg-muted px-2 py-1 rounded">hover-button</code>
+              <p className="text-xs text-muted-foreground mt-1">Quick lift + shadow (200ms)</p>
             </div>
             <div>
-              <code className="bg-gray-100 px-2 py-1 rounded">hover-lift-sm</code>
-              <p className="text-xs text-gray-500 mt-1">Small lift -4px</p>
+              <code className="bg-muted px-2 py-1 rounded">hover-lift-sm</code>
+              <p className="text-xs text-muted-foreground mt-1">Small lift -4px</p>
             </div>
             <div>
-              <code className="bg-gray-100 px-2 py-1 rounded">hover-lift-md</code>
-              <p className="text-xs text-gray-500 mt-1">Medium lift -8px</p>
+              <code className="bg-muted px-2 py-1 rounded">hover-lift-md</code>
+              <p className="text-xs text-muted-foreground mt-1">Medium lift -8px</p>
             </div>
             <div>
-              <code className="bg-gray-100 px-2 py-1 rounded">hover-shadow-meeple</code>
-              <p className="text-xs text-gray-500 mt-1">Warm brown shadow</p>
+              <code className="bg-muted px-2 py-1 rounded">hover-shadow-meeple</code>
+              <p className="text-xs text-muted-foreground mt-1">Warm brown shadow</p>
             </div>
           </div>
         </div>
 
         {/* Entry Animations */}
-        <div className="bg-white rounded-2xl border border-meeple-border p-6">
+        <div className="bg-card rounded-2xl border border-meeple-border p-6">
           <h3 className="text-xl font-bold font-heading mb-4">Entry Animations</h3>
           <div className="grid grid-cols-2 gap-4 text-sm font-body">
             <div>
-              <code className="bg-gray-100 px-2 py-1 rounded">animate-fade-in</code>
-              <p className="text-xs text-gray-500 mt-1">Opacity 0 → 1 (500ms)</p>
+              <code className="bg-muted px-2 py-1 rounded">animate-fade-in</code>
+              <p className="text-xs text-muted-foreground mt-1">Opacity 0 → 1 (500ms)</p>
             </div>
             <div>
-              <code className="bg-gray-100 px-2 py-1 rounded">animate-slide-up</code>
-              <p className="text-xs text-gray-500 mt-1">Slide from bottom (600ms)</p>
+              <code className="bg-muted px-2 py-1 rounded">animate-slide-up</code>
+              <p className="text-xs text-muted-foreground mt-1">Slide from bottom (600ms)</p>
             </div>
             <div>
-              <code className="bg-gray-100 px-2 py-1 rounded">animate-scale-in</code>
-              <p className="text-xs text-gray-500 mt-1">Scale 0.95 → 1 (400ms)</p>
+              <code className="bg-muted px-2 py-1 rounded">animate-scale-in</code>
+              <p className="text-xs text-muted-foreground mt-1">Scale 0.95 → 1 (400ms)</p>
             </div>
             <div>
-              <code className="bg-gray-100 px-2 py-1 rounded">animate-bounce-subtle</code>
-              <p className="text-xs text-gray-500 mt-1">Gentle bounce (350ms)</p>
+              <code className="bg-muted px-2 py-1 rounded">animate-bounce-subtle</code>
+              <p className="text-xs text-muted-foreground mt-1">Gentle bounce (350ms)</p>
             </div>
           </div>
         </div>

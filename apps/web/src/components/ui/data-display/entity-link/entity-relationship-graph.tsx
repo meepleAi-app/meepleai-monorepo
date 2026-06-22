@@ -259,7 +259,7 @@ function ViewToggleButton({
       className={cn(
         'flex h-7 w-7 items-center justify-center rounded-md',
         'transition-all duration-150',
-        'focus:outline-none focus:ring-2 focus:ring-slate-300',
+        'focus:outline-none focus:ring-2 focus:ring-border',
         active
           ? 'bg-muted text-foreground'
           : 'text-muted-foreground/60 hover:bg-muted/60 hover:text-muted-foreground'

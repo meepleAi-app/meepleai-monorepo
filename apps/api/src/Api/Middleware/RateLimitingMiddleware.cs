@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using System.Globalization;
 using Api.Extensions;
+using Api.Helpers;
 using Api.Models;
 using Api.Services;
 
@@ -62,10 +63,13 @@ internal class RateLimitingMiddleware
 
             var (authenticated, session, _) = context.TryGetActiveSession();
 
-            if (authenticated && session.User is not null)
+            if (authenticated && session.Principal?.Subject is not null)
             {
-                role = session.User.Role;
-                rateKey = $"user:{session.User.Id}";
+                // Cluster D (rate-limit/quota): MUST use Subject — an admin impersonating a user
+                // must NOT bypass that user's rate-limit by virtue of their own admin role/tier.
+                // See audits/2026-05-26-s2-spike-cluster-classification.md §3 Cluster D.
+                role = session.Principal!.Subject.Role;
+                rateKey = $"user:{session.Principal!.Subject.Id}";
             }
             else
             {
@@ -105,7 +109,7 @@ internal class RateLimitingMiddleware
             // SEC-I4: Error level so alerting detects rate limit infrastructure failures (e.g. Redis down)
             _logger.LogError(ex,
                 "SEC-I4: Rate limiting fail-open. Redis may be down — all requests allowed without rate limiting. Path: {Path}, Method: {Method}",
-                LogValueSanitizer.SanitizePath(context.Request.Path), LogValueSanitizer.Sanitize(context.Request.Method));
+                LogSanitizer.SanitizePath(context.Request.Path), LogSanitizer.Sanitize(context.Request.Method));
             await _next(context).ConfigureAwait(false);
             return;
         }

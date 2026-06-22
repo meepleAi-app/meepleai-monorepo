@@ -4,10 +4,14 @@ using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Application;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
+using Api.BoundedContexts.GameManagement.Application.DTOs.Leaderboard;
 using Api.BoundedContexts.GameManagement.Application.Queries;
+using Api.BoundedContexts.GameManagement.Application.Queries.Leaderboard;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
+using SessionTrackingQueries = Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.Extensions;
 using Api.Infrastructure.Entities;
 using Api.Models.Requests;
@@ -85,6 +89,16 @@ internal static class GameEndpoints
         .WithSummary("Get game rule specifications")
         .WithDescription("Returns all rule specification versions for a game. Supports Rules tab in Game Detail Page. Requires authentication.");
 
+        // Get social leaderboard for a game (DDD/CQRS)
+        // Issue #1467: Supports the Stats-tab leaderboard in the Game Detail Page
+        group.MapGet("/games/{id}/leaderboard", HandleGetGameLeaderboard)
+        .RequireAuthenticatedUser()
+        .Produces<GameLeaderboardResponse>(200)
+        .Produces(401)
+        .WithTags("Games")
+        .WithSummary("Get game social leaderboard")
+        .WithDescription("Returns the top registered players ranked by wins across the play records visible to the caller (own records plus records of groups the caller belongs to). Supports ?since= and ?limit= (1..50, default 10). Requires authentication.");
+
         // Get AI agents available for a game
         // Issue #2677: Frontend uses this endpoint for game detail page agent list
         // Note: Agents are game-agnostic, returns all active agents
@@ -110,26 +124,8 @@ internal static class GameEndpoints
 
     private static void MapGameManagementEndpoints(RouteGroupBuilder group)
     {
-        // Create game (DDD/CQRS) - Admin/Editor only
-        group.MapPost("/games", HandleCreateGame)
-        .Produces<GameDto>(201)
-        .Produces(400)
-        .Produces(401)
-        .Produces(403)
-        .WithTags("Games", "Admin")
-        .WithSummary("Create a new game")
-        .WithDescription("Creates a new board game in the catalog. Admin or Editor role required. Returns created game with generated ID.");
-
-        // Update game (DDD/CQRS) - Admin/Editor only
-        group.MapPut("/games/{id}", HandleUpdateGame)
-        .Produces<GameDto>(200)
-        .Produces(400)
-        .Produces(401)
-        .Produces(403)
-        .Produces(404)
-        .WithTags("Games", "Admin")
-        .WithSummary("Update an existing game")
-        .WithDescription("Updates board game information. Admin or Editor role required. Partial updates supported.");
+        // NOTE: CreateGame, UpdateGame, PublishGame endpoints removed by #1320 (P2c).
+        // Game catalog management is now done exclusively through SharedGameCatalog BC.
 
         // Upload game image (icon or cover) - Issue #2255
         group.MapPost("/games/upload-image", HandleUploadGameImage)
@@ -142,16 +138,6 @@ internal static class GameEndpoints
         .WithSummary("Upload game image")
         .WithDescription("Uploads game icon or cover image. Admin or Editor role required. Accepts multipart/form-data with file, gameId, and imageType fields.");
 
-        // Publish game to SharedGameCatalog - Issue #3481
-        group.MapPut("/games/{id}/publish", HandlePublishGame)
-        .Produces<GameDto>(200)
-        .Produces(400)
-        .Produces(401)
-        .Produces(403)
-        .Produces(404)
-        .WithTags("Games", "Admin", "SharedGameCatalog")
-        .WithSummary("Publish game to SharedGameCatalog")
-        .WithDescription("Updates game publication status and publishes to SharedGameCatalog. Admin role required.");
     }
 
     private static void MapSessionLifecycleEndpoints(RouteGroupBuilder group)
@@ -254,6 +240,19 @@ internal static class GameEndpoints
         .WithSummary("Get active sessions for a game")
         .WithDescription("Returns all currently active game sessions for a specific board game. Requires authentication.");
 
+        // Issue #2036 — Top session contributors for a game (registered users
+        // with at least one finalized session). Public read; used by the
+        // SessionContributorsStrip avatar component on /library/[gameId]. Path
+        // intentionally uses the literal "session-contributors" to avoid
+        // ambiguity with the sharing-based GameContributor endpoint at
+        // /shared-games/{id}/contributors (Issue #2746).
+        group.MapGet("/games/{gameId:guid}/session-contributors", HandleGetGameSessionContributors)
+        .AllowAnonymous()
+        .Produces<IReadOnlyList<SessionContributorDto>>(200)
+        .WithTags("Games", "Sessions")
+        .WithSummary("Get top session contributors for a game")
+        .WithDescription("Returns the top N registered users who have participated in at least one finalized session for this game, sorted by descending session count. Limit is clamped to [1,50] (default 8). Public endpoint accessible without authentication.");
+
         // Get all active sessions (with pagination)
         group.MapGet("/sessions/active", HandleGetActiveSessions)
         .RequireAuthenticatedUser() // Issue #1446: Dual authentication (session OR API key)
@@ -335,6 +334,26 @@ internal static class GameEndpoints
         return result != null ? Results.Ok(result) : Results.NotFound();
     }
 
+    private static async Task<IResult> HandleGetGameLeaderboard(
+        Guid id,
+        [FromQuery] DateTime? since,
+        [FromQuery] int? limit,
+        HttpContext httpContext,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var userId = httpContext.User.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
+        var query = new GetGameLeaderboardQuery(id, userId, since, limit ?? 10);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        return Results.Ok(result);
+    }
+
     private static async Task<IResult> HandleGetGameRules(
         Guid id,
         IMediator mediator,
@@ -377,9 +396,9 @@ internal static class GameEndpoints
         // otherwise never see them.
         if (context.Items.TryGetValue(nameof(SessionStatusDto), out var sessionObj) &&
             sessionObj is SessionStatusDto sessionForAgents &&
-            sessionForAgents.User != null)
+            sessionForAgents.Principal?.Subject != null)
         {
-            var agentConfigQuery = new GetGameAgentConfigQuery(sessionForAgents.User.Id, id);
+            var agentConfigQuery = new GetGameAgentConfigQuery(sessionForAgents.Principal!.Subject.Id, id);
             var agentConfig = await mediator.Send(agentConfigQuery, ct).ConfigureAwait(false);
 
             if (agentConfig != null)
@@ -388,7 +407,7 @@ internal static class GameEndpoints
                 // user+game pair always produces the same ID across requests. This prevents
                 // React Query from treating each response as a cache miss (agent.id is used
                 // as cache key in KnowledgeBaseTab via agentDocumentsKeys.byAgent(agent.id)).
-                var userBytes = sessionForAgents.User.Id.ToByteArray();
+                var userBytes = sessionForAgents.Principal!.Subject.Id.ToByteArray();
                 var gameBytes = id.ToByteArray();
                 var deterministicBytes = new byte[16];
                 for (var i = 0; i < 16; i++)
@@ -407,87 +426,11 @@ internal static class GameEndpoints
                     IsRecentlyUsed: false,
                     IsIdle: false,
                     GameId: id,
-                    CreatedByUserId: sessionForAgents.User.Id));
+                    CreatedByUserId: sessionForAgents.Principal!.Subject.Id));
             }
         }
 
         return Results.Ok(new { success = true, agents = agentList, count = agentList.Count });
-    }
-
-    private static async Task<IResult> HandleCreateGame(
-        CreateGameRequest request,
-        IMediator mediator,
-        HttpContext context,
-        ILogger<Program> logger,
-        CancellationToken ct)
-    {
-        // Auth check
-        var (authorized, _, error) = context.RequireAdminOrEditorSession();
-        if (!authorized) return error!;
-
-        var command = new CreateGameCommand(
-            Title: request.Title,
-            Publisher: request.Publisher,
-            YearPublished: request.YearPublished,
-            MinPlayers: request.MinPlayers,
-            MaxPlayers: request.MaxPlayers,
-            MinPlayTimeMinutes: request.MinPlayTimeMinutes,
-            MaxPlayTimeMinutes: request.MaxPlayTimeMinutes,
-            IconUrl: request.IconUrl,
-            ImageUrl: request.ImageUrl,
-            BggId: request.BggId,
-            SharedGameId: request.SharedGameId // Issue #2373: Link to SharedGameCatalog
-        );
-
-        var result = await mediator.Send(command, ct).ConfigureAwait(false);
-        logger.LogInformation("Created game {GameId} via DDD/CQRS", result.Id);
-        return Results.Created($"/api/v1/games/{result.Id}", result);
-    }
-
-    private static async Task<IResult> HandleUpdateGame(
-        Guid id,
-        UpdateGameRequest request,
-        IMediator mediator,
-        HttpContext context,
-        CancellationToken ct)
-    {
-        // Auth check
-        var (authorized, _, error) = context.RequireAdminOrEditorSession();
-        if (!authorized) return error!;
-
-        var command = new UpdateGameCommand(
-            GameId: id,
-            Title: request.Title,
-            Publisher: request.Publisher,
-            YearPublished: request.YearPublished,
-            MinPlayers: request.MinPlayers,
-            MaxPlayers: request.MaxPlayers,
-            MinPlayTimeMinutes: request.MinPlayTimeMinutes,
-            MaxPlayTimeMinutes: request.MaxPlayTimeMinutes
-        );
-
-        var result = await mediator.Send(command, ct).ConfigureAwait(false);
-        return Results.Ok(result);
-    }
-
-    private static async Task<IResult> HandlePublishGame(
-        Guid id,
-        PublishGameRequest request,
-        IMediator mediator,
-        HttpContext context,
-        CancellationToken ct)
-    {
-        // Auth check - Admin only
-        var (authorized, _, error) = context.RequireAdminSession();
-        if (!authorized) return error!;
-
-        var command = new PublishGameCommand(
-            GameId: id,
-            Status: request.Status
-        );
-
-        var result = await mediator.Send(command, ct).ConfigureAwait(false);
-        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleStartSession(
@@ -501,9 +444,9 @@ internal static class GameEndpoints
         var (authenticated, session, error) = context.TryGetActiveSession();
         if (!authenticated) return error!;
 
-        var userId = session!.User!.Id;
-        var userTier = UserTier.Parse(session.User!.Tier);
-        var userRole = Role.Parse(session.User!.Role);
+        var userId = session!.Principal!.Subject.Id;
+        var userTier = UserTier.Parse(session.Principal!.Subject.Tier);
+        var userRole = Role.Parse(session.Principal!.EffectiveActor.Role);
 
         var command = new StartGameSessionCommand(
             GameId: request.GameId,
@@ -622,6 +565,20 @@ internal static class GameEndpoints
         var query = new GetActiveSessionsByGameQuery(gameId);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetGameSessionContributors(
+        Guid gameId,
+        [FromQuery] int? limit,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        // Issue #2036 — Limit ergonomics: omit → default 8 (mockup), explicit
+        // values outside [1,50] are clamped by the handler so the FE can pass
+        // any value safely.
+        var query = new SessionTrackingQueries.GetGameSessionContributorsQuery(gameId, limit ?? 8);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);
     }
 
@@ -1026,7 +983,7 @@ internal static class GameEndpoints
             SessionId: sessionId,
             SuggestionId: request.SuggestionId,
             StateChanges: request.StateChanges,
-            UserId: session.User!.Id
+            UserId: session.Principal!.Subject.Id
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -1046,9 +1003,9 @@ internal static class GameEndpoints
         Guid? userId = null;
         if (context.Items.TryGetValue(nameof(SessionStatusDto), out var sessionObj) &&
             sessionObj is SessionStatusDto session &&
-            session.User != null)
+            session.Principal?.Subject != null)
         {
-            userId = session.User.Id;
+            userId = session.Principal!.Subject.Id;
         }
 
         var query = new GetSimilarGamesQuery(

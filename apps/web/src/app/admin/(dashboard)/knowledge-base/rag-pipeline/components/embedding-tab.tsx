@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- pre-existing pattern: array/object access guarded by length/key check or by upstream validator; assertion is correct by construction. Cleanup tracked for follow-up audit. */
 
@@ -208,7 +209,7 @@ function InfoCell({ label, value }: { label: string; value: string }) {
 
 function MetricCell({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="rounded-lg border bg-white/50 dark:bg-zinc-800/50 p-3 text-center">
+    <div className="rounded-lg border bg-card/50 dark:bg-zinc-800/50 p-3 text-center">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="text-xl font-bold tabular-nums">{value}</p>
     </div>

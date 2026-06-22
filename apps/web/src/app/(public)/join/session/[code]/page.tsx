@@ -23,7 +23,7 @@ export default function GuestSessionPage({ params }: GuestSessionPageProps) {
     <Suspense
       fallback={
         <main className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
-          <p className="font-nunito text-gray-600 dark:text-gray-400">Caricamento sessione...</p>
+          <p className="font-nunito text-muted-foreground">Caricamento sessione...</p>
         </main>
       }
     >

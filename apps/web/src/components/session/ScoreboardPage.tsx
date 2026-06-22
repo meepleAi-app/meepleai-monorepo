@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * ScoreboardPage — /sessions/{id}/scoreboard
  *
@@ -19,6 +20,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Trophy, Users } from 'lucide-react';
 import Link from 'next/link';
 
+import { SessionStateRenderer } from '@/components/features/session-live';
 import {
   Sheet,
   SheetContent,
@@ -45,8 +47,8 @@ const STATUS_LABELS: Record<string, string> = {
 const STATUS_COLORS: Record<string, string> = {
   Active: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400',
   Paused: 'bg-amber-100 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400',
-  Finalized: 'bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-400',
-  Completed: 'bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-400',
+  Finalized: 'bg-muted text-foreground dark:bg-card dark:text-muted-foreground',
+  Completed: 'bg-muted text-foreground dark:bg-card dark:text-muted-foreground',
 };
 
 // Avatar colors cycling for players that don't have a color set
@@ -68,6 +70,8 @@ export function ScoreboardPage({ sessionId }: ScoreboardPageProps) {
     data: session,
     isPending,
     isError,
+    error,
+    refetch,
   } = useQuery({
     queryKey: ['session', sessionId],
     queryFn: () => api.sessions.getById(sessionId),
@@ -75,43 +79,40 @@ export function ScoreboardPage({ sessionId }: ScoreboardPageProps) {
     retry: false,
   });
 
-  // ----------- Loading state -----------
+  // ----------- Loading state (G7 SessionStateRenderer pilot — Issue #2356) -----------
   if (isPending) {
     return (
       <div data-testid="scoreboard-loading" className="min-h-screen bg-background p-4">
-        {/* Header skeleton */}
-        <div className="mb-6 flex items-center gap-3">
-          <div className="h-8 w-8 animate-pulse rounded-lg bg-muted" />
-          <div className="space-y-2">
-            <div className="h-4 w-40 animate-pulse rounded bg-muted" />
-            <div className="h-3 w-24 animate-pulse rounded bg-muted" />
-          </div>
-        </div>
-        {/* Player card skeletons */}
-        <div className="space-y-3">
-          {[1, 2, 3].map(i => (
-            <div
-              key={i}
-              className="flex h-16 items-center gap-4 rounded-xl border border-border bg-card p-4"
-            >
-              <div className="h-10 w-10 animate-pulse rounded-lg bg-muted" />
-              <div className="h-4 w-32 animate-pulse rounded bg-muted" />
-            </div>
-          ))}
-        </div>
+        <SessionStateRenderer
+          state={{
+            kind: 'loading',
+            loadingAriaLabel: 'Caricamento classifica in corso',
+          }}
+        />
       </div>
     );
   }
 
-  // ----------- Error / empty state -----------
+  // ----------- Error state (G7 SessionStateRenderer pilot — Issue #2356) -----------
   if (isError || !session) {
+    const fallbackError =
+      error instanceof Error ? error : new Error('Impossibile caricare la sessione');
     return (
       <div
         data-testid="scoreboard-error"
         className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background p-4 text-center"
       >
-        <p className="text-sm font-medium text-destructive">Impossibile caricare la sessione</p>
-        <p className="text-xs text-muted-foreground">Verifica la connessione e riprova.</p>
+        <SessionStateRenderer
+          state={{
+            kind: 'error',
+            error: fallbackError,
+            onRetry: () => {
+              void refetch();
+            },
+            errorTitle: 'Impossibile caricare la sessione',
+            retryLabel: 'Riprova',
+          }}
+        />
         <Button variant="outline" size="sm" asChild>
           <Link href="/sessions">Torna alle sessioni</Link>
         </Button>
@@ -123,7 +124,7 @@ export function ScoreboardPage({ sessionId }: ScoreboardPageProps) {
   const statusLabel = STATUS_LABELS[session.status] ?? session.status;
   const statusColor =
     STATUS_COLORS[session.status] ??
-    'bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-400';
+    'bg-muted text-foreground dark:bg-card dark:text-muted-foreground';
 
   // Players ranked by playerOrder (ascending)
   const rankedPlayers = [...session.players].sort((a, b) => a.playerOrder - b.playerOrder);
@@ -213,7 +214,7 @@ export function ScoreboardPage({ sessionId }: ScoreboardPageProps) {
 
               {/* Avatar */}
               <div
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white shadow-sm ring-1 ring-black/10"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white shadow-sm ring-1 ring-border"
                 style={{
                   background: `linear-gradient(135deg, ${avatarColor} 0%, ${avatarColor}dd 100%)`,
                 }}

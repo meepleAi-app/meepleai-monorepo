@@ -1,9 +1,7 @@
-using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.Models;
-using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Api.Tests.BoundedContexts.DocumentProcessing.TestHelpers;
 
@@ -23,74 +21,16 @@ namespace Api.Tests.TestHelpers;
 ///
 /// <para><strong>Examples:</strong></para>
 /// <code>
-/// // Quick game creation
-/// var game = TestDataFactory.CreateValidGame();
-///
 /// // Multiple users with different roles
 /// var user = TestDataFactory.CreateUser();
 /// var admin = TestDataFactory.CreateAdmin();
 ///
 /// // Complete scenarios
-/// var (game, pdf, snippets) = TestDataFactory.CreateRagScenario();
 /// var (user, session) = TestDataFactory.CreateUserWithSession();
-///
-/// // Custom title with factory defaults
-/// var game = TestDataFactory.CreateValidGame("Catan");
-///
-/// // Mix factory with builder for customization
-/// var game = new GameBuilder()
-///     .WithTitle(TestDataFactory.Defaults.TestGameTitle)
-///     .WithPlayerCount(1, 4)
-///     .Build();
 /// </code>
 /// </remarks>
 internal static class TestDataFactory
 {
-    /// <summary>
-    /// Creates a valid game with sensible defaults (Catan-like).
-    /// </summary>
-    public static Game CreateValidGame(string? title = null) =>
-        new GameBuilder()
-            .WithTitle(title ?? "Test Game")
-            .WithPublisher("Test Publisher")
-            .WithYearPublished(2000)
-            .WithPlayerCount(2, 4)
-            .WithPlayTime(45, 90)
-            .Build();
-
-    /// <summary>
-    /// Creates a game with full BGG metadata.
-    /// </summary>
-    public static Game CreateGameWithBggData(int bggId = 13, string? metadata = null) =>
-        new GameBuilder()
-            .WithTitle("Catan")
-            .WithPublisher("Catan Studio")
-            .WithYearPublished(1995)
-            .WithPlayerCount(3, 4)
-            .WithPlayTime(60, 120)
-            .WithBggLink(bggId, metadata ?? "{\"rating\": 7.2, \"weight\": 2.3}")
-            .Build();
-
-    /// <summary>
-    /// Creates a game with minimal data (title only).
-    /// </summary>
-    public static Game CreateMinimalGame(string title = "Minimal Game") =>
-        new GameBuilder()
-            .WithTitle(title)
-            .Build();
-
-    /// <summary>
-    /// Creates multiple games for list tests.
-    /// </summary>
-    public static List<Game> CreateGames(int count)
-    {
-        var games = new List<Game>();
-        for (int i = 1; i <= count; i++)
-        {
-            games.Add(CreateValidGame($"Game {i}"));
-        }
-        return games;
-    }
     /// <summary>
     /// Creates a standard user with User role.
     /// </summary>
@@ -238,30 +178,6 @@ internal static class TestDataFactory
 
 
     /// <summary>
-    /// Creates a complete game setup with user, game, and PDFs.
-    /// </summary>
-    public static (User user, Game game, List<PdfDocument> pdfs) CreateGameSetup()
-    {
-        var user = CreateUser();
-        var game = CreateValidGame();
-        var pdfs = CreatePdfDocuments(game.Id, count: 2);
-
-        return (user, game, pdfs);
-    }
-
-    /// <summary>
-    /// Creates a complete RAG test scenario.
-    /// </summary>
-    public static (Game game, PdfDocument pdf, List<Snippet> snippets) CreateRagScenario()
-    {
-        var game = CreateValidGame();
-        var pdf = CreatePdfDocument(game.Id);
-        var snippets = CreateValidSnippets(pdf.Id);
-
-        return (game, pdf, snippets);
-    }
-
-    /// <summary>
     /// Creates a user with an active session.
     /// </summary>
     public static (User user, Session session) CreateUserWithSession()
@@ -279,19 +195,6 @@ internal static class TestDataFactory
         var admin = CreateAdmin();
         var session = CreateActiveSession(admin.Id);
         return (admin, session);
-    }
-
-    /// <summary>
-    /// Creates a game with an active play session.
-    /// </summary>
-    public static (Game game, GameSession gameSession) CreateGameWithSession(int playerCount = 2)
-    {
-        var game = CreateValidGame();
-        var gameSession = new GameSessionBuilder()
-            .WithGameId(game.Id)
-            .ThatIsStarted()
-            .Build();
-        return (game, gameSession);
     }
 
 }

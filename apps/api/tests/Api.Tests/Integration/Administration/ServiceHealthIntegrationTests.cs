@@ -15,7 +15,7 @@ namespace Api.Tests.Integration.Administration;
 
 /// <summary>
 /// Integration tests for Service Health monitoring with real health check service.
-/// Tests PostgreSQL, Redis, and Qdrant health validation.
+/// Tests PostgreSQL, Redis, and pgvector health validation.
 /// Issue #3697: Epic 1 - Testing & Integration (Phase 2)
 /// </summary>
 [Collection("Integration-GroupD")]

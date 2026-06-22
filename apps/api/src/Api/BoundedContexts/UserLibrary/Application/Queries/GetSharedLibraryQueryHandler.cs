@@ -2,6 +2,7 @@ using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure;
+using Api.Infrastructure.Security;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -42,7 +43,7 @@ internal class GetSharedLibraryQueryHandler : IQueryHandler<GetSharedLibraryQuer
 
         if (shareLink == null)
         {
-            _logger.LogDebug("Share link not found for token: {Token}", query.ShareToken);
+            _logger.LogDebug("Share link not found for token: {Token}", DataMasking.MaskString(query.ShareToken, 8));
             return null;
         }
 

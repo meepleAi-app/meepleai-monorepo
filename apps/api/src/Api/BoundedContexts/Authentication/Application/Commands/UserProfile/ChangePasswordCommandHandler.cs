@@ -15,13 +15,16 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 internal class ChangePasswordCommandHandler : ICommandHandler<ChangePasswordCommand>
 {
     private readonly IUserRepository _userRepository;
+    private readonly ISessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
 
     public ChangePasswordCommandHandler(
         IUserRepository userRepository,
+        ISessionRepository sessionRepository,
         IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
@@ -47,7 +50,29 @@ internal class ChangePasswordCommandHandler : ICommandHandler<ChangePasswordComm
         // Change password (domain method verifies current password)
         user.ChangePassword(command.CurrentPassword, newPasswordHash);
 
-        // Persist updates
+        // C7: revoke other sessions atomically with the password update so a
+        // stolen cookie can't outlive the credential it was bound to. The
+        // current session is preserved by default — the user shouldn't be
+        // logged out of the device they just changed the password from.
+        // IncludeCurrentInRevoke=true (or a missing CurrentSessionId, e.g.
+        // service-driven password reset) falls back to revoke-everything.
+        if (command.IncludeCurrentInRevoke || command.CurrentSessionId is null)
+        {
+            await _sessionRepository
+                .RevokeAllUserSessionsAsync(command.UserId, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        else
+        {
+            await _sessionRepository
+                .RevokeAllUserSessionsExceptAsync(
+                    command.UserId,
+                    command.CurrentSessionId.Value,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        // Persist updates (user + session revocations in the same UoW commit)
         await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }

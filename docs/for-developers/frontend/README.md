@@ -325,12 +325,12 @@ try {
 
 ## Related Documentation
 
-- [API Documentation](../api/README.md)
+- **API Documentation** _(planned)_
 - [Testing Guide](../testing/README.md)
-- [User Flows](../11-user-flows/README.md)
-- [Development Guide](../development/README.md)
+- **User Flows** _(planned)_
+- **Development Guide** _(planned)_
 - [V2 Migration Component Matrix](./v2-migration-matrix.md) — 46 SP4 wave 1+2 component stubs, paths, routes, acceptance criteria
-- [Bundle-size Budget Enforcement](./bundle-size-budget.md) — per-route First Load JS gate
+- **Bundle-size Budget Enforcement** _(planned)_ — per-route First Load JS gate
 
 ---
 

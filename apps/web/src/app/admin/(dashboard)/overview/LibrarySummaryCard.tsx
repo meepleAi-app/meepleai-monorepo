@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { Library } from 'lucide-react';
@@ -33,7 +34,7 @@ function formatItalianDate(dateStr: string): string {
 
 export function LibrarySummaryCard({ totalGames, recentGames }: LibrarySummaryCardProps) {
   return (
-    <div className="rounded-2xl border border-slate-200/60 dark:border-zinc-700/40 bg-white/70 dark:bg-zinc-800/50 backdrop-blur-sm p-5 flex flex-col gap-4">
+    <div className="rounded-2xl border border-border/60 dark:border-zinc-700/40 bg-card/70 dark:bg-zinc-800/50 backdrop-blur-sm p-5 flex flex-col gap-4">
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100/80 dark:bg-orange-500/20">
@@ -78,7 +79,7 @@ export function LibrarySummaryCard({ totalGames, recentGames }: LibrarySummaryCa
       </div>
 
       {/* Footer link */}
-      <div className="mt-auto pt-2 border-t border-slate-200/60 dark:border-zinc-700/40">
+      <div className="mt-auto pt-2 border-t border-border/60 dark:border-zinc-700/40">
         <Link
           href="/admin/shared-games/all"
           className="text-sm text-orange-600 dark:text-orange-400 hover:underline font-medium"

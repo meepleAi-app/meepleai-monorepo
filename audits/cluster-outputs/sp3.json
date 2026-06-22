@@ -1,0 +1,146 @@
+[
+  {
+    "mockup_path": "admin-mockups/design_files/sp3-shared-games.html",
+    "design_intent": "current",
+    "confidence": 0.85,
+    "reasoning": "Public catalog index for /shared-games route (exists at apps/web/src/app/(public)/shared-games/page.tsx). No OBSOLETE/REFACTOR-FORWARD/Diverge/Pre-Stage markers. Mockup describes current vetrina pattern: hero + filter bar sticky + grid MeepleCard entity=game variant=grid + ContributorsSidebar, references existing primitives (Banner, MeepleCard, entity-color system).",
+    "sub_components": ["SharedGamesFilters", "ContributorsSidebar", "MeepleCard grid variant", "Banner", "HeroPattern"],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp3-shared-games.jsx",
+    "design_intent": "current",
+    "confidence": 0.85,
+    "reasoning": "JSX twin of sp3-shared-games.html. Header comment 'Route target: /shared-games' (live route). EXTRA_GAMES dataset extends DS.games with realistic Italian community catalog entries. No design markers indicating forward-refactor or obsolescence.",
+    "sub_components": ["buildPublicGames", "SharedGamesFilters", "ContributorsSidebar", "MeepleCard grid"],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp3-shared-game-detail.html",
+    "design_intent": "current",
+    "confidence": 0.9,
+    "reasoning": "Detail page for /shared-games/[id] route. MOCKUPS_INDEX maps to 'Wave A.3, PR #600/605/612/630' — shipped wave references. ConnectionBar described as 'riproduzione 1:1 dal componente prod PR #549/#552'. No OBSOLETE/REFACTOR-FORWARD markers.",
+    "sub_components": ["ConnectionBar", "ToolkitPublicListItem", "AgentPublicListItem", "KBPublicDocItem", "ContributorsStrip", "Tabs"],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp3-shared-game-detail.jsx",
+    "design_intent": "current",
+    "confidence": 0.9,
+    "reasoning": "JSX twin of sp3-shared-game-detail.html. Header confirms 'riproduzione 1:1 dal componente prod PR #549/#552' for ConnectionBar — production-aligned reproduction. PUB_TOOLKITS/PUB_AGENTS/PUB_KBS datasets follow shipped catalog data model.",
+    "sub_components": ["ConnectionBar", "Tabs", "PUB_TOOLKITS", "PUB_AGENTS", "PUB_KBS", "ContributorsStrip"],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp3-library-public.html",
+    "design_intent": "forward-refactor",
+    "confidence": 0.6,
+    "reasoning": "Comment 'SP3 missing #8 /library (public variant, non-loggato) ULTIMO OBBLIGATORIO SP3' — explicitly labeled 'missing' design slot needing implementation. Maps per MOCKUPS_INDEX to /shared-games (variant) + /library/shared/[token]. Public marketing-style 'library della community' design (hero + featured carousel + trending games + category stats) does NOT match the shipped /library route. The mockup describes a distinct community showcase concept not yet shipped. NOT 'forward-refactor-obsolete' because the public showcase concept remains active (distinct from auth /games hub).",
+    "sub_components": ["HeroGradient", "CommunityStatsRow", "FeaturedGamesCarousel", "MeepleCard hero variant", "EntityChip", "TRENDING_GAMES", "CATEGORIES"],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp3-library-public.jsx",
+    "design_intent": "forward-refactor",
+    "confidence": 0.6,
+    "reasoning": "JSX twin of sp3-library-public.html. Header 'ULTIMO OBBLIGATORIO SP3 — Componenti v2 nuovi: CommunityStatsRow, FeaturedGamesCarousel' — both new v2 compositions not yet implemented in codebase. Public community showcase concept distinct from sp4 authenticated hub. Design ambitions exceed shipped scope.",
+    "sub_components": ["HeroGradient", "CommunityStatsRow", "FeaturedGamesCarousel", "FEATURED_GAMES", "TRENDING_GAMES", "CATEGORIES"],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp3-legal.html",
+    "design_intent": "current",
+    "confidence": 0.85,
+    "reasoning": "Comment 'Legal pages template, Route: /terms (riusabile per /privacy /cookies), Template UNICO'. All target routes (/legal, /terms, /privacy, /cookies, /cookie-settings) exist. Template-unico approach is standard convention. No forward-refactor markers.",
+    "sub_components": ["LegalPageShell", "LegalTOC", "TERMS_DOC content sections"],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp3-legal.jsx",
+    "design_intent": "current",
+    "confidence": 0.85,
+    "reasoning": "JSX twin of sp3-legal.html. v2-new components are scoped extensions for a stable, template-driven concept. Placeholder content with versioned doc ('versione 2.4.0', 'updated 26 aprile 2026') indicates active maintenance, not redesign.",
+    "sub_components": ["LegalPageShell", "LegalTOC", "scroll-spy", "TERMS_DOC"],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp3-join.html",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "Route /join exists. Public waitlist page concept aligns with shipped invite-only registration. Riusa AuthCard/InputField/PwdInput/SuccessCard (shipped SP1 primitives). No forward-refactor/obsolete markers.",
+    "sub_components": ["AuthCard", "InputField", "PwdInput", "SuccessCard", "GamePreferenceSelect", "AlphaPill", "BrandMark"],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp3-join.jsx",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "JSX twin of sp3-join.html. Header 'Route target: /join. Riusa AuthCard/InputField/PwdInput/SuccessCard pattern; introduce GamePreferenceSelect' — explicit reuse of shipped SP1 primitives plus one new compositional element. 5 stati reflect standard form-with-states semantics.",
+    "sub_components": ["BrandMark", "AlphaPill", "GamePreferenceSelect", "TOP_GAMES", "ALPHA_FEATURES"],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp3-how-it-works.html",
+    "design_intent": "current",
+    "confidence": 0.85,
+    "reasoning": "Route /how-it-works exists. Comment 'Riusa HeroGradient (public.jsx pub-hero pattern) + EntityChip; Nuovo v2: HowItWorksStep' — explicit reuse of existing patterns + one scoped new component. Educational 4-step page.",
+    "sub_components": ["HeroGradient", "EntityChip", "HowItWorksStep"],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp3-how-it-works.jsx",
+    "design_intent": "current",
+    "confidence": 0.85,
+    "reasoning": "JSX twin. Reaffirms 'Route: /how-it-works' + 'Pagina educativa statica — nessuna variante dinamica per stato'. Riuso 1:1 di HeroGradient da public.jsx (shipped pattern).",
+    "sub_components": ["HeroGradient", "EntityChip", "HowItWorksStep", "ENTITIES"],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp3-faq-enhanced.html",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "Route /faq exists. Comment 'FAQ Enhanced, Route: /faq (replaces existing static FAQ from PR #553)' — explicit upgrade-in-place from previously shipped static FAQ. The enhancement (search + categorie tab pills + quick answers + accordion) is iterative on shipped concept.",
+    "sub_components": ["FAQ search", "category tab pills sticky", "quick answers cards", "Accordion clone Radix"],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp3-faq-enhanced.jsx",
+    "design_intent": "current",
+    "confidence": 0.8,
+    "reasoning": "JSX twin. Header 'replaces existing static FAQ from PR #553' — explicit upgrade path from shipped FAQ. FAQ_CATEGORIES, FAQS dataset, mark highlighting, single-open accordion are all conventional patterns.",
+    "sub_components": ["FAQ_CATEGORIES", "FAQS dataset", "category tab pills", "Accordion (Radix clone)", "search highlight mark"],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp3-accept-invite.html",
+    "design_intent": "current",
+    "confidence": 0.85,
+    "reasoning": "Route /accept-invite/[token] exists. Game-night invite flow with 7 stati aligns with shipped GameNightEvent/RSVP semantics. Riusi AuthCard/InputField/PrimaryBtn (shipped SP1), SuccessCard pattern extended.",
+    "sub_components": ["InviteHostCard", "SessionMetaGrid", "DeclinedShell", "AuthCard", "InputField", "PrimaryBtn", "SuccessCard"],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  },
+  {
+    "mockup_path": "admin-mockups/design_files/sp3-accept-invite.jsx",
+    "design_intent": "current",
+    "confidence": 0.85,
+    "reasoning": "JSX twin. Header confirms 'Route target: /accept-invite/[token]', 7 stati for invite lifecycle. Riusi explicit AuthCard/InputField/PrimaryBtn from SP1, SuccessCard pattern, Banner, MeepleCardGame compact. Mock data uses DS.players + DS.games (shipped seed).",
+    "sub_components": ["InviteHostCard", "SessionMetaGrid", "DeclinedShell", "INVITE mock", "ROSTER", "HOST", "GAME"],
+    "pair_disagreement": false,
+    "suggested_tracking_issue": null
+  }
+]

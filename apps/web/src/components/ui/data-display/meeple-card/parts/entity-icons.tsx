@@ -29,6 +29,8 @@ export const entityIcons: Record<MeepleEntityType, LucideIcon> = {
   event: Calendar,
   toolkit: Briefcase,
   tool: Wrench,
+  // #1929 WP2: GameNight-specific entity, reuses Calendar (event palette)
+  gameNightEvent: Calendar,
 };
 
 export const ENTITY_ICON_STROKE = 1.75;

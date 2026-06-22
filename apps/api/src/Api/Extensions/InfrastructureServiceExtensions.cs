@@ -1,3 +1,4 @@
+using Api.Infrastructure.DomainEventOutbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Hosting;
@@ -5,11 +6,20 @@ using StackExchange.Redis;
 using Polly;
 using Polly.CircuitBreaker;
 using Polly.Extensions.Http;
+using Api.BoundedContexts.Administration.Application.Behaviors;
+using Api.BoundedContexts.Administration.Domain.Repositories;
+using Api.BoundedContexts.Administration.Domain.Services;
+using Api.BoundedContexts.Administration.Infrastructure.BackgroundJobs;
+using Api.BoundedContexts.Administration.Infrastructure.Repositories;
 using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.BackgroundTasks;
 using Api.Infrastructure.Http;
+using Api.Infrastructure.EventBroadcasting;
+using Api.Infrastructure.Persistence;
 using Api.Services;
+using Api.Services.Providers.Probe;
+using Api.Services.Providers.Quota;
 using Api.Configuration;
 using Api.Models;
 using Api.SharedKernel.Application.Services;
@@ -25,6 +35,7 @@ internal static class InfrastructureServiceExtensions
         IConfiguration configuration,
         IWebHostEnvironment environment)
     {
+        services.AddEventBroadcasting(); // F4.1 #1718: SSE event broadcasting (Task 1.6)
         services.AddDatabaseServices(configuration, environment);
         services.AddCachingServices(configuration);
         services.AddHttpClients(configuration);
@@ -36,6 +47,65 @@ internal static class InfrastructureServiceExtensions
         services.Configure<HostOptions>(options =>
             options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore);
         services.AddStorageServices(); // Issue #2732: Storage services
+
+        // Issue #936: Provider token probe (G1+G3).
+        // Single OpenAiCompatibleProbeExecutor handles any /v1/models endpoint
+        // (OpenRouter, DeepSeek, OpenAI cloud, Ollama local, LocalAI, vLLM, …).
+#pragma warning disable S1075 // URIs should not be hardcoded - Default fallback URLs for provider probe targets
+        const string OpenRouterDefaultBaseUrl = "https://openrouter.ai/api/v1";
+        const string DeepSeekDefaultBaseUrl = "https://api.deepseek.com/v1";
+        const string OllamaLocalDefaultBaseUrl = "http://localhost:11434/v1";
+#pragma warning restore S1075
+
+        services.AddSingleton<IProviderProbeExecutor>(sp => new OpenAiCompatibleProbeExecutor(
+            sp.GetRequiredService<IHttpClientFactory>(),
+            sp.GetRequiredService<ILogger<OpenAiCompatibleProbeExecutor>>(),
+            providerName: "openrouter",
+            baseUrl: sp.GetRequiredService<IConfiguration>()["Providers:OpenRouter:BaseUrl"]
+                ?? OpenRouterDefaultBaseUrl,
+            apiKeyEnvVar: "OPENROUTER_API_KEY"));
+
+        services.AddSingleton<IProviderProbeExecutor>(sp => new OpenAiCompatibleProbeExecutor(
+            sp.GetRequiredService<IHttpClientFactory>(),
+            sp.GetRequiredService<ILogger<OpenAiCompatibleProbeExecutor>>(),
+            providerName: "deepseek",
+            baseUrl: sp.GetRequiredService<IConfiguration>()["Providers:DeepSeek:BaseUrl"]
+                ?? DeepSeekDefaultBaseUrl,
+            apiKeyEnvVar: "DEEPSEEK_API_KEY"));
+
+        services.AddSingleton<IProviderProbeExecutor>(sp => new OpenAiCompatibleProbeExecutor(
+            sp.GetRequiredService<IHttpClientFactory>(),
+            sp.GetRequiredService<ILogger<OpenAiCompatibleProbeExecutor>>(),
+            providerName: "ollama-local",
+            baseUrl: sp.GetRequiredService<IConfiguration>()["Providers:OllamaLocal:BaseUrl"]
+                ?? OllamaLocalDefaultBaseUrl,
+            apiKeyEnvVar: null));
+
+        services.AddSingleton<IProviderProbeExecutorFactory, ProviderProbeExecutorFactory>();
+        services.AddScoped<IProviderProbeAuditRepository, ProviderProbeAuditRepository>();
+        services.AddScoped<IProviderProbeService, ProviderProbeService>();
+
+        // Issue #1859: Provider key rotation infrastructure.
+        // - Repository: Scoped (depends on Scoped DbContext).
+        // - Resolver: Scoped — depends on Scoped repository + Singleton IMemoryCache.
+        //   The cache is Singleton so cross-scope cache hits work; the resolver itself can be
+        //   per-request without re-querying DB on every call.
+        // - Invalidator: Singleton — wraps Singleton IConnectionMultiplexer, stateless.
+        // - Subscriber: HostedService — opens Redis subscription at startup, uses
+        //   IServiceScopeFactory to resolve the Scoped resolver per invalidation message.
+        services.AddScoped<IProviderCredentialRepository, ProviderCredentialRepository>();
+        services.AddScoped<IProviderCredentialResolver, ProviderCredentialResolver>();
+        services.AddSingleton<IProviderCacheInvalidator, RedisProviderCacheInvalidator>();
+        services.AddHostedService<Api.BoundedContexts.Administration.Infrastructure.HostedServices.ProviderCacheInvalidationSubscriber>();
+
+        // Issue #936 (G2): Provider quota providers — OpenRouter + DeepSeek only.
+        services.AddSingleton<IProviderQuotaProvider, OpenRouterQuotaProvider>();
+        services.AddSingleton<IProviderQuotaProvider, DeepSeekQuotaProvider>();
+        services.AddSingleton<IProviderQuotaProviderFactory, ProviderQuotaProviderFactory>();
+        services.AddScoped<IProviderQuotaService, ProviderQuotaService>();
+
+        // Issue #985 (G4): static metrics registrar wired with DI-resolved IProviderQuotaService at startup.
+        services.AddHostedService<Api.Observability.ProviderQuotaMetricsHostedService>();
 
         return services;
     }
@@ -70,8 +140,17 @@ internal static class InfrastructureServiceExtensions
                 ?? configuration.GetConnectionString("Postgres")
                 ?? throw new InvalidOperationException("No PostgreSQL connection string configured");
 
+            // SP5 Admin Security S1 T3: register the audit snapshot sink + interceptor.
+            // Scoped lifetime aligns with the HTTP request lifecycle — one sink per request ensures
+            // snapshots captured by AuditingSaveChangesInterceptor are drained by AuditLoggingBehavior
+            // for the same request without cross-request bleed.
+            services.AddScoped<ScopedAuditSnapshotSink>();
+            services.AddScoped<IAuditSnapshotSink>(sp => sp.GetRequiredService<ScopedAuditSnapshotSink>());
+            services.AddScoped<AuditingSaveChangesInterceptor>();
+
             // PERF-09: Optimize Postgres connection pooling for better throughput
-            services.AddDbContext<MeepleAiDbContext>(options =>
+            // Changed from (options =>) to (sp, options =>) to inject the interceptor.
+            services.AddDbContext<MeepleAiDbContext>((sp, options) =>
             {
                 options.UseNpgsql(connectionString, npgsqlOptions =>
                 {
@@ -97,11 +176,81 @@ internal static class InfrastructureServiceExtensions
 
                 // Query behavior
                 options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking); // PERF-06: Default to no-tracking
+
+                // SP5 Admin Security S1 T3: attach the audit interceptor so every SaveChanges
+                // during an [AuditableAction] command captures entity snapshots into the sink.
+                // F4.1 #1718 Task 1.6: also attach the event broadcast interceptor so committed
+                // DomainEventLogEntity rows are fanned out to SSE subscribers.
+                options.AddInterceptors(
+                    sp.GetRequiredService<AuditingSaveChangesInterceptor>(),
+                    sp.GetRequiredService<DomainEventBroadcastInterceptor>());
             });
 
             // Register domain event collector as scoped (per-request lifecycle)
             // This ensures events are collected and dispatched within the same HTTP request
             services.AddScoped<IDomainEventCollector, DomainEventCollector>();
+
+            // Issue #1535 — post-commit event outbox dispatch. The type resolver is a
+            // pure read-only lookup (assembly scan at construction); register as a singleton
+            // so the dictionaries are built once at app startup, not per request.
+            services.AddSingleton<IDomainEventTypeResolver, DomainEventTypeResolver>();
+
+            // Bind DomainEventOutboxOptions from the "DomainEventOutbox" configuration section.
+            // MeepleAiDbContext picks up IOptions<DomainEventOutboxOptions> to route dispatch
+            // based on Mode (OutboxOnly default post-T9 cutover; Hybrid documented rollback).
+            //
+            // ValidateOnStart fails fast at app startup if an operator misconfigures the
+            // outbox knobs into a degenerate state (e.g. MaxAttempts=0 → every transient
+            // failure becomes terminal; InitialBackoffMs=0 → tight-loop retry storm).
+            services.AddOptions<DomainEventOutboxOptions>()
+                .Bind(configuration.GetSection(DomainEventOutboxOptions.SectionName))
+                .Validate(
+                    o => o.MaxAttempts >= 1,
+                    "DomainEventOutbox.MaxAttempts must be >= 1 (a value of 0 would terminate every event on first dispatch failure).")
+                .Validate(
+                    o => o.InitialBackoffMs > 0,
+                    "DomainEventOutbox.InitialBackoffMs must be > 0 (a value of 0 produces zero-second backoff and a tight-loop retry storm).")
+                .Validate(
+                    o => o.MaxBackoffSeconds > 0,
+                    "DomainEventOutbox.MaxBackoffSeconds must be > 0 (a value of 0 caps every retry at zero seconds, identical to InitialBackoffMs=0).")
+                .Validate(
+                    o => o.BatchSize >= 1 && o.BatchSize <= 10_000,
+                    "DomainEventOutbox.BatchSize must be in [1, 10000] — outside this range the poll cycle is either no-op or risks excessive memory pressure.")
+                .Validate(
+                    o => o.PollIntervalSeconds >= 1,
+                    "DomainEventOutbox.PollIntervalSeconds must be >= 1 (sub-second polls would saturate the DB without observable throughput gain).")
+                .Validate(
+                    o => o.SentRetentionDays >= 1,
+                    "DomainEventOutbox.SentRetentionDays must be >= 1 (a value of 0 would purge every Sent row on the next retention tick).")
+                .Validate(
+                    o => o.RetentionIntervalHours >= 1,
+                    "DomainEventOutbox.RetentionIntervalHours must be >= 1 (sub-hour polls would saturate the DB without retention benefit).")
+                .Validate(
+                    o => o.RetentionBatchSize >= 1 && o.RetentionBatchSize <= 100_000,
+                    "DomainEventOutbox.RetentionBatchSize must be in [1, 100000] — outside this range the chunked DELETE either becomes a no-op or blocks writes for too long.")
+                .ValidateOnStart();
+
+            // Issue #1535 T4 — post-commit event outbox processor.
+            // Singleton processor (no per-request state); a thin hosted-service wrapper
+            // resolves it so integration tests can also drive RunOnceAsync explicitly without
+            // standing up the BackgroundService loop.
+            services.AddSingleton<Api.Infrastructure.BackgroundJobs.DomainEventOutboxProcessor>();
+            services.AddHostedService(sp =>
+                sp.GetRequiredService<Api.Infrastructure.BackgroundJobs.DomainEventOutboxProcessor>());
+
+            // Issue #1966 — TTL cleanup BackgroundService for Sent outbox rows. Polls
+            // hourly by default; loops chunked DELETE until the eligible set is empty.
+            // Singleton + factory-registered HostedService mirrors the processor pattern
+            // so integration tests can drive RunOnceAsync deterministically.
+            services.AddSingleton<Api.Infrastructure.BackgroundJobs.DomainEventOutboxRetentionService>();
+            services.AddHostedService(sp =>
+                sp.GetRequiredService<Api.Infrastructure.BackgroundJobs.DomainEventOutboxRetentionService>());
+
+            // Issue #1535 T6 — health tracker is registered UNGATED in
+            // ApplicationServiceExtensions so HTTP integration tests (which skip
+            // this AddDatabaseServices branch via environment.IsEnvironment("Testing"))
+            // still get a tracker to satisfy Program.cs's RegisterDomainEventOutboxGauges
+            // resolve call. Mirrors the IAuditOutboxHealthTracker registration site.
         }
 
         return services;
@@ -201,6 +350,13 @@ internal static class InfrastructureServiceExtensions
         // Required for ILlmTierRoutingService and other singleton services that depend on caching
         services.AddSingleton<IHybridCacheService, HybridCacheService>();
 
+        // ADR-062: Cross-replica L1 cache invalidation subscriber
+        // Subscribes to Redis Pub/Sub channel "meepleai:cache-invalidate:tag" on startup so
+        // that any tag-scoped invalidation broadcast by another replica evicts this replica's
+        // L1 entries within sub-second latency. Required for multi-replica deploys; on a
+        // single-replica setup it remains harmless (only self-broadcast messages received).
+        services.AddHostedService<HybridCacheInvalidationSubscriber>();
+
         // AI-10: Cache optimization services
         services.Configure<CacheOptimizationConfiguration>(
             configuration.GetSection("CacheOptimization"));
@@ -284,8 +440,6 @@ internal static class InfrastructureServiceExtensions
             MaxConnectionsPerServer = 10,
             EnableMultipleHttp2Connections = true
         });
-
-        // Qdrant HttpClient removed — pgvector is the sole vector store (no external Qdrant needed)
 
         // ADR-016 Phase 2: HuggingFace embedding client
         services.AddHttpClient("HuggingFace", client =>
@@ -388,6 +542,13 @@ internal static class InfrastructureServiceExtensions
         // Configure BGG settings from appsettings.json
         services.Configure<BggConfiguration>(configuration.GetSection("Bgg"));
 
+        // Issue #936: Provider probe HttpClient — soft 10s timeout; per-executor enforces hard 5s via CancellationTokenSource
+        services.AddHttpClient("provider-probe", client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(10);
+            client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI-ProviderProbe/1.0");
+        });
+
         return services;
     }
 
@@ -436,12 +597,46 @@ internal static class InfrastructureServiceExtensions
         services.AddScoped<Infrastructure.Services.IBggImportQueueService, Infrastructure.Services.BggImportQueueService>();
         services.AddHostedService<Infrastructure.BackgroundServices.BggImportQueueBackgroundService>();
 
+        // #1861: Catalog sync cron service (opt-in via CatalogSyncCron:Enabled)
+        services.AddHostedService<Infrastructure.BackgroundServices.CatalogSyncCronService>();
+
         // Admin Invitation Flow: background services for invitation lifecycle
         services.AddHostedService<Infrastructure.BackgroundServices.InvitationCleanupService>();
         services.AddHostedService<Infrastructure.BackgroundServices.GameSuggestionProcessorService>();
 
         // Issue #3695: Daily database metrics snapshots for growth tracking
         services.AddHostedService<Infrastructure.BackgroundServices.DatabaseMetricsSnapshotService>();
+
+        // R6 (auth security fixes): periodic cleanup of expired / used temp
+        // 2FA sessions. Without this the temp_sessions table grows
+        // monotonically and slows the C6 atomic-update path over time.
+        services.AddHostedService<Infrastructure.BackgroundServices.CleanupExpiredTempSessionsService>();
+
+        // I10 (auth security fixes): security audit logger writes to the
+        // dedicated security_audit_logs table. Resolves a fresh DbContext
+        // from a child scope on each LogAsync call so audit rows do NOT
+        // participate in the caller's UnitOfWork transaction (a rollback
+        // there would otherwise silently lose the audit row).
+        services.AddScoped<
+            BoundedContexts.SecurityAudit.Application.Services.IAuditLogger,
+            BoundedContexts.SecurityAudit.Infrastructure.Services.AuditLogger>();
+
+        // I5 (auth security fixes): email outbox + drainer. The service is
+        // scoped (per-request DbContext); the drainer is hosted (singleton
+        // via BackgroundService and uses IServiceScopeFactory to spin up a
+        // scope on each tick).
+        services.AddScoped<
+            BoundedContexts.UserNotifications.Application.Services.IEmailOutboxService,
+            BoundedContexts.UserNotifications.Infrastructure.Services.EmailOutboxService>();
+        services.AddHostedService<Infrastructure.BackgroundServices.EmailOutboxBackgroundService>();
+
+        // Issue #1314 PR 2: storage-layout migration outbox + drainer. Same
+        // pattern as email outbox above (scoped service + hosted drainer).
+        // The drainer no-ops when StorageLayout:MigrationEnabled=false.
+        services.AddScoped<
+            BoundedContexts.DocumentProcessing.Application.Services.IStorageOperationOutboxService,
+            BoundedContexts.DocumentProcessing.Infrastructure.Services.StorageOperationOutboxService>();
+        services.AddHostedService<Infrastructure.BackgroundServices.StorageOperationOutboxBackgroundService>();
 
         // Issue #936: Infisical secrets management client (POC)
         services.AddHttpClient("Infisical", client =>
@@ -453,6 +648,9 @@ internal static class InfrastructureServiceExtensions
             policy.WaitAndRetryAsync(2, retryAttempt =>
                 TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))))
         .AddServiceCallLogging("Infisical");
+
+        // Issue #936: Probe audit retention job (Task 14) — runs daily, default 365-day window
+        services.AddHostedService<ProbeAuditRetentionJob>();
 
         // ISSUE-3499: Orchestration service client for Tutor agent
         services.AddHttpClient("OrchestrationService", client =>

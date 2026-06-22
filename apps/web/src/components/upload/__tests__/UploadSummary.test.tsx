@@ -154,9 +154,9 @@ describe('UploadSummary - Issue #2308 Phase 2', () => {
       <UploadSummary stats={statsWithCancelled} onClose={vi.fn()} onClearAll={vi.fn()} />
     );
 
-    // Assert - Cancelled card visible
+    // Assert - Cancelled card visible (post DS-15: text-gray-600 → text-muted-foreground)
     expect(
-      screen.getByText('2', { selector: 'div.text-2xl.font-bold.text-gray-600' })
+      screen.getByText('2', { selector: 'div.text-2xl.font-bold.text-muted-foreground' })
     ).toBeInTheDocument();
     expect(screen.getByText('Cancelled')).toBeInTheDocument();
 

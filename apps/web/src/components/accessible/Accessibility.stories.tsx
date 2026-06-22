@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 /**
  * Accessibility Guide - Storybook Documentation
  * Issue #2247 Task 5: Storybook accessibility documentation
@@ -302,24 +303,24 @@ export const ColorContrastExamples: Story = {
       <h3 className="text-lg font-semibold">Color Contrast Examples</h3>
 
       <div className="space-y-4">
-        <div className="p-4 bg-slate-950 rounded">
+        <div className="p-4 bg-card rounded">
           <p className="text-slate-50 mb-2">
-            ✅ <strong>PASS</strong>: text-slate-50 on bg-slate-950 (15.89:1 ratio)
+            ✅ <strong>PASS</strong>: text-slate-50 on bg-card (15.89:1 ratio)
           </p>
           <p className="text-slate-200">
-            ✅ <strong>PASS</strong>: text-slate-200 on bg-slate-950 (12.89:1 ratio)
+            ✅ <strong>PASS</strong>: text-slate-200 on bg-card (12.89:1 ratio)
           </p>
-          <p className="text-slate-400">
-            ✅ <strong>PASS</strong>: text-slate-400 on bg-slate-950 (6.12:1 ratio)
+          <p className="text-muted-foreground">
+            ✅ <strong>PASS</strong>: text-muted-foreground on bg-card (6.12:1 ratio)
           </p>
         </div>
 
-        <div className="p-4 bg-white border rounded">
-          <p className="text-slate-900 mb-2">
-            ✅ <strong>PASS</strong>: text-slate-900 on white (16.2:1 ratio)
+        <div className="p-4 bg-card border rounded">
+          <p className="text-foreground mb-2">
+            ✅ <strong>PASS</strong>: text-foreground on white (16.2:1 ratio)
           </p>
-          <p className="text-slate-700">
-            ✅ <strong>PASS</strong>: text-slate-700 on white (10.8:1 ratio)
+          <p className="text-foreground">
+            ✅ <strong>PASS</strong>: text-foreground on white (10.8:1 ratio)
           </p>
         </div>
 

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -13,13 +14,16 @@ internal sealed class StartTestingAgentDefinitionCommandHandler
     : IRequestHandler<StartTestingAgentDefinitionCommand>
 {
     private readonly IAgentDefinitionRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<StartTestingAgentDefinitionCommandHandler> _logger;
 
     public StartTestingAgentDefinitionCommandHandler(
         IAgentDefinitionRepository repository,
+        IUnitOfWork unitOfWork,
         ILogger<StartTestingAgentDefinitionCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -37,6 +41,7 @@ internal sealed class StartTestingAgentDefinitionCommandHandler
 
         await _repository.UpdateAsync(agentDefinition, cancellationToken).ConfigureAwait(false);
 
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         _logger.LogInformation(
             "AgentDefinition {Id} transitioned to Testing status",
             request.Id);

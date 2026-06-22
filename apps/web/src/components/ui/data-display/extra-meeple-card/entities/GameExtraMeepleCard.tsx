@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 'use client';
 
 /**
@@ -106,7 +107,7 @@ export const GameExtraMeepleCard = React.memo(function GameExtraMeepleCard({
     <div
       className={cn(
         'flex w-[600px] flex-col rounded-2xl overflow-hidden',
-        'bg-white/70 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-white/20',
+        'bg-card/70 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-border',
         'max-md:w-full',
         className
       )}
@@ -132,7 +133,7 @@ export const GameExtraMeepleCard = React.memo(function GameExtraMeepleCard({
         onValueChange={v => setActiveTab(v as GameTab)}
         className="flex flex-1 flex-col"
       >
-        <TabsList className="mx-4 mt-3 h-10 w-auto justify-start gap-1 bg-slate-100/80 rounded-lg p-1">
+        <TabsList className="mx-4 mt-3 h-10 w-auto justify-start gap-1 bg-muted/80 rounded-lg p-1">
           <EntityTabTrigger
             value="details"
             icon={Gamepad2}
@@ -198,7 +199,7 @@ export const GameExtraMeepleCard = React.memo(function GameExtraMeepleCard({
                 )}
               </div>
               {data.description && (
-                <p className="font-nunito text-xs text-slate-600 leading-relaxed">
+                <p className="font-nunito text-xs text-muted-foreground leading-relaxed">
                   {data.description}
                 </p>
               )}
@@ -220,7 +221,7 @@ export const GameExtraMeepleCard = React.memo(function GameExtraMeepleCard({
                 icon={HelpCircle}
                 variant="game"
               />
-              <p className="font-nunito text-xs text-slate-400 text-center py-4">
+              <p className="font-nunito text-xs text-muted-foreground text-center py-4">
                 Rules and FAQs will be displayed here
               </p>
             </div>
@@ -257,15 +258,15 @@ export const GameExtraMeepleCard = React.memo(function GameExtraMeepleCard({
               <div className="flex flex-col items-center gap-3 py-8 text-center">
                 <FileText className="h-8 w-8 text-slate-300" aria-hidden="true" />
                 <div>
-                  <p className="font-nunito text-sm font-medium text-slate-600">
+                  <p className="font-nunito text-sm font-medium text-muted-foreground">
                     Nessun documento caricato
                   </p>
-                  <p className="font-nunito text-xs text-slate-400 mt-0.5">
+                  <p className="font-nunito text-xs text-muted-foreground mt-0.5">
                     Carica un PDF per creare la Knowledge Base di questo gioco
                   </p>
                 </div>
                 <a
-                  href={`/library/games/${data.id}`}
+                  href={`/library/${data.id}`}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-1.5 font-nunito text-xs font-semibold text-white hover:bg-orange-600 transition-colors"
                   data-testid="game-kb-upload-cta"
                 >
@@ -291,18 +292,18 @@ export const GameExtraMeepleCard = React.memo(function GameExtraMeepleCard({
                     : sortedKbDocs.map(doc => (
                         <div
                           key={doc.id}
-                          className="flex items-center gap-3 rounded-lg border border-slate-200/60 bg-slate-50/50 p-2.5"
+                          className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/50 p-2.5"
                           data-testid={`game-kb-doc-${doc.id}`}
                         >
                           <FileText
-                            className="h-4 w-4 shrink-0 text-slate-400"
+                            className="h-4 w-4 shrink-0 text-muted-foreground"
                             aria-hidden="true"
                           />
                           <div className="flex-1 min-w-0">
-                            <p className="font-nunito text-xs font-medium text-slate-700 truncate">
+                            <p className="font-nunito text-xs font-medium text-foreground truncate">
                               {doc.fileName}
                             </p>
-                            <p className="font-nunito text-[10px] text-slate-400">
+                            <p className="font-nunito text-[10px] text-muted-foreground">
                               {new Date(doc.uploadedAt).toLocaleDateString('it-IT', {
                                 day: '2-digit',
                                 month: '2-digit',
@@ -326,15 +327,15 @@ export const GameExtraMeepleCard = React.memo(function GameExtraMeepleCard({
               <div className="flex flex-col items-center gap-3 py-8 text-center">
                 <Bot className="h-8 w-8 text-slate-300" aria-hidden="true" />
                 <div>
-                  <p className="font-nunito text-sm font-medium text-slate-600">
+                  <p className="font-nunito text-sm font-medium text-muted-foreground">
                     Nessun agente configurato
                   </p>
-                  <p className="font-nunito text-xs text-slate-400 mt-0.5">
+                  <p className="font-nunito text-xs text-muted-foreground mt-0.5">
                     Crea un agente AI per rispondere alle domande su questo gioco
                   </p>
                 </div>
                 <a
-                  href={`/library/games/${data.id}/agent`}
+                  href={`/library/${data.id}/agent`}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-1.5 font-nunito text-xs font-semibold text-white hover:bg-orange-600 transition-colors"
                   data-testid="game-agent-create-cta"
                 >
@@ -376,7 +377,7 @@ function GameAgentCard({ agent, gameId }: { agent: GameAgentPreview; gameId: str
       {/* CTAs */}
       <div className="flex gap-2">
         <a
-          href={agent.id ? `/chat/new?agentId=${agent.id}` : `/library/games/${gameId}/agent`}
+          href={agent.id ? `/chat/new?agentId=${agent.id}` : `/library/${gameId}/agent`}
           className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-orange-500 px-3 py-2 font-nunito text-xs font-semibold text-white hover:bg-orange-600 transition-colors"
           data-testid="game-agent-start-chat"
         >
@@ -384,7 +385,7 @@ function GameAgentCard({ agent, gameId }: { agent: GameAgentPreview; gameId: str
           Avvia Chat
         </a>
         <a
-          href={`/library/games/${gameId}/agent`}
+          href={`/library/${gameId}/agent`}
           className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-orange-200 bg-orange-50/60 px-3 py-2 font-nunito text-xs font-semibold text-orange-700 hover:bg-orange-100 transition-colors"
           data-testid="game-agent-configure"
         >

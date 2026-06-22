@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -106,13 +107,13 @@ public sealed class ConversationMemoryRepositoryIntegrationTests : IAsyncLifetim
         _dbContext!.Users.Add(user);
 
         // Create test game
-        var game = new Api.Infrastructure.Entities.GameEntity
+        var game = new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = "Test Game",
+            Title = "Test Game",
             CreatedAt = DateTime.UtcNow
         };
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
 
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }
@@ -226,7 +227,7 @@ public sealed class ConversationMemoryRepositoryIntegrationTests : IAsyncLifetim
     {
         // Arrange
         var user = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var game = await _dbContext.Games.FirstAsync(TestCancellationToken);
+        var game = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
 
         var memory1 = new ConversationMemory(
             Guid.NewGuid(), Guid.NewGuid(), user.Id, game.Id, "Game-specific", "user",

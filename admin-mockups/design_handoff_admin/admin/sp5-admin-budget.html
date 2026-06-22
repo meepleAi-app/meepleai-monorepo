@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Budget &amp; Cost · MeepleAI Admin</title>
+<!-- C5 · Platform & Operations → 'budget' (NAV_ID non ancora presente in admin-nav.js;
+     verrà aggiunto nel gruppo "Platform & Operations"). -->
+<!-- @v1 CostStackedArea · FeatureCostTable · CostSimulator · BudgetGauge reuse
+     Endpoints: GET /api/v1/admin/business, /admin/budget, /admin/cost-calculator
+                POST /api/v1/admin/budget/limit
+     Role: admin -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+
+<!-- ═══════════════════ INLINED DS (tokens + components + admin-base) ═══════════════════ -->
+<style>
+/* ── tokens.css ─────────────────────────────────────────────────── */
+:root{
+  --c-game:25 95% 45%;--c-player:262 83% 58%;--c-session:240 60% 55%;--c-agent:38 92% 50%;
+  --c-kb:174 60% 40%;--c-chat:220 80% 55%;--c-event:350 89% 60%;--c-toolkit:142 70% 45%;--c-tool:195 80% 50%;
+  --c-success:142 70% 45%;--c-warning:38 92% 50%;--c-danger:350 89% 60%;--c-info:220 80% 55%;
+  --brand:var(--c-game);--brand-fg:hsl(var(--c-game));
+  --f-display:'Quicksand',system-ui,sans-serif;--f-body:'Nunito',system-ui,sans-serif;--f-mono:'JetBrains Mono',ui-monospace,monospace;
+  --fs-xs:11px;--fs-sm:12px;--fs-base:14px;--fs-md:15px;--fs-lg:17px;--fs-xl:20px;--fs-2xl:24px;--fs-3xl:32px;--fs-4xl:40px;
+  --fw-reg:400;--fw-med:500;--fw-semi:600;--fw-bold:700;--fw-ext:800;
+  --lh-tight:1.2;--lh-snug:1.35;--lh-body:1.5;--lh-relax:1.65;
+  --s-0:0;--s-1:4px;--s-2:8px;--s-3:12px;--s-4:16px;--s-5:20px;--s-6:24px;--s-7:32px;--s-8:40px;--s-9:48px;--s-10:64px;
+  --r-xs:4px;--r-sm:6px;--r-md:10px;--r-lg:14px;--r-xl:18px;--r-2xl:24px;--r-pill:9999px;
+  --ease-out:cubic-bezier(.16,1,.3,1);--ease-in-out:cubic-bezier(.65,0,.35,1);--ease-spring:cubic-bezier(.34,1.56,.64,1);
+  --dur-xs:120ms;--dur-sm:180ms;--dur-md:280ms;--dur-lg:400ms;--dur-xl:600ms;
+  --z-base:0;--z-sticky:10;--z-nav:20;--z-overlay:50;--z-drawer:51;--z-modal:60;--z-toast:70;--z-tooltip:80;
+}
+:root,:root[data-theme="light"]{
+  --bg:#f7f3ee;--bg-card:#fff;--bg-muted:#efe6d9;--bg-sunken:#ede2d0;--bg-hover:rgba(180,130,80,.06);
+  --text:#2b1f12;--text-sec:#5a4a38;--text-muted:#9a8870;
+  --border:rgba(180,130,80,.18);--border-light:rgba(180,130,80,.1);--border-strong:rgba(180,130,80,.32);
+  --shadow-xs:0 1px 2px rgba(90,60,20,.06);--shadow-sm:0 2px 8px rgba(90,60,20,.08);--shadow-md:0 4px 16px rgba(90,60,20,.1);
+  --shadow-lg:0 12px 36px rgba(90,60,20,.14);--shadow-drawer:0 -8px 32px rgba(90,60,20,.12);
+  --glass-bg:rgba(255,255,255,.88);--glass-border:rgba(255,255,255,.6);color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#14100a;--bg-card:#1e1710;--bg-muted:#241c13;--bg-sunken:#0f0c08;--bg-hover:rgba(255,200,130,.05);
+  --text:#f0e4d2;--text-sec:#c8b896;--text-muted:#8a7860;
+  --border:rgba(224,180,110,.14);--border-light:rgba(224,180,110,.08);--border-strong:rgba(224,180,110,.28);
+  --shadow-xs:0 1px 2px rgba(0,0,0,.3);--shadow-sm:0 2px 8px rgba(0,0,0,.4);--shadow-md:0 4px 16px rgba(0,0,0,.5);
+  --shadow-lg:0 12px 36px rgba(0,0,0,.6);--shadow-drawer:0 -8px 32px rgba(0,0,0,.5);
+  --glass-bg:rgba(30,22,14,.85);--glass-border:rgba(224,180,110,.14);
+  --c-game:28 95% 58%;--c-player:262 75% 70%;--c-session:235 70% 70%;--c-agent:38 92% 62%;--c-kb:174 60% 55%;
+  --c-chat:218 80% 68%;--c-event:350 85% 70%;--c-toolkit:142 60% 58%;--c-tool:195 75% 62%;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}html,body{margin:0;padding:0}
+body{font-family:var(--f-body);background:var(--bg);color:var(--text);font-size:var(--fs-base);line-height:var(--lh-body);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;transition:background var(--dur-md) var(--ease-out),color var(--dur-md) var(--ease-out)}
+h1,h2,h3,h4,h5,h6{font-family:var(--f-display);font-weight:var(--fw-bold);letter-spacing:-.01em;margin:0;line-height:var(--lh-tight)}
+button{font-family:inherit;cursor:pointer}a{color:inherit;text-decoration:none}
+code,kbd{font-family:var(--f-mono);font-size:.9em}
+.e-game{--e:var(--c-game)}.e-player{--e:var(--c-player)}.e-session{--e:var(--c-session)}.e-agent{--e:var(--c-agent)}
+.e-kb{--e:var(--c-kb)}.e-chat{--e:var(--c-chat)}.e-event{--e:var(--c-event)}.e-toolkit{--e:var(--c-toolkit)}.e-tool{--e:var(--c-tool)}
+.e-fg{color:hsl(var(--e))}.e-bg{background:hsl(var(--e));color:#fff}
+.e-tint{background:hsl(var(--e)/.1);color:hsl(var(--e))}.e-ring{box-shadow:0 0 0 2px hsl(var(--e)/.35)}
+.spark{stroke:currentColor;stroke-width:1.5;fill:none}.spark-fill{fill:currentColor;opacity:.14}
+
+/* ── admin-base.css ─────────────────────────────────────────────── */
+.admin-page{background:var(--bg);color:var(--text);min-height:100vh;font-family:var(--f-body);font-size:var(--fs-sm);line-height:1.5}
+.admin-shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+.admin-nav{background:var(--bg-card);border-right:1px solid var(--border);padding:16px 0;display:flex;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.admin-nav-brand{padding:4px 16px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border-light);margin-bottom:12px}
+.admin-nav-brand-mark{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,hsl(var(--c-game)),hsl(var(--c-event)));color:#fff;display:grid;place-items:center;font-family:var(--f-display);font-weight:900;font-size:14px}
+.admin-nav-brand-name{font-family:var(--f-display);font-weight:800;font-size:14px}
+.admin-nav-brand-tag{font-family:var(--f-mono);font-size:9px;font-weight:700;color:hsl(var(--c-event));text-transform:uppercase;letter-spacing:.08em;padding:2px 6px;border-radius:4px;background:hsl(var(--c-event)/.12);margin-left:auto}
+.admin-nav-group{padding:10px 16px 4px;font-family:var(--f-mono);font-size:9.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}
+.admin-nav-item{display:flex;align-items:center;gap:10px;padding:7px 16px;color:var(--text-sec);font-family:var(--f-display);font-size:13px;font-weight:600;cursor:pointer;border-left:2px solid transparent;text-decoration:none}
+.admin-nav-item:hover{background:var(--bg-muted);color:var(--text)}
+.admin-nav-item.active{background:hsl(var(--c-event)/.08);color:hsl(var(--c-event));border-left-color:hsl(var(--c-event))}
+.admin-nav-item .em{font-size:14px;opacity:.9}
+.admin-nav-item .count{margin-left:auto;font-family:var(--f-mono);font-size:10px;color:var(--text-muted);font-weight:700}
+.admin-nav-foot{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border-light);font-family:var(--f-mono);font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:8px}
+.admin-nav-foot .badge{padding:2px 6px;border-radius:4px;background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit));font-weight:700;font-size:9px;text-transform:uppercase;letter-spacing:.05em}
+.admin-top{background:var(--bg);border-bottom:1px solid var(--border-light);padding:12px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:50;backdrop-filter:blur(12px)}
+.admin-top h1{font-family:var(--f-display);font-size:20px;font-weight:800;margin:0;line-height:1.2}
+.admin-top .crumbs{font-family:var(--f-mono);font-size:11px;color:var(--text-muted);margin-top:2px}
+.admin-top .spacer{flex:1}.admin-top-actions{display:flex;gap:8px;align-items:center}
+.admin-search{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;width:280px;font-size:12px}
+.admin-search input{flex:1;border:0;background:transparent;color:var(--text);font-family:var(--f-body);font-size:12.5px;outline:0}
+.admin-search kbd{padding:1px 5px;border-radius:4px;background:var(--bg-muted);border:1px solid var(--border);font-family:var(--f-mono);font-size:9px;color:var(--text-muted)}
+.btn-admin{padding:6px 12px;border-radius:6px;font-family:var(--f-display);font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--bg-card);color:var(--text);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-admin:hover{background:var(--bg-muted)}
+.btn-admin.primary{background:hsl(var(--c-event));border-color:hsl(var(--c-event));color:#fff;box-shadow:0 2px 6px hsl(var(--c-event)/.3)}
+.btn-admin.primary:hover{filter:brightness(1.08)}
+.btn-admin.danger{background:var(--bg-card);border-color:hsl(var(--c-event)/.5);color:hsl(var(--c-event))}
+.btn-admin.success{background:hsl(var(--c-toolkit));border-color:hsl(var(--c-toolkit));color:#fff}
+.btn-admin.ghost{background:transparent;border-color:transparent}
+.btn-admin.icon{padding:6px;width:28px;height:28px;justify-content:center}
+.btn-admin.sm{padding:3px 8px;font-size:11px}
+.btn-admin kbd{padding:1px 4px;border-radius:3px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);font-family:var(--f-mono);font-size:9px;margin-left:4px}
+.admin-kpi{background:var(--bg-card);border:1px solid var(--border-light);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-height:88px;position:relative}
+.admin-kpi-label{font-family:var(--f-mono);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em}
+.admin-kpi-value{font-family:var(--f-display);font-size:28px;font-weight:800;color:var(--text);line-height:1.1;font-variant-numeric:tabular-nums}
+.admin-kpi-trend{font-family:var(--f-mono);font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:3px}
+.admin-kpi-trend.up{color:hsl(var(--c-toolkit))}.admin-kpi-trend.down{color:hsl(var(--c-event))}.admin-kpi-trend.flat{color:var(--text-muted)}
+.admin-kpi-spark{position:absolute;right:12px;top:12px;width:70px;height:28px;opacity:.85}
+.admin-kpi.e-agent{border-left:3px solid hsl(var(--c-agent))}
+.admin-kpi.e-event{border-left:3px solid hsl(var(--c-event))}
+.admin-kpi.e-toolkit{border-left:3px solid hsl(var(--c-toolkit))}
+.admin-kpi.e-chat{border-left:3px solid hsl(var(--c-chat))}
+.admin-panel{background:var(--bg-card);border:1px solid var(--border-light);border-radius:10px;overflow:hidden}
+.admin-panel-head{padding:10px 14px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:10px;background:var(--bg)}
+.admin-panel-head h3{margin:0;font-family:var(--f-display);font-size:13px;font-weight:800}
+.admin-panel-head .meta{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);margin-left:auto}
+.admin-panel-body{padding:14px}
+.admin-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.admin-table th{text-align:left;padding:8px 12px;font-family:var(--f-mono);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border-light);background:var(--bg);position:sticky;top:0;white-space:nowrap}
+.admin-table td{padding:8px 12px;border-bottom:1px solid var(--border-light);vertical-align:middle}
+.admin-table tr:hover td{background:var(--bg-muted)}
+.status-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-family:var(--f-mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.status-chip::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.status-chip.healthy{background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit))}
+.status-chip.healthy::before{background:hsl(var(--c-toolkit));box-shadow:0 0 0 3px hsl(var(--c-toolkit)/.25)}
+.status-chip.warning{background:hsl(38 90% 56%/.14);color:hsl(38 90% 50%)}
+.status-chip.warning::before{background:hsl(38 90% 50%)}
+.status-chip.danger{background:hsl(var(--c-event)/.12);color:hsl(var(--c-event))}
+.status-chip.danger::before{background:hsl(var(--c-event))}
+.status-chip.muted{background:var(--bg-muted);color:var(--text-muted)}
+.status-chip.muted::before{background:var(--text-muted)}
+.status-chip.info{background:hsl(var(--c-chat)/.12);color:hsl(var(--c-chat))}
+.status-chip.info::before{background:hsl(var(--c-chat))}
+.admin-form-row{display:grid;grid-template-columns:200px 1fr;gap:16px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border-light)}
+.admin-form-row:last-child{border-bottom:0}
+.admin-form-label{font-family:var(--f-display);font-size:12.5px;font-weight:700}
+.admin-form-label .desc{display:block;margin-top:3px;font-family:var(--f-body);font-size:11px;font-weight:400;color:var(--text-muted);line-height:1.4}
+.admin-input,.admin-select,.admin-textarea{width:100%;max-width:360px;padding:6px 10px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;font-family:var(--f-body);font-size:12.5px}
+.admin-input.mono{font-family:var(--f-mono)}
+.alert-banner{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-radius:8px;font-size:12.5px}
+.alert-banner.warning{background:hsl(38 90% 56%/.1);border:1px solid hsl(38 90% 56%/.35);color:var(--text)}
+.alert-banner.danger{background:hsl(var(--c-event)/.08);border:1px solid hsl(var(--c-event)/.35);color:var(--text)}
+.alert-banner.success{background:hsl(var(--c-toolkit)/.08);border:1px solid hsl(var(--c-toolkit)/.3);color:var(--text)}
+.alert-banner .em{font-size:18px;flex-shrink:0}
+.alert-banner .title{font-family:var(--f-display);font-weight:800;margin-bottom:2px;font-size:13px}
+.alert-banner .actions{margin-left:auto;display:flex;gap:6px;align-items:center}
+@media (max-width:880px){
+  .admin-mobile-fallback{display:flex !important;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;text-align:center;gap:16px}
+  .admin-mobile-fallback .em{font-size:56px}
+  .admin-mobile-fallback h2{margin:0;font-family:var(--f-display);font-size:20px}
+  .admin-mobile-fallback p{color:var(--text-sec);max-width:320px;margin:0;line-height:1.5}
+  .admin-shell{display:none}
+}
+.admin-mobile-fallback{display:none}
+.admin-body{padding:20px 24px}
+
+/* ── Page-specific ──────────────────────────────────────────────── */
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.head-cluster{display:inline-flex;align-items:center;gap:10px;margin-left:auto}
+.head-cluster .sep{width:1px;height:14px;background:var(--border-light)}
+.kpi-bar{position:absolute;left:14px;right:14px;bottom:10px;height:4px;border-radius:99px;background:hsl(var(--e)/.12);overflow:hidden}
+.kpi-bar i{position:absolute;left:0;top:0;bottom:0;background:hsl(var(--e));border-radius:99px}
+
+/* ── Cost chart (stacked area, 30 days) ─────────────────────────── */
+.chart-wrap{padding:16px 20px 12px;display:flex;flex-direction:column;gap:8px}
+.chart-frame{position:relative;width:100%;height:260px;background:linear-gradient(180deg, var(--bg-sunken,var(--bg)) 0%, var(--bg) 100%);border:1px solid var(--border-light);border-radius:10px;overflow:hidden}
+.chart-frame svg{display:block;width:100%;height:100%}
+.chart-frame .y-axis{position:absolute;left:0;top:0;bottom:18px;width:46px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;padding:6px 6px 0 0;font-family:var(--f-mono);font-size:9.5px;color:var(--text-muted);pointer-events:none}
+.chart-frame .x-axis{position:absolute;left:46px;right:8px;bottom:0;height:18px;display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:9.5px;color:var(--text-muted);padding-top:2px;pointer-events:none}
+.chart-frame .grid{stroke:hsl(var(--border-strong));stroke-width:.5;opacity:.4;stroke-dasharray:2 4}
+.chart-frame .ann{font-family:var(--f-mono);font-size:9px;fill:var(--text-muted)}
+.chart-frame .budget-line{stroke:hsl(38 90% 50%);stroke-width:1;stroke-dasharray:4 3;fill:none;opacity:.8}
+.chart-frame .budget-lbl{font-family:var(--f-mono);font-size:9.5px;fill:hsl(38 90% 50%);font-weight:700}
+
+.chart-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-top:4px;font-family:var(--f-mono);font-size:11px}
+.chart-legend .item{display:inline-flex;align-items:center;gap:6px;color:var(--text-sec)}
+.chart-legend .item .sw{width:12px;height:12px;border-radius:3px;background:hsl(var(--e))}
+.chart-legend .item .val{color:var(--text);font-weight:700;margin-left:2px}
+.chart-legend .item .pct{color:var(--text-muted);font-weight:500}
+
+/* ── Feature cost table ─────────────────────────────────────────── */
+.feat-cell{display:flex;align-items:center;gap:10px}
+.feat-cell .feat-mark{width:28px;height:28px;border-radius:7px;background:hsl(var(--e)/.12);color:hsl(var(--e));display:grid;place-items:center;font-size:14px;flex-shrink:0;border:1px solid hsl(var(--e)/.25)}
+.feat-cell .feat-info{display:flex;flex-direction:column;min-width:0;line-height:1.2}
+.feat-cell .feat-name{font-family:var(--f-display);font-weight:800;font-size:13px;color:var(--text)}
+.feat-cell .feat-sub{font-family:var(--f-mono);font-size:10px;color:var(--text-muted)}
+.pct-bar{display:flex;align-items:center;gap:8px;justify-content:flex-start}
+.pct-bar .bar{flex:1;height:6px;border-radius:99px;background:hsl(var(--e)/.12);overflow:hidden;position:relative;max-width:160px}
+.pct-bar .bar i{position:absolute;left:0;top:0;bottom:0;background:hsl(var(--e));border-radius:99px}
+.pct-bar .v{font-family:var(--f-mono);font-size:11px;color:var(--text);font-weight:700;min-width:44px;text-align:right;font-variant-numeric:tabular-nums}
+.mini-spark{width:60px;height:20px;display:inline-block;vertical-align:middle}
+.trend-cell{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:11px;font-weight:600}
+.trend-cell.up{color:hsl(var(--c-toolkit))}
+.trend-cell.down{color:hsl(var(--c-event))}
+.trend-cell.flat{color:var(--text-muted)}
+
+/* ── Simulator ──────────────────────────────────────────────────── */
+.sim-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:0;align-items:stretch}
+.sim-form{padding:6px 20px 16px}
+.sim-form .admin-form-row{grid-template-columns:170px 1fr;padding:10px 0}
+.sim-form .admin-input,.sim-form .admin-select{max-width:none;width:100%}
+.sim-form .admin-input.mono.compact{max-width:160px}
+.sim-form .row-inline{display:flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:11px;color:var(--text-muted)}
+.sim-form .row-inline .v{color:var(--text);font-weight:700}
+.sim-form .pricing-readout{font-family:var(--f-mono);font-size:10.5px;color:var(--text-muted);margin-top:6px;padding:6px 10px;background:var(--bg);border:1px solid var(--border-light);border-radius:6px;display:flex;justify-content:space-between;align-items:center}
+.sim-form .pricing-readout .k{color:var(--text-muted)}
+.sim-form .pricing-readout .v{color:var(--text);font-weight:700}
+
+.sim-readout{padding:20px;background:linear-gradient(180deg, hsl(var(--c-agent)/.06) 0%, var(--bg) 100%);border-left:1px solid var(--border-light);display:flex;flex-direction:column;gap:16px;justify-content:center}
+.sim-readout .label{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+.sim-readout .big{font-family:var(--f-display);font-weight:800;font-size:44px;line-height:1;color:hsl(var(--c-agent));font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.sim-readout .big .cur{font-size:24px;color:var(--text-muted);margin-right:2px;font-weight:700}
+.sim-readout .big .unit{font-size:14px;color:var(--text-muted);margin-left:4px;font-weight:600}
+.sim-readout .alt-stack{display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px dashed var(--border-light)}
+.sim-readout .alt{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--f-mono);font-size:12px}
+.sim-readout .alt .k{color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;font-size:10px;font-weight:700}
+.sim-readout .alt .v{color:var(--text);font-weight:700;font-size:14px;font-variant-numeric:tabular-nums}
+.sim-readout .alt .v.diff-down{color:hsl(var(--c-toolkit))}
+.sim-readout .alt .v.diff-up{color:hsl(var(--c-event))}
+.sim-readout .impact{font-family:var(--f-mono);font-size:10.5px;color:var(--text-muted);display:flex;align-items:center;gap:6px;margin-top:4px}
+.sim-readout .impact .dot{width:8px;height:8px;border-radius:50%;background:hsl(var(--c-toolkit))}
+
+/* ── Budget banner gauge inline ─────────────────────────────────── */
+.budget-banner-gauge{flex:1;max-width:280px;display:flex;flex-direction:column;gap:4px}
+.budget-banner-gauge .bar{position:relative;height:10px;border-radius:99px;background:hsl(38 90% 56%/.15);overflow:hidden}
+.budget-banner-gauge .bar i{position:absolute;left:0;top:0;bottom:0;background:hsl(38 90% 50%);border-radius:99px}
+.budget-banner-gauge .ll{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:10px;color:var(--text)}
+.budget-banner-gauge .ll .k{color:var(--text-muted)}
+</style>
+</head>
+<body class="admin-page">
+
+  <div class="admin-mobile-fallback">
+    <div class="em">🖥️</div>
+    <h2>Console solo desktop</h2>
+    <p>La console admin è ottimizzata per schermi ≥ 880px. Aprila da desktop.</p>
+  </div>
+
+  <div class="admin-shell">
+    <div data-admin-nav-mount></div>
+
+    <main>
+      <header class="admin-top">
+        <div>
+          <h1>Budget &amp; Cost</h1>
+          <div class="crumbs">Admin › Platform &amp; Operations › Budget · maggio 2026 · aggiornato 14:23:08</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="admin-top-actions">
+          <div class="admin-search"><span>🔍</span><input placeholder="Cerca feature, provider…"/><kbd>⌘K</kbd></div>
+          <select class="admin-select" style="width:130px;font-size:12px;padding:5px 8px">
+            <option>30 giorni</option>
+            <option>7 giorni</option>
+            <option>90 giorni</option>
+            <option>Anno</option>
+          </select>
+          <button class="btn-admin">⟳ Refresh <kbd>R</kbd></button>
+          <button class="btn-admin">⤓ Export CSV</button>
+          <button class="btn-admin primary">＋ Imposta budget</button>
+          <button class="btn-admin icon" title="Tema">🌗</button>
+        </div>
+      </header>
+
+      <div class="admin-body" style="display:flex;flex-direction:column;gap:14px">
+
+        <!-- ────────── 1) KPI strip ────────── -->
+        <section class="kpi-strip">
+          <div class="admin-kpi e-agent">
+            <div class="admin-kpi-label">Spesa oggi</div>
+            <div class="admin-kpi-value"><span style="font-size:18px;color:var(--text-muted);font-weight:700">$</span>12.40</div>
+            <div class="admin-kpi-trend up">▲ 8.6% vs ieri ($11.42)</div>
+            <svg class="admin-kpi-spark e-agent" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,20 L8,18 L16,16 L24,17 L32,14 L40,13 L48,11 L56,12 L64,9 L70,8 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,20 L8,18 L16,16 L24,17 L32,14 L40,13 L48,11 L56,12 L64,9 L70,8"/>
+            </svg>
+          </div>
+
+          <div class="admin-kpi e-event" style="--e:var(--c-event)">
+            <div class="admin-kpi-label">Spesa mese</div>
+            <div class="admin-kpi-value"><span style="font-size:18px;color:var(--text-muted);font-weight:700">$</span>284<span style="font-size:14px;color:var(--text-muted);font-weight:600"> / 1.200</span></div>
+            <div class="admin-kpi-trend flat">▬ 23.6% del budget · giorno 22/31</div>
+            <div class="kpi-bar"><i style="width:23.6%"></i></div>
+          </div>
+
+          <div class="admin-kpi e-toolkit">
+            <div class="admin-kpi-label">Budget residuo</div>
+            <div class="admin-kpi-value"><span style="font-size:18px;color:var(--text-muted);font-weight:700">$</span>916<span style="font-size:14px;color:var(--text-muted);font-weight:600">.00</span></div>
+            <div class="admin-kpi-trend up">▲ 9 giorni residui · $101.7/d capacità</div>
+            <svg class="admin-kpi-spark e-toolkit" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,4 L8,6 L16,8 L24,10 L32,12 L40,14 L48,16 L56,18 L64,19 L70,20 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,4 L8,6 L16,8 L24,10 L32,12 L40,14 L48,16 L56,18 L64,19 L70,20"/>
+            </svg>
+          </div>
+
+          <div class="admin-kpi e-chat">
+            <div class="admin-kpi-label">Proiezione fine mese</div>
+            <div class="admin-kpi-value"><span style="font-size:18px;color:var(--text-muted);font-weight:700">$</span>890<span style="font-size:14px;color:var(--text-muted);font-weight:600">.00</span></div>
+            <div class="admin-kpi-trend up">▼ -$310 sotto budget · 74.2%</div>
+            <svg class="admin-kpi-spark e-chat" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,22 L8,21 L16,19 L24,18 L32,16 L40,14 L48,12 L56,11 L64,9 L70,7 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,22 L8,21 L16,19 L24,18 L32,16 L40,14 L48,12 L56,11 L64,9 L70,7"/>
+            </svg>
+          </div>
+        </section>
+
+        <!-- ────────── 2) Costi per provider · 30 giorni ────────── -->
+        <section class="admin-panel">
+          <div class="admin-panel-head">
+            <h3>Costi per provider · 30 giorni</h3>
+            <span class="status-chip info">stacked area · $/giorno</span>
+            <div class="head-cluster">
+              <span class="meta">tot $284.34 · media $9.18/d · picco $14.20 (12 mag)</span>
+              <button class="btn-admin sm ghost">⤓ ndjson</button>
+            </div>
+          </div>
+
+          <div class="chart-wrap">
+            <div class="chart-frame">
+              <!-- Y axis labels -->
+              <div class="y-axis">
+                <span>$16</span><span>$12</span><span>$8</span><span>$4</span><span>$0</span>
+              </div>
+              <!-- X axis labels -->
+              <div class="x-axis">
+                <span>22 apr</span><span>27 apr</span><span>02 mag</span><span>07 mag</span><span>12 mag</span><span>17 mag</span><span>22 mag</span>
+              </div>
+
+              <!-- Chart SVG: padding left 46, right 8, top 6, bottom 18 -->
+              <svg viewBox="0 0 700 240" preserveAspectRatio="none" aria-hidden="true">
+                <!-- y values: chart inner height 216 (240-6-18) -->
+                <!-- gridlines -->
+                <g>
+                  <line class="grid" x1="46" y1="60"  x2="692" y2="60"/>
+                  <line class="grid" x1="46" y1="114" x2="692" y2="114"/>
+                  <line class="grid" x1="46" y1="168" x2="692" y2="168"/>
+                  <line class="grid" x1="46" y1="222" x2="692" y2="222"/>
+                </g>
+
+                <!-- Stacked layers, bottom→top:
+                     DeepSeek (e-tool)  base
+                     OpenRouter (e-chat)
+                     OpenAI (e-toolkit)
+                     Anthropic (e-agent) top
+                     y=222 is $0, y=6 is $16; scale: 1$ = 13.5px -->
+
+                <!-- Anthropic layer (top, smallest) ~$0.40-$0.80 -->
+                <g class="e-agent" style="color:hsl(var(--c-agent))">
+                  <path d="M46,128 L77,125 L108,123 L138,127 L169,121 L200,118 L231,115 L261,123 L292,118 L323,112 L354,108 L384,110 L415,104 L446,99 L477,95 L507,98 L538,92 L569,90 L600,82 L630,80 L661,75 L692,70 L692,134 L661,80 L630,85 L600,88 L569,95 L538,98 L507,103 L477,100 L446,106 L415,109 L384,114 L354,113 L323,118 L292,122 L261,127 L231,120 L200,123 L169,125 L138,131 L108,128 L77,130 L46,134 Z" fill="hsl(var(--c-agent) / .55)"/>
+                </g>
+
+                <!-- OpenAI (gpt-4o-mini) layer ~$1-$2 -->
+                <g class="e-toolkit" style="color:hsl(var(--c-toolkit))">
+                  <path d="M46,148 L77,145 L108,142 L138,148 L169,140 L200,138 L231,135 L261,144 L292,138 L323,130 L354,128 L384,131 L415,124 L446,118 L477,114 L507,118 L538,110 L569,108 L600,99 L630,98 L661,92 L692,86 L692,134 L661,80 L630,85 L600,88 L569,95 L538,98 L507,103 L477,100 L446,106 L415,109 L384,114 L354,113 L323,118 L292,122 L261,127 L231,120 L200,123 L169,125 L138,131 L108,128 L77,130 L46,134 Z" fill="hsl(var(--c-toolkit) / .55)"/>
+                </g>
+
+                <!-- OpenRouter layer ~$3-$4 -->
+                <g class="e-chat" style="color:hsl(var(--c-chat))">
+                  <path d="M46,182 L77,178 L108,175 L138,180 L169,170 L200,168 L231,165 L261,174 L292,168 L323,160 L354,158 L384,162 L415,154 L446,148 L477,144 L507,148 L538,140 L569,138 L600,128 L630,128 L661,121 L692,114 L692,148 L661,92 L630,98 L600,99 L569,108 L538,110 L507,118 L477,114 L446,118 L415,124 L384,131 L354,128 L323,130 L292,138 L261,144 L231,135 L200,138 L169,140 L138,148 L108,142 L77,145 L46,148 Z" fill="hsl(var(--c-chat) / .6)"/>
+                </g>
+
+                <!-- DeepSeek (base, largest) ~$5-$7 -->
+                <g class="e-tool" style="color:hsl(var(--c-tool))">
+                  <path d="M46,222 L77,216 L108,210 L138,216 L169,205 L200,202 L231,198 L261,210 L292,202 L323,193 L354,190 L384,196 L415,186 L446,178 L477,172 L507,178 L538,168 L569,165 L600,154 L630,152 L661,144 L692,136 L692,182 L661,121 L630,128 L600,128 L569,138 L538,140 L507,148 L477,144 L446,148 L415,154 L384,162 L354,158 L323,160 L292,168 L261,174 L231,165 L200,168 L169,170 L138,180 L108,175 L77,178 L46,182 Z" fill="hsl(var(--c-tool) / .65)"/>
+                </g>
+
+                <!-- Top contour line -->
+                <path class="spark" stroke="hsl(var(--text-sec))" stroke-opacity=".25" fill="none"
+                      d="M46,128 L77,125 L108,123 L138,127 L169,121 L200,118 L231,115 L261,123 L292,118 L323,112 L354,108 L384,110 L415,104 L446,99 L477,95 L507,98 L538,92 L569,90 L600,82 L630,80 L661,75 L692,70"/>
+
+                <!-- Budget daily line ($1200/30 = $40/d), but realistic cap ~$15/d for chart scope -> $15 = y 19.5; drawing budget ceiling at $15 -->
+                <line class="budget-line" x1="46" y1="19" x2="692" y2="19"/>
+                <text class="budget-lbl" x="688" y="14" text-anchor="end">budget cap · $40/d (off-scale)</text>
+
+                <!-- Annotation point: peak 12 mag -->
+                <circle cx="446" cy="99" r="3" fill="hsl(var(--c-event))"/>
+                <text class="ann" x="452" y="94">12 mag · $14.20 picco</text>
+              </svg>
+            </div>
+
+            <div class="chart-legend">
+              <span class="item e-tool"><span class="sw"></span>DeepSeek <span class="val">$162.18</span> <span class="pct">· 57.0%</span></span>
+              <span class="item e-chat"><span class="sw"></span>OpenRouter <span class="val">$78.94</span> <span class="pct">· 27.8%</span></span>
+              <span class="item e-toolkit"><span class="sw"></span>OpenAI <span class="val">$31.06</span> <span class="pct">· 10.9%</span></span>
+              <span class="item e-agent"><span class="sw"></span>Anthropic <span class="val">$12.16</span> <span class="pct">· 4.3%</span></span>
+              <span class="item" style="color:hsl(38 90% 50%);margin-left:auto"><span class="sw" style="background:transparent;border-top:2px dashed hsl(38 90% 50%);border-radius:0;height:0;width:14px"></span>budget cap $40/d</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- ────────── 3) Costo per feature ────────── -->
+        <section class="admin-panel">
+          <div class="admin-panel-head">
+            <h3>Costo per feature · 30 giorni</h3>
+            <span class="status-chip info">6 feature attive</span>
+            <div class="head-cluster">
+              <span class="meta">tot $284.34 · 6 feature · 48.3k richieste</span>
+              <button class="btn-admin sm ghost">⤓ Export</button>
+            </div>
+          </div>
+
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th style="width:28%">Feature</th>
+                <th style="width:11%;text-align:right">Richieste</th>
+                <th style="width:11%;text-align:right">Token</th>
+                <th style="width:11%;text-align:right">Costo</th>
+                <th style="width:20%">% del totale</th>
+                <th style="width:130px;text-align:right">Trend 7g</th>
+                <th style="width:90px"></th>
+              </tr>
+            </thead>
+            <tbody>
+
+              <tr class="e-chat">
+                <td>
+                  <div class="feat-cell">
+                    <div class="feat-mark">💬</div>
+                    <div class="feat-info"><span class="feat-name">Chat / RAG</span><span class="feat-sub">deepseek-chat · openrouter</span></div>
+                  </div>
+                </td>
+                <td class="mono" style="text-align:right">28 144</td>
+                <td class="mono" style="text-align:right">1.24 M</td>
+                <td class="mono" style="text-align:right;font-weight:700;color:var(--text)">$148.92</td>
+                <td><div class="pct-bar"><div class="bar"><i style="width:52.4%"></i></div><span class="v">52.4%</span></div></td>
+                <td><span class="trend-cell up">▲ 12.4% <svg class="mini-spark e-chat" viewBox="0 0 60 20"><path class="spark e-fg" d="M0,15 L10,14 L20,13 L30,11 L40,9 L50,7 L60,5"/></svg></span></td>
+                <td style="text-align:right"><button class="btn-admin sm ghost">↗ Dettaglio</button></td>
+              </tr>
+
+              <tr class="e-kb">
+                <td>
+                  <div class="feat-cell">
+                    <div class="feat-mark">🧩</div>
+                    <div class="feat-info"><span class="feat-name">Embedding</span><span class="feat-sub">bge-m3 (locale) + openai backup</span></div>
+                  </div>
+                </td>
+                <td class="mono" style="text-align:right">142 880</td>
+                <td class="mono" style="text-align:right">2.86 M</td>
+                <td class="mono" style="text-align:right;font-weight:700;color:var(--text)">$62.18</td>
+                <td><div class="pct-bar"><div class="bar"><i style="width:21.9%"></i></div><span class="v">21.9%</span></div></td>
+                <td><span class="trend-cell flat">▬ +0.8% <svg class="mini-spark e-kb" viewBox="0 0 60 20"><path class="spark e-fg" d="M0,11 L10,12 L20,10 L30,11 L40,10 L50,11 L60,10"/></svg></span></td>
+                <td style="text-align:right"><button class="btn-admin sm ghost">↗ Dettaglio</button></td>
+              </tr>
+
+              <tr class="e-tool">
+                <td>
+                  <div class="feat-cell">
+                    <div class="feat-mark">🎯</div>
+                    <div class="feat-info"><span class="feat-name">Reranking</span><span class="feat-sub">bge-reranker · top-50→8</span></div>
+                  </div>
+                </td>
+                <td class="mono" style="text-align:right">26 408</td>
+                <td class="mono" style="text-align:right">0.32 M</td>
+                <td class="mono" style="text-align:right;font-weight:700;color:var(--text)">$28.40</td>
+                <td><div class="pct-bar"><div class="bar"><i style="width:10.0%"></i></div><span class="v">10.0%</span></div></td>
+                <td><span class="trend-cell up">▲ 4.1% <svg class="mini-spark e-tool" viewBox="0 0 60 20"><path class="spark e-fg" d="M0,14 L10,13 L20,12 L30,12 L40,10 L50,9 L60,8"/></svg></span></td>
+                <td style="text-align:right"><button class="btn-admin sm ghost">↗ Dettaglio</button></td>
+              </tr>
+
+              <tr class="e-agent">
+                <td>
+                  <div class="feat-cell">
+                    <div class="feat-mark">🧠</div>
+                    <div class="feat-info"><span class="feat-name">Mechanic Extractor</span><span class="feat-sub">claude-3.5-sonnet · per-game</span></div>
+                  </div>
+                </td>
+                <td class="mono" style="text-align:right">812</td>
+                <td class="mono" style="text-align:right">0.41 M</td>
+                <td class="mono" style="text-align:right;font-weight:700;color:var(--text)">$22.84</td>
+                <td><div class="pct-bar"><div class="bar"><i style="width:8.0%"></i></div><span class="v">8.0%</span></div></td>
+                <td><span class="trend-cell up">▲ 28.2% <svg class="mini-spark e-agent" viewBox="0 0 60 20"><path class="spark e-fg" d="M0,17 L10,15 L20,13 L30,12 L40,9 L50,7 L60,4"/></svg></span></td>
+                <td style="text-align:right"><button class="btn-admin sm ghost">↗ Dettaglio</button></td>
+              </tr>
+
+              <tr class="e-toolkit">
+                <td>
+                  <div class="feat-cell">
+                    <div class="feat-mark">👁️</div>
+                    <div class="feat-info"><span class="feat-name">Vision / OCR</span><span class="feat-sub">smoldocling + gpt-4o-mini fallback</span></div>
+                  </div>
+                </td>
+                <td class="mono" style="text-align:right">3 244</td>
+                <td class="mono" style="text-align:right">0.18 M</td>
+                <td class="mono" style="text-align:right;font-weight:700;color:var(--text)">$15.06</td>
+                <td><div class="pct-bar"><div class="bar"><i style="width:5.3%"></i></div><span class="v">5.3%</span></div></td>
+                <td><span class="trend-cell down">▼ -6.7% <svg class="mini-spark e-toolkit" viewBox="0 0 60 20"><path class="spark e-fg" d="M0,8 L10,9 L20,11 L30,10 L40,12 L50,13 L60,14"/></svg></span></td>
+                <td style="text-align:right"><button class="btn-admin sm ghost">↗ Dettaglio</button></td>
+              </tr>
+
+              <tr class="e-game">
+                <td>
+                  <div class="feat-cell">
+                    <div class="feat-mark">📚</div>
+                    <div class="feat-info"><span class="feat-name">Catalog enrichment</span><span class="feat-sub">BGG ingest · cron 02:00</span></div>
+                  </div>
+                </td>
+                <td class="mono" style="text-align:right">488</td>
+                <td class="mono" style="text-align:right">0.09 M</td>
+                <td class="mono" style="text-align:right;font-weight:700;color:var(--text)">$6.94</td>
+                <td><div class="pct-bar"><div class="bar"><i style="width:2.4%"></i></div><span class="v">2.4%</span></div></td>
+                <td><span class="trend-cell flat">▬ +1.2% <svg class="mini-spark e-game" viewBox="0 0 60 20"><path class="spark e-fg" d="M0,12 L10,11 L20,12 L30,11 L40,11 L50,10 L60,10"/></svg></span></td>
+                <td style="text-align:right"><button class="btn-admin sm ghost">↗ Dettaglio</button></td>
+              </tr>
+
+            </tbody>
+          </table>
+        </section>
+
+        <!-- ────────── 4) Simulatore costo ────────── -->
+        <section class="admin-panel">
+          <div class="admin-panel-head">
+            <h3>Simulatore costo</h3>
+            <span class="status-chip info">live recompute</span>
+            <div class="head-cluster">
+              <span class="meta">pricing snapshot · 22 mag 2026 · USD per 1M token</span>
+              <button class="btn-admin sm ghost">⤓ Esporta scenario</button>
+            </div>
+          </div>
+
+          <div class="sim-grid">
+            <div class="sim-form">
+
+              <div class="admin-form-row">
+                <span class="admin-form-label">Modello<span class="desc">Provider e tariffa input/output</span></span>
+                <div>
+                  <select class="admin-select">
+                    <option>deepseek-chat — $0.27 in · $1.10 out / 1M</option>
+                    <option>openai/gpt-4o-mini — $0.15 in · $0.60 out / 1M</option>
+                    <option>anthropic/claude-3.5-sonnet — $3.00 in · $15.00 out / 1M</option>
+                    <option>openrouter/auto — best-cost routing</option>
+                    <option>bge-m3 (embedding) — $0.05 / 1M token</option>
+                  </select>
+                  <div class="pricing-readout">
+                    <span><span class="k">Tariffa input</span> <span class="v">$0.27</span></span>
+                    <span><span class="k">Tariffa output</span> <span class="v">$1.10</span></span>
+                    <span><span class="k">Context max</span> <span class="v">64k</span></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="admin-form-row">
+                <span class="admin-form-label">Richieste / giorno<span class="desc">Volume previsto per la feature</span></span>
+                <div class="row-inline">
+                  <input class="admin-input mono compact" value="1 200" />
+                  <span>req/d</span>
+                  <span style="color:var(--text-muted)">· stima a regime · </span>
+                  <span class="v">36 000 req/mese</span>
+                </div>
+              </div>
+
+              <div class="admin-form-row">
+                <span class="admin-form-label">Token input medi<span class="desc">Prompt + RAG context per richiesta</span></span>
+                <div class="row-inline">
+                  <input class="admin-input mono compact" value="2 400" />
+                  <span>tok in</span>
+                  <span style="color:var(--text-muted)">· 2.88M tok/d</span>
+                </div>
+              </div>
+
+              <div class="admin-form-row">
+                <span class="admin-form-label">Token output medi<span class="desc">Risposta generata stimata</span></span>
+                <div class="row-inline">
+                  <input class="admin-input mono compact" value="480" />
+                  <span>tok out</span>
+                  <span style="color:var(--text-muted)">· 576k tok/d</span>
+                </div>
+              </div>
+
+              <div class="admin-form-row" style="border-bottom:0">
+                <span class="admin-form-label">Cache-hit RAG<span class="desc">% richieste servite da cache</span></span>
+                <div class="row-inline">
+                  <input class="admin-input mono compact" value="35" />
+                  <span>%</span>
+                  <span style="color:var(--text-muted)">· risparmio</span>
+                  <span class="v" style="color:hsl(var(--c-toolkit))">−$13.04 / mese</span>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="sim-readout">
+              <div>
+                <div class="label">Costo stimato · giornaliero</div>
+                <div class="big"><span class="cur">$</span>1.41<span class="unit">/ d</span></div>
+              </div>
+
+              <div class="alt-stack">
+                <div class="alt"><span class="k">Mensile (30g)</span><span class="v">$42.30</span></div>
+                <div class="alt"><span class="k">Annuale</span><span class="v">$514.65</span></div>
+                <div class="alt"><span class="k">Δ vs feature attuale (Chat/RAG)</span><span class="v diff-down">−71.6%</span></div>
+                <div class="alt"><span class="k">Δ vs gpt-4o-mini</span><span class="v diff-up">+32.4%</span></div>
+              </div>
+
+              <div class="impact"><span class="dot"></span>Impatto su budget mensile · <strong style="color:var(--text);margin:0 4px">3.5%</strong> di $1.200</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ────────── 5) Alert proiezione vs budget ────────── -->
+        <div class="alert-banner warning">
+          <span class="em">📉</span>
+          <div style="flex:1">
+            <div class="title">Proiezione fine mese sotto budget</div>
+            <div style="line-height:1.55">Proiezione attuale <strong>$890</strong> contro budget di <strong>$1.200</strong> (74.2%, margine $310). Trend stabile · nessuna azione richiesta. Ti avviseremo se la proiezione supera il <strong>90%</strong> del budget.</div>
+          </div>
+          <div class="budget-banner-gauge">
+            <div class="bar"><i style="width:74.2%"></i></div>
+            <div class="ll"><span class="k">$0</span><span>$890 / $1.200 · 74.2%</span><span class="k">$1.200</span></div>
+          </div>
+          <div class="actions">
+            <button class="btn-admin sm ghost">🔔 Regola soglia</button>
+            <button class="btn-admin sm">＋ Edita budget</button>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="admin-nav.js"></script>
+  <script>renderAdminNav('budget');</script>
+</body>
+</html>

@@ -36,7 +36,7 @@ public class GetPhotoBatchStatusQueryHandlerTests
              .Returns(batch);
 
         // GetPresignedDownloadUrlAsync has no CancellationToken param per interface contract
-        _blob.GetPresignedDownloadUrlAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int?>())
+        _blob.GetPresignedDownloadUrlAsync(Arg.Any<string>(), Arg.Any<BlobCategory>(), Arg.Any<string>(), Arg.Any<int?>())
              .Returns(Task.FromResult<string?>("https://blob/thumb.jpg"));
 
         var sut = CreateSut();
@@ -134,6 +134,6 @@ public class GetPhotoBatchStatusQueryHandlerTests
 
         // Assert — no blob calls when batch has no pages
         await _blob.DidNotReceive().GetPresignedDownloadUrlAsync(
-            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int?>());
+            Arg.Any<string>(), Arg.Any<BlobCategory>(), Arg.Any<string>(), Arg.Any<int?>());
     }
 }

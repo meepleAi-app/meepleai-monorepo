@@ -40,7 +40,7 @@ internal sealed class GetVisionSnapshotsQueryHandler
             foreach (var image in snapshot.Images)
             {
                 var downloadUrl = await _blobStorageService
-                    .GetPresignedDownloadUrlAsync(image.StorageKey, gameIdForStorage)
+                    .GetPresignedDownloadUrlAsync(image.StorageKey, BlobCategory.VisionSnapshot, gameIdForStorage)
                     .ConfigureAwait(false);
 
                 imageDtos.Add(new VisionSnapshotImageDto(

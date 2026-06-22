@@ -10,7 +10,10 @@ using Api.Middleware;
 using Api.Models;
 using Api.Observability;
 using Api.Routing;
+using Api.Routing.Admin;
+using Api.Routing.AdministrationDiscover;
 using Api.Routing.GameManagement;
+using Api.Routing.GameToolkit;
 using Api.BoundedContexts.GameManagement.Routing; // Issue #4273
 using Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.AgentMemory.Infrastructure.DependencyInjection;
@@ -23,6 +26,8 @@ using Api.BoundedContexts.Gamification.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameManagement.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameToolbox.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameToolkit.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.KbQuality;
+using Api.BoundedContexts.KbQuality.Routing;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.SessionTracking.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Health;
@@ -90,6 +95,20 @@ else if (isCIEnv)
 }
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Issue #1928 Task B (DEC-B-4) — Triple gate STARTUP fail-fast.
+// Refuses to start if BOTH E2E_SEEDING_ENABLED=true AND ASPNETCORE_ENVIRONMENT=Production.
+// Defense-in-depth: even if a deployment misconfigures the flag, the app refuses to
+// boot rather than expose admin test endpoints in production.
+// Component 1/3 of triple gate (Component 2/3: endpoint conditional registration in
+// Program.cs ~line 840; Component 3/3: RequireAdminSessionFilter at endpoint group level).
+if (builder.Environment.IsProduction()
+    && builder.Configuration.GetValue<bool>("E2E_SEEDING_ENABLED"))
+{
+    throw new InvalidOperationException(
+        "E2E_SEEDING_ENABLED=true is FORBIDDEN in Production environment. " +
+        "Refusing to start. See docs/for-developers/testing/e2e-entity-seeding.md.");
+}
 
 // OPS-04: Configure Serilog with environment-based settings and sensitive data redaction
 Log.Logger = LoggingConfiguration.ConfigureSerilog(builder).CreateLogger();
@@ -260,14 +279,35 @@ builder.Services.Configure<RateLimitConfiguration>(builder.Configuration.GetSect
 builder.Services.Configure<FollowUpQuestionsConfiguration>(builder.Configuration.GetSection("FollowUpQuestions")); // CHAT-02
 builder.Services.Configure<RagPromptsConfiguration>(builder.Configuration.GetSection("RagPrompts")); // AI-07.1: RAG prompt templates
 builder.Services.Configure<HybridCacheConfiguration>(builder.Configuration.GetSection("HybridCache")); // PERF-05: HybridCache configuration
+builder.Services.Configure<LlmQueryComplexityRoutingOptions>(
+    builder.Configuration.GetSection(LlmQueryComplexityRoutingOptions.SectionName)); // Issue #562: per-call model override by query complexity tier
 builder.Services.Configure<HybridSearchConfiguration>(builder.Configuration.GetSection("HybridSearch")); // AI-14: Hybrid search configuration
 builder.Services.Configure<WeeklyEvaluationConfiguration>(builder.Configuration.GetSection("QualityEvaluation")); // BGAI-042: Weekly evaluation configuration
 builder.Services.Configure<BggImportQueueConfiguration>(builder.Configuration.GetSection("BggImportQueue")); // ISSUE-3541: BGG import queue configuration
+builder.Services.Configure<CatalogSyncCronConfiguration>(builder.Configuration.GetSection("CatalogSyncCron")); // #1861: catalog sync cron service
 builder.Services.Configure<Api.BoundedContexts.Administration.Infrastructure.External.PrometheusOptions>(builder.Configuration.GetSection("Prometheus")); // Issue #893: Prometheus HTTP client configuration
 builder.Services.Configure<IndexingSettings>(builder.Configuration.GetSection(IndexingSettings.SectionName)); // ISSUE-3197: Vector indexing batch configuration
 
 // Issue #1447: Security headers middleware configuration
 builder.Services.AddSecurityHeaders(builder.Configuration);
+
+// C8 (auth security fixes): antiforgery / CSRF protection on state-changing
+// endpoints. Uses the double-submit cookie pattern — the X-XSRF-TOKEN cookie
+// is non-HttpOnly so the JS client can read it and echo the value in the
+// X-XSRF-TOKEN request header; AntiforgeryEndpointFilter then verifies the
+// header equals the server-side request token. The session cookie itself
+// stays HttpOnly + SameSite=Lax; this is layered defence against top-level
+// cross-origin form POSTs.
+builder.Services.AddAntiforgery(opt =>
+{
+    opt.HeaderName = "X-XSRF-TOKEN";
+    opt.Cookie.Name = "X-XSRF-TOKEN";
+    opt.Cookie.HttpOnly = false; // intentional: JS reads to echo in the header
+    opt.Cookie.SameSite = SameSiteMode.Lax;
+    opt.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest
+        : CookieSecurePolicy.Always;
+});
 
 // BGAI-021 (Issue #963): AI provider configuration with startup validation
 builder.Services.Configure<AiProviderSettings>(builder.Configuration.GetSection(AiProviderSettings.SectionName));
@@ -296,6 +336,10 @@ builder.Services.AddHostedService<Api.Infrastructure.BackgroundServices.RagBacku
 // ADR-051 Sprint 2 / Task 8: Mechanic-recalc async pipeline worker (Pending → Running → terminal).
 builder.Services.AddHostedService<Api.Infrastructure.BackgroundServices.MechanicRecalcBackgroundService>();
 
+// Issue #1292 (AC-6.4): warm-up gamebook index cache for dogfood accounts + superadmins
+// 30s after startup. Background fire-and-forget — does NOT block IHost.StartAsync.
+builder.Services.AddHostedService<Api.Observability.GamebookCacheWarmupService>();
+
 // Issue #1449: FluentValidation for CQRS pipeline
 builder.Services.AddFluentValidation();
 
@@ -308,16 +352,24 @@ builder.Services.AddMediatR(cfg =>
     cfg.AddOpenBehavior(typeof(Api.BoundedContexts.Administration.Application.Behaviors.AuditLoggingBehavior<,>)); // Issue #3691: Audit logging
     cfg.AddOpenBehavior(typeof(Api.BoundedContexts.Authentication.Application.Behaviors.TwoFactorEnforcementBehavior<,>)); // Issue #186 P1.1: 2FA admin enforcement (shadow mode)
     cfg.AddOpenBehavior(typeof(Api.BoundedContexts.SessionTracking.Application.Behaviors.ValidatePlayerRoleBehavior<,>)); // Issue #4765: Role validation
+    cfg.AddOpenBehavior(typeof(Api.BoundedContexts.KbQuality.Application.Behaviors.EvalRateLimitBehavior<,>)); // Issue #1675: KB quality eval sliding rate limit (registered BEFORE cost cap)
+    cfg.AddOpenBehavior(typeof(Api.BoundedContexts.KbQuality.Application.Behaviors.EvalCostCapBehavior<,>)); // Issue #1675: KB quality eval cost cap (D-H, A1)
+    cfg.AddOpenBehavior(typeof(Api.BoundedContexts.UserNotifications.Application.Behaviors.NotificationDedupePipelineBehavior<,>)); // #2383 (ADR-068/072): swallow 23505 on UX_notifications_user_source_event_id (race-safe idempotent dispatch)
     var mediatrLicenseKey = Environment.GetEnvironmentVariable("MEDIATR_LICENSE_KEY");
     if (!string.IsNullOrWhiteSpace(mediatrLicenseKey))
         cfg.LicenseKey = mediatrLicenseKey;
 });
 
+// Issue #1534: the open-generic DomainEventAuditHandler<TEvent> is auto-registered by
+// MediatR's RegisterServicesFromAssembly above. No explicit AddTransient registration
+// is needed — MediatR honours the `where TEvent : IDomainEvent` constraint, so only
+// IDomainEvent notifications resolve this handler.
+
 // Application services (Domain, AI, Admin)
 builder.Services.AddVectorSearchServices(builder.Configuration);
 builder.Services.AddDomainServices();
 builder.Services.AddAiServices();
-builder.Services.AddPdfServices();
+builder.Services.AddPdfServices(builder.Configuration);
 builder.Services.AddChatServices();
 builder.Services.AddAdminServices();
 builder.Services.AddBggServices();
@@ -343,6 +395,9 @@ builder.Services.AddEntityRelationshipsContext();
 
 // DDD-PHASE3: KnowledgeBase bounded context
 builder.Services.AddKnowledgeBaseServices();
+
+// Issue #1675: KbQuality bounded context (per-doc quality eval)
+builder.Services.AddKbQualityModule(builder.Configuration);
 
 // DDD-PHASE3: WorkflowIntegration bounded context
 builder.Services.AddWorkflowIntegrationContext(builder.Configuration);
@@ -387,7 +442,7 @@ builder.Services.AddSharedGameCatalogContext(builder.Configuration);
 builder.Services.AddSharedGameCatalogPolicies();
 
 // Authentication services (Auth, OAuth, 2FA, API keys, Sessions)
-builder.Services.AddAuthenticationServices(builder.Configuration);
+builder.Services.AddAuthenticationServices(builder.Configuration, builder.Environment);
 
 // Observability services (OpenTelemetry, Health checks, Swagger)
 builder.Services.AddObservabilityServices(builder.Configuration, builder.Environment);
@@ -478,6 +533,10 @@ if (builder.Environment.IsDevelopment())
 
 var app = builder.Build();
 
+// Issue #1314 PR 2: wire the current-layout-version ObservableGauge once
+// the DI root is built. Idempotent — safe across HotReload restarts.
+Api.Observability.MeepleAiMetrics.RegisterStorageLayoutVersionGauge(app.Services);
+
 #if DEBUG
 if (app.Environment.IsDevelopment())
 {
@@ -502,8 +561,6 @@ using (var scope = app.Services.CreateScope())
     else
     {
         await db.Database.MigrateAsync().ConfigureAwait(false);
-
-        // Qdrant initialization removed — pgvector is the sole vector store
 
         // Validate embedding configuration consistency
         var embedding = scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
@@ -555,6 +612,27 @@ using (var scope = app.Services.CreateScope())
 {
     var tracker = app.Services.GetRequiredService<IAutoSaveHealthTracker>();
     MeepleAiMetrics.RegisterAutoSaveHealthGauge(tracker);
+}
+
+// SP5 Admin Security S1 T4b: register audit_outbox health gauges (pending, oldest age, failed).
+{
+    var auditOutboxTracker = app.Services
+        .GetRequiredService<Api.BoundedContexts.Administration.Infrastructure.Health.IAuditOutboxHealthTracker>();
+    MeepleAiMetrics.RegisterAuditOutboxGauges(auditOutboxTracker);
+}
+
+// Issue #1535 T6: register domain_event_outbox health gauges (pending, oldest age, failed).
+{
+    var domainEventOutboxTracker = app.Services
+        .GetRequiredService<Api.Infrastructure.DomainEventOutbox.IDomainEventOutboxHealthTracker>();
+    MeepleAiMetrics.RegisterDomainEventOutboxGauges(domainEventOutboxTracker);
+}
+
+// SP5 Admin Security S2 T7: register the impersonation active-count gauge.
+{
+    var impersonationTracker = app.Services
+        .GetRequiredService<Api.BoundedContexts.Administration.Infrastructure.Health.IImpersonationHealthTracker>();
+    MeepleAiMetrics.RegisterImpersonationGauges(impersonationTracker);
 }
 
 // Configure middleware pipeline
@@ -628,14 +706,17 @@ app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks
     }
 });
 
+// Readiness probe: tagged Critical → application is ready to serve traffic.
+// Excludes Optional providers so swapping a pluggable backend does not flap the probe.
 app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
-    Predicate = check => check.Tags.Contains("db") || check.Tags.Contains("cache") || check.Tags.Contains("vector")
+    Predicate = check => check.Tags.Contains(Api.Infrastructure.Health.Models.HealthCheckTags.Critical)
 });
 
+// Liveness probe: process is alive (no dependency checks).
 app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
-    Predicate = _ => false // Just check if the app is running
+    Predicate = _ => false
 });
 
 // CA1869: Cache JsonSerializerOptions for health check endpoints
@@ -664,19 +745,39 @@ app.MapHealthChecks("/health/config", new Microsoft.AspNetCore.Diagnostics.Healt
     }
 });
 
+// Seed / RAG state probe (#2126 D3). Surfaces the SeedStateHealthCheck Data
+// (seed_state, pdf_total, pdf_ready, pdf_failed, chunk_count, embedding_count)
+// at a stable JSON path so a dev (or a monitoring scrape) can see whether the
+// stack is `empty`, `indexing`, `partial_failed`, or `ready` without parsing
+// the noisier global /health response.
+app.MapHealthChecks("/health/seed", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains(Api.Infrastructure.Health.Models.HealthCheckTags.Seed),
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var seedCheck = report.Entries.FirstOrDefault(e => string.Equals(e.Key, "seed_state", StringComparison.Ordinal));
+        var data = seedCheck.Value.Data ?? new Dictionary<string, object>(StringComparer.Ordinal);
+        var result = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            seed_state = data.TryGetValue("seed_state", out var s) ? s : "unknown",
+            pdf_total = data.TryGetValue("pdf_total", out var pt) ? pt : 0,
+            pdf_ready = data.TryGetValue("pdf_ready", out var pr) ? pr : 0,
+            pdf_failed = data.TryGetValue("pdf_failed", out var pf) ? pf : 0,
+            chunk_count = data.TryGetValue("chunk_count", out var cc) ? cc : 0,
+            embedding_count = data.TryGetValue("embedding_count", out var ec) ? ec : 0,
+            description = seedCheck.Value.Description,
+            duration = seedCheck.Value.Duration.TotalMilliseconds,
+        }, healthCheckJsonOptions);
+        await context.Response.WriteAsync(result).ConfigureAwait(false);
+    }
+});
+
 // API-01: Create v1 API route group and map routing files
 var v1Api = app.MapGroup("/api/v1");
 
-// Alpha Zero: gate non-essential endpoints behind ALPHA_MODE=true
-var isAlphaMode = app.Configuration["ALPHA_MODE"]?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
-if (isAlphaMode)
-{
-    app.Logger.LogInformation("🎯 ALPHA_MODE enabled — only core endpoints registered");
-}
-
-// ═══ ALPHA ZERO: Core endpoints (always active) ═══
-
-// Authentication (core only)
+// Authentication
 v1Api.MapAuthEndpoints();
 v1Api.MapAccessRequestEndpoints(); // Invite-only registration: access requests + registration mode
 v1Api.MapWaitlistEndpoints(); // ISSUE-589: Public Alpha waitlist (Wave A.2)
@@ -690,6 +791,7 @@ v1Api.MapGamePhaseTemplateEndpoints(); // Game phase templates for session setup
 v1Api.MapBggEndpoints(); // ISSUE-3120: BoardGameGeek integration
 v1Api.MapGameManagementEndpoints(); // Issue #4273: Game search autocomplete
 v1Api.MapPrivateGameEndpoints();       // Private games (Issue #3663)
+v1Api.MapUserGamebooksEndpoints();     // SP6 libro game /gamebook index (Issue #869)
 v1Api.MapRuleSpecEndpoints();
 v1Api.MapGameNightEndpoints(); // Issue #46/#607: Game Night Event + public token-based RSVP (Wave A.5)
 
@@ -703,12 +805,17 @@ v1Api.MapPhotoIngestionEndpoints(); // Libro Game AI Assistant MVP Phase 1: phot
 v1Api.MapKnowledgeBaseEndpoints();
 v1Api.MapChatSessionEndpoints(); // Issue #3483: Chat session persistence endpoints
 v1Api.MapUserGameKbEndpoints(); // KB-06: User feedback on KB chat responses
+v1Api.MapKbManagementEndpoints(); // Issue #903: SG2 — KB reindex + RAPTOR rebuild lifecycle endpoints
 v1Api.MapModelEndpoints(); // Issue #3377: AI model configuration endpoints
 v1Api.MapLlmEndpoints(); // ISSUE-2391: Sprint 2 - LLM provider management
 v1Api.MapAiEndpoints();
 v1Api.MapAgentsEndpoints(); // Issue #641 (Wave B.2 hotfix): user-facing agent listing
+v1Api.MapActivityFeedEndpoints(); // BE-3 #1590 Task 8: cross-entity activity feed from domain_event_logs
 v1Api.MapAgentTypologiesEndpoints(); // Issue #649: user-facing typology dropdown
 v1Api.MapRulebookAnalysisEndpoints(); // ISSUE-2402: Rulebook analysis service
+
+// Discover surface (cross-BC aggregation)
+TopUserContributorsEndpoints.Map(v1Api); // Wave 3 Phase 4a (#805): /users/top-contributors
 
 // User Library
 v1Api.MapUserLibraryEndpoints();       // User game library
@@ -719,6 +826,7 @@ v1Api.MapDashboardEndpoints();         // Issue #3314: User dashboard aggregated
 
 // Admin (users + content only)
 v1Api.MapAdminUserEndpoints();         // User management
+v1Api.MapAdminStagingAllowlistEndpoints(); // #845: DevOps Wave 1 staging email allowlist
 v1Api.MapAdminConfigEndpoints();       // Issue #3673: PDF limits admin UI (per-tier)
 v1Api.MapConfigurationEndpoints();     // System configuration CRUD & operations
 v1Api.MapFeatureFlagEndpoints();       // Feature flag management
@@ -732,165 +840,192 @@ v1Api.MapMonitoringEndpoints();        // Issues #891 + #893: Infrastructure hea
 v1Api.MapSessionEndpoints();           // Session management
 v1Api.MapSessionFlowEndpoints();       // Session Flow v2.1 (T9): KB readiness, pause/resume, turn-order, score+diary, diary reads
 
-// ═══ NON-ALPHA: Extended endpoints (gated behind ALPHA_MODE) ═══
-if (!isAlphaMode)
+// Public shared-games search/list (needed by AddGameDrawer catalog tab)
+Api.Routing.SharedGameCatalogPublicEndpoints.Map(v1Api);
+
+// Auth extended
+v1Api.MapPermissionEndpoints(); // Epic #4068: Permission system endpoints
+v1Api.MapShareLinkEndpoints(); // ISSUE-2052: Shareable chat thread links
+v1Api.MapUserAiConsentEndpoints(); // Issue #5512: GDPR AI consent
+v1Api.MapUserLlmDataEndpoints(); // Issue #5509: GDPR right to erasure for LLM data
+v1Api.MapUserUsageEndpoints(); // E2-2: User tier usage endpoint
+v1Api.MapDeviceEndpoints();            // Issue #3340: Device tracking and management
+
+// Game Management extended
+v1Api.MapPlayRecordEndpoints(); // ISSUE-3889/3890: Play record tracking
+v1Api.MapLiveSessionEndpoints(); // Issue #4749: Live session CQRS endpoints
+v1Api.MapSessionAttachmentEndpoints(); // Issue #5365: Session photo attachment endpoints
+v1Api.MapGameToolkitEndpoints(); // Issue #4753: Game toolkit CQRS endpoints
+v1Api.MapToolkitMarketplaceEndpoints(); // Wave 3 Phase 2 (#805): /toolkits/[id] marketplace
+v1Api.MapGameToolboxEndpoints(); // Epic #412: Game toolbox per-game containers
+v1Api.MapToolStateEndpoints(); // Issue #4754: Tool state CQRS endpoints
+v1Api.MapTurnOrderEndpoints(); // Issue #4970: TurnOrder base toolkit endpoints
+v1Api.MapWhiteboardEndpoints(); // Issue #4971: Whiteboard base toolkit endpoints
+v1Api.MapSessionSnapshotEndpoints(); // Issue #4755: Session snapshot endpoints
+v1Api.MapPlaylistEndpoints(); // Issue #5582: Game Night Playlist endpoints
+v1Api.MapGameNightImprovvisataEndpoints(); // Game Night Improvvisata: E1-2 BGG import
+v1Api.MapRuleConflictFaqEndpoints(); // ISSUE-3966: Rule conflict FAQ management
+v1Api.MapVisionSnapshotEndpoints(); // Session Vision AI: board photo snapshots + game state extraction
+v1Api.MapSessionTrackingEndpoints(); // GST-003: Session tracking real-time collaboration
+v1Api.MapSessionStatisticsEndpoints(); // P4: Session analytics dashboard
+
+// Shared Game Catalog
+v1Api.MapSharedGameCatalogEndpoints(); // ISSUE-2371: Shared game catalog Phase 2
+
+// Agent Memory
+v1Api.MapAgentMemoryEndpoints(); // AgentMemory: group, game memory, player stats endpoints
+
+// Admin extended
+app.MapAdminGameImportWizardEndpoints(); // Issue #4157: Admin game import wizard
+v1Api.MapAdminGameWizardEndpoints();    // Admin Game+PDF+Agent Wizard
+v1Api.MapAdminAgentTestEndpoints();     // Admin Agent Auto-Test Suite
+v1Api.MapAdminOpenRouterEndpoints();    // Issue #5077: OpenRouter usage monitoring dashboard
+v1Api.MapAdminEmergencyControlsEndpoints(); // Issue #5476: LLM emergency controls
+v1Api.MapAdminLlmConfigEndpoints();        // Issue #5495: LLM system configuration CRUD
+v1Api.MapStatusBannerEndpoints();          // Issue #1089: Global incident/status banner (public GET + admin GET/PUT)
+if (!app.Environment.IsProduction())
+    app.MapAdminSecretsEndpoints();      // Admin secrets management (non-prod only)
+app.MapAdminBulkImportEndpoints();       // Issue #4354: Bulk import endpoint routing
+app.MapAdminProviderEndpoints();         // Issue #936: Provider token probe observability
+v1Api.MapGroup("/admin/catalog-ingestion").MapAdminCatalogIngestionEndpoints(); // Admin bulk Excel import + enrichment
+v1Api.MapGroup("/admin/catalog/seeds").MapAdminCatalogSeedEndpoints();          // Issue #1903 M6.2: admin catalog seed pipeline
+v1Api.MapGroup("/admin/wikidata/enrichment").MapAdminWikidataCoverEnrichmentEndpoints(); // Issue #1823 Wave 3 M12: admin Wikidata cover trigger
+v1Api.MapGroup("/admin/event-outbox").MapAdminDomainEventOutboxEndpoints();    // Issue #1535 T6: domain_event_outbox health surface
+
+// Issue #1928 Task B (DEC-B-1 + DEC-B-4) — E2E test seeding endpoints, triple-gated:
+// Component 2/3: conditional registration ENV != Production + E2E_SEEDING_ENABLED=true
+// Component 1/3 (startup fail-fast) is registered earlier in Program.cs (T6).
+// Component 3/3 (RequireAdminSessionFilter) is at endpoint group level.
+if (!app.Environment.IsProduction()
+    && app.Configuration.GetValue<bool>("E2E_SEEDING_ENABLED"))
 {
-    // Auth extended
-    v1Api.MapPermissionEndpoints(); // Epic #4068: Permission system endpoints
-    v1Api.MapShareLinkEndpoints(); // ISSUE-2052: Shareable chat thread links
-    v1Api.MapUserAiConsentEndpoints(); // Issue #5512: GDPR AI consent
-    v1Api.MapUserLlmDataEndpoints(); // Issue #5509: GDPR right to erasure for LLM data
-    v1Api.MapUserUsageEndpoints(); // E2-2: User tier usage endpoint
-    v1Api.MapDeviceEndpoints();            // Issue #3340: Device tracking and management
-
-    // Game Management extended
-    v1Api.MapPlayRecordEndpoints(); // ISSUE-3889/3890: Play record tracking
-    v1Api.MapLiveSessionEndpoints(); // Issue #4749: Live session CQRS endpoints
-    v1Api.MapSessionAttachmentEndpoints(); // Issue #5365: Session photo attachment endpoints
-    v1Api.MapGameToolkitEndpoints(); // Issue #4753: Game toolkit CQRS endpoints
-    v1Api.MapGameToolboxEndpoints(); // Epic #412: Game toolbox per-game containers
-    v1Api.MapToolStateEndpoints(); // Issue #4754: Tool state CQRS endpoints
-    v1Api.MapTurnOrderEndpoints(); // Issue #4970: TurnOrder base toolkit endpoints
-    v1Api.MapWhiteboardEndpoints(); // Issue #4971: Whiteboard base toolkit endpoints
-    v1Api.MapSessionSnapshotEndpoints(); // Issue #4755: Session snapshot endpoints
-    v1Api.MapPlaylistEndpoints(); // Issue #5582: Game Night Playlist endpoints
-    v1Api.MapGameNightImprovvisataEndpoints(); // Game Night Improvvisata: E1-2 BGG import
-    v1Api.MapRuleConflictFaqEndpoints(); // ISSUE-3966: Rule conflict FAQ management
-    v1Api.MapVisionSnapshotEndpoints(); // Session Vision AI: board photo snapshots + game state extraction
-    v1Api.MapSessionTrackingEndpoints(); // GST-003: Session tracking real-time collaboration
-    v1Api.MapSessionStatisticsEndpoints(); // P4: Session analytics dashboard
-    v1Api.MapProposalMigrationEndpoints(); // Proposal migrations (Issue #3666)
-
-    // Shared Game Catalog
-    v1Api.MapSharedGameCatalogEndpoints(); // ISSUE-2371: Shared game catalog Phase 2
-
-    // Agent Memory
-    v1Api.MapAgentMemoryEndpoints(); // AgentMemory: group, game memory, player stats endpoints
-
-    // Admin extended
-    app.MapAdminGameImportWizardEndpoints(); // Issue #4157: Admin game import wizard
-    v1Api.MapAdminGameWizardEndpoints();    // Admin Game+PDF+Agent Wizard
-    v1Api.MapAdminAgentTestEndpoints();     // Admin Agent Auto-Test Suite
-    v1Api.MapAdminOpenRouterEndpoints();    // Issue #5077: OpenRouter usage monitoring dashboard
-    v1Api.MapAdminEmergencyControlsEndpoints(); // Issue #5476: LLM emergency controls
-    v1Api.MapAdminLlmConfigEndpoints();        // Issue #5495: LLM system configuration CRUD
-    if (!app.Environment.IsProduction())
-        app.MapAdminSecretsEndpoints();      // Admin secrets management (non-prod only)
-    app.MapAdminBulkImportEndpoints();       // Issue #4354: Bulk import endpoint routing
-    v1Api.MapGroup("/admin/catalog-ingestion").MapAdminCatalogIngestionEndpoints(); // Admin bulk Excel import + enrichment
-    app.MapPdfAnalyticsEndpoints();          // Issue #3715: PDF analytics dashboard
-    app.MapChatAnalyticsEndpoints();         // Issue #3714: Chat analytics dashboard
-    app.MapModelPerformanceEndpoints();      // Issue #3716: Model performance dashboard
-    v1Api.MapRateLimitAdminEndpoints();    // Issue #2738: Rate limit admin management
-    v1Api.MapGameLibraryConfigEndpoints(); // Issue #2444: Game library tier limits config
-    v1Api.MapChatHistoryConfigEndpoints(); // Issue #4918: Chat history tier limits config
-    v1Api.MapSessionLimitsConfigEndpoints(); // Issue #3070: Session limits config
-    v1Api.MapPdfUploadLimitsConfigEndpoints(); // Issue #3072: PDF upload limits config
-    v1Api.MapPdfTierUploadLimitsConfigEndpoints(); // Issue #3333: PDF tier upload limits config (bulk)
-    v1Api.MapAdminTierEndpoints();         // E2-1: Admin tier CRUD
-    v1Api.MapSessionInviteEndpoints();     // E3-1: Session invite flow
-    v1Api.MapAnalyticsEndpoints();         // Dashboard statistics & metrics
-    v1Api.MapActivityTimelineEndpoints();  // Issue #4315: Activity timeline with page-based pagination
-    v1Api.MapLlmAnalyticsEndpoints();      // ISSUE-1725: LLM cost optimization analytics
-    v1Api.MapAdminAgentMetricsEndpoints(); // Issue #3382: Agent Metrics Dashboard
-    v1Api.MapArbitroAdminEndpoints();      // Issue #4328: Arbitro beta testing admin tools
-    v1Api.MapAdminPdfMetricsEndpoints();   // Issue #4212: PDF processing metrics
-    v1Api.MapAdminPdfStorageEndpoints();   // PDF Storage Management Hub: Storage health
-    v1Api.MapAdminPdfManagementEndpoints(); // PDF Storage Management Hub: Bulk ops, maintenance, analytics
-    v1Api.MapAdminQueueEndpoints();         // Issue #4731: Processing queue management
-    v1Api.MapAdminStorageMigrationEndpoints(); // S3 storage migration (local → S3)
-    v1Api.MapAdminRagBackupEndpoints();        // RAG data backup & import
-    v1Api.MapAdminEmailEndpoints();        // Issue #4430: Email queue dashboard monitoring
-    v1Api.MapAdminEmailTemplateEndpoints(); // Issue #52: Admin email template management
-    v1Api.MapAdminNotificationQueueEndpoints(); // Admin notification queue monitoring
-    v1Api.MapAdminSlackEndpoints();        // Admin Slack connection & team channel management
-    v1Api.MapAdminManualNotificationEndpoints(); // Admin manual notification send
-    v1Api.MapAdminBusinessStatsEndpoints(); // Issue #4562: App Usage Stats (Epic #3688)
-    v1Api.MapAdminAgentDefinitionEndpoints(); // Issue #3809: Agent Definition management (AI Lab)
-    v1Api.MapAgentPlaygroundEndpoints();    // Issue #3810: Agent Playground with SSE streaming
-    v1Api.MapPlaygroundTestScenarioEndpoints(); // Issue #4396: Playground Test Scenario CRUD
-    v1Api.MapAdminStrategyEndpoints();      // Issue #3811: Strategy Editor for RAG pipelines
-    v1Api.MapAdminRagExecutionEndpoints();  // Issue #4458: RAG Execution History
-    v1Api.MapAdminDebugChatEndpoints();    // Admin Debug Chat with real-time pipeline tracing
-    v1Api.MapAdminSandboxEndpoints();     // RAG Sandbox Dashboard: documents, chunks, metrics
-    v1Api.MapRagEnhancementAdminEndpoints();    // RAG Enhancement toggles (admin)
-    v1Api.MapRagEnhancementEstimateEndpoints(); // RAG Enhancement cost estimate (user-facing)
-    v1Api.MapAdminRagQualityEndpoints();        // RAG Quality report: index health + game breakdown
-    v1Api.MapAdminMiscEndpoints();         // Miscellaneous admin operations
-    v1Api.MapAdminSeedingEndpoints();      // Epic #318: Admin seeding re-trigger
-
-    // Alerts & Notifications
-    v1Api.MapAlertEndpoints();             // Alert management
-    v1Api.MapAlertConfigEndpoints();       // Alert rules (Issue #921)
-    v1Api.MapAlertConfigurationEndpoints(); // Alert configuration (Issue #915)
-    v1Api.MapNotificationEndpoints();      // User notifications (Issue #2053)
-    v1Api.MapNotificationPreferencesEndpoints(); // Notification preferences (Issue #4220)
-    v1Api.MapSlackIntegrationEndpoints();        // Slack OAuth connect/disconnect/status
-    v1Api.MapUnsubscribeEndpoints();       // Issue #38: GDPR-compliant email unsubscribe
-    v1Api.MapContactEndpoints();           // Public contact form (no auth required)
-
-    // Library extended
-    v1Api.MapEntityLinkUserEndpoints();    // Entity link user endpoints (Issue #5137)
-    v1Api.MapEntityLinkAdminEndpoints();   // Entity link admin endpoints (Issue #5138)
-    v1Api.MapWishlistEndpoints();          // Wishlist management (Issue #3917)
-    v1Api.MapUserHandEndpoints();          // My Hand quick-access slots (La Mia Mano)
-    v1Api.MapAchievementEndpoints();       // Achievement system (Issue #3922)
-
-    // Audit & Analytics
-    v1Api.MapAuditEndpoints();             // Audit log retrieval & search
-    v1Api.MapAdminAuditLogEndpoints();     // Issue #3691: Admin audit log system
-    v1Api.MapUserActivityEndpoints();      // Issue #4652: User activity log for Admin Dashboard
-    v1Api.MapAdminAgentAnalyticsEndpoints(); // Issue #4653: Agents analytics for Admin Dashboard
-    v1Api.MapAdminAnalyticsEndpoints();      // Admin analytics: overview, chat, PDF, model performance, MAU
-    v1Api.MapAdminOperationsEndpoints();   // Issue #3696: Operations - Service Control Panel
-    v1Api.MapAdminInfrastructureEndpoints(); // AI Infrastructure Dashboard: service status, config, restart
-    v1Api.MapDatabaseSyncEndpoints();     // Database sync admin panel
-    v1Api.MapAdminDockerEndpoints();       // Issue #139: Docker container management (Phase 3)
-    v1Api.MapAdminLogEndpoints();          // Structured application log viewer (Seq)
-    v1Api.MapAdminServiceCallEndpoints();  // Service call history and statistics
-    v1Api.MapAdminCircuitBreakerEndpoints(); // Polly circuit breaker state visibility
-    v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation
-
-    // Workflows
-    v1Api.MapWorkflowEndpoints();          // n8n workflow integration
-    v1Api.MapN8nWebhookEndpoints();        // Issue #57: n8n → API webhook callbacks
-
-    // AI extended
-    v1Api.MapTokenManagementEndpoints();   // Token management & monitoring (Issue #3692)
-    v1Api.MapAiModelAdminEndpoints();      // AI model management (Issue #2567)
-    v1Api.MapArbitroAgentEndpoints(); // Issue #3759: Arbitro agent endpoints (Rules Arbitration Engine)
-    v1Api.MapAgentSessionEndpoints(); // Issue #3184 (AGT-010): Agent session lifecycle endpoints
-    v1Api.MapGroup("/admin/ab-tests").MapAdminAbTestEndpoints(); // Issue #5497: A/B Test backend API endpoints
-    v1Api.MapGroup("/admin/test-results").MapAdminTestResultEndpoints(); // Issue #3379: Agent test results history & persistence
-    v1Api.MapLedgerModeEndpoints();     // Issue #2405: Ledger Mode endpoints
-    v1Api.MapRagDashboardEndpoints();   // Issue #3304: RAG Dashboard configuration and metrics
-    v1Api.MapRagPipelineEndpoints();   // Issue #5312: User-facing RAG pipeline CRUD
-    v1Api.MapGroup("/rag").MapRagStrategyEndpoints(); // Issue #8: Public RAG strategies endpoint
-
-    // Business Simulations
-    v1Api.MapBudgetEndpoints();           // Budget display system (credit tracking)
-    v1Api.MapFinancialLedgerEndpoints();  // Financial Ledger CRUD (Issue #3722)
-    v1Api.MapCostCalculatorEndpoints();   // Agent Cost Calculator (Issue #3725)
-    v1Api.MapResourceForecastEndpoints(); // Resource Forecasting Simulator (Issue #3726)
-
-    // Batch & Operations
-    v1Api.MapBatchJobEndpoints();          // Batch job system & operations (Issue #3693)
-    v1Api.MapBatchJobLogsEndpoints();      // Batch job real-time logs SSE (Issue #3693 Task 3)
-    v1Api.MapAdminResourcesEndpoints();    // Resources monitoring (Issue #3695)
-    // Qdrant admin endpoints removed — pgvector is the sole vector store
-    v1Api.MapAdminEmbeddingEndpoints();    // Embedding service dashboard (Issue #4878)
-    v1Api.MapAdminPipelineEndpoints();     // Pipeline health overview (Issue #4879)
-    v1Api.MapAdminKBSettingsEndpoints();   // KB settings read-only (Issue #4881)
-    v1Api.MapTierStrategyAdminEndpoints(); // Tier-strategy configuration (Issue #3440)
-    v1Api.MapRagPipelineAdminEndpoints();  // RAG Pipeline builder (Issue #3463)
-    v1Api.MapRagExecutionAdminEndpoints(); // RAG Execution replay & compare (Issue #4459)
-    v1Api.MapAdminMechanicExtractorEndpoints(); // Mechanic Extractor: Variant C copyright-compliant analysis
-    v1Api.MapAdminMechanicAnalysesEndpoints();  // ISSUE-524 / M1.2: AI-generated mechanic analyses (async pipeline)
-    v1Api.MapAdminMechanicExtractorValidationEndpoints(); // ADR-051 Sprint 1 / Task 32: Mechanic validation admin surface
-    v1Api.MapReportingEndpoints();         // ISSUE-916: Report generation & scheduling
-    v1Api.MapTestingMetricsEndpoints();    // Issue #2139: Testing metrics API
-    v1Api.MapBggImportQueueEndpoints(); // Issue #3541: BGG import queue management (admin-only)
+    v1Api.MapGroup("/admin/test/seed").MapAdminTestSeedEndpoints();
 }
+app.MapPdfAnalyticsEndpoints();          // Issue #3715: PDF analytics dashboard
+app.MapChatAnalyticsEndpoints();         // Issue #3714: Chat analytics dashboard
+app.MapModelPerformanceEndpoints();      // Issue #3716: Model performance dashboard
+v1Api.MapRateLimitAdminEndpoints();    // Issue #2738: Rate limit admin management
+v1Api.MapGameLibraryConfigEndpoints(); // Issue #2444: Game library tier limits config
+v1Api.MapChatHistoryConfigEndpoints(); // Issue #4918: Chat history tier limits config
+v1Api.MapSessionLimitsConfigEndpoints(); // Issue #3070: Session limits config
+v1Api.MapPdfUploadLimitsConfigEndpoints(); // Issue #3072: PDF upload limits config
+v1Api.MapPdfTierUploadLimitsConfigEndpoints(); // Issue #3333: PDF tier upload limits config (bulk)
+v1Api.MapAdminTierEndpoints();         // E2-1: Admin tier CRUD
+v1Api.MapSessionInviteEndpoints();     // E3-1: Session invite flow
+v1Api.MapAnalyticsEndpoints();         // Dashboard statistics & metrics
+v1Api.MapActivityTimelineEndpoints();  // Issue #4315: Activity timeline with page-based pagination
+v1Api.MapLlmAnalyticsEndpoints();      // ISSUE-1725: LLM cost optimization analytics
+v1Api.MapAdminAgentMetricsEndpoints(); // Issue #3382: Agent Metrics Dashboard
+v1Api.MapArbitroAdminEndpoints();      // Issue #4328: Arbitro beta testing admin tools
+v1Api.MapAdminPdfMetricsEndpoints();   // Issue #4212: PDF processing metrics
+v1Api.MapAdminKbQualityEndpoints();    // Issue #1675: Per-doc KB quality evaluations
+v1Api.MapAdminPdfStorageEndpoints();   // PDF Storage Management Hub: Storage health
+v1Api.MapAdminPdfManagementEndpoints(); // PDF Storage Management Hub: Bulk ops, maintenance, analytics
+v1Api.MapAdminIndexerEndpoints();       // Issue #1673: indexer version registry endpoint
+v1Api.MapAdminQueueEndpoints();         // Issue #4731: Processing queue management
+v1Api.MapAdminStorageMigrationEndpoints(); // S3 storage migration (local → S3)
+v1Api.MapAdminRagBackupEndpoints();        // RAG data backup & import
+v1Api.MapAdminEmailEndpoints();        // Issue #4430: Email queue dashboard monitoring
+v1Api.MapAdminEmailTemplateEndpoints(); // Issue #52: Admin email template management
+v1Api.MapAdminNotificationQueueEndpoints(); // Admin notification queue monitoring
+v1Api.MapAdminSlackEndpoints();        // Admin Slack connection & team channel management
+v1Api.MapAdminManualNotificationEndpoints(); // Admin manual notification send
+v1Api.MapAdminBusinessStatsEndpoints(); // Issue #4562: App Usage Stats (Epic #3688)
+v1Api.MapAdminAgentDefinitionEndpoints(); // Issue #3809: Agent Definition management (AI Lab)
+v1Api.MapAgentPlaygroundEndpoints();    // Issue #3810: Agent Playground with SSE streaming
+v1Api.MapPlaygroundTestScenarioEndpoints(); // Issue #4396: Playground Test Scenario CRUD
+v1Api.MapAdminStrategyEndpoints();      // Issue #3811: Strategy Editor for RAG pipelines
+v1Api.MapAdminRagExecutionEndpoints();  // Issue #4458: RAG Execution History
+v1Api.MapAdminDebugChatEndpoints();    // Admin Debug Chat with real-time pipeline tracing
+v1Api.MapAdminSandboxEndpoints();     // RAG Sandbox Dashboard: documents, chunks, metrics
+v1Api.MapRagEnhancementAdminEndpoints();    // RAG Enhancement toggles (admin)
+v1Api.MapRagEnhancementEstimateEndpoints(); // RAG Enhancement cost estimate (user-facing)
+v1Api.MapAdminRagQualityEndpoints();        // RAG Quality report: index health + game breakdown
+v1Api.MapAdminMiscEndpoints();         // Miscellaneous admin operations
+v1Api.MapAdminSeedingEndpoints();      // Epic #318: Admin seeding re-trigger
+
+// Alerts & Notifications
+v1Api.MapAlertEndpoints();             // Alert management
+v1Api.MapAlertConfigEndpoints();       // Alert rules (Issue #921)
+v1Api.MapAlertConfigurationEndpoints(); // Alert configuration (Issue #915)
+v1Api.MapAdminMetricsEndpoints();      // SP5 F4-C7 #1840: Prometheus metric labels passthrough
+v1Api.MapBggAttemptBeaconEndpoints();  // Issue #2123: anonymous beacon for FE Image-loader ToS guard
+v1Api.MapAlertChannelsEndpoints();     // SP5 F4-C7 #1840: Email/Slack channel CRUD + test-connection
+v1Api.MapNotificationEndpoints();      // User notifications (Issue #2053)
+v1Api.MapNotificationPreferencesEndpoints(); // Notification preferences (Issue #4220)
+v1Api.MapSlackIntegrationEndpoints();        // Slack OAuth connect/disconnect/status
+v1Api.MapUnsubscribeEndpoints();       // Issue #38: GDPR-compliant email unsubscribe
+v1Api.MapContactEndpoints();           // Public contact form (no auth required)
+
+// Library extended
+v1Api.MapEntityLinkUserEndpoints();    // Entity link user endpoints (Issue #5137)
+v1Api.MapEntityLinkAdminEndpoints();   // Entity link admin endpoints (Issue #5138)
+v1Api.MapWishlistEndpoints();          // Wishlist management (Issue #3917)
+v1Api.MapUserHandEndpoints();          // My Hand quick-access slots (La Mia Mano)
+v1Api.MapAchievementEndpoints();       // Achievement system (Issue #3922)
+v1Api.MapGamebookCampaignEndpoints();  // Iter 1.A — Libro Game gamebook campaigns
+v1Api.MapGamebookPhotoEndpoints();    // Iter 1.B — Libro Game photo translate pipeline
+v1Api.MapGameBookEndpoints();          // Phase E1 — GameBook catalog (multi-book generalization)
+
+// Audit & Analytics
+v1Api.MapAuditEndpoints();             // Audit log retrieval & search
+v1Api.MapAdminAuditLogEndpoints();     // Issue #3691: Admin audit log system
+v1Api.MapAdminEventsEndpoints();       // F4.1 #1718: admin domain event log (GET, stream SSE, types)
+v1Api.MapUserActivityEndpoints();      // Issue #4652: User activity log for Admin Dashboard
+v1Api.MapAdminAgentAnalyticsEndpoints(); // Issue #4653: Agents analytics for Admin Dashboard
+v1Api.MapAdminAnalyticsEndpoints();      // Admin analytics: overview, chat, PDF, model performance, MAU
+v1Api.MapAdminOperationsEndpoints();   // Issue #3696: Operations - Service Control Panel
+v1Api.MapAdminImpersonationEndpoints(); // SP5 S2: consolidated impersonation API (start/end/revoke/active)
+v1Api.MapAdminTwoFactorComplianceEndpoints(); // SP5 S3 T6: admin 2FA compliance sweep (GET /admin/users/no-2fa)
+v1Api.MapAdminCategoriesEndpoints();   // Issue #1440: SharedGame categories CRUD
+v1Api.MapSharedGameTranslationEndpoints(); // Issue #2339 sub-PR 1/3 Wave 5: SharedGame translations admin CRUD
+v1Api.MapAdminInfrastructureEndpoints(); // AI Infrastructure Dashboard: service status, config, restart
+v1Api.MapDatabaseSyncEndpoints();     // Database sync admin panel
+v1Api.MapAdminDockerEndpoints();       // Issue #139: Docker container management (Phase 3)
+v1Api.MapAdminLogEndpoints();          // Structured application log viewer (Seq)
+v1Api.MapAdminServiceCallEndpoints();  // Service call history and statistics
+v1Api.MapAdminCircuitBreakerEndpoints(); // Polly circuit breaker state visibility
+v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation
+
+// Workflows
+v1Api.MapWorkflowEndpoints();          // n8n workflow integration
+v1Api.MapN8nWebhookEndpoints();        // Issue #57: n8n → API webhook callbacks
+
+// AI extended
+v1Api.MapTokenManagementEndpoints();   // Token management & monitoring (Issue #3692)
+v1Api.MapAiModelAdminEndpoints();      // AI model management (Issue #2567)
+v1Api.MapArbitroAgentEndpoints(); // Issue #3759: Arbitro agent endpoints (Rules Arbitration Engine)
+v1Api.MapAgentSessionEndpoints(); // Issue #3184 (AGT-010): Agent session lifecycle endpoints
+v1Api.MapGroup("/admin/ab-tests").MapAdminAbTestEndpoints(); // Issue #5497: A/B Test backend API endpoints
+v1Api.MapGroup("/admin/test-results").MapAdminTestResultEndpoints(); // Issue #3379: Agent test results history & persistence
+v1Api.MapLedgerModeEndpoints();     // Issue #2405: Ledger Mode endpoints
+v1Api.MapRagDashboardEndpoints();   // Issue #3304: RAG Dashboard configuration and metrics
+v1Api.MapRagPipelineEndpoints();   // Issue #5312: User-facing RAG pipeline CRUD
+v1Api.MapGroup("/rag").MapRagStrategyEndpoints(); // Issue #8: Public RAG strategies endpoint
+
+// Business Simulations
+v1Api.MapBudgetEndpoints();           // Budget display system (credit tracking)
+v1Api.MapAdminBudgetEndpoints();     // SP5 F4-C5 #1838: Singleton AppBudget config (GET + PUT /admin/budget)
+v1Api.MapFinancialLedgerEndpoints();  // Financial Ledger CRUD (Issue #3722)
+v1Api.MapCostCalculatorEndpoints();   // Agent Cost Calculator (Issue #3725)
+v1Api.MapResourceForecastEndpoints(); // Resource Forecasting Simulator (Issue #3726)
+
+// Batch & Operations
+v1Api.MapBatchJobEndpoints();          // Batch job system & operations (Issue #3693)
+v1Api.MapBatchJobLogsEndpoints();      // Batch job real-time logs SSE (Issue #3693 Task 3)
+v1Api.MapAdminResourcesEndpoints();    // Resources monitoring (Issue #3695)
+v1Api.MapAdminEmbeddingEndpoints();    // Embedding service dashboard (Issue #4878)
+v1Api.MapAdminPipelineEndpoints();     // Pipeline health overview (Issue #4879)
+v1Api.MapAdminKBSettingsEndpoints();   // KB settings read-only (Issue #4881)
+v1Api.MapTierStrategyAdminEndpoints(); // Tier-strategy configuration (Issue #3440)
+v1Api.MapRagPipelineAdminEndpoints();  // RAG Pipeline builder (Issue #3463)
+v1Api.MapRagExecutionAdminEndpoints(); // RAG Execution replay & compare (Issue #4459)
+v1Api.MapAdminMechanicExtractorEndpoints(); // Mechanic Extractor: Variant C copyright-compliant analysis
+v1Api.MapAdminMechanicAnalysesEndpoints();  // ISSUE-524 / M1.2: AI-generated mechanic analyses (async pipeline)
+v1Api.MapAdminMechanicExtractorValidationEndpoints(); // ADR-051 Sprint 1 / Task 32: Mechanic validation admin surface
+v1Api.MapReportingEndpoints();         // ISSUE-916: Report generation & scheduling
+v1Api.MapTestingMetricsEndpoints();    // Issue #2139: Testing metrics API
+v1Api.MapBggImportQueueEndpoints(); // Issue #3541: BGG import queue management (admin-only)
 
 // SEC-01: Only register test endpoints in Development to prevent exposure in staging/QA
 if (app.Environment.IsDevelopment())
@@ -899,10 +1034,6 @@ if (app.Environment.IsDevelopment())
     v1Api.MapTestEndpoints();
 }
 
-// ═══ ALWAYS REGISTERED (DI dependencies) ═══
-// GameStateHub MUST remain unconditionally registered:
-// Multiple handlers inject IHubContext<GameStateHub> and would fail DI resolution if removed.
-// Alpha users won't connect to it — no client-side SignalR setup in Alpha routes.
 app.MapHub<Api.Hubs.GameStateHub>("/hubs/gamestate");
 
 // ISSUE-2511: Startup health check for critical services

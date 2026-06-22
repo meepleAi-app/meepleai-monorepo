@@ -44,7 +44,7 @@ export function EmptyState({ variant, onAction }: EmptyStateProps) {
   const config = emptyStateConfig[variant];
 
   return (
-    <Card className="bg-white/70 backdrop-blur-md border-2 border-dashed border-muted">
+    <Card className="bg-card/70 backdrop-blur-md border-2 border-dashed border-muted">
       <CardContent className="flex flex-col items-center justify-center py-12 text-center">
         <div className="text-6xl mb-4" role="img" aria-label={config.title}>
           {config.icon}

@@ -53,7 +53,11 @@ function formatViolations(violations: Awaited<ReturnType<AxeBuilder['analyze']>>
 
 test.describe('Accessibility - Public Pages (Light Mode)', () => {
   test.beforeEach(async ({ page }) => {
-    await page.emulateMedia({ colorScheme: 'light' });
+    // #1094 follow-up: reduced-motion neutralizes mid-animation captures
+    // (e.g. /register `.animate-pulse` "Creating account…" yielded ratio 4.09
+    // when caught mid-pulse cycle). Components must carry
+    // `motion-reduce:animate-none` for this to take effect.
+    await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
   });
 
   test('Landing Page (/) - light mode @a11y', async ({ page }) => {
@@ -132,7 +136,7 @@ test.describe('Accessibility - Public Pages (Light Mode)', () => {
 
 test.describe('Accessibility - Public Pages (Dark Mode)', () => {
   test.beforeEach(async ({ page }) => {
-    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
   });
 
   test('Landing Page (/) - dark mode @a11y', async ({ page }) => {
@@ -180,7 +184,11 @@ test.describe('Accessibility - Public Pages (Dark Mode)', () => {
 
 test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
   test('Landing Page meets 4.5:1 contrast ratio - light mode @a11y', async ({ page }) => {
-    await page.emulateMedia({ colorScheme: 'light' });
+    // #1094 follow-up: reduced-motion neutralizes mid-animation captures
+    // (e.g. /register `.animate-pulse` "Creating account…" yielded ratio 4.09
+    // when caught mid-pulse cycle). Components must carry
+    // `motion-reduce:animate-none` for this to take effect.
+    await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
@@ -190,7 +198,7 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
   });
 
   test('Landing Page meets 4.5:1 contrast ratio - dark mode @a11y', async ({ page }) => {
-    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
@@ -200,7 +208,11 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
   });
 
   test('Games Catalog meets contrast requirements @a11y', async ({ page }) => {
-    await page.emulateMedia({ colorScheme: 'light' });
+    // #1094 follow-up: reduced-motion neutralizes mid-animation captures
+    // (e.g. /register `.animate-pulse` "Creating account…" yielded ratio 4.09
+    // when caught mid-pulse cycle). Components must carry
+    // `motion-reduce:animate-none` for this to take effect.
+    await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
     await page.goto('/board-game-ai/games');
     await page.waitForLoadState('networkidle');
 
@@ -210,7 +222,11 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
   });
 
   test('Auth pages meet contrast requirements @a11y', async ({ page }) => {
-    await page.emulateMedia({ colorScheme: 'light' });
+    // #1094 follow-up: reduced-motion neutralizes mid-animation captures
+    // (e.g. /register `.animate-pulse` "Creating account…" yielded ratio 4.09
+    // when caught mid-pulse cycle). Components must carry
+    // `motion-reduce:animate-none` for this to take effect.
+    await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
     await page.goto('/login');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(500);
@@ -412,6 +428,15 @@ test.describe('Accessibility - Authenticated Pages', () => {
 // ============================================================================
 
 test.describe('Accessibility - Comprehensive Audit', () => {
+  // #1094 follow-up (review on #1249 MEDIUM-1): emit reduced-motion to
+  // neutralize mid-animation captures (e.g. /register .animate-pulse).
+  // Without this beforeEach, the Comprehensive Audit's /register test
+  // can capture #7c7874-family colors mid-pulse at 4.09:1 AA fail.
+  // Components must carry `motion-reduce:animate-none` for this to take effect.
+  test.beforeEach(async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+  });
+
   const publicPages = [
     { name: 'Landing Page', url: '/' },
     { name: 'Games Catalog', url: '/board-game-ai/games' },

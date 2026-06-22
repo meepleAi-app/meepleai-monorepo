@@ -23,10 +23,54 @@ internal static partial class MeepleAiMetrics
     /// Gauge for OpenRouter account balance in USD.
     /// Issue #5480: Scraped from /auth/key — enables budget alerting.
     /// </summary>
+    /// <remarks>
+    /// **DEPRECATED (Issue #985):** Use <see cref="ProviderQuotaRemainingUsd"/> with provider label "openrouter".
+    /// This metric will be removed once consumers migrate to the new multi-provider gauge.
+    /// </remarks>
     public static readonly UpDownCounter<double> OpenRouterBalanceUsd = Meter.CreateUpDownCounter<double>(
         name: "meepleai.openrouter.balance_usd",
         unit: "USD",
         description: "OpenRouter account balance in USD");
+
+    // ─── Issue #985 (G4): Multi-provider quota gauges ───────────────────────
+    // All three use observeValues: (plural) overload — IEnumerable<Measurement<double>>
+    // with per-provider tags. The plural overload differs from the singular observeValue:
+    // used elsewhere in the codebase (e.g., MeepleAiMetrics.Cache.cs); plural is intentional
+    // because we emit one measurement per provider with a `provider` label.
+    //
+    // Callbacks fire on Prometheus scrape (~15s) and call IProviderQuotaService.GetQuotaAsync
+    // which hits the HybridCache (5min TTL) — typically <5ms per scrape per provider.
+
+    /// <summary>
+    /// Issue #985 (G4): multi-provider remaining USD credit.
+    /// Replaces <see cref="OpenRouterBalanceUsd"/>.
+    /// </summary>
+    public static readonly ObservableGauge<double> ProviderQuotaRemainingUsd = Meter.CreateObservableGauge(
+        name: "meepleai.provider.quota_remaining_usd",
+        observeValues: () => ProviderQuotaMetricsRegistrar.ObserveRemainingUsd(),
+        unit: "USD",
+        description: "Remaining USD credit per LLM provider (provider label)");
+
+    /// <summary>
+    /// Issue #985 (G4): cumulative USD used per provider.
+    /// For free-tier providers (no enforced limit), tracks lifetime usage.
+    /// </summary>
+    public static readonly ObservableGauge<double> ProviderQuotaUsedUsd = Meter.CreateObservableGauge(
+        name: "meepleai.provider.quota_used_usd",
+        observeValues: () => ProviderQuotaMetricsRegistrar.ObserveUsedUsd(),
+        unit: "USD",
+        description: "Cumulative USD used per LLM provider (provider label)");
+
+    /// <summary>
+    /// Issue #985 (G4): configured USD limit per provider.
+    /// No measurement emitted for providers without enforced limit (e.g., DeepSeek pay-as-you-go).
+    /// Used by Prometheus alert rules for remaining/limit ratio computation.
+    /// </summary>
+    public static readonly ObservableGauge<double> ProviderQuotaLimitUsd = Meter.CreateObservableGauge(
+        name: "meepleai.provider.quota_limit_usd",
+        observeValues: () => ProviderQuotaMetricsRegistrar.ObserveLimitUsd(),
+        unit: "USD",
+        description: "Configured USD limit per LLM provider (no measurement = no enforced limit)");
 
     /// <summary>
     /// Gauge for OpenRouter RPM utilization (0.0 to 1.0).

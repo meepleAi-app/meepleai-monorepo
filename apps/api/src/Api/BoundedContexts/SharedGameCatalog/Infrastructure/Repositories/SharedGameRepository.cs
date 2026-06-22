@@ -31,8 +31,12 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
 
     public async Task<SharedGame?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        // Issue #2035: Include Designers so MapToDomain can hydrate the aggregate's
+        // designer collection — required by GetGameDetailQueryHandler which surfaces
+        // designer names on the library detail DTO.
         var entity = await DbContext.Set<SharedGameEntity>()
             .AsNoTracking()
+            .Include(g => g.Designers)
             .FirstOrDefaultAsync(g => g.Id == id && !g.IsDeleted, cancellationToken)
             .ConfigureAwait(false);
 
@@ -117,7 +121,7 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
         }
 
         // Use internal reconstruction constructor (no events)
-        return new SharedGame(
+        var sharedGame = new SharedGame(
             entity.Id,
             entity.Title,
             entity.YearPublished,
@@ -128,8 +132,13 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             entity.MinAge,
             entity.ComplexityRating,
             entity.AverageRating,
-            entity.ImageUrl,
-            entity.ThumbnailUrl,
+            // Issue #2123 — entity.ImageUrl/ThumbnailUrl are now nullable post-Phase A
+            // nullify migration. SharedGame aggregate still types them as non-nullable
+            // (legacy contract; deprecation tombstone). Coerce to empty string here so
+            // null entity values don't blow up the aggregate constructor — FE consumers
+            // MUST prefer SharedGameDto.CoverUrl which is the R2-resolved replacement.
+            entity.ImageUrl ?? string.Empty,
+            entity.ThumbnailUrl ?? string.Empty,
             rules,
             (GameStatus)entity.Status,
             entity.CreatedBy,
@@ -140,7 +149,27 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             entity.BggId,
             entity.AgentDefinitionId,
             (GameDataStatus)entity.GameDataStatus,
-            entity.HasUploadedPdf);
+            entity.HasUploadedPdf,
+            pdfCoverR2Key: entity.PdfCoverR2Key,
+            wikidataQid: entity.WikidataQid,
+            wikidataCoverR2Key: entity.WikidataCoverR2Key,
+            wikidataCoverLicense: entity.WikidataCoverLicense,
+            wikidataCoverAttribution: entity.WikidataCoverAttribution,
+            wikidataCoverSourceUrl: entity.WikidataCoverSourceUrl,
+            wikidataQidLastVerifiedAt: entity.WikidataQidLastVerifiedAt);
+
+        // Issue #2035: Hydrate designers from the M:N join — only when the caller
+        // eager-loaded the navigation (GetByIdAsync), otherwise the EF Core
+        // collection is empty by default (lazy loading is not enabled).
+        foreach (var designer in entity.Designers)
+        {
+            if (!string.IsNullOrWhiteSpace(designer.Name))
+            {
+                sharedGame.AddDesigner(designer.Name);
+            }
+        }
+
+        return sharedGame;
     }
 
     private static SharedGameEntity MapToEntity(SharedGame game)
@@ -166,6 +195,14 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             RulesLanguage = game.Rules?.Language,
             RulesExternalUrl = game.Rules?.ExternalUrl,
             HasUploadedPdf = game.HasUploadedPdf,
+            PdfCoverR2Key = game.PdfCoverR2Key,
+            // Issue #1823 Phase B M8 — propagate Wikidata enrichment state.
+            WikidataQid = game.WikidataQid,
+            WikidataCoverR2Key = game.WikidataCoverR2Key,
+            WikidataCoverLicense = game.WikidataCoverLicense,
+            WikidataCoverAttribution = game.WikidataCoverAttribution,
+            WikidataCoverSourceUrl = game.WikidataCoverSourceUrl,
+            WikidataQidLastVerifiedAt = game.WikidataQidLastVerifiedAt,
             // SearchVector managed by PostgreSQL trigger
             CreatedBy = game.CreatedBy,
             ModifiedBy = game.ModifiedBy,
@@ -223,5 +260,14 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             .ConfigureAwait(false);
 
         return entities.Select(MapToDomain).ToList();
+    }
+
+    public async Task<int> CountAllAsync(CancellationToken cancellationToken = default)
+    {
+        return await DbContext.SharedGames
+            .AsNoTracking()
+            .Where(g => !g.IsDeleted)
+            .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
     }
 }

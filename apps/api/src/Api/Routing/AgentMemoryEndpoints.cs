@@ -96,6 +96,15 @@ internal static class AgentMemoryEndpoints
             .Produces(401)
             .WithSummary("Get all glossary entries for a game");
 
+        // === House-rule Metadata (issue #2492 — SP6 §F drawer ConnectionBar) ===
+
+        agentMemory.MapGet("/house-rules/metadata", HandleGetHouseRulesMetadata)
+            .RequireAuthenticatedUser()
+            .Produces<HouseRulesMetadataDto>(200)
+            .Produces(400)
+            .Produces(401)
+            .WithSummary("Get aggregated house-rule metadata counts (agent/game/session/kb) for SP6 §F drawer");
+
         // === Player Stats ===
 
         agentMemory.MapGet("/players/me/stats", HandleGetMyStats)
@@ -252,6 +261,22 @@ internal static class AgentMemoryEndpoints
     {
         var userId = httpContext.User.GetUserId();
         var result = await mediator.Send(new GetGlossaryQuery(gameId, userId), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetHouseRulesMetadata(
+        [FromQuery] Guid gameId,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        if (gameId == Guid.Empty)
+            return Results.BadRequest(new { error = "gameId is required" });
+
+        var userId = httpContext.User.GetUserId();
+        var result = await mediator
+            .Send(new GetHouseRulesMetadataQuery(gameId, userId), cancellationToken)
+            .ConfigureAwait(false);
         return Results.Ok(result);
     }
 

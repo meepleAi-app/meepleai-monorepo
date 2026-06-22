@@ -116,6 +116,55 @@ const FRAMES: { slug: string; file: string }[] = [
     slug: 'pages-librogame-play-session--frame-04-glossary-inline',
     file: 'librogame-play-session-04-glossary-inline.png',
   },
+  // librogame-translate-viewer (12 frames, 13 mockup states — state J merged into Frame05) — Task 6 #2174
+  {
+    slug: 'pages-librogame-translate-viewer--frame-01-idle',
+    file: 'librogame-translate-viewer-01-idle.png',
+  },
+  {
+    slug: 'pages-librogame-translate-viewer--frame-02-segmenting',
+    file: 'librogame-translate-viewer-02-segmenting.png',
+  },
+  {
+    slug: 'pages-librogame-translate-viewer--frame-03-segments-list',
+    file: 'librogame-translate-viewer-03-segments-list.png',
+  },
+  {
+    slug: 'pages-librogame-translate-viewer--frame-04-translating',
+    file: 'librogame-translate-viewer-04-translating.png',
+  },
+  {
+    slug: 'pages-librogame-translate-viewer--frame-05-translated',
+    file: 'librogame-translate-viewer-05-translated.png',
+  },
+  {
+    slug: 'pages-librogame-translate-viewer--frame-06-low-confidence',
+    file: 'librogame-translate-viewer-06-low-confidence.png',
+  },
+  {
+    slug: 'pages-librogame-translate-viewer--frame-07-loading-4step',
+    file: 'librogame-translate-viewer-07-loading-4step.png',
+  },
+  {
+    slug: 'pages-librogame-translate-viewer--frame-08-reader-mode',
+    file: 'librogame-translate-viewer-08-reader-mode.png',
+  },
+  {
+    slug: 'pages-librogame-translate-viewer--frame-09-wake-lock',
+    file: 'librogame-translate-viewer-09-wake-lock.png',
+  },
+  {
+    slug: 'pages-librogame-translate-viewer--frame-10-lang-badge-high',
+    file: 'librogame-translate-viewer-10-lang-badge-high.png',
+  },
+  {
+    slug: 'pages-librogame-translate-viewer--frame-11-lang-override-modal',
+    file: 'librogame-translate-viewer-11-lang-override-modal.png',
+  },
+  {
+    slug: 'pages-librogame-translate-viewer--frame-12-manual-input-mode',
+    file: 'librogame-translate-viewer-12-manual-input-mode.png',
+  },
 ];
 
 for (const { slug, file } of FRAMES) {

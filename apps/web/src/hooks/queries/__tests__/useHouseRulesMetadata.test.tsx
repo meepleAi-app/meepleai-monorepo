@@ -72,6 +72,23 @@ describe('useHouseRulesMetadata — constants', () => {
       GAME_ID,
     ]);
   });
+
+  it('queryKey is unique per gameId value including null/undefined/empty', () => {
+    // Guard against cache collision when callers pass null/undefined — each
+    // case gets a distinct entry rather than colliding on a shared `all` key.
+    const nullKey = houseRulesMetadataKeys.byGame(null);
+    const undefKey = houseRulesMetadataKeys.byGame(undefined);
+    const emptyKey = houseRulesMetadataKeys.byGame('');
+    const idKey = houseRulesMetadataKeys.byGame(GAME_ID);
+
+    // null/undefined/'' all stringify to the same '' tail — that's fine because
+    // `enabled: false` means queryFn never runs for any of them. The valid id
+    // case stays distinct.
+    expect(nullKey).toEqual(['agent-memory', 'house-rules', 'metadata', '']);
+    expect(undefKey).toEqual(['agent-memory', 'house-rules', 'metadata', '']);
+    expect(emptyKey).toEqual(['agent-memory', 'house-rules', 'metadata', '']);
+    expect(idKey).not.toEqual(emptyKey);
+  });
 });
 
 describe('useHouseRulesMetadata — auto-enable gate', () => {

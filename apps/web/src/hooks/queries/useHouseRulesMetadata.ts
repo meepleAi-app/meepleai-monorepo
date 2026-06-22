@@ -22,7 +22,8 @@ export const HOUSE_RULES_METADATA_STALE_TIME_MS = 5 * 60 * 1000; // 5 min.
 
 export const houseRulesMetadataKeys = {
   all: ['agent-memory', 'house-rules', 'metadata'] as const,
-  byGame: (gameId: string) => [...houseRulesMetadataKeys.all, gameId] as const,
+  byGame: (gameId: string | null | undefined) =>
+    [...houseRulesMetadataKeys.all, gameId ?? ''] as const,
 };
 
 export interface UseHouseRulesMetadataOptions {
@@ -41,7 +42,10 @@ export function useHouseRulesMetadata({ gameId, enabled = true }: UseHouseRulesM
   const isValid = typeof gameId === 'string' && gameId.length > 0;
 
   return useQuery<HouseRulesMetadataDto | null, Error>({
-    queryKey: isValid ? houseRulesMetadataKeys.byGame(gameId) : houseRulesMetadataKeys.all,
+    // Always include gameId in the key so each game has its own cache entry,
+    // even when invalid (the `enabled` guard prevents the fetch). Avoids
+    // collision under the shared `all` key when multiple mounts pass null.
+    queryKey: houseRulesMetadataKeys.byGame(gameId),
     queryFn: async () => {
       if (!isValid) {
         throw new Error('gameId is required');

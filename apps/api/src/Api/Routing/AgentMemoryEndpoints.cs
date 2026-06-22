@@ -98,6 +98,9 @@ internal static class AgentMemoryEndpoints
 
         // === House-rule Metadata (issue #2492 — SP6 §F drawer ConnectionBar) ===
 
+        // Note: no Produces(404). When the (gameId, userId) pair has no GameMemory
+        // record the endpoint returns 200 with agentCount=0 and the cross-BC kb
+        // count — a missing record is a valid "zero" state, not an error.
         agentMemory.MapGet("/house-rules/metadata", HandleGetHouseRulesMetadata)
             .RequireAuthenticatedUser()
             .Produces<HouseRulesMetadataDto>(200)

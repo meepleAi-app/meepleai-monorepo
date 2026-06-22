@@ -1,6 +1,7 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';
+import type { TurnOrderType } from '@/lib/session-live/turn-state';
 
 describe('useLiveSessionStore — Block A #2389 contract evolution', () => {
   beforeEach(() => {
@@ -87,5 +88,43 @@ describe('useLiveSessionStore — Block A #2389 contract evolution', () => {
     });
     useLiveSessionStore.getState().resolveProposal('unknown-id', true);
     expect(useLiveSessionStore.getState().pendingProposals).toHaveLength(1);
+  });
+
+  // #2483 Task 2 — turnOrderType field
+  it('initial state — turnOrderType is null', () => {
+    expect(useLiveSessionStore.getState().turnOrderType).toBeNull();
+  });
+
+  it('setTurnOrderType writes the turnOrderType value', () => {
+    useLiveSessionStore.getState().setTurnOrderType('Sequential');
+    expect(useLiveSessionStore.getState().turnOrderType).toBe('Sequential');
+  });
+
+  it('setTurnOrderType(null) clears the value', () => {
+    useLiveSessionStore.getState().setTurnOrderType('RoundRobin');
+    useLiveSessionStore.getState().setTurnOrderType(null);
+    expect(useLiveSessionStore.getState().turnOrderType).toBeNull();
+  });
+
+  it('reset() clears turnOrderType to null', () => {
+    useLiveSessionStore.getState().setTurnOrderType('Custom');
+    useLiveSessionStore.getState().reset();
+    expect(useLiveSessionStore.getState().turnOrderType).toBeNull();
+  });
+
+  it('setTurnOrderType accepts all valid TurnOrderType variants', () => {
+    const variants: TurnOrderType[] = [
+      'RoundRobin',
+      'Sequential',
+      'Simultaneous',
+      'Realtime',
+      'None',
+      'Custom',
+      'FirstPlayerToken',
+    ];
+    for (const variant of variants) {
+      useLiveSessionStore.getState().setTurnOrderType(variant);
+      expect(useLiveSessionStore.getState().turnOrderType).toBe(variant);
+    }
   });
 });

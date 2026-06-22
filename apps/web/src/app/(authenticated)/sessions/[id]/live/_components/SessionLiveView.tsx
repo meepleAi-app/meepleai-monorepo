@@ -850,6 +850,7 @@ export function SessionLiveView(): ReactElement {
   // is forwarded to ScoreTabContent via the shared useLiveSessionStore.
 
   const setScoringConfig = useLiveSessionStore(s => s.setScoringConfig);
+  const setTurnOrderType = useLiveSessionStore(s => s.setTurnOrderType);
 
   // #2431: polymorphic endgame summary — selectors feed mapScoreDataToEndgameSummary
   // below. Subscribed reactively so the EndgameDialog refreshes as scoreData
@@ -880,6 +881,15 @@ export function SessionLiveView(): ReactElement {
       });
     }
   }, [sessionQuery.data, setScoringConfig]);
+
+  // #2483 Task 2: REST hydration for turnOrderType (path B — static, no SignalR).
+  // Populate once from the DTO. No race guard needed: no SignalR event exists for
+  // turnOrderType (it never changes during the session).
+  useEffect(() => {
+    const dto = sessionQuery.data;
+    if (dto?.turnOrderType == null) return;
+    setTurnOrderType(dto.turnOrderType as import('@/lib/session-live/turn-state').TurnOrderType);
+  }, [sessionQuery.data, setTurnOrderType]);
 
   // ── G5c #2376: Zustand toolkit renderer store ─────────────────────────────
   // Store starts empty; real hydration via useQuery(['toolkit', sessionId]) is a

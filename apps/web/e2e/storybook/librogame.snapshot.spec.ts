@@ -99,6 +99,23 @@ const FRAMES: { slug: string; file: string }[] = [
     slug: 'pages-librogame-encounter-cheatsheet--frame-04-error',
     file: 'librogame-encounter-cheatsheet-04-error.png',
   },
+  // librogame-play-session (4 frames) — Task 5 #2174
+  {
+    slug: 'pages-librogame-play-session--frame-01-story-tab',
+    file: 'librogame-play-session-01-story-tab.png',
+  },
+  {
+    slug: 'pages-librogame-play-session--frame-02-encounter-tab',
+    file: 'librogame-play-session-02-encounter-tab.png',
+  },
+  {
+    slug: 'pages-librogame-play-session--frame-03-chat-overlay',
+    file: 'librogame-play-session-03-chat-overlay.png',
+  },
+  {
+    slug: 'pages-librogame-play-session--frame-04-glossary-inline',
+    file: 'librogame-play-session-04-glossary-inline.png',
+  },
 ];
 
 for (const { slug, file } of FRAMES) {

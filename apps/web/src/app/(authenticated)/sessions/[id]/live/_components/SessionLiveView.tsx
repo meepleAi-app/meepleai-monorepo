@@ -105,6 +105,7 @@ import { useSession } from '@/hooks/queries/useActiveSessions';
 import { useTranslation } from '@/hooks/useTranslation';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
 import { mapConnectionState } from '@/lib/session-live/map-connection-state';
+import { mapTurnDataToTurnState } from '@/lib/session-live/map-turn-data-to-turn-state';
 import { hasRequiredRole } from '@/lib/session-live/participant-role';
 import { mapScoreDataToEndgameSummary } from '@/lib/session-live/score-data-to-endgame-summary';
 import {
@@ -388,6 +389,10 @@ export function SessionLiveView(): ReactElement {
     };
   }, [fixture, sessionQuery.data, liveStream.events]);
 
+  // #2483 Task 2: reactive selector for turnOrderType — must be declared before
+  // turnRendererState useMemo (which appears in the i18n labels section below).
+  const storeTurnOrderType = useLiveSessionStore(s => s.turnOrderType);
+
   // ── Navigation handlers ───────────────────────────────────────────────────
 
   /** Build a new search string preserving params not in overrides. */
@@ -603,15 +608,18 @@ export function SessionLiveView(): ReactElement {
     [t, intl.messages]
   );
 
+  // #2483 Task 4: replace hardcoded RoundRobin with real turnOrderType from store.
+  // mapTurnDataToTurnState is pure and handles null/unknown safely (→ 'None' fallback).
+  // storeTurnOrderType in deps so the memo re-fires when the DTO hydration effect runs.
   const turnRendererState = useMemo<TurnState>(
-    (): TurnState => ({
-      type: 'RoundRobin',
-      round: activeSession?.currentTurn ?? 0,
-      totalRounds: activeSession?.totalTurns ?? 0,
-      activePlayerId: activeSession?.activePlayerId ?? '',
-      playOrder: activeSession?.players.map(p => p.id) ?? [],
-    }),
-    [activeSession]
+    () =>
+      mapTurnDataToTurnState(storeTurnOrderType, {
+        currentTurn: activeSession?.currentTurn,
+        totalTurns: activeSession?.totalTurns,
+        activePlayerId: activeSession?.activePlayerId,
+        players: activeSession?.players,
+      }),
+    [storeTurnOrderType, activeSession]
   );
 
   const turnRendererPlayers = useMemo<ReadonlyArray<TurnPlayerInfo>>(

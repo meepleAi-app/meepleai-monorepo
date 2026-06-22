@@ -1340,3 +1340,87 @@ describe('SessionLiveView — Block B (#2389) scoring wire-up', () => {
     expect(container.querySelector('[data-slot="scoring-panel-points"]')).not.toBeNull();
   });
 });
+
+// ─── #2483 Task 4 — turnRendererState wired from store ────────────────────────
+
+describe('SessionLiveView — #2483 Task 4: TurnIndicatorRenderer from store', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
+    // Always show the 'turn' tab so TurnIndicatorRenderer is visible.
+    searchParamsMap['tab'] = 'turn';
+    mockParamsId = 'session-abc-123';
+    IS_VISUAL_TEST_BUILD_MOCK = false;
+    useSessionMock.mockReturnValue({
+      data: MOCK_SESSION_DTO,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+  });
+
+  it('renders Sequential branch when store.turnOrderType=Sequential', () => {
+    act(() => {
+      useLiveSessionStore.getState().setTurnOrderType('Sequential');
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // Sequential branch must be present; RoundRobin must NOT be present.
+    expect(container.querySelector('[data-slot="turn-branch-sequential"]')).not.toBeNull();
+    expect(container.querySelector('[data-slot="turn-branch-round-robin"]')).toBeNull();
+  });
+
+  it('renders RoundRobin branch when store.turnOrderType=RoundRobin', () => {
+    act(() => {
+      useLiveSessionStore.getState().setTurnOrderType('RoundRobin');
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.querySelector('[data-slot="turn-branch-round-robin"]')).not.toBeNull();
+  });
+
+  it('renders None branch (safe fallback) when store.turnOrderType=null — no hardcoded RoundRobin', () => {
+    // turnOrderType is null by default (reset() was called in global beforeEach).
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // Must NOT render round-robin silently.
+    expect(container.querySelector('[data-slot="turn-branch-round-robin"]')).toBeNull();
+    // Must render the explicit None fallback.
+    expect(container.querySelector('[data-slot="turn-branch-none"]')).not.toBeNull();
+  });
+
+  it('renders Realtime branch when store.turnOrderType=Realtime', () => {
+    act(() => {
+      useLiveSessionStore.getState().setTurnOrderType('Realtime');
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.querySelector('[data-slot="turn-branch-realtime"]')).not.toBeNull();
+  });
+
+  it('renders None branch when store.turnOrderType=None', () => {
+    act(() => {
+      useLiveSessionStore.getState().setTurnOrderType('None');
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.querySelector('[data-slot="turn-branch-none"]')).not.toBeNull();
+  });
+
+  it('renders None branch when DTO supplies turnOrderType=Sequential (hydration path)', () => {
+    // Test the full hydration path: DTO carries turnOrderType → store → renderer.
+    const dtoWithTurnOrder: GameSessionDto = {
+      ...MOCK_SESSION_DTO,
+      turnOrderType: 'Sequential',
+    };
+    useSessionMock.mockReturnValue({
+      data: dtoWithTurnOrder,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.querySelector('[data-slot="turn-branch-sequential"]')).not.toBeNull();
+    expect(container.querySelector('[data-slot="turn-branch-round-robin"]')).toBeNull();
+  });
+});

@@ -25,7 +25,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 /// <c>SharedGameCatalogServiceExtensions.AddSharedGameCatalogContext</c>.
 /// </para>
 /// </remarks>
-public interface IWebpVariantGenerator
+internal interface IWebpVariantGenerator
 {
     /// <summary>
     /// Generates a WebP variant of the original image, cropped to the requested

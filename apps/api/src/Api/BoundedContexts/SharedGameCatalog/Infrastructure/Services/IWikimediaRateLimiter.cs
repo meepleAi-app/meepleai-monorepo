@@ -24,7 +24,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 /// past 5 RPS combined.
 /// </para>
 /// </remarks>
-public interface IWikimediaRateLimiter
+internal interface IWikimediaRateLimiter
 {
     /// <summary>
     /// Waits asynchronously until a 5 RPS token is available, then consumes it.

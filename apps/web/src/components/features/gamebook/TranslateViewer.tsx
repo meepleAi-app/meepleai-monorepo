@@ -38,6 +38,38 @@ export interface TranslateViewerProps {
    * endpoint validates kind discrimination.
    */
   gameRef: GameRef;
+  /**
+   * Test-seam: pre-seed the internal FSM phase for Storybook / test use.
+   * MUST NOT be used in production code — default-safe (undefined = 'idle').
+   * DS-17 Phase D-2 Task 6 story harness.
+   */
+  _initialPhase?: Phase;
+  /**
+   * Test-seam: pre-seed the photo artifact for Storybook / test use.
+   * Active when `_initialPhase` is 'segments_ready', 'translating', or 'translated'.
+   */
+  _initialArtifact?: GamebookPhotoArtifact | null;
+  /**
+   * Test-seam: pre-seed the active segment for Storybook / test use.
+   * Active when `_initialPhase` is 'translating' or 'translated'.
+   */
+  _initialActiveSegment?: GamebookSegment | null;
+  /**
+   * Test-seam: pre-seed SSE state for Storybook / test use (translated/translating frames).
+   * Keys match TranslateState from useTranslateSegmentSSE.
+   */
+  _initialSseState?: {
+    partialText?: string;
+    isComplete?: boolean;
+    appliedTerms?: readonly string[];
+    detectedSourceLang?: SourceLangCode | null;
+    langDetectionConfidence?: number | null;
+  };
+  /**
+   * Test-seam: pre-seed the lang-override modal open state for Storybook.
+   * When true, the modal mounts open with mode='manual'.
+   */
+  _initialModalOpen?: boolean;
 }
 
 export type Phase =
@@ -65,10 +97,20 @@ function effectiveTier(
   return rawTier;
 }
 
-export function TranslateViewer({ campaignId, gameRef }: TranslateViewerProps): ReactElement {
-  const [phase, setPhase] = useState<Phase>('idle');
-  const [artifact, setArtifact] = useState<GamebookPhotoArtifact | null>(null);
-  const [activeSegment, setActiveSegment] = useState<GamebookSegment | null>(null);
+export function TranslateViewer({
+  campaignId,
+  gameRef,
+  _initialPhase,
+  _initialArtifact,
+  _initialActiveSegment,
+  _initialSseState,
+  _initialModalOpen,
+}: TranslateViewerProps): ReactElement {
+  const [phase, setPhase] = useState<Phase>(_initialPhase ?? 'idle');
+  const [artifact, setArtifact] = useState<GamebookPhotoArtifact | null>(_initialArtifact ?? null);
+  const [activeSegment, setActiveSegment] = useState<GamebookSegment | null>(
+    _initialActiveSegment ?? null
+  );
   const [kebabOpen, setKebabOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -92,7 +134,30 @@ export function TranslateViewer({ campaignId, gameRef }: TranslateViewerProps): 
 
   const upload = usePhotoUpload(campaignId);
   const segment = useSegmentPhoto(campaignId);
-  const sse = useTranslateSegmentSSE();
+  const sseRaw = useTranslateSegmentSSE();
+  // Test-seam: overlay _initialSseState so story frames can drive translated/translating
+  // without actually running the SSE connection. In production _initialSseState is always
+  // undefined, so `sse === sseRaw` with zero overhead.
+  const sse = useMemo(
+    () =>
+      _initialSseState
+        ? {
+            ...sseRaw,
+            partialText: _initialSseState.partialText ?? sseRaw.partialText,
+            isComplete: _initialSseState.isComplete ?? sseRaw.isComplete,
+            appliedTerms: _initialSseState.appliedTerms ?? sseRaw.appliedTerms,
+            detectedSourceLang:
+              _initialSseState.detectedSourceLang !== undefined
+                ? _initialSseState.detectedSourceLang
+                : sseRaw.detectedSourceLang,
+            langDetectionConfidence:
+              _initialSseState.langDetectionConfidence !== undefined
+                ? _initialSseState.langDetectionConfidence
+                : sseRaw.langDetectionConfidence,
+          }
+        : sseRaw,
+    [sseRaw, _initialSseState]
+  );
 
   // T5 — DEC-4: Hard timeout state. Merged into errorMessage below.
   const [timeoutError, setTimeoutError] = useState<string | null>(null);
@@ -106,7 +171,10 @@ export function TranslateViewer({ campaignId, gameRef }: TranslateViewerProps): 
   const [analyticsDetectedFiredForArtifact, setAnalyticsDetectedFiredForArtifact] = useState<
     string | null
   >(null);
-  const [modalState, setModalState] = useState<ModalState>({ open: false, mode: 'manual' });
+  const [modalState, setModalState] = useState<ModalState>({
+    open: _initialModalOpen ?? false,
+    mode: 'manual',
+  });
 
   // Reset lang state on artifact change (DEC-FE-11)
   useEffect(() => {

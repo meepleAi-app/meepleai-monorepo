@@ -110,6 +110,9 @@ export const GameSessionDtoSchema = z.object({
   // Both fields are nullable strings (scoreData is a JSON-encoded payload).
   scoringType: z.string().nullable().optional(),
   scoreData: z.string().nullable().optional(),
+  // #2483 Task 1 BE: turnOrderType derived from the game's toolkit (static for the session).
+  // Null when the game has no toolkit wired. Path B: no SignalR event, populated from DTO.
+  turnOrderType: z.string().nullable().optional(),
 });
 
 export type GameSessionDto = z.infer<typeof GameSessionDtoSchema>;

@@ -226,6 +226,72 @@ Query rapide:
 - *«Cronologia ultimi 30 giorni»* → `git log --since='30 days ago' -- data/snapshots/AUDIT.md`.
 - *«Quale snapshot serviva il dev X durante l'incident del 2026-06-11 alle 14:00?»* → cerca la riga il cui `Published at` precede 14:00 (era il `latest.txt` puntato).
 
+## Freshness & ownership requirements
+
+Formal requirements governing snapshot freshness and bake ownership. These
+requirements are enforced or surfaced by the tooling described in this document.
+
+### R-SNAP-FRESH-01 — Migration alignment
+
+> A published snapshot's `ef_migration_head` MUST equal `main`'s HEAD EF
+> migration at the time the first developer runs `make dev-from-snapshot` after
+> a migration merge.
+
+**Enforcement**: the D4 bake workflow (`seed-snapshot-bake-ci.yml`) triggers on
+push to paths that include migration files and `seed-schema.version`. When a
+migration lands, the smoke bake runs automatically and, if `publish=true`, moves
+`latest.txt` to a snapshot whose `ef_migration_head` matches the new HEAD.
+Developers who run `make dev-from-snapshot` before the bake completes will be
+blocked by `snapshot-verify.sh` exit code `2` (migration drift) and prompted to
+wait for the workflow or run a local bake.
+
+### R-SNAP-FRESH-02 — Age SLO (formalized)
+
+> The delta `created_at → today` of the published snapshot MUST be ≤ 7 days.
+> A snapshot aged 7–30 days is **warning** (orange); ≥ 30 days or missing is
+> **stale** (red).
+
+**Enforcement**:
+
+- `seed-status.sh` surfaces the age in every mode (`default`, `--brief`,
+  `--badge`) using the thresholds `WARNING_AGE_DAYS=7` and `STALE_AGE_DAYS=30`.
+- `seed-status.sh --strict` exits `1` when the snapshot is stale or missing,
+  blocking CI pipelines that depend on a fresh snapshot.
+- `snapshot-verify.sh` exit codes (downstream of the bake) also gate the
+  publish step — a half-baked snapshot never replaces `latest.txt`.
+- The weekly cron on `seed-snapshot-bake-full.yml` (Sundays 03:00 UTC) is the
+  heartbeat that keeps the published snapshot within the 7-day SLO even when no
+  migration or manifest changes are made.
+- The README snapshot-freshness badge (`make seed-status-badge`) provides a
+  visible signal to developers browsing the repository. Refresh it after any
+  successful bake.
+
+### R-SNAP-OWNER-01 — Bake ownership
+
+> Bake ownership is **shared** between:
+>
+> 1. **Merging developer** — responsible for triggering a fresh bake (or
+>    verifying the push-triggered CI smoke completed successfully) when merging
+>    a PR that changes `dev.yml`, EF migrations, or `seed-schema.version`.
+> 2. **Rotating release captain** — responsible for ensuring the weekly cron
+>    (`seed-snapshot-bake-full.yml`) is healthy and that `latest.txt` points to
+>    a snapshot within the 7-day SLO before a sprint release.
+
+**Practical checklist for the merging developer**:
+- After merging a migration PR, verify `seed-snapshot-bake-ci.yml` completed
+  green (or manually dispatch `seed-snapshot-bake-full.yml`).
+- If the bake fails, open a follow-up issue tagged `seed/snapshot` and announce
+  in the team channel that `make dev-from-snapshot` may surface a schema-drift
+  warning until resolved.
+
+**Practical checklist for the release captain**:
+- On release day: `make seed-status` to check age.
+- If ≥ 7 days: `gh workflow run seed-snapshot-bake-full.yml --field publish=true`.
+- After a successful bake: `make seed-status-badge` (from `infra/`) and commit
+  the updated badge in a `chore(infra): refresh snapshot freshness badge` PR.
+
+See also: `CONTRIBUTING.md` §"Seed snapshot bake ownership".
+
 ## Testing
 
 ### Manual e2e con `ci.yml`

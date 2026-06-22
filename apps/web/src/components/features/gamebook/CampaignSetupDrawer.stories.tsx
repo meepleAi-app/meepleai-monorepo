@@ -3,23 +3,24 @@
  *
  * CampaignSetupDrawer argTypes matrix story — DS-17 Phase D-2 (sub-issue #2174).
  *
- * State-driving strategy:
- *   The drawer's step state (StepId 1|2|3) is fully INTERNAL — `useState<StepId>(1)`.
- *   Only `open`, `onOpenChange`, and `trigger` are external props.
- *   All 4 frames use controlled mode (`open={true}` via render:) so the drawer is
- *   visible on first render without requiring a trigger click.
+ * State-driving strategy (STATIC — no play functions):
+ *   All 4 frames render interaction-driven states via test-seam props
+ *   (`initialStep`, `initialTitle`, `initialPresetId`) so the snapshot harness
+ *   (`apps/web/e2e/storybook/librogame.snapshot.spec.ts`) captures the correct
+ *   wizard step on first render without needing to run play functions.
  *
- *   Frame01_Step1Name    — real component, open=true on mount, step 1 (default).
- *   Frame02_Step2Players — play: click "Avanti →" once → step advances to 2.
- *   Frame03_Step3Confirm — play: click "Avanti →" twice → step advances to 3.
- *                          MSW handler mocks POST /api/v1/gamebook/campaigns so
- *                          the confirm button renders without a network error.
- *   Frame04_ValidationErr — play: clear the title input → titleError renders
- *                           inline, "Avanti →" becomes disabled.
+ *   Frame01_Step1Name    — initialStep:1 (default), default title, preset group-a.
+ *   Frame02_Step2Players — initialStep:2, stepper shows step 1 done + step 2 active.
+ *   Frame03_Step3Confirm — initialStep:3, MSW handler mocks POST /api/v1/gamebook/campaigns.
+ *   Frame04_ValidationErr — initialStep:1, initialTitle:'Ca' (2 chars < 3-char min)
+ *                           → titleError renders statically without interaction.
  *
- * Portal note (vaul):
- *   DrawerContent renders into a vaul portal (outside the canvasElement root).
- *   All play functions query via `document.body` — NOT `within(canvasElement)`.
+ * Why static over play:
+ *   The snapshot harness does `goto(iframe) + waitForTimeout(2000) + screenshot`;
+ *   it does NOT execute Storybook play functions. Frames 02/03/04 with play-only
+ *   state advancement captured step-1 in every screenshot, making them useless.
+ *   The test-seam props (backward-compatible optional props) solve this at the
+ *   component level with maximum fidelity — the real component renders, no mocks.
  *
  * BGG guard: no BGG refs in this file (#2123).
  *
@@ -27,7 +28,7 @@
  *       umbrella #2063, sub-issue #2174 (Phase D-2).
  */
 
-import { fn, userEvent, within } from 'storybook/test';
+import { fn } from 'storybook/test';
 
 import { mswForLibrogameSetupWizardState } from '@/__tests__/fixtures/mockup-pilots/librogame/librogame-setup-wizard';
 
@@ -52,8 +53,9 @@ const meta: Meta<typeof CampaignSetupDrawer> = {
         component:
           'Pixel-faithful matrix di librogame-runthrough-setup-wizard.html 4 stati. ' +
           '3-step wizard drawer per "Nuova campagna libro game" (Nome → Giocatori → Conferma). ' +
-          'Step state è interno; frames 2-4 avanzano/modificano lo stato via play functions. ' +
-          'DrawerContent usa vaul portal → play queries usano document.body.',
+          'Tutti i frame usano test-seam props (initialStep/initialTitle/initialPresetId) ' +
+          'per render statico senza play functions — compatibile col snapshot harness ' +
+          '(goto+waitForTimeout+screenshot, no play execution).',
       },
     },
   },
@@ -62,6 +64,20 @@ const meta: Meta<typeof CampaignSetupDrawer> = {
     gameTitle: { control: 'text', description: 'Game title shown in drawer header + review card.' },
     open: { control: 'boolean', description: 'Controlled open state.' },
     onOpenChange: { action: 'openChange' },
+    initialStep: {
+      control: { type: 'select' },
+      options: [1, 2, 3],
+      description: 'Storybook/test seam: initial wizard step (default 1).',
+    },
+    initialTitle: {
+      control: 'text',
+      description: 'Storybook/test seam: initial campaign title.',
+    },
+    initialPresetId: {
+      control: { type: 'select' },
+      options: ['group-a', 'group-b', 'custom'],
+      description: 'Storybook/test seam: initial preset selection.',
+    },
   },
   args: {
     gameId: 'game-nanolith-001',
@@ -82,9 +98,8 @@ const mockOnOpenChange = fn();
 export const Frame01_Step1Name: Story = {
   name: '01 · Step 1 Nome — nome campagna + preset gruppo',
   args: {
-    gameId: 'game-nanolith-001',
-    gameTitle: 'Eldoria',
     open: true,
+    initialStep: 1,
     onOpenChange: mockOnOpenChange,
   },
   parameters: {
@@ -99,14 +114,13 @@ export const Frame01_Step1Name: Story = {
   },
 };
 
-// ── Frame 02 · Step 2 Players — after first "Avanti →" ────────────────────
+// ── Frame 02 · Step 2 Players ──────────────────────────────────────────────
 
 export const Frame02_Step2Players: Story = {
   name: '02 · Step 2 Giocatori — 4 player chip + add custom',
   args: {
-    gameId: 'game-nanolith-001',
-    gameTitle: 'Eldoria',
     open: true,
+    initialStep: 2,
     onOpenChange: fn(),
   },
   parameters: {
@@ -116,28 +130,19 @@ export const Frame02_Step2Players: Story = {
           'Stato 02 mockup — step 2/3. Aaron (host) + Marco, Giulia, Luca (guest) come player chip. ' +
           'Add custom button (dashed, disabled). Suggerimento agente Nanolith Tutor. ' +
           'Stepper: [✓ Nome done | 2 Giocatori active | 3 pending]. ' +
-          'Avanzato via play: click "Avanti →" dal step 1.',
+          'Reso statico via initialStep:2 (test-seam prop).',
       },
     },
   },
-  play: async () => {
-    // DrawerContent renders in a vaul portal → must query document.body, not canvasElement.
-    const body = within(document.body);
-
-    // Wait for the drawer to be rendered and "Avanti →" button to appear
-    const nextBtn = await body.findByTestId('campaign-setup-next');
-    await userEvent.click(nextBtn);
-  },
 };
 
-// ── Frame 03 · Step 3 Confirm — after second "Avanti →", with MSW ─────────
+// ── Frame 03 · Step 3 Confirm — with MSW ──────────────────────────────────
 
 export const Frame03_Step3Confirm: Story = {
   name: '03 · Step 3 Conferma — review card ManaPips + CTA "Inizia sessione"',
   args: {
-    gameId: 'game-nanolith-001',
-    gameTitle: 'Eldoria',
     open: true,
+    initialStep: 3,
     onOpenChange: fn(),
   },
   parameters: {
@@ -150,56 +155,33 @@ export const Frame03_Step3Confirm: Story = {
           'Stato 03 mockup — step 3/3. Review card con cover-mini, meta-rows ' +
           '(Preset / Giocatori / Lingua agente / Durata stimata) + info box "Cosa succede ora". ' +
           'CTA "📖 Inizia sessione" abilitato. Stepper: [✓ Nome | ✓ Giocatori | 3 Conferma active]. ' +
-          'Avanzato via play: click "Avanti →" x2 dal step 1. ' +
+          'Reso statico via initialStep:3 (test-seam prop). ' +
           'MSW handler mocks POST /api/v1/gamebook/campaigns → 201 (no real network error).',
       },
     },
   },
-  play: async () => {
-    const body = within(document.body);
-
-    // Step 1 → Step 2
-    const nextBtn1 = await body.findByTestId('campaign-setup-next');
-    await userEvent.click(nextBtn1);
-
-    // Step 2 → Step 3 (button still has data-testid="campaign-setup-next" in step 2)
-    const nextBtn2 = await body.findByTestId('campaign-setup-next');
-    await userEvent.click(nextBtn2);
-  },
 };
 
-// ── Frame 04 · Validation Error — title cleared, error inline ─────────────
+// ── Frame 04 · Validation Error — short title shows error statically ───────
 
 export const Frame04_ValidationErr: Story = {
   name: '04 · Validation Error — nome vuoto, bottone disabilitato, hint danger',
   args: {
-    gameId: 'game-nanolith-001',
-    gameTitle: 'Eldoria',
     open: true,
+    initialStep: 1,
+    initialTitle: 'Ca',
     onOpenChange: fn(),
   },
   parameters: {
     docs: {
       description: {
         story:
-          'Stato 04 mockup — step 1, campo nome svuotato. ' +
+          'Stato 04 mockup — step 1, campo nome con 2 caratteri ("Ca" < 3 min). ' +
           'Inline error "⚠ Il nome deve essere almeno 3 caratteri." con bordo danger. ' +
-          '"Avanti →" disabilitato (titleValid=false). Recovery immediato digitando. ' +
-          'Avanzato via play: select-all + delete sul campo "Nome campagna".',
+          '"Avanti →" disabilitato (titleValid=false). ' +
+          'titleError è derivato in render (title.length>0 && trim<3) — nessun touched flag. ' +
+          'Reso statico via initialTitle:"Ca" (test-seam prop).',
       },
     },
-  },
-  play: async () => {
-    const body = within(document.body);
-
-    // Find the title input and clear it to trigger the validation error
-    const titleInput = await body.findByTestId('campaign-setup-title');
-    await userEvent.clear(titleInput);
-    // Type a single character then clear to ensure titleError branch is reached
-    // (error only shows when title.length > 0 fails MIN_TITLE_LENGTH check)
-    await userEvent.type(titleInput, 'A');
-    await userEvent.clear(titleInput);
-    // Type 2 chars: triggers "almeno 3 caratteri" error (length 2 > 0 but < 3)
-    await userEvent.type(titleInput, 'Ca');
   },
 };

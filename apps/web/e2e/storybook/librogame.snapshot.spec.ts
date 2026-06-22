@@ -240,6 +240,23 @@ const FRAMES: { slug: string; file: string }[] = [
     slug: 'pages-librogame-quota-credits--frame-07-soft-warning',
     file: 'librogame-quota-credits-07-soft-warning.png',
   },
+  // librogame-game-onboarding (4 frames) — Task 10 #2174
+  {
+    slug: 'pages-librogame-game-onboarding--frame-01-prereq-missing',
+    file: 'librogame-game-onboarding-01-prereq-missing.png',
+  },
+  {
+    slug: 'pages-librogame-game-onboarding--frame-02-pdf-uploading',
+    file: 'librogame-game-onboarding-02-pdf-uploading.png',
+  },
+  {
+    slug: 'pages-librogame-game-onboarding--frame-03-kb-indexing',
+    file: 'librogame-game-onboarding-03-kb-indexing.png',
+  },
+  {
+    slug: 'pages-librogame-game-onboarding--frame-04-ready',
+    file: 'librogame-game-onboarding-04-ready.png',
+  },
 ];
 
 for (const { slug, file } of FRAMES) {

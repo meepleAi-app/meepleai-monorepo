@@ -15,7 +15,31 @@
 import { test, expect } from '@playwright/test';
 
 const FRAMES: { slug: string; file: string }[] = [
-  // Popolato dai task per-mockup (Task 1-13): 1 entry per ogni Story export.
+  // librogame-game-detail (3 Frame + 3 variants = 6 stories) — Task 1 PILOTA #2174
+  {
+    slug: 'pages-librogame-game-detail--frame-01-default',
+    file: 'librogame-game-detail-01-default.png',
+  },
+  {
+    slug: 'pages-librogame-game-detail--frame-01-b-kb-indexing',
+    file: 'librogame-game-detail-01b-kb-indexing.png',
+  },
+  {
+    slug: 'pages-librogame-game-detail--frame-01-c-kb-error',
+    file: 'librogame-game-detail-01c-kb-error.png',
+  },
+  {
+    slug: 'pages-librogame-game-detail--frame-02-loading',
+    file: 'librogame-game-detail-02-loading.png',
+  },
+  {
+    slug: 'pages-librogame-game-detail--frame-03-error',
+    file: 'librogame-game-detail-03-error.png',
+  },
+  {
+    slug: 'pages-librogame-game-detail--frame-04-not-found',
+    file: 'librogame-game-detail-04-not-found.png',
+  },
 ];
 
 for (const { slug, file } of FRAMES) {

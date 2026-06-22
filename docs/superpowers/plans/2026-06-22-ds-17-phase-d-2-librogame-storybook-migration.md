@@ -91,6 +91,17 @@ export const Frame01_<ShortName>: Story = {
 // ... 1 export per stato
 ```
 
+### Template Mf — Story via URL fixture-override (per componenti con `?fixture=` built-in)
+Quando il componente ha un override di stato via query string (verificato: `GamebookIndexView` ha `STATE_OVERRIDE_ENABLED` con `?fixture=loading|error|empty|default|quota-soft|quota-hard`, `apps/web/src/app/(authenticated)/gamebook/_components/GamebookIndexView.tsx:175-220`). Pilota lo stato via `parameters.nextjs.navigation.query` invece di MSW — più semplice e deterministico per gli stati non-network.
+
+```tsx
+export const Frame01_<ShortName>: Story = {
+  name: '01 · <stato>',
+  parameters: { nextjs: { appDirectory: true, navigation: { query: { fixture: '<state>' } } } },
+};
+// loading/error che NON passano dal fixture data-path usano comunque MSW (Template M).
+```
+
 ### Template K — Component-mock presentational (stati-gap PARTIAL / mockup senza componente)
 Quando il prodotto non implementa lo stato (es. session-end outcome modal, error-states pool, game-onboarding stepper). Si crea un componente presentational che riproduce il markup del mockup, in zona fixtures (NON codice di prodotto), e la story lo renderizza.
 
@@ -145,7 +156,12 @@ cd apps/web && pnpm build-storybook
 
 Ogni task-mockup esegue questi step (2-5 min ciascuno). I DATI specifici sono nella tabella del task.
 
-1. **Leggi il mockup + il componente reale.** `admin-mockups/design_files/<mockup>.{html,jsx}` (stati/assi) e il componente reale al path indicato (signature props, se fa fetch o è presentational). Determina il template: **P** (props-driven) · **M** (fetch-driven/MSW) · **K** (component-mock per stati-gap).
+1. **Leggi il mockup + il componente reale.** `admin-mockups/design_files/<mockup>.{html,jsx}` (stati/assi) e il componente reale al path indicato. **NON fidarti del template suggerito nel task — verificalo leggendo il componente.** Determina:
+   - Usa hook di fetch (`useQuery`/`useMutation` di `@tanstack/react-query`, custom hook `useGamebook*`/`useGameBooks`/`usePhotoUpload`/`useTranslateSegment*`)? → **Template M** (MSW handlers). I componenti `/gamebook` sono **prevalentemente react-query + Zustand**: aspettati M/decorator, NON P.
+   - Usa uno store Zustand (`useChatPanelStore`, `useReaderMode`, ecc.)? → aggiungi un **decorator** che seed-a lo store nello story file.
+   - È davvero solo props-driven (riceve dati via props, nessun fetch)? → **Template P**. (Conferma leggendo la signature.)
+   - Lo stato del mockup **non esiste nella FSM/`status`/`Phase` union del componente reale**? → quello stato è un **gap → Template K** (component-mock `forward-*`). **Riconcilia gli stati elencati nel task con la FSM reale del componente** (leggi la sua union di stati): scarta i nomi inventati, usa i nomi reali, e tratta come `forward-*` solo ciò che il prodotto non implementa.
+   - Se il componente usa `useRouter()` (`next/navigation`), imposta `parameters.nextjs: { appDirectory: true }` nello story file (anche se `preview.tsx` lo fornisce globalmente, esplicitalo).
 2. **Crea la fixture** `apps/web/src/__tests__/fixtures/mockup-pilots/librogame/librogame-<stem>.ts` (Template F). Dati o handler MSW secondo il template scelto.
 3. **(solo se servono stati-gap)** Crea il component-mock `…/librogame/_mocks/<Stem>Mock.tsx` (Template K) per gli stati che il componente reale non copre.
 4. **Crea la story** al path indicato (Template P/M). 1 export per stato; `meta.title = 'Pages/Librogame/<Name>'`; `argTypes` che rispecchiano le props del componente / l'asse `state`.
@@ -181,7 +197,7 @@ Ogni task-mockup esegue questi step (2-5 min ciascuno). I DATI specifici sono ne
 - Create: `apps/web/e2e/storybook/librogame.snapshot.spec.ts`
 - Read: `apps/web/.storybook/main.ts`
 
-- [ ] **Step 1: Verifica la stories-glob.** Leggi `apps/web/.storybook/main.ts` e conferma che il campo `stories` includa `src/**/*.stories.@(ts|tsx)` (o equivalente che copre `src/components/features/gamebook/**` e `src/app/**`). Annota il glob effettivo. Se i component-mock in `src/__tests__/fixtures/.../ _mocks/` NON sono importabili dalle story (lo sono — sono solo import, non story), nessuna azione. Le story NON devono stare in `__tests__/` se la glob non lo include → tutte le story stanno sotto `src/components/features/gamebook/` o `src/app/(authenticated)/gamebook/`.
+- [ ] **Step 1: Conferma la stories-glob.** La glob è `'../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'` (`apps/web/.storybook/main.ts:4`) — copre **tutto** `src/`, incluso `src/__tests__/`. I component-mock (Template K) vivono in `src/__tests__/fixtures/mockup-pilots/librogame/_mocks/` e sono solo **importati** dalle story (non sono `.stories.tsx`). Le story `.stories.tsx` stanno co-locate sotto `src/components/features/gamebook/` (o `src/components/features/gamebook/_librogame/` per i mockup senza componente reale) e `src/app/(authenticated)/gamebook/` — scelta di chiarezza, non vincolo di glob.
 
 - [ ] **Step 2: Crea lo snapshot spec skeleton.** Crea `apps/web/e2e/storybook/librogame.snapshot.spec.ts` con header `@mockup DS-17 Phase D-2 cluster librogame (#2174)`, `const FRAMES = [];` (popolato dai task successivi) e il test-loop identico a `sp6-7-nano.snapshot.spec.ts:253-260` (goto `/iframe.html?id=${slug}&viewMode=story`, waitForTimeout 2000, toHaveScreenshot). Sostituisci la label test in `` `librogame ${file…}` ``.
 
@@ -207,7 +223,7 @@ git commit -m "chore(stories): #2174 Phase D-2 librogame cluster scaffold"
 - Create: `apps/web/src/components/features/gamebook/LibroGameDetailView.stories.tsx`
 - Modify: `admin-mockups/design_files/librogame-runthrough-game-detail.fidelity.json`, `apps/web/e2e/storybook/librogame.snapshot.spec.ts`
 
-**Dati:** Componente `LibroGameDetailView` (game detail hero + meta grid 4 info + CTA "Avvia libro game"). Template **P** (presentational) se accetta props, altrimenti **M**. ~4 stati: `default`, `loading`, `error`, `not-found`. Title `Pages/Librogame/Game Detail`.
+**Dati:** Componente `LibroGameDetailView` (game detail hero + meta grid 4 info + CTA "Avvia libro game"). Data via props (Template **P**), MA usa `useRouter()` (`LibroGameDetailView.tsx:38`) → imposta `parameters.nextjs: { appDirectory: true }` nello story file. Importa anche `NanolithCampaignCTA` (`:25`) → in step 1 verifica che quel sottocomponente non abbia dipendenze di fetch/context aggiuntive. ~4 stati: `default`, `loading`, `error`, `not-found` — verifica in step 1 se loading/error/not-found sono pilotabili via prop o derivano da fetch (in tal caso quegli stati passano a Template M/K). Title `Pages/Librogame/Game Detail`.
 
 - [ ] Esegui la **Procedura standard** (step 1-8). Nota pilota: dopo lo Step 5 (typecheck PASS), fermati e verifica con l'utente/review che il pattern sia corretto prima di Task 2+.
 
@@ -221,7 +237,7 @@ git commit -m "chore(stories): #2174 Phase D-2 librogame cluster scaffold"
 - Create: `apps/web/src/app/(authenticated)/gamebook/page.stories.tsx`
 - Modify: fidelity + snapshot spec
 
-**Dati:** Route `/gamebook` index → `GamebookIndexView` (griglia card + `GameSearchBar`). Template **M** (fetch-driven → MSW per la lista gamebook; FSM 6 celle: loading/error/empty/default/quota-soft/quota-hard). ~4 stati da migrare: `default`, `search-filtered`, `empty-no-match`, `quota-soft`. Title `Pages/Librogame/Library Search`. `nextjs: { appDirectory: true }`.
+**Dati:** Route `/gamebook` index → `GamebookIndexView`. FSM reale a 6 celle: `loading | error | empty | default | quota-soft | quota-hard` (NON esistono `search-filtered`/`empty-no-match` — non inventarli). Template **Mf** (URL fixture override `?fixture=…` via `parameters.nextjs.navigation.query`) per `default`/`empty`/`quota-soft`/`quota-hard` (`GamebookIndexView.tsx:175-220`); Template **M** (MSW) solo per `loading`/`error` se il fixture-path non li forza. ~5-6 stati. Title `Pages/Librogame/Library Search`. `nextjs: { appDirectory: true }`.
 
 - [ ] Procedura standard (1-8).
 
@@ -234,7 +250,7 @@ git commit -m "chore(stories): #2174 Phase D-2 librogame cluster scaffold"
 - Create: `…/librogame/librogame-setup-wizard.ts`, `apps/web/src/components/features/gamebook/CampaignSetupDrawer.stories.tsx`
 - Modify: fidelity + snapshot spec
 
-**Dati:** `CampaignSetupDrawer` (3-step drawer). Template **P** (props-driven: `open`, `step`). ~4 stati: `step1-name`, `step2-players`, `step3-confirm`, `validation-err`. Title `Pages/Librogame/Setup Wizard`. `layout: 'centered'` (drawer/overlay).
+**Dati:** `CampaignSetupDrawer` (3-step drawer). Display props-driven (`open`, step interno), MA usa `useMutation` (`@tanstack/react-query`, `:33`) + `useRouter()` (`:119`). `QueryClientProvider` è globale in `preview.tsx` → `useMutation` non crasha. Il submit dello Step 3 spara `POST /api/v1/gamebook/campaigns` reale → lo stato `step3-confirm` deve includere un **MSW handler** per quell'endpoint (Template **P** + MSW per il submit). Imposta `nextjs: { appDirectory: true }`. ~4 stati: `step1-name`, `step2-players`, `step3-confirm`, `validation-err` (client-side, props-driven). Title `Pages/Librogame/Setup Wizard`. `layout: 'centered'`.
 
 - [ ] Procedura standard (1-8).
 
@@ -260,9 +276,9 @@ git commit -m "chore(stories): #2174 Phase D-2 librogame cluster scaffold"
 - Create: `…/librogame/librogame-play-session.ts`, `apps/web/src/components/features/gamebook/GamebookPlayShell.stories.tsx`
 - Modify: fidelity + snapshot spec
 
-**Dati:** `GamebookPlayShell` (shell runtime tabbed/split). Orchestrator con store → può servire decorator/provider mock (verificare in `.storybook/preview.tsx` quali provider sono globali). Template **P** se le tab sono pilotabili via prop, altrimenti wrapper con store seed. ~4 stati: `story-tab`, `encounter-tab`, `chat-overlay`, `glossary-inline`. Title `Pages/Librogame/Play Session`.
+**Dati:** `GamebookPlayShell` (orchestrator). Template **M** (NON P). Usa `useGamebookCampaign(campaignId)` + `useUpdateGamebookProgress(campaignId)` + `useGameBooks(gameRef)` (react-query) + `useChatPanelStore` (Zustand). Renderizza uno **skeleton finché `isLoading || !data`** → senza MSW per `GET /api/v1/gamebook/campaigns/{id}` la story mostra solo lo skeleton. **NON ha tab-props**: gli stati del mockup (`story-tab`/`encounter-tab`/`chat-overlay`/`glossary-inline`) NON sono pilotabili via prop → in step 1 verifica se sono interazioni UI (tab click via `play` function) o vanno resi come Template **K** (component-mock forward-*). Aggiungi un decorator che seed-a `useChatPanelStore` se la chat overlay serve aperta. Riconcilia gli stati con ciò che il componente realmente espone. Title `Pages/Librogame/Play Session`.
 
-- [ ] Procedura standard (1-8). Se richiede provider/store non globali, aggiungi un decorator nello story file (documenta nel JSDoc).
+- [ ] Procedura standard (1-8). Step 1 è critico: leggi `GamebookPlayShell.tsx` per intero, determina MSW handlers + decorator store, e quali stati richiedono component-mock K.
 
 ---
 
@@ -273,9 +289,9 @@ git commit -m "chore(stories): #2174 Phase D-2 librogame cluster scaffold"
 - Create: `…/librogame/librogame-translate-viewer.ts`, `apps/web/src/components/features/gamebook/TranslateViewer.stories.tsx`
 - Modify: fidelity + snapshot spec
 
-**Dati:** `TranslateViewer` (foto→OCR→translate fullscreen, state machine). ~13 stati (A-M): `camera`, `segmenting`, `segments-list`, `translating`, `fullscreen`, `low-confidence`, `loading-4step`, `reader-mode`, `wake-lock`, `aaa-contrast`, `lang-badge`, `lang-override`, `manual-input`. Template **P** se lo step è pilotabile via prop (es. `initialStep`), altrimenti wrapper che seed-a lo store `TranslateViewer.steps`. Title `Pages/Librogame/Translate Viewer`. **Mockup più oneroso** — leggere bene la state machine.
+**Dati:** `TranslateViewer` (foto→OCR→translate fullscreen). Template **M + K** (NON P). Props solo `{ campaignId, gameRef }` — **nessun `initialStep`/`initialPhase`**: tutto lo stato è interno (`useGameBooks`, `usePhotoUpload`, `useSegmentPhoto`, `useTranslateSegmentSSE`, `useReaderMode`). `Phase` union reale: `idle | uploading | segmenting | segments_ready | translating | translated`. Gli stati del mockup raggiungibili via la Phase si pilotano con **MSW** (handlers per upload/segment/translate-SSE). Gli stati `wake-lock`, `aaa-contrast`, `fullscreen` **non sono Phase** → resi come Template **K** (component-mock forward-*). `reader-mode`/`lang-badge`/`lang-override` sono combinazioni interne (`useReaderMode` toggle, `modalState`) → in step 1 valuta se raggiungibili via interazione o K. **`TranslateViewer.steps` è un file di helper** (`deriveUiStep`, `isAbortableStep`, `LABELS`), NON uno store: non "seedabile". ~13 export totali (mix MSW + K). Title `Pages/Librogame/Translate Viewer`. **Mockup più oneroso** — leggi a fondo `TranslateViewer.tsx` + `TranslateViewer.steps.ts` + gli hook in step 1.
 
-- [ ] Procedura standard (1-8).
+- [ ] Procedura standard (1-8). Step 1 critico: mappa ogni stato del mockup → (Phase via MSW) | (combinazione interna via interazione) | (Template K forward-*).
 
 ---
 
@@ -288,7 +304,7 @@ git commit -m "chore(stories): #2174 Phase D-2 librogame cluster scaffold"
 - Create: `…/librogame/librogame-resume-picker.ts`, `…/librogame/_mocks/ResumePickerMock.tsx` (per gli stati onboarding/tutorial non coperti), `apps/web/src/components/features/gamebook/ResumeBooksList.stories.tsx`
 - Modify: fidelity + snapshot spec
 
-**Dati:** `ResumeBooksList` copre 3/5 stati (`single-resume`, `multi-campaign`, `stale-warning`). Gli stati-gap `first-time` e `with-tutorial` → component-mock `ResumePickerMock` (Template K, marcati `forward-*`). 5 stati totali. Title `Pages/Librogame/Resume Picker`.
+**Dati:** `ResumeBooksList` è puro **props-driven** (`progress: BookProgress[]`, `onResume`), con solo 2 branch reali: lista non-vuota / empty. `single-resume` (array di 1) e `multi-campaign` (array di N) si pilotano variando la prop `progress` (Template **P**). Gli stati `stale-warning`, `first-time`, `with-tutorial` **non hanno branch** nel componente → Template **K** (`ResumePickerMock`, forward-*). 5 stati totali. Title `Pages/Librogame/Resume Picker`.
 
 - [ ] Procedura standard (1-8) con step 3 (component-mock per 2 stati-gap).
 
@@ -298,10 +314,10 @@ git commit -m "chore(stories): #2174 Phase D-2 librogame cluster scaffold"
 
 **Files:**
 - Read: mockup + `apps/web/src/components/features/gamebook/GlossaryEditorModal.tsx`
-- Create: `…/librogame/librogame-glossary-editor.ts`, `…/librogame/_mocks/GlossaryEditorMock.tsx` (collision/bulk/variants), `apps/web/src/components/features/gamebook/GlossaryEditorModal.stories.tsx`
+- Create: `…/librogame/librogame-glossary-editor.ts`, `…/librogame/_mocks/GlossaryEditorMock.tsx` (solo bulk-import/variants), `apps/web/src/components/features/gamebook/GlossaryEditorModal.stories.tsx`
 - Modify: fidelity + snapshot spec
 
-**Dati:** `GlossaryEditorModal` copre base (`edit-pristine`, `edited`, `save-error`). Stati-gap `collision`, `bulk-import`, `variants` → component-mock `GlossaryEditorMock` (forward-*). ~6 stati (semplificati dai ~8-10 del mockup). Title `Pages/Librogame/Glossary Editor`. `layout: 'centered'`.
+**Dati:** `GlossaryEditorModal` usa `useTranslation()` (→ `useIntl`; `ReactIntlProvider` è globale in `preview.tsx` → OK) + `useUpsertGlossary(campaignId)` (mutation). Copre nativamente `edit-pristine`, `edited`, **e `collision`** (implementato, `:268-283` ramo `state.status === 'collision'` + `CollisionBanner` — **NON è un gap**, pilotabile via Template P). Lo stato `save-error` richiede un **MSW handler** che fa fallire `PUT /api/v1/gamebook/glossary/{id}`. Stati-gap reali (non implementati) `bulk-import`, `variants` → Template **K** (`GlossaryEditorMock`, forward-*). ~6 stati. Title `Pages/Librogame/Glossary Editor`. `layout: 'centered'`.
 
 - [ ] Procedura standard (1-8) con step 3.
 
@@ -310,13 +326,13 @@ git commit -m "chore(stories): #2174 Phase D-2 librogame cluster scaffold"
 ### Task 9: librogame-runthrough-quota-credits
 
 **Files:**
-- Read: mockup + `apps/web/src/components/features/gamebook/checkout/` (5 step) + `QuotaWidget.tsx` + `SoftWarningCredits.tsx`
-- Create: `…/librogame/librogame-quota-credits.ts`, story `apps/web/src/components/features/gamebook/checkout/CheckoutFlow.stories.tsx` (o sul componente orchestratore del checkout — verificare il nome reale leggendo `checkout/`)
+- Read: mockup + `apps/web/src/components/features/gamebook/CheckoutModal.tsx` (orchestratore) + `checkout/` (step `Step1QuotaReached`, `Step2PackPicker`, `Step3CheckoutForm`, `Step4Success`, `CheckoutStepIndicator`) + `SoftWarningCredits.tsx`
+- Create: `…/librogame/librogame-quota-credits.ts`, story `apps/web/src/components/features/gamebook/CheckoutModal.stories.tsx`
 - Modify: fidelity + snapshot spec
 
-**Dati:** checkout flow 7 step: `step1-quota`, `step2-picker`, `step3-form`, `step3-loading`, `step3-failed`, `step4-success`, `soft-warning`. Template **P** sui componenti checkout reali; `soft-warning` usa `SoftWarningCredits`. Title `Pages/Librogame/Quota Credits`.
+**Dati:** L'orchestratore è **`CheckoutModal.tsx`** (un livello sopra `checkout/`, NON `checkout/CheckoutFlow`). checkout flow 7 step: `step1-quota`, `step2-picker`, `step3-form`, `step3-loading`, `step3-failed`, `step4-success`, `soft-warning`. Template **P** sui componenti checkout reali; gli step con submit (`step3-loading`/`step3-failed`) potrebbero richiedere MSW se `CheckoutModal` usa una mutation (verifica in step 1). `soft-warning` usa `SoftWarningCredits` (componente separato — può essere una story export distinta o un secondo componente nello stesso file). Title `Pages/Librogame/Quota Credits`.
 
-- [ ] Procedura standard (1-8). Lo step 1 deve identificare il nome reale del componente orchestratore del checkout in `checkout/`.
+- [ ] Procedura standard (1-8). Step 1: leggi `CheckoutModal.tsx` per capire come pilotare i 7 step (prop step? mutation? state interno).
 
 ---
 
@@ -419,4 +435,20 @@ git commit -m "docs(ds-17): #2174 Phase D-2 librogame designer review queue"
 
 **3. Type consistency:** Naming coerente — `mswForLibrogame<Stem>State`, `MOCK_LIBROGAME_<STEM>`, `<Stem>Mock`, title `Pages/Librogame/<Name>`, slug `pages-librogame-<name>`, fixture path `…/mockup-pilots/librogame/librogame-<stem>.ts`. Snapshot spec `librogame.snapshot.spec.ts` referenziato in modo uniforme.
 
-**Note aperte (risolte in esecuzione, non placeholder):** il template effettivo (P vs M vs K) e i nomi-prop esatti dipendono dalla lettura del componente reale (step 1 di ogni task) — questo è by-design del pattern scaffold DS-17, non un gap del piano.
+**Note aperte (risolte in esecuzione, non placeholder):** i nomi-prop esatti e gli handler MSW specifici dipendono dalla lettura del componente reale (step 1 di ogni task) — by-design del pattern scaffold DS-17.
+
+### Post code-review (subagent, 2026-06-22)
+
+Una review pre-esecuzione (`feature-dev:code-reviewer`) ha letto i componenti reali e corretto assunzioni sistematiche (i componenti `/gamebook` sono react-query + Zustand, non presentational). Correzioni applicate:
+- **Procedura step 1** rafforzato: default M/decorator per gamebook, riconciliazione FSM, stati non-FSM → K, `nextjs.appDirectory` per `useRouter`.
+- **Template Mf** aggiunto (URL fixture-override `?fixture=` per `GamebookIndexView`).
+- **Task 2** (`GamebookIndexView`): FSM reale `loading|error|empty|default|quota-soft|quota-hard` (rimossi i nomi inventati), Template Mf.
+- **Task 3** (`CampaignSetupDrawer`): MSW per il submit Step 3 (`useMutation`).
+- **Task 5** (`GamebookPlayShell`): Template M + decorator store; nessuna tab-prop (skeleton se `!data`).
+- **Task 6** (`TranslateViewer`): Template M + K; `Phase` union reale; `TranslateViewer.steps` è helper non store.
+- **Task 7** (`ResumeBooksList`): puro props (2 branch); stati extra → K.
+- **Task 8** (`GlossaryEditorModal`): `collision` è implementato (NON gap); `save-error` → MSW.
+- **Task 9** (checkout): orchestratore reale = `CheckoutModal.tsx` (non `checkout/CheckoutFlow`).
+- **Task 0**: corretto il commento sulla glob (`../src/**/*.stories.@(...)` copre anche `__tests__/`).
+
+I 6 CRITICAL della review sono risolti. Il pilota (Task 1) valida il pattern corretto prima di scalare.

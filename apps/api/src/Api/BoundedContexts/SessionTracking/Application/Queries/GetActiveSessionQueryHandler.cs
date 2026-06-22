@@ -1,7 +1,9 @@
+using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
+using Api.BoundedContexts.GameToolkit.Domain.Enums;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SessionTracking;
 
@@ -59,6 +61,11 @@ public class GetActiveSessionQueryHandler : IRequestHandler<GetActiveSessionQuer
             Timestamp = e.Timestamp
         }).ToList();
 
+        // Path B (#2483): derive TurnOrderType from the game's published toolkit.
+        // Static for the session lifetime — no new Session field, no migration, no SignalR event.
+        var turnOrderType = await ResolveTurnOrderTypeAsync(session.GameId, cancellationToken)
+            .ConfigureAwait(false);
+
         return new SessionDto
         {
             Id = session.Id,
@@ -72,8 +79,46 @@ public class GetActiveSessionQueryHandler : IRequestHandler<GetActiveSessionQuer
             FinalizedAt = session.FinalizedAt,
             ScoringType = session.ScoringType,
             ScoreData = session.ScoreData,
+            TurnOrderType = turnOrderType,
             Participants = participants,
             Scores = scores
         };
+    }
+
+    /// <summary>
+    /// Looks up the TurnOrderType from the game's first published GameToolkit TurnTemplate.
+    /// Returns null when no game is linked, no published toolkit exists, or the toolkit
+    /// has no TurnTemplate configured.
+    /// </summary>
+    private async Task<string?> ResolveTurnOrderTypeAsync(Guid? gameId, CancellationToken cancellationToken)
+    {
+        if (gameId == null)
+            return null;
+
+        var turnTemplateJson = await _context.GameToolkits
+            .Where(t => t.GameId == gameId && t.IsPublished && t.TurnTemplateJson != null)
+            .Select(t => t.TurnTemplateJson)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (string.IsNullOrEmpty(turnTemplateJson))
+            return null;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(turnTemplateJson);
+            if (doc.RootElement.TryGetProperty("turnOrderType", out var prop) &&
+                prop.TryGetInt32(out var value) &&
+                Enum.IsDefined(typeof(TurnOrderType), value))
+            {
+                return ((TurnOrderType)value).ToString();
+            }
+        }
+        catch (JsonException)
+        {
+            // Malformed JSON — treat as no turn template rather than throwing.
+        }
+
+        return null;
     }
 }

@@ -244,6 +244,26 @@ If any of these red-flag, the branch was likely created on top of an in-progress
 
 ---
 
+## Seed snapshot bake ownership
+
+When merging a PR that adds an EF migration, changes `infra/seed-manifest/dev.yml`,
+or bumps `infra/seed-schema.version`, you are responsible for ensuring a fresh
+snapshot is published before the next developer runs `make dev-from-snapshot`:
+
+1. Verify `seed-snapshot-bake-ci.yml` completed green on your PR (it triggers
+   automatically on migration/manifest paths).
+2. If the full snapshot (`dev.yml`, 100+ PDFs) needs refreshing, manually
+   dispatch `seed-snapshot-bake-full.yml` via the GitHub Actions UI.
+3. After a successful bake, run `cd infra && make seed-status-badge` and commit
+   the updated README badge in a follow-up `chore(infra)` PR.
+
+The release captain verifies the same checklist on every sprint release.
+
+Full SLOs and requirements: [`docs/for-developers/workflows/snapshot-seed-workflow.md`
+§ Freshness & ownership requirements](./docs/for-developers/workflows/snapshot-seed-workflow.md#freshness--ownership-requirements).
+
+---
+
 ## References
 
 - [`SECURITY.md`](./SECURITY.md) — security policy + responsible disclosure

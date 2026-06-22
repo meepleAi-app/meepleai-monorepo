@@ -2902,6 +2902,85 @@ Companion script: `infra/runner/monitor.sh` (textfile collector emits the
 
 ---
 
+## 22. Wikidata SSE Subscriber Starvation
+
+### Alert: `WikidataSseSubscriberStarvation`
+
+| Property | Value |
+|---|---|
+| Severity | warning |
+| Subsystem | wikidata-sse |
+| Threshold | `meepleai_wikidata_sse_subscribers == 0 AND meepleai_wikidata_sse_admin_clients_connected > 0` |
+| Sustained for | 15m |
+| Defined in | `infra/prometheus/alerts/wikidata-sse.yml` |
+
+### What it means
+
+An admin has the wikidata dead-letter visibility page open (it is
+heartbeating every 30s, so the `admin_clients_connected` gauge is
+above zero), but the local broadcaster reports **zero SSE subscribers**.
+Live row updates are silently not flowing — the admin sees a stale page
+until they hard-reload.
+
+Background metric contract:
+
+- `meepleai_wikidata_sse_subscribers` — gauge fed by
+  `IWikidataEnrichmentEventBroadcaster.SubscriberCount`.
+- `meepleai_wikidata_sse_admin_clients_connected` — gauge fed by
+  `WikidataAdminClientHeartbeatTracker.GetConnectedCount(now)`. TTL is
+  90 seconds (3 missed FE pings); entries older are GC'd on read.
+
+### Investigation steps
+
+1. **Confirm the alert is real**. In Grafana → dashboard
+   "Wikidata Cover Enrichment — Pipeline Health" → Panels 9 + 12.
+   Panel 9 should read 0; Panel 12 should be ≥ 1 (one or more admins
+   actively watching). If Panel 12 is also 0, the alert is misfiring
+   — file a sub-issue.
+
+2. **Check publisher activity**. Panel 10 (`SSE publish rate`) — if it
+   is also flat at 0, the alert is benign (nothing to deliver). If it
+   is non-zero, every published event is being dropped on this pod.
+
+3. **Search api logs for failure patterns**. SSH to the running pod
+   and grep:
+
+   ```bash
+   docker logs meepleai-api --since 30m 2>&1 | grep -E \
+     "RedisWikidataEnrichmentEventBroadcaster.*(SUBSCRIBE failed|dropped malformed|UNSUBSCRIBE failed)|InMemoryWikidataEnrichmentEventBroadcaster.*dropped event"
+   ```
+
+   - `failed to open SUBSCRIBE` → Redis backplane handshake broken.
+     Verify Redis health (`docker exec meepleai-redis redis-cli PING`).
+   - `dropped malformed message` → schema-version mismatch between pods
+     after a partial deploy.
+   - Nothing in logs → likely a client-side EventSource drop (step 4).
+
+4. **Ask the admin to hard-reload the page**. If the gauge climbs back
+   to ≥ 1 within 30 seconds, the issue was a stale FE EventSource and
+   the alert clears within ~15 min. If the gauge stays at 0, the SSE
+   endpoint is genuinely starving — investigate reverse-proxy /
+   ingress idle-timeout (Traefik, nginx) on `/api/v1/admin/wikidata/enrichment/events`.
+
+### Resolution paths
+
+| Symptom | Fix |
+|---|---|
+| FE EventSource dropped | Admin hard-reload; consider a future client-side auto-reconnect with exponential backoff |
+| Redis SUBSCRIBE failed | `docker restart meepleai-api` (re-runs `EnsureRedisSubscriptionAsync` lazily on next subscriber) |
+| Proxy idle-timeout | Bump the ingress `proxy_read_timeout` / Traefik `transport.respondingTimeouts.readTimeout` above the 30s heartbeat |
+| Malformed-message rate spike | Roll forward to a single deploy version — partial rollout broke the wire schema |
+
+### Refs
+
+- Issue: [#2470](https://github.com/meepleAi-app/meepleai-monorepo/issues/2470)
+- Companion: [#2256](https://github.com/meepleAi-app/meepleai-monorepo/issues/2256) (Redis backplane shipped in PR #2469)
+- Originating SSE endpoint: `apps/api/src/Api/Routing/Admin/AdminWikidataCoverEnrichmentEndpoints.cs` → `HandleEventsStream`
+- Broadcaster: `apps/api/src/Api/BoundedContexts/SharedGameCatalog/Application/Services/*WikidataEnrichmentEventBroadcaster.cs`
+- Heartbeat tracker: `apps/api/src/Api/BoundedContexts/SharedGameCatalog/Application/Services/WikidataAdminClientHeartbeatTracker.cs`
+
+---
+
 ## Appendix A: Complete Command Reference
 
 ### Service Management

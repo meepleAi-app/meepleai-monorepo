@@ -203,6 +203,70 @@ public sealed class AdminWikidataCoverEnrichmentEndpointsTests : IAsyncLifetime
         result.Items[0].Reason.Should().Be("image-processing-error");
     }
 
+    // ──────────────────────────────────────────────────────────────────────
+    // Issue #2470 (DEC-C) — heartbeat endpoint tests.
+    //
+    // The wikidata-dead-letters page POSTs every 30s while open; the BE
+    // tracker exposes the count as the
+    // meepleai_wikidata_sse_admin_clients_connected gauge, which the
+    // WikidataSseSubscriberStarvation alert correlates against
+    // meepleai_wikidata_sse_subscribers.
+    // ──────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task SseClientHeartbeat_AnonymousRequest_Returns401()
+    {
+        var url = $"{EndpointBase}/sse-clients/heartbeat";
+        var request = new HttpRequestMessage(HttpMethod.Post, url);
+
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized,
+            "the heartbeat endpoint MUST be admin-gated like the rest of the group");
+    }
+
+    [Fact]
+    public async Task SseClientHeartbeat_AdminSession_Returns204()
+    {
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            $"{EndpointBase}/sse-clients/heartbeat",
+            _adminSessionToken);
+
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task SseClientHeartbeat_AdminSession_RegistersOnTracker()
+    {
+        // Snapshot count BEFORE the heartbeat (could be 0, could be >0 if a
+        // sibling test in the collection landed a heartbeat already).
+        var tracker = _factory.Services.GetRequiredService<
+            Api.BoundedContexts.SharedGameCatalog.Application.Services.IWikidataAdminClientHeartbeatTracker>();
+        var before = tracker.GetConnectedCount(DateTime.UtcNow);
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            $"{EndpointBase}/sse-clients/heartbeat",
+            _adminSessionToken);
+
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var after = tracker.GetConnectedCount(DateTime.UtcNow);
+
+        // The same admin id can only contribute once (idempotent upsert), so
+        // the gauge MUST satisfy: after ∈ {before, before+1}. before+1 when
+        // the admin was not previously tracked; before when this test or a
+        // sibling already registered the same admin within TTL.
+        after.Should().BeOneOf(before, before + 1);
+        after.Should().BeGreaterThan(0,
+            "after a successful heartbeat the tracker MUST report at least one connected admin");
+    }
+
     private async Task<Guid> SeedDeadLetterAsync(
         string gameTitle = "M16 Test Game",
         string reason = "r2-upload-error")

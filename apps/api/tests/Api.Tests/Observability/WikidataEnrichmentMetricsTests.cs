@@ -131,6 +131,172 @@ public class WikidataEnrichmentMetricsTests
     }
 
     // ──────────────────────────────────────────────────────────────────────
+    // Issue #2470 — SSE plane (subscribers + publish/receive + admin clients)
+    // ──────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void WikidataSseSubscribers_BeforeCallbackSet_GaugeReports0()
+    {
+        MeepleAiMetrics.ResetWikidataSseSubscribersCallback();
+
+        ReadObservableGaugeValue(MeepleAiMetrics.WikidataSseSubscribers)
+            .Should().Be(0, "the gauge degrades to 0 when no broadcaster callback is bound");
+    }
+
+    [Fact]
+    public void WikidataSseSubscribers_AfterCallbackSet_GaugeReportsCallbackValue()
+    {
+        try
+        {
+            MeepleAiMetrics.SetWikidataSseSubscribersCallback(() => 7);
+
+            ReadObservableGaugeValue(MeepleAiMetrics.WikidataSseSubscribers).Should().Be(7);
+        }
+        finally
+        {
+            MeepleAiMetrics.ResetWikidataSseSubscribersCallback();
+        }
+    }
+
+    [Fact]
+    public void WikidataSseSubscribers_CallbackThrows_GaugeDegradesTo0()
+    {
+        try
+        {
+            MeepleAiMetrics.SetWikidataSseSubscribersCallback(() => throw new InvalidOperationException("broadcaster torn down"));
+
+            ReadObservableGaugeValue(MeepleAiMetrics.WikidataSseSubscribers)
+                .Should().Be(0, "scrape MUST NOT throw — a thrown callback is treated as 0");
+        }
+        finally
+        {
+            MeepleAiMetrics.ResetWikidataSseSubscribersCallback();
+        }
+    }
+
+    [Fact]
+    public void SetWikidataSseSubscribersCallback_Null_Throws()
+    {
+        var act = () => MeepleAiMetrics.SetWikidataSseSubscribersCallback(null!);
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void WikidataSseAdminClientsConnected_BeforeCallbackSet_GaugeReports0()
+    {
+        MeepleAiMetrics.ResetWikidataSseAdminClientsConnectedCallback();
+
+        ReadObservableGaugeValue(MeepleAiMetrics.WikidataSseAdminClientsConnected).Should().Be(0);
+    }
+
+    [Fact]
+    public void WikidataSseAdminClientsConnected_AfterCallbackSet_GaugeReportsCallbackValue()
+    {
+        try
+        {
+            MeepleAiMetrics.SetWikidataSseAdminClientsConnectedCallback(() => 3);
+
+            ReadObservableGaugeValue(MeepleAiMetrics.WikidataSseAdminClientsConnected).Should().Be(3);
+        }
+        finally
+        {
+            MeepleAiMetrics.ResetWikidataSseAdminClientsConnectedCallback();
+        }
+    }
+
+    [Fact]
+    public void SetWikidataSseAdminClientsConnectedCallback_Null_Throws()
+    {
+        var act = () => MeepleAiMetrics.SetWikidataSseAdminClientsConnectedCallback(null!);
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void WikidataSseMessagesPublished_Name_MatchesIssue2470Contract()
+    {
+        // PR review / Grafana panel 10 + alert WikidataSseSubscriberStarvation
+        // depend on this exact metric name; renaming requires updating the
+        // dashboard JSON + the alert YAML in lockstep.
+        MeepleAiMetrics.WikidataSseMessagesPublished.Name
+            .Should().Be("meepleai.wikidata.sse.messages.published.total");
+        MeepleAiMetrics.WikidataSseMessagesPublished.Unit.Should().Be("messages");
+    }
+
+    [Fact]
+    public void WikidataSseMessagesReceived_Name_MatchesIssue2470Contract()
+    {
+        MeepleAiMetrics.WikidataSseMessagesReceived.Name
+            .Should().Be("meepleai.wikidata.sse.messages.received.total");
+        MeepleAiMetrics.WikidataSseMessagesReceived.Unit.Should().Be("messages");
+    }
+
+    [Fact]
+    public void WikidataSseSubscribers_Name_MatchesIssue2470Contract()
+    {
+        MeepleAiMetrics.WikidataSseSubscribers.Name
+            .Should().Be("meepleai.wikidata.sse.subscribers");
+        MeepleAiMetrics.WikidataSseSubscribers.Unit.Should().Be("subscribers");
+    }
+
+    [Fact]
+    public void WikidataSseAdminClientsConnected_Name_MatchesIssue2470Contract()
+    {
+        MeepleAiMetrics.WikidataSseAdminClientsConnected.Name
+            .Should().Be("meepleai.wikidata.sse.admin_clients_connected");
+        MeepleAiMetrics.WikidataSseAdminClientsConnected.Unit.Should().Be("clients");
+    }
+
+    [Fact]
+    public void WikidataSseMessagesPublished_RecordsIncrements_AndIsCollectable()
+    {
+        var measurements = new List<long>();
+
+        using var listener = new MeterListener
+        {
+            InstrumentPublished = (instrument, l) =>
+            {
+                if (instrument.Name == "meepleai.wikidata.sse.messages.published.total")
+                {
+                    l.EnableMeasurementEvents(instrument);
+                }
+            },
+        };
+        listener.SetMeasurementEventCallback<long>((_, value, _, _) => measurements.Add(value));
+        listener.Start();
+
+        MeepleAiMetrics.WikidataSseMessagesPublished.Add(1);
+        MeepleAiMetrics.WikidataSseMessagesPublished.Add(5);
+
+        // Tolerant: shared global counter; only assert OUR two increments
+        // arrived through the listener wiring.
+        measurements.Should().Contain(1).And.Contain(5);
+    }
+
+    [Fact]
+    public void WikidataSseMessagesReceived_RecordsIncrements_AndIsCollectable()
+    {
+        var measurements = new List<long>();
+
+        using var listener = new MeterListener
+        {
+            InstrumentPublished = (instrument, l) =>
+            {
+                if (instrument.Name == "meepleai.wikidata.sse.messages.received.total")
+                {
+                    l.EnableMeasurementEvents(instrument);
+                }
+            },
+        };
+        listener.SetMeasurementEventCallback<long>((_, value, _, _) => measurements.Add(value));
+        listener.Start();
+
+        MeepleAiMetrics.WikidataSseMessagesReceived.Add(3);
+        MeepleAiMetrics.WikidataSseMessagesReceived.Add(7);
+
+        measurements.Should().Contain(3).And.Contain(7);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
     // Helpers
     // ──────────────────────────────────────────────────────────────────────
 

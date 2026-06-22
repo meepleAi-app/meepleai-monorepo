@@ -238,6 +238,18 @@ internal static class SharedGameCatalogServiceExtensions
         // publisher (M9 scheduler / M12 trigger) are unchanged.
         services.AddWikidataEnrichmentEventBroadcaster(configuration);
 
+        // Issue #2470 (DEC-C): FE↔BE correlation for the SSE starvation
+        // alert. The wikidata-dead-letters page POSTs a heartbeat every 30s
+        // while open; the tracker exposes the count via the
+        // meepleai_wikidata_sse_admin_clients_connected gauge. Singleton so
+        // the TTL'd map survives across requests.
+        services.AddSingleton<IWikidataAdminClientHeartbeatTracker, WikidataAdminClientHeartbeatTracker>();
+
+        // Issue #2470: hosted service that binds the static
+        // MeepleAiMetrics SSE gauges to runtime sources (broadcaster +
+        // tracker) once DI is wired. See class remarks re: idempotent re-bind.
+        services.AddHostedService<WikidataSseGaugeBinder>();
+
         // Issue #1823 Wave 3 M9: Quartz scheduler for batch Wikidata cover
         // enrichment. Runs every 1 minute (HPA=1 per DEC-3e). [DisallowConcurrentExecution]
         // on the job class is the belt-and-braces guarantee that we never have

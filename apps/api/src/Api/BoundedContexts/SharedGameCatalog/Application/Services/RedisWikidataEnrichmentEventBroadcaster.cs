@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Threading.Channels;
+using Api.Observability;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 
@@ -82,6 +83,14 @@ internal sealed class RedisWikidataEnrichmentEventBroadcaster
     public void Publish(WikidataEnrichmentEvent payload)
     {
         ArgumentNullException.ThrowIfNull(payload);
+
+        // Issue #2470 — count the publish attempt before we touch Redis. A
+        // failed PUBLISH still counts as a publisher-side attempt; the gap
+        // between this counter and the receive counter (post fan-out) on
+        // the same pod is the local delivery loss rate. Multi-pod
+        // fan-out adds remote-pod receives so the ratio inverts naturally
+        // once HPA scales above 1.
+        MeepleAiMetrics.WikidataSseMessagesPublished.Add(1);
 
         var json = JsonSerializer.Serialize(payload, SerializerOptions);
 
@@ -296,6 +305,13 @@ internal sealed class RedisWikidataEnrichmentEventBroadcaster
         }
 
         if (payload is null) return;
+
+        // Issue #2470 — snapshot the subscriber count BEFORE the fan-out so
+        // the counter increment is consistent against concurrent
+        // subscribe/unsubscribe. Mirror of the in-memory broadcaster
+        // bookkeeping.
+        var deliveredCount = _subscribers.Count;
+        MeepleAiMetrics.WikidataSseMessagesReceived.Add(deliveredCount);
 
         foreach (var (_, channel) in _subscribers)
         {

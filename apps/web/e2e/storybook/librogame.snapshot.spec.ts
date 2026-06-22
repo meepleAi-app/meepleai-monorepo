@@ -65,6 +65,23 @@ const FRAMES: { slug: string; file: string }[] = [
     slug: 'pages-librogame-library-search--frame-06-error',
     file: 'librogame-library-search-06-error.png',
   },
+  // librogame-setup-wizard (4 frames) — Task 3 #2174
+  {
+    slug: 'pages-librogame-setup-wizard--frame-01-step-1-name',
+    file: 'librogame-setup-wizard-01-step1-name.png',
+  },
+  {
+    slug: 'pages-librogame-setup-wizard--frame-02-step-2-players',
+    file: 'librogame-setup-wizard-02-step2-players.png',
+  },
+  {
+    slug: 'pages-librogame-setup-wizard--frame-03-step-3-confirm',
+    file: 'librogame-setup-wizard-03-step3-confirm.png',
+  },
+  {
+    slug: 'pages-librogame-setup-wizard--frame-04-validation-err',
+    file: 'librogame-setup-wizard-04-validation-err.png',
+  },
 ];
 
 for (const { slug, file } of FRAMES) {

@@ -24,8 +24,8 @@
     ],
     "designer_approved_by": "user@meepleAi (self-waiver P250, single-person team)",
     "designer_approved_on": "2026-06-15",
-    "story_path": "",
-    "fixtures_path": "",
+    "story_path": "apps/web/src/components/features/gamebook/CampaignSetupDrawer.stories.tsx",
+    "fixtures_path": "apps/web/src/__tests__/fixtures/mockup-pilots/librogame/librogame-setup-wizard.ts",
     "design_intent": "current",
     "viewports": [
       "desktop"

@@ -87,7 +87,7 @@
 | `sp4-agent-detail.html` | page-mock | `/agents/[id]`, `/library/[gameId]/agent` |
 | `sp4-agents-index.html` | page-mock | `/agents`, `/editor/agent-proposals/*` (partial), `/chat/agents/create` (partial) |
 | `sp4-citation-pdf-viewer.html` | component-mock | Citation overlay used by `/chat/[threadId]` and game-chat tabs |
-| `sp4-dashboard.html` | page-mock | `/dashboard` (forward-design Pre-Stage-3, closes #491) |
+| `sp4-dashboard.html` | page-mock (obsolete) | `/dashboard` — historical Pre-Stage-3 mockup, superseded by Asse C #1898 priority-driven design (4 priority sections replace 5 entity sections); tracking #2114 |
 | `sp4-discover.html` | page-mock | `/discover` |
 | `sp4-game-chat-tab.html` | component-mock | Chat tab embedded in `/library/[gameId]/agent`, `/games/[id]` |
 | `sp4-game-detail.html` | page-mock | `/games/[id]`, `/library/[gameId]`, `/private-games/[id]` |

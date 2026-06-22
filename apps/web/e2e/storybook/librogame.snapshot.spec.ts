@@ -116,6 +116,27 @@ const FRAMES: { slug: string; file: string }[] = [
     slug: 'pages-librogame-play-session--frame-04-glossary-inline',
     file: 'librogame-play-session-04-glossary-inline.png',
   },
+  // librogame-resume-picker (5 frames) — Task 7 #2174
+  {
+    slug: 'pages-librogame-resume-picker--frame-01-first-time',
+    file: 'librogame-resume-picker-01-first-time.png',
+  },
+  {
+    slug: 'pages-librogame-resume-picker--frame-02-single-resume',
+    file: 'librogame-resume-picker-02-single-resume.png',
+  },
+  {
+    slug: 'pages-librogame-resume-picker--frame-03-multi-campaign',
+    file: 'librogame-resume-picker-03-multi-campaign.png',
+  },
+  {
+    slug: 'pages-librogame-resume-picker--frame-04-stale-warning',
+    file: 'librogame-resume-picker-04-stale-warning.png',
+  },
+  {
+    slug: 'pages-librogame-resume-picker--frame-05-with-tutorial',
+    file: 'librogame-resume-picker-05-with-tutorial.png',
+  },
   // librogame-translate-viewer (12 frames, 13 mockup states — state J merged into Frame05) — Task 6 #2174
   {
     slug: 'pages-librogame-translate-viewer--frame-01-idle',

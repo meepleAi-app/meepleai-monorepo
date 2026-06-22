@@ -40,6 +40,31 @@ const FRAMES: { slug: string; file: string }[] = [
     slug: 'pages-librogame-game-detail--frame-04-not-found',
     file: 'librogame-game-detail-04-not-found.png',
   },
+  // librogame-library-search (6 frames) — Task 2 #2174
+  {
+    slug: 'pages-librogame-library-search--frame-01-default',
+    file: 'librogame-library-search-01-default.png',
+  },
+  {
+    slug: 'pages-librogame-library-search--frame-02-empty',
+    file: 'librogame-library-search-02-empty.png',
+  },
+  {
+    slug: 'pages-librogame-library-search--frame-03-quota-soft',
+    file: 'librogame-library-search-03-quota-soft.png',
+  },
+  {
+    slug: 'pages-librogame-library-search--frame-04-quota-hard',
+    file: 'librogame-library-search-04-quota-hard.png',
+  },
+  {
+    slug: 'pages-librogame-library-search--frame-05-loading',
+    file: 'librogame-library-search-05-loading.png',
+  },
+  {
+    slug: 'pages-librogame-library-search--frame-06-error',
+    file: 'librogame-library-search-06-error.png',
+  },
 ];
 
 for (const { slug, file } of FRAMES) {

@@ -138,22 +138,26 @@ export function TranslateViewer({
   // Test-seam: overlay _initialSseState so story frames can drive translated/translating
   // without actually running the SSE connection. In production _initialSseState is always
   // undefined, so `sse === sseRaw` with zero overhead.
-  const sse = _initialSseState
-    ? {
-        ...sseRaw,
-        partialText: _initialSseState.partialText ?? sseRaw.partialText,
-        isComplete: _initialSseState.isComplete ?? sseRaw.isComplete,
-        appliedTerms: _initialSseState.appliedTerms ?? sseRaw.appliedTerms,
-        detectedSourceLang:
-          _initialSseState.detectedSourceLang !== undefined
-            ? _initialSseState.detectedSourceLang
-            : sseRaw.detectedSourceLang,
-        langDetectionConfidence:
-          _initialSseState.langDetectionConfidence !== undefined
-            ? _initialSseState.langDetectionConfidence
-            : sseRaw.langDetectionConfidence,
-      }
-    : sseRaw;
+  const sse = useMemo(
+    () =>
+      _initialSseState
+        ? {
+            ...sseRaw,
+            partialText: _initialSseState.partialText ?? sseRaw.partialText,
+            isComplete: _initialSseState.isComplete ?? sseRaw.isComplete,
+            appliedTerms: _initialSseState.appliedTerms ?? sseRaw.appliedTerms,
+            detectedSourceLang:
+              _initialSseState.detectedSourceLang !== undefined
+                ? _initialSseState.detectedSourceLang
+                : sseRaw.detectedSourceLang,
+            langDetectionConfidence:
+              _initialSseState.langDetectionConfidence !== undefined
+                ? _initialSseState.langDetectionConfidence
+                : sseRaw.langDetectionConfidence,
+          }
+        : sseRaw,
+    [sseRaw, _initialSseState]
+  );
 
   // T5 — DEC-4: Hard timeout state. Merged into errorMessage below.
   const [timeoutError, setTimeoutError] = useState<string | null>(null);

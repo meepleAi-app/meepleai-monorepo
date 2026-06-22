@@ -82,6 +82,23 @@ const FRAMES: { slug: string; file: string }[] = [
     slug: 'pages-librogame-setup-wizard--frame-04-validation-err',
     file: 'librogame-setup-wizard-04-validation-err.png',
   },
+  // librogame-encounter-cheatsheet (4 frames) — Task 4 #2174
+  {
+    slug: 'pages-librogame-encounter-cheatsheet--frame-01-idle',
+    file: 'librogame-encounter-cheatsheet-01-idle.png',
+  },
+  {
+    slug: 'pages-librogame-encounter-cheatsheet--frame-02-parsing',
+    file: 'librogame-encounter-cheatsheet-02-parsing.png',
+  },
+  {
+    slug: 'pages-librogame-encounter-cheatsheet--frame-03-rendered',
+    file: 'librogame-encounter-cheatsheet-03-rendered.png',
+  },
+  {
+    slug: 'pages-librogame-encounter-cheatsheet--frame-04-error',
+    file: 'librogame-encounter-cheatsheet-04-error.png',
+  },
 ];
 
 for (const { slug, file } of FRAMES) {

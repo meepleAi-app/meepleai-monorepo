@@ -156,6 +156,8 @@ cd apps/web && pnpm build-storybook
 
 Ogni task-mockup esegue questi step (2-5 min ciascuno). I DATI specifici sono nella tabella del task.
 
+> 🔴 **SNAPSHOT-STATIC RULE (lezione Task 3):** la snapshot harness (`librogame.snapshot.spec.ts`) fa solo `goto(iframe) + wait + screenshot` — **NON esegue i `play` functions** (quelli girano solo sotto `@storybook/test-runner`). Quindi ogni stato deve essere reso **staticamente**, mai via `play`/interazione. Per gli stati guidati da state interno di un componente stateful (step wizard, modali, fasi), usa **test-seam props** (DEC user-locked 2026-06-22): aggiungi al componente reale props opzionali default-safe (es. `initialStep?`, `initialTitle?`, `initialPhase?`) che inizializzano i rispettivi `useState`, e pilota ogni Frame via `args`. Riusa SEMPRE il componente reale (massima fedeltà). Verifica che nessun `useEffect`/reset sovrascriva il valore iniziale al mount, e che i test esistenti del componente passino ancora.
+
 1. **Leggi il mockup + il componente reale.** `admin-mockups/design_files/<mockup>.{html,jsx}` (stati/assi) e il componente reale al path indicato. **NON fidarti del template suggerito nel task — verificalo leggendo il componente.** Determina:
    - Usa hook di fetch (`useQuery`/`useMutation` di `@tanstack/react-query`, custom hook `useGamebook*`/`useGameBooks`/`usePhotoUpload`/`useTranslateSegment*`)? → **Template M** (MSW handlers). I componenti `/gamebook` sono **prevalentemente react-query + Zustand**: aspettati M/decorator, NON P.
    - Usa uno store Zustand (`useChatPanelStore`, `useReaderMode`, ecc.)? → aggiungi un **decorator** che seed-a lo store nello story file.

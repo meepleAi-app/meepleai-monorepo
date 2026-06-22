@@ -2,6 +2,7 @@ using Api.BoundedContexts.Administration.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.UserLibrary.Domain.Events;
 using Api.SharedKernel.Domain.Interfaces;
 
@@ -84,6 +85,13 @@ public static class EventTypeRegistry
         // historical log rows otherwise. Tested in EventTypeRegistryTests.
         [typeof(AlertFiredEvent)] = "alert.fired",
         [typeof(AlertResolvedEvent)] = "alert.resolved",
+
+        // Issue #2494 AC-5 — Mechanic Extractor cost cap state changes.
+        // Both admin overrides (OverrunCause=AdminOverride) and pipeline
+        // mid-stream overrun detections (OverrunCause=MidStreamOverrun) are
+        // durably logged so the audit trail covers both budget intent (admin)
+        // and budget breach (system).
+        [typeof(MechanicAnalysisCostCapOverriddenEvent)] = "mechanic.analysis.cost_cap.overridden",
     };
 
     /// <summary>

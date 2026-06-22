@@ -9,6 +9,8 @@ AI-powered board game assistant with RAG, multi-agent architecture, and living d
 | Backend | 4.30% | 90% | Phase 2 |
 | Frontend | 39% | 85% | Phase 2 |
 
+<!-- snapshot-badge:start -->Snapshot freshness: stale (68 d) 🔴<!-- snapshot-badge:end -->
+
 ## Features
 
 - **RAG System**: Hybrid retrieval (vector + keyword) with multi-model validation

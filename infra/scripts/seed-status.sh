@@ -26,16 +26,22 @@ set -euo pipefail
 
 BRIEF=false
 STRICT=false
+BADGE=false
 for arg in "$@"; do
   case "$arg" in
     --brief)  BRIEF=true  ;;
     --strict) STRICT=true ;;
+    --badge)  BADGE=true  ;;
     -h|--help)
       cat <<HELP
 seed-status.sh — report on the local seed snapshot freshness.
 
   --brief    one-line banner mode (used by 'make dev' hook)
   --strict   exit 1 on missing / stale snapshot (used by CI)
+  --badge    emit a single Markdown line to stdout (D5 of #2126),
+             wrapped in <!-- snapshot-badge:start/end --> markers.
+             Color: ✅ green ≤7d · ⚠️ yellow 7-30d · 🔴 red ≥30d/missing.
+             Safe to capture: all other output goes to stderr.
 HELP
       exit 0
       ;;
@@ -46,7 +52,8 @@ done
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 INFRA_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO_DIR="$(cd "$INFRA_DIR/.." && pwd)"
-SNAPSHOTS_DIR="$REPO_DIR/data/snapshots"
+# Allow env override for testing (bats fixtures) and CI (SEED_INDEX_OUT_DIR).
+SNAPSHOTS_DIR="${SNAPSHOTS_DIR:-${SEED_INDEX_OUT_DIR:-$REPO_DIR/data/snapshots}}"
 
 # ── ANSI colours (off when stderr is not a tty, NO_COLOR set, or in brief) ──
 if [[ -t 2 && -z "${NO_COLOR:-}" ]]; then
@@ -76,6 +83,11 @@ if [[ -d "$SNAPSHOTS_DIR" ]]; then
 fi
 
 if [[ -z "$LATEST_META" ]]; then
+  if $BADGE; then
+    printf "<!-- snapshot-badge:start -->🔴 Snapshot freshness: missing<!-- snapshot-badge:end -->\n"
+    $STRICT && exit 1
+    exit 0
+  fi
   if $BRIEF; then
     printf "%s[seed-status]%s no snapshot found in %s — \`make dev\` will run runtime indexing (hours)\n" \
       "$C_DIM" "$C_RST" "$SNAPSHOTS_DIR" >&2
@@ -141,6 +153,30 @@ else
 fi
 if $SCHEMA_DRIFT; then
   STATUS_TAG="$C_RED"; STATUS_LABEL="stale (schema drift)"; STATUS_HARD=true
+fi
+
+# ── Badge mode (D5 of #2126) ───────────────────────────────────────────────
+# Emits ONE stdout line (Markdown) wrapped in HTML markers for splice-in-place.
+# All other output stays on stderr so callers can safely capture stdout only.
+if $BADGE; then
+  case "$STATUS_LABEL" in
+    fresh*)
+      BADGE_EMOJI="✅"
+      BADGE_TEXT="Snapshot freshness: ${AGE_DAYS} days ${BADGE_EMOJI}"
+      ;;
+    warning*)
+      BADGE_EMOJI="⚠️"
+      BADGE_TEXT="Snapshot freshness: ${AGE_DAYS} days ${BADGE_EMOJI}"
+      ;;
+    *)
+      # stale / age unknown / schema drift
+      BADGE_EMOJI="🔴"
+      BADGE_TEXT="Snapshot freshness: ${STATUS_LABEL} ${BADGE_EMOJI}"
+      ;;
+  esac
+  printf "<!-- snapshot-badge:start -->%s<!-- snapshot-badge:end -->\n" "$BADGE_TEXT"
+  $STRICT && $STATUS_HARD && exit 1
+  exit 0
 fi
 
 # ── Brief mode ─────────────────────────────────────────────────────────────

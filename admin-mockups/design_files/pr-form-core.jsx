@@ -281,6 +281,32 @@ const Step2Quando = ({ dateLabel = 'Sabato 17 maggio 2026', time = '21:00', dura
 );
 
 // ─── STEP 3 — GIOCATORI & PUNTEGGI ─────────────────────
+// #2496 — Asse A inv #16: tiny pill distinguishes account-linked players from guest tags.
+// Used in ScoreRow next to the player title so editors see the roster mix at-a-glance.
+const KindBadge = ({ kind }) => {
+  const isGuest = kind === 'guest';
+  return (
+    <span
+      title={isGuest ? 'Giocatore ospite — non collegato a un account' : 'Giocatore con account collegato'}
+      style={{
+        fontFamily: 'var(--f-mono)',
+        fontSize: 8.5,
+        fontWeight: 800,
+        letterSpacing: '.06em',
+        textTransform: 'uppercase',
+        padding: '1px 6px',
+        borderRadius: 'var(--r-pill)',
+        color: isGuest ? 'var(--text-sec)' : entityHsl('player'),
+        background: isGuest ? 'var(--bg-muted)' : entityHsl('player', 0.12),
+        border: isGuest ? '1px solid var(--border-light)' : `1px solid ${entityHsl('player', 0.25)}`,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {isGuest ? 'Ospite' : 'Account'}
+    </span>
+  );
+};
+
 const ScoreRow = ({ player, score, isWinner }) => (
   <div style={{
     display:'flex', alignItems:'center', gap: 10, padding:'10px 12px',
@@ -290,8 +316,10 @@ const ScoreRow = ({ player, score, isWinner }) => (
   }}>
     <Avatar player={player} size={34}/>
     <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{ fontFamily:'var(--f-display)', fontSize: 13.5, fontWeight: 800, color:'var(--text)', display:'flex', alignItems:'center', gap: 6 }}>
+      <div style={{ fontFamily:'var(--f-display)', fontSize: 13.5, fontWeight: 800, color:'var(--text)', display:'flex', alignItems:'center', gap: 6, flexWrap:'wrap' }}>
         {player.title.split(' ')[0]}
+        {/* #2496 Asse A inv #16 — User/Guest pill so the editor sees the roster mix */}
+        <KindBadge kind={player.kind || 'user'}/>
         {isWinner && (
           <span style={{ display:'inline-flex', alignItems:'center', gap: 3, padding:'1px 7px', borderRadius:'var(--r-pill)', background: entityHsl('session', 0.14), color: entityHsl('session'), fontFamily:'var(--f-mono)', fontSize: 8.5, fontWeight: 800, textTransform:'uppercase', letterSpacing:'.06em' }}>🏆 Vincitore</span>
         )}

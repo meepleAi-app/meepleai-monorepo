@@ -1,8 +1,8 @@
 # ADR-082 — External Media Enrichment: Ports/Adapters Layout
 
-**Status**: Proposed
-**Date**: 2026-06-20
-**Deciders**: @badsworm (pending ratification at PR review)
+**Status**: Accepted
+**Date**: 2026-06-20 (proposed) · 2026-06-22 (ratified post-verification, #2055 Phase 1)
+**Deciders**: @badsworm
 **Tracking**: [#2055](https://github.com/meepleAi-app/meepleai-monorepo/issues/2055) ("Plan harden") gap closure
 **Related**:
 - [`adr-2026-06-09-wikidata-enrichment-architecture.md`](./adr-2026-06-09-wikidata-enrichment-architecture.md) (Accepted) — DEC-3a..3j Wikidata cover pipeline
@@ -113,7 +113,7 @@ apps/api/src/Api/BoundedContexts/SharedGameCatalog/
     │   ├── InMemoryWikimediaRateLimiter.cs       ← adapter (BC-internal initially)
     │   ├── LicenseValidator.cs                   ← pure domain helper (static, non-port)
     │   ├── IWebpVariantGenerator.cs              ← port (BC-internal)
-    │   ├── WebpVariantGenerator.cs               ← adapter (ImageSharp 2.x per DEC-3d-1)
+    │   ├── WebpVariantGenerator.cs               ← adapter (Magick.NET-Q8-AnyCPU 14.x per DEC-3d-1, superseded ImageSharp 3.x rejected for license)
     │   ├── ICoverR2UploadPipeline.cs             ← port (BC-internal)
     │   └── CoverR2UploadPipeline.cs              ← adapter (wraps IBlobStorageService shared)
     └── Resilience/
@@ -214,13 +214,28 @@ When a second BC needs to enrich via Wikimedia Commons (e.g. `PdfDocumentBC.PdfD
 
 ## Compliance
 
-- [x] No `MediaEnrichment` BC created.
-- [x] `IWikimediaCommonsClient` lives in `Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services` (catalog-internal) ✅ as-shipped.
-- [x] `IWikidataCoverEnrichmentRunner` lives in `Api.BoundedContexts.SharedGameCatalog.Application.Services` (orchestrator port BC-owned) ✅ as-shipped.
-- [x] `WikidataCatalogProvider` is shared between catalog seed + cover P18 — currently in SharedGameCatalog BC-internal namespace; promotion ladder defined in § Decision for when second BC consumer arrives.
-- [x] DEC-3e single-pod rate-limit constraint preserved — `InMemoryWikimediaRateLimiter` is process-singleton.
-- [ ] Future Phase G migration audit: cross-link this ADR in CODEOWNERS for `apps/api/src/Api/BoundedContexts/SharedGameCatalog/Infrastructure/Services/Wikimedia*` (manual setup, post-Accepted).
-- [ ] Future PR template: add "ADR-082 promotion check" checkbox if PR touches Wikimedia adapter visibility.
+### As-shipped verification (2026-06-22 ratification, #2055 Phase 1)
+
+- [x] **No `MediaEnrichment` BC created** — Glob `apps/api/src/Api/BoundedContexts/**/MediaEnrichment*` returns zero matches.
+- [x] **`IWikimediaCommonsClient` lives in `Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services`** (catalog-internal) ✅ — declared `internal interface`.
+- [x] **`IWikidataCoverEnrichmentRunner` lives in `Api.BoundedContexts.SharedGameCatalog.Application.Services`** (orchestrator port BC-owned) ✅ — declared `internal interface`, DI `AddScoped`.
+- [x] **`WikidataCatalogProvider` is shared between catalog seed + cover P18** — in `SharedGameCatalog/Infrastructure/Providers/`, declared `internal sealed class`. Promotion ladder applies when second BC consumer arrives.
+- [x] **DEC-3e single-pod rate-limit constraint preserved** — `InMemoryWikimediaRateLimiter` registered `AddSingleton<IWikimediaRateLimiter, InMemoryWikimediaRateLimiter>()` (line 203 of `SharedGameCatalogServiceExtensions.cs`); class is `internal sealed : IWikimediaRateLimiter, IDisposable`.
+- [x] **All adapter ports `internal` visibility** — verified 2026-06-22:
+  - `IWikidataCoverEnrichmentRunner` → `internal` ✅
+  - `IWikimediaCommonsClient` → `internal` ✅
+  - `IWikimediaRateLimiter` → `internal` ✅ (tightened in #2055 Phase 1 from initial `public` shipping; no cross-BC consumer existed)
+  - `IWebpVariantGenerator` → `internal` ✅ (tightened in #2055 Phase 1 from initial `public` shipping; no cross-BC consumer existed)
+  - `ICoverR2UploadPipeline` → `internal` ✅
+  - `LicenseValidator` → `internal static` ✅
+  - `ImageProcessingException` → `public sealed` ⚠️ (constraint: Sonar S3871 forbids `internal` exception types — catch-across-assembly assumption; documented exception to "no public-leak" rule, surfaces only in tests via `Assert.ThrowsAsync<ImageProcessingException>`)
+- [x] **Adapter ImageSharp → Magick.NET supersession recorded** — DEC-3d-1 LOCKED 2026-06-20 (License: Six Labors Split License conflict on ImageSharp 3.x). § Decision Layout updated to reflect Magick.NET-Q8-AnyCPU 14.x.
+
+### Forward action items (post-Accepted)
+
+- [ ] **Phase G CODEOWNERS cross-link**: add `apps/api/src/Api/BoundedContexts/SharedGameCatalog/Infrastructure/Services/Wikimedia*` and `apps/api/src/Api/BoundedContexts/SharedGameCatalog/Infrastructure/Resilience/Wikimedia*` entries pointing to architecture owner. Manual one-off.
+- [ ] **PR template enhancement**: add "ADR-082 promotion check" checkbox triggered when PR touches `Infrastructure/Services/IWikimedia*` or visibility modifiers thereof.
+- [ ] **Promotion PR contract**: when a second consumer BC ships, the promotion PR must (a) move files per § Decision Steps 2-3, (b) upgrade `internal` → `public`, (c) update DI registrations in both BCs, (d) append a `Phase 2 promotion executed YYYY-MM-DD` line to this ADR Status.
 
 ---
 
@@ -250,4 +265,4 @@ This ADR codifies the AS-SHIPPED layout. No migration is required for current `S
 
 ---
 
-**Last updated**: 2026-06-20 | **Status**: Proposed → Accepted at PR review.
+**Last updated**: 2026-06-22 | **Status**: Accepted (ratified at #2055 Phase 1, verified against as-shipped code; 2 minor `public → internal` visibility tightenings applied in the same PR).

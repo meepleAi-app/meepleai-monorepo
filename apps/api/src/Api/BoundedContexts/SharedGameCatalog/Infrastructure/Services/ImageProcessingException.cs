@@ -3,7 +3,8 @@ namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 /// <summary>
 /// Thrown by <see cref="IWebpVariantGenerator"/> when the source image bytes
 /// cannot be decoded — either because they are corrupted, truncated, or encoded
-/// in a format ImageSharp does not recognize.
+/// in a format Magick.NET does not recognize (PNG, JPEG, WebP, GIF, BMP, TIFF
+/// are the bundled decoders).
 /// </summary>
 /// <remarks>
 /// Surfaces as a typed domain exception so callers (the cover enrichment

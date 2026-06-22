@@ -15,7 +15,7 @@ internal sealed class GroundingGuardrail : IMechanicGuardrail
 
     public GroundingGuardrail(IEmbeddingService embeddings) => _embeddings = embeddings;
 
-    public string RuleFamily => "T3";
+    public string RuleFamily => "T3b";
     public int Order => 40;
 
     private static readonly string[] ClaimFields = { "claim", "description", "text", "answer", "primary" };

@@ -131,6 +131,17 @@ public sealed class PageSubstringGuardrailTests
         var r = await Eval(json, chunks, pageCount: 50);
         r.Should().ContainSingle().Which.Rule.Should().Be("T4_quote_not_substring");
     }
+
+    [Fact]
+    public async Task PageInRangeButNotIndexed_SkipsCheck()
+    {
+        // Pool has page metadata (page 3) but the citation cites page 5 (in range, not indexed).
+        // Must skip — NOT widen to the whole document (would let a fabricated page citation pass).
+        var chunks = new[] { new MechanicSourceChunk(0, 3, null, "the deck has cards") };
+        var json = "{\"claim\":\"x\",\"citations\":[{\"pdf_page\":5,\"quote\":\"anything not present\"}]}";
+        var r = await Eval(json, chunks, pageCount: 50);
+        r.Should().BeEmpty();
+    }
 }
 
 public sealed class RejectionSamplingGuardrailTests

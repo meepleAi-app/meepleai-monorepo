@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExt
 /// </summary>
 internal sealed class CitationPresenceGuardrail : IMechanicGuardrail
 {
-    public string RuleFamily => "T3";
+    public string RuleFamily => "T3a";
     public int Order => 15;
 
     private static readonly string[] ClaimFields = { "claim", "description", "text", "answer", "primary" };

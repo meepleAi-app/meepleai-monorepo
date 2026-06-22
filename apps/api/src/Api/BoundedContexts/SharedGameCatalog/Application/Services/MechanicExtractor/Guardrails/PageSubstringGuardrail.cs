@@ -58,9 +58,25 @@ internal sealed class PageSubstringGuardrail : IMechanicGuardrail
                 return;
             }
 
-            var candidates = normalizedChunksByPage.TryGetValue(page, out var byPage) && byPage.Count > 0
-                ? byPage
-                : allNormalized;
+            // Verify against chunks covering the cited page. Three cases:
+            //  - page has indexed chunks → check those
+            //  - pool HAS page metadata but not for this page (partial indexing) → unverifiable, skip.
+            //    Do NOT widen to the whole document, or a fabricated page citation could pass when the
+            //    quoted text happens to appear on another page.
+            //  - pool has NO page metadata at all → best-effort whole-document check.
+            List<string> candidates;
+            if (normalizedChunksByPage.TryGetValue(page, out var byPage) && byPage.Count > 0)
+            {
+                candidates = byPage;
+            }
+            else if (normalizedChunksByPage.Count > 0)
+            {
+                return; // page in range but not indexed — unverifiable, skip (no false positive)
+            }
+            else
+            {
+                candidates = allNormalized;
+            }
             if (candidates.Count == 0)
             {
                 return; // no source pool to verify against (e.g. unit context) — skip, not a violation

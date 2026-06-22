@@ -83,13 +83,8 @@ const OutcomeBadge = ({ outcome, status }) => {
     );
   }
   const map = {
-<<<<<<< HEAD
-    won:  { label:'🏆 Vinta', bg: entityHsl('toolkit', 0.14), fg: entityHsl('toolkit'), bd: entityHsl('toolkit', 0.3) },
-    lost: { label:'△ Persa', bg: entityHsl('event', 0.12), fg: entityHsl('event'), bd: entityHsl('event', 0.3) },
-=======
     won:  { label:'🏆 Vinta', bg:'hsl(var(--c-success) / .14)', fg:'hsl(var(--c-success))', bd:'hsl(var(--c-success) / .3)' },
     lost: { label:'△ Persa', bg:'hsl(var(--c-event) / .12)', fg:'hsl(var(--c-event))', bd:'hsl(var(--c-event) / .3)' },
->>>>>>> origin/main-dev
     tie:  { label:'= Pareggio', bg:'var(--bg-muted)', fg:'var(--text-sec)', bd:'var(--border)' },
   };
   const m = map[outcome] || map.tie;

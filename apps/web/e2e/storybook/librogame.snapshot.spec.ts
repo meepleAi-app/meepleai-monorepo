@@ -211,6 +211,35 @@ const FRAMES: { slug: string; file: string }[] = [
     slug: 'pages-librogame-glossary-editor--frame-06-variants',
     file: 'librogame-glossary-editor-06-variants.png',
   },
+  // librogame-quota-credits (7 frames) — Task 9 #2174
+  {
+    slug: 'pages-librogame-quota-credits--frame-01-step-1-quota',
+    file: 'librogame-quota-credits-01-step1-quota.png',
+  },
+  {
+    slug: 'pages-librogame-quota-credits--frame-02-step-2-picker',
+    file: 'librogame-quota-credits-02-step2-picker.png',
+  },
+  {
+    slug: 'pages-librogame-quota-credits--frame-03-step-3-form',
+    file: 'librogame-quota-credits-03-step3-form.png',
+  },
+  {
+    slug: 'pages-librogame-quota-credits--frame-04-step-3-loading',
+    file: 'librogame-quota-credits-04-step3-loading.png',
+  },
+  {
+    slug: 'pages-librogame-quota-credits--frame-05-step-3-failed',
+    file: 'librogame-quota-credits-05-step3-failed.png',
+  },
+  {
+    slug: 'pages-librogame-quota-credits--frame-06-step-4-success',
+    file: 'librogame-quota-credits-06-step4-success.png',
+  },
+  {
+    slug: 'pages-librogame-quota-credits--frame-07-soft-warning',
+    file: 'librogame-quota-credits-07-soft-warning.png',
+  },
 ];
 
 for (const { slug, file } of FRAMES) {

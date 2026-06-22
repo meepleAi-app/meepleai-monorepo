@@ -64,6 +64,18 @@ export interface CheckoutModalProps {
    * still runs (2s) but the outcome is forced. Production code never sets this.
    */
   readonly __testPaymentResult?: 'success' | 'failed';
+  /**
+   * TEST-ONLY step override. When set, the modal opens at this step regardless
+   * of `initialStep`. Allows Storybook to render step 3 and step 4 statically
+   * without user interaction. Production code never sets this.
+   */
+  readonly __initialStep?: ModalStep;
+  /**
+   * TEST-ONLY payment sub-state override. When set, `paymentSubState` is
+   * initialized to this value so step-3-loading and step-3-failed render
+   * correctly on first paint. Production code never sets this.
+   */
+  readonly __initialPaymentSubState?: Step3SubState;
 }
 
 const PAYMENT_LATENCY_MS = 2000;
@@ -77,10 +89,14 @@ export function CheckoutModal({
   onClose,
   onPurchaseSuccess,
   __testPaymentResult,
+  __initialStep,
+  __initialPaymentSubState,
 }: CheckoutModalProps): ReactElement {
-  const [step, setStep] = useState<ModalStep>(initialStep);
+  const [step, setStep] = useState<ModalStep>(__initialStep ?? initialStep);
   const [selectedPack, setSelectedPack] = useState<CheckoutPackId>('starter');
-  const [paymentSubState, setPaymentSubState] = useState<Step3SubState>('filled');
+  const [paymentSubState, setPaymentSubState] = useState<Step3SubState>(
+    __initialPaymentSubState ?? 'filled'
+  );
 
   const pack = getCheckoutPack(selectedPack);
   const priceEurString = formatEur(pack.priceEur);

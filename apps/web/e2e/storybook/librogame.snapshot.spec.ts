@@ -186,6 +186,31 @@ const FRAMES: { slug: string; file: string }[] = [
     slug: 'pages-librogame-translate-viewer--frame-12-manual-input-mode',
     file: 'librogame-translate-viewer-12-manual-input-mode.png',
   },
+  // librogame-glossary-editor (6 frames) — Task 8 #2174
+  {
+    slug: 'pages-librogame-glossary-editor--frame-01-edit-pristine',
+    file: 'librogame-glossary-editor-01-edit-pristine.png',
+  },
+  {
+    slug: 'pages-librogame-glossary-editor--frame-02-edited',
+    file: 'librogame-glossary-editor-02-edited.png',
+  },
+  {
+    slug: 'pages-librogame-glossary-editor--frame-03-save-error',
+    file: 'librogame-glossary-editor-03-save-error.png',
+  },
+  {
+    slug: 'pages-librogame-glossary-editor--frame-04-collision',
+    file: 'librogame-glossary-editor-04-collision.png',
+  },
+  {
+    slug: 'pages-librogame-glossary-editor--frame-05-bulk-import',
+    file: 'librogame-glossary-editor-05-bulk-import.png',
+  },
+  {
+    slug: 'pages-librogame-glossary-editor--frame-06-variants',
+    file: 'librogame-glossary-editor-06-variants.png',
+  },
 ];
 
 for (const { slug, file } of FRAMES) {

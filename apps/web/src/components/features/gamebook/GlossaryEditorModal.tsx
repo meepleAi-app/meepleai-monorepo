@@ -42,6 +42,13 @@ export interface GlossaryEditorModalProps {
   readonly onSaved?: (saved: GamebookGlossaryEntry) => void;
   /** Force layout for visual tests; auto-derived from viewport otherwise. */
   readonly forceLayout?: 'mobile' | 'desktop';
+  /**
+   * [Test-seam] Override specific reducer fields for static story rendering.
+   * Merged on top of `makeInitialState(entry)` at mount time.
+   * For Storybook stories only — do NOT use in production code.
+   * @internal
+   */
+  readonly _initialState?: Partial<ModalState>;
 }
 
 // ---------------------------------------------------------------------------
@@ -53,7 +60,8 @@ interface CollidingEntry {
   readonly termEn: string;
 }
 
-type ModalState = {
+/** @internal Exported for test-seam stories only. */
+export type ModalState = {
   itValue: string;
   initialIt: string;
   status: 'idle' | 'saving' | 'error' | 'collision';
@@ -131,16 +139,16 @@ export function GlossaryEditorModal({
   onClose,
   onSaved,
   forceLayout,
+  _initialState,
 }: GlossaryEditorModalProps): ReactElement | null {
   const { t } = useTranslation();
   const upsert = useUpsertGlossary(campaignId);
   const titleId = useId();
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const [state, dispatch] = useReducer(
-    modalReducer,
-    entry,
-    e => (e ? makeInitialState(e) : EMPTY_MODAL_STATE)
-  );
+  const [state, dispatch] = useReducer(modalReducer, entry, e => {
+    const base = e ? makeInitialState(e) : EMPTY_MODAL_STATE;
+    return _initialState ? { ...base, ..._initialState } : base;
+  });
 
   // Escape closes — listener attached only while the modal is mounted.
   useEffect(() => {
@@ -208,28 +216,18 @@ export function GlossaryEditorModal({
 
   return (
     <div data-slot="glossary-editor-modal">
-      <div
-        data-testid="glossary-editor-scrim"
-        onClick={onClose}
-        role="presentation"
-      />
+      <div data-testid="glossary-editor-scrim" onClick={onClose} role="presentation" />
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         data-testid={
-          layout === 'desktop'
-            ? 'glossary-editor-dialog-desktop'
-            : 'glossary-editor-dialog-mobile'
+          layout === 'desktop' ? 'glossary-editor-dialog-desktop' : 'glossary-editor-dialog-mobile'
         }
       >
         <header>
           <h2 id={titleId}>{t('gamebook.glossaryEditor.title')}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t('gamebook.glossaryEditor.close')}
-          >
+          <button type="button" onClick={onClose} aria-label={t('gamebook.glossaryEditor.close')}>
             {t('gamebook.glossaryEditor.close')}
           </button>
         </header>
@@ -283,17 +281,15 @@ export function GlossaryEditorModal({
         )}
 
         {/* Issue #1312 AC-6: desktop side-panel surfacing the conflicting entry. */}
-        {layout === 'desktop' &&
-          state.status === 'collision' &&
-          state.collidingEntry !== null && (
-            <aside
-              data-testid="glossary-editor-collision-side-panel"
-              aria-label={t('gamebook.glossaryEditor.collision.sidePanelLabel')}
-            >
-              <p>{state.collidingEntry.termEn}</p>
-              <p>{state.itValue}</p>
-            </aside>
-          )}
+        {layout === 'desktop' && state.status === 'collision' && state.collidingEntry !== null && (
+          <aside
+            data-testid="glossary-editor-collision-side-panel"
+            aria-label={t('gamebook.glossaryEditor.collision.sidePanelLabel')}
+          >
+            <p>{state.collidingEntry.termEn}</p>
+            <p>{state.itValue}</p>
+          </aside>
+        )}
 
         <button
           type="button"

@@ -274,6 +274,23 @@ const FRAMES: { slug: string; file: string }[] = [
     slug: 'pages-librogame-setup-chat--frame-04-loading',
     file: 'librogame-setup-chat-04-loading.png',
   },
+  // librogame-session-end (4 frames) — Task 12 #2174
+  {
+    slug: 'pages-librogame-session-end--frame-01-paused',
+    file: 'librogame-session-end-01-paused.png',
+  },
+  {
+    slug: 'pages-librogame-session-end--frame-02-victory',
+    file: 'librogame-session-end-02-victory.png',
+  },
+  {
+    slug: 'pages-librogame-session-end--frame-03-defeat',
+    file: 'librogame-session-end-03-defeat.png',
+  },
+  {
+    slug: 'pages-librogame-session-end--frame-04-cancelled',
+    file: 'librogame-session-end-04-cancelled.png',
+  },
 ];
 
 for (const { slug, file } of FRAMES) {

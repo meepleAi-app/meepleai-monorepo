@@ -62,7 +62,9 @@
 |------|------|---------------|
 | `auth-flow.html` | page-mock | `/login`, `/register`, `/reset-password`, `/oauth-callback`, `/verify-email`, `/verification-pending`, `/verification-success`, `/invitation-expired` |
 | `onboarding.html` | page-mock | `/welcome`, `/onboarding`, `/setup`, `/setup-account` |
-| `notifications.html` | page-mock | `/notifications`, `/notifications/preferences` |
+| `notifications.html` | page-mock | _(SP1 legacy archive — superseded by `sp7-notifications-*`, #2028)_ |
+| `sp7-notifications-hub.html` | page-mock | `/notifications` |
+| `sp7-notifications-preferences.html` | page-mock | `/notifications/preferences` |
 | `public.html` | page-mock | `/` (landing) |
 | `settings.html` | page-mock | `/settings` + 7 sub-route (`/ai-consent`, `/api-keys`, `/notifications`, `/preferences`, `/profile`, `/security`, `/services`) |
 

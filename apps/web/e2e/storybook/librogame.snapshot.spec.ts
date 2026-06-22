@@ -142,8 +142,8 @@ const FRAMES: { slug: string; file: string }[] = [
     file: 'librogame-translate-viewer-06-low-confidence.png',
   },
   {
-    slug: 'pages-librogame-translate-viewer--frame-07-loading-4step',
-    file: 'librogame-translate-viewer-07-loading-4step.png',
+    slug: 'pages-librogame-translate-viewer--frame-07-loading-4-step',
+    file: 'librogame-translate-viewer-07-loading-4-step.png',
   },
   {
     slug: 'pages-librogame-translate-viewer--frame-08-reader-mode',

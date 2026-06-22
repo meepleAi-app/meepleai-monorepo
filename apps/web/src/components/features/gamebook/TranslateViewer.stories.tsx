@@ -289,7 +289,7 @@ export const Frame06_LowConfidence: Story = {
     _initialArtifact: MOCK_ARTIFACT_TV,
     _initialSseState: {
       partialText: '',
-      isComplete: true,
+      isComplete: false,
       appliedTerms: [],
       detectedSourceLang: null,
       langDetectionConfidence: 0.31,
@@ -303,8 +303,11 @@ export const Frame06_LowConfidence: Story = {
           'Mockup stato F: low-confidence. ' +
           'LangBadge tier=low mostra "Sorgente richiesta" (rose). ' +
           'SegmentPicker bloccato: hint "Conferma la sorgente per tradurre." visibile. ' +
-          'Modal auto-open per tier=low è soppresso perché sse.isComplete=true ma artifact.id ' +
-          'non corrisponde ad autoLowFiredForArtifact (componente in segments_ready senza history).',
+          'Modal auto-open per tier=low è soppresso tenendo isComplete:false — ' +
+          'il useEffect (TranslateViewer.tsx:212-224) esce early alla prima guard ' +
+          '`if (!sse.isComplete || !artifact?.id) return` prima di aprire LangOverrideModal. ' +
+          'Il badge e il picker-blocked si attivano da phase=segments_ready + tier=low, ' +
+          'indipendentemente da isComplete.',
       },
     },
   },

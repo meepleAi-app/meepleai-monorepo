@@ -432,4 +432,52 @@ public class RedisWikidataEnrichmentEventBroadcasterTests : IAsyncLifetime
         // single assertion covers every field including the nullable ones.
         received.Should().Be(fullyPopulated);
     }
+
+    /// <summary>
+    /// Issue #2470 — instrumentation contract: every <c>Publish</c> ticks the
+    /// global <c>meepleai_wikidata_sse_messages_published_total</c> counter
+    /// exactly once, regardless of whether the Redis PUBLISH succeeds or fails.
+    /// This preserves the operator's ability to spot "publishes flowing, but
+    /// nothing arrives on the subscribers" via Grafana panel 10 + 11.
+    /// </summary>
+    [Fact]
+    public void Publish_IncrementsPublishedCounter_ByOne()
+    {
+        var broadcaster = CreateBroadcaster(_connectionA!);
+
+        var delta = MeasureCounterDelta(
+            "meepleai.wikidata.sse.messages.published.total",
+            () => broadcaster.Publish(SampleEvent()));
+
+        delta.Should().Be(1L);
+    }
+
+    /// <summary>
+    /// Captures the delta of a global counter while <paramref name="action"/>
+    /// runs. The shared global <c>Meter</c> may receive concurrent ticks from
+    /// other tests in the same process, so we filter measurements down to the
+    /// instrument we asked for. Mirror of the helper in the in-memory broadcaster
+    /// tests + the metrics scaffolding tests.
+    /// </summary>
+    private static long MeasureCounterDelta(string instrumentName, Action action)
+    {
+        var captured = new List<long>();
+
+        using var listener = new System.Diagnostics.Metrics.MeterListener
+        {
+            InstrumentPublished = (instrument, l) =>
+            {
+                if (instrument.Name == instrumentName)
+                {
+                    l.EnableMeasurementEvents(instrument);
+                }
+            },
+        };
+        listener.SetMeasurementEventCallback<long>((_, value, _, _) => captured.Add(value));
+        listener.Start();
+
+        action();
+
+        return captured.Sum();
+    }
 }

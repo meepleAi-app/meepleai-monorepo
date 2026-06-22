@@ -63,6 +63,15 @@ internal static class AdminWikidataCoverEnrichmentEndpoints
             .WithName("AdminWikidataCoverEnrichment_EventsStream")
             .WithTags("Admin", "WikidataCoverEnrichment");
 
+        // Issue #2470 (DEC-C) — heartbeat endpoint for the admin
+        // dead-letter page. FE posts every 30s while the page is open; the
+        // BE-side tracker exposes the count as
+        // meepleai_wikidata_sse_admin_clients_connected so the starvation
+        // alert can correlate "no subscribers" with "admin actually waiting".
+        group.MapPost("/sse-clients/heartbeat", HandleSseClientHeartbeat)
+            .WithName("AdminWikidataCoverEnrichment_SseClientHeartbeat")
+            .WithTags("Admin", "WikidataCoverEnrichment");
+
         return group;
     }
 
@@ -208,6 +217,29 @@ internal static class AdminWikidataCoverEnrichmentEndpoints
     /// immediately with <c>:ok\n\n</c> so the client sees headers without
     /// waiting for the first event.
     /// </remarks>
+    /// <summary>
+    /// Issue #2470 (DEC-C) — heartbeat endpoint hit by the admin
+    /// wikidata-dead-letters page every 30s while it is open. The TTL'd
+    /// tracker maintains a per-user lastBeat dictionary whose count is
+    /// surfaced through <c>meepleai_wikidata_sse_admin_clients_connected</c>.
+    /// </summary>
+    /// <remarks>
+    /// Group-level <c>RequireAdminSessionFilter</c> already enforces auth;
+    /// anonymous requests are rejected with 401 before this handler runs.
+    /// The endpoint is intentionally body-less — the user id is taken from
+    /// the authenticated session, which dedups multiple tabs / browser
+    /// windows of the same user automatically.
+    /// </remarks>
+    private static IResult HandleSseClientHeartbeat(
+        HttpContext context,
+        IWikidataAdminClientHeartbeatTracker tracker,
+        TimeProvider timeProvider)
+    {
+        var userId = context.User.GetUserId();
+        tracker.RecordHeartbeat(userId, timeProvider.GetUtcNow().UtcDateTime);
+        return Results.NoContent();
+    }
+
     private static async Task HandleEventsStream(
         HttpContext context,
         IWikidataEnrichmentEventBroadcaster broadcaster,

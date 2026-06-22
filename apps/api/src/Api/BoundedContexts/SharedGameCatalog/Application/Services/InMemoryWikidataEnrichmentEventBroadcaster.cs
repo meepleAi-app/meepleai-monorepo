@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using Api.Observability;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
@@ -35,10 +36,24 @@ internal sealed class InMemoryWikidataEnrichmentEventBroadcaster : IWikidataEnri
     {
         ArgumentNullException.ThrowIfNull(payload);
 
+        // Issue #2470 — count every publish call, even when no subscribers
+        // are present. Operationally useful: an admin watching the dashboard
+        // can confirm M9 ticks are still firing even when nobody is on the
+        // dead-letter page.
+        MeepleAiMetrics.WikidataSseMessagesPublished.Add(1);
+
         if (_subscribers.IsEmpty)
         {
             return;
         }
+
+        // Snapshot the subscriber count BEFORE the write loop so the
+        // `received_total` increment is consistent even if a concurrent
+        // subscribe / unsubscribe mutates the dictionary mid-loop. The
+        // counter is a best-effort approximation of delivery (drop-oldest
+        // makes "delivery" itself best-effort anyway).
+        var deliveredCount = _subscribers.Count;
+        MeepleAiMetrics.WikidataSseMessagesReceived.Add(deliveredCount);
 
         foreach (var (_, channel) in _subscribers)
         {

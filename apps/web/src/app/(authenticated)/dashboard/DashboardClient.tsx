@@ -20,7 +20,13 @@
  *   empty   → derived (length === 0)
  *   default → otherwise
  *
- * Pixel-faithful to admin-mockups/design_files/sp4-dashboard.jsx.
+ * Note on mockup divergence (#2114): `admin-mockups/design_files/sp4-dashboard.{html,jsx}`
+ * is the legacy Pre-Stage-3 design with 5 entity sections — it is intentionally
+ * NOT the design target for this component. The mockup is classified
+ * `forward-refactor-obsolete` in its fidelity.json companion; the codebase
+ * supersedes it via the Asse C refactor. There is no current pixel-faithful
+ * mockup for the priority-driven layout; the spec lives in the plan archived
+ * under `docs/superpowers/plans/` (2026-06-05 Asse C session).
  */
 
 'use client';

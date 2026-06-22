@@ -314,6 +314,143 @@ public sealed class WikidataContractTests : IAsyncLifetime
     }
 
     // =========================================================================
+    // Wikimedia Commons FilePath contract — image-bytes download path
+    // =========================================================================
+    //
+    // Pins the request/response shape consumed by
+    // WikimediaCommonsClient.FetchImageBytesAsync(filename, ct), which hits
+    // GET /wiki/Special:FilePath/{decoded_name} (relative to the Commons base
+    // address). The default HttpClientHandler auto-follows 302 redirects, so
+    // a single 200 response is the correct WireMock stub for the happy path;
+    // no explicit redirect-chasing test is required.
+    //
+    // Tiny valid 1×1 PNG (67 bytes, minimal IHDR+IDAT+IEND) used as the served
+    // body so the consumer's `bytes.Length == 0` guard does not false-fire.
+
+    private static readonly byte[] TinyPng =
+    [
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+        0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, // IHDR chunk length + type
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, // width=1, height=1
+        0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, // bit depth=8, colour=RGB, CRC start
+        0xDE, 0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41, // IHDR CRC, IDAT chunk length + type
+        0x54, 0x08, 0xD7, 0x63, 0xF8, 0xCF, 0xC0, 0x00, // IDAT data (deflate-compressed 1px)
+        0x00, 0x00, 0x02, 0x00, 0x01, 0xE2, 0x21, 0xBC, // IDAT CRC
+        0x33, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, // padding + IEND chunk length + type
+        0x44, 0xAE, 0x42, 0x60, 0x82                    // IEND CRC
+    ];
+
+    [Fact]
+    public async Task FetchImageBytes_Success_ReturnsBytes()
+    {
+        // Arrange — WireMock serves the tiny PNG directly on the FilePath route.
+        // The real Commons endpoint resolves the name to a CDN URL and returns
+        // 302, but HttpClientHandler auto-follows by default, so what the client
+        // sees is a 200 with the image body; a single 200 stub exercises the
+        // same production code path.
+        const string filename = "Catan-2015-boxed-edition.jpg";
+        var decodedEscaped = Uri.EscapeDataString(Uri.UnescapeDataString(filename));
+        _commonsServer
+            .Given(Request.Create()
+                .WithPath($"/wiki/Special:FilePath/{decodedEscaped}")
+                .UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "image/png")
+                .WithBody(TinyPng));
+
+        var client = CreateCommonsClient();
+
+        // Act
+        var result = await client.FetchImageBytesAsync(filename, CancellationToken.None);
+
+        // Assert — contract: on 200 the client returns the raw body bytes.
+        result.Should().NotBeNull("a 200 response with a non-empty body must return bytes");
+        result.Should().HaveCount(TinyPng.Length,
+            "returned bytes must match the full served body without truncation");
+    }
+
+    [Fact]
+    public async Task FetchImageBytes_NotFound_ReturnsNull()
+    {
+        // Arrange — Commons returns 404 when the file does not exist. Producer
+        // must degrade gracefully (null) without throwing, per failure semantics
+        // documented on WikimediaCommonsClient (DEC-3f / issue #2157).
+        const string filename = "NonExistentFile.jpg";
+        var decodedEscaped = Uri.EscapeDataString(Uri.UnescapeDataString(filename));
+        _commonsServer
+            .Given(Request.Create()
+                .WithPath($"/wiki/Special:FilePath/{decodedEscaped}")
+                .UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(404)
+                .WithBody(string.Empty));
+
+        var client = CreateCommonsClient();
+
+        // Act
+        var act = async () => await client.FetchImageBytesAsync(filename, CancellationToken.None);
+
+        // Assert — must not throw; non-2xx collapses to null.
+        var result = await act.Should().NotThrowAsync();
+        result.Subject.Should().BeNull("404 must collapse to null per failure semantics");
+    }
+
+    [Fact]
+    public async Task FetchImageBytes_ServerError_ReturnsNull()
+    {
+        // Arrange — Commons 503 under load; producer must degrade gracefully.
+        // Consistent with FetchLicense_503 behavior: non-2xx status → null,
+        // warning logged, caller (batch handler) decides retry. Issue #2157.
+        const string filename = "Catan-2015-boxed-edition.jpg";
+        var decodedEscaped = Uri.EscapeDataString(Uri.UnescapeDataString(filename));
+        _commonsServer
+            .Given(Request.Create()
+                .WithPath($"/wiki/Special:FilePath/{decodedEscaped}")
+                .UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(503)
+                .WithHeader("Content-Type", "text/html")
+                .WithBody("<html><body>Service Unavailable</body></html>"));
+
+        var client = CreateCommonsClient();
+
+        // Act
+        var act = async () => await client.FetchImageBytesAsync(filename, CancellationToken.None);
+
+        // Assert — must not throw; 5xx collapses to null.
+        var result = await act.Should().NotThrowAsync();
+        result.Subject.Should().BeNull("503 must collapse to null per failure semantics");
+    }
+
+    [Fact]
+    public async Task FetchImageBytes_EmptyBody_ReturnsNull()
+    {
+        // Arrange — Commons occasionally returns 200 with an empty body (CDN
+        // misconfiguration, zero-byte file). WikimediaCommonsClient.cs lines
+        // 175-182 guard against this with an explicit length check.
+        const string filename = "Brass%20Birmingham%20cover.jpg";
+        var decodedEscaped = Uri.EscapeDataString(Uri.UnescapeDataString(filename));
+        _commonsServer
+            .Given(Request.Create()
+                .WithPath($"/wiki/Special:FilePath/{decodedEscaped}")
+                .UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "image/jpeg")
+                .WithBody(Array.Empty<byte>()));
+
+        var client = CreateCommonsClient();
+
+        // Act
+        var act = async () => await client.FetchImageBytesAsync(filename, CancellationToken.None);
+
+        // Assert — must not throw; 200+empty body collapses to null.
+        var result = await act.Should().NotThrowAsync();
+        result.Subject.Should().BeNull("200 with empty body must return null per the length guard");
+    }
+
+    // =========================================================================
     // LicenseValidator direct contract — DEC-3c whitelist regex
     // =========================================================================
     //

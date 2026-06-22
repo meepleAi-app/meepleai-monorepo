@@ -291,6 +291,47 @@ const FRAMES: { slug: string; file: string }[] = [
     slug: 'pages-librogame-session-end--frame-04-cancelled',
     file: 'librogame-session-end-04-cancelled.png',
   },
+  // librogame-error-states (10 frames) — Task 13 #2174
+  {
+    slug: 'pages-librogame-error-states--frame-01-stream-timeout',
+    file: 'librogame-error-states-01-stream-timeout.png',
+  },
+  {
+    slug: 'pages-librogame-error-states--frame-02-ocr-fail',
+    file: 'librogame-error-states-02-ocr-fail.png',
+  },
+  {
+    slug: 'pages-librogame-error-states--frame-03-llm-503',
+    file: 'librogame-error-states-03-llm-503.png',
+  },
+  {
+    slug: 'pages-librogame-error-states--frame-04-segmentation-fail',
+    file: 'librogame-error-states-04-segmentation-fail.png',
+  },
+  {
+    slug: 'pages-librogame-error-states--frame-05-ocr-low-conf',
+    file: 'librogame-error-states-05-ocr-low-conf.png',
+  },
+  {
+    slug: 'pages-librogame-error-states--frame-06-photo-blur',
+    file: 'librogame-error-states-06-photo-blur.png',
+  },
+  {
+    slug: 'pages-librogame-error-states--frame-07-translation-timeout',
+    file: 'librogame-error-states-07-translation-timeout.png',
+  },
+  {
+    slug: 'pages-librogame-error-states--frame-08-source-lang-unknown',
+    file: 'librogame-error-states-08-source-lang-unknown.png',
+  },
+  {
+    slug: 'pages-librogame-error-states--frame-09-network-mid-ocr',
+    file: 'librogame-error-states-09-network-mid-ocr.png',
+  },
+  {
+    slug: 'pages-librogame-error-states--frame-10-quota-exhausted',
+    file: 'librogame-error-states-10-quota-exhausted.png',
+  },
 ];
 
 for (const { slug, file } of FRAMES) {

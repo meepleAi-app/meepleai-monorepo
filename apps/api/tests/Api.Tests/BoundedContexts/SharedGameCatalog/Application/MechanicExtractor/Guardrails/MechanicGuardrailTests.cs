@@ -42,42 +42,54 @@ internal static class GuardrailTestContext
 
 public sealed class QuoteCapGuardrailTests
 {
-    private static string QuoteOfWords(int n) =>
-        "{\"citations\":[{\"quote\":\"" + string.Join(' ', Enumerable.Range(1, n).Select(i => "w" + i)) + "\"}]}";
+    // #2494 AC-1: T1 boundary/Unicode cases moved out of [InlineData] and into the
+    // fixture corpus under tests/Api.Tests/Fixtures/MechanicValidator/T1/*.json so
+    // future contributors can append cases without touching the test source.
+    private static readonly string FixtureRoot = Path.Combine(
+        Path.GetDirectoryName(typeof(QuoteCapGuardrailTests).Assembly.Location)!,
+        "Fixtures",
+        "MechanicValidator",
+        "T1");
 
-    [Theory]
-    [InlineData(24, true)]
-    [InlineData(25, true)]
-    [InlineData(26, false)]
-    public async Task WordCountBoundary(int words, bool ok)
+    public sealed record T1Fixture(string Name, string Description, string Quote, bool ExpectedPass);
+
+    public static IEnumerable<object[]> T1Cases()
     {
-        var result = await new QuoteCapGuardrail()
-            .EvaluateAsync(GuardrailTestContext.Ctx(QuoteOfWords(words)), default);
-        result.Any().Should().Be(!ok);
-        if (!ok)
+        // Discover every *.json fixture at runtime — adding a new case is a single
+        // file drop, no test code change required.
+        foreach (var path in Directory.EnumerateFiles(FixtureRoot, "*.json").OrderBy(p => p))
         {
-            result[0].Rule.Should().Be("T1_quote_cap");
+            var json = File.ReadAllText(path);
+            var fixture = JsonSerializer.Deserialize<T1Fixture>(
+                json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+            yield return new object[] { fixture };
         }
     }
 
-    [Fact]
-    public async Task UnicodeWhitespaceAndEmDash_CountAsSeparators()
+    [Theory]
+    [MemberData(nameof(T1Cases))]
+    public async Task QuoteCap_FixtureCorpus(T1Fixture fixture)
     {
-        // 26 tokens, one separated by an em-dash → must fail.
-        var quote = "a b c—d e f g h i j k l m n o p q r s t u v w x y z";
-        var json = "{\"citations\":[{\"quote\":\"" + quote + "\"}]}";
-        var result = await new QuoteCapGuardrail().EvaluateAsync(GuardrailTestContext.Ctx(json), default);
-        result.Should().ContainSingle().Which.Rule.Should().Be("T1_quote_cap");
-    }
+        // Encode the fixture quote into the same {"citations":[{"quote": ...}]}
+        // wrapper the guardrail expects. Use JsonSerializer to safely escape any
+        // embedded Unicode separators (NBSP, thin space, em-dash) in the raw JSON.
+        var encodedQuote = JsonSerializer.Serialize(fixture.Quote);
+        var payload = "{\"citations\":[{\"quote\":" + encodedQuote + "}]}";
 
-    [Fact]
-    public async Task PurePunctuationTokens_AreExcluded()
-    {
-        // 25 real words + standalone punctuation tokens → still 25 → pass.
-        var quote = string.Join(' ', Enumerable.Range(1, 25).Select(i => "w" + i)) + " - —";
-        var json = "{\"citations\":[{\"quote\":\"" + quote + "\"}]}";
-        var result = await new QuoteCapGuardrail().EvaluateAsync(GuardrailTestContext.Ctx(json), default);
-        result.Should().BeEmpty();
+        var result = await new QuoteCapGuardrail()
+            .EvaluateAsync(GuardrailTestContext.Ctx(payload), default);
+
+        if (fixture.ExpectedPass)
+        {
+            result.Should().BeEmpty($"fixture {fixture.Name} expected to pass: {fixture.Description}");
+        }
+        else
+        {
+            result.Should().ContainSingle(
+                $"fixture {fixture.Name} expected to fail: {fixture.Description}")
+                .Which.Rule.Should().Be("T1_quote_cap");
+        }
     }
 }
 

@@ -303,6 +303,16 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
                 result.TotalPromptTokens + result.TotalCompletionTokens,
                 result.TotalCostUsd);
 
+            // #2494 AC-5: when the abort was a cost-cap breach (and we successfully salvaged
+            // at least one section), raise the mid-stream overrun event for audit visibility.
+            // Must run BEFORE MarkAsPartiallyExtracted because the aggregate may seal events
+            // on terminal transitions.
+            if (result.Outcome == MechanicPipelineOutcome.AbortedCostCap
+                && result.TotalCostUsd > analysis.CostCapUsd)
+            {
+                analysis.RecordMidStreamCostCapOverrun(result.TotalCostUsd, analysis.CreatedBy);
+            }
+
             analysis.MarkAsPartiallyExtracted(reason, analysis.CreatedBy, utcNow);
 
             return new MechanicAbortRecoverySummary(reason, salvaged.Count, IsPartialCheckpoint: true);

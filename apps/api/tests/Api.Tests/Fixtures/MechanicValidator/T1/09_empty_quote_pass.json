@@ -1,0 +1,6 @@
+{
+  "name": "empty_quote_pass",
+  "description": "Empty quote has zero words and trivially passes T1 cap (other guardrails may flag it)",
+  "quote": "",
+  "expectedPass": true
+}

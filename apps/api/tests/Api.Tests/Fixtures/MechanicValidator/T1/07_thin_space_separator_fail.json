@@ -1,0 +1,6 @@
+{
+  "name": "thin_space_separator_fail",
+  "description": "Thin space (U+2009) acts as a word separator; 26 tokens after splitting",
+  "quote": "a b c d e f g h i j k l m n o p q r s t u v w x y z",
+  "expectedPass": false
+}

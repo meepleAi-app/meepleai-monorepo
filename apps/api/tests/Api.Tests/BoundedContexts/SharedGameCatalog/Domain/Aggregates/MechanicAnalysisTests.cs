@@ -330,8 +330,10 @@ public sealed class MechanicAnalysisTests
         analysis.CostCapOverrideAt.Should().Be(now);
         analysis.CostCapOverrideBy.Should().Be(actor);
         analysis.CostCapOverrideReason.Should().Be("high-cost game");
-        analysis.DomainEvents.Should().ContainSingle()
-            .Which.Should().BeOfType<MechanicAnalysisCostCapOverriddenEvent>();
+        var evt = analysis.DomainEvents.Should().ContainSingle()
+            .Which.Should().BeOfType<MechanicAnalysisCostCapOverriddenEvent>().Subject;
+        evt.OverrunCause.Should().Be(CostCapOverrunCause.AdminOverride,
+            "admin override is the back-compat default cause");
     }
 
     [Fact]
@@ -340,6 +342,47 @@ public sealed class MechanicAnalysisTests
         var analysis = NewAnalysisWithClaim(costCap: 5m);
         var act = () => analysis.OverrideCostCap(Guid.NewGuid(), newCapUsd: 5m, reason: "r", utcNow: DateTime.UtcNow);
         act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    // #2494 AC-5 — mid-stream cost cap overrun path
+    [Fact]
+    public void RecordMidStreamCostCapOverrun_WithCumulativeAboveCap_RaisesEventWithMidStreamCause()
+    {
+        var analysis = NewAnalysisWithClaim(costCap: 2m);
+        var actor = analysis.CreatedBy;
+
+        analysis.RecordMidStreamCostCapOverrun(cumulativeCostUsd: 2.50m, actor);
+
+        analysis.CostCapUsd.Should().Be(2m, "the cap itself is NOT mutated — only the breach is recorded");
+        var evt = analysis.DomainEvents.Should().ContainSingle()
+            .Which.Should().BeOfType<MechanicAnalysisCostCapOverriddenEvent>().Subject;
+        evt.OverrunCause.Should().Be(CostCapOverrunCause.MidStreamOverrun);
+        evt.PreviousCapUsd.Should().Be(2m);
+        evt.NewCapUsd.Should().Be(2.50m, "NewCapUsd carries the observed cumulative cost on this path");
+        evt.ActorId.Should().Be(actor);
+        evt.Reason.Should().Contain("Mid-stream overrun");
+    }
+
+    [Fact]
+    public void RecordMidStreamCostCapOverrun_WithCumulativeAtOrBelowCap_Throws()
+    {
+        var analysis = NewAnalysisWithClaim(costCap: 2m);
+        var actor = analysis.CreatedBy;
+
+        var act = () => analysis.RecordMidStreamCostCapOverrun(cumulativeCostUsd: 2m, actor);
+
+        act.Should().Throw<ArgumentOutOfRangeException>(
+            "the method is for genuine breaches — a value at-or-below the cap is a programming error");
+    }
+
+    [Fact]
+    public void RecordMidStreamCostCapOverrun_WithEmptyActor_Throws()
+    {
+        var analysis = NewAnalysisWithClaim(costCap: 2m);
+
+        var act = () => analysis.RecordMidStreamCostCapOverrun(cumulativeCostUsd: 2.50m, Guid.Empty);
+
+        act.Should().Throw<ArgumentException>();
     }
 
     // ============================================================

@@ -167,6 +167,61 @@ public sealed class MechanicAnalysisExecutorApplyAbortTests
         analysis.RejectionReason.Should().Be(MechanicAnalysis.AutoRejectionReasons.ValidationFailedBeyondRetry);
     }
 
+    // #2494 AC-5 — when the abort was a cost-cap breach AND total cost truly exceeds the
+    // aggregate cap, raise the mid-stream overrun event so the audit interceptor records it.
+    [Fact]
+    public void ApplyAbort_AbortedCostCap_CumulativeOverCap_RaisesMidStreamOverrunEvent()
+    {
+        var analysis = NewDraftAnalysis(); // CostCapUsd = 1m (see helper below)
+        var now = DateTime.UtcNow;
+
+        var result = BuildAbortResult(
+            outcome: MechanicPipelineOutcome.AbortedCostCap,
+            sectionOutputs: new Dictionary<MechanicSection, string>
+            {
+                [MechanicSection.Summary] = ParseableSummaryJson
+            },
+            totalPromptTokens: 50_000,
+            totalCompletionTokens: 50_000,
+            totalCostUsd: 1.25m); // > 1m cap
+
+        MechanicAnalysisExecutor.ApplyAbort(analysis, result, now);
+
+        var overrunEvent = analysis.DomainEvents
+            .OfType<MechanicAnalysisCostCapOverriddenEvent>()
+            .Should().ContainSingle().Subject;
+        overrunEvent.OverrunCause.Should().Be(CostCapOverrunCause.MidStreamOverrun);
+        overrunEvent.PreviousCapUsd.Should().Be(1m);
+        overrunEvent.NewCapUsd.Should().Be(1.25m, "the event carries the observed cumulative cost");
+        overrunEvent.ActorId.Should().Be(analysis.CreatedBy);
+    }
+
+    // Below-cap cost-cap aborts (e.g., a defensive abort triggered for non-cost reasons but
+    // misclassified as cost-cap) MUST NOT raise the overrun event — the predicate is the actual
+    // breach, not the outcome label.
+    [Fact]
+    public void ApplyAbort_AbortedCostCap_CumulativeUnderCap_DoesNotRaiseMidStreamOverrunEvent()
+    {
+        var analysis = NewDraftAnalysis(); // CostCapUsd = 1m
+        var now = DateTime.UtcNow;
+
+        var result = BuildAbortResult(
+            outcome: MechanicPipelineOutcome.AbortedCostCap,
+            sectionOutputs: new Dictionary<MechanicSection, string>
+            {
+                [MechanicSection.Summary] = ParseableSummaryJson
+            },
+            totalPromptTokens: 1_500,
+            totalCompletionTokens: 800,
+            totalCostUsd: 0.0024m); // well below cap
+
+        MechanicAnalysisExecutor.ApplyAbort(analysis, result, now);
+
+        analysis.DomainEvents
+            .OfType<MechanicAnalysisCostCapOverriddenEvent>()
+            .Should().BeEmpty("the cumulative cost did not actually breach the cap");
+    }
+
     [Fact]
     public void ApplyAbort_AbortedCostCap_RecordsUsageBeforeTerminalTransition_OnPartialCheckpoint()
     {

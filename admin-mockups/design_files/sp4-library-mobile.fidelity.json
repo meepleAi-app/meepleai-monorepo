@@ -28,7 +28,7 @@
     "fixtures_path": "",
     "design_intent": "forward-refactor",
     "viewports": [
-      "desktop"
+      "mobile"
     ],
     "obsolete_tracking_issue": "#2216"
   }

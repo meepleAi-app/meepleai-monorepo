@@ -74,7 +74,7 @@ const OutcomeBadge = ({ outcome, status }) => {
     );
   }
   const map = {
-    won:  { label:'🏆 Vinta', bg:'hsl(142 60% 45% / .14)', fg:'hsl(142 50% 32%)', bd:'hsl(142 60% 45% / .3)' },
+    won:  { label:'🏆 Vinta', bg:'hsl(var(--c-success) / .14)', fg:'hsl(var(--c-success))', bd:'hsl(var(--c-success) / .3)' },
     lost: { label:'△ Persa', bg:'hsl(var(--c-event) / .12)', fg:'hsl(var(--c-event))', bd:'hsl(var(--c-event) / .3)' },
     tie:  { label:'= Pareggio', bg:'var(--bg-muted)', fg:'var(--text-sec)', bd:'var(--border)' },
   };

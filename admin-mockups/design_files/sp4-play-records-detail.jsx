@@ -46,6 +46,42 @@ const playerTitle = (s) => {
   return p ? p.title : s.name;
 };
 
+// #2496 — Asse A invariante #16: roster player mix (User-linked + guest).
+// Reads the `kind` flag injected in sp4-play-records-data.js; defaults to 'user'
+// for the 5 core players in data.js (Marco/Sara/Luca/Giulia/Andrea).
+const playerKind = (s) => {
+  const p = DS.byId[s.playerId];
+  return (p && p.kind) || 'user';
+};
+
+// Tiny pill badge — distinguishes account-linked players ("Tu") from guest tags ("Ospite").
+// Sits next to the player title in Classifica + Hero podium so the roster mix is read at-a-glance.
+const PlayerKindBadge = ({ kind, small }) => {
+  const isGuest = kind === 'guest';
+  const label = isGuest ? 'Ospite' : 'Account';
+  const ent = isGuest ? null : 'player';
+  return (
+    <span
+      title={isGuest ? 'Giocatore ospite — non collegato a un account' : 'Giocatore con account collegato'}
+      style={{
+        fontFamily: 'var(--f-mono)',
+        fontSize: small ? 8 : 9,
+        fontWeight: 800,
+        letterSpacing: '.06em',
+        textTransform: 'uppercase',
+        padding: small ? '1px 5px' : '2px 7px',
+        borderRadius: 'var(--r-pill)',
+        color: isGuest ? 'var(--text-sec)' : eHs(ent),
+        background: isGuest ? 'var(--bg-muted)' : eHs(ent, 0.12),
+        border: isGuest ? '1px solid var(--border-light)' : `1px solid ${eHs(ent, 0.25)}`,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {label}
+    </span>
+  );
+};
+
 // ── Record demo ─────────────────────────────────────────
 const REC = DS.byId['pr1'];
 const REGISTRANT = (DS.stats && DS.stats.user) || 'Marco R.';
@@ -144,6 +180,8 @@ const HeroPodium = ({ record, compact, minimal }) => {
                   <span style={{ position:'absolute', bottom:-6, right:-6, width: 22, height: 22, borderRadius:'50%', background:'var(--bg-card)', border:`2px solid ${isW ? eHs('toolkit') : 'var(--border-strong)'}`, color: isW ? eHs('toolkit') : 'var(--text-sec)', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'var(--f-mono)', fontSize: 10, fontWeight: 800 }}>{place}</span>
                 </div>
                 <div style={{ fontFamily:'var(--f-display)', fontSize: place === 1 ? (compact ? 14 : 16) : (compact ? 12 : 13), fontWeight: 800, color:'var(--text)' }}>{neutral ? '—' : s.name}</div>
+                {/* #2496 Asse A inv #16 — podium roster mix badge (small variant for the tighter podium layout) */}
+                {!neutral && <PlayerKindBadge kind={playerKind(s)} small/>}
                 <ScoreVal value={neutral ? null : s.score} style={{ fontFamily:'var(--f-mono)', fontSize: place === 1 ? (compact ? 18 : 24) : (compact ? 13 : 16), fontWeight: 800, color: isW ? eHs('toolkit') : 'var(--text-sec)', fontVariantNumeric:'tabular-nums', lineHeight: 1 }}/>
               </div>
             );
@@ -212,7 +250,12 @@ const Classifica = ({ record, compact, minimal }) => {
               <span style={{ width: 24, fontFamily:'var(--f-display)', fontSize: 16, fontWeight: 800, color: isW ? eHs('toolkit') : 'var(--text-muted)', textAlign:'center', flexShrink: 0 }} aria-hidden="true">{place === 1 ? '🥇' : place === 2 ? '🥈' : place === 3 ? '🥉' : place}</span>
               <span style={{ width: 38, height: 38, borderRadius:'50%', background:`hsl(${pColor(s.playerId)}, 60%, 55%)`, color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'var(--f-display)', fontWeight: 800, fontSize: 13, flexShrink: 0, border:'2px solid var(--bg-card)' }} aria-hidden="true">{initialsOf(s)}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily:'var(--f-display)', fontSize: 13.5, fontWeight: 800, color:'var(--text)', display:'flex', alignItems:'center', gap: 6 }}>{playerTitle(s)}{isW && <span style={{ fontFamily:'var(--f-mono)', fontSize: 8.5, fontWeight: 800, color: eHs('toolkit'), background: eHs('toolkit', 0.14), padding:'1px 6px', borderRadius:'var(--r-pill)', textTransform:'uppercase', letterSpacing:'.06em' }}>Vincitore</span>}</div>
+                <div style={{ fontFamily:'var(--f-display)', fontSize: 13.5, fontWeight: 800, color:'var(--text)', display:'flex', alignItems:'center', gap: 6, flexWrap:'wrap' }}>
+                  {playerTitle(s)}
+                  {/* #2496 Asse A inv #16 — User/Guest badge so the roster mix is visible per row */}
+                  <PlayerKindBadge kind={playerKind(s)}/>
+                  {isW && <span style={{ fontFamily:'var(--f-mono)', fontSize: 8.5, fontWeight: 800, color: eHs('toolkit'), background: eHs('toolkit', 0.14), padding:'1px 6px', borderRadius:'var(--r-pill)', textTransform:'uppercase', letterSpacing:'.06em' }}>Vincitore</span>}
+                </div>
                 <div style={{ marginTop: 5, height: 6, borderRadius:'var(--r-pill)', background:'var(--bg-muted)', overflow:'hidden' }}>
                   <div style={{ width: `${pct}%`, height:'100%', borderRadius:'var(--r-pill)', background: isW ? eHs('toolkit') : eHs('session') }}/>
                 </div>

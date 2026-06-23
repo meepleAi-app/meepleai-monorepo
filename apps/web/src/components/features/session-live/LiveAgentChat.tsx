@@ -40,6 +40,12 @@ export interface ChatMessage {
   readonly visibility: 'private' | 'shared';
   readonly timestamp: string;
   readonly citations?: readonly ChatCitation[];
+  /**
+   * AC-CHAT-3: when true, the agent answered without any grounding citations.
+   * Shows a discrete disclaimer below the bubble. NEVER true on system status messages
+   * (those are injected by SessionLiveView without this flag).
+   */
+  readonly isNonGrounded?: boolean;
 }
 
 // ─── Labels ───────────────────────────────────────────────────────────────────
@@ -196,6 +202,20 @@ export function LiveAgentChat({
                       <ChatCitationCard key={i} citation={c} />
                     ))}
                   </div>
+                )}
+                {/* AC-CHAT-3: non-grounded disclaimer — only for agent messages with
+                    zero citations and explicit isNonGrounded flag.
+                    NEVER shown on system status messages (those lack the flag). */}
+                {msg.isNonGrounded === true && !isOwn && (
+                  <p
+                    data-slot="chat-nongrounded-disclaimer"
+                    className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"
+                  >
+                    <span aria-hidden="true">⚠️</span>
+                    {intl.formatMessage({
+                      id: 'pages.sessionLive.chatAgent.nonGroundedDisclaimer',
+                    })}
+                  </p>
                 )}
               </div>
             );

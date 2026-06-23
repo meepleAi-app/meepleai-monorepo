@@ -906,6 +906,9 @@ export function SessionLiveView(): ReactElement {
       visibility: 'shared' as const,
       timestamp: m.timestamp,
       citations: m.citations,
+      // AC-CHAT-3: propagate isNonGrounded ONLY from hook messages.
+      // System status messages (prepended below) do NOT get this flag → no disclaimer.
+      isNonGrounded: m.isNonGrounded,
     }));
 
     // Prepend a system status message when not ready (R-FINDING-5).

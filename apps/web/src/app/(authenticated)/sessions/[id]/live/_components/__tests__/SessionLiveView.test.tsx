@@ -269,6 +269,7 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.chatAgent.noAgentMessage': 'Nessun assistente disponibile per questo gioco.',
   'pages.sessionLive.chatAgent.errorMessage':
     "Impossibile avviare l'assistente. Riprova più tardi.",
+  'pages.sessionLive.chatAgent.nonGroundedDisclaimer': 'Risposta non basata sul regolamento',
   // MobileBody bottom-sheet labels (G1 #2374 T9 — sess.46r)
   'pages.sessionLive.mobile.openSheetCta': 'Apri pannello',
   'pages.sessionLive.mobile.closeSheetAriaLabel': 'Chiudi pannello',
@@ -1560,5 +1561,77 @@ describe('SessionLiveView — #2500 Task 4-FE: RAG agent wiring via useSessionAg
     const { container } = renderWithIntl(<SessionLiveView />);
     // The message content should be present
     expect(container.textContent).toContain('Domanda utente');
+  });
+
+  // ─── AC-CHAT-3: vincolo critico — disclaimer NOT su messaggi di sistema di stato ───
+
+  it('RAG-12 (AC-CHAT-3 critical): system status message (no-agent) NON mostra il disclaimer non-grounded', () => {
+    // Un messaggio di SISTEMA (iniettato da SessionLiveView per status no-agent)
+    // non deve mostrare il disclaimer non-grounded, anche se è assistant senza citazioni.
+    useSessionAgentLaunchMock.mockReturnValue({
+      status: 'no-agent' as const,
+      agentSessionId: '',
+    });
+    useSessionAgentChatMock.mockReturnValue({
+      messages: [], // nessun messaggio dal hook — il messaggio viene iniettato da SessionLiveView
+      isLoading: false,
+      error: null,
+      streamingContent: '',
+      ask: agentAskMock,
+      stop: vi.fn(),
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // Il messaggio di stato è presente nel DOM
+    expect(container.textContent).toMatch(/Nessun assistente/i);
+    // Il disclaimer non-grounded NON deve apparire sui messaggi di sistema
+    expect(
+      container.querySelector('[data-slot="chat-nongrounded-disclaimer"]')
+    ).not.toBeInTheDocument();
+  });
+
+  it('RAG-12b (AC-CHAT-3 critical): system status message (error) NON mostra il disclaimer non-grounded', () => {
+    useSessionAgentLaunchMock.mockReturnValue({
+      status: 'error' as const,
+      agentSessionId: '',
+    });
+    useSessionAgentChatMock.mockReturnValue({
+      messages: [],
+      isLoading: false,
+      error: null,
+      streamingContent: '',
+      ask: agentAskMock,
+      stop: vi.fn(),
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.textContent).toMatch(/Impossibile avviare/i);
+    expect(
+      container.querySelector('[data-slot="chat-nongrounded-disclaimer"]')
+    ).not.toBeInTheDocument();
+  });
+
+  it('RAG-13 (AC-CHAT-3): vera risposta RAG senza citazioni (isNonGrounded:true) MOSTRA il disclaimer', () => {
+    // Il hook produce un messaggio assistant con isNonGrounded:true (vera risposta RAG, 0 citazioni)
+    useSessionAgentChatMock.mockReturnValue({
+      messages: [
+        {
+          id: 'msg-ng-rag',
+          role: 'assistant' as const,
+          content: 'Risposta RAG senza fonti.',
+          timestamp: new Date().toISOString(),
+          citations: undefined,
+          isNonGrounded: true,
+        },
+      ],
+      isLoading: false,
+      error: null,
+      streamingContent: '',
+      ask: agentAskMock,
+      stop: vi.fn(),
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // Il disclaimer deve essere presente
+    expect(
+      container.querySelector('[data-slot="chat-nongrounded-disclaimer"]')
+    ).toBeInTheDocument();
   });
 });

@@ -334,4 +334,158 @@ describe('useSessionAgentChat', () => {
       expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
     });
   });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // AC-CHAT-3: isNonGrounded flag — SSE live flow + historic hydration
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('AC-CHAT-3: isNonGrounded flag', () => {
+    it('SSE complete with 0 citations → last assistant message has isNonGrounded:true', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          body: makeReadableStream([
+            'data: {"type":"token","content":"Risposta senza fonti."}\n\n',
+            'data: {"type":"complete","threadId":"t-ng-1"}\n\n',
+          ]),
+        } as unknown as Response)
+      );
+
+      const { result } = renderHook(() => useSessionAgentChat('game-sess-ng', 'agent-ng'));
+
+      await act(async () => {
+        await result.current.ask('Domanda senza citazioni');
+      });
+
+      const lastMsg = result.current.messages[result.current.messages.length - 1];
+      expect(lastMsg.role).toBe('assistant');
+      expect(lastMsg.isNonGrounded).toBe(true);
+    });
+
+    it('SSE complete with ≥1 citation → isNonGrounded is falsy', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          body: makeReadableStream([
+            'data: {"type":"token","content":"Risposta con fonti."}\n\n',
+            'data: {"type":"complete","threadId":"t-g-1","citations":[{"source":"Reg","pageNumber":3,"copyrightTier":"full","snippet":"testo"}]}\n\n',
+          ]),
+        } as unknown as Response)
+      );
+
+      const { result } = renderHook(() => useSessionAgentChat('game-sess-g', 'agent-g'));
+
+      await act(async () => {
+        await result.current.ask('Domanda con citazioni');
+      });
+
+      const lastMsg = result.current.messages[result.current.messages.length - 1];
+      expect(lastMsg.role).toBe('assistant');
+      expect(lastMsg.isNonGrounded).toBeFalsy();
+    });
+
+    it('user messages never have isNonGrounded set', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          body: makeReadableStream([
+            'data: {"type":"token","content":"Risposta."}\n\n',
+            'data: {"type":"complete","threadId":"t-user-1"}\n\n',
+          ]),
+        } as unknown as Response)
+      );
+
+      const { result } = renderHook(() => useSessionAgentChat('game-sess-u', 'agent-u'));
+
+      await act(async () => {
+        await result.current.ask('Domanda utente');
+      });
+
+      const userMsg = result.current.messages[0];
+      expect(userMsg.role).toBe('user');
+      expect(userMsg.isNonGrounded).toBeFalsy();
+    });
+
+    it('historic assistant message without citations → isNonGrounded:true', async () => {
+      const THREAD_ID_NG = 'thread-ng-history-001';
+      const STORAGE_KEY_NG = `meepleai:live-agent-thread:game-sess-ng-hist`;
+      sessionStorage.setItem(STORAGE_KEY_NG, THREAD_ID_NG);
+
+      mockGetThreadById.mockResolvedValueOnce({
+        id: THREAD_ID_NG,
+        gameId: null,
+        agentId: null,
+        agentType: null,
+        title: null,
+        createdAt: '2026-06-23T10:00:00Z',
+        lastMessageAt: '2026-06-23T10:01:00Z',
+        messageCount: 1,
+        messages: [
+          {
+            content: 'Risposta storica senza citazioni.',
+            role: 'assistant',
+            timestamp: '2026-06-23T10:01:00Z',
+            backendMessageId: 'msg-hist-ng-001',
+            citationsJson: null,
+          },
+        ],
+      });
+
+      const { result } = renderHook(() =>
+        useSessionAgentChat('game-sess-ng-hist', 'agent-ng-hist', { persistHistory: true })
+      );
+
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      });
+
+      expect(result.current.messages).toHaveLength(1);
+      const msg = result.current.messages[0];
+      expect(msg.role).toBe('assistant');
+      expect(msg.isNonGrounded).toBe(true);
+    });
+
+    it('historic assistant message WITH citations → isNonGrounded is falsy', async () => {
+      const THREAD_ID_G = 'thread-g-history-001';
+      const STORAGE_KEY_G = `meepleai:live-agent-thread:game-sess-g-hist`;
+      sessionStorage.setItem(STORAGE_KEY_G, THREAD_ID_G);
+
+      mockGetThreadById.mockResolvedValueOnce({
+        id: THREAD_ID_G,
+        gameId: null,
+        agentId: null,
+        agentType: null,
+        title: null,
+        createdAt: '2026-06-23T10:00:00Z',
+        lastMessageAt: '2026-06-23T10:01:00Z',
+        messageCount: 1,
+        messages: [
+          {
+            content: 'Risposta con citazioni storiche.',
+            role: 'assistant',
+            timestamp: '2026-06-23T10:01:00Z',
+            backendMessageId: 'msg-hist-g-001',
+            citationsJson:
+              '[{"source":"Reg","pageNumber":5,"copyrightTier":"full","snippet":"testo"}]',
+          },
+        ],
+      });
+
+      const { result } = renderHook(() =>
+        useSessionAgentChat('game-sess-g-hist', 'agent-g-hist', { persistHistory: true })
+      );
+
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      });
+
+      expect(result.current.messages).toHaveLength(1);
+      const msg = result.current.messages[0];
+      expect(msg.role).toBe('assistant');
+      expect(msg.isNonGrounded).toBeFalsy();
+    });
+  });
 });

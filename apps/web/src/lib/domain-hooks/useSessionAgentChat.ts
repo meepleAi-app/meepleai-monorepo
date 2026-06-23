@@ -27,6 +27,12 @@ export interface ChatMessage {
   content: string;
   timestamp: string;
   citations?: ChatCitation[];
+  /**
+   * AC-CHAT-3: true only when this is a genuine RAG assistant response with zero citations
+   * (i.e., the agent answered but found no grounding in the rulebook).
+   * Never set on user messages or system status messages injected by SessionLiveView.
+   */
+  isNonGrounded?: boolean;
 }
 
 /** Options for useSessionAgentChat. */
@@ -129,12 +135,21 @@ export function useSessionAgentChat(
             }
           }
 
+          const role = (dto.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant';
+          // AC-CHAT-3: historic assistant message with no citations → isNonGrounded true.
+          // User messages never have this flag.
+          const isNonGrounded =
+            role === 'assistant' && (citations === undefined || citations.length === 0)
+              ? true
+              : undefined;
+
           return {
             id: dto.backendMessageId ?? `history-${idx}`,
-            role: (dto.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+            role,
             content: dto.content,
             timestamp: dto.timestamp,
             citations,
+            isNonGrounded,
           };
         });
 
@@ -267,12 +282,15 @@ export function useSessionAgentChat(
           reader.releaseLock();
         }
 
+        // AC-CHAT-3: if the RAG response produced zero citations, flag as non-grounded.
+        const hasCitations = citationsRef.current.length > 0;
         const assistantMsg: ChatMessage = {
           id: crypto.randomUUID(),
           role: 'assistant',
           content: accumulated,
           timestamp: new Date().toISOString(),
-          citations: citationsRef.current.length ? citationsRef.current : undefined,
+          citations: hasCitations ? citationsRef.current : undefined,
+          isNonGrounded: hasCitations ? undefined : true,
         };
         setMessages(prev => [...prev, assistantMsg]);
         setStreamingContent('');

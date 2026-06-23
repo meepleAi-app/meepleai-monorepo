@@ -3226,7 +3226,8 @@
         "noAgentMessage": "No assistant available for this game",
         "launchingMessage": "Starting assistant…",
         "errorMessage": "Could not start the assistant. Try again later.",
-        "statusAriaLabel": "Assistant status"
+        "statusAriaLabel": "Assistant status",
+        "nonGroundedDisclaimer": "Answer not grounded in the rulebook"
       },
       "mobile": {
         "openSheetCta": "Open panel",

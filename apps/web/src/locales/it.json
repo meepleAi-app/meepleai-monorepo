@@ -3333,7 +3333,8 @@
         "noAgentMessage": "Nessun assistente disponibile per questo gioco",
         "launchingMessage": "Avvio assistente…",
         "errorMessage": "Impossibile avviare l'assistente. Riprova più tardi.",
-        "statusAriaLabel": "Stato assistente"
+        "statusAriaLabel": "Stato assistente",
+        "nonGroundedDisclaimer": "Risposta non basata sul regolamento"
       },
       "mobile": {
         "openSheetCta": "Apri pannello",

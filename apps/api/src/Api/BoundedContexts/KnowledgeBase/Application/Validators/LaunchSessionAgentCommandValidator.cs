@@ -29,12 +29,13 @@ internal sealed class LaunchSessionAgentCommandValidator : AbstractValidator<Lau
         RuleFor(x => x.GameId)
             .NotEqual(Guid.Empty).WithMessage("GameId is required");
 
+        // C1 fix: InitialGameStateJson is now optional — empty/whitespace means "use server default".
+        // Only MaximumLength applies unconditionally; V4 JSON parse is gated on non-empty.
         RuleFor(x => x.InitialGameStateJson)
-            .NotEmpty().WithMessage("InitialGameStateJson is required")
             .MaximumLength(MaxGameStateJsonLength)
             .WithMessage($"InitialGameStateJson cannot exceed {MaxGameStateJsonLength} characters");
 
-        // V4 — JSON safe-parse: validate before async repo rules (sync, no I/O)
+        // V4 — JSON safe-parse: only when non-empty (empty = use GameState.Initial on the handler side)
         RuleFor(x => x.InitialGameStateJson)
             .Must(json =>
             {
@@ -51,39 +52,40 @@ internal sealed class LaunchSessionAgentCommandValidator : AbstractValidator<Lau
             .WithMessage("InitialGameStateJson is not a valid game state.")
             .When(x => !string.IsNullOrWhiteSpace(x.InitialGameStateJson));
 
-        // V1 / V2 / V3 — repository-backed async rules
-        // All gated so they only run when AgentDefinitionId is a valid (non-empty) guid
-        RuleFor(x => x.AgentDefinitionId)
-            .MustAsync(async (command, agentDefinitionId, ct) =>
+        // V1 / V2 / V3 — consolidated into ONE async rule with a SINGLE DB query (I2 fix).
+        // Previously three separate RuleFor rules each called GetByIdAsync → 3 queries + 3 errors
+        // for a missing definition.  Now: one query, fail-fast on first problem with a targeted message.
+        // CustomAsync gives access to ValidationContext<T> so we can name the property explicitly.
+        RuleFor(x => x)
+            .CustomAsync(async (command, ctx, ct) =>
             {
-                var definition = await agentDefinitionRepository
-                    .GetByIdAsync(agentDefinitionId, ct)
-                    .ConfigureAwait(false);
-                return definition is not null;
-            })
-            .WithMessage("AgentDefinition not found or has been deleted.")
-            .When(x => x.AgentDefinitionId != Guid.Empty);
+                if (command.AgentDefinitionId == Guid.Empty)
+                    return; // gated below via When; also checked separately by NotEqual rule
 
-        RuleFor(x => x.AgentDefinitionId)
-            .MustAsync(async (command, agentDefinitionId, ct) =>
-            {
                 var definition = await agentDefinitionRepository
-                    .GetByIdAsync(agentDefinitionId, ct)
+                    .GetByIdAsync(command.AgentDefinitionId, ct)
                     .ConfigureAwait(false);
-                return definition is { IsActive: true };
-            })
-            .WithMessage("AgentDefinition is not active.")
-            .When(x => x.AgentDefinitionId != Guid.Empty);
 
-        RuleFor(x => x.AgentDefinitionId)
-            .MustAsync(async (command, agentDefinitionId, ct) =>
-            {
-                var definition = await agentDefinitionRepository
-                    .GetByIdAsync(agentDefinitionId, ct)
-                    .ConfigureAwait(false);
-                return definition is not null && definition.GameId == command.GameId;
+                // V1 — exists
+                if (definition is null)
+                {
+                    ctx.AddFailure("AgentDefinitionId", "AgentDefinition not found or has been deleted.");
+                    return;
+                }
+
+                // V2 — active
+                if (!definition.IsActive)
+                {
+                    ctx.AddFailure("AgentDefinitionId", "AgentDefinition is not active.");
+                    return;
+                }
+
+                // V3 — game-match
+                if (definition.GameId != command.GameId)
+                {
+                    ctx.AddFailure("AgentDefinitionId", "AgentDefinition does not belong to the specified game.");
+                }
             })
-            .WithMessage("AgentDefinition does not belong to the specified game.")
             .When(x => x.AgentDefinitionId != Guid.Empty);
     }
 }

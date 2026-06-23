@@ -122,6 +122,32 @@ public sealed class LaunchSessionAgentCommandValidatorTests
             .WithErrorMessage("AgentDefinition not found or has been deleted.");
     }
 
+    /// <summary>
+    /// I2 fix: consolidated V1/V2/V3 must produce exactly ONE error and call GetByIdAsync exactly ONCE
+    /// when the definition is not found (not 3 errors + 3 queries like before).
+    /// </summary>
+    [Fact]
+    public async Task Validate_V1_AgentDefinitionNotFound_ExactlyOneError_ExactlyOneDbCall()
+    {
+        _repoMock
+            .Setup(r => r.GetByIdAsync(_agentDefinitionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AgentDefinition?)null);
+
+        var command = ValidCommand();
+        var result = await _validator.TestValidateAsync(command);
+
+        // I2: exactly 1 error on AgentDefinitionId (not 3)
+        var definitionErrors = result.Errors
+            .Where(e => e.PropertyName == nameof(LaunchSessionAgentCommand.AgentDefinitionId))
+            .ToList();
+        Assert.Single(definitionErrors);
+
+        // I2: GetByIdAsync called exactly ONCE (not 3 times)
+        _repoMock.Verify(
+            r => r.GetByIdAsync(_agentDefinitionId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     // ──────────────────────────────────────────────────────────────────────────────
     // V2 — AgentDefinition is active
     // ──────────────────────────────────────────────────────────────────────────────
@@ -210,9 +236,15 @@ public sealed class LaunchSessionAgentCommandValidatorTests
     }
 
     [Fact]
-    public async Task Validate_V4_EmptyStringJson_IsHandledByNotEmptyRule_NotV4()
+    public async Task Validate_V4_EmptyStringJson_IsOptional_NoError()
     {
-        // When json is empty/whitespace the NotEmpty rule fires; V4 is gated with When(!IsNullOrWhiteSpace)
+        // C1 fix: InitialGameStateJson is optional — empty string means "use server default".
+        // V4 is gated with When(!IsNullOrWhiteSpace) so empty string must produce NO error on this field.
+        var def = CreateActiveDefinition(gameId: _gameId);
+        _repoMock
+            .Setup(r => r.GetByIdAsync(_agentDefinitionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(def);
+
         var command = new LaunchSessionAgentCommand(
             GameSessionId: _gameSessionId,
             AgentDefinitionId: _agentDefinitionId,
@@ -222,7 +254,28 @@ public sealed class LaunchSessionAgentCommandValidatorTests
 
         var result = await _validator.TestValidateAsync(command);
 
-        result.ShouldHaveValidationErrorFor(x => x.InitialGameStateJson);
+        result.ShouldNotHaveValidationErrorFor(x => x.InitialGameStateJson);
+    }
+
+    [Fact]
+    public async Task Validate_V4_WhitespaceJson_IsOptional_NoError()
+    {
+        // Whitespace is also treated as "use server default" — no error on InitialGameStateJson.
+        var def = CreateActiveDefinition(gameId: _gameId);
+        _repoMock
+            .Setup(r => r.GetByIdAsync(_agentDefinitionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(def);
+
+        var command = new LaunchSessionAgentCommand(
+            GameSessionId: _gameSessionId,
+            AgentDefinitionId: _agentDefinitionId,
+            UserId: _userId,
+            GameId: _gameId,
+            InitialGameStateJson: "   ");
+
+        var result = await _validator.TestValidateAsync(command);
+
+        result.ShouldNotHaveValidationErrorFor(x => x.InitialGameStateJson);
     }
 
     // ──────────────────────────────────────────────────────────────────────────────
@@ -239,6 +292,22 @@ public sealed class LaunchSessionAgentCommandValidatorTests
             .ReturnsAsync(def);
 
         var command = ValidCommand();
+        var result = await _validator.TestValidateAsync(command);
+
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public async Task Validate_HappyPath_EmptyGameStateJson_NoErrors()
+    {
+        // C1 fix: empty InitialGameStateJson is valid (handler uses GameState.Initial).
+        var def = CreateActiveDefinition(gameId: _gameId);
+
+        _repoMock
+            .Setup(r => r.GetByIdAsync(_agentDefinitionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(def);
+
+        var command = ValidCommand(gameStateJson: string.Empty);
         var result = await _validator.TestValidateAsync(command);
 
         result.ShouldNotHaveAnyValidationErrors();

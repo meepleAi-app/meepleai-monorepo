@@ -15,7 +15,9 @@ export const LaunchSessionAgentRequestSchema = z.object({
   agentDefinitionId: z.string().uuid(),
   agentId: z.string().uuid(),
   gameId: z.string().uuid(),
-  initialGameStateJson: z.string().optional().default('{}'),
+  // C1 fix: default to '' so the BE uses GameState.Initial(UserId) instead of
+  // GameState.FromJson('{}') which throws (ActivePlayer == Guid.Empty → 422).
+  initialGameStateJson: z.string().optional().default(''),
 });
 
 export const LaunchSessionAgentResponseSchema = z.object({

@@ -95,7 +95,9 @@ export function useSessionAgentLaunch(
         // AgentDefinition id, so the same value is correct for both fields.
         agentId: agent!.id,
         gameId: gameId as string,
-        initialGameStateJson: '{}',
+        // C1 fix: send empty string so BE uses GameState.Initial(UserId) as default.
+        // Sending '{}' caused GameState.FromJson('{}') to throw (ActivePlayer == Guid.Empty).
+        initialGameStateJson: '',
       }),
     enabled: canResolve && agent != null,
     staleTime: Infinity,

@@ -247,6 +247,38 @@ describe('LiveAgentChat — aria attributes', () => {
 
 // ─── #2375 G3 — draft persistence + smart scroll ──────────────────────────────
 
+// ─── #2500 — ChatCitationCard rendering ───────────────────────────────────────
+
+describe('#2500 — CitationCard rendering', () => {
+  it('renderizza ChatCitationCard quando il messaggio assistant ha citazioni', () => {
+    const msgWithCitations: ChatMessage = {
+      id: 'msg-cite-1',
+      senderId: 'agent',
+      senderName: 'Agent',
+      content: 'Ecco il regolamento.',
+      visibility: 'shared',
+      timestamp: '2026-06-23T10:00:00Z',
+      citations: [{ documentName: 'Reg Azul', pages: [7], excerpt: 'Posiziona' }],
+    };
+    renderChat({ messages: [msgWithCitations] });
+    expect(screen.getByText(/Reg Azul/)).toBeInTheDocument();
+    expect(screen.getByText(/pag\. 7/i)).toBeInTheDocument();
+  });
+
+  it('NON renderizza citazioni quando assenti (AC-CHAT-3)', () => {
+    const msgWithoutCitations: ChatMessage = {
+      id: 'msg-no-cite',
+      senderId: 'agent',
+      senderName: 'Agent',
+      content: 'Risposta senza citazioni.',
+      visibility: 'shared',
+      timestamp: '2026-06-23T10:01:00Z',
+    };
+    renderChat({ messages: [msgWithoutCitations] });
+    expect(screen.queryByText(/pag\./i)).toBeNull();
+  });
+});
+
 describe('#2375 G3 — draft + smart scroll', () => {
   const baseLabels: LiveAgentChatLabels = {
     title: 'Chat',

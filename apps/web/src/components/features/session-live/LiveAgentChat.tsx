@@ -25,6 +25,7 @@ import { type ReactElement, useEffect, useRef, useState, type RefObject } from '
 import { Send } from 'lucide-react';
 import { useIntl } from 'react-intl';
 
+import { type ChatCitation, ChatCitationCard } from '@/components/chat/panel/ChatCitationCard';
 import type { ParticipantRole } from '@/lib/session-live/participant-role';
 import { useChatDraft } from '@/lib/session-live/use-chat-draft';
 import { useScrollAnchor } from '@/lib/session-live/use-scroll-anchor';
@@ -38,6 +39,7 @@ export interface ChatMessage {
   readonly content: string;
   readonly visibility: 'private' | 'shared';
   readonly timestamp: string;
+  readonly citations?: readonly ChatCitation[];
 }
 
 // ─── Labels ───────────────────────────────────────────────────────────────────
@@ -188,6 +190,13 @@ export function LiveAgentChat({
                     </span>
                   )}
                 </div>
+                {msg.citations && msg.citations.length > 0 && (
+                  <div data-slot="chat-citations" className="mt-1 flex flex-col gap-1">
+                    {msg.citations.map((c, i) => (
+                      <ChatCitationCard key={i} citation={c} />
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })

@@ -34,7 +34,7 @@ import { IntlProvider } from 'react-intl';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactElement } from 'react';
 
-import type { GameSessionDto } from '@/lib/api/schemas/games.schemas';
+import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
 import type { UseSessionLiveStreamResult } from '@/lib/session-live/use-session-live-stream';
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';
 import type { ScoreDataByType } from '@/components/sessions/score-strategies/types';
@@ -59,7 +59,7 @@ vi.mock('next/navigation', () => ({
 // ─── useSession mock ──────────────────────────────────────────────────────
 
 type MockSessionReturn = {
-  data?: GameSessionDto | null;
+  data?: LiveSessionDto | null;
   isLoading: boolean;
   isError: boolean;
   isSuccess: boolean;
@@ -67,10 +67,10 @@ type MockSessionReturn = {
   refetch?: () => void;
 };
 
-const useSessionMock = vi.fn<[], MockSessionReturn>();
+const useLiveSessionMock = vi.fn<[], MockSessionReturn>();
 
-vi.mock('@/hooks/queries/useActiveSessions', () => ({
-  useSession: () => useSessionMock(),
+vi.mock('@/hooks/queries/useLiveSession', () => ({
+  useLiveSession: () => useLiveSessionMock(),
 }));
 
 // ─── useSessionLiveStream mock ────────────────────────────────────────────
@@ -278,21 +278,54 @@ function renderWithIntl(ui: ReactElement) {
 
 // ─── Fixture helpers ──────────────────────────────────────────────────────
 
-const MOCK_SESSION_DTO: GameSessionDto = {
+// ADR-083 Fase 1 (#2501): the canonical loader is now LiveGameSession
+// (LiveSessionDto). Only the fields SessionLiveView actually consumes are set;
+// the object is cast since the hook is mocked (no schema parse at this layer).
+const MOCK_SESSION_DTO = {
   id: 'session-abc-123',
+  sessionCode: 'ABC123',
   gameId: 'game-00000001',
+  gameName: 'Mage Knight',
+  gameSlug: 'mage-knight',
+  createdByUserId: '44444444-4444-4444-4444-444444444444',
   status: 'InProgress',
+  visibility: 'Private',
+  groupId: null,
+  createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
   startedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+  pausedAt: null,
   completedAt: null,
-  playerCount: 2,
-  players: [
-    { id: 'player-001', playerName: 'Marco', playerOrder: 1, color: 'blue' },
-    { id: 'player-002', playerName: 'Anna', playerOrder: 2, color: 'red' },
-  ],
-  winnerName: null,
+  updatedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+  lastSavedAt: null,
+  currentTurnIndex: 0,
+  currentTurnPlayerId: null,
+  agentMode: 'Active',
+  chatSessionId: null,
   notes: null,
-  durationMinutes: 60,
-};
+  players: [
+    {
+      id: 'player-001',
+      displayName: 'Marco',
+      userId: null,
+      color: 'blue',
+      role: 'Player',
+      totalScore: 0,
+      isActive: true,
+    },
+    {
+      id: 'player-002',
+      displayName: 'Anna',
+      userId: null,
+      color: 'red',
+      role: 'Player',
+      totalScore: 0,
+      isActive: true,
+    },
+  ],
+  teams: [],
+  roundScores: [],
+  scoringConfig: { enabledDimensions: [], dimensionUnits: {} },
+} as unknown as LiveSessionDto;
 
 // ─── Import under test ─────────────────────────────────────────────────────
 
@@ -312,7 +345,7 @@ describe('SessionLiveView (Wave D.2 Foundation)', () => {
     Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
     mockParamsId = 'session-abc-123';
     IS_VISUAL_TEST_BUILD_MOCK = false;
-    useSessionMock.mockReturnValue({
+    useLiveSessionMock.mockReturnValue({
       data: MOCK_SESSION_DTO,
       isLoading: false,
       isError: false,
@@ -333,7 +366,7 @@ describe('SessionLiveView (Wave D.2 Foundation)', () => {
   });
 
   it('root container has data-theme="dark" in loading state', () => {
-    useSessionMock.mockReturnValue({
+    useLiveSessionMock.mockReturnValue({
       data: undefined,
       isLoading: true,
       isError: false,
@@ -370,7 +403,7 @@ describe('SessionLiveView (Wave D.2 Foundation)', () => {
   // ─── 3.3: FSM Cell 2 — loading ─────────────────────────────────────────
 
   it('Cell 2: renders loading shell when isLoading=true', () => {
-    useSessionMock.mockReturnValue({
+    useLiveSessionMock.mockReturnValue({
       data: undefined,
       isLoading: true,
       isError: false,
@@ -385,7 +418,7 @@ describe('SessionLiveView (Wave D.2 Foundation)', () => {
   });
 
   it('Cell 2: no LiveTopBar rendered in loading state', () => {
-    useSessionMock.mockReturnValue({
+    useLiveSessionMock.mockReturnValue({
       data: undefined,
       isLoading: true,
       isError: false,
@@ -399,7 +432,7 @@ describe('SessionLiveView (Wave D.2 Foundation)', () => {
   // ─── 3.4: FSM Cell 3 — error ───────────────────────────────────────────
 
   it('Cell 3: renders error shell when isError=true', () => {
-    useSessionMock.mockReturnValue({
+    useLiveSessionMock.mockReturnValue({
       data: undefined,
       isLoading: false,
       isError: true,
@@ -416,7 +449,7 @@ describe('SessionLiveView (Wave D.2 Foundation)', () => {
 
   it('Cell 3: error retry button calls refetch', () => {
     const refetch = vi.fn();
-    useSessionMock.mockReturnValue({
+    useLiveSessionMock.mockReturnValue({
       data: undefined,
       isLoading: false,
       isError: true,
@@ -436,7 +469,7 @@ describe('SessionLiveView (Wave D.2 Foundation)', () => {
   // ─── 3.5: FSM Cell 4 — not-found (success + null data) ─────────────────
 
   it('Cell 4: renders not-found shell when data is null (session 404)', () => {
-    useSessionMock.mockReturnValue({
+    useLiveSessionMock.mockReturnValue({
       data: null,
       isLoading: false,
       isError: false,
@@ -576,7 +609,7 @@ describe('SessionLiveView (Wave D.2 Foundation)', () => {
   it('IS_VISUAL_TEST_BUILD=true: renders fixture data (not real hook)', () => {
     IS_VISUAL_TEST_BUILD_MOCK = true;
     // Even with useSession returning null, fixture renders default
-    useSessionMock.mockReturnValue({
+    useLiveSessionMock.mockReturnValue({
       data: null,
       isLoading: false,
       isError: false,
@@ -667,7 +700,7 @@ describe('SessionLiveView (Wave D.2 Interactions — Task 3)', () => {
     Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
     mockParamsId = 'session-abc-123';
     IS_VISUAL_TEST_BUILD_MOCK = false;
-    useSessionMock.mockReturnValue({
+    useLiveSessionMock.mockReturnValue({
       data: MOCK_SESSION_DTO,
       isLoading: false,
       isError: false,
@@ -704,7 +737,7 @@ describe('SessionLiveView (Wave D.2 Interactions — Task 3)', () => {
   });
 
   it('T3.1c: useSessionLiveStream enabled=false when sessionQuery.isSuccess=false', () => {
-    useSessionMock.mockReturnValue({
+    useLiveSessionMock.mockReturnValue({
       data: undefined,
       isLoading: true,
       isError: false,
@@ -1032,7 +1065,7 @@ describe('SessionLiveView (#2375 G3 — accordion FSM URL SSOT)', () => {
     Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
     mockParamsId = 'session-abc-123';
     IS_VISUAL_TEST_BUILD_MOCK = false;
-    useSessionMock.mockReturnValue({
+    useLiveSessionMock.mockReturnValue({
       data: MOCK_SESSION_DTO,
       isLoading: false,
       isError: false,
@@ -1123,7 +1156,7 @@ describe('SessionLiveView (#2375 G3 — accordion FSM URL SSOT)', () => {
 describe('SessionLiveView — Block B (#2389) scoring wire-up', () => {
   beforeEach(() => {
     // Default useSession + useSessionLiveStream returns for these tests.
-    useSessionMock.mockReturnValue({
+    useLiveSessionMock.mockReturnValue({
       data: MOCK_SESSION_DTO,
       isLoading: false,
       isError: false,
@@ -1134,120 +1167,16 @@ describe('SessionLiveView — Block B (#2389) scoring wire-up', () => {
     useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
   });
 
-  // ── REST hydration (5) ──────────────────────────────────────────────────────
-
-  it('calls setScoringConfig when DTO carries scoringType+scoreData', () => {
-    const dtoWithConfig: GameSessionDto = {
-      ...MOCK_SESSION_DTO,
-      scoringType: 'Points',
-      scoreData: JSON.stringify({
-        scores: [{ playerId: 'player-001', points: 10 }],
-      }),
-    };
-    useSessionMock.mockReturnValue({
-      data: dtoWithConfig,
-      isLoading: false,
-      isError: false,
-      isSuccess: true,
-      error: null,
-      refetch: vi.fn(),
-    });
-
-    renderWithIntl(<SessionLiveView />);
-
-    expect(useLiveSessionStore.getState().scoringType).toBe('Points');
-    expect(useLiveSessionStore.getState().scoreData).toEqual({
-      scores: [{ playerId: 'player-001', points: 10 }],
-    });
-  });
-
-  it('logs console.warn on malformed scoreData JSON', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const dtoMalformed: GameSessionDto = {
-      ...MOCK_SESSION_DTO,
-      scoringType: 'Points',
-      scoreData: 'not-valid-json',
-    };
-    useSessionMock.mockReturnValue({
-      data: dtoMalformed,
-      isLoading: false,
-      isError: false,
-      isSuccess: true,
-      error: null,
-      refetch: vi.fn(),
-    });
-
-    renderWithIntl(<SessionLiveView />);
-
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('[#2389]'),
-      expect.objectContaining({ sessionId: MOCK_SESSION_DTO.id })
-    );
-    expect(useLiveSessionStore.getState().scoringType).toBeNull();
-    warnSpy.mockRestore();
-  });
-
-  it('does not call setScoringConfig when DTO has no scoringType (legacy session)', () => {
-    // MOCK_SESSION_DTO has no scoringType/scoreData by default.
-    renderWithIntl(<SessionLiveView />);
-    expect(useLiveSessionStore.getState().scoringType).toBeNull();
-    expect(useLiveSessionStore.getState().scoreData).toBeNull();
-  });
-
-  it('does not overwrite SignalR-hydrated store on later REST resolve (race guard)', () => {
-    // SignalR hydrates first.
-    act(() => {
-      useLiveSessionStore.setState({
-        scoringType: 'Points',
-        scoreData: {
-          scores: [{ playerId: 'player-001', points: 99 }],
-        } as ScoreDataByType['Points'],
-      });
-    });
-
-    // REST resolves with stale snapshot.
-    const dtoStale: GameSessionDto = {
-      ...MOCK_SESSION_DTO,
-      scoringType: 'Points',
-      scoreData: JSON.stringify({
-        scores: [{ playerId: 'player-001', points: 0 }],
-      }),
-    };
-    useSessionMock.mockReturnValue({
-      data: dtoStale,
-      isLoading: false,
-      isError: false,
-      isSuccess: true,
-      error: null,
-      refetch: vi.fn(),
-    });
-
-    renderWithIntl(<SessionLiveView />);
-
-    // SignalR data wins; REST does NOT overwrite.
-    expect(useLiveSessionStore.getState().scoreData).toEqual({
-      scores: [{ playerId: 'player-001', points: 99 }],
-    });
-  });
-
-  it('does not call setScoringConfig when scoringType present but scoreData null', () => {
-    const dtoPartial: GameSessionDto = {
-      ...MOCK_SESSION_DTO,
-      scoringType: 'Points',
-      scoreData: null,
-    };
-    useSessionMock.mockReturnValue({
-      data: dtoPartial,
-      isLoading: false,
-      isError: false,
-      isSuccess: true,
-      error: null,
-      refetch: vi.fn(),
-    });
-
-    renderWithIntl(<SessionLiveView />);
-    expect(useLiveSessionStore.getState().scoringType).toBeNull();
-  });
+  // ── REST hydration removed (ADR-083 Fase 1, #2501) ──────────────────────────
+  // The polymorphic scoring REST hydration (scoringType/scoreData/turnOrderType
+  // from GameSessionDto) was removed when the loader switched to the canonical
+  // LiveGameSession aggregate (LiveSessionDto, which is round-based and exposes
+  // no polymorphic fields). On the real funnel those fields were always
+  // undefined (empty GameSession shell) so the effects never ran in production.
+  // The store can still be populated directly (SignalR / explicit action) — the
+  // null-gate, placeholder and renderer-variant tests below exercise that path.
+  // Round-based scoring wiring from LiveSessionDto.roundScores/scoringConfig is
+  // deferred to Fase 2.
 
   // ── Null gate + a11y placeholder (2) ────────────────────────────────────────
 
@@ -1351,7 +1280,7 @@ describe('SessionLiveView — #2483 Task 4: TurnIndicatorRenderer from store', (
     searchParamsMap['tab'] = 'turn';
     mockParamsId = 'session-abc-123';
     IS_VISUAL_TEST_BUILD_MOCK = false;
-    useSessionMock.mockReturnValue({
+    useLiveSessionMock.mockReturnValue({
       data: MOCK_SESSION_DTO,
       isLoading: false,
       isError: false,
@@ -1405,22 +1334,8 @@ describe('SessionLiveView — #2483 Task 4: TurnIndicatorRenderer from store', (
     expect(container.querySelector('[data-slot="turn-branch-none"]')).not.toBeNull();
   });
 
-  it('renders None branch when DTO supplies turnOrderType=Sequential (hydration path)', () => {
-    // Test the full hydration path: DTO carries turnOrderType → store → renderer.
-    const dtoWithTurnOrder: GameSessionDto = {
-      ...MOCK_SESSION_DTO,
-      turnOrderType: 'Sequential',
-    };
-    useSessionMock.mockReturnValue({
-      data: dtoWithTurnOrder,
-      isLoading: false,
-      isError: false,
-      isSuccess: true,
-      error: null,
-      refetch: vi.fn(),
-    });
-    const { container } = renderWithIntl(<SessionLiveView />);
-    expect(container.querySelector('[data-slot="turn-branch-sequential"]')).not.toBeNull();
-    expect(container.querySelector('[data-slot="turn-branch-round-robin"]')).toBeNull();
-  });
+  // Hydration-path test removed (ADR-083 Fase 1, #2501): turnOrderType is no
+  // longer hydrated from the DTO loader (LiveSessionDto exposes no turnOrderType).
+  // The store-seeded branch tests above cover the renderer; DTO→store wiring for
+  // round-based turn metadata is deferred to Fase 2.
 });

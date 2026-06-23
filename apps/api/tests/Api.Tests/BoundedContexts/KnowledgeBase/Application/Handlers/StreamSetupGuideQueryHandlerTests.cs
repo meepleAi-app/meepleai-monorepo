@@ -1,5 +1,8 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Models;
 using Api.Services;
 using Microsoft.Extensions.Configuration;
@@ -21,6 +24,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 public class StreamSetupGuideQueryHandlerTests
 {
     private readonly Mock<IEmbeddingService> _embeddingServiceMock;
+    private readonly Mock<IEmbeddingRepository> _embeddingRepositoryMock;
     private readonly Mock<ILlmService> _llmServiceMock;
     private readonly Mock<IPromptTemplateService> _promptTemplateServiceMock;
     private readonly IConfiguration _configuration;
@@ -31,6 +35,18 @@ public class StreamSetupGuideQueryHandlerTests
     public StreamSetupGuideQueryHandlerTests()
     {
         _embeddingServiceMock = new Mock<IEmbeddingService>();
+        _embeddingRepositoryMock = new Mock<IEmbeddingRepository>();
+        // Default: no RAG context (empty search). Tests that exercise the LLM path
+        // override this via SetupVectorSearchMock.
+        _embeddingRepositoryMock
+            .Setup(x => x.SearchByVectorAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<Vector>(),
+                It.IsAny<int>(),
+                It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Embedding>());
         _llmServiceMock = new Mock<ILlmService>();
         _promptTemplateServiceMock = new Mock<IPromptTemplateService>();
         _loggerMock = new Mock<ILogger<StreamSetupGuideQueryHandler>>();
@@ -42,6 +58,7 @@ public class StreamSetupGuideQueryHandlerTests
 
         _handler = new StreamSetupGuideQueryHandler(
             _embeddingServiceMock.Object,
+            _embeddingRepositoryMock.Object,
             _llmServiceMock.Object,
             _promptTemplateServiceMock.Object,
             _configuration,
@@ -49,10 +66,41 @@ public class StreamSetupGuideQueryHandlerTests
             _fakeTimeProvider
         );
     }
-    [Fact]
-    public async Task Handle_ValidGameId_StreamsSetupSteps()
+
+    /// <summary>
+    /// ADR-083 Fase 1 (#2504): configure pgvector to return setup chunks so the
+    /// handler reaches the LLM path (instead of the default-steps fallback).
+    /// </summary>
+    private void SetupVectorSearchMock(string gameId, params string[] chunkTexts)
     {
-        // Arrange
+        var embeddings = chunkTexts
+            .Select((text, i) => new Embedding(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                text,
+                new Vector(new float[] { 0.1f, 0.2f, 0.3f }),
+                "test-model",
+                chunkIndex: i,
+                pageNumber: i + 1))
+            .ToList();
+
+        _embeddingRepositoryMock
+            .Setup(x => x.SearchByVectorAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<Vector>(),
+                It.IsAny<int>(),
+                It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(embeddings);
+    }
+    [Fact]
+    public async Task Handle_NonGuidGameId_FallsBackToDefaultSteps()
+    {
+        // ADR-083 Fase 1 (#2504): a non-GUID gameId fails the pgvector lookup guard
+        // (Guid.TryParse in SearchSetupContextAsync) and falls back to the 5 default
+        // steps. The RAG/LLM path for a valid gameId is covered by the
+        // Handle_VectorSearchReturnsResults_* tests above.
         var gameId = "game123";
         var query = new StreamSetupGuideQuery(gameId);
 
@@ -92,6 +140,61 @@ public class StreamSetupGuideQueryHandlerTests
         completeEvent.Should().NotBeNull();
         var complete = completeEvent.Data.Should().BeOfType<StreamingComplete>().Which;
         (complete.estimatedReadingTimeMinutes >= 5).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Handle_VectorSearchReturnsResults_CallsLlmWithRetrievedContext()
+    {
+        // ADR-083 Fase 1 (#2504): when pgvector returns setup chunks, the handler
+        // must call the LLM with that retrieved context (not fall back to default steps).
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamSetupGuideQuery(gameId);
+
+        SetupEmbeddingMock();
+        SetupVectorSearchMock(gameId, "Place the board in the center and shuffle the deck.");
+        SetupLlmMock("STEP 1: Place the Board\nPut the game board in the center.");
+
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
+        {
+            events.Add(evt);
+        }
+
+        // The LLM was called with the retrieved chunk text embedded in the user prompt.
+        _llmServiceMock.Verify(
+            x => x.GenerateCompletionAsync(
+                It.IsAny<string>(),
+                It.Is<string>(p => p.Contains("Place the board in the center")),
+                It.IsAny<RequestSource>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_VectorSearchResults_WithPlayerCount_IncludesPlayerCountInstruction()
+    {
+        // ADR-083 Fase 1 (#2504): the player count must reach the LLM prompt so the
+        // guide adapts to 4 players. Only reachable once the RAG context exists.
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamSetupGuideQuery(gameId, PlayerCount: 4);
+
+        SetupEmbeddingMock();
+        SetupVectorSearchMock(gameId, "Setup varies by the number of players.");
+        SetupLlmMock("STEP 1: Setup\nPrepare for the players.");
+
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
+        {
+            events.Add(evt);
+        }
+
+        _llmServiceMock.Verify(
+            x => x.GenerateCompletionAsync(
+                It.IsAny<string>(),
+                It.Is<string>(p => p.Contains("PLAYER COUNT: 4 players")),
+                It.IsAny<RequestSource>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -411,6 +514,7 @@ public class StreamSetupGuideQueryHandlerTests
         var configWithPromptDb = CreateConfiguration(promptDatabaseEnabled: true);
         var handlerWithPromptDb = new StreamSetupGuideQueryHandler(
             _embeddingServiceMock.Object,
+            _embeddingRepositoryMock.Object,
             _llmServiceMock.Object,
             _promptTemplateServiceMock.Object,
             configWithPromptDb,
@@ -488,6 +592,7 @@ public class StreamSetupGuideQueryHandlerTests
         var configWithPromptDb = CreateConfiguration(promptDatabaseEnabled: true);
         var handlerWithPromptDb = new StreamSetupGuideQueryHandler(
             _embeddingServiceMock.Object,
+            _embeddingRepositoryMock.Object,
             _llmServiceMock.Object,
             _promptTemplateServiceMock.Object,
             configWithPromptDb,

@@ -100,8 +100,10 @@ import {
   type ScoringPanelRendererLabels,
   type ToolkitRendererLabels,
 } from '@/components/features/session-live';
+import type { ChatMessage as LiveAgentChatMessage } from '@/components/features/session-live/LiveAgentChat';
 import { useLiveSession } from '@/hooks/queries/useLiveSession';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useSessionAgentChat } from '@/lib/domain-hooks/useSessionAgentChat';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
 import { mapConnectionState } from '@/lib/session-live/map-connection-state';
 import { mapTurnDataToTurnState } from '@/lib/session-live/map-turn-data-to-turn-state';
@@ -489,23 +491,11 @@ export function SessionLiveView(): ReactElement {
   // useUpdateSessionScores → PUT /game-sessions/{id}/scores-polymorphic
   // (wired in ScoreTabContent).
 
-  const handleSendMessage = useCallback(
-    async (content: string, visibility: 'private' | 'shared'): Promise<void> => {
-      if (sessionId == null) return;
-
-      try {
-        await fetch(`/api/v1/game-sessions/${sessionId}/chat`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content, visibility }),
-          credentials: 'include',
-        });
-      } catch {
-        // Fail silently — SSE event confirms or not
-      }
-    },
-    [sessionId]
-  );
+  // NOTE: the social-chat POST handler (/game-sessions/{id}/chat) was retired
+  // in #2500 Task 4 (AC-CHAT-0). ChatAgentPanel now routes through handleAgentSendMessage
+  // (→ useSessionAgentChat → /agent/chat RAG endpoint). The social endpoint remains
+  // available on the backend for SSE-driven action-log entries but is no longer
+  // called from this orchestrator.
 
   const handleAddNote = useCallback(
     async (content: string, visibility: 'private' | 'shared'): Promise<void> => {
@@ -875,22 +865,47 @@ export function SessionLiveView(): ReactElement {
     [activeSession]
   );
 
+  // ── RAG agent chat (AC-CHAT-0) ────────────────────────────────────────────
+  // agentSessionId comes from the LiveSessionDto.chatSessionId field.
+  // When fixture mode is active or the DTO has no chatSessionId, we pass an
+  // empty string — the hook is called unconditionally (rules-of-hooks) and
+  // guarded in handleAgentSendMessage below (AC-CHAT-NULL).
+  const agentSessionId = sessionQuery.data?.chatSessionId ?? '';
+  const agentChat = useSessionAgentChat(sessionId ?? '', agentSessionId);
+
+  // Map useSessionAgentChat.ChatMessage → LiveAgentChat.ChatMessage.
+  // The two shapes differ: agent uses role:'user'|'assistant', LiveAgentChat uses
+  // senderId/senderName/visibility.  We map:
+  //   role:'user'      → senderId=viewerId (or 'user' fallback), visibility:'shared'
+  //   role:'assistant' → senderId='agent', senderName='MeepleAI', visibility:'shared'
+  // Citations pass through unchanged (same ChatCitation type, shared via ChatCitationCard import).
+  const agentChatMessages = useMemo<LiveAgentChatMessage[]>(() => {
+    const viewerId = activeSession?.viewerId ?? 'user';
+    return agentChat.messages.map(m => ({
+      id: m.id,
+      senderId: m.role === 'user' ? viewerId : 'agent',
+      senderName: m.role === 'user' ? '' : 'MeepleAI',
+      content: m.content,
+      visibility: 'shared' as const,
+      timestamp: m.timestamp,
+      citations: m.citations,
+    }));
+  }, [agentChat.messages, activeSession?.viewerId]);
+
+  // AC-CHAT-0: send goes to the RAG agent, NOT /game-sessions/{id}/chat.
+  // AC-CHAT-NULL: if agentSessionId absent (null/empty), suppress the call silently.
+  const handleAgentSendMessage = useCallback(
+    async (content: string, _visibility: 'private' | 'shared'): Promise<void> => {
+      if (!agentSessionId || !content.trim()) return;
+      await agentChat.ask(content);
+    },
+    [agentSessionId, agentChat]
+  );
+
   // ── Chat messages from SSE events ────────────────────────────────────────
-  // Extract chat messages from liveState actionLog (type='chat' entries).
-  // Foundation proxy: fixture has no chat messages.
-  const chatMessages = useMemo(() => {
-    if (activeSession == null) return [];
-    return activeSession.actionLog
-      .filter(e => e.type === 'chat')
-      .map(e => ({
-        id: e.id,
-        senderId: e.authorName,
-        senderName: e.authorName,
-        content: e.content,
-        visibility: 'shared' as const,
-        timestamp: e.timestamp,
-      }));
-  }, [activeSession]);
+  // NOTE: ChatAgentPanel now receives agentChatMessages (RAG) — see above.
+  // ActionLogTimeline uses activeSession.actionLog directly; this extraction
+  // is no longer needed and has been removed to avoid unused-var lint errors.
 
   // ── Notes from SSE events ────────────────────────────────────────────────
   const noteEntries = useMemo(() => {
@@ -932,10 +947,10 @@ export function SessionLiveView(): ReactElement {
       <div className="flex flex-col gap-3">
         <ChatAgentPanel
           sessionId={sessionId}
-          messages={chatMessages}
+          messages={agentChatMessages}
           viewerRole={activeSession.viewerRole}
           viewerId={activeSession.viewerId}
-          onSendMessage={handleSendMessage}
+          onSendMessage={handleAgentSendMessage}
           agentName="MeepleAI"
           agentEmoji="🤖"
           latencyMs={42}
@@ -950,8 +965,8 @@ export function SessionLiveView(): ReactElement {
   }, [
     activeSession,
     sessionId,
-    chatMessages,
-    handleSendMessage,
+    agentChatMessages,
+    handleAgentSendMessage,
     chatAgentLabels,
     actionLogLabels,
     mobileChatCollapsed,
@@ -1124,10 +1139,10 @@ export function SessionLiveView(): ReactElement {
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-3">
       <ChatAgentPanel
         sessionId={sessionId}
-        messages={chatMessages}
+        messages={agentChatMessages}
         viewerRole={activeSession.viewerRole}
         viewerId={activeSession.viewerId}
-        onSendMessage={handleSendMessage}
+        onSendMessage={handleAgentSendMessage}
         agentName="MeepleAI"
         agentEmoji="🤖"
         latencyMs={42}

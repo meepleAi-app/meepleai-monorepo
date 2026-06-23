@@ -116,6 +116,23 @@ vi.mock('sonner', () => ({
   },
 }));
 
+// ─── useSessionAgentChat mock (#2500 Task 4: RAG agent wiring) ────────────
+// Hoisted globally so all describe blocks get a safe no-op default.
+// The RAG-specific describe block overrides the return value in its beforeEach.
+
+const useSessionAgentChatMock = vi.fn(() => ({
+  messages: [],
+  isLoading: false,
+  error: null,
+  streamingContent: '',
+  ask: vi.fn(),
+  stop: vi.fn(),
+}));
+
+vi.mock('@/lib/domain-hooks/useSessionAgentChat', () => ({
+  useSessionAgentChat: (...args: unknown[]) => useSessionAgentChatMock(...args),
+}));
+
 // ─── visual-test-fixture mock ─────────────────────────────────────────────
 
 let IS_VISUAL_TEST_BUILD_MOCK = false;
@@ -1338,4 +1355,116 @@ describe('SessionLiveView — #2483 Task 4: TurnIndicatorRenderer from store', (
   // longer hydrated from the DTO loader (LiveSessionDto exposes no turnOrderType).
   // The store-seeded branch tests above cover the renderer; DTO→store wiring for
   // round-based turn metadata is deferred to Fase 2.
+});
+
+// ─── #2500 Task 4 — RAG agent wired into ChatAgentPanel ──────────────────────
+// AC-CHAT-0: send goes through useSessionAgentChat (RAG path), not /chat social endpoint.
+// AC-CHAT-NULL: when agentSessionId absent → panel renders without crash.
+
+describe('SessionLiveView — #2500 Task 4: RAG agent wiring', () => {
+  const agentAskMock = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
+    mockParamsId = 'session-abc-123';
+    IS_VISUAL_TEST_BUILD_MOCK = false;
+    useLiveSessionMock.mockReturnValue({
+      data: { ...MOCK_SESSION_DTO, chatSessionId: 'agent-session-uuid-0001' },
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+    useSessionAgentChatMock.mockReturnValue({
+      messages: [],
+      isLoading: false,
+      error: null,
+      streamingContent: '',
+      ask: agentAskMock,
+      stop: vi.fn(),
+    });
+  });
+
+  it('RAG-1: renders ChatAgentPanel without crash when chatSessionId present', () => {
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.querySelector('[data-slot="chat-agent-panel"]')).toBeInTheDocument();
+  });
+
+  it('RAG-2: AC-CHAT-NULL — renders ChatAgentPanel without crash when chatSessionId is null', () => {
+    useLiveSessionMock.mockReturnValue({
+      data: { ...MOCK_SESSION_DTO, chatSessionId: null },
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useSessionAgentChatMock.mockReturnValue({
+      messages: [],
+      isLoading: false,
+      error: null,
+      streamingContent: '',
+      ask: agentAskMock,
+      stop: vi.fn(),
+    });
+    expect(() => renderWithIntl(<SessionLiveView />)).not.toThrow();
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.querySelector('[data-slot="chat-agent-panel"]')).toBeInTheDocument();
+  });
+
+  it('RAG-3: assistant citation is rendered in ChatAgentPanel (pag. N pattern)', () => {
+    useSessionAgentChatMock.mockReturnValue({
+      messages: [
+        {
+          id: 'msg-001',
+          role: 'assistant' as const,
+          content: 'Il regolamento dice…',
+          timestamp: new Date().toISOString(),
+          citations: [{ documentName: 'Reg', pages: [7], excerpt: 'x' }],
+        },
+      ],
+      isLoading: false,
+      error: null,
+      streamingContent: '',
+      ask: agentAskMock,
+      stop: vi.fn(),
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // Citation card renders "pag. 7" (or page list) — asserting presence
+    expect(container.querySelector('[data-slot="chat-citations"]')).toBeInTheDocument();
+    expect(container.textContent).toMatch(/pag\.\s*7/i);
+  });
+
+  it('RAG-4: useSessionAgentChat is called with sessionId and chatSessionId from DTO', () => {
+    renderWithIntl(<SessionLiveView />);
+    expect(useSessionAgentChatMock).toHaveBeenCalledWith(
+      'session-abc-123',
+      'agent-session-uuid-0001'
+    );
+  });
+
+  it('RAG-5: AC-CHAT-NULL — useSessionAgentChat called with empty string when chatSessionId is null', () => {
+    useLiveSessionMock.mockReturnValue({
+      data: { ...MOCK_SESSION_DTO, chatSessionId: null },
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useSessionAgentChatMock.mockReturnValue({
+      messages: [],
+      isLoading: false,
+      error: null,
+      streamingContent: '',
+      ask: agentAskMock,
+      stop: vi.fn(),
+    });
+    renderWithIntl(<SessionLiveView />);
+    // Hook called with empty agentSessionId guard
+    expect(useSessionAgentChatMock).toHaveBeenCalledWith('session-abc-123', '');
+  });
 });

@@ -31,6 +31,25 @@ public sealed class CatalogSeederManifestOverrideTests
     }
 
     [Fact]
+    public void LoadManifest_WithE2eOverride_LoadsSingleKbReadyGame()
+    {
+        // #2502: the e2e manifest provides exactly one game with a pdfBlobKey so the
+        // bake yields a guaranteed KB-Ready game for the live-session E2E suite.
+        var manifest = CatalogSeeder.LoadManifest(SeedProfile.Dev, manifestName: "e2e");
+
+        manifest.Should().NotBeNull();
+        manifest.Catalog.Games.Should().ContainSingle(
+            "the e2e seed is intentionally minimal — a single KB-Ready game");
+
+        var game = manifest.Catalog.Games[0];
+        game.Title.Should().Be("Love Letter");
+        game.PdfBlobKey.Should().NotBeNullOrWhiteSpace(
+            "the e2e game must have a rulebook blob to reach KB Ready when baked");
+        game.SeedAgent.Should().BeTrue(
+            "the e2e game needs an agent for RAG / setup-guide E2E flows");
+    }
+
+    [Fact]
     public void LoadManifest_WithMissingOverride_Throws()
     {
         var act = () => CatalogSeeder.LoadManifest(SeedProfile.Dev, manifestName: "nonexistent");

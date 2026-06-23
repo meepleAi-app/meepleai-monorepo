@@ -141,6 +141,15 @@ jobs:
           SEED_INDEX_OUT_DIR: ${{ github.workspace }}/data/snapshots
         run: |
           mkdir -p "$SEED_INDEX_OUT_DIR"
+          # seed-index-wait.sh / seed-index-dump.sh default PG_DB to
+          # `meepleai_staging` (the staging-synced local value), but the
+          # placeholder database.secret created by `make secrets-setup` uses
+          # POSTGRES_DB=meepleai_db — so the postgres container creates
+          # `meepleai_db` and the wait script's psql query 404s on
+          # `meepleai_staging`. Export the actual values from the generated
+          # secret so the scripts query the DB the container really created.
+          export POSTGRES_USER="$(sed -n 's/^POSTGRES_USER=//p' secrets/database.secret)"
+          export POSTGRES_DB="$(sed -n 's/^POSTGRES_DB=//p' secrets/database.secret)"
           # `make seed-index` brings up the bake stack, runs the seeder, polls
           # processing_jobs, and dumps. CI runner is ephemeral, so we don't
           # bother with `make dev-down`.

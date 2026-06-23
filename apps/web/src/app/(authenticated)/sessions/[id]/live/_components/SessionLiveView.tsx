@@ -102,6 +102,7 @@ import {
 } from '@/components/features/session-live';
 import type { ChatMessage as LiveAgentChatMessage } from '@/components/features/session-live/LiveAgentChat';
 import { useLiveSession } from '@/hooks/queries/useLiveSession';
+import { useSessionAgentLaunch } from '@/hooks/queries/useSessionAgentLaunch';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useSessionAgentChat } from '@/lib/domain-hooks/useSessionAgentChat';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
@@ -866,22 +867,36 @@ export function SessionLiveView(): ReactElement {
   );
 
   // ── RAG agent chat (AC-CHAT-0) ────────────────────────────────────────────
-  // agentSessionId comes from the LiveSessionDto.chatSessionId field.
-  // When fixture mode is active or the DTO has no chatSessionId, we pass an
-  // empty string — the hook is called unconditionally (rules-of-hooks) and
-  // guarded in handleAgentSendMessage below (AC-CHAT-NULL).
-  const agentSessionId = sessionQuery.data?.chatSessionId ?? '';
+  // agentSessionId is resolved lazily via useSessionAgentLaunch:
+  //   1. getAgents(gameId) → pick first active agent
+  //   2. launch(sessionId, { agentDefinitionId }) → { agentSessionId }
+  // status discriminates lifecycle so the panel always shows feedback (R-FINDING-5):
+  //   'idle'      → preconditions not met (no sessionId/gameId or fixture mode)
+  //   'launching' → getAgents/launch in flight
+  //   'ready'     → agentSessionId obtained, chat can send
+  //   'no-agent'  → no assistant for this game
+  //   'error'     → getAgents or launch failed
+  // Disabled in fixture/visual-test builds so no real fetch is issued.
+  const agentLaunch = useSessionAgentLaunch(
+    sessionId ?? null,
+    sessionQuery.data?.gameId ?? null,
+    !fixture
+  );
+  const agentSessionId = agentLaunch.agentSessionId;
   const agentChat = useSessionAgentChat(sessionId ?? '', agentSessionId);
 
   // Map useSessionAgentChat.ChatMessage → LiveAgentChat.ChatMessage.
   // The two shapes differ: agent uses role:'user'|'assistant', LiveAgentChat uses
   // senderId/senderName/visibility.  We map:
-  //   role:'user'      → senderId=viewerId (or 'user' fallback), visibility:'shared'
+  //   role:'user'      → senderId=viewerId (consistent with how LiveAgentChat
+  //                       computes isOwn; '' when viewerId not yet known — R-FINDING-6)
   //   role:'assistant' → senderId='agent', senderName='MeepleAI', visibility:'shared'
   // Citations pass through unchanged (same ChatCitation type, shared via ChatCitationCard import).
+  // When the launch is not yet ready, a single system message is prepended so the user
+  // always sees feedback instead of a silent empty panel (R-FINDING-5 / AC-CHAT-NULL).
   const agentChatMessages = useMemo<LiveAgentChatMessage[]>(() => {
-    const viewerId = activeSession?.viewerId ?? 'user';
-    return agentChat.messages.map(m => ({
+    const viewerId = activeSession?.viewerId ?? '';
+    const realMessages = agentChat.messages.map(m => ({
       id: m.id,
       senderId: m.role === 'user' ? viewerId : 'agent',
       senderName: m.role === 'user' ? '' : 'MeepleAI',
@@ -890,10 +905,36 @@ export function SessionLiveView(): ReactElement {
       timestamp: m.timestamp,
       citations: m.citations,
     }));
-  }, [agentChat.messages, activeSession?.viewerId]);
+
+    // Prepend a system status message when not ready (R-FINDING-5).
+    // 'idle' → preconditions not met yet, no message needed.
+    let statusContent: string | null = null;
+    if (agentLaunch.status === 'launching') {
+      statusContent = t('pages.sessionLive.chatAgent.launchingMessage');
+    } else if (agentLaunch.status === 'no-agent') {
+      statusContent = t('pages.sessionLive.chatAgent.noAgentMessage');
+    } else if (agentLaunch.status === 'error') {
+      statusContent = t('pages.sessionLive.chatAgent.errorMessage');
+    }
+
+    if (statusContent != null) {
+      const statusMessage: LiveAgentChatMessage = {
+        id: `agent-status-${agentLaunch.status}`,
+        senderId: 'agent',
+        senderName: 'MeepleAI',
+        content: statusContent,
+        visibility: 'shared' as const,
+        timestamp: new Date().toISOString(),
+      };
+      return [statusMessage, ...realMessages];
+    }
+
+    return realMessages;
+  }, [agentChat.messages, activeSession?.viewerId, agentLaunch.status, t]);
 
   // AC-CHAT-0: send goes to the RAG agent, NOT /game-sessions/{id}/chat.
-  // AC-CHAT-NULL: if agentSessionId absent (null/empty), suppress the call silently.
+  // AC-CHAT-NULL: if agentLaunch.status !== 'ready', agent is not available yet —
+  // the status message above provides user feedback; suppress the actual ask() call.
   const handleAgentSendMessage = useCallback(
     async (content: string, _visibility: 'private' | 'shared'): Promise<void> => {
       if (!agentSessionId || !content.trim()) return;

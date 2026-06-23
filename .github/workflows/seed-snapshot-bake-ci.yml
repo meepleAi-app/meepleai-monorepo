@@ -99,12 +99,45 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
 
+      # `.secret` files + `infra/env/*.env.dev` are gitignored — present locally
+      # but absent in the ephemeral runner. docker compose requires them as
+      # `env_file` for every service the bake brings up (postgres → database.secret,
+      # redis → redis.secret, api → 12 .secret + env/api.env.dev). Without these,
+      # `make seed-index` aborts on the first missing env_file. Same placeholder
+      # pattern as e2e-smoke-real-backend.yml. The *seed-publish* S3 secrets stay
+      # separate (publish step only) — these are just the stack-boot placeholders.
+      - name: Generate placeholder secrets (CI cannot secrets-sync — no SSH key)
+        working-directory: infra
+        run: make secrets-setup
+
+      - name: Generate placeholder env file for the bake API container
+        working-directory: infra/env
+        run: |
+          # Only api.env.dev is needed: the bake brings up postgres, redis, api,
+          # embedding-service, smoldocling-service — and `api` is the only one
+          # with an `./env/` env_file (compose.dev.yml:50). Hostnames point at the
+          # compose service names so the API can reach the AI sidecars to process PDFs.
+          cat > api.env.dev <<'APIENV'
+          POSTGRES_HOST=postgres
+          POSTGRES_PORT=5432
+          REDIS_HOST=redis
+          REDIS_PORT=6379
+          OLLAMA_URL=http://ollama:11434
+          EMBEDDING_SERVICE_URL=http://embedding-service:8000
+          UNSTRUCTURED_SERVICE_URL=http://unstructured-service:8001
+          SMOLDOCLING_SERVICE_URL=http://smoldocling-service:8002
+          RERANKER_SERVICE_URL=http://reranker-service:8003
+          N8N_URL=http://n8n:5678
+          APIENV
+
       - name: Run bake
         working-directory: infra
         env:
-          # Seed secrets are NOT injected for the smoke bake — the local
-          # postgres + embedding service are sufficient. If the user passes
-          # `--publish=true`, the secrets-gate step below provides them.
+          # Seed-publish S3 secrets are NOT injected for the smoke bake — local
+          # postgres + embedding service are sufficient. storage.secret is a
+          # placeholder, so seed-index-preflight.sh logs "no seed bucket" and the
+          # bake legitimately runs on 0 PDFs (validates the pipeline flow). If the
+          # user passes `--publish=true`, the secrets-gate step below provides them.
           SEED_INDEX_OUT_DIR: ${{ github.workspace }}/data/snapshots
         run: |
           mkdir -p "$SEED_INDEX_OUT_DIR"

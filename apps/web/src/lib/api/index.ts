@@ -71,6 +71,7 @@ import {
   createAgentDocumentsClient,
   createInfrastructureClient,
   createSessionFlowClient,
+  createAgentSessionsClient,
   createKbDocsClient,
   createKbQualityClient,
   createActivityClient,
@@ -128,6 +129,7 @@ import {
   type AgentDocumentsClient,
   type InfrastructureClient,
   type SessionFlowClient,
+  type AgentSessionsClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -369,6 +371,9 @@ export interface ApiClient {
   /** Session Flow v2.1 — lifecycle, turns, scores, diary */
   sessionFlow: SessionFlowClient;
 
+  /** Session-based agent lifecycle — launch/config/end (Issue #3375) */
+  agentSessions: AgentSessionsClient;
+
   /** Cross-game per-user KB documents listing (Issue #1592 Phase 2b) */
   kbDocs: KbDocsClient;
 
@@ -479,6 +484,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     agentDocuments: createAgentDocumentsClient({ httpClient }), // User agent document selection
     infrastructure: createInfrastructureClient({ httpClient }), // AI Infrastructure Dashboard
     sessionFlow: createSessionFlowClient({ httpClient }), // Session Flow v2.1
+    agentSessions: createAgentSessionsClient({ httpClient }), // Issue #3375 — agent launch/config/end
     kbDocs: createKbDocsClient({ httpClient }), // Issue #1592 Phase 2b
     kbQuality: createKbQualityClient({ httpClient }), // Issue #1675 — per-doc quality eval
     activity: createActivityClient({ httpClient }), // Issue #1593 Phase 3b

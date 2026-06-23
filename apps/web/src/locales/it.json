@@ -3329,7 +3329,11 @@
         "latencyAriaLabel": "Latenza {ms}ms",
         "agentNameAriaLabel": "Nome agente {name}",
         "collapsedAriaLabel": "ChatAgent collassato — clic per espandere",
-        "expandedAriaLabel": "ChatAgent espanso — clic per collassare"
+        "expandedAriaLabel": "ChatAgent espanso — clic per collassare",
+        "noAgentMessage": "Nessun assistente disponibile per questo gioco",
+        "launchingMessage": "Avvio assistente…",
+        "errorMessage": "Impossibile avviare l'assistente. Riprova più tardi.",
+        "statusAriaLabel": "Stato assistente"
       },
       "mobile": {
         "openSheetCta": "Apri pannello",

@@ -3222,7 +3222,11 @@
         "latencyAriaLabel": "Latency {ms}ms",
         "agentNameAriaLabel": "Agent name {name}",
         "collapsedAriaLabel": "ChatAgent collapsed — click to expand",
-        "expandedAriaLabel": "ChatAgent expanded — click to collapse"
+        "expandedAriaLabel": "ChatAgent expanded — click to collapse",
+        "noAgentMessage": "No assistant available for this game",
+        "launchingMessage": "Starting assistant…",
+        "errorMessage": "Could not start the assistant. Try again later.",
+        "statusAriaLabel": "Assistant status"
       },
       "mobile": {
         "openSheetCta": "Open panel",

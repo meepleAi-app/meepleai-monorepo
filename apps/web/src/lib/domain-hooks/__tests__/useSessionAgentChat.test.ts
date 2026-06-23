@@ -73,4 +73,33 @@ describe('useSessionAgentChat', () => {
     expect(result.current.messages[0].role).toBe('user');
     expect(result.current.messages[0].content).toBe('Come funziona?');
   });
+
+  it('ask estrae le citazioni dal payload complete', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        body: makeReadableStream([
+          'data: {"type":"token","content":"Posiziona la plancia."}\n\n',
+          'data: {"type":"complete","threadId":"t1","citations":[{"source":"Regolamento Azul","pageNumber":7,"copyrightTier":"full","snippet":"Posiziona la plancia al centro."}]}\n\n',
+        ]),
+      } as unknown as Response)
+    );
+
+    const { result } = renderHook(() => useSessionAgentChat('game-sess-1', 'agent-1'));
+
+    await act(async () => {
+      await result.current.ask('come si fa il setup?');
+    });
+
+    const lastMsg = result.current.messages[result.current.messages.length - 1];
+    expect(lastMsg.role).toBe('assistant');
+    expect(lastMsg.citations).toBeDefined();
+    expect(lastMsg.citations).toHaveLength(1);
+    expect(lastMsg.citations![0]).toEqual({
+      documentName: 'Regolamento Azul',
+      pages: [7],
+      excerpt: 'Posiziona la plancia al centro.',
+    });
+  });
 });

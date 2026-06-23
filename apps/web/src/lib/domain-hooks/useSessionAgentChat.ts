@@ -10,7 +10,10 @@
  */
 import { useCallback, useRef, useState } from 'react';
 
+import type { ChatCitation } from '@/components/chat/panel/ChatCitationCard';
 import { getAgentChatUrl } from '@/lib/api/clients/sessionAgentClient';
+import { CitationSchema } from '@/lib/api/schemas/streaming.schemas';
+import { mapCitationToChatCitation } from '@/lib/session-live/map-citation-to-chat-citation';
 import { useSessionStore } from '@/stores/session/store';
 
 export interface ChatMessage {
@@ -18,6 +21,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
+  citations?: ChatCitation[];
 }
 
 /**
@@ -32,6 +36,7 @@ export function useSessionAgentChat(gameSessionId: string, agentSessionId: strin
   const [error, setError] = useState<string | null>(null);
   const [streamingContent, setStreamingContent] = useState('');
   const threadIdRef = useRef<string | undefined>(undefined);
+  const citationsRef = useRef<ChatCitation[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   // Ref-based guard prevents double-submit race regardless of stale closure timing
   const isLoadingRef = useRef(false);
@@ -50,6 +55,7 @@ export function useSessionAgentChat(gameSessionId: string, agentSessionId: strin
       setIsLoading(true);
       setError(null);
       setStreamingContent('');
+      citationsRef.current = [];
 
       const userMsg: ChatMessage = {
         id: crypto.randomUUID(),
@@ -126,12 +132,22 @@ export function useSessionAgentChat(gameSessionId: string, agentSessionId: strin
                     type: string;
                     content?: string;
                     threadId?: string;
+                    citations?: unknown[];
                   };
                   if (payload.type === 'token' && payload.content) {
                     accumulated += payload.content;
                     setStreamingContent(accumulated);
-                  } else if (payload.type === 'complete' && payload.threadId) {
-                    threadIdRef.current = payload.threadId;
+                  } else if (payload.type === 'complete') {
+                    if (payload.threadId) {
+                      threadIdRef.current = payload.threadId;
+                    }
+                    if (payload.citations) {
+                      citationsRef.current = (
+                        CitationSchema.array().safeParse(payload.citations).data ?? []
+                      )
+                        .map(mapCitationToChatCitation)
+                        .filter((x): x is ChatCitation => x !== null);
+                    }
                   }
                 } catch {
                   // Ignore non-JSON lines (keep-alive, comments, etc.)
@@ -148,6 +164,7 @@ export function useSessionAgentChat(gameSessionId: string, agentSessionId: strin
           role: 'assistant',
           content: accumulated,
           timestamp: new Date().toISOString(),
+          citations: citationsRef.current.length ? citationsRef.current : undefined,
         };
         setMessages(prev => [...prev, assistantMsg]);
         setStreamingContent('');

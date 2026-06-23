@@ -1462,7 +1462,16 @@ describe('SessionLiveView — #2500 Task 4-FE: RAG agent wiring via useSessionAg
     expect(useSessionAgentChatMock).toHaveBeenCalledWith(
       'session-abc-123',
       'agent-session-uuid-0001',
-      { persistHistory: true } // fixture=false in test → !fixture=true (R5 #2500)
+      {
+        persistHistory: true, // fixture=false in test → !fixture=true (R5 #2500)
+        gameContext: {
+          // I1 #2500: built from LiveSessionDto, not from useSessionStore
+          gameId: 'game-00000001',
+          gameTitle: 'Mage Knight',
+          players: ['Marco', 'Anna'],
+          currentTurn: 0,
+        },
+      }
     );
   });
 
@@ -1482,8 +1491,15 @@ describe('SessionLiveView — #2500 Task 4-FE: RAG agent wiring via useSessionAg
     renderWithIntl(<SessionLiveView />);
     // Hook called with empty agentSessionId guard (no-agent → no ready session)
     // R5: persistHistory passed as third arg — fixture=false → !fixture=true
+    // I1 #2500: gameContext still injected from LiveSessionDto even when no-agent
     expect(useSessionAgentChatMock).toHaveBeenCalledWith('session-abc-123', '', {
       persistHistory: true,
+      gameContext: {
+        gameId: 'game-00000001',
+        gameTitle: 'Mage Knight',
+        players: ['Marco', 'Anna'],
+        currentTurn: 0,
+      },
     });
   });
 

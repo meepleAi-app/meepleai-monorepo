@@ -883,8 +883,26 @@ export function SessionLiveView(): ReactElement {
     !fixture
   );
   const agentSessionId = agentLaunch.agentSessionId;
+
+  // I1 (#2500 Opzione A): inject gameContext from LiveSessionDto so the RAG retrieval
+  // receives the real game/player context. The game-night store (useSessionStore) is NOT
+  // populated in the live session route, so we pass data explicitly here.
+  // Nullable gameId guard: if the session has no associated game, gameContext is undefined
+  // (RAG will still run in degraded mode, same as before).
+  const liveSessionDto = sessionQuery.data;
+  const agentGameContext = useMemo(() => {
+    if (!liveSessionDto?.gameId) return undefined;
+    return {
+      gameId: liveSessionDto.gameId,
+      gameTitle: liveSessionDto.gameName,
+      players: liveSessionDto.players.map(p => p.displayName),
+      currentTurn: liveSessionDto.currentTurnIndex,
+    };
+  }, [liveSessionDto]);
+
   const agentChat = useSessionAgentChat(sessionId ?? '', agentSessionId, {
     persistHistory: !fixture,
+    gameContext: agentGameContext,
   });
 
   // Map useSessionAgentChat.ChatMessage → LiveAgentChat.ChatMessage.

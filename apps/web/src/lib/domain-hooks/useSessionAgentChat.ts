@@ -35,6 +35,22 @@ export interface ChatMessage {
   isNonGrounded?: boolean;
 }
 
+/**
+ * Explicit game context for RAG enrichment (I1 #2500).
+ * When provided via options, overrides the session store selectors so the hook
+ * can be used in routes where the game-night store is not populated
+ * (e.g. the live session route — SessionLiveView passes data from LiveSessionDto).
+ *
+ * When absent, the hook falls back to the store selectors (existing behaviour —
+ * preserves RulesExplainer compatibility).
+ */
+export interface SessionAgentGameContext {
+  gameId: string;
+  gameTitle: string;
+  players: string[];
+  currentTurn?: number;
+}
+
 /** Options for useSessionAgentChat. */
 export interface UseSessionAgentChatOptions {
   /**
@@ -43,6 +59,13 @@ export interface UseSessionAgentChatOptions {
    * Default: false (off) — keeps legacy behaviour for all existing consumers.
    */
   persistHistory?: boolean;
+  /**
+   * Explicit game context for RAG enrichment (I1 #2500 — Opzione A).
+   * Pass from LiveSessionDto in SessionLiveView to avoid reading an unpopulated
+   * game-night store. When absent, falls back to useSessionStore selectors
+   * (backward-compat for RulesExplainer and other consumers).
+   */
+  gameContext?: SessionAgentGameContext;
 }
 
 /** sessionStorage key for the persisted chatThreadId, keyed on gameSessionId. */
@@ -77,12 +100,19 @@ function writeThreadIdToStorage(gameSessionId: string, threadId: string): void {
  * @param agentSessionId - The agent session ID returned by LaunchSessionAgent (sent in body)
  * @param options - Optional opt-in flags. Pass `{ persistHistory: true }` in SessionLiveView only.
  */
+// StreamingEventType numeric values (matches BE Contracts.cs:71-111)
+// Naming mirrors useAgentChatStream.ts for consistency.
+const SSE_TOKEN = 7; // data: { token: string }
+const SSE_COMPLETE = 4; // data: { chatThreadId, citations[], totalTokens, confidence }
+const SSE_ERROR = 5; // data: { errorMessage, errorCode }
+
 export function useSessionAgentChat(
   gameSessionId: string,
   agentSessionId: string,
   options?: UseSessionAgentChatOptions
 ) {
   const persistHistory = options?.persistHistory ?? false;
+  const explicitGameContext = options?.gameContext;
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -94,7 +124,10 @@ export function useSessionAgentChat(
   // Ref-based guard prevents double-submit race regardless of stale closure timing
   const isLoadingRef = useRef(false);
 
-  // Granular selectors — avoid re-renders on unrelated store changes
+  // Granular selectors — avoid re-renders on unrelated store changes.
+  // I1 (#2500): when explicitGameContext is provided (e.g. from SessionLiveView via
+  // LiveSessionDto), the store values are still read but overridden below, so the
+  // game-night store not being populated does not affect the live session route.
   const gameId = useSessionStore(s => s.gameId);
   const gameTitle = useSessionStore(s => s.gameTitle);
   const participants = useSessionStore(s => s.participants);
@@ -184,16 +217,35 @@ export function useSessionAgentChat(
       };
       setMessages(prev => [...prev, userMsg]);
 
-      const gameContext =
-        gameId && gameTitle
-          ? {
-              gameId,
-              gameTitle,
-              players: participants.map(p => p.displayName),
-              currentTurn,
-              responseLanguage: 'it',
-            }
-          : undefined;
+      // I1 (#2500 Opzione A): prefer explicit gameContext from options (e.g. LiveSessionDto),
+      // fall back to session store selectors (RulesExplainer / other legacy consumers).
+      let gameContext:
+        | {
+            gameId: string;
+            gameTitle: string;
+            players: string[];
+            currentTurn?: number;
+            responseLanguage: string;
+          }
+        | undefined;
+
+      if (explicitGameContext && explicitGameContext.gameId) {
+        gameContext = {
+          gameId: explicitGameContext.gameId,
+          gameTitle: explicitGameContext.gameTitle,
+          players: explicitGameContext.players,
+          currentTurn: explicitGameContext.currentTurn,
+          responseLanguage: 'it',
+        };
+      } else if (gameId && gameTitle) {
+        gameContext = {
+          gameId,
+          gameTitle,
+          players: participants.map(p => p.displayName),
+          currentTurn,
+          responseLanguage: 'it',
+        };
+      }
 
       abortRef.current = new AbortController();
 
@@ -247,30 +299,47 @@ export function useSessionAgentChat(
             for (const line of lines) {
               if (line.startsWith('data: ')) {
                 try {
-                  const payload = JSON.parse(line.slice(6)) as {
-                    type: string;
-                    content?: string;
-                    threadId?: string;
-                    citations?: unknown[];
+                  // C2 (#2500): BE serialises with SseJsonOptions — camelCase, NUMERIC enum.
+                  // Wire: {"type":<int>,"data":{...},"timestamp":"...Z"}
+                  // Token (7):    data.token: string
+                  // Complete (4): data.chatThreadId, data.citations[]
+                  // Error (5):    data.errorMessage, data.errorCode
+                  const event = JSON.parse(line.slice(6)) as {
+                    type: number;
+                    data: unknown;
+                    timestamp?: string;
                   };
-                  if (payload.type === 'token' && payload.content) {
-                    accumulated += payload.content;
-                    setStreamingContent(accumulated);
-                  } else if (payload.type === 'complete') {
-                    if (payload.threadId) {
-                      threadIdRef.current = payload.threadId;
+
+                  if (event.type === SSE_TOKEN) {
+                    const t = (event.data as { token?: string }).token;
+                    if (t) {
+                      accumulated += t;
+                      setStreamingContent(accumulated);
+                    }
+                  } else if (event.type === SSE_COMPLETE) {
+                    const d = event.data as {
+                      chatThreadId?: string;
+                      citations?: unknown[];
+                    };
+                    if (d.chatThreadId) {
+                      threadIdRef.current = d.chatThreadId;
                       // R3: persist to sessionStorage so it survives reload
                       if (persistHistory) {
-                        writeThreadIdToStorage(gameSessionId, payload.threadId);
+                        writeThreadIdToStorage(gameSessionId, d.chatThreadId);
                       }
                     }
-                    if (payload.citations) {
+                    if (d.citations) {
                       citationsRef.current = (
-                        CitationSchema.array().safeParse(payload.citations).data ?? []
+                        CitationSchema.array().safeParse(d.citations).data ?? []
                       )
                         .map(mapCitationToChatCitation)
                         .filter((x): x is ChatCitation => x !== null);
                     }
+                  } else if (event.type === SSE_ERROR) {
+                    const d = event.data as { errorMessage?: string; errorCode?: string };
+                    setError(
+                      d.errorMessage ?? "L'agente non è disponibile. Controlla la connessione."
+                    );
                   }
                 } catch {
                   // Ignore non-JSON lines (keep-alive, comments, etc.)
@@ -304,8 +373,17 @@ export function useSessionAgentChat(
       }
     },
     // Removed `isLoading` — guard now uses isLoadingRef to avoid stale closure race
-    // persistHistory is captured by closure from outer scope (stable)
-    [gameSessionId, agentSessionId, gameId, gameTitle, participants, currentTurn, persistHistory]
+    // persistHistory and explicitGameContext are captured from outer scope (stable per mount)
+    [
+      gameSessionId,
+      agentSessionId,
+      gameId,
+      gameTitle,
+      participants,
+      currentTurn,
+      persistHistory,
+      explicitGameContext,
+    ]
   );
 
   const stop = useCallback(() => {

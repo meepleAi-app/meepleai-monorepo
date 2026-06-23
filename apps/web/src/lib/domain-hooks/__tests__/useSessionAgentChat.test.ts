@@ -33,6 +33,36 @@ const makeReadableStream = (chunks: string[]) => {
 const SESSION_STORAGE_KEY = (gameSessionId: string) =>
   `meepleai:live-agent-thread:${gameSessionId}`;
 
+// ─── Real wire SSE helpers ────────────────────────────────────────────────────
+// C2 (#2500): BE emits {"type":<int>,"data":{...},"timestamp":"...Z"}
+// Token=7, Complete=4, Error=5
+
+function sseToken(token: string): string {
+  return `data: ${JSON.stringify({ type: 7, data: { token }, timestamp: new Date().toISOString() })}\n\n`;
+}
+
+function sseComplete(chatThreadId: string, citations?: unknown[]): string {
+  return `data: ${JSON.stringify({
+    type: 4,
+    data: { chatThreadId, citations: citations ?? [], totalTokens: 10, confidence: 0.9 },
+    timestamp: new Date().toISOString(),
+  })}\n\n`;
+}
+
+/** Real CitationDto wire shape (BE Contracts.cs:137-144) */
+function makeCitationDto(overrides?: Record<string, unknown>) {
+  return {
+    documentId: 'doc-uuid-001',
+    pageNumber: 7,
+    relevanceScore: 0.92,
+    snippetPreview: 'Posiziona la plancia al centro.',
+    copyrightTier: 'full',
+    paraphrasedSnippet: null,
+    isPublic: true,
+    ...overrides,
+  };
+}
+
 describe('useSessionAgentChat', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -79,10 +109,7 @@ describe('useSessionAgentChat', () => {
       'fetch',
       vi.fn().mockResolvedValue({
         ok: true,
-        body: makeReadableStream([
-          'data: {"type":"token","content":"Ciao"}\n\n',
-          'data: {"type":"complete","threadId":"t1"}\n\n',
-        ]),
+        body: makeReadableStream([sseToken('Ciao'), sseComplete('t1')]),
       } as unknown as Response)
     );
 
@@ -96,14 +123,59 @@ describe('useSessionAgentChat', () => {
     expect(result.current.messages[0].content).toBe('Come funziona?');
   });
 
-  it('ask estrae le citazioni dal payload complete', async () => {
+  // ─── C2 wire format contract test ──────────────────────────────────────────
+  // This is the key anti-false-green test: asserts the parser reads
+  // {type:4,data:{chatThreadId,citations}} (numeric type, nested data).
+
+  it('C2 wire contract: token type=7 + complete type=4 with chatThreadId + citations', async () => {
+    const citationDto = makeCitationDto();
+
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
         ok: true,
         body: makeReadableStream([
-          'data: {"type":"token","content":"Posiziona la plancia."}\n\n',
-          'data: {"type":"complete","threadId":"t1","citations":[{"source":"Regolamento Azul","pageNumber":7,"copyrightTier":"full","snippet":"Posiziona la plancia al centro."}]}\n\n',
+          sseToken('Posiziona'),
+          sseToken(' la plancia.'),
+          sseComplete('thread-wire-001', [citationDto]),
+        ]),
+      } as unknown as Response)
+    );
+
+    const { result } = renderHook(() =>
+      useSessionAgentChat('game-sess-wire', 'agent-wire', { persistHistory: true })
+    );
+
+    await act(async () => {
+      await result.current.ask('Come si fa il setup?');
+    });
+
+    const lastMsg = result.current.messages[result.current.messages.length - 1];
+    expect(lastMsg.role).toBe('assistant');
+    // Token accumulation works
+    expect(lastMsg.content).toBe('Posiziona la plancia.');
+    // Citations mapped from real wire shape (snippetPreview → excerpt, documentId → documentName)
+    expect(lastMsg.citations).toBeDefined();
+    expect(lastMsg.citations).toHaveLength(1);
+    expect(lastMsg.citations![0]).toEqual({
+      documentName: 'doc-uuid-001', // real wire has no `source` → falls back to documentId
+      pages: [7],
+      excerpt: 'Posiziona la plancia al centro.',
+    });
+    // threadId persisted to sessionStorage
+    expect(sessionStorage.getItem(SESSION_STORAGE_KEY('game-sess-wire'))).toBe('thread-wire-001');
+  });
+
+  it('ask estrae le citazioni dal payload complete (wire format)', async () => {
+    const citationDto = makeCitationDto({ snippetPreview: 'Posiziona la plancia al centro.' });
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        body: makeReadableStream([
+          sseToken('Posiziona la plancia.'),
+          sseComplete('t1', [citationDto]),
         ]),
       } as unknown as Response)
     );
@@ -118,11 +190,8 @@ describe('useSessionAgentChat', () => {
     expect(lastMsg.role).toBe('assistant');
     expect(lastMsg.citations).toBeDefined();
     expect(lastMsg.citations).toHaveLength(1);
-    expect(lastMsg.citations![0]).toEqual({
-      documentName: 'Regolamento Azul',
-      pages: [7],
-      excerpt: 'Posiziona la plancia al centro.',
-    });
+    expect(lastMsg.citations![0].pages).toEqual([7]);
+    expect(lastMsg.citations![0].excerpt).toBe('Posiziona la plancia al centro.');
   });
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -138,7 +207,8 @@ describe('useSessionAgentChat', () => {
       // Pre-seed sessionStorage with a saved threadId
       sessionStorage.setItem(STORAGE_KEY, THREAD_ID);
 
-      // Mock getThreadById to return a thread with one assistant message with citationsJson
+      // Mock getThreadById to return a thread with one assistant message with citationsJson.
+      // citationsJson stores the real CitationDto wire shape (snippetPreview field).
       mockGetThreadById.mockResolvedValueOnce({
         id: THREAD_ID,
         gameId: null,
@@ -154,8 +224,17 @@ describe('useSessionAgentChat', () => {
             role: 'assistant',
             timestamp: '2026-06-23T10:01:00Z',
             backendMessageId: 'msg-uuid-001',
-            citationsJson:
-              '[{"source":"Regolamento Towers","pageNumber":3,"copyrightTier":"full","snippet":"Piazza la torre sulla casella."}]',
+            citationsJson: JSON.stringify([
+              {
+                documentId: 'doc-towers-001',
+                pageNumber: 3,
+                relevanceScore: 0.88,
+                snippetPreview: 'Piazza la torre sulla casella.',
+                copyrightTier: 'full',
+                paraphrasedSnippet: null,
+                isPublic: true,
+              },
+            ]),
           },
         ],
       });
@@ -176,7 +255,7 @@ describe('useSessionAgentChat', () => {
       expect(msg.citations).toBeDefined();
       expect(msg.citations).toHaveLength(1);
       expect(msg.citations![0]).toEqual({
-        documentName: 'Regolamento Towers',
+        documentName: 'doc-towers-001', // no `source` in wire → falls back to documentId
         pages: [3],
         excerpt: 'Piazza la torre sulla casella.',
       });
@@ -187,10 +266,7 @@ describe('useSessionAgentChat', () => {
         'fetch',
         vi.fn().mockResolvedValue({
           ok: true,
-          body: makeReadableStream([
-            'data: {"type":"token","content":"Risposta"}\n\n',
-            `data: {"type":"complete","threadId":"${THREAD_ID}"}\n\n`,
-          ]),
+          body: makeReadableStream([sseToken('Risposta'), sseComplete(THREAD_ID)]),
         } as unknown as Response)
       );
 
@@ -314,10 +390,7 @@ describe('useSessionAgentChat', () => {
         'fetch',
         vi.fn().mockResolvedValue({
           ok: true,
-          body: makeReadableStream([
-            'data: {"type":"token","content":"Risposta"}\n\n',
-            `data: {"type":"complete","threadId":"${THREAD_ID}"}\n\n`,
-          ]),
+          body: makeReadableStream([sseToken('Risposta'), sseComplete(THREAD_ID)]),
         } as unknown as Response)
       );
 
@@ -336,6 +409,105 @@ describe('useSessionAgentChat', () => {
   });
 
   // ─────────────────────────────────────────────────────────────────────────
+  // I1: gameContext explicit injection
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('I1: gameContext explicit injection', () => {
+    it('uses explicit gameContext in fetch body when provided', async () => {
+      let capturedBody: Record<string, unknown> | undefined;
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockImplementation(async (_url: string, init: RequestInit) => {
+          capturedBody = JSON.parse(init.body as string) as Record<string, unknown>;
+          return {
+            ok: true,
+            body: makeReadableStream([sseToken('ok'), sseComplete('t-ctx-1')]),
+          };
+        })
+      );
+
+      const { result } = renderHook(() =>
+        useSessionAgentChat('game-sess-ctx', 'agent-ctx', {
+          gameContext: {
+            gameId: 'game-uuid-123',
+            gameTitle: 'Azul',
+            players: ['Alice', 'Bob'],
+            currentTurn: 3,
+          },
+        })
+      );
+
+      await act(async () => {
+        await result.current.ask('Domanda con contesto');
+      });
+
+      expect(capturedBody).toBeDefined();
+      expect(capturedBody?.gameContext).toEqual({
+        gameId: 'game-uuid-123',
+        gameTitle: 'Azul',
+        players: ['Alice', 'Bob'],
+        currentTurn: 3,
+        responseLanguage: 'it',
+      });
+    });
+
+    it('falls back to session store when gameContext not provided (RulesExplainer compat)', async () => {
+      useSessionStore.getState().startSession({
+        sessionId: 'sess-rules',
+        gameId: 'game-rules-1',
+        gameTitle: 'Wingspan',
+        participants: [{ id: 'p1', displayName: 'Luca', isGuest: false }],
+      });
+
+      let capturedBody: Record<string, unknown> | undefined;
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockImplementation(async (_url: string, init: RequestInit) => {
+          capturedBody = JSON.parse(init.body as string) as Record<string, unknown>;
+          return {
+            ok: true,
+            body: makeReadableStream([sseToken('ok'), sseComplete('t-rules-1')]),
+          };
+        })
+      );
+
+      const { result } = renderHook(
+        () => useSessionAgentChat('game-sess-rules', 'agent-rules')
+        // no gameContext — uses store
+      );
+
+      await act(async () => {
+        await result.current.ask('Domanda rules explainer');
+      });
+
+      expect((capturedBody?.gameContext as Record<string, unknown>)?.gameId).toBe('game-rules-1');
+      expect((capturedBody?.gameContext as Record<string, unknown>)?.gameTitle).toBe('Wingspan');
+    });
+
+    it('sends no gameContext when store is empty and no explicit context provided', async () => {
+      let capturedBody: Record<string, unknown> | undefined;
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockImplementation(async (_url: string, init: RequestInit) => {
+          capturedBody = JSON.parse(init.body as string) as Record<string, unknown>;
+          return {
+            ok: true,
+            body: makeReadableStream([sseToken('ok'), sseComplete('t-empty-1')]),
+          };
+        })
+      );
+
+      const { result } = renderHook(() => useSessionAgentChat('game-sess-empty', 'agent-empty'));
+
+      await act(async () => {
+        await result.current.ask('Domanda senza contesto');
+      });
+
+      expect(capturedBody?.gameContext).toBeUndefined();
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
   // AC-CHAT-3: isNonGrounded flag — SSE live flow + historic hydration
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -345,10 +517,7 @@ describe('useSessionAgentChat', () => {
         'fetch',
         vi.fn().mockResolvedValue({
           ok: true,
-          body: makeReadableStream([
-            'data: {"type":"token","content":"Risposta senza fonti."}\n\n',
-            'data: {"type":"complete","threadId":"t-ng-1"}\n\n',
-          ]),
+          body: makeReadableStream([sseToken('Risposta senza fonti.'), sseComplete('t-ng-1')]),
         } as unknown as Response)
       );
 
@@ -369,8 +538,8 @@ describe('useSessionAgentChat', () => {
         vi.fn().mockResolvedValue({
           ok: true,
           body: makeReadableStream([
-            'data: {"type":"token","content":"Risposta con fonti."}\n\n',
-            'data: {"type":"complete","threadId":"t-g-1","citations":[{"source":"Reg","pageNumber":3,"copyrightTier":"full","snippet":"testo"}]}\n\n',
+            sseToken('Risposta con fonti.'),
+            sseComplete('t-g-1', [makeCitationDto({ snippetPreview: 'testo' })]),
           ]),
         } as unknown as Response)
       );
@@ -391,10 +560,7 @@ describe('useSessionAgentChat', () => {
         'fetch',
         vi.fn().mockResolvedValue({
           ok: true,
-          body: makeReadableStream([
-            'data: {"type":"token","content":"Risposta."}\n\n',
-            'data: {"type":"complete","threadId":"t-user-1"}\n\n',
-          ]),
+          body: makeReadableStream([sseToken('Risposta.'), sseComplete('t-user-1')]),
         } as unknown as Response)
       );
 
@@ -468,8 +634,17 @@ describe('useSessionAgentChat', () => {
             role: 'assistant',
             timestamp: '2026-06-23T10:01:00Z',
             backendMessageId: 'msg-hist-g-001',
-            citationsJson:
-              '[{"source":"Reg","pageNumber":5,"copyrightTier":"full","snippet":"testo"}]',
+            citationsJson: JSON.stringify([
+              {
+                documentId: 'doc-hist-001',
+                pageNumber: 5,
+                relevanceScore: 0.85,
+                snippetPreview: 'testo storico',
+                copyrightTier: 'full',
+                paraphrasedSnippet: null,
+                isPublic: true,
+              },
+            ]),
           },
         ],
       });

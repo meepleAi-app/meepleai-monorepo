@@ -64,7 +64,7 @@ jobs:
   bake-ci-smoke:
     name: Bake ci.yml (3 PDFs) + verify gates
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     env:
       SEED_CATALOG_MANIFEST_OVERRIDE: ci
@@ -110,6 +110,32 @@ jobs:
         working-directory: infra
         run: make secrets-setup
 
+      - name: Configure seed bucket (readonly R2) + local primary storage
+        working-directory: infra
+        env:
+          SEED_BUCKET_ENDPOINT: ${{ secrets.SEED_BUCKET_ENDPOINT }}
+          SEED_BUCKET_ACCESS_KEY: ${{ secrets.SEED_BUCKET_ACCESS_KEY }}
+          SEED_BUCKET_SECRET_KEY: ${{ secrets.SEED_BUCKET_SECRET_KEY }}
+        run: |
+          # The bake needs readonly access to the R2 seed bucket to fetch the
+          # source rulebook PDFs (ci.yml: love-letter / patchwork / jaipur).
+          # Without SEED_BUCKET_*, PdfSeeder seeds 0 PDFs and seed-index-wait.sh
+          # spins until the job timeout (total never reaches a terminal count).
+          # STORAGE_PROVIDER=local forces the *primary* blob store to disk,
+          # sidestepping the broken R2 PUT (#2271) — the seeder reads from
+          # SEED_BUCKET and writes PDFs locally.
+          : "${SEED_BUCKET_ENDPOINT:?SEED_BUCKET_ENDPOINT secret not configured}"
+          cat > secrets/storage.secret <<EOF
+          STORAGE_PROVIDER=local
+          SEED_BUCKET_NAME=meepleai-seeds
+          SEED_BUCKET_ENDPOINT=${SEED_BUCKET_ENDPOINT}
+          SEED_BUCKET_REGION=auto
+          SEED_BUCKET_FORCE_PATH_STYLE=false
+          SEED_BUCKET_ACCESS_KEY=${SEED_BUCKET_ACCESS_KEY}
+          SEED_BUCKET_SECRET_KEY=${SEED_BUCKET_SECRET_KEY}
+          EOF
+          chmod 600 secrets/storage.secret
+
       - name: Generate placeholder env file for the bake API container
         working-directory: infra/env
         run: |
@@ -117,6 +143,8 @@ jobs:
           # embedding-service, smoldocling-service — and `api` is the only one
           # with an `./env/` env_file (compose.dev.yml:50). Hostnames point at the
           # compose service names so the API can reach the AI sidecars to process PDFs.
+          # STORAGE_PROVIDER=local (last env_file wins) keeps the primary blob
+          # store on disk in CI, matching storage.secret above.
           cat > api.env.dev <<'APIENV'
           POSTGRES_HOST=postgres
           POSTGRES_PORT=5432
@@ -128,6 +156,7 @@ jobs:
           SMOLDOCLING_SERVICE_URL=http://smoldocling-service:8002
           RERANKER_SERVICE_URL=http://reranker-service:8003
           N8N_URL=http://n8n:5678
+          STORAGE_PROVIDER=local
           APIENV
 
       - name: Run bake

@@ -752,7 +752,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
     {
 
         // Update vector document with chunk count (no pgvector indexing)
-        await UpdateOrCreateVectorDocumentAsync(pdfGuid, pdfDoc, fullText, allDocumentChunks.Count, db, scope, cancellationToken).ConfigureAwait(false);
+        await UpdateOrCreateVectorDocumentAsync(pdfGuid, pdfDoc, fullText, allDocumentChunks.Count, db, scope, _logger, cancellationToken).ConfigureAwait(false);
 
         // Save text chunks to PostgreSQL for hybrid search (FTS)
         await SaveTextChunksForHybridSearchAsync(pdfGuid, pdfDoc, allDocumentChunks, db, scope, cancellationToken).ConfigureAwait(false);
@@ -772,8 +772,24 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         int indexedCount,
         MeepleAiDbContext db,
         IServiceScope scope,
+        ILogger logger,
         CancellationToken cancellationToken)
     {
+        // Pre-pipeline guard: IPdfIndexingPipeline.IndexAsync throws
+        // ArgumentOutOfRangeException on chunkCount <= 0 (see PdfIndexingPipeline.cs:51).
+        // This path can land here with indexedCount == 0 if extraction succeeded but
+        // every chunk was filtered out (whitespace-only, post-translation drop, etc.).
+        // PdfProcessingPipelineService already guards upstream with `if (chunks.Count == 0)`;
+        // mirror it here so the exception path doesn't trigger and the PDF gets marked
+        // failed with a clear diagnostic instead of being swallowed by the outer general catch.
+        if (indexedCount <= 0)
+        {
+            logger.LogWarning(
+                "ChunkedUpload PDF {PdfId}: no chunks produced from extracted text ({CharCount} chars) — skipping VectorDocument upsert",
+                pdfGuid, fullText.Length);
+            return;
+        }
+
         var pipeline = scope.ServiceProvider.GetRequiredService<IPdfIndexingPipeline>();
         await pipeline.IndexAsync(
             pdfDocumentId: pdfGuid,

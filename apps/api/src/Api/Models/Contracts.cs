@@ -325,7 +325,8 @@ internal record FollowUpQuestionClickEvent(
 );
 
 // AI-03: RAG Setup Guide models
-internal record SetupGuideRequest(string gameId, Guid? chatId = null);
+// #2504: playerCount (0 = generic setup, >0 = guide adapted to the player count).
+internal record SetupGuideRequest(string gameId, Guid? chatId = null, int playerCount = 0);
 internal record SetupGuideResponse(
     string gameTitle,
     IReadOnlyList<SetupGuideStep> steps,

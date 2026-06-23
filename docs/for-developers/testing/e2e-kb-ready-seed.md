@@ -40,17 +40,27 @@ The profile-name override mechanism is documented in
 `SEED_CATALOG_MANIFEST_OVERRIDE` accepts any manifest name (no code change needed —
 the manifests are embedded via the `Manifests\*.yml` glob).
 
-## CI validation
+## Validation
 
-`bake-e2e-smoke` in
-[`seed-snapshot-bake-ci.yml`](../../../.github/workflows/seed-snapshot-bake-ci.yml)
-bakes `e2e.yml` (1 PDF, `SEED_INDEX_FAILURE_PCT=0`) on every push/PR that touches a
-manifest, an EF migration, or a seed/snapshot script — so a broken `e2e.yml` (or a
-regression in the bake pipeline) fails the gate. It runs on its own runner alongside
-`bake-ci-smoke`, so the two do not share a postgres instance.
+`e2e.yml` is validated for **loadability + shape** by the unit test
+`CatalogSeederManifestOverrideTests.LoadManifest_WithE2eOverride_LoadsSingleKbReadyGame`
+(runs in `Backend Fast` — confirms the manifest is embedded, parses, has exactly one game
+with a `pdfBlobKey`, `seedAgent: true`, and a `defaultAgent`).
 
-The manifest is also unit-tested for loadability + shape by
-`CatalogSeederManifestOverrideTests.LoadManifest_WithE2eOverride_LoadsSingleKbReadyGame`.
+> **The actual bake is NOT validated in CI.** The `seed-snapshot-bake-ci.yml` gate
+> (`bake-ci-smoke`) requires `infra/secrets/*.secret` (redis, seed blob bucket) that are
+> not provisioned in the PR runner, so it has been failing on every run — including
+> `main-dev` — for weeks (`redis.secret not found → exit 2`). That is a pre-existing,
+> known-red gate, unrelated to this manifest. Validate the e2e bake in an environment
+> that has the secrets:
+>
+> ```bash
+> cd infra && make secrets-sync          # pull .secret files from staging
+> SEED_CATALOG_MANIFEST_OVERRIDE=e2e make seed-index
+> ```
+>
+> Fixing the CI bake gate (provisioning secrets in the runner) is tracked separately and
+> out of scope for #2502.
 
 ## Constraints
 
@@ -58,4 +68,4 @@ The manifest is also unit-tested for loadability + shape by
   has no image fields by design (`SeedManifestGameSchemaTests` guards this).
 - **`seedAgent: true` requires a `defaultAgent` section** (manifest validation), already
   present in `e2e.yml`.
-- Keep `e2e.yml` minimal (the CI job caps it at 3 PDFs) so the smoke stays fast.
+- Keep `e2e.yml` minimal (ideally one game) so the bake stays fast.

@@ -13,7 +13,9 @@
 # `seedAgent: true` provisions the chat agent so RAG/setup-guide E2E flows
 # (citations #2500, setup guide #2504) have a working agent for this game.
 #
-# Validated in CI by the `bake-e2e-smoke` job in seed-snapshot-bake-ci.yml.
+# Loadability/shape validated by CatalogSeederManifestOverrideTests (Backend Fast).
+# The bake itself requires infra/secrets — run in dev/staging, not CI (see
+# docs/for-developers/testing/e2e-kb-ready-seed.md).
 version: 1
 profile: dev
 catalog:

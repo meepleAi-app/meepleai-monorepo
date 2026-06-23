@@ -1,4 +1,4 @@
-name: Seed Snapshot Bake (CI smoke — ci.yml + e2e.yml manifests)
+name: Seed Snapshot Bake (CI smoke — ci.yml manifest)
 
 # Tier 2 D4 of #2126 — Seed snapshot freshness pipeline.
 #
@@ -180,77 +180,3 @@ jobs:
           EOF
           chmod 600 secrets/storage.secret
           bash scripts/seed-index-publish.sh
-
-  # ──────────────────────────────────────────────────────────────────────
-  # #2502: bake the e2e.yml manifest (single game — Love Letter) so the E2E
-  # suite has a guaranteed KB-Ready game. Runs on its own ubuntu runner with
-  # its own postgres/compose stack, so it does NOT clobber bake-ci-smoke.
-  # ──────────────────────────────────────────────────────────────────────
-  bake-e2e-smoke:
-    name: Bake e2e.yml (1 PDF) + verify gates
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-
-    env:
-      SEED_CATALOG_MANIFEST_OVERRIDE: e2e
-      SEED_INDEX_TIMEOUT: '1500'
-      SEED_INDEX_POLL: '10'
-      SEED_INDEX_FAILURE_PCT: '0' # the single e2e game MUST reach Ready
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Verify e2e.yml manifest is present and minimal
-        run: |
-          set -euo pipefail
-          MANIFEST=apps/api/src/Api/Infrastructure/Seeders/Catalog/Manifests/e2e.yml
-          test -f "$MANIFEST" || { echo "::error::missing $MANIFEST"; exit 1; }
-          PDF_COUNT=$(grep -cE '^\s*pdfBlobKey:' "$MANIFEST" || true)
-          echo "e2e.yml declares $PDF_COUNT PDF(s)"
-          if [ "$PDF_COUNT" -lt 1 ]; then
-            echo "::error::e2e.yml must declare at least one game with a pdfBlobKey"
-            exit 1
-          fi
-          # Keep the E2E seed minimal so this stays a fast smoke.
-          if [ "$PDF_COUNT" -gt 3 ]; then
-            echo "::error::e2e.yml has grown to $PDF_COUNT PDFs — keep the E2E seed minimal (cap 3)"
-            exit 1
-          fi
-
-      - name: Install jq (required by seed scripts)
-        run: sudo apt-get update && sudo apt-get install -y jq
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
-
-      - name: Run bake
-        working-directory: infra
-        env:
-          SEED_INDEX_OUT_DIR: ${{ github.workspace }}/data/snapshots
-        run: |
-          mkdir -p "$SEED_INDEX_OUT_DIR"
-          make seed-index
-
-      - name: Run verify gates (exit codes 2/3/4/5/6)
-        working-directory: infra
-        env:
-          SEED_INDEX_OUT_DIR: ${{ github.workspace }}/data/snapshots
-        run: bash scripts/snapshot-verify.sh
-
-      - name: Surface seed-status
-        working-directory: infra
-        env:
-          SEED_INDEX_OUT_DIR: ${{ github.workspace }}/data/snapshots
-        run: bash scripts/seed-status.sh || true
-
-      - name: Upload sidecar as workflow artifact (14-day retention)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: seed-snapshot-e2e-meta-${{ github.run_id }}
-          path: |
-            data/snapshots/*.meta.json
-            data/snapshots/.latest
-          retention-days: 14
-          if-no-files-found: warn

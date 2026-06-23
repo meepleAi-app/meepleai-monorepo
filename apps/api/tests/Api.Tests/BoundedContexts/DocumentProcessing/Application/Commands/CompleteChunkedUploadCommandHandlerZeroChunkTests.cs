@@ -29,6 +29,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Commands;
 /// zero chunks => Failed.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "DocumentProcessing")]
 public class CompleteChunkedUploadCommandHandlerZeroChunkTests
 {
     [Fact]

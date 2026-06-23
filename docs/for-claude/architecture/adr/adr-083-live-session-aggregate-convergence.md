@@ -125,7 +125,7 @@ Il disallineamento è tra **tre** aggregati su **tre** prefissi di route — il 
 
 - **Fase 0** ✅ — questo ADR (mappa + direzione + OQ risolte + ratifica).
 - **Fase 1** — *Allineamento loader a LiveGameSession*: in `SessionLiveView` sostituire `useSession()`/`api.sessions.getById` (GameSession) con il `LiveSessionDto` che il **layout già carica** (`session-store.ts:126`); adattare `composeSessionLiveState` ai players `displayName`/`id` di LiveGameSession; allineare `useSessionLiveStream` all'id corretto. Esito: SessionLiveView mostra le sessioni reali del funnel. **Niente riconciliazione scoring** (decisa: round-based) → scope ridotto rispetto al timore precedente.
-- **Fase 2** — *Portare chat/diary/media su `LiveGameSession`* (≈1.5-2 settimane, il grosso dell'epic): +3 endpoint BE su `/live-sessions/*` (`/chat` GET+POST, `/diary` GET+POST, `/media` GET/POST) + estensione `live-sessions.schemas.ts` (`chatMessages[]`, `diaryEntries[]`, `media[]`) + parser eventi SSE. Assorbe **#2500** (chat-RAG con citazioni) e **#2503** (foto/salvataggio). Decisione di design aperta: nuovi endpoint nativi su GameManagement **oppure** ponte cross-BC verso SessionTracking (evitando dipendenze circolari).
+- **Fase 2** — *Colmare i gap feature su LiveGameSession* (chat-RAG citazioni #2500, media/foto #2503, diary #2502, SSE realignment). Spec dettagliata: [`docs/for-developers/specs/2026-06-23-epic-2501-fase2-live-session-feature-gaps.md`](../../../for-developers/specs/2026-06-23-epic-2501-fase2-live-session-feature-gaps.md) (spec-panel: 27 finding, 23 AC, 6 sub-fasi). La "decisione di design aperta" è stata **risolta in SP0** — vedi § "Update 2026-06-23 (3)".
 - **Fase 3** — *Add-player UI* (**#2505**) su `POST /api/v1/live-sessions/{id}/players` (già presente, guest inclusi) + ricablaggio wizard mobile previa parità offline-sync.
 - **Fase 4** — *Deprecazione legacy*: ritiro del loader GameSession e, se confermato ridondante, delle superfici `/sessions/[id]/play` e degli endpoint `/api/v1/sessions/*` non più usati.
 
@@ -133,8 +133,42 @@ Il disallineamento è tra **tre** aggregati su **tre** prefissi di route — il 
 - **#2504** (`/agents/setup` propaga `playerCount`) — quick-win BE, parallelizzabile.
 - **#2502** (seed gioco con KB `Ready`) — fixture/seed, parallelizzabile.
 
+## Update 2026-06-23 (3) — SP0 decision-record (Fase 2)
+
+La Fase 2 è stata analizzata via `/sc:spec-panel` (7 esperti, [spec dedicata](../../../for-developers/specs/2026-06-23-epic-2501-fase2-live-session-feature-gaps.md)). Il panel ha smontato la "decisione aperta" dell'Update (2): la dicotomia «endpoint nativi vs ponte `ChatSessionId`» era una **falsa scelta su premessa errata** — `ChatSessionId` punta a un ChatThread di **KnowledgeBase** (non SessionTracking) ed è **dead code** (`SetAgentMode` chiamato solo da test); e **#2500 è già un servizio cross-BC end-to-end** (`ChatWithSessionAgentCommandHandler` produce già `CitationDto` + evento SSE con citazioni). La decisione va **decomposta per capability**, non presa monoliticamente.
+
+### Decisioni owner ratificate (2026-06-23)
+
+| # | Open Question | Decisione |
+|---|---|---|
+| OQ1 | Correlazione identità | **Session-companion canonica**: `LiveGameSession` crea/possiede una `SessionTracking.Session` companion at-creation via **Saga**, con un nuovo `TrackingSessionId` **non-nullable** garantito. È l'identità autoritativa che correla chat/diary/media. |
+| OQ2 | Transport realtime | **SSE nativo** `/api/v1/live-sessions/{id}/stream` (GameManagement): heartbeat 30s + Last-Event-ID resume + **sequence number monotono persistente**. Si deprecata `/game-sessions/{id}/stream/v2`. SignalR resta solo per i suoi usi esistenti. |
+| OQ3 | `ChatSessionId` + `SetAgentMode` | **Rimuovere** (dead code, falso ponte verso KnowledgeBase): da dominio, DTO e schema FE. La chat-RAG è già keyed su `LiveGameSession.Id`. |
+
+### Riconciliazione OQ1 ↔ OQ2 (tensione risolta)
+
+Le due scelte creano una tensione: con la **Session-companion** (OQ1) chat/diary/media si correlano su `SessionTracking` (via `TrackingSessionId`), ma lo **stream è nativo su GameManagement** (OQ2). Risoluzione:
+
+- Lo stream `/api/v1/live-sessions/{id}/stream` è un **SSE gateway/aggregatore** su GameManagement, keyed su `LiveGameSession.Id`. Il BE risolve `TrackingSessionId` e fonde in **un Canonical Event Model** gli eventi: domain-events di `LiveGameSession` (score/turn/phase) + eventi della `Session` companion SessionTracking (diary/media) + eventi chat-RAG da KnowledgeBase (chat + `citations[]`). Il FE consuma **un solo URL**.
+- **`TrackingSessionId` è il ponte REALE** (non `ChatSessionId`): non-nullable, popolato dalla Saga at-creation → niente null-window, niente race.
+- **chat-RAG** resta servizio KnowledgeBase (wiring FE), keyed su `LiveGameSession.Id` — invariato.
+- **diary/media**: con la Session-companion garantita, **riusano** la `SessionTracking.Session` companion via `TrackingSessionId` (no duplicazione nativa su GameManagement), raggiunti attraverso il gateway/ACL di GameManagement.
+
+### Invarianti e policy (SP0)
+
+- **No cicli**: `GameManagement` **non importa mai** tipi/servizi di `KnowledgeBase`. La dipendenza `KnowledgeBase → GameManagement` (chat-RAG) è già stabilita e aciclica; resta unidirezionale. La dipendenza `GameManagement → SessionTracking` (gateway/ACL per diary/media/stream) è unidirezionale via interfaccia dedicata (anti-corruption layer), no HTTP self-call.
+- **Naming/routing**: convenzione path→aggregato proprietario. URL canonico FE sotto `/live-sessions/*`; le rotte agent keyed su `LiveGameSession.Id` migrano sotto `/live-sessions/{id}/agent/*` (alias routing, stesso handler), deprecando l'alias `game-sessions`.
+- **Versioning eventi SSE**: payload con `type`+`version`, additive-only per non-breaking, nuovo path versionato solo per breaking change, finestra di sunset.
+- **Semantica di consegna SSE**: **at-least-once + dedup-by-monotonic-id**; il sequence number per-sessione (Redis INCR o colonna append-only) è posizione assoluta replayabile da qualsiasi istanza.
+- **Out of scope Fase 2**: path agente non-canonico `/sessions/live/[sessionId]/agent` + `AskSessionAgentCommandHandler` (no-RAG) → da deprecare; scoring polimorfico in live (ri-orientato ai play-records).
+
+### Conseguenze (impatto onesto)
+
+La combinazione scelta (Session-companion + SSE nativo) è la **più robusta ma anche la più costosa** tra quelle valutate: la Saga at-creation + il `TrackingSessionId` garantito + il **backfill/coexistence** delle sessioni in-flight + il **gateway SSE** su GameManagement portano la stima della Fase 2 **oltre** i ~19-27 gg della spec base (la stima ADR originale di "1.5-2 settimane" è superata). Vantaggio: correlazione garantita ovunque (niente null-window su chat/diary/media) + un solo canale realtime con contratto chiaro. La Saga al create introduce un punto di atomicità cross-BC da coprire con test (failure → nessuna LiveGameSession orfana senza companion). Questi costi vanno riflessi nelle sub-fasi SP0/SP2/SP4/SP5 della spec.
+
 ## Riferimenti
 - Epic #2501; user story di validazione #2506; gap issue #2500/#2503/#2505/#2504/#2502.
+- **Spec Fase 2**: `docs/for-developers/specs/2026-06-23-epic-2501-fase2-live-session-feature-gaps.md` (spec-panel).
 - ADR-060 (LiveGameSession persistence, EPIC #2097), ADR-065 (namespace split), ADR-071 (5-state FSM).
 - Scoring polimorfico recente: #2389 (G5a Block A/B/C), #2483 (turnOrderType), Asse A #1896.
 - Superfici: `SessionLiveView.tsx` (Wave D), `play-mode-mobile.tsx` (Improvvisata), `LiveSessionView` (`components/game-night`, `/sessions/[id]/play`).

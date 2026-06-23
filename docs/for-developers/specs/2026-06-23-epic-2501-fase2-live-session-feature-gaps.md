@@ -1,7 +1,7 @@
 # Spec — Epic #2501 Fase 2: feature gaps sessione live (chat-RAG citazioni · media/foto · diary · SSE)
 
 **Date**: 2026-06-23
-**Status**: Draft (post spec-panel) — richiede chiusura delle Open Questions bloccanti (SP0) prima dell'implementazione
+**Status**: SP0 ratificato (2026-06-23) — decisioni owner prese (Session-companion + SSE nativo + rimozione `ChatSessionId`). Pronta per `writing-plans` di SP1+. Vedi § "SP0 — Decisioni ratificate" e [ADR-083 § Update (3)](../../for-claude/architecture/adr/adr-083-live-session-aggregate-convergence.md).
 **Issue**: #2501 (epic) Fase 2 · assorbe #2500 (chat-RAG citazioni), #2503 (foto + salvataggio), #2502 (diary), realignment SSE
 **Related**: [ADR-083](../../for-claude/architecture/adr/adr-083-live-session-aggregate-convergence.md) (Direzione A: `LiveGameSession` canonico) · Fase 1 shipped (#2511) · #2504 shipped (retrieval pgvector)
 **Metodo**: `/sc:spec-panel` — panel di 7 esperti (Fowler, Newman, Hohpe, Nygard, Wiegers, Adzic, Crispin) su contesto ancorato al codice. 27 finding (9 critical / 12 major / 6 minor), 23 AC.
@@ -16,6 +16,37 @@ L'ADR-083 dichiarava la Fase 2 come **una** decisione binaria («endpoint nativi
 2. **#2500 (chat-RAG citazioni) è già un servizio cross-BC end-to-end**: `ChatWithSessionAgentCommandHandler` (KnowledgeBase) dipende già da `ILiveSessionRepository`, risolve `agentSession.GameSessionId` contro `LiveGameSession`, produce `CitationDto` copyright-tier-aware (`:246/:546`) e lo streamma in `StreamingComplete.Citations` (`:564`). La dipendenza KnowledgeBase→GameManagement è già **stabilita e aciclica**. #2500 è **wiring FE**, non architettura BE.
 
 **La decisione corretta è decomposta per capability**, non monolitica.
+
+---
+
+## SP0 — Decisioni ratificate (2026-06-23)
+
+L'owner ha chiuso le 3 Open Question bloccanti. **Dove queste divergono dalla raccomandazione del panel più sotto, prevalgono queste.**
+
+| # | Decisione | Note vs raccomandazione panel |
+|---|---|---|
+| **OQ1 — identità** | **Session-companion canonica**: `LiveGameSession` crea/possiede una `SessionTracking.Session` companion at-creation via **Saga**, con `TrackingSessionId` **non-nullable** garantito. | Il panel raccomandava «nativo + evento» (più leggero). L'owner ha scelto l'opzione **più robusta ma più costosa**: correlazione garantita ovunque, a costo di Saga + backfill. |
+| **OQ2 — transport** | **SSE nativo** `/api/v1/live-sessions/{id}/stream` (gateway su GameManagement, sequence monotono persistente, deprecata `/stream/v2`). | Allineato alla raccomandazione. |
+| **OQ3 — `ChatSessionId`** | **Rimuovere** (dead code / falso ponte verso KnowledgeBase). | Allineato alla raccomandazione. |
+
+### Architettura risultante (riconciliazione OQ1 ↔ OQ2)
+
+Con la Session-companion, chat/diary/media si correlano su `SessionTracking` via `TrackingSessionId`, ma lo stream è nativo su GameManagement → lo stream `/live-sessions/{id}/stream` è un **SSE gateway/aggregatore** keyed su `LiveGameSession.Id` che risolve `TrackingSessionId` e fonde in **un Canonical Event Model** gli eventi di 3 sorgenti:
+
+| Capability | Owner | Meccanismo (post-SP0) |
+|---|---|---|
+| Chat-RAG + citazioni (#2500) | KnowledgeBase | **Wiring FE** del path esistente (`/agent/chat` keyed su `LiveGameSession.Id`); `citations[]` nell'evento per il fan-out. Invariato. |
+| Diary (#2502) | SessionTracking (companion) | **Riuso** della `Session` companion via `TrackingSessionId` (no entità nativa duplicata su GameManagement), via gateway/ACL di GameManagement. |
+| Media + save (#2503) | SessionTracking (companion) + PlayRecord | Media sulla companion via `TrackingSessionId`; save esplicito come boundary event (estende `save-complete`) → proietta a PlayRecord. |
+| SSE | GameManagement (gateway) | `/live-sessions/{id}/stream` aggrega domain-events `LiveGameSession` + eventi companion SessionTracking + chat-RAG KB. |
+
+**`TrackingSessionId` è il ponte REALE** (non `ChatSessionId`): non-nullable, popolato dalla Saga at-creation → niente null-window, niente race.
+
+**Invarianti**: `GameManagement` non importa mai `KnowledgeBase`; `KnowledgeBase → GameManagement` (chat-RAG) e `GameManagement → SessionTracking` (gateway diary/media/stream, via ACL/interfaccia dedicata, no HTTP self-call) restano **unidirezionali e acicliche**. Naming path→aggregato; eventi `type`+`version` additive-only; consegna **at-least-once + dedup-by-monotonic-id**.
+
+> **Impatto stima**: la combinazione scelta è la più robusta ma più costosa. Saga at-creation + `TrackingSessionId` + **backfill/coexistence** sessioni in-flight + **gateway SSE** portano la Fase 2 **oltre** i ~19-27 gg base. La Saga introduce un punto di atomicità cross-BC da coprire con test (failure create → nessuna `LiveGameSession` orfana senza companion). Le sub-fasi sotto sono aggiornate di conseguenza.
+
+> ⚠️ La sezione «Decisione architetturale» e le Open Question #1/#2/#3 sotto restano come **traccia dell'analisi del panel**; per le scelte effettive fa fede questa sezione SP0.
 
 ---
 
@@ -46,6 +77,8 @@ L'ADR-083 dichiarava la Fase 2 come **una** decisione binaria («endpoint nativi
 ---
 
 ## Open Questions (bloccanti — da chiudere in SP0)
+
+> **Stato post-SP0 (2026-06-23)**: **#1 RISOLTA** (Session-companion canonica) · **#2 RISOLTA** (SSE nativo) · **#3 RISOLTA** (rimuovere `ChatSessionId`) · **#4 RISOLTA** (consegna at-least-once + dedup-by-monotonic-id). Vedi § "SP0 — Decisioni ratificate". Restano di dettaglio per i plan delle sub-fasi: **#5** (backfill/coexistence sessioni in-flight — ora rilevante per la Saga), **#6** (Notes vs diary), **#7** (deep-link MVP), **#8** (out-of-scope path non-canonico — confermato out-of-scope in SP0).
 
 1. **[BLOCCANTE] Correlazione identità**: introdurre la Session-companion canonica (Opzione C, id non-nullable at-creation via Saga) **oppure** `LiveGameSession` resta canonico e diary/media nativi correlano a SessionTracking **solo via evento al save**? I fatti escludono il ponte via `ChatSessionId` ma non determinano tra «nativo puro + handoff evento» e «Session-companion canonica». Determina se serve migrazione/backfill e quanta ACL.
 2. **[BLOCCANTE] Transport realtime**: consolidare su **un** canale (SignalR `GameStateHub` + backplane Redis, oppure SSE nativo `/live-sessions`) o mantenere due canali con dedup client nel breve? Verificato: SignalR è single-instance (no backplane Redis, `Program.cs:525`); i domain event di `LiveGameSession` duplicano la SSE taxonomy.
@@ -136,7 +169,7 @@ L'ADR-083 dichiarava la Fase 2 come **una** decisione binaria («endpoint nativi
 
 | Sub-fase | Scope | Dipende da | Stima |
 |---|---|---|---|
-| **SP0 — ADR decision-record + identità + naming** | Chiudere le 3 Open Question bloccanti nell'ADR-083: decisione per-capability (tabella owner/meccanismo); Correlation Identifier autoritativo (nativo+evento vs Session-companion); destino `ChatSessionId`+`SetAgentMode`. Regola invariante GameManagement↛KnowledgeBase; convenzione naming path→aggregato; policy versioning eventi; semantica consegna (at-least-once+dedup). Matrice tracciabilità AC↔issue↔componente + sezione Out-of-scope. **Test di guardia** che fallisce se un `LiveGameSession.Id` va a `/game-sessions/{id}/stream/v2`. | — | 2-3 gg · **blocca tutto** |
+| **SP0 — ADR decision-record + identità + naming** | ✅ **Decisioni prese 2026-06-23** ([ADR-083 § Update 3](../../for-claude/architecture/adr/adr-083-live-session-aggregate-convergence.md)): Session-companion canonica (Saga + `TrackingSessionId`); SSE nativo gateway; rimozione `ChatSessionId`; invarianti no-ciclo; naming path→aggregato; versioning eventi; consegna at-least-once+dedup. **Residuo per i plan**: matrice tracciabilità AC↔issue↔componente, **test di guardia** che fallisce se un `LiveGameSession.Id` va a `/game-sessions/{id}/stream/v2`, e **dimensionamento Saga + backfill** sessioni in-flight. | — | decisioni ✅; resta formalizzazione + dimensionamento Saga/backfill |
 | **SP1 — #2500 chat-RAG citazioni: WIRING FE** | Puntare `ChatAgentPanel`/`LiveAgentChat` al path RAG esistente; consumare `StreamingComplete.Citations`; mappare `CitationDto` tier-aware → `ChatCitation`; montare `ChatCitationCard`; gestire `AC-CHAT-NULL`; decidere `openUrl` MVP; estendere il payload evento chat con `citations[]` per il fan-out. Test: integration round-trip persistenza→trasmissione (Testcontainers + `IEmbeddingRepository` seed deterministico #2504, NO LLM); FAST CI mockato esteso; `@slow` real-LLM canary. | SP0 | 3-4 gg · **rischio basso (BE esiste)** |
 | **SP2 — SSE realignment + stream nativo** | `GET /api/v1/live-sessions/{id}/stream` su GameManagement che replica il contratto (heartbeat 30s, Last-Event-ID resume at-least-once, 429). Sequence number monotono per-sessione (Redis INCR/colonna append-only) + replay persistente cross-instance. Enumerare i tipi-evento. Repuntare `use-session-live-stream.ts:214` (test-first: asserzione unit + «vecchia rotta mai chiamata»). Test resilienza drop/reconnect/dedup. Expand-and-contract: deprecare `/stream/v2`. Risolvere consolidamento transport (OQ #2). | SP0 | 4-6 gg · **rischio alto** (+1-2 gg se backplane Redis) |
 | **SP3 — #2502 diary nativo** | Entità diary append-only (`id/authorId/createdAt/text`) su `LiveGameSession` + `POST/GET /live-sessions/{id}/diary`, distinto da `Notes`. Guard `409` su Completed. Evento diary sullo stream (SP2). Coesistenza Notes vs diary (OQ #6). Test: append-not-overwrite, multi-autore, ordinamento, una sola fonte di verità. | SP0, SP2 | 3-4 gg |

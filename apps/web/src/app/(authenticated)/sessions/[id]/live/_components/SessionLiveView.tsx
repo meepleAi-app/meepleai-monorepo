@@ -68,7 +68,7 @@
 
 'use client';
 
-import { useCallback, useEffect, useMemo, lazy, Suspense, type ReactElement } from 'react';
+import { useCallback, useMemo, lazy, Suspense, type ReactElement } from 'react';
 
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useIntl } from 'react-intl';
@@ -100,8 +100,7 @@ import {
   type ScoringPanelRendererLabels,
   type ToolkitRendererLabels,
 } from '@/components/features/session-live';
-import type { ScoreDataByType, ScoreType } from '@/components/sessions/score-strategies/types';
-import { useSession } from '@/hooks/queries/useActiveSessions';
+import { useLiveSession } from '@/hooks/queries/useLiveSession';
 import { useTranslation } from '@/hooks/useTranslation';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
 import { mapConnectionState } from '@/lib/session-live/map-connection-state';
@@ -324,8 +323,11 @@ export function SessionLiveView(): ReactElement {
     return resolveFixtureVariant(fixtureVariantParam);
   }, [fixtureVariantParam]);
 
-  // Real data hook — disabled when fixture is active or sessionId is null
-  const sessionQuery = useSession(
+  // Real data hook — disabled when fixture is active or sessionId is null.
+  // ADR-083 Fase 1 (#2501): load the canonical LiveGameSession aggregate
+  // (LiveSessionDto) — the one the wizards actually create — instead of the empty
+  // GameSession shell, which returned 404 for funnel-created sessions.
+  const sessionQuery = useLiveSession(
     sessionId ?? '',
     /* enabled= */ !IS_VISUAL_TEST_BUILD && sessionId != null
   );
@@ -362,18 +364,11 @@ export function SessionLiveView(): ReactElement {
     const dto = sessionQuery.data;
     if (dto == null) return null;
 
-    // Adapt DTO players: SessionPlayerDto.id is optional (backward-compat Gate B).
-    // composeSessionLiveState requires id: string — synthesise from playerName+playerOrder.
-    const initialData = {
-      ...dto,
-      players: dto.players.map((p, idx) => ({
-        ...p,
-        id: p.id ?? `${p.playerName}-${p.playerOrder}-${idx}`,
-      })),
-    };
-
-    // Compose live state from DTO + accumulated SSE events
-    const liveState = composeSessionLiveState(initialData, liveStream.events);
+    // ADR-083 Fase 1 (#2501): LiveSessionDto players already carry a stable id +
+    // displayName, and the DTO exposes status/currentTurnIndex/currentTurnPlayerId
+    // — all consumed directly by composeSessionLiveState (designed for LiveSessionDto).
+    // Compose live state from DTO + accumulated SSE events.
+    const liveState = composeSessionLiveState(dto, liveStream.events);
 
     return {
       id: dto.id,
@@ -851,53 +846,20 @@ export function SessionLiveView(): ReactElement {
 
   // ── Derived data for components ───────────────────────────────────────────
   //
-  // #2430 Block B+: Block B's polymorphic scoring logic (selectors, memo,
-  // a11y placeholder) MOVED to ScoreTabContent. SessionLiveView keeps only
-  // the REST hydration useEffect because it depends on sessionQuery.data
-  // (which lives at this level via useSession). The store-write side-effect
-  // is forwarded to ScoreTabContent via the shared useLiveSessionStore.
-
-  const setScoringConfig = useLiveSessionStore(s => s.setScoringConfig);
-  const setTurnOrderType = useLiveSessionStore(s => s.setTurnOrderType);
+  // ADR-083 Fase 1 (#2501): the polymorphic REST hydration of scoringType/
+  // scoreData/turnOrderType (Block B #2389 / #2430 / #2483) was removed when the
+  // loader switched to the canonical LiveGameSession aggregate. LiveSessionDto is
+  // round-based and exposes none of those polymorphic fields; on the real funnel
+  // they were always undefined (empty GameSession shell), so the effects never ran
+  // in production. The store is still consumed below and may be populated via
+  // SignalR; wiring round-based scoring from LiveSessionDto.roundScores/
+  // scoringConfig is deferred to Fase 2.
 
   // #2431: polymorphic endgame summary — selectors feed mapScoreDataToEndgameSummary
   // below. Subscribed reactively so the EndgameDialog refreshes as scoreData
   // changes (final-tick edits before the host acknowledges).
   const endgameScoringType = useLiveSessionStore(s => s.scoringType);
   const endgameScoreData = useLiveSessionStore(s => s.scoreData);
-
-  // #2389 Block B + #2430 Block B+: REST hydration with race guard +
-  // observability. Pre-populate the store from sessionQuery.data on initial
-  // mount so the renderer paints in ~300ms instead of waiting for SignalR.
-  // Skip if SignalR already populated to avoid stale REST overwriting fresh
-  // state.
-  useEffect(() => {
-    const dto = sessionQuery.data;
-    if (dto?.scoringType == null || dto.scoreData == null) return;
-    if (useLiveSessionStore.getState().scoringType != null) return;
-    try {
-      const parsed = JSON.parse(dto.scoreData) as ScoreDataByType[ScoreType];
-      setScoringConfig({
-        scoringType: dto.scoringType as ScoreType,
-        scoreData: parsed,
-      });
-    } catch (err) {
-      console.warn('[#2389] malformed scoreData JSON, will rely on SignalR', {
-        sessionId: dto.id,
-        scoreDataLength: dto.scoreData?.length ?? 0,
-        err,
-      });
-    }
-  }, [sessionQuery.data, setScoringConfig]);
-
-  // #2483 Task 2: REST hydration for turnOrderType (path B — static, no SignalR).
-  // Populate once from the DTO. No race guard needed: no SignalR event exists for
-  // turnOrderType (it never changes during the session).
-  useEffect(() => {
-    const dto = sessionQuery.data;
-    if (dto?.turnOrderType == null) return;
-    setTurnOrderType(dto.turnOrderType as import('@/lib/session-live/turn-state').TurnOrderType);
-  }, [sessionQuery.data, setTurnOrderType]);
 
   // ── G5c #2376: Zustand toolkit renderer store ─────────────────────────────
   // Store starts empty; real hydration via useQuery(['toolkit', sessionId]) is a

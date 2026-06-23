@@ -157,6 +157,7 @@ jobs:
           RERANKER_SERVICE_URL=http://reranker-service:8003
           N8N_URL=http://n8n:5678
           STORAGE_PROVIDER=local
+          SEED_CATALOG_MANIFEST_OVERRIDE=ci
           APIENV
 
       - name: Run bake

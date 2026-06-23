@@ -1,0 +1,42 @@
+# E2E seed manifest — issue #2502.
+#
+# Single game with a real rulebook PDF (Love Letter, reused from ci.yml: the
+# blob + sha256 are already verified by the CI bake). When baked it reaches
+# PdfProcessingState.Ready (chunks + embeddings in pgvector), giving the E2E
+# suite a guaranteed KB-Ready game for the live-session user story (#2506)
+# without depending on a slow full bake.
+#
+# Usage:
+#   bake:    SEED_CATALOG_MANIFEST_OVERRIDE=e2e make seed-index   (infra/)
+#   consume: make dev-from-snapshot                               (SKIP_CATALOG_SEED=true)
+#
+# `seedAgent: true` provisions the chat agent so RAG/setup-guide E2E flows
+# (citations #2500, setup guide #2504) have a working agent for this game.
+#
+# Validated in CI by the `bake-e2e-smoke` job in seed-snapshot-bake-ci.yml.
+version: 1
+profile: dev
+catalog:
+  games:
+  - title: Love Letter
+    bggId: 129622
+    language: en
+    yearPublished: 2012
+    minPlayers: 2
+    maxPlayers: 4
+    playingTime: 20
+    minAge: 10
+    averageRating: 7.23
+    averageWeight: 1.18
+    publishers:
+    - Z-Man Games
+    pdfBlobKey: rulebooks/v1/love-letter_rulebook.pdf
+    pdfSha256: e6b14614ffa5da73d995eaceefd7ca99e20ea8687b873da9b67ce6f3a5e69655
+    pdfVersion: '1.0'
+    seedAgent: true
+  # seedAgent=true requires a defaultAgent section (manifest validation).
+  defaultAgent:
+    name: MeepleAssistant POC
+    model: anthropic/claude-3-haiku
+    temperature: 0.3
+    maxTokens: 2048

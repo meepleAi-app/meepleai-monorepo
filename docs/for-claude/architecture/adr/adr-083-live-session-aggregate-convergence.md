@@ -78,7 +78,19 @@ Poiché i wizard creano `LiveGameSession` e i due aggregati non condividono l'id
 - Rischio di doppia manutenzione finché il legacy non è deprecato (Fase 4).
 - Parità mobile (offline-sync) è un prerequisito separato per ricablare il wizard mobile.
 
+## Update 2026-06-23 — Finding bloccante: conflitto di modello scoring
+
+Durante la stesura del piano di Fase 1 è emerso che i due sistemi hanno modelli di scoring **incompatibili**:
+
+- **GameSession/SessionTracking** — scoring **polimorfico** (`scoringType` + `scoreData` JSON). `SessionLiveView` lo consuma da `GameSessionDto` (`SessionLiveView.tsx:875` scoring hydration, `:897` `turnOrderType`). Shippato di recente: **#2389 G5a Block A/B/C (2026-06-19)** + **#2483 turnOrderType (2026-06-15)** — *più recenti di ADR-060*.
+- **LiveGameSession** — scoring **round-based** (`scoringConfig` dimensions + `roundScores` per-round). `LiveSessionDto` (`live-sessions.schemas.ts`) **non** espone `scoringType`/`scoreData`/`turnOrderType`.
+
+Correggere il loader di SessionLiveView a `LiveSessionDto` (la "correzione semplice" prevista in Fase 1) **perderebbe** i campi polimorfici su cui poggia il lavoro #2389/#2483 appena shippato.
+
+**Conseguenza sulla decisione**: questo dimostra che **entrambi i sistemi hanno investimento recente** (epic #2354/#2389 su GameSession/SessionLiveView è *più recente* di ADR-060 su LiveGameSession), con modelli dati confliggenti. La direzione di convergenza **non è determinabile dal solo codice** — richiede l'intento del team/owner. La Fase 1 non è una correzione di ore: include la **riconciliazione dei modelli di scoring** (decidere quale modello sopravvive). La raccomandazione di questo ADR (LiveGameSession) è quindi **declassata a "da decidere con l'owner alla luce di questo finding"** — lo Status resta `Proposed`.
+
 ## Riferimenti
 - Epic #2501; user story di validazione #2506; gap issue #2500/#2503/#2505/#2504/#2502.
 - ADR-060 (LiveGameSession persistence, EPIC #2097), ADR-065 (namespace split), ADR-071 (5-state FSM).
+- Scoring polimorfico recente: #2389 (G5a Block A/B/C), #2483 (turnOrderType), Asse A #1896.
 - Superfici: `SessionLiveView.tsx` (Wave D), `play-mode-mobile.tsx` (Improvvisata), `LiveSessionView` (`components/game-night`, `/sessions/[id]/play`).

@@ -192,8 +192,8 @@ jobs:
           for k in SEED_BUCKET_NAME SEED_BUCKET_ENDPOINT SEED_BUCKET_ACCESS_KEY SEED_BUCKET_SECRET_KEY STORAGE_PROVIDER; do
             v=$(sed -n "s/^$k=//p" secrets/storage.secret 2>/dev/null); echo "  $k: len=${#v}"
           done
-          echo "=== API seeder logs ==="
-          docker logs meepleai-api 2>&1 | grep -iE "seed|PdfSeeder|GameSeeder|SEED_BUCKET|SharedGame|manifest|NoOp|bgg|rating|catalog" | tail -60 || echo "(no matches / no api container)"
+          echo "=== API seeder startup logs (head) ==="
+          docker logs meepleai-api 2>&1 | grep -iE "Seeding with profile|CatalogSeed|GameSeeder|PdfSeeder|Seeded SharedGame|queued for RAG|Failed to seed|seed blob reader|from BGG|enhanced YAML|minimal|SEED_BUCKET" | head -80 || echo "(no matches / no api container)"
           echo "=== counts ==="
           PG_DB="$(sed -n 's/^POSTGRES_DB=//p' secrets/database.secret)"
           docker exec meepleai-postgres psql -U "${POSTGRES_USER:-meepleai}" -d "$PG_DB" -c \

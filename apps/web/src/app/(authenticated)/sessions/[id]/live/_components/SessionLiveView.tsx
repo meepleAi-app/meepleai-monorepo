@@ -883,7 +883,9 @@ export function SessionLiveView(): ReactElement {
     !fixture
   );
   const agentSessionId = agentLaunch.agentSessionId;
-  const agentChat = useSessionAgentChat(sessionId ?? '', agentSessionId);
+  const agentChat = useSessionAgentChat(sessionId ?? '', agentSessionId, {
+    persistHistory: !fixture,
+  });
 
   // Map useSessionAgentChat.ChatMessage → LiveAgentChat.ChatMessage.
   // The two shapes differ: agent uses role:'user'|'assistant', LiveAgentChat uses

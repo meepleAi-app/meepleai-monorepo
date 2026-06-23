@@ -1,7 +1,19 @@
 import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useSessionAgentChat } from '../useSessionAgentChat';
 import { useSessionStore } from '@/stores/session/store';
+import { api } from '@/lib/api';
+
+// Mock the api module so we can spy on api.chat.getThreadById
+vi.mock('@/lib/api', () => ({
+  api: {
+    chat: {
+      getThreadById: vi.fn(),
+    },
+  },
+}));
+
+const mockGetThreadById = vi.mocked(api.chat.getThreadById);
 
 // Mock fetch for streaming
 const makeReadableStream = (chunks: string[]) => {
@@ -17,11 +29,21 @@ const makeReadableStream = (chunks: string[]) => {
   });
 };
 
+// sessionStorage key helper — must match the hook implementation
+const SESSION_STORAGE_KEY = (gameSessionId: string) =>
+  `meepleai:live-agent-thread:${gameSessionId}`;
+
 describe('useSessionAgentChat', () => {
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
     useSessionStore.getState().reset();
     vi.restoreAllMocks();
+    mockGetThreadById.mockReset();
+  });
+
+  afterEach(() => {
+    sessionStorage.clear();
   });
 
   it('messages inizialmente è vuoto', () => {
@@ -100,6 +122,216 @@ describe('useSessionAgentChat', () => {
       documentName: 'Regolamento Azul',
       pages: [7],
       excerpt: 'Posiziona la plancia al centro.',
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // AC-CHAT-1: persistHistory opt-in — history hydration with citations
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('persistHistory opt-in', () => {
+    const GAME_SESSION_ID = 'game-sess-persist-1';
+    const THREAD_ID = 'thread-uuid-0001';
+    const STORAGE_KEY = SESSION_STORAGE_KEY(GAME_SESSION_ID);
+
+    it('AC-CHAT-1 happy: mounts with persisted threadId and hydrates messages with citations', async () => {
+      // Pre-seed sessionStorage with a saved threadId
+      sessionStorage.setItem(STORAGE_KEY, THREAD_ID);
+
+      // Mock getThreadById to return a thread with one assistant message with citationsJson
+      mockGetThreadById.mockResolvedValueOnce({
+        id: THREAD_ID,
+        gameId: null,
+        agentId: null,
+        agentType: null,
+        title: null,
+        createdAt: '2026-06-23T10:00:00Z',
+        lastMessageAt: '2026-06-23T10:01:00Z',
+        messageCount: 1,
+        messages: [
+          {
+            content: 'Le torri si piazzano così.',
+            role: 'assistant',
+            timestamp: '2026-06-23T10:01:00Z',
+            backendMessageId: 'msg-uuid-001',
+            citationsJson:
+              '[{"source":"Regolamento Towers","pageNumber":3,"copyrightTier":"full","snippet":"Piazza la torre sulla casella."}]',
+          },
+        ],
+      });
+
+      const { result } = renderHook(() =>
+        useSessionAgentChat(GAME_SESSION_ID, 'agent-1', { persistHistory: true })
+      );
+
+      // Wait for async mount effect
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      });
+
+      expect(result.current.messages).toHaveLength(1);
+      const msg = result.current.messages[0];
+      expect(msg.role).toBe('assistant');
+      expect(msg.content).toBe('Le torri si piazzano così.');
+      expect(msg.citations).toBeDefined();
+      expect(msg.citations).toHaveLength(1);
+      expect(msg.citations![0]).toEqual({
+        documentName: 'Regolamento Towers',
+        pages: [3],
+        excerpt: 'Piazza la torre sulla casella.',
+      });
+    });
+
+    it('AC-CHAT-1 persist: after SSE complete with chatThreadId, sessionStorage is populated', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          body: makeReadableStream([
+            'data: {"type":"token","content":"Risposta"}\n\n',
+            `data: {"type":"complete","threadId":"${THREAD_ID}"}\n\n`,
+          ]),
+        } as unknown as Response)
+      );
+
+      const { result } = renderHook(() =>
+        useSessionAgentChat(GAME_SESSION_ID, 'agent-1', { persistHistory: true })
+      );
+
+      await act(async () => {
+        await result.current.ask('Domanda di test');
+      });
+
+      expect(sessionStorage.getItem(STORAGE_KEY)).toBe(THREAD_ID);
+    });
+
+    it('AC-CHAT-1 opt-in OFF (default): no sessionStorage access, no getThreadById, messages empty', async () => {
+      sessionStorage.setItem(STORAGE_KEY, THREAD_ID);
+
+      const { result } = renderHook(() => useSessionAgentChat(GAME_SESSION_ID, 'agent-1'));
+
+      // Wait briefly for any async effect
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      });
+
+      // getThreadById must NOT be called when persistHistory is off
+      expect(mockGetThreadById).not.toHaveBeenCalled();
+      // messages must remain empty
+      expect(result.current.messages).toHaveLength(0);
+    });
+
+    it('AC-CHAT-1 opt-in explicit false: no getThreadById called', async () => {
+      sessionStorage.setItem(STORAGE_KEY, THREAD_ID);
+
+      const { result } = renderHook(() =>
+        useSessionAgentChat(GAME_SESSION_ID, 'agent-1', { persistHistory: false })
+      );
+
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      });
+
+      expect(mockGetThreadById).not.toHaveBeenCalled();
+      expect(result.current.messages).toHaveLength(0);
+    });
+
+    it('AC-CHAT-1 graceful: getThreadById rejects → no throw, messages remains empty', async () => {
+      sessionStorage.setItem(STORAGE_KEY, THREAD_ID);
+      mockGetThreadById.mockRejectedValueOnce(new Error('Network error'));
+
+      const { result } = renderHook(() =>
+        useSessionAgentChat(GAME_SESSION_ID, 'agent-1', { persistHistory: true })
+      );
+
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      });
+
+      // Must not throw, messages must stay empty on failure
+      expect(result.current.messages).toHaveLength(0);
+    });
+
+    it('AC-CHAT-1 graceful: no persisted threadId → no fetch, messages empty', async () => {
+      // sessionStorage is empty (no STORAGE_KEY)
+      const { result } = renderHook(() =>
+        useSessionAgentChat(GAME_SESSION_ID, 'agent-1', { persistHistory: true })
+      );
+
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      });
+
+      expect(mockGetThreadById).not.toHaveBeenCalled();
+      expect(result.current.messages).toHaveLength(0);
+    });
+
+    it('AC-CHAT-1 mapping: citationsJson null on messages → citations undefined', async () => {
+      sessionStorage.setItem(STORAGE_KEY, THREAD_ID);
+
+      mockGetThreadById.mockResolvedValueOnce({
+        id: THREAD_ID,
+        gameId: null,
+        agentId: null,
+        agentType: null,
+        title: null,
+        createdAt: '2026-06-23T10:00:00Z',
+        lastMessageAt: '2026-06-23T10:01:00Z',
+        messageCount: 2,
+        messages: [
+          {
+            content: 'Come funziona?',
+            role: 'user',
+            timestamp: '2026-06-23T10:00:00Z',
+            backendMessageId: 'msg-uuid-002',
+            citationsJson: null,
+          },
+          {
+            content: 'Funziona così.',
+            role: 'assistant',
+            timestamp: '2026-06-23T10:01:00Z',
+            backendMessageId: 'msg-uuid-003',
+            citationsJson: null,
+          },
+        ],
+      });
+
+      const { result } = renderHook(() =>
+        useSessionAgentChat(GAME_SESSION_ID, 'agent-1', { persistHistory: true })
+      );
+
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      });
+
+      expect(result.current.messages).toHaveLength(2);
+      expect(result.current.messages[0].citations).toBeUndefined();
+      expect(result.current.messages[1].citations).toBeUndefined();
+    });
+
+    it('AC-CHAT-1 persist opt-in OFF: SSE complete does NOT write to sessionStorage', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          body: makeReadableStream([
+            'data: {"type":"token","content":"Risposta"}\n\n',
+            `data: {"type":"complete","threadId":"${THREAD_ID}"}\n\n`,
+          ]),
+        } as unknown as Response)
+      );
+
+      const { result } = renderHook(
+        () => useSessionAgentChat(GAME_SESSION_ID, 'agent-1')
+        // no persistHistory
+      );
+
+      await act(async () => {
+        await result.current.ask('Domanda di test');
+      });
+
+      // sessionStorage must remain empty when opt-in is off
+      expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
     });
   });
 });

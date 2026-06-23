@@ -1460,7 +1460,8 @@ describe('SessionLiveView — #2500 Task 4-FE: RAG agent wiring via useSessionAg
     renderWithIntl(<SessionLiveView />);
     expect(useSessionAgentChatMock).toHaveBeenCalledWith(
       'session-abc-123',
-      'agent-session-uuid-0001'
+      'agent-session-uuid-0001',
+      { persistHistory: true } // fixture=false in test → !fixture=true (R5 #2500)
     );
   });
 
@@ -1479,7 +1480,10 @@ describe('SessionLiveView — #2500 Task 4-FE: RAG agent wiring via useSessionAg
     });
     renderWithIntl(<SessionLiveView />);
     // Hook called with empty agentSessionId guard (no-agent → no ready session)
-    expect(useSessionAgentChatMock).toHaveBeenCalledWith('session-abc-123', '');
+    // R5: persistHistory passed as third arg — fixture=false → !fixture=true
+    expect(useSessionAgentChatMock).toHaveBeenCalledWith('session-abc-123', '', {
+      persistHistory: true,
+    });
   });
 
   it('RAG-6: useSessionAgentLaunch called with sessionId, gameId, and !fixture', () => {

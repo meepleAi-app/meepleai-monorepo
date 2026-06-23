@@ -185,21 +185,6 @@ jobs:
           # bother with `make dev-down`.
           make seed-index
 
-      - name: Debug — seeder logs + config presence (diagnose 0-PDF)
-        if: always()
-        working-directory: infra
-        run: |
-          echo "=== SEED_BUCKET_* presence in storage.secret (lengths only) ==="
-          for k in SEED_BUCKET_NAME SEED_BUCKET_ENDPOINT SEED_BUCKET_ACCESS_KEY SEED_BUCKET_SECRET_KEY STORAGE_PROVIDER; do
-            v=$(sed -n "s/^$k=//p" secrets/storage.secret 2>/dev/null); echo "  $k: len=${#v}"
-          done
-          echo "=== API seeder startup logs (head) ==="
-          docker logs meepleai-api 2>&1 | grep -iE "Seeding with profile|CatalogSeed|GameSeeder|PdfSeeder|Seeded SharedGame|queued for RAG|Failed to seed|seed blob reader|from BGG|enhanced YAML|minimal|SEED_BUCKET" | head -80 || echo "(no matches / no api container)"
-          echo "=== counts ==="
-          PG_DB="$(sed -n 's/^POSTGRES_DB=//p' secrets/database.secret)"
-          docker exec meepleai-postgres psql -U "${POSTGRES_USER:-meepleai}" -d "$PG_DB" -c \
-            "SELECT 'shared_games' t, COUNT(*) c FROM shared_games UNION ALL SELECT 'pdf_documents', COUNT(*) FROM pdf_documents UNION ALL SELECT 'processing_jobs', COUNT(*) FROM processing_jobs;" 2>&1 || echo "(psql failed)"
-
       - name: Run verify gates (exit codes 2/3/4/5/6)
         working-directory: infra
         env:

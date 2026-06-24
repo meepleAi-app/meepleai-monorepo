@@ -259,4 +259,11 @@ jobs:
           SEED_BLOB_BUCKET=${SEED_BLOB_BUCKET}
           EOF
           chmod 600 secrets/storage.secret
+          # seed-index-publish.sh uses `aws s3 cp`. AWS CLI v2 is pre-installed on
+          # GitHub-hosted runners; install it on demand only if it's somehow absent.
+          if ! command -v aws >/dev/null 2>&1; then
+            curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+            unzip -q /tmp/awscliv2.zip -d /tmp
+            sudo /tmp/aws/install
+          fi
           bash scripts/seed-index-publish.sh

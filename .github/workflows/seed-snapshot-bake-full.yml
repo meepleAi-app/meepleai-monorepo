@@ -81,10 +81,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install jq + AWS CLI (required by seed-index-publish.sh)
+      - name: Install jq (seed scripts) — AWS CLI v2 is pre-installed on the runner
         run: |
+          # `awscli` was removed from the Ubuntu 24.04 (noble) apt repos
+          # ("no installation candidate"), so we no longer apt-install it.
+          # GitHub-hosted ubuntu-latest ships AWS CLI v2; the publish step adds a
+          # defensive fallback installer if `aws` is ever missing.
           sudo apt-get update
-          sudo apt-get install -y jq awscli
+          sudo apt-get install -y jq
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
@@ -263,6 +267,13 @@ jobs:
           SEED_BLOB_BUCKET=${SEED_BLOB_BUCKET}
           EOF
           chmod 600 secrets/storage.secret
+          # seed-index-publish.sh uses `aws s3 cp`. AWS CLI v2 is pre-installed on
+          # GitHub-hosted runners; install it on demand only if it's somehow absent.
+          if ! command -v aws >/dev/null 2>&1; then
+            curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+            unzip -q /tmp/awscliv2.zip -d /tmp
+            sudo /tmp/aws/install
+          fi
           bash scripts/seed-index-publish.sh
 
       - name: Notify on failure (placeholder for D6 audit trail)

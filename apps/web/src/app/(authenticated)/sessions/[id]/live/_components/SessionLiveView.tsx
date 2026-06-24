@@ -114,6 +114,7 @@ import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useLiveSession } from '@/hooks/queries/useLiveSession';
 import { useSessionAgentLaunch } from '@/hooks/queries/useSessionAgentLaunch';
 import { useTranslation } from '@/hooks/useTranslation';
+import { api } from '@/lib/api';
 import { useSessionAgentChat } from '@/lib/domain-hooks/useSessionAgentChat';
 import { getNavigationLinks } from '@/lib/navigation';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
@@ -332,10 +333,20 @@ export function SessionLiveView(): ReactElement {
 
   // ── #2503: Endgame confirm dialog state ──────────────────────────────────
   const [endgameConfirmOpen, setEndgameConfirmOpen] = useState(false);
+  // Host explicitly clicked "Salva partita": gates the single navigation path
+  // (code-review CRITICAL 1 — no auto-nav independent of the button click).
+  const [saveIntent, setSaveIntent] = useState(false);
 
   // ── #2503: Complete session mutation + play-record polling ───────────────
   const completeLiveSession = useCompleteLiveSession(sessionId ?? '');
-  const resolvePlayRecord = useResolvePlayRecord();
+  // Destructure stable members (code-review IMPORTANT 4 — the hook returns a new
+  // object literal each render; depending on the whole object re-memoizes every
+  // poll tick). `start` is a stable useCallback.
+  const {
+    status: resolveStatus,
+    playRecordId: resolvedPlayRecordId,
+    start: startResolvePlayRecord,
+  } = useResolvePlayRecord();
 
   // ── URL state SSOT ────────────────────────────────────────────────────────
   const tab = parseLiveTab(searchParams.get('tab'));
@@ -534,14 +545,33 @@ export function SessionLiveView(): ReactElement {
     setEndgameConfirmOpen(true);
   }, []);
 
-  const handleConfirmEndgame = useCallback(() => {
+  /**
+   * Confirm endgame → capture the pre-complete most-recent record id (baseline,
+   * code-review CRITICAL 2) BEFORE POST /complete, then complete + start polling
+   * with that baseline so resolution skips any pre-existing record for the game.
+   */
+  const handleConfirmEndgame = useCallback(async () => {
     if (sessionId == null) return;
     setEndgameConfirmOpen(false);
+
+    const gameId = sessionQuery.data?.gameId;
+
+    // Capture baseline BEFORE completing — awaited so the new record cannot leak
+    // into the snapshot (race-free identification of the auto-created record).
+    let previousRecordId: string | null = null;
+    if (gameId) {
+      try {
+        const baseline = await api.playRecords.getHistory({ gameId, pageSize: 1 });
+        previousRecordId = baseline.records[0]?.id ?? null;
+      } catch {
+        previousRecordId = null;
+      }
+    }
+
     completeLiveSession.mutate(undefined, {
       onSuccess: () => {
         handleDialogChange('endgame');
-        const gameId = sessionQuery.data?.gameId;
-        if (gameId) resolvePlayRecord.start(gameId);
+        if (gameId) startResolvePlayRecord(gameId, previousRecordId);
       },
     });
   }, [
@@ -549,27 +579,30 @@ export function SessionLiveView(): ReactElement {
     completeLiveSession,
     handleDialogChange,
     sessionQuery.data?.gameId,
-    resolvePlayRecord,
+    startResolvePlayRecord,
   ]);
 
+  /**
+   * "Salva partita" CTA — records the intent only; the effect below owns the
+   * single navigation path (code-review CRITICAL 1: avoids a button push racing
+   * an independent auto-nav effect). If polling is still in-flight the button
+   * shows a spinner (saving) and navigation fires once the record resolves.
+   */
   const handleSaveGame = useCallback(() => {
-    if (resolvePlayRecord.status === 'resolving') return;
-    const navLinks = getNavigationLinks();
-    if (resolvePlayRecord.playRecordId != null) {
-      router.push(navLinks.playRecordDetail(resolvePlayRecord.playRecordId));
-    }
-  }, [router, resolvePlayRecord.status, resolvePlayRecord.playRecordId]);
+    setSaveIntent(true);
+  }, []);
 
-  // Auto-navigate to PlayRecord page when polling resolves (Opzione C).
+  // Single navigation path — fires ONLY after the Host expressed save intent.
   useEffect(() => {
+    if (!saveIntent) return;
     const navLinks = getNavigationLinks();
-    if (resolvePlayRecord.status === 'resolved' && resolvePlayRecord.playRecordId != null) {
-      router.push(navLinks.playRecordDetail(resolvePlayRecord.playRecordId));
-    }
-    if (resolvePlayRecord.status === 'timeout') {
+    if (resolveStatus === 'resolved' && resolvedPlayRecordId != null) {
+      router.push(navLinks.playRecordDetail(resolvedPlayRecordId));
+    } else if (resolveStatus === 'timeout') {
+      // Opzione C fallback: record never surfaced → list view.
       router.push(navLinks.playRecords);
     }
-  }, [router, resolvePlayRecord.status, resolvePlayRecord.playRecordId]);
+  }, [saveIntent, resolveStatus, resolvedPlayRecordId, router]);
 
   // ── Write actions (Player+Host) ───────────────────────────────────────────
   // Note: legacy per-participant score update flow was retired in #2433
@@ -1470,7 +1503,7 @@ export function SessionLiveView(): ReactElement {
             endedBy={endgameEvent?.endedBy ?? '—'}
             onAcknowledge={() => handleDialogChange('none')}
             onSave={hasRequiredRole(activeSession.viewerRole, 'Host') ? handleSaveGame : undefined}
-            saving={resolvePlayRecord.status === 'resolving'}
+            saving={saveIntent && resolveStatus === 'resolving'}
             labels={{
               title: t('pages.sessionLive.endgameDialog.title'),
               winnerLabel: t('pages.sessionLive.endgameDialog.winnerLabel'),
@@ -1512,7 +1545,7 @@ export function SessionLiveView(): ReactElement {
               </button>
               <button
                 type="button"
-                onClick={handleConfirmEndgame}
+                onClick={() => void handleConfirmEndgame()}
                 disabled={completeLiveSession.isPending}
                 data-slot="endgame-confirm-cta"
                 className="flex-1 rounded-lg bg-destructive px-4 py-2.5 text-sm font-semibold

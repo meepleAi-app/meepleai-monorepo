@@ -158,6 +158,14 @@ jobs:
           N8N_URL=http://n8n:5678
           STORAGE_PROVIDER=local
           SEED_CATALOG_MANIFEST_OVERRIDE=ci
+          # The Core seed layer fails fatally if the admin user can't be seeded
+          # (SeedAdminUserCommandHandler requires INITIAL_ADMIN_EMAIL + a >=12-char
+          # complex INITIAL_ADMIN_PASSWORD). Locally the synced .secret files provide
+          # these; in CI the placeholder secrets don't, so the whole seed aborts
+          # before the catalog layer. Provide CI-only credentials (8th-layer fix).
+          INITIAL_ADMIN_EMAIL=bake-admin@meepleai.test
+          INITIAL_ADMIN_PASSWORD=BakeSeed1!Admin
+          INITIAL_ADMIN_DISPLAY_NAME=Bake Admin
           APIENV
 
       - name: Run bake

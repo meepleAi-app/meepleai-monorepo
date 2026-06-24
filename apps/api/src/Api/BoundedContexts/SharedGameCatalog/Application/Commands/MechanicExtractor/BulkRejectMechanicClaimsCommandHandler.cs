@@ -65,12 +65,14 @@ internal sealed class BulkRejectMechanicClaimsCommandHandler
         // De-duplicate the requested ids, then fail the batch if any does not exist (stale client).
         var requestedIds = request.ClaimIds.Distinct().ToList();
         var existingIds = analysis.Claims.Select(c => c.Id).ToHashSet();
-        var missingId = requestedIds.FirstOrDefault(id => !existingIds.Contains(id));
-        if (missingId != Guid.Empty)
+        // Explicit Count check (not FirstOrDefault's Guid.Empty sentinel, which would
+        // conflate "nothing missing" with "Guid.Empty was requested and is missing").
+        var missingIds = requestedIds.Where(id => !existingIds.Contains(id)).ToList();
+        if (missingIds.Count > 0)
         {
             throw new NotFoundException(
                 resourceType: "MechanicClaim",
-                resourceId: missingId.ToString());
+                resourceId: missingIds[0].ToString());
         }
 
         var requestedSet = requestedIds.ToHashSet();

@@ -7,6 +7,7 @@ using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -79,6 +80,10 @@ public class BulkRejectMechanicClaimsCommandHandlerTests
         result.SkippedAlreadyRejectedCount.Should().Be(0);
         analysis.Claims.Count(c => c.Status == MechanicClaimStatus.Rejected).Should().Be(2);
         analysis.Claims.Single(c => c.Id == ids[2]).Status.Should().Be(MechanicClaimStatus.Pending);
+        // Response projection — the UI refreshes the table from this without a follow-up GET.
+        result.Claims.Should().HaveCount(3);
+        result.Claims.Where(c => c.Id == ids[0] || c.Id == ids[1])
+            .Should().OnlyContain(c => c.Status == MechanicClaimStatus.Rejected && c.RejectionNote == "verbatim copy");
         _repositoryMock.Verify(r => r.Update(analysis), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -147,5 +152,21 @@ public class BulkRejectMechanicClaimsCommandHandlerTests
 
         await Assert.ThrowsAsync<ConflictException>(() => _handler.Handle(command, CancellationToken.None));
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_ConcurrencyConflict_Throws409()
+    {
+        var analysis = BuildInReviewAnalysis(1);
+        var claimId = analysis.Claims.First().Id;
+        SetupRepo(analysis, analysis.Id);
+        _unitOfWorkMock
+            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateConcurrencyException());
+
+        var command = new BulkRejectMechanicClaimsCommand(
+            analysis.Id, new[] { claimId }, "reason", Guid.NewGuid());
+
+        await Assert.ThrowsAsync<ConflictException>(() => _handler.Handle(command, CancellationToken.None));
     }
 }

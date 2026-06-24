@@ -21,6 +21,7 @@ namespace Api.Routing;
 ///   <item><c>POST /admin/mechanic-analyses/{id}/claims/{claimId}/approve</c> — per-claim approve.</item>
 ///   <item><c>POST /admin/mechanic-analyses/{id}/claims/{claimId}/reject</c> — per-claim reject with note.</item>
 ///   <item><c>POST /admin/mechanic-analyses/{id}/claims/bulk-approve</c> — bulk approve every Pending claim.</item>
+///   <item><c>POST /admin/mechanic-analyses/{id}/claims/bulk-reject</c> — bulk reject an explicit set of claims with a shared reason (#526).</item>
 /// </list>
 /// The admin's user id is always read from the validated session (never trusted from the body).
 /// </summary>

@@ -3373,7 +3373,15 @@
         "title": "Fine sessione",
         "winnerLabel": "Vincitore",
         "acknowledgeCta": "Ho capito",
-        "viewSummaryCta": "Vedi riepilogo"
+        "viewSummaryCta": "Vedi riepilogo",
+        "saveGameCta": "Salva partita",
+        "savingLabel": "Salvataggio…"
+      },
+      "endgameConfirm": {
+        "title": "Terminare la partita?",
+        "body": "L'azione è irreversibile. I punteggi finali verranno registrati.",
+        "confirmCta": "Termina partita",
+        "cancelCta": "Annulla"
       },
       "toolkitRenderer": {
         "title": "Strumenti",

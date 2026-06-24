@@ -3266,7 +3266,15 @@
         "title": "Session ended",
         "winnerLabel": "Winner",
         "acknowledgeCta": "Got it",
-        "viewSummaryCta": "View summary"
+        "viewSummaryCta": "View summary",
+        "saveGameCta": "Save game",
+        "savingLabel": "Saving…"
+      },
+      "endgameConfirm": {
+        "title": "End the game?",
+        "body": "This action is irreversible. Final scores will be recorded.",
+        "confirmCta": "End game",
+        "cancelCta": "Cancel"
       },
       "toolkitRenderer": {
         "title": "Tools",

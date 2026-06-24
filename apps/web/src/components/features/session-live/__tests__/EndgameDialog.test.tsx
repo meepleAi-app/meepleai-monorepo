@@ -26,6 +26,8 @@ const LABELS: EndgameDialogLabels = {
   winnerLabel: 'Vincitore',
   acknowledgeCta: 'Conferma',
   viewSummaryCta: 'Vedi riepilogo',
+  saveGameCta: 'Salva partita',
+  savingLabel: 'Salvataggio...',
 };
 
 const SCORES: ReadonlyArray<FinalScoreEntry> = [
@@ -184,5 +186,51 @@ describe('EndgameDialog — focus trap', () => {
     focusables[0].focus();
     await user.keyboard('{Shift>}{Tab}{/Shift}');
     expect(document.activeElement).toBe(focusables[focusables.length - 1]);
+  });
+});
+
+// ─── #2503 — Save game CTA ────────────────────────────────────────────────────
+
+describe('EndgameDialog — #2503: save game CTA', () => {
+  it('renders "Salva partita" button when onSave is passed', () => {
+    renderDialog({ onSave: vi.fn() });
+    expect(screen.getByRole('button', { name: 'Salva partita' })).toBeInTheDocument();
+  });
+
+  it('does NOT render save button when onSave is not passed', () => {
+    renderDialog({ onSave: undefined });
+    expect(screen.queryByRole('button', { name: 'Salva partita' })).not.toBeInTheDocument();
+    expect(document.querySelector('[data-slot="endgame-save-cta"]')).not.toBeInTheDocument();
+  });
+
+  it('calls onSave when "Salva partita" is clicked', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    renderDialog({ onSave });
+    await user.click(screen.getByRole('button', { name: 'Salva partita' }));
+    expect(onSave).toHaveBeenCalledOnce();
+  });
+
+  it('button is disabled and aria-busy when saving=true', () => {
+    renderDialog({ onSave: vi.fn(), saving: true });
+    const saveBtn = document.querySelector('[data-slot="endgame-save-cta"]') as HTMLButtonElement;
+    expect(saveBtn).toBeDisabled();
+    expect(saveBtn).toHaveAttribute('aria-busy', 'true');
+  });
+
+  it('shows savingLabel text when saving=true', () => {
+    renderDialog({ onSave: vi.fn(), saving: true });
+    expect(screen.getByText('Salvataggio...')).toBeInTheDocument();
+  });
+
+  it('shows saveGameCta text when saving=false', () => {
+    renderDialog({ onSave: vi.fn(), saving: false });
+    expect(screen.getByRole('button', { name: 'Salva partita' })).toBeInTheDocument();
+  });
+
+  it('acknowledge CTA is still present alongside save CTA', () => {
+    renderDialog({ onSave: vi.fn() });
+    expect(screen.getByRole('button', { name: 'Conferma' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Salva partita' })).toBeInTheDocument();
   });
 });

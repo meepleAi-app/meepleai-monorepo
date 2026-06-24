@@ -162,6 +162,59 @@ vi.mock('@/hooks/mutations/useAddLivePlayer', () => ({
   }),
 }));
 
+// ─── useCompleteLiveSession mock (#2503) ─────────────────────────────────────
+// Controllable: completeMutate captures the (undefined, { onSuccess }) call;
+// completeIsPending toggles the confirm-CTA disabled state.
+
+const completeMutate = vi.fn();
+let completeIsPending = false;
+
+vi.mock('@/hooks/mutations/useCompleteLiveSession', () => ({
+  useCompleteLiveSession: () => ({
+    mutate: completeMutate,
+    get isPending() {
+      return completeIsPending;
+    },
+  }),
+}));
+
+// ─── useResolvePlayRecord mock (#2503) ───────────────────────────────────────
+// Controllable status + playRecordId (read via getters per render) + start spy.
+
+type ResolveStatusMock = 'idle' | 'resolving' | 'resolved' | 'timeout';
+const resolveStart = vi.fn();
+let resolveStatusMock: ResolveStatusMock = 'idle';
+let resolvePlayRecordIdMock: string | null = null;
+
+vi.mock('@/lib/session-live/use-resolve-play-record', () => ({
+  useResolvePlayRecord: () => ({
+    get status() {
+      return resolveStatusMock;
+    },
+    get playRecordId() {
+      return resolvePlayRecordIdMock;
+    },
+    start: resolveStart,
+  }),
+}));
+
+// ─── @/lib/api mock (#2503: baseline getHistory before POST /complete) ───────
+// SessionLiveView only reaches `api.playRecords.getHistory` (all other API
+// surfaces go through already-mocked hooks), so a minimal mock is sufficient.
+// `vi.hoisted` is required because the factory references the spy EAGERLY
+// (not inside a lazy hook closure like useRouter/useCompleteLiveSession), so it
+// must be initialised before the hoisted vi.mock runs.
+
+const getHistoryMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@/lib/api', () => ({
+  api: {
+    playRecords: {
+      getHistory: getHistoryMock,
+    },
+  },
+}));
+
 // ─── AddPlayerDialog mock (#2505: lazy import — suppress real render) ─────────
 // The dialog is lazy-loaded; mock it so tests don't need Suspense async resolve
 // for the core SessionLiveView behavior tests.
@@ -340,6 +393,14 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.endgameDialog.winnerLabel': 'Vincitore',
   'pages.sessionLive.endgameDialog.acknowledgeCta': 'Ho capito',
   'pages.sessionLive.endgameDialog.viewSummaryCta': 'Vedi riepilogo',
+  // #2503
+  'pages.sessionLive.endgameDialog.saveGameCta': 'Salva partita',
+  'pages.sessionLive.endgameDialog.savingLabel': 'Salvataggio…',
+  'pages.sessionLive.endgameConfirm.title': 'Terminare la partita?',
+  'pages.sessionLive.endgameConfirm.body':
+    "L'azione è irreversibile. I punteggi finali verranno registrati.",
+  'pages.sessionLive.endgameConfirm.confirmCta': 'Termina partita',
+  'pages.sessionLive.endgameConfirm.cancelCta': 'Annulla',
 };
 
 function renderWithIntl(ui: ReactElement) {
@@ -1806,5 +1867,204 @@ describe('SessionLiveView — #2505: viewerRole derivation + AddPlayerDialog', (
 
     // The mocked AddPlayerDialog renders data-slot="add-player-dialog-mock" when open=true
     expect(document.querySelector('[data-slot="add-player-dialog-mock"]')).toBeInTheDocument();
+  });
+});
+
+// ─── #2503 — Endgame complete trigger + save-game CTA + PlayRecord nav ────────
+
+describe('SessionLiveView — #2503: endgame complete + save-game nav', () => {
+  const HOST_USER_ID = 'user-44444444-4444-4444-4444-444444444444';
+
+  const HOST_DTO = {
+    ...MOCK_SESSION_DTO,
+    gameId: 'game-00000001',
+    players: [
+      {
+        id: 'player-001',
+        displayName: 'Marco',
+        userId: HOST_USER_ID,
+        color: 'Blue',
+        role: 'Host',
+        totalScore: 0,
+        isActive: true,
+      },
+    ],
+  } as unknown as LiveSessionDto;
+
+  const PLAYER_DTO = {
+    ...MOCK_SESSION_DTO,
+    gameId: 'game-00000001',
+    players: [
+      {
+        id: 'player-001',
+        displayName: 'Marco',
+        userId: 'user-not-host',
+        color: 'Blue',
+        role: 'Player',
+        totalScore: 0,
+        isActive: true,
+      },
+    ],
+  } as unknown as LiveSessionDto;
+
+  function emptyHistory() {
+    return { records: [], totalCount: 0, page: 1, pageSize: 1, totalPages: 0 };
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
+    mockParamsId = 'session-abc-123';
+    IS_VISUAL_TEST_BUILD_MOCK = false;
+    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+    useCurrentUserMock.mockReturnValue({ data: { id: HOST_USER_ID } });
+    useLiveSessionMock.mockReturnValue({
+      data: HOST_DTO,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+    });
+    // Reset controllable mock state (#2503).
+    completeIsPending = false;
+    resolveStatusMock = 'idle';
+    resolvePlayRecordIdMock = null;
+    getHistoryMock.mockResolvedValue(emptyHistory());
+  });
+
+  it('#2503-1: Host clicking "Termina sessione" opens the confirm dialog', async () => {
+    const { container } = renderWithIntl(<SessionLiveView />);
+
+    const trigger = container.querySelector('[data-slot="session-live-top-bar-endgame"]');
+    expect(trigger).toBeInTheDocument();
+    expect(trigger).not.toHaveAttribute('aria-disabled');
+
+    await act(async () => {
+      fireEvent.click(trigger!);
+    });
+
+    expect(document.querySelector('[data-slot="endgame-confirm-dialog"]')).toBeInTheDocument();
+    // No mutation fired by merely opening the confirm dialog.
+    expect(completeMutate).not.toHaveBeenCalled();
+  });
+
+  it('#2503-2: confirm captures baseline, completes, then starts polling with previousRecordId', async () => {
+    // Pre-existing record for this game → baseline id the poll must skip.
+    getHistoryMock.mockResolvedValue({
+      records: [
+        {
+          id: 'prev-record-id',
+          gameName: 'Mage Knight',
+          sessionDate: '2026-06-24',
+          duration: null,
+          status: 'Completed',
+          playerCount: 1,
+        },
+      ],
+      totalCount: 1,
+      page: 1,
+      pageSize: 1,
+      totalPages: 1,
+    });
+    completeMutate.mockImplementation((_input: unknown, opts?: { onSuccess?: () => void }) =>
+      opts?.onSuccess?.()
+    );
+
+    const { container } = renderWithIntl(<SessionLiveView />);
+
+    await act(async () => {
+      fireEvent.click(container.querySelector('[data-slot="session-live-top-bar-endgame"]')!);
+    });
+    await act(async () => {
+      fireEvent.click(document.querySelector('[data-slot="endgame-confirm-cta"]')!);
+    });
+    // Flush the awaited baseline getHistory + mutate.onSuccess chain.
+    await act(async () => {});
+
+    expect(getHistoryMock).toHaveBeenCalledWith({ gameId: 'game-00000001', pageSize: 1 });
+    expect(completeMutate).toHaveBeenCalledTimes(1);
+    expect(resolveStart).toHaveBeenCalledWith('game-00000001', 'prev-record-id');
+  });
+
+  it('#2503-3: non-Host (Player) does NOT see the endgame trigger at all', () => {
+    useCurrentUserMock.mockReturnValue({ data: { id: 'user-not-host' } });
+    useLiveSessionMock.mockReturnValue({
+      data: PLAYER_DTO,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+    });
+
+    const { container } = renderWithIntl(<SessionLiveView />);
+
+    // LiveTopBar renders the endgame button only for hosts ({isHost && ...}),
+    // so a Player has no way to trigger session completion.
+    expect(
+      container.querySelector('[data-slot="session-live-top-bar-endgame"]')
+    ).not.toBeInTheDocument();
+  });
+
+  it('#2503-4: cancelling the confirm dialog closes it without completing', async () => {
+    const { container } = renderWithIntl(<SessionLiveView />);
+
+    await act(async () => {
+      fireEvent.click(container.querySelector('[data-slot="session-live-top-bar-endgame"]')!);
+    });
+    expect(document.querySelector('[data-slot="endgame-confirm-dialog"]')).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(document.querySelector('[data-slot="endgame-confirm-cancel"]')!);
+    });
+
+    expect(document.querySelector('[data-slot="endgame-confirm-dialog"]')).not.toBeInTheDocument();
+    expect(completeMutate).not.toHaveBeenCalled();
+  });
+
+  it('#2503-5: "Salva partita" navigates to the play-record detail once resolved', async () => {
+    resolveStatusMock = 'resolved';
+    resolvePlayRecordIdMock = 'rec-99';
+    searchParamsMap['dialog'] = 'endgame';
+
+    renderWithIntl(<SessionLiveView />);
+    // Flush the lazy EndgameDialog import.
+    await act(async () => {});
+
+    const saveCta = document.querySelector('[data-slot="endgame-save-cta"]');
+    expect(saveCta).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(saveCta!);
+    });
+
+    expect(routerPush).toHaveBeenCalledWith('/play-records/rec-99');
+  });
+
+  it('#2503-6: "Salva partita" falls back to the list on timeout', async () => {
+    resolveStatusMock = 'timeout';
+    resolvePlayRecordIdMock = null;
+    searchParamsMap['dialog'] = 'endgame';
+
+    renderWithIntl(<SessionLiveView />);
+    await act(async () => {});
+
+    await act(async () => {
+      fireEvent.click(document.querySelector('[data-slot="endgame-save-cta"]')!);
+    });
+
+    expect(routerPush).toHaveBeenCalledWith('/play-records');
+  });
+
+  it('#2503-7: resolved record does NOT auto-navigate without an explicit save click (CRITICAL 1)', async () => {
+    resolveStatusMock = 'resolved';
+    resolvePlayRecordIdMock = 'rec-99';
+    searchParamsMap['dialog'] = 'endgame';
+
+    renderWithIntl(<SessionLiveView />);
+    await act(async () => {});
+
+    // EndgameDialog is mounted with a resolved record, but the Host never clicked
+    // "Salva partita" → no navigation must fire.
+    expect(routerPush).not.toHaveBeenCalledWith('/play-records/rec-99');
   });
 });

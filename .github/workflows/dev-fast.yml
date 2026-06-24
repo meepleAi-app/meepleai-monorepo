@@ -77,8 +77,9 @@ jobs:
               - '.github/workflows/dev-fast.yml'
 
   # Sharding strategy (incident #1115): the apps/web Vitest suite runs >15min
-  # in CI as a single job. Splitting into 3 parallel matrix shards drops
-  # wall-clock to ~5min per shard while preserving full coverage. Lint and
+  # in CI as a single job. Splitting into 4 parallel matrix shards (was 3 — the
+  # suite grew until /3 shards hit timeout-minutes: 10) drops wall-clock to
+  # ~7.5min per shard while preserving full coverage. Lint and
   # typecheck stay in a separate fast job (no benefit from parallelism).
   # The frontend-fast aggregator job below preserves the branch-protection
   # required check name "Frontend Fast (lint + typecheck + unit)".
@@ -109,7 +110,7 @@ jobs:
         run: pnpm typecheck
 
   frontend-tests:
-    name: Frontend Tests (shard ${{ matrix.shard }}/3)
+    name: Frontend Tests (shard ${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: changes
@@ -117,7 +118,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        # 4 shards (was 3): the FE suite grew until each /3 shard ran ~9m30s–10m,
+        # tipping over timeout-minutes: 10 on slower runners (recent PRs passed by
+        # <5s; spurious "operation was canceled" with 0 test failures). The cost is
+        # dominated by per-file jsdom environment/setup, so splitting into more
+        # shards cuts each shard's wall-clock (~7.5m) without raising the timeout or
+        # touching test isolation. Only "GitGuardian Security Checks" is a required
+        # status check, so renaming (shard X/3)→(X/4) does not break branch protection.
+        shard: [1, 2, 3, 4]
     defaults:
       run:
         working-directory: apps/web
@@ -131,10 +139,10 @@ jobs:
           frozen-lockfile: 'true'
           cache-version: ${{ vars.CACHE_VERSION || 'v1' }}
 
-      - name: Unit tests (Vitest shard ${{ matrix.shard }}/3)
+      - name: Unit tests (Vitest shard ${{ matrix.shard }}/4)
         # Bypass the "test" pnpm script to forward the --shard flag cleanly.
         # Vitest 3.x supports deterministic file-level sharding via --shard.
-        run: pnpm exec vitest run --shard ${{ matrix.shard }}/3
+        run: pnpm exec vitest run --shard ${{ matrix.shard }}/4
 
   frontend-fast:
     # Aggregator job — preserves the branch-protection required check name

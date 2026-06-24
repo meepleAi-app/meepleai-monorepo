@@ -80,16 +80,20 @@ services:
     # /health/live is a pure liveness probe (Predicate => false, no deps), but on
     # a 2-core CI runner the synchronous full-bake startup seed (157 games +
     # ~136 PDF downloads/enqueue + embedding/smoldocling) saturates the CPU and a
-    # 10s curl can't get a response slice in time → the container flips unhealthy
-    # before `wait-for-healthy api` succeeds. A 30s probe timeout + longer grace
-    # lets the alive-but-busy API report healthy. Harmless for `make dev` (probes
-    # pass instantly when not under bake load).
+    # 10s curl can't get a response slice in time → the probe times out and the
+    # container can't report healthy before `wait-for-healthy api` gives up. The
+    # key lever is the 30s probe timeout (so a CPU-starved-but-alive API still
+    # answers); the 15s interval just polls more often for a faster healthy flip.
+    # start_period/retries are kept timing-equivalent to the base (60s + 6×15s =
+    # 150s = base 60s + 3×30s) so `make dev` failure detection is unchanged.
+    # wait-for-healthy ignores transient "unhealthy" and waits for "healthy", so
+    # these only govern when Docker labels a genuinely-dead API.
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/health/live || exit 1"]
       interval: 15s
       timeout: 30s
       retries: 6
-      start_period: 120s
+      start_period: 60s
 
   web:
     env_file: [./env/web.env.dev]

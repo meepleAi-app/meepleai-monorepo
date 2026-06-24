@@ -3205,7 +3205,20 @@
         "kickAriaLabel": "Espelli {playerName}",
         "roleSpectator": "Spettatore",
         "rolePlayer": "Giocatore",
-        "roleHost": "Host"
+        "roleHost": "Host",
+        "addPlayerCta": "Aggiungi giocatore",
+        "addPlayerDialogTitle": "Aggiungi giocatore",
+        "guestTab": "Ospite",
+        "registeredTab": "Utente registrato",
+        "displayNameLabel": "Nome",
+        "displayNamePlaceholder": "Es. Marco",
+        "searchUserPlaceholder": "Cerca per nome o email…",
+        "confirmCta": "Aggiungi",
+        "cancelCta": "Annulla",
+        "errorNoColorAvailable": "Nessun colore disponibile (tutti i 10 slot sono occupati).",
+        "errorDuplicateName": "Esiste già un giocatore con questo nome in sessione.",
+        "errorColorTaken": "Il colore assegnato è già stato preso. Riprova.",
+        "errorGeneric": "Si è verificato un errore. Riprova."
       },
       "scoring": {
         "title": "Punteggi",

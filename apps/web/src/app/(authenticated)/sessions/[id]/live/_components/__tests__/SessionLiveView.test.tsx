@@ -145,6 +145,32 @@ vi.mock('@/hooks/queries/useSessionAgentLaunch', () => ({
   useSessionAgentLaunch: (...args: unknown[]) => useSessionAgentLaunchMock(...args),
 }));
 
+// ─── useCurrentUser mock (#2505: viewerRole derivation) ─────────────────────
+
+const useCurrentUserMock = vi.fn(() => ({ data: null }));
+
+vi.mock('@/hooks/queries/useCurrentUser', () => ({
+  useCurrentUser: () => useCurrentUserMock(),
+}));
+
+// ─── useAddLivePlayer mock (#2505) ───────────────────────────────────────────
+
+vi.mock('@/hooks/mutations/useAddLivePlayer', () => ({
+  useAddLivePlayer: () => ({
+    mutate: vi.fn(),
+    isPending: false,
+  }),
+}));
+
+// ─── AddPlayerDialog mock (#2505: lazy import — suppress real render) ─────────
+// The dialog is lazy-loaded; mock it so tests don't need Suspense async resolve
+// for the core SessionLiveView behavior tests.
+
+vi.mock('@/components/features/session-live/AddPlayerDialog', () => ({
+  AddPlayerDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-slot="add-player-dialog-mock" /> : null,
+}));
+
 // ─── visual-test-fixture mock ─────────────────────────────────────────────
 
 let IS_VISUAL_TEST_BUILD_MOCK = false;
@@ -188,6 +214,19 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.roster.roleSpectator': 'Spettatore',
   'pages.sessionLive.roster.rolePlayer': 'Giocatore',
   'pages.sessionLive.roster.roleHost': 'Host',
+  'pages.sessionLive.roster.addPlayerCta': '+ Aggiungi giocatore',
+  'pages.sessionLive.roster.addPlayerDialogTitle': 'Aggiungi giocatore',
+  'pages.sessionLive.roster.guestTab': 'Ospite',
+  'pages.sessionLive.roster.registeredTab': 'Utente registrato',
+  'pages.sessionLive.roster.displayNameLabel': 'Nome',
+  'pages.sessionLive.roster.displayNamePlaceholder': 'Es. Marco',
+  'pages.sessionLive.roster.searchUserPlaceholder': 'Cerca per nome…',
+  'pages.sessionLive.roster.confirmCta': 'Aggiungi',
+  'pages.sessionLive.roster.cancelCta': 'Annulla',
+  'pages.sessionLive.roster.errorNoColorAvailable': 'Nessun colore disponibile.',
+  'pages.sessionLive.roster.errorDuplicateName': 'Nome duplicato.',
+  'pages.sessionLive.roster.errorColorTaken': 'Colore preso.',
+  'pages.sessionLive.roster.errorGeneric': 'Errore generico.',
   'pages.sessionLive.scoring.title': 'Punteggi',
   'pages.sessionLive.scoring.scoreLabel': 'Punteggio: {score}',
   'pages.sessionLive.scoring.winnerLabel': 'Vincitore',
@@ -372,6 +411,8 @@ import { SessionLiveView } from '../SessionLiveView';
 // of setState({...partial}) — Zustand setState merges by default.
 beforeEach(() => {
   useLiveSessionStore.getState().reset();
+  // #2505: reset currentUser to null by default; individual tests can override.
+  useCurrentUserMock.mockReturnValue({ data: null });
 });
 
 describe('SessionLiveView (Wave D.2 Foundation)', () => {
@@ -1649,5 +1690,121 @@ describe('SessionLiveView — #2500 Task 4-FE: RAG agent wiring via useSessionAg
     expect(
       container.querySelector('[data-slot="chat-nongrounded-disclaimer"]')
     ).toBeInTheDocument();
+  });
+});
+
+// ─── #2505 — viewerRole derivation + AddPlayerDialog wiring ──────────────────
+
+describe('SessionLiveView — #2505: viewerRole derivation + AddPlayerDialog', () => {
+  const MOCK_USER_ID = 'user-44444444-4444-4444-4444-444444444444';
+
+  const MOCK_DTO_WITH_HOST_PLAYER = {
+    ...MOCK_SESSION_DTO,
+    players: [
+      {
+        id: 'player-001',
+        displayName: 'Marco',
+        userId: MOCK_USER_ID,
+        color: 'Blue',
+        role: 'Host',
+        totalScore: 0,
+        isActive: true,
+      },
+      {
+        id: 'player-002',
+        displayName: 'Anna',
+        userId: null,
+        color: 'Red',
+        role: 'Player',
+        totalScore: 0,
+        isActive: true,
+      },
+    ],
+  } as unknown as LiveSessionDto;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
+    searchParamsMap['tab'] = 'turn'; // show PlayerRosterLive
+    mockParamsId = 'session-abc-123';
+    IS_VISUAL_TEST_BUILD_MOCK = false;
+    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+    useCurrentUserMock.mockReturnValue({ data: null });
+  });
+
+  it('#2505-1: viewerRole is "Host" when currentUser matches a Host player in dto.players', () => {
+    useCurrentUserMock.mockReturnValue({ data: { id: MOCK_USER_ID } });
+    useLiveSessionMock.mockReturnValue({
+      data: MOCK_DTO_WITH_HOST_PLAYER,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // PlayerRosterLive is rendered in 'turn' tab; host button should be present
+    expect(container.querySelector('[data-slot="player-roster-add"]')).toBeInTheDocument();
+  });
+
+  it('#2505-2: no "Add player" button when currentUser is null (not found in players)', () => {
+    useCurrentUserMock.mockReturnValue({ data: null });
+    useLiveSessionMock.mockReturnValue({
+      data: MOCK_DTO_WITH_HOST_PLAYER,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.querySelector('[data-slot="player-roster-add"]')).not.toBeInTheDocument();
+  });
+
+  it('#2505-3: no "Add player" button when currentUser matches a Player (not Host)', () => {
+    useCurrentUserMock.mockReturnValue({ data: { id: 'user-not-host' } });
+    useLiveSessionMock.mockReturnValue({
+      data: {
+        ...MOCK_SESSION_DTO,
+        players: [
+          {
+            id: 'player-001',
+            displayName: 'Marco',
+            userId: 'user-not-host',
+            color: 'Blue',
+            role: 'Player',
+            totalScore: 0,
+            isActive: true,
+          },
+        ],
+      } as unknown as LiveSessionDto,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.querySelector('[data-slot="player-roster-add"]')).not.toBeInTheDocument();
+  });
+
+  it('#2505-4: clicking "Add player" button mounts the AddPlayerDialog (mocked)', async () => {
+    useCurrentUserMock.mockReturnValue({ data: { id: MOCK_USER_ID } });
+    useLiveSessionMock.mockReturnValue({
+      data: MOCK_DTO_WITH_HOST_PLAYER,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+
+    const addBtn = container.querySelector('[data-slot="player-roster-add"]');
+    expect(addBtn).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(addBtn!);
+    });
+    await act(async () => {});
+
+    // The mocked AddPlayerDialog renders data-slot="add-player-dialog-mock" when open=true
+    expect(document.querySelector('[data-slot="add-player-dialog-mock"]')).toBeInTheDocument();
   });
 });

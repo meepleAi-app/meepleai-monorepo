@@ -68,7 +68,7 @@
 
 'use client';
 
-import { useCallback, useMemo, lazy, Suspense, type ReactElement } from 'react';
+import { useCallback, useMemo, useState, lazy, Suspense, type ReactElement } from 'react';
 
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useIntl } from 'react-intl';
@@ -101,6 +101,7 @@ import {
   type ToolkitRendererLabels,
 } from '@/components/features/session-live';
 import type { ChatMessage as LiveAgentChatMessage } from '@/components/features/session-live/LiveAgentChat';
+import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useLiveSession } from '@/hooks/queries/useLiveSession';
 import { useSessionAgentLaunch } from '@/hooks/queries/useSessionAgentLaunch';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -108,7 +109,7 @@ import { useSessionAgentChat } from '@/lib/domain-hooks/useSessionAgentChat';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
 import { mapConnectionState } from '@/lib/session-live/map-connection-state';
 import { mapTurnDataToTurnState } from '@/lib/session-live/map-turn-data-to-turn-state';
-import { hasRequiredRole } from '@/lib/session-live/participant-role';
+import { hasRequiredRole, type ParticipantRole } from '@/lib/session-live/participant-role';
 import { mapScoreDataToEndgameSummary } from '@/lib/session-live/score-data-to-endgame-summary';
 import {
   deriveSessionLiveUiState,
@@ -143,6 +144,12 @@ const PauseOverlay = lazy(() =>
 const EndgameDialog = lazy(() =>
   import('@/components/features/session-live/EndgameDialog').then(m => ({
     default: m.EndgameDialog,
+  }))
+);
+
+const AddPlayerDialog = lazy(() =>
+  import('@/components/features/session-live/AddPlayerDialog').then(m => ({
+    default: m.AddPlayerDialog,
   }))
 );
 
@@ -302,6 +309,16 @@ export function SessionLiveView(): ReactElement {
   // ── SessionId validation (contract §2.1) ─────────────────────────────────
   const sessionId = resolveSessionId(params?.id);
 
+  // ── Current user (for viewerRole derivation — #2505) ─────────────────────
+  const { data: currentUser } = useCurrentUser();
+
+  // ── AddPlayerDialog state (#2505) ────────────────────────────────────────
+  const [addPlayerOpen, setAddPlayerOpen] = useState(false);
+
+  const handleAddPlayer = useCallback(() => {
+    setAddPlayerOpen(true);
+  }, []);
+
   // ── URL state SSOT ────────────────────────────────────────────────────────
   const tab = parseLiveTab(searchParams.get('tab'));
   const mobileTab = parseMobileTab(searchParams.get('mtab'));
@@ -373,19 +390,27 @@ export function SessionLiveView(): ReactElement {
     // Compose live state from DTO + accumulated SSE events.
     const liveState = composeSessionLiveState(dto, liveStream.events);
 
+    // #2505: derive viewerRole from currentUser.id matched against dto.players.
+    // BE PlayerRole has 'Moderator' which FE ParticipantRole does not — map to 'Player'.
+    const currentUserId = currentUser?.id ?? '';
+    const viewerPlayer = dto.players.find(p => p.userId === currentUserId);
+    const derivedRole = viewerPlayer?.role;
+    const viewerRole: ParticipantRole =
+      derivedRole === 'Host' || derivedRole === 'Spectator' ? derivedRole : 'Player';
+
     return {
       id: dto.id,
       name: `Sessione ${dto.id.slice(0, 8)}`,
       status: liveState.status === 'Paused' ? 'Paused' : 'InProgress',
-      viewerRole: 'Player' as const, // Foundation default — real viewerRole from session DTO
-      viewerId: '',
+      viewerRole,
+      viewerId: viewerPlayer?.id ?? '',
       currentTurn: liveState.currentTurn,
       totalTurns: liveState.totalTurns,
       activePlayerId: liveState.activePlayerId,
       players: liveState.players,
       actionLog: liveState.actionLog,
     };
-  }, [fixture, sessionQuery.data, liveStream.events]);
+  }, [fixture, sessionQuery.data, liveStream.events, currentUser?.id]);
 
   // #2483 Task 2: reactive selector for turnOrderType — must be declared before
   // turnRendererState useMemo (which appears in the i18n labels section below).
@@ -628,6 +653,7 @@ export function SessionLiveView(): ReactElement {
       roleSpectator: t('pages.sessionLive.roster.roleSpectator'),
       rolePlayer: t('pages.sessionLive.roster.rolePlayer'),
       roleHost: t('pages.sessionLive.roster.roleHost'),
+      addPlayerLabel: t('pages.sessionLive.roster.addPlayerCta'),
     };
   }, [t, intl.messages, activeSession?.players.length]);
 
@@ -1057,6 +1083,9 @@ export function SessionLiveView(): ReactElement {
               players={activeSession.players}
               viewerId={activeSession.viewerId}
               viewerRole={activeSession.viewerRole}
+              onAddPlayer={
+                hasRequiredRole(activeSession.viewerRole, 'Host') ? handleAddPlayer : undefined
+              }
               labels={rosterLabels}
             />
           </div>
@@ -1103,6 +1132,7 @@ export function SessionLiveView(): ReactElement {
     turnRendererPlayers,
     turnRendererLabels,
     rosterLabels,
+    handleAddPlayer,
     toolkitWidgets,
     toolkitOpenId,
     setToolkitOpen,
@@ -1244,6 +1274,9 @@ export function SessionLiveView(): ReactElement {
             players={activeSession.players}
             viewerId={activeSession.viewerId}
             viewerRole={activeSession.viewerRole}
+            onAddPlayer={
+              hasRequiredRole(activeSession.viewerRole, 'Host') ? handleAddPlayer : undefined
+            }
             labels={rosterLabels}
           />
         </div>
@@ -1378,6 +1411,32 @@ export function SessionLiveView(): ReactElement {
               winnerLabel: t('pages.sessionLive.endgameDialog.winnerLabel'),
               acknowledgeCta: t('pages.sessionLive.endgameDialog.acknowledgeCta'),
               viewSummaryCta: t('pages.sessionLive.endgameDialog.viewSummaryCta'),
+            }}
+          />
+        </Suspense>
+      )}
+
+      {/* #2505: Host-only AddPlayerDialog — uses dto.players for color slots (LiveSessionFixturePlayer has no color field) */}
+      {addPlayerOpen && sessionId != null && (
+        <Suspense fallback={null}>
+          <AddPlayerDialog
+            sessionId={sessionId}
+            players={sessionQuery.data?.players ?? []}
+            open={addPlayerOpen}
+            onClose={() => setAddPlayerOpen(false)}
+            labels={{
+              dialogTitle: t('pages.sessionLive.roster.addPlayerDialogTitle'),
+              guestTab: t('pages.sessionLive.roster.guestTab'),
+              registeredTab: t('pages.sessionLive.roster.registeredTab'),
+              displayNameLabel: t('pages.sessionLive.roster.displayNameLabel'),
+              displayNamePlaceholder: t('pages.sessionLive.roster.displayNamePlaceholder'),
+              searchUserPlaceholder: t('pages.sessionLive.roster.searchUserPlaceholder'),
+              confirmCta: t('pages.sessionLive.roster.confirmCta'),
+              cancelCta: t('pages.sessionLive.roster.cancelCta'),
+              errorNoColorAvailable: t('pages.sessionLive.roster.errorNoColorAvailable'),
+              errorDuplicateName: t('pages.sessionLive.roster.errorDuplicateName'),
+              errorColorTaken: t('pages.sessionLive.roster.errorColorTaken'),
+              errorGeneric: t('pages.sessionLive.roster.errorGeneric'),
             }}
           />
         </Suspense>

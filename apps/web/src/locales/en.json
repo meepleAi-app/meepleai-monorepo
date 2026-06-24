@@ -3098,7 +3098,20 @@
         "kickAriaLabel": "Kick {playerName}",
         "roleSpectator": "Spectator",
         "rolePlayer": "Player",
-        "roleHost": "Host"
+        "roleHost": "Host",
+        "addPlayerCta": "Add player",
+        "addPlayerDialogTitle": "Add player",
+        "guestTab": "Guest",
+        "registeredTab": "Registered user",
+        "displayNameLabel": "Name",
+        "displayNamePlaceholder": "E.g. Marco",
+        "searchUserPlaceholder": "Search by name or email…",
+        "confirmCta": "Add",
+        "cancelCta": "Cancel",
+        "errorNoColorAvailable": "No color available (all 10 slots are taken).",
+        "errorDuplicateName": "A player with this name already exists in this session.",
+        "errorColorTaken": "The assigned color was already taken. Please try again.",
+        "errorGeneric": "An error occurred. Please try again."
       },
       "scoring": {
         "title": "Scores",

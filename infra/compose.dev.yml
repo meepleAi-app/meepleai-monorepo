@@ -76,6 +76,20 @@ services:
       DISABLE_RATE_LIMITING: ${DISABLE_RATE_LIMITING:-}
     volumes:
       - ./secrets:/app/infra/secrets:ro
+    # Override the base liveness healthcheck with load-tolerant timings (#2516).
+    # /health/live is a pure liveness probe (Predicate => false, no deps), but on
+    # a 2-core CI runner the synchronous full-bake startup seed (157 games +
+    # ~136 PDF downloads/enqueue + embedding/smoldocling) saturates the CPU and a
+    # 10s curl can't get a response slice in time → the container flips unhealthy
+    # before `wait-for-healthy api` succeeds. A 30s probe timeout + longer grace
+    # lets the alive-but-busy API report healthy. Harmless for `make dev` (probes
+    # pass instantly when not under bake load).
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health/live || exit 1"]
+      interval: 15s
+      timeout: 30s
+      retries: 6
+      start_period: 120s
 
   web:
     env_file: [./env/web.env.dev]

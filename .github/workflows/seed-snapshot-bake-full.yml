@@ -76,6 +76,9 @@ jobs:
       SEED_INDEX_TIMEOUT: '20000' # ~5.5h, just under the job limit
       SEED_INDEX_POLL: '30'
       SEED_INDEX_FAILURE_PCT: ${{ github.event.inputs.failure_pct || '15' }}
+      # On a 2-core runner the full dev.yml startup seed saturates the API; give
+      # the load-tolerant liveness probe more room to report healthy (#2516).
+      SEED_INDEX_HEALTH_TIMEOUT: '600'
 
     steps:
       - name: Checkout

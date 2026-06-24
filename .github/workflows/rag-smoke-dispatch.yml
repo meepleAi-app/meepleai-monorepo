@@ -81,6 +81,7 @@ jobs:
           bash scripts/wait-for-healthy.sh api 300
 
       - name: Run RAG smoke
+        id: ragsmoke
         working-directory: infra
         env:
           API_BASE_URL: http://localhost:8080
@@ -103,7 +104,9 @@ jobs:
           retention-days: 14
 
       - name: Open issue on retrieval drift
-        if: ${{ failure() && github.event.inputs.update_baseline != 'true' }}
+        # Only on actual retrieval drift (the smoke step failed), NOT on an infra
+        # failure like the broken R2 snapshot fetch in "Boot from published snapshot".
+        if: ${{ steps.ragsmoke.outcome == 'failure' && github.event.inputs.update_baseline != 'true' }}
         uses: actions/github-script@v7
         with:
           script: |

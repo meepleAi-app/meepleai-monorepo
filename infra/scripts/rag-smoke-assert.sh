@@ -66,7 +66,7 @@ fetch_top_chunks() {
     -d "$(jq -n --arg q "$query" --arg l "$LANG" --argjson k "$TOPK" '{query:$q, language:$l, topK:$k}')" 2>/dev/null \
     | grep '^data: ' | sed 's/^data: //' \
     | jq -c 'select(.type==1) | .data.citations' 2>/dev/null | head -1 \
-    | jq -c "if . == null then [] else (sort_by(-.score) | .[0:$TOPK] | map({source, page})) end" 2>/dev/null
+    | jq -c "if . == null then [] else (sort_by(-.score, .source, .page) | .[0:$TOPK] | map({source, page})) end" 2>/dev/null
 }
 
 PASS=0; FAIL=0
@@ -77,7 +77,7 @@ while IFS= read -r qid; do
   top=$(fetch_top_chunks "$query")
 
   if [ -z "$top" ] || [ "$top" = "[]" ]; then
-    echo "FAIL  $qid — no citations returned (Citations event type=1 empty/absent)"
+    echo "FAIL  $qid — no citations (type=1 empty/absent: cold index, auth failure, or non-SSE error body). Check login + that the snapshot is loaded."
     FAIL=$((FAIL+1)); continue
   fi
 
@@ -94,7 +94,10 @@ while IFS= read -r qid; do
     FAIL=$((FAIL+1)); continue
   fi
 
-  if [ "$(echo "$top" | jq -cS 'sort')" = "$(echo "$expected" | jq -cS 'sort')" ]; then
+  # Ordered comparison: both sides come from the same sort_by(-.score, .source, .page)
+  # pipeline, so rank matters — a chunk dropping from #1 to #3 must fail (real drift),
+  # not pass as it would with an order-insensitive set compare.
+  if [ "$top" = "$expected" ]; then
     echo "PASS  $qid"; PASS=$((PASS+1))
   else
     echo "FAIL  $qid — top-$TOPK retrieval drifted"
@@ -105,6 +108,9 @@ while IFS= read -r qid; do
 done < <(jq -r '.queries[].queryId' "$QUERIES")
 
 if [ "$UPDATE_BASELINE" = true ]; then
+  # Never write a partial baseline: a query that returned no citations would be
+  # silently omitted and later assert runs would blame the operator. Fail loudly.
+  [ "$FAIL" -eq 0 ] || fail "$FAIL query(ies) returned no citations — baseline NOT written (fix retrieval/auth first)"
   snap=$(cat "$DIR/../data/snapshots/.latest" 2>/dev/null || echo "unknown")
   model=$(jq -r '.embedding_model // "unknown"' "$DIR/../data/snapshots/$snap.meta.json" 2>/dev/null || echo "unknown")
   ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)

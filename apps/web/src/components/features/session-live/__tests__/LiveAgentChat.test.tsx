@@ -21,12 +21,14 @@ import { IntlProvider } from 'react-intl';
 import type { LiveAgentChatLabels, LiveAgentChatProps, ChatMessage } from '../LiveAgentChat';
 import { LiveAgentChat } from '../LiveAgentChat';
 import { CHAT_DRAFT_KEY_PREFIX } from '@/lib/session-live/use-chat-draft';
+import { mapCitationToChatCitation } from '@/lib/session-live/map-citation-to-chat-citation';
 
 // ─── i18n messages used by the component ──────────────────────────────────────
 
 const INTL_MESSAGES = {
   'pages.sessionLive.chat.newMessagesToast':
     '{count, plural, one {# nuovo messaggio} other {# nuovi messaggi}}',
+  'pages.sessionLive.chatAgent.nonGroundedDisclaimer': 'Risposta non basata sul regolamento',
 };
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -246,6 +248,147 @@ describe('LiveAgentChat — aria attributes', () => {
 });
 
 // ─── #2375 G3 — draft persistence + smart scroll ──────────────────────────────
+
+// ─── #2500 — ChatCitationCard rendering ───────────────────────────────────────
+
+describe('#2500 — CitationCard rendering', () => {
+  it('renderizza ChatCitationCard quando il messaggio assistant ha citazioni', () => {
+    const msgWithCitations: ChatMessage = {
+      id: 'msg-cite-1',
+      senderId: 'agent',
+      senderName: 'Agent',
+      content: 'Ecco il regolamento.',
+      visibility: 'shared',
+      timestamp: '2026-06-23T10:00:00Z',
+      citations: [{ documentName: 'Reg Azul', pages: [7], excerpt: 'Posiziona' }],
+    };
+    renderChat({ messages: [msgWithCitations] });
+    expect(screen.getByText(/Reg Azul/)).toBeInTheDocument();
+    expect(screen.getByText(/pag\. 7/i)).toBeInTheDocument();
+  });
+
+  it('NON renderizza citazioni quando assenti (AC-CHAT-3)', () => {
+    const msgWithoutCitations: ChatMessage = {
+      id: 'msg-no-cite',
+      senderId: 'agent',
+      senderName: 'Agent',
+      content: 'Risposta senza citazioni.',
+      visibility: 'shared',
+      timestamp: '2026-06-23T10:01:00Z',
+    };
+    renderChat({ messages: [msgWithoutCitations] });
+    expect(screen.queryByText(/pag\./i)).toBeNull();
+  });
+});
+
+// ─── AC-CHAT-2: DOM test "mai verbatim" (Parte A, solo test — nessuna modifica di produzione) ───
+
+describe('#2500 AC-CHAT-2 — protected verbatim never in DOM', () => {
+  it('mostra la parafrasi ma mai il verbatim nel DOM per citazione protected', () => {
+    // Costruisce la ChatCitation passando per mapCitationToChatCitation su una citazione protected
+    // con un campo verbatim distintivo — questo è il regression hook per il round-trip
+    // protected → mapper → ChatCitationCard → DOM.
+    const protectedCitation = {
+      source: 'Regolamento Azul',
+      pageNumber: 7,
+      copyrightTier: 'protected' as const,
+      snippet: 'VERBATIM_SECRET',
+      paraphrasedSnippet: 'sintesi regola',
+    };
+
+    const chatCitation = mapCitationToChatCitation(protectedCitation);
+    expect(chatCitation).not.toBeNull();
+    // Sanity: la citazione mappata usa paraphrase, non verbatim
+    expect(chatCitation!.excerpt).toBe('sintesi regola');
+
+    const msgWithProtectedCitation: ChatMessage = {
+      id: 'msg-protected-1',
+      senderId: 'agent',
+      senderName: 'MeepleAI',
+      content: 'Ecco la regola.',
+      visibility: 'shared',
+      timestamp: '2026-06-23T10:00:00Z',
+      citations: [chatCitation!],
+    };
+
+    const { container } = renderChat({ messages: [msgWithProtectedCitation] });
+
+    // La parafrasi è presente nel DOM
+    expect(screen.getByText(/sintesi regola/)).toBeInTheDocument();
+    // Il verbatim NON è mai nel DOM
+    expect(container.textContent).not.toContain('VERBATIM_SECRET');
+  });
+});
+
+// ─── AC-CHAT-3: disclaimer risposta non-grounded ──────────────────────────────
+
+describe('#2500 AC-CHAT-3 — non-grounded disclaimer', () => {
+  it('messaggio assistant isNonGrounded:true → disclaimer data-slot="chat-nongrounded-disclaimer" nel DOM', () => {
+    const msgNonGrounded: ChatMessage = {
+      id: 'msg-ng-1',
+      senderId: 'agent',
+      senderName: 'MeepleAI',
+      content: 'Risposta senza fonti.',
+      visibility: 'shared',
+      timestamp: '2026-06-23T10:00:00Z',
+      isNonGrounded: true,
+    };
+    const { container } = renderChat({ messages: [msgNonGrounded] });
+    expect(
+      container.querySelector('[data-slot="chat-nongrounded-disclaimer"]')
+    ).toBeInTheDocument();
+    // Testo localizzato presente
+    expect(container.textContent).toContain('Risposta non basata sul regolamento');
+  });
+
+  it('messaggio assistant con citazioni → disclaimer assente', () => {
+    const msgWithCitations: ChatMessage = {
+      id: 'msg-cite-ng',
+      senderId: 'agent',
+      senderName: 'MeepleAI',
+      content: 'Risposta con fonti.',
+      visibility: 'shared',
+      timestamp: '2026-06-23T10:00:00Z',
+      citations: [{ documentName: 'Reg', pages: [1], excerpt: 'testo' }],
+    };
+    const { container } = renderChat({ messages: [msgWithCitations] });
+    expect(
+      container.querySelector('[data-slot="chat-nongrounded-disclaimer"]')
+    ).not.toBeInTheDocument();
+  });
+
+  it('messaggio user → disclaimer assente anche se isNonGrounded accidentalmente truthy', () => {
+    // Nota: per design i messaggi user non hanno mai isNonGrounded, ma anche se fosse
+    // settato accidentalmente il disclaimer non deve apparire su messaggi user
+    const msgUser: ChatMessage = {
+      id: 'msg-user-ng',
+      senderId: 'viewer-id',
+      senderName: 'Player',
+      content: 'Domanda utente.',
+      visibility: 'shared',
+      timestamp: '2026-06-23T10:00:00Z',
+    };
+    const { container } = renderChat({ messages: [msgUser], viewerId: 'viewer-id' });
+    expect(
+      container.querySelector('[data-slot="chat-nongrounded-disclaimer"]')
+    ).not.toBeInTheDocument();
+  });
+
+  it('messaggio assistant isNonGrounded:false/undefined → disclaimer assente', () => {
+    const msgAssistant: ChatMessage = {
+      id: 'msg-a-nodisc',
+      senderId: 'agent',
+      senderName: 'MeepleAI',
+      content: 'Risposta normale senza flag.',
+      visibility: 'shared',
+      timestamp: '2026-06-23T10:00:00Z',
+    };
+    const { container } = renderChat({ messages: [msgAssistant] });
+    expect(
+      container.querySelector('[data-slot="chat-nongrounded-disclaimer"]')
+    ).not.toBeInTheDocument();
+  });
+});
 
 describe('#2375 G3 — draft + smart scroll', () => {
   const baseLabels: LiveAgentChatLabels = {

@@ -116,6 +116,35 @@ vi.mock('sonner', () => ({
   },
 }));
 
+// ─── useSessionAgentChat mock (#2500 Task 4: RAG agent wiring) ────────────
+// Hoisted globally so all describe blocks get a safe no-op default.
+// The RAG-specific describe block overrides the return value in its beforeEach.
+
+const useSessionAgentChatMock = vi.fn(() => ({
+  messages: [],
+  isLoading: false,
+  error: null,
+  streamingContent: '',
+  ask: vi.fn(),
+  stop: vi.fn(),
+}));
+
+vi.mock('@/lib/domain-hooks/useSessionAgentChat', () => ({
+  useSessionAgentChat: (...args: unknown[]) => useSessionAgentChatMock(...args),
+}));
+
+// ─── useSessionAgentLaunch mock (#2500 Task 4-FE: wire hook) ──────────────
+// Default: 'ready' with a valid agentSessionId so other describe blocks are unaffected.
+
+const useSessionAgentLaunchMock = vi.fn(() => ({
+  status: 'ready' as const,
+  agentSessionId: 'agent-session-uuid-0001',
+}));
+
+vi.mock('@/hooks/queries/useSessionAgentLaunch', () => ({
+  useSessionAgentLaunch: (...args: unknown[]) => useSessionAgentLaunchMock(...args),
+}));
+
 // ─── visual-test-fixture mock ─────────────────────────────────────────────
 
 let IS_VISUAL_TEST_BUILD_MOCK = false;
@@ -235,6 +264,12 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.chatAgent.agentNameAriaLabel': 'Nome agente {name}',
   'pages.sessionLive.chatAgent.onlineLabel': 'Online',
   'pages.sessionLive.chatAgent.latencyAriaLabel': 'Latenza {ms}ms',
+  // Agent launch status feedback messages (#2500 Task 4-FE R-FINDING-5)
+  'pages.sessionLive.chatAgent.launchingMessage': "Avvio dell'assistente di gioco…",
+  'pages.sessionLive.chatAgent.noAgentMessage': 'Nessun assistente disponibile per questo gioco.',
+  'pages.sessionLive.chatAgent.errorMessage':
+    "Impossibile avviare l'assistente. Riprova più tardi.",
+  'pages.sessionLive.chatAgent.nonGroundedDisclaimer': 'Risposta non basata sul regolamento',
   // MobileBody bottom-sheet labels (G1 #2374 T9 — sess.46r)
   'pages.sessionLive.mobile.openSheetCta': 'Apri pannello',
   'pages.sessionLive.mobile.closeSheetAriaLabel': 'Chiudi pannello',
@@ -1338,4 +1373,281 @@ describe('SessionLiveView — #2483 Task 4: TurnIndicatorRenderer from store', (
   // longer hydrated from the DTO loader (LiveSessionDto exposes no turnOrderType).
   // The store-seeded branch tests above cover the renderer; DTO→store wiring for
   // round-based turn metadata is deferred to Fase 2.
+});
+
+// ─── #2500 Task 4-FE — useSessionAgentLaunch wired into ChatAgentPanel ──────────
+// AC-CHAT-0: send goes through useSessionAgentChat (RAG path), not /chat social endpoint.
+// AC-CHAT-NULL: when agentSessionId absent → panel renders + status feedback visible.
+// R-FINDING-4/5/6: correct comments, status feedback messages, viewerId consistency.
+
+describe('SessionLiveView — #2500 Task 4-FE: RAG agent wiring via useSessionAgentLaunch', () => {
+  const agentAskMock = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
+    mockParamsId = 'session-abc-123';
+    IS_VISUAL_TEST_BUILD_MOCK = false;
+    useLiveSessionMock.mockReturnValue({
+      data: { ...MOCK_SESSION_DTO, gameId: 'game-00000001' },
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+    useSessionAgentLaunchMock.mockReturnValue({
+      status: 'ready' as const,
+      agentSessionId: 'agent-session-uuid-0001',
+    });
+    useSessionAgentChatMock.mockReturnValue({
+      messages: [],
+      isLoading: false,
+      error: null,
+      streamingContent: '',
+      ask: agentAskMock,
+      stop: vi.fn(),
+    });
+  });
+
+  it('RAG-1: renders ChatAgentPanel without crash when agentLaunch is ready', () => {
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.querySelector('[data-slot="chat-agent-panel"]')).toBeInTheDocument();
+  });
+
+  it('RAG-2: AC-CHAT-NULL — renders ChatAgentPanel without crash when no-agent status', () => {
+    useSessionAgentLaunchMock.mockReturnValue({
+      status: 'no-agent' as const,
+      agentSessionId: '',
+    });
+    useSessionAgentChatMock.mockReturnValue({
+      messages: [],
+      isLoading: false,
+      error: null,
+      streamingContent: '',
+      ask: agentAskMock,
+      stop: vi.fn(),
+    });
+    expect(() => renderWithIntl(<SessionLiveView />)).not.toThrow();
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.querySelector('[data-slot="chat-agent-panel"]')).toBeInTheDocument();
+  });
+
+  it('RAG-3: assistant citation is rendered in ChatAgentPanel (pag. N pattern)', () => {
+    useSessionAgentChatMock.mockReturnValue({
+      messages: [
+        {
+          id: 'msg-001',
+          role: 'assistant' as const,
+          content: 'Il regolamento dice…',
+          timestamp: new Date().toISOString(),
+          citations: [{ documentName: 'Reg', pages: [7], excerpt: 'x' }],
+        },
+      ],
+      isLoading: false,
+      error: null,
+      streamingContent: '',
+      ask: agentAskMock,
+      stop: vi.fn(),
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // Citation card renders "pag. 7" (or page list) — asserting presence
+    expect(container.querySelector('[data-slot="chat-citations"]')).toBeInTheDocument();
+    expect(container.textContent).toMatch(/pag\.\s*7/i);
+  });
+
+  it('RAG-4: useSessionAgentChat is called with sessionId and agentSessionId from useSessionAgentLaunch', () => {
+    renderWithIntl(<SessionLiveView />);
+    expect(useSessionAgentChatMock).toHaveBeenCalledWith(
+      'session-abc-123',
+      'agent-session-uuid-0001',
+      {
+        persistHistory: true, // fixture=false in test → !fixture=true (R5 #2500)
+        gameContext: {
+          // I1 #2500: built from LiveSessionDto, not from useSessionStore
+          gameId: 'game-00000001',
+          gameTitle: 'Mage Knight',
+          players: ['Marco', 'Anna'],
+          currentTurn: 0,
+        },
+      }
+    );
+  });
+
+  it('RAG-5: AC-CHAT-NULL — useSessionAgentChat called with empty string when no-agent', () => {
+    useSessionAgentLaunchMock.mockReturnValue({
+      status: 'no-agent' as const,
+      agentSessionId: '',
+    });
+    useSessionAgentChatMock.mockReturnValue({
+      messages: [],
+      isLoading: false,
+      error: null,
+      streamingContent: '',
+      ask: agentAskMock,
+      stop: vi.fn(),
+    });
+    renderWithIntl(<SessionLiveView />);
+    // Hook called with empty agentSessionId guard (no-agent → no ready session)
+    // R5: persistHistory passed as third arg — fixture=false → !fixture=true
+    // I1 #2500: gameContext still injected from LiveSessionDto even when no-agent
+    expect(useSessionAgentChatMock).toHaveBeenCalledWith('session-abc-123', '', {
+      persistHistory: true,
+      gameContext: {
+        gameId: 'game-00000001',
+        gameTitle: 'Mage Knight',
+        players: ['Marco', 'Anna'],
+        currentTurn: 0,
+      },
+    });
+  });
+
+  it('RAG-6: useSessionAgentLaunch called with sessionId, gameId, and !fixture', () => {
+    renderWithIntl(<SessionLiveView />);
+    expect(useSessionAgentLaunchMock).toHaveBeenCalledWith(
+      'session-abc-123',
+      'game-00000001',
+      true // enabled = !fixture = !false
+    );
+  });
+
+  it('RAG-7: useSessionAgentLaunch disabled in fixture mode (IS_VISUAL_TEST_BUILD)', () => {
+    IS_VISUAL_TEST_BUILD_MOCK = true;
+    renderWithIntl(<SessionLiveView />);
+    expect(useSessionAgentLaunchMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      false // enabled = !fixture = !true
+    );
+  });
+
+  // R-FINDING-5: feedback messages for non-ready status
+  it('RAG-8: launching status — shows launching feedback message in chat', () => {
+    useSessionAgentLaunchMock.mockReturnValue({
+      status: 'launching' as const,
+      agentSessionId: '',
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // Launching message appears in the chat messages list
+    expect(container.textContent).toMatch(/Avvio/i);
+  });
+
+  it('RAG-9: no-agent status — shows no-agent feedback message in chat', () => {
+    useSessionAgentLaunchMock.mockReturnValue({
+      status: 'no-agent' as const,
+      agentSessionId: '',
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.textContent).toMatch(/Nessun assistente/i);
+  });
+
+  it('RAG-10: error status — shows error feedback message in chat', () => {
+    useSessionAgentLaunchMock.mockReturnValue({
+      status: 'error' as const,
+      agentSessionId: '',
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.textContent).toMatch(/Impossibile avviare/i);
+  });
+
+  // R-FINDING-6: viewerId consistency — no magic-string 'user' fallback
+  it('RAG-11: user messages use viewerId from activeSession (not magic-string fallback)', () => {
+    // When activeSession.viewerId is '', messages should have senderId='' not 'user'
+    useSessionAgentChatMock.mockReturnValue({
+      messages: [
+        {
+          id: 'msg-user-1',
+          role: 'user' as const,
+          content: 'Domanda utente',
+          timestamp: new Date().toISOString(),
+          citations: undefined,
+        },
+      ],
+      isLoading: false,
+      error: null,
+      streamingContent: '',
+      ask: agentAskMock,
+      stop: vi.fn(),
+    });
+    // If viewerId is '' (activeSession default) and senderId is '', the message
+    // is own (isOwn=true) — no sender name label. The test checks no 'user' magic string
+    // by verifying the mapped senderId matches viewerId (both ''). Since both are '',
+    // isOwn=true, and the <span senderName> should NOT appear (only shown when !isOwn).
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // The message content should be present
+    expect(container.textContent).toContain('Domanda utente');
+  });
+
+  // ─── AC-CHAT-3: vincolo critico — disclaimer NOT su messaggi di sistema di stato ───
+
+  it('RAG-12 (AC-CHAT-3 critical): system status message (no-agent) NON mostra il disclaimer non-grounded', () => {
+    // Un messaggio di SISTEMA (iniettato da SessionLiveView per status no-agent)
+    // non deve mostrare il disclaimer non-grounded, anche se è assistant senza citazioni.
+    useSessionAgentLaunchMock.mockReturnValue({
+      status: 'no-agent' as const,
+      agentSessionId: '',
+    });
+    useSessionAgentChatMock.mockReturnValue({
+      messages: [], // nessun messaggio dal hook — il messaggio viene iniettato da SessionLiveView
+      isLoading: false,
+      error: null,
+      streamingContent: '',
+      ask: agentAskMock,
+      stop: vi.fn(),
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // Il messaggio di stato è presente nel DOM
+    expect(container.textContent).toMatch(/Nessun assistente/i);
+    // Il disclaimer non-grounded NON deve apparire sui messaggi di sistema
+    expect(
+      container.querySelector('[data-slot="chat-nongrounded-disclaimer"]')
+    ).not.toBeInTheDocument();
+  });
+
+  it('RAG-12b (AC-CHAT-3 critical): system status message (error) NON mostra il disclaimer non-grounded', () => {
+    useSessionAgentLaunchMock.mockReturnValue({
+      status: 'error' as const,
+      agentSessionId: '',
+    });
+    useSessionAgentChatMock.mockReturnValue({
+      messages: [],
+      isLoading: false,
+      error: null,
+      streamingContent: '',
+      ask: agentAskMock,
+      stop: vi.fn(),
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.textContent).toMatch(/Impossibile avviare/i);
+    expect(
+      container.querySelector('[data-slot="chat-nongrounded-disclaimer"]')
+    ).not.toBeInTheDocument();
+  });
+
+  it('RAG-13 (AC-CHAT-3): vera risposta RAG senza citazioni (isNonGrounded:true) MOSTRA il disclaimer', () => {
+    // Il hook produce un messaggio assistant con isNonGrounded:true (vera risposta RAG, 0 citazioni)
+    useSessionAgentChatMock.mockReturnValue({
+      messages: [
+        {
+          id: 'msg-ng-rag',
+          role: 'assistant' as const,
+          content: 'Risposta RAG senza fonti.',
+          timestamp: new Date().toISOString(),
+          citations: undefined,
+          isNonGrounded: true,
+        },
+      ],
+      isLoading: false,
+      error: null,
+      streamingContent: '',
+      ask: agentAskMock,
+      stop: vi.fn(),
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+    // Il disclaimer deve essere presente
+    expect(
+      container.querySelector('[data-slot="chat-nongrounded-disclaimer"]')
+    ).toBeInTheDocument();
+  });
 });

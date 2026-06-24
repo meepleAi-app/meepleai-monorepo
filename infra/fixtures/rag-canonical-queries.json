@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "_comment": "Canonical RAG smoke queries (#2480). Each query targets a well-known game indexed in the dev.yml seed snapshot. The harness (infra/scripts/rag-smoke-assert.sh) POSTs each to /api/v1/knowledge-base/ask/global and asserts the top-3 retrieved chunks (Citations SSE event, type=1) match infra/fixtures/rag-golden-baseline.json. Language is pinned to 'en' so retrieval ranking is deterministic across runs.",
+  "endpoint": "/api/v1/knowledge-base/ask/global",
+  "topK": 3,
+  "language": "en",
+  "queries": [
+    {
+      "queryId": "catan-setup",
+      "game": "Catan",
+      "query": "How do I set up the board and place the two initial settlements and roads in Catan?"
+    },
+    {
+      "queryId": "wingspan-round-goals",
+      "game": "Wingspan",
+      "query": "How does end-of-round goal scoring work in Wingspan?"
+    },
+    {
+      "queryId": "dominion-buy-phase",
+      "game": "Dominion",
+      "query": "During the buy phase how many cards may I buy and how do coins work in Dominion?"
+    },
+    {
+      "queryId": "ark-nova-conservation",
+      "game": "Ark Nova",
+      "query": "How do conservation projects and reputation points work in Ark Nova?"
+    },
+    {
+      "queryId": "seven-wonders-military",
+      "game": "7 Wonders",
+      "query": "How is military conflict resolved at the end of each age in 7 Wonders?"
+    }
+  ]
+}

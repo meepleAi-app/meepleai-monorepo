@@ -185,6 +185,19 @@ jobs:
           # bother with `make dev-down`.
           make seed-index
 
+      - name: Debug — seeding + advisory-lock logs (8th-layer diagnosis)
+        if: always()
+        working-directory: infra
+        run: |
+          echo "=== SeedOrchestrator + advisory-lock flow (Quartz excluded) ==="
+          docker logs meepleai-api 2>&1 \
+            | grep -iE "Seeding with profile|Attempting seeding advisory|advisory lock|Another replica|Running [0-9]+ seed layer|Running seed layer:|Seeding completed|Seeding failed|GameSeeder|CatalogSeedLayer|Created SharedGame" \
+            | grep -ivE "CatalogSeedFetchJob" | head -60 || echo "(no seeding logs)"
+          echo "=== seeded counts ==="
+          PG_DB="$(sed -n 's/^POSTGRES_DB=//p' secrets/database.secret)"
+          docker exec meepleai-postgres psql -U "${POSTGRES_USER:-meepleai}" -d "$PG_DB" -At -c \
+            "SELECT 'shared_games='||COUNT(*) FROM shared_games;" 2>&1 || echo "(psql failed)"
+
       - name: Run verify gates (exit codes 2/3/4/5/6)
         working-directory: infra
         env:

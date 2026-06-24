@@ -34,6 +34,8 @@ export interface PlayerRosterLiveLabels {
   readonly roleSpectator: string;
   readonly rolePlayer: string;
   readonly roleHost: string;
+  /** Host-only "Add player" CTA label. Required when onAddPlayer is provided. */
+  readonly addPlayerLabel?: string;
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -43,6 +45,8 @@ export interface PlayerRosterLiveProps {
   readonly viewerId: string;
   readonly viewerRole: ParticipantRole;
   readonly onKickParticipant?: (participantId: string) => void;
+  /** Host-only: if defined, a "+ Add player" button is rendered in the header. */
+  readonly onAddPlayer?: () => void;
   readonly compact?: boolean;
   readonly labels: PlayerRosterLiveLabels;
 }
@@ -62,6 +66,7 @@ export function PlayerRosterLive({
   viewerId,
   viewerRole,
   onKickParticipant,
+  onAddPlayer,
   compact = false,
   labels,
 }: PlayerRosterLiveProps): ReactElement {
@@ -72,7 +77,21 @@ export function PlayerRosterLive({
       {!compact && (
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-foreground">{labels.title}</h3>
-          <span className="text-xs text-muted-foreground">{labels.playerCountResolved}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">{labels.playerCountResolved}</span>
+            {onAddPlayer != null && (
+              <button
+                type="button"
+                onClick={onAddPlayer}
+                data-slot="player-roster-add"
+                className="rounded px-1.5 py-0.5 text-xs font-medium text-primary
+                  hover:bg-primary/10
+                  focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                {labels.addPlayerLabel ?? '+ Add'}
+              </button>
+            )}
+          </div>
         </div>
       )}
 

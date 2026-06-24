@@ -68,7 +68,15 @@
 
 'use client';
 
-import { useCallback, useMemo, useState, lazy, Suspense, type ReactElement } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  lazy,
+  Suspense,
+  type ReactElement,
+} from 'react';
 
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useIntl } from 'react-intl';
@@ -101,11 +109,13 @@ import {
   type ToolkitRendererLabels,
 } from '@/components/features/session-live';
 import type { ChatMessage as LiveAgentChatMessage } from '@/components/features/session-live/LiveAgentChat';
+import { useCompleteLiveSession } from '@/hooks/mutations/useCompleteLiveSession';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useLiveSession } from '@/hooks/queries/useLiveSession';
 import { useSessionAgentLaunch } from '@/hooks/queries/useSessionAgentLaunch';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useSessionAgentChat } from '@/lib/domain-hooks/useSessionAgentChat';
+import { getNavigationLinks } from '@/lib/navigation';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
 import { mapConnectionState } from '@/lib/session-live/map-connection-state';
 import { mapTurnDataToTurnState } from '@/lib/session-live/map-turn-data-to-turn-state';
@@ -129,6 +139,7 @@ import {
 } from '@/lib/session-live/session-live-visual-test-fixture';
 import type { TurnState, PlayerInfo as TurnPlayerInfo } from '@/lib/session-live/turn-state';
 import { useElapsedTime } from '@/lib/session-live/use-elapsed-time';
+import { useResolvePlayRecord } from '@/lib/session-live/use-resolve-play-record';
 import { useSessionLiveStream } from '@/lib/session-live/use-session-live-stream';
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';
 import { useToolkitRendererStore } from '@/lib/stores/toolkit-renderer-store';
@@ -318,6 +329,13 @@ export function SessionLiveView(): ReactElement {
   const handleAddPlayer = useCallback(() => {
     setAddPlayerOpen(true);
   }, []);
+
+  // ── #2503: Endgame confirm dialog state ──────────────────────────────────
+  const [endgameConfirmOpen, setEndgameConfirmOpen] = useState(false);
+
+  // ── #2503: Complete session mutation + play-record polling ───────────────
+  const completeLiveSession = useCompleteLiveSession(sessionId ?? '');
+  const resolvePlayRecord = useResolvePlayRecord();
 
   // ── URL state SSOT ────────────────────────────────────────────────────────
   const tab = parseLiveTab(searchParams.get('tab'));
@@ -510,6 +528,48 @@ export function SessionLiveView(): ReactElement {
   const handleBack = useCallback(() => {
     router.push('/sessions');
   }, [router]);
+
+  // ── #2503: Endgame trigger (Host-only) ────────────────────────────────────
+  const handleRequestEndgame = useCallback(() => {
+    setEndgameConfirmOpen(true);
+  }, []);
+
+  const handleConfirmEndgame = useCallback(() => {
+    if (sessionId == null) return;
+    setEndgameConfirmOpen(false);
+    completeLiveSession.mutate(undefined, {
+      onSuccess: () => {
+        handleDialogChange('endgame');
+        const gameId = sessionQuery.data?.gameId;
+        if (gameId) resolvePlayRecord.start(gameId);
+      },
+    });
+  }, [
+    sessionId,
+    completeLiveSession,
+    handleDialogChange,
+    sessionQuery.data?.gameId,
+    resolvePlayRecord,
+  ]);
+
+  const handleSaveGame = useCallback(() => {
+    if (resolvePlayRecord.status === 'resolving') return;
+    const navLinks = getNavigationLinks();
+    if (resolvePlayRecord.playRecordId != null) {
+      router.push(navLinks.playRecordDetail(resolvePlayRecord.playRecordId));
+    }
+  }, [router, resolvePlayRecord.status, resolvePlayRecord.playRecordId]);
+
+  // Auto-navigate to PlayRecord page when polling resolves (Opzione C).
+  useEffect(() => {
+    const navLinks = getNavigationLinks();
+    if (resolvePlayRecord.status === 'resolved' && resolvePlayRecord.playRecordId != null) {
+      router.push(navLinks.playRecordDetail(resolvePlayRecord.playRecordId));
+    }
+    if (resolvePlayRecord.status === 'timeout') {
+      router.push(navLinks.playRecords);
+    }
+  }, [router, resolvePlayRecord.status, resolvePlayRecord.playRecordId]);
 
   // ── Write actions (Player+Host) ───────────────────────────────────────────
   // Note: legacy per-participant score update flow was retired in #2433
@@ -1318,6 +1378,9 @@ export function SessionLiveView(): ReactElement {
         status={activeSession.status}
         viewerRole={activeSession.viewerRole}
         onExit={handleExit}
+        onEndgame={
+          hasRequiredRole(activeSession.viewerRole, 'Host') ? handleRequestEndgame : undefined
+        }
         labels={topBarLabels}
         elapsedMs={elapsedMs}
         connectionState={connectionPipState}
@@ -1406,14 +1469,61 @@ export function SessionLiveView(): ReactElement {
             endedAt={endgameEvent?.endedAt ?? '—'}
             endedBy={endgameEvent?.endedBy ?? '—'}
             onAcknowledge={() => handleDialogChange('none')}
+            onSave={hasRequiredRole(activeSession.viewerRole, 'Host') ? handleSaveGame : undefined}
+            saving={resolvePlayRecord.status === 'resolving'}
             labels={{
               title: t('pages.sessionLive.endgameDialog.title'),
               winnerLabel: t('pages.sessionLive.endgameDialog.winnerLabel'),
               acknowledgeCta: t('pages.sessionLive.endgameDialog.acknowledgeCta'),
               viewSummaryCta: t('pages.sessionLive.endgameDialog.viewSummaryCta'),
+              saveGameCta: t('pages.sessionLive.endgameDialog.saveGameCta'),
+              savingLabel: t('pages.sessionLive.endgameDialog.savingLabel'),
             }}
           />
         </Suspense>
+      )}
+
+      {/* #2503: Endgame confirm dialog — Host-only, shown before POST /complete */}
+      {endgameConfirmOpen && (
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="endgame-confirm-title"
+          data-slot="endgame-confirm-dialog"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/80"
+        >
+          <div className="w-full max-w-sm rounded-xl border border-border/60 bg-card p-6 shadow-2xl">
+            <h2 id="endgame-confirm-title" className="mb-2 text-base font-semibold text-foreground">
+              {t('pages.sessionLive.endgameConfirm.title')}
+            </h2>
+            <p className="mb-6 text-sm text-muted-foreground">
+              {t('pages.sessionLive.endgameConfirm.body')}
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setEndgameConfirmOpen(false)}
+                data-slot="endgame-confirm-cancel"
+                className="flex-1 rounded-lg border border-border px-4 py-2.5 text-sm
+                  font-medium text-foreground hover:bg-muted
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {t('pages.sessionLive.endgameConfirm.cancelCta')}
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmEndgame}
+                disabled={completeLiveSession.isPending}
+                data-slot="endgame-confirm-cta"
+                className="flex-1 rounded-lg bg-destructive px-4 py-2.5 text-sm font-semibold
+                  text-destructive-foreground hover:opacity-90 disabled:opacity-60
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {t('pages.sessionLive.endgameConfirm.confirmCta')}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* #2505: Host-only AddPlayerDialog — uses dto.players for color slots (LiveSessionFixturePlayer has no color field) */}

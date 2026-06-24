@@ -43,6 +43,9 @@ export interface EndgameDialogLabels {
   readonly winnerLabel: string;
   readonly acknowledgeCta: string;
   readonly viewSummaryCta: string;
+  // #2503
+  readonly saveGameCta: string;
+  readonly savingLabel: string;
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -53,6 +56,9 @@ export interface EndgameDialogProps {
   readonly endedBy: string;
   readonly onAcknowledge: () => void;
   readonly labels: EndgameDialogLabels;
+  // #2503
+  readonly onSave?: () => void;
+  readonly saving?: boolean;
 }
 
 // ─── Focus trap helper ────────────────────────────────────────────────────────
@@ -75,6 +81,8 @@ export function EndgameDialog({
   endedBy,
   onAcknowledge,
   labels,
+  onSave,
+  saving,
 }: EndgameDialogProps): ReactElement {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -195,7 +203,33 @@ export function EndgameDialog({
           ))}
         </ol>
 
-        {/* Acknowledge CTA — only exit path */}
+        {/* #2503 CTA primaria: "Salva partita" — solo se onSave passato */}
+        {onSave != null && (
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={saving === true}
+            aria-busy={saving === true}
+            data-slot="endgame-save-cta"
+            className="mb-3 w-full rounded-lg bg-entity-game px-4 py-3 text-sm font-semibold
+              text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-entity-game"
+          >
+            {saving === true ? (
+              <span role="status" className="flex items-center justify-center gap-2">
+                <span
+                  aria-hidden="true"
+                  className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
+                />
+                {labels.savingLabel}
+              </span>
+            ) : (
+              labels.saveGameCta
+            )}
+          </button>
+        )}
+
+        {/* Acknowledge CTA — secondary exit path */}
         <button
           ref={acknowledgeRef}
           type="button"

@@ -162,6 +162,25 @@ vi.mock('@/hooks/mutations/useAddLivePlayer', () => ({
   }),
 }));
 
+// ─── useCompleteLiveSession mock (#2503) ─────────────────────────────────────
+
+vi.mock('@/hooks/mutations/useCompleteLiveSession', () => ({
+  useCompleteLiveSession: () => ({
+    mutate: vi.fn(),
+    isPending: false,
+  }),
+}));
+
+// ─── useResolvePlayRecord mock (#2503) ───────────────────────────────────────
+
+vi.mock('@/lib/session-live/use-resolve-play-record', () => ({
+  useResolvePlayRecord: () => ({
+    status: 'idle' as const,
+    playRecordId: null as string | null,
+    start: vi.fn(),
+  }),
+}));
+
 // ─── AddPlayerDialog mock (#2505: lazy import — suppress real render) ─────────
 // The dialog is lazy-loaded; mock it so tests don't need Suspense async resolve
 // for the core SessionLiveView behavior tests.

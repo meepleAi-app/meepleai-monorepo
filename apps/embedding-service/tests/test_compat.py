@@ -30,10 +30,14 @@ def test_sentence_transformers_major_is_5_plus():
 
 
 def test_inference_interface_intact():
-    # The only two SentenceTransformer methods the service calls (main.py:94-100,193).
+    # The SentenceTransformer methods the service calls (main.py:94-100,193).
     # Confirm they still exist after the upgrade without instantiating (no model download).
     assert hasattr(SentenceTransformer, "encode")
-    assert hasattr(SentenceTransformer, "get_sentence_embedding_dimension")
+    # 5.x renamed get_sentence_embedding_dimension -> get_embedding_dimension; the
+    # service uses a getattr fallback, so at least one of the two must exist.
+    assert hasattr(SentenceTransformer, "get_embedding_dimension") or hasattr(
+        SentenceTransformer, "get_sentence_embedding_dimension"
+    )
 
 
 def test_main_imports_under_upgraded_stack():

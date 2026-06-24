@@ -92,7 +92,11 @@ async def lifespan(app: FastAPI):
     logger.info(f"Loading model {MODEL_NAME} on device {DEVICE}...")
     try:
         model = SentenceTransformer(MODEL_NAME, device=DEVICE)
-        logger.info(f"Model loaded successfully. Embedding dimension: {model.get_sentence_embedding_dimension()}")
+        # sentence-transformers 5.x renamed get_sentence_embedding_dimension() ->
+        # get_embedding_dimension() (old name deprecated). Prefer the new name and
+        # fall back to the old so this works across the 3.x->5.x upgrade (#1455 review).
+        _get_dim = getattr(model, "get_embedding_dimension", None) or model.get_sentence_embedding_dimension
+        logger.info(f"Model loaded successfully. Embedding dimension: {_get_dim()}")
 
         logger.info("Warming up embedding model...")
         warmup_texts = ["warmup"]

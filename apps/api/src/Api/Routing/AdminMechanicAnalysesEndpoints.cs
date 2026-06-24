@@ -21,6 +21,7 @@ namespace Api.Routing;
 ///   <item><c>POST /admin/mechanic-analyses/{id}/claims/{claimId}/approve</c> — per-claim approve.</item>
 ///   <item><c>POST /admin/mechanic-analyses/{id}/claims/{claimId}/reject</c> — per-claim reject with note.</item>
 ///   <item><c>POST /admin/mechanic-analyses/{id}/claims/bulk-approve</c> — bulk approve every Pending claim.</item>
+///   <item><c>POST /admin/mechanic-analyses/{id}/claims/bulk-reject</c> — bulk reject an explicit set of claims with a shared reason (#526).</item>
 /// </list>
 /// The admin's user id is always read from the validated session (never trusted from the body).
 /// </summary>
@@ -252,6 +253,32 @@ internal static class AdminMechanicAnalysesEndpoints
             "re-approve them. Returns ApprovedCount, SkippedRejectedCount, and the full " +
             "updated claims list. Parent analysis must be InReview.");
 
+        // POST /api/v1/admin/mechanic-analyses/{id}/claims/bulk-reject (#526 ME-M1.4)
+        // Bulk-reject an explicit set of claims (decision D3: client computes the id set).
+        group.MapPost("/{id:guid}/claims/bulk-reject", async (
+            Guid id,
+            BulkRejectClaimsRequest request,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+            var reviewerId = session!.Principal!.Subject.Id;
+
+            var command = new BulkRejectMechanicClaimsCommand(id, request.ClaimIds, request.Reason, reviewerId);
+            var response = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            return Results.Ok(response);
+        })
+        .WithName("AdminBulkRejectMechanicClaims")
+        .WithSummary("Bulk-reject an explicit set of claims with a shared reason (#526)")
+        .WithDescription(
+            "Rejects the claims whose ids are in the request body (the admin UI computes the set " +
+            "client-side). Claims already Rejected are skipped (idempotent); a missing claim id " +
+            "fails the batch with 404. The shared reason (1–500 chars) is applied to every " +
+            "rejected claim. Returns RejectedCount, SkippedAlreadyRejectedCount, and the full " +
+            "updated claims list. Parent analysis must be InReview; otherwise 409.");
+
         // T5 kill-switch: orthogonal suppression allowed from any status, including Published.
         group.MapPost("/{id:guid}/suppress", async (
             Guid id,
@@ -321,3 +348,11 @@ internal sealed record SuppressMechanicAnalysisRequest(
 /// <param name="Note">Reviewer rejection note (1–500 chars). Mandatory — surfaces back
 /// in the claims viewer so the reviewer can act on it before re-approving.</param>
 internal sealed record RejectClaimRequest(string Note);
+
+/// <summary>
+/// Request body for <c>POST /admin/mechanic-analyses/{id}/claims/bulk-reject</c> (#526).
+/// The reviewer id is sourced from the validated session, never the body.
+/// </summary>
+/// <param name="ClaimIds">Explicit claim ids to reject (computed client-side, decision D3).</param>
+/// <param name="Reason">Shared rejection reason (1–500 chars) applied to every claim.</param>
+internal sealed record BulkRejectClaimsRequest(IReadOnlyList<Guid> ClaimIds, string Reason);

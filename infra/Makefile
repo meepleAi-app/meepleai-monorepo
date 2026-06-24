@@ -49,6 +49,9 @@ smoke: ## Run automated smoke set against BASE_URL (default localhost:8080) — 
 smoke-staging: ## Run automated smoke set against staging (https://meepleai.app)
 	bash scripts/smoke-set.sh https://meepleai.app $(TEST_EMAIL) $(TEST_PASSWORD)
 
+rag-smoke: ## RAG retrieval smoke: canonical queries vs golden baseline (#2480). --update-baseline to capture.
+	bash scripts/rag-smoke-assert.sh $(RAG_SMOKE_ARGS)
+
 smoke-pg-readback: ## Run pg-readback.sh DB-direct migration validation (requires open tunnel)
 	bash scripts/pg-readback.sh
 

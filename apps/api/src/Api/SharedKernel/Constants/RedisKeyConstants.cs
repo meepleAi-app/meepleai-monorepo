@@ -68,4 +68,16 @@ public static class RedisKeyConstants
     /// </summary>
     public static string GetPartialResultKey(string taskId, int phaseNumber) =>
         $"{PartialResultsPrefix}:{taskId}:phase_{phaseNumber}";
+
+    /// <summary>
+    /// Prefix for per-session SSE event sequence counters.
+    /// Format: meepleai:session:seq:{sessionId:N}
+    /// Issue #2561 SP2 T6.
+    /// </summary>
+    public static string SessionSeqPrefix => $"{BasePrefix}:session:seq";
+
+    /// <summary>
+    /// Generates the Redis key for a session's SSE event sequence counter.
+    /// </summary>
+    public static string GetSessionSeqKey(Guid sessionId) => $"{SessionSeqPrefix}:{sessionId:N}";
 }

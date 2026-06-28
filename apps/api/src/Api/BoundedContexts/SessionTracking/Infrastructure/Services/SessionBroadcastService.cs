@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -21,6 +22,7 @@ public sealed class SessionBroadcastService : ISessionBroadcastService, IDisposa
 {
     private readonly ConcurrentDictionary<Guid, SessionSubscriptionPool> _pools = new();
     private readonly ISubscriber? _subscriber;
+    private readonly ISessionSequenceProvider _seq;
     private readonly ILogger<SessionBroadcastService> _logger;
     private readonly JsonSerializerOptions _jsonOptions;
     private readonly string _instanceId = Guid.NewGuid().ToString("N");
@@ -39,9 +41,11 @@ public sealed class SessionBroadcastService : ISessionBroadcastService, IDisposa
 
     public SessionBroadcastService(
         ILogger<SessionBroadcastService> logger,
+        ISessionSequenceProvider seq,
         IConnectionMultiplexer? redis = null)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _seq = seq ?? throw new ArgumentNullException(nameof(seq));
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -136,15 +140,17 @@ public sealed class SessionBroadcastService : ISessionBroadcastService, IDisposa
         CancellationToken ct = default)
     {
         // Build the envelope, deriving EventType from the domain event via the mapper.
+        // Id is intentionally left empty here: PublishEnvelopeAsync is the single
+        // id-assignment chokepoint (Issue #2561 SP2 T6 — monotonic sequence).
         var envelope = new SseEventEnvelope
         {
-            Id = $"{sessionId:N}-{DateTime.UtcNow.Ticks:x}",
+            Id = string.Empty,
             EventType = SseEventTypeMapper.GetEventType(evt),
             Data = evt,
             Timestamp = DateTime.UtcNow
         };
 
-        // Delegate to the envelope-based path.
+        // Delegate to the envelope-based path (which assigns the real monotonic Id).
         return PublishEnvelopeAsync(sessionId, envelope, visibility, ct);
     }
 
@@ -155,9 +161,13 @@ public sealed class SessionBroadcastService : ISessionBroadcastService, IDisposa
         EventVisibility visibility = default,
         CancellationToken ct = default)
     {
-        // Re-assign Id to keep id-assignment centralised (incoming Id is ignored).
-        // T4 will replace this format with a monotonic sequence.
-        envelope = envelope with { Id = $"{sessionId:N}-{DateTime.UtcNow.Ticks:x}" };
+        // Single id-assignment chokepoint: monotonic per-session D20 sequence (incoming Id is ignored).
+        // Issue #2561 SP2 T6: replaces the Ticks-based "{sessionId:N}-{Ticks:x}" format with a
+        // Redis-INCR-backed (in-process fallback) monotonic counter. D20 round-trips exactly for
+        // CircularEventBuffer.GetSince's ordinal match; legacy ids reconnecting after deploy simply
+        // miss → existing full-replay path → FE dedups via seenIds.
+        var seq = await _seq.NextAsync(sessionId, ct).ConfigureAwait(false);
+        envelope = envelope with { Id = seq.ToString("D20", CultureInfo.InvariantCulture) };
 
         // Publish to Redis for multi-instance (if available)
         if (_subscriber is not null)

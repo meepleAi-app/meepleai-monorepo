@@ -98,19 +98,29 @@ if [ "$actual_chunks" != "$expected_chunks" ]; then
     # Non fallire: il sidecar potrebbe avere un conteggio da un'altra query
 fi
 
+# Orphan checks are best-effort sanity WARNINGs — the data is already restored
+# above. The schema mixes snake_case columns (HasColumnName) with PascalCase
+# keys (e.g. "Id"), so a hand-written join here can reference a column that
+# doesn't exist under the current naming; that must NOT fail the restore (it
+# used to kill the script via `set -e`, blocking dev-from-snapshot entirely).
+# On a query error, skip the check instead of aborting. #2480.
 orphan_chunks=$(docker exec meepleai-postgres psql -U "$PG_USER" -d "$PG_DB" -At -c "
     SELECT COUNT(*) FROM text_chunks tc
-    LEFT JOIN pdf_documents p ON p.id = tc.pdf_document_id
-    WHERE p.id IS NULL;")
-if [ "$orphan_chunks" != "0" ]; then
+    LEFT JOIN pdf_documents p ON p.\"Id\" = tc.pdf_document_id
+    WHERE p.\"Id\" IS NULL;" 2>/dev/null || echo "skip")
+if [ "$orphan_chunks" = "skip" ]; then
+    log "orphan text_chunks check skipped (column-name mismatch — data restored OK)"
+elif [ "$orphan_chunks" != "0" ]; then
     log "WARNING: $orphan_chunks text_chunks orfani (possibile drift schema)"
 fi
 
 orphan_embeds=$(docker exec meepleai-postgres psql -U "$PG_USER" -d "$PG_DB" -At -c "
     SELECT COUNT(*) FROM pgvector_embeddings e
-    LEFT JOIN text_chunks tc ON tc.id = e.text_chunk_id
-    WHERE tc.id IS NULL;")
-if [ "$orphan_embeds" != "0" ]; then
+    LEFT JOIN text_chunks tc ON tc.\"Id\" = e.text_chunk_id
+    WHERE tc.\"Id\" IS NULL;" 2>/dev/null || echo "skip")
+if [ "$orphan_embeds" = "skip" ]; then
+    log "orphan pgvector_embeddings check skipped (column-name mismatch — data restored OK)"
+elif [ "$orphan_embeds" != "0" ]; then
     log "WARNING: $orphan_embeds pgvector_embeddings orfani (possibile drift schema)"
 fi
 

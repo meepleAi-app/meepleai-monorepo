@@ -14,6 +14,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Infrastructure.Services;
 /// Issue #2501 SP0.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "GameManagement")]
 public class CompanionSessionServiceTests
 {
     [Fact]

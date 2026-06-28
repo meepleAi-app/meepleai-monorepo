@@ -909,10 +909,28 @@ internal static class LiveSessionEndpoints
                 await httpContext.Response.Body.FlushAsync(ct).ConfigureAwait(false);
             }
         }
+        catch (OperationCanceledException)
+        {
+            // Expected: client disconnected or server shutting down — do not propagate to middleware.
+        }
         finally
         {
             await heartbeatCts.CancelAsync().ConfigureAwait(false);
-            await heartbeatTask.ConfigureAwait(false);
+            // Wait for heartbeat task to finish (it's already watching ct).
+            // Both OperationCanceledException (normal) and any other I/O exception are benign here —
+            // the heartbeat loop already exited because the connection is closing.
+            try
+            {
+                await heartbeatTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected: CancellationToken was cancelled — heartbeat task exited normally.
+            }
+            catch (Exception ex) when (ex is IOException or InvalidOperationException)
+            {
+                // I/O error after client disconnect — ignore, we're already in teardown.
+            }
         }
 
         return Results.Empty;

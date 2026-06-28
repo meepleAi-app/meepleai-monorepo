@@ -1,6 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import { withRetry } from '../resilienceWrappers';
 
+// `setTimeout(n)` is not guaranteed to take >= n ms of wall-clock: timer
+// coalescing plus the millisecond resolution of `Date.now()` can report a value
+// a few ms short (observed 99ms for a 100ms backoff on a loaded CI runner,
+// issue #2532). Allow a small scheduler tolerance on the timing assertions while
+// still proving a substantial backoff actually happened (vs ~0ms with no delay).
+const SCHEDULER_TOLERANCE_MS = 15;
+
 describe('resilienceWrappers (#1929 DEC-C-6)', () => {
   it('returns immediately on first-call success', async () => {
     const fn = vi.fn().mockResolvedValue('ok');
@@ -35,7 +42,7 @@ describe('resilienceWrappers (#1929 DEC-C-6)', () => {
     const start = Date.now();
     await withRetry(fn, { reason: 'backoff', backoffMs: 100 });
     const elapsed = Date.now() - start;
-    expect(elapsed).toBeGreaterThanOrEqual(100);
+    expect(elapsed).toBeGreaterThanOrEqual(100 - SCHEDULER_TOLERANCE_MS);
   });
 
   it('uses default 500ms backoff when not specified', async () => {
@@ -43,6 +50,6 @@ describe('resilienceWrappers (#1929 DEC-C-6)', () => {
     const start = Date.now();
     await withRetry(fn, { reason: 'default-backoff' });
     const elapsed = Date.now() - start;
-    expect(elapsed).toBeGreaterThanOrEqual(500);
+    expect(elapsed).toBeGreaterThanOrEqual(500 - SCHEDULER_TOLERANCE_MS);
   });
 });

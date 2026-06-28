@@ -10,14 +10,35 @@
  * - Focus trap: Tab cycles within dialog
  * - Shift+Tab wraps backward
  * - aria-labelledby links to title
+ * - #2501 SP4: photo upload section mounted above CTAs (Task 2)
  */
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { EndgameDialogLabels, EndgameDialogProps, FinalScoreEntry } from '../EndgameDialog';
 import { EndgameDialog } from '../EndgameDialog';
+
+// ─── Mock EndgamePhotoUploadSection ───────────────────────────────────────────
+// Mock so we can control onUploadingChange in isolation without needing
+// real file inputs, hooks, or i18n setup.
+
+let capturedOnUploadingChange: ((uploading: boolean) => void) | undefined;
+
+vi.mock('../EndgamePhotoUploadSection', () => ({
+  EndgamePhotoUploadSection: ({
+    recordId,
+    onUploadingChange,
+  }: {
+    recordId: string | null;
+    onUploadingChange?: (uploading: boolean) => void;
+    className?: string;
+  }) => {
+    capturedOnUploadingChange = onUploadingChange;
+    return <div data-testid="endgame-photo-upload-section" data-record-id={recordId ?? 'null'} />;
+  },
+}));
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -232,5 +253,64 @@ describe('EndgameDialog — #2503: save game CTA', () => {
     renderDialog({ onSave: vi.fn() });
     expect(screen.getByRole('button', { name: 'Conferma' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Salva partita' })).toBeInTheDocument();
+  });
+});
+
+// ─── #2501 SP4 — Photo upload section (Task 2) ────────────────────────────────
+
+describe('EndgameDialog — #2501 SP4: photo upload section', () => {
+  beforeEach(() => {
+    capturedOnUploadingChange = undefined;
+  });
+
+  it('renders_photo_section_above_ctas — EndgamePhotoUploadSection is rendered above the CTAs', () => {
+    renderDialog({ onSave: vi.fn(), recordId: 'rec-123' });
+
+    const photoSection = screen.getByTestId('endgame-photo-upload-section');
+    expect(photoSection).toBeInTheDocument();
+
+    // Verify ordering: photo section must appear before the save CTA in the DOM
+    const saveBtn = screen.getByRole('button', { name: 'Salva partita' });
+    const confirmBtn = screen.getByRole('button', { name: 'Conferma' });
+
+    // compareDocumentPosition returns a bitmask; DOCUMENT_POSITION_FOLLOWING (4)
+    // means saveBtn comes after photoSection in document order.
+    expect(
+      photoSection.compareDocumentPosition(saveBtn) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
+      photoSection.compareDocumentPosition(confirmBtn) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it('disables_save_cta_while_photos_uploading — save CTA is disabled when onUploadingChange(true), re-enabled at (false)', async () => {
+    renderDialog({ onSave: vi.fn(), recordId: 'rec-456' });
+
+    const saveBtn = screen.getByRole('button', { name: 'Salva partita' });
+
+    // Initially enabled
+    expect(saveBtn).not.toBeDisabled();
+
+    // Trigger uploading = true via the captured callback
+    act(() => {
+      capturedOnUploadingChange?.(true);
+    });
+
+    expect(saveBtn).toBeDisabled();
+
+    // Trigger uploading = false
+    act(() => {
+      capturedOnUploadingChange?.(false);
+    });
+
+    expect(saveBtn).not.toBeDisabled();
+  });
+
+  it('save_cta_enabled_with_no_photos — save CTA remains enabled when no upload is in progress (AC-MEDIA-2)', () => {
+    renderDialog({ onSave: vi.fn(), recordId: null });
+
+    // Photo section present but no upload triggered → save CTA enabled
+    expect(screen.getByTestId('endgame-photo-upload-section')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Salva partita' })).not.toBeDisabled();
   });
 });

@@ -24,9 +24,11 @@
  * data-slot="endgame-dialog" — required by unit tests.
  */
 
-import { type ReactElement, useId, useEffect, useRef, useCallback } from 'react';
+import { type ReactElement, useId, useEffect, useRef, useCallback, useState } from 'react';
 
 import { Trophy } from 'lucide-react';
+
+import { EndgamePhotoUploadSection } from './EndgamePhotoUploadSection';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -59,6 +61,8 @@ export interface EndgameDialogProps {
   // #2503
   readonly onSave?: () => void;
   readonly saving?: boolean;
+  // #2501 SP4 — photo upload
+  readonly recordId?: string | null;
 }
 
 // ─── Focus trap helper ────────────────────────────────────────────────────────
@@ -83,7 +87,10 @@ export function EndgameDialog({
   labels,
   onSave,
   saving,
+  recordId,
 }: EndgameDialogProps): ReactElement {
+  // #2501 SP4 — track photo upload in progress to disable save CTA (AC-MEDIA-1)
+  const [uploading, setUploading] = useState(false);
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const acknowledgeRef = useRef<HTMLButtonElement>(null);
@@ -203,12 +210,19 @@ export function EndgameDialog({
           ))}
         </ol>
 
+        {/* #2501 SP4 — photo upload section (additive, above CTAs) */}
+        <EndgamePhotoUploadSection
+          recordId={recordId ?? null}
+          onUploadingChange={setUploading}
+          className="mb-4"
+        />
+
         {/* #2503 CTA primaria: "Salva partita" — solo se onSave passato */}
         {onSave != null && (
           <button
             type="button"
             onClick={onSave}
-            disabled={saving === true}
+            disabled={saving === true || uploading}
             aria-busy={saving === true}
             data-slot="endgame-save-cta"
             className="mb-3 w-full rounded-lg bg-entity-game px-4 py-3 text-sm font-semibold

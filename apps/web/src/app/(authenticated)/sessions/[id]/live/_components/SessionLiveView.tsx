@@ -80,6 +80,7 @@ import {
 
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useIntl } from 'react-intl';
+import { toast } from 'sonner';
 
 import {
   ActionLogTimeline,
@@ -115,6 +116,7 @@ import { useLiveSession } from '@/hooks/queries/useLiveSession';
 import { useSessionAgentLaunch } from '@/hooks/queries/useSessionAgentLaunch';
 import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
+import { ConflictError } from '@/lib/api/core/errors';
 import { useSessionAgentChat } from '@/lib/domain-hooks/useSessionAgentChat';
 import { getNavigationLinks } from '@/lib/navigation';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
@@ -573,6 +575,16 @@ export function SessionLiveView(): ReactElement {
         handleDialogChange('endgame');
         if (gameId) startResolvePlayRecord(gameId, previousRecordId);
       },
+      onError: (err: Error) => {
+        // AC-MEDIA-4: if the session was already Completed (409 Conflict), show a toast
+        // and do NOT open the endgame dialog or start polling.
+        if (err instanceof ConflictError || (err as { statusCode?: number }).statusCode === 409) {
+          toast.error(t('pages.sessionLive.endgameDialog.alreadyCompletedToast'), {
+            id: 'endgame-already-completed',
+          });
+        }
+        // Other errors: no additional handling (mutation error state is available to callers).
+      },
     });
   }, [
     sessionId,
@@ -580,6 +592,7 @@ export function SessionLiveView(): ReactElement {
     handleDialogChange,
     sessionQuery.data?.gameId,
     startResolvePlayRecord,
+    t,
   ]);
 
   /**
@@ -1501,6 +1514,7 @@ export function SessionLiveView(): ReactElement {
             }
             endedAt={endgameEvent?.endedAt ?? '—'}
             endedBy={endgameEvent?.endedBy ?? '—'}
+            recordId={resolvedPlayRecordId}
             onAcknowledge={() => handleDialogChange('none')}
             onSave={hasRequiredRole(activeSession.viewerRole, 'Host') ? handleSaveGame : undefined}
             saving={saveIntent && resolveStatus === 'resolving'}

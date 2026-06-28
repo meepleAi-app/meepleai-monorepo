@@ -87,6 +87,36 @@ else
     log "nessun supplement file — skip"
 fi
 
+# Step 3b: Runtime-managed pgvector schema (#2480).
+# pgvector_embeddings.search_vector is a GENERATED tsvector column + its GIN/HNSW
+# indexes are created at runtime by PgVectorStoreAdapter (NOT by EF migrations —
+# the InitialCreate migration intentionally omits search_vector). `dotnet ef
+# database update` above therefore restores the table WITHOUT them, and
+# dev-from-snapshot skips PDF processing so the runtime ensure never runs →
+# keyword/hybrid search fails with `column "search_vector" does not exist` and
+# every cross-game ask returns 0 citations. Reproduce that DDL idempotently here
+# (search_vector is GENERATED from text_content, already restored, so it
+# auto-populates). Mirrors PgVectorStoreAdapter.cs.
+log "ensuring runtime-managed pgvector schema (search_vector + indexes)"
+docker exec -i meepleai-postgres psql -U "$PG_USER" -d "$PG_DB" --set ON_ERROR_STOP=on <<'SQL'
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'pgvector_embeddings' AND column_name = 'search_vector'
+    ) THEN
+        ALTER TABLE pgvector_embeddings
+            ADD COLUMN search_vector tsvector
+            GENERATED ALWAYS AS (to_tsvector('english', text_content)) STORED;
+    END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_pgvector_embeddings_search_vector ON pgvector_embeddings USING gin (search_vector);
+CREATE INDEX IF NOT EXISTS idx_pgvector_embeddings_vector_cosine ON pgvector_embeddings USING hnsw (vector vector_cosine_ops) WITH (m = 16, ef_construction = 200);
+CREATE INDEX IF NOT EXISTS idx_pgvector_embeddings_game_id ON pgvector_embeddings (game_id);
+CREATE INDEX IF NOT EXISTS idx_pgvector_embeddings_vector_document_id ON pgvector_embeddings (vector_document_id);
+SQL
+log "runtime-managed pgvector schema OK"
+
 # Step 4: Smoke test
 log "smoke test: chunk count + orphans"
 actual_chunks=$(docker exec meepleai-postgres psql -U "$PG_USER" -d "$PG_DB" -At -c "SELECT COUNT(*) FROM text_chunks;")

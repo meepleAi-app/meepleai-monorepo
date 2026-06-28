@@ -80,4 +80,16 @@ public static class RedisKeyConstants
     /// Generates the Redis key for a session's SSE event sequence counter.
     /// </summary>
     public static string GetSessionSeqKey(Guid sessionId) => $"{SessionSeqPrefix}:{sessionId:N}";
+
+    /// <summary>
+    /// Prefix for per-session SSE event replay buffers (Redis Sorted Set, score = sequence number).
+    /// Format: meepleai:session:replay:{sessionId:N}
+    /// Issue #2561 SP2 T7.
+    /// </summary>
+    public static string SessionReplayPrefix => $"{BasePrefix}:session:replay";
+
+    /// <summary>
+    /// Generates the Redis key for a session's SSE event replay ZSET.
+    /// </summary>
+    public static string GetSessionReplayKey(Guid sessionId) => $"{SessionReplayPrefix}:{sessionId:N}";
 }

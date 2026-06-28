@@ -3,6 +3,8 @@ using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -18,9 +20,20 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 public class MultiGameHybridSearchServiceTests
 {
     private readonly Mock<IHybridSearchService> _hybridSearchMock = new(MockBehavior.Strict);
+    private readonly Mock<IServiceScopeFactory> _scopeFactoryMock = new();
 
-    private MultiGameHybridSearchService CreateSut() =>
-        new(_hybridSearchMock.Object, Microsoft.Extensions.Logging.Abstractions.NullLogger<MultiGameHybridSearchService>.Instance);
+    // Each per-game search resolves IHybridSearchService from its OWN DI scope (own DbContext).
+    // Wire the scope factory so every CreateScope() yields a provider returning the single mock,
+    // keeping the existing Setup/Verify on _hybridSearchMock valid while exercising the scope path.
+    private MultiGameHybridSearchService CreateSut()
+    {
+        var provider = new Mock<IServiceProvider>();
+        provider.Setup(p => p.GetService(typeof(IHybridSearchService))).Returns(_hybridSearchMock.Object);
+        var scope = new Mock<IServiceScope>();
+        scope.SetupGet(s => s.ServiceProvider).Returns(provider.Object);
+        _scopeFactoryMock.Setup(f => f.CreateScope()).Returns(scope.Object);
+        return new(_scopeFactoryMock.Object, NullLogger<MultiGameHybridSearchService>.Instance);
+    }
 
     // ---------------------------------------------------------------------------
     // EC-1: empty gameIds → empty result, no calls to HybridSearchService
@@ -117,6 +130,34 @@ public class MultiGameHybridSearchServiceTests
                 It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
                 It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Regression (#2480): each per-game search runs in its OWN DI scope so it gets
+    // its OWN DbContext. Sharing the request-scoped DbContext across the concurrent
+    // per-game searches threw "A second operation was started on this context
+    // instance…" and made every cross-game search return 0 results.
+    // ---------------------------------------------------------------------------
+
+    [Fact]
+    public async Task MultipleGames_CreatesOneDiScopePerGame()
+    {
+        // Arrange
+        var gameId1 = Guid.NewGuid();
+        var gameId2 = Guid.NewGuid();
+        var gameId3 = Guid.NewGuid();
+
+        SetupHybridSearchForGame(gameId1, count: 1, baseScore: 0.8f);
+        SetupHybridSearchForGame(gameId2, count: 1, baseScore: 0.7f);
+        SetupHybridSearchForGame(gameId3, count: 1, baseScore: 0.6f);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.SearchAsync("test", new[] { gameId1, gameId2, gameId3 }, limit: 20);
+
+        // Assert — one scope (→ one DbContext) per game, never a shared context.
+        _scopeFactoryMock.Verify(f => f.CreateScope(), Times.Exactly(3));
     }
 
     // ---------------------------------------------------------------------------

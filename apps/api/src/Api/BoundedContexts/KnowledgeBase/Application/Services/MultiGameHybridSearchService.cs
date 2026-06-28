@@ -1,4 +1,5 @@
 using Api.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -7,7 +8,12 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 ///
 /// Strategy (R3 verdict b):
 /// 1. Early-exit when gameIds is empty (EC-1).
-/// 2. Launch one <see cref="IHybridSearchService.SearchAsync"/> task per game (parallel via Task.WhenAll).
+/// 2. Launch one <see cref="IHybridSearchService.SearchAsync"/> task per game. Each task runs in its
+///    OWN DI scope so it gets its OWN <c>MeepleAiDbContext</c> — the per-game services are scoped and
+///    a single request-scoped DbContext is NOT safe for concurrent use ("A second operation was
+///    started on this context instance…"), which previously made every cross-game search throw and
+///    return 0 results (#2480). A <see cref="SemaphoreSlim"/> caps concurrency so a user with many
+///    accessible games (e.g. an admin) cannot exhaust the connection pool.
 /// 3. Per-game exceptions are caught and logged as warnings; the query continues with the remaining
 ///    games (EC-2 / EC-7 resilience: a game with no indexed content should not abort the whole search).
 /// 4. Per-game already-fused results are tagged with their origin gameId and aggregated.
@@ -21,14 +27,19 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 /// </summary>
 internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchService
 {
-    private readonly IHybridSearchService _hybridSearch;
+    // Cap concurrent per-game searches. Each acquires its own DI scope (own DbContext +
+    // DB connection), so the bound also bounds the connection-pool draw when a user has
+    // many accessible games.
+    private const int MaxConcurrentGameSearches = 4;
+
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<MultiGameHybridSearchService> _logger;
 
     public MultiGameHybridSearchService(
-        IHybridSearchService hybridSearch,
+        IServiceScopeFactory scopeFactory,
         ILogger<MultiGameHybridSearchService> logger)
     {
-        _hybridSearch = hybridSearch;
+        _scopeFactory = scopeFactory;
         _logger = logger;
     }
 
@@ -60,11 +71,13 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
         // prevent per-game over-fetching when limit is very large.
         var perGameLimit = Math.Min(Math.Max(limit, 1), 50);
 
+        using var throttle = new SemaphoreSlim(MaxConcurrentGameSearches);
         var tasks = gameIds
-            .Select(gameId => SearchGameSafeAsync(query, gameId, perGameLimit, mode, documentIdsList, cancellationToken))
+            .Select(gameId => SearchGameSafeAsync(query, gameId, perGameLimit, mode, documentIdsList, throttle, cancellationToken))
             .ToList();
 
-        // Task.WhenAll guarantees parallel execution (all tasks start before any is awaited).
+        // Task.WhenAll guarantees parallel execution (all tasks start before any is awaited);
+        // the semaphore inside each task bounds how many run the DB work concurrently.
         var perGameResultArrays = await Task.WhenAll(tasks).ConfigureAwait(false);
 
         // Step 2: Aggregate, project to MultiGameSearchResultItem (preserving origin gameId).
@@ -105,10 +118,11 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
     }
 
     /// <summary>
-    /// Issues a single-game search, catching and logging any exception so that
-    /// one failing game does not abort the entire cross-game query (EC-2 resilience).
-    /// The <paramref name="documentIds"/> allowlist (Issue #1686) restricts the per-game
-    /// hit set to a subset of PDF documents; <c>null</c> = no document filter.
+    /// Issues a single-game search in its OWN DI scope (own DbContext), catching and logging any
+    /// exception so that one failing game does not abort the entire cross-game query (EC-2 resilience).
+    /// The <paramref name="throttle"/> bounds how many per-game searches hit the DB concurrently.
+    /// The <paramref name="documentIds"/> allowlist (Issue #1686) restricts the per-game hit set to a
+    /// subset of PDF documents; <c>null</c> = no document filter.
     /// </summary>
     private async Task<(Guid GameId, List<HybridSearchResult> Results)> SearchGameSafeAsync(
         string query,
@@ -116,11 +130,19 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
         int limit,
         SearchMode mode,
         List<Guid>? documentIds,
+        SemaphoreSlim throttle,
         CancellationToken cancellationToken)
     {
+        await throttle.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var results = await _hybridSearch.SearchAsync(
+            // Own scope → own scoped MeepleAiDbContext, so concurrent per-game searches never
+            // share a DbContext instance (the root cause of the cross-game "second operation on
+            // this context" failures that returned 0 results, #2480).
+            using var scope = _scopeFactory.CreateScope();
+            var hybridSearch = scope.ServiceProvider.GetRequiredService<IHybridSearchService>();
+
+            var results = await hybridSearch.SearchAsync(
                 query,
                 gameId,
                 mode,
@@ -139,6 +161,10 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
             return (gameId, new List<HybridSearchResult>());
         }
 #pragma warning restore CA1031
+        finally
+        {
+            throttle.Release();
+        }
     }
 
     /// <summary>

@@ -3281,7 +3281,8 @@
           "tooManyFiles": "You can upload at most {max} photos",
           "tooLarge": "File too large (max 5 MB)",
           "badFormat": "Format not supported",
-          "heicFailed": "HEIC conversion failed"
+          "heicFailed": "HEIC conversion failed",
+          "selectedPhotosList": "Selected photos"
         }
       },
       "endgameConfirm": {

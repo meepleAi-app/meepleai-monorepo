@@ -90,7 +90,7 @@ describe('EndgamePhotoUploadSection', () => {
     expect(screen.getAllByTestId('photo-preview-item')).toHaveLength(2);
   });
 
-  it('upload_disabled_while_recordId_null — button disabled when null, enabled when present', () => {
+  it('upload_disabled_while_recordId_null — shows preparing label when null, carica label when present', () => {
     const { rerender } = render(<EndgamePhotoUploadSection recordId={null} />, {
       wrapper: makeWrapper(),
     });
@@ -98,10 +98,12 @@ describe('EndgamePhotoUploadSection', () => {
     const input = screen.getByLabelText(/seleziona foto/i);
     fireEvent.change(input, { target: { files: [makeFile('photo1.jpg')] } });
 
-    const uploadBtn = screen.getByRole('button', { name: /carica foto/i });
-    expect(uploadBtn).toBeDisabled();
+    // When recordId=null the button shows the "preparing" label and is disabled
+    const preparingBtn = screen.getByRole('button', { name: /preparazione/i });
+    expect(preparingBtn).toBeDisabled();
 
     rerender(<EndgamePhotoUploadSection recordId="rec-123" />);
+    // After recordId is set the button switches to the upload label and is enabled
     expect(screen.getByRole('button', { name: /carica foto/i })).not.toBeDisabled();
   });
 
@@ -130,37 +132,65 @@ describe('EndgamePhotoUploadSection', () => {
     expect(onUploadingChange).toHaveBeenCalledWith(false);
   });
 
-  it('failed_upload_shows_inline_error_and_retry — retry resolves to done', async () => {
-    mutateAsyncMock.mockRejectedValueOnce(new Error('Upload failed')).mockResolvedValueOnce({
-      photoId: 'p2',
-      photoUrl: 'http://example.com/p2.jpg',
-      thumbnailUrl: null,
-      ocrText: null,
-      wasDeduplicated: false,
-    });
+  it('failed_upload_shows_inline_error_and_retry — first photo errors, second succeeds; retry resolves first to done', async () => {
+    // photo1 fails, photo2 succeeds on initial upload
+    mutateAsyncMock
+      .mockRejectedValueOnce(new Error('Upload failed')) // photo1 initial attempt → error
+      .mockResolvedValueOnce({
+        // photo2 initial attempt → done
+        photoId: 'p2',
+        photoUrl: 'http://example.com/p2.jpg',
+        thumbnailUrl: null,
+        ocrText: null,
+        wasDeduplicated: false,
+      })
+      .mockResolvedValueOnce({
+        // photo1 retry → done
+        photoId: 'p1',
+        photoUrl: 'http://example.com/p1.jpg',
+        thumbnailUrl: null,
+        ocrText: null,
+        wasDeduplicated: false,
+      });
 
     render(<EndgamePhotoUploadSection recordId="rec-123" />, {
       wrapper: makeWrapper(),
     });
 
     const input = screen.getByLabelText(/seleziona foto/i);
-    fireEvent.change(input, { target: { files: [makeFile('photo1.jpg')] } });
+    // Select 2 files
+    fireEvent.change(input, {
+      target: { files: [makeFile('photo1.jpg'), makeFile('photo2.jpg')] },
+    });
 
     const uploadBtn = screen.getByRole('button', { name: /carica foto/i });
     fireEvent.click(uploadBtn);
 
-    // Should show inline error alert on per-photo item
+    // (a) photo1 should show an inline error and retry button
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
-
-    // Retry button should appear
     const retryBtn = screen.getByRole('button', { name: /riprova/i });
     expect(retryBtn).toBeInTheDocument();
 
-    // Click retry
+    // (b) photo2 should be in the "done" state (not affected by photo1 error)
+    // The done badge appears for photo2 while photo1 still has the error
+    await waitFor(() => {
+      const items = screen.getAllByTestId('photo-preview-item');
+      expect(items).toHaveLength(2);
+      const doneItems = items.filter(el => el.getAttribute('data-status') === 'done');
+      const errorItems = items.filter(el => el.getAttribute('data-status') === 'error');
+      expect(doneItems).toHaveLength(1); // photo2 is done
+      expect(errorItems).toHaveLength(1); // photo1 is in error
+    });
+
+    // Click retry on photo1 — should resolve to done
     fireEvent.click(retryBtn);
 
-    // Should now show done badge
-    await waitFor(() => expect(screen.getByText(/caricata/i)).toBeInTheDocument());
+    // Now both should be done
+    await waitFor(() => {
+      const items = screen.getAllByTestId('photo-preview-item');
+      const doneItems = items.filter(el => el.getAttribute('data-status') === 'done');
+      expect(doneItems).toHaveLength(2);
+    });
   });
 
   it('respects_max_files — caps selection to 10, shows warning alert if more', () => {

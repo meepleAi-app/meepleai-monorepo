@@ -3388,7 +3388,8 @@
           "tooManyFiles": "Puoi caricare al massimo {max} foto",
           "tooLarge": "File troppo grande (max 5 MB)",
           "badFormat": "Formato non supportato",
-          "heicFailed": "Conversione HEIC non riuscita"
+          "heicFailed": "Conversione HEIC non riuscita",
+          "selectedPhotosList": "Foto selezionate"
         }
       },
       "endgameConfirm": {

@@ -18,13 +18,18 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 
 import { usePlayRecordPhotoUpload } from '@/hooks/mutations/usePlayRecordPhotoUpload';
 import { useTranslation } from '@/hooks/useTranslation';
+import {
+  PHOTO_MAX_BYTES,
+  PHOTO_MAX_FILES,
+  PHOTO_ACCEPTED_MIME,
+} from '@/lib/play-records/photo-constants';
 import { cn } from '@/lib/utils';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Constants (re-exported aliases for local readability) ────────────────────
 
-const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
-const MAX_FILES = 10;
-const ACCEPTED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];
+const MAX_BYTES = PHOTO_MAX_BYTES;
+const MAX_FILES = PHOTO_MAX_FILES;
+const ACCEPTED_MIME = PHOTO_ACCEPTED_MIME;
 
 // ─── Per-photo state ──────────────────────────────────────────────────────────
 
@@ -272,7 +277,10 @@ export function EndgamePhotoUploadSection({
 
       {/* Per-photo preview list */}
       {photos.length > 0 && (
-        <ul className="flex flex-col gap-2" aria-label="foto selezionate">
+        <ul
+          className="flex flex-col gap-2"
+          aria-label={t('pages.sessionLive.endgameDialog.photoUpload.selectedPhotosList')}
+        >
           {photos.map(photo => (
             <li
               key={photo.key}
@@ -335,7 +343,9 @@ export function EndgamePhotoUploadSection({
         >
           {isUploading
             ? t('pages.sessionLive.endgameDialog.photoUpload.uploadingLabel')
-            : t('pages.sessionLive.endgameDialog.photoUpload.uploadCta')}
+            : !recordId
+              ? t('pages.sessionLive.endgameDialog.photoUpload.preparingLabel')
+              : t('pages.sessionLive.endgameDialog.photoUpload.uploadCta')}
         </button>
       )}
     </section>

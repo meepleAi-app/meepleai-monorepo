@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
@@ -9,6 +10,7 @@ using Api.BoundedContexts.GameManagement.Application.Queries.GameNight;
 using Api.BoundedContexts.GameManagement.Application.Queries.GameSessionContext;
 using Api.BoundedContexts.GameManagement.Application.Queries.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.Queries.ToolState;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Models;
@@ -360,6 +362,21 @@ internal static class LiveSessionEndpoints
             .WithTags("LiveSessions")
             .WithSummary("Get session resume context")
             .WithDescription("Get session resume context with recap, scores, and photos. Issue #122.");
+
+        // NOTE: /{sessionId:guid}/stream uses a sub-segment and does NOT collide with /{sessionId:guid}
+        // because ASP.NET Core route matching considers the trailing /stream literal.
+        group.MapGet("/live-sessions/{sessionId:guid}/stream", HandleStreamAsync)
+            .RequireAuthenticatedUser()
+            .Produces(200)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Native SSE stream for live session events")
+            .WithDescription(
+                "Server-Sent Events stream for real-time live session updates via ILiveSessionStreamGateway. " +
+                "Returns X-Warning-Code: stream-not-linked when session has no companion (TrackingSessionId null). " +
+                "Issue #2561 SP2 T4.");
 
         return group;
     }
@@ -807,6 +824,104 @@ internal static class LiveSessionEndpoints
             new GetSessionResumeContextQuery(sessionId), cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
+
+    /// <summary>
+    /// Native SSE stream for live session events — Issue #2561 SP2 T4.
+    /// Mirrors the v2 legacy loop in SessionQueryEndpoints.cs:319-418 but uses
+    /// ILiveSessionStreamGateway (GameManagement ACL) instead of ISessionBroadcastService.
+    /// </summary>
+    private static async Task<IResult> HandleStreamAsync(
+        Guid sessionId,
+        HttpContext httpContext,
+        [FromServices] IMediator mediator,
+        [FromServices] ILiveSessionStreamGateway gateway,
+        [FromQuery] string? lastEventId,
+        CancellationToken ct)
+    {
+        var userId = httpContext.User.GetUserId();
+        if (userId == Guid.Empty)
+            return Results.Unauthorized();
+
+        // CQRS authz + companion-presence check — no direct repo injection in endpoints.
+        var ctx = await mediator
+            .Send(new GetLiveSessionStreamContextQuery(sessionId, userId), ct)
+            .ConfigureAwait(false);
+
+        if (!ctx.Found)
+            return Results.NotFound(new { error = "Live session not found" });
+
+        if (!ctx.Authorized)
+            return Results.StatusCode(403);
+
+        // Set SSE response headers — must happen before the first Write call.
+        httpContext.Response.Headers.Append("Content-Type", "text/event-stream");
+        httpContext.Response.Headers.Append("Cache-Control", "no-cache");
+        httpContext.Response.Headers.Append("Connection", "keep-alive");
+        httpContext.Response.Headers.Append("X-Accel-Buffering", "no");
+
+        // Warn caller when session has no companion: stream will be empty (gateway yields nothing).
+        // The connection stays open with heartbeats so the client can reconnect after SP0 is provisioned.
+        if (!ctx.HasCompanion)
+            httpContext.Response.Headers.Append("X-Warning-Code", "stream-not-linked");
+
+        // Commit the 200 status + SSE headers immediately, before any blocking gateway call.
+        // Without this flush, TestHost and some proxies hold off sending the response until
+        // the first body write — meaning an unhandled exception could still produce a 500 here.
+        httpContext.Response.StatusCode = 200;
+        await httpContext.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+
+        // Heartbeat task: write a comment every 30 s to keep the connection alive.
+        using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var heartbeatTask = Task.Run(async () =>
+        {
+            while (!heartbeatCts.Token.IsCancellationRequested)
+            {
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(30), heartbeatCts.Token).ConfigureAwait(false);
+                    await httpContext.Response.WriteAsync(
+                        $"event: heartbeat\ndata: {{\"timestamp\":\"{DateTime.UtcNow:O}\"}}\n\n",
+                        heartbeatCts.Token).ConfigureAwait(false);
+                    await httpContext.Response.Body.FlushAsync(heartbeatCts.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+            }
+        }, heartbeatCts.Token);
+
+        try
+        {
+            // gateway.SubscribeAsync returns an empty stream when HasCompanion == false.
+            await foreach (var evt in gateway
+                .SubscribeAsync(sessionId, userId, lastEventId, ct)
+                .ConfigureAwait(false)
+                .WithCancellation(ct))
+            {
+                var json = JsonSerializer.Serialize(evt.Data, SseJsonOptions);
+
+                if (evt.Id is not null)
+                    await httpContext.Response.WriteAsync($"id: {evt.Id}\n", ct).ConfigureAwait(false);
+
+                await httpContext.Response.WriteAsync($"event: {evt.Type}\n", ct).ConfigureAwait(false);
+                await httpContext.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
+                await httpContext.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            await heartbeatCts.CancelAsync().ConfigureAwait(false);
+            await heartbeatTask.ConfigureAwait(false);
+        }
+
+        return Results.Empty;
+    }
+
+    private static readonly JsonSerializerOptions SseJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
 
     #endregion
 

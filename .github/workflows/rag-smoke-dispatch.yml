@@ -122,9 +122,18 @@ jobs:
           # committed (#2480).
           SEED_INDEX_OUT_DIR: ${{ github.workspace }}/data/snapshots
         run: |
-          # Fetches the latest snapshot from R2 (snapshot-fetch.sh) using the read
-          # creds synthesized above, restores it, and brings up the AI stack.
-          make dev-from-snapshot
+          # Inline the dev-from-snapshot flow but bring up ONLY the services RAG
+          # retrieval needs — `make dev-from-snapshot` does `--profile ai up -d`
+          # which also starts web + n8n (extra env_files + a Next.js build) that
+          # this smoke doesn't use and that only add failure surface + minutes on
+          # a 2-core runner (#2480). COMPOSE mirrors the Makefile.
+          COMPOSE="docker compose -f docker-compose.yml -f compose.dev.yml"
+          bash scripts/snapshot-fetch.sh
+          bash scripts/snapshot-verify.sh
+          $COMPOSE up -d postgres
+          bash scripts/wait-for-healthy.sh postgres 60
+          bash scripts/snapshot-restore.sh
+          SKIP_CATALOG_SEED=true $COMPOSE --profile ai up -d postgres redis api embedding-service reranker-service
           bash scripts/wait-for-healthy.sh api 300
 
       - name: Run RAG smoke

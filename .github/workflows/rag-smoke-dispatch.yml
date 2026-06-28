@@ -169,12 +169,44 @@ jobs:
             bash scripts/rag-smoke-assert.sh
           fi
 
-      - name: Dump service logs on smoke failure
-        if: ${{ steps.ragsmoke.outcome == 'failure' }}
+      - name: Diagnose smoke failure
+        # always() is required: without it GitHub implicitly ANDs the condition
+        # with success(), so the step is skipped after the smoke step fails (#2480).
+        if: ${{ always() && steps.ragsmoke.outcome == 'failure' }}
+        working-directory: infra
+        env:
+          API_BASE_URL: http://localhost:8080
+          SMOKE_EMAIL: bake-admin@meepleai.test
+          SMOKE_PASSWORD: BakeSeed1!Admin
         run: |
-          echo "::group::meepleai-api (last 150)";        docker logs meepleai-api --tail 150 2>&1 || true; echo "::endgroup::"
-          echo "::group::meepleai-embedding (last 80)";    docker logs meepleai-embedding --tail 80 2>&1 || true; echo "::endgroup::"
-          echo "::group::meepleai-reranker (last 60)";     docker logs meepleai-reranker --tail 60 2>&1 || true; echo "::endgroup::"
+          set +e
+          PGUSER=$(sed -n 's/^POSTGRES_USER=//p' secrets/database.secret)
+          PGDB=$(sed -n 's/^POSTGRES_DB=//p' secrets/database.secret)
+          q() { docker exec meepleai-postgres psql -U "$PGUSER" -d "$PGDB" -At -c "$1" 2>&1; }
+          echo "::group::DB row counts"
+          echo "vector_documents:   $(q 'SELECT count(*) FROM vector_documents;')"
+          echo "pgvector_embeddings:$(q 'SELECT count(*) FROM pgvector_embeddings;')"
+          echo "text_chunks:        $(q 'SELECT count(*) FROM text_chunks;')"
+          echo "shared_games:       $(q 'SELECT count(*) FROM shared_games;')"
+          echo "::endgroup::"
+          echo "::group::vector_documents structure + sample"
+          q '\d vector_documents'
+          q 'SELECT * FROM vector_documents LIMIT 1;'
+          echo "::endgroup::"
+          echo "::group::shared_games rag flags (HasKnowledgeBase / IsRagPublic columns)"
+          q "SELECT column_name FROM information_schema.columns WHERE table_name='shared_games' AND (column_name ILIKE '%knowledge%' OR column_name ILIKE '%rag%');"
+          echo "::endgroup::"
+          echo "::group::raw ask/global response"
+          COOKIE=$(mktemp)
+          curl -s -c "$COOKIE" -X POST "$API_BASE_URL/api/v1/auth/login" -H 'Content-Type: application/json' \
+            -d "{\"email\":\"$SMOKE_EMAIL\",\"password\":\"$SMOKE_PASSWORD\"}" -o /dev/null -w "login HTTP: %{http_code}\n"
+          curl -sN -b "$COOKIE" -X POST "$API_BASE_URL/api/v1/knowledge-base/ask/global" -H 'Content-Type: application/json' \
+            -d '{"query":"How do I set up Catan?","language":"en","topK":3}' -w "\n--- HTTP: %{http_code} ---\n" | head -50
+          echo "::endgroup::"
+          echo "::group::api logs (rag/retrieval/error)"
+          docker logs meepleai-api --tail 250 2>&1 | grep -iE 'rag|retriev|vector|embed|error|exception|ask|citation|llm|openrouter|deepseek|threshold|search' | tail -70
+          echo "::endgroup::"
+          echo "::group::embedding-service logs"; docker logs meepleai-embedding --tail 40 2>&1; echo "::endgroup::"
 
       - name: Upload updated baseline (when --update-baseline)
         if: ${{ github.event.inputs.update_baseline == 'true' }}

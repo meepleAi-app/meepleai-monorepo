@@ -69,12 +69,26 @@ vi.mock('next/dynamic', () => ({
   default: (
     loader: () => Promise<{ default: React.ComponentType<Record<string, unknown>> }>
   ): React.ComponentType<Record<string, unknown>> => {
-    let Inner: React.ComponentType<Record<string, unknown>> | null = null;
-    void loader().then(mod => {
-      Inner = mod.default;
-    });
-    const Wrapper = (props: Record<string, unknown>) =>
-      Inner ? React.createElement(Inner, props) : null;
+    // Load the lazy module per-mount via state so resolving the loader triggers
+    // a re-render. The previous closure-only variant (`let Inner; loader().then(...)`)
+    // set Inner without re-rendering, so the component mounted only when an
+    // unrelated re-render happened to occur after the module-level loader resolved
+    // — deterministically failing in isolation and flaky in-file (#2537).
+    const Wrapper = (props: Record<string, unknown>) => {
+      const [Inner, setInner] = React.useState<React.ComponentType<Record<string, unknown>> | null>(
+        null
+      );
+      React.useEffect(() => {
+        let active = true;
+        void loader().then(mod => {
+          if (active) setInner(() => mod.default);
+        });
+        return () => {
+          active = false;
+        };
+      }, []);
+      return Inner ? React.createElement(Inner, props) : null;
+    };
     Wrapper.displayName = 'NextDynamicStub';
     return Wrapper;
   },
@@ -143,6 +157,27 @@ const DOC_FIXTURE = {
   updatedBy: null,
 };
 
+// Single-doc detail envelope (KbDocDetailSchema) returned by GET /kb-docs/:id.
+// Mounting with ?docId triggers useKbDocDetail → GET /kb-docs/:id; without a
+// handler MSW lets it hit the network → "network error" → the app's resilience
+// retry (3×, ~1s backoff) delays the editor mount past the waitFor timeout,
+// making S4 flaky in-file and deterministically failing in isolation (#2537).
+const DOC_DETAIL_FIXTURE = {
+  id: DOC_ID,
+  title: 'Old Title',
+  docType: 'rulebook' as const,
+  gameId: GAME_ID,
+  gameName: 'Azul',
+  uploaderName: 'Marco',
+  uploadedAt: ISO_DATE,
+  lastIngestedAt: ISO_DATE,
+  processingStatus: 'ready' as const,
+  chunkCount: 3,
+  pageCount: 24,
+  language: 'it',
+  tags: ['family'],
+};
+
 // Two search results distinguishable by docType / snippet
 const SEARCH_RESULT_RULEBOOK = {
   chunkId: 'c0eebc99-9c0b-4ef8-bb6d-6bb9bd380b11',
@@ -182,6 +217,12 @@ function kbDocsListHandler() {
       pageSize: 20,
     })
   );
+}
+
+/** kb-docs single-doc handler — GET /kb-docs/:id (useKbDocDetail), required by
+ *  the ?docId mount flow (S4-S6) so the detail fetch is deterministic (#2537). */
+function getKbDocByIdHandler() {
+  return http.get(`${API_BASE}/api/v1/kb-docs/:id`, () => HttpResponse.json(DOC_DETAIL_FIXTURE));
 }
 
 /**
@@ -323,7 +364,7 @@ describe('KbGlobaleView Phase 3 — S1-S6 (#1737)', () => {
 
   // ── S4: PATCH success ──────────────────────────────────────────────────────
   it('S4: PATCH success — editor mounts pre-filled, PATCH called, router navigates away', async () => {
-    server.use(kbDocsListHandler(), patchKbDocHandler());
+    server.use(kbDocsListHandler(), getKbDocByIdHandler(), patchKbDocHandler());
 
     // Mount at home branch with ?docId + ?edit=1 → editTargetDto resolved from useUserKbDocs
     searchParamsMap = { docId: DOC_ID, edit: '1' };
@@ -360,7 +401,7 @@ describe('KbGlobaleView Phase 3 — S1-S6 (#1737)', () => {
 
   // ── S5: PATCH 404 ──────────────────────────────────────────────────────────
   it('S5: PATCH 404 → generic notFoundError message (anti-info-leak)', async () => {
-    server.use(kbDocsListHandler(), patchKbDocHandler());
+    server.use(kbDocsListHandler(), getKbDocByIdHandler(), patchKbDocHandler());
 
     searchParamsMap = { docId: DOC_ID, edit: '1' };
     const Wrapper = createWrapper();
@@ -386,7 +427,7 @@ describe('KbGlobaleView Phase 3 — S1-S6 (#1737)', () => {
 
   // ── S6: PATCH 422 field errors ─────────────────────────────────────────────
   it('S6: PATCH 422 → FluentValidation envelope → inline field error with aria-describedby', async () => {
-    server.use(kbDocsListHandler(), patchKbDocHandler());
+    server.use(kbDocsListHandler(), getKbDocByIdHandler(), patchKbDocHandler());
 
     searchParamsMap = { docId: DOC_ID, edit: '1' };
     const Wrapper = createWrapper();

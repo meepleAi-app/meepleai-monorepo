@@ -3269,6 +3269,7 @@
         "viewSummaryCta": "View summary",
         "saveGameCta": "Save game",
         "savingLabel": "Saving…",
+        "alreadyCompletedToast": "Game already finished",
         "photoUpload": {
           "sectionTitle": "Game photos",
           "addPhotosCta": "Select photos",

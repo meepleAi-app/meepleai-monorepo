@@ -3376,6 +3376,7 @@
         "viewSummaryCta": "Vedi riepilogo",
         "saveGameCta": "Salva partita",
         "savingLabel": "Salvataggio…",
+        "alreadyCompletedToast": "Partita già conclusa",
         "photoUpload": {
           "sectionTitle": "Foto della partita",
           "addPhotosCta": "Seleziona foto",

@@ -135,6 +135,13 @@ jobs:
           bash scripts/snapshot-restore.sh
           SKIP_CATALOG_SEED=true $COMPOSE --profile ai up -d postgres redis api embedding-service reranker-service
           bash scripts/wait-for-healthy.sh api 300
+          # Retrieval encodes the query via embedding-service; its /health returns
+          # 503 until the model is loaded (e5-base download+load can take minutes on
+          # a fresh runner). Without waiting, the queries hit a not-ready encoder and
+          # the SSE stream emits zero type=1 citations. Wait for the model to be
+          # ready (and the reranker) before the smoke runs. #2480.
+          bash scripts/wait-for-healthy.sh embedding-service 600
+          bash scripts/wait-for-healthy.sh reranker-service 600
 
       - name: Run RAG smoke
         id: ragsmoke
@@ -154,6 +161,13 @@ jobs:
           else
             bash scripts/rag-smoke-assert.sh
           fi
+
+      - name: Dump service logs on smoke failure
+        if: ${{ steps.ragsmoke.outcome == 'failure' }}
+        run: |
+          echo "::group::meepleai-api (last 150)";        docker logs meepleai-api --tail 150 2>&1 || true; echo "::endgroup::"
+          echo "::group::meepleai-embedding (last 80)";    docker logs meepleai-embedding --tail 80 2>&1 || true; echo "::endgroup::"
+          echo "::group::meepleai-reranker (last 60)";     docker logs meepleai-reranker --tail 60 2>&1 || true; echo "::endgroup::"
 
       - name: Upload updated baseline (when --update-baseline)
         if: ${{ github.event.inputs.update_baseline == 'true' }}

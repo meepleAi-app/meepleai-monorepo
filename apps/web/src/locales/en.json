@@ -3268,7 +3268,21 @@
         "acknowledgeCta": "Got it",
         "viewSummaryCta": "View summary",
         "saveGameCta": "Save game",
-        "savingLabel": "Saving…"
+        "savingLabel": "Saving…",
+        "photoUpload": {
+          "sectionTitle": "Game photos",
+          "addPhotosCta": "Select photos",
+          "uploadCta": "Upload photos",
+          "uploadingLabel": "Uploading…",
+          "preparingLabel": "Preparing…",
+          "retryCta": "Retry",
+          "doneBadge": "Uploaded",
+          "errorGeneric": "Upload failed",
+          "tooManyFiles": "You can upload at most {max} photos",
+          "tooLarge": "File too large (max 5 MB)",
+          "badFormat": "Format not supported",
+          "heicFailed": "HEIC conversion failed"
+        }
       },
       "endgameConfirm": {
         "title": "End the game?",

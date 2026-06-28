@@ -3375,7 +3375,21 @@
         "acknowledgeCta": "Ho capito",
         "viewSummaryCta": "Vedi riepilogo",
         "saveGameCta": "Salva partita",
-        "savingLabel": "Salvataggio…"
+        "savingLabel": "Salvataggio…",
+        "photoUpload": {
+          "sectionTitle": "Foto della partita",
+          "addPhotosCta": "Seleziona foto",
+          "uploadCta": "Carica foto",
+          "uploadingLabel": "Caricamento…",
+          "preparingLabel": "Preparazione…",
+          "retryCta": "Riprova",
+          "doneBadge": "Caricata",
+          "errorGeneric": "Errore nel caricamento",
+          "tooManyFiles": "Puoi caricare al massimo {max} foto",
+          "tooLarge": "File troppo grande (max 5 MB)",
+          "badFormat": "Formato non supportato",
+          "heicFailed": "Conversione HEIC non riuscita"
+        }
       },
       "endgameConfirm": {
         "title": "Terminare la partita?",

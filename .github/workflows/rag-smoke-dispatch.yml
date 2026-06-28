@@ -98,6 +98,12 @@ jobs:
 
       - name: Boot from published snapshot
         working-directory: infra
+        env:
+          # Canonical out-dir (repo root, gitignored) so fetch/verify/restore use
+          # the same dir as the bake workflows — NOT infra/data/snapshots, which a
+          # relative default would create and where a stale snapshot used to be
+          # committed (#2480).
+          SEED_INDEX_OUT_DIR: ${{ github.workspace }}/data/snapshots
         run: |
           # Fetches the latest snapshot from R2 (snapshot-fetch.sh) using the read
           # creds synthesized above, restores it, and brings up the AI stack.
@@ -109,6 +115,7 @@ jobs:
         working-directory: infra
         env:
           API_BASE_URL: http://localhost:8080
+          SEED_INDEX_OUT_DIR: ${{ github.workspace }}/data/snapshots
           # The published snapshot is baked with the INITIAL_ADMIN user (same creds
           # as the bake workflows). Auth as that user — SMOKE_USER_* secrets don't
           # exist and wouldn't be present in the snapshot DB anyway. #2480.

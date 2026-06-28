@@ -71,4 +71,23 @@ public class LiveGameSessionMapperTests
         // holds — not that the value is non-zero at this point.
         entity.Xmin.Should().Be(session.Xmin);
     }
+
+    [Fact]
+    public void Mapper_RoundTrips_TrackingSessionId()
+    {
+        var trackingId = Guid.NewGuid();
+        var domain = LiveGameSession.Create(
+            id: Guid.NewGuid(),
+            createdByUserId: Guid.NewGuid(),
+            gameName: "Mage Knight",
+            timeProvider: TimeProvider.System,
+            gameId: Guid.NewGuid(),
+            trackingSessionId: trackingId);
+
+        var entity = LiveGameSessionMapper.ToEntity(domain);
+        entity.TrackingSessionId.Should().Be(trackingId);
+
+        var back = LiveGameSessionMapper.ToDomain(entity);
+        back.TrackingSessionId.Should().Be(trackingId);
+    }
 }

@@ -96,7 +96,7 @@ export function EndgamePhotoUploadSection({
       if (selected.length > MAX_FILES) {
         capped = selected.slice(0, MAX_FILES);
         setGlobalWarning(
-          t('pages.pages.sessionLive.endgameDialog.photoUpload.tooManyFiles', { max: MAX_FILES })
+          t('pages.sessionLive.endgameDialog.photoUpload.tooManyFiles', { max: MAX_FILES })
         );
       }
 

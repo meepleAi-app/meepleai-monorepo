@@ -8,16 +8,26 @@ name: RAG Smoke (canonical queries vs golden baseline)
 # retrieval regressions (embedding model / chunker / index drift) that the bake
 # smoke does not cover.
 #
-# ⚠️ DISPATCH-ONLY (no cron) until the golden baseline is committed:
-#   R2 snapshot distribution now WORKS (#2516): the dedicated meepleai-seed-snapshots
-#   bucket + SEED_BLOB_* repo secrets are configured, and dev-from-snapshot fetches
-#   the published snapshot via the read creds synthesized in "Configure snapshot
-#   bucket read credentials" below. The only remaining step before the weekly
-#   schedule is committing the golden baseline for the published snapshot: dispatch
-#   with update_baseline=true, download the artifact, and commit
-#   infra/fixtures/rag-golden-baseline.json. Flip to `schedule:` in that same PR.
+# Runs weekly (schedule) in ASSERT mode against the committed golden baseline, and
+# can be dispatched manually to re-capture the baseline (update_baseline=true) after a
+# re-bake. R2 snapshot distribution works (#2516): the dedicated meepleai-seed-snapshots
+# bucket + SEED_BLOB_* repo secrets are configured, and dev-from-snapshot fetches the
+# published snapshot via the read creds synthesized in "Configure snapshot bucket read
+# credentials" below. The golden baseline was first committed for snapshot
+# meepleai_seed_20260628T211806Z_intfloat_multilingual-e5-base_7cee37d47 (#2480).
+#
+# Re-baseline procedure (after a re-bake that changes the EF head / embedding model):
+#   1. re-bake + publish (seed-snapshot-bake-full.yml -f publish=true)
+#   2. dispatch this workflow with update_baseline=true
+#   3. download the rag-golden-baseline-<run_id> artifact, commit infra/fixtures/rag-golden-baseline.json
+#
+# On a schedule trigger github.event.inputs.update_baseline is empty → assert mode.
 
 on:
+  schedule:
+    # Weekly, Monday 05:37 UTC. Off-peak + offset minute (ADR-078: stay under the
+    # API/runner budget, avoid the top-of-hour cron stampede). Asserts only.
+    - cron: '37 5 * * 1'
   workflow_dispatch:
     inputs:
       update_baseline:

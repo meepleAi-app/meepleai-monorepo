@@ -37,16 +37,16 @@ make rag-smoke          # or: bash scripts/rag-smoke-assert.sh
 ```
 Exit 0 = all queries match. Exit 1 = a query drifted (prints expected vs got) or returned no citations.
 
-## CI status — DISPATCH-ONLY
+## CI status — WEEKLY CRON (assert) + manual re-baseline
 
-`.github/workflows/rag-smoke-dispatch.yml` is `workflow_dispatch` only (no cron). It cannot run on a schedule yet because `make dev-from-snapshot` → `snapshot-fetch.sh` downloads the `.dump` from the R2 seed blob bucket, and that publish path is **broken**:
+`.github/workflows/rag-smoke-dispatch.yml` runs **weekly on a schedule** (Monday 05:37 UTC) in **assert** mode against the committed golden baseline, and can still be dispatched manually to re-capture the baseline (`update_baseline=true`). R2 snapshot distribution works ([#2516](https://github.com/meepleAi-app/meepleai-monorepo/issues/2516)): the dedicated `meepleai-seed-snapshots` bucket + `SEED_BLOB_*` repo secrets are configured, and `dev-from-snapshot` fetches the published snapshot via the read creds synthesized in the workflow's "Configure snapshot bucket read credentials" step. On a `schedule` trigger `github.event.inputs.update_baseline` is empty → assert mode; a drift opens a tracking issue automatically.
 
-- `SEED_BLOB_*` repo secrets are not configured (only `SEED_BUCKET_*` for the source PDFs exist).
-- R2 PUT is broken ([#2271](https://github.com/meepleAi-app/meepleai-monorepo/issues/2271)).
+The golden baseline was first committed for snapshot `meepleai_seed_20260628T211806Z_intfloat_multilingual-e5-base_7cee37d47` (#2480), after the RAG retrieval fixes in #2556 (cross-game DbContext concurrency) + #2559 (restored `text_chunks`/`pdf_documents.search_vector` columns).
 
-**To enable the weekly cron**: (1) fix snapshot publish (configure `SEED_BLOB_*` + resolve #2271), (2) publish a fresh snapshot, (3) capture + commit the golden baseline for it, (4) add a `schedule:` trigger to the workflow.
-
-Until then the golden baseline is captured locally against the fresh snapshot.
+**Re-baseline after an intentional re-bake** (EF head / embedding-model / chunker change):
+1. re-bake + publish: `seed-snapshot-bake-full.yml -f publish=true`
+2. dispatch this workflow with `update_baseline=true`
+3. download the `rag-golden-baseline-<run_id>` artifact, commit `infra/fixtures/rag-golden-baseline.json`
 
 ## Canonical queries
 

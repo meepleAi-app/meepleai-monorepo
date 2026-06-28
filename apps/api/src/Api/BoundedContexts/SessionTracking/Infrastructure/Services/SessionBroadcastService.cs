@@ -129,13 +129,13 @@ public sealed class SessionBroadcastService : ISessionBroadcastService, IDisposa
     }
 
     /// <inheritdoc />
-    public async Task PublishAsync(
+    public Task PublishAsync(
         Guid sessionId,
         INotification evt,
         EventVisibility visibility = default,
         CancellationToken ct = default)
     {
-        // Create envelope
+        // Build the envelope, deriving EventType from the domain event via the mapper.
         var envelope = new SseEventEnvelope
         {
             Id = $"{sessionId:N}-{DateTime.UtcNow.Ticks:x}",
@@ -143,6 +143,21 @@ public sealed class SessionBroadcastService : ISessionBroadcastService, IDisposa
             Data = evt,
             Timestamp = DateTime.UtcNow
         };
+
+        // Delegate to the envelope-based path.
+        return PublishEnvelopeAsync(sessionId, envelope, visibility, ct);
+    }
+
+    /// <inheritdoc />
+    public async Task PublishEnvelopeAsync(
+        Guid sessionId,
+        SseEventEnvelope envelope,
+        EventVisibility visibility = default,
+        CancellationToken ct = default)
+    {
+        // Re-assign Id to keep id-assignment centralised (incoming Id is ignored).
+        // T4 will replace this format with a monotonic sequence.
+        envelope = envelope with { Id = $"{sessionId:N}-{DateTime.UtcNow.Ticks:x}" };
 
         // Publish to Redis for multi-instance (if available)
         if (_subscriber is not null)

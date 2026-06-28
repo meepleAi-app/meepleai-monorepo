@@ -660,6 +660,28 @@ public sealed class SessionBroadcastServiceTests : IDisposable
 
     #endregion
 
+    #region PublishEnvelopeAsync
+
+    [Fact]
+    public async Task PublishEnvelopeAsync_delivers_explicit_event_type()
+    {
+        var svc = new SessionBroadcastService(NullLogger<SessionBroadcastService>.Instance);
+        var sid = Guid.NewGuid(); var uid = Guid.NewGuid();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var received = new List<SseEventEnvelope>();
+        var sub = Task.Run(async () => {
+            await foreach (var e in svc.SubscribeAsync(sid, uid, null, cts.Token)) { received.Add(e); break; }
+        });
+        await Task.Delay(100);
+        await svc.PublishEnvelopeAsync(sid,
+            new SseEventEnvelope { Id = "ignored", EventType = "session:score", Data = new { value = 7 } });
+        await sub;
+        Assert.Single(received);
+        Assert.Equal("session:score", received[0].EventType);
+    }
+
+    #endregion
+
     #region Constants
 
     [Fact]

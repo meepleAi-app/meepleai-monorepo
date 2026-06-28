@@ -6,7 +6,12 @@ namespace Api.BoundedContexts.GameManagement.Application.Services;
 /// </summary>
 /// <param name="Type">Event type discriminator, e.g. "session:score", "session:turn".</param>
 /// <param name="Data">Opaque event payload — consumers cast or deserialise as needed.</param>
-public record LiveSessionStreamEvent(string Type, object Data);
+/// <param name="Id">
+/// SSE event id, populated on the subscribe path so the endpoint (Task 4) can emit
+/// <c>id:</c> for Last-Event-ID resume. <c>null</c> on the broadcast path — the
+/// underlying broadcast service assigns a monotonic id internally.
+/// </param>
+public record LiveSessionStreamEvent(string Type, object Data, string? Id = null);
 
 /// <summary>
 /// Anti-corruption layer (ACL) for the live-session SSE stream gateway.

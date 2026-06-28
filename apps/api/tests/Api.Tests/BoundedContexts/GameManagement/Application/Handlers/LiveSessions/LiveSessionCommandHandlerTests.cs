@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
@@ -23,6 +24,11 @@ public class LiveSessionCommandHandlerTests
     private readonly Mock<ILiveSessionRepository> _repositoryMock;
     private readonly TimeProvider _timeProvider;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+    // #2501 SP0: companion-saga ACL dependency. Default mock returns Guid.Empty for
+    // CreateCompanionAsync, which is harmless for these existing assertions (they verify
+    // AddAsync/captured properties, not TrackingSessionId). Companion behavior itself is
+    // covered by CreateLiveSessionCommandHandlerTests (dedicated saga unit tests).
+    private readonly Mock<ICompanionSessionService> _companionSessionServiceMock;
 
     private static readonly Guid DefaultUserId = Guid.NewGuid();
 
@@ -31,6 +37,7 @@ public class LiveSessionCommandHandlerTests
         _repositoryMock = new Mock<ILiveSessionRepository>();
         _timeProvider = TimeProvider.System;
         _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _companionSessionServiceMock = new Mock<ICompanionSessionService>();
     }
 
     // === Shared Helpers ===
@@ -97,7 +104,7 @@ public class LiveSessionCommandHandlerTests
     public async Task CreateLiveSession_HappyPath_DefaultConfig_ReturnsSessionId()
     {
         // Arrange
-        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
+        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object, _companionSessionServiceMock.Object);
         var command = new CreateLiveSessionCommand(DefaultUserId, "Catan");
 
         // Act
@@ -118,7 +125,7 @@ public class LiveSessionCommandHandlerTests
     public async Task CreateLiveSession_HappyPath_CustomScoring_ReturnsSessionId()
     {
         // Arrange
-        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
+        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object, _companionSessionServiceMock.Object);
         var scoringDimensions = new List<string> { "Points", "Bonus" };
         var dimensionUnits = new Dictionary<string, string> { { "Points", "pts" }, { "Bonus", "pts" } };
         var command = new CreateLiveSessionCommand(
@@ -142,7 +149,7 @@ public class LiveSessionCommandHandlerTests
     public async Task CreateLiveSession_NullCommand_ThrowsArgumentNullException()
     {
         // Arrange
-        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
+        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object, _companionSessionServiceMock.Object);
 
         // Act & Assert
         var act =
@@ -154,7 +161,7 @@ public class LiveSessionCommandHandlerTests
     public async Task CreateLiveSession_VerifiesAddAsyncCalled()
     {
         // Arrange
-        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
+        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object, _companionSessionServiceMock.Object);
         var command = new CreateLiveSessionCommand(DefaultUserId, "Ticket to Ride");
 
         LiveGameSession? capturedSession = null;
@@ -177,7 +184,7 @@ public class LiveSessionCommandHandlerTests
     public async Task CreateLiveSession_WithAllOptionalParams_CreatesCorrectly()
     {
         // Arrange
-        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
+        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object, _companionSessionServiceMock.Object);
         var gameId = Guid.NewGuid();
         var groupId = Guid.NewGuid();
         var command = new CreateLiveSessionCommand(
@@ -1146,7 +1153,7 @@ public class LiveSessionCommandHandlerTests
     public async Task CreateLiveSession_PassesCancellationTokenToRepository()
     {
         // Arrange
-        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
+        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object, _companionSessionServiceMock.Object);
         var command = new CreateLiveSessionCommand(DefaultUserId, "Token Test Game");
         using var cts = new CancellationTokenSource();
         var ct = cts.Token;

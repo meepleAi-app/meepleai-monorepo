@@ -39,7 +39,9 @@ jobs:
   rag-smoke:
     name: RAG canonical queries vs golden baseline
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # Generous: the embedding + reranker images build from source (~15-20min) on a
+    # fresh runner, on top of dotnet-ef restore (~5min) + snapshot fetch/restore.
+    timeout-minutes: 75
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -140,8 +142,13 @@ jobs:
           # a fresh runner). Without waiting, the queries hit a not-ready encoder and
           # the SSE stream emits zero type=1 citations. Wait for the model to be
           # ready (and the reranker) before the smoke runs. #2480.
-          bash scripts/wait-for-healthy.sh embedding-service 600
-          bash scripts/wait-for-healthy.sh reranker-service 600
+          # wait-for-healthy prepends "meepleai-" → pass the container suffix, NOT
+          # the compose service name (containers are meepleai-embedding /
+          # meepleai-reranker, not -embedding-service). These images build from
+          # source on a fresh runner (torch ~532MB), so the model isn't ready for
+          # ~15-20min — wait generously. #2480.
+          bash scripts/wait-for-healthy.sh embedding 1800
+          bash scripts/wait-for-healthy.sh reranker 1800
 
       - name: Run RAG smoke
         id: ragsmoke

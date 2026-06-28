@@ -3,6 +3,13 @@
 # Upload ultimo snapshot a seed blob bucket + rotation (tieni 3).
 set -euo pipefail
 
+# Resolve infra/ relative to THIS script, not the cwd. Both `make
+# seed-index-publish` and the bake workflows invoke this from infra/ (not the
+# repo root), so a hardcoded `infra/secrets/...` resolved to infra/infra/...
+# and the publish always failed at the storage.secret source (#2516).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+INFRA_DIR="$(dirname "$SCRIPT_DIR")"
+
 OUT_DIR="${SEED_INDEX_OUT_DIR:-data/snapshots}"
 LATEST="$OUT_DIR/.latest"
 
@@ -16,7 +23,7 @@ BASENAME=$(cat "$LATEST")
 
 # Carica credenziali da storage.secret
 # shellcheck disable=SC1091
-set -a; source infra/secrets/storage.secret; set +a
+set -a; source "$INFRA_DIR/secrets/storage.secret"; set +a
 : "${SEED_BLOB_BUCKET:?SEED_BLOB_BUCKET mancante in storage.secret}"
 : "${S3_ENDPOINT:?S3_ENDPOINT mancante}"
 : "${S3_ACCESS_KEY:?S3_ACCESS_KEY mancante}"

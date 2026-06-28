@@ -139,7 +139,7 @@ public sealed class SessionBroadcastService : ISessionBroadcastService, IDisposa
             if (_redisDb is not null && long.TryParse(lastEventId, NumberStyles.None, CultureInfo.InvariantCulture, out var sinceSeq))
             {
                 // Redis path: fetch all events with seq > sinceSeq (exclusive lower bound via "(" prefix).
-                missedEvents = await GetReplayFromRedisAsync(sessionId, sinceSeq, userId).ConfigureAwait(false);
+                missedEvents = await GetReplayFromRedisAsync(sessionId, sinceSeq, userId, lastEventId).ConfigureAwait(false);
             }
             else
             {
@@ -225,7 +225,7 @@ public sealed class SessionBroadcastService : ISessionBroadcastService, IDisposa
         {
             // T7: Write to durable replay ZSET before Pub/Sub so reconnecting clients always
             // find the event even if they reconnect after the Pub/Sub message is gone.
-            await AppendToRedisReplayAsync(sessionId, envelope, ct).ConfigureAwait(false);
+            await AppendToRedisReplayAsync(sessionId, envelope, visibility, ct).ConfigureAwait(false);
             await PublishToRedisAsync(sessionId, envelope, visibility, ct).ConfigureAwait(false);
         }
 
@@ -259,15 +259,18 @@ public sealed class SessionBroadcastService : ISessionBroadcastService, IDisposa
     /// <summary>
     /// Atomically appends an envelope to the Redis replay ZSET, evicts the oldest entries
     /// beyond the cap, and refreshes the TTL — all in a single Lua script round-trip.
+    /// Visibility metadata is encoded in the ZSET member (as a <see cref="ReplayEntry"/> wrapper)
+    /// so that <see cref="GetReplayFromRedisAsync"/> can filter private events at read time.
     /// Issue #2561 SP2 T7.
     /// </summary>
-    private async Task AppendToRedisReplayAsync(Guid sessionId, SseEventEnvelope envelope, CancellationToken ct)
+    private async Task AppendToRedisReplayAsync(Guid sessionId, SseEventEnvelope envelope, EventVisibility visibility, CancellationToken ct)
     {
         try
         {
             var seq = long.Parse(envelope.Id, CultureInfo.InvariantCulture);
             var key = (RedisKey)RedisKeyConstants.GetSessionReplayKey(sessionId);
-            var member = JsonSerializer.Serialize(envelope, _jsonOptions);
+            var entry = new ReplayEntry(envelope, visibility.IsPublic, visibility.TargetUserId);
+            var member = JsonSerializer.Serialize(entry, _jsonOptions);
 
             await _redisDb!.ScriptEvaluateAsync(
                 ReplayZaddCapScript,
@@ -285,12 +288,15 @@ public sealed class SessionBroadcastService : ISessionBroadcastService, IDisposa
     }
 
     /// <summary>
-    /// Reads events from the Redis replay ZSET with sequence > sinceSeq (exclusive lower bound)
-    /// and applies per-subscriber visibility filtering.
+    /// Reads events from the Redis replay ZSET with sequence &gt; sinceSeq (exclusive lower bound)
+    /// and applies the SAME per-subscriber visibility filter as <see cref="CircularEventBuffer.GetSince"/>:
+    /// an event is included only when <c>entry.IsPublic || entry.TargetUserId == userId</c>.
+    /// Visibility is encoded in every ZSET member by <see cref="AppendToRedisReplayAsync"/>,
+    /// so private events are never leaked to a different subscriber during cross-instance replay.
     /// Issue #2561 SP2 T7.
     /// </summary>
     private async Task<IReadOnlyList<SseEventEnvelope>> GetReplayFromRedisAsync(
-        Guid sessionId, long sinceSeq, Guid userId)
+        Guid sessionId, long sinceSeq, Guid userId, string originalLastEventId)
     {
         try
         {
@@ -312,19 +318,17 @@ public sealed class SessionBroadcastService : ISessionBroadcastService, IDisposa
                 if (entry.IsNullOrEmpty) continue;
                 try
                 {
-                    var env = JsonSerializer.Deserialize<SseEventEnvelope>(entry!, _jsonOptions);
-                    if (env is null) continue;
+                    var replayEntry = JsonSerializer.Deserialize<ReplayEntry>(entry!, _jsonOptions);
+                    if (replayEntry is null) continue;
 
-                    // Apply visibility filter: private events are stored in the ZSET but only
-                    // replayed to the correct subscriber.  Public events (no TargetUserId) pass.
-                    // NOTE: visibility metadata is embedded in the envelope's EventType/Data but
-                    // not in the ZSET member directly.  The visibility check below guards based on
-                    // the public replay contract: the ZSET stores ALL events (including private ones
-                    // so cross-instance hosts can reconstruct); the filter happens at read time.
-                    // For now we emit all events at replay — the same as the in-memory fallback
-                    // which has pool-level visibility applied.  When private-event replay semantics
-                    // are needed, visibility should be encoded in the ZSET member (T8 follow-up).
-                    result.Add(env);
+                    // Visibility filter — mirrors CircularEventBuffer.GetSince (:661-665):
+                    // private events are only replayed to the subscriber they were addressed to.
+                    if (!replayEntry.IsPublic && replayEntry.TargetUserId != userId)
+                    {
+                        continue;
+                    }
+
+                    result.Add(replayEntry.Envelope);
                 }
                 catch (JsonException ex)
                 {
@@ -342,11 +346,12 @@ public sealed class SessionBroadcastService : ISessionBroadcastService, IDisposa
                 "Redis replay ZSET read failed for session {SessionId}. Falling back to in-memory buffer.",
                 sessionId);
 
-            // Graceful degradation: fall back to in-memory CircularEventBuffer.
+            // Graceful degradation: fall back to in-memory CircularEventBuffer using the
+            // original lastEventId string (avoids re-formatting sinceSeq and breaking any
+            // non-D20-canonical ids that were passed through from the client).
             if (_pools.TryGetValue(sessionId, out var pool))
             {
-                return pool.GetEventsSince(
-                    sinceSeq.ToString("D20", CultureInfo.InvariantCulture), userId);
+                return pool.GetEventsSince(originalLastEventId, userId);
             }
 
             return Array.Empty<SseEventEnvelope>();
@@ -674,6 +679,19 @@ internal sealed class CircularEventBuffer
 
 [StructLayout(LayoutKind.Auto)]
 internal record struct BufferedEvent(SseEventEnvelope Envelope, EventVisibility Visibility);
+
+/// <summary>
+/// ZSET member format for the durable Redis replay buffer (Issue #2561 SP2 T7).
+/// Wraps the event envelope together with its visibility metadata so that
+/// <see cref="SessionBroadcastService.GetReplayFromRedisAsync"/> can enforce the same
+/// per-subscriber filter as <see cref="CircularEventBuffer.GetSince"/> at read time.
+/// </summary>
+/// <param name="Envelope">The event envelope to replay.</param>
+/// <param name="IsPublic"><c>true</c> when the event is visible to all subscribers.</param>
+/// <param name="TargetUserId">
+/// When <see cref="IsPublic"/> is <c>false</c>, the only subscriber that may receive this event.
+/// </param>
+internal record ReplayEntry(SseEventEnvelope Envelope, bool IsPublic, Guid? TargetUserId);
 
 /// <summary>
 /// Redis Pub/Sub message format for cross-instance event delivery.

@@ -349,6 +349,110 @@ public sealed class SessionBroadcastReplayTests
         threwException.Should().BeFalse("garbage lastEventId must never throw — graceful fallback expected");
     }
 
+    /// <summary>
+    /// PRIVACY REGRESSION: a private event published for userA must NOT be delivered to userB
+    /// when userB reconnects via the Redis ZSET cross-instance replay path.
+    /// userA's own reconnect MUST receive the private event.
+    ///
+    /// Regression for the Critical bug fixed in Issue #2561 SP2 T7:
+    /// the original ZSET path stored bare envelopes (no visibility) → leaked private events to all
+    /// reconnecting subscribers. Fix: <see cref="ReplayEntry"/> wrapper encodes visibility at write
+    /// time; filter applied at read time in GetReplayFromRedisAsync.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "Integration")]
+    [Trait("BoundedContext", "SessionTracking")]
+    public async Task Redis_PrivateEvent_NotLeakedToOtherSubscriber_OnCrossInstanceReplay()
+    {
+        await using var fixture = await RedisFixture.CreateAsync();
+        if (fixture is null)
+        {
+            // Docker not available — skip gracefully
+            return;
+        }
+
+        var sid = Guid.NewGuid();
+        var userA = Guid.NewGuid();
+        var userB = Guid.NewGuid();
+
+        // Instance A: publish one public event + one private event (for userA only)
+        using var svcA = CreateRedisService(fixture.Multiplexer);
+
+        // Keep-alive subscriber so the pool exists while publishing
+        using var keepAliveCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var keepAlive = Task.Run(async () =>
+        {
+            try { await foreach (var _ in svcA.SubscribeAsync(sid, Guid.NewGuid(), null, keepAliveCts.Token)) { } }
+            catch (OperationCanceledException) { }
+        }, keepAliveCts.Token);
+        await Task.Delay(50);
+
+        // Capture the id of the FIRST event (so we can reconnect "since" it)
+        using var cts1 = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var capturedIds = new List<string>();
+        var captureTask = Task.Run(async () =>
+        {
+            await foreach (var evt in svcA.SubscribeAsync(sid, userA, null, cts1.Token))
+            {
+                capturedIds.Add(evt.Id);
+                if (capturedIds.Count >= 1) break;
+            }
+        }, cts1.Token);
+        await Task.Delay(50);
+
+        // Event 1: public (anchor — both userA and userB should see this on reconnect)
+        await svcA.PublishAsync(sid, MakeScoreEvent(sid, Guid.NewGuid()), EventVisibility.Public);
+        await captureTask; // wait until we have the first event id
+
+        // Event 2: private — only for userA
+        await svcA.PublishAsync(sid, MakeScoreEvent(sid, userA), EventVisibility.PrivateTo(userA));
+        // Event 3: public again
+        await svcA.PublishAsync(sid, MakeScoreEvent(sid, Guid.NewGuid()), EventVisibility.Public);
+
+        await Task.Delay(50); // let writes settle into ZSET
+
+        await keepAliveCts.CancelAsync();
+        try { await keepAlive; } catch (OperationCanceledException) { }
+
+        var anchorId = capturedIds[0]; // reconnect "since" event-1 → should replay events 2+3
+
+        // Instance B: reconnect as userB since the anchor → must NOT see the private event
+        using var svcB = CreateRedisService(fixture.Multiplexer);
+
+        using var ctsBReconnect = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
+        var userBReplayed = new List<SseEventEnvelope>();
+        try
+        {
+            await foreach (var evt in svcB.SubscribeAsync(sid, userB, anchorId, ctsBReconnect.Token))
+            {
+                userBReplayed.Add(evt);
+                if (userBReplayed.Count >= 5) break; // safety cap
+            }
+        }
+        catch (OperationCanceledException) { }
+
+        // Instance C: reconnect as userA since the anchor → MUST see the private event
+        using var svcC = CreateRedisService(fixture.Multiplexer);
+
+        using var ctsCReconnect = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
+        var userAReplayed = new List<SseEventEnvelope>();
+        try
+        {
+            await foreach (var evt in svcC.SubscribeAsync(sid, userA, anchorId, ctsCReconnect.Token))
+            {
+                userAReplayed.Add(evt);
+                if (userAReplayed.Count >= 5) break; // safety cap
+            }
+        }
+        catch (OperationCanceledException) { }
+
+        // Assert: userB sees 1 public event (event 3), NOT the private event (event 2)
+        userBReplayed.Should().HaveCount(1, because: "userB must only receive the public event, not the private one");
+
+        // Assert: userA sees both event 2 (private to userA) and event 3 (public) = 2 events
+        userAReplayed.Should().HaveCount(2, because: "userA must receive the private event addressed to them plus the public event");
+    }
+
     #endregion
 
     // =========================================================================

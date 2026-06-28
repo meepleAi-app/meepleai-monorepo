@@ -3,6 +3,14 @@
 # Priorità: SNAPSHOT_FILE env > cache locale più recente > download da bucket.
 set -euo pipefail
 
+# Resolve infra/ relative to THIS script, not the cwd. `make dev-from-snapshot`
+# invokes this from infra/, so a hardcoded `infra/secrets/...` resolved to
+# infra/infra/... and the bucket fetch failed on a fresh machine with no local
+# cache — the exact case snapshot distribution exists for (#2516, mirrors the
+# seed-index-publish.sh fix).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+INFRA_DIR="$(dirname "$SCRIPT_DIR")"
+
 OUT_DIR="${SEED_INDEX_OUT_DIR:-data/snapshots}"
 mkdir -p "$OUT_DIR"
 
@@ -19,7 +27,7 @@ elif ls "$OUT_DIR"/meepleai_seed_*.meta.json >/dev/null 2>&1; then
 else
     log "nessuna cache locale — download dal bucket"
     # shellcheck disable=SC1091
-    set -a; source infra/secrets/storage.secret; set +a
+    set -a; source "$INFRA_DIR/secrets/storage.secret"; set +a
     : "${SEED_BLOB_BUCKET:?SEED_BLOB_BUCKET mancante}"
     : "${S3_ENDPOINT:?S3_ENDPOINT mancante}"
     : "${S3_ACCESS_KEY:?S3_ACCESS_KEY mancante}"

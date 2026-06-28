@@ -50,6 +50,7 @@ public class LiveGameSessionReconstituteTests
             agentMode: AgentSessionMode.None,
             chatSessionId: null,
             turnAdvancePolicy: TurnAdvancePolicy.Manual,
+            trackingSessionId: null,
             xmin: 42u,
             players: Array.Empty<LiveSessionPlayer>(),
             teams: Array.Empty<LiveSessionTeam>(),

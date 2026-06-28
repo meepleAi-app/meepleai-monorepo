@@ -66,6 +66,7 @@ internal static class LiveGameSessionMapper
             Notes = domain.Notes,
             AgentMode = (int)domain.AgentMode,
             ChatSessionId = domain.ChatSessionId,
+            TrackingSessionId = domain.TrackingSessionId,
             // Xmin is Postgres-system-owned (Issue #2305); EF round-trips it via xid mapping.
             // Mapper passes the current domain value back so EF emits WHERE xmin = @original.
             Xmin = domain.Xmin
@@ -263,6 +264,7 @@ internal static class LiveGameSessionMapper
             agentMode: (AgentSessionMode)entity.AgentMode,
             chatSessionId: entity.ChatSessionId,
             turnAdvancePolicy: (TurnAdvancePolicy)entity.TurnAdvancePolicy,
+            trackingSessionId: entity.TrackingSessionId,
             xmin: entity.Xmin,
             players: players,
             teams: teams,

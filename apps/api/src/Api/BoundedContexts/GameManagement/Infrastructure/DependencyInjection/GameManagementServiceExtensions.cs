@@ -36,6 +36,8 @@ internal static class GameManagementServiceExtensions
         services.AddScoped<IPlayRecordVersionRepository, PlayRecordVersionRepository>(); // #2437-3: version history + restore
         services.AddScoped<IRuleConflictFaqRepository, RuleConflictFaqRepository>(); // ISSUE-3761: Conflict FAQ
         services.AddScoped<ILiveSessionRepository, LiveSessionRepository>(); // Issue #2097 / ADR-060: EF-backed persistence
+        services.AddScoped<Api.BoundedContexts.GameManagement.Application.Services.ICompanionSessionService,
+            Api.BoundedContexts.GameManagement.Infrastructure.Services.CompanionSessionService>(); // #2501 SP0 ACL companion
         services.AddScoped<IToolStateRepository, ToolStateRepository>(); // Issue #4754: ToolState persistence
         services.AddScoped<ISessionSnapshotRepository, SessionSnapshotRepository>(); // Issue #4755: SessionSnapshot persistence
         services.AddScoped<IPauseSnapshotRepository, PauseSnapshotRepository>(); // Game Night: full-state pause snapshots

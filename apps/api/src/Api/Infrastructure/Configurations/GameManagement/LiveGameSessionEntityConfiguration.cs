@@ -110,6 +110,9 @@ internal sealed class LiveGameSessionEntityConfiguration : IEntityTypeConfigurat
         builder.Property(e => e.ChatSessionId)
             .HasColumnName("chat_session_id");
 
+        builder.Property(e => e.TrackingSessionId)
+            .HasColumnName("tracking_session_id");
+
         // --- JSON Columns ---
 
         builder.Property(e => e.ScoringConfigJson)

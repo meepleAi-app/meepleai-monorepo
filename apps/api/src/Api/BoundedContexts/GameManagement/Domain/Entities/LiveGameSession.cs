@@ -64,6 +64,13 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public AgentSessionMode AgentMode { get; private set; }
     public Guid? ChatSessionId { get; private set; }
     public TurnAdvancePolicy TurnAdvancePolicy { get; private set; }
+    /// <summary>
+    /// Id of the SessionTracking.Session companion created at-creation (Saga, ADR-083 SP0).
+    /// Non-null for new sessions created with a catalog GameId; null for legacy rows and
+    /// free-form sessions without a GameId (backfill tracked as OQ#5 follow-up).
+    /// This is the real cross-BC correlation bridge (replaces the dead-code ChatSessionId).
+    /// </summary>
+    public Guid? TrackingSessionId { get; private set; }
     public uint Xmin { get; private set; }
 
     // === Read-only collections ===
@@ -98,7 +105,8 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         Guid? groupId = null,
         SessionScoringConfig? scoringConfig = null,
         AgentSessionMode agentMode = AgentSessionMode.None,
-        TurnAdvancePolicy turnAdvancePolicy = TurnAdvancePolicy.Manual)
+        TurnAdvancePolicy turnAdvancePolicy = TurnAdvancePolicy.Manual,
+        Guid? trackingSessionId = null)
     {
         if (id == Guid.Empty)
             throw new ValidationException("Session ID cannot be empty");
@@ -134,7 +142,8 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
             CurrentTurnIndex = 0,
             ScoringConfig = scoringConfig ?? SessionScoringConfig.CreateDefault(),
             AgentMode = agentMode,
-            TurnAdvancePolicy = turnAdvancePolicy
+            TurnAdvancePolicy = turnAdvancePolicy,
+            TrackingSessionId = trackingSessionId
         };
 
         session.AddDomainEvent(new LiveSessionCreatedEvent(id, createdByUserId, trimmedName, gameId));
@@ -175,6 +184,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         AgentSessionMode agentMode,
         Guid? chatSessionId,
         TurnAdvancePolicy turnAdvancePolicy,
+        Guid? trackingSessionId,
         uint xmin,
         IEnumerable<LiveSessionPlayer> players,
         IEnumerable<LiveSessionTeam> teams,
@@ -212,6 +222,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
             AgentMode = agentMode,
             ChatSessionId = chatSessionId,
             TurnAdvancePolicy = turnAdvancePolicy,
+            TrackingSessionId = trackingSessionId,
             Xmin = xmin
         };
 

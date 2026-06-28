@@ -61,6 +61,36 @@ Cosa fa:
 
 Se qualcosa fallisce, il messaggio di errore ti dice esattamente cosa fare. **Fallback sempre disponibile**: `make dev`.
 
+#### Credenziali consumer (`storage.secret`)
+
+Su una macchina **senza cache locale**, `snapshot-fetch.sh` scarica lo snapshot dal
+bucket dedicato **`meepleai-seed-snapshots`**. Lo fa leggendo da `infra/secrets/storage.secret`:
+
+| Key | Valore |
+|---|---|
+| `SEED_BLOB_BUCKET` | `meepleai-seed-snapshots` |
+| `S3_ENDPOINT` | il tuo endpoint R2 EU (`https://<account>.eu.r2.cloudflarestorage.com`) |
+| `S3_ACCESS_KEY` / `S3_SECRET_KEY` | un token R2 **"Object Read only"** scoped a `meepleai-seed-snapshots` |
+
+⚠️ `snapshot-fetch.sh` usa le `S3_*` (non un pair `SEED_BLOB_S3_*`), quindi quelle
+credenziali devono avere **read** sul bucket snapshot. Per un consumer puro
+(nessun upload S3 in dev) la config raccomandata è:
+
+```
+STORAGE_PROVIDER=local          # l'app salva i PDF su disco; le S3_* servono SOLO a snapshot-fetch.sh
+S3_ENDPOINT=https://<account>.eu.r2.cloudflarestorage.com
+S3_ACCESS_KEY=<readonly key del token scoped a meepleai-seed-snapshots>
+S3_SECRET_KEY=<readonly secret>
+SEED_BLOB_BUCKET=meepleai-seed-snapshots
+```
+
+Template completo + commenti: `infra/secrets/storage.secret.example`. Se hai già
+una snapshot in `data/snapshots/`, il fetch usa quella e **non** tocca il bucket
+(le credenziali servono solo al primo download su macchina nuova).
+
+> **Nota cron / publisher**: la pubblicazione (full-bake settimanale) usa i GH
+> Actions secrets `SEED_BLOB_S3_*` del repo, non questo file. Vedi § *Secret richiesti*.
+
 ### Force reset
 
 Se hai già un DB non vuoto e vuoi ripartire dallo snapshot, serve il force:
@@ -196,7 +226,7 @@ I 2 workflow leggono `secrets.SEED_BLOB_*` solo quando *pubblicano*. Da configur
 | `SEED_BLOB_S3_SECRET_KEY` | `…` | secret key gemella |
 | `SEED_BLOB_BUCKET` | `meepleai-seed-snapshots` | name del bucket |
 
-Senza i secret, il **bake smoke gira lo stesso** (non pubblica), ma il **full bake fail-fast** allo step `Publish to seed blob bucket` per evitare un cron silenzioso che non muove `latest.txt`.
+Senza i secret, **entrambi** i bake girano lo stesso ma **non pubblicano**: lo step `Publish to seed blob bucket` fa **soft-skip** (warning + step summary, exit 0) e lo snapshot verificato resta scaricabile come **workflow artifact** (90gg). Quando i secret SONO presenti il publish è strict: un errore reale (creds errate, R2 down) fallisce il job. Questo evita sia un cron permanentemente rosso sia il rischio di sovrascrivere `latest.txt` con uno snapshot vuoto (#2516).
 
 ### Cosa succede se il bake fallisce
 

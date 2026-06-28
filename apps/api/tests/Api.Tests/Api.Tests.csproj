@@ -58,6 +58,11 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.11" />
+    <!-- Force the SQLitePCLRaw native bundle to 3.x: the transitive 2.1.10 pulled by
+         Microsoft.Data.Sqlite bundles a vulnerable SQLite (GHSA-2m69-gcr7-jv3q, HIGH,
+         vulnerable <= 2.1.11, no 2.x patch). The 3.x bundle ships SQLite 3.50.x.
+         Test-only dependency (in-memory SQLite for EndpointContractTests). -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.11" />
     <PackageReference Include="coverlet.collector" Version="6.0.4">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

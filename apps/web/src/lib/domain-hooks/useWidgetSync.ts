@@ -8,7 +8,7 @@
  * to the server.
  *
  * Features:
- * - Real-time widget state sync via V2 SSE stream (typed events)
+ * - Real-time widget state sync via native live-session SSE stream (typed events)
  * - Debounced outgoing state broadcasts (configurable, default 300ms)
  * - Echo prevention — ignores remote events matching the last local broadcast
  * - Connection status tracking

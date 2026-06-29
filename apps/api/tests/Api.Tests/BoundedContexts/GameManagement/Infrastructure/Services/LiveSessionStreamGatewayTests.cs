@@ -464,7 +464,6 @@ public sealed class LiveSessionStreamGatewayTests
         // Track which tokens were observed as cancelled by each source
         CancellationToken capturedCompanionToken = default;
         CancellationToken capturedSbsToolkitToken = default;
-        CancellationToken capturedSssToken = default;
 
         var repo = new Mock<ILiveSessionRepository>();
         repo.Setup(r => r.GetByIdAsync(liveId, It.IsAny<CancellationToken>()))
@@ -696,10 +695,9 @@ public sealed class LiveSessionStreamGatewayTests
     /// </summary>
     private sealed class CancellationCapturingSyncService : ISessionSyncService
     {
-        private readonly Guid _sessionId;
         public CancellationToken CapturedToken { get; private set; }
 
-        public CancellationCapturingSyncService(Guid sessionId) => _sessionId = sessionId;
+        public CancellationCapturingSyncService(Guid sessionId) { }
 
         public IAsyncEnumerable<INotification> SubscribeToSessionEvents(
             Guid sessionId,

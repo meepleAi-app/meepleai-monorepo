@@ -87,7 +87,8 @@ public class CastVoteOnDisputeCommandHandlerTests
         SetupDisputeGetById(disputeId, dispute);
 
         var command = new CastVoteOnDisputeCommand(
-            disputeId,
+            DefaultSessionId,
+disputeId,
             DefaultVoterPlayerId,
             AcceptsVerdict: true);
 
@@ -111,7 +112,8 @@ public class CastVoteOnDisputeCommandHandlerTests
         SetupFeatureFlagEnabled(false);
 
         var command = new CastVoteOnDisputeCommand(
-            Guid.NewGuid(),
+            DefaultSessionId,
+Guid.NewGuid(),
             DefaultVoterPlayerId,
             AcceptsVerdict: true);
 
@@ -132,7 +134,8 @@ public class CastVoteOnDisputeCommandHandlerTests
         SetupDisputeGetById(disputeId, null);
 
         var command = new CastVoteOnDisputeCommand(
-            disputeId,
+            DefaultSessionId,
+disputeId,
             DefaultVoterPlayerId,
             AcceptsVerdict: true);
 
@@ -156,7 +159,8 @@ public class CastVoteOnDisputeCommandHandlerTests
         SetupDisputeGetById(disputeId, dispute);
 
         var command = new CastVoteOnDisputeCommand(
-            disputeId,
+            DefaultSessionId,
+disputeId,
             DefaultVoterPlayerId,
             AcceptsVerdict: false);
 

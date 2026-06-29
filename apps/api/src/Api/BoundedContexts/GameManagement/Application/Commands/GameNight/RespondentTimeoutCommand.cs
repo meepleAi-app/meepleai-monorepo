@@ -7,5 +7,6 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
 /// The dispute proceeds with the initiator's claim only.
 /// </summary>
 internal record RespondentTimeoutCommand(
+    Guid SessionId,
     Guid DisputeId
 ) : ICommand;

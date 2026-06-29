@@ -27,10 +27,15 @@ internal sealed class RespondentTimeoutCommandHandler
         ArgumentNullException.ThrowIfNull(command);
 
         // 1. Get dispute — throw if not found
-        _ = await _disputeRepository
+        var dispute = await _disputeRepository
             .GetByIdAsync(command.DisputeId, cancellationToken)
             .ConfigureAwait(false)
             ?? throw new NotFoundException("RuleDispute", command.DisputeId.ToString());
+
+        // Cross-session authz (#2573): the dispute must belong to the route session.
+        // 404 (not 403) to avoid leaking the existence of disputes in other sessions.
+        if (dispute.SessionId != command.SessionId)
+            throw new NotFoundException("RuleDispute", command.DisputeId.ToString());
 
         // 2. No-op if respondent already set (or not).
         //    Dispute proceeds with initiator claim only.

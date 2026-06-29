@@ -36,6 +36,11 @@ internal sealed class RespondToDisputeCommandHandler
             .ConfigureAwait(false)
             ?? throw new NotFoundException("RuleDispute", command.DisputeId.ToString());
 
+        // Cross-session authz (#2573): the dispute must belong to the route session.
+        // 404 (not 403) to avoid leaking the existence of disputes in other sessions.
+        if (dispute.SessionId != command.SessionId)
+            throw new NotFoundException("RuleDispute", command.DisputeId.ToString());
+
         // 2. Add respondent claim
         dispute.AddRespondentClaim(command.RespondentPlayerId, command.RespondentClaim);
 

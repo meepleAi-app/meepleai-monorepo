@@ -781,7 +781,7 @@ internal static class LiveSessionEndpoints
         CancellationToken cancellationToken)
     {
         await mediator.Send(
-            new RespondToDisputeCommand(disputeId, request.RespondentPlayerId, request.RespondentClaim),
+            new RespondToDisputeCommand(sessionId, disputeId, request.RespondentPlayerId, request.RespondentClaim),
             cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
@@ -792,7 +792,7 @@ internal static class LiveSessionEndpoints
         [FromServices] IMediator mediator,
         CancellationToken cancellationToken)
     {
-        await mediator.Send(new RespondentTimeoutCommand(disputeId), cancellationToken).ConfigureAwait(false);
+        await mediator.Send(new RespondentTimeoutCommand(sessionId, disputeId), cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
 
@@ -804,7 +804,7 @@ internal static class LiveSessionEndpoints
         CancellationToken cancellationToken)
     {
         await mediator.Send(
-            new CastVoteOnDisputeCommand(disputeId, request.PlayerId, request.AcceptsVerdict),
+            new CastVoteOnDisputeCommand(sessionId, disputeId, request.PlayerId, request.AcceptsVerdict),
             cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
@@ -817,7 +817,7 @@ internal static class LiveSessionEndpoints
         CancellationToken cancellationToken)
     {
         await mediator.Send(
-            new TallyDisputeVotesCommand(disputeId, request.OverrideRule),
+            new TallyDisputeVotesCommand(sessionId, disputeId, request.OverrideRule),
             cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }

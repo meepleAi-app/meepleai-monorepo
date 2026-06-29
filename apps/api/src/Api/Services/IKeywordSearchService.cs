@@ -18,7 +18,7 @@ internal interface IKeywordSearchService
     /// <param name="limit">Maximum number of results to return</param>
     /// <param name="phraseSearch">Enable exact phrase matching with proximity operators</param>
     /// <param name="boostTerms">Optional list of terms to boost in ranking (e.g., game-specific terminology)</param>
-    /// <param name="language">Language code for FTS configuration: "it" → meepleai_italian, "en" → english (default: "it")</param>
+    /// <param name="language">Language code for FTS configuration: "en" → english, "it" → italian (default: "en", #2569 — matches content + pgvector path)</param>
     /// <param name="minScore">Minimum ts_rank_cd score threshold to filter low-relevance results (default: 0.0, no filtering)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of keyword search results with BM25-style relevance scores</returns>
@@ -28,7 +28,7 @@ internal interface IKeywordSearchService
         int limit = 10,
         bool phraseSearch = false,
         List<string>? boostTerms = null,
-        string language = "it",
+        string language = "en",
         double minScore = 0.0,
         CancellationToken cancellationToken = default);
 
@@ -39,14 +39,14 @@ internal interface IKeywordSearchService
     /// <param name="query">Search query</param>
     /// <param name="gameId">Game ID to filter results</param>
     /// <param name="limit">Maximum number of results</param>
-    /// <param name="language">Language code for FTS configuration: "it" → meepleai_italian, "en" → english (default: "it")</param>
+    /// <param name="language">Language code for FTS configuration: "en" → english, "it" → italian (default: "en", #2569 — matches content + pgvector path)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of PDF document search results</returns>
     Task<List<KeywordDocumentResult>> SearchDocumentsAsync(
         string query,
         Guid gameId,
         int limit = 10,
-        string language = "it",
+        string language = "en",
         CancellationToken cancellationToken = default);
 }
 

@@ -127,4 +127,38 @@ public sealed class SearchVectorColumnIntegrationTests : IAsyncLifetime
         var result = await cmd.ExecuteScalarAsync(TestCancellationToken);
         Assert.NotNull(result);
     }
+
+    // #2569: text_chunks / pdf_documents search_vector columns (added by AddSearchVectorColumns,
+    // #2559) must use the 'english' FTS config — matching the content (PDF Language defaults to
+    // "en") and the pgvector path (PgVectorStoreAdapter uses 'english'). They were initially
+    // 'italian', which silently mismatched English queries/content stemming. KeywordSearchService
+    // now queries with the english default, so the stored tsvector config MUST be english too.
+    [Theory]
+    [InlineData("text_chunks")]
+    [InlineData("pdf_documents")]
+    [Trait("Issue", "2569")]
+    public async Task KeywordSearchVectorColumns_UseEnglishFtsConfig(string tableName)
+    {
+        Assert.NotNull(_dbContext);
+        var conn = (NpgsqlConnection)_dbContext!.Database.GetDbConnection();
+        if (conn.State != System.Data.ConnectionState.Open)
+        {
+            await conn.OpenAsync(TestCancellationToken);
+        }
+
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            SELECT generation_expression
+            FROM information_schema.columns
+            WHERE table_name = @table AND column_name = 'search_vector';";
+        cmd.Parameters.Add(new NpgsqlParameter("table", tableName));
+
+        var expr = (string?)await cmd.ExecuteScalarAsync(TestCancellationToken);
+
+        Assert.False(
+            string.IsNullOrEmpty(expr),
+            $"{tableName}.search_vector should be a GENERATED column.");
+        Assert.Contains("english", expr!, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("italian", expr!, StringComparison.OrdinalIgnoreCase);
+    }
 }

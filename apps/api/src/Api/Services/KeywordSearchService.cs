@@ -18,10 +18,13 @@ internal class KeywordSearchService : IKeywordSearchService
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<KeywordSearchService> _logger;
 
-    // PostgreSQL full-text search configuration
-    // Issue #3228: Use built-in config (custom meepleai_italian never created)
-    // Note: ADR-016 planned custom FTS with game synonyms - tracked in follow-up issue
-    private const string DefaultTextSearchConfig = "italian";
+    // PostgreSQL full-text search configuration.
+    // #2569: default is 'english' to match the content (PdfDocument.Language defaults to "en")
+    // and the pgvector path (PgVectorStoreAdapter uses 'english'). The stored search_vector
+    // columns (text_chunks/pdf_documents) are generated with 'english' too, so query config and
+    // column config agree. The previous 'italian' default silently mismatched English content.
+    // Note: ADR-016 planned custom FTS with game synonyms - tracked in follow-up issue.
+    private const string DefaultTextSearchConfig = "english";
     private const string EnglishTextSearchConfig = "english";
     private const int DefaultNormalization = 1; // ts_rank_cd normalization method (1 = divide by document length)
 
@@ -50,7 +53,7 @@ internal class KeywordSearchService : IKeywordSearchService
         int limit = 10,
         bool phraseSearch = false,
         List<string>? boostTerms = null,
-        string language = "it",
+        string language = "en",
         double minScore = 0.0,
         CancellationToken cancellationToken = default)
     {
@@ -165,7 +168,7 @@ internal class KeywordSearchService : IKeywordSearchService
         string query,
         Guid gameId,
         int limit = 10,
-        string language = "it",
+        string language = "en",
         CancellationToken cancellationToken = default)
     {
         // Issue #1445: Use centralized query validation

@@ -144,6 +144,20 @@ internal static class LiveGameSessionMapper
             });
         }
 
+        // #2570 SP3 T2: diary entries — domain DiaryEntry.Id is the stable PK assigned
+        // at creation time (AddDiaryEntry uses Guid.NewGuid()), so no deterministic helper needed.
+        foreach (var entry in domain.DiaryEntries)
+        {
+            entity.DiaryEntries.Add(new LiveSessionDiaryEntryEntity
+            {
+                Id = entry.Id,
+                LiveGameSessionId = domain.Id,
+                AuthorId = entry.AuthorId,
+                CreatedAt = entry.CreatedAt,
+                Text = entry.Text
+            });
+        }
+
         return entity;
     }
 
@@ -237,6 +251,12 @@ internal static class LiveGameSessionMapper
             phaseName: t.PhaseName,
             endedAt: t.EndedAt)).ToList();
 
+        // #2570 SP3 T2: diary entries — restored in CreatedAt order (oldest first).
+        var diaryEntries = entity.DiaryEntries
+            .OrderBy(d => d.CreatedAt)
+            .Select(d => new DiaryEntry(d.Id, d.AuthorId, d.CreatedAt, d.Text))
+            .ToList();
+
         return LiveGameSession.Reconstitute(
             id: entity.Id,
             sessionCode: entity.SessionCode,
@@ -272,6 +292,7 @@ internal static class LiveGameSessionMapper
             roundScores: roundScores,
             turnRecords: turnRecords,
             disputes: disputes,
+            diaryEntries: diaryEntries,
             setupChecklist: setupChecklist);
     }
 

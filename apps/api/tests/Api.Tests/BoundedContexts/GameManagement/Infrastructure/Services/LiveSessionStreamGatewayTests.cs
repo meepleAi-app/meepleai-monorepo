@@ -68,6 +68,7 @@ public sealed class LiveSessionStreamGatewayTests
             roundScores: Enumerable.Empty<RoundScore>(),
             turnRecords: Enumerable.Empty<TurnRecord>(),
             disputes: Enumerable.Empty<RuleDisputeEntry>(),
+            diaryEntries: Enumerable.Empty<DiaryEntry>(),
             setupChecklist: null);
     }
 

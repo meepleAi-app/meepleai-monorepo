@@ -201,5 +201,11 @@ internal sealed class LiveGameSessionEntityConfiguration : IEntityTypeConfigurat
             .WithOne(t => t.LiveGameSession)
             .HasForeignKey(t => t.LiveGameSessionId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // #2570 SP3 T2: diary entries — append-only, cascade on session delete
+        builder.HasMany(e => e.DiaryEntries)
+            .WithOne(d => d.LiveGameSession)
+            .HasForeignKey(d => d.LiveGameSessionId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

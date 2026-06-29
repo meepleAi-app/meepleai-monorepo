@@ -194,6 +194,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         IEnumerable<RoundScore> roundScores,
         IEnumerable<TurnRecord> turnRecords,
         IEnumerable<RuleDisputeEntry> disputes,
+        IEnumerable<DiaryEntry> diaryEntries,
         SetupChecklistData? setupChecklist)
     {
         var session = new LiveGameSession
@@ -239,6 +240,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         session._roundScores.AddRange(roundScores);
         session._turnRecords.AddRange(turnRecords);
         session._disputes.AddRange(disputes);
+        session._diaryEntries.AddRange(diaryEntries);
 
         // Critical: Reconstitute MUST NOT raise events (we are not creating anything new).
         session.ClearDomainEvents();

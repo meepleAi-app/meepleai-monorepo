@@ -58,6 +58,7 @@ public class LiveGameSessionReconstituteTests
             roundScores: Array.Empty<RoundScore>(),
             turnRecords: Array.Empty<TurnRecord>(),
             disputes: Array.Empty<RuleDisputeEntry>(),
+            diaryEntries: Array.Empty<DiaryEntry>(),
             setupChecklist: null);
 
         // Assert

@@ -229,6 +229,26 @@ internal static class LiveSessionEndpoints
             .WithSummary("Update setup checklist state")
             .WithDescription("Replaces the setup checklist data, used when the user toggles components or completes steps in the setup wizard.");
 
+        // === Diary (SP3) ===
+
+        group.MapPost("/live-sessions/{sessionId}/diary", HandleAddDiaryEntry)
+            .RequireAuthenticatedUser()
+            .Produces<Guid>(201)
+            .Produces(400)
+            .Produces(404)
+            .Produces(409)
+            .WithTags("LiveSessions")
+            .WithSummary("Add a diary entry to a live session")
+            .WithDescription("Appends an immutable diary entry to the session. Returns the new entry id. 409 if session is Completed. Issue #2570 SP3.");
+
+        group.MapGet("/live-sessions/{sessionId}/diary", HandleGetDiary)
+            .RequireAuthenticatedUser()
+            .Produces<IReadOnlyList<DiaryEntryDto>>(200)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Get diary entries for a live session")
+            .WithDescription("Returns all diary entries ordered by CreatedAt ascending. 404 if session not found. Issue #2570 SP3.");
+
         // === Dispute v2 ===
 
         group.MapPost("/live-sessions/{sessionId}/disputes", HandleOpenDispute)
@@ -656,6 +676,45 @@ internal static class LiveSessionEndpoints
         return Results.NoContent();
     }
 
+    // === Diary handlers (SP3 T5) ===
+
+    /// <summary>
+    /// POST /api/v1/live-sessions/{sessionId}/diary — Issue #2570 SP3 T5.
+    /// AuthorId is taken from the authenticated user's claims (not from the body).
+    /// 409 (Completed session) and 404 (not found) propagate from the command handler via middleware.
+    /// </summary>
+    private static async Task<IResult> HandleAddDiaryEntry(
+        Guid sessionId,
+        [FromBody] AddDiaryEntryRequest request,
+        HttpContext httpContext,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var authorId = httpContext.User.GetUserId();
+
+        var entryId = await mediator.Send(
+            new AddDiaryEntryCommand(sessionId, authorId, request.Text),
+            cancellationToken).ConfigureAwait(false);
+
+        return Results.Created($"/api/v1/live-sessions/{sessionId}/diary/{entryId}", entryId);
+    }
+
+    /// <summary>
+    /// GET /api/v1/live-sessions/{sessionId}/diary — Issue #2570 SP3 T5.
+    /// Returns all diary entries ordered by CreatedAt ascending. 404 if session not found.
+    /// </summary>
+    private static async Task<IResult> HandleGetDiary(
+        Guid sessionId,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var entries = await mediator.Send(
+            new GetLiveSessionDiaryQuery(sessionId),
+            cancellationToken).ConfigureAwait(false);
+
+        return Results.Ok(entries);
+    }
+
     private static async Task<IResult> HandleOpenDispute(
         Guid sessionId,
         [FromBody] OpenDisputeRequest request,
@@ -1002,6 +1061,9 @@ internal static class LiveSessionEndpoints
     private sealed record ConfirmScoreRequest(Guid PlayerId, string Dimension, int Value, int Round);
 
     private sealed record GenerateSetupChecklistRequest(int PlayerCount);
+
+    // Diary (SP3) request model
+    private sealed record AddDiaryEntryRequest(string Text);
 
     // Dispute v2 request models
     internal sealed record OpenDisputeRequest(

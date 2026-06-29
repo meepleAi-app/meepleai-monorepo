@@ -457,6 +457,41 @@ describe('composeSessionLiveState — session:chat', () => {
     ]);
     expect(state.actionLog).toHaveLength(2);
   });
+
+  it('propagates citations[] from session:chat into the LiveLogEntry (#2564 AC-SSE-4)', () => {
+    const event: Extract<SessionEvent, { type: 'session:chat' }> = {
+      type: 'session:chat',
+      sessionId: 'sess-1',
+      messageId: 'msg-cited',
+      senderId: 'agent',
+      content: 'Per il setup vedi le regole.',
+      visibility: 'shared',
+      timestamp: TS,
+      citations: [
+        { page: 3, source: 'Setup', snippet: 'Place the board...' },
+        { page: 7, source: 'Combat' },
+      ],
+    };
+    const state = composeSessionLiveState(BASE_SESSION, [event]);
+    expect(state.actionLog).toHaveLength(1);
+    expect(state.actionLog[0].citations).toHaveLength(2);
+    expect(state.actionLog[0].citations?.[0].page).toBe(3);
+    expect(state.actionLog[0].citations?.[0].source).toBe('Setup');
+  });
+
+  it('chat entry without citations leaves citations undefined', () => {
+    const event: Extract<SessionEvent, { type: 'session:chat' }> = {
+      type: 'session:chat',
+      sessionId: 'sess-1',
+      messageId: 'msg-plain',
+      senderId: 'p-alice',
+      content: 'Hi',
+      visibility: 'shared',
+      timestamp: TS,
+    };
+    const state = composeSessionLiveState(BASE_SESSION, [event]);
+    expect(state.actionLog[0].citations).toBeUndefined();
+  });
 });
 
 // ============================================================================

@@ -9,6 +9,8 @@
 
 import type { ReactElement } from 'react';
 
+import type { Citation } from '@/lib/api/schemas/streaming.schemas';
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface ActionLogEntry {
@@ -17,6 +19,11 @@ export interface ActionLogEntry {
   readonly authorName: string;
   readonly content: string;
   readonly timestamp: string;
+  /**
+   * RAG citations attached to a broadcast chat entry (#2564 AC-SSE-4). Rendered read-only
+   * under the content so non-author participants see the shared citations too.
+   */
+  readonly citations?: ReadonlyArray<Citation>;
 }
 
 // ─── Labels ───────────────────────────────────────────────────────────────────
@@ -111,6 +118,27 @@ export function ActionLogTimeline({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs text-foreground">{entry.content}</p>
                 <p className="text-xs text-muted-foreground">{entry.authorName}</p>
+
+                {/* #2564 AC-SSE-4: broadcast RAG citations rendered read-only so non-author
+                    participants see the shared citations, not just the agent's text. */}
+                {entry.citations && entry.citations.length > 0 && (
+                  <ul data-slot="action-log-citations" className="mt-1 flex flex-wrap gap-1">
+                    {entry.citations.map((citation, index) => (
+                      <li
+                        key={`${entry.id}-cite-${index}`}
+                        data-slot="action-log-citation"
+                        title={citation.snippet ?? citation.text ?? undefined}
+                        className="inline-flex max-w-[10rem] items-center gap-1 rounded-full bg-muted px-2 py-0.5 font-mono text-[0.65rem] font-medium text-sky-400"
+                      >
+                        <span aria-hidden="true">📖</span>
+                        {typeof citation.page === 'number' && <span>p. {citation.page}</span>}
+                        {citation.source ? (
+                          <span className="truncate">{citation.source}</span>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
               {/* Timestamp */}

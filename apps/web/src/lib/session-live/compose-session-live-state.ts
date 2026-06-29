@@ -36,6 +36,8 @@
  * 4. session:tool-execution — BE has CoinFlipped/WheelSpun events not in FE 'dice'|'timer'|'card' enum.
  */
 
+import type { Citation } from '@/lib/api/schemas/streaming.schemas';
+
 import type { SessionEvent } from './sse-events';
 
 // ============================================================================
@@ -56,6 +58,12 @@ export interface LiveLogEntry {
   readonly authorName: string;
   readonly content: string;
   readonly timestamp: string;
+  /**
+   * RAG citations attached to a broadcast chat message (#2564 AC-SSE-4). Only populated for
+   * type='chat' entries that carried citations[] over the SSE wire (T8/T9 SP2 #2561). undefined
+   * for non-chat entries and for chat messages with no citations.
+   */
+  readonly citations?: ReadonlyArray<Citation>;
 }
 
 export interface SessionLiveState {
@@ -239,6 +247,8 @@ function applyChat(
     authorName: event.senderId,
     content: event.content,
     timestamp: event.timestamp,
+    // #2564 AC-SSE-4: carry the broadcast citations so non-author participants render them too.
+    citations: event.citations,
   };
   return { ...state, actionLog: [...state.actionLog, entry] };
 }

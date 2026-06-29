@@ -157,7 +157,7 @@ internal sealed class CreatePauseSnapshotCommandHandler
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // 11. Publish SessionPausedEvent for SignalR broadcast
-        // Note: SessionSaveRequestedEvent (AI summary) was gated on ChatSessionId (ADR-083 SP0 dead-code, removed).
+        // Note: the dormant AI-summary-on-pause flow (gated on ChatSessionId) was fully removed in #2580 (ADR-083 SP0/SP5-a dead-code).
         await _publisher
             .Publish(new SessionPausedEvent(session.Id), cancellationToken)
             .ConfigureAwait(false);

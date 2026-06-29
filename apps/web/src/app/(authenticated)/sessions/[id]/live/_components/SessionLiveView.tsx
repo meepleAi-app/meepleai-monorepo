@@ -634,17 +634,27 @@ export function SessionLiveView(): ReactElement {
       if (sessionId == null) return;
 
       try {
-        await fetch(`/api/v1/game-sessions/${sessionId}/diary`, {
+        const res = await fetch(`/api/v1/game-sessions/${sessionId}/diary`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ content, visibility }),
           credentials: 'include',
         });
+        if (!res.ok) {
+          // Surface HTTP errors to the user; do not silently lose writes when
+          // the SSE stream is down (finding #16, SP5-a Task 3).
+          toast.error(t('pages.sessionLive.notes.addNoteErrorToast'), {
+            id: 'note-add-error',
+          });
+        }
       } catch {
-        // Fail silently — SSE event confirms or not
+        // Network-level failure: surface to user so they know the note was not saved.
+        toast.error(t('pages.sessionLive.notes.addNoteErrorToast'), {
+          id: 'note-add-error',
+        });
       }
     },
-    [sessionId]
+    [sessionId, t]
   );
 
   const handleResume = useCallback(async (): Promise<void> => {

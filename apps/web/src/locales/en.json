@@ -3254,7 +3254,8 @@
         "addAriaLabel": "Add note",
         "visibilityPrivate": "Private",
         "visibilityShared": "Shared",
-        "emptyMessage": "No notes yet."
+        "emptyMessage": "No notes yet.",
+        "addNoteErrorToast": "Failed to save note. Please try again."
       },
       "pauseOverlay": {
         "title": "Session paused",

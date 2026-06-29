@@ -29,6 +29,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     private readonly List<RoundScore> _roundScores = new();
     private readonly List<TurnRecord> _turnRecords = new();
     private readonly List<RuleDisputeEntry> _disputes = new();
+    private readonly List<DiaryEntry> _diaryEntries = new();
     private SetupChecklistData? _setupChecklist;
 
 #pragma warning disable CS8618
@@ -81,6 +82,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public IReadOnlyList<RoundScore> RoundScores => _roundScores.AsReadOnly();
     public IReadOnlyList<TurnRecord> TurnRecords => _turnRecords.AsReadOnly();
     public IReadOnlyList<RuleDisputeEntry> Disputes => _disputes.AsReadOnly();
+    public IReadOnlyList<DiaryEntry> DiaryEntries => _diaryEntries.AsReadOnly();
     public SetupChecklistData? SetupChecklist => _setupChecklist;
 
     // === Computed Properties ===
@@ -735,6 +737,31 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public void UpdateSetupChecklist(SetupChecklistData checklist)
     {
         _setupChecklist = checklist ?? throw new ArgumentNullException(nameof(checklist));
+    }
+
+    // === Diary ===
+
+    /// <summary>
+    /// Appends an immutable diary entry authored by the given user.
+    /// Only rejects <see cref="LiveSessionStatus.Completed"/> sessions (Paused is allowed — AC-DIARY-3).
+    /// </summary>
+    public void AddDiaryEntry(Guid authorId, string text, TimeProvider? timeProvider = null)
+    {
+        if (Status == LiveSessionStatus.Completed)
+            throw new ConflictException("Cannot add diary entries to a completed session");
+
+        if (authorId == Guid.Empty)
+            throw new ValidationException("Author ID cannot be empty");
+
+        if (string.IsNullOrWhiteSpace(text))
+            throw new ValidationException("Diary entry text cannot be empty");
+
+        var now = new DateTimeOffset((timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime, TimeSpan.Zero);
+        var entry = new DiaryEntry(Guid.NewGuid(), authorId, now, text.Trim());
+
+        _diaryEntries.Add(entry);
+
+        AddDomainEvent(new LiveSessionDiaryEntryAddedEvent(Id, entry.Id, entry.AuthorId, entry.Text, entry.CreatedAt));
     }
 
     // === State & Notes ===

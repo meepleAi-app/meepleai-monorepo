@@ -323,7 +323,7 @@ public sealed class SessionBroadcastService : ISessionBroadcastService, IDisposa
                     var replayEntry = JsonSerializer.Deserialize<ReplayEntry>(entry!, _jsonOptions);
                     if (replayEntry is null) continue;
 
-                    // Visibility filter — EXACT mirror of CircularEventBuffer.GetSince (:661-665):
+                    // Visibility filter — EXACT mirror of CircularEventBuffer.GetSince (:671):
                     // skip only a private event (!IsPublic) addressed to a specific user
                     // (TargetUserId.HasValue) other than the current subscriber. A null TargetUserId
                     // means broadcast-to-all (codebase convention), so those events are always delivered.

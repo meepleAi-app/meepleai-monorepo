@@ -89,6 +89,16 @@ test.describe('#2561 SP2 T11 — Session live SSE stream surface smoke', () => {
   test('A1: canonical /live-sessions/{id}/stream is intercepted (mock route handler, not blind abort)', async ({
     page,
   }) => {
+    // KNOWN GAP (#2565): in fixture mode nativeStreamCallCount cannot reach >= 1 (no real backend
+    // session), so this test's real enforcement is only the co-located A2 contract below. The
+    // native-intercept assertion is deferred to the smoke-real-backend/ harness — tagged as a
+    // machine-readable annotation so the gap is visible in the Playwright report.
+    test.info().annotations.push({
+      type: 'known-gap',
+      description:
+        'nativeStreamCallCount >= 1 not assertable in fixture mode; deferred to smoke-real-backend/ (#2565).',
+    });
+
     let nativeStreamCallCount = 0;
 
     // Explicit route handler for the canonical stream endpoint.
@@ -182,9 +192,19 @@ test.describe('#2561 SP2 T11 — Session live SSE stream surface smoke', () => {
 
   // ── B) Deprecation headers on the legacy endpoint (documented expectation) ─
 
-  test('B1: /game-sessions/{id}/stream/v2 carries Deprecation, Sunset, and Link headers when reached', async ({
+  test('B1 [doc-test]: /game-sessions/{id}/stream/v2 deprecation-header SHAPE (real gate is the BE integration test)', async ({
     page,
   }) => {
+    // DOC-TEST (#2565): tautological by design — it asserts the shape of the FE-provided mock
+    // response, NOT real BE behavior. The authoritative gate for the deprecation headers is the BE
+    // integration test StreamV2DeprecationHeadersEndpointTests.cs. Kept as living FE documentation
+    // of the expected response shape during legacy-consumer migration.
+    test.info().annotations.push({
+      type: 'doc-test',
+      description:
+        'Asserts the FE mock shape, not BE behavior. Authoritative gate: StreamV2DeprecationHeadersEndpointTests.cs (BE).',
+    });
+
     // This test documents the EXPECTED deprecation headers on the /stream/v2 endpoint
     // (Part B of T11). It intercepts the route and inspects what the BROWSER sees
     // in the response headers via network request listener.

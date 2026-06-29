@@ -168,7 +168,8 @@ public sealed class SessionBroadcastReplayTests
         await using var fixture = await RedisFixture.CreateAsync();
         if (fixture is null)
         {
-            // Docker not available — skip gracefully
+            // Observable skip (NOT a silent no-op pass) so a green run never masks an unexecuted test.
+            Assert.Skip("Docker/Redis unavailable — Testcontainers fixture could not start.");
             return;
         }
 
@@ -243,7 +244,12 @@ public sealed class SessionBroadcastReplayTests
     public async Task Redis_CapEviction_keeps_only_newest_100_events()
     {
         await using var fixture = await RedisFixture.CreateAsync();
-        if (fixture is null) return;
+        if (fixture is null)
+        {
+            // Observable skip (NOT a silent no-op pass) so a green run never masks an unexecuted test.
+            Assert.Skip("Docker/Redis unavailable — Testcontainers fixture could not start.");
+            return;
+        }
 
         var sid = Guid.NewGuid();
         using var svc = CreateRedisService(fixture.Multiplexer);
@@ -294,7 +300,12 @@ public sealed class SessionBroadcastReplayTests
     public async Task Redis_GarbageLastEventId_triggers_graceful_fallback()
     {
         await using var fixture = await RedisFixture.CreateAsync();
-        if (fixture is null) return;
+        if (fixture is null)
+        {
+            // Observable skip (NOT a silent no-op pass) so a green run never masks an unexecuted test.
+            Assert.Skip("Docker/Redis unavailable — Testcontainers fixture could not start.");
+            return;
+        }
 
         var sid = Guid.NewGuid();
         var uid = Guid.NewGuid();
@@ -415,7 +426,10 @@ public sealed class SessionBroadcastReplayTests
         // NOT be dropped by a too-aggressive filter missing the TargetUserId.HasValue guard.
         await svcA.PublishAsync(sid, MakeScoreEvent(sid, Guid.NewGuid()), default);
 
-        await Task.Delay(50); // let writes settle into ZSET
+        // Poll until all 4 published events have settled into the replay ZSET, instead of a fixed
+        // Task.Delay(50) which races on a slow/loaded CI runner — hardens the privacy gate (#2565).
+        var replayKey = Api.SharedKernel.Constants.RedisKeyConstants.GetSessionReplayKey(sid);
+        await WaitForZsetCardinalityAsync(fixture.Multiplexer.GetDatabase(), replayKey, expected: 4);
 
         await keepAliveCts.CancelAsync();
         try { await keepAlive; } catch (OperationCanceledException) { }
@@ -488,6 +502,26 @@ public sealed class SessionBroadcastReplayTests
             ScoreEntryId = Guid.NewGuid(),
             NewScore = 10
         };
+
+    /// <summary>
+    /// Polls the replay ZSET until it holds at least <paramref name="expected"/> entries, replacing a
+    /// fixed Task.Delay that races on slow CI runners. Returns when the cardinality is reached or the
+    /// 2s budget elapses — in which case the test's own replay assertions surface the shortfall.
+    /// </summary>
+    private static async Task WaitForZsetCardinalityAsync(IDatabase db, RedisKey key, long expected)
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        while (!cts.IsCancellationRequested)
+        {
+            if (await db.SortedSetLengthAsync(key).ConfigureAwait(false) >= expected)
+            {
+                return;
+            }
+
+            try { await Task.Delay(10, cts.Token).ConfigureAwait(false); }
+            catch (OperationCanceledException) { return; }
+        }
+    }
 
     // =========================================================================
     // Testcontainers fixture — isolated Redis per test class

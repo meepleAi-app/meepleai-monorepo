@@ -140,17 +140,25 @@ public sealed class SseMetricsTests
         MeepleAiMetrics.RecordLiveSseReconnect();
         MeepleAiMetrics.RecordLiveSseReconnect();
 
-        // Tolerant: concurrent tests on the same global counter may add values.
-        // We only assert that OUR two Add(1) calls flowed through the listener.
-        measurements.Should().Contain(1L).And.Contain(1L,
-            "each RecordLiveSseReconnect call emits one Add(1) measurement");
+        // The reconnect counter is ONLY ever incremented by Add(1) (RecordLiveSseReconnect),
+        // so every measurement the listener captures must be exactly 1L — even if a concurrent
+        // test on the same global counter contributes more. OnlyContain(== 1L) catches an
+        // accidental Add(2)/Add(N) regression that the previous Contain(1L) check could not.
+        // Count delta: our two calls must contribute at least two measurements.
+        measurements.Should().HaveCountGreaterThanOrEqualTo(2,
+            "our two RecordLiveSseReconnect calls each emit one measurement")
+            .And.OnlyContain(v => v == 1L,
+            "the reconnect counter must only ever be incremented by Add(1)");
     }
 
-    [Fact(DisplayName = "LiveSseReconnectTotal and LiveSseActiveConnections are not null")]
-    public void BothMetrics_AreInitialized()
+    [Fact(DisplayName = "Both live-SSE metrics expose a non-empty Description for observability dashboards")]
+    public void BothMetrics_HaveNonEmptyDescription()
     {
-        MeepleAiMetrics.LiveSseReconnectTotal.Should().NotBeNull();
-        MeepleAiMetrics.LiveSseActiveConnections.Should().NotBeNull();
+        // A NotBeNull() assertion on a `static readonly` field is vacuous — it is initialized at
+        // type load and can never be null. Assert the real observability contract instead: every
+        // metric must carry a human-readable Description so Grafana/SLO dashboards stay legible.
+        MeepleAiMetrics.LiveSseReconnectTotal.Description.Should().NotBeNullOrWhiteSpace();
+        MeepleAiMetrics.LiveSseActiveConnections.Description.Should().NotBeNullOrWhiteSpace();
     }
 
     // ──────────────────────────────────────────────────────────────────────────

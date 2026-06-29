@@ -282,6 +282,9 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
             if (filteredChunks.Count == 0)
             {
                 _logger.LogInformation("No chunks above minScore {MinScore} for game {GameId}", profile.MinScore, gameId);
+                // SP5-b T3: single-source detection site — increment counter here, NOT in the handler.
+                // Guarded: metrics must never abort the retrieval path.
+                try { MeepleAiMetrics.RecordRetrievalEmpty(); } catch { /* metrics must not break retrieval */ }
                 return (string.Empty, citations);
             }
 

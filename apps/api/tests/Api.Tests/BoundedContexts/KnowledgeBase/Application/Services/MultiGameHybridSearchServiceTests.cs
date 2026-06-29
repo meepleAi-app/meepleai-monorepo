@@ -237,6 +237,105 @@ public class MultiGameHybridSearchServiceTests
     }
 
     // ---------------------------------------------------------------------------
+    // #2568: cross-game ranking degeneracy. Per-game RRF is rank-only, so EVERY
+    // game's rank-1 chunk gets the IDENTICAL fused HybridScore (0.7/(60+1) ≈ 0.01148).
+    // With only a ChunkIndex/PdfDocumentId tiebreak the merge picks the same
+    // query-agnostic (lowest-index / lowest-GUID) chunk for every cross-game query.
+    // The tie MUST be broken by the globally-comparable raw vector cosine
+    // (VectorScore) DESC so the chunk actually most relevant to THIS query wins.
+    // ---------------------------------------------------------------------------
+
+    [Fact]
+    public async Task TiedHybridScore_BrokenByVectorScoreDesc_NotChunkIndex()
+    {
+        // Arrange
+        var lowRelevanceGame = Guid.NewGuid();
+        var highRelevanceGame = Guid.NewGuid();
+        const float tiedHybrid = 0.01148f; // the rank-1 RRF value every game ties on
+
+        // low-relevance game: chunkIndex 0 → would WIN the legacy ChunkIndex-ASC
+        // tiebreak, but only a weak cosine match to the query.
+        _hybridSearchMock
+            .Setup(s => s.SearchAsync(
+                It.IsAny<string>(), lowRelevanceGame,
+                It.IsAny<SearchMode>(), It.IsAny<int>(), null,
+                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
+                It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<HybridSearchResult>
+            {
+                MakeResultWithScores(lowRelevanceGame, chunkIndex: 0, hybridScore: tiedHybrid, vectorScore: 0.45f),
+            });
+
+        // high-relevance game: chunkIndex 7 → would LOSE the legacy tiebreak, but a
+        // strong cosine match → it is the genuinely relevant result for the query.
+        _hybridSearchMock
+            .Setup(s => s.SearchAsync(
+                It.IsAny<string>(), highRelevanceGame,
+                It.IsAny<SearchMode>(), It.IsAny<int>(), null,
+                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
+                It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<HybridSearchResult>
+            {
+                MakeResultWithScores(highRelevanceGame, chunkIndex: 7, hybridScore: tiedHybrid, vectorScore: 0.92f),
+            });
+
+        var sut = CreateSut();
+
+        // Act
+        var result = await sut.SearchAsync("test", new[] { lowRelevanceGame, highRelevanceGame }, limit: 10);
+
+        // Assert — higher cosine wins the HybridScore tie, despite higher ChunkIndex
+        result.Should().HaveCount(2);
+        result[0].GameId.Should().Be(highRelevanceGame,
+            "the higher raw cosine (VectorScore) must win a HybridScore tie, not the lower ChunkIndex");
+        result[0].VectorScore.Should().Be(0.92f);
+        result[1].GameId.Should().Be(lowRelevanceGame);
+    }
+
+    [Fact]
+    public async Task TiedHybridScoreAndVectorScore_FallsBackToChunkIndexAsc()
+    {
+        // Arrange — when cosine ALSO ties, the deterministic ChunkIndex-ASC fallback
+        // still applies (preserves stable ordering, no nondeterminism).
+        var gameId1 = Guid.NewGuid();
+        var gameId2 = Guid.NewGuid();
+        const float tiedHybrid = 0.5f;
+        const float tiedVector = 0.6f;
+
+        _hybridSearchMock
+            .Setup(s => s.SearchAsync(
+                It.IsAny<string>(), gameId1,
+                It.IsAny<SearchMode>(), It.IsAny<int>(), null,
+                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
+                It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<HybridSearchResult>
+            {
+                MakeResultWithScores(gameId1, chunkIndex: 3, hybridScore: tiedHybrid, vectorScore: tiedVector),
+            });
+
+        _hybridSearchMock
+            .Setup(s => s.SearchAsync(
+                It.IsAny<string>(), gameId2,
+                It.IsAny<SearchMode>(), It.IsAny<int>(), null,
+                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
+                It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<HybridSearchResult>
+            {
+                MakeResultWithScores(gameId2, chunkIndex: 1, hybridScore: tiedHybrid, vectorScore: tiedVector),
+            });
+
+        var sut = CreateSut();
+
+        // Act
+        var result = await sut.SearchAsync("test", new[] { gameId1, gameId2 }, limit: 10);
+
+        // Assert — cosine ties → ChunkIndex ASC fallback → chunkIndex 1 before 3
+        result.Should().HaveCount(2);
+        result[0].ChunkIndex.Should().Be(1);
+        result[1].ChunkIndex.Should().Be(3);
+    }
+
+    // ---------------------------------------------------------------------------
     // EC-7: limit truncates final result
     // ---------------------------------------------------------------------------
 
@@ -499,6 +598,28 @@ public class MultiGameHybridSearchServiceTests
             KeywordScore = null,
             VectorRank = chunkIndex + 1,
             KeywordRank = null,
+            MatchedTerms = new List<string>(),
+            Mode = SearchMode.Hybrid,
+            RoleTags = GameBookRole.None
+        };
+
+    // #2568: lets a test pin HybridScore, VectorScore and KeywordScore independently
+    // so the cross-game tiebreak can be exercised (HybridScore tie + differing cosine).
+    private static HybridSearchResult MakeResultWithScores(
+        Guid gameId, int chunkIndex, float hybridScore, float vectorScore, float? keywordScore = null) =>
+        new()
+        {
+            ChunkId = $"{Guid.NewGuid()}_{chunkIndex}",
+            Content = $"chunk content {chunkIndex}",
+            PdfDocumentId = Guid.NewGuid().ToString(),
+            GameId = gameId,
+            ChunkIndex = chunkIndex,
+            PageNumber = chunkIndex + 1,
+            HybridScore = hybridScore,
+            VectorScore = vectorScore,
+            KeywordScore = keywordScore,
+            VectorRank = chunkIndex + 1,
+            KeywordRank = keywordScore.HasValue ? chunkIndex + 1 : (int?)null,
             MatchedTerms = new List<string>(),
             Mode = SearchMode.Hybrid,
             RoleTags = GameBookRole.None

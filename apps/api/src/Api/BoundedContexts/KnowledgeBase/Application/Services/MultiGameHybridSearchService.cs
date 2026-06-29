@@ -94,13 +94,29 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
         if (minScore > 0.0)
             aggregated = aggregated.Where(r => r.HybridScore >= (float)minScore).ToList();
 
-        // Step 4: Deterministic ordering (EC-4): score DESC, then ChunkIndex ASC, then PdfDocumentId ASC.
+        // Step 4: Ordering. Primary key is the fused HybridScore DESC.
+        //
+        // #2568: per-game RRF is rank-only, so EVERY game's rank-1 chunk gets the
+        // IDENTICAL fused HybridScore (vectorWeight/(rrfK+1) ≈ 0.01148). A bare
+        // ChunkIndex/PdfDocumentId tiebreak is query-agnostic, so the same lowest-index
+        // /lowest-GUID chunk won the tie for EVERY cross-game query (one document
+        // dominated unrelated-game queries). Break the tie by the globally-comparable
+        // raw vector cosine (VectorScore) DESC — the chunk actually most similar to THIS
+        // query wins — then keyword relevance (ts_rank_cd) DESC, and only then fall back
+        // to the deterministic ChunkIndex/PdfDocumentId ordering for true ties.
         aggregated.Sort(static (a, b) =>
         {
             var scoreCmp = b.HybridScore.CompareTo(a.HybridScore); // DESC
             if (scoreCmp != 0) return scoreCmp;
 
-            var chunkCmp = a.ChunkIndex.CompareTo(b.ChunkIndex);   // ASC
+            // null cosine (keyword-only hit) sorts below any real cosine match.
+            var vecCmp = (b.VectorScore ?? float.MinValue).CompareTo(a.VectorScore ?? float.MinValue); // DESC
+            if (vecCmp != 0) return vecCmp;
+
+            var kwCmp = (b.KeywordScore ?? float.MinValue).CompareTo(a.KeywordScore ?? float.MinValue); // DESC
+            if (kwCmp != 0) return kwCmp;
+
+            var chunkCmp = a.ChunkIndex.CompareTo(b.ChunkIndex);   // ASC (deterministic fallback)
             if (chunkCmp != 0) return chunkCmp;
 
             return string.Compare(a.PdfDocumentId, b.PdfDocumentId, StringComparison.Ordinal); // ASC

@@ -125,8 +125,13 @@ public sealed class HybridSearchServiceRoleBoostTests
     private static HybridSearchService BuildSut(
         Mock<IVectorStoreAdapter> vectorStoreMock,
         Mock<IEmbeddingService> embeddingMock)
+        => BuildSut(vectorStoreMock, embeddingMock, BuildEmptyKeywordMock());
+
+    private static HybridSearchService BuildSut(
+        Mock<IVectorStoreAdapter> vectorStoreMock,
+        Mock<IEmbeddingService> embeddingMock,
+        Mock<IKeywordSearchService> keywordMock)
     {
-        var keywordMock = new Mock<IKeywordSearchService>();
         var config = Options.Create(new HybridSearchConfiguration());
         return new HybridSearchService(
             keywordMock.Object,
@@ -135,6 +140,25 @@ public sealed class HybridSearchServiceRoleBoostTests
             NullLogger<HybridSearchService>.Instance,
             config);
     }
+
+    private static Mock<IKeywordSearchService> BuildEmptyKeywordMock()
+    {
+        var mock = new Mock<IKeywordSearchService>();
+        mock
+            .Setup(k => k.SearchAsync(
+                It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<bool>(),
+                It.IsAny<List<string>?>(), It.IsAny<string>(), It.IsAny<double>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<KeywordSearchResult>());
+        return mock;
+    }
+
+    // #2568: ExecuteVectorSearchAsync now consumes the scored variant. Wrap embeddings in
+    // ScoredEmbedding with descending cosines (0.9, 0.8, …) preserving the input order
+    // (pgvector returns cosine-DESC). Semantic HybridScore stays rank-based, so the cosine
+    // value only surfaces as VectorScore.
+    private static List<ScoredEmbedding> Scored(params Embedding[] embeddings)
+        => embeddings.Select((e, i) => new ScoredEmbedding(e, 0.9 - i * 0.1)).ToList();
 
     private static Embedding BuildEmbedding(int chunkIndex, GameBookRole roleTags)
     {
@@ -170,10 +194,10 @@ public sealed class HybridSearchServiceRoleBoostTests
         // Arrange: one matching chunk; boost MUST appear on HybridScore.
         var vectorStore = new Mock<IVectorStoreAdapter>();
         vectorStore
-            .Setup(v => v.SearchAsync(
+            .Setup(v => v.SearchWithScoresAsync(
                 It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(),
                 It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Embedding> { BuildEmbedding(chunkIndex: 0, GameBookRole.Tutorial) });
+            .ReturnsAsync(Scored(BuildEmbedding(chunkIndex: 0, GameBookRole.Tutorial)));
 
         var sut = BuildSut(vectorStore, BuildEmbeddingMock());
 
@@ -187,7 +211,8 @@ public sealed class HybridSearchServiceRoleBoostTests
         results.Should().HaveCount(1);
         results[0].RoleTags.Should().Be(GameBookRole.Tutorial);
         results[0].HybridScore.Should().BeApproximately(1.0f + HybridSearchService.RoleMatchBoost, 0.0001f);
-        results[0].VectorScore.Should().BeApproximately(1.0f, 0.0001f);
+        // #2568: VectorScore now carries the raw cosine (0.9 from Scored()), not a constant 1.0.
+        results[0].VectorScore.Should().BeApproximately(0.9f, 0.0001f);
     }
 
     [Fact]
@@ -196,10 +221,10 @@ public sealed class HybridSearchServiceRoleBoostTests
         // Arrange: chunk role disjoint from hint — no boost.
         var vectorStore = new Mock<IVectorStoreAdapter>();
         vectorStore
-            .Setup(v => v.SearchAsync(
+            .Setup(v => v.SearchWithScoresAsync(
                 It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(),
                 It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Embedding> { BuildEmbedding(chunkIndex: 0, GameBookRole.RulesReference) });
+            .ReturnsAsync(Scored(BuildEmbedding(chunkIndex: 0, GameBookRole.RulesReference)));
 
         var sut = BuildSut(vectorStore, BuildEmbeddingMock());
 
@@ -222,10 +247,10 @@ public sealed class HybridSearchServiceRoleBoostTests
         var second = BuildEmbedding(chunkIndex: 1, GameBookRole.Tutorial);
         var vectorStore = new Mock<IVectorStoreAdapter>();
         vectorStore
-            .Setup(v => v.SearchAsync(
+            .Setup(v => v.SearchWithScoresAsync(
                 It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(),
                 It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Embedding> { first, second });
+            .ReturnsAsync(Scored(first, second));
 
         var sut = BuildSut(vectorStore, BuildEmbeddingMock());
 
@@ -260,10 +285,10 @@ public sealed class HybridSearchServiceRoleBoostTests
         };
         var vectorStore = new Mock<IVectorStoreAdapter>();
         vectorStore
-            .Setup(v => v.SearchAsync(
+            .Setup(v => v.SearchWithScoresAsync(
                 It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(),
                 It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(ranked);
+            .ReturnsAsync(Scored(ranked.ToArray()));
 
         var sut = BuildSut(vectorStore, BuildEmbeddingMock());
 
@@ -280,5 +305,45 @@ public sealed class HybridSearchServiceRoleBoostTests
         results[2].ChunkIndex.Should().Be(3);
         results[2].HybridScore.Should().BeApproximately(0.25f + HybridSearchService.RoleMatchBoost, 0.0001f);
         results[3].ChunkIndex.Should().Be(2);
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // #2568: the fused VectorScore must carry the RAW pgvector cosine similarity (not a
+    // hard-coded 1.0f) so the cross-game merge in MultiGameHybridSearchService can break
+    // rank-only RRF ties by actual query relevance instead of a query-agnostic GUID tiebreak.
+    // -----------------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task SearchAsync_HybridMode_VectorScore_CarriesRawCosine_NotConstant()
+    {
+        // Arrange
+        const double cosine = 0.77;
+        var embedding = BuildEmbedding(chunkIndex: 0, GameBookRole.None);
+
+        var vectorStore = new Mock<IVectorStoreAdapter>();
+        // Scored path (post-fix): carries the cosine.
+        vectorStore
+            .Setup(v => v.SearchWithScoresAsync(
+                It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(),
+                It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ScoredEmbedding> { new(embedding, cosine) });
+        // Legacy unscored path (pre-fix) — also returns the chunk so the test fails on the
+        // VECTORSCORE VALUE (1.0 vs 0.77), not on an empty result set.
+        vectorStore
+            .Setup(v => v.SearchAsync(
+                It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(),
+                It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Embedding> { embedding });
+
+        var sut = BuildSut(vectorStore, BuildEmbeddingMock(), BuildEmptyKeywordMock());
+
+        // Act
+        var results = await sut.SearchAsync(
+            "anything", Guid.NewGuid(), SearchMode.Hybrid,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert — VectorScore equals the cosine the vector store returned.
+        results.Should().HaveCount(1);
+        results[0].VectorScore.Should().BeApproximately((float)cosine, 0.0001f);
     }
 }

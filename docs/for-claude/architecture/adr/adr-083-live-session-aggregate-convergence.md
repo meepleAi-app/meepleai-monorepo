@@ -172,12 +172,12 @@ L'Update (3) SP0 stabiliva che diary/media "riusano la `SessionTracking.Session`
 
 ### Razionale (code-grounded, da de-risk read-only)
 1. **L'eventing forza comunque un domain-event di `LiveGameSession`.** Il forwarder SP2 (`LiveSessionStreamForwarder`) inoltra allo stream **solo** domain-event di `LiveGameSession`; non esiste alcun handler `SessionTracking → ILiveSessionStreamGateway`. Quindi `session:diary` deve nascere come domain-event di `LiveGameSession` *a prescindere da dove è memorizzato*. Memorizzare il diary altrove (companion) **separerebbe** il write-path (SessionTracking) dall'event-path (GameManagement) → problema dual-source/dedup ("chi è autoritativo sul replay").
-2. **Semantica incompatibile.** Le note del companion (`SessionEvent`/`SessionNote`, SessionTracking) sono **crittografate-at-rest, private per-partecipante** — semanticamente NON un diario pubblico append-only multi-autore. Riusarle sovraccaricherebbe quell'aggregato.
+2. **Semantica incompatibile.** Le note del companion (`SessionEvent`/`SessionNote`, SessionTracking) sono **crittografate-at-rest, private per-partecipante** — semanticamente NON un diario append-only multi-autore tra i partecipanti registrati. Riusarle sovraccaricherebbe quell'aggregato.
 3. **Lowest-risk.** Append-only + 409-guard + forwarder è un clone 1:1 del pattern `RecordScore` esistente; co-locare storage ed evento elimina i rischi dual-write/dedup.
 
 ### Scope dell'emendamento
 - Si applica **solo al diary** (SP3). Il **media** (SP4, già shipped come foto in EndgameDialog #2558, FE-only su PlayRecord) e la **chat** (SP1 #2500, KnowledgeBase) NON sono toccati da questo emendamento. La direttiva SP0 "Session-companion canonica" resta valida come **identità correlante** (`TrackingSessionId`), ma il diary non vi memorizza i propri dati.
-- Conseguenza: `LiveGameSession` ha `Notes` (single-string, host-level, overwrite) **e** una collezione `DiaryEntry` (append-only, multi-autore) — due store distinti per due job distinti (OQ#6 risolta: coesistenza, nessuna deprecazione di Notes).
+- Conseguenza: `LiveGameSession` ha `Notes` (single-string, host-level, overwrite) **e** una collezione `DiaryEntry` (append-only, multi-autore tra i partecipanti registrati) — due store distinti per due job distinti (OQ#6 risolta: coesistenza, nessuna deprecazione di Notes).
 
 ### Decisione ratificata dall'owner (2026-06-29)
 **Option A — entità `DiaryEntry` nativa su `LiveGameSession`.** Endpoint `POST/GET /api/v1/live-sessions/{id}/diary`; `LiveSessionDiaryEntryAddedEvent` → forwarder → `session:diary` (`{ entryId, authorId, content, timestamp(ISO-8601) }`); 409 su Completed (allow Paused). De-risk: `.superpowers/sdd/sp3-diary-derisk-brief.md`.

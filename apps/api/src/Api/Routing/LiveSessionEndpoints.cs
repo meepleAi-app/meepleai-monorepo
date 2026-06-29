@@ -235,19 +235,23 @@ internal static class LiveSessionEndpoints
             .RequireAuthenticatedUser()
             .Produces<Guid>(201)
             .Produces(400)
+            .Produces(401)
+            .Produces(403)
             .Produces(404)
             .Produces(409)
             .WithTags("LiveSessions")
             .WithSummary("Add a diary entry to a live session")
-            .WithDescription("Appends an immutable diary entry to the session. Returns the new entry id. 409 if session is Completed. Issue #2570 SP3.");
+            .WithDescription("Appends an immutable diary entry to the session. Returns the new entry id. 403 if caller is not a participant. 409 if session is Completed. Issue #2570 SP3.");
 
         group.MapGet("/live-sessions/{sessionId}/diary", HandleGetDiary)
             .RequireAuthenticatedUser()
             .Produces<IReadOnlyList<DiaryEntryDto>>(200)
+            .Produces(401)
+            .Produces(403)
             .Produces(404)
             .WithTags("LiveSessions")
             .WithSummary("Get diary entries for a live session")
-            .WithDescription("Returns all diary entries ordered by CreatedAt ascending. 404 if session not found. Issue #2570 SP3.");
+            .WithDescription("Returns all diary entries ordered by CreatedAt ascending. 403 if caller is not a session participant. 404 if session not found. Issue #2570 SP3.");
 
         // === Dispute v2 ===
 

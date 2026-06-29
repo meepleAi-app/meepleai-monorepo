@@ -5,6 +5,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
 
@@ -47,14 +48,25 @@ public class GetLiveSessionDiaryQueryHandlerTests
         Guid sessionId,
         params string[] entryTexts)
     {
+        // Use FakeTimeProvider so each AddDiaryEntry call gets a DISTINCT, increasing timestamp.
+        // Without this, rapid in-loop calls to TimeProvider.System return sub-millisecond
+        // identical timestamps and BeInAscendingOrder holds vacuously even if ORDER BY is removed.
+        var fakeTime = new FakeTimeProvider(
+            new DateTimeOffset(2026, 6, 29, 10, 0, 0, TimeSpan.Zero));
+
         var session = CreateSession(sessionId, DefaultCreatorId);
         // Start the session so diary entries can be added
-        session.AddPlayer(DefaultAuthorId, "Host", PlayerColor.Red, TimeProvider.System);
-        session.Start(TimeProvider.System);
+        session.AddPlayer(DefaultAuthorId, "Host", PlayerColor.Red, fakeTime);
+        session.Start(fakeTime);
 
         foreach (var text in entryTexts)
         {
-            session.AddDiaryEntry(DefaultAuthorId, text, TimeProvider.System);
+            session.AddDiaryEntry(DefaultAuthorId, text, fakeTime);
+            // Advance 1 second between entries so each gets a strictly greater CreatedAt.
+            // This makes BeInAscendingOrder non-vacuous: if ORDER BY were removed the assertion
+            // would still hold only by insertion-order luck — but with distinct timestamps the
+            // query handler MUST sort to satisfy the assertion regardless of retrieval order.
+            fakeTime.Advance(TimeSpan.FromSeconds(1));
         }
 
         return session;

@@ -34,7 +34,7 @@
  * |                      |                            | BE `senderId` nullable matches FE       |
  * | session:tool-execution| DiceRolledEvent/RandomToolEvents | FE `tool: 'dice'|'timer'|'card'` |
  * |                      |                            | v1 gap: BE has CoinFlippedEvent, WheelSpunEvent not in FE enum |
- * | session:diary        | NoteSavedEvent/NoteRevealedEvent | BE `HasObscuredText` not in FE  |
+ * | session:diary        | LiveSessionDiaryEntryAddedEvent  | BE `HasObscuredText` not in FE  |
  * | session:turn         | TurnAdvancedEvent          | BE `newTurnIndex` + `currentPlayerId`       |
  * | heartbeat            | inline endpoint            | timestamp field matches FE contract     |
  */
@@ -333,10 +333,17 @@ function parseDiary(
           ? data['id']
           : null;
   if (!entryId) return null;
+  // Resolve authorId: check the direct `authorId` field first (the BE diary event field name),
+  // then fall back to resolveParticipantId() (which probes `participantId`/`userId`).
+  // Previously the priority was reversed — this corrects the intent without changing runtime
+  // behaviour (BE never emits `participantId` for diary events).
   const authorId =
-    resolveParticipantId(data) ?? (typeof data['authorId'] === 'string' ? data['authorId'] : null);
+    (typeof data['authorId'] === 'string' ? data['authorId'] : null) ?? resolveParticipantId(data);
   if (!authorId) return null;
-  const content = typeof data['content'] === 'string' ? data['content'] : '';
+  // Guard against missing or empty content — mirrors the BE `NotEmpty` validation.
+  // A silent empty-string diary entry would render as a blank card in the UI.
+  const content = typeof data['content'] === 'string' ? data['content'] : null;
+  if (!content || content.trim() === '') return null;
   const timestamp =
     typeof data['timestamp'] === 'string' ? data['timestamp'] : new Date().toISOString();
   return { type: 'session:diary', sessionId, entryId, authorId, content, timestamp };

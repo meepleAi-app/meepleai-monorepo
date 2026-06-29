@@ -103,8 +103,15 @@ public sealed class LiveSessionDiaryPersistenceIntegrationTests : IAsyncLifetime
         reloaded.DiaryEntries[0].Text.Should().Be("First entry");
         reloaded.DiaryEntries[1].AuthorId.Should().Be(AuthorId2);
         reloaded.DiaryEntries[1].Text.Should().Be("Second entry");
-        // Verify CreatedAt order preserved (OrderBy in mapper)
-        reloaded.DiaryEntries[0].CreatedAt.Should().BeOnOrBefore(reloaded.DiaryEntries[1].CreatedAt);
+        // Verify ordering is non-vacuous: assert entries come back in the EXACT insertion order
+        // by identity (authorId at index 0 must be AuthorId1, index 1 must be AuthorId2).
+        // This is a stronger assertion than BeOnOrBefore when PostgreSQL sub-millisecond
+        // timestamp granularity could produce identical CreatedAt values, making a
+        // "BeOnOrBefore" assertion hold vacuously even if ORDER BY CreatedAt were removed.
+        reloaded.DiaryEntries[0].AuthorId.Should().Be(AuthorId1,
+            "first entry was inserted by AuthorId1 — ORDER BY CreatedAt ASC must return it first");
+        reloaded.DiaryEntries[1].AuthorId.Should().Be(AuthorId2,
+            "second entry was inserted by AuthorId2 — ORDER BY CreatedAt ASC must return it second");
     }
 
     [Fact]

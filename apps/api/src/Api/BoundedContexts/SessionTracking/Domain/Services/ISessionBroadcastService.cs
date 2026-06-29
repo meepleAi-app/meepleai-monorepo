@@ -41,6 +41,22 @@ public interface ISessionBroadcastService
         CancellationToken ct = default);
 
     /// <summary>
+    /// Publishes a pre-built SSE envelope to all subscribers of a session,
+    /// using an explicit <paramref name="envelope.EventType"/> instead of deriving it from
+    /// <see cref="SseEventTypeMapper"/>. The envelope <c>Id</c> is overwritten by the service
+    /// to keep id assignment centralised.
+    /// </summary>
+    /// <param name="sessionId">Session to publish to.</param>
+    /// <param name="envelope">Pre-built envelope whose <c>EventType</c> is used verbatim.</param>
+    /// <param name="visibility">Who can see this event.</param>
+    /// <param name="ct">Cancellation token.</param>
+    Task PublishEnvelopeAsync(
+        Guid sessionId,
+        SseEventEnvelope envelope,
+        EventVisibility visibility = default,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// Gets the number of active connections for a session.
     /// </summary>
     int GetConnectionCount(Guid sessionId);

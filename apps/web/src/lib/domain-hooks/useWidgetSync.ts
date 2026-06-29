@@ -96,6 +96,11 @@ export function useWidgetSync({
   onRemoteUpdateRef.current = onRemoteUpdate;
 
   // ---- SSE subscription ----
+  // SP2: stays on legacy /game-sessions stream until toolkit/whiteboard events are
+  // forwarded to the native /live-sessions stream — see #2561 / SP5.
+  // This hook is mounted on the /toolkit/[sessionId] surface (NOT the canonical
+  // /sessions/[id]/live view) and consumes `session:toolkit` events which the
+  // native stream does not yet emit.
   useEffect(() => {
     if (!enabled || !sessionId) return;
 

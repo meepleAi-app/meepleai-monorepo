@@ -356,6 +356,17 @@ internal static class SessionQueryEndpoints
             // Get Last-Event-ID for reconnection
             var lastEventId = context.Request.Headers["Last-Event-ID"].FirstOrDefault();
 
+            // ── Expand-and-contract deprecation headers (Issue #2561 SP2 T11) ──────────
+            // This endpoint is superseded by /api/v1/live-sessions/{sessionId}/stream
+            // shipped in SP2 T4. It will be removed in Fase 4 after all legacy consumers
+            // (the 3 toolkit hooks left on legacy in T10) are migrated.
+            // Sunset date: 2026-09-29 (~3 months post SP2 merge; see task-11-report.md).
+            context.Response.Headers.Append("Deprecation", "true");
+            context.Response.Headers.Append("Sunset", "Mon, 29 Sep 2026 00:00:00 GMT");
+            context.Response.Headers.Append(
+                "Link",
+                $"</api/v1/live-sessions/{sessionId}/stream>; rel=\"successor-version\"");
+
             // Set SSE response headers
             context.Response.Headers.Append("Content-Type", "text/event-stream");
             context.Response.Headers.Append("Cache-Control", "no-cache");

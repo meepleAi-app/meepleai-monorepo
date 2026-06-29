@@ -4,7 +4,7 @@
  * useSessionLiveStream Hook (Wave D.2, Issue #750)
  *
  * Wraps native EventSource for SSE subscription to
- * GET /api/v1/game-sessions/{sessionId}/stream/v2.
+ * GET /api/v1/live-sessions/{sessionId}/stream.
  *
  * ## Features
  * - Typed event accumulation via useReducer (idempotent dedup by event.id)
@@ -211,7 +211,7 @@ export function useSessionLiveStream(input: UseSessionLiveStreamInput): UseSessi
     dispatch({ type: 'CONNECTING' });
 
     const lastEventId = state.lastEventId;
-    const url = `${baseUrl}/api/v1/game-sessions/${sessionId}/stream/v2${
+    const url = `${baseUrl}/api/v1/live-sessions/${sessionId}/stream${
       lastEventId ? `?lastEventId=${encodeURIComponent(lastEventId)}` : ''
     }`;
 

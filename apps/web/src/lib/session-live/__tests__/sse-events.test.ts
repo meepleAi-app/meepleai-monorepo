@@ -13,14 +13,16 @@ import {
 } from '../sse-events';
 
 describe('SESSION_EVENT_TYPES array', () => {
-  it('contains exactly 12 event types', () => {
-    expect(SESSION_EVENT_TYPES).toHaveLength(12);
+  it('contains exactly 13 event types', () => {
+    // T9 SP2 #2561: added session:phase → 13 total
+    expect(SESSION_EVENT_TYPES).toHaveLength(13);
   });
 
   it('includes all expected event type strings', () => {
     const expected: SessionEventType[] = [
       'session:score',
       'session:turn',
+      'session:phase',
       'session:player-join',
       'session:player-leave',
       'session:role-change',
@@ -37,10 +39,11 @@ describe('SESSION_EVENT_TYPES array', () => {
     }
   });
 
-  it('is typed as ReadonlyArray (array with 12 members)', () => {
+  it('is typed as ReadonlyArray (array with 13 members)', () => {
     // ReadonlyArray is a TypeScript type constraint, not a runtime frozen object.
+    // T9 SP2 #2561: added session:phase → 13 total
     expect(Array.isArray(SESSION_EVENT_TYPES)).toBe(true);
-    expect(SESSION_EVENT_TYPES.length).toBe(12);
+    expect(SESSION_EVENT_TYPES.length).toBe(13);
   });
 
   it('contains no duplicates', () => {

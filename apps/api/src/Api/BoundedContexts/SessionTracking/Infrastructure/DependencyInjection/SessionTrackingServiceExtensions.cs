@@ -51,6 +51,10 @@ internal static class SessionTrackingServiceExtensions
         // GST-003: Register SSE synchronization service (singleton for shared state)
         services.AddSingleton<ISessionSyncService, SessionSyncService>();
 
+        // Issue #2561 SP2 T6: Monotonic per-session sequence provider for SSE event IDs
+        // (Redis INCR + in-process fallback). Singleton — holds the in-process fallback counter dict.
+        services.AddSingleton<ISessionSequenceProvider, RedisSessionSequenceProvider>();
+
         // Issue #4764: Enhanced broadcast service with Redis Pub/Sub, connection pooling,
         // event buffering, selective broadcasting, and Last-Event-ID reconnection
         services.AddSingleton<ISessionBroadcastService, SessionBroadcastService>();

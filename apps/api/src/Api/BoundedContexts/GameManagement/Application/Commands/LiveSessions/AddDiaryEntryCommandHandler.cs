@@ -40,8 +40,7 @@ internal sealed class AddDiaryEntryCommandHandler : ICommandHandler<AddDiaryEntr
 
         // Authz: caller must be the session creator or an active linked player.
         // Mirrors GetLiveSessionStreamContextQueryHandler (SP2 T4).
-        var isParticipant = session.CreatedByUserId == command.AuthorId
-            || session.Players.Any(p => p.IsActive && p.UserId == command.AuthorId);
+        var isParticipant = session.IsAuthorizedParticipant(command.AuthorId);
         if (!isParticipant)
             throw new ForbiddenException("Only the session creator or an active participant may add diary entries.");
 

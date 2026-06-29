@@ -33,9 +33,8 @@ internal sealed class GetLiveSessionStreamContextQueryHandler
             return new LiveSessionStreamContextResult(Found: false, Authorized: false, HasCompanion: false);
 
         // Authz: creator or any active linked player (registered user) may subscribe.
-        // Inactive (removed/kicked) players lose stream access.
-        var isAuthorized = session.CreatedByUserId == query.UserId
-            || session.Players.Any(p => p.IsActive && p.UserId == query.UserId);
+        // Inactive (removed/kicked) players lose stream access. Single source of truth (#2573).
+        var isAuthorized = session.IsAuthorizedParticipant(query.UserId);
 
         var hasCompanion = session.TrackingSessionId.HasValue;
 

@@ -33,8 +33,7 @@ internal sealed class GetLiveSessionDiaryQueryHandler
 
         // Authz: caller must be the session creator or an active linked player.
         // Mirrors GetLiveSessionStreamContextQueryHandler (SP2 T4, issue #2561).
-        var isParticipant = session.CreatedByUserId == query.UserId
-            || session.Players.Any(p => p.IsActive && p.UserId == query.UserId);
+        var isParticipant = session.IsAuthorizedParticipant(query.UserId);
         if (!isParticipant)
             throw new ForbiddenException("Only the session creator or an active participant may read diary entries.");
 

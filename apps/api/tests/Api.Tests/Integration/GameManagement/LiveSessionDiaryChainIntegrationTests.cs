@@ -58,8 +58,21 @@ public sealed class LiveSessionDiaryChainIntegrationTests : IAsyncLifetime
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
         await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(connectionString);
 
+        // C1 fix (#2570 review): IntegrationWebApplicationFactory.Create() calls Sources.Clear(),
+        // so appsettings.json is NOT loaded and IOptions<DomainEventOutboxOptions>.Value.Mode
+        // resolves to the options-class C# default DomainEventDispatchMode.OutboxOnly.
+        // Under OutboxOnly the BackgroundService (which is removed by the factory) would need to
+        // drain the outbox — the inline MediatR.Publish never fires, the gateway spy never sees
+        // BroadcastAsync, and WaitForBroadcastAsync times out.
+        // Forcing Hybrid ensures MeepleAiDbContext.SaveChangesAsync dispatches inline (Step 5),
+        // which is the only mode compatible with a spy-based assertion in a synchronous test.
+        var extraConfig = new Dictionary<string, string?>
+        {
+            ["DomainEventOutbox:Mode"] = "Hybrid"
+        };
+
         // Build the factory from the shared helper, then extend it with a spy gateway.
-        var baseFactory = IntegrationWebApplicationFactory.Create(connectionString);
+        var baseFactory = IntegrationWebApplicationFactory.Create(connectionString, extraConfig: extraConfig);
 
         _factory = baseFactory.WithWebHostBuilder(builder =>
         {
@@ -173,25 +186,29 @@ public sealed class LiveSessionDiaryChainIntegrationTests : IAsyncLifetime
     // AC-DIARY-2 chain pin: multi-author + GET returns entries in chronological order
     // ──────────────────────────────────────────────────────────────────────────
 
-    [Fact(DisplayName = "POST two diary entries from different authors: GET returns them chronologically")]
+    [Fact(DisplayName = "POST two diary entries from different authors: GET returns them chronologically with distinct authorIds")]
     public async Task Post_TwoEntries_DifferentAuthors_GetReturnsChronologicalOrder()
     {
         // Arrange
-        var (clientA, sessionId, _) = await CreateSessionWithClientAsync();
+        var (clientA, sessionId, userAId) = await CreateSessionWithClientAsync();
 
-        // Author A is the creator; Author B is a second participant
+        // I1 fix (#2570 review): create userB as a real registered user with a known ID so they
+        // can be added as a linked player (UserId: userBId). The authz guard in
+        // AddDiaryEntryCommandHandler requires the caller be the session creator OR
+        // session.Players.Any(p => p.IsActive && p.UserId == command.AuthorId).
+        // A guest player (UserId: null) would satisfy neither condition for userB's requests.
         await using var setupScope = _factory.Services.CreateAsyncScope();
         var db = setupScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var (_, tokenB) = await TestSessionHelper.CreateUserSessionAsync(db);
+        var userBId = Guid.NewGuid();
+        var (_, tokenB) = await TestSessionHelper.CreateUserSessionAsync(db, userBId);
 
-        // Add Author B as a participant via the AddPlayer command
+        // Add Author B as a linked player with UserId so the authz check passes.
         var mediator = setupScope.ServiceProvider.GetRequiredService<IMediator>();
-        var userBId = Guid.NewGuid(); // guest player
         await mediator.Send(new AddPlayerToLiveSessionCommand(
             SessionId: sessionId,
             DisplayName: "Author B",
             Color: Api.BoundedContexts.GameManagement.Domain.Enums.PlayerColor.Blue,
-            UserId: null,
+            UserId: userBId,
             Role: null,
             AvatarUrl: null));
 
@@ -199,41 +216,49 @@ public sealed class LiveSessionDiaryChainIntegrationTests : IAsyncLifetime
         clientB.DefaultRequestHeaders.Add("Cookie", $"{TestSessionHelper.SessionCookieName}={tokenB}");
         clientB.DefaultRequestHeaders.Add("X-Test-Session-Token", tokenB);
 
-        // Act — POST two entries: A first, then B (using A's client for both for simplicity — same session)
+        // Act — POST first entry via clientA (Author A), second via clientB (Author B)
         var post1 = TestSessionHelper.CreateAuthenticatedRequest(
             HttpMethod.Post,
             $"/api/v1/live-sessions/{sessionId}/diary",
             GetTokenFromClient(clientA));
         post1.Content = JsonContent.Create(new { text = "Entry by author A" });
         var r1 = await clientA.SendAsync(post1);
-        r1.StatusCode.Should().Be(HttpStatusCode.Created);
+        r1.StatusCode.Should().Be(HttpStatusCode.Created,
+            "Author A (session creator) must be allowed to add a diary entry");
 
         var post2 = TestSessionHelper.CreateAuthenticatedRequest(
             HttpMethod.Post,
             $"/api/v1/live-sessions/{sessionId}/diary",
-            GetTokenFromClient(clientA));
-        post2.Content = JsonContent.Create(new { text = "Entry by author A again" });
-        var r2 = await clientA.SendAsync(post2);
-        r2.StatusCode.Should().Be(HttpStatusCode.Created);
+            GetTokenFromClient(clientB));
+        post2.Content = JsonContent.Create(new { text = "Entry by author B" });
+        var r2 = await clientB.SendAsync(post2);
+        r2.StatusCode.Should().Be(HttpStatusCode.Created,
+            "Author B (linked player) must be allowed to add a diary entry");
 
-        // GET the diary
+        // GET the diary as Author A (creator always has read access)
         var getRequest = TestSessionHelper.CreateAuthenticatedRequest(
             HttpMethod.Get,
             $"/api/v1/live-sessions/{sessionId}/diary",
             GetTokenFromClient(clientA));
         var getResponse = await clientA.SendAsync(getRequest);
 
-        // Assert — AC-DIARY-2: chronological order
+        // Assert — AC-DIARY-2: chronological order + distinct authorIds
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var entries = await getResponse.Content.ReadFromJsonAsync<List<DiaryEntryResponse>>(
             new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
         entries.Should().NotBeNull();
-        entries!.Should().HaveCount(2);
+        entries!.Should().HaveCount(2, "both diary entries must be persisted");
         entries.Should().BeInAscendingOrder(e => e.CreatedAt,
             "diary entries must be returned in chronological (ascending) order per AC-DIARY-2");
         entries[0].Text.Should().Be("Entry by author A");
-        entries[1].Text.Should().Be("Entry by author A again");
+        entries[1].Text.Should().Be("Entry by author B");
+
+        // Genuine multi-author assertion: two distinct authorIds
+        entries[0].AuthorId.Should().Be(userAId,
+            "first entry's authorId must match Author A's user id");
+        entries[1].AuthorId.Should().Be(userBId,
+            "second entry's authorId must match Author B's user id");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -320,6 +345,14 @@ public sealed class LiveSessionDiaryChainIntegrationTests : IAsyncLifetime
             }
             await Task.Delay(50);
         }
+
+        // M2 fix (#2570 review): throw on timeout so a misconfigured dispatch mode produces a
+        // clear diagnostic instead of a misleading "expected 1 item but found 0" FluentAssertions
+        // failure from the downstream HaveCount assertion.
+        throw new TimeoutException(
+            $"Timed out waiting for '{eventType}' broadcast on session {sessionId} " +
+            $"after {timeout.TotalSeconds:0}s. " +
+            "Verify DomainEventOutbox:Mode=Hybrid is configured in the test factory extraConfig.");
     }
 
     /// <summary>Returns an empty async enumerable of <see cref="LiveSessionStreamEvent"/>.</summary>

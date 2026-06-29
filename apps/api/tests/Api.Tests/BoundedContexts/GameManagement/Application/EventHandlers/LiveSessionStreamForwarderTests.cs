@@ -170,4 +170,41 @@ public sealed class LiveSessionStreamForwarderTests
             It.IsAny<CancellationToken>()),
             Times.Once);
     }
+
+    [Fact]
+    public async Task Forwards_diary_entry_added_event_as_session_diary()
+    {
+        // Arrange
+        var sid = Guid.NewGuid();
+        var entryId = Guid.NewGuid();
+        var authorId = Guid.NewGuid();
+        var createdAt = new DateTimeOffset(2026, 6, 29, 10, 0, 0, TimeSpan.Zero);
+        var evt = new LiveSessionDiaryEntryAddedEvent(sid, entryId, authorId, "Great move!", createdAt);
+
+        LiveSessionStreamEvent? captured = null;
+        _gateway
+            .Setup(g => g.BroadcastAsync(It.IsAny<Guid>(), It.IsAny<LiveSessionStreamEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<Guid, LiveSessionStreamEvent, CancellationToken>((_, e, _) => captured = e)
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _handler.Handle(evt, CancellationToken.None);
+
+        // Assert — event type
+        _gateway.Verify(g => g.BroadcastAsync(
+            sid,
+            It.Is<LiveSessionStreamEvent>(e => e.Type == "session:diary"),
+            It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        // Assert — payload fields via reflection on anonymous object
+        captured.Should().NotBeNull();
+        var data = captured!.Data;
+        var dataType = data.GetType();
+
+        dataType.GetProperty("entryId")!.GetValue(data).Should().Be(entryId);
+        dataType.GetProperty("authorId")!.GetValue(data).Should().Be(authorId);
+        dataType.GetProperty("content")!.GetValue(data).Should().Be("Great move!");
+        dataType.GetProperty("timestamp")!.GetValue(data).Should().Be(createdAt.ToString("o"));
+    }
 }

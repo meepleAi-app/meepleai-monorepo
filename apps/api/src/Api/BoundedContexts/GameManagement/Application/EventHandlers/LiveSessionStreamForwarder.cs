@@ -16,7 +16,8 @@ internal sealed class LiveSessionStreamForwarder :
     INotificationHandler<LiveSessionPlayerRemovedEvent>,
     INotificationHandler<LiveSessionPausedEvent>,
     INotificationHandler<LiveSessionResumedEvent>,
-    INotificationHandler<LiveSessionCompletedEvent>
+    INotificationHandler<LiveSessionCompletedEvent>,
+    INotificationHandler<LiveSessionDiaryEntryAddedEvent>
 {
     private readonly ILiveSessionStreamGateway _gateway;
     private readonly ILogger<LiveSessionStreamForwarder> _logger;
@@ -133,6 +134,21 @@ internal sealed class LiveSessionStreamForwarder :
                 notification.CompletedAt,
                 notification.TotalTurns,
                 notification.GameName
+            }),
+            cancellationToken);
+    }
+
+    public Task Handle(LiveSessionDiaryEntryAddedEvent notification, CancellationToken cancellationToken)
+    {
+        _logger.LogDebug("Broadcasting session:diary for session {SessionId}", notification.SessionId);
+        return _gateway.BroadcastAsync(
+            notification.SessionId,
+            new LiveSessionStreamEvent("session:diary", new
+            {
+                entryId = notification.EntryId,
+                authorId = notification.AuthorId,
+                content = notification.Text,
+                timestamp = notification.CreatedAt.ToString("o")
             }),
             cancellationToken);
     }

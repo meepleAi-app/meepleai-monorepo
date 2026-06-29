@@ -78,4 +78,6 @@ public class LiveGameSessionEntity
     public ICollection<SessionTeamEntity> Teams { get; set; } = new List<SessionTeamEntity>();
     public ICollection<LiveRoundScoreEntity> RoundScores { get; set; } = new List<LiveRoundScoreEntity>();
     public ICollection<LiveTurnRecordEntity> TurnRecords { get; set; } = new List<LiveTurnRecordEntity>();
+    // #2570 SP3 T2: per-session diary entries (append-only)
+    public ICollection<LiveSessionDiaryEntryEntity> DiaryEntries { get; set; } = new List<LiveSessionDiaryEntryEntity>();
 }

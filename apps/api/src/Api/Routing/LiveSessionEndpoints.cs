@@ -920,6 +920,12 @@ internal static class LiveSessionEndpoints
         {
             // Expected: client disconnected or server shutting down — do not propagate to middleware.
         }
+        catch (Exception)
+        {
+            // I/O write fault on an already-committed 200 SSE stream (e.g. IOException,
+            // ConnectionResetException) — swallow to avoid a spurious 500 in middleware logs.
+            // The connection is already broken; nothing meaningful can be written.
+        }
         finally
         {
             // AC-OBS-1 (#2561 SP2 T12): decrement active-connections gauge on every exit path.

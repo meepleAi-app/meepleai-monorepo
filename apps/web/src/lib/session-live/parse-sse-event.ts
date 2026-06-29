@@ -35,7 +35,7 @@
  * | session:tool-execution| DiceRolledEvent/RandomToolEvents | FE `tool: 'dice'|'timer'|'card'` |
  * |                      |                            | v1 gap: BE has CoinFlippedEvent, WheelSpunEvent not in FE enum |
  * | session:diary        | NoteSavedEvent/NoteRevealedEvent | BE `HasObscuredText` not in FE  |
- * | session:turn         | NO backend event           | v1 gap: no TurnAdvancedEvent domain record |
+ * | session:turn         | TurnAdvancedEvent          | BE `newTurnIndex` + `currentPlayerId`       |
  * | heartbeat            | inline endpoint            | timestamp field matches FE contract     |
  */
 
@@ -84,7 +84,9 @@ function parseScore(
       ? data['score']
       : typeof data['newScore'] === 'number'
         ? data['newScore']
-        : null;
+        : typeof data['value'] === 'number'
+          ? data['value']
+          : null;
   if (score === null) return null;
   const updatedBy = typeof data['updatedBy'] === 'string' ? data['updatedBy'] : participantId;
   const timestamp =
@@ -96,15 +98,21 @@ function parseTurn(
   data: Record<string, unknown>,
   sessionId: string
 ): Extract<SessionEvent, { type: 'session:turn' }> | null {
-  // v1 carryover: no backend TurnAdvancedEvent — this is a forward-compat placeholder
   const turnNumber =
     typeof data['turnNumber'] === 'number'
       ? data['turnNumber']
       : typeof data['currentTurn'] === 'number'
         ? data['currentTurn']
-        : null;
+        : typeof data['newTurnIndex'] === 'number'
+          ? data['newTurnIndex']
+          : null;
   if (turnNumber === null) return null;
-  const activePlayerId = typeof data['activePlayerId'] === 'string' ? data['activePlayerId'] : null;
+  const activePlayerId =
+    typeof data['activePlayerId'] === 'string'
+      ? data['activePlayerId']
+      : typeof data['currentPlayerId'] === 'string'
+        ? data['currentPlayerId']
+        : null;
   if (!activePlayerId) return null;
   const timestamp =
     typeof data['timestamp'] === 'string' ? data['timestamp'] : new Date().toISOString();

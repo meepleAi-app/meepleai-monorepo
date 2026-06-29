@@ -880,6 +880,44 @@ describe('parseSseEvent — heartbeat', () => {
 });
 
 // ============================================================================
+// Canonical BE payload contract (C1/C2 fix — #2561 SP2 final-review)
+// ============================================================================
+
+describe('parseSseEvent — canonical BE payload shapes (C1/C2 #2561)', () => {
+  const PLAYER_GUID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+
+  it('C1: parses session:score with BE round-based payload {playerId, round, dimension, value}', () => {
+    // BE LiveSessionStreamForwarder emits: { playerId, round, dimension, value }
+    const result = parseSseEvent(
+      'session:score',
+      JSON.stringify({ playerId: PLAYER_GUID, round: 1, dimension: 'vp', value: 5 }),
+      SESSION_ID
+    );
+    expect(result).not.toBeNull();
+    expect(result?.type).toBe('session:score');
+    if (result?.type === 'session:score') {
+      expect(result.score).toBe(5);
+      expect(result.participantId).toBe(PLAYER_GUID);
+    }
+  });
+
+  it('C2: parses session:turn with BE payload {newTurnIndex, currentPlayerId}', () => {
+    // BE LiveSessionStreamForwarder emits: { newTurnIndex, currentPlayerId }
+    const result = parseSseEvent(
+      'session:turn',
+      JSON.stringify({ newTurnIndex: 2, currentPlayerId: PLAYER_GUID }),
+      SESSION_ID
+    );
+    expect(result).not.toBeNull();
+    expect(result?.type).toBe('session:turn');
+    if (result?.type === 'session:turn') {
+      expect(result.turnNumber).toBe(2);
+      expect(result.activePlayerId).toBe(PLAYER_GUID);
+    }
+  });
+});
+
+// ============================================================================
 // sessionId resolution
 // ============================================================================
 

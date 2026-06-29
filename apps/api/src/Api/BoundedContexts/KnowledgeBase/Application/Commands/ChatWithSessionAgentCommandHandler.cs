@@ -582,7 +582,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             {
                 await _liveSessionStreamGateway.BroadcastAsync(
                     liveSession.Id,
-                    new LiveSessionStreamEvent("session:chat", chatBroadcastPayload, broadcastMessageId.ToString()),
+                    new LiveSessionStreamEvent("session:chat", chatBroadcastPayload, null),
                     cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)

@@ -2,7 +2,7 @@
  * SSE event type definitions for `/sessions/[id]/live` (Wave D.2).
  *
  * Typed event names enum + payload discriminated unions for the SSE stream
- * at `GET /api/v1/game-sessions/{id}/stream/v2`.
+ * at `GET /api/v1/live-sessions/{id}/stream`.
  *
  * SCHEMA REALITY V1 CARRYOVER (Gate B audit, mirror Wave D.1 PR #736 pattern):
  *

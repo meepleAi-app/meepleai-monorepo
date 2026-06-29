@@ -141,6 +141,9 @@ internal static class RateLimitingServiceExtensions
                 options.AddPolicy("GameNightTokenRespond", _ =>
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
 
+                options.AddPolicy("LiveSessionCodeReadPublic", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
                 // Issue #950 (W1-PR2): authenticated user-search autocomplete (disabled in tests)
                 options.AddPolicy("UsersSearch", _ =>
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
@@ -590,6 +593,25 @@ internal static class RateLimitingServiceExtensions
 
                 return RateLimitPartition.GetSlidingWindowLimiter(
                     partitionKey: $"game-night-token-read-{ipAddress}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 60,
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // Policy 23 (#2590): LiveSessionCodeReadPublic - 60 req/min per IP for the public
+            // join-by-code lobby lookup. Mirrors GameNightTokenRead: anonymous GET, ~one read per
+            // page load, 60/min gives retry/refresh headroom while making code enumeration loud.
+            options.AddPolicy("LiveSessionCodeReadPublic", httpContext =>
+            {
+                var ipAddress = GetClientIpAddress(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"live-session-code-read-{ipAddress}",
                     factory: _ => new SlidingWindowRateLimiterOptions
                     {
                         Window = TimeSpan.FromMinutes(1),

@@ -17,6 +17,7 @@ import {
 } from '../schemas/improvvisata.schemas';
 import {
   LiveSessionDtoSchema,
+  PublicLiveSessionDtoSchema,
   LiveSessionSummaryDtoSchema,
   LiveSessionPlayerDtoSchema,
   LiveSessionRoundScoreDtoSchema,
@@ -24,6 +25,7 @@ import {
   SessionToolsDtoSchema,
   TurnPhasesDtoSchema,
   type LiveSessionDto,
+  type PublicLiveSessionDto,
   type LiveSessionSummaryDto,
   type LiveSessionPlayerDto,
   type LiveSessionRoundScoreDto,
@@ -87,6 +89,9 @@ export interface LiveSessionsClient {
 
   /** Get a session by join code */
   getByCode(code: string): Promise<LiveSessionDto>;
+
+  /** PUBLIC — anonymous-safe. Get a narrow read-only lobby/scoreboard by join code (#2590). */
+  getPublicByCode(code: string): Promise<PublicLiveSessionDto>;
 
   /** Get scores for a session */
   getScores(sessionId: string): Promise<LiveSessionRoundScoreDto[]>;
@@ -294,6 +299,15 @@ export function createLiveSessionsClient({
       );
       if (!response) throw new Error('Session not found');
       return LiveSessionDtoSchema.parse(response);
+    },
+
+    // PUBLIC — anonymous-safe; narrow DTO. Maps to GET /code/{code}/public (#2590).
+    async getPublicByCode(code) {
+      const response = await httpClient.get<PublicLiveSessionDto>(
+        `${BASE}/code/${encodeURIComponent(code)}/public`
+      );
+      if (!response) throw new Error('Session not found');
+      return PublicLiveSessionDtoSchema.parse(response);
     },
 
     async getScores(sessionId) {

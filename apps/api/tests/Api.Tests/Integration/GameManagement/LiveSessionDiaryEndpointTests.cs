@@ -148,7 +148,68 @@ public sealed class LiveSessionDiaryEndpointTests : IAsyncLifetime
     }
 
     // ──────────────────────────────────────────────────────────────────────────
-    // Scenario 3: Unauthenticated caller → 401
+    // Scenario 3a: Authenticated non-participant → 403 on POST
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact(DisplayName = "POST diary returns 403 when caller is authenticated but not a participant")]
+    public async Task Post_NonParticipant_Returns403()
+    {
+        // Arrange — user A creates the session; user B is authenticated but NOT a participant
+        var (_, sessionId) = await CreateSessionWithClientAsync();
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, tokenB) = await TestSessionHelper.CreateUserSessionAsync(db);
+
+        var clientB = _factory.CreateClient();
+        clientB.DefaultRequestHeaders.Add("Cookie", $"{TestSessionHelper.SessionCookieName}={tokenB}");
+
+        var postRequest = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            $"/api/v1/live-sessions/{sessionId}/diary",
+            tokenB);
+        postRequest.Content = JsonContent.Create(new { text = "Sneaking in" });
+
+        // Act
+        var response = await clientB.SendAsync(postRequest);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden,
+            "an authenticated user who is not a participant must receive 403");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Scenario 3b: Authenticated non-participant → 403 on GET
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact(DisplayName = "GET diary returns 403 when caller is authenticated but not a participant")]
+    public async Task Get_NonParticipant_Returns403()
+    {
+        // Arrange — user A creates the session; user B is authenticated but NOT a participant
+        var (_, sessionId) = await CreateSessionWithClientAsync();
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, tokenB) = await TestSessionHelper.CreateUserSessionAsync(db);
+
+        var clientB = _factory.CreateClient();
+        clientB.DefaultRequestHeaders.Add("Cookie", $"{TestSessionHelper.SessionCookieName}={tokenB}");
+
+        var getRequest = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            $"/api/v1/live-sessions/{sessionId}/diary",
+            tokenB);
+
+        // Act
+        var response = await clientB.SendAsync(getRequest);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden,
+            "an authenticated user who is not a participant must receive 403");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Scenario 4: Unauthenticated caller → 401
     // ──────────────────────────────────────────────────────────────────────────
 
     [Fact(DisplayName = "POST and GET diary return 401 when caller is not authenticated")]
@@ -172,7 +233,7 @@ public sealed class LiveSessionDiaryEndpointTests : IAsyncLifetime
     }
 
     // ──────────────────────────────────────────────────────────────────────────
-    // Scenario 4: GET on session with no diary entries → 200 + empty array
+    // Scenario 5: GET on session with no diary entries → 200 + empty array
     // ──────────────────────────────────────────────────────────────────────────
 
     [Fact(DisplayName = "GET diary on session with no entries returns 200 empty array")]

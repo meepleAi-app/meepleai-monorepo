@@ -31,6 +31,13 @@ internal sealed class GetLiveSessionDiaryQueryHandler
             .ConfigureAwait(false)
             ?? throw new NotFoundException("LiveGameSession", query.SessionId.ToString());
 
+        // Authz: caller must be the session creator or an active linked player.
+        // Mirrors GetLiveSessionStreamContextQueryHandler (SP2 T4, issue #2561).
+        var isParticipant = session.CreatedByUserId == query.UserId
+            || session.Players.Any(p => p.IsActive && p.UserId == query.UserId);
+        if (!isParticipant)
+            throw new ForbiddenException("Only the session creator or an active participant may read diary entries.");
+
         return session.DiaryEntries
             .OrderBy(e => e.CreatedAt)
             .Select(e => new DiaryEntryDto(e.Id, e.AuthorId, e.CreatedAt, e.Text))

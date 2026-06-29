@@ -148,6 +148,33 @@ public class AddDiaryEntryCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_CallerIsNotParticipant_ThrowsForbiddenException()
+    {
+        // Arrange — session created by DefaultAuthorId, caller is a different user (nonParticipant)
+        var session = CreateActiveSession();
+        SetupRepoGetById(DefaultSessionId, session);
+        var nonParticipantId = Guid.NewGuid();
+        var command = new AddDiaryEntryCommand(DefaultSessionId, nonParticipantId, DefaultText);
+
+        // Act & Assert
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ForbiddenException>(
+            "only the session creator or an active participant may add diary entries");
+    }
+
+    [Fact]
+    public async Task Handle_NotFoundTakesPrecedenceOver403()
+    {
+        // Arrange — session doesn't exist; non-participant id
+        SetupRepoGetById(DefaultSessionId, null);
+        var command = new AddDiaryEntryCommand(DefaultSessionId, Guid.NewGuid(), DefaultText);
+
+        // Act & Assert — 404 fires before 403 (load-first pattern)
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
     public async Task Handle_SessionNotFound_DoesNotCallSaveChanges()
     {
         // Arrange

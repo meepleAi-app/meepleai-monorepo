@@ -702,14 +702,18 @@ internal static class LiveSessionEndpoints
     /// <summary>
     /// GET /api/v1/live-sessions/{sessionId}/diary — Issue #2570 SP3 T5.
     /// Returns all diary entries ordered by CreatedAt ascending. 404 if session not found.
+    /// 403 if the caller is not the session creator or an active participant.
     /// </summary>
     private static async Task<IResult> HandleGetDiary(
         Guid sessionId,
+        HttpContext httpContext,
         [FromServices] IMediator mediator,
         CancellationToken cancellationToken)
     {
+        var userId = httpContext.User.GetUserId();
+
         var entries = await mediator.Send(
-            new GetLiveSessionDiaryQuery(sessionId),
+            new GetLiveSessionDiaryQuery(sessionId, userId),
             cancellationToken).ConfigureAwait(false);
 
         return Results.Ok(entries);

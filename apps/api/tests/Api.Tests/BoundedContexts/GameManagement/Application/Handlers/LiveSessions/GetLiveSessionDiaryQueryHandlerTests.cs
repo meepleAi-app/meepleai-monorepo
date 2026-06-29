@@ -13,7 +13,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.LiveSess
 /// <summary>
 /// Unit tests for <see cref="GetLiveSessionDiaryQueryHandler"/>.
 /// TDD: Tests written first (RED), then implementation (GREEN).
-/// Issue #2570 SP3 T4.
+/// Issue #2570 SP3 T4 / T5 authz fix.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "GameManagement")]
@@ -23,6 +23,7 @@ public class GetLiveSessionDiaryQueryHandlerTests
     private readonly GetLiveSessionDiaryQueryHandler _handler;
 
     private static readonly Guid DefaultSessionId = Guid.NewGuid();
+    private static readonly Guid DefaultCreatorId = Guid.NewGuid();
     private static readonly Guid DefaultAuthorId = Guid.NewGuid();
 
     public GetLiveSessionDiaryQueryHandlerTests()
@@ -33,11 +34,11 @@ public class GetLiveSessionDiaryQueryHandlerTests
 
     // === Helpers ===
 
-    private static LiveGameSession CreateSession(Guid? sessionId = null)
+    private static LiveGameSession CreateSession(Guid? sessionId = null, Guid? creatorId = null)
     {
         return LiveGameSession.Create(
             sessionId ?? DefaultSessionId,
-            Guid.NewGuid(),
+            creatorId ?? DefaultCreatorId,
             "Test Game",
             TimeProvider.System);
     }
@@ -46,7 +47,7 @@ public class GetLiveSessionDiaryQueryHandlerTests
         Guid sessionId,
         params string[] entryTexts)
     {
-        var session = CreateSession(sessionId);
+        var session = CreateSession(sessionId, DefaultCreatorId);
         // Start the session so diary entries can be added
         session.AddPlayer(DefaultAuthorId, "Host", PlayerColor.Red, TimeProvider.System);
         session.Start(TimeProvider.System);
@@ -84,14 +85,14 @@ public class GetLiveSessionDiaryQueryHandlerTests
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
-    // === Handle: not found ===
+    // === Handle: not found (404 takes precedence over 403) ===
 
     [Fact]
     public async Task Handle_SessionNotFound_ThrowsNotFoundException()
     {
         // Arrange
         SetupRepoGetById(DefaultSessionId, null);
-        var query = new GetLiveSessionDiaryQuery(DefaultSessionId);
+        var query = new GetLiveSessionDiaryQuery(DefaultSessionId, DefaultCreatorId);
 
         // Act & Assert
         var act = () => _handler.Handle(query, CancellationToken.None);
@@ -101,15 +102,50 @@ public class GetLiveSessionDiaryQueryHandlerTests
         exception.ResourceId.Should().Be(DefaultSessionId.ToString());
     }
 
+    // === Handle: authz — non-participant → ForbiddenException (HTTP 403) ===
+
+    [Fact]
+    public async Task Handle_CallerIsNotParticipant_ThrowsForbiddenException()
+    {
+        // Arrange
+        var session = CreateSession(DefaultSessionId, DefaultCreatorId);
+        SetupRepoGetById(DefaultSessionId, session);
+        var nonParticipantId = Guid.NewGuid();
+        var query = new GetLiveSessionDiaryQuery(DefaultSessionId, nonParticipantId);
+
+        // Act & Assert
+        var act = () => _handler.Handle(query, CancellationToken.None);
+        await act.Should().ThrowAsync<ForbiddenException>(
+            "a caller who is neither the creator nor an active player must receive 403");
+    }
+
+    // === Handle: authz — creator can read ===
+
+    [Fact]
+    public async Task Handle_CallerIsCreator_ReturnsDiaryEntries()
+    {
+        // Arrange — creator is DefaultCreatorId (no players needed — creator check fires first)
+        var session = CreateSession(DefaultSessionId, DefaultCreatorId);
+        SetupRepoGetById(DefaultSessionId, session);
+        var query = new GetLiveSessionDiaryQuery(DefaultSessionId, DefaultCreatorId);
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeEmpty("no entries were added to this session");
+    }
+
     // === Handle: empty diary ===
 
     [Fact]
     public async Task Handle_SessionWithNoDiaryEntries_ReturnsEmptyList()
     {
-        // Arrange
-        var session = CreateSession(DefaultSessionId);
+        // Arrange — use creator as caller so authz passes
+        var session = CreateSession(DefaultSessionId, DefaultCreatorId);
         SetupRepoGetById(DefaultSessionId, session);
-        var query = new GetLiveSessionDiaryQuery(DefaultSessionId);
+        var query = new GetLiveSessionDiaryQuery(DefaultSessionId, DefaultCreatorId);
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -132,7 +168,8 @@ public class GetLiveSessionDiaryQueryHandlerTests
             "Third entry");
 
         SetupRepoGetById(DefaultSessionId, session);
-        var query = new GetLiveSessionDiaryQuery(DefaultSessionId);
+        // DefaultAuthorId is an active player (added in CreateActiveSessionWithDiary)
+        var query = new GetLiveSessionDiaryQuery(DefaultSessionId, DefaultCreatorId);
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -148,7 +185,7 @@ public class GetLiveSessionDiaryQueryHandlerTests
         // Arrange
         var session = CreateActiveSessionWithDiary(DefaultSessionId, "Great round!");
         SetupRepoGetById(DefaultSessionId, session);
-        var query = new GetLiveSessionDiaryQuery(DefaultSessionId);
+        var query = new GetLiveSessionDiaryQuery(DefaultSessionId, DefaultCreatorId);
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -168,7 +205,7 @@ public class GetLiveSessionDiaryQueryHandlerTests
         // Arrange
         var session = CreateActiveSessionWithDiary(DefaultSessionId, "Only entry");
         SetupRepoGetById(DefaultSessionId, session);
-        var query = new GetLiveSessionDiaryQuery(DefaultSessionId);
+        var query = new GetLiveSessionDiaryQuery(DefaultSessionId, DefaultCreatorId);
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -184,7 +221,7 @@ public class GetLiveSessionDiaryQueryHandlerTests
         // Arrange
         var session = CreateActiveSessionWithDiary(DefaultSessionId, "Entry A", "Entry B");
         SetupRepoGetById(DefaultSessionId, session);
-        var query = new GetLiveSessionDiaryQuery(DefaultSessionId);
+        var query = new GetLiveSessionDiaryQuery(DefaultSessionId, DefaultCreatorId);
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -198,9 +235,9 @@ public class GetLiveSessionDiaryQueryHandlerTests
     public async Task Handle_CallsRepositoryOnce()
     {
         // Arrange
-        var session = CreateSession(DefaultSessionId);
+        var session = CreateSession(DefaultSessionId, DefaultCreatorId);
         SetupRepoGetById(DefaultSessionId, session);
-        var query = new GetLiveSessionDiaryQuery(DefaultSessionId);
+        var query = new GetLiveSessionDiaryQuery(DefaultSessionId, DefaultCreatorId);
 
         // Act
         await _handler.Handle(query, CancellationToken.None);

@@ -11,6 +11,7 @@ using Api.Tests.Constants;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using FluentAssertions;
 using Xunit;
@@ -328,7 +329,8 @@ public class UpdatePlayerScoreCommandHandlerTests
             _mockScoreRepo.Object,
             _mockUnitOfWork.Object,
             _mockSyncService.Object,
-            _mockBroadcast.Object);
+            _mockBroadcast.Object,
+            NullLogger<UpdatePlayerScoreCommandHandler>.Instance);
     }
 
     private static Session CreateActiveSession(Guid sessionId, Guid participantId)
@@ -440,6 +442,35 @@ public class UpdatePlayerScoreCommandHandlerTests
             It.IsAny<INotification>(),
             It.Is<EventVisibility>(v => v.TargetUserId == participantId),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_ConcurrencyConflict_WhenBroadcastFails_StillThrowsConflictException()
+    {
+        // Regression for the #2563 review finding: the conflict SSE broadcast is fire-and-forget and
+        // must NEVER replace the 409. Since #2563 PublishAsync can propagate a mid-session Redis drop;
+        // if it does during a concurrency conflict, the caller must still receive ConflictException
+        // (409), not the broadcast exception (which the exception middleware would map to 500).
+        var sessionId = Guid.NewGuid();
+        var participantId = Guid.NewGuid();
+        var session = CreateActiveSession(sessionId, participantId);
+
+        _mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>())).ReturnsAsync(session);
+        _mockUnitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateConcurrencyException("Conflict"));
+        _mockBroadcast
+            .Setup(b => b.PublishAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<INotification>(),
+                It.IsAny<EventVisibility>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Redis dropped mid-session"));
+
+        var command = new UpdatePlayerScoreCommand(sessionId, participantId, participantId, 5m, RoundNumber: 1);
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Surfaces the domain 409, NOT the broadcast failure (which would otherwise become a 500).
+        await act.Should().ThrowAsync<ConflictException>();
     }
 }
 

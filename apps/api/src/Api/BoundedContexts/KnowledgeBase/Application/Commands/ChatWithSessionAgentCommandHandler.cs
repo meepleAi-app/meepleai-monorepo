@@ -10,6 +10,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.Models;
 using Api.Observability;
@@ -53,6 +54,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
     private readonly ICopyrightLeakGuard _copyrightLeakGuard;
     private readonly ICopyrightFallbackMessageProvider _fallbackMessageProvider;
     private readonly IOptions<CopyrightLeakGuardOptions> _copyrightOptions;
+    private readonly ILiveSessionStreamGateway _liveSessionStreamGateway;
 
     // Summary generation thresholds
     private const int SummaryThreshold = 10;
@@ -80,7 +82,8 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         ILogger<ChatWithSessionAgentCommandHandler> logger,
         ICopyrightLeakGuard copyrightLeakGuard,
         ICopyrightFallbackMessageProvider fallbackMessageProvider,
-        IOptions<CopyrightLeakGuardOptions> copyrightOptions)
+        IOptions<CopyrightLeakGuardOptions> copyrightOptions,
+        ILiveSessionStreamGateway liveSessionStreamGateway)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _definitionRepository = definitionRepository ?? throw new ArgumentNullException(nameof(definitionRepository));
@@ -99,6 +102,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         _copyrightLeakGuard = copyrightLeakGuard ?? throw new ArgumentNullException(nameof(copyrightLeakGuard));
         _fallbackMessageProvider = fallbackMessageProvider ?? throw new ArgumentNullException(nameof(fallbackMessageProvider));
         _copyrightOptions = copyrightOptions ?? throw new ArgumentNullException(nameof(copyrightOptions));
+        _liveSessionStreamGateway = liveSessionStreamGateway ?? throw new ArgumentNullException(nameof(liveSessionStreamGateway));
     }
 
     /// <summary>
@@ -542,7 +546,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             _ = GenerateConversationSummaryAsync(thread.Id);
         }
 
-        // Build citation DTOs for SSE response
+        // Build citation DTOs for SSE response (reused for both StreamingComplete and session:chat broadcast).
         var citationDtos = finalCitations.Select(c => new CitationDto(
             c.DocumentId,
             c.PageNumber,
@@ -551,6 +555,44 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             c.CopyrightTier.ToString().ToLowerInvariant(),
             c.ParaphrasedSnippet,
             c.IsPublic)).ToList();
+
+        // SP2 T8 — Broadcast session:chat on the live-session stream (ADR-083).
+        // Fires exactly once per completed chat, AFTER DB persist (DB is record-of-truth).
+        // Reuses the already-built citationDtos (tier-nulling inherited, no Protected verbatim leak).
+        // Wrapped in try/catch-swallow: a Redis/broadcast failure MUST NEVER break the user's stream.
+        if (liveSession is not null)
+        {
+            var broadcastMessageId = thread.Messages
+                .OrderByDescending(m => m.SequenceNumber)
+                .Select(m => (Guid?)m.Id)
+                .FirstOrDefault() ?? Guid.Empty;
+
+            var chatBroadcastPayload = new
+            {
+                sessionId = liveSession.Id,
+                messageId = broadcastMessageId,
+                senderId = definition.Name,
+                content = responseText,
+                visibility = "shared",
+                timestamp = DateTime.UtcNow.ToString("o"),
+                citations = citationDtos
+            };
+
+            try
+            {
+                await _liveSessionStreamGateway.BroadcastAsync(
+                    liveSession.Id,
+                    new LiveSessionStreamEvent("session:chat", chatBroadcastPayload, broadcastMessageId.ToString()),
+                    cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "session:chat broadcast failed for live session {LiveSessionId}; stream unaffected",
+                    liveSession.Id);
+            }
+        }
 
         yield return CreateEvent(
             StreamingEventType.Complete,

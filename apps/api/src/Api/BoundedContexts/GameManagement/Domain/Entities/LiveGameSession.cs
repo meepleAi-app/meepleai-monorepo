@@ -63,7 +63,6 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public JsonDocument? GameState { get; private set; }
     public string? Notes { get; private set; }
     public AgentSessionMode AgentMode { get; private set; }
-    public Guid? ChatSessionId { get; private set; }
     public TurnAdvancePolicy TurnAdvancePolicy { get; private set; }
     /// <summary>
     /// Id of the SessionTracking.Session companion created at-creation (Saga, ADR-083 SP0).
@@ -184,7 +183,6 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         JsonDocument? gameState,
         string? notes,
         AgentSessionMode agentMode,
-        Guid? chatSessionId,
         TurnAdvancePolicy turnAdvancePolicy,
         Guid? trackingSessionId,
         uint xmin,
@@ -223,7 +221,6 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
             GameState = gameState,
             Notes = notes,
             AgentMode = agentMode,
-            ChatSessionId = chatSessionId,
             TurnAdvancePolicy = turnAdvancePolicy,
             TrackingSessionId = trackingSessionId,
             Xmin = xmin
@@ -820,24 +817,6 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
             throw new ValidationException("Toolkit ID cannot be empty");
 
         ToolkitId = toolkitId;
-        var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
-        UpdatedAt = now;
-    }
-
-    /// <summary>
-    /// Sets the AI agent mode for the session.
-    /// </summary>
-    public void SetAgentMode(AgentSessionMode mode, Guid? chatSessionId = null, TimeProvider? timeProvider = null)
-    {
-        if (Status == LiveSessionStatus.Completed)
-            throw new ConflictException("Cannot change agent mode on a completed session");
-
-        if (mode != AgentSessionMode.None && chatSessionId == null)
-            throw new ValidationException("Chat session ID is required when enabling an AI agent");
-
-        AgentMode = mode;
-        ChatSessionId = mode == AgentSessionMode.None ? null : chatSessionId;
-
         var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
         UpdatedAt = now;
     }

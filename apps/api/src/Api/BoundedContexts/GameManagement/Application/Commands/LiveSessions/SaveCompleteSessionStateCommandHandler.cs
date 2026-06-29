@@ -23,7 +23,6 @@ internal sealed class SaveCompleteSessionStateCommandHandler
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly IMediator _mediator;
     private readonly ITierEnforcementService _tierEnforcementService;
-    private readonly ILogger<SaveCompleteSessionStateCommandHandler> _logger;
 
     public SaveCompleteSessionStateCommandHandler(
         ILiveSessionRepository sessionRepository,
@@ -34,7 +33,7 @@ internal sealed class SaveCompleteSessionStateCommandHandler
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _tierEnforcementService = tierEnforcementService ?? throw new ArgumentNullException(nameof(tierEnforcementService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _ = logger; // logger injected for DI compatibility; no log sites remain after ADR-083 SP0 dead-code removal
     }
 
     public async Task<SessionSaveResultDto> Handle(
@@ -75,15 +74,7 @@ internal sealed class SaveCompleteSessionStateCommandHandler
             new CreateSnapshotCommand(command.SessionId, SnapshotTrigger.ManualSave, "Complete session state save", null),
             cancellationToken).ConfigureAwait(false);
 
-        // 5. Persist agent state if ChatSessionId has value (Issue #122 — agent state persistence placeholder)
-        if (session.ChatSessionId.HasValue)
-        {
-            _logger.LogDebug(
-                "Agent state persistence not yet wired for session {SessionId}, chat session {ChatSessionId}",
-                command.SessionId, session.ChatSessionId.Value);
-        }
-
-        // 6. Photo count from snapshot DTO
+        // 5. Photo count from snapshot DTO
         var photoCount = snapshotDto.AttachmentCount;
 
         // 7. Generate recap text

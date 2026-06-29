@@ -447,7 +447,6 @@ const MOCK_SESSION_DTO = {
   currentTurnIndex: 0,
   currentTurnPlayerId: null,
   agentMode: 'Active',
-  chatSessionId: null,
   notes: null,
   players: [
     {

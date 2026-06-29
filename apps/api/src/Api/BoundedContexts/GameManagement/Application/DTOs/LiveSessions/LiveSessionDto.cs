@@ -25,7 +25,6 @@ internal record LiveSessionDto(
     int CurrentTurnIndex,
     Guid? CurrentTurnPlayerId,
     AgentSessionMode AgentMode,
-    Guid? ChatSessionId,
     string? Notes,
     IReadOnlyList<LiveSessionPlayerDto> Players,
     IReadOnlyList<LiveSessionTeamDto> Teams,

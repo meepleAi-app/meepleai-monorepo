@@ -270,7 +270,6 @@ public class ParseAndRecordScoreCommandHandlerTests
             CurrentTurnIndex: currentTurnIndex,
             CurrentTurnPlayerId: null,
             AgentMode: AgentSessionMode.None,
-            ChatSessionId: null,
             Notes: null,
             Players: new List<LiveSessionPlayerDto>(),
             Teams: new List<LiveSessionTeamDto>(),

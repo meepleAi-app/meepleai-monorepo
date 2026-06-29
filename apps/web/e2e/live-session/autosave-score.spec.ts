@@ -55,7 +55,6 @@ async function mockLiveSession(page: import('@playwright/test').Page) {
         currentTurnIndex: 0,
         currentTurnPlayerId: C.PARTICIPANT_ID,
         agentMode: 'None',
-        chatSessionId: null,
         notes: null,
         players: [
           {

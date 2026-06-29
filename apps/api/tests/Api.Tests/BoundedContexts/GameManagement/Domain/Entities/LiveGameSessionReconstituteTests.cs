@@ -48,7 +48,6 @@ public class LiveGameSessionReconstituteTests
             gameState: null,
             notes: "first turn ok",
             agentMode: AgentSessionMode.None,
-            chatSessionId: null,
             turnAdvancePolicy: TurnAdvancePolicy.Manual,
             trackingSessionId: null,
             xmin: 42u,

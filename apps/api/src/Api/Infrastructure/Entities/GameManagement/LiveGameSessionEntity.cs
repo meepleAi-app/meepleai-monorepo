@@ -62,7 +62,7 @@ public class LiveGameSessionEntity
 
     // AI Integration
     public int AgentMode { get; set; } // AgentSessionMode enum: 0=None,1=Assistant,2=GameMaster
-    public Guid? ChatSessionId { get; set; }
+    // chat_session_id column is retained in DB (nullable, all rows null) — domain property removed per ADR-083 SP0.
 
     // ADR-083 SP0: id of the SessionTracking.Session companion (cross-BC correlation bridge).
     public Guid? TrackingSessionId { get; set; }

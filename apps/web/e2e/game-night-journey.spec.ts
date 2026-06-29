@@ -268,7 +268,6 @@ test.describe('Game Night Journey', () => {
       currentTurnIndex: 0,
       currentTurnPlayerId: LIFECYCLE_CONSTANTS.PLAYER_ID_1,
       agentMode: 'None',
-      chatSessionId: null,
       notes: null,
       players: [
         {
@@ -660,7 +659,6 @@ async function setupJourneyMocks(page: Page, c: JourneyConstants): Promise<void>
           currentTurnIndex: 0,
           currentTurnPlayerId: c.PLAYER_ID_1,
           agentMode: 'None',
-          chatSessionId: null,
           notes: null,
           players: [
             {

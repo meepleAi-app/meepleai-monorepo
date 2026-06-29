@@ -128,7 +128,9 @@ export function ActionLogTimeline({
                         key={`${entry.id}-cite-${index}`}
                         data-slot="action-log-citation"
                         title={citation.snippet ?? citation.text ?? undefined}
-                        className="inline-flex max-w-[10rem] items-center gap-1 rounded-full bg-muted px-2 py-0.5 font-mono text-[0.65rem] font-medium text-sky-400"
+                        // Reuse the knowledge-base citation color (mirrors CitationChip, AA-compliant
+                        // in both themes) — citations are KB content. #2564.
+                        className="inline-flex max-w-[10rem] items-center gap-1 rounded-full bg-[hsl(var(--c-kb)/0.12)] px-2 py-0.5 font-mono text-[0.65rem] font-medium text-[hsl(var(--c-kb))]"
                       >
                         <span aria-hidden="true">📖</span>
                         {typeof citation.page === 'number' && <span>p. {citation.page}</span>}

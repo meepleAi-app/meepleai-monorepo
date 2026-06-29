@@ -97,14 +97,37 @@ internal sealed class LiveSessionStreamGateway : ILiveSessionStreamGateway
         var channel = Channel.CreateUnbounded<LiveSessionStreamEvent>(
             new UnboundedChannelOptions { SingleWriter = false, SingleReader = true });
 
-        // Launch all three pump tasks concurrently; they each write into the channel.
-        // Complete the writer only after ALL pumps have finished (or ct is cancelled).
-        _ = RunAllPumpsAsync(channel.Writer, liveSessionId, userId, lastEventId, companionId, ct);
+        // Derive a linked CTS so that cancellation of EITHER the caller's token OR early
+        // exit from the consumer's await-foreach (via the finally below) stops the pumps.
+        // Disposed in the finally to release OS handles promptly.
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
 
-        // Yield events as they arrive from any source.
-        await foreach (var evt in channel.Reader.ReadAllAsync(ct).ConfigureAwait(false))
+        // Launch all three pump tasks concurrently; they each write into the channel.
+        // Complete the writer only after ALL pumps have finished (or linkedCts is cancelled).
+        var pumpsTask = RunAllPumpsAsync(channel.Writer, liveSessionId, userId, lastEventId, companionId, linkedCts.Token);
+
+        try
         {
-            yield return evt;
+            // Yield events as they arrive from any source.
+            await foreach (var evt in channel.Reader.ReadAllAsync(ct).ConfigureAwait(false))
+            {
+                yield return evt;
+            }
+        }
+        finally
+        {
+            // Cancel the pumps when enumeration ends (including early break or exception).
+            // This handles the case where the consumer breaks out before the channel completes,
+            // which would otherwise leave the pumps running forever on an unbounded channel.
+            await linkedCts.CancelAsync().ConfigureAwait(false);
+            try
+            {
+                await pumpsTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected: pumps were cancelled via linkedCts — swallow.
+            }
         }
     }
 

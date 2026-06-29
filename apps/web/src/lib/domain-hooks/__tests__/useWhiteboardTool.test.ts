@@ -8,12 +8,14 @@
  * - saveStrokes: debounced 500ms, calls correct endpoint
  * - saveStructured: debounced 500ms, calls correct endpoint
  * - clear: immediate, resets strokes and tokens
- * - applySSEEvent: stroke-added, structured-updated, whiteboard-cleared
- * - SSE native stream listener: URL, event name, event dispatch (#2579)
+ * - applySSEEvent (manual delta API): stroke-added, structured-updated, whiteboard-cleared
+ * - SSE native stream listener (#2579): URL, event name, debounced refetch behavior
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
+
+// Note: fake timers are used in the SSE native stream listener tests (debounce assertions).
 
 import { useWhiteboardTool } from '../useWhiteboardTool';
 import type { WhiteboardState, WhiteboardSSEEvent, Stroke } from '@/components/session/types';
@@ -532,68 +534,161 @@ describe('SSE native stream listener', () => {
     expect(mockEventSourceInstances[0]?.close).toHaveBeenCalled();
   });
 
-  it('applies stroke-added event dispatched as session:whiteboard', async () => {
+  // ── Re-fetch behavior (correct SSE handler) ──────────────────────────────────
+  // The backend session:whiteboard payloads carry opaque `dataJson`/`structuredJson`
+  // blobs — the FE cannot delta-apply them. The hook uses SSE-as-signal + REST-as-truth:
+  // each event triggers a debounced re-fetch of GET /whiteboard.
+
+  it('triggers a GET /whiteboard refetch when a BE-shaped session:whiteboard event arrives', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
     const { result } = renderHook(() =>
       useWhiteboardTool({ sessionId: SESSION_ID, apiBaseUrl: API_BASE })
     );
+    // Wait for initial load
     await waitFor(() => expect(result.current.isLoading).toBe(false));
+    const fetchCallsAfterLoad = fetchMockSSE.mock.calls.length;
 
-    const instance = mockEventSourceInstances[0] as unknown as MockEventSource;
-    act(() => {
-      instance.emit('session:whiteboard', { type: 'stroke-added', stroke: MOCK_STROKE });
-    });
-
-    expect(result.current.whiteboardState?.strokes).toHaveLength(1);
-    expect(result.current.whiteboardState?.strokes[0]).toEqual(MOCK_STROKE);
-  });
-
-  it('applies structured-updated event dispatched as session:whiteboard', async () => {
-    const { result } = renderHook(() =>
-      useWhiteboardTool({ sessionId: SESSION_ID, apiBaseUrl: API_BASE })
-    );
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-
-    const newTokens = [{ id: 'tok-x', color: '#0ea5e9', label: 'X', gridX: 1, gridY: 1 }];
+    // Emit a realistic BE-shaped StrokeAddedEvent payload (no `type` field)
     const instance = mockEventSourceInstances[0] as unknown as MockEventSource;
     act(() => {
       instance.emit('session:whiteboard', {
-        type: 'structured-updated',
-        tokens: newTokens,
-        gridSize: '6x6',
-        showGrid: false,
-        mode: 'structured',
+        sessionId: SESSION_ID,
+        strokeId: 'stroke-uuid-1',
+        dataJson: '{"points":[{"x":0,"y":0}]}',
+        modifiedBy: 'user-uuid-1',
       });
     });
 
-    expect(result.current.whiteboardState?.tokens).toEqual(newTokens);
-    expect(result.current.whiteboardState?.gridSize).toBe('6x6');
-    expect(result.current.whiteboardState?.showGrid).toBe(false);
+    // Before debounce fires: no extra fetch yet
+    expect(fetchMockSSE.mock.calls.length).toBe(fetchCallsAfterLoad);
+
+    // Advance past debounce (200ms)
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    // After debounce: one additional GET /whiteboard call
+    await waitFor(() => {
+      expect(fetchMockSSE.mock.calls.length).toBeGreaterThan(fetchCallsAfterLoad);
+    });
+    const lastCall = fetchMockSSE.mock.calls[fetchMockSSE.mock.calls.length - 1] as [
+      string,
+      RequestInit,
+    ];
+    expect(lastCall[0]).toBe(`${API_BASE}/api/v1/live-sessions/${SESSION_ID}/whiteboard`);
+    expect(lastCall[1]).toMatchObject({ credentials: 'include' });
+
+    vi.useRealTimers();
   });
 
-  it('applies whiteboard-cleared event dispatched as session:whiteboard', async () => {
-    const stateWithData: WhiteboardState = {
-      ...MOCK_STATE,
-      strokes: [MOCK_STROKE],
-      tokens: [{ id: 't1', color: '#ef4444', label: 'A', gridX: 0, gridY: 0 }],
-    };
-    fetchMockSSE = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => stateWithData,
-    });
-    global.fetch = fetchMockSSE;
+  it('coalesces multiple rapid session:whiteboard events into ONE refetch', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
 
     const { result } = renderHook(() =>
       useWhiteboardTool({ sessionId: SESSION_ID, apiBaseUrl: API_BASE })
     );
-    await waitFor(() => expect(result.current.whiteboardState?.strokes).toHaveLength(1));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    const fetchCallsAfterLoad = fetchMockSSE.mock.calls.length;
+
+    const instance = mockEventSourceInstances[0] as unknown as MockEventSource;
+
+    // Emit 3 stroke events in rapid succession (within debounce window)
+    act(() => {
+      instance.emit('session:whiteboard', {
+        sessionId: SESSION_ID,
+        strokeId: 'a',
+        dataJson: '{}',
+        modifiedBy: 'u1',
+      });
+      instance.emit('session:whiteboard', {
+        sessionId: SESSION_ID,
+        strokeId: 'b',
+        dataJson: '{}',
+        modifiedBy: 'u1',
+      });
+      instance.emit('session:whiteboard', {
+        sessionId: SESSION_ID,
+        strokeId: 'c',
+        dataJson: '{}',
+        modifiedBy: 'u1',
+      });
+    });
+
+    // Advance past debounce
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    await waitFor(() => {
+      expect(fetchMockSSE.mock.calls.length).toBeGreaterThan(fetchCallsAfterLoad);
+    });
+
+    // Exactly ONE refetch despite three events
+    const refetchCount = fetchMockSSE.mock.calls.length - fetchCallsAfterLoad;
+    expect(refetchCount).toBe(1);
+
+    vi.useRealTimers();
+  });
+
+  it('does NOT refetch before the debounce window expires', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    const { result } = renderHook(() =>
+      useWhiteboardTool({ sessionId: SESSION_ID, apiBaseUrl: API_BASE })
+    );
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    const fetchCallsAfterLoad = fetchMockSSE.mock.calls.length;
 
     const instance = mockEventSourceInstances[0] as unknown as MockEventSource;
     act(() => {
-      instance.emit('session:whiteboard', { type: 'whiteboard-cleared' });
+      instance.emit('session:whiteboard', {
+        sessionId: SESSION_ID,
+        strokeId: 'x',
+        dataJson: '{}',
+        modifiedBy: 'u1',
+      });
     });
 
-    expect(result.current.whiteboardState?.strokes).toHaveLength(0);
-    expect(result.current.whiteboardState?.tokens).toHaveLength(0);
+    // Advance only 100ms — debounce has NOT fired yet
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+
+    expect(fetchMockSSE.mock.calls.length).toBe(fetchCallsAfterLoad);
+
+    vi.useRealTimers();
+  });
+
+  it('cancels the debounced refetch timer on unmount (no fetch after unmount)', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    const { result, unmount } = renderHook(() =>
+      useWhiteboardTool({ sessionId: SESSION_ID, apiBaseUrl: API_BASE })
+    );
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    const fetchCallsAfterLoad = fetchMockSSE.mock.calls.length;
+
+    const instance = mockEventSourceInstances[0] as unknown as MockEventSource;
+    act(() => {
+      instance.emit('session:whiteboard', {
+        sessionId: SESSION_ID,
+        strokeId: 'y',
+        dataJson: '{}',
+        modifiedBy: 'u1',
+      });
+    });
+
+    // Unmount before debounce fires
+    unmount();
+
+    // Advance past debounce — timer should have been cleared
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+
+    expect(fetchMockSSE.mock.calls.length).toBe(fetchCallsAfterLoad);
+
+    vi.useRealTimers();
   });
 });

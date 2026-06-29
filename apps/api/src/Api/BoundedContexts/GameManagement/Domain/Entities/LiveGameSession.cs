@@ -91,6 +91,23 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public bool IsActive => Status is LiveSessionStatus.InProgress or LiveSessionStatus.Paused or LiveSessionStatus.Setup;
     public LiveSessionPlayer? Host => _players.FirstOrDefault(p => p.Role == PlayerRole.Host && p.IsActive);
 
+    /// <summary>
+    /// Returns true if <paramref name="userId"/> is authorized to act on this session as a participant:
+    /// the session creator, OR an active linked player. Guest players (UserId == null) never match,
+    /// and a removed/deactivated player (IsActive == false) loses access (#2561).
+    /// Single source of truth for live-session participant authorization. Issue #2573.
+    /// </summary>
+    public bool IsAuthorizedParticipant(Guid userId)
+    {
+        if (userId == Guid.Empty)
+        {
+            return false;
+        }
+
+        return CreatedByUserId == userId
+            || _players.Any(p => p.IsActive && p.UserId == userId);
+    }
+
     // === Factory Methods ===
 
     /// <summary>

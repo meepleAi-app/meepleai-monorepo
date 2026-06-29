@@ -162,11 +162,18 @@
       "targets": [
         {
           "expr": "histogram_quantile(0.95, rate(meepleai_rag_citations_per_answer_bucket[5m]))",
-          "legendFormat": "P95 citations/answer"
+          "legendFormat": "P95 citations/answer",
+          "refId": "A"
         },
         {
           "expr": "histogram_quantile(0.50, rate(meepleai_rag_citations_per_answer_bucket[5m]))",
-          "legendFormat": "P50 citations/answer"
+          "legendFormat": "P50 citations/answer",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(meepleai_rag_citations_per_answer_bucket{le=\"0\"}[5m]) / (rate(meepleai_rag_citations_per_answer_count[5m]) > 0)",
+          "legendFormat": "grounded-but-uncited fraction (le=0)",
+          "refId": "C"
         }
       ],
       "fieldConfig": {

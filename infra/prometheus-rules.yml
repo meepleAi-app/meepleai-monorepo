@@ -990,7 +990,7 @@ groups:
   #     removed (SP5-c or later).
   #
   # Metric: meepleai.rag.first_token_latency (Histogram<double>, ms)
-  #   Code: MeepleAiMetrics.Rag.cs:38-41
+  #   Code: MeepleAiMetrics.Rag.cs:78-81
   #   Scraped name: meepleai_rag_first_token_latency_bucket/_count/_sum
   #
   # Cardinality: metric recorded with NO session/game/user tags (bounded safe).

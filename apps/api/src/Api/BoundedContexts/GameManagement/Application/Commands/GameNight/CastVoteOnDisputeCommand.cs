@@ -7,6 +7,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
 /// Part of the democratic override voting system.
 /// </summary>
 internal record CastVoteOnDisputeCommand(
+    Guid SessionId,
     Guid DisputeId,
     Guid PlayerId,
     bool AcceptsVerdict

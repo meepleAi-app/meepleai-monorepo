@@ -44,6 +44,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/start", HandleStartSession)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(404)
             .Produces(409)
@@ -53,6 +54,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/pause", HandlePauseSession)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(404)
             .Produces(409)
@@ -61,6 +63,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/resume", HandleResumeSession)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(404)
             .Produces(409)
@@ -69,6 +72,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/complete", HandleCompleteSession)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(404)
             .Produces(409)
@@ -78,6 +82,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/save", HandleSaveSession)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(404)
             .Produces(409)
@@ -86,6 +91,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/players", HandleAddPlayer)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<Guid>(201)
             .Produces(400)
             .Produces(404)
@@ -94,6 +100,7 @@ internal static class LiveSessionEndpoints
 
         group.MapDelete("/live-sessions/{sessionId}/players/{playerId}", HandleRemovePlayer)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(404)
             .Produces(409)
@@ -102,6 +109,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPut("/live-sessions/{sessionId}/turn-order", HandleUpdateTurnOrder)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(400)
             .Produces(404)
@@ -110,6 +118,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/teams", HandleCreateTeam)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<Guid>(201)
             .Produces(400)
             .Produces(404)
@@ -118,6 +127,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPut("/live-sessions/{sessionId}/teams/{teamId}/players/{playerId}", HandleAssignPlayerToTeam)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(404)
             .WithTags("LiveSessions")
@@ -125,6 +135,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/scores", HandleRecordScore)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(400)
             .Produces(404)
@@ -133,6 +144,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPut("/live-sessions/{sessionId}/scores", HandleEditScore)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(400)
             .Produces(404)
@@ -141,6 +153,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/advance-turn", HandleAdvanceTurn)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(404)
             .Produces(409)
@@ -149,6 +162,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/advance-phase", HandleAdvancePhase)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(400)
             .Produces(404)
@@ -159,6 +173,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPut("/live-sessions/{sessionId}/phases", HandleConfigurePhases)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(400)
             .Produces(404)
@@ -168,6 +183,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/trigger-snapshot", HandleTriggerSnapshot)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<SessionSnapshotDto>(201)
             .Produces(204)
             .Produces(400)
@@ -178,6 +194,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPut("/live-sessions/{sessionId}/notes", HandleUpdateNotes)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(404)
             .WithTags("LiveSessions")
@@ -185,6 +202,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/scores/parse", HandleParseScore)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<ScoreParseResultDto>(200)
             .Produces(400)
             .Produces(404)
@@ -194,6 +212,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/scores/confirm", HandleConfirmScore)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(400)
             .Produces(404)
@@ -202,6 +221,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/save-complete", HandleSaveComplete)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<SessionSaveResultDto>(200)
             .Produces(404)
             .Produces(409)
@@ -211,6 +231,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/setup-checklist", HandleGenerateSetupChecklist)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<SetupChecklistData>(200)
             .Produces(400)
             .Produces(404)
@@ -221,6 +242,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPut("/live-sessions/{sessionId}/setup-checklist", HandleUpdateSetupChecklist)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(400)
             .Produces(404)
@@ -257,6 +279,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/disputes", HandleOpenDispute)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<Guid>(201)
             .Produces(400)
             .Produces(404)
@@ -266,6 +289,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPut("/live-sessions/{sessionId}/disputes/{disputeId}/respond", HandleRespondToDispute)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(400)
             .Produces(404)
@@ -275,6 +299,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/disputes/{disputeId}/timeout", HandleRespondentTimeout)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(400)
             .Produces(404)
@@ -284,6 +309,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/disputes/{disputeId}/vote", HandleCastVote)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(400)
             .Produces(404)
@@ -293,6 +319,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/disputes/{disputeId}/tally", HandleTallyVotes)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(400)
             .Produces(404)
@@ -328,6 +355,7 @@ internal static class LiveSessionEndpoints
 
         group.MapGet("/live-sessions/{sessionId}", HandleGetSession)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<LiveSessionDto>(200)
             .Produces(404)
             .WithTags("LiveSessions")
@@ -336,6 +364,7 @@ internal static class LiveSessionEndpoints
 
         group.MapGet("/live-sessions/{sessionId}/scores", HandleGetSessionScores)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<IReadOnlyList<LiveSessionRoundScoreDto>>(200)
             .Produces(404)
             .WithTags("LiveSessions")
@@ -343,6 +372,7 @@ internal static class LiveSessionEndpoints
 
         group.MapGet("/live-sessions/{sessionId}/players", HandleGetSessionPlayers)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<IReadOnlyList<LiveSessionPlayerDto>>(200)
             .Produces(404)
             .WithTags("LiveSessions")
@@ -350,6 +380,7 @@ internal static class LiveSessionEndpoints
 
         group.MapGet("/live-sessions/{sessionId}/phases", HandleGetTurnPhases)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<TurnPhasesDto>(200)
             .Produces(404)
             .WithTags("LiveSessions")
@@ -358,6 +389,7 @@ internal static class LiveSessionEndpoints
 
         group.MapGet("/live-sessions/{sessionId}/tools", HandleGetSessionTools)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<SessionToolsDto>(200)
             .Produces(404)
             .WithTags("LiveSessions")
@@ -366,6 +398,7 @@ internal static class LiveSessionEndpoints
 
         group.MapGet("/live-sessions/{sessionId}/context", HandleGetSessionContext)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<GameSessionContextDto>(200)
             .Produces(404)
             .WithTags("LiveSessions")
@@ -374,6 +407,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/context/refresh", HandleRefreshSessionContext)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<GameSessionContextDto>(200)
             .Produces(404)
             .WithTags("LiveSessions")
@@ -382,6 +416,7 @@ internal static class LiveSessionEndpoints
 
         group.MapGet("/live-sessions/{sessionId}/resume-context", HandleGetResumeContext)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<SessionResumeContextDto>(200)
             .Produces(404)
             .WithTags("LiveSessions")
@@ -746,7 +781,7 @@ internal static class LiveSessionEndpoints
         CancellationToken cancellationToken)
     {
         await mediator.Send(
-            new RespondToDisputeCommand(disputeId, request.RespondentPlayerId, request.RespondentClaim),
+            new RespondToDisputeCommand(sessionId, disputeId, request.RespondentPlayerId, request.RespondentClaim),
             cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
@@ -757,7 +792,7 @@ internal static class LiveSessionEndpoints
         [FromServices] IMediator mediator,
         CancellationToken cancellationToken)
     {
-        await mediator.Send(new RespondentTimeoutCommand(disputeId), cancellationToken).ConfigureAwait(false);
+        await mediator.Send(new RespondentTimeoutCommand(sessionId, disputeId), cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
 
@@ -769,7 +804,7 @@ internal static class LiveSessionEndpoints
         CancellationToken cancellationToken)
     {
         await mediator.Send(
-            new CastVoteOnDisputeCommand(disputeId, request.PlayerId, request.AcceptsVerdict),
+            new CastVoteOnDisputeCommand(sessionId, disputeId, request.PlayerId, request.AcceptsVerdict),
             cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
@@ -782,7 +817,7 @@ internal static class LiveSessionEndpoints
         CancellationToken cancellationToken)
     {
         await mediator.Send(
-            new TallyDisputeVotesCommand(disputeId, request.OverrideRule),
+            new TallyDisputeVotesCommand(sessionId, disputeId, request.OverrideRule),
             cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }

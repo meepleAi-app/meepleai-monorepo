@@ -14,7 +14,7 @@
  * - Connection status tracking
  *
  * Backend endpoints:
- * - GET  /api/v1/game-sessions/{sessionId}/stream/v2  (SSE, typed events)
+ * - GET  /api/v1/live-sessions/{sessionId}/stream  (SSE, native stream, typed events)
  * - PATCH /api/v1/game-sessions/{sessionId}/toolkit-state/{widgetType}?toolkitId={toolkitId}
  *
  * @example
@@ -96,16 +96,12 @@ export function useWidgetSync({
   onRemoteUpdateRef.current = onRemoteUpdate;
 
   // ---- SSE subscription ----
-  // SP2: stays on legacy /game-sessions stream until toolkit/whiteboard events are
-  // forwarded to the native /live-sessions stream — see #2561 / SP5.
-  // This hook is mounted on the /toolkit/[sessionId] surface (NOT the canonical
-  // /sessions/[id]/live view) and consumes `session:toolkit` events which the
-  // native stream does not yet emit.
+  // Consumes the native live-session stream (/live-sessions/{id}/stream).
   useEffect(() => {
     if (!enabled || !sessionId) return;
 
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE || '';
-    const url = `${baseUrl}/api/v1/game-sessions/${sessionId}/stream/v2`;
+    const url = `${baseUrl}/api/v1/live-sessions/${sessionId}/stream`;
     const es = new EventSource(url, { withCredentials: true });
     eventSourceRef.current = es;
 

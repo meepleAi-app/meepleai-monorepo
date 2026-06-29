@@ -127,19 +127,23 @@ internal class HybridSearchService : IHybridSearchService
 
         var results = vectorResults.Select((r, index) =>
         {
-            var chunkRoleTags = (GameBookRole)r.RoleTags;
+            var embedding = r.Embedding;
+            var chunkRoleTags = (GameBookRole)embedding.RoleTags;
             var baseScore = 1.0f / (index + 1); // normalized rank score
             var roleBoost = ComputeRoleMatchBoost(queryRoleHint, chunkRoleTags);
             return new HybridSearchResult
             {
-                ChunkId = $"{r.VectorDocumentId}_{r.ChunkIndex}",
-                Content = r.TextContent,
-                PdfDocumentId = r.VectorDocumentId.ToString(),
+                ChunkId = $"{embedding.VectorDocumentId}_{embedding.ChunkIndex}",
+                Content = embedding.TextContent,
+                PdfDocumentId = embedding.VectorDocumentId.ToString(),
                 GameId = gameId,
-                ChunkIndex = r.ChunkIndex,
-                PageNumber = r.PageNumber,
+                ChunkIndex = embedding.ChunkIndex,
+                PageNumber = embedding.PageNumber,
+                // HybridScore stays the rank-based base (+ role boost) so within-game ordering
+                // is unchanged. VectorScore carries the RAW cosine (#2568) so the cross-game
+                // merge can break rank-only ties by true query relevance.
                 HybridScore = baseScore + roleBoost,
-                VectorScore = baseScore,
+                VectorScore = (float)r.Score,
                 KeywordScore = null,
                 VectorRank = index + 1,
                 KeywordRank = null,
@@ -268,14 +272,17 @@ internal class HybridSearchService : IHybridSearchService
             : keywordResults.Where(r => documentIds.Any(id =>
                 string.Equals(id.ToString(), r.PdfDocumentId, StringComparison.Ordinal))).ToList();
 
-        // Convert pgvector results to SearchResultItem for RRF fusion
-        var vectorItems = vectorEmbeddings.Select(e => new SearchResultItem
+        // Convert pgvector results to SearchResultItem for RRF fusion.
+        // #2568: carry the raw cosine similarity (was hard-coded 1.0f) so the fused
+        // VectorScore reflects true relevance for the cross-game tiebreak. RRF still ranks
+        // by list position (Rank), so this does NOT change within-game ordering.
+        var vectorItems = vectorEmbeddings.Select(se => new SearchResultItem
         {
-            Score = 1.0f,
-            Text = e.TextContent,
-            PdfId = e.VectorDocumentId.ToString(),
-            ChunkIndex = e.ChunkIndex,
-            Page = e.PageNumber
+            Score = (float)se.Score,
+            Text = se.Embedding.TextContent,
+            PdfId = se.Embedding.VectorDocumentId.ToString(),
+            ChunkIndex = se.Embedding.ChunkIndex,
+            Page = se.Embedding.PageNumber
         }).ToArray();
 
         _logger.LogInformation(
@@ -309,7 +316,7 @@ internal class HybridSearchService : IHybridSearchService
     /// Generates query embedding and performs pgvector cosine similarity search.
     /// Falls back to empty results if embedding generation or search fails (graceful degradation).
     /// </summary>
-    private async Task<List<KbEntities.Embedding>> ExecuteVectorSearchAsync(
+    private async Task<List<KbEntities.ScoredEmbedding>> ExecuteVectorSearchAsync(
         string query,
         Guid gameId,
         int limit,
@@ -327,12 +334,16 @@ internal class HybridSearchService : IHybridSearchService
                 _logger.LogWarning(
                     "Query embedding generation failed: {Error}. Falling back to keyword-only.",
                     embeddingResult.ErrorMessage);
-                return new List<KbEntities.Embedding>();
+                return new List<KbEntities.ScoredEmbedding>();
             }
 
             var queryVector = new Vector(embeddingResult.Embeddings[0]);
 
-            var results = await _vectorStore.SearchAsync(
+            // #2568: use the scored variant so the raw cosine similarity is preserved on each
+            // hit. The cross-game merge (MultiGameHybridSearchService) needs a globally-
+            // comparable signal to break rank-only RRF ties; the cosine is that signal.
+            // Same SQL / ordering / minScore as SearchAsync — additive method (#1653).
+            var results = await _vectorStore.SearchWithScoresAsync(
                 gameId,
                 queryVector,
                 topK: limit,
@@ -352,7 +363,7 @@ internal class HybridSearchService : IHybridSearchService
             _logger.LogWarning(ex,
                 "Vector search failed, falling back to keyword-only for gameId={GameId}",
                 gameId);
-            return new List<KbEntities.Embedding>();
+            return new List<KbEntities.ScoredEmbedding>();
         }
 #pragma warning restore CA1031
     }

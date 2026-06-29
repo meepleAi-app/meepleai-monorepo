@@ -1,9 +1,12 @@
 using System.Net;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities.SessionTracking;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
+using MediatR;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
@@ -27,14 +30,11 @@ namespace Api.Tests.Integration.SessionTracking;
 /// CancellationToken is used to abort the request after headers are inspected.
 ///
 /// Requires Testcontainers (Docker) — CI gate only.
-/// Conservative auth pattern: the test creates a real user+session via
-/// <see cref="TestSessionHelper.CreateUserSessionAsync"/> and then expects either:
-///   - HTTP 200 with the three deprecation headers (session owner, auth middleware honors cookie)
-///   - HTTP 401 (auth middleware does not honor cookie in this test isolation mode)
-/// Both paths are acceptable per the sibling test pattern used in
-/// <see cref="GetCampaignProgressEndpointTests"/>. The 401 path does NOT assert headers
-/// because the deprecation headers are set AFTER the auth+authz check succeeds.
-/// A separate assertion verifies that an UNAUTHENTICATED request never sees the headers.
+///
+/// Session-seeding strategy mirrors <see cref="LiveSessionStreamEndpointTests"/>:
+/// seed a real <see cref="SessionEntity"/> row that the authenticated user owns,
+/// so <c>GetSessionStreamQuery</c> finds it and the handler reaches the header-writing
+/// block at SessionQueryEndpoints.cs:364-368.
 /// </summary>
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
@@ -68,9 +68,9 @@ public sealed class StreamV2DeprecationHeadersEndpointTests : IAsyncLifetime
             {
                 builder.ConfigureTestServices(services =>
                 {
-                    // Replace ISessionBroadcastService with a mock that:
-                    //   - Reports 0 connections (below the 20-connection pool limit)
-                    //   - Returns an empty async-enumerable so the SSE loop exits immediately
+                    // Mock ISessionBroadcastService so:
+                    //   - GetConnectionCount returns 0 (below the 20-connection pool limit)
+                    //   - SubscribeAsync returns an empty SSE stream (stream exits immediately)
                     services.RemoveAll<ISessionBroadcastService>();
                     var mockBroadcast = new Mock<ISessionBroadcastService>();
                     mockBroadcast
@@ -84,12 +84,24 @@ public sealed class StreamV2DeprecationHeadersEndpointTests : IAsyncLifetime
                             It.IsAny<CancellationToken>()))
                         .Returns(EmptyAsyncEnumerable());
                     services.AddSingleton(mockBroadcast.Object);
+
+                    // Mock ISessionSyncService so GetSessionStreamQueryHandler.Handle
+                    // succeeds without a real Redis/in-memory channel.
+                    // The endpoint ignores the IAsyncEnumerable<INotification> return value —
+                    // it calls ISessionBroadcastService.SubscribeAsync directly — but the
+                    // handler still needs ISessionSyncService injected to compile.
+                    services.RemoveAll<ISessionSyncService>();
+                    var mockSync = new Mock<ISessionSyncService>();
+                    mockSync
+                        .Setup(s => s.SubscribeToSessionEvents(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                        .Returns(EmptyNotificationEnumerable());
+                    services.AddSingleton(mockSync.Object);
                 });
             });
 
         using (var scope = _factory.Services.CreateScope())
         {
-            var dbContext = scope.ServiceProvider.GetRequiredService<Api.Infrastructure.MeepleAiDbContext>();
+            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             await dbContext.Database.MigrateAsync();
         }
 
@@ -97,7 +109,6 @@ public sealed class StreamV2DeprecationHeadersEndpointTests : IAsyncLifetime
         {
             // Do NOT follow redirects — let us see 401 directly.
             AllowAutoRedirect = false,
-            // ResponseHeadersRead is set per-request via HttpCompletionOption.
         });
     }
 
@@ -129,136 +140,86 @@ public sealed class StreamV2DeprecationHeadersEndpointTests : IAsyncLifetime
         response.Headers.Contains("Link").Should().BeFalse();
     }
 
-    // ── Test 2: authenticated request receives deprecation headers (or 401 if cookie not honored) ─
+    // ── Test 2: authenticated owner request MUST reach 200 and carry deprecation headers ────
+    //
+    // Seeding strategy (mirrors LiveSessionStreamEndpointTests):
+    //   1. Create a user + auth session via TestSessionHelper.CreateUserSessionAsync.
+    //   2. Insert a SessionEntity owned by that user directly into the DB.
+    //   3. Make a GET request as that user to /stream/v2/{ownedSessionId}.
+    //   4. GetSessionStreamQuery finds the session (isOwner = true) → no NotFoundException.
+    //   5. The handler reaches the deprecation-header block (SessionQueryEndpoints.cs:364-368).
+    //   6. Assert Deprecation, Sunset, and Link headers on the 200 response.
+    //
+    // This test MUST fail if the deprecation headers are removed from the endpoint.
 
     [Fact]
-    public async Task StreamV2_AuthenticatedRequest_ReceivesDeprecationHeaders_When200()
+    public async Task StreamV2_AuthenticatedOwner_ReceivesDeprecationHeaders_On200()
     {
-        // Seed a user + session (real DB rows) so the auth middleware can validate the cookie.
-        using var scope = _factory.Services.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<Api.Infrastructure.MeepleAiDbContext>();
+        // ── Arrange: seed user + owned SessionTracking session ──────────────────
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        // Create a user and a valid auth session (returns userId + raw cookie token).
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
-        var sessionId = Guid.NewGuid(); // Non-existent session — will 404 from GetSessionStreamQuery.
-        var url = string.Format(StreamV2Path, sessionId);
+        // Seed a SessionEntity owned by that user so GetSessionStreamQuery succeeds.
+        var trackingSessionId = Guid.NewGuid();
+        dbContext.SessionTrackingSessions.Add(new SessionEntity
+        {
+            Id = trackingSessionId,
+            UserId = userId,
+            SessionCode = "TST001",
+            SessionType = "Standard",
+            Status = "Active",
+            SessionDate = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = userId,
+            ScoringType = "Points",
+            ScoreData = "{}",
+        });
+        await dbContext.SaveChangesAsync();
 
+        var url = string.Format(StreamV2Path, trackingSessionId);
+
+        // ── Act: authenticated request using ResponseHeadersRead ─────────────────
+        // We read only the response headers — the SSE body is infinite and we
+        // cancel immediately after reading headers (mirrors LiveSessionStreamEndpointTests).
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         var request = TestSessionHelper.CreateAuthenticatedRequest(HttpMethod.Get, url, sessionToken);
-        var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+        using var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token);
 
-        // Conservative dual-acceptance (mirrors GetCampaignProgressEndpointTests pattern):
-        // - 401 if the test-host auth middleware does not honor the seeded session cookie.
-        // - 404 if auth passes but the session doesn't exist (GetSessionStreamQuery throws NotFoundException).
-        // - 200 if auth passes AND the ISessionBroadcastService mock is wired (unlikely for non-existent session).
-        // In ALL non-401 cases we expect the deprecation headers to be present IF the handler body ran.
-        var sc = (int)response.StatusCode;
+        // ── Assert ───────────────────────────────────────────────────────────────
+        // The session exists and the user is its owner → GetSessionStreamQuery succeeds
+        // → the handler writes deprecation headers → 200 text/event-stream.
+        // If this fails with 401, the auth middleware did not honor the seeded cookie
+        // (a test-infrastructure failure, not a production regression).
+        response.StatusCode.Should().Be(HttpStatusCode.OK,
+            $"authenticated owner of session {trackingSessionId} must reach the streaming path " +
+            $"(401 = cookie not honored by test host; 404 = session row missing — both indicate " +
+            $"test-infrastructure issues, not a production regression)");
 
-        if (sc == 401)
-        {
-            // Auth middleware rejected — deprecation headers cannot be present.
-            // This is an expected outcome in certain test isolation configurations.
-            return;
-        }
-
-        // 404 = auth passed, session not found. The handler returns Results.NotFound BEFORE writing headers.
-        // So on 404 the deprecation headers are also NOT present (returned early from the lambda).
-        // On 200 (mock-assisted, unlikely here but covered) headers MUST be present.
-        if (sc == 404)
-        {
-            // Headers NOT present: the endpoint returns 404 early before the header-writing block.
-            // This is also an acceptable outcome — the headers are only written when the stream actually starts.
-            return;
-        }
-
-        // For any 200 response the deprecation headers MUST be present and correct.
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        AssertDeprecationHeaders(response, sessionId);
+        // All three deprecation headers MUST be present on the 200 response.
+        AssertDeprecationHeaders(response, trackingSessionId);
     }
 
-    // ── Test 3: verify header VALUES when endpoint streams (mock short-circuits the stream) ──
+    // ── Test 3: headers absent before 200 (verify ordering) ─────────────────────────────────
 
-    /// <summary>
-    /// This test uses a <see cref="Mock{T}"/> of <c>ISessionBroadcastService</c> and a
-    /// secondary factory override of <c>IMediator</c> to short-circuit the handler so we
-    /// can inspect headers on a 200 response without a real database session.
-    ///
-    /// CI-NEEDED: this test cannot run without a real Testcontainers Postgres instance because
-    /// <c>IntegrationWebApplicationFactory</c> always uses a real DB for migrations.
-    /// The IMediator mock bypasses the DB-backed <c>GetSessionStreamQuery</c> handler.
-    /// </summary>
     [Fact]
-    public async Task StreamV2_WithMockedMediator_HeadersAreCorrect()
+    public async Task StreamV2_Unauthenticated_NoDeprecationHeaders_SentBeforeAuth()
     {
+        // Sanity-check counterpart of Test 2: an unauthenticated request to a
+        // non-existent session MUST NOT carry deprecation headers (the headers are
+        // only appended after auth+session-lookup succeeds).
         var sessionId = Guid.NewGuid();
-
-        // Build a second factory with IMediator mocked so GetSessionStreamQuery
-        // doesn't hit the DB, and the handler proceeds to write headers.
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync($"stream_v2_mock_{Guid.NewGuid():N}");
-        await using var localFactory = IntegrationWebApplicationFactory
-            .Create(connectionString)
-            .WithWebHostBuilder(builder =>
-            {
-                builder.ConfigureTestServices(services =>
-                {
-                    // Mock ISessionBroadcastService
-                    services.RemoveAll<ISessionBroadcastService>();
-                    var mockBroadcast = new Mock<ISessionBroadcastService>();
-                    mockBroadcast.Setup(s => s.GetConnectionCount(It.IsAny<Guid>())).Returns(0);
-                    mockBroadcast
-                        .Setup(s => s.SubscribeAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
-                        .Returns(EmptyAsyncEnumerable());
-                    services.AddSingleton(mockBroadcast.Object);
-
-                    // Mock IMediator so GetSessionStreamQuery succeeds without a real DB session.
-                    // The query returns void (it's a guard-only query that throws on failure).
-                    services.RemoveAll<MediatR.IMediator>();
-                    var mockMediator = new Mock<MediatR.IMediator>();
-                    // GetSessionStreamQuery handler throws NotFoundException on failure.
-                    // Return a Unit result to simulate success (session found + authorized).
-                    mockMediator
-                        .Setup(m => m.Send(It.IsAny<MediatR.IRequest<MediatR.Unit>>(), It.IsAny<CancellationToken>()))
-                        .ReturnsAsync(MediatR.Unit.Value);
-                    services.AddScoped<MediatR.IMediator>(_ => mockMediator.Object);
-                });
-            });
-
-        // Migrate the isolated DB so the factory starts cleanly.
-        using (var scope = localFactory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<Api.Infrastructure.MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync();
-        }
-
-        // Build a client that does NOT follow redirects and skips auth
-        // (we need the auth middleware to bypass for this test — it can't because
-        // PLAYWRIGHT_AUTH_BYPASS only applies to the Next.js frontend proxy, not the BE).
-        // Therefore this test also hits the 401 path in test isolation.
-        // The conservative assertion below handles both outcomes.
-        using var localClient = localFactory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            AllowAutoRedirect = false,
-        });
-
         var url = string.Format(StreamV2Path, sessionId);
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
 
-        // We cannot inject a real auth cookie without a seeded DB user here, so
-        // this request will likely 401. The primary value of this test fixture is
-        // documenting the EXPECTED header values for a 200 response and providing
-        // a regression harness once the auth layer is bypassed in future test helpers.
-        var response = await localClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var response = await _client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cts.Token);
 
-        if ((int)response.StatusCode == 401)
-        {
-            // Expected in test isolation — document expectation and pass.
-            // Full header validation is covered by the manual smoke test in
-            // apps/web/e2e/session-live.smoke.spec.ts (Part A).
-            return;
-        }
-
-        // If auth somehow passes (e.g. future bypass helper), assert headers.
-        AssertDeprecationHeaders(response, sessionId);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.Headers.Contains("Deprecation").Should().BeFalse();
+        response.Headers.Contains("Sunset").Should().BeFalse();
+        response.Headers.Contains("Link").Should().BeFalse();
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────────────────────
@@ -288,6 +249,12 @@ public sealed class StreamV2DeprecationHeadersEndpointTests : IAsyncLifetime
     }
 
     private static async IAsyncEnumerable<SseEventEnvelope> EmptyAsyncEnumerable()
+    {
+        await Task.CompletedTask;
+        yield break;
+    }
+
+    private static async IAsyncEnumerable<INotification> EmptyNotificationEnumerable()
     {
         await Task.CompletedTask;
         yield break;

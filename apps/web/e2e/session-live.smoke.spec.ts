@@ -125,16 +125,21 @@ test.describe('#2561 SP2 T11 — Session live SSE stream surface smoke', () => {
     // Allow a brief settling window for any deferred SSE connections.
     await page.waitForTimeout(500);
 
-    // The canonical stream endpoint MUST have been contacted at least once
-    // by the SessionLiveView surface after T4+T10 wiring.
-    // NOTE: If the fixture mode suppresses all SSE calls (no real session ID
-    // resolved to an actual live session), this count may be 0 in fixture mode.
-    // In that case the assertion is relaxed to ≥0 and the legacy check (A2) is
-    // the primary gate. Adjust when fixture mode behavior is confirmed post-T10.
+    // NOTE (fixture mode — intentional relaxation):
+    // `?fixture=host` activates STATE_OVERRIDE_ENABLED which drives the session shell
+    // from deterministic in-memory state without making any backend calls.
+    // The SessionLiveView SSE connection is gated on a non-placeholder session ID
+    // that resolves to a live backend session; in fixture mode that gate is never
+    // satisfied, so nativeStreamCallCount is reliably 0.
     //
-    // Acceptance: nativeStreamCallCount ≥ 0 — the critical gate is A2 (legacy = 0).
-    // When the fixture exposes real SSE wiring (non-fixture navigation), this will be ≥ 1.
-    expect(nativeStreamCallCount).toBeGreaterThanOrEqual(0);
+    // We cannot assert `>= 1` here without a real backend + real session.
+    // The primary enforcement gate for this test is A2 (legacy calls = 0), which
+    // is always checkable regardless of fixture mode.
+    // Strengthen to `>= 1` once a real-backend E2E harness (smoke-real-backend/)
+    // is wired for session-live (see apps/web/e2e/smoke-real-backend/).
+    //
+    // Do NOT replace this comment with `expect(nativeStreamCallCount).toBeGreaterThanOrEqual(0)` —
+    // that assertion is tautological (any integer satisfies it) and provides no safety net.
 
     // A2 (co-located): legacy /stream/v2 MUST NOT be called by the live surface.
     expect(legacyStreamV2CallCount).toBe(0);

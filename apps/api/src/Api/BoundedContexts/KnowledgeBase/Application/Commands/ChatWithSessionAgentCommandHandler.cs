@@ -146,6 +146,10 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         ChatWithSessionAgentCommand command,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        // SP5-b T2: measure wall-clock time from handler entry to first token.
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var firstTokenRecorded = false;
+
         _logger.LogInformation(
             "Starting session agent chat for AgentSession {SessionId}, User {UserId}, Thread {ChatThreadId}",
             command.AgentSessionId, command.UserId, command.ChatThreadId);
@@ -380,6 +384,21 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             {
                 fullResponse.Append(chunk.Content);
                 yield return CreateEvent(StreamingEventType.Token, new StreamingToken(chunk.Content));
+
+                // SP5-b T2: record first-token latency AFTER the yield (metrics must not block/throw the stream).
+                // C# forbids yield inside try/catch — the try/catch wraps only the Record() call.
+                if (!firstTokenRecorded)
+                {
+                    try
+                    {
+                        MeepleAiMetrics.RagFirstTokenLatency.Record(sw.Elapsed.TotalMilliseconds);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogDebug(ex, "SP5-b: RagFirstTokenLatency recording failed (metrics must not break the stream)");
+                    }
+                    firstTokenRecorded = true;
+                }
             }
 
             if (chunk.IsFinal)
@@ -555,6 +574,18 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             c.CopyrightTier.ToString().ToLowerInvariant(),
             c.ParaphrasedSnippet,
             c.IsPublic)).ToList();
+
+        // SP5-b T2: record citations-per-answer ONCE, post-stream, using citationDtos.Count
+        // (the broadcast-authoritative list — NOT the earlier assembled.Citations or resolvedCitations).
+        // try/catch: a metrics fault must NEVER abort the user's stream.
+        try
+        {
+            MeepleAiMetrics.RecordCitationsPerAnswer(citationDtos.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "SP5-b: RagCitationsPerAnswer recording failed (metrics must not break the stream)");
+        }
 
         // SP2 T8 — Broadcast session:chat on the live-session stream (ADR-083).
         // Fires exactly once per completed chat, AFTER DB persist (DB is record-of-truth).

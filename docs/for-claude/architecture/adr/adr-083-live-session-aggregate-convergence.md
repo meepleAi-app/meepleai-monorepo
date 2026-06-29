@@ -182,8 +182,35 @@ L'Update (3) SP0 stabiliva che diary/media "riusano la `SessionTracking.Session`
 ### Decisione ratificata dall'owner (2026-06-29)
 **Option A — entità `DiaryEntry` nativa su `LiveGameSession`.** Endpoint `POST/GET /api/v1/live-sessions/{id}/diary`; `LiveSessionDiaryEntryAddedEvent` → forwarder → `session:diary` (`{ entryId, authorId, content, timestamp(ISO-8601) }`); 409 su Completed (allow Paused). De-risk: `.superpowers/sdd/sp3-diary-derisk-brief.md`.
 
+## Update 2026-06-29 (Fase 4) — RE-SCOPE: GameSession NON viene rimosso (ratificato come aggregato lifecycle/quota/history)
+
+Il piano a fasi originale (Fase 4) prevedeva il "ritiro graduale del loader GameSession e degli endpoint `/api/v1/sessions/*` non più usati". Un **de-risk read-only** della removal-safety (`.superpowers/sdd/fase4-removal-safety-map.md`) + un'**analisi architetturale** dell'aggregato GameSession (`.superpowers/sdd/gamesession-architecture-decision.md`) hanno provato che **la premessa di rimozione era mezza-vera** e l'owner ha **ratificato l'Opzione B (2026-06-29)**. Questa è una **decisione di reversal registrata onestamente**, non un no-op silenzioso.
+
+### Riconciliazione "guscio vuoto" (decision reversal)
+ADR-083 Update (2) chiamava GameSession un "guscio quasi vuoto". È vero **sull'asse runtime** (zero scoring/turni/snapshot — è LiveGameSession a possederli) ma **falso sulle responsabilità operative**: GameSession possiede una **4-state lifecycle machine** (Setup→InProgress→Paused→Completed/Abandoned), la **quota per-user cross-session** (`CreatedByUserId`, `TerminateForQuota`, `CountActiveByUserIdAsync`, `FindOldestActiveByUserIdAsync`, `SessionQuotaService`), una **history-query surface** (`FindHistoryAsync`), e **42+ call-site FE** (`api.sessions.*`). Non è un orfano rimovibile pulito.
+
+### Decisione ratificata (Opzione B)
+**GameSession resta l'aggregato del session-lifecycle + quota + history-surface; LiveGameSession resta il runtime in-play (scoring/turni/teams/diary/stream).** I due NON condividono id/FK (OQ1) — sono concern complementari, non duplicazione accidentale. **Razionale**: la quota è una policy per-user cross-session che NON appartiene a un runtime per-instance (estendere LiveGameSession violerebbe l'SRP); la history post-play ha già la sua home in `UserLibrary.GameSession` (entità diversa, popolata da `RecordGameSessionCommandHandler` su `LiveSessionCompletedEvent`); l'Opzione A (estendi+rimuovi) sarebbe un **epic large multi-PR ad alto rischio** (gap pause/resume/end, dual-write da convergere, 42+ call-site, DB migration) senza un guadagno proporzionale.
+
+### Boundary ratificato
+| Concern | GameSession (lifecycle aggregate) | LiveGameSession (in-play runtime) |
+|---|---|---|
+| Stati | 4 (lifecycle) | 5 (FSM runtime, ADR-071) |
+| Scoring/turni/teams/setup/snapshot/dispute/diary | nessuno | tutto |
+| Quota per-user cross-session | **possiede** | no |
+| History query | **`FindHistoryAsync`** | no |
+| TrackingSessionId companion | no | sì (SP0) |
+
+### Fase 4 RE-SCOPED — cosa resta (decomposizione gated, #2588)
+La Fase 4 NON rimuove GameSession. Le rimozioni legacy genuine sono spezzate in slice gated (umbrella **#2588**):
+- **Slice A**: repoint entry-point di `/sessions/[id]/play` + mobile-tree `/sessions/live/[sessionId]` a `/sessions/[id]/live` → poi delete superfici.
+- **Slice B** (gated ≥2026-09-29): **#2579** (forward toolkit/whiteboard/timer events + repoint 3 hook) → poi delete `/game-sessions/{id}/stream/v2` (Sunset 2026-09-29).
+- **Slice D** (owner-gated): cleanup `/sessions/[id]/notes`+`/players` solo se confermati dead.
+- **Debito separato**: convergere il **dual-creation funnel** (SessionSetupModal→GameSession vs wizard→LiveGameSession), **#2587** — indipendente dalla rimozione.
+
 ## Riferimenti
 - Epic #2501; user story di validazione #2506; gap issue #2500/#2503/#2505/#2504/#2502.
+- **Fase 4**: decomposition #2588 · dual-creation funnel #2587 · removal-safety-map + gamesession-architecture-decision (`.superpowers/sdd/`).
 - **Spec Fase 2**: `docs/for-developers/specs/2026-06-23-epic-2501-fase2-live-session-feature-gaps.md` (spec-panel).
 - ADR-060 (LiveGameSession persistence, EPIC #2097), ADR-065 (namespace split), ADR-071 (5-state FSM).
 - Scoring polimorfico recente: #2389 (G5a Block A/B/C), #2483 (turnOrderType), Asse A #1896.

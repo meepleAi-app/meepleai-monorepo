@@ -1,78 +1,78 @@
 {
   "schemaVersion": 1,
   "_comment": "Golden baseline for the RAG smoke harness (#2480). Captured once against a fresh, verified snapshot by running `bash infra/scripts/rag-smoke-assert.sh --update-baseline` after `make dev-from-snapshot`. Each entry pins the top-3 retrieved chunks (source + page) for a canonical query; the harness then fails if retrieval drifts. relevanceScore is advisory (compared with tolerance, not exact). Regenerate after an intentional re-index (embedding model change, chunker change, seed-table schema-version bump). See docs/for-developers/operations/rag-smoke-runbook.md.",
-  "capturedAt": "2026-06-28T22:08:07Z",
-  "snapshot": "meepleai_seed_20260628T211806Z_intfloat_multilingual-e5-base_7cee37d47",
+  "capturedAt": "2026-06-29T12:00:21Z",
+  "snapshot": "meepleai_seed_20260629T113602Z_intfloat_multilingual-e5-base_234fc5355",
   "embeddingModel": "intfloat/multilingual-e5-base",
   "baseline": {
     "catan-setup": [
       {
-        "source": "13dc2236-f2bb-40de-b8de-ae7e8bdd4c19",
-        "page": 1
+        "source": "27ec1ee5-dbc7-40f4-90d0-83208025ffc1",
+        "page": 13
       },
       {
-        "source": "5a3acd1c-cd07-4442-b1fa-289b8039a22f",
-        "page": 1
+        "source": "6d359cba-e8b8-4eaa-b035-4707bcc9df7b",
+        "page": 2
       },
       {
-        "source": "99167cf5-8e69-43ec-80ea-f38d1dfe1722",
+        "source": "b4c23991-9bf7-45f3-8458-5b15de4cadc3",
         "page": 1
       }
     ],
     "wingspan-round-goals": [
       {
-        "source": "13dc2236-f2bb-40de-b8de-ae7e8bdd4c19",
-        "page": 1
+        "source": "2a9cb705-bb68-4693-a8cb-fc0372f6f163",
+        "page": 11
       },
       {
-        "source": "142799c3-5ebc-4b44-b4e5-f89b614ec372",
-        "page": 1
+        "source": "324a91d6-774a-4365-9cd9-24b6df40bdc3",
+        "page": 22
       },
       {
-        "source": "5a3acd1c-cd07-4442-b1fa-289b8039a22f",
+        "source": "95d0f022-a38d-447b-86e6-e8e98666e71d",
         "page": 1
       }
     ],
     "dominion-buy-phase": [
       {
-        "source": "13dc2236-f2bb-40de-b8de-ae7e8bdd4c19",
-        "page": 1
+        "source": "38fd28c7-dff2-41a0-ba58-733c671013c4",
+        "page": 36
       },
       {
-        "source": "19c2bc2a-4141-4a4a-bf3b-30a0e901d981",
-        "page": 1
+        "source": "85fb2381-251a-4650-865f-0df689441b7e",
+        "page": 6
       },
       {
-        "source": "5a3acd1c-cd07-4442-b1fa-289b8039a22f",
-        "page": 1
+        "source": "f9eb661f-6a17-42c6-90a4-51eece2a8d50",
+        "page": 9
       }
     ],
     "ark-nova-conservation": [
       {
-        "source": "13dc2236-f2bb-40de-b8de-ae7e8bdd4c19",
-        "page": 1
+        "source": "4f654cf3-b930-4521-a7ee-e2bd400d9fb6",
+        "page": 36
       },
       {
-        "source": "aa3fcffa-010f-4a97-83ea-91b69559db1c",
-        "page": 1
+        "source": "f9b14e7f-66a3-4b66-837e-81839e6f2b2a",
+        "page": 38
       },
       {
-        "source": "c2eee70b-20b4-468c-8d42-04efff9e5cb8",
-        "page": 1
+        "source": "faf407fe-1fbf-4081-8b99-26069de89967",
+        "page": 8
       }
     ],
     "seven-wonders-military": [
       {
-        "source": "13dc2236-f2bb-40de-b8de-ae7e8bdd4c19",
-        "page": 1
+        "source": "5b398a03-1540-450d-8791-8ab656719b78",
+        "page": 7
       },
       {
-        "source": "5a3acd1c-cd07-4442-b1fa-289b8039a22f",
-        "page": 1
+        "source": "eca3c3b1-5842-4eb0-9fb2-93b43a87cdd0",
+        "page": 5
       },
       {
-        "source": "8fd0666f-ddc1-4b6a-9d5b-ae4060528e16",
-        "page": 1
+        "source": "f9b14e7f-66a3-4b66-837e-81839e6f2b2a",
+        "page": 38
       }
     ]
   }

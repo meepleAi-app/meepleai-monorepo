@@ -8,6 +8,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.SessionTracking.Application.Commands;
 
@@ -24,19 +25,22 @@ public class UpdatePlayerScoreCommandHandler : IRequestHandler<UpdatePlayerScore
     private readonly IUnitOfWork _unitOfWork;
     private readonly ISessionSyncService _syncService;
     private readonly ISessionBroadcastService _broadcastService;
+    private readonly ILogger<UpdatePlayerScoreCommandHandler> _logger;
 
     public UpdatePlayerScoreCommandHandler(
         ISessionRepository sessionRepository,
         IScoreEntryRepository scoreEntryRepository,
         IUnitOfWork unitOfWork,
         ISessionSyncService syncService,
-        ISessionBroadcastService broadcastService)
+        ISessionBroadcastService broadcastService,
+        ILogger<UpdatePlayerScoreCommandHandler> logger)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _scoreEntryRepository = scoreEntryRepository ?? throw new ArgumentNullException(nameof(scoreEntryRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _syncService = syncService ?? throw new ArgumentNullException(nameof(syncService));
         _broadcastService = broadcastService ?? throw new ArgumentNullException(nameof(broadcastService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<UpdatePlayerScoreResult> Handle(UpdatePlayerScoreCommand request, CancellationToken cancellationToken)
@@ -87,11 +91,26 @@ public class UpdatePlayerScoreCommandHandler : IRequestHandler<UpdatePlayerScore
                 ActionType = "score",
                 Message = "Score update conflict detected. Please retry with the latest session state."
             };
-            await _broadcastService.PublishAsync(
-                request.SessionId,
-                conflictEvt,
-                EventVisibility.PrivateTo(request.RequesterId),
-                cancellationToken).ConfigureAwait(false);
+            // The conflict SSE notification is fire-and-forget observational — it must NEVER replace the
+            // ConflictException (409) below on the primary path. Since #2563 PublishAsync can propagate a
+            // mid-session Redis failure (the seq provider no longer falls back to a from-zero counter);
+            // swallow it here so the caller still gets a deterministic 409.
+#pragma warning disable CA1031 // best-effort notification — a broadcast failure must not mask the 409
+            try
+            {
+                await _broadcastService.PublishAsync(
+                    request.SessionId,
+                    conflictEvt,
+                    EventVisibility.PrivateTo(request.RequesterId),
+                    cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Failed to broadcast score-conflict SSE for session {SessionId}; surfacing 409 regardless.",
+                    request.SessionId);
+            }
+#pragma warning restore CA1031
 
             throw new ConflictException(
                 "Score update conflict: another participant updated the session simultaneously. Please retry.");

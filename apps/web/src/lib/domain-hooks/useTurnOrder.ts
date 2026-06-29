@@ -5,7 +5,7 @@
  *
  * Features:
  * - Load, initialize, advance, and reset turn order via REST API
- * - Real-time turn advance updates via v2 SSE stream (session:toolkit events)
+ * - Real-time turn advance updates via native SSE stream (session:toolkit events)
  * - Exposes applySSEAdvance for manual SSE integration
  *
  * Backend endpoints:
@@ -195,14 +195,10 @@ export function useTurnOrder({
     onTurnAdvancedRef.current?.(payload);
   }, []);
 
-  // ── SSE v2 for real-time turn advances from other participants ────────────────
-  // SP2: stays on legacy /game-sessions stream until toolkit/whiteboard events are
-  // forwarded to the native /live-sessions stream — see #2561 / SP5.
-  // This hook is mounted on the /toolkit/[sessionId] surface (NOT the canonical
-  // /sessions/[id]/live view) and consumes `session:toolkit` events which the
-  // native stream does not yet emit.
+  // ── SSE for real-time turn advances from other participants ──────────────────
+  // Consumes the native live-session stream (/live-sessions/{id}/stream).
   useEffect(() => {
-    const endpoint = `${baseUrl}/api/v1/game-sessions/${sessionId}/stream/v2`;
+    const endpoint = `${baseUrl}/api/v1/live-sessions/${sessionId}/stream`;
 
     let source: EventSource | null = null;
     try {

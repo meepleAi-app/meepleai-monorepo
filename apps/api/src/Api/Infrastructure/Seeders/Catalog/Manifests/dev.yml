@@ -7577,7 +7577,7 @@ catalog:
     - Zvezda
     - 本长文化
   - title: 'Skytear: Arena of Legends'
-    bggId: 373106
+    bggId: 259061
     language: en
     pdfBlobKey: rulebooks/v1/skytear_rulebook.pdf
     pdfSha256: 2f316d16c5001b55097b9966c7c697bbde6a50e7e5c9b1c3df336ff5c3775960
@@ -8869,7 +8869,7 @@ catalog:
     pdfSha256: 31e496fdc97b9df7a8f38ccbd36561dc16265c142ff1cc3597fe6217f4707cc9
     pdfVersion: '1.0'
   - title: 'Great Western Trail: Argentina'
-    bggId: 380607
+    bggId: 364011
     language: en
     pdfBlobKey: rulebooks/v1/great-western-trail-argentina_rulebook.pdf
     pdfSha256: 88be4a0b83dda037566941e46d1e936ec6280c37e9860c0405a58a9bd412c2fa
@@ -9302,7 +9302,7 @@ catalog:
     pdfSha256: a43d7ee00276e963ea7afd327711cd52cee609712a8128e0f4a164290c2754d4
     pdfVersion: '1.0'
   - title: Voidfall
-    bggId: 338111
+    bggId: 337627
     language: en
     pdfBlobKey: rulebooks/v1/voidfall_rulebook.pdf
     pdfSha256: 29847a547dcec0deac860cfb658cd3ea694dcaab319258fcf286c27161243157

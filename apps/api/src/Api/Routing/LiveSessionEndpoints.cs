@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
+using Api.Observability;
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.DTOs.GameSessionContext;
@@ -870,6 +871,12 @@ internal static class LiveSessionEndpoints
         httpContext.Response.StatusCode = 200;
         await httpContext.Response.Body.FlushAsync(ct).ConfigureAwait(false);
 
+        // AC-OBS-1 (#2561 SP2 T12): track active connections + reconnects.
+        // Inc happens after auth + header flush so only live connections count.
+        MeepleAiMetrics.IncrementLiveSseActiveConnections();
+        if (!string.IsNullOrEmpty(lastEventId))
+            MeepleAiMetrics.RecordLiveSseReconnect();
+
         // Heartbeat task: write a comment every 30 s to keep the connection alive.
         using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         var heartbeatTask = Task.Run(async () =>
@@ -915,6 +922,9 @@ internal static class LiveSessionEndpoints
         }
         finally
         {
+            // AC-OBS-1 (#2561 SP2 T12): decrement active-connections gauge on every exit path.
+            MeepleAiMetrics.DecrementLiveSseActiveConnections();
+
             await heartbeatCts.CancelAsync().ConfigureAwait(false);
             // Wait for heartbeat task to finish (it's already watching ct).
             // Both OperationCanceledException (normal) and any other I/O exception are benign here —

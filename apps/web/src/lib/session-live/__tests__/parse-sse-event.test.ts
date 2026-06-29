@@ -666,6 +666,196 @@ describe('parseSseEvent — session:diary', () => {
 });
 
 // ============================================================================
+// session:chat — citations (Task 9 / #2561 SP2)
+// ============================================================================
+
+describe('parseSseEvent — session:chat citations (T9 #2561)', () => {
+  it('parses session:chat with citations array (full tier)', () => {
+    const result = parseSseEvent(
+      'session:chat',
+      makeJson({
+        messageId: 'msg-cit-1',
+        senderId: 'agent-1',
+        content: 'Here are the rules.',
+        visibility: 'shared',
+        timestamp: '2026-01-01T10:30:00Z',
+        citations: [
+          {
+            documentId: 'doc-guid-001',
+            pageNumber: 5,
+            relevanceScore: 0.91,
+            snippetPreview: 'Regola del gioco: muovi la pedina.',
+            copyrightTier: 'full',
+            isPublic: true,
+          },
+        ],
+      }),
+      SESSION_ID
+    );
+    expect(result?.type).toBe('session:chat');
+    if (result?.type === 'session:chat') {
+      expect(result.citations).toBeDefined();
+      expect(result.citations).toHaveLength(1);
+      expect(result.citations![0].documentId).toBe('doc-guid-001');
+      expect(result.citations![0].pageNumber).toBe(5);
+      expect(result.citations![0].copyrightTier).toBe('full');
+    }
+  });
+
+  it('parses session:chat with protected-tier citation (null snippetPreview → paraphrasedSnippet)', () => {
+    const result = parseSseEvent(
+      'session:chat',
+      makeJson({
+        messageId: 'msg-cit-2',
+        senderId: 'agent-1',
+        content: 'Protected source answer.',
+        visibility: 'shared',
+        timestamp: '2026-01-01T10:31:00Z',
+        citations: [
+          {
+            documentId: 'doc-protected-001',
+            pageNumber: 12,
+            relevanceScore: 0.85,
+            snippetPreview: null,
+            copyrightTier: 'protected',
+            paraphrasedSnippet: 'Sintesi del contenuto protetto.',
+            isPublic: false,
+          },
+        ],
+      }),
+      SESSION_ID
+    );
+    expect(result?.type).toBe('session:chat');
+    if (result?.type === 'session:chat') {
+      expect(result.citations).toHaveLength(1);
+      const cit = result.citations![0];
+      expect(cit.copyrightTier).toBe('protected');
+      expect(cit.paraphrasedSnippet).toBe('Sintesi del contenuto protetto.');
+      expect(cit.snippetPreview).toBeNull();
+    }
+  });
+
+  it('parses session:chat without citations (citations undefined when absent)', () => {
+    const result = parseSseEvent(
+      'session:chat',
+      makeJson({
+        messageId: 'msg-nocit',
+        senderId: 'p1',
+        content: 'No citations here.',
+        visibility: 'shared',
+        timestamp: '2026-01-01T10:32:00Z',
+      }),
+      SESSION_ID
+    );
+    expect(result?.type).toBe('session:chat');
+    if (result?.type === 'session:chat') {
+      expect(result.citations).toBeUndefined();
+    }
+  });
+
+  it('parses session:chat with empty citations array', () => {
+    const result = parseSseEvent(
+      'session:chat',
+      makeJson({
+        messageId: 'msg-emptycit',
+        senderId: 'p1',
+        content: 'Empty citations.',
+        visibility: 'shared',
+        timestamp: '2026-01-01T10:33:00Z',
+        citations: [],
+      }),
+      SESSION_ID
+    );
+    expect(result?.type).toBe('session:chat');
+    if (result?.type === 'session:chat') {
+      expect(result.citations).toEqual([]);
+    }
+  });
+});
+
+// ============================================================================
+// session:phase (Task 9 / #2561 SP2)
+// ============================================================================
+
+describe('parseSseEvent — session:phase (T9 #2561)', () => {
+  it('parses session:phase with required fields', () => {
+    const result = parseSseEvent(
+      'session:phase',
+      makeJson({ turnIndex: 2, newPhaseIndex: 1, phaseName: 'Combat', totalPhases: 3 }),
+      SESSION_ID
+    );
+    expect(result).not.toBeNull();
+    expect(result?.type).toBe('session:phase');
+    if (result?.type === 'session:phase') {
+      expect(result.turnIndex).toBe(2);
+      expect(result.newPhaseIndex).toBe(1);
+      expect(result.phaseName).toBe('Combat');
+      expect(result.totalPhases).toBe(3);
+      expect(result.sessionId).toBe(SESSION_ID);
+    }
+  });
+
+  it('parses session:phase without optional phaseName', () => {
+    const result = parseSseEvent(
+      'session:phase',
+      makeJson({ turnIndex: 0, newPhaseIndex: 0 }),
+      SESSION_ID
+    );
+    expect(result?.type).toBe('session:phase');
+    if (result?.type === 'session:phase') {
+      expect(result.phaseName).toBeUndefined();
+    }
+  });
+
+  it('parses session:phase without optional totalPhases', () => {
+    const result = parseSseEvent(
+      'session:phase',
+      makeJson({ turnIndex: 1, newPhaseIndex: 2, phaseName: 'Planning' }),
+      SESSION_ID
+    );
+    expect(result?.type).toBe('session:phase');
+    if (result?.type === 'session:phase') {
+      expect(result.totalPhases).toBeUndefined();
+    }
+  });
+
+  it('returns null for session:phase missing both turnIndex and newPhaseIndex', () => {
+    expect(parseSseEvent('session:phase', makeJson({ phaseName: 'X' }), SESSION_ID)).toBeNull();
+  });
+
+  it('returns null for session:phase with invalid turnIndex (non-number)', () => {
+    expect(
+      parseSseEvent('session:phase', makeJson({ turnIndex: 'bad', newPhaseIndex: 1 }), SESSION_ID)
+    ).toBeNull();
+  });
+});
+
+// ============================================================================
+// session:endgame — BE canonical shape (completedAt/totalTurns/gameName)
+// ============================================================================
+
+describe('parseSseEvent — session:endgame BE canonical shape (T9 #2561)', () => {
+  it('parses session:endgame with BE canonical payload {completedAt, totalTurns, gameName}', () => {
+    const result = parseSseEvent(
+      'session:endgame',
+      makeJson({
+        completedAt: '2026-01-01T12:00:00Z',
+        totalTurns: 8,
+        gameName: 'Mage Knight',
+        timestamp: '2026-01-01T12:00:00Z',
+      }),
+      SESSION_ID
+    );
+    expect(result?.type).toBe('session:endgame');
+    if (result?.type === 'session:endgame') {
+      // FE fetches scores via REST; endgame event carries metadata only
+      expect(result.finalScores).toHaveLength(0);
+      expect(result.sessionId).toBe(SESSION_ID);
+    }
+  });
+});
+
+// ============================================================================
 // heartbeat
 // ============================================================================
 

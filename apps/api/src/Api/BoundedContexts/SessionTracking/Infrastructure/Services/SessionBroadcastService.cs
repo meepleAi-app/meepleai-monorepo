@@ -290,7 +290,9 @@ public sealed class SessionBroadcastService : ISessionBroadcastService, IDisposa
     /// <summary>
     /// Reads events from the Redis replay ZSET with sequence &gt; sinceSeq (exclusive lower bound)
     /// and applies the SAME per-subscriber visibility filter as <see cref="CircularEventBuffer.GetSince"/>:
-    /// an event is included only when <c>entry.IsPublic || entry.TargetUserId == userId</c>.
+    /// an event is skipped only when it is private (<c>!IsPublic</c>) AND addressed to a specific user
+    /// (<c>TargetUserId.HasValue</c>) who is NOT the current subscriber. Events with a null
+    /// <c>TargetUserId</c> are broadcast-to-all (the codebase convention) and are always delivered.
     /// Visibility is encoded in every ZSET member by <see cref="AppendToRedisReplayAsync"/>,
     /// so private events are never leaked to a different subscriber during cross-instance replay.
     /// Issue #2561 SP2 T7.
@@ -321,9 +323,11 @@ public sealed class SessionBroadcastService : ISessionBroadcastService, IDisposa
                     var replayEntry = JsonSerializer.Deserialize<ReplayEntry>(entry!, _jsonOptions);
                     if (replayEntry is null) continue;
 
-                    // Visibility filter — mirrors CircularEventBuffer.GetSince (:661-665):
-                    // private events are only replayed to the subscriber they were addressed to.
-                    if (!replayEntry.IsPublic && replayEntry.TargetUserId != userId)
+                    // Visibility filter — EXACT mirror of CircularEventBuffer.GetSince (:661-665):
+                    // skip only a private event (!IsPublic) addressed to a specific user
+                    // (TargetUserId.HasValue) other than the current subscriber. A null TargetUserId
+                    // means broadcast-to-all (codebase convention), so those events are always delivered.
+                    if (!replayEntry.IsPublic && replayEntry.TargetUserId.HasValue && replayEntry.TargetUserId.Value != userId)
                     {
                         continue;
                     }

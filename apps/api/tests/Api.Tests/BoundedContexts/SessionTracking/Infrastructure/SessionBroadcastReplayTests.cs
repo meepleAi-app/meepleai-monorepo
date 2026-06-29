@@ -367,7 +367,9 @@ public sealed class SessionBroadcastReplayTests
         await using var fixture = await RedisFixture.CreateAsync();
         if (fixture is null)
         {
-            // Docker not available — skip gracefully
+            // Docker not available — observable skip (NOT a silent no-op pass) so a green run
+            // never masks an unexecuted regression test.
+            Assert.Skip("Docker/Redis unavailable — Testcontainers fixture could not start.");
             return;
         }
 
@@ -375,7 +377,7 @@ public sealed class SessionBroadcastReplayTests
         var userA = Guid.NewGuid();
         var userB = Guid.NewGuid();
 
-        // Instance A: publish one public event + one private event (for userA only)
+        // Instance A publishes the sequence below.
         using var svcA = CreateRedisService(fixture.Multiplexer);
 
         // Keep-alive subscriber so the pool exists while publishing
@@ -400,23 +402,28 @@ public sealed class SessionBroadcastReplayTests
         }, cts1.Token);
         await Task.Delay(50);
 
-        // Event 1: public (anchor — both userA and userB should see this on reconnect)
+        // Event 1: explicit public (anchor — replayed events start AFTER this one)
         await svcA.PublishAsync(sid, MakeScoreEvent(sid, Guid.NewGuid()), EventVisibility.Public);
         await captureTask; // wait until we have the first event id
 
-        // Event 2: private — only for userA
+        // Event 2: private — only for userA (must NOT leak to userB)
         await svcA.PublishAsync(sid, MakeScoreEvent(sid, userA), EventVisibility.PrivateTo(userA));
-        // Event 3: public again
+        // Event 3: explicit public again (both users must receive)
         await svcA.PublishAsync(sid, MakeScoreEvent(sid, Guid.NewGuid()), EventVisibility.Public);
+        // Event 4: default(EventVisibility) → TargetUserId=null, IsPublic=false → broadcast-to-all.
+        // This is the dominant LiveSessionStreamGateway path. Both users MUST receive it; it must
+        // NOT be dropped by a too-aggressive filter missing the TargetUserId.HasValue guard.
+        await svcA.PublishAsync(sid, MakeScoreEvent(sid, Guid.NewGuid()), default);
 
         await Task.Delay(50); // let writes settle into ZSET
 
         await keepAliveCts.CancelAsync();
         try { await keepAlive; } catch (OperationCanceledException) { }
 
-        var anchorId = capturedIds[0]; // reconnect "since" event-1 → should replay events 2+3
+        var anchorId = capturedIds[0]; // reconnect "since" event-1 → should replay events 2,3,4
 
-        // Instance B: reconnect as userB since the anchor → must NOT see the private event
+        // Instance B: reconnect as userB since the anchor → must see events 3 (public) + 4 (broadcast),
+        // but NOT event 2 (private to userA).
         using var svcB = CreateRedisService(fixture.Multiplexer);
 
         using var ctsBReconnect = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
@@ -431,7 +438,7 @@ public sealed class SessionBroadcastReplayTests
         }
         catch (OperationCanceledException) { }
 
-        // Instance C: reconnect as userA since the anchor → MUST see the private event
+        // Instance C: reconnect as userA since the anchor → must see ALL of events 2,3,4.
         using var svcC = CreateRedisService(fixture.Multiplexer);
 
         using var ctsCReconnect = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
@@ -446,11 +453,14 @@ public sealed class SessionBroadcastReplayTests
         }
         catch (OperationCanceledException) { }
 
-        // Assert: userB sees 1 public event (event 3), NOT the private event (event 2)
-        userBReplayed.Should().HaveCount(1, because: "userB must only receive the public event, not the private one");
+        // Assert: userB sees event 3 (public) + event 4 (broadcast-to-all) = 2 events,
+        // NOT the private event (event 2).
+        userBReplayed.Should().HaveCount(2,
+            because: "userB must receive the explicit-public AND the broadcast-to-all (null-target) events, but never the private one");
 
-        // Assert: userA sees both event 2 (private to userA) and event 3 (public) = 2 events
-        userAReplayed.Should().HaveCount(2, because: "userA must receive the private event addressed to them plus the public event");
+        // Assert: userA sees event 2 (private to userA) + event 3 (public) + event 4 (broadcast) = 3 events.
+        userAReplayed.Should().HaveCount(3,
+            because: "userA must receive the private event addressed to them, the explicit-public, and the broadcast-to-all event");
     }
 
     #endregion

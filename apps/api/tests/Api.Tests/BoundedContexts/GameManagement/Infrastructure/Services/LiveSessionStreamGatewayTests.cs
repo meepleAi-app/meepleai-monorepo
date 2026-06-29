@@ -58,7 +58,6 @@ public sealed class LiveSessionStreamGatewayTests
             gameState: null,
             notes: null,
             agentMode: AgentSessionMode.None,
-            chatSessionId: null,
             turnAdvancePolicy: TurnAdvancePolicy.Manual,
             trackingSessionId: trackingSessionId,
             xmin: 0,

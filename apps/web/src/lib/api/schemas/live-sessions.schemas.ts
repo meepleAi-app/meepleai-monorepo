@@ -128,7 +128,6 @@ export const LiveSessionDtoSchema = z.object({
   currentTurnIndex: z.number().int(),
   currentTurnPlayerId: z.string().uuid().nullable(),
   agentMode: AgentSessionModeSchema,
-  chatSessionId: z.string().uuid().nullable(),
   notes: z.string().nullable(),
   players: z.array(LiveSessionPlayerDtoSchema),
   teams: z.array(LiveSessionTeamDtoSchema),

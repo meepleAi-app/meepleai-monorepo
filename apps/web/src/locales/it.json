@@ -3361,7 +3361,8 @@
         "addAriaLabel": "Aggiungi nota",
         "visibilityPrivate": "Privata",
         "visibilityShared": "Condivisa",
-        "emptyMessage": "Nessuna nota ancora."
+        "emptyMessage": "Nessuna nota ancora.",
+        "addNoteErrorToast": "Impossibile salvare la nota. Riprova."
       },
       "pauseOverlay": {
         "title": "Sessione in pausa",

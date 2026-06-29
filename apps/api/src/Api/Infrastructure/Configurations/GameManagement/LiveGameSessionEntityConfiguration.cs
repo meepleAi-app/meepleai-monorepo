@@ -107,8 +107,8 @@ internal sealed class LiveGameSessionEntityConfiguration : IEntityTypeConfigurat
             .IsRequired()
             .HasDefaultValue(0);
 
-        builder.Property(e => e.ChatSessionId)
-            .HasColumnName("chat_session_id");
+        // chat_session_id column retained in DB (nullable, all rows null); domain property removed per ADR-083 SP0.
+        // EF no longer maps it — column is unused but safe to leave for a future migration if needed.
 
         builder.Property(e => e.TrackingSessionId)
             .HasColumnName("tracking_session_id");

@@ -3148,7 +3148,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("admin_reports");
+                    b.ToTable("admin_reports", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.Administration.AlertChannelEntity", b =>
@@ -3413,7 +3413,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("RecordedAt");
 
-                    b.ToTable("database_metrics_snapshots");
+                    b.ToTable("database_metrics_snapshots", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.Administration.HealthStatusAlertSentEntity", b =>
@@ -3551,7 +3551,7 @@ namespace Api.Infrastructure.Migrations
                     b.HasIndex("ServiceName")
                         .IsUnique();
 
-                    b.ToTable("service_health_states");
+                    b.ToTable("service_health_states", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.Administration.StagingAllowlistEntity", b =>
@@ -4387,7 +4387,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("BggImportQueue");
+                    b.ToTable("BggImportQueue", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.BusinessSimulations.AppBudgetEntity", b =>
@@ -4719,7 +4719,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ChatThreads");
+                    b.ToTable("ChatThreads", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.ChunkedUploadSessionEntity", b =>
@@ -5873,10 +5873,6 @@ namespace Api.Infrastructure.Migrations
                         .HasDefaultValue(0)
                         .HasColumnName("agent_mode");
 
-                    b.Property<Guid?>("ChatSessionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("chat_session_id");
-
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("completed_at");
@@ -6082,42 +6078,6 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("ix_live_round_scores_session_player_round_dim");
 
                     b.ToTable("live_session_round_scores", (string)null);
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.LiveSessionDiaryEntryEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<Guid>("AuthorId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("author_id");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid>("LiveGameSessionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("live_game_session_id");
-
-                    b.Property<string>("Text")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)")
-                        .HasColumnName("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("LiveGameSessionId")
-                        .HasDatabaseName("ix_live_session_diary_entries_session_id");
-
-                    b.HasIndex("LiveGameSessionId", "CreatedAt")
-                        .HasDatabaseName("ix_live_session_diary_entries_session_created_at");
-
-                    b.ToTable("live_session_diary_entries", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.LiveTurnRecordEntity", b =>
@@ -7567,7 +7527,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("AgentSessionId");
 
-                    b.ToTable("agent_game_state_snapshots");
+                    b.ToTable("agent_game_state_snapshots", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.AgentTestResultEntity", b =>
@@ -8189,7 +8149,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("GameId");
 
-                    b.ToTable("GameEntityRelations");
+                    b.ToTable("GameEntityRelations", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.KbReindexJobEntity", b =>
@@ -8513,7 +8473,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("rag_quality_logs");
+                    b.ToTable("rag_quality_logs", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.RagUserConfigEntity", b =>
@@ -8577,7 +8537,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("PdfDocumentId");
 
-                    b.ToTable("RaptorSummaries");
+                    b.ToTable("RaptorSummaries", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.SimilarityAuditResultEntity", b =>
@@ -9751,7 +9711,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("ReportId");
 
-                    b.ToTable("admin_report_executions");
+                    b.ToTable("admin_report_executions", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.RuleAtomEntity", b =>
@@ -15329,7 +15289,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("email_templates");
+                    b.ToTable("email_templates", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.UserNotifications.NotificationEntity", b =>
@@ -16206,7 +16166,7 @@ namespace Api.Infrastructure.Migrations
 
                             b1.HasKey("TokenTierId");
 
-                            b1.ToTable("token_tiers");
+                            b1.ToTable("token_tiers", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("TokenTierId");
@@ -16235,7 +16195,7 @@ namespace Api.Infrastructure.Migrations
 
                             b1.HasKey("TokenTierId");
 
-                            b1.ToTable("token_tiers");
+                            b1.ToTable("token_tiers", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("TokenTierId");
@@ -16268,7 +16228,7 @@ namespace Api.Infrastructure.Migrations
 
                             b1.HasKey("LedgerEntryId");
 
-                            b1.ToTable("ledger_entries");
+                            b1.ToTable("ledger_entries", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("LedgerEntryId");
@@ -16313,7 +16273,7 @@ namespace Api.Infrastructure.Migrations
 
                             b1.HasKey("GameBookId");
 
-                            b1.ToTable("game_books");
+                            b1.ToTable("game_books", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("GameBookId");
@@ -16368,7 +16328,7 @@ namespace Api.Infrastructure.Migrations
 
                             b1.HasKey("DocumentEvaluationRunId");
 
-                            b1.ToTable("document_evaluation_runs");
+                            b1.ToTable("document_evaluation_runs", (string)null);
 
                             b1.ToJson("Metrics");
 
@@ -16388,7 +16348,7 @@ namespace Api.Infrastructure.Migrations
 
                                     b2.HasKey("EvaluationMetricsDocumentEvaluationRunId");
 
-                                    b2.ToTable("document_evaluation_runs");
+                                    b2.ToTable("document_evaluation_runs", (string)null);
 
                                     b2.WithOwner()
                                         .HasForeignKey("EvaluationMetricsDocumentEvaluationRunId");
@@ -16410,7 +16370,7 @@ namespace Api.Infrastructure.Migrations
 
                                     b2.HasKey("EvaluationMetricsDocumentEvaluationRunId");
 
-                                    b2.ToTable("document_evaluation_runs");
+                                    b2.ToTable("document_evaluation_runs", (string)null);
 
                                     b2.WithOwner()
                                         .HasForeignKey("EvaluationMetricsDocumentEvaluationRunId");
@@ -16426,7 +16386,7 @@ namespace Api.Infrastructure.Migrations
 
                                     b2.HasKey("EvaluationMetricsDocumentEvaluationRunId");
 
-                                    b2.ToTable("document_evaluation_runs");
+                                    b2.ToTable("document_evaluation_runs", (string)null);
 
                                     b2.WithOwner()
                                         .HasForeignKey("EvaluationMetricsDocumentEvaluationRunId");
@@ -16619,7 +16579,7 @@ namespace Api.Infrastructure.Migrations
 
                             b1.HasKey("TierDefinitionId");
 
-                            b1.ToTable("tier_definitions");
+                            b1.ToTable("tier_definitions", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("TierDefinitionId");
@@ -17037,17 +16997,6 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("LiveGameSession");
 
                     b.Navigation("Player");
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.LiveSessionDiaryEntryEntity", b =>
-                {
-                    b.HasOne("Api.Infrastructure.Entities.GameManagement.LiveGameSessionEntity", "LiveGameSession")
-                        .WithMany("DiaryEntries")
-                        .HasForeignKey("LiveGameSessionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("LiveGameSession");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.LiveTurnRecordEntity", b =>
@@ -18614,8 +18563,6 @@ namespace Api.Infrastructure.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.LiveGameSessionEntity", b =>
                 {
-                    b.Navigation("DiaryEntries");
-
                     b.Navigation("Players");
 
                     b.Navigation("RoundScores");

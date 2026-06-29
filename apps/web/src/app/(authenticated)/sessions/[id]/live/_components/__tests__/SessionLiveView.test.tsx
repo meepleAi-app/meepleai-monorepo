@@ -396,6 +396,8 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.notes.visibilityPrivate': 'Privata',
   'pages.sessionLive.notes.visibilityShared': 'Condivisa',
   'pages.sessionLive.notes.emptyMessage': 'Nessuna nota ancora.',
+  // SP5-a Task 3 (finding #16): diary write response-ack toast key
+  'pages.sessionLive.notes.addNoteErrorToast': 'Impossibile salvare la nota. Riprova.',
   'pages.sessionLive.pauseOverlay.title': 'Sessione in pausa',
   'pages.sessionLive.pauseOverlay.resumeCta': 'Riprendi',
   'pages.sessionLive.pauseOverlay.closeCta': 'Chiudi',
@@ -447,7 +449,6 @@ const MOCK_SESSION_DTO = {
   currentTurnIndex: 0,
   currentTurnPlayerId: null,
   agentMode: 'Active',
-  chatSessionId: null,
   notes: null,
   players: [
     {
@@ -2185,5 +2186,182 @@ describe('SessionLiveView — #2501 SP4 Task 3: recordId wire + 409 handler', ()
     expect(routerPush).not.toHaveBeenCalledWith(expect.stringContaining('/play-records'));
     // Must NOT open the endgame dialog (no handleDialogChange('endgame') call).
     expect(document.querySelector('[data-slot="endgame-dialog"]')).not.toBeInTheDocument();
+  });
+});
+
+// ─── SP5-a Task 3 — finding #16: diary write response-ack (not fail-silently) ───
+//
+// Verifies that handleAddNote in SessionLiveView treats the POST response as the
+// source of truth for success/error, NOT fire-and-forget (finding #16).
+// Before the fix, the catch block said "Fail silently — SSE event confirms or not",
+// meaning a broken SSE stream would cause silent write loss.
+// After the fix: HTTP errors + network failures surface a toast.error to the user.
+
+describe('SessionLiveView — diary write response-ack (SP5-a finding #16)', () => {
+  const HOST_USER_ID_SP5 = '11111111-1111-1111-1111-111111111111';
+
+  const HOST_DTO_SP5 = {
+    id: 'session-abc-123',
+    sessionCode: 'SP5TEST',
+    gameId: 'game-00000001',
+    gameName: 'Test Game',
+    gameSlug: 'test-game',
+    createdByUserId: HOST_USER_ID_SP5,
+    status: 'InProgress',
+    visibility: 'Private',
+    groupId: null,
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    startedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    pausedAt: null,
+    completedAt: null,
+    updatedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+    lastSavedAt: null,
+    currentTurnIndex: 0,
+    currentTurnPlayerId: null,
+    agentMode: 'Active',
+    notes: null,
+    players: [
+      {
+        id: 'player-001',
+        displayName: 'Marco',
+        userId: HOST_USER_ID_SP5,
+        color: 'blue',
+        role: 'Host',
+        totalScore: 0,
+        isActive: true,
+      },
+    ],
+    teams: [],
+    roundScores: [],
+    scoringConfig: { enabledDimensions: [], dimensionUnits: {} },
+  } as unknown as import('@/lib/api/schemas/live-sessions.schemas').LiveSessionDto;
+
+  function emptyHistorySP5() {
+    return { records: [], totalCount: 0, page: 1, pageSize: 1, totalPages: 0 };
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
+    // Open the notes tab by default so LiveSessionNotes is mounted in the desktop right column.
+    searchParamsMap['tab'] = 'notes';
+    mockParamsId = 'session-abc-123';
+    IS_VISUAL_TEST_BUILD_MOCK = false;
+    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+    useCurrentUserMock.mockReturnValue({ data: { id: HOST_USER_ID_SP5 } });
+    useLiveSessionMock.mockReturnValue({
+      data: HOST_DTO_SP5,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+    });
+    completeIsPending = false;
+    resolveStatusMock = 'idle';
+    resolvePlayRecordIdMock = null;
+    getHistoryMock.mockResolvedValue(emptyHistorySP5());
+  });
+
+  it('finding #16-A: 5xx response on diary POST → toast.error surfaced (not silent)', async () => {
+    // Arrange: mock fetch to return a 500 error for the diary POST.
+    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ error: 'Internal Server Error' }), {
+        status: 500,
+        statusText: 'Internal Server Error',
+        headers: { 'content-type': 'application/json' },
+      })
+    );
+
+    const { container } = renderWithIntl(<SessionLiveView />);
+
+    // Locate the notes textarea and submit button in the LiveSessionNotes panel.
+    const notesPanel = container.querySelector('[data-slot="live-session-notes"]');
+    expect(notesPanel).not.toBeNull();
+
+    const textarea = notesPanel?.querySelector('textarea');
+    expect(textarea).not.toBeNull();
+
+    // Type a note and submit.
+    await act(async () => {
+      fireEvent.change(textarea!, { target: { value: 'Test note content' } });
+    });
+    const submitBtn = notesPanel?.querySelector('button[type="submit"]');
+    expect(submitBtn).not.toBeNull();
+    await act(async () => {
+      fireEvent.click(submitBtn!);
+    });
+
+    // Verify the diary POST was called.
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('/game-sessions/session-abc-123/diary'),
+      expect.objectContaining({ method: 'POST' })
+    );
+
+    // Verify toast.error was called — the write is NOT silently swallowed.
+    const { toast } = await import('sonner');
+    expect(toast.error).toHaveBeenCalledWith(
+      expect.stringContaining('Impossibile salvare la nota'),
+      expect.objectContaining({ id: 'note-add-error' })
+    );
+
+    fetchSpy.mockRestore();
+  });
+
+  it('finding #16-B: network failure on diary POST → toast.error surfaced (not silent)', async () => {
+    // Arrange: mock fetch to throw a network error.
+    const fetchSpy = vi.spyOn(global, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
+
+    const { container } = renderWithIntl(<SessionLiveView />);
+
+    const notesPanel = container.querySelector('[data-slot="live-session-notes"]');
+    const textarea = notesPanel?.querySelector('textarea');
+
+    await act(async () => {
+      fireEvent.change(textarea!, { target: { value: 'Another note' } });
+    });
+    const submitBtn = notesPanel?.querySelector('button[type="submit"]');
+    await act(async () => {
+      fireEvent.click(submitBtn!);
+    });
+
+    const { toast } = await import('sonner');
+    expect(toast.error).toHaveBeenCalledWith(
+      expect.stringContaining('Impossibile salvare la nota'),
+      expect.objectContaining({ id: 'note-add-error' })
+    );
+
+    fetchSpy.mockRestore();
+  });
+
+  it('finding #16-C: 200 response on diary POST → NO toast.error (happy path silent)', async () => {
+    // Arrange: mock fetch to return 200 (successful write).
+    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({}), {
+        status: 200,
+        statusText: 'OK',
+        headers: { 'content-type': 'application/json' },
+      })
+    );
+
+    const { container } = renderWithIntl(<SessionLiveView />);
+
+    const notesPanel = container.querySelector('[data-slot="live-session-notes"]');
+    const textarea = notesPanel?.querySelector('textarea');
+
+    await act(async () => {
+      fireEvent.change(textarea!, { target: { value: 'Happy note' } });
+    });
+    const submitBtn = notesPanel?.querySelector('button[type="submit"]');
+    await act(async () => {
+      fireEvent.click(submitBtn!);
+    });
+
+    const { toast } = await import('sonner');
+    expect(toast.error).not.toHaveBeenCalledWith(
+      expect.stringContaining('Impossibile salvare la nota'),
+      expect.anything()
+    );
+
+    fetchSpy.mockRestore();
   });
 });

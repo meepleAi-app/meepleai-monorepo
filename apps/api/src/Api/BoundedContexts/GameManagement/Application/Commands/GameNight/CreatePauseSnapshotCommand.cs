@@ -44,8 +44,7 @@ public sealed class CreatePauseSnapshotCommandValidator : AbstractValidator<Crea
 /// <summary>
 /// Handles <see cref="CreatePauseSnapshotCommand"/>.
 /// Captures session state, creates a PauseSnapshot, pauses the session,
-/// then publishes <see cref="SessionSaveRequestedEvent"/> (for async AI summary)
-/// and <see cref="SessionPausedEvent"/> (for SignalR broadcast).
+/// then publishes <see cref="SessionPausedEvent"/> (for SignalR broadcast).
 /// </summary>
 internal sealed class CreatePauseSnapshotCommandHandler
     : IRequestHandler<CreatePauseSnapshotCommand, Guid>
@@ -157,24 +156,8 @@ internal sealed class CreatePauseSnapshotCommandHandler
         // 10. Save snapshot to DB
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        // 11. Collect last messages for async summary (from ChatSessionId if available)
-        var lastMessages = await CollectLastMessagesAsync(session, cancellationToken).ConfigureAwait(false);
-
-        // 12. Publish SessionSaveRequestedEvent for async AI summary generation
-        //     Only publish if session has an active agent with a chat session
-        if (session.AgentMode != AgentSessionMode.None && session.ChatSessionId.HasValue)
-        {
-            // ChatSessionId serves as proxy for AgentDefinitionId; resolved by handler
-            await _publisher
-                .Publish(new SessionSaveRequestedEvent(
-                    pauseSnapshotId: snapshot.Id,
-                    liveGameSessionId: session.Id,
-                    agentDefinitionId: session.ChatSessionId.Value,
-                    lastMessages: lastMessages), cancellationToken)
-                .ConfigureAwait(false);
-        }
-
-        // 13. Publish SessionPausedEvent for SignalR broadcast
+        // 11. Publish SessionPausedEvent for SignalR broadcast
+        // Note: SessionSaveRequestedEvent (AI summary) was gated on ChatSessionId (ADR-083 SP0 dead-code, removed).
         await _publisher
             .Publish(new SessionPausedEvent(session.Id), cancellationToken)
             .ConfigureAwait(false);
@@ -211,50 +194,4 @@ internal sealed class CreatePauseSnapshotCommandHandler
         entity.DisputesJson = JsonSerializer.Serialize(session.Disputes, JsonOptions);
     }
 
-    private async Task<List<string>> CollectLastMessagesAsync(
-        LiveGameSession session,
-        CancellationToken cancellationToken)
-    {
-        if (!session.ChatSessionId.HasValue)
-            return new List<string>();
-
-        try
-        {
-            // ChatSessionEntity stores messages as a JSON blob (MessagesJson)
-            var chatSession = await _dbContext.ChatSessions
-                .AsNoTracking()
-                .FirstOrDefaultAsync(cs => cs.Id == session.ChatSessionId.Value, cancellationToken)
-                .ConfigureAwait(false);
-
-            if (chatSession is null || string.IsNullOrWhiteSpace(chatSession.MessagesJson))
-                return new List<string>();
-
-            // Deserialise the message array to extract role+content pairs
-            var rawMessages = System.Text.Json.JsonSerializer
-                .Deserialize<List<System.Text.Json.JsonElement>>(chatSession.MessagesJson, JsonOptions)
-                ?? new List<System.Text.Json.JsonElement>();
-
-            // Take the last 50 messages; include role and content
-            return rawMessages
-                .TakeLast(50)
-                .Select(m =>
-                {
-                    var role = m.TryGetProperty("role", out var r) ? r.GetString() ?? "unknown" : "unknown";
-                    var content = m.TryGetProperty("content", out var c) ? c.GetString() ?? string.Empty : string.Empty;
-                    return $"[{role}] {content}";
-                })
-                .ToList();
-        }
-#pragma warning disable CA1031
-        catch (Exception ex)
-        {
-            _logger.LogWarning(
-                ex,
-                "Could not collect last messages for ChatSessionId={ChatSessionId}. " +
-                "Summary will be generated without message history.",
-                session.ChatSessionId.Value);
-            return new List<string>();
-        }
-#pragma warning restore CA1031
-    }
 }

@@ -6,6 +6,46 @@ namespace Api.Observability;
 
 internal static partial class MeepleAiMetrics
 {
+    // === Issue #2582 SP5-b RAG Observability ===
+
+    /// <summary>
+    /// Counter incremented each time a RAG retrieval returns zero chunks.
+    /// Distinct from <see cref="RagRetrievalFallbacks"/> (which means "fallback fired").
+    /// NO tags — cardinality rule (no session/user labels).
+    /// </summary>
+    public static readonly Counter<long> RagRetrievalEmpty = Meter.CreateCounter<long>(
+        name: "meepleai.rag.retrieval_empty",
+        unit: "retrievals",
+        description: "Count of RAG retrievals that returned zero chunks");
+
+    /// <summary>
+    /// Histogram recording the number of citations included per RAG answer.
+    /// The <c>le=0</c> bucket captures grounded-but-uncited responses.
+    /// NO tags — cardinality rule (no session/user labels).
+    /// </summary>
+    public static readonly Histogram<long> RagCitationsPerAnswer = Meter.CreateHistogram<long>(
+        name: "meepleai.rag.citations_per_answer",
+        unit: "citations",
+        description: "Number of citations included per RAG answer");
+
+    /// <summary>
+    /// Records a RAG retrieval that returned zero chunks.
+    /// Call at the detection site — do NOT call inside a streaming yield block without a try/catch.
+    /// </summary>
+    public static void RecordRetrievalEmpty()
+    {
+        RagRetrievalEmpty.Add(1);
+    }
+
+    /// <summary>
+    /// Records the number of citations included in a RAG answer.
+    /// Call once, post-stream, using the final citation list count.
+    /// </summary>
+    public static void RecordCitationsPerAnswer(long count)
+    {
+        RagCitationsPerAnswer.Record(count);
+    }
+
     /// <summary>
     /// Counter for total RAG requests
     /// </summary>

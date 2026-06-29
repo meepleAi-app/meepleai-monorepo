@@ -94,6 +94,19 @@ internal static class EndpointFilterExtensions
     }
 
     /// <summary>
+    /// Requires the caller to be a participant (creator or active linked player) of the live session
+    /// identified by the {sessionId} route value. Returns 401 if unauthenticated, 404 if the session
+    /// is missing, 403 if authenticated but not a participant. Apply AFTER .RequireAuthenticatedUser().
+    /// </summary>
+    /// <param name="builder">The route handler builder.</param>
+    /// <returns>The builder for method chaining.</returns>
+    /// <remarks>Issue: #2573 - live-session write/read endpoints lack per-session participant authz.</remarks>
+    public static RouteHandlerBuilder RequireLiveSessionParticipant(this RouteHandlerBuilder builder)
+    {
+        return builder.AddEndpointFilter<RequireLiveSessionParticipantFilter>();
+    }
+
+    /// <summary>
     /// Applies notification-specific rate limiting for bulk operations.
     /// Uses stricter limits than global rate limiting to prevent abuse.
     ///

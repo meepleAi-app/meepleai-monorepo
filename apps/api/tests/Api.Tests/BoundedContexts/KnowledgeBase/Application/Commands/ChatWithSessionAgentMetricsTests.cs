@@ -39,12 +39,14 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Commands;
 ///
 /// Tests:
 /// 1. <c>meepleai.rag.first_token_latency</c> is recorded EXACTLY once per streamed chat
-///    and the observation is ≥ 0 ms.
+///    (even when the LLM stream emits multiple content chunks — proves the once-only guard).
+///    Observation is ≥ 0 ms.
 /// 2. <c>meepleai.rag.citations_per_answer</c> is recorded EXACTLY once per streamed chat
 ///    with the correct citation count.
 /// 3. The zero-citation case records 0 (grounded-but-uncited signal).
-/// 4. A metrics fault (simulated via a broken instrument) does NOT abort the stream
-///    (streaming safety — the try/catch guard).
+/// 4. Both metrics are recorded in the same streamed request (end-to-end happy path).
+///    NOTE: streaming-safety under metrics fault (try/catch guard) is covered by
+///    SP5-b Task 4 (#2582 T4) — not in this file.
 ///
 /// Uses <see cref="MeterListener"/> to capture measurement events, mirroring
 /// <see cref="SseMetricsTests"/> and <see cref="RagObservabilityMetricsTests"/>.
@@ -365,10 +367,17 @@ public sealed class ChatWithSessionAgentMetricsTests
             liveSessionStreamGateway: gateway.Object);
     }
 
+    /// <summary>
+    /// Emits TWO content chunks followed by the final/usage chunk.
+    /// Two chunks are required so that the once-only guard (<c>if (!firstTokenRecorded)</c>)
+    /// is genuinely exercised: a regression that records on every token would produce 2
+    /// observations, causing <c>ContainSingle</c> to fail.
+    /// </summary>
     private static async IAsyncEnumerable<StreamChunk> CreateLlmStream(string content)
     {
         await Task.Yield();
-        yield return new StreamChunk(Content: content);
+        yield return new StreamChunk(Content: content);          // first token → records latency
+        yield return new StreamChunk(Content: content + " (2)"); // second token → guard must suppress
         yield return new StreamChunk(
             Content: null,
             Usage: new LlmUsage(10, 5, 15),

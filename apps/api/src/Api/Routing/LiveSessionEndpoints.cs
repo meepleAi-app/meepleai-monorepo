@@ -353,6 +353,16 @@ internal static class LiveSessionEndpoints
             .WithTags("LiveSessions")
             .WithSummary("Get live session by join code");
 
+        group.MapGet("/live-sessions/code/{code}/public", HandleGetPublicSessionByCode)
+            .AllowAnonymous()
+            .RequireRateLimiting("LiveSessionCodeReadPublic")
+            .Produces<PublicLiveSessionDto>(200)
+            .Produces(404)
+            .Produces(429)
+            .WithTags("LiveSessions")
+            .WithSummary("Get a live session lobby by join code (public, read-only)")
+            .WithDescription("Public QR-code endpoint. Returns a narrow read-only lobby/scoreboard projection (no UserIds/Notes/scores history). Code-as-capability, optional auth. Rate-limited 60/min per IP. Issue #2590.");
+
         group.MapGet("/live-sessions/{sessionId}", HandleGetSession)
             .RequireAuthenticatedUser()
             .RequireLiveSessionParticipant()
@@ -852,6 +862,22 @@ internal static class LiveSessionEndpoints
     {
         var result = await mediator.Send(new GetLiveSessionByCodeQuery(code), cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
+    }
+
+    /// <summary>
+    /// GET /api/v1/live-sessions/code/{code}/public — Issue #2590.
+    /// Public, anonymous, rate-limited narrow lobby projection. Returns 404 for an unknown code.
+    /// </summary>
+    private static async Task<IResult> HandleGetPublicSessionByCode(
+        string code,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator
+            .Send(new GetPublicLiveSessionByCodeQuery(code), cancellationToken)
+            .ConfigureAwait(false);
+
+        return result is null ? Results.NotFound() : Results.Ok(result);
     }
 
     private static async Task<IResult> HandleGetActiveSessions(

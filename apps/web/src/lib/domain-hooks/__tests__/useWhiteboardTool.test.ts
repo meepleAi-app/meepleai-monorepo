@@ -9,6 +9,7 @@
  * - saveStructured: debounced 500ms, calls correct endpoint
  * - clear: immediate, resets strokes and tokens
  * - applySSEEvent: stroke-added, structured-updated, whiteboard-cleared
+ * - SSE native stream listener: URL, event name, event dispatch (#2579)
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -16,6 +17,49 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 
 import { useWhiteboardTool } from '../useWhiteboardTool';
 import type { WhiteboardState, WhiteboardSSEEvent, Stroke } from '@/components/session/types';
+
+// ── MockEventSource ───────────────────────────────────────────────────────────
+
+interface MockEventSourceInstance {
+  url: string;
+  withCredentials: boolean;
+  close: ReturnType<typeof vi.fn>;
+  addEventListener: ReturnType<typeof vi.fn>;
+  removeEventListener: ReturnType<typeof vi.fn>;
+  readyState: number;
+  /** Simulate dispatching a named SSE event to registered listeners */
+  emit: (eventName: string, data: unknown) => void;
+}
+
+let mockEventSourceInstances: MockEventSourceInstance[] = [];
+
+class MockEventSource {
+  url: string;
+  withCredentials: boolean;
+  close = vi.fn();
+  addEventListener = vi.fn() as ReturnType<typeof vi.fn>;
+  removeEventListener = vi.fn();
+  readyState = 0;
+
+  constructor(url: string, options?: { withCredentials?: boolean }) {
+    this.url = url;
+    this.withCredentials = options?.withCredentials ?? false;
+    mockEventSourceInstances.push(this as unknown as MockEventSourceInstance);
+  }
+
+  /** Test helper: dispatch a named event to all registered handlers */
+  emit(eventName: string, data: unknown) {
+    const calls = (this.addEventListener as ReturnType<typeof vi.fn>).mock.calls as [
+      string,
+      (e: MessageEvent) => void,
+    ][];
+    for (const [name, handler] of calls) {
+      if (name === eventName) {
+        handler({ data: JSON.stringify(data) } as MessageEvent);
+      }
+    }
+  }
+}
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -421,5 +465,135 @@ describe('applySSEEvent', () => {
     });
 
     expect(result.current.whiteboardState).toBeNull();
+  });
+});
+
+// ── SSE native stream listener (#2579) ────────────────────────────────────────
+
+describe('SSE native stream listener', () => {
+  let fetchMockSSE: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    mockEventSourceInstances = [];
+    global.EventSource = MockEventSource as unknown as typeof EventSource;
+    fetchMockSSE = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => MOCK_STATE,
+    });
+    global.fetch = fetchMockSSE;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('opens EventSource to /api/v1/live-sessions/{sessionId}/stream (native endpoint)', () => {
+    renderHook(() => useWhiteboardTool({ sessionId: SESSION_ID, apiBaseUrl: API_BASE }));
+
+    expect(mockEventSourceInstances).toHaveLength(1);
+    expect(mockEventSourceInstances[0]?.url).toBe(
+      `${API_BASE}/api/v1/live-sessions/${SESSION_ID}/stream`
+    );
+    expect(mockEventSourceInstances[0]?.withCredentials).toBe(true);
+  });
+
+  it('does NOT open EventSource to the legacy /game-sessions/.../stream/v2 URL', () => {
+    renderHook(() => useWhiteboardTool({ sessionId: SESSION_ID, apiBaseUrl: API_BASE }));
+
+    expect(mockEventSourceInstances[0]?.url).not.toContain('game-sessions');
+    expect(mockEventSourceInstances[0]?.url).not.toContain('stream/v2');
+  });
+
+  it('registers listener for session:whiteboard (not session:toolkit)', () => {
+    renderHook(() => useWhiteboardTool({ sessionId: SESSION_ID, apiBaseUrl: API_BASE }));
+
+    const instance = mockEventSourceInstances[0];
+    expect(instance?.addEventListener).toHaveBeenCalledWith(
+      'session:whiteboard',
+      expect.any(Function)
+    );
+    // Ensure the OLD broken event name is NOT registered
+    const calls = (instance?.addEventListener as ReturnType<typeof vi.fn>).mock.calls as [
+      string,
+      unknown,
+    ][];
+    const registeredNames = calls.map(([name]) => name);
+    expect(registeredNames).not.toContain('session:toolkit');
+  });
+
+  it('closes EventSource on unmount', () => {
+    const { unmount } = renderHook(() =>
+      useWhiteboardTool({ sessionId: SESSION_ID, apiBaseUrl: API_BASE })
+    );
+
+    unmount();
+
+    expect(mockEventSourceInstances[0]?.close).toHaveBeenCalled();
+  });
+
+  it('applies stroke-added event dispatched as session:whiteboard', async () => {
+    const { result } = renderHook(() =>
+      useWhiteboardTool({ sessionId: SESSION_ID, apiBaseUrl: API_BASE })
+    );
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const instance = mockEventSourceInstances[0] as unknown as MockEventSource;
+    act(() => {
+      instance.emit('session:whiteboard', { type: 'stroke-added', stroke: MOCK_STROKE });
+    });
+
+    expect(result.current.whiteboardState?.strokes).toHaveLength(1);
+    expect(result.current.whiteboardState?.strokes[0]).toEqual(MOCK_STROKE);
+  });
+
+  it('applies structured-updated event dispatched as session:whiteboard', async () => {
+    const { result } = renderHook(() =>
+      useWhiteboardTool({ sessionId: SESSION_ID, apiBaseUrl: API_BASE })
+    );
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const newTokens = [{ id: 'tok-x', color: '#0ea5e9', label: 'X', gridX: 1, gridY: 1 }];
+    const instance = mockEventSourceInstances[0] as unknown as MockEventSource;
+    act(() => {
+      instance.emit('session:whiteboard', {
+        type: 'structured-updated',
+        tokens: newTokens,
+        gridSize: '6x6',
+        showGrid: false,
+        mode: 'structured',
+      });
+    });
+
+    expect(result.current.whiteboardState?.tokens).toEqual(newTokens);
+    expect(result.current.whiteboardState?.gridSize).toBe('6x6');
+    expect(result.current.whiteboardState?.showGrid).toBe(false);
+  });
+
+  it('applies whiteboard-cleared event dispatched as session:whiteboard', async () => {
+    const stateWithData: WhiteboardState = {
+      ...MOCK_STATE,
+      strokes: [MOCK_STROKE],
+      tokens: [{ id: 't1', color: '#ef4444', label: 'A', gridX: 0, gridY: 0 }],
+    };
+    fetchMockSSE = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => stateWithData,
+    });
+    global.fetch = fetchMockSSE;
+
+    const { result } = renderHook(() =>
+      useWhiteboardTool({ sessionId: SESSION_ID, apiBaseUrl: API_BASE })
+    );
+    await waitFor(() => expect(result.current.whiteboardState?.strokes).toHaveLength(1));
+
+    const instance = mockEventSourceInstances[0] as unknown as MockEventSource;
+    act(() => {
+      instance.emit('session:whiteboard', { type: 'whiteboard-cleared' });
+    });
+
+    expect(result.current.whiteboardState?.strokes).toHaveLength(0);
+    expect(result.current.whiteboardState?.tokens).toHaveLength(0);
   });
 });

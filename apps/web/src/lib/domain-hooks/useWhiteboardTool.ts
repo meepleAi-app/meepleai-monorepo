@@ -8,7 +8,7 @@
  * - Save strokes (debounced 500ms)
  * - Save structured layer (tokens, grid settings) – debounced 500ms
  * - Clear the whiteboard
- * - Real-time sync via v2 SSE stream (session:toolkit events)
+ * - Real-time sync via native SSE stream (session:whiteboard events)
  * - Exposes applySSEEvent for manual SSE integration
  *
  * Backend endpoints (wired when BE is available):
@@ -224,15 +224,11 @@ export function useWhiteboardTool({
     });
   }, []);
 
-  // ── SSE v2 listener ──────────────────────────────────────────────────────────
-  // SP2: stays on legacy /game-sessions stream until toolkit/whiteboard events are
-  // forwarded to the native /live-sessions stream — see #2561 / SP5.
-  // This hook is mounted on the /toolkit/[sessionId] surface (NOT the canonical
-  // /sessions/[id]/live view) and consumes `session:toolkit` events which the
-  // native stream does not yet emit.
+  // ── SSE listener — native live-session stream ─────────────────────────────────
+  // Consumes `session:whiteboard` events from the native /api/v1/live-sessions stream.
 
   useEffect(() => {
-    const endpoint = `${baseUrl}/api/v1/game-sessions/${sessionId}/stream/v2`;
+    const endpoint = `${baseUrl}/api/v1/live-sessions/${sessionId}/stream`;
 
     let source: EventSource | null = null;
     try {
@@ -241,7 +237,7 @@ export function useWhiteboardTool({
       return;
     }
 
-    const handleToolkitEvent = (event: MessageEvent<string>) => {
+    const handleWhiteboardEvent = (event: MessageEvent<string>) => {
       try {
         const payload = JSON.parse(event.data) as Record<string, unknown>;
         if (typeof payload['type'] === 'string') {
@@ -252,7 +248,7 @@ export function useWhiteboardTool({
       }
     };
 
-    source.addEventListener('session:toolkit', handleToolkitEvent);
+    source.addEventListener('session:whiteboard', handleWhiteboardEvent);
     return () => {
       source?.close();
     };

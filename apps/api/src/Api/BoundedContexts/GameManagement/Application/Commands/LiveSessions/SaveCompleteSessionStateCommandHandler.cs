@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 namespace Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 
 /// <summary>
-/// Orchestrates: pause session + save + create snapshot + persist agent state + generate recap.
+/// Orchestrates: pause session + save + create snapshot + generate recap.
 /// Issue #122 — Enhanced Save/Resume.
 /// </summary>
 internal sealed class SaveCompleteSessionStateCommandHandler
@@ -33,7 +33,7 @@ internal sealed class SaveCompleteSessionStateCommandHandler
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _tierEnforcementService = tierEnforcementService ?? throw new ArgumentNullException(nameof(tierEnforcementService));
-        _ = logger; // logger injected for DI compatibility; no log sites remain after ADR-083 SP0 dead-code removal
+        ArgumentNullException.ThrowIfNull(logger); // no log sites remain after ADR-083 SP0 dead-code removal; validates non-null (Sonar S4487)
     }
 
     public async Task<SessionSaveResultDto> Handle(
@@ -77,7 +77,7 @@ internal sealed class SaveCompleteSessionStateCommandHandler
         // 5. Photo count from snapshot DTO
         var photoCount = snapshotDto.AttachmentCount;
 
-        // 7. Generate recap text
+        // 6. Generate recap text
         var activePlayers = session.Players.Where(p => p.IsActive).ToList();
         var playerNames = string.Join(", ", activePlayers.Select(p => p.DisplayName));
 
@@ -89,7 +89,7 @@ internal sealed class SaveCompleteSessionStateCommandHandler
             ? $"Partita salvata al turno {session.CurrentTurnIndex}. Giocatori: {playerNames}. In testa: {topPlayer.DisplayName} con {topPlayer.TotalScore} punti. Snapshot #{snapshotDto.SnapshotIndex} creato."
             : $"Partita salvata al turno {session.CurrentTurnIndex}. Giocatori: {playerNames}. Snapshot #{snapshotDto.SnapshotIndex} creato.";
 
-        // 8. Return result
+        // 7. Return result
         return new SessionSaveResultDto
         {
             SessionId = command.SessionId,

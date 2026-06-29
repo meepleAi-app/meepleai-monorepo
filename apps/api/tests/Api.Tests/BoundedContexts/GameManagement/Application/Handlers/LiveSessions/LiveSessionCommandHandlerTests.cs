@@ -187,6 +187,15 @@ public class LiveSessionCommandHandlerTests
         var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object, _companionSessionServiceMock.Object);
         var gameId = Guid.NewGuid();
         var groupId = Guid.NewGuid();
+
+        // #2552: with a non-null GameId the companion saga runs; configure the mock to return a real
+        // id so we can assert it flows into TrackingSessionId (the default mock returned Guid.Empty
+        // silently and the assertion below was missing).
+        var expectedTrackingSessionId = Guid.NewGuid();
+        _companionSessionServiceMock
+            .Setup(s => s.CreateCompanionAsync(DefaultUserId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedTrackingSessionId);
+
         var command = new CreateLiveSessionCommand(
             DefaultUserId,
             "Spirit Island",
@@ -210,6 +219,9 @@ public class LiveSessionCommandHandlerTests
         capturedSession.Visibility.Should().Be(PlayRecordVisibility.Group);
         capturedSession.GroupId.Should().Be(groupId);
         capturedSession.AgentMode.Should().Be(AgentSessionMode.Assistant);
+        capturedSession.TrackingSessionId.Should().Be(expectedTrackingSessionId);
+        _companionSessionServiceMock.Verify(
+            s => s.CreateCompanionAsync(DefaultUserId, gameId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     #endregion

@@ -90,4 +90,24 @@ public class LiveGameSessionMapperTests
         var back = LiveGameSessionMapper.ToDomain(entity);
         back.TrackingSessionId.Should().Be(trackingId);
     }
+
+    [Fact]
+    public void Mapper_RoundTrips_NullTrackingSessionId()
+    {
+        // #2552: explicit null round-trip — a free-form session (no GameId companion) must keep
+        // TrackingSessionId null through ToEntity → ToDomain, never coalescing to Guid.Empty.
+        var domain = LiveGameSession.Create(
+            id: Guid.NewGuid(),
+            createdByUserId: Guid.NewGuid(),
+            gameName: "Mage Knight",
+            timeProvider: TimeProvider.System,
+            gameId: null,
+            trackingSessionId: null);
+
+        var entity = LiveGameSessionMapper.ToEntity(domain);
+        entity.TrackingSessionId.Should().BeNull();
+
+        var back = LiveGameSessionMapper.ToDomain(entity);
+        back.TrackingSessionId.Should().BeNull();
+    }
 }

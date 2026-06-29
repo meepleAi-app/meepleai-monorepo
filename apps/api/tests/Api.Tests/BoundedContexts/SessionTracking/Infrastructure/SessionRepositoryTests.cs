@@ -2,6 +2,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
@@ -217,7 +218,7 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         };
 
         // Assert
-        await act.Should().ThrowAsync<InvalidOperationException>()
+        await act.Should().ThrowAsync<ConflictException>()
             .WithMessage("*Session code*already exists*");
     }
 

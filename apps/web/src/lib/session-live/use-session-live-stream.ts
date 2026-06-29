@@ -211,7 +211,7 @@ export function useSessionLiveStream(input: UseSessionLiveStreamInput): UseSessi
     dispatch({ type: 'CONNECTING' });
 
     const lastEventId = state.lastEventId;
-    const url = `${baseUrl}/api/v1/game-sessions/${sessionId}/stream/v2${
+    const url = `${baseUrl}/api/v1/live-sessions/${sessionId}/stream${
       lastEventId ? `?lastEventId=${encodeURIComponent(lastEventId)}` : ''
     }`;
 

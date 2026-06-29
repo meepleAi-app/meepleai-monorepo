@@ -225,6 +225,11 @@ export function useWhiteboardTool({
   }, []);
 
   // ── SSE v2 listener ──────────────────────────────────────────────────────────
+  // SP2: stays on legacy /game-sessions stream until toolkit/whiteboard events are
+  // forwarded to the native /live-sessions stream — see #2561 / SP5.
+  // This hook is mounted on the /toolkit/[sessionId] surface (NOT the canonical
+  // /sessions/[id]/live view) and consumes `session:toolkit` events which the
+  // native stream does not yet emit.
 
   useEffect(() => {
     const endpoint = `${baseUrl}/api/v1/game-sessions/${sessionId}/stream/v2`;

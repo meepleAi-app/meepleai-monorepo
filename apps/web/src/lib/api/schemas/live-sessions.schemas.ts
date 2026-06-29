@@ -137,6 +137,31 @@ export const LiveSessionDtoSchema = z.object({
 
 export type LiveSessionDto = z.infer<typeof LiveSessionDtoSchema>;
 
+// ── Public lobby projection (#2590) — anonymous-safe, narrow scoreboard ──────────
+// Served by GET /api/v1/live-sessions/code/{code}/public. Deliberately omits
+// userId, createdByUserId, notes, roundScores, teams, visibility, groupId, timestamps.
+export const PublicLiveSessionPlayerDtoSchema = z.object({
+  id: z.string().uuid(),
+  displayName: z.string(),
+  color: PlayerColorSchema,
+  totalScore: z.number().int(),
+  currentRank: z.number().int(),
+  isActive: z.boolean(),
+});
+
+export type PublicLiveSessionPlayerDto = z.infer<typeof PublicLiveSessionPlayerDtoSchema>;
+
+export const PublicLiveSessionDtoSchema = z.object({
+  id: z.string().uuid(),
+  sessionCode: z.string(),
+  gameName: z.string(),
+  gameSlug: z.string(),
+  status: LiveSessionStatusSchema,
+  players: z.array(PublicLiveSessionPlayerDtoSchema),
+});
+
+export type PublicLiveSessionDto = z.infer<typeof PublicLiveSessionDtoSchema>;
+
 export const LiveSessionSummaryDtoSchema = z.object({
   id: z.string().uuid(),
   sessionCode: z.string(),

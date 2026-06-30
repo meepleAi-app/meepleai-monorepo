@@ -67,6 +67,9 @@ public class LiveGameSessionEntity
     // ADR-083 SP0: id of the SessionTracking.Session companion (cross-BC correlation bridge).
     public Guid? TrackingSessionId { get; set; }
 
+    // ADR-083 #2587 Slice 1: id of the GameManagement.GameSession quota/lifecycle aggregate correlated at start.
+    public Guid? CorrelatedGameSessionId { get; set; }
+
     // Optimistic concurrency via PostgreSQL's xmin system column (Issue #2305).
     // Postgres assigns xmin = transaction-id-of-last-write per row; EF reads back via the
     // xid type-mapped uint property. Server-owned: NO mapper assignment, NO client default,

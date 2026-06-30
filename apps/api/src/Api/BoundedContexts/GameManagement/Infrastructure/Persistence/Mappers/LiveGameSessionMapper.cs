@@ -66,6 +66,7 @@ internal static class LiveGameSessionMapper
             Notes = domain.Notes,
             AgentMode = (int)domain.AgentMode,
             TrackingSessionId = domain.TrackingSessionId,
+            CorrelatedGameSessionId = domain.CorrelatedGameSessionId,
             // Xmin is Postgres-system-owned (Issue #2305); EF round-trips it via xid mapping.
             // Mapper passes the current domain value back so EF emits WHERE xmin = @original.
             Xmin = domain.Xmin
@@ -291,7 +292,8 @@ internal static class LiveGameSessionMapper
             turnRecords: turnRecords,
             disputes: disputes,
             diaryEntries: diaryEntries,
-            setupChecklist: setupChecklist);
+            setupChecklist: setupChecklist,
+            correlatedGameSessionId: entity.CorrelatedGameSessionId);
     }
 
     // ── Serialization helpers for types not directly deserializable by STJ ──

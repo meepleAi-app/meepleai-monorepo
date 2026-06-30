@@ -3209,6 +3209,7 @@
         "tabWidget": "Widget",
         "tabNotes": "Notes",
         "tabPhotos": "Photos",
+        "tabAgent": "Arbiter",
         "tabTools": "Tools",
         "tabChat": "Chat"
       },

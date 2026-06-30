@@ -32,6 +32,7 @@ const LABELS: RightColumnTabsLabels = {
   tabWidget: 'Widget',
   tabNotes: 'Note',
   tabPhotos: 'Foto',
+  tabAgent: 'Arbitro',
 };
 
 function renderTabs(overrides: Partial<RightColumnTabsProps> = {}) {
@@ -72,27 +73,28 @@ describe('RightColumnTabs — render shape', () => {
     expect(screen.getByRole('tablist', { name: 'Colonna destra' })).toBeInTheDocument();
   });
 
-  it('renders 5 tab buttons', () => {
+  it('renders 6 tab buttons', () => {
     renderTabs();
     const tabs = screen.getAllByRole('tab');
-    expect(tabs).toHaveLength(5);
+    expect(tabs).toHaveLength(6);
   });
 
-  it('renders tab labels (Score / Turni / Widget / Note / Foto)', () => {
+  it('renders tab labels (Score / Turni / Widget / Note / Foto / Arbitro)', () => {
     renderTabs();
     expect(screen.getByRole('tab', { name: 'Score' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Turni' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Widget' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Note' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Foto' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Arbitro' })).toBeInTheDocument();
   });
 
-  it('renders tab buttons in order: Score, Turn, Widget, Notes, Photos', () => {
+  it('renders tab buttons in order: Score, Turn, Widget, Notes, Photos, Agent', () => {
     renderTabs();
     const tablist = screen.getByRole('tablist');
     const tabs = within(tablist).getAllByRole('tab');
     const labels = tabs.map(t => t.textContent);
-    expect(labels).toEqual(['Score', 'Turni', 'Widget', 'Note', 'Foto']);
+    expect(labels).toEqual(['Score', 'Turni', 'Widget', 'Note', 'Foto', 'Arbitro']);
   });
 
   it('renders tabpanel with children', () => {
@@ -119,6 +121,7 @@ describe('RightColumnTabs — aria-selected + roving tabindex', () => {
     expect(screen.getByRole('tab', { name: 'Widget' })).toHaveAttribute('aria-selected', 'false');
     expect(screen.getByRole('tab', { name: 'Note' })).toHaveAttribute('aria-selected', 'false');
     expect(screen.getByRole('tab', { name: 'Foto' })).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByRole('tab', { name: 'Arbitro' })).toHaveAttribute('aria-selected', 'false');
   });
 
   it('active tab has tabIndex=0', () => {
@@ -132,6 +135,7 @@ describe('RightColumnTabs — aria-selected + roving tabindex', () => {
     expect(screen.getByRole('tab', { name: 'Widget' })).toHaveAttribute('tabindex', '-1');
     expect(screen.getByRole('tab', { name: 'Note' })).toHaveAttribute('tabindex', '-1');
     expect(screen.getByRole('tab', { name: 'Foto' })).toHaveAttribute('tabindex', '-1');
+    expect(screen.getByRole('tab', { name: 'Arbitro' })).toHaveAttribute('tabindex', '-1');
   });
 });
 
@@ -207,12 +211,23 @@ describe('RightColumnTabs — keyboard navigation', () => {
     expect(screen.getByRole('tab', { name: 'Foto' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('ArrowRight wraps from photos → score', async () => {
+  it('ArrowRight advances from photos → agent', async () => {
     const user = userEvent.setup();
     render(<ControlledTabs initialTab="photos" />);
 
     const photosTab = screen.getByRole('tab', { name: 'Foto' });
     photosTab.focus();
+    await user.keyboard('{ArrowRight}');
+
+    expect(screen.getByRole('tab', { name: 'Arbitro' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('ArrowRight wraps from agent → score', async () => {
+    const user = userEvent.setup();
+    render(<ControlledTabs initialTab="agent" />);
+
+    const agentTab = screen.getByRole('tab', { name: 'Arbitro' });
+    agentTab.focus();
     await user.keyboard('{ArrowRight}');
 
     expect(screen.getByRole('tab', { name: 'Score' })).toHaveAttribute('aria-selected', 'true');
@@ -229,7 +244,7 @@ describe('RightColumnTabs — keyboard navigation', () => {
     expect(screen.getByRole('tab', { name: 'Score' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('ArrowLeft wraps from score → photos', async () => {
+  it('ArrowLeft wraps from score → agent', async () => {
     const user = userEvent.setup();
     render(<ControlledTabs initialTab="score" />);
 
@@ -237,7 +252,7 @@ describe('RightColumnTabs — keyboard navigation', () => {
     scoreTab.focus();
     await user.keyboard('{ArrowLeft}');
 
-    expect(screen.getByRole('tab', { name: 'Foto' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Arbitro' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('Home jumps to first tab (score)', async () => {
@@ -251,7 +266,7 @@ describe('RightColumnTabs — keyboard navigation', () => {
     expect(screen.getByRole('tab', { name: 'Score' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('End jumps to last tab (photos)', async () => {
+  it('End jumps to last tab (agent)', async () => {
     const user = userEvent.setup();
     render(<ControlledTabs initialTab="score" />);
 
@@ -259,6 +274,6 @@ describe('RightColumnTabs — keyboard navigation', () => {
     scoreTab.focus();
     await user.keyboard('{End}');
 
-    expect(screen.getByRole('tab', { name: 'Foto' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Arbitro' })).toHaveAttribute('aria-selected', 'true');
   });
 });

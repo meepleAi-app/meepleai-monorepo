@@ -47,6 +47,7 @@ export interface MobileBottomSheetDrawerLabels {
   readonly tabWidget: string;
   readonly tabNotes: string;
   readonly tabPhotos: string;
+  readonly tabAgent: string;
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -69,6 +70,7 @@ const ORDERED_TABS: ReadonlyArray<{ id: LiveTab; labelKey: keyof MobileBottomShe
     { id: 'widget', labelKey: 'tabWidget' },
     { id: 'notes', labelKey: 'tabNotes' },
     { id: 'photos', labelKey: 'tabPhotos' },
+    { id: 'agent', labelKey: 'tabAgent' },
   ];
 
 // ─── Component ────────────────────────────────────────────────────────────────

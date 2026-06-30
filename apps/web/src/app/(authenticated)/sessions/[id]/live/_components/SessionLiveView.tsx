@@ -117,6 +117,7 @@ import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useLiveSession } from '@/hooks/queries/useLiveSession';
 import { useLiveSessionDiary } from '@/hooks/queries/useLiveSessionDiary';
 import { useSessionAgentLaunch } from '@/hooks/queries/useSessionAgentLaunch';
+import type { ChatImagePreview } from '@/hooks/useChatImageAttachments';
 import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 import { ConflictError } from '@/lib/api/core/errors';
@@ -966,6 +967,7 @@ export function SessionLiveView(): ReactElement {
       visibilityShared: t('pages.sessionLive.chat.visibilityShared'),
       emptyMessage: t('pages.sessionLive.chat.emptyMessage'),
       newMessagesToastAriaLabel: t('pages.sessionLive.chat.newMessagesToastAriaLabel'),
+      attachAriaLabel: t('pages.sessionLive.chat.attachAriaLabel'),
     }),
     [t]
   );
@@ -1064,6 +1066,10 @@ export function SessionLiveView(): ReactElement {
     gameContext: agentGameContext,
   });
 
+  // #2588 A3: local state for image-path messages (ask-agent JSON endpoint).
+  // These are merged into agentChatMessages below so they appear in the same panel.
+  const [imageMessages, setImageMessages] = useState<LiveAgentChatMessage[]>([]);
+
   // Map useSessionAgentChat.ChatMessage → LiveAgentChat.ChatMessage.
   // The two shapes differ: agent uses role:'user'|'assistant', LiveAgentChat uses
   // senderId/senderName/visibility.  We map:
@@ -1099,6 +1105,11 @@ export function SessionLiveView(): ReactElement {
       statusContent = t('pages.sessionLive.chatAgent.errorMessage');
     }
 
+    // #2588 A3: merge image-path messages (ask-agent) with RAG messages, sorted by timestamp.
+    const merged = [...realMessages, ...imageMessages].sort((a, b) =>
+      a.timestamp.localeCompare(b.timestamp)
+    );
+
     if (statusContent != null) {
       const statusMessage: LiveAgentChatMessage = {
         id: `agent-status-${agentLaunch.status}`,
@@ -1108,21 +1119,79 @@ export function SessionLiveView(): ReactElement {
         visibility: 'shared' as const,
         timestamp: new Date().toISOString(),
       };
-      return [statusMessage, ...realMessages];
+      return [statusMessage, ...merged];
     }
 
-    return realMessages;
-  }, [agentChat.messages, activeSession?.viewerId, agentLaunch.status, t]);
+    return merged;
+  }, [agentChat.messages, activeSession?.viewerId, agentLaunch.status, t, imageMessages]);
 
   // AC-CHAT-0: send goes to the RAG agent, NOT /game-sessions/{id}/chat.
   // AC-CHAT-NULL: if agentLaunch.status !== 'ready', agent is not available yet —
   // the status message above provides user feedback; suppress the actual ask() call.
+  // #2588 A3: dual-path — images → /ask-agent (multipart JSON); text-only → RAG SSE.
   const handleAgentSendMessage = useCallback(
-    async (content: string, _visibility: 'private' | 'shared'): Promise<void> => {
-      if (!agentSessionId || !content.trim()) return;
-      await agentChat.ask(content);
+    async (
+      content: string,
+      _visibility: 'private' | 'shared',
+      images?: ChatImagePreview[]
+    ): Promise<void> => {
+      if (images && images.length > 0) {
+        // Image path: multipart POST to /ask-agent (JSON response, not SSE).
+        if (sessionId == null) return;
+        const question = content.trim() || 'Analizza questa immagine';
+        const fd = new FormData();
+        fd.append('question', question);
+        fd.append('senderId', activeSession?.viewerId ?? '');
+        images.forEach(img => fd.append('images', img.file));
+
+        // Optimistically append user message so the UI feels responsive.
+        const userMsgId = crypto.randomUUID();
+        const now = new Date().toISOString();
+        setImageMessages(prev => [
+          ...prev,
+          {
+            id: userMsgId,
+            senderId: activeSession?.viewerId ?? '',
+            senderName: '',
+            content: question,
+            visibility: 'shared' as const,
+            timestamp: now,
+          },
+        ]);
+
+        try {
+          const res = await fetch(`/api/v1/game-sessions/${sessionId}/chat/ask-agent`, {
+            method: 'POST',
+            credentials: 'include',
+            body: fd,
+          });
+          if (!res.ok) throw new Error(`ask-agent ${res.status}`);
+          const json = (await res.json()) as { answer?: string; confidence?: number };
+          setImageMessages(prev => [
+            ...prev,
+            {
+              id: crypto.randomUUID(),
+              senderId: 'agent',
+              senderName: 'MeepleAI',
+              content: json.answer ?? 'Risposta non disponibile.',
+              visibility: 'shared' as const,
+              timestamp: new Date().toISOString(),
+            },
+          ]);
+        } catch {
+          toast.error("Impossibile elaborare l'immagine. Riprova.", {
+            id: 'image-ask-error',
+          });
+          // Remove the optimistic user message on failure.
+          setImageMessages(prev => prev.filter(m => m.id !== userMsgId));
+        }
+      } else {
+        // Text-only RAG path (unchanged).
+        if (!agentSessionId || !content.trim()) return;
+        await agentChat.ask(content);
+      }
     },
-    [agentSessionId, agentChat]
+    [agentSessionId, agentChat, sessionId, activeSession?.viewerId]
   );
 
   // ── Chat messages from SSE events ────────────────────────────────────────

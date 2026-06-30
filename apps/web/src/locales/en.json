@@ -3232,7 +3232,8 @@
         "visibilityShared": "Shared",
         "emptyMessage": "No messages yet.",
         "newMessagesToast": "{count, plural, one {# new message} other {# new messages}}",
-        "newMessagesToastAriaLabel": "New messages available — click to scroll to bottom"
+        "newMessagesToastAriaLabel": "New messages available — click to scroll to bottom",
+        "attachAriaLabel": "Attach image"
       },
       "chatAgent": {
         "title": "ChatAgent",

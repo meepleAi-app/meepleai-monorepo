@@ -3339,7 +3339,8 @@
         "visibilityShared": "Condiviso",
         "emptyMessage": "Nessun messaggio ancora.",
         "newMessagesToast": "{count, plural, one {# nuovo messaggio} other {# nuovi messaggi}}",
-        "newMessagesToastAriaLabel": "Nuovi messaggi disponibili — clic per scorrere in fondo"
+        "newMessagesToastAriaLabel": "Nuovi messaggi disponibili — clic per scorrere in fondo",
+        "attachAriaLabel": "Allega immagine"
       },
       "chatAgent": {
         "title": "ChatAgent",

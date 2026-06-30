@@ -31,7 +31,7 @@
 
 import { fireEvent, render, screen, act } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactElement } from 'react';
 
 import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
@@ -1783,6 +1783,109 @@ describe('SessionLiveView — #2500 Task 4-FE: RAG agent wiring via useSessionAg
     expect(
       container.querySelector('[data-slot="chat-nongrounded-disclaimer"]')
     ).toBeInTheDocument();
+  });
+});
+
+// ─── #2588 A3 — dual-path send handler (images → /ask-agent, text → RAG) ────────
+// Asserts the SessionLiveView.handleAgentSendMessage routing:
+//   - text-only send → agentChat.ask() (RAG SSE) and NOT fetch /ask-agent
+//   - image send     → multipart POST /chat/ask-agent and NOT agentChat.ask()
+
+describe('SessionLiveView — #2588 A3: dual-path image/text send handler', () => {
+  const agentAskMock = vi.fn();
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
+    mockParamsId = 'session-abc-123';
+    IS_VISUAL_TEST_BUILD_MOCK = false;
+    useLiveSessionMock.mockReturnValue({
+      data: { ...MOCK_SESSION_DTO, gameId: 'game-00000001' },
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+    useSessionAgentLaunchMock.mockReturnValue({
+      status: 'ready' as const,
+      agentSessionId: 'agent-session-uuid-0001',
+    });
+    useSessionAgentChatMock.mockReturnValue({
+      messages: [],
+      isLoading: false,
+      error: null,
+      streamingContent: '',
+      ask: agentAskMock,
+      stop: vi.fn(),
+    });
+    fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ answer: 'Risposta immagine.', confidence: 0.9 }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    // crypto.randomUUID is used for optimistic message ids on the image path.
+    if (typeof globalThis.crypto?.randomUUID !== 'function') {
+      vi.stubGlobal('crypto', {
+        ...globalThis.crypto,
+        randomUUID: () => `uuid-${Math.random().toString(36).slice(2)}`,
+      });
+    }
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('A3-1: text-only send calls agentChat.ask() and does NOT POST /ask-agent', async () => {
+    renderWithIntl(<SessionLiveView />);
+    // The desktop ChatAgentPanel mounts LiveAgentChat with the text input.
+    const input = screen.getAllByRole('textbox', { name: 'Scrivi un messaggio' })[0];
+    const sendBtn = screen.getAllByRole('button', { name: 'Invia messaggio' })[0];
+
+    fireEvent.change(input, { target: { value: 'Spiega la regola' } });
+    await act(async () => {
+      fireEvent.click(sendBtn);
+    });
+
+    expect(agentAskMock).toHaveBeenCalledWith('Spiega la regola');
+    // No multipart /ask-agent fetch for text-only sends.
+    const askAgentCalls = fetchMock.mock.calls.filter(c =>
+      String(c[0]).includes('/chat/ask-agent')
+    );
+    expect(askAgentCalls).toHaveLength(0);
+  });
+
+  it('A3-2: image send POSTs multipart /ask-agent and does NOT call agentChat.ask()', async () => {
+    renderWithIntl(<SessionLiveView />);
+
+    // Attach an image via the hidden file input in LiveAgentChat.
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(fileInput).not.toBeNull();
+
+    const file = new File(['x'], 'board.jpg', { type: 'image/jpeg' });
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [file] } });
+    });
+
+    const sendBtn = screen.getAllByRole('button', { name: 'Invia messaggio' })[0];
+    await act(async () => {
+      fireEvent.click(sendBtn);
+    });
+
+    // RAG path NOT taken for image sends.
+    expect(agentAskMock).not.toHaveBeenCalled();
+    // Multipart POST to /ask-agent issued.
+    const askAgentCalls = fetchMock.mock.calls.filter(c =>
+      String(c[0]).includes('/game-sessions/session-abc-123/chat/ask-agent')
+    );
+    expect(askAgentCalls).toHaveLength(1);
+    const [, init] = askAgentCalls[0];
+    expect((init as RequestInit).method).toBe('POST');
+    expect((init as RequestInit).body).toBeInstanceOf(FormData);
   });
 });
 

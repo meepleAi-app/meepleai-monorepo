@@ -17,6 +17,7 @@ Una subfolder per snapshot, formato `YYYY-MM-DD[-suffix]/`:
 | Snapshot | Scope | Gap report companion |
 |---|---|---|
 | [`2026-06-04/`](2026-06-04/) | Baseline SP4 + SP7 wizard + Auth (12 mockup) | [`docs/for-developers/audits/2026-06-04-claude-design-gap-report.md`](../docs/for-developers/audits/2026-06-04-claude-design-gap-report.md) |
+| [`2026-06-30-sp6/`](2026-06-30-sp6/) | SP6 Libro-Game (15 mockup, 5 turni, 49 gap) | [`docs/for-developers/audits/2026-06-30-claude-design-gap-report-sp6.md`](../docs/for-developers/audits/2026-06-30-claude-design-gap-report-sp6.md) |
 
 ## Come navigare uno snapshot
 

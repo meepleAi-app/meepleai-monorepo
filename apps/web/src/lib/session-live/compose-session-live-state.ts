@@ -271,10 +271,13 @@ function applyDiary(
   state: SessionLiveState,
   event: Extract<SessionEvent, { type: 'session:diary' }>
 ): SessionLiveState {
+  // #2575: resolve authorId to the player's display-name; fall back to raw UUID for
+  // guests or authors not yet in the players list.
+  const author = state.players.find(p => p.id === event.authorId);
   const entry: LiveLogEntry = {
     id: event.entryId,
     type: 'event',
-    authorName: event.authorId,
+    authorName: author?.name ?? event.authorId,
     content: event.content,
     timestamp: event.timestamp,
   };

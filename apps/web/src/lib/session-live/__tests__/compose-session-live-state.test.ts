@@ -549,7 +549,8 @@ describe('composeSessionLiveState — session:diary', () => {
     expect(state.actionLog[0].id).toBe('note-1');
   });
 
-  it('preserves authorId in actionLog entry authorName', () => {
+  it('resolves authorId to player display-name when player is in state', () => {
+    // TDD pin: authorId 'p-bob' must resolve to 'Bob' (PLAYER_BOB.displayName), not the raw UUID.
     const event: Extract<SessionEvent, { type: 'session:diary' }> = {
       type: 'session:diary',
       sessionId: 'sess-1',
@@ -559,7 +560,21 @@ describe('composeSessionLiveState — session:diary', () => {
       timestamp: TS,
     };
     const state = composeSessionLiveState(BASE_SESSION, [event]);
-    expect(state.actionLog[0].authorName).toBe('p-bob');
+    expect(state.actionLog[0].authorName).toBe('Bob');
+  });
+
+  it('falls back to raw authorId when player is not in state', () => {
+    // Guest or unknown author — not in the players list → raw UUID is acceptable fallback.
+    const event: Extract<SessionEvent, { type: 'session:diary' }> = {
+      type: 'session:diary',
+      sessionId: 'sess-1',
+      entryId: 'note-guest',
+      authorId: 'unknown-guest-uuid',
+      content: 'Guest note',
+      timestamp: TS,
+    };
+    const state = composeSessionLiveState(BASE_SESSION, [event]);
+    expect(state.actionLog[0].authorName).toBe('unknown-guest-uuid');
   });
 
   it('diary event does NOT affect players array (Notes/diary separation — FE side)', () => {
@@ -609,7 +624,8 @@ describe('session:diary end-to-end: parseSseEvent → composeSessionLiveState', 
     const entry = state.actionLog[0];
     expect(entry.type).toBe('event');
     expect(entry.content).toBe('Played the Forest Witch card');
-    expect(entry.authorName).toBe('p-alice');
+    // #2575: authorId resolves to display-name when player is in state
+    expect(entry.authorName).toBe('Alice');
     expect(entry.id).toBe('e2e-note-1');
     expect(entry.timestamp).toBe(TS);
   });

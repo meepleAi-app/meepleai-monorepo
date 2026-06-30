@@ -103,6 +103,13 @@ public sealed class LazyCompanionOnSubscribeTests : IAsyncLifetime
         // Assert — request succeeded
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
 
+        // Assert — NO X-Warning-Code: stream-not-linked on the subscribe that just linked the session.
+        // This is the stale-header fix (final-review Important finding): the endpoint must use the
+        // POST-ensure result, not the stale ctx.HasCompanion, for the warning decision.
+        resp.Headers.Should().NotContainKey("X-Warning-Code",
+            "GameId-backed session was just linked by EnsureCompanionCommand on this very subscribe; " +
+            "emitting stream-not-linked would mislead the client into thinking the stream is empty");
+
         // Assert — companion persisted after subscribe
         // Use a fresh DbContext scope to avoid stale tracking.
         await using var verifyScope = _factory.Services.CreateAsyncScope();

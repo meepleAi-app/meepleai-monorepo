@@ -147,7 +147,38 @@ public class EnsureCompanionCommandHandlerTests
         _repoMock.Verify(r => r.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task Handle_NullCompanionAndGameIdPresent_ReturnsNewCompanionId()
+    {
+        // Arrange — the command must return the newly created TrackingSessionId so the
+        // endpoint can avoid a stale X-Warning-Code: stream-not-linked on the linking subscribe.
+        var session = CreateSessionNeedsCompanion();
+        SetupRepoGetById(DefaultSessionId, session);
+        SetupCompanion(DefaultCompanionId);
+        var cmd = new EnsureCompanionCommand(DefaultSessionId);
+
+        // Act
+        var result = await _handler.Handle(cmd, CancellationToken.None);
+
+        // Assert
+        result.Should().Be(DefaultCompanionId,
+            "handler must return the newly created TrackingSessionId so the caller " +
+            "knows the session is now linked");
+    }
+
     // ── (b) Session already has a companion → no-op ────────────────────────────
+
+    private static readonly Guid ExistingCompanionId = Guid.NewGuid();
+
+    /// <summary>Creates a session that already has a companion with a known, captured id.</summary>
+    private static LiveGameSession CreateSessionAlreadyHasCompanionWithKnownId()
+        => LiveGameSession.Create(
+            DefaultSessionId,
+            DefaultUserId,
+            "Mage Knight",
+            TimeProvider.System,
+            gameId: DefaultGameId,
+            trackingSessionId: ExistingCompanionId);
 
     [Fact]
     public async Task Handle_AlreadyHasCompanion_DoesNotCallCreateCompanion()
@@ -179,6 +210,24 @@ public class EnsureCompanionCommandHandlerTests
 
         // Assert
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_AlreadyHasCompanion_ReturnsExistingTrackingSessionId()
+    {
+        // Arrange — session already has a companion; the command must return the existing id
+        // (not null) so the endpoint knows the session is still linked.
+        var session = CreateSessionAlreadyHasCompanionWithKnownId();
+        SetupRepoGetById(DefaultSessionId, session);
+        var cmd = new EnsureCompanionCommand(DefaultSessionId);
+
+        // Act
+        var result = await _handler.Handle(cmd, CancellationToken.None);
+
+        // Assert
+        result.Should().Be(ExistingCompanionId,
+            "handler must return the pre-existing TrackingSessionId so the caller " +
+            "knows the session is already linked");
     }
 
     // ── (c) Free-form session (GameId == null) → no-op ────────────────────────
@@ -213,6 +262,23 @@ public class EnsureCompanionCommandHandlerTests
 
         // Assert
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_FreeFormSession_ReturnsNull()
+    {
+        // Arrange — free-form session (GameId == null) must return null so the endpoint
+        // correctly emits X-Warning-Code: stream-not-linked (stream genuinely unlinked).
+        var session = CreateFreeFormSession();
+        SetupRepoGetById(DefaultSessionId, session);
+        var cmd = new EnsureCompanionCommand(DefaultSessionId);
+
+        // Act
+        var result = await _handler.Handle(cmd, CancellationToken.None);
+
+        // Assert
+        result.Should().BeNull(
+            "free-form sessions cannot have a companion; caller must still warn the client");
     }
 
     // ── Session not found → NotFoundException ─────────────────────────────────
@@ -275,6 +341,43 @@ public class EnsureCompanionCommandHandlerTests
         // Act — should NOT throw
         var act = () => _handler.Handle(cmd, CancellationToken.None);
         await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task Handle_ConcurrencyConflict_WhenRefetchShowsCompanionSet_ReturnsWinnersTrackingId()
+    {
+        // Arrange — after a race the loser re-fetches and must return the winner's TrackingSessionId
+        // so the endpoint knows the session IS now linked (no stale warning).
+        var sessionNeedsCompanion = CreateSessionNeedsCompanion();
+        var winnersCompanionId = Guid.NewGuid();
+        var sessionWinnerSet = LiveGameSession.Create(
+            DefaultSessionId, DefaultUserId, "Mage Knight", TimeProvider.System,
+            gameId: DefaultGameId, trackingSessionId: winnersCompanionId);
+
+        var callCount = 0;
+        _repoMock
+            .Setup(r => r.GetByIdAsync(DefaultSessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() =>
+            {
+                callCount++;
+                return callCount == 1 ? sessionNeedsCompanion : sessionWinnerSet;
+            });
+
+        SetupCompanion(DefaultCompanionId);
+
+        _uowMock
+            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateConcurrencyException("xmin conflict"));
+
+        var cmd = new EnsureCompanionCommand(DefaultSessionId);
+
+        // Act
+        var result = await _handler.Handle(cmd, CancellationToken.None);
+
+        // Assert
+        result.Should().Be(winnersCompanionId,
+            "the losing concurrent caller must return the winner's TrackingSessionId " +
+            "so the endpoint does not emit a stale stream-not-linked warning");
     }
 
     [Fact]

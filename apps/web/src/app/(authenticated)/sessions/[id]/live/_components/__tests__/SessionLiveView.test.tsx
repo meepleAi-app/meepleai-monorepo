@@ -189,6 +189,24 @@ vi.mock('@/hooks/mutations/useCompleteLiveSession', () => ({
   }),
 }));
 
+// ─── useAddDiaryEntry mock (#2575) ───────────────────────────────────────────
+// Controllable mutateAsync — finding #16 tests resolve/reject it to assert the
+// response-ack toast behavior (handleAddNote now goes through this mutation).
+const addDiaryMutateAsync = vi.fn();
+
+vi.mock('@/hooks/mutations/useAddDiaryEntry', () => ({
+  useAddDiaryEntry: () => ({
+    mutateAsync: addDiaryMutateAsync,
+  }),
+}));
+
+// ─── useLiveSessionDiary mock (#2575: historical hydration query) ────────────
+let diaryQueryData: Array<{ id: string; authorId: string; createdAt: string; text: string }> = [];
+
+vi.mock('@/hooks/queries/useLiveSessionDiary', () => ({
+  useLiveSessionDiary: () => ({ data: diaryQueryData }),
+}));
+
 // ─── useResolvePlayRecord mock (#2503) ───────────────────────────────────────
 // Controllable status + playRecordId (read via getters per render) + start spy.
 
@@ -2262,15 +2280,9 @@ describe('SessionLiveView — diary write response-ack (SP5-a finding #16)', () 
     getHistoryMock.mockResolvedValue(emptyHistorySP5());
   });
 
-  it('finding #16-A: 5xx response on diary POST → toast.error surfaced (not silent)', async () => {
-    // Arrange: mock fetch to return a 500 error for the diary POST.
-    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ error: 'Internal Server Error' }), {
-        status: 500,
-        statusText: 'Internal Server Error',
-        headers: { 'content-type': 'application/json' },
-      })
-    );
+  it('finding #16-A: rejected diary mutation (5xx) → toast.error surfaced (not silent)', async () => {
+    // #2575: handleAddNote now goes through the useAddDiaryEntry mutation, not a raw fetch.
+    addDiaryMutateAsync.mockRejectedValue(new Error('Internal Server Error'));
 
     const { container } = renderWithIntl(<SessionLiveView />);
 
@@ -2291,11 +2303,8 @@ describe('SessionLiveView — diary write response-ack (SP5-a finding #16)', () 
       fireEvent.click(submitBtn!);
     });
 
-    // Verify the diary POST was called.
-    expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining('/game-sessions/session-abc-123/diary'),
-      expect.objectContaining({ method: 'POST' })
-    );
+    // Verify the diary mutation was invoked with the SP3 text-only payload.
+    expect(addDiaryMutateAsync).toHaveBeenCalledWith({ text: 'Test note content' });
 
     // Verify toast.error was called — the write is NOT silently swallowed.
     const { toast } = await import('sonner');
@@ -2303,13 +2312,10 @@ describe('SessionLiveView — diary write response-ack (SP5-a finding #16)', () 
       expect.stringContaining('Impossibile salvare la nota'),
       expect.objectContaining({ id: 'note-add-error' })
     );
-
-    fetchSpy.mockRestore();
   });
 
-  it('finding #16-B: network failure on diary POST → toast.error surfaced (not silent)', async () => {
-    // Arrange: mock fetch to throw a network error.
-    const fetchSpy = vi.spyOn(global, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
+  it('finding #16-B: rejected diary mutation (network) → toast.error surfaced (not silent)', async () => {
+    addDiaryMutateAsync.mockRejectedValue(new TypeError('Failed to fetch'));
 
     const { container } = renderWithIntl(<SessionLiveView />);
 
@@ -2329,19 +2335,10 @@ describe('SessionLiveView — diary write response-ack (SP5-a finding #16)', () 
       expect.stringContaining('Impossibile salvare la nota'),
       expect.objectContaining({ id: 'note-add-error' })
     );
-
-    fetchSpy.mockRestore();
   });
 
-  it('finding #16-C: 200 response on diary POST → NO toast.error (happy path silent)', async () => {
-    // Arrange: mock fetch to return 200 (successful write).
-    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({}), {
-        status: 200,
-        statusText: 'OK',
-        headers: { 'content-type': 'application/json' },
-      })
-    );
+  it('finding #16-C: resolved diary mutation → NO toast.error (happy path silent)', async () => {
+    addDiaryMutateAsync.mockResolvedValue('new-entry-id');
 
     const { container } = renderWithIntl(<SessionLiveView />);
 
@@ -2356,12 +2353,11 @@ describe('SessionLiveView — diary write response-ack (SP5-a finding #16)', () 
       fireEvent.click(submitBtn!);
     });
 
+    expect(addDiaryMutateAsync).toHaveBeenCalledWith({ text: 'Happy note' });
     const { toast } = await import('sonner');
     expect(toast.error).not.toHaveBeenCalledWith(
       expect.stringContaining('Impossibile salvare la nota'),
       expect.anything()
     );
-
-    fetchSpy.mockRestore();
   });
 });

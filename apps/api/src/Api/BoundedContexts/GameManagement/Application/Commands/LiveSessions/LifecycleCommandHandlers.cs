@@ -223,6 +223,36 @@ internal class CompleteLiveSessionCommandHandler : ICommandHandler<CompleteLiveS
             }
             // If gameSession is null or already finished → idempotent, no action.
         }
+        else if (session.GameId.HasValue)
+        {
+            // Issue #2587 Slice 2: Backfill for legacy sessions started before Slice 1 shipped.
+            // CorrelatedGameSessionId == null && GameId != null means a GameId-backed session
+            // that never went through the Slice 1 correlation saga (started before it).
+            // Create the correlated GameSession already in Completed state so it appears in
+            // the user's session history. No quota check: completing ≠ starting, a Completed
+            // GameSession does not consume an active quota slot.
+            var players = session.Players
+                .Where(p => p.IsActive)
+                .Select((p, i) => new SessionPlayer(p.DisplayName, i + 1))
+                .ToList();
+
+            // Guard: GameSession ctor requires ≥1 player. A legacy session with no active
+            // players still completes — it just doesn't produce a history record.
+            if (players.Count > 0)
+            {
+                var gameSession = new GameSession(
+                    id: Guid.NewGuid(),
+                    gameId: session.GameId.Value,
+                    players: players,
+                    createdByUserId: session.CreatedByUserId);
+
+                gameSession.MarkCorrelatedComplete(_timeProvider);
+                session.SetCorrelatedGameSessionId(gameSession.Id);
+
+                await _gameSessionRepository.AddAsync(gameSession, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        // else: free-form session (GameId == null, no GameId-backed history) → no GameSession created.
 
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }

@@ -240,6 +240,54 @@ public sealed class LiveSessionStreamGatewayTests
         Assert.Equal("evt-42", scoreEvt.Id);
     }
 
+    [Fact]
+    public async Task SubscribeAsync_timer_event_on_companion_channel_reaches_subscriber()
+    {
+        // #2579: timer events (Start/Pause/Resume/Reset) are published by the SessionTracking
+        // RandomTool handlers via ISessionBroadcastService.PublishAsync(SessionId, ...), where
+        // SessionId is the SessionTracking session id == the companion's TrackingSessionId. The
+        // native stream therefore carries them via the COMPANION pump (keyed on TrackingSessionId),
+        // NOT the SBS toolkit pump (keyed on liveSessionId). This guards that "session:timer"
+        // reaches the native /live-sessions/{id}/stream surface.
+        // Arrange
+        var liveId = Guid.NewGuid();
+        var companionId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        var timerEnvelope = new SseEventEnvelope
+        {
+            Id = "timer-evt-1",
+            EventType = "session:timer",
+            Data = new { durationSeconds = 60 }
+        };
+
+        var repo = new Mock<ILiveSessionRepository>();
+        repo.Setup(r => r.GetByIdAsync(liveId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(FakeLiveSessionWith(trackingSessionId: companionId));
+
+        var broadcast = new Mock<ISessionBroadcastService>();
+        // Timer arrives on the companion channel (TrackingSessionId) → Pump 1.
+        broadcast
+            .Setup(b => b.SubscribeAsync(companionId, userId, null, It.IsAny<CancellationToken>()))
+            .Returns(SingleEnvelopeAsyncEnumerable(timerEnvelope));
+        // Toolkit channel (liveId) is empty — the timer does NOT come through here.
+        broadcast
+            .Setup(b => b.SubscribeAsync(liveId, userId, null, It.IsAny<CancellationToken>()))
+            .Returns(EmptyEnvelopeAsyncEnumerable());
+
+        var sut = BuildSut(repo.Object, broadcast.Object);
+
+        // Act
+        var events = new List<LiveSessionStreamEvent>();
+        await foreach (var e in sut.SubscribeAsync(liveId, userId, null, CancellationToken.None))
+            events.Add(e);
+
+        // Assert — the timer event reaches the native stream with its type intact
+        var timerEvt = events.FirstOrDefault(e => e.Type == "session:timer");
+        Assert.NotNull(timerEvt);
+        Assert.Equal("timer-evt-1", timerEvt.Id); // companion pump preserves the Id
+    }
+
     // ── SubscribeAsync — SBS toolkit source (a) ───────────────────────────────
 
     [Fact]

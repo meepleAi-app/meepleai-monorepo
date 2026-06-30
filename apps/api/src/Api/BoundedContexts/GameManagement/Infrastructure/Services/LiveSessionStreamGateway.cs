@@ -15,9 +15,12 @@ namespace Api.BoundedContexts.GameManagement.Infrastructure.Services;
 /// and fans in three event sources so the native stream carries all session events:
 /// <list type="number">
 ///   <item>Companion channel (<see cref="ISessionBroadcastService"/> keyed on TrackingSessionId):
-///         domain events with replay + visibility filter. Id preserved.</item>
+///         domain events (replay + visibility filter) AND SessionTracking toolkit events published
+///         on the companion id — notably timer events (Start/Pause/Resume/Reset), whose RandomTool
+///         handlers publish on the SessionTracking session id (== TrackingSessionId). Id preserved.</item>
 ///   <item>SBS toolkit channel (<see cref="ISessionBroadcastService"/> keyed on liveSessionId):
-///         whiteboard / turn / timer events. Id dropped (live-only, no replay contamination).</item>
+///         GameManagement-published whiteboard / turn events. Id dropped (live-only, no replay
+///         contamination).</item>
 ///   <item>SSS widget channel (<see cref="ISessionSyncService"/> keyed on liveSessionId):
 ///         in-memory WidgetStateUpdated events. Id null.</item>
 /// </list>
@@ -156,7 +159,9 @@ internal sealed class LiveSessionStreamGateway : ILiveSessionStreamGateway
             pumps.Add(PumpCompanionAsync(writer, companionId.Value, userId, lastEventId, ct));
         }
 
-        // Pump 2 — SBS toolkit channel keyed on liveSessionId (whiteboard/turn/timer).
+        // Pump 2 — SBS toolkit channel keyed on liveSessionId (whiteboard/turn, published by
+        // GameManagement handlers). Timer events arrive via Pump 1 instead — they are published
+        // on the SessionTracking session id (== TrackingSessionId), not liveSessionId.
         // Live-only: Id dropped so it does not contaminate Last-Event-ID reconnection.
         pumps.Add(PumpSbsToolkitAsync(writer, liveSessionId, userId, ct));
 

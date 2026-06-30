@@ -124,6 +124,7 @@ import { getNavigationLinks } from '@/lib/navigation';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
 import { mapConnectionState } from '@/lib/session-live/map-connection-state';
 import { mapTurnDataToTurnState } from '@/lib/session-live/map-turn-data-to-turn-state';
+import { mergeHydratedDiary } from '@/lib/session-live/merge-hydrated-diary';
 import { hasRequiredRole, type ParticipantRole } from '@/lib/session-live/participant-role';
 import { mapScoreDataToEndgameSummary } from '@/lib/session-live/score-data-to-endgame-summary';
 import {
@@ -142,7 +143,6 @@ import {
   VISUAL_TEST_FIXTURE_SESSION_PAUSED,
   type LiveSessionFixture,
 } from '@/lib/session-live/session-live-visual-test-fixture';
-import type { SessionEvent } from '@/lib/session-live/sse-events';
 import type { TurnState, PlayerInfo as TurnPlayerInfo } from '@/lib/session-live/turn-state';
 import { useElapsedTime } from '@/lib/session-live/use-elapsed-time';
 import { useResolvePlayRecord } from '@/lib/session-live/use-resolve-play-record';
@@ -434,24 +434,10 @@ export function SessionLiveView(): ReactElement {
     // ADR-083 Fase 1 (#2501): LiveSessionDto players already carry a stable id +
     // displayName, and the DTO exposes status/currentTurnIndex/currentTurnPlayerId
     // — all consumed directly by composeSessionLiveState (designed for LiveSessionDto).
-    // #2575: prepend the hydrated historical diary entries as session:diary events ahead of the
-    // live SSE stream, then dedup by entryId (hydrated history wins; an SSE duplicate that races
-    // the initial fetch is dropped) so applyDiary renders each entry once with a resolved author.
-    const diaryEvents: SessionEvent[] = (diaryQuery.data ?? []).map(d => ({
-      type: 'session:diary',
-      sessionId: dto.id,
-      entryId: d.id,
-      authorId: d.authorId,
-      content: d.text,
-      timestamp: d.createdAt,
-    }));
-    const seenDiaryIds = new Set<string>();
-    const mergedEvents = [...diaryEvents, ...liveStream.events].filter(e => {
-      if (e.type !== 'session:diary') return true;
-      if (seenDiaryIds.has(e.entryId)) return false;
-      seenDiaryIds.add(e.entryId);
-      return true;
-    });
+    // #2575: merge the hydrated historical diary (GET /diary) with the live SSE stream —
+    // deduped by entryId (hydrated wins) and re-sorted by timestamp so the composed actionLog
+    // stays chronological. See mergeHydratedDiary for the ordering rationale.
+    const mergedEvents = mergeHydratedDiary(diaryQuery.data ?? [], liveStream.events, dto.id);
     // Compose live state from DTO + hydrated diary + accumulated SSE events.
     const liveState = composeSessionLiveState(dto, mergedEvents);
 

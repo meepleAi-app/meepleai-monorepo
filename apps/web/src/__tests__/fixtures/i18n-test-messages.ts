@@ -378,10 +378,10 @@ export const addGameDrawerMessages = {
   'pages.library.addGame.question': 'How do you want to add your game?',
   'pages.library.addGame.manualLabel': 'Add manually',
   'pages.library.addGame.manualDescription':
-    'Enter the game details. You can upload the rulebook and configure the AI agent later from the game detail page.',
-  'pages.library.addGame.catalogLabel': 'From shared catalog',
+    'Enter the game details. Upload the rulebook and configure the AI agent later, from the game detail page.',
+  'pages.library.addGame.catalogLabel': 'Add from the shared catalog',
   'pages.library.addGame.catalogDescription':
-    'Search the community catalog and add a game in one click. Rulebook and AI agent setup come later.',
+    'Search the community catalog and add a game in one click. Upload the rulebook and configure the AI agent later, from the game detail page.',
 } as const;
 
 export const entityLabelMessages = {

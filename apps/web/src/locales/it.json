@@ -2096,9 +2096,9 @@
         "catalogTitle": "Aggiungi da catalogo",
         "question": "Come vuoi aggiungere il tuo gioco?",
         "manualLabel": "Aggiungi manualmente",
-        "manualDescription": "Inserisci i dettagli del gioco. Potrai caricare il regolamento e configurare l'agente AI dalla pagina di dettaglio.",
-        "catalogLabel": "Da catalogo condiviso",
-        "catalogDescription": "Cerca nel catalogo della community e aggiungi un gioco con un click. Regolamento e setup agente in seguito.",
+        "manualDescription": "Inserisci i dettagli del gioco. Carica il regolamento e configura l'agente AI più tardi, dalla pagina di dettaglio.",
+        "catalogLabel": "Aggiungi dal catalogo condiviso",
+        "catalogDescription": "Cerca nel catalogo della community e aggiungi un gioco con un click. Carica il regolamento e configura l'agente AI più tardi, dalla pagina di dettaglio.",
         "catalog": {
           "backAriaLabel": "Torna alla scelta",
           "searchPlaceholder": "Cerca giochi…",

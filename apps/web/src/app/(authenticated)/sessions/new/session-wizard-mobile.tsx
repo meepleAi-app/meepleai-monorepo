@@ -13,7 +13,7 @@
  * 5. Ready — summary + start
  *
  * API flow:
- *   createSession → addPlayer (per player) → updateTurnOrder → configurePhases (if any) → navigate to /sessions/live/{id}
+ *   createSession → addPlayer (per player) → updateTurnOrder → configurePhases (if any) → navigate to /sessions/{id}/live
  */
 
 'use client';
@@ -239,7 +239,7 @@ export function SessionWizardMobile({
             `Errore aggiungendo "${failedName}" (${addedPlayerIds.length}/${players.length} aggiunti). ${msg}. ` +
               (remaining > 1 ? `${remaining - 1} giocatori restanti non aggiunti.` : '')
           );
-          router.push(`/sessions/live/${sessionId}`);
+          router.push(`/sessions/${sessionId}/live`);
           return;
         }
       }
@@ -266,7 +266,7 @@ export function SessionWizardMobile({
       }
 
       // 5. Navigate to live session
-      router.push(`/sessions/live/${sessionId}`);
+      router.push(`/sessions/${sessionId}/live`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Errore nella creazione della sessione';
       setError(msg);

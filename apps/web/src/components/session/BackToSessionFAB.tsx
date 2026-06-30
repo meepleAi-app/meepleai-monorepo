@@ -11,13 +11,13 @@ export function BackToSessionFAB() {
   const pathname = usePathname();
 
   const activeSession = activeData?.sessions?.[0];
-  const isOnLiveSession = pathname.includes('/sessions/live/');
+  const isOnLiveSession = pathname.includes('/sessions/') && pathname.endsWith('/live');
 
   if (!activeSession || isOnLiveSession) return null;
 
   return (
     <Link
-      href={`/sessions/live/${activeSession.id}`}
+      href={`/sessions/${activeSession.id}/live`}
       className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all motion-reduce:transition-none"
       aria-label="Torna alla partita in corso"
     >

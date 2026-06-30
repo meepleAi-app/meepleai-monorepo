@@ -108,7 +108,7 @@ describe('MobileBottomBar — dynamic slot-3 (Issue #2150 D6)', () => {
 
 describe('isImmersiveRoute', () => {
   it('is true on in-session routes', () => {
-    expect(isImmersiveRoute('/sessions/live/abc-123')).toBe(true);
+    expect(isImmersiveRoute('/sessions/abc-123/live')).toBe(true);
     expect(isImmersiveRoute('/library/catan/play')).toBe(true);
     expect(isImmersiveRoute('/library/catan/play/4')).toBe(true);
   });

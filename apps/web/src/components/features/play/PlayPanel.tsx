@@ -105,7 +105,7 @@ export function PlayPanel() {
                   ]}
                   onClick={() => {
                     if (session.status === 'Setup' || session.status === 'Paused') {
-                      router.push(`/sessions/live/${session.id}`);
+                      router.push(`/sessions/${session.id}/live`);
                     } else {
                       openDetail(session.id, 'session');
                     }

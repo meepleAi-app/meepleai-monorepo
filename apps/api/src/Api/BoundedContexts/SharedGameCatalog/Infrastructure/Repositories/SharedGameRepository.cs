@@ -68,6 +68,14 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             .ConfigureAwait(false);
     }
 
+    public async Task<bool> ExistsByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await DbContext.Set<SharedGameEntity>()
+            .AsNoTracking()
+            .AnyAsync(g => g.Id == id && !g.IsDeleted, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task<IReadOnlyDictionary<Guid, SharedGame>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(ids);

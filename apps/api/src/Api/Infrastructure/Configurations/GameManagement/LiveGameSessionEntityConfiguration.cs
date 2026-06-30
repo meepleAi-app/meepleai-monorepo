@@ -170,6 +170,12 @@ internal sealed class LiveGameSessionEntityConfiguration : IEntityTypeConfigurat
             .HasDatabaseName("ix_live_game_sessions_created_at")
             .IsDescending(true);
 
+        // #2552: cross-BC lookups since SP2 filter on tracking_session_id (the companion id).
+        // Partial index (non-null only) keeps it small — legacy pre-SP0 rows have null here.
+        builder.HasIndex(e => e.TrackingSessionId)
+            .HasDatabaseName("ix_live_game_sessions_tracking_session_id")
+            .HasFilter("tracking_session_id IS NOT NULL");
+
         // --- Relationships ---
 
         builder.HasOne(e => e.Game)

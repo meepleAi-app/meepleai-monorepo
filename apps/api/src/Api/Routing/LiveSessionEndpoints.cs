@@ -982,6 +982,14 @@ internal static class LiveSessionEndpoints
         if (!ctx.Authorized)
             return Results.StatusCode(403);
 
+        // SP5-c (#2600 Task 2): lazily provision a companion for legacy GameId-backed sessions
+        // that pre-date the SP0 Saga (TrackingSessionId == null && GameId != null).
+        // The handler is idempotent and is a no-op for free-form (GameId == null) sessions and
+        // for sessions that already have a companion. The gateway re-reads the session inside
+        // SubscribeAsync so it will pick up the freshly-persisted TrackingSessionId.
+        if (!ctx.HasCompanion)
+            await mediator.Send(new EnsureCompanionCommand(sessionId), ct).ConfigureAwait(false);
+
         // Set SSE response headers — must happen before the first Write call.
         httpContext.Response.Headers.Append("Content-Type", "text/event-stream");
         httpContext.Response.Headers.Append("Cache-Control", "no-cache");

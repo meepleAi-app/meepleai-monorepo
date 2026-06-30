@@ -311,3 +311,22 @@ export const UpdateNotesRequestSchema = z.object({
 });
 
 export type UpdateNotesRequest = z.infer<typeof UpdateNotesRequestSchema>;
+
+// ── Diary (SP3 #2570 / write-path #2575) ──
+// Mirrors BE DiaryEntryDto (id, authorId, createdAt, text). Named distinctly to avoid collision
+// with the unrelated DiaryEntryDto types in session-flow/types.ts and gameNightSessionClient.ts.
+export const LiveSessionDiaryEntryDtoSchema = z.object({
+  id: z.string().uuid(),
+  authorId: z.string().uuid(),
+  createdAt: z.string(),
+  text: z.string(),
+});
+
+export type LiveSessionDiaryEntryDto = z.infer<typeof LiveSessionDiaryEntryDtoSchema>;
+
+// Mirrors BE AddDiaryEntryCommandValidator: NotEmpty + MaximumLength(2000).
+export const AddDiaryEntryRequestSchema = z.object({
+  text: z.string().min(1).max(2000),
+});
+
+export type AddDiaryEntryRequest = z.infer<typeof AddDiaryEntryRequestSchema>;

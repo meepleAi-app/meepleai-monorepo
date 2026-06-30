@@ -110,9 +110,11 @@ import {
   type ToolkitRendererLabels,
 } from '@/components/features/session-live';
 import type { ChatMessage as LiveAgentChatMessage } from '@/components/features/session-live/LiveAgentChat';
+import { useAddDiaryEntry } from '@/hooks/mutations/useAddDiaryEntry';
 import { useCompleteLiveSession } from '@/hooks/mutations/useCompleteLiveSession';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useLiveSession } from '@/hooks/queries/useLiveSession';
+import { useLiveSessionDiary } from '@/hooks/queries/useLiveSessionDiary';
 import { useSessionAgentLaunch } from '@/hooks/queries/useSessionAgentLaunch';
 import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
@@ -122,6 +124,7 @@ import { getNavigationLinks } from '@/lib/navigation';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
 import { mapConnectionState } from '@/lib/session-live/map-connection-state';
 import { mapTurnDataToTurnState } from '@/lib/session-live/map-turn-data-to-turn-state';
+import { mergeHydratedDiary } from '@/lib/session-live/merge-hydrated-diary';
 import { hasRequiredRole, type ParticipantRole } from '@/lib/session-live/participant-role';
 import { mapScoreDataToEndgameSummary } from '@/lib/session-live/score-data-to-endgame-summary';
 import {
@@ -341,6 +344,8 @@ export function SessionLiveView(): ReactElement {
 
   // ── #2503: Complete session mutation + play-record polling ───────────────
   const completeLiveSession = useCompleteLiveSession(sessionId ?? '');
+  // ── #2575: diary write-path mutation ──────────────────────────────────────
+  const addDiary = useAddDiaryEntry(sessionId ?? '');
   // Destructure stable members (code-review IMPORTANT 4 — the hook returns a new
   // object literal each render; depending on the whole object re-memoizes every
   // poll tick). `start` is a stable useCallback.
@@ -395,6 +400,17 @@ export function SessionLiveView(): ReactElement {
       sessionQuery.data != null,
   });
 
+  // ── #2575: hydrate historical diary entries on load ───────────────────────
+  // Previously the diary was SSE-passive only (reopening a session showed no prior entries
+  // until new SSE events arrived). These are merged ahead of the live SSE events below.
+  const diaryQuery = useLiveSessionDiary(
+    sessionId ?? '',
+    /* enabled= */ !IS_VISUAL_TEST_BUILD &&
+      sessionId != null &&
+      sessionQuery.isSuccess &&
+      sessionQuery.data != null
+  );
+
   // ── FSM derivation ────────────────────────────────────────────────────────
   const realUiState = useMemo<SessionLiveUiState>(() => {
     if (fixture != null) return 'default'; // fixture always renders default shell
@@ -418,8 +434,12 @@ export function SessionLiveView(): ReactElement {
     // ADR-083 Fase 1 (#2501): LiveSessionDto players already carry a stable id +
     // displayName, and the DTO exposes status/currentTurnIndex/currentTurnPlayerId
     // — all consumed directly by composeSessionLiveState (designed for LiveSessionDto).
-    // Compose live state from DTO + accumulated SSE events.
-    const liveState = composeSessionLiveState(dto, liveStream.events);
+    // #2575: merge the hydrated historical diary (GET /diary) with the live SSE stream —
+    // deduped by entryId (hydrated wins) and re-sorted by timestamp so the composed actionLog
+    // stays chronological. See mergeHydratedDiary for the ordering rationale.
+    const mergedEvents = mergeHydratedDiary(diaryQuery.data ?? [], liveStream.events, dto.id);
+    // Compose live state from DTO + hydrated diary + accumulated SSE events.
+    const liveState = composeSessionLiveState(dto, mergedEvents);
 
     // #2505: derive viewerRole from currentUser.id matched against dto.players.
     // BE PlayerRole has 'Moderator' which FE ParticipantRole does not — map to 'Player'.
@@ -441,7 +461,7 @@ export function SessionLiveView(): ReactElement {
       players: liveState.players,
       actionLog: liveState.actionLog,
     };
-  }, [fixture, sessionQuery.data, liveStream.events, currentUser?.id]);
+  }, [fixture, sessionQuery.data, liveStream.events, diaryQuery.data, currentUser?.id]);
 
   // #2483 Task 2: reactive selector for turnOrderType — must be declared before
   // turnRendererState useMemo (which appears in the i18n labels section below).
@@ -630,31 +650,23 @@ export function SessionLiveView(): ReactElement {
   // called from this orchestrator.
 
   const handleAddNote = useCallback(
-    async (content: string, visibility: 'private' | 'shared'): Promise<void> => {
+    // #2575: repointed off the legacy raw fetch to /game-sessions/{id}/diary onto the SP3
+    // text-only endpoint via useAddDiaryEntry. `visibility` stays a FE-only affordance (the SP3
+    // command is text-only) — the onAddNote(content, visibility) signature is kept unchanged.
+    async (content: string, _visibility: 'private' | 'shared'): Promise<void> => {
       if (sessionId == null) return;
 
       try {
-        const res = await fetch(`/api/v1/game-sessions/${sessionId}/diary`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content, visibility }),
-          credentials: 'include',
-        });
-        if (!res.ok) {
-          // Surface HTTP errors to the user; do not silently lose writes when
-          // the SSE stream is down (finding #16, SP5-a Task 3).
-          toast.error(t('pages.sessionLive.notes.addNoteErrorToast'), {
-            id: 'note-add-error',
-          });
-        }
+        await addDiary.mutateAsync({ text: content });
       } catch {
-        // Network-level failure: surface to user so they know the note was not saved.
+        // Surface the failure to the user so they know the note was not saved
+        // (finding #16, SP5-a Task 3) — do not silently lose writes.
         toast.error(t('pages.sessionLive.notes.addNoteErrorToast'), {
           id: 'note-add-error',
         });
       }
     },
-    [sessionId, t]
+    [sessionId, addDiary, t]
   );
 
   const handleResume = useCallback(async (): Promise<void> => {

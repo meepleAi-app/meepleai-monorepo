@@ -34,6 +34,11 @@ public sealed class LiveSessionDiaryPersistenceIntegrationTests : IAsyncLifetime
     private static readonly Guid AuthorId1 = Guid.NewGuid();
     private static readonly Guid AuthorId2 = Guid.NewGuid();
 
+    // Seeded in InitializeAsync — live_game_sessions.created_by_user_id is an FK to users, so the
+    // session owner must exist before AddAsync. (CreateSession previously used a random Guid,
+    // which violated FK_live_game_sessions_users_created_by_user_id — a baseline failure.)
+    private Guid _ownerUserId;
+
     public LiveSessionDiaryPersistenceIntegrationTests(SharedTestcontainersFixture fixture)
     {
         _fixture = fixture;
@@ -46,6 +51,23 @@ public sealed class LiveSessionDiaryPersistenceIntegrationTests : IAsyncLifetime
 
         _dbContext = _fixture.CreateDbContext(connectionString);
         await _dbContext.Database.MigrateAsync();
+
+        // Seed the session owner — created_by_user_id is an FK to users (NOT NULL, Restrict).
+        _ownerUserId = Guid.NewGuid();
+        _dbContext.Users.Add(new Api.Infrastructure.Entities.UserEntity
+        {
+            Id = _ownerUserId,
+            Email = $"diary-owner-{_ownerUserId:N}@test.local",
+            DisplayName = "Diary Owner",
+            PasswordHash = "not-a-real-hash",
+            Role = "user",
+            Tier = "free",
+            Status = "Active",
+            EmailVerified = true,
+            CreatedAt = DateTime.UtcNow,
+        });
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
 
         var mockCollector = new Mock<IDomainEventCollector>();
         mockCollector
@@ -68,11 +90,11 @@ public sealed class LiveSessionDiaryPersistenceIntegrationTests : IAsyncLifetime
     // Helpers
     // ─────────────────────────────────────────────────────────────────────────
 
-    private static LiveGameSession CreateSession()
+    private LiveGameSession CreateSession()
     {
         return LiveGameSession.Create(
             id: Guid.NewGuid(),
-            createdByUserId: Guid.NewGuid(),
+            createdByUserId: _ownerUserId,
             gameName: "Mage Knight",
             gameId: null);
     }
@@ -188,6 +210,62 @@ public sealed class LiveSessionDiaryPersistenceIntegrationTests : IAsyncLifetime
         final!.DiaryEntries.Should().HaveCount(1);
         final.DiaryEntries[0].Text.Should().Be("Stable entry");
         final.Notes.Should().Be("some notes");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_CalledTwice_DoesNotReinsertLoadedEntries()
+    {
+        // #2575: the existing-id set now comes from the UpdateAsync load-time projection (folded
+        // into the TotalPausedDurationMs read) instead of a standalone SELECT. This guards that a
+        // reload→update cycle never re-inserts an already-persisted entry (no duplicate ids).
+        var session = CreateSession();
+        session.AddDiaryEntry(AuthorId1, "First entry");
+        await _repository.AddAsync(session);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        // First cycle: reload, no new diary entry, update (touch an unrelated field).
+        var first = await _repository.GetByIdAsync(session.Id);
+        first!.UpdateNotes("touch 1");
+        await _repository.UpdateAsync(first);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        // Second cycle: reload, append a second entry, update.
+        var second = await _repository.GetByIdAsync(session.Id);
+        second!.AddDiaryEntry(AuthorId2, "Second entry");
+        await _repository.UpdateAsync(second);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        var final = await _repository.GetByIdAsync(session.Id);
+        final.Should().NotBeNull();
+        final!.DiaryEntries.Should().HaveCount(2);
+        final.DiaryEntries.Select(e => e.Id).Distinct().Should().HaveCount(2,
+            "the loaded entry must not be re-inserted — ids stay distinct after a reload→update cycle");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_AppendsMultipleNewEntries_AllInserted()
+    {
+        var session = CreateSession();
+        session.AddDiaryEntry(AuthorId1, "Original");
+        await _repository.AddAsync(session);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        var reloaded = await _repository.GetByIdAsync(session.Id);
+        reloaded!.AddDiaryEntry(AuthorId1, "New A");
+        reloaded.AddDiaryEntry(AuthorId2, "New B");
+        await _repository.UpdateAsync(reloaded);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        var final = await _repository.GetByIdAsync(session.Id);
+        final.Should().NotBeNull();
+        final!.DiaryEntries.Should().HaveCount(3);
+        final.DiaryEntries.Select(e => e.Id).Distinct().Should().HaveCount(3,
+            "two distinct new entries are inserted alongside the original in a single UpdateAsync");
     }
 
     // ─────────────────────────────────────────────────────────────────────────

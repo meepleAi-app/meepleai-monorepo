@@ -46,6 +46,12 @@ import type { SessionEvent } from './sse-events';
 
 export interface LivePlayerState {
   readonly id: string;
+  /**
+   * Auth user id this player is linked to (null for guest players). #2575: needed to resolve
+   * diary `authorId` (an auth-user id from GetUserId()) to a display name — the player `id` is a
+   * distinct player id, so name resolution must match on `userId`.
+   */
+  readonly userId?: string | null;
   readonly name: string;
   readonly role: 'Spectator' | 'Player' | 'Host';
   readonly score: number;
@@ -89,6 +95,7 @@ export interface InitialSessionData {
   readonly currentTurnPlayerId?: string | null;
   readonly players?: ReadonlyArray<{
     readonly id: string;
+    readonly userId?: string | null;
     readonly displayName?: string;
     readonly name?: string;
     readonly role?: string;
@@ -120,10 +127,25 @@ function toRole(raw: string | undefined): 'Spectator' | 'Player' | 'Host' {
   return 'Player';
 }
 
+/**
+ * Resolves an author id (an auth-user id, e.g. diary `authorId` from GetUserId()) to a player
+ * display name. Matches on `userId` first (the correct key for the live API), then falls back to
+ * the player `id` (covers fixtures/tests where the two coincide), then to the raw id for guests or
+ * system authors not present in the roster. #2575.
+ *
+ * Uses `|| id` (not `?? id`) because toBaseState can produce an empty `name` — a blank author
+ * label is worse than showing the id.
+ */
+function resolveAuthorName(state: SessionLiveState, id: string): string {
+  const match = state.players.find(p => p.userId === id || p.id === id);
+  return match?.name || id;
+}
+
 /** Convert initial DTO/fixture to base SessionLiveState. */
 function toBaseState(initial: InitialSessionData): SessionLiveState {
   const players: LivePlayerState[] = (initial.players ?? []).map(p => ({
     id: p.id,
+    userId: p.userId ?? null,
     name: p.displayName ?? p.name ?? '',
     role: toRole(p.role),
     score: p.totalScore ?? p.score ?? 0,
@@ -271,13 +293,13 @@ function applyDiary(
   state: SessionLiveState,
   event: Extract<SessionEvent, { type: 'session:diary' }>
 ): SessionLiveState {
-  // #2575: resolve authorId to the player's display-name; fall back to raw UUID for
-  // guests or authors not yet in the players list.
-  const author = state.players.find(p => p.id === event.authorId);
   const entry: LiveLogEntry = {
     id: event.entryId,
     type: 'event',
-    authorName: author?.name ?? event.authorId,
+    // #2575: resolve the auth-user authorId to a player display name. applyChat (senderId) and
+    // applyToolExecution (executedBy) intentionally still show raw ids — the issue scopes the
+    // resolution to applyDiary; a future PR can route them through resolveAuthorName too.
+    authorName: resolveAuthorName(state, event.authorId),
     content: event.content,
     timestamp: event.timestamp,
   };

@@ -40,6 +40,9 @@ import {
   type ConfigurePhasesRequest,
   type TriggerSnapshotRequest,
   type UpdateNotesRequest,
+  LiveSessionDiaryEntryDtoSchema,
+  type LiveSessionDiaryEntryDto,
+  type AddDiaryEntryRequest,
 } from '../schemas/live-sessions.schemas';
 import {
   SessionSaveResultSchema,
@@ -175,6 +178,14 @@ export interface LiveSessionsClient {
 
   /** Update session notes */
   updateNotes(sessionId: string, request: UpdateNotesRequest): Promise<void>;
+
+  // ========== Diary (SP3 #2570 / write-path #2575) ==========
+
+  /** Append an immutable diary entry to the session. Returns the new entry id. */
+  addDiary(sessionId: string, request: AddDiaryEntryRequest): Promise<string>;
+
+  /** Get all diary entries for the session, ordered by createdAt ascending. */
+  getDiary(sessionId: string): Promise<LiveSessionDiaryEntryDto[]>;
 
   // ========== AI Score Tracking (Issue #121) ==========
 
@@ -315,6 +326,21 @@ export function createLiveSessionsClient({
         `${BASE}/${encodeURIComponent(sessionId)}/scores`
       );
       return z.array(LiveSessionRoundScoreDtoSchema).parse(response ?? []);
+    },
+
+    async addDiary(sessionId, request) {
+      const response = await httpClient.post<string>(
+        `${BASE}/${encodeURIComponent(sessionId)}/diary`,
+        request
+      );
+      return response as string;
+    },
+
+    async getDiary(sessionId) {
+      const response = await httpClient.get<LiveSessionDiaryEntryDto[]>(
+        `${BASE}/${encodeURIComponent(sessionId)}/diary`
+      );
+      return z.array(LiveSessionDiaryEntryDtoSchema).parse(response ?? []);
     },
 
     async getPlayers(sessionId) {

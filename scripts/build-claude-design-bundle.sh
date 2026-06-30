@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+#
+# build-claude-design-bundle.sh — rebuild a Claude-Design INPUT bundle from
+# admin-mockups/design_files/ (the source of truth) into claude-design-bundle/<run>/.
+#
+# claude-design-bundle/ is gitignored (.gitignore:289) — the bundles are regenerable
+# seeds you upload to claude.ai/design, NOT committed artifacts. This script restores
+# the cp-able parts (shared scaffold + mockups). The authored companion files
+# (00-system-prompt.md, 01-manifest.md, README.md) are NOT touched — recover them from
+# git history or from docs/for-developers/workflows/claude-design-demo-prompts.md.
+#
+# Usage:  scripts/build-claude-design-bundle.sh [sp6|sp7|all]   (default: all)
+#
+# Tracking issues: SP6 → #1888 (libro-game) · SP7 → #1889 (game-night agent-builder)
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+SRC="admin-mockups/design_files"
+SCAFFOLD=(tokens.css components.css data.js 00-hub.html state-matrix.html)
+
+SP6_MOCKUPS=(
+  librogame-game-night-storyboard.html
+  librogame-runthrough-encounter-cheatsheet.html
+  librogame-runthrough-error-states.html
+  librogame-runthrough-game-detail.html
+  librogame-runthrough-game-onboarding.html
+  librogame-runthrough-glossary-editor.html
+  librogame-runthrough-library-search.html
+  librogame-runthrough-play-session.html
+  librogame-runthrough-play-session.jsx
+  librogame-runthrough-quota-credits.html
+  librogame-runthrough-resume-picker.html
+  librogame-runthrough-session-end.html
+  librogame-runthrough-setup-chat.html
+  librogame-runthrough-setup-wizard.html
+  librogame-runthrough-translate-viewer.html
+  sp6-libro-game-house-rule.html
+  sp6-libro-game-house-rule.jsx
+)
+
+SP7_MOCKUPS=(
+  sp7-game-night-new.html
+  sp7-game-night-new.jsx
+  sp7-game-night-detail-rsvp.html
+  sp7-game-night-detail-rsvp.jsx
+  sp7-game-night-live.html
+  sp7-game-night-live.jsx
+  sp7-game-night-transition.html
+  sp7-game-night-transition.jsx
+  sp7-game-night-summary.html
+  sp7-game-night-summary.jsx
+  sp7-game-night-join-public.jsx
+  sp7-notifications-hub.html
+  sp7-notifications-hub.jsx
+  sp7-notifications-preferences.html
+  sp7-notifications-preferences.jsx
+)
+
+build_bundle() {
+  local name="$1"; shift
+  local dest="claude-design-bundle/$name"
+  mkdir -p "$dest/mockups"
+  local f
+  for f in "${SCAFFOLD[@]}"; do
+    cp "$SRC/$f" "$dest/$f"
+  done
+  for f in "$@"; do
+    cp "$SRC/$f" "$dest/mockups/$f"
+  done
+  echo "[built] $dest — scaffold ${#SCAFFOLD[@]} + mockups $#"
+  for f in 00-system-prompt.md 01-manifest.md README.md; do
+    [ -f "$dest/$f" ] || echo "  ⚠ companion missing: $dest/$f (restore from git / claude-design-demo-prompts.md)"
+  done
+}
+
+target="${1:-all}"
+case "$target" in
+  sp6) build_bundle sp6-libro-game "${SP6_MOCKUPS[@]}" ;;
+  sp7) build_bundle sp7-game-night "${SP7_MOCKUPS[@]}" ;;
+  all)
+    build_bundle sp6-libro-game "${SP6_MOCKUPS[@]}"
+    build_bundle sp7-game-night "${SP7_MOCKUPS[@]}"
+    ;;
+  *) echo "usage: $0 [sp6|sp7|all]" >&2; exit 2 ;;
+esac

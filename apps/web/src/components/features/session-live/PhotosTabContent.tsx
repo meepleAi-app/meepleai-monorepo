@@ -1,20 +1,26 @@
 'use client';
 
 /**
- * PhotosTabContent — #2588 A1 photos tab for canonical session-live view.
+ * PhotosTabContent — #2588 A1 + A2 photos tab for canonical session-live view.
  *
- * In-session photo gallery backed by the client-local IndexedDB photo-store
- * (lib/storage/photo-store). Zero backend — local-only, session-scoped.
+ * Two coexisting sections within the "Foto" tab:
+ *  1. In-session photo gallery backed by the client-local IndexedDB photo-store
+ *     (lib/storage/photo-store). Zero backend — local-only, session-scoped (A1).
+ *  2. Vision-AI snapshots via SessionSnapshotPanel (A2) — server-backed
+ *     (/live-sessions/{id}/vision-snapshots) board-state capture + game-state
+ *     extraction. Backported from legacy /sessions/live/[sessionId]/photos.
  *
  * Ported from legacy /sessions/live/[sessionId]/photos/page.tsx.
- * Vision-AI / SessionSnapshotPanel is a later sub-slice (A2+) — NOT here.
+ * Agent/dispute tab is a later sub-slice — NOT here.
  */
 
 import { useRef, useState, useCallback, useEffect, type ReactElement } from 'react';
 
 import { Camera, Image as ImageIcon, Trash2 } from 'lucide-react';
 
+import { SessionSnapshotPanel } from '@/components/session/SessionSnapshotPanel';
 import { Button } from '@/components/ui/primitives/button';
+import { useTranslation } from '@/hooks/useTranslation';
 import { addPhoto, listPhotos, deletePhoto, type StoredPhoto } from '@/lib/storage/photo-store';
 
 // ─── Internal types ────────────────────────────────────────────────────────────
@@ -78,9 +84,24 @@ function PhotoCard({ photo, onDelete }: PhotoCardProps): ReactElement {
 
 export interface PhotosTabContentProps {
   readonly sessionId: string;
+  /**
+   * Current user id — required by SessionSnapshotPanel to attribute Vision-AI
+   * snapshot uploads. Threaded from SessionLiveView (currentUser?.id ?? '').
+   */
+  readonly userId: string;
+  /**
+   * Current turn number — seeds the snapshot upload dialog's default turn.
+   * Defaults to 1 (mirrors the legacy /photos page hardcode) when omitted.
+   */
+  readonly currentTurn?: number;
 }
 
-export function PhotosTabContent({ sessionId }: PhotosTabContentProps): ReactElement {
+export function PhotosTabContent({
+  sessionId,
+  userId,
+  currentTurn = 1,
+}: PhotosTabContentProps): ReactElement {
+  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photos, setPhotos] = useState<DisplayPhoto[]>([]);
   const photosRef = useRef<DisplayPhoto[]>([]);
@@ -130,58 +151,76 @@ export function PhotosTabContent({ sessionId }: PhotosTabContentProps): ReactEle
   }, []);
 
   return (
-    <div className="space-y-4" data-testid="photos-tab-content">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-base font-semibold text-foreground">Foto partita</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {photos.length === 0 ? 'Nessuna foto ancora' : `${photos.length} foto`}
-          </p>
-        </div>
+    <div className="space-y-6" data-testid="photos-tab-content">
+      {/* ─── Section 1: in-session local gallery (A1) ─────────────────────── */}
+      <section aria-label={t('pages.sessionLive.photosTab.galleryHeading')} className="space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-foreground">Foto partita</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {photos.length === 0 ? 'Nessuna foto ancora' : `${photos.length} foto`}
+            </p>
+          </div>
 
-        <Button
-          size="sm"
-          className="gap-2 bg-entity-session text-white hover:opacity-90 font-nunito"
-          onClick={() => fileInputRef.current?.click()}
-          data-testid="capture-button"
-        >
-          <Camera className="h-4 w-4" />
-          Scatta
-        </Button>
-      </div>
-
-      {/* Hidden file input — camera capture on mobile, file picker on desktop */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={handleCapture}
-        data-testid="photo-input"
-      />
-
-      {/* Empty state */}
-      {photos.length === 0 && (
-        <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-          <ImageIcon className="h-12 w-12 opacity-30" />
-          <p className="text-sm text-center">Scatta foto per documentare lo stato della partita</p>
-          <Button variant="outline" className="gap-2" onClick={() => fileInputRef.current?.click()}>
+          <Button
+            size="sm"
+            className="gap-2 bg-entity-session text-white hover:opacity-90 font-nunito"
+            onClick={() => fileInputRef.current?.click()}
+            data-testid="capture-button"
+          >
             <Camera className="h-4 w-4" />
-            Prima foto
+            Scatta
           </Button>
         </div>
-      )}
 
-      {/* Photo grid */}
-      {photos.length > 0 && (
-        <div className="grid grid-cols-2 gap-3">
-          {photos.map(photo => (
-            <PhotoCard key={photo.id} photo={photo} onDelete={handleDelete} />
-          ))}
-        </div>
-      )}
+        {/* Hidden file input — camera capture on mobile, file picker on desktop */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={handleCapture}
+          data-testid="photo-input"
+        />
+
+        {/* Empty state */}
+        {photos.length === 0 && (
+          <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
+            <ImageIcon className="h-12 w-12 opacity-30" />
+            <p className="text-sm text-center">
+              Scatta foto per documentare lo stato della partita
+            </p>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Camera className="h-4 w-4" />
+              Prima foto
+            </Button>
+          </div>
+        )}
+
+        {/* Photo grid */}
+        {photos.length > 0 && (
+          <div className="grid grid-cols-2 gap-3">
+            {photos.map(photo => (
+              <PhotoCard key={photo.id} photo={photo} onDelete={handleDelete} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ─── Section 2: Vision-AI snapshots (A2) ──────────────────────────── */}
+      <section
+        aria-label={t('pages.sessionLive.photosTab.snapshotsHeading')}
+        className="border-t border-border pt-6"
+        data-testid="photos-tab-snapshots"
+      >
+        <SessionSnapshotPanel sessionId={sessionId} userId={userId} currentTurn={currentTurn} />
+      </section>
     </div>
   );
 }

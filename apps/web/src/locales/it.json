@@ -3319,6 +3319,10 @@
         "tabTools": "Strumenti",
         "tabChat": "Chat"
       },
+      "photosTab": {
+        "galleryHeading": "Galleria foto della partita",
+        "snapshotsHeading": "Snapshot Vision AI"
+      },
       "tools": {
         "title": "Strumenti",
         "toolDiceLabel": "Dado",

@@ -3212,6 +3212,10 @@
         "tabTools": "Tools",
         "tabChat": "Chat"
       },
+      "photosTab": {
+        "galleryHeading": "Match photo gallery",
+        "snapshotsHeading": "Vision AI snapshots"
+      },
       "tools": {
         "title": "Tools",
         "toolDiceLabel": "Dice",

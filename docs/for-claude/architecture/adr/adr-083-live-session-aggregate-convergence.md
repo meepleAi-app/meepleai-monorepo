@@ -217,6 +217,16 @@ OQ1 prevedeva un `TrackingSessionId` "non-nullable garantito"; SP0 lo shippò **
 - Companion: **SSE-Companion** (#2579) per whiteboard/turn/timer/widget fluisce comunque senza companion (canale `liveSessionId`); il lazy companion riguarda solo i **domain-event forwarded**.
 - Implementazione: branch `feature/issue-2600-sp5c-lazy-companion-llm-timeout` (T1 dominio+command, T2 endpoint+integration, T3 LLM per-chunk timeout, T4 docs). De-risk: `.superpowers/sdd/sp5c-derisk.md`.
 
+## Update 2026-06-30 (#2587 Slices 1-3) — GameSession è un SHADOW di quota/history; scoring source-of-truth è LiveGameSession
+
+Il `GameSession` correlato (creato da `StartLiveSessionCommandHandler` Slice 1) è un **shadow aggregate** per quota e history. NON porta alcuno scoring autoritativo:
+
+- Viene creato con i soli player provenienti dal manifest `LiveGameSession` (display-name + color). **Nessun campo di scoring viene popolato** (`WinnerName`, punteggi, ranking ecc. sono tutti `null`/default).
+- **`LiveGameSession.ScoringConfig`** (round-based, polimorfico — PointsScoring / BinaryWin / ObjectivesScoring / RankingScoring) è la **single source of truth per lo scoring in-play**. Il `GameSession` correlato NON deve mai essere letto come fonte autoritativa per il risultato della partita.
+- `GameSession.WinnerName` e qualsiasi campo di scoring di `GameSession` restano **non popolati** dalla correlazione. La generazione di `PlayRecord` legge da `LiveGameSession`, non dal `GameSession` correlato.
+- Lo **scopo** del `GameSession` correlato è unicamente: (a) quota per-user (`CountActiveByUserIdAsync`, `SessionQuotaService`), (b) visibilità nella history (`FindHistoryAsync`, `GetActiveSessionsQuery`, `GetSessionHistoryQuery`), (c) lifecycle 4-state (Setup→InProgress→Paused→Completed/Abandoned).
+- Test di regressione end-to-end: `SessionHistoryVisibilityAfterStartTests` (`Integration/GameManagement/`) prova che dopo il wizard flow completo il `GameSession` correlato appare in `GetActiveSessionsQuery.Sessions` (l'identico query usato dal FE via `api.sessions.getActive`), e scompare da quel set dopo `CompleteLiveSessionCommand` (apparendo invece in `GetSessionHistoryQuery`).
+
 ## Riferimenti
 - Epic #2501; user story di validazione #2506; gap issue #2500/#2503/#2505/#2504/#2502.
 - **SP5-c**: lazy companion + LLM per-chunk timeout #2600 (de-risk `.superpowers/sdd/sp5c-derisk.md`).

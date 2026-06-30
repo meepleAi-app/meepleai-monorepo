@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
@@ -93,6 +94,36 @@ public sealed class CreateLiveSessionCompanionIntegrationTests : IAsyncLifetime
 
         companionExists.Should().BeTrue(
             "the companion Session and the LiveGameSession must be committed together in one transaction");
+    }
+
+    [Fact(DisplayName = "Create live session with a nonexistent GameId throws 404 NotFound and persists nothing (#2552)")]
+    public async Task Handle_WithNonexistentGameId_ThrowsNotFound_AndPersistsNothing()
+    {
+        // Arrange — seed only the user; deliberately NO shared game, so the GameId is well-formed
+        // (Guid != Empty, passes the validator) but points at no catalog row.
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var userId = await SeedUserAsync(db);
+        var nonexistentGameId = Guid.NewGuid();
+
+        // Act — the companion pre-flight existence check must reject the GameId BEFORE any insert,
+        // so the FK violation never reaches SaveChanges as a 500.
+        var act = () => mediator.Send(new CreateLiveSessionCommand(
+            UserId: userId,
+            GameName: "Ghost Game",
+            GameId: nonexistentGameId));
+
+        // Assert — 404 NotFound for the missing Game (#2552, respects #2568), not a 500 FK violation.
+        var ex = (await act.Should().ThrowAsync<NotFoundException>()).Which;
+        ex.ResourceType.Should().Be("Game");
+
+        // Assert — nothing persisted (no LiveGameSession, no orphan companion Session).
+        (await db.LiveGameSessions.AsNoTracking().AnyAsync(s => s.CreatedByUserId == userId))
+            .Should().BeFalse("the pre-flight guard must reject before persisting a LiveGameSession");
+        (await db.SessionTrackingSessions.AsNoTracking().AnyAsync(s => s.UserId == userId))
+            .Should().BeFalse("no orphan companion Session must be persisted when the game does not exist");
     }
 
     /// <summary>

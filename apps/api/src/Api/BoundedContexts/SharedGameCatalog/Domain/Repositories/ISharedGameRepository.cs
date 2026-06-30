@@ -24,6 +24,17 @@ public interface ISharedGameRepository
     Task<SharedGame?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Checks whether a non-deleted shared game exists for the given ID.
+    /// Issue #2552: lightweight existence probe (no aggregate hydration) used by the
+    /// companion-saga path to reject a valid-but-nonexistent GameId with a 404 instead of
+    /// letting the FK violation surface as a 500 at SaveChanges.
+    /// </summary>
+    /// <param name="id">The game ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>True if a non-deleted game with that ID exists, false otherwise</returns>
+    Task<bool> ExistsByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets multiple shared games by their IDs in a single batch query.
     /// Issue #3663: Added to prevent N+1 queries in GetUserLibraryQueryHandler.
     /// </summary>

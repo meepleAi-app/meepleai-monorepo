@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.DTOs.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.Services;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Tests.Constants;
@@ -295,7 +296,7 @@ public sealed class LiveSessionDiaryChainIntegrationTests : IAsyncLifetime
             UserId: userId,
             Role: null,
             AvatarUrl: null));
-        await mediator.Send(new StartLiveSessionCommand(sessionId));
+        await mediator.Send(new StartLiveSessionCommand(sessionId, userId, UserTier.Free, Role.User));
 
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Add("Cookie", $"{TestSessionHelper.SessionCookieName}={token}");

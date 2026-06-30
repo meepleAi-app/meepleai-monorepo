@@ -110,4 +110,45 @@ public class LiveGameSessionMapperTests
         var back = LiveGameSessionMapper.ToDomain(entity);
         back.TrackingSessionId.Should().BeNull();
     }
+
+    // ── CorrelatedGameSessionId round-trips (#2587 Slice 1 Task 1) ──────────
+
+    [Fact]
+    public void Mapper_RoundTrips_CorrelatedGameSessionId()
+    {
+        // #2587: CorrelatedGameSessionId must survive ToEntity → ToDomain round-trip.
+        var correlatedId = Guid.NewGuid();
+        var domain = LiveGameSession.Create(
+            id: Guid.NewGuid(),
+            createdByUserId: Guid.NewGuid(),
+            gameName: "Mage Knight",
+            timeProvider: TimeProvider.System,
+            gameId: Guid.NewGuid(),
+            correlatedGameSessionId: correlatedId);
+
+        var entity = LiveGameSessionMapper.ToEntity(domain);
+        entity.CorrelatedGameSessionId.Should().Be(correlatedId);
+
+        var back = LiveGameSessionMapper.ToDomain(entity);
+        back.CorrelatedGameSessionId.Should().Be(correlatedId);
+    }
+
+    [Fact]
+    public void Mapper_RoundTrips_NullCorrelatedGameSessionId()
+    {
+        // #2587: null CorrelatedGameSessionId (free-form / pre-Slice1 session) must remain null.
+        var domain = LiveGameSession.Create(
+            id: Guid.NewGuid(),
+            createdByUserId: Guid.NewGuid(),
+            gameName: "Mage Knight",
+            timeProvider: TimeProvider.System,
+            gameId: null,
+            correlatedGameSessionId: null);
+
+        var entity = LiveGameSessionMapper.ToEntity(domain);
+        entity.CorrelatedGameSessionId.Should().BeNull();
+
+        var back = LiveGameSessionMapper.ToDomain(entity);
+        back.CorrelatedGameSessionId.Should().BeNull();
+    }
 }

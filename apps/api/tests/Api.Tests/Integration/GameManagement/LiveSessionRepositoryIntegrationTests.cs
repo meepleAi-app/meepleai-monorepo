@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -191,7 +192,7 @@ public sealed class LiveSessionRepositoryIntegrationTests : IAsyncLifetime
         await using (var scope2 = _factoryAC2.Services.CreateAsyncScope())
         {
             var mediator = scope2.ServiceProvider.GetRequiredService<IMediator>();
-            await mediator.Send(new StartLiveSessionCommand(sessionId));
+            await mediator.Send(new StartLiveSessionCommand(sessionId, userId, UserTier.Free, Role.User));
 
         }
 
@@ -347,7 +348,7 @@ public sealed class LiveSessionRepositoryIntegrationTests : IAsyncLifetime
                 Color: PlayerColor.Red,
                 UserId: userId));
 
-            await mediator.Send(new StartLiveSessionCommand(sessionId));
+            await mediator.Send(new StartLiveSessionCommand(sessionId, userId, UserTier.Free, Role.User));
 
             // 100 sequential score records — proves all writes are transactionally durable
             for (int round = 1; round <= 100; round++)

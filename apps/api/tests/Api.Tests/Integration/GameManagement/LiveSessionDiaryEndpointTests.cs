@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.DTOs.LiveSessions;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -310,7 +311,7 @@ public sealed class LiveSessionDiaryEndpointTests : IAsyncLifetime
             AvatarUrl: null));
 
         // Domain invariant: session must be InProgress before Complete.
-        await mediator.Send(new StartLiveSessionCommand(sessionId));
+        await mediator.Send(new StartLiveSessionCommand(sessionId, Guid.NewGuid(), UserTier.Free, Role.User));
         await mediator.Send(new CompleteLiveSessionCommand(sessionId));
     }
 

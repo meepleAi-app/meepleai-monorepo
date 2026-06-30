@@ -113,6 +113,10 @@ internal sealed class LiveGameSessionEntityConfiguration : IEntityTypeConfigurat
         builder.Property(e => e.TrackingSessionId)
             .HasColumnName("tracking_session_id");
 
+        // ADR-083 #2587 Slice 1: correlated GameManagement.GameSession (quota/lifecycle aggregate).
+        builder.Property(e => e.CorrelatedGameSessionId)
+            .HasColumnName("correlated_game_session_id");
+
         // --- JSON Columns ---
 
         builder.Property(e => e.ScoringConfigJson)

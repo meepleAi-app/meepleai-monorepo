@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.Validators.LiveSessions;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.Constants;
 using FluentValidation.TestHelper;
 using Xunit;
@@ -1182,14 +1183,16 @@ public sealed class LiveSessionValidatorTests
     [Fact]
     public async Task Start_ValidSessionId_ShouldPass()
     {
-        var result = await _startValidator.TestValidateAsync(new StartLiveSessionCommand(Guid.NewGuid()));
+        var result = await _startValidator.TestValidateAsync(
+            new StartLiveSessionCommand(Guid.NewGuid(), Guid.NewGuid(), UserTier.Free, Role.User));
         result.ShouldNotHaveAnyValidationErrors();
     }
 
     [Fact]
     public async Task Start_EmptySessionId_ShouldFail()
     {
-        var result = await _startValidator.TestValidateAsync(new StartLiveSessionCommand(Guid.Empty));
+        var result = await _startValidator.TestValidateAsync(
+            new StartLiveSessionCommand(Guid.Empty, Guid.NewGuid(), UserTier.Free, Role.User));
         result.ShouldHaveValidationErrorFor(x => x.SessionId)
             .WithErrorMessage("Session ID is required");
     }

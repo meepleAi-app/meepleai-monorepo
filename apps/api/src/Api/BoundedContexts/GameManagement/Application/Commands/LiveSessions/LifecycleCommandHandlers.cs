@@ -1,27 +1,40 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
+using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.BoundedContexts.GameManagement.Domain.Services;
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 
 /// <summary>
 /// Handles starting a live session.
 /// Issue #4749: CQRS commands for live sessions.
+/// Issue #2587 Slice 1 T2: On GameId-backed sessions, enforces quota and creates a correlated
+/// GameSession aggregate so the session appears in history and consumes the user's quota slot.
 /// </summary>
 internal class StartLiveSessionCommandHandler : ICommandHandler<StartLiveSessionCommand>
 {
     private readonly ILiveSessionRepository _sessionRepository;
+    private readonly IGameSessionRepository _gameSessionRepository;
+    private readonly ISessionQuotaService _quotaService;
     private readonly TimeProvider _timeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
     public StartLiveSessionCommandHandler(
         ILiveSessionRepository sessionRepository,
+        IGameSessionRepository gameSessionRepository,
+        ISessionQuotaService quotaService,
         TimeProvider timeProvider,
         IUnitOfWork unitOfWork)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _gameSessionRepository = gameSessionRepository ?? throw new ArgumentNullException(nameof(gameSessionRepository));
+        _quotaService = quotaService ?? throw new ArgumentNullException(nameof(quotaService));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
@@ -34,9 +47,52 @@ internal class StartLiveSessionCommandHandler : ICommandHandler<StartLiveSession
             .ConfigureAwait(false)
             ?? throw new NotFoundException("LiveGameSession", command.SessionId.ToString());
 
+        // Issue #2587 Slice 1: Create correlated GameSession on first start of a GameId-backed session.
+        // Idempotent: CorrelatedGameSessionId != null means correlation already done (re-start guard).
+        if (session.GameId.HasValue && session.CorrelatedGameSessionId == null)
+        {
+            var quotaResult = await _quotaService
+                .CheckQuotaAsync(command.UserId, command.UserTier, command.UserRole, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (!quotaResult.IsAllowed)
+                throw new QuotaExceededException("SessionQuota", quotaResult.DenialReason ?? "Session limit reached");
+
+            var players = session.Players
+                .Select((p, i) => new SessionPlayer(p.DisplayName, i + 1))
+                .ToList();
+
+            var gameSession = new GameSession(
+                id: Guid.NewGuid(),
+                gameId: session.GameId.Value,
+                players: players,
+                createdByUserId: session.CreatedByUserId);
+
+            session.SetCorrelatedGameSessionId(gameSession.Id);
+
+            await _gameSessionRepository.AddAsync(gameSession, cancellationToken).ConfigureAwait(false);
+        }
+
         session.Start(_timeProvider);
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Race: another concurrent caller already started this session.
+            // Re-fetch to check whether they completed correlation.
+            var refreshed = await _sessionRepository
+                .GetByIdAsync(command.SessionId, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (refreshed?.CorrelatedGameSessionId != null)
+                return; // The winner already correlated — idempotent success.
+
+            throw;
+        }
     }
 }
 

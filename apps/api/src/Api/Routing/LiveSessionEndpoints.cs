@@ -18,6 +18,7 @@ using Api.BoundedContexts.GameManagement.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.Extensions;
+using Api.SharedKernel.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -478,9 +479,20 @@ internal static class LiveSessionEndpoints
     private static async Task<IResult> HandleStartSession(
         Guid sessionId,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        await mediator.Send(new StartLiveSessionCommand(sessionId), cancellationToken).ConfigureAwait(false);
+        // Issue #2587 Slice 1: Resolve user identity for quota enforcement and GameSession correlation.
+        var (authenticated, session, error) = httpContext.TryGetActiveSession();
+        if (!authenticated) return error!;
+
+        var userId = session!.Principal!.Subject.Id;
+        var userTier = UserTier.Parse(session.Principal!.Subject.Tier);
+        var userRole = Role.Parse(session.Principal!.EffectiveActor.Role);
+
+        await mediator.Send(
+            new StartLiveSessionCommand(sessionId, userId, userTier, userRole),
+            cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
 

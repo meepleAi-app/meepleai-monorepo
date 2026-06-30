@@ -208,8 +208,18 @@ La Fase 4 NON rimuove GameSession. Le rimozioni legacy genuine sono spezzate in 
 - **Slice D** (owner-gated): cleanup `/sessions/[id]/notes`+`/players` solo se confermati dead.
 - **Debito separato**: convergere il **dual-creation funnel** (SessionSetupModal→GameSession vs wizard→LiveGameSession), **#2587** — indipendente dalla rimozione.
 
+## Update 2026-06-30 (SP5-c #2600) — TrackingSessionId backfill via LAZY companion creation (OQ#5 risolta = B)
+
+OQ1 prevedeva un `TrackingSessionId` "non-nullable garantito"; SP0 lo shippò **nullable** (delta MVP) → sessioni **legacy pre-SP0** e **free-form senza GameId** hanno `TrackingSessionId == null` → niente broadcast SSE live dei domain-event forwarded (score/turn/phase/player/diary-event). Il "backfill/coexistence" menzionato per SP5 è risolto via **lazy on-demand (decisione owner B, 2026-06-29)**, non backfill eager su dati storici.
+
+- **Trigger** = primo subscribe al native stream (`GET /live-sessions/{id}/stream`): se `!HasCompanion` → `EnsureCompanionCommand` (DOPO auth/403, PRIMA di SubscribeAsync) → crea il companion + `LiveGameSession.SetTrackingSessionId(companionId)` + single SaveChanges atomico (SP0 no-orphan); il gateway re-legge la session e fonde il canale companion. Idempotente + race-safe (xmin → re-fetch, niente 2° companion né orphan).
+- **Vincolo strutturale**: il companion richiede un GameId (`Session.Create(userId, gameId, GameSpecific)`) → le **free-form senza GameId restano toolkit-only** (no companion). Il **diary è nativo** (SP3) e NON richiede companion.
+- Companion: **SSE-Companion** (#2579) per whiteboard/turn/timer/widget fluisce comunque senza companion (canale `liveSessionId`); il lazy companion riguarda solo i **domain-event forwarded**.
+- Implementazione: branch `feature/issue-2600-sp5c-lazy-companion-llm-timeout` (T1 dominio+command, T2 endpoint+integration, T3 LLM per-chunk timeout, T4 docs). De-risk: `.superpowers/sdd/sp5c-derisk.md`.
+
 ## Riferimenti
 - Epic #2501; user story di validazione #2506; gap issue #2500/#2503/#2505/#2504/#2502.
+- **SP5-c**: lazy companion + LLM per-chunk timeout #2600 (de-risk `.superpowers/sdd/sp5c-derisk.md`).
 - **Fase 4**: decomposition #2588 · dual-creation funnel #2587 · removal-safety-map + gamesession-architecture-decision (`.superpowers/sdd/`).
 - **Spec Fase 2**: `docs/for-developers/specs/2026-06-23-epic-2501-fase2-live-session-feature-gaps.md` (spec-panel).
 - ADR-060 (LiveGameSession persistence, EPIC #2097), ADR-065 (namespace split), ADR-071 (5-state FSM).

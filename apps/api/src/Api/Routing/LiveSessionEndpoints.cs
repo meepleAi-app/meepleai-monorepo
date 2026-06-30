@@ -982,6 +982,31 @@ internal static class LiveSessionEndpoints
         if (!ctx.Authorized)
             return Results.StatusCode(403);
 
+        // SP5-c (#2600 Task 2): lazily provision a companion for legacy GameId-backed sessions
+        // that pre-date the SP0 Saga (TrackingSessionId == null && GameId != null).
+        // The handler is idempotent and is a no-op for free-form (GameId == null) sessions and
+        // for sessions that already have a companion. The gateway re-reads the session inside
+        // SubscribeAsync so it will pick up the freshly-persisted TrackingSessionId.
+        //
+        // EnsureCompanionCommand returns the post-ensure TrackingSessionId:
+        //   non-null → session is now linked (pre-existing OR just created on this subscribe)
+        //   null     → free-form session; genuinely unlinked; stream will be empty.
+        // We use this POST-ensure value for the warning header to avoid emitting a stale
+        // "stream-not-linked" on the exact subscribe that just fixed the session (final-review fix).
+        bool isLinkedAfterEnsure;
+        if (ctx.HasCompanion)
+        {
+            // Already linked before we ran — skip the command, preserve the known state.
+            isLinkedAfterEnsure = true;
+        }
+        else
+        {
+            var ensuredTrackingId = await mediator
+                .Send(new EnsureCompanionCommand(sessionId), ct)
+                .ConfigureAwait(false);
+            isLinkedAfterEnsure = ensuredTrackingId.HasValue;
+        }
+
         // Set SSE response headers — must happen before the first Write call.
         httpContext.Response.Headers.Append("Content-Type", "text/event-stream");
         httpContext.Response.Headers.Append("Cache-Control", "no-cache");
@@ -990,7 +1015,8 @@ internal static class LiveSessionEndpoints
 
         // Warn caller when session has no companion: stream will be empty (gateway yields nothing).
         // The connection stays open with heartbeats so the client can reconnect after SP0 is provisioned.
-        if (!ctx.HasCompanion)
+        // Uses the POST-ensure value so a lazy-created companion on this subscribe does NOT trigger the warning.
+        if (!isLinkedAfterEnsure)
             httpContext.Response.Headers.Append("X-Warning-Code", "stream-not-linked");
 
         // Commit the 200 status + SSE headers immediately, before any blocking gateway call.

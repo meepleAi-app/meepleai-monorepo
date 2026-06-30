@@ -838,6 +838,43 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         UpdatedAt = now;
     }
 
+    // === Companion ===
+
+    /// <summary>
+    /// Lazily assigns the SessionTracking companion id to a legacy live session
+    /// that was created before SP0 (i.e. <see cref="TrackingSessionId"/> is <see langword="null"/>).
+    /// <para>
+    /// Idempotency semantics (explicit, by owner decision B):
+    /// <list type="bullet">
+    ///   <item>If <see cref="TrackingSessionId"/> is <see langword="null"/> → sets the property.</item>
+    ///   <item>If <see cref="TrackingSessionId"/> equals <paramref name="companionId"/> → no-op (idempotent).</item>
+    ///   <item>If <see cref="TrackingSessionId"/> is already set to a <em>different</em> value →
+    ///         throws <see cref="InvalidOperationException"/> (programmer error: two conflicting companions).</item>
+    /// </list>
+    /// </para>
+    /// Invoked exclusively by <c>EnsureCompanionCommandHandler</c> (ADR-083 SP5-c, Issue #2600).
+    /// </summary>
+    /// <param name="companionId">The id of the newly-created <c>SessionTracking.Session</c> companion.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="companionId"/> is <see cref="Guid.Empty"/>.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when <see cref="TrackingSessionId"/> is already set to a different, non-empty value.
+    /// </exception>
+    public void SetTrackingSessionId(Guid companionId)
+    {
+        if (companionId == Guid.Empty)
+            throw new ArgumentException("Companion id cannot be empty.", nameof(companionId));
+
+        if (TrackingSessionId == companionId)
+            return; // no-op — idempotent
+
+        if (TrackingSessionId.HasValue)
+            throw new InvalidOperationException(
+                $"TrackingSessionId is already set to {TrackingSessionId.Value} on live session {Id}. " +
+                $"Cannot overwrite with a different companion id {companionId}.");
+
+        TrackingSessionId = companionId;
+    }
+
     // === Query Methods ===
 
     /// <summary>

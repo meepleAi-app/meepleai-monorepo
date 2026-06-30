@@ -110,6 +110,7 @@ import {
   type ToolkitRendererLabels,
 } from '@/components/features/session-live';
 import type { ChatMessage as LiveAgentChatMessage } from '@/components/features/session-live/LiveAgentChat';
+import { PhotosTabContent } from '@/components/features/session-live/PhotosTabContent';
 import { useAddDiaryEntry } from '@/hooks/mutations/useAddDiaryEntry';
 import { useCompleteLiveSession } from '@/hooks/mutations/useCompleteLiveSession';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
@@ -194,10 +195,11 @@ function resolveFixtureVariant(variantParam: string | null): LiveSessionFixture 
 //   - legacy ?tab=chat   → 'score'   (chat is no longer a tab; live in LEFT mainColumn)
 //   - legacy/missing     → 'score'   (new default)
 
-type LiveTab = 'score' | 'turn' | 'widget' | 'notes';
+type LiveTab = 'score' | 'turn' | 'widget' | 'notes' | 'photos';
 
 function parseLiveTab(raw: string | null): LiveTab {
-  if (raw === 'turn' || raw === 'widget' || raw === 'notes' || raw === 'score') return raw;
+  if (raw === 'turn' || raw === 'widget' || raw === 'notes' || raw === 'score' || raw === 'photos')
+    return raw;
   // Back-compat aliases (R-1): legacy URL bookmarks must not 404.
   if (raw === 'tools') return 'widget';
   if (raw === 'chat') return 'score';
@@ -209,7 +211,8 @@ function parseLiveTab(raw: string | null): LiveTab {
 // Legacy ?mtab=chat   → 'score'  (chat always-visible in main column)
 // Legacy ?mtab=log    → 'score'  (log always-visible in main column)
 function parseMobileTab(raw: string | null): LiveTab {
-  if (raw === 'turn' || raw === 'widget' || raw === 'notes' || raw === 'score') return raw;
+  if (raw === 'turn' || raw === 'widget' || raw === 'notes' || raw === 'score' || raw === 'photos')
+    return raw;
   if (raw === 'tools') return 'widget';
   if (raw === 'chat' || raw === 'log') return 'score';
   return 'score';
@@ -854,6 +857,7 @@ export function SessionLiveView(): ReactElement {
       tabTurn: t('pages.sessionLive.rightColumn.tabTurn'),
       tabWidget: t('pages.sessionLive.rightColumn.tabWidget'),
       tabNotes: t('pages.sessionLive.rightColumn.tabNotes'),
+      tabPhotos: t('pages.sessionLive.rightColumn.tabPhotos'),
     }),
     [t]
   );
@@ -879,6 +883,7 @@ export function SessionLiveView(): ReactElement {
       tabTurn: t('pages.sessionLive.rightColumn.tabTurn'),
       tabWidget: t('pages.sessionLive.rightColumn.tabWidget'),
       tabNotes: t('pages.sessionLive.rightColumn.tabNotes'),
+      tabPhotos: t('pages.sessionLive.rightColumn.tabPhotos'),
     }),
     [t]
   );
@@ -1239,6 +1244,8 @@ export function SessionLiveView(): ReactElement {
             labels={notesLabels}
           />
         );
+      case 'photos':
+        return <PhotosTabContent sessionId={sessionId ?? ''} />;
       case 'score':
       default:
         return (
@@ -1428,6 +1435,7 @@ export function SessionLiveView(): ReactElement {
           labels={notesLabels}
         />
       )}
+      {tab === 'photos' && <PhotosTabContent sessionId={sessionId ?? ''} />}
     </RightColumnTabs>
   );
 

@@ -2046,9 +2046,9 @@
         "catalogTitle": "Add from catalog",
         "question": "How do you want to add your game?",
         "manualLabel": "Add manually",
-        "manualDescription": "Enter the game details. You can upload the rulebook and configure the AI agent later from the game detail page.",
-        "catalogLabel": "From shared catalog",
-        "catalogDescription": "Search the community catalog and add a game in one click. Rulebook and AI agent setup come later.",
+        "manualDescription": "Enter the game details. Upload the rulebook and configure the AI agent later, from the game detail page.",
+        "catalogLabel": "Add from the shared catalog",
+        "catalogDescription": "Search the community catalog and add a game in one click. Upload the rulebook and configure the AI agent later, from the game detail page.",
         "catalog": {
           "backAriaLabel": "Back to choice",
           "searchPlaceholder": "Search games…",

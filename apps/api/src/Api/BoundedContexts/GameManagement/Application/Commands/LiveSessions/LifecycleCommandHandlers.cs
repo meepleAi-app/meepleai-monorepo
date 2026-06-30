@@ -59,6 +59,7 @@ internal class StartLiveSessionCommandHandler : ICommandHandler<StartLiveSession
                 throw new QuotaExceededException("SessionQuota", quotaResult.DenialReason ?? "Session limit reached");
 
             var players = session.Players
+                .Where(p => p.IsActive)
                 .Select((p, i) => new SessionPlayer(p.DisplayName, i + 1))
                 .ToList();
 
@@ -168,19 +169,25 @@ internal class ResumeLiveSessionCommandHandler : ICommandHandler<ResumeLiveSessi
 /// Handles completing a live session.
 /// Triggers PlayRecord generation via domain events.
 /// Issue #4749: CQRS commands for live sessions.
+/// Issue #2587 Slice 1 T3: Also completes the correlated GameSession (if any) so it stops
+/// counting against the user's active quota. Guard against double-complete when the
+/// GameSession is already in a terminal state (Completed/Abandoned).
 /// </summary>
 internal class CompleteLiveSessionCommandHandler : ICommandHandler<CompleteLiveSessionCommand>
 {
     private readonly ILiveSessionRepository _sessionRepository;
+    private readonly IGameSessionRepository _gameSessionRepository;
     private readonly TimeProvider _timeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
     public CompleteLiveSessionCommandHandler(
         ILiveSessionRepository sessionRepository,
+        IGameSessionRepository gameSessionRepository,
         TimeProvider timeProvider,
         IUnitOfWork unitOfWork)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _gameSessionRepository = gameSessionRepository ?? throw new ArgumentNullException(nameof(gameSessionRepository));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
@@ -195,6 +202,30 @@ internal class CompleteLiveSessionCommandHandler : ICommandHandler<CompleteLiveS
 
         session.Complete(_timeProvider);
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+
+        // Issue #2587 Slice 1: Lifecycle-sync — complete the correlated GameSession so it
+        // is no longer counted as active in the user's quota.
+        // The correlated GameSession is created in Setup status at live-session start and is
+        // never explicitly progressed, so we drive it through Start → Complete to honour the
+        // GameSession state machine (Complete() guards InProgress/Paused).
+        if (session.CorrelatedGameSessionId.HasValue)
+        {
+            var gameSession = await _gameSessionRepository
+                .GetByIdAsync(session.CorrelatedGameSessionId.Value, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (gameSession != null && !gameSession.Status.IsFinished)
+            {
+                // Drive from Setup → InProgress → Completed so the domain invariants are met.
+                if (gameSession.Status == SessionStatus.Setup)
+                    gameSession.Start();
+
+                gameSession.Complete();
+                await _gameSessionRepository.UpdateAsync(gameSession, cancellationToken).ConfigureAwait(false);
+            }
+            // If gameSession is null or already finished → idempotent, no action.
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

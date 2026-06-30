@@ -377,6 +377,7 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.rightColumn.tabTurn': 'Turni',
   'pages.sessionLive.rightColumn.tabWidget': 'Widget',
   'pages.sessionLive.rightColumn.tabNotes': 'Note',
+  'pages.sessionLive.rightColumn.tabPhotos': 'Foto',
   // Back-compat (legacy keys for older callers — not used by SessionLiveView post-T4)
   'pages.sessionLive.rightColumn.tabTools': 'Strumenti',
   'pages.sessionLive.rightColumn.tabChat': 'Chat',
@@ -711,9 +712,9 @@ describe('SessionLiveView (Wave D.2 Foundation)', () => {
     searchParamsMap['msheet'] = 'open';
     searchParamsMap['mtab'] = 'turn';
     renderWithIntl(<SessionLiveView />);
-    // Drawer has 4 tabs; the 2nd (index 1) is Turn — aria-selected="true".
+    // Drawer has 5 tabs; the 2nd (index 1) is Turn — aria-selected="true".
     const drawerTabs = document.querySelectorAll('[data-slot="mobile-bottom-sheet"] [role="tab"]');
-    expect(drawerTabs).toHaveLength(4);
+    expect(drawerTabs).toHaveLength(5);
     expect(drawerTabs[1]).toHaveAttribute('aria-selected', 'true');
   });
 

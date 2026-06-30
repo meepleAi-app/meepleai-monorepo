@@ -1,6 +1,7 @@
 /**
  * LiveAgentChat unit tests — Wave D.2 Interactions sub-PR (Issue #750)
  * Extended by Issue #2375 G3 — draft persistence + smart scroll
+ * Extended by Issue #2588 A3 — image attachments
  *
  * Coverage:
  * - Render shape (data-slot, messages, empty state)
@@ -11,6 +12,7 @@
  * - aria attributes
  * - #2375 G3: draft persistence (sessionStorage read/write/clear)
  * - #2375 G3: data-at-bottom attribute reflecting scroll anchor state
+ * - #2588 A3: image attach button, preview strip, submit with images
  */
 
 import { act, render, screen, fireEvent } from '@testing-library/react';
@@ -41,6 +43,7 @@ const LABELS: LiveAgentChatLabels = {
   visibilityShared: 'Condiviso',
   emptyMessage: 'Nessun messaggio',
   newMessagesToastAriaLabel: 'Nuovi messaggi — clic per scorrere',
+  attachAriaLabel: 'Allega immagine',
 };
 
 const MESSAGES: ReadonlyArray<ChatMessage> = [
@@ -184,7 +187,7 @@ describe('LiveAgentChat — onSendMessage', () => {
     await user.click(screen.getByRole('button', { name: 'Invia' }));
 
     expect(onSendMessage).toHaveBeenCalledOnce();
-    expect(onSendMessage).toHaveBeenCalledWith('Test msg', 'shared');
+    expect(onSendMessage).toHaveBeenCalledWith('Test msg', 'shared', undefined);
   });
 
   it('calls onSendMessage with "private" when private is selected (Player)', async () => {
@@ -196,7 +199,7 @@ describe('LiveAgentChat — onSendMessage', () => {
     await user.type(screen.getByRole('textbox', { name: 'Scrivi un messaggio' }), 'Private msg');
     await user.click(screen.getByRole('button', { name: 'Invia' }));
 
-    expect(onSendMessage).toHaveBeenCalledWith('Private msg', 'private');
+    expect(onSendMessage).toHaveBeenCalledWith('Private msg', 'private', undefined);
   });
 
   it('forces Spectator to "shared" visibility', async () => {
@@ -206,7 +209,7 @@ describe('LiveAgentChat — onSendMessage', () => {
     await user.type(screen.getByRole('textbox', { name: 'Scrivi un messaggio' }), 'Spectator msg');
     await user.click(screen.getByRole('button', { name: 'Invia' }));
 
-    expect(onSendMessage).toHaveBeenCalledWith('Spectator msg', 'shared');
+    expect(onSendMessage).toHaveBeenCalledWith('Spectator msg', 'shared', undefined);
   });
 
   it('does not call onSendMessage when input is empty', async () => {
@@ -399,6 +402,7 @@ describe('#2375 G3 — draft + smart scroll', () => {
     visibilityShared: 'Condiviso',
     emptyMessage: 'Vuoto',
     newMessagesToastAriaLabel: 'Nuovi messaggi — clic per scorrere',
+    attachAriaLabel: 'Allega immagine',
   };
 
   it('loads draft from sessionStorage on mount', () => {
@@ -454,7 +458,7 @@ describe('#2375 G3 — draft + smart scroll', () => {
     fireEvent.change(input, { target: { value: 'hi' } });
     fireEvent.click(screen.getByLabelText('Invia'));
 
-    expect(onSend).toHaveBeenCalledWith('hi', 'shared');
+    expect(onSend).toHaveBeenCalledWith('hi', 'shared', undefined);
     expect(sessionStorage.getItem(`${CHAT_DRAFT_KEY_PREFIX}sess-1`)).toBe(null);
     expect(input.value).toBe('');
   });
@@ -539,5 +543,155 @@ describe('#2375 G3 — draft + smart scroll', () => {
 
     // Toast should disappear (guarded by !isAtBottom) AND counter reset to 0
     expect(queryByLabelText(baseLabels.newMessagesToastAriaLabel)).toBeNull();
+  });
+});
+
+// ─── #2588 A3 — image attachments ─────────────────────────────────────────────
+
+// Mock useChatImageAttachments to control state without URL.createObjectURL
+const mockClearImages = vi.fn();
+const mockRemoveImage = vi.fn();
+const mockAddImage = vi.fn().mockReturnValue(null);
+
+// Default mock: no images attached
+let mockHasImages = false;
+let mockImages: Array<{ file: File; previewUrl: string; mediaType: string }> = [];
+
+vi.mock('@/hooks/useChatImageAttachments', () => ({
+  useChatImageAttachments: () => ({
+    images: mockImages,
+    addImage: mockAddImage,
+    removeImage: mockRemoveImage,
+    clearImages: mockClearImages,
+    hasImages: mockHasImages,
+    canAddMore: true,
+  }),
+}));
+
+describe('#2588 A3 — image attachments in LiveAgentChat', () => {
+  beforeEach(() => {
+    mockHasImages = false;
+    mockImages = [];
+    mockClearImages.mockClear();
+    mockRemoveImage.mockClear();
+    mockAddImage.mockClear();
+  });
+
+  it('renders the attach button with correct aria-label', () => {
+    renderChat();
+    expect(screen.getByRole('button', { name: 'Allega immagine' })).toBeInTheDocument();
+  });
+
+  it('renders data-slot="chat-attach-button" on the attach button', () => {
+    const { container } = renderChat();
+    expect(container.querySelector('[data-slot="chat-attach-button"]')).toBeInTheDocument();
+  });
+
+  it('does not show preview strip when no images attached', () => {
+    const { container } = renderChat();
+    expect(container.querySelector('[data-slot="chat-image-previews"]')).not.toBeInTheDocument();
+  });
+
+  it('shows preview strip when images are attached', () => {
+    mockHasImages = true;
+    mockImages = [
+      {
+        file: new File([''], 'a.jpg', { type: 'image/jpeg' }),
+        previewUrl: 'blob:1',
+        mediaType: 'image/jpeg',
+      },
+    ];
+    const { container } = renderChat();
+    expect(container.querySelector('[data-slot="chat-image-previews"]')).toBeInTheDocument();
+    expect(container.querySelector('img[src="blob:1"]')).toBeInTheDocument();
+  });
+
+  it('calls removeImage with correct index when remove button clicked', async () => {
+    mockHasImages = true;
+    mockImages = [
+      {
+        file: new File([''], 'a.jpg', { type: 'image/jpeg' }),
+        previewUrl: 'blob:1',
+        mediaType: 'image/jpeg',
+      },
+    ];
+    const user = userEvent.setup();
+    renderChat();
+    const removeBtn = screen.getByRole('button', { name: 'Rimuovi immagine 1' });
+    await user.click(removeBtn);
+    expect(mockRemoveImage).toHaveBeenCalledWith(0);
+  });
+
+  it('submit button is enabled when hasImages=true and draft is empty', () => {
+    mockHasImages = true;
+    mockImages = [
+      {
+        file: new File([''], 'a.jpg', { type: 'image/jpeg' }),
+        previewUrl: 'blob:1',
+        mediaType: 'image/jpeg',
+      },
+    ];
+    renderChat();
+    expect(screen.getByRole('button', { name: 'Invia' })).not.toBeDisabled();
+  });
+
+  it('submit button is disabled when no text AND no images', () => {
+    mockHasImages = false;
+    mockImages = [];
+    renderChat();
+    expect(screen.getByRole('button', { name: 'Invia' })).toBeDisabled();
+  });
+
+  it('calls onSendMessage with images array when submitting with images and no text', async () => {
+    const user = userEvent.setup();
+    const fakeFile = new File([''], 'a.jpg', { type: 'image/jpeg' });
+    const fakeImg = { file: fakeFile, previewUrl: 'blob:1', mediaType: 'image/jpeg' };
+    mockHasImages = true;
+    mockImages = [fakeImg];
+    const { onSendMessage } = renderChat();
+    await user.click(screen.getByRole('button', { name: 'Invia' }));
+    expect(onSendMessage).toHaveBeenCalledOnce();
+    expect(onSendMessage).toHaveBeenCalledWith('', 'shared', [fakeImg]);
+  });
+
+  it('calls onSendMessage with images when submitting with text + images', async () => {
+    const user = userEvent.setup();
+    const fakeImg = {
+      file: new File([''], 'b.png', { type: 'image/png' }),
+      previewUrl: 'blob:2',
+      mediaType: 'image/png',
+    };
+    mockHasImages = true;
+    mockImages = [fakeImg];
+    const { onSendMessage } = renderChat();
+    await user.type(screen.getByRole('textbox', { name: 'Scrivi un messaggio' }), 'Descrivi');
+    await user.click(screen.getByRole('button', { name: 'Invia' }));
+    expect(onSendMessage).toHaveBeenCalledWith('Descrivi', 'shared', [fakeImg]);
+  });
+
+  it('calls clearImages after send', async () => {
+    const user = userEvent.setup();
+    mockHasImages = true;
+    mockImages = [
+      {
+        file: new File([''], 'a.jpg', { type: 'image/jpeg' }),
+        previewUrl: 'blob:1',
+        mediaType: 'image/jpeg',
+      },
+    ];
+    renderChat();
+    await user.click(screen.getByRole('button', { name: 'Invia' }));
+    expect(mockClearImages).toHaveBeenCalled();
+  });
+
+  it('text-only send calls onSendMessage with undefined images (backward-compat)', async () => {
+    const user = userEvent.setup();
+    // No images
+    mockHasImages = false;
+    mockImages = [];
+    const { onSendMessage } = renderChat();
+    await user.type(screen.getByRole('textbox', { name: 'Scrivi un messaggio' }), 'Testo puro');
+    await user.click(screen.getByRole('button', { name: 'Invia' }));
+    expect(onSendMessage).toHaveBeenCalledWith('Testo puro', 'shared', undefined);
   });
 });

@@ -2,6 +2,7 @@
 
 /**
  * ChatAgentPanel — Issue #2374 G1 (T3).
+ * Extended by Issue #2588 A3: forwards optional images param from LiveAgentChat.
  *
  * Wrapper primitive around `LiveAgentChat` that adds the mockup's
  * "magnet" header (emoji avatar + Online pip + agent name + latency +
@@ -30,6 +31,7 @@
 
 import type { ReactElement } from 'react';
 
+import type { ChatImagePreview } from '@/hooks/useChatImageAttachments';
 import type { ParticipantRole } from '@/lib/session-live/participant-role';
 
 import { LiveAgentChat } from './LiveAgentChat';
@@ -60,9 +62,14 @@ export interface ChatAgentPanelProps {
   readonly messages: ReadonlyArray<ChatMessage>;
   readonly viewerRole: ParticipantRole;
   readonly viewerId: string;
+  /**
+   * #2588 A3: extended with optional images param (backward-compatible).
+   * Existing callers that pass only (content, visibility) continue to work.
+   */
   readonly onSendMessage: (
     content: string,
-    visibility: 'private' | 'shared'
+    visibility: 'private' | 'shared',
+    images?: ChatImagePreview[]
   ) => Promise<void> | void;
   readonly agentName: string;
   /** Default '🤖'. */
@@ -94,11 +101,15 @@ export function ChatAgentPanel({
   labels,
   className,
 }: ChatAgentPanelProps): ReactElement {
-  // `LiveAgentChat.onSendMessage` is sync `(c, v) => void`, but #2375 may
-  // attach async sends. We adapt the wider Promise|void prop to a sync wrapper
-  // that fires the underlying call (errors are owned by the parent stream).
-  const handleSendMessage = (content: string, visibility: 'private' | 'shared') => {
-    void onSendMessage(content, visibility);
+  // `LiveAgentChat.onSendMessage` is sync, but #2375 may attach async sends.
+  // We adapt the wider Promise|void prop to a sync wrapper that fires the underlying
+  // call (errors are owned by the parent stream). #2588 A3: images forwarded through.
+  const handleSendMessage = (
+    content: string,
+    visibility: 'private' | 'shared',
+    images?: ChatImagePreview[]
+  ) => {
+    void onSendMessage(content, visibility, images);
   };
 
   // ─── Header content (identical for both <button> and <div> wrappers) ──────

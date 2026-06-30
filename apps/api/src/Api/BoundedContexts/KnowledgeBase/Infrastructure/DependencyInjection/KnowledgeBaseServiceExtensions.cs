@@ -68,6 +68,17 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<ICopyrightLeakGuard, NgramCopyrightLeakGuard>();
         services.AddSingleton<ICopyrightFallbackMessageProvider, DefaultCopyrightFallbackMessageProvider>();
 
+        // SP5-c #2600: session-agent options (per-chunk LLM stream timeout).
+        var sessionAgentOptionsBuilder = services.AddOptions<SessionAgentOptions>()
+            .Validate(
+                opts => opts.LlmPerChunkTimeoutSeconds > 0,
+                "SessionAgent:LlmPerChunkTimeoutSeconds must be > 0");
+        if (configuration != null)
+        {
+            sessionAgentOptionsBuilder.Bind(configuration.GetSection("SessionAgent"));
+        }
+        sessionAgentOptionsBuilder.ValidateOnStart();
+
         return services;
     }
 

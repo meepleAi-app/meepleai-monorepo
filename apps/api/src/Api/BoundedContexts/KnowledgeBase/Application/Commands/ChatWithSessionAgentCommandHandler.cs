@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Configuration;
 using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
@@ -55,6 +56,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
     private readonly ICopyrightFallbackMessageProvider _fallbackMessageProvider;
     private readonly IOptions<CopyrightLeakGuardOptions> _copyrightOptions;
     private readonly ILiveSessionStreamGateway _liveSessionStreamGateway;
+    private readonly IOptions<SessionAgentOptions> _sessionAgentOptions;
 
     // Summary generation thresholds
     private const int SummaryThreshold = 10;
@@ -64,6 +66,9 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
     internal const string AgentUnavailableErrorCode = "AGENT_TEMPORARILY_UNAVAILABLE";
     internal const string AgentUnavailableItalianMessage =
         "Agente AI temporaneamente non disponibile. Riprova tra qualche minuto o usa gli strumenti manuali.";
+
+    // SP5-c #2600: per-chunk LLM stream timeout error code
+    internal const string LlmTimeoutErrorCode = "LLM_TIMEOUT";
 
     public ChatWithSessionAgentCommandHandler(
         IAgentSessionRepository sessionRepository,
@@ -83,7 +88,8 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         ICopyrightLeakGuard copyrightLeakGuard,
         ICopyrightFallbackMessageProvider fallbackMessageProvider,
         IOptions<CopyrightLeakGuardOptions> copyrightOptions,
-        ILiveSessionStreamGateway liveSessionStreamGateway)
+        ILiveSessionStreamGateway liveSessionStreamGateway,
+        IOptions<SessionAgentOptions>? sessionAgentOptions = null)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _definitionRepository = definitionRepository ?? throw new ArgumentNullException(nameof(definitionRepository));
@@ -103,6 +109,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         _fallbackMessageProvider = fallbackMessageProvider ?? throw new ArgumentNullException(nameof(fallbackMessageProvider));
         _copyrightOptions = copyrightOptions ?? throw new ArgumentNullException(nameof(copyrightOptions));
         _liveSessionStreamGateway = liveSessionStreamGateway ?? throw new ArgumentNullException(nameof(liveSessionStreamGateway));
+        _sessionAgentOptions = sessionAgentOptions ?? Options.Create(new SessionAgentOptions());
     }
 
     /// <summary>
@@ -334,24 +341,94 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         var fullResponse = new StringBuilder();
         LlmUsage? finalUsage = null;
 
-        // Note: yield return cannot be in try-catch, so we collect chunks and capture errors
+        // SP5-c #2600: per-chunk deadline.
+        // NEEDS TUNING: observe p99 inter-chunk latency in production before tightening.
+        var perChunkTimeout = TimeSpan.FromSeconds(
+            _sessionAgentOptions.Value.LlmPerChunkTimeoutSeconds);
+
+        // Note: yield return cannot be in try-catch, so we collect chunks and capture errors.
+        // The per-chunk timeout is applied via a linked CancellationTokenSource whose deadline
+        // is armed just before each MoveNextAsync and disarmed immediately after a chunk arrives,
+        // so chunk-processing time (buffering, logging) does NOT count against the next deadline.
         var chunks = new List<StreamChunk>();
         string? streamError = null;
+        bool chunkTimedOut = false;
+        bool clientDisconnected = false;
         try
         {
-            await foreach (var chunk in _llmService.GenerateCompletionStreamAsync(
+            using var streamCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var enumerator = _llmService.GenerateCompletionStreamAsync(
                 systemPrompt,
                 assembled.UserPrompt,
                 RequestSource.AgentTask,
-                cancellationToken).ConfigureAwait(false))
+                streamCts.Token).GetAsyncEnumerator(streamCts.Token);
+            await using (enumerator.ConfigureAwait(false))
             {
-                chunks.Add(chunk);
+                while (true)
+                {
+                    // Arm per-chunk deadline before awaiting the next chunk.
+                    streamCts.CancelAfter(perChunkTimeout);
+
+                    bool moved;
+                    try
+                    {
+                        moved = await enumerator.MoveNextAsync().ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        if (streamCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+                        {
+                            // The streamCts deadline fired — the chunk took too long.
+                            chunkTimedOut = true;
+                        }
+                        else
+                        {
+                            // The original client ct was cancelled (normal disconnect).
+                            clientDisconnected = true;
+                        }
+                        break;
+                    }
+
+                    // Disarm the deadline now that a chunk has arrived (or the stream ended).
+                    // Processing the chunk does NOT count against the NEXT chunk's deadline.
+                    streamCts.CancelAfter(Timeout.InfiniteTimeSpan);
+
+                    if (!moved)
+                    {
+                        break;
+                    }
+
+                    chunks.Add(enumerator.Current);
+                }
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "LLM streaming failed for session {SessionId}", command.AgentSessionId);
             streamError = ex.Message;
+        }
+
+        // Handle timeout — yield the timeout error event (outside the try/catch per C# iterator rules).
+        if (chunkTimedOut)
+        {
+            _logger.LogWarning(
+                "LLM stream per-chunk timeout ({Timeout:g}) exceeded for session {SessionId}",
+                perChunkTimeout, command.AgentSessionId);
+            yield return CreateEvent(
+                StreamingEventType.Error,
+                new StreamingError(
+                    $"LLM stream timed out waiting for next chunk (deadline: {perChunkTimeout.TotalSeconds:0.#}s)",
+                    LlmTimeoutErrorCode));
+            yield break;
+        }
+
+        // Handle client disconnect — stop silently (normal disconnect, no error event).
+        if (clientDisconnected)
+        {
+            _logger.LogDebug(
+                "Client disconnected mid-stream for session {SessionId}; stream stopped",
+                command.AgentSessionId);
+            yield break;
         }
 
         if (streamError != null)

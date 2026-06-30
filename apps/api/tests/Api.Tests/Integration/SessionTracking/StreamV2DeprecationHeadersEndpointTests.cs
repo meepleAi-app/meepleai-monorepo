@@ -162,14 +162,26 @@ public sealed class StreamV2DeprecationHeadersEndpointTests : IAsyncLifetime
         // Create a user and a valid auth session (returns userId + raw cookie token).
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
+        // Seed a SharedGame to satisfy the SessionEntity.GameId FK. Although the C#
+        // property SessionEntity.GameId is Guid?, the column game_id is NOT NULL and
+        // carries a foreign key to shared_games with DeleteBehavior.Restrict
+        // (SessionConfiguration.cs:27-29,155-159). A random Guid would fail the FK,
+        // so we seed a real shared game and reference its id. (Issue #2596)
+        var gameId = await TestSessionHelper.SeedSharedGameAsync(dbContext, "StreamV2 Deprecation Test Game");
+
         // Seed a SessionEntity owned by that user so GetSessionStreamQuery succeeds.
         var trackingSessionId = Guid.NewGuid();
         dbContext.SessionTrackingSessions.Add(new SessionEntity
         {
             Id = trackingSessionId,
             UserId = userId,
+            GameId = gameId,
             SessionCode = "TST001",
-            SessionType = "Standard",
+            // Must be a valid SessionType enum member ("Generic" | "GameSpecific") —
+            // SessionMapper.ToDomain does Enum.Parse<SessionType>, so an invalid value
+            // (the previous "Standard") throws ArgumentException → 400. With a GameId set,
+            // "GameSpecific" is the semantically correct value. (Issue #2596)
+            SessionType = "GameSpecific",
             Status = "Active",
             SessionDate = DateTime.UtcNow,
             CreatedAt = DateTime.UtcNow,

@@ -136,15 +136,24 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
         // Map to entity snapshot for scalar values and child collections
         var snapshot = LiveGameSessionMapper.ToEntity(session);
 
-        // Preserve Entity-only fields that Domain doesn't surface.
-        // TotalPausedDurationMs (Issue #216 server-side timer) lives only on the Entity;
-        // read it back from DB (AsNoTracking, no change-tracker pollution) to prevent reset.
-        snapshot.TotalPausedDurationMs = await DbContext.LiveGameSessions
+        // Preserve Entity-only fields that Domain doesn't surface, AND read the existing diary
+        // ids in the SAME round-trip. TotalPausedDurationMs (Issue #216 server-side timer) lives
+        // only on the Entity; read it back from DB (AsNoTracking, no change-tracker pollution) to
+        // prevent reset. #2575: the diary-id set is folded into this projection so the append-only
+        // diary sync no longer needs its own standalone SELECT.
+        var loadProjection = await DbContext.LiveGameSessions
             .AsNoTracking()
             .Where(e => e.Id == session.Id)
-            .Select(e => e.TotalPausedDurationMs)
+            .Select(e => new
+            {
+                e.TotalPausedDurationMs,
+                DiaryIds = e.DiaryEntries.Select(d => d.Id).ToList(),
+            })
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
+
+        snapshot.TotalPausedDurationMs = loadProjection?.TotalPausedDurationMs ?? 0;
+        var existingDiaryIds = (loadProjection?.DiaryIds ?? new List<Guid>()).ToHashSet();
 
         // Capture child collection snapshots BEFORE modifying snapshot.Players etc.
         var snapshotPlayers = snapshot.Players.ToList();
@@ -180,7 +189,7 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
         await SyncTeamsAsync(session, snapshotTeams, cancellationToken).ConfigureAwait(false);
         await SyncRoundScoresAsync(session, snapshotRoundScores, cancellationToken).ConfigureAwait(false);
         await SyncTurnRecordsAsync(session, snapshotTurnRecords, cancellationToken).ConfigureAwait(false);
-        await SyncDiaryEntriesAsync(session, snapshotDiaryEntries, cancellationToken).ConfigureAwait(false); // #2570 SP3 T2
+        SyncDiaryEntries(snapshotDiaryEntries, existingDiaryIds); // #2570 SP3 T2 / #2575 refactor
 
         // Record metrics on the happy path only. If any of the above threw, we never reach here
         // and writes_total{op=update} stays consistent with actually-staged writes. The counter
@@ -340,23 +349,18 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
     /// #2570 SP3 T2: Diary entries are append-only — only INSERT new entries, never UPDATE
     /// or DELETE existing ones. The domain guarantees immutability post-creation; the cascade
     /// on session delete covers the cleanup path automatically.
+    /// #2575: the set of already-persisted ids comes from the load-time projection in UpdateAsync
+    /// (one fewer DB round-trip), not a fresh SELECT. Synchronous — it only stages EF state.
     /// </summary>
-    private async Task SyncDiaryEntriesAsync(
-        LiveGameSession session, ICollection<LiveSessionDiaryEntryEntity> snapshotEntries,
-        CancellationToken cancellationToken)
+    private void SyncDiaryEntries(
+        ICollection<LiveSessionDiaryEntryEntity> snapshotEntries,
+        IReadOnlyCollection<Guid> existingDiaryIds)
     {
-        var existingIds = await DbContext.Set<LiveSessionDiaryEntryEntity>()
-            .AsNoTracking()
-            .Where(e => e.LiveGameSessionId == session.Id)
-            .Select(e => e.Id)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-
         // Diary entries are append-only: INSERT new, skip existing (immutable).
         // No DELETE path — the domain never removes diary entries.
         foreach (var entry in snapshotEntries)
         {
-            if (!existingIds.Contains(entry.Id))
+            if (!existingDiaryIds.Contains(entry.Id))
             {
                 AttachOrUpdate(entry, entry.Id, EntityState.Added);
             }

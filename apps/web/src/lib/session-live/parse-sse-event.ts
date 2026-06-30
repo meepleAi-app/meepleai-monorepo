@@ -324,14 +324,14 @@ function parseDiary(
   data: Record<string, unknown>,
   sessionId: string
 ): Extract<SessionEvent, { type: 'session:diary' }> | null {
+  // #2575: the dead `noteId` back-compat alias was removed — the BE always emits `entryId`
+  // for session:diary. `id` is kept as a generic envelope fallback (not the noteId alias).
   const entryId =
     typeof data['entryId'] === 'string'
       ? data['entryId']
-      : typeof data['noteId'] === 'string'
-        ? data['noteId']
-        : typeof data['id'] === 'string'
-          ? data['id']
-          : null;
+      : typeof data['id'] === 'string'
+        ? data['id']
+        : null;
   if (!entryId) return null;
   // Resolve authorId: check the direct `authorId` field first (the BE diary event field name),
   // then fall back to resolveParticipantId() (which probes `participantId`/`userId`).

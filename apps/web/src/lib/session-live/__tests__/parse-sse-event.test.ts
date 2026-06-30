@@ -622,17 +622,6 @@ describe('parseSseEvent — session:diary', () => {
     }
   });
 
-  it('normalizes noteId → entryId (v1 BE NoteSavedEvent field name)', () => {
-    const result = parseSseEvent(
-      'session:diary',
-      makeJson({ noteId: 'note-2', authorId: 'p1', content: 'Note', timestamp: 'ts' }),
-      SESSION_ID
-    );
-    if (result?.type === 'session:diary') {
-      expect(result.entryId).toBe('note-2');
-    }
-  });
-
   it('normalizes participantId → authorId', () => {
     const result = parseSseEvent(
       'session:diary',
@@ -644,7 +633,7 @@ describe('parseSseEvent — session:diary', () => {
     }
   });
 
-  it('returns null when entryId/noteId missing', () => {
+  it('returns null when entryId missing', () => {
     expect(
       parseSseEvent(
         'session:diary',

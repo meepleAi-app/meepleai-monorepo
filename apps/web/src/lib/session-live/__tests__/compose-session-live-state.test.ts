@@ -549,17 +549,50 @@ describe('composeSessionLiveState — session:diary', () => {
     expect(state.actionLog[0].id).toBe('note-1');
   });
 
-  it('preserves authorId in actionLog entry authorName', () => {
+  // #2575: applyDiary resolves the auth-user authorId to a player display name.
+  it('resolves authorId to player display name via the player id fallback', () => {
     const event: Extract<SessionEvent, { type: 'session:diary' }> = {
       type: 'session:diary',
       sessionId: 'sess-1',
       entryId: 'note-2',
-      authorId: 'p-bob',
+      authorId: 'p-bob', // matches PLAYER_BOB.id (fallback path when userId is absent)
       content: 'Bob note',
       timestamp: TS,
     };
     const state = composeSessionLiveState(BASE_SESSION, [event]);
-    expect(state.actionLog[0].authorName).toBe('p-bob');
+    expect(state.actionLog[0].authorName).toBe('Bob');
+  });
+
+  it('resolves authorId to player display name via userId (real live-API path)', () => {
+    // On the live API the diary authorId is an auth-user id (GetUserId()), distinct from the
+    // player id — resolution must match on LivePlayerState.userId. #2575.
+    const session: InitialSessionData = {
+      ...BASE_SESSION,
+      players: [{ id: 'p-charlie', userId: 'u-charlie', displayName: 'Charlie', role: 'Player' }],
+    };
+    const event: Extract<SessionEvent, { type: 'session:diary' }> = {
+      type: 'session:diary',
+      sessionId: 'sess-1',
+      entryId: 'note-u',
+      authorId: 'u-charlie', // an auth-user id, NOT the player id 'p-charlie'
+      content: 'Charlie note',
+      timestamp: TS,
+    };
+    const state = composeSessionLiveState(session, [event]);
+    expect(state.actionLog[0].authorName).toBe('Charlie');
+  });
+
+  it('falls back to the raw authorId when the author is not in the roster (guest/system)', () => {
+    const event: Extract<SessionEvent, { type: 'session:diary' }> = {
+      type: 'session:diary',
+      sessionId: 'sess-1',
+      entryId: 'note-g',
+      authorId: 'guest-or-system-xyz',
+      content: 'Unknown author note',
+      timestamp: TS,
+    };
+    const state = composeSessionLiveState(BASE_SESSION, [event]);
+    expect(state.actionLog[0].authorName).toBe('guest-or-system-xyz');
   });
 
   it('diary event does NOT affect players array (Notes/diary separation — FE side)', () => {
@@ -609,15 +642,15 @@ describe('session:diary end-to-end: parseSseEvent → composeSessionLiveState', 
     const entry = state.actionLog[0];
     expect(entry.type).toBe('event');
     expect(entry.content).toBe('Played the Forest Witch card');
-    expect(entry.authorName).toBe('p-alice');
+    expect(entry.authorName).toBe('Alice'); // #2575: authorId 'p-alice' resolves to display name
     expect(entry.id).toBe('e2e-note-1');
     expect(entry.timestamp).toBe(TS);
   });
 
-  it('parsed session:diary with noteId alias also reaches composed actionLog', () => {
-    // BE NoteSavedEvent may send `noteId` not `entryId` — parseDiary normalizes it.
+  it('parsed session:diary with entryId reaches composed actionLog', () => {
+    // #2575: the dead `noteId` alias was removed; the BE always emits `entryId`.
     const rawData = JSON.stringify({
-      noteId: 'e2e-note-2',
+      entryId: 'e2e-note-2',
       authorId: 'p-bob',
       content: 'Move to the second chamber',
       timestamp: TS,

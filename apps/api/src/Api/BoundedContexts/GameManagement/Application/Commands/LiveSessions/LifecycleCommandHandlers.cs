@@ -205,9 +205,11 @@ internal class CompleteLiveSessionCommandHandler : ICommandHandler<CompleteLiveS
 
         // Issue #2587 Slice 1: Lifecycle-sync — complete the correlated GameSession so it
         // is no longer counted as active in the user's quota.
-        // The correlated GameSession is created in Setup status at live-session start and is
-        // never explicitly progressed, so we drive it through Start → Complete to honour the
-        // GameSession state machine (Complete() guards InProgress/Paused).
+        // Use MarkCorrelatedComplete (event-free bookkeeping) rather than Start()+Complete()
+        // so that no spurious GameSessionStartedEvent / GameSessionCompletedEvent is raised.
+        // The real session lifecycle side-effects are owned by LiveGameSession and its own
+        // domain events; firing them here would generate wrong audit entries and unintentionally
+        // credit SharedGameCatalog contributors (SessionCompletedForContributorsHandler).
         if (session.CorrelatedGameSessionId.HasValue)
         {
             var gameSession = await _gameSessionRepository
@@ -216,11 +218,7 @@ internal class CompleteLiveSessionCommandHandler : ICommandHandler<CompleteLiveS
 
             if (gameSession != null && !gameSession.Status.IsFinished)
             {
-                // Drive from Setup → InProgress → Completed so the domain invariants are met.
-                if (gameSession.Status == SessionStatus.Setup)
-                    gameSession.Start();
-
-                gameSession.Complete();
+                gameSession.MarkCorrelatedComplete(_timeProvider);
                 await _gameSessionRepository.UpdateAsync(gameSession, cancellationToken).ConfigureAwait(false);
             }
             // If gameSession is null or already finished → idempotent, no action.

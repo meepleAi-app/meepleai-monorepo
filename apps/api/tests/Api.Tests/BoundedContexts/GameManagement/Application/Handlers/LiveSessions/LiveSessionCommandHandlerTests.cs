@@ -527,6 +527,16 @@ public class LiveSessionCommandHandlerTests
         updatedGameSession.Should().NotBeNull();
         updatedGameSession!.Status.Should().Be(SessionStatus.Completed);
 
+        // Assert — event-free bookkeeping: MarkCorrelatedComplete must NOT raise
+        // GameSessionStartedEvent or GameSessionCompletedEvent (spurious audit + contributor
+        // credits via SessionCompletedForContributorsHandler — controller review finding).
+        updatedGameSession.DomainEvents.Should().NotContain(
+            e => e is Api.BoundedContexts.GameManagement.Domain.Events.GameSessionStartedEvent,
+            because: "shadow correlated complete must not fire GameSessionStartedEvent");
+        updatedGameSession.DomainEvents.Should().NotContain(
+            e => e is Api.BoundedContexts.GameManagement.Domain.Events.GameSessionCompletedEvent,
+            because: "shadow correlated complete must not fire GameSessionCompletedEvent");
+
         // Assert — single SaveChanges commits both
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }

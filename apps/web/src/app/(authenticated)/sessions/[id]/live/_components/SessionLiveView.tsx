@@ -109,6 +109,7 @@ import {
   type ScoringPanelRendererLabels,
   type ToolkitRendererLabels,
 } from '@/components/features/session-live';
+import { AgentDisputeTabContent } from '@/components/features/session-live/AgentDisputeTabContent';
 import type { ChatMessage as LiveAgentChatMessage } from '@/components/features/session-live/LiveAgentChat';
 import { PhotosTabContent } from '@/components/features/session-live/PhotosTabContent';
 import { useAddDiaryEntry } from '@/hooks/mutations/useAddDiaryEntry';
@@ -122,6 +123,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 import { ConflictError } from '@/lib/api/core/errors';
 import { useSessionAgentChat } from '@/lib/domain-hooks/useSessionAgentChat';
+import { useSignalRSession } from '@/lib/domain-hooks/useSignalrSession';
 import { getNavigationLinks } from '@/lib/navigation';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
 import { mapConnectionState } from '@/lib/session-live/map-connection-state';
@@ -196,10 +198,17 @@ function resolveFixtureVariant(variantParam: string | null): LiveSessionFixture 
 //   - legacy ?tab=chat   → 'score'   (chat is no longer a tab; live in LEFT mainColumn)
 //   - legacy/missing     → 'score'   (new default)
 
-type LiveTab = 'score' | 'turn' | 'widget' | 'notes' | 'photos';
+type LiveTab = 'score' | 'turn' | 'widget' | 'notes' | 'photos' | 'agent';
 
 function parseLiveTab(raw: string | null): LiveTab {
-  if (raw === 'turn' || raw === 'widget' || raw === 'notes' || raw === 'score' || raw === 'photos')
+  if (
+    raw === 'turn' ||
+    raw === 'widget' ||
+    raw === 'notes' ||
+    raw === 'score' ||
+    raw === 'photos' ||
+    raw === 'agent'
+  )
     return raw;
   // Back-compat aliases (R-1): legacy URL bookmarks must not 404.
   if (raw === 'tools') return 'widget';
@@ -212,7 +221,14 @@ function parseLiveTab(raw: string | null): LiveTab {
 // Legacy ?mtab=chat   → 'score'  (chat always-visible in main column)
 // Legacy ?mtab=log    → 'score'  (log always-visible in main column)
 function parseMobileTab(raw: string | null): LiveTab {
-  if (raw === 'turn' || raw === 'widget' || raw === 'notes' || raw === 'score' || raw === 'photos')
+  if (
+    raw === 'turn' ||
+    raw === 'widget' ||
+    raw === 'notes' ||
+    raw === 'score' ||
+    raw === 'photos' ||
+    raw === 'agent'
+  )
     return raw;
   if (raw === 'tools') return 'widget';
   if (raw === 'chat' || raw === 'log') return 'score';
@@ -859,6 +875,7 @@ export function SessionLiveView(): ReactElement {
       tabWidget: t('pages.sessionLive.rightColumn.tabWidget'),
       tabNotes: t('pages.sessionLive.rightColumn.tabNotes'),
       tabPhotos: t('pages.sessionLive.rightColumn.tabPhotos'),
+      tabAgent: t('pages.sessionLive.rightColumn.tabAgent'),
     }),
     [t]
   );
@@ -885,6 +902,7 @@ export function SessionLiveView(): ReactElement {
       tabWidget: t('pages.sessionLive.rightColumn.tabWidget'),
       tabNotes: t('pages.sessionLive.rightColumn.tabNotes'),
       tabPhotos: t('pages.sessionLive.rightColumn.tabPhotos'),
+      tabAgent: t('pages.sessionLive.rightColumn.tabAgent'),
     }),
     [t]
   );
@@ -1065,6 +1083,13 @@ export function SessionLiveView(): ReactElement {
     persistHistory: !fixture,
     gameContext: agentGameContext,
   });
+
+  // #2588 A4: SignalR connection for dispute hydration.
+  // Mounted once at orchestrator level so DisputeResolved events populate
+  // useLiveSessionStore.disputes even when the user is on another tab.
+  // Self-tears-down on unmount/sessionId change (hook contract).
+  // Disabled in fixture/visual-test builds to avoid real hub connections.
+  useSignalRSession(!fixture ? (sessionId ?? '') : '');
 
   // #2588 A3: local state for image-path messages (ask-agent JSON endpoint).
   // These are merged into agentChatMessages below so they appear in the same panel.
@@ -1321,6 +1346,17 @@ export function SessionLiveView(): ReactElement {
             currentTurn={activeSession.currentTurn}
           />
         );
+      case 'agent':
+        return (
+          <AgentDisputeTabContent
+            sessionId={sessionId ?? ''}
+            players={activeSession.players.map(p => ({
+              id: p.id,
+              name:
+                ('displayName' in p ? (p.displayName as string | undefined) : undefined) ?? p.name,
+            }))}
+          />
+        );
       case 'score':
       default:
         return (
@@ -1516,6 +1552,16 @@ export function SessionLiveView(): ReactElement {
           sessionId={sessionId ?? ''}
           userId={currentUser?.id ?? ''}
           currentTurn={activeSession.currentTurn}
+        />
+      )}
+      {tab === 'agent' && (
+        <AgentDisputeTabContent
+          sessionId={sessionId ?? ''}
+          players={activeSession.players.map(p => ({
+            id: p.id,
+            name:
+              ('displayName' in p ? (p.displayName as string | undefined) : undefined) ?? p.name,
+          }))}
         />
       )}
     </RightColumnTabs>

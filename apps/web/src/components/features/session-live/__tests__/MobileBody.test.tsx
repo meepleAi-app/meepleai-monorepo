@@ -34,6 +34,7 @@ const LABELS: MobileBodyLabels = {
   tabWidget: 'Widget',
   tabNotes: 'Note',
   tabPhotos: 'Foto',
+  tabAgent: 'Arbitro',
 };
 
 function renderBody(overrides: Partial<MobileBodyProps> = {}) {

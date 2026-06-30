@@ -46,6 +46,7 @@ export interface MobileBodyLabels {
   readonly tabWidget: string;
   readonly tabNotes: string;
   readonly tabPhotos: string;
+  readonly tabAgent: string;
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -131,6 +132,7 @@ export function MobileBody({
           tabWidget: labels.tabWidget,
           tabNotes: labels.tabNotes,
           tabPhotos: labels.tabPhotos,
+          tabAgent: labels.tabAgent,
         }}
       >
         {sheetContent}

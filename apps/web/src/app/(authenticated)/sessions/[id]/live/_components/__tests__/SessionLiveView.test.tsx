@@ -39,6 +39,22 @@ import type { UseSessionLiveStreamResult } from '@/lib/session-live/use-session-
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';
 import type { ScoreDataByType } from '@/components/sessions/score-strategies/types';
 
+// ─── useSignalRSession mock (#2588 A4: dispute hydration via SignalR) ─────────
+// The hook connects to /hubs/game-state — mock it to a no-op so tests don't try
+// to establish a real WebSocket connection. Assertions about mount/sessionId
+// come from the useSignalRSessionMock spy.
+
+const useSignalRSessionMock = vi.fn(() => ({
+  connection: null,
+  isConnected: false,
+  proposeScore: vi.fn(),
+  appBackgrounded: vi.fn(),
+}));
+
+vi.mock('@/lib/domain-hooks/useSignalrSession', () => ({
+  useSignalRSession: (...args: unknown[]) => useSignalRSessionMock(...args),
+}));
+
 // ─── next/navigation mocks ────────────────────────────────────────────────
 
 const searchParamsMap: Record<string, string> = {};
@@ -378,6 +394,7 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.rightColumn.tabWidget': 'Widget',
   'pages.sessionLive.rightColumn.tabNotes': 'Note',
   'pages.sessionLive.rightColumn.tabPhotos': 'Foto',
+  'pages.sessionLive.rightColumn.tabAgent': 'Arbitro',
   // Back-compat (legacy keys for older callers — not used by SessionLiveView post-T4)
   'pages.sessionLive.rightColumn.tabTools': 'Strumenti',
   'pages.sessionLive.rightColumn.tabChat': 'Chat',
@@ -506,6 +523,8 @@ beforeEach(() => {
   useLiveSessionStore.getState().reset();
   // #2505: reset currentUser to null by default; individual tests can override.
   useCurrentUserMock.mockReturnValue({ data: null });
+  // #2588 A4: reset SignalR mock so call counts don't bleed between tests.
+  useSignalRSessionMock.mockClear();
 });
 
 describe('SessionLiveView (Wave D.2 Foundation)', () => {
@@ -712,9 +731,9 @@ describe('SessionLiveView (Wave D.2 Foundation)', () => {
     searchParamsMap['msheet'] = 'open';
     searchParamsMap['mtab'] = 'turn';
     renderWithIntl(<SessionLiveView />);
-    // Drawer has 5 tabs; the 2nd (index 1) is Turn — aria-selected="true".
+    // Drawer has 6 tabs (score/turn/widget/notes/photos/agent); the 2nd (index 1) is Turn.
     const drawerTabs = document.querySelectorAll('[data-slot="mobile-bottom-sheet"] [role="tab"]');
-    expect(drawerTabs).toHaveLength(5);
+    expect(drawerTabs).toHaveLength(6);
     expect(drawerTabs[1]).toHaveAttribute('aria-selected', 'true');
   });
 
@@ -2463,5 +2482,125 @@ describe('SessionLiveView — diary write response-ack (SP5-a finding #16)', () 
       expect.stringContaining('Impossibile salvare la nota'),
       expect.anything()
     );
+  });
+});
+
+// ─── #2588 A4 — Arbitro (agent) tab wiring + SignalR dispute hydration ────────
+//
+// Verifies:
+//  A4-1: useSignalRSession called with sessionId on a live session
+//  A4-2: useSignalRSession called with '' in fixture mode (no real WS)
+//  A4-3: ?tab=agent shows data-active-tab="agent" on RightColumnTabs
+//  A4-4: ?mtab=agent selects the 6th tab (index 5) in the mobile drawer
+//  A4-5: desktop agent tab renders AgentDisputeTabContent slot
+
+describe('SessionLiveView — #2588 A4: Arbitro tab + dispute SignalR hydration', () => {
+  const SESSION_ID = 'session-abc-123';
+
+  const BASE_DTO = {
+    id: SESSION_ID,
+    sessionCode: 'A4TEST',
+    gameId: 'game-00000001',
+    gameName: 'Test Game',
+    gameSlug: 'test-game',
+    createdByUserId: 'user-a4-host',
+    status: 'InProgress',
+    visibility: 'Private',
+    groupId: null,
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    startedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    pausedAt: null,
+    completedAt: null,
+    updatedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+    lastSavedAt: null,
+    currentTurnIndex: 0,
+    currentTurnPlayerId: null,
+    agentMode: 'Active',
+    notes: null,
+    players: [
+      {
+        id: 'player-a4-001',
+        displayName: 'Marco',
+        userId: 'user-a4-host',
+        color: 'Blue',
+        role: 'Host',
+        totalScore: 0,
+        isActive: true,
+      },
+      {
+        id: 'player-a4-002',
+        displayName: 'Anna',
+        userId: null,
+        color: 'Red',
+        role: 'Player',
+        totalScore: 0,
+        isActive: true,
+      },
+    ],
+    teams: [],
+    roundScores: [],
+    scoringConfig: { enabledDimensions: [], dimensionUnits: {} },
+  } as unknown as LiveSessionDto;
+
+  function emptyHistoryA4() {
+    return { records: [], totalCount: 0, page: 1, pageSize: 1, totalPages: 0 };
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
+    mockParamsId = SESSION_ID;
+    IS_VISUAL_TEST_BUILD_MOCK = false;
+    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+    useCurrentUserMock.mockReturnValue({ data: { id: 'user-a4-host' } });
+    useLiveSessionMock.mockReturnValue({
+      data: BASE_DTO,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+    });
+    completeIsPending = false;
+    resolveStatusMock = 'idle';
+    resolvePlayRecordIdMock = null;
+    getHistoryMock.mockResolvedValue(emptyHistoryA4());
+  });
+
+  it('A4-1: useSignalRSession is called with the session id', () => {
+    renderWithIntl(<SessionLiveView />);
+    expect(useSignalRSessionMock).toHaveBeenCalledWith(SESSION_ID);
+  });
+
+  it('A4-2: useSignalRSession called with "" in fixture mode (no WS in tests)', () => {
+    IS_VISUAL_TEST_BUILD_MOCK = true;
+    renderWithIntl(<SessionLiveView />);
+    // fixture mode passes '' to prevent WebSocket handshake in CI
+    expect(useSignalRSessionMock).toHaveBeenCalledWith('');
+  });
+
+  it('A4-3: ?tab=agent sets data-active-tab="agent" on RightColumnTabs', () => {
+    searchParamsMap['tab'] = 'agent';
+    const { container } = renderWithIntl(<SessionLiveView />);
+    const tabsRoot = container.querySelector('[data-slot="right-column-tabs"]');
+    expect(tabsRoot).toBeInTheDocument();
+    expect(tabsRoot).toHaveAttribute('data-active-tab', 'agent');
+  });
+
+  it('A4-4: ?mtab=agent selects the agent tab in mobile drawer (aria-selected="true")', () => {
+    searchParamsMap['mtab'] = 'agent';
+    searchParamsMap['msheet'] = 'open'; // parseMobileSheetOpen: 'open' → true
+    renderWithIntl(<SessionLiveView />);
+    // Drawer portals to document.body — query document directly (not container).
+    // The 6th tab (index 5, data-tab="agent") must have aria-selected="true".
+    const drawerTabs = document.querySelectorAll('[data-slot="mobile-bottom-sheet"] [role="tab"]');
+    expect(drawerTabs).toHaveLength(6);
+    expect(drawerTabs[5]).toHaveAttribute('aria-selected', 'true'); // agent = index 5
+    expect(drawerTabs[5]).toHaveAttribute('data-tab', 'agent');
+  });
+
+  it('A4-5: desktop ?tab=agent renders AgentDisputeTabContent slot', () => {
+    searchParamsMap['tab'] = 'agent';
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.querySelector('[data-slot="agent-dispute-tab-content"]')).toBeInTheDocument();
   });
 });

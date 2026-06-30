@@ -1245,7 +1245,13 @@ export function SessionLiveView(): ReactElement {
           />
         );
       case 'photos':
-        return <PhotosTabContent sessionId={sessionId ?? ''} />;
+        return (
+          <PhotosTabContent
+            sessionId={sessionId ?? ''}
+            userId={currentUser?.id ?? ''}
+            currentTurn={activeSession.currentTurn}
+          />
+        );
       case 'score':
       default:
         return (
@@ -1262,6 +1268,7 @@ export function SessionLiveView(): ReactElement {
     mobileTab,
     activeSession,
     sessionId,
+    currentUser?.id,
     scoringPanelLabels,
     turnRendererState,
     turnRendererPlayers,
@@ -1435,7 +1442,13 @@ export function SessionLiveView(): ReactElement {
           labels={notesLabels}
         />
       )}
-      {tab === 'photos' && <PhotosTabContent sessionId={sessionId ?? ''} />}
+      {tab === 'photos' && (
+        <PhotosTabContent
+          sessionId={sessionId ?? ''}
+          userId={currentUser?.id ?? ''}
+          currentTurn={activeSession.currentTurn}
+        />
+      )}
     </RightColumnTabs>
   );
 

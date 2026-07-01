@@ -29,14 +29,6 @@ internal record SessionPlayerDto(
 );
 
 /// <summary>
-/// DTO for starting a game session.
-/// </summary>
-internal record StartGameSessionRequest(
-    Guid GameId,
-    IReadOnlyList<SessionPlayerRequest> Players
-);
-
-/// <summary>
 /// DTO for player in session.
 /// </summary>
 internal record SessionPlayerRequest(

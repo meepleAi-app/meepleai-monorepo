@@ -15,7 +15,7 @@
  * // Usage
  * const profile = await api.auth.getProfile();
  * const games = await api.games.getAll();
- * const session = await api.sessions.start({ gameId, players });
+ * const sessions = await api.sessions.getHistory();
  * ```
  */
 
@@ -406,7 +406,7 @@ export interface ApiClient {
  * const game = await api.games.getById(gameId);
  *
  * // Sessions
- * const session = await api.sessions.start({ gameId, players });
+ * const history = await api.sessions.getHistory({ gameId });
  * await api.sessions.complete(sessionId, { winnerName: 'Alice' });
  *
  * // Chat

@@ -33,16 +33,6 @@ export interface SessionHistoryFilters {
   offset?: number;
 }
 
-export interface StartSessionRequest {
-  gameId: string;
-  players: Array<{
-    playerName: string;
-    playerOrder: number;
-    color?: string | null;
-  }>;
-  notes?: string | null;
-}
-
 export interface CompleteSessionRequest {
   winnerName?: string | null;
 }
@@ -122,14 +112,6 @@ export function createSessionsClient({ httpClient }: CreateSessionsClientParams)
      */
     async getById(id: string): Promise<GameSessionDto | null> {
       return httpClient.get(`/api/v1/sessions/${encodeURIComponent(id)}`, GameSessionDtoSchema);
-    },
-
-    /**
-     * Start a new game session
-     * @param request Session start request with game ID and players
-     */
-    async start(request: StartSessionRequest): Promise<GameSessionDto> {
-      return httpClient.post('/api/v1/sessions', request, GameSessionDtoSchema);
     },
 
     // ========== Session Lifecycle ==========

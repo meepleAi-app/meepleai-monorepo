@@ -12,6 +12,9 @@ public class SessionEntity
     public Guid UserId { get; set; }
     public Guid? GameId { get; set; }
 
+    /// <summary>#2632 SI-1: optional link to the libro-game campaign (GameNight-attached play).</summary>
+    public Guid? GamebookCampaignId { get; set; }
+
     [MaxLength(6)]
     public string SessionCode { get; set; } = string.Empty;
 

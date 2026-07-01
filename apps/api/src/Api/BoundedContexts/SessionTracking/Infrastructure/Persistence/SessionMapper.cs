@@ -18,6 +18,7 @@ internal static class SessionMapper
             Id = domain.Id,
             UserId = domain.UserId,
             GameId = domain.GameId,
+            GamebookCampaignId = domain.GamebookCampaignId,
             SessionCode = domain.SessionCode,
             SessionType = domain.SessionType.ToString(),
             Status = domain.Status.ToString(),
@@ -54,6 +55,7 @@ internal static class SessionMapper
         typeof(Session).GetProperty(nameof(Session.Id))!.SetValue(session, entity.Id);
         typeof(Session).GetProperty(nameof(Session.UserId))!.SetValue(session, entity.UserId);
         typeof(Session).GetProperty(nameof(Session.GameId))!.SetValue(session, entity.GameId);
+        typeof(Session).GetProperty(nameof(Session.GamebookCampaignId))!.SetValue(session, entity.GamebookCampaignId);
         typeof(Session).GetProperty(nameof(Session.SessionCode))!.SetValue(session, entity.SessionCode);
         typeof(Session).GetProperty(nameof(Session.SessionType))!.SetValue(session, Enum.Parse<SessionType>(entity.SessionType));
         typeof(Session).GetProperty(nameof(Session.Status))!.SetValue(session, Enum.Parse<SessionStatus>(entity.Status));

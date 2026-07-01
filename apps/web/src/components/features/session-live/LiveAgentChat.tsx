@@ -315,7 +315,10 @@ export function LiveAgentChat({
                 <button
                   type="button"
                   onClick={() => removeImage(i)}
-                  aria-label={`Rimuovi immagine ${i + 1}`}
+                  aria-label={intl.formatMessage(
+                    { id: 'pages.sessionLive.chat.removeImageAriaLabel' },
+                    { n: i + 1 }
+                  )}
                   className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center
                     justify-center rounded-full bg-muted border border-border/60
                     text-muted-foreground hover:text-foreground

@@ -31,6 +31,7 @@ const INTL_MESSAGES = {
   'pages.sessionLive.chat.newMessagesToast':
     '{count, plural, one {# nuovo messaggio} other {# nuovi messaggi}}',
   'pages.sessionLive.chatAgent.nonGroundedDisclaimer': 'Risposta non basata sul regolamento',
+  'pages.sessionLive.chat.removeImageAriaLabel': 'Rimuovi immagine {n}',
 };
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -693,5 +694,50 @@ describe('#2588 A3 — image attachments in LiveAgentChat', () => {
     await user.type(screen.getByRole('textbox', { name: 'Scrivi un messaggio' }), 'Testo puro');
     await user.click(screen.getByRole('button', { name: 'Invia' }));
     expect(onSendMessage).toHaveBeenCalledWith('Testo puro', 'shared', undefined);
+  });
+
+  it('image-send failure path: onSendMessage called with image payload and clearImages invoked on rejection', async () => {
+    // LiveAgentChat.handleSubmit dispatches to onSendMessage and then clears state synchronously.
+    // When the host handler (SessionLiveView.handleAgentSendMessage) rejects, rollback happens
+    // at the orchestrator level — LiveAgentChat always clears draft+images after calling the prop.
+    // This test asserts the handoff: images are passed to onSendMessage, clearImages is called,
+    // and the rejected promise (returned asynchronously) does NOT crash the component.
+    const user = userEvent.setup();
+    // Return a rejected promise lazily (via mockImplementation, not mockReturnValue) so the
+    // rejection is only created when the mock is actually called — avoiding an unhandled
+    // rejection at declaration time. The test catches it via act + Promise.resolve drain.
+    const rejectingOnSend = vi
+      .fn()
+      .mockImplementation(() => Promise.reject(new Error('send failed')));
+    const fakeImg = {
+      file: new File([''], 'a.jpg', { type: 'image/jpeg' }),
+      previewUrl: 'blob:1',
+      mediaType: 'image/jpeg',
+    };
+    mockHasImages = true;
+    mockImages = [fakeImg];
+
+    renderWithIntl(
+      <LiveAgentChat
+        sessionId="sess-1"
+        messages={[]}
+        viewerRole="Player"
+        viewerId="me"
+        onSendMessage={rejectingOnSend}
+        labels={LABELS}
+      />
+    );
+
+    // Use act to absorb the unhandled rejection from the returned promise.
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Invia' }));
+      // Allow micro-task queue to settle so the rejected promise is handled.
+      await Promise.resolve();
+    });
+
+    // The image payload was handed off to the orchestrator.
+    expect(rejectingOnSend).toHaveBeenCalledWith('', 'shared', [fakeImg]);
+    // clearImages() is always called in handleSubmit after onSendMessage (before rejection propagates).
+    expect(mockClearImages).toHaveBeenCalled();
   });
 });

@@ -3324,6 +3324,15 @@
         "galleryHeading": "Galleria foto della partita",
         "snapshotsHeading": "Snapshot Vision AI"
       },
+      "photos": {
+        "title": "Foto partita",
+        "noneYet": "Nessuna foto ancora",
+        "photoAlt": "Foto partita {n}",
+        "deleteAriaLabel": "Elimina foto {n}",
+        "emptyStateBody": "Scatta foto per documentare lo stato della partita",
+        "firstPhoto": "Prima foto",
+        "captureButton": "Scatta"
+      },
       "tools": {
         "title": "Strumenti",
         "toolDiceLabel": "Dado",
@@ -3341,7 +3350,8 @@
         "emptyMessage": "Nessun messaggio ancora.",
         "newMessagesToast": "{count, plural, one {# nuovo messaggio} other {# nuovi messaggi}}",
         "newMessagesToastAriaLabel": "Nuovi messaggi disponibili — clic per scorrere in fondo",
-        "attachAriaLabel": "Allega immagine"
+        "attachAriaLabel": "Allega immagine",
+        "removeImageAriaLabel": "Rimuovi immagine {n}"
       },
       "chatAgent": {
         "title": "ChatAgent",
@@ -3354,7 +3364,12 @@
         "launchingMessage": "Avvio assistente…",
         "errorMessage": "Impossibile avviare l'assistente. Riprova più tardi.",
         "statusAriaLabel": "Stato assistente",
-        "nonGroundedDisclaimer": "Risposta non basata sul regolamento"
+        "nonGroundedDisclaimer": "Risposta non basata sul regolamento",
+        "imageAsk": {
+          "defaultQuestion": "Analizza questa immagine",
+          "fallbackResponse": "Risposta non disponibile.",
+          "errorToast": "Impossibile elaborare l'immagine. Riprova."
+        }
       },
       "mobile": {
         "openSheetCta": "Apri pannello",

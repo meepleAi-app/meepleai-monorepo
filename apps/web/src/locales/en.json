@@ -3217,6 +3217,15 @@
         "galleryHeading": "Match photo gallery",
         "snapshotsHeading": "Vision AI snapshots"
       },
+      "photos": {
+        "title": "Match photos",
+        "noneYet": "No photos yet",
+        "photoAlt": "Match photo {n}",
+        "deleteAriaLabel": "Delete photo {n}",
+        "emptyStateBody": "Take photos to document the game state",
+        "firstPhoto": "First photo",
+        "captureButton": "Capture"
+      },
       "tools": {
         "title": "Tools",
         "toolDiceLabel": "Dice",
@@ -3234,7 +3243,8 @@
         "emptyMessage": "No messages yet.",
         "newMessagesToast": "{count, plural, one {# new message} other {# new messages}}",
         "newMessagesToastAriaLabel": "New messages available — click to scroll to bottom",
-        "attachAriaLabel": "Attach image"
+        "attachAriaLabel": "Attach image",
+        "removeImageAriaLabel": "Remove image {n}"
       },
       "chatAgent": {
         "title": "ChatAgent",
@@ -3247,7 +3257,12 @@
         "launchingMessage": "Starting assistant…",
         "errorMessage": "Could not start the assistant. Try again later.",
         "statusAriaLabel": "Assistant status",
-        "nonGroundedDisclaimer": "Answer not grounded in the rulebook"
+        "nonGroundedDisclaimer": "Answer not grounded in the rulebook",
+        "imageAsk": {
+          "defaultQuestion": "Analyse this image",
+          "fallbackResponse": "Response not available.",
+          "errorToast": "Unable to process the image. Please try again."
+        }
       },
       "mobile": {
         "openSheetCta": "Open panel",

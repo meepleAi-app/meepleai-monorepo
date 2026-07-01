@@ -17,6 +17,7 @@
 import { useRef, useState, useCallback, useEffect, type ReactElement } from 'react';
 
 import { Camera, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { useIntl } from 'react-intl';
 
 import { SessionSnapshotPanel } from '@/components/session/SessionSnapshotPanel';
 import { Button } from '@/components/ui/primitives/button';
@@ -44,22 +45,21 @@ function toDisplay(stored: StoredPhoto): DisplayPhoto {
 interface PhotoCardProps {
   photo: DisplayPhoto;
   onDelete: (id: string) => void;
+  photoAlt: string;
+  timeLabel: string;
+  deleteAriaLabel: string;
 }
 
-function PhotoCard({ photo, onDelete }: PhotoCardProps): ReactElement {
-  const date = new Date(photo.timestamp);
-  const timeLabel = date.toLocaleTimeString('it-IT', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-
+function PhotoCard({
+  photo,
+  onDelete,
+  photoAlt,
+  timeLabel,
+  deleteAriaLabel,
+}: PhotoCardProps): ReactElement {
   return (
     <div className="group relative rounded-xl overflow-hidden bg-muted aspect-square shadow-sm border border-border">
-      <img
-        src={photo.objectUrl}
-        alt={`Foto partita ${timeLabel}`}
-        className="w-full h-full object-cover"
-      />
+      <img src={photo.objectUrl} alt={photoAlt} className="w-full h-full object-cover" />
       {/* Hover overlay */}
       <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/30 transition-colors" />
       {/* Timestamp badge */}
@@ -71,7 +71,7 @@ function PhotoCard({ photo, onDelete }: PhotoCardProps): ReactElement {
         type="button"
         className="absolute top-1.5 right-1.5 h-7 w-7 rounded-full bg-foreground/40 hover:bg-destructive/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
         onClick={() => onDelete(photo.id)}
-        aria-label={`Elimina foto ${timeLabel}`}
+        aria-label={deleteAriaLabel}
         data-testid={`delete-photo-${photo.id}`}
       >
         <Trash2 className="h-3.5 w-3.5 text-white" />
@@ -102,6 +102,7 @@ export function PhotosTabContent({
   currentTurn = 1,
 }: PhotosTabContentProps): ReactElement {
   const { t } = useTranslation();
+  const intl = useIntl();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photos, setPhotos] = useState<DisplayPhoto[]>([]);
   const photosRef = useRef<DisplayPhoto[]>([]);
@@ -157,9 +158,13 @@ export function PhotosTabContent({
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-base font-semibold text-foreground">Foto partita</h3>
+            <h3 className="text-base font-semibold text-foreground">
+              {t('pages.sessionLive.photos.title')}
+            </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {photos.length === 0 ? 'Nessuna foto ancora' : `${photos.length} foto`}
+              {photos.length === 0
+                ? t('pages.sessionLive.photos.noneYet')
+                : `${photos.length} foto`}
             </p>
           </div>
 
@@ -170,7 +175,7 @@ export function PhotosTabContent({
             data-testid="capture-button"
           >
             <Camera className="h-4 w-4" />
-            Scatta
+            {t('pages.sessionLive.photos.captureButton')}
           </Button>
         </div>
 
@@ -189,16 +194,14 @@ export function PhotosTabContent({
         {photos.length === 0 && (
           <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
             <ImageIcon className="h-12 w-12 opacity-30" />
-            <p className="text-sm text-center">
-              Scatta foto per documentare lo stato della partita
-            </p>
+            <p className="text-sm text-center">{t('pages.sessionLive.photos.emptyStateBody')}</p>
             <Button
               variant="outline"
               className="gap-2"
               onClick={() => fileInputRef.current?.click()}
             >
               <Camera className="h-4 w-4" />
-              Prima foto
+              {t('pages.sessionLive.photos.firstPhoto')}
             </Button>
           </div>
         )}
@@ -206,9 +209,27 @@ export function PhotosTabContent({
         {/* Photo grid */}
         {photos.length > 0 && (
           <div className="grid grid-cols-2 gap-3">
-            {photos.map(photo => (
-              <PhotoCard key={photo.id} photo={photo} onDelete={handleDelete} />
-            ))}
+            {photos.map((photo, index) => {
+              const date = new Date(photo.timestamp);
+              const timeLabel = intl.formatTime(date, { hour: '2-digit', minute: '2-digit' });
+              const n = index + 1;
+              return (
+                <PhotoCard
+                  key={photo.id}
+                  photo={photo}
+                  onDelete={handleDelete}
+                  photoAlt={intl.formatMessage(
+                    { id: 'pages.sessionLive.photos.photoAlt' },
+                    { n: timeLabel }
+                  )}
+                  timeLabel={timeLabel}
+                  deleteAriaLabel={intl.formatMessage(
+                    { id: 'pages.sessionLive.photos.deleteAriaLabel' },
+                    { n }
+                  )}
+                />
+              );
+            })}
           </div>
         )}
       </section>

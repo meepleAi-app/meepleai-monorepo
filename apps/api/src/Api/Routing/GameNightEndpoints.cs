@@ -83,6 +83,17 @@ internal static class GameNightEndpoints
             .WithSummary("Get a game night by ID")
             .WithDescription("Retrieves full details of a game night event.");
 
+        // #2633 Slice A: night-live read model (header + session progression) for useGameNightLive.
+        gameNights.MapGet("/{id:guid}/live", HandleGetGameNightLive)
+            .RequireAuthenticatedUser()
+            .Produces<GameNightLiveDto>(200)
+            .Produces(403)
+            .Produces(404)
+            .Produces(401)
+            .WithName("GetGameNightLive")
+            .WithSummary("Get the night-live read model")
+            .WithDescription("Returns the game night header + its session progression (status/winner/timing per game) for the live view.");
+
         gameNights.MapPut("/{id:guid}", HandleUpdateGameNight)
             .RequireAuthenticatedUser()
             .Produces(204)
@@ -571,6 +582,17 @@ internal static class GameNightEndpoints
         CancellationToken cancellationToken)
     {
         var result = await mediator.Send(new GetGameNightByIdQuery(id), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetGameNightLive(
+        Guid id,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        var result = await mediator.Send(new GetGameNightLiveQuery(id, userId), cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
 

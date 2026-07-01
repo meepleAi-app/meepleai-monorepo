@@ -18,5 +18,9 @@ public interface IGamebookGlossaryRepository
     Task<GamebookGlossaryEntry?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task AddRangeAsync(IEnumerable<GamebookGlossaryEntry> entries, CancellationToken cancellationToken = default);
     Task AddAsync(GamebookGlossaryEntry entry, CancellationToken cancellationToken = default);
+
+    /// <summary>Marks a glossary entry for hard deletion (flushed on the next SaveChanges).</summary>
+    void Remove(GamebookGlossaryEntry entry);
+
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }

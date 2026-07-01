@@ -49,6 +49,9 @@ internal sealed class GamebookGlossaryRepository : IGamebookGlossaryRepository
     public Task AddAsync(GamebookGlossaryEntry entry, CancellationToken cancellationToken = default)
         => _db.GamebookGlossaryEntries.AddAsync(entry, cancellationToken).AsTask();
 
+    public void Remove(GamebookGlossaryEntry entry)
+        => _db.GamebookGlossaryEntries.Remove(entry);
+
     public Task SaveChangesAsync(CancellationToken cancellationToken = default)
         => _db.SaveChangesAsync(cancellationToken);
 }

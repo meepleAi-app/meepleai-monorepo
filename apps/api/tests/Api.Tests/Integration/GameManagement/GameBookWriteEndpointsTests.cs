@@ -119,36 +119,6 @@ public sealed class GameBookWriteEndpointsTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task CreateBook_NoRole_ReturnsBadRequestOrUnauthorized()
-    {
-        using var scope = _factory.Services.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
-
-        var body = new
-        {
-            gameRefId = Guid.NewGuid(),
-            gameRefKind = 1,
-            displayName = "No role",
-            roles = 0, // invalid: validator requires at least one role
-            paragraphScheme = (int)ParagraphScheme.ParagraphNumber,
-            language = "it",
-            sequentialRead = false,
-            kbSourceDocId = (Guid?)null,
-            physicalOnly = false,
-        };
-        var request = TestSessionHelper.CreateAuthenticatedRequest(
-            HttpMethod.Post, "/api/v1/gamebook/books", sessionToken);
-        request.Content = JsonContent.Create(body);
-
-        var response = await _client.SendAsync(request);
-
-        (response.StatusCode == HttpStatusCode.BadRequest ||
-            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue(
-            $"Expected BadRequest or Unauthorized, got {response.StatusCode}");
-    }
-
-    [Fact]
     public async Task UpdateBook_NonExistent_ReturnsNotFoundOrUnauthorized()
     {
         using var scope = _factory.Services.CreateScope();

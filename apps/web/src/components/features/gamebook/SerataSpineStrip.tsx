@@ -20,9 +20,16 @@ const STATUS_LABELS: Record<string, string> = {
   Completed: 'completata',
 };
 
+// GameNights cap at 5 sessions (BE AddSession invariant); MAX_PIPS guards the DOM against a
+// malformed/adversarial payload sending an unbounded totalSessions. The numeric label still
+// shows the true count.
+const MAX_PIPS = 12;
+
 export function SerataSpineStrip({ spine }: SerataSpineStripProps): ReactElement {
   const total = Math.max(spine.totalSessions, 0);
   const completed = Math.min(Math.max(spine.completedSessions, 0), total);
+  const pipCount = Math.min(total, MAX_PIPS);
+  const filledPips = Math.min(completed, MAX_PIPS);
   const statusLabel = STATUS_LABELS[spine.gameNightStatus] ?? spine.gameNightStatus.toLowerCase();
 
   return (
@@ -63,12 +70,12 @@ export function SerataSpineStrip({ spine }: SerataSpineStripProps): ReactElement
             data-testid="serata-session-pip"
             aria-label={`${completed} di ${total} sessioni della serata`}
           >
-            {Array.from({ length: total }).map((_, i) => (
+            {Array.from({ length: pipCount }).map((_, i) => (
               <span
                 key={i}
                 aria-hidden
                 className={
-                  i < completed
+                  i < filledPips
                     ? 'inline-block h-1.5 w-1.5 rounded-full bg-entity-event'
                     : 'inline-block h-1.5 w-1.5 rounded-full bg-entity-event/25'
                 }

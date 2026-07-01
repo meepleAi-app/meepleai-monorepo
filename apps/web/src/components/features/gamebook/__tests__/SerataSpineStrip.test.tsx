@@ -49,4 +49,11 @@ describe('SerataSpineStrip', () => {
     render(<SerataSpineStrip spine={{ ...base, totalSessions: 1, completedSessions: 5 }} />);
     expect(screen.getByText('1/1')).toBeInTheDocument();
   });
+
+  it('caps rendered pip dots at MAX_PIPS but shows the true total (defensive)', () => {
+    render(<SerataSpineStrip spine={{ ...base, totalSessions: 100, completedSessions: 50 }} />);
+    expect(screen.getByText('50/100')).toBeInTheDocument();
+    const dots = screen.getByTestId('serata-session-pip').querySelectorAll('span[aria-hidden]');
+    expect(dots.length).toBe(12);
+  });
 });

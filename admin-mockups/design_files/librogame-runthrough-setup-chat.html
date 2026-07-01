@@ -10,9 +10,9 @@
   Scope:  Phase A runthrough — chat panel laterale per setup pre-sessione (N1 baseline)
   Stati:  default            (Aaron query setup 4 giocatori + risposta IT 5 step + citation Press Start + confidence alta)
           confidence-bassa   (Aaron edge "setup variante 5 giocatori" + disclaimer "non sono sicuro")
-          out-of-context     (Aaron chiede setup di Tainted Grail, agente declina con suggestion change game)
+          out-of-context     (Aaron chiede setup di Gloomhaven, agente declina con suggestion change game)
           loading            (skeleton bubble agent typing)
-  Persona: Aaron (badsworm@gmail.com), 30 minuti prima dell'arrivo amici, agente "Game Tutor" con KB Press Start.
+  Persona: Aaron (badsworm@gmail.com), 30 minuti prima dell'arrivo amici, agente "Arbitro Eldoria" con KB Press Start.
   Vincolo: SMART N1 P95 ≤ 8s, citation accuracy ≥ 90%, confidence badge visibile.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -354,11 +354,11 @@
           <div class="bubble agent">
             <div class="header">
               <span class="avatar" aria-hidden="true">🤖</span>
-              <span class="name">Game Tutor</span>
+              <span class="name">Arbitro Eldoria</span>
             </div>
             <p>Per una partita a 4 giocatori, segui questi step:</p>
             <ol>
-              <li><strong>Tabellone Avalon</strong> al centro del tavolo, lato A in alto.</li>
+              <li><strong>Tabellone Eldoria</strong> al centro del tavolo, lato A in alto.</li>
               <li>Distribuisci <strong>4 carte personaggio</strong> casuali — uno per giocatore.</li>
               <li>Posiziona <strong>5 dadi neri</strong> sulla pista combattimento e <strong>3 dadi bianchi</strong> sulla pista esplorazione.</li>
               <li>Mescola il mazzo <strong>Encounter</strong> (24 carte) e mettilo coperto vicino al tabellone.</li>
@@ -409,15 +409,15 @@
           <div class="desktop-main">
             <div class="session-head">
               <span class="pulse"></span>
-              <div><div class="title">Sera con i ragazzi · Chat regole</div><div class="sub">🎯 Setup pre-sessione · §1 · agente: Game Tutor</div></div>
+              <div><div class="title">Sera con i ragazzi · Chat regole</div><div class="sub">🎯 Setup pre-sessione · §1 · agente: Arbitro Eldoria</div></div>
             </div>
             <div class="conv" role="log" aria-live="polite">
               <div class="bubble user">come si setupa Eldoria per 4 giocatori?</div>
               <div class="bubble agent">
-                <div class="header"><span class="avatar">🤖</span><span class="name">Game Tutor</span></div>
+                <div class="header"><span class="avatar">🤖</span><span class="name">Arbitro Eldoria</span></div>
                 <p>Per una partita a 4 giocatori, segui questi step:</p>
                 <ol>
-                  <li><strong>Tabellone Avalon</strong> al centro del tavolo, lato A in alto.</li>
+                  <li><strong>Tabellone Eldoria</strong> al centro del tavolo, lato A in alto.</li>
                   <li>Distribuisci <strong>4 carte personaggio</strong> casuali — uno per giocatore.</li>
                   <li>Posiziona <strong>5 dadi neri</strong> sulla pista combattimento e <strong>3 dadi bianchi</strong> sulla pista esplorazione.</li>
                   <li>Mescola il mazzo <strong>Encounter</strong> (24 carte) e mettilo coperto vicino al tabellone.</li>
@@ -476,7 +476,7 @@
         <div class="conv" role="log">
           <div class="bubble user">e per 5 giocatori?</div>
           <div class="bubble agent">
-            <div class="header"><span class="avatar">🤖</span><span class="name">Game Tutor</span></div>
+            <div class="header"><span class="avatar">🤖</span><span class="name">Arbitro Eldoria</span></div>
             <p>Non sono sicuro — il quickstart Press Start copre solo configurazioni 2-4 giocatori. Per varianti 5+ ti suggerisco di:</p>
             <div class="disclaimer">
               <strong>⚠️ Non sono certo.</strong> Controlla pag. 18 del regolamento completo (Rules KB) per la variante "Avventura epica" che potrebbe estendere a 5-6 giocatori.
@@ -510,11 +510,11 @@
             </div>
           </aside>
           <div class="desktop-main">
-            <div class="session-head"><span class="pulse"></span><div><div class="title">Chat regole</div><div class="sub">🎯 Setup · agente: Game Tutor</div></div></div>
+            <div class="session-head"><span class="pulse"></span><div><div class="title">Chat regole</div><div class="sub">🎯 Setup · agente: Arbitro Eldoria</div></div></div>
             <div class="conv">
               <div class="bubble user">come si setupa Eldoria per 4 giocatori?</div>
               <div class="bubble agent" style="opacity: 0.65;">
-                <div class="header"><span class="avatar">🤖</span><span class="name">Game Tutor</span></div>
+                <div class="header"><span class="avatar">🤖</span><span class="name">Arbitro Eldoria</span></div>
                 <p>Per una partita a 4 giocatori… <em>(risposta confidence alta, vedi stato 1)</em></p>
                 <div class="conf-row" style="margin-top: var(--s-2);">
                   <span class="conf-badge alta">🟢 Alta · 0.92</span>
@@ -522,7 +522,7 @@
               </div>
               <div class="bubble user">e per 5 giocatori?</div>
               <div class="bubble agent">
-                <div class="header"><span class="avatar">🤖</span><span class="name">Game Tutor</span></div>
+                <div class="header"><span class="avatar">🤖</span><span class="name">Arbitro Eldoria</span></div>
                 <p>Non sono sicuro — il quickstart Press Start copre solo configurazioni 2-4 giocatori.</p>
                 <div class="disclaimer">
                   <strong>⚠️ Non sono certo.</strong> Controlla pag. 18 del regolamento completo (Rules KB) per la variante "Avventura epica" che potrebbe estendere a 5-6 giocatori.
@@ -555,7 +555,7 @@
   <section class="state-section" aria-labelledby="s3">
     <span class="label">Stato 3 · Edge · Out of Context</span>
     <h2 id="s3">Domanda fuori contesto — Decline + suggerimento switch</h2>
-    <p class="desc">Aaron per errore chiede setup di Tainted Grail (gioco diverso, KB non collegato). L'agente declina esplicitamente, NON inventa, suggerisce di cambiare gioco o agente.</p>
+    <p class="desc">Aaron per errore chiede setup di Gloomhaven (gioco diverso, KB non collegato). L'agente declina esplicitamente, NON inventa, suggerisce di cambiare gioco o agente.</p>
 
     <div class="frames">
       <div class="phone" role="region" aria-label="Mobile – out of context">
@@ -568,13 +568,13 @@
           <button class="tab" role="tab" aria-selected="false">🧰 Toolbox</button>
         </nav>
         <div class="conv" role="log">
-          <div class="bubble user">qual è il setup ottimale di Tainted Grail?</div>
+          <div class="bubble user">qual è il setup ottimale di Gloomhaven?</div>
           <div class="bubble agent">
-            <div class="header"><span class="avatar">🤖</span><span class="name">Game Tutor</span></div>
-            <p><strong>Non ho informazioni su Tainted Grail nel mio knowledge base.</strong> Il mio scope è il gioco Eldoria (Press Start + Rules). Cosa vuoi fare?</p>
+            <div class="header"><span class="avatar">🤖</span><span class="name">Arbitro Eldoria</span></div>
+            <p><strong>Non ho informazioni su Gloomhaven nel mio knowledge base.</strong> Il mio scope è il gioco Eldoria (Press Start + Rules). Cosa vuoi fare?</p>
             <div class="out-of-context-actions">
-              <button class="action-pill" type="button" onclick="window.location.href='librogame-runthrough-game-onboarding.html'" /* DEMO-NAV */>🎲 Cambia gioco a Tainted Grail</button>
-              <button class="action-pill" type="button">🤖 Cerca un agente Tainted Grail</button>
+              <button class="action-pill" type="button" onclick="window.location.href='librogame-runthrough-game-onboarding.html'" /* DEMO-NAV */>🎲 Cambia gioco a Gloomhaven</button>
+              <button class="action-pill" type="button">🤖 Cerca un agente Gloomhaven</button>
               <button class="action-pill" type="button" onclick="window.location.href='librogame-runthrough-game-onboarding.html'" /* DEMO-NAV */>↩️ Resta su Eldoria</button>
             </div>
             <div class="conf-row">
@@ -598,18 +598,18 @@
           <aside class="desktop-side">
             <div class="game-mini"><div class="nm">🎲 Eldoria</div><div class="sub">Scope agente</div></div>
             <h4>KB collegati</h4>
-            <div style="font-size: var(--fs-xs); color: var(--text-muted); padding: var(--s-2);">📄 Press Start ✓<br/>📄 Rules ✓<br/><span style="color: hsl(var(--c-danger));">✕ NO Tainted Grail</span></div>
+            <div style="font-size: var(--fs-xs); color: var(--text-muted); padding: var(--s-2);">📄 Press Start ✓<br/>📄 Rules ✓<br/><span style="color: hsl(var(--c-danger));">✕ NO Gloomhaven</span></div>
           </aside>
           <div class="desktop-main">
-            <div class="session-head"><span class="pulse"></span><div><div class="title">Chat regole · scope: Eldoria</div><div class="sub">🤖 agente: Game Tutor</div></div></div>
+            <div class="session-head"><span class="pulse"></span><div><div class="title">Chat regole · scope: Eldoria</div><div class="sub">🤖 agente: Arbitro Eldoria</div></div></div>
             <div class="conv">
-              <div class="bubble user">qual è il setup ottimale di Tainted Grail?</div>
+              <div class="bubble user">qual è il setup ottimale di Gloomhaven?</div>
               <div class="bubble agent">
-                <div class="header"><span class="avatar">🤖</span><span class="name">Game Tutor</span></div>
-                <p><strong>Non ho informazioni su Tainted Grail nel mio knowledge base.</strong> Il mio scope è il gioco Eldoria (Press Start + Rules). Cosa vuoi fare?</p>
+                <div class="header"><span class="avatar">🤖</span><span class="name">Arbitro Eldoria</span></div>
+                <p><strong>Non ho informazioni su Gloomhaven nel mio knowledge base.</strong> Il mio scope è il gioco Eldoria (Press Start + Rules). Cosa vuoi fare?</p>
                 <div class="out-of-context-actions">
-                  <button class="action-pill">🎲 Cambia gioco a Tainted Grail</button>
-                  <button class="action-pill">🤖 Cerca un agente Tainted Grail</button>
+                  <button class="action-pill">🎲 Cambia gioco a Gloomhaven</button>
+                  <button class="action-pill">🤖 Cerca un agente Gloomhaven</button>
                   <button class="action-pill">↩️ Resta su Eldoria</button>
                 </div>
                 <div class="conf-row">
@@ -646,7 +646,7 @@
         <div class="conv" role="log" aria-live="polite" aria-busy="true">
           <div class="bubble user">come si setupa Eldoria per 4 giocatori?</div>
           <div class="bubble agent" aria-label="Agente sta scrivendo">
-            <div class="header"><span class="avatar">🤖</span><span class="name">Game Tutor</span></div>
+            <div class="header"><span class="avatar">🤖</span><span class="name">Arbitro Eldoria</span></div>
             <div class="typing" aria-hidden="true"><span></span><span></span><span></span></div>
             <div class="typing-meta">⏱️ Cerco in 24 pag · 1.8s elapsed (budget 8s)</div>
           </div>
@@ -669,7 +669,7 @@
             <div class="conv" aria-busy="true">
               <div class="bubble user">come si setupa Eldoria per 4 giocatori?</div>
               <div class="bubble agent">
-                <div class="header"><span class="avatar">🤖</span><span class="name">Game Tutor</span></div>
+                <div class="header"><span class="avatar">🤖</span><span class="name">Arbitro Eldoria</span></div>
                 <div class="typing"><span></span><span></span><span></span></div>
                 <div class="typing-meta">⏱️ Cerco in 24 pag Press Start · 1.8s / 8s budget · streaming SSE</div>
               </div>

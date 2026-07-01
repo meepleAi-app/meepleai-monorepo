@@ -9,7 +9,7 @@
   Scope: timeline narrativa end-to-end di una game night Eldoria.
          Single-file storyboard che embedda gli iframe dei 10 mockup librogame-runthrough-*
          organizzati in 3 fasi (T-30 preparazione, T0 sessione attiva, T+post save/resume).
-         Use case: agente Tutor per regole, traduzione paragrafi (storybook + encounter
+         Use case: agente Arbitro Eldoria per regole, traduzione paragrafi (storybook + encounter
          book), gestione glossary, quota tier free.
   Persona: Aaron (badsworm@gmail.com), gruppo A (Marco/Giulia/Luca), Eldoria libro game.
   Goal:    validazione visuale del flusso completo prima dell'implementazione FE.
@@ -223,12 +223,12 @@
 <header class="hero">
   <span class="kicker">📖 Storyboard end-to-end</span>
   <h1>Game Night Eldoria</h1>
-  <p class="sub">Aaron + gruppo A (Marco · Giulia · Luca) giocano una sera Eldoria — libro game inglese — con l'assistente AI Tutor per regole, tutorial, traduzione paragrafi e gestione del libro game.</p>
+  <p class="sub">Aaron + gruppo A (Marco · Giulia · Luca) giocano una sera Eldoria — libro game inglese — con l'assistente AI Arbitro Eldoria per regole, tutorial, traduzione paragrafi e gestione del libro game.</p>
   <div class="meta">
     <span class="item">👤 Aaron · badsworm@gmail.com</span>
     <span class="item">🎲 Eldoria · Side Room 2024</span>
     <span class="item">📅 Sera tipo · 20:30 → 01:00</span>
-    <span class="item">🤖 Game Tutor · DeepSeek IT</span>
+    <span class="item">🤖 Arbitro Eldoria · DeepSeek IT</span>
     <span class="item">📄 KB 142 pag indicizzate</span>
   </div>
 </header>
@@ -237,7 +237,7 @@
   <span class="it"><span class="d kb"></span>kb (pagine)</span>
   <span class="it"><span class="d chat"></span>chat (Q&A)</span>
   <span class="it"><span class="d session"></span>session</span>
-  <span class="it"><span class="d agent"></span>agent (Tutor)</span>
+  <span class="it"><span class="d agent"></span>agent (Arbitro Eldoria)</span>
   <span class="it"><span class="d player"></span>player</span>
   <span class="it"><span class="d event"></span>event (encounter)</span>
   <span class="it"><span class="d toolkit"></span>toolkit (glossario)</span>
@@ -251,7 +251,7 @@
     <span class="time">T−30 · 20:30</span>
     <h2 id="ph1">Fase 1 · Preparazione pre-sera</h2>
   </div>
-  <p class="ph-desc">30 minuti prima dell'arrivo del gruppo, Aaron apre l'app sul telefono, trova Eldoria in libreria, crea la campagna e fa qualche domanda di setup all'agente Tutor.</p>
+  <p class="ph-desc">30 minuti prima dell'arrivo del gruppo, Aaron apre l'app sul telefono, trova Eldoria in libreria, crea la campagna e fa qualche domanda di setup all'agente Arbitro Eldoria.</p>
   <div class="jtbd"><strong>🔨 JTBD J1 · Rules tutor</strong> — "Voglio essere pronto a guidare il setup senza leggere 24 pagine di Press Start in inglese."</div>
 
   <div class="steps">
@@ -410,7 +410,7 @@
         <div class="info">
           <div class="ts">20:42</div>
           <h3>Setup chat · "come si fa il setup per 4 giocatori?"</h3>
-          <p class="desc">Aaron query Tutor IT. Risposta 5-step + citation <strong>Press Start p.3-7</strong>. Confidence alta, &lt;8s.</p>
+          <p class="desc">Aaron query Arbitro Eldoria IT. Risposta 5-step + citation <strong>Press Start p.3-7</strong>. Confidence alta, &lt;8s.</p>
         </div>
       </header>
       <div class="pips"><span class="manapip kb"><span class="badge">142</span></span><span class="manapip chat"><span class="badge">9</span></span><span class="manapip agent"><span class="badge">1</span></span></div>
@@ -443,7 +443,7 @@
         <div class="info">
           <div class="ts">21:00 · play shell</div>
           <h3>Play session · paragrafo §289</h3>
-          <p class="desc">Vista runtime default. Story tab con paragrafo IT + glossary pill inline (Voidstone, Goblin). Toolbar: 📷 photo · ⚔️ encounter · 📚 glossary. Chat strip laterale (Tutor live).</p>
+          <p class="desc">Vista runtime default. Story tab con paragrafo IT + glossary pill inline (Voidstone, Goblin). Toolbar: 📷 photo · ⚔️ encounter · 📚 glossary. Chat strip laterale (Arbitro Eldoria live).</p>
         </div>
       </header>
       <div class="pips"><span class="manapip kb"><span class="badge">142</span></span><span class="manapip chat"><span class="badge">12</span></span><span class="manapip event"><span class="badge">3</span></span><span class="manapip toolkit"><span class="badge">34</span></span></div>
@@ -515,7 +515,7 @@
         <div class="info">
           <div class="ts">22:33 · J1 rules</div>
           <h3>Chat overlay · regola stacking malus</h3>
-          <p class="desc">Marco chiede: "se ho 2 ferite il malus −2 si cumula?". Aaron query Tutor. Risposta streaming + citation <strong>Rules p.94 §6.3.2</strong> + conf alta in 7.2s.</p>
+          <p class="desc">Marco chiede: "se ho 2 ferite il malus −2 si cumula?". Aaron query Arbitro Eldoria. Risposta streaming + citation <strong>Rules p.94 §6.3.2</strong> + conf alta in 7.2s.</p>
         </div>
       </header>
       <div class="pips"><span class="manapip chat"><span class="badge">15</span></span><span class="manapip kb"><span class="badge">142</span></span></div>
@@ -593,7 +593,7 @@
           <span class="num">E2</span>
           <div class="info">
             <div class="ts">edge · out of context</div>
-            <h3>Chat · "setup di Tainted Grail"</h3>
+            <h3>Chat · "setup di Eldoria"</h3>
             <p class="desc">Aaron chiede di un altro gioco. Agente declina educatamente + suggerisce change game.</p>
           </div>
         </header>
@@ -765,7 +765,7 @@
      ═══════════════════════════════════════════════════════════ -->
 <section class="summary">
   <h2>📊 Game night Eldoria · counter totali agente</h2>
-  <p style="color: var(--text-sec); margin: 0 0 var(--s-5);">Stima singola sera con gruppo A. Tier free, agente Game Tutor (DeepSeek IT).</p>
+  <p style="color: var(--text-sec); margin: 0 0 var(--s-5);">Stima singola sera con gruppo A. Tier free, agente Arbitro Eldoria (DeepSeek IT).</p>
   <div class="grid">
     <div class="stat kb"><div class="v">142</div><div class="l">📄 KB pagine indicizzate</div></div>
     <div class="stat chat"><div class="v">15–17</div><div class="l">💬 Q&A regole (T2 cap)</div></div>

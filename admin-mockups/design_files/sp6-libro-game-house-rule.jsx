@@ -31,7 +31,7 @@ const MANUAL_EXCERPT =
   'Quando il gruppo perde il proprio leader, lo Stato del gruppo entra in stallo ' +
   'finché Niamh non designa un nuovo portavoce secondo le regole del capitolo corrente.';
 
-// Tainted Grail rules (2) + ISS Vanguard (1) — group headers per gioco.
+// Eldoria rules (2) + ISS Vanguard (1) — group headers per gioco.
 const RULES_TG = [
   {
     id: 'r1',
@@ -163,7 +163,7 @@ function DrawerHeader({ viewport, onClose }) {
           flex: 1, minWidth: 0, fontFamily: 'var(--f-display)', fontSize: 'var(--fs-xl)',
           fontWeight: 'var(--fw-bold)', color: 'var(--text)',
         }}>House rules</h2>
-        <EntityChip entity="game" icon="🎲">Tainted Grail</EntityChip>
+        <EntityChip entity="game" icon="🎲">Eldoria</EntityChip>
         <button
           type="button"
           aria-label="Chiudi drawer house rule"
@@ -355,7 +355,7 @@ function CreateTab({ mode, value, saving }) {
               }}>Salvataggio house rule in corso</span>
             </>
           ) : (
-            isEdit ? 'Aggiorna house rule' : 'Salva house rule per Tainted Grail'
+            isEdit ? 'Aggiorna house rule' : 'Salva house rule per Eldoria'
           )}
         </button>
         <button type="button" style={{
@@ -440,7 +440,7 @@ function ListTab({ empty, highlightId }) {
           <div style={{
             fontFamily: 'var(--f-display)', fontWeight: 'var(--fw-bold)', fontSize: 'var(--fs-lg)',
             color: 'var(--text)',
-          }}>Nessuna house rule definita per Tainted Grail</div>
+          }}>Nessuna house rule definita per Eldoria</div>
           <p style={{ margin: 0, fontSize: 'var(--fs-base)', color: 'var(--text-muted)', maxWidth: 280, lineHeight: 'var(--lh-body)' }}>
             Le rules personalizzate sostituiscono o estendono il manuale ufficiale per il vostro gruppo.
           </p>
@@ -469,7 +469,7 @@ function ListTab({ empty, highlightId }) {
       id="panel-list" role="tabpanel" aria-labelledby="tab-list"
       style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}
     >
-      <Group name="Tainted Grail" emoji="🎲" entity="game" rules={RULES_TG} />
+      <Group name="Eldoria" emoji="🎲" entity="game" rules={RULES_TG} />
       <Group name="ISS Vanguard" emoji="🎲" entity="game" rules={RULES_IV} />
     </div>
   );
@@ -673,7 +673,7 @@ function ParentChat() {
         background: 'var(--bg-card)', flexShrink: 0,
       }}>
         <span style={{ flex: 1, fontFamily: 'var(--f-display)', fontWeight: 'var(--fw-bold)', fontSize: 'var(--fs-md)' }}>
-          💬 Chat · Tainted Grail
+          💬 Chat · Eldoria
         </span>
         {/* DEC-1 entry-point secondary → apre drawer con defaultTab='list' */}
         <button type="button" aria-label="Apri house rules attive" style={{ background: 'none', border: 'none', padding: 0 }}>
@@ -832,7 +832,7 @@ const STATES = [
   { n: '05', id: 'state-05-create-saved-success', name: 'Salvato (transition)', Comp: State05_CreateSavedSuccess,
     desc: 'MAJ-1 — frame intermedio t≈600ms: Tab 1 collapsed (height auto→0) + switch a Tab 2 con rule in cima + highlight border 2px entityHsl(agent,0.6) (fade 600-2600ms) + toast entity=agent (autodismiss 3000ms).' },
   { n: '06', id: 'state-06-list-3-rules', name: 'Le tue rules · 3', Comp: State06_List3Rules,
-    desc: 'Tab Le tue rules con 3 rules: Tainted Grail (2) + ISS Vanguard (1), group header per gioco.' },
+    desc: 'Tab Le tue rules con 3 rules: Eldoria (2) + ISS Vanguard (1), group header per gioco.' },
   { n: '07', id: 'state-07-list-empty', name: 'Le tue rules · empty', Comp: State07_ListEmpty,
     desc: 'Empty state illustrato (role=status aria-live=polite) + CTA “＋ Crea la prima rule”.' },
   { n: '08', id: 'state-08-create-edit-mode-prefilled', name: 'Crea · edit', Comp: State08_CreateEditModePrefilled,
@@ -861,7 +861,7 @@ function Backdrop({ closed }) {
           background: `linear-gradient(135deg, ${entityHsl('game', 0.8)}, ${entityHsl('session', 0.5)})`,
           display: 'flex', alignItems: 'flex-end', padding: 'var(--s-2)', color: '#fff',
           fontFamily: 'var(--f-display)', fontWeight: 'var(--fw-bold)',
-        }}>§214 · Tainted Grail</div>
+        }}>§214 · Eldoria</div>
         <div style={{ height: 10, width: '90%', background: 'var(--bg-muted)', borderRadius: 4, marginBottom: 8 }} />
         <div style={{ height: 10, width: '80%', background: 'var(--bg-muted)', borderRadius: 4, marginBottom: 8 }} />
         <div style={{ height: 10, width: '85%', background: 'var(--bg-muted)', borderRadius: 4 }} />

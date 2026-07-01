@@ -38,27 +38,24 @@ public class ListGamebookCampaignSessionsHandlerTests
                 0, Array.Empty<int>(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow));
 
     [Fact]
-    public async Task Handle_ProjectsSittings_WithIsLiveComputed()
+    public async Task Handle_ReturnsCampaignSessionIds()
     {
         var campaignId = Guid.NewGuid();
         var caller = Guid.NewGuid();
         SetupOwnershipOk(campaignId, caller);
 
-        var live = Session.Create(caller, Guid.NewGuid(), SessionType.Generic, gamebookCampaignId: campaignId);
-        live.OpenLiveMode();
-        var draft = Session.Create(caller, Guid.NewGuid(), SessionType.Generic, gamebookCampaignId: campaignId);
+        var s1 = Session.Create(caller, Guid.NewGuid(), SessionType.Generic, gamebookCampaignId: campaignId);
+        var s2 = Session.Create(caller, Guid.NewGuid(), SessionType.Generic, gamebookCampaignId: campaignId);
 
         _sessions
             .Setup(r => r.ListByGamebookCampaignAsync(campaignId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Session> { live, draft });
+            .ReturnsAsync(new List<Session> { s1, s2 });
 
         var result = await _handler.Handle(
             new ListGamebookCampaignSessionsQuery(campaignId, caller),
             TestContext.Current.CancellationToken);
 
-        result.Should().HaveCount(2);
-        result.Single(s => s.SessionId == live.Id).IsLive.Should().BeTrue();
-        result.Single(s => s.SessionId == draft.Id).IsLive.Should().BeFalse();
+        result.Should().BeEquivalentTo(new[] { s1.Id, s2.Id });
     }
 
     [Fact]

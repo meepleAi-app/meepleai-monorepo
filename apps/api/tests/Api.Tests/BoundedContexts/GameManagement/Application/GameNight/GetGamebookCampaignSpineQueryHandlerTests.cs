@@ -11,7 +11,8 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.GameNight;
 
 /// <summary>
 /// #2632 (SI-1b Phase 3): the spine read path — derives the owning GameNight "Serata" + campaign
-/// status from a campaign's sittings.
+/// status from a campaign's sittings. Liveness comes from the authoritative
+/// <c>GameNightSession.Status</c> (InProgress), not <c>Session.StartedAt</c>.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "GameManagement")]
@@ -26,27 +27,30 @@ public class GetGamebookCampaignSpineQueryHandlerTests
         _handler = new GetGamebookCampaignSpineQueryHandler(_mediator.Object, _repo.Object);
     }
 
-    private void SetupSittings(Guid campaignId, params GamebookSittingDto[] sittings)
+    private void SetupSessionIds(Guid campaignId, params Guid[] ids)
         => _mediator
             .Setup(m => m.Send(
                 It.Is<ListGamebookCampaignSessionsQuery>(q => q.CampaignId == campaignId),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(sittings.ToList());
+            .ReturnsAsync(ids.ToList());
 
-    private static GameNightEvent PublishedWithSession(Guid sessionId, string title = "Serata da Marco")
+    /// <summary>A Published GameNight with one sitting; <paramref name="started"/> makes it InProgress (live).</summary>
+    private static GameNightEvent WithSession(Guid sessionId, string title, bool started)
     {
         var evt = GameNightEvent.Create(
             Guid.NewGuid(), title, DateTimeOffset.UtcNow.AddHours(1), gameIds: [Guid.NewGuid()]);
         evt.Publish([]);
         evt.AddSession(sessionId, evt.GameIds[0], "Eldoria");
+        if (started)
+            evt.StartCurrentSession();
         return evt;
     }
 
     [Fact]
-    public async Task Handle_NoSittings_ReturnsNull()
+    public async Task Handle_NoSessions_ReturnsNull()
     {
         var campaignId = Guid.NewGuid();
-        SetupSittings(campaignId); // empty
+        SetupSessionIds(campaignId); // empty
 
         var result = await _handler.Handle(
             new GetGamebookCampaignSpineQuery(campaignId, Guid.NewGuid()),
@@ -59,10 +63,10 @@ public class GetGamebookCampaignSpineQueryHandlerTests
     public async Task Handle_LiveSitting_ReturnsInProgressSpine()
     {
         var campaignId = Guid.NewGuid();
-        var sittingId = Guid.NewGuid();
-        SetupSittings(campaignId, new GamebookSittingDto(sittingId, IsLive: true, DateTime.UtcNow));
-        var gameNight = PublishedWithSession(sittingId);
-        _repo.Setup(r => r.FindByLinkedSessionIdAsync(sittingId, It.IsAny<CancellationToken>()))
+        var sessionId = Guid.NewGuid();
+        SetupSessionIds(campaignId, sessionId);
+        var gameNight = WithSession(sessionId, "Serata da Marco", started: true);
+        _repo.Setup(r => r.FindByLinkedSessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(gameNight);
 
         var result = await _handler.Handle(
@@ -82,10 +86,10 @@ public class GetGamebookCampaignSpineQueryHandlerTests
     public async Task Handle_NoLiveSitting_ReturnsResumableSpine()
     {
         var campaignId = Guid.NewGuid();
-        var sittingId = Guid.NewGuid();
-        SetupSittings(campaignId, new GamebookSittingDto(sittingId, IsLive: false, DateTime.UtcNow.AddDays(-1)));
-        _repo.Setup(r => r.FindByLinkedSessionIdAsync(sittingId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(PublishedWithSession(sittingId));
+        var sessionId = Guid.NewGuid();
+        SetupSessionIds(campaignId, sessionId);
+        _repo.Setup(r => r.FindByLinkedSessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(WithSession(sessionId, "Serata", started: false));
 
         var result = await _handler.Handle(
             new GetGamebookCampaignSpineQuery(campaignId, Guid.NewGuid()),
@@ -97,11 +101,11 @@ public class GetGamebookCampaignSpineQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_SittingsButNoGameNightAttached_ReturnsNull()
+    public async Task Handle_SessionsButNoGameNightAttached_ReturnsNull()
     {
         var campaignId = Guid.NewGuid();
-        var sittingId = Guid.NewGuid();
-        SetupSittings(campaignId, new GamebookSittingDto(sittingId, IsLive: false, DateTime.UtcNow));
+        var sessionId = Guid.NewGuid();
+        SetupSessionIds(campaignId, sessionId);
         _repo.Setup(r => r.FindByLinkedSessionIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((GameNightEvent?)null);
 
@@ -113,19 +117,17 @@ public class GetGamebookCampaignSpineQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_LiveSittingPreferredOverOlder()
+    public async Task Handle_LiveSittingPreferredOverOlderNight()
     {
-        // Two sittings: an older non-live and a current live one. The live one's GameNight wins.
+        // Two sittings in different nights: an older non-live and a current live one. The live one wins.
         var campaignId = Guid.NewGuid();
-        var oldSitting = Guid.NewGuid();
-        var liveSitting = Guid.NewGuid();
-        SetupSittings(campaignId,
-            new GamebookSittingDto(oldSitting, IsLive: false, DateTime.UtcNow.AddDays(-2)),
-            new GamebookSittingDto(liveSitting, IsLive: true, DateTime.UtcNow));
-        _repo.Setup(r => r.FindByLinkedSessionIdAsync(liveSitting, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(PublishedWithSession(liveSitting, "Serata Live"));
-        _repo.Setup(r => r.FindByLinkedSessionIdAsync(oldSitting, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(PublishedWithSession(oldSitting, "Serata Vecchia"));
+        var oldSession = Guid.NewGuid();
+        var liveSession = Guid.NewGuid();
+        SetupSessionIds(campaignId, oldSession, liveSession);
+        _repo.Setup(r => r.FindByLinkedSessionIdAsync(liveSession, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(WithSession(liveSession, "Serata Live", started: true));
+        _repo.Setup(r => r.FindByLinkedSessionIdAsync(oldSession, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(WithSession(oldSession, "Serata Vecchia", started: false));
 
         var result = await _handler.Handle(
             new GetGamebookCampaignSpineQuery(campaignId, Guid.NewGuid()),
@@ -134,5 +136,6 @@ public class GetGamebookCampaignSpineQueryHandlerTests
         result.Should().NotBeNull();
         result!.GameNightTitle.Should().Be("Serata Live");
         result.HasLiveSession.Should().BeTrue();
+        result.CampaignStatus.Should().Be("InProgress");
     }
 }

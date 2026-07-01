@@ -5,11 +5,11 @@ namespace Api.BoundedContexts.SessionTracking.Application.Queries;
 
 /// <summary>
 /// Handles <see cref="ListGamebookCampaignSessionsQuery"/>. Enforces ownership by delegating to
-/// <see cref="GetGamebookCampaignQuery"/> (which throws NotFound / Forbidden), then projects the
-/// campaign's Sessions to the spine-relevant <see cref="GamebookSittingDto"/>.
+/// <see cref="GetGamebookCampaignQuery"/> (which throws NotFound / Forbidden), then returns the
+/// campaign's linked Session IDs.
 /// </summary>
 public sealed class ListGamebookCampaignSessionsHandler
-    : IRequestHandler<ListGamebookCampaignSessionsQuery, IReadOnlyList<GamebookSittingDto>>
+    : IRequestHandler<ListGamebookCampaignSessionsQuery, IReadOnlyList<Guid>>
 {
     private readonly ISessionRepository _sessions;
     private readonly IMediator _mediator;
@@ -20,12 +20,13 @@ public sealed class ListGamebookCampaignSessionsHandler
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
     }
 
-    public async Task<IReadOnlyList<GamebookSittingDto>> Handle(
+    public async Task<IReadOnlyList<Guid>> Handle(
         ListGamebookCampaignSessionsQuery request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
         // Ownership + existence guard (throws NotFound if missing, Forbidden if not the owner).
+        // Fires even when the campaign has zero sittings (standalone) — no existence leak.
         _ = await _mediator.Send(
             new GetGamebookCampaignQuery(request.CampaignId, request.CallerUserId), cancellationToken)
             .ConfigureAwait(false);
@@ -34,11 +35,6 @@ public sealed class ListGamebookCampaignSessionsHandler
             .ListByGamebookCampaignAsync(request.CampaignId, cancellationToken)
             .ConfigureAwait(false);
 
-        return sittings
-            .Select(s => new GamebookSittingDto(
-                s.Id,
-                IsLive: s.StartedAt.HasValue && !s.FinalizedAt.HasValue,
-                s.StartedAt))
-            .ToList();
+        return sittings.Select(s => s.Id).ToList();
     }
 }

@@ -59,6 +59,26 @@ export const GamebookCampaignSchema = z.object({
 
 export type GamebookCampaign = z.infer<typeof GamebookCampaignSchema>;
 
+/**
+ * #2632 (SI-1b Phase 4): the owning GameNight "Serata" spine for a campaign, returned by
+ * `GET /gamebook/campaigns/{id}/spine`. The endpoint replies 204 (→ `null` here) when the
+ * campaign has no GameNight-attached play (standalone), in which case the FE renders no strip.
+ */
+export const GamebookCampaignSpineSchema = z.object({
+  gameNightId: z.string().uuid(),
+  gameNightTitle: z.string(),
+  organizerId: z.string().uuid(),
+  /** Backend `GameNightStatus.ToString()` — e.g. Published / InProgress / Completed. */
+  gameNightStatus: z.string(),
+  totalSessions: z.number().int().min(0),
+  completedSessions: z.number().int().min(0),
+  hasLiveSession: z.boolean(),
+  /** Derived: "InProgress" (a live sitting exists) or "Resumable". */
+  campaignStatus: z.string(),
+});
+
+export type GamebookCampaignSpine = z.infer<typeof GamebookCampaignSpineSchema>;
+
 export interface CreateCampaignInput {
   gameId: string;
   title: string;
@@ -93,6 +113,18 @@ export async function getCampaign(id: string): Promise<GamebookCampaign> {
     credentials: 'include',
   });
   return parseJson(res, GamebookCampaignSchema);
+}
+
+/**
+ * #2632 (SI-1b Phase 4): fetch the owning GameNight spine for a campaign. Returns `null` when the
+ * backend replies 204 (standalone campaign — no GameNight-attached play, so no strip is rendered).
+ */
+export async function getCampaignSpine(id: string): Promise<GamebookCampaignSpine | null> {
+  const res = await fetch(`${API_BASE}/api/v1/gamebook/campaigns/${encodeURIComponent(id)}/spine`, {
+    credentials: 'include',
+  });
+  if (res.status === 204) return null;
+  return parseJson(res, GamebookCampaignSpineSchema);
 }
 
 export async function listMyCampaigns(gameId?: string): Promise<GamebookCampaign[]> {

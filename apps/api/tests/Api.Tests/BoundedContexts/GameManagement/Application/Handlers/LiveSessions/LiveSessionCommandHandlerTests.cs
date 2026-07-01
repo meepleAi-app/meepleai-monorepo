@@ -329,13 +329,13 @@ public class LiveSessionCommandHandlerTests
         _quotaServiceMock.Verify(
             q => q.CheckQuotaAsync(It.IsAny<Guid>(), It.IsAny<UserTier>(), It.IsAny<Role>(), It.IsAny<CancellationToken>()),
             Times.Never,
-            because: "the creator guard fires before the quota block");
+            "the creator guard fires before the quota block");
 
         // No GameSession must have been created
         _gameSessionRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()),
             Times.Never,
-            because: "the creator guard fires before any GameSession correlation");
+            "the creator guard fires before any GameSession correlation");
 
         // Session must NOT have been started
         session.Status.Should().NotBe(LiveSessionStatus.InProgress);
@@ -876,10 +876,13 @@ public class LiveSessionCommandHandlerTests
 
         var session = LiveGameSession.Create(sessionId, DefaultUserId, "Catan", gameId: gameId);
 
-        // Add two players: one will be removed (deactivated), one stays active
-        var removedPlayer = session.AddPlayer(null, "Removed Player", PlayerColor.Red, TimeProvider.System);
+        // Add the host first (stays active), then a guest player that will be removed.
+        // The first player added becomes Host (AddPlayer: !HasPlayers => Host). Removing the
+        // host while other players are active is blocked by a domain guard, so the removed
+        // player must be a non-host guest (added second).
         session.AddPlayer(null, "Active Player", PlayerColor.Blue, TimeProvider.System);
-        // Simulate RemovePlayer which deactivates the player
+        var removedPlayer = session.AddPlayer(null, "Removed Player", PlayerColor.Red, TimeProvider.System);
+        // Simulate RemovePlayer which deactivates the (non-host) player
         session.RemovePlayer(removedPlayer.Id, TimeProvider.System);
 
         SetupRepoGetById(sessionId, session);

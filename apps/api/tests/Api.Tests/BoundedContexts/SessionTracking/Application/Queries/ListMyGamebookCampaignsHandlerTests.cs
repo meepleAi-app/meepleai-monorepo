@@ -113,6 +113,48 @@ public sealed class ListMyGamebookCampaignsHandlerTests
     }
 
     [Fact]
+    public async Task Handle_OrdersByLastPlayed_NotByUpdatedAt()
+    {
+        // Arrange: two campaigns for the same user.
+        //   X — played long ago, then RENAMED just now (UpdatedAt is the newest).
+        //   Y — played most recently, never renamed (UpdatedAt is older than X's).
+        // The repo fake preserves insertion order [X, Y]; the resume-picker must
+        // return Y first because it was *played* most recently — the rename on X
+        // must NOT promote it to the resume hero slot (#2619).
+        var campaigns = new FakeCampaignRepo();
+        var progress = new FakeProgressRepo();
+        var handler = new ListMyGamebookCampaignsHandler(campaigns, progress);
+        var userId = Guid.NewGuid();
+
+        var x = GamebookCampaignSession.Create(GameRef.Shared(Guid.NewGuid()), userId, "X");
+        var y = GamebookCampaignSession.Create(GameRef.Shared(Guid.NewGuid()), userId, "Y");
+        campaigns.Store.Add(x);
+        campaigns.Store.Add(y);
+
+        // X played first (older LastVisitedAt), Y played after (newer LastVisitedAt).
+        var xProgress = SessionBookProgress.Create(x.Id, Guid.NewGuid(), "§10");
+        progress.Store.Add(xProgress);
+        await Task.Delay(10, TestContext.Current.CancellationToken);
+        var yProgress = SessionBookProgress.Create(y.Id, Guid.NewGuid(), "§20");
+        progress.Store.Add(yProgress);
+
+        // X renamed last → its UpdatedAt is now the newest of the two.
+        await Task.Delay(10, TestContext.Current.CancellationToken);
+        x.Rename("X renamed", userId);
+        x.UpdatedAt.Should().BeAfter(y.UpdatedAt, "the test premise is that X has the newer UpdatedAt");
+
+        var query = new ListMyGamebookCampaignsQuery(userId, GameId: null);
+
+        // Act
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
+
+        // Assert: ordered by last-played (Y first), NOT by UpdatedAt (which would put X first).
+        result.Should().HaveCount(2);
+        result[0].Id.Should().Be(y.Id);
+        result[1].Id.Should().Be(x.Id);
+    }
+
+    [Fact]
     public async Task Handle_CampaignWithoutProgress_ReturnsZeroCurrentParagraph()
     {
         // Arrange

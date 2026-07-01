@@ -47,11 +47,13 @@ internal static class LiveSessionEndpoints
             .RequireAuthenticatedUser()
             .RequireLiveSessionParticipant()
             .Produces(204)
+            .Produces(400)  // QuotaExceededException (DomainException → 400 via middleware) or zero active players
+            .Produces(403)  // Non-creator caller (#2608: only the creator may start; maps to ForbiddenException → 403)
             .Produces(404)
-            .Produces(409)
+            .Produces(409)  // DbUpdateConcurrencyException (xmin race — concurrent start)
             .WithTags("LiveSessions")
             .WithSummary("Start a live session")
-            .WithDescription("Transitions session from Created/Setup to InProgress.");
+            .WithDescription("Transitions session from Created/Setup to InProgress. Only the session creator may start (403). Quota limit returns 400. Concurrent start race returns 409.");
 
         group.MapPost("/live-sessions/{sessionId}/pause", HandlePauseSession)
             .RequireAuthenticatedUser()

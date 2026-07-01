@@ -36,7 +36,7 @@ test.describe('ScoreAssistant — NLP Confidence Flows', () => {
   test('high confidence (≥80%) — auto-records score', async ({ page }) => {
     await sessionHelper.mockScoreParse(MOCK_SCORE_PARSE_RECORDED);
 
-    await page.goto(`/sessions/live/${MOCK_SESSION_ID}`);
+    await page.goto(`/sessions/${MOCK_SESSION_ID}/live`);
     await page.waitForLoadState('domcontentloaded');
 
     const input = page.getByTestId('score-input').first();
@@ -63,7 +63,7 @@ test.describe('ScoreAssistant — NLP Confidence Flows', () => {
     await sessionHelper.mockScoreParse(MOCK_SCORE_PARSE_NEEDS_CONFIRM);
     await sessionHelper.mockScoreConfirm();
 
-    await page.goto(`/sessions/live/${MOCK_SESSION_ID}`);
+    await page.goto(`/sessions/${MOCK_SESSION_ID}/live`);
     await page.waitForLoadState('domcontentloaded');
 
     const input = page.getByTestId('score-input').first();
@@ -92,7 +92,7 @@ test.describe('ScoreAssistant — NLP Confidence Flows', () => {
   test('low confidence — shows ambiguous candidates', async ({ page }) => {
     await sessionHelper.mockScoreParse(MOCK_SCORE_PARSE_AMBIGUOUS);
 
-    await page.goto(`/sessions/live/${MOCK_SESSION_ID}`);
+    await page.goto(`/sessions/${MOCK_SESSION_ID}/live`);
     await page.waitForLoadState('domcontentloaded');
 
     const input = page.getByTestId('score-input').first();
@@ -123,7 +123,7 @@ test.describe('ScoreAssistant — NLP Confidence Flows', () => {
   test('unrecognized input — shows error message', async ({ page }) => {
     await sessionHelper.mockScoreParse(MOCK_SCORE_PARSE_UNRECOGNIZED);
 
-    await page.goto(`/sessions/live/${MOCK_SESSION_ID}`);
+    await page.goto(`/sessions/${MOCK_SESSION_ID}/live`);
     await page.waitForLoadState('domcontentloaded');
 
     const input = page.getByTestId('score-input').first();

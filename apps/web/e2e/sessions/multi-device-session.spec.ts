@@ -333,7 +333,7 @@ test.describe('Multi-Device Session Flow', () => {
       await setupHostAuth(hostContext);
       await setupSessionApiRoutes(hostContext);
 
-      await hostPage.goto(`/sessions/${SESSION_ID}/players`);
+      await hostPage.goto(`/sessions/${SESSION_ID}/live?tab=turn`);
 
       // Verify both participants appear
       const hostName = hostPage.getByText('Host User').first();
@@ -355,7 +355,7 @@ test.describe('Multi-Device Session Flow', () => {
       await setupHostAuth(hostContext);
       await setupSessionApiRoutes(hostContext);
 
-      await hostPage.goto(`/sessions/${SESSION_ID}/players`);
+      await hostPage.goto(`/sessions/${SESSION_ID}/live?tab=turn`);
 
       // Check for role indicators
       const hostRole = hostPage.getByText(/host/i).first();
@@ -469,7 +469,7 @@ test.describe('Multi-Device Session Flow', () => {
         }
       );
 
-      await hostPage.goto(`/sessions/${SESSION_ID}/players`);
+      await hostPage.goto(`/sessions/${SESSION_ID}/live?tab=turn`);
 
       // Look for agent toggle switch
       const agentToggle = hostPage
@@ -521,7 +521,8 @@ test.describe('Multi-Device Session Flow', () => {
       await setupHostAuth(hostContext);
       await setupSessionApiRoutes(hostContext);
 
-      const subPages = ['players', 'scoreboard', 'notes'];
+      // 'players' route removed — players roster is now ?tab=turn on the live page.
+      const subPages = ['scoreboard', 'notes'];
 
       for (const subPage of subPages) {
         await hostPage.goto(`/sessions/${SESSION_ID}/${subPage}`);
@@ -624,8 +625,8 @@ test.describe('Multi-Device Session Flow', () => {
 
       // Both load participants page
       await Promise.all([
-        hostPage.goto(`/sessions/${SESSION_ID}/players`),
-        guestPage.goto(`/sessions/${SESSION_ID}/players`),
+        hostPage.goto(`/sessions/${SESSION_ID}/live?tab=turn`),
+        guestPage.goto(`/sessions/${SESSION_ID}/live?tab=turn`),
       ]);
 
       // Wait for API calls to complete

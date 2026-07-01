@@ -52,7 +52,7 @@ function DesktopWizardSection() {
 
   const handleWizardComplete = useCallback(
     (sessionId: string) => {
-      router.push(`/sessions/${sessionId}/play`);
+      router.push(`/sessions/${sessionId}/live`);
     },
     [router]
   );

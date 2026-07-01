@@ -37,7 +37,7 @@ test.describe('Asse D P1 polymorphic ScoreType editor', () => {
   });
 
   test('scores route mounts on the authenticated tree (no /login redirect)', async ({ page }) => {
-    await page.goto('/sessions/live/test-session-id/scores');
+    await page.goto('/sessions/test-session-id/live?tab=score');
 
     // Authenticated path enforced by fixtures — no `/login` fallback branch.
     await expect(page).not.toHaveURL(/\/(login|auth|sign-in)/);
@@ -60,7 +60,7 @@ test.describe('Asse D P1 polymorphic ScoreType editor', () => {
     // fixture state — we assert presence-OR-absence here so regressions
     // in the wiring (e.g. testid renamed) fail loudly even before the
     // store hydration arrives.
-    await page.goto('/sessions/live/test-session-id/scores');
+    await page.goto('/sessions/test-session-id/live?tab=score');
 
     const polymorphic = page.locator('[data-testid="polymorphic-scores-page"]');
     const scoreBoard = page.locator('[data-testid="autosave-indicator"]');

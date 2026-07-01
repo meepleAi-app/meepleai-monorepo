@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using SystemConfigurationEntity = Api.Infrastructure.Entities.SystemConfigurationEntity;
 
 namespace Api.Tests.Integration.GameManagement;
 
@@ -48,23 +49,28 @@ public sealed class CorrelatedGameSessionOnStartTests : IAsyncLifetime
         _fixture = fixture;
     }
 
+    // Stable GUID for the seeder system user required by the FK on system_configurations.created_by_user_id.
+    // Using a fixed value so it is deterministic and cannot collide with real test users (all random Guids).
+    private static readonly Guid SystemSeederUserId = new("c0c0ffee-5eed-4e2e-aaaa-000000000099");
+
     public async ValueTask InitializeAsync()
     {
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
         await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(connectionString);
 
-        // Override the Free-tier session limit to 1 so T2 (quota enforcement) is cheap:
-        // start 1 session → next start fails without needing 3 round-trips.
-        _factory = IntegrationWebApplicationFactory.Create(
-            connectionString,
-            extraConfig: new Dictionary<string, string?>
-            {
-                ["SessionLimits:free:MaxSessions"] = "1"
-            });
+        _factory = IntegrationWebApplicationFactory.Create(connectionString);
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         db.Database.Migrate();
+
+        // Seed Free-tier session limit = 1 via the DB-backed SystemConfiguration so that
+        // IConfigurationService.GetValueAsync<int?>("SessionLimits:free:MaxSessions") returns 1.
+        // NOTE: extraConfig on IntegrationWebApplicationFactory merges into the raw IConfiguration,
+        // which is NOT read by ConfigurationService — it uses the DB-backed SystemConfiguration
+        // bounded context (GetConfigByKeyQuery → ConfigurationRepository). Seeding the DB is the
+        // only way to make the limit reach SessionQuotaService.GetLimitForTierAsync.
+        await SeedSystemConfigAsync(db, "SessionLimits:free:MaxSessions", "1", "int");
     }
 
     public async ValueTask DisposeAsync()
@@ -127,14 +133,15 @@ public sealed class CorrelatedGameSessionOnStartTests : IAsyncLifetime
     }
 
     // ──────────────────────────────────────────────────────────────────────────
-    // T2 — Quota enforced: with Free limit overridden to 1, starting a second
-    //      GameId-backed session throws QuotaExceededException.
+    // T2 — Quota enforced: with Free limit seeded to 1 in SystemConfiguration,
+    //      starting a second GameId-backed session throws QuotaExceededException.
     //
-    // Quota tier config approach: IntegrationWebApplicationFactory.Create accepts
-    // extraConfig that merges into the in-memory IConfiguration. We set
-    // "SessionLimits:free:MaxSessions" = "1" in InitializeAsync so the
-    // SessionQuotaService's GetLimitForTierAsync falls through to the configured
-    // value instead of the DefaultLimits.FreeMaxSessions (3).
+    // Quota tier config approach: ConfigurationService.GetValueAsync reads from
+    // the DB-backed SystemConfiguration bounded context (not raw IConfiguration).
+    // InitializeAsync seeds a SystemConfigurationEntity row for key
+    // "SessionLimits:free:MaxSessions" = "1" (ValueType "int") so
+    // SessionQuotaService.GetLimitForTierAsync returns 1 instead of the
+    // DefaultLimits.FreeMaxSessions fallback (3).
     // ──────────────────────────────────────────────────────────────────────────
 
     [Fact(DisplayName = "T2: Starting beyond Free tier limit throws QuotaExceededException")]
@@ -294,6 +301,52 @@ public sealed class CorrelatedGameSessionOnStartTests : IAsyncLifetime
     // ──────────────────────────────────────────────────────────────────────────
     // Helpers
     // ──────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Seeds a SystemConfiguration row so that IConfigurationService.GetValueAsync reads the
+    /// test-overridden value from the DB (not from the raw IConfiguration which is not consulted
+    /// by ConfigurationService). Requires a real user row due to the Restrict FK on created_by_user_id.
+    /// </summary>
+    private static async Task SeedSystemConfigAsync(MeepleAiDbContext db, string key, string value, string valueType)
+    {
+        // Ensure the seeder system user exists (FK constraint on created_by_user_id — Restrict delete).
+        var systemUserExists = await db.Users.AnyAsync(u => u.Id == SystemSeederUserId);
+        if (!systemUserExists)
+        {
+            db.Users.Add(new UserEntity
+            {
+                Id = SystemSeederUserId,
+                Email = "integration-system-seeder@test.invalid",
+                DisplayName = "Integration System Seeder",
+                PasswordHash = "placeholder.NeverLogsIn",
+                Role = "user",
+                Tier = "free",
+                Status = "Active",
+                EmailVerified = false,
+                CreatedAt = DateTime.UtcNow,
+            });
+        }
+
+        db.SystemConfigurations.Add(new SystemConfigurationEntity
+        {
+            Id = Guid.NewGuid(),
+            Key = key,
+            Value = value,
+            ValueType = valueType,
+            Description = $"Integration test seed: {key} = {value}",
+            Category = "SessionLimits",
+            IsActive = true,
+            RequiresRestart = false,
+            Environment = "All",
+            Version = 1,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            CreatedByUserId = SystemSeederUserId,
+        });
+
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+    }
 
     private static async Task<Guid> SeedUserAsync(MeepleAiDbContext db)
     {

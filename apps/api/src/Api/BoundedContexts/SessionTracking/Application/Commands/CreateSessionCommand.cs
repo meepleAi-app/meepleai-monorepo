@@ -22,7 +22,8 @@ public record CreateSessionCommand(
     List<ParticipantDto> Participants,
     Guid? GameNightEventId = null,
     IReadOnlyList<string>? GuestNames = null,
-    GameStateTier StateTier = GameStateTier.Minimal
+    GameStateTier StateTier = GameStateTier.Minimal,
+    Guid? GamebookCampaignId = null
 ) : ICommand<CreateSessionResult>;
 
 /// <summary>

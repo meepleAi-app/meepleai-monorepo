@@ -195,6 +195,19 @@ internal static class GameNightEndpoints
             .WithSummary("Start next game in the night")
             .WithDescription("Creates and starts a new game session within the game night. Only the organizer can start sessions.");
 
+        // #2632 (SI-1b): attach a libro-game campaign to a Published game night as a live sitting.
+        gameNights.MapPost("/{id:guid}/gamebook-sessions", HandleAttachGamebookCampaign)
+            .RequireAuthenticatedUser()
+            .Produces<AttachGamebookCampaignToGameNightResult>(201)
+            .Produces(400)
+            .Produces(403)
+            .Produces(404)
+            .Produces(409)
+            .Produces(401)
+            .WithName("AttachGamebookCampaignToGameNight")
+            .WithSummary("Play a libro-game campaign in the night")
+            .WithDescription("Creates a Session linked to the libro-game campaign and starts it within the game night (#15 promotion + #10 max-1-live apply). Only the organizer can attach; shared-game campaigns only.");
+
         gameNights.MapPost("/{id:guid}/sessions/complete", HandleCompleteGameNightSession)
             .RequireAuthenticatedUser()
             .Produces(204)
@@ -421,6 +434,24 @@ internal static class GameNightEndpoints
         return Results.Created($"/api/v1/game-nights/{id}/sessions/{result.GameNightSessionId}", result);
     }
 
+    private static async Task<IResult> HandleAttachGamebookCampaign(
+        Guid id,
+        [FromBody] AttachGamebookCampaignRequest request,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+
+        var command = new AttachGamebookCampaignToGameNightCommand(
+            GameNightId: id,
+            CampaignId: request.CampaignId,
+            CallerUserId: userId);
+
+        var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.Created($"/api/v1/game-nights/{id}/sessions/{result.GameNightSessionId}", result);
+    }
+
     private static async Task<IResult> HandleCompleteGameNightSession(
         Guid id,
         [FromBody] CompleteGameNightSessionRequest? request,
@@ -604,6 +635,7 @@ internal static class GameNightEndpoints
 
     // Game Night Experience v2 request records
     private sealed record StartGameNightSessionRequest(Guid GameId, string GameTitle);
+    private sealed record AttachGamebookCampaignRequest(Guid CampaignId);
     private sealed record CompleteGameNightSessionRequest(Guid? WinnerId);
 
     #endregion

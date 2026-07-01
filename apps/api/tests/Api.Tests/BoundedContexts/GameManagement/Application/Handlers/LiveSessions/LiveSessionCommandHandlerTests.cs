@@ -297,6 +297,89 @@ public class LiveSessionCommandHandlerTests
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
+    // ─── Issue #2608: Creator-only guard ──────────────────────────────────────────
+
+    [Fact(DisplayName = "#2608: Non-creator caller → ForbiddenException, no quota check, no GameSession created, no start")]
+    public async Task StartLiveSession_NonCreatorCaller_ThrowsForbiddenException_BeforeQuotaOrGameSession()
+    {
+        // Arrange
+        var sessionId = Guid.NewGuid();
+        var creatorId = Guid.NewGuid();
+        var nonCreatorId = Guid.NewGuid(); // different from creatorId
+
+        var session = LiveGameSession.Create(sessionId, creatorId, "Catan", gameId: Guid.NewGuid());
+        session.AddPlayer(null, "Creator Player", PlayerColor.Red, TimeProvider.System);
+        SetupRepoGetById(sessionId, session);
+
+        var handler = new StartLiveSessionCommandHandler(
+            _repositoryMock.Object,
+            _gameSessionRepositoryMock.Object,
+            _quotaServiceMock.Object,
+            _timeProvider,
+            _unitOfWorkMock.Object);
+
+        // Command issued by nonCreatorId (participant but not creator)
+        var command = new StartLiveSessionCommand(sessionId, nonCreatorId, DefaultUserTier, DefaultUserRole);
+
+        // Act & Assert — must throw before reaching quota or GameSession creation
+        var act = () => handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ForbiddenException>();
+
+        // Quota service must NOT have been consulted
+        _quotaServiceMock.Verify(
+            q => q.CheckQuotaAsync(It.IsAny<Guid>(), It.IsAny<UserTier>(), It.IsAny<Role>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "the creator guard fires before the quota block");
+
+        // No GameSession must have been created
+        _gameSessionRepositoryMock.Verify(
+            r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "the creator guard fires before any GameSession correlation");
+
+        // Session must NOT have been started
+        session.Status.Should().NotBe(LiveSessionStatus.InProgress);
+
+        // Repository UpdateAsync must NOT have been called
+        _repositoryMock.Verify(
+            r => r.UpdateAsync(It.IsAny<LiveGameSession>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact(DisplayName = "#2608: Zero active players (GameId-backed) → ValidationException before GameSession ctor")]
+    public async Task StartLiveSession_ZeroActivePlayers_GameIdBacked_ThrowsValidationException()
+    {
+        // Arrange
+        var sessionId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+
+        // Session created by DefaultUserId with a GameId but all players removed
+        var session = LiveGameSession.Create(sessionId, DefaultUserId, "Catan", gameId: gameId);
+        var p1 = session.AddPlayer(null, "Player One", PlayerColor.Red, TimeProvider.System);
+        session.RemovePlayer(p1.Id, TimeProvider.System); // deactivates the only player
+        SetupRepoGetById(sessionId, session);
+
+        var handler = new StartLiveSessionCommandHandler(
+            _repositoryMock.Object,
+            _gameSessionRepositoryMock.Object,
+            _quotaServiceMock.Object,
+            _timeProvider,
+            _unitOfWorkMock.Object);
+
+        // Creator starts — passes creator guard, hits zero-players guard
+        var command = new StartLiveSessionCommand(sessionId, DefaultUserId, DefaultUserTier, DefaultUserRole);
+
+        // Act & Assert
+        var act = () => handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ValidationException>(
+            because: "starting with zero active players is an intentional validation error (400), not a generic ctor failure");
+
+        // No GameSession must have been created
+        _gameSessionRepositoryMock.Verify(
+            r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     #endregion
 
     // =============================================================================
@@ -793,10 +876,13 @@ public class LiveSessionCommandHandlerTests
 
         var session = LiveGameSession.Create(sessionId, DefaultUserId, "Catan", gameId: gameId);
 
-        // Add two players: one will be removed (deactivated), one stays active
-        var removedPlayer = session.AddPlayer(null, "Removed Player", PlayerColor.Red, TimeProvider.System);
+        // Add the host first (stays active), then a guest player that will be removed.
+        // The first player added becomes Host (AddPlayer: !HasPlayers => Host). Removing the
+        // host while other players are active is blocked by a domain guard, so the removed
+        // player must be a non-host guest (added second).
         session.AddPlayer(null, "Active Player", PlayerColor.Blue, TimeProvider.System);
-        // Simulate RemovePlayer which deactivates the player
+        var removedPlayer = session.AddPlayer(null, "Removed Player", PlayerColor.Red, TimeProvider.System);
+        // Simulate RemovePlayer which deactivates the (non-host) player
         session.RemovePlayer(removedPlayer.Id, TimeProvider.System);
 
         SetupRepoGetById(sessionId, session);

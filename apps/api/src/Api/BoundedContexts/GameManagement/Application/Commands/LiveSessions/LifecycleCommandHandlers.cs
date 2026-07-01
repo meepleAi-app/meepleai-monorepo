@@ -47,6 +47,15 @@ internal class StartLiveSessionCommandHandler : ICommandHandler<StartLiveSession
             .ConfigureAwait(false)
             ?? throw new NotFoundException("LiveGameSession", command.SessionId.ToString());
 
+        // Issue #2608: Only the session creator may start a GameId-backed session.
+        // The correlated GameSession is attributed to CreatedByUserId and the quota is checked
+        // against that user — allowing any participant to start would decouple the quota gate
+        // from the quota owner (non-creator starts → B's quota gates but A's slot is consumed).
+        // .RequireLiveSessionParticipant() on the endpoint remains as defense-in-depth (rejects
+        // non-participants before this point); this guard adds the creator-only business rule.
+        if (command.UserId != session.CreatedByUserId)
+            throw new ForbiddenException("Only the session creator can start the session.");
+
         // Issue #2587 Slice 1: Create correlated GameSession on first start of a GameId-backed session.
         // Idempotent: CorrelatedGameSessionId != null means correlation already done (re-start guard).
         if (session.GameId.HasValue && session.CorrelatedGameSessionId == null)
@@ -62,6 +71,11 @@ internal class StartLiveSessionCommandHandler : ICommandHandler<StartLiveSession
                 .Where(p => p.IsActive)
                 .Select((p, i) => new SessionPlayer(p.DisplayName, i + 1))
                 .ToList();
+
+            // Issue #2608: Guard against starting with zero active players so the caller
+            // receives a clear, intentional error rather than a generic GameSession ctor failure.
+            if (players.Count == 0)
+                throw new ValidationException("Cannot start a session with no active players.");
 
             var gameSession = new GameSession(
                 id: Guid.NewGuid(),

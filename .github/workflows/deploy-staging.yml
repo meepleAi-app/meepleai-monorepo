@@ -354,6 +354,17 @@ jobs:
 
       - name: Backend build check
         if: needs.detect-changes.outputs.deploy_api == 'true'
+        # Issue #2613: SkipAnalyzers=true evita l'OutOfMemoryException del Roslyn
+        # AnalyzerDriver sotto il cap MemoryMax=3G del runner self-hosted (#2336).
+        # MSBuild raccoglie la env var come proprietà globale, attivando il
+        # PropertyGroup condizionale di Api.csproj (righe 40-45) che disabilita
+        # l'intera suite analyzer (NetAnalyzers/Sonar/Meziantou/NoPiiInLog) —
+        # stesso meccanismo già usato dal Dockerfile per lo stesso OOM durante
+        # `dotnet publish`. Nessuna perdita di copertura reale: CodeQL su PR/push
+        # + CI su main-dev sono l'enforcement autoritativo (Api.csproj:11-17) e
+        # questo commit vi è già passato (vedi "Verify CI passed" sopra).
+        env:
+          SkipAnalyzers: 'true'
         run: |
           echo "🔨 Verifying backend compiles..."
           cd apps/api/src/Api
@@ -761,6 +772,10 @@ jobs:
       - name: Restore and build API project (for ef tools)
         if: vars.DEPLOY_METHOD == 'ssh'
         working-directory: apps/api/src/Api
+        # Issue #2613: vedi "Backend build check" — stessa env var per evitare
+        # l'OOM del Roslyn AnalyzerDriver. Copre questo `dotnet build` esplicito.
+        env:
+          SkipAnalyzers: 'true'
         run: |
           dotnet restore
           dotnet build --no-restore -c Release
@@ -768,6 +783,12 @@ jobs:
       - name: Generate idempotent migration SQL
         if: vars.DEPLOY_METHOD == 'ssh'
         working-directory: apps/api/src/Api
+        # Issue #2613: dotnet ef qui ricompila il progetto (nessun --no-build,
+        # per scelta deliberata sotto). Quel rebuild implicito riattiverebbe gli
+        # analyzer e andrebbe in OOM come gli step `dotnet build` espliciti — la
+        # env var SkipAnalyzers=true copre anche questo path (3° punto di build).
+        env:
+          SkipAnalyzers: 'true'
         run: |
           # No --no-build: dotnet-ef needs the project built. Built in prior
           # step; let ef trigger its own build without the flag to avoid

@@ -1163,7 +1163,9 @@ export function SessionLiveView(): ReactElement {
       if (images && images.length > 0) {
         // Image path: multipart POST to /ask-agent (JSON response, not SSE).
         if (sessionId == null) return;
-        const question = content.trim() || 'Analizza questa immagine';
+        const question =
+          content.trim() ||
+          intl.formatMessage({ id: 'pages.sessionLive.chatAgent.imageAsk.defaultQuestion' });
         const fd = new FormData();
         fd.append('question', question);
         fd.append('senderId', activeSession?.viewerId ?? '');
@@ -1198,15 +1200,20 @@ export function SessionLiveView(): ReactElement {
               id: crypto.randomUUID(),
               senderId: 'agent',
               senderName: 'MeepleAI',
-              content: json.answer ?? 'Risposta non disponibile.',
+              content:
+                json.answer ??
+                intl.formatMessage({ id: 'pages.sessionLive.chatAgent.imageAsk.fallbackResponse' }),
               visibility: 'shared' as const,
               timestamp: new Date().toISOString(),
             },
           ]);
         } catch {
-          toast.error("Impossibile elaborare l'immagine. Riprova.", {
-            id: 'image-ask-error',
-          });
+          toast.error(
+            intl.formatMessage({ id: 'pages.sessionLive.chatAgent.imageAsk.errorToast' }),
+            {
+              id: 'image-ask-error',
+            }
+          );
           // Remove the optimistic user message on failure.
           setImageMessages(prev => prev.filter(m => m.id !== userMsgId));
         }

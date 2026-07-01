@@ -26,6 +26,15 @@ internal class SoftDeleteGameBookCommandHandler : ICommandHandler<SoftDeleteGame
         var book = await _repo.GetByIdAsync(command.BookId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("GameBook", command.BookId.ToString());
 
+        // Ownership guard: only the owner of a personal book may delete it. Community
+        // books (OwnerUserId == null) are admin-managed and never mutable through this
+        // user-facing path — null != RequestedBy is always true, so this also blocks
+        // any non-admin from touching community books.
+        if (book.OwnerUserId != command.RequestedBy)
+        {
+            throw new ForbiddenException("Only the owner can delete this GameBook.");
+        }
+
         book.SoftDelete(command.RequestedBy);
 
         await _repo.UpdateAsync(book, cancellationToken).ConfigureAwait(false);

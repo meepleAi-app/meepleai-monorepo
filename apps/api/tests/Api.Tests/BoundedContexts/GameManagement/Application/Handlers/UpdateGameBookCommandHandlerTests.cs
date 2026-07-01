@@ -15,14 +15,15 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 [Trait("Category", TestCategories.Unit)]
 public class UpdateGameBookCommandHandlerTests
 {
-    private static readonly Guid AdminId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    private static GameBook PersonalBook(Guid ownerId) => GameBook.CreatePersonal(
+        GameRef.Shared(Guid.NewGuid()), ownerId, "Old Name",
+        GameBookRole.Tutorial, ParagraphScheme.None, "en", false, null, true);
 
     [Fact]
-    public async Task Handle_RenameAndUpdateRoles_PersistsChanges()
+    public async Task Handle_ByOwner_RenameAndUpdateRoles_PersistsChanges()
     {
-        var book = GameBook.CreateCommunity(
-            GameRef.Shared(Guid.NewGuid()), "Old Name",
-            GameBookRole.Tutorial, ParagraphScheme.None, "en", false, null, true, AdminId);
+        var ownerId = Guid.NewGuid();
+        var book = PersonalBook(ownerId);
 
         var repo = new Mock<IGameBookRepository>();
         repo.Setup(r => r.GetByIdAsync(book.Id, It.IsAny<CancellationToken>())).ReturnsAsync(book);
@@ -33,7 +34,7 @@ public class UpdateGameBookCommandHandlerTests
         var cmd = new UpdateGameBookCommand(
             book.Id, "New Name",
             Roles: (int)(GameBookRole.Tutorial | GameBookRole.RulesReference),
-            RequestedBy: AdminId);
+            RequestedBy: ownerId);
 
         var dto = await handler.Handle(cmd, TestContext.Current.CancellationToken);
 
@@ -44,6 +45,28 @@ public class UpdateGameBookCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ByNonOwner_ThrowsForbiddenAndDoesNotPersist()
+    {
+        var ownerId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+        var book = PersonalBook(ownerId);
+
+        var repo = new Mock<IGameBookRepository>();
+        repo.Setup(r => r.GetByIdAsync(book.Id, It.IsAny<CancellationToken>())).ReturnsAsync(book);
+
+        var uow = new Mock<IUnitOfWork>();
+        var handler = new UpdateGameBookCommandHandler(repo.Object, uow.Object);
+
+        var cmd = new UpdateGameBookCommand(book.Id, "Hijacked", (int)GameBookRole.Narrative, RequestedBy: otherUserId);
+
+        var act = () => handler.Handle(cmd, TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+        repo.Verify(r => r.UpdateAsync(It.IsAny<GameBook>(), It.IsAny<CancellationToken>()), Times.Never);
+        uow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Handle_BookNotFound_ThrowsNotFoundException()
     {
         var repo = new Mock<IGameBookRepository>();
@@ -51,7 +74,7 @@ public class UpdateGameBookCommandHandlerTests
             .ReturnsAsync((GameBook?)null);
 
         var handler = new UpdateGameBookCommandHandler(repo.Object, new Mock<IUnitOfWork>().Object);
-        var cmd = new UpdateGameBookCommand(Guid.NewGuid(), "X", (int)GameBookRole.Tutorial, AdminId);
+        var cmd = new UpdateGameBookCommand(Guid.NewGuid(), "X", (int)GameBookRole.Tutorial, Guid.NewGuid());
 
         var act = () => handler.Handle(cmd, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<NotFoundException>();

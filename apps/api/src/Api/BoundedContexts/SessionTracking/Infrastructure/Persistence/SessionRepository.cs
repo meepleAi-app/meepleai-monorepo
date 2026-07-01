@@ -69,6 +69,18 @@ public class SessionRepository : RepositoryBase, ISessionRepository
         return entities.Select(SessionMapper.ToDomain);
     }
 
+    public async Task<IReadOnlyList<Session>> ListByGamebookCampaignAsync(Guid gamebookCampaignId, CancellationToken ct)
+    {
+        var entities = await DbContext.SessionTrackingSessions
+            .Include(s => s.Participants)
+            .Where(s => s.GamebookCampaignId == gamebookCampaignId)
+            .OrderByDescending(s => s.StartedAt)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        return entities.Select(SessionMapper.ToDomain).ToList();
+    }
+
     public async Task AddAsync(Session session, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(session);

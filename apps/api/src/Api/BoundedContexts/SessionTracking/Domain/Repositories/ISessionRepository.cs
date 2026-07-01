@@ -40,6 +40,15 @@ public interface ISessionRepository
     Task<IEnumerable<Session>> GetActiveByUserIdAsync(Guid userId, CancellationToken ct);
 
     /// <summary>
+    /// #2632 (SI-1b): lists the sittings that advance a given libro-game campaign, most-recent first.
+    /// Backed by the filtered index <c>idx_sessions_gamebook_campaign</c>. Used by the spine read path
+    /// to derive the campaign's status + owning GameNight.
+    /// </summary>
+    /// <param name="gamebookCampaignId">The libro-game campaign id.</param>
+    /// <param name="ct">Cancellation token.</param>
+    Task<IReadOnlyList<Session>> ListByGamebookCampaignAsync(Guid gamebookCampaignId, CancellationToken ct);
+
+    /// <summary>
     /// Adds a new session.
     /// </summary>
     /// <param name="session">Session to add.</param>

@@ -87,6 +87,7 @@ internal static class GameNightEndpoints
         gameNights.MapGet("/{id:guid}/live", HandleGetGameNightLive)
             .RequireAuthenticatedUser()
             .Produces<GameNightLiveDto>(200)
+            .Produces(403)
             .Produces(404)
             .Produces(401)
             .WithName("GetGameNightLive")
@@ -587,9 +588,11 @@ internal static class GameNightEndpoints
     private static async Task<IResult> HandleGetGameNightLive(
         Guid id,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var result = await mediator.Send(new GetGameNightLiveQuery(id), cancellationToken).ConfigureAwait(false);
+        var userId = httpContext.User.GetUserId();
+        var result = await mediator.Send(new GetGameNightLiveQuery(id, userId), cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
 

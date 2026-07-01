@@ -40,7 +40,7 @@ public class GetGameNightLiveQueryHandlerTests
         _repo.Setup(r => r.GetByIdAsync(evt.Id, It.IsAny<CancellationToken>())).ReturnsAsync(evt);
 
         var result = await _handler.Handle(
-            new GetGameNightLiveQuery(evt.Id), TestContext.Current.CancellationToken);
+            new GetGameNightLiveQuery(evt.Id, evt.OrganizerId), TestContext.Current.CancellationToken);
 
         result.Id.Should().Be(evt.Id);
         result.Title.Should().Be("Serata da Marco");
@@ -68,9 +68,24 @@ public class GetGameNightLiveQueryHandlerTests
         _repo.Setup(r => r.GetByIdAsync(evt.Id, It.IsAny<CancellationToken>())).ReturnsAsync(evt);
 
         var result = await _handler.Handle(
-            new GetGameNightLiveQuery(evt.Id), TestContext.Current.CancellationToken);
+            new GetGameNightLiveQuery(evt.Id, evt.OrganizerId), TestContext.Current.CancellationToken);
 
         result.Sessions.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_NonParticipant_ThrowsForbidden()
+    {
+        var evt = GameNightEvent.Create(
+            Guid.NewGuid(), "Serata privata", DateTimeOffset.UtcNow.AddHours(1), gameIds: [Guid.NewGuid()]);
+        evt.Publish([]);
+        _repo.Setup(r => r.GetByIdAsync(evt.Id, It.IsAny<CancellationToken>())).ReturnsAsync(evt);
+
+        // A random authenticated user who is neither the organizer nor invited.
+        var act = () => _handler.Handle(
+            new GetGameNightLiveQuery(evt.Id, Guid.NewGuid()), TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 
     [Fact]
@@ -80,7 +95,7 @@ public class GetGameNightLiveQueryHandlerTests
             .ReturnsAsync((GameNightEvent?)null);
 
         var act = () => _handler.Handle(
-            new GetGameNightLiveQuery(Guid.NewGuid()), TestContext.Current.CancellationToken);
+            new GetGameNightLiveQuery(Guid.NewGuid(), Guid.NewGuid()), TestContext.Current.CancellationToken);
 
         await act.Should().ThrowAsync<NotFoundException>();
     }

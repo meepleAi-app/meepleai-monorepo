@@ -26,6 +26,12 @@ internal sealed class GetGameNightLiveQueryHandler : IQueryHandler<GetGameNightL
         var gameNight = await _repository.GetByIdAsync(query.GameNightId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("GameNightEvent", query.GameNightId.ToString());
 
+        // Participant-only: the live read exposes per-session WinnerId (user GUIDs) + progression.
+        var isParticipant = gameNight.OrganizerId == query.CallerUserId
+            || gameNight.Rsvps.Any(r => r.UserId == query.CallerUserId);
+        if (!isParticipant)
+            throw new ForbiddenException("Only the organizer or an invited player can view the night-live state.");
+
         var sessions = gameNight.Sessions
             .OrderBy(s => s.PlayOrder)
             .Select(s => new GameNightSessionDto(

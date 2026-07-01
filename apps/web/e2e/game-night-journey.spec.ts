@@ -178,13 +178,13 @@ test.describe('Game Night Journey', () => {
     await expect(createBtn).toBeEnabled();
     await createBtn.click();
 
-    // ─── Step 5: assert redirect to the session play page ──────────────
+    // ─── Step 5: assert redirect to the session live page ──────────────
     // handleWizardComplete in sessions/new/page.tsx redirects to
-    // /sessions/{id}/play (not /sessions/live/{id}).
-    await page.waitForURL(`**/sessions/${JOURNEY_CONSTANTS.SESSION_ID}/play`, {
+    // /sessions/{id}/live (canonical live route).
+    await page.waitForURL(`**/sessions/${JOURNEY_CONSTANTS.SESSION_ID}/live`, {
       timeout: 10_000,
     });
-    expect(page.url()).toContain(`/sessions/${JOURNEY_CONSTANTS.SESSION_ID}/play`);
+    expect(page.url()).toContain(`/sessions/${JOURNEY_CONSTANTS.SESSION_ID}/live`);
 
     // ─── Step 6: assert play page initial render ───────────────────────
     // The play page hydrates the session via GET /live-sessions/{id}
@@ -404,10 +404,10 @@ test.describe('Game Night Journey', () => {
     await page.context().route('**/hubs/game-state/**', route => route.abort('failed'));
 
     // ─── Navigate directly to the live play page ──────────────────────────
-    await page.goto(`/sessions/${LIFECYCLE_CONSTANTS.SESSION_ID}/play`);
+    await page.goto(`/sessions/${LIFECYCLE_CONSTANTS.SESSION_ID}/live`);
     await page.waitForLoadState('domcontentloaded');
 
-    // Wait for the play page to hydrate with Catan + Alice visible
+    // Wait for the live page to hydrate with Catan + Alice visible
     await expect(page.getByRole('heading', { name: 'Catan', level: 1 }).first()).toBeVisible({
       timeout: 10_000,
     });

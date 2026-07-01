@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
@@ -60,6 +61,12 @@ internal sealed class AttachGamebookCampaignToGameNightCommandHandler
         if (gameNight.OrganizerId != command.CallerUserId)
             throw new ForbiddenException("Only the organizer can attach a campaign to this game night.");
 
+        // Resolve the caller's real display name (mirrors StartGameNightSessionCommandHandler);
+        // a hardcoded literal would persist to session_participants and surface in the player list.
+        var caller = await _mediator.Send(new GetUserByIdQuery(command.CallerUserId), cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException("User", command.CallerUserId.ToString());
+        var displayName = !string.IsNullOrWhiteSpace(caller.DisplayName) ? caller.DisplayName : caller.Email;
+
         // Seed the caller as the sole owner participant (a gamebook sitting is typically solo).
         var participants = new List<ParticipantDto>
         {
@@ -67,7 +74,7 @@ internal sealed class AttachGamebookCampaignToGameNightCommandHandler
             {
                 Id = Guid.NewGuid(),
                 UserId = command.CallerUserId,
-                DisplayName = "Owner",
+                DisplayName = displayName,
                 IsOwner = true,
                 JoinOrder = 0
             }
@@ -102,8 +109,9 @@ internal sealed class AttachGamebookCampaignToGameNightCommandHandler
         }
         catch (InvalidOperationException ex)
         {
-            // AddSession (not Published) and StartCurrentSession (#10) throw InvalidOperationException /
-            // MaxLiveSessionsExceededException → surface as 409 Conflict.
+            // AddSession's "not Published" guard throws a plain InvalidOperationException → wrap as 409.
+            // (StartCurrentSession's #10 guard throws MaxLiveSessionsExceededException, which already
+            // IS a ConflictException and maps to 409 via middleware — it propagates past this catch.)
             throw new ConflictException(ex.Message);
         }
     }

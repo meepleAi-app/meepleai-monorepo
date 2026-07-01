@@ -1,3 +1,5 @@
+using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
@@ -68,6 +70,26 @@ public class AttachGamebookCampaignToGameNightCommandHandlerTests
             .Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CreateSessionResult(sessionId, code, [], Guid.Empty, false, null, null));
 
+    private void SetupUser(Guid userId, string displayName)
+        => _mediator
+            .Setup(m => m.Send(It.Is<GetUserByIdQuery>(q => q.UserId == userId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserDto(
+                Id: userId,
+                Email: "player@example.com",
+                DisplayName: displayName,
+                Role: "User",
+                Tier: "Free",
+                CreatedAt: DateTime.UtcNow,
+                IsTwoFactorEnabled: false,
+                TwoFactorEnabledAt: null,
+                Level: 1,
+                ExperiencePoints: 0,
+                EmailVerified: true,
+                EmailVerifiedAt: DateTime.UtcNow,
+                VerificationGracePeriodEndsAt: null,
+                OnboardingCompleted: true,
+                OnboardingSkipped: false));
+
     [Fact]
     public async Task Handle_SharedCampaign_CreatesLinkedSessionAndStarts()
     {
@@ -77,6 +99,7 @@ public class AttachGamebookCampaignToGameNightCommandHandlerTests
         var sessionId = Guid.NewGuid();
         SetupCampaign(campaignId, CampaignDto(campaignId, Guid.NewGuid(), organizer, GameRefKind.Shared));
         SetupCreateSession(sessionId);
+        SetupUser(organizer, "Marco Rossi");
         _repo.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>())).ReturnsAsync(gameNight);
 
         var result = await _handler.Handle(
@@ -101,6 +124,7 @@ public class AttachGamebookCampaignToGameNightCommandHandlerTests
         var gameId = Guid.NewGuid();
         SetupCampaign(campaignId, CampaignDto(campaignId, gameId, organizer, GameRefKind.Shared));
         SetupCreateSession(Guid.NewGuid());
+        SetupUser(organizer, "Marco Rossi");
         _repo.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>())).ReturnsAsync(gameNight);
 
         await _handler.Handle(
@@ -113,7 +137,8 @@ public class AttachGamebookCampaignToGameNightCommandHandlerTests
                 c.GameId == gameId &&
                 c.UserId == organizer &&
                 c.Participants.Count == 1 &&
-                c.Participants[0].IsOwner),
+                c.Participants[0].IsOwner &&
+                c.Participants[0].DisplayName == "Marco Rossi"),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 

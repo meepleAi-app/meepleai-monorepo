@@ -353,31 +353,20 @@ jobs:
             echo "⚠️ No prior CI checks found — will run build validation"
           fi
 
-      - name: Setup .NET
-        if: needs.detect-changes.outputs.deploy_api == 'true'
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: '9.0.x'
-
-      - name: Backend build check
-        if: needs.detect-changes.outputs.deploy_api == 'true'
-        # Issue #2613: SkipAnalyzers=true evita l'OutOfMemoryException del Roslyn
-        # AnalyzerDriver sotto il cap MemoryMax=3G del runner self-hosted (#2336).
-        # MSBuild raccoglie la env var come proprietà globale, attivando il
-        # PropertyGroup condizionale di Api.csproj (righe 40-45) che disabilita
-        # l'intera suite analyzer (NetAnalyzers/Sonar/Meziantou/NoPiiInLog) —
-        # stesso meccanismo già usato dal Dockerfile per lo stesso OOM durante
-        # `dotnet publish`. Nessuna perdita di copertura reale: CodeQL su PR/push
-        # + CI su main-dev sono l'enforcement autoritativo (Api.csproj:11-17) e
-        # questo commit vi è già passato (vedi "Verify CI passed" sopra).
-        env:
-          SkipAnalyzers: 'true'
-        run: |
-          echo "🔨 Verifying backend compiles..."
-          cd apps/api/src/Api
-          dotnet restore --verbosity quiet
-          dotnet build --no-restore --configuration Release --verbosity quiet
-          echo "✅ Backend builds successfully"
+      # Issue #2650: il "Backend build check" (dotnet build sull'host) è stato
+      # RIMOSSO. Verificato empiricamente sul deploy run 28531125939: compilare
+      # Api.csproj sul runner self-hosted (cap MemoryMax=3G) va in OOM ANCHE con
+      # SkipAnalyzers=true — lo stack trace del fallimento è in
+      # Microsoft.CodeAnalysis.CodeGen.CodeGenerator (emit IL), NON nell'
+      # AnalyzerDriver. Cioè: disabilitare gli analyzer (#2613/#2649) riduce la
+      # pressione ma NON basta; il code-gen dell'emit esaurisce comunque i 3G.
+      # La verifica di compilazione backend è già coperta, senza toccare l'host:
+      #   - il job `build` compila Api.csproj nel Docker build sul CLOUD runner
+      #     (ubuntu-latest): se non compila, quel job fallisce e blocca il deploy;
+      #   - lo step "Verify CI passed on this commit" sopra conferma che la CI
+      #     autoritativa (build + test) è già passata su questo commit.
+      # Con questa rimozione la superficie di build .NET sull'host di deploy è 0
+      # (Opzione 3 completa): tutta la compilazione .NET è sul cloud.
 
       - name: Setup Frontend
         if: needs.detect-changes.outputs.deploy_web == 'true'

@@ -151,30 +151,32 @@ test('Mage Knight full journey — 10 moments, single canonical surface', async 
       citations: [],
     });
 
-    // On mobile, the chat panel is inside the bottom sheet / accessible via the tab strip.
-    // Navigate to the agent tab if available, or wait for the chat panel to be present.
-    await page.goto(`/sessions/${C.SESSION_ID}/live?tab=score`);
+    // The live agent chat ([data-slot="live-agent-chat"]) lives inside ChatAgentPanel
+    // which is mounted in mobileMainContent — ALWAYS visible on mobile (no sheet needed).
+    // parseCollapsed only collapses on ?mchat=collapsed; default is expanded.
+    // Navigate to the canonical live URL (no tab params needed for chat).
+    await page.goto(`/sessions/${C.SESSION_ID}/live`);
     await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('[data-slot="session-live-view"]')).toBeVisible({ timeout: 10_000 });
 
-    // The live agent chat is always in the left column on desktop; on mobile it may be
-    // inside the sheet or accessible. Try finding it directly.
-    const chatSection = page.locator('[data-slot="live-agent-chat"]');
-    const chatVisible = await chatSection.isVisible({ timeout: 8_000 }).catch(() => false);
+    // UNCONDITIONAL: chat is always mounted in the main column on mobile.
+    // Both DesktopBody and MobileBody render a ChatAgentPanel in the DOM (CSS hides the
+    // desktop one on small viewports). Scope to [data-slot="mobile-body"] to avoid strict-mode
+    // violation from the dual mount and ensure we interact with the visible mobile instance.
+    const mobileBody = page.locator('[data-slot="mobile-body"]');
+    await expect(mobileBody).toBeVisible({ timeout: 10_000 });
+    const chatSection = mobileBody.locator('[data-slot="live-agent-chat"]');
+    await expect(chatSection).toBeVisible({ timeout: 8_000 });
 
-    if (chatVisible) {
-      const chatInput = chatSection.getByRole('textbox');
-      await chatInput.fill('Prepara il tavolo per 4 giocatori');
+    const chatInput = chatSection.getByRole('textbox');
+    await chatInput.fill('Prepara il tavolo per 4 giocatori');
 
-      // Use the send button with data-testid (added to LiveAgentChat.tsx).
-      const sendBtn = chatSection.getByTestId('live-agent-chat-send');
-      await sendBtn.click();
+    // Use the send button with data-testid (added to LiveAgentChat.tsx).
+    const sendBtn = chatSection.getByTestId('live-agent-chat-send');
+    await sendBtn.click();
 
-      // Assert agent reply renders
-      await expect(page.locator('[data-message-id]').last()).toBeVisible({ timeout: 10_000 });
-    }
-    // If chat is not visible on mobile in this layout, the step is satisfied by
-    // the URL invariant and the fact that the live shell is still up.
+    // Assert agent reply renders
+    await expect(page.locator('[data-message-id]').last()).toBeVisible({ timeout: 10_000 });
 
     // ANTI-FRAGMENTATION
     expect(page.url()).toContain(`/sessions/${C.SESSION_ID}/live`);
@@ -187,18 +189,20 @@ test('Mage Knight full journey — 10 moments, single canonical surface', async 
       citations: [],
     });
 
-    const chatSection = page.locator('[data-slot="live-agent-chat"]');
-    const chatVisible = await chatSection.isVisible({ timeout: 3_000 }).catch(() => false);
+    // UNCONDITIONAL: chat panel is always in main column on mobile (expanded by default).
+    // Scope to mobile-body to avoid strict-mode violation from dual DesktopBody+MobileBody mount.
+    const mobileBody = page.locator('[data-slot="mobile-body"]');
+    await expect(mobileBody).toBeVisible({ timeout: 8_000 });
+    const chatSection = mobileBody.locator('[data-slot="live-agent-chat"]');
+    await expect(chatSection).toBeVisible({ timeout: 5_000 });
 
-    if (chatVisible) {
-      const chatInput = chatSection.getByRole('textbox');
-      await chatInput.fill('Spiega il gioco');
+    const chatInput = chatSection.getByRole('textbox');
+    await chatInput.fill('Spiega il gioco');
 
-      const sendBtn = chatSection.getByTestId('live-agent-chat-send');
-      await sendBtn.click();
+    const sendBtn = chatSection.getByTestId('live-agent-chat-send');
+    await sendBtn.click();
 
-      await expect(page.locator('[data-message-id]').last()).toBeVisible({ timeout: 10_000 });
-    }
+    await expect(page.locator('[data-message-id]').last()).toBeVisible({ timeout: 10_000 });
 
     // ANTI-FRAGMENTATION
     expect(page.url()).toContain(`/sessions/${C.SESSION_ID}/live`);
@@ -225,31 +229,34 @@ test('Mage Knight full journey — 10 moments, single canonical surface', async 
       ],
     });
 
-    const chatSection = page.locator('[data-slot="live-agent-chat"]');
-    const chatVisible = await chatSection.isVisible({ timeout: 3_000 }).catch(() => false);
+    // UNCONDITIONAL: chat panel is always in main column on mobile (expanded by default).
+    // This is CRACK 1 — if the chat isn't visible here, that is a real bug to surface,
+    // NOT something to hide behind a guard.
+    // Scope to mobile-body to avoid strict-mode violation from dual DesktopBody+MobileBody mount.
+    const mobileBody = page.locator('[data-slot="mobile-body"]');
+    await expect(mobileBody).toBeVisible({ timeout: 8_000 });
+    const chatSection = mobileBody.locator('[data-slot="live-agent-chat"]');
+    await expect(chatSection).toBeVisible({ timeout: 5_000 });
 
-    if (chatVisible) {
-      const chatInput = chatSection.getByRole('textbox');
-      await chatInput.fill('Regola dubbio: come funziona il combattimento?');
+    const chatInput = chatSection.getByRole('textbox');
+    await chatInput.fill('Regola dubbio: come funziona il combattimento?');
 
-      const sendBtn = chatSection.getByTestId('live-agent-chat-send');
-      await sendBtn.click();
+    const sendBtn = chatSection.getByTestId('live-agent-chat-send');
+    await sendBtn.click();
 
-      // THE CRACK ASSERTION: citation card must render with page number + excerpt.
-      const citationsBlock = page.locator('[data-slot="chat-citations"]').last();
-      await expect(citationsBlock).toBeVisible({ timeout: 12_000 });
+    // THE CRACK ASSERTION (UNCONDITIONAL): citation card must render with page number + excerpt.
+    const citationsBlock = page.locator('[data-slot="chat-citations"]').last();
+    await expect(citationsBlock).toBeVisible({ timeout: 12_000 });
 
-      // "pag. 42" must appear inside the citation block.
-      await expect(citationsBlock.getByText(`pag. ${CITATION_PAGE}`, { exact: false })).toBeVisible(
-        { timeout: 5_000 }
-      );
+    // "pag. 42" must appear inside the citation block.
+    await expect(citationsBlock.getByText(`pag. ${CITATION_PAGE}`, { exact: false })).toBeVisible({
+      timeout: 5_000,
+    });
 
-      // The excerpt must appear (surrounded by " " / " " markup from ChatCitationCard).
-      await expect(citationsBlock.getByText(CITATION_EXCERPT, { exact: false })).toBeVisible({
-        timeout: 5_000,
-      });
-    }
-    // If chat section is not visible, note for DONE_WITH_CONCERNS report.
+    // The excerpt must appear (surrounded by " " / " " markup from ChatCitationCard).
+    await expect(citationsBlock.getByText(CITATION_EXCERPT, { exact: false })).toBeVisible({
+      timeout: 5_000,
+    });
 
     // ANTI-FRAGMENTATION
     expect(page.url()).toContain(`/sessions/${C.SESSION_ID}/live`);
@@ -257,36 +264,29 @@ test('Mage Knight full journey — 10 moments, single canonical surface', async 
 
   // ─── M8: Scores tab ───────────────────────────────────────────────────────
   await test.step('M8: scores tab — ScoreTabContent renders', async () => {
-    await page.goto(`/sessions/${C.SESSION_ID}/live?tab=score`);
+    // On mobile, the score tab lives in the bottom sheet.
+    // ?mtab=score&msheet=open opens the sheet with the score tab active.
+    // (Note: ?mtab=score is the default so the URL will clean it, but passing it
+    //  ensures parseMobileTab reads 'score' on initial load.)
+    await page.goto(`/sessions/${C.SESSION_ID}/live?mtab=score&msheet=open`);
     await page.waitForLoadState('domcontentloaded');
 
     await expect(page.locator('[data-slot="session-live-view"]')).toBeVisible({ timeout: 10_000 });
 
-    // ScoreTabContent renders either the empty placeholder or a scoring panel.
-    const scoringSelectors = [
-      '[data-slot="scoring-panel-empty"]',
-      '[data-slot="scoring-panel-points"]',
-      '[data-slot="scoring-panel-renderer"]',
-      '[data-slot="right-column-tabs"]', // Tab strip confirms the surface is active
-    ];
+    // UNCONDITIONAL: ?msheet=open triggers MobileBottomSheetDrawer.
+    // The sheet container must become visible (proves the URL param is honoured).
+    // ScoreTabContent is the default case inside the sheet.
+    // Assert the mobile-bottom-sheet is open (via its data-slot) — this is the
+    // meaningful assertion: the bottom sheet surface is accessible on mobile.
+    const mobileSheet = page.locator('[data-slot="mobile-bottom-sheet"]');
+    await expect(mobileSheet).toBeVisible({ timeout: 10_000 });
 
-    let scoringFound = false;
-    for (const sel of scoringSelectors) {
-      const visible = await page
-        .locator(sel)
-        .isVisible({ timeout: 3_000 })
-        .catch(() => false);
-      if (visible) {
-        scoringFound = true;
-        break;
-      }
-    }
-
-    if (!scoringFound) {
-      // On mobile the content may be in a bottom-sheet; the session shell being
-      // present is the minimum acceptance for M8.
-      await expect(page.locator('[data-slot="session-live-view"]')).toBeVisible({ timeout: 5_000 });
-    }
+    // Once the sheet is open, the scoring panel (empty placeholder or real panel) is in the DOM.
+    // Use a more generous timeout and check against the sheet container.
+    const scoringInSheet = mobileSheet.locator(
+      '[data-slot="scoring-panel-empty"], [data-slot="scoring-panel-points"], [data-slot="scoring-panel-renderer"]'
+    );
+    await expect(scoringInSheet.first()).toBeVisible({ timeout: 8_000 });
 
     // ANTI-FRAGMENTATION
     expect(page.url()).toContain(`/sessions/${C.SESSION_ID}/live`);
@@ -294,39 +294,41 @@ test('Mage Knight full journey — 10 moments, single canonical surface', async 
 
   // ─── M9: Photos — capture photo via hidden file input (CRACK 2) ───────────
   await test.step('M9: photos tab — capture photo + assert gallery entry (CRACK 2)', async () => {
-    await page.goto(`/sessions/${C.SESSION_ID}/live?tab=photos`);
+    // On mobile, PhotosTabContent is inside the bottom sheet — opened by ?mtab=photos&msheet=open.
+    // ?tab=photos (desktop param) is IGNORED on mobile viewport; the sheet stays closed.
+    // This was the root cause of the hollow guard: the photos content was never revealed.
+    await page.goto(`/sessions/${C.SESSION_ID}/live?mtab=photos&msheet=open`);
     await page.waitForLoadState('domcontentloaded');
 
     await expect(page.locator('[data-slot="session-live-view"]')).toBeVisible({ timeout: 10_000 });
 
+    // UNCONDITIONAL (CRACK 2): PhotosTabContent MUST be visible.
+    // If it isn't, that is a real bug — do NOT re-add a guard.
     const photosTabContent = page.getByTestId('photos-tab-content');
-    const photosVisible = await photosTabContent.isVisible({ timeout: 8_000 }).catch(() => false);
+    await expect(photosTabContent).toBeVisible({ timeout: 8_000 });
 
-    if (photosVisible) {
-      // The PhotosTabContent renders a hidden file input [data-testid="photo-input"].
-      // Use setInputFiles to simulate a captured photo without a real camera.
-      const photoInput = page.getByTestId('photo-input');
+    // The PhotosTabContent renders a hidden file input [data-testid="photo-input"].
+    // Use setInputFiles to simulate a captured photo without a real camera.
+    const photoInput = page.getByTestId('photo-input');
 
-      // Minimal 1×1 transparent PNG (67 bytes, valid binary).
-      const minimalPng = Buffer.from(
-        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-        'base64'
-      );
+    // Minimal 1×1 transparent PNG (67 bytes, valid binary).
+    const minimalPng = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      'base64'
+    );
 
-      await photoInput.setInputFiles({
-        name: 'mage-knight-table.png',
-        mimeType: 'image/png',
-        buffer: minimalPng,
-      });
+    await photoInput.setInputFiles({
+      name: 'mage-knight-table.png',
+      mimeType: 'image/png',
+      buffer: minimalPng,
+    });
 
-      // After setInputFiles, handleCapture adds the photo to IndexedDB and
-      // updates state. The gallery renders PhotoCard with data-testid="delete-photo-{id}".
-      // Wait for the delete button to appear as evidence of gallery entry.
-      await expect(page.locator('[data-testid^="delete-photo-"]').first()).toBeVisible({
-        timeout: 8_000,
-      });
-    }
-    // If not visible on mobile layout, URL invariant still holds.
+    // After setInputFiles, handleCapture adds the photo to IndexedDB and
+    // updates state. The gallery renders PhotoCard with data-testid="delete-photo-{id}".
+    // Wait for the delete button to appear as evidence of gallery entry.
+    await expect(page.locator('[data-testid^="delete-photo-"]').first()).toBeVisible({
+      timeout: 8_000,
+    });
 
     // ANTI-FRAGMENTATION
     expect(page.url()).toContain(`/sessions/${C.SESSION_ID}/live`);
@@ -357,24 +359,23 @@ test('Mage Knight full journey — 10 moments, single canonical surface', async 
     await expect(page.locator('[data-slot="endgame-dialog"]')).toBeVisible({ timeout: 10_000 });
 
     // Step 5: click the "Salva partita" CTA inside the EndgameDialog.
+    // UNCONDITIONAL: if EndgameDialog is visible (asserted above), the save CTA must be too.
     const saveCta = page.locator('[data-slot="endgame-save-cta"]');
-    const saveVisible = await saveCta.isVisible({ timeout: 3_000 }).catch(() => false);
-    if (saveVisible) {
-      await saveCta.click();
-      // The save CTA should go into busy state or the dialog closes/transitions.
-      // Assert that either the CTA becomes disabled or disappears (save completed).
-      await expect
-        .poll(
-          async () => {
-            const busy = await saveCta.getAttribute('aria-busy').catch(() => null);
-            const disabled = await saveCta.getAttribute('disabled').catch(() => null);
-            const hidden = !(await saveCta.isVisible().catch(() => true));
-            return busy === 'true' || disabled !== null || hidden;
-          },
-          { timeout: 6_000 }
-        )
-        .toBeTruthy();
-    }
+    await expect(saveCta).toBeVisible({ timeout: 5_000 });
+    await saveCta.click();
+    // The save CTA should go into busy state or the dialog closes/transitions.
+    // Assert that either the CTA becomes disabled or disappears (save completed).
+    await expect
+      .poll(
+        async () => {
+          const busy = await saveCta.getAttribute('aria-busy').catch(() => null);
+          const disabled = await saveCta.getAttribute('disabled').catch(() => null);
+          const hidden = !(await saveCta.isVisible().catch(() => true));
+          return busy === 'true' || disabled !== null || hidden;
+        },
+        { timeout: 6_000 }
+      )
+      .toBeTruthy();
 
     // ANTI-FRAGMENTATION — final check: we never left /sessions/{id}/live.
     // URL may have appended ?dialog=endgame but must still be on the live surface.
@@ -614,19 +615,23 @@ async function mockAgentSseResponse(page: Page, opts: AgentSseOptions): Promise<
     sseBody += `data: ${JSON.stringify({ type: 7, data: token })}\n\n`;
   }
 
-  // Complete event (type=4) — Citations MUST be PascalCase (matches BE Contracts.cs)
+  // Complete event (type=4) — wire field is camelCase `citations` (matches hook: d.citations).
+  // The hook reads event.data.citations (camelCase) and parses via CitationSchema.array().
+  // CitationSchema accepts: documentId, pageNumber, snippet (fallback for snippetPreview),
+  // relevanceScore, copyrightTier (defaults to 'full').
   const completePayload = {
     estimatedReadingTimeMinutes: 0,
     promptTokens: 10,
     completionTokens: tokens.length * 3,
     totalTokens: tokens.length * 3 + 10,
     confidence,
-    Citations: citations.map(c => ({
+    citations: citations.map(c => ({
       documentId: c.documentId,
       documentName: c.documentName,
       pageNumber: c.pageNumber,
-      snippet: c.snippet,
+      snippet: c.snippet, // CitationSchema.snippet (fallback from snippetPreview)
       relevanceScore: c.relevanceScore,
+      copyrightTier: 'full' as const, // explicit: mapCitationToChatCitation reads snippet path
     })),
   };
   sseBody += `data: ${JSON.stringify({ type: 4, data: completePayload })}\n\n`;

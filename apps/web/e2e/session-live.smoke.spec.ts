@@ -6,17 +6,19 @@
  *   A) The CANONICAL stream route `/api/v1/live-sessions/{id}/stream` (T4) is the
  *      target for new consumers and must be reachable from within the page context.
  *
- *   B) The LEGACY route `/api/v1/game-sessions/{id}/stream/v2` is deprecated
- *      (expand-and-contract, T11 Part B) but still functional. The SessionLiveView
- *      surface (post T10 wiring) must NOT be calling it for SSE — it must exclusively
- *      use the canonical `/live-sessions/{id}/stream` route.
+ *   B) The LEGACY route `/api/v1/game-sessions/{id}/stream/v2` was deprecated
+ *      (expand-and-contract, T11 Part B) and has been **removed early 2026-07-01**
+ *      (Slice B, #2588) ahead of the published Sunset 2026-09-29, by owner decision
+ *      (zero remaining consumers verified). The A2 guard below is a permanent
+ *      regression guard — now that the endpoint is gone it only strengthens the
+ *      assertion that no consumer re-introduces a call to the removed route.
  *
  * ## Anti-pattern avoided
  * The previous false-green pattern (`page.route('**/ game - sessions; /**', abort)`) was
  * a blind abort that would pass even if the page never hit that route at all. This
  * spec uses EXPLICIT route intercept with request tracking to assert:
  *   - native stream: intercepted and counted (≥ 1 call).
- *   - legacy stream/v2: intercepted and counted → must be ZERO calls.
+ *   - legacy stream/v2 (removed): intercepted and counted → must be ZERO calls.
  *
  * ## E2E vs real backend
  * These tests run against the Next.js dev server with mocked backend routes
@@ -155,9 +157,9 @@ test.describe('#2561 SP2 T11 — Session live SSE stream surface smoke', () => {
     expect(legacyStreamV2CallCount).toBe(0);
   });
 
-  // ── A2) Explicit: SessionLiveView MUST NOT call the deprecated /stream/v2 ─
+  // ── A2) Explicit: SessionLiveView MUST NOT call the removed /stream/v2 ────
 
-  test('A2: SessionLiveView does NOT call /game-sessions/{id}/stream/v2 (deprecation enforcement)', async ({
+  test('A2: SessionLiveView does NOT call /game-sessions/{id}/stream/v2 (removed, regression guard)', async ({
     page,
   }) => {
     // Track any calls to the legacy deprecated route.
@@ -188,110 +190,5 @@ test.describe('#2561 SP2 T11 — Session live SSE stream surface smoke', () => {
 
     // Primary contract: zero calls to the deprecated legacy route.
     expect(legacyCalls).toHaveLength(0);
-  });
-
-  // ── B) Deprecation headers on the legacy endpoint (documented expectation) ─
-
-  test('B1 [doc-test]: /game-sessions/{id}/stream/v2 deprecation-header SHAPE (real gate is the BE integration test)', async ({
-    page,
-  }) => {
-    // DOC-TEST (#2565): tautological by design — it asserts the shape of the FE-provided mock
-    // response, NOT real BE behavior. The authoritative gate for the deprecation headers is the BE
-    // integration test StreamV2DeprecationHeadersEndpointTests.cs. Kept as living FE documentation
-    // of the expected response shape during legacy-consumer migration.
-    test.info().annotations.push({
-      type: 'doc-test',
-      description:
-        'Asserts the FE mock shape, not BE behavior. Authoritative gate: StreamV2DeprecationHeadersEndpointTests.cs (BE).',
-    });
-
-    // This test documents the EXPECTED deprecation headers on the /stream/v2 endpoint
-    // (Part B of T11). It intercepts the route and inspects what the BROWSER sees
-    // in the response headers via network request listener.
-    //
-    // NOTE: In E2E tests with a mocked backend (PLAYWRIGHT_AUTH_BYPASS), the actual
-    // /stream/v2 endpoint is not reached — the FE mocks intercept it. The real header
-    // assertions are covered by the BE integration test
-    // (StreamV2DeprecationHeadersEndpointTests.cs, CI-needed).
-    //
-    // This test instead verifies the SHAPE of a correctly-deprecated response via a
-    // page.evaluate() EventSource call to the mocked route — confirming that when the
-    // FE DOES call the legacy route (e.g., during legacy consumer migration), the response
-    // it would receive in production carries the right headers.
-    //
-    // For the E2E harness: we set up a mock fulfillment that mirrors what the real BE
-    // will serve (Deprecation: true, Sunset, Link), then assert the request was made and
-    // the mock response structure is correct.
-
-    let legacyResponseHeaders: Record<string, string> = {};
-
-    // Mock the legacy route with the headers the real BE serves (T11 Part B).
-    await page.route(LEGACY_STREAM_V2_PATTERN, async route => {
-      const headers: Record<string, string> = {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        Connection: 'keep-alive',
-        // Mirrors the actual headers added in SessionQueryEndpoints.cs (T11 Part B).
-        Deprecation: 'true',
-        Sunset: 'Mon, 29 Sep 2026 00:00:00 GMT',
-        Link: `</api/v1/live-sessions/${FIXTURE_SESSION_ID}/stream>; rel="successor-version"`,
-      };
-      legacyResponseHeaders = headers;
-      await route.fulfill({
-        status: 200,
-        headers,
-        body: ': legacy-deprecated\n\n',
-      });
-    });
-
-    // Navigate to the page first so we have a page context for page.evaluate.
-    await seedAuth(page);
-    await page.goto(`/sessions/${FIXTURE_SESSION_ID}/live?fixture=host`, {
-      waitUntil: 'domcontentloaded',
-    });
-    await page.waitForSelector('[data-slot="session-live-view"][data-ui-state="default"]', {
-      timeout: 30_000,
-    });
-
-    // Programmatically hit the legacy route via fetch() inside the browser
-    // (EventSource headers are not readable from JS, but fetch() response headers are).
-    const deprecationHeaders = await page.evaluate<{
-      deprecation: string | null;
-      sunset: string | null;
-      link: string | null;
-      status: number;
-    }>(async sessionId => {
-      try {
-        // fetch with streaming mode (we only care about headers, not the body).
-        const res = await fetch(`/api/v1/game-sessions/${sessionId}/stream/v2`, {
-          credentials: 'include',
-          headers: { Accept: 'text/event-stream' },
-        });
-        return {
-          deprecation: res.headers.get('Deprecation'),
-          sunset: res.headers.get('Sunset'),
-          link: res.headers.get('Link'),
-          status: res.status,
-        };
-      } catch {
-        return { deprecation: null, sunset: null, link: null, status: 0 };
-      }
-    }, FIXTURE_SESSION_ID);
-
-    // The mock route fulfills with a 200 and the deprecation headers.
-    expect(deprecationHeaders.status).toBe(200);
-
-    // Assert the mock-fulfilled response carries the correct deprecation headers.
-    // These values must match what the real BE sets (SessionQueryEndpoints.cs T11 Part B).
-    expect(deprecationHeaders.deprecation).toBe('true');
-    expect(deprecationHeaders.sunset).toBe('Mon, 29 Sep 2026 00:00:00 GMT');
-    expect(deprecationHeaders.link).toContain(`/api/v1/live-sessions/${FIXTURE_SESSION_ID}/stream`);
-    expect(deprecationHeaders.link).toContain('successor-version');
-
-    // Confirm the mock was exercised (legacyResponseHeaders populated).
-    expect(legacyResponseHeaders).toMatchObject({
-      Deprecation: 'true',
-      Sunset: 'Mon, 29 Sep 2026 00:00:00 GMT',
-    });
   });
 });

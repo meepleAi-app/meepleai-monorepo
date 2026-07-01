@@ -369,6 +369,7 @@ export function LiveAgentChat({
           <button
             type="submit"
             aria-label={labels.sendAriaLabel}
+            data-testid="live-agent-chat-send"
             disabled={!draft.trim() && !hasImages}
             className="flex shrink-0 items-center justify-center rounded-lg border
               border-border/60 bg-card px-3 py-2 text-foreground

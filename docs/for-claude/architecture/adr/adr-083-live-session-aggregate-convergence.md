@@ -227,6 +227,12 @@ Il `GameSession` correlato (creato da `StartLiveSessionCommandHandler` Slice 1) 
 - Lo **scopo** del `GameSession` correlato è unicamente: (a) quota per-user (`CountActiveByUserIdAsync`, `SessionQuotaService`), (b) visibilità nella history (`FindHistoryAsync`, `GetActiveSessionsQuery`, `GetSessionHistoryQuery`), (c) lifecycle 4-state (Setup→InProgress→Paused→Completed/Abandoned).
 - Test di regressione end-to-end: `SessionHistoryVisibilityAfterStartTests` (`Integration/GameManagement/`) prova che dopo il wizard flow completo il `GameSession` correlato appare in `GetActiveSessionsQuery.Sessions` (l'identico query usato dal FE via `api.sessions.getActive`), e scompare da quel set dopo `CompleteLiveSessionCommand` (apparendo invece in `GetSessionHistoryQuery`).
 
+## Update 2026-07-01 (#2587) — Convergence complete: dead dual-creation funnel removed
+
+**#2587 convergence complete**: the dead `SessionSetupModal` → `POST /api/v1/sessions` (`StartGameSessionCommand`) creation funnel was removed 2026-07-01. The funnel is now single: wizard → `LiveGameSession` → correlate-at-start saga (#2587-A, Direzione A) creates the correlated `GameSession`. GameSession is created ONLY via the saga; `api.sessions.*` READ paths (history/quota) remain and read the correlated GameSession.
+
+Removed: `SessionSetupModal.tsx` + stories + test · `StartGameSessionCommand` + Handler + Validator class · `POST /sessions` route in `GameEndpoints.cs` · unit test `StartGameSessionCommandHandlerTests.cs` · 2 E2E tests (`StartSession_WithValidGame_CreatesSession`, `StartSession_WithoutAuthentication_ReturnsUnauthorized`) · `StartSessionRequest` type + `api.sessions.start()` FE method.
+
 ## Update 2026-07-01 (Slice B, #2588) — Early removal of `/game-sessions/{id}/stream/v2`
 
 **`/game-sessions/{id}/stream/v2` rimosso il 2026-07-01**, in anticipo rispetto al Sunset pubblicato 2026-09-29, per decisione esplicita dell'owner (zero consumer rimasti verificati dopo #2579). Il successore è il native stream `/api/v1/live-sessions/{id}/stream` (SP2, #2561). Il v1 `/api/v1/game-sessions/{id}/stream` (senza `/v2`) e il `GetSessionStreamQuery` condiviso restano invariati (ancora consumati). Rimossi: `MapEnhancedSessionStreamEndpoint` + call-site in `SessionQueryEndpoints.cs`, `StreamV2DeprecationHeadersEndpointTests.cs` (integrazione BE), test B1 e smoke reachability in FE e2e; mantenuta la A2 non-use guard (ora regressione permanente per endpoint rimosso).

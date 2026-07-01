@@ -146,16 +146,6 @@ internal static class GameEndpoints
         // GameSession CQRS Endpoints
         // ========================================
 
-        // Start game session
-        group.MapPost("/sessions", HandleStartSession)
-        .RequireSession() // Issue #1446: Automatic session validation
-        .Produces<GameSessionDto>(201)
-        .Produces(400)
-        .Produces(401)
-        .WithTags("Sessions")
-        .WithSummary("Start a new game session")
-        .WithDescription("Creates a new game session with players. Requires active user session.");
-
         // Add player to session
         group.MapPost("/sessions/{id}/players", HandleAddPlayer)
         .RequireSession() // Issue #1446: Automatic session validation
@@ -431,34 +421,6 @@ internal static class GameEndpoints
         }
 
         return Results.Ok(new { success = true, agents = agentList, count = agentList.Count });
-    }
-
-    private static async Task<IResult> HandleStartSession(
-        StartGameSessionRequest request,
-        HttpContext context,
-        IMediator mediator,
-        ILogger<Program> logger,
-        CancellationToken ct)
-    {
-        // Issue #3070: Get user info for session quota enforcement
-        var (authenticated, session, error) = context.TryGetActiveSession();
-        if (!authenticated) return error!;
-
-        var userId = session!.Principal!.Subject.Id;
-        var userTier = UserTier.Parse(session.Principal!.Subject.Tier);
-        var userRole = Role.Parse(session.Principal!.EffectiveActor.Role);
-
-        var command = new StartGameSessionCommand(
-            GameId: request.GameId,
-            Players: request.Players,
-            UserId: userId,
-            UserTier: userTier,
-            UserRole: userRole
-        );
-
-        var result = await mediator.Send(command, ct).ConfigureAwait(false);
-        logger.LogInformation("Started game session {SessionId} for game {GameId} by user {UserId}", result.Id, result.GameId, userId);
-        return Results.Created($"/api/v1/sessions/{result.Id}", result);
     }
 
     private static async Task<IResult> HandleAddPlayer(

@@ -12,7 +12,7 @@
    Stato      : ⏳ state-05 Diary (questa risposta).
                 state-06 Paragrafi drawer + state-07 End campaign verranno
                 APPESI in coda a questo file nelle risposte 2 e 3.
-   Dati       : inline (data.js è read-only). Tainted Grail · "La grotta dei
+   Dati       : inline (data.js è read-only). Eldoria · "La grotta dei
                 Goblin" · Cap 4 · §214 · glossario Niamh/Korak/Pietra Spettrale.
    ════════════════════════════════════════════════════════════════ */
 
@@ -257,7 +257,7 @@ function PhoneFrame({ d, lisaState }) {
       <span className="frame-label">Mobile · 375px</span>
       <div className="phone-sbar"><span>22:36</span><span>{offline ? '✈️' : '📶'} 🔋 58%</span></div>
       <div className="session-h">
-        <span className="crumbs"><strong>Avalon</strong> · La grotta dei Goblin · <span className="para">{CURRENT_PARA}</span></span>
+        <span className="crumbs"><strong>Eldoria</strong> · La grotta dei Goblin · <span className="para">{CURRENT_PARA}</span></span>
         <button className="menu" aria-label="Menu sessione">⋯</button>
       </div>
       <div className="header-pips">
@@ -287,7 +287,7 @@ function DesktopFrame({ d, lisaState }) {
       <span className="frame-label">Desktop · 1440px (scaled)</span>
       <div className="titlebar">
         <span className="dot r"></span><span className="dot y"></span><span className="dot g"></span>
-        <span className="url">meepleai.app/library/librogame/play/camp-avalon-1?tab=diary</span>
+        <span className="url">meepleai.app/library/librogame/play/camp-eldoria-1?tab=diary</span>
       </div>
       <div className="d-body">
         <aside className="d-side" style={{ width: 260, display: 'flex', flexDirection: 'column' }}>
@@ -530,7 +530,7 @@ function HistoryPhone({ h }) {
       <span className="frame-label">Mobile · 375px</span>
       <div className="phone-sbar"><span>22:46</span><span>{offline ? '✈️' : '📶'} 🔋 55%</span></div>
       <div className="session-h">
-        <span className="crumbs"><strong>Avalon</strong> · La grotta dei Goblin · <span className="para">{h.currentPara}</span></span>
+        <span className="crumbs"><strong>Eldoria</strong> · La grotta dei Goblin · <span className="para">{h.currentPara}</span></span>
         <button className="hy-trigger" aria-label="Paragrafi visitati" aria-expanded={h.open} onClick={() => h.setOpen(true)}>🕰</button>
       </div>
       <div className="header-pips"><span className="manapip kb"><span className="badge">47</span></span><span className="manapip session"><span className="badge">1</span></span><span className="manapip toolkit"><span className="badge">12</span></span><span className="lbl-mini">· Cap 4</span></div>
@@ -560,7 +560,7 @@ function HistoryDesktop({ h }) {
   return (
     <div className="desktop" role="region" aria-label="Desktop · history interattiva">
       <span className="frame-label">Desktop · 1440px (scaled)</span>
-      <div className="titlebar"><span className="dot r"></span><span className="dot y"></span><span className="dot g"></span><span className="url">meepleai.app/library/librogame/play/camp-avalon-1?history={h.open ? 'open' : 'closed'}</span></div>
+      <div className="titlebar"><span className="dot r"></span><span className="dot y"></span><span className="dot g"></span><span className="url">meepleai.app/library/librogame/play/camp-eldoria-1?history={h.open ? 'open' : 'closed'}</span></div>
       <div className="d-body" style={{ position: 'relative' }}>
         <aside className="d-side" style={{ width: 260, display: 'flex', flexDirection: 'column' }}>
           <div className="side-card" style={{ marginBottom: 'var(--s-2)' }}><h4>Campagna</h4><div className="row"><span className="k">Capitolo</span><span className="v">4 · {h.currentPara}</span></div></div>
@@ -668,7 +668,7 @@ function CloseSummary({ outcomeId, server, onReopen, onLib, onRetry, onForce }) 
         <div className="ec-s-badge">{isDone ? '🏆' : '📥'}</div>
         <span className="ec-s-kick">{isDone ? 'Completata' : (server === 'offline' ? 'Archiviata · in coda' : (isArchive ? 'Archiviata' : 'Abbandonata'))}</span>
         <h2>{isDone ? 'Hai finito la storia!' : (isArchive ? 'Campagna messa via' : 'Campagna chiusa')}</h2>
-        <p className="ec-s-camp">"La grotta dei Goblin"{isDone ? ' · Tainted Grail' : ' · la riprendi quando vuoi'}</p>
+        <p className="ec-s-camp">"La grotta dei Goblin"{isDone ? ' · Eldoria' : ' · la riprendi quando vuoi'}</p>
         {server === 'offline' && <span className="ec-pending"><span className="dot"></span>Pending sync · si completa online</span>}
         {server !== 'offline' && (
           <div className="ec-stats">
@@ -776,7 +776,7 @@ function EndPhone({ ec, server }) {
       <span className="frame-label">Mobile · 375px</span>
       <div className="phone-sbar"><span>23:02</span><span>{server === 'offline' ? '✈️' : '📶'} 🔋 50%</span></div>
       <div className="session-h">
-        <span className="crumbs"><strong>Avalon</strong> · La grotta dei Goblin · <span className="para">§214</span></span>
+        <span className="crumbs"><strong>Eldoria</strong> · La grotta dei Goblin · <span className="para">§214</span></span>
         {!showSummary && <button className="menu" aria-label="Menu sessione" aria-expanded={ec.phase === 'kebab'} onClick={() => ec.setPhase(ec.phase === 'kebab' ? 'idle' : 'kebab')}>⋮</button>}
       </div>
       {!showSummary && (
@@ -814,7 +814,7 @@ function EndDesktop({ ec, server }) {
   return (
     <div className="desktop" role="region" aria-label="Desktop · end campaign interattivo">
       <span className="frame-label">Desktop · 1440px (scaled)</span>
-      <div className="titlebar"><span className="dot r"></span><span className="dot y"></span><span className="dot g"></span><span className="url">meepleai.app/library/librogame/play/camp-avalon-1{showSummary ? '/summary' : '?close=' + (ec.phase === 'dialog' ? '1' : '0')}</span></div>
+      <div className="titlebar"><span className="dot r"></span><span className="dot y"></span><span className="dot g"></span><span className="url">meepleai.app/library/librogame/play/camp-eldoria-1{showSummary ? '/summary' : '?close=' + (ec.phase === 'dialog' ? '1' : '0')}</span></div>
       <div className="d-body" style={{ position: 'relative', justifyContent: showSummary ? 'center' : undefined, alignItems: showSummary ? 'center' : undefined }}>
         {!showSummary && (
           <React.Fragment>

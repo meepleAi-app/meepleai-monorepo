@@ -1014,16 +1014,25 @@ jobs:
             # ~356) so the unchanged service keeps pointing at its previous
             # deploy. The rebuilt service then overrides its var below with
             # the freshly-pushed digest.
-            export API_IMAGE="${{ env.API_IMAGE }}:staging-latest"
-            export WEB_IMAGE="${{ env.WEB_IMAGE }}:staging-latest"
+            # Issue #2650: Docker esige repository names TUTTI lowercase, ma
+            # ${{ github.repository }} conserva il case dell'org ('meepleAi-app'
+            # con la A maiuscola) e GHA non ha una funzione lowercase nelle
+            # espressioni. Le env var env.API_IMAGE/env.WEB_IMAGE e AI_BASE, se
+            # usate grezze, producono 'ghcr.io/meepleAi-app/...' → docker pull /
+            # compose up falliscono con "repository name must be lowercase"
+            # (deploy run 28699568838, step Deploy via SSH). Normalizza una volta
+            # qui e ricostruisci tutte le referenze immagine da REPO_LC.
+            REPO_LC=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+            export API_IMAGE="${{ env.REGISTRY }}/${REPO_LC}/api:staging-latest"
+            export WEB_IMAGE="${{ env.REGISTRY }}/${REPO_LC}/web:staging-latest"
 
             # Issue #1578 — AI image vars. compose.staging.yml guards
             # embedding/reranker with ${X_IMAGE:?}, so every `compose up`
             # (even one targeting only some services) needs them set, or it
             # aborts (analog of the api/web #1399-C fix above). Default all to
             # staging-latest; changed services keep this ref (the build-ai job
-            # always pushes staging-latest).
-            AI_BASE="${{ env.REGISTRY }}/${{ github.repository }}"
+            # always pushes staging-latest). AI_BASE uses REPO_LC (lowercase).
+            AI_BASE="${{ env.REGISTRY }}/${REPO_LC}"
             export EMBEDDING_IMAGE="${AI_BASE}/embedding-service:staging-latest"
             export RERANKER_IMAGE="${AI_BASE}/reranker-service:staging-latest"
             export ORCHESTRATION_IMAGE="${AI_BASE}/orchestration-service:staging-latest"

@@ -4,6 +4,7 @@
 **Date**: 2026-07-01
 **Related**: #2632 (SI-1 done) · #2633 (SI-2, blocked) · #2647 (OpenLiveMode/#15 gap)
 **Status**: PROPOSED — slice breakdown for review before implementation.
+**Update 2026-07-04**: Slice A shipped (PR #2652). Slice B ratified via `/sc:spec-panel` — see [`2026-07-04-issue-2633-sliceb-spec-panel-verdict.md`](./2026-07-04-issue-2633-sliceb-spec-panel-verdict.md). **Winner display is RE-SCOPED out of Slice B into Slice C** (LD-2): `getRsvps` returns only User-linked participants, so guest/organizer winners would silently vanish — the mapper carries `winnerId` through and Slice C resolves `{name,initials,color}` against the participant read model (extended for guests).
 
 ---
 

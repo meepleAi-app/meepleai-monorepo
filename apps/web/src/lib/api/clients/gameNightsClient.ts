@@ -5,14 +5,17 @@
 
 import { z } from 'zod';
 
+import { UnauthorizedError } from '../core/errors';
 import {
   ConflictCheckDtoSchema,
   GameNightDtoSchema,
+  GameNightLiveDtoSchema,
   GameNightRsvpDtoSchema,
   RegularDtoSchema,
   type ConflictCheckDto,
   type CreateGameNightInput,
   type GameNightDto,
+  type GameNightLiveDto,
   type GameNightRsvpDto,
   type RegularDto,
   type RsvpStatus,
@@ -27,6 +30,8 @@ export interface GameNightsClient {
   getCompleted(limit?: number): Promise<GameNightDto[]>;
   getMine(): Promise<GameNightDto[]>;
   getById(id: string): Promise<GameNightDto>;
+  // #2633 Slice B: night-live read model (header + session progression).
+  getLive(id: string): Promise<GameNightLiveDto>;
   getRsvps(id: string): Promise<GameNightRsvpDto[]>;
   create(data: CreateGameNightInput): Promise<string>;
   update(id: string, data: UpdateGameNightInput): Promise<void>;
@@ -70,6 +75,19 @@ export function createGameNightsClient({
     async getById(id) {
       const data = await httpClient.get<GameNightDto>(`/api/v1/game-nights/${id}`);
       return GameNightDtoSchema.parse(data);
+    },
+
+    async getLive(id) {
+      // #2633 Slice B (LD-10): httpClient.get returns null on a 401 (optional-auth
+      // path). Detect it BEFORE parsing so a lapsed session surfaces as a typed
+      // UnauthorizedError, not a SchemaValidationError masquerading as a 500.
+      const data = await httpClient.get<GameNightLiveDto>(`/api/v1/game-nights/${id}/live`);
+      if (data === null) {
+        throw new UnauthorizedError({
+          message: 'Authentication required to view the night-live state.',
+        });
+      }
+      return GameNightLiveDtoSchema.parse(data);
     },
 
     async getRsvps(id) {

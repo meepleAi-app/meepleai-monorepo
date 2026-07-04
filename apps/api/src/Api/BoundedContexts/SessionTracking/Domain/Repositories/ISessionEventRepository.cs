@@ -39,12 +39,16 @@ public interface ISessionEventRepository
     Task AddAsync(SessionEvent sessionEvent, CancellationToken ct = default);
 
     /// <summary>
-    /// Gets session events by game night ID, ordered chronologically.
-    /// Used for the cross-game diary timeline.
+    /// Gets session events by game night ID, ordered chronologically (ASC).
+    /// Used for the cross-game diary timeline. When <paramref name="newestFirst"/> is true the
+    /// query orders DESC before applying <paramref name="limit"/> — so a long night keeps its
+    /// MOST RECENT events instead of truncating them (#2633 C2 must-fix); the result is still
+    /// returned newest-first, callers re-sort to chronological if needed.
     /// </summary>
     Task<IEnumerable<SessionEvent>> GetByGameNightIdAsync(
         Guid gameNightId,
         int limit = 200,
         int offset = 0,
+        bool newestFirst = false,
         CancellationToken ct = default);
 }

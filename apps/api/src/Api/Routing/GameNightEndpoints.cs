@@ -244,11 +244,12 @@ internal static class GameNightEndpoints
         gameNights.MapGet("/{id:guid}/diary", HandleGetGameNightDiary)
             .RequireAuthenticatedUser()
             .Produces<GameNightDiaryDto>(200)
+            .Produces(403)
             .Produces(404)
             .Produces(401)
             .WithName("GetGameNightDiary")
             .WithSummary("Get game night diary timeline")
-            .WithDescription("Retrieves the cross-game diary timeline with all session events for the game night.");
+            .WithDescription("Retrieves the cross-game diary timeline with all session events for the game night. Participant-scoped (organizer or RSVP'd player).");
 
         return group;
     }
@@ -500,9 +501,12 @@ internal static class GameNightEndpoints
     private static async Task<IResult> HandleGetGameNightDiary(
         Guid id,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var result = await mediator.Send(new GetGameNightDiaryQuery(id), cancellationToken).ConfigureAwait(false);
+        // #2633 C2: participant-scoped — pass the caller so the handler can 403 a non-participant.
+        var userId = httpContext.User.GetUserId();
+        var result = await mediator.Send(new GetGameNightDiaryQuery(id, userId), cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
 

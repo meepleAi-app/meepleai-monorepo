@@ -6,6 +6,19 @@ import { gameNightSessionClient } from '@/lib/api/clients/gameNightSessionClient
 import { useGameNightStore } from '@/stores/game-night/store';
 import type { DiaryEntry } from '@/stores/game-night/types';
 
+/** #2633 C2: parse a diary payload without ever throwing — a malformed row must not vanish the diary. */
+function safeParsePayload(payload: string | undefined): Record<string, unknown> | undefined {
+  if (!payload) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(payload);
+    return parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Hook for managing game night diary entries.
  *
@@ -36,7 +49,9 @@ export function useGameNightDiary(gameNightId: string) {
               gameNightId,
               eventType: e.eventType as DiaryEntry['eventType'],
               description: e.description ?? '',
-              payload: e.payload ? JSON.parse(e.payload) : undefined,
+              // #2633 C2 (panel must-fix #2): guard the parse per-row — a single malformed payload
+              // must NOT throw and vanish the whole diary (it did, silently, via the outer .catch).
+              payload: safeParsePayload(e.payload),
               actorId: e.actorId,
               timestamp: e.timestamp,
             }))

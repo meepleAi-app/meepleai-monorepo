@@ -353,11 +353,15 @@ describe('mapNightLiveToViewModel — empty night (LD-11) + Slice-C seam (LD-3)'
     expect(vm.night.title).toBe('Serata Eldoria');
   });
 
-  it('emits the diary arrays as their true empty contract (Slice C2/C4)', () => {
+  it('exposes the sessionId→game lookup mapDiary joins against (Slice C2)', () => {
     const vm = mapNightLiveToViewModel(HAPPY, NOW);
-    expect(vm.diaryEvents).toEqual([]);
-    expect(vm.diaryGames).toEqual([]);
-    expect(vm.diaryPlayers).toEqual([]);
+    // The VM is live-only now — no diary fields (panel D2).
+    expect(vm).not.toHaveProperty('diaryEvents');
+    expect(vm.sessions).toEqual([
+      { sessionId: S1, gameId: G1, gameTitle: 'Brass' },
+      { sessionId: S2, gameId: G2, gameTitle: 'Spirit Island' },
+      { sessionId: S3, gameId: G3, gameTitle: 'Wingspan' },
+    ]);
   });
 
   it('leaves confirmedPlayers/totalPlayers undefined (no RSVP fetch in Slice B)', () => {

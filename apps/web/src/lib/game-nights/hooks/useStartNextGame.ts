@@ -17,6 +17,7 @@ import { ConflictError } from '@/lib/api/core/errors';
 import type { StartGameNightSessionResult } from '@/lib/api/schemas/game-nights.schemas';
 
 import { gameNightLiveKeys } from './useGameNightLive';
+import { nightLiveDiaryKeys } from './useNightLiveDiary';
 
 export const MAX_LIVE_SESSIONS_EXCEEDED = 'MAX_LIVE_SESSIONS_EXCEEDED';
 
@@ -39,7 +40,11 @@ export function useStartNextGame(
     mutationFn: ({ gameId, gameTitle }: StartNextGameVars) =>
       api.gameNights.startNextGame(gameNightId, gameId, gameTitle),
     onSuccess: () => {
+      // Refetch BOTH reads: the live sessions gain the new InProgress row AND the diary gains
+      // its game_started event — invalidating only the live key would leave the diary mis-grouped
+      // until its own staleTime elapsed (#2633 C2 must-fix #6, the two-query race).
       void queryClient.invalidateQueries({ queryKey: gameNightLiveKeys.detail(gameNightId) });
+      void queryClient.invalidateQueries({ queryKey: nightLiveDiaryKeys.detail(gameNightId) });
     },
     retry: false,
   });

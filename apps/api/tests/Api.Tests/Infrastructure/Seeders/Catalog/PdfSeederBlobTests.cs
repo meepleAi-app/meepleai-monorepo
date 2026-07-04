@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -296,6 +297,212 @@ public sealed class PdfSeederBlobTests
         _seedBlob.Verify(x => x.OpenReadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _primaryBlob.Verify(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         db.PdfDocuments.Should().BeEmpty();
+    }
+
+    // ===============================================================
+    // Repair mode (#2666): DB-only snapshot restore leaves the record
+    // intact but the blob missing from the runtime bucket. The seeder
+    // must verify blob presence before the idempotency skip and re-upload
+    // from the seed bucket using the EXISTING id when the blob is gone.
+    // ===============================================================
+
+    // ---------------------------------------------------------------
+    // Repair (a): record exists + blob PRESENT in runtime → plain skip
+    // ---------------------------------------------------------------
+    [Fact]
+    public async Task SeedAsync_ExistingHash_BlobPresentInRuntime_SkipsWithoutReupload()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var existingId = Guid.NewGuid();
+        _seedBlob.Setup(x => x.IsConfigured).Returns(true);
+
+        // Runtime blob is present → seeder must NOT re-upload nor mutate the record.
+        _primaryBlob.Setup(x => x.ExistsAsync(It.IsAny<string>(), BlobCategory.Pdf, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var manifest = CreateManifest(CreateBlobEntry(pdfSha256: "samehash"));
+        var gameMap = new Dictionary<int, Guid> { { 174430, gameId } };
+        using var db = TestDbContextFactory.CreateInMemoryDbContext();
+
+        db.Users.Add(new UserEntity { Id = userId, Email = "system@test.com", PasswordHash = "hash" });
+        db.SharedGames.Add(new SharedGameEntity { Id = gameId, Title = "Gloomhaven" });
+        db.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = existingId,
+            SharedGameId = gameId,
+            FileName = "gloomhaven.pdf",
+            // FilePath carries the fileId (deadbeef) so ExtractFileIdFromPath can build the ExistsAsync probe.
+            FilePath = $"pdfs/{PdfStorageKey.ForPdf(existingId)}/deadbeef_gloomhaven.pdf",
+            ContentHash = "samehash",
+            ProcessingState = nameof(PdfProcessingState.Ready),
+            UploadedByUserId = userId,
+            DocumentType = "base",
+            DocumentCategory = "Rulebook",
+        });
+        await db.SaveChangesAsync();
+
+        // Act
+        await PdfSeeder.SeedAsync(db, manifest, gameMap, userId,
+            _primaryBlob.Object, _seedBlob.Object, _logger.Object, CancellationToken.None);
+
+        // Assert — presence check happened, but no re-upload and no state change.
+        _primaryBlob.Verify(x => x.ExistsAsync(It.IsAny<string>(), BlobCategory.Pdf, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        _seedBlob.Verify(x => x.OpenReadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _primaryBlob.Verify(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        var doc = db.PdfDocuments.Single(p => p.Id == existingId);
+        doc.ProcessingState.Should().Be(nameof(PdfProcessingState.Ready));
+        db.ProcessingJobs.Should().BeEmpty();
+    }
+
+    // ---------------------------------------------------------------
+    // Repair (b): record exists + blob ABSENT in runtime + present in
+    //             seed → repair: re-upload against existing id, reset to
+    //             Pending, clear error fields, re-enqueue ProcessingJob.
+    // ---------------------------------------------------------------
+    [Fact]
+    public async Task SeedAsync_ExistingHash_BlobMissingInRuntimeButInSeed_RepairsInPlace()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var existingId = Guid.NewGuid();
+        _seedBlob.Setup(x => x.IsConfigured).Returns(true);
+
+        // Runtime blob is GONE (snapshot DB-only restore), but the seed bucket still has it.
+        _primaryBlob.Setup(x => x.ExistsAsync(It.IsAny<string>(), BlobCategory.Pdf, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _seedBlob.Setup(x => x.ExistsAsync("rulebooks/v1/gloomhaven.pdf", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _seedBlob.Setup(x => x.OpenReadAsync("rulebooks/v1/gloomhaven.pdf", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 }));
+
+        string? capturedResourceKey = null;
+        _primaryBlob.Setup(x => x.StoreAsync(It.IsAny<Stream>(), "gloomhaven.pdf", BlobCategory.Pdf, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<Stream, string, BlobCategory, string, CancellationToken>((_, _, _, rk, _) => capturedResourceKey = rk)
+            .ReturnsAsync(new BlobStorageResult(true, "newfile", "pdfs/repaired/newfile_gloomhaven.pdf", 4));
+
+        var manifest = CreateManifest(CreateBlobEntry(pdfSha256: "samehash"));
+        var gameMap = new Dictionary<int, Guid> { { 174430, gameId } };
+        using var db = TestDbContextFactory.CreateInMemoryDbContext();
+
+        db.Users.Add(new UserEntity { Id = userId, Email = "system@test.com", PasswordHash = "hash" });
+        db.SharedGames.Add(new SharedGameEntity { Id = gameId, Title = "Gloomhaven" });
+        db.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = existingId,
+            SharedGameId = gameId,
+            FileName = "gloomhaven.pdf",
+            FilePath = $"pdfs/{PdfStorageKey.ForPdf(existingId)}/deadbeef_gloomhaven.pdf",
+            FileSizeBytes = 999,
+            ContentHash = "samehash",
+            // The exact broken state observed on staging.
+            ProcessingState = nameof(PdfProcessingState.Failed),
+            ProcessingError = "PDF file not found in blob storage",
+            ErrorCategory = "Service",
+            FailedAtState = "Extracting",
+            RetryCount = 2,
+            UploadedByUserId = userId,
+            DocumentType = "base",
+            DocumentCategory = "Rulebook",
+        });
+        await db.SaveChangesAsync();
+
+        // Act
+        await PdfSeeder.SeedAsync(db, manifest, gameMap, userId,
+            _primaryBlob.Object, _seedBlob.Object, _logger.Object, CancellationToken.None);
+
+        // Assert — re-uploaded against the EXISTING id's bucket key (NOT a new Guid).
+        _primaryBlob.Verify(x => x.StoreAsync(It.IsAny<Stream>(), "gloomhaven.pdf", BlobCategory.Pdf, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        capturedResourceKey.Should().Be(PdfStorageKey.ForPdf(existingId));
+
+        // Record is repaired in place: same id, reset to Pending, error fields cleared, new blob path/size.
+        var docs = db.PdfDocuments.ToList();
+        docs.Should().HaveCount(1);
+        var doc = docs[0];
+        doc.Id.Should().Be(existingId);
+        doc.ProcessingState.Should().Be(nameof(PdfProcessingState.Pending));
+        doc.FilePath.Should().Be("pdfs/repaired/newfile_gloomhaven.pdf");
+        doc.FileSizeBytes.Should().Be(4);
+        doc.ProcessingError.Should().BeNull();
+        doc.ErrorCategory.Should().BeNull();
+        doc.FailedAtState.Should().BeNull();
+        doc.RetryCount.Should().Be(0);
+
+        // A fresh ProcessingJob is enqueued for the repaired PDF (5 Queued steps).
+        var jobs = db.ProcessingJobs.Include(j => j.Steps).ToList();
+        jobs.Should().HaveCount(1);
+        var job = jobs[0];
+        job.PdfDocumentId.Should().Be(existingId);
+        job.UserId.Should().Be(userId);
+        job.Status.Should().Be(nameof(JobStatus.Queued));
+        job.Steps.Should().HaveCount(5);
+        job.Steps.Select(s => s.StepName).Should().BeEquivalentTo(new[]
+        {
+            nameof(ProcessingStepType.Upload),
+            nameof(ProcessingStepType.Extract),
+            nameof(ProcessingStepType.Chunk),
+            nameof(ProcessingStepType.Embed),
+            nameof(ProcessingStepType.Index),
+        });
+        job.Steps.Should().OnlyContain(s => s.Status == "Pending");
+    }
+
+    // ---------------------------------------------------------------
+    // Repair (c): record exists + blob ABSENT in BOTH runtime and seed
+    //             → log warning, no crash, no re-upload, no state change.
+    // ---------------------------------------------------------------
+    [Fact]
+    public async Task SeedAsync_ExistingHash_BlobMissingInRuntimeAndSeed_LeavesRecordUntouched()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var existingId = Guid.NewGuid();
+        _seedBlob.Setup(x => x.IsConfigured).Returns(true);
+
+        // Blob gone from BOTH buckets → irrecoverable, must not crash and must not mutate.
+        _primaryBlob.Setup(x => x.ExistsAsync(It.IsAny<string>(), BlobCategory.Pdf, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _seedBlob.Setup(x => x.ExistsAsync("rulebooks/v1/gloomhaven.pdf", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var manifest = CreateManifest(CreateBlobEntry(pdfSha256: "samehash"));
+        var gameMap = new Dictionary<int, Guid> { { 174430, gameId } };
+        using var db = TestDbContextFactory.CreateInMemoryDbContext();
+
+        db.Users.Add(new UserEntity { Id = userId, Email = "system@test.com", PasswordHash = "hash" });
+        db.SharedGames.Add(new SharedGameEntity { Id = gameId, Title = "Gloomhaven" });
+        db.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = existingId,
+            SharedGameId = gameId,
+            FileName = "gloomhaven.pdf",
+            FilePath = $"pdfs/{PdfStorageKey.ForPdf(existingId)}/deadbeef_gloomhaven.pdf",
+            ContentHash = "samehash",
+            ProcessingState = nameof(PdfProcessingState.Failed),
+            ProcessingError = "PDF file not found in blob storage",
+            UploadedByUserId = userId,
+            DocumentType = "base",
+            DocumentCategory = "Rulebook",
+        });
+        await db.SaveChangesAsync();
+
+        // Act
+        Func<Task> act = () => PdfSeeder.SeedAsync(db, manifest, gameMap, userId,
+            _primaryBlob.Object, _seedBlob.Object, _logger.Object, CancellationToken.None);
+
+        // Assert — no crash, no re-upload, record untouched, no job enqueued.
+        await act.Should().NotThrowAsync();
+        _seedBlob.Verify(x => x.OpenReadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _primaryBlob.Verify(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        var doc = db.PdfDocuments.Single(p => p.Id == existingId);
+        doc.ProcessingState.Should().Be(nameof(PdfProcessingState.Failed));
+        doc.ProcessingError.Should().Be("PDF file not found in blob storage");
+        db.ProcessingJobs.Should().BeEmpty();
     }
 
     // ---------------------------------------------------------------

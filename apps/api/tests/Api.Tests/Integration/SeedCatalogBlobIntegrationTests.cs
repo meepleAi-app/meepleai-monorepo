@@ -247,8 +247,16 @@ public sealed class SeedCatalogBlobIntegrationTests
             .ReturnsAsync(() => new BlobStorageResult(
                 Success: true,
                 FileId: Guid.NewGuid().ToString(),
-                FilePath: "/blobs/x",
+                // Repair mode (#2666): FilePath must carry an extractable fileId so the
+                // second run can probe the runtime bucket for the existing record.
+                FilePath: "pdfs/bucket/abc123_barrage_rulebook.pdf",
                 FileSizeBytes: 4));
+        // Repair mode (#2666): the runtime blob IS present after the first store, so the
+        // second run's presence check must return true and short-circuit to a plain skip
+        // (no re-upload). Without this the seeder would treat the blob as missing and repair.
+        _primaryBlob
+            .Setup(x => x.ExistsAsync(It.IsAny<string>(), BlobCategory.Pdf, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
         // Act — run the seeder twice
         await PdfSeeder.SeedAsync(

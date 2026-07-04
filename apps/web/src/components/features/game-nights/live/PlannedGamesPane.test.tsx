@@ -182,4 +182,21 @@ describe('PlannedGamesPane', () => {
     const completedRow = container.querySelector('[data-status="completed"]');
     expect(completedRow?.className).toContain('opacity-80');
   });
+
+  // #2633 Slice B (LD-4): a Skipped session maps to status 'completed' + muted.
+  it('renders a muted (Skipped) tile with a SALTATA marker and data-muted flag', () => {
+    const skipped: PlannedGame = {
+      id: 's-skip',
+      title: 'Gioco Saltato',
+      status: 'completed',
+      order: 1,
+      muted: true,
+    };
+    const { container } = render(<PlannedGamesPane games={[skipped]} />);
+    expect(screen.getByText('SALTATA')).toBeInTheDocument();
+    expect(screen.queryByText('FINITO')).toBeNull();
+    const row = container.querySelector('[data-status="completed"]');
+    expect(row?.getAttribute('data-muted')).toBe('true');
+    expect(row?.className).toContain('opacity-50');
+  });
 });

@@ -40,8 +40,16 @@ test.describe('Smoke Test — 8 step pre-deploy', () => {
 
   test('2. Auth login form visibile', async ({ page }) => {
     await page.goto('/login', { waitUntil: 'domcontentloaded' });
+    // Il login form è client-only: nell'SSR /login rende il fallback <Suspense>
+    // (useSearchParams), quindi l'input email esiste SOLO dopo l'hydration del
+    // bundle client. Sul runner self-hosted (chromium headless, VPS con cap
+    // memoria 3G) l'hydration supera consistentemente gli 8s → falso negativo
+    // (il form è renderizzato e funzionante, verificato in un browser reale).
+    // Timeout ampio (30s) per assorbire l'hydration lenta senza rallentare il
+    // caso normale (l'expect passa appena l'elemento appare). NON mockare
+    // /auth/me qui: simulerebbe un utente loggato → redirect via da /login.
     await expect(page.locator('input[type="email"], input[name="email"]').first()).toBeVisible({
-      timeout: 8000,
+      timeout: 30000,
     });
   });
 

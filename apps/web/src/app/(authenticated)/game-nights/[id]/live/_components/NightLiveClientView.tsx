@@ -13,13 +13,14 @@
  * (LD-14) · empty-published happy path (LD-11).
  */
 
-import { useCallback, useEffect, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { NightLiveHub } from '@/components/features/game-nights/live';
+import { BlockedLiveSessionModal, NightLiveHub } from '@/components/features/game-nights/live';
 import { ForbiddenError, NotFoundError, UnauthorizedError } from '@/lib/api/core/errors';
 import { useGameNightLive } from '@/lib/game-nights/hooks/useGameNightLive';
+import { isMaxLiveBlockedError, useStartNextGame } from '@/lib/game-nights/hooks/useStartNextGame';
 
 export interface NightLiveClientViewProps {
   readonly nightId: string;
@@ -43,6 +44,25 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
   const handleLogin = useCallback(() => {
     router.push('/login');
   }, [router]);
+
+  // WS1 DEC-10: organizer-only interactive start. The mutation is server-authoritative —
+  // on success we invalidate the read model (no optimistic flip); a max-1-live 409 surfaces
+  // the blocked modal instead of a generic toast.
+  const startNextGame = useStartNextGame(nightId);
+  const [blockedModalOpen, setBlockedModalOpen] = useState(false);
+  const handleStartNext = useCallback(
+    (gameId: string, gameTitle: string) => {
+      startNextGame.mutate(
+        { gameId, gameTitle },
+        {
+          onError: err => {
+            if (isMaxLiveBlockedError(err)) setBlockedModalOpen(true);
+          },
+        }
+      );
+    },
+    [startNextGame]
+  );
 
   // LD-14: a Completed night must not render a fake-live hub over stale data —
   // send the user to the summary they actually want. The effect fires only once
@@ -96,25 +116,52 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
     );
   }
 
-  // Published → the read-only live hub.
+  // Published → the read-only live hub + the organizer's interactive start CTA (WS1).
+  const nextGame = vm.nextGame;
+  const liveSessionId = vm.currentGame?.sessionId ?? null;
+  // DEC-10: hidden when a game is already live (status==='live') — you can only start the
+  // next game when the current one is over. The 409 modal is the backstop for races.
+  const showStartCta = vm.isViewerOrganizer && nextGame !== null && vm.status !== 'live';
+
   return (
-    <NightLiveHub
-      readOnly
-      night={vm.night}
-      status={vm.status}
-      current={vm.current}
-      total={vm.total}
-      elapsed={vm.elapsed}
-      confirmedPlayers={vm.confirmedPlayers}
-      totalPlayers={vm.totalPlayers}
-      plannedGames={vm.plannedGames}
-      currentGame={vm.currentGame}
-      diaryEvents={vm.diaryEvents}
-      diaryGames={vm.diaryGames}
-      diaryPlayers={vm.diaryPlayers}
-      onBack={handleBack}
-      onJumpToSession={handleJumpToSession}
-    />
+    <>
+      <NightLiveHub
+        readOnly
+        night={vm.night}
+        status={vm.status}
+        current={vm.current}
+        total={vm.total}
+        elapsed={vm.elapsed}
+        confirmedPlayers={vm.confirmedPlayers}
+        totalPlayers={vm.totalPlayers}
+        plannedGames={vm.plannedGames}
+        currentGame={vm.currentGame}
+        diaryEvents={vm.diaryEvents}
+        diaryGames={vm.diaryGames}
+        diaryPlayers={vm.diaryPlayers}
+        onBack={handleBack}
+        onJumpToSession={handleJumpToSession}
+      />
+
+      {showStartCta && nextGame ? (
+        <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center p-4">
+          <button
+            type="button"
+            onClick={() => handleStartNext(nextGame.gameId, nextGame.gameTitle)}
+            disabled={startNextGame.isPending}
+            className="flex items-center gap-2 rounded-full border border-entity-session/40 bg-entity-session px-5 py-2.5 font-display text-sm font-extrabold text-white shadow-lg transition hover:bg-entity-session/90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {startNextGame.isPending ? 'Avvio…' : `▶ Avvia: ${nextGame.gameTitle}`}
+          </button>
+        </div>
+      ) : null}
+
+      <BlockedLiveSessionModal
+        open={blockedModalOpen}
+        onClose={() => setBlockedModalOpen(false)}
+        onJumpToLive={liveSessionId ? () => handleJumpToSession(liveSessionId) : undefined}
+      />
+    </>
   );
 }
 

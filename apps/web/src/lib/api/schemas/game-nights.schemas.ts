@@ -74,6 +74,15 @@ export const GameNightLineupItemDtoSchema = z.object({
 });
 export type GameNightLineupItemDto = z.infer<typeof GameNightLineupItemDtoSchema>;
 
+// WS1 DEC-10: result of POST /game-nights/{id}/sessions (start next game).
+export const StartGameNightSessionResultSchema = z.object({
+  sessionId: z.string().uuid(),
+  gameNightSessionId: z.string().uuid(),
+  sessionCode: z.string(),
+  playOrder: z.number().int(),
+});
+export type StartGameNightSessionResult = z.infer<typeof StartGameNightSessionResultSchema>;
+
 export const GameNightLiveDtoSchema = z.object({
   id: z.string().uuid(),
   title: z.string(),

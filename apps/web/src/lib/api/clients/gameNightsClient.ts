@@ -12,6 +12,7 @@ import {
   GameNightLiveDtoSchema,
   GameNightRsvpDtoSchema,
   RegularDtoSchema,
+  StartGameNightSessionResultSchema,
   type ConflictCheckDto,
   type CreateGameNightInput,
   type GameNightDto,
@@ -19,6 +20,7 @@ import {
   type GameNightRsvpDto,
   type RegularDto,
   type RsvpStatus,
+  type StartGameNightSessionResult,
   type UpdateGameNightInput,
 } from '../schemas/game-nights.schemas';
 
@@ -32,6 +34,12 @@ export interface GameNightsClient {
   getById(id: string): Promise<GameNightDto>;
   // #2633 Slice B: night-live read model (header + session progression).
   getLive(id: string): Promise<GameNightLiveDto>;
+  // #2633 WS1 DEC-10: start the next planned game (throws ConflictError on 409 max-live).
+  startNextGame(
+    gameNightId: string,
+    gameId: string,
+    gameTitle: string
+  ): Promise<StartGameNightSessionResult>;
   getRsvps(id: string): Promise<GameNightRsvpDto[]>;
   create(data: CreateGameNightInput): Promise<string>;
   update(id: string, data: UpdateGameNightInput): Promise<void>;
@@ -88,6 +96,19 @@ export function createGameNightsClient({
         });
       }
       return GameNightLiveDtoSchema.parse(data);
+    },
+
+    async startNextGame(gameNightId, gameId, gameTitle) {
+      // POST throws ConflictError (statusCode 409, code MAX_LIVE_SESSIONS_EXCEEDED) when a
+      // session is already live — the caller discriminates on that to mount the blocked modal.
+      const data = await httpClient.post<StartGameNightSessionResult>(
+        `/api/v1/game-nights/${gameNightId}/sessions`,
+        { gameId, gameTitle }
+      );
+      if (data === null) {
+        throw new UnauthorizedError({ message: 'Authentication required to start a game.' });
+      }
+      return StartGameNightSessionResultSchema.parse(data);
     },
 
     async getRsvps(id) {

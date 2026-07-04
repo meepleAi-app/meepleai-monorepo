@@ -65,4 +65,14 @@ describe('gameNightsClient.getLive', () => {
 
     await expect(client.getLive(GN_ID)).rejects.toBeInstanceOf(UnauthorizedError);
   });
+
+  it('rejects an unknown session status at the parse boundary — not the mapper (AC5)', async () => {
+    const poison = {
+      ...LIVE,
+      sessions: [{ ...LIVE.sessions[0], status: 'NewFutureStatus' }],
+    };
+    mockGet.mockResolvedValue(poison);
+
+    await expect(client.getLive(GN_ID)).rejects.toThrow();
+  });
 });

@@ -121,14 +121,29 @@ describe('NightLiveClientView — Published happy path', () => {
     expect(screen.queryByRole('button', { name: /^End$/ })).toBeNull();
   });
 
-  it('jumps to the real session on "Apri sessione live" (AC3)', async () => {
-    // currentGame is Slice C (null), so the jump is exercised via a planned-game
-    // row; here we assert the back navigation + jump handler wiring end-to-end.
+  it('navigates back to the night detail on "Indietro"', async () => {
     mockQuery({ data: vm() });
     render(<NightLiveClientView nightId={NIGHT_ID} />);
-    // back button navigates to the night detail
     await userEvent.click(screen.getByRole('button', { name: 'Indietro' }));
     expect(pushMock).toHaveBeenCalledWith(`/game-nights/${NIGHT_ID}`);
+  });
+
+  it('jumps to the session via its SessionId route key (AC3)', async () => {
+    // currentGame is Slice C (null from the mapper today) — but the jump handler
+    // is wired now, so we exercise it with a non-null currentGame to assert the
+    // /sessions/{SessionId} routing contract Slice C will rely on.
+    mockQuery({
+      data: vm({
+        currentGame: {
+          id: IN_PROGRESS_SESSION_ID,
+          sessionId: IN_PROGRESS_SESSION_ID,
+          title: 'Spirit Island',
+        },
+      }),
+    });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    await userEvent.click(screen.getByRole('button', { name: /Apri sessione live/i }));
+    expect(pushMock).toHaveBeenCalledWith(`/sessions/${IN_PROGRESS_SESSION_ID}`);
   });
 
   it('renders a defined empty state for a Published night with 0 sessions (LD-11)', () => {
@@ -167,6 +182,21 @@ describe('NightLiveClientView — error taxonomy (LD-10)', () => {
     mockQuery({ isError: true, error: new UnauthorizedError({ message: 'x' }) });
     render(<NightLiveClientView nightId={NIGHT_ID} />);
     expect(screen.getByText(/Sessione scaduta/i)).toBeInTheDocument();
+  });
+
+  it('401 UnauthorizedError → offers a login action routing to /login (LD-10 recovery)', async () => {
+    mockQuery({ isError: true, error: new UnauthorizedError({ message: 'x' }) });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    await userEvent.click(screen.getByRole('button', { name: /Accedi/i }));
+    expect(pushMock).toHaveBeenCalledWith('/login');
+  });
+
+  it('CircuitBreakerError → connection-lost copy (AC9)', () => {
+    const err = new Error('circuit open');
+    err.name = 'CircuitBreakerError';
+    mockQuery({ isError: true, error: err });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    expect(screen.getByRole('heading', { name: /Connessione persa/i })).toBeInTheDocument();
   });
 
   it('403 ForbiddenError → non-participant copy', () => {

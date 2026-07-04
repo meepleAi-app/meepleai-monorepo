@@ -40,6 +40,10 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
     [router]
   );
 
+  const handleLogin = useCallback(() => {
+    router.push('/login');
+  }, [router]);
+
   // LD-14: a Completed night must not render a fake-live hub over stale data —
   // send the user to the summary they actually want. The effect fires only once
   // the read model confirms the terminal status.
@@ -55,7 +59,7 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
   }
 
   if (isError) {
-    return <NightLiveError error={error} onBack={handleBack} />;
+    return <NightLiveError error={error} onBack={handleBack} onLogin={handleLogin} />;
   }
 
   if (!vm) {
@@ -134,13 +138,25 @@ function NightLiveSkeleton() {
 }
 
 /** LD-10: distinct copy per error class; a generic fallback for the rest. */
-function NightLiveError({ error, onBack }: { error: unknown; onBack: () => void }) {
+function NightLiveError({
+  error,
+  onBack,
+  onLogin,
+}: {
+  error: unknown;
+  onBack: () => void;
+  onLogin: () => void;
+}) {
   let title = 'Qualcosa è andato storto';
   let body = 'Non è stato possibile caricare la serata live. Riprova più tardi.';
+  // LD-10: a lapsed session (401) is a dead end without a recovery path — offer
+  // an explicit login action so the user is not stuck behind another auth wall.
+  let primaryAction: { label: string; onClick: () => void } | undefined;
 
   if (error instanceof UnauthorizedError) {
     title = 'Sessione scaduta';
     body = 'Effettua di nuovo l’accesso per vedere la serata live.';
+    primaryAction = { label: 'Accedi di nuovo', onClick: onLogin };
   } else if (error instanceof ForbiddenError) {
     title = 'Accesso riservato';
     body = 'Solo l’organizzatore o un giocatore invitato può vedere questa serata.';
@@ -155,7 +171,15 @@ function NightLiveError({ error, onBack }: { error: unknown; onBack: () => void 
     body = 'Controlla la connessione e riprova.';
   }
 
-  return <NightLiveNotice title={title} body={body} onBack={onBack} tone="error" />;
+  return (
+    <NightLiveNotice
+      title={title}
+      body={body}
+      onBack={onBack}
+      tone="error"
+      primaryAction={primaryAction}
+    />
+  );
 }
 
 function NightLiveNotice({
@@ -163,11 +187,13 @@ function NightLiveNotice({
   body,
   onBack,
   tone = 'neutral',
+  primaryAction,
 }: {
   title: string;
   body: ReactNode;
   onBack: () => void;
   tone?: 'neutral' | 'error';
+  primaryAction?: { label: string; onClick: () => void };
 }) {
   return (
     <div className="flex h-full min-h-0 flex-col items-center justify-center gap-3 bg-background p-6 text-center">
@@ -180,13 +206,24 @@ function NightLiveNotice({
         {title}
       </h1>
       <p className="max-w-sm font-mono text-sm text-muted-foreground">{body}</p>
-      <button
-        type="button"
-        onClick={onBack}
-        className="mt-2 rounded-md border border-border bg-card px-4 py-2 font-display text-[13px] font-extrabold text-foreground hover:bg-muted"
-      >
-        ← Torna alla serata
-      </button>
+      <div className="mt-2 flex items-center gap-2">
+        {primaryAction ? (
+          <button
+            type="button"
+            onClick={primaryAction.onClick}
+            className="rounded-md border border-entity-session/30 bg-entity-session/10 px-4 py-2 font-display text-[13px] font-extrabold text-entity-session hover:bg-entity-session/15"
+          >
+            {primaryAction.label}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={onBack}
+          className="rounded-md border border-border bg-card px-4 py-2 font-display text-[13px] font-extrabold text-foreground hover:bg-muted"
+        >
+          ← Torna alla serata
+        </button>
+      </div>
     </div>
   );
 }

@@ -230,6 +230,60 @@ describe('mapNightLiveToViewModel — planned games', () => {
   });
 });
 
+describe('mapNightLiveToViewModel — currentGame (Slice C1)', () => {
+  it('derives currentGame from the InProgress session', () => {
+    const cg = mapNightLiveToViewModel(HAPPY, NOW).currentGame;
+    expect(cg?.sessionId).toBe(S2);
+    expect(cg?.id).toBe(G2); // NightLiveHubCurrentGame.id = GameId
+    expect(cg?.title).toBe('Spirit Island');
+    expect(cg?.cover).toHaveLength(2);
+    expect(cg?.cover?.[0]).toContain(`hsl(${hashToHue(G2)}`);
+  });
+
+  it('leaves currentGame emoji + score undefined (fixture-only, D-SCORE/TIME)', () => {
+    const cg = mapNightLiveToViewModel(HAPPY, NOW).currentGame;
+    expect(cg?.emoji).toBeUndefined();
+    expect(cg?.score).toBeUndefined();
+  });
+
+  it('currentGame is null when no session is InProgress', () => {
+    const allDone = live({
+      sessions: [
+        session({
+          status: 'Completed',
+          startedAt: '2026-07-04T20:00:00Z',
+          completedAt: '2026-07-04T21:00:00Z',
+        }),
+      ],
+    });
+    expect(mapNightLiveToViewModel(allDone, NOW).currentGame).toBeNull();
+  });
+
+  it('picks the lowest-playOrder InProgress session when >1 (racy read)', () => {
+    const dto = live({
+      sessions: [
+        session({
+          sessionId: S2,
+          gameId: G2,
+          gameTitle: 'Later',
+          playOrder: 3,
+          status: 'InProgress',
+          startedAt: '2026-07-04T22:00:00Z',
+        }),
+        session({
+          sessionId: S1,
+          gameId: G1,
+          gameTitle: 'Earlier',
+          playOrder: 2,
+          status: 'InProgress',
+          startedAt: '2026-07-04T22:10:00Z',
+        }),
+      ],
+    });
+    expect(mapNightLiveToViewModel(dto, NOW).currentGame?.sessionId).toBe(S1);
+  });
+});
+
 describe('mapNightLiveToViewModel — time (LD-7)', () => {
   it("elapsed is 'Hh Mm' from the earliest StartedAt to now", () => {
     expect(mapNightLiveToViewModel(HAPPY, NOW).elapsed).toBe('2h 35m');
@@ -274,9 +328,8 @@ describe('mapNightLiveToViewModel — empty night (LD-11) + Slice-C seam (LD-3)'
     expect(vm.night.title).toBe('Serata Eldoria');
   });
 
-  it('emits the Slice-C props as their true empty contract', () => {
+  it('emits the diary arrays as their true empty contract (Slice C2/C4)', () => {
     const vm = mapNightLiveToViewModel(HAPPY, NOW);
-    expect(vm.currentGame).toBeNull();
     expect(vm.diaryEvents).toEqual([]);
     expect(vm.diaryGames).toEqual([]);
     expect(vm.diaryPlayers).toEqual([]);

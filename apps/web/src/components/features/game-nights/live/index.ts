@@ -19,6 +19,9 @@ export type {
   PlannedGameWinner,
 } from '@/components/features/game-nights/live/PlannedGamesPane';
 
+export { BlockedLiveSessionModal } from '@/components/features/game-nights/live/BlockedLiveSessionModal';
+export type { BlockedLiveSessionModalProps } from '@/components/features/game-nights/live/BlockedLiveSessionModal';
+
 export { NightLiveHub } from '@/components/features/game-nights/live/NightLiveHub';
 export type {
   NightLiveHubProps,

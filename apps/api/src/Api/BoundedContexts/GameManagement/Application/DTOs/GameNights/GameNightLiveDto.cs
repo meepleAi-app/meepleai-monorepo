@@ -12,7 +12,19 @@ public sealed record GameNightLiveDto(
     Guid Id,
     string Title,
     GameNightStatus Status,
-    IReadOnlyList<GameNightSessionDto> Sessions);
+    IReadOnlyList<GameNightSessionDto> Sessions,
+    // WS1 DEC-9: true when the caller is the night's organizer — gates the FE
+    // organizer-only "Avvia prossimo gioco" CTA. The read admits organizer + invited
+    // participants, so a viewer flag is needed to distinguish them.
+    bool IsViewerOrganizer,
+    // WS1 DEC-9: the planned games not yet turned into a Session, in planned order.
+    // The CTA starts the first of these (needs GameId + GameTitle for POST /sessions).
+    IReadOnlyList<GameNightLineupItemDto> PlannedLineup);
+
+/// <summary>
+/// A planned game in the night's line-up that has not yet been started as a Session.
+/// </summary>
+public sealed record GameNightLineupItemDto(Guid GameId, string GameTitle);
 
 /// <summary>
 /// A single sitting within the night — a projection of the <c>GameNightSession</c> child entity.

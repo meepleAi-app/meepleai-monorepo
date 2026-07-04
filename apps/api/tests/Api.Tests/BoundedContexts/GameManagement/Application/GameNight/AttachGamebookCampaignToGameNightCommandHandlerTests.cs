@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
+using Api.BoundedContexts.GameManagement.Domain.Exceptions;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
@@ -13,6 +14,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
 
@@ -140,6 +142,53 @@ public class AttachGamebookCampaignToGameNightCommandHandlerTests
                 c.Participants[0].IsOwner &&
                 c.Participants[0].DisplayName == "Marco Rossi"),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_HappyPath_WrapsWorkInCommittedTransaction()
+    {
+        var organizer = Guid.NewGuid();
+        var gameNight = CreatePublishedEvent(organizer);
+        var campaignId = Guid.NewGuid();
+        SetupCampaign(campaignId, CampaignDto(campaignId, Guid.NewGuid(), organizer, GameRefKind.Shared));
+        SetupCreateSession(Guid.NewGuid());
+        SetupUser(organizer, "Marco Rossi");
+        _repo.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>())).ReturnsAsync(gameNight);
+
+        await _handler.Handle(
+            new AttachGamebookCampaignToGameNightCommand(gameNight.Id, campaignId, organizer),
+            TestContext.Current.CancellationToken);
+
+        _uow.Verify(u => u.BeginTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _uow.Verify(u => u.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _uow.Verify(u => u.RollbackTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_ConcurrentXminLoser_RollsBackTransaction_Throws409()
+    {
+        // The xmin loser's aggregate SaveChanges throws; the whole tx (incl. the cross-BC Session
+        // INSERT) must roll back so no orphan Session survives, then map to the blocked-modal 409.
+        var organizer = Guid.NewGuid();
+        var gameNight = CreatePublishedEvent(organizer);
+        var campaignId = Guid.NewGuid();
+        SetupCampaign(campaignId, CampaignDto(campaignId, Guid.NewGuid(), organizer, GameRefKind.Shared));
+        SetupCreateSession(Guid.NewGuid());
+        SetupUser(organizer, "Marco Rossi");
+        _repo.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>())).ReturnsAsync(gameNight);
+        _uow.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateConcurrencyException());
+
+        var act = () => _handler.Handle(
+            new AttachGamebookCampaignToGameNightCommand(gameNight.Id, campaignId, organizer),
+            TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<MaxLiveSessionsExceededException>();
+        _uow.Verify(u => u.BeginTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _uow.Verify(u => u.RollbackTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _uow.Verify(u => u.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _mediator.Verify(m => m.Send(It.IsAny<OpenSessionLiveModeCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]

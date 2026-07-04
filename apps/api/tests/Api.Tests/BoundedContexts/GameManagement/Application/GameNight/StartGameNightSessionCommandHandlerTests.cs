@@ -6,10 +6,12 @@ using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
+using Api.BoundedContexts.GameManagement.Domain.Exceptions;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
 
@@ -291,6 +293,68 @@ public class StartGameNightSessionCommandHandlerTests
             () => _handler.Handle(command, CancellationToken.None));
 
         _mockMediator.Verify(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_HappyPath_WrapsWorkInCommittedTransaction()
+    {
+        // Arrange — the cross-BC Session INSERT + the aggregate link must be ONE atomic tx so a
+        // later failure cannot leave the Session orphaned (WS1 DEC-5 hardening).
+        var gameNight = CreatePublishedEvent();
+
+        _mockRepository.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateOrganizerDto(gameNight.OrganizerId));
+        _mockMediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CreateSessionResult(
+                Guid.NewGuid(), "ABC123", [], GameNightEventId: gameNight.Id,
+                GameNightWasCreated: false, AgentDefinitionId: null, ToolkitId: null));
+
+        var command = new StartGameNightSessionCommand(
+            gameNight.Id, gameNight.GameIds[0], "Catan", gameNight.OrganizerId);
+
+        // Act
+        await _handler.Handle(command, CancellationToken.None);
+
+        // Assert — begun + committed exactly once, never rolled back.
+        _mockUnitOfWork.Verify(u => u.BeginTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _mockUnitOfWork.Verify(u => u.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _mockUnitOfWork.Verify(u => u.RollbackTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_ConcurrentXminLoser_RollsBackTransaction_Throws409()
+    {
+        // Arrange — two concurrent starts both pass the in-memory guard; the xmin loser's aggregate
+        // SaveChanges throws DbUpdateConcurrencyException. The whole tx (incl. the cross-BC Session
+        // INSERT) must roll back so no orphan Session survives, then map to the blocked-modal 409.
+        var gameNight = CreatePublishedEvent();
+
+        _mockRepository.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateOrganizerDto(gameNight.OrganizerId));
+        _mockMediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CreateSessionResult(
+                Guid.NewGuid(), "ABC123", [], GameNightEventId: gameNight.Id,
+                GameNightWasCreated: false, AgentDefinitionId: null, ToolkitId: null));
+        _mockUnitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateConcurrencyException());
+
+        var command = new StartGameNightSessionCommand(
+            gameNight.Id, gameNight.GameIds[0], "Catan", gameNight.OrganizerId);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<MaxLiveSessionsExceededException>(
+            () => _handler.Handle(command, CancellationToken.None));
+
+        _mockUnitOfWork.Verify(u => u.BeginTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _mockUnitOfWork.Verify(u => u.RollbackTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _mockUnitOfWork.Verify(u => u.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
+        // The blocked start must NOT open live mode on a rolled-back session.
+        _mockMediator.Verify(m => m.Send(It.IsAny<OpenSessionLiveModeCommand>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 

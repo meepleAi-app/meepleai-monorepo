@@ -14,11 +14,13 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import {
+  ConflictError,
   ForbiddenError,
   NotFoundError,
   UnauthorizedError,
   NetworkError,
 } from '@/lib/api/core/errors';
+import { MAX_LIVE_SESSIONS_EXCEEDED } from '@/lib/game-nights/hooks/useStartNextGame';
 import type { NightLiveViewModel } from '@/lib/game-nights/mapNightLive';
 
 import { NightLiveClientView } from '../NightLiveClientView';
@@ -27,6 +29,18 @@ const useGameNightLiveMock = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/game-nights/hooks/useGameNightLive', () => ({
   useGameNightLive: useGameNightLiveMock,
 }));
+
+// Mock only the mutation hook; keep isMaxLiveBlockedError + MAX_LIVE_SESSIONS_EXCEEDED real so the
+// view's real 409 discrimination is exercised (no QueryClientProvider needed in these tests).
+const startNextMutateMock = vi.hoisted(() => vi.fn());
+const startNextState = vi.hoisted(() => ({ isPending: false }));
+vi.mock('@/lib/game-nights/hooks/useStartNextGame', async importActual => {
+  const actual = await importActual<typeof import('@/lib/game-nights/hooks/useStartNextGame')>();
+  return {
+    ...actual,
+    useStartNextGame: () => ({ mutate: startNextMutateMock, isPending: startNextState.isPending }),
+  };
+});
 
 const pushMock = vi.fn();
 const replaceMock = vi.fn();
@@ -41,6 +55,8 @@ function vm(over: Partial<NightLiveViewModel> = {}): NightLiveViewModel {
   return {
     night: { title: 'Serata Eldoria' },
     nightStatus: 'Published',
+    isViewerOrganizer: false,
+    nextGame: null,
     status: 'live',
     current: 2,
     total: 3,
@@ -89,7 +105,10 @@ function mockQuery(over: Record<string, unknown>) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  startNextState.isPending = false;
 });
+
+const NEXT_GAME = { gameId: '77777777-7777-4777-8777-777777777777', gameTitle: 'Catan' };
 
 describe('NightLiveClientView — loading', () => {
   it('renders a loading skeleton while the query is pending', () => {
@@ -152,6 +171,72 @@ describe('NightLiveClientView — Published happy path', () => {
     });
     render(<NightLiveClientView nightId={NIGHT_ID} />);
     expect(screen.getByText('Nessun gioco pianificato')).toBeInTheDocument();
+  });
+});
+
+describe('NightLiveClientView — organizer interactive start (WS1 DEC-10)', () => {
+  it('does NOT render the start CTA for a non-organizer viewer', () => {
+    mockQuery({
+      data: vm({ isViewerOrganizer: false, nextGame: NEXT_GAME, status: 'transition' }),
+    });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    expect(screen.queryByRole('button', { name: /Avvia:/i })).toBeNull();
+  });
+
+  it('does NOT render the start CTA when there is no next game', () => {
+    mockQuery({ data: vm({ isViewerOrganizer: true, nextGame: null, status: 'transition' }) });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    expect(screen.queryByRole('button', { name: /Avvia:/i })).toBeNull();
+  });
+
+  it('hides the start CTA while a game is already live (status==="live")', () => {
+    mockQuery({ data: vm({ isViewerOrganizer: true, nextGame: NEXT_GAME, status: 'live' }) });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    expect(screen.queryByRole('button', { name: /Avvia:/i })).toBeNull();
+  });
+
+  it('renders the start CTA for the organizer when a next game is queued and no game is live', () => {
+    mockQuery({ data: vm({ isViewerOrganizer: true, nextGame: NEXT_GAME, status: 'transition' }) });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    expect(screen.getByRole('button', { name: /Avvia: Catan/i })).toBeInTheDocument();
+  });
+
+  it('starts the next game with its id + title on click', async () => {
+    mockQuery({ data: vm({ isViewerOrganizer: true, nextGame: NEXT_GAME, status: 'transition' }) });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    await userEvent.click(screen.getByRole('button', { name: /Avvia: Catan/i }));
+    expect(startNextMutateMock).toHaveBeenCalledWith(
+      { gameId: NEXT_GAME.gameId, gameTitle: NEXT_GAME.gameTitle },
+      expect.objectContaining({ onError: expect.any(Function) })
+    );
+  });
+
+  it('disables the CTA while the mutation is pending', () => {
+    startNextState.isPending = true;
+    mockQuery({ data: vm({ isViewerOrganizer: true, nextGame: NEXT_GAME, status: 'transition' }) });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    expect(screen.getByRole('button', { name: /Avvio/i })).toBeDisabled();
+  });
+
+  it('surfaces the blocked modal when the start returns a max-1-live 409', async () => {
+    startNextMutateMock.mockImplementation((_vars, opts) => {
+      opts?.onError?.(new ConflictError({ message: 'blocked', code: MAX_LIVE_SESSIONS_EXCEEDED }));
+    });
+    mockQuery({ data: vm({ isViewerOrganizer: true, nextGame: NEXT_GAME, status: 'transition' }) });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    await userEvent.click(screen.getByRole('button', { name: /Avvia: Catan/i }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /già una partita live/i })).toBeInTheDocument();
+  });
+
+  it('does NOT surface the blocked modal for a non-409 error', async () => {
+    startNextMutateMock.mockImplementation((_vars, opts) => {
+      opts?.onError?.(new Error('boom'));
+    });
+    mockQuery({ data: vm({ isViewerOrganizer: true, nextGame: NEXT_GAME, status: 'transition' }) });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    await userEvent.click(screen.getByRole('button', { name: /Avvia: Catan/i }));
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });
 

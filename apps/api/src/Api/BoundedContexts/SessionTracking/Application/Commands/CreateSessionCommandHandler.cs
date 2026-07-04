@@ -77,8 +77,15 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
         }
 
         // Session Flow v2.1 — T4: Resolve or create the GameNight envelope.
-        var (nightEntity, gameNightWasCreated) = await ResolveGameNightAsync(
-            request, cancellationToken).ConfigureAwait(false);
+        // WS1 DEC-3: the game-night orchestrators own the session↔night link on the
+        // GameNightEvent aggregate, so they skip the envelope here (no phantom night).
+        GameNightEventEntity? nightEntity = null;
+        var gameNightWasCreated = false;
+        if (!request.SkipGameNightEnvelope)
+        {
+            (nightEntity, gameNightWasCreated) = await ResolveGameNightAsync(
+                request, cancellationToken).ConfigureAwait(false);
+        }
 
         var sessionType = Enum.Parse<SessionType>(request.SessionType);
 
@@ -157,101 +164,109 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
             {
                 await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);
 
-                // I2 fix: enforce max 5 sessions per GameNight (domain invariant bypass guard)
-                var existingSessionCount = await _db.GameNightSessions
-                    .CountAsync(gns => gns.GameNightEventId == nightEntity.Id, cancellationToken)
-                    .ConfigureAwait(false);
-                if (existingSessionCount >= 5)
-                    throw new ConflictException("A game night cannot have more than 5 sessions.");
-
-                var playOrder = Math.Max(1, nightEntity.Sessions.Count + 1);
-                var linkEntity = new GameNightSessionEntity
-                {
-                    Id = Guid.NewGuid(),
-                    GameNightEventId = nightEntity.Id,
-                    SessionId = session.Id,
-                    GameId = request.GameId,
-                    GameTitle = gameTitle,
-                    PlayOrder = playOrder,
-                    Status = GameNightSessionStatus.InProgress.ToString(),
-                    StartedAt = _timeProvider.GetUtcNow()
-                };
-
-                // Session Flow v2.1 — T5 fix: when nightEntity is loaded (Unchanged) and the
-                // child link has a non-default Guid PK, EF identity-resolution would otherwise
-                // mark the new linkEntity as Modified instead of Added (because GameNightSessionEntity.Id
-                // is configured ValueGeneratedOnAdd). Adding via the DbSet forces Added state and
-                // also keeps the in-memory navigation collection consistent for subsequent code paths.
-                await _db.GameNightSessions.AddAsync(linkEntity, cancellationToken).ConfigureAwait(false);
-                nightEntity.Sessions.Add(linkEntity);
-
-                // Session Flow v2.1 — T4: Emit diary events.
+                // Session Flow v2.1 — T4: Emit diary events (hoisted so the SSE publish loop
+                // below works whether or not the game-night envelope was written).
                 var diaryEntities = new List<Api.Infrastructure.Entities.SessionTracking.SessionEventEntity>();
 
-                var sessionCreatedPayload = System.Text.Json.JsonSerializer.Serialize(new
+                // WS1 DEC-3: the game-night orchestrators own the session↔night link on the
+                // GameNightEvent aggregate, so the envelope (link + game-night diary) is skipped
+                // here — otherwise this handler would mint a phantom ad-hoc night double-linking
+                // the session (breaking FindByLinkedSessionIdAsync).
+                if (!request.SkipGameNightEnvelope && nightEntity != null)
                 {
-                    gameId = request.GameId,
-                    gameNightEventId = nightEntity.Id,
-                    gameNightWasCreated
-                });
-                var sessionCreatedDiary = new Api.Infrastructure.Entities.SessionTracking.SessionEventEntity
-                {
-                    Id = Guid.NewGuid(),
-                    SessionId = session.Id,
-                    GameNightId = nightEntity.Id,
-                    EventType = "session_created",
-                    Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
-                    Payload = sessionCreatedPayload,
-                    CreatedBy = request.UserId,
-                    Source = "system",
-                    IsDeleted = false
-                };
-                _db.SessionEvents.Add(sessionCreatedDiary);
-                diaryEntities.Add(sessionCreatedDiary);
+                    // I2 fix: enforce max 5 sessions per GameNight (domain invariant bypass guard)
+                    var existingSessionCount = await _db.GameNightSessions
+                        .CountAsync(gns => gns.GameNightEventId == nightEntity.Id, cancellationToken)
+                        .ConfigureAwait(false);
+                    if (existingSessionCount >= 5)
+                        throw new ConflictException("A game night cannot have more than 5 sessions.");
 
-                if (gameNightWasCreated)
-                {
-                    var nightCreatedPayload = System.Text.Json.JsonSerializer.Serialize(new
+                    var playOrder = Math.Max(1, nightEntity.Sessions.Count + 1);
+                    var linkEntity = new GameNightSessionEntity
                     {
+                        Id = Guid.NewGuid(),
+                        GameNightEventId = nightEntity.Id,
+                        SessionId = session.Id,
+                        GameId = request.GameId,
+                        GameTitle = gameTitle,
+                        PlayOrder = playOrder,
+                        Status = GameNightSessionStatus.InProgress.ToString(),
+                        StartedAt = _timeProvider.GetUtcNow()
+                    };
+
+                    // Session Flow v2.1 — T5 fix: when nightEntity is loaded (Unchanged) and the
+                    // child link has a non-default Guid PK, EF identity-resolution would otherwise
+                    // mark the new linkEntity as Modified instead of Added (because GameNightSessionEntity.Id
+                    // is configured ValueGeneratedOnAdd). Adding via the DbSet forces Added state and
+                    // also keeps the in-memory navigation collection consistent for subsequent code paths.
+                    await _db.GameNightSessions.AddAsync(linkEntity, cancellationToken).ConfigureAwait(false);
+                    nightEntity.Sessions.Add(linkEntity);
+
+                    var sessionCreatedPayload = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        gameId = request.GameId,
                         gameNightEventId = nightEntity.Id,
-                        title = nightEntity.Title,
-                        isAdHoc = true
+                        gameNightWasCreated
                     });
-                    var nightCreatedDiary = new Api.Infrastructure.Entities.SessionTracking.SessionEventEntity
+                    var sessionCreatedDiary = new Api.Infrastructure.Entities.SessionTracking.SessionEventEntity
                     {
                         Id = Guid.NewGuid(),
                         SessionId = session.Id,
                         GameNightId = nightEntity.Id,
-                        EventType = "gamenight_created",
+                        EventType = "session_created",
                         Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
-                        Payload = nightCreatedPayload,
+                        Payload = sessionCreatedPayload,
                         CreatedBy = request.UserId,
                         Source = "system",
                         IsDeleted = false
                     };
-                    _db.SessionEvents.Add(nightCreatedDiary);
-                    diaryEntities.Add(nightCreatedDiary);
-                }
-                else
-                {
-                    var gameAddedPayload = System.Text.Json.JsonSerializer.Serialize(new
+                    _db.SessionEvents.Add(sessionCreatedDiary);
+                    diaryEntities.Add(sessionCreatedDiary);
+
+                    if (gameNightWasCreated)
                     {
-                        addedGameId = request.GameId
-                    });
-                    var gameAddedDiary = new Api.Infrastructure.Entities.SessionTracking.SessionEventEntity
+                        var nightCreatedPayload = System.Text.Json.JsonSerializer.Serialize(new
+                        {
+                            gameNightEventId = nightEntity.Id,
+                            title = nightEntity.Title,
+                            isAdHoc = true
+                        });
+                        var nightCreatedDiary = new Api.Infrastructure.Entities.SessionTracking.SessionEventEntity
+                        {
+                            Id = Guid.NewGuid(),
+                            SessionId = session.Id,
+                            GameNightId = nightEntity.Id,
+                            EventType = "gamenight_created",
+                            Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
+                            Payload = nightCreatedPayload,
+                            CreatedBy = request.UserId,
+                            Source = "system",
+                            IsDeleted = false
+                        };
+                        _db.SessionEvents.Add(nightCreatedDiary);
+                        diaryEntities.Add(nightCreatedDiary);
+                    }
+                    else
                     {
-                        Id = Guid.NewGuid(),
-                        SessionId = session.Id,
-                        GameNightId = nightEntity.Id,
-                        EventType = "gamenight_game_added",
-                        Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
-                        Payload = gameAddedPayload,
-                        CreatedBy = request.UserId,
-                        Source = "system",
-                        IsDeleted = false
-                    };
-                    _db.SessionEvents.Add(gameAddedDiary);
-                    diaryEntities.Add(gameAddedDiary);
+                        var gameAddedPayload = System.Text.Json.JsonSerializer.Serialize(new
+                        {
+                            addedGameId = request.GameId
+                        });
+                        var gameAddedDiary = new Api.Infrastructure.Entities.SessionTracking.SessionEventEntity
+                        {
+                            Id = Guid.NewGuid(),
+                            SessionId = session.Id,
+                            GameNightId = nightEntity.Id,
+                            EventType = "gamenight_game_added",
+                            Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
+                            Payload = gameAddedPayload,
+                            CreatedBy = request.UserId,
+                            Source = "system",
+                            IsDeleted = false
+                        };
+                        _db.SessionEvents.Add(gameAddedDiary);
+                        diaryEntities.Add(gameAddedDiary);
+                    }
                 }
 
                 // Single atomic save for session + participants + guest additions + night link + diary events.
@@ -275,7 +290,7 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                     SessionId: session.Id,
                     SessionCode: session.SessionCode,
                     Participants: session.Participants.Select(MapParticipant).ToList(),
-                    GameNightEventId: nightEntity.Id,
+                    GameNightEventId: nightEntity?.Id ?? Guid.Empty, // WS1 DEC-3: Empty when the envelope is skipped
                     GameNightWasCreated: gameNightWasCreated,
                     AgentDefinitionId: agentDefinitionId,
                     ToolkitId: toolkitId);

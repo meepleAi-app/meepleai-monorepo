@@ -261,4 +261,91 @@ public sealed class CreateSessionCommandHandlerTests : IDisposable
         _sessionRepoMock.Verify(r => r.AddAsync(It.IsAny<Api.BoundedContexts.SessionTracking.Domain.Entities.Session>(), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
+
+    // WS1 DEC-3 (#2633): the game-night orchestrators own the session↔night link on the
+    // GameNightEvent aggregate, so SkipGameNightEnvelope=true must create ONLY the tracking
+    // Session — no phantom ad-hoc night, no game_night_sessions link, no game-night diary rows.
+    // (This is the fix for the phantom double-link that made FindByLinkedSessionIdAsync
+    // nondeterministic and broke #2633.)
+    [Fact]
+    public async Task Handle_WithSkipGameNightEnvelope_CreatesNoNightNoLinkNoDiary()
+    {
+        var userId = Guid.NewGuid();
+        _db.Users.Add(new Api.Infrastructure.Entities.UserEntity
+        {
+            Id = userId,
+            Email = "skip@example.com",
+            Role = "user",
+            Tier = "free"
+        });
+        await _db.SaveChangesAsync();
+
+        _quotaServiceMock
+            .Setup(s => s.CheckQuotaAsync(
+                userId,
+                It.IsAny<Api.SharedKernel.Domain.ValueObjects.UserTier>(),
+                It.IsAny<Api.SharedKernel.Domain.ValueObjects.Role>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SessionQuotaResult.Allowed(0, 3));
+
+        var command = new CreateSessionCommand(
+            userId,
+            Guid.NewGuid(),
+            "Generic",
+            null,
+            null,
+            [new ParticipantDto { DisplayName = "Owner", IsOwner = true, UserId = userId }],
+            SkipGameNightEnvelope: true);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        Assert.Equal(Guid.Empty, result.GameNightEventId);
+        Assert.False(result.GameNightWasCreated);
+        Assert.Empty(_db.ChangeTracker.Entries<Api.Infrastructure.Entities.GameManagement.GameNightEventEntity>());
+        Assert.Empty(_db.ChangeTracker.Entries<Api.Infrastructure.Entities.GameManagement.GameNightSessionEntity>());
+        Assert.Empty(_db.ChangeTracker.Entries<Api.Infrastructure.Entities.SessionTracking.SessionEventEntity>());
+        _sessionRepoMock.Verify(
+            r => r.AddAsync(It.IsAny<Api.BoundedContexts.SessionTracking.Domain.Entities.Session>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    // Regression: the direct one-click flow (default SkipGameNightEnvelope=false) still mints
+    // the ad-hoc InProgress night + link + diary — WS1 must not change it.
+    [Fact]
+    public async Task Handle_WithoutSkip_CreatesAdHocNightAndLinkAndDiary()
+    {
+        var userId = Guid.NewGuid();
+        _db.Users.Add(new Api.Infrastructure.Entities.UserEntity
+        {
+            Id = userId,
+            Email = "noskip@example.com",
+            Role = "user",
+            Tier = "free"
+        });
+        await _db.SaveChangesAsync();
+
+        _quotaServiceMock
+            .Setup(s => s.CheckQuotaAsync(
+                userId,
+                It.IsAny<Api.SharedKernel.Domain.ValueObjects.UserTier>(),
+                It.IsAny<Api.SharedKernel.Domain.ValueObjects.Role>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SessionQuotaResult.Allowed(0, 3));
+
+        var command = new CreateSessionCommand(
+            userId,
+            Guid.NewGuid(),
+            "Generic",
+            null,
+            null,
+            [new ParticipantDto { DisplayName = "Owner", IsOwner = true, UserId = userId }]);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        Assert.NotEqual(Guid.Empty, result.GameNightEventId);
+        Assert.True(result.GameNightWasCreated);
+        Assert.Single(_db.ChangeTracker.Entries<Api.Infrastructure.Entities.GameManagement.GameNightEventEntity>());
+        Assert.Single(_db.ChangeTracker.Entries<Api.Infrastructure.Entities.GameManagement.GameNightSessionEntity>());
+        Assert.NotEmpty(_db.ChangeTracker.Entries<Api.Infrastructure.Entities.SessionTracking.SessionEventEntity>());
+    }
 }

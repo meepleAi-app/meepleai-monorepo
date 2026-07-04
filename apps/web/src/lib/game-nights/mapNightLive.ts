@@ -161,6 +161,19 @@ export function mapNightLiveToViewModel(dto: GameNightLiveDto, now: Date): Night
   // LD-8: 'live' iff a session is running; no 'paused' signal from the BE.
   const status: NightLiveStatus = inProgress.length > 0 ? 'live' : 'transition';
 
+  // Slice C1: currentGame is the InProgress session (lowest PlayOrder if racy).
+  // `inProgress` preserves the play-order sort, so [0] is the lowest. emoji/score
+  // stay undefined (fixture-only, D-SCORE/TIME); the diary is Slice C2/C4.
+  const currentSession = inProgress[0];
+  const currentGame: NightLiveHubCurrentGame | null = currentSession
+    ? {
+        id: currentSession.gameId,
+        sessionId: currentSession.sessionId,
+        title: toTitle(currentSession),
+        cover: coverFromGameId(currentSession.gameId),
+      }
+    : null;
+
   return {
     night: { title: dto.title }, // LD-15: shortTitle/nightCode undefined in Slice B
     nightStatus: dto.status, // LD-14: raw lifecycle status for terminal routing
@@ -171,8 +184,8 @@ export function mapNightLiveToViewModel(dto: GameNightLiveDto, now: Date): Night
     confirmedPlayers: undefined, // LD-8: no RSVP fetch in Slice B
     totalPlayers: undefined,
     plannedGames,
-    currentGame: null, // LD-3: Slice C
-    diaryEvents: [],
+    currentGame, // Slice C1
+    diaryEvents: [], // LD-3: Slice C2/C4
     diaryGames: [],
     diaryPlayers: [],
   };

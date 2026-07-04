@@ -63,6 +63,7 @@ const LIVE_DTO: GameNightLiveDto = {
       completedAt: null,
     },
   ],
+  isViewerOrganizer: true,
 };
 
 describe('useGameNightLive — query key factory', () => {

@@ -35,6 +35,8 @@ export interface NightLiveViewModel {
   readonly night: NightLiveHubNight;
   /** Raw GameNight lifecycle status — drives terminal-night routing (LD-14). */
   readonly nightStatus: GameNightStatus;
+  /** WS1 DEC-9: gates the organizer-only "Avvia prossimo gioco" CTA. */
+  readonly isViewerOrganizer: boolean;
   readonly status: NightLiveStatus;
   readonly current: number;
   readonly total: number;
@@ -177,6 +179,7 @@ export function mapNightLiveToViewModel(dto: GameNightLiveDto, now: Date): Night
   return {
     night: { title: dto.title }, // LD-15: shortTitle/nightCode undefined in Slice B
     nightStatus: dto.status, // LD-14: raw lifecycle status for terminal routing
+    isViewerOrganizer: dto.isViewerOrganizer, // WS1 DEC-9
     status,
     current,
     total,

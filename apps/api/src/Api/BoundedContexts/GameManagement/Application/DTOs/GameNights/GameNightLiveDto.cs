@@ -12,7 +12,11 @@ public sealed record GameNightLiveDto(
     Guid Id,
     string Title,
     GameNightStatus Status,
-    IReadOnlyList<GameNightSessionDto> Sessions);
+    IReadOnlyList<GameNightSessionDto> Sessions,
+    // WS1 DEC-9: true when the caller is the night's organizer — gates the FE
+    // organizer-only "Avvia prossimo gioco" CTA. The read admits organizer + invited
+    // participants, so a viewer flag is needed to distinguish them.
+    bool IsViewerOrganizer);
 
 /// <summary>
 /// A single sitting within the night — a projection of the <c>GameNightSession</c> child entity.

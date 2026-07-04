@@ -27,7 +27,8 @@ internal sealed class GetGameNightLiveQueryHandler : IQueryHandler<GetGameNightL
             ?? throw new NotFoundException("GameNightEvent", query.GameNightId.ToString());
 
         // Participant-only: the live read exposes per-session WinnerId (user GUIDs) + progression.
-        var isParticipant = gameNight.OrganizerId == query.CallerUserId
+        var isOrganizer = gameNight.OrganizerId == query.CallerUserId;
+        var isParticipant = isOrganizer
             || gameNight.Rsvps.Any(r => r.UserId == query.CallerUserId);
         if (!isParticipant)
             throw new ForbiddenException("Only the organizer or an invited player can view the night-live state.");
@@ -45,6 +46,6 @@ internal sealed class GetGameNightLiveQueryHandler : IQueryHandler<GetGameNightL
                 s.CompletedAt))
             .ToList();
 
-        return new GameNightLiveDto(gameNight.Id, gameNight.Title, gameNight.Status, sessions);
+        return new GameNightLiveDto(gameNight.Id, gameNight.Title, gameNight.Status, sessions, isOrganizer);
     }
 }

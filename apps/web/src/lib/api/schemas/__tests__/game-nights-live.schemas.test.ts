@@ -27,6 +27,7 @@ const LIVE = {
   title: 'Serata Eldoria',
   status: 'Published',
   sessions: [SESSION],
+  isViewerOrganizer: true,
 };
 
 describe('GameNightSessionStatusSchema', () => {

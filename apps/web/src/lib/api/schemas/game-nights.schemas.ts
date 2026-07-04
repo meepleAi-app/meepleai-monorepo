@@ -73,6 +73,8 @@ export const GameNightLiveDtoSchema = z.object({
   title: z.string(),
   status: GameNightStatusSchema,
   sessions: z.array(GameNightSessionDtoSchema),
+  // WS1 DEC-9: gates the organizer-only "Avvia prossimo gioco" CTA on the FE.
+  isViewerOrganizer: z.boolean(),
 });
 export type GameNightLiveDto = z.infer<typeof GameNightLiveDtoSchema>;
 

@@ -39,6 +39,7 @@ const LIVE = {
       completedAt: null,
     },
   ],
+  isViewerOrganizer: true,
 };
 
 describe('gameNightsClient.getLive', () => {

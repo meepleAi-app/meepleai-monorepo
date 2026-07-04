@@ -59,6 +59,37 @@ public class GetGameNightLiveQueryHandlerTests
         result.Sessions[1].StartedAt.Should().BeNull();
     }
 
+    // WS1 DEC-9: the read model exposes whether the viewer is the organizer, so the FE
+    // renders the organizer-only "Avvia prossimo gioco" CTA only for them.
+    [Fact]
+    public async Task Handle_ViewerIsOrganizer_IsViewerOrganizerTrue()
+    {
+        var evt = GameNightEvent.Create(
+            Guid.NewGuid(), "Serata", DateTimeOffset.UtcNow.AddHours(1), gameIds: [Guid.NewGuid()]);
+        evt.Publish([]);
+        _repo.Setup(r => r.GetByIdAsync(evt.Id, It.IsAny<CancellationToken>())).ReturnsAsync(evt);
+
+        var result = await _handler.Handle(
+            new GetGameNightLiveQuery(evt.Id, evt.OrganizerId), TestContext.Current.CancellationToken);
+
+        result.IsViewerOrganizer.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Handle_ViewerIsInvitedNonOrganizer_IsViewerOrganizerFalse()
+    {
+        var invitedUserId = Guid.NewGuid();
+        var evt = GameNightEvent.Create(
+            Guid.NewGuid(), "Serata", DateTimeOffset.UtcNow.AddHours(1), gameIds: [Guid.NewGuid()]);
+        evt.Publish([invitedUserId]); // creates an RSVP → invited participant
+        _repo.Setup(r => r.GetByIdAsync(evt.Id, It.IsAny<CancellationToken>())).ReturnsAsync(evt);
+
+        var result = await _handler.Handle(
+            new GetGameNightLiveQuery(evt.Id, invitedUserId), TestContext.Current.CancellationToken);
+
+        result.IsViewerOrganizer.Should().BeFalse();
+    }
+
     [Fact]
     public async Task Handle_NoSessions_ReturnsEmptyList()
     {

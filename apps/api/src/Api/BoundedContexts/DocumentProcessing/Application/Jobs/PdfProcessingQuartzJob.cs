@@ -183,6 +183,16 @@ public sealed class PdfProcessingQuartzJob : IJob
             // CancelJobCommand changes status to Cancelled in DB without stopping the worker,
             // so we must not overwrite it with Completed.
             await _dbContext.Entry(jobEntity).ReloadAsync(ct).ConfigureAwait(false);
+
+            // Issue #2661: also reload pdfDoc. The pipeline's ExtractTextAsync sets
+            // PdfDocument.PageCount + SaveChangesAsync on its own scoped DbContext instance,
+            // so the copy tracked by this job stays stale (PageCount == null). Without this
+            // reload, RecordStepMetricsSafeAsync below would pass "PageCount ?? 0" == 0, which
+            // trips the "Page count must be positive" guard in ProcessingMetricsService and
+            // silently drops the metric. pdfDoc is tracked (loaded via AsTracking), so
+            // ReloadAsync refreshes it from the value the pipeline persisted.
+            await _dbContext.Entry(pdfDoc).ReloadAsync(ct).ConfigureAwait(false);
+
             if (string.Equals(jobEntity.Status, nameof(JobStatus.Cancelled), StringComparison.Ordinal))
             {
                 _logger.LogInformation(

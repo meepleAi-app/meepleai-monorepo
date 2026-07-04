@@ -13,9 +13,6 @@
  */
 
 import type {
-  DiaryEvent,
-  DiaryGameRef,
-  DiaryPlayerRef,
   NightLiveHubCurrentGame,
   NightLiveHubNight,
   NightLiveStatus,
@@ -30,7 +27,22 @@ import type {
 } from '@/lib/api/schemas/game-nights.schemas';
 import { hashToHue } from '@/lib/games/cover-utils';
 
-/** The single seam type Slice B produces and Slice C extends. */
+/**
+ * The live read's `sessionId → gameId/title` lookup. Consumed by `mapDiary` (Slice C2) to
+ * group diary entries per game — the join stays FE-side (panel D4), so the diary never needs
+ * a GameId added to its own wire DTO.
+ */
+export interface NightSessionRef {
+  readonly sessionId: string;
+  readonly gameId: string;
+  readonly gameTitle: string;
+}
+
+/**
+ * The single seam type mapNightLive produces. It is LIVE-only (panel D2): the diary arrays
+ * live on a separate read path (`GET /diary`) and are composed with this VM in the view via
+ * `mapDiary`, keyed off {@link NightSessionRef}. Do NOT re-add diary fields here.
+ */
 export interface NightLiveViewModel {
   readonly night: NightLiveHubNight;
   /** Raw GameNight lifecycle status — drives terminal-night routing (LD-14). */
@@ -47,9 +59,8 @@ export interface NightLiveViewModel {
   readonly totalPlayers?: number;
   readonly plannedGames: readonly PlannedGame[];
   readonly currentGame: NightLiveHubCurrentGame | null;
-  readonly diaryEvents: readonly DiaryEvent[];
-  readonly diaryGames: readonly DiaryGameRef[];
-  readonly diaryPlayers: readonly DiaryPlayerRef[];
+  /** Slice C2: sessionId → gameId/title lookup for the diary join (not rendered directly). */
+  readonly sessions: readonly NightSessionRef[];
 }
 
 const MINUTE_MS = 60_000;
@@ -191,8 +202,11 @@ export function mapNightLiveToViewModel(dto: GameNightLiveDto, now: Date): Night
     totalPlayers: undefined,
     plannedGames,
     currentGame, // Slice C1
-    diaryEvents: [], // LD-3: Slice C2/C4
-    diaryGames: [],
-    diaryPlayers: [],
+    // Slice C2: the sessionId→game lookup the view feeds to mapDiary (diary is a separate read).
+    sessions: sessions.map(s => ({
+      sessionId: s.sessionId,
+      gameId: s.gameId,
+      gameTitle: toTitle(s),
+    })),
   };
 }

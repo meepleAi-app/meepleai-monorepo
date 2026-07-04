@@ -42,6 +42,17 @@ vi.mock('@/lib/game-nights/hooks/useStartNextGame', async importActual => {
   };
 });
 
+// Slice C2: the view composes a second read (the diary). Mock it to a resolved-empty default so
+// these live-focused tests don't need a QueryClient; a dedicated block drives it for diary render.
+const useNightLiveDiaryMock = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/game-nights/hooks/useNightLiveDiary', () => ({
+  useNightLiveDiary: useNightLiveDiaryMock,
+  nightLiveDiaryKeys: {
+    all: ['game-nights', 'diary'],
+    detail: (id: string) => ['game-nights', 'diary', id],
+  },
+}));
+
 const pushMock = vi.fn();
 const replaceMock = vi.fn();
 vi.mock('next/navigation', () => ({
@@ -86,9 +97,7 @@ function vm(over: Partial<NightLiveViewModel> = {}): NightLiveViewModel {
       },
     ],
     currentGame: null,
-    diaryEvents: [],
-    diaryGames: [],
-    diaryPlayers: [],
+    sessions: [],
     ...over,
   };
 }
@@ -106,6 +115,7 @@ function mockQuery(over: Record<string, unknown>) {
 beforeEach(() => {
   vi.clearAllMocks();
   startNextState.isPending = false;
+  useNightLiveDiaryMock.mockReturnValue({ data: undefined });
 });
 
 const NEXT_GAME = { gameId: '77777777-7777-4777-8777-777777777777', gameTitle: 'Catan' };
@@ -237,6 +247,50 @@ describe('NightLiveClientView — organizer interactive start (WS1 DEC-10)', () 
     render(<NightLiveClientView nightId={NIGHT_ID} />);
     await userEvent.click(screen.getByRole('button', { name: /Avvia: Catan/i }));
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+});
+
+describe('NightLiveClientView — diary composition (Slice C2)', () => {
+  const GAME_ID = '88888888-8888-4888-8888-888888888888';
+
+  it('renders diary events composed from the diary read + the live sessionId→game lookup', () => {
+    useNightLiveDiaryMock.mockReturnValue({
+      data: {
+        gameNightId: NIGHT_ID,
+        entries: [
+          {
+            id: '99999999-9999-4999-8999-999999999999',
+            sessionId: IN_PROGRESS_SESSION_ID,
+            eventType: 'score_updated',
+            description: '📊 Punteggio aggiornato',
+            payload: null,
+            actorId: null,
+            timestamp: '2026-07-04T20:00:00',
+          },
+        ],
+      },
+    });
+    mockQuery({
+      data: vm({
+        sessions: [
+          { sessionId: IN_PROGRESS_SESSION_ID, gameId: GAME_ID, gameTitle: 'Spirit Island' },
+        ],
+      }),
+    });
+
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+
+    expect(screen.getAllByText(/Punteggio aggiornato/i).length).toBeGreaterThan(0);
+  });
+
+  it('renders the hub with an empty diary when the diary read has not resolved (AC6)', () => {
+    useNightLiveDiaryMock.mockReturnValue({ data: undefined });
+    mockQuery({ data: vm() });
+
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+
+    // the live hub still renders (no crash / no dependency on the diary read)
+    expect(screen.getByText('Serata Eldoria')).toBeInTheDocument();
   });
 });
 

@@ -95,6 +95,62 @@ export const GameNightLiveDtoSchema = z.object({
 });
 export type GameNightLiveDto = z.infer<typeof GameNightLiveDtoSchema>;
 
+// ──────────────────────────────────────────────────────────────────────
+// #2633 C2 — night diary read model (GET /game-nights/{id}/diary).
+// Mirrors the C# GameNightDiaryDto / GameNightDiaryEntryDto. Per panel D8:
+// `eventType` is an OPEN z.string() — mapDiary derives a CLOSED DiaryEventKind
+// with a total default→system, so a new/unlisted BE event type renders instead
+// of being silently dropped as "malformed".
+// ──────────────────────────────────────────────────────────────────────
+
+export const GameNightDiaryEntryDtoSchema = z.object({
+  id: z.string().uuid(),
+  sessionId: z.string().uuid(),
+  eventType: z.string(),
+  description: z.string(),
+  payload: z.string().nullish(),
+  actorId: z.string().uuid().nullish(),
+  timestamp: z.string(),
+});
+export type GameNightDiaryEntryDto = z.infer<typeof GameNightDiaryEntryDtoSchema>;
+
+export const GameNightDiaryDtoSchema = z.object({
+  gameNightId: z.string().uuid(),
+  entries: z.array(GameNightDiaryEntryDtoSchema),
+});
+export type GameNightDiaryDto = z.infer<typeof GameNightDiaryDtoSchema>;
+
+/**
+ * Panel D8 / must-fix #2: per-row resilient parse. One malformed diary entry must
+ * NOT blow up the whole timeline (the array-level `.parse()` throw the shipped SSE
+ * hook suffered via unguarded JSON.parse). Skips + warns on bad rows, keeps the
+ * valid ones; a malformed envelope degrades to an empty diary rather than throwing.
+ */
+export function parseGameNightDiaryResilient(raw: unknown): GameNightDiaryDto {
+  const envelope = z
+    .object({ gameNightId: z.string().uuid(), entries: z.array(z.unknown()) })
+    .safeParse(raw);
+
+  if (!envelope.success) {
+    if (typeof console !== 'undefined') {
+      console.warn('[night-diary] malformed envelope, rendering empty diary', envelope.error);
+    }
+    const maybeId = (raw as { gameNightId?: unknown } | null)?.gameNightId;
+    return { gameNightId: typeof maybeId === 'string' ? maybeId : '', entries: [] };
+  }
+
+  const entries: GameNightDiaryEntryDto[] = [];
+  for (const row of envelope.data.entries) {
+    const parsed = GameNightDiaryEntryDtoSchema.safeParse(row);
+    if (parsed.success) {
+      entries.push(parsed.data);
+    } else if (typeof console !== 'undefined') {
+      console.warn('[night-diary] skipping malformed entry', parsed.error);
+    }
+  }
+  return { gameNightId: envelope.data.gameNightId, entries };
+}
+
 export const CreateGameNightInputSchema = z.object({
   title: z.string().min(3).max(200),
   description: z.string().max(2000).optional(),

@@ -85,6 +85,16 @@ public class GameNightEventMaxLiveTests
         MaxLiveSessionsExceededException.Code.Should().Be("MAX_LIVE_SESSIONS_EXCEEDED");
     }
 
+    // WS1 DEC-7: the HTTP-layer ErrorCode (which reaches the 409 body) must carry
+    // the discriminable Code, not the generic "conflict", so the FE can tell the
+    // max-1-live 409 apart from a "no pending session" 409.
+    [Fact]
+    public void MaxLiveSessionsExceededException_ErrorCodeProperty_IsDiscriminable()
+    {
+        var ex = new MaxLiveSessionsExceededException(Guid.NewGuid());
+        ex.ErrorCode.Should().Be("MAX_LIVE_SESSIONS_EXCEEDED");
+    }
+
     [Fact]
     public void MaxLiveSessionsExceededException_StoresGameNightEventId()
     {

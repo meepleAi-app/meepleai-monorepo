@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
+using Api.BoundedContexts.GameManagement.Domain.Exceptions;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
@@ -9,6 +10,7 @@ using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 
@@ -61,6 +63,10 @@ internal sealed class AttachGamebookCampaignToGameNightCommandHandler
         if (gameNight.OrganizerId != command.CallerUserId)
             throw new ForbiddenException("Only the organizer can attach a campaign to this game night.");
 
+        // WS1 DEC-4/DEC-8: guard-before-create — reject a blocked 2nd-open (409) before the
+        // cross-BC CreateSessionCommand commits a durable (orphan) tracking Session.
+        gameNight.EnsureCanStartSession();
+
         // Resolve the caller's real display name (mirrors StartGameNightSessionCommandHandler);
         // a hardcoded literal would persist to session_participants and surface in the player list.
         var caller = await _mediator.Send(new GetUserByIdQuery(command.CallerUserId), cancellationToken).ConfigureAwait(false)
@@ -81,8 +87,8 @@ internal sealed class AttachGamebookCampaignToGameNightCommandHandler
         };
 
         // Cross-BC: create the Session carrying the campaign link. GameNight linkage is done
-        // below via AddSession (mirroring StartGameNightSessionCommandHandler, which also leaves
-        // CreateSessionCommand.GameNightEventId null and links via the aggregate).
+        // below via AddSession (mirroring StartGameNightSessionCommandHandler).
+        // WS1 DEC-3/DEC-8: SkipGameNightEnvelope=true — the aggregate is the sole linker (no phantom night).
         var createResult = await _mediator.Send(new CreateSessionCommand(
             command.CallerUserId,
             campaign.GameRefId,
@@ -90,8 +96,10 @@ internal sealed class AttachGamebookCampaignToGameNightCommandHandler
             DateTime.UtcNow,
             null,
             participants,
-            GamebookCampaignId: command.CampaignId), cancellationToken).ConfigureAwait(false);
+            GamebookCampaignId: command.CampaignId,
+            SkipGameNightEnvelope: true), cancellationToken).ConfigureAwait(false);
 
+        AttachGamebookCampaignToGameNightResult result;
         try
         {
             // Both calls are required: AddSession registers the sitting; StartCurrentSession is
@@ -102,10 +110,13 @@ internal sealed class AttachGamebookCampaignToGameNightCommandHandler
             await _repository.UpdateAsync(gameNight, cancellationToken).ConfigureAwait(false);
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-            await _autoSaveScheduler.RegisterAsync(createResult.SessionId, cancellationToken).ConfigureAwait(false);
-
-            return new AttachGamebookCampaignToGameNightResult(
+            result = new AttachGamebookCampaignToGameNightResult(
                 createResult.SessionId, gns.Id, createResult.SessionCode, gns.PlayOrder);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // WS1 DEC-5/DEC-8: xmin loser of a concurrent start maps to the blocked-modal 409.
+            throw new MaxLiveSessionsExceededException(command.GameNightId);
         }
         catch (InvalidOperationException ex)
         {
@@ -114,5 +125,13 @@ internal sealed class AttachGamebookCampaignToGameNightCommandHandler
             // IS a ConflictException and maps to 409 via middleware — it propagates past this catch.)
             throw new ConflictException(ex.Message);
         }
+
+        // WS1 DEC-1/DEC-8 (#2647): open live mode LAST, after the link is committed, so the
+        // GameNight promotes Published → InProgress. Idempotent.
+        await _mediator.Send(new OpenSessionLiveModeCommand(createResult.SessionId), cancellationToken).ConfigureAwait(false);
+
+        await _autoSaveScheduler.RegisterAsync(createResult.SessionId, cancellationToken).ConfigureAwait(false);
+
+        return result;
     }
 }

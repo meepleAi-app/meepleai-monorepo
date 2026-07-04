@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
+using Api.BoundedContexts.GameManagement.Domain.Exceptions;
 using Api.BoundedContexts.GameToolbox.Application.Commands;
 using Api.BoundedContexts.GameToolbox.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
@@ -9,6 +10,7 @@ using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 
@@ -50,10 +52,17 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
         if (gameNight.OrganizerId != command.UserId)
             throw new ForbiddenException("Only the organizer can start sessions.");
 
+        // WS1 DEC-4: guard-before-create. Reject a blocked 2nd-open (409) BEFORE the
+        // cross-BC CreateSessionCommand commits a durable (orphan) tracking Session.
+        gameNight.EnsureCanStartSession();
+
         // Build participant list: auto-seed organizer when command provides none.
         var participants = await BuildParticipantsAsync(command, cancellationToken).ConfigureAwait(false);
 
-        // Cross-BC: create Session via MediatR dispatch to SessionTracking
+        // Cross-BC: create Session via MediatR dispatch to SessionTracking.
+        // WS1 DEC-3: SkipGameNightEnvelope=true — the GameNightEvent aggregate (AddSession
+        // below) is the SOLE linker against command.GameNightId, so CreateSessionCommand
+        // does NOT mint a phantom ad-hoc night that would double-link the session.
         var createResult = await _mediator.Send(new CreateSessionCommand(
             command.UserId,
             command.GameId,
@@ -61,9 +70,11 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
             DateTime.UtcNow,
             null,
             participants,
-            StateTier: command.StateTier), cancellationToken).ConfigureAwait(false);
+            StateTier: command.StateTier,
+            SkipGameNightEnvelope: true), cancellationToken).ConfigureAwait(false);
 
         // Link the new session to the GameNight aggregate and start it
+        StartGameNightSessionResult result;
         try
         {
             var gns = gameNight.AddSession(createResult.SessionId, command.GameId, command.GameTitle);
@@ -72,19 +83,33 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
             await _repository.UpdateAsync(gameNight, cancellationToken).ConfigureAwait(false);
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-            await _autoSaveScheduler.RegisterAsync(createResult.SessionId, cancellationToken).ConfigureAwait(false);
-
-            // Best-effort fire-and-forget: detach from the handler's CancellationToken so the
-            // warm-up does not block the response and is not cancelled on client disconnect.
-            _ = TryApplyToolboxTemplateAsync(command.GameId, CancellationToken.None);
-
-            return new StartGameNightSessionResult(
+            result = new StartGameNightSessionResult(
                 createResult.SessionId, gns.Id, createResult.SessionCode, gns.PlayOrder);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // WS1 DEC-5: two concurrent starts both pass the in-memory guard; xmin
+            // serializes and the loser maps to the same blocked-modal 409 instead of an
+            // uncaught 500 (+ orphan Session).
+            throw new MaxLiveSessionsExceededException(command.GameNightId);
         }
         catch (InvalidOperationException ex)
         {
             throw new ConflictException(ex.Message);
         }
+
+        // WS1 DEC-1 (#2647): open live mode LAST — AFTER the session↔night link is
+        // committed — so the SessionStartedDomainEvent resolves the parent unambiguously
+        // and promotes the night Published → InProgress. Idempotent.
+        await _mediator.Send(new OpenSessionLiveModeCommand(createResult.SessionId), cancellationToken).ConfigureAwait(false);
+
+        await _autoSaveScheduler.RegisterAsync(createResult.SessionId, cancellationToken).ConfigureAwait(false);
+
+        // Best-effort fire-and-forget: detach from the handler's CancellationToken so the
+        // warm-up does not block the response and is not cancelled on client disconnect.
+        _ = TryApplyToolboxTemplateAsync(command.GameId, CancellationToken.None);
+
+        return result;
     }
 
     private async Task TryApplyToolboxTemplateAsync(Guid gameId, CancellationToken cancellationToken)

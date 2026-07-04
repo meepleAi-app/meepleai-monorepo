@@ -79,6 +79,30 @@ public class GameNightEventMaxLiveTests
         gn.Sessions[1].Status.Should().Be(GameNightSessionStatus.InProgress);
     }
 
+    // WS1 DEC-4: guard-before-create. EnsureCanStartSession() lets the handler reject
+    // a blocked 2nd-open BEFORE CreateSessionCommand mints a durable (orphan) Session.
+    [Fact]
+    public void EnsureCanStartSession_WhenAnotherLiveActive_ThrowsMaxLiveSessionsExceeded()
+    {
+        var gn = CreatePublishedEventWithTwoSessions();
+        gn.StartCurrentSession(); // first InProgress
+
+        var act = () => gn.EnsureCanStartSession();
+
+        act.Should().Throw<MaxLiveSessionsExceededException>()
+            .Where(ex => ex.GameNightEventId == gn.Id);
+    }
+
+    [Fact]
+    public void EnsureCanStartSession_WhenNoneLive_DoesNotThrow()
+    {
+        var gn = CreatePublishedEventWithTwoSessions(); // both Pending
+
+        var act = () => gn.EnsureCanStartSession();
+
+        act.Should().NotThrow();
+    }
+
     [Fact]
     public void MaxLiveSessionsExceededException_ExposesCorrectErrorCode()
     {

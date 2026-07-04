@@ -427,6 +427,24 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// WS1 DEC-4 — guard-before-create. Throws <see cref="MaxLiveSessionsExceededException"/>
+    /// if any child session is already InProgress, WITHOUT mutating state. The start
+    /// handler calls this before dispatching CreateSessionCommand, so a blocked 2nd-open
+    /// returns 409 without minting an orphan tracking Session (StartCurrentSession's own
+    /// guard fires only after the Session has already been created and committed).
+    /// </summary>
+    /// <exception cref="MaxLiveSessionsExceededException">
+    /// Thrown when a session is already in InProgress status on this event.
+    /// </exception>
+    public void EnsureCanStartSession()
+    {
+        ThrowIfCorrupted();
+
+        if (_sessions.Any(s => s.Status == GameNightSessionStatus.InProgress))
+            throw new MaxLiveSessionsExceededException(Id);
+    }
+
+    /// <summary>
     /// Starts the first pending session.
     /// Enforces invariante #10 (GameNight/Session domain model): a GameNightEvent
     /// can have at most 1 GameNightSession in InProgress at a time.

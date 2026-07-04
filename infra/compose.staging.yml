@@ -104,6 +104,20 @@ services:
       # Dedicated named volume — must NOT share with /app/pdf_uploads which is
       # rotated when uploads are pruned.
       - dataprotection-keys-staging:/app/dataprotection
+    # Issue #2650: lo startup dell'API su HEAD può essere lento — init pesante +
+    # smaltimento all'avvio di un backlog di Quartz PDF jobs accumulato durante un
+    # lungo blocco dei deploy. /health/live (ASP.NET) non risponde finché lo
+    # startup non è completo. Il start_period base (60s in docker-compose.yml) è
+    # troppo stretto: se /health/live non risponde entro ~60s + 3×30s l'API è
+    # marcata unhealthy e il `depends_on: api: condition: service_healthy` di web
+    # scade → `docker compose up` fallisce (deploy run 28701237278: API healthy
+    # solo dopo ~6 min per il backlog). Override staging con start_period ampio +
+    # retries extra. NB: docker compose fa deep-merge dell'healthcheck, quindi
+    # test/interval/timeout restano ereditati dal base. Il backlog è un caso
+    # eccezionale (primo deploy dopo mesi); a regime lo startup è ~60-90s.
+    healthcheck:
+      start_period: 240s
+      retries: 5
     # Traefik labels removed — staging now via Cloudflare Tunnel (cloudflared service on VPS).
     # Routes meepleai.app/* and api.meepleai.app/* are configured in CF dashboard tunnel public hostnames.
     logging:

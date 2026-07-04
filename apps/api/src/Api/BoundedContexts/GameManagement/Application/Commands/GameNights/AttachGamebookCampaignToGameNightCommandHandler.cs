@@ -86,22 +86,31 @@ internal sealed class AttachGamebookCampaignToGameNightCommandHandler
             }
         };
 
-        // Cross-BC: create the Session carrying the campaign link. GameNight linkage is done
-        // below via AddSession (mirroring StartGameNightSessionCommandHandler).
-        // WS1 DEC-3/DEC-8: SkipGameNightEnvelope=true — the aggregate is the sole linker (no phantom night).
-        var createResult = await _mediator.Send(new CreateSessionCommand(
-            command.CallerUserId,
-            campaign.GameRefId,
-            "GameSpecific",
-            DateTime.UtcNow,
-            null,
-            participants,
-            GamebookCampaignId: command.CampaignId,
-            SkipGameNightEnvelope: true), cancellationToken).ConfigureAwait(false);
-
+        // WS1 DEC-5/DEC-8 (atomicity): create the Session carrying the campaign link and attach it
+        // to the aggregate in ONE explicit transaction. CreateSessionCommand's inner SaveChangesAsync
+        // enlists in this ambient tx (same scoped DbContext), so if the aggregate save loses the xmin
+        // race — or a guard trips — the Session INSERT rolls back with it and no orphan is left.
+        // Mirrors StartGameNightSessionCommandHandler.
+        CreateSessionResult createResult;
         AttachGamebookCampaignToGameNightResult result;
+        await _unitOfWork.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+
+        // Once CommitTransactionAsync starts it owns rollback-on-failure (self-rolls-back + disposes),
+        // so the catch blocks must not roll back a second time.
+        var commitStarted = false;
         try
         {
+            // WS1 DEC-3/DEC-8: SkipGameNightEnvelope=true — the aggregate is the sole linker (no phantom night).
+            createResult = await _mediator.Send(new CreateSessionCommand(
+                command.CallerUserId,
+                campaign.GameRefId,
+                "GameSpecific",
+                DateTime.UtcNow,
+                null,
+                participants,
+                GamebookCampaignId: command.CampaignId,
+                SkipGameNightEnvelope: true), cancellationToken).ConfigureAwait(false);
+
             // Both calls are required: AddSession registers the sitting; StartCurrentSession is
             // where the #10 max-1-live guard lives (throws MaxLiveSessionsExceededException).
             var gns = gameNight.AddSession(createResult.SessionId, campaign.GameRefId, campaign.Title);
@@ -110,20 +119,34 @@ internal sealed class AttachGamebookCampaignToGameNightCommandHandler
             await _repository.UpdateAsync(gameNight, cancellationToken).ConfigureAwait(false);
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+            commitStarted = true;
+            await _unitOfWork.CommitTransactionAsync(cancellationToken).ConfigureAwait(false);
+
             result = new AttachGamebookCampaignToGameNightResult(
                 createResult.SessionId, gns.Id, createResult.SessionCode, gns.PlayOrder);
         }
         catch (DbUpdateConcurrencyException)
         {
-            // WS1 DEC-5/DEC-8: xmin loser of a concurrent start maps to the blocked-modal 409.
+            // WS1 DEC-5/DEC-8: the xmin loser rolls the whole tx (incl. the Session INSERT) back —
+            // no orphan — then maps to the blocked-modal 409.
+            if (!commitStarted)
+                await _unitOfWork.RollbackTransactionAsync(cancellationToken).ConfigureAwait(false);
             throw new MaxLiveSessionsExceededException(command.GameNightId);
         }
         catch (InvalidOperationException ex)
         {
             // AddSession's "not Published" guard throws a plain InvalidOperationException → wrap as 409.
-            // (StartCurrentSession's #10 guard throws MaxLiveSessionsExceededException, which already
-            // IS a ConflictException and maps to 409 via middleware — it propagates past this catch.)
+            if (!commitStarted)
+                await _unitOfWork.RollbackTransactionAsync(cancellationToken).ConfigureAwait(false);
             throw new ConflictException(ex.Message);
+        }
+        catch (Exception)
+        {
+            // Any other post-INSERT failure (incl. StartCurrentSession's #10 MaxLiveSessionsExceededException)
+            // rolls back so the Session is never orphaned; the original exception then propagates.
+            if (!commitStarted)
+                await _unitOfWork.RollbackTransactionAsync(cancellationToken).ConfigureAwait(false);
+            throw;
         }
 
         // WS1 DEC-1/DEC-8 (#2647): open live mode LAST, after the link is committed, so the

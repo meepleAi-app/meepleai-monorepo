@@ -38,6 +38,8 @@ export const ChatThreadMessageDtoSchema = z.object({
   gameId: z.string().uuid().optional(),
   // Note: Keep in sync with FEEDBACK_OUTCOMES in @/lib/constants/feedback
   feedback: z.enum(['helpful', 'not-helpful', 'incorrect']).nullable().optional(),
+  // Populated by BE on assistant messages; null on user messages. R1 — Task 5-FE #2500.
+  citationsJson: z.string().nullable().optional(),
 });
 
 export type ChatThreadMessageDto = z.infer<typeof ChatThreadMessageDtoSchema>;

@@ -294,6 +294,25 @@ describe('NightLiveHub', () => {
     });
   });
 
+  describe('readOnly projection (#2633 Slice B · LD-13)', () => {
+    it('hides the pause/transition/end drive controls when readOnly', () => {
+      render(<NightLiveHub {...baseProps} readOnly />);
+      expect(screen.queryByRole('button', { name: /Pausa/ })).toBeNull();
+      expect(screen.queryByRole('button', { name: /Transition/ })).toBeNull();
+      expect(screen.queryByRole('button', { name: /^End$/ })).toBeNull();
+    });
+
+    it('still renders the read-only jump-to-session action', () => {
+      render(<NightLiveHub {...baseProps} readOnly onJumpToSession={() => undefined} />);
+      expect(screen.getByRole('button', { name: /Apri sessione live/ })).toBeInTheDocument();
+    });
+
+    it('renders the drive controls by default (readOnly omitted)', () => {
+      render(<NightLiveHub {...baseProps} />);
+      expect(screen.getByRole('button', { name: /Pausa/ })).toBeInTheDocument();
+    });
+  });
+
   it('accepts custom className override', () => {
     const { container } = render(<NightLiveHub {...baseProps} className="custom-hub-class" />);
     expect(container.firstChild).toHaveClass('custom-hub-class');

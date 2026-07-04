@@ -13,10 +13,15 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { usePlayRecordPhotoUpload } from '@/hooks/mutations/usePlayRecordPhotoUpload';
 import { useTranslation } from '@/hooks/useTranslation';
+import {
+  PHOTO_MAX_BYTES,
+  PHOTO_MAX_FILES,
+  PHOTO_ACCEPTED_MIME,
+} from '@/lib/play-records/photo-constants';
 
-const MAX_BYTES = 5 * 1024 * 1024; // 5MB — matches BE validator
-const MAX_FILES = 10;
-const ACCEPTED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];
+const MAX_BYTES = PHOTO_MAX_BYTES;
+const MAX_FILES = PHOTO_MAX_FILES;
+const ACCEPTED_MIME = PHOTO_ACCEPTED_MIME;
 
 export interface PlayRecordPhotoUploadDialogProps {
   recordId: string;

@@ -1,10 +1,15 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.BoundedContexts.GameManagement.Domain.Services;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
@@ -21,16 +26,33 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.LiveSess
 public class LiveSessionCommandHandlerTests
 {
     private readonly Mock<ILiveSessionRepository> _repositoryMock;
+    private readonly Mock<IGameSessionRepository> _gameSessionRepositoryMock;
+    private readonly Mock<ISessionQuotaService> _quotaServiceMock;
     private readonly TimeProvider _timeProvider;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+    // #2501 SP0: companion-saga ACL dependency. Default mock returns Guid.Empty for
+    // CreateCompanionAsync, which is harmless for these existing assertions (they verify
+    // AddAsync/captured properties, not TrackingSessionId). Companion behavior itself is
+    // covered by CreateLiveSessionCommandHandlerTests (dedicated saga unit tests).
+    private readonly Mock<ICompanionSessionService> _companionSessionServiceMock;
 
     private static readonly Guid DefaultUserId = Guid.NewGuid();
+    private static readonly UserTier DefaultUserTier = UserTier.Premium;
+    private static readonly Role DefaultUserRole = Role.Admin;
 
     public LiveSessionCommandHandlerTests()
     {
         _repositoryMock = new Mock<ILiveSessionRepository>();
+        _gameSessionRepositoryMock = new Mock<IGameSessionRepository>();
+        _quotaServiceMock = new Mock<ISessionQuotaService>();
         _timeProvider = TimeProvider.System;
         _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _companionSessionServiceMock = new Mock<ICompanionSessionService>();
+
+        // Default: quota allowed (Premium/Admin bypass)
+        _quotaServiceMock
+            .Setup(q => q.CheckQuotaAsync(It.IsAny<Guid>(), It.IsAny<UserTier>(), It.IsAny<Role>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SessionQuotaResult.Unlimited());
     }
 
     // === Shared Helpers ===
@@ -97,7 +119,7 @@ public class LiveSessionCommandHandlerTests
     public async Task CreateLiveSession_HappyPath_DefaultConfig_ReturnsSessionId()
     {
         // Arrange
-        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
+        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object, _companionSessionServiceMock.Object);
         var command = new CreateLiveSessionCommand(DefaultUserId, "Catan");
 
         // Act
@@ -118,7 +140,7 @@ public class LiveSessionCommandHandlerTests
     public async Task CreateLiveSession_HappyPath_CustomScoring_ReturnsSessionId()
     {
         // Arrange
-        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
+        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object, _companionSessionServiceMock.Object);
         var scoringDimensions = new List<string> { "Points", "Bonus" };
         var dimensionUnits = new Dictionary<string, string> { { "Points", "pts" }, { "Bonus", "pts" } };
         var command = new CreateLiveSessionCommand(
@@ -142,7 +164,7 @@ public class LiveSessionCommandHandlerTests
     public async Task CreateLiveSession_NullCommand_ThrowsArgumentNullException()
     {
         // Arrange
-        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
+        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object, _companionSessionServiceMock.Object);
 
         // Act & Assert
         var act =
@@ -154,7 +176,7 @@ public class LiveSessionCommandHandlerTests
     public async Task CreateLiveSession_VerifiesAddAsyncCalled()
     {
         // Arrange
-        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
+        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object, _companionSessionServiceMock.Object);
         var command = new CreateLiveSessionCommand(DefaultUserId, "Ticket to Ride");
 
         LiveGameSession? capturedSession = null;
@@ -177,9 +199,18 @@ public class LiveSessionCommandHandlerTests
     public async Task CreateLiveSession_WithAllOptionalParams_CreatesCorrectly()
     {
         // Arrange
-        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
+        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object, _companionSessionServiceMock.Object);
         var gameId = Guid.NewGuid();
         var groupId = Guid.NewGuid();
+
+        // #2552: with a non-null GameId the companion saga runs; configure the mock to return a real
+        // id so we can assert it flows into TrackingSessionId (the default mock returned Guid.Empty
+        // silently and the assertion below was missing).
+        var expectedTrackingSessionId = Guid.NewGuid();
+        _companionSessionServiceMock
+            .Setup(s => s.CreateCompanionAsync(DefaultUserId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedTrackingSessionId);
+
         var command = new CreateLiveSessionCommand(
             DefaultUserId,
             "Spirit Island",
@@ -203,6 +234,9 @@ public class LiveSessionCommandHandlerTests
         capturedSession.Visibility.Should().Be(PlayRecordVisibility.Group);
         capturedSession.GroupId.Should().Be(groupId);
         capturedSession.AgentMode.Should().Be(AgentSessionMode.Assistant);
+        capturedSession.TrackingSessionId.Should().Be(expectedTrackingSessionId);
+        _companionSessionServiceMock.Verify(
+            s => s.CreateCompanionAsync(DefaultUserId, gameId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     #endregion
@@ -221,8 +255,8 @@ public class LiveSessionCommandHandlerTests
         var session = CreateSessionWithPlayer(sessionId);
         SetupRepoGetById(sessionId, session);
 
-        var handler = new StartLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
-        var command = new StartLiveSessionCommand(sessionId);
+        var handler = new StartLiveSessionCommandHandler(_repositoryMock.Object, _gameSessionRepositoryMock.Object, _quotaServiceMock.Object, _timeProvider, _unitOfWorkMock.Object);
+        var command = new StartLiveSessionCommand(sessionId, DefaultUserId, DefaultUserTier, DefaultUserRole);
 
         // Act
         await handler.Handle(command, TestContext.Current.CancellationToken);
@@ -241,8 +275,8 @@ public class LiveSessionCommandHandlerTests
         var sessionId = Guid.NewGuid();
         SetupRepoGetById(sessionId, null);
 
-        var handler = new StartLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
-        var command = new StartLiveSessionCommand(sessionId);
+        var handler = new StartLiveSessionCommandHandler(_repositoryMock.Object, _gameSessionRepositoryMock.Object, _quotaServiceMock.Object, _timeProvider, _unitOfWorkMock.Object);
+        var command = new StartLiveSessionCommand(sessionId, DefaultUserId, DefaultUserTier, DefaultUserRole);
 
         // Act & Assert
         var act =
@@ -255,12 +289,95 @@ public class LiveSessionCommandHandlerTests
     public async Task StartLiveSession_NullCommand_ThrowsArgumentNullException()
     {
         // Arrange
-        var handler = new StartLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
+        var handler = new StartLiveSessionCommandHandler(_repositoryMock.Object, _gameSessionRepositoryMock.Object, _quotaServiceMock.Object, _timeProvider, _unitOfWorkMock.Object);
 
         // Act & Assert
         var act =
             () => handler.Handle(null!, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<ArgumentNullException>();
+    }
+
+    // ─── Issue #2608: Creator-only guard ──────────────────────────────────────────
+
+    [Fact(DisplayName = "#2608: Non-creator caller → ForbiddenException, no quota check, no GameSession created, no start")]
+    public async Task StartLiveSession_NonCreatorCaller_ThrowsForbiddenException_BeforeQuotaOrGameSession()
+    {
+        // Arrange
+        var sessionId = Guid.NewGuid();
+        var creatorId = Guid.NewGuid();
+        var nonCreatorId = Guid.NewGuid(); // different from creatorId
+
+        var session = LiveGameSession.Create(sessionId, creatorId, "Catan", gameId: Guid.NewGuid());
+        session.AddPlayer(null, "Creator Player", PlayerColor.Red, TimeProvider.System);
+        SetupRepoGetById(sessionId, session);
+
+        var handler = new StartLiveSessionCommandHandler(
+            _repositoryMock.Object,
+            _gameSessionRepositoryMock.Object,
+            _quotaServiceMock.Object,
+            _timeProvider,
+            _unitOfWorkMock.Object);
+
+        // Command issued by nonCreatorId (participant but not creator)
+        var command = new StartLiveSessionCommand(sessionId, nonCreatorId, DefaultUserTier, DefaultUserRole);
+
+        // Act & Assert — must throw before reaching quota or GameSession creation
+        var act = () => handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ForbiddenException>();
+
+        // Quota service must NOT have been consulted
+        _quotaServiceMock.Verify(
+            q => q.CheckQuotaAsync(It.IsAny<Guid>(), It.IsAny<UserTier>(), It.IsAny<Role>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "the creator guard fires before the quota block");
+
+        // No GameSession must have been created
+        _gameSessionRepositoryMock.Verify(
+            r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "the creator guard fires before any GameSession correlation");
+
+        // Session must NOT have been started
+        session.Status.Should().NotBe(LiveSessionStatus.InProgress);
+
+        // Repository UpdateAsync must NOT have been called
+        _repositoryMock.Verify(
+            r => r.UpdateAsync(It.IsAny<LiveGameSession>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact(DisplayName = "#2608: Zero active players (GameId-backed) → ValidationException before GameSession ctor")]
+    public async Task StartLiveSession_ZeroActivePlayers_GameIdBacked_ThrowsValidationException()
+    {
+        // Arrange
+        var sessionId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+
+        // Session created by DefaultUserId with a GameId but all players removed
+        var session = LiveGameSession.Create(sessionId, DefaultUserId, "Catan", gameId: gameId);
+        var p1 = session.AddPlayer(null, "Player One", PlayerColor.Red, TimeProvider.System);
+        session.RemovePlayer(p1.Id, TimeProvider.System); // deactivates the only player
+        SetupRepoGetById(sessionId, session);
+
+        var handler = new StartLiveSessionCommandHandler(
+            _repositoryMock.Object,
+            _gameSessionRepositoryMock.Object,
+            _quotaServiceMock.Object,
+            _timeProvider,
+            _unitOfWorkMock.Object);
+
+        // Creator starts — passes creator guard, hits zero-players guard
+        var command = new StartLiveSessionCommand(sessionId, DefaultUserId, DefaultUserTier, DefaultUserRole);
+
+        // Act & Assert
+        var act = () => handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ValidationException>(
+            because: "starting with zero active players is an intentional validation error (400), not a generic ctor failure");
+
+        // No GameSession must have been created
+        _gameSessionRepositoryMock.Verify(
+            r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     #endregion
@@ -387,6 +504,10 @@ public class LiveSessionCommandHandlerTests
 
     #region CompleteLiveSessionCommandHandler
 
+    // Helper: build a CompleteLiveSessionCommandHandler with both repositories injected.
+    private CompleteLiveSessionCommandHandler BuildCompleteHandler() =>
+        new(_repositoryMock.Object, _gameSessionRepositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
+
     [Fact]
     public async Task CompleteLiveSession_HappyPath_CompletesSession()
     {
@@ -395,7 +516,7 @@ public class LiveSessionCommandHandlerTests
         var session = CreateSessionInProgress(sessionId);
         SetupRepoGetById(sessionId, session);
 
-        var handler = new CompleteLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
+        var handler = BuildCompleteHandler();
         var command = new CompleteLiveSessionCommand(sessionId);
 
         // Act
@@ -416,7 +537,7 @@ public class LiveSessionCommandHandlerTests
         var sessionId = Guid.NewGuid();
         SetupRepoGetById(sessionId, null);
 
-        var handler = new CompleteLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
+        var handler = BuildCompleteHandler();
         var command = new CompleteLiveSessionCommand(sessionId);
 
         // Act & Assert
@@ -430,12 +551,364 @@ public class LiveSessionCommandHandlerTests
     public async Task CompleteLiveSession_NullCommand_ThrowsArgumentNullException()
     {
         // Arrange
-        var handler = new CompleteLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
+        var handler = BuildCompleteHandler();
 
         // Act & Assert
         var act =
             () => handler.Handle(null!, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<ArgumentNullException>();
+    }
+
+    // ─── Issue #2587 Slice 1 T3: Lifecycle-sync tests ─────────────────────────────
+
+    [Fact(DisplayName = "#2587-T3a: Complete with CorrelatedGameSessionId → GameSession loaded, completed, one SaveChanges")]
+    public async Task CompleteLiveSession_WithCorrelatedGameSession_CompletesGameSessionAndSavesOnce()
+    {
+        // Arrange
+        var sessionId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var correlatedId = Guid.NewGuid();
+
+        // LiveGameSession that has a correlated GameSession
+        var session = LiveGameSession.Create(
+            sessionId, DefaultUserId, "Catan",
+            gameId: gameId,
+            correlatedGameSessionId: correlatedId);
+        session.AddPlayer(null, "Alice", PlayerColor.Red, TimeProvider.System);
+        session.Start(TimeProvider.System);
+        SetupRepoGetById(sessionId, session);
+
+        // Correlated GameSession in Setup state (as created by T2)
+        var gameSession = new GameSession(correlatedId, gameId,
+            new[] { new SessionPlayer("Alice", 1) }, DefaultUserId);
+        _gameSessionRepositoryMock
+            .Setup(r => r.GetByIdAsync(correlatedId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameSession);
+
+        GameSession? updatedGameSession = null;
+        _gameSessionRepositoryMock
+            .Setup(r => r.UpdateAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()))
+            .Callback<GameSession, CancellationToken>((gs, _) => updatedGameSession = gs)
+            .Returns(Task.CompletedTask);
+
+        var handler = BuildCompleteHandler();
+        var command = new CompleteLiveSessionCommand(sessionId);
+
+        // Act
+        await handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert — LiveGameSession completed
+        session.Status.Should().Be(LiveSessionStatus.Completed);
+
+        // Assert — correlated GameSession loaded and completed
+        _gameSessionRepositoryMock.Verify(
+            r => r.GetByIdAsync(correlatedId, It.IsAny<CancellationToken>()),
+            Times.Once);
+        _gameSessionRepositoryMock.Verify(
+            r => r.UpdateAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        updatedGameSession.Should().NotBeNull();
+        updatedGameSession!.Status.Should().Be(SessionStatus.Completed);
+
+        // Assert — event-free bookkeeping: MarkCorrelatedComplete must NOT raise
+        // GameSessionStartedEvent or GameSessionCompletedEvent (spurious audit + contributor
+        // credits via SessionCompletedForContributorsHandler — controller review finding).
+        updatedGameSession.DomainEvents.Should().NotContain(
+            e => e is Api.BoundedContexts.GameManagement.Domain.Events.GameSessionStartedEvent,
+            because: "shadow correlated complete must not fire GameSessionStartedEvent");
+        updatedGameSession.DomainEvents.Should().NotContain(
+            e => e is Api.BoundedContexts.GameManagement.Domain.Events.GameSessionCompletedEvent,
+            because: "shadow correlated complete must not fire GameSessionCompletedEvent");
+
+        // Assert — single SaveChanges commits both
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact(DisplayName = "#2587-T3b: Free-form session (CorrelatedGameSessionId == null) → no GameSession repo call")]
+    public async Task CompleteLiveSession_FreeForm_NoGameSessionRepoCall()
+    {
+        // Arrange
+        var sessionId = Guid.NewGuid();
+        var session = CreateSessionInProgress(sessionId); // no GameId, no correlation
+        SetupRepoGetById(sessionId, session);
+
+        var handler = BuildCompleteHandler();
+        var command = new CompleteLiveSessionCommand(sessionId);
+
+        // Act
+        await handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert — LiveGameSession completed
+        session.Status.Should().Be(LiveSessionStatus.Completed);
+
+        // Assert — GameSession repo never touched
+        _gameSessionRepositoryMock.Verify(
+            r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _gameSessionRepositoryMock.Verify(
+            r => r.UpdateAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        // Assert — still one SaveChanges
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact(DisplayName = "#2587-T3c: Correlated GameSession already Completed → idempotent, no double-complete")]
+    public async Task CompleteLiveSession_CorrelatedGameSessionAlreadyCompleted_NoDoubleComplete()
+    {
+        // Arrange
+        var sessionId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var correlatedId = Guid.NewGuid();
+
+        var session = LiveGameSession.Create(
+            sessionId, DefaultUserId, "Catan",
+            gameId: gameId,
+            correlatedGameSessionId: correlatedId);
+        session.AddPlayer(null, "Alice", PlayerColor.Red, TimeProvider.System);
+        session.Start(TimeProvider.System);
+        SetupRepoGetById(sessionId, session);
+
+        // GameSession already in terminal Completed state
+        var gameSession = new GameSession(correlatedId, gameId,
+            new[] { new SessionPlayer("Alice", 1) }, DefaultUserId);
+        gameSession.Start();
+        gameSession.Complete();
+
+        _gameSessionRepositoryMock
+            .Setup(r => r.GetByIdAsync(correlatedId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameSession);
+
+        var handler = BuildCompleteHandler();
+        var command = new CompleteLiveSessionCommand(sessionId);
+
+        // Act — must not throw (idempotent)
+        await handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert — UpdateAsync never called on the already-completed GameSession
+        _gameSessionRepositoryMock.Verify(
+            r => r.UpdateAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        // Assert — LiveGameSession itself is completed
+        session.Status.Should().Be(LiveSessionStatus.Completed);
+
+        // Assert — single SaveChanges
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // ─── Issue #2587 Slice 2: On-complete backfill for legacy sessions ─────────────
+
+    [Fact(DisplayName = "#2587-S2-T1: Legacy backfill — GameId-backed + no correlation + active players → GameSession added, Completed, correlated, single SaveChanges")]
+    public async Task CompleteLiveSession_LegacyBackfill_AddsCompletedGameSessionAndCorrelates()
+    {
+        // Arrange
+        var sessionId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+
+        // Legacy session: has GameId but no CorrelatedGameSessionId
+        var session = LiveGameSession.Create(sessionId, DefaultUserId, "Mage Knight", gameId: gameId);
+        session.AddPlayer(null, "Alice", PlayerColor.Red, TimeProvider.System);
+        session.AddPlayer(null, "Bob", PlayerColor.Blue, TimeProvider.System);
+        session.Start(TimeProvider.System);
+        SetupRepoGetById(sessionId, session);
+
+        GameSession? capturedGameSession = null;
+        _gameSessionRepositoryMock
+            .Setup(r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()))
+            .Callback<GameSession, CancellationToken>((gs, _) => capturedGameSession = gs)
+            .Returns(Task.CompletedTask);
+
+        var handler = BuildCompleteHandler();
+        var command = new CompleteLiveSessionCommand(sessionId);
+
+        // Act
+        await handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert — LiveGameSession completed
+        session.Status.Should().Be(LiveSessionStatus.Completed);
+
+        // Assert — GameSession was added via AddAsync (not UpdateAsync)
+        _gameSessionRepositoryMock.Verify(
+            r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        _gameSessionRepositoryMock.Verify(
+            r => r.UpdateAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        // Assert — captured GameSession is in Completed state
+        capturedGameSession.Should().NotBeNull();
+        capturedGameSession!.Status.Should().Be(SessionStatus.Completed);
+        capturedGameSession.GameId.Should().Be(gameId);
+        capturedGameSession.CreatedByUserId.Should().Be(DefaultUserId);
+        capturedGameSession.Players.Should().HaveCount(2);
+
+        // Assert — event-free: MarkCorrelatedComplete must NOT raise domain events
+        capturedGameSession.DomainEvents.Should().NotContain(
+            e => e is Api.BoundedContexts.GameManagement.Domain.Events.GameSessionStartedEvent,
+            because: "backfill shadow must not fire GameSessionStartedEvent");
+        capturedGameSession.DomainEvents.Should().NotContain(
+            e => e is Api.BoundedContexts.GameManagement.Domain.Events.GameSessionCompletedEvent,
+            because: "backfill shadow must not fire GameSessionCompletedEvent");
+
+        // Assert — correlation set on the live session
+        session.CorrelatedGameSessionId.Should().Be(capturedGameSession.Id);
+
+        // Assert — single SaveChanges commits both atomically
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact(DisplayName = "#2587-S2-T2: Already-correlated (Slice 1 path) — no new GameSession added, existing one completed")]
+    public async Task CompleteLiveSession_AlreadyCorrelated_NoNewGameSessionAdded_Regression()
+    {
+        // Arrange (mirrors T3a to confirm it still passes after Slice 2 changes)
+        var sessionId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var correlatedId = Guid.NewGuid();
+
+        var session = LiveGameSession.Create(
+            sessionId, DefaultUserId, "Catan",
+            gameId: gameId,
+            correlatedGameSessionId: correlatedId);
+        session.AddPlayer(null, "Alice", PlayerColor.Red, TimeProvider.System);
+        session.Start(TimeProvider.System);
+        SetupRepoGetById(sessionId, session);
+
+        var gameSession = new GameSession(correlatedId, gameId,
+            new[] { new SessionPlayer("Alice", 1) }, DefaultUserId);
+        _gameSessionRepositoryMock
+            .Setup(r => r.GetByIdAsync(correlatedId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameSession);
+
+        var handler = BuildCompleteHandler();
+        var command = new CompleteLiveSessionCommand(sessionId);
+
+        // Act
+        await handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert — no NEW GameSession created
+        _gameSessionRepositoryMock.Verify(
+            r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        // Assert — existing GameSession was loaded and completed (UpdateAsync)
+        _gameSessionRepositoryMock.Verify(
+            r => r.GetByIdAsync(correlatedId, It.IsAny<CancellationToken>()),
+            Times.Once);
+        _gameSessionRepositoryMock.Verify(
+            r => r.UpdateAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        session.Status.Should().Be(LiveSessionStatus.Completed);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact(DisplayName = "#2587-S2-T3: Free-form (GameId==null) — no GameSession created, live session completes")]
+    public async Task CompleteLiveSession_FreeFormNoGameId_NoGameSessionCreated()
+    {
+        // Arrange
+        var sessionId = Guid.NewGuid();
+        var session = CreateSessionInProgress(sessionId); // GameId == null
+        SetupRepoGetById(sessionId, session);
+
+        var handler = BuildCompleteHandler();
+        var command = new CompleteLiveSessionCommand(sessionId);
+
+        // Act
+        await handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert — no GameSession repo interaction at all
+        _gameSessionRepositoryMock.Verify(
+            r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _gameSessionRepositoryMock.Verify(
+            r => r.UpdateAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _gameSessionRepositoryMock.Verify(
+            r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        session.Status.Should().Be(LiveSessionStatus.Completed);
+        session.CorrelatedGameSessionId.Should().BeNull();
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact(DisplayName = "#2587-S2-T4: Legacy with zero active players — no GameSession, no throw, live session still completes")]
+    public async Task CompleteLiveSession_LegacyBackfill_ZeroActivePlayers_SkipsBackfillWithoutThrowing()
+    {
+        // Arrange
+        var sessionId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+
+        // Session with a GameId but all players removed/deactivated
+        var session = LiveGameSession.Create(sessionId, DefaultUserId, "Mage Knight", gameId: gameId);
+        var p1 = session.AddPlayer(null, "Alice", PlayerColor.Red, TimeProvider.System);
+        session.Start(TimeProvider.System);
+        // Remove the only active player (deactivates it)
+        session.RemovePlayer(p1.Id, TimeProvider.System);
+        SetupRepoGetById(sessionId, session);
+
+        var handler = BuildCompleteHandler();
+        var command = new CompleteLiveSessionCommand(sessionId);
+
+        // Act — must NOT throw even though no active players
+        await handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert — no GameSession added (guard kicked in)
+        _gameSessionRepositoryMock.Verify(
+            r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        // Assert — live session still completed
+        session.Status.Should().Be(LiveSessionStatus.Completed);
+        session.CorrelatedGameSessionId.Should().BeNull();
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // ─── Issue #2587 Slice 1 T3 Part B: active-player filter in Start ─────────────
+
+    [Fact(DisplayName = "#2587-T3-partB: Inactive player excluded from correlated GameSession player list")]
+    public async Task StartLiveSession_InactivePlayerExcluded_FromCorrelatedGameSessionPlayers()
+    {
+        // Arrange
+        var sessionId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+
+        var session = LiveGameSession.Create(sessionId, DefaultUserId, "Catan", gameId: gameId);
+
+        // Add the host first (stays active), then a guest player that will be removed.
+        // The first player added becomes Host (AddPlayer: !HasPlayers => Host). Removing the
+        // host while other players are active is blocked by a domain guard, so the removed
+        // player must be a non-host guest (added second).
+        session.AddPlayer(null, "Active Player", PlayerColor.Blue, TimeProvider.System);
+        var removedPlayer = session.AddPlayer(null, "Removed Player", PlayerColor.Red, TimeProvider.System);
+        // Simulate RemovePlayer which deactivates the (non-host) player
+        session.RemovePlayer(removedPlayer.Id, TimeProvider.System);
+
+        SetupRepoGetById(sessionId, session);
+
+        GameSession? capturedGameSession = null;
+        _gameSessionRepositoryMock
+            .Setup(r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()))
+            .Callback<GameSession, CancellationToken>((gs, _) => capturedGameSession = gs)
+            .Returns(Task.CompletedTask);
+
+        var handler = new StartLiveSessionCommandHandler(
+            _repositoryMock.Object,
+            _gameSessionRepositoryMock.Object,
+            _quotaServiceMock.Object,
+            _timeProvider,
+            _unitOfWorkMock.Object);
+        var command = new StartLiveSessionCommand(sessionId, DefaultUserId, DefaultUserTier, DefaultUserRole);
+
+        // Act
+        await handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert — only the active player ("Active Player") maps to the GameSession
+        capturedGameSession.Should().NotBeNull();
+        capturedGameSession!.Players.Should().ContainSingle(
+            because: "the inactive/removed player must be excluded by the .Where(p => p.IsActive) filter");
+        capturedGameSession.Players[0].PlayerName.Should().Be("Active Player");
     }
 
     #endregion
@@ -1146,7 +1619,7 @@ public class LiveSessionCommandHandlerTests
     public async Task CreateLiveSession_PassesCancellationTokenToRepository()
     {
         // Arrange
-        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
+        var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object, _companionSessionServiceMock.Object);
         var command = new CreateLiveSessionCommand(DefaultUserId, "Token Test Game");
         using var cts = new CancellationTokenSource();
         var ct = cts.Token;
@@ -1168,8 +1641,8 @@ public class LiveSessionCommandHandlerTests
         var session = CreateSessionWithPlayer(sessionId);
         SetupRepoGetById(sessionId, session);
 
-        var handler = new StartLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
-        var command = new StartLiveSessionCommand(sessionId);
+        var handler = new StartLiveSessionCommandHandler(_repositoryMock.Object, _gameSessionRepositoryMock.Object, _quotaServiceMock.Object, _timeProvider, _unitOfWorkMock.Object);
+        var command = new StartLiveSessionCommand(sessionId, DefaultUserId, DefaultUserTier, DefaultUserRole);
         using var cts = new CancellationTokenSource();
         var ct = cts.Token;
 
@@ -1179,6 +1652,208 @@ public class LiveSessionCommandHandlerTests
         // Assert
         _repositoryMock.Verify(r => r.GetByIdAsync(sessionId, ct), Times.Once);
         _repositoryMock.Verify(r => r.UpdateAsync(session, ct), Times.Once);
+    }
+
+    // ─── Issue #2587 Slice 1: GameSession correlation + quota enforcement ───
+
+    [Fact(DisplayName = "#2587-a: GameId-backed session — quota checked, GameSession created, correlated, one SaveChanges")]
+    public async Task StartLiveSession_GameIdBacked_CreatesCorrelatedGameSessionAndChecksQuota()
+    {
+        // Arrange
+        var sessionId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var session = LiveGameSession.Create(sessionId, DefaultUserId, "Catan", gameId: gameId);
+        session.AddPlayer(null, "Alice", PlayerColor.Red, TimeProvider.System);
+        SetupRepoGetById(sessionId, session);
+
+        GameSession? capturedGameSession = null;
+        _gameSessionRepositoryMock
+            .Setup(r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()))
+            .Callback<GameSession, CancellationToken>((gs, _) => capturedGameSession = gs)
+            .Returns(Task.CompletedTask);
+
+        var handler = new StartLiveSessionCommandHandler(
+            _repositoryMock.Object,
+            _gameSessionRepositoryMock.Object,
+            _quotaServiceMock.Object,
+            _timeProvider,
+            _unitOfWorkMock.Object);
+        var command = new StartLiveSessionCommand(sessionId, DefaultUserId, DefaultUserTier, DefaultUserRole);
+
+        // Act
+        await handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert — quota was checked
+        _quotaServiceMock.Verify(
+            q => q.CheckQuotaAsync(DefaultUserId, DefaultUserTier, DefaultUserRole, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        // Assert — GameSession was added with correct gameId + createdByUserId
+        _gameSessionRepositoryMock.Verify(
+            r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        capturedGameSession.Should().NotBeNull();
+        capturedGameSession!.GameId.Should().Be(gameId);
+        capturedGameSession.CreatedByUserId.Should().Be(DefaultUserId);
+
+        // Assert — correlation set
+        session.CorrelatedGameSessionId.Should().Be(capturedGameSession.Id);
+
+        // Assert — session started
+        session.Status.Should().Be(LiveSessionStatus.InProgress);
+
+        // Assert — single SaveChanges
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact(DisplayName = "#2587-b: Quota denied — throws QuotaExceededException, no GameSession added, no Start")]
+    public async Task StartLiveSession_QuotaDenied_ThrowsQuotaExceededAndDoesNotCreateGameSession()
+    {
+        // Arrange
+        var sessionId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var session = LiveGameSession.Create(sessionId, DefaultUserId, "Catan", gameId: gameId);
+        session.AddPlayer(null, "Alice", PlayerColor.Red, TimeProvider.System);
+        SetupRepoGetById(sessionId, session);
+
+        _quotaServiceMock
+            .Setup(q => q.CheckQuotaAsync(It.IsAny<Guid>(), It.IsAny<UserTier>(), It.IsAny<Role>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SessionQuotaResult.Denied("Limit reached", currentCount: 3, maxAllowed: 3));
+
+        var handler = new StartLiveSessionCommandHandler(
+            _repositoryMock.Object,
+            _gameSessionRepositoryMock.Object,
+            _quotaServiceMock.Object,
+            _timeProvider,
+            _unitOfWorkMock.Object);
+        var command = new StartLiveSessionCommand(sessionId, DefaultUserId, DefaultUserTier, DefaultUserRole);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<QuotaExceededException>(
+            () => handler.Handle(command, TestContext.Current.CancellationToken));
+
+        _gameSessionRepositoryMock.Verify(
+            r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        session.Status.Should().Be(LiveSessionStatus.Created);
+    }
+
+    [Fact(DisplayName = "#2587-c: Already-correlated — no second GameSession, idempotent Start")]
+    public async Task StartLiveSession_AlreadyCorrelated_SkipsGameSessionCreation()
+    {
+        // Arrange
+        var sessionId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var existingCorrelationId = Guid.NewGuid();
+        var session = LiveGameSession.Create(
+            sessionId, DefaultUserId, "Catan",
+            gameId: gameId,
+            correlatedGameSessionId: existingCorrelationId);
+        session.AddPlayer(null, "Alice", PlayerColor.Red, TimeProvider.System);
+        SetupRepoGetById(sessionId, session);
+
+        var handler = new StartLiveSessionCommandHandler(
+            _repositoryMock.Object,
+            _gameSessionRepositoryMock.Object,
+            _quotaServiceMock.Object,
+            _timeProvider,
+            _unitOfWorkMock.Object);
+        var command = new StartLiveSessionCommand(sessionId, DefaultUserId, DefaultUserTier, DefaultUserRole);
+
+        // Act
+        await handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert — AddAsync never called
+        _gameSessionRepositoryMock.Verify(
+            r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        // Assert — quota check skipped (already correlated guard short-circuits)
+        _quotaServiceMock.Verify(
+            q => q.CheckQuotaAsync(It.IsAny<Guid>(), It.IsAny<UserTier>(), It.IsAny<Role>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        // Assert — correlation unchanged
+        session.CorrelatedGameSessionId.Should().Be(existingCorrelationId);
+        session.Status.Should().Be(LiveSessionStatus.InProgress);
+    }
+
+    [Fact(DisplayName = "#2587-d: Free-form (GameId==null) — no quota check, no GameSession, session starts")]
+    public async Task StartLiveSession_FreeForm_SkipsQuotaAndGameSessionCreation()
+    {
+        // Arrange
+        var sessionId = Guid.NewGuid();
+        var session = LiveGameSession.Create(sessionId, DefaultUserId, "Free Play"); // GameId = null
+        session.AddPlayer(null, "Alice", PlayerColor.Red, TimeProvider.System);
+        SetupRepoGetById(sessionId, session);
+
+        var handler = new StartLiveSessionCommandHandler(
+            _repositoryMock.Object,
+            _gameSessionRepositoryMock.Object,
+            _quotaServiceMock.Object,
+            _timeProvider,
+            _unitOfWorkMock.Object);
+        var command = new StartLiveSessionCommand(sessionId, DefaultUserId, DefaultUserTier, DefaultUserRole);
+
+        // Act
+        await handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        _quotaServiceMock.Verify(
+            q => q.CheckQuotaAsync(It.IsAny<Guid>(), It.IsAny<UserTier>(), It.IsAny<Role>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _gameSessionRepositoryMock.Verify(
+            r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        session.Status.Should().Be(LiveSessionStatus.InProgress);
+        session.CorrelatedGameSessionId.Should().BeNull();
+    }
+
+    [Fact(DisplayName = "#2587-e: DbUpdateConcurrencyException — re-fetch shows correlated → idempotent success")]
+    public async Task StartLiveSession_ConcurrencyException_RefetchShowsCorrelated_ReturnsIdempotently()
+    {
+        // Arrange
+        var sessionId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+
+        // First GetByIdAsync: returns a fresh Created session (not yet correlated)
+        var session = LiveGameSession.Create(sessionId, DefaultUserId, "Catan", gameId: gameId);
+        session.AddPlayer(null, "Alice", PlayerColor.Red, TimeProvider.System);
+
+        // Re-fetch (after catch): returns a session with correlation already set by the "winner"
+        var correlationId = Guid.NewGuid();
+        var refreshedSession = LiveGameSession.Create(
+            sessionId, DefaultUserId, "Catan",
+            gameId: gameId,
+            correlatedGameSessionId: correlationId);
+
+        var callCount = 0;
+        _repositoryMock
+            .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() =>
+            {
+                callCount++;
+                return callCount == 1 ? session : refreshedSession;
+            });
+
+        // SaveChanges throws concurrency exception on the first (and only) attempt
+        _unitOfWorkMock
+            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateConcurrencyException());
+
+        var handler = new StartLiveSessionCommandHandler(
+            _repositoryMock.Object,
+            _gameSessionRepositoryMock.Object,
+            _quotaServiceMock.Object,
+            _timeProvider,
+            _unitOfWorkMock.Object);
+        var command = new StartLiveSessionCommand(sessionId, DefaultUserId, DefaultUserTier, DefaultUserRole);
+
+        // Act — must not throw (idempotent success)
+        await handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert — SaveChanges called exactly once (no retry loop)
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     #endregion

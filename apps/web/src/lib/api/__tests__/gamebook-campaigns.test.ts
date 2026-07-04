@@ -2,10 +2,12 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
 import {
   GamebookCampaignSchema,
+  GamebookCampaignSpineSchema,
   SessionBookProgressSchema,
   createCampaign,
   getCampaign,
   getCampaignProgress,
+  getCampaignSpine,
   listMyCampaigns,
   updateProgress,
 } from '../gamebook-campaigns';
@@ -118,6 +120,32 @@ describe('gamebook-campaigns client', () => {
     const result = await getCampaign(validRow.id);
     expect(fetchMock.mock.calls[0][0]).toContain(`/api/v1/gamebook/campaigns/${validRow.id}`);
     expect(result.title).toBe('Campagna #1');
+  });
+
+  it('getCampaignSpine GETs /spine and parses the spine (#2632)', async () => {
+    const spine = {
+      gameNightId: '44444444-4444-4444-a444-444444444444',
+      gameNightTitle: 'Serata da Marco',
+      organizerId: '55555555-5555-4555-a555-555555555555',
+      gameNightStatus: 'InProgress',
+      totalSessions: 2,
+      completedSessions: 1,
+      hasLiveSession: true,
+      campaignStatus: 'InProgress',
+    };
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify(spine), { status: 200 }));
+
+    const result = await getCampaignSpine(validRow.id);
+
+    expect(fetchMock.mock.calls[0][0]).toContain(`/api/v1/gamebook/campaigns/${validRow.id}/spine`);
+    expect(result?.gameNightTitle).toBe('Serata da Marco');
+    expect(result?.hasLiveSession).toBe(true);
+  });
+
+  it('getCampaignSpine returns null on 204 (standalone campaign)', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const result = await getCampaignSpine(validRow.id);
+    expect(result).toBeNull();
   });
 
   it('listMyCampaigns appends gameId query when provided', async () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 export interface ChatImagePreview {
   file: File;
@@ -13,6 +13,20 @@ const SUPPORTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 export function useChatImageAttachments(maxImages: number = 5) {
   const [images, setImages] = useState<ChatImagePreview[]>([]);
+
+  // Keep a ref to the latest images so the unmount cleanup can revoke all object-URLs
+  // without capturing a stale closure over the initial empty array.
+  const imagesRef = useRef<ChatImagePreview[]>(images);
+  useEffect(() => {
+    imagesRef.current = images;
+  }, [images]);
+
+  // Revoke all object-URLs on unmount to prevent memory leaks from attached-but-unsent images.
+  useEffect(() => {
+    return () => {
+      imagesRef.current.forEach(img => URL.revokeObjectURL(img.previewUrl));
+    };
+  }, []);
 
   const addImage = useCallback(
     (file: File): string | null => {

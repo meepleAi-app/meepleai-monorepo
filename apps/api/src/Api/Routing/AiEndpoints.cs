@@ -561,6 +561,14 @@ internal static class AiEndpoints
             return Results.BadRequest(new { error = "gameId is required" });
         }
 
+        // #2504: validate GUID format up-front, mirroring /agents/qa. Without this,
+        // a malformed gameId silently degraded to generic default steps (HTTP 200)
+        // instead of surfacing a 400 — masking frontend integration bugs.
+        if (!Guid.TryParse(req.gameId, out _))
+        {
+            return Results.BadRequest(new { error = "Invalid game ID format" });
+        }
+
         var startTime = DateTime.UtcNow;
         logger.LogInformation("Setup guide streaming request from user {UserId} for game {GameId}",
             session.Principal!.Subject.Id, req.gameId);
@@ -574,7 +582,7 @@ internal static class AiEndpoints
 
         try
         {
-            var query = new StreamSetupGuideQuery(req.gameId);
+            var query = new StreamSetupGuideQuery(req.gameId, req.playerCount);
             await ExecuteSetupGuideStreamingAsync(query, context, mediator, streamContext, ct).ConfigureAwait(false);
 
             logger.LogInformation("Setup guide streaming completed for game {GameId}, {StepCount} steps, estimated {Minutes} min",

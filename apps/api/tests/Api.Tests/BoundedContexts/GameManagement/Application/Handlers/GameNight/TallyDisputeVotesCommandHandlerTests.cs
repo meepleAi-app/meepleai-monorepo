@@ -104,7 +104,7 @@ public class TallyDisputeVotesCommandHandlerTests
         SetupDisputeGetById(disputeId, dispute);
         SetupSessionGetById(DefaultSessionId, session);
 
-        var command = new TallyDisputeVotesCommand(disputeId);
+        var command = new TallyDisputeVotesCommand(DefaultSessionId, disputeId);
 
         // Act
         await _handler.Handle(command, CancellationToken.None);
@@ -129,7 +129,7 @@ public class TallyDisputeVotesCommandHandlerTests
         SetupDisputeGetById(disputeId, dispute);
         SetupSessionGetById(DefaultSessionId, session);
 
-        var command = new TallyDisputeVotesCommand(disputeId, OverrideRule: "House rule: two moves allowed");
+        var command = new TallyDisputeVotesCommand(DefaultSessionId, disputeId, OverrideRule: "House rule: two moves allowed");
 
         // Act
         await _handler.Handle(command, CancellationToken.None);
@@ -154,7 +154,7 @@ public class TallyDisputeVotesCommandHandlerTests
         SetupDisputeGetById(disputeId, dispute);
         SetupSessionGetById(DefaultSessionId, session);
 
-        var command = new TallyDisputeVotesCommand(disputeId);
+        var command = new TallyDisputeVotesCommand(DefaultSessionId, disputeId);
 
         // Act
         await _handler.Handle(command, CancellationToken.None);
@@ -175,7 +175,7 @@ public class TallyDisputeVotesCommandHandlerTests
         var disputeId = Guid.NewGuid();
         SetupDisputeGetById(disputeId, null);
 
-        var command = new TallyDisputeVotesCommand(disputeId);
+        var command = new TallyDisputeVotesCommand(DefaultSessionId, disputeId);
 
         // Act & Assert
         var act =

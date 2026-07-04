@@ -61,6 +61,8 @@ public sealed class TranslateGamebookTextQueryHandlerTests
         public Task AddAsync(GamebookGlossaryEntry entry, CancellationToken cancellationToken = default)
         { Store.Add(entry); return Task.CompletedTask; }
 
+        public void Remove(GamebookGlossaryEntry entry) => Store.Remove(entry);
+
         public Task SaveChangesAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 

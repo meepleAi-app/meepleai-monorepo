@@ -128,7 +128,6 @@ export const LiveSessionDtoSchema = z.object({
   currentTurnIndex: z.number().int(),
   currentTurnPlayerId: z.string().uuid().nullable(),
   agentMode: AgentSessionModeSchema,
-  chatSessionId: z.string().uuid().nullable(),
   notes: z.string().nullable(),
   players: z.array(LiveSessionPlayerDtoSchema),
   teams: z.array(LiveSessionTeamDtoSchema),
@@ -137,6 +136,31 @@ export const LiveSessionDtoSchema = z.object({
 });
 
 export type LiveSessionDto = z.infer<typeof LiveSessionDtoSchema>;
+
+// ── Public lobby projection (#2590) — anonymous-safe, narrow scoreboard ──────────
+// Served by GET /api/v1/live-sessions/code/{code}/public. Deliberately omits
+// userId, createdByUserId, notes, roundScores, teams, visibility, groupId, timestamps.
+export const PublicLiveSessionPlayerDtoSchema = z.object({
+  id: z.string().uuid(),
+  displayName: z.string(),
+  color: PlayerColorSchema,
+  totalScore: z.number().int(),
+  currentRank: z.number().int(),
+  isActive: z.boolean(),
+});
+
+export type PublicLiveSessionPlayerDto = z.infer<typeof PublicLiveSessionPlayerDtoSchema>;
+
+export const PublicLiveSessionDtoSchema = z.object({
+  id: z.string().uuid(),
+  sessionCode: z.string(),
+  gameName: z.string(),
+  gameSlug: z.string(),
+  status: LiveSessionStatusSchema,
+  players: z.array(PublicLiveSessionPlayerDtoSchema),
+});
+
+export type PublicLiveSessionDto = z.infer<typeof PublicLiveSessionDtoSchema>;
 
 export const LiveSessionSummaryDtoSchema = z.object({
   id: z.string().uuid(),
@@ -287,3 +311,22 @@ export const UpdateNotesRequestSchema = z.object({
 });
 
 export type UpdateNotesRequest = z.infer<typeof UpdateNotesRequestSchema>;
+
+// ── Diary (SP3 #2570 / write-path #2575) ──
+// Mirrors BE DiaryEntryDto (id, authorId, createdAt, text). Named distinctly to avoid collision
+// with the unrelated DiaryEntryDto types in session-flow/types.ts and gameNightSessionClient.ts.
+export const LiveSessionDiaryEntryDtoSchema = z.object({
+  id: z.string().uuid(),
+  authorId: z.string().uuid(),
+  createdAt: z.string(),
+  text: z.string(),
+});
+
+export type LiveSessionDiaryEntryDto = z.infer<typeof LiveSessionDiaryEntryDtoSchema>;
+
+// Mirrors BE AddDiaryEntryCommandValidator: NotEmpty + MaximumLength(2000).
+export const AddDiaryEntryRequestSchema = z.object({
+  text: z.string().min(1).max(2000),
+});
+
+export type AddDiaryEntryRequest = z.infer<typeof AddDiaryEntryRequestSchema>;

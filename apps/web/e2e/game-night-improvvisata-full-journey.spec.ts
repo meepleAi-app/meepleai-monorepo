@@ -80,7 +80,7 @@ test.describe('Game Night Improvvisata — Complete Journey', () => {
           route.fulfill({ status: 200, json: { messages: [] } })
         );
 
-      await page.goto(`/sessions/live/${MOCK_SESSION_ID}`);
+      await page.goto(`/sessions/${MOCK_SESSION_ID}/live`);
       await page.waitForLoadState('domcontentloaded');
 
       const sessionLoaded = await page
@@ -109,7 +109,7 @@ test.describe('Game Night Improvvisata — Complete Journey', () => {
           route.fulfill({ status: 200, json: { messages: [] } })
         );
 
-      await page.goto(`/sessions/live/${MOCK_SESSION_ID}`);
+      await page.goto(`/sessions/${MOCK_SESSION_ID}/live`);
       await page.waitForLoadState('domcontentloaded');
 
       const arbitroBtn = page.getByTestId('quick-action-arbiter').first();
@@ -138,7 +138,7 @@ test.describe('Game Night Improvvisata — Complete Journey', () => {
           route.fulfill({ status: 200, json: { messages: [] } })
         );
 
-      await page.goto(`/sessions/live/${MOCK_SESSION_ID}`);
+      await page.goto(`/sessions/${MOCK_SESSION_ID}/live`);
       await page.waitForLoadState('domcontentloaded');
 
       const resumePanel = page.getByTestId('resume-session-panel').first();

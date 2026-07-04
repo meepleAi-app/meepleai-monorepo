@@ -15,9 +15,17 @@ public sealed class SessionBroadcastServiceTests : IDisposable
 
     public SessionBroadcastServiceTests()
     {
-        _service = new SessionBroadcastService(
-            NullLogger<SessionBroadcastService>.Instance);
+        _service = CreateService();
     }
+
+    /// <summary>
+    /// Builds a SessionBroadcastService wired with the in-process fallback sequence
+    /// provider (no Redis). Issue #2561 SP2 T6.
+    /// </summary>
+    private static SessionBroadcastService CreateService() =>
+        new(
+            NullLogger<SessionBroadcastService>.Instance,
+            new RedisSessionSequenceProvider(null, NullLogger<RedisSessionSequenceProvider>.Instance));
 
     public void Dispose()
     {
@@ -652,10 +660,33 @@ public sealed class SessionBroadcastServiceTests : IDisposable
 
         // Assert
         var envelope = receivedEvents[0];
-        envelope.Id.Should().StartWith(sessionId.ToString("N"));
+        // Issue #2561 SP2 T6: Id is now a monotonic D20 sequence (no "{sessionId:N}-" prefix).
+        envelope.Id.Should().HaveLength(20).And.MatchRegex(@"^\d{20}$");
         envelope.EventType.Should().Be("session:toolkit");
         envelope.Data.Should().BeOfType<DiceRolledEvent>();
         envelope.Timestamp.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+    }
+
+    #endregion
+
+    #region PublishEnvelopeAsync
+
+    [Fact]
+    public async Task PublishEnvelopeAsync_delivers_explicit_event_type()
+    {
+        var svc = CreateService();
+        var sid = Guid.NewGuid(); var uid = Guid.NewGuid();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var received = new List<SseEventEnvelope>();
+        var sub = Task.Run(async () => {
+            await foreach (var e in svc.SubscribeAsync(sid, uid, null, cts.Token)) { received.Add(e); break; }
+        });
+        await Task.Delay(100);
+        await svc.PublishEnvelopeAsync(sid,
+            new SseEventEnvelope { Id = "ignored", EventType = "session:score", Data = new { value = 7 } });
+        await sub;
+        Assert.Single(received);
+        Assert.Equal("session:score", received[0].EventType);
     }
 
     #endregion

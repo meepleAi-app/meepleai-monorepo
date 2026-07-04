@@ -127,59 +127,6 @@ public sealed class GameManagementE2ETests : E2ETestBase
     #region Game Session Lifecycle Tests
 
     [Fact]
-    public async Task StartSession_WithValidGame_CreatesSession()
-    {
-        // Arrange - Need authentication for session endpoints
-        var email = $"sessiontest_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, userId) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
-        SetSessionCookie(sessionToken);
-
-        var payload = new
-        {
-            gameId = _testGameId,
-            players = new[]
-            {
-                new { playerName = "Player 1", playerOrder = 1 },
-                new { playerName = "Player 2", playerOrder = 2 }
-            }
-        };
-
-        // Act
-        var response = await Client.PostAsJsonAsync("/api/v1/sessions", payload);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
-
-        var result = await response.Content.ReadFromJsonAsync<GameSessionDto>();
-        result.Should().NotBeNull();
-        result!.GameId.Should().Be(_testGameId);
-        result.Players.Should().HaveCount(2);
-        result.Status.Should().Be("InProgress");
-    }
-
-    [Fact]
-    public async Task StartSession_WithoutAuthentication_ReturnsUnauthorized()
-    {
-        // Arrange
-        ClearAuthentication();
-
-        var payload = new
-        {
-            gameId = _testGameId,
-            players = new[]
-            {
-                new { playerName = "Player 1", playerOrder = 1 }
-            }
-        };
-
-        // Act
-        var response = await Client.PostAsJsonAsync("/api/v1/sessions", payload);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-    }
-
-    [Fact]
     public async Task CompleteSession_ValidSession_MarksAsCompleted()
     {
         // Arrange - Create session first

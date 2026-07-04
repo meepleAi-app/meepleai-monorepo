@@ -699,7 +699,62 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
             actorId,
             previous,
             newCapUsd,
-            CostCapOverrideReason));
+            CostCapOverrideReason,
+            CostCapOverrunCause.AdminOverride));
+    }
+
+    /// <summary>
+    /// #2494 AC-5 — Records that the pipeline detected cumulative cost exceeding the cap
+    /// AFTER at least one section completed. Raises a <see cref="MechanicAnalysisCostCapOverriddenEvent"/>
+    /// with <see cref="CostCapOverrunCause.MidStreamOverrun"/> for downstream audit/observability.
+    /// Does NOT mutate <see cref="CostCapUsd"/> — the cap was breached, not raised.
+    /// </summary>
+    /// <param name="cumulativeCostUsd">
+    /// Pipeline-observed cumulative cost at the moment of detection. Must be &gt; <see cref="CostCapUsd"/>.
+    /// </param>
+    /// <param name="actorId">
+    /// Actor recorded on the event. Pass the analysis <see cref="CreatedBy"/> when the pipeline
+    /// is the trigger (AI is the submitter per M1.2).
+    /// </param>
+    /// <remarks>
+    /// State transition to <see cref="MechanicAnalysisStatus.PartiallyExtracted"/> is handled
+    /// separately by <c>SubmitForReview</c>/auto-rejection paths in the executor; this method
+    /// only records the cost-cap breach event.
+    /// </remarks>
+    public void RecordMidStreamCostCapOverrun(decimal cumulativeCostUsd, Guid actorId)
+    {
+        if (actorId == Guid.Empty)
+        {
+            throw new ArgumentException("ActorId cannot be empty.", nameof(actorId));
+        }
+
+        // Aggregate invariant: mid-stream overrun is a Draft-only signal. Once the
+        // aggregate transitions out of Draft (PartiallyExtracted / Rejected / Published)
+        // the cost-cap state is sealed and recording a second event would confuse
+        // downstream audit consumers.
+        if (Status != MechanicAnalysisStatus.Draft)
+        {
+            throw new InvalidMechanicAnalysisStateException(
+                Id, Status, "record mid-stream cost cap overrun", MechanicAnalysisStatus.Draft);
+        }
+
+        if (cumulativeCostUsd <= CostCapUsd)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(cumulativeCostUsd),
+                cumulativeCostUsd,
+                $"Mid-stream overrun requires cumulative cost ({cumulativeCostUsd:C}) " +
+                $"strictly greater than current cap ({CostCapUsd:C}).");
+        }
+
+        AddDomainEvent(new MechanicAnalysisCostCapOverriddenEvent(
+            Id,
+            actorId,
+            previousCapUsd: CostCapUsd,
+            newCapUsd: CostCapUsd, // cap is NOT raised on this path — it was breached
+            reason: $"Mid-stream overrun: cumulative {cumulativeCostUsd:F6} USD > cap {CostCapUsd:F6} USD.",
+            overrunCause: CostCapOverrunCause.MidStreamOverrun,
+            observedCumulativeCostUsd: cumulativeCostUsd));
     }
 
     // === AI comprehension certification methods (ADR-051 M2) ===

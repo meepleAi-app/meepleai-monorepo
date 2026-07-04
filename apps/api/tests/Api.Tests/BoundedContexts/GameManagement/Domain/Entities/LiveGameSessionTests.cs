@@ -1044,48 +1044,6 @@ public class LiveGameSessionTests
         act.Should().Throw<ValidationException>();
     }
 
-    [Fact]
-    public void SetAgentMode_Assistant_WithChatSession_Succeeds()
-    {
-        // Arrange
-        var session = CreateDefaultSession();
-        var chatSessionId = Guid.NewGuid();
-
-        // Act
-        session.SetAgentMode(AgentSessionMode.Assistant, chatSessionId, _timeProvider);
-
-        // Assert
-        session.AgentMode.Should().Be(AgentSessionMode.Assistant);
-        session.ChatSessionId.Should().Be(chatSessionId);
-    }
-
-    [Fact]
-    public void SetAgentMode_None_ClearsChatSession()
-    {
-        // Arrange
-        var session = CreateDefaultSession();
-        session.SetAgentMode(AgentSessionMode.Assistant, Guid.NewGuid(), _timeProvider);
-
-        // Act
-        session.SetAgentMode(AgentSessionMode.None, null, _timeProvider);
-
-        // Assert
-        session.AgentMode.Should().Be(AgentSessionMode.None);
-        session.ChatSessionId.Should().BeNull();
-    }
-
-    [Fact]
-    public void SetAgentMode_WithoutChatSession_ThrowsValidationException()
-    {
-        // Arrange
-        var session = CreateDefaultSession();
-
-        // Act & Assert
-        var act = () =>
-            session.SetAgentMode(AgentSessionMode.GameMaster, null, _timeProvider);
-        act.Should().Throw<ValidationException>();
-    }
-
     #endregion
 
     #region Save Method
@@ -1298,21 +1256,6 @@ public class LiveGameSessionTests
         // Act & Assert
         var act = () =>
             session.LinkToolkit(Guid.NewGuid(), _timeProvider);
-        act.Should().Throw<ConflictException>();
-    }
-
-    [Fact]
-    public void SetAgentMode_CompletedSession_ThrowsConflictException()
-    {
-        // Arrange
-        var session = CreateDefaultSession();
-        AddDefaultPlayer(session);
-        session.Start(_timeProvider);
-        session.Complete(_timeProvider);
-
-        // Act & Assert
-        var act = () =>
-            session.SetAgentMode(AgentSessionMode.Assistant, Guid.NewGuid(), _timeProvider);
         act.Should().Throw<ConflictException>();
     }
 

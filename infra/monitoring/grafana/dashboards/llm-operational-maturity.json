@@ -153,10 +153,65 @@
           "unit": "percentunit"
         }
       }
+    },
+    {
+      "title": "Live-RAG Citations per Answer (SP5-b #2582) — PROVISIONAL",
+      "description": "Citations returned per live-session RAG answer (meepleai.rag.citations_per_answer). P50/P95 latency-style view + zero-citations fraction (le=0 bucket / total = grounded-but-uncited signal). BUFFERING CAVEAT: first-visible-token latency on this path equals total-response latency (~3s SLO, not 800ms TTFT). Thresholds provisional — tune after ≥1 week of live-RAG baseline data.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 22 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(meepleai_rag_citations_per_answer_bucket[5m]))",
+          "legendFormat": "P95 citations/answer",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.50, rate(meepleai_rag_citations_per_answer_bucket[5m]))",
+          "legendFormat": "P50 citations/answer",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(meepleai_rag_citations_per_answer_bucket{le=\"0\"}[5m]) / (rate(meepleai_rag_citations_per_answer_count[5m]) > 0)",
+          "legendFormat": "grounded-but-uncited fraction (le=0)",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1
+        }
+      }
+    },
+    {
+      "title": "Live-RAG Retrieval-Empty Rate (SP5-b #2582) — PROVISIONAL",
+      "description": "Fraction of live-session RAG answers with zero retrieved chunks (grounded-but-uncited signal). Denominator: meepleai_rag_first_token_latency_count (answers served). Alert threshold: >5% for 15m (warning, provisional). A rising trend indicates pgvector index drift, embedding model mismatch, or score-threshold too strict.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 22 },
+      "targets": [
+        {
+          "expr": "rate(meepleai_rag_retrieval_empty_total[5m]) / (rate(meepleai_rag_first_token_latency_count[5m]) > 0)",
+          "legendFormat": "retrieval-empty fraction"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.03 },
+              { "color": "red", "value": 0.05 }
+            ]
+          }
+        }
+      }
     }
   ],
   "schemaVersion": 39,
-  "tags": ["llm", "operational", "meepleai", "issue-5480"],
+  "tags": ["llm", "operational", "meepleai", "issue-5480", "sp5b-live-rag"],
   "templating": { "list": [] },
   "time": { "from": "now-3h", "to": "now" },
   "title": "LLM Operational Maturity",

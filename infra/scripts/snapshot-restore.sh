@@ -87,6 +87,36 @@ else
     log "nessun supplement file — skip"
 fi
 
+# Step 3b: Runtime-managed pgvector schema (#2480).
+# pgvector_embeddings.search_vector is a GENERATED tsvector column + its GIN/HNSW
+# indexes are created at runtime by PgVectorStoreAdapter (NOT by EF migrations —
+# the InitialCreate migration intentionally omits search_vector). `dotnet ef
+# database update` above therefore restores the table WITHOUT them, and
+# dev-from-snapshot skips PDF processing so the runtime ensure never runs →
+# keyword/hybrid search fails with `column "search_vector" does not exist` and
+# every cross-game ask returns 0 citations. Reproduce that DDL idempotently here
+# (search_vector is GENERATED from text_content, already restored, so it
+# auto-populates). Mirrors PgVectorStoreAdapter.cs.
+log "ensuring runtime-managed pgvector schema (search_vector + indexes)"
+docker exec -i meepleai-postgres psql -U "$PG_USER" -d "$PG_DB" --set ON_ERROR_STOP=on <<'SQL'
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'pgvector_embeddings' AND column_name = 'search_vector'
+    ) THEN
+        ALTER TABLE pgvector_embeddings
+            ADD COLUMN search_vector tsvector
+            GENERATED ALWAYS AS (to_tsvector('english', text_content)) STORED;
+    END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_pgvector_embeddings_search_vector ON pgvector_embeddings USING gin (search_vector);
+CREATE INDEX IF NOT EXISTS idx_pgvector_embeddings_vector_cosine ON pgvector_embeddings USING hnsw (vector vector_cosine_ops) WITH (m = 16, ef_construction = 200);
+CREATE INDEX IF NOT EXISTS idx_pgvector_embeddings_game_id ON pgvector_embeddings (game_id);
+CREATE INDEX IF NOT EXISTS idx_pgvector_embeddings_vector_document_id ON pgvector_embeddings (vector_document_id);
+SQL
+log "runtime-managed pgvector schema OK"
+
 # Step 4: Smoke test
 log "smoke test: chunk count + orphans"
 actual_chunks=$(docker exec meepleai-postgres psql -U "$PG_USER" -d "$PG_DB" -At -c "SELECT COUNT(*) FROM text_chunks;")
@@ -98,19 +128,29 @@ if [ "$actual_chunks" != "$expected_chunks" ]; then
     # Non fallire: il sidecar potrebbe avere un conteggio da un'altra query
 fi
 
+# Orphan checks are best-effort sanity WARNINGs — the data is already restored
+# above. The schema mixes snake_case columns (HasColumnName) with PascalCase
+# keys (e.g. "Id"), so a hand-written join here can reference a column that
+# doesn't exist under the current naming; that must NOT fail the restore (it
+# used to kill the script via `set -e`, blocking dev-from-snapshot entirely).
+# On a query error, skip the check instead of aborting. #2480.
 orphan_chunks=$(docker exec meepleai-postgres psql -U "$PG_USER" -d "$PG_DB" -At -c "
     SELECT COUNT(*) FROM text_chunks tc
-    LEFT JOIN pdf_documents p ON p.id = tc.pdf_document_id
-    WHERE p.id IS NULL;")
-if [ "$orphan_chunks" != "0" ]; then
+    LEFT JOIN pdf_documents p ON p.\"Id\" = tc.pdf_document_id
+    WHERE p.\"Id\" IS NULL;" 2>/dev/null || echo "skip")
+if [ "$orphan_chunks" = "skip" ]; then
+    log "orphan text_chunks check skipped (column-name mismatch — data restored OK)"
+elif [ "$orphan_chunks" != "0" ]; then
     log "WARNING: $orphan_chunks text_chunks orfani (possibile drift schema)"
 fi
 
 orphan_embeds=$(docker exec meepleai-postgres psql -U "$PG_USER" -d "$PG_DB" -At -c "
     SELECT COUNT(*) FROM pgvector_embeddings e
-    LEFT JOIN text_chunks tc ON tc.id = e.text_chunk_id
-    WHERE tc.id IS NULL;")
-if [ "$orphan_embeds" != "0" ]; then
+    LEFT JOIN text_chunks tc ON tc.\"Id\" = e.text_chunk_id
+    WHERE tc.\"Id\" IS NULL;" 2>/dev/null || echo "skip")
+if [ "$orphan_embeds" = "skip" ]; then
+    log "orphan pgvector_embeddings check skipped (column-name mismatch — data restored OK)"
+elif [ "$orphan_embeds" != "0" ]; then
     log "WARNING: $orphan_embeds pgvector_embeddings orfani (possibile drift schema)"
 fi
 

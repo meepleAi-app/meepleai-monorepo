@@ -55,7 +55,6 @@ async function mockLiveSession(page: import('@playwright/test').Page) {
         currentTurnIndex: 0,
         currentTurnPlayerId: C.PARTICIPANT_ID,
         agentMode: 'None',
-        chatSessionId: null,
         notes: null,
         players: [
           {
@@ -138,7 +137,7 @@ test.describe('Live Session — Autosave + Score', () => {
     // Suppress SSE streams
     await page.context().route('**/api/v1/game-sessions/**', route => route.abort('failed'));
 
-    await page.goto(`/sessions/live/${C.SESSION_ID}/scores`);
+    await page.goto(`/sessions/${C.SESSION_ID}/live?tab=score`);
     await page.waitForLoadState('networkidle');
 
     const indicator = page.getByTestId('autosave-indicator');

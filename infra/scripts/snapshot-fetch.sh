@@ -3,6 +3,14 @@
 # Priorità: SNAPSHOT_FILE env > cache locale più recente > download da bucket.
 set -euo pipefail
 
+# Resolve infra/ relative to THIS script, not the cwd. `make dev-from-snapshot`
+# invokes this from infra/, so a hardcoded `infra/secrets/...` resolved to
+# infra/infra/... and the bucket fetch failed on a fresh machine with no local
+# cache — the exact case snapshot distribution exists for (#2516, mirrors the
+# seed-index-publish.sh fix).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+INFRA_DIR="$(dirname "$SCRIPT_DIR")"
+
 OUT_DIR="${SEED_INDEX_OUT_DIR:-data/snapshots}"
 mkdir -p "$OUT_DIR"
 
@@ -13,13 +21,18 @@ if [ -n "${SNAPSHOT_FILE:-}" ]; then
     [ -f "$SNAPSHOT_FILE" ] || fail "SNAPSHOT_FILE non esiste: $SNAPSHOT_FILE"
     BASENAME=$(basename "$SNAPSHOT_FILE" .dump)
     log "override esplicito: $BASENAME"
-elif ls "$OUT_DIR"/meepleai_seed_*.meta.json >/dev/null 2>&1; then
-    BASENAME=$(ls -t "$OUT_DIR"/meepleai_seed_*.meta.json | head -1 | xargs basename | sed 's/\.meta\.json$//')
+elif ls "$OUT_DIR"/meepleai_seed_*.dump >/dev/null 2>&1; then
+    # Cache hit keys on the .dump (the heavy, gitignored data artifact), NOT the
+    # .meta.json. The .meta.json files are committed as a historical log, so a
+    # fresh git checkout always has them but WITHOUT their .dump — keying on
+    # .meta.json made dev-from-snapshot pick a basename with no data and skip the
+    # R2 download entirely, then fail at restore (#2480).
+    BASENAME=$(ls -t "$OUT_DIR"/meepleai_seed_*.dump | head -1 | xargs basename | sed 's/\.dump$//')
     log "cache locale: $BASENAME"
 else
     log "nessuna cache locale — download dal bucket"
     # shellcheck disable=SC1091
-    set -a; source infra/secrets/storage.secret; set +a
+    set -a; source "$INFRA_DIR/secrets/storage.secret"; set +a
     : "${SEED_BLOB_BUCKET:?SEED_BLOB_BUCKET mancante}"
     : "${S3_ENDPOINT:?S3_ENDPOINT mancante}"
     : "${S3_ACCESS_KEY:?S3_ACCESS_KEY mancante}"

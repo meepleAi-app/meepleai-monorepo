@@ -105,7 +105,8 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                 request.GameId,
                 sessionType,
                 request.Location,
-                request.SessionDate);
+                request.SessionDate,
+                request.GamebookCampaignId);
 
             // Populate participants on the domain aggregate BEFORE persisting so that
             // SessionRepository.AddAsync maps the full graph in a single insert — this keeps

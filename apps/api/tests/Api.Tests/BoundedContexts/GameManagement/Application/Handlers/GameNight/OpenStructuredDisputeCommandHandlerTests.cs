@@ -248,6 +248,7 @@ public class OpenStructuredDisputeCommandHandlerTests
         SetupDisputeGetById(disputeId, dispute);
 
         var command = new RespondToDisputeCommand(
+            DefaultSessionId,
             disputeId,
             DefaultRespondentPlayerId,
             "I disagree, the rule says otherwise");
@@ -272,6 +273,7 @@ public class OpenStructuredDisputeCommandHandlerTests
         SetupDisputeGetById(disputeId, null);
 
         var command = new RespondToDisputeCommand(
+            DefaultSessionId,
             disputeId,
             DefaultRespondentPlayerId,
             "Some response");
@@ -296,7 +298,7 @@ public class OpenStructuredDisputeCommandHandlerTests
 
         SetupDisputeGetById(disputeId, dispute);
 
-        var command = new RespondentTimeoutCommand(disputeId);
+        var command = new RespondentTimeoutCommand(DefaultSessionId, disputeId);
 
         // Act — should not throw (no-op)
         await _timeoutHandler.Handle(command, CancellationToken.None);
@@ -313,7 +315,7 @@ public class OpenStructuredDisputeCommandHandlerTests
         var disputeId = Guid.NewGuid();
         SetupDisputeGetById(disputeId, null);
 
-        var command = new RespondentTimeoutCommand(disputeId);
+        var command = new RespondentTimeoutCommand(DefaultSessionId, disputeId);
 
         // Act & Assert
         var act =

@@ -36,6 +36,8 @@
  * 4. session:tool-execution — BE has CoinFlipped/WheelSpun events not in FE 'dice'|'timer'|'card' enum.
  */
 
+import type { Citation } from '@/lib/api/schemas/streaming.schemas';
+
 import type { SessionEvent } from './sse-events';
 
 // ============================================================================
@@ -44,6 +46,12 @@ import type { SessionEvent } from './sse-events';
 
 export interface LivePlayerState {
   readonly id: string;
+  /**
+   * Auth user id this player is linked to (null for guest players). #2575: needed to resolve
+   * diary `authorId` (an auth-user id from GetUserId()) to a display name — the player `id` is a
+   * distinct player id, so name resolution must match on `userId`.
+   */
+  readonly userId?: string | null;
   readonly name: string;
   readonly role: 'Spectator' | 'Player' | 'Host';
   readonly score: number;
@@ -56,6 +64,12 @@ export interface LiveLogEntry {
   readonly authorName: string;
   readonly content: string;
   readonly timestamp: string;
+  /**
+   * RAG citations attached to a broadcast chat message (#2564 AC-SSE-4). Only populated for
+   * type='chat' entries that carried citations[] over the SSE wire (T8/T9 SP2 #2561). undefined
+   * for non-chat entries and for chat messages with no citations.
+   */
+  readonly citations?: ReadonlyArray<Citation>;
 }
 
 export interface SessionLiveState {
@@ -81,6 +95,7 @@ export interface InitialSessionData {
   readonly currentTurnPlayerId?: string | null;
   readonly players?: ReadonlyArray<{
     readonly id: string;
+    readonly userId?: string | null;
     readonly displayName?: string;
     readonly name?: string;
     readonly role?: string;
@@ -112,10 +127,25 @@ function toRole(raw: string | undefined): 'Spectator' | 'Player' | 'Host' {
   return 'Player';
 }
 
+/**
+ * Resolves an author id (an auth-user id, e.g. diary `authorId` from GetUserId()) to a player
+ * display name. Matches on `userId` first (the correct key for the live API), then falls back to
+ * the player `id` (covers fixtures/tests where the two coincide), then to the raw id for guests or
+ * system authors not present in the roster. #2575.
+ *
+ * Uses `|| id` (not `?? id`) because toBaseState can produce an empty `name` — a blank author
+ * label is worse than showing the id.
+ */
+function resolveAuthorName(state: SessionLiveState, id: string): string {
+  const match = state.players.find(p => p.userId === id || p.id === id);
+  return match?.name || id;
+}
+
 /** Convert initial DTO/fixture to base SessionLiveState. */
 function toBaseState(initial: InitialSessionData): SessionLiveState {
   const players: LivePlayerState[] = (initial.players ?? []).map(p => ({
     id: p.id,
+    userId: p.userId ?? null,
     name: p.displayName ?? p.name ?? '',
     role: toRole(p.role),
     score: p.totalScore ?? p.score ?? 0,
@@ -239,6 +269,8 @@ function applyChat(
     authorName: event.senderId,
     content: event.content,
     timestamp: event.timestamp,
+    // #2564 AC-SSE-4: carry the broadcast citations so non-author participants render them too.
+    citations: event.citations,
   };
   return { ...state, actionLog: [...state.actionLog, entry] };
 }
@@ -264,7 +296,10 @@ function applyDiary(
   const entry: LiveLogEntry = {
     id: event.entryId,
     type: 'event',
-    authorName: event.authorId,
+    // #2575: resolve the auth-user authorId to a player display name. applyChat (senderId) and
+    // applyToolExecution (executedBy) intentionally still show raw ids — the issue scopes the
+    // resolution to applyDiary; a future PR can route them through resolveAuthorName too.
+    authorName: resolveAuthorName(state, event.authorId),
     content: event.content,
     timestamp: event.timestamp,
   };

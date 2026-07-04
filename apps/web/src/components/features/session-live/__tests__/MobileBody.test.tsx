@@ -33,6 +33,8 @@ const LABELS: MobileBodyLabels = {
   tabTurn: 'Turni',
   tabWidget: 'Widget',
   tabNotes: 'Note',
+  tabPhotos: 'Foto',
+  tabAgent: 'Arbitro',
 };
 
 function renderBody(overrides: Partial<MobileBodyProps> = {}) {

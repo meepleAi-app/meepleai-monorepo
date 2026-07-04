@@ -62,7 +62,9 @@
 |------|------|---------------|
 | `auth-flow.html` | page-mock | `/login`, `/register`, `/reset-password`, `/oauth-callback`, `/verify-email`, `/verification-pending`, `/verification-success`, `/invitation-expired` |
 | `onboarding.html` | page-mock | `/welcome`, `/onboarding`, `/setup`, `/setup-account` |
-| `notifications.html` | page-mock | `/notifications`, `/notifications/preferences` |
+| `notifications.html` | page-mock | _(SP1 legacy archive — superseded by `sp7-notifications-*`, #2028)_ |
+| `sp7-notifications-hub.html` | page-mock | `/notifications` |
+| `sp7-notifications-preferences.html` | page-mock | `/notifications/preferences` |
 | `public.html` | page-mock | `/` (landing) |
 | `settings.html` | page-mock | `/settings` + 7 sub-route (`/ai-consent`, `/api-keys`, `/notifications`, `/preferences`, `/profile`, `/security`, `/services`) |
 
@@ -224,7 +226,7 @@ below) and the `/gamebook` family pages render directly from those._
 | `librogame-runthrough-play-session.html` | page-mock | `/library/[gameId]/play/[campaignId]` (4 stati v1 congelati + 3 stati SP8 companion: state-05 diary, state-06 paragrafi-drawer, state-07 end-campaign, brief 2026-05-30; jsx twin nuovo con 3 lab interattivi) |
 | `librogame-runthrough-quota-credits.html` | component-mock | Quota/credits overlay (global) |
 | `librogame-runthrough-resume-picker.html` | page-mock | `/library/[gameId]/play` |
-| `librogame-runthrough-session-end.html` | page-mock | `/sessions/live/[sessionId]` (end-state) |
+| `librogame-runthrough-session-end.html` | page-mock | `/sessions/[id]/live` (end-state) |
 | `librogame-runthrough-setup-chat.html` | page-mock | `/chat/new`, `/chat/[threadId]` (setup variant) |
 | `librogame-runthrough-setup-wizard.html` | page-mock | `/sessions/new`, `/library/[gameId]` campaign-setup drawer (PR #1037) |
 | `librogame-runthrough-translate-viewer.html` | page-mock | `/library/[gameId]/play/[campaignId]/translate` |

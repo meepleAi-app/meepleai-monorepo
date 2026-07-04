@@ -29,6 +29,7 @@
 19. [Catalog Seed Pipeline (#1903)](#19-catalog-seed-pipeline-1903)
 20. [Catalog Covers — BGG ToS Compliance (#2123)](#20-catalog-covers--bgg-tos-compliance-2123)
 21. [Self-Hosted Runner Recovery](#21-self-hosted-runner-recovery)
+22. [Live-RAG Observability — SLO, Alerts & Grafana (SP5-b #2582)](#22-live-rag-observability--slo-alerts--grafana-sp5-b-2582)
 
 ---
 
@@ -3151,3 +3152,91 @@ Existing runbooks in `docs/for-developers/operations/runbooks/`:
 | `infra/Makefile` | Make targets for common operations |
 | `infra/start-*.sh` / `infra/start-*.ps1` | Start helper scripts |
 | `infra/stop.ps1` | Stop helper script |
+
+---
+
+## 22. Live-RAG Observability — SLO, Alerts & Grafana (SP5-b #2582)
+
+> **Reference**: Epic #2501 SP5-b | Issue #2582 | ADR-043 (LLM subsystem NFR) | ADR-083 (live-session aggregate convergence).
+> **Added**: 2026-06-29.
+
+### 22.1 Background — the buffering caveat
+
+The live-session RAG handler (`ChatWithSessionAgentCommandHandler.HandleCore`) is a streaming `IAsyncEnumerable`.  
+**Current implementation buffers all LLM chunks before yielding** (SP5-b state, pending SP5-c streaming refactor).  
+As a consequence:
+
+- `meepleai.rag.first_token_latency` measures **start → first-VISIBLE-token (post-buffer)**, which is equivalent to **total-response latency** on this path.
+- The SLO target is therefore **≤ 3 000ms (total-response scale)**, mirroring `meepleai:slo:rag_total`, **NOT** the chat-path TTFT target of 800ms.
+- Once buffering is removed (SP5-c or later), the threshold should be revised down towards 800ms.
+
+**Mark all live-RAG SLO thresholds PROVISIONAL** until ≥1 week of real data is available.
+
+### 22.2 Metrics added by SP5-b
+
+| Metric (OTel dotted) | Prometheus name | Type | Cardinality rule |
+|---|---|---|---|
+| `meepleai.rag.first_token_latency` | `meepleai_rag_first_token_latency_{bucket,count,sum}` | Histogram (ms) | NO session/game/user tags |
+| `meepleai.rag.retrieval_empty` | `meepleai_rag_retrieval_empty_total` | Counter | NO tags |
+| `meepleai.rag.citations_per_answer` | `meepleai_rag_citations_per_answer_{bucket,count,sum}` | Histogram (count) | NO tags |
+
+**Cardinality rule (CRITICAL)**: never add `gameSessionId`, `agentSessionId`, or `userId` as a label — these are unbounded and will cause Prometheus series explosion.
+
+### 22.3 SLO recording rule
+
+**Rule name**: `meepleai:slo:live_rag_ttft:p95:5m`  
+**File**: `infra/prometheus-rules.yml` (group `meepleai_slo_live_rag_recording_rules`)  
+**PromQL**:
+```promql
+histogram_quantile(
+  0.95,
+  rate(meepleai_rag_first_token_latency_bucket[5m])
+)
+```
+**Labels**: `service=meepleai-api`, `slo=live_rag_ttft`, `target="3000"`, `provisional="true"`  
+**Target**: p95 ≤ 3 000ms (provisional — see §22.1 buffering caveat).
+
+Mirrors the structure of `meepleai:slo:rag_ttft:p95:5m` (prometheus-rules.yml:132-138).
+
+### 22.4 Retrieval-empty alert
+
+**Alert name**: `LiveRagRetrievalEmptyHigh`  
+**File**: `infra/prometheus-rules.yml` (group `meepleai_live_rag_warning_alerts`)  
+**Severity**: `warning` (NOT critical/paging — signals degraded answer quality, not an outage)  
+**Expression**:
+```promql
+(
+  rate(meepleai_rag_retrieval_empty_total[15m])
+  /
+  (rate(meepleai_rag_first_token_latency_count[15m]) > 0)
+) > 0.05
+```
+**`for`**: 15m  
+**Threshold**: >5% of answers have zero retrieved chunks — **PROVISIONAL**, tune after baseline data.
+
+**Denominator choice**: `meepleai_rag_first_token_latency_count` counts answers served on the live-session RAG path. Both numerator and denominator share identical cardinality (no session tags), ensuring a clean ratio.
+
+**Response steps**:
+1. Check pgvector index health: `docker compose exec postgres psql -U postgres -c "SELECT count(*) FROM text_chunks WHERE search_vector IS NOT NULL;"`
+2. Run the RAG smoke test: `cd infra && make rag-smoke`
+3. Inspect `RagPromptAssemblyService` logs for `filteredChunks.Count == 0` warnings.
+4. If embedding model was recently changed, a re-index (`make seed-index`) may be required.
+
+### 22.5 Grafana panels
+
+**Dashboard**: `infra/monitoring/grafana/dashboards/llm-operational-maturity.json` (uid `llm-operational-maturity`)  
+**Two panels added** (y=22, row 3):
+
+| Panel | Type | PromQL | Purpose |
+|---|---|---|---|
+| Live-RAG Citations per Answer | timeseries | `histogram_quantile(0.95/0.50, rate(meepleai_rag_citations_per_answer_bucket[5m]))` | P50/P95 citations returned per answer; zero = grounded-but-uncited signal |
+| Live-RAG Retrieval-Empty Rate | timeseries | `rate(meepleai_rag_retrieval_empty_total[5m]) / rate(meepleai_rag_first_token_latency_count[5m])` | Fraction of answers with no retrieved chunks; thresholds at 3%/5% |
+
+Both panels are tagged `PROVISIONAL` in their descriptions.
+
+### 22.6 Tuning guidance (post-baseline)
+
+After ≥1 week of production data:
+1. Review `meepleai:slo:live_rag_ttft:p95:5m` distribution. If p95 is reliably < 800ms, lower `target` label to `"800"` and add error-ratio burn-rate rules mirroring `SloRagTtftFastBurn`/`SloRagTtftSlowBurn`.
+2. Review `LiveRagRetrievalEmptyHigh` baseline fraction. Adjust threshold from 5% to an appropriate level; remove `provisional` comment.
+3. Remove `provisional: "true"` label from the recording rule once thresholds are validated.

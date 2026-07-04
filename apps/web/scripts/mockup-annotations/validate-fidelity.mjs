@@ -39,7 +39,7 @@ const REPO_ROOT = resolve(__dirname, '..', '..', '..', '..');
 // Schema (zod) — single source of truth for mockup.fidelity contract
 // ---------------------------------------------------------------------------
 
-const StateName = z.enum(['default', 'empty', 'loading', 'error', 'sse', 'offline']);
+const StateName = z.enum(['default', 'empty', 'loading', 'error', 'sse', 'offline', 'quota-soft', 'quota-hard']);
 
 export const FidelitySchema = z.object({
   mockup: z.object({

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.GameManagement.Application.Queries.GameNight;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
@@ -20,6 +21,7 @@ internal static class GamebookCampaignEndpoints
         MapCreateCampaignEndpoint(group);
         MapListCampaignsEndpoint(group);
         MapGetCampaignEndpoint(group);
+        MapGetCampaignSpineEndpoint(group);
         MapGetCampaignProgressEndpoint(group);
         MapUpdateProgressEndpoint(group);
         MapRenameCampaignEndpoint(group);
@@ -121,6 +123,42 @@ internal static class GamebookCampaignEndpoints
         .WithTags("Gamebook")
         .WithSummary("Get a gamebook campaign by ID")
         .WithDescription("Returns the gamebook campaign with the specified ID, if it belongs to the authenticated user.")
+        .WithOpenApi();
+    }
+
+    private static void MapGetCampaignSpineEndpoint(RouteGroupBuilder group)
+    {
+        // #2632 (SI-1b, Phase 3): the GameNight "Serata" spine for a campaign, or 204 if the
+        // campaign has no GameNight-attached play (standalone → no spine).
+        group.MapGet("/gamebook/campaigns/{id:guid}/spine", async (
+            Guid id,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var spine = await mediator.Send(
+                new GetGamebookCampaignSpineQuery(id, userId), ct
+            ).ConfigureAwait(false);
+
+            return spine is null ? Results.NoContent() : Results.Ok(spine);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<GamebookCampaignSpineDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status204NoContent)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces(StatusCodes.Status404NotFound)
+        .WithTags("Gamebook")
+        .WithSummary("Get the GameNight spine for a campaign")
+        .WithDescription("Returns the owning GameNight 'Serata' spine (title, organizer, status, session pip) + derived campaign status, or 204 if the campaign has no GameNight-attached play.")
         .WithOpenApi();
     }
 

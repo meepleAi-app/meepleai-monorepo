@@ -197,7 +197,7 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
         await api.liveSessions.startSession(sessionId);
 
         setShowPlayerSetup(false);
-        router.push(`/sessions/${sessionId}/play`);
+        router.push(`/sessions/${sessionId}/live`);
       } catch {
         toast.error('Impossibile avviare la partita', {
           description: 'Riprova tra qualche secondo.',
@@ -213,7 +213,7 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
     async (sessionId: string) => {
       try {
         await api.liveSessions.resumeSession(sessionId);
-        router.push(`/sessions/${sessionId}/play`);
+        router.push(`/sessions/${sessionId}/live`);
       } catch {
         // Error handling deferred
       }

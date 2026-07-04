@@ -28,6 +28,12 @@ public class SessionConfiguration : IEntityTypeConfiguration<SessionEntity>
             .HasColumnName("game_id")
             .IsRequired();
 
+        // #2632 SI-1: optional link to the libro-game campaign (GameNight-attached play).
+        // Logical FK to gamebook_campaign_sessions; no hard DB constraint (cross-aggregate,
+        // nullable) — the invariant is enforced in the attach command.
+        builder.Property(s => s.GamebookCampaignId)
+            .HasColumnName("gamebook_campaign_id");
+
         builder.Property(s => s.SessionCode)
             .HasColumnName("session_code")
             .HasMaxLength(6)
@@ -136,6 +142,11 @@ public class SessionConfiguration : IEntityTypeConfiguration<SessionEntity>
             .HasDatabaseName("idx_sessions_game_date")
             .IsDescending(false, true) // DESC on SessionDate
             .HasFilter("is_deleted = false");
+
+        // #2632 SI-1: resolve a campaign's GameNight-attached sittings (the spine read path).
+        builder.HasIndex(s => s.GamebookCampaignId)
+            .HasDatabaseName("idx_sessions_gamebook_campaign")
+            .HasFilter("gamebook_campaign_id IS NOT NULL");
 
         // Relationship: Session has many Participants
         builder.HasMany(s => s.Participants)

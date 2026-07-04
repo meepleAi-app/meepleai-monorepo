@@ -265,7 +265,12 @@ infra/dotnet-watch.log
 # .meta.json sidecars are intentionally NOT ignored (committable log history).
 data/snapshots/*.dump
 data/snapshots/*.dump.sha256
+data/snapshots/*.generated-tables.sql
 data/snapshots/.latest
+# `make` run from infra/ with a relative OUT_DIR drops snapshots in
+# infra/data/snapshots/ — never commit those (a stale 45MB .dump committed here
+# masked the R2 fetch in dev-from-snapshot, #2480). Ignore the whole tree.
+infra/data/snapshots/
 
 # Backups directory (issue #1320 — game entity reset)
 infra/backups/*.dump

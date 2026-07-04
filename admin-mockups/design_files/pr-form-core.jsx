@@ -3,23 +3,38 @@
    (form 8-col + live preview record-card 4-col).
    Entity dominante: session 🎯. game picker = game 🎲, giocatori = player 👤.
 
-   Esporta window.PRForm.render(rootId, { mode: 'new' | 'edit' }).
-   - new  : wizard vuoto / in compilazione
-   - edit : precompilato da DS.playRecords[0] (Wingspan), titolo "Modifica", azione Elimina.
+   Esporta:
+     window.PRForm.render(rootId, { mode: 'new' | 'edit', state?: 'default' | 'empty' | 'loading' | 'error' })
+     window.PRForm.FormMatrix  (componente React per embedding diretto nella gallery)
+
+   ── Stati canonici (G7 SessionStateRenderer, PR 2357) — solo mode='new' ──
+     default → form arrivato da deep-link serata: tutto precompilato (Wingspan).
+     empty   → form standalone (no gameNightId): tutti i field vuoti + banner info.
+     loading → autosave in corso dopo Step 1: toolbar saving + body offuscato + skeleton preview.
+     error   → errore submit finale: banner alert + form preservato + retry.
+   state-05-sse → SKIPPED: il form è transactional (single-shot save), non SSE-driven.
+
+   mode='edit' è INVARIATO (precompilato edit, azione Elimina) — sarà coperto da Mockup 4.
+
+   FREEZE: zero hex/hsl hardcoded per gli entity color → solo token --c-* via
+   entityHsl() (segue automaticamente light/dark via [data-theme]). Esente: color:'#fff'
+   su background entity (pattern .e-bg), rgba() per ombre/overlay neutri.
 */
 (function () {
 const { useState, useEffect } = React;
 const DS = window.DS;
 
-const entityHsl = (type, alpha) => {
-  const c = DS.EC[type] || DS.EC.session;
-  return alpha !== undefined ? `hsla(${c.h}, ${c.s}%, ${c.l}%, ${alpha})` : `hsl(${c.h}, ${c.s}%, ${c.l}%)`;
-};
+// entityHsl(entity, alpha?) — risolve SEMPRE sui token CSS (--c-*), così il
+// colore segue automaticamente light/dark ([data-theme]) ed è FREEZE-clean
+// (nessun valore hsl numerico hardcoded nel sorgente del mockup).
+const entityHsl = (entity, alpha) =>
+  alpha === undefined
+    ? `hsl(var(--c-${entity}))`
+    : `hsl(var(--c-${entity}) / ${alpha})`;
 
 const LIBRARY = DS.games;
-const PLAYERS = DS.players;
 
-// Prefill (edit mode) — Wingspan record
+// ── Prefill (default / edit) — Wingspan, roster da participants ──
 const PREFILL = {
   game: 'g-wingspan', dateLabel: 'Sab 17 maggio 2026', time: '21:00', duration: '3h',
   scores: [
@@ -30,6 +45,26 @@ const PREFILL = {
   ],
   notes: 'Partita combattuta fino all\'ultimo turno. Marco chiude con un mega-combo wetland.',
 };
+
+const FILLED = {
+  game: PREFILL.game, dateLabel: PREFILL.dateLabel, time: PREFILL.time, duration: PREFILL.duration,
+  scores: PREFILL.scores, notes: PREFILL.notes,
+};
+
+// Form standalone (state=empty): nessun gameNightId → tutti i field vuoti.
+const EMPTY_DATA = {
+  game: null, dateLabel: 'Quando avete giocato?', time: '--:--', duration: null, scores: [], notes: '',
+};
+
+const STATE_CFG = {
+  default: { mStep: 1, dStep: 3, data: FILLED },
+  empty:   { mStep: 1, dStep: 1, data: EMPTY_DATA },
+  loading: { mStep: 1, dStep: 1, data: FILLED },
+  error:   { mStep: 3, dStep: 3, data: FILLED },
+};
+
+const primaryLabel = (step, mode) =>
+  step === 3 ? (mode === 'edit' ? '✓ Salva modifiche' : '✓ Salva partita') : 'Avanti →';
 
 const winnerIndex = (scores) => {
   let best = -Infinity, idx = -1;
@@ -123,14 +158,14 @@ const GamePickCard = ({ game, selected }) => (
         display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 6px rgba(0,0,0,.25)',
       }}>✓</span>
     )}
-    <div style={{ height: 80, background: game.cover, display:'flex', alignItems:'center', justifyContent:'center', fontSize: 34 }} aria-hidden="true">
+    <div style={{ height: 80, background: game.cover || entityHsl('game', 0.12), display:'flex', alignItems:'center', justifyContent:'center', fontSize: 34 }} aria-hidden="true">
       <span style={{ filter:'drop-shadow(0 4px 12px rgba(0,0,0,.4))' }}>{game.coverEmoji}</span>
     </div>
     <div style={{ padding:'9px 11px 11px', display:'flex', flexDirection:'column', gap: 4 }}>
       <div style={{ fontFamily:'var(--f-display)', fontSize: 13, fontWeight: 800, color:'var(--text)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{game.title}</div>
       <div style={{ display:'flex', gap: 4, flexWrap:'wrap' }}>
-        <span style={{ padding:'2px 6px', borderRadius:'var(--r-sm)', background: entityHsl('game', 0.12), color: entityHsl('game'), fontFamily:'var(--f-mono)', fontSize: 9, fontWeight: 800, border:`1px solid ${entityHsl('game', 0.22)}` }}>👥 {game.players}</span>
-        <span style={{ padding:'2px 6px', borderRadius:'var(--r-sm)', background: entityHsl('game', 0.12), color: entityHsl('game'), fontFamily:'var(--f-mono)', fontSize: 9, fontWeight: 800, border:`1px solid ${entityHsl('game', 0.22)}` }}>⏱ {game.duration}</span>
+        <span style={{ padding:'2px 6px', borderRadius:'var(--r-sm)', background: entityHsl('game', 0.12), color: entityHsl('game'), fontFamily:'var(--f-mono)', fontSize: 9, fontWeight: 800, border:`1px solid ${entityHsl('game', 0.22)}` }}>👥 {game.players || '1–5'}</span>
+        <span style={{ padding:'2px 6px', borderRadius:'var(--r-sm)', background: entityHsl('game', 0.12), color: entityHsl('game'), fontFamily:'var(--f-mono)', fontSize: 9, fontWeight: 800, border:`1px solid ${entityHsl('game', 0.22)}` }}>⏱ {game.duration || '60′'}</span>
       </div>
     </div>
   </div>
@@ -143,9 +178,9 @@ const Step1Gioco = ({ selectedGame, empty, mobile }) => {
       <StepHeader title="Quale gioco avete giocato?" sub="Scegli dalla tua libreria. Il punteggio e i giocatori si adattano al gioco."/>
       <div style={{ position:'relative' }}>
         <span aria-hidden="true" style={{ position:'absolute', left: 12, top:'50%', transform:'translateY(-50%)', color:'var(--text-muted)', fontSize: 14 }}>⌕</span>
-        <input type="text" placeholder="Cerca nella libreria…" readOnly style={{
+        <input type="text" placeholder={empty ? 'Cerca o seleziona un gioco' : 'Cerca nella libreria…'} readOnly style={{
           width:'100%', padding:'10px 12px 10px 34px', borderRadius:'var(--r-md)',
-          border:'1px solid var(--border)', background:'var(--bg-card)', color:'var(--text)', fontFamily:'var(--f-body)', fontSize: 13,
+          border: empty ? `1px solid ${entityHsl('game', 0.4)}` : '1px solid var(--border)', background:'var(--bg-card)', color:'var(--text)', fontFamily:'var(--f-body)', fontSize: 13,
         }}/>
       </div>
       {empty && (
@@ -246,6 +281,32 @@ const Step2Quando = ({ dateLabel = 'Sabato 17 maggio 2026', time = '21:00', dura
 );
 
 // ─── STEP 3 — GIOCATORI & PUNTEGGI ─────────────────────
+// #2496 — Asse A inv #16: tiny pill distinguishes account-linked players from guest tags.
+// Used in ScoreRow next to the player title so editors see the roster mix at-a-glance.
+const KindBadge = ({ kind }) => {
+  const isGuest = kind === 'guest';
+  return (
+    <span
+      title={isGuest ? 'Giocatore ospite — non collegato a un account' : 'Giocatore con account collegato'}
+      style={{
+        fontFamily: 'var(--f-mono)',
+        fontSize: 8.5,
+        fontWeight: 800,
+        letterSpacing: '.06em',
+        textTransform: 'uppercase',
+        padding: '1px 6px',
+        borderRadius: 'var(--r-pill)',
+        color: isGuest ? 'var(--text-sec)' : entityHsl('player'),
+        background: isGuest ? 'var(--bg-muted)' : entityHsl('player', 0.12),
+        border: isGuest ? '1px solid var(--border-light)' : `1px solid ${entityHsl('player', 0.25)}`,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {isGuest ? 'Ospite' : 'Account'}
+    </span>
+  );
+};
+
 const ScoreRow = ({ player, score, isWinner }) => (
   <div style={{
     display:'flex', alignItems:'center', gap: 10, padding:'10px 12px',
@@ -255,8 +316,10 @@ const ScoreRow = ({ player, score, isWinner }) => (
   }}>
     <Avatar player={player} size={34}/>
     <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{ fontFamily:'var(--f-display)', fontSize: 13.5, fontWeight: 800, color:'var(--text)', display:'flex', alignItems:'center', gap: 6 }}>
+      <div style={{ fontFamily:'var(--f-display)', fontSize: 13.5, fontWeight: 800, color:'var(--text)', display:'flex', alignItems:'center', gap: 6, flexWrap:'wrap' }}>
         {player.title.split(' ')[0]}
+        {/* #2496 Asse A inv #16 — User/Guest pill so the editor sees the roster mix */}
+        <KindBadge kind={player.kind || 'user'}/>
         {isWinner && (
           <span style={{ display:'inline-flex', alignItems:'center', gap: 3, padding:'1px 7px', borderRadius:'var(--r-pill)', background: entityHsl('session', 0.14), color: entityHsl('session'), fontFamily:'var(--f-mono)', fontSize: 8.5, fontWeight: 800, textTransform:'uppercase', letterSpacing:'.06em' }}>🏆 Vincitore</span>
         )}
@@ -276,17 +339,26 @@ const ScoreRow = ({ player, score, isWinner }) => (
 
 const Step3Punteggi = ({ scores, notes, withNotes, mobile }) => {
   const wIdx = winnerIndex(scores);
+  const isEmpty = !scores || scores.length === 0;
   return (
     <div style={{ display:'flex', flexDirection:'column', gap: 16, padding: mobile ? '16px 14px 24px' : '20px 24px 24px' }}>
       <StepHeader title="Chi ha giocato e con che punteggio?" sub="Inserisci i punteggi: il vincitore è calcolato automaticamente dal punteggio più alto."/>
       <div style={{ display:'flex', flexDirection:'column', gap: 8 }}>
         <Label>Giocatori e punteggi ({scores.length})</Label>
-        <div style={{ display:'flex', flexDirection:'column', gap: 8 }}>
-          {scores.map((s, i) => {
-            const p = DS.byId[s.playerId] || { title: s.name, initials: s.name.slice(0,2), color: 240 };
-            return <ScoreRow key={s.playerId || i} player={p} score={s.score} isWinner={i === wIdx && s.score !== null}/>;
-          })}
-        </div>
+        {isEmpty ? (
+          <div style={{
+            padding:'18px 14px', borderRadius:'var(--r-lg)', background: entityHsl('player', 0.05),
+            border:`1px dashed ${entityHsl('player', 0.3)}`, textAlign:'center',
+            fontFamily:'var(--f-body)', fontSize: 12.5, color:'var(--text-sec)', fontWeight: 500,
+          }}>Nessun giocatore. Aggiungi i partecipanti alla partita.</div>
+        ) : (
+          <div style={{ display:'flex', flexDirection:'column', gap: 8 }}>
+            {scores.map((s, i) => {
+              const p = DS.byId[s.playerId] || { title: s.name, initials: s.name.slice(0,2), color: 240 };
+              return <ScoreRow key={s.playerId || i} player={p} score={s.score} isWinner={i === wIdx && s.score !== null}/>;
+            })}
+          </div>
+        )}
         <button type="button" style={{
           padding:'10px 12px', borderRadius:'var(--r-md)', background:'transparent',
           border:`1px dashed ${entityHsl('player', 0.4)}`, color: entityHsl('player'),
@@ -308,23 +380,23 @@ const Step3Punteggi = ({ scores, notes, withNotes, mobile }) => {
 
 // ─── LIVE PREVIEW (record card) ────────────────────────
 const RecordLivePreview = ({ data, mode }) => {
-  const game = DS.byId[data.game];
+  const game = data.game ? DS.byId[data.game] : null;
   const wIdx = winnerIndex(data.scores);
   return (
     <aside style={{ position:'sticky', top: 24, display:'flex', flexDirection:'column', gap: 14 }}>
       <div style={{ display:'flex', alignItems:'center', gap: 6, fontFamily:'var(--f-mono)', fontSize: 10, fontWeight: 800, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'.08em' }}>
-        <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius:'50%', background: entityHsl('session'), boxShadow:`0 0 0 3px ${entityHsl('session', 0.25)}`, animation:'sp7Pulse 1.6s var(--ease-out) infinite' }}/>
+        <span aria-hidden="true" className="mai-pulse" style={{ width: 6, height: 6, borderRadius:'50%', background: entityHsl('session'), boxShadow:`0 0 0 3px ${entityHsl('session', 0.25)}` }}/>
         Anteprima live · Record partita
       </div>
       <article style={{ background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:'var(--r-xl)', overflow:'hidden', boxShadow:'var(--shadow-md)' }}>
-        <div style={{ padding:'18px', background: game ? game.cover : entityHsl('session', 0.12), color:'#fff', position:'relative' }}>
+        <div style={{ padding:'18px', background: game ? (game.cover || entityHsl('session', 0.5)) : entityHsl('session', 0.18), color:'#fff', position:'relative' }}>
           <div style={{ display:'flex', alignItems:'center', gap: 6, marginBottom: 10 }}>
             <span style={{ padding:'3px 8px', borderRadius:'var(--r-pill)', background:'rgba(255,255,255,.25)', backdropFilter:'blur(8px)', fontFamily:'var(--f-mono)', fontSize: 9, fontWeight: 800, textTransform:'uppercase', letterSpacing:'.08em' }}>🎯 Partita</span>
             <span style={{ padding:'3px 8px', borderRadius:'var(--r-pill)', background:'rgba(255,255,255,.25)', backdropFilter:'blur(8px)', fontFamily:'var(--f-mono)', fontSize: 9, fontWeight: 800, textTransform:'uppercase', letterSpacing:'.08em' }}>{mode === 'edit' ? 'Modifica' : 'Bozza'}</span>
           </div>
           <h3 style={{ margin:'0 0 6px', fontFamily:'var(--f-display)', fontSize: 20, fontWeight: 800, lineHeight: 1.1, textShadow:'0 2px 8px rgba(0,0,0,.25)' }}>{game ? game.title : 'Seleziona un gioco'}</h3>
           <div style={{ fontFamily:'var(--f-mono)', fontSize: 11, fontWeight: 700, display:'flex', flexWrap:'wrap', gap:'2px 8px' }}>
-            <span>{data.dateLabel}</span><span aria-hidden="true">·</span><span>{data.time}</span><span aria-hidden="true">·</span><span>{data.duration}</span>
+            <span>{data.dateLabel}</span><span aria-hidden="true">·</span><span>{data.time}</span>{data.duration && <><span aria-hidden="true">·</span><span>{data.duration}</span></>}
           </div>
         </div>
         <div style={{ padding:'14px 18px 18px', display:'flex', flexDirection:'column', gap: 12 }}>
@@ -349,6 +421,9 @@ const RecordLivePreview = ({ data, mode }) => {
                     </div>
                   );
                 })}
+              {data.scores.length === 0 && (
+                <div style={{ padding:'10px 8px', fontFamily:'var(--f-body)', fontSize: 12, color:'var(--text-muted)', fontStyle:'italic' }}>Aggiungi giocatori per vedere la classifica.</div>
+              )}
             </div>
           </div>
         </div>
@@ -360,6 +435,106 @@ const RecordLivePreview = ({ data, mode }) => {
     </aside>
   );
 };
+
+// ─── PREVIEW SKELETON (loading · OCR foto in elaborazione) ──
+const PreviewSkeleton = () => (
+  <aside style={{ position:'sticky', top: 24, display:'flex', flexDirection:'column', gap: 14 }}>
+    <div style={{ fontFamily:'var(--f-mono)', fontSize: 10, fontWeight: 800, color: entityHsl('session'), textTransform:'uppercase', letterSpacing:'.08em' }}>
+      Anteprima · elaborazione foto…
+    </div>
+    <div aria-hidden="true" style={{ background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:'var(--r-xl)', overflow:'hidden', boxShadow:'var(--shadow-md)' }}>
+      <div className="skel" style={{ height: 96, background: entityHsl('session', 0.14) }}/>
+      <div style={{ padding:'14px 18px 18px', display:'flex', flexDirection:'column', gap: 9 }}>
+        <div className="skel" style={{ height: 11, width:'52%', borderRadius:'var(--r-xs)', background:'var(--bg-muted)' }}/>
+        {[0,1,2,3].map(i => <div key={i} className="skel" style={{ height: 32, borderRadius:'var(--r-sm)', background:'var(--bg-muted)' }}/>)}
+      </div>
+    </div>
+    <div aria-hidden="true" className="skel" style={{ height: 46, borderRadius:'var(--r-md)', background:'var(--bg-muted)' }}/>
+  </aside>
+);
+
+// ─── STATE BANNERS / TOOLBARS ──────────────────────────
+// empty → banner informativo entry-point standalone (role=status, aria-live=polite)
+const InfoBanner = ({ mobile }) => (
+  <div role="status" aria-live="polite" style={{
+    display:'flex', alignItems:'center', gap: 10,
+    padding: mobile ? '10px 14px' : '12px 24px',
+    background: entityHsl('session', 0.06),
+    borderLeft: `4px solid ${entityHsl('session', 0.45)}`,
+    borderBottom:'1px solid var(--border-light)',
+  }}>
+    <span aria-hidden="true" style={{ fontSize: 16, lineHeight: 1 }}>ℹ️</span>
+    <div style={{ flex: 1, minWidth: 0, fontSize: mobile ? 12 : 13, color:'var(--text-sec)', fontWeight: 600, lineHeight: 1.4 }}>
+      <strong style={{ color:'var(--text)', fontWeight: 800 }}>Registrazione manuale</strong> · Compila i campi per registrare una partita non collegata a una serata
+    </div>
+  </div>
+);
+
+// error → banner submit fallito (role=alert) + retry
+const ErrorBanner = ({ mobile }) => (
+  <div role="alert" style={{
+    display:'flex', alignItems:'center', gap: mobile ? 10 : 12,
+    padding: mobile ? '12px 14px' : '14px 24px',
+    background: entityHsl('event', 0.08),
+    borderLeft: `4px solid ${entityHsl('event', 0.6)}`,
+    borderBottom:'1px solid var(--border-light)',
+  }}>
+    <span aria-hidden="true" style={{ fontSize: mobile ? 18 : 20, lineHeight: 1 }}>⚠️</span>
+    <div style={{ flex: 1, minWidth: 0, fontSize: mobile ? 12.5 : 14, color:'var(--text)', fontWeight: 700, lineHeight: 1.4 }}>
+      <strong style={{ fontWeight: 800 }}>Impossibile salvare la partita</strong> <span style={{ color:'var(--text-sec)', fontWeight: 600 }}>· Verifica la connessione e riprova</span>
+    </div>
+    <button type="button" aria-label="Riprova salvataggio partita" style={{
+      padding:'7px 14px', borderRadius:'var(--r-md)', background:'transparent',
+      color: entityHsl('event'), border:`1px solid ${entityHsl('event', 0.5)}`,
+      fontFamily:'var(--f-display)', fontSize: 12, fontWeight: 800, cursor:'pointer',
+      display:'inline-flex', alignItems:'center', gap: 5, whiteSpace:'nowrap', flexShrink: 0,
+    }}><span aria-hidden="true">↻</span>Riprova salvataggio</button>
+  </div>
+);
+
+// error → link "Salva come bozza locale" (entity=session) sotto il banner
+const DraftLink = ({ mobile }) => (
+  <div style={{ padding: mobile ? '8px 14px' : '8px 24px', borderBottom:'1px solid var(--border-light)' }}>
+    <button type="button" style={{
+      background:'transparent', border:'none', padding: 0, color: entityHsl('session'),
+      fontFamily:'var(--f-display)', fontSize: 12.5, fontWeight: 800, cursor:'pointer',
+      textDecoration:'underline', textUnderlineOffset: 3, display:'inline-flex', alignItems:'center', gap: 5,
+    }}><span aria-hidden="true">💾</span>Salva come bozza locale</button>
+  </div>
+);
+
+// loading → toolbar sticky autosave (chip mono + spinner entity=session)
+const SavingToolbar = ({ mobile }) => (
+  <div style={{
+    display:'flex', alignItems:'center', gap: 9,
+    padding: mobile ? '9px 14px' : '11px 24px',
+    background: entityHsl('session', 0.06),
+    borderBottom:`1px solid ${entityHsl('session', 0.2)}`,
+    position:'sticky', top: 0, zIndex: 12,
+  }}>
+    <span className="pr-spin" aria-hidden="true" style={{
+      width: 14, height: 14, borderRadius:'50%',
+      border:`2px solid ${entityHsl('session', 0.25)}`, borderTopColor: entityHsl('session'),
+    }}/>
+    <span style={{ fontFamily:'var(--f-mono)', fontSize: 11, fontWeight: 800, color: entityHsl('session'), textTransform:'uppercase', letterSpacing:'.06em' }}>
+      <span aria-hidden="true">💾</span> Salvataggio in corso…
+    </span>
+    <span style={{ position:'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow:'hidden', clip:'rect(0 0 0 0)', whiteSpace:'nowrap', border: 0 }}>Salvataggio bozza in corso</span>
+  </div>
+);
+
+// loading → progress bar upload foto (entity=session) con percentuale
+const PhotoProgress = ({ mobile }) => (
+  <div style={{ padding: mobile ? '12px 14px 4px' : '12px 24px 4px', display:'flex', flexDirection:'column', gap: 6 }}>
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+      <span style={{ fontFamily:'var(--f-mono)', fontSize: 10, fontWeight: 800, color: entityHsl('session'), textTransform:'uppercase', letterSpacing:'.06em' }}><span aria-hidden="true">📷</span> Caricamento foto</span>
+      <span style={{ fontFamily:'var(--f-mono)', fontSize: 11, fontWeight: 800, color: entityHsl('session'), fontVariantNumeric:'tabular-nums' }}>60%</span>
+    </div>
+    <div role="progressbar" aria-valuenow={60} aria-valuemin={0} aria-valuemax={100} aria-label="Caricamento foto" style={{ height: 6, borderRadius:'var(--r-pill)', background: entityHsl('session', 0.14), overflow:'hidden' }}>
+      <div style={{ height:'100%', width:'60%', borderRadius:'var(--r-pill)', background: entityHsl('session') }}/>
+    </div>
+  </div>
+);
 
 // ─── ACTION BAR ────────────────────────────────────────
 const ActionBar = ({ step, mobile, primaryLabel, mode }) => (
@@ -373,14 +548,14 @@ const ActionBar = ({ step, mobile, primaryLabel, mode }) => (
     <div style={{ flex: 1 }}/>
     <button type="button" style={{
       padding:'12px 22px', borderRadius:'var(--r-md)',
-      background:`linear-gradient(135deg, ${entityHsl('session')}, hsl(${DS.EC.session.h - 14}, ${DS.EC.session.s}%, ${DS.EC.session.l - 8}%))`,
+      background:`linear-gradient(135deg, ${entityHsl('session')}, ${entityHsl('session', 0.8)})`,
       color:'#fff', border:'none', fontFamily:'var(--f-display)', fontSize: 13, fontWeight: 800, cursor:'pointer',
       boxShadow:`0 4px 14px ${entityHsl('session', 0.35)}`,
     }}>{primaryLabel}</button>
   </div>
 );
 
-// ─── MOBILE / DESKTOP SHELLS ───────────────────────────
+// ─── MOBILE / DESKTOP CHROME ───────────────────────────
 const PhoneSbar = () => (
   <div className="phone-sbar" style={{ color:'var(--text)' }}>
     <span>21:42</span>
@@ -396,76 +571,6 @@ const PhoneTopNav = ({ title }) => (
   </div>
 );
 
-const renderStep = (step, data, opts, mobile) => {
-  if (step === 1) return <Step1Gioco selectedGame={data.game} empty={opts.emptyGame} mobile={mobile}/>;
-  if (step === 2) return <Step2Quando dateLabel={data.dateLabel} time={data.time} duration={data.duration} mobile={mobile}/>;
-  return <Step3Punteggi scores={data.scores} notes={data.notes} withNotes={opts.withNotes} mobile={mobile}/>;
-};
-
-// loading / error bodies
-const LoadingBody = ({ mobile }) => (
-  <div style={{ padding: mobile ? '16px 14px' : '20px 24px', display:'flex', flexDirection:'column', gap: 12 }}>
-    <div className="mai-shimmer" style={{ height: 34, width:'60%', borderRadius:'var(--r-sm)', background:'var(--bg-muted)' }}/>
-    <div className="mai-shimmer" style={{ height: 14, width:'80%', borderRadius: 4, background:'var(--bg-muted)' }}/>
-    <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap: 10, marginTop: 6 }}>
-      {[0,1,2,3].map(i => <div key={i} className="mai-shimmer" style={{ height: 130, borderRadius:'var(--r-lg)', background:'var(--bg-muted)' }}/>)}
-    </div>
-  </div>
-);
-
-const ErrorBody = ({ mobile }) => (
-  <div style={{ padding:'40px 24px', textAlign:'center', margin: mobile ? 14 : 24, background:'hsl(var(--c-danger) / .06)', border:'1px solid hsl(var(--c-danger) / .25)', borderRadius:'var(--r-xl)', display:'flex', flexDirection:'column', alignItems:'center' }}>
-    <div style={{ width: 56, height: 56, borderRadius:'50%', background:'hsl(var(--c-danger) / .15)', color:'hsl(var(--c-danger))', display:'flex', alignItems:'center', justifyContent:'center', fontSize: 26, marginBottom: 12 }} aria-hidden="true">⚠</div>
-    <h3 style={{ fontFamily:'var(--f-display)', fontSize: 16, fontWeight: 800, color:'var(--text)', margin:'0 0 4px' }}>Salvataggio non riuscito</h3>
-    <p style={{ fontSize: 12.5, color:'var(--text-muted)', margin:'0 0 14px', maxWidth: 300 }}>Impossibile salvare la partita. La bozza è stata conservata localmente.</p>
-    <button type="button" style={{ padding:'8px 14px', borderRadius:'var(--r-md)', background:'hsl(var(--c-danger))', color:'#fff', border:'none', fontFamily:'var(--f-display)', fontSize: 12.5, fontWeight: 800, cursor:'pointer' }}>↻ Riprova salvataggio</button>
-  </div>
-);
-
-const MobileScreen = ({ anchor, label, step, data, opts, mode, primaryLabel, gherkin }) => (
-  <section className="phone-shell" data-screen-label={`PR-form · ${label}`}>
-    <div className="state-caption">
-      <span className="state-id">{anchor.replace('state-', '#')}</span>
-      <span className="state-label">📱 {label}</span>
-      {gherkin && <span className="gherkin">{gherkin}</span>}
-    </div>
-    <div className="phone">
-      <PhoneSbar/>
-      <div style={{ flex: 1, overflowY:'auto', display:'flex', flexDirection:'column', background:'var(--bg)' }}>
-        <PhoneTopNav title={mode === 'edit' ? 'Modifica partita' : 'Registra partita'}/>
-        {opts.loading ? <LoadingBody mobile/> : opts.error ? <ErrorBody mobile/> : (
-          <>
-            <StepIndicator current={step} onBack mobile/>
-            <div style={{ flex: 1 }}>{renderStep(step, data, opts, true)}</div>
-            <ActionBar step={step} mobile primaryLabel={primaryLabel} mode={mode}/>
-          </>
-        )}
-      </div>
-    </div>
-  </section>
-);
-
-const StepFlowOverview = ({ anchor, label, data, mode }) => (
-  <section data-screen-label={`PR-form · ${label}`}>
-    <div className="state-caption">
-      <span className="state-id">{anchor.replace('state-', '#')}</span>
-      <span className="state-label">📱 {label}</span>
-    </div>
-    <div className="step-flow-row">
-      {[1,2,3].map(step => (
-        <div key={step} className="phone phone-mini">
-          <PhoneSbar/>
-          <div style={{ flex: 1, overflowY:'auto', display:'flex', flexDirection:'column', background:'var(--bg)' }}>
-            <PhoneTopNav title={`Step ${step}/3`}/>
-            <StepIndicator current={step} onBack mobile/>
-            <div style={{ flex: 1 }}>{renderStep(step, data, { withNotes: true }, true)}</div>
-          </div>
-        </div>
-      ))}
-    </div>
-  </section>
-);
-
 const DesktopNav = ({ mode }) => (
   <div style={{ display:'flex', alignItems:'center', gap: 14, padding:'10px 24px', background:'var(--glass-bg)', backdropFilter:'blur(12px)', borderBottom:'1px solid var(--border)' }}>
     <div style={{ display:'flex', alignItems:'center', gap: 9 }}>
@@ -478,130 +583,93 @@ const DesktopNav = ({ mode }) => (
   </div>
 );
 
-const DesktopSplit = ({ anchor, label, step, data, opts, mode, primaryLabel }) => (
-  <section data-screen-label={`PR-form · ${label}`}>
-    <div className="state-caption">
-      <span className="state-id">{anchor.replace('state-', '#')}</span>
-      <span className="state-label">🖥️ {label}</span>
-    </div>
-    <div className="desktop-frame">
-      <div className="desktop-bar">
-        <span className="traffic"/><span className="traffic"/><span className="traffic"/>
-        <span className="url">meepleai.app/play-records/{mode === 'edit' ? 'pr1/edit' : 'new'}</span>
-      </div>
-      <div style={{ background:'var(--bg)' }}>
-        <DesktopNav mode={mode}/>
-        <StepIndicator current={step} mobile={false}/>
-        <div style={{ display:'grid', gridTemplateColumns:'minmax(0, 8fr) minmax(0, 4fr)', gap: 24, padding:'8px 24px 0', maxWidth: 1280, margin:'0 auto' }}>
-          <div style={{ display:'flex', flexDirection:'column', paddingBottom: 24 }}>{renderStep(step, data, opts, false)}</div>
-          <div style={{ paddingTop: 20, paddingBottom: 24 }}><RecordLivePreview data={data} mode={mode}/></div>
-        </div>
-        <ActionBar step={step} mobile={false} primaryLabel={primaryLabel} mode={mode}/>
-      </div>
-    </div>
-  </section>
-);
+const renderStep = (step, data, opts, mobile) => {
+  if (step === 1) return <Step1Gioco selectedGame={data.game} empty={opts.empty} mobile={mobile}/>;
+  if (step === 2) return <Step2Quando dateLabel={data.dateLabel} time={data.time} duration={data.duration} mobile={mobile}/>;
+  return <Step3Punteggi scores={data.scores} notes={data.notes} withNotes={opts.withNotes} mobile={mobile}/>;
+};
 
-// ─── APP ───────────────────────────────────────────────
-function App({ mode }) {
-  const [theme, setTheme] = useState('light');
-  useEffect(() => { document.documentElement.setAttribute('data-theme', theme); }, [theme]);
-
-  const isEdit = mode === 'edit';
-  const filled = {
-    game: PREFILL.game, dateLabel: PREFILL.dateLabel, time: PREFILL.time, duration: PREFILL.duration,
-    scores: PREFILL.scores, notes: PREFILL.notes,
-  };
-  const blank = {
-    game: 'g-wingspan', dateLabel: 'Oggi · 28 mag 2026', time: '21:00', duration: '2h',
-    scores: [
-      { playerId:'p-marco', name:'Marco', score: 42 },
-      { playerId:'p-anna',  name:'Anna',  score: 38 },
-      { playerId:'p-luca',  name:'Luca',  score: 29 },
-    ],
-    notes: 'Bella rimonta di Marco nell\'ultimo round.',
-  };
-  const data = isEdit ? filled : blank;
-  const primary = (step) => step === 3 ? (isEdit ? '✓ Salva modifiche' : '✓ Salva partita') : 'Avanti →';
-
-  const accent = entityHsl('session');
-  const primaryLabel3 = primary(3);
-
-  const MOBILE = isEdit ? [
-    { anchor:'state-01', step:1, opts:{}, label:'01 · Step 1 — Gioco (precompilato Wingspan)', gherkin:'EDIT' },
-    { anchor:'state-02', step:2, opts:{}, label:'02 · Step 2 — Quando (precompilato)', gherkin:'EDIT' },
-    { anchor:'state-03', step:3, opts:{ withNotes:true }, label:'03 · Step 3 — Punteggi + note (precompilati)', gherkin:'EDIT' },
-    { anchor:'state-04', step:3, opts:{ withNotes:true, error:true }, label:'04 · Error — salvataggio fallito', gherkin:'EDIT.err' },
-    { anchor:'state-05', step:1, opts:{ loading:true }, label:'05 · Loading — caricamento partita', gherkin:'EDIT.load' },
-  ] : [
-    { anchor:'state-01', step:1, opts:{ emptyGame:true }, label:'01 · Step 1 — Gioco · empty (nessuna selezione)', gherkin:'US.1' },
-    { anchor:'state-02', step:1, opts:{}, label:'02 · Step 1 — Gioco selezionato', gherkin:'US.1' },
-    { anchor:'state-03', step:2, opts:{}, label:'03 · Step 2 — Quando + durata', gherkin:'US.2' },
-    { anchor:'state-04', step:3, opts:{}, label:'04 · Step 3 — Punteggi (vincitore auto)', gherkin:'US.3' },
-    { anchor:'state-05', step:3, opts:{ withNotes:true }, label:'05 · Step 3 — Con note opzionali', gherkin:'US.3' },
-    { anchor:'state-06', step:1, opts:{ loading:true }, label:'06 · Loading — libreria', gherkin:'US.load' },
-    { anchor:'state-07', step:3, opts:{ error:true }, label:'07 · Error — salvataggio fallito', gherkin:'US.err' },
-  ];
-
+// ─── MOBILE FORM (wizard 3-step · bottom nav) ──────────
+const MobileForm = ({ mode, state, data, step }) => {
+  const loading = state === 'loading', error = state === 'error', empty = state === 'empty';
   return (
-    <div style={{ minHeight:'100vh', background:'var(--bg)', color:'var(--text)', padding:'24px 24px 80px' }}>
-      <header style={{ maxWidth: 1440, margin:'0 auto 32px', display:'flex', alignItems:'flex-start', gap: 16, flexWrap:'wrap' }}>
-        <div style={{ display:'flex', alignItems:'center', gap: 12, flex: 1, minWidth: 0 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background:`linear-gradient(135deg, ${entityHsl('game')}, ${accent})`, color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontWeight: 800, fontFamily:'var(--f-display)', fontSize: 18 }}>{isEdit ? '✎' : '+'}</div>
-          <div>
-            <div style={{ display:'flex', alignItems:'center', gap: 8, marginBottom: 2 }}>
-              <span style={{ padding:'2px 8px', borderRadius:'var(--r-pill)', background: entityHsl('session', 0.12), color: accent, fontFamily:'var(--f-mono)', fontSize: 9, fontWeight: 800, textTransform:'uppercase', letterSpacing:'.08em', border:`1px solid ${entityHsl('session', 0.22)}` }}>SP4 · /play-records</span>
-              <span style={{ fontFamily:'var(--f-mono)', fontSize: 10, color:'var(--text-muted)', fontWeight: 700 }}>{isEdit ? '/play-records/[id]/edit' : '/play-records/new'}</span>
-            </div>
-            <div style={{ fontFamily:'var(--f-display)', fontWeight: 800, fontSize: 22, color:'var(--text)', letterSpacing:'-.01em' }}>{isEdit ? 'Modifica partita' : 'Registra partita'}</div>
-            <div style={{ fontFamily:'var(--f-mono)', fontSize: 11, color:'var(--text-muted)', fontWeight: 600, marginTop: 2 }}>Wizard 3-step mobile + split-form desktop con live preview</div>
-          </div>
-        </div>
-        <button type="button" onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} style={{ padding:'8px 14px', borderRadius:'var(--r-md)', background:'var(--bg-card)', border:'1px solid var(--border)', color:'var(--text)', fontFamily:'var(--f-display)', fontSize: 12, fontWeight: 800, cursor:'pointer', display:'inline-flex', alignItems:'center', gap: 6 }}>
-          <span aria-hidden="true">🌗</span>{theme === 'light' ? 'Light' : 'Dark'}
-        </button>
-      </header>
-
-      <main style={{ maxWidth: 1440, margin:'0 auto', display:'flex', flexDirection:'column', gap: 56 }}>
-        <div>
-          <div className="section-header">
-            <span className="section-marker" style={{ background: accent }}/>
-            <h2 className="section-title">Mobile · 375 — Wizard 3 step</h2>
-            <span className="section-meta">{MOBILE.length} stati · default · loading · error</span>
-          </div>
-          <div className="mobile-grid">
-            {MOBILE.map(s => <MobileScreen key={s.anchor} {...s} data={data} mode={mode} primaryLabel={primary(s.step)}/>)}
-          </div>
-        </div>
-
-        <div>
-          <div className="section-header">
-            <span className="section-marker" style={{ background: accent }}/>
-            <h2 className="section-title">Mobile · Step-flow overview</h2>
-            <span className="section-meta">i 3 step affiancati per QA</span>
-          </div>
-          <StepFlowOverview anchor="state-08" label="08 · Step-flow 1→3 (compact)" data={data} mode={mode}/>
-        </div>
-
-        <div>
-          <div className="section-header">
-            <span className="section-marker" style={{ background: accent }}/>
-            <h2 className="section-title">Desktop · 1280 — Split-form</h2>
-            <span className="section-meta">form 8-col + record-card live preview 4-col</span>
-          </div>
-          <div style={{ display:'flex', flexDirection:'column', gap: 36 }}>
-            <DesktopSplit anchor="state-09" label="09 · Desktop · Step 3 Punteggi + live preview" step={3} data={data} opts={{ withNotes:true }} mode={mode} primaryLabel={primaryLabel3}/>
-            <DesktopSplit anchor="state-10" label="10 · Desktop · Step 1 Gioco + live preview" step={1} data={data} opts={{}} mode={mode} primaryLabel="Avanti →"/>
-          </div>
-        </div>
-      </main>
+    <div aria-busy={loading || undefined} style={{ flex: 1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+      <PhoneTopNav title={mode === 'edit' ? 'Modifica partita' : 'Registra partita'}/>
+      {empty && <InfoBanner mobile/>}
+      {error && <ErrorBanner mobile/>}
+      {error && <DraftLink mobile/>}
+      {loading && <SavingToolbar mobile/>}
+      {loading && <PhotoProgress mobile/>}
+      <div className={loading ? 'pr-loading-dim' : undefined} style={{ flex: 1, display:'flex', flexDirection:'column', overflowY:'auto', minHeight: 0 }}>
+        <StepIndicator current={step} onBack mobile/>
+        <div style={{ flex: 1 }}>{renderStep(step, data, { empty, withNotes: !empty }, true)}</div>
+      </div>
+      <ActionBar step={step} mobile primaryLabel={primaryLabel(step, mode)} mode={mode}/>
     </div>
   );
-}
+};
+
+// ─── DESKTOP FORM (split-form 8-col + preview 4-col) ───
+const DesktopForm = ({ mode, state, data, step }) => {
+  const loading = state === 'loading', error = state === 'error', empty = state === 'empty';
+  return (
+    <div aria-busy={loading || undefined} style={{ display:'flex', flexDirection:'column' }}>
+      <DesktopNav mode={mode}/>
+      {empty && <InfoBanner/>}
+      {error && <ErrorBanner/>}
+      {error && <DraftLink/>}
+      {loading && <SavingToolbar/>}
+      {loading && <PhotoProgress/>}
+      <div className={loading ? 'pr-loading-dim' : undefined}>
+        <StepIndicator current={step} mobile={false}/>
+        <div style={{ display:'grid', gridTemplateColumns:'minmax(0, 8fr) minmax(0, 4fr)', gap: 24, padding:'8px 24px 0', maxWidth: 1280, margin:'0 auto' }}>
+          <div style={{ display:'flex', flexDirection:'column', paddingBottom: 24 }}>{renderStep(step, data, { empty, withNotes: !empty }, false)}</div>
+          <div style={{ paddingTop: 20, paddingBottom: 24 }}>{loading ? <PreviewSkeleton/> : <RecordLivePreview data={data} mode={mode}/>}</div>
+        </div>
+      </div>
+      <ActionBar step={step} mobile={false} primaryLabel={primaryLabel(step, mode)} mode={mode}/>
+    </div>
+  );
+};
+
+// ─── FORM MATRIX (mobile 375 + desktop 1440 per uno stato) ──
+const FormMatrix = ({ mode = 'new', state = 'default' }) => {
+  const cfg = STATE_CFG[state] || STATE_CFG.default;
+  return (
+    <div className="matrix">
+      <div className="matrix-row">
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap: 8 }}>
+          <div className="frame-tag">Mobile · 375 — Wizard 3-step</div>
+          <div className="phone">
+            <PhoneSbar/>
+            <div style={{ flex: 1, overflow:'hidden', display:'flex', flexDirection:'column', background:'var(--bg)' }}>
+              <MobileForm mode={mode} state={state} data={cfg.data} step={cfg.mStep}/>
+            </div>
+          </div>
+        </div>
+        <div style={{ display:'flex', flexDirection:'column', gap: 8, flex: 1, minWidth: 0 }}>
+          <div className="frame-tag">Desktop · 1440 — Split-form + preview</div>
+          <div className="desktop-frame">
+            <div className="desktop-bar">
+              <span className="traffic"/><span className="traffic"/><span className="traffic"/>
+              <span className="url">meepleai.app/play-records/new</span>
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', minHeight: 640, background:'var(--bg)' }}>
+              <DesktopForm mode={mode} state={state} data={cfg.data} step={cfg.dStep}/>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 window.PRForm = {
+  FormMatrix,
   render(rootId, opts) {
-    ReactDOM.createRoot(document.getElementById(rootId)).render(<App mode={(opts && opts.mode) || 'new'}/>);
+    const mode = (opts && opts.mode) || 'new';
+    const state = (opts && opts.state) || 'default';
+    ReactDOM.createRoot(document.getElementById(rootId)).render(<FormMatrix mode={mode} state={state}/>);
   }
 };
 })();

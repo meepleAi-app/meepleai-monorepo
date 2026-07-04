@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities;
+using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using FluentAssertions;
@@ -1041,6 +1042,87 @@ public sealed class GameSessionTests
         // Assert
         session.Status.Should().Be(SessionStatus.Abandoned);
         session.Notes.Should().Contain("Player disconnected");
+    }
+
+    #endregion
+
+    // =============================================================================
+    // region MarkCorrelatedComplete — event-free shadow lifecycle (controller review #2587)
+    // =============================================================================
+
+    #region MarkCorrelatedComplete Tests
+
+    [Fact(DisplayName = "#2587-fix: MarkCorrelatedComplete from Setup → Completed, no domain events")]
+    public void MarkCorrelatedComplete_FromSetup_TransitionsToCompletedWithNoEvents()
+    {
+        // Arrange
+        var session = CreateSetupSession();
+        session.Status.Should().Be(SessionStatus.Setup);
+
+        // Act
+        session.MarkCorrelatedComplete(TimeProvider.System);
+
+        // Assert — status and timestamp
+        session.Status.Should().Be(SessionStatus.Completed);
+        session.CompletedAt.Should().NotBeNull();
+
+        // Assert — no GameSessionStartedEvent or GameSessionCompletedEvent raised
+        session.DomainEvents.Should().NotContain(
+            e => e is GameSessionStartedEvent,
+            because: "MarkCorrelatedComplete must not raise GameSessionStartedEvent");
+        session.DomainEvents.Should().NotContain(
+            e => e is GameSessionCompletedEvent,
+            because: "MarkCorrelatedComplete must not raise GameSessionCompletedEvent");
+    }
+
+    [Fact(DisplayName = "#2587-fix: MarkCorrelatedComplete is idempotent when already Completed")]
+    public void MarkCorrelatedComplete_AlreadyCompleted_IsNoOp()
+    {
+        // Arrange — drive to Completed via normal path
+        var session = CreateSetupSession();
+        session.Start();
+        session.Complete();
+        var completedAt = session.CompletedAt;
+        session.ClearDomainEvents(); // clear events from normal path
+
+        // Act — calling MarkCorrelatedComplete on an already-terminal session must not throw
+        var act = () => session.MarkCorrelatedComplete(TimeProvider.System);
+
+        // Assert
+        act.Should().NotThrow();
+        session.Status.Should().Be(SessionStatus.Completed, because: "status must remain Completed");
+        session.CompletedAt.Should().Be(completedAt, because: "CompletedAt must not be overwritten");
+        session.DomainEvents.Should().BeEmpty(because: "no events for an already-finished shadow");
+    }
+
+    [Fact(DisplayName = "#2587-fix: MarkCorrelatedComplete is idempotent when already Abandoned")]
+    public void MarkCorrelatedComplete_AlreadyAbandoned_IsNoOp()
+    {
+        // Arrange
+        var session = CreateSetupSession();
+        session.Abandon("test");
+        var completedAt = session.CompletedAt;
+        session.ClearDomainEvents();
+
+        // Act
+        var act = () => session.MarkCorrelatedComplete(TimeProvider.System);
+
+        // Assert
+        act.Should().NotThrow();
+        session.Status.Should().Be(SessionStatus.Abandoned, because: "status must remain Abandoned");
+        session.CompletedAt.Should().Be(completedAt, because: "CompletedAt must not be overwritten");
+        session.DomainEvents.Should().BeEmpty();
+    }
+
+    [Fact(DisplayName = "#2587-fix: MarkCorrelatedComplete with null TimeProvider throws ArgumentNullException")]
+    public void MarkCorrelatedComplete_NullTimeProvider_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var session = CreateSetupSession();
+
+        // Act & Assert
+        var act = () => session.MarkCorrelatedComplete(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     #endregion

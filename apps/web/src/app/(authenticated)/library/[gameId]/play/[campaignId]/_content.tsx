@@ -6,9 +6,13 @@ import { useRouter } from 'next/navigation';
 
 import { GamebookPlayShell } from '@/components/features/gamebook';
 import { ResumeBooksList } from '@/components/features/gamebook/ResumeBooksList';
+import { SerataSpineStrip } from '@/components/features/gamebook/SerataSpineStrip';
 import { GameRefKind, type GameRef } from '@/lib/api/gamebook';
 import { useCampaignProgress } from '@/lib/gamebook/hooks/useCampaignProgress';
-import { useGamebookCampaign } from '@/lib/gamebook/hooks/useGamebookCampaign';
+import {
+  useGamebookCampaign,
+  useGamebookCampaignSpine,
+} from '@/lib/gamebook/hooks/useGamebookCampaign';
 
 export function Content({
   campaignId,
@@ -42,6 +46,10 @@ export function Content({
   // has engaged with, server-side sorted by most-recent visit first.
   const { data: bookProgress = [] } = useCampaignProgress(campaignId);
 
+  // #2632 (SI-1b Phase 4): the owning GameNight "Serata" spine. Null when the campaign is played
+  // standalone (204) — the strip is only shown for GameNight-attached play.
+  const { data: spine } = useGamebookCampaignSpine(campaignId);
+
   const handleResume = useCallback(
     (bookId: string) => {
       // Future: route to a per-book play surface; for now we just refresh
@@ -54,6 +62,11 @@ export function Content({
 
   return (
     <main className="h-[calc(100vh-var(--app-topbar-height,64px))] flex flex-col">
+      {spine ? (
+        <div className="px-3 pt-2">
+          <SerataSpineStrip spine={spine} />
+        </div>
+      ) : null}
       <ResumeBooksList progress={bookProgress} onResume={handleResume} />
       <GamebookPlayShell campaignId={campaignId} gameId={gameId} gameRef={gameRef} />
     </main>

@@ -18,23 +18,16 @@ internal class KeywordSearchService : IKeywordSearchService
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<KeywordSearchService> _logger;
 
-    // PostgreSQL full-text search configuration
-    // Issue #3228: Use built-in config (custom meepleai_italian never created)
-    // Note: ADR-016 planned custom FTS with game synonyms - tracked in follow-up issue
-    private const string DefaultTextSearchConfig = "italian";
-    private const string EnglishTextSearchConfig = "english";
+    // PostgreSQL full-text search configuration.
+    // #2569: keyword FTS is 'english' to match the content (PdfDocument.Language defaults to
+    // "en"), the pgvector path (PgVectorStoreAdapter uses 'english'), and — critically — the
+    // GENERATED search_vector column on text_chunks/pdf_documents (also 'english'). Query config
+    // and column config MUST agree or the @@ operator silently returns nothing. There is NO
+    // per-language mapping on purpose: the column is single-config, so an 'italian' query would
+    // never match. A multilingual mapping returns only when a multilingual column exists
+    // (ADR-016 follow-up). See ResolveFtsConfig.
+    private const string DefaultTextSearchConfig = "english";
     private const int DefaultNormalization = 1; // ts_rank_cd normalization method (1 = divide by document length)
-
-    /// <summary>
-    /// Mapping of language codes to PostgreSQL text search configurations.
-    /// </summary>
-    private static readonly Dictionary<string, string> LanguageToFtsConfig = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-    {
-        { "it", "italian" },  // Issue #3228: Use built-in (meepleai_italian not created)
-        { "italian", "italian" },
-        { "en", "english" },
-        { "english", "english" }
-    };
 
     public KeywordSearchService(
         MeepleAiDbContext dbContext,
@@ -50,7 +43,7 @@ internal class KeywordSearchService : IKeywordSearchService
         int limit = 10,
         bool phraseSearch = false,
         List<string>? boostTerms = null,
-        string language = "it",
+        string language = "en",
         double minScore = 0.0,
         CancellationToken cancellationToken = default)
     {
@@ -165,7 +158,7 @@ internal class KeywordSearchService : IKeywordSearchService
         string query,
         Guid gameId,
         int limit = 10,
-        string language = "it",
+        string language = "en",
         CancellationToken cancellationToken = default)
     {
         // Issue #1445: Use centralized query validation
@@ -311,29 +304,18 @@ internal class KeywordSearchService : IKeywordSearchService
     }
 
     /// <summary>
-    /// Resolves a language code to the corresponding PostgreSQL FTS configuration.
-    /// ADR-016 Phase 3: Maps "it" → meepleai_italian (with game synonyms), "en" → english.
+    /// Resolves the PostgreSQL FTS configuration for keyword search.
+    /// #2569 footgun guard: ALWAYS returns <see cref="DefaultTextSearchConfig"/> ('english'),
+    /// ignoring <paramref name="language"/>. The <c>search_vector</c> column is a single-config
+    /// GENERATED column built with 'english'; a divergent query config (e.g. 'italian') would
+    /// make the <c>@@</c> operator silently return nothing. True per-query / multilingual FTS
+    /// requires a multilingual <c>search_vector</c> column (ADR-016 follow-up); until that
+    /// exists the query config is pinned to the column's config. The parameter is retained for
+    /// forward-compatibility (and so existing call sites need no change).
     /// </summary>
-    /// <param name="language">Language code (e.g., "it", "en", "italian", "english")</param>
-    /// <returns>PostgreSQL text search configuration name</returns>
-    private string ResolveFtsConfig(string language)
-    {
-        if (string.IsNullOrWhiteSpace(language))
-        {
-            _logger.LogDebug("Empty language provided, using default FTS config: {Config}", DefaultTextSearchConfig);
-            return DefaultTextSearchConfig;
-        }
-
-        if (LanguageToFtsConfig.TryGetValue(language, out var ftsConfig))
-        {
-            return ftsConfig;
-        }
-
-        _logger.LogWarning(
-            "Unknown language '{Language}' for FTS config, falling back to English",
-            language);
-        return EnglishTextSearchConfig;
-    }
+    /// <param name="language">Reserved; currently ignored — keyword FTS is english-only (#2569).</param>
+    /// <returns>The PostgreSQL text search configuration ('english').</returns>
+    internal static string ResolveFtsConfig(string language) => DefaultTextSearchConfig;
 
     /// <summary>
     /// Extracts matched terms from query for frontend highlighting.

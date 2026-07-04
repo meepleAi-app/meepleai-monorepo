@@ -433,7 +433,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
     /// Triggers asynchronous PDF processing after chunked upload completion.
     /// Orchestrates extraction, chunking, embedding generation, and indexing.
     /// </summary>
-    private async Task TriggerPdfProcessingAsync(string pdfId, string filePath, CancellationToken cancellationToken)
+    internal async Task TriggerPdfProcessingAsync(string pdfId, string filePath, CancellationToken cancellationToken)
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -465,6 +465,32 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
             // Step 2: Chunk text for embedding
             var allDocumentChunks = await ChunkTextContentAsync(
                 pdfId, fullText!, scope).ConfigureAwait(false);
+
+            // Guard: zero usable chunks → mark Failed. Mirrors PdfProcessingPipelineService
+            // (the non-chunked Quartz path) which fails on chunks.Count == 0. Without this,
+            // embedding/index become no-ops and the PDF would reach Ready with no indexed
+            // content — an unusable RAG state and an asymmetry with the other pipeline.
+            if (allDocumentChunks.Count == 0)
+            {
+                _logger.LogWarning("No usable chunks produced for chunked upload {PdfId}, marking as failed", pdfId);
+                pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
+                pdfDoc.ProcessingError = "Text extraction produced no usable chunks";
+                pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
+                try
+                {
+                    await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                }
+                catch (DbUpdateConcurrencyException ex)
+                {
+                    MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                        nameof(CompleteChunkedUploadCommandHandler),
+                        MeepleAiMetrics.PdfConcurrencyCategories.B);
+                    _logger.LogWarning(ex,
+                        "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                        pdfId, nameof(CompleteChunkedUploadCommandHandler));
+                }
+                return;
+            }
 
             // Step 3: Generate embeddings
             var (embeddingsSuccess, embeddings) = await GenerateEmbeddingsAsync(
@@ -752,7 +778,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
     {
 
         // Update vector document with chunk count (no pgvector indexing)
-        await UpdateOrCreateVectorDocumentAsync(pdfGuid, pdfDoc, fullText, allDocumentChunks.Count, db, scope, cancellationToken).ConfigureAwait(false);
+        await UpdateOrCreateVectorDocumentAsync(pdfGuid, pdfDoc, fullText, allDocumentChunks.Count, db, scope, _logger, cancellationToken).ConfigureAwait(false);
 
         // Save text chunks to PostgreSQL for hybrid search (FTS)
         await SaveTextChunksForHybridSearchAsync(pdfGuid, pdfDoc, allDocumentChunks, db, scope, cancellationToken).ConfigureAwait(false);
@@ -772,8 +798,24 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         int indexedCount,
         MeepleAiDbContext db,
         IServiceScope scope,
+        ILogger logger,
         CancellationToken cancellationToken)
     {
+        // Pre-pipeline guard: IPdfIndexingPipeline.IndexAsync throws
+        // ArgumentOutOfRangeException on chunkCount <= 0 (see PdfIndexingPipeline.cs:51).
+        // This path can land here with indexedCount == 0 if extraction succeeded but
+        // every chunk was filtered out (whitespace-only, post-translation drop, etc.).
+        // PdfProcessingPipelineService already guards upstream with `if (chunks.Count == 0)`;
+        // mirror it here so the exception path doesn't trigger and the PDF gets marked
+        // failed with a clear diagnostic instead of being swallowed by the outer general catch.
+        if (indexedCount <= 0)
+        {
+            logger.LogWarning(
+                "ChunkedUpload PDF {PdfId}: no chunks produced from extracted text ({CharCount} chars) — skipping VectorDocument upsert",
+                pdfGuid, fullText.Length);
+            return;
+        }
+
         var pipeline = scope.ServiceProvider.GetRequiredService<IPdfIndexingPipeline>();
         await pipeline.IndexAsync(
             pdfDocumentId: pdfGuid,

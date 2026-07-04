@@ -33,6 +33,7 @@ internal static class GamebookPhotoEndpoints
         MapGetGlossaryEndpoint(group);
         MapBootstrapGlossaryEndpoint(group);
         MapUpsertGlossaryEntryEndpoint(group);
+        MapDeleteGlossaryEntryEndpoint(group);
         MapEncounterParseEndpoint(group);
 
         return group;
@@ -503,6 +504,36 @@ internal static class GamebookPhotoEndpoints
         .WithTags("Gamebook")
         .WithSummary("Create or update a glossary entry")
         .WithDescription("If the entry with the given id does not exist, creates a new manual entry. If it exists, updates the Italian translation and sets Source to Manual. Note: TermEn is immutable on update; to rename a term, delete and recreate.")
+        .WithOpenApi();
+    }
+
+    private static void MapDeleteGlossaryEntryEndpoint(RouteGroupBuilder group)
+    {
+        group.MapDelete("/gamebook/campaigns/{campaignId:guid}/glossary/{entryId:guid}", async (
+            Guid campaignId,
+            Guid entryId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+            if (!TryGetUserId(context, session, out var userId)) return Results.Unauthorized();
+
+            await mediator.Send(
+                new DeleteGlossaryEntryCommand(campaignId, entryId, userId), ct).ConfigureAwait(false);
+
+            return Results.NoContent();
+        })
+        .RequireAuthenticatedUser()
+        .Produces(StatusCodes.Status204NoContent)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces(StatusCodes.Status404NotFound)
+        .WithTags("Gamebook")
+        .WithSummary("Delete a glossary entry")
+        .WithDescription("Hard-deletes a glossary entry from the campaign. Returns 403 if the caller does not own the campaign, 404 if the campaign or entry does not exist (or the entry belongs to another campaign). Enables removing a term or — combined with recreate — renaming one (TermEn is immutable on update).")
         .WithOpenApi();
     }
 

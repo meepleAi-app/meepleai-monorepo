@@ -59,4 +59,5 @@ export * from './kbQualityClient'; // Issue #1675 — Per-doc KB quality evaluat
 export * from './activityClient'; // Issue #1593 Phase 3b — cross-entity activity feed
 export * from './toolkit'; // Default Game Toolkit — session events & dice presets
 export * from './sessionSnapshotsClient'; // Session Vision AI — snapshot CRUD
+export * from './agentSessionsClient'; // Issue #3375 — session-based agent lifecycle (launch/config/end)
 export * from '../session-flow'; // Session Flow v2.1 — typed client + DTOs

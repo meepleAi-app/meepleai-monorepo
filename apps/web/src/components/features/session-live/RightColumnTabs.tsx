@@ -34,9 +34,16 @@ import { useTablistKeyboardNav } from '@/hooks/useTablistKeyboardNav';
 
 // ─── Tab types ────────────────────────────────────────────────────────────────
 
-export type LiveTab = 'score' | 'turn' | 'widget' | 'notes';
+export type LiveTab = 'score' | 'turn' | 'widget' | 'notes' | 'photos' | 'agent';
 
-const ORDERED_TABS: ReadonlyArray<LiveTab> = ['score', 'turn', 'widget', 'notes'];
+const ORDERED_TABS: ReadonlyArray<LiveTab> = [
+  'score',
+  'turn',
+  'widget',
+  'notes',
+  'photos',
+  'agent',
+];
 
 // ─── Labels ───────────────────────────────────────────────────────────────────
 
@@ -46,6 +53,8 @@ export interface RightColumnTabsLabels {
   readonly tabTurn: string;
   readonly tabWidget: string;
   readonly tabNotes: string;
+  readonly tabPhotos: string;
+  readonly tabAgent: string;
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -76,8 +85,17 @@ export function RightColumnTabs({
       turn: labels.tabTurn,
       widget: labels.tabWidget,
       notes: labels.tabNotes,
+      photos: labels.tabPhotos,
+      agent: labels.tabAgent,
     }),
-    [labels.tabScore, labels.tabTurn, labels.tabWidget, labels.tabNotes]
+    [
+      labels.tabScore,
+      labels.tabTurn,
+      labels.tabWidget,
+      labels.tabNotes,
+      labels.tabPhotos,
+      labels.tabAgent,
+    ]
   );
 
   const { tabRefs, handleKeyDown } = useTablistKeyboardNav<LiveTab>({

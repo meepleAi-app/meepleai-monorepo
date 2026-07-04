@@ -55,27 +55,6 @@ internal sealed class EndGameSessionCommandValidator : AbstractValidator<EndGame
 }
 
 /// <summary>
-/// Validator for StartGameSessionCommand.
-/// Ensures GameId and UserId are non-empty and Players list is provided.
-/// </summary>
-internal sealed class StartGameSessionCommandValidator : AbstractValidator<StartGameSessionCommand>
-{
-    public StartGameSessionCommandValidator()
-    {
-        RuleFor(x => x.GameId)
-            .NotEmpty().WithMessage("Game ID is required");
-
-        RuleFor(x => x.Players)
-            .NotEmpty().WithMessage("At least one player is required")
-            .Must(p => p.Count <= 100).WithMessage("Players list must not exceed 100 entries")
-            .When(x => x.Players is not null);
-
-        RuleFor(x => x.UserId)
-            .NotEmpty().WithMessage("User ID is required");
-    }
-}
-
-/// <summary>
 /// Validator for AddPlayerToSessionCommand.
 /// Ensures SessionId is non-empty and PlayerName is provided.
 /// </summary>

@@ -133,6 +133,9 @@ export type {
   PauseOverlayProps,
 } from '@/components/features/session-live/PauseOverlay';
 
+export { PhotosTabContent } from '@/components/features/session-live/PhotosTabContent';
+export type { PhotosTabContentProps } from '@/components/features/session-live/PhotosTabContent';
+
 export { RightColumnTabs } from '@/components/features/session-live/RightColumnTabs';
 export type {
   LiveTab,

@@ -105,6 +105,21 @@ export interface CampaignSetupDrawerProps {
   /** Controlled mode — drawer open state managed by parent. */
   readonly open?: boolean;
   readonly onOpenChange?: (open: boolean) => void;
+  /**
+   * Storybook/test seam: initial wizard step (default 1).
+   * Allows snapshot stories to render interaction-driven states statically
+   * without requiring play functions. Must NOT be used in production call sites.
+   */
+  readonly initialStep?: StepId;
+  /**
+   * Storybook/test seam: initial campaign title (default 'Campagna con i ragazzi').
+   * Pass a short string (< 3 chars) to render the validation-error state statically.
+   */
+  readonly initialTitle?: string;
+  /**
+   * Storybook/test seam: initial preset selection (default 'group-a').
+   */
+  readonly initialPresetId?: PresetId;
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -115,6 +130,9 @@ export function CampaignSetupDrawer({
   trigger,
   open: openProp,
   onOpenChange,
+  initialStep,
+  initialTitle,
+  initialPresetId,
 }: CampaignSetupDrawerProps): ReactElement {
   const router = useRouter();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -124,9 +142,9 @@ export function CampaignSetupDrawer({
     if (isControlled) onOpenChange?.(next);
     else setInternalOpen(next);
   };
-  const [step, setStep] = useState<StepId>(1);
-  const [title, setTitle] = useState('Campagna con i ragazzi');
-  const [presetId, setPresetId] = useState<PresetId>('group-a');
+  const [step, setStep] = useState<StepId>(initialStep ?? 1);
+  const [title, setTitle] = useState(initialTitle ?? 'Campagna con i ragazzi');
+  const [presetId, setPresetId] = useState<PresetId>(initialPresetId ?? 'group-a');
   const preset = PRESETS.find(p => p.id === presetId) ?? PRESETS[0];
 
   const mutation = useMutation({

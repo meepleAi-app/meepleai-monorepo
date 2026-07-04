@@ -48,8 +48,8 @@ public class LiveGameSessionReconstituteTests
             gameState: null,
             notes: "first turn ok",
             agentMode: AgentSessionMode.None,
-            chatSessionId: null,
             turnAdvancePolicy: TurnAdvancePolicy.Manual,
+            trackingSessionId: null,
             xmin: 42u,
             players: Array.Empty<LiveSessionPlayer>(),
             teams: Array.Empty<LiveSessionTeam>(),
@@ -57,6 +57,7 @@ public class LiveGameSessionReconstituteTests
             roundScores: Array.Empty<RoundScore>(),
             turnRecords: Array.Empty<TurnRecord>(),
             disputes: Array.Empty<RuleDisputeEntry>(),
+            diaryEntries: Array.Empty<DiaryEntry>(),
             setupChecklist: null);
 
         // Assert
@@ -68,6 +69,58 @@ public class LiveGameSessionReconstituteTests
         session.PhaseNames.Should().BeEquivalentTo(new[] { "Setup", "Action", "End" });
         session.Notes.Should().Be("first turn ok");
         session.Xmin.Should().Be(42u);
+        session.DomainEvents.Should().BeEmpty("Reconstitute MUST NOT raise events");
+    }
+
+    [Fact]
+    public void Reconstitute_WithNonNullTrackingSessionId_PreservesIt()
+    {
+        // #2552: the existing test only exercised trackingSessionId: null. A companion-backed
+        // session reconstituted with a non-null id must round-trip it unchanged (the branch was
+        // never asserted).
+        var trackingSessionId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var createdAt = new DateTime(2026, 6, 13, 10, 0, 0, DateTimeKind.Utc);
+
+        var session = LiveGameSession.Reconstitute(
+            id: Guid.NewGuid(),
+            sessionCode: "XYZ789",
+            gameId: gameId,
+            gameName: "Spirit Island",
+            toolkitId: null,
+            createdByUserId: Guid.NewGuid(),
+            visibility: PlayRecordVisibility.Private,
+            groupId: null,
+            status: LiveSessionStatus.InProgress,
+            createdAt: createdAt,
+            startedAt: createdAt.AddSeconds(30),
+            pausedAt: null,
+            completedAt: null,
+            updatedAt: createdAt.AddMinutes(5),
+            lastSavedAt: null,
+            currentTurnIndex: 0,
+            currentPhaseIndex: 0,
+            phaseNames: Array.Empty<string>(),
+            snapshotTriggerConfig: null,
+            lastSnapshotTimestamp: null,
+            scoringConfig: SessionScoringConfig.CreateDefault(),
+            gameState: null,
+            notes: null,
+            agentMode: AgentSessionMode.None,
+            turnAdvancePolicy: TurnAdvancePolicy.Manual,
+            trackingSessionId: trackingSessionId,
+            xmin: 1u,
+            players: Array.Empty<LiveSessionPlayer>(),
+            teams: Array.Empty<LiveSessionTeam>(),
+            turnOrder: Array.Empty<Guid>(),
+            roundScores: Array.Empty<RoundScore>(),
+            turnRecords: Array.Empty<TurnRecord>(),
+            disputes: Array.Empty<RuleDisputeEntry>(),
+            diaryEntries: Array.Empty<DiaryEntry>(),
+            setupChecklist: null);
+
+        session.TrackingSessionId.Should().Be(trackingSessionId);
+        session.GameId.Should().Be(gameId);
         session.DomainEvents.Should().BeEmpty("Reconstitute MUST NOT raise events");
     }
 }

@@ -38,7 +38,7 @@
  * Pattern: mirrors Wave C.2 agent-detail.smoke.spec.ts structure.
  * Wave D.2 Interactions sub-PR — Issue #750
  */
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 
 // ─── Environment guards ───────────────────────────────────────────────────────
 
@@ -96,69 +96,5 @@ test.describe('SMOKE — /sessions/[id]/live real backend', () => {
     );
     // Any of: default (session found + loaded), not-found (404), loading (slow backend)
     // is a valid assertion. We verify the frontend renders a known FSM shell without crash.
-  });
-
-  // ── SSE endpoint HTTP handshake ───────────────────────────────────────────────
-  //
-  // Verifies that the SSE streaming endpoint responds to an EventSource connection
-  // from within the browser context. Tests HTTP-layer connectivity only — does not
-  // verify that SSE events flow or that auth is valid.
-  //
-  // Acceptance: EventSource.readyState transitions from CONNECTING (0) to OPEN (1)
-  // OR CLOSED (2) within 10s. If it transitions to CLOSED, the backend accepted the
-  // TCP connection but rejected the HTTP request (e.g. 401/404) — still proves
-  // the endpoint is reachable.
-  //
-  // A CONNECTING timeout (never transitions) indicates network-level unreachability.
-
-  test('SSE endpoint /api/v1/game-sessions/{id}/stream/v2 is reachable', async ({ page }) => {
-    const targetId = STAGING_SESSION_ID ?? NEVER_EXISTS_ID;
-
-    await page.goto(`/sessions/${targetId}/live`, { waitUntil: 'domcontentloaded' });
-    await page.waitForSelector(
-      '[data-slot="session-live-view"], [data-slot="session-live-not-found"], [data-slot="session-live-loading"]',
-      { timeout: 30_000 }
-    );
-
-    // Evaluate EventSource connectivity from within the page's browser context.
-    // Resolves: 'open' (connected), 'error' (rejected/auth fail), or 'timeout' (unreachable).
-    const sseResult = await page.evaluate<'open' | 'error' | 'timeout'>(
-      async (sessionId: string) => {
-        return new Promise<'open' | 'error' | 'timeout'>(resolve => {
-          const url = `/api/v1/game-sessions/${sessionId}/stream/v2`;
-          let es: EventSource;
-          try {
-            es = new EventSource(url, { withCredentials: true });
-          } catch {
-            resolve('error');
-            return;
-          }
-
-          const timer = setTimeout(() => {
-            es.close();
-            resolve('timeout');
-          }, 10_000);
-
-          es.onopen = () => {
-            clearTimeout(timer);
-            es.close();
-            resolve('open');
-          };
-
-          es.onerror = () => {
-            clearTimeout(timer);
-            es.close();
-            // onerror can mean 401/404 (HTTP error) or network issue.
-            // Both indicate the endpoint was reachable at HTTP layer.
-            resolve('error');
-          };
-        });
-      },
-      targetId
-    );
-
-    // 'open' or 'error' both confirm endpoint reachability.
-    // Only 'timeout' indicates network-level unreachability (test should fail).
-    expect(sseResult).not.toBe('timeout');
   });
 });

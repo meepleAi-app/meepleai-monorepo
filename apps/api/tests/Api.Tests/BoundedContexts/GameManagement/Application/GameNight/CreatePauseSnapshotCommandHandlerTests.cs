@@ -262,60 +262,6 @@ public sealed class CreatePauseSnapshotCommandHandlerTests
             Times.Once);
     }
 
-    [Fact]
-    public async Task Handle_HappyPath_WithAgentMode_PublishesSessionSaveRequestedEvent()
-    {
-        // Arrange — session with an active agent
-        var chatSessionId = Guid.NewGuid();
-        var session = LiveGameSession.Create(
-            id: TestSessionId,
-            createdByUserId: TestUserId,
-            gameName: "Wingspan",
-            timeProvider: TimeProvider.System);
-
-        session.AddPlayer(TestUserId, "Alice", PlayerColor.Red, TimeProvider.System, PlayerRole.Host);
-        session.MoveToSetup(TimeProvider.System);
-        session.Start(TimeProvider.System);
-        session.SetAgentMode(AgentSessionMode.Assistant, chatSessionId, TimeProvider.System);
-
-        _sessionRepoMock
-            .Setup(r => r.GetByIdAsync(TestSessionId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(session);
-
-        _sessionRepoMock
-            .Setup(r => r.UpdateAsync(It.IsAny<LiveGameSession>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        _dbContext.LiveGameSessions.Add(new LiveGameSessionEntity
-        {
-            Id = TestSessionId,
-            SessionCode = session.SessionCode,
-            GameName = "Wingspan",
-            CreatedByUserId = TestUserId,
-            Status = (int)LiveSessionStatus.InProgress,
-            CurrentTurnIndex = session.CurrentTurnIndex,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-            AgentMode = (int)AgentSessionMode.Assistant,
-            ScoringConfigJson = "{}",
-            Xmin = 1u
-        });
-        await _dbContext.SaveChangesAsync();
-
-        var command = BuildCommand();
-
-        // Act
-        await _sut.Handle(command, CancellationToken.None);
-
-        // Assert
-        _publisherMock.Verify(
-            p => p.Publish(
-                It.Is<SessionSaveRequestedEvent>(e =>
-                    e.LiveGameSessionId == TestSessionId),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
     // ─── Error cases ──────────────────────────────────────────────────────────
 
     [Fact]
@@ -381,24 +327,6 @@ public sealed class CreatePauseSnapshotCommandHandlerTests
         var act = () =>
             _sut.Handle(command, CancellationToken.None);
         await act.Should().ThrowAsync<ConflictException>();
-    }
-
-    [Fact]
-    public async Task Handle_WithoutAgent_DoesNotPublishSessionSaveRequestedEvent()
-    {
-        // Arrange — no agent mode set (default = None)
-        CreateInProgressSession(withDbEntity: true);
-        var command = BuildCommand();
-
-        // Act
-        await _sut.Handle(command, CancellationToken.None);
-
-        // Assert — SessionSaveRequestedEvent should NOT be published when no agent
-        _publisherMock.Verify(
-            p => p.Publish(
-                It.IsAny<SessionSaveRequestedEvent>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
     }
 
     // ─── Tier enforcement ─────────────────────────────────────────────────────

@@ -145,9 +145,14 @@ describe('useSessionLiveStream — mount/unmount lifecycle', () => {
   it('creates EventSource when sessionId and enabled are set', () => {
     makeHook();
     expect(MockEventSource.instances).toHaveLength(1);
-    expect(MockEventSource.lastInstance()?.url).toContain(
-      '/api/v1/game-sessions/session-1/stream/v2'
-    );
+    expect(MockEventSource.lastInstance()?.url).toContain('/api/v1/live-sessions/session-1/stream');
+  });
+
+  it('connects to the native live-sessions stream, never the legacy game-sessions route', () => {
+    renderHook(() => useSessionLiveStream({ sessionId: 'session-1', enabled: true }));
+    const url = MockEventSource.lastInstance()!.url;
+    expect(url).toContain('/api/v1/live-sessions/session-1/stream');
+    expect(url).not.toContain('/game-sessions/');
   });
 
   it('does not create EventSource when sessionId is null', () => {

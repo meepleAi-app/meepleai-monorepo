@@ -40,13 +40,22 @@
   // pr-form-core PREFILL referenzia 'p-anna' che NON esiste in DS.players.
   // Lo aggiungiamo a DS.byId per evitare il fallback "?.title" undefined.
   if (!DS.byId['p-anna']) {
+    // #2496 — Anna F. is a "guest" player (tag-only, no User account linked).
+    // Used by the User-vs-Guest badge demo in detail/edit/new mockups.
     DS.byId['p-anna'] = {
       id: 'p-anna', type: 'player', title: 'Anna F.',
-      subtitle: 'Membro Set 2025 · 38 partite',
+      subtitle: 'Ospite · 38 partite registrate',
       initials: 'AF', color: 200, status: 'active',
+      kind: 'guest',
       totalWins: 14, totalSessions: 38, winRate: 0.368, fav: 'Wingspan',
     };
   }
+
+  // #2496 — Asse A invariante #16: backfill kind:'user' for the 5 core User-linked
+  // players in data.js so the badge helper has a consistent flag to read.
+  ['p-marco', 'p-sara', 'p-luca', 'p-giulia', 'p-andrea'].forEach(pid => {
+    if (DS.byId[pid] && !DS.byId[pid].kind) DS.byId[pid].kind = 'user';
+  });
 
   // ── PLAY RECORDS ──────────────────────────────────────────────────
   // pr1  : Wingspan · Marco vince (cover hero / vittoria)         [completed]
@@ -67,10 +76,12 @@
       hasChat: true, chatCount: 12,
       notes: 'Partita combattuta fino all\'ultimo turno. Marco chiude con un mega-combo wetland e ribalta il vantaggio di Sara grazie ai bonus di fine round.',
       scores: [
-        { playerId: 'p-marco',  name: 'Marco R.',  score: 89, winner: true  },
-        { playerId: 'p-sara',   name: 'Sara T.',   score: 76, winner: false },
-        { playerId: 'p-luca',   name: 'Luca B.',   score: 64, winner: false },
-        { playerId: 'p-giulia', name: 'Giulia M.', score: 58, winner: false },
+        { playerId: 'p-marco', name: 'Marco R.', score: 89, winner: true  },
+        { playerId: 'p-sara',  name: 'Sara T.',  score: 76, winner: false },
+        { playerId: 'p-luca',  name: 'Luca B.',  score: 64, winner: false },
+        // #2496 — Anna F. is the guest player demo: tag-only, no User account.
+        // Renders with the "Ospite" badge in detail Classifica + Hero podium.
+        { playerId: 'p-anna',  name: 'Anna F.',  score: 58, winner: false },
       ],
     },
     {

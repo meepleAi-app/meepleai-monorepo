@@ -68,10 +68,19 @@
 
 'use client';
 
-import { useCallback, useEffect, useMemo, lazy, Suspense, type ReactElement } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  lazy,
+  Suspense,
+  type ReactElement,
+} from 'react';
 
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useIntl } from 'react-intl';
+import { toast } from 'sonner';
 
 import {
   ActionLogTimeline,
@@ -100,12 +109,27 @@ import {
   type ScoringPanelRendererLabels,
   type ToolkitRendererLabels,
 } from '@/components/features/session-live';
-import type { ScoreDataByType, ScoreType } from '@/components/sessions/score-strategies/types';
-import { useSession } from '@/hooks/queries/useActiveSessions';
+import { AgentDisputeTabContent } from '@/components/features/session-live/AgentDisputeTabContent';
+import type { ChatMessage as LiveAgentChatMessage } from '@/components/features/session-live/LiveAgentChat';
+import { PhotosTabContent } from '@/components/features/session-live/PhotosTabContent';
+import { useAddDiaryEntry } from '@/hooks/mutations/useAddDiaryEntry';
+import { useCompleteLiveSession } from '@/hooks/mutations/useCompleteLiveSession';
+import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
+import { useLiveSession } from '@/hooks/queries/useLiveSession';
+import { useLiveSessionDiary } from '@/hooks/queries/useLiveSessionDiary';
+import { useSessionAgentLaunch } from '@/hooks/queries/useSessionAgentLaunch';
+import type { ChatImagePreview } from '@/hooks/useChatImageAttachments';
 import { useTranslation } from '@/hooks/useTranslation';
+import { api } from '@/lib/api';
+import { ConflictError } from '@/lib/api/core/errors';
+import { useSessionAgentChat } from '@/lib/domain-hooks/useSessionAgentChat';
+import { useSignalRSession } from '@/lib/domain-hooks/useSignalrSession';
+import { getNavigationLinks } from '@/lib/navigation';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
 import { mapConnectionState } from '@/lib/session-live/map-connection-state';
-import { hasRequiredRole } from '@/lib/session-live/participant-role';
+import { mapTurnDataToTurnState } from '@/lib/session-live/map-turn-data-to-turn-state';
+import { mergeHydratedDiary } from '@/lib/session-live/merge-hydrated-diary';
+import { hasRequiredRole, type ParticipantRole } from '@/lib/session-live/participant-role';
 import { mapScoreDataToEndgameSummary } from '@/lib/session-live/score-data-to-endgame-summary';
 import {
   deriveSessionLiveUiState,
@@ -125,6 +149,7 @@ import {
 } from '@/lib/session-live/session-live-visual-test-fixture';
 import type { TurnState, PlayerInfo as TurnPlayerInfo } from '@/lib/session-live/turn-state';
 import { useElapsedTime } from '@/lib/session-live/use-elapsed-time';
+import { useResolvePlayRecord } from '@/lib/session-live/use-resolve-play-record';
 import { useSessionLiveStream } from '@/lib/session-live/use-session-live-stream';
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';
 import { useToolkitRendererStore } from '@/lib/stores/toolkit-renderer-store';
@@ -140,6 +165,12 @@ const PauseOverlay = lazy(() =>
 const EndgameDialog = lazy(() =>
   import('@/components/features/session-live/EndgameDialog').then(m => ({
     default: m.EndgameDialog,
+  }))
+);
+
+const AddPlayerDialog = lazy(() =>
+  import('@/components/features/session-live/AddPlayerDialog').then(m => ({
+    default: m.AddPlayerDialog,
   }))
 );
 
@@ -167,10 +198,18 @@ function resolveFixtureVariant(variantParam: string | null): LiveSessionFixture 
 //   - legacy ?tab=chat   → 'score'   (chat is no longer a tab; live in LEFT mainColumn)
 //   - legacy/missing     → 'score'   (new default)
 
-type LiveTab = 'score' | 'turn' | 'widget' | 'notes';
+type LiveTab = 'score' | 'turn' | 'widget' | 'notes' | 'photos' | 'agent';
 
 function parseLiveTab(raw: string | null): LiveTab {
-  if (raw === 'turn' || raw === 'widget' || raw === 'notes' || raw === 'score') return raw;
+  if (
+    raw === 'turn' ||
+    raw === 'widget' ||
+    raw === 'notes' ||
+    raw === 'score' ||
+    raw === 'photos' ||
+    raw === 'agent'
+  )
+    return raw;
   // Back-compat aliases (R-1): legacy URL bookmarks must not 404.
   if (raw === 'tools') return 'widget';
   if (raw === 'chat') return 'score';
@@ -182,7 +221,15 @@ function parseLiveTab(raw: string | null): LiveTab {
 // Legacy ?mtab=chat   → 'score'  (chat always-visible in main column)
 // Legacy ?mtab=log    → 'score'  (log always-visible in main column)
 function parseMobileTab(raw: string | null): LiveTab {
-  if (raw === 'turn' || raw === 'widget' || raw === 'notes' || raw === 'score') return raw;
+  if (
+    raw === 'turn' ||
+    raw === 'widget' ||
+    raw === 'notes' ||
+    raw === 'score' ||
+    raw === 'photos' ||
+    raw === 'agent'
+  )
+    return raw;
   if (raw === 'tools') return 'widget';
   if (raw === 'chat' || raw === 'log') return 'score';
   return 'score';
@@ -299,6 +346,35 @@ export function SessionLiveView(): ReactElement {
   // ── SessionId validation (contract §2.1) ─────────────────────────────────
   const sessionId = resolveSessionId(params?.id);
 
+  // ── Current user (for viewerRole derivation — #2505) ─────────────────────
+  const { data: currentUser } = useCurrentUser();
+
+  // ── AddPlayerDialog state (#2505) ────────────────────────────────────────
+  const [addPlayerOpen, setAddPlayerOpen] = useState(false);
+
+  const handleAddPlayer = useCallback(() => {
+    setAddPlayerOpen(true);
+  }, []);
+
+  // ── #2503: Endgame confirm dialog state ──────────────────────────────────
+  const [endgameConfirmOpen, setEndgameConfirmOpen] = useState(false);
+  // Host explicitly clicked "Salva partita": gates the single navigation path
+  // (code-review CRITICAL 1 — no auto-nav independent of the button click).
+  const [saveIntent, setSaveIntent] = useState(false);
+
+  // ── #2503: Complete session mutation + play-record polling ───────────────
+  const completeLiveSession = useCompleteLiveSession(sessionId ?? '');
+  // ── #2575: diary write-path mutation ──────────────────────────────────────
+  const addDiary = useAddDiaryEntry(sessionId ?? '');
+  // Destructure stable members (code-review IMPORTANT 4 — the hook returns a new
+  // object literal each render; depending on the whole object re-memoizes every
+  // poll tick). `start` is a stable useCallback.
+  const {
+    status: resolveStatus,
+    playRecordId: resolvedPlayRecordId,
+    start: startResolvePlayRecord,
+  } = useResolvePlayRecord();
+
   // ── URL state SSOT ────────────────────────────────────────────────────────
   const tab = parseLiveTab(searchParams.get('tab'));
   const mobileTab = parseMobileTab(searchParams.get('mtab'));
@@ -323,8 +399,11 @@ export function SessionLiveView(): ReactElement {
     return resolveFixtureVariant(fixtureVariantParam);
   }, [fixtureVariantParam]);
 
-  // Real data hook — disabled when fixture is active or sessionId is null
-  const sessionQuery = useSession(
+  // Real data hook — disabled when fixture is active or sessionId is null.
+  // ADR-083 Fase 1 (#2501): load the canonical LiveGameSession aggregate
+  // (LiveSessionDto) — the one the wizards actually create — instead of the empty
+  // GameSession shell, which returned 404 for funnel-created sessions.
+  const sessionQuery = useLiveSession(
     sessionId ?? '',
     /* enabled= */ !IS_VISUAL_TEST_BUILD && sessionId != null
   );
@@ -340,6 +419,17 @@ export function SessionLiveView(): ReactElement {
       sessionQuery.isSuccess &&
       sessionQuery.data != null,
   });
+
+  // ── #2575: hydrate historical diary entries on load ───────────────────────
+  // Previously the diary was SSE-passive only (reopening a session showed no prior entries
+  // until new SSE events arrived). These are merged ahead of the live SSE events below.
+  const diaryQuery = useLiveSessionDiary(
+    sessionId ?? '',
+    /* enabled= */ !IS_VISUAL_TEST_BUILD &&
+      sessionId != null &&
+      sessionQuery.isSuccess &&
+      sessionQuery.data != null
+  );
 
   // ── FSM derivation ────────────────────────────────────────────────────────
   const realUiState = useMemo<SessionLiveUiState>(() => {
@@ -361,32 +451,41 @@ export function SessionLiveView(): ReactElement {
     const dto = sessionQuery.data;
     if (dto == null) return null;
 
-    // Adapt DTO players: SessionPlayerDto.id is optional (backward-compat Gate B).
-    // composeSessionLiveState requires id: string — synthesise from playerName+playerOrder.
-    const initialData = {
-      ...dto,
-      players: dto.players.map((p, idx) => ({
-        ...p,
-        id: p.id ?? `${p.playerName}-${p.playerOrder}-${idx}`,
-      })),
-    };
+    // ADR-083 Fase 1 (#2501): LiveSessionDto players already carry a stable id +
+    // displayName, and the DTO exposes status/currentTurnIndex/currentTurnPlayerId
+    // — all consumed directly by composeSessionLiveState (designed for LiveSessionDto).
+    // #2575: merge the hydrated historical diary (GET /diary) with the live SSE stream —
+    // deduped by entryId (hydrated wins) and re-sorted by timestamp so the composed actionLog
+    // stays chronological. See mergeHydratedDiary for the ordering rationale.
+    const mergedEvents = mergeHydratedDiary(diaryQuery.data ?? [], liveStream.events, dto.id);
+    // Compose live state from DTO + hydrated diary + accumulated SSE events.
+    const liveState = composeSessionLiveState(dto, mergedEvents);
 
-    // Compose live state from DTO + accumulated SSE events
-    const liveState = composeSessionLiveState(initialData, liveStream.events);
+    // #2505: derive viewerRole from currentUser.id matched against dto.players.
+    // BE PlayerRole has 'Moderator' which FE ParticipantRole does not — map to 'Player'.
+    const currentUserId = currentUser?.id ?? '';
+    const viewerPlayer = dto.players.find(p => p.userId === currentUserId);
+    const derivedRole = viewerPlayer?.role;
+    const viewerRole: ParticipantRole =
+      derivedRole === 'Host' || derivedRole === 'Spectator' ? derivedRole : 'Player';
 
     return {
       id: dto.id,
       name: `Sessione ${dto.id.slice(0, 8)}`,
       status: liveState.status === 'Paused' ? 'Paused' : 'InProgress',
-      viewerRole: 'Player' as const, // Foundation default — real viewerRole from session DTO
-      viewerId: '',
+      viewerRole,
+      viewerId: viewerPlayer?.id ?? '',
       currentTurn: liveState.currentTurn,
       totalTurns: liveState.totalTurns,
       activePlayerId: liveState.activePlayerId,
       players: liveState.players,
       actionLog: liveState.actionLog,
     };
-  }, [fixture, sessionQuery.data, liveStream.events]);
+  }, [fixture, sessionQuery.data, liveStream.events, diaryQuery.data, currentUser?.id]);
+
+  // #2483 Task 2: reactive selector for turnOrderType — must be declared before
+  // turnRendererState useMemo (which appears in the i18n labels section below).
+  const storeTurnOrderType = useLiveSessionStore(s => s.turnOrderType);
 
   // ── Navigation handlers ───────────────────────────────────────────────────
 
@@ -483,46 +582,111 @@ export function SessionLiveView(): ReactElement {
     router.push('/sessions');
   }, [router]);
 
+  // ── #2503: Endgame trigger (Host-only) ────────────────────────────────────
+  const handleRequestEndgame = useCallback(() => {
+    setEndgameConfirmOpen(true);
+  }, []);
+
+  /**
+   * Confirm endgame → capture the pre-complete most-recent record id (baseline,
+   * code-review CRITICAL 2) BEFORE POST /complete, then complete + start polling
+   * with that baseline so resolution skips any pre-existing record for the game.
+   */
+  const handleConfirmEndgame = useCallback(async () => {
+    if (sessionId == null) return;
+    setEndgameConfirmOpen(false);
+
+    const gameId = sessionQuery.data?.gameId;
+
+    // Capture baseline BEFORE completing — awaited so the new record cannot leak
+    // into the snapshot (race-free identification of the auto-created record).
+    let previousRecordId: string | null = null;
+    if (gameId) {
+      try {
+        const baseline = await api.playRecords.getHistory({ gameId, pageSize: 1 });
+        previousRecordId = baseline.records[0]?.id ?? null;
+      } catch {
+        previousRecordId = null;
+      }
+    }
+
+    completeLiveSession.mutate(undefined, {
+      onSuccess: () => {
+        handleDialogChange('endgame');
+        if (gameId) startResolvePlayRecord(gameId, previousRecordId);
+      },
+      onError: (err: Error) => {
+        // AC-MEDIA-4: if the session was already Completed (409 Conflict), show a toast
+        // and do NOT open the endgame dialog or start polling.
+        if (err instanceof ConflictError || (err as { statusCode?: number }).statusCode === 409) {
+          toast.error(t('pages.sessionLive.endgameDialog.alreadyCompletedToast'), {
+            id: 'endgame-already-completed',
+          });
+        }
+        // Other errors: no additional handling (mutation error state is available to callers).
+      },
+    });
+  }, [
+    sessionId,
+    completeLiveSession,
+    handleDialogChange,
+    sessionQuery.data?.gameId,
+    startResolvePlayRecord,
+    t,
+  ]);
+
+  /**
+   * "Salva partita" CTA — records the intent only; the effect below owns the
+   * single navigation path (code-review CRITICAL 1: avoids a button push racing
+   * an independent auto-nav effect). If polling is still in-flight the button
+   * shows a spinner (saving) and navigation fires once the record resolves.
+   */
+  const handleSaveGame = useCallback(() => {
+    setSaveIntent(true);
+  }, []);
+
+  // Single navigation path — fires ONLY after the Host expressed save intent.
+  useEffect(() => {
+    if (!saveIntent) return;
+    const navLinks = getNavigationLinks();
+    if (resolveStatus === 'resolved' && resolvedPlayRecordId != null) {
+      router.push(navLinks.playRecordDetail(resolvedPlayRecordId));
+    } else if (resolveStatus === 'timeout') {
+      // Opzione C fallback: record never surfaced → list view.
+      router.push(navLinks.playRecords);
+    }
+  }, [saveIntent, resolveStatus, resolvedPlayRecordId, router]);
+
   // ── Write actions (Player+Host) ───────────────────────────────────────────
   // Note: legacy per-participant score update flow was retired in #2433
   // (post-#2389 Block C). The polymorphic flow now goes through
   // useUpdateSessionScores → PUT /game-sessions/{id}/scores-polymorphic
   // (wired in ScoreTabContent).
 
-  const handleSendMessage = useCallback(
-    async (content: string, visibility: 'private' | 'shared'): Promise<void> => {
-      if (sessionId == null) return;
-
-      try {
-        await fetch(`/api/v1/game-sessions/${sessionId}/chat`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content, visibility }),
-          credentials: 'include',
-        });
-      } catch {
-        // Fail silently — SSE event confirms or not
-      }
-    },
-    [sessionId]
-  );
+  // NOTE: the social-chat POST handler (/game-sessions/{id}/chat) was retired
+  // in #2500 Task 4 (AC-CHAT-0). ChatAgentPanel now routes through handleAgentSendMessage
+  // (→ useSessionAgentChat → /agent/chat RAG endpoint). The social endpoint remains
+  // available on the backend for SSE-driven action-log entries but is no longer
+  // called from this orchestrator.
 
   const handleAddNote = useCallback(
-    async (content: string, visibility: 'private' | 'shared'): Promise<void> => {
+    // #2575: repointed off the legacy raw fetch to /game-sessions/{id}/diary onto the SP3
+    // text-only endpoint via useAddDiaryEntry. `visibility` stays a FE-only affordance (the SP3
+    // command is text-only) — the onAddNote(content, visibility) signature is kept unchanged.
+    async (content: string, _visibility: 'private' | 'shared'): Promise<void> => {
       if (sessionId == null) return;
 
       try {
-        await fetch(`/api/v1/game-sessions/${sessionId}/diary`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content, visibility }),
-          credentials: 'include',
-        });
+        await addDiary.mutateAsync({ text: content });
       } catch {
-        // Fail silently — SSE event confirms or not
+        // Surface the failure to the user so they know the note was not saved
+        // (finding #16, SP5-a Task 3) — do not silently lose writes.
+        toast.error(t('pages.sessionLive.notes.addNoteErrorToast'), {
+          id: 'note-add-error',
+        });
       }
     },
-    [sessionId]
+    [sessionId, addDiary, t]
   );
 
   const handleResume = useCallback(async (): Promise<void> => {
@@ -603,15 +767,18 @@ export function SessionLiveView(): ReactElement {
     [t, intl.messages]
   );
 
+  // #2483 Task 4: replace hardcoded RoundRobin with real turnOrderType from store.
+  // mapTurnDataToTurnState is pure and handles null/unknown safely (→ 'None' fallback).
+  // storeTurnOrderType in deps so the memo re-fires when the DTO hydration effect runs.
   const turnRendererState = useMemo<TurnState>(
-    (): TurnState => ({
-      type: 'RoundRobin',
-      round: activeSession?.currentTurn ?? 0,
-      totalRounds: activeSession?.totalTurns ?? 0,
-      activePlayerId: activeSession?.activePlayerId ?? '',
-      playOrder: activeSession?.players.map(p => p.id) ?? [],
-    }),
-    [activeSession]
+    () =>
+      mapTurnDataToTurnState(storeTurnOrderType, {
+        currentTurn: activeSession?.currentTurn,
+        totalTurns: activeSession?.totalTurns,
+        activePlayerId: activeSession?.activePlayerId,
+        players: activeSession?.players,
+      }),
+    [storeTurnOrderType, activeSession]
   );
 
   const turnRendererPlayers = useMemo<ReadonlyArray<TurnPlayerInfo>>(
@@ -634,6 +801,7 @@ export function SessionLiveView(): ReactElement {
       roleSpectator: t('pages.sessionLive.roster.roleSpectator'),
       rolePlayer: t('pages.sessionLive.roster.rolePlayer'),
       roleHost: t('pages.sessionLive.roster.roleHost'),
+      addPlayerLabel: t('pages.sessionLive.roster.addPlayerCta'),
     };
   }, [t, intl.messages, activeSession?.players.length]);
 
@@ -706,6 +874,8 @@ export function SessionLiveView(): ReactElement {
       tabTurn: t('pages.sessionLive.rightColumn.tabTurn'),
       tabWidget: t('pages.sessionLive.rightColumn.tabWidget'),
       tabNotes: t('pages.sessionLive.rightColumn.tabNotes'),
+      tabPhotos: t('pages.sessionLive.rightColumn.tabPhotos'),
+      tabAgent: t('pages.sessionLive.rightColumn.tabAgent'),
     }),
     [t]
   );
@@ -731,6 +901,8 @@ export function SessionLiveView(): ReactElement {
       tabTurn: t('pages.sessionLive.rightColumn.tabTurn'),
       tabWidget: t('pages.sessionLive.rightColumn.tabWidget'),
       tabNotes: t('pages.sessionLive.rightColumn.tabNotes'),
+      tabPhotos: t('pages.sessionLive.rightColumn.tabPhotos'),
+      tabAgent: t('pages.sessionLive.rightColumn.tabAgent'),
     }),
     [t]
   );
@@ -813,6 +985,7 @@ export function SessionLiveView(): ReactElement {
       visibilityShared: t('pages.sessionLive.chat.visibilityShared'),
       emptyMessage: t('pages.sessionLive.chat.emptyMessage'),
       newMessagesToastAriaLabel: t('pages.sessionLive.chat.newMessagesToastAriaLabel'),
+      attachAriaLabel: t('pages.sessionLive.chat.attachAriaLabel'),
     }),
     [t]
   );
@@ -843,43 +1016,20 @@ export function SessionLiveView(): ReactElement {
 
   // ── Derived data for components ───────────────────────────────────────────
   //
-  // #2430 Block B+: Block B's polymorphic scoring logic (selectors, memo,
-  // a11y placeholder) MOVED to ScoreTabContent. SessionLiveView keeps only
-  // the REST hydration useEffect because it depends on sessionQuery.data
-  // (which lives at this level via useSession). The store-write side-effect
-  // is forwarded to ScoreTabContent via the shared useLiveSessionStore.
-
-  const setScoringConfig = useLiveSessionStore(s => s.setScoringConfig);
+  // ADR-083 Fase 1 (#2501): the polymorphic REST hydration of scoringType/
+  // scoreData/turnOrderType (Block B #2389 / #2430 / #2483) was removed when the
+  // loader switched to the canonical LiveGameSession aggregate. LiveSessionDto is
+  // round-based and exposes none of those polymorphic fields; on the real funnel
+  // they were always undefined (empty GameSession shell), so the effects never ran
+  // in production. The store is still consumed below and may be populated via
+  // SignalR; wiring round-based scoring from LiveSessionDto.roundScores/
+  // scoringConfig is deferred to Fase 2.
 
   // #2431: polymorphic endgame summary — selectors feed mapScoreDataToEndgameSummary
   // below. Subscribed reactively so the EndgameDialog refreshes as scoreData
   // changes (final-tick edits before the host acknowledges).
   const endgameScoringType = useLiveSessionStore(s => s.scoringType);
   const endgameScoreData = useLiveSessionStore(s => s.scoreData);
-
-  // #2389 Block B + #2430 Block B+: REST hydration with race guard +
-  // observability. Pre-populate the store from sessionQuery.data on initial
-  // mount so the renderer paints in ~300ms instead of waiting for SignalR.
-  // Skip if SignalR already populated to avoid stale REST overwriting fresh
-  // state.
-  useEffect(() => {
-    const dto = sessionQuery.data;
-    if (dto?.scoringType == null || dto.scoreData == null) return;
-    if (useLiveSessionStore.getState().scoringType != null) return;
-    try {
-      const parsed = JSON.parse(dto.scoreData) as ScoreDataByType[ScoreType];
-      setScoringConfig({
-        scoringType: dto.scoringType as ScoreType,
-        scoreData: parsed,
-      });
-    } catch (err) {
-      console.warn('[#2389] malformed scoreData JSON, will rely on SignalR', {
-        sessionId: dto.id,
-        scoreDataLength: dto.scoreData?.length ?? 0,
-        err,
-      });
-    }
-  }, [sessionQuery.data, setScoringConfig]);
 
   // ── G5c #2376: Zustand toolkit renderer store ─────────────────────────────
   // Store starts empty; real hydration via useQuery(['toolkit', sessionId]) is a
@@ -895,22 +1045,191 @@ export function SessionLiveView(): ReactElement {
     [activeSession]
   );
 
-  // ── Chat messages from SSE events ────────────────────────────────────────
-  // Extract chat messages from liveState actionLog (type='chat' entries).
-  // Foundation proxy: fixture has no chat messages.
-  const chatMessages = useMemo(() => {
-    if (activeSession == null) return [];
-    return activeSession.actionLog
-      .filter(e => e.type === 'chat')
-      .map(e => ({
-        id: e.id,
-        senderId: e.authorName,
-        senderName: e.authorName,
-        content: e.content,
+  // ── RAG agent chat (AC-CHAT-0) ────────────────────────────────────────────
+  // agentSessionId is resolved lazily via useSessionAgentLaunch:
+  //   1. getAgents(gameId) → pick first active agent
+  //   2. launch(sessionId, { agentDefinitionId }) → { agentSessionId }
+  // status discriminates lifecycle so the panel always shows feedback (R-FINDING-5):
+  //   'idle'      → preconditions not met (no sessionId/gameId or fixture mode)
+  //   'launching' → getAgents/launch in flight
+  //   'ready'     → agentSessionId obtained, chat can send
+  //   'no-agent'  → no assistant for this game
+  //   'error'     → getAgents or launch failed
+  // Disabled in fixture/visual-test builds so no real fetch is issued.
+  const agentLaunch = useSessionAgentLaunch(
+    sessionId ?? null,
+    sessionQuery.data?.gameId ?? null,
+    !fixture
+  );
+  const agentSessionId = agentLaunch.agentSessionId;
+
+  // I1 (#2500 Opzione A): inject gameContext from LiveSessionDto so the RAG retrieval
+  // receives the real game/player context. The game-night store (useSessionStore) is NOT
+  // populated in the live session route, so we pass data explicitly here.
+  // Nullable gameId guard: if the session has no associated game, gameContext is undefined
+  // (RAG will still run in degraded mode, same as before).
+  const liveSessionDto = sessionQuery.data;
+  const agentGameContext = useMemo(() => {
+    if (!liveSessionDto?.gameId) return undefined;
+    return {
+      gameId: liveSessionDto.gameId,
+      gameTitle: liveSessionDto.gameName,
+      players: liveSessionDto.players.map(p => p.displayName),
+      currentTurn: liveSessionDto.currentTurnIndex,
+    };
+  }, [liveSessionDto]);
+
+  const agentChat = useSessionAgentChat(sessionId ?? '', agentSessionId, {
+    persistHistory: !fixture,
+    gameContext: agentGameContext,
+  });
+
+  // #2588 A4: SignalR connection for dispute hydration.
+  // Mounted once at orchestrator level so DisputeResolved events populate
+  // useLiveSessionStore.disputes even when the user is on another tab.
+  // Self-tears-down on unmount/sessionId change (hook contract).
+  // Disabled in fixture/visual-test builds to avoid real hub connections.
+  useSignalRSession(!fixture ? (sessionId ?? '') : '');
+
+  // #2588 A3: local state for image-path messages (ask-agent JSON endpoint).
+  // These are merged into agentChatMessages below so they appear in the same panel.
+  const [imageMessages, setImageMessages] = useState<LiveAgentChatMessage[]>([]);
+
+  // Map useSessionAgentChat.ChatMessage → LiveAgentChat.ChatMessage.
+  // The two shapes differ: agent uses role:'user'|'assistant', LiveAgentChat uses
+  // senderId/senderName/visibility.  We map:
+  //   role:'user'      → senderId=viewerId (consistent with how LiveAgentChat
+  //                       computes isOwn; '' when viewerId not yet known — R-FINDING-6)
+  //   role:'assistant' → senderId='agent', senderName='MeepleAI', visibility:'shared'
+  // Citations pass through unchanged (same ChatCitation type, shared via ChatCitationCard import).
+  // When the launch is not yet ready, a single system message is prepended so the user
+  // always sees feedback instead of a silent empty panel (R-FINDING-5 / AC-CHAT-NULL).
+  const agentChatMessages = useMemo<LiveAgentChatMessage[]>(() => {
+    const viewerId = activeSession?.viewerId ?? '';
+    const realMessages = agentChat.messages.map(m => ({
+      id: m.id,
+      senderId: m.role === 'user' ? viewerId : 'agent',
+      senderName: m.role === 'user' ? '' : 'MeepleAI',
+      content: m.content,
+      visibility: 'shared' as const,
+      timestamp: m.timestamp,
+      citations: m.citations,
+      // AC-CHAT-3: propagate isNonGrounded ONLY from hook messages.
+      // System status messages (prepended below) do NOT get this flag → no disclaimer.
+      isNonGrounded: m.isNonGrounded,
+    }));
+
+    // Prepend a system status message when not ready (R-FINDING-5).
+    // 'idle' → preconditions not met yet, no message needed.
+    let statusContent: string | null = null;
+    if (agentLaunch.status === 'launching') {
+      statusContent = t('pages.sessionLive.chatAgent.launchingMessage');
+    } else if (agentLaunch.status === 'no-agent') {
+      statusContent = t('pages.sessionLive.chatAgent.noAgentMessage');
+    } else if (agentLaunch.status === 'error') {
+      statusContent = t('pages.sessionLive.chatAgent.errorMessage');
+    }
+
+    // #2588 A3: merge image-path messages (ask-agent) with RAG messages, sorted by timestamp.
+    const merged = [...realMessages, ...imageMessages].sort((a, b) =>
+      a.timestamp.localeCompare(b.timestamp)
+    );
+
+    if (statusContent != null) {
+      const statusMessage: LiveAgentChatMessage = {
+        id: `agent-status-${agentLaunch.status}`,
+        senderId: 'agent',
+        senderName: 'MeepleAI',
+        content: statusContent,
         visibility: 'shared' as const,
-        timestamp: e.timestamp,
-      }));
-  }, [activeSession]);
+        timestamp: new Date().toISOString(),
+      };
+      return [statusMessage, ...merged];
+    }
+
+    return merged;
+  }, [agentChat.messages, activeSession?.viewerId, agentLaunch.status, t, imageMessages]);
+
+  // AC-CHAT-0: send goes to the RAG agent, NOT /game-sessions/{id}/chat.
+  // AC-CHAT-NULL: if agentLaunch.status !== 'ready', agent is not available yet —
+  // the status message above provides user feedback; suppress the actual ask() call.
+  // #2588 A3: dual-path — images → /ask-agent (multipart JSON); text-only → RAG SSE.
+  const handleAgentSendMessage = useCallback(
+    async (
+      content: string,
+      _visibility: 'private' | 'shared',
+      images?: ChatImagePreview[]
+    ): Promise<void> => {
+      if (images && images.length > 0) {
+        // Image path: multipart POST to /ask-agent (JSON response, not SSE).
+        if (sessionId == null) return;
+        const question =
+          content.trim() ||
+          intl.formatMessage({ id: 'pages.sessionLive.chatAgent.imageAsk.defaultQuestion' });
+        const fd = new FormData();
+        fd.append('question', question);
+        fd.append('senderId', activeSession?.viewerId ?? '');
+        images.forEach(img => fd.append('images', img.file));
+
+        // Optimistically append user message so the UI feels responsive.
+        const userMsgId = crypto.randomUUID();
+        const now = new Date().toISOString();
+        setImageMessages(prev => [
+          ...prev,
+          {
+            id: userMsgId,
+            senderId: activeSession?.viewerId ?? '',
+            senderName: '',
+            content: question,
+            visibility: 'shared' as const,
+            timestamp: now,
+          },
+        ]);
+
+        try {
+          const res = await fetch(`/api/v1/game-sessions/${sessionId}/chat/ask-agent`, {
+            method: 'POST',
+            credentials: 'include',
+            body: fd,
+          });
+          if (!res.ok) throw new Error(`ask-agent ${res.status}`);
+          const json = (await res.json()) as { answer?: string; confidence?: number };
+          setImageMessages(prev => [
+            ...prev,
+            {
+              id: crypto.randomUUID(),
+              senderId: 'agent',
+              senderName: 'MeepleAI',
+              content:
+                json.answer ??
+                intl.formatMessage({ id: 'pages.sessionLive.chatAgent.imageAsk.fallbackResponse' }),
+              visibility: 'shared' as const,
+              timestamp: new Date().toISOString(),
+            },
+          ]);
+        } catch {
+          toast.error(
+            intl.formatMessage({ id: 'pages.sessionLive.chatAgent.imageAsk.errorToast' }),
+            {
+              id: 'image-ask-error',
+            }
+          );
+          // Remove the optimistic user message on failure.
+          setImageMessages(prev => prev.filter(m => m.id !== userMsgId));
+        }
+      } else {
+        // Text-only RAG path (unchanged).
+        if (!agentSessionId || !content.trim()) return;
+        await agentChat.ask(content);
+      }
+    },
+    [agentSessionId, agentChat, sessionId, activeSession?.viewerId]
+  );
+
+  // ── Chat messages from SSE events ────────────────────────────────────────
+  // NOTE: ChatAgentPanel now receives agentChatMessages (RAG) — see above.
+  // ActionLogTimeline uses activeSession.actionLog directly; this extraction
+  // is no longer needed and has been removed to avoid unused-var lint errors.
 
   // ── Notes from SSE events ────────────────────────────────────────────────
   const noteEntries = useMemo(() => {
@@ -952,10 +1271,10 @@ export function SessionLiveView(): ReactElement {
       <div className="flex flex-col gap-3">
         <ChatAgentPanel
           sessionId={sessionId}
-          messages={chatMessages}
+          messages={agentChatMessages}
           viewerRole={activeSession.viewerRole}
           viewerId={activeSession.viewerId}
-          onSendMessage={handleSendMessage}
+          onSendMessage={handleAgentSendMessage}
           agentName="MeepleAI"
           agentEmoji="🤖"
           latencyMs={42}
@@ -970,8 +1289,8 @@ export function SessionLiveView(): ReactElement {
   }, [
     activeSession,
     sessionId,
-    chatMessages,
-    handleSendMessage,
+    agentChatMessages,
+    handleAgentSendMessage,
     chatAgentLabels,
     actionLogLabels,
     mobileChatCollapsed,
@@ -998,6 +1317,9 @@ export function SessionLiveView(): ReactElement {
               players={activeSession.players}
               viewerId={activeSession.viewerId}
               viewerRole={activeSession.viewerRole}
+              onAddPlayer={
+                hasRequiredRole(activeSession.viewerRole, 'Host') ? handleAddPlayer : undefined
+              }
               labels={rosterLabels}
             />
           </div>
@@ -1023,6 +1345,25 @@ export function SessionLiveView(): ReactElement {
             labels={notesLabels}
           />
         );
+      case 'photos':
+        return (
+          <PhotosTabContent
+            sessionId={sessionId ?? ''}
+            userId={currentUser?.id ?? ''}
+            currentTurn={activeSession.currentTurn}
+          />
+        );
+      case 'agent':
+        return (
+          <AgentDisputeTabContent
+            sessionId={sessionId ?? ''}
+            players={activeSession.players.map(p => ({
+              id: p.id,
+              name:
+                ('displayName' in p ? (p.displayName as string | undefined) : undefined) ?? p.name,
+            }))}
+          />
+        );
       case 'score':
       default:
         return (
@@ -1039,11 +1380,13 @@ export function SessionLiveView(): ReactElement {
     mobileTab,
     activeSession,
     sessionId,
+    currentUser?.id,
     scoringPanelLabels,
     turnRendererState,
     turnRendererPlayers,
     turnRendererLabels,
     rosterLabels,
+    handleAddPlayer,
     toolkitWidgets,
     toolkitOpenId,
     setToolkitOpen,
@@ -1144,10 +1487,10 @@ export function SessionLiveView(): ReactElement {
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-3">
       <ChatAgentPanel
         sessionId={sessionId}
-        messages={chatMessages}
+        messages={agentChatMessages}
         viewerRole={activeSession.viewerRole}
         viewerId={activeSession.viewerId}
-        onSendMessage={handleSendMessage}
+        onSendMessage={handleAgentSendMessage}
         agentName="MeepleAI"
         agentEmoji="🤖"
         latencyMs={42}
@@ -1185,6 +1528,9 @@ export function SessionLiveView(): ReactElement {
             players={activeSession.players}
             viewerId={activeSession.viewerId}
             viewerRole={activeSession.viewerRole}
+            onAddPlayer={
+              hasRequiredRole(activeSession.viewerRole, 'Host') ? handleAddPlayer : undefined
+            }
             labels={rosterLabels}
           />
         </div>
@@ -1208,6 +1554,23 @@ export function SessionLiveView(): ReactElement {
           labels={notesLabels}
         />
       )}
+      {tab === 'photos' && (
+        <PhotosTabContent
+          sessionId={sessionId ?? ''}
+          userId={currentUser?.id ?? ''}
+          currentTurn={activeSession.currentTurn}
+        />
+      )}
+      {tab === 'agent' && (
+        <AgentDisputeTabContent
+          sessionId={sessionId ?? ''}
+          players={activeSession.players.map(p => ({
+            id: p.id,
+            name:
+              ('displayName' in p ? (p.displayName as string | undefined) : undefined) ?? p.name,
+          }))}
+        />
+      )}
     </RightColumnTabs>
   );
 
@@ -1226,6 +1589,9 @@ export function SessionLiveView(): ReactElement {
         status={activeSession.status}
         viewerRole={activeSession.viewerRole}
         onExit={handleExit}
+        onEndgame={
+          hasRequiredRole(activeSession.viewerRole, 'Host') ? handleRequestEndgame : undefined
+        }
         labels={topBarLabels}
         elapsedMs={elapsedMs}
         connectionState={connectionPipState}
@@ -1313,12 +1679,86 @@ export function SessionLiveView(): ReactElement {
             }
             endedAt={endgameEvent?.endedAt ?? '—'}
             endedBy={endgameEvent?.endedBy ?? '—'}
+            recordId={resolvedPlayRecordId}
             onAcknowledge={() => handleDialogChange('none')}
+            onSave={hasRequiredRole(activeSession.viewerRole, 'Host') ? handleSaveGame : undefined}
+            saving={saveIntent && resolveStatus === 'resolving'}
             labels={{
               title: t('pages.sessionLive.endgameDialog.title'),
               winnerLabel: t('pages.sessionLive.endgameDialog.winnerLabel'),
               acknowledgeCta: t('pages.sessionLive.endgameDialog.acknowledgeCta'),
               viewSummaryCta: t('pages.sessionLive.endgameDialog.viewSummaryCta'),
+              saveGameCta: t('pages.sessionLive.endgameDialog.saveGameCta'),
+              savingLabel: t('pages.sessionLive.endgameDialog.savingLabel'),
+            }}
+          />
+        </Suspense>
+      )}
+
+      {/* #2503: Endgame confirm dialog — Host-only, shown before POST /complete */}
+      {endgameConfirmOpen && (
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="endgame-confirm-title"
+          data-slot="endgame-confirm-dialog"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/80"
+        >
+          <div className="w-full max-w-sm rounded-xl border border-border/60 bg-card p-6 shadow-2xl">
+            <h2 id="endgame-confirm-title" className="mb-2 text-base font-semibold text-foreground">
+              {t('pages.sessionLive.endgameConfirm.title')}
+            </h2>
+            <p className="mb-6 text-sm text-muted-foreground">
+              {t('pages.sessionLive.endgameConfirm.body')}
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setEndgameConfirmOpen(false)}
+                data-slot="endgame-confirm-cancel"
+                className="flex-1 rounded-lg border border-border px-4 py-2.5 text-sm
+                  font-medium text-foreground hover:bg-muted
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {t('pages.sessionLive.endgameConfirm.cancelCta')}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleConfirmEndgame()}
+                disabled={completeLiveSession.isPending}
+                data-slot="endgame-confirm-cta"
+                className="flex-1 rounded-lg bg-destructive px-4 py-2.5 text-sm font-semibold
+                  text-destructive-foreground hover:opacity-90 disabled:opacity-60
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {t('pages.sessionLive.endgameConfirm.confirmCta')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* #2505: Host-only AddPlayerDialog — uses dto.players for color slots (LiveSessionFixturePlayer has no color field) */}
+      {addPlayerOpen && sessionId != null && (
+        <Suspense fallback={null}>
+          <AddPlayerDialog
+            sessionId={sessionId}
+            players={sessionQuery.data?.players ?? []}
+            open={addPlayerOpen}
+            onClose={() => setAddPlayerOpen(false)}
+            labels={{
+              dialogTitle: t('pages.sessionLive.roster.addPlayerDialogTitle'),
+              guestTab: t('pages.sessionLive.roster.guestTab'),
+              registeredTab: t('pages.sessionLive.roster.registeredTab'),
+              displayNameLabel: t('pages.sessionLive.roster.displayNameLabel'),
+              displayNamePlaceholder: t('pages.sessionLive.roster.displayNamePlaceholder'),
+              searchUserPlaceholder: t('pages.sessionLive.roster.searchUserPlaceholder'),
+              confirmCta: t('pages.sessionLive.roster.confirmCta'),
+              cancelCta: t('pages.sessionLive.roster.cancelCta'),
+              errorNoColorAvailable: t('pages.sessionLive.roster.errorNoColorAvailable'),
+              errorDuplicateName: t('pages.sessionLive.roster.errorDuplicateName'),
+              errorColorTaken: t('pages.sessionLive.roster.errorColorTaken'),
+              errorGeneric: t('pages.sessionLive.roster.errorGeneric'),
             }}
           />
         </Suspense>

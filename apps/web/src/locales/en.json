@@ -2046,9 +2046,9 @@
         "catalogTitle": "Add from catalog",
         "question": "How do you want to add your game?",
         "manualLabel": "Add manually",
-        "manualDescription": "Enter the game details. You can upload the rulebook and configure the AI agent later from the game detail page.",
-        "catalogLabel": "From shared catalog",
-        "catalogDescription": "Search the community catalog and add a game in one click. Rulebook and AI agent setup come later.",
+        "manualDescription": "Enter the game details. Upload the rulebook and configure the AI agent later, from the game detail page.",
+        "catalogLabel": "Add from the shared catalog",
+        "catalogDescription": "Search the community catalog and add a game in one click. Upload the rulebook and configure the AI agent later, from the game detail page.",
         "catalog": {
           "backAriaLabel": "Back to choice",
           "searchPlaceholder": "Search games…",
@@ -3098,7 +3098,20 @@
         "kickAriaLabel": "Kick {playerName}",
         "roleSpectator": "Spectator",
         "rolePlayer": "Player",
-        "roleHost": "Host"
+        "roleHost": "Host",
+        "addPlayerCta": "Add player",
+        "addPlayerDialogTitle": "Add player",
+        "guestTab": "Guest",
+        "registeredTab": "Registered user",
+        "displayNameLabel": "Name",
+        "displayNamePlaceholder": "E.g. Marco",
+        "searchUserPlaceholder": "Search by name or email…",
+        "confirmCta": "Add",
+        "cancelCta": "Cancel",
+        "errorNoColorAvailable": "No color available (all 10 slots are taken).",
+        "errorDuplicateName": "A player with this name already exists in this session.",
+        "errorColorTaken": "The assigned color was already taken. Please try again.",
+        "errorGeneric": "An error occurred. Please try again."
       },
       "scoring": {
         "title": "Scores",
@@ -3195,8 +3208,23 @@
         "tabTurn": "Turn",
         "tabWidget": "Widget",
         "tabNotes": "Notes",
+        "tabPhotos": "Photos",
+        "tabAgent": "Arbiter",
         "tabTools": "Tools",
         "tabChat": "Chat"
+      },
+      "photosTab": {
+        "galleryHeading": "Match photo gallery",
+        "snapshotsHeading": "Vision AI snapshots"
+      },
+      "photos": {
+        "title": "Match photos",
+        "noneYet": "No photos yet",
+        "photoAlt": "Match photo {n}",
+        "deleteAriaLabel": "Delete photo {n}",
+        "emptyStateBody": "Take photos to document the game state",
+        "firstPhoto": "First photo",
+        "captureButton": "Capture"
       },
       "tools": {
         "title": "Tools",
@@ -3214,7 +3242,9 @@
         "visibilityShared": "Shared",
         "emptyMessage": "No messages yet.",
         "newMessagesToast": "{count, plural, one {# new message} other {# new messages}}",
-        "newMessagesToastAriaLabel": "New messages available — click to scroll to bottom"
+        "newMessagesToastAriaLabel": "New messages available — click to scroll to bottom",
+        "attachAriaLabel": "Attach image",
+        "removeImageAriaLabel": "Remove image {n}"
       },
       "chatAgent": {
         "title": "ChatAgent",
@@ -3222,7 +3252,17 @@
         "latencyAriaLabel": "Latency {ms}ms",
         "agentNameAriaLabel": "Agent name {name}",
         "collapsedAriaLabel": "ChatAgent collapsed — click to expand",
-        "expandedAriaLabel": "ChatAgent expanded — click to collapse"
+        "expandedAriaLabel": "ChatAgent expanded — click to collapse",
+        "noAgentMessage": "No assistant available for this game",
+        "launchingMessage": "Starting assistant…",
+        "errorMessage": "Could not start the assistant. Try again later.",
+        "statusAriaLabel": "Assistant status",
+        "nonGroundedDisclaimer": "Answer not grounded in the rulebook",
+        "imageAsk": {
+          "defaultQuestion": "Analyse this image",
+          "fallbackResponse": "Response not available.",
+          "errorToast": "Unable to process the image. Please try again."
+        }
       },
       "mobile": {
         "openSheetCta": "Open panel",
@@ -3236,7 +3276,8 @@
         "addAriaLabel": "Add note",
         "visibilityPrivate": "Private",
         "visibilityShared": "Shared",
-        "emptyMessage": "No notes yet."
+        "emptyMessage": "No notes yet.",
+        "addNoteErrorToast": "Failed to save note. Please try again."
       },
       "pauseOverlay": {
         "title": "Session paused",
@@ -3248,7 +3289,31 @@
         "title": "Session ended",
         "winnerLabel": "Winner",
         "acknowledgeCta": "Got it",
-        "viewSummaryCta": "View summary"
+        "viewSummaryCta": "View summary",
+        "saveGameCta": "Save game",
+        "savingLabel": "Saving…",
+        "alreadyCompletedToast": "Game already finished",
+        "photoUpload": {
+          "sectionTitle": "Game photos",
+          "addPhotosCta": "Select photos",
+          "uploadCta": "Upload photos",
+          "uploadingLabel": "Uploading…",
+          "preparingLabel": "Preparing…",
+          "retryCta": "Retry",
+          "doneBadge": "Uploaded",
+          "errorGeneric": "Upload failed",
+          "tooManyFiles": "You can upload at most {max} photos",
+          "tooLarge": "File too large (max 5 MB)",
+          "badFormat": "Format not supported",
+          "heicFailed": "HEIC conversion failed",
+          "selectedPhotosList": "Selected photos"
+        }
+      },
+      "endgameConfirm": {
+        "title": "End the game?",
+        "body": "This action is irreversible. Final scores will be recorded.",
+        "confirmCta": "End game",
+        "cancelCta": "Cancel"
       },
       "toolkitRenderer": {
         "title": "Tools",

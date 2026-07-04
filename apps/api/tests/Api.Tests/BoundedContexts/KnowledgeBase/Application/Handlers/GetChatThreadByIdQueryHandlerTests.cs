@@ -80,4 +80,46 @@ public class GetChatThreadByIdQueryHandlerTests
         Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
+
+    /// <summary>
+    /// Regression test for Issue #2500: CitationsJson and agent metadata must survive
+    /// the entity → DTO mapping so the FE can display citations after a reload.
+    /// </summary>
+    [Fact]
+    public async Task Handle_AssistantMessageWithMetadata_MapsCitationsJsonAndAgentMetadata()
+    {
+        // Arrange
+        var threadId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var citationsJson = "[{\"source\":\"Reg\",\"pageNumber\":7}]";
+        const string agentType = "tutor";
+        const float confidence = 0.92f;
+        const int tokenCount = 512;
+
+        var thread = new ChatThread(threadId, userId);
+        thread.AddUserMessage("How do I play Catan?");
+        thread.AddAssistantMessageWithMetadata(
+            content: "You start by placing settlements...",
+            agentType: agentType,
+            confidence: confidence,
+            citationsJson: citationsJson,
+            tokenCount: tokenCount);
+
+        _mockRepository
+            .Setup(r => r.GetByIdAsync(threadId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(thread);
+
+        var query = new GetChatThreadByIdQuery(threadId);
+
+        // Act
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Should().NotBeNull();
+        var assistantMsg = result!.Messages.Single(m => m.Role == "assistant");
+        assistantMsg.CitationsJson.Should().Be(citationsJson);
+        assistantMsg.AgentType.Should().Be(agentType);
+        assistantMsg.Confidence.Should().BeApproximately(confidence, 0.001f);
+        assistantMsg.TokenCount.Should().Be(tokenCount);
+    }
 }

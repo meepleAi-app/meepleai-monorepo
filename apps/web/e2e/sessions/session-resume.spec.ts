@@ -40,7 +40,7 @@ test.describe('Session Resume — Recap & Photo Review', () => {
   });
 
   test('should display resume panel with AI recap text', async ({ page }) => {
-    await page.goto(`/sessions/live/${MOCK_SESSION_ID}`);
+    await page.goto(`/sessions/${MOCK_SESSION_ID}/live`);
     await page.waitForLoadState('domcontentloaded');
 
     const resumePanel = page.getByTestId('resume-session-panel').first();
@@ -56,7 +56,7 @@ test.describe('Session Resume — Recap & Photo Review', () => {
   });
 
   test('should show player scores in resume panel', async ({ page }) => {
-    await page.goto(`/sessions/live/${MOCK_SESSION_ID}`);
+    await page.goto(`/sessions/${MOCK_SESSION_ID}/live`);
     await page.waitForLoadState('domcontentloaded');
 
     const scoresSection = page.getByTestId('resume-scores').first();
@@ -72,7 +72,7 @@ test.describe('Session Resume — Recap & Photo Review', () => {
   });
 
   test('should show photo thumbnails in resume panel', async ({ page }) => {
-    await page.goto(`/sessions/live/${MOCK_SESSION_ID}`);
+    await page.goto(`/sessions/${MOCK_SESSION_ID}/live`);
     await page.waitForLoadState('domcontentloaded');
 
     const photosSection = page.getByTestId('resume-photos').first();
@@ -81,7 +81,7 @@ test.describe('Session Resume — Recap & Photo Review', () => {
   });
 
   test('should have resume button with current turn number', async ({ page }) => {
-    await page.goto(`/sessions/live/${MOCK_SESSION_ID}`);
+    await page.goto(`/sessions/${MOCK_SESSION_ID}/live`);
     await page.waitForLoadState('domcontentloaded');
 
     const resumeBtn = page.getByTestId('resume-session-button').first();
@@ -99,7 +99,7 @@ test.describe('Session Resume — Recap & Photo Review', () => {
     const contextNoPhotos = { ...MOCK_RESUME_CONTEXT, photos: [] };
     await sessionHelper.mockResumeContext(contextNoPhotos);
 
-    await page.goto(`/sessions/live/${MOCK_SESSION_ID}`);
+    await page.goto(`/sessions/${MOCK_SESSION_ID}/live`);
     await page.waitForLoadState('domcontentloaded');
 
     const resumePanel = page.getByTestId('resume-session-panel').first();
@@ -111,7 +111,7 @@ test.describe('Session Resume — Recap & Photo Review', () => {
     const contextNoRecap = { ...MOCK_RESUME_CONTEXT, recap: 'Sessione ripresa dal turno 5.' };
     await sessionHelper.mockResumeContext(contextNoRecap);
 
-    await page.goto(`/sessions/live/${MOCK_SESSION_ID}`);
+    await page.goto(`/sessions/${MOCK_SESSION_ID}/live`);
     await page.waitForLoadState('domcontentloaded');
 
     const fallbackText = page.getByText(/sessione ripresa dal turno/i).first();

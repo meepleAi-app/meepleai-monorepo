@@ -26,8 +26,9 @@ namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 /// <b>Architectural boundary</b>: this port lives in <c>SharedGameCatalog/Infrastructure/Services/</c>
 /// (BC-internal). ADR-082 (External Media Enrichment: Ports/Adapters Layout) codifies
 /// the promotion ladder: if a second BC (e.g. PdfDocument cover thumbnails, Player avatars)
-/// needs Wikimedia Commons access, the adapter moves to <c>SharedKernel/ExternalServices/</c>
-/// while the consumer-owned port stays in the consuming BC. Direct cross-BC injection of
+/// needs Wikimedia Commons access, the adapter moves to <c>Api/Infrastructure/ExternalServices/Wikimedia/</c>
+/// (sibling of <c>Api/Infrastructure/ExternalServices/BoardGameGeek/</c>) while the
+/// consumer-owned orchestrator port stays in the consuming BC. Direct cross-BC injection of
 /// this interface is rejected (see ADR-082 § "Anti-promotion rules", Option C rejected).
 /// </para>
 /// </remarks>

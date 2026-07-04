@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries.SearchKbChunks;
 ///
 /// Performs PostgreSQL full-text search within a single KB document using:
 /// <list type="bullet">
-///   <item><c>plainto_tsquery('simple', ...)</c> — sanitises user input, preventing tsquery operator injection</item>
+///   <item><c>plainto_tsquery('english', ...)</c> — sanitises user input, preventing tsquery operator injection (config matches the search_vector column, #2569)</item>
 ///   <item><c>ts_rank_cd</c> — cover-density ranking for result ordering</item>
 ///   <item><c>ts_headline</c> — generates text snippets with <c>&lt;mark&gt;</c> tags</item>
 /// </list>
@@ -82,6 +82,12 @@ internal sealed class SearchKbChunksHandler : IQueryHandler<SearchKbChunksQuery,
         // FTS ranked query using plainto_tsquery (prevents operator injection).
         // Column names: PdfDocumentId, Id, PageNumber, ChunkIndex are PascalCase (migration convention).
         // search_vector is lowercase snake_case via [Column("search_vector")] on the entity.
+        //
+        // The tsquery config MUST match the config the search_vector column is GENERATED with
+        // (AlignSearchVectorToEnglishFtsConfig, #2569 = 'english') or `@@` silently returns nothing —
+        // a config mismatch here previously made every keyword chunk search return 0 rows.
+        // ts_headline must use the same config so highlighted lexemes line up. Keep all three in
+        // sync with the column config.
         const string ftsSQL = @"
             WITH ranked AS (
               SELECT
@@ -89,9 +95,9 @@ internal sealed class SearchKbChunksHandler : IQueryHandler<SearchKbChunksQuery,
                 tc.""PageNumber"",
                 tc.""ChunkIndex"",
                 ts_rank_cd(tc.search_vector, q) AS ""Rank"",
-                ts_headline('simple', tc.""Content"", q,
+                ts_headline('english', tc.""Content"", q,
                   'StartSel=<mark>, StopSel=</mark>, MaxFragments=2, MaxWords=20, MinWords=5') AS ""Snippet""
-              FROM text_chunks tc, plainto_tsquery('simple', {1}) q
+              FROM text_chunks tc, plainto_tsquery('english', {1}) q
               WHERE tc.""PdfDocumentId"" = {0}
                 AND tc.search_vector @@ q
             )
@@ -111,7 +117,7 @@ internal sealed class SearchKbChunksHandler : IQueryHandler<SearchKbChunksQuery,
         // Count total matches (without pagination).
         const string countSQL = @"
             SELECT COUNT(*)::int AS ""Value""
-            FROM text_chunks tc, plainto_tsquery('simple', {1}) q
+            FROM text_chunks tc, plainto_tsquery('english', {1}) q
             WHERE tc.""PdfDocumentId"" = {0} AND tc.search_vector @@ q";
         // No trailing ';' — composed with .Select(r => r.Value).FirstAsync(),
         // EF Core wraps this in a subquery and an inner semicolon produces

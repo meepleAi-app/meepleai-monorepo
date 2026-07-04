@@ -95,7 +95,7 @@ describe('useWidgetSync', () => {
     renderHook(() => useWidgetSync(defaultOpts));
     await vi.advanceTimersByTimeAsync(0); // flush microtask
     expect(MockEventSource.instances).toHaveLength(1);
-    expect(MockEventSource.instances[0].url).toContain('/stream/v2');
+    expect(MockEventSource.instances[0].url).toContain('/live-sessions/session-1/stream');
   });
 
   it('does not connect when sessionId is undefined', () => {

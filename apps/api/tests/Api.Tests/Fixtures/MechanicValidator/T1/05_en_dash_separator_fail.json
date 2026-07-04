@@ -1,0 +1,6 @@
+{
+  "name": "en_dash_separator_fail",
+  "description": "En-dash (U+2013) acts as a word separator; 26 tokens after splitting",
+  "quote": "a b c–d e f g h i j k l m n o p q r s t u v w x y z",
+  "expectedPass": false
+}

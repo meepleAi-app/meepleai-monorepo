@@ -40,6 +40,42 @@ export const GameNightDtoSchema = z.object({
 });
 export type GameNightDto = z.infer<typeof GameNightDtoSchema>;
 
+// ──────────────────────────────────────────────────────────────────────
+// #2633 Slice B — night-live read model (GET /game-nights/{id}/live).
+// Mirrors the shipped C# GameNightLiveDto / GameNightSessionDto (Slice A).
+// LD-4: the status enum MUST list all 5 wire strings so a Skipped/Corrupted
+// row never fails the whole array .parse(); an unknown 6th value fails fast.
+// ──────────────────────────────────────────────────────────────────────
+
+export const GameNightSessionStatusSchema = z.enum([
+  'Pending',
+  'InProgress',
+  'Completed',
+  'Skipped',
+  'Corrupted',
+]);
+export type GameNightSessionStatus = z.infer<typeof GameNightSessionStatusSchema>;
+
+export const GameNightSessionDtoSchema = z.object({
+  sessionId: z.string().uuid(),
+  gameId: z.string().uuid(),
+  gameTitle: z.string(),
+  playOrder: z.number().int(),
+  status: GameNightSessionStatusSchema,
+  winnerId: z.string().uuid().nullable(),
+  startedAt: z.string().nullable(),
+  completedAt: z.string().nullable(),
+});
+export type GameNightSessionDto = z.infer<typeof GameNightSessionDtoSchema>;
+
+export const GameNightLiveDtoSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  status: GameNightStatusSchema,
+  sessions: z.array(GameNightSessionDtoSchema),
+});
+export type GameNightLiveDto = z.infer<typeof GameNightLiveDtoSchema>;
+
 export const CreateGameNightInputSchema = z.object({
   title: z.string().min(3).max(200),
   description: z.string().max(2000).optional(),

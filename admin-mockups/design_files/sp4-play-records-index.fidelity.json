@@ -3,7 +3,10 @@
   "mockup": {
     "source": "admin-mockups/design_files/sp4-play-records-index.html",
     "states": [
-      "default"
+      "default",
+      "empty",
+      "loading",
+      "error"
     ]
   },
   "acceptance": {
@@ -12,7 +15,10 @@
     "tokens_used": "canonical_only",
     "legacy_token_names_forbidden": true,
     "states_covered": [
-      "default"
+      "default",
+      "empty",
+      "loading",
+      "error"
     ],
     "a11y_axe": "AA",
     "a11y_violations_max": 0,

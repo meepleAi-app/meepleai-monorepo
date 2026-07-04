@@ -2096,9 +2096,9 @@
         "catalogTitle": "Aggiungi da catalogo",
         "question": "Come vuoi aggiungere il tuo gioco?",
         "manualLabel": "Aggiungi manualmente",
-        "manualDescription": "Inserisci i dettagli del gioco. Potrai caricare il regolamento e configurare l'agente AI dalla pagina di dettaglio.",
-        "catalogLabel": "Da catalogo condiviso",
-        "catalogDescription": "Cerca nel catalogo della community e aggiungi un gioco con un click. Regolamento e setup agente in seguito.",
+        "manualDescription": "Inserisci i dettagli del gioco. Carica il regolamento e configura l'agente AI più tardi, dalla pagina di dettaglio.",
+        "catalogLabel": "Aggiungi dal catalogo condiviso",
+        "catalogDescription": "Cerca nel catalogo della community e aggiungi un gioco con un click. Carica il regolamento e configura l'agente AI più tardi, dalla pagina di dettaglio.",
         "catalog": {
           "backAriaLabel": "Torna alla scelta",
           "searchPlaceholder": "Cerca giochi…",
@@ -3205,7 +3205,20 @@
         "kickAriaLabel": "Espelli {playerName}",
         "roleSpectator": "Spettatore",
         "rolePlayer": "Giocatore",
-        "roleHost": "Host"
+        "roleHost": "Host",
+        "addPlayerCta": "Aggiungi giocatore",
+        "addPlayerDialogTitle": "Aggiungi giocatore",
+        "guestTab": "Ospite",
+        "registeredTab": "Utente registrato",
+        "displayNameLabel": "Nome",
+        "displayNamePlaceholder": "Es. Marco",
+        "searchUserPlaceholder": "Cerca per nome o email…",
+        "confirmCta": "Aggiungi",
+        "cancelCta": "Annulla",
+        "errorNoColorAvailable": "Nessun colore disponibile (tutti i 10 slot sono occupati).",
+        "errorDuplicateName": "Esiste già un giocatore con questo nome in sessione.",
+        "errorColorTaken": "Il colore assegnato è già stato preso. Riprova.",
+        "errorGeneric": "Si è verificato un errore. Riprova."
       },
       "scoring": {
         "title": "Punteggi",
@@ -3302,8 +3315,23 @@
         "tabTurn": "Turni",
         "tabWidget": "Widget",
         "tabNotes": "Note",
+        "tabPhotos": "Foto",
+        "tabAgent": "Arbitro",
         "tabTools": "Strumenti",
         "tabChat": "Chat"
+      },
+      "photosTab": {
+        "galleryHeading": "Galleria foto della partita",
+        "snapshotsHeading": "Snapshot Vision AI"
+      },
+      "photos": {
+        "title": "Foto partita",
+        "noneYet": "Nessuna foto ancora",
+        "photoAlt": "Foto partita {n}",
+        "deleteAriaLabel": "Elimina foto {n}",
+        "emptyStateBody": "Scatta foto per documentare lo stato della partita",
+        "firstPhoto": "Prima foto",
+        "captureButton": "Scatta"
       },
       "tools": {
         "title": "Strumenti",
@@ -3321,7 +3349,9 @@
         "visibilityShared": "Condiviso",
         "emptyMessage": "Nessun messaggio ancora.",
         "newMessagesToast": "{count, plural, one {# nuovo messaggio} other {# nuovi messaggi}}",
-        "newMessagesToastAriaLabel": "Nuovi messaggi disponibili — clic per scorrere in fondo"
+        "newMessagesToastAriaLabel": "Nuovi messaggi disponibili — clic per scorrere in fondo",
+        "attachAriaLabel": "Allega immagine",
+        "removeImageAriaLabel": "Rimuovi immagine {n}"
       },
       "chatAgent": {
         "title": "ChatAgent",
@@ -3329,7 +3359,17 @@
         "latencyAriaLabel": "Latenza {ms}ms",
         "agentNameAriaLabel": "Nome agente {name}",
         "collapsedAriaLabel": "ChatAgent collassato — clic per espandere",
-        "expandedAriaLabel": "ChatAgent espanso — clic per collassare"
+        "expandedAriaLabel": "ChatAgent espanso — clic per collassare",
+        "noAgentMessage": "Nessun assistente disponibile per questo gioco",
+        "launchingMessage": "Avvio assistente…",
+        "errorMessage": "Impossibile avviare l'assistente. Riprova più tardi.",
+        "statusAriaLabel": "Stato assistente",
+        "nonGroundedDisclaimer": "Risposta non basata sul regolamento",
+        "imageAsk": {
+          "defaultQuestion": "Analizza questa immagine",
+          "fallbackResponse": "Risposta non disponibile.",
+          "errorToast": "Impossibile elaborare l'immagine. Riprova."
+        }
       },
       "mobile": {
         "openSheetCta": "Apri pannello",
@@ -3343,7 +3383,8 @@
         "addAriaLabel": "Aggiungi nota",
         "visibilityPrivate": "Privata",
         "visibilityShared": "Condivisa",
-        "emptyMessage": "Nessuna nota ancora."
+        "emptyMessage": "Nessuna nota ancora.",
+        "addNoteErrorToast": "Impossibile salvare la nota. Riprova."
       },
       "pauseOverlay": {
         "title": "Sessione in pausa",
@@ -3355,7 +3396,31 @@
         "title": "Fine sessione",
         "winnerLabel": "Vincitore",
         "acknowledgeCta": "Ho capito",
-        "viewSummaryCta": "Vedi riepilogo"
+        "viewSummaryCta": "Vedi riepilogo",
+        "saveGameCta": "Salva partita",
+        "savingLabel": "Salvataggio…",
+        "alreadyCompletedToast": "Partita già conclusa",
+        "photoUpload": {
+          "sectionTitle": "Foto della partita",
+          "addPhotosCta": "Seleziona foto",
+          "uploadCta": "Carica foto",
+          "uploadingLabel": "Caricamento…",
+          "preparingLabel": "Preparazione…",
+          "retryCta": "Riprova",
+          "doneBadge": "Caricata",
+          "errorGeneric": "Errore nel caricamento",
+          "tooManyFiles": "Puoi caricare al massimo {max} foto",
+          "tooLarge": "File troppo grande (max 5 MB)",
+          "badFormat": "Formato non supportato",
+          "heicFailed": "Conversione HEIC non riuscita",
+          "selectedPhotosList": "Foto selezionate"
+        }
+      },
+      "endgameConfirm": {
+        "title": "Terminare la partita?",
+        "body": "L'azione è irreversibile. I punteggi finali verranno registrati.",
+        "confirmCta": "Termina partita",
+        "cancelCta": "Annulla"
       },
       "toolkitRenderer": {
         "title": "Strumenti",

@@ -49,6 +49,9 @@ smoke: ## Run automated smoke set against BASE_URL (default localhost:8080) — 
 smoke-staging: ## Run automated smoke set against staging (https://meepleai.app)
 	bash scripts/smoke-set.sh https://meepleai.app $(TEST_EMAIL) $(TEST_PASSWORD)
 
+rag-smoke: ## RAG retrieval smoke: canonical queries vs golden baseline (#2480). --update-baseline to capture.
+	bash scripts/rag-smoke-assert.sh $(RAG_SMOKE_ARGS)
+
 smoke-pg-readback: ## Run pg-readback.sh DB-direct migration validation (requires open tunnel)
 	bash scripts/pg-readback.sh
 
@@ -239,10 +242,16 @@ logs-ui: ## Open Grafana log explorer in browser (staging)
 seed-status: ## Report local snapshot freshness (age, schema drift, embedding model)
 	@bash scripts/seed-status.sh
 
+seed-status-badge: ## Regenerate README snapshot-freshness badge between <!-- snapshot-badge --> markers
+	@BADGE=$$(bash scripts/seed-status.sh --badge 2>/dev/null); \
+	perl -i -0pe "s|<!-- snapshot-badge:start -->.*?<!-- snapshot-badge:end -->|$$BADGE|gs" \
+	  ../README.md && \
+	echo "README.md badge updated: $$BADGE"
+
 seed-index: ## Bake: indicizza tutti i PDF e produce snapshot locale
 	@bash scripts/seed-index-preflight.sh
 	$(COMPOSE) -f compose.dev.yml --profile ai up -d postgres redis api embedding-service smoldocling-service
-	@bash scripts/wait-for-healthy.sh api 180
+	@bash scripts/wait-for-healthy.sh api $${SEED_INDEX_HEALTH_TIMEOUT:-180}
 	@bash scripts/seed-index-wait.sh
 	@bash scripts/seed-index-dump.sh
 	@echo "::notice:: snapshot pronto in data/snapshots/ — lancia 'make seed-index-publish' per caricarlo"

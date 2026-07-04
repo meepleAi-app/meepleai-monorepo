@@ -25,6 +25,15 @@ public record SessionDto
     /// ObjectivesScoreData, or RankingScoreData). FE deserialises via Zod schema.
     /// </summary>
     public string? ScoreData { get; init; }
+
+    /// <summary>
+    /// Turn mode discriminator derived from the game's published GameToolkit TurnTemplate.
+    /// Mirrors <see cref="Api.BoundedContexts.GameToolkit.Domain.Enums.TurnOrderType"/>.
+    /// Null when the session has no associated game or the game has no published toolkit
+    /// with a TurnTemplate configured. Static for the session lifetime — never changes
+    /// mid-session (no SignalR event needed). Issue #2483.
+    /// </summary>
+    public string? TurnOrderType { get; init; }
 }
 
 public record ParticipantDto

@@ -45,6 +45,7 @@ const CHAT_PANEL_LABELS: LiveAgentChatLabels = {
   visibilityShared: 'Condiviso',
   emptyMessage: 'Nessun messaggio',
   newMessagesToastAriaLabel: 'Nuovi messaggi — clic per scorrere',
+  attachAriaLabel: 'Allega immagine',
 };
 
 const LABELS: ChatAgentPanelLabels = {

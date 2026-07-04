@@ -5873,13 +5873,13 @@ namespace Api.Infrastructure.Migrations
                         .HasDefaultValue(0)
                         .HasColumnName("agent_mode");
 
-                    b.Property<Guid?>("ChatSessionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("chat_session_id");
-
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("completed_at");
+
+                    b.Property<Guid?>("CorrelatedGameSessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("correlated_game_session_id");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -5978,6 +5978,10 @@ namespace Api.Infrastructure.Migrations
                     b.Property<long>("TotalPausedDurationMs")
                         .HasColumnType("bigint");
 
+                    b.Property<Guid?>("TrackingSessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tracking_session_id");
+
                     b.Property<int>("TurnAdvancePolicy")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
@@ -6017,6 +6021,10 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("Status")
                         .HasDatabaseName("ix_live_game_sessions_status");
+
+                    b.HasIndex("TrackingSessionId")
+                        .HasDatabaseName("ix_live_game_sessions_tracking_session_id")
+                        .HasFilter("tracking_session_id IS NOT NULL");
 
                     b.HasIndex("CreatedByUserId", "Status")
                         .HasDatabaseName("ix_live_game_sessions_user_status");
@@ -6078,6 +6086,42 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("ix_live_round_scores_session_player_round_dim");
 
                     b.ToTable("live_session_round_scores", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.LiveSessionDiaryEntryEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AuthorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("author_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("LiveGameSessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("live_game_session_id");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LiveGameSessionId")
+                        .HasDatabaseName("ix_live_session_diary_entries_session_id");
+
+                    b.HasIndex("LiveGameSessionId", "CreatedAt")
+                        .HasDatabaseName("ix_live_session_diary_entries_session_created_at");
+
+                    b.ToTable("live_session_diary_entries", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.LiveTurnRecordEntity", b =>
@@ -10461,6 +10505,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("game_id");
 
+                    b.Property<Guid?>("GamebookCampaignId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("gamebook_campaign_id");
+
                     b.Property<DateTime?>("InviteExpiresAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -10552,6 +10600,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnName("user_id");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GamebookCampaignId")
+                        .HasDatabaseName("idx_sessions_gamebook_campaign")
+                        .HasFilter("gamebook_campaign_id IS NOT NULL");
 
                     b.HasIndex("SessionCode")
                         .IsUnique()
@@ -16999,6 +17051,17 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("Player");
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.LiveSessionDiaryEntryEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.GameManagement.LiveGameSessionEntity", "LiveGameSession")
+                        .WithMany("DiaryEntries")
+                        .HasForeignKey("LiveGameSessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LiveGameSession");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.LiveTurnRecordEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.GameManagement.LiveGameSessionEntity", "LiveGameSession")
@@ -18563,6 +18626,8 @@ namespace Api.Infrastructure.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.LiveGameSessionEntity", b =>
                 {
+                    b.Navigation("DiaryEntries");
+
                     b.Navigation("Players");
 
                     b.Navigation("RoundScores");

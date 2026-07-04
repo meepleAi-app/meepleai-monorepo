@@ -207,6 +207,15 @@ public sealed class PdfIndexingFlowKbFlagIntegrationTests : IAsyncLifetime
         // that fires after Sub #1 Block A publishes VectorDocumentIndexedEvent)
         services.AddScoped(_ => Mock.Of<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IVectorDocumentRepository>());
 
+        // Real IPdfIndexingPipeline (#2244 / epic #2242 Sub #2): the production write
+        // path that UploadPdfCommandHandler.UpdateVectorDocumentAsync now resolves at
+        // runtime via scope.ServiceProvider.GetRequiredService. Without this binding
+        // the resolver would throw InvalidOperationException and the handler's outer
+        // general catch would silently mark the PDF Failed — which is exactly the
+        // silent-fail mode this test class was written to detect.
+        services.AddScoped<Api.BoundedContexts.KnowledgeBase.Application.Services.IPdfIndexingPipeline,
+            Api.BoundedContexts.KnowledgeBase.Application.Services.PdfIndexingPipeline>();
+
         // HybridCache + dependencies — required by VectorDocumentIndexedForKbFlagHandler
         // (the handler that actually flips shared_games.has_knowledge_base = true on the event).
         services.AddSingleton<IMemoryCache, MemoryCache>();

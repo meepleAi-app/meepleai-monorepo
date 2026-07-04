@@ -8,6 +8,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
 /// Appends a legacy entry to the session for backward compatibility.
 /// </summary>
 internal record TallyDisputeVotesCommand(
+    Guid SessionId,
     Guid DisputeId,
     string? OverrideRule = null
 ) : ICommand;

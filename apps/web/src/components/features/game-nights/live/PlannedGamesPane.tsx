@@ -20,6 +20,17 @@ export interface PlannedGame {
   readonly estimated?: string;
   readonly score?: string;
   readonly winner?: PlannedGameWinner;
+  /**
+   * #2633 Slice B (LD-2): the raw session winner GUID, carried through the live
+   * mapper untouched. Winner {name,initials,color} resolution against the
+   * participant read model is deferred to Slice C — this is the seam it fills.
+   */
+  readonly winnerId?: string;
+  /**
+   * #2633 Slice B (LD-4): a Skipped session, rendered as a muted/struck tile
+   * kept in the line-up (not filtered out).
+   */
+  readonly muted?: boolean;
 }
 
 export interface PlannedGamesPaneProps {
@@ -116,12 +127,13 @@ function PlannedGameRow({ game }: { readonly game: PlannedGame }): JSX.Element {
   return (
     <li
       data-status={game.status}
+      data-muted={game.muted ? 'true' : undefined}
       className={[
         'relative rounded-md px-3 py-2.5 border-l-4',
         isInProgress
           ? 'bg-entity-session/[0.08] border border-entity-session/35'
           : 'bg-card border border-border',
-        isCompleted ? 'opacity-80' : '',
+        game.muted ? 'opacity-50' : isCompleted ? 'opacity-80' : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -140,7 +152,14 @@ function PlannedGameRow({ game }: { readonly game: PlannedGame }): JSX.Element {
           {game.emoji ?? '🎲'}
         </span>
         <div className="min-w-0 flex-1">
-          <div className="truncate font-display text-[12.5px] font-extrabold text-foreground">
+          <div
+            className={[
+              'truncate font-display text-[12.5px] font-extrabold text-foreground',
+              game.muted ? 'line-through' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
             {game.title}
           </div>
           {game.publisher ? (
@@ -180,9 +199,13 @@ function PlannedGameRow({ game }: { readonly game: PlannedGame }): JSX.Element {
       >
         {isCompleted ? (
           <>
-            <span>FINITO</span>
-            <span className="text-muted-foreground">·</span>
-            <span className="text-foreground/70">{game.actual ?? '—'}</span>
+            <span>{game.muted ? 'SALTATA' : 'FINITO'}</span>
+            {game.muted ? null : (
+              <>
+                <span className="text-muted-foreground">·</span>
+                <span className="text-foreground/70">{game.actual ?? '—'}</span>
+              </>
+            )}
           </>
         ) : null}
         {isInProgress ? (

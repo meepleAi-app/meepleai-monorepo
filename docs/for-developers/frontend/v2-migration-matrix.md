@@ -703,7 +703,7 @@ instead.
 | `/discover` | `sp4-discover.html` | Tier L, pending |
 | `/profile` · `/profile/achievements` | `sp4-player-detail.html` ↻ + `sp5-profile-settings.html` [partial] | `/profile?tab=settings` coperto da sp5; self-view + achievements via sp4-player-detail reuse |
 | `/settings` (+ `/ai-consent`, `/api-keys`, `/notifications`, `/preferences`, `/profile`, `/security`, `/services`) | `settings.html` | Shell unica per 7 sub-route |
-| `/notifications` · `/notifications/preferences` | `notifications.html` | — |
+| `/notifications` · `/notifications/preferences` | `sp7-notifications-hub.html` · `sp7-notifications-preferences.html` | SP7 v2 (#2028); `notifications.html` SP1 legacy archive |
 | `/versions` | — | gap (changelog) |
 
 ### Authenticated — Library

@@ -113,8 +113,13 @@ public class SessionRepository : RepositoryBase, ISessionRepository
         // so they are dispatched atomically with the SaveChangesAsync call upstream.
         CollectDomainEvents(session);
 
-        // Retrieve existing entity to preserve EF Core tracking
+        // Retrieve existing entity to preserve EF Core tracking.
+        // #2660: the DbContext default is QueryTrackingBehavior.NoTracking (PERF-06), so
+        // .AsTracking() is REQUIRED here — otherwise `existing` is loaded untracked and every
+        // scalar mutation below (Status/StartedAt/FinalizedAt/ScoreData/...) is a silent no-op
+        // that SaveChangesAsync never persists.
         var existing = await DbContext.SessionTrackingSessions
+            .AsTracking()
             .Include(s => s.Participants)
             .FirstOrDefaultAsync(s => s.Id == session.Id, ct)
             .ConfigureAwait(false);

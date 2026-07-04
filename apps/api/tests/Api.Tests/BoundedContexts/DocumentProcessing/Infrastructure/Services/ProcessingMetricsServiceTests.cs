@@ -77,6 +77,54 @@ public sealed class ProcessingMetricsServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RecordStepDurationAsync_ZeroPageCount_ThrowsArgumentException()
+    {
+        // Regression for Issue #2661: a stale/unpopulated PageCount reaches this service
+        // as 0 (PdfProcessingQuartzJob passes "PageCount ?? 0"). The guard must reject it so
+        // the caller never persists a metric with an invalid page count.
+        // Arrange
+        var pdfId = Guid.NewGuid();
+
+        // Act
+        var act = async () => await _service.RecordStepDurationAsync(
+            pdfId,
+            PdfProcessingState.Extracting,
+            TimeSpan.FromSeconds(10),
+            1024000,
+            pageCount: 0);
+
+        // Assert
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*Page count must be positive*")
+            .Where(ex => ex.ParamName == "pageCount");
+
+        // And nothing was persisted
+        var metric = await _context.ProcessingMetrics
+            .FirstOrDefaultAsync(m => m.PdfDocumentId == pdfId);
+        metric.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task RecordStepDurationAsync_NegativePageCount_ThrowsArgumentException()
+    {
+        // Arrange
+        var pdfId = Guid.NewGuid();
+
+        // Act
+        var act = async () => await _service.RecordStepDurationAsync(
+            pdfId,
+            PdfProcessingState.Extracting,
+            TimeSpan.FromSeconds(10),
+            1024000,
+            pageCount: -1);
+
+        // Assert
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*Page count must be positive*")
+            .Where(ex => ex.ParamName == "pageCount");
+    }
+
+    [Fact]
     public async Task GetAverageDurationAsync_NoData_ReturnsZeroStatistics()
     {
         // Arrange

@@ -14,6 +14,8 @@ export interface ApiErrorDetails {
   response?: Response;
   endpoint?: string;
   timestamp?: string;
+  /** Machine-readable error code from the response body's `error` field (e.g. MAX_LIVE_SESSIONS_EXCEEDED). */
+  code?: string;
 }
 
 /**
@@ -25,6 +27,7 @@ export class ApiError extends Error {
   public readonly response?: Response;
   public readonly endpoint?: string;
   public readonly timestamp: string;
+  public readonly code?: string;
 
   constructor(details: ApiErrorDetails) {
     super(details.message);
@@ -34,6 +37,7 @@ export class ApiError extends Error {
     this.response = details.response;
     this.endpoint = details.endpoint;
     this.timestamp = details.timestamp || new Date().toISOString();
+    this.code = details.code;
 
     // Maintains proper stack trace for where error was thrown
     if (Error.captureStackTrace) {
@@ -297,9 +301,14 @@ export async function createApiError(endpoint: string, response: Response): Prom
   // Extract error message from response body
   let message = `API ${endpoint} failed with status ${statusCode}`;
   let validationErrors: Record<string, string[]> | undefined;
+  // Machine-readable code from body.error (BE middleware writes HttpException.ErrorCode there).
+  let code: string | undefined;
 
   try {
     const body = await response.json();
+    if (typeof body?.error === 'string') {
+      code = body.error;
+    }
     // Prefer body.message (user-friendly message) over body.error (error type)
     if (body?.message) {
       message = body.message;
@@ -320,6 +329,7 @@ export async function createApiError(endpoint: string, response: Response): Prom
     correlationId,
     response,
     endpoint,
+    code,
   };
 
   // Map status codes to specific error types

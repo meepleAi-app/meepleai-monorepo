@@ -42,6 +42,7 @@ function vm(over: Partial<NightLiveViewModel> = {}): NightLiveViewModel {
     night: { title: 'Serata Eldoria' },
     nightStatus: 'Published',
     isViewerOrganizer: false,
+    nextGame: null,
     status: 'live',
     current: 2,
     total: 3,

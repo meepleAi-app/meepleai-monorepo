@@ -37,6 +37,8 @@ export interface NightLiveViewModel {
   readonly nightStatus: GameNightStatus;
   /** WS1 DEC-9: gates the organizer-only "Avvia prossimo gioco" CTA. */
   readonly isViewerOrganizer: boolean;
+  /** WS1 DEC-9: the next un-started planned game the CTA starts, or null if none. */
+  readonly nextGame: { readonly gameId: string; readonly gameTitle: string } | null;
   readonly status: NightLiveStatus;
   readonly current: number;
   readonly total: number;
@@ -180,6 +182,7 @@ export function mapNightLiveToViewModel(dto: GameNightLiveDto, now: Date): Night
     night: { title: dto.title }, // LD-15: shortTitle/nightCode undefined in Slice B
     nightStatus: dto.status, // LD-14: raw lifecycle status for terminal routing
     isViewerOrganizer: dto.isViewerOrganizer, // WS1 DEC-9
+    nextGame: dto.plannedLineup.length > 0 ? dto.plannedLineup[0] : null, // WS1 DEC-9
     status,
     current,
     total,

@@ -40,6 +40,7 @@ const LIVE = {
     },
   ],
   isViewerOrganizer: true,
+  plannedLineup: [],
 };
 
 describe('gameNightsClient.getLive', () => {

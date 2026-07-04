@@ -1,9 +1,13 @@
 using Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
+using Api.Infrastructure;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
 
@@ -15,14 +19,26 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.GameNight;
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "GameManagement")]
-public class GetGameNightLiveQueryHandlerTests
+public class GetGameNightLiveQueryHandlerTests : IDisposable
 {
     private readonly Mock<IGameNightEventRepository> _repo = new();
+    private readonly MeepleAiDbContext _db;
     private readonly GetGameNightLiveQueryHandler _handler;
 
     public GetGameNightLiveQueryHandlerTests()
     {
-        _handler = new GetGameNightLiveQueryHandler(_repo.Object);
+        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        _db = new MeepleAiDbContext(
+            options, new Mock<IMediator>().Object, new Mock<IDomainEventCollector>().Object);
+        _handler = new GetGameNightLiveQueryHandler(_repo.Object, _db);
+    }
+
+    public void Dispose()
+    {
+        _db.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     [Fact]
@@ -88,6 +104,31 @@ public class GetGameNightLiveQueryHandlerTests
             new GetGameNightLiveQuery(evt.Id, invitedUserId), TestContext.Current.CancellationToken);
 
         result.IsViewerOrganizer.Should().BeFalse();
+    }
+
+    // WS1 DEC-9: the read model exposes the un-started planned games (with titles) so the
+    // organizer CTA knows which game to start next.
+    [Fact]
+    public async Task Handle_ExposesUnstartedPlannedLineupWithTitles()
+    {
+        var g1 = Guid.NewGuid();
+        var g2 = Guid.NewGuid();
+        _db.SharedGames.Add(new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity { Id = g1, Title = "Brass" });
+        _db.SharedGames.Add(new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity { Id = g2, Title = "Catan" });
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var evt = GameNightEvent.Create(
+            Guid.NewGuid(), "Serata", DateTimeOffset.UtcNow.AddHours(1), gameIds: [g1, g2]);
+        evt.Publish([]);
+        evt.AddSession(Guid.NewGuid(), g1, "Brass"); // g1 started; g2 remains un-started
+        _repo.Setup(r => r.GetByIdAsync(evt.Id, It.IsAny<CancellationToken>())).ReturnsAsync(evt);
+
+        var result = await _handler.Handle(
+            new GetGameNightLiveQuery(evt.Id, evt.OrganizerId), TestContext.Current.CancellationToken);
+
+        result.PlannedLineup.Should().ContainSingle();
+        result.PlannedLineup[0].GameId.Should().Be(g2);
+        result.PlannedLineup[0].GameTitle.Should().Be("Catan");
     }
 
     [Fact]

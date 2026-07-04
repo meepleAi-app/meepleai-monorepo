@@ -42,6 +42,7 @@ function live(over: Partial<GameNightLiveDto> = {}): GameNightLiveDto {
     status: 'Published',
     sessions: [],
     isViewerOrganizer: false,
+    plannedLineup: [],
     ...over,
   };
 }
@@ -106,6 +107,20 @@ describe('mapNightLiveToViewModel — header + progression', () => {
     expect(mapNightLiveToViewModel(live({ status: 'Completed' }), NOW).nightStatus).toBe(
       'Completed'
     );
+  });
+
+  it('derives nextGame from the first planned-lineup item (WS1 DEC-9)', () => {
+    const withLineup = live({
+      plannedLineup: [
+        { gameId: G3, gameTitle: 'Wingspan' },
+        { gameId: G1, gameTitle: 'Brass' },
+      ],
+    });
+    expect(mapNightLiveToViewModel(withLineup, NOW).nextGame).toEqual({
+      gameId: G3,
+      gameTitle: 'Wingspan',
+    });
+    expect(mapNightLiveToViewModel(live({ plannedLineup: [] }), NOW).nextGame).toBeNull();
   });
 
   it('threads isViewerOrganizer from the DTO (WS1 DEC-9)', () => {

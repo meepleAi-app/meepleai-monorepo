@@ -28,6 +28,7 @@ const LIVE = {
   status: 'Published',
   sessions: [SESSION],
   isViewerOrganizer: true,
+  plannedLineup: [],
 };
 
 describe('GameNightSessionStatusSchema', () => {

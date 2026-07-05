@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.DocumentProcessing;
 using Microsoft.EntityFrameworkCore;
@@ -37,6 +38,12 @@ internal sealed class ProcessingQueueMonitorService : BackgroundService
 
     private TimeSpan StuckJobTimeout =>
         TimeSpan.FromMinutes(_configuration.GetValue("ProcessingQueueMonitor:StuckJobTimeoutMinutes", 10));
+
+    // Recovery threshold — deliberately higher than the alert threshold so an early
+    // "stuck" warning fires first (10 min) but automatic requeue only kicks in once a
+    // job is clearly dead (30 min), never resetting a job that is merely slow. #2683.
+    private TimeSpan StuckJobRecoveryTimeout =>
+        TimeSpan.FromMinutes(_configuration.GetValue("ProcessingQueueMonitor:StuckJobRecoveryTimeoutMinutes", 30));
 
     private int QueueDepthThreshold =>
         _configuration.GetValue("ProcessingQueueMonitor:QueueDepthThreshold", 20);
@@ -117,6 +124,98 @@ internal sealed class ProcessingQueueMonitorService : BackgroundService
                 DateTimeOffset.UtcNow);
 
             await streamService.PublishQueueEventAsync(evt, ct).ConfigureAwait(false);
+
+            // #2683: once a job is stuck well past the alert threshold, requeue it so the
+            // pipeline can pick it up again. Left unrecovered, a job orphaned by an API
+            // restart mid-processing stays in Processing forever.
+            if (stuckMinutes >= StuckJobRecoveryTimeout.TotalMinutes)
+            {
+                await RecoverStuckJobAsync(db, job.Id, job.FileName, stuckMinutes, ct).ConfigureAwait(false);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Requeues a job that has been stuck in <c>Processing</c> long past the recovery
+    /// threshold. Reuses the existing job row (Processing → Queued, <c>RetryCount</c>++)
+    /// so the counter persists across cycles — once it reaches <c>MaxRetries</c> the job
+    /// and its PDF are marked <c>Failed</c> instead of looping forever. Mirrors the reset
+    /// performed by <c>ReindexDocumentCommandHandler</c> (clear chunks, PDF → Pending).
+    /// </summary>
+    // internal (not private) so ProcessingQueueMonitorRecoveryTests can exercise the
+    // recovery logic directly against an in-memory DbContext (InternalsVisibleTo=Api.Tests).
+    internal async Task RecoverStuckJobAsync(
+        MeepleAiDbContext db,
+        Guid jobId,
+        string fileName,
+        double stuckMinutes,
+        CancellationToken ct)
+    {
+        var job = await db.Set<ProcessingJobEntity>()
+            .Include(j => j.PdfDocument)
+            .FirstOrDefaultAsync(j => j.Id == jobId && j.Status == "Processing", ct)
+            .ConfigureAwait(false);
+
+        // Status changed between the detection query and now — nothing to recover.
+        if (job is null)
+        {
+            return;
+        }
+
+        if (job.RetryCount >= job.MaxRetries)
+        {
+            _logger.LogError(
+                "Stuck PDF {FileName} (job {JobId}) exhausted {Max} recovery attempts after {Minutes:F0} min; marking Failed",
+                fileName, jobId, job.MaxRetries, stuckMinutes);
+
+            var stuckState = job.PdfDocument.ProcessingState;
+            job.Status = "Failed";
+            job.CompletedAt = DateTimeOffset.UtcNow;
+            job.ErrorMessage =
+                $"Processing stalled for {stuckMinutes:F0} min; automatic recovery exhausted ({job.MaxRetries} attempts).";
+            job.PdfDocument.FailedAtState = stuckState;
+            job.PdfDocument.ProcessingState = nameof(PdfProcessingState.Failed);
+            job.PdfDocument.ProcessingError = "Processing stalled and could not be recovered automatically.";
+        }
+        else
+        {
+            _logger.LogWarning(
+                "Recovering stuck PDF {FileName} (job {JobId}) after {Minutes:F0} min; requeue attempt {Attempt}/{Max}",
+                fileName, jobId, stuckMinutes, job.RetryCount + 1, job.MaxRetries);
+
+            // Clear any partial chunks so re-processing does not duplicate them
+            // (same as ReindexDocumentCommandHandler).
+            var chunks = await db.TextChunks
+                .Where(tc => tc.PdfDocumentId == job.PdfDocumentId)
+                .ToListAsync(ct)
+                .ConfigureAwait(false);
+            if (chunks.Count > 0)
+            {
+                db.TextChunks.RemoveRange(chunks);
+            }
+
+            // Reset the PDF to Pending (direct assignment, mirror of reindex).
+            job.PdfDocument.ProcessingState = nameof(PdfProcessingState.Pending);
+            job.PdfDocument.ProcessedAt = null;
+            job.PdfDocument.ProcessingError = null;
+            job.PdfDocument.FailedAtState = null;
+
+            // Reuse the existing job: back to Queued, bump RetryCount for loop-prevention.
+            job.Status = "Queued";
+            job.StartedAt = null;
+            job.CurrentStep = null;
+            job.RetryCount++;
+        }
+
+        try
+        {
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            // Another operation touched the row first — skip; the next cycle re-evaluates.
+            _logger.LogWarning(ex,
+                "Concurrency conflict recovering stuck job {JobId}; will retry next cycle", jobId);
         }
     }
 

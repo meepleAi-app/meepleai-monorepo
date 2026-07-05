@@ -79,8 +79,12 @@ internal sealed class CompleteGameNightSessionCommandHandler : ICommandHandler<C
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             // Cross-BC: finalize the tracking Session in the SAME transaction. Session.Finalize
-            // enforces Active/Paused; its inner SaveChangesAsync enlists in this ambient tx, so a
-            // later failure rolls back BOTH the GameNightSession completion and the finalize.
+            // enforces Active/Paused; its inner SaveChangesAsync enlists in this ambient tx, so the
+            // DB changes (GameNightSession complete + tracking Session finalize) roll back together.
+            // KNOWN RISK (accepted, → SI-3-proper): FinalizeSessionCommandHandler's SSE side-effects
+            // (_diaryStream.Publish + _syncService.PublishEventAsync) fire before CommitTransactionAsync,
+            // so a rare commit failure leaves phantom broadcasts — clients self-correct on the next
+            // poll. See must-fix #5 in the C4 spec (2026-07-05-issue-2634-c4-winner-completa-design.md).
             await _mediator.Send(new FinalizeSessionCommand(trackingSessionId, finalRanks), cancellationToken).ConfigureAwait(false);
 
             commitStarted = true;

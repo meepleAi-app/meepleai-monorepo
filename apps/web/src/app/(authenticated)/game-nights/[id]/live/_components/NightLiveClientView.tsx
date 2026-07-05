@@ -203,7 +203,10 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
         <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center p-4">
           <button
             type="button"
-            onClick={() => setWinnerPickerOpen(true)}
+            onClick={() => {
+              completeGame.reset(); // clear a stale 409/403 from a previous attempt before re-opening
+              setWinnerPickerOpen(true);
+            }}
             disabled={completeGame.isPending}
             className="flex items-center gap-2 rounded-full border border-entity-session/40 bg-entity-session px-5 py-2.5 font-display text-sm font-extrabold text-white shadow-lg transition hover:bg-entity-session/90 disabled:cursor-not-allowed disabled:opacity-60"
           >

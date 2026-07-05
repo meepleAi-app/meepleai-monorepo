@@ -55,6 +55,7 @@ vi.mock('@/lib/game-nights/hooks/useNightLiveDiary', () => ({
 
 // #2634 C4: the organizer "Completa" mutation.
 const completeMutateMock = vi.hoisted(() => vi.fn());
+const completeResetMock = vi.hoisted(() => vi.fn());
 const completeState = vi.hoisted(() => ({
   isPending: false,
   isError: false,
@@ -63,6 +64,7 @@ const completeState = vi.hoisted(() => ({
 vi.mock('@/lib/game-nights/hooks/useCompleteGameNightSession', () => ({
   useCompleteGameNightSession: () => ({
     mutate: completeMutateMock,
+    reset: completeResetMock,
     isPending: completeState.isPending,
     isError: completeState.isError,
     error: completeState.error,
@@ -347,6 +349,17 @@ describe('NightLiveClientView — organizer Completa + winner picker (C4)', () =
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText('Alice')).toBeInTheDocument();
     expect(screen.getByText('Bob')).toBeInTheDocument();
+  });
+
+  it('resets a stale mutation error before re-opening the picker', async () => {
+    // A previous attempt left a 409 on the mutation; opening the picker must clear it first so
+    // the re-opened modal does not immediately show the old error (review MINOR #2).
+    completeState.isError = true;
+    completeState.error = new ConflictError({ message: 'no live' });
+    mockQuery({ data: vm({ isViewerOrganizer: true, status: 'live', winnerCandidates: ROSTER }) });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    await userEvent.click(screen.getByRole('button', { name: /Completa partita/i }));
+    expect(completeResetMock).toHaveBeenCalledTimes(1);
   });
 
   it('completes with the selected winner participant id', async () => {

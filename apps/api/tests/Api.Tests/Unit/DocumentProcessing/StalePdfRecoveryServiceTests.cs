@@ -62,17 +62,17 @@ public sealed class StalePdfRecoveryServiceTests
     }
 
     // ──────────────────────────────────────────────────────────────────
-    // Test 1 (RED first): PDF stays in non-Ready state → stillStuck
+    // Test 1 (RED first): PDF does not progress past Pending after reset → stillStuck
     // ──────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task RecoverAll_WhenPdfStaysInEmbedding_CountsAsStillStuck_NotRecovered()
+    public async Task RecoverAll_WhenPdfDoesNotProgressAfterReset_CountsAsStillStuck()
     {
         // Arrange
         var dbName = $"stale_stuck_{Guid.NewGuid():N}";
         await SeedStalePdfAsync(dbName);
 
-        // Pipeline mock does nothing → PDF stays Pending (after ResetToPending)
+        // Pipeline mock does nothing → PDF stays Pending (after ResetToPendingAsync resets it)
         var pipelineMock = new Mock<IPdfProcessingPipelineService>();
         pipelineMock
             .Setup(p => p.ProcessAsync(
@@ -132,6 +132,80 @@ public sealed class StalePdfRecoveryServiceTests
         // Assert
         Assert.Equal(1, recovered);
         Assert.Equal(0, failed);
+        Assert.Equal(0, stillStuck);
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // Test 3: PDF ends in Failed state → failed branch (lines 85-91 in prod)
+    // ──────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task RecoverAll_WhenPdfEndsInFailed_CountsAsFailed()
+    {
+        // Arrange
+        var dbName = $"stale_failed_{Guid.NewGuid():N}";
+        var pdfId = await SeedStalePdfAsync(dbName);
+
+        // Pipeline mock simulates a failed processing run: writes state = Failed into the shared DB.
+        var pipelineMock = new Mock<IPdfProcessingPipelineService>();
+        pipelineMock
+            .Setup(p => p.ProcessAsync(
+                pdfId, It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns(async (Guid id, string fp, Guid userId, CancellationToken ct) =>
+            {
+                using var db = TestDbContextFactory.CreateInMemoryDbContext(dbName);
+                var entity = await db.PdfDocuments.FindAsync(new object[] { id }, ct);
+                if (entity != null)
+                {
+                    entity.ProcessingState = "Failed";
+                    await db.SaveChangesAsync(ct);
+                }
+            });
+
+        var scopeFactory = BuildScopeFactory(dbName, pipelineMock.Object);
+        var sut = new StalePdfRecoveryService(
+            scopeFactory,
+            NullLogger<StalePdfRecoveryService>.Instance);
+
+        // Act
+        var (recovered, failed, stillStuck) = await sut.RecoverAllAsync(CancellationToken.None);
+
+        // Assert: the finalState == "Failed" branch increments failed, not recovered/stillStuck
+        Assert.Equal(0, recovered);
+        Assert.Equal(1, failed);
+        Assert.Equal(0, stillStuck);
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // Test 4: ProcessAsync throws → catch block increments failed (lines 106-110 in prod)
+    // ──────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task RecoverAll_WhenProcessAsyncThrows_CountsAsFailed()
+    {
+        // Arrange
+        var dbName = $"stale_throws_{Guid.NewGuid():N}";
+        await SeedStalePdfAsync(dbName);
+
+        // Pipeline mock throws: the catch block at the bottom of the recovery loop
+        // increments failed++ and logs the error, rather than bubbling the exception.
+        var pipelineMock = new Mock<IPdfProcessingPipelineService>();
+        pipelineMock
+            .Setup(p => p.ProcessAsync(
+                It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Simulated pipeline failure"));
+
+        var scopeFactory = BuildScopeFactory(dbName, pipelineMock.Object);
+        var sut = new StalePdfRecoveryService(
+            scopeFactory,
+            NullLogger<StalePdfRecoveryService>.Instance);
+
+        // Act
+        var (recovered, failed, stillStuck) = await sut.RecoverAllAsync(CancellationToken.None);
+
+        // Assert: exception path → failed++, no recovered or stillStuck
+        Assert.Equal(0, recovered);
+        Assert.Equal(1, failed);
         Assert.Equal(0, stillStuck);
     }
 }

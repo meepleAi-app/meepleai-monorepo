@@ -29,6 +29,8 @@ const LABELS: LiveTopBarLabels = {
   exitAriaLabel: 'Esci',
   // G4 labels
   elapsedTimeAriaLabel: 'Tempo trascorso',
+  // SI-4 label
+  startedAtChipAriaLabel: 'Ora di inizio della sessione (derivata)',
   connectionStateAriaLabels: {
     connected: 'Connessione attiva',
     reconnecting: 'Riconnessione in corso',
@@ -66,6 +68,30 @@ describe('LiveTopBar — backward compat (no G4 props)', () => {
   it('preserves existing TopBar slot + status', () => {
     renderTopBar();
     expect(document.querySelector('[data-slot="session-live-top-bar"]')).not.toBeNull();
+  });
+});
+
+// ─── SI-4 (#2635) — derived start-time chip ───────────────────────────────────
+
+describe('LiveTopBar — SI-4 start-time chip', () => {
+  it('renders the read-only start-time chip when startedAtLabel is provided', () => {
+    renderTopBar({ startedAtLabel: '▶ Ora di inizio 5 lug, 20:35 · derivata' });
+    const chip = document.querySelector('[data-slot="session-live-top-bar-started-at"]');
+    expect(chip).not.toBeNull();
+    expect(chip?.textContent).toBe('▶ Ora di inizio 5 lug, 20:35 · derivata');
+    expect(chip?.getAttribute('aria-label')).toBe('Ora di inizio della sessione (derivata)');
+  });
+
+  it('hides the chip when startedAtLabel is undefined', () => {
+    renderTopBar();
+    expect(document.querySelector('[data-slot="session-live-top-bar-started-at"]')).toBeNull();
+  });
+
+  it('renders no editable input — the chip is display-only (Invariante 5)', () => {
+    renderTopBar({ startedAtLabel: '▶ Ora di inizio 5 lug, 20:35 · derivata' });
+    const chip = document.querySelector('[data-slot="session-live-top-bar-started-at"]');
+    expect(chip?.querySelector('input')).toBeNull();
+    expect(chip?.tagName.toLowerCase()).toBe('span'); // static text, not a control
   });
 });
 

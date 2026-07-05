@@ -433,4 +433,64 @@ public class StartGameNightSessionCommandHandlerTests
         var gns = gameNight.Sessions[0];
         Assert.Equal(GameNightSessionStatus.InProgress, gns.Status);
     }
+
+    [Fact]
+    public async Task Handle_SecondSittingOnInProgressNight_Succeeds()
+    {
+        // SI-4 (#2635): a night already InProgress (first game played & completed) resuming for a 2nd
+        // game. Before the AddSession relax this failed with 409 (Published-only guard) — the WS1
+        // latent multi-game bug. EnsureCanStartSession passes (no live session), AddSession now
+        // accepts an InProgress night, and the aggregate stays InProgress.
+        var gameNight = CreatePublishedEvent();
+        var firstSessionId = Guid.NewGuid();
+        gameNight.AddSession(firstSessionId, gameNight.GameIds[0], "Catan");
+        gameNight.StartCurrentSession();
+        gameNight.HandleFirstSessionStarted(firstSessionId); // Published → InProgress (async #15 in prod)
+        gameNight.CompleteCurrentSession(winnerId: null);     // first game done → no live session
+        Assert.Equal(GameNightStatus.InProgress, gameNight.Status);
+
+        var secondSessionId = Guid.NewGuid();
+        _mockRepository.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateOrganizerDto(gameNight.OrganizerId));
+        _mockMediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CreateSessionResult(
+                secondSessionId, "SND222", [], GameNightEventId: gameNight.Id,
+                GameNightWasCreated: false, AgentDefinitionId: null, ToolkitId: null));
+
+        var command = new StartGameNightSessionCommand(
+            gameNight.Id, gameNight.GameIds[1], "Dixit", gameNight.OrganizerId);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        Assert.Equal(secondSessionId, result.SessionId);
+        Assert.Equal(2, result.PlayOrder);
+        Assert.Equal(2, gameNight.Sessions.Count);
+        Assert.Equal(GameNightStatus.InProgress, gameNight.Status);
+    }
+
+    [Fact]
+    public async Task Handle_SecondStartWhileFirstStillLive_Throws409MaxLive_NoSessionCreated()
+    {
+        // AC5: max-1-live holds on resume. A 2nd start while the first session is still InProgress is
+        // rejected by EnsureCanStartSession (guard-before-create) — no cross-BC Session is minted.
+        var gameNight = CreatePublishedEvent();
+        var firstSessionId = Guid.NewGuid();
+        gameNight.AddSession(firstSessionId, gameNight.GameIds[0], "Catan");
+        gameNight.StartCurrentSession();                     // first session InProgress
+        gameNight.HandleFirstSessionStarted(firstSessionId); // night InProgress
+
+        _mockRepository.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+
+        var command = new StartGameNightSessionCommand(
+            gameNight.Id, gameNight.GameIds[1], "Dixit", gameNight.OrganizerId);
+
+        await Assert.ThrowsAsync<MaxLiveSessionsExceededException>(
+            () => _handler.Handle(command, CancellationToken.None));
+
+        _mockMediator.Verify(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
 }

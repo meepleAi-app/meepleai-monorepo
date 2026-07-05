@@ -1,4 +1,3 @@
-using System.Buffers;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure.Entities;
@@ -142,7 +141,7 @@ internal static class PdfSeeder
                     {
                         // fileId is embedded in the stored FilePath (pdfs/{resourceKey}/{fileId}_{name});
                         // extract it so ExistsAsync can locate the blob for the EXISTING record.
-                        var existingFileId = ExtractFileIdFromPath(existing.FilePath);
+                        var existingFileId = PdfStorageKey.FileIdFromPath(existing.FilePath);
                         var blobPresent = !string.IsNullOrEmpty(existingFileId)
                             && await primaryBlob.ExistsAsync(existingFileId, BlobCategory.Pdf, PdfStorageKey.ForPdf(existing.Id), ct).ConfigureAwait(false);
 
@@ -417,7 +416,7 @@ internal static class PdfSeeder
         {
             try
             {
-                var fileId = ExtractFileIdFromPath(filePath);
+                var fileId = PdfStorageKey.FileIdFromPath(filePath);
                 if (!string.IsNullOrEmpty(fileId))
                 {
                     await primaryBlob.DeleteAsync(fileId, BlobCategory.Pdf, gameIdStr, ct).ConfigureAwait(false);
@@ -440,40 +439,5 @@ internal static class PdfSeeder
             db.PdfDocuments.Remove(entity);
             await db.SaveChangesAsync(ct).ConfigureAwait(false);
         }
-    }
-
-    private static readonly SearchValues<char> PathSeparators = SearchValues.Create("/\\");
-
-    /// <summary>
-    /// Extracts the bare fileId from a storage path of shape
-    /// <c>pdf_uploads/{resourceKey}/{fileId}_{sanitizedFileName}</c>.
-    /// Returns null if the path does not match the expected layout.
-    /// Exposed as <c>internal</c> for unit testing the null-return branches
-    /// (no path separator, trailing slash, no underscore in segment, leading
-    /// underscore in segment).
-    /// </summary>
-    internal static string? ExtractFileIdFromPath(string filePath)
-    {
-        if (string.IsNullOrEmpty(filePath))
-        {
-            return null;
-        }
-
-        // Platform-independent separators: '/' for S3 + URL-style, '\\' on Windows local FS.
-        var lastSeparator = filePath.AsSpan().LastIndexOfAny(PathSeparators);
-        if (lastSeparator < 0 || lastSeparator == filePath.Length - 1)
-        {
-            return null;
-        }
-
-        var fileName = filePath[(lastSeparator + 1)..];
-        var underscoreIndex = fileName.IndexOf('_', StringComparison.Ordinal);
-        // <= 0 covers: not found (-1) AND leading underscore (= 0 ⇒ empty fileId).
-        if (underscoreIndex <= 0)
-        {
-            return null;
-        }
-
-        return fileName[..underscoreIndex];
     }
 }

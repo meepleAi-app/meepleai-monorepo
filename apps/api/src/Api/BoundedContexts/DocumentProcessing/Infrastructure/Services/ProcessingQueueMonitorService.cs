@@ -1,6 +1,8 @@
+using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.DocumentProcessing;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
@@ -38,6 +40,11 @@ internal sealed class ProcessingQueueMonitorService : BackgroundService
     private TimeSpan StuckJobTimeout =>
         TimeSpan.FromMinutes(_configuration.GetValue("ProcessingQueueMonitor:StuckJobTimeoutMinutes", 10));
 
+    // Recovery threshold — higher than the alert threshold (10 min) so the early "stuck"
+    // warning fires first, but a merely-slow job is never degraded. #2689.
+    private TimeSpan StuckJobRecoveryTimeout =>
+        TimeSpan.FromMinutes(_configuration.GetValue("ProcessingQueueMonitor:StuckJobRecoveryTimeoutMinutes", 30));
+
     private int QueueDepthThreshold =>
         _configuration.GetValue("ProcessingQueueMonitor:QueueDepthThreshold", 20);
 
@@ -72,13 +79,15 @@ internal sealed class ProcessingQueueMonitorService : BackgroundService
         _logger.LogInformation("ProcessingQueueMonitorService stopped");
     }
 
-    private async Task RunChecksAsync(CancellationToken ct)
+    // Exposed as internal for unit testing (InternalsVisibleTo Api.Tests). Issue #2689.
+    internal async Task RunChecksAsync(CancellationToken ct)
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var streamService = scope.ServiceProvider.GetRequiredService<IQueueStreamService>();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
-        await CheckStuckJobsAsync(db, streamService, ct).ConfigureAwait(false);
+        await CheckStuckJobsAsync(db, streamService, mediator, ct).ConfigureAwait(false);
         await CheckQueueDepthAsync(db, streamService, ct).ConfigureAwait(false);
         await CheckFailureRateAsync(db, streamService, ct).ConfigureAwait(false);
     }
@@ -86,6 +95,7 @@ internal sealed class ProcessingQueueMonitorService : BackgroundService
     private async Task CheckStuckJobsAsync(
         MeepleAiDbContext db,
         IQueueStreamService streamService,
+        IMediator mediator,
         CancellationToken ct)
     {
         var cutoff = DateTimeOffset.UtcNow - StuckJobTimeout;
@@ -117,6 +127,20 @@ internal sealed class ProcessingQueueMonitorService : BackgroundService
                 DateTimeOffset.UtcNow);
 
             await streamService.PublishQueueEventAsync(evt, ct).ConfigureAwait(false);
+
+            // Past recovery threshold → auto-degrade via command (Issue #2689).
+            // Degrade-only: the monitor sends the command; all state mutation lives in
+            // DegradeStuckJobCommandHandler. Does NOT re-queue (that was reverted in #2686).
+            if (stuckMinutes >= StuckJobRecoveryTimeout.TotalMinutes)
+            {
+                var result = await mediator.Send(new DegradeStuckJobCommand(job.Id, stuckMinutes), ct).ConfigureAwait(false);
+                if (result.Degraded)
+                {
+                    _logger.LogWarning(
+                        "Auto-degraded stuck job {JobId} (PDF: {FileName}) to Failed after {Minutes:F1} min (Issue #2689)",
+                        job.Id, job.FileName, stuckMinutes);
+                }
+            }
         }
     }
 

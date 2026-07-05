@@ -3175,6 +3175,8 @@
         "endgameCta": "Termina sessione",
         "exitAriaLabel": "Esci dalla sessione",
         "elapsedTimeAriaLabel": "Tempo trascorso",
+        "startedAtChip": "▶ Ora di inizio {time} · derivata",
+        "startedAtChipAriaLabel": "Ora di inizio della sessione (derivata, non modificabile)",
         "connectionStateConnected": "Connessione attiva",
         "connectionStateReconnecting": "Riconnessione in corso",
         "connectionStateFailed": "Connessione persa"

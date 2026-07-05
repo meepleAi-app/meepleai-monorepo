@@ -3068,6 +3068,8 @@
         "endgameCta": "End session",
         "exitAriaLabel": "Exit session",
         "elapsedTimeAriaLabel": "Elapsed time",
+        "startedAtChip": "▶ Started at {time} · derived",
+        "startedAtChipAriaLabel": "Session start time (derived, not editable)",
         "connectionStateConnected": "Connection active",
         "connectionStateReconnecting": "Reconnecting",
         "connectionStateFailed": "Connection lost"

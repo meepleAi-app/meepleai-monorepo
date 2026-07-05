@@ -126,6 +126,7 @@ import { useSessionAgentChat } from '@/lib/domain-hooks/useSessionAgentChat';
 import { useSignalRSession } from '@/lib/domain-hooks/useSignalrSession';
 import { getNavigationLinks } from '@/lib/navigation';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
+import { formatSessionStartedAt } from '@/lib/session-live/format-session-started-at';
 import { mapConnectionState } from '@/lib/session-live/map-connection-state';
 import { mapTurnDataToTurnState } from '@/lib/session-live/map-turn-data-to-turn-state';
 import { mergeHydratedDiary } from '@/lib/session-live/merge-hydrated-diary';
@@ -728,6 +729,8 @@ export function SessionLiveView(): ReactElement {
       exitAriaLabel: t('pages.sessionLive.topBar.exitAriaLabel'),
       // G4 — Issue #2355 wiring
       elapsedTimeAriaLabel: t('pages.sessionLive.topBar.elapsedTimeAriaLabel'),
+      // SI-4 (#2635) — derived start-time chip
+      startedAtChipAriaLabel: t('pages.sessionLive.topBar.startedAtChipAriaLabel'),
       connectionStateAriaLabels: {
         connected: t('pages.sessionLive.topBar.connectionStateConnected'),
         reconnecting: t('pages.sessionLive.topBar.connectionStateReconnecting'),
@@ -738,6 +741,11 @@ export function SessionLiveView(): ReactElement {
 
   // G4 — Issue #2355: live elapsed time + connection pip wiring
   const elapsedMs = useElapsedTime(sessionQuery.data?.startedAt);
+  // SI-4 (#2635): read-only derived start-time chip label (Invariante 5 — never user-editable).
+  const startedAt = sessionQuery.data?.startedAt;
+  const startedAtLabel = startedAt
+    ? t('pages.sessionLive.topBar.startedAtChip', { time: formatSessionStartedAt(startedAt) })
+    : undefined;
   const connectionPipState = mapConnectionState(liveStream.connectionState);
 
   // G5b #2378 — TurnIndicatorRenderer labels + fixture state memos.
@@ -1223,7 +1231,9 @@ export function SessionLiveView(): ReactElement {
         await agentChat.ask(content);
       }
     },
-    [agentSessionId, agentChat, sessionId, activeSession?.viewerId]
+    // `intl` is stable (react-intl memoizes useIntl); listing it clears a pre-existing
+    // exhaustive-deps baseline error surfaced while touching this file for SI-4 (#2635).
+    [agentSessionId, agentChat, sessionId, activeSession?.viewerId, intl]
   );
 
   // ── Chat messages from SSE events ────────────────────────────────────────
@@ -1594,6 +1604,7 @@ export function SessionLiveView(): ReactElement {
         }
         labels={topBarLabels}
         elapsedMs={elapsedMs}
+        startedAtLabel={startedAtLabel}
         connectionState={connectionPipState}
       />
 

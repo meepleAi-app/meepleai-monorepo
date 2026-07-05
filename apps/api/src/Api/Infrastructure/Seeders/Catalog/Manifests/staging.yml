@@ -1189,9 +1189,6 @@ catalog:
     - Hobby World
     - Korea Boardgames
     - MYBG Co., Ltd.
-    pdfBlobKey: rulebooks/v1/gloomhaven_rulebook.pdf
-    pdfSha256: a8bb3b2e3d875f325d12da48ca4c6fd7807876b3b0353bf4052a74678d339f27
-    pdfVersion: '1.0'
   - title: Small World
     bggId: 40692
     language: en
@@ -1938,9 +1935,6 @@ catalog:
     - Rozum
     - Siam Board Games
     - Super Impulse
-    pdfBlobKey: rulebooks/v1/exploding-kittens_rulebook.pdf
-    pdfSha256: 1585eb968604bd7652b3e8f276e5a7409c5bfca8fc1217ca75792ae3b44b654c
-    pdfVersion: '1.0'
   - title: Agricola
     bggId: 31260
     language: en
@@ -2440,9 +2434,6 @@ catalog:
     - Wizards of the Coast
     - asmodee
     - Hasbro
-    pdfBlobKey: rulebooks/v1/betrayal-at-house-on-the-hill_rulebook.pdf
-    pdfSha256: 806700be2b34ee26d0dee42c4b600bc57b0d1c4c520ddfeaf9db171441ba9f9e
-    pdfVersion: '1.0'
   - title: Ark Nova
     bggId: 342942
     language: en
@@ -2638,9 +2629,6 @@ catalog:
     - Rebel Sp. z o.o.
     - Spilbræt.dk
     - White Goblin Games
-    pdfBlobKey: rulebooks/v1/lost-ruins-of-arnak_rulebook.pdf
-    pdfSha256: d697b0612bbab7b16d183bdaee061d17fea25d6be485329e0c98bc90a1af11c1
-    pdfVersion: '1.0'
   - title: The Castles of Burgundy
     bggId: 84876
     language: en
@@ -3006,9 +2994,6 @@ catalog:
     - Vendetta
     - Zhiyanjia
     - Ігромаг
-    pdfBlobKey: rulebooks/v1/hive-pocket_rulebook.pdf
-    pdfSha256: d5dc5809bc293ef53f13b4aa92bbf833d6f7d95852b14bf491a4e2713478d1d5
-    pdfVersion: '1.0'
   - title: Raiders of the North Sea
     bggId: 170042
     language: en
@@ -3207,9 +3192,6 @@ catalog:
     - Hasbro
     - Play Factory
     - PS-Games
-    pdfBlobKey: rulebooks/v1/guillotine_rulebook.pdf
-    pdfSha256: 6272d65910f05a2a9ada9aa79d1247b3d015cc3b2b402d465f32894ef0928b76
-    pdfVersion: '1.0'
   - title: Harmonies
     bggId: 414317
     language: en

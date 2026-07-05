@@ -242,34 +242,13 @@ internal static class SessionFlowEndpoints
         .Produces(200)
         .Produces(401);
 
-        // GameNight diary (read) — C2 fix: passes RequesterId for ownership check
-        app.MapGet("/game-nights/{gameNightId:guid}/diary", async (
-            Guid gameNightId,
-            HttpContext httpContext,
-            IMediator mediator,
-            CancellationToken ct,
-            string? eventTypes = null,
-            DateTime? since = null,
-            int? limit = null) =>
-        {
-            var userId = httpContext.User.GetUserId();
-            var types = string.IsNullOrWhiteSpace(eventTypes)
-                ? null
-                : eventTypes
-                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                    .ToArray();
-
-            var result = await mediator
-                .Send(new GetGameNightDiaryQuery(gameNightId, userId, types, since, limit ?? 500), ct)
-                .ConfigureAwait(false);
-            return Results.Ok(result);
-        })
-        .RequireAuthenticatedUser()
-        .WithName("SessionFlow_GetGameNightDiary")
-        .WithTags("SessionFlow")
-        .WithSummary("Read the append-only diary for a whole game night (unions all attached sessions).")
-        .Produces(200)
-        .Produces(401);
+        // NOTE (#2633 C2): the GameNight diary GET used to be registered HERE too
+        // ("/game-nights/{gameNightId}/diary") — colliding with GameNightEndpoints' canonical
+        // "GetGameNightDiary" on the same v1 group → AmbiguousMatchException (HTTP 500) on every
+        // diary GET. Retired: the canonical, participant-guarded endpoint is
+        // GameNightEndpoints.HandleGetGameNightDiary (GameManagement, returns GameNightDiaryDto with
+        // server-side Descriptions). The SessionTracking GetGameNightDiaryQuery (5-arg, raw
+        // SessionEventDto[]) remains for unit-test coverage but is no longer routed.
 
         // Current session probe (orphan recovery — NFR-9)
         app.MapGet("/sessions/current", async (

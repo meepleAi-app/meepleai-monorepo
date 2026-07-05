@@ -86,12 +86,20 @@ public class SessionEventRepository : RepositoryBase, ISessionEventRepository
         Guid gameNightId,
         int limit = 200,
         int offset = 0,
+        bool newestFirst = false,
         CancellationToken ct = default)
     {
-        var entities = await DbContext.SessionEvents
+        var filtered = DbContext.SessionEvents
             .AsNoTracking()
-            .Where(e => e.GameNightId == gameNightId && !e.IsDeleted)
-            .OrderBy(e => e.Timestamp)
+            .Where(e => e.GameNightId == gameNightId && !e.IsDeleted);
+
+        // #2633 C2 must-fix: newest-first keeps the MOST RECENT `limit` events on a long night;
+        // the default ASC path preserves the legacy chronological read for existing callers.
+        var ordered = newestFirst
+            ? filtered.OrderByDescending(e => e.Timestamp)
+            : filtered.OrderBy(e => e.Timestamp);
+
+        var entities = await ordered
             .Skip(offset)
             .Take(limit)
             .ToListAsync(ct)

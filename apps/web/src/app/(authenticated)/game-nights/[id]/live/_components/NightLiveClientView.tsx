@@ -20,7 +20,9 @@ import { useRouter } from 'next/navigation';
 import { BlockedLiveSessionModal, NightLiveHub } from '@/components/features/game-nights/live';
 import { ForbiddenError, NotFoundError, UnauthorizedError } from '@/lib/api/core/errors';
 import { useGameNightLive } from '@/lib/game-nights/hooks/useGameNightLive';
+import { useNightLiveDiary } from '@/lib/game-nights/hooks/useNightLiveDiary';
 import { isMaxLiveBlockedError, useStartNextGame } from '@/lib/game-nights/hooks/useStartNextGame';
+import { mapDiary } from '@/lib/game-nights/mapDiary';
 
 export interface NightLiveClientViewProps {
   readonly nightId: string;
@@ -29,6 +31,10 @@ export interface NightLiveClientViewProps {
 export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
   const router = useRouter();
   const { data: vm, isLoading, isError, error } = useGameNightLive(nightId);
+  // Slice C2: the diary is a SEPARATE participant-guarded read; composed with the live VM
+  // below via mapDiary (panel D2). Its own error/loading is non-fatal — the hub renders an
+  // empty diary rather than blocking the live view.
+  const { data: diaryDto } = useNightLiveDiary(nightId);
 
   const handleBack = useCallback(() => {
     router.push(`/game-nights/${nightId}`);
@@ -123,6 +129,13 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
   // next game when the current one is over. The 409 modal is the backstop for races.
   const showStartCta = vm.isViewerOrganizer && nextGame !== null && vm.status !== 'live';
 
+  // Slice C2 (panel D2): compose the diary here, keyed off the live sessionId→game lookup.
+  // A pending/errored diary read yields empty arrays — the hub degrades to an empty diary
+  // rather than blocking the live view (AC6).
+  const diary = diaryDto
+    ? mapDiary(diaryDto, vm.sessions)
+    : { diaryEvents: [], diaryGames: [], diaryPlayers: [] };
+
   return (
     <>
       <NightLiveHub
@@ -136,9 +149,9 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
         totalPlayers={vm.totalPlayers}
         plannedGames={vm.plannedGames}
         currentGame={vm.currentGame}
-        diaryEvents={vm.diaryEvents}
-        diaryGames={vm.diaryGames}
-        diaryPlayers={vm.diaryPlayers}
+        diaryEvents={diary.diaryEvents}
+        diaryGames={diary.diaryGames}
+        diaryPlayers={diary.diaryPlayers}
         onBack={handleBack}
         onJumpToSession={handleJumpToSession}
       />

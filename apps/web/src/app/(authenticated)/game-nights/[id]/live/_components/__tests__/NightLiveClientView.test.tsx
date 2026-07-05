@@ -53,6 +53,24 @@ vi.mock('@/lib/game-nights/hooks/useNightLiveDiary', () => ({
   },
 }));
 
+// #2634 C4: the organizer "Completa" mutation.
+const completeMutateMock = vi.hoisted(() => vi.fn());
+const completeResetMock = vi.hoisted(() => vi.fn());
+const completeState = vi.hoisted(() => ({
+  isPending: false,
+  isError: false,
+  error: null as Error | null,
+}));
+vi.mock('@/lib/game-nights/hooks/useCompleteGameNightSession', () => ({
+  useCompleteGameNightSession: () => ({
+    mutate: completeMutateMock,
+    reset: completeResetMock,
+    isPending: completeState.isPending,
+    isError: completeState.isError,
+    error: completeState.error,
+  }),
+}));
+
 const pushMock = vi.fn();
 const replaceMock = vi.fn();
 vi.mock('next/navigation', () => ({
@@ -98,6 +116,7 @@ function vm(over: Partial<NightLiveViewModel> = {}): NightLiveViewModel {
     ],
     currentGame: null,
     sessions: [],
+    winnerCandidates: [],
     ...over,
   };
 }
@@ -115,6 +134,9 @@ function mockQuery(over: Record<string, unknown>) {
 beforeEach(() => {
   vi.clearAllMocks();
   startNextState.isPending = false;
+  completeState.isPending = false;
+  completeState.isError = false;
+  completeState.error = null;
   useNightLiveDiaryMock.mockReturnValue({ data: undefined });
 });
 
@@ -291,6 +313,76 @@ describe('NightLiveClientView — diary composition (Slice C2)', () => {
 
     // the live hub still renders (no crash / no dependency on the diary read)
     expect(screen.getByText('Serata Eldoria')).toBeInTheDocument();
+  });
+});
+
+describe('NightLiveClientView — organizer Completa + winner picker (C4)', () => {
+  const ROSTER = [
+    { id: '77777777-7777-4777-8777-777777777777', displayName: 'Alice' },
+    { id: '88888888-8888-4888-8888-888888888888', displayName: 'Bob' },
+  ];
+
+  it('shows the "Completa partita" CTA for the organizer while a game is live', () => {
+    mockQuery({ data: vm({ isViewerOrganizer: true, status: 'live', winnerCandidates: ROSTER }) });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    expect(screen.getByRole('button', { name: /Completa partita/i })).toBeInTheDocument();
+  });
+
+  it('does NOT show the Completa CTA for a non-organizer', () => {
+    mockQuery({ data: vm({ isViewerOrganizer: false, status: 'live', winnerCandidates: ROSTER }) });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    expect(screen.queryByRole('button', { name: /Completa partita/i })).toBeNull();
+  });
+
+  it('does NOT show the Completa CTA when no game is live', () => {
+    mockQuery({
+      data: vm({ isViewerOrganizer: true, status: 'transition', winnerCandidates: [] }),
+    });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    expect(screen.queryByRole('button', { name: /Completa partita/i })).toBeNull();
+  });
+
+  it('opens the winner picker with the live roster candidates', async () => {
+    mockQuery({ data: vm({ isViewerOrganizer: true, status: 'live', winnerCandidates: ROSTER }) });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    await userEvent.click(screen.getByRole('button', { name: /Completa partita/i }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('Alice')).toBeInTheDocument();
+    expect(screen.getByText('Bob')).toBeInTheDocument();
+  });
+
+  it('resets a stale mutation error before re-opening the picker', async () => {
+    // A previous attempt left a 409 on the mutation; opening the picker must clear it first so
+    // the re-opened modal does not immediately show the old error (review MINOR #2).
+    completeState.isError = true;
+    completeState.error = new ConflictError({ message: 'no live' });
+    mockQuery({ data: vm({ isViewerOrganizer: true, status: 'live', winnerCandidates: ROSTER }) });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    await userEvent.click(screen.getByRole('button', { name: /Completa partita/i }));
+    expect(completeResetMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('completes with the selected winner participant id', async () => {
+    mockQuery({ data: vm({ isViewerOrganizer: true, status: 'live', winnerCandidates: ROSTER }) });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    await userEvent.click(screen.getByRole('button', { name: /Completa partita/i }));
+    await userEvent.click(screen.getByRole('radio', { name: 'Alice' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Completa' }));
+    expect(completeMutateMock).toHaveBeenCalledWith(
+      { winnerId: ROSTER[0].id },
+      expect.objectContaining({ onSuccess: expect.any(Function) })
+    );
+  });
+
+  it('completes with no winner when "Nessun vincitore" is selected (default)', async () => {
+    mockQuery({ data: vm({ isViewerOrganizer: true, status: 'live', winnerCandidates: ROSTER }) });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    await userEvent.click(screen.getByRole('button', { name: /Completa partita/i }));
+    await userEvent.click(screen.getByRole('button', { name: 'Completa' }));
+    expect(completeMutateMock).toHaveBeenCalledWith(
+      { winnerId: undefined },
+      expect.objectContaining({ onSuccess: expect.any(Function) })
+    );
   });
 });
 

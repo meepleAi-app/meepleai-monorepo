@@ -63,6 +63,9 @@ export const GameNightSessionDtoSchema = z.object({
   playOrder: z.number().int(),
   status: GameNightSessionStatusSchema,
   winnerId: z.string().uuid().nullable(),
+  // #2634 C4: the winner's display name, BE-resolved from winnerId (a Participant.Id), scoped by
+  // session and guest-capable. null when there is no winner (or it could not be resolved).
+  winnerName: z.string().nullable(),
   startedAt: z.string().nullable(),
   completedAt: z.string().nullable(),
 });
@@ -73,6 +76,13 @@ export const GameNightLineupItemDtoSchema = z.object({
   gameTitle: z.string(),
 });
 export type GameNightLineupItemDto = z.infer<typeof GameNightLineupItemDtoSchema>;
+
+// #2634 C4: a candidate winner in the current live session — a tracking Participant.
+export const GameNightRosterMemberDtoSchema = z.object({
+  participantId: z.string().uuid(),
+  displayName: z.string(),
+});
+export type GameNightRosterMemberDto = z.infer<typeof GameNightRosterMemberDtoSchema>;
 
 // WS1 DEC-10: result of POST /game-nights/{id}/sessions (start next game).
 export const StartGameNightSessionResultSchema = z.object({
@@ -92,6 +102,9 @@ export const GameNightLiveDtoSchema = z.object({
   isViewerOrganizer: z.boolean(),
   // WS1 DEC-9: planned games not yet started, in order — the CTA starts the first.
   plannedLineup: z.array(GameNightLineupItemDtoSchema),
+  // #2634 C4: the in-progress session's participants — the winner-picker candidates. Empty when
+  // no game is live.
+  currentSessionRoster: z.array(GameNightRosterMemberDtoSchema),
 });
 export type GameNightLiveDto = z.infer<typeof GameNightLiveDtoSchema>;
 

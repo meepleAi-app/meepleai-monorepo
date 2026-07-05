@@ -49,6 +49,7 @@ const LIVE_DTO: GameNightLiveDto = {
       playOrder: 1,
       status: 'Completed',
       winnerId: null,
+      winnerName: null,
       startedAt: '2026-07-04T20:00:00Z',
       completedAt: '2026-07-04T21:53:00Z',
     },
@@ -59,12 +60,14 @@ const LIVE_DTO: GameNightLiveDto = {
       playOrder: 2,
       status: 'InProgress',
       winnerId: null,
+      winnerName: null,
       startedAt: '2026-07-04T22:00:00Z',
       completedAt: null,
     },
   ],
   isViewerOrganizer: true,
   plannedLineup: [],
+  currentSessionRoster: [],
 };
 
 describe('useGameNightLive — query key factory', () => {

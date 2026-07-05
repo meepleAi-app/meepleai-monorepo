@@ -22,6 +22,9 @@ export type {
 export { BlockedLiveSessionModal } from '@/components/features/game-nights/live/BlockedLiveSessionModal';
 export type { BlockedLiveSessionModalProps } from '@/components/features/game-nights/live/BlockedLiveSessionModal';
 
+export { WinnerPickerModal } from '@/components/features/game-nights/live/WinnerPickerModal';
+export type { WinnerPickerModalProps } from '@/components/features/game-nights/live/WinnerPickerModal';
+
 export { NightLiveHub } from '@/components/features/game-nights/live/NightLiveHub';
 export type {
   NightLiveHubProps,

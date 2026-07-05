@@ -29,6 +29,7 @@ function session(over: Partial<GameNightLiveDto['sessions'][number]>) {
     playOrder: 1,
     status: 'Pending' as const,
     winnerId: null,
+    winnerName: null,
     startedAt: null,
     completedAt: null,
     ...over,
@@ -43,6 +44,7 @@ function live(over: Partial<GameNightLiveDto> = {}): GameNightLiveDto {
     sessions: [],
     isViewerOrganizer: false,
     plannedLineup: [],
+    currentSessionRoster: [],
     ...over,
   };
 }
@@ -351,6 +353,38 @@ describe('mapNightLiveToViewModel — empty night (LD-11) + Slice-C seam (LD-3)'
     expect(vm.elapsed).toBe('0h 0m');
     expect(vm.status).toBe('transition');
     expect(vm.night.title).toBe('Serata Eldoria');
+  });
+
+  it('populates the resolved winner on a completed session (C4)', () => {
+    const winnerId = 'bbbb1111-1111-4111-8111-111111111111';
+    const vm = mapNightLiveToViewModel(
+      live({
+        sessions: [
+          session({
+            status: 'Completed',
+            winnerId,
+            winnerName: 'Guest Gina',
+            startedAt: '2026-07-04T20:00:00Z',
+            completedAt: '2026-07-04T21:00:00Z',
+          }),
+        ],
+      }),
+      NOW
+    );
+
+    const winner = vm.plannedGames[0].winner;
+    expect(winner).toBeDefined();
+    expect(winner?.name).toBe('Guest Gina');
+    expect(winner?.initials).toBe('GG');
+    expect(typeof winner?.color).toBe('number'); // hue for the chip's hsl(color,60%,55%)
+  });
+
+  it('leaves winner undefined when the BE resolved no name (D7 — no synthesized winner)', () => {
+    const vm = mapNightLiveToViewModel(
+      live({ sessions: [session({ status: 'Completed', winnerId: null, winnerName: null })] }),
+      NOW
+    );
+    expect(vm.plannedGames[0].winner).toBeUndefined();
   });
 
   it('exposes the sessionId→game lookup mapDiary joins against (Slice C2)', () => {

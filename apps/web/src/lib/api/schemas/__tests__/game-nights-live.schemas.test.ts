@@ -18,6 +18,7 @@ const SESSION = {
   playOrder: 1,
   status: 'InProgress',
   winnerId: null,
+  winnerName: null, // #2634 C4
   startedAt: '2026-07-04T20:00:00+00:00',
   completedAt: null,
 };
@@ -29,6 +30,7 @@ const LIVE = {
   sessions: [SESSION],
   isViewerOrganizer: true,
   plannedLineup: [],
+  currentSessionRoster: [], // #2634 C4
 };
 
 describe('GameNightSessionStatusSchema', () => {
@@ -67,5 +69,29 @@ describe('GameNightLiveDtoSchema', () => {
   it('throws when a session carries an unknown status (poison record fails fast)', () => {
     const poison = { ...LIVE, sessions: [{ ...SESSION, status: 'WhoKnows' }] };
     expect(() => GameNightLiveDtoSchema.parse(poison)).toThrow();
+  });
+
+  // #2634 C4: round-trip the winner name + the live roster.
+  it('round-trips winnerName + currentSessionRoster (C4)', () => {
+    const withWinner = {
+      ...LIVE,
+      sessions: [
+        {
+          ...SESSION,
+          status: 'Completed',
+          winnerId: '44444444-4444-4444-8444-444444444444',
+          winnerName: 'Alice',
+          completedAt: '2026-07-04T21:00:00+00:00',
+        },
+      ],
+      currentSessionRoster: [
+        { participantId: '44444444-4444-4444-8444-444444444444', displayName: 'Alice' },
+        { participantId: '55555555-5555-4555-8555-555555555555', displayName: 'Guest Gina' },
+      ],
+    };
+    const parsed = GameNightLiveDtoSchema.parse(withWinner);
+    expect(parsed.sessions[0].winnerName).toBe('Alice');
+    expect(parsed.currentSessionRoster).toHaveLength(2);
+    expect(parsed.currentSessionRoster[1].displayName).toBe('Guest Gina');
   });
 });

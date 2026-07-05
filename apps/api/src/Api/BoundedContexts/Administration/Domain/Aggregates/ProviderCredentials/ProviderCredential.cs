@@ -23,7 +23,10 @@ public sealed class ProviderCredential
     public DateTime RotatedAt { get; private set; }
     public Guid RotatedByUserId { get; private set; }
     public Guid? PreviousCredentialId { get; private set; }
-    public byte[] RowVersion { get; private set; } = Array.Empty<byte>();
+    // Nullable so the Npgsql provider can omit the store-generated row_version from the
+    // INSERT (a NOT NULL bytea column raised a 23502 violation on the first insert).
+    // Get-only: EF Core populates it via reflection; optimistic concurrency applies on UPDATE.
+    public byte[]? RowVersion { get; }
 
     public IReadOnlyCollection<INotification> DomainEvents => _domainEvents.AsReadOnly();
     public void ClearDomainEvents() => _domainEvents.Clear();

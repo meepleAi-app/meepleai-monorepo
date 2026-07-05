@@ -48,6 +48,12 @@ internal sealed class ProviderCredentialEntityConfiguration
         builder.Property(e => e.PreviousCredentialId)
             .HasColumnName("previous_credential_id");
 
+        // Optimistic concurrency token. The column MUST be nullable: with .IsRowVersion()
+        // the Npgsql provider treats row_version as store-generated and omits it from the
+        // INSERT, so a NOT NULL bytea column raised a 23502 not-null violation on the first
+        // credential INSERT (breaking rotate-key). A nullable column lets the provider omit
+        // it on INSERT and still enforce optimistic concurrency on UPDATE. Mirrors the
+        // PhotoBatchUpload fix (migration 20260524190307_FixPhotoBatchUploadRowVersionNullable).
         builder.Property(e => e.RowVersion)
             .HasColumnName("row_version")
             .IsRowVersion();

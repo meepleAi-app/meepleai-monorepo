@@ -38,6 +38,15 @@ export const gameNightSessionClient = {
       gameTitle,
     }),
 
+  // SI-4 (#2635): resume a gamebook campaign as a new live sitting on its game-night
+  // (POST /game-nights/{id}/gamebook-sessions → AttachGamebookCampaignToGameNightCommand).
+  // Same response shape as startSession; a max-1-live 409 carries MAX_LIVE_SESSIONS_EXCEEDED.
+  attachGamebookCampaign: (gameNightId: string, campaignId: string) =>
+    apiClient.post<StartSessionResponse>(
+      `${BASE}/${encodeURIComponent(gameNightId)}/gamebook-sessions`,
+      { campaignId }
+    ),
+
   completeSession: (gameNightId: string, winnerId?: string) =>
     apiClient.post<void>(`${BASE}/${encodeURIComponent(gameNightId)}/sessions/complete`, {
       winnerId: winnerId ?? null,

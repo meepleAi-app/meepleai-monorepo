@@ -25,7 +25,8 @@ public sealed class ProviderCredential
     public Guid? PreviousCredentialId { get; private set; }
     // Nullable so the Npgsql provider can omit the store-generated row_version from the
     // INSERT (a NOT NULL bytea column raised a 23502 violation on the first insert).
-    // Get-only: EF Core populates it via reflection; optimistic concurrency applies on UPDATE.
+    // Get-only: EF Core populates it via reflection. The token is not populated on this table
+    // (no trigger/xmin), so the 1-active-row guard is the ux_provider_credentials_active_one index.
     public byte[]? RowVersion { get; }
 
     public IReadOnlyCollection<INotification> DomainEvents => _domainEvents.AsReadOnly();

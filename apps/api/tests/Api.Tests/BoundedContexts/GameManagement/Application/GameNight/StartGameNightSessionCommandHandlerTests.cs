@@ -196,6 +196,48 @@ public class StartGameNightSessionCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_NoParticipants_SeedsOrganizerOwnerPlusAcceptedRsvpPlayers()
+    {
+        // #2634 C4: when the start command carries no explicit roster, seed from the night —
+        // the organizer as owner + every ACCEPTED-RSVP player (Pending/Declined excluded).
+        var organizerId = Guid.NewGuid();
+        var player2 = Guid.NewGuid();
+        var player3 = Guid.NewGuid();
+        var pendingPlayer = Guid.NewGuid();
+        var gameNight = GameNightEvent.Create(
+            organizerId, "Serata", DateTimeOffset.UtcNow.AddHours(1), gameIds: [Guid.NewGuid()]);
+        gameNight.Publish([player2, player3, pendingPlayer]); // 3 invited → Pending RSVPs
+        gameNight.GetRsvp(player2)!.Accept();
+        gameNight.GetRsvp(player3)!.Accept();
+        // pendingPlayer stays Pending → excluded from the seeded roster
+
+        _mockRepository.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GetUserByIdQuery q, CancellationToken _) =>
+                CreateOrganizerDto(q.UserId, $"User-{q.UserId.ToString()[..4]}"));
+        _mockMediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CreateSessionResult(
+                Guid.NewGuid(), "ABC123", [], GameNightEventId: gameNight.Id,
+                GameNightWasCreated: false, AgentDefinitionId: null, ToolkitId: null));
+
+        var command = new StartGameNightSessionCommand(
+            gameNight.Id, gameNight.GameIds[0], "Catan", organizerId);
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        _mockMediator.Verify(m => m.Send(
+            It.Is<CreateSessionCommand>(c =>
+                c.Participants.Count == 3 &&
+                c.Participants.Count(p => p.IsOwner) == 1 &&
+                c.Participants.Any(p => p.UserId == organizerId && p.IsOwner) &&
+                c.Participants.Any(p => p.UserId == player2 && !p.IsOwner) &&
+                c.Participants.Any(p => p.UserId == player3 && !p.IsOwner) &&
+                c.Participants.All(p => p.UserId != pendingPlayer)),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task Handle_WithProvidedParticipants_UsesThemDirectly()
     {
         // Arrange

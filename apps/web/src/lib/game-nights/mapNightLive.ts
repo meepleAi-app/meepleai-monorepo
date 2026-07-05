@@ -25,6 +25,8 @@ import type {
   GameNightSessionStatus,
   GameNightStatus,
 } from '@/lib/api/schemas/game-nights.schemas';
+import { userHue } from '@/lib/colors/user-hue';
+import { personInitials } from '@/lib/format/person-initials';
 import { hashToHue } from '@/lib/games/cover-utils';
 
 /**
@@ -61,6 +63,14 @@ export interface NightLiveViewModel {
   readonly currentGame: NightLiveHubCurrentGame | null;
   /** Slice C2: sessionId → gameId/title lookup for the diary join (not rendered directly). */
   readonly sessions: readonly NightSessionRef[];
+  /** #2634 C4: the live session's participants — the "Completa" winner-picker candidates. */
+  readonly winnerCandidates: readonly WinnerCandidate[];
+}
+
+/** #2634 C4: a candidate winner (a tracking-Session Participant) for the Completa picker. */
+export interface WinnerCandidate {
+  readonly id: string; // Participant.Id — sent as winnerId on complete
+  readonly displayName: string;
 }
 
 const MINUTE_MS = 60_000;
@@ -152,6 +162,16 @@ export function mapNightLiveToViewModel(dto: GameNightLiveDto, now: Date): Night
     actual: toActual(session, nowMs),
     cover: coverFromGameId(session.gameId),
     winnerId: session.winnerId ?? undefined, // LD-2: carried for Slice C
+    // #2634 C4: populate the resolved winner ONLY when the BE gave a name (D7: never synthesize
+    // one for a null winner). Skipped/Corrupted sessions have no winnerName → no chip. Colour is a
+    // deterministic hue off the Participant.Id (guest-capable); initials come from the person name.
+    winner: session.winnerName
+      ? {
+          name: session.winnerName,
+          initials: personInitials(session.winnerName),
+          color: userHue(session.winnerId ?? session.winnerName),
+        }
+      : undefined,
     muted: session.status === 'Skipped' ? true : undefined, // LD-4
   }));
 
@@ -207,6 +227,11 @@ export function mapNightLiveToViewModel(dto: GameNightLiveDto, now: Date): Night
       sessionId: s.sessionId,
       gameId: s.gameId,
       gameTitle: toTitle(s),
+    })),
+    // #2634 C4: the live session's roster → the Completa winner-picker candidates.
+    winnerCandidates: dto.currentSessionRoster.map(m => ({
+      id: m.participantId,
+      displayName: m.displayName,
     })),
   };
 }

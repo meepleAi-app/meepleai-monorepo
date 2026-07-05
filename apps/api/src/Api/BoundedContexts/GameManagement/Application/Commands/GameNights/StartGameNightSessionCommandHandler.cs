@@ -1,5 +1,7 @@
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
+using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Exceptions;
 using Api.BoundedContexts.GameToolbox.Application.Commands;
 using Api.BoundedContexts.GameToolbox.Application.Queries;
@@ -57,7 +59,7 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
         gameNight.EnsureCanStartSession();
 
         // Build participant list: auto-seed organizer when command provides none.
-        var participants = await BuildParticipantsAsync(command, cancellationToken).ConfigureAwait(false);
+        var participants = await BuildParticipantsAsync(gameNight, command, cancellationToken).ConfigureAwait(false);
 
         // WS1 DEC-5 (atomicity): the cross-BC Session INSERT and the aggregate link run in ONE
         // explicit transaction. CreateSessionCommand's inner SaveChangesAsync enlists in this
@@ -160,7 +162,7 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
     }
 
     private async Task<List<ParticipantDto>> BuildParticipantsAsync(
-        StartGameNightSessionCommand command, CancellationToken cancellationToken)
+        GameNightEvent gameNight, StartGameNightSessionCommand command, CancellationToken cancellationToken)
     {
         if (command.Participants is not null && command.Participants.Count > 0)
         {
@@ -169,24 +171,50 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
             return command.Participants.ToList();
         }
 
-        // Auto-seed: look up organizer via Authentication BC (cross-BC MediatR dispatch)
+        // #2634 C4: seed the roster from the night — the organizer as owner (JoinOrder 0) plus every
+        // ACCEPTED-RSVP player. This replaces the WS1 organizer-only auto-seed so a real night carries
+        // its confirmed players (and the winner picker has real candidates). RSVPs are User-linked, so
+        // this seeds Users only; a guest-player mechanism is out of C4 scope.
         var organizer = await _mediator.Send(new GetUserByIdQuery(command.UserId), cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("User", command.UserId.ToString());
 
-        var displayName = !string.IsNullOrWhiteSpace(organizer.DisplayName)
-            ? organizer.DisplayName
-            : organizer.Email;
-
-        return new List<ParticipantDto>
+        var participants = new List<ParticipantDto>
         {
             new()
             {
                 Id = Guid.NewGuid(),
                 UserId = command.UserId,
-                DisplayName = displayName,
+                DisplayName = DisplayNameOf(organizer),
                 IsOwner = true,
                 JoinOrder = 0
             }
         };
+
+        var acceptedPlayerIds = gameNight.Rsvps
+            .Where(r => r.Status == RsvpStatus.Accepted && r.UserId != command.UserId)
+            .Select(r => r.UserId)
+            .Distinct()
+            .ToList();
+
+        var joinOrder = 1;
+        foreach (var userId in acceptedPlayerIds)
+        {
+            var player = await _mediator.Send(new GetUserByIdQuery(userId), cancellationToken).ConfigureAwait(false);
+            if (player is null) continue; // an accepted RSVP whose user no longer resolves is skipped, not fatal
+
+            participants.Add(new ParticipantDto
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                DisplayName = DisplayNameOf(player),
+                IsOwner = false,
+                JoinOrder = joinOrder++
+            });
+        }
+
+        return participants;
     }
+
+    private static string DisplayNameOf(UserDto user) =>
+        !string.IsNullOrWhiteSpace(user.DisplayName) ? user.DisplayName : user.Email;
 }

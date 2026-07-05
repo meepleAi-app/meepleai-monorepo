@@ -17,8 +17,18 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { BlockedLiveSessionModal, NightLiveHub } from '@/components/features/game-nights/live';
-import { ForbiddenError, NotFoundError, UnauthorizedError } from '@/lib/api/core/errors';
+import {
+  BlockedLiveSessionModal,
+  NightLiveHub,
+  WinnerPickerModal,
+} from '@/components/features/game-nights/live';
+import {
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+  UnauthorizedError,
+} from '@/lib/api/core/errors';
+import { useCompleteGameNightSession } from '@/lib/game-nights/hooks/useCompleteGameNightSession';
 import { useGameNightLive } from '@/lib/game-nights/hooks/useGameNightLive';
 import { useNightLiveDiary } from '@/lib/game-nights/hooks/useNightLiveDiary';
 import { isMaxLiveBlockedError, useStartNextGame } from '@/lib/game-nights/hooks/useStartNextGame';
@@ -68,6 +78,17 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
       );
     },
     [startNextGame]
+  );
+
+  // #2634 C4: organizer completes the live game, optionally picking a winner from the guarded
+  // roster. Complementary to the WS1 start CTA (live → Completa → transition → Avvia prossimo).
+  const completeGame = useCompleteGameNightSession(nightId);
+  const [winnerPickerOpen, setWinnerPickerOpen] = useState(false);
+  const handleCompleteConfirm = useCallback(
+    (winnerId?: string) => {
+      completeGame.mutate({ winnerId }, { onSuccess: () => setWinnerPickerOpen(false) });
+    },
+    [completeGame]
   );
 
   // LD-14: a Completed night must not render a fake-live hub over stale data —
@@ -128,6 +149,15 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
   // DEC-10: hidden when a game is already live (status==='live') — you can only start the
   // next game when the current one is over. The 409 modal is the backstop for races.
   const showStartCta = vm.isViewerOrganizer && nextGame !== null && vm.status !== 'live';
+  // #2634 C4: the organizer completes the live game. Mutually exclusive with the start CTA above.
+  const showCompleteCta = vm.isViewerOrganizer && vm.status === 'live';
+  const completeErrorMessage = completeGame.isError
+    ? completeGame.error instanceof ForbiddenError
+      ? 'Solo l’organizzatore può completare la partita.'
+      : completeGame.error instanceof ConflictError
+        ? 'Non è possibile completare ora (nessuna partita live o vincitore non valido).'
+        : 'Impossibile completare la partita. Riprova.'
+    : null;
 
   // Slice C2 (panel D2): compose the diary here, keyed off the live sessionId→game lookup.
   // A pending/errored diary read yields empty arrays — the hub degrades to an empty diary
@@ -168,6 +198,31 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
           </button>
         </div>
       ) : null}
+
+      {showCompleteCta ? (
+        <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center p-4">
+          <button
+            type="button"
+            onClick={() => {
+              completeGame.reset(); // clear a stale 409/403 from a previous attempt before re-opening
+              setWinnerPickerOpen(true);
+            }}
+            disabled={completeGame.isPending}
+            className="flex items-center gap-2 rounded-full border border-entity-session/40 bg-entity-session px-5 py-2.5 font-display text-sm font-extrabold text-white shadow-lg transition hover:bg-entity-session/90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            🏁 Completa partita
+          </button>
+        </div>
+      ) : null}
+
+      <WinnerPickerModal
+        open={winnerPickerOpen}
+        candidates={vm.winnerCandidates}
+        pending={completeGame.isPending}
+        errorMessage={winnerPickerOpen ? completeErrorMessage : null}
+        onCancel={() => setWinnerPickerOpen(false)}
+        onConfirm={handleCompleteConfirm}
+      />
 
       <BlockedLiveSessionModal
         open={blockedModalOpen}

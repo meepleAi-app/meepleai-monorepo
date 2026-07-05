@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
+using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -37,6 +38,28 @@ internal sealed class GetGameNightLiveQueryHandler : IQueryHandler<GetGameNightL
         if (!isParticipant)
             throw new ForbiddenException("Only the organizer or an invited player can view the night-live state.");
 
+        // #2634 C4: batch-load the tracking-Session participants for winner-name resolution + the
+        // in-progress roster (the winner picker). Deliberate GameManagement→SessionTracking cross-BC
+        // read over the participant table; scoped to this night's sessions only.
+        var sessionIds = gameNight.Sessions.Select(s => s.SessionId).ToList();
+        var participants = sessionIds.Count == 0
+            ? new List<ParticipantRef>()
+            : await _db.SessionTrackingParticipants.AsNoTracking()
+                .Where(p => sessionIds.Contains(p.SessionId))
+                .Select(p => new ParticipantRef(p.Id, p.SessionId, p.DisplayName))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+        // Scoped by (SessionId, WinnerId): a stray/foreign Participant.Id fails closed to null
+        // rather than resolving a plausible-but-wrong name (panel D2).
+        string? WinnerNameFor(GameNightSession s) =>
+            s.WinnerId is { } wid
+                ? participants
+                    .Where(p => p.SessionId == s.SessionId && p.Id == wid)
+                    .Select(p => p.DisplayName)
+                    .FirstOrDefault()
+                : null;
+
         var sessions = gameNight.Sessions
             .OrderBy(s => s.PlayOrder)
             .Select(s => new GameNightSessionDto(
@@ -46,9 +69,20 @@ internal sealed class GetGameNightLiveQueryHandler : IQueryHandler<GetGameNightL
                 s.PlayOrder,
                 s.Status,
                 s.WinnerId,
+                WinnerNameFor(s),
                 s.StartedAt,
                 s.CompletedAt))
             .ToList();
+
+        // The winner picker candidates = the participants of the (single) in-progress session.
+        var inProgressSessionId = gameNight.Sessions
+            .FirstOrDefault(s => s.Status == GameNightSessionStatus.InProgress)?.SessionId;
+        var currentSessionRoster = inProgressSessionId is { } liveId
+            ? participants
+                .Where(p => p.SessionId == liveId)
+                .Select(p => new GameNightRosterMemberDto(p.Id, p.DisplayName))
+                .ToList()
+            : new List<GameNightRosterMemberDto>();
 
         // WS1 DEC-9: the planned games (GameIds) not yet started as a Session, in planned order.
         var startedGameIds = gameNight.Sessions.Select(s => s.GameId).ToHashSet();
@@ -65,6 +99,10 @@ internal sealed class GetGameNightLiveQueryHandler : IQueryHandler<GetGameNightL
             .ToList();
 
         return new GameNightLiveDto(
-            gameNight.Id, gameNight.Title, gameNight.Status, sessions, isOrganizer, plannedLineup);
+            gameNight.Id, gameNight.Title, gameNight.Status, sessions, isOrganizer, plannedLineup,
+            currentSessionRoster);
     }
+
+    /// <summary>A tracking-Session participant, flattened for the cross-BC roster read.</summary>
+    private sealed record ParticipantRef(Guid Id, Guid SessionId, string DisplayName);
 }

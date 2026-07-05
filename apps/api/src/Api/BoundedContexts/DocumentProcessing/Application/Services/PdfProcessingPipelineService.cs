@@ -450,8 +450,12 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     {
         // Issue #501: Use blob storage with correct GUID format (no hyphens) to match StoreAsync key format
         // Task 4: bucket key decoupled from gameId — uses pdf.Id (see PdfStorageKey + rebucket scripts)
-        var fileId = PdfStorageKey.ForPdf(pdfDoc.Id);
-        var fileStream = await _blobStorageService.RetrieveAsync(fileId, BlobCategory.Pdf, fileId, cancellationToken).ConfigureAwait(false);
+        // Issue #2671: StoreAsync writes the blob under a RANDOM fileId (persisted in FilePath), NOT pdfId.
+        // Recover that fileId from FilePath; ForPdf(Id) is the resourceKey folder, not the fileId. The
+        // ?? fallback preserves legacy behaviour for records with an empty/unparsable FilePath.
+        var resourceKey = PdfStorageKey.ForPdf(pdfDoc.Id);
+        var fileId = PdfStorageKey.FileIdFromPath(pdfDoc.FilePath) ?? resourceKey;
+        var fileStream = await _blobStorageService.RetrieveAsync(fileId, BlobCategory.Pdf, resourceKey, cancellationToken).ConfigureAwait(false);
 
         if (fileStream == null)
         {
@@ -978,9 +982,13 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         string filePath,
         CancellationToken cancellationToken)
     {
-        var fileId = PdfStorageKey.ForPdf(pdfDocumentId);
+        // Issue #2671: the blob lives under a random fileId embedded in FilePath, not pdfId.
+        // Recover it from the persisted path; ForPdf(Id) is the resourceKey folder. The ??
+        // fallback preserves legacy behaviour for records with an empty/unparsable FilePath.
+        var resourceKey = PdfStorageKey.ForPdf(pdfDocumentId);
+        var fileId = PdfStorageKey.FileIdFromPath(filePath) ?? resourceKey;
         var stream = await _blobStorageService
-            .RetrieveAsync(fileId, BlobCategory.Pdf, fileId, cancellationToken)
+            .RetrieveAsync(fileId, BlobCategory.Pdf, resourceKey, cancellationToken)
             .ConfigureAwait(false);
 
         if (stream is null)

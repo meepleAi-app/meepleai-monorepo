@@ -19,12 +19,22 @@ public sealed record GameNightLiveDto(
     bool IsViewerOrganizer,
     // WS1 DEC-9: the planned games not yet turned into a Session, in planned order.
     // The CTA starts the first of these (needs GameId + GameTitle for POST /sessions).
-    IReadOnlyList<GameNightLineupItemDto> PlannedLineup);
+    IReadOnlyList<GameNightLineupItemDto> PlannedLineup,
+    // #2634 C4: the in-progress session's participants (Participant.Id + DisplayName), sourced from
+    // this already-participant-guarded read so the winner picker never hits the unguarded
+    // GET /game-sessions/{id} roster (IDOR). Empty when no game is live.
+    IReadOnlyList<GameNightRosterMemberDto> CurrentSessionRoster);
 
 /// <summary>
 /// A planned game in the night's line-up that has not yet been started as a Session.
 /// </summary>
 public sealed record GameNightLineupItemDto(Guid GameId, string GameTitle);
+
+/// <summary>
+/// #2634 C4: a candidate winner in the current live session — a tracking-Session Participant.
+/// <see cref="ParticipantId"/> is what the FE sends as the winner on POST /sessions/complete.
+/// </summary>
+public sealed record GameNightRosterMemberDto(Guid ParticipantId, string DisplayName);
 
 /// <summary>
 /// A single sitting within the night — a projection of the <c>GameNightSession</c> child entity.
@@ -39,5 +49,9 @@ public sealed record GameNightSessionDto(
     int PlayOrder,
     GameNightSessionStatus Status,
     Guid? WinnerId,
+    // #2634 C4: the WinnerId (a tracking-Session Participant.Id) resolved to a display name,
+    // scoped by (SessionId, WinnerId) so a stray/foreign id fails closed to null. null when the
+    // session has no winner (or it could not be resolved).
+    string? WinnerName,
     DateTimeOffset? StartedAt,
     DateTimeOffset? CompletedAt);

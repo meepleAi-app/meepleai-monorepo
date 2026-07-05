@@ -171,4 +171,105 @@ public class GetGameNightLiveQueryHandlerTests : IDisposable
 
         await act.Should().ThrowAsync<NotFoundException>();
     }
+
+    // #2634 C4: resolve GameNightSession.WinnerId (a tracking Participant.Id) to a display name,
+    // scoped by (SessionId, WinnerId) so a foreign id fails closed to null.
+    [Fact]
+    public async Task Handle_ResolvesWinnerNameScopedBySession_AndNullsForeignIds()
+    {
+        var organizerId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+        var winnerId = Guid.NewGuid();
+        _db.SessionTrackingParticipants.Add(new Api.Infrastructure.Entities.SessionTracking.ParticipantEntity
+        {
+            Id = winnerId, SessionId = sessionId, DisplayName = "Alice", UserId = Guid.NewGuid(), JoinOrder = 1
+        });
+        // A participant with the SAME id but a DIFFERENT session must NOT resolve (scoping).
+        _db.SessionTrackingParticipants.Add(new Api.Infrastructure.Entities.SessionTracking.ParticipantEntity
+        {
+            Id = Guid.NewGuid(), SessionId = Guid.NewGuid(), DisplayName = "Bob", UserId = Guid.NewGuid(), JoinOrder = 1
+        });
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var evt = GameNightEvent.Create(
+            organizerId, "Serata", DateTimeOffset.UtcNow.AddHours(1), gameIds: [Guid.NewGuid()]);
+        evt.Publish([]);
+        evt.AddSession(sessionId, evt.GameIds[0], "Catan");
+        evt.StartCurrentSession();
+        evt.CompleteCurrentSession(winnerId); // Completed with winner
+        _repo.Setup(r => r.GetByIdAsync(evt.Id, It.IsAny<CancellationToken>())).ReturnsAsync(evt);
+
+        var result = await _handler.Handle(
+            new GetGameNightLiveQuery(evt.Id, organizerId), TestContext.Current.CancellationToken);
+
+        result.Sessions[0].WinnerId.Should().Be(winnerId);
+        result.Sessions[0].WinnerName.Should().Be("Alice");
+    }
+
+    [Fact]
+    public async Task Handle_ForeignWinnerId_ResolvesToNullName()
+    {
+        var organizerId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+        var evt = GameNightEvent.Create(
+            organizerId, "Serata", DateTimeOffset.UtcNow.AddHours(1), gameIds: [Guid.NewGuid()]);
+        evt.Publish([]);
+        evt.AddSession(sessionId, evt.GameIds[0], "Catan");
+        evt.StartCurrentSession();
+        evt.CompleteCurrentSession(Guid.NewGuid()); // winner id with NO matching participant row
+        _repo.Setup(r => r.GetByIdAsync(evt.Id, It.IsAny<CancellationToken>())).ReturnsAsync(evt);
+
+        var result = await _handler.Handle(
+            new GetGameNightLiveQuery(evt.Id, organizerId), TestContext.Current.CancellationToken);
+
+        result.Sessions[0].WinnerName.Should().BeNull();
+    }
+
+    // #2634 C4: the in-progress session's participants feed the winner picker off this guarded read.
+    [Fact]
+    public async Task Handle_ExposesInProgressSessionRoster()
+    {
+        var organizerId = Guid.NewGuid();
+        var liveSessionId = Guid.NewGuid();
+        var p1 = Guid.NewGuid();
+        var p2 = Guid.NewGuid();
+        _db.SessionTrackingParticipants.Add(new Api.Infrastructure.Entities.SessionTracking.ParticipantEntity
+        {
+            Id = p1, SessionId = liveSessionId, DisplayName = "Host", UserId = organizerId, IsOwner = true, JoinOrder = 1
+        });
+        _db.SessionTrackingParticipants.Add(new Api.Infrastructure.Entities.SessionTracking.ParticipantEntity
+        {
+            Id = p2, SessionId = liveSessionId, DisplayName = "Guest Gina", UserId = null, JoinOrder = 2
+        });
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var evt = GameNightEvent.Create(
+            organizerId, "Serata", DateTimeOffset.UtcNow.AddHours(1), gameIds: [Guid.NewGuid()]);
+        evt.Publish([]);
+        evt.AddSession(liveSessionId, evt.GameIds[0], "Catan");
+        evt.StartCurrentSession(); // InProgress
+        _repo.Setup(r => r.GetByIdAsync(evt.Id, It.IsAny<CancellationToken>())).ReturnsAsync(evt);
+
+        var result = await _handler.Handle(
+            new GetGameNightLiveQuery(evt.Id, organizerId), TestContext.Current.CancellationToken);
+
+        result.CurrentSessionRoster.Should().HaveCount(2);
+        result.CurrentSessionRoster.Should().Contain(m => m.ParticipantId == p1 && m.DisplayName == "Host");
+        result.CurrentSessionRoster.Should().Contain(m => m.ParticipantId == p2 && m.DisplayName == "Guest Gina");
+    }
+
+    [Fact]
+    public async Task Handle_NoLiveSession_RosterIsEmpty()
+    {
+        var organizerId = Guid.NewGuid();
+        var evt = GameNightEvent.Create(
+            organizerId, "Serata", DateTimeOffset.UtcNow.AddHours(1), gameIds: [Guid.NewGuid()]);
+        evt.Publish([]); // no session started
+        _repo.Setup(r => r.GetByIdAsync(evt.Id, It.IsAny<CancellationToken>())).ReturnsAsync(evt);
+
+        var result = await _handler.Handle(
+            new GetGameNightLiveQuery(evt.Id, organizerId), TestContext.Current.CancellationToken);
+
+        result.CurrentSessionRoster.Should().BeEmpty();
+    }
 }

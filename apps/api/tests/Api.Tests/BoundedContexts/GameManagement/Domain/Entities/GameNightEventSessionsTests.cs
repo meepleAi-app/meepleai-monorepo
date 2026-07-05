@@ -51,6 +51,57 @@ public class GameNightEventSessionsTests
             evt.AddSession(Guid.NewGuid(), Guid.NewGuid(), "Catan"));
     }
 
+    // SI-4 (#2635): resuming a night for a 2nd+ sitting. After the first game starts, the night is
+    // InProgress (#15). Adding a session for the next game must be allowed — this is the WS1 latent
+    // multi-game bug the resume slice fixes (AddSession was Published-only). The max-1-live guard (#10)
+    // lives in EnsureCanStartSession/StartCurrentSession, so relaxing AddSession creates no 2nd live.
+    [Fact]
+    public void AddSession_ToInProgressEvent_Succeeds()
+    {
+        var evt = CreatePublishedEvent();
+        var firstSessionId = Guid.NewGuid();
+        evt.AddSession(firstSessionId, evt.GameIds[0], "Catan");
+        evt.StartCurrentSession();
+        evt.HandleFirstSessionStarted(firstSessionId); // Published → InProgress
+        evt.CompleteCurrentSession(winnerId: null);     // first game done → no live session
+        Assert.Equal(GameNightStatus.InProgress, evt.Status);
+
+        var session = evt.AddSession(Guid.NewGuid(), evt.GameIds[1], "Dixit");
+
+        Assert.Equal(2, evt.Sessions.Count);
+        Assert.Equal(2, session.PlayOrder);
+        Assert.Equal(GameNightStatus.InProgress, evt.Status);
+    }
+
+    // SI-4: resume-from-Completed is OUT — a finalized night is terminal. Reject at the command
+    // boundary with guidance to start a new session, never resurrect a terminal state (spec-panel).
+    [Fact]
+    public void AddSession_ToCompletedEvent_ThrowsWithResumeGuidance()
+    {
+        var evt = CreatePublishedEvent();
+        var firstSessionId = Guid.NewGuid();
+        evt.AddSession(firstSessionId, evt.GameIds[0], "Catan");
+        evt.StartCurrentSession();
+        evt.HandleFirstSessionStarted(firstSessionId); // Published → InProgress
+        evt.CompleteCurrentSession(winnerId: null);
+        evt.CompleteAdHoc();                            // InProgress → Completed (production door)
+        Assert.Equal(GameNightStatus.Completed, evt.Status);
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            evt.AddSession(Guid.NewGuid(), evt.GameIds[1], "Dixit"));
+        Assert.Contains("finalized", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("new session", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void AddSession_ToCancelledEvent_Throws()
+    {
+        var evt = CreatePublishedEvent();
+        evt.Cancel(); // Published → Cancelled
+        Assert.Throws<InvalidOperationException>(() =>
+            evt.AddSession(Guid.NewGuid(), evt.GameIds[0], "Catan"));
+    }
+
     [Fact]
     public void StartCurrentSession_TransitionsFirstPendingToInProgress()
     {

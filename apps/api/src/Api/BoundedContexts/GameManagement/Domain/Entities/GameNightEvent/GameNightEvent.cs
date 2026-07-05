@@ -406,13 +406,28 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
 
     /// <summary>
     /// Adds a game session to this game night. Max 5 sessions per event.
+    ///
+    /// <para>Allowed on <see cref="GameNightStatus.Published"/> (first sitting) and
+    /// <see cref="GameNightStatus.InProgress"/> (SI-4 #2635: 2nd+ sitting resume — the night flips
+    /// to InProgress via #15 after the first session starts). The max-1-live guard (#10) lives in
+    /// <see cref="EnsureCanStartSession"/>/<see cref="StartCurrentSession"/>, so accepting an
+    /// InProgress night here never mints a 2nd concurrent live session.</para>
+    ///
+    /// <para>A <see cref="GameNightStatus.Completed"/> night is terminal: resume-from-Completed is
+    /// rejected here (mapped to 409 at the command boundary) with guidance to start a new session —
+    /// SI-4 spec-panel: never resurrect a terminal state. Draft/Cancelled/Corrupted are likewise rejected.</para>
     /// </summary>
     public GameNightSession AddSession(Guid sessionId, Guid gameId, string gameTitle)
     {
         ThrowIfCorrupted();
 
-        if (Status != GameNightStatus.Published)
-            throw new InvalidOperationException($"Cannot add sessions to a {Status} game night.");
+        if (Status != GameNightStatus.Published && Status != GameNightStatus.InProgress)
+        {
+            var message = Status == GameNightStatus.Completed
+                ? "Cannot add sessions to a finalized game night — start a new session."
+                : $"Cannot add sessions to a {Status} game night.";
+            throw new InvalidOperationException(message);
+        }
         if (_sessions.Count >= 5)
             throw new InvalidOperationException("A game night can have at most 5 sessions.");
 

@@ -135,7 +135,8 @@ internal sealed class AttachGamebookCampaignToGameNightCommandHandler
         }
         catch (InvalidOperationException ex)
         {
-            // AddSession's "not Published" guard throws a plain InvalidOperationException → wrap as 409.
+            // AddSession's status guard (rejects a Draft/Cancelled/Completed night — SI-4 #2635
+            // allows Published|InProgress) throws a plain InvalidOperationException → wrap as 409.
             if (!commitStarted)
                 await _unitOfWork.RollbackTransactionAsync(cancellationToken).ConfigureAwait(false);
             throw new ConflictException(ex.Message);

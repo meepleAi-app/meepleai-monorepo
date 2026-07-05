@@ -32,6 +32,22 @@ describe('formatSessionStartedAt', () => {
     ).toContain('22:35');
   });
 
+  it('localizes the month per the caller locale (en vs it)', () => {
+    // The chip must follow the viewer's resolved locale, not a hardcoded it-IT — else an EN user
+    // sees a mixed-language "Started at 5 lug…" string. SessionLiveView passes `intl.locale`.
+    const itOut = formatSessionStartedAt('2026-07-05T20:35:00Z', {
+      locale: 'it-IT',
+      timeZone: 'UTC',
+    });
+    const enOut = formatSessionStartedAt('2026-07-05T20:35:00Z', {
+      locale: 'en-US',
+      timeZone: 'UTC',
+    });
+    expect(itOut).toMatch(/lug/i);
+    expect(enOut).toMatch(/jul/i);
+    expect(enOut).not.toBe(itOut);
+  });
+
   it('returns empty string for an unparseable value', () => {
     expect(formatSessionStartedAt('not-a-date')).toBe('');
   });

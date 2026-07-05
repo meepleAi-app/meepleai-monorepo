@@ -102,6 +102,29 @@ public class GameNightEventSessionsTests
             evt.AddSession(Guid.NewGuid(), evt.GameIds[0], "Catan"));
     }
 
+    // SI-4 AC3: after resuming for a 2nd sitting, the InProgress night remains finalizable — the
+    // relaxed AddSession leaves no orphaned live child that would block completion (CompleteAdHoc).
+    [Fact]
+    public void CompleteAdHoc_AfterSecondSitting_FinalizesInProgressNight()
+    {
+        var evt = CreatePublishedEvent();
+        var firstSessionId = Guid.NewGuid();
+        evt.AddSession(firstSessionId, evt.GameIds[0], "Catan");
+        evt.StartCurrentSession();
+        evt.HandleFirstSessionStarted(firstSessionId); // Published → InProgress
+        evt.CompleteCurrentSession(winnerId: null);
+
+        evt.AddSession(Guid.NewGuid(), evt.GameIds[1], "Dixit"); // 2nd sitting (relaxed path)
+        evt.StartCurrentSession();
+        evt.CompleteCurrentSession(winnerId: null);              // no live session remains
+
+        evt.CompleteAdHoc();                                     // InProgress → Completed
+
+        Assert.Equal(GameNightStatus.Completed, evt.Status);
+        Assert.Equal(2, evt.Sessions.Count);
+        Assert.All(evt.Sessions, s => Assert.Equal(GameNightSessionStatus.Completed, s.Status));
+    }
+
     [Fact]
     public void StartCurrentSession_TransitionsFirstPendingToInProgress()
     {

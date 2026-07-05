@@ -744,7 +744,11 @@ export function SessionLiveView(): ReactElement {
   // SI-4 (#2635): read-only derived start-time chip label (Invariante 5 — never user-editable).
   const startedAt = sessionQuery.data?.startedAt;
   const startedAtLabel = startedAt
-    ? t('pages.sessionLive.topBar.startedAtChip', { time: formatSessionStartedAt(startedAt) })
+    ? t('pages.sessionLive.topBar.startedAtChip', {
+        // Format the instant in the viewer's RESOLVED locale (not the mapper's it-IT default) so an
+        // EN user does not get a mixed-language "Started at 5 lug…" chip.
+        time: formatSessionStartedAt(startedAt, { locale: intl.locale }),
+      })
     : undefined;
   const connectionPipState = mapConnectionState(liveStream.connectionState);
 

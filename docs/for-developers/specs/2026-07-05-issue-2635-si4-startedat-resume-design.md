@@ -37,13 +37,13 @@ Acceptance #2635: *Given a live Session, When the play UI renders, Then mostra u
 ## 3. Scope (SI-4, questa slice)
 **IN**: (a) chip read-only startedAt su SessionLiveView (+ resume-picker gamebook) + enforce Invariante 5; (b) wire "▶ Riprendi" → nuova live Session (Attach path); (c) BE `HandleFirstSessionStarted` Completed→InProgress + gestione side-effect stale [D6]; (d) `startedAt` sullo spine DTO. **OUT**: parallel play, edit manuale di startedAt (vietato da Inv.5).
 
-## 4. Acceptance criteria
-- **AC1** Una live Session mostra la chip read-only `▶ Ora di inizio {HH:MM} · derivata` (no time-picker, no durata input) su SessionLiveView.
-- **AC2** Nessun input editabile per startedAt/durata sulla session surface (Invariante 5).
-- **AC3** "▶ Riprendi" su una campagna Resumable apre una NUOVA live Session (fresh startedAt), campaign `createdAt` invariato.
-- **AC4** Riprendere quando il GameNight è **Completed** → la serata torna InProgress (no 500/crash); il summary stale è gestito [D6].
-- **AC5** max-1-live rispettato sul resume (409 se già una live).
-- **AC6** Nessuna regressione su WS1/C2/C4 (avvio/diary/winner) né sul night-live.
+## 4. Acceptance criteria (rev. post spec-panel — §7 item 9)
+- **AC1** Una live Session mostra la chip read-only `▶ Ora di inizio {data ora locale} · derivata` (no time-picker, no durata input) su SessionLiveView. ✅
+- **AC2** Nessun input editabile per startedAt/durata sulla session surface (Invariante 5) — assert-absent + regression guard. ✅
+- **AC3** (riscritta) Riprendere una serata già **InProgress** (2ª+ sitting) apre una NUOVA live Session; il GameNight resta InProgress con la nuova live child E **rimane finalizzabile** dopo (nessun live child orfano). `createdAt` della campaign invariato (D3). ✅
+- **AC4** (riscritta) Resume-from-**Completed** è rifiutato al **command boundary** con 409 ("start a new session"), MAI un 500 dal post-commit handler (`HandleFirstSessionStarted` resta strict Published/InProgress). ✅
+- **AC5** max-1-live rispettato sul resume: 409 (`MAX_LIVE_SESSIONS_EXCEEDED`) se una sitting è già live, su entrambe le chain (Start + Attach); nessuna Session orfana. ✅
+- **AC6** Nessuna regressione su WS1/C2/C4 (avvio/diary/winner) né sul night-live. ✅
 
 ## 5. Test plan
 - **BE unit/integration**: `HandleFirstSessionStarted` Completed→InProgress (nuovo) + idempotenza; Attach re-callable per resume; side-effect stale [D6]; spine DTO startedAt.
@@ -136,3 +136,13 @@ Acceptance #2635: *Given a live Session, When the play UI renders, Then mostra u
 - **D6 fantasma eliminato**: `NightFinalizedEvent` non ha handler; nessun summary stale da gestire. Nessun `NightReopenedEvent` (non serve — non si riapre lo stesso night).
 
 **Build order**: (1) chip FE SessionLiveView (indipendente, ship early) + Invariante-5 regression · (2) BE relax `AddSession` a Published||InProgress + reject Completed@boundary + test (incl. multi-game 2ª-sitting che oggi si rompe) · (3) FE wire "▶ Riprendi" → nuova live Session · (4) test concorrenza (double-resume 409, xmin loser) + AC riscritte.
+
+## 9. As-built (2026-07-05)
+
+**Step 1 — Chip** (commit `f6f8f3c69`): `formatSessionStartedAt` pure mapper (UTC instant → data+ora locale del viewer), chip read-only `▶ Ora di inizio {…} · derivata` su `LiveTopBar`/`SessionLiveView`. Una sola superficie (D1 narrowed), **D7 dropped**.
+
+**Step 2 — BE resume** (commit `49f2848cd`): `GameNightEvent.AddSession` rilassato a `Published || InProgress`; **Completed** rifiutato con "Cannot add sessions to a finalized game night — start a new session." (→409 via i due handler che già mappano `InvalidOperationException`→`ConflictException`); Draft/Cancelled/Corrupted rifiutati col messaggio generico. Guard max-1-live #10 (`EnsureCanStartSession`:439 / `StartCurrentSession`:459) **invariati** → nessuna 2ª InProgress. Sblocca anche il 2ª-sitting per **giochi normali** già wired in `NightLiveClientView` (`useStartNextGame` → `StartGameNightSessionCommand`). Test: 3 domain (`AddSession` InProgress/Completed-guidance/Cancelled) + 3 handler (Start 2ª-sitting + Start double-resume + Attach 2ª-sitting).
+
+**Step 3 — FE resume entry** (commit `93885e4a5`, decisione utente **= play-page**, non il resume-picker): scoperta bloccante — le campagne del resume-picker (`useUserCampaigns` → `GamebookCampaign`) **non hanno `gameNightId`** (solo lo `spine` lo espone, e solo se attached). Quindi l'entry è sulla **play page** `library/[gameId]/play/[campaignId]/_content.tsx`: CTA `▶ Riprendi la serata` sotto `SerataSpineStrip`, mostrata solo se `isSerataResumable(spine, currentUser.id)` (organizer + Published/InProgress + `!hasLiveSession`). Apre una NUOVA live Session via `POST /game-nights/{id}/gamebook-sessions` (`gameNightSessionClient.attachGamebookCampaign` + hook `useResumeGamebookSitting`) e instrada a `/sessions/{id}` (il FORK redirige la sessione in-progress a `/live`, dove appare la chip step-1). Feedback inline distinti: 409 max-live vs 403 organizer. Campagne standalone → lettura pura invariata. Test: predicato puro `isSerataResumable` (6 casi) + component (success-route / 409 / 403) + hook (delegate / max-live 409 / 403).
+
+**Step 4 — Concorrenza + AC**: double-resume-while-live → 409 `MAX_LIVE_SESSIONS_EXCEEDED` senza Session orfana, su **entrambe** le chain (Start + Attach); xmin loser → 409 (test pre-esistenti in entrambi gli handler); resume-from-Completed → 409 al boundary. AC §4 riscritte (AC3 = InProgress 2ª-sitting + finalizzabile dopo; AC4 = Completed rifiutato al boundary, mai 500).

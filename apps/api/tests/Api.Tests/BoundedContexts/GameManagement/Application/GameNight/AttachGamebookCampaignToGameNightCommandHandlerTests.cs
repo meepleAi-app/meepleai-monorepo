@@ -226,6 +226,31 @@ public class AttachGamebookCampaignToGameNightCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_SecondSittingWhileFirstStillLive_Throws409MaxLive_NoSessionCreated()
+    {
+        // AC5: max-1-live holds on the gamebook resume path (the one the play-page CTA drives).
+        // Attaching a 2nd campaign while the first sitting is still live is rejected by
+        // EnsureCanStartSession (guard-before-create) — no cross-BC Session is minted.
+        var organizer = Guid.NewGuid();
+        var gameNight = CreatePublishedEvent(organizer);
+        var firstSessionId = Guid.NewGuid();
+        gameNight.AddSession(firstSessionId, gameNight.GameIds[0], "Prima partita");
+        gameNight.StartCurrentSession();                     // first sitting InProgress
+        gameNight.HandleFirstSessionStarted(firstSessionId); // night InProgress
+
+        var campaignId = Guid.NewGuid();
+        SetupCampaign(campaignId, CampaignDto(campaignId, Guid.NewGuid(), organizer, GameRefKind.Shared));
+        _repo.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>())).ReturnsAsync(gameNight);
+
+        var act = () => _handler.Handle(
+            new AttachGamebookCampaignToGameNightCommand(gameNight.Id, campaignId, organizer),
+            TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<MaxLiveSessionsExceededException>();
+        _mediator.Verify(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Handle_PrivateGameCampaign_ThrowsConflict_AndDoesNotCreateSession()
     {
         var organizer = Guid.NewGuid();

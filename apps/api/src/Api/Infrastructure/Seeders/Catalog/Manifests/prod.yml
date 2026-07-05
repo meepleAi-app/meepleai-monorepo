@@ -8466,9 +8466,6 @@ catalog:
     - Swan Panasia Co., Ltd.
     - テンデイズゲームズ (TendaysGames)
     - White Goblin Games
-    pdfBlobKey: rulebooks/v1/age-of-innovation_rulebook.pdf
-    pdfSha256: 8f1150d295498a2df9ac6da4de3e73eb7efb2e8da8298aa6377afb1af6dc65e5
-    pdfVersion: '1.0'
   - title: 'Clank!: A Deck-Building Adventure'
     bggId: 201808
     language: en
@@ -8578,9 +8575,6 @@ catalog:
     - Portal Games
     - Reflexshop
     - TLAMA games
-    pdfBlobKey: rulebooks/v1/the-white-castle_rulebook.pdf
-    pdfSha256: dd14099d0194afad2402875e6eb6a27e0b8fbdc631713b16eca1026ad4b225b2
-    pdfVersion: '1.0'
   - title: Paladins of the West Kingdom
     bggId: 266810
     language: en
@@ -8727,9 +8721,6 @@ catalog:
     - Maldito Games
     - sternenschimmermeer
     - YOKA Games
-    pdfBlobKey: rulebooks/v1/the-gallerist_rulebook.pdf
-    pdfSha256: 4c1cc0f09c85177e05e890208a2377ab229a8563976b88e7c5d6f38d7e690dea
-    pdfVersion: '1.0'
   - title: 'Android: Netrunner'
     bggId: 124742
     language: en

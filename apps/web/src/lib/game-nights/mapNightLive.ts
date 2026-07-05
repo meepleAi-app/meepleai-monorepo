@@ -63,6 +63,14 @@ export interface NightLiveViewModel {
   readonly currentGame: NightLiveHubCurrentGame | null;
   /** Slice C2: sessionId → gameId/title lookup for the diary join (not rendered directly). */
   readonly sessions: readonly NightSessionRef[];
+  /** #2634 C4: the live session's participants — the "Completa" winner-picker candidates. */
+  readonly winnerCandidates: readonly WinnerCandidate[];
+}
+
+/** #2634 C4: a candidate winner (a tracking-Session Participant) for the Completa picker. */
+export interface WinnerCandidate {
+  readonly id: string; // Participant.Id — sent as winnerId on complete
+  readonly displayName: string;
 }
 
 const MINUTE_MS = 60_000;
@@ -219,6 +227,11 @@ export function mapNightLiveToViewModel(dto: GameNightLiveDto, now: Date): Night
       sessionId: s.sessionId,
       gameId: s.gameId,
       gameTitle: toTitle(s),
+    })),
+    // #2634 C4: the live session's roster → the Completa winner-picker candidates.
+    winnerCandidates: dto.currentSessionRoster.map(m => ({
+      id: m.participantId,
+      displayName: m.displayName,
     })),
   };
 }

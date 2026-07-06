@@ -86,6 +86,16 @@ export function toNightSummaryViewModel(
     order: g.playOrder,
     duration: g.durationMinutes != null ? formatDuration(g.durationMinutes) : durationUnknown,
     eventsCount: g.eventsCount,
+    // Runner-ups (top-3 by final rank, excluding the winner). Score is omitted — rank is
+    // universal across the polymorphic scoring types (#2722).
+    topScores: g.topPlayers
+      .filter(p => p.playerName !== g.winnerName)
+      .map(p => ({
+        id: `${g.sessionId}:${p.playerName}`,
+        name: p.playerName,
+        initials: initialsOf(p.playerName),
+        color: hueOf(p.playerName),
+      })),
     ...(g.winnerName
       ? {
           winner: {

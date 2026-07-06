@@ -263,6 +263,7 @@ export const GameNightGameRecapDtoSchema = z.object({
   winnerName: z.string().nullable(),
   durationMinutes: z.number().int().nullable(),
   eventsCount: z.number().int().nonnegative(),
+  topPlayers: z.array(z.object({ playerName: z.string(), rank: z.number().int().nullable() })),
 });
 export type GameNightGameRecapDto = z.infer<typeof GameNightGameRecapDtoSchema>;
 

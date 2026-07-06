@@ -43,4 +43,8 @@ public sealed record GameNightGameRecapDto(
     Guid? WinnerId,
     string? WinnerName,
     int? DurationMinutes,
-    int EventsCount);
+    int EventsCount,
+    IReadOnlyList<GameNightRecapPlayerDto> TopPlayers);
+
+/// <summary>A player on a game's final leaderboard (top-N by final rank) — Issue #2722.</summary>
+public sealed record GameNightRecapPlayerDto(string PlayerName, int? Rank);

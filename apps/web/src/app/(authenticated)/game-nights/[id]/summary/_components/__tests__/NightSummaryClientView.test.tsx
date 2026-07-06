@@ -70,6 +70,10 @@ const dto = {
       winnerName: 'Davide',
       durationMinutes: 90,
       eventsCount: 8,
+      topPlayers: [
+        { playerName: 'Davide', rank: 1 },
+        { playerName: 'Marco', rank: 2 },
+      ],
     },
   ],
 };

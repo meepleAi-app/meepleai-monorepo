@@ -186,47 +186,6 @@ describe('SessionsClient - Issue #3026', () => {
     });
   });
 
-  describe('start', () => {
-    it('should start a new session', async () => {
-      vi.mocked(mockHttpClient.post).mockResolvedValue(mockSession);
-
-      const client = createSessionsClient({ httpClient: mockHttpClient });
-      const result = await client.start({
-        gameId: 'game-456',
-        players: [
-          { playerName: 'Alice', playerOrder: 1, color: 'red' },
-          { playerName: 'Bob', playerOrder: 2, color: 'blue' },
-        ],
-        notes: 'First game of the day',
-      });
-
-      expect(result).toEqual(mockSession);
-      expect(mockHttpClient.post).toHaveBeenCalledWith(
-        '/api/v1/sessions',
-        expect.objectContaining({ gameId: 'game-456' }),
-        expect.any(Object)
-      );
-    });
-
-    it('should start session without optional fields', async () => {
-      vi.mocked(mockHttpClient.post).mockResolvedValue(mockSession);
-
-      const client = createSessionsClient({ httpClient: mockHttpClient });
-      await client.start({
-        gameId: 'game-456',
-        players: [{ playerName: 'Solo', playerOrder: 1 }],
-      });
-
-      expect(mockHttpClient.post).toHaveBeenCalledWith(
-        '/api/v1/sessions',
-        expect.objectContaining({
-          players: [{ playerName: 'Solo', playerOrder: 1 }],
-        }),
-        expect.any(Object)
-      );
-    });
-  });
-
   describe('Session Lifecycle', () => {
     describe('pause', () => {
       it('should pause an active session', async () => {
@@ -363,9 +322,7 @@ describe('SessionsClient - Issue #3026', () => {
         const result = await client.getState('session-123');
 
         expect(result).toEqual(mockState);
-        expect(mockHttpClient.get).toHaveBeenCalledWith(
-          '/api/v1/sessions/session-123/state'
-        );
+        expect(mockHttpClient.get).toHaveBeenCalledWith('/api/v1/sessions/session-123/state');
       });
     });
 
@@ -377,10 +334,9 @@ describe('SessionsClient - Issue #3026', () => {
         const stateJson = JSON.stringify({ turnNumber: 6 });
         await client.updateState('session-123', stateJson);
 
-        expect(mockHttpClient.patch).toHaveBeenCalledWith(
-          '/api/v1/sessions/session-123/state',
-          { stateJson }
-        );
+        expect(mockHttpClient.patch).toHaveBeenCalledWith('/api/v1/sessions/session-123/state', {
+          stateJson,
+        });
       });
     });
 

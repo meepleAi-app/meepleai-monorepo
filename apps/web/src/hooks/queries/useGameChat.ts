@@ -162,18 +162,26 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
             const tokenData = event.data;
             if (typeof tokenData === 'string') {
               answerBuffer += tokenData;
-            } else if (
-              typeof tokenData === 'object' &&
-              tokenData !== null &&
-              'content' in tokenData
-            ) {
-              answerBuffer += String((tokenData as { content?: unknown }).content ?? '');
+            } else if (typeof tokenData === 'object' && tokenData !== null) {
+              // Issue #2712: the SSE token event (type 7) carries { token: "..." } — see
+              // chatClient.qaStream, which yields the raw event.data. The previous code only
+              // handled { content }, so the answer text was NEVER accumulated (empty bubble).
+              // Support both shapes (token first) plus the plain-string form used in tests.
+              const obj = tokenData as { token?: unknown; content?: unknown };
+              answerBuffer += String(obj.token ?? obj.content ?? '');
             }
           } else if (event.type === COMPLETE_EVENT_TYPE) {
             const payload = event.data as StreamingCompletePayload;
             const confidence = payload.confidence ?? undefined;
             const citations = payload.Citations ?? payload.citations ?? [];
-            const isLowQuality = confidence !== undefined && confidence < LOW_QUALITY_THRESHOLD;
+            // Issue #2712: a grounded answer (valid citations) must NOT be degraded to the
+            // "Non sono certo" card. The numeric confidence is currently compressed (rank-based),
+            // so gating solely on it hid correct answers. Treat low-quality only when the RAG
+            // found NO context (no citations) AND confidence is below threshold.
+            const isLowQuality =
+              citations.length === 0 &&
+              confidence !== undefined &&
+              confidence < LOW_QUALITY_THRESHOLD;
             const outOfContext =
               citations.length === 0 &&
               (confidence === undefined || confidence < OUT_OF_CONTEXT_THRESHOLD);

@@ -52,6 +52,34 @@ public sealed class RrfFusionDomainServiceTests
     }
 
     [Fact]
+    public void FuseResults_PreservesRealRelevanceScore_NotRankBasedRrf()
+    {
+        // Issue #2712: the fused RelevanceScore must reflect the SOURCE result's real relevance
+        // (cosine similarity for vector results), NOT the rank-based RRF score. The RRF score for a
+        // single rank-1 result is NormalizeRrfScore(1/61) = 30/61 ≈ 0.4918; feeding that into
+        // confidence made it degenerate (~0.53). The real cosine (0.87) must be preserved.
+        var docId = Guid.NewGuid();
+        var vectorResults = new List<SearchResult>
+        {
+            new SearchResult(
+                id: Guid.NewGuid(),
+                vectorDocumentId: docId,
+                textContent: "Relevant chunk",
+                pageNumber: 1,
+                relevanceScore: new Confidence(0.87),
+                rank: 1,
+                searchMethod: "vector"),
+        };
+        var keywordResults = new List<SearchResult>();
+
+        var result = _service.FuseResults(vectorResults, keywordResults);
+
+        result.Should().HaveCount(1);
+        result.First().RelevanceScore.Value.Should().BeApproximately(0.87, 0.0001,
+            "the real cosine must survive fusion, not be overwritten by the ~0.49 rank-based RRF score");
+    }
+
+    [Fact]
     public void FuseResults_WithOverlappingDocuments_CombinesScores()
     {
         // Arrange

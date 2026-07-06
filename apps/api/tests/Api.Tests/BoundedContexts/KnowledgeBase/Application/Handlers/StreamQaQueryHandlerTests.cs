@@ -612,6 +612,10 @@ public class StreamQaQueryHandlerTests
         _embeddingRepositoryMock
             .Setup(x => x.SearchByVectorAsync(It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Embedding> { embedding });
+        // Issue #2712: PerformVectorSearchAsync now calls SearchByVectorWithScoresAsync (real cosine score).
+        _embeddingRepositoryMock
+            .Setup(x => x.SearchByVectorWithScoresAsync(It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ScoredEmbedding> { new ScoredEmbedding(embedding, 0.55) });
 
         // Low relevance score (0.55)
         var lowScoreResult = new DomainSearchResult(
@@ -724,6 +728,10 @@ public class StreamQaQueryHandlerTests
         _embeddingRepositoryMock
             .Setup(x => x.SearchByVectorAsync(It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(embeddings);
+        // Issue #2712: PerformVectorSearchAsync now calls SearchByVectorWithScoresAsync (real cosine score).
+        _embeddingRepositoryMock
+            .Setup(x => x.SearchByVectorWithScoresAsync(It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(embeddings.Select((e, i) => new ScoredEmbedding(e, 0.95 - i * 0.03)).ToList());
 
         _vectorSearchServiceMock
             .Setup(x => x.Search(It.IsAny<Vector>(), It.IsAny<List<Embedding>>(), It.IsAny<int>(), It.IsAny<double>()))
@@ -961,6 +969,10 @@ public class StreamQaQueryHandlerTests
         _embeddingRepositoryMock
             .Setup(x => x.SearchByVectorAsync(It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Embedding> { embedding });
+        // Issue #2712: PerformVectorSearchAsync now calls SearchByVectorWithScoresAsync (real cosine score).
+        _embeddingRepositoryMock
+            .Setup(x => x.SearchByVectorWithScoresAsync(It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ScoredEmbedding> { new ScoredEmbedding(embedding, 0.85) });
 
         // Setup vector search domain service to return results
         var vectorSearchResult = new DomainSearchResult(

@@ -78,7 +78,11 @@ internal class RrfFusionDomainService
                 vectorDocumentId: item.Result.VectorDocumentId,
                 textContent: item.Result.TextContent,
                 pageNumber: item.Result.PageNumber,
-                relevanceScore: new Confidence(item.NormalizedScore),
+                // Issue #2712: preserve the original relevance signal (cosine similarity for vector
+                // results) as the RelevanceScore. RRF still drives the ORDER (OrderByDescending above),
+                // but the RelevanceScore must reflect semantic relevance — feeding the rank-based RRF
+                // score into confidence made it degenerate (always ≈0.53).
+                relevanceScore: item.Result.RelevanceScore,
                 rank: index + 1, // Rank assigned after sorting
                 searchMethod: "hybrid"
             ))

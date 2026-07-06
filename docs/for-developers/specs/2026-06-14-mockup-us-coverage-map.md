@@ -1,8 +1,8 @@
 ---
-status: PROPOSED (gap analysis ready for review; US-INT-2..6 draft full; US-GAP-* compact)
-issue: TBD (umbrella tracker da aprire; parent DS-17 #2063)
-spec-panel: 2026-06-14 (Cockburn · Wiegers · Adzic · Crispin · Fowler · Nygard)
-verdict: gap-fill mapping ready; US-INT-* full need ADR resolution + sub-issue split; US-GAP-* immediately actionable
+status: ACTIVE (PARTIALLY-EXECUTED — Tier 0+1+2 shipped; Tier 3-6 pending. Vedi § Reconciliation status)
+issue: #2342 (umbrella tracker APERTO; parent DS-17 #2063)
+spec-panel: 2026-06-14 (Cockburn · Wiegers · Adzic · Crispin · Fowler · Nygard) · review #3 2026-07-06 (drift/currency critique)
+verdict: Tier 0+1+2 executed (#2346 chiuso, PR #2440); Tier 3-6 pending (ADR-backed, cascade da aprire)
 parent: #2063 DS-17 (Storybook stories pattern), #2127 Phase B audit, #1023 Design System De-versioning (CLOSED)
 related-specs:
   - docs/superpowers/specs/2026-06-12-us-int-1-kb-onboarding-spec.md (US-INT-1 template)
@@ -17,7 +17,35 @@ related-specs:
 > **Tipo**: spec doc Tipo B+C combinato (vedi DEC-1 più sotto)
 > · **Scope**: 115 mockup user-facing (67 page-mock + 48 component-mock; esclusi 12 dev-fixture)
 > · **Output**: 5 US-INT-* full + 17 US-GAP-* compact + cross-ref issue aperte
-> · **Maturity**: PROPOSED — review designer + maintainer richiesto prima dell'opening umbrella
+> · **Maturity**: ACTIVE (PARTIALLY-EXECUTED) — vedi § Reconciliation status
+
+## ⚠ Reconciliation status — 2026-07-06 (spec-panel review #3)
+
+> **Questo blocco è la single source of truth in-doc dello stato di esecuzione.** Dove le sezioni
+> §4a/§4b/§5 sottostanti divergono, **questo blocco prevale**: sono snapshot 2026-06-14 non aggiornati
+> riga-per-riga. Living-doc reconciliation dopo che l'esecuzione (Tier 0+1+2) ha superato il doc — è
+> il rimedio all'ironia che un doc anti-drift fosse esso stesso stale (finding CRIT-A, review #3).
+
+| Fase | Piano (2026-06-14) | Stato reale (2026-07-06) | Ref |
+|---|---|---|---|
+| **Tier 0 — ADR gate** | 13 ADR-N da draftare | ✅ **DONE** — 13/13 ADR shipped | #2363 (closed 15/06), PR #2371/#2380/#2381 |
+| **Tier 1 — filename** | rename brief SP7 | ✅ **DONE** | PR #2351 + cleanup PR #2364 (merged 15/06) |
+| **Tier 2 — Play Records** | US-INT-2 + 5 US-GAP-PR (NON READY) | ✅ **SHIPPED & CLOSED** — 4 sub-issue (2a-2d), 5 stati + axe + e2e | #2346 + #2347/#2348/#2349/#2350 (closed 19/06), PR #2440 |
+| **Tier 3 — Game Night E2E** | US-INT-3a..3f cascade | 🚧 **NON APERTO** (nessuna sub-issue) | US-INT-3c edit risolta via #2344→ADR-079 |
+| **Tier 4 — Live skeleton** | US-INT-4a..4c cascade | 🟡 **PARZIALE** — solo G4 timer shipped | #2352 (US-INT-4a §G4) |
+| **Tier 5 — Notification deep-link** | US-INT-5a..5c cascade | 🚧 **NON APERTO** | — |
+| **Tier 6 — Designer review gate** | US-INT-6a..6c | 🚧 **NON APERTO** | — |
+
+**Decisioni chiuse dopo il freeze del doc (recepite qui, non riga-per-riga sotto)**:
+- **#2344** sp7-game-night-edit → **CHIUSA 16/06**: Option C drawer overlay, pattern canonico in **ADR-079**. (DEC-A3 nel body #2342 è superato; §2.1 di questo doc è già coerente.)
+- **#2345** orphan JSX → CHIUSA 15/06 (Option C re-classify).
+- **Bloccanti chiusi**: #2088 `/sessions/[id]` 404 (13/06), #2176 dashboard counter (12/06). (§5.2 li elenca ancora OPEN — superato.)
+- **Designer review §3.3**: #2311 (15/06), #2209 + #2216 (22/06) tutti **CHIUSI**. (§3.3 li elenca pending — superato.)
+- **DEC-A5** state gate: **declassato 19/06** a review manuale (gate CI `lint:storybook-states` inesistente e non enforced in alcun workflow). Vedi US-GAP-STATE-COVERAGE §4b.
+
+**Debito noto (deferred da Tier 2, PR #2440)**: #2436/#2437/#2438 (Path B literal-AC), bug #2439 (DELETE endpoint). #2234 Phase C-3 per-game session resta il deferred canonico per Cluster B (§4b US-GAP-SESS-*).
+
+**🔴 Lezione di sicurezza catturata (Tier 2 / #2349)**: la chiusura di US-INT-2c ha fixato un **IDOR** su tutti e 6 gli endpoint PlayRecord. Ogni US futura con route entity-scoped (US-INT-3 game-nights, US-INT-4 sessions, US-INT-5 deep-link) DEVE avere un **IDOR-guard test come precondizione di chiusura** — vedi AC/failure-mode aggiornate in §4a.
 
 ## Sezione 0 — Premise & Scope
 
@@ -403,9 +431,9 @@ Vedi **US-INT-4** in §4a.
 
 | Mockup | Tracking issue | Status |
 |---|---|---|
-| `sp3-library-public.html` | #2209 | OPEN (designer review pending) |
-| `sp4-library-mobile.html` | #2216 | OPEN (designer review pending) |
-| `sp4-kb-detail.html` | #2311 | OPEN (forward-refactor split-view, via DS-17-13) |
+| `sp3-library-public.html` | #2209 | ✅ CLOSED 22/06 |
+| `sp4-library-mobile.html` | #2216 | ✅ CLOSED 22/06 |
+| `sp4-kb-detail.html` | #2311 | ✅ CLOSED 15/06 (forward-refactor split-view impl) |
 
 > **Più ampio gap residuo asse-***: il body umbrella #1895 ha "Designer Review Tracking Matrix"
 > con 15 route in stato "TBD" (mai firmate dal designer). Umbrella chiusa sess.37 con DEC-3
@@ -535,12 +563,23 @@ Total effort: ~16gg + upstream dependency su GameNight completion lifecycle (US-
 5. Stats query slow on large dataset → P95 latency budget + skeleton state
 6. Privacy: record condiviso con guest player non-User-linked → access control
 
+> **🔴 REALIZED (Tier 2 / #2349)**: il failure-mode #6 si è materializzato come **IDOR** su tutti e 6
+> gli endpoint PlayRecord (accesso a record altrui via id manipolato). Fixato in PR #2440. **Lezione**:
+> «access control» come AC astratta non basta — serve un IDOR-guard test che eserciti la pipeline reale
+> (cfr. memory `acceptance-tests-must-exercise-real-pipeline`). Propagato come precondizione a
+> US-INT-3 / US-INT-4 / US-INT-5.
+
 **Observability**: 3+ Prometheus metrics (`meepleai_playrecord_create_total`, `_save_duration_ms`,
 `_photo_upload_failures_total`) + Grafana panel.
 
 #### Spec-panel verdict
 
-⚠ **US-INT-2 NON è READY** — manca ADR ownership model + GameNight upstream + 5 mockup orfani da
+> **✅ AGGIORNAMENTO 2026-07-06**: US-INT-2 è **SHIPPED & CLOSED** (#2346 + 2a-2d, PR #2440, 19/06).
+> ADR ownership risolto in Tier 0 (#2363); flow standalone via DEC-A4 (`gameNightId nullable`, nessun
+> blocco GameNight). Debito residuo: #2436/#2437/#2438 (Path B literal-AC), #2439 (DELETE bug). Il
+> verdetto sotto è lo snapshot 2026-06-14.
+
+⚠ *(snapshot 2026-06-14)* **US-INT-2 NON è READY** — manca ADR ownership model + GameNight upstream + 5 mockup orfani da
 documentare prima. Apertura sub-issue 2a-2d post-resolution ADR.
 
 #### Refs
@@ -658,6 +697,10 @@ Total effort: ~26-32gg (Wave 1 full implementation post-brief).
 5. Transition modal aperto, network drop → local state preservation
 6. Summary share: privacy guest player → opt-in per record visibility
 
+> **🔴 IDOR-guard precondition (lezione Tier 2 / #2349)**: ogni endpoint entity-scoped di GameNight
+> (`/game-nights/[id]` detail/edit/RSVP + summary share token) DEVE avere un test che verifica il
+> rifiuto di accesso cross-tenant (utente non-roster / non-host) PRIMA della chiusura sub-issue.
+
 **Observability**: 5+ Prometheus metrics + 1 Grafana dashboard (GameNight lifecycle).
 
 #### Spec-panel verdict
@@ -762,6 +805,9 @@ Total effort: ~17-20gg.
 4. Score input race condition (2 player edita stesso turn) → last-write-wins con audit log
 5. State machine deadlock (loading → error → loading loop) → max 3 retry + manual escape
 
+> **🔴 IDOR-guard precondition (lezione Tier 2 / #2349)**: `/sessions/[id]` e il flavor loader DEVONO
+> rifiutare l'accesso a sessioni non appartenenti al viewer (test cross-tenant obbligatorio pre-chiusura).
+
 **Observability**: SSE drop rate, flavor module load latency, state transitions histogram.
 
 #### Spec-panel verdict
@@ -865,6 +911,10 @@ Total effort: ~10gg.
 3. Push notif non delivery (device offline >24h) → fallback email digest
 4. User unsubscribe via email → policy: lista email unsubscribe + UI revert
 5. Quiet hours timezone mismatch → user-side override + server validation
+
+> **🔴 IDOR-guard precondition (lezione Tier 2 / #2349)**: i deep-link entity (`/game-nights/{id}`,
+> `/sessions/{id}`, `/chat/{threadId}`) DEVONO validare l'ownership del target al follow, non solo la
+> validità del link (test cross-tenant pre-chiusura).
 
 **Observability**: notif delivery rate per channel + dedup hit rate + deep link 200/404 ratio.
 
@@ -985,6 +1035,11 @@ route asse-* unsigned + previene futuri umbrella closed-with-gate-violated.
 > + issue correlata. Per scenari completi end-to-end, vedi §4a.
 
 ### Cluster A — Play Records family (5 US-GAP)
+
+> **✅ SHIPPED 2026-07-06**: tutte e 5 le US-GAP-PR (→ US-INT-2a/2b/2c/2d, issue #2347-#2350) sono
+> chiuse via PR #2440 (19/06). Le righe «Stato copertura: ✗» sotto sono lo snapshot 2026-06-14: la
+> copertura reale include story a 5 stati + axe AA + e2e (`play-records-new`, `play-records-stats`).
+> Debito residuo: #2436/#2437/#2438 (Path B literal-AC), #2439 (DELETE bug).
 
 #### US-GAP-PR-01 — Play Records hub index
 
@@ -1335,8 +1390,8 @@ And review manuale + axe AA per ogni stato
 
 | # | Bloccante | Stato | US correlata |
 |---|---|---|---|
-| #2088 | `/sessions/[id]` route 404 | OPEN | US-INT-4 (skeleton) |
-| #2176 | dashboard/library counter mismatch | OPEN | US-INT-1 (KB onboarding) |
+| #2088 | `/sessions/[id]` route 404 | ✅ CLOSED 13/06 | US-INT-4 (skeleton) |
+| #2176 | dashboard/library counter mismatch | ✅ CLOSED 12/06 | US-INT-1 (KB onboarding) |
 | #492 | Community closure false-positive (achievement detail sheet) | CLOSED but residual | US-26 (parziale) |
 | #491 | Chat full-screen residual | CLOSED but residual | US-27 |
 | #2271 | (Batch 8 spec ref) | OPEN | (TBD scope) |
@@ -1429,7 +1484,7 @@ Il documento è **PROPOSED** e pronto per:
 | Mockup analizzati | 115 (esclusi 12 dev-fixture) |
 | Mockup FORTE coverage (≥10 doc) | 7 |
 | Mockup LIGHT coverage (1-9 doc) | 89 |
-| Mockup ORFANI (0 doc) | 19 |
+| Mockup ORFANI (0 doc) al 2026-06-14 | 19 (→ ~13 residui post Tier 1+2: 5 Play Records + `sp7-game-night-new` ora documentati) |
 | US identifier scoperti nel repo | 22 univoci (4 famiglie) |
 | US-INT-* full prodotte | 5 (US-INT-2 / 3 / 4 / 5 / 6) |
 | US-GAP-* compact prodotte | 17 |
@@ -1457,6 +1512,7 @@ Il documento è **PROPOSED** e pronto per:
 | 2026-06-14 | v1.0 | Claude Opus 4.7 (sess. /sc:spec-panel socratic) | Initial proposal post 4-agent parallel discovery + spec-panel synthesis 6 esperti (Cockburn · Wiegers · Adzic · Crispin · Fowler · Nygard) |
 | 2026-06-14 | v1.1 | Claude Opus 4.7 (sess. review) | Adversarial review fixes — C-1 (added `sp4-session-codenames-live.html` to §2.3, expanded "8-15" range to explicit 8-16, renumbered 17-19), C-2 (corrected US-GAP-* count 18→17 in 5 locations + Crispin "90 stati" → "85 stati"), M-1 (added SP7 transition component-mock row + sp7-game-night-edit planned note), M-2 (added #2311 issue ref to §3.3 sp4-kb-detail), M-3 (added DEC-4 locking Fowler tension opt-b — US-GAP-SESS-* parent doppio US-INT-4+4c), M-4 (clarified "22 identifier" breakdown adding sub-Gherkin embedded row), mn-2 (renamed §2.2 "Top 10 FORTE" → "Top 10 per coverage mix FORTE+LIGHT"). Fowler synthesis "23 US in 1 file" → "22 US". |
 | 2026-06-15 | v1.2 | Claude Opus 4.7 (sess. /sc:spec-panel critique umbrella #2342) | Post-merge critique fixes — CRIT-3 resolution: (1) §1.2 riga 104 — `sp7-game-night-new.html` filename brief mismatch → filename brief aligned via PR #2351; (2) §1.2 riga 105 — `sp7-game-night-edit.html` → annotato disposition #2344 pending; (3) §4b US-GAP-FILENAME-RENAME AC direzione invertita → corretta a "filesystem canonical, PR #2351 closed action"; (4) cleanup 10 file residui `sp7-game-night-create` stale refs in admin-mockups (.html `<script src>`, .jsx headers, .fidelity.json fixtures_path, design_handoff/* doc refs, MANIFEST.json). Companion umbrella v2.0 critique covers CRIT-1/2/4 + MAJ-1/2/3/4/5 (vedi umbrella #2342 body v2). |
+| 2026-07-06 | v1.3 | Claude Opus 4.8 (sess. /sc:spec-panel review #3 — drift/currency critique) | Living-doc reconciliation post-execution. Aggiunto blocco «⚠ Reconciliation status» come single-source-of-truth in-doc dello stato esecuzione; frontmatter `status` PROPOSED → ACTIVE (PARTIALLY-EXECUTED). Recepiti: Tier 0 ADR gate (#2363 done, 13/13), Tier 1 (#2351/#2364), Tier 2 Play Records SHIPPED (#2346 + 2a-2d, PR #2440, US-INT-2 verdict + Cluster A + §4b coverage), #2344→ADR-079, bloccanti #2088/#2176 CLOSED (§5.2), §3.3 designer review 3/3 CLOSED, DEC-A5 declassato, Appendice A orfani residui. CRIT-B: IDOR-guard precondition propagata a US-INT-3/4/5 da lezione #2349 (IDOR su 6 endpoint PlayRecord). Debito #2436-2439 linkato. Finding CRIT-A (doc anti-drift esso stesso stale) + MAJ-B (doppio source-of-truth doc↔body) documentati. |
 
 ---
 

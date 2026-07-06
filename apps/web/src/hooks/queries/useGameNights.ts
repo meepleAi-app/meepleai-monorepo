@@ -186,6 +186,15 @@ export function useGameNightSummary(id: string, options: { enabled?: boolean } =
   });
 }
 
+export function useSharedGameNightSummary(token: string) {
+  return useQuery({
+    queryKey: [...gameNightKeys.all, 'shared', token] as const,
+    queryFn: () => api.gameNights.getSharedSummary(token),
+    enabled: !!token,
+    retry: false,
+  });
+}
+
 export function useGenerateGameNightShareToken() {
   const queryClient = useQueryClient();
   return useMutation({

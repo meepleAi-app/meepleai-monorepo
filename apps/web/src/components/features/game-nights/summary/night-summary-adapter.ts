@@ -10,6 +10,7 @@ export interface NightSummaryViewModel {
   readonly night: NightSummaryNight;
   readonly mvp: NightSummaryMVP | null;
   readonly games: PerGameRecapGame[];
+  readonly eventsCount: number;
 }
 
 export interface NightSummaryAdapterOptions {
@@ -84,7 +85,7 @@ export function toNightSummaryViewModel(
     title: g.gameTitle,
     order: g.playOrder,
     duration: g.durationMinutes != null ? formatDuration(g.durationMinutes) : durationUnknown,
-    eventsCount: 0,
+    eventsCount: g.eventsCount,
     ...(g.winnerName
       ? {
           winner: {
@@ -98,5 +99,7 @@ export function toNightSummaryViewModel(
       : {}),
   }));
 
-  return { night, mvp, games };
+  const eventsCount = dto.games.reduce((sum, g) => sum + g.eventsCount, 0);
+
+  return { night, mvp, games, eventsCount };
 }

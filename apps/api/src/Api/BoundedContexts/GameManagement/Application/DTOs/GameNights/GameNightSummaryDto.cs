@@ -42,4 +42,5 @@ public sealed record GameNightGameRecapDto(
     GameNightSessionStatus Status,
     Guid? WinnerId,
     string? WinnerName,
-    int? DurationMinutes);
+    int? DurationMinutes,
+    int EventsCount);

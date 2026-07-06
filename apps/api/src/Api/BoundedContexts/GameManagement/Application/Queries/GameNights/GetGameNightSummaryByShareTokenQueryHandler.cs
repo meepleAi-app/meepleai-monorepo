@@ -35,7 +35,9 @@ internal sealed class GetGameNightSummaryByShareTokenQueryHandler
 
         var winnerName = await GameNightSummaryWinnerResolver
             .BuildAsync(_db, gameNight, cancellationToken).ConfigureAwait(false);
+        var eventCounts = await GameNightSummaryEventCounts
+            .BuildAsync(_db, gameNight.Id, cancellationToken).ConfigureAwait(false);
 
-        return GameNightSummaryMapper.Map(gameNight, winnerName, isViewerOrganizer: false);
+        return GameNightSummaryMapper.Map(gameNight, winnerName, eventCounts, isViewerOrganizer: false);
     }
 }

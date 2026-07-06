@@ -23,6 +23,8 @@ export const gameNightKeys = {
   rsvps: (id: string) => [...gameNightKeys.all, id, 'rsvps'] as const,
   voteTally: (id: string) => [...gameNightKeys.all, id, 'vote-tally'] as const,
   summary: (id: string) => [...gameNightKeys.all, id, 'summary'] as const,
+  photos: (id: string) => [...gameNightKeys.all, id, 'photos'] as const,
+  sharedPhotos: (token: string) => [...gameNightKeys.all, 'shared', token, 'photos'] as const,
 };
 
 export function useUpcomingGameNights(
@@ -212,6 +214,50 @@ export function useSetGameNightArchived() {
       api.gameNights.setArchived(id, archived),
     onSuccess: (_data, { id }) => {
       queryClient.invalidateQueries({ queryKey: gameNightKeys.summary(id) });
+    },
+  });
+}
+
+// ── Recap photo gallery — Issue #2724 ────────────────────────────────────
+
+export function useGameNightPhotos(id: string, options: { enabled?: boolean } = {}) {
+  const { enabled = true } = options;
+  return useQuery({
+    queryKey: gameNightKeys.photos(id),
+    queryFn: () => api.gameNights.getPhotos(id),
+    enabled: enabled && !!id,
+  });
+}
+
+export function useSharedGameNightPhotos(token: string) {
+  return useQuery({
+    queryKey: gameNightKeys.sharedPhotos(token),
+    queryFn: () => api.gameNights.getSharedPhotos(token),
+    enabled: !!token,
+    retry: false,
+  });
+}
+
+export function useUploadGameNightPhoto(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { file: Blob; caption?: string; extractScoreFromPhoto?: boolean }) =>
+      api.gameNights.uploadPhoto(id, vars.file, {
+        caption: vars.caption,
+        extractScoreFromPhoto: vars.extractScoreFromPhoto,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: gameNightKeys.photos(id) });
+    },
+  });
+}
+
+export function useDeleteGameNightPhoto(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (photoId: string) => api.gameNights.deletePhoto(id, photoId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: gameNightKeys.photos(id) });
     },
   });
 }

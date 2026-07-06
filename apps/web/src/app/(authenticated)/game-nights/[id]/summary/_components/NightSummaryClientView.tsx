@@ -4,14 +4,20 @@ import { useCallback, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
+import { GameNightPhotoGallery } from '@/components/features/game-nights/photos/GameNightPhotoGallery';
+import { GameNightPhotoUploadDialog } from '@/components/features/game-nights/photos/GameNightPhotoUploadDialog';
 import { NightSummaryView } from '@/components/features/game-nights/summary';
 import { toNightSummaryViewModel } from '@/components/features/game-nights/summary/night-summary-adapter';
+import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import {
+  useDeleteGameNightPhoto,
+  useGameNightPhotos,
   useGameNightSummary,
   useGenerateGameNightShareToken,
   useSetGameNightArchived,
 } from '@/hooks/queries/useGameNights';
 import { useTranslation } from '@/hooks/useTranslation';
+import type { GameNightPhotoDto } from '@/lib/api/schemas/game-nights.schemas';
 
 export interface NightSummaryClientViewProps {
   readonly nightId: string;
@@ -22,12 +28,26 @@ export function NightSummaryClientView({ nightId }: NightSummaryClientViewProps)
   const { t, locale } = useTranslation();
 
   const summaryQuery = useGameNightSummary(nightId);
+  const photosQuery = useGameNightPhotos(nightId);
   const generateShare = useGenerateGameNightShareToken();
   const setArchived = useSetGameNightArchived();
+  const deletePhoto = useDeleteGameNightPhoto(nightId);
+  const { data: currentUser } = useCurrentUser();
 
   const [shareSuccess, setShareSuccess] = useState<{ visible: boolean; subline?: string }>({
     visible: false,
   });
+  const [uploadOpen, setUploadOpen] = useState(false);
+
+  const isViewerOrganizer = summaryQuery.data?.isViewerOrganizer ?? false;
+  const canDeletePhoto = useCallback(
+    (photo: GameNightPhotoDto) => isViewerOrganizer || photo.uploadedByUserId === currentUser?.id,
+    [isViewerOrganizer, currentUser?.id]
+  );
+  const handleDeletePhoto = useCallback(
+    (photoId: string) => deletePhoto.mutate(photoId),
+    [deletePhoto]
+  );
 
   const handleShare = useCallback(() => {
     generateShare.mutate(nightId, {
@@ -78,18 +98,33 @@ export function NightSummaryClientView({ nightId }: NightSummaryClientViewProps)
   });
 
   return (
-    <NightSummaryView
-      night={night}
-      mvp={mvp}
-      games={games}
-      eventsCount={eventsCount}
-      archived={summaryQuery.data.isArchived}
-      shareSuccess={shareSuccess}
-      onShare={handleShare}
-      onArchive={handleArchive}
-      onUnarchive={handleUnarchive}
-      onGoToList={handleGoToList}
-      onJumpToSession={handleJumpToSession}
-    />
+    <div className="flex flex-col gap-6">
+      <NightSummaryView
+        night={night}
+        mvp={mvp}
+        games={games}
+        eventsCount={eventsCount}
+        archived={summaryQuery.data.isArchived}
+        shareSuccess={shareSuccess}
+        onShare={handleShare}
+        onArchive={handleArchive}
+        onUnarchive={handleUnarchive}
+        onGoToList={handleGoToList}
+        onJumpToSession={handleJumpToSession}
+      />
+
+      <GameNightPhotoGallery
+        photos={photosQuery.data ?? []}
+        onAddPhoto={() => setUploadOpen(true)}
+        onDeletePhoto={handleDeletePhoto}
+        canDeletePhoto={canDeletePhoto}
+      />
+
+      <GameNightPhotoUploadDialog
+        gameNightId={nightId}
+        open={uploadOpen}
+        onClose={() => setUploadOpen(false)}
+      />
+    </div>
   );
 }

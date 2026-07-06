@@ -11,6 +11,8 @@ import {
   GameNightDtoSchema,
   GameNightLiveDtoSchema,
   GameNightRsvpDtoSchema,
+  GameNightPhotoDtoSchema,
+  GameNightPhotoUploadResultSchema,
   GameNightShareLinkDtoSchema,
   GameNightSummaryDtoSchema,
   GameNightVoteTallyDtoSchema,
@@ -20,6 +22,8 @@ import {
   type CreateGameNightInput,
   type GameNightDto,
   type GameNightLiveDto,
+  type GameNightPhotoDto,
+  type GameNightPhotoUploadResult,
   type GameNightRsvpDto,
   type GameNightShareLinkDto,
   type GameNightSummaryDto,
@@ -67,6 +71,15 @@ export interface GameNightsClient {
   generateShareToken(gameNightId: string): Promise<GameNightShareLinkDto>;
   revokeShareToken(gameNightId: string): Promise<void>;
   setArchived(gameNightId: string, archived: boolean): Promise<void>;
+  // Issue #2724 — recap photo gallery
+  getPhotos(gameNightId: string): Promise<GameNightPhotoDto[]>;
+  getSharedPhotos(token: string): Promise<GameNightPhotoDto[]>;
+  uploadPhoto(
+    gameNightId: string,
+    file: Blob,
+    opts?: { caption?: string; extractScoreFromPhoto?: boolean }
+  ): Promise<GameNightPhotoUploadResult>;
+  deletePhoto(gameNightId: string, photoId: string): Promise<void>;
 }
 
 export function createGameNightsClient({
@@ -219,6 +232,44 @@ export function createGameNightsClient({
 
     async setArchived(gameNightId, archived) {
       await httpClient.post(`/api/v1/game-nights/${gameNightId}/archive`, { archived });
+    },
+
+    async getPhotos(gameNightId) {
+      const data = await httpClient.get<GameNightPhotoDto[]>(
+        `/api/v1/game-nights/${gameNightId}/photos`
+      );
+      return GameNightPhotoDtoSchema.array().parse(data);
+    },
+
+    async getSharedPhotos(token) {
+      const data = await httpClient.get<GameNightPhotoDto[]>(
+        `/api/v1/game-nights/shared/${token}/photos`
+      );
+      return GameNightPhotoDtoSchema.array().parse(data);
+    },
+
+    // Multipart upload — raw fetch (httpClient does not support FormData). Relative URL
+    // through the Next.js proxy avoids CORS; credentials carry the session cookie.
+    async uploadPhoto(gameNightId, file, opts = {}) {
+      const form = new FormData();
+      form.append('file', file, file instanceof File ? file.name : 'photo.jpg');
+      if (opts.extractScoreFromPhoto) form.append('extractScoreFromPhoto', 'true');
+      if (opts.caption) form.append('caption', opts.caption);
+
+      const res = await fetch(`/api/v1/game-nights/${gameNightId}/photos`, {
+        method: 'POST',
+        body: form,
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: 'Failed to upload photo' }));
+        throw new Error(error.error || error.message || 'Failed to upload photo');
+      }
+      return GameNightPhotoUploadResultSchema.parse(await res.json());
+    },
+
+    async deletePhoto(gameNightId, photoId) {
+      await httpClient.delete(`/api/v1/game-nights/${gameNightId}/photos/${photoId}`);
     },
   };
 }

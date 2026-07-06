@@ -1,10 +1,11 @@
 'use client';
 
-import { useSharedGameNightSummary } from '@/hooks/queries/useGameNights';
+import { useSharedGameNightPhotos, useSharedGameNightSummary } from '@/hooks/queries/useGameNights';
 import { useTranslation } from '@/hooks/useTranslation';
 
 import { toNightSummaryViewModel } from './night-summary-adapter';
 import { NightSummaryView } from './NightSummaryView';
+import { GameNightPhotoGallery } from '../photos/GameNightPhotoGallery';
 
 export interface SharedGameNightSummaryViewProps {
   readonly token: string;
@@ -17,6 +18,7 @@ export interface SharedGameNightSummaryViewProps {
 export function SharedGameNightSummaryView({ token }: SharedGameNightSummaryViewProps) {
   const { t, locale } = useTranslation();
   const query = useSharedGameNightSummary(token);
+  const photosQuery = useSharedGameNightPhotos(token);
 
   if (query.isLoading) {
     return (
@@ -37,12 +39,17 @@ export function SharedGameNightSummaryView({ token }: SharedGameNightSummaryView
   const { night, mvp, games, eventsCount } = toNightSummaryViewModel(query.data, { locale, t });
 
   return (
-    <NightSummaryView
-      night={night}
-      mvp={mvp}
-      games={games}
-      eventsCount={eventsCount}
-      archived={query.data.isArchived}
-    />
+    <div className="flex flex-col gap-6">
+      <NightSummaryView
+        night={night}
+        mvp={mvp}
+        games={games}
+        eventsCount={eventsCount}
+        archived={query.data.isArchived}
+      />
+      {(photosQuery.data?.length ?? 0) > 0 && (
+        <GameNightPhotoGallery photos={photosQuery.data ?? []} />
+      )}
+    </div>
   );
 }

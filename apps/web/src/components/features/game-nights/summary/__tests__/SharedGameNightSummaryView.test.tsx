@@ -4,9 +4,15 @@ import { render, screen } from '@testing-library/react';
 import { SharedGameNightSummaryView } from '../SharedGameNightSummaryView';
 
 const sharedMock = vi.fn();
+const sharedPhotosMock = vi.fn();
 
 vi.mock('@/hooks/queries/useGameNights', () => ({
   useSharedGameNightSummary: () => sharedMock(),
+  useSharedGameNightPhotos: () => sharedPhotosMock(),
+}));
+
+vi.mock('../../photos/GameNightPhotoGallery', () => ({
+  GameNightPhotoGallery: () => <div data-testid="photo-gallery" />,
 }));
 
 vi.mock('@/hooks/useTranslation', () => ({
@@ -46,6 +52,7 @@ const dto = {
 beforeEach(() => {
   vi.clearAllMocks();
   sharedMock.mockReturnValue({ data: dto, isLoading: false, isError: false });
+  sharedPhotosMock.mockReturnValue({ data: [], isLoading: false, isError: false });
 });
 
 describe('SharedGameNightSummaryView', () => {

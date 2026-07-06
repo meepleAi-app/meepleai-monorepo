@@ -285,3 +285,23 @@ export type GameNightSummaryDto = z.infer<typeof GameNightSummaryDtoSchema>;
 
 export const GameNightShareLinkDtoSchema = z.object({ shareToken: z.string() });
 export type GameNightShareLinkDto = z.infer<typeof GameNightShareLinkDtoSchema>;
+
+// Issue #2724 — recap photo gallery
+export const GameNightPhotoDtoSchema = z.object({
+  id: z.string().uuid(),
+  photoUrl: z.string(),
+  thumbnailUrl: z.string().nullable(),
+  caption: z.string().nullable(),
+  uploadedByUserId: z.string().uuid(),
+  uploadedAt: z.string(),
+});
+export type GameNightPhotoDto = z.infer<typeof GameNightPhotoDtoSchema>;
+
+export const GameNightPhotoUploadResultSchema = z.object({
+  photoId: z.string().uuid(),
+  photoUrl: z.string(),
+  thumbnailUrl: z.string().nullable(),
+  ocrText: z.string().nullable(),
+  wasDeduplicated: z.boolean(),
+});
+export type GameNightPhotoUploadResult = z.infer<typeof GameNightPhotoUploadResultSchema>;

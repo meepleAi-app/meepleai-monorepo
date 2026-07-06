@@ -3874,6 +3874,30 @@
       "durationUnknown": "—",
       "shareCopied": "Link copied to clipboard",
       "shareError": "Could not generate the share link."
+    },
+    "photos": {
+      "title": "Game night photos",
+      "addCta": "Add photo",
+      "emptyTitle": "No photos yet",
+      "emptyDescription": "Add shots from the night: scoreboards, lucky rolls, cheers.",
+      "photoAltFallback": "Game night photo",
+      "deleteCta": "Delete photo",
+      "prev": "Previous",
+      "next": "Next",
+      "dialogTitle": "Upload a photo",
+      "dialogDescription": "JPEG, PNG or WebP up to 5 MB.",
+      "selectLabel": "Choose an image",
+      "previewAlt": "Preview of the selected photo",
+      "captionLabel": "Caption (optional)",
+      "captionPlaceholder": "e.g. Davide's photo-finish win",
+      "extractScoreLabel": "Extract the score from the photo (OCR)",
+      "uploadCta": "Upload",
+      "uploading": "Uploading…",
+      "uploadError": "Could not upload the photo. Please try again.",
+      "dedupToast": "This photo is already in the gallery.",
+      "ocrResultTitle": "Detected text",
+      "badFormat": "Unsupported format. Use JPEG, PNG or WebP.",
+      "tooLarge": "The photo exceeds 5 MB."
     }
   },
   "gameNightsIndex": {

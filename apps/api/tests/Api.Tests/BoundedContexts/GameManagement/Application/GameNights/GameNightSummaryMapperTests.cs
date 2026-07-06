@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
 using Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
@@ -35,6 +36,9 @@ public class GameNightSummaryMapperTests
     private static readonly IReadOnlyDictionary<Guid, int> NoEventCounts =
         new Dictionary<Guid, int>();
 
+    private static readonly IReadOnlyDictionary<Guid, IReadOnlyList<GameNightRecapPlayerDto>> NoTopPlayers =
+        new Dictionary<Guid, IReadOnlyList<GameNightRecapPlayerDto>>();
+
     [Fact]
     public void Map_ComputesMvpKpisAndRecap()
     {
@@ -51,8 +55,17 @@ public class GameNightSummaryMapperTests
         var names = new Dictionary<Guid, string> { [davide] = "Davide", [marco] = "Marco" };
         string? Resolver(GameNightSession s) => s.WinnerId is { } w ? names.GetValueOrDefault(w) : null;
         var eventCounts = new Dictionary<Guid, int> { [brass.SessionId] = 11 };
+        var topPlayers = new Dictionary<Guid, IReadOnlyList<GameNightRecapPlayerDto>>
+        {
+            [brass.SessionId] = new List<GameNightRecapPlayerDto>
+            {
+                new("Davide", 1),
+                new("Marco", 2),
+                new("Giulia", 3),
+            },
+        };
 
-        var dto = GameNightSummaryMapper.Map(evt, Resolver, eventCounts, isViewerOrganizer: true);
+        var dto = GameNightSummaryMapper.Map(evt, Resolver, eventCounts, topPlayers, isViewerOrganizer: true);
 
         dto.Mvp.Should().NotBeNull();
         dto.Mvp!.PlayerName.Should().Be("Davide");
@@ -66,7 +79,11 @@ public class GameNightSummaryMapperTests
         dto.Games[0].WinnerName.Should().Be("Davide");
         dto.Games[0].DurationMinutes.Should().Be(120);
         dto.Games[0].EventsCount.Should().Be(11);
+        dto.Games[0].TopPlayers.Should().HaveCount(3);
+        dto.Games[0].TopPlayers[0].PlayerName.Should().Be("Davide");
+        dto.Games[0].TopPlayers[0].Rank.Should().Be(1);
         dto.Games[1].EventsCount.Should().Be(0); // no events recorded for this session
+        dto.Games[1].TopPlayers.Should().BeEmpty();
     }
 
     [Fact]
@@ -78,7 +95,7 @@ public class GameNightSummaryMapperTests
             CompletedSession(evt.Id, 1, Guid.NewGuid(), "Brass", winnerId: null, 90),
         });
 
-        var dto = GameNightSummaryMapper.Map(evt, _ => null, NoEventCounts, isViewerOrganizer: true);
+        var dto = GameNightSummaryMapper.Map(evt, _ => null, NoEventCounts, NoTopPlayers, isViewerOrganizer: true);
 
         dto.Mvp.Should().BeNull();
         dto.Kpis.WinnersCount.Should().Be(0);
@@ -93,8 +110,8 @@ public class GameNightSummaryMapperTests
         evt.Complete();
         evt.GenerateShareToken();
 
-        var organizerView = GameNightSummaryMapper.Map(evt, _ => null, NoEventCounts, isViewerOrganizer: true);
-        var guestView = GameNightSummaryMapper.Map(evt, _ => null, NoEventCounts, isViewerOrganizer: false);
+        var organizerView = GameNightSummaryMapper.Map(evt, _ => null, NoEventCounts, NoTopPlayers, isViewerOrganizer: true);
+        var guestView = GameNightSummaryMapper.Map(evt, _ => null, NoEventCounts, NoTopPlayers, isViewerOrganizer: false);
 
         organizerView.ShareToken.Should().NotBeNull();
         guestView.ShareToken.Should().BeNull();

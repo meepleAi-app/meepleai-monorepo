@@ -42,7 +42,9 @@ internal sealed class GetGameNightSummaryQueryHandler
             .BuildAsync(_db, gameNight, cancellationToken).ConfigureAwait(false);
         var eventCounts = await GameNightSummaryEventCounts
             .BuildAsync(_db, gameNight.Id, cancellationToken).ConfigureAwait(false);
+        var leaderboard = await GameNightSummaryLeaderboard
+            .BuildAsync(_db, gameNight, cancellationToken).ConfigureAwait(false);
 
-        return GameNightSummaryMapper.Map(gameNight, winnerName, eventCounts, isOrganizer);
+        return GameNightSummaryMapper.Map(gameNight, winnerName, eventCounts, leaderboard, isOrganizer);
     }
 }

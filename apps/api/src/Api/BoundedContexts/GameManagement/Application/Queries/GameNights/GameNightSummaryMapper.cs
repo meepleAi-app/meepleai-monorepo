@@ -16,6 +16,7 @@ internal static class GameNightSummaryMapper
         GameNightEvent night,
         Func<GameNightSession, string?> winnerName,
         IReadOnlyDictionary<Guid, int> eventCountBySession,
+        IReadOnlyDictionary<Guid, IReadOnlyList<GameNightRecapPlayerDto>> topPlayersBySession,
         bool isViewerOrganizer)
     {
         var games = night.Sessions
@@ -23,7 +24,10 @@ internal static class GameNightSummaryMapper
             .Select(s => new GameNightGameRecapDto(
                 s.SessionId, s.GameId, s.GameTitle, s.PlayOrder, s.Status,
                 s.WinnerId, winnerName(s), DurationMinutes(s),
-                eventCountBySession.TryGetValue(s.SessionId, out var count) ? count : 0))
+                eventCountBySession.TryGetValue(s.SessionId, out var count) ? count : 0,
+                topPlayersBySession.TryGetValue(s.SessionId, out var top)
+                    ? top
+                    : Array.Empty<GameNightRecapPlayerDto>()))
             .ToList();
 
         var kpis = new GameNightSummaryKpisDto(

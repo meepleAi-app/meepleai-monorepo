@@ -12,6 +12,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
 
@@ -23,6 +24,8 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 /// Issue #2689: Validates that the monitor sends <see cref="DegradeStuckJobCommand"/>
 /// when a job is stuck past the recovery threshold (default 30 min), and does NOT send it
 /// when the job is only past the alert threshold (10 min) but below the recovery threshold.
+/// Issue #2693: Validates that auto-degrade is suppressed within the startup grace period
+/// (default 15 min) to avoid racing StalePdfRecoveryService on the first monitor cycle.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "DocumentProcessing")]
@@ -154,16 +157,23 @@ public sealed class ProcessingQueueMonitorServiceTests
         return jobId;
     }
 
-    private static ProcessingQueueMonitorService BuildMonitor(IServiceScopeFactory scopeFactory)
+    /// <summary>
+    /// Builds a <see cref="ProcessingQueueMonitorService"/> using empty configuration
+    /// (all thresholds default: StuckJobTimeout=10min, StuckJobRecoveryTimeout=30min,
+    /// StartupGracePeriodMinutes=15min) and an optional <paramref name="timeProvider"/>.
+    /// The <paramref name="timeProvider"/> clock is sampled in the constructor to capture
+    /// <c>_serviceStartedAt</c>, so advance it AFTER this call to simulate elapsed time.
+    /// </summary>
+    private static ProcessingQueueMonitorService BuildMonitor(
+        IServiceScopeFactory scopeFactory,
+        TimeProvider? timeProvider = null)
     {
-        // Empty configuration → all thresholds use their defaults:
-        //   StuckJobTimeout          = 10 min
-        //   StuckJobRecoveryTimeout  = 30 min
         var configuration = new ConfigurationBuilder().Build();
         return new ProcessingQueueMonitorService(
             scopeFactory,
             configuration,
-            NullLogger<ProcessingQueueMonitorService>.Instance);
+            NullLogger<ProcessingQueueMonitorService>.Instance,
+            timeProvider);
     }
 
     // ──────────────────────────────────────────────────────────────────
@@ -179,7 +189,12 @@ public sealed class ProcessingQueueMonitorServiceTests
         var jobId = await SeedStuckJobAsync(dbName, startedAt);
 
         var (scopeFactory, mediatorMock, _) = BuildScopeFactory(dbName);
-        var monitor = BuildMonitor(scopeFactory);
+
+        // Construct first (captures _serviceStartedAt = T), then advance past the 15-min
+        // startup grace window so the degrade gate is open (Issue #2693 regression fix).
+        var tp = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        var monitor = BuildMonitor(scopeFactory, tp);
+        tp.Advance(TimeSpan.FromMinutes(31));
 
         // Act — call the internal method directly, bypassing the 2-minute loop delay
         await monitor.RunChecksAsync(CancellationToken.None);
@@ -206,7 +221,12 @@ public sealed class ProcessingQueueMonitorServiceTests
         await SeedStuckJobAsync(dbName, startedAt);
 
         var (scopeFactory, mediatorMock, streamMock) = BuildScopeFactory(dbName);
-        var monitor = BuildMonitor(scopeFactory);
+
+        // Construct first (captures _serviceStartedAt = T), then advance past the 15-min
+        // startup grace window so the degrade gate is open (Issue #2693 regression fix).
+        var tp = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        var monitor = BuildMonitor(scopeFactory, tp);
+        tp.Advance(TimeSpan.FromMinutes(31));
 
         // Act
         await monitor.RunChecksAsync(CancellationToken.None);
@@ -222,5 +242,76 @@ public sealed class ProcessingQueueMonitorServiceTests
         mediatorMock.Verify(
             m => m.Send(It.IsAny<DegradeStuckJobCommand>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // Grace-period test A: within grace → SSE alert fires but NO degrade
+    // Issue #2693
+    // ──────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CheckStuckJobs_WithinStartupGracePeriod_PublishesAlertButDoesNotDegrade()
+    {
+        // Arrange: job started 40 min ago (past both the 10-min alert and 30-min recovery
+        // thresholds), but the service is brand-new — grace not yet elapsed.
+        var dbName = $"monitor_grace_suppress_{Guid.NewGuid():N}";
+        var startedAt = DateTimeOffset.UtcNow.AddMinutes(-40);
+        var jobId = await SeedStuckJobAsync(dbName, startedAt);
+
+        var (scopeFactory, mediatorMock, streamMock) = BuildScopeFactory(dbName);
+
+        // FakeTimeProvider is NOT advanced after construction:
+        // elapsed = 0 min < 15 min default grace → degrade suppressed.
+        var tp = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        var monitor = BuildMonitor(scopeFactory, tp);
+        // No tp.Advance() — service just started.
+
+        // Act
+        await monitor.RunChecksAsync(CancellationToken.None);
+
+        // Assert: SSE alert still fires (stuck detection is unaffected by grace)
+        streamMock.Verify(
+            s => s.PublishQueueEventAsync(
+                It.Is<QueueStreamEvent>(e => e.Type == QueueStreamEventType.AlertDocumentStuck),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        // Assert: degrade suppressed — grace not yet elapsed
+        mediatorMock.Verify(
+            m => m.Send(It.IsAny<DegradeStuckJobCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // Grace-period test B: after grace → degrade fires
+    // Issue #2693
+    // ──────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CheckStuckJobs_AfterStartupGracePeriod_SendsDegradeCommand()
+    {
+        // Arrange: job started 40 min ago (> 30-min recovery threshold)
+        // and the service clock is advanced beyond the 15-min grace window.
+        var dbName = $"monitor_grace_degrade_{Guid.NewGuid():N}";
+        var startedAt = DateTimeOffset.UtcNow.AddMinutes(-40);
+        var jobId = await SeedStuckJobAsync(dbName, startedAt);
+
+        var (scopeFactory, mediatorMock, _) = BuildScopeFactory(dbName);
+
+        // Construct first (captures _serviceStartedAt = T), then advance 16 min
+        // (> 15 min default grace) so the degrade gate opens.
+        var tp = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        var monitor = BuildMonitor(scopeFactory, tp);
+        tp.Advance(TimeSpan.FromMinutes(16));
+
+        // Act
+        await monitor.RunChecksAsync(CancellationToken.None);
+
+        // Assert: degrade fires once with correct job id and stuck minutes
+        mediatorMock.Verify(
+            m => m.Send(
+                It.Is<DegradeStuckJobCommand>(c => c.JobId == jobId && c.StuckMinutes >= 30),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

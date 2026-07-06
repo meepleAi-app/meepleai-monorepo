@@ -497,13 +497,15 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
 
     /// <summary>
     /// Finalizes the game night, transitioning to Completed status.
-    /// All sessions must be finished (not in-progress).
+    /// Accepts both Published (finalized before any live session) and InProgress
+    /// (the production flow — invariant #15 promotes the night to InProgress when the
+    /// first Session goes live; #2699). All sessions must be finished (not in-progress).
     /// </summary>
     public void FinalizeNight()
     {
         ThrowIfCorrupted();
 
-        if (Status != GameNightStatus.Published)
+        if (Status != GameNightStatus.Published && Status != GameNightStatus.InProgress)
             throw new InvalidOperationException($"Cannot finalize a {Status} game night.");
         if (_sessions.Any(s => s.Status == GameNightSessionStatus.InProgress))
             throw new InvalidOperationException("Cannot finalize: a session is still in progress.");

@@ -3891,6 +3891,13 @@
         "reload": "Ricarica",
         "dismiss": "Annulla"
       }
+    },
+    "editDrawer": {
+      "title": "Modifica serata",
+      "description": "Aggiorna i dettagli della tua serata di gioco.",
+      "submit": "Salva modifiche",
+      "savedToast": "Serata aggiornata",
+      "errorGeneric": "Impossibile aggiornare la serata."
     }
   },
   "gameNightsIndex": {

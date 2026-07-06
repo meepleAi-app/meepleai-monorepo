@@ -61,4 +61,10 @@ internal interface IGameNightEventRepository : IRepository<GameNightEvent, Guid>
 
     /// <summary>Persists the organiser's resolved tie-break winner on the event row.</summary>
     Task SetVotingWinnerAsync(Guid eventId, Guid? winnerGameId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Finds a shared game night by its summary share token — Issue #2702. Returns null when the
+    /// token is unknown or sharing was revoked. Possession of the token is the authorisation.
+    /// </summary>
+    Task<GameNightEvent?> GetByShareTokenAsync(string shareToken, CancellationToken cancellationToken = default);
 }

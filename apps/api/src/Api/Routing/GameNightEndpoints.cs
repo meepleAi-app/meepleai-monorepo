@@ -77,6 +77,7 @@ internal static class GameNightEndpoints
         gameNights.MapGet("/{id:guid}", HandleGetGameNightById)
             .RequireAuthenticatedUser()
             .Produces<GameNightDto>(200)
+            .Produces(403)
             .Produces(404)
             .Produces(401)
             .WithName("GetGameNightById")
@@ -137,6 +138,7 @@ internal static class GameNightEndpoints
         gameNights.MapGet("/{id:guid}/rsvps", HandleGetGameNightRsvps)
             .RequireAuthenticatedUser()
             .Produces<IReadOnlyList<GameNightRsvpDto>>(200)
+            .Produces(403)
             .Produces(404)
             .Produces(401)
             .WithName("GetGameNightRsvps")
@@ -583,9 +585,11 @@ internal static class GameNightEndpoints
     private static async Task<IResult> HandleGetGameNightById(
         Guid id,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var result = await mediator.Send(new GetGameNightByIdQuery(id), cancellationToken).ConfigureAwait(false);
+        var userId = httpContext.User.GetUserId();
+        var result = await mediator.Send(new GetGameNightByIdQuery(id, userId), cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
 
@@ -603,9 +607,11 @@ internal static class GameNightEndpoints
     private static async Task<IResult> HandleGetGameNightRsvps(
         Guid id,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var result = await mediator.Send(new GetGameNightRsvpsQuery(id), cancellationToken).ConfigureAwait(false);
+        var userId = httpContext.User.GetUserId();
+        var result = await mediator.Send(new GetGameNightRsvpsQuery(id, userId), cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
 

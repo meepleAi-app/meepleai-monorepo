@@ -104,7 +104,10 @@ describe('OwnershipConfirmationDialog', () => {
     expect(screen.queryByRole('button', { name: /Crea Tutor veloce/i })).not.toBeInTheDocument();
   });
 
-  it('quick-create calls API and navigates to chat thread', async () => {
+  it('quick-create calls API and navigates to the created agent page', async () => {
+    // BUG B (#2727): the BE returns a placeholder chatThreadId (Guid.NewGuid,
+    // never persisted), so redirecting to /chat/{chatThreadId} lands on a dead
+    // thread. Redirect to the created agent's detail page instead.
     const user = userEvent.setup();
     render(
       <OwnershipConfirmationDialog
@@ -119,8 +122,9 @@ describe('OwnershipConfirmationDialog', () => {
 
     await waitFor(() => {
       expect(mockQuickCreateTutor).toHaveBeenCalledWith('game-1', 'shared-1');
-      expect(mockPush).toHaveBeenCalledWith('/chat/thread-1');
+      expect(mockPush).toHaveBeenCalledWith('/agents/agent-1');
     });
+    expect(mockPush).not.toHaveBeenCalledWith('/chat/thread-1');
   });
 
   it('Personalizza navigates to agent creation wizard', async () => {

@@ -333,12 +333,14 @@ describe('LibraryClient - Issue #3026', () => {
   });
 
   describe('Agent Configuration', () => {
+    // BE UserLibrary AgentConfigDto shape (flat, no id/userId/gameId/timestamps).
     const mockAgentConfig = {
-      id: 'config-123',
-      gameId: 'game-456',
-      agentDefinitionId: 'strategy',
-      modelName: 'gpt-4',
-      costEstimate: 0.05,
+      llmModel: 'llama-3.3-70b-free',
+      temperature: 0.7,
+      maxTokens: 4096,
+      personality: 'Amichevole',
+      detailLevel: 'Normale',
+      personalNotes: null,
     };
 
     describe('getAgentConfig', () => {
@@ -366,23 +368,57 @@ describe('LibraryClient - Issue #3026', () => {
     });
 
     describe('updateAgentConfig', () => {
-      it('should update agent configuration', async () => {
-        const updatedConfig = { ...mockAgentConfig, modelName: 'gpt-4-turbo' };
-        vi.mocked(mockHttpClient.put).mockResolvedValue(updatedConfig);
+      it('sends the BE-aligned request and returns the persisted customAgentConfig', async () => {
+        const persisted = {
+          llmModel: 'llama-3.3-70b',
+          temperature: 0.5,
+          maxTokens: 2048,
+          personality: 'Professionale',
+          detailLevel: 'Esaustivo',
+          personalNotes: 'gioco in coppia',
+        };
+        // BE PUT returns the full UserLibraryEntryDto with the config nested.
+        vi.mocked(mockHttpClient.put).mockResolvedValue({
+          id: 'entry-1',
+          customAgentConfig: persisted,
+        });
 
         const client = createLibraryClient({ httpClient: mockHttpClient });
-        const result = await client.updateAgentConfig('game-456', { modelName: 'gpt-4-turbo' });
+        const result = await client.updateAgentConfig('game-456', {
+          llmModel: 'llama-3.3-70b',
+          temperature: 0.5,
+          maxTokens: 2048,
+          personality: 'Professionale',
+          detailLevel: 'Esaustivo',
+          personalNotes: 'gioco in coppia',
+        });
 
-        expect(result.modelName).toBe('gpt-4-turbo');
+        expect(result).toEqual(persisted);
+        expect(mockHttpClient.put).toHaveBeenCalledWith(
+          '/api/v1/library/games/game-456/agent-config',
+          expect.objectContaining({
+            llmModel: 'llama-3.3-70b',
+            personality: 'Professionale',
+            detailLevel: 'Esaustivo',
+            personalNotes: 'gioco in coppia',
+          }),
+          expect.any(Object)
+        );
       });
 
-      it('should throw error when update fails', async () => {
-        vi.mocked(mockHttpClient.put).mockResolvedValue(null);
+      it('throws when the entry has no customAgentConfig', async () => {
+        vi.mocked(mockHttpClient.put).mockResolvedValue({ id: 'entry-1' });
 
         const client = createLibraryClient({ httpClient: mockHttpClient });
 
         await expect(
-          client.updateAgentConfig('game-456', { modelName: 'invalid' })
+          client.updateAgentConfig('game-456', {
+            llmModel: 'llama-3.3-70b',
+            temperature: 0.5,
+            maxTokens: 2048,
+            personality: 'Professionale',
+            detailLevel: 'Esaustivo',
+          })
         ).rejects.toThrow('Failed to update agent configuration');
       });
     });

@@ -81,43 +81,43 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
   }, [isOpen, configLoading, currentConfig]);
 
   // Form state
-  const [modelType, setModelType] = useState<AIModel>(DEFAULT_AGENT_CONFIG.modelType);
+  const [llmModel, setLlmModel] = useState<AIModel>(DEFAULT_AGENT_CONFIG.llmModel);
   const [temperature, setTemperature] = useState(DEFAULT_AGENT_CONFIG.temperature);
   const [maxTokens, setMaxTokens] = useState(DEFAULT_AGENT_CONFIG.maxTokens);
   const [personality, setPersonality] = useState<AgentPersonality>(
     DEFAULT_AGENT_CONFIG.personality
   );
   const [detailLevel, setDetailLevel] = useState<DetailLevel>(DEFAULT_AGENT_CONFIG.detailLevel);
-  const [customInstructions, setCustomInstructions] = useState('');
+  const [personalNotes, setPersonalNotes] = useState('');
 
   // Load current config when modal opens
   useEffect(() => {
     if (isOpen && currentConfig) {
-      setModelType(currentConfig.modelType);
+      setLlmModel(currentConfig.llmModel);
       setTemperature(currentConfig.temperature);
       setMaxTokens(currentConfig.maxTokens);
       setPersonality(currentConfig.personality);
       setDetailLevel(currentConfig.detailLevel);
-      setCustomInstructions(currentConfig.customInstructions || '');
+      setPersonalNotes(currentConfig.personalNotes || '');
     } else if (isOpen && !currentConfig) {
       // Reset to defaults if no config exists (inline to avoid dependency)
-      setModelType(DEFAULT_AGENT_CONFIG.modelType);
+      setLlmModel(DEFAULT_AGENT_CONFIG.llmModel);
       setTemperature(DEFAULT_AGENT_CONFIG.temperature);
       setMaxTokens(DEFAULT_AGENT_CONFIG.maxTokens);
       setPersonality(DEFAULT_AGENT_CONFIG.personality);
       setDetailLevel(DEFAULT_AGENT_CONFIG.detailLevel);
-      setCustomInstructions('');
+      setPersonalNotes('');
     }
   }, [isOpen, currentConfig]);
 
   const handleSave = async () => {
     const request: UpdateAgentConfigRequest = {
-      modelType,
+      llmModel,
       temperature,
       maxTokens,
       personality,
       detailLevel,
-      customInstructions: customInstructions || null,
+      personalNotes: personalNotes || null,
     };
 
     try {
@@ -134,12 +134,12 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
   };
 
   const handleResetToDefault = () => {
-    setModelType(DEFAULT_AGENT_CONFIG.modelType);
+    setLlmModel(DEFAULT_AGENT_CONFIG.llmModel);
     setTemperature(DEFAULT_AGENT_CONFIG.temperature);
     setMaxTokens(DEFAULT_AGENT_CONFIG.maxTokens);
     setPersonality(DEFAULT_AGENT_CONFIG.personality);
     setDetailLevel(DEFAULT_AGENT_CONFIG.detailLevel);
-    setCustomInstructions('');
+    setPersonalNotes('');
     toast.info('Configurazione ripristinata ai valori predefiniti');
   };
 
@@ -253,7 +253,7 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
               <Label htmlFor="model" className="text-base font-semibold">
                 🤖 Modello AI
               </Label>
-              <Select value={modelType} onValueChange={value => setModelType(value as AIModel)}>
+              <Select value={llmModel} onValueChange={value => setLlmModel(value as AIModel)}>
                 <SelectTrigger id="model">
                   <SelectValue />
                 </SelectTrigger>
@@ -266,7 +266,7 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
                 </SelectContent>
               </Select>
               <p className="text-sm text-muted-foreground">
-                {MODEL_OPTIONS.find(m => m.value === modelType)?.description}
+                {MODEL_OPTIONS.find(m => m.value === llmModel)?.description}
               </p>
             </div>
 
@@ -365,13 +365,13 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
               <Textarea
                 id="instructions"
                 placeholder="Es: Spiega sempre le regole come se fossi principiante"
-                value={customInstructions}
-                onChange={e => setCustomInstructions(e.target.value)}
+                value={personalNotes}
+                onChange={e => setPersonalNotes(e.target.value)}
                 maxLength={1000}
                 rows={4}
               />
               <div className="text-xs text-right text-muted-foreground">
-                {1000 - customInstructions.length} caratteri rimanenti
+                {1000 - personalNotes.length} caratteri rimanenti
               </div>
             </div>
           </div>

@@ -692,10 +692,11 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
     /**
      * Quick-create a tutor agent for a game after ownership declaration.
      * Uses pre-existing KB cards to instantly set up a chat-ready agent.
-     * POST /api/v1/agents/quick-create
+     * POST /api/v1/agents/quick-create (QuickCreateAgentCommand).
      * @param gameId - Game UUID
      * @param sharedGameId - Optional shared game UUID for catalog-linked games
-     * @todo BACKEND MISSING: No route registered for POST /api/v1/agents/quick-create. Throws on null response. See: endpoint audit 2026-04-15
+     * @remarks The response `chatThreadId` is a backend placeholder (chat-thread
+     * BC integration deferred) — do NOT navigate to it. Use `agentId` instead.
      */
     async quickCreateTutor(gameId: string, sharedGameId?: string): Promise<QuickCreateResult> {
       const body: { gameId: string; sharedGameId?: string } = { gameId };

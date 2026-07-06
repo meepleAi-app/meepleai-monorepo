@@ -128,7 +128,7 @@ export function MeepleLibraryGameCard({
   // Fetch agent configuration status
   const { data: agentConfig } = useAgentConfig(game.gameId, true);
   const agentConfigured = agentConfig !== null;
-  const agentModel = agentConfig?.modelType || 'default';
+  const agentModel = agentConfig?.llmModel || 'default';
 
   const toggleFavoriteMutation = useToggleLibraryFavorite();
 

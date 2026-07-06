@@ -6,13 +6,15 @@
  * Provides caching and mutations for per-game agent customization.
  */
 
-import { useQuery, useMutation, useQueryClient, UseQueryResult, UseMutationResult } from '@tanstack/react-query';
-
 import {
-  api,
-  type AgentConfigDto,
-  type UpdateAgentConfigRequest,
-} from '@/lib/api';
+  useQuery,
+  useMutation,
+  useQueryClient,
+  UseQueryResult,
+  UseMutationResult,
+} from '@tanstack/react-query';
+
+import { api, type AgentConfigDto, type UpdateAgentConfigRequest } from '@/lib/api';
 
 /**
  * Query key factory for agent configuration queries
@@ -81,26 +83,14 @@ export function useUpdateAgentConfig(): UseMutationResult<
         agentConfigKeys.byGame(gameId)
       );
 
-      // Optimistically update cache
-      queryClient.setQueryData<AgentConfigDto>(agentConfigKeys.byGame(gameId), (old) => {
+      // Optimistically update cache. The BE config DTO (UserLibrary) is a flat
+      // record with no id/userId/gameId/timestamps, so the request payload IS
+      // the optimistic config shape.
+      queryClient.setQueryData<AgentConfigDto>(agentConfigKeys.byGame(gameId), old => {
         if (!old) {
-          // If no config exists, create optimistic one
-          const optimisticConfig: AgentConfigDto = {
-            id: 'temp-id',
-            userId: 'temp-user',
-            gameId,
-            ...request,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-          return optimisticConfig;
+          return { ...request };
         }
-        // Update existing config
-        return {
-          ...old,
-          ...request,
-          updatedAt: new Date().toISOString(),
-        };
+        return { ...old, ...request };
       });
 
       return { previousConfig };

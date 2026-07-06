@@ -234,3 +234,52 @@ export const GameNightVoteTallyDtoSchema = z.object({
   candidates: z.array(GameNightCandidateTallyDtoSchema),
 });
 export type GameNightVoteTallyDto = z.infer<typeof GameNightVoteTallyDtoSchema>;
+
+// ──────────────────────────────────────────────────────────────────────
+// Issue #2702 — summary (MVP/KPI) + share-token + archive
+// ──────────────────────────────────────────────────────────────────────
+
+export const GameNightMvpDtoSchema = z.object({
+  playerName: z.string(),
+  wins: z.number().int().nonnegative(),
+});
+export type GameNightMvpDto = z.infer<typeof GameNightMvpDtoSchema>;
+
+export const GameNightSummaryKpisDtoSchema = z.object({
+  totalGames: z.number().int().nonnegative(),
+  completedGames: z.number().int().nonnegative(),
+  totalDurationMinutes: z.number().int().nonnegative(),
+  winnersCount: z.number().int().nonnegative(),
+});
+export type GameNightSummaryKpisDto = z.infer<typeof GameNightSummaryKpisDtoSchema>;
+
+export const GameNightGameRecapDtoSchema = z.object({
+  sessionId: z.string().uuid(),
+  gameId: z.string().uuid(),
+  gameTitle: z.string(),
+  playOrder: z.number().int(),
+  status: z.string(),
+  winnerId: z.string().uuid().nullable(),
+  winnerName: z.string().nullable(),
+  durationMinutes: z.number().int().nullable(),
+});
+export type GameNightGameRecapDto = z.infer<typeof GameNightGameRecapDtoSchema>;
+
+export const GameNightSummaryDtoSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  status: z.string(),
+  scheduledAt: z.string(),
+  location: z.string().nullable(),
+  isViewerOrganizer: z.boolean(),
+  isArchived: z.boolean(),
+  isShared: z.boolean(),
+  shareToken: z.string().nullable(),
+  mvp: GameNightMvpDtoSchema.nullable(),
+  kpis: GameNightSummaryKpisDtoSchema,
+  games: z.array(GameNightGameRecapDtoSchema),
+});
+export type GameNightSummaryDto = z.infer<typeof GameNightSummaryDtoSchema>;
+
+export const GameNightShareLinkDtoSchema = z.object({ shareToken: z.string() });
+export type GameNightShareLinkDto = z.infer<typeof GameNightShareLinkDtoSchema>;

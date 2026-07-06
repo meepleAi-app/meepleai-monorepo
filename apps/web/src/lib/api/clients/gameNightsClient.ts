@@ -11,6 +11,8 @@ import {
   GameNightDtoSchema,
   GameNightLiveDtoSchema,
   GameNightRsvpDtoSchema,
+  GameNightShareLinkDtoSchema,
+  GameNightSummaryDtoSchema,
   GameNightVoteTallyDtoSchema,
   RegularDtoSchema,
   StartGameNightSessionResultSchema,
@@ -19,6 +21,8 @@ import {
   type GameNightDto,
   type GameNightLiveDto,
   type GameNightRsvpDto,
+  type GameNightShareLinkDto,
+  type GameNightSummaryDto,
   type GameNightVoteTallyDto,
   type RegularDto,
   type RsvpStatus,
@@ -57,6 +61,12 @@ export interface GameNightsClient {
   castVote(gameNightId: string, candidateGameId: string): Promise<void>;
   retractVote(gameNightId: string, candidateGameId: string): Promise<void>;
   resolveVotingTie(gameNightId: string, winningCandidateGameId: string): Promise<void>;
+  // Issue #2702 — summary + share-token + archive
+  getSummary(gameNightId: string): Promise<GameNightSummaryDto>;
+  getSharedSummary(token: string): Promise<GameNightSummaryDto>;
+  generateShareToken(gameNightId: string): Promise<GameNightShareLinkDto>;
+  revokeShareToken(gameNightId: string): Promise<void>;
+  setArchived(gameNightId: string, archived: boolean): Promise<void>;
 }
 
 export function createGameNightsClient({
@@ -179,6 +189,36 @@ export function createGameNightsClient({
       await httpClient.post(`/api/v1/game-nights/${gameNightId}/votes/resolve-tie`, {
         winningCandidateGameId,
       });
+    },
+
+    async getSummary(gameNightId) {
+      const data = await httpClient.get<GameNightSummaryDto>(
+        `/api/v1/game-nights/${gameNightId}/summary`
+      );
+      return GameNightSummaryDtoSchema.parse(data);
+    },
+
+    async getSharedSummary(token) {
+      const data = await httpClient.get<GameNightSummaryDto>(
+        `/api/v1/game-nights/shared/${token}/summary`
+      );
+      return GameNightSummaryDtoSchema.parse(data);
+    },
+
+    async generateShareToken(gameNightId) {
+      const data = await httpClient.post<GameNightShareLinkDto>(
+        `/api/v1/game-nights/${gameNightId}/share-token`,
+        {}
+      );
+      return GameNightShareLinkDtoSchema.parse(data);
+    },
+
+    async revokeShareToken(gameNightId) {
+      await httpClient.delete(`/api/v1/game-nights/${gameNightId}/share-token`);
+    },
+
+    async setArchived(gameNightId, archived) {
+      await httpClient.post(`/api/v1/game-nights/${gameNightId}/archive`, { archived });
     },
   };
 }

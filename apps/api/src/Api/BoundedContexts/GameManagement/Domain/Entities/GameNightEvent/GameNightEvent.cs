@@ -464,6 +464,66 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     /// <summary>Restores the resolved tie-break winner from persistence.</summary>
     internal void RestoreVotingWinner(Guid? winnerGameId) => VotingWinnerGameId = winnerGameId;
 
+    // ── Summary share-token + archive — Issue #2702 ──────────────────────────
+
+    /// <summary>URL-safe token that makes the night's summary publicly readable; null when unshared.</summary>
+    public string? ShareToken { get; private set; }
+
+    /// <summary>True while a share token is active.</summary>
+    public bool IsShared { get; private set; }
+
+    /// <summary>True once the organiser has archived a finalised night.</summary>
+    public bool IsArchived { get; private set; }
+
+    /// <summary>
+    /// Generates (or rotates) a URL-safe share token that makes the night's summary publicly
+    /// readable. Possession of the token authorises the anonymous read (#2702).
+    /// </summary>
+    public string GenerateShareToken()
+    {
+        ShareToken = Convert.ToBase64String(Guid.NewGuid().ToByteArray())
+            .Replace('/', '_')
+            .Replace('+', '-')
+            .TrimEnd('=');
+        IsShared = true;
+        UpdatedAt = DateTimeOffset.UtcNow;
+        return ShareToken;
+    }
+
+    /// <summary>Revokes the share token, disabling anonymous access to the summary.</summary>
+    public void RevokeShareToken()
+    {
+        ShareToken = null;
+        IsShared = false;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>Archives a finalised (Completed) night. Idempotent.</summary>
+    public void Archive()
+    {
+        ThrowIfCorrupted();
+        if (Status != GameNightStatus.Completed)
+            throw new ConflictException("Only a completed game night can be archived");
+        IsArchived = true;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>Restores an archived night to the active summary list. Idempotent.</summary>
+    public void Unarchive()
+    {
+        ThrowIfCorrupted();
+        IsArchived = false;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>Restores the share-token + archive state from persistence.</summary>
+    internal void RestoreShareState(string? shareToken, bool isShared, bool isArchived)
+    {
+        ShareToken = shareToken;
+        IsShared = isShared;
+        IsArchived = isArchived;
+    }
+
     /// <summary>
     /// Marks that the 24-hour reminder has been sent.
     /// </summary>

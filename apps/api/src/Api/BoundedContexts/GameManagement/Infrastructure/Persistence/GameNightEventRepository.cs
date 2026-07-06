@@ -199,6 +199,22 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
         return entity != null ? MapToDomain(entity) : null;
     }
 
+    public async Task<GameNightEvent?> GetByShareTokenAsync(
+        string shareToken, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(shareToken);
+
+        var entity = await DbContext.GameNightEvents
+            .AsNoTracking()
+            .Include(e => e.Rsvps)
+            .Include(e => e.Sessions)
+            .Include(e => e.Votes)
+            .FirstOrDefaultAsync(e => e.ShareToken == shareToken && e.IsShared, cancellationToken)
+            .ConfigureAwait(false);
+
+        return entity != null ? MapToDomain(entity) : null;
+    }
+
     public async Task AddVoteAsync(GameNightVote vote, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(vote);
@@ -259,6 +275,9 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             CreatedAt = domain.CreatedAt,
             UpdatedAt = domain.UpdatedAt,
             VotingWinnerGameId = domain.VotingWinnerGameId,
+            ShareToken = domain.ShareToken,
+            IsShared = domain.IsShared,
+            IsArchived = domain.IsArchived,
             Xmin = domain.Xmin
         };
 
@@ -407,6 +426,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .ToList();
         evt.RestoreVotes(votes);
         evt.RestoreVotingWinner(entity.VotingWinnerGameId);
+        evt.RestoreShareState(entity.ShareToken, entity.IsShared, entity.IsArchived);
 
         // Clear domain events from reconstruction
         evt.ClearDomainEvents();

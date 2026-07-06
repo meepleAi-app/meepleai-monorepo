@@ -3919,6 +3919,14 @@
         "body": "Scegli il gioco vincitore tra i candidati in parità.",
         "resolve": "Scegli {title}"
       }
+    },
+    "summary": {
+      "loading": "Caricamento riepilogo…",
+      "error": "Impossibile caricare il riepilogo della serata.",
+      "mvpWins": "{wins, plural, =1 {1 vittoria} other {# vittorie}}",
+      "durationUnknown": "—",
+      "shareCopied": "Link copiato negli appunti",
+      "shareError": "Impossibile generare il link di condivisione."
     }
   },
   "gameNightsIndex": {

@@ -22,6 +22,7 @@ export const gameNightKeys = {
   detail: (id: string) => [...gameNightKeys.all, id] as const,
   rsvps: (id: string) => [...gameNightKeys.all, id, 'rsvps'] as const,
   voteTally: (id: string) => [...gameNightKeys.all, id, 'vote-tally'] as const,
+  summary: (id: string) => [...gameNightKeys.all, id, 'summary'] as const,
 };
 
 export function useUpcomingGameNights(
@@ -170,6 +171,38 @@ export function useResolveGameNightVotingTie() {
       api.gameNights.resolveVotingTie(id, winningCandidateGameId),
     onSuccess: (_data, { id }) => {
       queryClient.invalidateQueries({ queryKey: gameNightKeys.voteTally(id) });
+    },
+  });
+}
+
+// ── Summary + share-token + archive — Issue #2702 ────────────────────────
+
+export function useGameNightSummary(id: string, options: { enabled?: boolean } = {}) {
+  const { enabled = true } = options;
+  return useQuery({
+    queryKey: gameNightKeys.summary(id),
+    queryFn: () => api.gameNights.getSummary(id),
+    enabled: enabled && !!id,
+  });
+}
+
+export function useGenerateGameNightShareToken() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.gameNights.generateShareToken(id),
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: gameNightKeys.summary(id) });
+    },
+  });
+}
+
+export function useSetGameNightArchived() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, archived }: { id: string; archived: boolean }) =>
+      api.gameNights.setArchived(id, archived),
+    onSuccess: (_data, { id }) => {
+      queryClient.invalidateQueries({ queryKey: gameNightKeys.summary(id) });
     },
   });
 }

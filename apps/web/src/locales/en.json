@@ -3866,6 +3866,14 @@
         "body": "Choose the winning game among the tied candidates.",
         "resolve": "Choose {title}"
       }
+    },
+    "summary": {
+      "loading": "Loading summary…",
+      "error": "Could not load the game night summary.",
+      "mvpWins": "{wins, plural, =1 {1 win} other {# wins}}",
+      "durationUnknown": "—",
+      "shareCopied": "Link copied to clipboard",
+      "shareError": "Could not generate the share link."
     }
   },
   "gameNightsIndex": {

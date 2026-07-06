@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -8,156 +8,158 @@ import {
   NightSummaryView,
   type NightSummaryMVP,
   type NightSummaryNight,
-  type NightSummaryPhoto,
 } from '@/components/features/game-nights/summary';
 import type { PerGameRecapGame } from '@/components/features/game-nights/summary';
+import {
+  useGameNightSummary,
+  useGenerateGameNightShareToken,
+  useSetGameNightArchived,
+} from '@/hooks/queries/useGameNights';
+import { useTranslation } from '@/hooks/useTranslation';
 
-// ─── Fixture data (TODO: replace with backend hook `useGameNightSummary(id)`)
-// Continuità con mockup M mergiato nel PR #1250 — issue #487
-// ─────────────────────────────────────────────────────────────────────────
+// ─── DTO → view-model adapter ───────────────────────────────────────────────
+// Deferred (need new subsystems, #2702 follow-up): per-game top-3 leaderboard scores,
+// per-session event counts, and the photo gallery. Those render empty for now.
 
-const NIGHT: NightSummaryNight = {
-  title: 'Sabato boardgame con i Padovani',
-  dateLine: 'sabato 17 maggio 2026',
-  location: 'Casa Marco · Padova',
-  startedAt: '21:00',
-  endedAt: '03:15',
-  duration: '6h 15m',
-  nightCode: '#GN-042',
-};
+function formatDuration(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
 
-const MVP: NightSummaryMVP = {
-  id: 'p-davide',
-  name: 'Davide',
-  initials: 'DC',
-  color: 200,
-  achievements: '1 vittoria · 11 eventi diary · top scorer Brass',
-};
+function initialsOf(name: string): string {
+  return name
+    .split(/\s+/)
+    .map(w => w.charAt(0))
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+}
 
-const GAMES: ReadonlyArray<PerGameRecapGame> = [
-  {
-    id: 'gs-brass-1',
-    sessionId: 's-brass-may17',
-    title: 'Brass: Birmingham',
-    emoji: '🏭',
-    cover: ['hsl(220 35% 28%)', 'hsl(28 60% 38%)'],
-    order: 1,
-    duration: '2h 45m',
-    eventsCount: 11,
-    winner: { id: 'p-davide', name: 'Davide', initials: 'DC', color: 200, score: 178 },
-    topScores: [
-      { id: 'p-marco', name: 'Marco', initials: 'MR', color: 262, score: 142 },
-      { id: 'p-giulia', name: 'Giulia', initials: 'GM', color: 10, score: 128 },
-    ],
-  },
-  {
-    id: 'gs-spirit-1',
-    sessionId: 's-spirit-may17',
-    title: 'Spirit Island',
-    emoji: '🌋',
-    cover: ['hsl(210 50% 30%)', 'hsl(150 50% 38%)'],
-    order: 2,
-    duration: '1h 50m',
-    eventsCount: 9,
-    coopMode: true,
-    coopOutcome: 'team coop vinto · round 5/6 · adversary England 1',
-  },
-  {
-    id: 'gs-wing-1',
-    sessionId: 's-wing-may17',
-    title: 'Wingspan',
-    emoji: '🦜',
-    cover: ['hsl(85 40% 45%)', 'hsl(35 60% 50%)'],
-    order: 3,
-    duration: '1h 25m',
-    eventsCount: 8,
-    winner: { id: 'p-giulia', name: 'Giulia', initials: 'GM', color: 10, score: 92 },
-    topScores: [
-      { id: 'p-sara', name: 'Sara', initials: 'ST', color: 320, score: 88 },
-      { id: 'p-aaron', name: 'Aaron', initials: 'AK', color: 140, score: 81 },
-    ],
-  },
-];
-
-const PHOTOS: ReadonlyArray<NightSummaryPhoto> = [
-  { id: 'ph-1', label: 'Setup Brass', gradient: ['hsl(220 35% 30%)', 'hsl(28 60% 40%)'] },
-  { id: 'ph-2', label: 'Davide vince', gradient: ['hsl(350 70% 55%)', 'hsl(28 60% 50%)'] },
-  { id: 'ph-3', label: 'Tabellone Spirit', gradient: ['hsl(210 50% 30%)', 'hsl(150 50% 40%)'] },
-  { id: 'ph-4', label: 'Foto di gruppo', gradient: ['hsl(262 50% 50%)', 'hsl(320 60% 55%)'] },
-  { id: 'ph-5', label: 'Tableau Wingspan', gradient: ['hsl(85 50% 50%)', 'hsl(35 60% 55%)'] },
-  { id: 'ph-6', label: 'Brindisi finale', gradient: ['hsl(38 80% 55%)', 'hsl(10 70% 50%)'] },
-];
-
-// ─── View component ─────────────────────────────────────────────────────
+function hueOf(name: string): number {
+  let hue = 0;
+  for (let i = 0; i < name.length; i++) {
+    hue = (hue * 31 + name.charCodeAt(i)) % 360;
+  }
+  return hue;
+}
 
 export interface NightSummaryClientViewProps {
   readonly nightId: string;
 }
 
-export function NightSummaryClientView({ nightId: _nightId }: NightSummaryClientViewProps) {
+export function NightSummaryClientView({ nightId }: NightSummaryClientViewProps) {
   const router = useRouter();
-  const [archived, setArchived] = useState(false);
-  const [shareSuccess, setShareSuccess] = useState<{
-    visible: boolean;
-    subline?: string;
-  }>({ visible: false });
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { t, locale } = useTranslation();
 
-  // Cleanup pending toast timer on unmount to avoid setState on unmounted component
-  useEffect(() => {
-    return () => {
-      if (toastTimerRef.current) {
-        clearTimeout(toastTimerRef.current);
-      }
-    };
-  }, []);
+  const summaryQuery = useGameNightSummary(nightId);
+  const generateShare = useGenerateGameNightShareToken();
+  const setArchived = useSetGameNightArchived();
+
+  const [shareSuccess, setShareSuccess] = useState<{ visible: boolean; subline?: string }>({
+    visible: false,
+  });
 
   const handleShare = useCallback(() => {
-    const url = `meepleai.app/s/${_nightId.slice(0, 12)}`;
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      void navigator.clipboard.writeText(`https://${url}`).catch(() => undefined);
-    }
-    setShareSuccess({
-      visible: true,
-      subline: `${url} · sparisce in 3s`,
+    generateShare.mutate(nightId, {
+      onSuccess: ({ shareToken }) => {
+        if (typeof window !== 'undefined' && navigator.clipboard) {
+          const url = `${window.location.origin}/game-nights/${nightId}/summary?share=${shareToken}`;
+          void navigator.clipboard.writeText(url).catch(() => undefined);
+        }
+        setShareSuccess({ visible: true, subline: t('gameNightDetail.summary.shareCopied') });
+      },
     });
-    // Replace any previous pending timer so rapid re-shares don't race
-    if (toastTimerRef.current) {
-      clearTimeout(toastTimerRef.current);
-    }
-    toastTimerRef.current = setTimeout(() => {
-      setShareSuccess({ visible: false });
-      toastTimerRef.current = null;
-    }, 3000);
-  }, [_nightId]);
+  }, [generateShare, nightId, t]);
 
-  const handleArchive = useCallback(() => {
-    setArchived(true);
-  }, []);
-
-  const handleUnarchive = useCallback(() => {
-    setArchived(false);
-  }, []);
-
-  const handleGoToList = useCallback(() => {
-    router.push('/game-nights');
-  }, [router]);
-
+  const handleArchive = useCallback(
+    () => setArchived.mutate({ id: nightId, archived: true }),
+    [setArchived, nightId]
+  );
+  const handleUnarchive = useCallback(
+    () => setArchived.mutate({ id: nightId, archived: false }),
+    [setArchived, nightId]
+  );
+  const handleGoToList = useCallback(() => router.push('/game-nights'), [router]);
   const handleJumpToSession = useCallback(
-    (sessionId: string) => {
-      router.push(`/sessions/${sessionId}`);
-    },
+    (sessionId: string) => router.push(`/sessions/${sessionId}`),
     [router]
   );
 
+  if (summaryQuery.isLoading) {
+    return (
+      <div data-testid="summary-loading" className="p-8 text-center text-muted-foreground">
+        {t('gameNightDetail.summary.loading')}
+      </div>
+    );
+  }
+
+  if (summaryQuery.isError || !summaryQuery.data) {
+    return (
+      <div data-testid="summary-error" className="p-8 text-center text-muted-foreground">
+        {t('gameNightDetail.summary.error')}
+      </div>
+    );
+  }
+
+  const dto = summaryQuery.data;
+  const durationUnknown = t('gameNightDetail.summary.durationUnknown');
+
+  const startTime = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(
+    new Date(dto.scheduledAt)
+  );
+  const night: NightSummaryNight = {
+    title: dto.title,
+    dateLine: new Intl.DateTimeFormat(locale, {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(new Date(dto.scheduledAt)),
+    ...(dto.location ? { location: dto.location } : {}),
+    startedAt: startTime,
+    endedAt: '',
+    duration: formatDuration(dto.kpis.totalDurationMinutes),
+    nightCode: `#${dto.id.slice(0, 8).toUpperCase()}`,
+  };
+
+  const mvp: NightSummaryMVP | null = dto.mvp
+    ? {
+        id: dto.mvp.playerName,
+        name: dto.mvp.playerName,
+        initials: initialsOf(dto.mvp.playerName),
+        color: hueOf(dto.mvp.playerName),
+        achievements: t('gameNightDetail.summary.mvpWins', { wins: dto.mvp.wins }),
+      }
+    : null;
+
+  const games: PerGameRecapGame[] = dto.games.map(g => ({
+    id: g.sessionId,
+    sessionId: g.sessionId,
+    title: g.gameTitle,
+    order: g.playOrder,
+    duration: g.durationMinutes != null ? formatDuration(g.durationMinutes) : durationUnknown,
+    eventsCount: 0,
+    ...(g.winnerName
+      ? {
+          winner: {
+            id: g.winnerName,
+            name: g.winnerName,
+            initials: initialsOf(g.winnerName),
+            color: hueOf(g.winnerName),
+            score: 0,
+          },
+        }
+      : {}),
+  }));
+
   return (
     <NightSummaryView
-      night={NIGHT}
-      mvp={MVP}
-      games={GAMES}
-      eventsCount={28}
-      photos={PHOTOS}
-      archived={archived}
+      night={night}
+      mvp={mvp}
+      games={games}
+      eventsCount={0}
+      archived={dto.isArchived}
       shareSuccess={shareSuccess}
       onShare={handleShare}
       onArchive={handleArchive}

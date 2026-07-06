@@ -33,7 +33,7 @@ public sealed class SearchQueryHandlerTests
     /// <summary>
     /// Issue #563 — happy path: caller supplies a pre-computed query vector,
     /// so the handler MUST NOT invoke <see cref="IEmbeddingService.GenerateEmbeddingAsync(string, string, CancellationToken)"/>,
-    /// and the supplied vector MUST flow through to <see cref="IEmbeddingRepository.SearchByVectorAsync"/>.
+    /// and the supplied vector MUST flow through to <see cref="IEmbeddingRepository.SearchByVectorWithScoresAsync"/>.
     /// </summary>
     [Fact]
     public async Task Handle_WithPrecomputedQueryVector_SkipsEmbeddingService()
@@ -57,6 +57,19 @@ public sealed class SearchQueryHandlerTests
             .Callback<Guid, Vector, int, double, IReadOnlyList<Guid>?, CancellationToken>(
                 (_, vector, _, _, _, _) => capturedVectors.Add(vector))
             .ReturnsAsync(new List<Embedding>());
+        // Issue #2712: PerformVectorSearchAsync now calls SearchByVectorWithScoresAsync,
+        // so capture the query vector here (this is the method actually invoked).
+        embeddingRepositoryMock
+            .Setup(r => r.SearchByVectorWithScoresAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<Vector>(),
+                It.IsAny<int>(),
+                It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<Guid, Vector, int, double, IReadOnlyList<Guid>?, CancellationToken>(
+                (_, vector, _, _, _, _) => capturedVectors.Add(vector))
+            .ReturnsAsync((IReadOnlyList<ScoredEmbedding>)new List<ScoredEmbedding>());
 
         var ragAccessMock = new Mock<IRagAccessService>();
         // No UserId on query → access check is skipped, no setup needed.
@@ -124,6 +137,19 @@ public sealed class SearchQueryHandlerTests
             .Callback<Guid, Vector, int, double, IReadOnlyList<Guid>?, CancellationToken>(
                 (_, vector, _, _, _, _) => capturedVectors.Add(vector))
             .ReturnsAsync(new List<Embedding>());
+        // Issue #2712: PerformVectorSearchAsync now calls SearchByVectorWithScoresAsync,
+        // so capture the generated query vector here (this is the method actually invoked).
+        embeddingRepositoryMock
+            .Setup(r => r.SearchByVectorWithScoresAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<Vector>(),
+                It.IsAny<int>(),
+                It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<Guid, Vector, int, double, IReadOnlyList<Guid>?, CancellationToken>(
+                (_, vector, _, _, _, _) => capturedVectors.Add(vector))
+            .ReturnsAsync((IReadOnlyList<ScoredEmbedding>)new List<ScoredEmbedding>());
 
         var ragAccessMock = new Mock<IRagAccessService>();
 
@@ -181,6 +207,16 @@ public sealed class SearchQueryHandlerTests
                 It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Embedding>());
+        // Issue #2712: PerformVectorSearchAsync now calls SearchByVectorWithScoresAsync.
+        embeddingRepositoryMock
+            .Setup(r => r.SearchByVectorWithScoresAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<Vector>(),
+                It.IsAny<int>(),
+                It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<ScoredEmbedding>)new List<ScoredEmbedding>());
 
         var ragAccessMock = new Mock<IRagAccessService>();
 

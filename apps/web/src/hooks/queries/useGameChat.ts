@@ -173,7 +173,14 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
             const payload = event.data as StreamingCompletePayload;
             const confidence = payload.confidence ?? undefined;
             const citations = payload.Citations ?? payload.citations ?? [];
-            const isLowQuality = confidence !== undefined && confidence < LOW_QUALITY_THRESHOLD;
+            // Issue #2712: a grounded answer (valid citations) must NOT be degraded to the
+            // "Non sono certo" card. The numeric confidence is currently compressed (rank-based),
+            // so gating solely on it hid correct answers. Treat low-quality only when the RAG
+            // found NO context (no citations) AND confidence is below threshold.
+            const isLowQuality =
+              citations.length === 0 &&
+              confidence !== undefined &&
+              confidence < LOW_QUALITY_THRESHOLD;
             const outOfContext =
               citations.length === 0 &&
               (confidence === undefined || confidence < OUT_OF_CONTEXT_THRESHOLD);

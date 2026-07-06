@@ -147,6 +147,12 @@ public sealed class AskQuestionQueryHandlerIntentRoutingTests
                 It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(),
                 It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Embedding>());
+        // Issue #2712: PerformVectorSearchAsync now calls SearchByVectorWithScoresAsync.
+        embeddingRepoMock
+            .Setup(r => r.SearchByVectorWithScoresAsync(
+                It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(),
+                It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<ScoredEmbedding>)new List<ScoredEmbedding>());
 
         var searchEmbeddingServiceMock = new Mock<IEmbeddingService>();
         searchEmbeddingServiceMock

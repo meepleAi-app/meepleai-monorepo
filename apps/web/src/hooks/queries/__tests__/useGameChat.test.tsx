@@ -69,16 +69,34 @@ describe('useGameChat', () => {
     expect(result.current.messages[1].isLowQuality).toBe(false);
   });
 
-  it('derives isLowQuality=true when confidence < 0.70', async () => {
+  it('derives isLowQuality=true when confidence < 0.70 AND no citations', async () => {
     const lowConfEvents = [
       { type: 7, data: 'Non sono certo.' },
-      { type: 4, data: { confidence: 0.42, Citations: [sampleCitation] } },
+      { type: 4, data: { confidence: 0.42, Citations: [] } },
     ];
     vi.mocked(qaStream).mockReturnValueOnce(mockStream(lowConfEvents) as any);
     const { result } = renderHook(() => useGameChat('wingspan'));
-    await act(async () => { await result.current.ask('edge?'); });
+    await act(async () => {
+      await result.current.ask('edge?');
+    });
     expect(result.current.messages[1].isLowQuality).toBe(true);
     expect(result.current.messages[1].outOfContext).toBe(false);
+  });
+
+  it('does NOT mark isLowQuality when citations are present even if confidence < 0.70 (Issue #2712)', async () => {
+    // A grounded answer with valid citations must be shown, not hidden behind the "Non sono certo" card.
+    const groundedLowConf = [
+      { type: 7, data: 'Il punteggio si calcola contando le carte agente rimaste.' },
+      { type: 4, data: { confidence: 0.53, Citations: [sampleCitation] } },
+    ];
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(groundedLowConf) as any);
+    const { result } = renderHook(() => useGameChat('wingspan'));
+    await act(async () => {
+      await result.current.ask('come si calcola il punteggio?');
+    });
+    expect(result.current.messages[1].isLowQuality).toBe(false);
+    expect(result.current.messages[1].content).toContain('Il punteggio si calcola');
+    expect(result.current.messages[1].citations).toHaveLength(1);
   });
 
   it('derives outOfContext=true when no citations + confidence < 0.30', async () => {
@@ -88,7 +106,9 @@ describe('useGameChat', () => {
     ];
     vi.mocked(qaStream).mockReturnValueOnce(mockStream(oocEvents) as any);
     const { result } = renderHook(() => useGameChat('wingspan'));
-    await act(async () => { await result.current.ask('tg?'); });
+    await act(async () => {
+      await result.current.ask('tg?');
+    });
     expect(result.current.messages[1].outOfContext).toBe(true);
     expect(result.current.messages[1].citations).toBeUndefined();
   });
@@ -96,16 +116,22 @@ describe('useGameChat', () => {
   it('isLoading transitions correctly during ask', async () => {
     let releaseStream: () => void = () => {};
     const slowStream = async function* () {
-      await new Promise<void>(r => { releaseStream = r; });
+      await new Promise<void>(r => {
+        releaseStream = r;
+      });
       yield happyEvents[2];
     };
     vi.mocked(qaStream).mockReturnValueOnce(slowStream() as any);
     const { result } = renderHook(() => useGameChat('wingspan'));
 
-    act(() => { void result.current.ask('q'); });
+    act(() => {
+      void result.current.ask('q');
+    });
     await waitFor(() => expect(result.current.isLoading).toBe(true));
 
-    await act(async () => { releaseStream(); });
+    await act(async () => {
+      releaseStream();
+    });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
   });
 
@@ -117,23 +143,33 @@ describe('useGameChat', () => {
     vi.mocked(qaStream).mockReturnValueOnce(errorStream() as any);
     const { result } = renderHook(() => useGameChat('wingspan'));
     await act(async () => {
-      try { await result.current.ask('q'); } catch { /* expected */ }
+      try {
+        await result.current.ask('q');
+      } catch {
+        /* expected */
+      }
     });
     await waitFor(() => expect(result.current.isError).toBe(true));
   });
 
   it('switchAgent updates currentAgent', () => {
     const { result } = renderHook(() => useGameChat('wingspan'));
-    act(() => { result.current.switchAgent('arbitro'); });
+    act(() => {
+      result.current.switchAgent('arbitro');
+    });
     expect(result.current.currentAgent).toBe('arbitro');
   });
 
   it('switchAgent does NOT clear message history', async () => {
     vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
     const { result } = renderHook(() => useGameChat('wingspan'));
-    await act(async () => { await result.current.ask('q'); });
+    await act(async () => {
+      await result.current.ask('q');
+    });
     expect(result.current.messages).toHaveLength(2);
-    act(() => { result.current.switchAgent('arbitro'); });
+    act(() => {
+      result.current.switchAgent('arbitro');
+    });
     expect(result.current.messages).toHaveLength(2);
   });
 
@@ -219,11 +255,15 @@ describe('useGameChat', () => {
     const { result } = renderHook(() => useGameChat('wingspan'));
     await waitFor(() => expect(result.current.chatThreadId).toBe('thread-existing'));
 
-    await act(async () => { await result.current.ask('new question'); });
+    await act(async () => {
+      await result.current.ask('new question');
+    });
 
-    expect(qaStream).toHaveBeenCalledWith(expect.objectContaining({
-      chatId: 'thread-existing',
-    }));
+    expect(qaStream).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chatId: 'thread-existing',
+      })
+    );
   });
 
   it('preserves messages across remount (audit trigger A)', async () => {

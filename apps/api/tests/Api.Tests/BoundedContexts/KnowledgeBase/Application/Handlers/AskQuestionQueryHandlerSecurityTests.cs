@@ -79,6 +79,16 @@ public class AskQuestionQueryHandlerSecurityTests
                 It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Embedding>());
+        // Issue #2712: PerformVectorSearchAsync now calls SearchByVectorWithScoresAsync.
+        mockEmbeddingRepo
+            .Setup(r => r.SearchByVectorWithScoresAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<Vector>(),
+                It.IsAny<int>(),
+                It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<ScoredEmbedding>)new List<ScoredEmbedding>());
 
         // Setup VectorSearchDomainService
         mockVectorSearchService

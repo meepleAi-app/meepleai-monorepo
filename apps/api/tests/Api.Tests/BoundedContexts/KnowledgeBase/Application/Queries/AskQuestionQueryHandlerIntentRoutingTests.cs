@@ -7,6 +7,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Configuration;
 using Api.Infrastructure.Entities;
@@ -188,6 +189,7 @@ public sealed class AskQuestionQueryHandlerIntentRoutingTests
 
         return new AskQuestionQueryHandler(
             searchHandler,
+            CreatePassthroughReranker(),
             new QualityTrackingDomainService(),
             new ChatContextDomainService(),
             new Mock<IChatThreadRepository>().Object,
@@ -206,5 +208,19 @@ public sealed class AskQuestionQueryHandlerIntentRoutingTests
             intentClassifier,
             routingMonitorMock.Object,
             new Mock<ILogger<AskQuestionQueryHandler>>().Object);
+    }
+
+    private static ICrossEncoderReranker CreatePassthroughReranker()
+    {
+        var mock = new Mock<ICrossEncoderReranker>();
+        mock
+            .Setup(r => r.RerankAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<RerankChunk>>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string _, IReadOnlyList<RerankChunk> chunks, int? topK, CancellationToken _) =>
+                new RerankResult(
+                    chunks.Take(topK ?? chunks.Count)
+                        .Select((c, i) => new RerankedChunk(c.Id, c.Content, c.OriginalScore, 0.9 - (i * 0.1)))
+                        .ToList(),
+                    "test-model", 1.0));
+        return mock.Object;
     }
 }

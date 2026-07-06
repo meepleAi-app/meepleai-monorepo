@@ -8,6 +8,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Models;
 using Api.Services;
@@ -36,6 +37,7 @@ public class StreamQaQueryHandlerTests
     private readonly Mock<IEmbeddingService> _embeddingServiceMock;
     private readonly Mock<IHybridSearchService> _hybridSearchServiceMock;
     private readonly SearchQueryHandler _searchQueryHandler;
+    private readonly Mock<ICrossEncoderReranker> _rerankerMock;
     private readonly Mock<QualityTrackingDomainService> _qualityTrackingServiceMock;
     private readonly Mock<ChatContextDomainService> _chatContextServiceMock;
     private readonly Mock<IChatThreadRepository> _chatThreadRepositoryMock;
@@ -69,6 +71,17 @@ public class StreamQaQueryHandlerTests
             searchLoggerMock.Object
         );
 
+        // Default: reranker preserves order (passthrough) so existing assertions are unaffected.
+        _rerankerMock = new Mock<ICrossEncoderReranker>();
+        _rerankerMock
+            .Setup(r => r.RerankAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<RerankChunk>>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string _, IReadOnlyList<RerankChunk> chunks, int? topK, CancellationToken _) =>
+                new RerankResult(
+                    chunks.Take(topK ?? chunks.Count)
+                        .Select((c, i) => new RerankedChunk(c.Id, c.Content, c.OriginalScore, 0.9 - (i * 0.1)))
+                        .ToList(),
+                    "test-model", 1.0));
+
         _qualityTrackingServiceMock = new Mock<QualityTrackingDomainService>();
         _chatContextServiceMock = new Mock<ChatContextDomainService>();
         _chatThreadRepositoryMock = new Mock<IChatThreadRepository>();
@@ -83,6 +96,7 @@ public class StreamQaQueryHandlerTests
 
         _handler = new StreamQaQueryHandler(
             _searchQueryHandler,
+            _rerankerMock.Object,
             _qualityTrackingServiceMock.Object,
             _chatContextServiceMock.Object,
             _chatThreadRepositoryMock.Object,

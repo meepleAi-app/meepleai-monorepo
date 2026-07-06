@@ -3927,6 +3927,30 @@
       "durationUnknown": "—",
       "shareCopied": "Link copiato negli appunti",
       "shareError": "Impossibile generare il link di condivisione."
+    },
+    "photos": {
+      "title": "Foto della serata",
+      "addCta": "Aggiungi foto",
+      "emptyTitle": "Ancora nessuna foto",
+      "emptyDescription": "Aggiungi gli scatti della serata: tabelloni, tiri fortunati, brindisi.",
+      "photoAltFallback": "Foto della serata",
+      "deleteCta": "Elimina foto",
+      "prev": "Precedente",
+      "next": "Successiva",
+      "dialogTitle": "Carica una foto",
+      "dialogDescription": "JPEG, PNG o WebP fino a 5 MB.",
+      "selectLabel": "Scegli un'immagine",
+      "previewAlt": "Anteprima della foto selezionata",
+      "captionLabel": "Didascalia (opzionale)",
+      "captionPlaceholder": "Es. La vittoria di Davide al fotofinish",
+      "extractScoreLabel": "Estrai il punteggio dalla foto (OCR)",
+      "uploadCta": "Carica",
+      "uploading": "Caricamento…",
+      "uploadError": "Impossibile caricare la foto. Riprova.",
+      "dedupToast": "Foto già presente nella galleria.",
+      "ocrResultTitle": "Testo rilevato",
+      "badFormat": "Formato non supportato. Usa JPEG, PNG o WebP.",
+      "tooLarge": "La foto supera i 5 MB."
     }
   },
   "gameNightsIndex": {

@@ -12,6 +12,20 @@ vi.mock('@/hooks/queries/useGameNights', () => ({
   useGameNightSummary: () => summaryMock(),
   useGenerateGameNightShareToken: () => ({ mutate: generateMock }),
   useSetGameNightArchived: () => ({ mutate: archiveMock }),
+  useGameNightPhotos: () => ({ data: [] }),
+  useDeleteGameNightPhoto: () => ({ mutate: vi.fn() }),
+}));
+
+vi.mock('@/hooks/queries/useCurrentUser', () => ({
+  useCurrentUser: () => ({ data: { id: 'org-1' } }),
+}));
+
+// Stub the photo subsystem — its own tests cover it; keep this test on summary wiring.
+vi.mock('@/components/features/game-nights/photos/GameNightPhotoGallery', () => ({
+  GameNightPhotoGallery: () => <div data-testid="photo-gallery" />,
+}));
+vi.mock('@/components/features/game-nights/photos/GameNightPhotoUploadDialog', () => ({
+  GameNightPhotoUploadDialog: () => null,
 }));
 
 vi.mock('@/hooks/useTranslation', () => ({

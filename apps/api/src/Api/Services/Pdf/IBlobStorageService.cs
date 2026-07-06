@@ -43,6 +43,10 @@ public enum BlobCategory
     /// <summary>Photos attached to a PlayRecord (scoreboard captures, party shots).
     /// Target prefix <c>play-record-photos/{playRecordId}/</c>.</summary>
     PlayRecordPhoto,
+
+    /// <summary>Photos attached to a GameNight (recap gallery: scoreboard captures, party shots).
+    /// Target prefix <c>game-night-photos/{gameNightId}/</c>. Issue #2724.</summary>
+    GameNightPhoto,
 }
 
 internal static class BlobCategoryExtensions
@@ -62,6 +66,7 @@ internal static class BlobCategoryExtensions
         BlobCategory.GamebookPhoto => "gamebook-photos",
         BlobCategory.PhotoBatch => "photo-batches",
         BlobCategory.PlayRecordPhoto => "play-record-photos",
+        BlobCategory.GameNightPhoto => "game-night-photos",
         _ => throw new ArgumentOutOfRangeException(nameof(category), category, null),
     };
 }

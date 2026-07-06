@@ -352,6 +352,50 @@ internal static class GameNightEndpoints
             .WithSummary("Get a shared game night summary by token")
             .WithDescription("Public endpoint to read a shared summary by its opaque token. Returns 404 when the token is unknown or sharing was revoked. Rate-limited per IP.");
 
+        // ── Recap photo gallery — Issue #2724 ────────────────────────────────
+
+        gameNights.MapPost("/{id:guid}/photos", HandleUploadGameNightPhoto)
+            .RequireAuthenticatedUser()
+            .DisableAntiforgery()
+            .Produces<GameNightPhotoUploadResult>(201)
+            .Produces(400)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .WithName("UploadGameNightPhoto")
+            .WithSummary("Upload a photo to the game night recap gallery")
+            .WithDescription("Multipart upload (field 'file', optional 'caption', optional 'extractScoreFromPhoto'). Participant-scoped (organizer or RSVP'd player). Idempotent on identical bytes.");
+
+        gameNights.MapGet("/{id:guid}/photos", HandleGetGameNightPhotos)
+            .RequireAuthenticatedUser()
+            .Produces<IReadOnlyList<GameNightPhotoDto>>(200)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .WithName("GetGameNightPhotos")
+            .WithSummary("List the game night recap photos")
+            .WithDescription("Participant-scoped (organizer or RSVP'd player). URLs are presigned.");
+
+        gameNights.MapDelete("/{id:guid}/photos/{photoId:guid}", HandleDeleteGameNightPhoto)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .WithName("DeleteGameNightPhoto")
+            .WithSummary("Delete a game night recap photo")
+            .WithDescription("Uploader- or organizer-only.");
+
+        gameNights.MapGet("/shared/{token}/photos", HandleGetSharedGameNightPhotos)
+            .AllowAnonymous()
+            .RequireRateLimiting("GameNightTokenRead")
+            .Produces<IReadOnlyList<GameNightPhotoDto>>(200)
+            .Produces(404)
+            .Produces(429)
+            .WithName("GetSharedGameNightPhotos")
+            .WithSummary("Get shared game night photos by token")
+            .WithDescription("Public endpoint to read a shared night's recap photos by its opaque token. Returns 404 when the token is unknown or sharing was revoked. Rate-limited per IP.");
+
         return group;
     }
 
@@ -522,6 +566,69 @@ internal static class GameNightEndpoints
         var userId = httpContext.User.GetUserId();
         var result = await mediator
             .Send(new GetGameNightSummaryQuery(id, userId), cancellationToken)
+            .ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleUploadGameNightPhoto(
+        Guid id,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var form = await httpContext.Request.ReadFormAsync(cancellationToken).ConfigureAwait(false);
+        var file = form.Files.GetFile("file");
+        if (file is null || file.Length == 0)
+            return Results.BadRequest(new { error = "File is required" });
+
+        var extractScore = form.TryGetValue("extractScoreFromPhoto", out var raw)
+            && bool.TryParse(raw.ToString(), out var b) && b;
+        var caption = form.TryGetValue("caption", out var cap) ? cap.ToString() : null;
+
+        using var stream = file.OpenReadStream();
+        var command = new UploadGameNightPhotoCommand(
+            id, httpContext.User.GetUserId(), stream, file.Length, file.ContentType, extractScore, caption);
+
+        // Exceptions propagate to ApiExceptionHandlerMiddleware (ForbiddenException→403,
+        // NotFoundException→404, ValidationException→400).
+        var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.Created($"/api/v1/game-nights/{id}/photos/{result.PhotoId}", result);
+    }
+
+    private static async Task<IResult> HandleGetGameNightPhotos(
+        Guid id,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        var result = await mediator
+            .Send(new GetGameNightPhotosQuery(id, userId), cancellationToken)
+            .ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleDeleteGameNightPhoto(
+        Guid id,
+        Guid photoId,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        await mediator
+            .Send(new DeleteGameNightPhotoCommand(id, photoId, userId), cancellationToken)
+            .ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleGetSharedGameNightPhotos(
+        string token,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator
+            .Send(new GetGameNightPhotosByShareTokenQuery(token), cancellationToken)
             .ConfigureAwait(false);
         return Results.Ok(result);
     }

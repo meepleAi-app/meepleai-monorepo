@@ -78,4 +78,10 @@ public class GameNightEventEntity
     public List<GameNightRsvpEntity> Rsvps { get; set; } = [];
 
     public List<GameNightSessionEntity> Sessions { get; set; } = [];
+
+    // Optimistic concurrency via PostgreSQL's xmin system column (Issue #2703, ADR-060).
+    // Server-owned: Postgres assigns xmin = transaction-id-of-last-write per row.
+    // The repository round-trips this value so the detached Update emits a
+    // WHERE id = @id AND xmin = @original concurrency check.
+    public uint Xmin { get; set; }
 }

@@ -212,7 +212,8 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             RsvpDeadline = domain.RsvpDeadline,
             RsvpClosedAt = domain.RsvpClosedAt,
             CreatedAt = domain.CreatedAt,
-            UpdatedAt = domain.UpdatedAt
+            UpdatedAt = domain.UpdatedAt,
+            Xmin = domain.Xmin
         };
 
         foreach (var rsvp in domain.Rsvps)
@@ -292,6 +293,10 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
 
         var rsvpClosedAtProp = typeof(GameNightEvent).GetProperty(nameof(GameNightEvent.RsvpClosedAt));
         rsvpClosedAtProp?.SetValue(evt, entity.RsvpClosedAt);
+
+        // Restore the xmin concurrency token so the detached UpdateAsync emits the
+        // WHERE id = @id AND xmin = @original check (Issue #2703).
+        evt.SetXmin(entity.Xmin);
 
         // Restore RSVPs
         var rsvps = entity.Rsvps.Select(r => GameNightRsvp.Reconstitute(

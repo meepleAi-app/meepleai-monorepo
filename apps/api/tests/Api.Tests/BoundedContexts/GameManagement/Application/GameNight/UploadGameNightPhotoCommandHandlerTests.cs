@@ -11,8 +11,10 @@ using Api.Middleware.Exceptions;
 using Api.Services.Pdf;
 using Api.SharedKernel.Infrastructure.Persistence;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using Npgsql;
 using ImageMagick;
 using Xunit;
 
@@ -151,6 +153,45 @@ public class UploadGameNightPhotoCommandHandlerTests
         result.PhotoId.Should().Be(existing.Id);
         _blob.Verify(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _photos.Verify(p => p.AddAsync(It.IsAny<GameNightPhotoEntity>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_ConcurrentUniqueViolation_ReturnsDedupAndReclaimsOrphanBlob()
+    {
+        var organizer = Guid.NewGuid();
+        var night = NewNight(organizer);
+        _events.Setup(r => r.GetByIdAsync(night.Id, It.IsAny<CancellationToken>())).ReturnsAsync(night);
+
+        var winner = new GameNightPhotoEntity
+        {
+            Id = Guid.NewGuid(),
+            GameNightId = night.Id,
+            BlobUrl = "game-night-photos/winner/win_00000000.png",
+            UploadedByUserId = organizer,
+            UploadedAt = DateTime.UtcNow,
+        };
+        // First check (pre-store) sees nothing; the in-catch re-query finds the winner.
+        _photos.SetupSequence(p => p.GetBySha256Async(night.Id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GameNightPhotoEntity?)null)
+            .ReturnsAsync(winner);
+        StubStore();
+        _blob.Setup(b => b.GetPresignedDownloadUrlAsync(It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<int?>()))
+            .ReturnsAsync("https://signed/url");
+
+        // The losing concurrent write hits the (GameNightId, Sha256Hash) unique index.
+        var pg = new PostgresException("duplicate key", "ERROR", "ERROR", "23505");
+        _uow.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateException("save failed", pg));
+
+        var png = MakePngBytes();
+        var result = await CreateSut().Handle(
+            new UploadGameNightPhotoCommand(night.Id, organizer, new MemoryStream(png), png.Length, "image/png", false, null),
+            CancellationToken.None);
+
+        result.WasDeduplicated.Should().BeTrue();
+        result.PhotoId.Should().Be(winner.Id);
+        // Our now-orphaned blob (game-night-photos/abc/fid_...png from StubStore) is reclaimed.
+        _blob.Verify(b => b.DeleteAsync(It.IsAny<string>(), BlobCategory.GameNightPhoto, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 
     [Fact]

@@ -174,6 +174,15 @@ internal sealed class UploadGameNightPhotoCommandHandler
             // Concurrent identical upload won the (GameNightId, Sha256Hash) unique-index race
             // between our GetBySha256 check and this SaveChanges → treat as idempotent dedup
             // rather than a 500 (lesson #2700). Return the row the winner persisted.
+            // Our own store already happened (store-then-save), so best-effort delete our now-orphaned
+            // blobs and log them, mirroring the generic-exception path.
+            _logger.LogWarning(ex,
+                "Concurrent duplicate game-night photo upload for night {GameNightId} sha {Sha}; reclaiming orphaned blobs: photo={PhotoPath} thumb={ThumbPath}",
+                command.GameNightId, sha, stored.FilePath, thumbUrl);
+            await TryDeleteBlobAsync(stored.FilePath, cancellationToken).ConfigureAwait(false);
+            if (thumbUrl is not null)
+                await TryDeleteBlobAsync(thumbUrl, cancellationToken).ConfigureAwait(false);
+
             var winner = await _photoRepository.GetBySha256Async(command.GameNightId, sha, cancellationToken).ConfigureAwait(false);
             if (winner != null)
             {
@@ -199,5 +208,24 @@ internal sealed class UploadGameNightPhotoCommandHandler
             ? null
             : await GameNightPhotoUrlResolver.ResolveAsync(_blobStorage, thumbUrl, GameNightPhotoUrlResolver.DefaultExpirySeconds).ConfigureAwait(false);
         return new GameNightPhotoUploadResult(photoId, url, thumbPresigned, ocrText, WasDeduplicated: false);
+    }
+
+    /// <summary>Best-effort blob delete parsing fileId/folder from the stored path (orphan is harmless if it fails).</summary>
+    private async Task TryDeleteBlobAsync(string blobPath, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var fileName = Path.GetFileName(blobPath);
+            var underscoreIndex = fileName.IndexOf('_', StringComparison.Ordinal);
+            if (underscoreIndex <= 0) return;
+            var fileId = fileName[..underscoreIndex];
+            var folder = Path.GetFileName(Path.GetDirectoryName(blobPath) ?? string.Empty);
+            if (string.IsNullOrEmpty(folder)) return;
+            await _blobStorage.DeleteAsync(fileId, BlobCategory.GameNightPhoto, folder, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Best-effort blob delete failed for {BlobPath}", blobPath);
+        }
     }
 }

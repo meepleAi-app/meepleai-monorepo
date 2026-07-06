@@ -36,12 +36,14 @@ const LIVE = {
       playOrder: 1,
       status: 'InProgress',
       winnerId: null,
+      winnerName: null,
       startedAt: '2026-07-04T20:00:00Z',
       completedAt: null,
     },
   ],
   isViewerOrganizer: true,
   plannedLineup: [],
+  currentSessionRoster: [],
 };
 
 describe('gameNightsClient.getLive', () => {

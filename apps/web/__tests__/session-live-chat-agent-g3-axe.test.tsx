@@ -34,6 +34,7 @@ const labels = {
     visibilityShared: 'Shared',
     emptyMessage: 'No messages yet.',
     newMessagesToastAriaLabel: 'New messages — click to scroll',
+    attachAriaLabel: 'Attach image',
   },
 };
 

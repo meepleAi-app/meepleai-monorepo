@@ -35,7 +35,10 @@ vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
 vi.mock('@/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (k: string) => k, locale: 'it-IT' }),
 }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useSearchParams: () => ({ get: () => null }),
+}));
 
 // Stub heavy children so the test focuses on the view's edit wiring.
 vi.mock('@/components/game-night/planning/GameNightPlanningLayout', () => ({

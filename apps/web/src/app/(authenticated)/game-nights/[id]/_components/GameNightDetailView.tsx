@@ -25,7 +25,7 @@ import { useEffect, useMemo } from 'react';
 
 import { Edit, Send, XCircle } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
   GameNightCancelledBanner,
@@ -54,6 +54,7 @@ import { GameNightEditDrawer } from './GameNightEditDrawer';
 
 export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t, locale } = useTranslation();
   const { toast } = useToast();
 
@@ -206,6 +207,12 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   const isCancelled = event.status === 'Cancelled';
   const isCompleted = event.status === 'Completed';
   const isLive = event.status === 'Published';
+
+  // #2723: Published events surface a Dettagli|Votazione tab strip (ADR-061 tab-canonical),
+  // deep-linked via ?tab=voting. The voting tab shows only the VotingPanel; the details tab
+  // shows the RSVP / session / roster body.
+  const votingTabActive = isLive && searchParams.get('tab') === 'voting';
+  const showDetailsContent = !votingTabActive;
   const hasActiveSession = activeSessions.some(s => s.status === 'in_progress');
 
   const statusKey = event.status.toLowerCase() as 'draft' | 'published' | 'completed' | 'cancelled';
@@ -336,8 +343,41 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
       {/* Draft → preserve legacy planning layout. */}
       {isDraft && <GameNightPlanningLayout title={event.title} availableGames={availableGames} />}
 
-      {/* RSVP action bar — guests only, on Published events. */}
-      {isGuest && isLive && (
+      {/* Published tabs — Dettagli | Votazione (#2723, ADR-061, ?tab=voting deep-link). */}
+      {isLive && (
+        <nav
+          className="flex gap-1 border-b border-border"
+          aria-label={t('gameNightDetail.tabs.details')}
+        >
+          <Link
+            href={`/game-nights/${id}`}
+            aria-current={showDetailsContent ? 'page' : undefined}
+            data-testid="tab-details"
+            className={`px-4 py-2 text-sm font-semibold ${
+              showDetailsContent
+                ? 'border-b-2 border-primary text-foreground'
+                : 'text-muted-foreground'
+            }`}
+          >
+            {t('gameNightDetail.tabs.details')}
+          </Link>
+          <Link
+            href={`/game-nights/${id}?tab=voting`}
+            aria-current={votingTabActive ? 'page' : undefined}
+            data-testid="tab-voting"
+            className={`px-4 py-2 text-sm font-semibold ${
+              votingTabActive
+                ? 'border-b-2 border-primary text-foreground'
+                : 'text-muted-foreground'
+            }`}
+          >
+            {t('gameNightDetail.tabs.voting')}
+          </Link>
+        </nav>
+      )}
+
+      {/* RSVP action bar — guests only, on Published events (details tab). */}
+      {isGuest && isLive && showDetailsContent && (
         <GameNightRsvpActionBar
           labels={rsvpLabels}
           currentResponse={currentResponse}
@@ -346,13 +386,13 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
         />
       )}
 
-      {/* Candidate voting (approval model) — Issue #2700. Published events only. */}
-      {isLive && (
+      {/* Candidate voting (approval model) — Issue #2700 / #2723 voting tab. */}
+      {votingTabActive && (
         <VotingPanel gameNightId={id} isOrganizer={isHost} gameTitleById={gameTitleById} />
       )}
 
-      {/* Live / Completed: session flow sections under hero. */}
-      {(isLive || isCompleted) && (
+      {/* Live / Completed: session flow sections under hero (details tab). */}
+      {(isLive || isCompleted) && showDetailsContent && (
         <>
           <GameNightActions
             gameNightId={id}
@@ -365,8 +405,8 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
         </>
       )}
 
-      {/* Roster */}
-      {sortedRsvps.length > 0 && (
+      {/* Roster (details tab) */}
+      {sortedRsvps.length > 0 && showDetailsContent && (
         <section
           aria-label={t('gameNightDetail.participants.sectionTitle', {
             count: sortedRsvps.length,

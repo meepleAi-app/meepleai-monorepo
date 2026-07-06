@@ -140,6 +140,17 @@ public sealed class GameNightVotingCommandTests : IAsyncLifetime
         await act.Should().ThrowAsync<ForbiddenException>();
     }
 
+    [Fact(DisplayName = "IDOR: a non-participant cannot retract a vote (403)")]
+    public async Task Retract_ByNonParticipant_Throws403()
+    {
+        var (eventId, _, _, gameA, _) = await SeedAsync(DateTimeOffset.UtcNow.AddDays(2));
+        var stranger = Guid.NewGuid();
+
+        var act = async () => await SendAsync(new RetractGameNightVoteCommand(eventId, stranger, gameA));
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
     [Fact(DisplayName = "Retract removes the vote from the tally")]
     public async Task Retract_RemovesVote()
     {

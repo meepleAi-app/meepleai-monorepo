@@ -388,6 +388,10 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     {
         ThrowIfCorrupted();
 
+        // IDOR: gate authorization before revealing any voting state (parity with #2698).
+        if (!IsConfirmedParticipant(voterUserId))
+            throw new ForbiddenException("Only confirmed participants can retract a vote");
+
         if (IsVotingClosed(now))
             throw new ConflictException("Voting has closed for this game night");
 

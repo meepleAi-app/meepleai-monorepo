@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 
@@ -40,7 +41,18 @@ internal sealed class CastGameNightVoteCommandHandler : ICommandHandler<CastGame
         if (vote is null)
             return; // approval already recorded — idempotent
 
-        await _repository.AddVoteAsync(vote, cancellationToken).ConfigureAwait(false);
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _repository.AddVoteAsync(vote, cancellationToken).ConfigureAwait(false);
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateException ex)
+            when (ex.InnerException is Npgsql.PostgresException { SqlState: "23505" })
+        {
+            // A concurrent request approved the same (voter, candidate) pair first and won the
+            // unique index (event, voter, candidate). Our in-memory idempotency guard could not
+            // see it (both requests loaded before either committed). Treat the duplicate INSERT
+            // rejection as the idempotent success it is.
+        }
     }
 }

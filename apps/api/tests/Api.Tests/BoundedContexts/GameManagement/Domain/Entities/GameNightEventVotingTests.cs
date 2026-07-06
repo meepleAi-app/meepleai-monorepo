@@ -136,6 +136,17 @@ public class GameNightEventVotingTests
     }
 
     [Fact]
+    public void RetractVote_ByNonParticipant_ThrowsForbidden()
+    {
+        // IDOR: a non-participant must not learn the event's voting state via retract.
+        var (evt, _, gameA, _, _) = BuildPublishedEventWithConfirmedVoter();
+
+        var act = () => evt.RetractVote(Guid.NewGuid(), gameA, Open);
+
+        act.Should().Throw<ForbiddenException>();
+    }
+
+    [Fact]
     public void RetractVote_RemovesVote_AndIsIdempotent()
     {
         var (evt, voter, gameA, _, _) = BuildPublishedEventWithConfirmedVoter();

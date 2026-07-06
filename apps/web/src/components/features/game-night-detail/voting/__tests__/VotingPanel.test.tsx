@@ -153,6 +153,22 @@ describe('VotingPanel', () => {
     );
   });
 
+  it('hides the tie resolver once a winner has been resolved', () => {
+    tallyMock.mockReturnValue({
+      data: {
+        ...openTally,
+        isTie: true,
+        isVotingClosed: true,
+        winnerGameId: 'game-a',
+        leadingCandidateGameIds: ['game-a', 'game-b'],
+      },
+      isLoading: false,
+      isError: false,
+    });
+    renderPanel({ isOrganizer: true });
+    expect(screen.queryByTestId('voting-tied-resolver')).not.toBeInTheDocument();
+  });
+
   it('hides the tie resolver from non-organizers', () => {
     tallyMock.mockReturnValue({
       data: {

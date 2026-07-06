@@ -131,7 +131,9 @@ function VotingContent({
   onResolve,
 }: VotingContentProps): React.JSX.Element {
   const maxVoteCount = Math.max(0, ...data.candidates.map(c => c.voteCount));
-  const showResolver = isOrganizer && data.isTie && data.isVotingClosed;
+  // Hide once a winner is resolved: a tie's vote counts stay equal, so `isTie` remains true
+  // even after resolution — `!winnerGameId` prevents the organiser from re-overriding.
+  const showResolver = isOrganizer && data.isTie && data.isVotingClosed && !data.winnerGameId;
 
   return (
     <>

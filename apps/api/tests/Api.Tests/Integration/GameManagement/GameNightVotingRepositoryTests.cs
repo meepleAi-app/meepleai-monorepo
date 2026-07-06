@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
@@ -107,6 +108,29 @@ public sealed class GameNightVotingRepositoryTests : IAsyncLifetime
 
         reloaded!.Votes.Should().ContainSingle(v => v.VoterUserId == voter && v.CandidateGameId == gameA);
         reloaded.TallyVotes().CountsByCandidate[gameA].Should().Be(1);
+    }
+
+    [Fact(DisplayName = "Duplicate (event,voter,candidate) vote is rejected by the unique index")]
+    public async Task DuplicateVote_ViolatesUniqueIndex()
+    {
+        var (eventId, voter, gameA, _) = await SeedPublishedEventAsync();
+
+        await using var db = _fixture.CreateDbContext(_connectionString);
+        var repo = Repo(db);
+
+        var evt = await repo.GetByIdAsync(eventId, Ct);
+        var first = evt!.CastVote(voter, gameA, DateTimeOffset.UtcNow);
+        await repo.AddVoteAsync(first!, Ct);
+        await db.SaveChangesAsync(Ct);
+
+        // A distinct row (new id) for the same (event, voter, candidate) tuple must be rejected —
+        // this is the DB guard the CastVote handler relies on to convert a concurrent race into
+        // an idempotent success.
+        var duplicate = GameNightVote.Create(eventId, voter, gameA);
+        await repo.AddVoteAsync(duplicate, Ct);
+        Func<Task> act = async () => await db.SaveChangesAsync(Ct);
+
+        await act.Should().ThrowAsync<DbUpdateException>();
     }
 
     [Fact(DisplayName = "An unrelated update does NOT wipe previously-cast votes")]

@@ -11,6 +11,7 @@ import {
   GameNightDtoSchema,
   GameNightLiveDtoSchema,
   GameNightRsvpDtoSchema,
+  GameNightVoteTallyDtoSchema,
   RegularDtoSchema,
   StartGameNightSessionResultSchema,
   type ConflictCheckDto,
@@ -18,6 +19,7 @@ import {
   type GameNightDto,
   type GameNightLiveDto,
   type GameNightRsvpDto,
+  type GameNightVoteTallyDto,
   type RegularDto,
   type RsvpStatus,
   type StartGameNightSessionResult,
@@ -50,6 +52,11 @@ export interface GameNightsClient {
   // Issue #950 W1-PR2 wizard hooks
   getRegulars(limit?: number): Promise<RegularDto[]>;
   checkConflict(at: string): Promise<ConflictCheckDto>;
+  // Issue #2700 — candidate voting (approval model)
+  getVoteTally(gameNightId: string): Promise<GameNightVoteTallyDto>;
+  castVote(gameNightId: string, candidateGameId: string): Promise<void>;
+  retractVote(gameNightId: string, candidateGameId: string): Promise<void>;
+  resolveVotingTie(gameNightId: string, winningCandidateGameId: string): Promise<void>;
 }
 
 export function createGameNightsClient({
@@ -151,6 +158,27 @@ export function createGameNightsClient({
         `/api/v1/game-nights/check-conflict?at=${encodeURIComponent(at)}`
       );
       return ConflictCheckDtoSchema.parse(data);
+    },
+
+    async getVoteTally(gameNightId) {
+      const data = await httpClient.get<GameNightVoteTallyDto>(
+        `/api/v1/game-nights/${gameNightId}/votes/tally`
+      );
+      return GameNightVoteTallyDtoSchema.parse(data);
+    },
+
+    async castVote(gameNightId, candidateGameId) {
+      await httpClient.post(`/api/v1/game-nights/${gameNightId}/votes`, { candidateGameId });
+    },
+
+    async retractVote(gameNightId, candidateGameId) {
+      await httpClient.delete(`/api/v1/game-nights/${gameNightId}/votes/${candidateGameId}`);
+    },
+
+    async resolveVotingTie(gameNightId, winningCandidateGameId) {
+      await httpClient.post(`/api/v1/game-nights/${gameNightId}/votes/resolve-tie`, {
+        winningCandidateGameId,
+      });
     },
   };
 }

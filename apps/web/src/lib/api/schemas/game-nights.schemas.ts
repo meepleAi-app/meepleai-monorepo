@@ -214,3 +214,23 @@ export const UpdateGameNightInputSchema = z.object({
   gameIds: z.array(z.string().uuid()).max(20).optional(),
 });
 export type UpdateGameNightInput = z.infer<typeof UpdateGameNightInputSchema>;
+
+// ──────────────────────────────────────────────────────────────────────
+// Issue #2700 — candidate voting (approval model)
+// ──────────────────────────────────────────────────────────────────────
+
+export const GameNightCandidateTallyDtoSchema = z.object({
+  gameId: z.string().uuid(),
+  voteCount: z.number().int().nonnegative(),
+  votedByMe: z.boolean(),
+});
+export type GameNightCandidateTallyDto = z.infer<typeof GameNightCandidateTallyDtoSchema>;
+
+export const GameNightVoteTallyDtoSchema = z.object({
+  isVotingClosed: z.boolean(),
+  isTie: z.boolean(),
+  winnerGameId: z.string().uuid().nullable(),
+  leadingCandidateGameIds: z.array(z.string().uuid()),
+  candidates: z.array(GameNightCandidateTallyDtoSchema),
+});
+export type GameNightVoteTallyDto = z.infer<typeof GameNightVoteTallyDtoSchema>;

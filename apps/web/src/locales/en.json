@@ -3845,6 +3845,27 @@
       "submit": "Save changes",
       "savedToast": "Game night updated",
       "errorGeneric": "Could not update the game night."
+    },
+    "voting": {
+      "title": "Candidate voting",
+      "votingClosed": "Voting closed",
+      "vote": "Vote",
+      "retract": "Remove vote",
+      "leaderBadge": "Leading",
+      "winnerBadge": "Winner",
+      "candidateFallback": "Game",
+      "votesCount": "{count, plural, =0 {No votes} =1 {1 vote} other {# votes}}",
+      "actionError": "Could not record your vote. Please retry.",
+      "error": "Could not load the vote.",
+      "empty": {
+        "title": "No candidates",
+        "body": "There are no games to vote on for this night."
+      },
+      "tie": {
+        "title": "It's a tie!",
+        "body": "Choose the winning game among the tied candidates.",
+        "resolve": "Choose {title}"
+      }
     }
   },
   "gameNightsIndex": {

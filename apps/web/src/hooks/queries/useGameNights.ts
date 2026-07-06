@@ -21,6 +21,7 @@ export const gameNightKeys = {
   mine: () => [...gameNightKeys.all, 'mine'] as const,
   detail: (id: string) => [...gameNightKeys.all, id] as const,
   rsvps: (id: string) => [...gameNightKeys.all, id, 'rsvps'] as const,
+  voteTally: (id: string) => [...gameNightKeys.all, id, 'vote-tally'] as const,
 };
 
 export function useUpcomingGameNights(
@@ -125,6 +126,50 @@ export function useRsvpGameNight() {
       queryClient.invalidateQueries({ queryKey: gameNightKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: gameNightKeys.rsvps(id) });
       queryClient.invalidateQueries({ queryKey: gameNightKeys.all });
+    },
+  });
+}
+
+// ── Candidate voting (approval model) — Issue #2700 ──────────────────────
+
+export function useGameNightVoteTally(id: string, options: { enabled?: boolean } = {}) {
+  const { enabled = true } = options;
+  return useQuery({
+    queryKey: gameNightKeys.voteTally(id),
+    queryFn: () => api.gameNights.getVoteTally(id),
+    enabled: enabled && !!id,
+  });
+}
+
+export function useCastGameNightVote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, candidateGameId }: { id: string; candidateGameId: string }) =>
+      api.gameNights.castVote(id, candidateGameId),
+    onSuccess: (_data, { id }) => {
+      queryClient.invalidateQueries({ queryKey: gameNightKeys.voteTally(id) });
+    },
+  });
+}
+
+export function useRetractGameNightVote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, candidateGameId }: { id: string; candidateGameId: string }) =>
+      api.gameNights.retractVote(id, candidateGameId),
+    onSuccess: (_data, { id }) => {
+      queryClient.invalidateQueries({ queryKey: gameNightKeys.voteTally(id) });
+    },
+  });
+}
+
+export function useResolveGameNightVotingTie() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, winningCandidateGameId }: { id: string; winningCandidateGameId: string }) =>
+      api.gameNights.resolveVotingTie(id, winningCandidateGameId),
+    onSuccess: (_data, { id }) => {
+      queryClient.invalidateQueries({ queryKey: gameNightKeys.voteTally(id) });
     },
   });
 }

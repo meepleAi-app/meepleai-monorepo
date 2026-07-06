@@ -162,12 +162,13 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
             const tokenData = event.data;
             if (typeof tokenData === 'string') {
               answerBuffer += tokenData;
-            } else if (
-              typeof tokenData === 'object' &&
-              tokenData !== null &&
-              'content' in tokenData
-            ) {
-              answerBuffer += String((tokenData as { content?: unknown }).content ?? '');
+            } else if (typeof tokenData === 'object' && tokenData !== null) {
+              // Issue #2712: the SSE token event (type 7) carries { token: "..." } — see
+              // chatClient.qaStream, which yields the raw event.data. The previous code only
+              // handled { content }, so the answer text was NEVER accumulated (empty bubble).
+              // Support both shapes (token first) plus the plain-string form used in tests.
+              const obj = tokenData as { token?: unknown; content?: unknown };
+              answerBuffer += String(obj.token ?? obj.content ?? '');
             }
           } else if (event.type === COMPLETE_EVENT_TYPE) {
             const payload = event.data as StreamingCompletePayload;

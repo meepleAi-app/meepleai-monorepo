@@ -99,6 +99,25 @@ describe('useGameChat', () => {
     expect(result.current.messages[1].citations).toHaveLength(1);
   });
 
+  it('accumulates answer text from { token } event shape (Issue #2712)', async () => {
+    // Production SSE sends type-7 events as { token: "..." } (chatClient.qaStream yields raw
+    // event.data), NOT plain strings. The hook must accumulate that shape or the bubble is empty.
+    const tokenObjectEvents = [
+      { type: 7, data: { token: 'Il punteggio ' } },
+      { type: 7, data: { token: 'si calcola alla fine della partita.' } },
+      { type: 4, data: { confidence: 0.79, Citations: [sampleCitation] } },
+    ];
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(tokenObjectEvents) as any);
+    const { result } = renderHook(() => useGameChat('wingspan'));
+    await act(async () => {
+      await result.current.ask('come si calcola il punteggio?');
+    });
+    expect(result.current.messages[1].content).toBe(
+      'Il punteggio si calcola alla fine della partita.'
+    );
+    expect(result.current.messages[1].isLowQuality).toBe(false);
+  });
+
   it('derives outOfContext=true when no citations + confidence < 0.30', async () => {
     const oocEvents = [
       { type: 7, data: 'Non ho informazioni.' },

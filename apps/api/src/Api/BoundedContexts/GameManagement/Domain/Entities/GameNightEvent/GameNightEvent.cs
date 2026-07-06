@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.Exceptions;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Entities;
 
 namespace Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
@@ -15,6 +16,7 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
 #pragma warning restore MA0049
 {
     private readonly List<GameNightRsvp> _rsvps = new();
+    private readonly List<GameNightVote> _votes = new();
 
     public Guid OrganizerId { get; private set; }
     public string Title { get; private set; }
@@ -45,6 +47,15 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset? UpdatedAt { get; private set; }
     public IReadOnlyList<GameNightRsvp> Rsvps => _rsvps.AsReadOnly();
+
+    // Candidate voting (approval model) — Issue #2700
+    public IReadOnlyList<GameNightVote> Votes => _votes.AsReadOnly();
+
+    /// <summary>
+    /// Organiser-chosen winner set when candidate voting closed on a tie (#2700).
+    /// Null when there is no tie or the tie has not been resolved.
+    /// </summary>
+    public Guid? VotingWinnerGameId { get; private set; }
 
     // Optimistic concurrency via PostgreSQL's xmin system column (Issue #2703, ADR-060).
     // Server-owned: Postgres assigns xmin on each write; EF reads it back so the
@@ -327,6 +338,127 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     /// Returns true if the game night has reached its maximum player count.
     /// </summary>
     public bool IsFull => MaxPlayers.HasValue && AcceptedCount >= MaxPlayers.Value;
+
+    // ── Candidate voting (approval model) — Issue #2700 ──────────────────────
+
+    /// <summary>Voting on candidate games closes this long before <see cref="ScheduledAt"/>.</summary>
+    public static readonly TimeSpan VotingCloseLeadTime = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// True once candidate voting has closed for the night: at or after
+    /// <c>ScheduledAt - 1h</c> (lazy check, no scheduled job — ADR-074 Option C philosophy).
+    /// </summary>
+    public bool IsVotingClosed(DateTimeOffset now) => now >= ScheduledAt - VotingCloseLeadTime;
+
+    /// <summary>
+    /// Casts (approves) a vote for a candidate game. Approval model: a confirmed participant
+    /// may approve any subset of candidates, one vote each. Idempotent for a repeated
+    /// (voter, candidate) pair. Guards: Published status, voting open, valid candidate,
+    /// confirmed (Accepted RSVP) voter.
+    /// </summary>
+    /// <returns>The newly-created vote, or null when the approval already existed (idempotent no-op).</returns>
+    public GameNightVote? CastVote(Guid voterUserId, Guid candidateGameId, DateTimeOffset now)
+    {
+        ThrowIfCorrupted();
+
+        if (Status != GameNightStatus.Published)
+            throw new ConflictException("Voting is only open on published game nights");
+        if (IsVotingClosed(now))
+            throw new ConflictException("Voting has closed for this game night");
+        if (!GameIds.Contains(candidateGameId))
+            throw new NotFoundException("GameNightCandidate", candidateGameId.ToString());
+        if (!IsConfirmedParticipant(voterUserId))
+            throw new ForbiddenException("Only confirmed participants can vote on candidate games");
+
+        if (_votes.Any(v => v.VoterUserId == voterUserId && v.CandidateGameId == candidateGameId))
+            return null; // approval toggle: a repeated approval is a no-op
+
+        var vote = GameNightVote.Create(Id, voterUserId, candidateGameId);
+        _votes.Add(vote);
+        UpdatedAt = now;
+        return vote;
+    }
+
+    /// <summary>
+    /// Retracts a previously-cast approval vote. Idempotent when the vote is absent.
+    /// Guard: voting still open.
+    /// </summary>
+    /// <returns>The removed vote, or null when no matching approval existed (idempotent no-op).</returns>
+    public GameNightVote? RetractVote(Guid voterUserId, Guid candidateGameId, DateTimeOffset now)
+    {
+        ThrowIfCorrupted();
+
+        if (IsVotingClosed(now))
+            throw new ConflictException("Voting has closed for this game night");
+
+        var vote = _votes.FirstOrDefault(
+            v => v.VoterUserId == voterUserId && v.CandidateGameId == candidateGameId);
+        if (vote is null)
+            return null; // idempotent
+
+        _votes.Remove(vote);
+        UpdatedAt = now;
+        return vote;
+    }
+
+    /// <summary>
+    /// Organiser resolves a voting tie after voting has closed, choosing one of the tied
+    /// leaders as the winner. Guards: organiser-only, voting closed, an actual tie exists,
+    /// the chosen game is one of the tied leaders.
+    /// </summary>
+    public void ResolveVotingTie(Guid hostUserId, Guid winningCandidateGameId, DateTimeOffset now)
+    {
+        ThrowIfCorrupted();
+
+        if (hostUserId != OrganizerId)
+            throw new ForbiddenException("Only the organiser can resolve a voting tie");
+        if (!IsVotingClosed(now))
+            throw new ConflictException(
+                "Voting is still open; a tie can only be resolved after voting closes");
+
+        var tally = TallyVotes();
+        if (!tally.IsTie)
+            throw new ConflictException("There is no voting tie to resolve");
+        if (!tally.LeadingCandidateGameIds.Contains(winningCandidateGameId))
+            throw new ConflictException("The chosen game is not among the tied leaders");
+
+        VotingWinnerGameId = winningCandidateGameId;
+        UpdatedAt = now;
+    }
+
+    /// <summary>
+    /// Tallies approval votes per candidate game and derives the leader(s), tie flag, and
+    /// resolved winner (organiser tie-break if set, else the single leader, else null).
+    /// </summary>
+    public GameNightVoteTally TallyVotes()
+    {
+        var counts = GameIds.ToDictionary(
+            gameId => gameId,
+            gameId => _votes.Count(v => v.CandidateGameId == gameId));
+
+        var max = counts.Count == 0 ? 0 : counts.Values.Max();
+        var leaders = max == 0
+            ? new List<Guid>()
+            : counts.Where(kv => kv.Value == max).Select(kv => kv.Key).ToList();
+        var isTie = leaders.Count > 1;
+
+        var winner = VotingWinnerGameId ?? (leaders.Count == 1 ? leaders[0] : (Guid?)null);
+
+        return new GameNightVoteTally(counts, leaders, isTie, winner);
+    }
+
+    private bool IsConfirmedParticipant(Guid userId) =>
+        _rsvps.Any(r => r.UserId == userId && r.Status == RsvpStatus.Accepted);
+
+    /// <summary>Restores votes from persistence.</summary>
+    internal void RestoreVotes(IEnumerable<GameNightVote> votes)
+    {
+        _votes.Clear();
+        _votes.AddRange(votes);
+    }
+
+    /// <summary>Restores the resolved tie-break winner from persistence.</summary>
+    internal void RestoreVotingWinner(Guid? winnerGameId) => VotingWinnerGameId = winnerGameId;
 
     /// <summary>
     /// Marks that the 24-hour reminder has been sent.

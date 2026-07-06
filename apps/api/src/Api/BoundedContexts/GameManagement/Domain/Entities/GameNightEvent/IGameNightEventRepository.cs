@@ -46,4 +46,19 @@ internal interface IGameNightEventRepository : IRepository<GameNightEvent, Guid>
     /// the parent game night when a Session transitions to live mode.
     /// </remarks>
     Task<GameNightEvent?> FindByLinkedSessionIdAsync(Guid sessionId, CancellationToken cancellationToken = default);
+
+    // ── Candidate voting (approval model) — Issue #2700 ──────────────────────
+    // Votes are immutable append/remove children persisted with tracked Add/Remove.
+    // They deliberately bypass the aggregate's detached-Update full-remap: EF's
+    // Update() marks a brand-new PK-set child as Modified → 0-row UPDATE. Loading the
+    // event (which Includes Votes) still preserves existing votes across an event edit.
+
+    /// <summary>Inserts a single approval vote (tracked Add → INSERT).</summary>
+    Task AddVoteAsync(GameNightVote vote, CancellationToken cancellationToken = default);
+
+    /// <summary>Removes a single approval vote by its id (tracked delete). No-op when absent.</summary>
+    Task RemoveVoteAsync(Guid voteId, CancellationToken cancellationToken = default);
+
+    /// <summary>Persists the organiser's resolved tie-break winner on the event row.</summary>
+    Task SetVotingWinnerAsync(Guid eventId, Guid? winnerGameId, CancellationToken cancellationToken = default);
 }

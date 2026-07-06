@@ -253,6 +253,52 @@ internal static class GameNightEndpoints
             .WithSummary("Get game night diary timeline")
             .WithDescription("Retrieves the cross-game diary timeline with all session events for the game night. Participant-scoped (organizer or RSVP'd player).");
 
+        // ── Candidate voting (approval model) — Issue #2700 ─────────────────
+
+        gameNights.MapPost("/{id:guid}/votes", HandleCastGameNightVote)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(400)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .Produces(409)
+            .WithName("CastGameNightVote")
+            .WithSummary("Approve a candidate game")
+            .WithDescription("Casts an approval vote for a candidate game. Confirmed participants only; voting closes 1h before the event. Idempotent for a repeated approval.");
+
+        gameNights.MapDelete("/{id:guid}/votes/{candidateGameId:guid}", HandleRetractGameNightVote)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(401)
+            .Produces(404)
+            .Produces(409)
+            .WithName("RetractGameNightVote")
+            .WithSummary("Retract a candidate approval")
+            .WithDescription("Retracts a previously-cast approval vote. Idempotent when absent; voting must still be open.");
+
+        gameNights.MapPost("/{id:guid}/votes/resolve-tie", HandleResolveGameNightVotingTie)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(400)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .Produces(409)
+            .WithName("ResolveGameNightVotingTie")
+            .WithSummary("Resolve a voting tie")
+            .WithDescription("Organiser chooses the winner among the tied leaders after voting closes.");
+
+        gameNights.MapGet("/{id:guid}/votes/tally", HandleGetGameNightVoteTally)
+            .RequireAuthenticatedUser()
+            .Produces<GameNightVoteTallyDto>(200)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .WithName("GetGameNightVoteTally")
+            .WithSummary("Get the candidate-vote tally")
+            .WithDescription("Returns per-candidate approval counts, leader(s), tie flag, resolved winner, and the caller's own approvals. Participant-scoped (organizer or RSVP'd player).");
+
         return group;
     }
 
@@ -356,6 +402,60 @@ internal static class GameNightEndpoints
         var command = new RespondToGameNightCommand(id, userId, rsvpStatus);
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
+    }
+
+    // ── Candidate voting (approval model) — Issue #2700 ─────────────────────
+
+    private static async Task<IResult> HandleCastGameNightVote(
+        Guid id,
+        [FromBody] CastVoteRequest request,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        var command = new CastGameNightVoteCommand(id, userId, request.CandidateGameId);
+        await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleRetractGameNightVote(
+        Guid id,
+        Guid candidateGameId,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        var command = new RetractGameNightVoteCommand(id, userId, candidateGameId);
+        await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleResolveGameNightVotingTie(
+        Guid id,
+        [FromBody] ResolveVotingTieRequest request,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        var command = new ResolveGameNightVotingTieCommand(id, userId, request.WinningCandidateGameId);
+        await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleGetGameNightVoteTally(
+        Guid id,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        var result = await mediator
+            .Send(new GetGameNightVoteTallyQuery(id, userId), cancellationToken)
+            .ConfigureAwait(false);
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleCreateGameNightInvitationByEmail(
@@ -666,6 +766,8 @@ internal static class GameNightEndpoints
         string? DisplayName = null);
 
     // Game Night Experience v2 request records
+    private sealed record CastVoteRequest(Guid CandidateGameId);
+    private sealed record ResolveVotingTieRequest(Guid WinningCandidateGameId);
     private sealed record StartGameNightSessionRequest(Guid GameId, string GameTitle);
     private sealed record AttachGamebookCampaignRequest(Guid CampaignId);
     private sealed record CompleteGameNightSessionRequest(Guid? WinnerId);

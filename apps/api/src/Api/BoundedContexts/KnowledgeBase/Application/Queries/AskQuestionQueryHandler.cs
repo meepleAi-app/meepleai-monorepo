@@ -6,6 +6,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Mappers;
 using Api.Configuration;
@@ -37,6 +38,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         "Always cite the page number in brackets, e.g. [Page 3].";
 
     private readonly SearchQueryHandler _searchQueryHandler;
+    private readonly ICrossEncoderReranker _reranker;
     private readonly QualityTrackingDomainService _qualityTrackingService;
     private readonly ChatContextDomainService _chatContextService;
     private readonly IChatThreadRepository _chatThreadRepository;
@@ -56,8 +58,14 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     private readonly IOptionsMonitor<LlmQueryComplexityRoutingOptions> _routingOptions;
     private readonly ILogger<AskQuestionQueryHandler> _logger;
 
+    // Issue #2708: retrieve a wider candidate pool, then let the cross-encoder narrow it to the
+    // final top-K by semantic relevance (improves precision without raising MinScore).
+    private const int RerankCandidatePoolSize = 20;
+    private const int FinalTopK = 5;
+
     public AskQuestionQueryHandler(
         SearchQueryHandler searchQueryHandler,
+        ICrossEncoderReranker reranker,
         QualityTrackingDomainService qualityTrackingService,
         ChatContextDomainService chatContextService,
         IChatThreadRepository chatThreadRepository,
@@ -78,6 +86,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         ILogger<AskQuestionQueryHandler> logger)
     {
         _searchQueryHandler = searchQueryHandler ?? throw new ArgumentNullException(nameof(searchQueryHandler));
+        _reranker = reranker ?? throw new ArgumentNullException(nameof(reranker));
         _qualityTrackingService = qualityTrackingService ?? throw new ArgumentNullException(nameof(qualityTrackingService));
         _chatContextService = chatContextService ?? throw new ArgumentNullException(nameof(chatContextService));
         _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
@@ -425,7 +434,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         var searchQuery = new SearchQuery(
             GameId: query.GameId,
             Query: query.Question,
-            TopK: 5,
+            TopK: RerankCandidatePoolSize,
             MinScore: 0.55,
             SearchMode: query.SearchMode ?? "hybrid",
             Language: query.Language,
@@ -434,6 +443,11 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         );
 
         var searchResults = await _searchQueryHandler.Handle(searchQuery, cancellationToken).ConfigureAwait(false);
+
+        // Issue #2708: rerank the wider candidate pool down to the final top-K by semantic relevance
+        // (cross-encoder; graceful degradation to raw top-K if the reranker is unavailable).
+        searchResults = await SearchResultReranker.RerankAsync(
+            _reranker, query.Question, searchResults, FinalTopK, _logger, cancellationToken).ConfigureAwait(false);
 
         // Map search results to domain entities for quality tracking
         var domainSearchResults = searchResults.Select(sr => new Domain.Entities.SearchResult(

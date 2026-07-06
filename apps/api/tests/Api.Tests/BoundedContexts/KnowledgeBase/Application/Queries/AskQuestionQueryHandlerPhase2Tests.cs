@@ -441,6 +441,7 @@ public class AskQuestionQueryHandlerPhase2Tests
         Api.Configuration.LlmQueryComplexityRoutingOptions? routingOverrides = null) =>
         new(
             _searchHandler,
+            CreatePassthroughReranker(),
             _mockQualityService.Object,
             _mockChatContextService.Object,
             _mockThreadRepository.Object,
@@ -460,6 +461,24 @@ public class AskQuestionQueryHandlerPhase2Tests
             new IntentClassifierService(),
             BuildRoutingMonitor(routingOverrides ?? new Api.Configuration.LlmQueryComplexityRoutingOptions()),
             _mockLogger.Object);
+
+    private static Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking.ICrossEncoderReranker CreatePassthroughReranker()
+    {
+        var mock = new Mock<Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking.ICrossEncoderReranker>();
+        mock
+            .Setup(r => r.RerankAsync(
+                It.IsAny<string>(),
+                It.IsAny<IReadOnlyList<Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking.RerankChunk>>(),
+                It.IsAny<int?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string _, IReadOnlyList<Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking.RerankChunk> chunks, int? topK, CancellationToken _) =>
+                new Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking.RerankResult(
+                    chunks.Take(topK ?? chunks.Count)
+                        .Select((c, i) => new Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking.RerankedChunk(c.Id, c.Content, c.OriginalScore, 0.9 - (i * 0.1)))
+                        .ToList(),
+                    "test-model", 1.0));
+        return mock.Object;
+    }
 
     private static Microsoft.Extensions.Options.IOptionsMonitor<Api.Configuration.LlmQueryComplexityRoutingOptions> BuildRoutingMonitor(
         Api.Configuration.LlmQueryComplexityRoutingOptions value)

@@ -3898,6 +3898,27 @@
       "submit": "Salva modifiche",
       "savedToast": "Serata aggiornata",
       "errorGeneric": "Impossibile aggiornare la serata."
+    },
+    "voting": {
+      "title": "Votazione candidati",
+      "votingClosed": "Votazione chiusa",
+      "vote": "Vota",
+      "retract": "Rimuovi voto",
+      "leaderBadge": "In testa",
+      "winnerBadge": "Vincitore",
+      "candidateFallback": "Gioco",
+      "votesCount": "{count, plural, =0 {Nessun voto} =1 {1 voto} other {# voti}}",
+      "actionError": "Impossibile registrare il voto. Riprova.",
+      "error": "Impossibile caricare la votazione.",
+      "empty": {
+        "title": "Nessun candidato",
+        "body": "Non ci sono giochi tra cui votare per questa serata."
+      },
+      "tie": {
+        "title": "Pareggio!",
+        "body": "Scegli il gioco vincitore tra i candidati in parità.",
+        "resolve": "Scegli {title}"
+      }
     }
   },
   "gameNightsIndex": {

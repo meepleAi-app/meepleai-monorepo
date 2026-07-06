@@ -33,6 +33,7 @@ import {
   GameNightRsvpActionBar,
   GameNightRsvpRow,
 } from '@/components/features/game-night-detail';
+import { VotingPanel } from '@/components/features/game-night-detail/voting/VotingPanel';
 import { GameNightActions } from '@/components/game-night/GameNightActions';
 import { GameNightDiaryPanel } from '@/components/game-night/GameNightDiaryPanel';
 import { GameNightSessionsList } from '@/components/game-night/GameNightSessionsList';
@@ -63,9 +64,10 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
 
   const { event, rsvps, actor, isLoading, isError, currentResponse, pendingResponse } = detail;
 
-  // Catalog games only needed for Draft planning layout.
+  // Catalog games power the Draft planning layout and the Published voting-panel titles.
   const isDraft = event?.status === 'Draft';
-  const { data: catalogData } = useSharedGames(undefined, isDraft);
+  const needsCatalog = isDraft || event?.status === 'Published';
+  const { data: catalogData } = useSharedGames(undefined, needsCatalog);
 
   const { addPlayer, addGame, reset, activeSessions } = useGameNightStore();
 
@@ -236,6 +238,11 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
     maxPlayers: g.maxPlayers,
   }));
 
+  // Candidate-game titles for the voting panel (#2700).
+  const gameTitleById: Record<string, string> = Object.fromEntries(
+    (catalogData?.items ?? []).map(g => [g.id, g.title])
+  );
+
   const isHost = actor?.actor === 'host';
   const isGuest = actor?.actor === 'guest';
 
@@ -337,6 +344,11 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
           pendingResponse={pendingResponse}
           onSelect={handleRsvp}
         />
+      )}
+
+      {/* Candidate voting (approval model) — Issue #2700. Published events only. */}
+      {isLive && (
+        <VotingPanel gameNightId={id} isOrganizer={isHost} gameTitleById={gameTitleById} />
       )}
 
       {/* Live / Completed: session flow sections under hero. */}

@@ -124,9 +124,9 @@ public sealed class AlertChannelTests
     }
 
     [Fact]
-    public void Reconstitute_PreservesRowVersionAndAuditFields()
+    public void Reconstitute_PreservesXminAndAuditFields()
     {
-        var rowVersion = new byte[] { 1, 2, 3, 4 };
+        const uint xmin = 42u;
         var createdAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var updatedAt = new DateTime(2026, 6, 4, 12, 0, 0, DateTimeKind.Utc);
         var lastTestedAt = new DateTime(2026, 6, 4, 11, 0, 0, DateTimeKind.Utc);
@@ -142,9 +142,9 @@ public sealed class AlertChannelTests
             updatedAt: updatedAt,
             createdBy: "founder@meepleai.dev",
             updatedBy: "ops@meepleai.dev",
-            rowVersion: rowVersion);
+            xmin: xmin);
 
-        channel.RowVersion.Should().BeEquivalentTo(rowVersion);
+        channel.Xmin.Should().Be(xmin);
         channel.CreatedAt.Should().Be(createdAt);
         channel.UpdatedAt.Should().Be(updatedAt);
         channel.LastTestedAt.Should().Be(lastTestedAt);

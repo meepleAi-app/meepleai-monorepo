@@ -20,15 +20,15 @@ export const alertChannelSchema = z.object({
   lastTestMessage: z.string().nullable(),
   updatedAt: z.string().datetime({ offset: true }),
   updatedBy: z.string().nullable(),
-  // Base64-encoded byte[] from PostgreSQL bytea (RowVersion concurrency token).
-  rowVersion: z.string(),
+  // Postgres xmin system column (numeric optimistic-concurrency token), not base64.
+  xmin: z.number(),
 });
 
 export const upsertAlertChannelRequestSchema = z.object({
   configJson: z.string(),
   isEnabled: z.boolean(),
   // Required when updating an existing channel, omit on first-time create.
-  rowVersion: z.string().optional().nullable(),
+  xmin: z.number().optional().nullable(),
 });
 
 // Backend: TestAlertChannelConnectionResult (TestAlertChannelConnectionCommand.cs):

@@ -19,7 +19,7 @@ namespace Api.Tests.Integration.Administration;
 /// Testcontainers PostgreSQL instance (Issue #1840 SP5 F4-C7).
 ///
 /// Covers: insert-on-upsert, update-on-upsert, GetByType, GetAll, optimistic
-/// concurrency via stale RowVersion.
+/// concurrency via stale xmin.
 /// </summary>
 [Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
@@ -101,7 +101,7 @@ public sealed class AlertChannelRepositoryIntegrationTests : IAsyncLifetime
         fetched!.Type.Should().Be(AlertChannelType.Slack);
         fetched.IsEnabled.Should().BeTrue();
         fetched.UpdatedBy.Should().Be("admin@meepleai.dev");
-        fetched.RowVersion.Should().NotBeEmpty(
+        fetched.Xmin.Should().NotBe(0u,
             "Postgres xmin must populate the concurrency token on insert");
     }
 
@@ -140,7 +140,7 @@ public sealed class AlertChannelRepositoryIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpsertAsync_OnStaleRowVersion_ThrowsConcurrencyException()
+    public async Task UpsertAsync_OnStaleXmin_ThrowsConcurrencyException()
     {
         // Admin A and Admin B both load the same channel.
         var initial = AlertChannel.Create(
@@ -153,11 +153,11 @@ public sealed class AlertChannelRepositoryIntegrationTests : IAsyncLifetime
         var loadedByA = await _repository.GetByTypeAsync(AlertChannelType.Slack, TestCancellationToken);
         var loadedByB = await _repository.GetByTypeAsync(AlertChannelType.Slack, TestCancellationToken);
 
-        // Admin A commits first → bumps RowVersion.
+        // Admin A commits first → bumps xmin.
         loadedByA!.UpdateConfig("""{"webhookUrl":"https://hooks.slack.com/v2"}""", true, "adminA");
         await _repository.UpsertAsync(loadedByA, TestCancellationToken);
 
-        // Admin B attempts to commit with the stale RowVersion captured BEFORE
+        // Admin B attempts to commit with the stale xmin captured BEFORE
         // Admin A's update.
         loadedByB!.UpdateConfig("""{"webhookUrl":"https://hooks.slack.com/v3"}""", true, "adminB");
 

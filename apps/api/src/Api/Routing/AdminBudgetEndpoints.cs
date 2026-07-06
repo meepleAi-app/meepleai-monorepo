@@ -10,7 +10,7 @@ namespace Api.Routing;
 /// Admin endpoints for the singleton AppBudget configuration (Issue #1838 SP5 F4-C5).
 ///
 /// <list type="bullet">
-///   <item><c>GET /api/v1/admin/budget</c> — current limit + computed spend KPIs + RowVersion</item>
+///   <item><c>GET /api/v1/admin/budget</c> — current limit + computed spend KPIs + xmin</item>
 ///   <item><c>PUT /api/v1/admin/budget</c> — upsert limit + alert/critical thresholds (concurrency-checked)</item>
 /// </list>
 ///
@@ -61,7 +61,7 @@ internal static class AdminBudgetEndpoints
                     MonthlyLimitCurrency: request.MonthlyLimitCurrency,
                     AlertThresholdPct: request.AlertThresholdPct,
                     CriticalThresholdPct: request.CriticalThresholdPct,
-                    RowVersion: request.RowVersion,
+                    Xmin: request.Xmin,
                     UpdatedBy: userId);
 
                 var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -75,7 +75,7 @@ internal static class AdminBudgetEndpoints
 }
 
 /// <summary>
-/// Request body for <c>PUT /api/v1/admin/budget</c>. RowVersion is omitted on
+/// Request body for <c>PUT /api/v1/admin/budget</c>. Xmin is omitted on
 /// first-time creation; required for in-place updates.
 /// </summary>
 internal sealed record UpsertAppBudgetRequest(
@@ -83,4 +83,4 @@ internal sealed record UpsertAppBudgetRequest(
     string MonthlyLimitCurrency,
     int AlertThresholdPct,
     int CriticalThresholdPct,
-    string? RowVersion);
+    uint? Xmin);

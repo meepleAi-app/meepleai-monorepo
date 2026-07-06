@@ -26,7 +26,7 @@ internal sealed record AppBudgetDto(
     int DaysRemaining,
     DateTime UpdatedAt,
     string? UpdatedBy,
-    string RowVersion);
+    uint Xmin);
 
 /// <summary>Computed spend KPIs for the current calendar month + today.</summary>
 internal sealed record SpendBreakdownDto(

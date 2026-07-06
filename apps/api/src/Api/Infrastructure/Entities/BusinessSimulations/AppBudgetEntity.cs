@@ -28,6 +28,6 @@ public class AppBudgetEntity
     public string? CreatedBy { get; set; }
     public string? UpdatedBy { get; set; }
 
-    /// <summary>EF Core optimistic concurrency token (PostgreSQL <c>xmin</c>).</summary>
-    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+    /// <summary>EF Core optimistic concurrency token (PostgreSQL <c>xmin</c> system column).</summary>
+    public uint Xmin { get; set; }
 }

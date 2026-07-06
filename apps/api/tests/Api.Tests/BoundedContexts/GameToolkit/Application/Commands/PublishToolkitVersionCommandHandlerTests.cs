@@ -76,9 +76,7 @@ public class PublishToolkitVersionCommandHandlerTests
             IsPublished = isPublished,
             TemplateStatus = (int)TemplateStatus.Approved,
             CreatedAt = Now,
-            UpdatedAt = Now,
-            RowVersion = [0],
-        };
+            UpdatedAt = Now,        };
 #pragma warning restore CS0618
         context.GameToolkits.Add(toolkit);
         return toolkit;

@@ -73,9 +73,9 @@ internal sealed class AlertChannelRepository : RepositoryBase, IAlertChannelRepo
         else
         {
             // Force EF to check the concurrency token: assigning the original
-            // RowVersion via Entry.OriginalValues makes DbUpdateConcurrencyException
+            // xmin via Entry.OriginalValues makes DbUpdateConcurrencyException
             // fire when another admin has bumped xmin since the aggregate was loaded.
-            DbContext.Entry(tracked).Property(p => p.RowVersion).OriginalValue = channel.RowVersion;
+            DbContext.Entry(tracked).Property(p => p.Xmin).OriginalValue = channel.Xmin;
 
             tracked.ConfigJson = channel.ConfigJson;
             tracked.IsEnabled = channel.IsEnabled;
@@ -102,6 +102,6 @@ internal sealed class AlertChannelRepository : RepositoryBase, IAlertChannelRepo
             e.UpdatedAt,
             e.CreatedBy,
             e.UpdatedBy,
-            e.RowVersion,
+            e.Xmin,
             e.LastDispatchedEventId);
 }

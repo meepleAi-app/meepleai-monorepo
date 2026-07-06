@@ -71,9 +71,7 @@ public class YankToolkitVersionCommandHandlerTests
             IsPublished = isPublished,
             TemplateStatus = (int)TemplateStatus.Approved,
             CreatedAt = Now,
-            UpdatedAt = Now,
-            RowVersion = [0],
-        };
+            UpdatedAt = Now,        };
 #pragma warning restore CS0618
         context.GameToolkits.Add(toolkit);
         return toolkit;
@@ -94,9 +92,7 @@ public class YankToolkitVersionCommandHandlerTests
             PublishedBy = AuthorId,
             YankedAt = yanked ? Now.AddHours(-1) : null,
             YankReason = yanked ? "Earlier yank" : null,
-            YankedBy = yanked ? AuthorId : null,
-            RowVersion = [0],
-        };
+            YankedBy = yanked ? AuthorId : null,        };
         context.Set<ToolkitVersionEntity>().Add(row);
         return row;
     }

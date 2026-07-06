@@ -98,7 +98,10 @@ public sealed class GetAppBudgetQueryHandlerTests : IAsyncLifetime
         result.Spent.ProjectedMonthEnd.Should().Be(0m);
         // AnchorToday = 2026-06-01 → 30 - 1 = 29 days remaining in June.
         result.DaysRemaining.Should().Be(29);
-        result.RowVersion.Should().NotBeNull();
+        // In-memory provider doesn't populate the Postgres xmin system column;
+        // the DTO surfaces whatever the repo carried (0 here). Real xmin
+        // round-tripping is covered by the Testcontainers integration suite.
+        result.Xmin.Should().Be(0u);
     }
 
     [Fact]

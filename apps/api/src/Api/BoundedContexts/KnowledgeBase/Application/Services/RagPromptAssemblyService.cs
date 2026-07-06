@@ -4,6 +4,7 @@ using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -25,6 +26,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 {
     private readonly IEmbeddingService _embeddingService;
+    private readonly IEmbeddingRepository _embeddingRepository;
     private readonly ICrossEncoderReranker _reranker;
     private readonly ILlmService _llmService;
     private readonly ITextChunkSearchService _textSearch;
@@ -63,6 +65,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 
     public RagPromptAssemblyService(
         IEmbeddingService embeddingService,
+        IEmbeddingRepository embeddingRepository,
         ICrossEncoderReranker reranker,
         ILlmService llmService,
         ITextChunkSearchService textSearch,
@@ -75,6 +78,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         ILogger<RagPromptAssemblyService> logger)
     {
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
+        _embeddingRepository = embeddingRepository ?? throw new ArgumentNullException(nameof(embeddingRepository));
         _reranker = reranker ?? throw new ArgumentNullException(nameof(reranker));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _textSearch = textSearch ?? throw new ArgumentNullException(nameof(textSearch));
@@ -246,9 +250,14 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                 queries = await ExpandQueryAsync(userQuestion, ct).ConfigureAwait(false);
             }
 
-            // Step 2: Generate embeddings for all queries
+            // Step 2: Generate query embeddings and run pgvector semantic search.
+            // Issue #2705: this branch was dropped in commit 5d00be387 (#504), which left the
+            // retrieval FTS-only. FTS-only RRF scores are capped at NormalizeRrfScore(1/61) ≈ 0.49,
+            // below the 0.55 MinScore, so filteredChunks was ALWAYS empty and the agent answered
+            // "non sono certo" regardless of the question. Restoring the semantic branch feeds real
+            // cosine similarities (multilingual-e5, cross-lingual) into the fusion via Math.Max, so
+            // relevant chunks clear MinScore again.
             var allChunks = new List<SearchResultItem>();
-            // Embeddings are still generated for potential future use.
             foreach (var query in queries)
             {
                 var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query, ct).ConfigureAwait(false);
@@ -259,10 +268,29 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                         _logger.LogWarning("Embedding generation failed for primary query: {Error}", embeddingResult.ErrorMessage);
                         return (string.Empty, citations);
                     }
+
+                    continue;
+                }
+
+                var queryVector = new Vector(embeddingResult.Embeddings[0]);
+                var scoredEmbeddings = await _embeddingRepository
+                    .SearchByVectorWithScoresAsync(gameId, queryVector, profile.TopK, profile.MinScore, documentIds: null, ct)
+                    .ConfigureAwait(false);
+
+                foreach (var scored in scoredEmbeddings)
+                {
+                    allChunks.Add(new SearchResultItem
+                    {
+                        Score = (float)scored.Score,
+                        Text = scored.Embedding.TextContent,
+                        PdfId = scored.Embedding.VectorDocumentId.ToString(),
+                        Page = scored.Embedding.PageNumber,
+                        ChunkIndex = scored.Embedding.ChunkIndex
+                    });
                 }
             }
 
-            // Step 2b: Hybrid search — PostgreSQL FTS + RRF fusion (graceful degradation)
+            // Step 2b: Hybrid search — semantic vector chunks + PostgreSQL FTS + RRF fusion (graceful degradation)
             allChunks = await TryHybridSearchAsync(userQuestion, gameId, allChunks, profile, ct).ConfigureAwait(false);
 
             // Deduplicate by PdfId+ChunkIndex, keep highest score

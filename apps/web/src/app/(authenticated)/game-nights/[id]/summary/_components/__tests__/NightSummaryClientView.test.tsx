@@ -69,6 +69,7 @@ const dto = {
       winnerId: null,
       winnerName: 'Davide',
       durationMinutes: 90,
+      eventsCount: 8,
     },
   ],
 };

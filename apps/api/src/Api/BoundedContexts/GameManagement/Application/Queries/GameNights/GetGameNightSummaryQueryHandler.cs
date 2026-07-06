@@ -40,7 +40,9 @@ internal sealed class GetGameNightSummaryQueryHandler
 
         var winnerName = await GameNightSummaryWinnerResolver
             .BuildAsync(_db, gameNight, cancellationToken).ConfigureAwait(false);
+        var eventCounts = await GameNightSummaryEventCounts
+            .BuildAsync(_db, gameNight.Id, cancellationToken).ConfigureAwait(false);
 
-        return GameNightSummaryMapper.Map(gameNight, winnerName, isOrganizer);
+        return GameNightSummaryMapper.Map(gameNight, winnerName, eventCounts, isOrganizer);
     }
 }

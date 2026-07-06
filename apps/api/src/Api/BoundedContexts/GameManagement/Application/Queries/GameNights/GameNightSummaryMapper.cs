@@ -15,13 +15,15 @@ internal static class GameNightSummaryMapper
     public static GameNightSummaryDto Map(
         GameNightEvent night,
         Func<GameNightSession, string?> winnerName,
+        IReadOnlyDictionary<Guid, int> eventCountBySession,
         bool isViewerOrganizer)
     {
         var games = night.Sessions
             .OrderBy(s => s.PlayOrder)
             .Select(s => new GameNightGameRecapDto(
                 s.SessionId, s.GameId, s.GameTitle, s.PlayOrder, s.Status,
-                s.WinnerId, winnerName(s), DurationMinutes(s)))
+                s.WinnerId, winnerName(s), DurationMinutes(s),
+                eventCountBySession.TryGetValue(s.SessionId, out var count) ? count : 0))
             .ToList();
 
         var kpis = new GameNightSummaryKpisDto(

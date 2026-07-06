@@ -32,22 +32,27 @@ public class GameNightSummaryMapperTests
             completedAt: Start.AddMinutes(durationMinutes));
     }
 
+    private static readonly IReadOnlyDictionary<Guid, int> NoEventCounts =
+        new Dictionary<Guid, int>();
+
     [Fact]
     public void Map_ComputesMvpKpisAndRecap()
     {
         var evt = GameNightEvent.Create(Guid.NewGuid(), "Serata", Start.AddDays(-1));
         var davide = Guid.NewGuid();
         var marco = Guid.NewGuid();
+        var brass = CompletedSession(evt.Id, 1, Guid.NewGuid(), "Brass", davide, 120);
         evt.RestoreSessions(new[]
         {
-            CompletedSession(evt.Id, 1, Guid.NewGuid(), "Brass", davide, 120),
+            brass,
             CompletedSession(evt.Id, 2, Guid.NewGuid(), "Spirit", davide, 60),
             CompletedSession(evt.Id, 3, Guid.NewGuid(), "Azul", marco, 30),
         });
         var names = new Dictionary<Guid, string> { [davide] = "Davide", [marco] = "Marco" };
         string? Resolver(GameNightSession s) => s.WinnerId is { } w ? names.GetValueOrDefault(w) : null;
+        var eventCounts = new Dictionary<Guid, int> { [brass.SessionId] = 11 };
 
-        var dto = GameNightSummaryMapper.Map(evt, Resolver, isViewerOrganizer: true);
+        var dto = GameNightSummaryMapper.Map(evt, Resolver, eventCounts, isViewerOrganizer: true);
 
         dto.Mvp.Should().NotBeNull();
         dto.Mvp!.PlayerName.Should().Be("Davide");
@@ -60,6 +65,8 @@ public class GameNightSummaryMapperTests
         dto.Games[0].GameTitle.Should().Be("Brass");
         dto.Games[0].WinnerName.Should().Be("Davide");
         dto.Games[0].DurationMinutes.Should().Be(120);
+        dto.Games[0].EventsCount.Should().Be(11);
+        dto.Games[1].EventsCount.Should().Be(0); // no events recorded for this session
     }
 
     [Fact]
@@ -71,7 +78,7 @@ public class GameNightSummaryMapperTests
             CompletedSession(evt.Id, 1, Guid.NewGuid(), "Brass", winnerId: null, 90),
         });
 
-        var dto = GameNightSummaryMapper.Map(evt, _ => null, isViewerOrganizer: true);
+        var dto = GameNightSummaryMapper.Map(evt, _ => null, NoEventCounts, isViewerOrganizer: true);
 
         dto.Mvp.Should().BeNull();
         dto.Kpis.WinnersCount.Should().Be(0);
@@ -86,8 +93,8 @@ public class GameNightSummaryMapperTests
         evt.Complete();
         evt.GenerateShareToken();
 
-        var organizerView = GameNightSummaryMapper.Map(evt, _ => null, isViewerOrganizer: true);
-        var guestView = GameNightSummaryMapper.Map(evt, _ => null, isViewerOrganizer: false);
+        var organizerView = GameNightSummaryMapper.Map(evt, _ => null, NoEventCounts, isViewerOrganizer: true);
+        var guestView = GameNightSummaryMapper.Map(evt, _ => null, NoEventCounts, isViewerOrganizer: false);
 
         organizerView.ShareToken.Should().NotBeNull();
         guestView.ShareToken.Should().BeNull();

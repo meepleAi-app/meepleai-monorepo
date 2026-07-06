@@ -262,6 +262,7 @@ export const GameNightGameRecapDtoSchema = z.object({
   winnerId: z.string().uuid().nullable(),
   winnerName: z.string().nullable(),
   durationMinutes: z.number().int().nullable(),
+  eventsCount: z.number().int().nonnegative(),
 });
 export type GameNightGameRecapDto = z.infer<typeof GameNightGameRecapDtoSchema>;
 

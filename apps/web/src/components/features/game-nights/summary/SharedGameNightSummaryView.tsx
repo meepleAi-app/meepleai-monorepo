@@ -34,14 +34,14 @@ export function SharedGameNightSummaryView({ token }: SharedGameNightSummaryView
     );
   }
 
-  const { night, mvp, games } = toNightSummaryViewModel(query.data, { locale, t });
+  const { night, mvp, games, eventsCount } = toNightSummaryViewModel(query.data, { locale, t });
 
   return (
     <NightSummaryView
       night={night}
       mvp={mvp}
       games={games}
-      eventsCount={0}
+      eventsCount={eventsCount}
       archived={query.data.isArchived}
     />
   );

@@ -72,14 +72,17 @@ export function NightSummaryClientView({ nightId }: NightSummaryClientViewProps)
     );
   }
 
-  const { night, mvp, games } = toNightSummaryViewModel(summaryQuery.data, { locale, t });
+  const { night, mvp, games, eventsCount } = toNightSummaryViewModel(summaryQuery.data, {
+    locale,
+    t,
+  });
 
   return (
     <NightSummaryView
       night={night}
       mvp={mvp}
       games={games}
-      eventsCount={0}
+      eventsCount={eventsCount}
       archived={summaryQuery.data.isArchived}
       shareSuccess={shareSuccess}
       onShare={handleShare}

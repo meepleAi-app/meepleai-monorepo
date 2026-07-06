@@ -49,8 +49,9 @@ import {
   type SettingsState,
 } from '@/components/features/agent-detail';
 import { DetailPageContainer } from '@/components/layout/PageContainer';
+import { toast } from '@/components/layout/Toast';
 import { useAgent } from '@/hooks/queries/useAgent';
-import { useAgentConfig } from '@/hooks/queries/useAgentConfig';
+import { useAgentConfig, useUpdateAgentConfig } from '@/hooks/queries/useAgentConfig';
 import { useAgentKbDocs, useAgentThreads } from '@/hooks/queries/useAgentData';
 import { useTranslation } from '@/hooks/useTranslation';
 import { deriveAgentDetailUiState } from '@/lib/agents/agent-detail-state';
@@ -59,6 +60,7 @@ import {
   IS_VISUAL_TEST_BUILD,
   tryLoadVisualTestFixture,
 } from '@/lib/agents/agent-detail-visual-test-fixture';
+import { DEFAULT_AGENT_CONFIG } from '@/lib/api/schemas/agent-config.schemas';
 
 // ─── State override hatch (dev / visual-test only) ─────────────────────────
 
@@ -250,14 +252,14 @@ function mapSettingsState(
 
   const config = query.data;
   const resolvedConfig = {
-    strategy: config?.modelType ?? 'llama-3.3-70b-free',
+    strategy: config?.llmModel ?? 'llama-3.3-70b-free',
     parameters: config
       ? {
           temperature: config.temperature,
           maxTokens: config.maxTokens,
           personality: config.personality,
           detailLevel: config.detailLevel,
-          customInstructions: config.customInstructions,
+          customInstructions: config.personalNotes,
         }
       : {},
   };
@@ -374,6 +376,11 @@ export function AgentDetailView({ agentId }: AgentDetailViewProps): ReactElement
     gameIdForConfig || (agentId ?? ''), // fallback to agentId if no gameId
     configEnabled
   );
+
+  // BUG E (#2727): Settings tab Save persists the per-game agent config.
+  // NOTE: AgentSettingsForm is currently display-only (no editable inputs), so
+  // this round-trips the loaded config; field editability is a follow-up.
+  const updateConfig = useUpdateAgentConfig();
 
   // ── Shell renders (FSM cells 1, 2, 3, 4) ──────────────────────────────────
   if (effectiveKind === 'loading') {
@@ -654,7 +661,33 @@ export function AgentDetailView({ agentId }: AgentDetailViewProps): ReactElement
               state={settingsState}
               labels={settingsLabels}
               onSave={() => {
-                /* mutations handled by child */
+                if (updateConfig.isPending) return; // guard against double-fire
+                const gameId = agentQuery.data?.gameId;
+                // Config is per-game; a standalone agent (no real gameId) cannot
+                // be configured from this per-agent page.
+                if (!gameId) {
+                  toast.error(settingsLabels.saveError);
+                  return;
+                }
+                const current = configQueryGated.data;
+                // No custom config yet → persist defaults (mutation create path).
+                const request = current
+                  ? {
+                      llmModel: current.llmModel,
+                      temperature: current.temperature,
+                      maxTokens: current.maxTokens,
+                      personality: current.personality,
+                      detailLevel: current.detailLevel,
+                      personalNotes: current.personalNotes ?? null,
+                    }
+                  : { ...DEFAULT_AGENT_CONFIG, personalNotes: null };
+                updateConfig.mutate(
+                  { gameId, request },
+                  {
+                    onSuccess: () => toast.success(settingsLabels.saveSuccess),
+                    onError: () => toast.error(settingsLabels.saveError),
+                  }
+                );
               }}
               onCancel={() => {
                 /* no-op: form handles internally */

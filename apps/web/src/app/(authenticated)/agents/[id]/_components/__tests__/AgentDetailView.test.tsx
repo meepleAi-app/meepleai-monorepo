@@ -128,9 +128,25 @@ const configMockState: MockConfigReturn = {
 };
 
 const useAgentConfigSpy = vi.fn<[string, boolean?], MockConfigReturn>();
+// BUG E (#2727): Settings tab Save must wire the update-config mutation.
+const updateConfigMutate = vi.fn();
 
 vi.mock('@/hooks/queries/useAgentConfig', () => ({
   useAgentConfig: (gameId: string, enabled?: boolean) => useAgentConfigSpy(gameId, enabled),
+  useUpdateAgentConfig: () => ({ mutate: updateConfigMutate, isPending: false }),
+}));
+
+// ─── Toast mock (BUG E #2727) ─────────────────────────────────────────────────
+
+const toastSuccess = vi.fn();
+const toastError = vi.fn();
+
+vi.mock('@/components/layout/Toast', () => ({
+  toast: {
+    success: (...args: unknown[]) => toastSuccess(...args),
+    error: (...args: unknown[]) => toastError(...args),
+    info: vi.fn(),
+  },
 }));
 
 // ─── Visual fixture mock ──────────────────────────────────────────────────────
@@ -318,6 +334,9 @@ function resetAll() {
   configMockState.refetch = vi.fn();
   useAgentConfigSpy.mockReset();
   useAgentConfigSpy.mockImplementation(() => ({ ...configMockState }));
+  updateConfigMutate.mockClear();
+  toastSuccess.mockClear();
+  toastError.mockClear();
 
   mockIsVisualTestBuild = false;
   mockFixtureData = null;
@@ -824,6 +843,99 @@ describe('AgentDetailView — FSM integration tests (Phase 0.5 contract, Wave C.
     expect(
       document.querySelector('[data-slot="agent-detail-settings-form"][data-settings-kind="error"]')
     ).toBeInTheDocument();
+
+    assertKbDocsNeverCalledWithBadGameId();
+  });
+
+  // ─── Settings tab: Save persists config (BUG E #2727) ──────────────────────
+  it('Settings tab Save wires the update-config mutation with per-game payload', () => {
+    useAgentSpy.mockImplementation(() => ({
+      data: makeAgent({ invocationCount: 5 }), // active + gameId → editable variant
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      refetch: vi.fn(),
+    }));
+    useAgentConfigSpy.mockImplementation(() => ({
+      ...configMockState,
+      data: {
+        llmModel: 'llama-3.3-70b-free',
+        temperature: 0.7,
+        maxTokens: 4096,
+        personality: 'Amichevole',
+        detailLevel: 'Normale',
+        personalNotes: 'note personali',
+      },
+      isSuccess: true,
+    }));
+
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
+
+    act(() => {
+      fireEvent.click(document.querySelector('[data-tab-key="settings"]')!);
+    });
+
+    const saveBtn = screen.getByRole('button', { name: 'Salva' });
+    act(() => {
+      fireEvent.click(saveBtn);
+    });
+
+    expect(updateConfigMutate).toHaveBeenCalledTimes(1);
+    expect(updateConfigMutate.mock.calls[0][0]).toEqual({
+      gameId: VALID_GAME_ID,
+      request: {
+        llmModel: 'llama-3.3-70b-free',
+        temperature: 0.7,
+        maxTokens: 4096,
+        personality: 'Amichevole',
+        detailLevel: 'Normale',
+        personalNotes: 'note personali',
+      },
+    });
+
+    assertKbDocsNeverCalledWithBadGameId();
+  });
+
+  // ─── Settings tab: Save on unconfigured active agent persists defaults ─────
+  it('Settings tab Save on an unconfigured active agent persists defaults, no error toast', () => {
+    // BUG E follow-up (#2727 review): an active agent with no saved config
+    // (getAgentConfig → null) must create the config from defaults on Save,
+    // NOT show a misleading "save error" toast.
+    useAgentSpy.mockImplementation(() => ({
+      data: makeAgent({ invocationCount: 5 }), // active + gameId
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      refetch: vi.fn(),
+    }));
+    useAgentConfigSpy.mockImplementation(() => ({
+      ...configMockState,
+      data: null, // no custom config saved yet
+      isSuccess: true,
+    }));
+
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
+
+    act(() => {
+      fireEvent.click(document.querySelector('[data-tab-key="settings"]')!);
+    });
+
+    const saveBtn = screen.getByRole('button', { name: 'Salva' });
+    act(() => {
+      fireEvent.click(saveBtn);
+    });
+
+    expect(toastError).not.toHaveBeenCalled();
+    expect(updateConfigMutate).toHaveBeenCalledTimes(1);
+    const payload = updateConfigMutate.mock.calls[0][0] as {
+      gameId: string;
+      request: Record<string, unknown>;
+    };
+    expect(payload.gameId).toBe(VALID_GAME_ID);
+    expect(payload.request.llmModel).toBe('llama-3.3-70b-free');
+    expect(payload.request.personality).toBe('Amichevole');
+    expect(payload.request.detailLevel).toBe('Normale');
+    expect(payload.request.personalNotes).toBeNull();
 
     assertKbDocsNeverCalledWithBadGameId();
   });

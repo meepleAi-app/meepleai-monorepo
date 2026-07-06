@@ -22,68 +22,95 @@ export type AIModel = z.infer<typeof AIModelSchema>;
 
 /**
  * Agent Personality Types
+ *
+ * Canonical values are the Italian labels enforced by the backend
+ * ConfigureGameAgentCommandValidator (`ValidPersonalities`). The FE contract
+ * mirrors the BE exactly — sending legacy English values yields HTTP 400.
  */
 export const AgentPersonalitySchema = z.enum([
-  'formal', // Professional tone, detailed responses
-  'friendly', // Casual tone, practical examples
-  'expert', // Technical tone, advanced references
+  'Amichevole', // Casual tone, practical examples
+  'Professionale', // Professional, formal tone
+  'Umoristico', // Light, witty tone
+  'Conciso', // Short, direct answers
+  'Dettagliato', // In-depth, complete answers
 ]);
 
 export type AgentPersonality = z.infer<typeof AgentPersonalitySchema>;
 
 /**
  * Response Detail Level
+ *
+ * Canonical values are the Italian labels enforced by the backend
+ * ConfigureGameAgentCommandValidator (`ValidDetailLevels`).
  */
 export const DetailLevelSchema = z.enum([
-  'brief', // Short responses (1-2 sentences)
-  'normal', // Balanced responses (2-4 sentences)
-  'detailed', // Complete responses with examples
+  'Breve', // Short responses (1-2 sentences)
+  'Normale', // Balanced responses (2-4 sentences)
+  'Dettagliato', // Complete responses with examples
+  'Esaustivo', // Very thorough responses
 ]);
 
 export type DetailLevel = z.infer<typeof DetailLevelSchema>;
 
 /**
  * Agent Configuration Request (User -> Backend)
+ *
+ * Field names mirror the backend `AgentConfigDto` record
+ * (LlmModel / PersonalNotes) — camelCased on the wire.
  */
 export const UpdateAgentConfigRequestSchema = z.object({
-  modelType: AIModelSchema.default('llama-3.3-70b-free'),
+  llmModel: AIModelSchema.default('llama-3.3-70b-free'),
   temperature: z.number().min(0).max(2).default(0.7),
   maxTokens: z.number().min(512).max(8192).default(4096),
-  personality: AgentPersonalitySchema.default('friendly'),
-  detailLevel: DetailLevelSchema.default('normal'),
-  customInstructions: z.string().max(1000).nullable().optional(),
+  personality: AgentPersonalitySchema.default('Amichevole'),
+  detailLevel: DetailLevelSchema.default('Normale'),
+  personalNotes: z.string().max(1000).nullable().optional(),
 });
 
 export type UpdateAgentConfigRequest = z.infer<typeof UpdateAgentConfigRequestSchema>;
 
 /**
  * Agent Configuration Response (Backend -> User)
+ *
+ * Mirrors the backend `AgentConfigDto` (UserLibrary bounded context): a flat
+ * config record with no id/userId/gameId/timestamps. Returned by
+ * GET /api/v1/library/games/{gameId}/agent-config (null when unconfigured).
  */
 export const AgentConfigDtoSchema = z.object({
-  id: z.string().uuid(),
-  userId: z.string().uuid(),
-  gameId: z.string().uuid(),
-  modelType: AIModelSchema,
+  llmModel: AIModelSchema,
   temperature: z.number(),
   maxTokens: z.number(),
   personality: AgentPersonalitySchema,
   detailLevel: DetailLevelSchema,
-  customInstructions: z.string().nullable().optional(),
-  createdAt: z.string().datetime({ offset: true }),
-  updatedAt: z.string().datetime({ offset: true }).nullable().optional(),
+  personalNotes: z.string().nullable().optional(),
 });
 
 export type AgentConfigDto = z.infer<typeof AgentConfigDtoSchema>;
 
 /**
+ * Response wrapper for PUT /api/v1/library/games/{gameId}/agent-config.
+ *
+ * The backend endpoint returns the full UserLibraryEntryDto after configuring
+ * the agent; only its `customAgentConfig` field carries the persisted config.
+ * `.passthrough()` tolerates the remaining entry fields we don't consume here.
+ */
+export const UpdateAgentConfigResponseSchema = z
+  .object({
+    customAgentConfig: AgentConfigDtoSchema.nullable().optional(),
+  })
+  .passthrough();
+
+export type UpdateAgentConfigResponse = z.infer<typeof UpdateAgentConfigResponseSchema>;
+
+/**
  * Default Agent Configuration (fallback values)
  */
-export const DEFAULT_AGENT_CONFIG: Omit<UpdateAgentConfigRequest, 'customInstructions'> = {
-  modelType: 'llama-3.3-70b-free',
+export const DEFAULT_AGENT_CONFIG: Omit<UpdateAgentConfigRequest, 'personalNotes'> = {
+  llmModel: 'llama-3.3-70b-free',
   temperature: 0.7,
   maxTokens: 4096,
-  personality: 'friendly',
-  detailLevel: 'normal',
+  personality: 'Amichevole',
+  detailLevel: 'Normale',
 };
 
 /**
@@ -179,19 +206,29 @@ export interface PersonalityInfo {
 
 export const PERSONALITY_OPTIONS: PersonalityInfo[] = [
   {
-    value: 'formal',
-    label: 'Formale',
-    description: 'Tono professionale, risposte dettagliate',
-  },
-  {
-    value: 'friendly',
+    value: 'Amichevole',
     label: 'Amichevole',
     description: 'Tono casual, esempi pratici',
   },
   {
-    value: 'expert',
-    label: 'Esperto',
-    description: 'Tono tecnico, riferimenti avanzati',
+    value: 'Professionale',
+    label: 'Professionale',
+    description: 'Tono professionale e formale',
+  },
+  {
+    value: 'Umoristico',
+    label: 'Umoristico',
+    description: 'Tono leggero e spiritoso',
+  },
+  {
+    value: 'Conciso',
+    label: 'Conciso',
+    description: 'Risposte brevi e dirette',
+  },
+  {
+    value: 'Dettagliato',
+    label: 'Dettagliato',
+    description: 'Risposte approfondite e complete',
   },
 ];
 
@@ -206,18 +243,23 @@ export interface DetailLevelInfo {
 
 export const DETAIL_LEVEL_OPTIONS: DetailLevelInfo[] = [
   {
-    value: 'brief',
-    label: 'Sintetico',
+    value: 'Breve',
+    label: 'Breve',
     description: 'Risposte brevi (1-2 frasi)',
   },
   {
-    value: 'normal',
+    value: 'Normale',
     label: 'Normale',
     description: 'Risposte equilibrate (2-4 frasi)',
   },
   {
-    value: 'detailed',
+    value: 'Dettagliato',
     label: 'Dettagliato',
     description: 'Risposte complete con esempi',
+  },
+  {
+    value: 'Esaustivo',
+    label: 'Esaustivo',
+    description: 'Risposte molto approfondite',
   },
 ];

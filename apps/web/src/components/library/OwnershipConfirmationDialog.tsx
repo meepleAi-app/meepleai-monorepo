@@ -56,7 +56,11 @@ export function OwnershipConfirmationDialog({
     try {
       const result = await api.agents.quickCreateTutor(gameId, sharedGameId);
       onOpenChange(false);
-      router.push(`/chat/${result.chatThreadId}`);
+      // BUG B (#2727): the BE returns a placeholder chatThreadId (Guid.NewGuid,
+      // never persisted — chat-thread BC integration deferred), so navigating to
+      // /chat/{chatThreadId} lands on a non-existent thread. Send the user to the
+      // agent that was actually created instead.
+      router.push(`/agents/${result.agentId}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Impossibile creare il tutor. Riprova.');
     } finally {

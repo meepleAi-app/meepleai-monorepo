@@ -198,7 +198,7 @@ below) and the `/gamebook` family pages render directly from those._
 | File | Type | Mapped routes |
 |------|------|---------------|
 | `sp7-game-night-new.html` | page-mock | `/game-nights/new` |
-| `sp7-game-night-detail-rsvp.html` | page-mock | `/game-nights/[id]`, `/game-nights/[id]/edit` |
+| `sp7-game-night-detail-rsvp.html` | page-mock | `/game-nights/[id]` |
 | `sp7-game-night-live.html` | page-mock | `/game-nights/[id]/live` (issue #487 screen #4+#7) |
 | `sp7-game-night-transition.html` | component-mock | Modal opened from `/game-nights/[id]/live` (issue #487 screen #5) |
 | `sp7-game-night-summary.html` | page-mock | `/game-nights/[id]/summary` (issue #487 screen #6) |

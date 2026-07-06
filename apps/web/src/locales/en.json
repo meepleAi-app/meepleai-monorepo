@@ -3838,6 +3838,13 @@
         "reload": "Reload",
         "dismiss": "Dismiss"
       }
+    },
+    "editDrawer": {
+      "title": "Edit game night",
+      "description": "Update the details of your game night.",
+      "submit": "Save changes",
+      "savedToast": "Game night updated",
+      "errorGeneric": "Could not update the game night."
     }
   },
   "gameNightsIndex": {

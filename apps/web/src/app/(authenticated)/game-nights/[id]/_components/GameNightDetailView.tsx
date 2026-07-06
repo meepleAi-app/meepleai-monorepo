@@ -49,6 +49,8 @@ import { useTranslation } from '@/hooks/useTranslation';
 import type { RsvpResponse } from '@/lib/game-nights/rsvp-state-machine';
 import { useGameNightStore } from '@/stores/game-night';
 
+import { GameNightEditDrawer } from './GameNightEditDrawer';
+
 export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   const router = useRouter();
   const { t, locale } = useTranslation();
@@ -286,7 +288,7 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
           {isDraft && (
             <>
               <Button size="sm" variant="outline" asChild>
-                <Link href={`/game-nights/${id}/edit`}>
+                <Link href={`/game-nights/${id}?action=edit`}>
                   <Edit className="mr-1 h-4 w-4" />
                   {t('gameNightDetail.actor.host.edit')}
                 </Link>
@@ -379,6 +381,21 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
           </ul>
         </section>
       )}
+
+      {/* Edit-overlay drawer (ADR-079 / #2701). Self-gates on ?action=edit +
+          organiser identity — the visible trigger is Draft-only, but the drawer
+          is mountable for any non-terminal status via deep-link. */}
+      <GameNightEditDrawer
+        gameNightId={id}
+        organizerId={event.organizerId}
+        defaultValues={{
+          title: event.title,
+          description: event.description ?? undefined,
+          scheduledAt: event.scheduledAt,
+          location: event.location ?? undefined,
+          maxPlayers: event.maxPlayers ?? undefined,
+        }}
+      />
     </FormPageContainer>
   );
 }

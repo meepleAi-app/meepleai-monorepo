@@ -14,7 +14,7 @@ namespace Api.BoundedContexts.BusinessSimulations.Infrastructure.Persistence;
 /// (Issue #1838 SP5 F4-C5). The singleton AppBudget row is detected
 /// application-side: <see cref="UpsertAsync"/> looks for an existing row and
 /// either inserts (first-time config) or in-place updates (admin edit), with
-/// optimistic concurrency enforced by EF's RowVersion convention.
+/// optimistic concurrency enforced by PostgreSQL's xmin system column (ADR-060).
 /// </summary>
 internal sealed class AppBudgetRepository : RepositoryBase, IAppBudgetRepository
 {
@@ -62,10 +62,11 @@ internal sealed class AppBudgetRepository : RepositoryBase, IAppBudgetRepository
         }
         else
         {
-            // Force EF to check the concurrency token: assigning the original
-            // RowVersion via Entry.OriginalValues makes DbUpdateConcurrencyException
-            // fire when another admin has bumped xmin since the aggregate was loaded.
-            DbContext.Entry(tracked).Property(p => p.RowVersion).OriginalValue = budget.RowVersion;
+            // Force EF to check the concurrency token: assigning the client-supplied
+            // xmin via Entry.OriginalValue makes DbUpdateConcurrencyException fire when
+            // another admin has bumped xmin since the aggregate was loaded (the freshly
+            // re-queried `tracked` row already carries the newer xmin).
+            DbContext.Entry(tracked).Property(p => p.Xmin).OriginalValue = budget.Xmin;
 
             tracked.MonthlyLimitAmount = budget.MonthlyLimit.Amount;
             tracked.MonthlyLimitCurrency = budget.MonthlyLimit.Currency;
@@ -90,5 +91,5 @@ internal sealed class AppBudgetRepository : RepositoryBase, IAppBudgetRepository
             e.UpdatedAt,
             e.CreatedBy,
             e.UpdatedBy,
-            e.RowVersion);
+            e.Xmin);
 }

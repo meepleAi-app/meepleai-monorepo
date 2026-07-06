@@ -17,7 +17,7 @@ namespace Api.BoundedContexts.BusinessSimulations.Domain.Aggregates.AppBudgets;
 /// constraint so the schema stays portable and future-friendly (e.g. multi-
 /// tenant scoping could add a tenant discriminator without redoing migrations).</para>
 ///
-/// <para>RowVersion enables optimistic-concurrency protection: two simultaneous
+/// <para>Xmin enables optimistic-concurrency protection: two simultaneous
 /// admins editing the budget will surface a 409 ConflictException via
 /// <c>DbUpdateConcurrencyException</c> translation in the upsert command handler.</para>
 /// </summary>
@@ -42,10 +42,12 @@ internal sealed class AppBudget
     public string? CreatedBy { get; private set; }
     public string? UpdatedBy { get; private set; }
 
-    /// <summary>SQL Server / Postgres optimistic concurrency token.
-    /// Repository populates this from <c>xmin</c> via EF's <c>[Timestamp]</c>
-    /// equivalent (<see cref="Microsoft.EntityFrameworkCore.Metadata.Builders.PropertyBuilder.IsRowVersion"/>).</summary>
-    public byte[] RowVersion { get; private set; } = Array.Empty<byte>();
+    /// <summary>Postgres xmin optimistic-concurrency token. Server-owned; the repository
+    /// round-trips it for detached update (ADR-060).</summary>
+    public uint Xmin { get; private set; }
+
+    /// <summary>Repository-only: restore the xmin token after loading from persistence.</summary>
+    internal void SetXmin(uint xmin) => Xmin = xmin;
 
     private AppBudget() { /* EF Core / reconstitution */ }
 
@@ -97,7 +99,7 @@ internal sealed class AppBudget
             updatedBy: createdBy);
     }
 
-    /// <summary>Repository-only reconstitution; preserves stored RowVersion and timestamps.</summary>
+    /// <summary>Repository-only reconstitution; preserves stored xmin and timestamps.</summary>
     public static AppBudget Reconstitute(
         Guid id,
         Money monthlyLimit,
@@ -108,14 +110,14 @@ internal sealed class AppBudget
         DateTime updatedAt,
         string? createdBy,
         string? updatedBy,
-        byte[] rowVersion)
+        uint xmin)
     {
         ArgumentNullException.ThrowIfNull(monthlyLimit);
         return new AppBudget(
             id, monthlyLimit, alertThresholdPct, criticalThresholdPct, isEnabled,
             createdAt, updatedAt, createdBy, updatedBy)
         {
-            RowVersion = rowVersion ?? Array.Empty<byte>(),
+            Xmin = xmin,
         };
     }
 

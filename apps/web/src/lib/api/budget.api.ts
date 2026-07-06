@@ -23,7 +23,7 @@ export const budgetApi = {
   },
 
   /**
-   * Upsert the singleton AppBudget. Pass `rowVersion` from the most recent
+   * Upsert the singleton AppBudget. Pass `xmin` from the most recent
    * GET to detect concurrent edits (409 ConflictException). Omit on first
    * creation.
    */

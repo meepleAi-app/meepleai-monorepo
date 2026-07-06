@@ -65,7 +65,7 @@ internal static class AlertChannelsEndpoints
                     Type: type,
                     ConfigJson: request.ConfigJson,
                     IsEnabled: request.IsEnabled,
-                    RowVersion: request.RowVersion,
+                    Xmin: request.Xmin,
                     UpdatedBy: userId);
 
                 var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -96,6 +96,6 @@ internal static class AlertChannelsEndpoints
 
 /// <summary>
 /// Request body for <c>PUT /api/v1/admin/alert-channels/{type}</c>.
-/// RowVersion is omitted on first-time creation; required for in-place updates.
+/// Xmin (Postgres concurrency token) is omitted on first-time creation; required for in-place updates.
 /// </summary>
-internal sealed record UpsertAlertChannelRequest(string ConfigJson, bool IsEnabled, string? RowVersion);
+internal sealed record UpsertAlertChannelRequest(string ConfigJson, bool IsEnabled, uint? Xmin);

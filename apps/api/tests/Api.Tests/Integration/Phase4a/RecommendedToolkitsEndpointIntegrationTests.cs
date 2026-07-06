@@ -259,8 +259,9 @@ public sealed class RecommendedToolkitsEndpointIntegrationTests : IAsyncLifetime
     /// <summary>
     /// Seeds an authored GameToolkit with explicit createdAt. Mirrors the raw
     /// SQL pattern from <c>ToolkitMarketplaceEndpointsIntegrationTests</c> —
-    /// the row-version + JSONB columns require a raw INSERT to bypass EF's
-    /// store-generated stripping of <c>RowVersion</c>.
+    /// the JSONB columns are seeded via raw INSERT to keep full control of the
+    /// column values. The xmin concurrency token is a Postgres system column,
+    /// auto-populated on insert, so it is never listed in the INSERT.
     /// </summary>
     private static async Task SeedToolkitAsync(
         MeepleAiDbContext dbContext,
@@ -296,8 +297,7 @@ public sealed class RecommendedToolkitsEndpointIntegrationTests : IAsyncLifetime
                 "ScoringTemplateJson", "TurnTemplateJson", "StateTemplate",
                 "AgentConfig",
                 "TemplateStatus", "IsTemplate",
-                "ReviewNotes", "ReviewedByUserId", "ReviewedAt",
-                "RowVersion"
+                "ReviewNotes", "ReviewedByUserId", "ReviewedAt"
             ) VALUES (
                 {0}, {1}, NULL, {2}, 1,
                 {3}, {4},
@@ -308,8 +308,7 @@ public sealed class RecommendedToolkitsEndpointIntegrationTests : IAsyncLifetime
                 NULL, NULL, NULL,
                 NULL,
                 {7}, {8},
-                NULL, NULL, NULL,
-                E'\\x01'
+                NULL, NULL, NULL
             )
             """;
 

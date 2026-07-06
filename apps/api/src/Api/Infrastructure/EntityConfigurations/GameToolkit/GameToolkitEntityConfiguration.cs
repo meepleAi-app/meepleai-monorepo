@@ -53,8 +53,15 @@ internal class GameToolkitEntityConfiguration : IEntityTypeConfiguration<GameToo
         builder.Property(e => e.StateTemplate).HasColumnType("jsonb");
         builder.Property(e => e.AgentConfig).HasColumnType("jsonb");
 
-        // Concurrency token
-        builder.Property(e => e.RowVersion).IsRowVersion();
+        // Optimistic concurrency via PostgreSQL's xmin system column (ADR-060).
+        // xmin is a Postgres system column — EF maps it but does NOT create the column.
+        // ValueGeneratedOnAddOrUpdate tells EF the DB owns the value on every write.
+        // IsConcurrencyToken() makes EF include it in UPDATE … WHERE xmin = @p0.
+        builder.Property(e => e.Xmin)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
 
         // FK to SharedGameEntity — optional
         builder.HasOne(e => e.Game)

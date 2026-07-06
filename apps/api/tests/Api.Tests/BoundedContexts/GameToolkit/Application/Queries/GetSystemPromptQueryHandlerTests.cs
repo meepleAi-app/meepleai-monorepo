@@ -67,9 +67,7 @@ public class GetSystemPromptQueryHandlerTests
             TemplateStatus = (int)TemplateStatus.Approved,
             CreatedAt = Now,
             UpdatedAt = Now,
-            AgentConfig = agentConfig,
-            RowVersion = [0],
-        };
+            AgentConfig = agentConfig,        };
 #pragma warning restore CS0618
         context.GameToolkits.Add(toolkit);
         return toolkit;

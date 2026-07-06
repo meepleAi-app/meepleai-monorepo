@@ -27,7 +27,13 @@ internal class ToolkitVersionEntityConfiguration : IEntityTypeConfiguration<Tool
         builder.Property(e => e.YankReason).IsRequired(false).HasMaxLength(500);
         builder.Property(e => e.YankedBy).IsRequired(false);
 
-        builder.Property(e => e.RowVersion).IsRowVersion();
+        // Optimistic concurrency via PostgreSQL's xmin system column (ADR-060).
+        // xmin is a Postgres system column — EF maps it but does NOT create the column.
+        builder.Property(e => e.Xmin)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
 
         // FK to GameToolkitEntity. Cascade delete: yanking the parent toolkit
         // (admin hard-delete path, not the normal soft-delete via unpublish)

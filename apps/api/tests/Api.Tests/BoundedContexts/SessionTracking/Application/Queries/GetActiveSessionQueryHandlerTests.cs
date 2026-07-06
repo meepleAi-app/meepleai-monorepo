@@ -92,9 +92,7 @@ public sealed class GetActiveSessionQueryHandlerTests : IDisposable
             GameId = gameId,
             Name = "Test Toolkit",
             CreatedByUserId = userId,
-            IsPublished = true,
-            RowVersion = [0],
-            // camelCase JSON matching JsonNamingPolicy.CamelCase used by repository
+            IsPublished = true,            // camelCase JSON matching JsonNamingPolicy.CamelCase used by repository
             TurnTemplateJson = "{\"turnOrderType\":3,\"phases\":[]}"
         });
 
@@ -166,9 +164,7 @@ public sealed class GetActiveSessionQueryHandlerTests : IDisposable
             GameId = gameId,
             Name = "Toolkit No Turn",
             CreatedByUserId = userId,
-            IsPublished = true,
-            RowVersion = [0],
-            TurnTemplateJson = null
+            IsPublished = true,            TurnTemplateJson = null
         });
 
         _db.SessionTrackingSessions.Add(new SessionEntity

@@ -727,19 +727,13 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
     // ──────────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Seeds a <see cref="GameToolkitEntity"/> directly via raw SQL because
-    /// EF treats the <c>RowVersion</c> column as <c>IsRowVersion()</c> which
-    /// strips the value from INSERT statements. The migration declares the
-    /// column NOT NULL with no DB-side default, so the EF path produces a
-    /// constraint violation when seeding outside the production aggregate
-    /// repository (which similarly omits RowVersion but is exercised through
-    /// SaveChangesAsync paths that EF rewrites server-side).
-    ///
-    /// Using raw SQL bypasses the EF generator and gives us full control of
-    /// the IsPublished / TemplateStatus combinations needed for the security
-    /// boundary tests (PR #732 §5.2). FK to <see cref="SharedGameEntity"/>
-    /// (via <see cref="GameEntity"/> mapping that points to the SharedGame
-    /// row) is satisfied by inserting a sibling SharedGame first.
+    /// Seeds a <see cref="GameToolkitEntity"/> directly via raw SQL to keep full
+    /// control of the IsPublished / TemplateStatus combinations needed for the
+    /// security boundary tests (PR #732 §5.2). The xmin concurrency token is a
+    /// Postgres system column, auto-populated on insert, so it is never listed
+    /// in the INSERT. FK to <see cref="SharedGameEntity"/> (via the
+    /// <see cref="GameEntity"/> mapping that points to the SharedGame row) is
+    /// satisfied by inserting a sibling SharedGame first.
     /// </summary>
     [Obsolete]
     private static async Task<GameToolkitEntity> SeedToolkitAsync(
@@ -767,13 +761,9 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
         var templateStatusInt = (int)templateStatus;
         var isTemplate = templateStatus == TemplateStatus.Approved;
 
-        // Raw INSERT that explicitly sets RowVersion. EF treats RowVersion as
-        // store-generated under IsRowVersion(), which strips the value during
-        // INSERT and produces a NOT-NULL violation when seeding outside the
-        // production aggregate path. The aggregate's repository takes the same
-        // path through SaveChangesAsync but EF's update pipeline rewrites the
-        // RowVersion side-effect for IsRowVersion()-tagged properties — that
-        // does not happen for raw entity inserts via Add() in tests.
+        // Raw INSERT keeps full control of the seeded columns. The xmin
+        // concurrency token is a Postgres system column, auto-populated on
+        // insert, so it is not listed here.
         //
         // We embed the agentConfig literal directly when present (escaping
         // single quotes for SQL safety AND escaping curly braces because the
@@ -796,8 +786,7 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
                 "ScoringTemplateJson", "TurnTemplateJson", "StateTemplate",
                 "AgentConfig",
                 "TemplateStatus", "IsTemplate",
-                "ReviewNotes", "ReviewedByUserId", "ReviewedAt",
-                "RowVersion"
+                "ReviewNotes", "ReviewedByUserId", "ReviewedAt"
             ) VALUES (
                 {0}, {1}, NULL, {2}, 1,
                 {3}, {4},
@@ -808,8 +797,7 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
                 NULL, NULL, NULL,
                 {{agentConfigSql}},
                 {7}, {8},
-                NULL, NULL, NULL,
-                E'\\x01'
+                NULL, NULL, NULL
             )
             """;
 
@@ -838,7 +826,6 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
             TemplateStatus = templateStatusInt,
             IsTemplate = isTemplate,
             AgentConfig = agentConfig,
-            RowVersion = new byte[] { 1 },
         };
     }
 }

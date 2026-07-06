@@ -6,8 +6,8 @@ namespace Api.BoundedContexts.BusinessSimulations.Application.Commands.AppBudget
 /// <summary>
 /// Creates or updates the singleton AppBudget (Issue #1838 SP5 F4-C5).
 ///
-/// <para>The <see cref="RowVersion"/> field carries the Postgres xmin token
-/// returned by GET; pass <c>null</c> or empty for first-time creation.
+/// <para>The <see cref="Xmin"/> field carries the Postgres xmin token
+/// returned by GET; pass <c>null</c> for first-time creation.
 /// Returning a stale token on update surfaces as a 409 ConflictException via
 /// <see cref="Api.Middleware.Exceptions.ConflictException"/>.</para>
 /// </summary>
@@ -16,14 +16,14 @@ internal sealed record UpsertAppBudgetCommand(
     string MonthlyLimitCurrency,
     int AlertThresholdPct,
     int CriticalThresholdPct,
-    string? RowVersion,
+    uint? Xmin,
     string UpdatedBy) : IRequest<AppBudgetUpsertResult>;
 
 /// <summary>Result returned to the endpoint after a successful upsert.</summary>
 internal sealed record AppBudgetUpsertResult(
     Guid Id,
     DateTime UpdatedAt,
-    string RowVersion);
+    uint Xmin);
 
 internal sealed class UpsertAppBudgetCommandValidator : AbstractValidator<UpsertAppBudgetCommand>
 {

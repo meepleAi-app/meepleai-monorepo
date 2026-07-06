@@ -20,17 +20,17 @@ export const appBudgetSchema = z.object({
   daysRemaining: z.number().int(),
   updatedAt: z.string().datetime({ offset: true }),
   updatedBy: z.string().nullable(),
-  rowVersion: z.string(),
+  xmin: z.number(),
 });
 
 // Backend: UpsertAppBudgetRequest (AdminBudgetEndpoints.cs:81).
-// RowVersion omitted on first creation, required for in-place update (409 ConflictException on stale).
+// xmin omitted on first creation, required for in-place update (409 ConflictException on stale).
 export const upsertAppBudgetRequestSchema = z.object({
   monthlyLimitAmount: z.number().positive(),
   monthlyLimitCurrency: z.literal('USD'),
   alertThresholdPct: z.number().int().min(1).max(99),
   criticalThresholdPct: z.number().int().min(2).max(100),
-  rowVersion: z.string().optional().nullable(),
+  xmin: z.number().optional().nullable(),
 });
 
 // Backend: AppBudgetUpsertResult — wire shape returned by UpsertAppBudgetCommand handler.
@@ -38,7 +38,7 @@ export const upsertAppBudgetRequestSchema = z.object({
 export const upsertAppBudgetResultSchema = z.object({
   id: z.string().uuid(),
   updatedAt: z.string().datetime({ offset: true }),
-  rowVersion: z.string(),
+  xmin: z.number(),
 });
 
 export type SpendBreakdown = z.infer<typeof spendBreakdownSchema>;

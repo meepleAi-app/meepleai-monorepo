@@ -95,9 +95,7 @@ public class GetToolkitDetailQueryHandlerTests
             IsPublished = true,
             TemplateStatus = (int)TemplateStatus.Approved,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-            RowVersion = [0],
-        };
+            UpdatedAt = DateTime.UtcNow,        };
 #pragma warning restore CS0618
         configure?.Invoke(toolkit);
         context.GameToolkits.Add(toolkit);
@@ -339,9 +337,7 @@ public class GetToolkitDetailQueryHandlerTests
             // outcome by setting both in the same in-memory write.
             VersionSemver = "0.5.0",
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-            RowVersion = [0],
-        };
+            UpdatedAt = DateTime.UtcNow,        };
         context.GameToolkits.Add(entity);
         await context.SaveChangesAsync();
 

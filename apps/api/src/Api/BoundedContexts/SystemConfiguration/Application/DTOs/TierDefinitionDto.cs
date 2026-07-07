@@ -42,7 +42,10 @@ public record TierLimitsDto(
     int MaxSessionPlayers,
     int MaxPhotosPerSession,
     bool SessionSaveEnabled,
-    int MaxCatalogProposalsPerWeek)
+    int MaxCatalogProposalsPerWeek,
+    // #2750 (C14): optional (defaults 0) so existing positional constructions keep compiling;
+    // FromValueObject/ToValueObject round-trip the real value so admin edits don't reset the quota.
+    int MaxGamebookTranslationsPerMonth = 0)
 {
     public static TierLimitsDto FromValueObject(TierLimits limits) => new(
         limits.MaxPrivateGames,
@@ -54,12 +57,14 @@ public record TierLimitsDto(
         limits.MaxSessionPlayers,
         limits.MaxPhotosPerSession,
         limits.SessionSaveEnabled,
-        limits.MaxCatalogProposalsPerWeek);
+        limits.MaxCatalogProposalsPerWeek,
+        limits.MaxGamebookTranslationsPerMonth);
 
     public TierLimits ToValueObject() => TierLimits.Create(
         MaxPrivateGames, MaxPdfUploadsPerMonth,
         MaxPdfSizeBytes, MaxAgents,
         MaxAgentQueriesPerDay, MaxSessionQueries,
         MaxSessionPlayers, MaxPhotosPerSession,
-        SessionSaveEnabled, MaxCatalogProposalsPerWeek);
+        SessionSaveEnabled, MaxCatalogProposalsPerWeek,
+        maxGamebookTranslationsPerMonth: MaxGamebookTranslationsPerMonth);
 }

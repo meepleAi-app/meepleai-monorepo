@@ -19,6 +19,12 @@ public interface ITierEnforcementService
 
     /// <summary>Gets a snapshot of current usage for a user.</summary>
     Task<UsageSnapshot> GetUsageAsync(Guid userId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Gets the monthly gamebook paragraph-translation quota snapshot for display (no enforcement).
+    /// Issue #2750 (C14).
+    /// </summary>
+    Task<GamebookQuotaSnapshot> GetGamebookQuotaSnapshotAsync(Guid userId, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -39,7 +45,13 @@ public enum TierAction
     /// Free-tier users are blocked (returns false from CanPerformAsync).
     /// Issue #903: SG2 — KB lifecycle smoke tests.
     /// </summary>
-    RaptorRebuild
+    RaptorRebuild,
+
+    /// <summary>
+    /// Translate one gamebook (libro-game) paragraph. Monthly per-user counter backing
+    /// a display-only quota widget (no enforcement/blocking). Issue #2750 (C14).
+    /// </summary>
+    TranslateGamebookParagraph
 }
 
 /// <summary>
@@ -54,4 +66,14 @@ public record UsageSnapshot(
     int PhotosThisSession, int PhotosThisSessionMax,
     bool SessionSaveEnabled,
     int CatalogProposalsThisWeek, int CatalogProposalsThisWeekMax
+);
+
+/// <summary>
+/// Monthly gamebook paragraph-translation quota snapshot (display-only). Issue #2750 (C14).
+/// </summary>
+public record GamebookQuotaSnapshot(
+    int TranslationsThisMonth,
+    int MaxTranslationsPerMonth,
+    DateTime ResetDate,
+    string Tier
 );

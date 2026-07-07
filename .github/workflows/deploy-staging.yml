@@ -229,14 +229,18 @@ jobs:
             echo "📦 Selective deploy: api=$API, web=$WEB"
           fi
 
-          # Issue #1578 — AI service change detection. Same force-full triggers
-          # as api/web (workflow_dispatch / force / infra / initial push).
+          # Issue #1578 — AI service change detection.
+          # #2655 — INFRA is deliberately NOT a force trigger for AI (unlike api/web). The AI
+          # images (~10GB embedding + ~13GB reranker) do NOT depend on infra/** or the workflow
+          # file, so an infra/workflow-only change must not force a ~23GB re-pull that trips the
+          # AI_PULL_GATE on the 75GB staging VPS. AI is re-pulled only on an explicit operator
+          # deploy (workflow_dispatch / force_full_deploy), an initial push that can't diff, or an
+          # actual change to the service's own path (apps/{embedding,reranker,orchestration}-service).
           EMB="${{ steps.changes.outputs.embedding }}"
           RRK="${{ steps.changes.outputs.reranker }}"
           ORC="${{ steps.changes.outputs.orchestration }}"
           if [ "$EVENT" = "workflow_dispatch" ] \
             || [ "$FORCE" = "true" ] \
-            || [ "$INFRA" = "true" ] \
             || [ "$BEFORE" = "$ZEROS" ] \
             || [ -z "$BEFORE" ]; then
             EMB=true; RRK=true; ORC=true
@@ -1041,16 +1045,34 @@ jobs:
             RRK_CHANGED="${{ fromJSON(needs.detect-changes.outputs.ai_changed).reranker }}"
             ORC_CHANGED="${{ fromJSON(needs.detect-changes.outputs.ai_changed).orchestration }}"
 
-            # Pre-pull disk guard (issue #1578 / #1575). Pulling a ~5GB torch
-            # image while the old one is still referenced can fill the disk.
-            # Pre-prune, then require AI_PULL_GATE_GB free; otherwise ABORT
-            # (fail-safe) — never risk disk-full.
+            # Issue #1578 follow-up — free OLD AI images BEFORE the disk gate (disk-safe order).
+            # The old image stays referenced by the running container while the new one is pulled
+            # (transient peak ~old+new). Freeing the changed services' old images first (~10GB
+            # embedding + ~13GB reranker) lets the AI_PULL_GATE below see the REAL post-free
+            # headroom. #2655 — previously free_old_ai ran AFTER this gate, so on the 75GB VPS the
+            # gate saw only ~10GB free (old images still present) and aborted every AI deploy before
+            # the space could be reclaimed. Trade-off: ~30-60s AI downtime during the pull.
+            free_old_ai() {
+              local cont="$1"
+              local old_img
+              old_img=$(docker inspect "$cont" --format '{{.Image}}' 2>/dev/null || true)
+              docker rm -f "$cont" 2>/dev/null && echo "  - stopped + removed $cont" || true
+              if [ -n "$old_img" ]; then
+                docker rmi "$old_img" 2>/dev/null && echo "  - rmi $old_img" || echo "  - rmi $old_img skipped (in use elsewhere)"
+              fi
+            }
+
+            # Pre-pull disk guard (issue #1578 / #1575): free old AI images, prune, then require
+            # AI_PULL_GATE_GB free; otherwise ABORT (fail-safe) — never risk disk-full.
             AI_PULL_GATE_GB="${AI_PULL_GATE_GB:-15}"
             if [ "$EMB_CHANGED" = "true" ] || [ "$RRK_CHANGED" = "true" ] || [ "$ORC_CHANGED" = "true" ]; then
+              echo "🗑️ Freeing old AI images before disk gate (disk-safe ordering)..."
+              [ "$EMB_CHANGED" = "true" ] && free_old_ai meepleai-embedding
+              [ "$RRK_CHANGED" = "true" ] && free_old_ai meepleai-reranker
               echo "🧹 Pre-prune before AI image pull..."
               docker image prune -af --filter "until=24h" || true
               FREE_GB=$(df -BG / | awk 'NR==2 {gsub(/G/,"",$4); print $4}')
-              echo "💽 VPS disk: ${FREE_GB} GB free — AI pull gate ${AI_PULL_GATE_GB} GB"
+              echo "💽 VPS disk after free: ${FREE_GB} GB free — AI pull gate ${AI_PULL_GATE_GB} GB"
               if [ "$FREE_GB" -lt "$AI_PULL_GATE_GB" ]; then
                 echo "::error::Insufficient disk for AI image pull: ${FREE_GB} GB free < ${AI_PULL_GATE_GB} GB"
                 echo "🚫 Aborting AI deploy (fail-safe). Manual cleanup on the VPS:"
@@ -1077,33 +1099,7 @@ jobs:
               echo "📦 Web image updated"
             fi
 
-            # Issue #1578 follow-up — free-old-AI before pull (disk-safe order).
-            # The original "pull then recreate then prune" order leaves OLD AI
-            # images on disk during the new pull (transient peak ~old+new). On
-            # a VPS at 14 GB free this hit the AI_PULL_GATE_GB=15 fail-safe and
-            # blocked the deploy (run 26563212569). Re-ordering to:
-            #   stop+rm container → rmi old image → pull new → compose recreate
-            # frees ~5.3 GB (embedding) + ~2.1 GB (reranker) BEFORE the pull, so
-            # the transient peak does not need the full old+new headroom.
-            # Trade-off: ~30-60s extra AI downtime per service during the pull,
-            # acceptable on staging.
-            free_old_ai() {
-              local cont="$1"
-              local old_img
-              old_img=$(docker inspect "$cont" --format '{{.Image}}' 2>/dev/null || true)
-              docker rm -f "$cont" 2>/dev/null && echo "  - stopped + removed $cont" || true
-              if [ -n "$old_img" ]; then
-                docker rmi "$old_img" 2>/dev/null && echo "  - rmi $old_img" || echo "  - rmi $old_img skipped (in use elsewhere)"
-              fi
-            }
-            if [ "$EMB_CHANGED" = "true" ] || [ "$RRK_CHANGED" = "true" ]; then
-              echo "🗑️ Freeing old AI images before pull (disk-safe ordering)..."
-              [ "$EMB_CHANGED" = "true" ] && free_old_ai meepleai-embedding
-              [ "$RRK_CHANGED" = "true" ] && free_old_ai meepleai-reranker
-              echo "💽 Disk after free-old: $(df -BG / | awk 'NR==2 {gsub(/G/,"",$4); print $4}') GB free"
-            fi
-
-            # Issue #1578 — AI services. embedding/reranker are in the
+            # AI services. embedding/reranker are in the
             # ai-essential profile → pull + recreate. orchestration is
             # publish-only → pull ONLY (cached for a future activation).
             if [ "$EMB_CHANGED" = "true" ]; then

@@ -6,7 +6,9 @@ using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Domain.ValueObjects;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
+using System.Diagnostics.Metrics;
 using Api.Models;
+using Api.Observability;
 using Api.Services;
 using Api.Services.LlmClients;
 using Api.SharedKernel.Domain.ValueObjects;
@@ -16,6 +18,7 @@ using Xunit;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Application.Queries;
 
+[Collection("GamebookMeter")] // #2752: serialize with GamebookTranslationMetricsTests — shared static gamebook Meter
 [Trait("Category", "Unit")]
 [Trait("BoundedContext", "SessionTracking")]
 public sealed class TranslateGamebookSegmentQueryHandlerTests
@@ -252,6 +255,48 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
         public Task<int> RemoveByTagAcrossReplicasAsync(string tag, CancellationToken ct = default) => Task.FromResult(0);
         public Task<HybridCacheStats> GetStatsAsync(CancellationToken ct = default)
             => Task.FromResult(new HybridCacheStats());
+    }
+
+    /// <summary>
+    /// #2752: Fake LLM whose final chunk carries BOTH Usage and Cost, mirroring what
+    /// OpenRouterLlmClient / DeepSeekLlmClient emit. Drives the translation_cost_eur wiring.
+    /// </summary>
+    private sealed class CostReportingFakeLlmService : ILlmService
+    {
+        private readonly LlmCost _cost;
+        public CostReportingFakeLlmService(LlmCost cost) => _cost = cost;
+
+        public async IAsyncEnumerable<StreamChunk> GenerateCompletionStreamAsync(
+            string systemPrompt,
+            string userPrompt,
+            RequestSource source = RequestSource.Manual,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+        {
+            yield return new StreamChunk("L'Alveare si risveglia.", IsFinal: false);
+            await Task.Yield();
+            yield return new StreamChunk(null, Usage: new LlmUsage(50, 10, 60), Cost: _cost, IsFinal: true);
+        }
+
+        public Task<LlmCompletionResult> GenerateCompletionAsync(string s, string u, RequestSource r = RequestSource.Manual, CancellationToken ct = default)
+            => Task.FromResult(LlmCompletionResult.CreateSuccess(string.Empty));
+
+        public Task<T?> GenerateJsonAsync<T>(string s, string u, RequestSource r = RequestSource.Manual, CancellationToken ct = default) where T : class
+            => Task.FromResult<T?>(null);
+
+        public Task<LlmCompletionResult> GenerateMultimodalCompletionAsync(IReadOnlyList<LlmMessage> messages, RequestSource source = RequestSource.Manual, CancellationToken ct = default)
+            => Task.FromResult(LlmCompletionResult.CreateSuccess(string.Empty));
+
+        public async IAsyncEnumerable<StreamChunk> GenerateMultimodalCompletionStreamAsync(
+            IReadOnlyList<LlmMessage> messages,
+            RequestSource source = RequestSource.Manual,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+        {
+            yield return new StreamChunk(null, IsFinal: true);
+            await Task.CompletedTask;
+        }
+
+        public Task<LlmCompletionResult> GenerateCompletionWithModelAsync(string explicitModel, string systemPrompt, string userPrompt, RequestSource source = RequestSource.Manual, int? maxTokens = null, CancellationToken ct = default)
+            => Task.FromResult(LlmCompletionResult.CreateSuccess(string.Empty));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -542,5 +587,129 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
         finalChunk.DetectedSourceLang.Should().BeNull(
             "no lang was detected — audit field must remain null");
         finalChunk.LangDetectionConfidence.Should().BeNull();
+    }
+
+    // ── #2752: translation_cost_eur wiring from StreamChunk.Cost ────────────────
+
+    [Fact]
+    public async Task Handle_FinalChunkCarriesCost_RecordsTranslationCostEur()
+    {
+        // Arrange
+        var campaignRepo = new FakeCampaignRepo();
+        var artifactRepo = new FakeArtifactRepo();
+        var paragraphRepo = new FakeParagraphRepo();
+        var glossaryRepo = new FakeGlossaryRepo();
+        var progressRepo = new FakeProgressRepo();
+
+        var ownerId = Guid.NewGuid();
+        var campaign = GamebookCampaignSession.Create(GameRef.Shared(Guid.NewGuid()), ownerId, "Cost Campaign");
+        campaignRepo.Store.Add(campaign);
+        var bookId = Guid.NewGuid();
+
+        var artifact = GamebookPhotoArtifact.Create(campaign.Id, bookId, $"gamebook-photos/{campaign.Id}/photo-cost");
+        artifact.RecordSegments(
+            new[] { GamebookSegment.Create(47, "The Hive awakens.", null) },
+            "The Hive awakens.");
+        artifactRepo.Store.Add(artifact);
+
+        // TotalCost = 0.0005 USD, distinctive provider isolates this test from concurrent meter emitters.
+        var cost = new LlmCost { InputCost = 0.0003m, OutputCost = 0.0002m, ModelId = "deepseek-chat", Provider = "test-seg-provider" };
+        var handler = BuildHandler(
+            campaignRepo, artifactRepo, paragraphRepo, glossaryRepo, progressRepo,
+            llm: new CostReportingFakeLlmService(cost));
+
+        var query = new TranslateGamebookSegmentQuery(campaign.Id, artifact.Id, 47, ownerId, bookId);
+
+        // Act
+        using var capture = new CostEurCapture();
+        await foreach (var _ in handler.Handle(query, CancellationToken.None)) { }
+
+        // Assert — cost_eur = TotalCost x UsdToEurRate, tagged with the chunk's provider
+        var recorded = capture.ForProvider("test-seg-provider");
+        recorded.Should().NotBeNull("StreamChunk.Cost carries a positive cost → translation_cost_eur must be recorded");
+        recorded!.Value.Value.Should().BeApproximately(0.0005 * MeepleAiMetrics.UsdToEurRate, 1e-9);
+    }
+
+    [Fact]
+    public async Task Handle_FinalChunkWithoutCost_DoesNotRecordCostEur()
+    {
+        // Arrange — default FakeLlmService yields a final chunk with Usage but no Cost.
+        var campaignRepo = new FakeCampaignRepo();
+        var artifactRepo = new FakeArtifactRepo();
+        var paragraphRepo = new FakeParagraphRepo();
+        var glossaryRepo = new FakeGlossaryRepo();
+        var progressRepo = new FakeProgressRepo();
+
+        var ownerId = Guid.NewGuid();
+        var campaign = GamebookCampaignSession.Create(GameRef.Shared(Guid.NewGuid()), ownerId, "No-Cost Campaign");
+        campaignRepo.Store.Add(campaign);
+        var bookId = Guid.NewGuid();
+
+        var artifact = GamebookPhotoArtifact.Create(campaign.Id, bookId, $"gamebook-photos/{campaign.Id}/photo-nocost");
+        artifact.RecordSegments(
+            new[] { GamebookSegment.Create(47, "The Hive awakens.", null) },
+            "The Hive awakens.");
+        artifactRepo.Store.Add(artifact);
+
+        var handler = BuildHandler(campaignRepo, artifactRepo, paragraphRepo, glossaryRepo, progressRepo);
+        var query = new TranslateGamebookSegmentQuery(campaign.Id, artifact.Id, 47, ownerId, bookId);
+
+        // Act
+        using var capture = new CostEurCapture();
+        await foreach (var _ in handler.Handle(query, CancellationToken.None)) { }
+
+        // Assert — no cost means no EUR record (provider stays "unknown", helper skips the emit)
+        capture.ForProvider("unknown").Should().BeNull("null Cost → handler must not record translation_cost_eur");
+    }
+
+    /// <summary>
+    /// #2752: captures meepleai.gamebook.translation_cost_eur measurements, keyed by provider tag,
+    /// so assertions filter to this test's distinctive provider and stay robust under parallel test runs.
+    /// </summary>
+    private sealed class CostEurCapture : IDisposable
+    {
+        private const string CostName = "meepleai.gamebook.translation_cost_eur";
+        private readonly MeterListener _listener;
+        private readonly List<(double Value, string? Provider)> _captured = new();
+        private readonly object _gate = new();
+
+        public CostEurCapture()
+        {
+            _listener = new MeterListener
+            {
+                InstrumentPublished = (instrument, l) =>
+                {
+                    if (instrument.Meter.Name == MeepleAiMetrics.MeterName && instrument.Name == CostName)
+                        l.EnableMeasurementEvents(instrument);
+                }
+            };
+            _listener.SetMeasurementEventCallback<double>((instrument, value, tags, _) =>
+            {
+                string? provider = null;
+                foreach (var tag in tags)
+                {
+                    if (tag.Key == "provider")
+                        provider = tag.Value as string;
+                }
+                lock (_gate)
+                {
+                    _captured.Add((value, provider));
+                }
+            });
+            _listener.Start();
+        }
+
+        public (double Value, string? Provider)? ForProvider(string provider)
+        {
+            lock (_gate)
+            {
+                return _captured
+                    .Where(m => string.Equals(m.Provider, provider, StringComparison.Ordinal))
+                    .Select(m => ((double Value, string? Provider)?)m)
+                    .LastOrDefault();
+            }
+        }
+
+        public void Dispose() => _listener.Dispose();
     }
 }

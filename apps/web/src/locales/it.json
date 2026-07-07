@@ -3726,6 +3726,14 @@
       "lore": "Ambientazione",
       "setup": "Setup"
     },
+    "glossaryLookup": {
+      "title": "Glossario",
+      "subtitle": "Termini della campagna (EN → IT)",
+      "close": "Chiudi",
+      "loading": "Caricamento del glossario…",
+      "error": "Errore nel caricamento del glossario. Riprova.",
+      "empty": "Nessun termine nel glossario. I termini vengono creati durante la traduzione."
+    },
     "glossaryEditor": {
       "title": "Modifica voce di glossario",
       "termEnLabel": "Termine originale",

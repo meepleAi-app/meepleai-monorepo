@@ -1283,10 +1283,15 @@ jobs:
           # CF Access bypass headers reused for all curls in this step
           CF_HEADERS=(-H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}" -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}")
 
-          # Wait for API with structured health response (CF Access bypass)
+          # Wait for API with structured health response (CF Access bypass).
+          # #2655 — `curl -s` (NOT `-sf`): with `-f` curl discards the body and returns non-zero on
+          # a 503 Degraded response, so $HEALTH stayed empty and the loop timed out even though the
+          # API was up and serving. The critical-service gate below only requires postgres+redis
+          # Healthy, so a Degraded overall status (e.g. a non-critical slack_queue backlog) must not
+          # fail the deploy. Same fix as the in-container health wait earlier in this workflow.
           HEALTH=""
           for i in {1..30}; do
-            HEALTH=$(curl -sf "${CF_HEADERS[@]}" https://api.meepleai.app/health 2>/dev/null || true)
+            HEALTH=$(curl -s "${CF_HEADERS[@]}" https://api.meepleai.app/health 2>/dev/null || true)
             if [ -n "$HEALTH" ]; then
               echo "📋 Health response received"
               break
@@ -1363,11 +1368,14 @@ jobs:
             fi
           }
 
-          # Critical smoke tests (failure = deployment issue)
-          smoke_test "API Health" "https://meepleai.app/health" "200"
+          # Critical smoke tests (failure = deployment issue).
+          # #2655 — /health returns 503 when the overall status is Degraded (e.g. a non-critical
+          # slack_queue backlog); the API is still up and serving, so accept 200 OR 503 for the
+          # two /health reachability probes. A truly-down API yields 000/timeout, which still fails.
+          smoke_test "API Health" "https://meepleai.app/health" "200 503"
           smoke_test "Web Root" "https://meepleai.app" "200"
           smoke_test "API Game Catalog" "https://meepleai.app/api/v1/shared-games?pageNumber=1&pageSize=1" "200"
-          smoke_test "API Direct Health" "https://api.meepleai.app/health" "200"
+          smoke_test "API Direct Health" "https://api.meepleai.app/health" "200 503"
 
           # Health endpoint JSON validation
           echo "  Validating health response structure..."

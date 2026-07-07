@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 
+import Link from 'next/link';
+
 import { AbortButton } from '@/components/features/gamebook/AbortButton';
 import { BookPicker } from '@/components/features/gamebook/BookPicker';
 import { EnterManualLink } from '@/components/features/gamebook/EnterManualLink';
@@ -29,6 +31,12 @@ import { getLangTier, type LangTier } from '@/lib/gamebook/lang-tier';
 
 export interface TranslateViewerProps {
   campaignId: string;
+  /**
+   * #2750 C9: the route `gameId`, threaded from the translate page so the viewer
+   * can build the encounter-cheatsheet link (`/library/[gameId]/…/encounter`).
+   * Optional: when absent (legacy test-seams / stories) the link is not rendered.
+   */
+  gameId?: string;
   /**
    * GameRef of the campaign being translated. Required so the viewer can
    * fetch the list of GameBooks (multi-book generalization, Phase E).
@@ -99,6 +107,7 @@ function effectiveTier(
 
 export function TranslateViewer({
   campaignId,
+  gameId,
   gameRef,
   _initialPhase,
   _initialArtifact,
@@ -489,6 +498,33 @@ export function TranslateViewer({
           error={sse.error}
         />
       )}
+
+      {/* #2750 C9 — encounter-cheatsheet entry point. Available once a segment is
+          translated: the encounter route needs photoId + target paragraph +
+          gameBookId, all resolved at this point. This is the only live surface
+          that carries those params (the play shell lacks photoId). */}
+      {gameId &&
+        artifact &&
+        activeSegment &&
+        effectiveBookId &&
+        phase === 'translated' &&
+        sse.isComplete && (
+          <div className="rounded-lg border border-[var(--c-game)]/20 bg-background p-4">
+            <Link
+              href={`/library/${gameId}/play/${campaignId}/encounter?${new URLSearchParams({
+                photoId: artifact.id,
+                to: String(activeSegment.paragraphNumber),
+                gameBookId: effectiveBookId,
+                from: String(activeSegment.paragraphNumber),
+              }).toString()}`}
+              data-testid="translate-open-encounter"
+              className="inline-flex items-center gap-2 text-sm font-medium text-[var(--c-game)] hover:underline"
+            >
+              <span aria-hidden="true">⚔️</span> Apri scheda incontro §
+              {activeSegment.paragraphNumber}
+            </Link>
+          </div>
+        )}
 
       <LangOverrideModal
         open={modalState.open}

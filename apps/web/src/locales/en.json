@@ -3673,6 +3673,14 @@
       "lore": "Lore",
       "setup": "Setup"
     },
+    "glossaryLookup": {
+      "title": "Glossary",
+      "subtitle": "Campaign terms (EN → IT)",
+      "close": "Close",
+      "loading": "Loading glossary…",
+      "error": "Failed to load the glossary. Retry.",
+      "empty": "No glossary terms yet. Terms are created during translation."
+    },
     "glossaryEditor": {
       "title": "Edit glossary entry",
       "termEnLabel": "Source term",

@@ -14,6 +14,18 @@ namespace Api.Tests.Observability;
 /// Prometheus alert rules and Grafana dashboards) and that record helpers emit
 /// values with the documented label set.
 /// </summary>
+/// <summary>
+/// #2752: the gamebook meter (meepleai.gamebook.*) is a process-wide static Meter. Tests that
+/// assert exact values via a global MeterListener + FindLast are polluted by ANY concurrent emitter
+/// (the translate handler tests now emit translation_cost_eur / latency / token). This collection
+/// serializes all direct + indirect gamebook-meter emitters so their assertions stay deterministic.
+/// </summary>
+[CollectionDefinition("GamebookMeter", DisableParallelization = true)]
+public sealed class GamebookMeterCollection
+{
+}
+
+[Collection("GamebookMeter")]
 [Trait("Category", TestCategories.Unit)]
 [Trait("Area", "Observability")]
 [Trait("BoundedContext", "SessionTracking")]

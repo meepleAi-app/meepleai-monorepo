@@ -32,7 +32,7 @@ public class GetGroupMemoryQueryHandlerTests
             .Setup(r => r.GetByIdAsync(groupId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(group);
 
-        var query = new GetGroupMemoryQuery(groupId);
+        var query = new GetGroupMemoryQuery(groupId, creatorId);
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -44,6 +44,53 @@ public class GetGroupMemoryQueryHandlerTests
     }
 
     [Fact]
+    public async Task Handle_RequesterIsMemberNotCreator_ReturnsMappedDto()
+    {
+        // Arrange — a plain member (not the creator) may read the group.
+        var groupId = Guid.NewGuid();
+        var creatorId = Guid.NewGuid();
+        var memberId = Guid.NewGuid();
+        var group = GroupMemory.Create(creatorId, "Weekend Warriors");
+        group.AddMember(creatorId);
+        group.AddMember(memberId);
+
+        _groupRepoMock
+            .Setup(r => r.GetByIdAsync(groupId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(group);
+
+        var query = new GetGroupMemoryQuery(groupId, memberId);
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task Handle_RequesterNotMember_ReturnsNull()
+    {
+        // Arrange — #2655 IDOR fix: a non-member must not read another group's
+        // memory. Returning null (→ 404) also hides the group's existence.
+        var groupId = Guid.NewGuid();
+        var creatorId = Guid.NewGuid();
+        var group = GroupMemory.Create(creatorId, "Weekend Warriors");
+        group.AddMember(creatorId);
+
+        _groupRepoMock
+            .Setup(r => r.GetByIdAsync(groupId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(group);
+
+        var query = new GetGroupMemoryQuery(groupId, Guid.NewGuid()); // outsider
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
     public async Task Handle_GroupNotFound_ReturnsNull()
     {
         // Arrange
@@ -52,7 +99,7 @@ public class GetGroupMemoryQueryHandlerTests
             .Setup(r => r.GetByIdAsync(groupId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((GroupMemory?)null);
 
-        var query = new GetGroupMemoryQuery(groupId);
+        var query = new GetGroupMemoryQuery(groupId, Guid.NewGuid());
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);

@@ -54,6 +54,9 @@ internal sealed class EndGameSessionCommandValidator : AbstractValidator<EndGame
         RuleFor(x => x.SessionId)
             .NotEmpty().WithMessage("Session ID is required");
 
+        RuleFor(x => x.RequesterId)
+            .NotEmpty().WithMessage("Requester ID is required");
+
         RuleFor(x => x.WinnerName)
             .MaximumLength(200).WithMessage("Winner name must not exceed 200 characters")
             .When(x => x.WinnerName is not null);

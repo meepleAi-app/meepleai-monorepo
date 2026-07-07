@@ -526,11 +526,19 @@ internal static class GameEndpoints
     private static async Task<IResult> HandleEndSession(
         Guid id,
         CompleteSessionRequest? request,
+        HttpContext httpContext,
         IMediator mediator,
                 CancellationToken ct)
     {
+        var userId = httpContext.User.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
         var command = new EndGameSessionCommand(
             SessionId: id,
+            RequesterId: userId,
             WinnerName: request?.WinnerName
         );
 

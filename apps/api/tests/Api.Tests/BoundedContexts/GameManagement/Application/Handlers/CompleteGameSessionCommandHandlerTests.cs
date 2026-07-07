@@ -82,7 +82,7 @@ public class CompleteGameSessionCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithNonExistentSession_ThrowsInvalidOperationException()
+    public async Task Handle_WithNonExistentSession_ThrowsNotFoundException()
     {
         // Arrange
         var sessionId = Guid.NewGuid();
@@ -92,10 +92,10 @@ public class CompleteGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((GameSession?)null);
 
-        // Act & Assert
+        // Act & Assert — #2568: missing resource must be 404 (NotFoundException), not 500.
         var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
         exception.Message.Should().Contain(sessionId.ToString());
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);

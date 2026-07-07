@@ -140,7 +140,7 @@ public class PauseGameSessionCommandHandlerTests
         result.Notes.Should().Contain("Game is going well!");
     }
     [Fact]
-    public async Task Handle_NonExistentSession_ThrowsInvalidOperationException()
+    public async Task Handle_NonExistentSession_ThrowsNotFoundException()
     {
         // Arrange
         var sessionId = Guid.NewGuid();
@@ -151,12 +151,12 @@ public class PauseGameSessionCommandHandlerTests
 
         var command = new PauseGameSessionCommand(SessionId: sessionId, RequesterId: GameSessionBuilder.DefaultCreatedByUserId);
 
-        // Act & Assert
+        // Act & Assert — #2568: missing resource must be 404 (NotFoundException), not 500.
         var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
-        exception.Message.Should().ContainEquivalentOf($"Session with ID {sessionId} not found");
+        exception.Message.Should().ContainEquivalentOf(sessionId.ToString());
 
         // Verify save was NOT called
         _unitOfWorkMock.Verify(

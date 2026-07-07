@@ -30,7 +30,7 @@ internal class PauseGameSessionCommandHandler : ICommandHandler<PauseGameSession
         // Fetch session
         var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken).ConfigureAwait(false);
         if (session == null)
-            throw new InvalidOperationException($"Session with ID {command.SessionId} not found");
+            throw new NotFoundException("GameSession", command.SessionId.ToString());
 
         // #2655 IDOR guard: only the session creator may pause it.
         if (session.CreatedByUserId != command.RequesterId)

@@ -57,7 +57,7 @@
          vulnerabile <=7.1.0). Override alla versione patchata 7.2.0 per far
          passare il check CI "Dependency Vulnerabilities" (fail su HIGH/CRITICAL).
          Solo test project — Scriban non è nel path di produzione (Api pulito). -->
-    <PackageReference Include="Scriban.Signed" Version="7.2.0" />
+    <PackageReference Include="Scriban.Signed" Version="7.2.1" />
     <PackageReference Include="WireMock.Net" Version="2.5.0" />
     <PackageReference Include="xunit.abstractions" Version="2.0.3" />
     <PackageReference Include="xunit.v3" Version="3.2.1" />

@@ -33,6 +33,53 @@ const BLOCKED_IMAGE_HOSTS: readonly string[] = [
 ];
 
 /**
+ * Parses `imageUrl` and returns its lowercased hostname, or `null` when the
+ * input is missing, a data/relative URL, or fails to parse. Centralises the
+ * URL-parsing rules so every BGG-host decision uses the same anchored,
+ * hostname-based comparison instead of ad-hoc substring matching.
+ *
+ * SSR-safe: does not rely on `window.location` or other browser globals.
+ */
+function parseImageHost(imageUrl: string | null | undefined): string | null {
+  if (!imageUrl) return null;
+
+  const trimmed = imageUrl.trim();
+  if (!trimmed) return null;
+
+  // Data URLs and same-origin relative paths carry no third-party host.
+  if (trimmed.startsWith('data:') || trimmed.startsWith('/')) return null;
+
+  try {
+    return new URL(trimmed).hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Returns true when `host` is a blocked BGG image CDN, matching either the
+ * exact host or any subdomain of it. Anchored comparison — no substring match.
+ */
+function isBggImageHostname(host: string): boolean {
+  return BLOCKED_IMAGE_HOSTS.some(blocked => host === blocked || host.endsWith(`.${blocked}`));
+}
+
+/**
+ * Returns true only when `imageUrl` parses to a hostname that is a blocked BGG
+ * image CDN (issue #2655). Unlike {@link shouldUsePlaceholder}, it returns
+ * `false` for the null / empty / unparseable / relative cases — those are
+ * missing-data states, not ToS violations. Use this to decide whether a real
+ * BGG asset request was attempted (e.g. before firing the SLO=0 beacon), so a
+ * garbage src that merely *contains* a BGG token is not mis-counted.
+ *
+ * SSR-safe.
+ */
+export function isBlockedImageHost(imageUrl: string | null | undefined): boolean {
+  const host = parseImageHost(imageUrl);
+  return host !== null && isBggImageHostname(host);
+}
+
+/**
  * Returns true when the given image URL should be treated as missing and the
  * caller should render the placeholder instead.
  *
@@ -52,14 +99,11 @@ export function shouldUsePlaceholder(imageUrl: string | null | undefined): boole
   // Data URLs and same-origin relative paths are always allowed.
   if (trimmed.startsWith('data:') || trimmed.startsWith('/')) return false;
 
-  let host: string;
-  try {
-    host = new URL(trimmed).hostname.toLowerCase();
-  } catch {
-    return true;
-  }
+  const host = parseImageHost(trimmed);
+  // A non-parseable URL has no host we can vet → fall back to the placeholder.
+  if (host === null) return true;
 
-  return BLOCKED_IMAGE_HOSTS.some(blocked => host === blocked || host.endsWith(`.${blocked}`));
+  return isBggImageHostname(host);
 }
 
 /**

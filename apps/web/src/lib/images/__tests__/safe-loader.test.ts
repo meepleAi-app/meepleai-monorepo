@@ -85,6 +85,36 @@ describe('safeImageLoader (#2123)', () => {
     expect(beacon).not.toHaveBeenCalled();
   });
 
+  it('does NOT fire the beacon for an unparseable src that only contains a BGG host substring (#2655)', () => {
+    // Regression for js/regex/missing-regexp-anchor: the old unanchored regex
+    // matched a raw substring, so a garbage src merely CONTAINING a BGG token
+    // fired a false BGG-attempt beacon and inflated the SLO=0 metric (false P1).
+    // The src is still redirected to the placeholder (no BGG request), but the
+    // beacon must stay silent because there is no real BGG host involved.
+    const beacon = vi.fn(() => true);
+    // @ts-expect-error — overriding for the test
+    navigator.sendBeacon = beacon;
+
+    const url = safeImageLoader({
+      src: 'not-a-real-url-boardgamegeek.com-marketing',
+      width: 100,
+    });
+
+    expect(url).toBe('/placeholder.svg');
+    expect(beacon).not.toHaveBeenCalled();
+  });
+
+  it('fires the beacon for a subdomain of a blocked BGG host (#2655)', () => {
+    const beacon = vi.fn(() => true);
+    // @ts-expect-error — overriding for the test
+    navigator.sendBeacon = beacon;
+
+    safeImageLoader({ src: 'https://eu.cf.geekdo-images.com/y.jpg', width: 100 });
+
+    expect(beacon).toHaveBeenCalledTimes(1);
+    expect(beacon.mock.calls[0][0]).toBe('/api/metrics/bgg-attempt');
+  });
+
   it('truncates oversized src to 512 chars + ellipsis before fire-and-forget beacon', () => {
     // Mitigates code-review followup #3: the beacon payload must not carry
     // multi-KB src strings over the wire even before the backend truncates.

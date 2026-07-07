@@ -23,7 +23,7 @@
  *   ADR : docs/for-claude/architecture/adr/adr-059-catalog-seed-legal-posture.md §5
  */
 
-import { shouldUsePlaceholder } from '@/lib/games/cover-utils';
+import { isBlockedImageHost, shouldUsePlaceholder } from '@/lib/games/cover-utils';
 
 interface LoaderArgs {
   src: string;
@@ -79,12 +79,11 @@ export default function safeImageLoader({ src, width, quality }: LoaderArgs): st
     // Only fire the beacon for hosts in the BGG block list — not for the
     // null / empty / unparseable cases that `shouldUsePlaceholder` also
     // returns true for (those are not ToS issues, just missing-data states).
-    if (
-      src &&
-      /(cf\.geekdo-images\.com|geekdo-images\.com|images\.geekdo\.com|boardgamegeek\.com)/i.test(
-        src
-      )
-    ) {
+    //
+    // `isBlockedImageHost` parses the URL and compares the hostname exactly
+    // (issue #2655) — replacing an unanchored substring regex that mis-flagged
+    // any src merely *containing* a BGG token (js/regex/missing-regexp-anchor).
+    if (isBlockedImageHost(src)) {
       reportBggAttempt(src);
     }
     return PLACEHOLDER_PATH;

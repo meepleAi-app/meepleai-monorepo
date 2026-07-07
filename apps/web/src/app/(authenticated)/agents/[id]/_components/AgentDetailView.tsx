@@ -41,6 +41,7 @@ import {
   SystemPromptViewer,
   panelIdFor,
   tabIdFor,
+  type AgentConfig,
   type AgentTabKey,
   type ChatHistoryState,
   type ChatThreadEntry,
@@ -244,28 +245,29 @@ function mapChatHistoryState(
 
 function mapSettingsState(
   query: ReturnType<typeof useAgentConfig>,
-  isReadOnly: boolean,
+  agentGameId: string | null,
+  isArchived: boolean,
   onRetry: () => void
 ): SettingsState {
   if (query.isLoading) return { kind: 'loading' };
   if (query.isError) return { kind: 'error', retry: onRetry };
 
-  const config = query.data;
-  const resolvedConfig = {
-    strategy: config?.llmModel ?? 'llama-3.3-70b-free',
-    parameters: config
-      ? {
-          temperature: config.temperature,
-          maxTokens: config.maxTokens,
-          personality: config.personality,
-          detailLevel: config.detailLevel,
-          customInstructions: config.personalNotes,
-        }
-      : {},
-  };
+  const data = query.data;
+  const config: AgentConfig = data
+    ? {
+        llmModel: data.llmModel,
+        temperature: data.temperature,
+        maxTokens: data.maxTokens,
+        personality: data.personality,
+        detailLevel: data.detailLevel,
+        personalNotes: data.personalNotes ?? '',
+      }
+    : { ...DEFAULT_AGENT_CONFIG, personalNotes: '' };
 
-  if (isReadOnly) return { kind: 'read-only', config: resolvedConfig };
-  return { kind: 'editable', config: resolvedConfig };
+  // Standalone agent (no game association) cannot be configured per-game.
+  if (agentGameId == null) return { kind: 'read-only', config, reason: 'standalone' };
+  if (isArchived) return { kind: 'read-only', config, reason: 'archived' };
+  return { kind: 'editable', config };
 }
 
 // ─── Main orchestrator ───────────────────────────────────────────────────────
@@ -377,9 +379,8 @@ export function AgentDetailView({ agentId }: AgentDetailViewProps): ReactElement
     configEnabled
   );
 
-  // BUG E (#2727): Settings tab Save persists the per-game agent config.
-  // NOTE: AgentSettingsForm is currently display-only (no editable inputs), so
-  // this round-trips the loaded config; field editability is a follow-up.
+  // Settings tab Save persists the per-game agent config (Issue #2727, #2732).
+  // AgentSettingsForm is now a real editor; Save carries the edited draft.
   const updateConfig = useUpdateAgentConfig();
 
   // ── Shell renders (FSM cells 1, 2, 3, 4) ──────────────────────────────────
@@ -501,6 +502,8 @@ export function AgentDetailView({ agentId }: AgentDetailViewProps): ReactElement
     strategyLabel: t('pages.agentDetail.settings.strategyLabel'),
     parametersLabel: t('pages.agentDetail.settings.parametersLabel'),
     readOnlyBanner: t('pages.agentDetail.settings.readOnlyBanner'),
+    perGameNote: t('pages.agentDetail.settings.perGameNote'),
+    standaloneBanner: t('pages.agentDetail.settings.standaloneBanner'),
     saveCta: t('pages.agentDetail.settings.saveCta'),
     cancelCta: t('pages.agentDetail.settings.cancelCta'),
     saveSuccess: t('pages.agentDetail.settings.saveSuccess'),
@@ -529,8 +532,11 @@ export function AgentDetailView({ agentId }: AgentDetailViewProps): ReactElement
     threadsQueryGated.refetch()
   );
 
-  const settingsState: SettingsState = mapSettingsState(configQueryGated, isArchived, () =>
-    configQueryGated.refetch()
+  const settingsState: SettingsState = mapSettingsState(
+    configQueryGated,
+    safeAgent.gameId ?? null,
+    isArchived,
+    () => configQueryGated.refetch()
   );
 
   return (
@@ -660,7 +666,7 @@ export function AgentDetailView({ agentId }: AgentDetailViewProps): ReactElement
             <AgentSettingsForm
               state={settingsState}
               labels={settingsLabels}
-              onSave={() => {
+              onSave={edited => {
                 if (updateConfig.isPending) return; // guard against double-fire
                 const gameId = agentQuery.data?.gameId;
                 // Config is per-game; a standalone agent (no real gameId) cannot
@@ -669,18 +675,16 @@ export function AgentDetailView({ agentId }: AgentDetailViewProps): ReactElement
                   toast.error(settingsLabels.saveError);
                   return;
                 }
-                const current = configQueryGated.data;
-                // No custom config yet → persist defaults (mutation create path).
-                const request = current
-                  ? {
-                      llmModel: current.llmModel,
-                      temperature: current.temperature,
-                      maxTokens: current.maxTokens,
-                      personality: current.personality,
-                      detailLevel: current.detailLevel,
-                      personalNotes: current.personalNotes ?? null,
-                    }
-                  : { ...DEFAULT_AGENT_CONFIG, personalNotes: null };
+                // Persist the edited draft. Empty personal notes → null so the
+                // backend clears the field rather than storing "".
+                const request = {
+                  llmModel: edited.llmModel,
+                  temperature: edited.temperature,
+                  maxTokens: edited.maxTokens,
+                  personality: edited.personality,
+                  detailLevel: edited.detailLevel,
+                  personalNotes: edited.personalNotes.trim() === '' ? null : edited.personalNotes,
+                };
                 updateConfig.mutate(
                   { gameId, request },
                   {
@@ -690,7 +694,7 @@ export function AgentDetailView({ agentId }: AgentDetailViewProps): ReactElement
                 );
               }}
               onCancel={() => {
-                /* no-op: form handles internally */
+                /* no-op: draft reset handled inside the form */
               }}
             />
             {/* Danger zone: only for active variant per contract sez. 4 */}

@@ -18,7 +18,7 @@ import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, Check, RotateCcw, MessageCircle, Bot } from 'lucide-react';
 
-import { TypologySelector, StrategySelector } from '@/components/agent/config';
+import { AgentConfigFields, StrategySelector, TypologySelector } from '@/components/agent/config';
 import { toast } from '@/components/layout/Toast';
 import {
   Dialog,
@@ -28,25 +28,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
-import { Input } from '@/components/ui/primitives/input';
-import { Label } from '@/components/ui/primitives/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/primitives/radio-group';
-import { Slider } from '@/components/ui/primitives/slider';
-import { Textarea } from '@/components/ui/primitives/textarea';
 import { useAgentConfig, useUpdateAgentConfig, agentConfigKeys } from '@/hooks/queries';
 import {
   api,
-  MODEL_OPTIONS,
-  PERSONALITY_OPTIONS,
-  DETAIL_LEVEL_OPTIONS,
   DEFAULT_AGENT_CONFIG,
   type AIModel,
   type AgentPersonality,
@@ -247,134 +232,24 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
             </div>
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Model Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="model" className="text-base font-semibold">
-                🤖 Modello AI
-              </Label>
-              <Select value={llmModel} onValueChange={value => setLlmModel(value as AIModel)}>
-                <SelectTrigger id="model">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MODEL_OPTIONS.map(model => (
-                    <SelectItem key={model.value} value={model.value}>
-                      {model.label} ({model.costLevel}) {model.isDefault && '⭐'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-sm text-muted-foreground">
-                {MODEL_OPTIONS.find(m => m.value === llmModel)?.description}
-              </p>
-            </div>
-
-            {/* Temperature Slider */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="temperature" className="text-base font-semibold">
-                  ⚙️ Temperatura
-                </Label>
-                <span className="text-sm text-muted-foreground">{temperature.toFixed(2)}</span>
-              </div>
-              <Slider
-                id="temperature"
-                min={0}
-                max={2}
-                step={0.1}
-                value={[temperature]}
-                onValueChange={([value]) => setTemperature(value)}
-                className="w-full"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>0.0 (Preciso)</span>
-                <span>2.0 (Creativo)</span>
-              </div>
-            </div>
-
-            {/* Max Tokens Input */}
-            <div className="space-y-2">
-              <Label htmlFor="maxTokens" className="text-base font-semibold">
-                📏 Max Tokens
-              </Label>
-              <Input
-                id="maxTokens"
-                type="number"
-                min={512}
-                max={8192}
-                step={256}
-                value={maxTokens}
-                onChange={e => setMaxTokens(Number(e.target.value))}
-              />
-              <p className="text-sm text-muted-foreground">
-                Lunghezza massima della risposta (512-8192)
-              </p>
-            </div>
-
-            {/* Personality Radio Buttons */}
-            <div className="space-y-2">
-              <Label className="text-base font-semibold">🎭 Personalità Agente</Label>
-              <RadioGroup
-                value={personality}
-                onValueChange={v => setPersonality(v as AgentPersonality)}
-              >
-                {PERSONALITY_OPTIONS.map(option => (
-                  <div key={option.value} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option.value} id={`personality-${option.value}`} />
-                    <Label
-                      htmlFor={`personality-${option.value}`}
-                      className="font-normal cursor-pointer"
-                    >
-                      <span className="font-medium">{option.label}</span>
-                      <span className="text-sm text-muted-foreground ml-2">
-                        ({option.description})
-                      </span>
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-
-            {/* Detail Level Radio Buttons */}
-            <div className="space-y-2">
-              <Label className="text-base font-semibold">📊 Livello Dettaglio</Label>
-              <RadioGroup value={detailLevel} onValueChange={v => setDetailLevel(v as DetailLevel)}>
-                {DETAIL_LEVEL_OPTIONS.map(option => (
-                  <div key={option.value} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option.value} id={`detail-${option.value}`} />
-                    <Label
-                      htmlFor={`detail-${option.value}`}
-                      className="font-normal cursor-pointer"
-                    >
-                      <span className="font-medium">{option.label}</span>
-                      <span className="text-sm text-muted-foreground ml-2">
-                        ({option.description})
-                      </span>
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-
-            {/* Custom Instructions Textarea */}
-            <div className="space-y-2">
-              <Label htmlFor="instructions" className="text-base font-semibold">
-                📝 Note Personali
-              </Label>
-              <Textarea
-                id="instructions"
-                placeholder="Es: Spiega sempre le regole come se fossi principiante"
-                value={personalNotes}
-                onChange={e => setPersonalNotes(e.target.value)}
-                maxLength={1000}
-                rows={4}
-              />
-              <div className="text-xs text-right text-muted-foreground">
-                {1000 - personalNotes.length} caratteri rimanenti
-              </div>
-            </div>
-          </div>
+          <AgentConfigFields
+            value={{
+              llmModel,
+              temperature,
+              maxTokens,
+              personality,
+              detailLevel,
+              personalNotes,
+            }}
+            onChange={v => {
+              setLlmModel(v.llmModel);
+              setTemperature(v.temperature);
+              setMaxTokens(v.maxTokens);
+              setPersonality(v.personality);
+              setDetailLevel(v.detailLevel);
+              setPersonalNotes(v.personalNotes);
+            }}
+          />
         )}
 
         {mode === 'edit' && (

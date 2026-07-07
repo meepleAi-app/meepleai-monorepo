@@ -58,7 +58,9 @@ export {
   type ChatThreadEntry,
 } from '@/components/features/agent-detail/ChatHistoryTimeline';
 
-// AgentSettingsForm — variant-aware (editable for active, read-only for archived)
+// AgentSettingsForm — real per-game AI config editor (Issue #2732).
+// Editable for active+game agents; read-only for archived or standalone agents.
+// `AgentConfig` is an alias of AgentConfigFieldsValue (shared with AgentConfigModal).
 export {
   AgentSettingsForm,
   type AgentSettingsFormProps,

@@ -2733,6 +2733,8 @@
         "strategyLabel": "RAG Strategy",
         "parametersLabel": "Strategy parameters",
         "readOnlyBanner": "Settings are read-only for archived agents.",
+        "perGameNote": "These settings apply to every agent of this game.",
+        "standaloneBanner": "This agent is not linked to a game, so its settings are read-only.",
         "saveCta": "Save settings",
         "cancelCta": "Cancel",
         "saveSuccess": "Settings saved.",

@@ -5,6 +5,8 @@
  * Issue #4776: Added AgentCreationSheet
  */
 
+export { AgentConfigFields } from './AgentConfigFields';
+export type { AgentConfigFieldsProps, AgentConfigFieldsValue } from './AgentConfigFields';
 export { AgentConfigSheet } from './AgentConfigSheet';
 export { AgentCreationSheet } from './AgentCreationSheet';
 export type { AgentCreationSheetProps } from './AgentCreationSheet';

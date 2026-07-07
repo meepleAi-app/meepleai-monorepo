@@ -9,6 +9,8 @@ using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using System.Diagnostics.Metrics;
 using Api.Models;
 using Api.Observability;
+using Api.SharedKernel.Services;
+using Moq;
 using Api.Services;
 using Api.Services.LlmClients;
 using Api.SharedKernel.Domain.ValueObjects;
@@ -309,7 +311,8 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
         FakeProgressRepo progressRepo,
         ILlmService? llm = null,
         ICampaignOwnershipGuard? ownershipGuard = null,
-        IHybridCacheService? cache = null) =>
+        IHybridCacheService? cache = null,
+        ITierEnforcementService? tierService = null) =>
         new(
             campaignRepo,
             artifactRepo,
@@ -319,9 +322,81 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
             llm ?? new FakeLlmService(),
             ownershipGuard ?? new AlwaysOwnedGuard(),
             cache ?? new FakeHybridCache(),
-            NullLogger<TranslateGamebookSegmentQueryHandler>.Instance);
+            NullLogger<TranslateGamebookSegmentQueryHandler>.Instance,
+            tierService ?? new Mock<ITierEnforcementService>().Object);
 
     // ── Tests ─────────────────────────────────────────────────────────────────
+
+    // #2750 (C14): a successful paragraph translation counts toward the monthly quota;
+    // a failed one does not.
+    [Fact]
+    public async Task Handle_OnSuccess_RecordsGamebookTranslationQuotaUsage()
+    {
+        var campaignRepo = new FakeCampaignRepo();
+        var artifactRepo = new FakeArtifactRepo();
+        var paragraphRepo = new FakeParagraphRepo();
+        var glossaryRepo = new FakeGlossaryRepo();
+        var progressRepo = new FakeProgressRepo();
+
+        var ownerId = Guid.NewGuid();
+        var campaign = GamebookCampaignSession.Create(GameRef.Shared(Guid.NewGuid()), ownerId, "Quota Campaign");
+        campaignRepo.Store.Add(campaign);
+        var bookId = Guid.NewGuid();
+        var artifact = GamebookPhotoArtifact.Create(campaign.Id, bookId, $"gamebook-photos/{campaign.Id}/photo-quota");
+        artifact.RecordSegments(
+            new[] { GamebookSegment.Create(47, "The Hive awakens.", null) }, "The Hive awakens.");
+        artifactRepo.Store.Add(artifact);
+
+        var tierService = new Mock<ITierEnforcementService>();
+        var handler = BuildHandler(
+            campaignRepo, artifactRepo, paragraphRepo, glossaryRepo, progressRepo,
+            tierService: tierService.Object);
+        var query = new TranslateGamebookSegmentQuery(campaign.Id, artifact.Id, 47, ownerId, bookId);
+
+        await foreach (var _ in handler.Handle(query, CancellationToken.None)) { }
+
+        tierService.Verify(
+            s => s.RecordUsageAsync(ownerId, TierAction.TranslateGamebookParagraph, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_OnFailure_DoesNotRecordGamebookTranslationQuotaUsage()
+    {
+        // Ownership guard throws → the translation never succeeds → no quota increment.
+        var campaignRepo = new FakeCampaignRepo();
+        var artifactRepo = new FakeArtifactRepo();
+        var paragraphRepo = new FakeParagraphRepo();
+        var glossaryRepo = new FakeGlossaryRepo();
+        var progressRepo = new FakeProgressRepo();
+
+        var ownerId = Guid.NewGuid();
+        var campaign = GamebookCampaignSession.Create(GameRef.Shared(Guid.NewGuid()), ownerId, "Quota Fail Campaign");
+        campaignRepo.Store.Add(campaign);
+        var bookId = Guid.NewGuid();
+
+        var tierService = new Mock<ITierEnforcementService>();
+        var handler = BuildHandler(
+            campaignRepo, artifactRepo, paragraphRepo, glossaryRepo, progressRepo,
+            ownershipGuard: new ThrowingOwnershipGuard(),
+            tierService: tierService.Object);
+        var query = new TranslateGamebookSegmentQuery(campaign.Id, Guid.NewGuid(), 47, ownerId, bookId);
+
+        await Assert.ThrowsAnyAsync<Exception>(async () =>
+        {
+            await foreach (var _ in handler.Handle(query, CancellationToken.None)) { }
+        });
+
+        tierService.Verify(
+            s => s.RecordUsageAsync(It.IsAny<Guid>(), It.IsAny<TierAction>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    private sealed class ThrowingOwnershipGuard : ICampaignOwnershipGuard
+    {
+        public Task AssertOwnedByAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken)
+            => throw new UnauthorizedAccessException("not owner");
+    }
 
     [Fact]
     public async Task Handle_StreamsAndPersistsTranslation()

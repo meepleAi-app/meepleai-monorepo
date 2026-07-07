@@ -7,6 +7,8 @@ using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using System.Diagnostics.Metrics;
 using Api.Middleware.Exceptions;
 using Api.Observability;
+using Api.SharedKernel.Services;
+using Moq;
 using Api.Services;
 using Api.Services.LlmClients;
 using Api.SharedKernel.Domain.ValueObjects;
@@ -195,13 +197,15 @@ public sealed class TranslateGamebookTextQueryHandlerTests
         FakeCampaignRepo campaignRepo,
         FakeGlossaryRepo glossaryRepo,
         ILlmService? llm = null,
-        ICampaignOwnershipGuard? guard = null) =>
+        ICampaignOwnershipGuard? guard = null,
+        ITierEnforcementService? tierService = null) =>
         new(
             campaignRepo,
             glossaryRepo,
             llm ?? new FakeLlmService(),
             guard ?? new AlwaysOwnedGuard(),
-            NullLogger<TranslateGamebookTextQueryHandler>.Instance);
+            NullLogger<TranslateGamebookTextQueryHandler>.Instance,
+            tierService ?? new Mock<ITierEnforcementService>().Object);
 
     private static (FakeCampaignRepo campaigns, FakeGlossaryRepo glossary)
         BuildRepos()
@@ -216,6 +220,41 @@ public sealed class TranslateGamebookTextQueryHandlerTests
     }
 
     // ── Tests ─────────────────────────────────────────────────────────────────
+
+    // #2750 (C14): a successful paragraph translation counts toward the monthly quota;
+    // a failed one does not.
+    [Fact]
+    public async Task Handle_OnSuccess_RecordsGamebookTranslationQuotaUsage()
+    {
+        var (campaigns, glossary) = BuildRepos();
+        var campaign = campaigns.Store[0];
+        var tierService = new Mock<ITierEnforcementService>();
+        var handler = BuildHandler(campaigns, glossary, tierService: tierService.Object);
+        var query = new TranslateGamebookTextQuery(campaign.Id, "Hello.", "EN", "IT", GameBookId, UserId);
+
+        await foreach (var _ in handler.Handle(query, CancellationToken.None)) { }
+
+        tierService.Verify(
+            s => s.RecordUsageAsync(UserId, TierAction.TranslateGamebookParagraph, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_OnFailure_DoesNotRecordGamebookTranslationQuotaUsage()
+    {
+        var (campaigns, glossary) = BuildRepos();
+        var tierService = new Mock<ITierEnforcementService>();
+        var handler = BuildHandler(campaigns, glossary, guard: new AlwaysDeniedGuard(), tierService: tierService.Object);
+
+        await Assert.ThrowsAsync<ForbiddenException>(async () =>
+        {
+            await foreach (var _ in handler.Handle(DefaultQuery(), CancellationToken.None)) { }
+        });
+
+        tierService.Verify(
+            s => s.RecordUsageAsync(It.IsAny<Guid>(), It.IsAny<TierAction>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
 
     [Fact]
     public async Task Handle_OwnershipDenied_ThrowsForbidden()
@@ -328,7 +367,8 @@ public sealed class TranslateGamebookTextQueryHandlerTests
             glossary,
             new FakeLlmService(),
             new AlwaysOwnedGuard(),
-            NullLogger<TranslateGamebookTextQueryHandler>.Instance);
+            NullLogger<TranslateGamebookTextQueryHandler>.Instance,
+            new Mock<ITierEnforcementService>().Object);
 
         await foreach (var _ in handler.Handle(
             new TranslateGamebookTextQuery(campaign.Id, "Hello.", "EN", "IT", GameBookId, UserId),

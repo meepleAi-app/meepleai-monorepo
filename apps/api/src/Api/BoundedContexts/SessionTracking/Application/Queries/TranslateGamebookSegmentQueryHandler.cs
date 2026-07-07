@@ -14,6 +14,7 @@ using Api.Models;
 using Api.Observability;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Services;
 using Api.SharedKernel.Translation;
 using Microsoft.Extensions.Logging;
 
@@ -34,6 +35,7 @@ internal sealed class TranslateGamebookSegmentQueryHandler
     private readonly ICampaignOwnershipGuard _ownershipGuard;
     private readonly IHybridCacheService _cache;
     private readonly ILogger<TranslateGamebookSegmentQueryHandler> _logger;
+    private readonly ITierEnforcementService _tierService;
 
     public TranslateGamebookSegmentQueryHandler(
         IGamebookCampaignSessionRepository campaigns,
@@ -44,7 +46,8 @@ internal sealed class TranslateGamebookSegmentQueryHandler
         ILlmService llm,
         ICampaignOwnershipGuard ownershipGuard,
         IHybridCacheService cache,
-        ILogger<TranslateGamebookSegmentQueryHandler> logger)
+        ILogger<TranslateGamebookSegmentQueryHandler> logger,
+        ITierEnforcementService tierService)
     {
         ArgumentNullException.ThrowIfNull(campaigns);
         ArgumentNullException.ThrowIfNull(photos);
@@ -55,6 +58,7 @@ internal sealed class TranslateGamebookSegmentQueryHandler
         ArgumentNullException.ThrowIfNull(ownershipGuard);
         ArgumentNullException.ThrowIfNull(cache);
         ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(tierService);
         _campaigns = campaigns;
         _photos = photos;
         _paragraphs = paragraphs;
@@ -64,6 +68,7 @@ internal sealed class TranslateGamebookSegmentQueryHandler
         _ownershipGuard = ownershipGuard;
         _cache = cache;
         _logger = logger;
+        _tierService = tierService;
     }
 
     public async IAsyncEnumerable<TranslateChunk> Handle(
@@ -260,6 +265,16 @@ internal sealed class TranslateGamebookSegmentQueryHandler
             {
                 var rate = (double)matchedTerms / totalApplicableTerms;
                 MeepleAiMetrics.RecordGamebookGlossaryConsistency(rate, HashCampaignId(query.CampaignId));
+            }
+
+            // #2750 (C14): count one successful paragraph translation toward the monthly quota.
+            // CancellationToken.None so a request whose SSE stream was aborted AFTER the
+            // translation completed still counts (mirrors the metrics emit above).
+            if (string.Equals(status, "success", StringComparison.Ordinal))
+            {
+                await _tierService
+                    .RecordUsageAsync(query.CallerUserId, TierAction.TranslateGamebookParagraph, CancellationToken.None)
+                    .ConfigureAwait(false);
             }
         }
     }

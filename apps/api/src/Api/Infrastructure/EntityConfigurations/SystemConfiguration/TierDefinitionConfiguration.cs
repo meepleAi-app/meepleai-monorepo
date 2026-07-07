@@ -64,6 +64,9 @@ internal class TierDefinitionConfiguration : IEntityTypeConfiguration<TierDefini
                 .HasColumnName("session_save_enabled");
             limits.Property(l => l.MaxCatalogProposalsPerWeek)
                 .HasColumnName("max_catalog_proposals_per_week");
+            // Issue #2750 (C14): monthly gamebook translation quota (display-only).
+            limits.Property(l => l.MaxGamebookTranslationsPerMonth)
+                .HasColumnName("max_gamebook_translations_per_month");
         });
 
         // Unique index on name

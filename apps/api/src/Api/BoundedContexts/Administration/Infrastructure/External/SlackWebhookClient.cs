@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Helpers;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.External;
@@ -43,6 +44,21 @@ internal sealed class SlackWebhookClient : ISlackWebhookClient
         if (!Uri.TryCreate(webhookUrl, UriKind.Absolute, out var uri))
         {
             return new SlackSendResult(false, "Webhook URL is not a valid absolute URI.");
+        }
+
+        // SSRF guard (#2655 finding #11): a compromised/misconfigured webhook URL must not be able
+        // to reach internal services or the cloud metadata endpoint. Only HTTPS URLs resolving to
+        // public IPs are allowed. The response message stays generic (no resolved IP) and the URL is
+        // never logged (it embeds the webhook secret).
+        try
+        {
+            SsrfSafeHttpClient.ValidateUrlScheme(webhookUrl);
+            await SsrfSafeHttpClient.ValidateResolvedIpAsync(webhookUrl, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            _logger.LogWarning(ex, "Slack webhook blocked by SSRF guard");
+            return new SlackSendResult(false, "Webhook URL is not allowed (must be HTTPS to a public host).");
         }
 
         var payload = BuildPayload(message);

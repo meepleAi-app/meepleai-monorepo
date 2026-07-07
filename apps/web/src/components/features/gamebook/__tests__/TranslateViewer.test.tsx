@@ -233,6 +233,36 @@ describe('TranslateViewer', () => {
     expect(screen.getByTestId('translate-viewer-error')).toHaveTextContent('stream_error');
   });
 
+  // #2750 C9 — encounter cheatsheet entry point. The encounter route needs
+  // photoId + target paragraph + gameBookId, all available once a segment is
+  // translated. This is the only live surface with those params.
+  it('#2750 C9: offers an encounter-cheatsheet link after a segment is translated', () => {
+    makeOneBookMock();
+    wrap(
+      <TranslateViewer
+        campaignId={CAMPAIGN_ID}
+        gameRef={GAME_REF}
+        gameId={GAME_ID}
+        _initialPhase="translated"
+        _initialArtifact={FAKE_ARTIFACT as never}
+        _initialActiveSegment={FAKE_ARTIFACT.segments[0] as never}
+        _initialSseState={{ isComplete: true, partialText: 'Ti svegli in una prigione.' }}
+      />
+    );
+
+    const link = screen.getByTestId('translate-open-encounter');
+    expect(link).toHaveAttribute(
+      'href',
+      `/library/${GAME_ID}/play/${CAMPAIGN_ID}/encounter?photoId=${ARTIFACT_ID}&to=1&gameBookId=${BOOK_STORY_ID}&from=1`
+    );
+  });
+
+  it('#2750 C9: does not offer the encounter link before a translation completes', () => {
+    makeOneBookMock();
+    wrap(<TranslateViewer campaignId={CAMPAIGN_ID} gameRef={GAME_REF} gameId={GAME_ID} />);
+    expect(screen.queryByTestId('translate-open-encounter')).not.toBeInTheDocument();
+  });
+
   it('shows error copy and disables camera when no narrative books exist (E3)', () => {
     vi.mocked(booksHook.useGameBooks).mockReturnValue({
       data: [],

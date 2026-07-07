@@ -47,7 +47,7 @@ export function Content({
       {isManualMode ? (
         <ManualInputView campaignId={campaignId} gameRef={gameRef} />
       ) : (
-        <TranslateViewer campaignId={campaignId} gameRef={gameRef} />
+        <TranslateViewer campaignId={campaignId} gameId={gameId} gameRef={gameRef} />
       )}
     </main>
   );

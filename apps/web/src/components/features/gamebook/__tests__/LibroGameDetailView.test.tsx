@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within, type RenderResult } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe, toHaveNoViolations } from 'jest-axe';
@@ -64,6 +64,13 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
+// #2750 C1: the AI Chat tab opens the global chat panel via chat-panel-store.
+const mockOpenChat = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/stores/chat-panel-store', () => ({
+  useChatPanelStore: (selector: (s: { open: typeof mockOpenChat }) => unknown) =>
+    selector({ open: mockOpenChat }),
+}));
+
 vi.mock('@/components/features/gamebook/NanolithCampaignCTA', () => ({
   NanolithCampaignCTA: ({ gameId, gameTitle }: { gameId: string; gameTitle: string }) => (
     <div data-testid="mock-nanolith-cta">
@@ -110,6 +117,10 @@ function makeLibraryGameDetail(overrides: Partial<LibraryGameDetail> = {}): Libr
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
 describe('LibroGameDetailView', () => {
+  beforeEach(() => {
+    mockOpenChat.mockClear();
+  });
+
   it('renders default tab "info" with InfoPanel', () => {
     const gameDetail = makeLibraryGameDetail();
     renderView(<LibroGameDetailView gameDetail={gameDetail} />);
@@ -179,31 +190,50 @@ describe('LibroGameDetailView', () => {
     expect(screen.getByLabelText('partite 5')).toBeVisible();
   });
 
-  it('switches tabs and shows placeholder text', async () => {
-    const gameDetail = makeLibraryGameDetail();
+  // #2750 C1: the 3 non-Info tabs are wired to real surfaces (no more "in arrivo" placeholder).
+
+  it('C1: AI Chat tab opens the global chat panel with the game context', async () => {
+    const gameDetail = makeLibraryGameDetail({
+      gameId: 'g1',
+      gameTitle: 'Nanolith',
+      chunkCount: 4,
+    });
     renderView(<LibroGameDetailView gameDetail={gameDetail} />);
     const user = userEvent.setup();
 
-    // Click AI Chat tab
     await user.click(screen.getByRole('tab', { name: 'AI Chat' }));
-    expect(screen.getByText(/Pannello/i)).toBeVisible();
-    // Verify placeholder panel is visible by checking both the label and complete text together
     const chatPanel = screen.getByRole('tabpanel');
-    expect(chatPanel).toHaveTextContent('Pannello');
-    expect(chatPanel).toHaveTextContent('AI Chat');
-    expect(chatPanel).toHaveTextContent(/in arrivo con la prossima iter/);
+    expect(chatPanel).not.toHaveTextContent(/in arrivo con la prossima iter/);
 
-    // Click Toolbox tab
+    await user.click(within(chatPanel).getByRole('button', { name: /chat/i }));
+    expect(mockOpenChat).toHaveBeenCalledTimes(1);
+    expect(mockOpenChat).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'g1', name: 'Nanolith' })
+    );
+  });
+
+  it('C1: Toolbox tab links to the game toolbox sub-page', async () => {
+    const gameDetail = makeLibraryGameDetail({ gameId: 'g1' });
+    renderView(<LibroGameDetailView gameDetail={gameDetail} />);
+    const user = userEvent.setup();
+
     await user.click(screen.getByRole('tab', { name: 'Toolbox' }));
-    const toolboxPanel = screen.getByRole('tabpanel');
-    expect(toolboxPanel).toHaveTextContent('Toolbox');
-    expect(toolboxPanel).toHaveTextContent(/in arrivo con la prossima iter/);
+    const panel = screen.getByRole('tabpanel');
+    expect(panel).not.toHaveTextContent(/in arrivo con la prossima iter/);
+    const link = within(panel).getByRole('link');
+    expect(link).toHaveAttribute('href', '/library/g1/toolbox');
+  });
 
-    // Click Toolkit tab
+  it('C1: Toolkit tab links to the game toolkit sub-page', async () => {
+    const gameDetail = makeLibraryGameDetail({ gameId: 'g1' });
+    renderView(<LibroGameDetailView gameDetail={gameDetail} />);
+    const user = userEvent.setup();
+
     await user.click(screen.getByRole('tab', { name: 'Toolkit' }));
-    const toolkitPanel = screen.getByRole('tabpanel');
-    expect(toolkitPanel).toHaveTextContent('Toolkit');
-    expect(toolkitPanel).toHaveTextContent(/in arrivo con la prossima iter/);
+    const panel = screen.getByRole('tabpanel');
+    expect(panel).not.toHaveTextContent(/in arrivo con la prossima iter/);
+    const link = within(panel).getByRole('link');
+    expect(link).toHaveAttribute('href', '/library/g1/toolkit');
   });
 
   it("KB badge variant: kbStatus='indexing'", () => {

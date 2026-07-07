@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Application.Queries.GameNight;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
+using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -25,6 +26,7 @@ internal static class GamebookCampaignEndpoints
         MapGetCampaignProgressEndpoint(group);
         MapUpdateProgressEndpoint(group);
         MapRenameCampaignEndpoint(group);
+        MapCloseCampaignEndpoint(group);
         MapDeleteCampaignEndpoint(group);
 
         return group;
@@ -266,6 +268,50 @@ internal static class GamebookCampaignEndpoints
         .WithOpenApi();
     }
 
+    private static void MapCloseCampaignEndpoint(RouteGroupBuilder group)
+    {
+        // SI-8 (#2639): terminal close from the play-evening-end 3-way selector.
+        // "Completa"/"Abbandona" POST here; "Archivia" (resumable) does not.
+        group.MapPost("/gamebook/campaigns/{id:guid}/close", async (
+            Guid id,
+            [FromBody] CloseGamebookCampaignRequest body,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            if (!Enum.TryParse<GamebookCampaignOutcome>(body.Outcome, ignoreCase: true, out var outcome)
+                || !Enum.IsDefined(outcome))
+            {
+                return Results.BadRequest(new { error = "outcome must be 'Completed' or 'Abandoned'" });
+            }
+
+            var dto = await mediator.Send(
+                new CloseGamebookCampaignCommand(id, userId, outcome), ct
+            ).ConfigureAwait(false);
+
+            return Results.Ok(dto);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<GamebookCampaignDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces(StatusCodes.Status404NotFound)
+        .Produces(StatusCodes.Status409Conflict)
+        .WithTags("Gamebook")
+        .WithSummary("Terminally close a gamebook campaign")
+        .WithDescription("Sets the manual terminal outcome (Completed/Abandoned) on the campaign (SI-8). Only the owner may close; a campaign already closed returns 409.")
+        .WithOpenApi();
+    }
+
     private static void MapDeleteCampaignEndpoint(RouteGroupBuilder group)
     {
         group.MapDelete("/gamebook/campaigns/{id:guid}", async (
@@ -327,3 +373,10 @@ public sealed record UpdateGamebookProgressRequest(Guid GameBookId, int CurrentP
 
 /// <summary>Request body for renaming a gamebook campaign.</summary>
 public sealed record RenameGamebookCampaignRequest(string Title);
+
+/// <summary>
+/// Request body for terminally closing a gamebook campaign (SI-8 #2639).
+/// <paramref name="Outcome"/> is the string form of <c>GamebookCampaignOutcome</c>
+/// ("Completed" or "Abandoned"); "Archivia" (resumable) does not call this endpoint.
+/// </summary>
+public sealed record CloseGamebookCampaignRequest(string Outcome);

@@ -33,8 +33,10 @@ public record UpdateMediaCaptionCommand(
 /// <summary>
 /// Command to delete media from a session.
 /// </summary>
+/// <param name="MediaId">Media to soft-delete.</param>
+/// <param name="RequesterUserId">Authenticated caller — must own the participant that uploaded the media (#2655 IDOR guard). Never sourced from the client query string.</param>
 public record DeleteSessionMediaCommand(
     Guid MediaId,
-    Guid ParticipantId
+    Guid RequesterUserId
 ) : IRequest<Unit>;
 

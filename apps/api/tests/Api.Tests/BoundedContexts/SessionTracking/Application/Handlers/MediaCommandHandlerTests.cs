@@ -191,28 +191,53 @@ public class UpdateMediaCaptionCommandHandlerTests
 public class DeleteSessionMediaCommandHandlerTests
 {
     private readonly Mock<ISessionMediaRepository> _mockMediaRepo;
+    private readonly Mock<ISessionRepository> _mockSessionRepo;
     private readonly Mock<IMediator> _mockMediator;
     private readonly DeleteSessionMediaCommandHandler _handler;
 
     public DeleteSessionMediaCommandHandlerTests()
     {
         _mockMediaRepo = new Mock<ISessionMediaRepository>();
+        _mockSessionRepo = new Mock<ISessionRepository>();
         _mockMediator = new Mock<IMediator>();
-        _handler = new DeleteSessionMediaCommandHandler(_mockMediaRepo.Object, _mockMediator.Object);
+        _handler = new DeleteSessionMediaCommandHandler(
+            _mockMediaRepo.Object, _mockSessionRepo.Object, _mockMediator.Object);
+    }
+
+    private static Session CreateSessionWithParticipant(Guid sessionId, Guid participantId, Guid? ownerUserId)
+    {
+        var session = Session.Create(
+            userId: Guid.NewGuid(),
+            gameId: Guid.NewGuid(),
+            sessionType: SessionType.GameSpecific);
+
+        typeof(Session).GetProperty("Id")!.SetValue(session, sessionId);
+
+        var participant = new Participant { Id = participantId, SessionId = sessionId, UserId = ownerUserId };
+        var participantsField = typeof(Session).GetField("_participants",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var list = (List<Participant>)participantsField!.GetValue(session)!;
+        list.Add(participant);
+
+        return session;
     }
 
     [Fact]
-    public async Task Handle_ValidCommand_SoftDeletesAndPublishesEvent()
+    public async Task Handle_OwnerDeletes_SoftDeletesAndPublishesEvent()
     {
-        // Arrange
+        // Arrange — the authenticated user owns the participant that uploaded the media.
+        var sessionId = Guid.NewGuid();
         var participantId = Guid.NewGuid();
+        var ownerUserId = Guid.NewGuid();
         var media = SessionMedia.Create(
-            Guid.NewGuid(), participantId, "f", "f.jpg", "image/jpeg", 100, SessionMediaType.Photo);
+            sessionId, participantId, "f", "f.jpg", "image/jpeg", 100, SessionMediaType.Photo);
 
         _mockMediaRepo.Setup(r => r.GetByIdAsync(media.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(media);
+        _mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSessionWithParticipant(sessionId, participantId, ownerUserId));
 
-        var command = new DeleteSessionMediaCommand(media.Id, participantId);
+        var command = new DeleteSessionMediaCommand(media.Id, ownerUserId);
 
         // Act
         await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -238,16 +263,24 @@ public class DeleteSessionMediaCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_DifferentParticipant_ThrowsForbiddenException()
+    public async Task Handle_DifferentUser_ThrowsForbiddenException()
     {
+        // Arrange — #2655 IDOR fix: a user who does NOT own the media's participant
+        // cannot delete it, even by passing a forged participant id (the id is now
+        // resolved server-side from the authenticated caller).
+        var sessionId = Guid.NewGuid();
         var participantId = Guid.NewGuid();
+        var ownerUserId = Guid.NewGuid();
+        var attackerUserId = Guid.NewGuid();
         var media = SessionMedia.Create(
-            Guid.NewGuid(), participantId, "f", "f.jpg", "image/jpeg", 100, SessionMediaType.Photo);
+            sessionId, participantId, "f", "f.jpg", "image/jpeg", 100, SessionMediaType.Photo);
 
         _mockMediaRepo.Setup(r => r.GetByIdAsync(media.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(media);
+        _mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSessionWithParticipant(sessionId, participantId, ownerUserId));
 
-        var command = new DeleteSessionMediaCommand(media.Id, Guid.NewGuid());
+        var command = new DeleteSessionMediaCommand(media.Id, attackerUserId);
 
         var act6 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
         await act6.Should().ThrowAsync<ForbiddenException>();

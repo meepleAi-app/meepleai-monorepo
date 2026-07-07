@@ -99,13 +99,16 @@ public class UpdateMediaCaptionCommandHandler : IRequestHandler<UpdateMediaCapti
 public class DeleteSessionMediaCommandHandler : IRequestHandler<DeleteSessionMediaCommand, Unit>
 {
     private readonly ISessionMediaRepository _mediaRepository;
+    private readonly ISessionRepository _sessionRepository;
     private readonly IMediator _mediator;
 
     public DeleteSessionMediaCommandHandler(
         ISessionMediaRepository mediaRepository,
+        ISessionRepository sessionRepository,
         IMediator mediator)
     {
         _mediaRepository = mediaRepository;
+        _sessionRepository = sessionRepository;
         _mediator = mediator;
     }
 
@@ -114,7 +117,13 @@ public class DeleteSessionMediaCommandHandler : IRequestHandler<DeleteSessionMed
         var media = await _mediaRepository.GetByIdAsync(request.MediaId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Media {request.MediaId} not found");
 
-        if (media.ParticipantId != request.ParticipantId)
+        // #2655 IDOR guard: resolve the owning participant server-side from the
+        // authenticated caller — never trust a client-supplied participant id.
+        // Only the user who owns the uploading participant may delete the media.
+        var session = await _sessionRepository.GetByIdAsync(media.SessionId, cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException($"Session {media.SessionId} not found");
+        var owner = session.Participants.FirstOrDefault(p => p.Id == media.ParticipantId);
+        if (owner is null || owner.UserId != request.RequesterUserId)
             throw new ForbiddenException("Only the media owner can delete it.");
 
         media.SoftDelete();
@@ -125,7 +134,7 @@ public class DeleteSessionMediaCommandHandler : IRequestHandler<DeleteSessionMed
         {
             SessionId = media.SessionId,
             MediaId = media.Id,
-            ParticipantId = request.ParticipantId,
+            ParticipantId = media.ParticipantId,
         }, cancellationToken).ConfigureAwait(false);
 
         return Unit.Value;

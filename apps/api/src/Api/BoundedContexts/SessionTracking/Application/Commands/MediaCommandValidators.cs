@@ -36,6 +36,6 @@ public class DeleteSessionMediaCommandValidator : AbstractValidator<DeleteSessio
     public DeleteSessionMediaCommandValidator()
     {
         RuleFor(x => x.MediaId).NotEmpty();
-        RuleFor(x => x.ParticipantId).NotEmpty();
+        RuleFor(x => x.RequesterUserId).NotEmpty();
     }
 }

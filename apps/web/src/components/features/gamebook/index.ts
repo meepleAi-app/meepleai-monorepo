@@ -148,6 +148,10 @@ export type {
 export { GlossaryEditorModal } from '@/components/features/gamebook/GlossaryEditorModal';
 export type { GlossaryEditorModalProps } from '@/components/features/gamebook/GlossaryEditorModal';
 
+// #2750 C11 — read-only glossary look-up (distinct from the single-entry editor above)
+export { GlossaryLookupModal } from '@/components/features/gamebook/GlossaryLookupModal';
+export type { GlossaryLookupModalProps } from '@/components/features/gamebook/GlossaryLookupModal';
+
 // Issue #1484 — Encounter Book cheatsheet (parse-centric MVP, consumes BE #1520)
 export { EncounterCheatsheetView } from '@/components/features/gamebook/EncounterCheatsheetView';
 export type {

@@ -87,4 +87,44 @@ public sealed class SessionRepositoryUpdatePersistenceTests : IAsyncLifetime
                 "UpdateAsync must persist the StartedAt scalar set by OpenLiveMode (#2660 — .AsTracking() under the NoTracking default)");
         }
     }
+
+    [Fact(DisplayName = "#2660: UpdateAsync persists Session.FinalizedAt + Status (Finalize) to the scalar columns")]
+    public async Task UpdateAsync_PersistsFinalizedAt()
+    {
+        Guid sessionId;
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var repo = scope.ServiceProvider.GetRequiredService<ISessionRepository>();
+            var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+            var (userId, _) = await TestSessionHelper.CreateUserSessionAsync(db);
+            var gameId = await TestSessionHelper.SeedSharedGameAsync(db, title: "Finalize-Persist Game");
+            var session = Session.Create(userId, gameId, SessionType.Generic);
+            await repo.AddAsync(session, CancellationToken.None);
+            await uow.SaveChangesAsync(CancellationToken.None);
+            sessionId = session.Id;
+        }
+
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var repo = scope.ServiceProvider.GetRequiredService<ISessionRepository>();
+            var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+            var session = await repo.GetByIdAsync(sessionId, CancellationToken.None);
+            session!.Finalize();
+            await repo.UpdateAsync(session, CancellationToken.None);
+            await uow.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var entity = await db.SessionTrackingSessions.AsNoTracking().FirstAsync(s => s.Id == sessionId);
+            entity.FinalizedAt.Should().NotBeNull(
+                "UpdateAsync must persist the FinalizedAt scalar set by Finalize (#2660 — same untracked no-op class as StartedAt)");
+            entity.Status.Should().Be("Finalized",
+                "UpdateAsync must persist the Status scalar set by Finalize (#2660 — .AsTracking() under the NoTracking default)");
+        }
+    }
 }

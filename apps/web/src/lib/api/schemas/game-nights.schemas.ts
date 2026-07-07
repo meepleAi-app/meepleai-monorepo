@@ -5,7 +5,16 @@
 
 import { z } from 'zod';
 
-export const GameNightStatusSchema = z.enum(['Draft', 'Published', 'Cancelled', 'Completed']);
+// SI-3 #2634: `InProgress` mirrors the BE `GameNightStatus` enum (a Published night is promoted
+// to InProgress when its first session starts, event-driven via SessionStartedHandler). It MUST be
+// listed so the live/detail read of a night mid-play parses instead of failing the whole payload.
+export const GameNightStatusSchema = z.enum([
+  'Draft',
+  'Published',
+  'InProgress',
+  'Cancelled',
+  'Completed',
+]);
 export type GameNightStatus = z.infer<typeof GameNightStatusSchema>;
 
 export const RsvpStatusSchema = z.enum(['Pending', 'Accepted', 'Declined', 'Maybe']);

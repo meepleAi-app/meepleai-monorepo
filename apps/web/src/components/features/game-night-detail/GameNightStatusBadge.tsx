@@ -45,6 +45,12 @@ const STATUS_VISUALS: Record<GameNightStatus, StatusVisualConfig> = {
     showPulsingDot: true,
     icon: null,
   },
+  // SI-3 #2634: a night mid-play — session/indigo, live-pulsing (per this file's status legend).
+  InProgress: {
+    entityClass: 'bg-entity-session/14 text-entity-session border-entity-session/28',
+    showPulsingDot: true,
+    icon: null,
+  },
   Completed: {
     entityClass: 'bg-muted text-muted-foreground border-border',
     showPulsingDot: false,

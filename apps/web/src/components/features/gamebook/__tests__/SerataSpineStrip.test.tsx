@@ -36,6 +36,14 @@ describe('SerataSpineStrip', () => {
     expect(screen.getByText('programmata')).toBeInTheDocument();
   });
 
+  it('renders "completata" and NO live badge for a Completed night (SI-3 — pure BE-state render, no FE backward flip)', () => {
+    render(
+      <SerataSpineStrip spine={{ ...base, gameNightStatus: 'Completed', hasLiveSession: false }} />
+    );
+    expect(screen.queryByTestId('serata-live-badge')).not.toBeInTheDocument();
+    expect(screen.getByText('completata')).toBeInTheDocument();
+  });
+
   it('renders the session pip with completed/total', () => {
     render(<SerataSpineStrip spine={{ ...base, totalSessions: 3, completedSessions: 2 }} />);
     expect(screen.getByText('2/3')).toBeInTheDocument();

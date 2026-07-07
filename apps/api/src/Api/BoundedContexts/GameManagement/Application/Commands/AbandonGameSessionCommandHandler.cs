@@ -32,6 +32,12 @@ internal class AbandonGameSessionCommandHandler : ICommandHandler<AbandonGameSes
         var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken)
 .ConfigureAwait(false) ?? throw new NotFoundException("GameSession", command.SessionId.ToString());
 
+        // #2655 IDOR guard: only the session creator may abandon it.
+        if (session.CreatedByUserId != command.RequesterId)
+        {
+            throw new ForbiddenException("Only the session creator can abandon this session.");
+        }
+
         // Abandon via domain method
         session.Abandon(command.Reason);
 

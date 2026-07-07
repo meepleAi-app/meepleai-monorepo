@@ -48,7 +48,7 @@ public class ResumeGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new ResumeGameSessionCommand(SessionId: sessionId);
+        var command = new ResumeGameSessionCommand(SessionId: sessionId, RequesterId: GameSessionBuilder.DefaultCreatedByUserId);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -83,7 +83,7 @@ public class ResumeGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new ResumeGameSessionCommand(SessionId: sessionId);
+        var command = new ResumeGameSessionCommand(SessionId: sessionId, RequesterId: GameSessionBuilder.DefaultCreatedByUserId);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -112,7 +112,7 @@ public class ResumeGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new ResumeGameSessionCommand(SessionId: sessionId);
+        var command = new ResumeGameSessionCommand(SessionId: sessionId, RequesterId: GameSessionBuilder.DefaultCreatedByUserId);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -139,7 +139,7 @@ public class ResumeGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new ResumeGameSessionCommand(SessionId: sessionId);
+        var command = new ResumeGameSessionCommand(SessionId: sessionId, RequesterId: GameSessionBuilder.DefaultCreatedByUserId);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -170,7 +170,7 @@ public class ResumeGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new ResumeGameSessionCommand(SessionId: sessionId);
+        var command = new ResumeGameSessionCommand(SessionId: sessionId, RequesterId: GameSessionBuilder.DefaultCreatedByUserId);
 
         // Act - Resume from second pause
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -188,7 +188,7 @@ public class ResumeGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((GameSession?)null);
 
-        var command = new ResumeGameSessionCommand(SessionId: sessionId);
+        var command = new ResumeGameSessionCommand(SessionId: sessionId, RequesterId: GameSessionBuilder.DefaultCreatedByUserId);
 
         // Act & Assert
         var act =
@@ -216,7 +216,7 @@ public class ResumeGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new ResumeGameSessionCommand(SessionId: sessionId);
+        var command = new ResumeGameSessionCommand(SessionId: sessionId, RequesterId: GameSessionBuilder.DefaultCreatedByUserId);
 
         // Act & Assert
         var act =
@@ -245,7 +245,7 @@ public class ResumeGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new ResumeGameSessionCommand(SessionId: sessionId);
+        var command = new ResumeGameSessionCommand(SessionId: sessionId, RequesterId: GameSessionBuilder.DefaultCreatedByUserId);
 
         // Act & Assert
         var act =
@@ -269,7 +269,7 @@ public class ResumeGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new ResumeGameSessionCommand(SessionId: sessionId);
+        var command = new ResumeGameSessionCommand(SessionId: sessionId, RequesterId: GameSessionBuilder.DefaultCreatedByUserId);
 
         // Act & Assert
         var act =
@@ -299,7 +299,7 @@ public class ResumeGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new ResumeGameSessionCommand(SessionId: sessionId);
+        var command = new ResumeGameSessionCommand(SessionId: sessionId, RequesterId: GameSessionBuilder.DefaultCreatedByUserId);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -328,7 +328,7 @@ public class ResumeGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new ResumeGameSessionCommand(SessionId: sessionId);
+        var command = new ResumeGameSessionCommand(SessionId: sessionId, RequesterId: GameSessionBuilder.DefaultCreatedByUserId);
 
         using var cts = new CancellationTokenSource();
         var cancellationToken = cts.Token;
@@ -346,6 +346,32 @@ public class ResumeGameSessionCommandHandlerTests
         _unitOfWorkMock.Verify(
             u => u.SaveChangesAsync(cancellationToken),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenRequesterIsNotOwner_ThrowsForbiddenException()
+    {
+        // Arrange — #2655 IDOR fix: only the session creator may resume it.
+        var sessionId = Guid.NewGuid();
+        var session = new GameSessionBuilder()
+            .WithId(sessionId)
+            .WithCreatedByUserId(GameSessionBuilder.DefaultCreatedByUserId)
+            .ThatIsStarted()
+            .Build();
+        session.Pause();
+
+        _sessionRepositoryMock
+            .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var command = new ResumeGameSessionCommand(SessionId: sessionId, RequesterId: Guid.NewGuid());
+
+        // Act & Assert
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ForbiddenException>();
+
+        _sessionRepositoryMock.Verify(r => r.UpdateAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 }
 

@@ -12,9 +12,9 @@
  *   - On click, fire `onChange(bookId)`.
  *
  * The `roles` field on each option carries the GameBookRole bitflag (Tutorial=1,
- * Setup=2, Narrative=4, Encounter=8, RulesReference=16). Callers typically
- * filter the full book list by role BEFORE passing it in (e.g. only Narrative
- * books for a photo-translate flow).
+ * RulesReference=2, Narrative=4, Encounter=8, Lore=16, Setup=32). Callers
+ * typically filter the full book list by role BEFORE passing it in (e.g. only
+ * Narrative books for a photo-translate flow).
  */
 
 import { type FC } from 'react';

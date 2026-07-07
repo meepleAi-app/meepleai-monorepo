@@ -658,6 +658,43 @@ describe('#2638 SI-7 — multi-context render', () => {
   });
 });
 
+describe('#2637 SI-6 — context bookId → GameBook displayName resolution', () => {
+  it('renders the GameBook displayName instead of the raw bookId when books are provided', () => {
+    renderModal(
+      <GlossaryEditorModal
+        campaignId={CAMPAIGN_ID}
+        entry={ENTRY_WITH_CONTEXTS}
+        onClose={() => {}}
+        books={[
+          { id: BOOK_A, displayName: 'Manuale Base' },
+          { id: BOOK_B, displayName: 'Storybook' },
+        ]}
+      />
+    );
+
+    const rows = screen.getAllByTestId('glossary-context-row');
+    expect(rows[0]).toHaveTextContent('Manuale Base');
+    expect(rows[0]).not.toHaveTextContent(BOOK_A);
+    expect(rows[1]).toHaveTextContent('Storybook');
+    expect(rows[1]).not.toHaveTextContent(BOOK_B);
+  });
+
+  it('falls back to the raw bookId when a context book is missing from the list', () => {
+    renderModal(
+      <GlossaryEditorModal
+        campaignId={CAMPAIGN_ID}
+        entry={ENTRY_WITH_CONTEXTS}
+        onClose={() => {}}
+        books={[{ id: BOOK_A, displayName: 'Manuale Base' }]}
+      />
+    );
+
+    const rows = screen.getAllByTestId('glossary-context-row');
+    expect(rows[0]).toHaveTextContent('Manuale Base');
+    expect(rows[1]).toHaveTextContent(BOOK_B);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // AC-4 — Submit error + retry
 // ---------------------------------------------------------------------------

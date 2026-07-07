@@ -33,6 +33,12 @@ vi.mock('@/hooks/queries/useLibrary', () => ({
   useLibraryGameDetail: mockUseLibraryGameDetail,
 }));
 
+// SI-6 (#2637): the page now fetches the game's GameBooks; stub the hook so the
+// branching-logic tests don't fire a real network request.
+vi.mock('@/hooks/useGameBooks', () => ({
+  useGameBooks: vi.fn(() => ({ data: [], isLoading: false })),
+}));
+
 vi.mock('@/lib/visual-test/state-override', () => ({
   useStateOverride: mockUseStateOverride,
 }));

@@ -32,6 +32,8 @@ import { GameTableSkeleton } from '@/components/library/game-table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
 import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
+import { useGameBooks } from '@/hooks/useGameBooks';
+import { GameRefKind } from '@/lib/api/gamebook';
 import { tryLoadVisualTestFixture } from '@/lib/games/game-detail-visual-test-fixture';
 import { isLibroGame } from '@/lib/games/is-libro-game';
 import { useStateOverride } from '@/lib/visual-test/state-override';
@@ -63,6 +65,14 @@ export default function LibraryGameDetailPage() {
     isLoading,
     error,
   } = useLibraryGameDetail(gameId, stateOverride === null);
+
+  // SI-6 (#2637): the game's 1..N GameBooks, surfaced in the libro-game detail
+  // view. Fetched here (page owns data) and passed down. Shared GameRef — the
+  // seeded community books live on the SharedGame; the endpoint returns []
+  // for games without books, so this is inert for non-libro titles.
+  const { data: gameBooks, isLoading: gameBooksLoading } = useGameBooks(
+    gameId ? { id: gameId, kind: GameRefKind.Shared } : null
+  );
 
   // S4 — parse `?tab=` query param to open a specific tab (deep-link support)
   const tabParam = searchParams?.get('tab');
@@ -142,7 +152,13 @@ export default function LibraryGameDetailPage() {
   // Non-libro-game titles keep the legacy GameDetailDesktop until B2/B3.
   const renderLibroView = isLibroGame({ gameTitle: effectiveDetail.gameTitle });
   if (renderLibroView) {
-    return <LibroGameDetailView gameDetail={effectiveDetail} />;
+    return (
+      <LibroGameDetailView
+        gameDetail={effectiveDetail}
+        books={gameBooks ?? []}
+        booksLoading={gameBooksLoading}
+      />
+    );
   }
 
   return (

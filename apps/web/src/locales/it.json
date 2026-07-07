@@ -3693,6 +3693,26 @@
         }
       }
     },
+    "bookList": {
+      "heading": "Libri",
+      "count": "{count, plural, one {# libro} other {# libri}}",
+      "indexed": "{count, plural, one {# indicizzato} other {# indicizzati}}",
+      "empty": "Nessun libro disponibile per questo gioco.",
+      "loading": "Caricamento libri…",
+      "originCommunity": "Community",
+      "originPersonal": "Personale",
+      "statusIndexed": "Indicizzato",
+      "statusPhysical": "Solo fisico",
+      "statusNotIndexed": "Non indicizzato"
+    },
+    "bookRole": {
+      "tutorial": "Tutorial",
+      "rulesReference": "Regole",
+      "narrative": "Storia",
+      "encounter": "Incontri",
+      "lore": "Ambientazione",
+      "setup": "Setup"
+    },
     "glossaryEditor": {
       "title": "Modifica voce di glossario",
       "termEnLabel": "Termine originale",

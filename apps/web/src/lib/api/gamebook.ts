@@ -39,8 +39,9 @@ export interface GameRef {
 /**
  * GameBook DTO mirroring `Api.BoundedContexts.GameManagement.Application.DTOs.GameBookDto`.
  *
- * `roles` encodes a GameBookRole bitflag: Tutorial=1, Setup=2, Narrative=4,
- * Encounter=8, RulesReference=16. Use bitwise AND to filter by role.
+ * `roles` encodes a GameBookRole bitflag: Tutorial=1, RulesReference=2,
+ * Narrative=4, Encounter=8, Lore=16, Setup=32. Use bitwise AND to filter by
+ * role (see `hasRole` / `rolesToNames`).
  *
  * `paragraphScheme`: 0=None, 1=ParagraphNumber, 2=Section.
  */
@@ -64,21 +65,50 @@ export type GameBookDto = z.infer<typeof GameBookDtoSchema>;
 const ListGameBooksResponseSchema = z.array(GameBookDtoSchema);
 
 /**
- * GameBookRole bitflag values (matches backend `[Flags] enum GameBookRole`).
+ * GameBookRole bitflag values — mirrors backend `[Flags] enum GameBookRole`
+ * (GameManagement BC) exactly:
+ *   None=0, Tutorial=1, RulesReference=2, Narrative=4, Encounter=8, Lore=16, Setup=32
+ *
+ * Kept in lock-step by `src/lib/api/__tests__/gamebook.test.ts`. Divergence
+ * mislabels the `roles` int decoded from the wire (issue #2637 SI-6).
  */
 export const GameBookRole = {
   Tutorial: 1,
-  Setup: 2,
+  RulesReference: 2,
   Narrative: 4,
   Encounter: 8,
-  RulesReference: 16,
+  Lore: 16,
+  Setup: 32,
 } as const;
+
+export type GameBookRoleName = keyof typeof GameBookRole;
+
+/**
+ * Canonical display order for the role badges rendered by the book-manager.
+ * Reading-flow order: onboarding roles first, then reference/story material.
+ */
+export const GAME_BOOK_ROLE_ORDER = [
+  'Tutorial',
+  'Setup',
+  'RulesReference',
+  'Narrative',
+  'Encounter',
+  'Lore',
+] as const satisfies readonly GameBookRoleName[];
 
 /**
  * Returns true if the supplied bitflag includes the given role.
  */
 export function hasRole(roles: number, role: number): boolean {
   return (roles & role) !== 0;
+}
+
+/**
+ * Decodes a `roles` bitflag into the list of present role names, in canonical
+ * display order (`GAME_BOOK_ROLE_ORDER`). Empty array for `None` (0).
+ */
+export function rolesToNames(roles: number): GameBookRoleName[] {
+  return GAME_BOOK_ROLE_ORDER.filter(name => hasRole(roles, GameBookRole[name]));
 }
 
 /**

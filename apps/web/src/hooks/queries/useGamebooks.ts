@@ -3,10 +3,7 @@
  *
  * Issue #869 status:
  *   - `useGamebooks`  → wired to `GET /api/v1/gamebooks` (real data)
- *   - `useQuotaInfo`  → STILL STUB pending follow-up (`GET /api/v1/users/me/quota`
- *                       not yet exposed). The stub returns canonical fixture
- *                       data so the orchestrator FSM keeps rendering correctly
- *                       until the quota endpoint lands.
+ *   - `useQuotaInfo`  → wired to `GET /api/v1/users/me/quota` (real data, #2750 C14)
  *
  * Used by:
  *   - `apps/web/src/app/(authenticated)/gamebook/_components/GamebookIndexView.tsx`
@@ -16,8 +13,9 @@
 
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
+import { fetchUserQuota } from '@/lib/api/gamebook-quota';
 import { fetchUserGamebooks } from '@/lib/api/gamebooks-list';
-import { gamebookIndexFixtures, type GamebookCardData, type QuotaInfo } from '@/lib/gamebook-index';
+import { type GamebookCardData, type QuotaInfo } from '@/lib/gamebook-index';
 
 /**
  * Stable query keys for the gamebook index hooks.
@@ -50,21 +48,19 @@ export function useGamebooks(): UseQueryResult<readonly GamebookCardData[], Erro
 }
 
 /**
- * Hook to fetch the current user's translation quota.
+ * Hook to fetch the current user's monthly gamebook translation quota.
  *
- * v1 carryover: returns the canonical fixture data via `gamebookIndexFixtures.default`.
- * The backend `GET /api/v1/users/me/quota` endpoint is NOT exposed; integration
- * deferred to a follow-up (issue #869b — split from #869 to keep PR small).
+ * #2750 (C14): wired to `GET /api/v1/users/me/quota` via `fetchUserQuota` (was a
+ * fixture stub). Returns the real per-user "paragraphs translated this month"
+ * count vs the monthly free-tier limit; 401 surfaces as an error the
+ * orchestrator's `error` FSM cell renders.
  *
  * @returns UseQueryResult with the QuotaInfo object.
  */
 export function useQuotaInfo(): UseQueryResult<QuotaInfo, Error> {
   return useQuery({
     queryKey: gamebookKeys.quota(),
-    queryFn: async (): Promise<QuotaInfo> => {
-      // v1 carryover stub — return canonical fixture data.
-      return gamebookIndexFixtures.default.quota;
-    },
+    queryFn: ({ signal }) => fetchUserQuota(signal),
     staleTime: 60_000,
   });
 }

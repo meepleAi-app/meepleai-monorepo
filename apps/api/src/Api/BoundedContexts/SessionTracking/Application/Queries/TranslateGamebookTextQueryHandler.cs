@@ -10,6 +10,7 @@ using Api.Models;
 using Api.Observability;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Services;
 using Api.SharedKernel.Translation;
 using Microsoft.Extensions.Logging;
 
@@ -32,24 +33,28 @@ internal sealed class TranslateGamebookTextQueryHandler
     private readonly ILlmService _llm;
     private readonly ICampaignOwnershipGuard _ownershipGuard;
     private readonly ILogger<TranslateGamebookTextQueryHandler> _logger;
+    private readonly ITierEnforcementService _tierService;
 
     public TranslateGamebookTextQueryHandler(
         IGamebookCampaignSessionRepository campaigns,
         IGamebookGlossaryRepository glossary,
         ILlmService llm,
         ICampaignOwnershipGuard ownershipGuard,
-        ILogger<TranslateGamebookTextQueryHandler> logger)
+        ILogger<TranslateGamebookTextQueryHandler> logger,
+        ITierEnforcementService tierService)
     {
         ArgumentNullException.ThrowIfNull(campaigns);
         ArgumentNullException.ThrowIfNull(glossary);
         ArgumentNullException.ThrowIfNull(llm);
         ArgumentNullException.ThrowIfNull(ownershipGuard);
         ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(tierService);
         _campaigns = campaigns;
         _glossary = glossary;
         _llm = llm;
         _ownershipGuard = ownershipGuard;
         _logger = logger;
+        _tierService = tierService;
     }
 
     public async IAsyncEnumerable<TranslateChunk> Handle(
@@ -183,6 +188,16 @@ internal sealed class TranslateGamebookTextQueryHandler
             {
                 var rate = (double)matchedTerms / totalApplicableTerms;
                 MeepleAiMetrics.RecordGamebookGlossaryConsistency(rate, HashCampaignId(query.CampaignId));
+            }
+
+            // #2750 (C14): count one successful paragraph translation toward the monthly quota.
+            // CancellationToken.None so a request whose SSE stream was aborted AFTER the
+            // translation completed still counts (mirrors the metrics emit above).
+            if (string.Equals(status, "success", StringComparison.Ordinal))
+            {
+                await _tierService
+                    .RecordUsageAsync(query.CallerUserId, TierAction.TranslateGamebookParagraph, CancellationToken.None)
+                    .ConfigureAwait(false);
             }
         }
     }

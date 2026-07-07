@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   useRouter: vi.fn(() => ({ push: vi.fn(), replace: vi.fn() })),
   useSearchParams: vi.fn(() => new URLSearchParams()),
   useLibraryGameDetail: vi.fn(),
+  useGameBooks: vi.fn(() => ({ data: [], isLoading: false })),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -35,6 +36,12 @@ vi.mock('@/hooks/queries/useLibrary', () => ({
     lists: () => ['library', 'list'],
     gameDetail: (id: string) => ['library', 'detail', id],
   },
+}));
+
+// SI-6 (#2637): the page now calls useGameBooks (useQuery); this suite renders
+// the page without a QueryClientProvider, so stub the hook.
+vi.mock('@/hooks/useGameBooks', () => ({
+  useGameBooks: mocks.useGameBooks,
 }));
 
 // Stub the heavy child components so this test focuses on page routing only

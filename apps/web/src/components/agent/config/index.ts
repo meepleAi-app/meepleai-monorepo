@@ -3,6 +3,7 @@
  * Issue #3239 (FRONT-003)
  * Issue #3: Added TypologySelector, StrategySelector
  * Issue #4776: Added AgentCreationSheet
+ * Issue #2732: Added AgentConfigFields (shared per-game config editor)
  */
 
 export { AgentConfigFields } from './AgentConfigFields';

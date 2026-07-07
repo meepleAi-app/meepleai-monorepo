@@ -21,8 +21,10 @@ import { useState, type ReactElement } from 'react';
 
 import { useRouter } from 'next/navigation';
 
+import { GameBookList } from '@/components/features/gamebook/GameBookList';
 import { NanolithCampaignCTA } from '@/components/features/gamebook/NanolithCampaignCTA';
 import type { LibraryGameDetail } from '@/hooks/queries/useLibrary';
+import type { GameBookDto } from '@/lib/api/gamebook';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -30,11 +32,21 @@ type TabId = 'info' | 'chat' | 'toolbox' | 'toolkit';
 
 export interface LibroGameDetailViewProps {
   readonly gameDetail: LibraryGameDetail;
+  /**
+   * The game's 1..N GameBooks (SI-6). Fetched by the page via `useGameBooks`
+   * and threaded down so this presentational view stays provider-free.
+   */
+  readonly books?: readonly GameBookDto[];
+  readonly booksLoading?: boolean;
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
-export function LibroGameDetailView({ gameDetail }: LibroGameDetailViewProps): ReactElement {
+export function LibroGameDetailView({
+  gameDetail,
+  books,
+  booksLoading,
+}: LibroGameDetailViewProps): ReactElement {
   const router = useRouter();
   const [tab, setTab] = useState<TabId>('info');
 
@@ -170,7 +182,9 @@ export function LibroGameDetailView({ gameDetail }: LibroGameDetailViewProps): R
           aria-labelledby={`tab-${tab}`}
           className="py-4"
         >
-          {tab === 'info' && <InfoPanel detail={gameDetail} />}
+          {tab === 'info' && (
+            <InfoPanel detail={gameDetail} books={books} booksLoading={booksLoading} />
+          )}
           {tab === 'chat' && <PlaceholderPanel label="AI Chat" />}
           {tab === 'toolbox' && <PlaceholderPanel label="Toolbox" />}
           {tab === 'toolkit' && <PlaceholderPanel label="Toolkit" />}
@@ -256,7 +270,15 @@ function TabButton({
   );
 }
 
-function InfoPanel({ detail }: { detail: LibraryGameDetail }): ReactElement {
+function InfoPanel({
+  detail,
+  books,
+  booksLoading,
+}: {
+  detail: LibraryGameDetail;
+  books?: readonly GameBookDto[];
+  booksLoading?: boolean;
+}): ReactElement {
   return (
     <div className="grid gap-4">
       <div>
@@ -267,6 +289,15 @@ function InfoPanel({ detail }: { detail: LibraryGameDetail }): ReactElement {
           {detail.description ??
             `${detail.gameTitle} — campagna libro game. Avvia la modalità per setup tutorial, Q&A regole e traduzione storybook.`}
         </p>
+      </div>
+
+      {/* Libri — 1..N GameBook aggregate (SI-6 #2637); replaces the retired
+          hardcoded "Press Start + Rules" 2-PDF model. */}
+      <div>
+        <h2 className="mb-2 font-quicksand text-[15px] font-bold uppercase tracking-wide text-[#9a8870]">
+          Libri
+        </h2>
+        <GameBookList books={books ?? []} isLoading={booksLoading} />
       </div>
 
       {/* KB status row */}

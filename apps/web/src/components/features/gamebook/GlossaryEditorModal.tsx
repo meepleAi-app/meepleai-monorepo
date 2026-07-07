@@ -40,6 +40,12 @@ export interface GlossaryEditorModalProps {
   readonly onClose: () => void;
   /** Called after a successful PUT — parent decides whether to also close. */
   readonly onSaved?: (saved: GamebookGlossaryEntry) => void;
+  /**
+   * The game's GameBooks (SI-6 #2637), used to resolve each context's
+   * `bookId` to its human `displayName` instead of showing the raw UUID.
+   * When a context's book is absent the row falls back to the id.
+   */
+  readonly books?: readonly { readonly id: string; readonly displayName: string }[];
   /** Force layout for visual tests; auto-derived from viewport otherwise. */
   readonly forceLayout?: 'mobile' | 'desktop';
   /**
@@ -139,10 +145,12 @@ export function GlossaryEditorModal({
   onClose,
   onSaved,
   forceLayout,
+  books,
   _initialState,
 }: GlossaryEditorModalProps): ReactElement | null {
   const { t } = useTranslation();
   const upsert = useUpsertGlossary(campaignId);
+  const bookNameById = new Map((books ?? []).map(b => [b.id, b.displayName]));
   const titleId = useId();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [state, dispatch] = useReducer(modalReducer, entry, e => {
@@ -275,7 +283,7 @@ export function GlossaryEditorModal({
                     data-slot="glossary-context-book"
                     className="inline-flex w-fit items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
                   >
-                    📖 {ctx.bookId}
+                    📖 {bookNameById.get(ctx.bookId) ?? ctx.bookId}
                   </span>
                   <p className="text-sm text-foreground">
                     {ctx.definition ?? (

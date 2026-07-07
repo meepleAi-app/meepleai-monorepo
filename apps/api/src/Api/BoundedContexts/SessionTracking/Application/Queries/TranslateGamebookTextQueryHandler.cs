@@ -61,6 +61,8 @@ internal sealed class TranslateGamebookTextQueryHandler
         double? streamingLatencySec = null;
         long? promptTokens = null;
         long? completionTokens = null;
+        double? costUsd = null;          // #2752: captured from StreamChunk.Cost on the final chunk
+        string provider = "unknown";     // #2752: LLM provider that served the request
         int totalApplicableTerms = 0;
         int matchedTerms = 0;
 
@@ -112,6 +114,13 @@ internal sealed class TranslateGamebookTextQueryHandler
                         "gamebook.text.translate.cost campaign={CampaignId} tokens_in={In} tokens_out={Out}",
                         query.CampaignId, chunk.Usage.PromptTokens, chunk.Usage.CompletionTokens);
                 }
+                // #2752: cost + provider ride on StreamChunk.Cost (sibling of Usage), populated
+                // per-provider by OpenRouterLlmClient / DeepSeekLlmClient on the final chunk.
+                if (chunk.Cost is not null)
+                {
+                    costUsd = (double)chunk.Cost.TotalCost;
+                    provider = chunk.Cost.Provider;
+                }
             }
 
             var translatedIt = fullText.ToString().Trim();
@@ -157,14 +166,17 @@ internal sealed class TranslateGamebookTextQueryHandler
                 status = "cancelled";
             }
 
+            // #2752: cost_eur derived (USD x UsdToEurRate) inside the helper from StreamChunk.Cost,
+            // captured above. costUsd stays null when the provider does not report cost (or on a
+            // failed/cancelled stream) — the helper skips the EUR record then.
             MeepleAiMetrics.RecordGamebookTranslationRequest(
                 status: status,
                 latencyFullSeconds: stopwatch.Elapsed.TotalSeconds,
                 latencyStreamingSeconds: streamingLatencySec,
                 promptTokens: promptTokens,
                 completionTokens: completionTokens,
-                costUsd: null,
-                provider: "unknown",
+                costUsd: costUsd,
+                provider: provider,
                 sourceMethod: "manual");
 
             if (totalApplicableTerms > 0)

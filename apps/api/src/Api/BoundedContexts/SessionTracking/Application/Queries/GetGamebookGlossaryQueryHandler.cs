@@ -31,7 +31,9 @@ internal sealed class GetGamebookGlossaryQueryHandler
         var entries = await _glossary.ListByCampaignAsync(query.CampaignId, cancellationToken).ConfigureAwait(false);
 
         return entries
-            .Select(e => new GamebookGlossaryEntryDto(e.Id, e.TermEn, e.TermIt, e.Source.ToString(), e.UpdatedAt))
+            .Select(e => new GamebookGlossaryEntryDto(
+                e.Id, e.TermEn, e.TermIt, e.Source.ToString(), e.UpdatedAt,
+                e.Contexts.Select(c => new GlossaryContextDto(c.BookId, c.ParagraphRef, c.Definition)).ToList()))
             .ToList()
             .AsReadOnly();
     }

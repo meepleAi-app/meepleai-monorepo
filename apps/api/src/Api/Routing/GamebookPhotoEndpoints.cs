@@ -490,7 +490,7 @@ internal static class GamebookPhotoEndpoints
                 return Results.BadRequest(new { error = "termIt is required" });
 
             var dto = await mediator.Send(
-                new UpsertGlossaryEntryCommand(campaignId, entryId, body.TermEn, body.TermIt, userId),
+                new UpsertGlossaryEntryCommand(campaignId, entryId, body.TermEn, body.TermIt, userId, body.Contexts),
                 ct).ConfigureAwait(false);
 
             return Results.Ok(dto);
@@ -607,4 +607,11 @@ internal static class GamebookPhotoEndpoints
 }
 
 /// <summary>Request body for upserting a glossary entry.</summary>
-public sealed record UpsertGlossaryEntryRequest(string TermEn, string TermIt);
+/// <remarks>
+/// #2638 / SI-7: <c>Contexts</c> is optional — null leaves existing contexts unchanged,
+/// non-null replaces the full set (dedup by book + paragraph ref).
+/// </remarks>
+public sealed record UpsertGlossaryEntryRequest(
+    string TermEn,
+    string TermIt,
+    IReadOnlyList<GlossaryContextDto>? Contexts = null);

@@ -3,6 +3,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Domain.Exceptions;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
+using Api.BoundedContexts.SessionTracking.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 using MediatR;
 
@@ -48,7 +49,8 @@ internal sealed class UpsertGlossaryEntryCommandHandler
         if (existing is null)
         {
             entry = GamebookGlossaryEntry.Create(
-                cmd.CampaignId, cmd.TermEn, cmd.TermIt, GlossarySource.Manual, cmd.CallerUserId);
+                cmd.CampaignId, cmd.TermEn, cmd.TermIt, GlossarySource.Manual, cmd.CallerUserId,
+                contexts: cmd.Contexts?.Select(c => GlossaryContext.Create(c.BookId, c.ParagraphRef, c.Definition)));
             await _glossary.AddAsync(entry, cancellationToken).ConfigureAwait(false);
         }
         else
@@ -57,11 +59,22 @@ internal sealed class UpsertGlossaryEntryCommandHandler
                 throw new ConflictException("Entry does not belong to this campaign");
 
             existing.UpdateTermIt(cmd.TermIt, cmd.CallerUserId);
+
+            // #2638 / SI-7: null = leave existing contexts unchanged; non-null = full-set replace.
+            if (cmd.Contexts is not null)
+            {
+                existing.ReplaceContexts(
+                    cmd.Contexts.Select(c => GlossaryContext.Create(c.BookId, c.ParagraphRef, c.Definition)),
+                    cmd.CallerUserId);
+            }
+
             entry = existing;
         }
 
         await _glossary.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return new GamebookGlossaryEntryDto(entry.Id, entry.TermEn, entry.TermIt, entry.Source.ToString(), entry.UpdatedAt);
+        return new GamebookGlossaryEntryDto(
+            entry.Id, entry.TermEn, entry.TermIt, entry.Source.ToString(), entry.UpdatedAt,
+            entry.Contexts.Select(c => new GlossaryContextDto(c.BookId, c.ParagraphRef, c.Definition)).ToList());
     }
 }

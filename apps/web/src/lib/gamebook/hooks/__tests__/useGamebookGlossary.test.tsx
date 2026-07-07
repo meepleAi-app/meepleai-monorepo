@@ -22,6 +22,7 @@ const fakeEntry: glossaryApi.GamebookGlossaryEntry = {
   termIt: 'Drago',
   source: 'AutoBootstrap',
   updatedAt: '2026-05-07T10:00:00Z',
+  contexts: [],
 };
 
 function makeWrapper(qc: QueryClient) {

@@ -254,6 +254,47 @@ export function GlossaryEditorModal({
           </p>
         )}
 
+        {/* #2638 / SI-7: read-only multi-context list. Rendered only when the entry
+            carries provenance contexts (per-variant editing is a follow-up). */}
+        {entry.contexts.length > 0 && (
+          <section
+            data-slot="glossary-editor-contexts"
+            aria-label={t('gamebook.glossaryEditor.contexts.heading')}
+          >
+            <h3 className="text-sm font-semibold text-foreground">
+              {t('gamebook.glossaryEditor.contexts.heading')}
+            </h3>
+            <ul className="divide-y divide-border border-t border-border">
+              {entry.contexts.map((ctx, i) => (
+                <li
+                  key={`${ctx.bookId}-${ctx.paragraphRef ?? i}`}
+                  data-testid="glossary-context-row"
+                  className="flex flex-col gap-1 py-2"
+                >
+                  <span
+                    data-slot="glossary-context-book"
+                    className="inline-flex w-fit items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
+                  >
+                    📖 {ctx.bookId}
+                  </span>
+                  <p className="text-sm text-foreground">
+                    {ctx.definition ?? (
+                      <span className="italic text-muted-foreground">
+                        {t('gamebook.glossaryEditor.contexts.usaBase')}
+                      </span>
+                    )}
+                  </p>
+                  {ctx.paragraphRef && (
+                    <span className="text-xs text-muted-foreground">
+                      {t('gamebook.glossaryEditor.contexts.firstSeen', { ref: ctx.paragraphRef })}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {state.status === 'error' && (
           <div role="alert" data-testid="glossary-editor-error">
             <p>{t('gamebook.glossaryEditor.error.saveFailed')}</p>

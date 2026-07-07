@@ -1145,26 +1145,59 @@ jobs:
               --profile ai-essential --profile monitoring-essential \
               up -d --no-deps --force-recreate $SERVICES
 
-            # Health check via docker exec (port not exposed on host)
-            echo "⏳ Waiting for API health..."
-            for attempt in $(seq 1 20); do
-              if docker exec meepleai-api curl -sf http://localhost:8080/health > /dev/null 2>&1; then
-                echo "✅ API healthy after ~$((attempt*3))s"
+            # Health check via docker exec (port not exposed on host).
+            # #2655 — API cold-start can take several minutes (Quartz backlog) before /health
+            # reports overall Healthy; the previous 20×3s=60s loop gave up far too early. Postgres+
+            # Redis become Healthy well before that, so we poll the CORE deps (not the overall 2xx)
+            # for up to ~240s. `curl -s` (NOT `-sf`): -f discards the body on a 503 Degraded response
+            # and writes an EMPTY file, making json.load fail with a misleading JSONDecodeError; -s
+            # keeps the JSON body that ASP.NET serves even while Degraded.
+            #
+            # #1959 — the validator is written to a file first (heredoc, robust under appleboy/
+            # ssh-action quoting) and invoked as `python3 <file>`, avoiding both `python3 -c` argv
+            # breakage and a nested heredoc inside the poll loop.
+            cat > /tmp/check_health.py << 'PY'
+            import json, sys
+            try:
+                with open('/tmp/staging-health.json') as f:
+                    content = f.read().strip()
+                if not content:
+                    sys.exit(1)
+                d = json.loads(content)
+                checks = {c['name']: c['status'] for c in d.get('checks', [])}
+                sys.exit(0 if checks.get('postgres') == 'Healthy' and checks.get('redis') == 'Healthy' else 1)
+            except Exception:
+                sys.exit(1)
+            PY
+
+            echo "⏳ Waiting for API core deps (postgres+redis) Healthy — up to ~240s..."
+            health_ok=0
+            for attempt in $(seq 1 80); do
+              docker exec meepleai-api curl -s http://localhost:8080/health > /tmp/staging-health.json 2>/dev/null || true
+              if python3 /tmp/check_health.py; then
+                health_ok=1
+                echo "✅ API core deps (postgres+redis) healthy after ~$((attempt*3))s"
                 break
               fi
               sleep 3
             done
-            # #1959 — previously `... | python3 -c "<multi-line script>"` broke
-            # under appleboy/ssh-action quoting: argv arrived as `python3 -c`
-            # with `-c` interpreted as a file path (FileNotFoundError on
-            # /opt/meepleai/repo/infra/-c), yielding a spurious step failure
-            # despite the deploy succeeding. Heredoc avoids the quoting issue
-            # and is robust under SSH multi-line shell invocation.
-            docker exec meepleai-api curl -sf http://localhost:8080/health > /tmp/staging-health.json
+
+            if [ "$health_ok" -ne 1 ]; then
+              echo "::error::API did not report postgres+redis Healthy within ~240s"
+              echo "Last /health response:"
+              cat /tmp/staging-health.json 2>/dev/null || echo "(empty or missing)"
+              docker logs meepleai-api --tail 50 2>/dev/null || true
+              exit 1
+            fi
+
+            # Final assertion on the captured health JSON. Guard against an empty body for a clear
+            # message instead of a JSONDecodeError, then require postgres + redis Healthy.
             python3 << 'PY' || exit 1
             import json
             with open('/tmp/staging-health.json') as f:
-                d = json.load(f)
+                content = f.read().strip()
+            assert content, 'API /health returned an empty body (API not ready)'
+            d = json.loads(content)
             healthy = [c['name'] for c in d['checks'] if c['status']=='Healthy']
             print(f'Healthy services: {len(healthy)}')
             assert any(c['name']=='postgres' and c['status']=='Healthy' for c in d['checks']), 'postgres unhealthy'

@@ -166,7 +166,10 @@ internal sealed class TierEnforcementService : ITierEnforcementService
         }
         else
         {
-            tier = user.IsContributor ? "premium" : (user.Tier ?? "free");
+            // FE QuotaInfo.tier is a binary enum ('free' | 'premium'); collapse any paid tier
+            // (normal/pro/premium/enterprise) or contributor to "premium" so the Zod parse holds.
+            var resolved = user.IsContributor ? "premium" : (user.Tier ?? "free");
+            tier = string.Equals(resolved, "free", StringComparison.OrdinalIgnoreCase) ? "free" : "premium";
         }
 
         var limits = await GetLimitsAsync(userId, ct).ConfigureAwait(false);

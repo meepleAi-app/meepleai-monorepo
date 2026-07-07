@@ -14,6 +14,9 @@ internal sealed class AbandonGameSessionCommandValidator : AbstractValidator<Aba
         RuleFor(x => x.SessionId)
             .NotEmpty().WithMessage("Session ID is required");
 
+        RuleFor(x => x.RequesterId)
+            .NotEmpty().WithMessage("Requester ID is required");
+
         RuleFor(x => x.Reason)
             .MaximumLength(500).WithMessage("Reason must not exceed 500 characters")
             .When(x => x.Reason is not null);
@@ -31,6 +34,9 @@ internal sealed class CompleteGameSessionCommandValidator : AbstractValidator<Co
         RuleFor(x => x.SessionId)
             .NotEmpty().WithMessage("Session ID is required");
 
+        RuleFor(x => x.RequesterId)
+            .NotEmpty().WithMessage("Requester ID is required");
+
         RuleFor(x => x.WinnerName)
             .MaximumLength(200).WithMessage("Winner name must not exceed 200 characters")
             .When(x => x.WinnerName is not null);
@@ -47,6 +53,9 @@ internal sealed class EndGameSessionCommandValidator : AbstractValidator<EndGame
     {
         RuleFor(x => x.SessionId)
             .NotEmpty().WithMessage("Session ID is required");
+
+        RuleFor(x => x.RequesterId)
+            .NotEmpty().WithMessage("Requester ID is required");
 
         RuleFor(x => x.WinnerName)
             .MaximumLength(200).WithMessage("Winner name must not exceed 200 characters")

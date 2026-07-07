@@ -7,7 +7,11 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// Command to end (complete) a game session with optional winner.
 /// Business alias for CompleteGameSessionCommand.
 /// </summary>
+/// <param name="SessionId">Session to end.</param>
+/// <param name="RequesterId">Authenticated caller — must match the session creator (#2655 IDOR guard).</param>
+/// <param name="WinnerName">Optional winner name.</param>
 internal record EndGameSessionCommand(
     Guid SessionId,
+    Guid RequesterId,
     string? WinnerName = null
 ) : ICommand<GameSessionDto>;

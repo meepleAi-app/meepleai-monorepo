@@ -32,6 +32,12 @@ internal class ResumeGameSessionCommandHandler : ICommandHandler<ResumeGameSessi
         if (session == null)
             throw new NotFoundException("GameSession", command.SessionId.ToString());
 
+        // #2655 IDOR guard: only the session creator may resume it.
+        if (session.CreatedByUserId != command.RequesterId)
+        {
+            throw new ForbiddenException("Only the session creator can resume this session.");
+        }
+
         // Resume (domain method validates state transition)
         session.Resume();
 

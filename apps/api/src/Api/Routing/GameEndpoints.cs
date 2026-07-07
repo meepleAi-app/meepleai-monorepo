@@ -445,11 +445,19 @@ internal static class GameEndpoints
     private static async Task<IResult> HandleCompleteSession(
         Guid id,
         CompleteSessionRequest? request,
+        HttpContext httpContext,
         IMediator mediator,
                 CancellationToken ct)
     {
+        var userId = httpContext.User.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
         var command = new CompleteGameSessionCommand(
             SessionId: id,
+            RequesterId: userId,
             WinnerName: request?.WinnerName
         );
 
@@ -459,11 +467,19 @@ internal static class GameEndpoints
 
     private static async Task<IResult> HandleAbandonSession(
         Guid id,
+        HttpContext httpContext,
         IMediator mediator,
                 CancellationToken ct)
     {
+        var userId = httpContext.User.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
         var command = new AbandonGameSessionCommand(
             SessionId: id,
+            RequesterId: userId,
             Reason: null
         );
 
@@ -473,10 +489,17 @@ internal static class GameEndpoints
 
     private static async Task<IResult> HandlePauseSession(
         Guid id,
+        HttpContext httpContext,
         IMediator mediator,
                 CancellationToken ct)
     {
-        var command = new PauseGameSessionCommand(SessionId: id);
+        var userId = httpContext.User.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
+        var command = new PauseGameSessionCommand(SessionId: id, RequesterId: userId);
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
         return Results.Ok(result);
@@ -484,10 +507,17 @@ internal static class GameEndpoints
 
     private static async Task<IResult> HandleResumeSession(
         Guid id,
+        HttpContext httpContext,
         IMediator mediator,
                 CancellationToken ct)
     {
-        var command = new ResumeGameSessionCommand(SessionId: id);
+        var userId = httpContext.User.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
+        var command = new ResumeGameSessionCommand(SessionId: id, RequesterId: userId);
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
         return Results.Ok(result);
@@ -496,11 +526,19 @@ internal static class GameEndpoints
     private static async Task<IResult> HandleEndSession(
         Guid id,
         CompleteSessionRequest? request,
+        HttpContext httpContext,
         IMediator mediator,
                 CancellationToken ct)
     {
+        var userId = httpContext.User.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
         var command = new EndGameSessionCommand(
             SessionId: id,
+            RequesterId: userId,
             WinnerName: request?.WinnerName
         );
 

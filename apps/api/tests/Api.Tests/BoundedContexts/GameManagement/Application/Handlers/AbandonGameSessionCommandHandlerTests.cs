@@ -47,6 +47,7 @@ public class AbandonGameSessionCommandHandlerTests
 
         var command = new AbandonGameSessionCommand(
             SessionId: sessionId,
+            RequesterId: GameSessionBuilder.DefaultCreatedByUserId,
             Reason: "Players had to leave");
 
         // Act
@@ -82,6 +83,7 @@ public class AbandonGameSessionCommandHandlerTests
 
         var command = new AbandonGameSessionCommand(
             SessionId: sessionId,
+            RequesterId: GameSessionBuilder.DefaultCreatedByUserId,
             Reason: "Emergency came up");
 
         // Act
@@ -108,6 +110,7 @@ public class AbandonGameSessionCommandHandlerTests
 
         var command = new AbandonGameSessionCommand(
             SessionId: sessionId,
+            RequesterId: GameSessionBuilder.DefaultCreatedByUserId,
             Reason: null);
 
         // Act
@@ -136,6 +139,7 @@ public class AbandonGameSessionCommandHandlerTests
 
         var command = new AbandonGameSessionCommand(
             SessionId: sessionId,
+            RequesterId: GameSessionBuilder.DefaultCreatedByUserId,
             Reason: "Power outage");
 
         // Act
@@ -165,6 +169,7 @@ public class AbandonGameSessionCommandHandlerTests
 
         var command = new AbandonGameSessionCommand(
             SessionId: sessionId,
+            RequesterId: GameSessionBuilder.DefaultCreatedByUserId,
             Reason: "Never resumed");
 
         // Act
@@ -189,6 +194,7 @@ public class AbandonGameSessionCommandHandlerTests
 
         var command = new AbandonGameSessionCommand(
             SessionId: sessionId,
+            RequesterId: GameSessionBuilder.DefaultCreatedByUserId,
             Reason: "Not enough players showed up");
 
         // Act
@@ -216,6 +222,7 @@ public class AbandonGameSessionCommandHandlerTests
 
         var command = new AbandonGameSessionCommand(
             SessionId: sessionId,
+            RequesterId: GameSessionBuilder.DefaultCreatedByUserId,
             Reason: "Game took too long");
 
         // Act
@@ -237,6 +244,7 @@ public class AbandonGameSessionCommandHandlerTests
 
         var command = new AbandonGameSessionCommand(
             SessionId: sessionId,
+            RequesterId: GameSessionBuilder.DefaultCreatedByUserId,
             Reason: "Test");
 
         // Act & Assert
@@ -268,6 +276,7 @@ public class AbandonGameSessionCommandHandlerTests
 
         var command = new AbandonGameSessionCommand(
             SessionId: sessionId,
+            RequesterId: GameSessionBuilder.DefaultCreatedByUserId,
             Reason: "Too late");
 
         // Act & Assert
@@ -296,6 +305,7 @@ public class AbandonGameSessionCommandHandlerTests
 
         var command = new AbandonGameSessionCommand(
             SessionId: sessionId,
+            RequesterId: GameSessionBuilder.DefaultCreatedByUserId,
             Reason: "Second reason");
 
         // Act & Assert
@@ -322,6 +332,7 @@ public class AbandonGameSessionCommandHandlerTests
 
         var command = new AbandonGameSessionCommand(
             SessionId: sessionId,
+            RequesterId: GameSessionBuilder.DefaultCreatedByUserId,
             Reason: "");
 
         // Act
@@ -353,6 +364,7 @@ public class AbandonGameSessionCommandHandlerTests
 
         var command = new AbandonGameSessionCommand(
             SessionId: sessionId,
+            RequesterId: GameSessionBuilder.DefaultCreatedByUserId,
             Reason: "Test abandon");
 
         // Act
@@ -385,6 +397,7 @@ public class AbandonGameSessionCommandHandlerTests
 
         var command = new AbandonGameSessionCommand(
             SessionId: sessionId,
+            RequesterId: GameSessionBuilder.DefaultCreatedByUserId,
             Reason: "Test");
 
         // Act
@@ -413,6 +426,7 @@ public class AbandonGameSessionCommandHandlerTests
 
         var command = new AbandonGameSessionCommand(
             SessionId: sessionId,
+            RequesterId: GameSessionBuilder.DefaultCreatedByUserId,
             Reason: "Test");
 
         using var cts = new CancellationTokenSource();
@@ -431,6 +445,34 @@ public class AbandonGameSessionCommandHandlerTests
         _unitOfWorkMock.Verify(
             u => u.SaveChangesAsync(cancellationToken),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenRequesterIsNotOwner_ThrowsForbiddenException()
+    {
+        // Arrange — #2655 IDOR fix: only the session creator may abandon it.
+        var sessionId = Guid.NewGuid();
+        var session = new GameSessionBuilder()
+            .WithId(sessionId)
+            .WithCreatedByUserId(GameSessionBuilder.DefaultCreatedByUserId)
+            .ThatIsStarted()
+            .Build();
+
+        _sessionRepositoryMock
+            .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var command = new AbandonGameSessionCommand(
+            SessionId: sessionId,
+            RequesterId: Guid.NewGuid(), // attacker, not the owner
+            Reason: "malicious abandon");
+
+        // Act & Assert
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ForbiddenException>();
+
+        _sessionRepositoryMock.Verify(r => r.UpdateAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 }
 

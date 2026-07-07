@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Moq;
@@ -44,7 +45,7 @@ public class PauseGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new PauseGameSessionCommand(SessionId: sessionId);
+        var command = new PauseGameSessionCommand(SessionId: sessionId, RequesterId: GameSessionBuilder.DefaultCreatedByUserId);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -77,7 +78,7 @@ public class PauseGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new PauseGameSessionCommand(SessionId: sessionId);
+        var command = new PauseGameSessionCommand(SessionId: sessionId, RequesterId: GameSessionBuilder.DefaultCreatedByUserId);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -104,7 +105,7 @@ public class PauseGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new PauseGameSessionCommand(SessionId: sessionId);
+        var command = new PauseGameSessionCommand(SessionId: sessionId, RequesterId: GameSessionBuilder.DefaultCreatedByUserId);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -129,7 +130,7 @@ public class PauseGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new PauseGameSessionCommand(SessionId: sessionId);
+        var command = new PauseGameSessionCommand(SessionId: sessionId, RequesterId: GameSessionBuilder.DefaultCreatedByUserId);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -139,7 +140,7 @@ public class PauseGameSessionCommandHandlerTests
         result.Notes.Should().Contain("Game is going well!");
     }
     [Fact]
-    public async Task Handle_NonExistentSession_ThrowsInvalidOperationException()
+    public async Task Handle_NonExistentSession_ThrowsNotFoundException()
     {
         // Arrange
         var sessionId = Guid.NewGuid();
@@ -148,14 +149,14 @@ public class PauseGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((GameSession?)null);
 
-        var command = new PauseGameSessionCommand(SessionId: sessionId);
+        var command = new PauseGameSessionCommand(SessionId: sessionId, RequesterId: GameSessionBuilder.DefaultCreatedByUserId);
 
-        // Act & Assert
+        // Act & Assert — #2568: missing resource must be 404 (NotFoundException), not 500.
         var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
-        exception.Message.Should().ContainEquivalentOf($"Session with ID {sessionId} not found");
+        exception.Message.Should().ContainEquivalentOf(sessionId.ToString());
 
         // Verify save was NOT called
         _unitOfWorkMock.Verify(
@@ -176,7 +177,7 @@ public class PauseGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new PauseGameSessionCommand(SessionId: sessionId);
+        var command = new PauseGameSessionCommand(SessionId: sessionId, RequesterId: GameSessionBuilder.DefaultCreatedByUserId);
 
         // Act & Assert
         var act =
@@ -205,7 +206,7 @@ public class PauseGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new PauseGameSessionCommand(SessionId: sessionId);
+        var command = new PauseGameSessionCommand(SessionId: sessionId, RequesterId: GameSessionBuilder.DefaultCreatedByUserId);
 
         // Act & Assert
         var act =
@@ -232,7 +233,7 @@ public class PauseGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new PauseGameSessionCommand(SessionId: sessionId);
+        var command = new PauseGameSessionCommand(SessionId: sessionId, RequesterId: GameSessionBuilder.DefaultCreatedByUserId);
 
         // Act & Assert
         var act =
@@ -260,7 +261,7 @@ public class PauseGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new PauseGameSessionCommand(SessionId: sessionId);
+        var command = new PauseGameSessionCommand(SessionId: sessionId, RequesterId: GameSessionBuilder.DefaultCreatedByUserId);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -287,7 +288,7 @@ public class PauseGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new PauseGameSessionCommand(SessionId: sessionId);
+        var command = new PauseGameSessionCommand(SessionId: sessionId, RequesterId: GameSessionBuilder.DefaultCreatedByUserId);
 
         using var cts = new CancellationTokenSource();
         var cancellationToken = cts.Token;
@@ -305,6 +306,31 @@ public class PauseGameSessionCommandHandlerTests
         _unitOfWorkMock.Verify(
             u => u.SaveChangesAsync(cancellationToken),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenRequesterIsNotOwner_ThrowsForbiddenException()
+    {
+        // Arrange — #2655 IDOR fix: only the session creator may pause it.
+        var sessionId = Guid.NewGuid();
+        var session = new GameSessionBuilder()
+            .WithId(sessionId)
+            .WithCreatedByUserId(GameSessionBuilder.DefaultCreatedByUserId)
+            .ThatIsStarted()
+            .Build();
+
+        _sessionRepositoryMock
+            .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var command = new PauseGameSessionCommand(SessionId: sessionId, RequesterId: Guid.NewGuid());
+
+        // Act & Assert
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ForbiddenException>();
+
+        _sessionRepositoryMock.Verify(r => r.UpdateAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 }
 

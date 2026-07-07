@@ -36,16 +36,19 @@ import { GlossaryEditorModal } from '../GlossaryEditorModal';
 
 // react-intl wants dot-notation flat keys; the locale catalogue is nested.
 function flatten(obj: Record<string, unknown>, prefix = ''): Record<string, string> {
-  return Object.keys(obj).reduce((acc, key) => {
-    const full = prefix ? `${prefix}.${key}` : key;
-    const value = obj[key];
-    if (value && typeof value === 'object') {
-      Object.assign(acc, flatten(value as Record<string, unknown>, full));
-    } else {
-      acc[full] = String(value);
-    }
-    return acc;
-  }, {} as Record<string, string>);
+  return Object.keys(obj).reduce(
+    (acc, key) => {
+      const full = prefix ? `${prefix}.${key}` : key;
+      const value = obj[key];
+      if (value && typeof value === 'object') {
+        Object.assign(acc, flatten(value as Record<string, unknown>, full));
+      } else {
+        acc[full] = String(value);
+      }
+      return acc;
+    },
+    {} as Record<string, string>
+  );
 }
 
 const FLAT_EN = flatten(enMessages as Record<string, unknown>);
@@ -93,6 +96,18 @@ const ENTRY: GamebookGlossaryEntry = {
   termIt: 'Pietra del Vuoto',
   source: 'AutoBootstrap',
   updatedAt: '2026-05-01T12:00:00Z',
+  contexts: [],
+};
+
+// #2638 / SI-7 — entry carrying two provenance contexts (one without a definition).
+const BOOK_A = '11111111-1111-4111-8111-111111111111';
+const BOOK_B = '22222222-2222-4222-8222-222222222222';
+const ENTRY_WITH_CONTEXTS: GamebookGlossaryEntry = {
+  ...ENTRY,
+  contexts: [
+    { bookId: BOOK_A, paragraphRef: '§147', definition: null },
+    { bookId: BOOK_B, paragraphRef: '§63', definition: 'punto di osservazione strategica' },
+  ],
 };
 
 beforeEach(() => {
@@ -110,13 +125,7 @@ afterEach(() => {
 
 describe('AC-1 — Pristine mount', () => {
   it('mounts with EN locked, IT prefilled, Salva button disabled', () => {
-    renderModal(
-      <GlossaryEditorModal
-        campaignId={CAMPAIGN_ID}
-        entry={ENTRY}
-        onClose={() => {}}
-      />
-    );
+    renderModal(<GlossaryEditorModal campaignId={CAMPAIGN_ID} entry={ENTRY} onClose={() => {}} />);
 
     // EN rendered as locked / read-only text (not in an editable input).
     expect(screen.getByText('Voidstone')).toBeInTheDocument();
@@ -138,13 +147,7 @@ describe('AC-1 — Pristine mount', () => {
 describe('AC-2 — Dirty edit + diff hint', () => {
   it('enables Salva and renders the diff hint with the previous value struck through', async () => {
     const user = userEvent.setup();
-    renderModal(
-      <GlossaryEditorModal
-        campaignId={CAMPAIGN_ID}
-        entry={ENTRY}
-        onClose={() => {}}
-      />
-    );
+    renderModal(<GlossaryEditorModal campaignId={CAMPAIGN_ID} entry={ENTRY} onClose={() => {}} />);
 
     const itInput = screen.getByRole('textbox', { name: /italian translation/i });
     await user.clear(itInput);
@@ -279,13 +282,7 @@ describe('AC-3b — Dismiss flows', () => {
 
 describe('AC-8 — Accessibility', () => {
   it('exposes role="dialog" + aria-modal + aria-labelledby pointing to the header', () => {
-    renderModal(
-      <GlossaryEditorModal
-        campaignId={CAMPAIGN_ID}
-        entry={ENTRY}
-        onClose={() => {}}
-      />
-    );
+    renderModal(<GlossaryEditorModal campaignId={CAMPAIGN_ID} entry={ENTRY} onClose={() => {}} />);
 
     const dialog = screen.getByRole('dialog');
     expect(dialog).toHaveAttribute('aria-modal', 'true');
@@ -298,13 +295,7 @@ describe('AC-8 — Accessibility', () => {
   });
 
   it('moves focus to the IT input on mount (not the close button)', async () => {
-    renderModal(
-      <GlossaryEditorModal
-        campaignId={CAMPAIGN_ID}
-        entry={ENTRY}
-        onClose={() => {}}
-      />
-    );
+    renderModal(<GlossaryEditorModal campaignId={CAMPAIGN_ID} entry={ENTRY} onClose={() => {}} />);
 
     const itInput = screen.getByRole('textbox', { name: /italian translation/i });
     await waitFor(() => {
@@ -479,13 +470,7 @@ describe('#1312 AC-5 — [Change translation] returns focus to input without res
       )
     );
 
-    renderModal(
-      <GlossaryEditorModal
-        campaignId={CAMPAIGN_ID}
-        entry={ENTRY}
-        onClose={() => {}}
-      />
-    );
+    renderModal(<GlossaryEditorModal campaignId={CAMPAIGN_ID} entry={ENTRY} onClose={() => {}} />);
 
     const itInput = screen.getByRole('textbox', { name: /italian translation/i });
     await user.clear(itInput);
@@ -620,14 +605,9 @@ describe('#1312 AC-7 — axe finds zero violations on collision states', () => {
 
 describe('AC-9 — i18n integration', () => {
   it('renders Italian labels when locale is "it" and preserves the entity literals', () => {
-    renderModal(
-      <GlossaryEditorModal
-        campaignId={CAMPAIGN_ID}
-        entry={ENTRY}
-        onClose={() => {}}
-      />,
-      { locale: 'it' }
-    );
+    renderModal(<GlossaryEditorModal campaignId={CAMPAIGN_ID} entry={ENTRY} onClose={() => {}} />, {
+      locale: 'it',
+    });
 
     // Italian dialog title from the it.json catalogue (not the en fallback).
     expect(screen.getByText('Modifica voce di glossario')).toBeInTheDocument();
@@ -637,9 +617,44 @@ describe('AC-9 — i18n integration', () => {
 
     // Entity literals are injected via props, not translated.
     expect(screen.getByText('Voidstone')).toBeInTheDocument();
-    expect(
-      screen.getByRole('textbox', { name: /traduzione italiana/i })
-    ).toHaveValue('Pietra del Vuoto');
+    expect(screen.getByRole('textbox', { name: /traduzione italiana/i })).toHaveValue(
+      'Pietra del Vuoto'
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #2638 / SI-7 — multi-context read-only render
+// ---------------------------------------------------------------------------
+
+describe('#2638 SI-7 — multi-context render', () => {
+  it('renders one row per context with book badge, base fallback, and firstSeen ref', () => {
+    renderModal(
+      <GlossaryEditorModal
+        campaignId={CAMPAIGN_ID}
+        entry={ENTRY_WITH_CONTEXTS}
+        onClose={() => {}}
+      />
+    );
+
+    const rows = screen.getAllByTestId('glossary-context-row');
+    expect(rows).toHaveLength(2);
+
+    // First context: book badge (bookId), null definition → "uses base", firstSeen ref.
+    expect(rows[0]).toHaveTextContent(BOOK_A);
+    expect(rows[0]).toHaveTextContent(/uses base/i);
+    expect(rows[0]).toHaveTextContent('§147');
+
+    // Second context: concrete definition rendered literally + its own ref.
+    expect(rows[1]).toHaveTextContent(BOOK_B);
+    expect(rows[1]).toHaveTextContent('punto di osservazione strategica');
+    expect(rows[1]).toHaveTextContent('§63');
+  });
+
+  it('does NOT render the contexts section when the entry has no contexts', () => {
+    renderModal(<GlossaryEditorModal campaignId={CAMPAIGN_ID} entry={ENTRY} onClose={() => {}} />);
+
+    expect(screen.queryByTestId('glossary-context-row')).not.toBeInTheDocument();
   });
 });
 

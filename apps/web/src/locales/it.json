@@ -3707,6 +3707,12 @@
         "overwrite": "Sovrascrivi",
         "changeTranslation": "Cambia traduzione",
         "sidePanelLabel": "Voce in conflitto"
+      },
+      "contexts": {
+        "heading": "Appare in",
+        "usaBase": "usa base",
+        "firstSeen": "Vedi paragrafo originale {ref}",
+        "deleteVariant": "Elimina variante {book}"
       }
     },
     "encounter": {

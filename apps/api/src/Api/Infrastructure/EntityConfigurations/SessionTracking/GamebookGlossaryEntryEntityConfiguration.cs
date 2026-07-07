@@ -24,6 +24,9 @@ internal class GamebookGlossaryEntryEntityConfiguration : IEntityTypeConfigurati
         builder.Property(e => e.TermIt).HasColumnName("term_it").HasMaxLength(200).IsRequired();
         builder.Property(e => e.Source).HasColumnName("source").IsRequired();
         builder.Property(e => e.FirstSeenBookId).HasColumnName("first_seen_book_id");
+        // #2638 / SI-7: multi-context list persisted as a JSONB array (default "[]").
+        builder.Property(e => e.ContextsJson).HasColumnName("contexts").HasColumnType("jsonb").IsRequired().HasDefaultValue("[]");
+        builder.Ignore(e => e.Contexts);
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
         builder.Property(e => e.UpdatedAt).HasColumnName("updated_at").IsRequired();
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").IsRequired();

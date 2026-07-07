@@ -3654,6 +3654,12 @@
         "overwrite": "Overwrite",
         "changeTranslation": "Change translation",
         "sidePanelLabel": "Conflicting entry"
+      },
+      "contexts": {
+        "heading": "Appears in",
+        "usaBase": "uses base",
+        "firstSeen": "See original paragraph {ref}",
+        "deleteVariant": "Delete variant {book}"
       }
     },
     "encounter": {

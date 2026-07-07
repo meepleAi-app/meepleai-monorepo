@@ -85,7 +85,8 @@ internal sealed class BootstrapGamebookGlossaryCommandHandler
     }
 
     private static GamebookGlossaryEntryDto MapToDto(GamebookGlossaryEntry e) => new(
-        e.Id, e.TermEn, e.TermIt, e.Source.ToString(), e.UpdatedAt);
+        e.Id, e.TermEn, e.TermIt, e.Source.ToString(), e.UpdatedAt,
+        e.Contexts.Select(c => new GlossaryContextDto(c.BookId, c.ParagraphRef, c.Definition)).ToList());
 
     private sealed record BootstrapResult(IReadOnlyList<BootstrapEntry> Entries);
     private sealed record BootstrapEntry(string En, string It);

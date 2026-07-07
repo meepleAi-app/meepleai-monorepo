@@ -62,6 +62,15 @@ export const MOCK_GLOSSARY_ENTRY_GE: GamebookGlossaryEntry = {
   termIt: 'soldato di guardia',
   source: 'AutoBootstrap',
   updatedAt: '2026-06-22T20:00:00Z',
+  // #2638 / SI-7: two provenance contexts mirroring the variant-expansion mockup.
+  contexts: [
+    { bookId: '11111111-1111-4111-8111-111111111111', paragraphRef: '§147', definition: null },
+    {
+      bookId: '22222222-2222-4222-8222-222222222222',
+      paragraphRef: '§63',
+      definition: 'punto di osservazione strategica',
+    },
+  ],
 };
 
 // ---------------------------------------------------------------------------

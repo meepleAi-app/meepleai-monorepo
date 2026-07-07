@@ -127,6 +127,47 @@ public sealed class SessionTrackingNoTrackingPersistenceTests : IAsyncLifetime
         }
     }
 
+    [Fact(DisplayName = "#2734: GamebookCampaignSession.SoftDelete persists IsDeleted through the getter (data-integrity: HasQueryFilter)")]
+    public async Task SoftDeleteGamebookCampaign_PersistsIsDeleted()
+    {
+        Guid campaignId;
+        Guid ownerId;
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var repo = scope.ServiceProvider.GetRequiredService<IGamebookCampaignSessionRepository>();
+
+            (ownerId, _) = await TestSessionHelper.CreateUserSessionAsync(db);
+            var session = GamebookCampaignSession.Create(GameRef.Shared(Guid.NewGuid()), ownerId, "Doomed Campaign");
+            await repo.AddAsync(session, CancellationToken.None);
+            await repo.SaveChangesAsync(CancellationToken.None);
+            campaignId = session.Id;
+        }
+
+        // Replicates DeleteGamebookCampaignHandler: load via getter, SoftDelete(), save.
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var repo = scope.ServiceProvider.GetRequiredService<IGamebookCampaignSessionRepository>();
+
+            var session = await repo.GetByIdAsync(campaignId, CancellationToken.None);
+            session!.SoftDelete(ownerId);
+            await repo.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            // IgnoreQueryFilters(): the global HasQueryFilter(e => !e.IsDeleted) would otherwise
+            // hide the row. Assert the column actually flipped — a NoTracking no-op would leave
+            // is_deleted=false, leaving the "deleted" campaign visible forever (data-integrity bug).
+            var entity = await db.GamebookCampaignSessions.IgnoreQueryFilters().AsNoTracking()
+                .FirstAsync(x => x.Id == campaignId);
+            entity.IsDeleted.Should().BeTrue(
+                "GetByIdAsync must load .AsTracking() so SoftDelete() flips is_deleted (#2734 — HasQueryFilter makes this a data-integrity bug)");
+            entity.DeletedAt.Should().NotBeNull();
+        }
+    }
+
     [Fact(DisplayName = "#2734: ToolkitSessionState.UpdateWidgetState persists the widget state (update path) through the getter")]
     public async Task UpdateWidgetState_PersistsWidgetStates()
     {

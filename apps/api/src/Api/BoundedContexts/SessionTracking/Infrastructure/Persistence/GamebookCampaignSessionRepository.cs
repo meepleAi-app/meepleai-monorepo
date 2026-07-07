@@ -12,11 +12,15 @@ internal sealed class GamebookCampaignSessionRepository : IGamebookCampaignSessi
     public GamebookCampaignSessionRepository(MeepleAiDbContext db) => _db = db;
 
     // #2734: the DbContext default is QueryTrackingBehavior.NoTracking (PERF-06). This getter
-    // feeds RenameGamebookCampaignHandler (Rename()) and UpdateGamebookProgressHandler (Touch()),
-    // which mutate the returned aggregate and rely on SaveChangesAsync to persist it. Without
-    // .AsTracking() the entity is untracked and every scalar mutation is a silent no-op.
-    // Tracking a single FirstOrDefault entity is negligible and side-effect-free for the
-    // read-only callers (e.g. CampaignOwnershipGuard), which never mutate it.
+    // feeds every write path on the campaign aggregate — RenameGamebookCampaignHandler (Rename),
+    // UpdateGamebookProgressHandler + TranslateGamebookSegmentQueryHandler (Touch), and
+    // DeleteGamebookCampaignHandler (SoftDelete) — which mutate the returned aggregate and rely on
+    // SaveChangesAsync to persist it. Without .AsTracking() the entity is untracked and every
+    // mutation is a silent no-op. The SoftDelete no-op is especially dangerous: HasQueryFilter
+    // (!IsDeleted) only hides the row once is_deleted actually flips, so a "deleted" campaign
+    // stays visible forever. Tracking a single FirstOrDefault entity is negligible and
+    // side-effect-free for the read-only callers (e.g. CampaignOwnershipGuard,
+    // GetGamebookCampaignHandler), which never mutate it.
     public Task<GamebookCampaignSession?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => _db.GamebookCampaignSessions.AsTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
 

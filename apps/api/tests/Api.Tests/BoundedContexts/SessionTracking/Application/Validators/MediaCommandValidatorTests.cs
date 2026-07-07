@@ -168,7 +168,7 @@ public class UpdateMediaCaptionCommandValidatorTests
     }
 
     [Fact]
-    public void Validate_EmptyParticipantId_ShouldFail()
+    public void Validate_EmptyRequesterUserId_ShouldFail()
     {
         var cmd = new UpdateMediaCaptionCommand(Guid.NewGuid(), Guid.Empty, "Caption");
         var result = _validator.Validate(cmd);
@@ -207,7 +207,7 @@ public class DeleteSessionMediaCommandValidatorTests
     }
 
     [Fact]
-    public void Validate_EmptyParticipantId_ShouldFail()
+    public void Validate_EmptyRequesterUserId_ShouldFail()
     {
         var cmd = new DeleteSessionMediaCommand(Guid.NewGuid(), Guid.Empty);
         var result = _validator.Validate(cmd);

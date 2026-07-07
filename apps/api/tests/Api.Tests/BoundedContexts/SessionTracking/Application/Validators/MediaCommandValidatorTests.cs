@@ -168,7 +168,7 @@ public class UpdateMediaCaptionCommandValidatorTests
     }
 
     [Fact]
-    public void Validate_EmptyParticipantId_ShouldFail()
+    public void Validate_EmptyRequesterUserId_ShouldFail()
     {
         var cmd = new UpdateMediaCaptionCommand(Guid.NewGuid(), Guid.Empty, "Caption");
         var result = _validator.Validate(cmd);

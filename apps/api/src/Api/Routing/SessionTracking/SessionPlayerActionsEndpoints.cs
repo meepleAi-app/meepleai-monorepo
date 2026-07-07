@@ -492,6 +492,7 @@ internal static class SessionPlayerActionsEndpoints
             Guid sessionId,
             Guid mediaId,
             UpdateMediaCaptionCommand command,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
@@ -500,7 +501,15 @@ internal static class SessionPlayerActionsEndpoints
                 return Results.BadRequest(new { error = "Media ID mismatch" });
             }
 
-            await mediator.Send(command, ct).ConfigureAwait(false);
+            // #2655: the owning participant is resolved server-side from the
+            // authenticated user; any client-supplied RequesterUserId is overridden.
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            await mediator.Send(command with { RequesterUserId = userId }, ct).ConfigureAwait(false);
             return Results.NoContent();
         })
         .RequireAuthenticatedUser()

@@ -26,7 +26,7 @@ public class UpdateMediaCaptionCommandValidator : AbstractValidator<UpdateMediaC
     public UpdateMediaCaptionCommandValidator()
     {
         RuleFor(x => x.MediaId).NotEmpty();
-        RuleFor(x => x.ParticipantId).NotEmpty();
+        RuleFor(x => x.RequesterUserId).NotEmpty();
         RuleFor(x => x.Caption).MaximumLength(500).When(x => x.Caption != null);
     }
 }

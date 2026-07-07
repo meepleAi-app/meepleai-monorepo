@@ -71,10 +71,14 @@ public class UploadSessionMediaCommandHandler : IRequestHandler<UploadSessionMed
 public class UpdateMediaCaptionCommandHandler : IRequestHandler<UpdateMediaCaptionCommand, Unit>
 {
     private readonly ISessionMediaRepository _mediaRepository;
+    private readonly ISessionRepository _sessionRepository;
 
-    public UpdateMediaCaptionCommandHandler(ISessionMediaRepository mediaRepository)
+    public UpdateMediaCaptionCommandHandler(
+        ISessionMediaRepository mediaRepository,
+        ISessionRepository sessionRepository)
     {
         _mediaRepository = mediaRepository;
+        _sessionRepository = sessionRepository;
     }
 
     public async Task<Unit> Handle(UpdateMediaCaptionCommand request, CancellationToken cancellationToken)
@@ -82,7 +86,12 @@ public class UpdateMediaCaptionCommandHandler : IRequestHandler<UpdateMediaCapti
         var media = await _mediaRepository.GetByIdAsync(request.MediaId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Media {request.MediaId} not found");
 
-        if (media.ParticipantId != request.ParticipantId)
+        // #2655 IDOR guard: resolve the owning participant server-side from the
+        // authenticated caller — never trust a client-supplied participant id.
+        var session = await _sessionRepository.GetByIdAsync(media.SessionId, cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException($"Session {media.SessionId} not found");
+        var owner = session.Participants.FirstOrDefault(p => p.Id == media.ParticipantId);
+        if (owner is null || owner.UserId != request.RequesterUserId)
             throw new ForbiddenException("Only the media owner can update the caption.");
 
         media.UpdateCaption(request.Caption);

@@ -16,6 +16,10 @@ internal sealed class UpdateGroupPreferencesCommandValidator : AbstractValidator
             .NotEmpty()
             .WithMessage("Group ID is required");
 
+        RuleFor(x => x.RequesterId)
+            .NotEmpty()
+            .WithMessage("Requester ID is required");
+
         RuleFor(x => x.PreferredComplexity)
             .Must(c => c == null || ValidComplexities.Contains(c, StringComparer.OrdinalIgnoreCase))
             .WithMessage("Preferred complexity must be Light, Medium, or Heavy");

@@ -152,9 +152,16 @@ internal static class AgentMemoryEndpoints
     private static async Task<IResult> HandleGetGroup(
         Guid groupId,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var result = await mediator.Send(new GetGroupMemoryQuery(groupId), cancellationToken).ConfigureAwait(false);
+        var userId = httpContext.User.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
+        var result = await mediator.Send(new GetGroupMemoryQuery(groupId, userId), cancellationToken).ConfigureAwait(false);
         return result is null ? Results.NotFound() : Results.Ok(result);
     }
 
@@ -162,10 +169,17 @@ internal static class AgentMemoryEndpoints
         Guid groupId,
         [FromBody] UpdatePreferencesRequest request,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
+        var userId = httpContext.User.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
         var command = new UpdateGroupPreferencesCommand(
-            groupId, request.MaxDuration, request.PreferredComplexity, request.CustomNotes);
+            groupId, userId, request.MaxDuration, request.PreferredComplexity, request.CustomNotes);
 
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.NoContent();

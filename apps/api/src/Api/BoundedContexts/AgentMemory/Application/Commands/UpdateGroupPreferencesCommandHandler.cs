@@ -46,6 +46,12 @@ internal sealed class UpdateGroupPreferencesCommandHandler : ICommandHandler<Upd
         var group = await _groupRepo.GetByIdAsync(command.GroupId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Group memory {command.GroupId} not found");
 
+        // #2655 IDOR guard: only the creator or a member may change preferences.
+        if (!group.IsMemberOrCreator(command.RequesterId))
+        {
+            throw new ForbiddenException("Only a group member can update its preferences.");
+        }
+
         PreferredComplexity? complexity = command.PreferredComplexity != null
             ? Enum.Parse<PreferredComplexity>(command.PreferredComplexity, ignoreCase: true)
             : null;

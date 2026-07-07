@@ -66,6 +66,16 @@ internal sealed class GroupMemory : AggregateRoot<Guid>
         });
     }
 
+    /// <summary>
+    /// Returns true when <paramref name="userId"/> is the group creator or a
+    /// registered member. Used to authorize read/mutate access to the group
+    /// (#2655 IDOR guard). The creator is normally also added as a member, but
+    /// the explicit CreatorId check keeps this robust for legacy rows.
+    /// </summary>
+    public bool IsMemberOrCreator(Guid userId) =>
+        userId != Guid.Empty
+        && (CreatorId == userId || _members.Any(m => m.UserId == userId));
+
     public void UpdatePreferences(GroupPreferences preferences)
     {
         Preferences = preferences ?? throw new ArgumentNullException(nameof(preferences));

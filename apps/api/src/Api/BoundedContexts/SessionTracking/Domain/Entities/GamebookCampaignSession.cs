@@ -1,3 +1,5 @@
+using Api.BoundedContexts.SessionTracking.Domain.Enums;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.ValueObjects;
 
 namespace Api.BoundedContexts.SessionTracking.Domain.Entities;
@@ -14,6 +16,17 @@ public sealed class GamebookCampaignSession
     public Guid? UpdatedBy { get; private set; }
     public bool IsDeleted { get; private set; }
     public DateTimeOffset? DeletedAt { get; private set; }
+
+    // SI-8 (#2639): manual terminal close ("Completa"/"Abbandona" in the play-evening
+    // 3-way selector). Per D4 (reuse-Session), the campaign does NOT duplicate the
+    // Session timestamp-trio; the play-evening lifecycle lives on Session/GameNight.
+    // These two nullable columns are the single "manual Complete flag": a null
+    // Outcome means the campaign is still open/resumable ("Archivia" leaves it null).
+    public GamebookCampaignOutcome? Outcome { get; private set; }
+    public DateTimeOffset? CompletedAt { get; private set; }
+
+    /// <summary>True once the campaign has been terminally closed (Completa/Abbandona).</summary>
+    public bool IsClosed => Outcome.HasValue;
 
     // EF parameterless constructor
     private GamebookCampaignSession() { }
@@ -66,5 +79,28 @@ public sealed class GamebookCampaignSession
         DeletedAt = DateTimeOffset.UtcNow;
         UpdatedAt = DeletedAt.Value;
         UpdatedBy = deletedBy;
+    }
+
+    /// <summary>
+    /// SI-8 (#2639): terminally closes the campaign with a manual outcome
+    /// (<see cref="GamebookCampaignOutcome.Completed"/> or
+    /// <see cref="GamebookCampaignOutcome.Abandoned"/>), stamping
+    /// <see cref="CompletedAt"/>. Idempotency guard: throws if already closed.
+    /// The campaign is NOT soft-deleted — it stays queryable so the resume picker
+    /// can list it under a "completed" section (it just filters it out of the
+    /// resumable set). "Archivia" (resumable) never calls this.
+    /// </summary>
+    /// <exception cref="ConflictException">Thrown when the campaign is already closed.</exception>
+    public void Close(GamebookCampaignOutcome outcome, Guid closedBy)
+    {
+        if (Outcome.HasValue)
+            throw new ConflictException(
+                $"Campaign {Id} is already closed (outcome={Outcome}). Cannot close again.");
+
+        var now = DateTimeOffset.UtcNow;
+        Outcome = outcome;
+        CompletedAt = now;
+        UpdatedAt = now;
+        UpdatedBy = closedBy;
     }
 }

@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useMemo, type ReactElement } from 'react';
+import { useCallback, useMemo, useState, type ReactElement } from 'react';
 
 import { useRouter } from 'next/navigation';
 
 import { GamebookPlayShell } from '@/components/features/gamebook';
+import { CampaignCloseSelector } from '@/components/features/gamebook/CampaignCloseSelector';
 import { ResumeBooksList } from '@/components/features/gamebook/ResumeBooksList';
 import {
   SerataResumeButton,
@@ -12,6 +13,7 @@ import {
 } from '@/components/features/gamebook/SerataResumeButton';
 import { SerataSpineStrip } from '@/components/features/gamebook/SerataSpineStrip';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
+import { useTranslation } from '@/hooks/useTranslation';
 import { GameRefKind, type GameRef } from '@/lib/api/gamebook';
 import { useCampaignProgress } from '@/lib/gamebook/hooks/useCampaignProgress';
 import {
@@ -27,6 +29,10 @@ export function Content({
   gameId: string;
 }): ReactElement {
   const router = useRouter();
+  const { t } = useTranslation();
+  // SI-8 (#2639): the play-evening-end 3-way close selector is revealed on demand
+  // (not always visible while reading) and only for an open campaign.
+  const [showClose, setShowClose] = useState(false);
   // Issue #1392: derive the GameRef discriminator from the campaign DTO so
   // private-game campaigns route correctly (the BE now emits gameRefKind).
   // Fallback to Shared + route gameId while the campaign is still loading.
@@ -79,6 +85,32 @@ export function Content({
               <SerataResumeButton gameNightId={spine.gameNightId} campaignId={campaignId} />
             </div>
           ) : null}
+        </div>
+      ) : null}
+      {/* SI-8 (#2639): campaign close. Shown only for a loaded, still-open campaign;
+          "Archivia" leaves it resumable, "Completa"/"Abbandona" close it terminally. */}
+      {campaign && campaign.outcome == null ? (
+        <div className="px-3 pt-2">
+          {showClose ? (
+            <CampaignCloseSelector
+              campaignId={campaignId}
+              campaignName={campaign.title}
+              onArchive={() => {
+                setShowClose(false);
+                router.refresh();
+              }}
+              onClosed={() => router.push('/library')}
+            />
+          ) : (
+            <button
+              type="button"
+              data-testid="campaign-close-open"
+              onClick={() => setShowClose(true)}
+              className="rounded-md border border-border px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
+            >
+              {t('gamebook.campaignClose.heading')}
+            </button>
+          )}
         </div>
       ) : null}
       <ResumeBooksList progress={bookProgress} onResume={handleResume} />

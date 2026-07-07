@@ -68,7 +68,9 @@ public class CreateGamebookCampaignHandler : IRequestHandler<CreateGamebookCampa
             history,
             lastReadAt,
             s.CreatedAt,
-            s.UpdatedAt);
+            s.UpdatedAt,
+            s.Outcome.HasValue ? (int)s.Outcome.Value : null,
+            s.CompletedAt);
     }
 
     private static int ParseParagraph(string location)

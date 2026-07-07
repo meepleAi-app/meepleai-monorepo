@@ -3693,6 +3693,19 @@
         }
       }
     },
+    "campaignClose": {
+      "heading": "Termina la serata",
+      "prompt": "Come vuoi chiudere «{campaign}»?",
+      "complete": "Completa",
+      "completeHint": "Hai finito il libro — chiudi la campagna.",
+      "archive": "Archivia",
+      "archiveHint": "Metti in pausa: potrai riprendere più tardi.",
+      "abandon": "Abbandona",
+      "abandonHint": "Chiudi definitivamente senza completarla.",
+      "closing": "Chiusura in corso…",
+      "error": "Chiusura fallita. Riprova.",
+      "retry": "Riprova"
+    },
     "bookList": {
       "heading": "Libri",
       "count": "{count, plural, one {# libro} other {# libri}}",

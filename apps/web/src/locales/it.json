@@ -2783,6 +2783,8 @@
         "strategyLabel": "Strategia RAG",
         "parametersLabel": "Parametri strategia",
         "readOnlyBanner": "Le impostazioni sono in sola lettura per gli agenti archiviati.",
+        "readOnlyStandalone": "Configurazione disponibile solo per agenti associati a un gioco.",
+        "perGameNote": "Queste impostazioni valgono per tutti gli agenti di questo gioco.",
         "saveCta": "Salva impostazioni",
         "cancelCta": "Annulla",
         "saveSuccess": "Impostazioni salvate.",
@@ -3691,6 +3693,39 @@
         }
       }
     },
+    "campaignClose": {
+      "heading": "Termina la serata",
+      "prompt": "Come vuoi chiudere «{campaign}»?",
+      "complete": "Completa",
+      "completeHint": "Hai finito il libro — chiudi la campagna.",
+      "archive": "Archivia",
+      "archiveHint": "Metti in pausa: potrai riprendere più tardi.",
+      "abandon": "Abbandona",
+      "abandonHint": "Chiudi definitivamente senza completarla.",
+      "closing": "Chiusura in corso…",
+      "error": "Chiusura fallita. Riprova.",
+      "retry": "Riprova"
+    },
+    "bookList": {
+      "heading": "Libri",
+      "count": "{count, plural, one {# libro} other {# libri}}",
+      "indexed": "{count, plural, one {# indicizzato} other {# indicizzati}}",
+      "empty": "Nessun libro disponibile per questo gioco.",
+      "loading": "Caricamento libri…",
+      "originCommunity": "Community",
+      "originPersonal": "Personale",
+      "statusIndexed": "Indicizzato",
+      "statusPhysical": "Solo fisico",
+      "statusNotIndexed": "Non indicizzato"
+    },
+    "bookRole": {
+      "tutorial": "Tutorial",
+      "rulesReference": "Regole",
+      "narrative": "Storia",
+      "encounter": "Incontri",
+      "lore": "Ambientazione",
+      "setup": "Setup"
+    },
     "glossaryEditor": {
       "title": "Modifica voce di glossario",
       "termEnLabel": "Termine originale",
@@ -3707,6 +3742,12 @@
         "overwrite": "Sovrascrivi",
         "changeTranslation": "Cambia traduzione",
         "sidePanelLabel": "Voce in conflitto"
+      },
+      "contexts": {
+        "heading": "Appare in",
+        "usaBase": "usa base",
+        "firstSeen": "Vedi paragrafo originale {ref}",
+        "deleteVariant": "Elimina variante {book}"
       }
     },
     "encounter": {
@@ -3891,6 +3932,66 @@
         "reload": "Ricarica",
         "dismiss": "Annulla"
       }
+    },
+    "editDrawer": {
+      "title": "Modifica serata",
+      "description": "Aggiorna i dettagli della tua serata di gioco.",
+      "submit": "Salva modifiche",
+      "savedToast": "Serata aggiornata",
+      "errorGeneric": "Impossibile aggiornare la serata."
+    },
+    "voting": {
+      "title": "Votazione candidati",
+      "votingClosed": "Votazione chiusa",
+      "vote": "Vota",
+      "retract": "Rimuovi voto",
+      "leaderBadge": "In testa",
+      "winnerBadge": "Vincitore",
+      "candidateFallback": "Gioco",
+      "votesCount": "{count, plural, =0 {Nessun voto} =1 {1 voto} other {# voti}}",
+      "actionError": "Impossibile registrare il voto. Riprova.",
+      "error": "Impossibile caricare la votazione.",
+      "empty": {
+        "title": "Nessun candidato",
+        "body": "Non ci sono giochi tra cui votare per questa serata."
+      },
+      "tie": {
+        "title": "Pareggio!",
+        "body": "Scegli il gioco vincitore tra i candidati in parità.",
+        "resolve": "Scegli {title}"
+      }
+    },
+    "summary": {
+      "loading": "Caricamento riepilogo…",
+      "error": "Impossibile caricare il riepilogo della serata.",
+      "mvpWins": "{wins, plural, =1 {1 vittoria} other {# vittorie}}",
+      "durationUnknown": "—",
+      "shareCopied": "Link copiato negli appunti",
+      "shareError": "Impossibile generare il link di condivisione."
+    },
+    "photos": {
+      "title": "Foto della serata",
+      "addCta": "Aggiungi foto",
+      "emptyTitle": "Ancora nessuna foto",
+      "emptyDescription": "Aggiungi gli scatti della serata: tabelloni, tiri fortunati, brindisi.",
+      "photoAltFallback": "Foto della serata",
+      "deleteCta": "Elimina foto",
+      "prev": "Precedente",
+      "next": "Successiva",
+      "dialogTitle": "Carica una foto",
+      "dialogDescription": "JPEG, PNG o WebP fino a 5 MB.",
+      "selectLabel": "Scegli un'immagine",
+      "previewAlt": "Anteprima della foto selezionata",
+      "captionLabel": "Didascalia (opzionale)",
+      "captionPlaceholder": "Es. La vittoria di Davide al fotofinish",
+      "extractScoreLabel": "Estrai il punteggio dalla foto (OCR)",
+      "uploadCta": "Carica",
+      "uploading": "Caricamento…",
+      "uploadError": "Impossibile caricare la foto. Riprova.",
+      "dedupToast": "Foto già presente nella galleria.",
+      "ocrResultTitle": "Testo rilevato",
+      "badFormat": "Formato non supportato. Usa JPEG, PNG o WebP.",
+      "tooLarge": "La foto supera i 5 MB."
     }
   },
   "gameNightsIndex": {

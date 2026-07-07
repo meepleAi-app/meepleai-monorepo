@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Moq;
@@ -47,6 +48,7 @@ public class EndGameSessionCommandHandlerTests
 
         var command = new EndGameSessionCommand(
             SessionId: sessionId,
+            RequesterId: GameSessionBuilder.DefaultCreatedByUserId,
             WinnerName: "Alice");
 
         // Act
@@ -88,6 +90,7 @@ public class EndGameSessionCommandHandlerTests
 
         var command = new EndGameSessionCommand(
             SessionId: sessionId,
+            RequesterId: GameSessionBuilder.DefaultCreatedByUserId,
             WinnerName: null);
 
         // Act
@@ -117,6 +120,7 @@ public class EndGameSessionCommandHandlerTests
 
         var command = new EndGameSessionCommand(
             SessionId: sessionId,
+            RequesterId: GameSessionBuilder.DefaultCreatedByUserId,
             WinnerName: "Charlie");
 
         // Act
@@ -146,6 +150,7 @@ public class EndGameSessionCommandHandlerTests
 
         var command = new EndGameSessionCommand(
             SessionId: sessionId,
+            RequesterId: GameSessionBuilder.DefaultCreatedByUserId,
             WinnerName: "Player 1");
 
         // Act
@@ -157,7 +162,7 @@ public class EndGameSessionCommandHandlerTests
         (result.CompletedAt >= result.StartedAt).Should().BeTrue(); // EndedAt should be after StartedAt
     }
     [Fact]
-    public async Task Handle_NonExistentSession_ThrowsInvalidOperationException()
+    public async Task Handle_NonExistentSession_ThrowsNotFoundException()
     {
         // Arrange
         var sessionId = Guid.NewGuid();
@@ -168,19 +173,49 @@ public class EndGameSessionCommandHandlerTests
 
         var command = new EndGameSessionCommand(
             SessionId: sessionId,
+            RequesterId: GameSessionBuilder.DefaultCreatedByUserId,
             WinnerName: "Player 1");
 
-        // Act & Assert
+        // Act & Assert — #2568: missing resource must be 404 (NotFoundException), not 500.
         var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
-        exception.Message.Should().ContainEquivalentOf($"Session with ID {sessionId} not found");
+        exception.Message.Should().ContainEquivalentOf(sessionId.ToString());
 
         // Verify update was NOT called
         _sessionRepositoryMock.Verify(
             r => r.UpdateAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenRequesterIsNotOwner_ThrowsForbiddenException()
+    {
+        // Arrange — #2655 IDOR fix: only the session creator may end it.
+        var sessionId = Guid.NewGuid();
+        var session = new GameSessionBuilder()
+            .WithId(sessionId)
+            .WithCreatedByUserId(GameSessionBuilder.DefaultCreatedByUserId)
+            .WithPlayers("Alice", "Bob")
+            .ThatIsStarted()
+            .Build();
+
+        _sessionRepositoryMock
+            .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var command = new EndGameSessionCommand(
+            SessionId: sessionId,
+            RequesterId: Guid.NewGuid(), // attacker, not the owner
+            WinnerName: "Alice");
+
+        // Act & Assert
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ForbiddenException>();
+
+        _sessionRepositoryMock.Verify(r => r.UpdateAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepositories()
@@ -199,6 +234,7 @@ public class EndGameSessionCommandHandlerTests
 
         var command = new EndGameSessionCommand(
             SessionId: sessionId,
+            RequesterId: GameSessionBuilder.DefaultCreatedByUserId,
             WinnerName: "Player 1");
 
         using var cts = new CancellationTokenSource();
@@ -237,6 +273,7 @@ public class EndGameSessionCommandHandlerTests
 
         var command = new EndGameSessionCommand(
             SessionId: sessionId,
+            RequesterId: GameSessionBuilder.DefaultCreatedByUserId,
             WinnerName: "Player 1");
 
         // Act
@@ -263,6 +300,7 @@ public class EndGameSessionCommandHandlerTests
 
         var command = new EndGameSessionCommand(
             SessionId: sessionId,
+            RequesterId: GameSessionBuilder.DefaultCreatedByUserId,
             WinnerName: "Bob");
 
         // Act

@@ -8,5 +8,6 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// </summary>
 internal record AbandonGameSessionCommand(
     Guid SessionId,
+    Guid RequesterId,
     string? Reason = null
 ) : ICommand<GameSessionDto>;

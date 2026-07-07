@@ -55,7 +55,26 @@ export const GamebookCampaignSchema = z.object({
   lastReadAt: z.string().datetime({ offset: true }),
   createdAt: z.string().datetime({ offset: true }),
   updatedAt: z.string().datetime({ offset: true }),
+  /**
+   * SI-8 (#2639): terminal close outcome. Mirrors backend `GamebookCampaignOutcome`
+   * (1 = Completed, 2 = Abandoned); `null` = still open/resumable ("Archivia").
+   * Optional for backward-compat with fixtures predating the field.
+   */
+  outcome: z.number().int().nullable().optional().default(null),
+  completedAt: z.string().datetime({ offset: true }).nullable().optional().default(null),
 });
+
+/**
+ * SI-8 (#2639): terminal outcome mirroring backend `GamebookCampaignOutcome`.
+ * "Archivia" (resumable) is NOT one of these — it never closes the campaign.
+ */
+export const GamebookCampaignOutcome = {
+  Completed: 1,
+  Abandoned: 2,
+} as const;
+
+export type GamebookCampaignOutcomeValue =
+  (typeof GamebookCampaignOutcome)[keyof typeof GamebookCampaignOutcome];
 
 export type GamebookCampaign = z.infer<typeof GamebookCampaignSchema>;
 
@@ -189,6 +208,26 @@ export async function renameCampaign(id: string, title: string): Promise<Gameboo
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title }),
+    credentials: 'include',
+  });
+  return parseJson(res, GamebookCampaignSchema);
+}
+
+/**
+ * SI-8 (#2639): terminally close a campaign with a manual outcome
+ * (Completed / Abandoned). "Archivia" (resumable) does NOT call this — it just
+ * finalizes the evening's Session (SI-3) and leaves the campaign open.
+ * Owner-only (403 for others); a campaign already closed returns 409.
+ */
+export async function closeCampaign(
+  id: string,
+  outcome: GamebookCampaignOutcomeValue
+): Promise<GamebookCampaign> {
+  const outcomeName = outcome === GamebookCampaignOutcome.Completed ? 'Completed' : 'Abandoned';
+  const res = await fetch(`${API_BASE}/api/v1/gamebook/campaigns/${encodeURIComponent(id)}/close`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ outcome: outcomeName }),
     credentials: 'include',
   });
   return parseJson(res, GamebookCampaignSchema);

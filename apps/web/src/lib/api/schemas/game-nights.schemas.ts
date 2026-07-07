@@ -5,7 +5,16 @@
 
 import { z } from 'zod';
 
-export const GameNightStatusSchema = z.enum(['Draft', 'Published', 'Cancelled', 'Completed']);
+// SI-3 #2634: `InProgress` mirrors the BE `GameNightStatus` enum (a Published night is promoted
+// to InProgress when its first session starts, event-driven via SessionStartedHandler). It MUST be
+// listed so the live/detail read of a night mid-play parses instead of failing the whole payload.
+export const GameNightStatusSchema = z.enum([
+  'Draft',
+  'Published',
+  'InProgress',
+  'Cancelled',
+  'Completed',
+]);
 export type GameNightStatus = z.infer<typeof GameNightStatusSchema>;
 
 export const RsvpStatusSchema = z.enum(['Pending', 'Accepted', 'Declined', 'Maybe']);
@@ -214,3 +223,94 @@ export const UpdateGameNightInputSchema = z.object({
   gameIds: z.array(z.string().uuid()).max(20).optional(),
 });
 export type UpdateGameNightInput = z.infer<typeof UpdateGameNightInputSchema>;
+
+// ──────────────────────────────────────────────────────────────────────
+// Issue #2700 — candidate voting (approval model)
+// ──────────────────────────────────────────────────────────────────────
+
+export const GameNightCandidateTallyDtoSchema = z.object({
+  gameId: z.string().uuid(),
+  voteCount: z.number().int().nonnegative(),
+  votedByMe: z.boolean(),
+});
+export type GameNightCandidateTallyDto = z.infer<typeof GameNightCandidateTallyDtoSchema>;
+
+export const GameNightVoteTallyDtoSchema = z.object({
+  isVotingClosed: z.boolean(),
+  isTie: z.boolean(),
+  winnerGameId: z.string().uuid().nullable(),
+  leadingCandidateGameIds: z.array(z.string().uuid()),
+  candidates: z.array(GameNightCandidateTallyDtoSchema),
+});
+export type GameNightVoteTallyDto = z.infer<typeof GameNightVoteTallyDtoSchema>;
+
+// ──────────────────────────────────────────────────────────────────────
+// Issue #2702 — summary (MVP/KPI) + share-token + archive
+// ──────────────────────────────────────────────────────────────────────
+
+export const GameNightMvpDtoSchema = z.object({
+  playerName: z.string(),
+  wins: z.number().int().nonnegative(),
+});
+export type GameNightMvpDto = z.infer<typeof GameNightMvpDtoSchema>;
+
+export const GameNightSummaryKpisDtoSchema = z.object({
+  totalGames: z.number().int().nonnegative(),
+  completedGames: z.number().int().nonnegative(),
+  totalDurationMinutes: z.number().int().nonnegative(),
+  winnersCount: z.number().int().nonnegative(),
+});
+export type GameNightSummaryKpisDto = z.infer<typeof GameNightSummaryKpisDtoSchema>;
+
+export const GameNightGameRecapDtoSchema = z.object({
+  sessionId: z.string().uuid(),
+  gameId: z.string().uuid(),
+  gameTitle: z.string(),
+  playOrder: z.number().int(),
+  status: z.string(),
+  winnerId: z.string().uuid().nullable(),
+  winnerName: z.string().nullable(),
+  durationMinutes: z.number().int().nullable(),
+  eventsCount: z.number().int().nonnegative(),
+  topPlayers: z.array(z.object({ playerName: z.string(), rank: z.number().int().nullable() })),
+});
+export type GameNightGameRecapDto = z.infer<typeof GameNightGameRecapDtoSchema>;
+
+export const GameNightSummaryDtoSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  status: z.string(),
+  scheduledAt: z.string(),
+  location: z.string().nullable(),
+  isViewerOrganizer: z.boolean(),
+  isArchived: z.boolean(),
+  isShared: z.boolean(),
+  shareToken: z.string().nullable(),
+  mvp: GameNightMvpDtoSchema.nullable(),
+  kpis: GameNightSummaryKpisDtoSchema,
+  games: z.array(GameNightGameRecapDtoSchema),
+});
+export type GameNightSummaryDto = z.infer<typeof GameNightSummaryDtoSchema>;
+
+export const GameNightShareLinkDtoSchema = z.object({ shareToken: z.string() });
+export type GameNightShareLinkDto = z.infer<typeof GameNightShareLinkDtoSchema>;
+
+// Issue #2724 — recap photo gallery
+export const GameNightPhotoDtoSchema = z.object({
+  id: z.string().uuid(),
+  photoUrl: z.string(),
+  thumbnailUrl: z.string().nullable(),
+  caption: z.string().nullable(),
+  uploadedByUserId: z.string().uuid(),
+  uploadedAt: z.string(),
+});
+export type GameNightPhotoDto = z.infer<typeof GameNightPhotoDtoSchema>;
+
+export const GameNightPhotoUploadResultSchema = z.object({
+  photoId: z.string().uuid(),
+  photoUrl: z.string(),
+  thumbnailUrl: z.string().nullable(),
+  ocrText: z.string().nullable(),
+  wasDeduplicated: z.boolean(),
+});
+export type GameNightPhotoUploadResult = z.infer<typeof GameNightPhotoUploadResultSchema>;

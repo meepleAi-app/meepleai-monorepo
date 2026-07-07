@@ -7,5 +7,6 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// Command to resume a paused game session.
 /// </summary>
 internal record ResumeGameSessionCommand(
-    Guid SessionId
+    Guid SessionId,
+    Guid RequesterId
 ) : ICommand<GameSessionDto>;

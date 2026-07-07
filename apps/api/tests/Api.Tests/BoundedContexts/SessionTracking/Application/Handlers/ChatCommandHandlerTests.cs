@@ -281,25 +281,49 @@ public class AskSessionAgentCommandHandlerTests
 public class DeleteChatMessageCommandHandlerTests
 {
     private readonly Mock<ISessionChatRepository> _mockChatRepo;
+    private readonly Mock<ISessionRepository> _mockSessionRepo;
     private readonly DeleteChatMessageCommandHandler _handler;
 
     public DeleteChatMessageCommandHandlerTests()
     {
         _mockChatRepo = new Mock<ISessionChatRepository>();
-        _handler = new DeleteChatMessageCommandHandler(_mockChatRepo.Object);
+        _mockSessionRepo = new Mock<ISessionRepository>();
+        _handler = new DeleteChatMessageCommandHandler(_mockChatRepo.Object, _mockSessionRepo.Object);
+    }
+
+    private static Session CreateSessionWithParticipant(Guid sessionId, Guid participantId, Guid? ownerUserId)
+    {
+        var session = Session.Create(
+            userId: Guid.NewGuid(),
+            gameId: Guid.NewGuid(),
+            sessionType: SessionType.GameSpecific);
+
+        typeof(Session).GetProperty("Id")!.SetValue(session, sessionId);
+
+        var participant = new Participant { Id = participantId, SessionId = sessionId, UserId = ownerUserId };
+        var participantsField = typeof(Session).GetField("_participants",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var list = (List<Participant>)participantsField!.GetValue(session)!;
+        list.Add(participant);
+
+        return session;
     }
 
     [Fact]
-    public async Task Handle_ValidCommand_SoftDeletesTextMessage()
+    public async Task Handle_SenderDeletes_SoftDeletesTextMessage()
     {
-        // Arrange
-        var senderId = Guid.NewGuid();
-        var message = SessionChatMessage.CreateTextMessage(Guid.NewGuid(), senderId, "Hello", 1);
+        // Arrange — the authenticated user owns the participant that sent the message.
+        var sessionId = Guid.NewGuid();
+        var senderParticipantId = Guid.NewGuid();
+        var ownerUserId = Guid.NewGuid();
+        var message = SessionChatMessage.CreateTextMessage(sessionId, senderParticipantId, "Hello", 1);
 
         _mockChatRepo.Setup(r => r.GetByIdAsync(message.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(message);
+        _mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSessionWithParticipant(sessionId, senderParticipantId, ownerUserId));
 
-        var command = new DeleteChatMessageCommand(message.Id, senderId);
+        var command = new DeleteChatMessageCommand(message.Id, ownerUserId);
 
         // Act
         await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -324,15 +348,23 @@ public class DeleteChatMessageCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_DifferentSender_ThrowsForbiddenException()
+    public async Task Handle_DifferentUser_ThrowsForbiddenException()
     {
-        var senderId = Guid.NewGuid();
-        var message = SessionChatMessage.CreateTextMessage(Guid.NewGuid(), senderId, "Hello", 1);
+        // Arrange — #2655 IDOR fix: a user who does NOT own the sending participant
+        // cannot delete the message, even by forging a requester id (now resolved
+        // server-side from the authenticated caller).
+        var sessionId = Guid.NewGuid();
+        var senderParticipantId = Guid.NewGuid();
+        var ownerUserId = Guid.NewGuid();
+        var attackerUserId = Guid.NewGuid();
+        var message = SessionChatMessage.CreateTextMessage(sessionId, senderParticipantId, "Hello", 1);
 
         _mockChatRepo.Setup(r => r.GetByIdAsync(message.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(message);
+        _mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSessionWithParticipant(sessionId, senderParticipantId, ownerUserId));
 
-        var command = new DeleteChatMessageCommand(message.Id, Guid.NewGuid());
+        var command = new DeleteChatMessageCommand(message.Id, attackerUserId);
 
         var act6 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
         await act6.Should().ThrowAsync<ForbiddenException>();
@@ -343,16 +375,15 @@ public class DeleteChatMessageCommandHandlerTests
     [Fact]
     public async Task Handle_SystemEventMessage_ThrowsInvalidOperationException()
     {
+        // Non-text messages are rejected by the type check, which runs before the
+        // ownership resolution — so no session lookup is needed here.
         var message = SessionChatMessage.CreateSystemEvent(Guid.NewGuid(), "event", 1);
 
         _mockChatRepo.Setup(r => r.GetByIdAsync(message.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(message);
 
-        // System messages have no sender, so requesterId won't match but the type check comes first
         var command = new DeleteChatMessageCommand(message.Id, Guid.NewGuid());
 
-        // SenderId is null for system events, so ForbiddenException won't fire (null != requesterId is false with HasValue check)
-        // Instead, it reaches the MessageType check
         var act7 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
         await act7.Should().ThrowAsync<InvalidOperationException>();
     }

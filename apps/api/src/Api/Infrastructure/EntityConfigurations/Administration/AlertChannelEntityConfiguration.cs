@@ -63,12 +63,14 @@ internal class AlertChannelEntityConfiguration : IEntityTypeConfiguration<AlertC
             .HasColumnName("updated_by")
             .HasMaxLength(200);
 
-        // Postgres concurrency token — uses xmin system column under the hood.
-        // We map to a bytea column for portability with the EF Core RowVersion
-        // convention used elsewhere in the codebase.
-        builder.Property(e => e.RowVersion)
-            .HasColumnName("row_version")
-            .IsRowVersion()
+        // Optimistic concurrency via PostgreSQL's xmin system column (ADR-060).
+        // xmin is a Postgres system column — EF maps it but does NOT create the column.
+        // ValueGeneratedOnAddOrUpdate tells EF the DB owns the value on every write.
+        // IsConcurrencyToken() makes EF include it in UPDATE … WHERE xmin = @original.
+        builder.Property(e => e.Xmin)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
             .IsConcurrencyToken();
 
         // Issue #1941 / iso-2 Fix 1: dedup key for AlertFiredEvent dispatch per channel.

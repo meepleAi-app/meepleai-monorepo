@@ -72,7 +72,9 @@ internal static class AdminImpersonationEndpoints
         .WithSummary("End an active impersonation session (admin)")
         .Produces(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status400BadRequest)
-        .Produces(StatusCodes.Status401Unauthorized);
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces(StatusCodes.Status404NotFound);
 
         // REVOKE — superadmin kill-switch for another admin's impersonation session.
         impersonationGroup.MapPost("/revoke", async (

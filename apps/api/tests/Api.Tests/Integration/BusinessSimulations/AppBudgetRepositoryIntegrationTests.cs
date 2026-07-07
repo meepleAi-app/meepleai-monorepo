@@ -19,7 +19,7 @@ namespace Api.Tests.Integration.BusinessSimulations;
 ///
 /// Covers: insert-on-upsert (singleton creation), update-on-upsert (in-place
 /// edit), GetCurrentAsync semantics, optimistic concurrency via stale
-/// RowVersion, and singleton enforcement (second Upsert reuses the same row
+/// xmin, and singleton enforcement (second Upsert reuses the same row
 /// rather than creating a duplicate).
 /// </summary>
 [Collection("Integration-GroupD")]
@@ -113,7 +113,7 @@ public sealed class AppBudgetRepositoryIntegrationTests : IAsyncLifetime
         fetched.IsEnabled.Should().BeTrue();
         fetched.CreatedBy.Should().Be("admin@meepleai.dev");
         fetched.UpdatedBy.Should().Be("admin@meepleai.dev");
-        fetched.RowVersion.Should().NotBeEmpty(
+        fetched.Xmin.Should().NotBe(0u,
             "Postgres xmin must populate the concurrency token on insert");
     }
 
@@ -141,7 +141,7 @@ public sealed class AppBudgetRepositoryIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpsertAsync_OnStaleRowVersion_ThrowsConcurrencyException()
+    public async Task UpsertAsync_OnStaleXmin_ThrowsConcurrencyException()
     {
         var initial = AppBudgetAggregate.Create(Money.Create(1000m, "USD"), 80, 95, "admin");
         await _repository!.UpsertAsync(initial, TestCancellationToken);
@@ -150,11 +150,11 @@ public sealed class AppBudgetRepositoryIntegrationTests : IAsyncLifetime
         var loadedByA = await _repository.GetCurrentAsync(TestCancellationToken);
         var loadedByB = await _repository.GetCurrentAsync(TestCancellationToken);
 
-        // Admin A commits first → bumps RowVersion.
+        // Admin A commits first → bumps xmin.
         loadedByA!.UpdateLimit(Money.Create(2000m, "USD"), 80, 95, "adminA");
         await _repository.UpsertAsync(loadedByA, TestCancellationToken);
 
-        // Admin B attempts to commit with the stale RowVersion captured before
+        // Admin B attempts to commit with the stale xmin captured before
         // Admin A's update.
         loadedByB!.UpdateLimit(Money.Create(3000m, "USD"), 80, 95, "adminB");
 

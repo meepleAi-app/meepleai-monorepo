@@ -64,7 +64,6 @@ export {
   type AgentSettingsFormProps,
   type AgentSettingsFormLabels,
   type SettingsState,
-  type AgentConfig,
 } from '@/components/features/agent-detail/AgentSettingsForm';
 
 // AgentDangerZone — only renders when variant === 'active', returns null otherwise

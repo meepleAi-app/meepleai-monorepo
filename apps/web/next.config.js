@@ -231,6 +231,15 @@ const nextConfig = {
       { source: '/library/proposals', destination: '/discover?tab=proposals', permanent: true },
       { source: '/library/propose', destination: '/discover/propose', permanent: true },
 
+      // ADR-079 (#2701): the legacy standalone `/game-nights/:id/edit` page is
+      // retired in favour of the edit-overlay drawer deep-link. Safety net for any
+      // link that escaped into chat/email before the migration.
+      {
+        source: '/game-nights/:id/edit',
+        destination: '/game-nights/:id?action=edit',
+        permanent: true,
+      },
+
       // Profile / Settings consolidation
       // NOTE: /profile → /settings (Issue #1672) is REMOVED — /profile is now
       //       the canonical profile page; /settings redirects here instead.

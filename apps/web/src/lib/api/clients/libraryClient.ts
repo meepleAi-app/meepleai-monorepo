@@ -13,8 +13,10 @@ import { z } from 'zod';
 
 import {
   AgentConfigDtoSchema,
+  UpdateAgentConfigResponseSchema,
   type AgentConfigDto,
   type UpdateAgentConfigRequest,
+  type UpdateAgentConfigResponse,
 } from '../schemas/agent-config.schemas';
 import {
   EntityLinkDtoSchema,
@@ -433,7 +435,11 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
      */
     async createGameAgent(
       gameId: string,
-      request: { agentDefinitionId: string; strategyName: string; strategyParameters?: string | null }
+      request: {
+        agentDefinitionId: string;
+        strategyName: string;
+        strategyParameters?: string | null;
+      }
     ): Promise<unknown> {
       return httpClient.post<unknown>(`/api/v1/library/games/${gameId}/agent`, request);
     },
@@ -493,15 +499,17 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
       gameId: string,
       request: UpdateAgentConfigRequest
     ): Promise<AgentConfigDto> {
-      const data = await httpClient.put<AgentConfigDto>(
+      // PUT returns the full UserLibraryEntryDto; the persisted config lives in
+      // its `customAgentConfig` field (ConfigureGameAgentCommandHandler).
+      const entry = await httpClient.put<UpdateAgentConfigResponse>(
         `/api/v1/library/games/${gameId}/agent-config`,
         request,
-        AgentConfigDtoSchema
+        UpdateAgentConfigResponseSchema
       );
-      if (!data) {
+      if (!entry?.customAgentConfig) {
         throw new Error('Failed to update agent configuration');
       }
-      return data;
+      return entry.customAgentConfig;
     },
 
     /**

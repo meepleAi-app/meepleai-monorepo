@@ -19,7 +19,7 @@ internal interface IAppBudgetRepository
     /// <summary>
     /// Upserts the singleton AppBudget. When a row already exists the
     /// implementation MUST enforce optimistic concurrency via the aggregate's
-    /// <see cref="AppBudget.RowVersion"/> token (translated to
+    /// <see cref="AppBudget.Xmin"/> token (translated to
     /// <c>DbUpdateConcurrencyException</c> by EF Core).
     /// </summary>
     Task UpsertAsync(AppBudget budget, CancellationToken cancellationToken = default);

@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Mappers;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
@@ -29,7 +30,13 @@ internal class EndGameSessionCommandHandler : ICommandHandler<EndGameSessionComm
         // Fetch session
         var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken).ConfigureAwait(false);
         if (session == null)
-            throw new InvalidOperationException($"Session with ID {command.SessionId} not found");
+            throw new NotFoundException("GameSession", command.SessionId.ToString());
+
+        // #2655 IDOR guard: only the session creator may end it.
+        if (session.CreatedByUserId != command.RequesterId)
+        {
+            throw new ForbiddenException("Only the session creator can end this session.");
+        }
 
         // Complete (domain method validates state transition)
         session.Complete(command.WinnerName);

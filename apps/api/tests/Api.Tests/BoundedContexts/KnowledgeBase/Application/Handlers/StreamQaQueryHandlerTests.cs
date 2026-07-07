@@ -8,6 +8,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Models;
 using Api.Services;
@@ -36,6 +37,7 @@ public class StreamQaQueryHandlerTests
     private readonly Mock<IEmbeddingService> _embeddingServiceMock;
     private readonly Mock<IHybridSearchService> _hybridSearchServiceMock;
     private readonly SearchQueryHandler _searchQueryHandler;
+    private readonly Mock<ICrossEncoderReranker> _rerankerMock;
     private readonly Mock<QualityTrackingDomainService> _qualityTrackingServiceMock;
     private readonly Mock<ChatContextDomainService> _chatContextServiceMock;
     private readonly Mock<IChatThreadRepository> _chatThreadRepositoryMock;
@@ -69,6 +71,17 @@ public class StreamQaQueryHandlerTests
             searchLoggerMock.Object
         );
 
+        // Default: reranker preserves order (passthrough) so existing assertions are unaffected.
+        _rerankerMock = new Mock<ICrossEncoderReranker>();
+        _rerankerMock
+            .Setup(r => r.RerankAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<RerankChunk>>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string _, IReadOnlyList<RerankChunk> chunks, int? topK, CancellationToken _) =>
+                new RerankResult(
+                    chunks.Take(topK ?? chunks.Count)
+                        .Select((c, i) => new RerankedChunk(c.Id, c.Content, c.OriginalScore, 0.9 - (i * 0.1)))
+                        .ToList(),
+                    "test-model", 1.0));
+
         _qualityTrackingServiceMock = new Mock<QualityTrackingDomainService>();
         _chatContextServiceMock = new Mock<ChatContextDomainService>();
         _chatThreadRepositoryMock = new Mock<IChatThreadRepository>();
@@ -83,6 +96,7 @@ public class StreamQaQueryHandlerTests
 
         _handler = new StreamQaQueryHandler(
             _searchQueryHandler,
+            _rerankerMock.Object,
             _qualityTrackingServiceMock.Object,
             _chatContextServiceMock.Object,
             _chatThreadRepositoryMock.Object,
@@ -598,6 +612,10 @@ public class StreamQaQueryHandlerTests
         _embeddingRepositoryMock
             .Setup(x => x.SearchByVectorAsync(It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Embedding> { embedding });
+        // Issue #2712: PerformVectorSearchAsync now calls SearchByVectorWithScoresAsync (real cosine score).
+        _embeddingRepositoryMock
+            .Setup(x => x.SearchByVectorWithScoresAsync(It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ScoredEmbedding> { new ScoredEmbedding(embedding, 0.55) });
 
         // Low relevance score (0.55)
         var lowScoreResult = new DomainSearchResult(
@@ -710,6 +728,10 @@ public class StreamQaQueryHandlerTests
         _embeddingRepositoryMock
             .Setup(x => x.SearchByVectorAsync(It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(embeddings);
+        // Issue #2712: PerformVectorSearchAsync now calls SearchByVectorWithScoresAsync (real cosine score).
+        _embeddingRepositoryMock
+            .Setup(x => x.SearchByVectorWithScoresAsync(It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(embeddings.Select((e, i) => new ScoredEmbedding(e, 0.95 - i * 0.03)).ToList());
 
         _vectorSearchServiceMock
             .Setup(x => x.Search(It.IsAny<Vector>(), It.IsAny<List<Embedding>>(), It.IsAny<int>(), It.IsAny<double>()))
@@ -947,6 +969,10 @@ public class StreamQaQueryHandlerTests
         _embeddingRepositoryMock
             .Setup(x => x.SearchByVectorAsync(It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Embedding> { embedding });
+        // Issue #2712: PerformVectorSearchAsync now calls SearchByVectorWithScoresAsync (real cosine score).
+        _embeddingRepositoryMock
+            .Setup(x => x.SearchByVectorWithScoresAsync(It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ScoredEmbedding> { new ScoredEmbedding(embedding, 0.85) });
 
         // Setup vector search domain service to return results
         var vectorSearchResult = new DomainSearchResult(

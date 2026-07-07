@@ -13,7 +13,7 @@ namespace Api.Tests.BoundedContexts.BusinessSimulations.Application.Commands.App
 
 /// <summary>
 /// Unit tests for UpsertAppBudgetCommandHandler (Issue #1838 SP5 F4-C5).
-/// Covers create vs update branches, RowVersion plumbing, and 409 translation.
+/// Covers create vs update branches, xmin plumbing, and 409 translation.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "BusinessSimulations")]
@@ -29,7 +29,7 @@ public sealed class UpsertAppBudgetCommandHandlerTests
     {
         _repo.SetupSequence(r => r.GetCurrentAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync((AppBudgetAggregate?)null)
-            .ReturnsAsync(Reconstituted(rowVersion: new byte[] { 1, 2, 3 }));
+            .ReturnsAsync(Reconstituted(xmin: 123u));
 
         var capture = new List<AppBudgetAggregate>();
         _repo.Setup(r => r.UpsertAsync(It.IsAny<AppBudgetAggregate>(), It.IsAny<CancellationToken>()))
@@ -41,7 +41,7 @@ public sealed class UpsertAppBudgetCommandHandlerTests
             MonthlyLimitCurrency: "USD",
             AlertThresholdPct: 80,
             CriticalThresholdPct: 95,
-            RowVersion: null,
+            Xmin: null,
             UpdatedBy: "admin");
 
         var result = await CreateHandler().Handle(cmd, CancellationToken.None);
@@ -49,18 +49,18 @@ public sealed class UpsertAppBudgetCommandHandlerTests
         capture.Should().HaveCount(1);
         capture[0].MonthlyLimit.Amount.Should().Be(1500m);
         capture[0].CreatedBy.Should().Be("admin");
-        result.RowVersion.Should().Be(Convert.ToBase64String(new byte[] { 1, 2, 3 }));
+        result.Xmin.Should().Be(123u);
     }
 
     [Fact]
-    public async Task Handle_WhenBudgetExists_UpdatesAndPropagatesRowVersion()
+    public async Task Handle_WhenBudgetExists_UpdatesAndPropagatesXmin()
     {
-        var existingRowVersion = new byte[] { 5, 5, 5 };
-        var existing = Reconstituted(rowVersion: existingRowVersion);
+        const uint existingXmin = 555u;
+        var existing = Reconstituted(xmin: existingXmin);
 
         _repo.SetupSequence(r => r.GetCurrentAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing)
-            .ReturnsAsync(Reconstituted(rowVersion: new byte[] { 6, 6, 6 }));
+            .ReturnsAsync(Reconstituted(xmin: 666u));
 
         var capture = new List<AppBudgetAggregate>();
         _repo.Setup(r => r.UpsertAsync(It.IsAny<AppBudgetAggregate>(), It.IsAny<CancellationToken>()))
@@ -72,7 +72,7 @@ public sealed class UpsertAppBudgetCommandHandlerTests
             MonthlyLimitCurrency: "USD",
             AlertThresholdPct: 70,
             CriticalThresholdPct: 90,
-            RowVersion: Convert.ToBase64String(existingRowVersion),
+            Xmin: existingXmin,
             UpdatedBy: "admin2");
 
         var result = await CreateHandler().Handle(cmd, CancellationToken.None);
@@ -82,19 +82,22 @@ public sealed class UpsertAppBudgetCommandHandlerTests
         capture[0].AlertThresholdPct.Should().Be(70);
         capture[0].CriticalThresholdPct.Should().Be(90);
         capture[0].UpdatedBy.Should().Be("admin2");
-        capture[0].RowVersion.Should().BeEquivalentTo(existingRowVersion,
-            "Handler must reconstitute with client-supplied token for EF concurrency check");
-        result.RowVersion.Should().Be(Convert.ToBase64String(new byte[] { 6, 6, 6 }));
+        capture[0].Xmin.Should().Be(existingXmin,
+            "Handler must carry the client-supplied token for the EF concurrency check");
+        result.Xmin.Should().Be(666u);
     }
 
     [Fact]
-    public async Task Handle_WithMalformedBase64RowVersion_FallsBackToServerToken()
+    public async Task Handle_WithNullXminOnUpdate_UsesServerToken()
     {
-        var existing = Reconstituted(rowVersion: new byte[] { 1 });
+        var existing = Reconstituted(xmin: 42u);
         _repo.SetupSequence(r => r.GetCurrentAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing)
-            .ReturnsAsync(Reconstituted(rowVersion: new byte[] { 2 }));
+            .ReturnsAsync(Reconstituted(xmin: 43u));
+
+        var capture = new List<AppBudgetAggregate>();
         _repo.Setup(r => r.UpsertAsync(It.IsAny<AppBudgetAggregate>(), It.IsAny<CancellationToken>()))
+            .Callback<AppBudgetAggregate, CancellationToken>((b, _) => capture.Add(b))
             .Returns(Task.CompletedTask);
 
         var cmd = new UpsertAppBudgetCommand(
@@ -102,19 +105,24 @@ public sealed class UpsertAppBudgetCommandHandlerTests
             MonthlyLimitCurrency: "USD",
             AlertThresholdPct: 80,
             CriticalThresholdPct: 95,
-            RowVersion: "***not-base64***",
+            Xmin: null,
             UpdatedBy: "admin");
 
-        // Should not throw — handler silently falls back to existing aggregate's token
+        // Should not throw — with no client token the handler keeps the
+        // server-loaded aggregate's token.
         var result = await CreateHandler().Handle(cmd, CancellationToken.None);
+
         result.Should().NotBeNull();
+        capture.Should().HaveCount(1);
+        capture[0].Xmin.Should().Be(42u,
+            "with no client token the handler keeps the server-loaded xmin");
     }
 
     [Fact]
     public async Task Handle_OnConcurrencyConflict_Throws409()
     {
         _repo.SetupSequence(r => r.GetCurrentAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Reconstituted(rowVersion: new byte[] { 1 }));
+            .ReturnsAsync(Reconstituted(xmin: 1u));
 
         _repo.Setup(r => r.UpsertAsync(It.IsAny<AppBudgetAggregate>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new DbUpdateConcurrencyException("Conflict"));
@@ -124,7 +132,7 @@ public sealed class UpsertAppBudgetCommandHandlerTests
             MonthlyLimitCurrency: "USD",
             AlertThresholdPct: 80,
             CriticalThresholdPct: 95,
-            RowVersion: Convert.ToBase64String(new byte[] { 1 }),
+            Xmin: 1u,
             UpdatedBy: "admin");
 
         var act = () => CreateHandler().Handle(cmd, CancellationToken.None);
@@ -148,7 +156,7 @@ public sealed class UpsertAppBudgetCommandHandlerTests
             MonthlyLimitCurrency: "USD",
             AlertThresholdPct: 80,
             CriticalThresholdPct: 95,
-            RowVersion: null,
+            Xmin: null,
             UpdatedBy: "admin");
 
         var act = () => CreateHandler().Handle(cmd, CancellationToken.None);
@@ -156,7 +164,7 @@ public sealed class UpsertAppBudgetCommandHandlerTests
         await act.Should().ThrowAsync<NotFoundException>();
     }
 
-    private static AppBudgetAggregate Reconstituted(byte[] rowVersion) =>
+    private static AppBudgetAggregate Reconstituted(uint xmin) =>
         AppBudgetAggregate.Reconstitute(
             id: Guid.NewGuid(),
             monthlyLimit: Money.Create(1000m, "USD"),
@@ -167,5 +175,5 @@ public sealed class UpsertAppBudgetCommandHandlerTests
             updatedAt: DateTime.UtcNow,
             createdBy: "seed",
             updatedBy: "seed",
-            rowVersion: rowVersion);
+            xmin: xmin);
 }

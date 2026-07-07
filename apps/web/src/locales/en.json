@@ -2733,6 +2733,8 @@
         "strategyLabel": "RAG Strategy",
         "parametersLabel": "Strategy parameters",
         "readOnlyBanner": "Settings are read-only for archived agents.",
+        "readOnlyStandalone": "Configuration is available only for agents linked to a game.",
+        "perGameNote": "These settings apply to every agent for this game.",
         "saveCta": "Save settings",
         "cancelCta": "Cancel",
         "saveSuccess": "Settings saved.",
@@ -3638,6 +3640,39 @@
         }
       }
     },
+    "campaignClose": {
+      "heading": "End the evening",
+      "prompt": "How do you want to close “{campaign}”?",
+      "complete": "Complete",
+      "completeHint": "You finished the book — close the campaign.",
+      "archive": "Archive",
+      "archiveHint": "Pause it: you can resume later.",
+      "abandon": "Abandon",
+      "abandonHint": "Close it for good without finishing.",
+      "closing": "Closing…",
+      "error": "Close failed. Try again.",
+      "retry": "Retry"
+    },
+    "bookList": {
+      "heading": "Books",
+      "count": "{count, plural, one {# book} other {# books}}",
+      "indexed": "{count, plural, one {# indexed} other {# indexed}}",
+      "empty": "No books available for this game yet.",
+      "loading": "Loading books…",
+      "originCommunity": "Community",
+      "originPersonal": "Personal",
+      "statusIndexed": "Indexed",
+      "statusPhysical": "Physical only",
+      "statusNotIndexed": "Not indexed"
+    },
+    "bookRole": {
+      "tutorial": "Tutorial",
+      "rulesReference": "Rules",
+      "narrative": "Story",
+      "encounter": "Encounters",
+      "lore": "Lore",
+      "setup": "Setup"
+    },
     "glossaryEditor": {
       "title": "Edit glossary entry",
       "termEnLabel": "Source term",
@@ -3654,6 +3689,12 @@
         "overwrite": "Overwrite",
         "changeTranslation": "Change translation",
         "sidePanelLabel": "Conflicting entry"
+      },
+      "contexts": {
+        "heading": "Appears in",
+        "usaBase": "uses base",
+        "firstSeen": "See original paragraph {ref}",
+        "deleteVariant": "Delete variant {book}"
       }
     },
     "encounter": {
@@ -3838,6 +3879,66 @@
         "reload": "Reload",
         "dismiss": "Dismiss"
       }
+    },
+    "editDrawer": {
+      "title": "Edit game night",
+      "description": "Update the details of your game night.",
+      "submit": "Save changes",
+      "savedToast": "Game night updated",
+      "errorGeneric": "Could not update the game night."
+    },
+    "voting": {
+      "title": "Candidate voting",
+      "votingClosed": "Voting closed",
+      "vote": "Vote",
+      "retract": "Remove vote",
+      "leaderBadge": "Leading",
+      "winnerBadge": "Winner",
+      "candidateFallback": "Game",
+      "votesCount": "{count, plural, =0 {No votes} =1 {1 vote} other {# votes}}",
+      "actionError": "Could not record your vote. Please retry.",
+      "error": "Could not load the vote.",
+      "empty": {
+        "title": "No candidates",
+        "body": "There are no games to vote on for this night."
+      },
+      "tie": {
+        "title": "It's a tie!",
+        "body": "Choose the winning game among the tied candidates.",
+        "resolve": "Choose {title}"
+      }
+    },
+    "summary": {
+      "loading": "Loading summary…",
+      "error": "Could not load the game night summary.",
+      "mvpWins": "{wins, plural, =1 {1 win} other {# wins}}",
+      "durationUnknown": "—",
+      "shareCopied": "Link copied to clipboard",
+      "shareError": "Could not generate the share link."
+    },
+    "photos": {
+      "title": "Game night photos",
+      "addCta": "Add photo",
+      "emptyTitle": "No photos yet",
+      "emptyDescription": "Add shots from the night: scoreboards, lucky rolls, cheers.",
+      "photoAltFallback": "Game night photo",
+      "deleteCta": "Delete photo",
+      "prev": "Previous",
+      "next": "Next",
+      "dialogTitle": "Upload a photo",
+      "dialogDescription": "JPEG, PNG or WebP up to 5 MB.",
+      "selectLabel": "Choose an image",
+      "previewAlt": "Preview of the selected photo",
+      "captionLabel": "Caption (optional)",
+      "captionPlaceholder": "e.g. Davide's photo-finish win",
+      "extractScoreLabel": "Extract the score from the photo (OCR)",
+      "uploadCta": "Upload",
+      "uploading": "Uploading…",
+      "uploadError": "Could not upload the photo. Please try again.",
+      "dedupToast": "This photo is already in the gallery.",
+      "ocrResultTitle": "Detected text",
+      "badFormat": "Unsupported format. Use JPEG, PNG or WebP.",
+      "tooLarge": "The photo exceeds 5 MB."
     }
   },
   "gameNightsIndex": {

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SessionTracking.Application.Commands;
+using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Domain.Exceptions;
@@ -143,5 +144,101 @@ public sealed class UpsertGlossaryEntryCommandHandlerTests
 
         // Assert
         await act.Should().ThrowAsync<GlossaryTermCollisionException>();
+    }
+
+    // -------------------------------------------------------------------------
+    // #2638 / SI-7 — multi-context upsert
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    [Trait("Issue", "2638")]
+    public async Task Handle_WithContexts_ReplacesAndReturnsThemInDto()
+    {
+        // Arrange — existing entry seeded with a single (legacy) context.
+        var legacyBook = Guid.NewGuid();
+        var editing = GamebookGlossaryEntry.Create(
+            CampaignId, "Voidstone", "Pietra del Vuoto", GlossarySource.Manual, OwnerId,
+            firstSeenBookId: legacyBook);
+        _glossaryMock
+            .Setup(r => r.GetByIdAsync(editing.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(editing);
+        _glossaryMock
+            .Setup(r => r.GetByTermItAsync(CampaignId, "Pietra del Vuoto", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GamebookGlossaryEntry?)null);
+
+        var bookA = Guid.NewGuid();
+        var bookB = Guid.NewGuid();
+        var cmd = new UpsertGlossaryEntryCommand(
+            CampaignId, editing.Id, "Voidstone", "Pietra del Vuoto", OwnerId,
+            Contexts: new List<GlossaryContextDto>
+            {
+                new(bookA, "§147", null),
+                new(bookB, "§63", "definizione contestuale"),
+            });
+
+        // Act
+        var dto = await _handler.Handle(cmd, CancellationToken.None);
+
+        // Assert — full-set replace; legacy context gone, both new ones present in the DTO.
+        dto.Contexts.Should().HaveCount(2);
+        dto.Contexts.Should().NotContain(c => c.BookId == legacyBook);
+        dto.Contexts.Should().ContainSingle(c => c.BookId == bookA && c.ParagraphRef == "§147" && c.Definition == null);
+        dto.Contexts.Should().ContainSingle(c =>
+            c.BookId == bookB && c.ParagraphRef == "§63" && c.Definition == "definizione contestuale");
+        _glossaryMock.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    [Trait("Issue", "2638")]
+    public async Task Handle_WithoutContexts_LeavesExistingUnchanged()
+    {
+        // Arrange — existing entry with a single seeded context; command carries no contexts.
+        var legacyBook = Guid.NewGuid();
+        var editing = GamebookGlossaryEntry.Create(
+            CampaignId, "Voidstone", "Pietra del Vuoto", GlossarySource.Manual, OwnerId,
+            firstSeenBookId: legacyBook);
+        _glossaryMock
+            .Setup(r => r.GetByIdAsync(editing.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(editing);
+        _glossaryMock
+            .Setup(r => r.GetByTermItAsync(CampaignId, "Pietra del Vuoto rev", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GamebookGlossaryEntry?)null);
+
+        var cmd = new UpsertGlossaryEntryCommand(
+            CampaignId, editing.Id, "Voidstone", "Pietra del Vuoto rev", OwnerId,
+            Contexts: null);
+
+        // Act
+        var dto = await _handler.Handle(cmd, CancellationToken.None);
+
+        // Assert — termIt updated, but the pre-existing context is untouched.
+        dto.TermIt.Should().Be("Pietra del Vuoto rev");
+        dto.Contexts.Should().ContainSingle(c => c.BookId == legacyBook);
+    }
+
+    [Fact]
+    [Trait("Issue", "2638")]
+    public async Task Handle_CreateWithContexts_PersistsThemOnNewEntry()
+    {
+        // Arrange — no existing entry (create branch).
+        _glossaryMock
+            .Setup(r => r.GetByIdAsync(EntryId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GamebookGlossaryEntry?)null);
+        _glossaryMock
+            .Setup(r => r.GetByTermItAsync(CampaignId, "Spada", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GamebookGlossaryEntry?)null);
+
+        var bookA = Guid.NewGuid();
+        var cmd = new UpsertGlossaryEntryCommand(
+            CampaignId, EntryId, "Sword", "Spada", OwnerId,
+            Contexts: new List<GlossaryContextDto> { new(bookA, "§12", null) });
+
+        // Act
+        var dto = await _handler.Handle(cmd, CancellationToken.None);
+
+        // Assert
+        dto.TermEn.Should().Be("Sword");
+        dto.Contexts.Should().ContainSingle(c => c.BookId == bookA && c.ParagraphRef == "§12");
+        _glossaryMock.Verify(r => r.AddAsync(It.IsAny<GamebookGlossaryEntry>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 }

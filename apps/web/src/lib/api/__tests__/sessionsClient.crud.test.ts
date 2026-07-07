@@ -1,7 +1,10 @@
 /**
  * SessionsClient CRUD and Lifecycle Tests
  *
- * Tests for: getById, getHistory, start, pause, resume, end, complete, abandon
+ * Tests for: getById, getHistory, pause, resume, end, complete, abandon
+ *
+ * NB: `start` (POST /sessions) was removed in #2587 (dead funnel). The orphaned
+ * start tests were deleted in #2715; do not re-add them.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createSessionsClient } from '../clients/sessionsClient';
@@ -106,52 +109,6 @@ describe('sessionsClient CRUD and lifecycle', () => {
 
       expect(result.sessions).toEqual([]);
       expect(result.total).toBe(0);
-    });
-  });
-
-  describe('start', () => {
-    it('should start a new session', async () => {
-      const mockSession = {
-        id: 'new-session',
-        gameId: 'game-1',
-        status: 'active',
-        players: [{ playerName: 'Player 1', playerOrder: 1 }],
-      };
-
-      vi.mocked(mockHttpClient.post).mockResolvedValueOnce(mockSession);
-
-      const result = await client.start({
-        gameId: 'game-1',
-        players: [{ playerName: 'Player 1', playerOrder: 1 }],
-      });
-
-      expect(mockHttpClient.post).toHaveBeenCalledWith(
-        '/api/v1/sessions',
-        {
-          gameId: 'game-1',
-          players: [{ playerName: 'Player 1', playerOrder: 1 }],
-        },
-        expect.any(Object)
-      );
-      expect(result).toEqual(mockSession);
-    });
-
-    it('should start session with notes', async () => {
-      const mockSession = { id: 'session-with-notes', notes: 'Test notes' };
-
-      vi.mocked(mockHttpClient.post).mockResolvedValueOnce(mockSession);
-
-      await client.start({
-        gameId: 'game-1',
-        players: [{ playerName: 'Player 1', playerOrder: 1 }],
-        notes: 'Test notes',
-      });
-
-      expect(mockHttpClient.post).toHaveBeenCalledWith(
-        '/api/v1/sessions',
-        expect.objectContaining({ notes: 'Test notes' }),
-        expect.any(Object)
-      );
     });
   });
 

@@ -124,7 +124,7 @@ public class DeleteChatMessageCommandValidatorTests
     }
 
     [Fact]
-    public void Validate_EmptyRequesterId_ShouldFail()
+    public void Validate_EmptyRequesterUserId_ShouldFail()
     {
         var cmd = new DeleteChatMessageCommand(Guid.NewGuid(), Guid.Empty);
         var result = _validator.Validate(cmd);

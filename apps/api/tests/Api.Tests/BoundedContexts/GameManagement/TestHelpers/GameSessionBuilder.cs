@@ -8,8 +8,15 @@ namespace Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 /// </summary>
 internal class GameSessionBuilder
 {
+    /// <summary>
+    /// Default session creator id. Tests asserting ownership (#2655 IDOR guards)
+    /// can pass this as the command RequesterId to match the built session.
+    /// </summary>
+    public static readonly Guid DefaultCreatedByUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+
     private Guid _id = Guid.NewGuid();
     private Guid _gameId = Guid.NewGuid();
+    private Guid? _createdByUserId = DefaultCreatedByUserId;
     private List<SessionPlayer> _players = new()
     {
         new SessionPlayer("Player 1", 1),
@@ -25,6 +32,13 @@ internal class GameSessionBuilder
     public GameSessionBuilder WithId(Guid id)
     {
         _id = id;
+        return this;
+    }
+
+    /// <summary>Sets the session creator id (null = ownerless session).</summary>
+    public GameSessionBuilder WithCreatedByUserId(Guid? createdByUserId)
+    {
+        _createdByUserId = createdByUserId;
         return this;
     }
 
@@ -140,7 +154,7 @@ internal class GameSessionBuilder
     /// </summary>
     public GameSession Build()
     {
-        var session = new GameSession(_id, _gameId, _players);
+        var session = new GameSession(_id, _gameId, _players, _createdByUserId);
 
         if (_notes != null)
         {

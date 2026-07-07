@@ -29,5 +29,5 @@ internal sealed class GetAllAlertChannelsQueryHandler
         LastTestMessage: c.LastTestMessage,
         UpdatedAt: c.UpdatedAt,
         UpdatedBy: c.UpdatedBy,
-        RowVersion: Convert.ToBase64String(c.RowVersion ?? Array.Empty<byte>()));
+        Xmin: c.Xmin);
 }

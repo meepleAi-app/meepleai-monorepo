@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -36,6 +37,7 @@ public class RagPromptAssemblyServiceFallbackMetricsTests
     private const string CounterName = "meepleai.rag.retrieval.fallbacks";
 
     private readonly Mock<IEmbeddingService> _embeddingMock = new();
+    private readonly Mock<IEmbeddingRepository> _embeddingRepositoryMock = new();
     private readonly Mock<ICrossEncoderReranker> _rerankerMock = new();
     private readonly Mock<ILlmService> _llmMock = new();
     private readonly Mock<ITextChunkSearchService> _textSearchMock = new();
@@ -64,12 +66,19 @@ public class RagPromptAssemblyServiceFallbackMetricsTests
         _ragEnhancementMock
             .Setup(r => r.GetActiveEnhancementsAsync(It.IsAny<UserTier>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(RagEnhancement.None);
+
+        _embeddingRepositoryMock
+            .Setup(r => r.SearchByVectorWithScoresAsync(
+                It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<ScoredEmbedding>());
     }
 
     private RagPromptAssemblyService CreateService()
     {
         return new RagPromptAssemblyService(
             _embeddingMock.Object,
+            _embeddingRepositoryMock.Object,
             _rerankerMock.Object,
             _llmMock.Object,
             _textSearchMock.Object,

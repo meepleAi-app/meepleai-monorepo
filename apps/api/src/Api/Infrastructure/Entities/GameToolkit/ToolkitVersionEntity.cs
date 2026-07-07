@@ -29,8 +29,8 @@ public class ToolkitVersionEntity
     public string? YankReason { get; set; }
     public Guid? YankedBy { get; set; }
 
-    // Concurrency token — mirrors GameToolkitEntity.RowVersion.
-    public byte[] RowVersion { get; set; } = default!;
+    // Concurrency token — PostgreSQL xmin system column (mirrors GameToolkitEntity.Xmin, ADR-060).
+    public uint Xmin { get; set; }
 
     // Navigation
     public GameToolkitEntity? Toolkit { get; set; }

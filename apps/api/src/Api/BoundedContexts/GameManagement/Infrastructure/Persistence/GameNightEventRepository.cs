@@ -58,6 +58,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .AsNoTracking()
             .Include(e => e.Rsvps)
             .Include(e => e.Sessions)
+            .Include(e => e.Votes)
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken).ConfigureAwait(false);
 
         return entity != null ? MapToDomain(entity) : null;
@@ -69,6 +70,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .AsNoTracking()
             .Include(e => e.Rsvps)
             .Include(e => e.Sessions)
+            .Include(e => e.Votes)
             .OrderByDescending(e => e.ScheduledAt)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
@@ -81,6 +83,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .AsNoTracking()
             .Include(e => e.Rsvps)
             .Include(e => e.Sessions)
+            .Include(e => e.Votes)
             .Where(e => e.Status == nameof(GameNightStatus.Published) && e.ScheduledAt > DateTimeOffset.UtcNow)
             .OrderBy(e => e.ScheduledAt)
             .Take(50)
@@ -105,6 +108,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .AsNoTracking()
             .Include(e => e.Rsvps)
             .Include(e => e.Sessions)
+            .Include(e => e.Votes)
             .Where(e => e.Status == nameof(GameNightStatus.Completed)
                 || (e.Status == nameof(GameNightStatus.Published) && e.ScheduledAt < now))
             .OrderByDescending(e => e.ScheduledAt)
@@ -120,6 +124,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .AsNoTracking()
             .Include(e => e.Rsvps)
             .Include(e => e.Sessions)
+            .Include(e => e.Votes)
             .Where(e => e.OrganizerId == userId || e.Rsvps.Any(r => r.UserId == userId))
             .OrderByDescending(e => e.ScheduledAt)
             .Take(50)
@@ -135,6 +140,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
         var entities = await DbContext.GameNightEvents
             .Include(e => e.Rsvps)
             .Include(e => e.Sessions)
+            .Include(e => e.Votes)
             .Where(e => e.Status == nameof(GameNightStatus.Published) && e.ScheduledAt >= from && e.ScheduledAt <= to)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
@@ -184,12 +190,67 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
         var entity = await DbContext.GameNightEvents
             .Include(e => e.Rsvps)
             .Include(e => e.Sessions)
+            .Include(e => e.Votes)
             .FirstOrDefaultAsync(
                 e => e.Sessions.Any(s => s.SessionId == sessionId),
                 cancellationToken)
             .ConfigureAwait(false);
 
         return entity != null ? MapToDomain(entity) : null;
+    }
+
+    public async Task<GameNightEvent?> GetByShareTokenAsync(
+        string shareToken, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(shareToken);
+
+        var entity = await DbContext.GameNightEvents
+            .AsNoTracking()
+            .Include(e => e.Rsvps)
+            .Include(e => e.Sessions)
+            .Include(e => e.Votes)
+            .FirstOrDefaultAsync(e => e.ShareToken == shareToken && e.IsShared, cancellationToken)
+            .ConfigureAwait(false);
+
+        return entity != null ? MapToDomain(entity) : null;
+    }
+
+    public async Task AddVoteAsync(GameNightVote vote, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(vote);
+
+        await DbContext.GameNightVotes.AddAsync(new GameNightVoteEntity
+        {
+            Id = vote.Id,
+            EventId = vote.EventId,
+            VoterUserId = vote.VoterUserId,
+            CandidateGameId = vote.CandidateGameId,
+            CreatedAt = vote.CreatedAt
+        }, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task RemoveVoteAsync(Guid voteId, CancellationToken cancellationToken = default)
+    {
+        var entity = await DbContext.GameNightVotes
+            .FirstOrDefaultAsync(v => v.Id == voteId, cancellationToken).ConfigureAwait(false);
+        if (entity != null)
+        {
+            DbContext.GameNightVotes.Remove(entity);
+        }
+    }
+
+    public async Task SetVotingWinnerAsync(
+        Guid eventId, Guid? winnerGameId, CancellationToken cancellationToken = default)
+    {
+        // Direct column write — bypasses the aggregate's detached full-remap (which would
+        // re-Modify every child) and the xmin concurrency token (tie resolution is a single
+        // organiser action, not a contended write).
+        await DbContext.GameNightEvents
+            .Where(e => e.Id == eventId)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(e => e.VotingWinnerGameId, winnerGameId),
+                cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private static GameNightEventEntity MapToPersistence(GameNightEvent domain)
@@ -212,7 +273,12 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             RsvpDeadline = domain.RsvpDeadline,
             RsvpClosedAt = domain.RsvpClosedAt,
             CreatedAt = domain.CreatedAt,
-            UpdatedAt = domain.UpdatedAt
+            UpdatedAt = domain.UpdatedAt,
+            VotingWinnerGameId = domain.VotingWinnerGameId,
+            ShareToken = domain.ShareToken,
+            IsShared = domain.IsShared,
+            IsArchived = domain.IsArchived,
+            Xmin = domain.Xmin
         };
 
         foreach (var rsvp in domain.Rsvps)
@@ -242,6 +308,18 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
                 WinnerId = session.WinnerId,
                 StartedAt = session.StartedAt,
                 CompletedAt = session.CompletedAt
+            });
+        }
+
+        foreach (var vote in domain.Votes)
+        {
+            entity.Votes.Add(new GameNightVoteEntity
+            {
+                Id = vote.Id,
+                EventId = vote.EventId,
+                VoterUserId = vote.VoterUserId,
+                CandidateGameId = vote.CandidateGameId,
+                CreatedAt = vote.CreatedAt
             });
         }
 
@@ -293,6 +371,10 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
         var rsvpClosedAtProp = typeof(GameNightEvent).GetProperty(nameof(GameNightEvent.RsvpClosedAt));
         rsvpClosedAtProp?.SetValue(evt, entity.RsvpClosedAt);
 
+        // Restore the xmin concurrency token so the detached UpdateAsync emits the
+        // WHERE id = @id AND xmin = @original check (Issue #2703).
+        evt.SetXmin(entity.Xmin);
+
         // Restore RSVPs
         var rsvps = entity.Rsvps.Select(r => GameNightRsvp.Reconstitute(
             id: r.Id,
@@ -332,6 +414,19 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
 
             evt.RestoreSessions(sessions);
         }
+
+        // Restore candidate-game votes + resolved tie-break winner (#2700)
+        var votes = entity.Votes
+            .Select(v => GameNightVote.Reconstitute(
+                id: v.Id,
+                eventId: v.EventId,
+                voterUserId: v.VoterUserId,
+                candidateGameId: v.CandidateGameId,
+                createdAt: v.CreatedAt))
+            .ToList();
+        evt.RestoreVotes(votes);
+        evt.RestoreVotingWinner(entity.VotingWinnerGameId);
+        evt.RestoreShareState(entity.ShareToken, entity.IsShared, entity.IsArchived);
 
         // Clear domain events from reconstruction
         evt.ClearDomainEvents();

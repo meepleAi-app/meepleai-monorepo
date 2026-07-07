@@ -2,8 +2,10 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Helpers;
 using Api.Models;
@@ -29,7 +31,13 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStreamingEvent>
 {
     private readonly SearchQueryHandler _searchQueryHandler;
+    private readonly ICrossEncoderReranker _reranker;
     private readonly QualityTrackingDomainService _qualityTrackingService;
+
+    // Issue #2708: retrieve a wider candidate pool, then let the cross-encoder narrow it to the
+    // final top-K by semantic relevance (improves precision without raising MinScore).
+    private const int RerankCandidatePoolSize = 20;
+    private const int FinalTopK = 5;
     private readonly ChatContextDomainService _chatContextService;
     private readonly IChatThreadRepository _chatThreadRepository;
     private readonly IPdfDocumentRepository _pdfDocumentRepository;
@@ -43,6 +51,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
 
     public StreamQaQueryHandler(
         SearchQueryHandler searchQueryHandler,
+        ICrossEncoderReranker reranker,
         QualityTrackingDomainService qualityTrackingService,
         ChatContextDomainService chatContextService,
         IChatThreadRepository chatThreadRepository,
@@ -56,6 +65,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         TimeProvider? timeProvider = null)
     {
         _searchQueryHandler = searchQueryHandler ?? throw new ArgumentNullException(nameof(searchQueryHandler));
+        _reranker = reranker ?? throw new ArgumentNullException(nameof(reranker));
         _qualityTrackingService = qualityTrackingService ?? throw new ArgumentNullException(nameof(qualityTrackingService));
         _chatContextService = chatContextService ?? throw new ArgumentNullException(nameof(chatContextService));
         _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
@@ -274,7 +284,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         var searchQuery = new SearchQuery(
             GameId: Guid.Parse(gameId),
             Query: queryText,
-            TopK: 5,
+            TopK: RerankCandidatePoolSize,
             MinScore: 0.55,
             SearchMode: "hybrid",
             Language: "en",
@@ -288,6 +298,11 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
             _logger.LogInformation("No vector results found for query in game {GameId}", gameId);
             return (false, null, null, null);
         }
+
+        // Issue #2708: rerank the wider candidate pool down to the final top-K by semantic relevance
+        // (cross-encoder; graceful degradation to raw top-K if the reranker is unavailable).
+        searchResults = await SearchResultReranker.RerankAsync(
+            _reranker, queryText, searchResults, FinalTopK, _logger, cancellationToken).ConfigureAwait(false);
 
         // Map search results to domain entities for quality tracking
         var domainSearchResults = searchResults.Select(sr => new Domain.Entities.SearchResult(

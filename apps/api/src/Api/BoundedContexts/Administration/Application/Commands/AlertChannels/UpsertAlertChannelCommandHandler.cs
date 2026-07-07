@@ -30,29 +30,12 @@ internal sealed class UpsertAlertChannelCommandHandler
         }
         else
         {
-            // Carry the RowVersion supplied by the client back into the aggregate
+            // Carry the xmin token supplied by the client back into the aggregate
             // so the repository can detect a concurrent update via Entry.OriginalValues.
             existing.UpdateConfig(request.ConfigJson, request.IsEnabled, request.UpdatedBy);
-            if (!string.IsNullOrEmpty(request.RowVersion))
+            if (request.Xmin.HasValue)
             {
-                var tokenBytes = TryDecodeRowVersion(request.RowVersion);
-                if (tokenBytes is not null)
-                {
-                    // We reconstitute a copy with the client-supplied token —
-                    // necessary because UpdateConfig doesn't touch RowVersion.
-                    existing = AlertChannel.Reconstitute(
-                        existing.Type,
-                        existing.ConfigJson,
-                        existing.IsEnabled,
-                        existing.LastTestedAt,
-                        existing.LastTestStatus,
-                        existing.LastTestMessage,
-                        existing.CreatedAt,
-                        existing.UpdatedAt,
-                        existing.CreatedBy,
-                        existing.UpdatedBy,
-                        tokenBytes);
-                }
+                existing.SetXmin(request.Xmin.Value);
             }
             aggregate = existing;
         }
@@ -68,25 +51,13 @@ internal sealed class UpsertAlertChannelCommandHandler
                 ex);
         }
 
-        // Re-fetch to surface the freshly-bumped RowVersion to the client.
+        // Re-fetch to surface the freshly-bumped xmin to the client.
         var refreshed = await _repository.GetByTypeAsync(type, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("AlertChannel", request.Type);
 
         return new AlertChannelUpsertResult(
             Type: request.Type.ToLowerInvariant(),
             UpdatedAt: refreshed.UpdatedAt,
-            RowVersion: Convert.ToBase64String(refreshed.RowVersion ?? Array.Empty<byte>()));
-    }
-
-    private static byte[]? TryDecodeRowVersion(string base64)
-    {
-        try
-        {
-            return Convert.FromBase64String(base64);
-        }
-        catch (FormatException)
-        {
-            return null;
-        }
+            Xmin: refreshed.Xmin);
     }
 }

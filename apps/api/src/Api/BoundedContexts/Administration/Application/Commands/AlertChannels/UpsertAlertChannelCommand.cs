@@ -8,19 +8,19 @@ namespace Api.BoundedContexts.Administration.Application.Commands.AlertChannels;
 ///
 /// <para>The channel <see cref="Type"/> is part of the URL
 /// (PUT /admin/alert-channels/{type}) and acts as the natural key. The
-/// <see cref="RowVersion"/> field carries the Postgres xmin token; pass
-/// an empty string for first-time creation. Returning a stale token on update
+/// <see cref="Xmin"/> field carries the Postgres xmin token; pass
+/// <c>null</c> for first-time creation. Supplying a stale token on update
 /// surfaces as a 409 ConflictException.</para>
 /// </summary>
 internal sealed record UpsertAlertChannelCommand(
     string Type,
     string ConfigJson,
     bool IsEnabled,
-    string? RowVersion,
+    uint? Xmin,
     string UpdatedBy) : IRequest<AlertChannelUpsertResult>;
 
 /// <summary>Result returned to the endpoint after a successful upsert.</summary>
-internal sealed record AlertChannelUpsertResult(string Type, DateTime UpdatedAt, string RowVersion);
+internal sealed record AlertChannelUpsertResult(string Type, DateTime UpdatedAt, uint Xmin);
 
 internal sealed class UpsertAlertChannelCommandValidator : AbstractValidator<UpsertAlertChannelCommand>
 {

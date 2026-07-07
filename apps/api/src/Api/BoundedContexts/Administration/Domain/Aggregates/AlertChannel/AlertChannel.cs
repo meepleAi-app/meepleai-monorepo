@@ -11,9 +11,9 @@ namespace Api.BoundedContexts.Administration.Domain.Aggregates.AlertChannels;
 /// Email) plus the most recent test-connection outcome surfaced in the
 /// admin Canali drawer.</para>
 ///
-/// <para>RowVersion enables optimistic-concurrency protection for the
-/// admin-edit flow: two simultaneous admins editing the same channel will
-/// get a 409 ConflictException via <c>DbUpdateConcurrencyException</c>
+/// <para>The <c>xmin</c> token (<see cref="Xmin"/>) enables optimistic-concurrency
+/// protection for the admin-edit flow: two simultaneous admins editing the same
+/// channel will get a 409 ConflictException via <c>DbUpdateConcurrencyException</c>
 /// translation in the upsert command handler.</para>
 /// </summary>
 internal sealed class AlertChannel
@@ -57,10 +57,15 @@ internal sealed class AlertChannel
     /// </summary>
     public Guid? LastDispatchedEventId { get; private set; }
 
-    /// <summary>SQL Server / Postgres optimistic concurrency token.
-    /// Repository populates this from <c>xmin</c> via EF's <c>[Timestamp]</c>
-    /// equivalent (<see cref="Microsoft.EntityFrameworkCore.Metadata.Builders.PropertyBuilder.IsRowVersion"/>).</summary>
-    public byte[] RowVersion { get; private set; } = Array.Empty<byte>();
+    /// <summary>Postgres <c>xmin</c> optimistic-concurrency token. Server-owned; the
+    /// repository round-trips it for the detached in-place update (ADR-060). Zero until
+    /// the row is first read back from Postgres.</summary>
+    public uint Xmin { get; private set; }
+
+    /// <summary>Repository/handler-only: restore the xmin token after loading from
+    /// persistence, or override it with a client-supplied stale token for concurrency
+    /// checking on the upsert path.</summary>
+    internal void SetXmin(uint xmin) => Xmin = xmin;
 
     private AlertChannel() { /* EF Core / reconstitution */ }
 
@@ -98,7 +103,7 @@ internal sealed class AlertChannel
         return new AlertChannel(type, configJson, isEnabled, now, now, createdBy, createdBy);
     }
 
-    /// <summary>Repository-only reconstitution; preserves stored RowVersion and timestamps.</summary>
+    /// <summary>Repository-only reconstitution; preserves stored xmin and timestamps.</summary>
     public static AlertChannel Reconstitute(
         AlertChannelType type,
         string configJson,
@@ -110,7 +115,7 @@ internal sealed class AlertChannel
         DateTime updatedAt,
         string? createdBy,
         string? updatedBy,
-        byte[] rowVersion,
+        uint xmin,
         Guid? lastDispatchedEventId = null)
     {
         return new AlertChannel(type, configJson, isEnabled, createdAt, updatedAt, createdBy, updatedBy)
@@ -118,7 +123,7 @@ internal sealed class AlertChannel
             LastTestedAt = lastTestedAt,
             LastTestStatus = lastTestStatus,
             LastTestMessage = lastTestMessage,
-            RowVersion = rowVersion ?? Array.Empty<byte>(),
+            Xmin = xmin,
             LastDispatchedEventId = lastDispatchedEventId,
         };
     }

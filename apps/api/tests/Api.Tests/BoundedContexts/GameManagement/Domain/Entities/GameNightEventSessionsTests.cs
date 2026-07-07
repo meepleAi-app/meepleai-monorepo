@@ -169,6 +169,26 @@ public class GameNightEventSessionsTests
     }
 
     [Fact]
+    public void FinalizeNight_WhenInProgressAfterFirstLiveSession_SetsCompleted()
+    {
+        // #2699: reproduces the PRODUCTION flow. Invariant #15 promotes the night
+        // Published -> InProgress when the first Session goes live (SessionStartedHandler
+        // -> HandleFirstSessionStarted). FinalizeNight must accept InProgress, not only
+        // Published, otherwise a real finalize after a live session throws -> 409.
+        var evt = CreatePublishedEvent();
+        var sessionId = Guid.NewGuid();
+        evt.AddSession(sessionId, evt.GameIds[0], "Catan");
+        evt.StartCurrentSession();
+        evt.HandleFirstSessionStarted(sessionId);   // #15: Published -> InProgress
+        Assert.Equal(GameNightStatus.InProgress, evt.Status);
+        evt.CompleteCurrentSession(Guid.NewGuid());
+
+        evt.FinalizeNight();
+
+        Assert.Equal(GameNightStatus.Completed, evt.Status);
+    }
+
+    [Fact]
     public void FinalizeNight_WithInProgressSession_Throws()
     {
         var evt = CreatePublishedEvent();

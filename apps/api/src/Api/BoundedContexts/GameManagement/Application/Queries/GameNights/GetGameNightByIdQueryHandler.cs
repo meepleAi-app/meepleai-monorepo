@@ -33,6 +33,14 @@ internal sealed class GetGameNightByIdQueryHandler : IQueryHandler<GetGameNightB
         var gameNight = await _repository.GetByIdAsync(query.GameNightId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("GameNightEvent", query.GameNightId.ToString());
 
+        // #2698: participant-scoped read (organizer or invited) — closes the cross-tenant IDOR
+        // where any authenticated user could read another user's private game night. Mirrors the
+        // guard on GetGameNightLiveQueryHandler.
+        var isParticipant = gameNight.OrganizerId == query.CallerUserId
+            || gameNight.Rsvps.Any(r => r.UserId == query.CallerUserId);
+        if (!isParticipant)
+            throw new ForbiddenException("Only the organizer or an invited player can view this game night.");
+
         var organizerName = await GetUserDisplayNameAsync(gameNight.OrganizerId, cancellationToken).ConfigureAwait(false);
 
         return GameNightMapperHelper.MapToDto(gameNight, organizerName);

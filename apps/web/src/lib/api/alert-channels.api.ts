@@ -26,7 +26,7 @@ export const alertChannelsApi = {
   },
 
   /**
-   * Create or update a channel configuration. `rowVersion` is required when
+   * Create or update a channel configuration. `xmin` is required when
    * updating an existing channel — the backend returns 409 ConflictException
    * if the row was modified concurrently.
    */

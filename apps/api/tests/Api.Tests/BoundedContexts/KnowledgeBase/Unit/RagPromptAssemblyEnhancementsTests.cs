@@ -1,5 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -20,6 +22,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Unit;
 public class RagPromptAssemblyEnhancementsTests
 {
     private readonly Mock<IEmbeddingService> _embeddingMock;
+    private readonly Mock<IEmbeddingRepository> _embeddingRepositoryMock;
     private readonly Mock<ICrossEncoderReranker> _rerankerMock;
     private readonly Mock<ILlmService> _llmMock;
     private readonly Mock<ITextChunkSearchService> _textSearchMock;
@@ -37,6 +40,7 @@ public class RagPromptAssemblyEnhancementsTests
     public RagPromptAssemblyEnhancementsTests()
     {
         _embeddingMock = new Mock<IEmbeddingService>();
+        _embeddingRepositoryMock = new Mock<IEmbeddingRepository>();
         _rerankerMock = new Mock<ICrossEncoderReranker>();
         _llmMock = new Mock<ILlmService>();
         _textSearchMock = new Mock<ITextChunkSearchService>();
@@ -70,12 +74,20 @@ public class RagPromptAssemblyEnhancementsTests
                 It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<TextChunkMatch>());
+
+        // Default: empty vector search (no embedding matches)
+        _embeddingRepositoryMock
+            .Setup(r => r.SearchByVectorWithScoresAsync(
+                It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<ScoredEmbedding>());
     }
 
     private RagPromptAssemblyService CreateService()
     {
         return new RagPromptAssemblyService(
             _embeddingMock.Object,
+            _embeddingRepositoryMock.Object,
             _rerankerMock.Object,
             _llmMock.Object,
             _textSearchMock.Object,

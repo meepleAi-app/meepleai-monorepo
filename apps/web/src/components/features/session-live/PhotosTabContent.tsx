@@ -63,18 +63,18 @@ function PhotoCard({
       {/* Hover overlay */}
       <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/30 transition-colors" />
       {/* Timestamp badge */}
-      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-2">
-        <p className="text-white text-xs font-mono">{timeLabel}</p>
+      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-2 text-white">
+        <p className="text-xs font-mono">{timeLabel}</p>
       </div>
       {/* Delete button */}
       <button
         type="button"
-        className="absolute top-1.5 right-1.5 h-7 w-7 rounded-full bg-foreground/40 hover:bg-destructive/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+        className="absolute top-1.5 right-1.5 h-7 w-7 rounded-full bg-foreground/40 hover:bg-destructive/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all text-white"
         onClick={() => onDelete(photo.id)}
         aria-label={deleteAriaLabel}
         data-testid={`delete-photo-${photo.id}`}
       >
-        <Trash2 className="h-3.5 w-3.5 text-white" />
+        <Trash2 className="h-3.5 w-3.5" />
       </button>
     </div>
   );

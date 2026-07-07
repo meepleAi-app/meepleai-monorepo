@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Services.Pdf;
 using Microsoft.Extensions.Logging;
 
@@ -26,6 +27,23 @@ internal sealed class BggCoverDownloader : IBggCoverDownloader
     {
         if (string.IsNullOrWhiteSpace(remoteImageUrl))
         {
+            return null;
+        }
+
+        // SSRF guard (#2655 finding #10): only fetch HTTPS URLs that resolve to public IPs.
+        // Reuses the SharedGameCatalog SsrfSafeHttpClient validators (same bounded context). Fails
+        // closed — an invalid scheme or a private/reserved target aborts the download (returns null).
+        try
+        {
+            SsrfSafeHttpClient.ValidateUrlScheme(remoteImageUrl);
+            await SsrfSafeHttpClient.ValidateResolvedIpAsync(remoteImageUrl, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            _logger.LogWarning(
+                ex,
+                "BGG cover download blocked by SSRF guard: BggId={BggId}, Url={Url}",
+                bggId, remoteImageUrl);
             return null;
         }
 

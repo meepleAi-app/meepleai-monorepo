@@ -6,6 +6,10 @@ namespace Api.BoundedContexts.SessionTracking.Application.DTOs;
 /// shared vs private campaigns without hardcoding <c>kind: Shared</c>. Issue #1405
 /// removed the legacy <c>GameId</c> alias after all FE consumers migrated to
 /// <see cref="GameRefId"/>.
+///
+/// SI-8 (#2639): <see cref="Outcome"/> (int form of <c>GamebookCampaignOutcome</c>,
+/// null = open/resumable) + <see cref="CompletedAt"/> expose the manual terminal
+/// close, so the FE can render "completata"/"abbandonata" and filter the resume set.
 /// </summary>
 public sealed record GamebookCampaignDto(
     Guid Id,
@@ -17,4 +21,6 @@ public sealed record GamebookCampaignDto(
     IReadOnlyList<int> History,
     DateTimeOffset LastReadAt,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    int? Outcome = null,
+    DateTimeOffset? CompletedAt = null);

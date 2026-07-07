@@ -7,6 +7,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api } from '@/lib/api';
 import type { DiaryQueryParams } from '@/lib/api/session-flow/types';
+import { gameNightLiveKeys } from '@/lib/game-nights/hooks/useGameNightLive';
+import { gamebookCampaignKeys } from '@/lib/gamebook/hooks/useGamebookCampaign';
 
 import { gameNightKeys } from './useGameNights';
 
@@ -71,8 +73,13 @@ export function useKbReadinessQuery(gameId: string) {
 // ─── Mutations ──────────────────────────────────────────────────────────────
 
 /**
- * Complete a game night — cascade-finalize all sessions.
- * Invalidates both session-flow diary and game-night detail queries.
+ * Complete a game night — cascade-finalize all sessions (in-progress → completed).
+ *
+ * Invalidates the session-flow diary + game-night list/detail queries AND (SI-3 #2634) the
+ * night-live read + the whole gamebook campaign family, so every surface reflecting the night's
+ * status refetches: the night-live hub strip AND the cross-surface "Serata" spine strip on the
+ * gamebook play page. The spine is keyed by campaignId (unknown at finalize time), hence the
+ * broad `gamebookCampaignKeys.all` family invalidation rather than a targeted key.
  */
 export function useCompleteGameNight() {
   const queryClient = useQueryClient();
@@ -83,6 +90,10 @@ export function useCompleteGameNight() {
       queryClient.invalidateQueries({ queryKey: sessionFlowKeys.gameNightDiary(gameNightId) });
       queryClient.invalidateQueries({ queryKey: gameNightKeys.detail(gameNightId) });
       queryClient.invalidateQueries({ queryKey: gameNightKeys.all });
+      // SI-3: the night-live read (the strip transitions in-progress → completed) …
+      queryClient.invalidateQueries({ queryKey: gameNightLiveKeys.detail(gameNightId) });
+      // … and every gamebook campaign/spine (cross-surface Serata strip refetch).
+      queryClient.invalidateQueries({ queryKey: gamebookCampaignKeys.all });
     },
   });
 }

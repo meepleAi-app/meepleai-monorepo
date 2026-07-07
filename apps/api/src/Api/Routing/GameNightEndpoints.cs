@@ -77,6 +77,7 @@ internal static class GameNightEndpoints
         gameNights.MapGet("/{id:guid}", HandleGetGameNightById)
             .RequireAuthenticatedUser()
             .Produces<GameNightDto>(200)
+            .Produces(403)
             .Produces(404)
             .Produces(401)
             .WithName("GetGameNightById")
@@ -137,6 +138,7 @@ internal static class GameNightEndpoints
         gameNights.MapGet("/{id:guid}/rsvps", HandleGetGameNightRsvps)
             .RequireAuthenticatedUser()
             .Produces<IReadOnlyList<GameNightRsvpDto>>(200)
+            .Produces(403)
             .Produces(404)
             .Produces(401)
             .WithName("GetGameNightRsvps")
@@ -251,6 +253,149 @@ internal static class GameNightEndpoints
             .WithSummary("Get game night diary timeline")
             .WithDescription("Retrieves the cross-game diary timeline with all session events for the game night. Participant-scoped (organizer or RSVP'd player).");
 
+        // ── Candidate voting (approval model) — Issue #2700 ─────────────────
+
+        gameNights.MapPost("/{id:guid}/votes", HandleCastGameNightVote)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(400)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .Produces(409)
+            .WithName("CastGameNightVote")
+            .WithSummary("Approve a candidate game")
+            .WithDescription("Casts an approval vote for a candidate game. Confirmed participants only; voting closes 1h before the event. Idempotent for a repeated approval.");
+
+        gameNights.MapDelete("/{id:guid}/votes/{candidateGameId:guid}", HandleRetractGameNightVote)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(401)
+            .Produces(404)
+            .Produces(409)
+            .WithName("RetractGameNightVote")
+            .WithSummary("Retract a candidate approval")
+            .WithDescription("Retracts a previously-cast approval vote. Idempotent when absent; voting must still be open.");
+
+        gameNights.MapPost("/{id:guid}/votes/resolve-tie", HandleResolveGameNightVotingTie)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(400)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .Produces(409)
+            .WithName("ResolveGameNightVotingTie")
+            .WithSummary("Resolve a voting tie")
+            .WithDescription("Organiser chooses the winner among the tied leaders after voting closes.");
+
+        gameNights.MapGet("/{id:guid}/votes/tally", HandleGetGameNightVoteTally)
+            .RequireAuthenticatedUser()
+            .Produces<GameNightVoteTallyDto>(200)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .WithName("GetGameNightVoteTally")
+            .WithSummary("Get the candidate-vote tally")
+            .WithDescription("Returns per-candidate approval counts, leader(s), tie flag, resolved winner, and the caller's own approvals. Participant-scoped (organizer or RSVP'd player).");
+
+        // ── Summary + share-token + archive — Issue #2702 ───────────────────
+
+        gameNights.MapGet("/{id:guid}/summary", HandleGetGameNightSummary)
+            .RequireAuthenticatedUser()
+            .Produces<GameNightSummaryDto>(200)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .WithName("GetGameNightSummary")
+            .WithSummary("Get the game night summary")
+            .WithDescription("Returns the post-finalize summary (MVP + KPIs + per-game recap). Participant-scoped (organizer or RSVP'd player). The share token is only included for the organizer.");
+
+        gameNights.MapPost("/{id:guid}/share-token", HandleGenerateGameNightShareToken)
+            .RequireAuthenticatedUser()
+            .Produces<GameNightShareLinkDto>(201)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .WithName("GenerateGameNightShareToken")
+            .WithSummary("Share the game night summary")
+            .WithDescription("Organizer-only. Generates (or rotates) a public share token for the summary; returns the token.");
+
+        gameNights.MapDelete("/{id:guid}/share-token", HandleRevokeGameNightShareToken)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .WithName("RevokeGameNightShareToken")
+            .WithSummary("Stop sharing the game night summary")
+            .WithDescription("Organizer-only. Revokes the public share token.");
+
+        gameNights.MapPost("/{id:guid}/archive", HandleSetGameNightArchived)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .Produces(409)
+            .WithName("SetGameNightArchived")
+            .WithSummary("Archive or restore a game night")
+            .WithDescription("Organizer-only. Archives a completed night (409 if not completed) or restores an archived one.");
+
+        gameNights.MapGet("/shared/{token}/summary", HandleGetSharedGameNightSummary)
+            .AllowAnonymous()
+            .RequireRateLimiting("GameNightTokenRead")
+            .Produces<GameNightSummaryDto>(200)
+            .Produces(404)
+            .Produces(429)
+            .WithName("GetSharedGameNightSummary")
+            .WithSummary("Get a shared game night summary by token")
+            .WithDescription("Public endpoint to read a shared summary by its opaque token. Returns 404 when the token is unknown or sharing was revoked. Rate-limited per IP.");
+
+        // ── Recap photo gallery — Issue #2724 ────────────────────────────────
+
+        gameNights.MapPost("/{id:guid}/photos", HandleUploadGameNightPhoto)
+            .RequireAuthenticatedUser()
+            .DisableAntiforgery()
+            .Produces<GameNightPhotoUploadResult>(201)
+            .Produces(400)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .WithName("UploadGameNightPhoto")
+            .WithSummary("Upload a photo to the game night recap gallery")
+            .WithDescription("Multipart upload (field 'file', optional 'caption', optional 'extractScoreFromPhoto'). Participant-scoped (organizer or RSVP'd player). Idempotent on identical bytes.");
+
+        gameNights.MapGet("/{id:guid}/photos", HandleGetGameNightPhotos)
+            .RequireAuthenticatedUser()
+            .Produces<IReadOnlyList<GameNightPhotoDto>>(200)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .WithName("GetGameNightPhotos")
+            .WithSummary("List the game night recap photos")
+            .WithDescription("Participant-scoped (organizer or RSVP'd player). URLs are presigned.");
+
+        gameNights.MapDelete("/{id:guid}/photos/{photoId:guid}", HandleDeleteGameNightPhoto)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .WithName("DeleteGameNightPhoto")
+            .WithSummary("Delete a game night recap photo")
+            .WithDescription("Uploader- or organizer-only.");
+
+        gameNights.MapGet("/shared/{token}/photos", HandleGetSharedGameNightPhotos)
+            .AllowAnonymous()
+            .RequireRateLimiting("GameNightTokenRead")
+            .Produces<IReadOnlyList<GameNightPhotoDto>>(200)
+            .Produces(404)
+            .Produces(429)
+            .WithName("GetSharedGameNightPhotos")
+            .WithSummary("Get shared game night photos by token")
+            .WithDescription("Public endpoint to read a shared night's recap photos by its opaque token. Returns 404 when the token is unknown or sharing was revoked. Rate-limited per IP.");
+
         return group;
     }
 
@@ -354,6 +499,189 @@ internal static class GameNightEndpoints
         var command = new RespondToGameNightCommand(id, userId, rsvpStatus);
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
+    }
+
+    // ── Candidate voting (approval model) — Issue #2700 ─────────────────────
+
+    private static async Task<IResult> HandleCastGameNightVote(
+        Guid id,
+        [FromBody] CastVoteRequest request,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        var command = new CastGameNightVoteCommand(id, userId, request.CandidateGameId);
+        await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleRetractGameNightVote(
+        Guid id,
+        Guid candidateGameId,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        var command = new RetractGameNightVoteCommand(id, userId, candidateGameId);
+        await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleResolveGameNightVotingTie(
+        Guid id,
+        [FromBody] ResolveVotingTieRequest request,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        var command = new ResolveGameNightVotingTieCommand(id, userId, request.WinningCandidateGameId);
+        await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleGetGameNightVoteTally(
+        Guid id,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        var result = await mediator
+            .Send(new GetGameNightVoteTallyQuery(id, userId), cancellationToken)
+            .ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    // ── Summary + share-token + archive — Issue #2702 ───────────────────────
+
+    private static async Task<IResult> HandleGetGameNightSummary(
+        Guid id,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        var result = await mediator
+            .Send(new GetGameNightSummaryQuery(id, userId), cancellationToken)
+            .ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleUploadGameNightPhoto(
+        Guid id,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var form = await httpContext.Request.ReadFormAsync(cancellationToken).ConfigureAwait(false);
+        var file = form.Files.GetFile("file");
+        if (file is null || file.Length == 0)
+            return Results.BadRequest(new { error = "File is required" });
+
+        var extractScore = form.TryGetValue("extractScoreFromPhoto", out var raw)
+            && bool.TryParse(raw.ToString(), out var b) && b;
+        var caption = form.TryGetValue("caption", out var cap) ? cap.ToString() : null;
+
+        using var stream = file.OpenReadStream();
+        var command = new UploadGameNightPhotoCommand(
+            id, httpContext.User.GetUserId(), stream, file.Length, file.ContentType, extractScore, caption);
+
+        // Exceptions propagate to ApiExceptionHandlerMiddleware (ForbiddenException→403,
+        // NotFoundException→404, ValidationException→400).
+        var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.Created($"/api/v1/game-nights/{id}/photos/{result.PhotoId}", result);
+    }
+
+    private static async Task<IResult> HandleGetGameNightPhotos(
+        Guid id,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        var result = await mediator
+            .Send(new GetGameNightPhotosQuery(id, userId), cancellationToken)
+            .ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleDeleteGameNightPhoto(
+        Guid id,
+        Guid photoId,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        await mediator
+            .Send(new DeleteGameNightPhotoCommand(id, photoId, userId), cancellationToken)
+            .ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleGetSharedGameNightPhotos(
+        string token,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator
+            .Send(new GetGameNightPhotosByShareTokenQuery(token), cancellationToken)
+            .ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGenerateGameNightShareToken(
+        Guid id,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        var token = await mediator
+            .Send(new GenerateGameNightShareTokenCommand(id, userId), cancellationToken)
+            .ConfigureAwait(false);
+        return Results.Created($"/api/v1/game-nights/shared/{token}/summary", new GameNightShareLinkDto(token));
+    }
+
+    private static async Task<IResult> HandleRevokeGameNightShareToken(
+        Guid id,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        await mediator
+            .Send(new RevokeGameNightShareTokenCommand(id, userId), cancellationToken)
+            .ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleSetGameNightArchived(
+        Guid id,
+        [FromBody] SetGameNightArchivedRequest request,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        await mediator
+            .Send(new SetGameNightArchivedCommand(id, userId, request.Archived), cancellationToken)
+            .ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleGetSharedGameNightSummary(
+        string token,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator
+            .Send(new GetGameNightSummaryByShareTokenQuery(token), cancellationToken)
+            .ConfigureAwait(false);
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleCreateGameNightInvitationByEmail(
@@ -583,9 +911,11 @@ internal static class GameNightEndpoints
     private static async Task<IResult> HandleGetGameNightById(
         Guid id,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var result = await mediator.Send(new GetGameNightByIdQuery(id), cancellationToken).ConfigureAwait(false);
+        var userId = httpContext.User.GetUserId();
+        var result = await mediator.Send(new GetGameNightByIdQuery(id, userId), cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
 
@@ -603,9 +933,11 @@ internal static class GameNightEndpoints
     private static async Task<IResult> HandleGetGameNightRsvps(
         Guid id,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var result = await mediator.Send(new GetGameNightRsvpsQuery(id), cancellationToken).ConfigureAwait(false);
+        var userId = httpContext.User.GetUserId();
+        var result = await mediator.Send(new GetGameNightRsvpsQuery(id, userId), cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
 
@@ -660,6 +992,9 @@ internal static class GameNightEndpoints
         string? DisplayName = null);
 
     // Game Night Experience v2 request records
+    private sealed record CastVoteRequest(Guid CandidateGameId);
+    private sealed record ResolveVotingTieRequest(Guid WinningCandidateGameId);
+    private sealed record SetGameNightArchivedRequest(bool Archived);
     private sealed record StartGameNightSessionRequest(Guid GameId, string GameTitle);
     private sealed record AttachGamebookCampaignRequest(Guid CampaignId);
     private sealed record CompleteGameNightSessionRequest(Guid? WinnerId);

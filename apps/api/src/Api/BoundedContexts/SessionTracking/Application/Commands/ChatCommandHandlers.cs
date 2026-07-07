@@ -273,10 +273,14 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
 public class DeleteChatMessageCommandHandler : IRequestHandler<DeleteChatMessageCommand, Unit>
 {
     private readonly ISessionChatRepository _chatRepository;
+    private readonly ISessionRepository _sessionRepository;
 
-    public DeleteChatMessageCommandHandler(ISessionChatRepository chatRepository)
+    public DeleteChatMessageCommandHandler(
+        ISessionChatRepository chatRepository,
+        ISessionRepository sessionRepository)
     {
         _chatRepository = chatRepository;
+        _sessionRepository = sessionRepository;
     }
 
     public async Task<Unit> Handle(DeleteChatMessageCommand request, CancellationToken cancellationToken)
@@ -284,11 +288,19 @@ public class DeleteChatMessageCommandHandler : IRequestHandler<DeleteChatMessage
         var message = await _chatRepository.GetByIdAsync(request.MessageId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Message {request.MessageId} not found");
 
-        if (message.SenderId.HasValue && message.SenderId.Value != request.RequesterId)
-            throw new ForbiddenException("Only the message sender can delete it.");
-
         if (message.MessageType != SessionChatMessageType.Text)
             throw new InvalidOperationException("Only text messages can be deleted.");
+
+        // #2655 IDOR guard: resolve the sending participant server-side from the
+        // authenticated caller — never trust a client-supplied requester id. Only
+        // the user who owns the sending participant may delete the message.
+        var session = await _sessionRepository.GetByIdAsync(message.SessionId, cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException($"Session {message.SessionId} not found");
+        var sender = message.SenderId.HasValue
+            ? session.Participants.FirstOrDefault(p => p.Id == message.SenderId.Value)
+            : null;
+        if (sender is null || sender.UserId != request.RequesterUserId)
+            throw new ForbiddenException("Only the message sender can delete it.");
 
         message.SoftDelete();
         await _chatRepository.UpdateAsync(message, cancellationToken).ConfigureAwait(false);

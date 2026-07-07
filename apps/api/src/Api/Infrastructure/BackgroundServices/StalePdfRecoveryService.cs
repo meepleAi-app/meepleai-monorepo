@@ -71,9 +71,30 @@ internal sealed class StalePdfRecoveryService : BackgroundService
 
         _logger.LogInformation("[StalePdfRecovery] Found {Count} stale PDF(s) to recover", stalePdfs.Count);
 
-        // Process one at a time to avoid overwhelming services
+        var (recovered, failed, stillStuck) = await RecoverAllAsync(stalePdfs, stoppingToken).ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "[StalePdfRecovery] Recovery complete: {Recovered} recovered, {Failed} failed, {StillStuck} still stuck, {Total} total",
+            recovered, failed, stillStuck, stalePdfs.Count);
+    }
+
+    /// <summary>
+    /// Exposed as internal for unit testing: runs the full recovery loop and
+    /// returns honest outcome counts re-read from the DB after each ProcessAsync call.
+    /// </summary>
+    internal async Task<(int recovered, int failed, int stillStuck)> RecoverAllAsync(CancellationToken stoppingToken)
+    {
+        var stalePdfs = await FindStalePdfsAsync(stoppingToken).ConfigureAwait(false);
+        return await RecoverAllAsync(stalePdfs, stoppingToken).ConfigureAwait(false);
+    }
+
+    private async Task<(int recovered, int failed, int stillStuck)> RecoverAllAsync(
+        IReadOnlyList<StalePdfInfo> stalePdfs,
+        CancellationToken stoppingToken)
+    {
         var recovered = 0;
         var failed = 0;
+        var stillStuck = 0;
 
         foreach (var pdf in stalePdfs)
         {
@@ -99,9 +120,29 @@ internal sealed class StalePdfRecoveryService : BackgroundService
                 await pipeline.ProcessAsync(pdf.Id, pdf.FilePath, pdf.UploadedByUserId, stoppingToken)
                     .ConfigureAwait(false);
 
-                recovered++;
+                // Re-read state from DB: ProcessAsync may have returned without reaching Ready
+                // (e.g. claim-skip or concurrency abort). Counting unconditionally was dishonest.
+                var finalState = await ReadProcessingStateAsync(pdf.Id, stoppingToken).ConfigureAwait(false);
 
-                _logger.LogInformation("[StalePdfRecovery] Successfully recovered PDF {PdfId}", pdf.Id);
+                if (string.Equals(finalState, nameof(PdfProcessingState.Ready), StringComparison.Ordinal))
+                {
+                    recovered++;
+                    _logger.LogInformation("[StalePdfRecovery] Recovered PDF {PdfId} → Ready", pdf.Id);
+                }
+                else if (string.Equals(finalState, nameof(PdfProcessingState.Failed), StringComparison.Ordinal))
+                {
+                    failed++;
+                    _logger.LogWarning(
+                        "[StalePdfRecovery] PDF {PdfId} ended Failed after reprocessing (will be retried by RetryFailedPdfsJob)",
+                        pdf.Id);
+                }
+                else
+                {
+                    stillStuck++;
+                    _logger.LogWarning(
+                        "[StalePdfRecovery] PDF {PdfId} did NOT progress (state={State}); recovery ineffective",
+                        pdf.Id, finalState);
+                }
             }
 #pragma warning disable CA1031 // Non-blocking: log and continue to next PDF
             catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
@@ -117,9 +158,18 @@ internal sealed class StalePdfRecoveryService : BackgroundService
 #pragma warning restore CA1031
         }
 
-        _logger.LogInformation(
-            "[StalePdfRecovery] Recovery complete: {Recovered} recovered, {Failed} failed, {Total} total",
-            recovered, failed, stalePdfs.Count);
+        return (recovered, failed, stillStuck);
+    }
+
+    private async Task<string?> ReadProcessingStateAsync(Guid pdfDocumentId, CancellationToken ct)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        return await db.PdfDocuments
+            .Where(p => p.Id == pdfDocumentId)
+            .Select(p => p.ProcessingState)
+            .FirstOrDefaultAsync(ct)
+            .ConfigureAwait(false);
     }
 
     private async Task<List<StalePdfInfo>> FindStalePdfsAsync(CancellationToken cancellationToken)

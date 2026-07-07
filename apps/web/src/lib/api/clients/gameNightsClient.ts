@@ -11,13 +11,23 @@ import {
   GameNightDtoSchema,
   GameNightLiveDtoSchema,
   GameNightRsvpDtoSchema,
+  GameNightPhotoDtoSchema,
+  GameNightPhotoUploadResultSchema,
+  GameNightShareLinkDtoSchema,
+  GameNightSummaryDtoSchema,
+  GameNightVoteTallyDtoSchema,
   RegularDtoSchema,
   StartGameNightSessionResultSchema,
   type ConflictCheckDto,
   type CreateGameNightInput,
   type GameNightDto,
   type GameNightLiveDto,
+  type GameNightPhotoDto,
+  type GameNightPhotoUploadResult,
   type GameNightRsvpDto,
+  type GameNightShareLinkDto,
+  type GameNightSummaryDto,
+  type GameNightVoteTallyDto,
   type RegularDto,
   type RsvpStatus,
   type StartGameNightSessionResult,
@@ -50,6 +60,26 @@ export interface GameNightsClient {
   // Issue #950 W1-PR2 wizard hooks
   getRegulars(limit?: number): Promise<RegularDto[]>;
   checkConflict(at: string): Promise<ConflictCheckDto>;
+  // Issue #2700 — candidate voting (approval model)
+  getVoteTally(gameNightId: string): Promise<GameNightVoteTallyDto>;
+  castVote(gameNightId: string, candidateGameId: string): Promise<void>;
+  retractVote(gameNightId: string, candidateGameId: string): Promise<void>;
+  resolveVotingTie(gameNightId: string, winningCandidateGameId: string): Promise<void>;
+  // Issue #2702 — summary + share-token + archive
+  getSummary(gameNightId: string): Promise<GameNightSummaryDto>;
+  getSharedSummary(token: string): Promise<GameNightSummaryDto>;
+  generateShareToken(gameNightId: string): Promise<GameNightShareLinkDto>;
+  revokeShareToken(gameNightId: string): Promise<void>;
+  setArchived(gameNightId: string, archived: boolean): Promise<void>;
+  // Issue #2724 — recap photo gallery
+  getPhotos(gameNightId: string): Promise<GameNightPhotoDto[]>;
+  getSharedPhotos(token: string): Promise<GameNightPhotoDto[]>;
+  uploadPhoto(
+    gameNightId: string,
+    file: Blob,
+    opts?: { caption?: string; extractScoreFromPhoto?: boolean }
+  ): Promise<GameNightPhotoUploadResult>;
+  deletePhoto(gameNightId: string, photoId: string): Promise<void>;
 }
 
 export function createGameNightsClient({
@@ -151,6 +181,95 @@ export function createGameNightsClient({
         `/api/v1/game-nights/check-conflict?at=${encodeURIComponent(at)}`
       );
       return ConflictCheckDtoSchema.parse(data);
+    },
+
+    async getVoteTally(gameNightId) {
+      const data = await httpClient.get<GameNightVoteTallyDto>(
+        `/api/v1/game-nights/${gameNightId}/votes/tally`
+      );
+      return GameNightVoteTallyDtoSchema.parse(data);
+    },
+
+    async castVote(gameNightId, candidateGameId) {
+      await httpClient.post(`/api/v1/game-nights/${gameNightId}/votes`, { candidateGameId });
+    },
+
+    async retractVote(gameNightId, candidateGameId) {
+      await httpClient.delete(`/api/v1/game-nights/${gameNightId}/votes/${candidateGameId}`);
+    },
+
+    async resolveVotingTie(gameNightId, winningCandidateGameId) {
+      await httpClient.post(`/api/v1/game-nights/${gameNightId}/votes/resolve-tie`, {
+        winningCandidateGameId,
+      });
+    },
+
+    async getSummary(gameNightId) {
+      const data = await httpClient.get<GameNightSummaryDto>(
+        `/api/v1/game-nights/${gameNightId}/summary`
+      );
+      return GameNightSummaryDtoSchema.parse(data);
+    },
+
+    async getSharedSummary(token) {
+      const data = await httpClient.get<GameNightSummaryDto>(
+        `/api/v1/game-nights/shared/${token}/summary`
+      );
+      return GameNightSummaryDtoSchema.parse(data);
+    },
+
+    async generateShareToken(gameNightId) {
+      const data = await httpClient.post<GameNightShareLinkDto>(
+        `/api/v1/game-nights/${gameNightId}/share-token`,
+        {}
+      );
+      return GameNightShareLinkDtoSchema.parse(data);
+    },
+
+    async revokeShareToken(gameNightId) {
+      await httpClient.delete(`/api/v1/game-nights/${gameNightId}/share-token`);
+    },
+
+    async setArchived(gameNightId, archived) {
+      await httpClient.post(`/api/v1/game-nights/${gameNightId}/archive`, { archived });
+    },
+
+    async getPhotos(gameNightId) {
+      const data = await httpClient.get<GameNightPhotoDto[]>(
+        `/api/v1/game-nights/${gameNightId}/photos`
+      );
+      return GameNightPhotoDtoSchema.array().parse(data);
+    },
+
+    async getSharedPhotos(token) {
+      const data = await httpClient.get<GameNightPhotoDto[]>(
+        `/api/v1/game-nights/shared/${token}/photos`
+      );
+      return GameNightPhotoDtoSchema.array().parse(data);
+    },
+
+    // Multipart upload — raw fetch (httpClient does not support FormData). Relative URL
+    // through the Next.js proxy avoids CORS; credentials carry the session cookie.
+    async uploadPhoto(gameNightId, file, opts = {}) {
+      const form = new FormData();
+      form.append('file', file, file instanceof File ? file.name : 'photo.jpg');
+      if (opts.extractScoreFromPhoto) form.append('extractScoreFromPhoto', 'true');
+      if (opts.caption) form.append('caption', opts.caption);
+
+      const res = await fetch(`/api/v1/game-nights/${gameNightId}/photos`, {
+        method: 'POST',
+        body: form,
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: 'Failed to upload photo' }));
+        throw new Error(error.error || error.message || 'Failed to upload photo');
+      }
+      return GameNightPhotoUploadResultSchema.parse(await res.json());
+    },
+
+    async deletePhoto(gameNightId, photoId) {
+      await httpClient.delete(`/api/v1/game-nights/${gameNightId}/photos/${photoId}`);
     },
   };
 }

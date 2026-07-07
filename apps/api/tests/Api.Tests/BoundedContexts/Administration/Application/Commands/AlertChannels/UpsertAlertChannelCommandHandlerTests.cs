@@ -30,7 +30,7 @@ public sealed class UpsertAlertChannelCommandHandlerTests
             .Callback<AlertChannel, CancellationToken>((c, _) => capture.Add(c))
             .Returns(Task.CompletedTask);
 
-        // Refetch after upsert returns a fresh aggregate w/ RowVersion populated
+        // Refetch after upsert returns a fresh aggregate w/ xmin populated
         _repo.SetupSequence(r => r.GetByTypeAsync(AlertChannelType.Slack, It.IsAny<CancellationToken>()))
             .ReturnsAsync((AlertChannel?)null) // initial lookup
             .ReturnsAsync(AlertChannel.Reconstitute(
@@ -44,20 +44,20 @@ public sealed class UpsertAlertChannelCommandHandlerTests
                 updatedAt: DateTime.UtcNow,
                 createdBy: "admin",
                 updatedBy: "admin",
-                rowVersion: new byte[] { 1, 2, 3 }));
+                xmin: 3u));
 
         var cmd = new UpsertAlertChannelCommand(
             Type: "slack",
             ConfigJson: """{"webhookUrl":"https://hooks.slack.com/X"}""",
             IsEnabled: true,
-            RowVersion: null,
+            Xmin: null,
             UpdatedBy: "admin");
 
         var handler = CreateHandler();
         var result = await handler.Handle(cmd, CancellationToken.None);
 
         result.Type.Should().Be("slack");
-        result.RowVersion.Should().NotBeNullOrEmpty();
+        result.Xmin.Should().NotBe(0u);
         capture.Should().HaveCount(1);
     }
 
@@ -69,7 +69,7 @@ public sealed class UpsertAlertChannelCommandHandlerTests
             """{"webhookUrl":"https://hooks.slack.com/v1"}""",
             true, null, null, null,
             DateTime.UtcNow, DateTime.UtcNow, "admin", "admin",
-            rowVersion: new byte[] { 9, 9, 9 });
+            xmin: 9u);
         _repo.Setup(r => r.GetByTypeAsync(AlertChannelType.Slack, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
         _repo.Setup(r => r.UpsertAsync(It.IsAny<AlertChannel>(), It.IsAny<CancellationToken>()))
@@ -78,7 +78,7 @@ public sealed class UpsertAlertChannelCommandHandlerTests
         var cmd = new UpsertAlertChannelCommand(
             "slack", """{"webhookUrl":"https://hooks.slack.com/v2"}""",
             true,
-            RowVersion: Convert.ToBase64String(new byte[] { 1, 1, 1 }), // STALE
+            Xmin: 1u, // STALE
             UpdatedBy: "admin");
 
         var handler = CreateHandler();
@@ -106,7 +106,7 @@ public sealed class UpsertAlertChannelCommandHandlerTests
                 """{"recipients":["ops@meepleai.dev"]}""",
                 false, null, null, null,
                 DateTime.UtcNow, DateTime.UtcNow, "admin", "admin",
-                new byte[] { 7 }));
+                7u));
 
         var cmd = new UpsertAlertChannelCommand(
             "email", """{"recipients":["ops@meepleai.dev"]}""", false, null, "admin");

@@ -8,6 +8,10 @@ import {
 } from '@/lib/api/gamebook-campaigns';
 
 export const gamebookCampaignKeys = {
+  // SI-3 #2634: broad family key so `invalidateQueries({ queryKey: gamebookCampaignKeys.all })`
+  // targets every campaign detail + spine at once — the finalize flow does not know the
+  // campaignId(s) of the night it completes, so it must invalidate the whole family.
+  all: ['gamebook', 'campaigns'] as const,
   detail: (id: string) => ['gamebook', 'campaigns', id] as const,
   spine: (id: string) => ['gamebook', 'campaigns', id, 'spine'] as const,
 };

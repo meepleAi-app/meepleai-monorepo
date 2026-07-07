@@ -7,7 +7,7 @@
  * Pre-popolato con i valori correnti se il budget è già configurato; vuoto sulla
  * prima visita (Scenario I empty state).
  *
- * Concurrency: passa il `rowVersion` corrente al PUT — il backend ritorna 409
+ * Concurrency: passa il `xmin` corrente al PUT — il backend ritorna 409
  * ConflictException se un altro admin ha modificato la riga nel frattempo.
  * In quel caso mostriamo il toast di errore e l'utente deve riaprire il modal
  * (`useBudget.refetch` parte automaticamente grazie alla invalidation).
@@ -76,7 +76,7 @@ export function SetBudgetDialog({ open, onClose }: SetBudgetDialogProps): React.
         monthlyLimitCurrency: 'USD',
         alertThresholdPct: parsedAlert,
         criticalThresholdPct: parsedCritical,
-        rowVersion: budget?.rowVersion ?? null,
+        xmin: budget?.xmin ?? null,
       });
       toast.success(budget ? 'Budget aggiornato' : 'Budget configurato', {
         description: `Limite mensile: $${parsedAmount.toFixed(2)}`,

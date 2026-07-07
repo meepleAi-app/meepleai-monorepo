@@ -11,8 +11,14 @@ internal sealed class GamebookCampaignSessionRepository : IGamebookCampaignSessi
 
     public GamebookCampaignSessionRepository(MeepleAiDbContext db) => _db = db;
 
+    // #2734: the DbContext default is QueryTrackingBehavior.NoTracking (PERF-06). This getter
+    // feeds RenameGamebookCampaignHandler (Rename()) and UpdateGamebookProgressHandler (Touch()),
+    // which mutate the returned aggregate and rely on SaveChangesAsync to persist it. Without
+    // .AsTracking() the entity is untracked and every scalar mutation is a silent no-op.
+    // Tracking a single FirstOrDefault entity is negligible and side-effect-free for the
+    // read-only callers (e.g. CampaignOwnershipGuard), which never mutate it.
     public Task<GamebookCampaignSession?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        => _db.GamebookCampaignSessions.FirstOrDefaultAsync(x => x.Id == id, ct);
+        => _db.GamebookCampaignSessions.AsTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
 
     public async Task<IReadOnlyList<GamebookCampaignSession>> ListByOwnerAsync(Guid ownerUserId, Guid? gameId, CancellationToken ct = default)
     {

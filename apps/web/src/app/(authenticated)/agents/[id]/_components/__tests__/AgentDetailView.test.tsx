@@ -222,6 +222,8 @@ const MESSAGES: Record<string, string> = {
   'pages.agentDetail.settings.strategyLabel': 'Strategia RAG',
   'pages.agentDetail.settings.parametersLabel': 'Parametri',
   'pages.agentDetail.settings.readOnlyBanner': 'Impostazioni in sola lettura.',
+  'pages.agentDetail.settings.readOnlyStandalone': 'Config solo per agenti con gioco.',
+  'pages.agentDetail.settings.perGameNote': 'Vale per tutti gli agenti del gioco.',
   'pages.agentDetail.settings.saveCta': 'Salva',
   'pages.agentDetail.settings.cancelCta': 'Annulla',
   'pages.agentDetail.settings.saveSuccess': 'Salvato.',
@@ -936,6 +938,84 @@ describe('AgentDetailView — FSM integration tests (Phase 0.5 contract, Wave C.
     expect(payload.request.personality).toBe('Amichevole');
     expect(payload.request.detailLevel).toBe('Normale');
     expect(payload.request.personalNotes).toBeNull();
+
+    assertKbDocsNeverCalledWithBadGameId();
+  });
+
+  // ─── Settings tab: editing a field persists the EDITED value (#2732) ───────
+  it('Settings tab editing a field and saving persists the edited value', () => {
+    useAgentSpy.mockImplementation(() => ({
+      data: makeAgent({ invocationCount: 5 }),
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      refetch: vi.fn(),
+    }));
+    useAgentConfigSpy.mockImplementation(() => ({
+      ...configMockState,
+      data: {
+        llmModel: 'llama-3.3-70b-free',
+        temperature: 0.7,
+        maxTokens: 4096,
+        personality: 'Amichevole',
+        detailLevel: 'Normale',
+        personalNotes: 'note',
+      },
+      isSuccess: true,
+    }));
+
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
+
+    act(() => {
+      fireEvent.click(document.querySelector('[data-tab-key="settings"]')!);
+    });
+    act(() => {
+      fireEvent.change(screen.getByLabelText(/Max Tokens/), { target: { value: '2048' } });
+    });
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Salva' }));
+    });
+
+    expect(updateConfigMutate).toHaveBeenCalledTimes(1);
+    const payload = updateConfigMutate.mock.calls[0][0] as {
+      gameId: string;
+      request: Record<string, unknown>;
+    };
+    expect(payload.gameId).toBe(VALID_GAME_ID);
+    expect(payload.request.maxTokens).toBe(2048);
+    expect(payload.request.personalNotes).toBe('note');
+
+    assertKbDocsNeverCalledWithBadGameId();
+  });
+
+  // ─── Settings tab: standalone agent (no game) is read-only (#2732) ──────────
+  it('Settings tab is read-only for a standalone agent (no gameId)', () => {
+    useAgentSpy.mockImplementation(() => ({
+      data: makeAgent({ invocationCount: 5, gameId: null, gameName: null }),
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      refetch: vi.fn(),
+    }));
+    useAgentConfigSpy.mockImplementation(() => ({
+      ...configMockState,
+      data: null,
+      isSuccess: true,
+    }));
+
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
+
+    act(() => {
+      fireEvent.click(document.querySelector('[data-tab-key="settings"]')!);
+    });
+
+    expect(
+      document.querySelector(
+        '[data-slot="agent-detail-settings-form"][data-settings-kind="read-only"]'
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByText('Config solo per agenti con gioco.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Salva' })).not.toBeInTheDocument();
 
     assertKbDocsNeverCalledWithBadGameId();
   });

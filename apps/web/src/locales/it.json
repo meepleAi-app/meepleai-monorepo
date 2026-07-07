@@ -2783,6 +2783,8 @@
         "strategyLabel": "Strategia RAG",
         "parametersLabel": "Parametri strategia",
         "readOnlyBanner": "Le impostazioni sono in sola lettura per gli agenti archiviati.",
+        "readOnlyStandalone": "Configurazione disponibile solo per agenti associati a un gioco.",
+        "perGameNote": "Queste impostazioni valgono per tutti gli agenti di questo gioco.",
         "saveCta": "Salva impostazioni",
         "cancelCta": "Annulla",
         "saveSuccess": "Impostazioni salvate.",

@@ -30,6 +30,7 @@ import { useMemo, useState, type ReactElement } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+import { type AgentConfigFieldsValue } from '@/components/agent/config';
 import {
   AgentDangerZone,
   AgentHero,
@@ -244,28 +245,30 @@ function mapChatHistoryState(
 
 function mapSettingsState(
   query: ReturnType<typeof useAgentConfig>,
-  isReadOnly: boolean,
+  isArchived: boolean,
+  agentHasGameId: boolean,
   onRetry: () => void
 ): SettingsState {
   if (query.isLoading) return { kind: 'loading' };
   if (query.isError) return { kind: 'error', retry: onRetry };
 
   const config = query.data;
-  const resolvedConfig = {
-    strategy: config?.llmModel ?? 'llama-3.3-70b-free',
-    parameters: config
-      ? {
-          temperature: config.temperature,
-          maxTokens: config.maxTokens,
-          personality: config.personality,
-          detailLevel: config.detailLevel,
-          customInstructions: config.personalNotes,
-        }
-      : {},
-  };
+  const value: AgentConfigFieldsValue = config
+    ? {
+        llmModel: config.llmModel,
+        temperature: config.temperature,
+        maxTokens: config.maxTokens,
+        personality: config.personality,
+        detailLevel: config.detailLevel,
+        personalNotes: config.personalNotes ?? '',
+      }
+    : { ...DEFAULT_AGENT_CONFIG, personalNotes: '' };
 
-  if (isReadOnly) return { kind: 'read-only', config: resolvedConfig };
-  return { kind: 'editable', config: resolvedConfig };
+  // Archived agents and standalone agents (no game) are read-only: the per-game
+  // config cannot be edited/persisted for them.
+  if (isArchived) return { kind: 'read-only', value, readOnlyReason: 'archived' };
+  if (!agentHasGameId) return { kind: 'read-only', value, readOnlyReason: 'standalone' };
+  return { kind: 'editable', value };
 }
 
 // ─── Main orchestrator ───────────────────────────────────────────────────────
@@ -501,6 +504,8 @@ export function AgentDetailView({ agentId }: AgentDetailViewProps): ReactElement
     strategyLabel: t('pages.agentDetail.settings.strategyLabel'),
     parametersLabel: t('pages.agentDetail.settings.parametersLabel'),
     readOnlyBanner: t('pages.agentDetail.settings.readOnlyBanner'),
+    readOnlyStandalone: t('pages.agentDetail.settings.readOnlyStandalone'),
+    perGameNote: t('pages.agentDetail.settings.perGameNote'),
     saveCta: t('pages.agentDetail.settings.saveCta'),
     cancelCta: t('pages.agentDetail.settings.cancelCta'),
     saveSuccess: t('pages.agentDetail.settings.saveSuccess'),
@@ -529,8 +534,11 @@ export function AgentDetailView({ agentId }: AgentDetailViewProps): ReactElement
     threadsQueryGated.refetch()
   );
 
-  const settingsState: SettingsState = mapSettingsState(configQueryGated, isArchived, () =>
-    configQueryGated.refetch()
+  const settingsState: SettingsState = mapSettingsState(
+    configQueryGated,
+    isArchived,
+    safeAgent.gameId != null,
+    () => configQueryGated.refetch()
   );
 
   return (
@@ -660,29 +668,17 @@ export function AgentDetailView({ agentId }: AgentDetailViewProps): ReactElement
             <AgentSettingsForm
               state={settingsState}
               labels={settingsLabels}
-              onSave={() => {
+              onSave={value => {
                 if (updateConfig.isPending) return; // guard against double-fire
                 const gameId = agentQuery.data?.gameId;
-                // Config is per-game; a standalone agent (no real gameId) cannot
-                // be configured from this per-agent page.
+                // Editable state is only produced for agents with a game; guard
+                // defensively (config is per-game and can't persist without one).
                 if (!gameId) {
                   toast.error(settingsLabels.saveError);
                   return;
                 }
-                const current = configQueryGated.data;
-                // No custom config yet → persist defaults (mutation create path).
-                const request = current
-                  ? {
-                      llmModel: current.llmModel,
-                      temperature: current.temperature,
-                      maxTokens: current.maxTokens,
-                      personality: current.personality,
-                      detailLevel: current.detailLevel,
-                      personalNotes: current.personalNotes ?? null,
-                    }
-                  : { ...DEFAULT_AGENT_CONFIG, personalNotes: null };
                 updateConfig.mutate(
-                  { gameId, request },
+                  { gameId, request: { ...value, personalNotes: value.personalNotes || null } },
                   {
                     onSuccess: () => toast.success(settingsLabels.saveSuccess),
                     onError: () => toast.error(settingsLabels.saveError),

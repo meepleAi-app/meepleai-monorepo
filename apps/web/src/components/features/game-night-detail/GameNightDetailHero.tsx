@@ -69,6 +69,8 @@ export interface GameNightDetailHeroProps {
 const GRADIENT_BY_STATUS: Record<GameNightStatus, string> = {
   Draft: 'bg-gradient-to-br from-entity-event/[0.16] to-entity-event/[0.02]',
   Published: 'bg-gradient-to-br from-entity-toolkit/[0.16] to-entity-toolkit/[0.02]',
+  // SI-3 #2634: a night mid-play — session/indigo accent (mirrors GameNightStatusBadge).
+  InProgress: 'bg-gradient-to-br from-entity-session/[0.16] to-entity-session/[0.02]',
   Completed: 'bg-muted',
   Cancelled: 'bg-gradient-to-br from-destructive/[0.14] to-destructive/[0.04]',
 };
@@ -76,6 +78,7 @@ const GRADIENT_BY_STATUS: Record<GameNightStatus, string> = {
 const ACCENT_TEXT_BY_STATUS: Record<GameNightStatus, string> = {
   Draft: 'text-entity-event',
   Published: 'text-entity-toolkit',
+  InProgress: 'text-entity-session',
   Completed: 'text-muted-foreground',
   Cancelled: 'text-destructive',
 };

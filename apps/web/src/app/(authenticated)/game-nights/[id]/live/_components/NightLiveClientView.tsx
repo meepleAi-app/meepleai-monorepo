@@ -22,6 +22,7 @@ import {
   NightLiveHub,
   WinnerPickerModal,
 } from '@/components/features/game-nights/live';
+import { useCompleteGameNight } from '@/hooks/queries/useSessionFlow';
 import {
   ConflictError,
   ForbiddenError,
@@ -91,6 +92,13 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
     [completeGame]
   );
 
+  // #2634 SI-3: the organizer concludes the WHOLE night (in-progress → completed) once every game
+  // is done and none is live. POST /complete (useCompleteGameNight) is the single finalize path; on
+  // success the read model refetches and the LD-14 effect below routes to /summary. Complementary
+  // to — and mutually exclusive with — the per-session start/Completa CTAs (this one is night-level,
+  // live-only CTAs are per-session).
+  const finalizeNight = useCompleteGameNight();
+
   // LD-14: a Completed night must not render a fake-live hub over stale data —
   // send the user to the summary they actually want. The effect fires only once
   // the read model confirms the terminal status.
@@ -159,6 +167,25 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
         : 'Impossibile completare la partita. Riprova.'
     : null;
 
+  // #2634 SI-3: the night-level finalize CTA. Gated on nightStatus==='InProgress' because POST
+  // /complete is InProgress-only (409 on a still-Published night not yet promoted by its first
+  // session). Also requires no live game (status!=='live') and nothing left to start (nextGame
+  // null) — so it never overlaps the per-session start CTA (needs nextGame) or Completa CTA
+  // (live-only). plannedGames>0 is a sanity floor (a night with a lineup).
+  const showFinalizeCta =
+    vm.isViewerOrganizer &&
+    vm.status !== 'live' &&
+    nextGame === null &&
+    vm.nightStatus === 'InProgress' &&
+    vm.plannedGames.length > 0;
+  const finalizeErrorMessage = finalizeNight.isError
+    ? finalizeNight.error instanceof ForbiddenError
+      ? 'Solo l’organizzatore può concludere la serata.'
+      : finalizeNight.error instanceof ConflictError
+        ? 'Non è possibile concludere ora.'
+        : 'Impossibile concludere la serata. Riprova.'
+    : null;
+
   // Slice C2 (panel D2): compose the diary here, keyed off the live sessionId→game lookup.
   // A pending/errored diary read yields empty arrays — the hub degrades to an empty diary
   // rather than blocking the live view (AC6).
@@ -211,6 +238,27 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
             className="flex items-center gap-2 rounded-full border border-entity-session/40 bg-entity-session px-5 py-2.5 font-display text-sm font-extrabold text-white shadow-lg transition hover:bg-entity-session/90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             🏁 Completa partita
+          </button>
+        </div>
+      ) : null}
+
+      {showFinalizeCta ? (
+        <div className="fixed inset-x-0 bottom-0 z-40 flex flex-col items-center gap-2 p-4">
+          {finalizeErrorMessage ? (
+            <p
+              role="alert"
+              className="rounded-md border border-border bg-card px-3 py-1.5 font-mono text-xs font-semibold text-destructive shadow"
+            >
+              {finalizeErrorMessage}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => finalizeNight.mutate(nightId)}
+            disabled={finalizeNight.isPending}
+            className="flex items-center gap-2 rounded-full border border-entity-event/40 bg-entity-event px-5 py-2.5 font-display text-sm font-extrabold text-white shadow-lg transition hover:bg-entity-event/90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            🏁 Concludi serata
           </button>
         </div>
       ) : null}

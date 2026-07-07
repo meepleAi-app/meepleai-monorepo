@@ -71,6 +71,22 @@ vi.mock('@/lib/game-nights/hooks/useCompleteGameNightSession', () => ({
   }),
 }));
 
+// #2634 SI-3: the night-level "Concludi serata" mutation (POST /complete via useCompleteGameNight).
+const finalizeNightMutateMock = vi.hoisted(() => vi.fn());
+const finalizeNightState = vi.hoisted(() => ({
+  isPending: false,
+  isError: false,
+  error: null as Error | null,
+}));
+vi.mock('@/hooks/queries/useSessionFlow', () => ({
+  useCompleteGameNight: () => ({
+    mutate: finalizeNightMutateMock,
+    isPending: finalizeNightState.isPending,
+    isError: finalizeNightState.isError,
+    error: finalizeNightState.error,
+  }),
+}));
+
 const pushMock = vi.fn();
 const replaceMock = vi.fn();
 vi.mock('next/navigation', () => ({
@@ -137,6 +153,9 @@ beforeEach(() => {
   completeState.isPending = false;
   completeState.isError = false;
   completeState.error = null;
+  finalizeNightState.isPending = false;
+  finalizeNightState.isError = false;
+  finalizeNightState.error = null;
   useNightLiveDiaryMock.mockReturnValue({ data: undefined });
 });
 
@@ -383,6 +402,144 @@ describe('NightLiveClientView — organizer Completa + winner picker (C4)', () =
       { winnerId: undefined },
       expect.objectContaining({ onSuccess: expect.any(Function) })
     );
+  });
+});
+
+describe('NightLiveClientView — night finalize (SI-3)', () => {
+  it('shows the "Concludi serata" CTA for the organizer of an InProgress night with no live game and no next game', () => {
+    mockQuery({
+      data: vm({
+        isViewerOrganizer: true,
+        status: 'transition',
+        nextGame: null,
+        nightStatus: 'InProgress',
+      }),
+    });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    expect(screen.getByRole('button', { name: /Concludi serata/i })).toBeInTheDocument();
+  });
+
+  it('does NOT show the finalize CTA for a non-organizer', () => {
+    mockQuery({
+      data: vm({
+        isViewerOrganizer: false,
+        status: 'transition',
+        nextGame: null,
+        nightStatus: 'InProgress',
+      }),
+    });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    expect(screen.queryByRole('button', { name: /Concludi serata/i })).toBeNull();
+  });
+
+  it('does NOT show the finalize CTA while a game is live (status==="live")', () => {
+    mockQuery({
+      data: vm({
+        isViewerOrganizer: true,
+        status: 'live',
+        nextGame: null,
+        nightStatus: 'InProgress',
+      }),
+    });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    expect(screen.queryByRole('button', { name: /Concludi serata/i })).toBeNull();
+  });
+
+  it('does NOT show the finalize CTA when a next game is still queued', () => {
+    mockQuery({
+      data: vm({
+        isViewerOrganizer: true,
+        status: 'transition',
+        nextGame: NEXT_GAME,
+        nightStatus: 'InProgress',
+      }),
+    });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    expect(screen.queryByRole('button', { name: /Concludi serata/i })).toBeNull();
+  });
+
+  it('does NOT show the finalize CTA for a Published night not yet promoted to InProgress', () => {
+    mockQuery({
+      data: vm({
+        isViewerOrganizer: true,
+        status: 'transition',
+        nextGame: null,
+        nightStatus: 'Published',
+      }),
+    });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    expect(screen.queryByRole('button', { name: /Concludi serata/i })).toBeNull();
+  });
+
+  it('does NOT show the finalize CTA for a Completed night (redirects to summary instead)', () => {
+    mockQuery({
+      data: vm({
+        isViewerOrganizer: true,
+        status: 'transition',
+        nextGame: null,
+        nightStatus: 'Completed',
+      }),
+    });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    expect(screen.queryByRole('button', { name: /Concludi serata/i })).toBeNull();
+  });
+
+  it('finalizes the night with its id on click', async () => {
+    mockQuery({
+      data: vm({
+        isViewerOrganizer: true,
+        status: 'transition',
+        nextGame: null,
+        nightStatus: 'InProgress',
+      }),
+    });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    await userEvent.click(screen.getByRole('button', { name: /Concludi serata/i }));
+    expect(finalizeNightMutateMock).toHaveBeenCalledWith(NIGHT_ID);
+  });
+
+  it('disables the finalize CTA while the mutation is pending', () => {
+    finalizeNightState.isPending = true;
+    mockQuery({
+      data: vm({
+        isViewerOrganizer: true,
+        status: 'transition',
+        nextGame: null,
+        nightStatus: 'InProgress',
+      }),
+    });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    expect(screen.getByRole('button', { name: /Concludi serata/i })).toBeDisabled();
+  });
+
+  it('surfaces a distinct 403 message when the finalize is forbidden', () => {
+    finalizeNightState.isError = true;
+    finalizeNightState.error = new ForbiddenError({ message: 'not organizer' });
+    mockQuery({
+      data: vm({
+        isViewerOrganizer: true,
+        status: 'transition',
+        nextGame: null,
+        nightStatus: 'InProgress',
+      }),
+    });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    expect(screen.getByText(/Solo l’organizzatore può concludere la serata/i)).toBeInTheDocument();
+  });
+
+  it('surfaces a distinct 409 message when the finalize conflicts', () => {
+    finalizeNightState.isError = true;
+    finalizeNightState.error = new ConflictError({ message: 'cannot complete now' });
+    mockQuery({
+      data: vm({
+        isViewerOrganizer: true,
+        status: 'transition',
+        nextGame: null,
+        nightStatus: 'InProgress',
+      }),
+    });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    expect(screen.getByText(/Non è possibile concludere ora/i)).toBeInTheDocument();
   });
 });
 

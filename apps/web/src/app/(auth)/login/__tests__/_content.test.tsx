@@ -1,14 +1,21 @@
 /**
  * Login page (_content.tsx) tests — v2 AuthCard migration (Task 10).
  *
+ * #2650 — LoginPageContent now receives `fromParam`/`reason` as PROPS from the
+ * Server Component page.tsx (which reads searchParams). This removes the
+ * `useSearchParams` client hook, so the email form renders server-side (SSR)
+ * instead of behind a <Suspense> fallback — fixing the flaky staging E2E
+ * "Auth login form visibile" (hydration >30s on the headless VPS runner).
+ *
  * Verifies:
  * - AuthCard with title from i18n
- * - LoginForm submit calls `api.auth.login` and redirects to ?from on success
+ * - LoginForm submit calls `api.auth.login` and redirects to fromParam on success
  * - 2FA challenge: when API returns requiresTwoFactor, renders TwoFactorVerification
  * - OAuth buttons call window.location.assign with buildOAuthUrl(provider)
- * - Session-expired banner visible when ?reason=session_expired
+ * - Session-expired banner visible when reason="session_expired"
  * - Forgot password link → /reset-password
  * - Footer register link → /register
+ * - open-redirect protection on fromParam (#2168)
  */
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -24,11 +31,11 @@ vi.mock('@/hooks/useTranslation', () => ({
 
 const pushMock = vi.fn().mockResolvedValue(undefined);
 const refreshMock = vi.fn();
-const searchParamsMock = { get: vi.fn<(key: string) => string | null>() };
 
+// #2650: LoginPageContent no longer calls useSearchParams — it reads from props.
+// Only useRouter is still used.
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock, refresh: refreshMock }),
-  useSearchParams: () => searchParamsMock,
 }));
 
 const { mockAuth } = vi.hoisted(() => ({
@@ -62,22 +69,25 @@ vi.mock('@/components/auth/oauth-url', () => ({
 }));
 
 // Import AFTER mocks
-import { LoginPageContent, LoginFallback } from '../_content';
+import { LoginPageContent } from '../_content';
 import { logger } from '@/lib/logger';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function setSearchParams(params: Record<string, string | null>) {
-  searchParamsMock.get.mockImplementation((key: string) =>
-    Object.prototype.hasOwnProperty.call(params, key) ? (params[key] ?? null) : null
-  );
+function fillAndSubmit() {
+  fireEvent.change(screen.getByLabelText(/auth\.login\.emailLabel/i), {
+    target: { value: 'user@example.com' },
+  });
+  fireEvent.change(screen.getByLabelText(/auth\.login\.passwordLabel/i), {
+    target: { value: 'StrongPassword1' },
+  });
+  fireEvent.submit(screen.getByTestId('login-form'));
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  setSearchParams({});
 });
 
 // ---------------------------------------------------------------------------
@@ -127,20 +137,16 @@ describe('LoginPageContent (v2 AuthCard)', () => {
     }
   });
 
-  it('shows session-expired banner when ?reason=session_expired', () => {
-    setSearchParams({ reason: 'session_expired' });
-    render(<LoginPageContent />);
+  it('shows session-expired banner when reason="session_expired"', () => {
+    render(<LoginPageContent reason="session_expired" />);
     // Banner uses role="alert"
     const alerts = screen.getAllByRole('alert');
     expect(alerts.length).toBeGreaterThan(0);
-    // Should contain a localized expired message key — we look for presence of an alert
-    // with the session key OR textual fallback
     expect(alerts.some(a => /session|expired|scaduta/i.test(a.textContent ?? ''))).toBe(true);
   });
 
-  it('does not show session-expired banner when reason param is absent', () => {
+  it('does not show session-expired banner when reason prop is absent', () => {
     render(<LoginPageContent />);
-    // no alert containing the session-expired key should exist
     const alerts = screen.queryAllByRole('alert');
     expect(alerts.some(a => /session.*expired|session_expired/i.test(a.textContent ?? ''))).toBe(
       false
@@ -159,22 +165,14 @@ describe('LoginPageContent (v2 AuthCard)', () => {
     expect(link).toHaveAttribute('href', '/register');
   });
 
-  it('submits the login form and redirects to ?from on success', async () => {
-    setSearchParams({ from: '/library/custom' });
+  it('submits the login form and redirects to fromParam on success', async () => {
     loginMock.mockResolvedValueOnce({
       user: { id: 'u1', email: 't@e.com', role: 'User' },
       requiresTwoFactor: false,
     });
 
-    render(<LoginPageContent />);
-
-    fireEvent.change(screen.getByLabelText(/auth\.login\.emailLabel/i), {
-      target: { value: 'user@example.com' },
-    });
-    fireEvent.change(screen.getByLabelText(/auth\.login\.passwordLabel/i), {
-      target: { value: 'StrongPassword1' },
-    });
-    fireEvent.submit(screen.getByTestId('login-form'));
+    render(<LoginPageContent fromParam="/library/custom" />);
+    fillAndSubmit();
 
     await waitFor(() => {
       expect(loginMock).toHaveBeenCalledWith({
@@ -188,21 +186,14 @@ describe('LoginPageContent (v2 AuthCard)', () => {
     });
   });
 
-  it('redirects to /library when ?from is not provided', async () => {
+  it('redirects to /library when fromParam is not provided', async () => {
     loginMock.mockResolvedValueOnce({
       user: { id: 'u1', email: 't@e.com', role: 'User' },
       requiresTwoFactor: false,
     });
 
     render(<LoginPageContent />);
-
-    fireEvent.change(screen.getByLabelText(/auth\.login\.emailLabel/i), {
-      target: { value: 'user@example.com' },
-    });
-    fireEvent.change(screen.getByLabelText(/auth\.login\.passwordLabel/i), {
-      target: { value: 'StrongPassword1' },
-    });
-    fireEvent.submit(screen.getByTestId('login-form'));
+    fillAndSubmit();
 
     await waitFor(() => {
       expect(pushMock).toHaveBeenCalledWith('/library');
@@ -217,14 +208,7 @@ describe('LoginPageContent (v2 AuthCard)', () => {
     });
 
     render(<LoginPageContent />);
-
-    fireEvent.change(screen.getByLabelText(/auth\.login\.emailLabel/i), {
-      target: { value: 'user@example.com' },
-    });
-    fireEvent.change(screen.getByLabelText(/auth\.login\.passwordLabel/i), {
-      target: { value: 'StrongPassword1' },
-    });
-    fireEvent.submit(screen.getByTestId('login-form'));
+    fillAndSubmit();
 
     await waitFor(() => {
       expect(screen.getByTestId('two-factor-verification')).toBeInTheDocument();
@@ -234,23 +218,14 @@ describe('LoginPageContent (v2 AuthCard)', () => {
   });
 
   it('redirects admins to /library (user app) after successful login', async () => {
-    // Issue #893 demo follow-up: admins/superadmins land on the user app by
-    // default (consistent with role experience). Admin pages remain accessible
-    // via the navigation menu. See _content.tsx:56-69.
+    // Issue #893 demo follow-up: admins/superadmins land on the user app by default.
     loginMock.mockResolvedValueOnce({
       user: { id: 'u2', email: 'a@e.com', role: 'Admin' },
       requiresTwoFactor: false,
     });
 
     render(<LoginPageContent />);
-
-    fireEvent.change(screen.getByLabelText(/auth\.login\.emailLabel/i), {
-      target: { value: 'admin@example.com' },
-    });
-    fireEvent.change(screen.getByLabelText(/auth\.login\.passwordLabel/i), {
-      target: { value: 'StrongPassword1' },
-    });
-    fireEvent.submit(screen.getByTestId('login-form'));
+    fillAndSubmit();
 
     await waitFor(() => {
       expect(pushMock).toHaveBeenCalledWith('/library');
@@ -259,22 +234,14 @@ describe('LoginPageContent (v2 AuthCard)', () => {
 });
 
 describe('LoginPageContent — open redirect protection (#2168)', () => {
-  it('falls back to /library when ?from= is external URL', async () => {
-    setSearchParams({ from: 'https://evil.com' });
+  it('falls back to /library when fromParam is external URL', async () => {
     loginMock.mockResolvedValueOnce({
       user: { id: 'u1', email: 't@e.com', role: 'User' },
       requiresTwoFactor: false,
     });
 
-    render(<LoginPageContent />);
-
-    fireEvent.change(screen.getByLabelText(/auth\.login\.emailLabel/i), {
-      target: { value: 'user@example.com' },
-    });
-    fireEvent.change(screen.getByLabelText(/auth\.login\.passwordLabel/i), {
-      target: { value: 'StrongPassword1' },
-    });
-    fireEvent.submit(screen.getByTestId('login-form'));
+    render(<LoginPageContent fromParam="https://evil.com" />);
+    fillAndSubmit();
 
     await waitFor(() => {
       expect(pushMock).toHaveBeenCalledWith('/library');
@@ -290,22 +257,14 @@ describe('LoginPageContent — open redirect protection (#2168)', () => {
     );
   });
 
-  it('preserves valid relative ?from= path', async () => {
-    setSearchParams({ from: '/sessions/abc-123' });
+  it('preserves valid relative fromParam path', async () => {
     loginMock.mockResolvedValueOnce({
       user: { id: 'u1', email: 't@e.com', role: 'User' },
       requiresTwoFactor: false,
     });
 
-    render(<LoginPageContent />);
-
-    fireEvent.change(screen.getByLabelText(/auth\.login\.emailLabel/i), {
-      target: { value: 'user@example.com' },
-    });
-    fireEvent.change(screen.getByLabelText(/auth\.login\.passwordLabel/i), {
-      target: { value: 'StrongPassword1' },
-    });
-    fireEvent.submit(screen.getByTestId('login-form'));
+    render(<LoginPageContent fromParam="/sessions/abc-123" />);
+    fillAndSubmit();
 
     await waitFor(() => {
       expect(pushMock).toHaveBeenCalledWith('/sessions/abc-123');
@@ -315,10 +274,8 @@ describe('LoginPageContent — open redirect protection (#2168)', () => {
     expect(logger.warn).not.toHaveBeenCalled();
   });
 
-  it('logs unsafe ?from= attempt on initial render (before any user action)', async () => {
-    setSearchParams({ from: 'https://evil.com' });
-
-    render(<LoginPageContent />);
+  it('logs unsafe fromParam attempt on initial render (before any user action)', async () => {
+    render(<LoginPageContent fromParam="https://evil.com" />);
 
     // useEffect fires after render commit — wait for it
     await waitFor(() => {
@@ -337,24 +294,11 @@ describe('LoginPageContent — open redirect protection (#2168)', () => {
 });
 
 describe('LoginPageContent — error logging dedup (#2171)', () => {
-  // Bug #2171: previously 4 console.error per failed login (HTTP 400 from
-  // browser + 2× [API Error] from retry layer + 1× [ERROR] Login failed from
-  // caller). PR #2236 removed the retry-layer duplicate; this PR removes the
-  // caller-side `logger.error('Login failed:', err)` because HttpClient already
-  // calls logApiError on failed responses. The caller's job is UX feedback
-  // via setError, not logging.
   it('does NOT call logger.error when login API call rejects', async () => {
     loginMock.mockRejectedValueOnce(new Error('Invalid email or password'));
 
     render(<LoginPageContent />);
-
-    fireEvent.change(screen.getByLabelText(/auth\.login\.emailLabel/i), {
-      target: { value: 'bad@example.com' },
-    });
-    fireEvent.change(screen.getByLabelText(/auth\.login\.passwordLabel/i), {
-      target: { value: 'WrongPassword1' },
-    });
-    fireEvent.submit(screen.getByTestId('login-form'));
+    fillAndSubmit();
 
     // Wait until error path settles (setError → re-render)
     await waitFor(() => {
@@ -362,12 +306,5 @@ describe('LoginPageContent — error logging dedup (#2171)', () => {
     });
 
     expect(logger.error).not.toHaveBeenCalled();
-  });
-});
-
-describe('LoginFallback', () => {
-  it('renders loading message', () => {
-    render(<LoginFallback />);
-    expect(screen.getByText('auth.login.loadingMessage')).toBeInTheDocument();
   });
 });

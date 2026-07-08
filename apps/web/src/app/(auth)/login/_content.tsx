@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 import { LoginForm, type LoginFormData } from '@/components/auth/LoginForm';
 import { buildOAuthUrl } from '@/components/auth/oauth-url';
@@ -21,33 +21,35 @@ import { logger } from '@/lib/logger';
 import { assertSafeRelativeOrFallback } from '@/lib/url-safety';
 
 // ============================================================================
-// Fallback (Suspense boundary)
-// ============================================================================
-
-export function LoginFallback() {
-  const { t } = useTranslation();
-  return (
-    <main className="min-h-dvh flex items-center justify-center bg-muted text-muted-foreground">
-      {t('auth.login.loadingMessage')}
-    </main>
-  );
-}
-
-// ============================================================================
 // Main content
 // ============================================================================
 
-export function LoginPageContent() {
+/**
+ * #2650 — `fromParam`/`reason` are passed as PROPS by the Server Component
+ * page.tsx (which reads searchParams). Reading them here as props instead of
+ * via the `useSearchParams` client hook lets this component render server-side
+ * (SSR) — the email form is in the initial HTML instead of behind a
+ * &lt;Suspense&gt; fallback. This fixes the flaky staging E2E "Auth login form
+ * visibile" (client-only hydration exceeded 30s on the headless VPS runner) and
+ * removes the "loading" flash before the form appears.
+ */
+export interface LoginPageContentProps {
+  /** Post-login redirect target (validated against open-redirect). From `?from=`. */
+  fromParam?: string;
+  /** Session-expired reason marker. From `?reason=`. */
+  reason?: string;
+}
+
+export function LoginPageContent({ fromParam, reason }: LoginPageContentProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { t } = useTranslation();
   const { loadCurrentUser } = useAuth();
 
   // Issue #2168: validate ?from= against open-redirect attack vectors.
   // `assertSafeRelativeOrFallback` rejects 8 attack vectors and falls back to /library.
-  const rawFrom = searchParams?.get('from');
+  const rawFrom = fromParam;
   const from = assertSafeRelativeOrFallback(rawFrom, '/library');
-  const isSessionExpired = searchParams?.get('reason') === 'session_expired';
+  const isSessionExpired = reason === 'session_expired';
 
   // Log when the input was unsafe so we can detect attack attempts.
   // Wrapped in useEffect to fire once on mount (not on every re-render).

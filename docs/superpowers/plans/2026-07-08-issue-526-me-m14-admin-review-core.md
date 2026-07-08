@@ -55,6 +55,18 @@
 
 ---
 
+## Delivery — recommended PR split
+
+14 tasks / ~20 files spanning a DB migration + 5 backend handlers + a metric + FE schemas/client + two new PDF components + a heavily-modified `ClaimsSection` + E2E is too large for one reviewable PR (and mixes a migration with UI churn). Recommended **3 stacked PRs** onto `main-dev` (each independently green; later PRs branch off the prior):
+
+- **PR-A — backend contract + AC-6 + AC-7 (Tasks 1–4):** `validations[]` DTO, `review_note` migration, approve-note (incl. the endpoint + `MapClaimToEntity` persistence fixes), bulk-actions counter. Migration isolated; fast BE tests.
+- **PR-B — FE plumbing + PDF (Tasks 5–7, 12):** schemas/client, `pdf-quote-highlight` helper, `PdfQuoteHighlighter`, footer attribution swap. No `ClaimsSection` behavior change.
+- **PR-C — ClaimsSection UI + E2E (Tasks 8–11, 13):** badges, citation wire, bulk dropdown, approve-note dialog, E2E. Concentrates the risky UI diff + the E2E fixture update in one reviewable slice.
+
+Task 14 (full-suite verify + follow-up filing) runs at the end of PR-C. If the reviewer prefers a single PR, the task order already works as one branch — this split is a reviewability optimization, not a dependency requirement. **Confirm the delivery shape before execution.**
+
+---
+
 ## Task 1: Backend — derived `validations[]` on `MechanicClaimDto`
 
 **Files:**
@@ -126,6 +138,7 @@ public static class MechanicClaimValidations
         Families.Select(f => new MechanicClaimValidationDto(f, "pass")).ToList();
 }
 ```
+> Honesty note: `all-pass` is correct, not optimistic. A section that fails guardrails returns `Output: null` and aborts (`MechanicAnalysisPipeline.cs:96-100,261`); the `PartiallyExtracted` salvage keeps only passed sections (`MechanicAnalysisExecutor.cs:291-292`) — so every *persisted* claim passed T1–T4. And `MechanicGuardrailOptions` exposes **no per-guardrail enable flag**, so no family is ever `notRun` in core; the spec's `notRun`-for-disabled branch stays dormant until FU-1 records real outcomes.
 
 - [ ] **Step 4: Add `Validations` to `MechanicClaimDto`** — append as the last positional param (after `Citations`) in `MechanicClaimDto.cs`:
 
@@ -144,10 +157,14 @@ public sealed record MechanicClaimDto(
     IReadOnlyList<MechanicClaimValidationDto> Validations);
 ```
 
-- [ ] **Step 5: Update every construction site.** Find them:
+- [ ] **Step 5: Update every construction site.** There are **5** — but `ApproveMechanicClaimCommandHandler.ToDto` is target-typed (`=> new(`), so a `new MechanicClaimDto(` grep only finds 4. Enumerate all 5 explicitly:
+- `GetMechanicAnalysisClaimsQueryHandler.cs:53`
+- `ApproveMechanicClaimCommandHandler.cs:113` (target-typed `new(`)
+- `RejectMechanicClaimCommandHandler.cs:100`
+- `BulkApproveMechanicClaimsCommandHandler.cs:119`
+- `BulkRejectMechanicClaimsCommandHandler.cs:132`
 
-Run: `cd apps/api/src/Api && grep -rn "new MechanicClaimDto(" .`
-For each site (GetMechanicAnalysisClaimsQueryHandler, ApproveMechanicClaimCommandHandler.ToDto, RejectMechanicClaimCommandHandler, BulkApproveMechanicClaimsCommandHandler, BulkRejectMechanicClaimsCommandHandler), add the final argument:
+Cross-check with `cd apps/api/src/Api && grep -rn "MechanicClaimDto(" BoundedContexts` (no `new ` prefix) — and rely on `dotnet build` (Step 6) to catch any miss (a missing arg is a compile error). For each, add the final argument:
 ```csharp
                     .ToList(),
             Validations: MechanicClaimValidations.DerivePass()));
@@ -220,26 +237,33 @@ Expected: migration applies; build succeeds.
 ```bash
 git add apps/api/src/Api/Infrastructure/Entities/SharedGameCatalog/MechanicClaimEntity.cs \
         apps/api/src/Api/Infrastructure/Configurations/SharedGameCatalog/MechanicClaimEntityConfiguration.cs \
-        apps/api/src/Api/Migrations
+        apps/api/src/Api/Infrastructure/Migrations
 git commit -m "feat(mechanic-extractor): #526 add nullable review_note column (AC-6)"
 ```
+> Migrations + the single `MeepleAiDbContextModelSnapshot.cs` live under `apps/api/src/Api/Infrastructure/Migrations/` (NOT `apps/api/src/Api/Migrations`). Confirm both the new migration file and the modified snapshot are staged.
 
 ---
 
 ## Task 3: Backend — thread optional approve note
 
 **Files:**
-- Modify: `…/Domain/Entities/MechanicClaim.cs` (`Approve`)
+- Modify: `…/Domain/Entities/MechanicClaim.cs` (`Approve`, `Reconstitute`, `ResetToPending`)
 - Modify: `…/Domain/Aggregates/MechanicAnalysis.cs` (`ApproveClaim`)
 - Modify: `…/Application/Commands/MechanicExtractor/ApproveMechanicClaimCommand.cs`, `…Handler.cs`, `…Validator.cs`
 - Modify: `…/Application/DTOs/MechanicClaimDto.cs` (add `ReviewNote`) + all construction sites
-- Test: `apps/api/tests/…/MechanicExtractor/ApproveMechanicClaimCommandHandlerTests.cs`
+- **Modify: `apps/api/src/Api/Routing/AdminMechanicAnalysesEndpoints.cs`** — the approve endpoint must bind the note from the body (BLOCKER-1)
+- **Modify: `apps/api/src/Api/BoundedContexts/SharedGameCatalog/Infrastructure/Repositories/MechanicAnalysisRepository.cs`** — BOTH `MapClaimToDomain` (read) AND `MapClaimToEntity` (write) (BLOCKER-2)
+- Test: `apps/api/tests/…/MechanicExtractor/ApproveMechanicClaimCommandHandlerTests.cs` (Moq, fast) **and** an integration round-trip test in `MechanicAnalysisRepositoryIntegrationTests.cs` (Testcontainers) — the Moq test alone is INSUFFICIENT (it reads the in-memory domain object, so it stays green even if the DB write drops the note).
 
 **Interfaces:**
 - Consumes: `MechanicClaimValidations.DerivePass()` (Task 1).
-- Produces: `ApproveMechanicClaimCommand(Guid AnalysisId, Guid ClaimId, Guid ReviewerId, string? Note = null)`; `MechanicClaim.Approve(Guid, DateTime, string?)`; `MechanicAnalysis.ApproveClaim(Guid, Guid, DateTime, string?)`; `MechanicClaimDto.ReviewNote : string?`.
+- Produces: `ApproveMechanicClaimCommand(Guid AnalysisId, Guid ClaimId, Guid ReviewerId, string? Note = null)`; `MechanicClaim.Approve(Guid, DateTime, string?)`; `MechanicClaim.Reconstitute(…, IEnumerable<MechanicCitation> citations, string? reviewNote = null)` (new param is **LAST**); `MechanicAnalysis.ApproveClaim(Guid, Guid, DateTime, string?)`; `MechanicClaimDto.ReviewNote : string?`; `record ApproveClaimRequest(string? Note)` (endpoint body).
 
-- [ ] **Step 1: Write the failing domain test** — in `ApproveMechanicClaimCommandHandlerTests.cs` (mirror the Moq/`BuildInReviewAnalysis` pattern from `BulkRejectMechanicClaimsCommandHandlerTests.cs`):
+> ⚠️ **Two silent-persistence traps this task must close (both caught in plan review):**
+> 1. The approve **endpoint** currently binds no body (`AdminMechanicAnalysesEndpoints.cs:187-198` hard-codes `new ApproveMechanicClaimCommand(id, claimId, reviewerId)`), so the FE `{ note }` is discarded — mirror the reject endpoint's `RejectClaimRequest` binding.
+> 2. The repo **write** mapper `MapClaimToEntity` (`MechanicAnalysisRepository.cs:392-407`) copies `RejectionNote` but not `ReviewNote`; `Update()` forces `EntityState.Modified`, so `review_note` is UPDATEd to `null` unless the mapper is patched. The Moq handler test + the API response both come from the in-memory domain aggregate and will pass anyway — only the integration round-trip test (Step 9) catches this.
+
+- [ ] **Step 1: Write the failing Moq handler test** — in `ApproveMechanicClaimCommandHandlerTests.cs` (mirror the Moq/`BuildInReviewAnalysis` pattern from `BulkRejectMechanicClaimsCommandHandlerTests.cs`). NOTE: necessary but NOT sufficient — it verifies the domain thread, not persistence (Step 9 covers persistence):
 
 ```csharp
 [Fact]
@@ -283,7 +307,7 @@ Expected: FAIL — `ApproveMechanicClaimCommand` has 3 params / `MechanicClaimDt
         ReviewNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
     }
 ```
-Also add `ReviewNote` to `Reconstitute` (new param + assignment) and set `ReviewNote = null` in `ResetToPending`. Update the `Reconstitute` call site in the repository's `MapToDomain` (grep `Reconstitute(` in `MechanicAnalysisRepository`).
+In `ResetToPending`, add `ReviewNote = null;`. In `Reconstitute`, add `string? reviewNote = null` as the **LAST** parameter (after `IEnumerable<MechanicCitation> citations`) — placing it mid-list breaks the 6 named-arg callers (1 prod + 5 tests) and an optional-before-required `citations` is a CS1737 compile error. Assign `claim.ReviewNote = reviewNote;` (via the object initializer). Only the prod caller passes it (Step 7); the 5 test callers keep compiling because the param is optional-and-last.
 
 - [ ] **Step 4: Aggregate** — `MechanicAnalysis.ApproveClaim`:
 
@@ -313,20 +337,69 @@ Validator (`ApproveMechanicClaimCommandValidator.cs`, after the ReviewerId rule)
 ```
 Handler (`ApproveMechanicClaimCommandHandler.cs`, line ~76): `analysis.ApproveClaim(request.ClaimId, request.ReviewerId, utcNow, request.Note);` and in `ToDto` add `ReviewNote: claim.ReviewNote,` after `RejectionNote:`.
 
-- [ ] **Step 6: DTO + entity mapping + all construction sites**
+- [ ] **Step 6: Bind the note at the endpoint (BLOCKER-1)** — in `AdminMechanicAnalysesEndpoints.cs`, the approve mapping (~line 187) currently takes no body. Add an optional body record + pass it (mirror the reject endpoint at ~line 210):
 
-Add `string? ReviewNote` to `MechanicClaimDto` (after `RejectionNote`); in `GetMechanicAnalysisClaimsQueryHandler` projection add `ReviewNote: c.ReviewNote,` (the query reads the `MechanicClaimEntity`, so `c.ReviewNote` resolves after Task 2); repeat for the Reject/BulkApprove/BulkReject projection sites (add `ReviewNote: c.ReviewNote,`). Confirm the entity→domain map (`MechanicClaimEntityConfiguration` already maps the column; the repository `Reconstitute` call must pass `entity.ReviewNote`).
+```csharp
+// near the other request records at the bottom of the file:
+internal sealed record ApproveClaimRequest(string? Note);
+```
+```csharp
+// approve endpoint handler — add the body param + thread request?.Note:
+        group.MapPost("/{id:guid}/claims/{claimId:guid}/approve", async (
+            Guid id,
+            Guid claimId,
+            ApproveClaimRequest? request,          // NEW — optional so empty-body approve still works
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+            var reviewerId = session!.Principal!.Subject.Id;
+            var command = new ApproveMechanicClaimCommand(id, claimId, reviewerId, request?.Note);
+            var response = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(response);
+        }) // …existing .WithName/.WithSummary chain unchanged
+```
 
-- [ ] **Step 7: Run to verify it passes + build**
+- [ ] **Step 7: Repository read + WRITE mappers (BLOCKER-2)** — in `MechanicAnalysisRepository.cs`:
+  - `MapClaimToDomain` (~line 328): pass the column into `Reconstitute` — `reviewNote: entity.ReviewNote` (last arg).
+  - **`MapClaimToEntity` (~line 404): add `ReviewNote = claim.ReviewNote,`** next to `RejectionNote = claim.RejectionNote,`. Without this, `Update()` writes `review_note = NULL`.
 
-Run: `cd apps/api/src/Api && dotnet test --filter "FullyQualifiedName~ApproveMechanicClaimCommandHandlerTests" && dotnet build`
-Expected: PASS + build OK (all `new MechanicClaimDto(` sites compile with `ReviewNote`).
+- [ ] **Step 8: DTO + all construction sites**
 
-- [ ] **Step 8: Commit**
+Add `string? ReviewNote` to `MechanicClaimDto` (after `RejectionNote`). Then update **all 5** construction sites (named args, so order-independent) — the literal grep misses the target-typed one, so enumerate: `GetMechanicAnalysisClaimsQueryHandler.cs:53` (entity source → `c.ReviewNote`), `ApproveMechanicClaimCommandHandler.cs:113` (`new(` target-typed — already handled in Step 5's `ToDto`), `RejectMechanicClaimCommandHandler.cs:100`, `BulkApproveMechanicClaimsCommandHandler.cs:119`, `BulkRejectMechanicClaimsCommandHandler.cs:132` (all four project from the domain aggregate → `c.ReviewNote`). Add `ReviewNote: c.ReviewNote,` to each.
+
+- [ ] **Step 9: Write the failing integration round-trip test (persistence guard)** — in `MechanicAnalysisRepositoryIntegrationTests.cs` (Testcontainers). This is the test the Moq one cannot be: it reloads the aggregate from Postgres and asserts the column survived.
+
+```csharp
+[Fact]
+public async Task ApprovedClaimWithNote_PersistsReviewNote_AcrossReload()
+{
+    var analysis = BuildInReviewAnalysisWithClaim(); // reuse this file's seed helper
+    await _repository.AddAsync(analysis, CancellationToken.None);
+    await _unitOfWork.SaveChangesAsync(CancellationToken.None);
+
+    var claimId = analysis.Claims.Single().Id;
+    analysis.ApproveClaim(claimId, Guid.NewGuid(), DateTime.UtcNow, "verified against p.4");
+    _repository.Update(analysis);
+    await _unitOfWork.SaveChangesAsync(CancellationToken.None);
+
+    var reloaded = await _repository.GetByIdWithClaimsIgnoringFiltersAsync(analysis.Id, CancellationToken.None);
+    reloaded!.Claims.Single(c => c.Id == claimId).ReviewNote.Should().Be("verified against p.4");
+}
+```
+Run it and confirm it FAILS before Step 7's `MapClaimToEntity` fix (proves the trap), then PASSES after.
+
+- [ ] **Step 10: Run to verify all pass + build**
+
+Run: `cd apps/api/src/Api && dotnet test --filter "FullyQualifiedName~ApproveMechanicClaimCommandHandlerTests|FullyQualifiedName~MechanicAnalysisRepositoryIntegrationTests" && dotnet build`
+Expected: PASS + build OK (all construction sites + the 6 `Reconstitute` callers compile).
+
+- [ ] **Step 11: Commit**
 
 ```bash
 git add -A
-git commit -m "feat(mechanic-extractor): #526 thread optional approve note through to review_note (AC-6)"
+git commit -m "feat(mechanic-extractor): #526 thread + persist optional approve note to review_note (AC-6)"
 ```
 
 ---
@@ -346,6 +419,7 @@ git commit -m "feat(mechanic-extractor): #526 thread optional approve note throu
 ```csharp
 using System.Diagnostics.Metrics;
 using Api.Observability;
+using Api.Tests.Constants;
 using FluentAssertions;
 using Xunit;
 
@@ -647,7 +721,7 @@ Expected: PASS.
   readonly highlightQuote?: string;
   readonly onQuoteMatch?: (found: boolean) => void;
 ```
-Destructure them (with `renderTextLayer` default `false`). Build the renderer + effect:
+Destructure them (with `renderTextLayer` default `false`). **Add `useMemo` to the existing React import** (`PdfInlineViewer.tsx:21` currently imports `useState, useEffect, useCallback, useRef` — not `useMemo`). Build the renderer:
 ```tsx
 import { makeQuoteTextRenderer } from './pdf-quote-highlight';
 // … inside component:
@@ -1168,7 +1242,7 @@ Expected: FAIL — approve now opens a dialog instead of firing immediately.
 - [ ] **Step 4: Run to verify it passes + existing claims tests + typecheck**
 
 Run: `cd apps/web && pnpm test src/components/admin/mechanic-extractor/claims && pnpm typecheck`
-Expected: PASS. (Note: existing tests that click `claim-approve-<id>` and expect immediate approval must be updated to go through the dialog — update them in this step.)
+Expected: PASS. (Note: `ClaimsSection` ships with **zero** pre-existing unit tests — the only tests touching `claim-approve-*` are the ones this plan creates in Tasks 8–11, and Tasks 8/9/10 never click approve, so routing approve through a dialog here breaks nothing prior. No external test needs updating.)
 
 - [ ] **Step 5: Commit**
 
@@ -1259,17 +1333,25 @@ export function MechanicAnalysisFooterAttribution({
       />
 ```
 
-- [ ] **Step 5: Verify the forbidden string is gone + existing page test passes**
+- [ ] **Step 5: Update the stale review-page test.** The existing test `renders copyright footer with Variant C text` in `review.test.tsx` has **two** assertions inside the swapped-out footer: `/Variant C/` (line 83) AND `/L'AI non ha mai letto…/` (line 85). The new `MechanicAnalysisFooterAttribution` renders **neither** — updating only line 85 leaves line 83 red. Rewrite the whole test to assert the new attribution and drop `/Variant C/`:
 
-Run:
+```tsx
+    expect(await screen.findByText(/riformulata in parole originali/i)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/non ha mai letto il testo del PDF originale/i)
+    ).not.toBeInTheDocument();
 ```
-cd apps/web && grep -rn "non ha mai letto il testo del PDF originale" src ; echo "hits above (expect 0)"
+
+- [ ] **Step 6: Verify the forbidden string is gone + tests pass.** The source uses the entity apostrophe `L&apos;AI` and wraps `…del PDF` / `originale.` across two lines, so a full-phrase grep never matches the page — use the short substring:
+
+```
+cd apps/web && grep -rn "non ha mai letto" src ; echo "hits above (expect 0)"
 pnpm test src/components/admin/mechanic-extractor/__tests__/MechanicAnalysisFooterAttribution.test.tsx
 pnpm test src/__tests__/app/admin/knowledge-base/mechanic-extractor/review.test.tsx
 ```
-Expected: **0 grep hits**; both tests PASS. NB the existing `review.test.tsx:85` asserts `/L'AI non ha mai letto…/` — that assertion is now stale and MUST be updated in this step to assert the new attribution text (`/riformulata in parole originali/i`) instead. Update it.
+Expected: **0 grep hits**; both tests PASS.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add apps/web/src/components/admin/mechanic-extractor/MechanicAnalysisFooterAttribution.tsx apps/web/src/components/admin/mechanic-extractor/__tests__ "apps/web/src/app/admin/(dashboard)/knowledge-base/mechanic-extractor/review/page.tsx" apps/web/src/__tests__/app/admin/knowledge-base/mechanic-extractor/review.test.tsx
@@ -1286,7 +1368,17 @@ git commit -m "feat(mechanic-extractor): #526 swap Variant-C footer for ADR-051 
 **Interfaces:**
 - Consumes: all prior tasks (the running app).
 
-- [ ] **Step 1: Add a claims fixture with two claims (one long-quote) + a bulk-reject route mock.** In `mockAnalysisRoutes`, add `bulkReject: 0` to `calls`, extend `buildClaimsResponse()` to return two claims (`CLAIM_ID` with a >20-word quote + a second short-quote claim), and register:
+- [ ] **Step 1: Update the claims fixture (REQUIRED — Task 5 made `reviewNote` + `validations` non-optional) + add a bulk-reject mock.** `HttpClient.validateResponse` throws `SchemaValidationError` on a `safeParse` miss, so the existing `buildClaimsResponse()` (which omits both new fields) will make `getMechanicAnalysisClaims` throw → `ClaimsSection` renders `claims-load-error` and **all three existing E2E tests break** (deep-link / load-by-id / discovery). Every claim object in `buildClaimsResponse()` MUST add:
+```ts
+      reviewNote: null,
+      validations: [
+        { rule: 'T1', outcome: 'pass', message: null },
+        { rule: 'T2', outcome: 'pass', message: null },
+        { rule: 'T3', outcome: 'pass', message: null },
+        { rule: 'T4', outcome: 'pass', message: null },
+      ],
+```
+Then, in `mockAnalysisRoutes`, add `bulkReject: 0` to `calls`, extend `buildClaimsResponse()` to return two claims (`CLAIM_ID` with a >20-word quote + a second short-quote claim), flip the status builder to `InReview` (so the bulk `Select` renders — `isClaimsActionable = InReview && !suppressed`), and register:
 ```ts
   await page.context().route(
     new RegExp(`/api/v1/admin/mechanic-analyses/${ANALYSIS_ID}/claims/bulk-reject$`),

@@ -13,17 +13,23 @@
  * Standalone login page with session expiration handling.
  * Uses AuthLayout wrapper for consistent auth page UX (Issue #2231).
  *
- * Note (FE-IMP-005): Client-side only - AuthModal uses TanStack Query
+ * #2650: this Server Component reads searchParams (async in Next 16) and passes
+ * `from`/`reason` down as props, so the client LoginPageContent renders WITHOUT
+ * `useSearchParams` — the email form is server-rendered (no <Suspense> fallback,
+ * no client-only hydration gate). Fixes the flaky staging E2E "Auth login form
+ * visibile" and removes the loading flash before the form.
  */
 
-import { Suspense } from 'react';
+import { LoginPageContent } from './_content';
 
-import { LoginFallback, LoginPageContent } from './_content';
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const params = await searchParams;
+  const fromParam = typeof params.from === 'string' ? params.from : undefined;
+  const reason = typeof params.reason === 'string' ? params.reason : undefined;
 
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<LoginFallback />}>
-      <LoginPageContent />
-    </Suspense>
-  );
+  return <LoginPageContent fromParam={fromParam} reason={reason} />;
 }

@@ -40,16 +40,18 @@ test.describe('Smoke Test — 8 step pre-deploy', () => {
 
   test('2. Auth login form visibile', async ({ page }) => {
     await page.goto('/login', { waitUntil: 'domcontentloaded' });
-    // Il login form è client-only: nell'SSR /login rende il fallback <Suspense>
-    // (useSearchParams), quindi l'input email esiste SOLO dopo l'hydration del
-    // bundle client. Sul runner self-hosted (chromium headless, VPS con cap
-    // memoria 3G) l'hydration supera consistentemente gli 8s → falso negativo
-    // (il form è renderizzato e funzionante, verificato in un browser reale).
-    // Timeout ampio (30s) per assorbire l'hydration lenta senza rallentare il
-    // caso normale (l'expect passa appena l'elemento appare). NON mockare
-    // /auth/me qui: simulerebbe un utente loggato → redirect via da /login.
+    // #2770: il login form è ora SERVER-RENDERED. Prima l'intero body dell'app
+    // faceva BailoutToCSR — StatePreviewProvider era montato via
+    // `next/dynamic({ ssr: false })` in providers.tsx e avvolgeva ogni route,
+    // così l'input email compariva SOLO dopo l'hydration del bundle client
+    // (>30s sul runner headless con cap memoria 3G → falso negativo). Ora
+    // l'email input è nell'HTML iniziale (verificato via curl dell'SSR), quindi
+    // è presente già a `domcontentloaded`. Timeout ridotto a 15s: ampio per
+    // assorbire latenza VPS/rete sul singolo documento, ma abbastanza stretto
+    // da FALLIRE (invece di mascherare via hydration) se l'SSR regredisse.
+    // NON mockare /auth/me qui: simulerebbe un utente loggato → redirect da /login.
     await expect(page.locator('input[type="email"], input[name="email"]').first()).toBeVisible({
-      timeout: 30000,
+      timeout: 15000,
     });
   });
 

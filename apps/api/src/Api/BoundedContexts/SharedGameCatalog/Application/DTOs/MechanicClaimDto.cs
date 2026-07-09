@@ -16,6 +16,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 /// <param name="ReviewedBy">Admin who last reviewed the claim, or <c>null</c> if untouched.</param>
 /// <param name="ReviewedAt">UTC timestamp of the last review action, or <c>null</c>.</param>
 /// <param name="RejectionNote">Reason for rejection (set only when <see cref="Status"/> is Rejected).</param>
+/// <param name="ReviewNote">Optional note captured on approval (#526 AC-6). Distinct from <see cref="RejectionNote"/>.</param>
 /// <param name="Citations">Attribution citations (≥ 1 — ADR-051 T3).</param>
 /// <param name="Validations">T1–T4 guardrail badges (#526 AC-1). Derived, not persisted — see <see cref="MechanicClaimValidationDto"/>.</param>
 public sealed record MechanicClaimDto(
@@ -28,6 +29,7 @@ public sealed record MechanicClaimDto(
     Guid? ReviewedBy,
     DateTime? ReviewedAt,
     string? RejectionNote,
+    string? ReviewNote,
     IReadOnlyList<MechanicCitationDto> Citations,
     IReadOnlyList<MechanicClaimValidationDto> Validations);
 

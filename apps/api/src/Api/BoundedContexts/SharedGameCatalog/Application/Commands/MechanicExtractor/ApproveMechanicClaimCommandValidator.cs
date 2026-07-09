@@ -20,5 +20,9 @@ internal sealed class ApproveMechanicClaimCommandValidator
 
         RuleFor(c => c.ReviewerId)
             .NotEmpty().WithMessage("ReviewerId is required.");
+
+        RuleFor(c => c.Note)
+            .MaximumLength(2000).WithMessage("Note must be 2000 characters or fewer.")
+            .When(c => c.Note is not null);
     }
 }

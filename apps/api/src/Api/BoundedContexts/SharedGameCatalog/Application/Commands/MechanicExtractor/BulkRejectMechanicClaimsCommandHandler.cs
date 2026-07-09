@@ -139,6 +139,7 @@ internal sealed class BulkRejectMechanicClaimsCommandHandler
                 ReviewedBy: c.ReviewedBy,
                 ReviewedAt: c.ReviewedAt,
                 RejectionNote: c.RejectionNote,
+                ReviewNote: c.ReviewNote,
                 Citations: c.Citations
                     .OrderBy(citation => citation.DisplayOrder)
                     .Select(citation => new MechanicCitationDto(

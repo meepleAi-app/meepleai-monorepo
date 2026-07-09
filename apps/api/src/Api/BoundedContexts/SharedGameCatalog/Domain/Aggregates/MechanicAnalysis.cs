@@ -564,12 +564,13 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Approves a single claim. Valid only while the analysis is InReview.
+    /// Approves a single claim, optionally capturing a review note (#526 AC-6).
+    /// Valid only while the analysis is InReview.
     /// </summary>
-    public void ApproveClaim(Guid claimId, Guid reviewerId, DateTime utcNow)
+    public void ApproveClaim(Guid claimId, Guid reviewerId, DateTime utcNow, string? note = null)
     {
         var claim = RequireClaimUnderReview(claimId, "approve claim");
-        claim.Approve(reviewerId, utcNow);
+        claim.Approve(reviewerId, utcNow, note);
     }
 
     /// <summary>

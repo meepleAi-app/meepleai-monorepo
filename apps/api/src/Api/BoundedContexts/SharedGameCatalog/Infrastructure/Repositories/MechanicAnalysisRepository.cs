@@ -335,7 +335,8 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
             reviewedBy: entity.ReviewedBy,
             reviewedAt: entity.ReviewedAt,
             rejectionNote: entity.RejectionNote,
-            citations: citations);
+            citations: citations,
+            reviewNote: entity.ReviewNote);
     }
 
     private static MechanicCitation MapCitationToDomain(MechanicCitationEntity entity)
@@ -402,6 +403,7 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
             ReviewedBy = claim.ReviewedBy,
             ReviewedAt = claim.ReviewedAt,
             RejectionNote = claim.RejectionNote,
+            ReviewNote = claim.ReviewNote,
             Citations = claim.Citations.Select(MapCitationToEntity).ToList()
         };
     }

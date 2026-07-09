@@ -15,7 +15,7 @@
 import { useEffect, useState, type FormEvent, type JSX } from 'react';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 import { AuthCard } from '@/components/ui/auth-card';
 import { Btn } from '@/components/ui/btn';
@@ -60,30 +60,26 @@ function validatePassword(password: string): PasswordValidation {
 }
 
 // ---------------------------------------------------------------------------
-// Suspense fallback
-// ---------------------------------------------------------------------------
-
-export function ResetPasswordFallback(): JSX.Element {
-  const { t } = useTranslation();
-  return (
-    <main className="min-h-dvh flex items-center justify-center bg-muted text-muted-foreground">
-      <div className="animate-pulse" data-testid="reset-password-loading">
-        {t('auth.resetPassword.loadingTitle')}
-      </div>
-    </main>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Main content
 // ---------------------------------------------------------------------------
 
-export function ResetPasswordPageContent(): JSX.Element | null {
+/**
+ * #2773 — `token` arrives as a PROP from the async Server Component page.tsx
+ * (which reads searchParams). Reading it as a prop instead of via the
+ * `useSearchParams` client hook lets this component render server-side (SSR),
+ * dropping the CSR bailout. Same pattern as `login/_content.tsx` (#2650).
+ */
+export interface ResetPasswordPageContentProps {
+  /** `?token=` reset token. Reset mode when present, request mode otherwise. */
+  token?: string | null;
+}
+
+export function ResetPasswordPageContent({
+  token = null,
+}: ResetPasswordPageContentProps): JSX.Element | null {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { t } = useTranslation();
 
-  const token = searchParams?.get('token') ?? null;
   const mode: 'request' | 'reset' = token ? 'reset' : 'request';
   // Note (#2168): all redirect targets in this file are hardcoded (/chat, /, /reset-password).
   // Do NOT introduce ?from= here without using assertSafeRelativeOrFallback

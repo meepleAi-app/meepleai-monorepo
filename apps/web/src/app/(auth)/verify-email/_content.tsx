@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 import { VerificationError } from '@/components/auth/VerificationError';
 import { VerificationSuccess } from '@/components/auth/VerificationSuccess';
@@ -10,13 +10,24 @@ import { AuthCard } from '@/components/ui/auth-card';
 import { useEmailVerification } from '@/hooks/useEmailVerification';
 import { useTranslation } from '@/hooks/useTranslation';
 
-export function VerifyEmailContent() {
+/**
+ * #2773 — `token`/`emailParam` arrive as PROPS from the async Server Component
+ * page.tsx (which reads searchParams). Reading them as props instead of via the
+ * `useSearchParams` client hook lets this component render server-side (SSR),
+ * dropping the CSR bailout. Same pattern as `login/_content.tsx` (#2650).
+ */
+export interface VerifyEmailContentProps {
+  /** `?token=` verification token. */
+  token?: string | null;
+  /** `?email=` address (for resend); falls back to sessionStorage when absent. */
+  emailParam?: string | null;
+}
+
+export function VerifyEmailContent({ token = null, emailParam = null }: VerifyEmailContentProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { t } = useTranslation();
 
-  const token = searchParams?.get('token') ?? null;
-  const emailFromParams = searchParams?.get('email') ?? null;
+  const emailFromParams = emailParam;
 
   const {
     isLoading,

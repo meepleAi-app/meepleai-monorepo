@@ -161,6 +161,30 @@ internal static class AdminMechanicAnalysesEndpoints
             "Transitions the aggregate from InReview to Published. All claims must be in " +
             "Approved status; otherwise the endpoint returns 409 with a breakdown.");
 
+        // POST /api/v1/admin/mechanic-analyses/{id}/publish (#527)
+        // Publishes a Published-lifecycle analysis into a user-facing mechanic_cards row.
+        group.MapPost("/{id:guid}/publish", async (
+            Guid id,
+            PublishMechanicCardRequest? body,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+            var publisherId = session!.Principal!.Subject.Id;
+
+            var command = new PublishMechanicCardCommand(id, body?.Title, body?.PreviousCardId, publisherId);
+            var response = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            return Results.Created($"/api/v1/admin/mechanic-cards/{response.CardId}", response);
+        })
+        .WithName("AdminPublishMechanicCard")
+        .WithSummary("Publish an approved mechanic analysis into a user-facing card")
+        .WithDescription(
+            "Snapshots the approved claims into a new mechanic_cards row (version monotonic per game). " +
+            "The analysis must be Published and not already published; an active card for the game " +
+            "returns 409 unless a suppressed previousCardId is supplied (republish → new version).");
+
         // GET /api/v1/admin/mechanic-analyses/{id}/claims (ISSUE-584)
         // Lists every claim of the analysis with citations, ordered by section then display order.
         group.MapGet("/{id:guid}/claims", async (
@@ -356,3 +380,6 @@ internal sealed record RejectClaimRequest(string Note);
 /// <param name="ClaimIds">Explicit claim ids to reject (computed client-side, decision D3).</param>
 /// <param name="Reason">Shared rejection reason (1–500 chars) applied to every claim.</param>
 internal sealed record BulkRejectClaimsRequest(IReadOnlyList<Guid> ClaimIds, string Reason);
+
+/// <summary>Body for <c>POST /admin/mechanic-analyses/{id}/publish</c> (#527). Both fields optional.</summary>
+internal sealed record PublishMechanicCardRequest(string? Title, Guid? PreviousCardId);

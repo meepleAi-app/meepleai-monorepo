@@ -318,7 +318,8 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
             certifiedByUserId: entity.CertifiedByUserId,
             certificationOverrideReason: entity.CertificationOverrideReason,
             lastMetricsId: entity.LastMetricsId,
-            xminVersion: entity.Xmin);
+            xminVersion: entity.Xmin,
+            publishedCardId: entity.PublishedCardId);
     }
 
     private static MechanicClaim MapClaimToDomain(MechanicClaimEntity entity)
@@ -363,6 +364,7 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
             ReviewedBy = analysis.ReviewedBy,
             ReviewedAt = analysis.ReviewedAt,
             RejectionReason = analysis.RejectionReason,
+            PublishedCardId = analysis.PublishedCardId,
             TotalTokensUsed = analysis.TotalTokensUsed,
             EstimatedCostUsd = analysis.EstimatedCostUsd,
             ModelUsed = analysis.ModelUsed,

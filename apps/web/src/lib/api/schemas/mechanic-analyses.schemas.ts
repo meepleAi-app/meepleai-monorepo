@@ -343,6 +343,13 @@ export interface RejectMechanicClaimRequest {
 export const REJECT_CLAIM_NOTE_MIN_LENGTH = 1;
 export const REJECT_CLAIM_NOTE_MAX_LENGTH = 500;
 
+/**
+ * Local validation bound for the (optional) approve reviewer note. Mirrors
+ * `ApproveMechanicClaimCommandValidator.MaximumLength(2000)` and the
+ * `review_note` column (`varchar(2000)`).
+ */
+export const APPROVE_CLAIM_NOTE_MAX_LENGTH = 2000;
+
 // ========== Labels ==========
 
 export const MECHANIC_ANALYSIS_STATUS_LABELS: Record<number, string> = {

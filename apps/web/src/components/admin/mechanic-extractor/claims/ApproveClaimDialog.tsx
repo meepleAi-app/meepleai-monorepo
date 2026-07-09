@@ -15,8 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/overlays/alert-dialog-primitives';
-
-const APPROVE_CLAIM_NOTE_MAX_LENGTH = 500;
+import { APPROVE_CLAIM_NOTE_MAX_LENGTH } from '@/lib/api/schemas/mechanic-analyses.schemas';
 
 interface ApproveClaimDialogProps {
   open: boolean;

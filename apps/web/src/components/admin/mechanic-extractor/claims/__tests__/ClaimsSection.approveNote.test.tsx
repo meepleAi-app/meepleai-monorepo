@@ -42,6 +42,7 @@ describe('ClaimsSection approve with note', () => {
     mockApprove.mockResolvedValue({ ...claim, status: 1, reviewNote: 'matches p.4' });
     render(<ClaimsSection analysisId="a" />, { wrapper: Wrapper });
     fireEvent.click(await screen.findByTestId('claim-approve-d1'));
+    expect(screen.getByTestId('approve-claim-note-input')).toHaveAttribute('maxLength', '2000');
     fireEvent.change(screen.getByTestId('approve-claim-note-input'), {
       target: { value: 'matches p.4' },
     });

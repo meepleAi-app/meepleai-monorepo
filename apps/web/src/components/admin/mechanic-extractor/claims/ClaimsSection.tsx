@@ -29,6 +29,7 @@ import {
   MECHANIC_SECTION_LABELS,
   MechanicClaimStatus,
   type MechanicClaimDto,
+  type MechanicClaimValidationDto,
 } from '@/lib/api/schemas/mechanic-analyses.schemas';
 
 import { RejectClaimDialog } from './RejectClaimDialog';
@@ -41,6 +42,41 @@ const CLAIM_STATUS_BADGE_CLASS: Record<number, string> = {
   [MechanicClaimStatus.Approved]: 'bg-green-100 text-green-800 border-green-300',
   [MechanicClaimStatus.Rejected]: 'bg-rose-100 text-rose-800 border-rose-300',
 };
+
+/** Per-rule (T1-T4) template validation badge styling (#526 ME-M1.4 AC-1). */
+const VALIDATION_BADGE_CLASS: Record<string, string> = {
+  pass: 'bg-green-100 text-green-800 border-green-300',
+  fail: 'bg-rose-100 text-rose-800 border-rose-300',
+  notRun: 'bg-slate-100 text-slate-600 border-slate-300',
+};
+
+/**
+ * Renders one Badge per template validation rule (T1-T4) with pass/fail/notRun
+ * styling. Exported for direct unit testing and reuse across claim rows.
+ */
+export function ValidationBadges({
+  validations,
+}: {
+  validations: MechanicClaimValidationDto[];
+}): React.JSX.Element | null {
+  if (!validations || validations.length === 0) return null;
+  return (
+    <span className="flex flex-wrap gap-1" data-testid="claim-validation-badges">
+      {validations.map(v => (
+        <Badge
+          key={v.rule}
+          variant="outline"
+          className={VALIDATION_BADGE_CLASS[v.outcome] ?? VALIDATION_BADGE_CLASS.notRun}
+          data-testid={`claim-validation-badge-${v.rule}`}
+          aria-label={`${v.rule} ${v.outcome}${v.message ? `: ${v.message}` : ''}`}
+          title={v.message ?? `${v.rule} ${v.outcome}`}
+        >
+          {v.outcome === 'pass' ? '✓' : v.outcome === 'fail' ? '✗' : '—'} {v.rule}
+        </Badge>
+      ))}
+    </span>
+  );
+}
 
 interface ClaimsSectionProps {
   analysisId: string;
@@ -407,6 +443,7 @@ function ClaimRow({
           )}
         </div>
         <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+          <ValidationBadges validations={claim.validations} />
           <Badge
             variant="outline"
             className={CLAIM_STATUS_BADGE_CLASS[status] ?? ''}
@@ -461,10 +498,8 @@ function ClaimRow({
             <ul className="mt-1 space-y-1 border-l-2 border-sky-200 pl-3 text-xs">
               {claim.citations.map(c => (
                 <li key={c.id} className="text-muted-foreground">
-                  <span className="font-medium text-foreground">
-                    p.{c.pdfPage}
-                  </span>{' '}
-                  — &ldquo;{c.quote}&rdquo;
+                  <span className="font-medium text-foreground">p.{c.pdfPage}</span> — &ldquo;
+                  {c.quote}&rdquo;
                 </li>
               ))}
             </ul>

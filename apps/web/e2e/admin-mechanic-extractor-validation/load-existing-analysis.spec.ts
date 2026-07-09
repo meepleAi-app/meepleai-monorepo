@@ -47,21 +47,31 @@ const CLAIM_TEXT =
   'Players score 1 point per completed road tile when the road is finished during the scoring phase.';
 
 const STATUS_PUBLISHED = 2; // MechanicAnalysisStatus.Published
+const STATUS_IN_REVIEW = 1; // MechanicAnalysisStatus.InReview
 const SECTION_MECHANICS = 1; // MECHANIC_SECTION_LABELS[1] = 'Mechanics'
 const RUN_STATUS_SUCCEEDED = 0;
 const CLAIM_STATUS_PENDING = 0; // MechanicClaimStatus.Pending
 
+const CLAIM_ID_SHORT_QUOTE = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
+
 /**
  * In-memory state holder so we can mutate the analysis between tests if
  * needed. The status mock returns whatever's currently in `state.current`.
+ *
+ * `status` is parameterized (default `Published`) because the bulk-action
+ * `<Select>` in `ClaimsSection` only renders when
+ * `isClaimsActionable = status === InReview && !isSuppressed` — see
+ * `analyses/page.tsx:716-719`. The three original load-existing-analysis
+ * flows don't care about bulk actions and keep the `Published` default; the
+ * bulk-reject test below overrides it to `InReview`.
  */
-function buildStatusDto() {
+function buildStatusDto(status: number = STATUS_PUBLISHED) {
   return {
     id: ANALYSIS_ID,
     sharedGameId: SHARED_GAME_ID,
     pdfDocumentId: PDF_DOCUMENT_ID,
     promptVersion: 'v1.0.0',
-    status: STATUS_PUBLISHED,
+    status,
     rejectionReason: null,
     createdBy: ADMIN_USER_ID,
     createdAt: '2026-04-25T10:00:00Z',
@@ -80,7 +90,7 @@ function buildStatusDto() {
     suppressedAt: null,
     suppressedBy: null,
     suppressionReason: null,
-    claimsCount: 1,
+    claimsCount: 2,
     sectionRuns: [
       {
         section: SECTION_MECHANICS,
@@ -111,7 +121,7 @@ function buildListResponse() {
         pdfDocumentId: PDF_DOCUMENT_ID,
         promptVersion: 'v1.0.0',
         status: STATUS_PUBLISHED,
-        claimsCount: 1,
+        claimsCount: 2,
         totalTokensUsed: 4200,
         estimatedCostUsd: 0.42,
         certificationStatus: 1,
@@ -125,6 +135,18 @@ function buildListResponse() {
   };
 }
 
+/**
+ * Two claims: `CLAIM_ID` carries a citation quote >20 words (drives the
+ * "Reject all with quote >20 words" bulk action / `claimsWithLongQuote` in
+ * `ClaimsSection.tsx:59-61`), the second carries a short-quote citation so
+ * the bulk-reject computed-ids assertion is meaningful (only 1 of 2 claims
+ * targeted). Every claim MUST set `reviewNote` + `validations` — Task 5 made
+ * both fields non-optional on `MechanicClaimDtoSchema`
+ * (`mechanic-analyses.schemas.ts:255-256`); omitting them makes
+ * `HttpClient.validateResponse` throw `SchemaValidationError`, which flips
+ * `ClaimsSection` into its `claims-load-error` branch and breaks every test
+ * in this file (not just the new ones).
+ */
 function buildClaimsResponse() {
   return [
     {
@@ -137,11 +159,48 @@ function buildClaimsResponse() {
       reviewedBy: null,
       reviewedAt: null,
       rejectionNote: null,
+      reviewNote: null,
+      validations: [
+        { rule: 'T1', outcome: 'pass', message: null },
+        { rule: 'T2', outcome: 'pass', message: null },
+        { rule: 'T3', outcome: 'pass', message: null },
+        { rule: 'T4', outcome: 'pass', message: null },
+      ],
       citations: [
         {
           id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+          // >20 words — qualifies for the "reject-long-quote" bulk action.
           pdfPage: 4,
-          quote: 'A completed road scores 1 point per tile during the scoring phase.',
+          quote:
+            'A completed road scores 1 point per tile during the scoring phase, ' +
+            'and every player who contributed a tile to that road shares in the points equally.',
+          displayOrder: 0,
+        },
+      ],
+    },
+    {
+      id: CLAIM_ID_SHORT_QUOTE,
+      analysisId: ANALYSIS_ID,
+      section: SECTION_MECHANICS,
+      text: 'Cities score 2 points per tile when completed.',
+      displayOrder: 1,
+      status: CLAIM_STATUS_PENDING,
+      reviewedBy: null,
+      reviewedAt: null,
+      rejectionNote: null,
+      reviewNote: null,
+      validations: [
+        { rule: 'T1', outcome: 'pass', message: null },
+        { rule: 'T2', outcome: 'pass', message: null },
+        { rule: 'T3', outcome: 'pass', message: null },
+        { rule: 'T4', outcome: 'pass', message: null },
+      ],
+      citations: [
+        {
+          id: 'aaaaaaaa-1111-4aaa-8aaa-111111111111',
+          pdfPage: 6,
+          // Short quote — does NOT qualify for the "reject-long-quote" bulk action.
+          quote: 'A completed city scores 2 points per tile.',
           displayOrder: 0,
         },
       ],
@@ -185,13 +244,19 @@ function buildAuthMeDto() {
  * Absolute-URL mocks (against `API_BASE`) silently miss those requests, which
  * is why earlier iterations of this spec hung on the "Verifica autorizzazioni…"
  * spinner: `RequireRole` polled `/api/v1/auth/me` and never got a response.
+ *
+ * `statusOverride` lets bulk-action tests flip the analysis into `InReview`
+ * (see {@link buildStatusDto}) so `ClaimsSection`'s `isClaimsActionable` gate
+ * renders the `bulk-action-select`; the three pre-existing hydration tests
+ * don't pass it and keep the `Published` default.
  */
-async function mockAnalysisRoutes(page: Page) {
+async function mockAnalysisRoutes(page: Page, statusOverride?: number) {
   const calls = {
     authMe: 0,
     list: 0,
     status: 0,
     claims: 0,
+    bulkReject: 0,
   };
 
   // Auth — RequireRole in the admin (dashboard) layout calls this on mount.
@@ -262,7 +327,7 @@ async function mockAnalysisRoutes(page: Page) {
           await route.fulfill({
             status: 200,
             contentType: 'application/json',
-            body: JSON.stringify(buildStatusDto()),
+            body: JSON.stringify(buildStatusDto(statusOverride)),
           });
           return;
         }
@@ -282,6 +347,31 @@ async function mockAnalysisRoutes(page: Page) {
             status: 200,
             contentType: 'application/json',
             body: JSON.stringify(buildClaimsResponse()),
+          });
+          return;
+        }
+        await route.continue();
+      }
+    );
+
+  // Bulk-reject endpoint (#526 ME-M1.4 AC-3/AC-9) — POST only; falls through
+  // to `route.continue()` for any other method so unrelated requests aren't
+  // swallowed.
+  await page
+    .context()
+    .route(
+      new RegExp(`/api/v1/admin/mechanic-analyses/${ANALYSIS_ID}/claims/bulk-reject$`),
+      async (route: Route) => {
+        if (route.request().method() === 'POST') {
+          calls.bulkReject += 1;
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              rejectedCount: 1,
+              skippedAlreadyRejectedCount: 0,
+              claims: buildClaimsResponse(),
+            }),
           });
           return;
         }
@@ -412,5 +502,45 @@ test.describe('Admin · Mechanic Extractor · Load existing analysis', () => {
 
     await expect.poll(() => calls.status, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
     await expect.poll(() => calls.claims, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
+  });
+
+  // #526 ME-M1.4 AC-9 — bulk-reject + citation-open flows.
+  test('bulk-reject by quote length calls the endpoint with computed ids', async ({ page }) => {
+    await setAdminSessionCookies(page);
+    // Analysis must be InReview for `isClaimsActionable` to render the bulk
+    // <Select> (see `analyses/page.tsx:716-719` / `buildStatusDto` doc above).
+    const calls = await mockAnalysisRoutes(page, STATUS_IN_REVIEW);
+    await page.goto(`${ANALYSES_PATH}?analysisId=${ANALYSIS_ID}`);
+
+    await expect(page.getByTestId('claims-section')).toBeVisible();
+
+    // `bulk-action-select` is a Radix `<Select>` (SelectPrimitive.Root), NOT a
+    // native <select> — `.selectOption()` does not drive it. Open the
+    // listbox by clicking the trigger, then click the target option by its
+    // accessible role/name (rendered text includes the computed count, e.g.
+    // "Reject all with quote >20 words (1)" — match on the stable prefix).
+    await page.getByTestId('bulk-action-select').click();
+    await page.getByRole('option', { name: /Reject all with quote >20 words/ }).click();
+
+    await expect(page.getByTestId('bulk-action-count')).toContainText('1');
+    await page.getByTestId('bulk-action-confirm').click();
+
+    await expect.poll(() => calls.bulkReject, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
+  });
+
+  test('clicking a citation opens the quote highlighter', async ({ page }) => {
+    await setAdminSessionCookies(page);
+    await mockAnalysisRoutes(page);
+    await page.goto(`${ANALYSES_PATH}?analysisId=${ANALYSIS_ID}`);
+
+    await expect(page.getByTestId('claims-section')).toBeVisible();
+
+    await page.getByTestId(`claim-citations-toggle-${CLAIM_ID}`).click();
+    await page
+      .getByTestId(/^claim-citation-open-/)
+      .first()
+      .click();
+
+    await expect(page.getByRole('dialog')).toBeVisible();
   });
 });

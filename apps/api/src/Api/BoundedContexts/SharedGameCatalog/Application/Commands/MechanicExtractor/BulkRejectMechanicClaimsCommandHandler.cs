@@ -146,7 +146,8 @@ internal sealed class BulkRejectMechanicClaimsCommandHandler
                         PdfPage: citation.PdfPage,
                         Quote: citation.Quote,
                         DisplayOrder: citation.DisplayOrder))
-                    .ToList()))
+                    .ToList(),
+                Validations: MechanicClaimValidations.DerivePass()))
             .ToList();
 
         return new BulkRejectMechanicClaimsResponseDto(

@@ -114,6 +114,7 @@ internal sealed class RejectMechanicClaimCommandHandler
                     PdfPage: c.PdfPage,
                     Quote: c.Quote,
                     DisplayOrder: c.DisplayOrder))
-                .ToList());
+                .ToList(),
+            Validations: MechanicClaimValidations.DerivePass());
     }
 }

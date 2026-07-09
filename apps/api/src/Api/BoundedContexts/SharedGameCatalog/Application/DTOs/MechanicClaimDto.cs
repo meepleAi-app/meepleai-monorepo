@@ -17,6 +17,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 /// <param name="ReviewedAt">UTC timestamp of the last review action, or <c>null</c>.</param>
 /// <param name="RejectionNote">Reason for rejection (set only when <see cref="Status"/> is Rejected).</param>
 /// <param name="Citations">Attribution citations (≥ 1 — ADR-051 T3).</param>
+/// <param name="Validations">T1–T4 guardrail badges (#526 AC-1). Derived, not persisted — see <see cref="MechanicClaimValidationDto"/>.</param>
 public sealed record MechanicClaimDto(
     Guid Id,
     Guid AnalysisId,
@@ -27,7 +28,8 @@ public sealed record MechanicClaimDto(
     Guid? ReviewedBy,
     DateTime? ReviewedAt,
     string? RejectionNote,
-    IReadOnlyList<MechanicCitationDto> Citations);
+    IReadOnlyList<MechanicCitationDto> Citations,
+    IReadOnlyList<MechanicClaimValidationDto> Validations);
 
 /// <summary>
 /// Read model for a single attribution <c>MechanicCitation</c>. Page + verbatim quote are the

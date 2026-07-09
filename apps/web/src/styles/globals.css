@@ -864,3 +864,12 @@
   max-width: 65ch;
   margin-inline: auto;
 }
+
+/* ============================================================================
+ * PdfInlineViewer — opt-in quote highlight (ME-M1.4 AC-2 base, #526)
+ * Marks text-layer spans matching a `highlightQuote` via customTextRenderer.
+ * ============================================================================ */
+
+.pdf-quote-highlight {
+  background-color: rgba(255, 235, 59, 0.4);
+}

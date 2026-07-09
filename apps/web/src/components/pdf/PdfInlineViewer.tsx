@@ -22,6 +22,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   useRef,
   type ChangeEvent,
   type FormEvent,
@@ -34,6 +35,8 @@ import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
 import { api } from '@/lib/api';
+
+import { makeQuoteTextRenderer } from './pdf-quote-highlight';
 
 // Worker setup — T0 spike confirmed idempotent (multi-module assignment safe).
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -55,6 +58,9 @@ export interface PdfInlineViewerProps {
   readonly defaultZoom?: 'fit-width' | number;
   readonly features?: PdfInlineViewerFeatures;
   readonly className?: string;
+  readonly renderTextLayer?: boolean;
+  readonly highlightQuote?: string;
+  readonly onQuoteMatch?: (found: boolean) => void;
 }
 
 type ZoomState = 'fit-width' | number;
@@ -69,6 +75,9 @@ export function PdfInlineViewer({
   defaultZoom = 'fit-width',
   features = {},
   className,
+  renderTextLayer = false,
+  highlightQuote,
+  onQuoteMatch,
 }: PdfInlineViewerProps): ReactElement {
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(initialPage);
@@ -81,6 +90,11 @@ export function PdfInlineViewer({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const downloadUrl = api.pdf.getPdfDownloadUrl(documentId);
+
+  const quoteRenderer = useMemo(
+    () => (highlightQuote ? makeQuoteTextRenderer(highlightQuote) : null),
+    [highlightQuote]
+  );
 
   const onDocumentLoadSuccess = useCallback(({ numPages: n }: { numPages: number }) => {
     setNumPages(n);
@@ -291,7 +305,15 @@ export function PdfInlineViewer({
               pageNumber={currentPage}
               scale={scale}
               renderAnnotationLayer={false}
-              renderTextLayer={false}
+              renderTextLayer={renderTextLayer || !!highlightQuote}
+              customTextRenderer={
+                quoteRenderer ? ({ str }) => quoteRenderer.render({ str }) : undefined
+              }
+              onRenderTextLayerSuccess={
+                quoteRenderer && onQuoteMatch
+                  ? () => onQuoteMatch(quoteRenderer.matched())
+                  : undefined
+              }
             />
           </Document>
         )}

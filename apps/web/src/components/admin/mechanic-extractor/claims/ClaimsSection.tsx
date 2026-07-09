@@ -41,6 +41,7 @@ import {
   type MechanicClaimValidationDto,
 } from '@/lib/api/schemas/mechanic-analyses.schemas';
 
+import { ApproveClaimDialog } from './ApproveClaimDialog';
 import { BulkActionDialog } from './BulkActionDialog';
 import { RejectClaimDialog } from './RejectClaimDialog';
 
@@ -133,6 +134,7 @@ export function ClaimsSection({
   // Separate channel for success-with-skipped (amber) so we don't conflate it
   // with hard failures (rose) — spec-panel P1 fix.
   const [actionWarning, setActionWarning] = useState<string | null>(null);
+  const [approveTarget, setApproveTarget] = useState<MechanicClaimDto | null>(null);
   const [rejectTarget, setRejectTarget] = useState<MechanicClaimDto | null>(null);
   const [pendingClaimId, setPendingClaimId] = useState<string | null>(null);
   const [citationTarget, setCitationTarget] = useState<CitationTarget | null>(null);
@@ -182,11 +184,13 @@ export function ClaimsSection({
   };
 
   const approveMutation = useMutation({
-    mutationFn: (claimId: string) => adminClient.approveMechanicClaim(analysisId, claimId),
-    onMutate: claimId => setPendingClaimId(claimId),
+    mutationFn: ({ claimId, note }: { claimId: string; note?: string }) =>
+      adminClient.approveMechanicClaim(analysisId, claimId, note || undefined),
+    onMutate: ({ claimId }) => setPendingClaimId(claimId),
     onSuccess: () => {
       setActionError(null);
       setActionWarning(null);
+      setApproveTarget(null);
       invalidateClaimsAndStatus();
     },
     onError: (err: unknown) => {
@@ -387,12 +391,25 @@ export function ClaimsSection({
             isActionable={isClaimsActionable}
             pendingClaimId={pendingClaimId}
             pdfDocumentId={pdfDocumentId}
-            onApprove={id => approveMutation.mutate(id)}
+            onApprove={claim => setApproveTarget(claim)}
             onReject={claim => setRejectTarget(claim)}
             onOpenCitation={setCitationTarget}
           />
         ))}
       </div>
+
+      <ApproveClaimDialog
+        open={!!approveTarget}
+        onOpenChange={open => {
+          if (!open) setApproveTarget(null);
+        }}
+        onConfirm={note => {
+          if (!approveTarget) return;
+          approveMutation.mutate({ claimId: approveTarget.id, note });
+        }}
+        isPending={approveMutation.isPending}
+        claimPreview={approveTarget ? truncate(approveTarget.text, 120) : undefined}
+      />
 
       <RejectClaimDialog
         open={!!rejectTarget}
@@ -439,7 +456,7 @@ interface SectionGroupProps {
   isActionable: boolean;
   pendingClaimId: string | null;
   pdfDocumentId?: string;
-  onApprove: (claimId: string) => void;
+  onApprove: (claim: MechanicClaimDto) => void;
   onReject: (claim: MechanicClaimDto) => void;
   onOpenCitation: (target: CitationTarget) => void;
 }
@@ -489,7 +506,7 @@ function SectionGroup({
               isActionable={isActionable}
               isPending={pendingClaimId === claim.id}
               pdfDocumentId={pdfDocumentId}
-              onApprove={() => onApprove(claim.id)}
+              onApprove={() => onApprove(claim)}
               onReject={() => onReject(claim)}
               onOpenCitation={onOpenCitation}
             />
@@ -562,6 +579,14 @@ function ClaimRow({
               data-testid={`claim-rejection-note-${claim.id}`}
             >
               <strong>Rejection:</strong> {claim.rejectionNote}
+            </p>
+          )}
+          {claim.reviewNote && (
+            <p
+              className="mt-1 rounded border border-green-200 bg-green-50 p-1 text-xs text-green-800 break-words"
+              data-testid={`claim-review-note-${claim.id}`}
+            >
+              <strong>Note:</strong> {claim.reviewNote}
             </p>
           )}
         </div>

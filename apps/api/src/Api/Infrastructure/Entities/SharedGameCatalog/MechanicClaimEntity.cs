@@ -21,6 +21,9 @@ public class MechanicClaimEntity
     public DateTime? ReviewedAt { get; set; }
     public string? RejectionNote { get; set; }
 
+    /// <summary>Optional free-form note captured on APPROVE (#526 AC-6). Distinct from RejectionNote.</summary>
+    public string? ReviewNote { get; set; }
+
     // === Navigation ===
     public MechanicAnalysisEntity Analysis { get; set; } = default!;
     public ICollection<MechanicCitationEntity> Citations { get; set; } = new List<MechanicCitationEntity>();

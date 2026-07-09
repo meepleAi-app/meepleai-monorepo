@@ -20,6 +20,7 @@ import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckIcon, ChevronDownIcon, ChevronRightIcon, Loader2Icon, XIcon } from 'lucide-react';
 
+import { PdfQuoteHighlighter } from '@/components/pdf/PdfQuoteHighlighter';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { createAdminClient } from '@/lib/api/clients/adminClient';
@@ -85,11 +86,24 @@ interface ClaimsSectionProps {
    * Used for terminal states where claims are still useful read-only context.
    */
   isClaimsActionable?: boolean;
+  /**
+   * Source PDF id (#526 ME-M1.4 AC-2). When present, citation rows become
+   * clickable buttons that open {@link PdfQuoteHighlighter} at the cited
+   * page/quote; when absent, citations render as plain read-only text.
+   */
+  pdfDocumentId?: string;
+}
+
+interface CitationTarget {
+  documentId: string;
+  page: number;
+  quote: string;
 }
 
 export function ClaimsSection({
   analysisId,
   isClaimsActionable = true,
+  pdfDocumentId,
 }: ClaimsSectionProps): React.JSX.Element {
   const queryClient = useQueryClient();
   const [actionError, setActionError] = useState<string | null>(null);
@@ -98,6 +112,7 @@ export function ClaimsSection({
   const [actionWarning, setActionWarning] = useState<string | null>(null);
   const [rejectTarget, setRejectTarget] = useState<MechanicClaimDto | null>(null);
   const [pendingClaimId, setPendingClaimId] = useState<string | null>(null);
+  const [citationTarget, setCitationTarget] = useState<CitationTarget | null>(null);
 
   const claimsQuery = useQuery({
     queryKey: ['mechanic-analysis', analysisId, 'claims'],
@@ -298,8 +313,10 @@ export function ClaimsSection({
             claims={sectionClaims}
             isActionable={isClaimsActionable}
             pendingClaimId={pendingClaimId}
+            pdfDocumentId={pdfDocumentId}
             onApprove={id => approveMutation.mutate(id)}
             onReject={claim => setRejectTarget(claim)}
+            onOpenCitation={setCitationTarget}
           />
         ))}
       </div>
@@ -316,6 +333,18 @@ export function ClaimsSection({
         isPending={rejectMutation.isPending}
         claimPreview={rejectTarget ? truncate(rejectTarget.text, 120) : undefined}
       />
+
+      {citationTarget && (
+        <PdfQuoteHighlighter
+          open={!!citationTarget}
+          onOpenChange={open => {
+            if (!open) setCitationTarget(null);
+          }}
+          documentId={citationTarget.documentId}
+          page={citationTarget.page}
+          quote={citationTarget.quote}
+        />
+      )}
     </div>
   );
 }
@@ -325,8 +354,10 @@ interface SectionGroupProps {
   claims: MechanicClaimDto[];
   isActionable: boolean;
   pendingClaimId: string | null;
+  pdfDocumentId?: string;
   onApprove: (claimId: string) => void;
   onReject: (claim: MechanicClaimDto) => void;
+  onOpenCitation: (target: CitationTarget) => void;
 }
 
 function SectionGroup({
@@ -334,8 +365,10 @@ function SectionGroup({
   claims,
   isActionable,
   pendingClaimId,
+  pdfDocumentId,
   onApprove,
   onReject,
+  onOpenCitation,
 }: SectionGroupProps): React.JSX.Element {
   const [expanded, setExpanded] = useState(true);
   const label = MECHANIC_SECTION_LABELS[section] ?? `Section ${section}`;
@@ -371,8 +404,10 @@ function SectionGroup({
               claim={claim}
               isActionable={isActionable}
               isPending={pendingClaimId === claim.id}
+              pdfDocumentId={pdfDocumentId}
               onApprove={() => onApprove(claim.id)}
               onReject={() => onReject(claim)}
+              onOpenCitation={onOpenCitation}
             />
           ))}
         </ul>
@@ -385,8 +420,10 @@ interface ClaimRowProps {
   claim: MechanicClaimDto;
   isActionable: boolean;
   isPending: boolean;
+  pdfDocumentId?: string;
   onApprove: () => void;
   onReject: () => void;
+  onOpenCitation: (target: CitationTarget) => void;
 }
 
 /**
@@ -401,8 +438,10 @@ function ClaimRow({
   claim,
   isActionable,
   isPending,
+  pdfDocumentId,
   onApprove,
   onReject,
+  onOpenCitation,
 }: ClaimRowProps): React.JSX.Element {
   const [showCitations, setShowCitations] = useState(false);
   const [textExpanded, setTextExpanded] = useState(false);
@@ -498,8 +537,28 @@ function ClaimRow({
             <ul className="mt-1 space-y-1 border-l-2 border-sky-200 pl-3 text-xs">
               {claim.citations.map(c => (
                 <li key={c.id} className="text-muted-foreground">
-                  <span className="font-medium text-foreground">p.{c.pdfPage}</span> — &ldquo;
-                  {c.quote}&rdquo;
+                  {pdfDocumentId ? (
+                    <button
+                      type="button"
+                      className="text-left hover:underline"
+                      onClick={() =>
+                        onOpenCitation({
+                          documentId: pdfDocumentId,
+                          page: c.pdfPage,
+                          quote: c.quote,
+                        })
+                      }
+                      data-testid={`claim-citation-open-${c.id}`}
+                    >
+                      <span className="font-medium text-foreground">p.{c.pdfPage}</span> — &ldquo;
+                      {c.quote}&rdquo;
+                    </button>
+                  ) : (
+                    <>
+                      <span className="font-medium text-foreground">p.{c.pdfPage}</span> — &ldquo;
+                      {c.quote}&rdquo;
+                    </>
+                  )}
                 </li>
               ))}
             </ul>

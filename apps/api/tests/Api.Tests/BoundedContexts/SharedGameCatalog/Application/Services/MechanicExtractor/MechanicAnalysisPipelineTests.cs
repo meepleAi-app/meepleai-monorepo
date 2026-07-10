@@ -68,6 +68,41 @@ public sealed class MechanicAnalysisPipelineTests
     }
 
     [Fact]
+    public async Task RunAsync_RetainedGuardrailSection_ProducesStatus3RunWithFlagSummary()
+    {
+        // #2782 D9: a retained (Status=3) section run must carry an honest ErrorMessage
+        // summarizing which rule families failed (telemetry legibility) — even though the
+        // Status=3 DB CHECK constraint itself does not require a non-null ErrorMessage.
+        var ruleOutcomes = new MechanicRuleOutcome[]
+        {
+            new("T1", "pass", null, null, null, Array.Empty<MechanicValidationViolation>()),
+            new("T2", "fail", "long verbatim", "$.summary.text", null,
+                new[] { new MechanicValidationViolation("T2", "long verbatim", "$.summary.text") }),
+            new("T3a", "notRun", null, null, null, Array.Empty<MechanicValidationViolation>()),
+            new("T3b", "notRun", null, null, null, Array.Empty<MechanicValidationViolation>()),
+            new("T4", "notRun", null, null, null, Array.Empty<MechanicValidationViolation>())
+        };
+        var validation = MechanicValidationResult.Invalid(
+            new[] { new MechanicValidationViolation("T2", "long verbatim", "$.summary.text") },
+            ruleOutcomes);
+
+        var pipeline = BuildPipeline(
+            llmResponse: WellFormedJson,
+            validation: validation);
+
+        var result = await pipeline.RunAsync(
+            BuildRequest(MechanicSection.Summary), CancellationToken.None);
+
+        var run = result.SectionRuns.Single(r => r.Section == (int)MechanicSection.Summary);
+        run.Status.Should().Be(3);
+        run.ErrorMessage.Should().Contain("T2");
+        // Honest telemetry: the message must state the section was RETAINED (not merely
+        // "failed") and must summarize the DISTINCT failed rule families from RuleOutcomes,
+        // not a raw dump of the last attempt's Violations collection.
+        run.ErrorMessage.Should().Be("Retained with guardrail flags: T2");
+    }
+
+    [Fact]
     public async Task RunAsync_WellFormedFail_LeavesSectionAbsent_NoAbort()
     {
         // (b) LLM always returns non-JSON → validator (real path) yields Invalid([well_formed])

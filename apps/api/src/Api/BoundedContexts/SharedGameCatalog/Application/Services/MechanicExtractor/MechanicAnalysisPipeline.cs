@@ -5,6 +5,7 @@ using System.Text.Json;
 using Api.BoundedContexts.SharedGameCatalog.Application.Configuration;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExtractor.Guardrails;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Services;
 using Microsoft.Extensions.Logging;
@@ -274,6 +275,25 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
         // Status: 3 (RetainedWithGuardrailFlags) only when we actually retain; else 1 (Failed).
         var failureStatus = !neverWellFormed && !groundingUnavailable ? 3 : 1;
 
+        // #2782 D9: for the RETAINED (Status=3) branch, ErrorMessage must be an honest telemetry
+        // summary — this section's output was KEPT, not "failed" — listing the DISTINCT rule
+        // families that were flagged (fail-fast means normally just one, but this stays correct
+        // if the guardrail chain is ever changed to non-fail-fast). For genuine failures
+        // (never-well-formed / grounding-outage, Status=1), keep the existing raw diagnostic.
+        string errorMessage;
+        if (failureStatus == 3)
+        {
+            var failedRuleFamilies = lastValidation!.RuleOutcomes
+                .Where(o => string.Equals(o.Outcome, MechanicClaimValidationOutcomes.Fail, StringComparison.Ordinal))
+                .Select(o => o.Rule)
+                .Distinct(StringComparer.Ordinal);
+            errorMessage = $"Retained with guardrail flags: {string.Join(", ", failedRuleFamilies)}";
+        }
+        else
+        {
+            errorMessage = $"Validation failed after {attempts} attempts: {lastValidationError}";
+        }
+
         var validationFailureRun = new MechanicAnalysisSectionRunEntity
         {
             Id = Guid.NewGuid(),
@@ -288,7 +308,7 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
             EstimatedCostUsd = decimal.Round(accCostUsd, 6, MidpointRounding.AwayFromZero),
             LatencyMs = (int)Math.Min(int.MaxValue, stopwatch.ElapsedMilliseconds),
             Status = failureStatus,
-            ErrorMessage = $"Validation failed after {attempts} attempts: {lastValidationError}",
+            ErrorMessage = errorMessage,
             StartedAt = startedAt,
             CompletedAt = completedAtValidationFail
         };

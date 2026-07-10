@@ -20,24 +20,20 @@
  * 4. On submit: activate account and redirect to onboarding or dashboard
  */
 
-import { Suspense } from 'react';
-
-import { AuthLayout } from '@/components/layouts';
-
 import { SetupAccountContent } from './_content';
 
-export default function SetupAccountPage() {
-  return (
-    <Suspense
-      fallback={
-        <AuthLayout title="Caricamento...">
-          <div className="text-center py-8">
-            <div className="animate-pulse text-muted-foreground">Caricamento...</div>
-          </div>
-        </AuthLayout>
-      }
-    >
-      <SetupAccountContent />
-    </Suspense>
-  );
+/**
+ * #2773: async Server Component reads searchParams (async in Next 16) and passes
+ * `token` down as a prop, so the client content renders WITHOUT `useSearchParams`
+ * — no CSR bailout. Same props pattern as `login/page.tsx` (#2650 / #2771).
+ */
+export default async function SetupAccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const params = await searchParams;
+  const token = typeof params.token === 'string' ? params.token : undefined;
+
+  return <SetupAccountContent token={token} />;
 }

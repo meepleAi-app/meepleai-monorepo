@@ -51,6 +51,10 @@ internal sealed class MechanicClaimEntityConfiguration : IEntityTypeConfiguratio
             .HasColumnName("rejection_note")
             .HasMaxLength(2000);
 
+        builder.Property(c => c.ReviewNote)
+            .HasColumnName("review_note")
+            .HasMaxLength(2000);
+
         builder.HasIndex(c => c.AnalysisId).HasDatabaseName("ix_mechanic_claims_analysis_id");
         builder.HasIndex(c => new { c.AnalysisId, c.Section, c.DisplayOrder })
             .HasDatabaseName("ix_mechanic_claims_analysis_section_order");

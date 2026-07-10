@@ -18,7 +18,6 @@ const {
   mockRequestPasswordReset,
   mockConfirmPasswordReset,
   mockLogin,
-  mockSearchParamsGet,
   MockApiError,
 } = vi.hoisted(() => {
   // Minimal stand-in for the real ApiError class. The shared getErrorMessage
@@ -41,14 +40,12 @@ const {
     mockRequestPasswordReset: vi.fn(),
     mockConfirmPasswordReset: vi.fn(),
     mockLogin: vi.fn(),
-    mockSearchParamsGet: vi.fn<(key: string) => string | null>(),
     MockApiError,
   };
 });
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
-  useSearchParams: () => ({ get: mockSearchParamsGet }),
 }));
 
 vi.mock('@/hooks/useTranslation', () => ({
@@ -80,9 +77,7 @@ beforeEach(() => {
   mockRequestPasswordReset.mockReset();
   mockConfirmPasswordReset.mockReset();
   mockLogin.mockReset();
-  mockSearchParamsGet.mockReset();
 
-  mockSearchParamsGet.mockReturnValue(null);
   // default: not authenticated (so the auth guard clears isCheckingAuth)
   mockGetMe.mockRejectedValue(new Error('401'));
 });
@@ -179,10 +174,8 @@ describe('ResetPasswordPageContent — request mode', () => {
 // ---------------------------------------------------------------------------
 
 describe('ResetPasswordPageContent — reset mode', () => {
-  beforeEach(() => {
-    mockSearchParamsGet.mockImplementation((key: string) => (key === 'token' ? 'tok-123' : null));
-  });
-
+  // #2773: reset mode is now driven by the `token` prop (from the async page.tsx),
+  // not by a mocked useSearchParams.
   it('shows the verifying state while the token is being checked', async () => {
     // Use mockImplementation (not mockResolvedValueOnce): the verify-token
     // effect re-fires on every render because the mocked useTranslation
@@ -190,7 +183,7 @@ describe('ResetPasswordPageContent — reset mode', () => {
     // A single-shot mock would be exhausted after the first render.
     mockVerifyResetToken.mockImplementation(() => new Promise(() => {}));
 
-    render(<ResetPasswordPageContent />);
+    render(<ResetPasswordPageContent token="tok-123" />);
 
     expect(
       await screen.findByRole('heading', { name: 'auth.resetPassword.verifyingTitle' })
@@ -200,7 +193,7 @@ describe('ResetPasswordPageContent — reset mode', () => {
   it('shows the invalid-link card when token verification fails', async () => {
     mockVerifyResetToken.mockRejectedValue(new Error('bad token'));
 
-    render(<ResetPasswordPageContent />);
+    render(<ResetPasswordPageContent token="tok-123" />);
 
     expect(
       await screen.findByRole('heading', { name: 'auth.resetPassword.invalidLinkTitle' })
@@ -213,7 +206,7 @@ describe('ResetPasswordPageContent — reset mode', () => {
   it('renders the new password form when token is valid', async () => {
     mockVerifyResetToken.mockResolvedValue(undefined);
 
-    render(<ResetPasswordPageContent />);
+    render(<ResetPasswordPageContent token="tok-123" />);
 
     expect(
       await screen.findByRole('heading', { name: 'auth.resetPassword.confirmTitle' })
@@ -227,7 +220,7 @@ describe('ResetPasswordPageContent — reset mode', () => {
     mockConfirmPasswordReset.mockResolvedValue({ message: 'ok' });
     mockLogin.mockRejectedValue(new Error('no auto-login'));
 
-    render(<ResetPasswordPageContent />);
+    render(<ResetPasswordPageContent token="tok-123" />);
 
     const pwd = await screen.findByLabelText('auth.resetPassword.passwordLabel');
     const confirm = screen.getByLabelText('auth.resetPassword.confirmPasswordLabel');
@@ -264,7 +257,7 @@ describe('ResetPasswordPageContent — reset mode', () => {
     mockVerifyResetToken.mockResolvedValue(undefined);
     mockConfirmPasswordReset.mockRejectedValue(new Error('Token expired'));
 
-    render(<ResetPasswordPageContent />);
+    render(<ResetPasswordPageContent token="tok-123" />);
 
     const pwd = await screen.findByLabelText('auth.resetPassword.passwordLabel');
     const confirm = screen.getByLabelText('auth.resetPassword.confirmPasswordLabel');

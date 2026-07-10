@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { Mail, RefreshCw } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 import { AuthCard } from '@/components/ui/auth-card';
 import { Btn } from '@/components/ui/btn';
@@ -26,13 +26,23 @@ function maskEmail(email: string): string {
   return `${maskedLocal}@${domain}`;
 }
 
-export function VerificationPendingContent() {
+/**
+ * #2773 — `emailParam` arrives as a PROP from the async Server Component
+ * page.tsx (which reads searchParams). Reading it as a prop instead of via the
+ * `useSearchParams` client hook lets this component render server-side (SSR),
+ * dropping the CSR bailout. Same pattern as `login/_content.tsx` (#2650).
+ */
+export interface VerificationPendingContentProps {
+  /** `?email=` address; falls back to sessionStorage when absent. */
+  emailParam?: string | null;
+}
+
+export function VerificationPendingContent({ emailParam = null }: VerificationPendingContentProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { t } = useTranslation();
 
   // Get email from query params or session storage
-  const emailFromParams = searchParams?.get('email') ?? null;
+  const emailFromParams = emailParam;
   const [email, setEmail] = useState<string | null>(null);
 
   const { isResending, error, cooldownSeconds, resendVerificationEmail, clearError } =

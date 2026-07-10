@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Exceptions;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.Observability;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -126,6 +128,8 @@ internal sealed class BulkRejectMechanicClaimsCommandHandler
             skippedAlreadyRejectedCount,
             request.ReviewerId);
 
+        MeepleAiMetrics.MechanicReviewBulkActions.Add(1, new TagList { { "action", "bulk_reject" } });
+
         var claims = analysis.Claims
             .OrderBy(c => c.Section)
             .ThenBy(c => c.DisplayOrder)
@@ -139,6 +143,7 @@ internal sealed class BulkRejectMechanicClaimsCommandHandler
                 ReviewedBy: c.ReviewedBy,
                 ReviewedAt: c.ReviewedAt,
                 RejectionNote: c.RejectionNote,
+                ReviewNote: c.ReviewNote,
                 Citations: c.Citations
                     .OrderBy(citation => citation.DisplayOrder)
                     .Select(citation => new MechanicCitationDto(
@@ -146,7 +151,8 @@ internal sealed class BulkRejectMechanicClaimsCommandHandler
                         PdfPage: citation.PdfPage,
                         Quote: citation.Quote,
                         DisplayOrder: citation.DisplayOrder))
-                    .ToList()))
+                    .ToList(),
+                Validations: MechanicClaimValidations.DerivePass()))
             .ToList();
 
         return new BulkRejectMechanicClaimsResponseDto(

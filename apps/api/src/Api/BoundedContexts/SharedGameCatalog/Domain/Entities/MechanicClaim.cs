@@ -48,6 +48,9 @@ public sealed class MechanicClaim : Entity<Guid>
     /// <summary>Reason the claim was rejected. Required when <see cref="Status"/> is Rejected.</summary>
     public string? RejectionNote { get; private set; }
 
+    /// <summary>Optional note captured on approval (#526 AC-6). Distinct from <see cref="RejectionNote"/>.</summary>
+    public string? ReviewNote { get; private set; }
+
     /// <summary>Attribution citations (minimum 1 — ADR-051 T3).</summary>
     public IReadOnlyList<MechanicCitation> Citations => _citations.AsReadOnly();
 
@@ -205,7 +208,8 @@ public sealed class MechanicClaim : Entity<Guid>
         Guid? reviewedBy,
         DateTime? reviewedAt,
         string? rejectionNote,
-        IEnumerable<MechanicCitation> citations)
+        IEnumerable<MechanicCitation> citations,
+        string? reviewNote = null)
     {
         ArgumentNullException.ThrowIfNull(citations);
 
@@ -220,6 +224,7 @@ public sealed class MechanicClaim : Entity<Guid>
             ReviewedBy = reviewedBy,
             ReviewedAt = reviewedAt,
             RejectionNote = rejectionNote,
+            ReviewNote = reviewNote,
             IsNew = false
         };
 
@@ -228,9 +233,10 @@ public sealed class MechanicClaim : Entity<Guid>
     }
 
     /// <summary>
-    /// Approves the claim. Idempotent: re-approving is a no-op.
+    /// Approves the claim, optionally capturing a review note (#526 AC-6). Idempotent:
+    /// re-approving is a no-op except for refreshing the note.
     /// </summary>
-    internal void Approve(Guid reviewerId, DateTime utcNow)
+    internal void Approve(Guid reviewerId, DateTime utcNow, string? note = null)
     {
         if (reviewerId == Guid.Empty)
         {
@@ -241,6 +247,7 @@ public sealed class MechanicClaim : Entity<Guid>
         ReviewedBy = reviewerId;
         ReviewedAt = utcNow;
         RejectionNote = null;
+        ReviewNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
     }
 
     /// <summary>
@@ -262,6 +269,7 @@ public sealed class MechanicClaim : Entity<Guid>
         ReviewedBy = reviewerId;
         ReviewedAt = utcNow;
         RejectionNote = note.Trim();
+        ReviewNote = null;
     }
 
     /// <summary>
@@ -273,5 +281,6 @@ public sealed class MechanicClaim : Entity<Guid>
         ReviewedBy = null;
         ReviewedAt = null;
         RejectionNote = null;
+        ReviewNote = null;
     }
 }

@@ -4,7 +4,7 @@
 import { useEffect, useState, useCallback } from 'react';
 
 import { PartyPopper, ArrowRight, Sparkles } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 import { Btn } from '@/components/ui/btn';
 import { logger } from '@/lib/logger';
@@ -26,10 +26,20 @@ export function WelcomeFallback() {
   );
 }
 
-export function WelcomeContent() {
+/**
+ * #2773 — `redirectToParam` arrives as a PROP from the async Server Component
+ * page.tsx (which reads searchParams). Reading it as a prop instead of via the
+ * `useSearchParams` client hook lets this component render server-side (SSR),
+ * dropping the CSR bailout. Same pattern as `login/_content.tsx` (#2650).
+ */
+export interface WelcomeContentProps {
+  /** `?redirectTo=` target. Sanitized against open-redirect below (#2168). */
+  redirectToParam?: string;
+}
+
+export function WelcomeContent({ redirectToParam }: WelcomeContentProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const rawRedirectTo = searchParams?.get('redirectTo');
+  const rawRedirectTo = redirectToParam;
   // Audit (#2168): ?redirectTo= is user-controlled; guard against open-redirect
   // via assertSafeRelativeOrFallback before passing to router.push().
   const redirectTo = assertSafeRelativeOrFallback(rawRedirectTo, '/library');

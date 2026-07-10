@@ -62,7 +62,7 @@ describe('MechanicExtractorReviewPage', () => {
     expect(screen.getByText('2')).toBeInTheDocument(); // 2 mechanics
   });
 
-  it('renders copyright footer with Variant C text', async () => {
+  it('renders ADR-051 attribution footer and NOT the retired Variant-C copy', async () => {
     mockGetMechanicDraft.mockResolvedValue({
       gameTitle: 'Catan',
       summaryDraft: 'Trade and build',
@@ -80,9 +80,9 @@ describe('MechanicExtractorReviewPage', () => {
 
     render(<MechanicExtractorReviewPage />, { wrapper: Wrapper });
 
-    expect(await screen.findByText(/Variant C/)).toBeInTheDocument();
+    expect(await screen.findByText(/riformulata in parole originali/i)).toBeInTheDocument();
     expect(
-      screen.getByText(/L'AI non ha mai letto il testo del PDF originale/i)
-    ).toBeInTheDocument();
+      screen.queryByText(/non ha mai letto il testo del PDF originale/i)
+    ).not.toBeInTheDocument();
   });
 });

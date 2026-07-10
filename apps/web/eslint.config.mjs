@@ -766,7 +766,7 @@ export default [
                 "@/components/ui/state-preview/state-preview-provider",
               ],
               message:
-                "Use '@/components/ui/state-preview' barrel (which uses dynamic({ssr:false}) for tree-shake guarantee). Direct import of state-preview-provider bypasses dev-only isolation.",
+                "Use '@/components/ui/state-preview' barrel (NODE_ENV-gated loader: production gets a zero-cost pass-through that keeps SSR working, dev gets a dynamic import WITHOUT ssr:false — see #2770). Direct import of state-preview-provider bypasses that isolation and the tree-shake guarantee.",
             },
             {
               group: [

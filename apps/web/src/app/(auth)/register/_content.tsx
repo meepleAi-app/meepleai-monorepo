@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 import { buildOAuthUrl } from '@/components/auth/oauth-url';
 import { RegisterForm, type RegisterSubmitPayload } from '@/components/auth/RegisterForm';
@@ -23,25 +23,23 @@ import { useApiClient } from '@/lib/api/context';
 type RegistrationMode = 'loading' | 'public' | 'invite-only';
 
 // ============================================================================
-// Fallback (Suspense boundary)
-// ============================================================================
-
-export function RegisterFallback() {
-  const { t } = useTranslation();
-  return (
-    <main className="min-h-dvh flex items-center justify-center bg-muted text-muted-foreground">
-      {t('auth.register.loadingMessage')}
-    </main>
-  );
-}
-
-// ============================================================================
 // Main content
 // ============================================================================
 
-export function RegisterPageContent() {
+/**
+ * #2773 — `oauthDisabled` arrives as a PROP from the async Server Component
+ * page.tsx (which reads searchParams). Reading it as a prop instead of via the
+ * `useSearchParams` client hook lets this component render server-side (SSR) —
+ * the form is in the initial HTML instead of behind a CSR bailout. Same pattern
+ * as `login/_content.tsx` (#2650).
+ */
+export interface RegisterPageContentProps {
+  /** `?oauth_disabled=true` marker (OAuth suppressed for invite-only). */
+  oauthDisabled?: boolean;
+}
+
+export function RegisterPageContent({ oauthDisabled = false }: RegisterPageContentProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { t } = useTranslation();
   const { register } = useAuth();
   const api = useApiClient();
@@ -51,7 +49,6 @@ export function RegisterPageContent() {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [error, setError] = useState<string>('');
 
-  const oauthDisabled = searchParams?.get('oauth_disabled') === 'true';
   // Audit (#2168): register does NOT read ?from=. Post-registration redirect is
   // hardcoded to /verification-pending (line below in handleRegister). If a
   // ?from= param is ever introduced here, use assertSafeRelativeOrFallback from

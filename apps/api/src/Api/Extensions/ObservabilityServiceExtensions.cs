@@ -200,14 +200,25 @@ internal static class ObservabilityServiceExtensions
                 "shared-catalog-fts",
                 failureStatus: HealthStatus.Degraded,
                 tags: SharedCatalogTags)
-            .AddUrlGroup(
-                new Uri($"{n8nUrl}/healthz"),
-                name: "n8n",
-                tags: N8nTags)
             .AddCheck<Api.Infrastructure.HealthChecks.ConfigurationHealthCheck>(
                 "configuration",
                 failureStatus: HealthStatus.Degraded,
                 tags: ConfigurationTags);
+
+        // #2796: only health-check n8n when the WorkflowIntegration webhook client
+        // is actually enabled (mirrors N8nWebhookClientOptions.SectionName "N8n" +
+        // IsEnabled). Staging removed n8n entirely (disk); an unconditional probe
+        // would report permanent Unhealthy on the dashboard for a service we don't
+        // integrate with. String-indexer read avoids coupling to the WI context.
+        var n8nEnabled = string.Equals(
+            configuration["N8n:IsEnabled"], "true", StringComparison.OrdinalIgnoreCase);
+        if (n8nEnabled)
+        {
+            builder.AddUrlGroup(
+                new Uri($"{n8nUrl}/healthz"),
+                name: "n8n",
+                tags: N8nTags);
+        }
     }
 
     /// <summary>

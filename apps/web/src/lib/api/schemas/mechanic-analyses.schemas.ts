@@ -233,6 +233,14 @@ export const MechanicCitationDtoSchema = z.object({
 });
 export type MechanicCitationDto = z.infer<typeof MechanicCitationDtoSchema>;
 
+/** Per-rule template validation outcome (#526 ME-M1.4). Currently always T1-T4, derived server-side. */
+export const MechanicClaimValidationDtoSchema = z.object({
+  rule: z.string(),
+  outcome: z.enum(['pass', 'fail', 'notRun']),
+  message: z.string().nullable().optional(),
+});
+export type MechanicClaimValidationDto = z.infer<typeof MechanicClaimValidationDtoSchema>;
+
 export const MechanicClaimDtoSchema = z.object({
   id: z.string().uuid(),
   analysisId: z.string().uuid(),
@@ -244,6 +252,8 @@ export const MechanicClaimDtoSchema = z.object({
   reviewedAt: z.string().nullable(),
   rejectionNote: z.string().nullable(),
   citations: z.array(MechanicCitationDtoSchema),
+  reviewNote: z.string().nullable(),
+  validations: z.array(MechanicClaimValidationDtoSchema),
 });
 export type MechanicClaimDto = z.infer<typeof MechanicClaimDtoSchema>;
 
@@ -288,6 +298,21 @@ export const BulkApproveMechanicClaimsResponseDtoSchema = z.object({
 export type BulkApproveMechanicClaimsResponseDto = z.infer<
   typeof BulkApproveMechanicClaimsResponseDtoSchema
 >;
+
+export const BulkRejectMechanicClaimsResponseDtoSchema = z.object({
+  rejectedCount: z.number().int(),
+  skippedAlreadyRejectedCount: z.number().int(),
+  claims: MechanicClaimsListSchema,
+});
+export type BulkRejectMechanicClaimsResponseDto = z.infer<
+  typeof BulkRejectMechanicClaimsResponseDtoSchema
+>;
+
+/** Body for `POST .../claims/bulk-reject` (#526). Reviewer id comes from the session. */
+export interface BulkRejectMechanicClaimsRequest {
+  claimIds: string[];
+  reason: string;
+}
 
 // ========== Request types ==========
 
@@ -350,6 +375,7 @@ export const MECHANIC_ANALYSES_ROUTES = {
   rejectClaim: (id: string, claimId: string) =>
     `/api/v1/admin/mechanic-analyses/${id}/claims/${claimId}/reject`,
   bulkApproveClaims: (id: string) => `/api/v1/admin/mechanic-analyses/${id}/claims/bulk-approve`,
+  bulkRejectClaims: (id: string) => `/api/v1/admin/mechanic-analyses/${id}/claims/bulk-reject`,
 } as const;
 
 export const MECHANIC_ANALYSES_PAGES = {

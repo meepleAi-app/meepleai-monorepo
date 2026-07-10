@@ -47,6 +47,7 @@ import {
 } from '../../schemas/entity-link.schemas';
 import {
   BulkApproveMechanicClaimsResponseDtoSchema,
+  BulkRejectMechanicClaimsResponseDtoSchema,
   MechanicAnalysisGenerationResponseDtoSchema,
   MechanicAnalysisLifecycleResponseDtoSchema,
   MechanicAnalysisListPageDtoSchema,
@@ -55,6 +56,8 @@ import {
   MechanicClaimsListSchema,
   MECHANIC_ANALYSES_ROUTES,
   type BulkApproveMechanicClaimsResponseDto,
+  type BulkRejectMechanicClaimsRequest,
+  type BulkRejectMechanicClaimsResponseDto,
   type GenerateMechanicAnalysisRequest,
   type MechanicAnalysisGenerationResponseDto,
   type MechanicAnalysisLifecycleResponseDto,
@@ -622,10 +625,14 @@ export function createAdminContentClient(http: HttpClient) {
       return result ?? [];
     },
 
-    async approveMechanicClaim(analysisId: string, claimId: string): Promise<MechanicClaimDto> {
+    async approveMechanicClaim(
+      analysisId: string,
+      claimId: string,
+      note?: string
+    ): Promise<MechanicClaimDto> {
       const result = await http.post(
         MECHANIC_ANALYSES_ROUTES.approveClaim(analysisId, claimId),
-        {},
+        note !== undefined ? { note } : {},
         MechanicClaimDtoSchema
       );
       if (!result) throw new Error('Failed to approve claim');
@@ -655,6 +662,19 @@ export function createAdminContentClient(http: HttpClient) {
         BulkApproveMechanicClaimsResponseDtoSchema
       );
       if (!result) throw new Error('Failed to bulk-approve claims');
+      return result;
+    },
+
+    async bulkRejectMechanicClaims(
+      analysisId: string,
+      request: BulkRejectMechanicClaimsRequest
+    ): Promise<BulkRejectMechanicClaimsResponseDto> {
+      const result = await http.post(
+        MECHANIC_ANALYSES_ROUTES.bulkRejectClaims(analysisId),
+        request,
+        BulkRejectMechanicClaimsResponseDtoSchema
+      );
+      if (!result) throw new Error('Failed to bulk-reject claims');
       return result;
     },
 

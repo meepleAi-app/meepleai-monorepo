@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 
+import { MechanicAnalysisFooterAttribution } from '@/components/admin/mechanic-extractor/MechanicAnalysisFooterAttribution';
 import { EvaluateButton } from '@/components/admin/mechanic-extractor/validation/EvaluateButton';
 import { FeatureFlagGate } from '@/components/admin/mechanic-extractor/validation/FeatureFlagGate';
 import { MetricsCard } from '@/components/admin/mechanic-extractor/validation/MetricsCard';
@@ -268,21 +269,11 @@ function ReviewContent() {
         </ReviewCard>
       )}
 
-      {/* Copyright Footer */}
-      <div className="rounded-lg border border-green-200 bg-green-50/50 p-4 text-center text-xs text-green-800 dark:border-green-800 dark:bg-green-950/20 dark:text-green-300 print:border-green-400">
-        <strong>&copy; 2026 MeepleAI</strong> — Contenuto originale. Meccaniche di gioco descritte
-        indipendentemente.
-        <br />
-        <span className="opacity-70">
-          Generato con Variant C (human + AI assistant). L&apos;AI non ha mai letto il testo del PDF
-          originale.
-        </span>
-        {(draft.totalTokensUsed ?? 0) > 0 && (
-          <span className="ml-2 opacity-70">
-            | {draft.totalTokensUsed} tokens, ${(draft.estimatedCostUsd ?? 0).toFixed(4)}
-          </span>
-        )}
-      </div>
+      {/* Copyright Footer (ADR-051, #526 AC-5) */}
+      <MechanicAnalysisFooterAttribution
+        totalTokensUsed={draft.totalTokensUsed}
+        estimatedCostUsd={draft.estimatedCostUsd}
+      />
 
       {/* AI Comprehension Validation (feature-flagged — ADR-051 Sprint 1 / Task 37) */}
       <FeatureFlagGate>

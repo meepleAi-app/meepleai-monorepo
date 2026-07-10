@@ -64,6 +64,11 @@ internal sealed class MechanicAnalysisEntityConfiguration : IEntityTypeConfigura
             .HasColumnName("rejection_reason")
             .HasMaxLength(2000);
 
+        // #527: soft reference to the published card (no DB FK — avoids the analysis↔card FK cycle
+        // and its insert-ordering hazard; integrity is guaranteed by the publish handler setting
+        // this to the just-created card id inside the same transaction).
+        builder.Property(a => a.PublishedCardId).HasColumnName("published_card_id");
+
         builder.Property(a => a.TotalTokensUsed).HasColumnName("total_tokens_used").HasDefaultValue(0).IsRequired();
 
         builder.Property(a => a.EstimatedCostUsd)

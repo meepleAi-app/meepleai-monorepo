@@ -15,11 +15,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // ---------------------------------------------------------------------------
 
 const pushMock = vi.fn().mockResolvedValue(undefined);
-const searchParamsMock = { get: vi.fn<(key: string) => string | null>() };
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
-  useSearchParams: () => searchParamsMock,
 }));
 
 vi.mock('@/lib/logger', () => ({
@@ -34,16 +32,12 @@ import { logger } from '@/lib/logger';
 // Helpers
 // ---------------------------------------------------------------------------
 
-function setSearchParams(params: Record<string, string | null>) {
-  searchParamsMock.get.mockImplementation((key: string) =>
-    Object.prototype.hasOwnProperty.call(params, key) ? (params[key] ?? null) : null
-  );
-}
+// #2773: ?redirectTo= now flows as the `redirectToParam` prop from the async
+// page.tsx, not via a mocked useSearchParams.
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers();
-  setSearchParams({});
 });
 
 afterEach(() => {
@@ -71,8 +65,6 @@ async function advancePastRedirect() {
 
 describe('WelcomeContent — auto redirect', () => {
   it('redirects to /library after 2000ms when no ?redirectTo= param', async () => {
-    setSearchParams({});
-
     await act(async () => {
       render(<WelcomeContent />);
     });
@@ -84,8 +76,6 @@ describe('WelcomeContent — auto redirect', () => {
   });
 
   it('redirects immediately when the "Vai alla Dashboard" button is clicked', async () => {
-    setSearchParams({});
-
     await act(async () => {
       render(<WelcomeContent />);
       // Flush the setMounted(true) useEffect so the component renders the button
@@ -106,10 +96,8 @@ describe('WelcomeContent — auto redirect', () => {
 
 describe('WelcomeContent — open redirect protection (#2168)', () => {
   it('falls back to /library when ?redirectTo= is external URL', async () => {
-    setSearchParams({ redirectTo: 'https://evil.com' });
-
     await act(async () => {
-      render(<WelcomeContent />);
+      render(<WelcomeContent redirectToParam="https://evil.com" />);
     });
 
     await advancePastRedirect();
@@ -127,10 +115,8 @@ describe('WelcomeContent — open redirect protection (#2168)', () => {
   });
 
   it('preserves valid relative ?redirectTo= path', async () => {
-    setSearchParams({ redirectTo: '/sessions/abc-123' });
-
     await act(async () => {
-      render(<WelcomeContent />);
+      render(<WelcomeContent redirectToParam="/sessions/abc-123" />);
     });
 
     await advancePastRedirect();
@@ -142,10 +128,8 @@ describe('WelcomeContent — open redirect protection (#2168)', () => {
   });
 
   it('logs unsafe ?redirectTo= attempt on initial render (before redirect)', async () => {
-    setSearchParams({ redirectTo: 'https://evil.com' });
-
     await act(async () => {
-      render(<WelcomeContent />);
+      render(<WelcomeContent redirectToParam="https://evil.com" />);
       // Flush microtasks so the warn useEffect commits, but do NOT advance
       // past the 2000ms redirect timer — push must not have been called yet
     });

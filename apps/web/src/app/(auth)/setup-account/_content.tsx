@@ -14,7 +14,7 @@
 import { useEffect, useState, FormEvent } from 'react';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 import { AuthLayout } from '@/components/layouts';
 import { Btn } from '@/components/ui/btn';
@@ -71,10 +71,19 @@ const getApiBase = (): string => {
 // Main Content Component
 // ──────────────────────────────────────────────
 
-export function SetupAccountContent() {
+/**
+ * #2773 — `token` arrives as a PROP from the async Server Component page.tsx
+ * (which reads searchParams). Reading it as a prop instead of via the
+ * `useSearchParams` client hook lets this component render server-side (SSR),
+ * dropping the CSR bailout. Same pattern as `login/_content.tsx` (#2650).
+ */
+export interface SetupAccountContentProps {
+  /** `?token=` invitation token. */
+  token?: string | null;
+}
+
+export function SetupAccountContent({ token = null }: SetupAccountContentProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const token = searchParams?.get('token') ?? null;
 
   // Token validation state
   const [validationResult, setValidationResult] = useState<InvitationValidation | null>(null);
@@ -376,9 +385,7 @@ export function SetupAccountContent() {
           <div className="text-sm space-y-1">
             <div
               className={`flex items-center gap-2 ${
-                passwordValidation.minLength
-                  ? 'text-green-400'
-                  : 'text-muted-foreground'
+                passwordValidation.minLength ? 'text-green-400' : 'text-muted-foreground'
               }`}
             >
               <span aria-hidden="true">{passwordValidation.minLength ? '\u2713' : '\u25CB'}</span>
@@ -386,9 +393,7 @@ export function SetupAccountContent() {
             </div>
             <div
               className={`flex items-center gap-2 ${
-                passwordValidation.hasUppercase
-                  ? 'text-green-400'
-                  : 'text-muted-foreground'
+                passwordValidation.hasUppercase ? 'text-green-400' : 'text-muted-foreground'
               }`}
             >
               <span aria-hidden="true">
@@ -398,9 +403,7 @@ export function SetupAccountContent() {
             </div>
             <div
               className={`flex items-center gap-2 ${
-                passwordValidation.hasLowercase
-                  ? 'text-green-400'
-                  : 'text-muted-foreground'
+                passwordValidation.hasLowercase ? 'text-green-400' : 'text-muted-foreground'
               }`}
             >
               <span aria-hidden="true">
@@ -410,9 +413,7 @@ export function SetupAccountContent() {
             </div>
             <div
               className={`flex items-center gap-2 ${
-                passwordValidation.hasNumber
-                  ? 'text-green-400'
-                  : 'text-muted-foreground'
+                passwordValidation.hasNumber ? 'text-green-400' : 'text-muted-foreground'
               }`}
             >
               <span aria-hidden="true">{passwordValidation.hasNumber ? '\u2713' : '\u25CB'}</span>

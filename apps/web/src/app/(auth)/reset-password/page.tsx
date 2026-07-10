@@ -10,15 +10,15 @@
 /**
  * Password Reset Page (AUTH-04) — v2 migration (Task 13).
  *
- * Two-mode password reset flow wrapped in a Suspense boundary so that the
- * client-only `useSearchParams()` hook inside `_content.tsx` is allowed.
+ * #2773: async Server Component reads searchParams (async in Next 16) and passes
+ * `token` down as a prop, so the client _content renders WITHOUT
+ * `useSearchParams` — SSR'd, no CSR bailout. Same props pattern as
+ * `login/page.tsx` (#2650 / #2771).
  */
-
-import { Suspense } from 'react';
 
 import { Metadata } from 'next';
 
-import { ResetPasswordFallback, ResetPasswordPageContent } from './_content';
+import { ResetPasswordPageContent } from './_content';
 
 export const metadata: Metadata = {
   title: 'Reimposta password | MeepleAI',
@@ -26,10 +26,13 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function ResetPasswordPage() {
-  return (
-    <Suspense fallback={<ResetPasswordFallback />}>
-      <ResetPasswordPageContent />
-    </Suspense>
-  );
+export default async function ResetPasswordPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const params = await searchParams;
+  const token = typeof params.token === 'string' ? params.token : undefined;
+
+  return <ResetPasswordPageContent token={token} />;
 }

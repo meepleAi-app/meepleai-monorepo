@@ -14,11 +14,7 @@
  * User lands here after clicking the verification link in their email.
  */
 
-import { Suspense } from 'react';
-
 import { Metadata } from 'next';
-
-import { AuthCard } from '@/components/ui/auth-card';
 
 import { VerifyEmailContent } from './_content';
 
@@ -28,20 +24,19 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function VerifyEmailPage() {
-  return (
-    <Suspense
-      fallback={
-        <AuthCard title="Verifica email">
-          <div className="text-center py-8">
-            <div className="animate-pulse text-muted-foreground text-sm">
-              Verifica email in corso...
-            </div>
-          </div>
-        </AuthCard>
-      }
-    >
-      <VerifyEmailContent />
-    </Suspense>
-  );
+/**
+ * #2773: async Server Component reads searchParams (async in Next 16) and passes
+ * `token`/`email` down as props, so the client content renders WITHOUT
+ * `useSearchParams` — no CSR bailout. Same props pattern as `login/page.tsx`.
+ */
+export default async function VerifyEmailPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const params = await searchParams;
+  const token = typeof params.token === 'string' ? params.token : undefined;
+  const email = typeof params.email === 'string' ? params.email : undefined;
+
+  return <VerifyEmailContent token={token} emailParam={email} />;
 }

@@ -9,6 +9,7 @@
  *   POST /admin/mechanic-analyses/{id}/claims/{claimId}/approve       → single
  *   POST /admin/mechanic-analyses/{id}/claims/{claimId}/reject        → single + note
  *   POST /admin/mechanic-analyses/{id}/claims/bulk-approve            → batch
+ *   POST /admin/mechanic-analyses/{id}/claims/bulk-reject             → batch + reason (#526 ME-M1.4 AC-3)
  *
  * Lifecycle invariant (AC-10): the parent analysis can only be promoted to
  * Published once **every** claim is Approved. The viewer surfaces totals so
@@ -20,7 +21,15 @@ import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckIcon, ChevronDownIcon, ChevronRightIcon, Loader2Icon, XIcon } from 'lucide-react';
 
+import { PdfQuoteHighlighter } from '@/components/pdf/PdfQuoteHighlighter';
 import { Badge } from '@/components/ui/data-display/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
 import { createAdminClient } from '@/lib/api/clients/adminClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
@@ -29,18 +38,70 @@ import {
   MECHANIC_SECTION_LABELS,
   MechanicClaimStatus,
   type MechanicClaimDto,
+  type MechanicClaimValidationDto,
 } from '@/lib/api/schemas/mechanic-analyses.schemas';
 
+import { ApproveClaimDialog } from './ApproveClaimDialog';
+import { BulkActionDialog } from './BulkActionDialog';
 import { RejectClaimDialog } from './RejectClaimDialog';
 
 const httpClient = new HttpClient();
 const adminClient = createAdminClient({ httpClient });
+
+/** Word threshold above which a citation quote is considered "long" (#526 ME-M1.4 AC-3, ADR-051 T1). */
+const LONG_QUOTE_WORDS = 20;
+
+function wordCount(s: string): number {
+  return s.trim().split(/\s+/).filter(Boolean).length;
+}
+
+/** Claims whose citations include at least one quote longer than {@link LONG_QUOTE_WORDS} words. */
+function claimsWithLongQuote(claims: MechanicClaimDto[]): MechanicClaimDto[] {
+  return claims.filter(c => c.citations.some(cit => wordCount(cit.quote) > LONG_QUOTE_WORDS));
+}
+
+type BulkActionKind = 'approve-pending' | 'reject-long-quote';
 
 const CLAIM_STATUS_BADGE_CLASS: Record<number, string> = {
   [MechanicClaimStatus.Pending]: 'bg-amber-100 text-amber-800 border-amber-300',
   [MechanicClaimStatus.Approved]: 'bg-green-100 text-green-800 border-green-300',
   [MechanicClaimStatus.Rejected]: 'bg-rose-100 text-rose-800 border-rose-300',
 };
+
+/** Per-rule (T1-T4) template validation badge styling (#526 ME-M1.4 AC-1). */
+const VALIDATION_BADGE_CLASS: Record<string, string> = {
+  pass: 'bg-green-100 text-green-800 border-green-300',
+  fail: 'bg-rose-100 text-rose-800 border-rose-300',
+  notRun: 'bg-slate-100 text-slate-600 border-slate-300',
+};
+
+/**
+ * Renders one Badge per template validation rule (T1-T4) with pass/fail/notRun
+ * styling. Exported for direct unit testing and reuse across claim rows.
+ */
+export function ValidationBadges({
+  validations,
+}: {
+  validations: MechanicClaimValidationDto[];
+}): React.JSX.Element | null {
+  if (!validations || validations.length === 0) return null;
+  return (
+    <span className="flex flex-wrap gap-1" data-testid="claim-validation-badges">
+      {validations.map(v => (
+        <Badge
+          key={v.rule}
+          variant="outline"
+          className={VALIDATION_BADGE_CLASS[v.outcome] ?? VALIDATION_BADGE_CLASS.notRun}
+          data-testid={`claim-validation-badge-${v.rule}`}
+          aria-label={`${v.rule} ${v.outcome}${v.message ? `: ${v.message}` : ''}`}
+          title={v.message ?? `${v.rule} ${v.outcome}`}
+        >
+          {v.outcome === 'pass' ? '✓' : v.outcome === 'fail' ? '✗' : '—'} {v.rule}
+        </Badge>
+      ))}
+    </span>
+  );
+}
 
 interface ClaimsSectionProps {
   analysisId: string;
@@ -49,19 +110,35 @@ interface ClaimsSectionProps {
    * Used for terminal states where claims are still useful read-only context.
    */
   isClaimsActionable?: boolean;
+  /**
+   * Source PDF id (#526 ME-M1.4 AC-2). When present, citation rows become
+   * clickable buttons that open {@link PdfQuoteHighlighter} at the cited
+   * page/quote; when absent, citations render as plain read-only text.
+   */
+  pdfDocumentId?: string;
+}
+
+interface CitationTarget {
+  documentId: string;
+  page: number;
+  quote: string;
 }
 
 export function ClaimsSection({
   analysisId,
   isClaimsActionable = true,
+  pdfDocumentId,
 }: ClaimsSectionProps): React.JSX.Element {
   const queryClient = useQueryClient();
   const [actionError, setActionError] = useState<string | null>(null);
   // Separate channel for success-with-skipped (amber) so we don't conflate it
   // with hard failures (rose) — spec-panel P1 fix.
   const [actionWarning, setActionWarning] = useState<string | null>(null);
+  const [approveTarget, setApproveTarget] = useState<MechanicClaimDto | null>(null);
   const [rejectTarget, setRejectTarget] = useState<MechanicClaimDto | null>(null);
   const [pendingClaimId, setPendingClaimId] = useState<string | null>(null);
+  const [citationTarget, setCitationTarget] = useState<CitationTarget | null>(null);
+  const [bulkAction, setBulkAction] = useState<BulkActionKind | null>(null);
 
   const claimsQuery = useQuery({
     queryKey: ['mechanic-analysis', analysisId, 'claims'],
@@ -107,11 +184,13 @@ export function ClaimsSection({
   };
 
   const approveMutation = useMutation({
-    mutationFn: (claimId: string) => adminClient.approveMechanicClaim(analysisId, claimId),
-    onMutate: claimId => setPendingClaimId(claimId),
+    mutationFn: ({ claimId, note }: { claimId: string; note?: string }) =>
+      adminClient.approveMechanicClaim(analysisId, claimId, note || undefined),
+    onMutate: ({ claimId }) => setPendingClaimId(claimId),
     onSuccess: () => {
       setActionError(null);
       setActionWarning(null);
+      setApproveTarget(null);
       invalidateClaimsAndStatus();
     },
     onError: (err: unknown) => {
@@ -155,7 +234,53 @@ export function ClaimsSection({
     onError: (err: unknown) => {
       setActionError(err instanceof Error ? err.message : 'Bulk approve failed');
     },
+    onSettled: () => setBulkAction(null),
   });
+
+  const bulkRejectMutation = useMutation({
+    mutationFn: (vars: { claimIds: string[]; reason: string }) =>
+      adminClient.bulkRejectMechanicClaims(analysisId, vars),
+    onSuccess: result => {
+      setActionError(null);
+      // Partial success: report skipped-already-rejected as a warning (amber), not error (rose).
+      if (result.skippedAlreadyRejectedCount > 0) {
+        setActionWarning(
+          `Bulk reject completed: ${result.rejectedCount} rejected, ` +
+            `${result.skippedAlreadyRejectedCount} already-rejected claim(s) skipped.`
+        );
+      } else {
+        setActionWarning(null);
+      }
+      invalidateClaimsAndStatus();
+    },
+    onError: (err: unknown) => {
+      setActionError(err instanceof Error ? err.message : 'Bulk reject failed');
+    },
+    onSettled: () => setBulkAction(null),
+  });
+
+  const pendingClaims = useMemo(
+    () => claims.filter(c => c.status === MechanicClaimStatus.Pending),
+    [claims]
+  );
+  const longQuoteClaims = useMemo(() => claimsWithLongQuote(claims), [claims]);
+
+  const bulkActionTargets = bulkAction === 'approve-pending' ? pendingClaims : longQuoteClaims;
+  const bulkActionTitle =
+    bulkAction === 'approve-pending'
+      ? 'Approve all pending claims?'
+      : 'Reject claims with quote >20 words?';
+
+  const handleBulkActionConfirm = () => {
+    if (bulkAction === 'approve-pending') {
+      bulkApproveMutation.mutate();
+    } else if (bulkAction === 'reject-long-quote') {
+      bulkRejectMutation.mutate({
+        claimIds: bulkActionTargets.map(c => c.id),
+        reason: 'Citazione supera 20 parole (ADR-051 T1) — rifiuto bulk.',
+      });
+    }
+  };
 
   if (claimsQuery.isLoading) {
     return (
@@ -195,7 +320,7 @@ export function ClaimsSection({
     );
   }
 
-  const canBulkApprove = isClaimsActionable && stats.pending > 0 && !bulkApproveMutation.isPending;
+  const isBulkActionPending = bulkApproveMutation.isPending || bulkRejectMutation.isPending;
 
   return (
     <div className="space-y-3" data-testid="claims-section">
@@ -218,20 +343,23 @@ export function ClaimsSection({
           )}
         </div>
         {isClaimsActionable && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => bulkApproveMutation.mutate()}
-            disabled={!canBulkApprove}
-            data-testid="bulk-approve-button"
+          <Select
+            value=""
+            onValueChange={value => setBulkAction(value as BulkActionKind)}
+            disabled={isBulkActionPending}
           >
-            {bulkApproveMutation.isPending ? (
-              <Loader2Icon className="mr-1 h-4 w-4 animate-spin" />
-            ) : (
-              <CheckIcon className="mr-1 h-4 w-4" />
-            )}
-            Bulk approve pending ({stats.pending})
-          </Button>
+            <SelectTrigger className="w-64" data-testid="bulk-action-select">
+              <SelectValue placeholder="Bulk action…" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="approve-pending" disabled={pendingClaims.length === 0}>
+                Approve all pending ({pendingClaims.length})
+              </SelectItem>
+              <SelectItem value="reject-long-quote" disabled={longQuoteClaims.length === 0}>
+                Reject all with quote &gt;20 words ({longQuoteClaims.length})
+              </SelectItem>
+            </SelectContent>
+          </Select>
         )}
       </div>
 
@@ -262,11 +390,26 @@ export function ClaimsSection({
             claims={sectionClaims}
             isActionable={isClaimsActionable}
             pendingClaimId={pendingClaimId}
-            onApprove={id => approveMutation.mutate(id)}
+            pdfDocumentId={pdfDocumentId}
+            onApprove={claim => setApproveTarget(claim)}
             onReject={claim => setRejectTarget(claim)}
+            onOpenCitation={setCitationTarget}
           />
         ))}
       </div>
+
+      <ApproveClaimDialog
+        open={!!approveTarget}
+        onOpenChange={open => {
+          if (!open) setApproveTarget(null);
+        }}
+        onConfirm={note => {
+          if (!approveTarget) return;
+          approveMutation.mutate({ claimId: approveTarget.id, note });
+        }}
+        isPending={approveMutation.isPending}
+        claimPreview={approveTarget ? truncate(approveTarget.text, 120) : undefined}
+      />
 
       <RejectClaimDialog
         open={!!rejectTarget}
@@ -280,6 +423,29 @@ export function ClaimsSection({
         isPending={rejectMutation.isPending}
         claimPreview={rejectTarget ? truncate(rejectTarget.text, 120) : undefined}
       />
+
+      <BulkActionDialog
+        open={!!bulkAction}
+        onOpenChange={open => {
+          if (!open) setBulkAction(null);
+        }}
+        title={bulkActionTitle}
+        count={bulkActionTargets.length}
+        onConfirm={handleBulkActionConfirm}
+        isPending={isBulkActionPending}
+      />
+
+      {citationTarget && (
+        <PdfQuoteHighlighter
+          open={!!citationTarget}
+          onOpenChange={open => {
+            if (!open) setCitationTarget(null);
+          }}
+          documentId={citationTarget.documentId}
+          page={citationTarget.page}
+          quote={citationTarget.quote}
+        />
+      )}
     </div>
   );
 }
@@ -289,8 +455,10 @@ interface SectionGroupProps {
   claims: MechanicClaimDto[];
   isActionable: boolean;
   pendingClaimId: string | null;
-  onApprove: (claimId: string) => void;
+  pdfDocumentId?: string;
+  onApprove: (claim: MechanicClaimDto) => void;
   onReject: (claim: MechanicClaimDto) => void;
+  onOpenCitation: (target: CitationTarget) => void;
 }
 
 function SectionGroup({
@@ -298,8 +466,10 @@ function SectionGroup({
   claims,
   isActionable,
   pendingClaimId,
+  pdfDocumentId,
   onApprove,
   onReject,
+  onOpenCitation,
 }: SectionGroupProps): React.JSX.Element {
   const [expanded, setExpanded] = useState(true);
   const label = MECHANIC_SECTION_LABELS[section] ?? `Section ${section}`;
@@ -335,8 +505,10 @@ function SectionGroup({
               claim={claim}
               isActionable={isActionable}
               isPending={pendingClaimId === claim.id}
-              onApprove={() => onApprove(claim.id)}
+              pdfDocumentId={pdfDocumentId}
+              onApprove={() => onApprove(claim)}
               onReject={() => onReject(claim)}
+              onOpenCitation={onOpenCitation}
             />
           ))}
         </ul>
@@ -349,8 +521,10 @@ interface ClaimRowProps {
   claim: MechanicClaimDto;
   isActionable: boolean;
   isPending: boolean;
+  pdfDocumentId?: string;
   onApprove: () => void;
   onReject: () => void;
+  onOpenCitation: (target: CitationTarget) => void;
 }
 
 /**
@@ -365,8 +539,10 @@ function ClaimRow({
   claim,
   isActionable,
   isPending,
+  pdfDocumentId,
   onApprove,
   onReject,
+  onOpenCitation,
 }: ClaimRowProps): React.JSX.Element {
   const [showCitations, setShowCitations] = useState(false);
   const [textExpanded, setTextExpanded] = useState(false);
@@ -405,8 +581,17 @@ function ClaimRow({
               <strong>Rejection:</strong> {claim.rejectionNote}
             </p>
           )}
+          {claim.reviewNote && (
+            <p
+              className="mt-1 rounded border border-green-200 bg-green-50 p-1 text-xs text-green-800 break-words"
+              data-testid={`claim-review-note-${claim.id}`}
+            >
+              <strong>Note:</strong> {claim.reviewNote}
+            </p>
+          )}
         </div>
         <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+          <ValidationBadges validations={claim.validations} />
           <Badge
             variant="outline"
             className={CLAIM_STATUS_BADGE_CLASS[status] ?? ''}
@@ -461,10 +646,28 @@ function ClaimRow({
             <ul className="mt-1 space-y-1 border-l-2 border-sky-200 pl-3 text-xs">
               {claim.citations.map(c => (
                 <li key={c.id} className="text-muted-foreground">
-                  <span className="font-medium text-foreground">
-                    p.{c.pdfPage}
-                  </span>{' '}
-                  — &ldquo;{c.quote}&rdquo;
+                  {pdfDocumentId ? (
+                    <button
+                      type="button"
+                      className="text-left hover:underline"
+                      onClick={() =>
+                        onOpenCitation({
+                          documentId: pdfDocumentId,
+                          page: c.pdfPage,
+                          quote: c.quote,
+                        })
+                      }
+                      data-testid={`claim-citation-open-${c.id}`}
+                    >
+                      <span className="font-medium text-foreground">p.{c.pdfPage}</span> — &ldquo;
+                      {c.quote}&rdquo;
+                    </button>
+                  ) : (
+                    <>
+                      <span className="font-medium text-foreground">p.{c.pdfPage}</span> — &ldquo;
+                      {c.quote}&rdquo;
+                    </>
+                  )}
                 </li>
               ))}
             </ul>

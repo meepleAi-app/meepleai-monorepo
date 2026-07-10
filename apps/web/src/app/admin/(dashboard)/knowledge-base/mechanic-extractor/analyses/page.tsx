@@ -712,6 +712,7 @@ export default function MechanicAnalysesPage() {
             {analysisId && status && status.claimsCount > 0 && (
               <ClaimsSection
                 analysisId={analysisId}
+                pdfDocumentId={status?.pdfDocumentId}
                 isClaimsActionable={
                   // Approve/Reject only allowed while parent is InReview (server-enforced).
                   status.status === MechanicAnalysisStatus.InReview && !status.isSuppressed

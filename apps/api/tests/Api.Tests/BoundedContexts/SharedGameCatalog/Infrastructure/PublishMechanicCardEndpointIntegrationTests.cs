@@ -128,7 +128,7 @@ public sealed class PublishMechanicCardEndpointIntegrationTests : IAsyncLifetime
         using (var contentDoc = JsonDocument.Parse(card.Content))
         {
             var contentRoot = contentDoc.RootElement;
-            contentRoot.GetProperty("schema_version").GetInt32().Should().Be(1);
+            contentRoot.GetProperty("schema_version").GetInt32().Should().Be(2); // #2782 D6: bumped for real validations projection.
             contentRoot.GetProperty("source_analysis_id").GetGuid().Should().Be(analysisId);
             contentRoot.GetProperty("claims").GetArrayLength().Should().Be(1);
         }

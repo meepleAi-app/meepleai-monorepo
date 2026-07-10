@@ -18,7 +18,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 public sealed record MechanicCardContent
 {
     /// <summary>Current on-disk JSONB schema version.</summary>
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2; // #2782: real validations projected; write-only until a card reader (#528) exists.
 
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -77,9 +77,17 @@ public sealed record MechanicCardContent
                         Quote = cit.Quote
                     })
                     .ToList(),
-                // Validation (T1-T4) outcomes are not yet persisted on the claim graph (wired by
-                // #526). Emitted as an empty array now; the schema_version guards future population.
-                Validations = Array.Empty<MechanicCardValidationSnapshot>()
+                // Down-project each claim's real per-rule validations (#2782 D6). Both "fail" AND
+                // "notRun" collapse to Passed=false — the card is a published snapshot of accepted
+                // claims, so the 3-state review nuance is intentionally lossy here. Never project up.
+                Validations = c.Validations
+                    .Select(v => new MechanicCardValidationSnapshot
+                    {
+                        Rule = v.Rule,
+                        Passed = string.Equals(v.Outcome, MechanicClaimValidationOutcomes.Pass, StringComparison.Ordinal),
+                        Score = v.Score
+                    })
+                    .ToList()
             })
             .ToList();
 
@@ -139,7 +147,7 @@ public sealed record MechanicCardCitationSnapshot
     public string Quote { get; init; } = string.Empty;
 }
 
-/// <summary>T1-T4 guardrail outcome snapshot (reserved; populated when #526 wires validations).</summary>
+/// <summary>T1-T4 guardrail outcome snapshot, down-projected from <see cref="MechanicClaimValidation"/> (#2782 D6).</summary>
 public sealed record MechanicCardValidationSnapshot
 {
     [JsonPropertyName("rule")]

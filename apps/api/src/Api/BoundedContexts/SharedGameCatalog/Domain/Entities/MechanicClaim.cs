@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
@@ -62,6 +63,16 @@ public sealed class MechanicClaim : Entity<Guid>
     /// mechanic_claims column for it), so it is only meaningful during the run that parsed the claim.
     /// </summary>
     public string SourceAnchor { get; private set; } = string.Empty;
+
+    private readonly List<MechanicClaimValidation> _validations = new();
+
+    /// <summary>
+    /// Per-rule guardrail outcomes correlated to this claim at pipeline time (#2782 D4), one per
+    /// rule family (T1/T2/T3a/T3b/T4) evaluated for the owning section. Empty when the section had
+    /// no captured <c>SectionOutcomes</c> (e.g. it succeeded before D3 landed) or on claims that
+    /// have not yet gone through <see cref="AttachValidations"/>.
+    /// </summary>
+    public IReadOnlyList<MechanicClaimValidation> Validations => _validations.AsReadOnly();
 
     /// <summary>
     /// True when the claim was instantiated via <see cref="Create"/> and is not yet persisted;
@@ -223,7 +234,8 @@ public sealed class MechanicClaim : Entity<Guid>
         string? rejectionNote,
         IEnumerable<MechanicCitation> citations,
         string? reviewNote = null,
-        string? sourceAnchor = null)
+        string? sourceAnchor = null,
+        IEnumerable<MechanicClaimValidation>? validations = null)
     {
         ArgumentNullException.ThrowIfNull(citations);
 
@@ -244,7 +256,21 @@ public sealed class MechanicClaim : Entity<Guid>
         };
 
         claim._citations.AddRange(citations);
+
+        if (validations is not null)
+        {
+            claim._validations.AddRange(validations);
+        }
+
         return claim;
+    }
+
+    /// <summary>Attach the correlated per-rule guardrail outcomes captured at pipeline time (#2782 D4).</summary>
+    internal void AttachValidations(IReadOnlyList<MechanicClaimValidation> validations)
+    {
+        ArgumentNullException.ThrowIfNull(validations);
+        _validations.Clear();
+        _validations.AddRange(validations);
     }
 
     /// <summary>

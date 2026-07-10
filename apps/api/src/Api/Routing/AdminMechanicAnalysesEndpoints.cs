@@ -211,6 +211,7 @@ internal static class AdminMechanicAnalysesEndpoints
         group.MapPost("/{id:guid}/claims/{claimId:guid}/approve", async (
             Guid id,
             Guid claimId,
+            ApproveClaimRequest? request,
             HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
@@ -218,7 +219,7 @@ internal static class AdminMechanicAnalysesEndpoints
             var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
             var reviewerId = session!.Principal!.Subject.Id;
 
-            var command = new ApproveMechanicClaimCommand(id, claimId, reviewerId);
+            var command = new ApproveMechanicClaimCommand(id, claimId, reviewerId, request?.Note);
             var response = await mediator.Send(command, ct).ConfigureAwait(false);
 
             return Results.Ok(response);
@@ -227,7 +228,9 @@ internal static class AdminMechanicAnalysesEndpoints
         .WithSummary("Approve a single claim (ISSUE-584)")
         .WithDescription(
             "Transitions a single claim from Pending or Rejected to Approved. Idempotent on " +
-            "claims already Approved. Parent analysis must be InReview; otherwise 409.");
+            "claims already Approved. An optional review note (#526 AC-6, ≤ 2000 chars) is " +
+            "persisted alongside the approval; an empty body still approves. Parent analysis " +
+            "must be InReview; otherwise 409.");
 
         // POST /api/v1/admin/mechanic-analyses/{id}/claims/{claimId}/reject (ISSUE-584)
         // Per-claim reject with mandatory note (1–500 chars).
@@ -372,6 +375,14 @@ internal sealed record SuppressMechanicAnalysisRequest(
 /// <param name="Note">Reviewer rejection note (1–500 chars). Mandatory — surfaces back
 /// in the claims viewer so the reviewer can act on it before re-approving.</param>
 internal sealed record RejectClaimRequest(string Note);
+
+/// <summary>
+/// Request body for <c>POST /admin/mechanic-analyses/{id}/claims/{claimId}/approve</c>
+/// (#526 AC-6). Optional — an empty body still approves the claim. The reviewer id is
+/// sourced from the validated session, never the body.
+/// </summary>
+/// <param name="Note">Optional free-form review note (≤ 2000 chars) persisted with the approval.</param>
+internal sealed record ApproveClaimRequest(string? Note);
 
 /// <summary>
 /// Request body for <c>POST /admin/mechanic-analyses/{id}/claims/bulk-reject</c> (#526).

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -13,9 +14,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260709200055_AddMechanicClaimReviewNote")]
+    partial class AddMechanicClaimReviewNote
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -11959,10 +11962,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(64)")
                         .HasColumnName("provider");
 
-                    b.Property<Guid?>("PublishedCardId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("published_card_id");
-
                     b.Property<string>("RejectionReason")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)")
@@ -12237,157 +12236,6 @@ namespace Api.Infrastructure.Migrations
                             t.HasCheckConstraint("ck_mechanic_section_runs_status_range", "status BETWEEN 0 AND 2");
 
                             t.HasCheckConstraint("ck_mechanic_section_runs_tokens_non_negative", "prompt_tokens >= 0 AND completion_tokens >= 0 AND total_tokens >= 0");
-                        });
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicCardAuditLogEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Action")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
-                        .HasColumnName("action");
-
-                    b.Property<Guid>("ActorId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("actor_id");
-
-                    b.Property<Guid>("CardId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("card_id");
-
-                    b.Property<string>("Metadata")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("metadata");
-
-                    b.Property<DateTime>("OccurredAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("occurred_at");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CardId")
-                        .HasDatabaseName("ix_mechanic_card_audit_log_card_id");
-
-                    b.ToTable("mechanic_card_audit_log", null, t =>
-                        {
-                            t.HasCheckConstraint("ck_mechanic_card_audit_log_action", "action IN ('published', 'suppressed', 'unsuppressed', 'revised')");
-                        });
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicCardEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("jsonb")
-                        .HasColumnName("content");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<int>("ErrorReportsCount")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
-                        .HasColumnName("error_reports_count");
-
-                    b.Property<decimal?>("FeedbackScore")
-                        .HasColumnType("numeric(4,2)")
-                        .HasColumnName("feedback_score");
-
-                    b.Property<bool>("IsSuppressed")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("is_suppressed");
-
-                    b.Property<string>("Origin")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
-                        .HasColumnName("origin");
-
-                    b.Property<Guid>("OriginAnalysisId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("origin_analysis_id");
-
-                    b.Property<DateTime>("PublishedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("published_at");
-
-                    b.Property<Guid>("PublishedBy")
-                        .HasColumnType("uuid")
-                        .HasColumnName("published_by");
-
-                    b.Property<Guid>("SharedGameId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("shared_game_id");
-
-                    b.Property<DateTime?>("SuppressedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("suppressed_at");
-
-                    b.Property<Guid?>("SuppressedBy")
-                        .HasColumnType("uuid")
-                        .HasColumnName("suppressed_by");
-
-                    b.Property<string>("SuppressedReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("suppressed_reason");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("title");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<int>("Version")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1)
-                        .HasColumnName("version");
-
-                    b.Property<uint>("Xmin")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OriginAnalysisId")
-                        .HasDatabaseName("ix_mechanic_cards_origin_analysis_id");
-
-                    b.HasIndex("SharedGameId")
-                        .IsUnique()
-                        .HasDatabaseName("ux_mechanic_cards_active_per_game")
-                        .HasFilter("is_suppressed = false");
-
-                    b.ToTable("mechanic_cards", null, t =>
-                        {
-                            t.HasCheckConstraint("ck_mechanic_cards_error_reports_non_negative", "error_reports_count >= 0");
-
-                            t.HasCheckConstraint("ck_mechanic_cards_origin", "origin IN ('ai_reviewed', 'manual', 'imported_external')");
-
-                            t.HasCheckConstraint("ck_mechanic_cards_suppression_completeness", "(is_suppressed = false AND suppressed_at IS NULL AND suppressed_by IS NULL AND suppressed_reason IS NULL) OR (is_suppressed = true AND suppressed_at IS NOT NULL AND suppressed_by IS NOT NULL AND suppressed_reason IS NOT NULL)");
-
-                            t.HasCheckConstraint("ck_mechanic_cards_version_positive", "version >= 1");
                         });
                 });
 
@@ -18305,36 +18153,6 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("Analysis");
                 });
 
-            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicCardAuditLogEntity", b =>
-                {
-                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.MechanicCardEntity", "Card")
-                        .WithMany("AuditLog")
-                        .HasForeignKey("CardId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Card");
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicCardEntity", b =>
-                {
-                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.MechanicAnalysisEntity", "OriginAnalysis")
-                        .WithMany()
-                        .HasForeignKey("OriginAnalysisId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "SharedGame")
-                        .WithMany()
-                        .HasForeignKey("SharedGameId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("OriginAnalysis");
-
-                    b.Navigation("SharedGame");
-                });
-
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicCitationEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.TextChunkEntity", null)
@@ -19046,11 +18864,6 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("Claims");
 
                     b.Navigation("SectionRuns");
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicCardEntity", b =>
-                {
-                    b.Navigation("AuditLog");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicClaimEntity", b =>

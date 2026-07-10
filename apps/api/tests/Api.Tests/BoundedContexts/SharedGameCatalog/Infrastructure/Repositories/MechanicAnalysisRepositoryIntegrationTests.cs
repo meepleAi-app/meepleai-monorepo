@@ -437,6 +437,40 @@ public sealed class MechanicAnalysisRepositoryIntegrationTests : IAsyncLifetime
     }
 
     // ============================================================
+    // #526 AC-6: optional approve note round-trips to review_note
+    // ============================================================
+
+    [Fact]
+    public async Task ApprovedClaimWithNote_PersistsReviewNote_AcrossReload()
+    {
+        // Guards BLOCKER-2: MapClaimToEntity must copy ReviewNote. The Moq handler test and the
+        // API response both read the in-memory domain aggregate, so they pass even if the DB write
+        // drops the note. Only this Postgres round-trip catches it — Update() forces
+        // EntityState.Modified, so review_note is UPDATEd to NULL unless the write mapper is patched.
+        var sharedGameId = await SeedSharedGameAsync();
+        var analysis = BuildDraftAnalysisWithClaim(sharedGameId);
+        await _repository.AddAsync(analysis);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        var reloaded = await _repository.GetByIdWithClaimsAsync(analysis.Id);
+        reloaded.Should().NotBeNull();
+
+        var reviewer = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        reloaded!.SubmitForReview(reviewer, now);
+        var claimId = reloaded.Claims.Single().Id;
+        reloaded.ApproveClaim(claimId, reviewer, now, "verified against p.4");
+
+        _repository.Update(reloaded);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        var verify = await _repository.GetByIdWithClaimsAsync(analysis.Id);
+        verify!.Claims.Single(c => c.Id == claimId).ReviewNote.Should().Be("verified against p.4");
+    }
+
+    // ============================================================
     // Helpers
     // ============================================================
 

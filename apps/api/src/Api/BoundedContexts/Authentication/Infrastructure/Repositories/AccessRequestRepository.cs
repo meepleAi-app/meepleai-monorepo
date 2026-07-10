@@ -125,6 +125,26 @@ internal sealed class AccessRequestRepository : RepositoryBase, IAccessRequestRe
             .ConfigureAwait(false);
     }
 
+    public async Task SetInvitationIdAsync(Guid id, Guid invitationId, CancellationToken cancellationToken = default)
+    {
+        // Direct SQL UPDATE of a single column: does NOT load the aggregate, does NOT touch the
+        // ChangeTracker, and does NOT require SaveChangesAsync. This avoids the full-aggregate
+        // overwrite (last-writer-wins, #B 2026-07-10) that reverted an approved status when a
+        // stale aggregate snapshot was written back during async outbox dispatch.
+        await DbContext.AccessRequests
+            .Where(e => e.Id == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.InvitationId, invitationId), cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task MarkNotifiedAsync(Guid id, Guid eventId, CancellationToken cancellationToken = default)
+    {
+        await DbContext.AccessRequests
+            .Where(e => e.Id == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.LastNotifiedEventId, eventId), cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     /// <summary>
     /// Maps infrastructure entity to domain aggregate.
     /// Uses internal factory + RestoreState method (no reflection).

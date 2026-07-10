@@ -52,11 +52,15 @@ internal sealed class AccessRequestApprovedEventHandler : DomainEventHandlerBase
                     domainEvent.ApprovedByUserId),
                 cancellationToken).ConfigureAwait(false);
 
-            // Set correlation ID linking access request to invitation
+            // Set correlation ID linking access request to invitation.
+            // Partial update (happy-path #B): write ONLY invitation_id via a direct SQL UPDATE.
+            // A full UpdateAsync(aggregate) here reverted the approved status (last-writer-wins),
+            // and adding a reentrant SaveChanges tripped the ConcurrencyDetector inside the outbox
+            // processor's transaction. SetInvitationIdAsync executes immediately without either hazard.
             if (accessRequest is not null)
             {
-                accessRequest.SetInvitationId(invitationResult.Id);
-                await _repository.UpdateAsync(accessRequest, cancellationToken).ConfigureAwait(false);
+                await _repository.SetInvitationIdAsync(
+                    domainEvent.AccessRequestId, invitationResult.Id, cancellationToken).ConfigureAwait(false);
             }
         }
         catch (Exception ex)

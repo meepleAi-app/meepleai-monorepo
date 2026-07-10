@@ -1531,6 +1531,12 @@ jobs:
         env:
           STAGING_URL: https://meepleai.app
           CI: 'true'
+          # #2799: staging is behind Cloudflare Access (owner-only). Pass the
+          # service-token so Playwright reaches the real app instead of the CF
+          # Access sign-in page. Consumed by playwright.staging.config.ts →
+          # extraHTTPHeaders. Same secrets the curl smoke already uses above.
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: |
           echo "🧪 Running E2E smoke tests against staging..."
           pnpm exec playwright test e2e/smoke.spec.ts \

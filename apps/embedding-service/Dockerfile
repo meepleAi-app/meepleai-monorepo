@@ -26,6 +26,7 @@ ENV PIP_DEFAULT_TIMEOUT=300
 # service runs DEVICE=cpu, so they are dead weight. Pre-installing the CPU wheel
 # leaves torch already satisfied, so the requirements install below never pulls
 # the CUDA variant (and requirements.txt stays unchanged for CI test jobs).
+# hadolint ignore=DL3013 -- torch IS pinned; hadolint misreads the --index-url value as an unpinned package
 RUN pip install --no-cache-dir --retries 5 torch==2.12.1 --index-url https://download.pytorch.org/whl/cpu
 RUN pip install --no-cache-dir --retries 5 -r requirements.txt
 

@@ -63,6 +63,7 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
 
         var sectionRuns = new List<MechanicAnalysisSectionRunEntity>(request.Sections.Count);
         var outputs = new Dictionary<MechanicSection, string>(request.Sections.Count);
+        var sectionOutcomesMap = new Dictionary<MechanicSection, IReadOnlyList<MechanicRuleOutcome>>();
         var totalPromptTokens = 0;
         var totalCompletionTokens = 0;
         decimal totalCostUsd = 0m;
@@ -78,7 +79,7 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
             var context = request.RetrievedContextBySection.TryGetValue(section, out var ctx) ? ctx : string.Empty;
             var userPrompt = BuildUserPrompt(sectionPrompt, context);
 
-            var (sectionRun, sectionOutput, sectionAbort) = await RunSectionAsync(
+            var (sectionRun, sectionOutput, sectionAbort, sectionOutcomes) = await RunSectionAsync(
                 request,
                 section,
                 runOrder,
@@ -93,10 +94,15 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
             totalCompletionTokens += sectionRun.CompletionTokens;
             totalCostUsd += sectionRun.EstimatedCostUsd;
 
+            if (sectionOutcomes.Count > 0)
+            {
+                sectionOutcomesMap[section] = sectionOutcomes;
+            }
+
             if (sectionAbort is not null)
             {
                 return BuildAbortResult(sectionAbort.Value, sectionRun.ErrorMessage, sectionRuns, outputs,
-                    totalPromptTokens, totalCompletionTokens, totalCostUsd);
+                    sectionOutcomesMap, totalPromptTokens, totalCompletionTokens, totalCostUsd);
             }
 
             if (totalCostUsd > request.EffectiveCostCapUsd)
@@ -108,7 +114,7 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
                 return BuildAbortResult(
                     MechanicPipelineOutcome.AbortedCostCap,
                     $"Cumulative cost {totalCostUsd:F6} USD exceeded effective cap {request.EffectiveCostCapUsd:F6} USD after section '{section}'.",
-                    sectionRuns, outputs, totalPromptTokens, totalCompletionTokens, totalCostUsd);
+                    sectionRuns, outputs, sectionOutcomesMap, totalPromptTokens, totalCompletionTokens, totalCostUsd);
             }
 
             if (sectionOutput is not null)
@@ -124,10 +130,14 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
             TotalPromptTokens: totalPromptTokens,
             TotalCompletionTokens: totalCompletionTokens,
             TotalCostUsd: decimal.Round(totalCostUsd, 6, MidpointRounding.AwayFromZero),
-            AbortDetail: null);
+            AbortDetail: null)
+        {
+            SectionOutcomes = sectionOutcomesMap
+        };
     }
 
-    private async Task<(MechanicAnalysisSectionRunEntity Run, string? Output, MechanicPipelineOutcome? Abort)>
+    private async Task<(MechanicAnalysisSectionRunEntity Run, string? Output,
+        MechanicPipelineOutcome? Abort, IReadOnlyList<MechanicRuleOutcome> Outcomes)>
         RunSectionAsync(
             MechanicPipelineRequest request,
             MechanicSection section,
@@ -142,6 +152,12 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
         string? lastOutputHash = null;
         var currentSystemPrompt = systemPrompt;
         var attempts = _options.MaxRetriesPerSection + 1;
+
+        // #2782 D3: retain the last well-formed output + its FINAL-attempt validation so the
+        // post-loop tail can classify (never-well-formed vs guardrail-fail vs grounding-outage)
+        // WITHOUT re-parsing or re-validating.
+        MechanicValidationResult? lastValidation = null;
+        string? lastCleanedResponse = null;
 
         // Accumulate tokens/cost across all attempts (retries share the T8 cap, AC-6).
         var accPromptTokens = 0;
@@ -176,7 +192,8 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
                     sectionStatus: 1,
                     errorMessage: result.ErrorMessage ?? "LLM call failed without a specific error."),
                     Output: null,
-                    Abort: MechanicPipelineOutcome.AbortedLlmFailed);
+                    Abort: MechanicPipelineOutcome.AbortedLlmFailed,
+                    Outcomes: Array.Empty<MechanicRuleOutcome>());
             }
 
             lastResult = result;
@@ -190,6 +207,10 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
             var cleanedResponse = StripCodeFences(result.Response);
             var validation = await ValidateSectionAsync(
                 request, section, cleanedResponse, attempt - 1, cancellationToken).ConfigureAwait(false);
+
+            // Capture the final state on every attempt for post-loop classification (#2782 D3).
+            lastValidation = validation;
+            lastCleanedResponse = cleanedResponse;
 
             if (validation.IsValid)
             {
@@ -213,7 +234,7 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
                     StartedAt = startedAt,
                     CompletedAt = completedAt
                 };
-                return (run, cleanedResponse, Abort: null);
+                return (run, cleanedResponse, Abort: null, Outcomes: validation.RuleOutcomes);
             }
 
             lastValidationError = string.Join("; ",
@@ -240,6 +261,19 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
 
         stopwatch.Stop();
         var completedAtValidationFail = _timeProvider.GetUtcNow().UtcDateTime;
+
+        // #2782 D3: classify the final validation failure WITHOUT re-parsing/re-validating.
+        // - Never well-formed (malformed JSON / empty every attempt): section stays ABSENT.
+        // - Grounding outage (embedding down): HARD ABORT (fail-closed IP protection).
+        // - Ordinary guardrail fail: RETAIN the last well-formed output + its RuleOutcomes (Status=3).
+        var neverWellFormed = lastValidation is null
+            || lastValidation.Violations.All(v => string.Equals(v.Rule, "well_formed", StringComparison.Ordinal));
+        var groundingUnavailable = lastValidation is not null
+            && lastValidation.Violations.Any(v => string.Equals(v.Rule, "T3_grounding_unavailable", StringComparison.Ordinal));
+
+        // Status: 3 (RetainedWithGuardrailFlags) only when we actually retain; else 1 (Failed).
+        var failureStatus = !neverWellFormed && !groundingUnavailable ? 3 : 1;
+
         var validationFailureRun = new MechanicAnalysisSectionRunEntity
         {
             Id = Guid.NewGuid(),
@@ -253,12 +287,30 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
             TotalTokens = accPromptTokens + accCompletionTokens,
             EstimatedCostUsd = decimal.Round(accCostUsd, 6, MidpointRounding.AwayFromZero),
             LatencyMs = (int)Math.Min(int.MaxValue, stopwatch.ElapsedMilliseconds),
-            Status = 1,
+            Status = failureStatus,
             ErrorMessage = $"Validation failed after {attempts} attempts: {lastValidationError}",
             StartedAt = startedAt,
             CompletedAt = completedAtValidationFail
         };
-        return (validationFailureRun, Output: null, Abort: MechanicPipelineOutcome.AbortedValidation);
+
+        if (groundingUnavailable)
+        {
+            // Fail-closed: an embedding OUTAGE cannot certify grounding, so we hard-abort even
+            // under advisory mode. Salvaged claims must not leak IP that was never grounded.
+            return (validationFailureRun, Output: null, Abort: MechanicPipelineOutcome.AbortedValidation,
+                Outcomes: Array.Empty<MechanicRuleOutcome>());
+        }
+
+        if (neverWellFormed)
+        {
+            // Section never produced parseable output — leave it absent (no outcomes, no output).
+            return (validationFailureRun, Output: null, Abort: null,
+                Outcomes: Array.Empty<MechanicRuleOutcome>());
+        }
+
+        // Ordinary guardrail failure on a well-formed section → retain (advisory). No abort.
+        return (validationFailureRun, Output: lastCleanedResponse, Abort: null,
+            Outcomes: lastValidation!.RuleOutcomes);
     }
 
     /// <summary>
@@ -367,6 +419,7 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
         string? detail,
         IReadOnlyList<MechanicAnalysisSectionRunEntity> runs,
         IReadOnlyDictionary<MechanicSection, string> outputs,
+        IReadOnlyDictionary<MechanicSection, IReadOnlyList<MechanicRuleOutcome>> sectionOutcomes,
         int totalPromptTokens,
         int totalCompletionTokens,
         decimal totalCostUsd) =>
@@ -377,7 +430,10 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
             TotalPromptTokens: totalPromptTokens,
             TotalCompletionTokens: totalCompletionTokens,
             TotalCostUsd: decimal.Round(totalCostUsd, 6, MidpointRounding.AwayFromZero),
-            AbortDetail: detail);
+            AbortDetail: detail)
+        {
+            SectionOutcomes = sectionOutcomes
+        };
 
     private static string BuildUserPrompt(string sectionPrompt, string retrievedContext)
     {

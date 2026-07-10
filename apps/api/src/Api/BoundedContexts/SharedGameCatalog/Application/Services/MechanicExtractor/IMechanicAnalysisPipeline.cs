@@ -58,6 +58,12 @@ public sealed record MechanicPipelineResult(
 {
     public bool IsSuccess => Outcome == MechanicPipelineOutcome.Succeeded;
 
+    /// <summary>Per-section final-attempt guardrail rule outcomes (#2782 D3). Empty on sections that
+    /// never produced well-formed output. Init-only with an empty default so existing positional
+    /// constructions (incl. the ApplyAbort tests) keep compiling.</summary>
+    public IReadOnlyDictionary<MechanicSection, IReadOnlyList<MechanicRuleOutcome>> SectionOutcomes { get; init; }
+        = new Dictionary<MechanicSection, IReadOnlyList<MechanicRuleOutcome>>();
+
     public MechanicPipelineAbortReason? AbortReason => Outcome switch
     {
         MechanicPipelineOutcome.AbortedCostCap => MechanicPipelineAbortReason.CostCapExceeded,

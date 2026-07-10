@@ -312,9 +312,13 @@ internal partial class EmailService
     }
 
     // ISSUE-124: Invitation system emails
-    // Issue #1629: refactored to route through IEmailSender (Resend/SMTP) and
-    // fixed redeem link from /accept-invite?token=… to /invites/{token} so it
-    // matches the actual Next.js route at apps/web/src/app/(public)/invites/[token].
+    // Issue #1629: refactored to route through IEmailSender (Resend/SMTP).
+    // Redeem link: the base-invitation flow (token only, no pending user) is redeemed at
+    // /accept-invite?token= → POST /auth/accept-invitation, which creates the user from
+    // token+password (AcceptInvitationCommandHandler). NOTE: #1629 mistakenly repointed this
+    // to /invites/{token}, which is the game-night RSVP landing (game_night_invitations) and
+    // 404s for invitation tokens; restored to /accept-invite here. (The enhanced/provisioned
+    // flow with a pending user uses /setup-account?token= — see the overload below.)
     public async Task SendInvitationEmailAsync(
         string toEmail,
         string role,
@@ -324,7 +328,7 @@ internal partial class EmailService
     {
         try
         {
-            var inviteLink = $"{_frontendBaseUrl}/invites/{Uri.EscapeDataString(token)}";
+            var inviteLink = $"{_frontendBaseUrl}/accept-invite?token={Uri.EscapeDataString(token)}";
             var subject = "You've been invited to MeepleAI";
             var body = BuildInvitationEmailBody(role, inviteLink, invitedByName);
 

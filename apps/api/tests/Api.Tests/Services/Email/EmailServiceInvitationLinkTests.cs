@@ -70,11 +70,14 @@ public sealed class EmailServiceInvitationLinkTests
     }
 
     [Fact]
-    public async Task SendInvitationEmailAsync_RedeemLinkUsesInvitesPath()
+    public async Task SendInvitationEmailAsync_RedeemLinkUsesAcceptInvitePath()
     {
-        // Arrange — Issue #1629 collateral fix: link path was /accept-invite (query string token)
-        // but the actual Next.js route is /invites/[token]. Without this fix the link in
-        // delivered emails returned 404.
+        // Arrange — the base-invitation redeem flow lives at /accept-invite?token= →
+        // POST /auth/accept-invitation (AcceptInvitationCommandHandler creates the user from
+        // token+password; no pending user needed). Issue #1629 wrongly repointed this link at
+        // /invites/{token}, which is the game-night RSVP landing (game_night_invitations) and
+        // returns "Invito non trovato" for invitation tokens. The base flow has no pending user,
+        // so /setup-account (activate-account) is NOT its redeem either — /accept-invite is.
         EmailRequest? captured = null;
         _sender
             .Setup(s => s.SendAsync(It.IsAny<EmailRequest>(), It.IsAny<CancellationToken>()))
@@ -94,11 +97,11 @@ public sealed class EmailServiceInvitationLinkTests
         // Assert
         captured.Should().NotBeNull();
         captured!.HtmlBody.Should().Contain(
-            $"{FrontendBaseUrl}/invites/abc123",
-            "the redeem URL must point to the /invites/{token} path that exists in apps/web/src/app/(public)/invites/[token].");
+            $"{FrontendBaseUrl}/accept-invite?token=abc123",
+            "the redeem URL must point to /accept-invite?token= (apps/web/src/app/(public)/accept-invite) which calls POST /auth/accept-invitation.");
         captured.HtmlBody.Should().NotContain(
-            "/accept-invite?token=",
-            "the legacy /accept-invite?token= URL is a 404 — must be removed in this PR.");
+            "/invites/abc123",
+            "/invites/{token} is the game-night RSVP landing, not the user-invitation redeem — it 404s for invitation tokens.");
     }
 
     [Fact]

@@ -22,6 +22,11 @@ public sealed record MechanicGuardrailContext(
     public int RetryCount { get; init; }
 }
 
+/// <summary>Detailed guardrail result: the violations plus an optional numeric score (T3b only).</summary>
+public sealed record MechanicGuardrailResult(
+    IReadOnlyList<MechanicValidationViolation> Violations,
+    double? Score = null);
+
 /// <summary>
 /// One ADR-051 guardrail (T1 quote cap, T2 long-verbatim, T3 citation present/grounded,
 /// T4 page+substring). Returns an empty list when the output passes.
@@ -37,4 +42,16 @@ public interface IMechanicGuardrail
     Task<IReadOnlyList<MechanicValidationViolation>> EvaluateAsync(
         MechanicGuardrailContext context,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Collect-all detailed evaluation (#2782 D1/D2). Default: wrap <see cref="EvaluateAsync"/>
+    /// with a null score. Only <c>GroundingGuardrail</c> overrides to surface its cosine.
+    /// </summary>
+    async Task<MechanicGuardrailResult> EvaluateDetailedAsync(
+        MechanicGuardrailContext context,
+        CancellationToken cancellationToken)
+    {
+        var violations = await EvaluateAsync(context, cancellationToken).ConfigureAwait(false);
+        return new MechanicGuardrailResult(violations, Score: null);
+    }
 }

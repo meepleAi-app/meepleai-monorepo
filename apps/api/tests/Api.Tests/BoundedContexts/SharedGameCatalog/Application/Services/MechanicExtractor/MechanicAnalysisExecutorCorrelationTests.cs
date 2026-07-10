@@ -40,9 +40,51 @@ public class MechanicAnalysisExecutorCorrelationTests
         MechanicAnalysisExecutor.CorrelateValidations(claims, outcomes); // internal static, exposed for test
 
         claims[0].Validations.Single(v => v.Rule == "T2").Outcome.Should().Be("pass");
+        claims[0].Validations.Should().HaveCount(5); // T1,T2,T3a,T3b,T4
+        claims[0].Validations.Single(v => v.Rule == "T1").Outcome.Should().Be("pass");
+        claims[0].Validations.Single(v => v.Rule == "T3a").Outcome.Should().Be("pass");
+        claims[0].Validations.Single(v => v.Rule == "T3b").Outcome.Should().Be("pass");
+        claims[0].Validations.Single(v => v.Rule == "T4").Outcome.Should().Be("pass");
         claims[1].Validations.Single(v => v.Rule == "T2").Outcome.Should().Be("fail");
         claims[1].Validations.Should().HaveCount(5); // T1,T2,T3a,T3b,T4
         claims[1].Validations.Single(v => v.Rule == "T3b").Score.Should().Be(0.8);
+    }
+
+    [Fact]
+    public void Correlate_NotRunOutcome_AppliesToAllClaimsInSection()
+    {
+        // notRun is not narrowed by anchor matching (only Fail is, per CorrelateValidations)
+        // — a guardrail that was skipped (e.g. downstream of a fail-fast T3a) must pass through
+        // as notRun to EVERY claim in the section, not just the one that triggered the abort.
+        var json = """
+        {"mechanics":[
+          {"description":"clean mechanic","citations":[{"pdf_page":1,"quote":"clean"}]},
+          {"description":"another mechanic","citations":[{"pdf_page":2,"quote":"another"}]}
+        ]}
+        """;
+        var claims = MechanicOutputParser.Parse(Guid.NewGuid(),
+            new Dictionary<MechanicSection, string> { [MechanicSection.Mechanics] = json }).ToList();
+
+        claims.Should().HaveCount(2);
+
+        var outcomes = new Dictionary<MechanicSection, IReadOnlyList<MechanicRuleOutcome>>
+        {
+            [MechanicSection.Mechanics] = new[]
+            {
+                new MechanicRuleOutcome("T1", "pass", null, null, null, Array.Empty<MechanicValidationViolation>()),
+                new MechanicRuleOutcome("T2", "fail", "long verbatim", "$.mechanics[0].description", null,
+                    new[] { new MechanicValidationViolation("T2_long_verbatim", "long verbatim", "$.mechanics[0].description") }),
+                new MechanicRuleOutcome("T3a", "notRun", null, null, null, Array.Empty<MechanicValidationViolation>()),
+                new MechanicRuleOutcome("T3b", "notRun", null, null, null, Array.Empty<MechanicValidationViolation>()),
+                new MechanicRuleOutcome("T4", "notRun", null, null, null, Array.Empty<MechanicValidationViolation>()),
+            }
+        };
+
+        MechanicAnalysisExecutor.CorrelateValidations(claims, outcomes);
+
+        claims.Should().OnlyContain(c => c.Validations.Single(v => v.Rule == "T3a").Outcome == "notRun");
+        claims.Should().OnlyContain(c => c.Validations.Single(v => v.Rule == "T3b").Outcome == "notRun");
+        claims.Should().OnlyContain(c => c.Validations.Single(v => v.Rule == "T4").Outcome == "notRun");
     }
 
     [Fact]

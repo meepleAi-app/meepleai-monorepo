@@ -48,6 +48,9 @@ public class MechanicOutputValidatorRuleOutcomesTests
         result.RuleOutcomes.Single(o => o.Rule == "T2").Outcome.Should().Be("fail");
         result.RuleOutcomes.Single(o => o.Rule == "T2").Path.Should().Be("$.mechanics[1].description");
         result.RuleOutcomes.Single(o => o.Rule == "T3b").Outcome.Should().Be("notRun");
+        result.RuleOutcomes.Single(o => o.Rule == "T3b").Score.Should().BeNull(); // notRun suppresses score even though the stub carries 0.9
+        result.RuleOutcomes.Single(o => o.Rule == "T3b").Message.Should().BeNull();
+        result.RuleOutcomes.Single(o => o.Rule == "T3b").Path.Should().BeNull();
     }
 
     [Fact]

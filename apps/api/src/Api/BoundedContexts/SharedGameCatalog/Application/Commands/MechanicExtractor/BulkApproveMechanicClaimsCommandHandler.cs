@@ -139,7 +139,7 @@ internal sealed class BulkApproveMechanicClaimsCommandHandler
                         Quote: citation.Quote,
                         DisplayOrder: citation.DisplayOrder))
                     .ToList(),
-                Validations: MechanicClaimValidations.DerivePass()))
+                Validations: MechanicClaimValidations.FromDomain(c)))
             .ToList();
 
         return new BulkApproveMechanicClaimsResponseDto(

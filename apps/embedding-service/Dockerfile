@@ -20,6 +20,13 @@ COPY requirements.txt .
 # PyPI/pythonhosted occasionally times out on large packages (torch ~700MB).
 # Extend pip's 15s socket timeout and add resumable retries.
 ENV PIP_DEFAULT_TIMEOUT=300
+# Install CPU-only torch FIRST from the official PyTorch CPU index (#2794).
+# On aarch64 the default `pip install torch` bundles ~2.9GB of unused NVIDIA
+# CUDA libraries (nvidia_cublas/cudnn/nccl/...); this server is GPU-less and the
+# service runs DEVICE=cpu, so they are dead weight. Pre-installing the CPU wheel
+# leaves torch already satisfied, so the requirements install below never pulls
+# the CUDA variant (and requirements.txt stays unchanged for CI test jobs).
+RUN pip install --no-cache-dir --retries 5 torch==2.12.1 --index-url https://download.pytorch.org/whl/cpu
 RUN pip install --no-cache-dir --retries 5 -r requirements.txt
 
 # Pre-download the model so runtime container starts fast

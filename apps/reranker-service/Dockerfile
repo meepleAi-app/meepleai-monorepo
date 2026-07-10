@@ -10,14 +10,28 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Install Python dependencies into a virtual env for a clean copy into the
+# runtime stage (#2794). The previous `pip wheel` + copy-to-/wheels approach
+# left ~409MB of wheel files behind in the final image (they were installed but
+# never removed). The venv-copy pattern (mirrors embedding-service) carries only
+# the installed packages, no wheel artifacts.
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+ENV PIP_DEFAULT_TIMEOUT=300
+
 COPY requirements.txt .
-RUN pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements.txt
+# Install CPU-only torch FIRST from the official PyTorch CPU index (#2794).
+# On aarch64 the default `pip install torch` bundles ~2.9GB of unused NVIDIA
+# CUDA libraries (nvidia_cublas/cudnn/nccl/...); this server is GPU-less and the
+# service runs DEVICE=cpu, so they are dead weight. Pre-installing the CPU wheel
+# leaves torch already satisfied, so the requirements install below never pulls
+# the CUDA variant (and requirements.txt stays unchanged for CI test jobs).
+RUN pip install --no-cache-dir --retries 5 torch --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir --retries 5 -r requirements.txt
 
 # Pre-download ML model in builder to avoid cold-start delay
 ENV HF_HOME=/model-cache
-RUN pip install --no-cache-dir /app/wheels/* \
-    && python -c "from sentence_transformers import CrossEncoder; CrossEncoder('BAAI/bge-reranker-v2-m3')"
+RUN python -c "from sentence_transformers import CrossEncoder; CrossEncoder('BAAI/bge-reranker-v2-m3')"
 
 # Production stage
 FROM python:3.11-slim
@@ -32,12 +46,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy wheels from builder stage
-COPY --from=builder /app/wheels /wheels
-COPY --from=builder /app/requirements.txt .
-
-# Install dependencies from wheels (faster, no compilation)
-RUN pip install --no-cache-dir /wheels/*
+# Copy the virtual env with all installed packages (no build tools, no wheels)
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy pre-downloaded model from builder
 COPY --from=builder --chown=reranker:reranker /model-cache /home/reranker/.cache/huggingface

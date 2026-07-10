@@ -55,6 +55,15 @@ public sealed class MechanicClaim : Entity<Guid>
     public IReadOnlyList<MechanicCitation> Citations => _citations.AsReadOnly();
 
     /// <summary>
+    /// Stable JSONPath anchor of this claim's RAW source object, captured by the parser before any
+    /// drop/reorder/compaction (#2782 D4), e.g. "$.mechanics[2]" or "$.victory". Used to correlate a
+    /// guardrail violation's Path to exactly one claim WITHIN the originating pipeline execution.
+    /// NOT persisted or reloaded — it is empty on ALL reconstituted claims (there is no
+    /// mechanic_claims column for it), so it is only meaningful during the run that parsed the claim.
+    /// </summary>
+    public string SourceAnchor { get; private set; } = string.Empty;
+
+    /// <summary>
     /// True when the claim was instantiated via <see cref="Create"/> and is not yet persisted;
     /// false when rehydrated from storage via <see cref="Reconstitute"/>.
     /// </summary>
@@ -150,7 +159,8 @@ public sealed class MechanicClaim : Entity<Guid>
         MechanicSection section,
         string text,
         int displayOrder,
-        IEnumerable<MechanicCitation> citations)
+        IEnumerable<MechanicCitation> citations,
+        string sourceAnchor)
     {
         if (id == Guid.Empty)
         {
@@ -188,7 +198,10 @@ public sealed class MechanicClaim : Entity<Guid>
             analysisId: analysisId,
             section: section,
             text: text.Trim(),
-            displayOrder: displayOrder);
+            displayOrder: displayOrder)
+        {
+            SourceAnchor = sourceAnchor
+        };
 
         claim._citations.AddRange(citationList);
         return claim;
@@ -209,7 +222,8 @@ public sealed class MechanicClaim : Entity<Guid>
         DateTime? reviewedAt,
         string? rejectionNote,
         IEnumerable<MechanicCitation> citations,
-        string? reviewNote = null)
+        string? reviewNote = null,
+        string? sourceAnchor = null)
     {
         ArgumentNullException.ThrowIfNull(citations);
 
@@ -225,6 +239,7 @@ public sealed class MechanicClaim : Entity<Guid>
             ReviewedAt = reviewedAt,
             RejectionNote = rejectionNote,
             ReviewNote = reviewNote,
+            SourceAnchor = sourceAnchor ?? string.Empty,
             IsNew = false
         };
 

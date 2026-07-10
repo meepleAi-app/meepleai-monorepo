@@ -115,7 +115,8 @@ internal static class MechanicOutputParser
             section: MechanicSection.Summary,
             text: text!,
             displayOrder: 0,
-            citations: citations);
+            citations: citations,
+            sourceAnchor: "$.summary");
     }
 
     // ============================================================
@@ -129,9 +130,13 @@ internal static class MechanicOutputParser
             yield break;
         }
 
+        var sourceIndex = 0;
         var displayOrder = 0;
         foreach (var item in items.EnumerateArray())
         {
+            var anchor = $"$.mechanics[{sourceIndex}]";
+            sourceIndex++;
+
             if (item.ValueKind != JsonValueKind.Object)
             {
                 continue;
@@ -161,7 +166,8 @@ internal static class MechanicOutputParser
                 section: MechanicSection.Mechanics,
                 text: text,
                 displayOrder: displayOrder++,
-                citations: citations);
+                citations: citations,
+                sourceAnchor: anchor);
         }
     }
 
@@ -199,7 +205,8 @@ internal static class MechanicOutputParser
             section: MechanicSection.Victory,
             text: primary!,
             displayOrder: displayOrder++,
-            citations: primaryCitations);
+            citations: primaryCitations,
+            sourceAnchor: "$.victory");
 
         // Alternatives reuse the same citation source — re-extract per claim so ClaimId wires up.
         if (!victory.TryGetProperty("alternatives", out var alternatives)
@@ -234,7 +241,8 @@ internal static class MechanicOutputParser
                 section: MechanicSection.Victory,
                 text: text!,
                 displayOrder: displayOrder++,
-                citations: altCitations);
+                citations: altCitations,
+                sourceAnchor: "$.victory");
         }
     }
 
@@ -249,9 +257,13 @@ internal static class MechanicOutputParser
             yield break;
         }
 
+        var sourceIndex = 0;
         var displayOrder = 0;
         foreach (var item in items.EnumerateArray())
         {
+            var anchor = $"$.resources[{sourceIndex}]";
+            sourceIndex++;
+
             if (item.ValueKind != JsonValueKind.Object)
             {
                 continue;
@@ -281,7 +293,8 @@ internal static class MechanicOutputParser
                 section: MechanicSection.Resources,
                 text: text,
                 displayOrder: displayOrder++,
-                citations: citations);
+                citations: citations,
+                sourceAnchor: anchor);
         }
     }
 
@@ -325,7 +338,7 @@ internal static class MechanicOutputParser
             .ThenBy(x => x.SourceIndex);
 
         var displayOrder = 0;
-        foreach (var (_, _, item) in ordered)
+        foreach (var (_, srcIdx, item) in ordered)
         {
             var description = ReadString(item, "description");
             if (string.IsNullOrWhiteSpace(description))
@@ -351,7 +364,8 @@ internal static class MechanicOutputParser
                 section: MechanicSection.Phases,
                 text: text,
                 displayOrder: displayOrder++,
-                citations: citations);
+                citations: citations,
+                sourceAnchor: $"$.phases[{srcIdx}]");
         }
     }
 
@@ -367,9 +381,13 @@ internal static class MechanicOutputParser
             yield break;
         }
 
+        var sourceIndex = 0;
         var displayOrder = 0;
         foreach (var item in items.EnumerateArray())
         {
+            var anchor = $"$.faq[{sourceIndex}]";
+            sourceIndex++;
+
             if (item.ValueKind != JsonValueKind.Object)
             {
                 continue;
@@ -399,7 +417,8 @@ internal static class MechanicOutputParser
                 section: MechanicSection.Faq,
                 text: text,
                 displayOrder: displayOrder++,
-                citations: citations);
+                citations: citations,
+                sourceAnchor: anchor);
         }
     }
 
@@ -496,7 +515,8 @@ internal static class MechanicOutputParser
         MechanicSection section,
         string text,
         int displayOrder,
-        IReadOnlyList<MechanicCitation> citations)
+        IReadOnlyList<MechanicCitation> citations,
+        string sourceAnchor)
     {
         return MechanicClaim.CreateWithId(
             id: claimId,
@@ -504,7 +524,8 @@ internal static class MechanicOutputParser
             section: section,
             text: text.Trim(),
             displayOrder: displayOrder,
-            citations: citations);
+            citations: citations,
+            sourceAnchor: sourceAnchor);
     }
 
     private static string? ReadString(JsonElement obj, string propertyName)

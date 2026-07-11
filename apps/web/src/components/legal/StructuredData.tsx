@@ -99,6 +99,43 @@ export function faqPageSchema(faqs: Array<{ question: string; answer: string }>)
 }
 
 /**
+ * Generate LearningResource schema for explainer / how-it-works pages.
+ *
+ * Emits a schema.org `LearningResource` (JSON-LD) so search engines can surface
+ * the page as educational content. `learningResourceType` describes the format
+ * (e.g. "explainer"); `inLanguage` mirrors the site's bilingual support.
+ */
+export function learningResourceSchema({
+  name,
+  description,
+  url,
+  learningResourceType = 'explainer',
+  inLanguage = ['it', 'en'],
+}: {
+  name: string;
+  description: string;
+  url: string;
+  learningResourceType?: string;
+  inLanguage?: string[];
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'LearningResource',
+    name,
+    description,
+    url,
+    learningResourceType,
+    inLanguage,
+    provider: organizationSchema(),
+    isPartOf: {
+      '@type': 'WebSite',
+      name: 'MeepleAI',
+      url: 'https://meepleai.com',
+    },
+  };
+}
+
+/**
  * Generate BreadcrumbList schema
  */
 export function breadcrumbSchema(items: Array<{ name: string; url: string }>) {

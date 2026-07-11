@@ -1,122 +1,71 @@
 /**
- * Smoke Test — 8-step pre-deploy check
- * Verifica che le pagine chiave di MeepleAI carichino correttamente.
- * Eseguire prima di ogni deploy: pnpm test:e2e e2e/smoke.spec.ts
+ * Smoke Test — post-deploy health check contro lo staging live.
+ * Eseguito da deploy-staging.yml (job "Staging E2E Smoke Tests") su meepleai.app.
+ *
+ * ⚠️ Cosa questo smoke PUÒ e NON PUÒ verificare (#2802):
+ * Lo staging fa auth SERVER-SIDE nel middleware `src/proxy.ts` (redirect delle
+ * PROTECTED_ROUTES → /login) e `PLAYWRIGHT_AUTH_BYPASS` NON è attivo su staging.
+ * I `page.route` mock di Playwright intercettano solo le richieste del browser,
+ * quindi NON possono autenticare contro il middleware: qualunque navigazione a
+ * una route protetta senza una vera sessione `meepleai_session` viene rediretta
+ * a /login prima del render. Il vecchio `mockAdminAuth` era perciò un no-op sullo
+ * staging e gli step "carica dopo auth mock" testavano in realtà /login (redirect)
+ * asserendo solo `body` → falsa confidenza.
+ *
+ * Questo smoke quindi verifica ciò che è realmente osservabile SENZA credenziali:
+ *   1. la homepage pubblica carica,
+ *   2. il login form è server-rendered (regressione SSR = fail, cfr. #2770/#2650),
+ *   3. le route protette rediregono a /login se non autenticati (auth gate integro).
+ * Il coverage del CONTENUTO autenticato (dashboard/admin/chat reali) richiede un
+ * E2E con login applicativo reale (admin seedato via secret) — follow-up separato.
  */
 
 import { test, expect } from '@playwright/test';
 
-const API_BASE =
-  process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+// Login page email field — server-rendered nell'HTML iniziale (#2650/#2770).
+const EMAIL_INPUT = 'input[type="email"], input[name="email"]';
 
-async function mockAdminAuth(page: import('@playwright/test').Page) {
-  await page.route(`${API_BASE}/api/v1/auth/me`, route =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        user: { id: 'admin-1', email: 'admin@meepleai.dev', displayName: 'Admin', role: 'Admin' },
-        expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
-      }),
-    })
-  );
-  await page.route(`${API_BASE}/api/v1/**`, route =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ data: [] }),
-    })
-  );
-}
+// Route protette (sottoinsieme rappresentativo di PROTECTED_ROUTES in src/proxy.ts):
+// una user route, due admin route, una chat route. Ognuna DEVE redirigere a /login
+// per un visitatore anonimo.
+const PROTECTED_ROUTES = [
+  '/dashboard',
+  '/library',
+  '/admin/overview',
+  '/admin/agents/pipeline',
+  '/admin/knowledge-base/documents',
+  '/chat/new',
+] as const;
 
-test.describe('Smoke Test — 8 step pre-deploy', () => {
-  test('1. Homepage carica', async ({ page }) => {
+test.describe('Smoke Test — deploy health', () => {
+  test('1. Homepage pubblica carica', async ({ page }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('body')).toBeVisible();
-    // Verifica che almeno un heading o CTA sia presente
-    const heading = page.locator('h1, h2, [data-testid="hero"]').first();
-    await expect(heading).toBeVisible({ timeout: 8000 });
-  });
-
-  test('2. Auth login form visibile', async ({ page }) => {
-    await page.goto('/login', { waitUntil: 'domcontentloaded' });
-    // #2770: il login form è ora SERVER-RENDERED. Prima l'intero body dell'app
-    // faceva BailoutToCSR — StatePreviewProvider era montato via
-    // `next/dynamic({ ssr: false })` in providers.tsx e avvolgeva ogni route,
-    // così l'input email compariva SOLO dopo l'hydration del bundle client
-    // (>30s sul runner headless con cap memoria 3G → falso negativo). Ora
-    // l'email input è nell'HTML iniziale (verificato via curl dell'SSR), quindi
-    // è presente già a `domcontentloaded`. Timeout ridotto a 15s: ampio per
-    // assorbire latenza VPS/rete sul singolo documento, ma abbastanza stretto
-    // da FALLIRE (invece di mascherare via hydration) se l'SSR regredisse.
-    // NON mockare /auth/me qui: simulerebbe un utente loggato → redirect da /login.
-    await expect(page.locator('input[type="email"], input[name="email"]').first()).toBeVisible({
-      timeout: 15000,
+    // Almeno un heading/CTA presente = la homepage ha renderizzato (non un errore).
+    await expect(page.locator('h1, h2, [data-testid="hero"]').first()).toBeVisible({
+      timeout: 8000,
     });
   });
 
-  test('3. Dashboard carica dopo auth mock', async ({ page }) => {
-    await mockAdminAuth(page);
-    await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('body')).toBeVisible();
+  test('2. Login form server-rendered', async ({ page }) => {
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
+    // #2770/#2650: l'email input è nell'HTML SSR iniziale (nessun gate di hydration).
+    // Timeout 15s: ampio per latenza VPS/CF ma stretto abbastanza da FALLIRE se l'SSR
+    // regredisse (invece di mascherare via hydration client). NON mockare /auth/me:
+    // simulerebbe un utente loggato → redirect da /login.
+    await expect(page.locator(EMAIL_INPUT).first()).toBeVisible({ timeout: 15000 });
   });
 
-  test('4. Catalog giochi carica con MeepleCard', async ({ page }) => {
-    await page.route(`${API_BASE}/api/v1/shared-games**`, route =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          items: [
-            { id: 'g1', title: 'Catan', publisher: 'Kosmos', averageRating: 7.2, imageUrl: null },
-            { id: 'g2', title: 'Pandemic', publisher: 'Z-Man', averageRating: 8.1, imageUrl: null },
-          ],
-          totalCount: 2,
-        }),
-      })
-    );
-    await page.goto('/library', { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('body')).toBeVisible();
-  });
-
-  test('5. Admin overview carica (TopNav)', async ({ page }) => {
-    await mockAdminAuth(page);
-    await page.goto('/admin/overview', { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('body')).toBeVisible();
-  });
-
-  test('6. Pipeline Diagram visibile', async ({ page }) => {
-    await mockAdminAuth(page);
-    await page.route(`${API_BASE}/api/v1/admin/rag/**`, route =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ data: [] }),
-      })
-    );
-    await page.goto('/admin/agents/pipeline', { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('body')).toBeVisible();
-  });
-
-  test('7. Documents table carica', async ({ page }) => {
-    await mockAdminAuth(page);
-    await page.route(`${API_BASE}/api/v1/admin/knowledge-base/documents**`, route =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ items: [], totalCount: 0 }),
-      })
-    );
-    await page.goto('/admin/knowledge-base/documents', { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('body')).toBeVisible();
-  });
-
-  test('8. Chat interface carica', async ({ page }) => {
-    await mockAdminAuth(page);
-    await page.route(`${API_BASE}/api/v1/agents**`, route =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
-    );
-    await page.goto('/chat/new', { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('body')).toBeVisible();
-  });
+  // Auth gate: ogni route protetta redirige un anonimo a /login (server-side proxy.ts).
+  // Cattura regressioni reali: middleware auth giù, route rimossa da PROTECTED_ROUTES,
+  // o /login rotto. Vedi header per perché non testiamo il contenuto autenticato.
+  for (const [i, route] of PROTECTED_ROUTES.entries()) {
+    test(`${i + 3}. Route protetta ${route} redirige a /login se non autenticato`, async ({
+      page,
+    }) => {
+      await page.goto(route, { waitUntil: 'domcontentloaded' });
+      await expect(page).toHaveURL(/\/login(\?|\/|$)/, { timeout: 15000 });
+      // Il redirect deve atterrare sul login funzionante (form renderizzato).
+      await expect(page.locator(EMAIL_INPUT).first()).toBeVisible({ timeout: 15000 });
+    });
+  }
 });

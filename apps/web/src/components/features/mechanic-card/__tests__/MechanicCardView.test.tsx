@@ -7,12 +7,18 @@ import {
   type PublishedMechanicCardDto,
 } from '@/lib/api/schemas/mechanic-card.schemas';
 
-// ─── Mock the shared PDF citation viewer (mirrors ClaimsSection.citation.test) ──
-const mockHighlighter = vi.hoisted(() => vi.fn());
-vi.mock('@/components/pdf/PdfQuoteHighlighter', () => ({
-  PdfQuoteHighlighter: (props: Record<string, unknown>) => {
-    mockHighlighter(props);
-    return props.open ? <div data-testid="highlighter-open" /> : null;
+// ─── Mock the responsive citation panel (#530). The real panel mounts pdfjs +
+// Sheet/Drawer primitives; we stub it and assert the props MechanicCardView
+// drives it with. The real MechanicCitationBadge still renders (owns the testid).
+const mockPanel = vi.hoisted(() => vi.fn());
+vi.mock('../MechanicCitationPanel', () => ({
+  MechanicCitationPanel: (props: Record<string, unknown>) => {
+    mockPanel(props);
+    return props.isOpen ? (
+      <div data-testid="citation-panel-open">
+        {(props.citation as { pdfPage?: number } | null)?.pdfPage}
+      </div>
+    ) : null;
   },
 }));
 
@@ -54,6 +60,9 @@ const SAMPLE_CARD: PublishedMechanicCardDto = {
   gameName: 'Catan',
   publisher: 'Kosmos',
   language: 'en',
+  sourceAnalysisId: '99999999-9999-4999-8999-999999999999',
+  publicationYear: 1995,
+  documentName: 'Catan Rulebook',
   sections: [
     {
       // Parsed DTO carries the numeric enum (zod preprocesses the "Summary" string).
@@ -98,7 +107,7 @@ describe('MechanicCardView', () => {
     cardMockState.isLoading = false;
     cardMockState.isError = false;
     cardMockState.refetch = vi.fn();
-    mockHighlighter.mockClear();
+    mockPanel.mockClear();
     notFoundSpy.mockClear();
   });
 
@@ -142,26 +151,35 @@ describe('MechanicCardView', () => {
     ).toHaveTextContent('p.12');
   });
 
-  it('opens PdfQuoteHighlighter with documentId/page/quote when a citation is clicked', () => {
+  it('opens the citation panel with the clicked citation + card provenance', () => {
     cardMockState.data = SAMPLE_CARD;
     render(<MechanicCardView gameId={SAMPLE_CARD.sharedGameId} />);
 
-    // Before any click, the viewer is not open.
-    expect(mockHighlighter).not.toHaveBeenCalledWith(expect.objectContaining({ open: true }));
+    // Before any click, the panel is not open.
+    expect(mockPanel).not.toHaveBeenCalledWith(expect.objectContaining({ isOpen: true }));
 
     fireEvent.click(
       screen.getByTestId('mechanic-card-citation-eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee-12')
     );
 
-    expect(mockHighlighter).toHaveBeenCalledWith(
+    expect(mockPanel).toHaveBeenCalledWith(
       expect.objectContaining({
-        documentId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
-        page: 12,
-        quote: 'only on your own turn',
-        open: true,
+        isOpen: true,
+        citation: expect.objectContaining({
+          pdfId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+          pdfPage: 12,
+          quote: 'only on your own turn',
+        }),
+        card: expect.objectContaining({
+          gameName: 'Catan',
+          publisher: 'Kosmos',
+          publicationYear: 1995,
+          documentName: 'Catan Rulebook',
+          sourceAnalysisId: '99999999-9999-4999-8999-999999999999',
+        }),
       })
     );
-    expect(screen.getByTestId('highlighter-open')).toBeInTheDocument();
+    expect(screen.getByTestId('citation-panel-open')).toBeInTheDocument();
   });
 
   it('shows a loading shell while fetching', () => {

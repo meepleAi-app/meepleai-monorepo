@@ -73,6 +73,13 @@ export const PublishedMechanicCardDtoSchema = z.object({
   publisher: z.string().nullable(),
   language: z.string(),
   sections: z.array(PublishedMechanicSectionDtoSchema),
+  // #530 (ME-M2.1) — extra provenance for the APA-style "copy citation" output.
+  // `sourceAnalysisId` comes from the content snapshot (always present). Both
+  // `publicationYear` and `documentName` are resolved at read time and MAY be
+  // null when unknown — the FE substitutes `[n.d.]` / a sensible fallback.
+  sourceAnalysisId: z.string().uuid(),
+  publicationYear: z.number().int().nullable(),
+  documentName: z.string().nullable(),
 });
 export type PublishedMechanicCardDto = z.infer<typeof PublishedMechanicCardDtoSchema>;
 

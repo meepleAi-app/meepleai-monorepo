@@ -90,6 +90,10 @@ public sealed class PublishedMechanicCardEndpointIntegrationTests : IAsyncLifeti
         // Sections grouped + ordered by enum: Summary then Mechanics.
         dto.Sections.Select(s => s.Section).Should().Equal("Summary", "Mechanics");
         dto.Sections[0].Claims[0].Citations[0].PdfPage.Should().Be(1);
+        // #530 APA context resolved at read time (year from SharedGame, doc name from the source PDF).
+        dto.PublicationYear.Should().Be(1995);
+        dto.DocumentName.Should().Be("Game Rules");
+        dto.SourceAnalysisId.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -159,6 +163,16 @@ public sealed class PublishedMechanicCardEndpointIntegrationTests : IAsyncLifeti
 
         var analysisId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
+        db.Set<Api.Infrastructure.Entities.PdfDocumentEntity>().Add(new Api.Infrastructure.Entities.PdfDocumentEntity
+        {
+            Id = pdfId,
+            FileName = "catan-rules.pdf",
+            FilePath = "pdfs/catan-rules.pdf",
+            FileSizeBytes = 1024,
+            UploadedByUserId = TestUserId,
+            UploadedAt = DateTime.UtcNow,
+            Title = "Game Rules"
+        });
         db.MechanicAnalyses.Add(new MechanicAnalysisEntity
         {
             Id = analysisId,

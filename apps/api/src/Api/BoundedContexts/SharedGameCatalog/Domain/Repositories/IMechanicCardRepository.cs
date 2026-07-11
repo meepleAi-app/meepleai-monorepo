@@ -33,4 +33,14 @@ public interface IMechanicCardRepository
     /// republish (AC-5), which must reference a suppressed card.
     /// </summary>
     Task<MechanicCard?> GetByIdIgnoringFiltersAsync(Guid cardId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Read-time context for the public card's APA "copy citation" output (#530): the game's
+    /// publication year and the source PDF's display name. Both fields may be null when unknown.
+    /// </summary>
+    Task<MechanicCardApaContext> GetApaContextAsync(
+        Guid sharedGameId, Guid pdfDocumentId, CancellationToken cancellationToken = default);
 }
+
+/// <summary>Read-time enrichment for the APA citation format (#530). Fields nullable when unknown.</summary>
+public sealed record MechanicCardApaContext(int? PublicationYear, string? DocumentName);

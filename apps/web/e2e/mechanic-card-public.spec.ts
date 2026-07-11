@@ -32,6 +32,9 @@ const SAMPLE_CARD = {
   gameName: 'Catan',
   publisher: 'Kosmos',
   language: 'en',
+  sourceAnalysisId: '99999999-9999-4999-8999-999999999999',
+  publicationYear: 1995,
+  documentName: 'Catan Rulebook',
   sections: [
     {
       section: 'Summary',

@@ -30,15 +30,17 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { MechanicAnalysisFooterAttribution } from '@/components/admin/mechanic-extractor/MechanicAnalysisFooterAttribution';
-import { PdfQuoteHighlighter } from '@/components/pdf/PdfQuoteHighlighter';
 import { Badge } from '@/components/ui/data-display/badge';
 import { useMechanicCard } from '@/hooks/queries/useMechanicCard';
+import { MECHANIC_SECTION_LABELS, MechanicSection } from '@/lib/api/schemas/mechanic-card.schemas';
 import type {
   PublishedMechanicCardDto,
   PublishedMechanicCitationDto,
   PublishedMechanicSectionDto,
 } from '@/lib/api/schemas/mechanic-card.schemas';
-import { MECHANIC_SECTION_LABELS, MechanicSection } from '@/lib/api/schemas/mechanic-card.schemas';
+
+import { MechanicCitationBadge } from './MechanicCitationBadge';
+import { MechanicCitationPanel } from './MechanicCitationPanel';
 
 const HOW_IT_WORKS_HREF = '/how-it-works/game-comprehension';
 const TAKEDOWN_HREF = '/legal/takedown';
@@ -63,12 +65,6 @@ export interface MechanicCardViewProps {
    * MUST be `string | null` — never `undefined` or the string `'undefined'`.
    */
   readonly gameId: string | null;
-}
-
-interface CitationTarget {
-  readonly documentId: string;
-  readonly page: number;
-  readonly quote: string;
 }
 
 // ─── Shells ──────────────────────────────────────────────────────────────────
@@ -134,42 +130,12 @@ function ErrorShell({ onRetry }: { onRetry: () => void }): ReactElement {
 
 // ─── Presentational pieces ───────────────────────────────────────────────────
 
-/**
- * A single `[p.N]` citation. When it can open the source PDF it renders as a
- * button that opens the shared viewer; otherwise (defensive, should not happen
- * for a published card) it degrades to a static badge.
- */
-function CitationBadge({
-  citation,
-  onOpen,
-}: {
-  citation: PublishedMechanicCitationDto;
-  onOpen: (target: CitationTarget) => void;
-}): ReactElement {
-  const label = `p.${citation.pdfPage}`;
-  return (
-    <button
-      type="button"
-      data-slot="mechanic-card-citation"
-      data-testid={`mechanic-card-citation-${citation.pdfId}-${citation.pdfPage}`}
-      onClick={() =>
-        onOpen({ documentId: citation.pdfId, page: citation.pdfPage, quote: citation.quote })
-      }
-      title={`“${citation.quote}”`}
-      aria-label={`Open source rulebook at page ${citation.pdfPage}`}
-      className="inline-flex items-center rounded-md border border-entity-game/40 bg-entity-game/10 px-1.5 py-0.5 align-middle text-[11px] font-semibold text-entity-game transition-colors hover:bg-entity-game/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring print:border-border print:bg-transparent print:text-foreground"
-    >
-      {label}
-    </button>
-  );
-}
-
 function ClaimItem({
   claim,
   onOpenCitation,
 }: {
   claim: PublishedMechanicCardDto['sections'][number]['claims'][number];
-  onOpenCitation: (target: CitationTarget) => void;
+  onOpenCitation: (citation: PublishedMechanicCitationDto) => void;
 }): ReactElement {
   return (
     <li
@@ -182,10 +148,10 @@ function ClaimItem({
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="sr-only">Sources:</span>
           {claim.citations.map(citation => (
-            <CitationBadge
+            <MechanicCitationBadge
               key={`${citation.pdfId}-${citation.pdfPage}`}
               citation={citation}
-              onOpen={onOpenCitation}
+              onOpen={() => onOpenCitation(citation)}
             />
           ))}
         </div>
@@ -201,7 +167,7 @@ function SectionBlock({
 }: {
   section: PublishedMechanicSectionDto;
   index: number;
-  onOpenCitation: (target: CitationTarget) => void;
+  onOpenCitation: (citation: PublishedMechanicCitationDto) => void;
 }): ReactElement {
   const label = sectionLabel(section.section);
   return (
@@ -240,7 +206,14 @@ function SectionBlock({
 
 export function MechanicCardView({ gameId }: MechanicCardViewProps): ReactElement {
   const { data, isLoading, isError, refetch } = useMechanicCard(gameId);
-  const [citationTarget, setCitationTarget] = useState<CitationTarget | null>(null);
+  // AD-2: exactly ONE panel instance. Clicking another badge swaps `activeCitation`.
+  const [activeCitation, setActiveCitation] = useState<PublishedMechanicCitationDto | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
+
+  const openCitation = (citation: PublishedMechanicCitationDto): void => {
+    setActiveCitation(citation);
+    setPanelOpen(true);
+  };
 
   if (isLoading) {
     return <LoadingShell />;
@@ -312,7 +285,7 @@ export function MechanicCardView({ gameId }: MechanicCardViewProps): ReactElemen
                 key={String(section.section)}
                 section={section}
                 index={index}
-                onOpenCitation={setCitationTarget}
+                onOpenCitation={openCitation}
               />
             ))}
           </div>
@@ -336,17 +309,14 @@ export function MechanicCardView({ gameId }: MechanicCardViewProps): ReactElemen
         </footer>
       </article>
 
-      {citationTarget && (
-        <PdfQuoteHighlighter
-          open={!!citationTarget}
-          onOpenChange={open => {
-            if (!open) setCitationTarget(null);
-          }}
-          documentId={citationTarget.documentId}
-          page={citationTarget.page}
-          quote={citationTarget.quote}
-        />
-      )}
+      {/* AD-2: a single citation panel drives every badge; swapping content on
+          click, restoring focus + announcing on open. */}
+      <MechanicCitationPanel
+        citation={activeCitation}
+        card={card}
+        isOpen={panelOpen}
+        onClose={() => setPanelOpen(false)}
+      />
     </CardShell>
   );
 }

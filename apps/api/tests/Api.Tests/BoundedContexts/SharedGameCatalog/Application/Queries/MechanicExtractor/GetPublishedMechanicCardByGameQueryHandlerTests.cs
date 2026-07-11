@@ -34,14 +34,14 @@ public class GetPublishedMechanicCardByGameQueryHandlerTests
             createdAt: DateTime.UtcNow,
             updatedAt: DateTime.UtcNow);
 
-    private static string ContentWithMixedSections(Guid gameId, Guid pdfId)
+    private static string ContentWithMixedSections(Guid gameId, Guid pdfId, Guid analysisId)
     {
         // Sections deliberately OUT of enum order and ordinals shuffled within a section,
         // to prove the handler groups + orders by MechanicSection enum then by ordinal.
         var content = new MechanicCardContent
         {
             SnapshotAt = DateTime.UtcNow,
-            SourceAnalysisId = Guid.NewGuid(),
+            SourceAnalysisId = analysisId,
             SourcePromptVersion = "mechanic-extractor-v1",
             Metadata = new MechanicCardMetadata
             {
@@ -70,10 +70,13 @@ public class GetPublishedMechanicCardByGameQueryHandlerTests
     {
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
-        var card = BuildCard(gameId, ContentWithMixedSections(gameId, pdfId));
+        var analysisId = Guid.NewGuid();
+        var card = BuildCard(gameId, ContentWithMixedSections(gameId, pdfId, analysisId));
 
         var repo = new Mock<IMechanicCardRepository>();
         repo.Setup(r => r.GetActiveByGameAsync(gameId, It.IsAny<CancellationToken>())).ReturnsAsync(card);
+        repo.Setup(r => r.GetApaContextAsync(gameId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MechanicCardApaContext(2020, "Game Rules"));
 
         var handler = new GetPublishedMechanicCardByGameQueryHandler(repo.Object);
         var dto = await handler.Handle(new GetPublishedMechanicCardByGameQuery(gameId), CancellationToken.None);
@@ -83,6 +86,10 @@ public class GetPublishedMechanicCardByGameQueryHandlerTests
         dto.Publisher.Should().Be("Kosmos");
         dto.Language.Should().Be("en");
         dto.Version.Should().Be(3);
+        // #530 APA context.
+        dto.SourceAnalysisId.Should().Be(analysisId);
+        dto.PublicationYear.Should().Be(2020);
+        dto.DocumentName.Should().Be("Game Rules");
 
         // Grouped into 3 sections, ordered by MechanicSection enum: Summary(0), Mechanics(1), Faq(5).
         dto.Sections.Select(s => s.Section).Should().Equal("Summary", "Mechanics", "Faq");

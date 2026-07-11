@@ -17,7 +17,13 @@ public sealed record PublishedMechanicCardDto(
     string GameName,
     string? Publisher,
     string Language,
-    IReadOnlyList<PublishedMechanicCardSectionDto> Sections);
+    IReadOnlyList<PublishedMechanicCardSectionDto> Sections,
+    // #530 — extra context for the APA-style "copy citation" output. SourceAnalysisId comes from the
+    // content snapshot; PublicationYear (SharedGame) and DocumentName (source PDF Title/FileName) are
+    // resolved at read time. Any may be null when unknown — the FE substitutes [n.d.] / a fallback.
+    Guid SourceAnalysisId,
+    int? PublicationYear,
+    string? DocumentName);
 
 /// <summary>One of the 6 mechanic sections (Summary/Mechanics/Victory/Resources/Phases/Faq).</summary>
 public sealed record PublishedMechanicCardSectionDto(

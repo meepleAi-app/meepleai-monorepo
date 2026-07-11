@@ -28,6 +28,7 @@
 import { NextResponse } from 'next/server';
 
 import * as metrics from '@/lib/metrics/session-cache-metrics';
+import { matchesRoutePrefix } from '@/lib/routing/route-matching';
 import { isAdminRole } from '@/lib/utils/roles';
 
 import type { NextRequest } from 'next/server';
@@ -454,9 +455,12 @@ export async function proxy(request: NextRequest) {
   const isAdminViewMode = isAdmin && viewModeCookie?.value !== 'user';
 
   // Check if the current route is protected or public auth route
-  const isProtectedRoute = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
+  // Boundary-aware matching (matchesRoutePrefix): a route matches only on an
+  // exact hit or a `route + '/'` sub-path, so protected `/library` no longer
+  // swallows the public `/library-public` landing (plain startsWith did).
+  const isProtectedRoute = matchesRoutePrefix(pathname, PROTECTED_ROUTES);
   const isPublicAuthRoute = PUBLIC_AUTH_ROUTES.some(route => pathname === route);
-  const isAdminRoute = ADMIN_ONLY_ROUTES.some(route => pathname.startsWith(route));
+  const isAdminRoute = matchesRoutePrefix(pathname, ADMIN_ONLY_ROUTES);
   const isHomePage = pathname === '/';
 
   // Redirect unauthenticated users from protected routes to login
@@ -481,7 +485,7 @@ export async function proxy(request: NextRequest) {
     const fromParam = request.nextUrl.searchParams.get('from');
     const defaultDest = isAdminViewMode ? '/admin' : '/library';
     const redirectUrl =
-      fromParam && PROTECTED_ROUTES.some(route => fromParam.startsWith(route))
+      fromParam && matchesRoutePrefix(fromParam, PROTECTED_ROUTES)
         ? new URL(fromParam, request.url)
         : new URL(defaultDest, request.url);
     const response = NextResponse.redirect(redirectUrl);

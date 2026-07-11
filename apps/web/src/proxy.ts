@@ -418,7 +418,11 @@ export async function proxy(request: NextRequest) {
   // PLAYWRIGHT_AUTH_BYPASS is never set there.
   const isVisualTestBuild = process.env.NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED === '1';
   const isAuthBypassAllowed = process.env.NODE_ENV !== 'production' || isVisualTestBuild;
-  if (isAuthBypassAllowed && process.env.PLAYWRIGHT_AUTH_BYPASS === 'true' && sessionCookieValue) {
+  const isAuthBypassEngaged =
+    isAuthBypassAllowed &&
+    process.env.PLAYWRIGHT_AUTH_BYPASS === 'true' &&
+    Boolean(sessionCookieValue);
+  if (isAuthBypassEngaged) {
     isAuthenticated = true;
   } else if (sessionCookieValue) {
     isAuthenticated = await isSessionCookieValid(request, sessionCookieValue);
@@ -437,6 +441,20 @@ export async function proxy(request: NextRequest) {
     const cachedRole = getCachedRole(sessionCookieValue);
     if (cachedRole) {
       userRole = cachedRole;
+    } else if (isAuthBypassEngaged) {
+      // E2E auth bypass: isSessionCookieValid was skipped above, so the
+      // session-validation cache is never warmed and getCachedRole() is null.
+      // Resolve the role from the plaintext meepleai_user_role cookie seeded by
+      // the E2E auth helpers instead. Unreachable in production: the bypass
+      // requires PLAYWRIGHT_AUTH_BYPASS (never set in prod) AND either
+      // NODE_ENV!=='production' or the visual-test flag (dead-code-eliminated in
+      // real prod builds), so a client-set role cookie can never escalate a real
+      // user. Restores admin E2E coverage after the v1 role-cookie sunset
+      // (2026-05-13). See issue #2784.
+      const bypassRole = request.cookies.get(USER_ROLE_COOKIE_V1)?.value;
+      if (bypassRole) {
+        userRole = bypassRole;
+      }
     } else if (Date.now() < USER_ROLE_COOKIE_V1_SUNSET) {
       const v1 = request.cookies.get(USER_ROLE_COOKIE_V1)?.value;
       if (v1) {

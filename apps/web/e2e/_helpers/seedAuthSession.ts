@@ -52,12 +52,16 @@ const FIXTURE_SESSION_TOKEN = 'playwright-fixture-session-token';
 
 export type AuthSessionRole = 'user' | 'admin';
 
-export async function seedAuthSession(
-  page: Page,
-  options: { role?: AuthSessionRole } = {}
-): Promise<void> {
-  const role = options.role ?? 'user';
-  await page.context().addCookies([
+/** Role names used by the mock-auth helpers (AdminHelper, AuthHelper, fixtures). */
+export type MockAuthRole = 'Admin' | 'Editor' | 'User';
+
+/**
+ * Builds the two cookies proxy.ts needs to resolve an authenticated session AND
+ * its role under the E2E auth bypass. `role` must already be lower-cased to match
+ * proxy.ts's isAdminRole() expectation.
+ */
+function buildBypassAuthCookies(role: string) {
+  return [
     {
       name: SESSION_COOKIE_NAME,
       value: FIXTURE_SESSION_TOKEN,
@@ -65,7 +69,7 @@ export async function seedAuthSession(
       path: '/',
       httpOnly: true,
       secure: false,
-      sameSite: 'Lax',
+      sameSite: 'Lax' as const,
     },
     {
       name: USER_ROLE_COOKIE,
@@ -74,9 +78,30 @@ export async function seedAuthSession(
       path: '/',
       httpOnly: false,
       secure: false,
-      sameSite: 'Lax',
+      sameSite: 'Lax' as const,
     },
-  ]);
+  ];
+}
+
+export async function seedAuthSession(
+  page: Page,
+  options: { role?: AuthSessionRole } = {}
+): Promise<void> {
+  const role = options.role ?? 'user';
+  await page.context().addCookies(buildBypassAuthCookies(role));
+}
+
+/**
+ * Seeds the session + role cookies for the PascalCase-role mock-auth helpers so
+ * navigating to /admin/** actually resolves the admin role under the E2E bypass
+ * (proxy.ts #2784), instead of the middleware falling back to 'user' and
+ * redirecting away. Call BEFORE the first page.goto in a mock-auth helper.
+ *
+ * The meepleai_user_role cookie is honored by proxy.ts ONLY while the bypass is
+ * engaged (dev/CI); production ignores it, so it cannot escalate privileges.
+ */
+export async function seedMockRoleCookies(page: Page, role: MockAuthRole): Promise<void> {
+  await page.context().addCookies(buildBypassAuthCookies(role.toLowerCase()));
 }
 
 /**

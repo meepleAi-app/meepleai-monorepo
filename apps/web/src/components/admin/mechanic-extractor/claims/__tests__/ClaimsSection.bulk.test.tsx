@@ -18,7 +18,6 @@ vi.mock('@/lib/api/core/httpClient', () => ({ HttpClient: MockHttpClient }));
 
 import { ClaimsSection } from '../ClaimsSection';
 
-const longQuote = Array.from({ length: 25 }, (_, i) => `w${i}`).join(' ');
 const claims = [
   {
     id: 'd1',
@@ -31,8 +30,8 @@ const claims = [
     reviewedAt: null,
     rejectionNote: null,
     reviewNote: null,
-    validations: [],
-    citations: [{ id: 'c1', pdfPage: 1, quote: longQuote, displayOrder: 0 }],
+    validations: [{ rule: 'T2', outcome: 'fail', message: 'verbatim', score: null }],
+    citations: [{ id: 'c1', pdfPage: 1, quote: 'short', displayOrder: 0 }],
   },
   {
     id: 'd2',
@@ -45,7 +44,7 @@ const claims = [
     reviewedAt: null,
     rejectionNote: null,
     reviewNote: null,
-    validations: [],
+    validations: [{ rule: 'T2', outcome: 'pass', message: null, score: null }],
     citations: [{ id: 'c2', pdfPage: 1, quote: 'short quote', displayOrder: 0 }],
   },
 ];
@@ -55,8 +54,8 @@ function Wrapper({ children }: { children: React.ReactNode }) {
   return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
 }
 
-describe('ClaimsSection bulk reject by quote length', () => {
-  it('rejects only the >20-word-quote claim after count-confirm', async () => {
+describe('ClaimsSection bulk reject by T2 failure', () => {
+  it('rejects only the T2-failing claim after count-confirm', async () => {
     mockGetClaims.mockResolvedValue(claims);
     mockBulkReject.mockResolvedValue({ rejectedCount: 1, skippedAlreadyRejectedCount: 0, claims });
     render(<ClaimsSection analysisId="a" />, { wrapper: Wrapper });
@@ -64,7 +63,7 @@ describe('ClaimsSection bulk reject by quote length', () => {
     const select = await screen.findByTestId('bulk-action-select');
     fireEvent.click(select);
     const listbox = await screen.findByRole('listbox');
-    fireEvent.click(within(listbox).getByText(/Reject all with quote >20 words/));
+    fireEvent.click(within(listbox).getByText(/Reject all failing T2/));
 
     expect(screen.getByTestId('bulk-action-count')).toHaveTextContent('1');
     fireEvent.click(screen.getByTestId('bulk-action-confirm'));
@@ -89,7 +88,7 @@ describe('ClaimsSection bulk reject by quote length', () => {
     const select = await screen.findByTestId('bulk-action-select');
     fireEvent.click(select);
     const listbox = await screen.findByRole('listbox');
-    fireEvent.click(within(listbox).getByText(/Reject all with quote >20 words/));
+    fireEvent.click(within(listbox).getByText(/Reject all failing T2/));
     fireEvent.click(screen.getByTestId('bulk-action-confirm'));
 
     expect(await screen.findByTestId('claims-action-warning')).toHaveTextContent(/1/);

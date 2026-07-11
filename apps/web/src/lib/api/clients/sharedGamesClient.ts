@@ -7,7 +7,7 @@
 
 import { z } from 'zod';
 
-import { isNotFoundError } from '../core/errors';
+import { createApiError, isNotFoundError } from '../core/errors';
 import { type HttpClient, downloadFile, getApiBase } from '../core/httpClient';
 import {
   agentDefinitionDtoSchema,
@@ -15,6 +15,10 @@ import {
   type AgentDefinitionDto,
   type KbCardDto,
 } from '../schemas/agent-definitions.schemas';
+import {
+  MECHANIC_CARD_FEEDBACK_ROUTES,
+  type SubmitMechanicCardFeedbackBody,
+} from '../schemas/mechanic-card-feedback.schemas';
 import {
   MECHANIC_CARD_ROUTES,
   PublishedMechanicCardDtoSchema,
@@ -1139,6 +1143,38 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
           return null;
         }
         throw error;
+      }
+    },
+
+    /**
+     * Submit per-claim feedback on a published mechanic card (AUTHENTICATED).
+     * POST /api/v1/mechanic-cards/{cardId}/feedback — ME-M3.1, Issue #533.
+     *
+     * The endpoint is status-only (201 created · 200 updated · 404 · 429 · 401)
+     * so we don't parse a response body. Non-2xx responses are converted to the
+     * typed `ApiError` subclass (`NotFoundError` / `RateLimitError` / …) via
+     * `createApiError` so callers can branch on `instanceof`. A raw fetch is used
+     * (rather than `httpClient.post`) because a status-only 200/201 may carry an
+     * empty body, which `response.json()` would choke on.
+     *
+     * `errorType` is meaningful only for a 👎; it MUST be null for a 👍.
+     *
+     * @param cardId - Published card UUID (the card the claim belongs to)
+     * @param body - Feedback payload
+     */
+    async submitMechanicCardFeedback(
+      cardId: string,
+      body: SubmitMechanicCardFeedbackBody
+    ): Promise<void> {
+      const path = MECHANIC_CARD_FEEDBACK_ROUTES.feedback(cardId);
+      const response = await fetch(`${getApiBase()}${path}`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        throw await createApiError(path, response);
       }
     },
 

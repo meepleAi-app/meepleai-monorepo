@@ -1,7 +1,8 @@
 /** @vitest-environment jsdom */
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { NotFoundError, RateLimitError } from '@/lib/api';
 import {
   MechanicSection,
   type PublishedMechanicCardDto,
@@ -37,6 +38,26 @@ const cardMockState: MockCardReturn = {
 };
 vi.mock('@/hooks/queries/useMechanicCard', () => ({
   useMechanicCard: () => cardMockState,
+}));
+
+// ─── Mock the feedback mutation hook (#533) ────────────────────────────────────
+// `mutate` (👍) resolves via onSuccess; `mutateAsync` (👎) resolves/rejects.
+// Tests swap the implementation to exercise 200/429 paths.
+const feedbackMutate = vi.hoisted(() => vi.fn());
+const feedbackMutateAsync = vi.hoisted(() => vi.fn());
+vi.mock('@/hooks/mutations/useSubmitMechanicCardFeedback', () => ({
+  useSubmitMechanicCardFeedback: () => ({
+    mutate: feedbackMutate,
+    mutateAsync: feedbackMutateAsync,
+    isPending: false,
+  }),
+}));
+
+// ─── Mock sonner toasts ────────────────────────────────────────────────────────
+const toastError = vi.hoisted(() => vi.fn());
+const toastSuccess = vi.hoisted(() => vi.fn());
+vi.mock('sonner', () => ({
+  toast: { error: toastError, success: toastSuccess },
 }));
 
 // ─── notFound spy (called on data === null) ────────────────────────────────────
@@ -109,6 +130,10 @@ describe('MechanicCardView', () => {
     cardMockState.refetch = vi.fn();
     mockPanel.mockClear();
     notFoundSpy.mockClear();
+    feedbackMutate.mockReset();
+    feedbackMutateAsync.mockReset();
+    toastError.mockReset();
+    toastSuccess.mockReset();
   });
 
   it('renders game name, section labels (Faq → FAQ) and claims', () => {
@@ -202,5 +227,138 @@ describe('MechanicCardView', () => {
       'NEXT_NOT_FOUND'
     );
     expect(notFoundSpy).toHaveBeenCalled();
+  });
+
+  // ─── Per-claim feedback (ME-M3.1, #533) ──────────────────────────────────────
+  describe('per-claim feedback', () => {
+    const CLAIM_UP = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+    it('👍 posts isPositive:true (errorType null) and shows the thanks state', () => {
+      // The 👍 path uses mutate(vars, { onSuccess }) — invoke onSuccess to simulate 201/200.
+      feedbackMutate.mockImplementation(
+        (_vars: unknown, opts?: { onSuccess?: () => void; onSettled?: () => void }) => {
+          opts?.onSuccess?.();
+          opts?.onSettled?.();
+        }
+      );
+      cardMockState.data = SAMPLE_CARD;
+      render(<MechanicCardView gameId={SAMPLE_CARD.sharedGameId} />);
+
+      fireEvent.click(screen.getByTestId(`mechanic-card-thumb-up-${CLAIM_UP}`));
+
+      expect(feedbackMutate).toHaveBeenCalledWith(
+        {
+          cardId: SAMPLE_CARD.cardId,
+          body: {
+            claimId: CLAIM_UP,
+            isPositive: true,
+            errorType: null,
+            description: null,
+            suggestedCitation: null,
+          },
+        },
+        expect.any(Object)
+      );
+
+      // The thumb-up button reflects the active vote + a "thanks" confirmation shows.
+      expect(screen.getByTestId(`mechanic-card-thumb-up-${CLAIM_UP}`)).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+      expect(screen.getByTestId(`mechanic-card-feedback-thanks-${CLAIM_UP}`)).toHaveTextContent(
+        /thanks/i
+      );
+    });
+
+    it('👎 opens the report modal and submitting posts the negative payload', async () => {
+      feedbackMutateAsync.mockResolvedValue(undefined);
+      cardMockState.data = SAMPLE_CARD;
+      render(<MechanicCardView gameId={SAMPLE_CARD.sharedGameId} />);
+
+      // Modal is closed initially.
+      expect(screen.queryByTestId('mechanic-card-report-dialog')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId(`mechanic-card-thumb-down-${CLAIM_UP}`));
+
+      // Modal opens (focus-trapped Radix dialog).
+      expect(await screen.findByTestId('mechanic-card-report-dialog')).toBeInTheDocument();
+
+      // Fill the description (type defaults to 'factual') and submit.
+      fireEvent.change(screen.getByTestId('mechanic-card-report-description'), {
+        target: { value: 'Wrong page.' },
+      });
+      fireEvent.click(screen.getByTestId('mechanic-card-report-submit'));
+
+      await waitFor(() =>
+        expect(feedbackMutateAsync).toHaveBeenCalledWith({
+          cardId: SAMPLE_CARD.cardId,
+          body: {
+            claimId: CLAIM_UP,
+            isPositive: false,
+            errorType: 'factual',
+            description: 'Wrong page.',
+            suggestedCitation: null,
+          },
+        })
+      );
+
+      // On success: modal closes + the claim shows the "report received" thanks state.
+      await waitFor(() =>
+        expect(screen.queryByTestId('mechanic-card-report-dialog')).not.toBeInTheDocument()
+      );
+      expect(screen.getByTestId(`mechanic-card-thumb-down-${CLAIM_UP}`)).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+      expect(screen.getByTestId(`mechanic-card-feedback-thanks-${CLAIM_UP}`)).toHaveTextContent(
+        /report received/i
+      );
+    });
+
+    it('👍 on 429 shows the limit toast and does NOT mark the claim submitted', () => {
+      feedbackMutate.mockImplementation(
+        (_vars: unknown, opts?: { onError?: (e: unknown) => void; onSettled?: () => void }) => {
+          opts?.onError?.(new RateLimitError({ message: 'rate limited', endpoint: '/feedback' }));
+          opts?.onSettled?.();
+        }
+      );
+      cardMockState.data = SAMPLE_CARD;
+      render(<MechanicCardView gameId={SAMPLE_CARD.sharedGameId} />);
+
+      fireEvent.click(screen.getByTestId(`mechanic-card-thumb-up-${CLAIM_UP}`));
+
+      // Limit toast shown.
+      expect(toastError).toHaveBeenCalledWith(expect.stringMatching(/limit/i));
+      // NOT marked as voted → no thanks state, button not pressed.
+      expect(
+        screen.queryByTestId(`mechanic-card-feedback-thanks-${CLAIM_UP}`)
+      ).not.toBeInTheDocument();
+      expect(screen.getByTestId(`mechanic-card-thumb-up-${CLAIM_UP}`)).toHaveAttribute(
+        'aria-pressed',
+        'false'
+      );
+    });
+
+    it('👎 submit failure keeps the modal open and toasts (404 → card gone)', async () => {
+      feedbackMutateAsync.mockRejectedValue(
+        new NotFoundError({ message: 'gone', endpoint: '/feedback' })
+      );
+      cardMockState.data = SAMPLE_CARD;
+      render(<MechanicCardView gameId={SAMPLE_CARD.sharedGameId} />);
+
+      fireEvent.click(screen.getByTestId(`mechanic-card-thumb-down-${CLAIM_UP}`));
+      expect(await screen.findByTestId('mechanic-card-report-dialog')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId('mechanic-card-report-submit'));
+
+      await waitFor(() =>
+        expect(toastError).toHaveBeenCalledWith(expect.stringMatching(/no longer available/i))
+      );
+      // Modal stays open so the user can retry.
+      expect(screen.getByTestId('mechanic-card-report-dialog')).toBeInTheDocument();
+      expect(
+        screen.queryByTestId(`mechanic-card-feedback-thanks-${CLAIM_UP}`)
+      ).not.toBeInTheDocument();
+    });
   });
 });

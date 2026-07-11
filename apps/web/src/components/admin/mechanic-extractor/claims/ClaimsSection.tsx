@@ -407,6 +407,7 @@ export function ClaimsSection({
         }}
         isPending={approveMutation.isPending}
         claimPreview={approveTarget ? truncate(approveTarget.text, 120) : undefined}
+        validations={approveTarget?.validations}
       />
 
       <RejectClaimDialog

@@ -133,7 +133,7 @@ internal static class AdminMechanicExtractorEndpoints
                 "Admin finalizing mechanic draft {DraftId}",
                 request.DraftId);
 
-            var command = new FinalizeMechanicAnalysisCommand(
+            var command = new FinalizeMechanicDraftCommand(
                 request.DraftId,
                 request.UserId);
 

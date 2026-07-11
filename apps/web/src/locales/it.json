@@ -1156,6 +1156,53 @@
       "aboutCta": "Scopri di più su MeepleAI",
       "faqCta": "Consulta le FAQ"
     },
+    "gameComprehension": {
+      "metaTitle": "Come MeepleAI comprende un gioco | MeepleAI",
+      "metaDescription": "Dal PDF del regolamento alla scheda con citazioni: scopri la catena di fiducia che rende ogni risposta di MeepleAI verificabile, pagina per pagina.",
+      "eyebrow": "La catena di fiducia",
+      "title": "Ogni risposta risale al regolamento.",
+      "subtitle": "MeepleAI legge il manuale ufficiale, riformula ogni meccanica con le sue parole e cita la pagina esatta. Nessuna regola inventata: solo ciò che c'è scritto, con la fonte allegata.",
+      "chainHeading": "Dal PDF alla scheda citata",
+      "chainSubheading": "Quattro passaggi, un solo filo conduttore: la fonte non si perde mai.",
+      "chain": {
+        "pdf": {
+          "label": "Fonte",
+          "title": "Il regolamento in PDF",
+          "description": "Tutto parte dal manuale ufficiale del gioco. È la nostra unica fonte di verità: MeepleAI non aggiunge nulla che non sia nel documento."
+        },
+        "read": {
+          "label": "Lettura AI",
+          "title": "L'AI legge e riformula",
+          "description": "L'AI legge il manuale e riscrive ogni meccanica con parole proprie, mantenendo il legame con il punto esatto da cui l'ha estratta."
+        },
+        "review": {
+          "label": "Revisione umana",
+          "title": "Un revisore approva",
+          "description": "Una persona rivede ogni affermazione, una per una. Solo le regole approvate finiscono sulla scheda pubblicata."
+        },
+        "card": {
+          "label": "Scheda finale",
+          "title": "La scheda con citazioni",
+          "description": "La scheda pubblicata cita la pagina precisa del regolamento per ogni affermazione. Un clic e vedi da dove arriva."
+        }
+      },
+      "demoHeading": "Provala: passa sopra la citazione",
+      "demoSubheading": "Ecco una meccanica di Catan come apparirebbe sulla scheda. Passa il mouse o usa il tasto Invio sul riferimento per vedere la fonte.",
+      "demoGameName": "Catan",
+      "demoSectionLabel": "Meccaniche",
+      "demoClaim": "I giocatori raccolgono risorse tirando i dadi all'inizio di ogni turno.",
+      "demoQuote": "All'inizio del suo turno, il giocatore di turno tira entrambi i dadi. La somma indica quali caselle terreno producono risorse in questo turno.",
+      "demoDocumentName": "Regolamento di Catan",
+      "demoPanelHeading": "Fonte della citazione",
+      "demoReviewedBadge": "Generata da AI, revisionata da una persona",
+      "demoPageLabel": "pagina {page}",
+      "demoDismiss": "Chiudi",
+      "trustNote": "Ogni scheda è generata dall'AI e revisionata da una persona. È questa combinazione — non l'AI da sola — a rendere ogni citazione affidabile.",
+      "ctaHeading": "Pronto a fidarti delle regole?",
+      "ctaSubheading": "Carica il regolamento del tuo gioco e ottieni risposte con la fonte allegata.",
+      "ctaPrimary": "Prova con il tuo gioco",
+      "ctaSecondary": "Come funziona in generale"
+    },
     "blog": {
       "title": "Blog",
       "subtitle": "Novità, guide e approfondimenti",

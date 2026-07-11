@@ -1109,6 +1109,53 @@
       "aboutCta": "Learn more about MeepleAI",
       "faqCta": "Browse the FAQ"
     },
+    "gameComprehension": {
+      "metaTitle": "How MeepleAI understands a game | MeepleAI",
+      "metaDescription": "From the rulebook PDF to a card with citations: see the trust chain that makes every MeepleAI answer verifiable, page by page.",
+      "eyebrow": "The trust chain",
+      "title": "Every answer traces back to the rulebook.",
+      "subtitle": "MeepleAI reads the official manual, rewords each mechanic in its own words, and cites the exact page. No invented rules — only what's written, with the source attached.",
+      "chainHeading": "From PDF to a cited card",
+      "chainSubheading": "Four steps, one thread running through them: the source is never lost.",
+      "chain": {
+        "pdf": {
+          "label": "Source",
+          "title": "The rulebook PDF",
+          "description": "It all starts with the game's official manual. It is our single source of truth: MeepleAI never adds anything that isn't in the document."
+        },
+        "read": {
+          "label": "AI reads",
+          "title": "The AI reads and rewords",
+          "description": "The AI reads the manual and rewrites each mechanic in its own words, keeping the link back to the exact spot it came from."
+        },
+        "review": {
+          "label": "Human review",
+          "title": "A reviewer approves",
+          "description": "A person reviews every claim, one by one. Only approved rules make it onto the published card."
+        },
+        "card": {
+          "label": "Final card",
+          "title": "The card with citations",
+          "description": "The published card cites the precise rulebook page for every claim. One click and you see where it came from."
+        }
+      },
+      "demoHeading": "Try it: hover the citation",
+      "demoSubheading": "Here's a Catan mechanic as it would appear on the card. Hover or press Enter on the reference to see the source.",
+      "demoGameName": "Catan",
+      "demoSectionLabel": "Mechanics",
+      "demoClaim": "Players gather resources by rolling dice at the start of each turn.",
+      "demoQuote": "At the beginning of their turn, the active player rolls both dice. The total indicates which terrain hexes produce resources this turn.",
+      "demoDocumentName": "Catan Rulebook",
+      "demoPanelHeading": "Citation source",
+      "demoReviewedBadge": "AI-generated, human-reviewed",
+      "demoPageLabel": "page {page}",
+      "demoDismiss": "Dismiss",
+      "trustNote": "Every card is AI-generated and human-reviewed. It's that combination — not the AI alone — that makes each citation trustworthy.",
+      "ctaHeading": "Ready to trust the rules?",
+      "ctaSubheading": "Upload your game's rulebook and get answers with the source attached.",
+      "ctaPrimary": "Try it with your game",
+      "ctaSecondary": "See how it works overall"
+    },
     "blog": {
       "title": "Blog",
       "description": "News, guides, and insights on the world of board games",

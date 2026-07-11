@@ -803,6 +803,55 @@
         }
       }
     },
+    "takedown": {
+      "title": "Takedown Request",
+      "description": "How to report content you believe infringes your copyright, and how we handle the request.",
+      "sections": {
+        "overview": {
+          "title": "1. Overview",
+          "content": "MeepleAI respects copyright. Published mechanic cards are AI-generated analyses of game rulebooks: every claim is reworded in original language and cites the rulebook page. Copyright in the original manual text remains with the publishers.\n\nIf you believe a published card reproduces your protected material beyond what is permitted, you can request its removal or suppression through this page. Every request is reviewed by a person; this is not an automated process."
+        },
+        "whoCanFile": {
+          "title": "2. Who can file a request",
+          "content": "A takedown request may be filed by the copyright owner (for example the publisher or the author of the rulebook) or by a representative authorized to act on their behalf.\n\nSo we can verify and reach you, provide your full name, a valid email address, and — if acting on behalf of a third party — the party you represent."
+        },
+        "whatToInclude": {
+          "title": "3. What to include",
+          "content": "To let us handle the request quickly, please include:\n\n- The protected work involved (rulebook or manual title).\n- The exact URL of the card in question (the `/games/{id}/card` page).\n- A description of which content you believe is infringing and why.\n- A good-faith statement that the disputed use is not authorized by the copyright owner, its agent, or the law.\n- Confirmation that the information you provide is accurate.\n\nThe form below assembles these elements into a pre-filled email automatically."
+        },
+        "howWeRespond": {
+          "title": "4. How we respond",
+          "content": "We acknowledge receipt of your request within **3 business days**. We assess the report and, where upheld, suppress or remove the affected card within **10 business days** of receipt.\n\nA suppressed card is no longer publicly accessible. We will update you by email on the outcome, and may ask for additional information if needed to complete the review."
+        },
+        "contact": {
+          "title": "5. Contact",
+          "content": "Takedown requests should be sent to: **takedown@meepleai.app**\n\nYou can use the form at the bottom of this page to compose a pre-filled email, or write directly to that address including the information listed above."
+        }
+      },
+      "form": {
+        "heading": "Takedown request form",
+        "intro": "Fill in the fields to generate a pre-filled email to takedown@meepleai.app. No data is sent to our servers from this page.",
+        "nameLabel": "Full name",
+        "namePlaceholder": "Jane Doe",
+        "emailLabel": "Email",
+        "emailPlaceholder": "you@example.com",
+        "workLabel": "Copyrighted work / rulebook title",
+        "workPlaceholder": "e.g. Catan — Base game rulebook",
+        "cardUrlLabel": "URL of the card in question",
+        "cardUrlPlaceholder": "https://meepleai.com/games/.../card",
+        "descriptionLabel": "Description of the problem",
+        "descriptionPlaceholder": "Describe which content you believe infringes your copyright and why.",
+        "confirmLabel": "I state in good faith that the disputed use is not authorized and that the information I have provided is accurate.",
+        "submit": "Open pre-filled email",
+        "copy": "Copy request to clipboard",
+        "copied": "Copied!",
+        "requiredError": "This field is required.",
+        "emailInvalidError": "Enter a valid email address.",
+        "confirmError": "You must confirm the statement to proceed.",
+        "errorSummary": "Please fix the highlighted fields before proceeding.",
+        "mailSubject": "Takedown request — {work}"
+      }
+    },
     "privacy": {
       "title": "Privacy Policy",
       "description": "How we collect, use, and protect your personal data",

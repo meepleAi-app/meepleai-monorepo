@@ -121,6 +121,15 @@ describe('MechanicCardView', () => {
     expect(badgeLink).toHaveAttribute('href', '/how-it-works/game-comprehension');
   });
 
+  it('renders a public takedown link in the card footer (#529)', () => {
+    cardMockState.data = SAMPLE_CARD;
+    render(<MechanicCardView gameId={SAMPLE_CARD.sharedGameId} />);
+
+    const takedownLink = screen.getByTestId('mechanic-card-takedown-link');
+    expect(takedownLink).toHaveAttribute('href', '/legal/takedown');
+    expect(takedownLink).toHaveTextContent(/copyright/i);
+  });
+
   it('renders a [p.N] citation badge per citation', () => {
     cardMockState.data = SAMPLE_CARD;
     render(<MechanicCardView gameId={SAMPLE_CARD.sharedGameId} />);

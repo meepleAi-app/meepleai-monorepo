@@ -41,6 +41,7 @@ import type {
 import { MECHANIC_SECTION_LABELS, MechanicSection } from '@/lib/api/schemas/mechanic-card.schemas';
 
 const HOW_IT_WORKS_HREF = '/how-it-works/game-comprehension';
+const TAKEDOWN_HREF = '/legal/takedown';
 
 /**
  * Resolve a human label for a section. The parsed DTO carries the numeric enum
@@ -317,9 +318,21 @@ export function MechanicCardView({ gameId }: MechanicCardViewProps): ReactElemen
           </div>
         )}
 
-        {/* Footer attribution (shared, ADR-051 — #529 will later swap the copy) */}
+        {/* Footer attribution (shared, ADR-051) + public takedown link (#529).
+            The takedown link is card-only — the shared attribution component is
+            reused on the admin review page, which must NOT show it. */}
         <footer data-slot="mechanic-card-footer">
           <MechanicAnalysisFooterAttribution />
+          <p className="mt-2 text-center text-xs text-muted-foreground print:hidden">
+            <Link
+              href={TAKEDOWN_HREF}
+              data-slot="mechanic-card-takedown-link"
+              data-testid="mechanic-card-takedown-link"
+              className="underline hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Report a copyright concern
+            </Link>
+          </p>
         </footer>
       </article>
 

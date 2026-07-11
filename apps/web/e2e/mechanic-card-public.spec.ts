@@ -128,4 +128,65 @@ test.describe('Public mechanic card — /games/[id]/card', () => {
     // The default Next not-found surface shows a 404 signal.
     await expect(page.getByText(/not found|404|non trovat/i).first()).toBeVisible();
   });
+
+  // ─── Per-claim feedback (ME-M3.1, #533) ───────────────────────────────────────
+  test('👍 posts a positive vote and shows the thanks state; 👎 posts an error report', async ({
+    page,
+  }) => {
+    await seedAuth(page);
+
+    const CLAIM_UP = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const CLAIM_DOWN = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+
+    await page.context().route(/\/api\/v1\/games\/[^/]+\/card(\?.*)?$/, async (route: Route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(SAMPLE_CARD),
+      });
+    });
+
+    // Capture the feedback POST bodies. 201 = created.
+    const feedbackBodies: unknown[] = [];
+    await page
+      .context()
+      .route(/\/api\/v1\/mechanic-cards\/[^/]+\/feedback(\?.*)?$/, async (route: Route) => {
+        feedbackBodies.push(route.request().postDataJSON());
+        await route.fulfill({ status: 201, contentType: 'application/json', body: '{}' });
+      });
+
+    await page.goto(`/games/${GAME_ID}/card`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('mechanic-card-title')).toHaveText('Catan');
+
+    // 👍 on the first claim → immediate positive vote.
+    await page.getByTestId(`mechanic-card-thumb-up-${CLAIM_UP}`).click();
+    await expect(page.getByTestId(`mechanic-card-feedback-thanks-${CLAIM_UP}`)).toBeVisible();
+    await expect(page.getByTestId(`mechanic-card-thumb-up-${CLAIM_UP}`)).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    expect(feedbackBodies.at(-1)).toMatchObject({
+      claimId: CLAIM_UP,
+      isPositive: true,
+      errorType: null,
+    });
+
+    // 👎 on the second claim → open the modal, fill it, submit.
+    await page.getByTestId(`mechanic-card-thumb-down-${CLAIM_DOWN}`).click();
+    await expect(page.getByTestId('mechanic-card-report-dialog')).toBeVisible();
+    await page
+      .getByTestId('mechanic-card-report-description')
+      .fill('This contradicts the trading rules.');
+    await page.getByTestId('mechanic-card-report-submit').click();
+
+    // Modal closes + the claim shows the "report received" thanks state.
+    await expect(page.getByTestId('mechanic-card-report-dialog')).toHaveCount(0);
+    await expect(page.getByTestId(`mechanic-card-feedback-thanks-${CLAIM_DOWN}`)).toBeVisible();
+    expect(feedbackBodies.at(-1)).toMatchObject({
+      claimId: CLAIM_DOWN,
+      isPositive: false,
+      errorType: 'factual',
+      description: 'This contradicts the trading rules.',
+    });
+  });
 });

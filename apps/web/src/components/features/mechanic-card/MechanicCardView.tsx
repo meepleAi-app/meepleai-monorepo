@@ -28,10 +28,13 @@ import { useState, type ReactElement } from 'react';
 
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { toast } from 'sonner';
 
 import { MechanicAnalysisFooterAttribution } from '@/components/admin/mechanic-extractor/MechanicAnalysisFooterAttribution';
 import { Badge } from '@/components/ui/data-display/badge';
+import { useSubmitMechanicCardFeedback } from '@/hooks/mutations/useSubmitMechanicCardFeedback';
 import { useMechanicCard } from '@/hooks/queries/useMechanicCard';
+import { NotFoundError, RateLimitError } from '@/lib/api';
 import { MECHANIC_SECTION_LABELS, MechanicSection } from '@/lib/api/schemas/mechanic-card.schemas';
 import type {
   PublishedMechanicCardDto,
@@ -39,8 +42,10 @@ import type {
   PublishedMechanicSectionDto,
 } from '@/lib/api/schemas/mechanic-card.schemas';
 
+import { ClaimFeedbackControls, type ClaimVote } from './ClaimFeedbackControls';
 import { MechanicCitationBadge } from './MechanicCitationBadge';
 import { MechanicCitationPanel } from './MechanicCitationPanel';
+import { ReportErrorDialog, type ReportErrorSubmission } from './ReportErrorDialog';
 
 const HOW_IT_WORKS_HREF = '/how-it-works/game-comprehension';
 const TAKEDOWN_HREF = '/legal/takedown';
@@ -128,14 +133,31 @@ function ErrorShell({ onRetry }: { onRetry: () => void }): ReactElement {
   );
 }
 
+// ─── Feedback wiring (ME-M3.1, #533) ─────────────────────────────────────────
+
+/**
+ * The per-claim feedback surface, threaded from the card view down to each claim.
+ * Kept as one object so `SectionBlock` doesn't have to prop-drill five callbacks.
+ */
+interface ClaimFeedbackApi {
+  /** Current vote per claim id (`undefined` = not yet voted this session). */
+  readonly votes: Readonly<Record<string, ClaimVote>>;
+  /** The claim id whose submission is currently in flight, if any. */
+  readonly pendingClaimId: string | null;
+  readonly onThumbUp: (claimId: string) => void;
+  readonly onThumbDown: (claimId: string) => void;
+}
+
 // ─── Presentational pieces ───────────────────────────────────────────────────
 
 function ClaimItem({
   claim,
   onOpenCitation,
+  feedback,
 }: {
   claim: PublishedMechanicCardDto['sections'][number]['claims'][number];
   onOpenCitation: (citation: PublishedMechanicCitationDto) => void;
+  feedback: ClaimFeedbackApi;
 }): ReactElement {
   return (
     <li
@@ -156,6 +178,13 @@ function ClaimItem({
           ))}
         </div>
       )}
+      <ClaimFeedbackControls
+        claimId={claim.id}
+        vote={feedback.votes[claim.id]}
+        isPending={feedback.pendingClaimId === claim.id}
+        onThumbUp={() => feedback.onThumbUp(claim.id)}
+        onThumbDown={() => feedback.onThumbDown(claim.id)}
+      />
     </li>
   );
 }
@@ -164,10 +193,12 @@ function SectionBlock({
   section,
   index,
   onOpenCitation,
+  feedback,
 }: {
   section: PublishedMechanicSectionDto;
   index: number;
   onOpenCitation: (citation: PublishedMechanicCitationDto) => void;
+  feedback: ClaimFeedbackApi;
 }): ReactElement {
   const label = sectionLabel(section.section);
   return (
@@ -195,7 +226,12 @@ function SectionBlock({
       </div>
       <ul className="flex flex-col">
         {section.claims.map(claim => (
-          <ClaimItem key={claim.id} claim={claim} onOpenCitation={onOpenCitation} />
+          <ClaimItem
+            key={claim.id}
+            claim={claim}
+            onOpenCitation={onOpenCitation}
+            feedback={feedback}
+          />
         ))}
       </ul>
     </section>
@@ -210,9 +246,99 @@ export function MechanicCardView({ gameId }: MechanicCardViewProps): ReactElemen
   const [activeCitation, setActiveCitation] = useState<PublishedMechanicCitationDto | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
 
+  // ── Per-claim feedback state (ME-M3.1, #533) ──────────────────────────────
+  // A single card-scoped map: claimId → recorded vote this session. No global store.
+  const [votes, setVotes] = useState<Record<string, ClaimVote>>({});
+  // Which claim currently has a submission in flight (disables just that row).
+  const [pendingClaimId, setPendingClaimId] = useState<string | null>(null);
+  // Which claim's "Report error" modal is open (null = closed).
+  const [reportClaimId, setReportClaimId] = useState<string | null>(null);
+  const submitFeedback = useSubmitMechanicCardFeedback();
+
   const openCitation = (citation: PublishedMechanicCitationDto): void => {
     setActiveCitation(citation);
     setPanelOpen(true);
+  };
+
+  // Map a failed feedback submission to a user-facing toast. Returns nothing —
+  // callers decide whether to mark the vote as recorded (they do NOT on failure).
+  const notifyFeedbackError = (error: unknown): void => {
+    if (error instanceof RateLimitError) {
+      toast.error('You’ve reached today’s report limit. Please try again tomorrow.');
+      return;
+    }
+    if (error instanceof NotFoundError) {
+      toast.error('This card is no longer available.');
+      return;
+    }
+    toast.error('Something went wrong. Please try again.');
+  };
+
+  // 👍 — submit a positive vote immediately (errorType MUST be null).
+  const handleThumbUp = (claimId: string): void => {
+    // `data` is non-null past the guards below, but this closure is created before
+    // them at first render; the button only mounts once `card` exists, so read it
+    // defensively.
+    const cardId = data?.cardId;
+    if (!cardId || pendingClaimId !== null) return;
+    setPendingClaimId(claimId);
+    submitFeedback.mutate(
+      {
+        cardId,
+        body: {
+          claimId,
+          isPositive: true,
+          errorType: null,
+          description: null,
+          suggestedCitation: null,
+        },
+      },
+      {
+        onSuccess: () => setVotes(prev => ({ ...prev, [claimId]: 'up' })),
+        onError: notifyFeedbackError,
+        onSettled: () => setPendingClaimId(null),
+      }
+    );
+  };
+
+  // 👎 — open the report-error modal for this claim (submission happens on modal submit).
+  const handleThumbDown = (claimId: string): void => {
+    setReportClaimId(claimId);
+  };
+
+  // Modal submit → post the negative feedback with the collected type/description.
+  const handleReportSubmit = async (submission: ReportErrorSubmission): Promise<void> => {
+    const cardId = data?.cardId;
+    if (!cardId || reportClaimId === null) return;
+    const claimId = reportClaimId;
+    setPendingClaimId(claimId);
+    try {
+      await submitFeedback.mutateAsync({
+        cardId,
+        body: {
+          claimId,
+          isPositive: false,
+          errorType: submission.errorType,
+          description: submission.description,
+          suggestedCitation: submission.suggestedCitation,
+        },
+      });
+      // Success → mark the vote + close the modal.
+      setVotes(prev => ({ ...prev, [claimId]: 'down' }));
+      setReportClaimId(null);
+    } catch (error) {
+      // Keep the modal open so the user can retry; do NOT mark as submitted.
+      notifyFeedbackError(error);
+    } finally {
+      setPendingClaimId(null);
+    }
+  };
+
+  const feedback: ClaimFeedbackApi = {
+    votes,
+    pendingClaimId,
+    onThumbUp: handleThumbUp,
+    onThumbDown: handleThumbDown,
   };
 
   if (isLoading) {
@@ -286,6 +412,7 @@ export function MechanicCardView({ gameId }: MechanicCardViewProps): ReactElemen
                 section={section}
                 index={index}
                 onOpenCitation={openCitation}
+                feedback={feedback}
               />
             ))}
           </div>
@@ -316,6 +443,14 @@ export function MechanicCardView({ gameId }: MechanicCardViewProps): ReactElemen
         card={card}
         isOpen={panelOpen}
         onClose={() => setPanelOpen(false)}
+      />
+
+      {/* One report-error modal drives every 👎; the target claim is `reportClaimId`. */}
+      <ReportErrorDialog
+        open={reportClaimId !== null}
+        onClose={() => setReportClaimId(null)}
+        onSubmit={handleReportSubmit}
+        isSubmitting={pendingClaimId !== null && pendingClaimId === reportClaimId}
       />
     </CardShell>
   );

@@ -13,3 +13,15 @@ export type { MechanicCitationBadgeProps } from '@/components/features/mechanic-
 
 export { MechanicCitationPanel } from '@/components/features/mechanic-card/MechanicCitationPanel';
 export type { MechanicCitationPanelProps } from '@/components/features/mechanic-card/MechanicCitationPanel';
+
+export { ClaimFeedbackControls } from '@/components/features/mechanic-card/ClaimFeedbackControls';
+export type {
+  ClaimFeedbackControlsProps,
+  ClaimVote,
+} from '@/components/features/mechanic-card/ClaimFeedbackControls';
+
+export { ReportErrorDialog } from '@/components/features/mechanic-card/ReportErrorDialog';
+export type {
+  ReportErrorDialogProps,
+  ReportErrorSubmission,
+} from '@/components/features/mechanic-card/ReportErrorDialog';

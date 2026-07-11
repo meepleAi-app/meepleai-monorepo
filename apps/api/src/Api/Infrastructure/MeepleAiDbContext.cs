@@ -210,6 +210,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<MechanicSuppressionAuditEntity> MechanicSuppressionAudits => Set<MechanicSuppressionAuditEntity>(); // ISSUE-523: T5 audit trail for suppressions
     public DbSet<MechanicCardEntity> MechanicCards => Set<MechanicCardEntity>(); // #527: Mechanic Extractor M1.5 — published user-facing card
     public DbSet<MechanicCardAuditLogEntity> MechanicCardAuditLog => Set<MechanicCardAuditLogEntity>(); // #527: card lifecycle audit trail
+    public DbSet<MechanicCardFeedbackEntity> MechanicCardFeedback => Set<MechanicCardFeedbackEntity>(); // #533: per-user per-claim card feedback
     public DbSet<MechanicAnalysisSectionRunEntity> MechanicAnalysisSectionRuns => Set<MechanicAnalysisSectionRunEntity>(); // ISSUE-524: M1.2 per-section provider/token tracking (B6=C)
     public DbSet<MechanicGoldenClaimEntity> MechanicGoldenClaims => Set<MechanicGoldenClaimEntity>(); // ADR-051 Sprint 1 / M2.0: golden-set claims
     public DbSet<MechanicGoldenBggTagEntity> MechanicGoldenBggTags => Set<MechanicGoldenBggTagEntity>(); // ADR-051 Sprint 1 / M2.0: BGG mechanic tags

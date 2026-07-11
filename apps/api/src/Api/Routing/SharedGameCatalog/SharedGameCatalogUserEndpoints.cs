@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetGameDocumentsForUser;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.MechanicExtractor;
 using Api.Middleware.Exceptions;
 using MediatR;
 
@@ -21,6 +22,25 @@ internal static class SharedGameCatalogUserEndpoints
             .Produces<IReadOnlyList<SharedGameDocumentDto>>()
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status404NotFound);
+
+        // Get the active published mechanic card for a game (#528 ME-M1.6, login-gated).
+        group.MapGet("/games/{gameId:guid}/card", HandleGetPublishedMechanicCard)
+            .RequireAuthorization()
+            .WithName("GetPublishedMechanicCard")
+            .WithSummary("Get the published mechanic card for a game (Authenticated)")
+            .WithDescription("Returns the active (non-suppressed) published mechanic card for a game. 404 when no card is published or the card was suppressed/taken down.")
+            .Produces<PublishedMechanicCardDto>()
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound);
+    }
+
+    private static async Task<IResult> HandleGetPublishedMechanicCard(
+        Guid gameId,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetPublishedMechanicCardByGameQuery(gameId), ct).ConfigureAwait(false);
+        return result is null ? Results.NotFound() : Results.Ok(result);
     }
 
     private static async Task<IResult> HandleGetGameDocumentsForUser(

@@ -7,6 +7,7 @@
 
 import { z } from 'zod';
 
+import { isNotFoundError } from '../core/errors';
 import { type HttpClient, downloadFile, getApiBase } from '../core/httpClient';
 import {
   agentDefinitionDtoSchema,
@@ -14,6 +15,11 @@ import {
   type AgentDefinitionDto,
   type KbCardDto,
 } from '../schemas/agent-definitions.schemas';
+import {
+  MECHANIC_CARD_ROUTES,
+  PublishedMechanicCardDtoSchema,
+  type PublishedMechanicCardDto,
+} from '../schemas/mechanic-card.schemas';
 import { GameRagReadinessSchema, type GameRagReadiness } from '../schemas/rag-setup.schemas';
 import {
   SeedingGameListSchema,
@@ -1099,6 +1105,41 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
         z.array(RulebookAnalysisDtoSchema)
       );
       return result ?? [];
+    },
+
+    // ========== Public Mechanic Card (ME-M1.6, Issue #528) ==========
+
+    /**
+     * Get the published, login-gated mechanic card for a game (AUTHENTICATED).
+     * GET /api/v1/games/{gameId}/card — `gameId` is the sharedGameId.
+     *
+     * Returns `null` when the backend responds 404 (no published card, or the
+     * card was suppressed/taken down) so the caller can render `notFound()`.
+     * All other failures (5xx / network / schema) propagate so the caller can
+     * distinguish "gone" from "broken".
+     *
+     * @param gameId - SharedGame UUID
+     * @returns The published card, or null when 404
+     */
+    async getPublishedMechanicCard(gameId: string): Promise<PublishedMechanicCardDto | null> {
+      if (
+        !gameId ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(gameId)
+      ) {
+        return null;
+      }
+      try {
+        return await httpClient.get(
+          MECHANIC_CARD_ROUTES.card(gameId),
+          PublishedMechanicCardDtoSchema
+        );
+      } catch (error) {
+        // 404 = no published card OR suppressed/taken down → caller calls notFound().
+        if (isNotFoundError(error)) {
+          return null;
+        }
+        throw error;
+      }
     },
 
     // ========== Admin PDF Upload (Issue #4922 + #4926) ==========

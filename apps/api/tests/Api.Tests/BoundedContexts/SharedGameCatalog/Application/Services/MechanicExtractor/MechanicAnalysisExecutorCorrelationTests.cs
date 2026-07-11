@@ -32,7 +32,8 @@ public class MechanicAnalysisExecutorCorrelationTests
                 new MechanicRuleOutcome("T2", "fail", "long verbatim", "$.mechanics[1].description", null,
                     new[] { new MechanicValidationViolation("T2_long_verbatim", "long verbatim", "$.mechanics[1].description") }),
                 new MechanicRuleOutcome("T3a", "pass", null, null, null, Array.Empty<MechanicValidationViolation>()),
-                new MechanicRuleOutcome("T3b", "pass", null, null, 0.8, Array.Empty<MechanicValidationViolation>()),
+                new MechanicRuleOutcome("T3b", "pass", null, null, 0.8, Array.Empty<MechanicValidationViolation>(),
+                    new Dictionary<string, double> { ["$.mechanics[0]"] = 0.8, ["$.mechanics[1]"] = 0.8 }),
                 new MechanicRuleOutcome("T4", "pass", null, null, null, Array.Empty<MechanicValidationViolation>()),
             }
         };
@@ -88,12 +89,12 @@ public class MechanicAnalysisExecutorCorrelationTests
     }
 
     [Fact]
-    public void Correlate_VictorySection_FailPropagatesToAllSharedAnchorClaims()
+    public void Correlate_VictorySection_PrimaryFail_DoesNotTaintAlternatives()
     {
-        // Victory primary + alternatives all share the anchor "$.victory" (MechanicOutputParser
-        // ParseVictory), so per the D4 documented approximation a Victory guardrail failure
-        // attributes to every Victory claim sharing that anchor — there is no per-alternative
-        // sub-anchor to disambiguate against.
+        // #2808: the primary anchors to "$.victory" and each alternative to
+        // "$.victory.alternatives[i]", so a "$.victory" violation (about the primary)
+        // matches the primary exactly but NOT the alternative sub-anchors — the D4
+        // broadcast approximation is replaced with per-claim precision.
         var json = """
         {"victory":{
           "primary":"Score the most points",
@@ -105,7 +106,8 @@ public class MechanicAnalysisExecutorCorrelationTests
             new Dictionary<MechanicSection, string> { [MechanicSection.Victory] = json }).ToList();
 
         claims.Should().HaveCount(2);
-        claims.Should().OnlyContain(c => c.SourceAnchor == "$.victory");
+        claims[0].SourceAnchor.Should().Be("$.victory");
+        claims[1].SourceAnchor.Should().Be("$.victory.alternatives[0]");
 
         var outcomes = new Dictionary<MechanicSection, IReadOnlyList<MechanicRuleOutcome>>
         {
@@ -118,6 +120,73 @@ public class MechanicAnalysisExecutorCorrelationTests
 
         MechanicAnalysisExecutor.CorrelateValidations(claims, outcomes);
 
-        claims.Should().OnlyContain(c => c.Validations.Single(v => v.Rule == "T3a").Outcome == "fail");
+        claims[0].Validations.Single(v => v.Rule == "T3a").Outcome.Should().Be("fail"); // primary
+        claims[1].Validations.Single(v => v.Rule == "T3a").Outcome.Should().Be("pass"); // alternative untainted
+    }
+
+    [Fact]
+    public void Correlate_T3b_AttachesPerClaimCosine_NotSectionMin()
+    {
+        // #2811: a well-grounded claim must render ITS OWN cosine, not the section-wide min
+        // captured from a different, poorly-grounded sibling.
+        var json = """
+        {"mechanics":[
+          {"description":"well grounded","citations":[{"pdf_page":1,"quote":"q"}]},
+          {"description":"poorly grounded","citations":[{"pdf_page":2,"quote":"q"}]}
+        ]}
+        """;
+        var claims = MechanicOutputParser.Parse(Guid.NewGuid(),
+            new Dictionary<MechanicSection, string> { [MechanicSection.Mechanics] = json }).ToList();
+
+        var claimScores = new Dictionary<string, double>
+        {
+            ["$.mechanics[0]"] = 0.90,
+            ["$.mechanics[1]"] = 0.30,
+        };
+        var outcomes = new Dictionary<MechanicSection, IReadOnlyList<MechanicRuleOutcome>>
+        {
+            [MechanicSection.Mechanics] = new[]
+            {
+                new MechanicRuleOutcome("T3b", "fail", "below threshold", "$.mechanics[1]", 0.30,
+                    new[] { new MechanicValidationViolation("T3_grounding", "below threshold", "$.mechanics[1]") },
+                    claimScores),
+            }
+        };
+
+        MechanicAnalysisExecutor.CorrelateValidations(claims, outcomes);
+
+        var c0 = claims[0].Validations.Single(v => v.Rule == "T3b");
+        c0.Outcome.Should().Be("pass");
+        c0.Score.Should().Be(0.90); // its own — NOT the section-min 0.30
+
+        var c1 = claims[1].Validations.Single(v => v.Rule == "T3b");
+        c1.Outcome.Should().Be("fail");
+        c1.Score.Should().Be(0.30);
+    }
+
+    [Fact]
+    public void Correlate_T3b_NoPerClaimScore_YieldsNull_NotSectionMin()
+    {
+        // #2811: when a claim has no per-claim cosine (e.g. no citations graded), its T3b score
+        // is null rather than the misleading section-min carried on the outcome.
+        var json = """
+        {"mechanics":[{"description":"ungraded","citations":[{"pdf_page":1,"quote":"q"}]}]}
+        """;
+        var claims = MechanicOutputParser.Parse(Guid.NewGuid(),
+            new Dictionary<MechanicSection, string> { [MechanicSection.Mechanics] = json }).ToList();
+
+        var outcomes = new Dictionary<MechanicSection, IReadOnlyList<MechanicRuleOutcome>>
+        {
+            [MechanicSection.Mechanics] = new[]
+            {
+                // Score (section-min) present but ClaimScores has no entry for $.mechanics[0].
+                new MechanicRuleOutcome("T3b", "pass", null, null, 0.42, Array.Empty<MechanicValidationViolation>(),
+                    new Dictionary<string, double>()),
+            }
+        };
+
+        MechanicAnalysisExecutor.CorrelateValidations(claims, outcomes);
+
+        claims[0].Validations.Single(v => v.Rule == "T3b").Score.Should().BeNull();
     }
 }

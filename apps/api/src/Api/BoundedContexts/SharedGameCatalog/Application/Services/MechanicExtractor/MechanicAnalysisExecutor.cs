@@ -289,8 +289,15 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
                     var hits = o.Violations.Any(v => MatchesAnchor(v.Path, claim.SourceAnchor));
                     outcome = hits ? MechanicClaimValidationOutcomes.Fail : MechanicClaimValidationOutcomes.Pass;
                 }
+                // #2811: attach THIS claim's own grounding cosine (keyed by its anchor) rather than
+                // the section-wide min carried on o.Score — pass claims no longer render a misleading
+                // sibling's low score; claims with no per-claim cosine get null.
+                var claimScore = o.ClaimScores is not null
+                    && o.ClaimScores.TryGetValue(claim.SourceAnchor, out var cs)
+                    ? cs
+                    : (double?)null;
                 perClaim.Add(new MechanicClaimValidation(o.Rule, outcome,
-                    string.Equals(outcome, MechanicClaimValidationOutcomes.Fail, StringComparison.Ordinal) ? o.Message : null, o.Score));
+                    string.Equals(outcome, MechanicClaimValidationOutcomes.Fail, StringComparison.Ordinal) ? o.Message : null, claimScore));
             }
             claim.AttachValidations(perClaim);
         }

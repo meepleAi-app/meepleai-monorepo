@@ -23,18 +23,20 @@ internal sealed class GroundingGuardrail : IMechanicGuardrail
     public async Task<IReadOnlyList<MechanicValidationViolation>> EvaluateAsync(
         MechanicGuardrailContext context, CancellationToken cancellationToken)
     {
-        var (violations, _) = await EvaluateCoreAsync(context, cancellationToken).ConfigureAwait(false);
+        var (violations, _, _) = await EvaluateCoreAsync(context, cancellationToken).ConfigureAwait(false);
         return violations;
     }
 
     public async Task<MechanicGuardrailResult> EvaluateDetailedAsync(
         MechanicGuardrailContext context, CancellationToken cancellationToken)
     {
-        var (violations, minCosine) = await EvaluateCoreAsync(context, cancellationToken).ConfigureAwait(false);
-        return new MechanicGuardrailResult(violations, minCosine);
+        var (violations, minCosine, claimScores) = await EvaluateCoreAsync(context, cancellationToken).ConfigureAwait(false);
+        return new MechanicGuardrailResult(violations, minCosine,
+            claimScores.Count > 0 ? claimScores : null);
     }
 
-    private async Task<(IReadOnlyList<MechanicValidationViolation> Violations, double? MinCosine)> EvaluateCoreAsync(
+    private async Task<(IReadOnlyList<MechanicValidationViolation> Violations, double? MinCosine,
+        IReadOnlyDictionary<string, double> ClaimScores)> EvaluateCoreAsync(
         MechanicGuardrailContext context, CancellationToken cancellationToken)
     {
         var violations = new List<MechanicValidationViolation>();
@@ -78,6 +80,9 @@ internal sealed class GroundingGuardrail : IMechanicGuardrail
         });
 
         double? minCosine = null;
+        // #2811: per-claim cosine keyed by the claim object's JSONPath (min across that claim's
+        // citations), so each claim can surface its OWN grounding score instead of the section min.
+        var claimScores = new Dictionary<string, double>(StringComparer.Ordinal);
         foreach (var (claim, path, chunk) in targets)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -87,6 +92,7 @@ internal sealed class GroundingGuardrail : IMechanicGuardrail
                 var b = await _embeddings.EmbedAsync(chunk.Content, cancellationToken).ConfigureAwait(false);
                 var cos = Cosine(a, b);
                 minCosine = minCosine is null ? cos : Math.Min(minCosine.Value, cos);
+                claimScores[path] = claimScores.TryGetValue(path, out var prior) ? Math.Min(prior, cos) : cos;
                 if (cos < context.Options.MinClaimGroundingSimilarity)
                 {
                     violations.Add(new MechanicValidationViolation(
@@ -110,7 +116,7 @@ internal sealed class GroundingGuardrail : IMechanicGuardrail
             }
         }
 
-        return (violations, minCosine);
+        return (violations, minCosine, claimScores);
     }
 
     private static MechanicSourceChunk? ResolveChunk(JsonElement citation, IReadOnlyList<MechanicSourceChunk> pool)

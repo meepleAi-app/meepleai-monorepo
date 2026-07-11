@@ -22,10 +22,16 @@ public sealed record MechanicGuardrailContext(
     public int RetryCount { get; init; }
 }
 
-/// <summary>Detailed guardrail result: the violations plus an optional numeric score (T3b only).</summary>
+/// <summary>
+/// Detailed guardrail result: the violations plus an optional numeric score (T3b only).
+/// <paramref name="Score"/> is the section-wide min cosine (kept for telemetry); <paramref name="ClaimScores"/>
+/// (#2811) carries the PER-CLAIM cosine keyed by the claim object's JSONPath so each claim can render
+/// its own grounding score instead of the misleading section min. Null for non-T3b guardrails.
+/// </summary>
 public sealed record MechanicGuardrailResult(
     IReadOnlyList<MechanicValidationViolation> Violations,
-    double? Score = null);
+    double? Score = null,
+    IReadOnlyDictionary<string, double>? ClaimScores = null);
 
 /// <summary>
 /// One ADR-051 guardrail (T1 quote cap, T2 long-verbatim, T3 citation present/grounded,

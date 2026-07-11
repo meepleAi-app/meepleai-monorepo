@@ -34,7 +34,13 @@ public sealed record MechanicAnalysisStatusDto(
     Guid? SuppressedBy,
     string? SuppressionReason,
     int ClaimsCount,
-    IReadOnlyList<MechanicSectionRunSummaryDto> SectionRuns);
+    IReadOnlyList<MechanicSectionRunSummaryDto> SectionRuns,
+    // #2807 (ME-FU-1): the "N/M sections produced claims" signal. SectionsWithClaims = number of
+    // distinct sections that yielded >=1 persisted claim; TotalSections = total expected (6).
+    // SectionsWithClaims < TotalSections means at least one section was dropped (e.g. failed the
+    // well_formed check across all retries) and is silently absent from the review queue.
+    int SectionsWithClaims,
+    int TotalSections);
 
 /// <summary>
 /// Per-section execution summary persisted in <c>mechanic_analysis_section_runs</c> (B6=C).

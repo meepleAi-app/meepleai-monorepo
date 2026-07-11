@@ -199,6 +199,13 @@ internal static class MechanicOutputParser
             yield break;
         }
 
+        // The primary anchors to the whole "$.victory" object; its guardrail violations land on
+        // "$.victory" or "$.victory.citations[n]", both of which prefix-match this anchor (shared
+        // citations belong to the primary). NOTE: because MatchesAnchor is a one-way prefix check,
+        // "$.victory" also prefix-covers the "$.victory.alternatives[i]" subtree. That is harmless
+        // today — no guardrail walks the alternatives strings, so no "$.victory.alternatives[i]"
+        // violation path is ever produced. If alternatives-level validation is ever added, give the
+        // primary a boundary-exact anchor (or tighten MatchesAnchor) so it stops covering them.
         yield return BuildClaim(
             claimId: primaryClaimId,
             analysisId: analysisId,
@@ -215,8 +222,13 @@ internal static class MechanicOutputParser
             yield break;
         }
 
+        var altIndex = -1;
         foreach (var alt in alternatives.EnumerateArray())
         {
+            // #2808: stamp the RAW array index so each alternative carries a stable
+            // per-claim anchor ($.victory.alternatives[i]) that a "$.victory" primary
+            // violation no longer prefix-matches — mirrors the $.mechanics[i] semantics.
+            altIndex++;
             if (alt.ValueKind != JsonValueKind.String)
             {
                 continue;
@@ -242,7 +254,7 @@ internal static class MechanicOutputParser
                 text: text!,
                 displayOrder: displayOrder++,
                 citations: altCitations,
-                sourceAnchor: "$.victory");
+                sourceAnchor: $"$.victory.alternatives[{altIndex}]");
         }
     }
 

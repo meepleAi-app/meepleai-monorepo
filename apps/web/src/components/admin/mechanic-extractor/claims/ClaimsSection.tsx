@@ -93,8 +93,12 @@ export function ValidationBadges({
           variant="outline"
           className={VALIDATION_BADGE_CLASS[v.outcome] ?? VALIDATION_BADGE_CLASS.notRun}
           data-testid={`claim-validation-badge-${v.rule}`}
-          aria-label={`${v.rule} ${v.outcome}${v.message ? `: ${v.message}` : ''}`}
-          title={v.message ?? `${v.rule} ${v.outcome}`}
+          aria-label={`${v.rule} ${v.outcome}${v.score != null ? ` score ${v.score.toFixed(2)}` : ''}${v.message ? `: ${v.message}` : ''}`}
+          title={
+            v.score != null
+              ? `${v.rule} ${v.outcome} (score ${v.score.toFixed(2)})`
+              : (v.message ?? `${v.rule} ${v.outcome}`)
+          }
         >
           {v.outcome === 'pass' ? '✓' : v.outcome === 'fail' ? '✗' : '—'} {v.rule}
         </Badge>

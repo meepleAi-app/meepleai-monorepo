@@ -139,7 +139,9 @@ jobs:
 
       - name: Build API (Release)
         working-directory: apps/api
-        run: dotnet build --no-restore --configuration Release
+        # Build only the API project (not the whole solution incl. test projects)
+        # to stay inside the 15min SLO — the full solution build was ~6min. #2816
+        run: dotnet build src/Api --no-restore --configuration Release
 
       - name: Install EF Core tools
         run: |
@@ -219,8 +221,15 @@ jobs:
         # #2816: pin to a single project — the folder was running across all 6
         # Playwright projects (~138 tests) and timing out. desktop-chrome matches
         # the ci.yml `e2e` job convention.
+        #
+        # Call playwright directly via `pnpm exec` (NOT `pnpm test:e2e -- …`):
+        # the test:e2e script is `dotenv -e .env.test -- playwright test`, and
+        # `pnpm run … -- <args>` appends a SECOND `--`, so playwright received
+        # `-- --project=… folder` → `--project` was parsed as a positional file
+        # filter (ignored) and all 6 projects ran anyway. `pnpm exec dotenv …`
+        # forwards `--project` as a real option.
         working-directory: apps/web
         env:
           PLAYWRIGHT_AUTH_BYPASS: 'true'
           CI: 'true'
-        run: pnpm test:e2e -- --project=desktop-chrome e2e/smoke-real-backend/
+        run: pnpm exec dotenv -e .env.test -- playwright test --project=desktop-chrome e2e/smoke-real-backend/

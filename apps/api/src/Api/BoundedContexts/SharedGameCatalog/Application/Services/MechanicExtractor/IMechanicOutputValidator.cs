@@ -21,14 +21,38 @@ public interface IMechanicOutputValidator
         CancellationToken cancellationToken);
 }
 
-/// <summary>Outcome of validation — either valid or a list of violations.</summary>
-public sealed record MechanicValidationResult(bool IsValid, IReadOnlyList<MechanicValidationViolation> Violations)
+/// <summary>Outcome of validation — either valid or a list of violations, PLUS the per-guardrail
+/// rule outcomes accumulated during the fail-fast pass (#2782 D1).</summary>
+public sealed record MechanicValidationResult(
+    bool IsValid,
+    IReadOnlyList<MechanicValidationViolation> Violations,
+    IReadOnlyList<MechanicRuleOutcome> RuleOutcomes)
 {
-    public static MechanicValidationResult Valid() => new(true, Array.Empty<MechanicValidationViolation>());
+    public static MechanicValidationResult Valid() =>
+        new(true, Array.Empty<MechanicValidationViolation>(), Array.Empty<MechanicRuleOutcome>());
+
+    public static MechanicValidationResult Valid(IReadOnlyList<MechanicRuleOutcome> ruleOutcomes) =>
+        new(true, Array.Empty<MechanicValidationViolation>(), ruleOutcomes);
 
     public static MechanicValidationResult Invalid(IReadOnlyList<MechanicValidationViolation> violations) =>
-        new(false, violations);
+        new(false, violations, Array.Empty<MechanicRuleOutcome>());
+
+    public static MechanicValidationResult Invalid(
+        IReadOnlyList<MechanicValidationViolation> violations,
+        IReadOnlyList<MechanicRuleOutcome> ruleOutcomes) =>
+        new(false, violations, ruleOutcomes);
 }
+
+/// <summary>One guardrail's outcome captured during the fail-fast pass (#2782 D1). Rule is the
+/// guardrail RuleFamily (T1/T2/T3a/T3b/T4). Outcome ∈ {pass,fail,notRun} — notRun = the guardrail
+/// was downstream of the first failing guardrail and never ran.</summary>
+public sealed record MechanicRuleOutcome(
+    string Rule,
+    string Outcome,
+    string? Message,
+    string? Path,
+    double? Score,
+    IReadOnlyList<MechanicValidationViolation> Violations);
 
 public sealed record MechanicValidationViolation(
     string Rule,

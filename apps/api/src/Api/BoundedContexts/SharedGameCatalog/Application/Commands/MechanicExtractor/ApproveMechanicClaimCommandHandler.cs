@@ -132,5 +132,5 @@ internal sealed class ApproveMechanicClaimCommandHandler
                     Quote: c.Quote,
                     DisplayOrder: c.DisplayOrder))
                 .ToList(),
-            Validations: MechanicClaimValidations.DerivePass());
+            Validations: MechanicClaimValidations.FromDomain(claim));
 }

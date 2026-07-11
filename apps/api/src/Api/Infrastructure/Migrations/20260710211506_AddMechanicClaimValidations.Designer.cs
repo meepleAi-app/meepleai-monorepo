@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -13,9 +14,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260710211506_AddMechanicClaimValidations")]
+    partial class AddMechanicClaimValidations
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -12234,7 +12237,7 @@ namespace Api.Infrastructure.Migrations
 
                             t.HasCheckConstraint("ck_mechanic_section_runs_section_range", "section BETWEEN 0 AND 5");
 
-                            t.HasCheckConstraint("ck_mechanic_section_runs_status_range", "status BETWEEN 0 AND 3");
+                            t.HasCheckConstraint("ck_mechanic_section_runs_status_range", "status BETWEEN 0 AND 2");
 
                             t.HasCheckConstraint("ck_mechanic_section_runs_tokens_non_negative", "prompt_tokens >= 0 AND completion_tokens >= 0 AND total_tokens >= 0");
                         });

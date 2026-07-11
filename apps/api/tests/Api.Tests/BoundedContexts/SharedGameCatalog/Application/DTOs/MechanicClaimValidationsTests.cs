@@ -10,11 +10,11 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.DTOs;
 public class MechanicClaimValidationsTests
 {
     [Fact]
-    public void DerivePass_ReturnsFourPassBadges_T1ToT4()
+    public void DeriveLegacyAllPassFallback_ReturnsFivePassBadges_T1ToT4WithT3Split()
     {
-        var validations = MechanicClaimValidations.DerivePass();
+        var validations = MechanicClaimValidations.DeriveLegacyAllPassFallback();
 
-        validations.Select(v => v.Rule).Should().Equal("T1", "T2", "T3", "T4");
+        validations.Select(v => v.Rule).Should().Equal("T1", "T2", "T3a", "T3b", "T4");
         validations.Should().OnlyContain(v => v.Outcome == "pass" && v.Message == null);
     }
 }

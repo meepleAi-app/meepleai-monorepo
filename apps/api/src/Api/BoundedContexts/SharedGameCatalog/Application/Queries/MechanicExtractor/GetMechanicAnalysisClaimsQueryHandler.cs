@@ -69,7 +69,7 @@ internal sealed class GetMechanicAnalysisClaimsQueryHandler
                         Quote: citation.Quote,
                         DisplayOrder: citation.DisplayOrder))
                     .ToList(),
-                Validations: MechanicClaimValidations.DerivePass()))
+                Validations: MechanicClaimValidations.FromEntity(c)))
             .ToList();
     }
 }

@@ -1,6 +1,9 @@
+using System.Text.Json;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Api.Infrastructure.Configurations.SharedGameCatalog;
 
@@ -54,6 +57,15 @@ internal sealed class MechanicClaimEntityConfiguration : IEntityTypeConfiguratio
         builder.Property(c => c.ReviewNote)
             .HasColumnName("review_note")
             .HasMaxLength(2000);
+
+        var validationsConverter = new ValueConverter<List<MechanicClaimValidation>?, string?>(
+            v => v == null ? null : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+            v => v == null ? null : JsonSerializer.Deserialize<List<MechanicClaimValidation>>(v, (JsonSerializerOptions?)null));
+
+        builder.Property(c => c.Validations)
+            .HasColumnName("validations")
+            .HasColumnType("jsonb")
+            .HasConversion(validationsConverter);
 
         builder.HasIndex(c => c.AnalysisId).HasDatabaseName("ix_mechanic_claims_analysis_id");
         builder.HasIndex(c => new { c.AnalysisId, c.Section, c.DisplayOrder })

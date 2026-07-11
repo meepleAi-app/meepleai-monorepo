@@ -23,6 +23,20 @@ internal sealed class GroundingGuardrail : IMechanicGuardrail
     public async Task<IReadOnlyList<MechanicValidationViolation>> EvaluateAsync(
         MechanicGuardrailContext context, CancellationToken cancellationToken)
     {
+        var (violations, _) = await EvaluateCoreAsync(context, cancellationToken).ConfigureAwait(false);
+        return violations;
+    }
+
+    public async Task<MechanicGuardrailResult> EvaluateDetailedAsync(
+        MechanicGuardrailContext context, CancellationToken cancellationToken)
+    {
+        var (violations, minCosine) = await EvaluateCoreAsync(context, cancellationToken).ConfigureAwait(false);
+        return new MechanicGuardrailResult(violations, minCosine);
+    }
+
+    private async Task<(IReadOnlyList<MechanicValidationViolation> Violations, double? MinCosine)> EvaluateCoreAsync(
+        MechanicGuardrailContext context, CancellationToken cancellationToken)
+    {
         var violations = new List<MechanicValidationViolation>();
         var targets = new List<(string claim, string path, MechanicSourceChunk chunk)>();
 
@@ -63,6 +77,7 @@ internal sealed class GroundingGuardrail : IMechanicGuardrail
             }
         });
 
+        double? minCosine = null;
         foreach (var (claim, path, chunk) in targets)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -71,6 +86,7 @@ internal sealed class GroundingGuardrail : IMechanicGuardrail
                 var a = await _embeddings.EmbedAsync(claim, cancellationToken).ConfigureAwait(false);
                 var b = await _embeddings.EmbedAsync(chunk.Content, cancellationToken).ConfigureAwait(false);
                 var cos = Cosine(a, b);
+                minCosine = minCosine is null ? cos : Math.Min(minCosine.Value, cos);
                 if (cos < context.Options.MinClaimGroundingSimilarity)
                 {
                     violations.Add(new MechanicValidationViolation(
@@ -94,7 +110,7 @@ internal sealed class GroundingGuardrail : IMechanicGuardrail
             }
         }
 
-        return violations;
+        return (violations, minCosine);
     }
 
     private static MechanicSourceChunk? ResolveChunk(JsonElement citation, IReadOnlyList<MechanicSourceChunk> pool)

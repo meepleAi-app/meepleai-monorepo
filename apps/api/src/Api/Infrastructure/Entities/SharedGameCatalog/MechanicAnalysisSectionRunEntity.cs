@@ -40,7 +40,7 @@ public class MechanicAnalysisSectionRunEntity
     /// <summary>Wall-clock duration of the LLM call in milliseconds.</summary>
     public int LatencyMs { get; set; }
 
-    /// <summary>0=Succeeded, 1=Failed, 2=SkippedDueToCostCap.</summary>
+    /// <summary>0=Succeeded, 1=Failed, 2=SkippedDueToCostCap, 3=RetainedWithGuardrailFlags (D9).</summary>
     public int Status { get; set; }
 
     /// <summary>Free-text error message when <see cref="Status"/> is Failed; null otherwise.</summary>

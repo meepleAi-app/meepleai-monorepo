@@ -49,18 +49,12 @@ const httpClient = new HttpClient();
 const adminClient = createAdminClient({ httpClient });
 
 /** Word threshold above which a citation quote is considered "long" (#526 ME-M1.4 AC-3, ADR-051 T1). */
-const LONG_QUOTE_WORDS = 20;
-
-function wordCount(s: string): number {
-  return s.trim().split(/\s+/).filter(Boolean).length;
+/** Claims carrying a real T2 (long-verbatim) guardrail FAIL (#2782 FU-1). */
+function claimsFailingT2(claims: MechanicClaimDto[]): MechanicClaimDto[] {
+  return claims.filter(c => c.validations.some(v => v.rule === 'T2' && v.outcome === 'fail'));
 }
 
-/** Claims whose citations include at least one quote longer than {@link LONG_QUOTE_WORDS} words. */
-function claimsWithLongQuote(claims: MechanicClaimDto[]): MechanicClaimDto[] {
-  return claims.filter(c => c.citations.some(cit => wordCount(cit.quote) > LONG_QUOTE_WORDS));
-}
-
-type BulkActionKind = 'approve-pending' | 'reject-long-quote';
+type BulkActionKind = 'approve-pending' | 'reject-all-failing-T2';
 
 const CLAIM_STATUS_BADGE_CLASS: Record<number, string> = {
   [MechanicClaimStatus.Pending]: 'bg-amber-100 text-amber-800 border-amber-300',
@@ -93,8 +87,12 @@ export function ValidationBadges({
           variant="outline"
           className={VALIDATION_BADGE_CLASS[v.outcome] ?? VALIDATION_BADGE_CLASS.notRun}
           data-testid={`claim-validation-badge-${v.rule}`}
-          aria-label={`${v.rule} ${v.outcome}${v.message ? `: ${v.message}` : ''}`}
-          title={v.message ?? `${v.rule} ${v.outcome}`}
+          aria-label={`${v.rule} ${v.outcome}${v.score != null ? ` score ${v.score.toFixed(2)}` : ''}${v.message ? `: ${v.message}` : ''}`}
+          title={
+            v.score != null
+              ? `${v.rule} ${v.outcome} (score ${v.score.toFixed(2)})`
+              : (v.message ?? `${v.rule} ${v.outcome}`)
+          }
         >
           {v.outcome === 'pass' ? '✓' : v.outcome === 'fail' ? '✗' : '—'} {v.rule}
         </Badge>
@@ -263,21 +261,21 @@ export function ClaimsSection({
     () => claims.filter(c => c.status === MechanicClaimStatus.Pending),
     [claims]
   );
-  const longQuoteClaims = useMemo(() => claimsWithLongQuote(claims), [claims]);
+  const failingT2Claims = useMemo(() => claimsFailingT2(claims), [claims]);
 
-  const bulkActionTargets = bulkAction === 'approve-pending' ? pendingClaims : longQuoteClaims;
+  const bulkActionTargets = bulkAction === 'approve-pending' ? pendingClaims : failingT2Claims;
   const bulkActionTitle =
     bulkAction === 'approve-pending'
       ? 'Approve all pending claims?'
-      : 'Reject claims with quote >20 words?';
+      : 'Reject claims that failed the T2 guardrail?';
 
   const handleBulkActionConfirm = () => {
     if (bulkAction === 'approve-pending') {
       bulkApproveMutation.mutate();
-    } else if (bulkAction === 'reject-long-quote') {
+    } else if (bulkAction === 'reject-all-failing-T2') {
       bulkRejectMutation.mutate({
         claimIds: bulkActionTargets.map(c => c.id),
-        reason: 'Citazione supera 20 parole (ADR-051 T1) — rifiuto bulk.',
+        reason: 'Claim ha fallito il guardrail T2 (long-verbatim) — rifiuto bulk (#2782).',
       });
     }
   };
@@ -355,8 +353,8 @@ export function ClaimsSection({
               <SelectItem value="approve-pending" disabled={pendingClaims.length === 0}>
                 Approve all pending ({pendingClaims.length})
               </SelectItem>
-              <SelectItem value="reject-long-quote" disabled={longQuoteClaims.length === 0}>
-                Reject all with quote &gt;20 words ({longQuoteClaims.length})
+              <SelectItem value="reject-all-failing-T2" disabled={failingT2Claims.length === 0}>
+                Reject all failing T2 ({failingT2Claims.length})
               </SelectItem>
             </SelectContent>
           </Select>
@@ -409,6 +407,7 @@ export function ClaimsSection({
         }}
         isPending={approveMutation.isPending}
         claimPreview={approveTarget ? truncate(approveTarget.text, 120) : undefined}
+        validations={approveTarget?.validations}
       />
 
       <RejectClaimDialog

@@ -92,9 +92,14 @@ Validations = c.Validations
 
 ### 3. JSON key casing is frozen
 
-- **Review side**: `MechanicClaimValidation` serializes with the domain record's default
-  (camelCase) property casing — `{rule, outcome, message, score}` — matching
-  `MechanicClaimValidationDto`.
+- **Review side (persisted jsonb)**: the `mechanic_claims.validations` value converter serializes
+  `MechanicClaimValidation` with `JsonSerializer` **default options**, i.e. the domain record's
+  PascalCase property names — `{Rule, Outcome, Message, Score}`. Write and read use the same
+  default options, so the round-trip is internally consistent (proven by the Testcontainers
+  round-trip test). This on-disk casing is an internal storage detail — it never reaches the
+  client, because the API returns the separate `MechanicClaimValidationDto` record, which the
+  global API JSON policy serializes to camelCase (`{rule, outcome, message, score}`) for the FE
+  Zod schema.
 - **Card side**: `MechanicCardValidationSnapshot` uses explicit `[JsonPropertyName]` snake_case —
   `{rule, passed, score}` — matching every other field in `MechanicCardContent` (`schema_version`,
   `snapshot_at`, `source_analysis_id`, etc.), which is on-disk JSONB per ADR-051.

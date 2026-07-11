@@ -226,8 +226,14 @@ const nextConfig = {
       // sub-route redirects above (they map specific tab paths) but do not
       // add a catch-all here — rely on the explicit list to avoid the
       // aiChat regression that motivated #1004.
-      { source: '/library/wishlist', destination: '/library?tab=wishlist', permanent: true },
-      { source: '/library/private', destination: '/library?tab=private', permanent: true },
+      // Happy-path testing (2026-07-11): removed the legacy `/library/wishlist`
+      // → `?tab=wishlist` and `/library/private` → `?tab=private` redirects. Those
+      // hub tabs were retired (see `library/_content.tsx`) but the redirects
+      // survived and — since Next redirects take precedence over page routing —
+      // shadowed the standalone pages `library/wishlist/page.tsx` ("My Wishlist")
+      // and `library/private/page.tsx` (PrivateGamesClient), leaving both routes
+      // unreachable (they landed on the hub "Tutti" tab). Those pages are the
+      // canonical destinations and nav links (`contextual-tabs.ts`) point to them.
       { source: '/library/proposals', destination: '/discover?tab=proposals', permanent: true },
       { source: '/library/propose', destination: '/discover/propose', permanent: true },
 

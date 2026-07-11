@@ -7,3 +7,9 @@
 
 export { MechanicCardView } from '@/components/features/mechanic-card/MechanicCardView';
 export type { MechanicCardViewProps } from '@/components/features/mechanic-card/MechanicCardView';
+
+export { MechanicCitationBadge } from '@/components/features/mechanic-card/MechanicCitationBadge';
+export type { MechanicCitationBadgeProps } from '@/components/features/mechanic-card/MechanicCitationBadge';
+
+export { MechanicCitationPanel } from '@/components/features/mechanic-card/MechanicCitationPanel';
+export type { MechanicCitationPanelProps } from '@/components/features/mechanic-card/MechanicCitationPanel';

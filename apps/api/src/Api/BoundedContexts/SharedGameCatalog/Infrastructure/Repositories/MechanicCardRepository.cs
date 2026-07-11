@@ -3,6 +3,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure;
@@ -69,6 +70,30 @@ internal sealed class MechanicCardRepository : RepositoryBase, IMechanicCardRepo
             .ConfigureAwait(false);
 
         return entity is null ? null : MapToDomain(entity);
+    }
+
+    public async Task<MechanicCardApaContext> GetApaContextAsync(
+        Guid sharedGameId, Guid pdfDocumentId, CancellationToken cancellationToken = default)
+    {
+        var year = await DbContext.SharedGames
+            .AsNoTracking()
+            .Where(g => g.Id == sharedGameId)
+            .Select(g => (int?)g.YearPublished)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        string? documentName = null;
+        if (pdfDocumentId != Guid.Empty)
+        {
+            documentName = await DbContext.Set<PdfDocumentEntity>()
+                .AsNoTracking()
+                .Where(p => p.Id == pdfDocumentId)
+                .Select(p => p.Title ?? p.FileName)
+                .FirstOrDefaultAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return new MechanicCardApaContext(year, documentName);
     }
 
     // === Mapping ===

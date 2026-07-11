@@ -67,6 +67,16 @@ internal sealed class GetPublishedMechanicCardByGameQueryHandler
                     .ToList()))
             .ToList();
 
+        // #530: every citation shares the origin analysis' PdfDocumentId, so the first one identifies
+        // the source PDF for the APA "copy citation" document name.
+        var pdfDocumentId = content.Claims
+            .SelectMany(c => c.Citations)
+            .Select(cit => cit.PdfId)
+            .FirstOrDefault();
+
+        var apa = await _cards.GetApaContextAsync(request.SharedGameId, pdfDocumentId, cancellationToken)
+            .ConfigureAwait(false);
+
         return new PublishedMechanicCardDto(
             CardId: card.Id,
             SharedGameId: card.SharedGameId,
@@ -76,7 +86,10 @@ internal sealed class GetPublishedMechanicCardByGameQueryHandler
             GameName: content.Metadata.SharedGameName,
             Publisher: content.Metadata.Publisher,
             Language: content.Metadata.Language,
-            Sections: sections);
+            Sections: sections,
+            SourceAnalysisId: content.SourceAnalysisId,
+            PublicationYear: apa.PublicationYear,
+            DocumentName: apa.DocumentName);
     }
 
     // Unknown section names sort last (defensive; the snapshot only writes enum names).

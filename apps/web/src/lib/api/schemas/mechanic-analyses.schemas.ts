@@ -238,6 +238,7 @@ export const MechanicClaimValidationDtoSchema = z.object({
   rule: z.string(),
   outcome: z.enum(['pass', 'fail', 'notRun']),
   message: z.string().nullable().optional(),
+  score: z.number().nullable().optional(),
 });
 export type MechanicClaimValidationDto = z.infer<typeof MechanicClaimValidationDtoSchema>;
 

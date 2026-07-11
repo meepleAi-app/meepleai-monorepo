@@ -16,7 +16,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExt
 /// <summary>
 /// Handler for <see cref="PublishMechanicCardCommand"/> (#527). Snapshots an approved analysis into a
 /// new <c>MechanicCard</c>, links the analysis (<c>PublishedCardId</c>), and writes an audit-log row —
-/// all in the same transaction (AC-4 atomicity). Conflicts F1–F5/F9 surface as
+/// all in the same transaction (AC-4 atomicity). Conflicts F1–F7/F9 surface as
 /// <see cref="ConflictException"/> (409); a missing analysis is 404.
 /// </summary>
 internal sealed class PublishMechanicCardCommandHandler

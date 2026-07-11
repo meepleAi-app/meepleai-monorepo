@@ -569,6 +569,7 @@ public sealed class AdminMechanicExtractorValidationEndpointsTests : IAsyncLifet
         var claim = new MechanicGoldenClaimEntity
         {
             Id = claimId,
+            SharedGameId = sharedGameId, // FK_mechanic_golden_claims_shared_games_shared_game_id (#2785: param was dropped)
             Section = (int)MechanicSection.Mechanics,
             Statement = "Each player begins with five resource tokens.",
             ExpectedPage = 3,

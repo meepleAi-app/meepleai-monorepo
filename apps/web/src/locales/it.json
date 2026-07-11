@@ -902,6 +902,55 @@
         }
       }
     },
+    "takedown": {
+      "title": "Richiesta di rimozione (Takedown)",
+      "description": "Come segnalare un contenuto che ritieni violi il tuo diritto d'autore e come gestiamo la richiesta.",
+      "sections": {
+        "overview": {
+          "title": "1. Panoramica",
+          "content": "MeepleAI rispetta il diritto d'autore. Le schede meccaniche pubblicate sono analisi generate dall'AI a partire dai manuali di gioco: ogni affermazione è riformulata in parole originali e cita la pagina del regolamento. Il copyright del testo originale del manuale resta degli editori.\n\nSe ritieni che una scheda pubblicata riproduca il tuo materiale protetto oltre quanto consentito, puoi chiederne la rimozione o la sospensione tramite questa pagina. La richiesta viene esaminata da una persona; non è un processo automatico."
+        },
+        "whoCanFile": {
+          "title": "2. Chi può inviare una richiesta",
+          "content": "Può inviare una richiesta di rimozione il titolare del diritto d'autore (ad esempio l'editore o l'autore del regolamento) oppure un suo rappresentante autorizzato ad agire per suo conto.\n\nPer permetterci di verificare e ricontattarti, indica il tuo nome completo, un indirizzo email valido e, se agisci per conto di terzi, il soggetto che rappresenti."
+        },
+        "whatToInclude": {
+          "title": "3. Cosa includere nella richiesta",
+          "content": "Per gestire la richiesta rapidamente, includi:\n\n- L'opera protetta interessata (titolo del regolamento o del manuale).\n- L'URL esatto della scheda contestata (la pagina `/games/{id}/card`).\n- Una descrizione di quale contenuto ritieni problematico e perché.\n- Una dichiarazione in buona fede che l'uso contestato non è autorizzato dal titolare del diritto, dal suo rappresentante o dalla legge.\n- La conferma che le informazioni fornite sono accurate.\n\nIl modulo qui sotto compone automaticamente questi elementi in una email precompilata."
+        },
+        "howWeRespond": {
+          "title": "4. Come rispondiamo",
+          "content": "Confermiamo la ricezione della tua richiesta entro **3 giorni lavorativi**. Valutiamo la segnalazione e, quando accolta, sospendiamo o rimuoviamo la scheda interessata entro **10 giorni lavorativi** dalla ricezione.\n\nUna scheda sospesa non è più accessibile pubblicamente. Ti aggiorneremo via email sull'esito. Possiamo chiederti informazioni aggiuntive se necessarie per completare la verifica."
+        },
+        "contact": {
+          "title": "5. Contatti",
+          "content": "Le richieste di rimozione vanno inviate a: **takedown@meepleai.app**\n\nPuoi usare il modulo in fondo a questa pagina per comporre una email precompilata, oppure scrivere direttamente all'indirizzo indicando le informazioni elencate sopra."
+        }
+      },
+      "form": {
+        "heading": "Modulo di richiesta di rimozione",
+        "intro": "Compila i campi per generare una email precompilata verso takedown@meepleai.app. Nessun dato viene inviato ai nostri server da questa pagina.",
+        "nameLabel": "Nome completo",
+        "namePlaceholder": "Mario Rossi",
+        "emailLabel": "Email",
+        "emailPlaceholder": "tu@esempio.com",
+        "workLabel": "Opera protetta / titolo del regolamento",
+        "workPlaceholder": "Es. Catan — Regolamento base",
+        "cardUrlLabel": "URL della scheda contestata",
+        "cardUrlPlaceholder": "https://meepleai.com/games/.../card",
+        "descriptionLabel": "Descrizione del problema",
+        "descriptionPlaceholder": "Descrivi quale contenuto ritieni violi il tuo diritto d'autore e perché.",
+        "confirmLabel": "Dichiaro in buona fede che l'uso contestato non è autorizzato e che le informazioni fornite sono accurate.",
+        "submit": "Apri email precompilata",
+        "copy": "Copia richiesta negli appunti",
+        "copied": "Copiato!",
+        "requiredError": "Questo campo è obbligatorio.",
+        "emailInvalidError": "Inserisci un indirizzo email valido.",
+        "confirmError": "Devi confermare la dichiarazione per procedere.",
+        "errorSummary": "Correggi i campi evidenziati prima di procedere.",
+        "mailSubject": "Richiesta di rimozione — {work}"
+      }
+    },
     "privacy": {
       "title": "Informativa sulla Privacy",
       "description": "Come raccogliamo, utilizziamo e proteggiamo i tuoi dati personali",

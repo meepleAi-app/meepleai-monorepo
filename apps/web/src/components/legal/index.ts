@@ -1,5 +1,6 @@
 export { LegalPageLayout } from './LegalPageLayout';
 export { LegalMarkdown } from './LegalMarkdown';
+export { TakedownRequestForm, TAKEDOWN_EMAIL, buildTakedownBody } from './TakedownRequestForm';
 export { LegalLocaleToggle, LegalLocaleProvider, useLegalLocale } from './LegalLocaleToggle';
 export { CookieConsentBanner, useCookieConsent } from './CookieConsentBanner';
 export type { CookieConsent } from './CookieConsentBanner';

@@ -96,8 +96,9 @@ public sealed class MechanicCard : AggregateRoot<Guid>
             throw new ArgumentOutOfRangeException(nameof(version), version, "Version must be >= 1.");
         }
 
-        // Defense in depth: the handler already guards these, but the factory re-checks so the
-        // aggregate can never be constructed from a non-publishable analysis.
+        // Defense in depth: the PublishMechanicCardCommandHandler already guards all four of these
+        // (status, published-card, no-claims, not-all-approved — #2783), but the factory re-checks so
+        // the aggregate can never be constructed from a non-publishable analysis (e.g. a direct caller).
         if (analysis.Status != MechanicAnalysisStatus.Published)
         {
             throw new InvalidOperationException(

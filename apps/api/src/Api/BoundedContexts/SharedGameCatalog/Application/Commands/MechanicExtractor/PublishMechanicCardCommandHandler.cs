@@ -16,7 +16,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExt
 /// <summary>
 /// Handler for <see cref="PublishMechanicCardCommand"/> (#527). Snapshots an approved analysis into a
 /// new <c>MechanicCard</c>, links the analysis (<c>PublishedCardId</c>), and writes an audit-log row —
-/// all in the same transaction (AC-4 atomicity). Conflicts F1–F5/F9 surface as
+/// all in the same transaction (AC-4 atomicity). Conflicts F1–F7/F9 surface as
 /// <see cref="ConflictException"/> (409); a missing analysis is 404.
 /// </summary>
 internal sealed class PublishMechanicCardCommandHandler
@@ -78,6 +78,24 @@ internal sealed class PublishMechanicCardCommandHandler
                 analysis.Id, analysis.PublishedCardId, "already_published");
             throw new ConflictException(
                 $"Already published as card {analysis.PublishedCardId}. To revise, suppress current and republish.");
+        }
+
+        // F6 — no claims to publish (defense-in-depth; Approve already guarantees ≥1 claim before Published).
+        if (analysis.Claims.Count == 0)
+        {
+            _logger.LogWarning(
+                "Publish rejected for analysis {AnalysisId}: no claims (ConflictReason={ConflictReason}).",
+                analysis.Id, "no_claims");
+            throw new ConflictException("Analysis has no claims to publish.");
+        }
+
+        // F7 — not every claim is Approved (defense-in-depth; Approve already enforces this before Published).
+        if (analysis.Claims.Any(c => c.Status != MechanicClaimStatus.Approved))
+        {
+            _logger.LogWarning(
+                "Publish rejected for analysis {AnalysisId}: not all claims Approved (ConflictReason={ConflictReason}).",
+                analysis.Id, "claims_not_approved");
+            throw new ConflictException("All claims must be Approved before publishing.");
         }
 
         var game = await _sharedGameRepository.GetByIdAsync(analysis.SharedGameId, cancellationToken).ConfigureAwait(false);

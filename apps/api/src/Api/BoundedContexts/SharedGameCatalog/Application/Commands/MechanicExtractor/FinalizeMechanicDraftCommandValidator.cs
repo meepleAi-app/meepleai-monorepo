@@ -3,11 +3,11 @@ using FluentValidation;
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExtractor;
 
 /// <summary>
-/// Validator for FinalizeMechanicAnalysisCommand.
+/// Validator for FinalizeMechanicDraftCommand.
 /// </summary>
-internal sealed class FinalizeMechanicAnalysisCommandValidator : AbstractValidator<FinalizeMechanicAnalysisCommand>
+internal sealed class FinalizeMechanicDraftCommandValidator : AbstractValidator<FinalizeMechanicDraftCommand>
 {
-    public FinalizeMechanicAnalysisCommandValidator()
+    public FinalizeMechanicDraftCommandValidator()
     {
         RuleFor(x => x.DraftId)
             .NotEmpty()

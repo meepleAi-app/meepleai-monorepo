@@ -10,11 +10,13 @@ using Api.SharedKernel.Infrastructure.Persistence;
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExtractor;
 
 /// <summary>
-/// Handler for finalizing a mechanic draft into a RulebookAnalysis entry.
-/// Parses the accepted JSON drafts and creates a RulebookAnalysis.CreateManual().
+/// Handler for finalizing a Variant-C <c>MechanicDraft</c> into a <c>RulebookAnalysis</c>.
+/// Parses the accepted per-section JSON drafts and creates the analysis via
+/// <c>RulebookAnalysis.CreateManual()</c> (copyright-compliant Variant-C path). Not the AI-first
+/// <c>MechanicAnalysis</c> aggregate (#2783).
 /// </summary>
-internal sealed class FinalizeMechanicAnalysisCommandHandler
-    : ICommandHandler<FinalizeMechanicAnalysisCommand, RulebookAnalysisDto>
+internal sealed class FinalizeMechanicDraftCommandHandler
+    : ICommandHandler<FinalizeMechanicDraftCommand, RulebookAnalysisDto>
 {
     private static readonly JsonSerializerOptions CaseInsensitiveOptions = new()
     {
@@ -24,13 +26,13 @@ internal sealed class FinalizeMechanicAnalysisCommandHandler
     private readonly IMechanicDraftRepository _draftRepository;
     private readonly IRulebookAnalysisRepository _analysisRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<FinalizeMechanicAnalysisCommandHandler> _logger;
+    private readonly ILogger<FinalizeMechanicDraftCommandHandler> _logger;
 
-    public FinalizeMechanicAnalysisCommandHandler(
+    public FinalizeMechanicDraftCommandHandler(
         IMechanicDraftRepository draftRepository,
         IRulebookAnalysisRepository analysisRepository,
         IUnitOfWork unitOfWork,
-        ILogger<FinalizeMechanicAnalysisCommandHandler> logger)
+        ILogger<FinalizeMechanicDraftCommandHandler> logger)
     {
         _draftRepository = draftRepository ?? throw new ArgumentNullException(nameof(draftRepository));
         _analysisRepository = analysisRepository ?? throw new ArgumentNullException(nameof(analysisRepository));
@@ -39,7 +41,7 @@ internal sealed class FinalizeMechanicAnalysisCommandHandler
     }
 
     public async Task<RulebookAnalysisDto> Handle(
-        FinalizeMechanicAnalysisCommand request,
+        FinalizeMechanicDraftCommand request,
         CancellationToken cancellationToken)
     {
         var draft = await _draftRepository.GetByIdAsync(request.DraftId, cancellationToken)

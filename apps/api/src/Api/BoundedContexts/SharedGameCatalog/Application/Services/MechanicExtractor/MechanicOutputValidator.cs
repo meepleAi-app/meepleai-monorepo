@@ -60,7 +60,8 @@ internal sealed class MechanicOutputValidator : IMechanicOutputValidator
                 Message: first?.Message,
                 Path: first?.Path,
                 Score: detailed.Score,
-                Violations: violations));
+                Violations: violations,
+                ClaimScores: detailed.ClaimScores));
 
             if (violations.Count > 0)
             {

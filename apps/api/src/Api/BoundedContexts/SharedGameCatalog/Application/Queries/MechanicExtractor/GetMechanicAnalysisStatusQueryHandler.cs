@@ -46,6 +46,17 @@ internal sealed class GetMechanicAnalysisStatusQueryHandler
             .CountAsync(c => c.AnalysisId == request.AnalysisId, cancellationToken)
             .ConfigureAwait(false);
 
+        // #2807: distinct sections that produced >=1 claim, so the reviewer can see "N/6 sections
+        // produced claims" and notice a section silently dropped (e.g. never well_formed).
+        var sectionsWithClaims = await _dbContext.MechanicClaims
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(c => c.AnalysisId == request.AnalysisId)
+            .Select(c => c.Section)
+            .Distinct()
+            .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
+
         var sectionRunEntities = await _dbContext.MechanicAnalysisSectionRuns
             .AsNoTracking()
             .Where(r => r.AnalysisId == request.AnalysisId)
@@ -80,7 +91,9 @@ internal sealed class GetMechanicAnalysisStatusQueryHandler
             SuppressedBy: analysis.SuppressedBy,
             SuppressionReason: analysis.SuppressionReason,
             ClaimsCount: claimsCount,
-            SectionRuns: sectionRuns);
+            SectionRuns: sectionRuns,
+            SectionsWithClaims: sectionsWithClaims,
+            TotalSections: Enum.GetValues<MechanicSection>().Length);
     }
 
     private static MechanicSectionRunSummaryDto MapSectionRun(MechanicAnalysisSectionRunEntity entity) =>

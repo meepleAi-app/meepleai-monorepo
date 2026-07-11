@@ -52,7 +52,11 @@ public sealed record MechanicRuleOutcome(
     string? Message,
     string? Path,
     double? Score,
-    IReadOnlyList<MechanicValidationViolation> Violations);
+    IReadOnlyList<MechanicValidationViolation> Violations,
+    // #2811: per-claim grounding cosine keyed by the claim object's JSONPath (T3b only; null
+    // otherwise). CorrelateValidations attaches each claim's own score from here instead of the
+    // section-wide min carried by Score.
+    IReadOnlyDictionary<string, double>? ClaimScores = null);
 
 public sealed record MechanicValidationViolation(
     string Rule,

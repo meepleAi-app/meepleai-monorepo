@@ -80,6 +80,24 @@ internal sealed class PublishMechanicCardCommandHandler
                 $"Already published as card {analysis.PublishedCardId}. To revise, suppress current and republish.");
         }
 
+        // F6 — no claims to publish (defense-in-depth; Approve already guarantees ≥1 claim before Published).
+        if (analysis.Claims.Count == 0)
+        {
+            _logger.LogWarning(
+                "Publish rejected for analysis {AnalysisId}: no claims (ConflictReason={ConflictReason}).",
+                analysis.Id, "no_claims");
+            throw new ConflictException("Analysis has no claims to publish.");
+        }
+
+        // F7 — not every claim is Approved (defense-in-depth; Approve already enforces this before Published).
+        if (analysis.Claims.Any(c => c.Status != MechanicClaimStatus.Approved))
+        {
+            _logger.LogWarning(
+                "Publish rejected for analysis {AnalysisId}: not all claims Approved (ConflictReason={ConflictReason}).",
+                analysis.Id, "claims_not_approved");
+            throw new ConflictException("All claims must be Approved before publishing.");
+        }
+
         var game = await _sharedGameRepository.GetByIdAsync(analysis.SharedGameId, cancellationToken).ConfigureAwait(false);
         if (game is null)
         {

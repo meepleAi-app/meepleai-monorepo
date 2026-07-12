@@ -109,6 +109,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         href: '/admin/knowledge-base/mechanic-extractor/analyses',
         icon: Wrench,
       },
+      // #532 ME-M2.3: operational metrics dashboard (cost / review-time / approval-rate).
+      {
+        label: 'Mechanic Metrics',
+        href: '/admin/knowledge-base/mechanic-extractor/metrics',
+        icon: BarChart2,
+      },
       // #537 ME-M4.2: the deprecated Variant C editor menu entry is hidden by default,
       // shown only when NEXT_PUBLIC_SHOW_LEGACY_MECHANIC_EXTRACTOR=true (staging/debug override).
       ...(isLegacyMechanicExtractorEnabled()

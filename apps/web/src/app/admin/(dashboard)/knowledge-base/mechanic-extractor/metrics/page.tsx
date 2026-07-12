@@ -5,6 +5,7 @@ import type { JSX } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
 import { CheckCircle2, Clock, DollarSign, ListChecks } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { MechanicCostChart } from '@/components/admin/mechanic-extractor/metrics/MechanicCostChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
@@ -51,6 +52,7 @@ export default function MechanicMetricsPage(): JSX.Element {
   const [reviewerId, setReviewerId] = useState<string | undefined>();
   const [status, setStatus] = useState<number | undefined>();
   const [offset, setOffset] = useState(0);
+  const [isExporting, setIsExporting] = useState(false);
 
   const startDate = useMemo(() => {
     const d = new Date();
@@ -83,7 +85,10 @@ export default function MechanicMetricsPage(): JSX.Element {
     staleTime: 30_000,
   });
 
-  // Filter dropdown options: distinct games/reviewers across a broad unfiltered fetch.
+  // Filter dropdown options: distinct games/reviewers derived from the 200 most-recent analyses.
+  // KNOWN LIMITATION (#532 follow-up): games/reviewers whose analyses all fall outside this window
+  // won't appear as filter options once volume exceeds 200 rows. A dedicated DISTINCT endpoint is the
+  // proper fix — deferred; the summary/recent/export results themselves are NOT capped by this.
   const optionsQuery = useQuery({
     queryKey: ['me-metrics', 'filter-options'],
     queryFn: () => adminClient.getMechanicRecentAnalyses({ limit: 200 }),
@@ -116,20 +121,28 @@ export default function MechanicMetricsPage(): JSX.Element {
   const recent = recentQuery.data;
 
   const handleExport = async () => {
-    const blob = await adminClient.exportMechanicAnalysesCsv({
-      gameId,
-      reviewerId,
-      status,
-      startDate,
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'mechanic-analyses.csv';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      const blob = await adminClient.exportMechanicAnalysesCsv({
+        gameId,
+        reviewerId,
+        status,
+        startDate,
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'mechanic-analyses.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Esportazione CSV fallita. Riprova.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -154,8 +167,14 @@ export default function MechanicMetricsPage(): JSX.Element {
               {p}g
             </Button>
           ))}
-          <Button size="sm" variant="outline" onClick={handleExport} data-testid="export-csv">
-            Export CSV
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleExport}
+            disabled={isExporting}
+            data-testid="export-csv"
+          >
+            {isExporting ? 'Esporto…' : 'Export CSV'}
           </Button>
         </div>
       </div>

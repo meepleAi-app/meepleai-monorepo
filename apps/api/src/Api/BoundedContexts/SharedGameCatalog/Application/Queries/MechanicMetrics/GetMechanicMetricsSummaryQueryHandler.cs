@@ -50,7 +50,7 @@ internal sealed class GetMechanicMetricsSummaryQueryHandler
         // Materialize the minimal projection for the filtered set — mechanic analyses are modest in
         // volume, and review-time (TimeSpan.TotalHours) + rejection-reason grouping are cleanest in memory.
         var rows = await query
-            .Select(a => new Row(a.Status, a.EstimatedCostUsd, a.CreatedAt, a.ReviewedAt, a.RejectionReason))
+            .Select(a => new Row(a.Status, a.EstimatedCostUsd, a.CreatedAt, a.ReviewedAt, a.RejectionReason, a.CreatedBy, a.ReviewedBy))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -61,9 +61,18 @@ internal sealed class GetMechanicMetricsSummaryQueryHandler
         var totalCost = rows.Sum(r => r.Cost);
         var averageCost = total > 0 ? totalCost / total : 0m;
 
-        var reviewed = rows.Where(r => r.ReviewedAt.HasValue).ToList();
-        double? averageReviewHours = reviewed.Count > 0
-            ? reviewed.Average(r => (r.ReviewedAt!.Value - r.CreatedAt).TotalHours)
+        // Review time reflects HUMAN review throughput only. System auto-transitions
+        // (AutoRejectFromDraft, MarkAsPartiallyExtracted) stamp ReviewedAt≈CreatedAt in the same
+        // pipeline run using the analysis' own CreatedBy as actor, so they'd drag the average toward
+        // zero. Include only terminal human decisions (Published/Rejected) reviewed by someone other
+        // than the creator (Partial=4 is always a system transition, so it's excluded by status).
+        var humanReviewed = rows
+            .Where(r => r.ReviewedAt.HasValue
+                && r.Status is StatusPublished or StatusRejected
+                && r.ReviewedBy.HasValue && r.ReviewedBy.Value != r.CreatedBy)
+            .ToList();
+        double? averageReviewHours = humanReviewed.Count > 0
+            ? humanReviewed.Average(r => (r.ReviewedAt!.Value - r.CreatedAt).TotalHours)
             : null;
 
         // Approval rate over reviewed terminal states (Published vs Rejected/Partial).
@@ -83,5 +92,7 @@ internal sealed class GetMechanicMetricsSummaryQueryHandler
             averageCost, averageReviewHours, approvalRate, rejectionBreakdown);
     }
 
-    private sealed record Row(int Status, decimal Cost, DateTime CreatedAt, DateTime? ReviewedAt, string? RejectionReason);
+    private sealed record Row(
+        int Status, decimal Cost, DateTime CreatedAt, DateTime? ReviewedAt, string? RejectionReason,
+        Guid CreatedBy, Guid? ReviewedBy);
 }

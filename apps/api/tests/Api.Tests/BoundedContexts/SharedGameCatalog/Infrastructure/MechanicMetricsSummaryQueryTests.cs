@@ -76,6 +76,27 @@ public sealed class MechanicMetricsSummaryQueryTests : IAsyncLifetime
         MechanicMetricsSummaryDtoAsserts(await RunAsync(new GetMechanicMetricsSummaryQuery()));
     }
 
+    [Fact]
+    public async Task ReviewTime_ExcludesSystemAutoTransitions()
+    {
+        var now = DateTime.UtcNow;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var humanGame = await MechanicMetricsSeed.GameAsync(scope, _userId, "HumanReviewed");
+            var systemGame = await MechanicMetricsSeed.GameAsync(scope, _userId, "AutoRejected");
+            // Human-approved: reviewed by a different admin, 4h elapsed → counts.
+            await MechanicMetricsSeed.AnalysisAsync(scope, humanGame, _userId, status: 2, costUsd: 1.00m,
+                createdAt: now.AddHours(-4), reviewedAt: now, reviewedBy: _reviewerId);
+            // System auto-reject: ReviewedBy == CreatedBy, ReviewedAt≈CreatedAt → must be excluded.
+            await MechanicMetricsSeed.AnalysisAsync(scope, systemGame, _userId, status: 3, costUsd: 0.10m,
+                createdAt: now.AddMinutes(-1), reviewedAt: now, reviewedBy: _userId, rejectionReason: "llm_generation_failed");
+        }
+
+        var dto = await RunAsync(new GetMechanicMetricsSummaryQuery());
+        dto.AverageReviewTimeHours.Should().NotBeNull();
+        dto.AverageReviewTimeHours!.Value.Should().BeApproximately(4.0, 0.05); // only the human-reviewed 4h row
+    }
+
     private static void MechanicMetricsSummaryDtoAsserts(
         Api.BoundedContexts.SharedGameCatalog.Application.DTOs.MechanicMetricsSummaryDto dto)
     {

@@ -12,6 +12,8 @@
 
 'use client';
 
+import '@/components/agent/agent-theme-styles';
+
 import { useState } from 'react';
 
 import { Lock, Sparkles, Zap, Clock, Headphones, X } from 'lucide-react';

@@ -345,12 +345,12 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
      * @returns Created game ID
      */
     async create(request: CreateSharedGameRequest): Promise<string> {
-      const result = await httpClient.post<CreatedResponse>(
-        '/api/v1/admin/shared-games',
-        request,
-        CreatedResponseSchema
-      );
-      return result.id;
+      // Issue #2845/#HH (leg 1): POST /admin/shared-games returns a BARE Guid
+      // string (`.Produces<Guid>`), not an object. Validating with
+      // CreatedResponseSchema ({ id }) made the FE reject a successful 201
+      // ("Schema validation failed") → no redirect + duplicate creations.
+      // Validate the bare id string instead.
+      return httpClient.post<string>('/api/v1/admin/shared-games', request, z.string().uuid());
     },
 
     /**

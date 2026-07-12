@@ -80,6 +80,28 @@ public sealed class RunMechanicCardAutoSuppressionHandlerTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task TwoBreachingCards_BothSuppressed_AcrossLoopIterations()
+    {
+        Guid cardA, cardB;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            cardA = await MechanicCardAutoSuppressionSeed.CardWithFeedbackAsync(scope, _userId, negatives: 5, positives: 0);
+            cardB = await MechanicCardAutoSuppressionSeed.CardWithFeedbackAsync(scope, _userId, negatives: 6, positives: 1);
+        }
+
+        var result = await RunAsync();
+
+        result.Suppressed.Should().Be(2);
+        using var read = _factory.Services.CreateScope();
+        var db = read.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var suppressed = await db.MechanicCards.IgnoreQueryFilters().AsNoTracking()
+            .Where(c => c.Id == cardA || c.Id == cardB).ToListAsync();
+        suppressed.Should().OnlyContain(c => c.IsSuppressed);
+        // Each suppression writes exactly one audit row — no cross-iteration event/tracker leakage.
+        (await db.MechanicCardAuditLog.CountAsync(a => a.CardId == cardA || a.CardId == cardB)).Should().Be(2);
+    }
+
+    [Fact]
     public async Task HighScore_Card_IsNotSuppressed_ButCountersUpdated()
     {
         Guid cardId;

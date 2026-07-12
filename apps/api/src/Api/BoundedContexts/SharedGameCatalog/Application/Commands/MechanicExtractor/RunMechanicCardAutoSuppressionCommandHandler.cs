@@ -3,8 +3,10 @@ using System.Text.Json;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Infrastructure;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +29,8 @@ internal sealed class RunMechanicCardAutoSuppressionCommandHandler
     private readonly IMechanicCardRepository _cardRepository;
     private readonly IConfigurationService _configuration;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly MeepleAiDbContext _dbContext;
+    private readonly IDomainEventCollector _eventCollector;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<RunMechanicCardAutoSuppressionCommandHandler> _logger;
 
@@ -34,12 +38,16 @@ internal sealed class RunMechanicCardAutoSuppressionCommandHandler
         IMechanicCardRepository cardRepository,
         IConfigurationService configuration,
         IUnitOfWork unitOfWork,
+        MeepleAiDbContext dbContext,
+        IDomainEventCollector eventCollector,
         TimeProvider timeProvider,
         ILogger<RunMechanicCardAutoSuppressionCommandHandler> logger)
     {
         _cardRepository = cardRepository;
         _configuration = configuration;
         _unitOfWork = unitOfWork;
+        _dbContext = dbContext;
+        _eventCollector = eventCollector;
         _timeProvider = timeProvider;
         _logger = logger;
     }
@@ -72,6 +80,14 @@ internal sealed class RunMechanicCardAutoSuppressionCommandHandler
 
         foreach (var agg in aggregates)
         {
+            // Each card is its own unit of work sharing one scoped DbContext + event collector. Reset both
+            // at the top of every iteration so a prior card's failed SaveChanges (a swallowed concurrency
+            // conflict below) can't leave a stale Modified entity or an uncleared domain event that the
+            // next card's save would replay — the loop-per-item + shared-context convention used across
+            // the seeders / outbox processors in this codebase.
+            _dbContext.ChangeTracker.Clear();
+            _eventCollector.Clear();
+
             var total = agg.NegativeCount + agg.PositiveCount;
             decimal? score = total > 0 ? (decimal)agg.PositiveCount / total : null;
 

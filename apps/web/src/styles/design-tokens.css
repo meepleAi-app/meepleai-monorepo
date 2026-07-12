@@ -360,15 +360,6 @@
     --color-entity-event: 350 89% 60%;    /* Rose */
     --color-entity-tool: 195 80% 50%;     /* Sky Blue — Epic #412 */
 
-    /* Short aliases for v2 mockup compatibility (direct values, not var()) */
-    --c-game: 25 95% 45%;
-    --c-player: 262 83% 58%;
-    --c-session: 240 60% 55%;
-    --c-agent: 38 92% 50%;
-    --c-kb: 210 40% 55%;
-    --c-chat: 220 80% 55%;
-    --c-event: 350 89% 60%;
-
     /* ============================================================================
      * V2 Entity & Semantic Colors (Issue #572 — V2 Phase 0)
      * Aligned with admin-mockups/design_files/tokens.css (design system source of truth).

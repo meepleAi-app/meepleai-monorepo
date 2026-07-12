@@ -126,8 +126,19 @@ internal sealed class UserGamebookViewRepository : IUserGamebookViewRepository
                               failedPdfCount,
                               entry.AddedAt);
 
-        var combined = await sharedSide.Concat(privateSide).ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+        // Issue #2850 (#M): materialize each side with its own SELECT and merge
+        // in memory instead of a DB-side Concat. EF Core cannot translate a set
+        // operation (UNION ALL) whose two sides carry client-projected correlated
+        // subqueries (the `let` Any/Max/Count above) — it throws
+        // SelectExpression.ApplySetOperation at query-compilation time regardless
+        // of row count. Each side translates fine on its own; the handler applies
+        // the final ordering, so no DB-side ordering is lost by splitting.
+        var sharedItems = await sharedSide.ToListAsync(cancellationToken).ConfigureAwait(false);
+        var privateItems = await privateSide.ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        var combined = new List<UserGamebookViewItem>(sharedItems.Count + privateItems.Count);
+        combined.AddRange(sharedItems);
+        combined.AddRange(privateItems);
 
         return combined;
     }

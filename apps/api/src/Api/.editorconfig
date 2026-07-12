@@ -8,3 +8,10 @@ root = true
 # Increased from default 60 to 100 lines to accommodate routing files with multiple endpoint definitions
 # while still maintaining quality control for business logic methods
 MA0051.maximum_lines_per_method = 100
+
+# EF Core migrations are generated code — exempt from analyzers.
+# The consolidated Initial baseline scaffolds InsertData/HasData seed as inline
+# constant/empty arrays that trip CA1861/MA0005 (and others) under
+# TreatWarningsAsErrors. Treat migration files as generated so analyzers skip them.
+[**/Migrations/*.cs]
+generated_code = true

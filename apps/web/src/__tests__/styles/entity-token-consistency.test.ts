@@ -49,12 +49,13 @@ describe('entity token consistency across runtime sources (#2856)', () => {
   const globals = fs.readFileSync(path.join(STYLES, 'globals.css'), 'utf8');
   const designTokens = fs.readFileSync(path.join(STYLES, 'design-tokens.css'), 'utf8');
 
-  it.each(ENTITIES)('--c-%s matches across canonical, globals, design-tokens', entity => {
-    const c = tokenValues(canonical, entity);
-    const g = tokenValues(globals, entity);
-    const d = tokenValues(designTokens, entity);
-    expect(c.length).toBeGreaterThan(0);
-    expect(g).toEqual(c);
-    expect(d).toEqual(c);
+  it.each(ENTITIES)('--c-%s is declared only in canonical (single source)', entity => {
+    // After the physical collapse (#2857), each accent token is defined exactly
+    // once — in canonical. globals.css and design-tokens.css no longer redefine
+    // it, so CSS import-order can no longer pick a winner. (The `-text` variants
+    // remain duplicated for now — a separate follow-up.)
+    expect(tokenValues(canonical, entity).length).toBeGreaterThan(0);
+    expect(tokenValues(globals, entity)).toEqual([]);
+    expect(tokenValues(designTokens, entity)).toEqual([]);
   });
 });

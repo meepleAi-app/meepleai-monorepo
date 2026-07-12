@@ -228,8 +228,10 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
 
         foreach (var userId in invitedUserIds)
         {
-            var rsvp = GameNightRsvp.Create(Id, userId);
-            _rsvps.Add(rsvp);
+            if (_rsvps.All(r => r.UserId != userId))
+            {
+                _rsvps.Add(GameNightRsvp.Create(Id, userId));
+            }
         }
 
         AddDomainEvent(new GameNightPublishedEvent(Id, OrganizerId, Title, ScheduledAt, invitedUserIds));

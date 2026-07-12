@@ -9,9 +9,24 @@ internal class CreateToolkitCommandValidator : AbstractValidator<CreateToolkitCo
 {
     public CreateToolkitCommandValidator()
     {
-        RuleFor(x => x.GameId).Must(id => id.HasValue && id.Value != Guid.Empty).WithMessage("GameId is required");
+        // Issue #2851/#Q: a toolkit belongs to EITHER a shared game (GameId) or a
+        // private game (PrivateGameId) — mutually exclusive, matching the
+        // GameToolkit aggregate ctor (#4972). The old rule required GameId always,
+        // so the FE's private-game create ({ privateGameId, name, ... }) failed
+        // with 422 even though the command/handler/entity already support it.
+        RuleFor(x => x)
+            .Must(HasExactlyOneGameReference)
+            .WithMessage("Exactly one of GameId or PrivateGameId is required (mutually exclusive).")
+            .OverridePropertyName(nameof(CreateToolkitCommand.GameId));
         RuleFor(x => x.Name).NotEmpty().MaximumLength(200).WithMessage("Name is required (max 200 chars)");
         RuleFor(x => x.CreatedByUserId).NotEmpty().WithMessage("CreatedByUserId is required");
+    }
+
+    private static bool HasExactlyOneGameReference(CreateToolkitCommand command)
+    {
+        var hasGameId = command.GameId.HasValue && command.GameId.Value != Guid.Empty;
+        var hasPrivateGameId = command.PrivateGameId.HasValue && command.PrivateGameId.Value != Guid.Empty;
+        return hasGameId ^ hasPrivateGameId;
     }
 }
 

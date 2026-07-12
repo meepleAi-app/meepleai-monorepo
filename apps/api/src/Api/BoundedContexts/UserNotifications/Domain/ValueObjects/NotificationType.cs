@@ -77,6 +77,9 @@ internal sealed class NotificationType : ValueObject
     // Admin notification when PDF processing starts (enriched with uploader details)
     public static readonly NotificationType AdminPdfProcessingStarted = new("admin_pdf_processing_started");
 
+    // #535 ME-M3.3: admin notification when a mechanic card is suppressed (auto or manual)
+    public static readonly NotificationType AdminMechanicCardSuppressed = new("admin_mechanic_card_suppressed");
+
     // ISSUE-44/47: Game night notification types
     public static readonly NotificationType GameNightInvitation = new("game_night_invitation");
     public static readonly NotificationType GameNightRsvpReceived = new("game_night_rsvp_received");
@@ -168,6 +171,7 @@ internal sealed class NotificationType : ValueObject
             "admin_access_request_created" => AdminAccessRequestCreated,
             "admin_manual_notification" => AdminManualNotification,
             "admin_pdf_processing_started" => AdminPdfProcessingStarted,
+            "admin_mechanic_card_suppressed" => AdminMechanicCardSuppressed,
             "slack_connection_revoked" => SlackConnectionRevoked,
             "mechanic_analysis_ready" => MechanicAnalysisReady,
             "mechanic_analysis_rejected" => MechanicAnalysisRejected,

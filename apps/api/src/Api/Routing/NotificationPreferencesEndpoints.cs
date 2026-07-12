@@ -44,6 +44,24 @@ internal static class NotificationPreferencesEndpoints
         .RequireSession()
         .WithName("UpdateNotificationPreferences");
 
+        // #535 ME-M3.3: dedicated toggle for the mechanic-card-suppression email opt-in. Separate from
+        // the Document-preferences PUT above so a partial FE save never resets it.
+        group.MapPut("/notifications/preferences/card-suppression", async (
+            UpdateCardSuppressionEmailPreferenceCommand command,
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
+
+            var updatedCommand = command with { UserId = session!.Principal!.Subject.Id };
+            await mediator.Send(updatedCommand, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        })
+        .RequireSession()
+        .WithName("UpdateCardSuppressionEmailPreference");
+
         // Issue #4416: Push notification subscription management
         group.MapPost("/notifications/push/subscribe", async (
             SubscribePushNotificationsCommand command,

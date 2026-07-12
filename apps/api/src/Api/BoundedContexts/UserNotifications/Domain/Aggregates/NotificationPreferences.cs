@@ -16,6 +16,9 @@ internal sealed class NotificationPreferences : AggregateRoot<Guid>
     public bool EmailOnDocumentFailed { get; private set; } = true;
     public bool EmailOnRetryAvailable { get; private set; }
 
+    // #535 ME-M3.3: opt-in email when a mechanic card is suppressed (admin-facing). Default off.
+    public bool EmailOnCardSuppressed { get; private set; }
+
     // PDF Processing - Push
     public bool PushOnDocumentReady { get; private set; } = true;
     public bool PushOnDocumentFailed { get; private set; } = true;
@@ -95,7 +98,8 @@ internal sealed class NotificationPreferences : AggregateRoot<Guid>
         bool slackOnRetryAvailable = false, bool slackOnGameNightInvitation = true,
         bool slackOnGameNightReminder = true, bool slackOnShareRequestCreated = true,
         bool slackOnShareRequestApproved = true, bool slackOnBadgeEarned = true,
-        string timeZone = "UTC", TimeOnly? quietHoursStart = null, TimeOnly? quietHoursEnd = null)
+        string timeZone = "UTC", TimeOnly? quietHoursStart = null, TimeOnly? quietHoursEnd = null,
+        bool emailOnCardSuppressed = false)
     {
         return new NotificationPreferences
         {
@@ -129,7 +133,8 @@ internal sealed class NotificationPreferences : AggregateRoot<Guid>
             SlackOnGameNightReminder = slackOnGameNightReminder,
             SlackOnShareRequestCreated = slackOnShareRequestCreated,
             SlackOnShareRequestApproved = slackOnShareRequestApproved,
-            SlackOnBadgeEarned = slackOnBadgeEarned
+            SlackOnBadgeEarned = slackOnBadgeEarned,
+            EmailOnCardSuppressed = emailOnCardSuppressed
         };
     }
 
@@ -138,6 +143,12 @@ internal sealed class NotificationPreferences : AggregateRoot<Guid>
         EmailOnDocumentReady = onReady;
         EmailOnDocumentFailed = onFailed;
         EmailOnRetryAvailable = onRetry;
+    }
+
+    /// <summary>#535: toggle the per-admin card-suppression email opt-in.</summary>
+    public void UpdateCardSuppressionEmailPreference(bool email)
+    {
+        EmailOnCardSuppressed = email;
     }
 
     public void UpdatePushPreferences(bool onReady, bool onFailed, bool onRetry)

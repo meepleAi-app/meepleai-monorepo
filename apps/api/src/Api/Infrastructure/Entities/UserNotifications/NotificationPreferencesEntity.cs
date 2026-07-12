@@ -7,6 +7,9 @@ public class NotificationPreferencesEntity
     public bool EmailOnDocumentReady { get; set; } = true;
     public bool EmailOnDocumentFailed { get; set; } = true;
     public bool EmailOnRetryAvailable { get; set; }
+
+    // #535 ME-M3.3: opt-in email on mechanic card suppression. Default false.
+    public bool EmailOnCardSuppressed { get; set; }
     public bool PushOnDocumentReady { get; set; } = true;
     public bool PushOnDocumentFailed { get; set; } = true;
     public bool PushOnRetryAvailable { get; set; }

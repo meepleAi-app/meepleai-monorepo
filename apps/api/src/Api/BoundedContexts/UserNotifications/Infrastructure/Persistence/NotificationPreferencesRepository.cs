@@ -76,7 +76,8 @@ internal class NotificationPreferencesRepository : RepositoryBase, INotification
             entity.SlackOnRetryAvailable, entity.SlackOnGameNightInvitation,
             entity.SlackOnGameNightReminder, entity.SlackOnShareRequestCreated,
             entity.SlackOnShareRequestApproved, entity.SlackOnBadgeEarned,
-            entity.TimeZone, entity.QuietHoursStart, entity.QuietHoursEnd
+            entity.TimeZone, entity.QuietHoursStart, entity.QuietHoursEnd,
+            entity.EmailOnCardSuppressed
         );
     }
 
@@ -89,6 +90,7 @@ internal class NotificationPreferencesRepository : RepositoryBase, INotification
             EmailOnDocumentReady = domain.EmailOnDocumentReady,
             EmailOnDocumentFailed = domain.EmailOnDocumentFailed,
             EmailOnRetryAvailable = domain.EmailOnRetryAvailable,
+            EmailOnCardSuppressed = domain.EmailOnCardSuppressed,
             PushOnDocumentReady = domain.PushOnDocumentReady,
             PushOnDocumentFailed = domain.PushOnDocumentFailed,
             PushOnRetryAvailable = domain.PushOnRetryAvailable,

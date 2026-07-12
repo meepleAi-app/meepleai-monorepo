@@ -28,7 +28,7 @@
 import { NextResponse } from 'next/server';
 
 import * as metrics from '@/lib/metrics/session-cache-metrics';
-import { matchesRoutePrefix } from '@/lib/routing/route-matching';
+import { isAdminPath, isProtectedPath } from '@/lib/routing/protected-routes';
 import { isAdminRole } from '@/lib/utils/roles';
 
 import type { NextRequest } from 'next/server';
@@ -39,57 +39,10 @@ import type { NextRequest } from 'next/server';
 // Configuration
 // ============================================================================
 
-/**
- * Protected routes that require authentication
- * Unauthenticated users will be redirected to /login
- *
- * Kept alphabetised so the diff is easy to read and additions are mechanical.
- * Sources of truth for what belongs here:
- *   - any top-level path under `src/app/(authenticated)/` whose Server Component
- *     should not render for an anonymous visitor
- *   - any path under `src/app/(chat)/`
- *   - `/admin` (its own (dashboard) subtree)
- *
- * `#2118` sweep: added the remaining `(authenticated)` top-levels that were
- * silently missing from this list. Before the sweep, anonymous users hitting
- * `/hub/games`, `/dashboard`, `/profile`, etc. saw the authenticated chrome
- * (`UserShell` / `AppTopBar`) with an empty session and relied on each page
- * hook to surface a 401 — which produced a flash of broken UI.
- */
-const PROTECTED_ROUTES = [
-  '/admin',
-  '/agents',
-  '/chat',
-  '/dashboard',
-  '/discover',
-  '/editor',
-  '/game-nights',
-  '/gamebook',
-  '/games',
-  '/hub',
-  '/knowledge-base',
-  '/library',
-  '/n8n',
-  '/notifications',
-  '/onboarding',
-  '/pipeline-builder',
-  '/play-records',
-  '/players',
-  '/private-games',
-  '/profile',
-  '/sessions',
-  '/settings',
-  '/setup',
-  '/toolkit',
-  '/toolkits',
-  '/upload',
-  '/versions',
-];
-
-/**
- * Admin-only routes that require admin role
- */
-const ADMIN_ONLY_ROUTES = ['/admin'];
+// Route authorization policy (protected / public-share / admin prefix sets and
+// the boundary-aware decision helpers) lives in `@/lib/routing/protected-routes`
+// so it can be unit-tested without a full edge/NextRequest harness — see
+// `isProtectedPath` / `isAdminPath`.
 
 /**
  * Public routes that don't require authentication
@@ -455,12 +408,14 @@ export async function proxy(request: NextRequest) {
   const isAdminViewMode = isAdmin && viewModeCookie?.value !== 'user';
 
   // Check if the current route is protected or public auth route
-  // Boundary-aware matching (matchesRoutePrefix): a route matches only on an
-  // exact hit or a `route + '/'` sub-path, so protected `/library` no longer
-  // swallows the public `/library-public` landing (plain startsWith did).
-  const isProtectedRoute = matchesRoutePrefix(pathname, PROTECTED_ROUTES);
+  // Boundary-aware matching: a route matches only on an exact hit or a
+  // `route + '/'` sub-path, so protected `/library` no longer swallows the
+  // public `/library-public` landing (plain startsWith did). Issue #2846:
+  // isProtectedPath also subtracts the public share routes (`/library/shared/*`,
+  // `/game-nights/shared/*`, `/play-records/shared/*`) so guests can reach them.
+  const isProtectedRoute = isProtectedPath(pathname);
   const isPublicAuthRoute = PUBLIC_AUTH_ROUTES.some(route => pathname === route);
-  const isAdminRoute = matchesRoutePrefix(pathname, ADMIN_ONLY_ROUTES);
+  const isAdminRoute = isAdminPath(pathname);
   const isHomePage = pathname === '/';
 
   // Redirect unauthenticated users from protected routes to login
@@ -485,7 +440,7 @@ export async function proxy(request: NextRequest) {
     const fromParam = request.nextUrl.searchParams.get('from');
     const defaultDest = isAdminViewMode ? '/admin' : '/library';
     const redirectUrl =
-      fromParam && matchesRoutePrefix(fromParam, PROTECTED_ROUTES)
+      fromParam && isProtectedPath(fromParam)
         ? new URL(fromParam, request.url)
         : new URL(defaultDest, request.url);
     const response = NextResponse.redirect(redirectUrl);

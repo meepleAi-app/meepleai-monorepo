@@ -210,6 +210,19 @@ public sealed class MechanicCard : AggregateRoot<Guid>
         UpdatedAt = utcNow;
     }
 
+    /// <summary>
+    /// Overwrites the derived feedback aggregates with values recomputed from the raw
+    /// <c>mechanic_card_feedback</c> rows (#534 ME-M3.2). Pure state update; the suppression
+    /// decision (threshold evaluation) is an application concern that calls <see cref="Suppress"/>.
+    /// </summary>
+    public void ApplyFeedbackAggregates(int errorReportsCount, decimal? feedbackScore, DateTime utcNow)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(errorReportsCount);
+        ErrorReportsCount = errorReportsCount;
+        FeedbackScore = feedbackScore;
+        UpdatedAt = utcNow;
+    }
+
     private static string ResolveTitle(string? overrideTitle, string sharedGameName)
     {
         if (!string.IsNullOrWhiteSpace(overrideTitle))

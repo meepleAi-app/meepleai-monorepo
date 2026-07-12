@@ -16,6 +16,7 @@ import {
   createAdminConfigClient,
   createAdminMechanicExtractorValidationClient,
   createAdminProvidersClient,
+  createAdminMechanicMetricsClient,
 } from './admin';
 
 import type { HttpClient } from '../core/httpClient';
@@ -91,6 +92,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
     ...createAdminMechanicExtractorValidationClient(http),
     ...createAdminConfigClient(http),
     ...createAdminProvidersClient(http),
+    ...createAdminMechanicMetricsClient(http),
   };
 }
 

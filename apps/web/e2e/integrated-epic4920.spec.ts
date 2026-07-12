@@ -8,6 +8,8 @@
 
 import { test, expect, type Page } from '@playwright/test';
 
+import { seedMockRoleCookies } from './_helpers/seedAuthSession';
+
 const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
@@ -17,7 +19,8 @@ const AGENT_ID = 'ag-1';
 const KB_CARD_ID = 'kbc-1';
 
 async function mockAdminAuth(page: Page) {
-  await page.context().route(`${API_BASE}/api/v1/auth/me`, (route) =>
+  await seedMockRoleCookies(page, 'Admin');
+  await page.context().route(`${API_BASE}/api/v1/auth/me`, route =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -33,7 +36,7 @@ async function setupAllMocks(page: Page) {
   await mockAdminAuth(page);
 
   // Step 1-2: Shared game con PDF upload
-  await page.context().route(`${API_BASE}/api/v1/admin/shared-games/${GAME_ID}**`, (route) => {
+  await page.context().route(`${API_BASE}/api/v1/admin/shared-games/${GAME_ID}**`, route => {
     if (route.request().method() === 'GET') {
       return route.fulfill({
         status: 200,
@@ -49,16 +52,20 @@ async function setupAllMocks(page: Page) {
     return route.continue();
   });
 
-  await page.context().route(`${API_BASE}/api/v1/admin/shared-games/${GAME_ID}/upload-pdf`, (route) =>
+  await page.context().route(`${API_BASE}/api/v1/admin/shared-games/${GAME_ID}/upload-pdf`, route =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ documentId: DOC_ID, fileName: 'catan-rulebook.pdf', status: 'processing' }),
+      body: JSON.stringify({
+        documentId: DOC_ID,
+        fileName: 'catan-rulebook.pdf',
+        status: 'processing',
+      }),
     })
   );
 
   // Step 3: KB Documents mostra documento con sharedGameId
-  await page.context().route(`${API_BASE}/api/v1/admin/knowledge-base/documents**`, (route) =>
+  await page.context().route(`${API_BASE}/api/v1/admin/knowledge-base/documents**`, route =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -79,20 +86,25 @@ async function setupAllMocks(page: Page) {
   );
 
   // Step 4-6: Agent Builder con KB Cards
-  await page.context().route(`${API_BASE}/api/v1/admin/knowledge-base/kb-cards**`, (route) =>
+  await page.context().route(`${API_BASE}/api/v1/admin/knowledge-base/kb-cards**`, route =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
         items: [
-          { id: KB_CARD_ID, title: 'Catan Rulebook — Overview', sharedGameId: GAME_ID, chunkCount: 12 },
+          {
+            id: KB_CARD_ID,
+            title: 'Catan Rulebook — Overview',
+            sharedGameId: GAME_ID,
+            chunkCount: 12,
+          },
         ],
         totalCount: 1,
       }),
     })
   );
 
-  await page.context().route(`${API_BASE}/api/v1/admin/agent-definitions`, (route) => {
+  await page.context().route(`${API_BASE}/api/v1/admin/agent-definitions`, route => {
     if (route.request().method() === 'POST') {
       const body = route.request().postDataJSON() as Record<string, unknown>;
       return route.fulfill({
@@ -113,21 +125,29 @@ async function setupAllMocks(page: Page) {
   });
 
   // Step 7: Test agente
-  await page.context().route(`${API_BASE}/api/v1/admin/agent-definitions/${AGENT_ID}/test**`, (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        response: 'In Catan, le strade collegano i tuoi insediamenti...',
-        tokensUsed: 1245,
-        kbCardsUsed: [KB_CARD_ID],
-      }),
-    })
-  );
+  await page
+    .context()
+    .route(`${API_BASE}/api/v1/admin/agent-definitions/${AGENT_ID}/test**`, route =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          response: 'In Catan, le strade collegano i tuoi insediamenti...',
+          tokensUsed: 1245,
+          kbCardsUsed: [KB_CARD_ID],
+        }),
+      })
+    );
 
-  await page.context().route(`${API_BASE}/api/v1/admin/**`, (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) })
-  );
+  await page
+    .context()
+    .route(`${API_BASE}/api/v1/admin/**`, route =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: [] }),
+      })
+    );
 }
 
 test.describe('Flusso Integrato E2E — Epic #4920', () => {
@@ -137,16 +157,17 @@ test.describe('Flusso Integrato E2E — Epic #4920', () => {
 
   test('Step 1: PdfUploadSection visibile nel dettaglio Shared Game', async ({ page }) => {
     await page.goto(`/admin/shared-games/${GAME_ID}`, { waitUntil: 'domcontentloaded' });
-    if (await page.getByText('Catan').count() > 0) {
+    if ((await page.getByText('Catan').count()) > 0) {
       await expect(page.getByText('Catan').first()).toBeVisible({ timeout: 8000 });
     } else {
       await expect(page.locator('body')).toBeVisible();
     }
 
-    const uploadSection = page.locator(
-      '[data-testid="pdf-upload-section"], input[type="file"], .pdf-upload'
-    ).or(page.locator('text=/upload|carica/i')).first();
-    if (await uploadSection.count() > 0) {
+    const uploadSection = page
+      .locator('[data-testid="pdf-upload-section"], input[type="file"], .pdf-upload')
+      .or(page.locator('text=/upload|carica/i'))
+      .first();
+    if ((await uploadSection.count()) > 0) {
       await expect(uploadSection).toBeVisible({ timeout: 8000 });
     }
   });
@@ -154,7 +175,7 @@ test.describe('Flusso Integrato E2E — Epic #4920', () => {
   test('Step 2-3: PDF uploadato appare in KB Documents con sharedGameId', async ({ page }) => {
     // Vai direttamente a KB documents (dopo upload simulato)
     await page.goto('/admin/knowledge-base/documents', { waitUntil: 'domcontentloaded' });
-    if (await page.getByText('catan-rulebook.pdf').count() > 0) {
+    if ((await page.getByText('catan-rulebook.pdf').count()) > 0) {
       await expect(page.getByText('catan-rulebook.pdf').first()).toBeVisible({ timeout: 8000 });
     }
   });
@@ -163,14 +184,16 @@ test.describe('Flusso Integrato E2E — Epic #4920', () => {
     await page.goto('/admin/agents/builder', { waitUntil: 'domcontentloaded' });
 
     // Cerca tab o sezione KB Cards
-    const kbSection = page.locator(
-      'button[role="tab"]:has-text("KB"), button:has-text("Knowledge"), [data-testid="kb-cards-section"]'
-    ).first();
+    const kbSection = page
+      .locator(
+        'button[role="tab"]:has-text("KB"), button:has-text("Knowledge"), [data-testid="kb-cards-section"]'
+      )
+      .first();
 
-    if (await kbSection.count() > 0) {
+    if ((await kbSection.count()) > 0) {
       await kbSection.click();
       await page.waitForTimeout(400);
-      if (await page.getByText('Catan Rulebook').count() > 0) {
+      if ((await page.getByText('Catan Rulebook').count()) > 0) {
         await expect(page.getByText('Catan Rulebook').first()).toBeVisible({ timeout: 8000 });
       }
     }
@@ -179,7 +202,7 @@ test.describe('Flusso Integrato E2E — Epic #4920', () => {
   test('Step 6: Agente salvato con kbCardIds', async ({ page }) => {
     let savedKbCardIds: string[] = [];
 
-    await page.context().route(`${API_BASE}/api/v1/admin/agent-definitions`, (route) => {
+    await page.context().route(`${API_BASE}/api/v1/admin/agent-definitions`, route => {
       if (route.request().method() === 'POST') {
         const body = route.request().postDataJSON() as Record<string, unknown>;
         savedKbCardIds = (body['kbCardIds'] as string[]) || [];
@@ -195,19 +218,21 @@ test.describe('Flusso Integrato E2E — Epic #4920', () => {
     await page.goto('/admin/agents/builder', { waitUntil: 'domcontentloaded' });
 
     const nameField = page.locator('input[name="name"]').first();
-    if (await nameField.count() > 0) {
+    if ((await nameField.count()) > 0) {
       await nameField.fill('Catan E2E Agent');
 
       // Seleziona KB card
-      const kbTab = page.locator('button[role="tab"]:has-text("KB"), button:has-text("Knowledge")').first();
-      if (await kbTab.count() > 0) {
+      const kbTab = page
+        .locator('button[role="tab"]:has-text("KB"), button:has-text("Knowledge")')
+        .first();
+      if ((await kbTab.count()) > 0) {
         await kbTab.click();
         const checkbox = page.locator('input[type="checkbox"]').first();
-        if (await checkbox.count() > 0) await checkbox.click();
+        if ((await checkbox.count()) > 0) await checkbox.click();
       }
 
       const saveBtn = page.locator('button:has-text("Salva"), button[type="submit"]').first();
-      if (await saveBtn.count() > 0) {
+      if ((await saveBtn.count()) > 0) {
         await saveBtn.click();
         await page.waitForTimeout(1000);
       }
@@ -219,7 +244,7 @@ test.describe('Flusso Integrato E2E — Epic #4920', () => {
   test('Flusso completo: Shared Game → KB Documents → Agent Builder', async ({ page }) => {
     // Step 1: Verifica shared game
     await page.goto(`/admin/shared-games/${GAME_ID}`, { waitUntil: 'domcontentloaded' });
-    if (await page.getByText('Catan').count() > 0) {
+    if ((await page.getByText('Catan').count()) > 0) {
       await expect(page.getByText('Catan').first()).toBeVisible({ timeout: 8000 });
     } else {
       await expect(page.locator('body')).toBeVisible();
@@ -227,7 +252,7 @@ test.describe('Flusso Integrato E2E — Epic #4920', () => {
 
     // Step 3: Verifica KB Documents
     await page.goto('/admin/knowledge-base/documents', { waitUntil: 'domcontentloaded' });
-    if (await page.getByText('catan-rulebook.pdf').count() > 0) {
+    if ((await page.getByText('catan-rulebook.pdf').count()) > 0) {
       await expect(page.getByText('catan-rulebook.pdf').first()).toBeVisible({ timeout: 8000 });
     }
 

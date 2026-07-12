@@ -13,6 +13,8 @@
 
 import { Page } from '@playwright/test';
 
+import { seedMockRoleCookies } from '../../_helpers/seedAuthSession';
+
 const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 export class AdminHelper {
@@ -24,6 +26,10 @@ export class AdminHelper {
    * Equivalent to loginAsAdmin() from fixtures/auth.ts
    */
   async setupAdminAuth(skipNavigation: boolean = false): Promise<void> {
+    // Seed cookies FIRST so proxy.ts resolves the admin role under the E2E bypass
+    // and grants /admin access (#2784), instead of falling back to 'user'.
+    await seedMockRoleCookies(this.page, 'Admin');
+
     // Setup authenticated admin session
     const adminUser = {
       id: 'admin-test-id',

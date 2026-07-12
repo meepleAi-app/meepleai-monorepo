@@ -7,6 +7,7 @@
 
 import { z } from 'zod';
 
+import { createApiError, isNotFoundError } from '../core/errors';
 import { type HttpClient, downloadFile, getApiBase } from '../core/httpClient';
 import {
   agentDefinitionDtoSchema,
@@ -14,6 +15,15 @@ import {
   type AgentDefinitionDto,
   type KbCardDto,
 } from '../schemas/agent-definitions.schemas';
+import {
+  MECHANIC_CARD_FEEDBACK_ROUTES,
+  type SubmitMechanicCardFeedbackBody,
+} from '../schemas/mechanic-card-feedback.schemas';
+import {
+  MECHANIC_CARD_ROUTES,
+  PublishedMechanicCardDtoSchema,
+  type PublishedMechanicCardDto,
+} from '../schemas/mechanic-card.schemas';
 import { GameRagReadinessSchema, type GameRagReadiness } from '../schemas/rag-setup.schemas';
 import {
   SeedingGameListSchema,
@@ -1099,6 +1109,73 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
         z.array(RulebookAnalysisDtoSchema)
       );
       return result ?? [];
+    },
+
+    // ========== Public Mechanic Card (ME-M1.6, Issue #528) ==========
+
+    /**
+     * Get the published, login-gated mechanic card for a game (AUTHENTICATED).
+     * GET /api/v1/games/{gameId}/card — `gameId` is the sharedGameId.
+     *
+     * Returns `null` when the backend responds 404 (no published card, or the
+     * card was suppressed/taken down) so the caller can render `notFound()`.
+     * All other failures (5xx / network / schema) propagate so the caller can
+     * distinguish "gone" from "broken".
+     *
+     * @param gameId - SharedGame UUID
+     * @returns The published card, or null when 404
+     */
+    async getPublishedMechanicCard(gameId: string): Promise<PublishedMechanicCardDto | null> {
+      if (
+        !gameId ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(gameId)
+      ) {
+        return null;
+      }
+      try {
+        return await httpClient.get(
+          MECHANIC_CARD_ROUTES.card(gameId),
+          PublishedMechanicCardDtoSchema
+        );
+      } catch (error) {
+        // 404 = no published card OR suppressed/taken down → caller calls notFound().
+        if (isNotFoundError(error)) {
+          return null;
+        }
+        throw error;
+      }
+    },
+
+    /**
+     * Submit per-claim feedback on a published mechanic card (AUTHENTICATED).
+     * POST /api/v1/mechanic-cards/{cardId}/feedback — ME-M3.1, Issue #533.
+     *
+     * The endpoint is status-only (201 created · 200 updated · 404 · 429 · 401)
+     * so we don't parse a response body. Non-2xx responses are converted to the
+     * typed `ApiError` subclass (`NotFoundError` / `RateLimitError` / …) via
+     * `createApiError` so callers can branch on `instanceof`. A raw fetch is used
+     * (rather than `httpClient.post`) because a status-only 200/201 may carry an
+     * empty body, which `response.json()` would choke on.
+     *
+     * `errorType` is meaningful only for a 👎; it MUST be null for a 👍.
+     *
+     * @param cardId - Published card UUID (the card the claim belongs to)
+     * @param body - Feedback payload
+     */
+    async submitMechanicCardFeedback(
+      cardId: string,
+      body: SubmitMechanicCardFeedbackBody
+    ): Promise<void> {
+      const path = MECHANIC_CARD_FEEDBACK_ROUTES.feedback(cardId);
+      const response = await fetch(`${getApiBase()}${path}`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        throw await createApiError(path, response);
+      }
     },
 
     // ========== Admin PDF Upload (Issue #4922 + #4926) ==========

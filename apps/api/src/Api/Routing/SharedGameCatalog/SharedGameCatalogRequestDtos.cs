@@ -12,6 +12,17 @@ namespace Api.Routing;
 // ========================================
 
 /// <summary>
+/// Request body for <c>POST /mechanic-cards/{cardId}/feedback</c> (#533 ME-M3.1). The card id comes
+/// from the route and the user id from the session, so the body only carries the claim + verdict.
+/// </summary>
+internal record SubmitMechanicCardFeedbackRequest(
+    Guid ClaimId,
+    bool IsPositive,
+    string? ErrorType,
+    string? Description,
+    string? SuggestedCitation);
+
+/// <summary>
 /// Request DTO for creating a shared game.
 /// </summary>
 internal record CreateSharedGameRequest(

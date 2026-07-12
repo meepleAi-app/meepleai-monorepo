@@ -1,5 +1,4 @@
 export { MeepleCard } from './MeepleCard';
-export { MeepleCards } from './compound';
 export type {
   MeepleCardProps,
   MeepleEntityType,
@@ -15,7 +14,6 @@ export type {
   LifecycleState,
 } from './types';
 export { FlipCard } from './features/FlipCard';
-export { HoverPreview } from './features/HoverPreview';
 export { Carousel3D } from './features/Carousel3D';
 export { EntityTable } from './features/EntityTable';
 export type {

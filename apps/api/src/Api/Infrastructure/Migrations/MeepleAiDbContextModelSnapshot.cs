@@ -12234,7 +12234,7 @@ namespace Api.Infrastructure.Migrations
 
                             t.HasCheckConstraint("ck_mechanic_section_runs_section_range", "section BETWEEN 0 AND 5");
 
-                            t.HasCheckConstraint("ck_mechanic_section_runs_status_range", "status BETWEEN 0 AND 2");
+                            t.HasCheckConstraint("ck_mechanic_section_runs_status_range", "status BETWEEN 0 AND 3");
 
                             t.HasCheckConstraint("ck_mechanic_section_runs_tokens_non_negative", "prompt_tokens >= 0 AND completion_tokens >= 0 AND total_tokens >= 0");
                         });
@@ -12391,6 +12391,67 @@ namespace Api.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicCardFeedbackEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("card_id");
+
+                    b.Property<Guid>("ClaimId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("claim_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("ErrorType")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("error_type");
+
+                    b.Property<bool>("IsPositive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_positive");
+
+                    b.Property<string>("SuggestedCitation")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("suggested_citation");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_mechanic_card_feedback_user_created");
+
+                    b.HasIndex("CardId", "UserId", "ClaimId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_mechanic_card_feedback_card_user_claim");
+
+                    b.ToTable("mechanic_card_feedback", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_mechanic_card_feedback_error_type", "error_type IS NULL OR error_type IN ('factual', 'ambiguous', 'contradicts_rule')");
+                        });
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicCitationEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -12493,6 +12554,10 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("text");
+
+                    b.Property<string>("Validations")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("validations");
 
                     b.HasKey("Id");
 
@@ -15727,6 +15792,11 @@ namespace Api.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("EmailOnCardSuppressed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<bool>("EmailOnDocumentFailed")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -18333,6 +18403,17 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("OriginAnalysis");
 
                     b.Navigation("SharedGame");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicCardFeedbackEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.MechanicCardEntity", "Card")
+                        .WithMany()
+                        .HasForeignKey("CardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Card");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicCitationEntity", b =>

@@ -8,6 +8,7 @@
  * - Dependency status
  */
 
+import { seedMockRoleCookies } from '../_helpers/seedAuthSession';
 import { test, expect } from '../fixtures';
 
 import type { Page } from '@playwright/test';
@@ -16,7 +17,10 @@ const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 async function setupSystemHealthMocks(page: Page) {
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  // Seed role cookie FIRST so proxy.ts resolves Admin under the E2E bypass (#2784)
+  await seedMockRoleCookies(page, 'Admin');
+
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -27,7 +31,7 @@ async function setupSystemHealthMocks(page: Page) {
     });
   });
 
-  await page.route(`${API_BASE}/api/v1/admin/health`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/health`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -44,8 +48,12 @@ async function setupSystemHealthMocks(page: Page) {
     });
   });
 
-  await page.route(`${API_BASE}/api/v1/admin/**`, async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) });
+  await page.route(`${API_BASE}/api/v1/admin/**`, async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: [] }),
+    });
   });
 
   return {};

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExtractor.Guardrails;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Observability;
 using Microsoft.Extensions.Logging;
 
@@ -27,26 +28,40 @@ internal sealed class MechanicOutputValidator : IMechanicOutputValidator
     public async Task<MechanicValidationResult> ValidateAsync(
         MechanicGuardrailContext context, CancellationToken cancellationToken)
     {
-        foreach (var guardrail in _guardrails)
+        var outcomes = new List<MechanicRuleOutcome>(_guardrails.Count);
+
+        for (var i = 0; i < _guardrails.Count; i++)
         {
+            var guardrail = _guardrails[i];
             cancellationToken.ThrowIfCancellationRequested();
             var stopwatch = Stopwatch.StartNew();
-            var violations = await guardrail.EvaluateAsync(context, cancellationToken).ConfigureAwait(false);
+            var detailed = await guardrail.EvaluateDetailedAsync(context, cancellationToken).ConfigureAwait(false);
+            var violations = detailed.Violations;
             stopwatch.Stop();
 
-            var outcome = violations.Count == 0 ? "pass" : "fail";
+            var outcomeLabel = violations.Count == 0 ? "pass" : "fail";
             MeepleAiMetrics.MechanicValidatorInvocations.Add(1, new System.Diagnostics.TagList
             {
                 { "validator", guardrail.RuleFamily },
-                { "outcome", outcome }
+                { "outcome", outcomeLabel }
             });
 
             _logger.LogInformation(
                 "Mechanic guardrail {Validator} {Outcome} for analysis {AnalysisId} section {Section} " +
                 "(retry {RetryCount}) in {LatencyMs}ms{ViolationRule}",
-                guardrail.RuleFamily, outcome, context.AnalysisId, context.Section, context.RetryCount,
+                guardrail.RuleFamily, outcomeLabel, context.AnalysisId, context.Section, context.RetryCount,
                 stopwatch.ElapsedMilliseconds,
                 violations.Count == 0 ? string.Empty : $" — {violations[0].Rule}");
+
+            var first = violations.Count > 0 ? violations[0] : null;
+            outcomes.Add(new MechanicRuleOutcome(
+                Rule: guardrail.RuleFamily,
+                Outcome: violations.Count == 0 ? MechanicClaimValidationOutcomes.Pass : MechanicClaimValidationOutcomes.Fail,
+                Message: first?.Message,
+                Path: first?.Path,
+                Score: detailed.Score,
+                Violations: violations,
+                ClaimScores: detailed.ClaimScores));
 
             if (violations.Count > 0)
             {
@@ -57,10 +72,21 @@ internal sealed class MechanicOutputValidator : IMechanicOutputValidator
                         { "rule", v.Rule }
                     });
                 }
-                return MechanicValidationResult.Invalid(violations); // fail-fast
+
+                // Fail-fast: every guardrail AFTER this one is notRun.
+                for (var j = i + 1; j < _guardrails.Count; j++)
+                {
+                    outcomes.Add(new MechanicRuleOutcome(
+                        Rule: _guardrails[j].RuleFamily,
+                        Outcome: MechanicClaimValidationOutcomes.NotRun,
+                        Message: null, Path: null, Score: null,
+                        Violations: Array.Empty<MechanicValidationViolation>()));
+                }
+
+                return MechanicValidationResult.Invalid(violations, outcomes); // fail-fast
             }
         }
 
-        return MechanicValidationResult.Valid();
+        return MechanicValidationResult.Valid(outcomes);
     }
 }

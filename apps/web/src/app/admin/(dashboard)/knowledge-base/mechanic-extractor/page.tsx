@@ -14,10 +14,13 @@ import {
   FileTextIcon,
   ChevronRightIcon,
   ShieldCheckIcon,
+  AlertTriangleIcon,
 } from 'lucide-react';
+import Link from 'next/link';
 
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent } from '@/components/ui/data-display/card';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import {
   Select,
@@ -252,6 +255,22 @@ export default function MechanicExtractorPage() {
 
   return (
     <div className="space-y-6">
+      {/* #536 ME-M4.1: deprecation banner — this Variant C editor is superseded by the AI Analyses
+          flow. Persists ~6 months pre-removal (#538). */}
+      <Alert className="border-amber-400 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200">
+        <AlertTriangleIcon className="h-4 w-4" />
+        <AlertTitle>Questo flow è deprecato</AlertTitle>
+        <AlertDescription className="flex flex-wrap items-center gap-3">
+          <span>
+            L&apos;editor Variant C è sostituito dalla nuova <strong>AI Analysis</strong>{' '}
+            (estrazione AI con revisione per-claim e citazioni).
+          </span>
+          <Button asChild size="sm" variant="outline">
+            <Link href="/admin/knowledge-base/mechanic-extractor/analyses">Vai ad AI Analysis</Link>
+          </Button>
+        </AlertDescription>
+      </Alert>
+
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>

@@ -1,3 +1,5 @@
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+
 namespace Api.Infrastructure.Entities.SharedGameCatalog;
 
 /// <summary>
@@ -23,6 +25,14 @@ public class MechanicClaimEntity
 
     /// <summary>Optional free-form note captured on APPROVE (#526 AC-6). Distinct from RejectionNote.</summary>
     public string? ReviewNote { get; set; }
+
+    /// <summary>
+    /// Real per-claim guardrail outcomes captured at pipeline time (#2782 FU-1). Null for pre-FU-1
+    /// claims (legacy all-pass derivation applies). Stored as jsonb via a value converter. No value
+    /// comparer is needed because MechanicAnalysisRepository.Update() rebuilds a detached entity and
+    /// force-writes all columns (the snapshot-diff a comparer feeds is never consulted for that path).
+    /// </summary>
+    public List<MechanicClaimValidation>? Validations { get; set; }
 
     // === Navigation ===
     public MechanicAnalysisEntity Analysis { get; set; } = default!;

@@ -96,8 +96,9 @@ public sealed class MechanicCard : AggregateRoot<Guid>
             throw new ArgumentOutOfRangeException(nameof(version), version, "Version must be >= 1.");
         }
 
-        // Defense in depth: the handler already guards these, but the factory re-checks so the
-        // aggregate can never be constructed from a non-publishable analysis.
+        // Defense in depth: the PublishMechanicCardCommandHandler already guards all four of these
+        // (status, published-card, no-claims, not-all-approved — #2783), but the factory re-checks so
+        // the aggregate can never be constructed from a non-publishable analysis (e.g. a direct caller).
         if (analysis.Status != MechanicAnalysisStatus.Published)
         {
             throw new InvalidOperationException(
@@ -206,6 +207,19 @@ public sealed class MechanicCard : AggregateRoot<Guid>
     public void MarkErrorReport(DateTime utcNow)
     {
         ErrorReportsCount += 1;
+        UpdatedAt = utcNow;
+    }
+
+    /// <summary>
+    /// Overwrites the derived feedback aggregates with values recomputed from the raw
+    /// <c>mechanic_card_feedback</c> rows (#534 ME-M3.2). Pure state update; the suppression
+    /// decision (threshold evaluation) is an application concern that calls <see cref="Suppress"/>.
+    /// </summary>
+    public void ApplyFeedbackAggregates(int errorReportsCount, decimal? feedbackScore, DateTime utcNow)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(errorReportsCount);
+        ErrorReportsCount = errorReportsCount;
+        FeedbackScore = feedbackScore;
         UpdatedAt = utcNow;
     }
 

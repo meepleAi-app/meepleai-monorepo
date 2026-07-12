@@ -1,5 +1,7 @@
 import { test as base, Page, Route } from '@playwright/test';
 
+import { seedMockRoleCookies } from '../_helpers/seedAuthSession';
+
 // Issue #841: Make API_BASE configurable via environment variables
 const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
@@ -104,6 +106,10 @@ export async function setupMockAuth(
   role: 'Admin' | 'Editor' | 'User' = 'Admin',
   email: string = 'admin@meepleai.dev'
 ) {
+  // Seed cookies FIRST (before any route mocks / navigation) so proxy.ts can
+  // resolve the role under the E2E bypass and grant /admin access (#2784).
+  await seedMockRoleCookies(page, role);
+
   const userResponse = {
     user: {
       id: `${role.toLowerCase()}-test-id`,

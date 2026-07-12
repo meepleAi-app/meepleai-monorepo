@@ -235,6 +235,7 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
             || type == NotificationType.RateLimitReached
             || type == NotificationType.SlackConnectionRevoked
             || type == NotificationType.MechanicAnalysisRejected
+            || type == NotificationType.AdminMechanicCardSuppressed
             || type == NotificationType.AgentCreationFailed)
             return NotificationSeverity.Warning;
 
@@ -291,6 +292,7 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
         if (type == NotificationType.AdminAccessRequestCreated) return "[Admin] Nuova richiesta accesso";
         if (type == NotificationType.AdminManualNotification) return "[Admin] Notifica manuale";
         if (type == NotificationType.AdminPdfProcessingStarted) return "[Admin] Elaborazione PDF avviata";
+        if (type == NotificationType.AdminMechanicCardSuppressed) return "[Admin] Scheda Meccanica Soppressa";
 
         return "Notifica MeepleAI";
     }
@@ -308,6 +310,8 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
             return prefs.EmailOnGameNightInvitation;
         if (type == NotificationType.GameNightReminder)
             return prefs.EmailOnGameNightReminder;
+        if (type == NotificationType.AdminMechanicCardSuppressed)
+            return prefs.EmailOnCardSuppressed; // #535: opt-in (default off)
 
         // Default: send email for types not explicitly configured
         return true;
@@ -330,7 +334,8 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
             || type == NotificationType.AdminModelStatusChanged
             || type == NotificationType.AdminAccessRequestCreated
             || type == NotificationType.AdminManualNotification
-            || type == NotificationType.AdminPdfProcessingStarted)
+            || type == NotificationType.AdminPdfProcessingStarted
+            || type == NotificationType.AdminMechanicCardSuppressed)
             return false;
 
         if (type == NotificationType.DocumentReady || type == NotificationType.RuleSpecGenerated)

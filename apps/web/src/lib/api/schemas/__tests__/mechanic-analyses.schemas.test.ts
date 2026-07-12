@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   MechanicClaimDtoSchema,
   BulkRejectMechanicClaimsResponseDtoSchema,
+  MechanicClaimValidationDtoSchema,
 } from '../mechanic-analyses.schemas';
 
 describe('mechanic-analyses schemas #526', () => {
@@ -30,5 +31,26 @@ describe('mechanic-analyses schemas #526', () => {
       claims: [],
     });
     expect(r.rejectedCount).toBe(2);
+  });
+});
+
+describe('MechanicClaimValidationDtoSchema #2782', () => {
+  it('preserves the T3b score field (guards against Zod silent-drop)', () => {
+    const parsed = MechanicClaimValidationDtoSchema.parse({
+      rule: 'T3b',
+      outcome: 'pass',
+      message: null,
+      score: 0.87,
+    });
+    expect(parsed.score).toBe(0.87);
+  });
+
+  it('allows a null/absent score for non-T3b rules', () => {
+    const parsed = MechanicClaimValidationDtoSchema.parse({
+      rule: 'T1',
+      outcome: 'fail',
+      message: 'too long',
+    });
+    expect(parsed.score ?? null).toBeNull();
   });
 });

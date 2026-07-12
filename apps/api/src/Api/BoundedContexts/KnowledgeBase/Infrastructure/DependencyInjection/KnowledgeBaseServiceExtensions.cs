@@ -241,11 +241,14 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<HybridLlmService>(sp => (HybridLlmService)sp.GetRequiredService<ILlmService>());
 
         // ISSUE-962 (BGAI-020): Provider Health Check Service (Singleton - background service)
-        services.AddHostedService<ProviderHealthCheckService>();
-        services.AddSingleton<IProviderHealthCheckService>(sp =>
-            sp.GetServices<IHostedService>().OfType<ProviderHealthCheckService>().ToList()[0]);
-        services.AddSingleton<ProviderHealthCheckService>(sp =>
-            (ProviderHealthCheckService)sp.GetRequiredService<IProviderHealthCheckService>());
+        // #2865: register the concrete singleton FIRST, then have both the hosted-service role and
+        // the injectable IProviderHealthCheckService role resolve that same instance directly. The
+        // previous registration looked the instance up via the IHostedService collection and took
+        // [0], which threw ArgumentOutOfRangeException wherever hosted services are stripped (the
+        // integration test factory does exactly this to prevent background-service startup).
+        services.AddSingleton<ProviderHealthCheckService>();
+        services.AddHostedService(sp => sp.GetRequiredService<ProviderHealthCheckService>());
+        services.AddSingleton<IProviderHealthCheckService>(sp => sp.GetRequiredService<ProviderHealthCheckService>());
 
         // ISSUE-1725: LLM budget monitoring background service
         services.AddHostedService<LlmBudgetMonitoringService>();

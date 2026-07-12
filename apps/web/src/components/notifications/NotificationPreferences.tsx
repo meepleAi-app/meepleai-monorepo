@@ -175,6 +175,22 @@ const PREFERENCE_CATEGORIES: PreferenceCategory[] = [
       },
     ],
   },
+  {
+    // #535 / #2832: admin-only opt-in email when a mechanic card is suppressed.
+    id: 'card-suppressed',
+    title: 'Scheda meccanica soppressa (admin)',
+    description: 'Email quando una scheda meccaniche viene soppressa (auto o manuale)',
+    icon: Bell,
+    iconColor: 'bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400',
+    rows: [
+      {
+        key: 'emailOnCardSuppressed',
+        icon: Mail,
+        label: 'Email',
+        description: 'Ricevi email quando una scheda meccaniche viene soppressa',
+      },
+    ],
+  },
 ];
 
 // ============================================================================
@@ -225,6 +241,11 @@ export function NotificationPreferences() {
     try {
       const { userId: _userId, ...prefsWithoutUserId } = prefs;
       await api.notifications.updatePreferences(prefsWithoutUserId);
+      // #2832: card-suppression email opt-in persists via its dedicated endpoint (the generic PUT
+      // above only handles the Document preferences and would otherwise ignore this field).
+      await api.notifications.updateCardSuppressionEmailPreference(
+        prefs.emailOnCardSuppressed ?? false
+      );
       toast({
         title: 'Salvato',
         description: 'Preferenze di notifica aggiornate',

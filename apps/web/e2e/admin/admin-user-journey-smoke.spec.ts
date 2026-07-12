@@ -1,5 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 
+import { seedMockRoleCookies } from '../_helpers/seedAuthSession';
+
 const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
@@ -133,6 +135,10 @@ async function mockUserApis(page: Page) {
 // ---------------------------------------------------------------------------
 
 test.describe('Admin User Journey Smoke', () => {
+  test.beforeEach(async ({ page }) => {
+    await seedMockRoleCookies(page, 'Admin');
+  });
+
   test('full admin user journey: list → detail → role change → audit', async ({ page }) => {
     // ---- Setup mocks ----
     await mockAdminAuth(page);

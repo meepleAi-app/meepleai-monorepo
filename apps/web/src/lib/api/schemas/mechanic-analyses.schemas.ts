@@ -233,11 +233,16 @@ export const MechanicCitationDtoSchema = z.object({
 });
 export type MechanicCitationDto = z.infer<typeof MechanicCitationDtoSchema>;
 
-/** Per-rule template validation outcome (#526 ME-M1.4). Currently always T1-T4, derived server-side. */
+/**
+ * Per-rule guardrail validation outcome. As of #2782 FU-1 these are REAL per-claim outcomes
+ * (taxonomy T1/T2/T3a/T3b/T4, 3-state pass/fail/notRun), persisted server-side — no longer a
+ * derived all-pass stub. `score` carries the T3b grounding cosine (null for the other rules).
+ */
 export const MechanicClaimValidationDtoSchema = z.object({
   rule: z.string(),
   outcome: z.enum(['pass', 'fail', 'notRun']),
   message: z.string().nullable().optional(),
+  score: z.number().nullable().optional(),
 });
 export type MechanicClaimValidationDto = z.infer<typeof MechanicClaimValidationDtoSchema>;
 

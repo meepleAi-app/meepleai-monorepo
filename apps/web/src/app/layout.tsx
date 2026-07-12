@@ -22,10 +22,12 @@ import type { Metadata, Viewport } from 'next';
 import '../styles/design-tokens-canonical.css';
 import '../styles/globals.css';
 import '../styles/diff-viewer.css';
-import '../styles/agent-theme.css';
-import '../styles/agent-typography.css';
-import '../styles/agent-animations.css';
 import 'prismjs/themes/prism-tomorrow.css';
+// Agent neon-brutalist styles (agent-theme/typography/animations) are NOT loaded
+// globally — they are scoped to the agent feature via
+// `@/components/agent/agent-theme-styles`, imported by the agent components that
+// consume `--agent-*` (issue #2852). This keeps ~450 LOC + a Google Fonts
+// @import off every non-agent page.
 
 const quicksand = Quicksand({
   subsets: ['latin'],

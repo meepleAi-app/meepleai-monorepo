@@ -15,5 +15,6 @@ internal record NotificationPreferencesDto(
     bool InAppOnDocumentReady,
     bool InAppOnDocumentFailed,
     bool InAppOnRetryAvailable,
-    bool HasPushSubscription
+    bool HasPushSubscription,
+    bool EmailOnCardSuppressed // #535/#2832: opt-in admin email on mechanic-card suppression
 );

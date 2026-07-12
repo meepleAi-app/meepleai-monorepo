@@ -12,11 +12,14 @@
 
 import { test, expect } from '@playwright/test';
 
+import { isBackendReachable, NO_BACKEND_SKIP_REASON } from './_helpers/backendGuard';
+
 const ADMIN_EMAIL = 'admin@test.com';
 const ADMIN_PASSWORD = 'Admin123!';
 
 test.describe('Admin Management Integration - Issue #903', () => {
   test.beforeEach(async ({ page }) => {
+    test.skip(!(await isBackendReachable(page)), NO_BACKEND_SKIP_REASON);
     // Login as admin
     await page.goto('/login');
     await page.fill('input[name="email"]', ADMIN_EMAIL);

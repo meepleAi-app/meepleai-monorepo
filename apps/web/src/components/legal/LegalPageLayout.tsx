@@ -33,7 +33,7 @@ import { LegalLocaleProvider, LegalLocaleToggle } from './LegalLocaleToggle';
 import { LegalMarkdown } from './LegalMarkdown';
 import { StructuredData, legalPageSchema, breadcrumbSchema } from './StructuredData';
 
-type LegalPageKey = 'privacy' | 'terms' | 'cookies';
+type LegalPageKey = 'privacy' | 'terms' | 'cookies' | 'takedown';
 
 interface FooterNavLink {
   href: string;
@@ -66,6 +66,7 @@ const PAGE_PATHS: Record<LegalPageKey, string> = {
   privacy: '/privacy',
   terms: '/terms',
   cookies: '/cookies',
+  takedown: '/legal/takedown',
 };
 
 function LegalPageContent({

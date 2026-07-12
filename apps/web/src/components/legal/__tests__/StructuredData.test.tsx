@@ -13,6 +13,7 @@ import {
   organizationSchema,
   breadcrumbSchema,
   faqPageSchema,
+  learningResourceSchema,
 } from '../StructuredData';
 
 describe('StructuredData', () => {
@@ -90,5 +91,34 @@ describe('faqPageSchema', () => {
     expect(schema['@type']).toBe('FAQPage');
     expect(schema.mainEntity).toHaveLength(1);
     expect(schema.mainEntity[0]['@type']).toBe('Question');
+  });
+});
+
+describe('learningResourceSchema', () => {
+  it('generates correct LearningResource schema with defaults', () => {
+    const schema = learningResourceSchema({
+      name: 'How MeepleAI understands a game',
+      description: 'The trust chain behind every answer.',
+      url: 'https://meepleai.com/how-it-works/game-comprehension',
+    });
+    expect(schema['@context']).toBe('https://schema.org');
+    expect(schema['@type']).toBe('LearningResource');
+    expect(schema.name).toBe('How MeepleAI understands a game');
+    expect(schema.url).toBe('https://meepleai.com/how-it-works/game-comprehension');
+    expect(schema.learningResourceType).toBe('explainer');
+    expect(schema.inLanguage).toEqual(['it', 'en']);
+    expect(schema.provider['@type']).toBe('Organization');
+  });
+
+  it('respects overridden learningResourceType and inLanguage', () => {
+    const schema = learningResourceSchema({
+      name: 'Guide',
+      description: 'Desc',
+      url: 'https://meepleai.com/x',
+      learningResourceType: 'guide',
+      inLanguage: ['en'],
+    });
+    expect(schema.learningResourceType).toBe('guide');
+    expect(schema.inLanguage).toEqual(['en']);
   });
 });

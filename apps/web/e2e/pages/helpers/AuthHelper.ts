@@ -12,6 +12,8 @@
 
 import { Page } from '@playwright/test';
 
+import { seedMockRoleCookies } from '../../_helpers/seedAuthSession';
+
 const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 export interface UserFixture {
@@ -169,9 +171,7 @@ export class AuthHelper {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([
-          { id: 'game-1', title: 'Test Game', description: 'A test game' },
-        ]),
+        body: JSON.stringify([{ id: 'game-1', title: 'Test Game', description: 'A test game' }]),
       });
     });
 
@@ -516,6 +516,10 @@ export class AuthHelper {
    * Equivalent to setupMockAuth() from fixtures/auth.ts
    */
   async setupMockAuth(role: 'Admin' | 'Editor' | 'User' = 'Admin', email?: string): Promise<void> {
+    // Seed cookies FIRST so proxy.ts resolves the role under the E2E bypass and
+    // grants /admin access (#2784), instead of falling back to 'user'.
+    await seedMockRoleCookies(this.page, role);
+
     const user = {
       id: `${role.toLowerCase()}-test-id`,
       email: email || `${role.toLowerCase()}@example.com`,
@@ -616,7 +620,9 @@ export class AuthHelper {
   async setupRealSession(role: 'admin' | 'editor' | 'user'): Promise<void> {
     const success = await this.loginWithRealCredentials(role);
     if (!success) {
-      throw new Error(`Failed to login as ${role}. Make sure E2E test users exist in the database.`);
+      throw new Error(
+        `Failed to login as ${role}. Make sure E2E test users exist in the database.`
+      );
     }
   }
 }

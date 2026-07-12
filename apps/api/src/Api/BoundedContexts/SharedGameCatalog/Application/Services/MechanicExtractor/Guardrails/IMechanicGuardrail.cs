@@ -23,6 +23,17 @@ public sealed record MechanicGuardrailContext(
 }
 
 /// <summary>
+/// Detailed guardrail result: the violations plus an optional numeric score (T3b only).
+/// <paramref name="Score"/> is the section-wide min cosine (kept for telemetry); <paramref name="ClaimScores"/>
+/// (#2811) carries the PER-CLAIM cosine keyed by the claim object's JSONPath so each claim can render
+/// its own grounding score instead of the misleading section min. Null for non-T3b guardrails.
+/// </summary>
+public sealed record MechanicGuardrailResult(
+    IReadOnlyList<MechanicValidationViolation> Violations,
+    double? Score = null,
+    IReadOnlyDictionary<string, double>? ClaimScores = null);
+
+/// <summary>
 /// One ADR-051 guardrail (T1 quote cap, T2 long-verbatim, T3 citation present/grounded,
 /// T4 page+substring). Returns an empty list when the output passes.
 /// </summary>
@@ -37,4 +48,16 @@ public interface IMechanicGuardrail
     Task<IReadOnlyList<MechanicValidationViolation>> EvaluateAsync(
         MechanicGuardrailContext context,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Collect-all detailed evaluation (#2782 D1/D2). Default: wrap <see cref="EvaluateAsync"/>
+    /// with a null score. Only <c>GroundingGuardrail</c> overrides to surface its cosine.
+    /// </summary>
+    async Task<MechanicGuardrailResult> EvaluateDetailedAsync(
+        MechanicGuardrailContext context,
+        CancellationToken cancellationToken)
+    {
+        var violations = await EvaluateAsync(context, cancellationToken).ConfigureAwait(false);
+        return new MechanicGuardrailResult(violations, Score: null);
+    }
 }

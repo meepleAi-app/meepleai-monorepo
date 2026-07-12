@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+import { setupMockAuth } from './fixtures/auth';
+
 /**
  * Epic #2: Agent System
  * Issues: #4082-#4096 (15 issues)
@@ -7,6 +9,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Epic #2: Agent System', () => {
   test.beforeEach(async ({ page }) => {
+    await setupMockAuth(page, 'Admin');
+
     // TODO: Login as authenticated user
     await page.goto('/');
   });

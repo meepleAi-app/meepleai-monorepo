@@ -115,7 +115,8 @@ internal static class MechanicOutputParser
             section: MechanicSection.Summary,
             text: text!,
             displayOrder: 0,
-            citations: citations);
+            citations: citations,
+            sourceAnchor: "$.summary");
     }
 
     // ============================================================
@@ -129,9 +130,13 @@ internal static class MechanicOutputParser
             yield break;
         }
 
+        var sourceIndex = 0;
         var displayOrder = 0;
         foreach (var item in items.EnumerateArray())
         {
+            var anchor = $"$.mechanics[{sourceIndex}]";
+            sourceIndex++;
+
             if (item.ValueKind != JsonValueKind.Object)
             {
                 continue;
@@ -161,7 +166,8 @@ internal static class MechanicOutputParser
                 section: MechanicSection.Mechanics,
                 text: text,
                 displayOrder: displayOrder++,
-                citations: citations);
+                citations: citations,
+                sourceAnchor: anchor);
         }
     }
 
@@ -193,13 +199,21 @@ internal static class MechanicOutputParser
             yield break;
         }
 
+        // The primary anchors to the whole "$.victory" object; its guardrail violations land on
+        // "$.victory" or "$.victory.citations[n]", both of which prefix-match this anchor (shared
+        // citations belong to the primary). NOTE: because MatchesAnchor is a one-way prefix check,
+        // "$.victory" also prefix-covers the "$.victory.alternatives[i]" subtree. That is harmless
+        // today — no guardrail walks the alternatives strings, so no "$.victory.alternatives[i]"
+        // violation path is ever produced. If alternatives-level validation is ever added, give the
+        // primary a boundary-exact anchor (or tighten MatchesAnchor) so it stops covering them.
         yield return BuildClaim(
             claimId: primaryClaimId,
             analysisId: analysisId,
             section: MechanicSection.Victory,
             text: primary!,
             displayOrder: displayOrder++,
-            citations: primaryCitations);
+            citations: primaryCitations,
+            sourceAnchor: "$.victory");
 
         // Alternatives reuse the same citation source — re-extract per claim so ClaimId wires up.
         if (!victory.TryGetProperty("alternatives", out var alternatives)
@@ -208,8 +222,13 @@ internal static class MechanicOutputParser
             yield break;
         }
 
+        var altIndex = -1;
         foreach (var alt in alternatives.EnumerateArray())
         {
+            // #2808: stamp the RAW array index so each alternative carries a stable
+            // per-claim anchor ($.victory.alternatives[i]) that a "$.victory" primary
+            // violation no longer prefix-matches — mirrors the $.mechanics[i] semantics.
+            altIndex++;
             if (alt.ValueKind != JsonValueKind.String)
             {
                 continue;
@@ -234,7 +253,8 @@ internal static class MechanicOutputParser
                 section: MechanicSection.Victory,
                 text: text!,
                 displayOrder: displayOrder++,
-                citations: altCitations);
+                citations: altCitations,
+                sourceAnchor: $"$.victory.alternatives[{altIndex}]");
         }
     }
 
@@ -249,9 +269,13 @@ internal static class MechanicOutputParser
             yield break;
         }
 
+        var sourceIndex = 0;
         var displayOrder = 0;
         foreach (var item in items.EnumerateArray())
         {
+            var anchor = $"$.resources[{sourceIndex}]";
+            sourceIndex++;
+
             if (item.ValueKind != JsonValueKind.Object)
             {
                 continue;
@@ -281,7 +305,8 @@ internal static class MechanicOutputParser
                 section: MechanicSection.Resources,
                 text: text,
                 displayOrder: displayOrder++,
-                citations: citations);
+                citations: citations,
+                sourceAnchor: anchor);
         }
     }
 
@@ -325,7 +350,7 @@ internal static class MechanicOutputParser
             .ThenBy(x => x.SourceIndex);
 
         var displayOrder = 0;
-        foreach (var (_, _, item) in ordered)
+        foreach (var (_, srcIdx, item) in ordered)
         {
             var description = ReadString(item, "description");
             if (string.IsNullOrWhiteSpace(description))
@@ -351,7 +376,8 @@ internal static class MechanicOutputParser
                 section: MechanicSection.Phases,
                 text: text,
                 displayOrder: displayOrder++,
-                citations: citations);
+                citations: citations,
+                sourceAnchor: $"$.phases[{srcIdx}]");
         }
     }
 
@@ -367,9 +393,13 @@ internal static class MechanicOutputParser
             yield break;
         }
 
+        var sourceIndex = 0;
         var displayOrder = 0;
         foreach (var item in items.EnumerateArray())
         {
+            var anchor = $"$.faq[{sourceIndex}]";
+            sourceIndex++;
+
             if (item.ValueKind != JsonValueKind.Object)
             {
                 continue;
@@ -399,7 +429,8 @@ internal static class MechanicOutputParser
                 section: MechanicSection.Faq,
                 text: text,
                 displayOrder: displayOrder++,
-                citations: citations);
+                citations: citations,
+                sourceAnchor: anchor);
         }
     }
 
@@ -496,7 +527,8 @@ internal static class MechanicOutputParser
         MechanicSection section,
         string text,
         int displayOrder,
-        IReadOnlyList<MechanicCitation> citations)
+        IReadOnlyList<MechanicCitation> citations,
+        string sourceAnchor)
     {
         return MechanicClaim.CreateWithId(
             id: claimId,
@@ -504,7 +536,8 @@ internal static class MechanicOutputParser
             section: section,
             text: text.Trim(),
             displayOrder: displayOrder,
-            citations: citations);
+            citations: citations,
+            sourceAnchor: sourceAnchor);
     }
 
     private static string? ReadString(JsonElement obj, string propertyName)

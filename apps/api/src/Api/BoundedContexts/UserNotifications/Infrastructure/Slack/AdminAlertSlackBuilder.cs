@@ -27,7 +27,8 @@ internal sealed class AdminAlertSlackBuilder : ISlackMessageBuilder
             || type == NotificationType.AdminOpenRouterThresholdAlert
             || type == NotificationType.AdminOpenRouterDailySummary
             || type == NotificationType.AdminSystemHealthAlert
-            || type == NotificationType.AdminModelStatusChanged;
+            || type == NotificationType.AdminModelStatusChanged
+            || type == NotificationType.AdminMechanicCardSuppressed; // #535
     }
 
     public object BuildMessage(INotificationPayload payload, string? deepLinkPath)

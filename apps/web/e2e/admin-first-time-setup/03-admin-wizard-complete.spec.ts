@@ -13,11 +13,8 @@
 
 import { test, expect } from '@playwright/test';
 
-import {
-  loginAsAdmin,
-  navigateToWizard,
-  cleanupTestData,
-} from '../utils/admin-setup-helpers';
+import { isBackendReachable, NO_BACKEND_SKIP_REASON } from '../_helpers/backendGuard';
+import { loginAsAdmin, navigateToWizard, cleanupTestData } from '../utils/admin-setup-helpers';
 
 // Shared state across wizard steps
 let testPdfId: string;
@@ -26,10 +23,22 @@ let testChatThreadId: string;
 
 test.describe.configure({ mode: 'serial' });
 test.describe('Admin Wizard - Complete Flow', () => {
+  // Every test performs a real UI login — skip the whole suite without a
+  // reachable backend. See #2784.
+  test.beforeEach(async ({ page }) => {
+    test.skip(!(await isBackendReachable(page)), NO_BACKEND_SKIP_REASON);
+  });
+
   // Login before all tests
   test.beforeAll(async ({ browser }) => {
     const context = await browser.newContext();
     const page = await context.newPage();
+    // Guard the pre-warm login too: without a backend the login would hard-fail
+    // and fail the suite even though every test is skipped by beforeEach.
+    if (!(await isBackendReachable(page))) {
+      await context.close();
+      return;
+    }
     await loginAsAdmin(page);
     await context.close();
   });
@@ -67,9 +76,9 @@ test.describe('Admin Wizard - Complete Flow', () => {
     await navigateToWizard(page);
 
     // Verify we're on step 1
-    await expect(
-      page.locator('text=/Step 1|PDF Upload|Upload Rulebook/i')
-    ).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=/Step 1|PDF Upload|Upload Rulebook/i')).toBeVisible({
+      timeout: 5000,
+    });
 
     // Select a seeded game (using Pandemic for test)
     const gameSelect = page.locator('select[name="gameSelect"], select[name="game"]');
@@ -102,7 +111,7 @@ test.describe('Admin Wizard - Complete Flow', () => {
 
     // Wait for upload response
     const uploadPromise = page.waitForResponse(
-      (response) =>
+      response =>
         response.url().includes('/api/v1/documents') &&
         (response.status() === 200 || response.status() === 201),
       { timeout: 30000 }
@@ -135,9 +144,9 @@ test.describe('Admin Wizard - Complete Flow', () => {
     // For isolated test, we skip step 1 and go directly
 
     // Verify we're on step 2
-    await expect(
-      page.locator('text=/Step 2|Game Selection|Select Game/i')
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=/Step 2|Game Selection|Select Game/i')).toBeVisible({
+      timeout: 10000,
+    });
 
     // Select Pandemic from dropdown
     const gameIdSelect = page.locator('select[name="gameId"]');
@@ -164,9 +173,9 @@ test.describe('Admin Wizard - Complete Flow', () => {
     await navigateToWizard(page);
 
     // Verify we're on step 3
-    await expect(
-      page.locator('text=/Step 3|Chat Setup|RAG Agent/i')
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=/Step 3|Chat Setup|RAG Agent/i')).toBeVisible({
+      timeout: 10000,
+    });
 
     // Wait for PDF processing status
     console.log('⏳ Waiting for PDF processing...');
@@ -222,9 +231,7 @@ test.describe('Admin Wizard - Complete Flow', () => {
     await navigateToWizard(page);
 
     // Verify we're on step 4
-    await expect(
-      page.locator('text=/Step 4|Q&A|Test/i')
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=/Step 4|Q&A|Test/i')).toBeVisible({ timeout: 10000 });
 
     // Send test question
     const testQuestion = 'How many players can play Pandemic?';
@@ -238,7 +245,7 @@ test.describe('Admin Wizard - Complete Flow', () => {
 
     // Wait for agent response
     const messagePromise = page.waitForResponse(
-      (response) =>
+      response =>
         response.url().includes('/api/v1/chat/messages') &&
         (response.status() === 200 || response.status() === 201),
       { timeout: 30000 }

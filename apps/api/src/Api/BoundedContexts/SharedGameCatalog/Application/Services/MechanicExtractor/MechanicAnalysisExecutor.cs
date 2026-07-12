@@ -4,6 +4,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -240,6 +241,8 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
             return;
         }
 
+        CorrelateValidations(parsed, result.SectionOutcomes);
+
         foreach (var claim in parsed)
         {
             analysis.AddClaim(claim);
@@ -253,6 +256,69 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
         // AI author as the submitter; human review starts in the subsequent phase.
         analysis.SubmitForReview(analysis.CreatedBy, utcNow);
         await Task.CompletedTask.ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Correlates the pipeline's per-section <see cref="MechanicRuleOutcome"/>s to individual
+    /// claims by matching each violation's JSONPath against the claim's <see cref="MechanicClaim.SourceAnchor"/>
+    /// (#2782 D4). This is what turns section-wide guardrail results into per-claim precision: a
+    /// T2 (long-verbatim) failure on claim #1 in a Mechanics section must NOT also flag claim #0 as
+    /// failing — siblings whose anchor doesn't match the violation path stay <c>pass</c> for that rule.
+    /// </summary>
+    /// <remarks>
+    /// <c>internal static</c> so <c>MechanicAnalysisExecutorCorrelationTests</c> can exercise the
+    /// correlation algorithm directly without standing up the full executor dependency graph.
+    /// </remarks>
+    internal static void CorrelateValidations(
+        IReadOnlyList<MechanicClaim> claims,
+        IReadOnlyDictionary<MechanicSection, IReadOnlyList<MechanicRuleOutcome>> sectionOutcomes)
+    {
+        foreach (var claim in claims)
+        {
+            if (!sectionOutcomes.TryGetValue(claim.Section, out var outcomes) || outcomes.Count == 0)
+            {
+                continue; // section had no captured outcomes (e.g. succeeded pre-anchor path) → leave empty
+            }
+
+            var perClaim = new List<MechanicClaimValidation>(outcomes.Count);
+            foreach (var o in outcomes)
+            {
+                var outcome = o.Outcome;
+                if (string.Equals(outcome, MechanicClaimValidationOutcomes.Fail, StringComparison.Ordinal))
+                {
+                    var hits = o.Violations.Any(v => MatchesAnchor(v.Path, claim.SourceAnchor));
+                    outcome = hits ? MechanicClaimValidationOutcomes.Fail : MechanicClaimValidationOutcomes.Pass;
+                }
+                // #2811: attach THIS claim's own grounding cosine (keyed by its anchor) rather than
+                // the section-wide min carried on o.Score — pass claims no longer render a misleading
+                // sibling's low score; claims with no per-claim cosine get null.
+                var claimScore = o.ClaimScores is not null
+                    && o.ClaimScores.TryGetValue(claim.SourceAnchor, out var cs)
+                    ? cs
+                    : (double?)null;
+                perClaim.Add(new MechanicClaimValidation(o.Rule, outcome,
+                    string.Equals(outcome, MechanicClaimValidationOutcomes.Fail, StringComparison.Ordinal) ? o.Message : null, claimScore));
+            }
+            claim.AttachValidations(perClaim);
+        }
+    }
+
+    /// <summary>
+    /// True when <paramref name="violationPath"/> belongs to the claim rooted at <paramref name="anchor"/>
+    /// — either the exact anchor (rare, whole-object violation) or a nested property/array-index
+    /// path under it (e.g. anchor <c>$.mechanics[1]</c> matches <c>$.mechanics[1].description</c>
+    /// and <c>$.mechanics[1].citations[0].quote</c>, but not <c>$.mechanics[10]...</c>).
+    /// </summary>
+    private static bool MatchesAnchor(string? violationPath, string anchor)
+    {
+        if (string.IsNullOrEmpty(violationPath) || string.IsNullOrEmpty(anchor))
+        {
+            return false;
+        }
+
+        return string.Equals(violationPath, anchor, StringComparison.Ordinal)
+            || violationPath.StartsWith(anchor + ".", StringComparison.Ordinal)
+            || violationPath.StartsWith(anchor + "[", StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -294,6 +360,8 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
 
         if (salvaged.Count > 0)
         {
+            CorrelateValidations(salvaged, result.SectionOutcomes);
+
             foreach (var claim in salvaged)
             {
                 analysis.AddClaim(claim);

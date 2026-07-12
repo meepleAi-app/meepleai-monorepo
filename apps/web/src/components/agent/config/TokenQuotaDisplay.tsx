@@ -9,6 +9,8 @@
 
 'use client';
 
+import '@/components/agent/agent-theme-styles';
+
 import { AlertTriangle } from 'lucide-react';
 
 import { useSessionQuota } from '@/hooks/queries/useSessionQuota';

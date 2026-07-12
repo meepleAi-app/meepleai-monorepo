@@ -13,11 +13,18 @@
 
 import { test, expect } from '@playwright/test';
 
+import { isBackendReachable, NO_BACKEND_SKIP_REASON } from '../_helpers/backendGuard';
 import { loginAsAdmin } from '../utils/admin-setup-helpers';
 
 test.describe.configure({ mode: 'serial' });
 test.describe('Authentication Flow', () => {
   test.use({ storageState: undefined }); // Start with no auth
+
+  // Every test in this suite exercises the real login/auth flow against the
+  // backend — skip the whole suite when no backend is reachable. See #2784.
+  test.beforeEach(async ({ page }) => {
+    test.skip(!(await isBackendReachable(page)), NO_BACKEND_SKIP_REASON);
+  });
 
   test('admin first login with email/password (no 2FA)', async ({ page }) => {
     // Navigate to login page
@@ -36,7 +43,7 @@ test.describe('Authentication Flow', () => {
 
     // Set up response listener BEFORE clicking submit
     const responsePromise = page.waitForResponse(
-      (response) => response.url().includes('/api/v1/auth/login') && response.status() === 200
+      response => response.url().includes('/api/v1/auth/login') && response.status() === 200
     );
 
     // Submit login form
@@ -74,7 +81,7 @@ test.describe('Authentication Flow', () => {
     const cookies = await context.cookies();
     // Session cookie may have various names: session, sessionToken, .AspNetCore.Session, etc.
     const sessionCookie = cookies.find(
-      (c) =>
+      c =>
         c.name.toLowerCase().includes('session') ||
         c.name.toLowerCase().includes('auth') ||
         c.name.startsWith('.')
@@ -107,7 +114,7 @@ test.describe('Authentication Flow', () => {
     // Get session cookie (flexible name matching)
     const cookies = await page.context().cookies();
     const sessionCookie = cookies.find(
-      (c) =>
+      c =>
         c.name.toLowerCase().includes('session') ||
         c.name.toLowerCase().includes('auth') ||
         c.name.startsWith('.')
@@ -137,8 +144,8 @@ test.describe('Authentication Flow', () => {
     await page.fill('input[name="email"]', 'admin@meepleai.dev');
     await page.fill('input[name="password"]', 'WrongPassword123');
 
-    const responsePromise = page.waitForResponse(
-      (response) => response.url().includes('/api/v1/auth/login')
+    const responsePromise = page.waitForResponse(response =>
+      response.url().includes('/api/v1/auth/login')
     );
 
     await page.click('button[type="submit"]');
@@ -182,7 +189,7 @@ test.describe('Authentication Flow', () => {
     // Verify session cleared
     const cookies = await context.cookies();
     const sessionCookie = cookies.find(
-      (c) =>
+      c =>
         c.name.toLowerCase().includes('session') ||
         c.name.toLowerCase().includes('auth') ||
         c.name.startsWith('.')
@@ -256,9 +263,9 @@ test.describe('Authentication Flow', () => {
     expect(page.url()).toContain('/admin');
 
     // Verify admin content visible
-    await expect(
-      page.locator('h1:has-text("Users"), h1:has-text("User Management")')
-    ).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('h1:has-text("Users"), h1:has-text("User Management")')).toBeVisible({
+      timeout: 5000,
+    });
 
     console.log('✅ Admin routes accessible');
   });

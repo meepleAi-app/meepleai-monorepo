@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/overlays/alert-dialog-primitives';
 import { APPROVE_CLAIM_NOTE_MAX_LENGTH } from '@/lib/api/schemas/mechanic-analyses.schemas';
+import type { MechanicClaimValidationDto } from '@/lib/api/schemas/mechanic-analyses.schemas';
 
 interface ApproveClaimDialogProps {
   open: boolean;
@@ -24,6 +25,8 @@ interface ApproveClaimDialogProps {
   isPending: boolean;
   /** Short claim preview (first ~80 chars) used in the dialog description. */
   claimPreview?: string;
+  /** Per-claim guardrail outcomes; a `fail` surfaces an override warning (#2782 FU-1). */
+  validations?: MechanicClaimValidationDto[];
 }
 
 /**
@@ -37,8 +40,10 @@ export function ApproveClaimDialog({
   onConfirm,
   isPending,
   claimPreview,
+  validations,
 }: ApproveClaimDialogProps): React.JSX.Element {
   const [note, setNote] = useState('');
+  const hasFail = (validations ?? []).some(v => v.outcome === 'fail');
 
   // Reset note when the dialog closes (Cancel or programmatic close).
   useEffect(() => {
@@ -60,6 +65,15 @@ export function ApproveClaimDialog({
             </span>
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {hasFail && (
+          <div
+            className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-300"
+            role="alert"
+            data-testid="approve-fail-warning"
+          >
+            Questo claim ha fallito uno o più guardrail. Approvando confermi un override manuale.
+          </div>
+        )}
         <div className="space-y-2">
           <label className="block text-sm font-medium" htmlFor="approve-claim-note">
             Reviewer note (optional, up to {APPROVE_CLAIM_NOTE_MAX_LENGTH} chars)

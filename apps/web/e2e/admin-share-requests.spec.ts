@@ -12,8 +12,12 @@
 
 import { test, expect } from '@playwright/test';
 
+import { setupMockAuth } from './fixtures/auth';
+
 test.describe('Admin Share Requests - Review Workflow', () => {
   test.beforeEach(async ({ page }) => {
+    await setupMockAuth(page, 'Admin');
+
     // Navigate to admin share requests queue
     // Note: Assumes admin authentication is handled by middleware or session
     await page.goto('/admin/share-requests');
@@ -42,9 +46,9 @@ test.describe('Admin Share Requests - Review Workflow', () => {
 
   test('should filter requests by status', async ({ page }) => {
     // Open status filter (assuming it's a select or dropdown)
-    const statusFilter = page.getByRole('combobox', { name: /status/i }).or(
-      page.getByLabel(/status/i)
-    );
+    const statusFilter = page
+      .getByRole('combobox', { name: /status/i })
+      .or(page.getByLabel(/status/i));
 
     if (await statusFilter.isVisible()) {
       await statusFilter.click();
@@ -63,9 +67,9 @@ test.describe('Admin Share Requests - Review Workflow', () => {
 
   test('should filter requests by contribution type', async ({ page }) => {
     // Open type filter
-    const typeFilter = page.getByRole('combobox', { name: /type|contribution/i }).or(
-      page.getByLabel(/type|contribution/i)
-    );
+    const typeFilter = page
+      .getByRole('combobox', { name: /type|contribution/i })
+      .or(page.getByLabel(/type|contribution/i));
 
     if (await typeFilter.isVisible()) {
       await typeFilter.click();
@@ -100,7 +104,9 @@ test.describe('Admin Share Requests - Review Workflow', () => {
 
     // Verify detail page elements
     const detailContent = page.getByRole('heading', { name: /wingspan|terraforming|gloomhaven/i });
-    await expect(detailContent.or(page.locator('text=/wingspan|terraforming|gloomhaven/i'))).toBeVisible();
+    await expect(
+      detailContent.or(page.locator('text=/wingspan|terraforming|gloomhaven/i'))
+    ).toBeVisible();
   });
 
   test('should start review and acquire lock', async ({ page }) => {
@@ -114,8 +120,7 @@ test.describe('Admin Share Requests - Review Workflow', () => {
 
     // Set up response listener BEFORE clicking
     const responsePromise = page.waitForResponse(
-      (response) =>
-        response.url().includes('/start-review') && response.status() === 200
+      response => response.url().includes('/start-review') && response.status() === 200
     );
 
     // Click Start Review
@@ -156,8 +161,7 @@ test.describe('Admin Share Requests - Review Workflow', () => {
 
     // Set up response listener
     const responsePromise = page.waitForResponse(
-      (response) =>
-        response.url().includes('/release-review') && response.status() === 200
+      response => response.url().includes('/release-review') && response.status() === 200
     );
 
     await releaseButton.click();
@@ -191,9 +195,9 @@ test.describe('Admin Share Requests - Review Workflow', () => {
     await page.waitForTimeout(500);
 
     // Check for confirmation dialog or notes input
-    const notesInput = page.getByLabel(/notes|comment/i).or(
-      page.getByPlaceholder(/notes|comment/i)
-    );
+    const notesInput = page
+      .getByLabel(/notes|comment/i)
+      .or(page.getByPlaceholder(/notes|comment/i));
 
     if (await notesInput.isVisible()) {
       await notesInput.fill('Looks great! Approved for catalog.');
@@ -204,8 +208,7 @@ test.describe('Admin Share Requests - Review Workflow', () => {
 
     // Set up response listener
     const responsePromise = page.waitForResponse(
-      (response) =>
-        response.url().includes('/approve') && response.status() === 200
+      response => response.url().includes('/approve') && response.status() === 200
     );
 
     await confirmButton.click();
@@ -216,9 +219,7 @@ test.describe('Admin Share Requests - Review Workflow', () => {
 
     // Verify success (check for success message or redirect to queue)
     const successMessage = page.locator('text=/approved|success/i');
-    await expect(
-      successMessage.or(page).first()
-    ).toBeVisible({ timeout: 5000 });
+    await expect(successMessage.or(page).first()).toBeVisible({ timeout: 5000 });
   });
 
   test('should reject request with reason', async ({ page }) => {
@@ -242,19 +243,18 @@ test.describe('Admin Share Requests - Review Workflow', () => {
     await page.waitForTimeout(500);
 
     // Fill rejection reason (required field)
-    const reasonInput = page.getByLabel(/reason/i).or(
-      page.getByPlaceholder(/reason/i)
-    );
+    const reasonInput = page.getByLabel(/reason/i).or(page.getByPlaceholder(/reason/i));
     await expect(reasonInput).toBeVisible();
-    await reasonInput.fill('Incomplete documentation. Please provide rulebook and quick reference.');
+    await reasonInput.fill(
+      'Incomplete documentation. Please provide rulebook and quick reference.'
+    );
 
     // Confirm rejection
     const confirmButton = page.getByRole('button', { name: /confirm|reject/i }).last();
 
     // Set up response listener
     const responsePromise = page.waitForResponse(
-      (response) =>
-        response.url().includes('/reject') && response.status() === 200
+      response => response.url().includes('/reject') && response.status() === 200
     );
 
     await confirmButton.click();
@@ -265,9 +265,7 @@ test.describe('Admin Share Requests - Review Workflow', () => {
 
     // Verify success
     const successMessage = page.locator('text=/rejected|success/i');
-    await expect(
-      successMessage.or(page).first()
-    ).toBeVisible({ timeout: 5000 });
+    await expect(successMessage.or(page).first()).toBeVisible({ timeout: 5000 });
   });
 
   test('should request changes with feedback', async ({ page }) => {
@@ -291,9 +289,9 @@ test.describe('Admin Share Requests - Review Workflow', () => {
     await page.waitForTimeout(500);
 
     // Fill feedback (required field)
-    const feedbackInput = page.getByLabel(/feedback|changes/i).or(
-      page.getByPlaceholder(/feedback|changes/i)
-    );
+    const feedbackInput = page
+      .getByLabel(/feedback|changes/i)
+      .or(page.getByPlaceholder(/feedback|changes/i));
     await expect(feedbackInput).toBeVisible();
     await feedbackInput.fill('Please add FAQ section and clarify setup rules.');
 
@@ -302,8 +300,7 @@ test.describe('Admin Share Requests - Review Workflow', () => {
 
     // Set up response listener
     const responsePromise = page.waitForResponse(
-      (response) =>
-        response.url().includes('/request-changes') && response.status() === 200
+      response => response.url().includes('/request-changes') && response.status() === 200
     );
 
     await confirmButton.click();
@@ -314,9 +311,7 @@ test.describe('Admin Share Requests - Review Workflow', () => {
 
     // Verify success
     const successMessage = page.locator('text=/changes requested|success|sent/i');
-    await expect(
-      successMessage.or(page).first()
-    ).toBeVisible({ timeout: 5000 });
+    await expect(successMessage.or(page).first()).toBeVisible({ timeout: 5000 });
   });
 
   test('should show lock conflict when request is locked by another admin', async ({ page }) => {
@@ -355,9 +350,10 @@ test.describe('Admin Share Requests - Review Workflow', () => {
     await expect(heading.or(page.locator('text=/share request/i'))).toBeVisible();
 
     // Verify can navigate to detail page
-    const reviewButton = page.getByRole('button', { name: /review/i }).first().or(
-      page.locator('text=/review/i').first()
-    );
+    const reviewButton = page
+      .getByRole('button', { name: /review/i })
+      .first()
+      .or(page.locator('text=/review/i').first());
 
     if (await reviewButton.isVisible()) {
       await reviewButton.click();

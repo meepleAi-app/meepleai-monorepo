@@ -396,6 +396,9 @@ public sealed class MechanicAnalysisEndpointsIntegrationTests : IAsyncLifetime
         dto.IsSuppressed.Should().BeFalse();
         // Background executor is mocked → no section runs recorded yet.
         dto.SectionRuns.Should().BeEmpty();
+        // #2807: N/M sections-with-claims signal — no claims produced yet → 0 of 6.
+        dto.SectionsWithClaims.Should().Be(0);
+        dto.TotalSections.Should().Be(6);
     }
 
     [Fact]

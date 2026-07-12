@@ -18,9 +18,10 @@ internal sealed class MechanicAnalysisSectionRunEntityConfiguration : IEntityTyp
                 "ck_mechanic_section_runs_section_range",
                 "section BETWEEN 0 AND 5");
 
+            // 0=Succeeded, 1=Failed, 2=SkippedDueToCostCap, 3=RetainedWithGuardrailFlags (D9).
             t.HasCheckConstraint(
                 "ck_mechanic_section_runs_status_range",
-                "status BETWEEN 0 AND 2");
+                "status BETWEEN 0 AND 3");
 
             t.HasCheckConstraint(
                 "ck_mechanic_section_runs_tokens_non_negative",

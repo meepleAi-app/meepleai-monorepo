@@ -13,8 +13,11 @@
 
 import { test, expect } from '@playwright/test';
 
+import { isBackendReachable, NO_BACKEND_SKIP_REASON } from '../_helpers/backendGuard';
+
 test.describe('SharedGameCatalog Admin Workflow', () => {
   test.beforeEach(async ({ page }) => {
+    test.skip(!(await isBackendReachable(page)), NO_BACKEND_SKIP_REASON);
     // Login as admin (auto-seeded: admin@meepleai.dev / Admin123!)
     await page.goto('/login');
     await page.fill('input[type="email"]', 'admin@meepleai.dev');

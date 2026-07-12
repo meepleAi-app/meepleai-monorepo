@@ -803,6 +803,55 @@
         }
       }
     },
+    "takedown": {
+      "title": "Takedown Request",
+      "description": "How to report content you believe infringes your copyright, and how we handle the request.",
+      "sections": {
+        "overview": {
+          "title": "1. Overview",
+          "content": "MeepleAI respects copyright. Published mechanic cards are AI-generated analyses of game rulebooks: every claim is reworded in original language and cites the rulebook page. Copyright in the original manual text remains with the publishers.\n\nIf you believe a published card reproduces your protected material beyond what is permitted, you can request its removal or suppression through this page. Every request is reviewed by a person; this is not an automated process."
+        },
+        "whoCanFile": {
+          "title": "2. Who can file a request",
+          "content": "A takedown request may be filed by the copyright owner (for example the publisher or the author of the rulebook) or by a representative authorized to act on their behalf.\n\nSo we can verify and reach you, provide your full name, a valid email address, and — if acting on behalf of a third party — the party you represent."
+        },
+        "whatToInclude": {
+          "title": "3. What to include",
+          "content": "To let us handle the request quickly, please include:\n\n- The protected work involved (rulebook or manual title).\n- The exact URL of the card in question (the `/games/{id}/card` page).\n- A description of which content you believe is infringing and why.\n- A good-faith statement that the disputed use is not authorized by the copyright owner, its agent, or the law.\n- Confirmation that the information you provide is accurate.\n\nThe form below assembles these elements into a pre-filled email automatically."
+        },
+        "howWeRespond": {
+          "title": "4. How we respond",
+          "content": "We acknowledge receipt of your request within **3 business days**. We assess the report and, where upheld, suppress or remove the affected card within **10 business days** of receipt.\n\nA suppressed card is no longer publicly accessible. We will update you by email on the outcome, and may ask for additional information if needed to complete the review."
+        },
+        "contact": {
+          "title": "5. Contact",
+          "content": "Takedown requests should be sent to: **takedown@meepleai.app**\n\nYou can use the form at the bottom of this page to compose a pre-filled email, or write directly to that address including the information listed above."
+        }
+      },
+      "form": {
+        "heading": "Takedown request form",
+        "intro": "Fill in the fields to generate a pre-filled email to takedown@meepleai.app. No data is sent to our servers from this page.",
+        "nameLabel": "Full name",
+        "namePlaceholder": "Jane Doe",
+        "emailLabel": "Email",
+        "emailPlaceholder": "you@example.com",
+        "workLabel": "Copyrighted work / rulebook title",
+        "workPlaceholder": "e.g. Catan — Base game rulebook",
+        "cardUrlLabel": "URL of the card in question",
+        "cardUrlPlaceholder": "https://meepleai.com/games/.../card",
+        "descriptionLabel": "Description of the problem",
+        "descriptionPlaceholder": "Describe which content you believe infringes your copyright and why.",
+        "confirmLabel": "I state in good faith that the disputed use is not authorized and that the information I have provided is accurate.",
+        "submit": "Open pre-filled email",
+        "copy": "Copy request to clipboard",
+        "copied": "Copied!",
+        "requiredError": "This field is required.",
+        "emailInvalidError": "Enter a valid email address.",
+        "confirmError": "You must confirm the statement to proceed.",
+        "errorSummary": "Please fix the highlighted fields before proceeding.",
+        "mailSubject": "Takedown request — {work}"
+      }
+    },
     "privacy": {
       "title": "Privacy Policy",
       "description": "How we collect, use, and protect your personal data",
@@ -1059,6 +1108,53 @@
       },
       "aboutCta": "Learn more about MeepleAI",
       "faqCta": "Browse the FAQ"
+    },
+    "gameComprehension": {
+      "metaTitle": "How MeepleAI understands a game | MeepleAI",
+      "metaDescription": "From the rulebook PDF to a card with citations: see the trust chain that makes every MeepleAI answer verifiable, page by page.",
+      "eyebrow": "The trust chain",
+      "title": "Every answer traces back to the rulebook.",
+      "subtitle": "MeepleAI reads the official manual, rewords each mechanic in its own words, and cites the exact page. No invented rules — only what's written, with the source attached.",
+      "chainHeading": "From PDF to a cited card",
+      "chainSubheading": "Four steps, one thread running through them: the source is never lost.",
+      "chain": {
+        "pdf": {
+          "label": "Source",
+          "title": "The rulebook PDF",
+          "description": "It all starts with the game's official manual. It is our single source of truth: MeepleAI never adds anything that isn't in the document."
+        },
+        "read": {
+          "label": "AI reads",
+          "title": "The AI reads and rewords",
+          "description": "The AI reads the manual and rewrites each mechanic in its own words, keeping the link back to the exact spot it came from."
+        },
+        "review": {
+          "label": "Human review",
+          "title": "A reviewer approves",
+          "description": "A person reviews every claim, one by one. Only approved rules make it onto the published card."
+        },
+        "card": {
+          "label": "Final card",
+          "title": "The card with citations",
+          "description": "The published card cites the precise rulebook page for every claim. One click and you see where it came from."
+        }
+      },
+      "demoHeading": "Try it: hover the citation",
+      "demoSubheading": "Here's a Catan mechanic as it would appear on the card. Hover or press Enter on the reference to see the source.",
+      "demoGameName": "Catan",
+      "demoSectionLabel": "Mechanics",
+      "demoClaim": "Players gather resources by rolling dice at the start of each turn.",
+      "demoQuote": "At the beginning of their turn, the active player rolls both dice. The total indicates which terrain hexes produce resources this turn.",
+      "demoDocumentName": "Catan Rulebook",
+      "demoPanelHeading": "Citation source",
+      "demoReviewedBadge": "AI-generated, human-reviewed",
+      "demoPageLabel": "page {page}",
+      "demoDismiss": "Dismiss",
+      "trustNote": "Every card is AI-generated and human-reviewed. It's that combination — not the AI alone — that makes each citation trustworthy.",
+      "ctaHeading": "Ready to trust the rules?",
+      "ctaSubheading": "Upload your game's rulebook and get answers with the source attached.",
+      "ctaPrimary": "Try it with your game",
+      "ctaSecondary": "See how it works overall"
     },
     "blog": {
       "title": "Blog",

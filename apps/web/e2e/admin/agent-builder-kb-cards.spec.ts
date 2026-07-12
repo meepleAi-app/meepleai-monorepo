@@ -7,11 +7,13 @@
 
 import { test, expect, type Page } from '@playwright/test';
 
+import { seedMockRoleCookies } from '../_helpers/seedAuthSession';
+
 const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 async function mockAdminAuth(page: Page) {
-  await page.context().route(`${API_BASE}/api/v1/auth/me`, (route) =>
+  await page.context().route(`${API_BASE}/api/v1/auth/me`, route =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -57,7 +59,7 @@ const MOCK_AGENT = {
 
 async function mockAgentBuilderApi(page: Page) {
   // KB Cards list
-  await page.context().route(`${API_BASE}/api/v1/admin/knowledge-base/kb-cards**`, (route) =>
+  await page.context().route(`${API_BASE}/api/v1/admin/knowledge-base/kb-cards**`, route =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -66,7 +68,7 @@ async function mockAgentBuilderApi(page: Page) {
   );
 
   // Agent definitions GET
-  await page.context().route(`${API_BASE}/api/v1/admin/agent-definitions**`, (route) => {
+  await page.context().route(`${API_BASE}/api/v1/admin/agent-definitions**`, route => {
     const method = route.request().method();
     if (method === 'POST') {
       return route.fulfill({
@@ -90,21 +92,34 @@ async function mockAgentBuilderApi(page: Page) {
   });
 
   // Linked agent
-  await page.context().route(`${API_BASE}/api/v1/admin/agent-definitions/ag-1/linked-agent**`, (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ agentId: 'ag-1', sharedGameId: 'sg-1', kbCardIds: ['kbc-1', 'kbc-2'] }),
-    })
-  );
+  await page
+    .context()
+    .route(`${API_BASE}/api/v1/admin/agent-definitions/ag-1/linked-agent**`, route =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          agentId: 'ag-1',
+          sharedGameId: 'sg-1',
+          kbCardIds: ['kbc-1', 'kbc-2'],
+        }),
+      })
+    );
 
-  await page.context().route(`${API_BASE}/api/v1/admin/**`, (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) })
-  );
+  await page
+    .context()
+    .route(`${API_BASE}/api/v1/admin/**`, route =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: [] }),
+      })
+    );
 }
 
 test.describe('ADM — Agent Builder Form', () => {
   test.beforeEach(async ({ page }) => {
+    await seedMockRoleCookies(page, 'Admin');
     await mockAdminAuth(page);
     await mockAgentBuilderApi(page);
   });
@@ -118,10 +133,10 @@ test.describe('ADM — Agent Builder Form', () => {
     await page.goto('/admin/agents/builder', { waitUntil: 'domcontentloaded' });
 
     // Cerca campo nome agente
-    const nameField = page.locator(
-      'input[name="name"], input[placeholder*="nome"], input[placeholder*="name"]'
-    ).first();
-    if (await nameField.count() > 0) {
+    const nameField = page
+      .locator('input[name="name"], input[placeholder*="nome"], input[placeholder*="name"]')
+      .first();
+    if ((await nameField.count()) > 0) {
       await expect(nameField).toBeVisible({ timeout: 8000 });
     }
   });
@@ -129,7 +144,7 @@ test.describe('ADM — Agent Builder Form', () => {
   test('compila form base e salva', async ({ page }) => {
     let savedPayload: unknown = null;
 
-    await page.context().route(`${API_BASE}/api/v1/admin/agent-definitions`, (route) => {
+    await page.context().route(`${API_BASE}/api/v1/admin/agent-definitions`, route => {
       if (route.request().method() === 'POST') {
         savedPayload = route.request().postDataJSON();
         return route.fulfill({
@@ -144,16 +159,18 @@ test.describe('ADM — Agent Builder Form', () => {
     await page.goto('/admin/agents/builder', { waitUntil: 'domcontentloaded' });
 
     const nameField = page.locator('input[name="name"]').first();
-    if (await nameField.count() > 0) {
+    if ((await nameField.count()) > 0) {
       await nameField.fill('Test Agent E2E');
 
-      const promptField = page.locator('textarea[name="systemPrompt"], textarea[name="prompt"]').first();
-      if (await promptField.count() > 0) {
+      const promptField = page
+        .locator('textarea[name="systemPrompt"], textarea[name="prompt"]')
+        .first();
+      if ((await promptField.count()) > 0) {
         await promptField.fill('Sei un assistente per giochi da tavolo.');
       }
 
       const saveBtn = page.locator('button:has-text("Salva"), button[type="submit"]').first();
-      if (await saveBtn.count() > 0) {
+      if ((await saveBtn.count()) > 0) {
         await saveBtn.click();
         await page.waitForTimeout(1000);
       }
@@ -165,6 +182,7 @@ test.describe('ADM — Agent Builder Form', () => {
 
 test.describe('ADM — KB Cards Checklist in Agent Builder ⭐', () => {
   test.beforeEach(async ({ page }) => {
+    await seedMockRoleCookies(page, 'Admin');
     await mockAdminAuth(page);
     await mockAgentBuilderApi(page);
   });
@@ -173,11 +191,13 @@ test.describe('ADM — KB Cards Checklist in Agent Builder ⭐', () => {
     await page.goto('/admin/agents/builder', { waitUntil: 'domcontentloaded' });
 
     // Cerca pulsante per aprire modal o tab KB Cards
-    const kbTab = page.locator(
-      'button[role="tab"]:has-text("KB"), button:has-text("Knowledge Base"), [data-tab="kb-cards"]'
-    ).first();
+    const kbTab = page
+      .locator(
+        'button[role="tab"]:has-text("KB"), button:has-text("Knowledge Base"), [data-tab="kb-cards"]'
+      )
+      .first();
 
-    if (await kbTab.count() > 0) {
+    if ((await kbTab.count()) > 0) {
       await kbTab.click();
       await expect(page.getByText('Catan Rulebook')).toBeVisible({ timeout: 8000 });
     }
@@ -187,22 +207,24 @@ test.describe('ADM — KB Cards Checklist in Agent Builder ⭐', () => {
     await page.goto('/admin/agents/builder', { waitUntil: 'domcontentloaded' });
 
     // Naviga a tab KB cards
-    const kbTab = page.locator(
-      'button[role="tab"]:has-text("KB"), button:has-text("Knowledge Base"), button:has-text("Cards")'
-    ).first();
+    const kbTab = page
+      .locator(
+        'button[role="tab"]:has-text("KB"), button:has-text("Knowledge Base"), button:has-text("Cards")'
+      )
+      .first();
 
-    if (await kbTab.count() > 0) {
+    if ((await kbTab.count()) > 0) {
       await kbTab.click();
       await page.waitForTimeout(300);
 
       // Seleziona prima card
       const firstCard = page.locator('input[type="checkbox"], [role="checkbox"]').first();
-      if (await firstCard.count() > 0) {
+      if ((await firstCard.count()) > 0) {
         await firstCard.click();
 
         // Verifica counter o stato selezionato
         const counter = page.locator('text=/1.*selezionat|1.*selected|card.*selezionat/i').first();
-        if (await counter.count() > 0) {
+        if ((await counter.count()) > 0) {
           await expect(counter).toBeVisible({ timeout: 5000 });
         }
       }
@@ -212,7 +234,7 @@ test.describe('ADM — KB Cards Checklist in Agent Builder ⭐', () => {
   test('salva agente con kbCardIds nel payload', async ({ page }) => {
     let capturedPayload: Record<string, unknown> | null = null;
 
-    await page.context().route(`${API_BASE}/api/v1/admin/agent-definitions`, (route) => {
+    await page.context().route(`${API_BASE}/api/v1/admin/agent-definitions`, route => {
       if (route.request().method() === 'POST') {
         capturedPayload = route.request().postDataJSON() as Record<string, unknown>;
         return route.fulfill({
@@ -227,21 +249,23 @@ test.describe('ADM — KB Cards Checklist in Agent Builder ⭐', () => {
     await page.goto('/admin/agents/builder', { waitUntil: 'domcontentloaded' });
 
     const nameField = page.locator('input[name="name"]').first();
-    if (await nameField.count() > 0) {
+    if ((await nameField.count()) > 0) {
       await nameField.fill('Agent With KB Cards');
 
       // Vai a tab KB Cards e seleziona una
-      const kbTab = page.locator('button[role="tab"]:has-text("KB"), button:has-text("Knowledge")').first();
-      if (await kbTab.count() > 0) {
+      const kbTab = page
+        .locator('button[role="tab"]:has-text("KB"), button:has-text("Knowledge")')
+        .first();
+      if ((await kbTab.count()) > 0) {
         await kbTab.click();
         const firstCheckbox = page.locator('input[type="checkbox"], [role="checkbox"]').first();
-        if (await firstCheckbox.count() > 0) {
+        if ((await firstCheckbox.count()) > 0) {
           await firstCheckbox.click();
         }
       }
 
       const saveBtn = page.locator('button:has-text("Salva"), button[type="submit"]').first();
-      if (await saveBtn.count() > 0) {
+      if ((await saveBtn.count()) > 0) {
         await saveBtn.click();
         await page.waitForTimeout(1000);
       }

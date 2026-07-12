@@ -14,8 +14,11 @@
 
 import { test, expect } from '@playwright/test';
 
+import { isBackendReachable, NO_BACKEND_SKIP_REASON } from '../_helpers/backendGuard';
+
 test.describe('Approval Queue Page', () => {
   test.beforeEach(async ({ page }) => {
+    test.skip(!(await isBackendReachable(page)), NO_BACKEND_SKIP_REASON);
     // Login as admin
     await page.goto('/login');
     await page.fill('input[type="email"]', 'admin@meepleai.dev');
@@ -56,10 +59,16 @@ test.describe('Approval Queue Page', () => {
   test.describe('Filters', () => {
     test('should display filter controls', async ({ page }) => {
       // Urgency filter
-      await expect(page.locator('text=All Items').or(page.locator('text=Urgent Only'))).toBeVisible();
+      await expect(
+        page.locator('text=All Items').or(page.locator('text=Urgent Only'))
+      ).toBeVisible();
 
       // Sort filter
-      await expect(page.locator('text=Oldest First').or(page.locator('text=Newest First').or(page.locator('text=Most Urgent')))).toBeVisible();
+      await expect(
+        page
+          .locator('text=Oldest First')
+          .or(page.locator('text=Newest First').or(page.locator('text=Most Urgent')))
+      ).toBeVisible();
     });
 
     test('should filter by urgency', async ({ page }) => {
@@ -103,7 +112,7 @@ test.describe('Approval Queue Page', () => {
       const rejectButton = page.locator('button:has-text("Reject")');
 
       // At least one should be visible if items exist
-      const hasItems = await page.locator('[data-testid="queue-item"]').count() > 0;
+      const hasItems = (await page.locator('[data-testid="queue-item"]').count()) > 0;
       if (hasItems) {
         await expect(approveButton.or(rejectButton)).toBeVisible();
       }
@@ -129,7 +138,7 @@ test.describe('Approval Queue Page', () => {
       const urgentBadge = page.locator('text=Urgent');
 
       // If urgent items exist, badge should be visible
-      const hasUrgent = await urgentBadge.count() > 0;
+      const hasUrgent = (await urgentBadge.count()) > 0;
       if (hasUrgent) {
         await expect(urgentBadge.first()).toBeVisible();
       }
@@ -140,7 +149,7 @@ test.describe('Approval Queue Page', () => {
       const daysBadge = page.locator('text=/\\d+ day(s)? pending/');
 
       // If items exist, should show days
-      const hasItems = await daysBadge.count() > 0;
+      const hasItems = (await daysBadge.count()) > 0;
       if (hasItems) {
         await expect(daysBadge.first()).toBeVisible();
       }
@@ -148,9 +157,15 @@ test.describe('Approval Queue Page', () => {
 
     test('should have action buttons for each item', async ({ page }) => {
       // Look for item action buttons
-      const eyeButton = page.locator('button').filter({ has: page.locator('[data-testid="eye-icon"]') });
-      const checkButton = page.locator('button').filter({ has: page.locator('[data-testid="check-icon"]') });
-      const xButton = page.locator('button').filter({ has: page.locator('[data-testid="x-icon"]') });
+      const eyeButton = page
+        .locator('button')
+        .filter({ has: page.locator('[data-testid="eye-icon"]') });
+      const checkButton = page
+        .locator('button')
+        .filter({ has: page.locator('[data-testid="check-icon"]') });
+      const xButton = page
+        .locator('button')
+        .filter({ has: page.locator('[data-testid="x-icon"]') });
 
       // Just verify the page loads without errors
       await page.waitForTimeout(500);
@@ -167,7 +182,9 @@ test.describe('Approval Queue Page', () => {
       await page.waitForTimeout(300);
 
       // Look for bulk approve button
-      const approveButton = page.locator('button:has-text("Approve")').filter({ hasText: /\(\d+\)/ });
+      const approveButton = page
+        .locator('button:has-text("Approve")')
+        .filter({ hasText: /\(\d+\)/ });
 
       const isVisible = await approveButton.isVisible();
       if (isVisible) {
@@ -202,7 +219,10 @@ test.describe('Approval Queue Page', () => {
   test.describe('Preview', () => {
     test('should open preview when clicking eye icon', async ({ page }) => {
       // Find an eye icon button
-      const previewButton = page.locator('button').filter({ has: page.locator('svg[data-lucide="eye"]') }).first();
+      const previewButton = page
+        .locator('button')
+        .filter({ has: page.locator('svg[data-lucide="eye"]') })
+        .first();
 
       const hasPreviewButton = await previewButton.isVisible();
       if (hasPreviewButton) {
@@ -215,7 +235,11 @@ test.describe('Approval Queue Page', () => {
 
     test('preview should have link to full details', async ({ page }) => {
       // Find an eye icon button
-      const previewButton = page.locator('button').filter({ has: page.locator('svg') }).filter({ hasText: '' }).first();
+      const previewButton = page
+        .locator('button')
+        .filter({ has: page.locator('svg') })
+        .filter({ hasText: '' })
+        .first();
 
       const hasPreviewButton = await previewButton.isVisible();
       if (hasPreviewButton) {

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExtractor;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.MechanicExtractor;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.MechanicMetrics;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.Filters;
 using MediatR;
@@ -55,6 +56,63 @@ internal static class AdminMechanicAnalysesEndpoints
             "Returns a page of mechanic analyses ordered by CreatedAt DESC. Bypasses the " +
             "IsSuppressed query filter so suppressed rows remain reachable from the index. " +
             "Page defaults to 1, pageSize to 20 (capped at 100).");
+
+        // #532 ME-M2.3: metrics dashboard endpoints (KPIs, cost time-series, recent table, CSV export).
+        group.MapGet("/metrics/summary", async (
+            Guid? gameId, Guid? reviewerId, DateTime? startDate, DateTime? endDate,
+            IMediator mediator, CancellationToken ct) =>
+        {
+            var result = await mediator
+                .Send(new GetMechanicMetricsSummaryQuery(gameId, reviewerId, startDate, endDate), ct)
+                .ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("AdminMechanicMetricsSummary")
+        .WithSummary("Mechanic Extractor metrics KPIs: cost, review time, approval rate, rejection breakdown (#532)");
+
+        group.MapGet("/metrics/cost-by-day", async (
+            int? days, Guid? gameId, Guid? reviewerId, IMediator mediator, CancellationToken ct) =>
+        {
+            var result = await mediator
+                .Send(new GetMechanicCostByDayQuery(days ?? 30, gameId, reviewerId), ct)
+                .ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("AdminMechanicMetricsCostByDay")
+        .WithSummary("Mechanic Extractor daily cost time-series, gap-filled (#532)");
+
+        group.MapGet("/metrics/recent", async (
+            int? limit, int? offset, Guid? gameId, Guid? reviewerId, int? status,
+            IMediator mediator, CancellationToken ct) =>
+        {
+            var result = await mediator
+                .Send(new GetMechanicRecentAnalysesQuery(limit ?? 25, offset ?? 0, gameId, reviewerId, status), ct)
+                .ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("AdminMechanicMetricsRecent")
+        .WithSummary("Mechanic Extractor recent analyses (paged + filtered by game/reviewer/status) (#532)");
+
+        group.MapGet("/metrics/export", async (
+            Guid? gameId, Guid? reviewerId, int? status, DateTime? startDate, DateTime? endDate,
+            IMediator mediator, CancellationToken ct) =>
+        {
+            var result = await mediator
+                .Send(new ExportMechanicAnalysesQuery(gameId, reviewerId, status, startDate, endDate), ct)
+                .ConfigureAwait(false);
+            return Results.File(result.Content, result.ContentType, result.FileName);
+        })
+        .WithName("AdminMechanicMetricsExport")
+        .WithSummary("Mechanic Extractor analyses CSV export with the same filters as the grid (#532)");
+
+        // #2837: DISTINCT game/reviewer options for the dashboard filter dropdowns (no recency cap).
+        group.MapGet("/metrics/filter-options", async (IMediator mediator, CancellationToken ct) =>
+        {
+            var result = await mediator.Send(new GetMechanicMetricsFilterOptionsQuery(), ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("AdminMechanicMetricsFilterOptions")
+        .WithSummary("DISTINCT game + reviewer options for the metrics filter dropdowns (#2837)");
 
         // POST /api/v1/admin/mechanic-analyses
         // Enqueues the async AI pipeline (B5=B). Returns 202 Accepted with polling URL.

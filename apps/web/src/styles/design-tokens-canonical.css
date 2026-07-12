@@ -19,15 +19,15 @@
 
 :root {
   /* ─── Entity Colors (HSL triplets for alpha composability) ─── */
-  --c-game:    25 95% 45%;
-  --c-player:  262 83% 58%;
-  --c-session: 240 60% 55%;
-  --c-agent:   38 92% 50%;
-  --c-kb:      174 60% 40%;
-  --c-chat:    220 80% 55%;
-  --c-event:   350 89% 60%;
-  --c-toolkit: 142 70% 45%;
-  --c-tool:    195 80% 50%;
+  --c-game:    25 95% 38%;
+  --c-player:  262 83% 45%;
+  --c-session: 240 60% 35%;
+  --c-agent:   38 92% 32%;
+  --c-kb:      174 60% 30%;
+  --c-chat:    220 80% 40%;
+  --c-event:   350 89% 38%;
+  --c-toolkit: 142 70% 30%;
+  --c-tool:    195 80% 32%;
 
   /* ─── Entity Color TEXT variants (darker — for AA 4.5:1 text contrast) ─── *
    * Entity colors above are sized for non-text usage (borders, backgrounds,

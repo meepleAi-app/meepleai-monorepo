@@ -8,6 +8,7 @@
  * - Activity timeline
  */
 
+import { seedMockRoleCookies } from '../_helpers/seedAuthSession';
 import { test, expect } from '../fixtures';
 
 import type { Page } from '@playwright/test';
@@ -16,7 +17,10 @@ const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 async function setupUserActivityMocks(page: Page) {
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  // Seed role cookie FIRST so proxy.ts resolves Admin under the E2E bypass (#2784)
+  await seedMockRoleCookies(page, 'Admin');
+
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -27,7 +31,7 @@ async function setupUserActivityMocks(page: Page) {
     });
   });
 
-  await page.route(`${API_BASE}/api/v1/admin/users/activity`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/users/activity`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -45,8 +49,12 @@ async function setupUserActivityMocks(page: Page) {
     });
   });
 
-  await page.route(`${API_BASE}/api/v1/admin/**`, async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) });
+  await page.route(`${API_BASE}/api/v1/admin/**`, async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: [] }),
+    });
   });
 
   return {};
@@ -71,6 +79,8 @@ test.describe('ADM-16: User Activity Dashboard', () => {
     await setupUserActivityMocks(page);
     await page.goto('/admin/analytics/users');
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('canvas, svg, [data-testid="activity-chart"]').or(page.locator('body'))).toBeVisible();
+    await expect(
+      page.locator('canvas, svg, [data-testid="activity-chart"]').or(page.locator('body'))
+    ).toBeVisible();
   });
 });

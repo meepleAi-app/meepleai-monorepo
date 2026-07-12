@@ -9,6 +9,7 @@
  * - Export audit logs
  */
 
+import { seedMockRoleCookies } from '../_helpers/seedAuthSession';
 import { test, expect } from '../fixtures';
 
 import type { Page } from '@playwright/test';
@@ -32,8 +33,17 @@ interface AuditLogEntry {
  * Setup mock routes for audit log testing
  */
 async function setupAuditLogMocks(page: Page) {
+  await seedMockRoleCookies(page, 'Admin');
+
   const generateLogs = (count: number): AuditLogEntry[] => {
-    const actions = ['LOGIN', 'LOGOUT', 'CREATE_GAME', 'UPDATE_USER', 'DELETE_DOCUMENT', 'EXPORT_DATA'];
+    const actions = [
+      'LOGIN',
+      'LOGOUT',
+      'CREATE_GAME',
+      'UPDATE_USER',
+      'DELETE_DOCUMENT',
+      'EXPORT_DATA',
+    ];
     const users = [
       { id: 'user-1', email: 'admin@meepleai.dev' },
       { id: 'user-2', email: 'user@example.com' },
@@ -49,7 +59,11 @@ async function setupAuditLogMocks(page: Page) {
         userId: user.id,
         userEmail: user.email,
         action,
-        resourceType: action.includes('GAME') ? 'Game' : action.includes('USER') ? 'User' : 'Session',
+        resourceType: action.includes('GAME')
+          ? 'Game'
+          : action.includes('USER')
+            ? 'User'
+            : 'Session',
         resourceId: `resource-${i}`,
         details: { action, index: i },
         ipAddress: `192.168.1.${(i % 255) + 1}`,
@@ -61,7 +75,7 @@ async function setupAuditLogMocks(page: Page) {
   const allLogs = generateLogs(100);
 
   // Mock admin auth
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -78,7 +92,7 @@ async function setupAuditLogMocks(page: Page) {
   });
 
   // Mock audit logs endpoint with pagination and filtering
-  await page.route(`${API_BASE}/api/v1/admin/audit-logs**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/audit-logs**`, async route => {
     const url = route.request().url();
     const page_num = parseInt(url.match(/page=(\d+)/)?.[1] || '1');
     const pageSize = parseInt(url.match(/pageSize=(\d+)/)?.[1] || '20');
@@ -90,18 +104,18 @@ async function setupAuditLogMocks(page: Page) {
     let filteredLogs = [...allLogs];
 
     if (userFilter) {
-      filteredLogs = filteredLogs.filter((l) => l.userId === userFilter);
+      filteredLogs = filteredLogs.filter(l => l.userId === userFilter);
     }
     if (actionFilter) {
-      filteredLogs = filteredLogs.filter((l) => l.action === actionFilter);
+      filteredLogs = filteredLogs.filter(l => l.action === actionFilter);
     }
     if (startDate) {
       const start = new Date(decodeURIComponent(startDate));
-      filteredLogs = filteredLogs.filter((l) => new Date(l.timestamp) >= start);
+      filteredLogs = filteredLogs.filter(l => new Date(l.timestamp) >= start);
     }
     if (endDate) {
       const end = new Date(decodeURIComponent(endDate));
-      filteredLogs = filteredLogs.filter((l) => new Date(l.timestamp) <= end);
+      filteredLogs = filteredLogs.filter(l => new Date(l.timestamp) <= end);
     }
 
     const start = (page_num - 1) * pageSize;
@@ -121,7 +135,7 @@ async function setupAuditLogMocks(page: Page) {
   });
 
   // Mock export endpoint
-  await page.route(`${API_BASE}/api/v1/admin/audit-logs/export`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/audit-logs/export`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'text/csv',
@@ -130,7 +144,7 @@ async function setupAuditLogMocks(page: Page) {
   });
 
   // Mock common admin endpoints
-  await page.route(`${API_BASE}/api/v1/admin/**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -166,9 +180,9 @@ test.describe('ADM-14: Audit Log Viewer', () => {
       await page.waitForLoadState('networkidle');
 
       // Should show log entries
-      await expect(
-        page.getByText(/login|logout|create|update|delete/i).first()
-      ).toBeVisible({ timeout: 5000 });
+      await expect(page.getByText(/login|logout|create|update|delete/i).first()).toBeVisible({
+        timeout: 5000,
+      });
     });
 
     test('should show entry details', async ({ page }) => {
@@ -199,9 +213,9 @@ test.describe('ADM-14: Audit Log Viewer', () => {
       await page.goto('/admin/audit-logs');
       await page.waitForLoadState('networkidle');
 
-      const userFilter = page.getByRole('combobox', { name: /user/i }).or(
-        page.locator('[data-testid="user-filter"]')
-      );
+      const userFilter = page
+        .getByRole('combobox', { name: /user/i })
+        .or(page.locator('[data-testid="user-filter"]'));
 
       if (await userFilter.isVisible()) {
         await userFilter.click();
@@ -220,9 +234,9 @@ test.describe('ADM-14: Audit Log Viewer', () => {
       await page.goto('/admin/audit-logs');
       await page.waitForLoadState('networkidle');
 
-      const actionFilter = page.getByRole('combobox', { name: /action/i }).or(
-        page.locator('[data-testid="action-filter"]')
-      );
+      const actionFilter = page
+        .getByRole('combobox', { name: /action/i })
+        .or(page.locator('[data-testid="action-filter"]'));
 
       if (await actionFilter.isVisible()) {
         await actionFilter.click();
@@ -261,7 +275,7 @@ test.describe('ADM-14: Audit Log Viewer', () => {
       const userFilter = page.getByRole('combobox', { name: /user/i });
       const actionFilter = page.getByRole('combobox', { name: /action/i });
 
-      if (await userFilter.isVisible() && await actionFilter.isVisible()) {
+      if ((await userFilter.isVisible()) && (await actionFilter.isVisible())) {
         await userFilter.click();
         await page.getByText(/admin/i).first().click();
 
@@ -282,9 +296,9 @@ test.describe('ADM-14: Audit Log Viewer', () => {
 
       // Should show pagination
       await expect(
-        page.getByRole('button', { name: /next|2|→/i }).or(
-          page.locator('[data-testid="pagination"]')
-        )
+        page
+          .getByRole('button', { name: /next|2|→/i })
+          .or(page.locator('[data-testid="pagination"]'))
       ).toBeVisible();
     });
 
@@ -311,9 +325,9 @@ test.describe('ADM-14: Audit Log Viewer', () => {
       await page.waitForLoadState('networkidle');
 
       await expect(
-        page.getByRole('combobox', { name: /page.*size|show|per.*page/i }).or(
-          page.locator('[data-testid="page-size"]')
-        )
+        page
+          .getByRole('combobox', { name: /page.*size|show|per.*page/i })
+          .or(page.locator('[data-testid="page-size"]'))
       ).toBeVisible();
     });
 
@@ -340,9 +354,7 @@ test.describe('ADM-14: Audit Log Viewer', () => {
       await page.goto('/admin/audit-logs');
       await page.waitForLoadState('networkidle');
 
-      await expect(
-        page.getByRole('button', { name: /export|download/i })
-      ).toBeVisible();
+      await expect(page.getByRole('button', { name: /export|download/i })).toBeVisible();
     });
 
     test('should export as CSV', async ({ page }) => {
@@ -399,9 +411,7 @@ test.describe('ADM-14: Audit Log Viewer', () => {
         await logEntry.click();
 
         // Should show more details
-        await expect(
-          page.getByText(/detail|resource|ip/i)
-        ).toBeVisible();
+        await expect(page.getByText(/detail|resource|ip/i)).toBeVisible();
       }
     });
 

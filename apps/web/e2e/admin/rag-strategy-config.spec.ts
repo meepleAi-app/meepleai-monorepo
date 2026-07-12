@@ -7,11 +7,14 @@
 
 import { test, expect, type Page } from '@playwright/test';
 
+import { seedMockRoleCookies } from '../_helpers/seedAuthSession';
+
 const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 async function mockAdminAuth(page: Page) {
-  await page.context().route(`${API_BASE}/api/v1/auth/me`, (route) =>
+  await seedMockRoleCookies(page, 'Admin');
+  await page.context().route(`${API_BASE}/api/v1/auth/me`, route =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -27,24 +30,24 @@ const MOCK_TIER_MATRIX = {
   tiers: ['free', 'pro', 'enterprise'],
   strategies: ['basic', 'hybrid', 'semantic', 'fullrag'],
   matrix: {
-    free:       { basic: true,  hybrid: false, semantic: false, fullrag: false },
-    pro:        { basic: true,  hybrid: true,  semantic: true,  fullrag: false },
-    enterprise: { basic: true,  hybrid: true,  semantic: true,  fullrag: true  },
+    free: { basic: true, hybrid: false, semantic: false, fullrag: false },
+    pro: { basic: true, hybrid: true, semantic: true, fullrag: false },
+    enterprise: { basic: true, hybrid: true, semantic: true, fullrag: true },
   },
 };
 
 const MOCK_MODEL_MAPPINGS = [
-  { strategy: 'basic',    model: 'claude-haiku-4-5',   tier: 'free' },
-  { strategy: 'hybrid',   model: 'claude-sonnet-4-6',  tier: 'pro' },
-  { strategy: 'semantic', model: 'claude-sonnet-4-6',  tier: 'pro' },
-  { strategy: 'fullrag',  model: 'claude-opus-4-6',    tier: 'enterprise' },
+  { strategy: 'basic', model: 'claude-haiku-4-5', tier: 'free' },
+  { strategy: 'hybrid', model: 'claude-sonnet-4-6', tier: 'pro' },
+  { strategy: 'semantic', model: 'claude-sonnet-4-6', tier: 'pro' },
+  { strategy: 'fullrag', model: 'claude-opus-4-6', tier: 'enterprise' },
 ];
 
 test.describe('ADM — Strategy Config ⭐', () => {
   test.beforeEach(async ({ page }) => {
     await mockAdminAuth(page);
 
-    await page.context().route(`${API_BASE}/api/v1/admin/rag/tier-strategy-matrix**`, (route) =>
+    await page.context().route(`${API_BASE}/api/v1/admin/rag/tier-strategy-matrix**`, route =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -52,7 +55,7 @@ test.describe('ADM — Strategy Config ⭐', () => {
       })
     );
 
-    await page.context().route(`${API_BASE}/api/v1/admin/rag/strategy-model-mappings**`, (route) =>
+    await page.context().route(`${API_BASE}/api/v1/admin/rag/strategy-model-mappings**`, route =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -60,9 +63,15 @@ test.describe('ADM — Strategy Config ⭐', () => {
       })
     );
 
-    await page.context().route(`${API_BASE}/api/v1/admin/**`, (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) })
-    );
+    await page
+      .context()
+      .route(`${API_BASE}/api/v1/admin/**`, route =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ data: [] }),
+        })
+      );
   });
 
   test('carica pagina Strategy Config', async ({ page }) => {
@@ -75,11 +84,11 @@ test.describe('ADM — Strategy Config ⭐', () => {
 
     // Verifica presenza etichette tier
     const freeLabel = page.locator('text=/free/i').first();
-    const proLabel  = page.locator('text=/pro/i').first();
-    if (await freeLabel.count() > 0) {
+    const proLabel = page.locator('text=/pro/i').first();
+    if ((await freeLabel.count()) > 0) {
       await expect(freeLabel).toBeVisible({ timeout: 8000 });
     }
-    if (await proLabel.count() > 0) {
+    if ((await proLabel.count()) > 0) {
       await expect(proLabel).toBeVisible({ timeout: 8000 });
     }
   });
@@ -89,7 +98,7 @@ test.describe('ADM — Strategy Config ⭐', () => {
 
     // Cerca riferimenti ai modelli
     const modelRef = page.locator('text=/claude|sonnet|haiku|opus/i').first();
-    if (await modelRef.count() > 0) {
+    if ((await modelRef.count()) > 0) {
       await expect(modelRef).toBeVisible({ timeout: 8000 });
     }
   });
@@ -97,33 +106,30 @@ test.describe('ADM — Strategy Config ⭐', () => {
   test('modifica mappatura e salva con toast conferma', async ({ page }) => {
     let saveCalled = false;
 
-    await page.context().route(
-      `${API_BASE}/api/v1/admin/rag/strategy-model-mappings`,
-      (route) => {
-        if (route.request().method() === 'PUT' || route.request().method() === 'PATCH') {
-          saveCalled = true;
-          return route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({ success: true }),
-          });
-        }
-        return route.continue();
+    await page.context().route(`${API_BASE}/api/v1/admin/rag/strategy-model-mappings`, route => {
+      if (route.request().method() === 'PUT' || route.request().method() === 'PATCH') {
+        saveCalled = true;
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: true }),
+        });
       }
-    );
+      return route.continue();
+    });
 
     await page.goto('/admin/agents/strategy', { waitUntil: 'domcontentloaded' });
 
     // Cerca pulsante modifica/salva
-    const saveBtn = page.locator(
-      'button:has-text("Salva"), button:has-text("Save"), button[type="submit"]'
-    ).first();
+    const saveBtn = page
+      .locator('button:has-text("Salva"), button:has-text("Save"), button[type="submit"]')
+      .first();
 
-    if (await saveBtn.count() > 0) {
+    if ((await saveBtn.count()) > 0) {
       // Tenta una modifica (select o toggle)
       const editableEl = page.locator('select, input[type="checkbox"]').first();
-      if (await editableEl.count() > 0) {
-        const tag = await editableEl.evaluate((el) => el.tagName);
+      if ((await editableEl.count()) > 0) {
+        const tag = await editableEl.evaluate(el => el.tagName);
         if (tag === 'SELECT') {
           await editableEl.selectOption({ index: 0 });
         } else {
@@ -141,7 +147,7 @@ test.describe('ADM — Strategy Config ⭐', () => {
     await page.goto('/admin/agents/strategy', { waitUntil: 'domcontentloaded' });
 
     const checkboxes = page.locator('input[type="checkbox"], [role="checkbox"]');
-    if (await checkboxes.count() > 0) {
+    if ((await checkboxes.count()) > 0) {
       await expect(checkboxes.first()).toBeVisible({ timeout: 8000 });
     }
   });

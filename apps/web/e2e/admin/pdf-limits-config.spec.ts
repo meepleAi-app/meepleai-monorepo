@@ -9,6 +9,7 @@
  * - Configure allowed file types
  */
 
+import { seedMockRoleCookies } from '../_helpers/seedAuthSession';
 import { test, expect } from '../fixtures';
 
 import type { Page } from '@playwright/test';
@@ -49,8 +50,11 @@ async function setupPdfLimitsConfigMocks(
 
   const currentConfig = { ...defaultConfig, ...options.initialConfig };
 
+  // Seed role cookie FIRST so proxy.ts resolves Admin under the E2E bypass (#2784)
+  await seedMockRoleCookies(page, 'Admin');
+
   // Mock admin auth
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -67,7 +71,7 @@ async function setupPdfLimitsConfigMocks(
   });
 
   // Mock PDF limits config endpoint
-  await page.route(`${API_BASE}/api/v1/admin/system/pdf-limits`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/system/pdf-limits`, async route => {
     const method = route.request().method();
 
     if (method === 'GET') {
@@ -115,7 +119,10 @@ async function setupPdfLimitsConfigMocks(
       }
 
       if (body.maxUploadsPerDay !== undefined) {
-        currentConfig.maxUploadsPerDay = { ...currentConfig.maxUploadsPerDay, ...body.maxUploadsPerDay };
+        currentConfig.maxUploadsPerDay = {
+          ...currentConfig.maxUploadsPerDay,
+          ...body.maxUploadsPerDay,
+        };
       }
 
       await route.fulfill({
@@ -132,7 +139,7 @@ async function setupPdfLimitsConfigMocks(
   });
 
   // Mock common admin endpoints
-  await page.route(`${API_BASE}/api/v1/admin/**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -205,9 +212,10 @@ test.describe('ADM-12: PDF Limits Configuration', () => {
       await page.waitForLoadState('networkidle');
 
       // Find file size input
-      const fileSizeInput = page.getByLabel(/max.*file.*size|file.*size.*limit/i).or(
-        page.locator('input[name*="fileSize"], input[name*="maxSize"]')
-      ).first();
+      const fileSizeInput = page
+        .getByLabel(/max.*file.*size|file.*size.*limit/i)
+        .or(page.locator('input[name*="fileSize"], input[name*="maxSize"]'))
+        .first();
 
       if (await fileSizeInput.isVisible()) {
         await fileSizeInput.clear();
@@ -226,9 +234,10 @@ test.describe('ADM-12: PDF Limits Configuration', () => {
       await page.goto('/admin/config/pdf-limits');
       await page.waitForLoadState('networkidle');
 
-      const fileSizeInput = page.getByLabel(/max.*file.*size/i).or(
-        page.locator('input[name*="fileSize"]')
-      ).first();
+      const fileSizeInput = page
+        .getByLabel(/max.*file.*size/i)
+        .or(page.locator('input[name*="fileSize"]'))
+        .first();
 
       if (await fileSizeInput.isVisible()) {
         await fileSizeInput.clear();
@@ -247,9 +256,10 @@ test.describe('ADM-12: PDF Limits Configuration', () => {
       await page.goto('/admin/config/pdf-limits');
       await page.waitForLoadState('networkidle');
 
-      const fileSizeInput = page.getByLabel(/max.*file.*size/i).or(
-        page.locator('input[name*="fileSize"]')
-      ).first();
+      const fileSizeInput = page
+        .getByLabel(/max.*file.*size/i)
+        .or(page.locator('input[name*="fileSize"]'))
+        .first();
 
       if (await fileSizeInput.isVisible()) {
         await fileSizeInput.clear();
@@ -270,9 +280,10 @@ test.describe('ADM-12: PDF Limits Configuration', () => {
       await page.goto('/admin/config/pdf-limits');
       await page.waitForLoadState('networkidle');
 
-      const maxPagesInput = page.getByLabel(/max.*page/i).or(
-        page.locator('input[name*="maxPages"]')
-      ).first();
+      const maxPagesInput = page
+        .getByLabel(/max.*page/i)
+        .or(page.locator('input[name*="maxPages"]'))
+        .first();
 
       if (await maxPagesInput.isVisible()) {
         await maxPagesInput.clear();
@@ -304,9 +315,10 @@ test.describe('ADM-12: PDF Limits Configuration', () => {
       await page.waitForLoadState('networkidle');
 
       // Find Free tier upload limit input
-      const freeUploadInput = page.getByLabel(/free.*upload/i).or(
-        page.locator('input[name*="freeUpload"]')
-      ).first();
+      const freeUploadInput = page
+        .getByLabel(/free.*upload/i)
+        .or(page.locator('input[name*="freeUpload"]'))
+        .first();
 
       if (await freeUploadInput.isVisible()) {
         await freeUploadInput.clear();

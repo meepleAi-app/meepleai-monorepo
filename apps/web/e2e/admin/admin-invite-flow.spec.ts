@@ -13,6 +13,8 @@
 
 import { test, expect, type Page } from '@playwright/test';
 
+import { seedMockRoleCookies } from '../_helpers/seedAuthSession';
+
 // ========== Configuration ==========
 
 const API_BASE =
@@ -69,6 +71,7 @@ async function mockAdminAuth(page: Page) {
 }
 
 async function setupInvitationPageMocks(page: Page) {
+  await seedMockRoleCookies(page, 'Admin');
   await mockAdminAuth(page);
 
   // Mock stats endpoint (must come before the general invitations route)

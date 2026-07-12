@@ -5,10 +5,8 @@ export { ConnectionChipPopover, type ConnectionChipPopoverProps } from './Connec
 export { ConnectionChipStrip, type ConnectionChipStripVariant } from './ConnectionChipStrip';
 export { Cover } from './Cover';
 export { EntityBadge } from './EntityBadge';
-export { LifecycleStateBadge } from './LifecycleStateBadge';
 export { MenuPlaceholder } from './MenuPlaceholder';
 export { MetaChips } from './MetaChips';
-export { OwnershipBadge } from './OwnershipBadge';
 export { QuickActions } from './QuickActions';
 export { Rating } from './Rating';
 export { StatusBadge } from './StatusBadge';

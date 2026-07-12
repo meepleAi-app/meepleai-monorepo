@@ -14,6 +14,8 @@
 
 'use client';
 
+import '@/components/agent/agent-theme-styles';
+
 import { useState } from 'react';
 
 import { ArrowLeft, HelpCircle } from 'lucide-react';
@@ -44,12 +46,7 @@ interface AgentConfigSheetProps {
 
 type ViewState = 'config' | 'template-info' | 'model-pricing';
 
-export function AgentConfigSheet({
-  isOpen,
-  onClose,
-  gameId,
-  gameTitle,
-}: AgentConfigSheetProps) {
+export function AgentConfigSheet({ isOpen, onClose, gameId, gameTitle }: AgentConfigSheetProps) {
   const [view, setView] = useState<ViewState>('config');
 
   const isLaunching = false;
@@ -91,12 +88,7 @@ export function AgentConfigSheet({
                 {view === 'model-pricing' && 'Model Pricing'}
               </SheetTitle>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              aria-label="Help"
-            >
+            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Help">
               <HelpCircle className="h-4 w-4 text-muted-foreground" />
             </Button>
           </div>

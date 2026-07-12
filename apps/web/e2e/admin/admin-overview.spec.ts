@@ -5,11 +5,13 @@
 
 import { test, expect, type Page } from '@playwright/test';
 
+import { seedMockRoleCookies } from '../_helpers/seedAuthSession';
+
 const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 async function mockAdminAuth(page: Page) {
-  await page.context().route(`${API_BASE}/api/v1/auth/me`, (route) =>
+  await page.context().route(`${API_BASE}/api/v1/auth/me`, route =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -31,32 +33,60 @@ const MOCK_OVERVIEW_STATS = {
 };
 
 const MOCK_ACTIVITY = [
-  { id: 'a1', type: 'user_registered', message: 'Nuovo utente: test@example.com', createdAt: '2026-02-21T09:00:00Z' },
-  { id: 'a2', type: 'game_published', message: 'Gioco pubblicato: Catan', createdAt: '2026-02-21T08:30:00Z' },
-  { id: 'a3', type: 'pdf_processed', message: 'PDF processato: catan-rulebook.pdf', createdAt: '2026-02-21T08:00:00Z' },
+  {
+    id: 'a1',
+    type: 'user_registered',
+    message: 'Nuovo utente: test@example.com',
+    createdAt: '2026-02-21T09:00:00Z',
+  },
+  {
+    id: 'a2',
+    type: 'game_published',
+    message: 'Gioco pubblicato: Catan',
+    createdAt: '2026-02-21T08:30:00Z',
+  },
+  {
+    id: 'a3',
+    type: 'pdf_processed',
+    message: 'PDF processato: catan-rulebook.pdf',
+    createdAt: '2026-02-21T08:00:00Z',
+  },
 ];
 
 const MOCK_HEALTH = {
   status: 'healthy',
   uptime: '5d 14h 22m',
   services: [
-    { name: 'API',      status: 'healthy', latencyMs: 45  },
-    { name: 'Database', status: 'healthy', latencyMs: 12  },
-    { name: 'Redis',    status: 'healthy', latencyMs: 3   },
-    { name: 'Qdrant',   status: 'healthy', latencyMs: 25  },
-    { name: 'Embedding',status: 'healthy', latencyMs: 180 },
+    { name: 'API', status: 'healthy', latencyMs: 45 },
+    { name: 'Database', status: 'healthy', latencyMs: 12 },
+    { name: 'Redis', status: 'healthy', latencyMs: 3 },
+    { name: 'Qdrant', status: 'healthy', latencyMs: 25 },
+    { name: 'Embedding', status: 'healthy', latencyMs: 180 },
   ],
 };
 
 test.describe('ADM — Overview', () => {
   test.beforeEach(async ({ page }) => {
+    await seedMockRoleCookies(page, 'Admin');
     await mockAdminAuth(page);
-    await page.context().route(`${API_BASE}/api/v1/admin/stats**`, (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_OVERVIEW_STATS) })
-    );
-    await page.context().route(`${API_BASE}/api/v1/admin/**`, (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) })
-    );
+    await page
+      .context()
+      .route(`${API_BASE}/api/v1/admin/stats**`, route =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(MOCK_OVERVIEW_STATS),
+        })
+      );
+    await page
+      .context()
+      .route(`${API_BASE}/api/v1/admin/**`, route =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ data: [] }),
+        })
+      );
   });
 
   test('carica pagina overview con TopNav e Sidebar', async ({ page }) => {
@@ -70,18 +100,21 @@ test.describe('ADM — Overview', () => {
   test('mostra KPI cards statistiche', async ({ page }) => {
     await page.goto('/admin/overview', { waitUntil: 'domcontentloaded' });
     // Cerca almeno uno dei KPI
-    const kpi = page.locator('[data-testid="kpi-card"]')
+    const kpi = page
+      .locator('[data-testid="kpi-card"]')
       .or(page.locator('text=/1.234|1234|utenti|users|giochi|games/i'))
       .first();
-    if (await kpi.count() > 0) {
+    if ((await kpi.count()) > 0) {
       await expect(kpi).toBeVisible({ timeout: 8000 });
     }
   });
 
   test('sidebar contestuale presente', async ({ page }) => {
     await page.goto('/admin/overview', { waitUntil: 'domcontentloaded' });
-    const sidebar = page.locator('aside, [data-testid="contextual-sidebar"], [data-testid="admin-sidebar"]').first();
-    if (await sidebar.count() > 0) {
+    const sidebar = page
+      .locator('aside, [data-testid="contextual-sidebar"], [data-testid="admin-sidebar"]')
+      .first();
+    if ((await sidebar.count()) > 0) {
       await expect(sidebar).toBeVisible({ timeout: 8000 });
     }
   });
@@ -89,17 +122,24 @@ test.describe('ADM — Overview', () => {
 
 test.describe('ADM — Activity Feed', () => {
   test.beforeEach(async ({ page }) => {
+    await seedMockRoleCookies(page, 'Admin');
     await mockAdminAuth(page);
-    await page.context().route(`${API_BASE}/api/v1/admin/activity**`, (route) =>
+    await page.context().route(`${API_BASE}/api/v1/admin/activity**`, route =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ items: MOCK_ACTIVITY, totalCount: MOCK_ACTIVITY.length }),
       })
     );
-    await page.context().route(`${API_BASE}/api/v1/admin/**`, (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) })
-    );
+    await page
+      .context()
+      .route(`${API_BASE}/api/v1/admin/**`, route =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ data: [] }),
+        })
+      );
   });
 
   test('carica activity feed', async ({ page }) => {
@@ -110,10 +150,11 @@ test.describe('ADM — Activity Feed', () => {
   test('mostra eventi recenti con timestamp', async ({ page }) => {
     await page.goto('/admin/overview/activity', { waitUntil: 'domcontentloaded' });
 
-    const activityItem = page.locator('[data-testid="activity-item"]')
+    const activityItem = page
+      .locator('[data-testid="activity-item"]')
       .or(page.locator('text=/Catan|utente|registrat|published/i'))
       .first();
-    if (await activityItem.count() > 0) {
+    if ((await activityItem.count()) > 0) {
       await expect(activityItem).toBeVisible({ timeout: 8000 });
     }
   });
@@ -121,13 +162,26 @@ test.describe('ADM — Activity Feed', () => {
 
 test.describe('ADM — System Health', () => {
   test.beforeEach(async ({ page }) => {
+    await seedMockRoleCookies(page, 'Admin');
     await mockAdminAuth(page);
-    await page.context().route(`${API_BASE}/api/v1/admin/health**`, (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_HEALTH) })
-    );
-    await page.context().route(`${API_BASE}/api/v1/admin/**`, (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) })
-    );
+    await page
+      .context()
+      .route(`${API_BASE}/api/v1/admin/health**`, route =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(MOCK_HEALTH),
+        })
+      );
+    await page
+      .context()
+      .route(`${API_BASE}/api/v1/admin/**`, route =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ data: [] }),
+        })
+      );
   });
 
   test('carica pagina system health', async ({ page }) => {
@@ -139,7 +193,7 @@ test.describe('ADM — System Health', () => {
     await page.goto('/admin/overview/system', { waitUntil: 'domcontentloaded' });
 
     const serviceList = page.locator('text=/API|Database|Redis|Qdrant/i').first();
-    if (await serviceList.count() > 0) {
+    if ((await serviceList.count()) > 0) {
       await expect(serviceList).toBeVisible({ timeout: 8000 });
     }
   });
@@ -148,7 +202,7 @@ test.describe('ADM — System Health', () => {
     await page.goto('/admin/overview/system', { waitUntil: 'domcontentloaded' });
 
     const uptime = page.locator('text=/uptime|5d|14h/i').first();
-    if (await uptime.count() > 0) {
+    if ((await uptime.count()) > 0) {
       await expect(uptime).toBeVisible({ timeout: 8000 });
     }
   });

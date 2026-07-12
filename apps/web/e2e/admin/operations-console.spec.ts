@@ -5,12 +5,15 @@
 
 import { test, expect, type Page } from '@playwright/test';
 
+import { seedMockRoleCookies } from '../_helpers/seedAuthSession';
+
 const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 /* ---------- Auth mock ---------- */
 
 async function mockAdminAuth(page: Page) {
+  await seedMockRoleCookies(page, 'Admin');
   await page.context().route(`${API_BASE}/api/v1/auth/me`, route =>
     route.fulfill({
       status: 200,

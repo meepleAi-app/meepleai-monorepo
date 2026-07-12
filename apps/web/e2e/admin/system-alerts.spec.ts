@@ -9,6 +9,7 @@
  * - Enable/disable alerts
  */
 
+import { seedMockRoleCookies } from '../_helpers/seedAuthSession';
 import { test, expect } from '../fixtures';
 
 import type { Page } from '@playwright/test';
@@ -76,8 +77,11 @@ async function setupSystemAlertsMocks(page: Page) {
     },
   ];
 
+  // Seed role cookie FIRST so proxy.ts resolves Admin under the E2E bypass (#2784)
+  await seedMockRoleCookies(page, 'Admin');
+
   // Mock admin auth
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -94,7 +98,7 @@ async function setupSystemAlertsMocks(page: Page) {
   });
 
   // Mock alerts list endpoint
-  await page.route(`${API_BASE}/api/v1/admin/alerts`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/alerts`, async route => {
     const method = route.request().method();
 
     if (method === 'GET') {
@@ -139,13 +143,13 @@ async function setupSystemAlertsMocks(page: Page) {
   });
 
   // Mock single alert endpoint
-  await page.route(`${API_BASE}/api/v1/admin/alerts/*`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/alerts/*`, async route => {
     const method = route.request().method();
     const url = route.request().url();
     const alertIdMatch = url.match(/alerts\/([^/]+)/);
     const alertId = alertIdMatch?.[1];
 
-    const alertIndex = alerts.findIndex((a) => a.id === alertId);
+    const alertIndex = alerts.findIndex(a => a.id === alertId);
 
     if (alertIndex === -1) {
       await route.fulfill({
@@ -171,7 +175,7 @@ async function setupSystemAlertsMocks(page: Page) {
         }),
       });
     } else if (method === 'DELETE') {
-      alerts = alerts.filter((a) => a.id !== alertId);
+      alerts = alerts.filter(a => a.id !== alertId);
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -187,7 +191,7 @@ async function setupSystemAlertsMocks(page: Page) {
   });
 
   // Mock notification channels
-  await page.route(`${API_BASE}/api/v1/admin/notification-channels`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/notification-channels`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -203,7 +207,7 @@ async function setupSystemAlertsMocks(page: Page) {
   });
 
   // Mock metrics endpoint
-  await page.route(`${API_BASE}/api/v1/admin/metrics`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/metrics`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -220,7 +224,7 @@ async function setupSystemAlertsMocks(page: Page) {
   });
 
   // Mock common admin endpoints
-  await page.route(`${API_BASE}/api/v1/admin/**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -277,9 +281,7 @@ test.describe('ADM-15: System Alerts Config', () => {
       await page.waitForLoadState('networkidle');
 
       // Should show severity indicators
-      await expect(
-        page.getByText(/warning|critical|info/i).first()
-      ).toBeVisible();
+      await expect(page.getByText(/warning|critical|info/i).first()).toBeVisible();
     });
   });
 
@@ -290,9 +292,7 @@ test.describe('ADM-15: System Alerts Config', () => {
       await page.goto('/admin/alerts');
       await page.waitForLoadState('networkidle');
 
-      await expect(
-        page.getByRole('button', { name: /create|add|new.*alert/i })
-      ).toBeVisible();
+      await expect(page.getByRole('button', { name: /create|add|new.*alert/i })).toBeVisible();
     });
 
     test('should open create alert form', async ({ page }) => {

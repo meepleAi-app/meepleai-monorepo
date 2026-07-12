@@ -8,6 +8,7 @@
  * - Allow admin bypass
  */
 
+import { seedMockRoleCookies } from '../_helpers/seedAuthSession';
 import { test, expect } from '../fixtures';
 
 import type { Page } from '@playwright/test';
@@ -16,7 +17,10 @@ const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 async function setupMaintenanceMocks(page: Page, isAdmin = false) {
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  // Seed role cookie FIRST so proxy.ts resolves the role under the E2E bypass (#2784)
+  await seedMockRoleCookies(page, isAdmin ? 'Admin' : 'User');
+
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -32,7 +36,7 @@ async function setupMaintenanceMocks(page: Page, isAdmin = false) {
     });
   });
 
-  await page.route(`${API_BASE}/api/v1/system/status`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/system/status`, async route => {
     await route.fulfill({
       status: 503,
       contentType: 'application/json',
@@ -45,7 +49,7 @@ async function setupMaintenanceMocks(page: Page, isAdmin = false) {
     });
   });
 
-  await page.route(`${API_BASE}/api/v1/**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/**`, async route => {
     if (!isAdmin) {
       await route.fulfill({
         status: 503,

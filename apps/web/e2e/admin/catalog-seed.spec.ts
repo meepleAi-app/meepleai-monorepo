@@ -15,6 +15,7 @@
  * Backend Fast unit-test runs (we already cover the components with Vitest).
  */
 
+import { seedMockRoleCookies } from '../_helpers/seedAuthSession';
 import { test, expect, type Page } from '../fixtures';
 
 const API_BASE =
@@ -30,6 +31,8 @@ interface SeedListState {
 }
 
 async function setupCatalogSeedMocks(page: Page, state: SeedListState): Promise<void> {
+  await seedMockRoleCookies(page, 'Admin');
+
   // Admin auth
   await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({

@@ -19,6 +19,8 @@
 
 import { expect, test } from '@playwright/test';
 
+import { setupMockAuth } from '../fixtures/auth';
+
 // Helper: Login as admin user
 async function loginAsAdmin(page: any) {
   // TODO: Replace with actual admin login flow
@@ -37,6 +39,7 @@ async function waitForChartsToRender(page: any) {
 
 test.describe('Admin Dashboard - Visual Regression', () => {
   test.beforeEach(async ({ page }) => {
+    await setupMockAuth(page, 'Admin');
     await loginAsAdmin(page);
   });
 

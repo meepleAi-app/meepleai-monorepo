@@ -1,7 +1,11 @@
 import { test, expect } from '@playwright/test';
 
+import { setupMockAuth } from './fixtures/auth';
+
 test.describe('Admin Dashboard Navigation', () => {
   test.beforeEach(async ({ page }) => {
+    await setupMockAuth(page, 'Admin');
+
     // Set auth bypass for E2E
     process.env.PLAYWRIGHT_AUTH_BYPASS = 'true';
 

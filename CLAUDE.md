@@ -198,9 +198,11 @@ import { MeepleCard } from '@/components/ui/data-display/meeple-card';
   imageUrl={game.imageUrl} rating={game.averageRating} ratingMax={10} />
 ```
 
-Entity types: `game` (orange) · `player` (purple) · `collection` (teal) · `event` (rose)
-Variants: `grid` (default) · `list` · `compact` · `featured` · `hero`
+Entity types (10, `MeepleEntityType`): `game` · `player` · `session` · `agent` · `kb` · `chat` · `event` · `toolkit` · `tool` · `gameNightEvent`
+Variants (6, `variantMap` in `MeepleCard.tsx`): `grid` (default) · `list` · `compact` · `featured` · `hero` · `focus`
 Docs: [docs/for-developers/frontend/meeple-card-design-tokens.md](./docs/for-developers/frontend/meeple-card-design-tokens.md)
+
+> **Note**: `MeepleCard` (generic dispatcher) is one of **three parallel card families** — see also `ui/shared-games/meeple-card-game.tsx` (`MeepleCardGame`) and `ui/data-display/extra-meeple-card/` (detail/drawer). Consolidation debt + CSS layering are tracked in the [MeepleCard/CSS drift audit](./docs/for-developers/audits/2026-07-12-meeplecard-css-drift-audit.md).
 
 ### V2 Migration Components
 
@@ -305,7 +307,7 @@ Stage 3 conformity fixes shipped per cluster (player-detail, toolkit-detail BE+F
 
 **Token Canonicalization** — Tier 1+2+3+4 complete, 0 project-wide violations (2026-05-12, spec [`2026-05-12-token-canonicalization.md`](./docs/for-developers/specs/2026-05-12-token-canonicalization.md)).
 
-The runtime imports `admin-mockups/design_files/tokens.css` as `apps/web/src/styles/design-tokens-canonical.css`. Legacy v1 names (`--bg-base`, `--gaming-bg-*`, `--nh-bg-*`, `--e-*`) are still aliased via `token-bridge.css` because ~120 CSS-side consumers reference them directly via `var(--*)` literals. The bridge will be removed in **DS-16** (CSS variable migration codemod), separate from this token-class migration.
+The runtime imports `admin-mockups/design_files/tokens.css` as `apps/web/src/styles/design-tokens-canonical.css`. The legacy `token-bridge.css` file was **removed in DS-16** (the standalone bridge stylesheet no longer exists — see the load-order comment in `apps/web/src/app/layout.tsx`). Any residual legacy `var(--*)` literals (`--bg-base`, `--gaming-bg-*`, `--nh-bg-*`, `--e-*`) are inventoried in the [MeepleCard/CSS drift audit](./docs/for-developers/audits/2026-07-12-meeplecard-css-drift-audit.md) § css-layers.
 
 Theming uses `[data-theme="light|dark"]` (next-themes applies both `class="dark"` AND `data-theme="dark"`). **Default theme is light** (mockup cream `#f7f3ee`), dark accessible via user toggle.
 

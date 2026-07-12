@@ -118,6 +118,58 @@ describe('useGameChat', () => {
     expect(result.current.messages[1].isLowQuality).toBe(false);
   });
 
+  it('surfaces citations from the type-1 Citations-early SSE event when COMPLETE has citations:null (#V)', async () => {
+    // Real backend contract (verified on live SSE): citations arrive in the
+    // type-1 (CITATIONS) event as { text, source:"PDF:{docId}", page, score },
+    // while the type-4 COMPLETE payload carries citations:null. The hook MUST
+    // surface the type-1 citations (mapped to the FE Citation shape) or the chat
+    // renders zero CitationChip and the source PDF is unreachable.
+    const sseRealEvents = [
+      { type: 7, data: { token: 'Alla fine ' } },
+      { type: 7, data: { token: 'della partita si contano i punti.' } },
+      {
+        type: 1,
+        data: {
+          citations: [
+            {
+              text: 'Alice loses a total of 8 points',
+              source: 'PDF:853f6dcc-aaaa',
+              page: 6,
+              line: 0,
+              score: 0.85,
+            },
+            {
+              text: 'tiles directly adjacent',
+              source: 'PDF:853f6dcc-aaaa',
+              page: 5,
+              line: 0,
+              score: 0.83,
+            },
+          ],
+        },
+      },
+      { type: 4, data: { confidence: 0.8, citations: null } },
+    ];
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(sseRealEvents) as any);
+    const { result } = renderHook(() => useGameChat('azul'));
+    await act(async () => {
+      await result.current.ask('come si calcolano i punti a fine partita?');
+    });
+    const agent = result.current.messages[1];
+    expect(agent.citations).toHaveLength(2);
+    expect(agent.citations?.[0]).toEqual(
+      expect.objectContaining({
+        documentId: '853f6dcc-aaaa',
+        pageNumber: 6,
+        snippet: 'Alice loses a total of 8 points',
+        relevanceScore: 0.85,
+        copyrightTier: 'full',
+      })
+    );
+    expect(agent.isLowQuality).toBe(false);
+    expect(agent.outOfContext).toBe(false);
+  });
+
   it('derives outOfContext=true when no citations + confidence < 0.30', async () => {
     const oocEvents = [
       { type: 7, data: 'Non ho informazioni.' },

@@ -85,37 +85,15 @@ export default function MechanicMetricsPage(): JSX.Element {
     staleTime: 30_000,
   });
 
-  // Filter dropdown options: distinct games/reviewers derived from the 200 most-recent analyses.
-  // KNOWN LIMITATION (#532 follow-up): games/reviewers whose analyses all fall outside this window
-  // won't appear as filter options once volume exceeds 200 rows. A dedicated DISTINCT endpoint is the
-  // proper fix — deferred; the summary/recent/export results themselves are NOT capped by this.
+  // Filter dropdown options: DISTINCT games/reviewers across ALL analyses (#2837 — no recency cap).
   const optionsQuery = useQuery({
     queryKey: ['me-metrics', 'filter-options'],
-    queryFn: () => adminClient.getMechanicRecentAnalyses({ limit: 200 }),
+    queryFn: () => adminClient.getMechanicMetricsFilterOptions(),
     staleTime: 5 * 60_000,
   });
 
-  const gameOptions = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const r of optionsQuery.data?.items ?? []) {
-      map.set(r.sharedGameId, r.gameName);
-    }
-    return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
-  }, [optionsQuery.data]);
-
-  const reviewerOptions = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const r of optionsQuery.data?.items ?? []) {
-      if (r.reviewedBy) {
-        map.set(r.reviewedBy, r.reviewerName ?? r.reviewedBy);
-      }
-    }
-    return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
-  }, [optionsQuery.data]);
+  const gameOptions = optionsQuery.data?.games ?? [];
+  const reviewerOptions = optionsQuery.data?.reviewers ?? [];
 
   const summary = summaryQuery.data;
   const recent = recentQuery.data;

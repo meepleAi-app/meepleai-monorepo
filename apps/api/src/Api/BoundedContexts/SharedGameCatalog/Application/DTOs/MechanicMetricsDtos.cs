@@ -40,3 +40,14 @@ internal sealed record MechanicRecentAnalysesResult(
 
 /// <summary>CSV export payload for the recent-analyses table (#532).</summary>
 internal sealed record ExportMechanicAnalysesResult(byte[] Content, string ContentType, string FileName);
+
+/// <summary>One selectable option (game or reviewer) for the dashboard filter dropdowns (#2837).</summary>
+internal sealed record MechanicFilterOptionDto(Guid Id, string Name);
+
+/// <summary>
+/// DISTINCT game + reviewer options for the metrics dashboard filter dropdowns (#2837), computed over
+/// ALL non-suppressed analyses (no recency cap, unlike the earlier recent(200)-derived options).
+/// </summary>
+internal sealed record MechanicMetricsFilterOptionsDto(
+    IReadOnlyList<MechanicFilterOptionDto> Games,
+    IReadOnlyList<MechanicFilterOptionDto> Reviewers);

@@ -9,9 +9,11 @@ import {
   MechanicMetricsSummarySchema,
   MechanicCostByDayArraySchema,
   MechanicRecentAnalysesResultSchema,
+  MechanicMetricsFilterOptionsSchema,
   type MechanicMetricsSummary,
   type MechanicCostByDay,
   type MechanicRecentAnalysesResult,
+  type MechanicMetricsFilterOptions,
 } from '../../schemas/admin-mechanic-metrics.schemas';
 
 import type { HttpClient } from '../../core/httpClient';
@@ -70,6 +72,11 @@ export function createAdminMechanicMetricsClient(http: HttpClient) {
         status: params.status,
       });
       return http.get(`${BASE}/recent${qs}`, MechanicRecentAnalysesResultSchema);
+    },
+
+    // #2837: DISTINCT game/reviewer options for the filter dropdowns (no recency cap).
+    async getMechanicMetricsFilterOptions(): Promise<MechanicMetricsFilterOptions | null> {
+      return http.get(`${BASE}/filter-options`, MechanicMetricsFilterOptionsSchema);
     },
 
     async exportMechanicAnalysesCsv(filters: MechanicMetricsFilters = {}): Promise<Blob> {

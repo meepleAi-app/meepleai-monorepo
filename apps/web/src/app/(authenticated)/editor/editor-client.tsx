@@ -42,6 +42,7 @@ import { logger } from '@/lib/logger';
 import { sanitizeHtml } from '@/lib/security/sanitize';
 import { cn } from '@/lib/utils';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
+import { canUseEditor } from '@/lib/utils/roles';
 import {
   useRuleSpecLockStore,
   selectHasLock,
@@ -486,8 +487,10 @@ export function EditorClient() {
     );
   }
 
-  // RequireRole already checked permissions, this is redundant but kept for safety
-  if (user && user.role !== 'Admin' && user.role !== 'Editor') {
+  // RequireRole already checked permissions, this is redundant but kept for safety.
+  // Issue #2845/#GG: use the case-insensitive, superadmin-aware helper — a flat
+  // `role !== 'Admin'` compare denied the lowercase roles the backend emits.
+  if (user && !canUseEditor(user.role)) {
     return (
       <main className="p-6 font-sans">
         <h1>Editor RuleSpec</h1>

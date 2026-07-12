@@ -13,6 +13,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from '@playwright/test';
 
+import { isBackendReachable, NO_BACKEND_SKIP_REASON } from '../_helpers/backendGuard';
+
 test.describe('SharedGameCatalog Accessibility (WCAG AA)', () => {
   test.beforeEach(async ({ page }) => {
     // Note: axe-playwright auto-injects axe-core, no manual injection needed
@@ -34,6 +36,7 @@ test.describe('SharedGameCatalog Accessibility (WCAG AA)', () => {
   });
 
   test('Admin list page should have no WCAG AA violations', async ({ page }) => {
+    test.skip(!(await isBackendReachable(page)), NO_BACKEND_SKIP_REASON);
     // Login as admin
     await page.goto('/login');
     await page.fill('input[type="email"]', 'admin@meepleai.dev');
@@ -78,6 +81,7 @@ test.describe('SharedGameCatalog Accessibility (WCAG AA)', () => {
   });
 
   test('Keyboard navigation should work throughout admin UI', async ({ page }) => {
+    test.skip(!(await isBackendReachable(page)), NO_BACKEND_SKIP_REASON);
     await page.goto('/login');
     await page.fill('input[type="email"]', 'admin@meepleai.dev');
     await page.fill('input[type="password"]', 'Admin123!');

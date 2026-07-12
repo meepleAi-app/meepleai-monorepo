@@ -13,11 +13,14 @@
 
 import { test, expect } from '@playwright/test';
 
+import { isBackendReachable, NO_BACKEND_SKIP_REASON } from '../_helpers/backendGuard';
+
 const BASE_URL = process.env.NEXT_PUBLIC_WEB_BASE || 'http://localhost:3000';
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 test.describe('API Keys UI Security - Issue #914', () => {
   test.beforeEach(async ({ page }) => {
+    test.skip(!(await isBackendReachable(page)), NO_BACKEND_SKIP_REASON);
     // Login as admin
     await page.goto(`${BASE_URL}/login`);
     await page.fill('input[name="email"]', 'demo@meepleai.dev');

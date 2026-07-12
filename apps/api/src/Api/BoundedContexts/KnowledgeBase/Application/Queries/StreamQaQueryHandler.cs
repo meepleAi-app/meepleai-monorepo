@@ -318,14 +318,30 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         // Calculate search confidence
         var searchConfidence = _qualityTrackingService.CalculateSearchConfidence(domainSearchResults);
 
-        // Build citations
-        var snippets = searchResults.Select(r => new Snippet(
-            r.TextContent,
-            $"PDF:{r.VectorDocumentId}",
-            r.PageNumber,
-            0,
-            (float)r.RelevanceScore
-        )).ToList();
+        // Build citations — Issue #W: the search result's VectorDocumentId is the
+        // vector_documents.Id, but the citation "source" must carry the pdf_documents.Id
+        // so the FE PDF viewer (GET /api/v1/pdfs/{id}/download) can resolve it — otherwise
+        // it 404s and the cited source is unreadable. Resolve VectorDocumentId →
+        // PdfDocumentId via the game's vector documents (typically 1-2 per game).
+        var vectorDocs = await _vectorDocumentRepository
+            .GetByGameIdAsync(Guid.Parse(gameId), cancellationToken).ConfigureAwait(false);
+        var pdfIdByVectorId = vectorDocs.ToDictionary(v => v.Id, v => v.PdfDocumentId);
+
+        var snippets = searchResults.Select(r =>
+        {
+            // Fall back to the vector id if resolution fails (keeps a stable source string).
+            var citationDocId =
+                Guid.TryParse(r.VectorDocumentId, out var vecId)
+                && pdfIdByVectorId.TryGetValue(vecId, out var pdfId)
+                    ? pdfId.ToString()
+                    : r.VectorDocumentId;
+            return new Snippet(
+                r.TextContent,
+                $"PDF:{citationDocId}",
+                r.PageNumber,
+                0,
+                (float)r.RelevanceScore);
+        }).ToList();
 
         return (true, snippets, domainSearchResults, searchConfidence);
     }

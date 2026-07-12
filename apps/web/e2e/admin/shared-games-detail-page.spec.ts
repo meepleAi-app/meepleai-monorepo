@@ -16,10 +16,13 @@
 
 import { test, expect } from '@playwright/test';
 
+import { isBackendReachable, NO_BACKEND_SKIP_REASON } from '../_helpers/backendGuard';
+
 test.describe('Game Detail Page', () => {
   let testGameId: string;
 
   test.beforeEach(async ({ page }) => {
+    test.skip(!(await isBackendReachable(page)), NO_BACKEND_SKIP_REASON);
     // Login as admin
     await page.goto('/login');
     await page.fill('input[type="email"]', 'admin@meepleai.dev');
@@ -61,7 +64,7 @@ test.describe('Game Detail Page', () => {
 
     test('should display BGG link if game has bggId', async ({ page }) => {
       const bggLink = page.locator('a[href*="boardgamegeek.com"]');
-      const hasBggLink = await bggLink.count() > 0;
+      const hasBggLink = (await bggLink.count()) > 0;
 
       if (hasBggLink) {
         await expect(bggLink).toHaveAttribute('target', '_blank');
@@ -119,8 +122,8 @@ test.describe('Game Detail Page', () => {
       const image = page.locator('img[alt]');
       const placeholder = page.locator('svg[data-lucide]');
 
-      const hasImage = await image.count() > 0;
-      const hasPlaceholder = await placeholder.count() > 0;
+      const hasImage = (await image.count()) > 0;
+      const hasPlaceholder = (await placeholder.count()) > 0;
 
       expect(hasImage || hasPlaceholder).toBeTruthy();
     });
@@ -146,7 +149,9 @@ test.describe('Game Detail Page', () => {
     });
 
     test('should display documents list section', async ({ page }) => {
-      await expect(page.locator('h2:has-text("Documents"), h3:has-text("Documents")')).toBeVisible();
+      await expect(
+        page.locator('h2:has-text("Documents"), h3:has-text("Documents")')
+      ).toBeVisible();
     });
 
     test('should show empty state if no documents', async ({ page }) => {
@@ -184,7 +189,9 @@ test.describe('Game Detail Page', () => {
       }
     });
 
-    test('should display Approve and Reject buttons for Pending Approval games', async ({ page }) => {
+    test('should display Approve and Reject buttons for Pending Approval games', async ({
+      page,
+    }) => {
       const status = await page.locator('text=Pending Approval').count();
 
       if (status > 0) {
@@ -260,7 +267,7 @@ test.describe('Game Detail Page', () => {
 
     test('should navigate to external BGG link', async ({ page }) => {
       const bggLink = page.locator('a[href*="boardgamegeek.com"]').first();
-      const hasBggLink = await bggLink.count() > 0;
+      const hasBggLink = (await bggLink.count()) > 0;
 
       if (hasBggLink) {
         // Check it opens in new tab

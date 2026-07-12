@@ -14,6 +14,7 @@
 
 import { test, expect } from '@playwright/test';
 
+import { isBackendReachable, NO_BACKEND_SKIP_REASON } from '../_helpers/backendGuard';
 import {
   verifyServiceHealth,
   verifySharedGamesSeeded,
@@ -24,6 +25,12 @@ import {
 test.describe('Complete First-Time Journey', () => {
   // Extended timeout for complete journey
   test.setTimeout(300000); // 5 minutes
+
+  // The single journey test performs a real UI login (Phase 2) — skip without
+  // a reachable backend. See #2784.
+  test.beforeEach(async ({ page }) => {
+    test.skip(!(await isBackendReachable(page)), NO_BACKEND_SKIP_REASON);
+  });
 
   // Cleanup data
   let createdPdfId: string | undefined;

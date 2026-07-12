@@ -11,6 +11,8 @@
 
 import { test, expect } from '@playwright/test';
 
+import { isBackendReachable, NO_BACKEND_SKIP_REASON } from '../_helpers/backendGuard';
+
 test.describe('SharedGameCatalog Permission Enforcement', () => {
   test('User (unauthenticated) cannot access admin endpoints', async ({ page }) => {
     // Try to access admin page without login
@@ -21,6 +23,7 @@ test.describe('SharedGameCatalog Permission Enforcement', () => {
   });
 
   test('Editor cannot publish game (AdminOrEditor policy allows)', async ({ page }) => {
+    test.skip(!(await isBackendReachable(page)), NO_BACKEND_SKIP_REASON);
     // Login as editor (assumes editor@meepleai.dev exists)
     await page.goto('/login');
     await page.fill('input[type="email"]', 'editor@meepleai.dev');
@@ -41,6 +44,7 @@ test.describe('SharedGameCatalog Permission Enforcement', () => {
   });
 
   test('Editor cannot access bulk import (Admin only)', async ({ page }) => {
+    test.skip(!(await isBackendReachable(page)), NO_BACKEND_SKIP_REASON);
     await page.goto('/login');
     await page.fill('input[type="email"]', 'editor@meepleai.dev');
     await page.fill('input[type="password"]', 'Editor123!');
@@ -61,6 +65,7 @@ test.describe('SharedGameCatalog Permission Enforcement', () => {
   });
 
   test('Editor cannot approve delete requests (Admin only)', async ({ page }) => {
+    test.skip(!(await isBackendReachable(page)), NO_BACKEND_SKIP_REASON);
     await page.goto('/login');
     await page.fill('input[type="email"]', 'editor@meepleai.dev');
     await page.fill('input[type="password"]', 'Editor123!');
@@ -81,6 +86,7 @@ test.describe('SharedGameCatalog Permission Enforcement', () => {
   });
 
   test('Regular user cannot create games (API returns 403)', async ({ page, request }) => {
+    test.skip(!(await isBackendReachable(page)), NO_BACKEND_SKIP_REASON);
     // Login as regular user
     await page.goto('/login');
     await page.fill('input[type="email"]', 'user@meepleai.dev');

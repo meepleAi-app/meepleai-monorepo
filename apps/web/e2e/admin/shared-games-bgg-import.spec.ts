@@ -12,12 +12,15 @@
 
 import { test, expect } from '@playwright/test';
 
+import { isBackendReachable, NO_BACKEND_SKIP_REASON } from '../_helpers/backendGuard';
+
 // Test configuration
 const TEST_BGG_ID = '13'; // Catan - a well-known game for testing
 const TEST_BGG_URL = 'https://boardgamegeek.com/boardgame/13/catan';
 
 test.describe('BGG Import Workflow', () => {
   test.beforeEach(async ({ page }) => {
+    test.skip(!(await isBackendReachable(page)), NO_BACKEND_SKIP_REASON);
     // Login as admin
     await page.goto('/login');
     await page.fill('input[type="email"]', 'admin@meepleai.dev');
@@ -136,7 +139,9 @@ test.describe('BGG Import Workflow', () => {
       await page.waitForTimeout(1500);
 
       // Should show error message
-      await expect(page.locator('text=not found').or(page.locator('text=Game not found'))).toBeVisible();
+      await expect(
+        page.locator('text=not found').or(page.locator('text=Game not found'))
+      ).toBeVisible();
     });
 
     test('should handle rate limit errors', async ({ page }) => {

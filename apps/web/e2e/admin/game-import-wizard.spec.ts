@@ -15,6 +15,8 @@ import path from 'path';
 
 import { test, expect } from '@playwright/test';
 
+import { isBackendReachable, NO_BACKEND_SKIP_REASON } from '../_helpers/backendGuard';
+
 // Test data paths
 const TEST_PDF_PATH = path.join(__dirname, '..', 'test-data', 'wingspan_rulebook.pdf');
 const WIZARD_URL = '/admin/shared-games/import';
@@ -55,6 +57,10 @@ async function loginAsEditor(page: any) {
 }
 
 test.describe('Game Import Wizard E2E', () => {
+  test.beforeEach(async ({ page }) => {
+    test.skip(!(await isBackendReachable(page)), NO_BACKEND_SKIP_REASON);
+  });
+
   test.describe('Happy Path', () => {
     test('completes full import workflow', async ({ page }) => {
       // Setup: Authenticate as admin

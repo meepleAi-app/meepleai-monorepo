@@ -92,6 +92,8 @@ export const NotificationPreferencesSchema = z.object({
   pushOnGameNightInvitation: z.boolean().optional().default(true),
   emailOnGameNightReminder: z.boolean().optional().default(true),
   pushOnGameNightReminder: z.boolean().optional().default(true),
+  // #535 / #2832: opt-in admin email when a mechanic card is suppressed (default off).
+  emailOnCardSuppressed: z.boolean().optional().default(false),
 });
 export type NotificationPreferences = z.infer<typeof NotificationPreferencesSchema>;
 

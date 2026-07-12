@@ -37,6 +37,44 @@ internal sealed class MechanicCardRepository : RepositoryBase, IMechanicCardRepo
         DbContext.MechanicCardAuditLog.Add(MapAuditToEntity(entry));
     }
 
+    public void Update(MechanicCard card)
+    {
+        ArgumentNullException.ThrowIfNull(card);
+
+        var entity = MapToEntity(card);
+        DbContext.MechanicCards.Attach(entity);
+        DbContext.Entry(entity).State = EntityState.Modified;
+
+        // Server-managed concurrency token — don't dirty it; EF compares WHERE xmin = @loaded on UPDATE.
+        DbContext.Entry(entity).Property(e => e.Xmin).IsModified = false;
+
+        CollectDomainEvents(card);
+    }
+
+    public async Task<IReadOnlyList<MechanicCardFeedbackAggregate>> GetActiveCardFeedbackAggregatesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        // MechanicCards reads apply the !IsSuppressed query filter → active cards only. The inner join
+        // to feedback means only cards with ≥1 feedback row are returned.
+        var aggregates = await DbContext.MechanicCards
+            .AsNoTracking()
+            .Join(
+                DbContext.MechanicCardFeedback,
+                card => card.Id,
+                fb => fb.CardId,
+                (card, fb) => new { card.Id, card.SharedGameId, fb.IsPositive })
+            .GroupBy(x => new { x.Id, x.SharedGameId })
+            .Select(g => new MechanicCardFeedbackAggregate(
+                g.Key.Id,
+                g.Key.SharedGameId,
+                g.Count(x => !x.IsPositive),
+                g.Count(x => x.IsPositive)))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return aggregates;
+    }
+
     public async Task<int> GetMaxVersionForGameAsync(Guid sharedGameId, CancellationToken cancellationToken = default)
     {
         // Version is monotonic across ALL cards for the game (suppressed or not), so ignore the filter.

@@ -202,7 +202,7 @@ Entity types (10, `MeepleEntityType`): `game` · `player` · `session` · `agent
 Variants (6, `variantMap` in `MeepleCard.tsx`): `grid` (default) · `list` · `compact` · `featured` · `hero` · `focus`
 Docs: [docs/for-developers/frontend/meeple-card-design-tokens.md](./docs/for-developers/frontend/meeple-card-design-tokens.md)
 
-> **Note**: `MeepleCard` (generic dispatcher) is one of **three parallel card families** — see also `shared-games/meeple-card-game.tsx` (`MeepleCardGame`) and `data-display/extra-meeple-card/` (detail/drawer). Consolidation debt + CSS layering are tracked in the [MeepleCard/CSS drift audit](./docs/for-developers/audits/2026-07-12-meeplecard-css-drift-audit.md).
+> **Note**: `MeepleCard` (generic dispatcher) is one of **three parallel card families** — see also `ui/shared-games/meeple-card-game.tsx` (`MeepleCardGame`) and `ui/data-display/extra-meeple-card/` (detail/drawer). Consolidation debt + CSS layering are tracked in the [MeepleCard/CSS drift audit](./docs/for-developers/audits/2026-07-12-meeplecard-css-drift-audit.md).
 
 ### V2 Migration Components
 

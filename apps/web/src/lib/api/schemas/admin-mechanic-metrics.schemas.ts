@@ -52,3 +52,16 @@ export const MechanicRecentAnalysesResultSchema = z.object({
   totalCount: z.number(),
 });
 export type MechanicRecentAnalysesResult = z.infer<typeof MechanicRecentAnalysesResultSchema>;
+
+// #2837: DISTINCT filter options (no recency cap).
+export const MechanicFilterOptionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+});
+export type MechanicFilterOption = z.infer<typeof MechanicFilterOptionSchema>;
+
+export const MechanicMetricsFilterOptionsSchema = z.object({
+  games: z.array(MechanicFilterOptionSchema),
+  reviewers: z.array(MechanicFilterOptionSchema),
+});
+export type MechanicMetricsFilterOptions = z.infer<typeof MechanicMetricsFilterOptionsSchema>;

@@ -105,6 +105,15 @@ internal static class AdminMechanicAnalysesEndpoints
         .WithName("AdminMechanicMetricsExport")
         .WithSummary("Mechanic Extractor analyses CSV export with the same filters as the grid (#532)");
 
+        // #2837: DISTINCT game/reviewer options for the dashboard filter dropdowns (no recency cap).
+        group.MapGet("/metrics/filter-options", async (IMediator mediator, CancellationToken ct) =>
+        {
+            var result = await mediator.Send(new GetMechanicMetricsFilterOptionsQuery(), ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("AdminMechanicMetricsFilterOptions")
+        .WithSummary("DISTINCT game + reviewer options for the metrics filter dropdowns (#2837)");
+
         // POST /api/v1/admin/mechanic-analyses
         // Enqueues the async AI pipeline (B5=B). Returns 202 Accepted with polling URL.
         group.MapPost("/", async (

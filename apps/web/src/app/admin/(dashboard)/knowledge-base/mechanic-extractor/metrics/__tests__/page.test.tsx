@@ -9,6 +9,7 @@ import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 const mockGetSummary = vi.hoisted(() => vi.fn());
 const mockGetCostByDay = vi.hoisted(() => vi.fn());
 const mockGetRecent = vi.hoisted(() => vi.fn());
+const mockGetFilterOptions = vi.hoisted(() => vi.fn());
 const mockExportCsv = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/api/clients/adminClient', () => ({
@@ -16,6 +17,7 @@ vi.mock('@/lib/api/clients/adminClient', () => ({
     getMechanicMetricsSummary: mockGetSummary,
     getMechanicCostByDay: mockGetCostByDay,
     getMechanicRecentAnalyses: mockGetRecent,
+    getMechanicMetricsFilterOptions: mockGetFilterOptions,
     exportMechanicAnalysesCsv: mockExportCsv,
   }),
 }));
@@ -57,6 +59,10 @@ describe('MechanicMetricsPage', () => {
         },
       ],
       totalCount: 1,
+    });
+    mockGetFilterOptions.mockResolvedValue({
+      games: [{ id: 'g1', name: 'Catan' }],
+      reviewers: [{ id: 'u1', name: 'Alice' }],
     });
     mockExportCsv.mockResolvedValue(new Blob(['x'], { type: 'text/csv' }));
   });

@@ -273,6 +273,10 @@ internal static class SharedGameCatalogServiceExtensions
         // deletes dead-letter rows older than 7 days. Runs daily at 03:00 UTC.
         RegisterWikidataCoverDeadLetterRetentionJob(services);
 
+        // Issue #534 ME-M3.2: hourly job that aggregates mechanic-card feedback and
+        // auto-suppresses cards breaching the admin-tunable thresholds.
+        RegisterMechanicCardAutoSuppressionJob(services);
+
         // Issue #1823 Wave 3 M15 (ADR DEC-3i): Quartz quarterly cron that
         // resets WikidataQidLastVerifiedAt on stale games (>90gg) so the M9
         // scheduler picks them up for re-enrichment. Runs every 3 months at
@@ -500,6 +504,29 @@ internal static class SharedGameCatalogServiceExtensions
                     .WithIntervalInMinutes(1)
                     .RepeatForever())
                 .WithDescription("Issue #1823 Wave 3 M9: drives the Wikidata cover enrichment pipeline every 1 minute. DEC-3j retry + dead-letter policy is applied per game."));
+        });
+    }
+
+    /// <summary>
+    /// Issue #534 ME-M3.2 — registers <see cref="MechanicCardAutoSuppressionJob"/> with the Quartz
+    /// scheduler. Runs at the top of every hour: aggregates <c>mechanic_card_feedback</c> into per-card
+    /// counters and auto-suppresses active cards breaching the admin-tunable thresholds. Not time-critical.
+    /// </summary>
+    private static void RegisterMechanicCardAutoSuppressionJob(IServiceCollection services)
+    {
+        services.AddQuartz(q =>
+        {
+            var jobKey = new JobKey("MechanicCardAutoSuppressionJob", "SharedGameCatalog");
+
+            q.AddJob<MechanicCardAutoSuppressionJob>(opts => opts
+                .WithIdentity(jobKey)
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob(jobKey)
+                .WithIdentity("MechanicCardAutoSuppressionTrigger", "SharedGameCatalog")
+                .WithCronSchedule("0 0 * * * ?")
+                .WithDescription("Issue #534 ME-M3.2: hourly aggregate of mechanic-card feedback + auto-suppression of cards breaching the admin-tunable thresholds."));
         });
     }
 

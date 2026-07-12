@@ -15,8 +15,8 @@ export type MeepleEntityType =
   | 'tool'
   | 'gameNightEvent';
 
-// 6 variants
-export type MeepleCardVariant = 'grid' | 'list' | 'compact' | 'featured' | 'hero' | 'focus';
+// 5 variants
+export type MeepleCardVariant = 'grid' | 'list' | 'compact' | 'featured' | 'hero';
 
 export interface MeepleCardMetadata {
   icon?: ReactNode;
@@ -73,10 +73,6 @@ export interface ConnectionChipProps {
   iconOverride?: import('react').ReactNode;
 }
 
-export type OwnershipBadge = 'owned' | 'wishlist' | 'archived';
-
-export type LifecycleState = 'active' | 'idle' | 'completed' | 'setup' | 'processing' | 'failed';
-
 export interface CoverLabel {
   text: string;
   color?: string;
@@ -98,8 +94,7 @@ export interface MeepleCardProps {
   coverEmoji?: string;
   /**
    * Semantic heading level for the card's title element (2, 3, or 4).
-   * Default: 3 for most variants (GridCard/ListCard/FeaturedCard/HeroCard);
-   * 2 for FocusCard (full-focus detail card).
+   * Default: 3 for the title-bearing variants (GridCard/ListCard/FeaturedCard/HeroCard).
    *
    * Pass `headingLevel={2}` when this card is rendered in a grid below an
    * `<h1>` hero — without this, axe-core flags `heading-order` (h1→h3 jump
@@ -132,8 +127,6 @@ export interface MeepleCardProps {
   manaPips?: ManaPip[];
   connections?: ConnectionChipProps[];
   connectionsVariant?: 'footer' | 'inline' | 'auto';
-  ownership?: OwnershipBadge;
-  lifecycle?: LifecycleState;
   onClick?: () => void;
   flippable?: boolean;
   flipBackContent?: ReactNode;

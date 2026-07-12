@@ -11,7 +11,6 @@ const skeletonHeight: Record<MeepleCardVariant, string> = {
   compact: 'h-[48px]',
   featured: 'h-[340px]',
   hero: 'h-[320px]',
-  focus: 'h-[378px]',
 };
 
 export function MeepleCardSkeleton({ variant = 'grid', className = '' }: MeepleCardSkeletonProps) {

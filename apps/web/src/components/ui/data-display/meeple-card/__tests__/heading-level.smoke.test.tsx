@@ -2,8 +2,8 @@
  * #1842 headingLevel cross-variant smoke test.
  *
  * Verifies the MeepleCard API contract: passing `headingLevel` produces
- * the correct semantic tag for each of the 5 variants that own a title
- * heading (GridCard, ListCard, FeaturedCard, HeroCard, FocusCard).
+ * the correct semantic tag for each of the 4 variants that own a title
+ * heading (GridCard, ListCard, FeaturedCard, HeroCard).
  *
  * CompactCard is intentionally skipped — it renders <span> for the title
  * (compact-ticker semantic), not a heading.
@@ -28,7 +28,6 @@ const variants: VariantSpec[] = [
   { variant: 'list', defaultTag: 'H3' },
   { variant: 'featured', defaultTag: 'H3' },
   { variant: 'hero', defaultTag: 'H3' },
-  { variant: 'focus', defaultTag: 'H2' },
 ];
 
 describe('MeepleCard headingLevel smoke (#1842)', () => {

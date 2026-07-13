@@ -14,7 +14,10 @@ import path from 'node:path';
  *   --c-toolkit: 142 70% 30%   (Toolkit green — darkened from L=45% for AA on white)
  */
 describe('entity tokens alignment (post-#807 AA, post DS-16)', () => {
-  const css = fs.readFileSync(path.join(__dirname, '../globals.css'), 'utf8');
+  // #2857 collapsed the --c-{entity} accents to a single source
+  // (design-tokens-canonical.css); globals.css now only aliases them via
+  // --color-entity-*. Read the canonical file, not globals.css.
+  const css = fs.readFileSync(path.join(__dirname, '../design-tokens-canonical.css'), 'utf8');
 
   it('--c-kb matches AA-aligned value (174 60% 30%)', () => {
     expect(css).toMatch(/--c-kb:\s*174\s+60%\s+30%/);

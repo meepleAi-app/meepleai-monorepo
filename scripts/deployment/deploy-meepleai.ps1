@@ -2,7 +2,7 @@
 # MeepleAI Production Deployment Script (PowerShell)
 # =============================================================================
 #
-# Deploys MeepleAI to production at meepleai.io
+# Deploys MeepleAI to production at meepleai.app
 #
 # Usage:
 #   .\scripts\deployment\deploy-meepleai.ps1 [command]
@@ -151,9 +151,9 @@ function Show-Status {
     Write-Host "           Endpoints                    " -ForegroundColor Cyan
     Write-Host "=========================================" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "  🌐 Website:    https://www.meepleai.io"
-    Write-Host "  🔌 API:        https://api.meepleai.io"
-    Write-Host "  📊 Grafana:    https://grafana.meepleai.io"
+    Write-Host "  🌐 Website:    https://meepleai.app"
+    Write-Host "  🔌 API:        https://api.meepleai.app"
+    Write-Host "  📊 Grafana:    https://grafana.meepleai.app"
     Write-Host "  ☁️  Edge:       Cloudflare Tunnel (cloudflared on VPS)"
     Write-Host ""
 }

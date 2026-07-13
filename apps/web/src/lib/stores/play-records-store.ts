@@ -12,7 +12,10 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import type { PlayRecordStatus, PlayRecordVisibility } from '@/lib/api/schemas/play-records.schemas';
+import type {
+  PlayRecordStatus,
+  PlayRecordVisibility,
+} from '@/lib/api/schemas/play-records.schemas';
 
 // ========== State Interfaces ==========
 
@@ -52,10 +55,7 @@ export interface PlayRecordsStoreState {
 
   // Play History Filters
   filters: PlayHistoryFilters;
-  setFilter: <K extends keyof PlayHistoryFilters>(
-    field: K,
-    value: PlayHistoryFilters[K]
-  ) => void;
+  setFilter: <K extends keyof PlayHistoryFilters>(field: K, value: PlayHistoryFilters[K]) => void;
   resetFilters: () => void;
 
   // View Preferences
@@ -68,6 +68,10 @@ export interface PlayRecordsStoreState {
 }
 
 // ========== Default State ==========
+
+// The create wizard has 3 steps (Gioco / Quando / Punteggi), so the last valid
+// 0-indexed step is 2. `nextStep` must cap here — never the out-of-range index 3.
+const WIZARD_LAST_STEP_INDEX = 2;
 
 const DEFAULT_SESSION_CREATION: SessionCreationState = {
   currentStep: 0,
@@ -89,12 +93,12 @@ const DEFAULT_FILTERS: PlayHistoryFilters = {
 
 export const usePlayRecordsStore = create<PlayRecordsStoreState>()(
   persist(
-    (set) => ({
+    set => ({
       // Session Creation State
       sessionCreation: DEFAULT_SESSION_CREATION,
 
       setSessionField: (field, value) =>
-        set((state) => ({
+        set(state => ({
           sessionCreation: {
             ...state.sessionCreation,
             [field]: value,
@@ -102,15 +106,15 @@ export const usePlayRecordsStore = create<PlayRecordsStoreState>()(
         })),
 
       nextStep: () =>
-        set((state) => ({
+        set(state => ({
           sessionCreation: {
             ...state.sessionCreation,
-            currentStep: Math.min(state.sessionCreation.currentStep + 1, 3),
+            currentStep: Math.min(state.sessionCreation.currentStep + 1, WIZARD_LAST_STEP_INDEX),
           },
         })),
 
       prevStep: () =>
-        set((state) => ({
+        set(state => ({
           sessionCreation: {
             ...state.sessionCreation,
             currentStep: Math.max(state.sessionCreation.currentStep - 1, 0),
@@ -126,7 +130,7 @@ export const usePlayRecordsStore = create<PlayRecordsStoreState>()(
       filters: DEFAULT_FILTERS,
 
       setFilter: (field, value) =>
-        set((state) => ({
+        set(state => ({
           filters: {
             ...state.filters,
             [field]: value,
@@ -143,14 +147,14 @@ export const usePlayRecordsStore = create<PlayRecordsStoreState>()(
       sortBy: 'recent',
       sidebarOpen: true,
 
-      setViewMode: (viewMode) => set({ viewMode }),
-      setSortBy: (sortBy) => set({ sortBy }),
-      toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+      setViewMode: viewMode => set({ viewMode }),
+      setSortBy: sortBy => set({ sortBy }),
+      toggleSidebar: () => set(state => ({ sidebarOpen: !state.sidebarOpen })),
     }),
     {
       name: 'play-records-storage',
       // Only persist view preferences, not active filters or creation state
-      partialize: (state) => ({
+      partialize: state => ({
         viewMode: state.viewMode,
         sortBy: state.sortBy,
         sidebarOpen: state.sidebarOpen,

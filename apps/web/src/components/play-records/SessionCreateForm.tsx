@@ -742,7 +742,11 @@ export function SessionCreateForm({
       location: initialDraft.location ?? '',
     });
     setPlayers(initialDraft.players);
-    setSessionField('currentStep', initialDraft.currentStep);
+    // Clamp the restored step to a valid index — a corrupted/stale draft must
+    // never open the wizard on an out-of-range step (broken StepIndicator +
+    // undefined STEP_FIELDS).
+    const restoredStep = Math.min(Math.max(initialDraft.currentStep, 0), STEP_COUNT - 1);
+    setSessionField('currentStep', restoredStep);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-once restore
   }, []);
 

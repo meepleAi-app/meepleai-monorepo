@@ -82,8 +82,17 @@ curl_json() {
   local method="$1" path="$2" jar="$3" data="${4:-}"
   local args=(-sS -X "$method" -H "Content-Type: application/json" -b "$jar" -c "$jar"
               -w "\n%{http_code}" "$API_BASE$path")
-  if [[ -n "$data" ]]; then args+=(-d "$data"); fi
-  curl "${args[@]}"
+  # Send the body via stdin (--data-binary @-), NOT as a `-d "$data"` argv arg.
+  # On Git Bash/MSYS (Windows) the native curl.exe re-encodes command-line args
+  # at the argv boundary, corrupting multibyte UTF-8 (e.g. accented designer
+  # names like "Vlaada Chvátil"). The API then receives invalid UTF-8 and rejects
+  # the body with HTTP 400 ("could not be converted to System.String").
+  # stdin bypasses argv re-encoding, so the exact bytes reach the server.
+  if [[ -n "$data" ]]; then
+    printf '%s' "$data" | curl "${args[@]}" --data-binary @-
+  else
+    curl "${args[@]}"
+  fi
 }
 
 # curl_get PATH COOKIE_JAR  →  body + code

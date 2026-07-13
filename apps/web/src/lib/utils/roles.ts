@@ -51,3 +51,18 @@ export function isAdminRole(role: string | null | undefined): boolean {
   const normalized = normalizeRole(role);
   return normalized === 'admin' || normalized === 'superadmin';
 }
+
+/**
+ * Check if a role may use the RuleSpec editor / agent-proposals surfaces
+ * (case-insensitive, superadmin-aware).
+ *
+ * Issue #2845 / finding #GG: the editor guards used a flat, case-sensitive
+ * compare (`role !== 'Admin' && role !== 'Editor'`) which denied both the
+ * lowercase `superadmin` and `admin` roles the backend actually emits.
+ * Grants: superadmin ≥ admin ≥ editor. Denies user/creator.
+ */
+export function canUseEditor(role: string | null | undefined): boolean {
+  if (!role) return false;
+  const normalized = normalizeRole(role);
+  return normalized === 'superadmin' || normalized === 'admin' || normalized === 'editor';
+}

@@ -33,8 +33,10 @@ import {
   Wrench,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
+import { api } from '@/lib/api';
 import type { EntityType } from '@/lib/api/schemas/collections.schemas';
 import type { QuickAction } from '@/types/quick-action';
 
@@ -87,6 +89,38 @@ export interface EntityActions {
     destructive?: boolean;
     separator?: boolean;
   }>;
+}
+
+// ============================================================================
+// Handler helpers
+// ============================================================================
+
+/**
+ * Copy text to the clipboard with success/error toast feedback.
+ * Guards against restricted contexts where the Clipboard API is unavailable.
+ */
+async function copyWithToast(text: string, successMessage: string): Promise<void> {
+  try {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      throw new Error('Clipboard API unavailable');
+    }
+    await navigator.clipboard.writeText(text);
+    toast.success(successMessage);
+  } catch {
+    toast.error('Copia non riuscita');
+  }
+}
+
+/**
+ * Export a chat thread (default PDF) via the existing export pipeline, with toast feedback.
+ */
+async function exportChatWithToast(chatId: string): Promise<void> {
+  try {
+    await api.chat.exportChat(chatId, { format: 'pdf' });
+    toast.success('Chat esportata');
+  } catch {
+    toast.error('Esportazione non riuscita');
+  }
 }
 
 // ============================================================================
@@ -197,7 +231,10 @@ export function useEntityActions({
               icon: Share2,
               label: 'Condividi',
               onClick: () => {
-                navigator.clipboard?.writeText(`${window.location.origin}/games/${id}`);
+                void copyWithToast(
+                  `${window.location.origin}/games/${id}`,
+                  'Link copiato negli appunti'
+                );
               },
             },
           ],
@@ -237,9 +274,8 @@ export function useEntityActions({
               icon: Share2,
               label: 'Condividi codice',
               onClick: () => {
-                // TODO: Copy session code to clipboard
                 const sessionCode = (data?.sessionCode as string | undefined) || id;
-                navigator.clipboard?.writeText(sessionCode);
+                void copyWithToast(sessionCode, 'Codice sessione copiato');
               },
             },
           ],
@@ -300,8 +336,8 @@ export function useEntityActions({
               icon: Download,
               label: 'Download',
               onClick: () => {
-                // TODO: Trigger download
-                window.open(`/api/v1/documents/${id}/download`, '_blank');
+                // Browser-native download via the canonical pdf endpoint (session-cookie auth).
+                window.open(api.pdf.getPdfDownloadUrl(id), '_blank');
               },
             },
             {
@@ -340,8 +376,7 @@ export function useEntityActions({
               icon: FileDown,
               label: 'Esporta',
               onClick: () => {
-                // TODO: Export chat history
-                router.push(`/chat/${id}/export`);
+                void exportChatWithToast(id);
               },
             },
           ],
@@ -375,7 +410,8 @@ export function useEntityActions({
               icon: UserPlus,
               label: 'Invita a Sessione',
               onClick: () => {
-                // TODO: Open session invite modal
+                // Navigates to the session wizard. The invitePlayer param is reserved for a
+                // future roster pre-fill (the wizard does not consume it yet — see #2776).
                 router.push(`/sessions/new?invitePlayer=${id}`);
               },
             },
@@ -405,15 +441,18 @@ export function useEntityActions({
               icon: CheckCircle,
               label: 'Partecipa',
               onClick: () => {
-                // TODO: RSVP to event
-                router.push(`/events/${id}/rsvp`);
+                // RSVP lives on the game-night detail page (event id === game-night id).
+                router.push(`/game-nights/${id}`);
               },
             },
             {
               icon: Share2,
               label: 'Condividi',
               onClick: () => {
-                navigator.clipboard?.writeText(`${window.location.origin}/events/${id}`);
+                void copyWithToast(
+                  `${window.location.origin}/game-nights/${id}`,
+                  'Link copiato negli appunti'
+                );
               },
             },
           ],

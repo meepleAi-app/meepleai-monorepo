@@ -49,12 +49,74 @@ public sealed class SeedOrchestratorTests
         result.Should().Be(SeedProfile.Staging);
     }
 
-    [Fact]
-    public void ResolveProfile_DefaultsToDev_WhenNothingConfigured()
+    [Theory]
+    [Trait("Category", TestCategories.Unit)]
+    [InlineData("Production", SeedProfile.Prod)]
+    [InlineData("production", SeedProfile.Prod)]
+    [InlineData("  Staging  ", SeedProfile.Staging)]
+    [InlineData("Development", SeedProfile.Dev)]
+    [InlineData("Testing", SeedProfile.None)]
+    [InlineData("CI", SeedProfile.None)]
+    [InlineData("", SeedProfile.None)]
+    [InlineData(null, SeedProfile.None)]
+    [InlineData("garbage", SeedProfile.None)]
+    public void ResolveProfile_DerivesFromAspNetCoreEnvironment_WhenNoOverride(string? environmentName, SeedProfile expected)
     {
         Environment.SetEnvironmentVariable("SEED_PROFILE", null);
-        var result = SeedOrchestrator.ResolveProfile(null);
-        result.Should().Be(SeedProfile.Dev);
+        try
+        {
+            var result = SeedOrchestrator.ResolveProfile(configuration: null, environmentName: environmentName);
+            result.Should().Be(expected);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("SEED_PROFILE", null);
+        }
+    }
+
+    [Fact]
+    [Trait("Category", TestCategories.Unit)]
+    public void ResolveProfile_EnvironmentVariable_TakesPrecedenceOverDerive()
+    {
+        Environment.SetEnvironmentVariable("SEED_PROFILE", "Staging");
+        try
+        {
+            var result = SeedOrchestrator.ResolveProfile(configuration: null, environmentName: "Production");
+            result.Should().Be(SeedProfile.Staging); // explicit override beats derived Prod
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("SEED_PROFILE", null);
+        }
+    }
+
+    [Fact]
+    [Trait("Category", TestCategories.Unit)]
+    public void ResolveProfile_Config_TakesPrecedenceOverDerive_WhenNoEnvVar()
+    {
+        Environment.SetEnvironmentVariable("SEED_PROFILE", null);
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Seeding:Profile"] = "Staging" })
+            .Build();
+
+        var result = SeedOrchestrator.ResolveProfile(config, environmentName: "Production");
+        result.Should().Be(SeedProfile.Staging); // config override beats derived Prod
+    }
+
+    [Fact]
+    [Trait("Category", TestCategories.Unit)]
+    public void ResolveProfile_InvalidEnvVar_FallsThroughToDerive()
+    {
+        Environment.SetEnvironmentVariable("SEED_PROFILE", "Prdo"); // typo → invalid enum
+        try
+        {
+            var result = SeedOrchestrator.ResolveProfile(configuration: null, environmentName: "Production");
+            result.Should().Be(SeedProfile.Prod); // invalid value ignored, derives from env
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("SEED_PROFILE", null);
+        }
     }
 
     [Fact]

@@ -32,7 +32,7 @@ internal sealed class SeedOrchestrator
     /// </summary>
     public async Task RunAsync(MeepleAiDbContext db, IServiceProvider services, CancellationToken ct = default)
     {
-        var profile = ResolveProfile(_configuration);
+        var profile = ResolveProfile(_configuration, logger: _logger);
 
         if (profile == SeedProfile.None)
         {
@@ -80,22 +80,50 @@ internal sealed class SeedOrchestrator
     }
 
     /// <summary>
-    /// Resolve seed profile from SEED_PROFILE env var → Seeding:Profile config → default Dev.
+    /// Resolve seed profile: SEED_PROFILE env var → Seeding:Profile config →
+    /// derive from ASPNETCORE_ENVIRONMENT (fail-closed to None on unknown).
     /// </summary>
-    internal static SeedProfile ResolveProfile(IConfiguration? configuration)
+    internal static SeedProfile ResolveProfile(
+        IConfiguration? configuration,
+        string? environmentName = null,
+        ILogger? logger = null)
     {
-        // 1. Environment variable takes priority
+        // 1. Environment variable takes priority (explicit override)
         var envVar = Environment.GetEnvironmentVariable("SEED_PROFILE");
-        if (!string.IsNullOrWhiteSpace(envVar) && Enum.TryParse<SeedProfile>(envVar, ignoreCase: true, out var envProfile))
-            return envProfile;
+        if (!string.IsNullOrWhiteSpace(envVar))
+        {
+            if (Enum.TryParse<SeedProfile>(envVar, ignoreCase: true, out var envProfile))
+                return envProfile;
+            logger?.LogWarning("SEED_PROFILE='{Value}' is not a valid seed profile; ignoring.", envVar);
+        }
 
-        // 2. Configuration section
+        // 2. Configuration section (explicit override)
         var configValue = configuration?["Seeding:Profile"];
-        if (!string.IsNullOrWhiteSpace(configValue) && Enum.TryParse<SeedProfile>(configValue, ignoreCase: true, out var cfgProfile))
-            return cfgProfile;
+        if (!string.IsNullOrWhiteSpace(configValue))
+        {
+            if (Enum.TryParse<SeedProfile>(configValue, ignoreCase: true, out var cfgProfile))
+                return cfgProfile;
+            logger?.LogWarning("Seeding:Profile='{Value}' is not a valid seed profile; ignoring.", configValue);
+        }
 
-        // 3. Default to Dev for local development
-        return SeedProfile.Dev;
+        // 3. Derive from ASPNETCORE_ENVIRONMENT (fail-closed)
+        var env = environmentName ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        var derived = env?.Trim().ToLowerInvariant() switch
+        {
+            "production" => SeedProfile.Prod,
+            "staging" => SeedProfile.Staging,
+            "development" => SeedProfile.Dev,
+            _ => SeedProfile.None, // null / "Test" / "CI" / unknown → fail-closed
+        };
+
+        if (derived == SeedProfile.None)
+        {
+            logger?.LogWarning(
+                "Seed profile unresolved (SEED_PROFILE and Seeding:Profile unset; ASPNETCORE_ENVIRONMENT='{Env}' unrecognized). "
+                + "Seeding with profile None (no data). Set SEED_PROFILE explicitly.", env ?? "(null)");
+        }
+
+        return derived;
     }
 
     /// <summary>

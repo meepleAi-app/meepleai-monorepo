@@ -12,11 +12,14 @@ internal sealed class ResetPasswordCommandValidator : AbstractValidator<ResetPas
 {
     public ResetPasswordCommandValidator()
     {
+        // Issue #2806: the reset token is a 32-byte secure random value encoded as
+        // base64url by PasswordResetService — NOT a GUID. Only presence is enforced
+        // here; existence, single-use and expiry are checked in
+        // PasswordResetService.ResetPasswordAsync. The previous .Must(BeValidGuid)
+        // rejected every real token (HTTP 422), breaking password reset for all users.
         RuleFor(x => x.Token)
             .NotEmpty()
-            .WithMessage("Reset token is required")
-            .Must(BeValidGuid)
-            .WithMessage("Reset token must be a valid GUID");
+            .WithMessage("Reset token is required");
 
         // I7 (auth security fixes): the new password must satisfy the
         // 12-char minimum enforced by PasswordHash.Create.
@@ -35,10 +38,5 @@ internal sealed class ResetPasswordCommandValidator : AbstractValidator<ResetPas
             .WithMessage("New password must contain at least one digit")
             .Matches(@"[^a-zA-Z0-9]")
             .WithMessage("New password must contain at least one special character");
-    }
-
-    private static bool BeValidGuid(string token)
-    {
-        return Guid.TryParse(token, out _);
     }
 }

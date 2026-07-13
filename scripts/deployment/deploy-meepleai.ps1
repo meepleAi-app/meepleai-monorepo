@@ -35,11 +35,12 @@ $ScriptDir = Split-Path -Parent $PSCommandPath
 $ProjectRoot = Split-Path -Parent (Split-Path -Parent $ScriptDir)
 $InfraDir = Join-Path $ProjectRoot 'infra'
 
-# Compose files (post-PR #738 — Traefik decommissioned, edge=CF Tunnel)
+# Compose files (post-PR #738 — Traefik decommissioned, edge=CF Tunnel).
+# compose.meepleai.yml (legacy Traefik/socket-proxy override for meepleai.io) was
+# dropped from the tree and is obsolete under CF Tunnel — removed here (#2898).
 $ComposeFiles = @(
     '-f', 'docker-compose.yml',
-    '-f', 'compose.prod.yml',
-    '-f', 'compose.meepleai.yml'
+    '-f', 'compose.prod.yml'
 )
 
 Set-Location $InfraDir

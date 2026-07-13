@@ -94,6 +94,14 @@ public class StreamQaQueryHandlerTests
         _fakeTimeProvider = new FakeTimeProvider();
         _fakeTimeProvider.SetUtcNow(new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
+        // Issue #2884: PR #2833 added GetByGameIdAsync in PerformSearchAndBuildCitationsAsync to
+        // resolve VectorDocumentId -> PdfDocumentId for citations. Default to an empty list so
+        // citation building falls back to the vector id (pre-#2833 behavior) instead of throwing
+        // ArgumentNullException on ToDictionary(null) when the mock is otherwise unconfigured.
+        _vectorDocumentRepositoryMock
+            .Setup(x => x.GetByGameIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<VectorDocument>());
+
         _handler = new StreamQaQueryHandler(
             _searchQueryHandler,
             _rerankerMock.Object,

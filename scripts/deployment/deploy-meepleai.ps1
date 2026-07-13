@@ -38,8 +38,10 @@ $InfraDir = Join-Path $ProjectRoot 'infra'
 # Compose files (post-PR #738 — Traefik decommissioned, edge=CF Tunnel)
 $ComposeFiles = @(
     '-f', 'docker-compose.yml',
-    '-f', 'compose.prod.yml',
-    '-f', 'compose.meepleai.yml'
+    '-f', 'compose.prod.yml'
+    # '-f', 'compose.meepleai.yml'  # #2893: file never existed in repo/server checkout;
+    #   prod seed profile now wired via compose.prod.yml + code derive. Re-enable if a real
+    #   prod overlay is introduced.
 )
 
 Set-Location $InfraDir

@@ -72,6 +72,7 @@ services:
       - ./secrets/prod/storage.secret
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      SEED_PROFILE: Prod   # #2893: explicit prod seed profile (belt-and-suspenders over code derive)
       ASPNETCORE_URLS: http://+:8080
       POSTGRES_HOST: postgres
       POSTGRES_USER: ${POSTGRES_USER:-meeple}

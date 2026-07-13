@@ -51,7 +51,14 @@ import { GameCombobox } from './GameCombobox';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface SessionCreateFormProps {
-  onSubmit: (data: SessionCreateFormData) => void;
+  /**
+   * Called on final submit. Issue #2847 (#BB): the roster (`players`) lives in
+   * component state (not a react-hook-form field), so it is passed as a second
+   * argument — the create flow persists players + their scores + location, which
+   * the form-data alone omitted. `onSubmit` may be async; the form waits for it
+   * before clearing the draft/state so a failed create keeps the entered data.
+   */
+  onSubmit: (data: SessionCreateFormData, players: PlayerEntry[]) => void | Promise<void>;
   onCancel?: () => void;
   isSubmitting?: boolean;
   /**
@@ -776,8 +783,11 @@ export function SessionCreateForm({
     onCancel?.();
   };
 
-  const handleFormSubmit = form.handleSubmit(data => {
-    onSubmit(data);
+  const handleFormSubmit = form.handleSubmit(async data => {
+    // Issue #2847 (#BB): pass the roster so the create flow can persist players +
+    // scores + location. Await the (possibly async) submit BEFORE clearing so a
+    // failed create leaves the entered data intact for a retry.
+    await onSubmit(data, players);
     clear();
     resetSessionCreation();
     form.reset();

@@ -314,4 +314,99 @@ public sealed class ProcessingQueueMonitorServiceTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
+
+    // ──────────────────────────────────────────────────────────────────
+    // Issue #2903: multiple stuck jobs are ALL degraded. Previously the second
+    // degrade collided with the first on the shared DbContext (outbox identity
+    // conflict), throwing out of the whole check so no job was recovered.
+    // ──────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CheckStuckJobs_MultipleStuckJobs_DegradesEachOne()
+    {
+        var dbName = $"monitor_multi_{Guid.NewGuid():N}";
+        var startedAt = DateTimeOffset.UtcNow.AddMinutes(-40);
+        var job1 = await SeedStuckJobAsync(dbName, startedAt);
+        var job2 = await SeedStuckJobAsync(dbName, startedAt);
+
+        var (scopeFactory, mediatorMock, _) = BuildScopeFactory(dbName);
+        var tp = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        var monitor = BuildMonitor(scopeFactory, tp);
+        tp.Advance(TimeSpan.FromMinutes(31));
+
+        await monitor.RunChecksAsync(CancellationToken.None);
+
+        mediatorMock.Verify(
+            m => m.Send(It.Is<DegradeStuckJobCommand>(c => c.JobId == job1), It.IsAny<CancellationToken>()),
+            Times.Once);
+        mediatorMock.Verify(
+            m => m.Send(It.Is<DegradeStuckJobCommand>(c => c.JobId == job2), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // Issue #2903: a single degrade failure (the real bug threw an EF identity
+    // conflict) must NOT abort the remaining jobs or the whole check.
+    // ──────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CheckStuckJobs_OneDegradeThrows_StillDegradesTheOthers()
+    {
+        var dbName = $"monitor_resilient_{Guid.NewGuid():N}";
+        var startedAt = DateTimeOffset.UtcNow.AddMinutes(-40);
+        var job1 = await SeedStuckJobAsync(dbName, startedAt);
+        var job2 = await SeedStuckJobAsync(dbName, startedAt);
+
+        var (scopeFactory, mediatorMock, _) = BuildScopeFactory(dbName);
+        // First job's degrade blows up (simulating the outbox identity conflict);
+        // the check must swallow it and still degrade the second job.
+        mediatorMock
+            .Setup(m => m.Send(
+                It.Is<DegradeStuckJobCommand>(c => c.JobId == job1),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("simulated outbox identity conflict"));
+
+        var tp = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        var monitor = BuildMonitor(scopeFactory, tp);
+        tp.Advance(TimeSpan.FromMinutes(31));
+
+        // Must NOT throw out of the check.
+        var act = async () => await monitor.RunChecksAsync(CancellationToken.None);
+        await act.Should().NotThrowAsync();
+
+        // Both degrades were attempted despite the first throwing.
+        mediatorMock.Verify(
+            m => m.Send(It.Is<DegradeStuckJobCommand>(c => c.JobId == job1), It.IsAny<CancellationToken>()),
+            Times.Once);
+        mediatorMock.Verify(
+            m => m.Send(It.Is<DegradeStuckJobCommand>(c => c.JobId == job2), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // Issue #2903 (review): the per-job try/catch must NOT swallow cancellation —
+    // a shutdown signal has to propagate so the service exits promptly and is not
+    // mislogged as a transient degrade failure.
+    // ──────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CheckStuckJobs_DegradeCancelled_PropagatesCancellation()
+    {
+        var dbName = $"monitor_cancel_{Guid.NewGuid():N}";
+        var startedAt = DateTimeOffset.UtcNow.AddMinutes(-40);
+        await SeedStuckJobAsync(dbName, startedAt);
+
+        var (scopeFactory, mediatorMock, _) = BuildScopeFactory(dbName);
+        mediatorMock
+            .Setup(m => m.Send(It.IsAny<DegradeStuckJobCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException());
+
+        var tp = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        var monitor = BuildMonitor(scopeFactory, tp);
+        tp.Advance(TimeSpan.FromMinutes(31));
+
+        // Cancellation must bubble out, not be caught as a transient degrade error.
+        var act = async () => await monitor.RunChecksAsync(CancellationToken.None);
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
 }

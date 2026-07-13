@@ -98,9 +98,8 @@ internal sealed class ProcessingQueueMonitorService : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var streamService = scope.ServiceProvider.GetRequiredService<IQueueStreamService>();
-        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
-        await CheckStuckJobsAsync(db, streamService, mediator, ct).ConfigureAwait(false);
+        await CheckStuckJobsAsync(db, streamService, ct).ConfigureAwait(false);
         await CheckQueueDepthAsync(db, streamService, ct).ConfigureAwait(false);
         await CheckFailureRateAsync(db, streamService, ct).ConfigureAwait(false);
     }
@@ -108,7 +107,6 @@ internal sealed class ProcessingQueueMonitorService : BackgroundService
     private async Task CheckStuckJobsAsync(
         MeepleAiDbContext db,
         IQueueStreamService streamService,
-        IMediator mediator,
         CancellationToken ct)
     {
         var cutoff = DateTimeOffset.UtcNow - StuckJobTimeout;
@@ -158,13 +156,36 @@ internal sealed class ProcessingQueueMonitorService : BackgroundService
                     continue;
                 }
 
-                var result = await mediator.Send(new DegradeStuckJobCommand(job.Id, stuckMinutes), ct).ConfigureAwait(false);
-                if (result.Degraded)
+                // Issue #2903: run each degrade in its OWN scope/DbContext. Sharing the monitor's
+                // DbContext across jobs let one degrade's domain-event outbox rows collide with the
+                // next on the same change-tracker (EF identity conflict: DomainEventOutboxEntity.Id
+                // == EventId), which threw out of the entire check every cycle — so NO stuck job was
+                // ever degraded. The per-job try/catch keeps a single failure from aborting the
+                // remaining jobs and the downstream queue-depth / failure-rate checks.
+                try
                 {
-                    _logger.LogWarning(
-                        "Auto-degraded stuck job {JobId} (PDF: {FileName}) to Failed after {Minutes:F1} min (Issue #2689)",
-                        job.Id, job.FileName, stuckMinutes);
+                    using var degradeScope = _scopeFactory.CreateScope();
+                    var degradeMediator = degradeScope.ServiceProvider.GetRequiredService<IMediator>();
+                    var result = await degradeMediator
+                        .Send(new DegradeStuckJobCommand(job.Id, stuckMinutes), ct)
+                        .ConfigureAwait(false);
+                    if (result.Degraded)
+                    {
+                        _logger.LogWarning(
+                            "Auto-degraded stuck job {JobId} (PDF: {FileName}) to Failed after {Minutes:F1} min (Issue #2689)",
+                            job.Id, job.FileName, stuckMinutes);
+                    }
                 }
+#pragma warning disable CA1031 // Best-effort per-job degrade — one failure must not abort the whole check
+                // Let OperationCanceledException propagate so a shutdown signal exits promptly and
+                // is not mislogged as a transient degrade failure (ExecuteAsync breaks on it).
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    _logger.LogError(ex,
+                        "Failed to auto-degrade stuck job {JobId} (PDF: {FileName}); continuing with remaining jobs (Issue #2903)",
+                        job.Id, job.FileName);
+                }
+#pragma warning restore CA1031
             }
         }
     }

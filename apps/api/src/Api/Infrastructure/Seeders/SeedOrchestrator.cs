@@ -80,7 +80,8 @@ internal sealed class SeedOrchestrator
     }
 
     /// <summary>
-    /// Resolve seed profile from SEED_PROFILE env var → Seeding:Profile config → default Dev.
+    /// Resolve seed profile in precedence order: SEED_PROFILE env var → Seeding:Profile config →
+    /// ASPNETCORE_ENVIRONMENT derivation (Production→Prod, Staging→Staging) → default Dev (#2893).
     /// </summary>
     internal static SeedProfile ResolveProfile(IConfiguration? configuration)
     {

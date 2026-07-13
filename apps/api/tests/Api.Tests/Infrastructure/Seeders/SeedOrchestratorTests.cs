@@ -72,6 +72,7 @@ public sealed class SeedOrchestratorTests
     [InlineData("Production", SeedProfile.Prod)]
     [InlineData("production", SeedProfile.Prod)]
     [InlineData("Staging", SeedProfile.Staging)]
+    [InlineData("staging", SeedProfile.Staging)]
     [InlineData("Development", SeedProfile.Dev)]
     [InlineData("SomethingElse", SeedProfile.Dev)]
     public void ResolveProfile_DerivesFromAspNetCoreEnvironment_WhenNoEnvVarOrConfig(string aspNetEnv, SeedProfile expected)

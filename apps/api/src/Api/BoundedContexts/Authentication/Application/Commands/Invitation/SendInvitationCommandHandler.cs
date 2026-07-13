@@ -75,7 +75,10 @@ internal sealed class SendInvitationCommandHandler : ICommandHandler<SendInvitat
         await _invitationRepo.AddAsync(invitation, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        // Send email (fire-and-forget pattern — log errors but don't fail the operation)
+        // Send email (fire-and-forget pattern — log errors but don't fail the operation).
+        // Track the real send outcome so the DTO's EmailSent reflects an SMTP failure instead of
+        // always reporting true (bug #D): the admin UI reports "invito inviato" off this flag.
+        var emailSent = true;
         try
         {
             await _emailService.SendInvitationEmailAsync(
@@ -89,10 +92,11 @@ internal sealed class SendInvitationCommandHandler : ICommandHandler<SendInvitat
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to send invitation email to {Email}", DataMasking.MaskEmail(normalizedEmail));
+            emailSent = false;
         }
 #pragma warning restore CA1031
 
-        return MapToDto(invitation, rawToken);
+        return MapToDto(invitation, rawToken) with { EmailSent = emailSent };
     }
 
     internal static InvitationDto MapToDto(InvitationToken invitation, string? rawToken = null)

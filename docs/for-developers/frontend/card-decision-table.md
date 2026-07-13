@@ -85,3 +85,18 @@ output types). Pick by render surface:
 | Chips | `build*Connections` (`ui/data-display/meeple-card/nav-items/`) | `ConnectionChipProps[]` (entity-derived icon, optional count, `items`/`onCreate`/`onClick`/`href`) | `ConnectionChipStrip` → `ConnectionChip` | card footers — nav + actions |
 
 Each builder's slot order is locked by tests in the respective `__tests__/` dir.
+
+## Anti-reimplementation gates (#2858 C1 + #2861 C4)
+
+Two complementary guards stop a new entity tile from being hand-rolled instead of
+composing `MeepleCard`:
+
+- **C1 — `local/no-standalone-card-renderer`** (ESLint, error): no value-import of
+  `meeple-card/parts` or `/variants` from outside the canonical dir — you cannot
+  re-assemble a card from the atomic parts.
+- **C4 — `no-inline-card-reimplementation.test.tsx`** (Vitest AST gate): fails when a
+  `*Card` component (outside the canonical dirs) renders inline star glyphs (`★`/`☆`)
+  and never composes `<MeepleCard>` — catches the raw-HTML rating reimplementation.
+  Existing hand-rolled star-cards (`HubGameCard`, `HubToolkitCard`) are grandfathered
+  in `STAR_CARD_ALLOWLIST`; new ones must compose `<MeepleCard>` or use the shared
+  `<Stars>` (`@/components/ui/feedback/Stars`).

@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { mapProcessingStateToDisplayStatus } from '@/lib/kb/processing-status';
+
 import type { KbDetailData } from '../types';
 
 // ============================================================================
@@ -52,16 +54,9 @@ export function useKbDetail(pdfId: string): UseKbDetailResult {
 }
 
 function mapToKbDetailData(doc: Record<string, unknown>): KbDetailData {
-  const rawStatus = String(doc.processingStatus ?? 'none').toLowerCase();
-  const statusMap: Record<string, KbDetailData['status']> = {
-    uploaded: 'processing',
-    extracting: 'processing',
-    indexing: 'processing',
-    indexed: 'indexed',
-    failed: 'failed',
-    none: 'none',
-  };
-  const status = statusMap[rawStatus] ?? 'none';
+  const status = mapProcessingStateToDisplayStatus(
+    doc.processingStatus as string | null | undefined
+  );
 
   const extractedText = doc.extractedText != null ? String(doc.extractedText) : undefined;
   const MAX_CHARS = 2000; // ~500 words

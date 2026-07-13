@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { useConnectionSource } from '../hooks/useConnectionSource';
 import { AccentBorder } from '../parts/AccentBorder';
 import { CardFooter } from '../parts/CardFooter';
@@ -36,6 +38,7 @@ export function GridCard(props: MeepleCardProps) {
     manaPips,
     showQuickActions,
     onClick,
+    href,
     className = '',
     attribution,
   } = props;
@@ -45,16 +48,11 @@ export function GridCard(props: MeepleCardProps) {
 
   const glowColor = entityHsl(entity, 0.4);
 
-  return (
-    <div
-      className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-[var(--mc-border)] bg-[var(--mc-bg-card)] shadow-[var(--mc-shadow-sm)] outline-2 outline-offset-2 outline-transparent backdrop-blur-[12px] backdrop-saturate-[180%] transition-all duration-[350ms] [transition-timing-function:cubic-bezier(0.4,0,0.2,1)] hover:-translate-y-1.5 hover:shadow-[var(--mc-shadow-xl)] hover:outline-[var(--mc-glow)] ${className}`}
-      style={{ '--mc-glow': glowColor } as React.CSSProperties}
-      onClick={onClick}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      data-entity={entity}
-      data-testid={testId}
-    >
+  const rootClassName = `group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-[var(--mc-border)] bg-[var(--mc-bg-card)] shadow-[var(--mc-shadow-sm)] outline-2 outline-offset-2 outline-transparent backdrop-blur-[12px] backdrop-saturate-[180%] transition-all duration-[350ms] [transition-timing-function:cubic-bezier(0.4,0,0.2,1)] hover:-translate-y-1.5 hover:shadow-[var(--mc-shadow-xl)] hover:outline-[var(--mc-glow)] ${className}`;
+  const rootStyle = { '--mc-glow': glowColor } as React.CSSProperties;
+
+  const content = (
+    <>
       <AccentBorder entity={entity} />
       <div className="relative">
         <Cover
@@ -99,6 +97,35 @@ export function GridCard(props: MeepleCardProps) {
       )}
       {/* Footer: StatusDot + uppercase mono badge (#1856 DEC-5). */}
       <CardFooter status={status} badge={badge} />
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        prefetch
+        className={`${rootClassName} no-underline`}
+        style={rootStyle}
+        data-entity={entity}
+        data-testid={testId}
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <div
+      className={rootClassName}
+      style={rootStyle}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      data-entity={entity}
+      data-testid={testId}
+    >
+      {content}
     </div>
   );
 }

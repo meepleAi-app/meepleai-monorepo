@@ -30,6 +30,7 @@ import noGameDetailOrphanRoutes from "./eslint-rules/no-game-detail-orphan-route
 // Forbids direct reads of `useLiveSessionStore(s => s.scores)`; consumers
 // must use `useSessionScores()` from @/lib/domain-hooks/useSessionScores.
 import noStoreScoresDirect from "./eslint-rules/no-store-scores-direct.js";
+import noStandaloneCardRenderer from "./eslint-rules/no-standalone-card-renderer.js";
 // Issue #2339 sub-PR 2/3 — encourage useGameTitle() adoption (warn-only).
 import preferUseGameTitle from "./eslint-rules/prefer-use-game-title.js";
 
@@ -123,6 +124,8 @@ export default [
           "no-store-scores-direct": noStoreScoresDirect,
           // Issue #2339 sub-PR 2/3 — encourage useGameTitle() adoption (warn-only per DEC-FE-8).
           "prefer-use-game-title": preferUseGameTitle,
+          // Issue #2858 (C1) — no value-import of meeple-card internals outside the canonical dir.
+          "no-standalone-card-renderer": noStandaloneCardRenderer,
         },
       },
     },
@@ -300,6 +303,10 @@ export default [
       // promotes to `error`. Allow-list: aria-label values (DEC-FE-9), test
       // files, stories, lib/i18n/.
       "local/prefer-use-game-title": "warn",
+      // Issue #2858 (C1) — compose the public <MeepleCard>; do not re-assemble
+      // cards from meeple-card/parts or /variants. Import-boundary only; the
+      // inline-reimplementation body gate is C4 (#2861).
+      "local/no-standalone-card-renderer": "error",
     },
     settings: {
       react: {

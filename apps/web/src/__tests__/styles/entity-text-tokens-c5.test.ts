@@ -7,9 +7,13 @@ const CSS = readFileSync(
   'utf8'
 );
 
-// #ffffff (light card) and #1e1710 (dark card) — the EntityBadge pill surface.
+// The EntityBadge glass pill renders on Tailwind's `bg-card`, i.e. the semantic
+// `--card` token (globals.css), NOT the `--bg-card` mockup family. Its solid
+// value is the conservative AA surface: light `--card` = `0 0% 100%` (#ffffff),
+// dark `--card` = `0 0% 18%` (~#2e2e2e, globals.css:658). Validate against those
+// — the same target `--c-session-text` is tuned for (globals.css:714).
 const LIGHT_BG: [number, number, number] = [255, 255, 255];
-const DARK_BG: [number, number, number] = [30, 23, 16];
+const DARK_BG: [number, number, number] = hslToRgb(0, 0, 18);
 
 function block(theme: 'light' | 'dark'): string {
   if (theme === 'light') return CSS.slice(0, CSS.indexOf('[data-theme="dark"]'));

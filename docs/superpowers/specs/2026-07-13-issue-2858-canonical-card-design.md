@@ -22,8 +22,9 @@ La verifica sul codice attuale (`main-dev`, post Phase A/B/C2) mostra però che 
 
 1. **Framing → tassonomia canonica a 2 tier.** Formalizzare `MeepleCard` = tier DISPLAY, `ExtraMeepleCard` = tier DETAIL. Non un unico canonico assoluto (assorbire il drawer sarebbe ~29 consumer + sistema 6-tab, oltre lo scope L e ad alto rischio).
 2. **`MeepleCardGame` → adapter, "canonico + segnali mappati".** Il body diventa una composizione di `MeepleCard entity="game" variant="grid"`; i segnali distintivi si mappano su props canoniche; si accetta la normalizzazione visiva verso il look canonico su `/shared-games`.
-3. **Lint a 2 layer complementari, C1 = `error`.** C1 spedisce la ESLint rule *guardia dichiarazione/uso*; C4 aggiungerà il gate AST *guardia implementazione* (body-inspection). Zero overlap.
+3. **Lint C1 = solo import-boundary (`error`); compose-enforcement → C4** (corretto in fase di plan, 2026-07-13). Il compose-check *basato sul nome* `*Card` è impraticabile: il codebase ha ~100+ componenti `*Card` generici (`StatCard`, `KPICard`, `GlassCard`, `AuthCard`, `PricingCard`, `HubGameCard`, `MeepleInfoCard`, `MeepleWishlistCard`, …) senza rapporto con MeepleCard → floodrebbe la CI o richiederebbe un'allowlist da 100+ voci arbitrarie. Quindi C1 spedisce **solo** la ESLint rule *import-boundary* (ban dei deep-import di `meeple-card/parts/`/`variants/` da fuori la dir canonica). L'enforcement "non reimplementare cover/stelle/badge inline" va **interamente a C4** (#2861 body-inspection, keyed sui primitivi, non sul nome). Split a 2 layer preservato, più corretto.
 4. **Decision-table = doc markdown + test di tracciabilità.** Versionabile (Wiegers) e anti-drift (Adzic).
+5. **Anchor via `href` first-class su MeepleCard** (deciso in fase di plan, 2026-07-13). Il root di `MeepleCardGame` è un vero `<a href>` (`<Link prefetch>`) richiesto sulla route pubblica `/shared-games` (prefetch, apri-in-nuova-scheda, focus nativo, SEO). Il canonico `GridCard` rende un `<div role=button>` e naviga via `onClick`. Si aggiunge `href?: string` a `MeepleCardProps`: quando presente, la root di `GridCard` rende `<Link href>` invece di `<div>`. È una capability semantica riusabile, non un hack di fedeltà; scope C1 limitato a `GridCard`.
 
 ## 3. Tassonomia canonica
 
@@ -36,7 +37,11 @@ Regola per lo sviluppatore che porta un mockup: **scegli il tier dal contesto** 
 
 ## 4. Conversione `MeepleCardGame` → adapter
 
-**Principio.** L'interfaccia pubblica `MeepleCardGameProps` resta invariata (eccetto `compact`, vedi sotto) così che `shared-games-grid.tsx` e `page-client.tsx` non cambino. Il *body* diventa una composizione di `MeepleCard`. L'adapter risolve l'i18n (`labels`) in stringhe prima di passarle.
+**Principio.** L'interfaccia pubblica `MeepleCardGameProps` resta invariata (eccetto `compact`, vedi sotto) così che `page-client.tsx` non cambi. Il *body* diventa una composizione di `MeepleCard entity="game" variant="grid" href={/shared-games/{id}}`. L'adapter risolve l'i18n (`labels`) in stringhe prima di passarle.
+
+**Anchor (`href`).** `MeepleCard` acquisisce `href?: string`; `GridCard` rende la root come `<Link href prefetch>` quando `href` è presente (altrimenti `<div>` come oggi). L'attribution footer resta sibling di `GridCard` (renderizzato da `MeepleCardImpl` fuori dalla root) → nessun anchor annidato. L'adapter passa i props Wikidata a `MeepleCard`, che rende il footer.
+
+**Hook DOM.** Il tile è identificato via `data-testid="shared-games-card"` (forwarded da `GridCard` alla root). `shared-games-grid.test.tsx` passa da `[data-slot="shared-games-card"]` a `[data-testid="shared-games-card"]` (3 selettori). `data-game-id` è rimosso: non è usato esternamente su questa tile (verificato via grep; le altre occorrenze sono componenti diversi).
 
 **Mapping dei segnali (DTO shared-games → `MeepleCardProps`):**
 
@@ -57,20 +62,20 @@ Regola per lo sviluppatore che porta un mockup: **scegli il tier dal contesto** 
 
 **Test.** `meeple-card-game.test.tsx` passa da asserzioni sul markup inline ad **asserzioni comportamentali** sul render canonico: titolo (`h3`), stelle via ruolo/aria-label, chip di connessione con count (toolkit/agent/kb), badge "new this week", attribution footer Wikidata quando presente. Coerente con l'acceptance-matrix #2859.
 
-## 5. ESLint rule `local/no-standalone-card-renderer` (severità `error`)
+## 5. ESLint rule `local/no-standalone-card-renderer` (import-boundary, severità `error`)
 
-**Obiettivo:** rendere strutturalmente difficile ricreare una card "copiando HTML", senza falsi positivi che impediscano il flip a `error`. Due controlli complementari nella stessa rule:
+**Obiettivo:** rendere strutturalmente impossibile riassemblare una card "rubando" i parts atomici. **Un solo controllo** (import-boundary), preciso e a falsi-positivi ~0.
 
-- **Controllo A — import-boundary (preciso).** Vietato importare da `**/meeple-card/parts/**` e `**/meeple-card/variants/**` da file **fuori** da `ui/data-display/meeple-card/`. Solo l'export pubblico `MeepleCard` è consumabile. → non puoi "rubare" i parts per riassemblare una card a mano.
-- **Controllo B — compose-check (euristico).** Un componente il cui nome matcha `*Card`, definito sotto `components/` ma **fuori** dalle dir canoniche, deve rendere `<MeepleCard>` (o `<ExtraMeepleCard>`) nel proprio JSX.
+- **Controllo unico — import-boundary.** Vietato il **value-import** da `**/meeple-card/parts/**` e `**/meeple-card/variants/**` da file **fuori** da `ui/data-display/meeple-card/`. Solo l'export pubblico `MeepleCard` (root della dir) è consumabile. → non puoi comporre una card a mano dai parts interni.
 
-**Esenzioni (perché `error` sia sicuro da subito):**
+> Il compose-check basato sul **nome** `*Card` è stato **scartato**: il codebase ha ~100+ componenti `*Card` generici (`StatCard`, `KPICard`, `GlassCard`, `AuthCard`, `PricingCard`, `HubGameCard`, `MeepleInfoCard`, …) non legati a MeepleCard. L'enforcement "non reimplementare cover/stelle/badge inline" è **interamente C4** (#2861 body-inspection, keyed sui primitivi renderizzati, non sul nome).
 
-- Dir canoniche: `ui/data-display/meeple-card/` (i suoi `GridCard`/`ListCard`/… sono gli interni del dispatcher) e `ui/data-display/extra-meeple-card/` (tier detail: `GameExtraMeepleCard` ecc. legittimamente non compongono `MeepleCard`).
-- Pattern non-card per nome: `*Skeleton*`, `*Empty*`, `*Error*`, `*Footer*`, `*Placeholder*` (stati/wrapper, non renderer di entità).
-- **Allowlist esplicita** per path (stesso pattern di `SPREAD_ALLOWLIST` in `call-site-coverage.test.tsx`): eccezioni legittime future si aggiungono con motivazione in commit, senza degradare a `warn`.
+**Esenzioni (perché `error` sia sicuro da subito — verificate via grep):**
 
-**Confine con C4 (nessun overlap).** Questa rule è *dichiarazione/uso* (import + presenza di `<MeepleCard>`). C4 (#2861) farà il *body-inspection* AST (rileva `<Cover>`/glifi-stella/`<StatusBadge>` renderizzati inline anche senza import). Al merge di C1 il violatore reale (`MeepleCardGame`) non esiste più.
+- Dir canonica `ui/data-display/meeple-card/` (i suoi interni usano i parts legittimamente).
+- File di test (`**/__tests__/**`, `*.test.*`): importano gli interni per testarli.
+- **`import type`**: gli import type-only non trascinano logica di rendering (es. `ManaPip`/`ManaPipItem`) → esenti.
+- **Allowlist esplicita** per path (pattern `SPREAD_ALLOWLIST` di `call-site-coverage.test.tsx`). Al momento **1 voce**: `src/hooks/queries/useGameManaPips.ts` — importa il value util `getKbPipColor` (colore pip), non un componente card. Nuove eccezioni si aggiungono con motivazione in commit, senza degradare a `warn`.
 
 **Wiring:** `apps/web/eslint-rules/no-standalone-card-renderer.js` + `.test.js` (RuleTester), export in `eslint-rules/index.js`, registrazione + severità `error` in `eslint.config.mjs` (stesso pattern di `no-store-scores-direct` / `no-hardcoded-color-utility`).
 
@@ -90,21 +95,23 @@ Regola per lo sviluppatore che porta un mockup: **scegli il tier dal contesto** 
 | `/dashboard#Prossimi/#Recenti` | `GameNightSummary` | event | DISPLAY | `MeepleEventCard` | list/compact |
 | drawer/dettaglio | `*DetailData` | * | DETAIL | `*ExtraMeepleCard` | — |
 
-(La tabella completa nel doc include tutte le righe estratte dalla mappatura.)
+(La tabella completa nel doc include tutte le righe degli adapter che compongono `MeepleCard`.)
 
-**Test** → `card-decision-table.test.ts`:
+**Test** → `card-decision-table.test.ts` — coverage **`<MeepleCard>`-usage-based** (precisa, name-independent; nessun compose-check sul nome):
 
-- **No righe dangling:** ogni adapter citato nella tabella esiste ed è esportato (parse markdown → risolve import path).
-- **Coverage:** ogni componente `*Card` adapter in produzione (esclusi gli esenti) compare in una riga della tabella → la mappa non può omettere un adapter senza rompere il build (guardia "la mappa non mente sul filesystem", stile test importPath del registry).
-
-> **Consistenza guardie.** Il coverage test e il compose-check della ESLint rule (§5) devono condividere **la stessa definizione di "adapter `*Card`"** (identiche esenzioni per nome/dir). Per evitare divergenze, l'insieme delle esenzioni vive in un unico modulo condiviso (es. `apps/web/eslint-rules/card-renderer-exemptions.js` o equivalente importabile dal test), consumato da entrambi.
+- **Coverage:** ogni file di produzione sotto `src/{app,components}` (esclusi test/dev/showcase e la dir `meeple-card/`) che **rende `<MeepleCard …>`** in JSX è un adapter display-tier e il suo componente **deve** comparire in una riga della tabella. → la mappa non può omettere un adapter reale senza rompere il build (guardia "la mappa non mente", stile test importPath del registry). Definizione name-independent: si conta l'uso di `<MeepleCard>`, non il nome `*Card`.
+- **No righe dangling:** ogni adapter citato nella tabella (`` `MeepleXxx` `` / `` `XxxExtraMeepleCard` ``) esiste ed è esportato in `src/components/**` (scan export).
+- **Safeguard:** floor sul numero di file scansionati (>50) per evitare pass vacui su glob rotto (come `call-site-coverage.test.tsx`).
 
 ## 7. Strategia TDD (ordine)
 
-1. `card-decision-table.md` + `card-decision-table.test.ts`: scrivo la tabella, il test la valida (rosso→verde).
-2. ESLint rule: casi `RuleTester` prima (rosso: valid = adapter che compone / file esente; invalid = `*Card` che non compone + deep-import) → implementazione (verde) → registrazione `error` in `eslint.config.mjs`.
-3. `MeepleCardGame`: aggiorno `meeple-card-game.test.tsx` al contratto comportamentale (rosso) → converto il body ad adapter (verde) → rimuovo `compact` da `MeepleCardGameProps` e aggiorno `shared-games-grid.tsx`.
-4. Verifica finale: `pnpm test` (mirato meeple-card + shared-games), `pnpm typecheck`, `pnpm lint` (nuova rule attiva), `pnpm build`. **Gate a11y BLOCKING:** il render canonico usa già token AA (`--c-*` 38% + `--c-*-text`), rischio contrasto basso; verifica su `/shared-games`.
+1. **`href` su MeepleCard/GridCard** (prerequisito conversione): test GridCard href (rosso) → aggiungo `href?` a `types.ts` + branch `<Link>` in `GridCard.tsx` (verde).
+2. **`MeepleCardGame` → adapter**: aggiorno `meeple-card-game.test.tsx` al contratto comportamentale + aggiorno i 3 selettori di `shared-games-grid.test.tsx` (rosso) → converto il body ad adapter, rimuovo `compact` da `MeepleCardGameProps`, aggiorno `shared-games-grid.tsx` (verde).
+3. **ESLint rule import-boundary**: casi `RuleTester` (rosso: valid = adapter che compone MeepleCard / file esente / `import type` / allowlist; invalid = value deep-import di `parts/`/`variants/`) → implementazione (verde) → registrazione `error` in `eslint.config.mjs` → `pnpm lint` full (verifica 0 violazioni: solo `useGameManaPips` in allowlist).
+4. **Decision-table**: `card-decision-table.test.ts` coverage `<MeepleCard>`-usage (rosso) → scrivo `card-decision-table.md` con tutte le righe adapter (verde).
+5. Verifica finale: `pnpm test` (mirato meeple-card + shared-games), `pnpm typecheck`, `pnpm lint` (nuova rule attiva), `pnpm build`. **Gate a11y BLOCKING:** il render canonico usa già token AA (`--c-*` 38% + `--c-*-text`), rischio contrasto basso; verifica su `/shared-games`.
+
+**Ordine di merge (importante):** l'import-boundary non riguarda `MeepleCardGame` (che importa il root `MeepleCard`, non i parts), quindi non c'è dipendenza d'ordine stretta; la sequenza sopra tiene comunque la CI verde tra un task e l'altro.
 
 ## 8. Scope
 
@@ -121,15 +128,17 @@ Regola per lo sviluppatore che porta un mockup: **scegli il tier dal contesto** 
 
 | Rischio | Mitigazione |
 |---|---|
-| Il compose-check (Controllo B) genera falsi positivi bloccando `error` | Esenzioni per nome/dir + allowlist per path; casi coperti da `RuleTester` prima del flip |
+| Import-boundary genera falsi positivi bloccando `error` | Solo 3 hit fuori dalla dir canonica (verificato via grep): 2 in test + 1 in `useGameManaPips`; esenzioni `import type` + test + 1 allowlist coprono tutto. `pnpm lint` full nel task 3 conferma 0 residui |
 | Cambio visivo su route pubblica `/shared-games` | Deciso e accettato in brainstorm (look canonico + segnali mappati); delta dichiarati in §4 |
-| Regressione a11y sul nuovo render | Token già AA; verifica esplicita su `/shared-games` nel gate BLOCKING |
-| `connections` count-only rende chip senza popover diverso dall'atteso | ConnectionChipStrip footer con count e senza `items`/handler = chip statico con count, match funzionale del footer attuale |
+| Regressione a11y sul nuovo render (rating perde `role=img`/aria-label) | Token già AA (axe passa); il rating canonico è quello usato da tutte le altre game-card → coerenza, non nuovo problema. Verifica esplicita su `/shared-games` nel gate BLOCKING |
+| `connections` count-only rende chip diverso dall'atteso | ConnectionChipStrip footer con count e senza `items`/handler = chip statico con count, match funzionale del footer attuale |
+| Un nuovo renderer di entity-card *senza* nome `*Card` sfugge al lint C1 | È by-design: il compose/reimpl-guard è C4 (body-inspection sui primitivi). C1 copre solo l'import-boundary strutturale |
 
 ## 10. Acceptance criteria
 
-- [ ] `MeepleCardGame` compone `MeepleCard` (nessun `★`/cover/badge inline); interfaccia pubblica invariata eccetto `compact` rimosso.
+- [ ] `MeepleCard` accetta `href?`; `GridCard` rende `<Link href>` quando presente, `<div>` altrimenti (comportamento esistente invariato per i consumer senza `href`).
+- [ ] `MeepleCardGame` compone `MeepleCard` (nessun `★`/cover/badge inline); interfaccia pubblica invariata eccetto `compact` rimosso; root è un `<a href="/shared-games/{id}">`.
 - [ ] `/shared-games` renderizza via tier canonico; test comportamentali verdi; nessuna regressione a11y.
-- [ ] `docs/for-developers/frontend/card-decision-table.md` presente; `card-decision-table.test.ts` verde (no-dangling + coverage).
-- [ ] `local/no-standalone-card-renderer` attiva a `error`; `RuleTester` verde; `pnpm lint` pulito sul codebase.
+- [ ] `docs/for-developers/frontend/card-decision-table.md` presente; `card-decision-table.test.ts` verde (coverage `<MeepleCard>`-usage + no-dangling).
+- [ ] `local/no-standalone-card-renderer` (import-boundary) attiva a `error`; `RuleTester` verde; `pnpm lint` pulito sul codebase (unica allowlist: `useGameManaPips`).
 - [ ] `pnpm test` mirato, `pnpm typecheck`, `pnpm lint`, `pnpm build` verdi.

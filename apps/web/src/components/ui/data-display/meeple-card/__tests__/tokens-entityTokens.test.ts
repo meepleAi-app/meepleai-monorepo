@@ -3,28 +3,29 @@ import { describe, expect, it } from 'vitest';
 import { entityTokens } from '../tokens';
 
 describe('entityTokens()', () => {
-  it('returns solid color using existing entityHsl', () => {
+  // #2862 (C5): entityTokens now emits theme-aware canonical --c-* CSS vars.
+  it('returns solid color as the canonical --c-* var', () => {
     const t = entityTokens('game');
-    expect(t.solid).toBe('hsl(25, 95%, 39%)');
+    expect(t.solid).toBe('hsl(var(--c-game))');
   });
 
   it('returns fill with 0.12 alpha', () => {
     const t = entityTokens('game');
-    expect(t.fill).toBe('hsla(25, 95%, 39%, 0.12)');
+    expect(t.fill).toBe('hsl(var(--c-game) / 0.12)');
   });
 
   it('returns border with 0.35 alpha', () => {
     const t = entityTokens('game');
-    expect(t.border).toBe('hsla(25, 95%, 39%, 0.35)');
+    expect(t.border).toBe('hsl(var(--c-game) / 0.35)');
   });
 
   it('returns named tokens for hover, glow, shadow, muted, dashed', () => {
     const t = entityTokens('kb');
-    expect(t.hover).toBe('hsla(210, 40%, 48%, 0.22)');
-    expect(t.glow).toBe('hsla(210, 40%, 48%, 0.18)');
-    expect(t.shadow).toBe('hsla(210, 40%, 48%, 0.25)');
-    expect(t.muted).toBe('hsla(210, 40%, 48%, 0.06)');
-    expect(t.dashed).toBe('hsla(210, 40%, 48%, 0.25)');
+    expect(t.hover).toBe('hsl(var(--c-kb) / 0.22)');
+    expect(t.glow).toBe('hsl(var(--c-kb) / 0.18)');
+    expect(t.shadow).toBe('hsl(var(--c-kb) / 0.25)');
+    expect(t.muted).toBe('hsl(var(--c-kb) / 0.06)');
+    expect(t.dashed).toBe('hsl(var(--c-kb) / 0.25)');
   });
 
   it('returns textOn = #ffffff', () => {

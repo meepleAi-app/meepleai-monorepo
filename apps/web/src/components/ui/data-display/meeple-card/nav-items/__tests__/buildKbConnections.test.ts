@@ -31,4 +31,9 @@ describe('buildKbConnections', () => {
     expect(items[2].count).toBeUndefined();
     expect(items[3].count).toBeUndefined();
   });
+
+  it('emits kb entityType for all 4 slots (#2860)', () => {
+    const items = buildKbConnections({ chunkCount: 1 }, handlers);
+    expect(items.map(i => i.entityType)).toEqual(['kb', 'kb', 'kb', 'kb']);
+  });
 });

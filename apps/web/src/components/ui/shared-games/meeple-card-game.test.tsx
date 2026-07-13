@@ -51,6 +51,14 @@ describe('MeepleCardGame (adapter over MeepleCard, #2858)', () => {
     expect(screen.getByTestId('shared-games-card')).toBeInTheDocument();
   });
 
+  it('emits no interactive element nested inside the card anchor (WCAG 4.1.2)', () => {
+    render(<MeepleCardGame {...baseProps} />);
+    const link = screen.getByRole('link');
+    // Count chips render as static <span role="img"> and no MenuPlaceholder button is
+    // rendered inside an anchor-rooted card, so the <a> has zero nested buttons/anchors.
+    expect(link.querySelectorAll('button, a')).toHaveLength(0);
+  });
+
   it('renders the title as a heading', () => {
     render(<MeepleCardGame {...baseProps} />);
     expect(screen.getByRole('heading', { name: 'Catan' })).toBeInTheDocument();

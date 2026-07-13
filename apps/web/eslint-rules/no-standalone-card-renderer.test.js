@@ -28,7 +28,7 @@ test('no-standalone-card-renderer (import-boundary)', () => {
       {
         filename: 'apps/web/src/components/ui/data-display/meeple-card/variants/GridCard.tsx',
         code:
-          "import { Cover } from '../parts/Cover';\n" +
+          "import { Cover } from '@/components/ui/data-display/meeple-card/parts/Cover';\n" +
           'export function GridCard() { return <div><Cover /></div>; }',
       },
       // Test file — may import internals to test them.

@@ -203,6 +203,22 @@ export function ConnectionChip({
     );
   }
 
+  const isStatic = !disabled && !loading && !hasItems && !hasCreate && !hasOnClick && !href;
+
+  // A static chip (count/empty display with no items, create, click, or href) has no
+  // interactive affordance — render a non-interactive <span> instead of a <button>.
+  // Keeps a screen-reader-parseable label (role="img" + aria-label) without emitting a
+  // do-nothing button, and makes count-only chips valid inside an anchor-rooted card
+  // (GridCard href) — no nested-interactive (WCAG 4.1.2). (#2858 C-1)
+  if (isStatic) {
+    return (
+      <span role="img" aria-label={ariaLabel} className={rootClassName} style={rootStyle}>
+        {chipInner}
+        {labelEl}
+      </span>
+    );
+  }
+
   const buttonEl = (
     <button
       type="button"

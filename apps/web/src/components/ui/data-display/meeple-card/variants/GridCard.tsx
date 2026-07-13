@@ -71,7 +71,7 @@ export function GridCard(props: MeepleCardProps) {
           <EntityBadge entity={entity} stacked />
         </div>
         {/* Top-right hover-visible 3-dot menu placeholder (#1856 DEC-4). */}
-        {(!showQuickActions || actions.length === 0) && <MenuPlaceholder />}
+        {!href && (!showQuickActions || actions.length === 0) && <MenuPlaceholder />}
         {tags.length > 0 && <TagStrip tags={tags} entity={entity} topClass="top-9" />}
         {showQuickActions && actions.length > 0 && <QuickActions actions={actions} />}
       </div>

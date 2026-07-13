@@ -72,6 +72,10 @@ services:
       - ./secrets/prod/storage.secret
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      # #2893: pin the seed profile explicitly so production never falls back to the
+      # Dev default (which would seed dev.yml + LivedIn synthetic data). Prod runs the
+      # Core layer only (admin + AI models); the game catalog is populated separately.
+      SEED_PROFILE: Prod
       ASPNETCORE_URLS: http://+:8080
       POSTGRES_HOST: postgres
       POSTGRES_USER: ${POSTGRES_USER:-meeple}

@@ -53,8 +53,79 @@ public sealed class SeedOrchestratorTests
     public void ResolveProfile_DefaultsToDev_WhenNothingConfigured()
     {
         Environment.SetEnvironmentVariable("SEED_PROFILE", null);
-        var result = SeedOrchestrator.ResolveProfile(null);
-        result.Should().Be(SeedProfile.Dev);
+        var previousAspNetEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", null);
+        try
+        {
+            var result = SeedOrchestrator.ResolveProfile(null);
+            result.Should().Be(SeedProfile.Dev);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", previousAspNetEnv);
+        }
+    }
+
+    // #2893: when SEED_PROFILE and Seeding:Profile are both absent, the profile is derived
+    // from ASPNETCORE_ENVIRONMENT so Production never falls open to the Dev default.
+    [Theory]
+    [InlineData("Production", SeedProfile.Prod)]
+    [InlineData("production", SeedProfile.Prod)]
+    [InlineData("Staging", SeedProfile.Staging)]
+    [InlineData("Development", SeedProfile.Dev)]
+    [InlineData("SomethingElse", SeedProfile.Dev)]
+    public void ResolveProfile_DerivesFromAspNetCoreEnvironment_WhenNoEnvVarOrConfig(string aspNetEnv, SeedProfile expected)
+    {
+        Environment.SetEnvironmentVariable("SEED_PROFILE", null);
+        var previousAspNetEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", aspNetEnv);
+        try
+        {
+            var result = SeedOrchestrator.ResolveProfile(null);
+            result.Should().Be(expected);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", previousAspNetEnv);
+        }
+    }
+
+    [Fact]
+    public void ResolveProfile_EnvVar_TakesPrecedenceOver_AspNetCoreEnvironment()
+    {
+        var previousAspNetEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
+        Environment.SetEnvironmentVariable("SEED_PROFILE", "Prod");
+        try
+        {
+            var result = SeedOrchestrator.ResolveProfile(null);
+            result.Should().Be(SeedProfile.Prod);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("SEED_PROFILE", null);
+            Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", previousAspNetEnv);
+        }
+    }
+
+    [Fact]
+    public void ResolveProfile_Config_TakesPrecedenceOver_AspNetCoreEnvironment()
+    {
+        Environment.SetEnvironmentVariable("SEED_PROFILE", null);
+        var previousAspNetEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Production");
+        try
+        {
+            var config = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { ["Seeding:Profile"] = "Staging" })
+                .Build();
+            var result = SeedOrchestrator.ResolveProfile(config);
+            result.Should().Be(SeedProfile.Staging);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", previousAspNetEnv);
+        }
     }
 
     [Fact]

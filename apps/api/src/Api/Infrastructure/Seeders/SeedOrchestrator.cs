@@ -94,7 +94,19 @@ internal sealed class SeedOrchestrator
         if (!string.IsNullOrWhiteSpace(configValue) && Enum.TryParse<SeedProfile>(configValue, ignoreCase: true, out var cfgProfile))
             return cfgProfile;
 
-        // 3. Default to Dev for local development
+        // 3. Derive from ASPNETCORE_ENVIRONMENT so Production/Staging never fall open to the
+        //    Dev default (#2893). A prod deploy that forgets to set SEED_PROFILE previously
+        //    resolved to Dev, which would seed dev.yml + LivedIn synthetic data in production.
+        var aspNetEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        if (!string.IsNullOrWhiteSpace(aspNetEnv))
+        {
+            if (aspNetEnv.Equals("Production", StringComparison.OrdinalIgnoreCase))
+                return SeedProfile.Prod;
+            if (aspNetEnv.Equals("Staging", StringComparison.OrdinalIgnoreCase))
+                return SeedProfile.Staging;
+        }
+
+        // 4. Default to Dev for local development (Development + any unrecognized environment)
         return SeedProfile.Dev;
     }
 

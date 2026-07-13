@@ -33,7 +33,7 @@ export type SharedGamesGridState =
   | 'empty-search'
   | 'filtered-empty';
 
-export type SharedGamesGridGame = Omit<MeepleCardGameProps, 'labels' | 'compact' | 'className'>;
+export type SharedGamesGridGame = Omit<MeepleCardGameProps, 'labels' | 'className'>;
 
 export interface SharedGamesGridProps {
   readonly state: SharedGamesGridState;
@@ -92,7 +92,7 @@ export function SharedGamesGrid({
   return (
     <div data-slot="shared-games-grid" data-state="default" className={gridClasses}>
       {games.map(game => (
-        <MeepleCardGame key={game.id} {...game} labels={cardLabels} compact={compact} />
+        <MeepleCardGame key={game.id} {...game} labels={cardLabels} />
       ))}
     </div>
   );

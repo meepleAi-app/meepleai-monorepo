@@ -67,6 +67,8 @@ export function entityHslText(entity: MeepleEntityType, alpha?: number): string 
 
 I valori light provengono da `entityTextOverrides` (già AA su cream). I dark seguono il pattern esistente (più chiari; `--c-game-text` dark 70%, `--c-toolkit-text` dark 72%). `game/kb/toolkit/session` hanno già i `-text`. `player`/`tool` non hanno override (fallback al solido, replica il comportamento JS).
 
+**`EntityBadge` — pill theme-aware (aggiunta Opzione 2).** Il testo `entityHslText` diventa theme-aware (`--c-*-text` flippa: dark in light-theme, light in dark-theme), ma la pill è oggi `bg-white/85` (bianca **invariante**) → in dark il testo chiaro finirebbe su pill bianca = AA fail. Fix: `EntityBadge.tsx:22` cambia `bg-white/85` → **`bg-card/85`** (glass theme-aware: chiara in light, scura in dark) e si **rimuove l'`eslint-disable local/no-hardcoded-color-utility`** (non più necessario con l'utility semantica). Così `--c-*-text` è AA su entrambe le pill. È un cambio **visivo** alla pill (glass bianco → glass card) → designer-review.
+
 **`entityColors` / `entityTextOverrides`:** `entityColors` **resta** (consumer esterni + regression #636). `entityTextOverrides` non è più usato da `entityHslText` dopo la riscrittura → si può rimuovere SE non ha altri consumer (verifico via grep; se orfano, delete). `entityTokens`/`statusColors`/`entityLabel`/`entityIcon` invariati.
 
 ## 4. Testing
@@ -103,7 +105,8 @@ I valori light provengono da `entityTextOverrides` (già AA su cream). I dark se
 
 - [ ] `entityHsl(entity, alpha?)` emette `hsl(var(--c-<map(entity)>) [/ alpha])` (theme-aware); `gameNightEvent→event`.
 - [ ] `entityHslText(entity)` emette `hsl(var(--c-<e>-text))` per game/kb/toolkit/session/event/agent/chat e `hsl(var(--c-<e>))` per player/tool.
-- [ ] `--c-event-text`/`--c-agent-text`/`--c-chat-text` presenti in canonical (light + dark), tutti ≥ 4.5:1.
+- [ ] `--c-event-text`/`--c-agent-text`/`--c-chat-text` presenti in canonical (light + dark), tutti ≥ 4.5:1 (light su `--bg-card` #ffffff, dark su `--bg-card` dark).
+- [ ] `EntityBadge.tsx` pill `bg-white/85` → `bg-card/85`, `eslint-disable` rimosso; testo `--c-*-text` AA su entrambi i temi.
 - [ ] `entityTokens` e le ~19 call-site invariate ma ora theme-aware/single-source; `entityColors` invariato (+ #636 verde).
 - [ ] `entityTextOverrides` rimosso se orfano (grep-verificato).
 - [ ] `tokens.test.ts` aggiornato + nuovi assert verdi; golden/consistency verdi; acceptance-matrix verde.

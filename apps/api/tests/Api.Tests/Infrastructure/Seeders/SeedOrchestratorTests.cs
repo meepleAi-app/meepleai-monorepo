@@ -58,7 +58,6 @@ public sealed class SeedOrchestratorTests
     [InlineData("Testing", SeedProfile.None)]
     [InlineData("CI", SeedProfile.None)]
     [InlineData("", SeedProfile.None)]
-    [InlineData(null, SeedProfile.None)]
     [InlineData("garbage", SeedProfile.None)]
     public void ResolveProfile_DerivesFromAspNetCoreEnvironment_WhenNoOverride(string? environmentName, SeedProfile expected)
     {
@@ -117,6 +116,19 @@ public sealed class SeedOrchestratorTests
         {
             Environment.SetEnvironmentVariable("SEED_PROFILE", null);
         }
+    }
+
+    [Fact]
+    [Trait("Category", TestCategories.Unit)]
+    public void ResolveProfile_InvalidConfig_FallsThroughToDerive()
+    {
+        Environment.SetEnvironmentVariable("SEED_PROFILE", null);
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Seeding:Profile"] = "Prdo" }) // invalid enum
+            .Build();
+
+        var result = SeedOrchestrator.ResolveProfile(config, environmentName: "Production");
+        result.Should().Be(SeedProfile.Prod); // invalid config value ignored, derives from env
     }
 
     [Fact]

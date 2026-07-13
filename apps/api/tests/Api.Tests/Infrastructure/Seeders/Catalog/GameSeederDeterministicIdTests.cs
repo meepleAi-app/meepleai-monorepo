@@ -67,4 +67,14 @@ public sealed class GameSeederDeterministicIdTests
         first.Id.Should().Be(second.Id, "re-seeding the same manifest game must reuse the same SharedGame id");
         first.Id.Should().Be(GameSeeder.GenerateDeterministicGameId(entry.BggId, entry.Title));
     }
+
+    [Fact]
+    public void GenerateDeterministicGameId_NullTitle_NoBggId_DoesNotThrow()
+    {
+        // Defensive: the title fallback tolerates a null title (should never happen from the
+        // manifest, but the parameter is nullable and must not NRE).
+        var act = () => GameSeeder.GenerateDeterministicGameId(null, null);
+        act.Should().NotThrow();
+        GameSeeder.GenerateDeterministicGameId(null, null).Should().NotBe(Guid.Empty);
+    }
 }

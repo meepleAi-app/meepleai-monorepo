@@ -240,7 +240,7 @@ internal static class GameSeeder
     /// so PdfSeeder recognizes existing PDFs (no orphans, embeddings preserved) — Issue #2904 / #964.
     /// SHA-256 of a namespaced key truncated to 16 bytes; NOT for cryptographic use.
     /// </summary>
-    internal static Guid GenerateDeterministicGameId(int? bggId, string title)
+    internal static Guid GenerateDeterministicGameId(int? bggId, string? title)
     {
         var key = bggId is > 0
             ? $"sharedgame:bgg:{bggId.Value}"

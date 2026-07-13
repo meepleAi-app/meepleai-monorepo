@@ -382,4 +382,31 @@ public sealed class ProcessingQueueMonitorServiceTests
             m => m.Send(It.Is<DegradeStuckJobCommand>(c => c.JobId == job2), It.IsAny<CancellationToken>()),
             Times.Once);
     }
+
+    // ──────────────────────────────────────────────────────────────────
+    // Issue #2903 (review): the per-job try/catch must NOT swallow cancellation —
+    // a shutdown signal has to propagate so the service exits promptly and is not
+    // mislogged as a transient degrade failure.
+    // ──────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CheckStuckJobs_DegradeCancelled_PropagatesCancellation()
+    {
+        var dbName = $"monitor_cancel_{Guid.NewGuid():N}";
+        var startedAt = DateTimeOffset.UtcNow.AddMinutes(-40);
+        await SeedStuckJobAsync(dbName, startedAt);
+
+        var (scopeFactory, mediatorMock, _) = BuildScopeFactory(dbName);
+        mediatorMock
+            .Setup(m => m.Send(It.IsAny<DegradeStuckJobCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException());
+
+        var tp = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        var monitor = BuildMonitor(scopeFactory, tp);
+        tp.Advance(TimeSpan.FromMinutes(31));
+
+        // Cancellation must bubble out, not be caught as a transient degrade error.
+        var act = async () => await monitor.RunChecksAsync(CancellationToken.None);
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
 }

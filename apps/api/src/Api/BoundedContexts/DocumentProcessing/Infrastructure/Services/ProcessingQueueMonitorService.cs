@@ -177,7 +177,9 @@ internal sealed class ProcessingQueueMonitorService : BackgroundService
                     }
                 }
 #pragma warning disable CA1031 // Best-effort per-job degrade — one failure must not abort the whole check
-                catch (Exception ex)
+                // Let OperationCanceledException propagate so a shutdown signal exits promptly and
+                // is not mislogged as a transient degrade failure (ExecuteAsync breaks on it).
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     _logger.LogError(ex,
                         "Failed to auto-degrade stuck job {JobId} (PDF: {FileName}); continuing with remaining jobs (Issue #2903)",

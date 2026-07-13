@@ -73,3 +73,15 @@ one that composes the canonical card — **never** a standalone renderer.
   `local/no-standalone-card-renderer` forbids it) and do **not** hand-roll
   cover/stars/badge (C4 body-gate, #2861).
 - Need a detail/drawer surface? Add an `ExtraMeepleCard` entity variant.
+
+## Connection builders — two families (#2860)
+
+Two intentionally-separate connection families; do NOT merge them (incompatible
+output types). Pick by render surface:
+
+| Family | Builder | Output | Rendered by | Surface |
+|---|---|---|---|---|
+| Pips | `build*ConnectionPips` (`ui/data-display/connection-bar/`) | `ConnectionPip[]` (icon in payload, count required, `isEmpty`) | `ConnectionBar` | detail pages — read-only cascade-nav strip |
+| Chips | `build*Connections` (`ui/data-display/meeple-card/nav-items/`) | `ConnectionChipProps[]` (entity-derived icon, optional count, `items`/`onCreate`/`onClick`/`href`) | `ConnectionChipStrip` → `ConnectionChip` | card footers — nav + actions |
+
+Each builder's slot order is locked by tests in the respective `__tests__/` dir.

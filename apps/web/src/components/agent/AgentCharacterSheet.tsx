@@ -26,7 +26,10 @@ import { useRouter } from 'next/navigation';
 
 import { ChatThreadView } from '@/components/chat-unified/ChatThreadView';
 import { AgentStatusBadge } from '@/components/ui/agent/AgentStatusBadge';
-import { ConnectionBar, buildAgentConnections } from '@/components/ui/data-display/connection-bar';
+import {
+  ConnectionBar,
+  buildAgentConnectionPips,
+} from '@/components/ui/data-display/connection-bar';
 import { KbStatusBadge } from '@/components/ui/data-display/extra-meeple-card/badge-stubs';
 import { Button } from '@/components/ui/primitives/button';
 import { useAgentKbDocs, useAgentThreads } from '@/hooks/queries/useAgentData';
@@ -73,7 +76,7 @@ export const AgentCharacterSheet = React.memo(function AgentCharacterSheet({
   const agentConnections =
     docsLoading || threadsLoading
       ? []
-      : buildAgentConnections({
+      : buildAgentConnectionPips({
           gameCount: data.gameId ? 1 : 0,
           kbCount: docs.length,
           chatCount: threads.length,

@@ -50,7 +50,7 @@ vi.mock('@/hooks/useConnectionBarNav', () => ({
 vi.mock('@/components/ui/data-display/connection-bar', () => ({
   ConnectionBar: ({ connections }: { connections: Array<{ count: number }> }) =>
     connections.length > 0 ? <div data-testid="connection-bar" /> : null,
-  buildGameConnections: (counts: Record<string, number>) =>
+  buildGameConnectionPips: (counts: Record<string, number>) =>
     Object.values(counts).some(v => v > 0) ? [{ count: 1 }] : [],
 }));
 

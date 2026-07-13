@@ -5,7 +5,10 @@ import { useState } from 'react';
 import { CustomCoverDialog } from '@/components/features/library/custom-cover/CustomCoverDialog';
 import { EditCoverOverlay } from '@/components/features/library/custom-cover/EditCoverOverlay';
 import { SessionContributorsStrip } from '@/components/features/library/SessionContributorsStrip';
-import { ConnectionBar, buildGameConnections } from '@/components/ui/data-display/connection-bar';
+import {
+  ConnectionBar,
+  buildGameConnectionPips,
+} from '@/components/ui/data-display/connection-bar';
 import type { MeepleCardMetadata } from '@/components/ui/data-display/meeple-card/types';
 import { useGameSessionContributors } from '@/hooks/queries/useGameSessionContributors';
 import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
@@ -116,7 +119,7 @@ export function GameDetailDesktop({
   // threads for the game. Both default to 0 when the BE field is undefined
   // (legacy response shapes).
   const gameConnections = game
-    ? buildGameConnections({
+    ? buildGameConnectionPips({
         agentCount: game.agentCount ?? 0,
         kbCount: game.hasCustomPdf || game.hasRagAccess ? 1 : 0,
         chatCount: game.chatThreadCount ?? 0,

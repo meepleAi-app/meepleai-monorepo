@@ -11,7 +11,7 @@ function pip(
   return { entityType, count, label, icon, isEmpty: count === 0 };
 }
 
-export function buildGameConnections(counts: {
+export function buildGameConnectionPips(counts: {
   agentCount: number;
   kbCount: number;
   chatCount: number;
@@ -25,7 +25,7 @@ export function buildGameConnections(counts: {
   ];
 }
 
-export function buildPlayerConnections(counts: {
+export function buildPlayerConnectionPips(counts: {
   sessionCount: number;
   favoriteGameCount: number;
 }): ConnectionPip[] {
@@ -35,7 +35,7 @@ export function buildPlayerConnections(counts: {
   ];
 }
 
-export function buildSessionConnections(counts: {
+export function buildSessionConnectionPips(counts: {
   gameCount: number;
   playerCount: number;
   toolCount: number;
@@ -49,7 +49,7 @@ export function buildSessionConnections(counts: {
   ];
 }
 
-export function buildAgentConnections(counts: {
+export function buildAgentConnectionPips(counts: {
   gameCount: number;
   kbCount: number;
   chatCount: number;
@@ -61,7 +61,7 @@ export function buildAgentConnections(counts: {
   ];
 }
 
-export function buildKbConnections(counts: {
+export function buildKbConnectionPips(counts: {
   gameCount: number;
   agentCount: number;
 }): ConnectionPip[] {
@@ -71,7 +71,7 @@ export function buildKbConnections(counts: {
   ];
 }
 
-export function buildChatConnections(counts: {
+export function buildChatConnectionPips(counts: {
   agentCount: number;
   gameCount: number;
 }): ConnectionPip[] {
@@ -81,7 +81,7 @@ export function buildChatConnections(counts: {
   ];
 }
 
-export function buildEventConnections(counts: {
+export function buildEventConnectionPips(counts: {
   participantCount: number;
   gameCount: number;
   sessionCount: number;
@@ -93,7 +93,7 @@ export function buildEventConnections(counts: {
   ];
 }
 
-export function buildToolkitConnections(counts: {
+export function buildToolkitConnectionPips(counts: {
   gameCount: number;
   toolCount: number;
   sessionCount: number;
@@ -105,6 +105,6 @@ export function buildToolkitConnections(counts: {
   ];
 }
 
-export function buildToolConnections(counts: { toolkitCount: number }): ConnectionPip[] {
+export function buildToolConnectionPips(counts: { toolkitCount: number }): ConnectionPip[] {
   return [pip('toolkit', counts.toolkitCount, 'Toolkit', Wrench)];
 }

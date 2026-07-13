@@ -505,84 +505,120 @@ internal class TotpService : ITotpService
 
     private async Task<bool> ExecuteBackupCodeTransactionAsync(Guid userId, string backupCode, CancellationToken cancellationToken)
     {
-        // Use transaction with Serializable isolation to prevent concurrent use of same code
-        using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken).ConfigureAwait(false);
-        try
+        // Issue #2894: the DbContext enables EnableRetryOnFailure (NpgsqlRetryingExecutionStrategy) both in
+        // production (InfrastructureServiceExtensions.cs) and in the integration test factory, which forbids a
+        // user-initiated transaction unless it runs through an execution strategy. Wrap the whole
+        // read-verify-mark-used unit so a serialization conflict rolls back and re-runs atomically as one
+        // retriable operation — matching the repo convention (HandleOAuthCallbackCommandHandler, AuditLoggingBehavior, …).
+        var strategy = _dbContext.Database.CreateExecutionStrategy();
+        var outcome = await strategy.ExecuteAsync(async () =>
         {
-            // Get all unused backup codes for user (within transaction)
-            var backupCodes = await _dbContext.UserBackupCodes
-                .Where(bc => bc.UserId == userId && !bc.IsUsed)
-                .ToListAsync(cancellationToken).ConfigureAwait(false);
-
-            if (backupCodes.Count == 0)
+            // Use transaction with Serializable isolation to prevent concurrent use of same code
+            using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken).ConfigureAwait(false);
+            try
             {
-                _logger.LogWarning("Backup code verify failed: No unused codes for user {UserId}", userId);
-                await _auditService.LogAsync(userId.ToString(), "BackupCodeVerify", "TwoFactor", userId.ToString(), "Failed",
-                    "No unused backup codes available").ConfigureAwait(false);
-                return false;
-            }
+                // Get all unused backup codes for user (within transaction)
+                var backupCodes = await _dbContext.UserBackupCodes
+                    .Where(bc => bc.UserId == userId && !bc.IsUsed)
+                    .ToListAsync(cancellationToken).ConfigureAwait(false);
 
-            // Verify code against hashed codes (constant-time comparison via PBKDF2)
-            foreach (var storedCode in backupCodes)
-            {
-                var isMatch = VerifyBackupCode(storedCode.CodeHash, backupCode);
-                if (isMatch)
+                if (backupCodes.Count == 0)
                 {
-                    // Mark as used (atomic with transaction commit)
-                    storedCode.IsUsed = true;
-                    storedCode.UsedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                    await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-                    await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
-
-                    var remainingCodes = backupCodes.Count - 1;
-                    await _auditService.LogAsync(userId.ToString(), "BackupCodeUsed", "TwoFactor", userId.ToString(), "Success",
-                        $"User authenticated with backup code ({remainingCodes} remaining)").ConfigureAwait(false);
-                    _logger.LogInformation("Backup code used for user {UserId}, {Remaining} codes remaining",
-                        userId, remainingCodes);
-
-                    // Warn if low on backup codes
-                    if (remainingCodes < 3)
-                    {
-                        _logger.LogWarning("User {UserId} has only {Remaining} backup codes remaining",
-                            userId, remainingCodes);
-                    }
-
-                    // SEC-05: Clear failed attempts on successful verification
-                    await ClearFailedAttemptsAsync(userId, "backup").ConfigureAwait(false);
-
-                    // SEC-08: Track successful backup code use
-                    MeepleAiMetrics.Record2FAVerification("backup_code", success: true, userId: userId.ToString());
-
-                    return true;
+                    _logger.LogWarning("Backup code verify failed: No unused codes for user {UserId}", userId);
+                    await _auditService.LogAsync(userId.ToString(), "BackupCodeVerify", "TwoFactor", userId.ToString(), "Failed",
+                        "No unused backup codes available").ConfigureAwait(false);
+                    return BackupCodeOutcome.NoCodes;
                 }
+
+                // Verify code against hashed codes (constant-time comparison via PBKDF2)
+                foreach (var storedCode in backupCodes)
+                {
+                    var isMatch = VerifyBackupCode(storedCode.CodeHash, backupCode);
+                    if (isMatch)
+                    {
+                        // Mark as used (atomic with transaction commit)
+                        storedCode.IsUsed = true;
+                        storedCode.UsedAt = _timeProvider.GetUtcNow().UtcDateTime;
+                        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+
+                        var remainingCodes = backupCodes.Count - 1;
+                        await _auditService.LogAsync(userId.ToString(), "BackupCodeUsed", "TwoFactor", userId.ToString(), "Success",
+                            $"User authenticated with backup code ({remainingCodes} remaining)").ConfigureAwait(false);
+                        _logger.LogInformation("Backup code used for user {UserId}, {Remaining} codes remaining",
+                            userId, remainingCodes);
+
+                        // Warn if low on backup codes
+                        if (remainingCodes < 3)
+                        {
+                            _logger.LogWarning("User {UserId} has only {Remaining} backup codes remaining",
+                                userId, remainingCodes);
+                        }
+
+                        // Non-transactional side-effects (Clear failed attempts, metrics) run once
+                        // after the strategy completes — see the switch below.
+                        return BackupCodeOutcome.Matched;
+                    }
+                }
+
+                // No match found. Non-transactional side-effects (failed-attempt tracking, alert, metrics)
+                // run once after the strategy completes — see the switch below.
+                _logger.LogWarning("Backup code verify failed: Invalid code for user {UserId}", userId);
+                await _auditService.LogAsync(userId.ToString(), "BackupCodeVerify", "TwoFactor", userId.ToString(), "Failed",
+                    "Failed backup code attempt").ConfigureAwait(false);
+
+                return BackupCodeOutcome.NoMatch;
             }
+            catch (DbUpdateException ex)
+            {
+                // Rewrapping a statement-time serialization failure (DbUpdateException) as a NON-transient
+                // InvalidOperationException intentionally suppresses an execution-strategy retry for this
+                // path — do NOT "simplify" this catch. A commit-time 40001 still propagates as a transient
+                // PostgresException and IS retried, which is why the side-effects live outside the strategy.
+                _logger.LogError(ex, "Database error during backup code verification for user {UserId}", userId);
+                await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+                throw new InvalidOperationException("Failed to verify backup code due to database error", ex);
+            }
+            catch (CryptographicException ex)
+            {
+                _logger.LogError(ex, "Cryptographic error during backup code verification for user {UserId}", userId);
+                await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+                throw new InvalidOperationException("Failed to verify backup code due to cryptographic error", ex);
+            }
+        }).ConfigureAwait(false);
 
-            // No match found
-            _logger.LogWarning("Backup code verify failed: Invalid code for user {UserId}", userId);
-            await _auditService.LogAsync(userId.ToString(), "BackupCodeVerify", "TwoFactor", userId.ToString(), "Failed",
-                "Failed backup code attempt").ConfigureAwait(false);
-
-            // SEC-05: Track failed attempt for lockout mechanism
-            await TrackFailedAttemptAsync(userId, "backup").ConfigureAwait(false);
-            await CheckAndTriggerSecurityAlertAsync(userId, "BackupCode", cancellationToken).ConfigureAwait(false);
-
-            // SEC-08: Track failed backup code attempt
-            MeepleAiMetrics.Record2FAVerification("backup_code", success: false, userId: userId.ToString());
-
-            return false;
-        }
-        catch (DbUpdateException ex)
+        // #2894 review: non-transactional side-effects run exactly ONCE on the final outcome, deliberately
+        // OUTSIDE strategy.ExecuteAsync. A commit-time serialization conflict (Postgres 40001) is transient,
+        // so the strategy re-runs the delegate — but the Redis lockout counters, the security alert, and the
+        // metrics below must not double-fire on that retry. The DB read-verify-mark-used unit is what re-runs.
+        switch (outcome)
         {
-            _logger.LogError(ex, "Database error during backup code verification for user {UserId}", userId);
-            await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
-            throw new InvalidOperationException("Failed to verify backup code due to database error", ex);
+            case BackupCodeOutcome.Matched:
+                await ClearFailedAttemptsAsync(userId, "backup").ConfigureAwait(false); // SEC-05
+                MeepleAiMetrics.Record2FAVerification("backup_code", success: true, userId: userId.ToString()); // SEC-08
+                return true;
+
+            case BackupCodeOutcome.NoMatch:
+                await TrackFailedAttemptAsync(userId, "backup").ConfigureAwait(false); // SEC-05 lockout
+                await CheckAndTriggerSecurityAlertAsync(userId, "BackupCode", cancellationToken).ConfigureAwait(false);
+                MeepleAiMetrics.Record2FAVerification("backup_code", success: false, userId: userId.ToString()); // SEC-08
+                return false;
+
+            case BackupCodeOutcome.NoCodes:
+            default:
+                return false;
         }
-        catch (CryptographicException ex)
-        {
-            _logger.LogError(ex, "Cryptographic error during backup code verification for user {UserId}", userId);
-            await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
-            throw new InvalidOperationException("Failed to verify backup code due to cryptographic error", ex);
-        }
+    }
+
+    /// <summary>
+    /// Outcome of the transactional backup-code check, returned from the retriable execution strategy so
+    /// non-transactional side-effects (Redis lockout counters, security alert, metrics) run exactly once.
+    /// </summary>
+    private enum BackupCodeOutcome
+    {
+        NoCodes,
+        NoMatch,
+        Matched
     }
 
     /// <summary>

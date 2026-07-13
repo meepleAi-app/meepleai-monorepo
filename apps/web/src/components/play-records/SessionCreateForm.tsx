@@ -788,6 +788,16 @@ export function SessionCreateForm({
   };
 
   const handleFormSubmit = form.handleSubmit(async data => {
+    // Premature-submit guard: the record must ONLY be created from the final step
+    // (Punteggi). A create wizard can submit before the last step when an async
+    // re-render swaps the type="button" "Avanti" control for the type="submit"
+    // "Salva" control mid-interaction — that would create an empty record
+    // (status "Planned", players:[]) and navigate away, silently losing the
+    // roster. When the form submits early, advance instead of creating.
+    if (currentStep < STEP_COUNT - 1) {
+      nextStep();
+      return;
+    }
     // Issue #2847 (#BB): pass the roster so the create flow can persist players +
     // scores + location. Await the (possibly async) submit BEFORE clearing so a
     // failed create leaves the entered data intact for a retry.

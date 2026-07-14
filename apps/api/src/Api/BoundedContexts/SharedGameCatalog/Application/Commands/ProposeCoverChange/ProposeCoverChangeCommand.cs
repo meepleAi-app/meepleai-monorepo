@@ -74,12 +74,14 @@ internal sealed class ProposeCoverChangeCommandHandler : ICommandHandler<Propose
             .Send(new MaterializePdfCoverCommand(command.PdfDocumentId, command.PageNumber, dbKey), cancellationToken)
             .ConfigureAwait(false);
 
+        // C1 fix: command.PageNumber is 1-based; ShareRequest.CoverPageIndex is documented
+        // and stored 0-based (mirrors PdfDocument.CoverPageIndex).
         var request = ShareRequest.CreateCoverChange(
             command.UserId,
             command.SharedGameId,
             command.PdfDocumentId,
             pendingKey,
-            command.PageNumber);
+            command.PageNumber - 1);
 
         await _shareRequests.AddAsync(request, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

@@ -189,7 +189,8 @@ public sealed class ProposeCoverChangeIntegrationTests : IAsyncLifetime
         sr!.ContributionType.Should().Be(ContributionType.CoverChange);
         sr.Status.Should().Be(ShareRequestStatus.Pending);
         sr.PendingCoverR2Key.Should().NotBeNullOrWhiteSpace();
-        sr.CoverPageIndex.Should().Be(2);
+        // C1 fix: PageNumber: 2 (1-based) must store as CoverPageIndex 1 (0-based).
+        sr.CoverPageIndex.Should().Be(1);
     }
 
     /// <summary>

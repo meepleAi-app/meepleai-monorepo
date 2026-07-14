@@ -64,7 +64,11 @@ internal sealed class MaterializePdfCoverCommandHandler : ICommandHandler<Materi
 
         var dbKey = await _uploadPipeline.UploadAsync(command.DbKey, webpBytes, cancellationToken).ConfigureAwait(false);
 
-        pdf.MarkCoverGenerated(dbKey, command.PageNumber);
+        // C1 fix: command.PageNumber is 1-based (render/query contract); PdfDocument.CoverPageIndex
+        // is documented and persisted as 0-based (see PdfProcessingPipelineService.cs and
+        // BackfillPdfCoversJob.cs, which both store result.SelectedPageIndex, a 0-based value).
+        // Only the stored index changes here — the GetPdfPageImageQuery call above stays 1-based.
+        pdf.MarkCoverGenerated(dbKey, command.PageNumber - 1);
 
         await _repository.UpdateAsync(pdf, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

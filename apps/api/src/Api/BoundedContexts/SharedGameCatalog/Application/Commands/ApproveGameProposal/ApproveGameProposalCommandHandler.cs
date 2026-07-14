@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
@@ -65,14 +66,25 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
             throw new NotFoundException("ShareRequest", command.ShareRequestId.ToString());
         }
 
-        // 2. Validate request type
+        // 2. UpdateCover is a CoverChange approval action: it does not involve a private game
+        // promotion, so it is handled separately before the NewGameProposal-specific gates below.
+        if (command.ApprovalAction == ProposalApprovalAction.UpdateCover)
+        {
+            var coverTargetId = await ApproveCoverChangeAsync(shareRequest, command, cancellationToken)
+                .ConfigureAwait(false);
+
+            return await FinalizeApprovalAsync(shareRequest, command, coverTargetId, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        // 3. Validate request type
         if (shareRequest.ContributionType != ContributionType.NewGameProposal)
         {
             throw new ConflictException(
                 $"ShareRequest {shareRequest.Id} is not a NewGameProposal (type: {shareRequest.ContributionType})");
         }
 
-        // 3. Get the private game from the UserLibraryEntry
+        // 4. Get the private game from the UserLibraryEntry
         // For NewGameProposal, SourceGameId references UserLibraryEntry.Id
         // Note: Using DbContext directly for cross-context access (UserLibrary domain entity doesn't expose PrivateGameId)
         var libraryEntry = await _context.UserLibraryEntries
@@ -100,7 +112,7 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
             throw new NotFoundException("PrivateGame", libraryEntry.PrivateGameId.Value.ToString());
         }
 
-        // 4. Execute approval action based on type
+        // 5. Execute approval action based on type
         Guid targetSharedGameId = command.ApprovalAction switch
         {
             ProposalApprovalAction.ApproveAsNew =>
@@ -115,7 +127,22 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
             _ => throw new InvalidOperationException($"Unknown approval action: {command.ApprovalAction}")
         };
 
-        // 5. Copy documents to shared game (if any attached)
+        return await FinalizeApprovalAsync(shareRequest, command, targetSharedGameId, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Copies any attached documents to the target shared game, approves the share request
+    /// (domain validates state and raises events), persists all changes, and builds the
+    /// response. Shared tail reused by every ApprovalAction branch, including UpdateCover.
+    /// </summary>
+    private async Task<ApproveShareRequestResponse> FinalizeApprovalAsync(
+        ShareRequest shareRequest,
+        ApproveGameProposalCommand command,
+        Guid targetSharedGameId,
+        CancellationToken cancellationToken)
+    {
+        // Copy documents to shared game (if any attached)
         var documentIds = shareRequest.AttachedDocuments.Select(d => d.DocumentId).ToList();
         if (documentIds.Count > 0)
         {
@@ -130,16 +157,16 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
                 documentIds.Count, shareRequest.Id, targetSharedGameId);
         }
 
-        // 6. Approve the share request (domain validates state and raises events)
+        // Approve the share request (domain validates state and raises events)
         shareRequest.Approve(
             command.AdminId,
             targetSharedGameId,
             command.AdminNotes);
 
-        // 7. Update repository
+        // Update repository
         _shareRequestRepository.Update(shareRequest);
 
-        // 8. Persist all changes
+        // Persist all changes
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
@@ -161,6 +188,48 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
             shareRequest.Status,
             targetSharedGameId,
             shareRequest.ResolvedAt.Value);
+    }
+
+    /// <summary>
+    /// Promotes a CoverChange proposal's pending cover image to L4 (SharedGame.PdfCoverR2Key).
+    /// Task 5: Game Cover-da-PDF.
+    /// </summary>
+    /// <exception cref="ConflictException">
+    /// I3 fix: thrown when <see cref="ApproveGameProposalCommand.TargetSharedGameId"/> is
+    /// supplied AND differs from the proposal's persisted
+    /// <see cref="ShareRequest.TargetSharedGameId"/>. Without this guard an admin-supplied
+    /// (e.g. tampered or stale) TargetSharedGameId could silently promote the pending
+    /// cover onto the wrong SharedGame instead of the one the proposal actually targets.
+    /// </exception>
+    private async Task<Guid> ApproveCoverChangeAsync(
+        ShareRequest shareRequest,
+        ApproveGameProposalCommand command,
+        CancellationToken cancellationToken)
+    {
+        if (command.TargetSharedGameId.HasValue
+            && shareRequest.TargetSharedGameId.HasValue
+            && command.TargetSharedGameId.Value != shareRequest.TargetSharedGameId.Value)
+        {
+            throw new ConflictException(
+                $"TargetSharedGameId mismatch: command specifies {command.TargetSharedGameId.Value} " +
+                $"but ShareRequest {shareRequest.Id} targets {shareRequest.TargetSharedGameId.Value}.");
+        }
+
+        var targetId = shareRequest.TargetSharedGameId ?? command.TargetSharedGameId
+            ?? throw new ConflictException("CoverChange senza target shared game.");
+
+        var sharedGame = await _sharedGameRepository.GetByIdAsync(targetId, cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException($"SharedGame {targetId} not found.");
+
+        if (string.IsNullOrWhiteSpace(shareRequest.PendingCoverR2Key))
+        {
+            throw new ConflictException("Pending cover key mancante sulla proposal.");
+        }
+
+        sharedGame.SetPdfCoverR2Key(shareRequest.PendingCoverR2Key);
+        _sharedGameRepository.Update(sharedGame);
+
+        return targetId;
     }
 
     /// <summary>

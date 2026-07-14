@@ -236,6 +236,16 @@ internal class BlobStorageService : IBlobStorageService
         return Task.FromResult<string?>(null);
     }
 
+    /// <summary>
+    /// Local storage does not support pre-signed URLs.
+    /// Consumers should fall back to the API download endpoint when this returns null.
+    /// </summary>
+    public Task<string?> GetPresignedUrlForRawKeyAsync(string rawKey, int? expirySeconds = null)
+    {
+        _ = (rawKey, expirySeconds); // Local storage: no presigned URL
+        return Task.FromResult<string?>(null);
+    }
+
     private static string SanitizeFileName(string fileName)
     {
         return StringHelper.SanitizeFilename(fileName, maxLength: 200, fallbackName: "file");

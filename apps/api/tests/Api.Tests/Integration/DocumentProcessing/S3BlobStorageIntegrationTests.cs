@@ -329,6 +329,62 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
         result.Should().BeNull();
     }
 
+    // ── P1 fix (2026-07-14): GetPresignedUrlForRawKeyAsync end-to-end ───────────
+    // Real R2/S3 round-trip proving the CoverUrlResolver fix actually resolves a
+    // slash-and-dot physical key — the exact shape L2/L3/L4 write (e.g.
+    // "covers/{gameId}/cover.webp"). Guarded by the same SkipIfNotAvailable()
+    // gate as the rest of this suite (Docker/TEST_S3_ENDPOINT required).
+
+    [Fact]
+    public async Task GetPresignedUrlForRawKeyAsync_ObjectUploadedAtSlashDotKey_ResolvesRealUrl()
+    {
+        SkipIfNotAvailable();
+
+        // Arrange: upload directly via the raw S3 client to the exact physical key
+        // shape CoverUrlResolver's L4/L2/L3 branches use (mirrors PdfCoverUploadPipeline's
+        // raw PutObjectAsync, bypassing IBlobStorageService.StoreAsync's categorized layout).
+        var rawKey = $"covers/{Guid.NewGuid():N}/cover.webp";
+        var content = "fake webp bytes"u8.ToArray();
+
+        await _s3Client.PutObjectAsync(new PutObjectRequest
+        {
+            BucketName = _options.BucketName,
+            Key = rawKey,
+            InputStream = new MemoryStream(content),
+            ContentType = "image/webp",
+        });
+
+        // Act
+        var url = await _sut.GetPresignedUrlForRawKeyAsync(rawKey, expirySeconds: 300);
+
+        // Assert
+        url.Should().NotBeNull("the object exists at the exact raw key and must resolve");
+        url.Should().Contain(_options.BucketName);
+
+        using var httpClient = new HttpClient();
+        var response = await httpClient.GetAsync(url);
+        response.IsSuccessStatusCode.Should().BeTrue($"presigned URL download failed: {response.StatusCode}");
+
+        var downloaded = await response.Content.ReadAsByteArrayAsync();
+        downloaded.Should().BeEquivalentTo(content);
+    }
+
+    [Fact]
+    public async Task GetPresignedUrlForRawKeyAsync_NoObjectAtKey_ReturnsNull()
+    {
+        SkipIfNotAvailable();
+
+        // Arrange: never uploaded — simulates a DB-persisted R2 key whose physical
+        // object was never written (or was deleted out-of-band).
+        var rawKey = $"covers/{Guid.NewGuid():N}/missing-cover.webp";
+
+        // Act
+        var url = await _sut.GetPresignedUrlForRawKeyAsync(rawKey);
+
+        // Assert
+        url.Should().BeNull("a presigned URL must never be minted for a non-existent object");
+    }
+
     [Fact]
     public async Task HealthCheck_WithRealMinIO_ReturnsHealthy()
     {

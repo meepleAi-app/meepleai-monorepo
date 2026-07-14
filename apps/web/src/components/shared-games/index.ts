@@ -24,6 +24,7 @@ export { SharedGameDetailModal, type SharedGameDetailModalProps } from './Shared
 export { KnowledgeBaseTab, type KnowledgeBaseTabProps } from './KnowledgeBaseTab';
 export { ContributorsSection } from './ContributorsSection';
 export { MeepleContributorCard } from './MeepleContributorCard';
+export { CoverPagePicker, type CoverPagePickerProps } from './CoverPagePicker';
 
 // Re-export the replacement component for migration convenience
 export {

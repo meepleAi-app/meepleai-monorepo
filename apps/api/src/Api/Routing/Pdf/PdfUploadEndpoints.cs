@@ -294,12 +294,6 @@ internal static class PdfUploadEndpoints
         {
             logger.LogWarning("Failed to complete chunked upload {SessionId}: {Error}", request.SessionId, result.ErrorMessage);
 
-            // Return 409 Conflict for duplicate content uploads
-            if (string.Equals(result.ErrorMessage, CompleteChunkedUploadCommandHandler.DuplicateContentErrorMessage, StringComparison.Ordinal))
-            {
-                return Results.Conflict(new { error = "duplicate_content", message = result.ErrorMessage });
-            }
-
             if (result.MissingChunks != null && result.MissingChunks.Count > 0)
             {
                 return Results.BadRequest(new { error = result.ErrorMessage, missingChunks = result.MissingChunks });

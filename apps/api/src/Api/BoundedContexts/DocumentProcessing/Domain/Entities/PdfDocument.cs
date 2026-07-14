@@ -92,6 +92,13 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     // Issue #1852: L4 PDF cover extraction state (mirrors PdfDocumentEntity columns).
     public string? CoverR2Key { get; private set; }
     public PdfCoverGenerationStatus CoverGenerationStatus { get; private set; } = PdfCoverGenerationStatus.Pending;
+    /// <summary>
+    /// Zero-based index of the PDF page the cover was rendered from (or heuristically
+    /// rejected/attempted, per <see cref="CoverGenerationStatus"/>). Mirrors the
+    /// zero-based convention of <c>ShareRequest.CoverPageIndex</c>. Callers passing a
+    /// 1-based page number (e.g. <c>MaterializePdfCoverCommand.PageNumber</c>) must
+    /// convert before calling <see cref="MarkCoverGenerated"/>.
+    /// </summary>
     public int? CoverPageIndex { get; private set; }
     public string? CoverGenerationError { get; private set; }
 
@@ -840,6 +847,11 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     /// Records successful PDF cover extraction and raises <see cref="PdfCoverGeneratedEvent"/>
     /// so SharedGame catalog can propagate the key. Issue #1852 (Gap A).
     /// </summary>
+    /// <param name="coverR2Key">The R2 object key (DB-stored, un-suffixed) of the generated cover.</param>
+    /// <param name="pageIndex">
+    /// Zero-based index of the source PDF page. Callers with a 1-based page number
+    /// must subtract 1 before calling this method.
+    /// </param>
     public void MarkCoverGenerated(string coverR2Key, int pageIndex)
     {
         if (string.IsNullOrWhiteSpace(coverR2Key))

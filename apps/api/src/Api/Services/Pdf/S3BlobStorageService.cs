@@ -355,6 +355,74 @@ internal sealed class S3BlobStorageService : IBlobStorageService
 #pragma warning restore CA1031 // Do not catch general exception types
     }
 
+    /// <summary>
+    /// Generates a pre-signed GET URL for an EXACT physical S3 object key.
+    /// Deliberately skips <c>PathSecurity.ValidateIdentifier</c> and prefix
+    /// discovery — the caller (business logic that composed the key) is
+    /// trusted. An existence check (HEAD via <c>GetObjectMetadataAsync</c>) is
+    /// performed FIRST: this is load-bearing, because returning a presigned
+    /// URL for a non-existent object would render as a broken image on the
+    /// client instead of falling back to a placeholder.
+    /// </summary>
+    public async Task<string?> GetPresignedUrlForRawKeyAsync(string rawKey, int? expirySeconds = null)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(rawKey))
+            {
+                return null;
+            }
+
+            try
+            {
+                await _s3Client.GetObjectMetadataAsync(_options.BucketName, rawKey, CancellationToken.None)
+                    .ConfigureAwait(false);
+            }
+            catch (AmazonS3Exception ex) when (
+                ex.StatusCode == System.Net.HttpStatusCode.NotFound ||
+                string.Equals(ex.ErrorCode, "NotFound", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(ex.ErrorCode, "NoSuchKey", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning(ex, "Cannot generate pre-signed URL: raw key not found in S3: {Key}", rawKey);
+                return null;
+            }
+
+            var expiry = expirySeconds ?? _options.PresignedUrlExpirySeconds;
+
+            var request = new GetPreSignedUrlRequest
+            {
+                BucketName = _options.BucketName,
+                Key = rawKey,
+                Expires = DateTime.UtcNow.AddSeconds(expiry),
+                Verb = HttpVerb.GET
+            };
+
+            var url = await _s3Client.GetPreSignedURLAsync(request).ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "Generated pre-signed URL for raw key {Key} (expires in {Expiry}s)",
+                rawKey, expiry);
+
+            return url;
+        }
+        catch (AmazonS3Exception ex)
+        {
+            _logger.LogError(ex, "S3 error generating pre-signed URL for raw key {Key}: {ErrorCode}", rawKey, ex.ErrorCode);
+            return null;
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        catch (Exception ex)
+        {
+            // SERVICE BOUNDARY PATTERN: S3 storage service boundary - must handle all errors gracefully
+            // Rationale: This is a service entry point that interacts with external S3 storage. Network and
+            // S3 operations can throw various runtime exceptions (timeouts, network errors, authentication failures).
+            // We must catch all exceptions to return null instead of crashing the service.
+            _logger.LogError(ex, "Unexpected error generating pre-signed URL for raw key {Key}", rawKey);
+            return null;
+        }
+#pragma warning restore CA1031 // Do not catch general exception types
+    }
+
     private static string SanitizeFileName(string fileName)
     {
         return StringHelper.SanitizeFilename(fileName, maxLength: 200, fallbackName: "file");

@@ -112,9 +112,7 @@ internal static class PrivateGameEndpoints
                 Description: request.Description,
                 PlayingTimeMinutes: request.PlayingTimeMinutes,
                 MinAge: request.MinAge,
-                ComplexityRating: request.ComplexityRating,
-                ImageUrl: request.ImageUrl,
-                ThumbnailUrl: request.ThumbnailUrl
+                ComplexityRating: request.ComplexityRating
             );
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -449,9 +447,7 @@ internal record AddPrivateGameRequest(
     string? Description = null,
     int? PlayingTimeMinutes = null,
     int? MinAge = null,
-    decimal? ComplexityRating = null,
-    string? ImageUrl = null,
-    string? ThumbnailUrl = null
+    decimal? ComplexityRating = null
 );
 
 /// <summary>

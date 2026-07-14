@@ -24,5 +24,11 @@ public enum ProposalApprovalAction
     /// Creates a new SharedGame with a variant suffix (e.g., "Game Title (Variant)").
     /// Used for game editions, expansions, or regional variants.
     /// </summary>
-    ApproveAsVariant = 2
+    ApproveAsVariant = 2,
+
+    /// <summary>
+    /// Promote a CoverChange proposal's pending cover image to L4 on the target SharedGame.
+    /// Task 5: Game Cover-da-PDF.
+    /// </summary>
+    UpdateCover = 3
 }

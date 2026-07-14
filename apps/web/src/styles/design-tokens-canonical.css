@@ -4,11 +4,12 @@
  * Single source of truth: admin-mockups/design_files/tokens.css
  * Date imported: 2026-05-12 (DS-1, spec: 2026-05-12-token-canonicalization.md)
  *
- * IMPORTANT — DS-1 transitional state:
- *   This file is the authoritative token source. Legacy tokens in
- *   `globals.css` / `design-tokens.css` / `premium-gaming.css` are now
- *   bridged aliases pointing here (see token-bridge.css).
- *   Bridge layer will be removed in DS-12 once all clusters are migrated.
+ * IMPORTANT — token source of truth (post DS-16):
+ *   This file is the authoritative token source. The standalone bridge
+ *   stylesheet (`token-bridge.css`) was REMOVED in DS-16 after the codemod
+ *   renamed all consumer references to canonical names — it no longer exists.
+ *   Any residual legacy `var(--*)` aliases now live inline in `globals.css`
+ *   (see the load-order comment in `app/layout.tsx`).
  *
  * Theming mechanism: [data-theme="light|dark"] attribute on <html>
  * (set by next-themes; SSR default = "light" — mockup convention).

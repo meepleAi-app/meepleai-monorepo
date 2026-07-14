@@ -132,8 +132,8 @@ function isPipelineRunning(status: MechanicAnalysisStatusDto | null | undefined)
   //   - PartiallyExtracted: ADR-051 Sprint 2 salvage state (also terminal)
   if (status.status !== MechanicAnalysisStatus.Draft) return false;
   if (status.sectionRuns.length === 0) return true;
-  // All 6 sections should complete; stop when each has a completedAt.
-  return status.sectionRuns.length < 6;
+  // All 9 sections should complete; stop when each has a completedAt (v1.1.0 added Setup/Components/Endgame).
+  return status.sectionRuns.length < 9;
 }
 
 export default function MechanicAnalysesPage() {
@@ -379,7 +379,7 @@ export default function MechanicAnalysesPage() {
           variant="outline"
           className="mt-2 border-sky-300 bg-sky-50 text-sky-800 dark:bg-sky-950/30 dark:text-sky-300"
         >
-          <SparklesIcon className="mr-1 h-3 w-3" />6 sections · cost-cap enforced
+          <SparklesIcon className="mr-1 h-3 w-3" />9 sections · cost-cap enforced
         </Badge>
       </div>
 

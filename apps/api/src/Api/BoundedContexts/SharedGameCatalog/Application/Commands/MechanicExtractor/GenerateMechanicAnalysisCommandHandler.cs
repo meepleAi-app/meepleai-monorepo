@@ -55,7 +55,10 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
         MechanicSection.Victory,
         MechanicSection.Resources,
         MechanicSection.Phases,
-        MechanicSection.Faq
+        MechanicSection.Faq,
+        MechanicSection.Setup,
+        MechanicSection.Components,
+        MechanicSection.EndgameScoring
     };
 
     private readonly IMechanicAnalysisRepository _analysisRepository;

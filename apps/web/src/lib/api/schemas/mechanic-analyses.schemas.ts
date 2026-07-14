@@ -77,6 +77,27 @@ export const MECHANIC_SECTION_LABELS: Record<number, string> = {
   3: 'Resources',
   4: 'Phases',
   5: 'FAQ',
+  // v1.1.0 (#539 follow-up): Setup / Components / EndgameScoring.
+  6: 'Preparazione',
+  7: 'Componenti',
+  8: 'Fine partita',
+};
+
+/**
+ * Logical display order for the section groups (card + admin review). The enum values are
+ * append-only (6/7/8), so Setup/Components would otherwise render after FAQ; this map floats
+ * them to their natural reading position. Sections absent here fall back to their numeric value.
+ */
+export const MECHANIC_SECTION_DISPLAY_ORDER: Record<number, number> = {
+  0: 0, // Summary
+  6: 1, // Preparazione (Setup)
+  7: 2, // Componenti (Components)
+  1: 3, // Mechanics
+  3: 4, // Resources
+  4: 5, // Phases
+  2: 6, // Victory
+  8: 7, // Fine partita (EndgameScoring)
+  5: 8, // FAQ
 };
 
 /**

@@ -35,6 +35,7 @@ import { createAdminClient } from '@/lib/api/clients/adminClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
 import {
   MECHANIC_CLAIM_STATUS_LABELS,
+  MECHANIC_SECTION_DISPLAY_ORDER,
   MECHANIC_SECTION_LABELS,
   MechanicClaimStatus,
   type MechanicClaimDto,
@@ -221,8 +222,11 @@ export function ClaimsSection({
       arr.push(c);
       map.set(key, arr);
     }
-    // Stable section ordering by enum number; claims by displayOrder within.
-    const orderedKeys = Array.from(map.keys()).sort((a, b) => a - b);
+    // Section ordering by logical display order (v1.1.0: Setup/Components float up near the top,
+    // since their enum values are append-only 6/7); claims by displayOrder within.
+    const orderedKeys = Array.from(map.keys()).sort(
+      (a, b) => (MECHANIC_SECTION_DISPLAY_ORDER[a] ?? a) - (MECHANIC_SECTION_DISPLAY_ORDER[b] ?? b)
+    );
     return orderedKeys.map(section => ({
       section,
       claims: (map.get(section) ?? []).slice().sort((a, b) => a.displayOrder - b.displayOrder),

@@ -96,8 +96,8 @@ internal sealed class AddPrivateGameCommandHandler : ICommandHandler<AddPrivateG
                 playingTimeMinutes: command.PlayingTimeMinutes,
                 minAge: command.MinAge,
                 complexityRating: command.ComplexityRating,
-                imageUrl: command.ImageUrl,
-                thumbnailUrl: command.ThumbnailUrl);
+                imageUrl: null, // BGG freeze #2123 / ADR-059: no user-supplied external URLs; cover materializes later via PDF flow
+                thumbnailUrl: null);
 
             _logger.LogInformation(
                 "Created private game from BGG {BggId} for user {UserId}: {Title}",
@@ -117,7 +117,7 @@ internal sealed class AddPrivateGameCommandHandler : ICommandHandler<AddPrivateG
                 playingTimeMinutes: command.PlayingTimeMinutes,
                 minAge: command.MinAge,
                 complexityRating: command.ComplexityRating,
-                imageUrl: command.ImageUrl);
+                imageUrl: null); // BGG freeze #2123 / ADR-059: no user-supplied external URLs; cover materializes later via PDF flow
 
             _logger.LogInformation(
                 "Created manual private game for user {UserId}: {Title}",

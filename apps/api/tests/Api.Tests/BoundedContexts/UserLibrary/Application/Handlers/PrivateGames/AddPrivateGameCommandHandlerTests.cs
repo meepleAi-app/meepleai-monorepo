@@ -189,8 +189,7 @@ public sealed class AddPrivateGameCommandHandlerTests
             Description: "A detailed description",
             PlayingTimeMinutes: 90,
             MinAge: 12,
-            ComplexityRating: 3.5m,
-            ImageUrl: "https://example.com/image.jpg");
+            ComplexityRating: 3.5m);
 
         _privateGameRepositoryMock
             .Setup(r => r.AddAsync(It.IsAny<PrivateGame>(), It.IsAny<CancellationToken>()))
@@ -210,7 +209,7 @@ public sealed class AddPrivateGameCommandHandlerTests
         result.PlayingTimeMinutes.Should().Be(90);
         result.MinAge.Should().Be(12);
         result.ComplexityRating.Should().Be(3.5m);
-        result.ImageUrl.Should().Be("https://example.com/image.jpg");
+        result.ImageUrl.Should().BeNull(); // BGG freeze #2123: no external URL input; cover is null at creation
     }
 
     [Theory]
@@ -263,9 +262,7 @@ public sealed class AddPrivateGameCommandHandlerTests
             Description: "A game from BGG",
             PlayingTimeMinutes: 120,
             MinAge: 14,
-            ComplexityRating: 4.2m,
-            ImageUrl: "https://cf.geekdo-images.com/image.jpg",
-            ThumbnailUrl: "https://cf.geekdo-images.com/thumb.jpg");
+            ComplexityRating: 4.2m);
 
         _sharedGameRepositoryMock
             .Setup(r => r.GetByBggIdAsync(12345, It.IsAny<CancellationToken>()))
@@ -291,7 +288,7 @@ public sealed class AddPrivateGameCommandHandlerTests
         result.Title.Should().Be("Imported BGG Game");
         result.Source.Should().Be("BoardGameGeek");
         result.BggId.Should().Be(12345);
-        result.ThumbnailUrl.Should().Be("https://cf.geekdo-images.com/thumb.jpg");
+        result.ThumbnailUrl.Should().BeNull(); // BGG freeze #2123: no external URL input; cover is null at creation
         result.CanProposeToCatalog.Should().BeTrue(); // BGG games can be proposed
     }
 
@@ -534,9 +531,7 @@ public sealed class AddPrivateGameCommandHandlerTests
             Description: "Full description for mapping test",
             PlayingTimeMinutes: 180,
             MinAge: 10,
-            ComplexityRating: 2.8m,
-            ImageUrl: "https://example.com/full.jpg",
-            ThumbnailUrl: "https://example.com/thumb.jpg");
+            ComplexityRating: 2.8m);
 
         _sharedGameRepositoryMock
             .Setup(r => r.GetByBggIdAsync(55555, It.IsAny<CancellationToken>()))
@@ -571,8 +566,8 @@ public sealed class AddPrivateGameCommandHandlerTests
         result.PlayingTimeMinutes.Should().Be(180);
         result.MinAge.Should().Be(10);
         result.ComplexityRating.Should().Be(2.8m);
-        result.ImageUrl.Should().Be("https://example.com/full.jpg");
-        result.ThumbnailUrl.Should().Be("https://example.com/thumb.jpg");
+        result.ImageUrl.Should().BeNull(); // BGG freeze #2123: no external URL input; cover is null at creation
+        result.ThumbnailUrl.Should().BeNull(); // BGG freeze #2123: no external URL input; cover is null at creation
         result.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
         result.UpdatedAt.Should().BeNull();
         result.BggSyncedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5)); // BGG games have sync time
@@ -627,8 +622,7 @@ public sealed class AddPrivateGameCommandHandlerTests
             Description: "A custom game with full details",
             PlayingTimeMinutes: 90,
             MinAge: 12,
-            ComplexityRating: 3.5m,
-            ImageUrl: "https://example.com/image.jpg");
+            ComplexityRating: 3.5m);
 
         // Assert
         command.YearPublished.Should().Be(2023);
@@ -636,7 +630,6 @@ public sealed class AddPrivateGameCommandHandlerTests
         command.PlayingTimeMinutes.Should().Be(90);
         command.MinAge.Should().Be(12);
         command.ComplexityRating.Should().Be(3.5m);
-        command.ImageUrl.Should().Be("https://example.com/image.jpg");
     }
 
     [Fact]
@@ -652,13 +645,11 @@ public sealed class AddPrivateGameCommandHandlerTests
             BggId: 12345,
             Title: "BGG Imported Game",
             MinPlayers: 2,
-            MaxPlayers: 5,
-            ThumbnailUrl: "https://cf.geekdo-images.com/thumb.jpg");
+            MaxPlayers: 5);
 
         // Assert
         command.Source.Should().Be("BoardGameGeek");
         command.BggId.Should().Be(12345);
-        command.ThumbnailUrl.Should().Be("https://cf.geekdo-images.com/thumb.jpg");
     }
 
     [Theory]

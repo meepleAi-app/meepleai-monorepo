@@ -113,3 +113,178 @@ export function classifyMockupEntry(entry, fidelityIndex, io) {
   }
   return { ...base, verdict: 'covered', storyPath, declared, detected: [...detected] };
 }
+
+/** Pure: parse index markdown, classify each page-mock entry. */
+export function scanEntries(indexMd, fidelityIndex, io) {
+  const entries = parseMockupsIndex(indexMd);
+  return entries.map((e) => classifyMockupEntry(e, fidelityIndex, io));
+}
+
+export function buildJsonReport(results, baseline) {
+  const counts = { covered: 0, coverageGaps: 0, contractViolations: 0, skippedObsolete: 0 };
+  const coverageGaps = [];
+  const contractViolations = [];
+  for (const r of results) {
+    if (r.verdict === 'covered') counts.covered += 1;
+    else if (r.verdict === 'coverage-gap') {
+      counts.coverageGaps += 1;
+      coverageGaps.push({ mockup: r.mockup, routes: r.routes, reason: r.reason });
+    } else if (r.verdict === 'contract-violation') {
+      counts.contractViolations += 1;
+      contractViolations.push({
+        mockup: r.mockup, routes: r.routes, storyPath: r.storyPath,
+        declared: r.declared, detected: r.detected, missing: r.missing,
+      });
+    } else if (r.verdict === 'skipped-obsolete') counts.skippedObsolete += 1;
+  }
+  return {
+    generatedAt: new Date().toISOString(),
+    generatedFrom: 'admin-mockups/MOCKUPS_INDEX.md',
+    canonicalStates: [...CANONICAL_STATES],
+    totalMappableEntries: results.length,
+    baselineMaxCoverageGaps: baseline,
+    counts,
+    coverageGaps,
+    contractViolations,
+  };
+}
+
+export function buildMdReport(report) {
+  const { counts, canonicalStates } = report;
+  const lines = [];
+  lines.push('# Storybook canonical-state coverage (DEC-A5 / #2342)', '');
+  lines.push(`Generated: ${report.generatedAt}`);
+  lines.push(`Source: \`${report.generatedFrom}\` · Canonical states: ${canonicalStates.join(', ')}`, '');
+  lines.push('| Metric | Count |', '| --- | --- |');
+  lines.push(`| Total page-mock entries | ${report.totalMappableEntries} |`);
+  lines.push(`| Covered | ${counts.covered} |`);
+  lines.push(`| Coverage gaps (baseline ${report.baselineMaxCoverageGaps ?? 'n/a'}) | ${counts.coverageGaps} |`);
+  lines.push(`| Contract violations (always blocking) | ${counts.contractViolations} |`);
+  lines.push(`| Skipped (obsolete) | ${counts.skippedObsolete} |`, '');
+  if (report.contractViolations.length) {
+    lines.push('## Contract violations (must be 0)', '');
+    lines.push('| Mockup | Story | Declared | Detected | Missing |', '| --- | --- | --- | --- | --- |');
+    for (const v of report.contractViolations) {
+      lines.push(`| \`${v.mockup}\` | \`${v.storyPath}\` | ${v.declared.join(', ')} | ${v.detected.join(', ')} | **${v.missing.join(', ')}** |`);
+    }
+    lines.push('');
+  }
+  if (report.coverageGaps.length) {
+    lines.push('## Coverage gaps (whitelist-incremental, ratchet down)', '');
+    lines.push('| Mockup | Routes | Reason |', '| --- | --- | --- |');
+    for (const g of report.coverageGaps) {
+      lines.push(`| \`${g.mockup}\` | ${g.routes.join(', ')} | ${g.reason} |`);
+    }
+    lines.push('');
+  }
+  lines.push('## Gate semantics', '');
+  lines.push('- **contract-violation**: story omits a state its fidelity declares → **always fails** (fix story or align `states_covered`).');
+  lines.push('- **coverage-gap**: mockup with no fidelity/story → tolerated under `--max-baseline N`; a NEW gap fails. Migrate a page → lower `N` (ratchet-down).');
+  return lines.join('\n') + '\n';
+}
+
+export function parseArgs(argv) {
+  const args = { strict: false, maxBaseline: null, verbose: false, help: false };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--strict') args.strict = true;
+    else if (a === '--verbose' || a === '-v') args.verbose = true;
+    else if (a === '--help' || a === '-h') args.help = true;
+    else if (a === '--max-baseline') {
+      const n = Number.parseInt(argv[++i], 10);
+      if (Number.isNaN(n) || n < 0) throw new Error(`--max-baseline requires a non-negative integer, got: ${argv[i]}`);
+      args.maxBaseline = n;
+    } else if (a.startsWith('--max-baseline=')) {
+      const n = Number.parseInt(a.slice('--max-baseline='.length), 10);
+      if (Number.isNaN(n) || n < 0) throw new Error(`--max-baseline requires a non-negative integer, got: ${a}`);
+      args.maxBaseline = n;
+    } else {
+      throw new Error(`Unknown argument: ${a}`);
+    }
+  }
+  return args;
+}
+
+function printHelp() {
+  process.stdout.write(
+    'Usage: node scripts/lint-storybook-states.mjs [--strict --max-baseline N] [--verbose] [--help]\n' +
+      '  (no flags)   inventory: write audit reports, exit 0\n' +
+      '  --strict     fail (exit 1) if coverageGaps > --max-baseline OR contractViolations > 0\n'
+  );
+}
+
+async function main() {
+  let args;
+  try {
+    args = parseArgs(process.argv.slice(2));
+  } catch (err) {
+    process.stderr.write(`[lint:storybook-states] ERROR: ${err.message}\n`);
+    printHelp();
+    process.exit(2);
+  }
+  if (args.help) {
+    printHelp();
+    process.exit(0);
+  }
+  if (args.strict && args.maxBaseline === null) {
+    process.stderr.write('[lint:storybook-states] ERROR: --strict requires --max-baseline N\n');
+    process.exit(2);
+  }
+
+  const fidelityFiles = globSync('**/*.fidelity.json', {
+    cwd: REPO_ROOT,
+    ignore: ['**/node_modules/**', '**/.next/**', '**/.claude/**', '**/dist/**', '**/coverage/**'],
+    nodir: true,
+  });
+  const readRel = (rel) => readFileSync(resolve(REPO_ROOT, rel), 'utf-8');
+  const io = { exists: (rel) => existsSync(resolve(REPO_ROOT, rel)), readFile: readRel };
+  const fidelityIndex = buildFidelityIndex(fidelityFiles, readRel);
+
+  const indexMd = readFileSync(MOCKUPS_INDEX, 'utf-8');
+  const results = scanEntries(indexMd, fidelityIndex, io);
+  const report = buildJsonReport(results, args.maxBaseline);
+
+  writeFileSync(JSON_OUT, JSON.stringify(report, null, 2) + '\n', 'utf-8');
+  writeFileSync(MD_OUT, buildMdReport(report), 'utf-8');
+
+  const c = report.counts;
+  process.stdout.write(
+    `[lint:storybook-states] entries=${report.totalMappableEntries} covered=${c.covered} ` +
+      `gaps=${c.coverageGaps} contract=${c.contractViolations} skipped=${c.skippedObsolete}\n` +
+      `  JSON: ${relative(REPO_ROOT, JSON_OUT)}\n  MD:   ${relative(REPO_ROOT, MD_OUT)}\n`
+  );
+  if (args.verbose) {
+    for (const v of report.contractViolations) {
+      process.stdout.write(`  contract-violation ${v.mockup} missing: ${v.missing.join(', ')}\n`);
+    }
+  }
+
+  if (args.strict) {
+    const failGaps = c.coverageGaps > args.maxBaseline;
+    const failContract = c.contractViolations > 0;
+    if (failGaps || failContract) {
+      if (failContract) {
+        process.stderr.write(
+          `[lint:storybook-states] FAIL: ${c.contractViolations} contract-violation(s). ` +
+            'A story omits a canonical state its fidelity declares. Fix the story, add ' +
+            'parameters.canonicalStates, or align states_covered.\n'
+        );
+      }
+      if (failGaps) {
+        process.stderr.write(
+          `[lint:storybook-states] FAIL: ${c.coverageGaps} coverage-gaps exceed --max-baseline ${args.maxBaseline}. ` +
+            'A new page-mock lacks a Storybook story/fidelity. Add one or raise the baseline (rare).\n'
+        );
+      }
+      process.exit(1);
+    }
+  }
+  process.exit(0);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((err) => {
+    process.stderr.write(`[lint:storybook-states] UNEXPECTED: ${err.stack || err.message}\n`);
+    process.exit(2);
+  });
+}

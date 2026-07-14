@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { CANONICAL_STATES, normalizeState, detectStates } from '../lint-storybook-states.mjs';
 import { buildFidelityIndex, classifyMockupEntry } from '../lint-storybook-states.mjs';
+import { scanEntries, buildJsonReport, parseArgs } from '../lint-storybook-states.mjs';
 
 describe('CANONICAL_STATES', () => {
   it('is exactly the 5 DEC-A5 states in order', () => {
@@ -154,5 +155,78 @@ describe('classifyMockupEntry', () => {
     const idx = buildFidelityIndex(Object.keys(files), rel => files[rel]);
     const r = classifyMockupEntry(entry, idx, makeIo(files));
     expect(r.verdict).toBe('covered'); // offline dropped, only default required & present
+  });
+});
+
+const INDEX_MD = [
+  '| File | Type | Mapped routes |',
+  '| --- | --- | --- |',
+  '| `x.html` | page-mock | `/x` |',
+  '| `y.html` | page-mock | `/y` |',
+  '| `comp.html` | component-mock | used globally |',
+].join('\n');
+
+describe('scanEntries', () => {
+  it('classifies each page-mock entry and ignores component-mock rows', () => {
+    const files: Record<string, string> = {
+      'fx.fidelity.json': JSON.stringify({
+        mockup: { source: 'admin-mockups/design_files/x.html', states: ['default', 'loading'] },
+        acceptance: {
+          states_covered: ['default', 'loading'],
+          story_path: 'x.tsx',
+          design_intent: 'current',
+        },
+      }),
+      'x.tsx': `mswForState('default'); mswForState('loading');`,
+    };
+    const io = {
+      exists: (rel: string) => rel in files,
+      readFile: (rel: string) => files[rel],
+    };
+    const idx = buildFidelityIndex(Object.keys(files), rel => files[rel]);
+    const results = scanEntries(INDEX_MD, idx, io);
+    expect(results).toHaveLength(2); // x + y, comp excluded
+    const x = results.find(r => r.mockup === 'x.html');
+    const y = results.find(r => r.mockup === 'y.html');
+    expect(x!.verdict).toBe('covered');
+    expect(y!.verdict).toBe('coverage-gap'); // no fidelity for y
+  });
+});
+
+describe('buildJsonReport', () => {
+  it('computes counts and preserves the total invariant', () => {
+    const results = [
+      { mockup: 'a', routes: [], verdict: 'covered' },
+      { mockup: 'b', routes: [], verdict: 'coverage-gap', reason: 'no-fidelity' },
+      { mockup: 'c', routes: [], verdict: 'contract-violation', missing: ['error'] },
+      { mockup: 'd', routes: [], verdict: 'skipped-obsolete' },
+    ];
+    const report = buildJsonReport(results, 5);
+    expect(report.totalMappableEntries).toBe(4);
+    expect(report.counts).toEqual({
+      covered: 1,
+      coverageGaps: 1,
+      contractViolations: 1,
+      skippedObsolete: 1,
+    });
+    expect(report.baselineMaxCoverageGaps).toBe(5);
+    expect(report.coverageGaps).toHaveLength(1);
+    expect(report.contractViolations).toHaveLength(1);
+  });
+});
+
+describe('parseArgs', () => {
+  it('parses strict + max-baseline', () => {
+    expect(parseArgs(['--strict', '--max-baseline', '61'])).toMatchObject({
+      strict: true,
+      maxBaseline: 61,
+    });
+  });
+  it('supports --max-baseline=N and --verbose/-v', () => {
+    expect(parseArgs(['--max-baseline=3', '-v'])).toMatchObject({ maxBaseline: 3, verbose: true });
+  });
+  it('throws on unknown arg and on negative baseline', () => {
+    expect(() => parseArgs(['--nope'])).toThrow();
+    expect(() => parseArgs(['--max-baseline', '-1'])).toThrow();
   });
 });

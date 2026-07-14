@@ -128,6 +128,23 @@ export function scanEntries(indexMd, fidelityIndex, io) {
   return entries.map((e) => classifyMockupEntry(e, fidelityIndex, io));
 }
 
+/**
+ * Extract a clean route path for report display: the leading `/…` up to the first
+ * whitespace. MOCKUPS_INDEX cells sometimes append prose after the route (e.g.
+ * `/sessions/[id]/live Catan demo (...`); the shared parser's cleanRoute only strips
+ * balanced parens, so the prose survives into entry.routes. This cleanup is
+ * report-cosmetic ONLY — routes are never used in classification (#2929).
+ */
+export function cleanReportRoute(raw) {
+  if (typeof raw !== 'string') return null;
+  const m = raw.trim().match(/^\/\S*/);
+  return m ? m[0] : null;
+}
+
+function cleanReportRoutes(routes) {
+  return (routes || []).map(cleanReportRoute).filter(Boolean);
+}
+
 export function buildJsonReport(results, baseline) {
   const counts = { covered: 0, coverageGaps: 0, contractViolations: 0, skippedObsolete: 0 };
   const coverageGaps = [];
@@ -136,11 +153,11 @@ export function buildJsonReport(results, baseline) {
     if (r.verdict === 'covered') counts.covered += 1;
     else if (r.verdict === 'coverage-gap') {
       counts.coverageGaps += 1;
-      coverageGaps.push({ mockup: r.mockup, routes: r.routes, reason: r.reason });
+      coverageGaps.push({ mockup: r.mockup, routes: cleanReportRoutes(r.routes), reason: r.reason });
     } else if (r.verdict === 'contract-violation') {
       counts.contractViolations += 1;
       contractViolations.push({
-        mockup: r.mockup, routes: r.routes, storyPath: r.storyPath,
+        mockup: r.mockup, routes: cleanReportRoutes(r.routes), storyPath: r.storyPath,
         declared: r.declared, detected: r.detected, missing: r.missing,
       });
     } else if (r.verdict === 'skipped-obsolete') counts.skippedObsolete += 1;

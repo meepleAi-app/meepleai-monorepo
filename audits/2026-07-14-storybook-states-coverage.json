@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-14T14:58:39.293Z",
+  "generatedAt": "2026-07-14T16:20:03.576Z",
   "generatedFrom": "admin-mockups/MOCKUPS_INDEX.md",
   "canonicalStates": [
     "default",
@@ -75,7 +75,7 @@
     {
       "mockup": "sp3-shared-game-detail.html",
       "routes": [
-        "/shared-games/[id] (Wave A.3"
+        "/shared-games/[id]"
       ],
       "reason": "no-story-path"
     },
@@ -208,112 +208,112 @@
     {
       "mockup": "sp4-session-catan-live.html",
       "routes": [
-        "/sessions/[id]/live Catan demo (medium euro + trading"
+        "/sessions/[id]/live"
       ],
       "reason": "no-story-path"
     },
     {
       "mockup": "sp4-session-catan-summary.html",
       "routes": [
-        "/sessions/[id] Catan post-game . Premium #3/7."
+        "/sessions/[id]"
       ],
       "reason": "no-story-path"
     },
     {
       "mockup": "sp4-session-codenames-live.html",
       "routes": [
-        "/sessions/[id]/live Codenames demo (team deduction party game"
+        "/sessions/[id]/live"
       ],
       "reason": "no-story-path"
     },
     {
       "mockup": "sp4-session-codenames-summary.html",
       "routes": [
-        "/sessions/[id] Codenames post-game . Premium #7/7."
+        "/sessions/[id]"
       ],
       "reason": "no-story-path"
     },
     {
       "mockup": "sp4-session-paleo-live.html",
       "routes": [
-        "/sessions/[id]/live Paleo demo (co-op preistorico Simultaneous"
+        "/sessions/[id]/live"
       ],
       "reason": "no-story-path"
     },
     {
       "mockup": "sp4-session-paleo-summary.html",
       "routes": [
-        "/sessions/[id] Paleo post-game . Premium #6/7."
+        "/sessions/[id]"
       ],
       "reason": "no-story-path"
     },
     {
       "mockup": "sp4-session-power-grid-live.html",
       "routes": [
-        "/sessions/[id]/live Power Grid demo (heavy euro auction + network"
+        "/sessions/[id]/live"
       ],
       "reason": "no-story-path"
     },
     {
       "mockup": "sp4-session-power-grid-summary.html",
       "routes": [
-        "/sessions/[id] Power Grid post-game . Premium #4/7."
+        "/sessions/[id]"
       ],
       "reason": "no-story-path"
     },
     {
       "mockup": "sp4-session-puerto-rico-live.html",
       "routes": [
-        "/sessions/[id]/live Puerto Rico demo (heavy euro role-selection"
+        "/sessions/[id]/live"
       ],
       "reason": "no-story-path"
     },
     {
       "mockup": "sp4-session-puerto-rico-summary.html",
       "routes": [
-        "/sessions/[id] Puerto Rico post-game . Premium #2/7."
+        "/sessions/[id]"
       ],
       "reason": "no-story-path"
     },
     {
       "mockup": "sp4-session-skeleton-live.html",
       "routes": [
-        "/sessions/[id]/live **generic skeleton** . Consumes AiToolkitSuggestionDto polymorphically. Demo shows side-by-side Wingspan  vs Paleo . Closes #1750 ."
+        "/sessions/[id]/live"
       ],
       "reason": "no-story-path"
     },
     {
       "mockup": "sp4-session-summary-skeleton.html",
       "routes": [
-        "/sessions/[id] **generic post-game skeleton** . Demo shows side-by-side Wingspan vs Paleo. Closes #1750 ."
+        "/sessions/[id]"
       ],
       "reason": "no-story-path"
     },
     {
       "mockup": "sp4-session-wingspan-live.html",
       "routes": [
-        "/sessions/[id]/live Wingspan demo + consolidated tabs ?tab=scores\\|photos\\|agent\\|players\\|chat\\|tools\\|notes (was 4 separate sub-routes pre-2026-05-31"
+        "/sessions/[id]/live"
       ],
       "reason": "no-story-path"
     },
     {
       "mockup": "sp4-session-wingspan-summary.html",
       "routes": [
-        "/sessions/[id] Wingspan demo + consolidated tabs ?tab=scoreboard\\|notes\\|players (was 3 separate sub-routes pre-2026-05-31"
+        "/sessions/[id]"
       ],
       "reason": "no-story-path"
     },
     {
       "mockup": "sp4-session-zombicide-live.html",
       "routes": [
-        "/sessions/[id]/live Zombicide GH demo (co-op miniatures dungeon-crawler"
+        "/sessions/[id]/live"
       ],
       "reason": "no-story-path"
     },
     {
       "mockup": "sp4-session-zombicide-summary.html",
       "routes": [
-        "/sessions/[id] Zombicide post-game . Premium #5/7."
+        "/sessions/[id]"
       ],
       "reason": "no-story-path"
     },
@@ -336,7 +336,7 @@
     {
       "mockup": "librogame-game-night-storyboard.html",
       "routes": [
-        "/game-nights/[id] (storyboard variant — was nanolith-game-night-storyboard.html pre-rename post-IA consolidation #871"
+        "/game-nights/[id]"
       ],
       "reason": "no-story-path"
     }

@@ -8,6 +8,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 using Api.Extensions;
 using Api.Infrastructure.BackgroundServices;
 using Api.Services;
+using Api.Services.Pdf;
 using Api.Infrastructure.Http;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
@@ -164,6 +165,15 @@ internal static class DocumentProcessingServiceExtensions
         // Issue #1831 (umbrella #1821 L4) — PDF first-page cover extraction
         services.AddScoped<IPdfCoverExtractor, PdfCoverExtractor>();
 
+        // Cover-da-PDF plan Task 3 — MaterializePdfCover R2 upload pipeline.
+        // Singleton because the underlying AmazonS3Client is thread-safe and
+        // reuses a connection pool — matches CoverR2UploadPipeline's lifetime.
+        // NOTE: IWebpVariantGenerator is already registered as a Singleton by
+        // SharedGameCatalogServiceExtensions.AddSharedGameCatalogContext (same
+        // DI container in Program.cs) — not re-registered here to avoid a
+        // duplicate registration for the same concrete type.
+        RegisterPdfCoverUploadPipeline(services);
+
         // Shared PDF processing pipeline (used by recovery job and future handler consolidation)
         services.AddScoped<IPdfProcessingPipelineService, PdfProcessingPipelineService>();
 
@@ -193,6 +203,55 @@ internal static class DocumentProcessingServiceExtensions
         RegisterKbFlagDriftAuditJob(services);
 
         return services;
+    }
+
+    /// <summary>
+    /// Cover-da-PDF plan Task 3 — registers <see cref="IPdfCoverUploadPipeline"/>
+    /// as a singleton backed by a lazily-constructed <see cref="Amazon.S3.IAmazonS3"/>
+    /// client. Mirrors <c>SharedGameCatalogServiceExtensions.RegisterCoverR2UploadPipeline</c>
+    /// (same <c>S3_*</c> env vars as <see cref="BlobStorageServiceFactory"/>) so the
+    /// two R2 cover pipelines don't drift on endpoint/credentials. Singleton
+    /// lifetime matches the long-lived AWS SDK client (thread-safe + connection pool).
+    /// </summary>
+    private static void RegisterPdfCoverUploadPipeline(IServiceCollection services)
+    {
+        services.AddSingleton<IPdfCoverUploadPipeline>(sp =>
+        {
+            var config = sp.GetRequiredService<IConfiguration>();
+            var logger = sp.GetRequiredService<ILogger<Api.BoundedContexts.DocumentProcessing.Infrastructure.Services.PdfCoverUploadPipeline>>();
+
+            var options = new S3StorageOptions
+            {
+                Endpoint = config["S3_ENDPOINT"] ?? throw new InvalidOperationException("S3_ENDPOINT is required for PdfCoverUploadPipeline"),
+                AccessKey = config["S3_ACCESS_KEY"] ?? throw new InvalidOperationException("S3_ACCESS_KEY is required for PdfCoverUploadPipeline"),
+                SecretKey = config["S3_SECRET_KEY"] ?? throw new InvalidOperationException("S3_SECRET_KEY is required for PdfCoverUploadPipeline"),
+                BucketName = config["S3_BUCKET_NAME"] ?? throw new InvalidOperationException("S3_BUCKET_NAME is required for PdfCoverUploadPipeline"),
+                Region = config["S3_REGION"] ?? "auto",
+                ForcePathStyle = bool.TryParse(config["S3_FORCE_PATH_STYLE"], out var forcePathStyle) && forcePathStyle,
+            };
+
+            var s3Config = new Amazon.S3.AmazonS3Config
+            {
+                ServiceURL = options.Endpoint,
+                ForcePathStyle = options.ForcePathStyle,
+                AuthenticationRegion = options.Region,
+            };
+
+            if (!string.Equals(options.Region, "auto", StringComparison.Ordinal)
+                && Amazon.RegionEndpoint.GetBySystemName(options.Region) != null)
+            {
+                s3Config.RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(options.Region);
+            }
+
+            var credentials = new Amazon.Runtime.BasicAWSCredentials(options.AccessKey, options.SecretKey);
+            var s3Client = new Amazon.S3.AmazonS3Client(credentials, s3Config);
+
+            // Issue #1357: R2 rejects x-amz-tagging-directive; strip it
+            // defensively (same hook used by BlobStorageServiceFactory).
+            s3Client.BeforeRequestEvent += BlobStorageServiceFactory.StripUnsupportedR2Headers;
+
+            return new Api.BoundedContexts.DocumentProcessing.Infrastructure.Services.PdfCoverUploadPipeline(s3Client, options, logger);
+        });
     }
 
     /// <summary>

@@ -48,8 +48,21 @@ internal static class GamebookCampaignEndpoints
                 return Results.Unauthorized();
             }
 
+            // #2917: map the optional wire roster to ParticipantDto. The owner is seeded
+            // server-side by the Session factory (authenticated user), so a client-claimed
+            // IsOwner participant is harmless — the handler filters non-owner entries.
+            var participants = body.Participants
+                ?.Select(p => new ParticipantDto
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = p.UserId,
+                    DisplayName = p.DisplayName,
+                    IsOwner = p.IsOwner,
+                })
+                .ToList();
+
             var dto = await mediator.Send(
-                new CreateGamebookCampaignCommand(body.GameId, userId, body.Title), ct
+                new CreateGamebookCampaignCommand(body.GameId, userId, body.Title, participants, body.GuestNames), ct
             ).ConfigureAwait(false);
 
             return Results.Created($"/api/v1/gamebook/campaigns/{dto.Id}", dto);
@@ -362,7 +375,16 @@ internal static class GamebookCampaignEndpoints
 }
 
 /// <summary>Request body for creating a new gamebook campaign.</summary>
-public sealed record CreateGamebookCampaignRequest(Guid GameId, string Title);
+/// <remarks>#2917: optional roster — <paramref name="Participants"/> (User-linked players) and
+/// <paramref name="GuestNames"/> (free guests) persist a non-live Session for standalone play.</remarks>
+public sealed record CreateGamebookCampaignRequest(
+    Guid GameId,
+    string Title,
+    IReadOnlyList<CreateCampaignParticipantRequest>? Participants = null,
+    IReadOnlyList<string>? GuestNames = null);
+
+/// <summary>#2917: minimal wire shape for a campaign roster participant (server assigns Id/JoinOrder).</summary>
+public sealed record CreateCampaignParticipantRequest(Guid? UserId, string DisplayName, bool IsOwner = false);
 
 /// <summary>
 /// Request body for updating the current paragraph progress for a specific book.

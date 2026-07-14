@@ -61,6 +61,34 @@ internal sealed class CatalogSeedLayer : ISeedLayer
             config,
             manifestNameOverride: manifestOverride).ConfigureAwait(false);
 
+        // Issue #2907: retroactively remove orphan PDFs whose shared_game_id points to a missing
+        // or soft-deleted SharedGame (follow-up to #2904). Best-effort + idempotent. Runs BEFORE
+        // the re-enqueue pass so a soon-to-be-deleted orphan is never re-enqueued.
+        try
+        {
+            var mediator = context.Services.GetRequiredService<IMediator>();
+            await OrphanPdfCleanupSeeder
+                .CleanupAsync(context.DbContext, mediator, context.Logger, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            context.Logger.LogError(ex, "[Catalog] OrphanPdfCleanupSeeder failed — continuing");
+        }
+
+        // Issue #2908: re-enqueue valid-catalog PDFs stranded in Pending with no active
+        // ProcessingJob, so PdfProcessingQuartzJob picks them up. Best-effort + idempotent.
+        try
+        {
+            await ReattemptStalePendingPdfsSeeder
+                .ReattemptAsync(context.DbContext, context.SystemUserId, context.Logger, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            context.Logger.LogError(ex, "[Catalog] ReattemptStalePendingPdfsSeeder failed — continuing");
+        }
+
         // Badsworm dogfood persona: 10 library entries (incl. Nanolith) + mock KB
         // documents for dashboard validation. Runs after CatalogSeeder so the
         // SharedGames it references are guaranteed to exist. Idempotent.

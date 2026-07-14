@@ -67,8 +67,18 @@ internal sealed class ProposeCoverChangeCommandHandler : ICommandHandler<Propose
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        // Deterministic dbKey for the pending cover of this proposal.
-        var dbKey = $"covers/{command.SharedGameId:D}/pdf-cover-pending";
+        // I2 fix: the dbKey must be unique PER PROPOSAL, not deterministic per-game.
+        // A per-game deterministic key (e.g. "covers/{gameId}/pdf-cover-pending")
+        // means two proposals for the same game (two users, or two pages) write the
+        // SAME physical R2 object and persist the SAME PendingCoverR2Key. On
+        // approval, the admin approving proposal A could end up promoting whatever
+        // bytes a later still-pending proposal B last overwrote at that key — the
+        // wrong image gets promoted. The GUID segment below eliminates the
+        // collision while preserving the same slash-containing key SHAPE
+        // (covers/{gameId}/...) required by the R2 resolver fix (commit
+        // 05723c823's GetPresignedUrlForRawKeyAsync, which resolves slash/dot
+        // physical keys via an existence check).
+        var dbKey = $"covers/{command.SharedGameId:D}/pdf-cover-{Guid.NewGuid():N}";
 
         var pendingKey = await _mediator
             .Send(new MaterializePdfCoverCommand(command.PdfDocumentId, command.PageNumber, dbKey), cancellationToken)

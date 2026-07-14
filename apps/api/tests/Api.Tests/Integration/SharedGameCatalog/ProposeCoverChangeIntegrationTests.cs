@@ -194,6 +194,110 @@ public sealed class ProposeCoverChangeIntegrationTests : IAsyncLifetime
     }
 
     /// <summary>
+    /// I2 fix regression guard: two proposals for the SAME SharedGame (e.g. two
+    /// different users, or the same user proposing two different pages) must NOT
+    /// collide on the same physical R2 pending-cover object. Prior to the I2 fix,
+    /// <c>ProposeCoverChangeCommandHandler</c> built a per-GAME deterministic dbKey
+    /// (<c>covers/{gameId}/pdf-cover-pending</c>) — a second proposal for the same
+    /// game would overwrite the first proposal's R2 bytes at the same key and BOTH
+    /// <see cref="ShareRequest"/> rows would persist the identical
+    /// <see cref="ShareRequest.PendingCoverR2Key"/>. On approval, an admin approving
+    /// proposal A would actually promote whatever bytes proposal B (or a later
+    /// still-pending proposal) last wrote — silently promoting the wrong image.
+    /// The fix makes the dbKey unique per-proposal (a fresh GUID segment), while
+    /// preserving the same slash-containing key SHAPE (<c>covers/{gameId}/...</c>)
+    /// so it still resolves via <c>GetPresignedUrlForRawKeyAsync</c> (R2 resolver fix,
+    /// commit 05723c823).
+    /// </summary>
+    [Fact]
+    public async Task Propose_TwoProposalsForSameGame_ProduceDistinctPendingCoverKeys()
+    {
+        // Arrange: seed a User + a SharedGame + a Ready PdfDocument pointed at it —
+        // same fixture shape as the single-proposal test above.
+        var userId = Guid.NewGuid();
+
+        _dbContext.Set<UserEntity>().Add(new UserEntity
+        {
+            Id = userId,
+            Email = $"propose-cover-collision-{userId:N}@test.com",
+            DisplayName = "Propose Cover Collision Test User",
+            Role = "user",
+            Tier = "free",
+            CreatedAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync(CancellationToken.None);
+        _dbContext.ChangeTracker.Clear();
+
+        var sharedGame = SharedGame.Create(
+            title: "Wingspan",
+            yearPublished: 2019,
+            description: "Bird-collection engine builder",
+            minPlayers: 1,
+            maxPlayers: 5,
+            playingTimeMinutes: 70,
+            minAge: 10,
+            complexityRating: 2.4m,
+            averageRating: 8.1m,
+            imageUrl: "https://example.com/wingspan.jpg",
+            thumbnailUrl: "https://example.com/wingspan-thumb.jpg",
+            rules: null,
+            createdBy: userId);
+
+        var pdfDocument = new PdfDocumentBuilder()
+            .WithGameId(sharedGame.Id)
+            .WithUploadedBy(userId)
+            .WithFilePath("/uploads/00000000-0000-0000-0000-000000000002_test-rulebook.pdf")
+            .ThatIsCompleted()
+            .Build();
+
+        using (var scope = _serviceProvider.CreateScope())
+        {
+            var sharedGameRepo = scope.ServiceProvider.GetRequiredService<ISharedGameRepository>();
+            var pdfRepo = scope.ServiceProvider.GetRequiredService<IPdfDocumentRepository>();
+            var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+            await sharedGameRepo.AddAsync(sharedGame);
+            await pdfRepo.AddAsync(pdfDocument);
+            await uow.SaveChangesAsync(CancellationToken.None);
+        }
+
+        _dbContext.ChangeTracker.Clear();
+
+        // Act: propose TWO different pages of the SAME PdfDocument for the SAME
+        // SharedGame — mirrors two concurrent proposals racing on the same game.
+        using var actScope = _serviceProvider.CreateScope();
+        var mediator = actScope.ServiceProvider.GetRequiredService<IMediator>();
+
+        var cmdA = new ProposeCoverChangeCommand(userId, sharedGame.Id, pdfDocument.Id, PageNumber: 2);
+        var shareRequestIdA = await mediator.Send(cmdA, CancellationToken.None);
+
+        var cmdB = new ProposeCoverChangeCommand(userId, sharedGame.Id, pdfDocument.Id, PageNumber: 7);
+        var shareRequestIdB = await mediator.Send(cmdB, CancellationToken.None);
+
+        // Assert
+        _dbContext.ChangeTracker.Clear();
+        var shareRequestRepo = actScope.ServiceProvider.GetRequiredService<IShareRequestRepository>();
+        var srA = await shareRequestRepo.GetByIdAsync(shareRequestIdA);
+        var srB = await shareRequestRepo.GetByIdAsync(shareRequestIdB);
+
+        srA.Should().NotBeNull();
+        srB.Should().NotBeNull();
+        srA!.PendingCoverR2Key.Should().NotBeNullOrWhiteSpace();
+        srB!.PendingCoverR2Key.Should().NotBeNullOrWhiteSpace();
+
+        // The core I2 assertion: no collision between concurrent proposals for the
+        // same game.
+        srA.PendingCoverR2Key.Should().NotBe(srB.PendingCoverR2Key);
+
+        // Structural guard (not exact-value, per Guid.NewGuid() non-determinism):
+        // both keys must still match the per-game slash-containing shape required
+        // by the R2 resolver fix, with a unique 32-hex-char GUID segment.
+        var keyPattern = $"^covers/{sharedGame.Id:D}/pdf-cover-[0-9a-f]{{32}}$";
+        srA.PendingCoverR2Key.Should().MatchRegex(keyPattern);
+        srB.PendingCoverR2Key.Should().MatchRegex(keyPattern);
+    }
+
+    /// <summary>
     /// Fixed-response fake for the "SmolDoclingService" named HttpClient. Always
     /// returns 200 OK with a minimal JPEG magic-number payload, regardless of the
     /// requested page number — sufficient for GetPdfPageImageQueryHandler, whose

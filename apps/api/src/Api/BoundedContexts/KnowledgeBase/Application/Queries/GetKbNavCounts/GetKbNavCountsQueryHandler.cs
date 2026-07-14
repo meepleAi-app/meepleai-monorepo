@@ -33,14 +33,21 @@ internal sealed class GetKbNavCountsQueryHandler
         var asOf = _clock.GetUtcNow();
         var since = asOf.UtcDateTime - FeedbackWindow;
 
-        var queueTask = _jobs.CountByStatusesAsync(ActiveStatuses, cancellationToken);
-        var feedbackTask = _feedback.CountSinceAsync(since, cancellationToken);
-
-        await Task.WhenAll(queueTask, feedbackTask).ConfigureAwait(false);
+        // NOTE: these two counts MUST be awaited sequentially. Both repositories share the same
+        // scoped MeepleAiDbContext, and EF Core's DbContext is not thread-safe — running them
+        // concurrently via Task.WhenAll throws "A second operation was started on this context
+        // instance before a previous operation completed" (HTTP 500). The counts are cheap, so the
+        // extra round-trip is negligible.
+        var processingQueue = await _jobs
+            .CountByStatusesAsync(ActiveStatuses, cancellationToken)
+            .ConfigureAwait(false);
+        var feedback7d = await _feedback
+            .CountSinceAsync(since, cancellationToken)
+            .ConfigureAwait(false);
 
         return new KbNavCountsDto(
-            ProcessingQueue: await queueTask.ConfigureAwait(false),
-            Feedback7d: await feedbackTask.ConfigureAwait(false),
+            ProcessingQueue: processingQueue,
+            Feedback7d: feedback7d,
             AsOf: asOf);
     }
 }

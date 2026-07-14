@@ -67,28 +67,34 @@ public sealed class GetKbNavCountsQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_RunsCountQueriesInParallel()
+    public async Task Handle_RunsCountQueriesSequentially()
     {
+        // Regression guard for the KB nav-counts 500: both repositories share the same
+        // scoped MeepleAiDbContext, which is NOT thread-safe. The handler must await the
+        // two counts sequentially — running them concurrently (Task.WhenAll) throws
+        // "A second operation was started on this context instance...". So while the
+        // queue count is still pending, the feedback count must NOT have started.
         var queueTcs = new TaskCompletionSource<int>();
         _jobs.CountByStatusesAsync(Arg.Any<IReadOnlyList<JobStatus>>(), Arg.Any<CancellationToken>())
             .Returns(queueTcs.Task);
         _feedback.CountSinceAsync(Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
-            .Returns(0);
+            .Returns(9);
 
         var task = _sut.Handle(new GetKbNavCountsQuery(), CancellationToken.None);
 
-        // Give the scheduler a chance to enter both awaits
+        // Give the scheduler a chance to reach the first (still-pending) await.
         await Task.Yield();
 
-        // If the handler called repos sequentially it would still be on the first await
-        // and the feedback call would never have happened.
-        await _feedback.Received(1).CountSinceAsync(Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
+        // Sequential: the feedback count must not run while the queue count is pending.
+        await _feedback.DidNotReceive().CountSinceAsync(Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
 
-        queueTcs.SetResult(1);
+        // Completing the queue count lets the feedback count run.
+        queueTcs.SetResult(4);
         var result = await task;
 
-        result.ProcessingQueue.Should().Be(1);
-        result.Feedback7d.Should().Be(0);
+        await _feedback.Received(1).CountSinceAsync(Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
+        result.ProcessingQueue.Should().Be(4);
+        result.Feedback7d.Should().Be(9);
     }
 
     [Fact]

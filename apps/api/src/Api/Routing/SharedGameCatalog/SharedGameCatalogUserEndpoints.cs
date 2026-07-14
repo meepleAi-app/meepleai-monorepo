@@ -56,7 +56,8 @@ internal static class SharedGameCatalogUserEndpoints
             .WithDescription("Materializes a pending cover from a page of an uploaded PDF and creates a Pending CoverChange share request for admin review.")
             .Produces(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status404NotFound);
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status503ServiceUnavailable);
     }
 
     private static async Task<IResult> HandleSubmitCardFeedback(

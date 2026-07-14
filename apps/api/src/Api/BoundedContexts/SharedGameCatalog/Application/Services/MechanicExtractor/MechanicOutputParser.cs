@@ -5,7 +5,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExtractor;
 
 /// <summary>
-/// Parses the six section-level JSON envelopes emitted by the Mechanic Extractor pipeline
+/// Parses the nine section-level JSON envelopes emitted by the Mechanic Extractor pipeline
 /// into a flat list of <see cref="MechanicClaim"/> entities ready to be attached to a
 /// <see cref="Domain.Aggregates.MechanicAnalysis"/> aggregate.
 /// </summary>
@@ -75,6 +75,9 @@ internal static class MechanicOutputParser
                     MechanicSection.Resources => ParseResources(analysisId, root),
                     MechanicSection.Phases => ParsePhases(analysisId, root),
                     MechanicSection.Faq => ParseFaq(analysisId, root),
+                    MechanicSection.Setup => ParseSetup(analysisId, root),
+                    MechanicSection.Components => ParseComponents(analysisId, root),
+                    MechanicSection.EndgameScoring => ParseEndgame(analysisId, root),
                     _ => Array.Empty<MechanicClaim>()
                 };
 
@@ -427,6 +430,195 @@ internal static class MechanicOutputParser
                 claimId: claimId,
                 analysisId: analysisId,
                 section: MechanicSection.Faq,
+                text: text,
+                displayOrder: displayOrder++,
+                citations: citations,
+                sourceAnchor: anchor);
+        }
+    }
+
+    // ============================================================
+    // Section: Setup (v1.1.0)
+    // Schema: { "setup": [{ "description": "...", "order": 1, "playerCountNote": "...", "citations": [...] }] }
+    // Emitted in declared `order`; falls back to source array order when missing/duplicate.
+    // ============================================================
+    private static IEnumerable<MechanicClaim> ParseSetup(Guid analysisId, JsonElement root)
+    {
+        if (!root.TryGetProperty("setup", out var items) || items.ValueKind != JsonValueKind.Array)
+        {
+            yield break;
+        }
+
+        var buffered = new List<(int? Order, int SourceIndex, JsonElement Element)>();
+        var sourceIndex = 0;
+        foreach (var item in items.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.Object)
+            {
+                sourceIndex++;
+                continue;
+            }
+
+            int? order = null;
+            if (item.TryGetProperty("order", out var orderEl)
+                && orderEl.ValueKind == JsonValueKind.Number
+                && orderEl.TryGetInt32(out var parsedOrder))
+            {
+                order = parsedOrder;
+            }
+
+            buffered.Add((order, sourceIndex, item));
+            sourceIndex++;
+        }
+
+        var ordered = buffered
+            .OrderBy(x => x.Order ?? int.MaxValue)
+            .ThenBy(x => x.SourceIndex);
+
+        var displayOrder = 0;
+        foreach (var (_, srcIdx, item) in ordered)
+        {
+            var description = ReadString(item, "description");
+            if (string.IsNullOrWhiteSpace(description))
+            {
+                continue;
+            }
+
+            var claimId = Guid.NewGuid();
+            var citations = ExtractCitations(item, claimId).ToList();
+            if (citations.Count == 0)
+            {
+                continue;
+            }
+
+            var note = ReadString(item, "playerCountNote");
+            var text = string.IsNullOrWhiteSpace(note)
+                ? description!
+                : $"{description!.Trim()} ({note!.Trim()})";
+
+            yield return BuildClaim(
+                claimId: claimId,
+                analysisId: analysisId,
+                section: MechanicSection.Setup,
+                text: text,
+                displayOrder: displayOrder++,
+                citations: citations,
+                sourceAnchor: $"$.setup[{srcIdx}]");
+        }
+    }
+
+    // ============================================================
+    // Section: Components (v1.1.0)
+    // Schema: { "components": [{ "name": "...", "description": "...", "quantity": "...", "citations": [...] }] }
+    // ============================================================
+    private static IEnumerable<MechanicClaim> ParseComponents(Guid analysisId, JsonElement root)
+    {
+        if (!root.TryGetProperty("components", out var items) || items.ValueKind != JsonValueKind.Array)
+        {
+            yield break;
+        }
+
+        var sourceIndex = 0;
+        var displayOrder = 0;
+        foreach (var item in items.EnumerateArray())
+        {
+            var anchor = $"$.components[{sourceIndex}]";
+            sourceIndex++;
+
+            if (item.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            var description = ReadString(item, "description");
+            if (string.IsNullOrWhiteSpace(description))
+            {
+                continue;
+            }
+
+            var claimId = Guid.NewGuid();
+            var citations = ExtractCitations(item, claimId).ToList();
+            if (citations.Count == 0)
+            {
+                continue;
+            }
+
+            var name = ReadString(item, "name");
+            var quantity = ReadString(item, "quantity");
+            string? label;
+            if (string.IsNullOrWhiteSpace(quantity))
+            {
+                label = string.IsNullOrWhiteSpace(name) ? null : name!.Trim();
+            }
+            else if (string.IsNullOrWhiteSpace(name))
+            {
+                label = $"×{quantity!.Trim()}";
+            }
+            else
+            {
+                label = $"{name!.Trim()} (×{quantity!.Trim()})";
+            }
+
+            var text = string.IsNullOrWhiteSpace(label)
+                ? description!
+                : $"{label}: {description!.Trim()}";
+
+            yield return BuildClaim(
+                claimId: claimId,
+                analysisId: analysisId,
+                section: MechanicSection.Components,
+                text: text,
+                displayOrder: displayOrder++,
+                citations: citations,
+                sourceAnchor: anchor);
+        }
+    }
+
+    // ============================================================
+    // Section: EndgameScoring (v1.1.0)
+    // Schema: { "endgame": [{ "name": "...", "description": "...", "citations": [...] }] }
+    // ============================================================
+    private static IEnumerable<MechanicClaim> ParseEndgame(Guid analysisId, JsonElement root)
+    {
+        if (!root.TryGetProperty("endgame", out var items) || items.ValueKind != JsonValueKind.Array)
+        {
+            yield break;
+        }
+
+        var sourceIndex = 0;
+        var displayOrder = 0;
+        foreach (var item in items.EnumerateArray())
+        {
+            var anchor = $"$.endgame[{sourceIndex}]";
+            sourceIndex++;
+
+            if (item.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            var description = ReadString(item, "description");
+            if (string.IsNullOrWhiteSpace(description))
+            {
+                continue;
+            }
+
+            var claimId = Guid.NewGuid();
+            var citations = ExtractCitations(item, claimId).ToList();
+            if (citations.Count == 0)
+            {
+                continue;
+            }
+
+            var name = ReadString(item, "name");
+            var text = string.IsNullOrWhiteSpace(name)
+                ? description!
+                : $"{name!.Trim()}: {description!.Trim()}";
+
+            yield return BuildClaim(
+                claimId: claimId,
+                analysisId: analysisId,
+                section: MechanicSection.EndgameScoring,
                 text: text,
                 displayOrder: displayOrder++,
                 citations: citations,

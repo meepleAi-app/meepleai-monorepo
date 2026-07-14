@@ -1,0 +1,5 @@
+# Issue #2772 Option C — restart meepleai-api if the host :8080 docker-proxy dies.
+# Interim mitigation until the containerized-cloudflared cutover (Option A, #2909).
+# Runs every minute; the script itself is quiet on the happy path and enforces a
+# 10-min restart cooldown (loop guard).
+* * * * * /usr/local/bin/docker-proxy-watchdog.sh >> /var/log/meepleai-docker-proxy-watchdog.log 2>&1

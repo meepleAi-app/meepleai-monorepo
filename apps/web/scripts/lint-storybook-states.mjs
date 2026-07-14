@@ -58,3 +58,58 @@ export function detectStates(storySource) {
   }
   return set;
 }
+
+/** Build Map<mockupSource, {fidelityPath, fidelity}>. Malformed JSON skipped. */
+export function buildFidelityIndex(fidelityRelPaths, readFile) {
+  const bySource = new Map();
+  for (const rel of fidelityRelPaths) {
+    let obj;
+    try {
+      obj = JSON.parse(readFile(rel));
+    } catch {
+      continue;
+    }
+    const source = obj && obj.mockup && obj.mockup.source;
+    if (typeof source === 'string' && source.length > 0) {
+      bySource.set(source, { fidelityPath: rel, fidelity: obj });
+    }
+  }
+  return bySource;
+}
+
+/** Classify one page-mock entry against its fidelity + story. */
+export function classifyMockupEntry(entry, fidelityIndex, io) {
+  const mockupSource = `admin-mockups/design_files/${entry.mockup}`;
+  const base = { mockup: entry.mockup, routes: entry.routes, mockupSource };
+
+  const hit = fidelityIndex.get(mockupSource);
+  if (!hit) return { ...base, verdict: 'coverage-gap', reason: 'no-fidelity' };
+
+  const acceptance = hit.fidelity.acceptance || {};
+  if (acceptance.design_intent === 'forward-refactor-obsolete') {
+    return { ...base, verdict: 'skipped-obsolete' };
+  }
+
+  const storyPath = acceptance.story_path;
+  if (!storyPath) return { ...base, verdict: 'coverage-gap', reason: 'no-story-path' };
+  if (!io.exists(storyPath)) return { ...base, verdict: 'coverage-gap', reason: 'story-missing' };
+
+  const declared = [
+    ...new Set((acceptance.states_covered || []).map(normalizeState).filter(Boolean)),
+  ].filter((s) => CANONICAL_STATES.includes(s));
+
+  const detected = detectStates(io.readFile(storyPath));
+  const missing = declared.filter((s) => !detected.has(s));
+
+  if (missing.length > 0) {
+    return {
+      ...base,
+      verdict: 'contract-violation',
+      storyPath,
+      declared,
+      detected: [...detected],
+      missing,
+    };
+  }
+  return { ...base, verdict: 'covered', storyPath, declared, detected: [...detected] };
+}

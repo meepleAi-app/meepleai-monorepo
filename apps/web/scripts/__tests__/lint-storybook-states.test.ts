@@ -6,6 +6,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { CANONICAL_STATES, normalizeState, detectStates } from '../lint-storybook-states.mjs';
+import { buildFidelityIndex, classifyMockupEntry } from '../lint-storybook-states.mjs';
 
 describe('CANONICAL_STATES', () => {
   it('is exactly the 5 DEC-A5 states in order', () => {
@@ -61,5 +62,97 @@ describe('detectStates — explicit override wins', () => {
       const phases = ['idle','segmenting','translating'];
     `;
     expect(detectStates(src)).toEqual(new Set(['default', 'loading', 'sse']));
+  });
+});
+
+// In-memory IO helpers for classification tests.
+function makeIo(files: Record<string, string>) {
+  return {
+    exists: (rel: string) => Object.prototype.hasOwnProperty.call(files, rel),
+    readFile: (rel: string) => {
+      if (!(rel in files)) throw new Error(`ENOENT ${rel}`);
+      return files[rel];
+    },
+  };
+}
+
+const fidelityOf = (source: string, statesCovered: string[], storyPath = '', intent = 'current') =>
+  JSON.stringify({
+    mockup: { source, states: statesCovered },
+    acceptance: { states_covered: statesCovered, story_path: storyPath, design_intent: intent },
+  });
+
+describe('buildFidelityIndex', () => {
+  it('indexes fidelity objects by mockup.source and skips malformed json', () => {
+    const files = {
+      'a.fidelity.json': fidelityOf('admin-mockups/design_files/x.html', ['default']),
+      'b.fidelity.json': '{ not json',
+    };
+    const idx = buildFidelityIndex(Object.keys(files), rel => files[rel]);
+    expect(idx.has('admin-mockups/design_files/x.html')).toBe(true);
+    expect(idx.size).toBe(1);
+  });
+});
+
+describe('classifyMockupEntry', () => {
+  const entry = { mockup: 'x.html', routes: ['/x'] };
+  const src = 'admin-mockups/design_files/x.html';
+
+  it('coverage-gap: no fidelity for the mockup', () => {
+    const idx = buildFidelityIndex([], () => '');
+    const r = classifyMockupEntry(entry, idx, makeIo({}));
+    expect(r.verdict).toBe('coverage-gap');
+    expect(r.reason).toBe('no-fidelity');
+  });
+
+  it('coverage-gap: fidelity present but story_path empty', () => {
+    const files = { 'f.fidelity.json': fidelityOf(src, ['default', 'loading'], '') };
+    const idx = buildFidelityIndex(Object.keys(files), rel => files[rel]);
+    const r = classifyMockupEntry(entry, idx, makeIo(files));
+    expect(r.verdict).toBe('coverage-gap');
+    expect(r.reason).toBe('no-story-path');
+  });
+
+  it('skipped-obsolete: design_intent forward-refactor-obsolete', () => {
+    const files = {
+      'f.fidelity.json': fidelityOf(src, ['default'], 'story.tsx', 'forward-refactor-obsolete'),
+    };
+    const idx = buildFidelityIndex(Object.keys(files), rel => files[rel]);
+    const r = classifyMockupEntry(entry, idx, makeIo({ ...files, 'story.tsx': '' }));
+    expect(r.verdict).toBe('skipped-obsolete');
+  });
+
+  it('covered: story implements every declared canonical state', () => {
+    const story = `mswForState('default'); mswForState('loading'); mswForState('error');`;
+    const files = {
+      'f.fidelity.json': fidelityOf(src, ['default', 'loading', 'error'], 'story.tsx'),
+      'story.tsx': story,
+    };
+    const idx = buildFidelityIndex(Object.keys(files), rel => files[rel]);
+    const r = classifyMockupEntry(entry, idx, makeIo(files));
+    expect(r.verdict).toBe('covered');
+  });
+
+  it('contract-violation: story omits a declared state, listing the missing ones', () => {
+    const story = `mswForState('default');`; // declares loading+error but story only has default
+    const files = {
+      'f.fidelity.json': fidelityOf(src, ['default', 'loading', 'error'], 'story.tsx'),
+      'story.tsx': story,
+    };
+    const idx = buildFidelityIndex(Object.keys(files), rel => files[rel]);
+    const r = classifyMockupEntry(entry, idx, makeIo(files));
+    expect(r.verdict).toBe('contract-violation');
+    expect(r.missing.sort()).toEqual(['error', 'loading']);
+  });
+
+  it('ignores non-canonical declared states (offline) when comparing', () => {
+    const story = `mswForState('default');`;
+    const files = {
+      'f.fidelity.json': fidelityOf(src, ['default', 'offline'], 'story.tsx'),
+      'story.tsx': story,
+    };
+    const idx = buildFidelityIndex(Object.keys(files), rel => files[rel]);
+    const r = classifyMockupEntry(entry, idx, makeIo(files));
+    expect(r.verdict).toBe('covered'); // offline dropped, only default required & present
   });
 });

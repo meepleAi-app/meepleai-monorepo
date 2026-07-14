@@ -90,7 +90,12 @@ internal sealed class KbFlagDriftAuditJob : IJob
             }
 
             // Load the drifted games TRACKED so we can flip the flag and persist.
+            // .AsTracking() is REQUIRED: MeepleAiDbContext defaults to NoTracking
+            // (PERF-06), so without it the loaded entities are detached and the
+            // SaveChangesAsync below is a silent no-op (the reconcile would never
+            // actually repair anything).
             var games = await _dbContext.SharedGames
+                .AsTracking()
                 .Where(g => driftedGameIds.Contains(g.Id))
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);

@@ -201,9 +201,13 @@ services:
   grafana:
     restart: always
     env_file: [./secrets/prod/monitoring.secret]
+    # External access via Cloudflare Tunnel: grafana.${PROD_DOMAIN} → localhost:3001 → container :3000.
+    # Aligned with staging (subdomain, not subpath) — #2911.
+    ports:
+      - "127.0.0.1:3001:3000"
     environment:
-      GF_SERVER_ROOT_URL: "https://${PROD_DOMAIN}/grafana"
-      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_SERVER_ROOT_URL: "https://grafana.${PROD_DOMAIN}"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "false"
     volumes:
       - grafana-prod:/var/lib/grafana
       - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro

@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 /**
@@ -46,7 +45,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
           key={i}
           className={cn(
             'h-1.5 rounded-full transition-all duration-200',
-            i < current ? 'w-4 bg-emerald-400' : i === current ? 'w-6 bg-card' : 'w-4 bg-card/20'
+            i < current ? 'w-4 bg-emerald-400' : i === current ? 'w-6 bg-primary' : 'w-4 bg-border'
           )}
         />
       ))}
@@ -219,14 +218,14 @@ export function NewPlayRecordSheet({
 
       {/* Sheet */}
       <div
-        className="relative z-10 flex flex-col rounded-t-2xl bg-[var(--gaming-bg-surface,#1a1a2e)] border-t border-border max-h-[92dvh]"
+        className="relative z-10 flex flex-col rounded-t-2xl bg-card border-t border-border max-h-[92dvh]"
         role="dialog"
         aria-modal="true"
         aria-label="Registra partita"
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1">
-          <div className="h-1 w-10 rounded-full bg-card/20" />
+          <div className="h-1 w-10 rounded-full bg-border" />
         </div>
 
         {/* Header */}
@@ -236,7 +235,7 @@ export function NewPlayRecordSheet({
               <button
                 type="button"
                 onClick={() => setStep(s => s - 1)}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-foreground/80 hover:bg-card/5"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-foreground/80 hover:bg-muted"
                 aria-label="Passo precedente"
               >
                 <ChevronLeft className="h-5 w-5" />
@@ -247,7 +246,7 @@ export function NewPlayRecordSheet({
           <button
             type="button"
             onClick={handleClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-foreground/80 hover:bg-card/5"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-foreground/80 hover:bg-muted"
             aria-label="Chiudi"
           >
             <X className="h-5 w-5" />
@@ -260,7 +259,7 @@ export function NewPlayRecordSheet({
           {step === 0 && (
             <div className="flex flex-col gap-5">
               <div>
-                <p className="text-base font-bold text-white mb-1">Quale gioco hai giocato?</p>
+                <p className="text-base font-bold text-foreground mb-1">Quale gioco hai giocato?</p>
                 <p className="text-xs text-muted-foreground">
                   Cerca nella tua libreria o inserisci il nome
                 </p>
@@ -288,7 +287,7 @@ export function NewPlayRecordSheet({
                     value={gameName}
                     onChange={e => setGameName(e.target.value)}
                     placeholder="Es. Catan, Puerto Rico…"
-                    className="w-full rounded-xl bg-card/5 border border-border px-3 py-2.5 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+                    className="w-full rounded-xl bg-muted border border-border px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
                     data-testid="game-name-input"
                   />
                 </div>
@@ -302,7 +301,7 @@ export function NewPlayRecordSheet({
                   type="date"
                   value={sessionDate}
                   onChange={e => setSessionDate(e.target.value)}
-                  className="w-full rounded-xl bg-card/5 border border-border px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-ring/30"
+                  className="w-full rounded-xl bg-muted border border-border px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
                   data-testid="session-date-input"
                 />
               </div>
@@ -320,8 +319,8 @@ export function NewPlayRecordSheet({
                       className={cn(
                         'flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors',
                         visibility === v
-                          ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-400'
-                          : 'border-border bg-card/5 text-foreground/80 hover:border-border'
+                          ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                          : 'border-border bg-muted text-foreground/80 hover:border-border'
                       )}
                       data-testid={`visibility-${v.toLowerCase()}`}
                     >
@@ -337,7 +336,7 @@ export function NewPlayRecordSheet({
           {step === 1 && (
             <div className="flex flex-col gap-4">
               <div>
-                <p className="text-base font-bold text-white mb-1">Chi ha giocato?</p>
+                <p className="text-base font-bold text-foreground mb-1">Chi ha giocato?</p>
                 <p className="text-xs text-muted-foreground mb-0.5">
                   {gameName} •{' '}
                   {new Date(sessionDate + 'T12:00:00').toLocaleDateString('it-IT', {
@@ -352,9 +351,9 @@ export function NewPlayRecordSheet({
                 {players.map(p => (
                   <div
                     key={p.id}
-                    className="flex items-center gap-3 rounded-xl bg-card/5 border border-border px-3 py-2.5"
+                    className="flex items-center gap-3 rounded-xl bg-muted/50 border border-border px-3 py-2.5"
                   >
-                    <span className="flex-1 text-sm font-semibold text-white truncate">
+                    <span className="flex-1 text-sm font-semibold text-foreground truncate">
                       {p.name}
                     </span>
                     <div className="flex items-center gap-1.5">
@@ -363,13 +362,13 @@ export function NewPlayRecordSheet({
                         value={p.score}
                         onChange={e => updateScore(p.id, e.target.value)}
                         placeholder="Pts"
-                        className="w-16 rounded-lg bg-card/5 border border-border px-2 py-1 text-center text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+                        className="w-16 rounded-lg bg-muted border border-border px-2 py-1 text-center text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
                         data-testid={`player-score-${p.name}`}
                       />
                       <button
                         type="button"
                         onClick={() => removePlayer(p.id)}
-                        className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:text-red-400"
+                        className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:text-destructive"
                         aria-label={`Rimuovi ${p.name}`}
                       >
                         <X className="h-3.5 w-3.5" />
@@ -387,13 +386,13 @@ export function NewPlayRecordSheet({
                   onChange={e => setNewPlayerName(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && addPlayer()}
                   placeholder="Nome giocatore…"
-                  className="flex-1 rounded-xl bg-card/5 border border-border px-3 py-2.5 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+                  className="flex-1 rounded-xl bg-muted border border-border px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
                   data-testid="new-player-input"
                 />
                 <button
                   type="button"
                   onClick={addPlayer}
-                  className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-card/5 border border-border text-foreground/80 hover:bg-card/10"
+                  className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-muted border border-border text-foreground/80 hover:bg-muted/80"
                   aria-label="Aggiungi giocatore"
                   data-testid="add-player-btn"
                 >
@@ -404,11 +403,13 @@ export function NewPlayRecordSheet({
               {/* Vincitore auto */}
               {winnerPlayer && (
                 <div className="flex items-center gap-2 rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2.5">
-                  <Trophy className="h-4 w-4 text-amber-400 flex-shrink-0" />
-                  <p className="text-sm font-semibold text-amber-400">
-                    Vincitore: <span className="text-white">{winnerPlayer.name}</span>
+                  <Trophy className="h-4 w-4 text-amber-500 dark:text-amber-400 flex-shrink-0" />
+                  <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+                    Vincitore: <span className="text-foreground">{winnerPlayer.name}</span>
                     {winnerPlayer.score && (
-                      <span className="text-amber-400/70 ml-1">({winnerPlayer.score} pts)</span>
+                      <span className="text-amber-700/80 dark:text-amber-400/70 ml-1">
+                        ({winnerPlayer.score} pts)
+                      </span>
                     )}
                   </p>
                 </div>
@@ -420,7 +421,7 @@ export function NewPlayRecordSheet({
           {step === 2 && (
             <div className="flex flex-col gap-5">
               <div>
-                <p className="text-base font-bold text-white mb-0.5">Riepilogo partita</p>
+                <p className="text-base font-bold text-foreground mb-0.5">Riepilogo partita</p>
                 <p className="text-xs text-muted-foreground">
                   {gameName} • {players.length} {players.length === 1 ? 'giocatore' : 'giocatori'}
                 </p>
@@ -436,7 +437,7 @@ export function NewPlayRecordSheet({
                         'flex items-center justify-between rounded-xl px-3 py-2.5',
                         i === 0
                           ? 'bg-amber-500/10 border border-amber-500/20'
-                          : 'bg-card/5 border border-border'
+                          : 'bg-muted/50 border border-border'
                       )}
                     >
                       <div className="flex items-center gap-2.5">
@@ -444,7 +445,7 @@ export function NewPlayRecordSheet({
                         <span
                           className={cn(
                             'text-sm font-semibold',
-                            i === 0 ? 'text-amber-300' : 'text-white'
+                            i === 0 ? 'text-amber-700 dark:text-amber-300' : 'text-foreground'
                           )}
                         >
                           {p.name}
@@ -454,7 +455,7 @@ export function NewPlayRecordSheet({
                         <span
                           className={cn(
                             'text-sm font-bold',
-                            i === 0 ? 'text-amber-400' : 'text-foreground/80'
+                            i === 0 ? 'text-amber-700 dark:text-amber-400' : 'text-foreground/80'
                           )}
                         >
                           {p.score} pts
@@ -475,7 +476,7 @@ export function NewPlayRecordSheet({
                   onChange={e => setNotes(e.target.value)}
                   placeholder="Come è andata la partita?"
                   rows={3}
-                  className="w-full rounded-xl bg-card/5 border border-border px-3 py-2.5 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30 resize-none"
+                  className="w-full rounded-xl bg-muted border border-border px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30 resize-none"
                   data-testid="notes-input"
                 />
               </div>
@@ -483,7 +484,7 @@ export function NewPlayRecordSheet({
               {/* Error */}
               {errorMsg && (
                 <div
-                  className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400"
+                  className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
                   data-testid="save-error"
                 >
                   {errorMsg}

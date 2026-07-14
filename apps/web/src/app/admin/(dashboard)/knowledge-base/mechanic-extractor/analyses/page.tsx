@@ -85,7 +85,32 @@ const RUN_STATUS_BADGE_CLASS: Record<number, string> = {
   0: 'bg-green-100 text-green-800 border-green-300', // Succeeded
   1: 'bg-rose-100 text-rose-800 border-rose-300', // Failed
   2: 'bg-muted text-foreground border-border', // SkippedDueToCostCap
+  3: 'bg-amber-100 text-amber-800 border-amber-300', // RetainedWithGuardrailFlags
 };
+
+/** #539: descriptive tooltip for the section-run Status column (what each numeric status means). */
+const SECTION_RUN_STATUS_DESC: Record<number, string> = {
+  0: 'Succeeded — sezione generata e superati tutti i guardrail.',
+  1: 'Failed — la sezione non ha prodotto output valido (JSON malformato dopo i retry, o chiamata LLM in errore/timeout).',
+  2: 'Skipped — sezione saltata perché il costo cumulato ha superato il cost cap.',
+  3: 'Retained with flags — output ben formato ma con guardrail (es. T4) flaggati; conservato in modalità advisory per la review umana.',
+};
+
+/**
+ * #539: LLM model override presets. The pipeline routes the provider purely by model name,
+ * so picking a model here selects the provider. Empty value = server default (DeepSeek).
+ */
+const MODEL_OPTIONS: ReadonlyArray<{ value: string; label: string; provider: string }> = [
+  // `default` is a sentinel (Radix Select forbids empty-string item values) → no override sent.
+  { value: 'default', label: 'Default (DeepSeek · deepseek-chat)', provider: '' },
+  {
+    value: 'meta-llama/llama-3.3-70b-instruct',
+    label: 'OpenRouter · llama-3.3-70b',
+    provider: 'OpenRouter',
+  },
+  { value: 'deepseek-chat', label: 'DeepSeek · deepseek-chat', provider: 'DeepSeek' },
+  { value: 'qwen2.5:3b', label: 'Ollama · qwen2.5:3b (locale)', provider: 'Ollama' },
+];
 
 function formatCurrency(value: number | null | undefined): string {
   if (value == null) return '—';
@@ -128,6 +153,9 @@ export default function MechanicAnalysesPage() {
   const [selectedGameId, setSelectedGameId] = useState('');
   const [selectedPdfId, setSelectedPdfId] = useState('');
   const [costCapUsd, setCostCapUsd] = useState<string>('0.50');
+  // #539: LLM model override + force-regenerate (bypass idempotency).
+  const [selectedModel, setSelectedModel] = useState<string>('default');
+  const [forceRegen, setForceRegen] = useState(false);
   const [overrideEnabled, setOverrideEnabled] = useState(false);
   const [overrideCapUsd, setOverrideCapUsd] = useState<string>('1.00');
   const [overrideReason, setOverrideReason] = useState('');
@@ -230,6 +258,8 @@ export default function MechanicAnalysesPage() {
       if (!Number.isFinite(cap) || cap <= 0) {
         throw new Error('Cost cap must be a positive number');
       }
+      const modelOpt = MODEL_OPTIONS.find(m => m.value === selectedModel);
+      const modelOverride = selectedModel === 'default' ? undefined : selectedModel;
       return adminClient.generateMechanicAnalysis({
         sharedGameId: selectedGameId,
         pdfDocumentId: selectedPdfId,
@@ -240,6 +270,9 @@ export default function MechanicAnalysesPage() {
               reason: overrideReason,
             }
           : undefined,
+        model: modelOverride,
+        provider: modelOpt?.provider || undefined,
+        forceRegenerate: forceRegen || undefined,
       });
     },
     onSuccess: res => {
@@ -455,6 +488,36 @@ export default function MechanicAnalysesPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* #539: LLM model override + force-regenerate. */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-foreground">
+                Modello LLM
+              </label>
+              <Select value={selectedModel} onValueChange={setSelectedModel}>
+                <SelectTrigger data-testid="model-select">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MODEL_OPTIONS.map(m => (
+                    <SelectItem key={m.value} value={m.value}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <label className="mt-2 flex items-start gap-2 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={forceRegen}
+                  onChange={e => setForceRegen(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-border"
+                  data-testid="force-regen-checkbox"
+                />
+                Rigenera con un nuovo modello (ignora l&apos;idempotenza: crea una nuova analisi
+                anche se ne esiste già una per questo gioco/PDF).
+              </label>
             </div>
 
             <div>
@@ -691,6 +754,7 @@ export default function MechanicAnalysesPage() {
                             <Badge
                               variant="outline"
                               className={RUN_STATUS_BADGE_CLASS[run.status] ?? ''}
+                              title={SECTION_RUN_STATUS_DESC[run.status] ?? undefined}
                             >
                               {MECHANIC_SECTION_RUN_STATUS_LABELS[run.status] ?? run.status}
                             </Badge>

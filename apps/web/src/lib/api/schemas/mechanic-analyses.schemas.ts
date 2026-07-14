@@ -331,6 +331,12 @@ export interface GenerateMechanicAnalysisRequest {
   pdfDocumentId: string;
   costCapUsd: number;
   costCapOverride?: CostCapOverrideRequest;
+  /** #539: LLM model override (routes provider by name, e.g. "meta-llama/llama-3.3-70b-instruct" → OpenRouter, "qwen2.5:3b" → Ollama). Null → DeepSeek default. */
+  model?: string;
+  /** #539: provider label for telemetry (e.g. "OpenRouter", "Ollama"). */
+  provider?: string;
+  /** #539: skip the idempotency short-circuit so a re-run with a different model creates a new analysis. */
+  forceRegenerate?: boolean;
 }
 
 export interface SuppressMechanicAnalysisRequest {

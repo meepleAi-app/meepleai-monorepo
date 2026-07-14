@@ -141,7 +141,10 @@ internal static class AdminMechanicAnalysesEndpoints
                 PdfDocumentId: request.PdfDocumentId,
                 RequestedBy: adminId,
                 CostCapUsd: request.CostCapUsd,
-                CostCapOverride: overrideInput);
+                CostCapOverride: overrideInput,
+                ModelOverride: request.Model,
+                ProviderOverride: request.Provider,
+                ForceRegenerate: request.ForceRegenerate);
 
             var response = await mediator.Send(command, ct).ConfigureAwait(false);
 
@@ -403,7 +406,13 @@ internal sealed record GenerateMechanicAnalysisRequest(
     Guid SharedGameId,
     Guid PdfDocumentId,
     decimal CostCapUsd,
-    CostCapOverrideRequest? CostCapOverride = null);
+    CostCapOverrideRequest? CostCapOverride = null,
+    // #539 eval: optional LLM model/provider override (e.g. "meta-llama/llama-3.3-70b-instruct"
+    // → OpenRouter, "qwen2.5:3b" → Ollama). Null falls back to the DeepSeek defaults.
+    string? Model = null,
+    string? Provider = null,
+    // #539: force a fresh run (skip the idempotency short-circuit) — used by the "Regenerate" action.
+    bool ForceRegenerate = false);
 
 /// <summary>
 /// Optional planning-time cost cap override (B3=A). Mirrors

@@ -236,33 +236,9 @@ internal static class PdfSeeder
                 db.PdfDocuments.Add(pdfEntity);
                 await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
-                // Enqueue a ProcessingJob so PdfProcessingQuartzJob picks this PDF up.
-                // We write the EF entity directly (not the ProcessingJob.Create aggregate
-                // factory) to bypass the MaxQueueSize=100 guard — a seed run can push
-                // more than 100 PDFs and those limits are meant for user-driven enqueue,
-                // not batch seeding. We also initialise the five standard pipeline steps
-                // so the job row matches what EnqueuePdfCommandHandler would have produced.
-                var now = DateTimeOffset.UtcNow;
-                var jobEntity = new ProcessingJobEntity
-                {
-                    Id = Guid.NewGuid(),
-                    PdfDocumentId = pdfEntity.Id,
-                    UserId = systemUserId,
-                    Status = nameof(JobStatus.Queued),
-                    Priority = 0,
-                    CreatedAt = now,
-                    MaxRetries = 3,
-                    RetryCount = 0,
-                };
-                jobEntity.Steps = new List<ProcessingStepEntity>
-                {
-                    new() { Id = Guid.NewGuid(), ProcessingJobId = jobEntity.Id, StepName = nameof(ProcessingStepType.Upload),  Status = "Pending" },
-                    new() { Id = Guid.NewGuid(), ProcessingJobId = jobEntity.Id, StepName = nameof(ProcessingStepType.Extract), Status = "Pending" },
-                    new() { Id = Guid.NewGuid(), ProcessingJobId = jobEntity.Id, StepName = nameof(ProcessingStepType.Chunk),   Status = "Pending" },
-                    new() { Id = Guid.NewGuid(), ProcessingJobId = jobEntity.Id, StepName = nameof(ProcessingStepType.Embed),   Status = "Pending" },
-                    new() { Id = Guid.NewGuid(), ProcessingJobId = jobEntity.Id, StepName = nameof(ProcessingStepType.Index),   Status = "Pending" },
-                };
-                db.Set<ProcessingJobEntity>().Add(jobEntity);
+                // Enqueue a Queued ProcessingJob (+5 steps) so PdfProcessingQuartzJob picks
+                // this PDF up. See EnqueueProcessingJob for the direct-entity rationale.
+                var jobEntity = EnqueueProcessingJob(db, pdfEntity.Id, systemUserId);
                 await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
                 // Track for subsequent iterations
@@ -361,17 +337,42 @@ internal static class PdfSeeder
         pdfEntity.RetryCount = 0;
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
-        // Re-enqueue a ProcessingJob with the five standard pipeline steps (identical to the
-        // new-record flow) so PdfProcessingQuartzJob picks the repaired PDF up again.
-        var now = DateTimeOffset.UtcNow;
+        // Re-enqueue a Queued ProcessingJob (+5 steps) identical to the new-record flow so
+        // PdfProcessingQuartzJob picks the repaired PDF up again.
+        var jobEntity = EnqueueProcessingJob(db, existingId, systemUserId);
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        logger.LogInformation(
+            "PdfSeeder: repaired: re-uploaded missing blob for '{FileName}' (pdfId {Id}, JobId={JobId}, {Size} bytes) and reset to Pending",
+            fileName, existingId, jobEntity.Id, result.FileSizeBytes);
+        return true;
+    }
+
+    /// <summary>
+    /// Builds a Queued <see cref="ProcessingJobEntity"/> with the five standard pipeline steps
+    /// (Upload/Extract/Chunk/Embed/Index, all "Pending") and adds it to the change tracker so
+    /// <c>PdfProcessingQuartzJob</c> (polls <c>processing_jobs WHERE Status='Queued'</c>) picks
+    /// the PDF up.
+    ///
+    /// Writes the EF entity directly (not the <c>ProcessingJob.Create</c> aggregate factory) to
+    /// bypass the MaxQueueSize=100 guard — a batch seed/recovery run can push more than 100 PDFs
+    /// and that cap is meant for user-driven enqueue. The caller owns the <c>SaveChangesAsync</c>.
+    /// Shared by the new-record path, the missing-blob repair path, and the #2908 stale-Pending
+    /// re-enqueue seeder.
+    /// </summary>
+    internal static ProcessingJobEntity EnqueueProcessingJob(
+        MeepleAiDbContext db,
+        Guid pdfDocumentId,
+        Guid systemUserId)
+    {
         var jobEntity = new ProcessingJobEntity
         {
             Id = Guid.NewGuid(),
-            PdfDocumentId = existingId,
+            PdfDocumentId = pdfDocumentId,
             UserId = systemUserId,
             Status = nameof(JobStatus.Queued),
             Priority = 0,
-            CreatedAt = now,
+            CreatedAt = DateTimeOffset.UtcNow,
             MaxRetries = 3,
             RetryCount = 0,
         };
@@ -384,12 +385,7 @@ internal static class PdfSeeder
             new() { Id = Guid.NewGuid(), ProcessingJobId = jobEntity.Id, StepName = nameof(ProcessingStepType.Index),   Status = "Pending" },
         };
         db.Set<ProcessingJobEntity>().Add(jobEntity);
-        await db.SaveChangesAsync(ct).ConfigureAwait(false);
-
-        logger.LogInformation(
-            "PdfSeeder: repaired: re-uploaded missing blob for '{FileName}' (pdfId {Id}, JobId={JobId}, {Size} bytes) and reset to Pending",
-            fileName, existingId, jobEntity.Id, result.FileSizeBytes);
-        return true;
+        return jobEntity;
     }
 
     /// <summary>

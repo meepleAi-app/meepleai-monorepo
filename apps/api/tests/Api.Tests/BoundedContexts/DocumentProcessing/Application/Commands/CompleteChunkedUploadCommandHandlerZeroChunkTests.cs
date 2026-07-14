@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
@@ -113,6 +114,7 @@ public class CompleteChunkedUploadCommandHandlerZeroChunkTests
                 extractorMock.Object,
                 tableExtractorMock.Object,
                 Mock.Of<IMediator>(),
+                Mock.Of<IPdfDeduplicationService>(),
                 TimeProvider.System);
 
             // Act --------------------------------------------------------------------

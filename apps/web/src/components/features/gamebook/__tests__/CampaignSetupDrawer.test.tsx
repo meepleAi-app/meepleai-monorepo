@@ -135,49 +135,41 @@ describe('CampaignSetupDrawer — Step 1 (Name + Preset)', () => {
 // ─── Step 2: Players ─────────────────────────────────────────────────────────
 
 describe('CampaignSetupDrawer — Step 2 (Players)', () => {
-  it('renders host + guest chips for default preset group-a', async () => {
+  async function advanceToStep2(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+    const titleInput = screen.getByTestId('campaign-setup-title');
+    await user.clear(titleInput);
+    await user.type(titleInput, 'Test campaign');
+    await user.click(screen.getByTestId('campaign-setup-next'));
+  }
+
+  it('shows the host and an enabled add-guest input (#2917)', async () => {
     const user = userEvent.setup();
     wrap(
       <CampaignSetupDrawer gameId="g1" gameTitle="Nanolith" open={true} onOpenChange={() => {}} />
     );
+    await advanceToStep2(user);
 
-    // Type a valid title so Next is enabled
-    const titleInput = screen.getByTestId('campaign-setup-title');
-    await user.clear(titleInput);
-    await user.type(titleInput, 'Test campaign');
-
-    await user.click(screen.getByTestId('campaign-setup-next'));
-
-    // Step 2 should show player chips for group-a (Aaron host + Marco + Giulia + Luca)
-    expect(screen.getByText('Aaron')).toBeInTheDocument();
-    expect(screen.getByText('Marco')).toBeInTheDocument();
-    expect(screen.getByText('Giulia')).toBeInTheDocument();
-    expect(screen.getByText('Luca')).toBeInTheDocument();
-
-    // Host indicator
+    // Host (the authenticated owner, seeded server-side)
+    expect(screen.getByText('Tu')).toBeInTheDocument();
     expect(screen.getByText(/Host · tu/)).toBeInTheDocument();
 
-    // "Aggiungi giocatore" button should be disabled
-    const addButton = screen.getByRole('button', { name: /Aggiungi giocatore/ });
-    expect(addButton).toHaveAttribute('aria-disabled', 'true');
+    // The roster is now editable: a real add-guest input (no disabled placeholder).
+    expect(screen.getByTestId('campaign-add-guest-input')).toBeInTheDocument();
   });
 
-  it('shows agent suggestion card with player count', async () => {
+  it('adds a guest to the roster and removes it (#2917)', async () => {
     const user = userEvent.setup();
     wrap(
       <CampaignSetupDrawer gameId="g1" gameTitle="Nanolith" open={true} onOpenChange={() => {}} />
     );
+    await advanceToStep2(user);
 
-    const titleInput = screen.getByTestId('campaign-setup-title');
-    await user.clear(titleInput);
-    await user.type(titleInput, 'Test campaign');
-    await user.click(screen.getByTestId('campaign-setup-next'));
+    await user.type(screen.getByTestId('campaign-add-guest-input'), 'Marco');
+    await user.click(screen.getByTestId('campaign-add-guest-button'));
+    expect(screen.getByText('Marco')).toBeInTheDocument();
 
-    // Agent suggestion card — "4 giocatori" appears in both the party heading and
-    // the agent <strong>, so use getAllByText to confirm at least one instance.
-    expect(screen.getByText(/Nanolith Tutor/)).toBeInTheDocument();
-    const playerCountMatches = screen.getAllByText(/4 giocatori/);
-    expect(playerCountMatches.length).toBeGreaterThanOrEqual(1);
+    await user.click(screen.getByRole('button', { name: /Rimuovi Marco/ }));
+    expect(screen.queryByText('Marco')).not.toBeInTheDocument();
   });
 });
 
@@ -288,9 +280,42 @@ describe('CampaignSetupDrawer — Footer + Submit', () => {
     await user.click(screen.getByTestId('campaign-setup-submit'));
 
     await waitFor(() =>
-      expect(client.createCampaign).toHaveBeenCalledWith({ gameId: 'g1', title: 'Test campaign' })
+      expect(client.createCampaign).toHaveBeenCalledWith({
+        gameId: 'g1',
+        title: 'Test campaign',
+        guestNames: [],
+      })
     );
     await waitFor(() => expect(pushSpy).toHaveBeenCalledWith('/library/g1/play/c1'));
+  });
+
+  it('submit sends the guest roster in the payload (#2917)', async () => {
+    vi.mocked(client.createCampaign).mockResolvedValueOnce({ id: 'c1' } as never);
+
+    const user = userEvent.setup();
+    wrap(
+      <CampaignSetupDrawer gameId="g1" gameTitle="Nanolith" open={true} onOpenChange={() => {}} />
+    );
+
+    const titleInput = screen.getByTestId('campaign-setup-title');
+    await user.clear(titleInput);
+    await user.type(titleInput, 'Test campaign');
+    await user.click(screen.getByTestId('campaign-setup-next'));
+
+    // Add a guest in Step 2
+    await user.type(screen.getByTestId('campaign-add-guest-input'), 'Marco');
+    await user.click(screen.getByTestId('campaign-add-guest-button'));
+
+    await user.click(screen.getByTestId('campaign-setup-next'));
+    await user.click(screen.getByTestId('campaign-setup-submit'));
+
+    await waitFor(() =>
+      expect(client.createCampaign).toHaveBeenCalledWith({
+        gameId: 'g1',
+        title: 'Test campaign',
+        guestNames: ['Marco'],
+      })
+    );
   });
 
   it('submit error: shows error message', async () => {

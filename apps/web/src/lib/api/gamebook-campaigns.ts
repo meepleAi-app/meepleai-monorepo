@@ -101,6 +101,13 @@ export type GamebookCampaignSpine = z.infer<typeof GamebookCampaignSpineSchema>;
 export interface CreateCampaignInput {
   gameId: string;
   title: string;
+  /**
+   * #2917: optional roster. Per decision #2759 (MVP) the authenticated owner is seeded
+   * server-side; everyone else is a free guest name. Extra User-linked participants are
+   * reserved (`participants`) but the MVP sends guests only.
+   */
+  guestNames?: string[];
+  participants?: Array<{ displayName: string; isOwner: boolean }>;
 }
 
 async function parseJson<T>(res: Response, schema: z.ZodSchema<T>): Promise<T> {

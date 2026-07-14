@@ -147,8 +147,23 @@ export function CampaignSetupDrawer({
   const [presetId, setPresetId] = useState<PresetId>(initialPresetId ?? 'group-a');
   const preset = PRESETS.find(p => p.id === presetId) ?? PRESETS[0];
 
+  // #2917: real roster. Per decision #2759 (MVP), the authenticated owner is seeded
+  // server-side (as a non-live Session); everyone else is a free guest name.
+  const [guests, setGuests] = useState<string[]>([]);
+  const [guestInput, setGuestInput] = useState('');
+  const addGuest = (): void => {
+    const name = guestInput.trim();
+    if (name.length > 0 && !guests.includes(name)) {
+      setGuests(prev => [...prev, name]);
+      setGuestInput('');
+    }
+  };
+  const removeGuest = (name: string): void => {
+    setGuests(prev => prev.filter(g => g !== name));
+  };
+
   const mutation = useMutation({
-    mutationFn: () => createCampaign({ gameId, title: title.trim() }),
+    mutationFn: () => createCampaign({ gameId, title: title.trim(), guestNames: guests }),
     onSuccess: campaign => {
       reset();
       router.push(`/library/${gameId}/play/${campaign.id}`);
@@ -180,6 +195,8 @@ export function CampaignSetupDrawer({
     setStep(1);
     setTitle('Campagna con i ragazzi');
     setPresetId('group-a');
+    setGuests([]);
+    setGuestInput('');
     mutation.reset();
     isInitialMountRef.current = true;
   }
@@ -249,12 +266,21 @@ export function CampaignSetupDrawer({
               onPresetChange={setPresetId}
             />
           )}
-          {step === 2 && <StepPlayers preset={preset} />}
+          {step === 2 && (
+            <StepPlayers
+              guests={guests}
+              guestInput={guestInput}
+              onGuestInputChange={setGuestInput}
+              onAddGuest={addGuest}
+              onRemoveGuest={removeGuest}
+            />
+          )}
           {step === 3 && (
             <StepConfirm
               gameTitle={gameTitle}
               campaignTitle={trimmedTitle}
               preset={preset}
+              guests={guests}
               error={
                 mutation.isError
                   ? mutation.error instanceof Error
@@ -435,72 +461,104 @@ function StepName({
 
 // ─── Step 2 · Players ───────────────────────────────────────────────────────
 
-function StepPlayers({ preset }: { preset: PresetConfig }): ReactElement {
+interface StepPlayersProps {
+  readonly guests: readonly string[];
+  readonly guestInput: string;
+  readonly onGuestInputChange: (v: string) => void;
+  readonly onAddGuest: () => void;
+  readonly onRemoveGuest: (name: string) => void;
+}
+
+function StepPlayers({
+  guests,
+  guestInput,
+  onGuestInputChange,
+  onAddGuest,
+  onRemoveGuest,
+}: StepPlayersProps): ReactElement {
+  const partySize = guests.length + 1; // +1 host
   return (
     <div className="grid gap-4">
       <div>
         <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-          Party · {preset.players.length} {preset.players.length === 1 ? 'giocatore' : 'giocatori'}
+          Party · {partySize} {partySize === 1 ? 'giocatore' : 'giocatori'}
         </h3>
-        <div className="grid grid-cols-2 gap-2">
-          {preset.players.map(p => {
-            const isHost = p.role === 'host';
-            return (
-              <div
-                key={p.id}
-                className={
-                  isHost
-                    ? 'flex items-center gap-2 rounded-md border border-[hsl(var(--c-session)/0.55)] bg-[hsl(var(--c-session)/0.1)] px-3 py-2'
-                    : 'flex items-center gap-2 rounded-md border border-[hsl(var(--c-player)/0.35)] bg-[hsl(var(--c-player)/0.08)] px-3 py-2'
-                }
+        <div className="grid gap-2">
+          {/* Host — the authenticated owner, seeded server-side (#2917). */}
+          <div className="flex items-center gap-2 rounded-md border border-[hsl(var(--c-session)/0.55)] bg-[hsl(var(--c-session)/0.1)] px-3 py-2">
+            <span
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--c-session))] font-mono text-xs font-bold text-white"
+              aria-hidden="true"
+            >
+              ★
+            </span>
+            <span className="flex-1 truncate">
+              <span className="block text-sm font-semibold text-foreground">Tu</span>
+              <span className="block font-mono text-[10px] text-[hsl(var(--c-session))]">
+                ⭐ Host · tu
+              </span>
+            </span>
+          </div>
+
+          {/* Guests */}
+          {guests.map(name => (
+            <div
+              key={name}
+              className="flex items-center gap-2 rounded-md border border-[hsl(var(--c-player)/0.35)] bg-[hsl(var(--c-player)/0.08)] px-3 py-2"
+            >
+              <span
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--c-player))] font-mono text-xs font-bold text-white"
+                aria-hidden="true"
               >
-                <span
-                  className={
-                    isHost
-                      ? 'flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--c-session))] font-mono text-xs font-bold text-white'
-                      : 'flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--c-player))] font-mono text-xs font-bold text-white'
-                  }
-                  aria-hidden="true"
-                >
-                  {p.initial}
-                </span>
-                <span className="flex-1 truncate">
-                  <span className="block text-sm font-semibold text-foreground">{p.name}</span>
-                  <span
-                    className={
-                      isHost
-                        ? 'block font-mono text-[10px] text-[hsl(var(--c-session))]'
-                        : 'block font-mono text-[10px] text-[hsl(var(--c-player))]'
-                    }
-                  >
-                    {isHost ? '⭐ Host · tu' : 'guest'}
-                  </span>
-                </span>
-              </div>
-            );
-          })}
-          {/* Add-custom slot (visual only for Iter 4 — wire-up in iter futuro) */}
-          <button
-            type="button"
-            disabled
-            className="flex items-center justify-center gap-1 rounded-md border-2 border-dashed border-border bg-transparent px-3 py-2 text-sm font-semibold text-muted-foreground opacity-60"
-            aria-disabled="true"
-            title="Aggiunta custom — disponibile in iter futuro"
-          >
-            ＋ Aggiungi giocatore
-          </button>
+                {name.charAt(0).toUpperCase()}
+              </span>
+              <span className="flex-1 truncate text-sm font-semibold text-foreground">{name}</span>
+              <button
+                type="button"
+                onClick={() => onRemoveGuest(name)}
+                className="rounded-sm px-2 py-0.5 text-xs font-semibold text-muted-foreground hover:text-[hsl(var(--c-danger))]"
+                aria-label={`Rimuovi ${name}`}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="flex gap-3 rounded-md border border-[hsl(var(--c-agent)/0.25)] bg-[hsl(var(--c-agent)/0.08)] p-3 text-sm">
-        <span aria-hidden="true" className="text-lg">
-          🤖
-        </span>
-        <span className="text-muted-foreground">
-          <strong className="font-bold text-[hsl(var(--c-agent))]">Nanolith Tutor</strong> consiglia{' '}
-          <strong className="font-semibold">{preset.players.length} giocatori</strong> per la prima
-          campagna.
-        </span>
+      <div className="grid gap-1.5">
+        <label
+          htmlFor="campaign-add-guest"
+          className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground"
+        >
+          Aggiungi giocatore
+        </label>
+        <div className="flex gap-2">
+          <input
+            id="campaign-add-guest"
+            type="text"
+            value={guestInput}
+            onChange={e => onGuestInputChange(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                onAddGuest();
+              }
+            }}
+            placeholder="Nome giocatore"
+            className="flex-1 rounded-md border border-input bg-background px-3 py-2 outline-none focus:border-[hsl(var(--c-session))] focus:ring-[3px] focus:ring-[hsl(var(--c-session)/0.18)]"
+            data-testid="campaign-add-guest-input"
+          />
+          <button
+            type="button"
+            onClick={onAddGuest}
+            disabled={guestInput.trim().length === 0}
+            className="rounded-md border border-input bg-background px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+            data-testid="campaign-add-guest-button"
+          >
+            ＋ Aggiungi
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -512,11 +570,19 @@ interface StepConfirmProps {
   readonly gameTitle: string;
   readonly campaignTitle: string;
   readonly preset: PresetConfig;
+  readonly guests: readonly string[];
   readonly error: string | null;
 }
 
-function StepConfirm({ gameTitle, campaignTitle, preset, error }: StepConfirmProps): ReactElement {
-  const playerNames = preset.players.map(p => p.name).join(' · ');
+function StepConfirm({
+  gameTitle,
+  campaignTitle,
+  preset,
+  guests,
+  error,
+}: StepConfirmProps): ReactElement {
+  // #2917: summarize the real roster (host + guests), not the cosmetic preset.
+  const playerNames = ['Tu', ...guests].join(' · ');
   return (
     <div className="grid gap-3">
       <article

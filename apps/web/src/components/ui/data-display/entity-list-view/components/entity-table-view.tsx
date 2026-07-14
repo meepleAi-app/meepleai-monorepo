@@ -84,7 +84,7 @@ export interface EntityTableViewProps<T> {
 // Auto-generate columns from MeepleCardProps
 // ============================================================================
 
-function createDefaultColumns(entity: MeepleEntityType): ColumnDef<TableRowData, unknown>[] {
+function createDefaultColumns(): ColumnDef<TableRowData, unknown>[] {
   return [
     {
       accessorKey: 'title',
@@ -104,8 +104,7 @@ function createDefaultColumns(entity: MeepleEntityType): ColumnDef<TableRowData,
               <span
                 className={cn(
                   'ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase',
-                  `bg-[hsl(var(--e-${entity}))/0.1]`,
-                  `text-[hsl(var(--e-${entity}))]`
+                  'bg-muted text-muted-foreground'
                 )}
               >
                 {row.original.badge}
@@ -219,8 +218,8 @@ export function EntityTableView<T>({
     if (customColumns && customColumns.length > 0) {
       return createColumnsFromConfig(customColumns);
     }
-    return createDefaultColumns(entity);
-  }, [customColumns, entity]);
+    return createDefaultColumns();
+  }, [customColumns]);
 
   // Row click handler
   const handleRowClick = useMemo(() => {

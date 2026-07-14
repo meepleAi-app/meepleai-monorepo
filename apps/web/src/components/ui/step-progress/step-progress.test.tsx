@@ -19,13 +19,12 @@ describe('StepProgress', () => {
     expect(screen.getByText('Step 3')).toBeInTheDocument();
   });
 
-  it('completed steps have completed styling (inline background color)', () => {
+  it('completed steps have completed styling (bg-primary fill)', () => {
     const { container } = render(<StepProgress steps={makeSteps(4)} currentIndex={2} />);
     const completed = container.querySelector('[data-step-status="completed"]');
     expect(completed).toBeInTheDocument();
-    // Check data-step-circle child has inline style
     const circle = completed?.querySelector('[data-step-circle]') as HTMLElement | null;
-    expect(circle?.style.backgroundColor).toMatch(/hsl/i);
+    expect(circle?.className).toMatch(/bg-primary/);
   });
 
   it('current step has current styling (ring and scale)', () => {
@@ -69,22 +68,22 @@ describe('StepProgress', () => {
     expect(items[3]?.getAttribute('data-step-status')).toBe('pending');
   });
 
-  it('entity prop applies correct HSL inline to completed circles', () => {
+  it('completed circles use the bg-primary fill', () => {
     const { container } = render(
       <StepProgress steps={makeSteps(3)} currentIndex={2} entity="session" />
     );
     const completed = container.querySelector(
       '[data-step-status="completed"] [data-step-circle]'
     ) as HTMLElement | null;
-    expect(completed?.style.backgroundColor).toContain('var(--e-session)');
+    expect(completed?.className).toMatch(/bg-primary/);
   });
 
-  it('default entity (no prop) uses --e-game brand color', () => {
+  it('current + completed circles are branded with bg-primary', () => {
     const { container } = render(<StepProgress steps={makeSteps(3)} currentIndex={2} />);
     const completed = container.querySelector(
       '[data-step-status="completed"] [data-step-circle]'
     ) as HTMLElement | null;
-    expect(completed?.style.backgroundColor).toContain('var(--e-game)');
+    expect(completed?.className).toMatch(/bg-primary/);
   });
 
   it('sets role="progressbar" and aria-valuenow reflects currentIndex+1', () => {
@@ -118,14 +117,12 @@ describe('StepProgress', () => {
     expect(bar?.className).toMatch(/custom-xyz/);
   });
 
-  it('handles kb entity mapping to --e-document', () => {
+  it('sets data-entity="kb" on the progressbar root', () => {
     const { container } = render(
       <StepProgress steps={makeSteps(3)} currentIndex={2} entity="kb" />
     );
-    const completed = container.querySelector(
-      '[data-step-status="completed"] [data-step-circle]'
-    ) as HTMLElement | null;
-    expect(completed?.style.backgroundColor).toContain('var(--e-document)');
+    const bar = container.querySelector('[role="progressbar"]');
+    expect(bar).toHaveAttribute('data-entity', 'kb');
   });
 
   it('handles 2 steps (min edge)', () => {

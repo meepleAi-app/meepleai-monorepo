@@ -1,21 +1,8 @@
-import type { CSSProperties, JSX } from 'react';
+import type { JSX } from 'react';
 
 import clsx from 'clsx';
 
 import type { EntityType } from '@/components/ui/entity-tokens';
-
-// Mirror entity-card / btn ENTITY_CSS_VAR_KEY mapping so `kb` resolves to `--c-kb`
-const ENTITY_CSS_VAR_KEY: Record<EntityType, string> = {
-  game: 'game',
-  player: 'player',
-  session: 'session',
-  agent: 'agent',
-  kb: 'document',
-  chat: 'chat',
-  event: 'event',
-  toolkit: 'toolkit',
-  tool: 'tool',
-};
 
 export type ToggleSwitchSize = 'sm' | 'md';
 
@@ -61,16 +48,11 @@ export function ToggleSwitch({
     console.warn('ToggleSwitch: provide `ariaLabel` or `ariaLabelledBy` for accessibility.');
   }
 
-  const cssKey = ENTITY_CSS_VAR_KEY[entity];
-  const entityColor = `hsl(var(--e-${cssKey}))`;
-
-  const trackStyle: CSSProperties = checked ? { backgroundColor: entityColor } : {};
-
   const trackClasses = clsx(
     'relative inline-flex items-center rounded-full transition-colors',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
     TRACK_CLASSES[size],
-    !checked && 'bg-muted',
+    checked ? 'bg-primary' : 'bg-muted',
     disabled && 'opacity-50 cursor-not-allowed',
     className
   );
@@ -80,11 +62,6 @@ export function ToggleSwitch({
     THUMB_CLASSES[size],
     checked ? THUMB_TRANSLATE[size] : 'translate-x-0.5'
   );
-
-  const focusRingStyle: CSSProperties = {
-    // via CSS custom property so ring uses entity color
-    ['--tw-ring-color' as string]: entityColor,
-  };
 
   return (
     <button
@@ -98,7 +75,6 @@ export function ToggleSwitch({
       disabled={disabled}
       data-entity={entity}
       className={trackClasses}
-      style={{ ...trackStyle, ...focusRingStyle }}
       onClick={() => {
         if (!disabled) onCheckedChange(!checked);
       }}

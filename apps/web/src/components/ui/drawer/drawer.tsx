@@ -6,7 +6,6 @@ import {
   useContext,
   useMemo,
   type ButtonHTMLAttributes,
-  type CSSProperties,
   type HTMLAttributes,
   type ReactNode,
 } from 'react';
@@ -17,19 +16,6 @@ import { Drawer as VaulDrawer } from 'vaul';
 
 import { useDrawerBreakpoint } from '@/components/ui/drawer/use-drawer-breakpoint';
 import type { EntityType } from '@/components/ui/entity-tokens';
-
-// Mirror EntityCard: `kb` -> `--c-kb` (pre-existing token name).
-const ENTITY_CSS_VAR_KEY: Record<EntityType, string> = {
-  game: 'game',
-  player: 'player',
-  session: 'session',
-  agent: 'agent',
-  kb: 'document',
-  chat: 'chat',
-  event: 'event',
-  toolkit: 'toolkit',
-  tool: 'tool',
-};
 
 export type DrawerSide = 'auto' | 'mobile-bottom' | 'desktop-right';
 export type DrawerDirection = 'bottom' | 'right';
@@ -68,11 +54,6 @@ function resolveMode(
   if (side === 'mobile-bottom') return 'mobile';
   if (side === 'desktop-right') return 'desktop';
   return breakpoint;
-}
-
-function entityAccentStyle(entity: EntityType | undefined): CSSProperties | undefined {
-  if (!entity) return undefined;
-  return { backgroundColor: `hsl(var(--e-${ENTITY_CSS_VAR_KEY[entity]}))` };
 }
 
 export function Drawer({
@@ -119,8 +100,10 @@ export const DrawerContent = forwardRef<HTMLDivElement, DrawerContentProps>(func
           <div
             data-drawer-accent={entity}
             aria-hidden="true"
-            className={clsx('mx-auto mt-2 h-1 w-12 rounded-full', !entity && 'bg-border')}
-            style={entityAccentStyle(entity)}
+            className={clsx(
+              'mx-auto mt-2 h-1 w-12 rounded-full',
+              entity ? 'bg-primary' : 'bg-border'
+            )}
           />
           {children}
         </VaulDrawer.Content>
@@ -135,8 +118,7 @@ export const DrawerContent = forwardRef<HTMLDivElement, DrawerContentProps>(func
           <div
             data-drawer-accent={entity}
             aria-hidden="true"
-            className="absolute inset-y-0 left-0 w-1 rounded-l-2xl"
-            style={entityAccentStyle(entity)}
+            className="absolute inset-y-0 left-0 w-1 rounded-l-2xl bg-primary"
           />
         )}
         {children}

@@ -1,21 +1,8 @@
-import type { CSSProperties, JSX, ReactNode } from 'react';
+import type { JSX, ReactNode } from 'react';
 
 import clsx from 'clsx';
 
 import type { EntityType } from '@/components/ui/entity-tokens';
-
-// Mirror entity-card / btn ENTITY_CSS_VAR_KEY mapping so `kb` resolves to `--c-kb`
-const ENTITY_CSS_VAR_KEY: Record<EntityType, string> = {
-  game: 'game',
-  player: 'player',
-  session: 'session',
-  agent: 'agent',
-  kb: 'document',
-  chat: 'chat',
-  event: 'event',
-  toolkit: 'toolkit',
-  tool: 'tool',
-};
 
 export interface SettingsRowProps {
   readonly icon?: ReactNode;
@@ -69,10 +56,6 @@ export function SettingsRow({
   const useButton = Boolean(onClick);
   const useLink = !useButton && Boolean(href);
 
-  const iconStyle: CSSProperties | undefined = entity
-    ? { color: `hsl(var(--e-${ENTITY_CSS_VAR_KEY[entity]}))` }
-    : undefined;
-
   const showAutoChevron = isInteractive && trailing === undefined;
 
   const innerClasses = clsx(
@@ -89,7 +72,7 @@ export function SettingsRow({
   const body = (
     <>
       {icon !== undefined ? (
-        <span data-testid="settings-row-icon" className="flex-shrink-0 text-lg" style={iconStyle}>
+        <span data-testid="settings-row-icon" className="flex-shrink-0 text-lg">
           {icon}
         </span>
       ) : null}
@@ -109,7 +92,7 @@ export function SettingsRow({
   );
 
   return (
-    <li className={className}>
+    <li className={className} data-entity={entity}>
       {useButton ? (
         <button
           type="button"

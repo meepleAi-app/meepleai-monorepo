@@ -61,6 +61,7 @@ internal static class DocumentProcessingServiceExtensions
         services.AddScoped<IUserQuotaInfoService, UserQuotaInfoService>(); // Local read service for user quota info (avoids cross-BC IUserRepository dependency)
         services.AddScoped<IQueueBackpressureService, QueueBackpressureService>(); // Issue #5457: Backpressure
         services.AddScoped<CitationPriorityService>(); // ISSUE-2051: Citation priority and deduplication
+        services.AddScoped<IPdfDeduplicationService, PdfDeduplicationService>(); // Centralized PDF dedup rule (cover-config plan Task 1)
 
         // Issue #3653: Private PDF progress streaming service (singleton for in-memory subscriber management)
         services.AddSingleton<IPrivatePdfProgressStreamService, PrivatePdfProgressStreamService>();

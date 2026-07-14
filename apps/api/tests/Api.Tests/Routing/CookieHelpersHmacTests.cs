@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using System.Security.Cryptography;
 using Xunit;
@@ -131,13 +132,16 @@ public sealed class CookieHelpersHmacTests
             "not silently accepted.");
     }
 
-    [Fact(Skip = "C4 grace period hardcoded sunset (UserRoleCookieV1SunsetUtc = 2026-05-13) is now in the past; pre-sunset behaviour is no longer reachable from a real clock. To restore coverage, refactor CookieHelpers to take an ITimeProvider/clock seam and reintroduce this assertion under a controlled now, or replace with a post-sunset assertion (v1 cookie → null). Tracked separately from #892.")]
+    [Fact]
     public void ReadUserRoleCookie_FallbackV1_ReturnsRole_DuringGracePeriod()
     {
-        // Only a v1 cookie is present (legacy session pre-deploy). During the
-        // grace window we must still authorise the user to avoid logging out
-        // every existing session on deploy day.
-        var ctx = CreateContext(out _);
+        // #2934: clock pinned BEFORE the sunset (2026-05-13) via an injected TimeProvider,
+        // so the grace window is open regardless of the wall clock. Only a v1 cookie is
+        // present (legacy session pre-deploy); during the grace window we must still
+        // authorise the user to avoid logging out every existing session on deploy day.
+        var beforeSunset = new FakeTimeProvider(new DateTimeOffset(2026, 5, 1, 0, 0, 0, TimeSpan.Zero));
+        var provider = new EphemeralDataProtectionProvider();
+        var ctx = CreateContextWithProvider(provider, beforeSunset);
         ctx.Request.Headers.Cookie = $"{V1Name}=admin";
 
         var role = CookieHelpers.ReadUserRoleCookie(ctx);
@@ -145,6 +149,24 @@ public sealed class CookieHelpersHmacTests
         role.Should().Be("admin",
             "during the 7-day v1 grace period a legacy plaintext cookie must still " +
             "yield the role so existing sessions survive deploy.");
+    }
+
+    [Fact]
+    public void ReadUserRoleCookie_FallbackV1_ReturnsNull_AfterSunset()
+    {
+        // #2934: clock pinned AFTER the sunset (2026-05-13) via an injected TimeProvider.
+        // The v1 grace window is closed, so an intact legacy plaintext cookie must be
+        // ignored — the client must have re-logged in to receive a v2 HMAC cookie.
+        var afterSunset = new FakeTimeProvider(new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero));
+        var provider = new EphemeralDataProtectionProvider();
+        var ctx = CreateContextWithProvider(provider, afterSunset);
+        ctx.Request.Headers.Cookie = $"{V1Name}=admin";
+
+        var role = CookieHelpers.ReadUserRoleCookie(ctx);
+
+        role.Should().BeNull(
+            "after the v1 sunset an intact plaintext cookie must be rejected — a stale " +
+            "v1 cookie must not keep authorising a session past the grace window.");
     }
 
     // -------------------------------------------------------------------------
@@ -170,7 +192,9 @@ public sealed class CookieHelpersHmacTests
         return CreateContextWithProvider(providerMock.Object);
     }
 
-    private static HttpContext CreateContextWithProvider(IDataProtectionProvider provider)
+    private static HttpContext CreateContextWithProvider(
+        IDataProtectionProvider provider,
+        TimeProvider? timeProvider = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton(provider);
@@ -180,6 +204,13 @@ public sealed class CookieHelpersHmacTests
         var envMock = new Mock<IHostEnvironment>();
         envMock.SetupGet(e => e.EnvironmentName).Returns("Production"); // bypass dev SameSite=None workaround
         services.AddSingleton(envMock.Object);
+
+        // #2934: register a controllable clock only when the test supplies one. When null,
+        // CookieHelpers falls back to TimeProvider.System (matches production wiring).
+        if (timeProvider is not null)
+        {
+            services.AddSingleton(timeProvider);
+        }
 
         var sp = services.BuildServiceProvider();
         var ctx = new DefaultHttpContext { RequestServices = sp };

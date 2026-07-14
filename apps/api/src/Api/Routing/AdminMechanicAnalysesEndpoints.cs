@@ -114,6 +114,15 @@ internal static class AdminMechanicAnalysesEndpoints
         .WithName("AdminMechanicMetricsFilterOptions")
         .WithSummary("DISTINCT game + reviewer options for the metrics filter dropdowns (#2837)");
 
+        // #539 follow-up: read-only view of the current prompt (system + per-section) for inspection.
+        group.MapGet("/prompt", async (IMediator mediator, CancellationToken ct) =>
+        {
+            var result = await mediator.Send(new GetMechanicPromptQuery(), ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("AdminGetMechanicPrompt")
+        .WithSummary("Get the current Mechanic Extractor prompt (system + per-section) for inspection (#539)");
+
         // POST /api/v1/admin/mechanic-analyses
         // Enqueues the async AI pipeline (B5=B). Returns 202 Accepted with polling URL.
         group.MapPost("/", async (

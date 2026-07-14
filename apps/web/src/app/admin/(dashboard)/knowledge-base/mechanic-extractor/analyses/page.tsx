@@ -27,8 +27,10 @@ import {
   CheckIcon,
   ClockIcon,
   DollarSignIcon,
+  FileTextIcon,
   Loader2Icon,
   PlayIcon,
+  RefreshCwIcon,
   SendIcon,
   ShieldAlertIcon,
   SparklesIcon,
@@ -156,6 +158,9 @@ export default function MechanicAnalysesPage() {
   // #539: LLM model override + force-regenerate (bypass idempotency).
   const [selectedModel, setSelectedModel] = useState<string>('default');
   const [forceRegen, setForceRegen] = useState(false);
+  // #539 follow-up: regenerate-this-analysis model picker + prompt-viewer modal.
+  const [regenModel, setRegenModel] = useState<string>('default');
+  const [promptOpen, setPromptOpen] = useState(false);
   const [overrideEnabled, setOverrideEnabled] = useState(false);
   const [overrideCapUsd, setOverrideCapUsd] = useState<string>('1.00');
   const [overrideReason, setOverrideReason] = useState('');
@@ -284,6 +289,39 @@ export default function MechanicAnalysesPage() {
       const msg = e instanceof Error ? e.message : 'Generation failed';
       setGenerateError(msg);
     },
+  });
+
+  // #539 follow-up: regenerate the CURRENT analysis (same game+PDF) with a chosen engine.
+  // Reuses the generate endpoint with forceRegenerate=true (skips idempotency → new analysis).
+  const regenerateMutation = useMutation({
+    mutationFn: async () => {
+      if (!status) throw new Error('No analysis loaded to regenerate');
+      const modelOpt = MODEL_OPTIONS.find(m => m.value === regenModel);
+      return adminClient.generateMechanicAnalysis({
+        sharedGameId: status.sharedGameId,
+        pdfDocumentId: status.pdfDocumentId,
+        costCapUsd: Number.parseFloat(costCapUsd) || 0.5,
+        model: regenModel === 'default' ? undefined : regenModel,
+        provider: modelOpt?.provider || undefined,
+        forceRegenerate: true,
+      });
+    },
+    onSuccess: res => {
+      setLifecycleError(null);
+      setAnalysisId(res.id);
+      queryClient.invalidateQueries({ queryKey: ['mechanic-analysis', res.id] });
+    },
+    onError: (e: unknown) => {
+      setLifecycleError(e instanceof Error ? e.message : 'Regenerate failed');
+    },
+  });
+
+  // #539 follow-up: the current prompt (system + per-section), fetched lazily when the modal opens.
+  const promptQuery = useQuery({
+    queryKey: ['mechanic-prompt'],
+    queryFn: () => adminClient.getMechanicPrompt(),
+    enabled: promptOpen,
+    staleTime: 5 * 60_000,
   });
 
   const submitReviewMutation = useMutation({
@@ -832,6 +870,53 @@ export default function MechanicAnalysesPage() {
                 </Button>
               </div>
             )}
+
+            {/* #539 follow-up: regenerate this analysis with a different engine + inspect the prompt */}
+            {status && (
+              <div className="flex flex-wrap items-end gap-2 border-t border-border pt-4 dark:border-zinc-700">
+                <div className="flex flex-col gap-1">
+                  <label
+                    htmlFor="regen-model"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
+                    Motore rigenerazione
+                  </label>
+                  <Select value={regenModel} onValueChange={setRegenModel}>
+                    <SelectTrigger id="regen-model" className="w-56">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MODEL_OPTIONS.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => regenerateMutation.mutate()}
+                  disabled={regenerateMutation.isPending}
+                  title="Riesegue l'intera pipeline (9 sezioni) sullo stesso PDF con il motore selezionato e crea una nuova analisi (forceRegenerate)."
+                >
+                  {regenerateMutation.isPending ? (
+                    <Loader2Icon className="mr-1 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCwIcon className="mr-1 h-4 w-4" />
+                  )}
+                  Rigenera
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setPromptOpen(true)}
+                  title="Mostra il prompt di sistema e i prompt per-sezione inviati all'LLM."
+                >
+                  <FileTextIcon className="mr-1 h-4 w-4" />
+                  Vedi prompt
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -908,6 +993,52 @@ export default function MechanicAnalysesPage() {
               ) : null}
               Suppress
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* #539 follow-up: prompt viewer (system + per-section prompts, read-only) */}
+      <AlertDialog open={promptOpen} onOpenChange={setPromptOpen}>
+        <AlertDialogContent className="max-w-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Prompt Mechanic Extractor
+              {promptQuery.data ? ` — ${promptQuery.data.promptVersion}` : ''}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Prompt di sistema e prompt per-sezione inviati all&apos;LLM a ogni chiamata della
+              pipeline. Read-only.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-2">
+            {promptQuery.isLoading && <p className="text-sm text-muted-foreground">Caricamento…</p>}
+            {promptQuery.isError && (
+              <p className="text-sm text-rose-600">Impossibile caricare il prompt.</p>
+            )}
+            {promptQuery.data && (
+              <>
+                <section>
+                  <h3 className="mb-1 text-sm font-semibold">System prompt</h3>
+                  <pre className="whitespace-pre-wrap rounded-md bg-muted p-3 text-xs">
+                    {promptQuery.data.systemPrompt}
+                  </pre>
+                </section>
+                {promptQuery.data.sections.map(s => (
+                  <section key={s.section}>
+                    <h3 className="mb-1 text-sm font-semibold">
+                      {MECHANIC_SECTION_LABELS[s.section] ?? s.sectionName}{' '}
+                      <span className="font-normal text-muted-foreground">({s.sectionName})</span>
+                    </h3>
+                    <pre className="whitespace-pre-wrap rounded-md bg-muted p-3 text-xs">
+                      {s.prompt}
+                    </pre>
+                  </section>
+                ))}
+              </>
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Chiudi</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

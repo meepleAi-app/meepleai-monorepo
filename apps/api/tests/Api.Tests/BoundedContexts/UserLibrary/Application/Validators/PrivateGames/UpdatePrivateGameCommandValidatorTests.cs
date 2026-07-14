@@ -36,8 +36,7 @@ public sealed class UpdatePrivateGameCommandValidatorTests
         string? description = null,
         int? playingTimeMinutes = null,
         int? minAge = null,
-        decimal? complexityRating = null,
-        string? imageUrl = null)
+        decimal? complexityRating = null)
     {
         return new UpdatePrivateGameCommand(
             PrivateGameId: privateGameId ?? Guid.NewGuid(),
@@ -49,8 +48,7 @@ public sealed class UpdatePrivateGameCommandValidatorTests
             Description: description,
             PlayingTimeMinutes: playingTimeMinutes,
             MinAge: minAge,
-            ComplexityRating: complexityRating,
-            ImageUrl: imageUrl);
+            ComplexityRating: complexityRating);
     }
 
     #region PrivateGameId Validation
@@ -327,25 +325,6 @@ public sealed class UpdatePrivateGameCommandValidatorTests
 
     #endregion
 
-    #region ImageUrl Validation
-
-    [Fact]
-    public void ImageUrl_TooLong_HasValidationError()
-    {
-        // Arrange
-        var longUrl = "https://example.com/" + new string('a', 500);
-        var command = CreateValidCommand(imageUrl: longUrl);
-
-        // Act
-        var result = _validator.TestValidate(command);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(x => x.ImageUrl)
-            .WithErrorMessage("ImageUrl cannot exceed 500 characters");
-    }
-
-    #endregion
-
     #region Description Validation
 
     [Fact]
@@ -379,8 +358,7 @@ public sealed class UpdatePrivateGameCommandValidatorTests
             description: "Updated description",
             playingTimeMinutes: 90,
             minAge: 12,
-            complexityRating: 3.5m,
-            imageUrl: "https://example.com/updated.jpg");
+            complexityRating: 3.5m);
 
         // Act
         var result = _validator.TestValidate(command);

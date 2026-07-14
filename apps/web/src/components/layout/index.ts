@@ -1,17 +1,6 @@
 // Barrel exports for layout module
 // Issue #3286 - Layout System Implementation
 
-// Phase 1: Core Layout Structure (#3287)
-export {
-  LayoutProvider,
-  useLayout,
-  useLayoutResponsive,
-  useLayoutFAB,
-  useLayoutActionBar,
-  useLayoutMultiSelect,
-} from './LayoutProvider';
-export { Layout, PageHeader, PageContent, EmptyState, LoadingState } from './Layout';
-
 // Logo — TopNavbar removed, use BrandMark directly from '@/components/ui/brand'
 
 // Phase 4-6: ActionBar + Breadcrumb removed — replaced by UserShell ContextualBottomNav

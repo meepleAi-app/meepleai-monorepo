@@ -60,6 +60,11 @@ const meta: Meta<typeof GameOnboardingMock> = {
           'Sostituire con il vero GameOnboardingPanel quando implementato.',
       },
     },
+    // fidelity.json documents the canonical mapping explicitly: default=prereq-missing,
+    // loading=pdf-uploading+kb-indexing, empty=ready. State names are mockup-stage
+    // literals (`'prereq-missing'`, `'pdf-uploading'`, etc.), not canonical literals —
+    // lint:storybook-states heuristic can't see them (#2342 Task 4 bonifica).
+    canonicalStates: ['default', 'loading', 'empty'],
   },
   args: {
     state: 'prereq-missing' as GameOnboardingMockState,

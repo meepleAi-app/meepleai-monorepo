@@ -68,6 +68,12 @@ const meta: Meta<typeof SessionEndMock> = {
           'Sostituire con il vero SessionEndModal quando estratto dallo overlay store.',
       },
     },
+    // fidelity.json `_state_mapping_note` documents the intentional canonical mapping:
+    // default = Frame01_Paused + Frame02_Victory (happy-path outcomes), error =
+    // Frame03_Defeat + Frame04_Cancelled (failure/destructive outcomes). Driven via
+    // `outcome` prop values (paused/victory/defeat/cancelled), not canonical string
+    // literals — lint:storybook-states heuristic can't see them (#2342 Task 4 bonifica).
+    canonicalStates: ['default', 'error'],
   },
   args: {
     outcome: 'paused' as SessionEndMockOutcome,

@@ -58,6 +58,15 @@ const meta: Meta<typeof CampaignSetupDrawer> = {
           '(goto+waitForTimeout+screenshot, no play execution).',
       },
     },
+    // Frame01-03 cover canonical `default` (steady-state wizard steps) via
+    // `initialStep` test-seam props, not string literals. Frame04_ValidationErr
+    // covers canonical `error`: the mockup's own state-04 is labeled
+    // "Validation Error" / `SetupWizardDrawer · ErrorState` (see
+    // librogame-runthrough-setup-wizard.html:496-547) and is rendered via
+    // `initialTitle:'Ca'` (2-char title triggers the inline field error), not
+    // a quoted `'error'` literal — lint:storybook-states heuristic can't see
+    // either (#2342 Task 4 bonifica).
+    canonicalStates: ['default', 'error'],
   },
   argTypes: {
     gameId: { control: 'text', description: 'Game reference ID passed to POST payload.' },

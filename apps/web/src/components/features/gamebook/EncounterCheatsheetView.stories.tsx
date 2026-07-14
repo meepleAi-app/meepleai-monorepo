@@ -60,6 +60,12 @@ const meta: Meta<typeof EncounterCheatsheetView> = {
           'nessun MSW, nessun test-seam. `status` è una prop diretta che seleziona il ramo FSM.',
       },
     },
+    // Frame03_Rendered (status='rendered') covers canonical `default`, Frame02_Parsing
+    // (status='parsing') covers canonical `loading` — neither literal appears as a
+    // quoted string, only as FSM-specific status values — lint:storybook-states
+    // heuristic can't see them (#2342 Task 4 bonifica). Frame04_Error (status='error')
+    // already detected via the literal `'error'` string.
+    canonicalStates: ['default', 'loading', 'error'],
   },
   argTypes: {
     status: {

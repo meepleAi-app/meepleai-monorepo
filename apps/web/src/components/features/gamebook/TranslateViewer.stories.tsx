@@ -129,6 +129,12 @@ const meta: Meta<typeof TranslateViewer> = {
           'Frame12 usa il vero ManualInputView (?mode=manual route).',
       },
     },
+    // Frame01_Idle covers canonical `default`, Frame02_Segmenting covers canonical
+    // `loading`, Frame04_Translating covers canonical `sse` (partial streaming text)
+    // — all driven via `_initialPhase` test-seam prop values (idle/segmenting/
+    // translating), not `mswForState`-style string literals — lint:storybook-states
+    // heuristic can't see them (#2342 Task 4 bonifica).
+    canonicalStates: ['default', 'loading', 'sse'],
   },
   decorators: [readerModeClearDecorator],
   args: {

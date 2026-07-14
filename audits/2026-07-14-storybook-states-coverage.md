@@ -1,6 +1,6 @@
 # Storybook canonical-state coverage (DEC-A5 / #2342)
 
-Generated: 2026-07-14T13:16:35.586Z
+Generated: 2026-07-14T14:58:39.293Z
 Source: `admin-mockups/MOCKUPS_INDEX.md` · Canonical states: default, empty, loading, error, sse
 
 | Metric | Count |

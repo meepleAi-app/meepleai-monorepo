@@ -38,7 +38,13 @@ export function normalizeState(raw) {
 const OVERRIDE_RE = /canonicalStates\s*:\s*\[([^\]]*)\]/;
 const STATE_LITERAL_RE = /['"`](default|empty[\w-]*|loading|error|sse|offline|quota-(?:soft|hard))['"`]/g;
 
-/** Hybrid state detection: explicit override wins, else heuristic scan. */
+/**
+ * Hybrid state detection: explicit override wins, else heuristic scan.
+ * Heuristic is intentionally "satisfies-only": a false-positive match can only
+ * ever SATISFY a declared state, never invent a contract-violation — so it
+ * fails safe for the blocking direction. Use `parameters.canonicalStates` to
+ * override for stories the heuristic can't read.
+ */
 export function detectStates(storySource) {
   const set = new Set();
   const override = OVERRIDE_RE.exec(storySource);
@@ -231,9 +237,23 @@ async function main() {
     process.exit(2);
   }
 
+  // Exclude docs/for-developers/frontend/templates/examples: these duplicate
+  // mockup.source values from admin-mockups/design_files/ canonical fidelity
+  // files but with divergent content (e.g. story_path). glob traversal order
+  // is not guaranteed across platforms, so without this exclusion the
+  // last-writer-wins index in buildFidelityIndex is non-deterministic between
+  // platforms (e.g. Windows dev box vs Linux CI). The design_files copy is
+  // always authoritative.
   const fidelityFiles = globSync('**/*.fidelity.json', {
     cwd: REPO_ROOT,
-    ignore: ['**/node_modules/**', '**/.next/**', '**/.claude/**', '**/dist/**', '**/coverage/**'],
+    ignore: [
+      '**/node_modules/**',
+      '**/.next/**',
+      '**/.claude/**',
+      '**/dist/**',
+      '**/coverage/**',
+      '**/templates/examples/**',
+    ],
     nodir: true,
   });
   const readRel = (rel) => readFileSync(resolve(REPO_ROOT, rel), 'utf-8');

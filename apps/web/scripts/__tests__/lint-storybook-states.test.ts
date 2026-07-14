@@ -12,6 +12,7 @@ import {
   buildJsonReport,
   buildMdReport,
   parseArgs,
+  cleanReportRoute,
 } from '../lint-storybook-states.mjs';
 
 describe('CANONICAL_STATES', () => {
@@ -240,6 +241,41 @@ describe('parseArgs', () => {
   });
   it('throws a clear error when --max-baseline has no value', () => {
     expect(() => parseArgs(['--max-baseline'])).toThrow(/value/i);
+  });
+});
+
+describe('cleanReportRoute', () => {
+  it('extracts the route path up to the first whitespace (strips trailing prose)', () => {
+    expect(cleanReportRoute('/sessions/[id]/live Catan demo (medium euro')).toBe(
+      '/sessions/[id]/live'
+    );
+    expect(cleanReportRoute('/games/[id]/faqs (reuse)')).toBe('/games/[id]/faqs');
+  });
+  it('preserves query strings and dynamic segments (no whitespace)', () => {
+    expect(cleanReportRoute('/games?tab=discover')).toBe('/games?tab=discover');
+    expect(cleanReportRoute('/shared-games/[token]')).toBe('/shared-games/[token]');
+  });
+  it('trims and returns null for non-route tokens', () => {
+    expect(cleanReportRoute('  /library  ')).toBe('/library');
+    expect(cleanReportRoute('used globally')).toBeNull();
+    expect(cleanReportRoute(42 as unknown as string)).toBeNull();
+  });
+});
+
+describe('buildJsonReport — route hygiene', () => {
+  it('cleans dirty routes in coverageGaps for the report', () => {
+    const report = buildJsonReport(
+      [
+        {
+          mockup: 'a.html',
+          routes: ['/sessions/[id]/live Catan demo (medium'],
+          verdict: 'coverage-gap',
+          reason: 'no-story-path',
+        },
+      ],
+      0
+    );
+    expect(report.coverageGaps[0].routes).toEqual(['/sessions/[id]/live']);
   });
 });
 

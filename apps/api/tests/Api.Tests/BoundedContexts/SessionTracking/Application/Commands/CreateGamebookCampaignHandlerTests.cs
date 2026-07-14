@@ -1,3 +1,5 @@
+using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
@@ -46,6 +48,11 @@ public sealed class CreateGamebookCampaignHandlerTests
             .Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CreateSessionResult(
                 Guid.NewGuid(), "ABC123", new List<ParticipantDto>(), Guid.Empty, false, null, null));
+
+        // Owner display-name resolution (null → the handler falls back to "Owner").
+        _mediator
+            .Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((UserDto?)null);
     }
 
     private CreateGamebookCampaignHandler CreateHandler()
@@ -92,6 +99,9 @@ public sealed class CreateGamebookCampaignHandlerTests
                 && c.SkipGameNightEnvelope
                 && c.SkipKbReadinessGate
                 && c.GuestNames != null && c.GuestNames.Contains("Luca")
+                // Regression guard for the review finding: the dispatched command MUST carry the
+                // owner (CreateSessionCommandValidator requires an IsOwner participant).
+                && c.Participants.Any(p => p.IsOwner && p.UserId == userId)
                 && c.Participants.Any(p => p.DisplayName == "Alice")),
             It.IsAny<CancellationToken>()), Times.Once);
     }

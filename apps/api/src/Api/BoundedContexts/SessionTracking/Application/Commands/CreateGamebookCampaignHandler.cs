@@ -1,4 +1,5 @@
 using System.Globalization;
+using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
@@ -39,7 +40,34 @@ public class CreateGamebookCampaignHandler : IRequestHandler<CreateGamebookCampa
         // SkipGameNightEnvelope=true keeps it night-less; SkipKbReadinessGate=true because gamebook
         // play does not depend on RAG KB readiness; live mode is NOT opened, so invariant #10
         // max-1-live stays scoped to GameNight play.
-        var participants = cmd.Participants?.Where(p => !p.IsOwner).ToList() ?? new List<ParticipantDto>();
+        //
+        // The roster MUST carry an IsOwner participant with the caller's real display name:
+        // CreateSessionCommandValidator requires one, and this mirrors the attach/start handlers
+        // (resolve the caller via GetUserByIdQuery so the owner shows their name, not a literal).
+        var owner = await _mediator.Send(new GetUserByIdQuery(cmd.OwnerUserId), cancellationToken).ConfigureAwait(false);
+        var ownerName = owner is not null && !string.IsNullOrWhiteSpace(owner.DisplayName)
+            ? owner.DisplayName
+            : owner?.Email ?? "Owner";
+
+        var participants = new List<ParticipantDto>
+        {
+            new() { Id = Guid.NewGuid(), UserId = cmd.OwnerUserId, DisplayName = ownerName, IsOwner = true, JoinOrder = 0 },
+        };
+        if (cmd.Participants is { Count: > 0 })
+        {
+            var joinOrder = 1;
+            foreach (var p in cmd.Participants.Where(p => !p.IsOwner))
+            {
+                participants.Add(new ParticipantDto
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = p.UserId,
+                    DisplayName = p.DisplayName,
+                    IsOwner = false,
+                    JoinOrder = joinOrder++,
+                });
+            }
+        }
 
         await _unitOfWork.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         var commitStarted = false;

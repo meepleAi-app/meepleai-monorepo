@@ -17,6 +17,13 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushSpy }),
 }));
 
+// Deterministic owner display name so the Host roster entry is stable (#2917).
+vi.mock('@/hooks/queries/useCurrentUser', () => ({
+  useCurrentUser: () => ({
+    data: { id: 'owner-1', email: 'owner@example.com', displayName: 'Owner', role: 'user' },
+  }),
+}));
+
 /**
  * Force desktop mode so Radix Dialog is used instead of Vaul.
  * Vaul requires PointerEvent capture, scrollIntoView, and transform parsing
@@ -135,7 +142,7 @@ describe('CampaignSetupDrawer — Step 1 (Name + Preset)', () => {
 // ─── Step 2: Players ─────────────────────────────────────────────────────────
 
 describe('CampaignSetupDrawer — Step 2 (Players)', () => {
-  it('renders host + guest chips for default preset group-a', async () => {
+  it('renders the editable roster (owner host + preset guests) for group-a', async () => {
     const user = userEvent.setup();
     wrap(
       <CampaignSetupDrawer gameId="g1" gameTitle="Nanolith" open={true} onOpenChange={() => {}} />
@@ -148,18 +155,40 @@ describe('CampaignSetupDrawer — Step 2 (Players)', () => {
 
     await user.click(screen.getByTestId('campaign-setup-next'));
 
-    // Step 2 should show player chips for group-a (Aaron host + Marco + Giulia + Luca)
-    expect(screen.getByText('Aaron')).toBeInTheDocument();
+    // PlayerSetup shows the roster: Host = real owner display name (NOT demo "Aaron"),
+    // plus the preset guests Marco / Giulia / Luca.
+    expect(screen.getByText('Owner')).toBeInTheDocument();
+    expect(screen.queryByText('Aaron')).not.toBeInTheDocument();
     expect(screen.getByText('Marco')).toBeInTheDocument();
     expect(screen.getByText('Giulia')).toBeInTheDocument();
     expect(screen.getByText('Luca')).toBeInTheDocument();
 
-    // Host indicator
-    expect(screen.getByText(/Host · tu/)).toBeInTheDocument();
+    // Host role badge is present (PlayerSetup renders a "Host" role toggle).
+    expect(screen.getByRole('button', { name: /Ruolo di Owner: Host/ })).toBeInTheDocument();
 
-    // "Aggiungi giocatore" button should be disabled
-    const addButton = screen.getByRole('button', { name: /Aggiungi giocatore/ });
-    expect(addButton).toHaveAttribute('aria-disabled', 'true');
+    // The add-player affordance is now ENABLED: an input + a real "Aggiungi" button.
+    expect(screen.getByLabelText('Nome nuovo giocatore')).toBeEnabled();
+    const addButton = screen.getByRole('button', { name: /^Aggiungi$/ });
+    expect(addButton).not.toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('adding a player extends the roster', async () => {
+    const user = userEvent.setup();
+    wrap(
+      <CampaignSetupDrawer gameId="g1" gameTitle="Nanolith" open={true} onOpenChange={() => {}} />
+    );
+
+    const titleInput = screen.getByTestId('campaign-setup-title');
+    await user.clear(titleInput);
+    await user.type(titleInput, 'Test campaign');
+    await user.click(screen.getByTestId('campaign-setup-next'));
+
+    // Add a new player via the enabled input + button.
+    const nameInput = screen.getByLabelText('Nome nuovo giocatore');
+    await user.type(nameInput, 'Priya');
+    await user.click(screen.getByRole('button', { name: /^Aggiungi$/ }));
+
+    expect(screen.getByText('Priya')).toBeInTheDocument();
   });
 
   it('shows agent suggestion card with player count', async () => {
@@ -173,11 +202,9 @@ describe('CampaignSetupDrawer — Step 2 (Players)', () => {
     await user.type(titleInput, 'Test campaign');
     await user.click(screen.getByTestId('campaign-setup-next'));
 
-    // Agent suggestion card — "4 giocatori" appears in both the party heading and
-    // the agent <strong>, so use getAllByText to confirm at least one instance.
+    // Agent suggestion card reflects the live roster length (4 for group-a).
     expect(screen.getByText(/Nanolith Tutor/)).toBeInTheDocument();
-    const playerCountMatches = screen.getAllByText(/4 giocatori/);
-    expect(playerCountMatches.length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/4 giocatori/)).toBeInTheDocument();
   });
 });
 
@@ -205,9 +232,12 @@ describe('CampaignSetupDrawer — Step 3 (Confirm)', () => {
     // Campaign title heading
     expect(screen.getByText('Test campaign')).toBeInTheDocument();
 
-    // Preset row
+    // Preset row (still shown for context)
     expect(screen.getByText('Preset')).toBeInTheDocument();
     expect(screen.getByText('Gruppo A · I ragazzi')).toBeInTheDocument();
+
+    // Giocatori row shows the REAL roster (owner Host + guests), not the demo preset.
+    expect(screen.getByText('Owner · Marco · Giulia · Luca')).toBeInTheDocument();
 
     // Submit button
     expect(screen.getByTestId('campaign-setup-submit')).toBeInTheDocument();
@@ -287,9 +317,18 @@ describe('CampaignSetupDrawer — Footer + Submit', () => {
 
     await user.click(screen.getByTestId('campaign-setup-submit'));
 
+    // Payload now carries the real roster (#2917). The owner is the Host and is
+    // auto-seeded server-side, so guestNames excludes the owner ("Owner") and
+    // contains only the preset guests.
     await waitFor(() =>
-      expect(client.createCampaign).toHaveBeenCalledWith({ gameId: 'g1', title: 'Test campaign' })
+      expect(client.createCampaign).toHaveBeenCalledWith({
+        gameId: 'g1',
+        title: 'Test campaign',
+        guestNames: ['Marco', 'Giulia', 'Luca'],
+      })
     );
+    const payload = vi.mocked(client.createCampaign).mock.calls[0][0];
+    expect(payload.guestNames).not.toContain('Owner');
     await waitFor(() => expect(pushSpy).toHaveBeenCalledWith('/library/g1/play/c1'));
   });
 

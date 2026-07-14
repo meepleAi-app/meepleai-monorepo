@@ -7,7 +7,12 @@
 import { describe, it, expect } from 'vitest';
 import { CANONICAL_STATES, normalizeState, detectStates } from '../lint-storybook-states.mjs';
 import { buildFidelityIndex, classifyMockupEntry } from '../lint-storybook-states.mjs';
-import { scanEntries, buildJsonReport, parseArgs } from '../lint-storybook-states.mjs';
+import {
+  scanEntries,
+  buildJsonReport,
+  buildMdReport,
+  parseArgs,
+} from '../lint-storybook-states.mjs';
 
 describe('CANONICAL_STATES', () => {
   it('is exactly the 5 DEC-A5 states in order', () => {
@@ -52,6 +57,10 @@ describe('detectStates — heuristic', () => {
   it('does not treat a non-state string literal as a state', () => {
     const src = `HttpResponse.json({ error: 'server error' }, { status: 500 })`;
     expect(detectStates(src)).toEqual(new Set());
+  });
+  it('does not detect non-canonical state literals (offline, quota-*)', () => {
+    const src = `mswForState('offline'); mswForState('quota-soft'); mswForState('default');`;
+    expect(detectStates(src)).toEqual(new Set(['default']));
   });
 });
 
@@ -228,5 +237,53 @@ describe('parseArgs', () => {
   it('throws on unknown arg and on negative baseline', () => {
     expect(() => parseArgs(['--nope'])).toThrow();
     expect(() => parseArgs(['--max-baseline', '-1'])).toThrow();
+  });
+  it('throws a clear error when --max-baseline has no value', () => {
+    expect(() => parseArgs(['--max-baseline'])).toThrow(/value/i);
+  });
+});
+
+describe('buildMdReport', () => {
+  it('renders the metric table, coverage-gap rows and gate-semantics section', () => {
+    const report = buildJsonReport(
+      [
+        { mockup: 'a.html', routes: ['/a'], verdict: 'covered' },
+        { mockup: 'b.html', routes: ['/b'], verdict: 'coverage-gap', reason: 'no-fidelity' },
+      ],
+      5
+    );
+    const md = buildMdReport(report);
+    expect(md).toContain('# Storybook canonical-state coverage');
+    expect(md).toContain('| Total page-mock entries | 2 |');
+    expect(md).toContain('| Covered | 1 |');
+    expect(md).toContain('| Coverage gaps (baseline 5) | 1 |');
+    expect(md).toContain('## Coverage gaps');
+    expect(md).toContain('no-fidelity');
+    expect(md).toContain('## Gate semantics');
+    expect(md.endsWith('\n')).toBe(true);
+  });
+  it('includes a contract-violations section only when there are violations', () => {
+    const clean = buildMdReport(
+      buildJsonReport([{ mockup: 'a.html', routes: [], verdict: 'covered' }], 0)
+    );
+    expect(clean).not.toContain('## Contract violations');
+    const withViol = buildMdReport(
+      buildJsonReport(
+        [
+          {
+            mockup: 'c.html',
+            routes: ['/c'],
+            verdict: 'contract-violation',
+            storyPath: 's.tsx',
+            declared: ['error'],
+            detected: [],
+            missing: ['error'],
+          },
+        ],
+        0
+      )
+    );
+    expect(withViol).toContain('## Contract violations (must be 0)');
+    expect(withViol).toContain('**error**');
   });
 });

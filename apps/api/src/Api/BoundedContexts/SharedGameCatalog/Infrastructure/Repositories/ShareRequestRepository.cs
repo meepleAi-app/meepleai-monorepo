@@ -226,7 +226,10 @@ internal sealed class ShareRequestRepository : RepositoryBase, IShareRequestRepo
             entity.CreatedBy,
             entity.ModifiedBy,
             entity.RowVersion,
-            documents);
+            documents,
+            entity.PendingCoverR2Key,
+            entity.CoverPageIndex,
+            entity.SourcePdfDocumentId);
     }
 
     private static ShareRequestEntity MapToEntity(ShareRequest request)
@@ -251,7 +254,10 @@ internal sealed class ShareRequestRepository : RepositoryBase, IShareRequestRepo
             ModifiedAt = request.ModifiedAt,
             CreatedBy = request.CreatedBy,
             ModifiedBy = request.ModifiedBy,
-            RowVersion = request.RowVersion
+            RowVersion = request.RowVersion,
+            PendingCoverR2Key = request.PendingCoverR2Key,
+            CoverPageIndex = request.CoverPageIndex,
+            SourcePdfDocumentId = request.SourcePdfDocumentId
         };
 
         foreach (var doc in request.AttachedDocuments)

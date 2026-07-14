@@ -22,5 +22,12 @@ public enum ContributionType
     /// Proposing a private game for inclusion in the shared catalog (Issue #3665).
     /// Promotes PrivateGame to SharedGame upon approval.
     /// </summary>
-    NewGameProposal = 2
+    NewGameProposal = 2,
+
+    /// <summary>
+    /// Proposing a replacement cover image derived from a page of an already-indexed
+    /// PDF document (Game Cover-da-PDF, Task 4). Applies a pending cover materialized
+    /// in object storage to the target shared game upon approval.
+    /// </summary>
+    CoverChange = 3
 }

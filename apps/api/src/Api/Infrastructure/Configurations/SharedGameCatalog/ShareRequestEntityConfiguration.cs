@@ -84,6 +84,17 @@ internal sealed class ShareRequestEntityConfiguration : IEntityTypeConfiguration
         builder.Property(e => e.SourcePrivateGameId)
             .HasColumnName("source_private_game_id");
 
+        // Task 4: Game Cover-da-PDF - pending cover fields for CoverChange contributions
+        builder.Property(e => e.PendingCoverR2Key)
+            .HasColumnName("pending_cover_r2_key")
+            .HasMaxLength(512);
+
+        builder.Property(e => e.CoverPageIndex)
+            .HasColumnName("cover_page_index");
+
+        builder.Property(e => e.SourcePdfDocumentId)
+            .HasColumnName("source_pdf_document_id");
+
         // Indexes
         builder.HasIndex(e => e.UserId)
             .HasDatabaseName("ix_share_requests_user_id");

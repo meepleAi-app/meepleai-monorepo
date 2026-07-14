@@ -47,6 +47,24 @@ public class ShareRequestEntity
 
     public byte[]? RowVersion { get; set; }
 
+    /// <summary>
+    /// R2 object key of the pending cover image materialized from a PDF page
+    /// (for CoverChange contributions). Task 4: Game Cover-da-PDF.
+    /// </summary>
+    public string? PendingCoverR2Key { get; set; }
+
+    /// <summary>
+    /// Zero-based index of the PDF page the pending cover was rendered from
+    /// (for CoverChange contributions). Task 4: Game Cover-da-PDF.
+    /// </summary>
+    public int? CoverPageIndex { get; set; }
+
+    /// <summary>
+    /// ID of the source PDF document the pending cover was rendered from
+    /// (for CoverChange contributions). Task 4: Game Cover-da-PDF.
+    /// </summary>
+    public Guid? SourcePdfDocumentId { get; set; }
+
     // Navigation properties
     public SharedGameEntity SourceGame { get; set; } = default!;
     public SharedGameEntity? TargetSharedGame { get; set; }

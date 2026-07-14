@@ -400,9 +400,25 @@ export const SUPPRESSION_REQUEST_SOURCE_LABELS: Record<number, string> = {
 
 // ========== Routes ==========
 
+/** #539 follow-up: read-only view of the current Mechanic Extractor prompt (system + per-section). */
+export const MechanicPromptDtoSchema = z.object({
+  promptVersion: z.string(),
+  systemPrompt: z.string(),
+  sections: z.array(
+    z.object({
+      section: z.number(),
+      sectionName: z.string(),
+      prompt: z.string(),
+    })
+  ),
+});
+export type MechanicPromptDto = z.infer<typeof MechanicPromptDtoSchema>;
+
 export const MECHANIC_ANALYSES_ROUTES = {
   list: '/api/v1/admin/mechanic-analyses',
   create: '/api/v1/admin/mechanic-analyses',
+  // #539 follow-up: read-only prompt inspection (system + per-section).
+  prompt: '/api/v1/admin/mechanic-analyses/prompt',
   status: (id: string) => `/api/v1/admin/mechanic-analyses/${id}/status`,
   submitReview: (id: string) => `/api/v1/admin/mechanic-analyses/${id}/submit-review`,
   approve: (id: string) => `/api/v1/admin/mechanic-analyses/${id}/approve`,

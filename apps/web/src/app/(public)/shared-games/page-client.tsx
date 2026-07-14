@@ -51,6 +51,7 @@ import {
 
 const SEARCH_DEBOUNCE_MS = 300;
 const VALID_CHIP_KEYS: ReadonlySet<ChipKey> = new Set([
+  'with-kb',
   'with-toolkit',
   'with-agent',
   'top-rated',

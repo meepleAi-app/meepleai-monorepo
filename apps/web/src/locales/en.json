@@ -3012,6 +3012,7 @@
         "totalCounter": "{total, plural, =1 {1 game in the catalog} other {# games in the catalog}}"
       },
       "chips": {
+        "withKb": "KB-ready only",
         "withToolkit": "With toolkit",
         "withAgent": "With agent",
         "topRated": "Top rated",

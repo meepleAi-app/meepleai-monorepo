@@ -3062,6 +3062,7 @@
         "totalCounter": "{total, plural, =1 {1 gioco nel catalogo} other {# giochi nel catalogo}}"
       },
       "chips": {
+        "withKb": "Solo con KB pronta",
         "withToolkit": "Con toolkit",
         "withAgent": "Con agente",
         "topRated": "Top rated",

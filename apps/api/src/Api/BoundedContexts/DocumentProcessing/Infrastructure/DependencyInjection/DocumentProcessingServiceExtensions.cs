@@ -187,8 +187,9 @@ internal static class DocumentProcessingServiceExtensions
         // Issue #1831 follow-up: Register Quartz job for orphan cover recovery (daily at 03:00 UTC)
         RegisterPdfCoverOrphanRecoveryJob(services);
 
-        // Issue #2248 (epic #2242, Sub #6 Block B): periodic audit for the
-        // "Ready ⇒ HasKnowledgeBase" invariant. Runs every 10 minutes.
+        // Issue #2248 (epic #2242, Sub #6 Block B): periodic reconcile for the
+        // "Ready ⇒ HasKnowledgeBase" invariant. Runs every 10 minutes and repairs
+        // any SharedGame whose inline KB-flag projection was missed.
         RegisterKbFlagDriftAuditJob(services);
 
         return services;

@@ -58,6 +58,7 @@ export interface UseSharedGamesResult {
 function chipsToBackendArgs(chips: readonly ChipKey[]): Partial<SearchSharedGamesArgs> {
   // Build a mutable bag, then cast to the readonly partial when returning.
   const args: {
+    hasKb?: boolean;
     hasToolkit?: boolean;
     hasAgent?: boolean;
     isTopRated?: boolean;
@@ -65,6 +66,9 @@ function chipsToBackendArgs(chips: readonly ChipKey[]): Partial<SearchSharedGame
   } = {};
   for (const chip of chips) {
     switch (chip) {
+      case 'with-kb':
+        args.hasKb = true;
+        break;
       case 'with-toolkit':
         args.hasToolkit = true;
         break;

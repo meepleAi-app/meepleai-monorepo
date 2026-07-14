@@ -444,7 +444,7 @@ jobs:
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd  # v4
 
       - name: Setup QEMU for ARM64 cross-compilation
-        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a  # v4
+        uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3  # v4
         with:
           platforms: arm64
 
@@ -671,7 +671,7 @@ jobs:
 
       - name: Setup QEMU for ARM64
         if: ${{ fromJSON(needs.detect-changes.outputs.ai_changed)[matrix.service] }}
-        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a  # v4
+        uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3  # v4
         with:
           platforms: arm64
 
@@ -1285,19 +1285,36 @@ jobs:
           # API was up and serving. The critical-service gate below only requires postgres+redis
           # Healthy, so a Degraded overall status (e.g. a non-critical slack_queue backlog) must not
           # fail the deploy. Same fix as the in-container health wait earlier in this workflow.
+          # #2772 — capture the HTTP status alongside the body. An app-level health response is
+          # 200 (Healthy) or 503 (Degraded, still a valid JSON body — see #2655). A 502/504/000 is an
+          # edge/origin-unreachable failure (e.g. the host docker-proxy for :8080 died and Cloudflare
+          # can't reach the API origin) and MUST fail loud instead of being silently skipped by the jq
+          # parse below — a 502 HTML body has no postgres/redis keys, so STATUS goes empty → "skipping"
+          # → a false green. Only a 200/503 is treated as a real response and breaks the wait loop.
           HEALTH=""
+          HTTP_STATUS="000"
           for i in {1..30}; do
-            HEALTH=$(curl -s "${CF_HEADERS[@]}" https://api.meepleai.app/health 2>/dev/null || true)
-            if [ -n "$HEALTH" ]; then
-              echo "📋 Health response received"
+            HTTP_STATUS=$(curl -s -o /tmp/api_health_body -w "%{http_code}" "${CF_HEADERS[@]}" https://api.meepleai.app/health 2>/dev/null || echo "000")
+            HEALTH=$(cat /tmp/api_health_body 2>/dev/null || true)
+            if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "503" ]; then
+              echo "📋 Health response received (HTTP $HTTP_STATUS)"
               break
             fi
-            echo "⏳ Waiting for API... ($i/30)"
+            echo "⏳ Waiting for API... ($i/30) [HTTP $HTTP_STATUS]"
             sleep 10
           done
 
-          if [ -z "$HEALTH" ]; then
-            echo "❌ API did not respond within 5 minutes"
+          # Hard guard (#2772): only a 200/503 is a genuine app health response. Anything else
+          # (502/504 from the edge, or 000 = no response) means the API origin was never reached —
+          # an infrastructure failure, not a healthy deploy. Fail loud instead of silently skipping.
+          if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "503" ]; then
+            echo "❌ API /health returned HTTP $HTTP_STATUS after 5 minutes — origin unreachable (502/504) or no response (000)."
+            echo "   Infrastructure/edge failure (Cloudflare tunnel cannot reach the API origin — see #2772), NOT a healthy deploy."
+            if [ -n "$HEALTH" ]; then
+              echo "   First 500 bytes of body:"
+              echo "$HEALTH" | head -c 500
+              echo
+            fi
             exit 1
           fi
 

@@ -77,6 +77,27 @@ export const MECHANIC_SECTION_LABELS: Record<number, string> = {
   3: 'Resources',
   4: 'Phases',
   5: 'FAQ',
+  // v1.1.0 (#539 follow-up): Setup / Components / EndgameScoring.
+  6: 'Preparazione',
+  7: 'Componenti',
+  8: 'Fine partita',
+};
+
+/**
+ * Logical display order for the section groups (card + admin review). The enum values are
+ * append-only (6/7/8), so Setup/Components would otherwise render after FAQ; this map floats
+ * them to their natural reading position. Sections absent here fall back to their numeric value.
+ */
+export const MECHANIC_SECTION_DISPLAY_ORDER: Record<number, number> = {
+  0: 0, // Summary
+  6: 1, // Preparazione (Setup)
+  7: 2, // Componenti (Components)
+  1: 3, // Mechanics
+  3: 4, // Resources
+  4: 5, // Phases
+  2: 6, // Victory
+  8: 7, // Fine partita (EndgameScoring)
+  5: 8, // FAQ
 };
 
 /**
@@ -331,6 +352,12 @@ export interface GenerateMechanicAnalysisRequest {
   pdfDocumentId: string;
   costCapUsd: number;
   costCapOverride?: CostCapOverrideRequest;
+  /** #539: LLM model override (routes provider by name, e.g. "meta-llama/llama-3.3-70b-instruct" → OpenRouter, "qwen2.5:3b" → Ollama). Null → DeepSeek default. */
+  model?: string;
+  /** #539: provider label for telemetry (e.g. "OpenRouter", "Ollama"). */
+  provider?: string;
+  /** #539: skip the idempotency short-circuit so a re-run with a different model creates a new analysis. */
+  forceRegenerate?: boolean;
 }
 
 export interface SuppressMechanicAnalysisRequest {
@@ -373,9 +400,25 @@ export const SUPPRESSION_REQUEST_SOURCE_LABELS: Record<number, string> = {
 
 // ========== Routes ==========
 
+/** #539 follow-up: read-only view of the current Mechanic Extractor prompt (system + per-section). */
+export const MechanicPromptDtoSchema = z.object({
+  promptVersion: z.string(),
+  systemPrompt: z.string(),
+  sections: z.array(
+    z.object({
+      section: z.number(),
+      sectionName: z.string(),
+      prompt: z.string(),
+    })
+  ),
+});
+export type MechanicPromptDto = z.infer<typeof MechanicPromptDtoSchema>;
+
 export const MECHANIC_ANALYSES_ROUTES = {
   list: '/api/v1/admin/mechanic-analyses',
   create: '/api/v1/admin/mechanic-analyses',
+  // #539 follow-up: read-only prompt inspection (system + per-section).
+  prompt: '/api/v1/admin/mechanic-analyses/prompt',
   status: (id: string) => `/api/v1/admin/mechanic-analyses/${id}/status`,
   submitReview: (id: string) => `/api/v1/admin/mechanic-analyses/${id}/submit-review`,
   approve: (id: string) => `/api/v1/admin/mechanic-analyses/${id}/approve`,

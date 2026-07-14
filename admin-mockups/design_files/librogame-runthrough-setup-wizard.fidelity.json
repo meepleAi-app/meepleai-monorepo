@@ -16,6 +16,7 @@
       "default",
       "error"
     ],
+    "_state_mapping_note": "error: Frame04_ValidationErr — inline form validation failure (title < 3 chars). Kept as canonical 'error' per #2929: a form validation-failure IS a legitimate UI error-state (distinct from a technical/network error, but a recognised error state nonetheless).",
     "a11y_axe": "AA",
     "a11y_violations_max": 0,
     "responsive_breakpoints": [

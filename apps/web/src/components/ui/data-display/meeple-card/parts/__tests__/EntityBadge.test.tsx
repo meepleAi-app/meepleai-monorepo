@@ -14,10 +14,10 @@ describe('EntityBadge (glass restyle, #1856)', () => {
     expect(el.textContent).toContain(entityLabel.game);
   });
 
-  it('uses the glass background (bg-white/85 + backdrop-blur-md)', () => {
+  it('uses the theme-aware glass background (bg-card/85 + backdrop-blur-md — #2862)', () => {
     const { container } = render(<EntityBadge entity="game" />);
     const el = container.querySelector('[data-slot="meeple-card-entity-badge"]') as HTMLElement;
-    expect(el.className).toMatch(/bg-white\/85/);
+    expect(el.className).toMatch(/bg-card\/85/);
     expect(el.className).toMatch(/backdrop-blur-md/);
   });
 
@@ -63,7 +63,7 @@ describe('EntityBadge (glass restyle, #1856)', () => {
     for (const e of entities) {
       const { container, unmount } = render(<EntityBadge entity={e} />);
       const el = container.querySelector('[data-slot="meeple-card-entity-badge"]') as HTMLElement;
-      expect(el.className).toMatch(/bg-white\/85/);
+      expect(el.className).toMatch(/bg-card\/85/);
       expect(el.style.color).toBeTruthy();
       expect(el.style.color).not.toBe('');
       unmount();

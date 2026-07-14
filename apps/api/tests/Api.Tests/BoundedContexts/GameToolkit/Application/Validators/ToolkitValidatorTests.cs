@@ -70,6 +70,56 @@ public class ToolkitValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.CreatedByUserId);
     }
 
+    // Issue #2851/#Q: a toolkit belongs to EITHER a shared game (GameId) or a
+    // private game (PrivateGameId), mutually exclusive — matching the GameToolkit
+    // aggregate ctor. The old validator required GameId always, so the FE's
+    // private-game create ({ privateGameId, ... }) failed with 422.
+
+    [Fact]
+    public void CreateToolkit_PrivateGameIdOnly_PassesValidation()
+    {
+        var validator = new CreateToolkitCommandValidator();
+        var command = new CreateToolkitCommand(
+            GameId: null,
+            Name: "Private Toolkit",
+            CreatedByUserId: Guid.NewGuid(),
+            PrivateGameId: Guid.NewGuid());
+
+        var result = validator.TestValidate(command);
+
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void CreateToolkit_BothGameIdAndPrivateGameId_FailsValidation()
+    {
+        var validator = new CreateToolkitCommandValidator();
+        var command = new CreateToolkitCommand(
+            GameId: Guid.NewGuid(),
+            Name: "Toolkit",
+            CreatedByUserId: Guid.NewGuid(),
+            PrivateGameId: Guid.NewGuid());
+
+        var result = validator.TestValidate(command);
+
+        result.ShouldHaveValidationErrorFor(x => x.GameId);
+    }
+
+    [Fact]
+    public void CreateToolkit_NeitherGameIdNorPrivateGameId_FailsValidation()
+    {
+        var validator = new CreateToolkitCommandValidator();
+        var command = new CreateToolkitCommand(
+            GameId: null,
+            Name: "Toolkit",
+            CreatedByUserId: Guid.NewGuid(),
+            PrivateGameId: null);
+
+        var result = validator.TestValidate(command);
+
+        result.ShouldHaveValidationErrorFor(x => x.GameId);
+    }
+
     // ========================================================================
     // UpdateToolkitCommandValidator
     // ========================================================================

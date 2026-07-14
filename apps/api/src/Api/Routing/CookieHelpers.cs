@@ -194,8 +194,12 @@ internal static class CookieHelpers
         }
 
         // C4: grace-period fallback to the legacy plaintext cookie. After the
-        // sunset date, ignore v1 entirely and force a fresh login.
-        if (DateTime.UtcNow < UserRoleCookieV1SunsetUtc &&
+        // sunset date, ignore v1 entirely and force a fresh login. The clock is
+        // resolved from DI (TimeProvider) so the grace window is testable under a
+        // controlled now; falls back to the system clock in production where no
+        // TimeProvider is registered.
+        var timeProvider = context.RequestServices.GetService<TimeProvider>() ?? TimeProvider.System;
+        if (timeProvider.GetUtcNow().UtcDateTime < UserRoleCookieV1SunsetUtc &&
             context.Request.Cookies.TryGetValue(UserRoleCookieNameV1, out var v1Value) &&
             !string.IsNullOrWhiteSpace(v1Value))
         {

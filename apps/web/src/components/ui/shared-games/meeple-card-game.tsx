@@ -1,87 +1,60 @@
 /**
  * MeepleCardGame — community shared-game tile for /shared-games index.
  *
- * Wave A.3b (Issue #596). Mirrors mockup `sp3-shared-games.jsx` lines 208-274.
+ * Issue #2858 (C1): thin adapter over the canonical MeepleCard
+ * (entity="game", variant="grid"). Previously a standalone renderer that
+ * re-implemented cover/stars/badge inline; now composes MeepleCard and maps
+ * the shared-games signals to canonical props. The public prop interface is
+ * unchanged except `compact` (an unwired responsive knob) which was removed.
  *
- * Spec deviation (§3.2): root MUST be `<Link>` from `next/link` (not `<article tabIndex={0}>`)
- * to leverage Next.js prefetch + browser-native focus/keyboard. Link styles are reset.
+ * Navigation: passes `href` so GridCard renders a real `<Link prefetch>` root
+ * (public route needs prefetch + open-in-new-tab + native focus). The Wikidata
+ * attribution footer is emitted by MeepleCard (entity=game) as a sibling of the
+ * card root — no nested anchor.
  *
- * Footer renders 3 entity counters (toolkits / agents / kbs). The `kb` chip is rendered
- * count-only (label="" passed to the existing `EntityChip` primitive) per mockup line 270.
- * Chips are rendered only when count > 0.
- *
- * `newWeek >= 2` produces a top-right "+{count}" badge tinted `hsl(var(--c-event))`.
+ * `labels.ratingAriaLabel` / `labels.newWeekAriaLabel` are retained on the
+ * interface (to avoid churning /shared-games page-client) but are no longer
+ * consumed by the canonical render; a follow-up may prune them.
  */
-
 import type { JSX } from 'react';
 
-import clsx from 'clsx';
-import Link from 'next/link';
-
-import { MeepleCardAttributionFooter } from '@/components/ui/data-display/meeple-card/MeepleCardAttributionFooter';
-import { EntityChip } from '@/components/ui/entity-chip/entity-chip';
+import { MeepleCard } from '@/components/ui/data-display/meeple-card/MeepleCard';
+import type { ConnectionChipProps } from '@/components/ui/data-display/meeple-card/types';
 
 export interface MeepleCardGameLabels {
-  /** Aria label prefix for the rating, e.g. "Voto" → "Voto 4 di 5". */
+  /** Aria label prefix for the rating (retained for interface stability). */
   readonly ratingAriaLabel: string;
-  /** Footer chip labels (kb intentionally omitted: count-only per mockup). */
+  /** Footer chip label for the toolkit count. */
   readonly toolkitLabel: string;
+  /** Footer chip label for the agent count. */
   readonly agentLabel: string;
-  /** Aria label fragment for newWeek badge, e.g. `${count} nuovi questa settimana`. */
+  /** Aria label fragment for the newWeek badge (retained for interface stability). */
   readonly newWeekAriaLabel: (count: number) => string;
 }
 
 export interface MeepleCardGameProps {
   readonly id: string;
   readonly title: string;
-  /** Optional cover image; falls back to a tinted emoji placeholder when absent. */
+  /** Optional cover image; falls back to a tinted 🎲 emoji placeholder when absent. */
   readonly coverUrl?: string | null;
-  /** Year published (rendered in meta line). */
+  /** Year published (rendered as the subtitle). */
   readonly year?: number | null;
   /** Average rating in 0..5 scale (already converted from backend 0..10). */
   readonly rating: number;
-  /** Number of toolkits attached to this shared game. */
   readonly toolkitsCount: number;
-  /** Number of agent definitions attached. */
   readonly agentsCount: number;
-  /** Number of knowledge bases (vector documents) attached. */
   readonly kbsCount: number;
-  /** Count of children created this week (>=2 triggers visible badge). */
+  /** Count of children created this week (>=2 triggers the visible badge). */
   readonly newThisWeekCount: number;
   readonly labels: MeepleCardGameLabels;
-  readonly compact?: boolean;
   readonly className?: string;
   /**
-   * Issue #2055 Phase 7 — Wikidata cover attribution fields.
-   * Forwarded from `SharedGame.wikidataCoverLicense/Attribution/SourceUrl` (Zod schema).
-   * When `wikidataCoverLicense` is null/undefined, `MeepleCardAttributionFooter` returns null.
+   * Issue #2055 Phase 7 — Wikidata cover attribution fields. Forwarded to
+   * MeepleCard, which renders MeepleCardAttributionFooter for entity=game.
    */
   readonly wikidataCoverLicense?: string | null;
   readonly wikidataCoverAttribution?: string | null;
   readonly wikidataCoverSourceUrl?: string | null;
-}
-
-function Stars({
-  rating,
-  ariaLabel,
-}: {
-  readonly rating: number;
-  readonly ariaLabel: string;
-}): JSX.Element {
-  const full = Math.round(Math.max(0, Math.min(5, rating)));
-  return (
-    <span
-      role="img"
-      aria-label={ariaLabel}
-      className="inline-flex shrink-0 items-center gap-0.5 font-mono text-[11px] tabular-nums text-[hsl(var(--c-warning))]"
-    >
-      {Array.from({ length: 5 }, (_, i) => (
-        <span aria-hidden="true" key={i}>
-          {i < full ? '★' : '☆'}
-        </span>
-      ))}
-    </span>
-  );
 }
 
 export function MeepleCardGame({
@@ -95,102 +68,52 @@ export function MeepleCardGame({
   kbsCount,
   newThisWeekCount,
   labels,
-  compact = false,
   className,
   wikidataCoverLicense = null,
   wikidataCoverAttribution = null,
   wikidataCoverSourceUrl = null,
 }: MeepleCardGameProps): JSX.Element {
-  const showNewBadge = newThisWeekCount >= 2;
-  const coverH = compact ? 'h-24' : 'h-[116px]';
-  const ratingFive = Math.round(Math.max(0, Math.min(5, rating)));
+  const connections: ConnectionChipProps[] = [];
+  if (toolkitsCount > 0) {
+    connections.push({
+      entityType: 'toolkit',
+      count: toolkitsCount,
+      label: labels.toolkitLabel,
+      showLabel: true,
+    });
+  }
+  if (agentsCount > 0) {
+    connections.push({
+      entityType: 'agent',
+      count: agentsCount,
+      label: labels.agentLabel,
+      showLabel: true,
+    });
+  }
+  if (kbsCount > 0) {
+    connections.push({ entityType: 'kb', count: kbsCount, showLabel: false });
+  }
+
+  const badge = newThisWeekCount >= 2 ? `+${newThisWeekCount}` : undefined;
 
   return (
-    <>
-      <Link
-        href={`/shared-games/${id}`}
-        prefetch
-        data-slot="shared-games-card"
-        data-game-id={id}
-        className={clsx(
-          'group relative flex flex-col overflow-hidden rounded-lg border border-border bg-card no-underline',
-          'text-foreground transition-[transform,box-shadow,border-color] duration-150',
-          'hover:-translate-y-0.5 hover:shadow-md hover:border-[hsl(var(--c-game)/0.4)]',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--c-game))] focus-visible:ring-offset-2',
-          className
-        )}
-      >
-        {/* Cover */}
-        <div
-          className={clsx(
-            'relative flex items-center justify-center bg-[hsl(var(--c-game)/0.12)]',
-            coverH
-          )}
-        >
-          {coverUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={coverUrl}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover"
-              loading="lazy"
-            />
-          ) : (
-            <span aria-hidden="true" className={compact ? 'text-[36px]' : 'text-[44px]'}>
-              🎲
-            </span>
-          )}
-          {showNewBadge ? (
-            <span
-              aria-label={labels.newWeekAriaLabel(newThisWeekCount)}
-              className="absolute right-2 top-2 rounded-full bg-[hsl(var(--c-event))] px-2 py-0.5 font-mono text-[10px] font-bold text-white shadow-sm"
-            >
-              +{newThisWeekCount}
-            </span>
-          ) : null}
-        </div>
-
-        {/* Body */}
-        <div className={clsx('flex flex-col gap-1.5', compact ? 'p-2.5' : 'p-3.5')}>
-          <div className="flex items-start justify-between gap-2">
-            <h3
-              className={clsx(
-                'm-0 line-clamp-2 font-display font-bold leading-tight text-foreground',
-                compact ? 'text-[13px]' : 'text-[14px]'
-              )}
-            >
-              {title}
-            </h3>
-            <Stars
-              rating={rating}
-              ariaLabel={`${labels.ratingAriaLabel} ${ratingFive} ${'di'} 5`}
-            />
-          </div>
-
-          {year != null ? (
-            <p className="m-0 font-mono text-[10px] uppercase tracking-[0.06em] text-[hsl(var(--text-muted))]">
-              {year}
-            </p>
-          ) : null}
-
-          {(toolkitsCount > 0 || agentsCount > 0 || kbsCount > 0) && (
-            <div className="mt-1 flex flex-wrap gap-1.5">
-              {toolkitsCount > 0 ? (
-                <EntityChip entity="toolkit" label={`${toolkitsCount} ${labels.toolkitLabel}`} />
-              ) : null}
-              {agentsCount > 0 ? (
-                <EntityChip entity="agent" label={`${agentsCount} ${labels.agentLabel}`} />
-              ) : null}
-              {kbsCount > 0 ? <EntityChip entity="kb" label={String(kbsCount)} /> : null}
-            </div>
-          )}
-        </div>
-      </Link>
-      <MeepleCardAttributionFooter
-        license={wikidataCoverLicense}
-        attribution={wikidataCoverAttribution}
-        sourceUrl={wikidataCoverSourceUrl}
-      />
-    </>
+    <MeepleCard
+      entity="game"
+      variant="grid"
+      href={`/shared-games/${id}`}
+      title={title}
+      subtitle={year != null ? String(year) : undefined}
+      imageUrl={coverUrl ?? undefined}
+      coverEmoji="🎲"
+      rating={rating}
+      ratingMax={5}
+      badge={badge}
+      connections={connections}
+      className={className}
+      data-testid="shared-games-card"
+      wikidataCoverLicense={wikidataCoverLicense}
+      wikidataCoverAttribution={wikidataCoverAttribution}
+      wikidataCoverSourceUrl={wikidataCoverSourceUrl}
+    />
   );
 }

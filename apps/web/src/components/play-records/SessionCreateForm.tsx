@@ -51,7 +51,14 @@ import { GameCombobox } from './GameCombobox';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface SessionCreateFormProps {
-  onSubmit: (data: SessionCreateFormData) => void;
+  /**
+   * Called on final submit. Issue #2847 (#BB): the roster (`players`) lives in
+   * component state (not a react-hook-form field), so it is passed as a second
+   * argument — the create flow persists players + their scores + location, which
+   * the form-data alone omitted. `onSubmit` may be async; the form waits for it
+   * before clearing the draft/state so a failed create keeps the entered data.
+   */
+  onSubmit: (data: SessionCreateFormData, players: PlayerEntry[]) => void | Promise<void>;
   onCancel?: () => void;
   isSubmitting?: boolean;
   /**
@@ -735,7 +742,11 @@ export function SessionCreateForm({
       location: initialDraft.location ?? '',
     });
     setPlayers(initialDraft.players);
-    setSessionField('currentStep', initialDraft.currentStep);
+    // Clamp the restored step to a valid index — a corrupted/stale draft must
+    // never open the wizard on an out-of-range step (broken StepIndicator +
+    // undefined STEP_FIELDS).
+    const restoredStep = Math.min(Math.max(initialDraft.currentStep, 0), STEP_COUNT - 1);
+    setSessionField('currentStep', restoredStep);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-once restore
   }, []);
 
@@ -776,8 +787,21 @@ export function SessionCreateForm({
     onCancel?.();
   };
 
-  const handleFormSubmit = form.handleSubmit(data => {
-    onSubmit(data);
+  const handleFormSubmit = form.handleSubmit(async data => {
+    // Premature-submit guard: the record must ONLY be created from the final step
+    // (Punteggi). A create wizard can submit before the last step when an async
+    // re-render swaps the type="button" "Avanti" control for the type="submit"
+    // "Salva" control mid-interaction — that would create an empty record
+    // (status "Planned", players:[]) and navigate away, silently losing the
+    // roster. When the form submits early, advance instead of creating.
+    if (currentStep < STEP_COUNT - 1) {
+      nextStep();
+      return;
+    }
+    // Issue #2847 (#BB): pass the roster so the create flow can persist players +
+    // scores + location. Await the (possibly async) submit BEFORE clearing so a
+    // failed create leaves the entered data intact for a retry.
+    await onSubmit(data, players);
     clear();
     resetSessionCreation();
     form.reset();

@@ -3,6 +3,8 @@
  * Extracted from meeple-info-card.tsx for reuse in KbDrawerSheet and GameBackContent.
  */
 
+import { mapProcessingStateToDisplayStatus } from '@/lib/kb/processing-status';
+
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return bytes + ' B';
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
@@ -50,31 +52,14 @@ export function getDocumentStatus(doc: {
 }
 
 /**
- * Map processingState (PascalCase) to DocumentIndexingStatus for MeepleCard kbCards prop.
+ * Map processingState (PascalCase) or processingStatus to KbDisplayStatus for
+ * MeepleCard kbCards prop (#2860: delegates to shared module).
  */
 export function mapToIndexingStatus(doc: {
   processingState?: string;
   processingStatus?: string;
 }): 'processing' | 'indexed' | 'failed' | 'none' {
-  const state = doc.processingState || doc.processingStatus || '';
-  switch (state) {
-    case 'Ready':
-    case 'completed':
-      return 'indexed';
-    case 'Failed':
-    case 'failed':
-      return 'failed';
-    case 'Extracting':
-    case 'Chunking':
-    case 'Embedding':
-    case 'Indexing':
-    case 'Uploading':
-    case 'Pending':
-    case 'processing':
-      return 'processing';
-    default:
-      return 'none';
-  }
+  return mapProcessingStateToDisplayStatus(doc.processingState || doc.processingStatus);
 }
 
 /**

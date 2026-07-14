@@ -54,15 +54,10 @@ describe('sessionsClient CRUD and lifecycle', () => {
   });
 
   describe('getHistory', () => {
-    it('should fetch session history without filters', async () => {
-      const mockResponse = {
-        sessions: [],
-        total: 0,
-        page: 1,
-        pageSize: 20,
-      };
-
-      vi.mocked(mockHttpClient.get).mockResolvedValueOnce(mockResponse);
+    // Issue #2848 (#Z): /sessions/history returns a bare List<GameSessionDto>;
+    // getHistory validates the array and wraps it into a PaginatedSessionsResponse.
+    it('should wrap the empty array into a paginated response', async () => {
+      vi.mocked(mockHttpClient.get).mockResolvedValueOnce([]);
 
       const result = await client.getHistory();
 
@@ -70,18 +65,12 @@ describe('sessionsClient CRUD and lifecycle', () => {
         '/api/v1/sessions/history?',
         expect.any(Object)
       );
-      expect(result).toEqual(mockResponse);
+      expect(result).toEqual({ sessions: [], total: 0, page: 1, pageSize: 20 });
     });
 
-    it('should fetch session history with filters', async () => {
-      const mockResponse = {
-        sessions: [{ id: 'session-1', gameId: 'game-1' }],
-        total: 1,
-        page: 1,
-        pageSize: 10,
-      };
-
-      vi.mocked(mockHttpClient.get).mockResolvedValueOnce(mockResponse);
+    it('should wrap the returned array and apply filters', async () => {
+      const sessions = [{ id: 'session-1', gameId: 'game-1' }];
+      vi.mocked(mockHttpClient.get).mockResolvedValueOnce(sessions);
 
       const result = await client.getHistory({
         gameId: 'game-1',
@@ -99,7 +88,7 @@ describe('sessionsClient CRUD and lifecycle', () => {
         expect.stringContaining('startDate=2024-01-01'),
         expect.any(Object)
       );
-      expect(result).toEqual(mockResponse);
+      expect(result).toEqual({ sessions, total: 1, page: 1, pageSize: 10 });
     });
 
     it('should return empty response on null', async () => {

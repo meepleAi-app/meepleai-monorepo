@@ -4,7 +4,6 @@ using Api.Infrastructure;
 using Api.Infrastructure.Security;
 using Api.Services;
 using Api.SharedKernel.Application.EventHandlers;
-using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.Authentication.Application.EventHandlers;
@@ -13,19 +12,16 @@ internal sealed class AccessRequestCreatedEventHandler : DomainEventHandlerBase<
 {
     private readonly IAlertingService _alertingService;
     private readonly IAccessRequestRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
 
     public AccessRequestCreatedEventHandler(
         MeepleAiDbContext dbContext,
         IAlertingService alertingService,
         IAccessRequestRepository repository,
-        IUnitOfWork unitOfWork,
         ILogger<AccessRequestCreatedEventHandler> logger)
         : base(dbContext, logger)
     {
         _alertingService = alertingService;
         _repository = repository;
-        _unitOfWork = unitOfWork;
     }
 
     protected override async Task HandleEventAsync(
@@ -90,9 +86,12 @@ internal sealed class AccessRequestCreatedEventHandler : DomainEventHandlerBase<
         // may resend the Slack alert on the retry — accepted trade-off vs the alternative
         // where a DB failure after a successful Slack send silently swallows the guard,
         // which would have the same effect plus no operator signal.
-        accessRequest.MarkNotified(domainEvent.EventId);
-        await _repository.UpdateAsync(accessRequest, cancellationToken).ConfigureAwait(false);
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        // Partial update (happy-path #B): persist ONLY last_notified_event_id via a direct SQL
+        // UPDATE. The previous MarkNotified + full UpdateAsync(aggregate) + SaveChanges reverted a
+        // concurrently-committed approval (last-writer-wins) — the handler's read can predate the
+        // approval, so writing the whole aggregate back clobbered the Approved status.
+        await _repository.MarkNotifiedAsync(
+            domainEvent.AccessRequestId, domainEvent.EventId, cancellationToken).ConfigureAwait(false);
     }
 
     protected override Guid? GetUserId(AccessRequestCreatedEvent domainEvent)

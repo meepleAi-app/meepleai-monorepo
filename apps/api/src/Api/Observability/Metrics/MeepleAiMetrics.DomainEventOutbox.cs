@@ -24,12 +24,19 @@ internal static partial class MeepleAiMetrics
 
     /// <summary>
     /// Incremented once per successful <c>MediatR.Publish</c> from
-    /// <c>DomainEventOutboxProcessor</c>. Tag: <c>event_type</c> (same labelling as
-    /// <see cref="DomainEventOutboxEnqueued"/>).
+    /// <c>DomainEventOutboxProcessor</c>, when a row transitions Pending → Sent.
+    /// Tag: <c>event_type</c> (same labelling as <see cref="DomainEventOutboxEnqueued"/>).
     ///
-    /// <para>Used to compute <i>throughput</i>. The dispatched rate must converge with the
-    /// enqueued rate over a sliding window (otherwise backlog grows — see
-    /// <see cref="MeepleAiMetrics"/> health gauges below).</para>
+    /// <para>Used to compute dispatch <i>throughput</i>.</para>
+    ///
+    /// <para>#2923 — cardinality caveat: this counter is emitted ONLY by the processor,
+    /// so a per-<c>event_type</c> series first appears only AFTER the first dispatch of that
+    /// type following a process restart. At low volume its label cardinality therefore lags
+    /// <see cref="DomainEventOutboxEnqueued"/> (which observes every type at enqueue time).
+    /// The <c>dispatched / enqueued</c> rate ratio is consequently NOT a reliable backlog
+    /// signal at low volume — do not gate on it. The canonical backlog signals are the
+    /// <c>pending.count</c> and <c>pending.oldest_age_seconds</c> gauges (Grafana alerts in
+    /// <c>infra/prometheus/alerts/domain-event-outbox.yml</c>).</para>
     /// </summary>
     public static readonly Counter<long> DomainEventOutboxDispatched = Meter.CreateCounter<long>(
         name: "meepleai.domain_event_outbox.dispatched.total",

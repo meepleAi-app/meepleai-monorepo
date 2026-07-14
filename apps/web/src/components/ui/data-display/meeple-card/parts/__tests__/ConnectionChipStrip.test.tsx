@@ -19,7 +19,8 @@ describe('ConnectionChipStrip', () => {
         ]}
       />
     );
-    expect(screen.getAllByRole('button')).toHaveLength(2);
+    // Count-only connections have no interactive affordance — static <span role="img"> chips.
+    expect(screen.getAllByRole('img')).toHaveLength(2);
   });
 
   it('renders smaller chips in inline variant by default', () => {

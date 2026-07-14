@@ -78,6 +78,35 @@ describe('SessionCreateForm — draft persistence wiring', () => {
     expect(mockSetSessionField).toHaveBeenCalledWith('currentStep', 1);
   });
 
+  it('clamps an out-of-range restored draft step to the last valid step (2)', () => {
+    // A corrupted/stale draft must never open the wizard on an invalid step
+    // index (would render a broken StepIndicator + undefined STEP_FIELDS).
+    mockCurrentStep = 0;
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({
+        savedAt: Date.now(),
+        draft: {
+          schemaVersion: PLAY_RECORD_DRAFT_SCHEMA_VERSION,
+          currentStep: 99, // out of range
+          gameType: 'catalog',
+          gameName: 'Catan',
+          sessionDate: '2026-06-19T10:00:00.000Z',
+          visibility: 'Private',
+          enableScoring: false,
+          scoringDimensions: [],
+          dimensionUnits: {},
+          notes: '',
+          location: 'Verona',
+          players: [],
+        },
+      })
+    );
+    render(<SessionCreateForm {...props} />, { wrapper: wrapper() });
+    expect(mockSetSessionField).toHaveBeenCalledWith('currentStep', 2);
+    expect(mockSetSessionField).not.toHaveBeenCalledWith('currentStep', 99);
+  });
+
   it('AC-A3: does NOT restore when initialValues (gameNight prefill) is present', () => {
     mockCurrentStep = 1;
     localStorage.setItem(

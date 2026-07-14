@@ -18,7 +18,7 @@ vi.mock('@/hooks/useConnectionBarNav', () => ({
 vi.mock('@/components/ui/data-display/connection-bar', () => ({
   ConnectionBar: ({ connections }: { connections: Array<unknown> }) =>
     connections.length > 0 ? <div data-testid="connection-bar" /> : null,
-  buildAgentConnections: () => [{ count: 1 }], // always returns non-empty (real impl always returns 3 pips)
+  buildAgentConnectionPips: () => [{ count: 1 }], // always returns non-empty (real impl always returns 3 pips)
 }));
 vi.mock('@/components/chat-unified/ChatThreadView', () => ({
   ChatThreadView: () => <div data-testid="chat-thread-view" />,

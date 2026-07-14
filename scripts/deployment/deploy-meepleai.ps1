@@ -2,7 +2,7 @@
 # MeepleAI Production Deployment Script (PowerShell)
 # =============================================================================
 #
-# Deploys MeepleAI to production at meepleai.io
+# Deploys MeepleAI to production at meepleai.app
 #
 # Usage:
 #   .\scripts\deployment\deploy-meepleai.ps1 [command]
@@ -35,11 +35,12 @@ $ScriptDir = Split-Path -Parent $PSCommandPath
 $ProjectRoot = Split-Path -Parent (Split-Path -Parent $ScriptDir)
 $InfraDir = Join-Path $ProjectRoot 'infra'
 
-# Compose files (post-PR #738 — Traefik decommissioned, edge=CF Tunnel)
+# Compose files (post-PR #738 — Traefik decommissioned, edge=CF Tunnel).
+# compose.meepleai.yml (legacy Traefik/socket-proxy override for meepleai.io) was
+# dropped from the tree and is obsolete under CF Tunnel — removed here (#2898).
 $ComposeFiles = @(
     '-f', 'docker-compose.yml',
-    '-f', 'compose.prod.yml',
-    '-f', 'compose.meepleai.yml'
+    '-f', 'compose.prod.yml'
 )
 
 Set-Location $InfraDir
@@ -150,9 +151,9 @@ function Show-Status {
     Write-Host "           Endpoints                    " -ForegroundColor Cyan
     Write-Host "=========================================" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "  🌐 Website:    https://www.meepleai.io"
-    Write-Host "  🔌 API:        https://api.meepleai.io"
-    Write-Host "  📊 Grafana:    https://grafana.meepleai.io"
+    Write-Host "  🌐 Website:    https://meepleai.app"
+    Write-Host "  🔌 API:        https://api.meepleai.app"
+    Write-Host "  📊 Grafana:    https://grafana.meepleai.app"
     Write-Host "  ☁️  Edge:       Cloudflare Tunnel (cloudflared on VPS)"
     Write-Host ""
 }

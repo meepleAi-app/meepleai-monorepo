@@ -159,6 +159,44 @@ services:
       options: { max-size: "10m", max-file: "3" }
 
   # ===========================================================================
+  # Edge — Cloudflare Tunnel (containerized) — Issue #2772 Option A · OPT-IN
+  # ===========================================================================
+  # Started ONLY with `--profile cf-tunnel`, so this scaffold cannot disturb the
+  # current VPS-native cloudflared until the cutover is validated. See the runbook:
+  # docs/for-developers/operations/cf-tunnel-containerization.md
+  #
+  # Why: the intermittent api.meepleai.app 502 (#2772) is caused by the host
+  # userland `docker-proxy` dying under VPS memory/disk pressure. A VPS-native
+  # cloudflared can only reach the API via the host-published 127.0.0.1/::1:8080
+  # port (docker-proxy in the path). On the `meepleai` docker network a
+  # containerized cloudflared reaches the container directly (http://meepleai-api:8080)
+  # — no docker-proxy, no single point of fragility.
+  #
+  # REQUIRES a matching Cloudflare dashboard change (Zero Trust → Networks →
+  # Tunnels → Public Hostnames): repoint api.meepleai.app origin from
+  # http://localhost:8080 to http://meepleai-api:8080 (and web/monitoring likewise).
+  # Uses the SAME remotely-managed tunnel token as the VPS-native cloudflared.
+  cloudflared:
+    profiles: [cf-tunnel]
+    image: cloudflare/cloudflared:latest  # TODO(ops): pin to a specific version tag before cutover
+    container_name: meepleai-cloudflared
+    restart: always
+    # Token supplied via TUNNEL_TOKEN (env_file) so it is not exposed in `ps`/command.
+    # Ingress/origins for a token (remotely-managed) tunnel live in the CF dashboard,
+    # not in a local config.yml.
+    command: ["tunnel", "--no-autoupdate", "run"]
+    env_file:
+      - ./secrets/cloudflared.secret   # TUNNEL_TOKEN=...
+    networks:
+      - meepleai
+    depends_on:
+      - api
+      - web
+    logging:
+      driver: "json-file"
+      options: { max-size: "10m", max-file: "3" }
+
+  # ===========================================================================
   # AI Services — internal-only (post-PR #738: CF Tunnel handles edge, no public exposure)
   # Resource limits are reduced vs base compose (CAX21 has 8GB total).
   # Use 'make staging' only when AI features are needed; prefer 'make staging-core' otherwise.

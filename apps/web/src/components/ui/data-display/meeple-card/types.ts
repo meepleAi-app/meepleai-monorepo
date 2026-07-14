@@ -128,6 +128,14 @@ export interface MeepleCardProps {
   connections?: ConnectionChipProps[];
   connectionsVariant?: 'footer' | 'inline' | 'auto';
   onClick?: () => void;
+  /**
+   * Issue #2858 (C1) — when present, the card root renders as a Next.js
+   * `<Link href prefetch>` instead of a `<div role="button">`, giving real
+   * anchor semantics (prefetch, middle-click / open-in-new-tab, native
+   * keyboard focus, SEO) to navigable display cards on public routes.
+   * Currently honored by GridCard only.
+   */
+  href?: string;
   flippable?: boolean;
   flipBackContent?: ReactNode;
   flipTrigger?: 'card' | 'button';

@@ -31,6 +31,31 @@ public sealed class ResetPasswordCommandValidatorTests
         // Assert
         result.ShouldNotHaveAnyValidationErrors();
     }
+
+    // Issue #2806: the reset token is a 32-byte secure random value encoded as
+    // base64url by PasswordResetService (NOT a GUID). This is the exact shape of
+    // every real token. The previous .Must(BeValidGuid) rule rejected all of them,
+    // breaking password reset confirm for every user (HTTP 422). The validator MUST
+    // accept a base64url token.
+    [Theory]
+    [InlineData("R6fJNEsX7k4lr8hHxADcWB81K1EDyH0qbW7CNFJYEJU")]
+    [InlineData("abc123XYZ_-def456GHI789jklMNO012pqrSTU345vwx")]
+    public void Should_Pass_When_Token_Is_Base64Url_From_Service(string token)
+    {
+        // Arrange
+        var command = new ResetPasswordCommand
+        {
+            Token = token,
+            NewPassword = "NewUnusualPwd123!"
+        };
+
+        // Act
+        var result = _validator.TestValidate(command);
+
+        // Assert
+        result.ShouldNotHaveValidationErrorFor(x => x.Token);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -52,28 +77,9 @@ public sealed class ResetPasswordCommandValidatorTests
             .WithErrorMessage("Reset token is required");
     }
 
-    [Theory]
-    [InlineData("not-a-guid")]
-    [InlineData("12345")]
-    [InlineData("invalid-token-format")]
-    [InlineData("00000000-0000-0000-0000-00000000000")]
-    public void Should_Fail_When_Token_Is_Not_A_Valid_Guid(string token)
-    {
-        // Arrange
-        var command = new ResetPasswordCommand
-        {
-            Token = token,
-            NewPassword = "NewUnusualPwd123!"
-        };
-
-        // Act
-        var result = _validator.TestValidate(command);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(x => x.Token)
-            .WithErrorMessage("Reset token must be a valid GUID");
-    }
-
+    // Issue #2806: a GUID is still a non-empty string, so it continues to pass.
+    // These document backward-compatibility, NOT a GUID requirement — the token
+    // is base64url in practice (see Should_Pass_When_Token_Is_Base64Url_From_Service).
     [Fact]
     public void Should_Pass_When_Token_Is_Valid_Guid_With_Hyphens()
     {
@@ -244,7 +250,7 @@ public sealed class ResetPasswordCommandValidatorTests
         // Arrange
         var command = new ResetPasswordCommand
         {
-            Token = "invalid-token",
+            Token = "",
             NewPassword = "weak"
         };
 

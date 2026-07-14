@@ -76,10 +76,10 @@ describe('ManaPips', () => {
     const { container } = render(<ManaPips pips={pips} size="sm" />);
     const dot = container.querySelector('.rounded-full');
     expect(dot).not.toBeNull();
-    // Default KB color hsl(210, 40%, 48%) => rgb(73, 122, 171) in jsdom
-    // (lightness lowered from 55% to 48% by issue #636 to meet WCAG AA
-    // contrast for white text on the EntityBadge surface)
-    expect((dot as HTMLElement).style.background).toBe('rgb(73, 122, 171)');
+    // #2862: the default pip color now emits the theme-aware canonical
+    // --c-kb var (was the concrete light-only hsl that jsdom rendered as
+    // rgb(73, 122, 171)). jsdom preserves the `hsl(var(...))` form verbatim.
+    expect((dot as HTMLElement).style.background).toBe('hsl(var(--c-kb))');
   });
 
   it('uses different color for colorOverride vs default', () => {

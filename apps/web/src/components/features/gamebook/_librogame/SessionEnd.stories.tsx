@@ -68,6 +68,12 @@ const meta: Meta<typeof SessionEndMock> = {
           'Sostituire con il vero SessionEndModal quando estratto dallo overlay store.',
       },
     },
+    // Only `default` is a canonical UI state here (Frame01_Paused + Frame02_Victory,
+    // happy-path outcomes). Frame03_Defeat + Frame04_Cancelled are NARRATIVE OUTCOMES
+    // (defeat/abandon), not the canonical `error` state (reserved for technical
+    // failures) — they remain story variants driven by the `outcome` prop without a
+    // canonical state. De-mapped from `error` per #2929.
+    canonicalStates: ['default'],
   },
   args: {
     outcome: 'paused' as SessionEndMockOutcome,

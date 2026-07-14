@@ -323,6 +323,45 @@ describe('SessionCreateForm — wizard 3-step', () => {
     });
   });
 
+  // ── Premature-submit guard ──────────────────────────────────────────────────
+  describe('Premature-submit guard', () => {
+    it('does NOT create a record when the form submits before the final step', async () => {
+      // Simulates a stray submit at Step 2 (Quando) — e.g. an async re-render
+      // swapping "Avanti" (type=button) for "Salva" (type=submit) mid-click.
+      // The record must NOT be created (would lose the roster); the wizard
+      // advances instead.
+      mockCurrentStep = 1;
+      const onSubmit = vi.fn();
+      const { container } = render(<SessionCreateForm {...defaultProps} onSubmit={onSubmit} />, {
+        wrapper: createWrapper(),
+      });
+
+      const form = container.querySelector('form');
+      expect(form).not.toBeNull();
+      fireEvent.submit(form as HTMLFormElement);
+
+      // handleSubmit validates asynchronously — wait for the guard to advance.
+      await waitFor(() => {
+        expect(mockNextStep).toHaveBeenCalled();
+      });
+      expect(onSubmit).not.toHaveBeenCalled();
+    });
+
+    it('creates the record when the form submits on the final step (Punteggi)', async () => {
+      mockCurrentStep = 2;
+      const onSubmit = vi.fn();
+      const { container } = render(<SessionCreateForm {...defaultProps} onSubmit={onSubmit} />, {
+        wrapper: createWrapper(),
+      });
+
+      fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+
+      await waitFor(() => {
+        expect(onSubmit).toHaveBeenCalled();
+      });
+    });
+  });
+
   // ── AC-3.7: Validation gate ─────────────────────────────────────────────────
   describe('AC-3.7: Validation gate — "Avanti" disabled when step invalid', () => {
     it('renders a next/continue button on step 1', () => {

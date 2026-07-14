@@ -89,32 +89,56 @@ describe('SessionsClient - Issue #3026', () => {
   });
 
   describe('getHistory', () => {
-    it('should fetch session history without filters', async () => {
-      const mockResponse = {
-        sessions: [{ ...mockSession, status: 'Completed' }],
-        total: 1,
-        page: 1,
-        pageSize: 20,
-      };
-      vi.mocked(mockHttpClient.get).mockResolvedValue(mockResponse);
+    // Issue #2848 (#Z): GET /api/v1/sessions/history returns a BARE array
+    // (`.Produces<List<GameSessionDto>>`), unlike /sessions/active which returns a
+    // paginated envelope. getHistory validates the array and wraps it into the
+    // PaginatedSessionsResponse its callers expect. A schema-valid fixture is used
+    // so the array-schema assertion below is meaningful.
+    const validHistorySession = {
+      id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+      gameId: '6ba7b810-9dad-41d1-80b4-00c04fd430c8',
+      status: 'Completed',
+      startedAt: '2024-01-15T10:00:00Z',
+      completedAt: '2024-01-15T12:00:00Z',
+      playerCount: 2,
+      players: [],
+      winnerName: null,
+      notes: null,
+      durationMinutes: 120,
+    };
+
+    it('wraps the bare array the BE returns into a paginated response', async () => {
+      vi.mocked(mockHttpClient.get).mockResolvedValue([validHistorySession]);
 
       const client = createSessionsClient({ httpClient: mockHttpClient });
       const result = await client.getHistory();
 
-      expect(result).toEqual(mockResponse);
+      expect(result).toEqual({
+        sessions: [validHistorySession],
+        total: 1,
+        page: 1,
+        pageSize: 20,
+      });
       expect(mockHttpClient.get).toHaveBeenCalledWith(
         '/api/v1/sessions/history?',
         expect.any(Object)
       );
     });
 
+    it('validates against a schema that accepts the bare array (root cause of #2848)', async () => {
+      vi.mocked(mockHttpClient.get).mockResolvedValue([validHistorySession]);
+
+      const client = createSessionsClient({ httpClient: mockHttpClient });
+      await client.getHistory();
+
+      const schemaArg = vi.mocked(mockHttpClient.get).mock.calls[0]?.[1] as
+        | { safeParse: (x: unknown) => { success: boolean } }
+        | undefined;
+      expect(schemaArg?.safeParse([validHistorySession]).success).toBe(true);
+    });
+
     it('should apply all filters', async () => {
-      vi.mocked(mockHttpClient.get).mockResolvedValue({
-        sessions: [],
-        total: 0,
-        page: 1,
-        pageSize: 10,
-      });
+      vi.mocked(mockHttpClient.get).mockResolvedValue([]);
 
       const client = createSessionsClient({ httpClient: mockHttpClient });
       await client.getHistory({

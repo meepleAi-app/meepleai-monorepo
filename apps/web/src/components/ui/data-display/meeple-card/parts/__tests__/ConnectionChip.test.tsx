@@ -79,10 +79,12 @@ describe('ConnectionChip', () => {
   });
 
   it('has aria-label including count and entity label', () => {
+    // Static count-only chip (no href/items/onCreate/onClick) → non-interactive
+    // <span role="img">, not a <button>.
     render(<ConnectionChip entityType="session" count={5} />);
-    const btn = screen.getByRole('button');
-    expect(btn.getAttribute('aria-label')).toMatch(/5/);
-    expect(btn.getAttribute('aria-label')?.toLowerCase()).toMatch(/session/);
+    const chip = screen.getByRole('img');
+    expect(chip.getAttribute('aria-label')).toMatch(/5/);
+    expect(chip.getAttribute('aria-label')?.toLowerCase()).toMatch(/session/);
   });
 
   it('renders as a link when href is provided and no items/popover', () => {
@@ -100,10 +102,12 @@ describe('ConnectionChip', () => {
   });
 
   it('uses "99 or more" in aria-label when count exceeds 99', () => {
+    // Static count-only chip (no href/items/onCreate/onClick) → non-interactive
+    // <span role="img">, not a <button>.
     render(<ConnectionChip entityType="session" count={150} />);
-    const btn = screen.getByRole('button');
-    expect(btn.getAttribute('aria-label')).toMatch(/99 or more/i);
-    expect(btn.getAttribute('aria-label')).not.toMatch(/150/);
+    const chip = screen.getByRole('img');
+    expect(chip.getAttribute('aria-label')).toMatch(/99 or more/i);
+    expect(chip.getAttribute('aria-label')).not.toMatch(/150/);
   });
 
   it('does NOT render as Link when hasCreate is true and href is provided (even with count 0)', () => {

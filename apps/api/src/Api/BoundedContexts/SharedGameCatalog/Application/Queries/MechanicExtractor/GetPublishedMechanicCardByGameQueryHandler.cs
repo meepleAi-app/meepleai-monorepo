@@ -92,7 +92,23 @@ internal sealed class GetPublishedMechanicCardByGameQueryHandler
             DocumentName: apa.DocumentName);
     }
 
-    // Unknown section names sort last (defensive; the snapshot only writes enum names).
+    // Logical reading order for the card (v1.1.0: Setup/Components float up near the top since their
+    // enum values are append-only 6/7). Mirrors the FE MECHANIC_SECTION_DISPLAY_ORDER map. Unknown
+    // section names sort last (defensive; the snapshot only writes enum names).
     private static int SectionOrder(string section) =>
-        Enum.TryParse<MechanicSection>(section, ignoreCase: false, out var parsed) ? (int)parsed : int.MaxValue;
+        Enum.TryParse<MechanicSection>(section, ignoreCase: false, out var parsed)
+            ? parsed switch
+            {
+                MechanicSection.Summary => 0,
+                MechanicSection.Setup => 1,
+                MechanicSection.Components => 2,
+                MechanicSection.Mechanics => 3,
+                MechanicSection.Resources => 4,
+                MechanicSection.Phases => 5,
+                MechanicSection.Victory => 6,
+                MechanicSection.EndgameScoring => 7,
+                MechanicSection.Faq => 8,
+                _ => int.MaxValue
+            }
+            : int.MaxValue;
 }

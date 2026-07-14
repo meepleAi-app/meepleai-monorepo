@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { entityColors, entityHsl, entityLabel, entityIcon, statusColors } from '../tokens';
+import {
+  entityColors,
+  entityHsl,
+  entityHslText,
+  entityLabel,
+  entityIcon,
+  statusColors,
+} from '../tokens';
 import type { MeepleEntityType } from '../types';
 
 const allEntities: MeepleEntityType[] = [
@@ -80,13 +87,35 @@ describe('entityColors', () => {
   });
 });
 
-describe('entityHsl', () => {
-  it('returns hsl string without alpha', () => {
-    expect(entityHsl('game')).toMatch(/^hsl\(/);
+describe('entityHsl (CSS-var-backed, theme-aware — #2862)', () => {
+  it('returns hsl(var(--c-<entity>)) without alpha', () => {
+    expect(entityHsl('game')).toBe('hsl(var(--c-game))');
   });
 
-  it('returns hsla string with alpha', () => {
-    expect(entityHsl('game', 0.5)).toMatch(/^hsla\(/);
+  it('returns hsl(var(--c-<entity>) / alpha) with alpha', () => {
+    expect(entityHsl('game', 0.5)).toBe('hsl(var(--c-game) / 0.5)');
+  });
+
+  it('maps gameNightEvent to the event palette', () => {
+    expect(entityHsl('gameNightEvent')).toBe('hsl(var(--c-event))');
+  });
+});
+
+describe('entityHslText (CSS-var-backed, theme-aware — #2862)', () => {
+  it.each(['game', 'kb', 'toolkit', 'session', 'event', 'agent', 'chat'] as const)(
+    '%s uses the -text variant',
+    entity => {
+      expect(entityHslText(entity)).toBe(`hsl(var(--c-${entity}-text))`);
+    }
+  );
+
+  it('player/tool fall back to the solid var (no -text)', () => {
+    expect(entityHslText('player')).toBe('hsl(var(--c-player))');
+    expect(entityHslText('tool')).toBe('hsl(var(--c-tool))');
+  });
+
+  it('gameNightEvent uses the event -text variant', () => {
+    expect(entityHslText('gameNightEvent')).toBe('hsl(var(--c-event-text))');
   });
 });
 

@@ -941,7 +941,10 @@ internal static class SharedGameCatalogAdminEndpoints
             return Results.Unauthorized();
         }
 
-        var isAdmin = context.User.IsInRole("Admin");
+        // Issue #2845/#HH: include SuperAdmin — a superadmin's role claim is
+        // "SuperAdmin", so IsInRole("Admin") alone routed them to the Editor
+        // "request delete" branch (202, no-op) instead of a direct delete.
+        var isAdmin = context.User.IsAdmin();
 
         if (isAdmin)
         {

@@ -85,7 +85,7 @@ describe('SharedGamesGrid (v2)', () => {
 
   it('renders one MeepleCardGame per game when state=default', () => {
     const { container } = render(<SharedGamesGrid {...build()} />);
-    expect(container.querySelectorAll('[data-slot="shared-games-card"]')).toHaveLength(2);
+    expect(container.querySelectorAll('[data-testid="shared-games-card"]')).toHaveLength(2);
     expect(screen.getByText('Catan')).toBeInTheDocument();
     expect(screen.getByText('Wingspan')).toBeInTheDocument();
   });
@@ -122,8 +122,8 @@ describe('SharedGamesGrid (v2)', () => {
     const { container, rerender } = render(
       <SharedGamesGrid {...build({ state: 'empty-search' })} />
     );
-    expect(container.querySelectorAll('[data-slot="shared-games-card"]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-testid="shared-games-card"]')).toHaveLength(0);
     rerender(<SharedGamesGrid {...build({ state: 'error' })} />);
-    expect(container.querySelectorAll('[data-slot="shared-games-card"]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-testid="shared-games-card"]')).toHaveLength(0);
   });
 });

@@ -61,19 +61,24 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
         await CheckSessionQuotaAsync(request.UserId, cancellationToken).ConfigureAwait(false);
 
         // Session Flow v2.1 — T4: KB readiness pre-check.
-        var kbReadiness = await _mediator
-            .Send(new GetKbReadinessQuery(request.GameId), cancellationToken)
-            .ConfigureAwait(false);
-
-        if (!kbReadiness.IsReady)
+        // #2917: standalone gamebook play passes SkipKbReadinessGate=true — gamebook play does not
+        // depend on RAG KB readiness, so it must not 422 on a game whose KB is not indexed.
+        if (!request.SkipKbReadinessGate)
         {
-            _logger.LogWarning(
-                "KB not ready for game {GameId} (state={State}, ready={Ready}, failed={Failed})",
-                request.GameId, kbReadiness.State, kbReadiness.ReadyPdfCount, kbReadiness.FailedPdfCount);
+            var kbReadiness = await _mediator
+                .Send(new GetKbReadinessQuery(request.GameId), cancellationToken)
+                .ConfigureAwait(false);
 
-            throw new UnprocessableEntityException(
-                errorCode: "kb_not_ready",
-                message: $"KB for game {request.GameId} is not ready (state: {kbReadiness.State}).");
+            if (!kbReadiness.IsReady)
+            {
+                _logger.LogWarning(
+                    "KB not ready for game {GameId} (state={State}, ready={Ready}, failed={Failed})",
+                    request.GameId, kbReadiness.State, kbReadiness.ReadyPdfCount, kbReadiness.FailedPdfCount);
+
+                throw new UnprocessableEntityException(
+                    errorCode: "kb_not_ready",
+                    message: $"KB for game {request.GameId} is not ready (state: {kbReadiness.State}).");
+            }
         }
 
         // Session Flow v2.1 — T4: Resolve or create the GameNight envelope.

@@ -101,6 +101,20 @@ export type GamebookCampaignSpine = z.infer<typeof GamebookCampaignSpineSchema>;
 export interface CreateCampaignInput {
   gameId: string;
   title: string;
+  /**
+   * Issue #2917: standalone campaign roster (User-linked participants). The
+   * OWNER (authenticated user) is auto-seeded server-side and MUST NOT be sent
+   * here. Reserved for future use — the MVP FE leaves this empty/undefined and
+   * sends every extra player as a free `guestName`. Omitted fields serialize to
+   * `null` on the wire, which the backend treats as "no participants".
+   */
+  participants?: { userId: string | null; displayName: string }[];
+  /**
+   * Issue #2917: free-guest roster names (everyone but the owner). When both
+   * `participants` and `guestNames` are absent the backend keeps the legacy
+   * campaign-only behavior (backward-compatible).
+   */
+  guestNames?: string[];
 }
 
 async function parseJson<T>(res: Response, schema: z.ZodSchema<T>): Promise<T> {

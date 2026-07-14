@@ -107,6 +107,11 @@ const meta: Meta<typeof GamebookPlayShell> = {
           'Frame04 mostra la history dei paragrafi visitati (10 voci).',
       },
     },
+    // All 4 frames cover the canonical `default` (steady-state, loaded) state via
+    // `mswForLibrogamePlaySession*` handlers, not the literal `mswForState('default')`
+    // — lint:storybook-states heuristic can't see it (#2342 Task 4 bonifica). Only
+    // `default` is declared in fidelity.json for this mockup.
+    canonicalStates: ['default'],
   },
   decorators: [chatClosedDecorator],
   argTypes: {

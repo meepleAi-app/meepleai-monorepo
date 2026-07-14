@@ -55,6 +55,8 @@ import {
   MechanicClaimDtoSchema,
   MechanicClaimsListSchema,
   MECHANIC_ANALYSES_ROUTES,
+  MechanicPromptDtoSchema,
+  type MechanicPromptDto,
   type BulkApproveMechanicClaimsResponseDto,
   type BulkRejectMechanicClaimsRequest,
   type BulkRejectMechanicClaimsResponseDto,
@@ -577,6 +579,11 @@ export function createAdminContentClient(http: HttpClient) {
       );
       if (!result) throw new Error('Failed to enqueue mechanic analysis pipeline');
       return result;
+    },
+
+    // #539 follow-up: read-only prompt inspection (system + per-section).
+    async getMechanicPrompt(): Promise<MechanicPromptDto | null> {
+      return http.get(MECHANIC_ANALYSES_ROUTES.prompt, MechanicPromptDtoSchema);
     },
 
     async getMechanicAnalysisStatus(id: string): Promise<MechanicAnalysisStatusDto | null> {

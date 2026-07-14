@@ -640,6 +640,43 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
+    // ========================================
+    // DELETE SHARED GAME TESTS (Issue #2845 / finding #HH, leg 3)
+    // ========================================
+
+    [Fact]
+    public async Task DeleteSharedGame_WithSuperAdmin_Returns204AndSoftDeletes()
+    {
+        // Arrange — a superadmin (role claim "SuperAdmin"). Before the fix,
+        // HandleDeleteGame used IsInRole("Admin"), which is false for a
+        // superadmin, so it fell through to the Editor "request delete" branch
+        // (202 Accepted, no actual delete).
+        using var authScope = _factory.Services.CreateScope();
+        var authDbContext = authScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (superAdminUserId, sessionToken) =
+            await TestSessionHelper.CreateSuperAdminSessionAsync(authDbContext);
+
+        var game = await CreateTestGameAsync(GameStatus.Published, superAdminUserId);
+
+        // Act
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Delete,
+            $"/api/v1/admin/shared-games/{game.Id}",
+            sessionToken,
+            new { reason = "integration test — superadmin direct delete" });
+        var response = await _client.SendAsync(request);
+
+        // Assert — direct delete (204), NOT the Editor request path (202).
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        using var assertScope = _factory.Services.CreateScope();
+        var dbContext = assertScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var deleted = await dbContext.SharedGames
+            .IgnoreQueryFilters()
+            .FirstAsync(g => g.Id == game.Id, TestContext.Current.CancellationToken);
+        deleted.IsDeleted.Should().BeTrue("a superadmin delete must soft-delete the game, not just enqueue a request");
+    }
+
     /// <summary>
     /// Helper to create a game with a specific BGG ID for duplicate tests.
     /// </summary>

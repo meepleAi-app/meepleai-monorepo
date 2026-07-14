@@ -15,7 +15,9 @@ internal sealed class EmbeddedMechanicPromptProvider : IMechanicPromptProvider
     private static readonly Assembly Assembly = typeof(EmbeddedMechanicPromptProvider).Assembly;
     private readonly ConcurrentDictionary<string, string> _cache = new(StringComparer.Ordinal);
 
-    public string PromptVersion => "v1.0.0";
+    // v1.1.0 (#539 follow-up): added Setup / Components / EndgameScoring sections. Bumping the
+    // version so idempotency (FindByPromptVersionAsync) treats new runs as distinct from v1.0.0.
+    public string PromptVersion => "v1.1.0";
 
     public string GetSystemPrompt() => LoadResource("system.md");
 
@@ -29,6 +31,9 @@ internal sealed class EmbeddedMechanicPromptProvider : IMechanicPromptProvider
             MechanicSection.Resources => "resources.md",
             MechanicSection.Phases => "phases.md",
             MechanicSection.Faq => "faq.md",
+            MechanicSection.Setup => "setup.md",
+            MechanicSection.Components => "components.md",
+            MechanicSection.EndgameScoring => "endgame.md",
             _ => throw new ArgumentOutOfRangeException(nameof(section), section, "Unknown Mechanic section.")
         };
 

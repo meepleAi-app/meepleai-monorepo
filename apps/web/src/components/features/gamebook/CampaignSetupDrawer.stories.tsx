@@ -58,6 +58,15 @@ const meta: Meta<typeof CampaignSetupDrawer> = {
           '(goto+waitForTimeout+screenshot, no play execution).',
       },
     },
+    // Frame01-03 cover canonical `default` (steady-state wizard steps) via
+    // `initialStep` test-seam props, not string literals. Frame04_ValidationErr
+    // covers canonical `error`: the mockup's own state-04 is labeled
+    // "Validation Error" / `SetupWizardDrawer · ErrorState` (see
+    // librogame-runthrough-setup-wizard.html:496-547) and is rendered via
+    // `initialTitle:'Ca'` (2-char title triggers the inline field error), not
+    // a quoted `'error'` literal — lint:storybook-states heuristic can't see
+    // either (#2342 Task 4 bonifica).
+    canonicalStates: ['default', 'error'],
   },
   argTypes: {
     gameId: { control: 'text', description: 'Game reference ID passed to POST payload.' },
@@ -117,7 +126,7 @@ export const Frame01_Step1Name: Story = {
 // ── Frame 02 · Step 2 Players ──────────────────────────────────────────────
 
 export const Frame02_Step2Players: Story = {
-  name: '02 · Step 2 Giocatori — 4 player chip + add custom',
+  name: '02 · Step 2 Giocatori — roster editabile (host + guests)',
   args: {
     open: true,
     initialStep: 2,
@@ -127,8 +136,10 @@ export const Frame02_Step2Players: Story = {
     docs: {
       description: {
         story:
-          'Stato 02 mockup — step 2/3. Aaron (host) + Marco, Giulia, Luca (guest) come player chip. ' +
-          'Add custom button (dashed, disabled). Suggerimento agente Nanolith Tutor. ' +
+          'Stato 02 mockup — step 2/3 (#2917). Roster editabile via <PlayerSetup>: host = ' +
+          'utente corrente (fallback "Tu" senza sessione) + guest del preset group-a ' +
+          '(Marco, Giulia, Luca). Input "Nome giocatore" + bottone "Aggiungi" ABILITATI ' +
+          '(add/remove/reorder). Suggerimento agente Nanolith Tutor riflette il roster live. ' +
           'Stepper: [✓ Nome done | 2 Giocatori active | 3 pending]. ' +
           'Reso statico via initialStep:2 (test-seam prop).',
       },
@@ -154,6 +165,7 @@ export const Frame03_Step3Confirm: Story = {
         story:
           'Stato 03 mockup — step 3/3. Review card con cover-mini, meta-rows ' +
           '(Preset / Giocatori / Lingua agente / Durata stimata) + info box "Cosa succede ora". ' +
+          'La riga Giocatori mostra il roster REALE assemblato allo step 2 (#2917), non il preset. ' +
           'CTA "📖 Inizia sessione" abilitato. Stepper: [✓ Nome | ✓ Giocatori | 3 Conferma active]. ' +
           'Reso statico via initialStep:3 (test-seam prop). ' +
           'MSW handler mocks POST /api/v1/gamebook/campaigns → 201 (no real network error).',

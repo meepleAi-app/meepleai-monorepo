@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SessionTracking.Application.Commands;
+using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.Extensions;
 using MediatR;
@@ -29,14 +30,50 @@ internal static class SessionCommandEndpoints
     /// </summary>
     public record UpdateSessionScoresRequest(ScoreType ScoringType, string ScoreData);
 
+    /// <summary>
+    /// #2920: request body for <c>POST /game-sessions</c>. Deliberately EXCLUDES the internal-only
+    /// orchestration flags on <see cref="CreateSessionCommand"/> — <c>GamebookCampaignId</c>,
+    /// <c>SkipGameNightEnvelope</c>, <c>SkipKbReadinessGate</c> — so a client cannot forge them.
+    /// Those are set only by internal MediatR orchestrators (StartGameNight / AttachGamebookCampaign
+    /// / the standalone gamebook handler). Binding the command directly let a client send e.g.
+    /// <c>skipKbReadinessGate: true</c> to bypass the KB-readiness gate.
+    /// </summary>
+    public record CreateSessionRequest(
+        Guid UserId,
+        Guid GameId,
+        string SessionType,
+        DateTime? SessionDate,
+        string? Location,
+        List<ParticipantDto> Participants,
+        Guid? GameNightEventId = null,
+        IReadOnlyList<string>? GuestNames = null,
+        GameStateTier StateTier = GameStateTier.Minimal)
+    {
+        /// <summary>
+        /// Maps to <see cref="CreateSessionCommand"/>, leaving the internal-only flags
+        /// (<c>GamebookCampaignId</c>, <c>SkipGameNightEnvelope</c>, <c>SkipKbReadinessGate</c>)
+        /// at their safe defaults (<c>null</c>/<c>false</c>/<c>false</c>).
+        /// </summary>
+        public CreateSessionCommand ToCommand() => new(
+            UserId,
+            GameId,
+            SessionType,
+            SessionDate,
+            Location,
+            Participants,
+            GameNightEventId: GameNightEventId,
+            GuestNames: GuestNames,
+            StateTier: StateTier);
+    }
+
     private static void MapCreateSessionEndpoint(RouteGroupBuilder group)
     {
         group.MapPost("/game-sessions", async (
-            CreateSessionCommand command,
+            CreateSessionRequest request,
             IMediator mediator,
             CancellationToken ct) =>
         {
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            var result = await mediator.Send(request.ToCommand(), ct).ConfigureAwait(false);
             return Results.Created($"/api/v1/game-sessions/{result.SessionId}", result);
         })
         .RequireAuthenticatedUser()

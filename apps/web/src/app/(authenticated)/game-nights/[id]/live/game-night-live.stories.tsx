@@ -60,6 +60,10 @@ const meta: Meta<typeof NightLiveHub> = {
           'Pixel-faithful matrix di sp7-game-night-live.jsx 10 frames (game progression, transition, pause, diary embedded, mobile tabs, auto-save toast). Hero usa NightLiveHub (Screen K). Frame 03 transition rendered via GameTransitionDialog sibling primitive. Desktop primary; Mobile tab frames (07-09) DEFERRED a Phase 4 viewport sweep.',
       },
     },
+    // The Frame* stories all cover the canonical `default` (steady-state, loaded)
+    // state via `mswForSp7LiveState('live')`, not the literal `mswForState('default')`
+    // — lint:storybook-states heuristic can't see it (#2342 Task 4 bonifica).
+    canonicalStates: ['default'],
   },
   argTypes: {
     status: {

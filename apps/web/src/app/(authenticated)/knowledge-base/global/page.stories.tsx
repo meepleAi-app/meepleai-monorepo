@@ -22,6 +22,10 @@ const meta: Meta<typeof KnowledgeBaseGlobalPage> = {
           '#2220 DS-17-13. Knowledge base globale page (community KB catalog). Route /knowledge-base/global EXISTS pre-DS-17-13; story scaffold only.',
       },
     },
+    // `Default` export (empty args) covers the canonical `default` state — no
+    // `mswForState('default')` string literal for lint:storybook-states to detect
+    // (#2342 Task 4 bonifica).
+    canonicalStates: ['default'],
   },
 };
 

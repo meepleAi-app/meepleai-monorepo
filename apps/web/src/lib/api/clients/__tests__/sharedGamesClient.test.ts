@@ -197,8 +197,12 @@ describe('SharedGamesClient - Issue #3026', () => {
     });
 
     describe('create', () => {
-      it('should create a new game', async () => {
-        vi.mocked(mockHttpClient.post).mockResolvedValue({ id: 'new-game-123' });
+      // Issue #2845/#HH (leg 1): POST /admin/shared-games returns a BARE Guid
+      // string (`.Produces<Guid>`), not `{ id }`. Validating with an object
+      // schema rejected a successful 201 → no redirect + duplicate creations.
+      it('returns the bare game id the BE responds with', async () => {
+        const newId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+        vi.mocked(mockHttpClient.post).mockResolvedValue(newId);
 
         const client = createSharedGamesClient({ httpClient: mockHttpClient });
         const result = await client.create({
@@ -208,12 +212,17 @@ describe('SharedGamesClient - Issue #3026', () => {
           maxPlayers: 4,
         });
 
-        expect(result).toBe('new-game-123');
+        expect(result).toBe(newId);
         expect(mockHttpClient.post).toHaveBeenCalledWith(
           '/api/v1/admin/shared-games',
           expect.objectContaining({ title: 'New Game' }),
           expect.any(Object)
         );
+        // The schema passed must accept the bare guid string (root cause of leg 1).
+        const schemaArg = vi.mocked(mockHttpClient.post).mock.calls[0]?.[2] as
+          | { safeParse: (x: unknown) => { success: boolean } }
+          | undefined;
+        expect(schemaArg?.safeParse(newId).success).toBe(true);
       });
     });
 

@@ -25,6 +25,10 @@ const meta: Meta<typeof GamebookUploadPage> = {
           '#2214 DS-17-12. Upload wizard extended flow (gamebook upload). BGG upload option removed Stage 0.',
       },
     },
+    // `Default` export (empty args) covers the canonical `default` state — no
+    // `mswForState('default')` string literal for lint:storybook-states to detect
+    // (#2342 Task 4 bonifica).
+    canonicalStates: ['default'],
   },
 };
 

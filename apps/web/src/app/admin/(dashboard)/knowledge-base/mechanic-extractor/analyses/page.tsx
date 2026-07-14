@@ -27,8 +27,10 @@ import {
   CheckIcon,
   ClockIcon,
   DollarSignIcon,
+  FileTextIcon,
   Loader2Icon,
   PlayIcon,
+  RefreshCwIcon,
   SendIcon,
   ShieldAlertIcon,
   SparklesIcon,
@@ -85,7 +87,32 @@ const RUN_STATUS_BADGE_CLASS: Record<number, string> = {
   0: 'bg-green-100 text-green-800 border-green-300', // Succeeded
   1: 'bg-rose-100 text-rose-800 border-rose-300', // Failed
   2: 'bg-muted text-foreground border-border', // SkippedDueToCostCap
+  3: 'bg-amber-100 text-amber-800 border-amber-300', // RetainedWithGuardrailFlags
 };
+
+/** #539: descriptive tooltip for the section-run Status column (what each numeric status means). */
+const SECTION_RUN_STATUS_DESC: Record<number, string> = {
+  0: 'Succeeded — sezione generata e superati tutti i guardrail.',
+  1: 'Failed — la sezione non ha prodotto output valido (JSON malformato dopo i retry, o chiamata LLM in errore/timeout).',
+  2: 'Skipped — sezione saltata perché il costo cumulato ha superato il cost cap.',
+  3: 'Retained with flags — output ben formato ma con guardrail (es. T4) flaggati; conservato in modalità advisory per la review umana.',
+};
+
+/**
+ * #539: LLM model override presets. The pipeline routes the provider purely by model name,
+ * so picking a model here selects the provider. Empty value = server default (DeepSeek).
+ */
+const MODEL_OPTIONS: ReadonlyArray<{ value: string; label: string; provider: string }> = [
+  // `default` is a sentinel (Radix Select forbids empty-string item values) → no override sent.
+  { value: 'default', label: 'Default (DeepSeek · deepseek-chat)', provider: '' },
+  {
+    value: 'meta-llama/llama-3.3-70b-instruct',
+    label: 'OpenRouter · llama-3.3-70b',
+    provider: 'OpenRouter',
+  },
+  { value: 'deepseek-chat', label: 'DeepSeek · deepseek-chat', provider: 'DeepSeek' },
+  { value: 'qwen2.5:3b', label: 'Ollama · qwen2.5:3b (locale)', provider: 'Ollama' },
+];
 
 function formatCurrency(value: number | null | undefined): string {
   if (value == null) return '—';
@@ -107,8 +134,8 @@ function isPipelineRunning(status: MechanicAnalysisStatusDto | null | undefined)
   //   - PartiallyExtracted: ADR-051 Sprint 2 salvage state (also terminal)
   if (status.status !== MechanicAnalysisStatus.Draft) return false;
   if (status.sectionRuns.length === 0) return true;
-  // All 6 sections should complete; stop when each has a completedAt.
-  return status.sectionRuns.length < 6;
+  // All 9 sections should complete; stop when each has a completedAt (v1.1.0 added Setup/Components/Endgame).
+  return status.sectionRuns.length < 9;
 }
 
 export default function MechanicAnalysesPage() {
@@ -128,6 +155,12 @@ export default function MechanicAnalysesPage() {
   const [selectedGameId, setSelectedGameId] = useState('');
   const [selectedPdfId, setSelectedPdfId] = useState('');
   const [costCapUsd, setCostCapUsd] = useState<string>('0.50');
+  // #539: LLM model override + force-regenerate (bypass idempotency).
+  const [selectedModel, setSelectedModel] = useState<string>('default');
+  const [forceRegen, setForceRegen] = useState(false);
+  // #539 follow-up: regenerate-this-analysis model picker + prompt-viewer modal.
+  const [regenModel, setRegenModel] = useState<string>('default');
+  const [promptOpen, setPromptOpen] = useState(false);
   const [overrideEnabled, setOverrideEnabled] = useState(false);
   const [overrideCapUsd, setOverrideCapUsd] = useState<string>('1.00');
   const [overrideReason, setOverrideReason] = useState('');
@@ -230,6 +263,8 @@ export default function MechanicAnalysesPage() {
       if (!Number.isFinite(cap) || cap <= 0) {
         throw new Error('Cost cap must be a positive number');
       }
+      const modelOpt = MODEL_OPTIONS.find(m => m.value === selectedModel);
+      const modelOverride = selectedModel === 'default' ? undefined : selectedModel;
       return adminClient.generateMechanicAnalysis({
         sharedGameId: selectedGameId,
         pdfDocumentId: selectedPdfId,
@@ -240,6 +275,9 @@ export default function MechanicAnalysesPage() {
               reason: overrideReason,
             }
           : undefined,
+        model: modelOverride,
+        provider: modelOpt?.provider || undefined,
+        forceRegenerate: forceRegen || undefined,
       });
     },
     onSuccess: res => {
@@ -251,6 +289,39 @@ export default function MechanicAnalysesPage() {
       const msg = e instanceof Error ? e.message : 'Generation failed';
       setGenerateError(msg);
     },
+  });
+
+  // #539 follow-up: regenerate the CURRENT analysis (same game+PDF) with a chosen engine.
+  // Reuses the generate endpoint with forceRegenerate=true (skips idempotency → new analysis).
+  const regenerateMutation = useMutation({
+    mutationFn: async () => {
+      if (!status) throw new Error('No analysis loaded to regenerate');
+      const modelOpt = MODEL_OPTIONS.find(m => m.value === regenModel);
+      return adminClient.generateMechanicAnalysis({
+        sharedGameId: status.sharedGameId,
+        pdfDocumentId: status.pdfDocumentId,
+        costCapUsd: Number.parseFloat(costCapUsd) || 0.5,
+        model: regenModel === 'default' ? undefined : regenModel,
+        provider: modelOpt?.provider || undefined,
+        forceRegenerate: true,
+      });
+    },
+    onSuccess: res => {
+      setLifecycleError(null);
+      setAnalysisId(res.id);
+      queryClient.invalidateQueries({ queryKey: ['mechanic-analysis', res.id] });
+    },
+    onError: (e: unknown) => {
+      setLifecycleError(e instanceof Error ? e.message : 'Regenerate failed');
+    },
+  });
+
+  // #539 follow-up: the current prompt (system + per-section), fetched lazily when the modal opens.
+  const promptQuery = useQuery({
+    queryKey: ['mechanic-prompt'],
+    queryFn: () => adminClient.getMechanicPrompt(),
+    enabled: promptOpen,
+    staleTime: 5 * 60_000,
   });
 
   const submitReviewMutation = useMutation({
@@ -346,7 +417,7 @@ export default function MechanicAnalysesPage() {
           variant="outline"
           className="mt-2 border-sky-300 bg-sky-50 text-sky-800 dark:bg-sky-950/30 dark:text-sky-300"
         >
-          <SparklesIcon className="mr-1 h-3 w-3" />6 sections · cost-cap enforced
+          <SparklesIcon className="mr-1 h-3 w-3" />9 sections · cost-cap enforced
         </Badge>
       </div>
 
@@ -455,6 +526,36 @@ export default function MechanicAnalysesPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* #539: LLM model override + force-regenerate. */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-foreground">
+                Modello LLM
+              </label>
+              <Select value={selectedModel} onValueChange={setSelectedModel}>
+                <SelectTrigger data-testid="model-select">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MODEL_OPTIONS.map(m => (
+                    <SelectItem key={m.value} value={m.value}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <label className="mt-2 flex items-start gap-2 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={forceRegen}
+                  onChange={e => setForceRegen(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-border"
+                  data-testid="force-regen-checkbox"
+                />
+                Rigenera con un nuovo modello (ignora l&apos;idempotenza: crea una nuova analisi
+                anche se ne esiste già una per questo gioco/PDF).
+              </label>
             </div>
 
             <div>
@@ -691,6 +792,7 @@ export default function MechanicAnalysesPage() {
                             <Badge
                               variant="outline"
                               className={RUN_STATUS_BADGE_CLASS[run.status] ?? ''}
+                              title={SECTION_RUN_STATUS_DESC[run.status] ?? undefined}
                             >
                               {MECHANIC_SECTION_RUN_STATUS_LABELS[run.status] ?? run.status}
                             </Badge>
@@ -765,6 +867,53 @@ export default function MechanicAnalysesPage() {
                 >
                   <ShieldAlertIcon className="mr-1 h-4 w-4" />
                   Suppress (T5)
+                </Button>
+              </div>
+            )}
+
+            {/* #539 follow-up: regenerate this analysis with a different engine + inspect the prompt */}
+            {status && (
+              <div className="flex flex-wrap items-end gap-2 border-t border-border pt-4 dark:border-zinc-700">
+                <div className="flex flex-col gap-1">
+                  <label
+                    htmlFor="regen-model"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
+                    Motore rigenerazione
+                  </label>
+                  <Select value={regenModel} onValueChange={setRegenModel}>
+                    <SelectTrigger id="regen-model" className="w-56">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MODEL_OPTIONS.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => regenerateMutation.mutate()}
+                  disabled={regenerateMutation.isPending}
+                  title="Riesegue l'intera pipeline (9 sezioni) sullo stesso PDF con il motore selezionato e crea una nuova analisi (forceRegenerate)."
+                >
+                  {regenerateMutation.isPending ? (
+                    <Loader2Icon className="mr-1 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCwIcon className="mr-1 h-4 w-4" />
+                  )}
+                  Rigenera
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setPromptOpen(true)}
+                  title="Mostra il prompt di sistema e i prompt per-sezione inviati all'LLM."
+                >
+                  <FileTextIcon className="mr-1 h-4 w-4" />
+                  Vedi prompt
                 </Button>
               </div>
             )}
@@ -844,6 +993,52 @@ export default function MechanicAnalysesPage() {
               ) : null}
               Suppress
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* #539 follow-up: prompt viewer (system + per-section prompts, read-only) */}
+      <AlertDialog open={promptOpen} onOpenChange={setPromptOpen}>
+        <AlertDialogContent className="max-w-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Prompt Mechanic Extractor
+              {promptQuery.data ? ` — ${promptQuery.data.promptVersion}` : ''}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Prompt di sistema e prompt per-sezione inviati all&apos;LLM a ogni chiamata della
+              pipeline. Read-only.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-2">
+            {promptQuery.isLoading && <p className="text-sm text-muted-foreground">Caricamento…</p>}
+            {promptQuery.isError && (
+              <p className="text-sm text-rose-600">Impossibile caricare il prompt.</p>
+            )}
+            {promptQuery.data && (
+              <>
+                <section>
+                  <h3 className="mb-1 text-sm font-semibold">System prompt</h3>
+                  <pre className="whitespace-pre-wrap rounded-md bg-muted p-3 text-xs">
+                    {promptQuery.data.systemPrompt}
+                  </pre>
+                </section>
+                {promptQuery.data.sections.map(s => (
+                  <section key={s.section}>
+                    <h3 className="mb-1 text-sm font-semibold">
+                      {MECHANIC_SECTION_LABELS[s.section] ?? s.sectionName}{' '}
+                      <span className="font-normal text-muted-foreground">({s.sectionName})</span>
+                    </h3>
+                    <pre className="whitespace-pre-wrap rounded-md bg-muted p-3 text-xs">
+                      {s.prompt}
+                    </pre>
+                  </section>
+                ))}
+              </>
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Chiudi</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

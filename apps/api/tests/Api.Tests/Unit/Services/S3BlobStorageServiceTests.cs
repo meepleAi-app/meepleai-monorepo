@@ -488,6 +488,78 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         result.Should().Be(expectedUrl);
     }
 
+    /// <summary>
+    /// I1 GATE (final whole-branch review of feature/game-cover-configuration): reproduces
+    /// the exact call shape used by <c>CoverUrlResolver.ResolvePublicAsync</c>'s L4 branch —
+    /// <c>GetPresignedDownloadUrlAsync($"{PdfCoverR2Key}-preview.webp", BlobCategory.GameImage,
+    /// PdfCoverR2Key)</c> — where <c>PdfCoverR2Key</c> is the flat, slash-containing key
+    /// written by <c>ProposeCoverChangeCommandHandler</c>
+    /// (<c>covers/{sharedGameId:D}/pdf-cover-pending</c>).
+    ///
+    /// Both the <c>fileId</c> and <c>resourceKey</c> arguments passed here contain <c>/</c>.
+    /// <see cref="S3BlobStorageService.GetPresignedDownloadUrlAsync"/> validates BOTH via
+    /// <c>PathSecurity.ValidateIdentifier</c> (regex <c>^[a-zA-Z0-9_-]+$</c>, which rejects
+    /// <c>/</c>) BEFORE ever touching <see cref="IAmazonS3"/>. This test asserts that
+    /// outcome deterministically (no S3/HTTP call should even be attempted) — settling
+    /// whether the flat-slash L4 key convention can resolve at all, independent of any
+    /// Testcontainers/MinIO transport environment noise.
+    /// </summary>
+    [Fact]
+    public async Task GetPresignedDownloadUrlAsync_FlatSlashPdfCoverKeyShape_ReturnsNullWithoutCallingS3()
+    {
+        // Arrange: exact shape CoverUrlResolver.ResolvePublicAsync passes for L4.
+        var pdfCoverR2Key = $"covers/{Guid.NewGuid():D}/pdf-cover-pending";
+        var fileId = $"{pdfCoverR2Key}-preview.webp";
+
+        // Act
+        var result = await _sut.GetPresignedDownloadUrlAsync(fileId, BlobCategory.GameImage, pdfCoverR2Key);
+
+        // Assert: PathSecurity.ValidateIdentifier throws ArgumentException on the slash
+        // before any S3 call — the catch-all handler converts it to a null return, which
+        // is indistinguishable from "not found" at the CoverUrlResolver call site.
+        result.Should().BeNull(
+            "PathSecurity.ValidateIdentifier rejects '/' in both fileId and resourceKey, " +
+            "so the flat-slash L4 key can never reach S3 — this is the I1 gate verdict");
+
+        _mockS3Client.Verify(x => x.ListObjectsV2Async(
+            It.IsAny<ListObjectsV2Request>(),
+            It.IsAny<CancellationToken>()),
+            Times.Never,
+            "validation must fail before any S3 round-trip is attempted");
+
+        _mockS3Client.Verify(x => x.GetPreSignedURLAsync(
+            It.IsAny<GetPreSignedUrlRequest>()),
+            Times.Never);
+    }
+
+    /// <summary>
+    /// Companion to the I1 gate above: confirms the ALREADY-SHIPPED L2 Wikidata convention
+    /// (<c>GetPresignedDownloadUrlAsync($"{WikidataCoverR2Key}.webp", GameImage,
+    /// WikidataCoverR2Key)</c>, same flat-slash shape) hits the identical validation
+    /// failure — proving this is a pre-existing, shared defect in the flat-slash key
+    /// convention itself, not something unique to the new PDF-cover (L4) feature.
+    /// </summary>
+    [Fact]
+    public async Task GetPresignedDownloadUrlAsync_FlatSlashWikidataKeyShape_ReturnsNullWithoutCallingS3()
+    {
+        // Arrange: exact shape CoverUrlResolver.ResolvePublicAsync passes for L2.
+        var wikidataCoverR2Key = $"covers/{Guid.NewGuid():D}/wikidata-cover";
+        var fileId = $"{wikidataCoverR2Key}.webp";
+
+        // Act
+        var result = await _sut.GetPresignedDownloadUrlAsync(fileId, BlobCategory.GameImage, wikidataCoverR2Key);
+
+        // Assert
+        result.Should().BeNull(
+            "the L2 Wikidata convention uses the identical flat-slash shape as L4 and " +
+            "hits the same PathSecurity.ValidateIdentifier rejection");
+
+        _mockS3Client.Verify(x => x.ListObjectsV2Async(
+            It.IsAny<ListObjectsV2Request>(),
+            It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     // ── Issue #2271: non-seekable stream handling ────────────────────────────
     // R2 (and other S3-compatible providers) reject PutObject when the SDK's
     // checksum calculator cannot read a stream's Length. This happens when the

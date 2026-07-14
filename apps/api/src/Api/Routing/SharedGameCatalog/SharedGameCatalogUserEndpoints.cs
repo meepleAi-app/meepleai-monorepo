@@ -1,7 +1,9 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExtractor;
+using Api.BoundedContexts.SharedGameCatalog.Application.Commands.ProposeCoverChange;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetGameDocumentsForUser;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.MechanicExtractor;
+using Api.Extensions;
 using Api.Middleware.Exceptions;
 using MediatR;
 
@@ -45,6 +47,16 @@ internal static class SharedGameCatalogUserEndpoints
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status429TooManyRequests);
+
+        // Propose a cover-from-PDF for a SharedGame (Task 6, Game Cover-da-PDF plan).
+        group.MapPost("/games/{gameId:guid}/cover/propose-from-pdf", HandleProposeCoverFromPdf)
+            .RequireAuthorization()
+            .WithName("ProposeCoverFromPdf")
+            .WithSummary("Propose a cover-from-PDF for a shared game (Authenticated)")
+            .WithDescription("Materializes a pending cover from a page of an uploaded PDF and creates a Pending CoverChange share request for admin review.")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound);
     }
 
     private static async Task<IResult> HandleSubmitCardFeedback(
@@ -110,4 +122,36 @@ internal static class SharedGameCatalogUserEndpoints
             return Results.NotFound();
         }
     }
+
+    private static async Task<IResult> HandleProposeCoverFromPdf(
+        Guid gameId,
+        ProposeCoverFromPdfRequest body,
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var userId = context.User.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
+        try
+        {
+            var command = new ProposeCoverChangeCommand(userId, gameId, body.PdfDocumentId, body.PageNumber);
+            var shareRequestId = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(new { shareRequestId });
+        }
+        catch (NotFoundException)
+        {
+            return Results.NotFound();
+        }
+    }
 }
+
+/// <summary>
+/// Request body for <c>POST /api/v1/games/{gameId}/cover/propose-from-pdf</c>.
+/// </summary>
+/// <param name="PdfDocumentId">The source PDF the cover page is extracted from.</param>
+/// <param name="PageNumber">1-based page number to render as the cover.</param>
+internal sealed record ProposeCoverFromPdfRequest(Guid PdfDocumentId, int PageNumber);

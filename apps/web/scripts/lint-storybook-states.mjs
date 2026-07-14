@@ -1,0 +1,60 @@
+/**
+ * lint-storybook-states.mjs — canonical-state coverage gate (DEC-A5, umbrella #2342)
+ *
+ * Walks MOCKUPS_INDEX page-mock entries → fidelity.json (by mockup.source) →
+ * story_path → states implemented, and classifies each entry:
+ *   - covered            : story implements every declared canonical state
+ *   - coverage-gap       : no fidelity, or fidelity without story_path (whitelist-incremental)
+ *   - contract-violation : story omits a declared canonical state (always blocking)
+ *   - skipped-obsolete   : fidelity design_intent === 'forward-refactor-obsolete'
+ *
+ * Modes: inventory (default, exit 0) | strict (--strict --max-baseline N).
+ * Refs: docs/superpowers/specs/2026-07-14-lint-storybook-states-design.md
+ */
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { resolve, dirname, relative } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { globSync } from 'glob';
+import { parseMockupsIndex } from './mockup-annotations/inject-annotations.mjs';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = resolve(__dirname, '..', '..', '..');
+const MOCKUPS_INDEX = resolve(REPO_ROOT, 'admin-mockups', 'MOCKUPS_INDEX.md');
+const AUDIT_DIR = resolve(REPO_ROOT, 'audits');
+const JSON_OUT = resolve(AUDIT_DIR, '2026-07-14-storybook-states-coverage.json');
+const MD_OUT = resolve(AUDIT_DIR, '2026-07-14-storybook-states-coverage.md');
+
+export const CANONICAL_STATES = Object.freeze(['default', 'empty', 'loading', 'error', 'sse']);
+
+/** Canonicalize one raw state token. empty-* → empty. Non-canonical → null. */
+export function normalizeState(raw) {
+  if (typeof raw !== 'string') return null;
+  const s = raw.trim().toLowerCase();
+  if (s === 'default' || s === 'loading' || s === 'error' || s === 'sse') return s;
+  if (s === 'empty' || s.startsWith('empty-')) return 'empty';
+  return null;
+}
+
+const OVERRIDE_RE = /canonicalStates\s*:\s*\[([^\]]*)\]/;
+const STATE_LITERAL_RE = /['"`](default|empty[\w-]*|loading|error|sse|offline|quota-(?:soft|hard))['"`]/g;
+
+/** Hybrid state detection: explicit override wins, else heuristic scan. */
+export function detectStates(storySource) {
+  const set = new Set();
+  const override = OVERRIDE_RE.exec(storySource);
+  if (override) {
+    const quoted = override[1].match(/['"`]([^'"`]+)['"`]/g) || [];
+    for (const q of quoted) {
+      const norm = normalizeState(q.slice(1, -1));
+      if (norm) set.add(norm);
+    }
+    return set;
+  }
+  STATE_LITERAL_RE.lastIndex = 0;
+  let m;
+  while ((m = STATE_LITERAL_RE.exec(storySource)) !== null) {
+    const norm = normalizeState(m[1]);
+    if (norm) set.add(norm);
+  }
+  return set;
+}

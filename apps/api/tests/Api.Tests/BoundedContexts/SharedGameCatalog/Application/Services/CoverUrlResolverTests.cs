@@ -63,13 +63,13 @@ public class CoverUrlResolverTests
     {
         var sg = new SharedGameEntity { PdfCoverR2Key = "pdf-key", WikidataCoverR2Key = "wiki-key" };
         var entry = new UserLibraryEntryEntity { CustomCoverR2Key = "custom-key" };
-        _blob.Setup(b => b.GetPresignedDownloadUrlAsync("custom-key.webp", BlobCategory.GameImage, "custom-key", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("custom-key.webp", null))
              .ReturnsAsync("https://r2/custom.webp");
 
         var url = await CoverUrlResolver.ResolveForUserAsync(sg, entry, _blob.Object);
 
         url.Should().Be("https://r2/custom.webp");
-        _blob.Verify(b => b.GetPresignedDownloadUrlAsync("pdf-key-preview.webp", It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<int?>()), Times.Never);
+        _blob.Verify(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", It.IsAny<int?>()), Times.Never);
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public class CoverUrlResolverTests
     {
         var sg = new SharedGameEntity { PdfCoverR2Key = "pdf-key", WikidataCoverR2Key = "wiki-key" };
         var entry = new UserLibraryEntryEntity { CustomCoverR2Key = null };
-        _blob.Setup(b => b.GetPresignedDownloadUrlAsync("pdf-key-preview.webp", BlobCategory.GameImage, "pdf-key", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
              .ReturnsAsync("https://r2/pdf.webp");
 
         var url = await CoverUrlResolver.ResolveForUserAsync(sg, entry, _blob.Object);
@@ -89,7 +89,7 @@ public class CoverUrlResolverTests
     public async Task ResolvePublicAsync_L4WinsOverL2()
     {
         var sg = new SharedGameEntity { PdfCoverR2Key = "pdf-key", WikidataCoverR2Key = "wiki-key" };
-        _blob.Setup(b => b.GetPresignedDownloadUrlAsync("pdf-key-preview.webp", BlobCategory.GameImage, "pdf-key", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
              .ReturnsAsync("https://r2/pdf.webp");
 
         var url = await CoverUrlResolver.ResolvePublicAsync(sg, _blob.Object);
@@ -101,7 +101,7 @@ public class CoverUrlResolverTests
     public async Task ResolvePublicAsync_NoL4_FallsBackToL2()
     {
         var sg = new SharedGameEntity { PdfCoverR2Key = null, WikidataCoverR2Key = "wiki-key" };
-        _blob.Setup(b => b.GetPresignedDownloadUrlAsync("wiki-key.webp", BlobCategory.GameImage, "wiki-key", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
              .ReturnsAsync("https://r2/wiki.webp");
 
         var url = await CoverUrlResolver.ResolvePublicAsync(sg, _blob.Object);
@@ -123,14 +123,59 @@ public class CoverUrlResolverTests
     public async Task ResolvePublicAsync_PresignedReturnsNull_FallsThroughToNextLayer()
     {
         var sg = new SharedGameEntity { PdfCoverR2Key = "pdf-key", WikidataCoverR2Key = "wiki-key" };
-        _blob.Setup(b => b.GetPresignedDownloadUrlAsync("pdf-key-preview.webp", It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<int?>()))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", It.IsAny<int?>()))
              .ReturnsAsync((string?)null);
-        _blob.Setup(b => b.GetPresignedDownloadUrlAsync("wiki-key.webp", It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<int?>()))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", It.IsAny<int?>()))
              .ReturnsAsync("https://r2/wiki.webp");
 
         var url = await CoverUrlResolver.ResolvePublicAsync(sg, _blob.Object);
 
         url.Should().Be("https://r2/wiki.webp");
+    }
+
+    [Fact]
+    public async Task ResolvePublicAsync_L4SlashAndDotKey_ResolvesViaRawKeyMethod()
+    {
+        // P1 fix regression guard: the real PdfCoverR2Key shape is
+        // "covers/{sharedGameId:D}/pdf-cover-pending" (contains '/'). Before the fix,
+        // GetPresignedDownloadUrlAsync validated this via PathSecurity.ValidateIdentifier
+        // and always returned null. Now it must resolve via GetPresignedUrlForRawKeyAsync
+        // called with the exact physical key including the "-preview.webp" suffix.
+        var pdfKey = $"covers/{Guid.NewGuid():D}/pdf-cover-pending";
+        var sg = new SharedGameEntity { PdfCoverR2Key = pdfKey };
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync($"{pdfKey}-preview.webp", null))
+             .ReturnsAsync("https://r2/pdf-cover.webp");
+
+        var url = await CoverUrlResolver.ResolvePublicAsync(sg, _blob.Object);
+
+        url.Should().Be("https://r2/pdf-cover.webp");
+    }
+
+    [Fact]
+    public async Task ResolvePublicAsync_L2SlashAndDotKey_ResolvesViaRawKeyMethod()
+    {
+        var wikidataKey = $"covers/{Guid.NewGuid():D}/wikidata-cover";
+        var sg = new SharedGameEntity { WikidataCoverR2Key = wikidataKey };
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync($"{wikidataKey}.webp", null))
+             .ReturnsAsync("https://r2/wikidata-cover.webp");
+
+        var url = await CoverUrlResolver.ResolvePublicAsync(sg, _blob.Object);
+
+        url.Should().Be("https://r2/wikidata-cover.webp");
+    }
+
+    [Fact]
+    public async Task ResolveForUserAsync_L3SlashAndDotKey_ResolvesViaRawKeyMethod()
+    {
+        var customKey = $"covers/{Guid.NewGuid():D}/user-custom-cover";
+        var sg = new SharedGameEntity();
+        var entry = new UserLibraryEntryEntity { CustomCoverR2Key = customKey };
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync($"{customKey}.webp", null))
+             .ReturnsAsync("https://r2/user-custom-cover.webp");
+
+        var url = await CoverUrlResolver.ResolveForUserAsync(sg, entry, _blob.Object);
+
+        url.Should().Be("https://r2/user-custom-cover.webp");
     }
 
     // ----- Issue #2123 metric emission tests --------------------------------
@@ -141,7 +186,7 @@ public class CoverUrlResolverTests
         using var capture = new CoverMetricsCapture();
         var sg = new SharedGameEntity();
         var entry = new UserLibraryEntryEntity { CustomCoverR2Key = "custom-key" };
-        _blob.Setup(b => b.GetPresignedDownloadUrlAsync("custom-key.webp", BlobCategory.GameImage, "custom-key", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("custom-key.webp", null))
              .ReturnsAsync("https://r2/custom.webp");
 
         await CoverUrlResolver.ResolveForUserAsync(sg, entry, _blob.Object);
@@ -157,7 +202,7 @@ public class CoverUrlResolverTests
     {
         using var capture = new CoverMetricsCapture();
         var sg = new SharedGameEntity { PdfCoverR2Key = "pdf-key" };
-        _blob.Setup(b => b.GetPresignedDownloadUrlAsync("pdf-key-preview.webp", BlobCategory.GameImage, "pdf-key", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
              .ReturnsAsync("https://r2/pdf.webp");
 
         await CoverUrlResolver.ResolvePublicAsync(sg, _blob.Object);
@@ -189,7 +234,7 @@ public class CoverUrlResolverTests
     {
         using var capture = new CoverMetricsCapture();
         var sg = new SharedGameEntity { WikidataCoverR2Key = "wiki-key" };
-        _blob.Setup(b => b.GetPresignedDownloadUrlAsync("wiki-key.webp", BlobCategory.GameImage, "wiki-key", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
              .ReturnsAsync("https://r2/wiki.webp");
 
         await CoverUrlResolver.ResolvePublicAsync(sg, _blob.Object);
@@ -223,7 +268,7 @@ public class CoverUrlResolverTests
         using var capture = new CoverMetricsCapture();
         var sg = new SharedGameEntity { WikidataCoverR2Key = "wiki-key" };
         var entry = new UserLibraryEntryEntity { CustomCoverR2Key = null };
-        _blob.Setup(b => b.GetPresignedDownloadUrlAsync("wiki-key.webp", BlobCategory.GameImage, "wiki-key", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
              .ReturnsAsync("https://r2/wiki.webp");
 
         await CoverUrlResolver.ResolveForUserAsync(sg, entry, _blob.Object);
@@ -246,9 +291,9 @@ public class CoverUrlResolverTests
         var sg = new SharedGameEntity { WikidataCoverR2Key = "wiki-key" };
         var entry = new UserLibraryEntryEntity { CustomCoverR2Key = "custom-key" };
 
-        _blob.Setup(b => b.GetPresignedDownloadUrlAsync("custom-key.webp", BlobCategory.GameImage, "custom-key", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("custom-key.webp", null))
              .ReturnsAsync((string?)null);
-        _blob.Setup(b => b.GetPresignedDownloadUrlAsync("wiki-key.webp", BlobCategory.GameImage, "wiki-key", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
              .ReturnsAsync("https://r2/wiki.webp");
 
         await CoverUrlResolver.ResolveForUserAsync(sg, entry, _blob.Object);
@@ -268,7 +313,7 @@ public class CoverUrlResolverTests
         var sg = new SharedGameEntity(); // no R2 keys at all
         var entry = new UserLibraryEntryEntity { CustomCoverR2Key = "custom-key" };
 
-        _blob.Setup(b => b.GetPresignedDownloadUrlAsync("custom-key.webp", BlobCategory.GameImage, "custom-key", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("custom-key.webp", null))
              .ReturnsAsync((string?)null);
 
         await CoverUrlResolver.ResolveForUserAsync(sg, entry, _blob.Object);

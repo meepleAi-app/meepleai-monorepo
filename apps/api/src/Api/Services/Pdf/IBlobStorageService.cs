@@ -142,6 +142,20 @@ internal interface IBlobStorageService
     /// <param name="expirySeconds">URL expiration time (optional, defaults to configured value).</param>
     /// <returns>Pre-signed download URL, or null if not supported or file not found.</returns>
     Task<string?> GetPresignedDownloadUrlAsync(string fileId, BlobCategory category, string resourceKey, int? expirySeconds = null);
+
+    /// <summary>
+    /// Generates a pre-signed GET URL for an EXACT physical storage object key.
+    /// Unlike <see cref="GetPresignedDownloadUrlAsync"/>, this does NOT run
+    /// <c>PathSecurity.ValidateIdentifier</c> on the key and does NOT perform
+    /// prefix-based discovery — the caller is expected to have already validated
+    /// or otherwise trusted the key (e.g. a deterministic key composed by
+    /// business logic before being persisted to the DB). Slashes and dots are
+    /// allowed in <paramref name="rawKey"/>.
+    /// </summary>
+    /// <param name="rawKey">The exact physical storage object key.</param>
+    /// <param name="expirySeconds">URL expiration time (optional, defaults to configured value).</param>
+    /// <returns>Pre-signed GET URL, or null if the object does not exist or the operation is not supported.</returns>
+    Task<string?> GetPresignedUrlForRawKeyAsync(string rawKey, int? expirySeconds = null);
 }
 
 /// <summary>

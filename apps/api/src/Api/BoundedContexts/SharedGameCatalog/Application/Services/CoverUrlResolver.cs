@@ -11,6 +11,20 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 /// -> L2 (Wikidata) -> null. Each layer falls through to the next when its R2 key
 /// is missing or the blob storage cannot mint a presigned URL (returns null in dev / local).
 ///
+/// P1 fix (2026-07-14): L3/L4/L2 resolve via
+/// <see cref="IBlobStorageService.GetPresignedUrlForRawKeyAsync"/>, passing the
+/// exact physical object key these layers write deterministically
+/// (<c>{key}.webp</c> / <c>{key}-preview.webp</c>). The previous
+/// <c>GetPresignedDownloadUrlAsync(fileId, category, resourceKey)</c> call
+/// validated BOTH arguments with <c>PathSecurity.ValidateIdentifier</c> (which
+/// rejects <c>/</c> and <c>.</c>) and then did categorized prefix discovery —
+/// neither of which matches these layers' raw, slash-containing key shape, so
+/// the call always threw internally and returned null (silent no-op: covers
+/// never resolved). L2.5 (BGG) is intentionally UNCHANGED: its physical key is
+/// non-deterministic (<c>StoreAsync</c> mints a random fileId), so it cannot be
+/// resolved from the DB-persisted key via a raw-key lookup; it stays on the
+/// legacy path (still a placeholder today) pending a follow-up.
+///
 /// Issue #2123 (BGG ToS compliance): every resolution outcome — including the
 /// terminal <c>null</c> path that triggers a placeholder render on the FE —
 /// emits a <see cref="MeepleAiMetrics.CoverResolution"/> measurement tagged
@@ -35,10 +49,7 @@ internal static class CoverUrlResolver
         if (!string.IsNullOrWhiteSpace(userEntry?.CustomCoverR2Key))
         {
             var url = await blobStorage
-                .GetPresignedDownloadUrlAsync(
-                    $"{userEntry.CustomCoverR2Key}.webp",
-                    BlobCategory.GameImage,
-                    userEntry.CustomCoverR2Key)
+                .GetPresignedUrlForRawKeyAsync($"{userEntry.CustomCoverR2Key}.webp")
                 .ConfigureAwait(false);
             if (url is not null)
             {
@@ -68,10 +79,7 @@ internal static class CoverUrlResolver
         if (!string.IsNullOrWhiteSpace(sharedGame.PdfCoverR2Key))
         {
             var url = await blobStorage
-                .GetPresignedDownloadUrlAsync(
-                    $"{sharedGame.PdfCoverR2Key}-preview.webp",
-                    BlobCategory.GameImage,
-                    sharedGame.PdfCoverR2Key)
+                .GetPresignedUrlForRawKeyAsync($"{sharedGame.PdfCoverR2Key}-preview.webp")
                 .ConfigureAwait(false);
             if (url is not null)
             {
@@ -105,10 +113,7 @@ internal static class CoverUrlResolver
         if (!string.IsNullOrWhiteSpace(sharedGame.WikidataCoverR2Key))
         {
             var url = await blobStorage
-                .GetPresignedDownloadUrlAsync(
-                    $"{sharedGame.WikidataCoverR2Key}.webp",
-                    BlobCategory.GameImage,
-                    sharedGame.WikidataCoverR2Key)
+                .GetPresignedUrlForRawKeyAsync($"{sharedGame.WikidataCoverR2Key}.webp")
                 .ConfigureAwait(false);
             if (url is not null)
             {

@@ -33,7 +33,8 @@ public record CreateSessionCommand(
     IReadOnlyList<string>? GuestNames = null,
     GameStateTier StateTier = GameStateTier.Minimal,
     Guid? GamebookCampaignId = null,
-    bool SkipGameNightEnvelope = false
+    bool SkipGameNightEnvelope = false,
+    bool SkipKbReadinessGate = false
 ) : ICommand<CreateSessionResult>;
 
 /// <summary>

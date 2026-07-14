@@ -4,6 +4,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 
 namespace Api.BoundedContexts.SessionTracking.Application.Commands;
@@ -12,11 +13,16 @@ public class CreateGamebookCampaignHandler : IRequestHandler<CreateGamebookCampa
 {
     private readonly IGamebookCampaignSessionRepository _repo;
     private readonly IMediator _mediator;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public CreateGamebookCampaignHandler(IGamebookCampaignSessionRepository repo, IMediator mediator)
+    public CreateGamebookCampaignHandler(
+        IGamebookCampaignSessionRepository repo,
+        IMediator mediator,
+        IUnitOfWork unitOfWork)
     {
         _repo = repo ?? throw new ArgumentNullException(nameof(repo));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task<GamebookCampaignDto> Handle(CreateGamebookCampaignCommand cmd, CancellationToken cancellationToken)
@@ -24,11 +30,49 @@ public class CreateGamebookCampaignHandler : IRequestHandler<CreateGamebookCampa
         // A0.2 (#1320): bare Guid cmd.GameId is still a SharedGame reference at the
         // wire level; wrap into GameRef.Shared until command DTO is updated upstream.
         var session = GamebookCampaignSession.Create(GameRef.Shared(cmd.GameId), cmd.OwnerUserId, cmd.Title);
-        await _repo.AddAsync(session, cancellationToken).ConfigureAwait(false);
-        await _repo.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        // Issue #1292 (AC-6.2): notify gamebook index cache so the new campaign
-        // appears within 500ms on the next GET /api/v1/gamebooks for the owner.
+        // #2917 (decision #2759 — Option A + no-live-mode): spin up a NON-LIVE Session to carry the
+        // roster. The Session factory auto-seeds the owner participant; extra User-linked participants
+        // + guest names come from the request. Campaign + Session commit in ONE explicit transaction —
+        // the inner CreateSessionCommand's SaveChanges enlists in the ambient tx (shared scoped
+        // DbContext), so a Session failure rolls the campaign INSERT back (no orphan).
+        // SkipGameNightEnvelope=true keeps it night-less; SkipKbReadinessGate=true because gamebook
+        // play does not depend on RAG KB readiness; live mode is NOT opened, so invariant #10
+        // max-1-live stays scoped to GameNight play.
+        var participants = cmd.Participants?.Where(p => !p.IsOwner).ToList() ?? new List<ParticipantDto>();
+
+        await _unitOfWork.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        var commitStarted = false;
+        try
+        {
+            await _repo.AddAsync(session, cancellationToken).ConfigureAwait(false);
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            await _mediator.Send(new CreateSessionCommand(
+                cmd.OwnerUserId,
+                cmd.GameId,
+                "GameSpecific",
+                DateTime.UtcNow,
+                Location: null,
+                Participants: participants,
+                GuestNames: cmd.GuestNames,
+                GamebookCampaignId: session.Id,
+                SkipGameNightEnvelope: true,
+                SkipKbReadinessGate: true), cancellationToken).ConfigureAwait(false);
+
+            commitStarted = true;
+            await _unitOfWork.CommitTransactionAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            if (!commitStarted)
+                await _unitOfWork.RollbackTransactionAsync(cancellationToken).ConfigureAwait(false);
+            throw;
+        }
+
+        // Issue #1292 (AC-6.2): notify gamebook index cache so the new campaign appears within
+        // 500ms on the next GET /api/v1/gamebooks. Published AFTER commit so cache-invalidation
+        // subscribers never observe an uncommitted campaign.
         await _mediator.Publish(
             new GamebookCampaignCreatedDomainEvent(session.Id, session.GameRef.Id, session.OwnerUserId),
             cancellationToken).ConfigureAwait(false);

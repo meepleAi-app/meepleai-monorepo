@@ -34,6 +34,11 @@ const meta: Meta<typeof LibraryPage> = {
           '#2214 DS-17-12. Authenticated library catalog page entry point. Default = desktop primary (sp4-library-desktop). MobileVariant = forward-refactor mobile <768px (sp4-library-mobile, designer review tracking #2216).',
       },
     },
+    // `Default` (desktop) and `MobileVariant` exports both cover the canonical
+    // `default` state for their respective mockups (sp4-library-desktop /
+    // sp4-library-mobile) — no `mswForState('default')` string literal for
+    // lint:storybook-states to detect (#2342 Task 4 bonifica).
+    canonicalStates: ['default'],
   },
 };
 

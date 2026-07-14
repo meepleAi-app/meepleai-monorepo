@@ -73,6 +73,11 @@ const meta: Meta<typeof LibroGameDetailView> = {
           "gameTitle='Nanolith' (isLibroGame allowlist) per rendere il CTA primario.",
       },
     },
+    // Frame01_Default covers the canonical `default` state via the real component with
+    // populated fixture args — no `mswForState('default')` string literal for
+    // lint:storybook-states to detect (#2342 Task 4 bonifica). Only `default` is
+    // declared in fidelity.json for this mockup.
+    canonicalStates: ['default'],
   },
   argTypes: {
     gameDetail: {

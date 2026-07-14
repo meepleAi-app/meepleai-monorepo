@@ -80,6 +80,11 @@ const meta: Meta<typeof ResumeBooksList> = {
           '(forward-refactor: isStale + tutorialAvailable non ancora props del componente reale).',
       },
     },
+    // Frame01_FirstTime (progress: []) covers canonical `empty`, Frame02/03 cover
+    // canonical `default` (populated list) — driven by array-length props, not
+    // `mswForState`-style string literals — lint:storybook-states heuristic can't
+    // see them (#2342 Task 4 bonifica).
+    canonicalStates: ['default', 'empty'],
   },
   argTypes: {
     progress: {

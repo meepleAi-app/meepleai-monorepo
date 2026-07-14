@@ -136,6 +136,11 @@ const meta: Meta<typeof KnowledgeBaseDetailPage> = {
           '#2311 FE-6. KB document detail surface (split-view chunks list + Markdown preview). DEC-D1 keeps the canonical route /knowledge-base/[id]; /kb/[id] is a server redirect.',
       },
     },
+    // `Default` export covers the canonical `default` state via MSW fixtures,
+    // not a `mswForState('default')` string literal — lint:storybook-states heuristic
+    // can't see it (#2342 Task 4 bonifica). Loading/EmptyChunks already detected via
+    // MSW handler literals.
+    canonicalStates: ['default', 'loading', 'empty'],
   },
 };
 

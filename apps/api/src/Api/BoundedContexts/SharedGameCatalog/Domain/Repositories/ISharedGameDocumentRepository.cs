@@ -86,8 +86,11 @@ public interface ISharedGameDocumentRepository
     Task<int> CountByUserAsync(Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Checks whether a specific PDF is linked to a shared game (any document type / any version).
-    /// Used by ISSUE-524 / M1.2 mechanic extractor handler to validate the (game, pdf) pair
+    /// Checks whether a specific PDF is linked to a shared game, accepting EITHER linkage source:
+    /// a curated <c>shared_game_documents</c> row (any document type / any version) OR the
+    /// denormalized <c>pdf_documents.shared_game_id</c> FK set by the standard <c>/ingest/pdf</c>
+    /// upload (#2952). Used by ISSUE-524 / M1.2 mechanic extractor handler to validate the
+    /// (game, pdf) pair — consistently with the picker, which lists by <c>shared_game_id</c> —
     /// without leaking <c>SharedGameDocument</c> entity projections into the command handler.
     /// </summary>
     Task<bool> IsPdfLinkedToGameAsync(

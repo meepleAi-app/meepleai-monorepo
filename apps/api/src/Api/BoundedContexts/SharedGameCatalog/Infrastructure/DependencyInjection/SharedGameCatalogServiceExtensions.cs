@@ -44,6 +44,12 @@ internal static class SharedGameCatalogServiceExtensions
         services.Configure<MechanicGuardrailOptions>(
             configuration.GetSection(MechanicGuardrailOptions.SectionName));
 
+        // #2951: Mechanic Extractor default LLM provider/model — config-driven so the wired
+        // default (DeepSeek) can be overridden per-environment without a redeploy when it is
+        // unavailable (e.g. credit exhausted → 402). Routing is by model name (ADR-007).
+        services.Configure<MechanicExtractorLlmOptions>(
+            configuration.GetSection(MechanicExtractorLlmOptions.SectionName));
+
 
         // Register repositories
         services.AddScoped<ISharedGameRepository, SharedGameRepository>();

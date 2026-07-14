@@ -36,7 +36,7 @@ export function normalizeState(raw) {
 }
 
 const OVERRIDE_RE = /canonicalStates\s*:\s*\[([^\]]*)\]/;
-const STATE_LITERAL_RE = /['"`](default|empty[\w-]*|loading|error|sse|offline|quota-(?:soft|hard))['"`]/g;
+const STATE_LITERAL_RE = /['"`](default|empty[\w-]*|loading|error|sse)['"`]/g;
 
 /**
  * Hybrid state detection: explicit override wins, else heuristic scan.
@@ -100,9 +100,11 @@ export function classifyMockupEntry(entry, fidelityIndex, io) {
   if (!storyPath) return { ...base, verdict: 'coverage-gap', reason: 'no-story-path' };
   if (!io.exists(storyPath)) return { ...base, verdict: 'coverage-gap', reason: 'story-missing' };
 
+  // normalizeState returns a canonical state or null, so filter(Boolean) already
+  // leaves only canonical values — no extra CANONICAL_STATES membership check needed.
   const declared = [
     ...new Set((acceptance.states_covered || []).map(normalizeState).filter(Boolean)),
-  ].filter((s) => CANONICAL_STATES.includes(s));
+  ];
 
   const detected = detectStates(io.readFile(storyPath));
   const missing = declared.filter((s) => !detected.has(s));
@@ -197,8 +199,10 @@ export function parseArgs(argv) {
     else if (a === '--verbose' || a === '-v') args.verbose = true;
     else if (a === '--help' || a === '-h') args.help = true;
     else if (a === '--max-baseline') {
-      const n = Number.parseInt(argv[++i], 10);
-      if (Number.isNaN(n) || n < 0) throw new Error(`--max-baseline requires a non-negative integer, got: ${argv[i]}`);
+      const raw = argv[++i];
+      if (raw === undefined) throw new Error('--max-baseline requires a value (non-negative integer)');
+      const n = Number.parseInt(raw, 10);
+      if (Number.isNaN(n) || n < 0) throw new Error(`--max-baseline requires a non-negative integer, got: ${raw}`);
       args.maxBaseline = n;
     } else if (a.startsWith('--max-baseline=')) {
       const n = Number.parseInt(a.slice('--max-baseline='.length), 10);

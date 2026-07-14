@@ -340,6 +340,22 @@ jobs:
         run: pnpm mockup-annotations:audit --denominator mappable --threshold 80
         # Note: script resolves REPO_ROOT from __dirname; runs from apps/web (job default).
 
+      # DEC-A5 (umbrella #2342): blocking gate — each page-mock story must
+      # implement the canonical states its fidelity.json declares.
+      # coverage-gaps whitelist-incremental (ratchet down); contract-violations always fail.
+      - name: Storybook canonical-states coverage gate (DEC-A5 / #2342)
+        run: pnpm lint:storybook-states --strict --max-baseline 44
+
+      - name: Upload storybook-states report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: storybook-states-${{ github.run_number }}
+          path: |
+            audits/2026-07-14-storybook-states-coverage.json
+            audits/2026-07-14-storybook-states-coverage.md
+          retention-days: 14
+
       # Issue #2123 — BGG ToS compliance gate
       - name: BGG ToS compliance gate (#2123)
         run: pnpm lint:bgg

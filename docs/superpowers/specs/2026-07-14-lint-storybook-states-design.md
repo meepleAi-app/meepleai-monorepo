@@ -88,8 +88,10 @@ esiste; altrimenti se ne estrae uno riusabile invece di duplicare la logica di p
 | **COVERAGE-GAP** | La catena si rompe prima degli stati: mockup senza `fidelity.json`, oppure fidelity con `story_path` vuoto | Debito noto (migrazione DS-17 incompleta) | Whitelist-incrementale sotto `--max-baseline N` |
 | **CONTRACT-VIOLATION** | `story_path` esiste ma la story **non implementa** tutti gli stati in `states_covered` | Bug reale — divergenza silenziosa | **Sempre bloccante**, fuori baseline |
 
-**Skip** (non contano in nessun conteggio): fidelity con `design_intent: forward-refactor-obsolete`
-(migrazione story SKIPPED per definizione; hanno già `obsolete_tracking_issue`).
+**Skip** (`skipped-obsolete`): la route resta **dentro** il denominatore mappabile ma non è contata
+come gap/violation/covered quando il suo mockup/fidelity ha `design_intent: forward-refactor-obsolete`
+(migrazione story SKIPPED per definizione; hanno già `obsolete_tracking_issue`). Vale quindi
+l'invariante `totalMappableRoutes == covered + coverageGaps + contractViolations + skippedObsolete`.
 
 ### Razionale della separazione
 
@@ -155,14 +157,17 @@ Exit codes: `0` pass · `1` gate fallito · `2` errore d'invocazione. CLI-guard 
 
 `audits/2026-07-14-storybook-states-coverage.{json,md}`:
 
+Numeri illustrativi — i valori reali sono fissati dalla prima run. Invariante:
+`totalMappableRoutes == covered + coverageGaps + contractViolations + skippedObsolete`.
+
 ```jsonc
 {
   "generatedFrom": "MOCKUPS_INDEX.md",
   "canonicalStates": ["default", "empty", "loading", "error", "sse"],
-  "totalMappableRoutes": 68,
-  "baselineMaxCoverageGaps": 65,
+  "totalMappableRoutes": 68,               // covered+gaps+violations+skipped
+  "baselineMaxCoverageGaps": 61,
   "counts": {
-    "coverageGaps": 65,
+    "coverageGaps": 61,
     "contractViolations": 0,
     "skippedObsolete": 4,
     "covered": 3
@@ -184,13 +189,13 @@ token-mockups.
 ## CI wiring
 
 `.github/workflows/ci.yml`, job `frontend-lint`, nuovo step dopo `mockup-annotations:audit`,
-**blocking** (niente `continue-on-error`). La baseline garantisce verde oggi (65 gap ≤ 65) e 0
+**blocking** (niente `continue-on-error`). La baseline garantisce verde oggi (i gap correnti ≤ N) e 0
 contract-violation (le 3 fidelity attuali sono oneste), esattamente come `lint:tokens:mockups --strict`
 è blocking da subito.
 
 ```yaml
 - name: Storybook canonical-states coverage gate (DEC-A5 / #2342)
-  run: pnpm lint:storybook-states --strict --max-baseline 65   # N dalla prima run
+  run: pnpm lint:storybook-states --strict --max-baseline 61   # N illustrativo — dalla prima run
 
 - name: Upload storybook-states report
   if: always()
@@ -203,7 +208,7 @@ contract-violation (le 3 fidelity attuali sono oneste), esattamente come `lint:t
     retention-days: 14
 ```
 
-Il valore `65` è provvisorio: fissato dalla prima run reale prima del merge.
+Il valore `61` è illustrativo: fissato dalla prima run reale (report inventory) prima del merge.
 
 ## Testing
 
@@ -242,5 +247,5 @@ Vitest (locazione della suite `.mjs` verificata in fase di piano — probabile `
 |---|---|
 | Euristica MSW non riconosce un pattern di story nuovo | Override esplicito `parameters.canonicalStates` come escape hatch documentato |
 | `MOCKUPS_INDEX.md` va stale → denominatore errato | Riuso dello stesso parser/denominatore già gated da `mockup-annotations:audit`, che tiene l'INDEX allineato |
-| Baseline `65` sbagliata al primo giro | Fissata dalla prima run reale; il report inventory stampa il conteggio esatto |
+| Baseline iniziale sbagliata | Fissata dalla prima run reale; il report inventory stampa il conteggio esatto |
 | Falso CONTRACT-VIOLATION per naming stato granulare | `normalizeState()` mappa le varianti note; override disponibile per casi residui |

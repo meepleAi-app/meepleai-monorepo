@@ -51,6 +51,18 @@ internal static class SeedMaintenanceSeeder
             return 0;
         }
 
+        // Remove the orphans' processing_jobs (and their steps) explicitly rather than relying on
+        // the DB-level ON DELETE CASCADE — this keeps the delete provider-agnostic (the InMemory
+        // test provider does not enforce FK cascades) and covered by unit tests.
+        var orphanIds = orphans.Select(p => p.Id).ToHashSet();
+        var orphanJobs = await db.Set<ProcessingJobEntity>()
+            .Include(j => j.Steps)
+            .Where(j => orphanIds.Contains(j.PdfDocumentId))
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+        if (orphanJobs.Count > 0)
+            db.Set<ProcessingJobEntity>().RemoveRange(orphanJobs);
+
         db.PdfDocuments.RemoveRange(orphans);
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
         logger.LogInformation(
@@ -76,6 +88,10 @@ internal static class SeedMaintenanceSeeder
         var queued = nameof(JobStatus.Queued);
         var processing = nameof(JobStatus.Processing);
 
+        // Deliberately WITHOUT IgnoreQueryFilters (asymmetric with CleanupOrphanPdfsAsync): a
+        // soft-deleted game is excluded here, so its PDFs are NOT re-processed — we don't index a
+        // removed game. Cleanup, by contrast, keeps those PDFs (the game may be restored); if it is
+        // un-deleted a later seed run re-enqueues its Pending PDFs. Both paths are conservative.
         var validGameIds = (await db.SharedGames
             .Select(g => g.Id)
             .ToListAsync(ct)

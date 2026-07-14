@@ -51,19 +51,22 @@ public sealed class SeedMaintenanceSeederTests
     // ── #2907 ──────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task CleanupOrphanPdfs_RemovesDanglingPdfs_KeepsValidOnes()
+    public async Task CleanupOrphanPdfs_RemovesDanglingPdfs_AndTheirJobs_KeepsValidOnes()
     {
         var dbName = $"seedmaint_cleanup_{Guid.NewGuid():N}";
         var orphanGameId = Guid.NewGuid(); // never inserted into shared_games
-        Guid validGameId;
+        Guid validGameId, orphanPdfId;
 
         using (var db = TestDbContextFactory.CreateInMemoryDbContext(dbName))
         {
             var game = NewGame("Valid", 13);
             validGameId = game.Id;
             db.SharedGames.Add(game);
-            db.PdfDocuments.Add(NewPdf(validGameId, "valid.pdf"));
-            db.PdfDocuments.Add(NewPdf(orphanGameId, "orphan.pdf"));
+            var validPdf = NewPdf(validGameId, "valid.pdf");
+            var orphanPdf = NewPdf(orphanGameId, "orphan.pdf");
+            orphanPdfId = orphanPdf.Id;
+            db.PdfDocuments.AddRange(validPdf, orphanPdf);
+            db.Set<ProcessingJobEntity>().Add(NewQueuedJob(orphanPdfId, Guid.NewGuid()));
             await db.SaveChangesAsync();
         }
 
@@ -78,6 +81,12 @@ public sealed class SeedMaintenanceSeederTests
         {
             var remaining = await db.PdfDocuments.Select(p => p.SharedGameId).ToListAsync();
             remaining.Should().ContainSingle().Which.Should().Be(validGameId);
+
+            // The orphan's ProcessingJob is removed explicitly (not relying on the DB cascade).
+            var orphanJobs = await db.Set<ProcessingJobEntity>()
+                .Where(j => j.PdfDocumentId == orphanPdfId)
+                .ToListAsync();
+            orphanJobs.Should().BeEmpty();
         }
     }
 

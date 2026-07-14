@@ -194,12 +194,28 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
     /// Promotes a CoverChange proposal's pending cover image to L4 (SharedGame.PdfCoverR2Key).
     /// Task 5: Game Cover-da-PDF.
     /// </summary>
+    /// <exception cref="ConflictException">
+    /// I3 fix: thrown when <see cref="ApproveGameProposalCommand.TargetSharedGameId"/> is
+    /// supplied AND differs from the proposal's persisted
+    /// <see cref="ShareRequest.TargetSharedGameId"/>. Without this guard an admin-supplied
+    /// (e.g. tampered or stale) TargetSharedGameId could silently promote the pending
+    /// cover onto the wrong SharedGame instead of the one the proposal actually targets.
+    /// </exception>
     private async Task<Guid> ApproveCoverChangeAsync(
         ShareRequest shareRequest,
         ApproveGameProposalCommand command,
         CancellationToken cancellationToken)
     {
-        var targetId = command.TargetSharedGameId ?? shareRequest.TargetSharedGameId
+        if (command.TargetSharedGameId.HasValue
+            && shareRequest.TargetSharedGameId.HasValue
+            && command.TargetSharedGameId.Value != shareRequest.TargetSharedGameId.Value)
+        {
+            throw new ConflictException(
+                $"TargetSharedGameId mismatch: command specifies {command.TargetSharedGameId.Value} " +
+                $"but ShareRequest {shareRequest.Id} targets {shareRequest.TargetSharedGameId.Value}.");
+        }
+
+        var targetId = shareRequest.TargetSharedGameId ?? command.TargetSharedGameId
             ?? throw new ConflictException("CoverChange senza target shared game.");
 
         var sharedGame = await _sharedGameRepository.GetByIdAsync(targetId, cancellationToken).ConfigureAwait(false)

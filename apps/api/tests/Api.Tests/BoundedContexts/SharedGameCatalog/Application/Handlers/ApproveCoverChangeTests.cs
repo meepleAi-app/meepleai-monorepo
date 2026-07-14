@@ -75,6 +75,32 @@ public class ApproveCoverChangeTests
 
         await act.Should().ThrowAsync<NotFoundException>();
     }
+
+    /// <summary>
+    /// I3 fix: an admin-supplied TargetSharedGameId that differs from the proposal's
+    /// persisted ShareRequest.TargetSharedGameId must be rejected, not silently honored —
+    /// otherwise a tampered/stale command could promote the pending cover onto the wrong
+    /// SharedGame instead of the one the proposal actually targets.
+    /// </summary>
+    [Fact]
+    public async Task Approve_UpdateCover_MismatchedTargetSharedGameId_ThrowsConflictException()
+    {
+        var proposalTarget = Guid.NewGuid();
+        var wrongTarget = Guid.NewGuid();
+        var sharedGame = SharedGameTestFactory.Existing(proposalTarget);
+        var req = ShareRequest.CreateCoverChange(Guid.NewGuid(), proposalTarget, Guid.NewGuid(), "covers/g/pdf-cover", 3, null);
+        var (handler, adminId) = ApproveHandlerBuilder.For(req, sharedGame);
+
+        // Command supplies a DIFFERENT TargetSharedGameId than the proposal's own target.
+        var cmd = new ApproveGameProposalCommand(ShareRequestId: req.Id, AdminId: adminId,
+            ApprovalAction: ProposalApprovalAction.UpdateCover, TargetSharedGameId: wrongTarget, AdminNotes: null);
+
+        var act = () => handler.Handle(cmd, TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ConflictException>();
+        // The SharedGame that the proposal actually targets must remain untouched.
+        sharedGame.PdfCoverR2Key.Should().BeNull();
+    }
 }
 
 /// <summary>

@@ -76,10 +76,30 @@ route (admin-mockups/MOCKUPS_INDEX.md, denominatore "mappable")
         → story file       → detectStates() → Set<CanonicalState>
 ```
 
-Il denominatore delle route è lo stesso del gate `mockup-annotations:audit --denominator mappable`:
-le route con mapping in `MOCKUPS_INDEX.md` (esclude admin/api/internal, prive di design surface).
-Il parser di `MOCKUPS_INDEX.md` va riutilizzato dal modulo condiviso di `mockup-annotations` se
-esiste; altrimenti se ne estrae uno riusabile invece di duplicare la logica di parsing.
+**Unità di classificazione e conteggio: la page-mock *entry*** (1 story per mockup, DEC-P3-3), non
+la singola route. Un mockup con N route (es. `auth-flow.html` → 8 route) ha **una** story che deve
+coprire gli stati; le route associate sono elencate nel report solo come contesto. Questo diverge
+lievemente dal gate `mockup-annotations:audit` che conta le route: qui l'oggetto naturale è
+mockup ↔ fidelity ↔ story.
+
+Il parser è **riutilizzabile e confermato**: `parseMockupsIndex(md)` e `routeToFilePath(route, files)`
+sono esportati da `apps/web/scripts/mockup-annotations/inject-annotations.mjs`. `parseMockupsIndex`
+ritorna `{ mockup, type: 'page-mock', routes[] }` e **filtra già** ai soli `page-mock` (esclude
+`component-mock` e `dev-fixture`, quindi admin/api/internal prive di design surface). Dal mockup si
+risale al source `admin-mockups/design_files/${mockup}` e al fidelity gemello
+`admin-mockups/design_files/${base}.fidelity.json` (oppure alla copia in
+`docs/for-developers/frontend/templates/examples/` per i pilot Library/GameDetail).
+
+### Post-discovery 2026-07-14 (numeri reali)
+
+La ricognizione ha corretto due assunzioni:
+
+- **33** `fidelity.json` hanno `story_path` non-vuoto (non 3): 33 story già da verificare al primo giro
+  (su 159 fidelity totali, 150 in `admin-mockups/design_files`).
+- I pattern delle story sono **eterogenei**: `Library`/`GameDetail` usano `mswForState('X')`
+  (euristica OK), ma `TranslateViewer` esprime gli stati via `parameters` + `_initialPhase`
+  (`idle|segmenting|translating`) senza stringhe `default/loading/sse` → l'euristica **non li rileva**
+  e serve l'override esplicito `parameters.canonicalStates: ['default','loading','sse']`.
 
 ## Classi di violazione
 
@@ -109,9 +129,27 @@ Segue il precedente `lint:tokens:mockups`:
 - **Strict** (`--strict --max-baseline N`):
   - `exit 1` se `coverageGaps.length > N` **OR** `contractViolations.length > 0`
   - `exit 0` altrimenti
-- La prima run stabilisce `N` (≈ numero di route mappabili senza story oggi); il valore va hardcoded
+- La prima run stabilisce `N` (≈ numero di page-mock entry senza story oggi); il valore va hardcoded
   in `ci.yml`. Migrare una pagina fa scendere il conteggio → si abbassa `N` (ratchet-down, come gli
   altri gate). `--strict` senza `--max-baseline` è errore d'invocazione (exit 2).
+
+### Rollout delle contract-violation esistenti (misura → bonifica a zero → blocking)
+
+Le contract-violation restano **sempre bloccanti** (fuori baseline), ma con 33 story già collegate e
+pattern eterogenei alcune potrebbero emergere al primo giro. Il rollout evita il gate-rosso al primo
+merge senza indebolire il design:
+
+1. Scrivere lo script (con funzioni pure esportate) + test.
+2. Eseguire l'inventory (`pnpm lint:storybook-states`) e leggere il conteggio **reale** delle
+   contract-violation.
+3. Bonificare fino a `contractViolations == 0`:
+   - **falso-positivo euristico** (la story copre lo stato ma con un pattern non rilevabile, es.
+     `TranslateViewer`) → aggiungere `parameters.canonicalStates` alla story;
+   - **vera divergenza** (la story non implementa uno stato dichiarato) → correggere la story, oppure
+     — se la copertura è fuori scope ora — allineare `states_covered` nel fidelity a ciò che la story
+     realmente copre (il che la riclassifica come copertura ridotta, non come bugia).
+4. Solo con `contractViolations == 0` si abilita il gate **blocking** in CI e si fissa `--max-baseline`
+   sul conteggio coverage-gap corrente.
 
 ## Detection degli stati nella story (ibrido)
 
@@ -227,11 +265,12 @@ Vitest (locazione della suite `.mjs` verificata in fase di piano — probabile `
 
 | File | Azione |
 |---|---|
-| `apps/web/scripts/lint-storybook-states.mjs` | nuovo (script) |
-| `apps/web/scripts/__tests__/lint-storybook-states.test.*` | nuovo (test) |
+| `apps/web/scripts/lint-storybook-states.mjs` | nuovo (script, funzioni pure esportate) |
+| `apps/web/scripts/__tests__/lint-storybook-states.test.ts` | nuovo (test, TypeScript come i gemelli) |
 | `apps/web/package.json` | +1 script `lint:storybook-states` |
 | `.github/workflows/ci.yml` | +1 step + artifact upload nel job `frontend-lint` |
 | `audits/2026-07-14-storybook-states-coverage.{json,md}` | generato, committato per baseline |
+| story con pattern non-euristico (es. `TranslateViewer.stories.tsx`) | +`parameters.canonicalStates` (bonifica) |
 | body/commento umbrella **#2342** | reconciliation (Tier 3 CLOSED + DEC-A5 shipped) |
 
 ## Precedenti riusati

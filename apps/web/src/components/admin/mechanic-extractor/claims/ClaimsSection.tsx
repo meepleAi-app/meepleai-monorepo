@@ -70,6 +70,33 @@ const VALIDATION_BADGE_CLASS: Record<string, string> = {
 };
 
 /**
+ * #539: human-readable ADR-051 guardrail taxonomy. Drives the per-badge tooltip and the
+ * "Cosa sono i badge" legend so reviewers understand what each T-rule checks.
+ */
+export const GUARDRAIL_DESCRIPTIONS: Record<string, { label: string; desc: string }> = {
+  T1: {
+    label: 'T1 · Quote cap',
+    desc: 'Ogni citazione (quote) deve essere breve (≤ N parole): nessuna copia verbatim lunga.',
+  },
+  T2: {
+    label: 'T2 · No long-verbatim',
+    desc: 'Il testo del claim non deve ricopiare alla lettera lunghe sequenze del regolamento (anti-plagio / tutela IP).',
+  },
+  T3a: {
+    label: 'T3a · Citazione presente',
+    desc: 'Ogni affermazione deve portare almeno una citazione della fonte.',
+  },
+  T3b: {
+    label: 'T3b · Grounding semantico',
+    desc: 'Il claim deve essere semanticamente coerente col chunk citato (similarità coseno sopra soglia).',
+  },
+  T4: {
+    label: 'T4 · Pagina/substring',
+    desc: 'La pagina citata deve esistere nel PDF e la quote deve essere un estratto reale di quella pagina.',
+  },
+};
+
+/**
  * Renders one Badge per template validation rule (T1-T4) with pass/fail/notRun
  * styling. Exported for direct unit testing and reuse across claim rows.
  */
@@ -88,16 +115,43 @@ export function ValidationBadges({
           className={VALIDATION_BADGE_CLASS[v.outcome] ?? VALIDATION_BADGE_CLASS.notRun}
           data-testid={`claim-validation-badge-${v.rule}`}
           aria-label={`${v.rule} ${v.outcome}${v.score != null ? ` score ${v.score.toFixed(2)}` : ''}${v.message ? `: ${v.message}` : ''}`}
-          title={
-            v.score != null
-              ? `${v.rule} ${v.outcome} (score ${v.score.toFixed(2)})`
-              : (v.message ?? `${v.rule} ${v.outcome}`)
-          }
+          title={`${GUARDRAIL_DESCRIPTIONS[v.rule]?.label ?? v.rule} — ${GUARDRAIL_DESCRIPTIONS[v.rule]?.desc ?? ''}\nEsito: ${v.outcome}${v.score != null ? ` (score ${v.score.toFixed(2)})` : ''}${v.message ? `\n${v.message}` : ''}`}
         >
           {v.outcome === 'pass' ? '✓' : v.outcome === 'fail' ? '✗' : '—'} {v.rule}
         </Badge>
       ))}
     </span>
+  );
+}
+
+/**
+ * #539: expandable legend explaining the T1-T4 guardrails + how claims are produced.
+ * Rendered once above the claim list so reviewers understand the ✓/✗/— badges.
+ */
+export function ValidationLegend(): React.JSX.Element {
+  return (
+    <details className="rounded-md border border-border bg-muted/40 p-3 text-xs dark:border-zinc-700 dark:bg-zinc-800/40">
+      <summary className="cursor-pointer font-medium text-foreground">
+        Cosa sono i badge T1–T4? (guardrail di qualità)
+      </summary>
+      <p className="mt-2 text-muted-foreground">
+        Ogni sezione è generata dall&apos;LLM come JSON (affermazioni + citazioni); una catena di
+        guardrail valida poi ogni claim. Esito badge: <span className="font-medium">✓</span>{' '}
+        superato
+        {' · '}
+        <span className="font-medium">✗</span> fallito
+        {' · '}
+        <span className="font-medium">—</span> non eseguito.
+      </p>
+      <ul className="mt-2 space-y-1">
+        {Object.values(GUARDRAIL_DESCRIPTIONS).map(g => (
+          <li key={g.label}>
+            <span className="font-medium text-foreground">{g.label}</span>{' '}
+            <span className="text-muted-foreground">— {g.desc}</span>
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }
 
@@ -360,6 +414,8 @@ export function ClaimsSection({
           </Select>
         )}
       </div>
+
+      <ValidationLegend />
 
       {actionError && (
         <div

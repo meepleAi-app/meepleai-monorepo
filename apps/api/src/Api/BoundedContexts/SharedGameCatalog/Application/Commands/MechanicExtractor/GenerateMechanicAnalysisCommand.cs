@@ -20,12 +20,25 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExt
 ///   raises the aggregate's cap to <see cref="CostCapOverrideInput.NewCapUsd"/> immediately after
 ///   creation, preserving the override reason on the aggregate's audit fields
 ///   (<c>CostCapOverrideAt</c>/<c>CostCapOverrideBy</c>/<c>CostCapOverrideReason</c>).</param>
+/// <param name="ModelOverride">#539: optional LLM model override. Routing is by model name
+///   (<c>ILlmClient.SupportsModel</c>), so this alone selects the provider; null → DeepSeek default.</param>
+/// <param name="ProviderOverride">#539: optional provider label recorded for telemetry (e.g. "OpenRouter").</param>
+/// <param name="ForceRegenerate">#539: when true, skips the T7 idempotency short-circuit so a re-run
+///   with a different model creates a new analysis instead of returning the existing one.</param>
 internal record GenerateMechanicAnalysisCommand(
     Guid SharedGameId,
     Guid PdfDocumentId,
     Guid RequestedBy,
     decimal CostCapUsd,
-    CostCapOverrideInput? CostCapOverride = null) : ICommand<MechanicAnalysisGenerationResponseDto>;
+    CostCapOverrideInput? CostCapOverride = null,
+    // #539 eval: optional LLM override. The pipeline routes the provider purely by model name
+    // (ILlmClient.SupportsModel), so supplying ModelOverride is sufficient to switch provider;
+    // ProviderOverride only labels telemetry. Null → the ADR-007 DeepSeek defaults in the handler.
+    string? ModelOverride = null,
+    string? ProviderOverride = null,
+    // #539: bypass the T7 idempotency short-circuit so a re-run (e.g. with a different model)
+    // creates a NEW analysis instead of returning the existing one for the same (game, pdf, prompt).
+    bool ForceRegenerate = false) : ICommand<MechanicAnalysisGenerationResponseDto>;
 
 /// <summary>
 /// Admin-initiated raise of the default cost cap at planning time. Required when the cost

@@ -108,6 +108,15 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
 
         var promptVersion = _promptProvider.PromptVersion;
 
+        // #539 eval: resolve the effective provider/model. Null override → ADR-007 DeepSeek default.
+        // Routing is by model name (ILlmClient.SupportsModel), so the model alone selects the provider.
+        var effectiveProvider = string.IsNullOrWhiteSpace(request.ProviderOverride)
+            ? DefaultProvider
+            : request.ProviderOverride.Trim();
+        var effectiveModel = string.IsNullOrWhiteSpace(request.ModelOverride)
+            ? DefaultModel
+            : request.ModelOverride.Trim();
+
         // 1. SharedGame existence (404 if missing).
         var sharedGame = await _sharedGameRepository
             .GetByIdAsync(request.SharedGameId, cancellationToken)
@@ -131,29 +140,34 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
                 resourceId: $"{request.SharedGameId}/{request.PdfDocumentId}");
         }
 
-        // 3. T7 idempotency — return the existing non-rejected analysis unchanged.
-        var existing = await _analysisRepository
-            .FindByPromptVersionAsync(request.SharedGameId, request.PdfDocumentId, promptVersion, cancellationToken)
-            .ConfigureAwait(false);
-        if (existing is not null)
+        // 3. T7 idempotency — return the existing non-rejected analysis unchanged. Skipped when
+        //    ForceRegenerate is set (#539), so a re-run with a different model creates a new row
+        //    instead of short-circuiting to the prior analysis for the same (game, pdf, prompt).
+        if (!request.ForceRegenerate)
         {
-            _logger.LogInformation(
-                "Mechanic analysis idempotent short-circuit: existing {ExistingId} for (SharedGame={SharedGame}, Pdf={Pdf}, PromptVersion={Version}, Status={Status}).",
-                existing.Id,
-                request.SharedGameId,
-                request.PdfDocumentId,
-                promptVersion,
-                existing.Status);
+            var existing = await _analysisRepository
+                .FindByPromptVersionAsync(request.SharedGameId, request.PdfDocumentId, promptVersion, cancellationToken)
+                .ConfigureAwait(false);
+            if (existing is not null)
+            {
+                _logger.LogInformation(
+                    "Mechanic analysis idempotent short-circuit: existing {ExistingId} for (SharedGame={SharedGame}, Pdf={Pdf}, PromptVersion={Version}, Status={Status}).",
+                    existing.Id,
+                    request.SharedGameId,
+                    request.PdfDocumentId,
+                    promptVersion,
+                    existing.Status);
 
-            return BuildResponse(
-                existing.Id,
-                existing.Status,
-                promptVersion,
-                effectiveCostCap: existing.CostCapUsd,
-                estimatedCost: 0m,
-                projectedTotalTokens: 0,
-                costCapOverrideApplied: existing.CostCapOverrideBy is not null,
-                isExisting: true);
+                return BuildResponse(
+                    existing.Id,
+                    existing.Status,
+                    promptVersion,
+                    effectiveCostCap: existing.CostCapUsd,
+                    estimatedCost: 0m,
+                    projectedTotalTokens: 0,
+                    costCapOverrideApplied: existing.CostCapOverrideBy is not null,
+                    isExisting: true);
+            }
         }
 
         // 4. Load retrieval context. M1.2 ships the same bundled rulebook content to every
@@ -173,8 +187,8 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
         var retrievedPromptTokens = retrievalContext.Length / 4;
         var estimate = _costEstimator.Estimate(new AnalysisCostEstimateInput(
             PromptVersion: promptVersion,
-            Provider: DefaultProvider,
-            Model: DefaultModel,
+            Provider: effectiveProvider,
+            Model: effectiveModel,
             Sections: AllSections,
             TotalRetrievedPromptTokens: retrievedPromptTokens,
             InputCostPerMillionTokens: DefaultInputCostPerMillion,
@@ -208,8 +222,8 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
             promptVersion: promptVersion,
             createdBy: request.RequestedBy,
             createdAt: utcNow,
-            modelUsed: DefaultModel,
-            provider: DefaultProvider,
+            modelUsed: effectiveModel,
+            provider: effectiveProvider,
             costCapUsd: request.CostCapUsd);
 
         if (hasOverride)

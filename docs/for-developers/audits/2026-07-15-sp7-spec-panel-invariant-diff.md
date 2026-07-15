@@ -181,8 +181,30 @@ Da consolidare in una sessione socratic di dominio **prima** di autorare i mocku
 - Precondizione di sblocco reale (da commento #1889 + questo doc): **prima** autorare i 5 mockup agent-builder mancanti (D–H), che a loro volta richiedono la risoluzione degli 8 invarianti candidati (§3).
 
 ### Disposizione #1889
-Mantenere **OPEN / `deferred`**. Questo spec-panel ha evaso 2/5 acceptance criteria (diff invarianti + candidati invarianti) e ha prodotto la coda di follow-up che, una volta chiusa, rende autorabili i mockup e quindi eseguibile il demo.
+**Concludibile** (aggiornato 2026-07-15 dopo verifica gap residui — vedi §6). AC3/AC4/AC5 DONE, AC1 MOOT, AC2 metà (gap report statico ✅, replay web scorporato in chore non-bloccante #2980). L'intera wave agent-builder D–H è riconciliata al runtime shipped (ADR-085 + PR #2973). Residui tracciati: **#2978** (#17 pending-card, materiale), **#2979** (cleanup low).
 
 ---
 
-*Prodotto da spec-panel critique statico (Opus 4.8) — 2026-07-15. Nessun file di prodotto modificato oltre a questo audit.*
+## § 6 — Addendum: verifica gap residui (2026-07-15)
+
+Verifica avversariale post-audit (3 verificatori paralleli) sui gap che il diff §1 aveva saltato o rimandato.
+
+### 6.1 `sp7-game-night-join-public` vs #16/#17 — ✅ COMPLIANT (non era in Target-1)
+Il 6° mockup game-night (RSVP pubblico anonimo via token/QR, `/join/event/[code]`, #1169) — mai incluso in Target-1 (A/B/K/L/M) — diffato ora: **conforme** a #16 e #17.
+- **#16** COMPLIANT: il token-invitation esiste solo se un organizer lo conia esplicitamente (`CreateGameNightInvitationByEmailCommandHandler.cs:68-72` guard); la route pubblica è puramente lato-destinatario (`PublicJoinEventView.tsx:66-114`, GET + POST respond, nessun auto-invito). Mappa domain model :279/:290 (token = "invited", mai "tagged").
+- **#17** COMPLIANT: `Pending` default (`GameNightInvitationStatus.cs:9-10`, `.Create:130`); pannello conferma solo dopo `alreadyRespondedAs` (`PublicJoinEventView.tsx:106,332-350`); transizione pending→confermato in `GameNightInvitation.Respond:280-305`.
+- **Error-states** coperti: 410 expired/cancelled (`RespondToGameNightInvitationByTokenCommandHandler.cs:50-61`), 429 rate-limit (`GameNightEndpoints.cs:162/173` + FE countdown `PublicJoinEventView.tsx:187-207`).
+
+### 6.2 Invariante #17 card pending lato invitato — 🔴 REAL_GAP → #2978
+Il trattamento card pending dell'invitato (badge "Da confermare" + semitrasparenza + Conferma/Declina inline) in dashboard "Prossimi" e list `/game-nights` **non esiste**: solo contatori aggregati host-side (`ProssimiSection.tsx:37-39`; `GameNightListCard.tsx:168-196` gated su role, non su viewer-RSVP), e `GameNightDto` non porta `myRsvpStatus` (`game-nights.schemas.ts:33-50`). L'RSVP inline esiste solo sulla detail page. Unico gap **funzionale** materiale → **#2978** (BE DTO + FE dashboard/list + test).
+
+### 6.3 Notifiche I/J vs #16 — ⚠️ runtime corretto, gap solo doc/cleanup → #2979
+Runtime cablato end-to-end (`GameNightPublishedNotificationHandler` → `NotificationType.GameNightInvitation` deep-link → `GameNightDetailView` RsvpActionBar). I mockup I/J sono demo statici non nel diff + un dead-entry `game_night_published` FE/BE. Nessun gap funzionale → **#2979**.
+
+### 6.4 Note
+- **Mockup stale**: `sp7-game-night-detail-rsvp.jsx` intenzionalmente stale vs il fix #16 runtime (annotato nel file header); re-sync tracciato in #2979.
+- **Tensione Auto-RSVP** (§4 row-5): domanda di dominio aperta → #2979.
+
+---
+
+*Prodotto da spec-panel critique statico (Opus 4.8) — 2026-07-15, addendum §6 stessa data. Nessun file di prodotto modificato oltre a questo audit + annotazione mockup.*

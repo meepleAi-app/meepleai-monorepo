@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
@@ -18,7 +19,6 @@ using Api.SharedKernel.Exceptions;
 using Api.SharedKernel.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Cryptography;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
@@ -37,6 +37,7 @@ internal sealed class AddRulebookCommandHandler : ICommandHandler<AddRulebookCom
     private readonly ITierEnforcementService _tierEnforcementService;
     private readonly IBackgroundTaskService _backgroundTaskService;
     private readonly IPdfUploadQuotaService _quotaService;
+    private readonly IPdfDeduplicationService _pdfDeduplicationService;
     private readonly ILogger<AddRulebookCommandHandler> _logger;
     private readonly TimeProvider _timeProvider;
 
@@ -48,6 +49,7 @@ internal sealed class AddRulebookCommandHandler : ICommandHandler<AddRulebookCom
         ITierEnforcementService tierEnforcementService,
         IBackgroundTaskService backgroundTaskService,
         IPdfUploadQuotaService quotaService,
+        IPdfDeduplicationService pdfDeduplicationService,
         ILogger<AddRulebookCommandHandler> logger,
         TimeProvider? timeProvider = null)
     {
@@ -58,6 +60,7 @@ internal sealed class AddRulebookCommandHandler : ICommandHandler<AddRulebookCom
         _tierEnforcementService = tierEnforcementService ?? throw new ArgumentNullException(nameof(tierEnforcementService));
         _backgroundTaskService = backgroundTaskService ?? throw new ArgumentNullException(nameof(backgroundTaskService));
         _quotaService = quotaService ?? throw new ArgumentNullException(nameof(quotaService));
+        _pdfDeduplicationService = pdfDeduplicationService ?? throw new ArgumentNullException(nameof(pdfDeduplicationService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -90,54 +93,66 @@ internal sealed class AddRulebookCommandHandler : ICommandHandler<AddRulebookCom
             throw new Middleware.Exceptions.ForbiddenException($"User {userId} does not own game {gameId}.");
         }
 
-        // Step 1: Compute SHA-256 hash
-        var contentHash = await ComputeContentHashAsync(file, cancellationToken).ConfigureAwait(false);
-
-        // Step 2: Look up existing document by hash
-        var existingDoc = await _pdfDocumentRepository
-            .FindByContentHashAsync(contentHash, cancellationToken)
-            .ConfigureAwait(false);
-
-        if (existingDoc is not null)
+        // Step 1: Evaluate dedup via the centralized service (Issue #2949 Task 2).
+        // Rulebook uploads are catalog uploads: sharedGameId = gameId, privateGameId = null.
+        string contentHash;
+        using (var hashStream = file.OpenReadStream())
         {
-            return await HandleExistingDocumentAsync(existingDoc, gameId, userId, file, contentHash, cancellationToken)
+            contentHash = await _pdfDeduplicationService
+                .ComputeContentHashAsync(hashStream, cancellationToken)
                 .ConfigureAwait(false);
         }
 
-        // Step 3: No match — full upload flow
+        var dedup = await _pdfDeduplicationService
+            .EvaluateAsync(contentHash, sharedGameId: gameId, privateGameId: null, userId: userId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (dedup.Decision == PdfDedupDecision.ReuseExisting)
+        {
+            var existingDoc = await _pdfDocumentRepository
+                .GetByIdAsync(dedup.ExistingPdfDocumentId!.Value, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (existingDoc is not null)
+            {
+                return await HandleExistingDocumentAsync(existingDoc, gameId, userId, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+        }
+
+        // Step 2: NewUpload (no match, or match was Failed) — full upload flow.
+        // A Failed match is reported as NewUpload by the dedup service; clean up any
+        // stale Game→failed-PDF links first (mirrors the pre-migration behavior).
+        var staleMatch = await _pdfDocumentRepository
+            .FindByContentHashAsync(contentHash, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (staleMatch is not null && staleMatch.ProcessingState == PdfProcessingState.Failed)
+        {
+            _logger.LogInformation(
+                "Found existing PDF {PdfId} with matching hash but Failed state — treating as new upload",
+                staleMatch.Id);
+            await CleanupStaleEntityLinksAsync(staleMatch.Id, gameId, cancellationToken).ConfigureAwait(false);
+        }
+
         return await HandleNewUploadAsync(gameId, userId, file, contentHash, cancellationToken)
             .ConfigureAwait(false);
     }
 
     /// <summary>
     /// Handles the case where a document with matching content hash already exists.
-    /// For Ready or in-progress states, reuses by creating an EntityLink.
-    /// For Failed state, treats as a new upload.
+    /// Reuses the document by creating an EntityLink (Ready or in-progress states only —
+    /// Failed matches are handled upstream in <see cref="Handle"/> as a NewUpload).
     /// </summary>
     private async Task<RulebookUploadResult> HandleExistingDocumentAsync(
         Domain.Entities.PdfDocument existingDoc,
         Guid gameId,
         Guid userId,
-        IFormFile file,
-        string contentHash,
         CancellationToken cancellationToken)
     {
         var state = existingDoc.ProcessingState;
 
-        if (state == PdfProcessingState.Failed)
-        {
-            _logger.LogInformation(
-                "Found existing PDF {PdfId} with matching hash but Failed state — treating as new upload",
-                existingDoc.Id);
-
-            // Clean up stale EntityLinks from this game to the failed PDF
-            await CleanupStaleEntityLinksAsync(existingDoc.Id, gameId, cancellationToken).ConfigureAwait(false);
-
-            return await HandleNewUploadAsync(gameId, userId, file, contentHash, cancellationToken)
-                .ConfigureAwait(false);
-        }
-
-        // Ready or in-progress: reuse by creating EntityLink
+        // Ready or in-progress: reuse by creating EntityLink.
         await CreateKbCardEntityLinkSafelyAsync(existingDoc.Id, gameId, userId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -378,13 +393,6 @@ internal sealed class AddRulebookCommandHandler : ICommandHandler<AddRulebookCom
             _logger.LogWarning(ex, "Failed to cleanup stale EntityLinks for PDF {PdfId}", pdfDocumentId);
         }
 #pragma warning restore CA1031
-    }
-
-    private static async Task<string> ComputeContentHashAsync(IFormFile file, CancellationToken cancellationToken)
-    {
-        using var stream = file.OpenReadStream();
-        var hashBytes = await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
-        return Convert.ToHexStringLower(hashBytes);
     }
 
     private static async Task ValidatePdfStructureAsync(IFormFile file, CancellationToken cancellationToken)

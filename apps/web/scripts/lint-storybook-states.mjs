@@ -7,6 +7,8 @@
  *   - coverage-gap       : no fidelity, or fidelity without story_path (whitelist-incremental)
  *   - contract-violation : story omits a declared canonical state (always blocking)
  *   - skipped-obsolete   : fidelity design_intent === 'forward-refactor-obsolete'
+ *   - skipped-deferred   : fidelity design_intent === 'deferred' (built later by a tracked
+ *                          umbrella, e.g. per-game session mockups → Phase C-3 #2234)
  *
  * Modes: inventory (default, exit 0) | strict (--strict --max-baseline N).
  * Refs: docs/superpowers/specs/2026-07-14-lint-storybook-states-design.md
@@ -95,6 +97,9 @@ export function classifyMockupEntry(entry, fidelityIndex, io) {
   if (acceptance.design_intent === 'forward-refactor-obsolete') {
     return { ...base, verdict: 'skipped-obsolete' };
   }
+  if (acceptance.design_intent === 'deferred') {
+    return { ...base, verdict: 'skipped-deferred' };
+  }
 
   const storyPath = acceptance.story_path;
   if (!storyPath) return { ...base, verdict: 'coverage-gap', reason: 'no-story-path' };
@@ -146,7 +151,9 @@ function cleanReportRoutes(routes) {
 }
 
 export function buildJsonReport(results, baseline) {
-  const counts = { covered: 0, coverageGaps: 0, contractViolations: 0, skippedObsolete: 0 };
+  const counts = {
+    covered: 0, coverageGaps: 0, contractViolations: 0, skippedObsolete: 0, skippedDeferred: 0,
+  };
   const coverageGaps = [];
   const contractViolations = [];
   for (const r of results) {
@@ -161,6 +168,7 @@ export function buildJsonReport(results, baseline) {
         declared: r.declared, detected: r.detected, missing: r.missing,
       });
     } else if (r.verdict === 'skipped-obsolete') counts.skippedObsolete += 1;
+    else if (r.verdict === 'skipped-deferred') counts.skippedDeferred += 1;
   }
   return {
     generatedAt: new Date().toISOString(),
@@ -185,7 +193,8 @@ export function buildMdReport(report) {
   lines.push(`| Covered | ${counts.covered} |`);
   lines.push(`| Coverage gaps (baseline ${report.baselineMaxCoverageGaps ?? 'n/a'}) | ${counts.coverageGaps} |`);
   lines.push(`| Contract violations (always blocking) | ${counts.contractViolations} |`);
-  lines.push(`| Skipped (obsolete) | ${counts.skippedObsolete} |`, '');
+  lines.push(`| Skipped (obsolete) | ${counts.skippedObsolete} |`);
+  lines.push(`| Skipped (deferred) | ${counts.skippedDeferred} |`, '');
   if (report.contractViolations.length) {
     lines.push('## Contract violations (must be 0)', '');
     lines.push('| Mockup | Story | Declared | Detected | Missing |', '| --- | --- | --- | --- | --- |');
@@ -205,6 +214,7 @@ export function buildMdReport(report) {
   lines.push('## Gate semantics', '');
   lines.push('- **contract-violation**: story omits a state its fidelity declares → **always fails** (fix story or align `states_covered`).');
   lines.push('- **coverage-gap**: mockup with no fidelity/story → tolerated under `--max-baseline N`; a NEW gap fails. Migrate a page → lower `N` (ratchet-down).');
+  lines.push('- **skipped-obsolete / skipped-deferred**: fidelity `design_intent` is `forward-refactor-obsolete` (retired) or `deferred` (built later by a tracked umbrella) → excluded from the gap count; requires a tracking issue.');
   return lines.join('\n') + '\n';
 }
 

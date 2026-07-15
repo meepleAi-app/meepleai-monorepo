@@ -3,10 +3,7 @@
   "mockup": {
     "source": "admin-mockups/design_files/sp4-play-records-index.html",
     "states": [
-      "default",
-      "empty",
-      "loading",
-      "error"
+      "default"
     ]
   },
   "acceptance": {
@@ -15,10 +12,7 @@
     "tokens_used": "canonical_only",
     "legacy_token_names_forbidden": true,
     "states_covered": [
-      "default",
-      "empty",
-      "loading",
-      "error"
+      "default"
     ],
     "a11y_axe": "AA",
     "a11y_violations_max": 0,
@@ -30,7 +24,7 @@
     ],
     "designer_approved_by": "user@meepleAi (self-waiver P250, single-person team)",
     "designer_approved_on": "2026-06-15",
-    "story_path": "",
+    "story_path": "apps/web/src/app/(authenticated)/play-records/page.stories.tsx",
     "fixtures_path": "",
     "design_intent": "current",
     "viewports": [

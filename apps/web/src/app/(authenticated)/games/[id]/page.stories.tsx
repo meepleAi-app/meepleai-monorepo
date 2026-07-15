@@ -163,6 +163,8 @@ const meta: Meta<typeof GameDetailPage> = {
   title: 'Authenticated / sp4-game-detail',
   component: GameDetailPage,
   parameters: {
+    // DS-17 #2063: heuristic can't read named exports/http.get; declare states explicitly.
+    canonicalStates: ['default'],
     layout: 'fullscreen',
     nextjs: {
       appDirectory: true,

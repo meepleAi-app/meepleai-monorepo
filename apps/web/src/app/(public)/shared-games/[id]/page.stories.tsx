@@ -19,6 +19,8 @@ const meta: Meta<typeof SharedGameDetailPage> = {
   title: 'Public / sp3-shared-game-detail',
   component: SharedGameDetailPage,
   parameters: {
+    // DS-17 #2063: heuristic can't read named exports/http.get; declare states explicitly.
+    canonicalStates: ['default'],
     layout: 'fullscreen',
     nextjs: {
       appDirectory: true,

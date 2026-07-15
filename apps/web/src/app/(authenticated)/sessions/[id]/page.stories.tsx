@@ -11,6 +11,8 @@ const meta: Meta<typeof SessionDetailPage> = {
   title: 'Authenticated / sp4-session-summary-skeleton',
   component: SessionDetailPage,
   parameters: {
+    // DS-17 #2063: heuristic can't read named exports/http.get; declare states explicitly.
+    canonicalStates: ['default'],
     layout: 'fullscreen',
     nextjs: {
       appDirectory: true,

@@ -133,6 +133,15 @@ describe('classifyMockupEntry', () => {
     expect(r.verdict).toBe('skipped-obsolete');
   });
 
+  it('skipped-deferred: design_intent deferred (built later by a tracked umbrella)', () => {
+    const files = {
+      'f.fidelity.json': fidelityOf(src, ['default'], 'story.tsx', 'deferred'),
+    };
+    const idx = buildFidelityIndex(Object.keys(files), rel => files[rel]);
+    const r = classifyMockupEntry(entry, idx, makeIo({ ...files, 'story.tsx': '' }));
+    expect(r.verdict).toBe('skipped-deferred');
+  });
+
   it('covered: story implements every declared canonical state', () => {
     const story = `mswForState('default'); mswForState('loading'); mswForState('error');`;
     const files = {
@@ -210,14 +219,16 @@ describe('buildJsonReport', () => {
       { mockup: 'b', routes: [], verdict: 'coverage-gap', reason: 'no-fidelity' },
       { mockup: 'c', routes: [], verdict: 'contract-violation', missing: ['error'] },
       { mockup: 'd', routes: [], verdict: 'skipped-obsolete' },
+      { mockup: 'e', routes: [], verdict: 'skipped-deferred' },
     ];
     const report = buildJsonReport(results, 5);
-    expect(report.totalMappableEntries).toBe(4);
+    expect(report.totalMappableEntries).toBe(5);
     expect(report.counts).toEqual({
       covered: 1,
       coverageGaps: 1,
       contractViolations: 1,
       skippedObsolete: 1,
+      skippedDeferred: 1,
     });
     expect(report.baselineMaxCoverageGaps).toBe(5);
     expect(report.coverageGaps).toHaveLength(1);

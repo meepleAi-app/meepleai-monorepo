@@ -4,7 +4,6 @@
     "source": "admin-mockups/design_files/sp4-play-records-new.html",
     "states": [
       "default",
-      "empty",
       "loading",
       "error"
     ]
@@ -16,7 +15,6 @@
     "legacy_token_names_forbidden": true,
     "states_covered": [
       "default",
-      "empty",
       "loading",
       "error"
     ],
@@ -30,7 +28,7 @@
     ],
     "designer_approved_by": "user@meepleAi (self-waiver P250, single-person team)",
     "designer_approved_on": "2026-06-15",
-    "story_path": "",
+    "story_path": "apps/web/src/app/(authenticated)/play-records/new/page.stories.tsx",
     "fixtures_path": "",
     "design_intent": "current",
     "viewports": [

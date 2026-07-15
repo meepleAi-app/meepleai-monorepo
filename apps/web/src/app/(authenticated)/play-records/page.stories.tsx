@@ -11,6 +11,8 @@ const meta: Meta<typeof PlayRecordsPage> = {
   title: 'Authenticated / sp4-play-records-index',
   component: PlayRecordsPage,
   parameters: {
+    // DS-17 #2063: heuristic can't read named exports/http.get; declare states explicitly.
+    canonicalStates: ['default'],
     layout: 'fullscreen',
     nextjs: { appDirectory: true },
     viewport: { defaultViewport: 'desktop' },

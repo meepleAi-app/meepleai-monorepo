@@ -12,6 +12,8 @@ const meta: Meta<typeof AgentDetailPage> = {
   title: 'Authenticated / sp4-agent-detail',
   component: AgentDetailPage,
   parameters: {
+    // DS-17 #2063: heuristic can't read named exports/http.get; declare states explicitly.
+    canonicalStates: ['default'],
     layout: 'fullscreen',
     nextjs: {
       appDirectory: true,

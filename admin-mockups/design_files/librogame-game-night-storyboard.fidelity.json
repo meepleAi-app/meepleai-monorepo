@@ -26,10 +26,10 @@
     "designer_approved_on": "2026-06-15",
     "story_path": "",
     "fixtures_path": "",
-    "design_intent": "current",
+    "design_intent": "forward-refactor-obsolete",
     "viewports": [
       "desktop"
     ],
-    "obsolete_tracking_issue": ""
+    "obsolete_tracking_issue": "#2970"
   }
 }

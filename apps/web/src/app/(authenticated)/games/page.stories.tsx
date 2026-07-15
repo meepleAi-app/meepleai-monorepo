@@ -12,6 +12,8 @@ const meta: Meta<typeof GamesIndexPage> = {
   title: 'Authenticated / sp4-games-index',
   component: GamesIndexPage,
   parameters: {
+    // DS-17 #2063: heuristic can't read named exports/http.get; declare states explicitly.
+    canonicalStates: ['default'],
     layout: 'fullscreen',
     nextjs: { appDirectory: true },
     viewport: { defaultViewport: 'desktop' },

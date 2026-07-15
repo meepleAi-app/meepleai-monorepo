@@ -92,7 +92,12 @@ build_bundle() {
   for f in "$@"; do
     cp "$SRC/$f" "$dest/mockups/$f"
   done
-  echo "[built] $dest — scaffold ${#SCAFFOLD[@]} + mockups $#"
+  # Mockups reference shared assets as siblings (href="tokens.css"), so mirror them into
+  # mockups/ too — otherwise the relative refs break in the structured bundle (#1890 demo finding).
+  for f in tokens.css components.css data.js; do
+    cp "$SRC/$f" "$dest/mockups/$f"
+  done
+  echo "[built] $dest — scaffold ${#SCAFFOLD[@]} + mockups $# (+3 mirrored assets in mockups/)"
   for f in 00-system-prompt.md 01-manifest.md README.md; do
     [ -f "$dest/$f" ] || echo "  ⚠ companion missing: $dest/$f (restore from git / claude-design-demo-prompts.md)"
   done

@@ -165,7 +165,7 @@ below) and the `/gamebook` family pages render directly from those._
 
 | File | Type | Mapped routes |
 |------|------|---------------|
-| `librogame-game-night-storyboard.html` | page-mock | `/game-nights/[id]` (storyboard variant — was `nanolith-game-night-storyboard.html` pre-rename post-IA consolidation #871, sync inline 2026-06-08 #2025) |
+| `librogame-game-night-storyboard.html` | dev-fixture | Meta-storyboard: embeds the `librogame-runthrough-*` mockups via `<iframe>` as a pre-implementation validation timeline (was `nanolith-game-night-storyboard.html` pre-rename #871, sync inline 2026-06-08 #2025). Not a page render-surface — route `/game-nights/[id]` is covered by `game-night-detail-rsvp.stories.tsx`. Scoped out of `lint:storybook-states` per #2970 (Option B). |
 | `primitive-nav-bottom-mobile.html` | component-mock | Mobile bottom-nav primitive (global, was `nanolith-nav-bottom-mobile.html` pre-#2152) |
 | `primitive-nav-chat-panel.html` | component-mock | Chat slide-over panel (used globally via `useChatPanel`, was `nanolith-nav-chat-panel.html` pre-#2152) |
 | `primitive-nav-topbar.html` | component-mock | Top-bar primitive (global, was `nanolith-nav-topbar.html` pre-#2152) |
@@ -178,9 +178,9 @@ below) and the `/gamebook` family pages render directly from those._
 
 | Type | Count |
 |------|------:|
-| page-mock | 67 |
+| page-mock | 66 |
 | component-mock | 48 |
-| dev-fixture | 12 |
+| dev-fixture | 13 |
 | **Total** | **127** |
 
 > **Updated 2026-06-08** (#2025): 3 component-mock JSX Sara obsoleti eliminati

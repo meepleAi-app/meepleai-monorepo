@@ -462,39 +462,54 @@ internal class HybridLlmService : ILlmService
 
         while (client != null && attemptedProviders.Add(client.ProviderName))
         {
-            var stopwatch = Stopwatch.StartNew();
-            try
+            // Review #2990: fail fast when the current provider's circuit is already OPEN, matching
+            // GenerateCompletionWithModelAsync. The first (preferred) client is selected via
+            // SupportsModel — bypassing the selector's circuit gating — so without this check a
+            // known-broken provider (e.g. DeepSeek tripped by sustained 402s) would incur a wasted
+            // live call on every section before falling back. Subsequent fallback hops are already
+            // circuit-gated by GetNextFallbackAsync, so this is a harmless recheck for them.
+            if (_circuitBreakerRegistry.GetState(client.ProviderName) == CircuitState.Open)
             {
-                _logger.LogInformation(
-                    "Generating completion with model {Model} via {Provider} (max_tokens={MaxTokens}, multi-provider fallback enabled)",
-                    currentModel, client.ProviderName, effectiveMaxTokens);
-
-                var result = await client.GenerateCompletionAsync(
-                    currentModel, systemPrompt, userPrompt, DefaultTemperature, effectiveMaxTokens, ct)
-                    .ConfigureAwait(false);
-
-                stopwatch.Stop();
-
-                if (result.Success)
-                {
-                    _providerSelector.RecordSuccess(client.ProviderName, currentModel, stopwatch.ElapsedMilliseconds, result);
-                    // Fire-and-forget cost logging (CancellationToken.None to survive request cancellation).
-                    _ = _costService.LogSuccessAsync(result, LlmUserContext.Anonymous, stopwatch.ElapsedMilliseconds, source, CancellationToken.None);
-                    return result;
-                }
-
                 _logger.LogWarning(
-                    "Model {Model} via {Provider} failed: {Error} — attempting provider fallback",
-                    currentModel, client.ProviderName, result.ErrorMessage);
-                _providerSelector.RecordFailure(client.ProviderName, currentModel, stopwatch.ElapsedMilliseconds, result);
-                lastFailure = result;
+                    "Circuit breaker OPEN for {Provider}, skipping call and trying fallback", client.ProviderName);
+                lastFailure = LlmCompletionResult.CreateFailure($"Provider {client.ProviderName} circuit breaker open");
             }
-            catch (Exception ex)
+            else
             {
-                stopwatch.Stop();
-                _logger.LogError(ex, "Error generating completion with model {Model} via {Provider}", currentModel, client.ProviderName);
-                _providerSelector.RecordFailure(client.ProviderName, currentModel, stopwatch.ElapsedMilliseconds);
-                lastFailure = LlmCompletionResult.CreateFailure($"Error: {ex.Message}");
+                var stopwatch = Stopwatch.StartNew();
+                try
+                {
+                    _logger.LogInformation(
+                        "Generating completion with model {Model} via {Provider} (max_tokens={MaxTokens}, multi-provider fallback enabled)",
+                        currentModel, client.ProviderName, effectiveMaxTokens);
+
+                    var result = await client.GenerateCompletionAsync(
+                        currentModel, systemPrompt, userPrompt, DefaultTemperature, effectiveMaxTokens, ct)
+                        .ConfigureAwait(false);
+
+                    stopwatch.Stop();
+
+                    if (result.Success)
+                    {
+                        _providerSelector.RecordSuccess(client.ProviderName, currentModel, stopwatch.ElapsedMilliseconds, result);
+                        // Fire-and-forget cost logging (CancellationToken.None to survive request cancellation).
+                        _ = _costService.LogSuccessAsync(result, LlmUserContext.Anonymous, stopwatch.ElapsedMilliseconds, source, CancellationToken.None);
+                        return result;
+                    }
+
+                    _logger.LogWarning(
+                        "Model {Model} via {Provider} failed: {Error} — attempting provider fallback",
+                        currentModel, client.ProviderName, result.ErrorMessage);
+                    _providerSelector.RecordFailure(client.ProviderName, currentModel, stopwatch.ElapsedMilliseconds, result);
+                    lastFailure = result;
+                }
+                catch (Exception ex)
+                {
+                    stopwatch.Stop();
+                    _logger.LogError(ex, "Error generating completion with model {Model} via {Provider}", currentModel, client.ProviderName);
+                    _providerSelector.RecordFailure(client.ProviderName, currentModel, stopwatch.ElapsedMilliseconds);
+                    lastFailure = LlmCompletionResult.CreateFailure($"Error: {ex.Message}");
+                }
             }
 
             // Advance to the next available provider in the DB-driven fallback chain. The selector

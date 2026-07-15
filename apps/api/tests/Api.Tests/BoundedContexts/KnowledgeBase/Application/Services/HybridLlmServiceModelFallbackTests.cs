@@ -192,4 +192,41 @@ public sealed class HybridLlmServiceModelFallbackTests
                 It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
+
+    [Fact]
+    public async Task GenerateCompletionWithModelFallbackAsync_PreferredProviderCircuitOpen_SkipsItWithoutCalling_AndFallsBack()
+    {
+        // Review #2990: the preferred provider is selected via SupportsModel (bypassing the
+        // selector's circuit gating). When its circuit is already OPEN — the exact sustained-402
+        // scenario this feature targets — it must be skipped WITHOUT a wasted live call and fall
+        // straight to the healthy fallback, matching GenerateCompletionWithModelAsync's fail-fast.
+        _circuitBreakerRegistryMock.Setup(r => r.GetState("DeepSeek")).Returns(CircuitState.Open);
+        _circuitBreakerRegistryMock.Setup(r => r.GetState("OpenRouter")).Returns(CircuitState.Closed);
+
+        // If the preferred (open-circuit) provider were wrongly called it would return a failure —
+        // this keeps the pre-fix RED a clean Verify(Never) assertion failure, not an NRE.
+        _deepSeekMock
+            .Setup(c => c.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateFailure("should not be called — circuit open"));
+        _openRouterMock
+            .Setup(c => c.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SuccessFrom("OpenRouter"));
+
+        var sut = CreateSut();
+
+        var result = await sut.GenerateCompletionWithModelFallbackAsync(
+            PreferredModel, "system", "user", RequestSource.Manual, maxTokens: 4000, ct: CancellationToken.None);
+
+        result.Success.Should().BeTrue();
+        result.Cost.Provider.Should().Be("OpenRouter");
+        _deepSeekMock.Verify(
+            c => c.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
 }

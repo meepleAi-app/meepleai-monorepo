@@ -19,6 +19,7 @@ import { useGameSessionContributors } from '@/hooks/queries/useGameSessionContri
 import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
 import { useConnectionBarNav } from '@/hooks/useConnectionBarNav';
 
+import { getEntityCreateHref } from './entity-create-href';
 import { GameHero, type GameHeroMetaItem } from './GameHero';
 import { GameTabsPanel } from './GameTabsPanel';
 
@@ -53,26 +54,12 @@ export function GameDetailDesktop({
 }: GameDetailDesktopProps) {
   const { data: game, isLoading, isError } = useLibraryGameDetail(gameId);
   const router = useRouter();
-  // ConnectionBar "+" (empty pip) → create that entity. Per-entity targets:
-  // agent/kb are full-page routes under the game; chat/session are prefilled wizards.
+  // ConnectionBar "+" (empty pip) → create that entity. Per-entity target URLs
+  // live in the pure `getEntityCreateHref` helper (unit-tested in isolation).
   const handleCreateEntity = useCallback(
     (entityType: MeepleEntityType) => {
-      switch (entityType) {
-        case 'agent':
-          router.push(`/library/${gameId}/agent`);
-          break;
-        case 'kb':
-          router.push(`/library/${gameId}/kb`);
-          break;
-        case 'chat':
-          router.push(`/chat/new?game=${gameId}`);
-          break;
-        case 'session':
-          router.push(`/sessions/new?gameId=${gameId}`);
-          break;
-        default:
-          break;
-      }
+      const href = getEntityCreateHref(entityType, gameId);
+      if (href) router.push(href);
     },
     [router, gameId]
   );

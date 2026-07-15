@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
 /// </summary>
 internal static class GameNightMapperHelper
 {
-    public static GameNightDto MapToDto(GameNightEvent gameNight, string organizerName)
+    public static GameNightDto MapToDto(GameNightEvent gameNight, string organizerName, Guid? viewerId = null)
     {
         ArgumentNullException.ThrowIfNull(gameNight);
 
@@ -29,7 +29,8 @@ internal static class GameNightMapperHelper
             PendingCount: gameNight.Rsvps.Count(r => r.Status == RsvpStatus.Pending),
             TotalInvited: gameNight.Rsvps.Count,
             CreatedAt: gameNight.CreatedAt,
-            UpdatedAt: gameNight.UpdatedAt);
+            UpdatedAt: gameNight.UpdatedAt,
+            ViewerRsvpStatus: viewerId.HasValue ? gameNight.GetRsvp(viewerId.Value)?.Status : null);
     }
 
     public static GameNightRsvpDto MapToRsvpDto(GameNightRsvp rsvp, string userName)

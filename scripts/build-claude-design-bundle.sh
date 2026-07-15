@@ -9,9 +9,10 @@
 # (00-system-prompt.md, 01-manifest.md, README.md) are NOT touched — recover them from
 # git history or from docs/for-developers/workflows/claude-design-demo-prompts.md.
 #
-# Usage:  scripts/build-claude-design-bundle.sh [sp6|sp7|all]   (default: all)
+# Usage:  scripts/build-claude-design-bundle.sh [sp6|sp7|sp8|all]   (default: all)
 #
 # Tracking issues: SP6 → #1888 (libro-game) · SP7 → #1889 (game-night agent-builder)
+#                  SP8 → #1890 (mobile parity + libro-game companion)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -56,6 +57,30 @@ SP7_MOCKUPS=(
   sp7-notifications-preferences.jsx
 )
 
+SP8_MOCKUPS=(
+  # Library mobile parity (route /library <768px)
+  sp4-library-mobile.html
+  sp4-library-mobile.jsx
+  sp4-library-desktop.html
+  sp4-library-desktop.jsx
+  primitive-nav-bottom-mobile.html
+  mobile-app.jsx
+  # Libro-game companion (state-05 diary / state-06 paragrafi / state-07 end-campaign)
+  librogame-runthrough-play-session.html
+  librogame-runthrough-play-session.jsx
+  librogame-runthrough-translate-viewer.html
+)
+
+# SP8 also ships the two design briefs (not in design_files/) so the demo has the DoD in-bundle.
+copy_sp8_briefs() {
+  local dest="claude-design-bundle/sp8-mobile/briefs"
+  mkdir -p "$dest"
+  cp admin-mockups/briefs/_common.md \
+     admin-mockups/briefs/SP8-mobile-parity.md \
+     admin-mockups/briefs/SP8-libro-game-companion.md "$dest/"
+  echo "[built] +3 briefs → $dest/"
+}
+
 build_bundle() {
   local name="$1"; shift
   local dest="claude-design-bundle/$name"
@@ -77,9 +102,11 @@ target="${1:-all}"
 case "$target" in
   sp6) build_bundle sp6-libro-game "${SP6_MOCKUPS[@]}" ;;
   sp7) build_bundle sp7-game-night "${SP7_MOCKUPS[@]}" ;;
+  sp8) build_bundle sp8-mobile "${SP8_MOCKUPS[@]}"; copy_sp8_briefs ;;
   all)
     build_bundle sp6-libro-game "${SP6_MOCKUPS[@]}"
     build_bundle sp7-game-night "${SP7_MOCKUPS[@]}"
+    build_bundle sp8-mobile "${SP8_MOCKUPS[@]}"; copy_sp8_briefs
     ;;
-  *) echo "usage: $0 [sp6|sp7|all]" >&2; exit 2 ;;
+  *) echo "usage: $0 [sp6|sp7|sp8|all]" >&2; exit 2 ;;
 esac

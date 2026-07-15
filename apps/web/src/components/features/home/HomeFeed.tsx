@@ -27,6 +27,8 @@ import { useUpcomingGameNights } from '@/hooks/queries/useGameNights';
 import { useRecentlyAddedGames } from '@/hooks/queries/useLibrary';
 import { useNavigation } from '@/hooks/useNavigation';
 
+import { RecentSection } from './RecentSection';
+
 export function HomeFeed() {
   const router = useRouter();
   const { openDetail } = useNavigation();
@@ -42,7 +44,7 @@ export function HomeFeed() {
   const chats = chatSessions?.sessions ?? [];
 
   return (
-    <div className="p-4 sm:p-6 space-y-8">
+    <div className="p-3 pb-20 sm:p-6 sm:pb-6 space-y-8">
       {/* Sessioni Attive */}
       <section>
         <h2 className="font-quicksand font-bold text-lg mb-4">Sessioni Attive</h2>
@@ -147,6 +149,12 @@ export function HomeFeed() {
           </div>
         )}
       </section>
+
+      {/* Recenti (serate completate) — invariante #4 */}
+      <RecentSection
+        onOpenDetail={id => openDetail(id, 'event')}
+        onSeeAll={() => router.push('/game-nights?filter=completed')}
+      />
 
       {/* Chat Recenti */}
       <section>

@@ -185,7 +185,6 @@ export default function PrivateGamesClient() {
         minAge: data.minAge ?? null,
         complexityRating: data.complexityRating ?? null,
         description: data.description ?? null,
-        imageUrl: data.imageUrl || null,
       });
       setEditDialogOpen(false);
       setSelectedGame(null);
@@ -585,7 +584,6 @@ const EditFormSchema = z
     minAge: z.number().int().min(0).max(99).nullable().optional(),
     complexityRating: z.number().min(0).max(5).nullable().optional(),
     description: z.string().max(5000, 'Description too long').nullable().optional(),
-    imageUrl: z.string().url('Invalid URL').nullable().optional().or(z.literal('')),
   })
   .refine(data => data.maxPlayers >= data.minPlayers, {
     message: 'Max players must be >= min players',
@@ -619,7 +617,6 @@ function EditPrivateGameFormInner({
       minAge: game.minAge ?? undefined,
       complexityRating: game.complexityRating ?? undefined,
       description: game.description ?? undefined,
-      imageUrl: game.imageUrl ?? undefined,
     },
   });
 
@@ -735,11 +732,6 @@ function EditPrivateGameFormInner({
           rows={4}
           disabled={isSubmitting}
         />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="edit-imageUrl">{t('privateGameForm.imageUrl')}</Label>
-        <Input id="edit-imageUrl" type="url" {...register('imageUrl')} disabled={isSubmitting} />
       </div>
 
       <div className="flex justify-end gap-3 pt-4">

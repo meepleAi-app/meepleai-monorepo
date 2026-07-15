@@ -248,6 +248,9 @@ public sealed class PrivateGame : AggregateRoot<Guid>
 
     /// <summary>
     /// Updates the game information.
+    /// ImageUrl is intentionally NOT a parameter: the cover is owned by the
+    /// cover-from-PDF flow (#2943), never by user-supplied input (BGG freeze #2123 / ADR-059).
+    /// An update preserves the existing ImageUrl.
     /// </summary>
     public void UpdateInfo(
         string title,
@@ -257,8 +260,7 @@ public sealed class PrivateGame : AggregateRoot<Guid>
         string? description,
         int? playingTimeMinutes,
         int? minAge,
-        decimal? complexityRating,
-        string? imageUrl)
+        decimal? complexityRating)
     {
         ValidateTitle(title);
         ValidatePlayers(minPlayers, maxPlayers);
@@ -272,7 +274,6 @@ public sealed class PrivateGame : AggregateRoot<Guid>
         PlayingTimeMinutes = playingTimeMinutes;
         MinAge = minAge;
         ComplexityRating = complexityRating;
-        ImageUrl = imageUrl;
         UpdatedAt = DateTime.UtcNow;
     }
 

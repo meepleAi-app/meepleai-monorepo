@@ -49,7 +49,7 @@ export default function TermsPage() {
       pageKey="terms"
       sections={TERMS_SECTIONS}
       defaultOpenSection="acceptance"
-      lastUpdated={new Date('2026-03-09')}
+      lastUpdated={new Date('2026-07-15')}
       prevLink={{
         href: '/privacy',
         labelIt: 'Informativa Privacy',

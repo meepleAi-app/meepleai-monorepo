@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --c-game:25 95% 38%; --c-player:262 83% 45%; --c-session:240 60% 35%;
+  --c-agent:38 92% 32%; --c-kb:174 60% 30%; --c-chat:220 80% 40%;
+  --c-event:350 89% 38%; --c-toolkit:142 70% 30%; --c-tool:195 80% 32%;
+  --c-success:142 70% 40%; --c-warning:38 92% 42%; --c-danger:350 89% 52%; --c-info:220 80% 50%;
+  --f-display:'Quicksand',system-ui,sans-serif; --f-body:'Nunito',system-ui,sans-serif; --f-mono:'JetBrains Mono',ui-monospace,monospace;
+  --r-xs:4px; --r-sm:6px; --r-md:10px; --r-lg:14px; --r-xl:18px; --r-2xl:24px; --r-pill:9999px;
+  --ease-out:cubic-bezier(.16,1,.3,1); --ease-spring:cubic-bezier(.34,1.56,.64,1);
+}
+:root, [data-theme="light"]{
+  --bg:#f7f3ee; --bg-card:#ffffff; --bg-muted:#efe6d9; --bg-sunken:#ede2d0; --bg-hover:rgba(180,130,80,.06);
+  --text:#2b1f12; --text-sec:#5a4a38; --text-muted:#9a8870;
+  --border:rgba(180,130,80,.18); --border-light:rgba(180,130,80,.1); --border-strong:rgba(180,130,80,.32);
+  --shadow-sm:0 2px 8px rgba(90,60,20,.08); --shadow-md:0 4px 16px rgba(90,60,20,.1); --shadow-lg:0 12px 36px rgba(90,60,20,.14);
+  --shadow-drawer:0 -8px 32px rgba(90,60,20,.12); --glass-bg:rgba(255,255,255,.88);
+  color-scheme:light;
+}
+[data-theme="dark"]{
+  --bg:#14100a; --bg-card:#1e1710; --bg-muted:#241c13; --bg-sunken:#0f0c08; --bg-hover:rgba(255,200,130,.05);
+  --text:#f0e4d2; --text-sec:#c8b896; --text-muted:#8a7860;
+  --border:rgba(224,180,110,.14); --border-light:rgba(224,180,110,.08); --border-strong:rgba(224,180,110,.28);
+  --shadow-sm:0 2px 8px rgba(0,0,0,.4); --shadow-md:0 4px 16px rgba(0,0,0,.5); --shadow-lg:0 12px 36px rgba(0,0,0,.6);
+  --shadow-drawer:0 -8px 32px rgba(0,0,0,.5); --glass-bg:rgba(30,22,14,.85);
+  --c-game:28 95% 58%; --c-player:262 75% 70%; --c-session:235 70% 70%; --c-agent:38 92% 62%;
+  --c-kb:174 60% 55%; --c-chat:218 80% 68%; --c-event:350 85% 70%; --c-toolkit:142 60% 58%; --c-tool:195 75% 62%;
+  --c-success:142 60% 55%; --c-warning:38 92% 62%; --c-danger:350 85% 70%; --c-info:220 80% 68%;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;}
+@keyframes sp9shimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
+@keyframes sp9pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+.sp9-sk{background:linear-gradient(90deg,var(--bg-muted) 0%,var(--bg-hover) 50%,var(--bg-muted) 100%)!important;background-size:200% 100%!important;animation:sp9shimmer 1.5s linear infinite;}
+.sp9-scroll::-webkit-scrollbar{width:0;display:none;}
+button:focus-visible,a:focus-visible{outline:2px solid hsl(var(--c-event));outline-offset:2px;}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important;}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:var(--bg);color:var(--text);font-family:var(--f-body);padding:28px 24px 80px;">
+
+  <header style="max-width:1500px;margin:0 auto 8px;display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:260px;">
+      <div style="font-family:var(--f-mono);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;">SP9 · Turn B · Mobile GameNight Social · #2989</div>
+      <h1 style="font-family:var(--f-display);font-weight:700;font-size:32px;letter-spacing:-.02em;margin:0 0 8px;color:var(--text);">GameNights Index — <span style="font-family:var(--f-mono);font-size:16px;color:var(--text-muted);font-weight:600;">/game-nights · &lt;768px</span></h1>
+      <p style="color:var(--text-sec);font-size:14px;line-height:1.55;max-width:700px;margin:0;">Toggle <strong>Lista / Calendario</strong> + filter chip (Tutte / Organizzo / Invitato / Completate) + FAB "Nuova serata" → deep-link <code style="font-family:var(--f-mono);font-size:12px;background:var(--bg-muted);padding:1px 5px;border-radius:4px;">/game-nights/new</code>. Riusa <code style="font-family:var(--f-mono);font-size:12px;background:var(--bg-muted);padding:1px 5px;border-radius:4px;">GameNightListCard</code> / <code style="font-family:var(--f-mono);font-size:12px;background:var(--bg-muted);padding:1px 5px;border-radius:4px;">DayDetailDrawer</code>.</p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button type="button" onClick="{{ toggleMarkers }}" style="display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:var(--r-pill);background:var(--bg-card);border:1px solid var(--border);color:var(--text);font-family:var(--f-mono);font-size:12px;font-weight:600;cursor:pointer;">🏷️ {{ markersLabel }}</button>
+      <button type="button" onClick="{{ toggleTheme }}" style="display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:var(--r-pill);background:var(--bg-card);border:1px solid var(--border);color:var(--text);font-family:var(--f-mono);font-size:12px;font-weight:600;cursor:pointer;">{{ themeIcon }} {{ themeLabel }}</button>
+    </div>
+  </header>
+
+  <div style="max-width:1500px;margin:20px auto 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(392px,1fr));gap:36px 28px;align-items:start;">
+    {{ frames }}
+  </div>
+
+  <footer style="max-width:1500px;margin:56px auto 0;padding-top:24px;border-top:1px solid var(--border);color:var(--text-muted);font-size:12px;line-height:1.6;">
+    MeepleAI Design System v1 · SP9 mobile-gamenight-social · view-toggle role=tablist · filter chip role=radiogroup · DayDetailDrawer role=dialog + back-guard 1-livello · [INV-15] badge IN CORSO
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:880},&quot;defaultTheme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light' | 'dark'&quot;,&quot;section&quot;:&quot;Tema&quot;},&quot;showInvariantMarkers&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Annotazioni&quot;}}">
+class Component extends DCLogic {
+  state = { theme:'light', markers:true };
+
+  componentDidMount(){
+    const t = this.props.defaultTheme || 'light';
+    this.setState({ theme:t });
+    document.documentElement.setAttribute('data-theme', t);
+    if (this.props.showInvariantMarkers === false) this.setState({ markers:false });
+  }
+  toggleTheme = () => { const n = this.state.theme==='light'?'dark':'light'; document.documentElement.setAttribute('data-theme', n); this.setState({ theme:n }); };
+  toggleMarkers = () => this.setState(s => ({ markers:!s.markers }));
+
+  ev(a){ return a==null?'hsl(var(--c-event))':`hsl(var(--c-event) / ${a})`; }
+  se(a){ return a==null?'hsl(var(--c-session))':`hsl(var(--c-session) / ${a})`; }
+  pl(a){ return a==null?'hsl(var(--c-player))':`hsl(var(--c-player) / ${a})`; }
+  wa(a){ return a==null?'hsl(var(--c-warning))':`hsl(var(--c-warning) / ${a})`; }
+  su(a){ return a==null?'hsl(var(--c-success))':`hsl(var(--c-success) / ${a})`; }
+  da(a){ return a==null?'hsl(var(--c-danger))':`hsl(var(--c-danger) / ${a})`; }
+  h = React.createElement;
+
+  chip(text, kind){
+    if (!this.state.markers) return null;
+    const isInv = kind === 'inv';
+    return this.h('span',{ key:text, style:{
+      display:'inline-flex', alignItems:'center', gap:3, fontFamily:'var(--f-mono)', fontSize:9, fontWeight:700, letterSpacing:'.04em',
+      padding:'2px 6px', borderRadius:'var(--r-pill)', whiteSpace:'nowrap',
+      color: isInv?this.se():this.wa(), background: isInv?this.se(.12):this.wa(.12), border:`1px solid ${isInv?this.se(.3):this.wa(.35)}`,
+    }}, text);
+  }
+
+  statusBar(){
+    return this.h('div',{ style:{ height:34, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 22px 0', fontFamily:'var(--f-mono)', fontSize:12, fontWeight:700, color:'var(--text)' }},
+      this.h('span',{key:'t'},'21:04'), this.h('span',{key:'i', style:{letterSpacing:'2px'}},'● ● ● 88%'));
+  }
+
+  // ── header: title + view toggle + filter chips ──
+  indexHeader(view){
+    const toggle = (id, label, icon) => {
+      const active = view === id;
+      return this.h('button',{ key:id, role:'tab', 'aria-selected':active, style:{
+        minHeight:36, minWidth:44, padding:'0 12px', display:'inline-flex', alignItems:'center', gap:5, border:'none', cursor:'pointer',
+        borderRadius:'var(--r-md)', fontFamily:'var(--f-display)', fontSize:12.5, fontWeight:700,
+        background: active?'var(--bg-card)':'transparent', color: active?this.ev():'var(--text-muted)',
+        boxShadow: active?'var(--shadow-sm)':'none',
+      }}, this.h('span',{key:'i','aria-hidden':true},icon), label);
+    };
+    const filters = ['Tutte','Organizzo','Invitato','Completate'];
+    return this.h('div',{ style:{ position:'sticky', top:0, zIndex:4, background:'var(--glass-bg)', backdropFilter:'blur(12px)', borderBottom:'1px solid var(--border)', padding:'10px 14px 12px', display:'flex', flexDirection:'column', gap:11 }},
+      this.h('div',{key:'r1', style:{ display:'flex', alignItems:'center', gap:10 }},
+        this.h('h1',{key:'t', style:{ flex:1, fontFamily:'var(--f-display)', fontWeight:700, fontSize:19, color:'var(--text)', margin:0, letterSpacing:'-.01em' }},'Le mie serate'),
+        this.h('div',{key:'vt', role:'tablist', 'aria-label':'Vista', style:{ display:'flex', gap:2, padding:3, background:'var(--bg-muted)', borderRadius:'var(--r-lg)' }},
+          toggle('list','Lista','☰'), toggle('calendar','','📅')),
+      ),
+      this.h('div',{key:'r2', role:'radiogroup', 'aria-label':'Filtro serate', className:'sp9-scroll', style:{ display:'flex', gap:7, overflowX:'auto', margin:'0 -14px', padding:'0 14px' }},
+        filters.map((f,i) => {
+          const active = i===0;
+          return this.h('button',{ key:f, role:'radio', 'aria-checked':active, style:{
+            flexShrink:0, minHeight:34, padding:'0 13px', borderRadius:'var(--r-pill)', cursor:'pointer',
+            fontFamily:'var(--f-display)', fontSize:12.5, fontWeight:700,
+            background: active?this.ev():'var(--bg-card)', color: active?'#fff':'var(--text-sec)',
+            border: active?'1px solid transparent':'1px solid var(--border)',
+          }}, f);
+        }),
+      ),
+    );
+  }
+
+  // ── list card (status-aware) ──
+  listCard(g){
+    const status = {
+      planned:   { bg:this.ev(.12), fg:this.ev(), label:'Pianificata', dot:false },
+      progress:  { bg:this.se(.14), fg:this.se(), label:'In corso', dot:true },
+      pending:   { bg:this.wa(.16), fg:this.wa(), label:'Da confermare', dot:false },
+      completed: { bg:this.su(.14), fg:this.su(), label:'Completata', dot:false },
+    }[g.status];
+    return this.h('article',{ key:g.title, style:{ background:'var(--bg-card)', border:`1px solid ${g.status==='progress'?this.se(.4):'var(--border)'}`, borderRadius:'var(--r-xl)', boxShadow:'var(--shadow-sm)', padding:'13px 14px', display:'flex', flexDirection:'column', gap:10 }},
+      this.h('div',{key:'r1', style:{ display:'flex', alignItems:'flex-start', gap:11 }},
+        this.h('div',{key:'ic','aria-hidden':true, style:{ width:42, height:42, borderRadius:'var(--r-md)', background:this.ev(.12), color:this.ev(), display:'flex', alignItems:'center', justifyContent:'center', fontSize:21, flexShrink:0 }},'🎉'),
+        this.h('div',{key:'tx', style:{ flex:1, minWidth:0 }},
+          this.h('div',{key:'t', style:{ fontFamily:'var(--f-display)', fontWeight:700, fontSize:15, color:'var(--text)', lineHeight:1.2 }}, g.title),
+          this.h('div',{key:'m', style:{ fontFamily:'var(--f-mono)', fontSize:11, color:'var(--text-sec)', fontWeight:600, marginTop:3 }}, g.when),
+        ),
+        this.h('span',{key:'st', style:{ display:'inline-flex', alignItems:'center', gap:5, padding:'3px 8px', borderRadius:'var(--r-pill)', background:status.bg, color:status.fg, fontFamily:'var(--f-mono)', fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:'.05em', flexShrink:0 }},
+          status.dot ? this.h('span',{key:'d', style:{ width:6, height:6, borderRadius:'50%', background:status.fg, animation:'sp9pulse 1.4s ease-in-out infinite' }}) : null,
+          status.label,
+        ),
+      ),
+      this.h('div',{key:'r2', style:{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }},
+        this.h('span',{key:'l', style:{ display:'inline-flex', alignItems:'center', gap:5, fontSize:12, color:'var(--text-sec)', fontWeight:600 }}, this.h('span',{key:'e','aria-hidden':true},'📍'), g.loc),
+        this.h('span',{key:'p', style:{ display:'inline-flex', alignItems:'center', gap:5, fontSize:12, color:'var(--text-sec)', fontWeight:600 }}, this.h('span',{key:'e','aria-hidden':true},'👥'), g.players+' player'),
+        g.status==='progress' && this.state.markers ? this.chip('[INV-15]','inv') : null,
+      ),
+    );
+  }
+
+  listData(){
+    return [
+      { title:'Serata da Marco · Sabato', when:'Sab 15 Mar · 21:00', loc:'Casa Marco', players:4, status:'progress' },
+      { title:'Giovedì Wingspan', when:'Gio 20 Mar · 20:30', loc:'Casa Anna', players:5, status:'pending' },
+      { title:'Torneo 7 Wonders', when:'Sab 5 Apr · 14:00', loc:'Ludoteca', players:6, status:'planned' },
+      { title:'Giovedì scorso · Azul', when:'Gio 6 Mar · 21:00', loc:'Casa Marco', players:5, status:'completed' },
+    ];
+  }
+
+  fab(){
+    return this.h('div',{ style:{ position:'absolute', right:16, bottom:78, zIndex:6, display:'flex', alignItems:'center', gap:8 }},
+      this.state.markers ? this.h('span',{key:'g', style:{ alignSelf:'flex-end', marginBottom:14 }}, this.chip('[GAP-ROUTE] /game-nights/new','gap')) : null,
+      this.h('button',{ key:'b', 'aria-label':'Nuova serata', style:{
+        minHeight:52, padding:'0 20px', borderRadius:'var(--r-pill)', border:'none', cursor:'pointer',
+        background:this.ev(), color:'#fff', fontFamily:'var(--f-display)', fontWeight:700, fontSize:15,
+        display:'inline-flex', alignItems:'center', gap:8, boxShadow:`0 8px 24px ${this.ev(.4)}`,
+      }}, this.h('span',{key:'i','aria-hidden':true, style:{ fontSize:20, lineHeight:1 }},'＋'),'Nuova serata'),
+    );
+  }
+
+  // ── calendar mode ──
+  calendar(withDrawer){
+    const days = ['L','M','M','G','V','S','D'];
+    // March 2026 starts on a Sunday -> offset; keep simple grid with markers on specific days
+    const marked = { 15:'progress', 20:'pending', 6:'completed' };
+    const cells = [];
+    for (let i=0;i<3;i++) cells.push({ blank:true, key:'b'+i });
+    for (let d=1; d<=31; d++) cells.push({ d, key:'d'+d, mark: marked[d] });
+    const markColor = (m) => m==='progress'?this.se():m==='pending'?this.wa():m==='completed'?this.su():this.ev();
+    return this.h('div',{ style:{ padding:'14px 12px', display:'flex', flexDirection:'column', gap:12 }},
+      this.h('div',{key:'nav', style:{ display:'flex', alignItems:'center', gap:10, padding:'0 4px' }},
+        this.h('button',{key:'p','aria-label':'Mese precedente', style:{ width:36, height:36, borderRadius:'var(--r-md)', border:'1px solid var(--border)', background:'var(--bg-card)', color:'var(--text)', cursor:'pointer', fontSize:14 }},'‹'),
+        this.h('div',{key:'m', style:{ flex:1, textAlign:'center', fontFamily:'var(--f-display)', fontWeight:700, fontSize:16, color:'var(--text)' }},'Marzo 2026'),
+        this.h('button',{key:'n','aria-label':'Mese successivo', style:{ width:36, height:36, borderRadius:'var(--r-md)', border:'1px solid var(--border)', background:'var(--bg-card)', color:'var(--text)', cursor:'pointer', fontSize:14 }},'›'),
+      ),
+      this.h('div',{key:'dow', style:{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:4 }},
+        days.map((d,i) => this.h('div',{ key:'dow'+i, style:{ textAlign:'center', fontFamily:'var(--f-mono)', fontSize:10, fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase' }}, d))),
+      this.h('div',{key:'grid', style:{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:4 }},
+        cells.map(c => c.blank ? this.h('div',{key:c.key}) : this.h('button',{ key:c.key, 'aria-label':c.mark?`${c.d} marzo, serata`:`${c.d} marzo`, style:{
+          aspectRatio:'1', borderRadius:'var(--r-md)', cursor:'pointer', position:'relative',
+          border: c.d===15?`1.5px solid ${this.ev(.6)}`:'1px solid var(--border-light)',
+          background: c.mark?markColor(c.mark)+'':(c.d===15?this.ev(.08):'var(--bg-card)'),
+          color: c.mark?'#fff':'var(--text-sec)', fontFamily:'var(--f-display)', fontWeight:700, fontSize:13,
+          display:'flex', alignItems:'center', justifyContent:'center',
+        }}, c.d,
+          c.mark ? this.h('span',{key:'dot', style:{ position:'absolute', bottom:4, left:'50%', transform:'translateX(-50%)', width:4, height:4, borderRadius:'50%', background:'#fff' }}) : null,
+        )),
+      ),
+      this.h('div',{key:'lg', style:{ display:'flex', gap:12, flexWrap:'wrap', padding:'2px 4px' }},
+        [['In corso',this.se()],['Da confermare',this.wa()],['Completata',this.su()]].map(([l,c]) =>
+          this.h('span',{ key:l, style:{ display:'inline-flex', alignItems:'center', gap:5, fontFamily:'var(--f-mono)', fontSize:10, fontWeight:600, color:'var(--text-muted)' }},
+            this.h('span',{key:'d', style:{ width:9, height:9, borderRadius:3, background:c }}), l)),
+      ),
+      this.h('p',{key:'hint', style:{ fontSize:11, color:'var(--text-muted)', textAlign:'center', margin:'2px 0 0', fontStyle:'italic' }},'Tocca un giorno per aprire il dettaglio ↓'),
+    );
+  }
+
+  dayDrawer(){
+    return this.h('div',{ style:{ position:'absolute', inset:0, zIndex:8 }},
+      this.h('div',{key:'sc', style:{ position:'absolute', inset:0, background:'rgba(20,12,4,.42)' }}),
+      this.h('div',{key:'sheet', role:'dialog', 'aria-label':'Serate del 15 marzo', 'aria-modal':'true', style:{
+        position:'absolute', left:0, right:0, bottom:0, background:'var(--bg-card)', borderRadius:'var(--r-2xl) var(--r-2xl) 0 0',
+        boxShadow:'var(--shadow-drawer)', padding:'10px 16px 24px', maxHeight:'72%', display:'flex', flexDirection:'column', gap:12,
+      }},
+        this.h('div',{key:'grip', style:{ width:38, height:4, borderRadius:'var(--r-pill)', background:'var(--border-strong)', margin:'2px auto 4px' }}),
+        this.h('div',{key:'hd', style:{ display:'flex', alignItems:'center', gap:8 }},
+          this.h('div',{key:'t', style:{ flex:1 }},
+            this.h('div',{key:'a', style:{ fontFamily:'var(--f-display)', fontWeight:700, fontSize:17, color:'var(--text)' }},'Sabato 15 marzo'),
+            this.h('div',{key:'b', style:{ fontFamily:'var(--f-mono)', fontSize:11, color:'var(--text-muted)', fontWeight:600 }},'1 serata'),
+          ),
+          this.h('button',{key:'x','aria-label':'Chiudi', style:{ width:36, height:36, borderRadius:'var(--r-md)', border:'1px solid var(--border)', background:'var(--bg)', color:'var(--text-sec)', cursor:'pointer', fontSize:15 }},'✕'),
+        ),
+        this.listCard(this.listData()[0]),
+        this.h('div',{key:'add', style:{ display:'flex', alignItems:'center', gap:8 }},
+          this.h('button',{key:'b', style:{ flex:1, minHeight:44, borderRadius:'var(--r-md)', border:`1.5px dashed ${this.ev(.4)}`, background:this.ev(.06), color:this.ev(), fontFamily:'var(--f-display)', fontWeight:700, fontSize:13, cursor:'pointer' }},'＋ Aggiungi qui'),
+          this.state.markers ? this.chip('[GAP-ROUTE] /new?date','gap') : null,
+        ),
+        this.h('div',{key:'bg', style:{ display:'flex', justifyContent:'center' }}, this.chip('back-guard: pop 1 livello (ESC/gesture)','gap')),
+      ),
+    );
+  }
+
+  // ── empty / filtered-empty / skeleton / error ──
+  emptyState(kind){
+    const filtered = kind === 'filtered';
+    return this.h('div',{ style:{ display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center', padding:'54px 26px', gap:12 }},
+      this.h('div',{key:'ic','aria-hidden':true, style:{ width:64, height:64, borderRadius:'50%', background:this.ev(.12), color:this.ev(), display:'flex', alignItems:'center', justifyContent:'center', fontSize:30 }}, filtered?'🔍':'🎉'),
+      this.h('div',{key:'t', style:{ fontFamily:'var(--f-display)', fontWeight:700, fontSize:17, color:'var(--text)' }}, filtered?'Nessuna serata in questo filtro':'Nessuna serata'),
+      this.h('p',{key:'d', style:{ fontSize:13, color:'var(--text-muted)', margin:0, maxWidth:250, lineHeight:1.5 }}, filtered?'Prova un altro filtro o creane una nuova.':'Non hai ancora serate. Organizza il tuo prossimo game night!'),
+      filtered ? this.h('button',{key:'r', style:{ marginTop:2, minHeight:44, padding:'0 16px', borderRadius:'var(--r-md)', border:'1px solid var(--border)', background:'var(--bg-card)', color:'var(--text-sec)', fontFamily:'var(--f-display)', fontWeight:700, fontSize:13, cursor:'pointer' }},'Mostra tutte')
+        : this.h('button',{key:'c', style:{ marginTop:2, minHeight:44, padding:'0 18px', borderRadius:'var(--r-md)', border:'none', background:this.ev(), color:'#fff', fontFamily:'var(--f-display)', fontWeight:700, fontSize:14, cursor:'pointer' }},'＋ Crea serata'),
+    );
+  }
+
+  skeletonList(){
+    const sk = (k) => this.h('div',{ key:k, style:{ background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:'var(--r-xl)', padding:14, display:'flex', flexDirection:'column', gap:10 }},
+      this.h('div',{key:'r', style:{ display:'flex', gap:11, alignItems:'center' }},
+        this.h('div',{key:'i', className:'sp9-sk', style:{ width:42, height:42, borderRadius:'var(--r-md)', background:'var(--bg-muted)', flexShrink:0 }}),
+        this.h('div',{key:'t', style:{ flex:1, display:'flex', flexDirection:'column', gap:6 }},
+          this.h('div',{key:'a', className:'sp9-sk', style:{ height:12, width:'65%', borderRadius:4, background:'var(--bg-muted)' }}),
+          this.h('div',{key:'b', className:'sp9-sk', style:{ height:10, width:'40%', borderRadius:4, background:'var(--bg-muted)' }}),
+        ),
+      ),
+      this.h('div',{key:'c', className:'sp9-sk', style:{ height:14, width:'55%', borderRadius:4, background:'var(--bg-muted)' }}),
+    );
+    return this.h('div',{ style:{ padding:'14px 12px', display:'flex', flexDirection:'column', gap:12 }}, sk('s1'), sk('s2'), sk('s3'));
+  }
+
+  errorState(){
+    return this.h('div',{ role:'alert', style:{ padding:'48px 26px', display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center', gap:10 }},
+      this.h('div',{key:'i','aria-hidden':true, style:{ width:56, height:56, borderRadius:'50%', background:this.da(.15), color:this.da(), display:'flex', alignItems:'center', justifyContent:'center', fontSize:26 }},'⚠'),
+      this.h('div',{key:'t', style:{ fontFamily:'var(--f-display)', fontWeight:700, fontSize:16, color:'var(--text)' }},'Impossibile caricare le serate'),
+      this.h('p',{key:'d', style:{ fontSize:12.5, color:'var(--text-muted)', margin:0, maxWidth:260, lineHeight:1.5 }},'Errore di rete. Verifica la connessione e riprova.'),
+      this.h('button',{key:'r', style:{ marginTop:4, minHeight:44, padding:'0 18px', borderRadius:'var(--r-md)', border:'none', background:this.da(), color:'#fff', fontFamily:'var(--f-display)', fontWeight:700, fontSize:13, cursor:'pointer' }},'↻ Riprova'),
+    );
+  }
+
+  offlineBanner(){
+    return this.h('div',{ role:'status', style:{ margin:'10px 12px 0', padding:'10px 12px', borderRadius:'var(--r-md)', background:this.wa(.1), border:`1px solid ${this.wa(.32)}`, display:'flex', alignItems:'center', gap:9 }},
+      this.h('span',{key:'i','aria-hidden':true, style:{ fontSize:16 }},'⚡'),
+      this.h('div',{key:'t', style:{ flex:1 }},
+        this.h('div',{key:'a', style:{ fontFamily:'var(--f-display)', fontWeight:700, fontSize:12.5, color:'var(--text)' }},'Sei offline'),
+        this.h('div',{key:'b', style:{ fontSize:11, color:'var(--text-sec)' }},'Elenco in cache · aggiornato 21:04'),
+      ),
+    );
+  }
+
+  // ── list body ──
+  listBody(opts={}){
+    return this.h('div',{ style:{ padding:'14px 12px', display:'flex', flexDirection:'column', gap:11 }},
+      this.listData().map(g => this.listCard(g)));
+  }
+
+  // ── phone shell ──
+  phone(cfg){
+    const scrollKids = [ this.indexHeader(cfg.view || 'list') ];
+    if (cfg.body) scrollKids.push(this.h('div',{key:'body'}, cfg.body));
+    return this.h('div',{ 'data-theme': cfg.dark?'dark':undefined, style:{
+      width:392, height:748, borderRadius:44, border:'10px solid #1a1a1a', background:'var(--bg)', overflow:'hidden', position:'relative',
+      display:'flex', flexDirection:'column', boxShadow:'0 30px 70px rgba(0,0,0,.28), 0 0 0 2px #000', margin:'0 auto',
+    }},
+      this.statusBar(),
+      cfg.offline ? this.offlineBanner() : null,
+      this.h('div',{ key:'scr', className:'sp9-scroll', 'aria-live': cfg.live||undefined, style:{ flex:1, overflowY:'auto', position:'relative', background:'var(--bg)', paddingBottom:76 }}, scrollKids),
+      cfg.fab ? this.fab() : null,
+      cfg.drawer ? this.dayDrawer() : null,
+      this.bottomBar(),
+    );
+  }
+
+  bottomBar(){
+    const tabs = [ ['dashboard','⌂','Home',false],['library','📚','Libreria',false],['hub','🎲','Hub',true],['chat','💬','Chat',false],['profile','👤','Profilo',false] ];
+    return this.h('nav',{ 'aria-label':'Navigazione principale', style:{ position:'absolute', bottom:0, left:0, right:0, display:'flex', padding:'8px 8px 12px', background:'var(--glass-bg)', backdropFilter:'blur(14px)', borderTop:'1px solid var(--border)', zIndex:5 }},
+      tabs.map(([id,icon,label,active]) => this.h('button',{ key:id, 'aria-current':active?'page':undefined, style:{ flex:1, minHeight:44, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2, background:'transparent', border:'none', cursor:'pointer', color: active?this.ev():'var(--text-muted)', fontFamily:'var(--f-display)', fontSize:9.5, fontWeight:700 }},
+        this.h('span',{key:'i','aria-hidden':true, style:{ fontSize:18, lineHeight:1 }},icon), this.h('span',{key:'l'},label))));
+  }
+
+  frame(cfg){
+    return this.h('div',{ key:cfg.id, style:{ display:'flex', flexDirection:'column', alignItems:'center', gap:12 }},
+      this.h('div',{key:'cap', style:{ width:392, display:'flex', flexDirection:'column', gap:6 }},
+        this.h('div',{key:'r', style:{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }},
+          this.h('span',{key:'id', style:{ fontFamily:'var(--f-mono)', fontSize:10.5, fontWeight:700, color:this.ev(), background:this.ev(.12), border:`1px solid ${this.ev(.25)}`, padding:'3px 8px', borderRadius:'var(--r-pill)', letterSpacing:'.04em' }}, cfg.id),
+          this.h('span',{key:'l', style:{ fontFamily:'var(--f-display)', fontSize:13, fontWeight:700, color:'var(--text)' }}, cfg.label),
+          cfg.dark ? this.h('span',{key:'dk', style:{ fontFamily:'var(--f-mono)', fontSize:9, fontWeight:700, color:'var(--text-muted)', border:'1px solid var(--border)', borderRadius:'var(--r-pill)', padding:'2px 7px' }},'DARK') : null,
+        ),
+        cfg.desc ? this.h('p',{key:'d', style:{ fontSize:11.5, color:'var(--text-sec)', margin:0, lineHeight:1.5 }}, cfg.desc) : null,
+      ),
+      this.phone(cfg),
+    );
+  }
+
+  renderVals(){
+    const frames = [
+      this.frame({ id:'B-01', label:'Lista · Default', view:'list', fab:true, body:this.listBody(),
+        desc:'4 card mix status (IN CORSO [INV-15] · Da confermare · Pianificata · Completata) + FAB "Nuova serata".' }),
+      this.frame({ id:'B-01d', label:'Lista · Default', view:'list', fab:true, dark:true, body:this.listBody(),
+        desc:'Stesso stato in dark theme.' }),
+      this.frame({ id:'B-02', label:'Calendario', view:'calendar', fab:true, body:this.calendar(),
+        desc:'Griglia mese Marzo 2026 con giorni marcati per status. Tap giorno → DayDetailDrawer.' }),
+      this.frame({ id:'B-03', label:'Calendario · DayDetailDrawer', view:'calendar', fab:true, drawer:true, body:this.calendar(true),
+        desc:'Bottom-sheet giorno (role=dialog, back-guard 1-livello): card del giorno + "Aggiungi qui".' }),
+      this.frame({ id:'B-04', label:'Empty', view:'list', fab:true, body:this.emptyState('empty'),
+        desc:'Nessuna serata: illustrazione + CTA "Crea serata".' }),
+      this.frame({ id:'B-05', label:'Filtered-empty', view:'list', fab:true, body:this.emptyState('filtered'),
+        desc:'Filtro attivo senza risultati: "Nessuna serata in questo filtro" + "Mostra tutte".' }),
+      this.frame({ id:'B-06', label:'Loading', view:'list', live:'polite', body:this.skeletonList(),
+        desc:'Skeleton 3 card (shimmer, no spinner).' }),
+      this.frame({ id:'B-07', label:'Error', view:'list', body:this.errorState(),
+        desc:'Errore di rete + retry. Chrome e bottom-bar visibili.' }),
+      this.frame({ id:'B-08', label:'Offline', view:'list', fab:true, offline:true, body:this.listBody(),
+        desc:'Banner offline + elenco in cache read-only.' }),
+    ];
+    return {
+      frames,
+      toggleTheme:this.toggleTheme, toggleMarkers:this.toggleMarkers,
+      themeIcon: this.state.theme==='dark'?'🌙':'☀️', themeLabel: this.state.theme==='dark'?'Dark':'Light',
+      markersLabel: this.state.markers?'Marker ON':'Marker OFF',
+    };
+  }
+}
+</script>
+</body>
+</html>

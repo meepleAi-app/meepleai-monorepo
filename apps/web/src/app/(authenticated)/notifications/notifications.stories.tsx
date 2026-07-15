@@ -1,5 +1,10 @@
 /**
- * @mockup admin-mockups/design_files/notifications.html
+ * @mockup admin-mockups/design_files/sp7-notifications-hub.html
+ *
+ * Repointed 2026-07-15 (#2063 ratchet): the canonical /notifications mockup is
+ * sp7-notifications-hub.html; notifications.html is the superseded SP1 legacy
+ * archive (#2028, now design_intent=forward-refactor-obsolete). This story is
+ * wired as sp7-notifications-hub's fidelity.story_path.
  *
  * Notifications argTypes matrix story — DS-17 Phase C-1 (sub-issue #2160).
  *

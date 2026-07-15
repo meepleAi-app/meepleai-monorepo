@@ -11,6 +11,8 @@ const meta: Meta<typeof PlayersPage> = {
   title: 'Authenticated / sp4-players-index',
   component: PlayersPage,
   parameters: {
+    // DS-17 #2063: heuristic can't read named exports/http.get; declare states explicitly.
+    canonicalStates: ['default'],
     layout: 'fullscreen',
     nextjs: { appDirectory: true },
     viewport: { defaultViewport: 'desktop' },

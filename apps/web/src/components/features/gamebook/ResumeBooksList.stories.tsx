@@ -41,7 +41,7 @@
  *       umbrella #2063, sub-issue #2174 (Phase D-2).
  */
 
-import { fn } from '@storybook/test';
+import { fn } from 'storybook/test';
 
 import {
   ResumePickerStaleMock,

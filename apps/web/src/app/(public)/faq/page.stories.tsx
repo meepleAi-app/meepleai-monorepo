@@ -15,6 +15,8 @@ const meta: Meta<typeof FaqPage> = {
   title: 'Public / sp3-faq-enhanced',
   component: FaqPage,
   parameters: {
+    // DS-17 #2063: heuristic can't read named exports/http.get; declare states explicitly.
+    canonicalStates: ['default'],
     layout: 'fullscreen',
     nextjs: { appDirectory: true },
     viewport: { defaultViewport: 'desktop' },

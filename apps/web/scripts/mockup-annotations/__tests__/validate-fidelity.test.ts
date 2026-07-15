@@ -176,4 +176,30 @@ describe('FidelitySchema design_intent + viewports (DEC-P3-1+2+4)', () => {
     expect(result.ok).toBe(false);
     expect(result.errors.some(e => e.includes('obsolete_tracking_issue'))).toBe(true);
   });
+
+  it('accepts design_intent="deferred" (#2063 ratchet enum extension)', () => {
+    const result = FidelitySchema.safeParse({
+      mockup: { source: REAL_MOCKUP, states: ['default'] },
+      acceptance: {
+        states_covered: ['default'],
+        design_intent: 'deferred',
+        obsolete_tracking_issue: '#2234',
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('FAIL — design_intent="deferred" requires obsolete_tracking_issue', async () => {
+    const file = writeFixture('deferred-no-tracking.fidelity.json', {
+      mockup: { source: REAL_MOCKUP, states: ['default'] },
+      acceptance: {
+        states_covered: ['default'],
+        design_intent: 'deferred',
+        // obsolete_tracking_issue intentionally missing
+      },
+    });
+    const result = await validate(file);
+    expect(result.ok).toBe(false);
+    expect(result.errors.some(e => e.includes('obsolete_tracking_issue'))).toBe(true);
+  });
 });

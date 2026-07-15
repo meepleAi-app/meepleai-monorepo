@@ -4,7 +4,8 @@
     "source": "admin-mockups/design_files/sp7-notifications-preferences.html",
     "states": [
       "default",
-      "empty"
+      "loading",
+      "error"
     ]
   },
   "acceptance": {
@@ -14,7 +15,8 @@
     "legacy_token_names_forbidden": true,
     "states_covered": [
       "default",
-      "empty"
+      "loading",
+      "error"
     ],
     "a11y_axe": "AA",
     "a11y_violations_max": 0,
@@ -26,7 +28,7 @@
     ],
     "designer_approved_by": "",
     "designer_approved_on": "",
-    "story_path": "",
+    "story_path": "apps/web/src/app/(authenticated)/notifications/preferences/page.stories.tsx",
     "fixtures_path": "",
     "design_intent": "current",
     "viewports": [

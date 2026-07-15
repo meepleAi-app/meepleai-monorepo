@@ -61,11 +61,15 @@ export const FidelitySchema = z.object({
     fixtures_path: z.string().default(''),
 
     // DEC-P3-1+2 (2026-06-10): design intent classification
+    // 'deferred' added 2026-07-15 (#2063 ratchet): a current-intent mockup whose
+    // story authoring is deliberately deferred to a tracked umbrella (e.g. per-game
+    // session mockups → Phase C-3 #2234). Excluded from lint:storybook-states like
+    // obsolete, but semantically distinct (will be built later, not retired).
     design_intent: z
-      .enum(['current', 'forward-refactor', 'forward-refactor-obsolete'])
+      .enum(['current', 'forward-refactor', 'forward-refactor-obsolete', 'deferred'])
       .default('current')
       .describe(
-        'Mockup intent vs codebase corrente. forward-refactor-obsolete → skip story migration, tracking issue required.'
+        'Mockup intent vs codebase corrente. forward-refactor-obsolete → skip story migration; deferred → skip until a tracked umbrella builds it. Both require a tracking issue.'
       ),
 
     // DEC-P3-4 (2026-06-10): viewport opt-in (default desktop)
@@ -151,11 +155,14 @@ function crossReferenceCheck(fidelity, fidelityFilePath) {
   // DS-17 Phase B (#2127): accept 'PENDING' sentinel during the window between fidelity
   // stub generation and designer sign-off + tracking issue creation.
   // create-tracking-issues.mjs replaces PENDING with the real #NNNN ref post-signoff.
+  // #2063 ratchet (2026-07-15): 'deferred' carries the same tracking-issue requirement
+  // (the umbrella that will build the story, e.g. #2234), reusing obsolete_tracking_issue.
   const tracking = fidelity.acceptance.obsolete_tracking_issue;
-  if (fidelity.acceptance.design_intent === 'forward-refactor-obsolete' && !tracking) {
+  const intent = fidelity.acceptance.design_intent;
+  if ((intent === 'forward-refactor-obsolete' || intent === 'deferred') && !tracking) {
     errors.push(
-      `acceptance.design_intent='forward-refactor-obsolete' requires acceptance.obsolete_tracking_issue (use 'PENDING' placeholder pre-signoff or '#NNNN' post-signoff). ` +
-        `Open a GitHub issue tracking mockup rewrite OR component rollback (DEC-P3-2).`
+      `acceptance.design_intent='${intent}' requires acceptance.obsolete_tracking_issue (use 'PENDING' placeholder pre-signoff or '#NNNN' post-signoff). ` +
+        `Open/link a GitHub issue tracking the mockup rewrite, component rollback, or deferred build (DEC-P3-2).`
     );
   }
 

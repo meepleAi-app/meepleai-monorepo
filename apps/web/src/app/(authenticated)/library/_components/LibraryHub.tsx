@@ -55,7 +55,6 @@ import { HubPageContainer } from '@/components/layout/PageContainer';
 import { useHybridHubItems } from '@/hooks/queries/useHybridHubItems';
 import { useLibrary, useRemoveGameFromLibrary } from '@/hooks/queries/useLibrary';
 import { useActivityFeed } from '@/hooks/useActivityFeed';
-import { useAdminRole } from '@/hooks/useAdminRole';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 import { deriveGamesTabEntries } from '@/lib/library/games-tab-filters';
@@ -114,10 +113,6 @@ export function LibraryHub(): ReactElement {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  // F2 (#1975): BGG import is admin-only (BGG ToS — see AddGameDrawer.tsx:18 note).
-  // Gate the CTA visibility behind admin role; non-admins get `undefined` callbacks
-  // which collapse the CTA buttons in LibraryHeroDesktop + EmptyLibrary.
-  const { isAdminOrAbove } = useAdminRole();
 
   const [tab, setTab] = useState<HybridHubTab>('all');
   const [selectionMode, setSelectionMode] = useState<LibrarySelectionMode>('browse');
@@ -233,7 +228,8 @@ export function LibraryHub(): ReactElement {
       subtitle: t('pages.library.hero.subtitle'),
       eyebrow: t('pages.library.hero.eyebrow'),
       ctaAdd: t('pages.library.hero.cta.add'),
-      // F2: label kept (i18n stable) — visibility gated by `onImportBgg` prop in hero.
+      // BGG import CTA removed from /library (BGG user-side ban #2123). The label is required by
+      // LibraryHeroDesktopLabels but the CTA no longer renders (onImportBgg intentionally omitted).
       ctaImportBgg: t('pages.library.hero.cta.importBgg'),
       ctaExportAriaLabel: t('pages.library.hero.cta.exportAriaLabel'),
     }),
@@ -294,8 +290,6 @@ export function LibraryHub(): ReactElement {
         title: t('pages.library.emptyState.empty.title'),
         subtitle: t('pages.library.emptyState.empty.subtitle'),
         cta: t('pages.library.emptyState.empty.cta'),
-        // F2 (#1975): only render the BGG secondary CTA for admin users.
-        ctaImportBgg: isAdminOrAbove ? t('pages.library.emptyState.empty.ctaImportBgg') : undefined,
         suggestions: {
           heading: t('pages.library.emptyState.empty.suggestions.heading'),
         },
@@ -311,7 +305,7 @@ export function LibraryHub(): ReactElement {
         cta: t('pages.library.emptyState.error.cta'),
       },
     }),
-    [t, isAdminOrAbove]
+    [t]
   );
 
   const bulkLabels = useMemo<BulkSelectionBarLabels>(() => {
@@ -403,7 +397,6 @@ export function LibraryHub(): ReactElement {
 
   // ─── Callbacks ───
   const handleAddGame = useCallback(() => router.push('/library?action=add'), [router]);
-  const handleImportBgg = useCallback(() => router.push('/library?action=import-bgg'), [router]);
 
   const handleCardClick = useCallback(
     (itemId: string) => {
@@ -479,12 +472,7 @@ export function LibraryHub(): ReactElement {
       data-state={effectiveKind}
       className="gap-6 p-6 pb-24 sm:p-7"
     >
-      <LibraryHeroDesktop
-        labels={heroLabels}
-        stats={heroStatRows}
-        onAddGame={handleAddGame}
-        onImportBgg={isAdminOrAbove ? handleImportBgg : undefined}
-      />
+      <LibraryHeroDesktop labels={heroLabels} stats={heroStatRows} onAddGame={handleAddGame} />
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
         <div className="flex flex-1 flex-col gap-4">
           <LibraryTabs<HybridHubTab> tabs={tabsConfig} active={tab} onChange={setTab} />
@@ -544,7 +532,6 @@ export function LibraryHub(): ReactElement {
                   kind={effectiveKind}
                   labels={emptyLabels}
                   onAddGame={handleAddGame}
-                  onImportBgg={isAdminOrAbove ? handleImportBgg : undefined}
                   onClearFilters={handleClearFilters}
                   onRetry={handleRetry}
                 />

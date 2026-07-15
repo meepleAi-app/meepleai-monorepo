@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
+
+import { useRouter } from 'next/navigation';
 
 import { CustomCoverDialog } from '@/components/features/library/custom-cover/CustomCoverDialog';
 import { EditCoverOverlay } from '@/components/features/library/custom-cover/EditCoverOverlay';
@@ -9,7 +11,10 @@ import {
   ConnectionBar,
   buildGameConnectionPips,
 } from '@/components/ui/data-display/connection-bar';
-import type { MeepleCardMetadata } from '@/components/ui/data-display/meeple-card/types';
+import type {
+  MeepleCardMetadata,
+  MeepleEntityType,
+} from '@/components/ui/data-display/meeple-card/types';
 import { useGameSessionContributors } from '@/hooks/queries/useGameSessionContributors';
 import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
 import { useConnectionBarNav } from '@/hooks/useConnectionBarNav';
@@ -47,7 +52,31 @@ export function GameDetailDesktop({
   isPrivateGame,
 }: GameDetailDesktopProps) {
   const { data: game, isLoading, isError } = useLibraryGameDetail(gameId);
-  const { handlePipClick } = useConnectionBarNav(gameId);
+  const router = useRouter();
+  // ConnectionBar "+" (empty pip) → create that entity. Per-entity targets:
+  // agent/kb are full-page routes under the game; chat/session are prefilled wizards.
+  const handleCreateEntity = useCallback(
+    (entityType: MeepleEntityType) => {
+      switch (entityType) {
+        case 'agent':
+          router.push(`/library/${gameId}/agent`);
+          break;
+        case 'kb':
+          router.push(`/library/${gameId}/kb`);
+          break;
+        case 'chat':
+          router.push(`/chat/new?game=${gameId}`);
+          break;
+        case 'session':
+          router.push(`/sessions/new?gameId=${gameId}`);
+          break;
+        default:
+          break;
+      }
+    },
+    [router, gameId]
+  );
+  const { handlePipClick } = useConnectionBarNav(gameId, handleCreateEntity);
   // #2036: Top session contributors strip. Public endpoint — runs even when
   // the user hasn't actually added the game to their library yet (the share
   // surfaces social proof before deciding to play). `enabled` gates on gameId

@@ -597,7 +597,7 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
     expect(within(empty).queryByRole('button', { name: /Importa.*BGG/i })).toBeNull();
   });
 
-  it('renders BGG secondary CTA in empty state only for admin users (F2 #1975)', () => {
+  it('does not render the BGG import CTA in empty state even for admins (removed from /library, BGG user-side ban #2123)', () => {
     useAdminRoleMock.mockReturnValue({
       user: null,
       isSuperAdmin: false,
@@ -611,7 +611,7 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
     );
     const empty = container.querySelector('[data-slot="library-empty-state"]') as HTMLElement;
     expect(empty).toHaveAttribute('data-kind', 'empty');
-    expect(within(empty).getByRole('button', { name: /Importa.*BGG/i })).toBeInTheDocument();
+    expect(within(empty).queryByRole('button', { name: /Importa.*BGG/i })).toBeNull();
   });
 
   // ─── FSM: filtered-empty ───────────────────────────────────────────────

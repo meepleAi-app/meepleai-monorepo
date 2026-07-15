@@ -192,8 +192,16 @@ interface DateRangeFilterPopoverProps {
  * explicit "Applica intervallo" button — matching the mockup's `customMode`
  * pattern (selecting "custom" does not commit a range until Applica is
  * clicked with both bounds filled in).
+ *
+ * The popover is a CONTROLLED Radix `<Popover>` (`open`/`onOpenChange`) so it
+ * can be closed programmatically: selecting a non-custom preset or clicking
+ * "Applica intervallo" closes it (mirrors `setOpenDate(false)` in
+ * `admin-mockups/design_files/sp4-toolkit-history-ui.jsx:176,190`), while
+ * switching to the "custom" preset keeps it open so the user can fill in the
+ * date inputs.
  */
 function DateRangeFilterPopover({ state, onChange, t }: DateRangeFilterPopoverProps): JSX.Element {
+  const [open, setOpen] = useState(false);
   const [customMode, setCustomMode] = useState(state.datePreset === 'custom');
   const [customFrom, setCustomFrom] = useState(state.dateFrom ?? '');
   const [customTo, setCustomTo] = useState(state.dateTo ?? '');
@@ -219,11 +227,13 @@ function DateRangeFilterPopover({ state, onChange, t }: DateRangeFilterPopoverPr
       dateFrom: undefined,
       dateTo: undefined,
     });
+    setOpen(false);
   };
 
   const handleApply = () => {
     if (!customFrom || !customTo) return;
     onChange({ ...state, datePreset: 'custom', dateFrom: customFrom, dateTo: customTo });
+    setOpen(false);
   };
 
   const triggerLabel =
@@ -232,7 +242,7 @@ function DateRangeFilterPopover({ state, onChange, t }: DateRangeFilterPopoverPr
       : t(`pages.toolkitHistory.filters.dateOptions.${state.datePreset}`);
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           type="button"

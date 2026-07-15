@@ -17,7 +17,7 @@
  * interaction.
  */
 
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
@@ -140,6 +140,34 @@ describe('HistoryToolbar', () => {
       expect(onChange).toHaveBeenCalledTimes(1);
       expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ search: 'wingspan' }));
     });
+
+    it('cancels the pending debounced commit when the search is cleared before it fires', async () => {
+      const { onChange } = renderToolbar();
+
+      const searchInput = screen.getByRole('searchbox', {
+        name: 'pages.toolkitHistory.filters.searchAriaLabel',
+      });
+
+      fireEvent.change(searchInput, { target: { value: 'catan' } });
+
+      // Advance partway through the debounce window — the commit is still pending.
+      await act(async () => {
+        vi.advanceTimersByTime(200);
+      });
+      expect(onChange).not.toHaveBeenCalled();
+
+      fireEvent.click(
+        screen.getByRole('button', { name: 'pages.toolkitHistory.filters.clearSearch' })
+      );
+
+      // Advance past where the original debounce would have fired.
+      await act(async () => {
+        vi.advanceTimersByTime(400);
+      });
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ search: '' }));
+    });
   });
 
   it('clears the search immediately (bypassing the debounce) when the clear button is clicked', async () => {
@@ -225,26 +253,40 @@ describe('HistoryToolbar', () => {
     );
   });
 
-  it('applies a relative date preset immediately and clears any custom bounds', async () => {
+  it('applies a relative date preset immediately, clears any custom bounds, and closes the popover', async () => {
     const user = userEvent.setup();
     const { onChange } = renderToolbar({
       state: baseState({ datePreset: 'custom', dateFrom: '2026-01-01', dateTo: '2026-02-01' }),
     });
 
     await user.click(screen.getByRole('button', { name: 'pages.toolkitHistory.filters.date' }));
+    expect(
+      screen.getByRole('listbox', { name: 'pages.toolkitHistory.filters.dateRange' })
+    ).toBeInTheDocument();
+
     await user.click(screen.getByText('pages.toolkitHistory.filters.dateOptions.last30'));
 
     expect(onChange).toHaveBeenCalledWith(
       expect.objectContaining({ datePreset: 'last30', dateFrom: undefined, dateTo: undefined })
     );
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('listbox', { name: 'pages.toolkitHistory.filters.dateRange' })
+      ).not.toBeInTheDocument();
+    });
   });
 
-  it('applies a custom date range only after both dates are filled in and "Applica intervallo" is clicked', async () => {
+  it('keeps the popover open when switching to the custom preset, applies the range only after both dates are filled in and "Applica intervallo" is clicked, then closes it', async () => {
     const user = userEvent.setup();
     const { onChange } = renderToolbar();
 
     await user.click(screen.getByRole('button', { name: 'pages.toolkitHistory.filters.date' }));
     await user.click(screen.getByText('pages.toolkitHistory.filters.dateOptions.custom'));
+
+    expect(
+      screen.getByRole('listbox', { name: 'pages.toolkitHistory.filters.dateRange' })
+    ).toBeInTheDocument();
 
     const applyButton = screen.getByRole('button', {
       name: 'pages.toolkitHistory.filters.applyRange',
@@ -257,6 +299,11 @@ describe('HistoryToolbar', () => {
     fireEvent.change(toInput, { target: { value: '2026-06-30' } });
 
     expect(applyButton).not.toBeDisabled();
+    // Still open while the user is filling in the custom range.
+    expect(
+      screen.getByRole('listbox', { name: 'pages.toolkitHistory.filters.dateRange' })
+    ).toBeInTheDocument();
+
     await user.click(applyButton);
 
     expect(onChange).toHaveBeenCalledWith(
@@ -266,6 +313,12 @@ describe('HistoryToolbar', () => {
         dateTo: '2026-06-30',
       })
     );
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('listbox', { name: 'pages.toolkitHistory.filters.dateRange' })
+      ).not.toBeInTheDocument();
+    });
   });
 
   it('calls onChange with the new sort when a sort option is selected', async () => {

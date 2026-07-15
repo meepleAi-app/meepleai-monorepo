@@ -2520,6 +2520,142 @@
         "shareAction": "Share"
       }
     },
+    "toolkitHistory": {
+      "hero": {
+        "breadcrumbToolkit": "Toolkit",
+        "breadcrumbHistory": "History",
+        "title": "Session history",
+        "subtitle": "All finalized games, filterable by game, date and winner.",
+        "quickStat": "{sessions} sessions · {games} games · {winners} winners",
+        "exportCsv": "Export CSV",
+        "exportCsvShort": "CSV"
+      },
+      "tabs": {
+        "stats": "Stats",
+        "history": "History",
+        "templates": "Templates",
+        "play": "Play"
+      },
+      "filters": {
+        "searchPlaceholder": "Search by game or winner…",
+        "searchAriaLabel": "Search by game or winner",
+        "searching": "Searching…",
+        "clearSearch": "Clear search",
+        "games": "Games",
+        "filterByGame": "Filter by game",
+        "all": "All",
+        "showMore": "Show {n} more",
+        "showLess": "Show less",
+        "date": "Date",
+        "dateRange": "Date range",
+        "dateOptions": {
+          "all": "All dates",
+          "last30": "Last 30 days",
+          "last90": "Last 90 days",
+          "lastYear": "Last year",
+          "custom": "Custom dates"
+        },
+        "dateFrom": "From",
+        "dateTo": "To",
+        "dateFromLabel": "Start date",
+        "dateToLabel": "End date",
+        "applyRange": "Apply range",
+        "winners": "Winners",
+        "filterByWinner": "Filter by winner",
+        "winnerWon": "{name} (won)",
+        "noWinner": "No winner",
+        "sort": "Sort",
+        "sortBy": "Sort by",
+        "sortOptions": {
+          "recent": "Most recent",
+          "oldest": "Oldest",
+          "longest": "Longest",
+          "score": "Highest score"
+        },
+        "view": "View",
+        "viewTable": "Table view",
+        "viewCards": "Cards view"
+      },
+      "summary": {
+        "activeFilters": "{n, plural, one {# active filter} other {# active filters}}",
+        "results": "{n, plural, one {# session} other {# sessions}} of {total}",
+        "clearAll": "Clear all"
+      },
+      "table": {
+        "date": "Date",
+        "game": "Game",
+        "duration": "Duration",
+        "players": "Players",
+        "winner": "Winner",
+        "score": "Score",
+        "notes": "Notes",
+        "actions": "Actions",
+        "coop": "Cooperative",
+        "coopShort": "co-op",
+        "noWinner": "No winner",
+        "noNote": "No notes",
+        "hasNote": "Has notes",
+        "viewDetails": "View details",
+        "gameStats": "Game stats",
+        "unknownGame": "Unknown game",
+        "openInLibrary": "Open {game} in library",
+        "winnerAria": "Winner: {name}",
+        "playersAria": "{count} players: {names}"
+      },
+      "pagination": {
+        "prev": "Prev.",
+        "next": "Next",
+        "prevAria": "Previous page",
+        "nextAria": "Next page",
+        "mobileMeta": "Page {page} of {pages} · {total} sess.",
+        "rangeMeta": "{from}–{to} of {total} sessions",
+        "empty": "0 sessions",
+        "perPage": "Per page",
+        "perPageAria": "Sessions per page",
+        "listAria": "Session history pages"
+      },
+      "empty": {
+        "title": "No sessions yet",
+        "body": "Finalized games will appear here: filter by game, date or winner and open each one's details.",
+        "cta": "Create first session"
+      },
+      "filteredEmpty": {
+        "title": "No sessions match the filters",
+        "body": "Try adjusting the search or removing the active game, date or winner filters.",
+        "cta": "Clear filters"
+      },
+      "loading": {
+        "ariaLabel": "Loading session history"
+      },
+      "error": {
+        "message": "Unable to load history — try again.",
+        "retry": "Retry"
+      },
+      "modal": {
+        "title": "{game} · {date}",
+        "sub": "Duration {duration} · {count} players · {time}",
+        "close": "Close",
+        "leaderboard": "Final leaderboard",
+        "you": " · you",
+        "timeline": "Event timeline",
+        "notes": "Notes",
+        "notesEmpty": "No notes for this session.",
+        "stats": "Game statistics",
+        "turns": "Total turns",
+        "winnerScore": "Winner score",
+        "variance": "Score variance",
+        "highlights": "Highlights",
+        "noData": "—",
+        "gameStats": "Game stats",
+        "playAgain": "Play again",
+        "editNotes": "Edit notes",
+        "delete": "Delete"
+      },
+      "cards": {
+        "coop": "Co-op"
+      },
+      "batchNote": "Showing the first {n} results."
+    },
     "sessions": {
       "metadata": {
         "title": "My sessions — MeepleAI",

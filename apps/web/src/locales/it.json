@@ -2568,6 +2568,142 @@
         "shareAction": "Condividi"
       }
     },
+    "toolkitHistory": {
+      "hero": {
+        "breadcrumbToolkit": "Toolkit",
+        "breadcrumbHistory": "History",
+        "title": "Storico sessioni",
+        "subtitle": "Tutte le partite finalizzate, filtrabili per gioco, data e vincitore.",
+        "quickStat": "{sessions} sessioni · {games} giochi · {winners} vincitori",
+        "exportCsv": "Esporta CSV",
+        "exportCsvShort": "CSV"
+      },
+      "tabs": {
+        "stats": "Stats",
+        "history": "History",
+        "templates": "Templates",
+        "play": "Play"
+      },
+      "filters": {
+        "searchPlaceholder": "Cerca per gioco o vincitore…",
+        "searchAriaLabel": "Cerca per gioco o vincitore",
+        "searching": "Cercando…",
+        "clearSearch": "Cancella ricerca",
+        "games": "Giochi",
+        "filterByGame": "Filtra per gioco",
+        "all": "Tutti",
+        "showMore": "Mostra altri {n}",
+        "showLess": "Mostra meno",
+        "date": "Data",
+        "dateRange": "Intervallo date",
+        "dateOptions": {
+          "all": "Tutte le date",
+          "last30": "Ultimi 30 giorni",
+          "last90": "Ultimi 90 giorni",
+          "lastYear": "Ultimo anno",
+          "custom": "Date custom"
+        },
+        "dateFrom": "Da",
+        "dateTo": "A",
+        "dateFromLabel": "Data inizio",
+        "dateToLabel": "Data fine",
+        "applyRange": "Applica intervallo",
+        "winners": "Vincitori",
+        "filterByWinner": "Filtra per vincitore",
+        "winnerWon": "{name} (vinto)",
+        "noWinner": "Senza vincitore",
+        "sort": "Ordina",
+        "sortBy": "Ordina per",
+        "sortOptions": {
+          "recent": "Più recente",
+          "oldest": "Più antica",
+          "longest": "Più lunga",
+          "score": "Score più alto"
+        },
+        "view": "Vista",
+        "viewTable": "Vista tabella",
+        "viewCards": "Vista cards"
+      },
+      "summary": {
+        "activeFilters": "{n, plural, one {# filtro attivo} other {# filtri attivi}}",
+        "results": "{n, plural, one {# sessione} other {# sessioni}} su {total}",
+        "clearAll": "Cancella tutto"
+      },
+      "table": {
+        "date": "Data",
+        "game": "Gioco",
+        "duration": "Durata",
+        "players": "Giocatori",
+        "winner": "Vincitore",
+        "score": "Score",
+        "notes": "Note",
+        "actions": "Azioni",
+        "coop": "Cooperativa",
+        "coopShort": "co-op",
+        "noWinner": "Senza vincitore",
+        "noNote": "Nessuna nota",
+        "hasNote": "Nota presente",
+        "viewDetails": "Vedi dettagli",
+        "gameStats": "Stats del gioco",
+        "unknownGame": "Gioco sconosciuto",
+        "openInLibrary": "Apri {game} in libreria",
+        "winnerAria": "Vincitore: {name}",
+        "playersAria": "{count} giocatori: {names}"
+      },
+      "pagination": {
+        "prev": "Prec.",
+        "next": "Succ.",
+        "prevAria": "Pagina precedente",
+        "nextAria": "Pagina successiva",
+        "mobileMeta": "Pag. {page} di {pages} · {total} sess.",
+        "rangeMeta": "{from}–{to} di {total} sessioni",
+        "empty": "0 sessioni",
+        "perPage": "Per pagina",
+        "perPageAria": "Sessioni per pagina",
+        "listAria": "Pagine storico sessioni"
+      },
+      "empty": {
+        "title": "Nessuna sessione ancora",
+        "body": "Le partite finalizzate appariranno qui: filtra per gioco, data o vincitore e apri il dettaglio di ognuna.",
+        "cta": "Crea prima sessione"
+      },
+      "filteredEmpty": {
+        "title": "Nessuna sessione corrisponde ai filtri",
+        "body": "Prova a modificare la ricerca o a rimuovere i filtri di gioco, data o vincitore attivi.",
+        "cta": "Rimuovi filtri"
+      },
+      "loading": {
+        "ariaLabel": "Caricamento storico sessioni"
+      },
+      "error": {
+        "message": "Impossibile caricare lo storico — riprova.",
+        "retry": "Riprova"
+      },
+      "modal": {
+        "title": "{game} · {date}",
+        "sub": "Durata {duration} · {count} giocatori · {time}",
+        "close": "Chiudi",
+        "leaderboard": "Classifica finale",
+        "you": " · tu",
+        "timeline": "Timeline eventi",
+        "notes": "Note",
+        "notesEmpty": "Nessuna nota per questa sessione.",
+        "stats": "Statistiche partita",
+        "turns": "Turni totali",
+        "winnerScore": "Score vincitore",
+        "variance": "Varianza score",
+        "highlights": "Highlights",
+        "noData": "—",
+        "gameStats": "Stats gioco",
+        "playAgain": "Gioca di nuovo",
+        "editNotes": "Modifica note",
+        "delete": "Elimina"
+      },
+      "cards": {
+        "coop": "Co-op"
+      },
+      "batchNote": "Mostrati i primi {n} risultati."
+    },
     "sessions": {
       "metadata": {
         "title": "Le mie partite — MeepleAI",

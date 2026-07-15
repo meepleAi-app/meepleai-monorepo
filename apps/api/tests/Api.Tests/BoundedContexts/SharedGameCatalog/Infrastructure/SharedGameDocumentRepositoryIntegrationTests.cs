@@ -227,6 +227,91 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
 
     #endregion
 
+    #region IsPdfLinkedToGameAsync Tests
+
+    [Fact]
+    public async Task IsPdfLinkedToGameAsync_WhenLinkedViaSharedGameDocument_ReturnsTrue()
+    {
+        // Arrange: a curated shared_game_documents join row (admin link / wizard / import path).
+        var game = await CreateTestGameAsync();
+        var pdfDoc = await CreateTestPdfDocumentAsync(game.Id);
+        var joinRow = SharedGameDocument.Create(
+            game.Id,
+            pdfDoc.Id,
+            SharedGameDocumentType.Rulebook,
+            "1.0",
+            _testUserId);
+        await _repository.AddAsync(joinRow);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var linked = await _repository.IsPdfLinkedToGameAsync(game.Id, pdfDoc.Id);
+
+        // Assert
+        linked.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task IsPdfLinkedToGameAsync_WhenLinkedOnlyViaPdfSharedGameId_ReturnsTrue()
+    {
+        // Arrange: the standard /ingest/pdf upload sets pdf_documents.shared_game_id but does
+        // NOT create a shared_game_documents row (#2952). The mechanic-extractor picker lists
+        // PDFs by this FK, so the Generate validator must accept the same linkage source —
+        // otherwise the picker offers a PDF the validator rejects with 404.
+        var game = await CreateTestGameAsync();
+        var pdfDoc = await CreateTestPdfDocumentAsync(game.Id); // sets SharedGameId, no join row
+
+        // Act
+        var linked = await _repository.IsPdfLinkedToGameAsync(game.Id, pdfDoc.Id);
+
+        // Assert
+        linked.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task IsPdfLinkedToGameAsync_WhenPdfBelongsToDifferentGame_ReturnsFalse()
+    {
+        // Arrange: the PDF's shared_game_id points to game2; a query for game1 must not match
+        // (guards the OR fallback against over-matching any PDF with a shared_game_id).
+        var game1 = await CreateTestGameAsync();
+        var game2 = await CreateTestGameAsync();
+        var pdfDoc = await CreateTestPdfDocumentAsync(game2.Id);
+
+        // Act
+        var linked = await _repository.IsPdfLinkedToGameAsync(game1.Id, pdfDoc.Id);
+
+        // Assert
+        linked.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task IsPdfLinkedToGameAsync_WhenPdfHasNoSharedGame_ReturnsFalse()
+    {
+        // Arrange: a PDF with no shared_game_id and no join row (e.g. a private-game upload).
+        var game = await CreateTestGameAsync();
+        var orphanPdf = new PdfDocumentEntity
+        {
+            Id = Guid.NewGuid(),
+            SharedGameId = null,
+            FileName = $"orphan_{Guid.NewGuid():N}.pdf",
+            FilePath = "/test/orphan.pdf",
+            FileSizeBytes = 1024,
+            ContentType = "application/pdf",
+            UploadedByUserId = _testUserId,
+            UploadedAt = DateTime.UtcNow,
+        };
+        _dbContext.PdfDocuments.Add(orphanPdf);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var linked = await _repository.IsPdfLinkedToGameAsync(game.Id, orphanPdf.Id);
+
+        // Assert
+        linked.Should().BeFalse();
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private async Task<SharedGame> CreateTestGameAsync()

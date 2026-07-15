@@ -249,8 +249,8 @@ grep -E "hsl\([0-9]+,?\s*89%,\s*48%\)|hsla\([0-9]+,?\s*89%" \
 | `state-04-step3-party` | Step 3 player picker + email | Tag chips entity=player, autocomplete dropdown |
 | `state-05-step4-games` | Step 4 game multi-select | Library cards + duration/players matching |
 | `state-06-step4-conflict` | 2 game candidates con duration totale > "tutto il giorno" | Banner red "Troppo lungo per una sera" |
-| `state-07-review` | Riepilogo finale (read-only summary) | "Crea e invia inviti" CTA primary |
-| `state-08-success` | Post-submit: redirect a B con toast | "Invitato 6 giocatori, attendi RSVP" |
+| `state-07-review` | Riepilogo finale (read-only summary) | "Crea serata" CTA primary (**tagging silente, NESSUN invio inviti al submit** — invariante #16; gli inviti si mandano dopo, dal detail page B) |
+| `state-08-success` | Post-submit: redirect a B con toast | "Serata creata · 6 giocatori taggati. Invia gli inviti dal dettaglio." |
 | `state-09-mobile-step-flow` | Mobile vista wizard (4 step single column) | Bottom bar fixed con CTA "Avanti" / "Indietro" |
 
 Desktop variants:
@@ -269,7 +269,7 @@ Desktop variants:
 
 ### Coverage Gherkin
 
-US-31 happy: G31.1 (create + send invites), G31.5 (game candidates max 3), G31.7 (auto-RSVP regulars), G31.10 (mobile single-column wizard).
+US-31 happy: G31.1 (create + tag players — NO auto-invite al submit, invariante #16), G31.5 (game candidates max 3), G31.7 (auto-RSVP regulars), G31.10 (mobile single-column wizard).
 
 ---
 

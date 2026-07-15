@@ -3932,9 +3932,9 @@
       "host": {
         "edit": "Edit",
         "cancel": "Cancel game night",
-        "publish": "Publish",
+        "publish": "Send invites",
         "kickGuest": "Remove",
-        "publishedToast": "Game night published",
+        "publishedToast": "Invites sent",
         "publishedToastDescription": "Guests will receive a notification.",
         "cancelledToast": "Game night cancelled"
       },
@@ -3956,7 +3956,8 @@
         "accepted": "Going",
         "declined": "Declined",
         "maybe": "Maybe",
-        "pending": "Pending"
+        "pending": "Pending",
+        "tagged": "To invite"
       }
     },
     "cancelled": {

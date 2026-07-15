@@ -64,10 +64,10 @@ Già documentato in [SP6 Capitolo 2](./SP6-libro-game.md#capitolo-2--iter-1-dogf
 | **A** | `sp7-game-night-new.{html,jsx}` | `/game-nights/new` | US-31 | Multistep wizard 4 step (mobile) / split-form (desktop) |
 | **B** | `sp7-game-night-detail-rsvp.{html,jsx}` | `/game-nights/[id]` | US-31 | Hub detail + RSVP + game voting |
 | **C** | ~~`sp7-game-night-edit.{html,jsx}`~~ — **NOT COMMISSIONED** (ADR-079: drawer overlay) | `/game-nights/[id]?action=edit` | US-31 | Form edit + cancel/reschedule states rendered as drawer overlay from B detail page |
-| **D** | `sp7-agent-proposals-list.{html,jsx}` | `/editor/agent-proposals` | US-33 | Grid + filters + status badge |
-| **E** | `sp7-agent-builder-create.{html,jsx}` | `/editor/agent-proposals/create` | US-33 | Multistep wizard 4 step (KB → prompt → tone → review) |
-| **F** | `sp7-agent-builder-test.{html,jsx}` | `/editor/agent-proposals/[id]/test` | US-33 | Playground chat + feedback annotation |
-| **G** | `sp7-agent-builder-edit.{html,jsx}` | `/editor/agent-proposals/[id]/edit` | US-33 | Form edit + version diff |
+| **D** | ~~`sp7-agent-proposals-list`~~ — **già shipped** (admin) | `/admin/agents/definitions` (admin-only, ADR-085) | US-33 | Grid + filters + status badge |
+| **E** | ~~`sp7-agent-builder-create`~~ — **già shipped** (admin) | `/admin/agents/definitions/create` (admin-only, ADR-085) | US-33 | Wizard admin (no tone-picker/confidence — fuori MVP) |
+| **F** | ~~`sp7-agent-builder-test`~~ — **già shipped** (admin) | `/admin/agents/definitions/playground` (admin-only, ADR-085) | US-33 | Playground chat (`PlaygroundChatCommand`) |
+| **G** | ~~`sp7-agent-builder-edit`~~ — **già shipped** (admin, no version-diff) | `/admin/agents/definitions/[id]/edit` (admin-only, ADR-085) | US-33 | Form edit (version-diff fuori MVP) |
 | **H** | `sp7-library-game-agent.{html,jsx}` | `/library/games/[gameId]/agent` | US-13/33 | Chat inline a livello game (full-screen mobile / split desktop) |
 | **I** | `sp7-notifications-hub.{html,jsx}` | `/notifications` | US-41 | Timeline + grouping + bulk actions |
 | **J** | `sp7-notifications-preferences.{html,jsx}` | `/notifications/preferences` | US-41 | Preferences form + channel settings |
@@ -538,6 +538,17 @@ US-31: G31.16 (summary aggregation), G31.17 (share riepilogo), G31.18 (archive f
 ---
 
 # WAVE 2 — Agent Builder Flow (US-33)
+
+> ## ⚠️ CORREZIONE 2026-07-15 — allineamento al backend (ADR-085, issue #2964)
+>
+> Lo spec-panel #1889 ha verificato che la superficie agent-builder descritta in questa wave **NON corrisponde al backend reale**. Correzioni **normative** (governate da [ADR-085](../../docs/for-claude/architecture/adr/adr-085-agent-builder-admin-backend-alignment.md); invarianti in [`agent-builder-domain-invariants.md`](../../docs/for-developers/specs/2026-07-15-agent-builder-domain-invariants.md)):
+> - **Route/entità**: D–G vivono su `/admin/agent-definitions*` **admin-only** (`RequireAdminSessionFilter`), NON `/editor/agent-proposals*`. Entità = `AgentDefinition`, non `AgentProposal`.
+> - **Persona**: la **costruzione** agenti è **admin/dogfood (Aaron)**, non Marco. Marco **usa** gli agenti via chat inline (mockup H).
+> - **Già shipped → non commissionare**: la UI admin agent-builder **esiste già in produzione** (`/admin/agents/definitions` — list/create-wizard/test-playground/edit). I mockup D–G sono **ridondanti** e **non vanno commissionati** (disposition analoga ad ADR-079/mockup C).
+> - **Fuori MVP**: status `Archived` (è soft-delete, non un lifecycle status), **confidence-threshold slider** + **tone-preset picker a 5 toni** (E-Step 3), **version history/rollback** (G) — non supportati dal backend. Il publish **passa obbligatoriamente da Testing** (niente "Pubblica subito" da Draft in E). Analogo tono grezzo backend = `TypologySlug` {arbitro, game-master, chat}.
+> - **H resta user-facing** (chat inline, `/library/games/[id]/agent`).
+>
+> Le sezioni D–G sottostanti restano come **spec storica del design-intent user-facing** (differito); per l'MVP fanno fede questo banner + ADR-085.
 
 ## D — Agent Proposals List (`sp7-agent-proposals-list`)
 

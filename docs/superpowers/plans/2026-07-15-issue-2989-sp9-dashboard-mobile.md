@@ -407,6 +407,13 @@ git commit -m "feat(home): mount Recenti section + mobile-first container (#2989
 - **Placeholder scan**: Task 4 is intentionally gated on a real backend-field check (not a fake). Tasks 1–3 have complete code. `SkeletonCardGrid` import + `useCompletedGameNights` item shape flagged for verification in Task 2 Step 3 note (real risk, not a placeholder).
 - **Type consistency**: `RsvpStatus` values `'Accepted' | 'Declined'` used consistently; `PendingRsvpCardProps` names match between Task 1 and Task 4 usage; `RecentSectionProps` (`onOpenDetail`, `onSeeAll`) consistent between Task 2 and Task 3.
 
+## Execution status (2026-07-15)
+
+- ✅ **Task 1** — `PendingRsvpCard` (commit `4859045a9`, 3 test pass).
+- ✅ **Task 2** — `RecentSection` (commit `0dcba69fa`, 3 test pass).
+- ✅ **Task 3** — HomeFeed mobile-first + Recenti mounted (commit `89c591eaf`, typecheck pass). Test HomeFeed dedicato saltato (deviazione: RecentSection già testato in isolamento).
+- ⛔ **Task 4 — BLOCKED (backend gate)**: il DTO `upcoming` (`api.gameNights.getUpcoming` → `GameNightDto[]`) NON espone `viewerRsvpStatus` né `inviterName`. Servono prima: (1) BE — estendere la query/DTO upcoming con lo stato RSVP del viewer + nome invitante (CQRS: query → DTO → handler → test); (2) FE — schema zod + wire `PendingRsvpCard` nella sezione "Serate di Gioco". Tracciato come sotto-task backend separato. `PendingRsvpCard` è pronto e testato, riusabile appena il campo esiste.
+
 ## Scope note
 
 Screens **B (/game-nights index)** and **C (detail-RSVP)** are separate plans — their components mostly exist and need mobile adaptation (e.g. sticky-bottom RSVP bar), not greenfield. This plan (Screen A) produces working, testable software on its own: two new tested components + a mobile-first dashboard integration.

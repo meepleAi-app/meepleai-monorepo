@@ -19,9 +19,12 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExt
 /// cumulative cost check → <see cref="MechanicAnalysisSectionRunEntity"/> emission.
 /// </summary>
 /// <remarks>
-/// Provider selection is delegated to <see cref="ILlmService"/>; the pipeline simply asks
-/// for the requested model and records the metadata. In M1.3 we will switch to explicit
-/// JSON schema strict mode via <c>ILlmClient</c> to reduce parse failures.
+/// Provider selection is delegated to <see cref="ILlmService"/>; the pipeline asks for the
+/// requested model via the fallback-enabled path
+/// (<see cref="ILlmService.GenerateCompletionWithModelFallbackAsync"/>, #2961) so a single
+/// provider outage (e.g. DeepSeek 402) does not abort the run, and records the effective
+/// provider/model per section. In M1.3 we will switch to explicit JSON schema strict mode via
+/// <c>ILlmClient</c> to reduce parse failures.
 /// </remarks>
 internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
 {
@@ -170,8 +173,11 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var result = await _llmService.GenerateCompletionWithModelAsync(
-                explicitModel: request.Model,
+            // #2961: use the fallback-enabled path so a hard failure of the requested provider
+            // (e.g. DeepSeek 402 credit-exhausted) automatically retries the next available
+            // provider via the DB-driven fallback chain instead of aborting the whole analysis.
+            var result = await _llmService.GenerateCompletionWithModelFallbackAsync(
+                preferredModel: request.Model,
                 systemPrompt: currentSystemPrompt,
                 userPrompt: userPrompt,
                 source: RequestSource.Manual,

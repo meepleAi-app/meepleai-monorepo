@@ -21,10 +21,16 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Jobs;
 /// "Failed is terminal today, manual reset". This job automates the
 /// orphan-detection loop without requiring operator intervention.</para>
 /// <para>Daily cadence (03:00 UTC) because orphans are rare. The HEAD check
-/// via <see cref="IBlobStorageService.ExistsAsync"/> is cheap, but bounded by
-/// <see cref="BatchSize"/> = 50 per run to avoid runaway scans on very large
-/// catalogs. The inter-item sleep of <see cref="DelayBetweenItemsMs"/> = 1000ms
+/// via <see cref="IBlobStorageService.GetPresignedUrlForRawKeyAsync"/> is cheap,
+/// but bounded by <see cref="BatchSize"/> = 50 per run to avoid runaway scans on
+/// very large catalogs. The inter-item sleep of <see cref="DelayBetweenItemsMs"/> = 1000ms
 /// keeps the blob storage call rate at ~1 RPS.</para>
+/// <para>Issue #2947 fix: the PDF cover R2 key convention became a deterministic,
+/// slash-containing key (<c>covers/pdf/{pdfId:D}/cover</c>), which the categorized
+/// <see cref="IBlobStorageService.ExistsAsync"/> cannot check — it runs
+/// <c>PathSecurity.ValidateIdentifier</c>, which rejects <c>/</c> and <c>.</c>, so it
+/// always returned false and the job reset every valid cover. The existence
+/// check now mirrors <c>CoverUrlResolver</c> and uses the raw-key primitive.</para>
 /// </remarks>
 [DisallowConcurrentExecution]
 public sealed class PdfCoverOrphanRecoveryJob : IJob
@@ -107,14 +113,13 @@ public sealed class PdfCoverOrphanRecoveryJob : IJob
 
             try
             {
-                // Check for the preview variant as the canonical existence signal.
-                // If preview is missing, thumb is likely gone too — reset for full re-generation.
-                var previewFileId = $"{pdf.CoverR2Key}-preview.webp";
-                var exists = await blob.ExistsAsync(
-                    previewFileId,
-                    BlobCategory.GameImage,
-                    pdf.CoverR2Key!,
-                    ct).ConfigureAwait(false);
+                // Check for the preview variant as the canonical existence signal,
+                // via the RAW-KEY primitive (mirrors CoverUrlResolver): CoverR2Key
+                // is a deterministic key containing '/' (e.g. "covers/pdf/{id:D}/cover"),
+                // which the categorized ExistsAsync cannot validate/resolve.
+                var previewRawKey = $"{pdf.CoverR2Key}-preview.webp";
+                var exists = await blob.GetPresignedUrlForRawKeyAsync(previewRawKey)
+                    .ConfigureAwait(false) is not null;
 
                 if (!exists)
                 {

@@ -246,6 +246,18 @@ internal class BlobStorageService : IBlobStorageService
         return Task.FromResult<string?>(null);
     }
 
+    /// <summary>
+    /// Local storage does not host objects under raw R2-style keys (those are
+    /// only ever written directly to S3-compatible storage by the raw-key
+    /// upload paths). No-op returning false so callers treat it as "nothing to
+    /// delete here" rather than throwing.
+    /// </summary>
+    public Task<bool> DeleteRawKeyAsync(string rawKey, CancellationToken ct = default)
+    {
+        _ = (rawKey, ct); // Local storage: raw keys are not supported
+        return Task.FromResult(false);
+    }
+
     private static string SanitizeFileName(string fileName)
     {
         return StringHelper.SanitizeFilename(fileName, maxLength: 200, fallbackName: "file");

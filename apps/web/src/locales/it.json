@@ -3985,9 +3985,9 @@
       "host": {
         "edit": "Modifica",
         "cancel": "Annulla serata",
-        "publish": "Pubblica",
+        "publish": "Invia inviti",
         "kickGuest": "Rimuovi",
-        "publishedToast": "Serata pubblicata",
+        "publishedToast": "Inviti inviati",
         "publishedToastDescription": "Gli invitati riceveranno una notifica.",
         "cancelledToast": "Serata annullata"
       },
@@ -4009,7 +4009,8 @@
         "accepted": "Confermato",
         "declined": "Declinato",
         "maybe": "Forse",
-        "pending": "In attesa"
+        "pending": "In attesa",
+        "tagged": "Da invitare"
       }
     },
     "cancelled": {

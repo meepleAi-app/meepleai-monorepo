@@ -281,8 +281,16 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
 
   const hostLabel = t('gameNightDetail.participants.hostLabel');
 
-  function rsvpStatusLabel(status: string): string {
+  // #2963 / invariant #16: on a Draft night the roster shows *tagged* players
+  // (silently added at creation, no invite sent yet). Only after the host hits
+  // "Invia inviti" (publish → Published) do Pending rows read as *invited,
+  // awaiting reply*. The RSVP status itself is Pending in both cases — the
+  // distinction is the parent event status, so it is resolved here at the caller.
+  function rsvpStatusLabel(status: string, tagged: boolean): string {
     const key = status.toLowerCase() as 'accepted' | 'declined' | 'maybe' | 'pending';
+    if (tagged && key === 'pending') {
+      return t('gameNightDetail.participants.rsvpStatus.tagged');
+    }
     return t(`gameNightDetail.participants.rsvpStatus.${key}`);
   }
 
@@ -423,7 +431,7 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
                   userId={rsvp.userId}
                   userName={rsvp.userName}
                   status={rsvp.status}
-                  statusLabel={rsvpStatusLabel(rsvp.status)}
+                  statusLabel={rsvpStatusLabel(rsvp.status, isDraft)}
                   isMe={rsvp.userId === viewer?.id}
                   isHost={rsvp.userId === event.organizerId}
                   hostLabel={hostLabel}

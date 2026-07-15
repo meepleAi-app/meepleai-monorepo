@@ -184,6 +184,20 @@ export const Frame12_DesktopSplitVoting: Story = {
   },
 };
 
+export const Frame13_HostDraftTagged: Story = {
+  name: '13 · Host · Draft · giocatori taggati + "Invia inviti" (#2963, invariante #16)',
+  args: { id: 'gn-padovani-may17' },
+  parameters: {
+    msw: { handlers: mswForSp7DetailRsvpState('host-draft-tagged') },
+    docs: {
+      description: {
+        story:
+          'Invariante #16 (tagged vs invited): su una serata Draft i giocatori sono *taggati* (aggiunti, nessun invito inviato) — le righe Pending mostrano "Da invitare" e l\'host vede la CTA "Invia inviti" (publish → Published). Solo dopo l\'invio le righe diventano "In attesa" (invitati). Vedi #2963.',
+      },
+    },
+  },
+};
+
 // ── State variant frames (axis = LoadState) ────────────────────────────────
 
 export const Loading: Story = {

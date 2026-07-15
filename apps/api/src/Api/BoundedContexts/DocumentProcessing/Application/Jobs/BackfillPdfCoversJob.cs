@@ -67,9 +67,10 @@ public sealed class BackfillPdfCoversJob : IJob
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var extractor = scope.ServiceProvider.GetRequiredService<IPdfCoverExtractor>();
         var blob = scope.ServiceProvider.GetRequiredService<IBlobStorageService>();
+        var coverUploadPipeline = scope.ServiceProvider.GetRequiredService<IPdfCoverUploadPipeline>();
         var eventCollector = scope.ServiceProvider.GetService<IDomainEventCollector>();
 
-        await RunBatchAsync(db, extractor, blob, eventCollector, ct).ConfigureAwait(false);
+        await RunBatchAsync(db, extractor, blob, coverUploadPipeline, eventCollector, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -80,6 +81,7 @@ public sealed class BackfillPdfCoversJob : IJob
         MeepleAiDbContext db,
         IPdfCoverExtractor extractor,
         IBlobStorageService blob,
+        IPdfCoverUploadPipeline coverUploadPipeline,
         IDomainEventCollector? eventCollector,
         CancellationToken ct)
     {
@@ -109,7 +111,7 @@ public sealed class BackfillPdfCoversJob : IJob
         {
             ct.ThrowIfCancellationRequested();
             var pdf = batch[i];
-            await ProcessOneAsync(pdf, db, extractor, blob, eventCollector, ct).ConfigureAwait(false);
+            await ProcessOneAsync(pdf, db, extractor, blob, coverUploadPipeline, eventCollector, ct).ConfigureAwait(false);
 
             if (i < batch.Count - 1)
             {
@@ -123,6 +125,7 @@ public sealed class BackfillPdfCoversJob : IJob
         MeepleAiDbContext db,
         IPdfCoverExtractor extractor,
         IBlobStorageService blob,
+        IPdfCoverUploadPipeline coverUploadPipeline,
         IDomainEventCollector? eventCollector,
         CancellationToken ct)
     {
@@ -146,20 +149,17 @@ public sealed class BackfillPdfCoversJob : IJob
             {
                 case PdfCoverExtractionOutcome.Generated:
                     {
-                        var resourceKey = $"pdf-cover-{pdf.Id}";
+                        // Issue #2947: deterministic DB key; the pipeline writes the
+                        // physical R2 object "{dbKey}-preview.webp" that the resolver
+                        // reconstructs. Only the preview size is uploaded (the
+                        // resolver never reads the thumbnail size).
+                        var dbKey = $"covers/pdf/{pdf.Id:D}/cover";
 
-                        using (var thumbStream = new MemoryStream(result.ThumbnailWebp!, writable: false))
-                        {
-                            await blob.StoreAsync(thumbStream, "thumb.webp", BlobCategory.GameImage, resourceKey, ct)
-                                .ConfigureAwait(false);
-                        }
-                        using (var previewStream = new MemoryStream(result.PreviewWebp!, writable: false))
-                        {
-                            await blob.StoreAsync(previewStream, "preview.webp", BlobCategory.GameImage, resourceKey, ct)
-                                .ConfigureAwait(false);
-                        }
+                        var persistedKey = await coverUploadPipeline
+                            .UploadAsync(dbKey, result.PreviewWebp!, ct)
+                            .ConfigureAwait(false);
 
-                        pdf.CoverR2Key = resourceKey;
+                        pdf.CoverR2Key = persistedKey;
                         pdf.CoverGenerationStatus = nameof(PdfCoverGenerationStatus.Generated);
                         pdf.CoverPageIndex = result.SelectedPageIndex;
                         pdf.CoverGenerationError = null;
@@ -167,12 +167,12 @@ public sealed class BackfillPdfCoversJob : IJob
                         eventCollector?.Collect(new PdfCoverGeneratedEvent(
                             pdfDocumentId: pdf.Id,
                             sharedGameId: pdf.SharedGameId,
-                            coverR2Key: resourceKey,
+                            coverR2Key: persistedKey,
                             coverPageIndex: result.SelectedPageIndex ?? 0));
 
                         _logger.LogInformation(
-                            "BackfillPdfCoversJob: cover generated for PDF {PdfId} from page {PageIndex}",
-                            pdf.Id, result.SelectedPageIndex);
+                            "BackfillPdfCoversJob: cover generated for PDF {PdfId} from page {PageIndex} (dbKey={DbKey})",
+                            pdf.Id, result.SelectedPageIndex, persistedKey);
                         break;
                     }
                 case PdfCoverExtractionOutcome.Skipped:
@@ -206,20 +206,18 @@ public sealed class BackfillPdfCoversJob : IJob
         catch (Exception ex)
 #pragma warning restore CA1031
         {
-            // Operator-recovery hint: when StoreAsync succeeded for one or both
-            // sizes BUT the subsequent SaveChangesAsync threw (transient DB
-            // error, RowVersion conflict, etc.), R2 will contain orphan
-            // thumb.webp / preview.webp under "game-images/pdf-cover-{Id}/".
-            // The entity ends up Failed without a CoverR2Key so
-            // PdfDeletedEventHandler can't reach them. We embed the prospective
-            // resourceKey in CoverGenerationError so operators can grep the bucket.
-            var resourceKey = $"pdf-cover-{pdf.Id}";
+            // Operator-recovery hint: when UploadAsync succeeded BUT the subsequent
+            // SaveChangesAsync threw (transient DB error, RowVersion conflict, etc.),
+            // R2 will contain an orphan preview under the deterministic key. The
+            // entity ends up Failed without a CoverR2Key so cleanup can't reach it.
+            // Embed the prospective physical key so operators can grep the bucket.
+            var orphanPhysicalKey = $"covers/pdf/{pdf.Id:D}/cover-preview.webp";
             _logger.LogWarning(ex,
                 "BackfillPdfCoversJob: unexpected error processing PDF {PdfId}; marking Failed. " +
-                "Inspect R2 prefix game-images/{ResourceKey}/ for orphan blobs and clean up manually if present.",
-                pdf.Id, resourceKey);
+                "Inspect R2 key {OrphanKey} for an orphan preview blob and clean up manually if present.",
+                pdf.Id, orphanPhysicalKey);
             pdf.CoverGenerationStatus = nameof(PdfCoverGenerationStatus.Failed);
-            var detail = ex.GetType().Name + ": orphan-check-key=" + resourceKey;
+            var detail = ex.GetType().Name + ": orphan-check-key=" + orphanPhysicalKey;
             pdf.CoverGenerationError = detail.Length > 500 ? detail[..500] : detail;
             try
             {

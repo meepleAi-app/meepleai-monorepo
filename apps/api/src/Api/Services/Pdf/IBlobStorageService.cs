@@ -156,6 +156,19 @@ internal interface IBlobStorageService
     /// <param name="expirySeconds">URL expiration time (optional, defaults to configured value).</param>
     /// <returns>Pre-signed GET URL, or null if the object does not exist or the operation is not supported.</returns>
     Task<string?> GetPresignedUrlForRawKeyAsync(string rawKey, int? expirySeconds = null);
+
+    /// <summary>
+    /// Deletes an object at an EXACT physical storage key. Unlike
+    /// <see cref="DeleteAsync"/>, this does NOT run <c>PathSecurity.ValidateIdentifier</c>
+    /// and does NOT perform categorized prefix discovery — the caller is expected
+    /// to have already validated or otherwise trusted the key (e.g. a deterministic
+    /// key composed by business logic before being persisted to the DB). Slashes
+    /// and dots are allowed in <paramref name="rawKey"/>.
+    /// </summary>
+    /// <param name="rawKey">The exact physical storage object key to delete.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>True if the delete request was issued successfully (best-effort; local storage returns false as it does not host raw keys).</returns>
+    Task<bool> DeleteRawKeyAsync(string rawKey, CancellationToken ct = default);
 }
 
 /// <summary>

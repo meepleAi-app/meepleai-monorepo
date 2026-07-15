@@ -217,8 +217,8 @@ public class CoverUrlResolverTests
     public async Task ResolvePublicAsync_EmitsR2BggMetric_WhenL25BggCoverWins()
     {
         using var capture = new CoverMetricsCapture();
-        var sg = new SharedGameEntity { BggCoverR2Key = "bgg-key" };
-        _blob.Setup(b => b.GetPresignedDownloadUrlAsync("bgg-key", BlobCategory.GameImage, "bgg-key", null))
+        var sg = new SharedGameEntity { BggCoverR2Key = "bgg-covers/13/cover.jpg" };
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("bgg-covers/13/cover.jpg", null))
              .ReturnsAsync("https://r2/bgg.jpg");
 
         await CoverUrlResolver.ResolvePublicAsync(sg, _blob.Object);
@@ -227,6 +227,25 @@ public class CoverUrlResolverTests
             m.Name == "meepleai.cover.resolution.total" &&
             m.Value == 1 &&
             string.Equals(m.Tags["source"] as string, "r2_bgg", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ResolvePublicAsync_L25BggSlashKey_ResolvesViaRawKeyMethodNoSuffix()
+    {
+        // Issue #2947: BGG DB key is the FULL physical key (contains '/' and a
+        // dot-extension) and the resolver passes it verbatim to
+        // GetPresignedUrlForRawKeyAsync with NO appended suffix. The legacy
+        // GetPresignedDownloadUrlAsync path (PathSecurity.ValidateIdentifier)
+        // would have rejected the '/' and '.'.
+        var sg = new SharedGameEntity { BggCoverR2Key = "bgg-covers/42/cover.png" };
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("bgg-covers/42/cover.png", null))
+             .ReturnsAsync("https://r2/bgg-42.png");
+
+        var url = await CoverUrlResolver.ResolvePublicAsync(sg, _blob.Object);
+
+        url.Should().Be("https://r2/bgg-42.png");
+        _blob.Verify(b => b.GetPresignedDownloadUrlAsync(
+            It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<int?>()), Times.Never);
     }
 
     [Fact]

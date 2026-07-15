@@ -70,10 +70,12 @@ public class SharedGameEntity
     /// <summary>
     /// Issue #1852 (umbrella #1821 L4) — PDF cover key denormalized from
     /// PdfDocumentEntity.CoverR2Key via PdfCoverGeneratedEventHandler.
-    /// Stored in R2 at <c>covers/pdf/{SharedGameId}/{key}-preview.webp</c>.
+    /// Stored in R2 at <c>covers/pdf/{pdfId:D}/cover-preview.webp</c> (Issue #2947:
+    /// deterministic key keyed by the source PdfDocument's id, not SharedGameId).
     /// Has higher priority than Wikidata (L2) and user-uploaded (L3) covers
     /// but only when a PDF with a valid cover has been uploaded and processed.
-    /// Resolved to BlobCategory.GameImage when computing CoverUrl in DTOs.
+    /// Resolved via <c>IBlobStorageService.GetPresignedUrlForRawKeyAsync</c>
+    /// (raw-key primitive) when computing CoverUrl in DTOs — see CoverUrlResolver.
     /// </summary>
     public string? PdfCoverR2Key { get; set; }
 

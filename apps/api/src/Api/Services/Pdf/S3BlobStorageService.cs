@@ -423,6 +423,48 @@ internal sealed class S3BlobStorageService : IBlobStorageService
 #pragma warning restore CA1031 // Do not catch general exception types
     }
 
+    /// <summary>
+    /// Deletes an object at an EXACT physical S3 key. Deliberately skips
+    /// <c>PathSecurity.ValidateIdentifier</c> and prefix discovery — the caller
+    /// (business logic that composed the key) is trusted. Mirrors
+    /// <see cref="GetPresignedUrlForRawKeyAsync"/>'s raw-key contract.
+    /// </summary>
+    public async Task<bool> DeleteRawKeyAsync(string rawKey, CancellationToken ct = default)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(rawKey))
+            {
+                return false;
+            }
+
+            await _s3Client.DeleteObjectAsync(new DeleteObjectRequest
+            {
+                BucketName = _options.BucketName,
+                Key = rawKey,
+            }, ct).ConfigureAwait(false);
+
+            _logger.LogInformation("Deleted file from S3 (raw key): {Key}", rawKey);
+            return true;
+        }
+        catch (AmazonS3Exception ex)
+        {
+            _logger.LogWarning(ex, "S3 error deleting raw key {Key}: {ErrorCode}", rawKey, ex.ErrorCode);
+            return false;
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        catch (Exception ex)
+        {
+            // SERVICE BOUNDARY PATTERN: S3 storage service boundary - must handle all errors gracefully
+            // Rationale: This is a service entry point that deletes files from S3 storage. Network and
+            // S3 operations can throw various runtime exceptions (timeouts, network errors, authentication failures).
+            // We must catch all exceptions to return false instead of crashing the service.
+            _logger.LogWarning(ex, "Unexpected error deleting raw key {Key}", rawKey);
+            return false;
+        }
+#pragma warning restore CA1031 // Do not catch general exception types
+    }
+
     private static string SanitizeFileName(string fileName)
     {
         return StringHelper.SanitizeFilename(fileName, maxLength: 200, fallbackName: "file");

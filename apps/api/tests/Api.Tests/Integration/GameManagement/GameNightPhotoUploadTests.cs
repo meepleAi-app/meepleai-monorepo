@@ -70,6 +70,8 @@ public sealed class GameNightPhotoUploadTests : IAsyncLifetime
             => Task.FromResult<string?>(null);
         public Task<string?> GetPresignedUrlForRawKeyAsync(string rawKey, int? expirySeconds = null)
             => Task.FromResult<string?>(null);
+        public Task<bool> DeleteRawKeyAsync(string rawKey, CancellationToken ct = default)
+            => Task.FromResult(true);
     }
 
     public async ValueTask InitializeAsync()

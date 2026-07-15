@@ -94,6 +94,10 @@ export function classifyMockupEntry(entry, fidelityIndex, io) {
   if (!hit) return { ...base, verdict: 'coverage-gap', reason: 'no-fidelity' };
 
   const acceptance = hit.fidelity.acceptance || {};
+  // NB: obsolete/deferred short-circuit BEFORE the contract-violation check below,
+  // so a wired story that omits a declared state would NOT block if its fidelity is
+  // obsolete/deferred. Intentional (these intents exclude the entry from the gate);
+  // deferred entries carry story_path='' by construction, so this is inert today.
   if (acceptance.design_intent === 'forward-refactor-obsolete') {
     return { ...base, verdict: 'skipped-obsolete' };
   }
@@ -301,7 +305,8 @@ async function main() {
   const c = report.counts;
   process.stdout.write(
     `[lint:storybook-states] entries=${report.totalMappableEntries} covered=${c.covered} ` +
-      `gaps=${c.coverageGaps} contract=${c.contractViolations} skipped=${c.skippedObsolete}\n` +
+      `gaps=${c.coverageGaps} contract=${c.contractViolations} ` +
+      `skipped-obsolete=${c.skippedObsolete} skipped-deferred=${c.skippedDeferred}\n` +
       `  JSON: ${relative(REPO_ROOT, JSON_OUT)}\n  MD:   ${relative(REPO_ROOT, MD_OUT)}\n`
   );
   if (args.verbose) {

@@ -11,6 +11,21 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 /// -> L2 (Wikidata) -> null. Each layer falls through to the next when its R2 key
 /// is missing or the blob storage cannot mint a presigned URL (returns null in dev / local).
 ///
+/// P1 fix (2026-07-14): L3/L4/L2 resolve via
+/// <see cref="IBlobStorageService.GetPresignedUrlForRawKeyAsync"/>, passing the
+/// exact physical object key these layers write deterministically
+/// (<c>{key}.webp</c> / <c>{key}-preview.webp</c>). The previous
+/// <c>GetPresignedDownloadUrlAsync(fileId, category, resourceKey)</c> call
+/// validated BOTH arguments with <c>PathSecurity.ValidateIdentifier</c> (which
+/// rejects <c>/</c> and <c>.</c>) and then did categorized prefix discovery —
+/// neither of which matches these layers' raw, slash-containing key shape, so
+/// the call always threw internally and returned null (silent no-op: covers
+/// never resolved).
+/// L2.5 (BGG) now resolves via <see cref="IBlobStorageService.GetPresignedUrlForRawKeyAsync"/>
+/// using the full deterministic key written by
+/// <c>BggCoverUploadPipeline</c> (Issue #2947): <c>bgg-covers/{bggId}/cover{ext}</c>,
+/// with no suffix appended (BGG keeps its original image extension).
+///
 /// Issue #2123 (BGG ToS compliance): every resolution outcome — including the
 /// terminal <c>null</c> path that triggers a placeholder render on the FE —
 /// emits a <see cref="MeepleAiMetrics.CoverResolution"/> measurement tagged
@@ -35,10 +50,7 @@ internal static class CoverUrlResolver
         if (!string.IsNullOrWhiteSpace(userEntry?.CustomCoverR2Key))
         {
             var url = await blobStorage
-                .GetPresignedDownloadUrlAsync(
-                    $"{userEntry.CustomCoverR2Key}.webp",
-                    BlobCategory.GameImage,
-                    userEntry.CustomCoverR2Key)
+                .GetPresignedUrlForRawKeyAsync($"{userEntry.CustomCoverR2Key}.webp")
                 .ConfigureAwait(false);
             if (url is not null)
             {
@@ -68,10 +80,7 @@ internal static class CoverUrlResolver
         if (!string.IsNullOrWhiteSpace(sharedGame.PdfCoverR2Key))
         {
             var url = await blobStorage
-                .GetPresignedDownloadUrlAsync(
-                    $"{sharedGame.PdfCoverR2Key}-preview.webp",
-                    BlobCategory.GameImage,
-                    sharedGame.PdfCoverR2Key)
+                .GetPresignedUrlForRawKeyAsync($"{sharedGame.PdfCoverR2Key}-preview.webp")
                 .ConfigureAwait(false);
             if (url is not null)
             {
@@ -80,19 +89,17 @@ internal static class CoverUrlResolver
             }
         }
 
-        // L2.5 BGG re-uploaded cover (Gap G2)
-        // Asymmetry vs L4/L2: BGG cover is stored as a single asset under the raw
-        // resource key (set by BggCoverDownloader.DownloadAndUploadAsync), with no
-        // -preview.webp or .webp suffix. The blob service treats arg 1 as the literal
-        // storage object path; arg 3 is the cache identifier (same key here is fine
-        // because the storage object IS the cache target).
+        // L2.5 BGG re-uploaded cover (Gap G2 / Issue #2947)
+        // The DB key is the FULL deterministic physical object key composed by
+        // BggCoverUploadPipeline (bgg-covers/{bggId}/cover{ext}). Unlike L4/L2,
+        // NO suffix is appended: BGG keeps its original image extension, so the
+        // stored key IS the physical key. Resolved via the raw-key method (the
+        // legacy GetPresignedDownloadUrlAsync validated the key with
+        // PathSecurity.ValidateIdentifier, which rejects '/' and '.').
         if (!string.IsNullOrWhiteSpace(sharedGame.BggCoverR2Key))
         {
             var url = await blobStorage
-                .GetPresignedDownloadUrlAsync(
-                    sharedGame.BggCoverR2Key,
-                    BlobCategory.GameImage,
-                    sharedGame.BggCoverR2Key)
+                .GetPresignedUrlForRawKeyAsync(sharedGame.BggCoverR2Key)
                 .ConfigureAwait(false);
             if (url is not null)
             {
@@ -105,10 +112,7 @@ internal static class CoverUrlResolver
         if (!string.IsNullOrWhiteSpace(sharedGame.WikidataCoverR2Key))
         {
             var url = await blobStorage
-                .GetPresignedDownloadUrlAsync(
-                    $"{sharedGame.WikidataCoverR2Key}.webp",
-                    BlobCategory.GameImage,
-                    sharedGame.WikidataCoverR2Key)
+                .GetPresignedUrlForRawKeyAsync($"{sharedGame.WikidataCoverR2Key}.webp")
                 .ConfigureAwait(false);
             if (url is not null)
             {

@@ -33,7 +33,6 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunkedUploadCommand, CompleteChunkedUploadResult>
 {
     private static readonly string UploadTempBasePath = Path.Combine(Path.GetTempPath(), "meepleai_uploads");
-    internal const string DuplicateContentErrorMessage = "Un file identico è già stato caricato per questo gioco.";
 
     private readonly IChunkedUploadSessionRepository _sessionRepository;
     private readonly MeepleAiDbContext _dbContext;
@@ -45,6 +44,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
     private readonly IPdfTextExtractor _pdfTextExtractor;
     private readonly IPdfTableExtractor _tableExtractor;
     private readonly IMediator _mediator;
+    private readonly IPdfDeduplicationService _pdfDeduplicationService;
 
     public CompleteChunkedUploadCommandHandler(
         IChunkedUploadSessionRepository sessionRepository,
@@ -56,6 +56,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         IPdfTextExtractor pdfTextExtractor,
         IPdfTableExtractor tableExtractor,
         IMediator mediator,
+        IPdfDeduplicationService pdfDeduplicationService,
         TimeProvider? timeProvider = null)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
@@ -67,6 +68,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         _pdfTextExtractor = pdfTextExtractor ?? throw new ArgumentNullException(nameof(pdfTextExtractor));
         _tableExtractor = tableExtractor ?? throw new ArgumentNullException(nameof(tableExtractor));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+        _pdfDeduplicationService = pdfDeduplicationService ?? throw new ArgumentNullException(nameof(pdfDeduplicationService));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -109,36 +111,55 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 );
             }
 
-            // Check for duplicate content globally (same file content across any game)
+            // Check for duplicate content and, if found, transparently reuse the
+            // existing PDF document instead of rejecting the upload (Task 2 of the
+            // PDF dedup alignment plan; centralizes the rule previously duplicated
+            // and divergent between AddRulebookCommandHandler (reuse) and this
+            // handler (reject) in IPdfDeduplicationService).
             if (contentHash != null)
             {
-                var isDuplicate = await _dbContext.PdfDocuments.AnyAsync(
-                    p => p.ContentHash == contentHash,
-                    cancellationToken).ConfigureAwait(false);
+                var dedup = await _pdfDeduplicationService
+                    .EvaluateAsync(contentHash, session.GameId, session.PrivateGameId, session.UserId, cancellationToken)
+                    .ConfigureAwait(false);
 
-                if (isDuplicate)
+                if (dedup.Decision == PdfDedupDecision.ReuseExisting)
                 {
-                    // Cleanup the stored file (handles both local and S3 storage)
+                    // Cleanup del file appena assemblato (best effort): non serve, riusiamo l'esistente.
                     if (storageResult!.FileId != null)
                     {
                         try
                         {
-                            await _blobStorageService.DeleteAsync(
-                                storageResult.FileId,
-                                BlobCategory.Pdf,
-                                (session.PrivateGameId ?? session.GameId)?.ToString() ?? string.Empty,
-                                cancellationToken).ConfigureAwait(false);
+                            await _blobStorageService.DeleteAsync(storageResult.FileId, BlobCategory.Pdf,
+                                (session.PrivateGameId ?? session.GameId)?.ToString() ?? string.Empty, cancellationToken)
+                                .ConfigureAwait(false);
                         }
-                        catch { /* best effort cleanup */ }
+                        catch { /* best effort */ }
+                    }
+
+                    // Riuso trasparente via EntityLink verso il gioco.
+                    var linkTargetGameId = session.GameId ?? session.PrivateGameId ?? Guid.Empty;
+                    if (linkTargetGameId != Guid.Empty)
+                    {
+                        try
+                        {
+                            await _mediator.Send(new CreateEntityLinkCommand(
+                                SourceEntityType: MeepleEntityType.Game,
+                                SourceEntityId: linkTargetGameId,
+                                TargetEntityType: MeepleEntityType.KbCard,
+                                TargetEntityId: dedup.ExistingPdfDocumentId!.Value,
+                                LinkType: EntityLinkType.RelatedTo,
+                                Scope: EntityLinkScope.User,
+                                OwnerUserId: session.UserId), cancellationToken).ConfigureAwait(false);
+                        }
+                        catch (DuplicateEntityLinkException) { /* idempotent */ }
                     }
 
                     return new CompleteChunkedUploadResult(
-                        Success: false,
-                        DocumentId: null,
+                        Success: true,
+                        DocumentId: dedup.ExistingPdfDocumentId,
                         FileName: sanitizedFileName,
-                        ErrorMessage: DuplicateContentErrorMessage,
-                        MissingChunks: null
-                    );
+                        ErrorMessage: null,
+                        MissingChunks: null);
                 }
             }
 

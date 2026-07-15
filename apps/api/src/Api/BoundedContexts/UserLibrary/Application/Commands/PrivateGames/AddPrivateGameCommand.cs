@@ -18,8 +18,11 @@ namespace Api.BoundedContexts.UserLibrary.Application.Commands.PrivateGames;
 /// <param name="PlayingTimeMinutes">Typical playing time in minutes (optional)</param>
 /// <param name="MinAge">Minimum recommended age (optional)</param>
 /// <param name="ComplexityRating">Complexity rating 1.0-5.0 (optional)</param>
-/// <param name="ImageUrl">URL to game image (optional)</param>
-/// <param name="ThumbnailUrl">URL to game thumbnail (optional, BGG only)</param>
+/// <remarks>
+/// ImageUrl/ThumbnailUrl were removed as user-input channels (BGG freeze #2123 / ADR-059).
+/// The PrivateGame cover is null at creation; it is populated later via the
+/// cover-from-PDF materialization flow.
+/// </remarks>
 internal record AddPrivateGameCommand(
     Guid UserId,
     string Source,
@@ -31,7 +34,5 @@ internal record AddPrivateGameCommand(
     string? Description = null,
     int? PlayingTimeMinutes = null,
     int? MinAge = null,
-    decimal? ComplexityRating = null,
-    string? ImageUrl = null,
-    string? ThumbnailUrl = null
+    decimal? ComplexityRating = null
 ) : ICommand<PrivateGameDto>;

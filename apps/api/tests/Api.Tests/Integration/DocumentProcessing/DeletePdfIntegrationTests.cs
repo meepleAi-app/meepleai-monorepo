@@ -6,6 +6,9 @@ using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
+using Api.BoundedContexts.EntityRelationships.Domain.Enums;
+using Api.BoundedContexts.EntityRelationships.Domain.Repositories;
+using Api.BoundedContexts.EntityRelationships.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -73,6 +76,7 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         // Register repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
+        services.AddScoped<IEntityLinkRepository, EntityLinkRepository>();
 
         // Register the handler explicitly for test access
         services.AddScoped<DeletePdfCommandHandler>();
@@ -304,7 +308,8 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
             _dbContext!,
             _serviceProvider!.GetRequiredService<IBlobStorageService>(),
             _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
-            _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>()
+            _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>(),
+            _serviceProvider!.GetRequiredService<IEntityLinkRepository>()
         );
 
         var command = new DeletePdfCommand(pdfId.ToString());
@@ -357,8 +362,9 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         var blobStorage = scope.ServiceProvider.GetRequiredService<IBlobStorageService>();
         var cache = scope.ServiceProvider.GetRequiredService<IAiResponseCacheService>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<DeletePdfCommandHandler>>();
+        var entityLinks = scope.ServiceProvider.GetRequiredService<IEntityLinkRepository>();
 
-        return new DeletePdfCommandHandler(dbContext, blobStorage, cache, logger);
+        return new DeletePdfCommandHandler(dbContext, blobStorage, cache, logger, entityLinks);
     }
     [Fact]
     public async Task DeleteWithDbUpdateException_ThrowsPdfStorageException()
@@ -379,7 +385,8 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
             disposedContext,
             _serviceProvider!.GetRequiredService<IBlobStorageService>(),
             _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
-            _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>()
+            _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>(),
+            _serviceProvider!.GetRequiredService<IEntityLinkRepository>()
         );
 
         // Act
@@ -400,7 +407,8 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
             _dbContext!,
             _serviceProvider!.GetRequiredService<IBlobStorageService>(),
             _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
-            _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>()
+            _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>(),
+            _serviceProvider!.GetRequiredService<IEntityLinkRepository>()
         );
 
         var command = new DeletePdfCommand(pdfId.ToString());
@@ -436,7 +444,8 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
             _dbContext!,
             blobStorageMock.Object,
             _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
-            _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>()
+            _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>(),
+            _serviceProvider!.GetRequiredService<IEntityLinkRepository>()
         );
 
         var command = new DeletePdfCommand(pdfId.ToString());
@@ -452,6 +461,165 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         var pdfExists = await _dbContext!.PdfDocuments.AnyAsync(p => p.Id == pdfId, TestCancellationToken);
         pdfExists.Should().BeFalse();
     }
+    [Fact]
+    public async Task DeletePdf_StillLinkedBySecondGame_PreservesRecordAndRemovesOnlyCallerLink()
+    {
+        // Arrange
+        await ResetDatabaseAsync();
+        var pdfId = await CreateTestPdfAsync("MultiLinked.pdf", withVectorDoc: true);
+        var callerGameId = (await _dbContext!.SharedGames.FirstAsync(TestCancellationToken)).Id;
+        var callerUserId = (await _dbContext.Users.FirstAsync(TestCancellationToken)).Id;
+
+        // Second game that also links this PDF.
+        var secondGameId = Guid.NewGuid();
+        _dbContext.SharedGames.Add(new SharedGameEntity
+        {
+            Id = secondGameId,
+            Title = "Second Game Linking Same PDF",
+            YearPublished = 2024,
+            MinPlayers = 2,
+            MaxPlayers = 4,
+            PlayingTimeMinutes = 60,
+            CreatedAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        // Two EntityLinks Game -> KbCard/pdfId (caller game + second game).
+        await SeedGameKbCardLinkAsync(callerGameId, pdfId, callerUserId);
+        await SeedGameKbCardLinkAsync(secondGameId, pdfId, callerUserId);
+
+        var handler = _serviceProvider!.GetRequiredService<DeletePdfCommandHandler>();
+        var command = new DeletePdfCommand(pdfId.ToString());
+
+        // Act
+        var result = await handler.Handle(command, TestCancellationToken);
+
+        // Assert: success, but the PDF record + vectors are PRESERVED (still referenced).
+        result.Success.Should().BeTrue();
+
+        var pdfExists = await _dbContext.PdfDocuments.AnyAsync(p => p.Id == pdfId, TestCancellationToken);
+        pdfExists.Should().BeTrue("PDF is still referenced by the second game");
+
+        var vectorExists = await _dbContext.VectorDocuments.AnyAsync(v => v.PdfDocumentId == pdfId, TestCancellationToken);
+        vectorExists.Should().BeTrue("vectors must survive while the PDF record survives");
+
+        // Only the caller's link was removed; the second game's link remains.
+        var callerLinkExists = await _dbContext.EntityLinks.AnyAsync(
+            el => el.SourceEntityId == callerGameId && el.TargetEntityId == pdfId
+                  && el.TargetEntityType == MeepleEntityType.KbCard,
+            TestCancellationToken);
+        callerLinkExists.Should().BeFalse("caller's game->PDF link should be removed");
+
+        var secondLinkExists = await _dbContext.EntityLinks.AnyAsync(
+            el => el.SourceEntityId == secondGameId && el.TargetEntityId == pdfId
+                  && el.TargetEntityType == MeepleEntityType.KbCard,
+            TestCancellationToken);
+        secondLinkExists.Should().BeTrue("second game's link must be preserved");
+    }
+
+    [Fact]
+    public async Task DeletePdf_CallerGameDiffersFromUploaderGame_RemovesCallerLinkNotUploaderLink()
+    {
+        // Arrange: PDF record's SharedGameId is pinned to the UPLOADER game (Game A) per
+        // catalog dedup semantics (Task 2 of #2943): when Game B later reuses the same PDF
+        // via dedup, the record.SharedGameId stays A even though Game B now also links it.
+        // A delete issued on behalf of Game B (e.g. RemoveRagFromSharedGame cleaning up
+        // Game B) must remove GAME B's link — NOT Game A's, which is uninvolved.
+        await ResetDatabaseAsync();
+        var pdfId = await CreateTestPdfAsync("DedupCrossGame.pdf", withVectorDoc: true);
+        var uploaderGameId = (await _dbContext!.SharedGames.FirstAsync(TestCancellationToken)).Id; // Game A == pdfDoc.SharedGameId
+        var uploaderUserId = (await _dbContext.Users.FirstAsync(TestCancellationToken)).Id;
+
+        // Game B: reused the PDF via dedup, does NOT own the record's SharedGameId.
+        var callerGameId = Guid.NewGuid();
+        _dbContext.SharedGames.Add(new SharedGameEntity
+        {
+            Id = callerGameId,
+            Title = "Caller Game (dedup reuser, not uploader)",
+            YearPublished = 2024,
+            MinPlayers = 2,
+            MaxPlayers = 4,
+            PlayingTimeMinutes = 60,
+            CreatedAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        // Two EntityLinks: Game A (uploader) -> KbCard/pdf AND Game B (caller) -> KbCard/pdf.
+        await SeedGameKbCardLinkAsync(uploaderGameId, pdfId, uploaderUserId);
+        await SeedGameKbCardLinkAsync(callerGameId, pdfId, uploaderUserId);
+
+        var handler = _serviceProvider!.GetRequiredService<DeletePdfCommandHandler>();
+        var command = new DeletePdfCommand(pdfId.ToString(), CallerGameId: callerGameId);
+
+        // Act: delete issued on behalf of Game B (the caller), not the uploader Game A.
+        var result = await handler.Handle(command, TestCancellationToken);
+
+        // Assert: success, record + vectors preserved (linkCount was 2).
+        result.Success.Should().BeTrue();
+
+        var pdfExists = await _dbContext.PdfDocuments.AnyAsync(p => p.Id == pdfId, TestCancellationToken);
+        pdfExists.Should().BeTrue("PDF is still referenced by the uploader game after Game B's link is removed");
+
+        var vectorExists = await _dbContext.VectorDocuments.AnyAsync(v => v.PdfDocumentId == pdfId, TestCancellationToken);
+        vectorExists.Should().BeTrue("vectors must survive while the PDF record survives");
+
+        // Game B's (the actual caller's) link must be removed.
+        var callerLinkExists = await _dbContext.EntityLinks.AnyAsync(
+            el => el.SourceEntityId == callerGameId && el.TargetEntityId == pdfId
+                  && el.TargetEntityType == MeepleEntityType.KbCard,
+            TestCancellationToken);
+        callerLinkExists.Should().BeFalse("Game B's link (the actual caller) should be removed");
+
+        // Game A's (uninvolved uploader) link must be PRESERVED.
+        var uploaderLinkExists = await _dbContext.EntityLinks.AnyAsync(
+            el => el.SourceEntityId == uploaderGameId && el.TargetEntityId == pdfId
+                  && el.TargetEntityType == MeepleEntityType.KbCard,
+            TestCancellationToken);
+        uploaderLinkExists.Should().BeTrue("Game A's link (uninvolved uploader) must be preserved — it was not the caller");
+    }
+
+    [Fact]
+    public async Task DeletePdf_LastRemainingLink_DeletesRecordAndVectors()
+    {
+        // Arrange
+        await ResetDatabaseAsync();
+        var pdfId = await CreateTestPdfAsync("LastLink.pdf", withVectorDoc: true);
+        var callerGameId = (await _dbContext!.SharedGames.FirstAsync(TestCancellationToken)).Id;
+        var callerUserId = (await _dbContext.Users.FirstAsync(TestCancellationToken)).Id;
+
+        // Exactly one EntityLink Game -> KbCard/pdfId.
+        await SeedGameKbCardLinkAsync(callerGameId, pdfId, callerUserId);
+
+        var handler = _serviceProvider!.GetRequiredService<DeletePdfCommandHandler>();
+        var command = new DeletePdfCommand(pdfId.ToString());
+
+        // Act
+        var result = await handler.Handle(command, TestCancellationToken);
+
+        // Assert: last link -> full delete (record + vectors gone).
+        result.Success.Should().BeTrue();
+
+        var pdfExists = await _dbContext.PdfDocuments.AnyAsync(p => p.Id == pdfId, TestCancellationToken);
+        pdfExists.Should().BeFalse("last link removed -> PDF record deleted");
+
+        var vectorExists = await _dbContext.VectorDocuments.AnyAsync(v => v.PdfDocumentId == pdfId, TestCancellationToken);
+        vectorExists.Should().BeFalse("last link removed -> vectors deleted");
+    }
+
+    private async Task SeedGameKbCardLinkAsync(Guid gameId, Guid pdfId, Guid ownerUserId)
+    {
+        var link = Api.BoundedContexts.EntityRelationships.Domain.Aggregates.EntityLink.Create(
+            sourceEntityType: MeepleEntityType.Game,
+            sourceEntityId: gameId,
+            targetEntityType: MeepleEntityType.KbCard,
+            targetEntityId: pdfId,
+            linkType: EntityLinkType.RelatedTo,
+            scope: EntityLinkScope.User,
+            ownerUserId: ownerUserId);
+        _dbContext!.EntityLinks.Add(link);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+    }
+
     private static async Task EnsureCreatedWithRetry(MeepleAiDbContext context)
     {
         const int maxAttempts = 3;

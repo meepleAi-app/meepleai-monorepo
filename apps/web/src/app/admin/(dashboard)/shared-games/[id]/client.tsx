@@ -19,6 +19,7 @@ import {
   Download,
   ExternalLink,
   FileText,
+  Image as ImageIcon,
   Link2,
   MoreHorizontal,
   Settings2,
@@ -33,6 +34,7 @@ import { EditGameDrawer } from '@/components/admin/shared-games/EditGameDrawer';
 import { GameProcessingQueue } from '@/components/admin/shared-games/GameProcessingQueue';
 import { PdfIndexingStatus } from '@/components/admin/shared-games/PdfIndexingStatus';
 import { PdfUploadSection } from '@/components/admin/shared-games/PdfUploadSection';
+import { CoverPagePicker } from '@/components/shared-games/CoverPagePicker';
 import { Badge } from '@/components/ui/data-display/badge';
 import {
   Card,
@@ -51,6 +53,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/navigation/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/overlays/dialog';
 import {
   Select,
   SelectContent,
@@ -92,10 +101,13 @@ function DocumentItem({
   document,
   onDelete,
   isDeleting,
+  onSetCover,
 }: {
   document: SharedGameDocument;
   onDelete: (id: string) => void;
   isDeleting: boolean;
+  /** Opens the cover-da-PDF picker dialog for this document (Task 8). */
+  onSetCover: (document: SharedGameDocument) => void;
 }) {
   const handleDownload = useCallback(() => {
     // Download is not yet wired to a signed URL - placeholder
@@ -134,6 +146,10 @@ function DocumentItem({
             <DropdownMenuItem onClick={handleDownload}>
               <Download className="mr-2 h-4 w-4" />
               Download
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onSetCover(document)}>
+              <ImageIcon className="mr-2 h-4 w-4" />
+              Imposta cover
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -191,6 +207,9 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
 
   // ── Edit Game drawer ─────────────────────────────────────────────────────
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+
+  // ── Cover-da-PDF picker dialog (Task 8: "Imposta cover" action) ──────────
+  const [coverPickerDocument, setCoverPickerDocument] = useState<SharedGameDocument | null>(null);
 
   const { data: linkedAgent, isLoading: linkedAgentLoading } = useQuery({
     queryKey: ['admin', 'shared-games', gameId, 'linked-agent'],
@@ -706,6 +725,7 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
                       isDeleting={
                         deleteDocMutation.isPending && deleteDocMutation.variables === doc.id
                       }
+                      onSetCover={setCoverPickerDocument}
                     />
                   ))}
                   <div className="pt-2">
@@ -731,6 +751,34 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
       {game && (
         <EditGameDrawer open={editDrawerOpen} onOpenChange={setEditDrawerOpen} game={game} />
       )}
+
+      {/* Cover-da-PDF picker dialog (Task 8: "Imposta cover" action) */}
+      <Dialog
+        open={coverPickerDocument !== null}
+        onOpenChange={open => !open && setCoverPickerDocument(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Imposta cover da PDF</DialogTitle>
+            <DialogDescription>
+              Scegli una pagina del PDF da proporre come copertina. La proposta richiede
+              l&apos;approvazione di un amministratore.
+            </DialogDescription>
+          </DialogHeader>
+          {coverPickerDocument && (
+            <CoverPagePicker
+              gameId={gameId}
+              pdfDocumentId={coverPickerDocument.pdfDocumentId}
+              onProposed={() => {
+                setCoverPickerDocument(null);
+                queryClient.invalidateQueries({
+                  queryKey: ['admin', 'shared-games', gameId],
+                });
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

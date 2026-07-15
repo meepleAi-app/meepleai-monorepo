@@ -21,11 +21,11 @@ import { Label } from '@/components/ui/primitives/label';
 import { api } from '@/lib/api';
 
 interface GameCreationStepProps {
-  pdfId?: string | null;  // Optional for user wizard (Issue #4)
-  pdfFileName?: string | null;  // Optional for user wizard
-  allowSkipPdf?: boolean;  // Show "Skip PDF" button for user wizard
+  pdfId?: string | null; // Optional for user wizard (Issue #4)
+  pdfFileName?: string | null; // Optional for user wizard
+  allowSkipPdf?: boolean; // Show "Skip PDF" button for user wizard
   onComplete: (gameId: string, gameName: string) => void;
-  onSkipPdf?: () => void;  // Callback for skip PDF button
+  onSkipPdf?: () => void; // Callback for skip PDF button
   onBack: () => void;
   /**
    * Determines which API endpoint to use for game creation.
@@ -125,6 +125,9 @@ export function GameCreationStep({
 
       if (mode === 'user') {
         // ── User wizard: create private game via /api/v1/private-games ──────────
+        // No external image URL is sent: the private-game cover is materialized
+        // by the cover-from-PDF flow (#2943), never from user input
+        // (BGG freeze #2123 / ADR-059).
         const result = await api.library.addPrivateGame({
           source: 'Manual',
           title: gameName.trim(),
@@ -132,35 +135,8 @@ export function GameCreationStep({
           // Required fields — user can edit them later
           minPlayers: 1,
           maxPlayers: 99,
-          imageUrl: null,
-          thumbnailUrl: null,
         });
         gameId = result.id;
-
-        // Upload cover image (file upload uses shared storage endpoint)
-        let finalImageUrl: string | null = null;
-
-        if (imageMode === 'url' && imageUrl.trim()) {
-          finalImageUrl = imageUrl.trim();
-        } else if (imageMode === 'upload' && imageFile) {
-          toast.info('Caricamento immagine copertina...');
-          const uploadResult = await api.games.uploadImage(imageFile, gameId, 'image');
-          if (uploadResult.success && uploadResult.fileUrl) {
-            finalImageUrl = uploadResult.fileUrl;
-          } else {
-            toast.warning(`Errore caricamento immagine: ${uploadResult.error || 'Errore sconosciuto'}`);
-          }
-        }
-
-        // Update private game with image URL if available
-        if (finalImageUrl) {
-          await api.library.updatePrivateGame(gameId, {
-            title: gameName.trim(),
-            minPlayers: 1,
-            maxPlayers: 99,
-            imageUrl: finalImageUrl,
-          });
-        }
       } else {
         // ── Admin wizard: create shared game via /api/v1/games ──────────────────
         const result = await api.games.create({
@@ -185,7 +161,9 @@ export function GameCreationStep({
           if (uploadResult.success && uploadResult.fileUrl) {
             finalIconUrl = uploadResult.fileUrl;
           } else {
-            toast.warning(`Errore caricamento icona: ${uploadResult.error || 'Errore sconosciuto'}`);
+            toast.warning(
+              `Errore caricamento icona: ${uploadResult.error || 'Errore sconosciuto'}`
+            );
           }
         }
 
@@ -197,7 +175,9 @@ export function GameCreationStep({
           if (uploadResult.success && uploadResult.fileUrl) {
             finalImageUrl = uploadResult.fileUrl;
           } else {
-            toast.warning(`Errore caricamento immagine: ${uploadResult.error || 'Errore sconosciuto'}`);
+            toast.warning(
+              `Errore caricamento immagine: ${uploadResult.error || 'Errore sconosciuto'}`
+            );
           }
         }
 
@@ -340,57 +320,60 @@ export function GameCreationStep({
         </Tabs>
       </Card>
 
-      {/* Cover Image */}
-      <Card className="p-4 space-y-4">
-        <Label className="text-base font-medium">Immagine di Copertina</Label>
-        <Tabs value={imageMode} onValueChange={v => setImageMode(v as ImageInputMode)}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="url">URL</TabsTrigger>
-            <TabsTrigger value="upload">Upload</TabsTrigger>
-          </TabsList>
-          <TabsContent value="url" className="space-y-2">
-            <Input
-              value={imageUrl}
-              onChange={e => setImageUrl(e.target.value)}
-              placeholder="https://example.com/cover.jpg"
-              type="url"
-            />
-            {imageUrl && (
-              <div className="flex justify-center">
-                <div className="relative max-w-xs h-48 rounded-lg border overflow-hidden">
-                  <Image
-                    src={imageUrl}
-                    alt="Cover preview"
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 384px"
-                    onError={e => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
+      {/* Cover Image — admin-only: user-mode covers come from the PDF flow (#2943),
+          never from a user-supplied URL/upload (BGG freeze #2123 / ADR-059) */}
+      {mode === 'admin' && (
+        <Card className="p-4 space-y-4">
+          <Label className="text-base font-medium">Immagine di Copertina</Label>
+          <Tabs value={imageMode} onValueChange={v => setImageMode(v as ImageInputMode)}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="url">URL</TabsTrigger>
+              <TabsTrigger value="upload">Upload</TabsTrigger>
+            </TabsList>
+            <TabsContent value="url" className="space-y-2">
+              <Input
+                value={imageUrl}
+                onChange={e => setImageUrl(e.target.value)}
+                placeholder="https://example.com/cover.jpg"
+                type="url"
+              />
+              {imageUrl && (
+                <div className="flex justify-center">
+                  <div className="relative max-w-xs h-48 rounded-lg border overflow-hidden">
+                    <Image
+                      src={imageUrl}
+                      alt="Cover preview"
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 384px"
+                      onError={e => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
-          </TabsContent>
-          <TabsContent value="upload" className="space-y-2">
-            <Input type="file" accept="image/*" onChange={handleImageFileChange} />
-            {imagePreview && (
-              <div className="flex justify-center">
-                <div className="relative max-w-xs h-48 rounded-lg border overflow-hidden">
-                  <Image
-                    src={imagePreview}
-                    alt="Cover preview"
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 384px"
-                    unoptimized
-                  />
+              )}
+            </TabsContent>
+            <TabsContent value="upload" className="space-y-2">
+              <Input type="file" accept="image/*" onChange={handleImageFileChange} />
+              {imagePreview && (
+                <div className="flex justify-center">
+                  <div className="relative max-w-xs h-48 rounded-lg border overflow-hidden">
+                    <Image
+                      src={imagePreview}
+                      alt="Cover preview"
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 384px"
+                      unoptimized
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </Card>
+              )}
+            </TabsContent>
+          </Tabs>
+        </Card>
+      )}
 
       {/* Actions */}
       <div className="flex justify-between gap-3">
@@ -399,22 +382,24 @@ export function GameCreationStep({
         </Button>
         <div className="flex gap-2">
           {allowSkipPdf && onSkipPdf && (
-            <Button
-              variant="outline"
-              onClick={onSkipPdf}
-              disabled={creating}
-            >
+            <Button variant="outline" onClick={onSkipPdf} disabled={creating}>
               Salta PDF →
             </Button>
           )}
-          <Button onClick={handleCreate} disabled={!gameName.trim() || creating} className="min-w-32">
+          <Button
+            onClick={handleCreate}
+            disabled={!gameName.trim() || creating}
+            className="min-w-32"
+          >
             {creating ? (
               <>
                 <Spinner size="sm" className="mr-2" />
                 Creazione...
               </>
+            ) : allowSkipPdf ? (
+              'Crea e Continua →'
             ) : (
-              allowSkipPdf ? 'Crea e Continua →' : 'Crea Gioco →'
+              'Crea Gioco →'
             )}
           </Button>
         </div>

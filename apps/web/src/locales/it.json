@@ -750,8 +750,6 @@
     "complexityPlaceholder": "es. 2.5",
     "description": "Descrizione",
     "descriptionPlaceholder": "Descrizione del gioco...",
-    "imageUrl": "URL Immagine",
-    "imageUrlPlaceholder": "https://esempio.com/immagine.jpg",
     "adding": "Aggiunta in corso...",
     "addPrivateGame": "Aggiungi Gioco Privato",
     "addFromBgg": "Aggiungi dal catalogo"

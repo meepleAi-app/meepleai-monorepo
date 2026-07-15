@@ -69,16 +69,6 @@ internal sealed class AddPrivateGameCommandValidator : AbstractValidator<AddPriv
             .WithMessage("MinAge cannot be negative")
             .When(x => x.MinAge.HasValue);
 
-        RuleFor(x => x.ImageUrl)
-            .MaximumLength(500)
-            .WithMessage("ImageUrl cannot exceed 500 characters")
-            .When(x => !string.IsNullOrWhiteSpace(x.ImageUrl));
-
-        RuleFor(x => x.ThumbnailUrl)
-            .MaximumLength(500)
-            .WithMessage("ThumbnailUrl cannot exceed 500 characters")
-            .When(x => !string.IsNullOrWhiteSpace(x.ThumbnailUrl));
-
         RuleFor(x => x.Description)
             .MaximumLength(2000)
             .WithMessage("Description cannot exceed 2000 characters")

@@ -184,10 +184,10 @@ describe('Drawer (desktop / Radix)', () => {
     const dialog = screen.getByRole('dialog');
     const accent = dialog.querySelector('[data-drawer-accent="game"]');
     expect(accent).toBeInTheDocument();
-    expect(accent?.getAttribute('style')).toContain('hsl(var(--e-game))');
+    expect(accent?.className).toContain('bg-primary');
   });
 
-  it('maps kb entity to --e-document on desktop accent', () => {
+  it('renders the desktop accent for kb entity', () => {
     render(
       <Drawer open onOpenChange={() => {}} side="desktop-right" entity="kb">
         <DrawerContent>
@@ -198,7 +198,8 @@ describe('Drawer (desktop / Radix)', () => {
       </Drawer>
     );
     const accent = screen.getByRole('dialog').querySelector('[data-drawer-accent="kb"]');
-    expect(accent?.getAttribute('style')).toContain('hsl(var(--e-document))');
+    expect(accent).toBeInTheDocument();
+    expect(accent?.className).toContain('bg-primary');
   });
 
   it('has no a11y violations on desktop', async () => {
@@ -268,7 +269,7 @@ describe('Drawer (mobile / vaul)', () => {
     await screen.findByText('player drawer');
     const accent = document.querySelector('[data-drawer-accent="player"]');
     expect(accent).not.toBeNull();
-    expect(accent?.getAttribute('style')).toContain('hsl(var(--e-player))');
+    expect(accent?.className).toContain('bg-primary');
   });
 
   it('DrawerClose triggers onOpenChange(false) on mobile', async () => {

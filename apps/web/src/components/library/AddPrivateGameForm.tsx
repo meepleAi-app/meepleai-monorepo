@@ -34,7 +34,6 @@ const AddPrivateGameFormSchema = z
     minAge: z.number().int().min(0).max(99).nullable().optional(),
     complexityRating: z.number().min(0).max(5).nullable().optional(),
     description: z.string().max(5000, 'Description too long').nullable().optional(),
-    imageUrl: z.string().url('Invalid URL').nullable().optional().or(z.literal('')),
   })
   .refine(data => data.maxPlayers >= data.minPlayers, {
     message: 'Max players must be >= min players',
@@ -79,7 +78,6 @@ export function AddPrivateGameForm({
       minAge: initialValues?.minAge ?? undefined,
       complexityRating: initialValues?.complexityRating ?? undefined,
       description: initialValues?.description ?? undefined,
-      imageUrl: initialValues?.imageUrl ?? undefined,
     },
   });
 
@@ -225,19 +223,6 @@ export function AddPrivateGameForm({
         {errors.description && (
           <p className="text-sm text-destructive">{errors.description.message}</p>
         )}
-      </div>
-
-      {/* Image URL */}
-      <div className="space-y-2">
-        <Label htmlFor="imageUrl">{t('privateGameForm.imageUrl')}</Label>
-        <Input
-          id="imageUrl"
-          type="url"
-          {...register('imageUrl')}
-          placeholder={t('privateGameForm.imageUrlPlaceholder')}
-          disabled={isSubmitting}
-        />
-        {errors.imageUrl && <p className="text-sm text-destructive">{errors.imageUrl.message}</p>}
       </div>
 
       {/* Form Actions */}

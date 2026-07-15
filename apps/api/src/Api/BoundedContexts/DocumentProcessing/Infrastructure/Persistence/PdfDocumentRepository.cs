@@ -169,6 +169,17 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<PdfDocument?> FindByContentHashForUserAsync(string contentHash, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var entity = await DbContext.PdfDocuments
+            .AsNoTracking()
+            .Where(p => p.ContentHash == contentHash && p.UploadedByUserId == userId)
+            .OrderByDescending(p => p.UploadedAt)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+        return entity != null ? MapToDomain(entity) : null;
+    }
+
     private static PdfDocument MapToDomain(Api.Infrastructure.Entities.PdfDocumentEntity entity)
     {
         var fileName = new FileName(entity.FileName);

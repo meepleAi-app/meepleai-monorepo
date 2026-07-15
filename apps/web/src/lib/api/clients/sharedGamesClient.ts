@@ -1478,6 +1478,37 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
       return `${getApiBase()}/api/v1/ingest/pdf/${encodeURIComponent(pdfId)}/page-image?page=${page}`;
     },
 
+    // ========== Cover-da-PDF (Task 8, Game Cover-da-PDF plan) ==========
+
+    /**
+     * Propose a PDF page as a game cover (AUTHENTICATED).
+     * POST /api/v1/games/{gameId}/cover/propose-from-pdf
+     *
+     * Materializes the given page as a pending cover image and creates a
+     * Pending CoverChange share request for admin review. If the render step
+     * (SmolDocling) fails, the backend responds 503 with
+     * `{ error: "cover_render_unavailable" }` — a non-blocking failure the
+     * caller should surface as a retryable message, not a hard error.
+     *
+     * @param gameId - SharedGame UUID
+     * @param pdfDocumentId - Source PDF UUID
+     * @param pageNumber - 1-based page number to render as the cover
+     * @returns The created share request ID
+     */
+    async proposeCoverFromPdf(
+      gameId: string,
+      pdfDocumentId: string,
+      pageNumber: number
+    ): Promise<{ shareRequestId: string }> {
+      const Schema = z.object({ shareRequestId: z.string() });
+      const result = await httpClient.post<z.infer<typeof Schema>>(
+        `/api/v1/games/${encodeURIComponent(gameId)}/cover/propose-from-pdf`,
+        { pdfDocumentId, pageNumber },
+        Schema
+      );
+      return result!;
+    },
+
     /**
      * Search knowledge base for a game (RAG test in Step 5).
      * POST /api/v1/knowledge-base/search

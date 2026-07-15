@@ -13321,6 +13321,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("contribution_type");
 
+                    b.Property<int?>("CoverPageIndex")
+                        .HasColumnType("integer")
+                        .HasColumnName("cover_page_index");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -13336,6 +13340,11 @@ namespace Api.Infrastructure.Migrations
                     b.Property<Guid?>("ModifiedBy")
                         .HasColumnType("uuid")
                         .HasColumnName("modified_by");
+
+                    b.Property<string>("PendingCoverR2Key")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("pending_cover_r2_key");
 
                     b.Property<DateTime?>("ResolvedAt")
                         .HasColumnType("timestamp with time zone")
@@ -13362,6 +13371,10 @@ namespace Api.Infrastructure.Migrations
                     b.Property<Guid>("SourceGameId")
                         .HasColumnType("uuid")
                         .HasColumnName("source_game_id");
+
+                    b.Property<Guid?>("SourcePdfDocumentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("source_pdf_document_id");
 
                     b.Property<Guid?>("SourcePrivateGameId")
                         .HasColumnType("uuid")

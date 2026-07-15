@@ -111,8 +111,7 @@ public sealed class UpdatePrivateGameCommandHandlerTests
             Description: "Updated description",
             PlayingTimeMinutes: 120,
             MinAge: 14,
-            ComplexityRating: 3.5m,
-            ImageUrl: "https://example.com/updated.jpg");
+            ComplexityRating: 3.5m);
 
         _repositoryMock
             .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
@@ -139,7 +138,7 @@ public sealed class UpdatePrivateGameCommandHandlerTests
         result.PlayingTimeMinutes.Should().Be(120);
         result.MinAge.Should().Be(14);
         result.ComplexityRating.Should().Be(3.5m);
-        result.ImageUrl.Should().Be("https://example.com/updated.jpg");
+        result.ImageUrl.Should().BeNull(); // preserved: UpdateInfo no longer sets ImageUrl (BGG freeze #2123 / ADR-059)
         result.UpdatedAt.Should().NotBeNull();
 
         _repositoryMock.Verify(
@@ -176,8 +175,7 @@ public sealed class UpdatePrivateGameCommandHandlerTests
             Description: null,   // Clear description
             PlayingTimeMinutes: null,
             MinAge: null,
-            ComplexityRating: null, // Clear complexity
-            ImageUrl: null);
+            ComplexityRating: null); // Clear complexity
 
         _repositoryMock
             .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
@@ -235,8 +233,7 @@ public sealed class UpdatePrivateGameCommandHandlerTests
             Description: "Updated description",
             PlayingTimeMinutes: 90,
             MinAge: 12,
-            ComplexityRating: 3.0m,
-            ImageUrl: "https://example.com/new.jpg");
+            ComplexityRating: 3.0m);
 
         _repositoryMock
             .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
@@ -258,6 +255,7 @@ public sealed class UpdatePrivateGameCommandHandlerTests
         result.BggId.Should().Be(12345); // Preserved
         result.Source.Should().Be("BoardGameGeek"); // Preserved
         result.ThumbnailUrl.Should().Be("https://example.com/old-thumb.jpg"); // Preserved (not updated by UpdateInfo)
+        result.ImageUrl.Should().Be("https://example.com/old.jpg"); // Preserved: UpdateInfo no longer touches ImageUrl (BGG freeze #2123 / ADR-059)
         result.Title.Should().Be("Updated BGG Title");
         result.CanProposeToCatalog.Should().BeTrue();
     }
@@ -281,8 +279,7 @@ public sealed class UpdatePrivateGameCommandHandlerTests
             Description: null,
             PlayingTimeMinutes: null,
             MinAge: null,
-            ComplexityRating: null,
-            ImageUrl: null);
+            ComplexityRating: null);
 
         _repositoryMock
             .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
@@ -330,8 +327,7 @@ public sealed class UpdatePrivateGameCommandHandlerTests
             Description: null,
             PlayingTimeMinutes: null,
             MinAge: null,
-            ComplexityRating: null,
-            ImageUrl: null);
+            ComplexityRating: null);
 
         _repositoryMock
             .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
@@ -374,8 +370,7 @@ public sealed class UpdatePrivateGameCommandHandlerTests
             Description: null,
             PlayingTimeMinutes: null,
             MinAge: null,
-            ComplexityRating: null,
-            ImageUrl: null);
+            ComplexityRating: null);
 
         _repositoryMock
             .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
@@ -439,8 +434,7 @@ public sealed class UpdatePrivateGameCommandHandlerTests
             Description: "Mapped description",
             PlayingTimeMinutes: 150,
             MinAge: 16,
-            ComplexityRating: 4.0m,
-            ImageUrl: "https://example.com/mapped.jpg");
+            ComplexityRating: 4.0m);
 
         _repositoryMock
             .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
@@ -471,7 +465,7 @@ public sealed class UpdatePrivateGameCommandHandlerTests
         result.PlayingTimeMinutes.Should().Be(150);
         result.MinAge.Should().Be(16);
         result.ComplexityRating.Should().Be(4.0m);
-        result.ImageUrl.Should().Be("https://example.com/mapped.jpg");
+        result.ImageUrl.Should().BeNull(); // preserved: UpdateInfo no longer sets ImageUrl (BGG freeze #2123 / ADR-059)
         result.ThumbnailUrl.Should().BeNull();
         result.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
         result.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
@@ -501,8 +495,7 @@ public sealed class UpdatePrivateGameCommandHandlerTests
             Description: "Updated description",
             PlayingTimeMinutes: 90,
             MinAge: 12,
-            ComplexityRating: 3.0m,
-            ImageUrl: "https://example.com/updated.jpg");
+            ComplexityRating: 3.0m);
 
         // Assert
         command.PrivateGameId.Should().Be(gameId);

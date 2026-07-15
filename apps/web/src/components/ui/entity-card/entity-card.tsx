@@ -1,22 +1,8 @@
-import type { CSSProperties, JSX, ReactNode } from 'react';
+import type { JSX, ReactNode } from 'react';
 
 import clsx from 'clsx';
 
 import type { EntityType } from '@/components/ui/entity-tokens';
-
-// Map EntityType -> CSS variable key. Mirrors TAILWIND_KEY in entity-tokens.ts
-// so `kb` resolves to `--c-kb` (pre-existing naming from design tokens).
-const ENTITY_CSS_VAR_KEY: Record<EntityType, string> = {
-  game: 'game',
-  player: 'player',
-  session: 'session',
-  agent: 'agent',
-  kb: 'document',
-  chat: 'chat',
-  event: 'event',
-  toolkit: 'toolkit',
-  tool: 'tool',
-};
 
 export type EntityCardVariant = 'default' | 'elevated' | 'flat';
 
@@ -58,10 +44,6 @@ export function EntityCard({
     className
   );
 
-  const style: CSSProperties | undefined = entityBorder
-    ? { borderLeftColor: `hsl(var(--e-${ENTITY_CSS_VAR_KEY[entity]}))` }
-    : undefined;
-
   if (onClick) {
     return (
       <button
@@ -70,7 +52,6 @@ export function EntityCard({
         data-entity={entity}
         onClick={onClick}
         className={clsx('block w-full text-left', classes)}
-        style={style}
       >
         {children}
       </button>
@@ -78,7 +59,7 @@ export function EntityCard({
   }
 
   return (
-    <div data-entity={entity} className={classes} style={style}>
+    <div data-entity={entity} className={classes}>
       {children}
     </div>
   );

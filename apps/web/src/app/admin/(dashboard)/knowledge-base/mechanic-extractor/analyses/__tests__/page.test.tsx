@@ -158,7 +158,7 @@ describe('MechanicAnalysesPage', () => {
     it('renders pipeline summary badge', () => {
       renderWithQuery(<MechanicAnalysesPage />);
       // Internal IDs (ISSUE-524 / ADR-051 / M1.2) intentionally not in the UI.
-      expect(screen.getByText(/6 sections · cost-cap enforced/i)).toBeInTheDocument();
+      expect(screen.getByText(/9 sections · cost-cap enforced/i)).toBeInTheDocument();
     });
   });
 

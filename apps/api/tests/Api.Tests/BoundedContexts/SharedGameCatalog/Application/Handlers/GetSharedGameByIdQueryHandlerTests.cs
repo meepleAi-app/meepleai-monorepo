@@ -233,12 +233,10 @@ public class GetSharedGameByIdQueryHandlerTests
             .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
 
-        // CoverUrlResolver calls GetPresignedDownloadUrlAsync("{key}-preview.webp", GameImage, key, null)
+        // CoverUrlResolver calls GetPresignedUrlForRawKeyAsync("{key}-preview.webp", null)
         _blobStorageMock
-            .Setup(b => b.GetPresignedDownloadUrlAsync(
+            .Setup(b => b.GetPresignedUrlForRawKeyAsync(
                 $"{pdfKey}-preview.webp",
-                BlobCategory.GameImage,
-                pdfKey,
                 null))
             .ReturnsAsync(expectedUrl);
 

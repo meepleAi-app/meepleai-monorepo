@@ -1,4 +1,4 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
+/* eslint-disable local/no-hardcoded-color-utility -- single exception: text-white on the avatar initials, whose bg is a dynamic per-player color set via inline style (avatarColor) and so cannot be declared in className. All other surfaces migrated to semantic/theme-aware tokens. */
 /**
  * GameOverModal — shown when a session is completed
  *
@@ -31,9 +31,9 @@ interface GameOverModalProps {
 }
 
 const RANK_ICONS = [
-  <Trophy key="1" className="h-5 w-5 text-amber-400" />,
-  <Medal key="2" className="h-5 w-5 text-slate-300" />,
-  <Medal key="3" className="h-5 w-5 text-amber-700" />,
+  <Trophy key="1" className="h-5 w-5 text-amber-500 dark:text-amber-400" />,
+  <Medal key="2" className="h-5 w-5 text-muted-foreground" />,
+  <Medal key="3" className="h-5 w-5 text-amber-700 dark:text-amber-500" />,
 ];
 
 export function GameOverModal({ gameName, players, sessionId, onClose }: GameOverModalProps) {
@@ -59,16 +59,16 @@ export function GameOverModal({ gameName, players, sessionId, onClose }: GameOve
       aria-label="Partita terminata"
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-foreground/70 backdrop-blur-sm"
     >
-      <div className="w-full max-w-md bg-[var(--gaming-card-bg,#1a1a2e)] border border-border rounded-t-2xl sm:rounded-2xl p-6 space-y-6">
+      <div className="w-full max-w-md bg-card border border-border rounded-t-2xl sm:rounded-2xl p-6 space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
           <div className="flex justify-center">
-            <Crown className="h-10 w-10 text-amber-400" />
+            <Crown className="h-10 w-10 text-amber-500 dark:text-amber-400" />
           </div>
           <h2 className="text-2xl font-bold font-quicksand">Partita terminata!</h2>
           <p className="text-sm text-muted-foreground">{gameName}</p>
           {winner && (
-            <p className="text-base font-semibold text-amber-300">
+            <p className="text-base font-semibold text-amber-700 dark:text-amber-300">
               Vincitore: {winner.displayName} ({winner.totalScore} pts)
             </p>
           )}
@@ -83,7 +83,7 @@ export function GameOverModal({ gameName, players, sessionId, onClose }: GameOve
                 'flex items-center gap-3 rounded-xl px-4 py-3 border',
                 player.rank === 1
                   ? 'border-amber-500/50 bg-amber-500/10'
-                  : 'border-border bg-card/5'
+                  : 'border-border bg-muted/50'
               )}
             >
               {/* Rank icon */}
@@ -119,7 +119,7 @@ export function GameOverModal({ gameName, players, sessionId, onClose }: GameOve
         <div className="flex gap-3">
           <button
             onClick={handleNewSession}
-            className="flex-1 rounded-xl bg-card/10 py-3 text-sm font-medium hover:bg-card/20 transition-colors"
+            className="flex-1 rounded-xl bg-muted py-3 text-sm font-medium hover:bg-muted/80 transition-colors"
           >
             Nuova partita
           </button>

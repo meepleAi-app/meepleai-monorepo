@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.Middleware;
 using Api.Middleware.Exceptions;
 using Api.Observability;
@@ -763,6 +764,36 @@ public class ApiExceptionHandlerMiddlewareTests
         errorResponse.RootElement.GetProperty("correlationId").ValueKind
             .Should().NotBe(System.Text.Json.JsonValueKind.Null,
                 "correlationId must be present so the client can report the incident");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_CoverMaterializationException_Returns503WithCoverRenderUnavailable()
+    {
+        // Game Cover-da-PDF (Task 6, review fix): SmolDocling render failure is a
+        // non-blocking failure, not a server bug — the middleware maps it to 503 with
+        // error code "cover_render_unavailable" so the FE (Task 8) can show a
+        // non-blocking retry message instead of a generic 500.
+        var exception = new CoverMaterializationException(
+            "Rendering pagina PDF non disponibile.", new HttpRequestException("503"));
+        var middleware = new ApiExceptionHandlerMiddleware(
+            next: (context) => throw exception,
+            _loggerMock.Object,
+            _environmentMock.Object);
+
+        _httpContext.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(_httpContext);
+
+        _httpContext.Response.StatusCode.Should().Be(503,
+            "SmolDocling being down/404 is a transient rendering failure, not a server bug");
+
+        _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
+        using var reader = new StreamReader(_httpContext.Response.Body);
+        var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
+        using var errorResponse = ParseErrorResponse(responseBody);
+
+        errorResponse.RootElement.GetProperty("error").GetString().Should().Be("cover_render_unavailable",
+            "the FE uses this distinct error code to render a non-blocking retry message");
     }
 
     private static JsonDocument ParseErrorResponse(string responseBody)

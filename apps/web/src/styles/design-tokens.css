@@ -516,15 +516,6 @@
   --mc-nav-footer-bg: rgba(245, 240, 235, 0.28);
   --mc-nav-icon-bg: rgba(255, 255, 255, 0.60);
   --mc-nav-icon-border: rgba(200, 180, 160, 0.30);
-  --e-game-h: 25;    --e-game-s: 95%;    --e-game-l: 45%;
-  --e-player-h: 262;  --e-player-s: 83%;   --e-player-l: 58%;
-  --e-session-h: 240;  --e-session-s: 60%;  --e-session-l: 55%;
-  --e-agent-h: 38;    --e-agent-s: 92%;    --e-agent-l: 50%;
-  --e-kb-h: 210;      --e-kb-s: 40%;       --e-kb-l: 55%;
-  --e-chat-h: 220;    --e-chat-s: 80%;     --e-chat-l: 55%;
-  --e-event-h: 350;   --e-event-s: 89%;    --e-event-l: 60%;
-  --e-toolkit-h: 142;  --e-toolkit-s: 70%;  --e-toolkit-l: 45%;
-  --e-tool-h: 195;    --e-tool-s: 80%;     --e-tool-l: 50%;
   }
 
   /* Dark mode adjustments */

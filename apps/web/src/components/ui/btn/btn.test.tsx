@@ -53,35 +53,37 @@ describe('Btn', () => {
     expect(screen.getByRole('button')).toHaveClass('bg-transparent');
   });
 
-  it('entity prop applies entity background on primary variant', () => {
+  it('entity prop sets data-entity and no inline color on primary variant', () => {
     render(
       <Btn variant="primary" entity="game">
         x
       </Btn>
     );
     const btn = screen.getByRole('button');
-    expect(btn.style.backgroundColor).toBe('hsl(var(--e-game))');
+    expect(btn).toHaveAttribute('data-entity', 'game');
+    expect(btn.style.backgroundColor).toBe('');
   });
 
-  it('entity=kb maps to --e-document css variable', () => {
+  it('entity=kb sets data-entity="kb"', () => {
     render(
       <Btn variant="primary" entity="kb">
         x
       </Btn>
     );
     const btn = screen.getByRole('button');
-    expect(btn.style.backgroundColor).toBe('hsl(var(--e-document))');
+    expect(btn).toHaveAttribute('data-entity', 'kb');
   });
 
-  it('entity prop applies entity border + color on outline variant', () => {
+  it('entity prop no longer inline-colors the outline variant', () => {
     render(
       <Btn variant="outline" entity="agent">
         x
       </Btn>
     );
     const btn = screen.getByRole('button');
-    expect(btn.style.borderColor).toBe('hsl(var(--e-agent))');
-    expect(btn.style.color).toBe('hsl(var(--e-agent))');
+    expect(btn).toHaveAttribute('data-entity', 'agent');
+    expect(btn.style.borderColor).toBe('');
+    expect(btn.style.color).toBe('');
   });
 
   it('entity prop has no inline style effect on ghost/secondary/destructive', () => {

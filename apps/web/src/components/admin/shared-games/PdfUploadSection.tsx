@@ -19,6 +19,7 @@ import { FileUp, X, FileText, CheckCircle2, AlertCircle, Loader2, Zap } from 'lu
 import { toast } from 'sonner';
 
 import { KbCardStatusRow } from '@/components/documents/KbCardStatusRow';
+import { CoverPagePicker } from '@/components/shared-games/CoverPagePicker';
 import {
   Card,
   CardContent,
@@ -80,6 +81,10 @@ export function PdfUploadSection({
 
   // Processing status polling (Issue #5196 → refactored to useQuery in #2246 Block B)
   const [processingDoc, setProcessingDoc] = useState<PdfDocumentDto | null>(null);
+  // Cover-da-PDF prompt (Task 8, Game Cover-da-PDF plan): offered once the PDF
+  // reaches Ready, dismissed once the admin proposes a cover (or never shown
+  // again for this upload if dismissed).
+  const [coverPromptDismissed, setCoverPromptDismissed] = useState(false);
 
   const queryClient = useQueryClient();
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
@@ -232,6 +237,7 @@ export function PdfUploadSection({
     setUploading(true);
     setUploadProgress(0);
     setError(null);
+    setCoverPromptDismissed(false);
 
     try {
       const formData = new FormData();
@@ -344,6 +350,7 @@ export function PdfUploadSection({
     setFile(null);
     setError(null);
     setProcessingDoc(null);
+    setCoverPromptDismissed(false);
     onPdfRemoved?.();
   }, [onPdfRemoved]);
 
@@ -399,6 +406,21 @@ export function PdfUploadSection({
               Stato elaborazione
             </p>
             <KbCardStatusRow document={processingDoc} />
+          </div>
+        )}
+
+        {/* Cover-da-PDF prompt (Task 8): offered once the PDF reaches Ready */}
+        {gameId && processingDoc?.processingState === 'Ready' && !coverPromptDismissed && (
+          <div data-testid="cover-page-picker-prompt" className="space-y-2 rounded-lg border p-4">
+            <p className="text-sm font-medium">Vuoi proporre una copertina da questo PDF?</p>
+            <CoverPagePicker
+              gameId={gameId}
+              pdfDocumentId={processingDoc.id}
+              onProposed={() => {
+                toast.success('Copertina proposta per approvazione');
+                setCoverPromptDismissed(true);
+              }}
+            />
           </div>
         )}
 

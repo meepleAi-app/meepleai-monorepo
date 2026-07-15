@@ -3594,8 +3594,6 @@
     "complexityPlaceholder": "e.g. 2.5",
     "description": "Description",
     "descriptionPlaceholder": "Game description...",
-    "imageUrl": "Image URL",
-    "imageUrlPlaceholder": "https://example.com/image.jpg",
     "adding": "Adding...",
     "addPrivateGame": "Add Private Game",
     "addFromBgg": "Add from catalog"

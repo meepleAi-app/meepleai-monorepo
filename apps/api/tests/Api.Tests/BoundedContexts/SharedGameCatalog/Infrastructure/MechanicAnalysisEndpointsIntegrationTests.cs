@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Api.BoundedContexts.SharedGameCatalog.Application.Configuration;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.Infrastructure;
@@ -16,6 +17,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
@@ -43,6 +45,7 @@ public sealed class MechanicAnalysisEndpointsIntegrationTests : IAsyncLifetime
 
     private readonly SharedTestcontainersFixture _fixture;
     private readonly string _testDbName;
+    private string _connectionString = null!;
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _client = null!;
     private string _adminSessionToken = null!;
@@ -65,6 +68,7 @@ public sealed class MechanicAnalysisEndpointsIntegrationTests : IAsyncLifetime
     public async ValueTask InitializeAsync()
     {
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
+        _connectionString = connectionString;
 
         _backgroundTaskMock = new Mock<IBackgroundTaskService>();
         // Default: swallow background enqueue so the executor never runs under test.
@@ -184,20 +188,101 @@ public sealed class MechanicAnalysisEndpointsIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task Generate_PdfNotLinkedToGame_Returns404()
     {
-        // Arrange — SharedGame exists, PDF exists, but no SharedGameDocument row linking them.
-        // The PDF still needs a valid SharedGameId FK (post-Phase 2d); the "not linked"
-        // condition under test is the absence of the SharedGameDocument approval row,
-        // not a dangling PdfDocument.SharedGameId.
-        var sharedGameId = await SeedSharedGameAsync();
-        var pdfDocumentId = await SeedPdfDocumentAsync(chunkCount: 3, sharedGameId);
+        // Arrange — the PDF's shared_game_id points to a DIFFERENT game and there is no
+        // shared_game_documents row linking it to the target game. #2952: linkage now also
+        // accepts pdf_documents.shared_game_id, so "not linked" means NEITHER source matches
+        // the target game — a PDF merely owned by another game must still 404 for this game.
+        var targetGameId = await SeedSharedGameAsync();
+        var otherGameId = await SeedSharedGameAsync();
+        var pdfDocumentId = await SeedPdfDocumentAsync(chunkCount: 3, otherGameId);
 
-        var body = new GenerateBody(sharedGameId, pdfDocumentId, CostCapUsd: 1.00m);
+        var body = new GenerateBody(targetGameId, pdfDocumentId, CostCapUsd: 1.00m);
 
         // Act
         var response = await SendGenerateAsync(body);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Generate_PdfLinkedOnlyViaSharedGameIdFk_Returns202()
+    {
+        // Arrange — the standard /ingest/pdf upload sets pdf_documents.shared_game_id but does
+        // NOT create a shared_game_documents row (#2952). The mechanic-extractor picker lists
+        // such PDFs by the FK, so Generate must accept them. Seed a PDF + chunks linked ONLY via
+        // the FK (deliberately skip SeedSharedGameDocumentLinkAsync).
+        var sharedGameId = await SeedSharedGameAsync();
+        var pdfDocumentId = await SeedPdfDocumentAsync(chunkCount: 4, sharedGameId);
+
+        var body = new GenerateBody(sharedGameId, pdfDocumentId, CostCapUsd: 1.00m);
+
+        // Act
+        var response = await SendGenerateAsync(body);
+
+        // Assert — pre-#2952 this returned 404 (validator checked only shared_game_documents);
+        // now it is accepted because the PDF is linked via pdf_documents.shared_game_id.
+        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+
+        _backgroundTaskMock.Verify(
+            b => b.ExecuteWithCancellation(It.IsAny<string>(), It.IsAny<Func<CancellationToken, Task>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Generate_HonoursConfiguredDefaultLlmProvider()
+    {
+        // Arrange — the default provider/model is config-driven (#2951). Wire a NON-default
+        // provider via the MechanicExtractorLlm section, then assert the created analysis records
+        // it. This proves the handler reads MechanicExtractorLlmOptions rather than a hardcoded
+        // const — the override differs from the wired DeepSeek default. The section uses init-only
+        // properties, so it must be supplied through configuration (not a post-configure delegate).
+        const string overrideProvider = "OpenRouter";
+        const string overrideModel = "meta-llama/llama-3.3-70b-instruct";
+
+        var (sharedGameId, pdfDocumentId) = await SeedHappyPathAsync(chunkCount: 4);
+
+        using var configuredFactory = IntegrationWebApplicationFactory
+            .Create(_connectionString)
+            .WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureAppConfiguration((_, config) =>
+                {
+                    config.AddInMemoryCollection(new Dictionary<string, string?>
+                    {
+                        [$"{MechanicExtractorLlmOptions.SectionName}:DefaultProvider"] = overrideProvider,
+                        [$"{MechanicExtractorLlmOptions.SectionName}:DefaultModel"] = overrideModel,
+                    });
+                });
+                builder.ConfigureTestServices(services =>
+                {
+                    services.RemoveAll<IBackgroundTaskService>();
+                    services.AddSingleton<IBackgroundTaskService>(_backgroundTaskMock.Object);
+                });
+            });
+        using var configuredClient = configuredFactory.CreateClient();
+
+        var body = new GenerateBody(sharedGameId, pdfDocumentId, CostCapUsd: 1.00m);
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, EndpointBase, _adminSessionToken, body);
+
+        // Act
+        var response = await configuredClient.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        var dto = await response.Content.ReadFromJsonAsync<MechanicAnalysisGenerationResponseDto>(JsonOptions);
+        dto.Should().NotBeNull();
+
+        using var scope = configuredFactory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var analysis = await dbContext.Set<MechanicAnalysisEntity>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(a => a.Id == dto!.Id);
+
+        analysis.Should().NotBeNull();
+        analysis!.Provider.Should().Be(overrideProvider);
+        analysis.ModelUsed.Should().Be(overrideModel);
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -396,9 +481,11 @@ public sealed class MechanicAnalysisEndpointsIntegrationTests : IAsyncLifetime
         dto.IsSuppressed.Should().BeFalse();
         // Background executor is mocked → no section runs recorded yet.
         dto.SectionRuns.Should().BeEmpty();
-        // #2807: N/M sections-with-claims signal — no claims produced yet → 0 of 6.
+        // #2807: N/M sections-with-claims signal — no claims produced yet → 0 of 9.
+        // TotalSections = Enum.GetValues<MechanicSection>().Length; the enum grew 6→9 with
+        // Setup/Components/EndgameScoring, so this expectation was stale (already red on main-dev).
         dto.SectionsWithClaims.Should().Be(0);
-        dto.TotalSections.Should().Be(6);
+        dto.TotalSections.Should().Be(9);
     }
 
     [Fact]

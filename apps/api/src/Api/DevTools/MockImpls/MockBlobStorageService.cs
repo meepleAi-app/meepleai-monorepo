@@ -100,4 +100,20 @@ internal sealed class MockBlobStorageService : IBlobStorageService
         return Task.FromResult<string?>(
             $"http://localhost/mock-s3/{resourceKey}/{fileId}?expiry={expirySeconds ?? 3600}");
     }
+
+    /// <inheritdoc />
+    public Task<string?> GetPresignedUrlForRawKeyAsync(string rawKey, int? expirySeconds = null)
+    {
+        // Always return a synthetic URL — the mock assumes every blob exists.
+        return Task.FromResult<string?>(
+            $"http://localhost/mock-s3/raw?key={Uri.EscapeDataString(rawKey)}&expiry={expirySeconds ?? 3600}");
+    }
+
+    /// <inheritdoc />
+    public Task<bool> DeleteRawKeyAsync(string rawKey, CancellationToken ct = default)
+    {
+        _ = (rawKey, ct);
+        // Return true for the same "everything is present" mock semantics as DeleteAsync.
+        return Task.FromResult(true);
+    }
 }

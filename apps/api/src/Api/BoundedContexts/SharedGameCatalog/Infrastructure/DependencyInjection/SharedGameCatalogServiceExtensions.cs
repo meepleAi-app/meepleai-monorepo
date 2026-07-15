@@ -44,6 +44,12 @@ internal static class SharedGameCatalogServiceExtensions
         services.Configure<MechanicGuardrailOptions>(
             configuration.GetSection(MechanicGuardrailOptions.SectionName));
 
+        // #2951: Mechanic Extractor default LLM provider/model — config-driven so the wired
+        // default (DeepSeek) can be overridden per-environment without a redeploy when it is
+        // unavailable (e.g. credit exhausted → 402). Routing is by model name (ADR-007).
+        services.Configure<MechanicExtractorLlmOptions>(
+            configuration.GetSection(MechanicExtractorLlmOptions.SectionName));
+
 
         // Register repositories
         services.AddScoped<ISharedGameRepository, SharedGameRepository>();
@@ -234,6 +240,11 @@ internal static class SharedGameCatalogServiceExtensions
         // call (S3 misconfiguration surfaces synchronously instead of silently).
         RegisterCoverR2UploadPipeline(services);
 
+        // Issue #2947 — BGG cover R2 upload pipeline (deterministic key). Same
+        // S3_* config + lifetime as RegisterCoverR2UploadPipeline. Register both
+        // the interface and the concrete type (CLAUDE.md pitfall #2565).
+        RegisterBggCoverUploadPipeline(services);
+
         // Issue #1823 Wave 3 M9 (ADR DEC-3j): retry/dead-letter classifier for
         // the WikidataCoverEnrichmentJob scheduler. Stateless + thread-safe —
         // singleton lifetime.
@@ -336,6 +347,72 @@ internal static class SharedGameCatalogServiceExtensions
 
             return new CoverR2UploadPipeline(s3Client, options, logger);
         });
+    }
+
+    /// <summary>
+    /// Issue #2947 — registers <see cref="IBggCoverUploadPipeline"/> as a
+    /// singleton backed by a lazily-constructed <see cref="Amazon.S3.IAmazonS3"/>
+    /// client. Mirrors <see cref="RegisterCoverR2UploadPipeline"/> (same S3_* env
+    /// vars, same R2 header-strip hook, same singleton lifetime).
+    /// </summary>
+    private static void RegisterBggCoverUploadPipeline(IServiceCollection services)
+    {
+        services.AddSingleton<IBggCoverUploadPipeline>(sp =>
+        {
+            var config = sp.GetRequiredService<IConfiguration>();
+            var logger = sp.GetRequiredService<ILogger<BggCoverUploadPipeline>>();
+            return BuildBggCoverUploadPipeline(config, logger);
+        });
+    }
+
+    /// <summary>
+    /// Test seam (Issue #2947): registers only the BGG cover pipeline against a
+    /// caller-supplied service collection so a DI-resolution unit test can verify
+    /// the registration without spinning up the whole catalog context. The caller
+    /// MUST have already registered an <see cref="IConfiguration"/> on the same
+    /// collection (the singleton factory resolves it via
+    /// <c>sp.GetRequiredService&lt;IConfiguration&gt;()</c>).
+    /// </summary>
+    internal static void RegisterBggCoverUploadPipelineForTests(IServiceCollection services)
+    {
+        services.AddLogging();
+        RegisterBggCoverUploadPipeline(services);
+    }
+
+    private static BggCoverUploadPipeline BuildBggCoverUploadPipeline(
+        IConfiguration config,
+        ILogger<BggCoverUploadPipeline> logger)
+    {
+        var options = new S3StorageOptions
+        {
+            Endpoint = config["S3_ENDPOINT"] ?? throw new InvalidOperationException("S3_ENDPOINT is required for BggCoverUploadPipeline"),
+            AccessKey = config["S3_ACCESS_KEY"] ?? throw new InvalidOperationException("S3_ACCESS_KEY is required for BggCoverUploadPipeline"),
+            SecretKey = config["S3_SECRET_KEY"] ?? throw new InvalidOperationException("S3_SECRET_KEY is required for BggCoverUploadPipeline"),
+            BucketName = config["S3_BUCKET_NAME"] ?? throw new InvalidOperationException("S3_BUCKET_NAME is required for BggCoverUploadPipeline"),
+            Region = config["S3_REGION"] ?? "auto",
+            ForcePathStyle = bool.TryParse(config["S3_FORCE_PATH_STYLE"], out var forcePathStyle) && forcePathStyle,
+        };
+
+        var s3Config = new Amazon.S3.AmazonS3Config
+        {
+            ServiceURL = options.Endpoint,
+            ForcePathStyle = options.ForcePathStyle,
+            AuthenticationRegion = options.Region,
+        };
+
+        if (!string.Equals(options.Region, "auto", StringComparison.Ordinal)
+            && Amazon.RegionEndpoint.GetBySystemName(options.Region) != null)
+        {
+            s3Config.RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(options.Region);
+        }
+
+        var credentials = new Amazon.Runtime.BasicAWSCredentials(options.AccessKey, options.SecretKey);
+        var s3Client = new Amazon.S3.AmazonS3Client(credentials, s3Config);
+
+        // Issue #1357: R2 rejects x-amz-tagging-directive; strip it defensively.
+        s3Client.BeforeRequestEvent += BlobStorageServiceFactory.StripUnsupportedR2Headers;
+
+        return new BggCoverUploadPipeline(s3Client, options, logger);
     }
 
     /// <summary>

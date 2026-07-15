@@ -1,4 +1,5 @@
 using System;
+using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Exceptions;
 using Api.Helpers;
 using Api.Middleware.Exceptions;
@@ -382,6 +383,15 @@ internal class ApiExceptionHandlerMiddleware
                 StatusCodes.Status404NotFound,
                 "not_found",
                 "The requested resource was not found"
+            ),
+
+            // Game Cover-da-PDF (Task 6): SmolDocling render failure (503/404) is a
+            // non-blocking failure, not a server bug — 503 lets the FE distinguish it
+            // from a generic 500 and show a retryable "cover unavailable" message.
+            CoverMaterializationException => (
+                StatusCodes.Status503ServiceUnavailable,
+                "cover_render_unavailable",
+                "La copertina non è al momento disponibile per il rendering. Riprova più tardi."
             ),
 
             // Domain exceptions (from SharedKernel)

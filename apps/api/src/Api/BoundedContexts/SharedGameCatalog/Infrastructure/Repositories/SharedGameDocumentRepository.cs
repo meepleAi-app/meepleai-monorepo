@@ -214,10 +214,29 @@ internal sealed class SharedGameDocumentRepository : RepositoryBase, ISharedGame
         Guid pdfDocumentId,
         CancellationToken cancellationToken = default)
     {
-        return await DbContext.SharedGameDocuments
+        // A PDF is linked to a game via EITHER the curated shared_game_documents join
+        // (created by the admin link / RAG wizard / import paths, carrying type/version/
+        // approval) OR the denormalized pdf_documents.shared_game_id FK set by the standard
+        // /ingest/pdf upload (#2952). The standard upload does not create a join row, so the
+        // mechanic-extractor picker — which lists PDFs by pdf_documents.shared_game_id — would
+        // otherwise offer PDFs this validator rejects with a 404. Accept both linkage sources
+        // so the picker and the validator agree on which (game, pdf) pairs are valid.
+        var linkedViaJoin = await DbContext.SharedGameDocuments
             .AsNoTracking()
             .AnyAsync(
                 d => d.SharedGameId == sharedGameId && d.PdfDocumentId == pdfDocumentId,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        if (linkedViaJoin)
+        {
+            return true;
+        }
+
+        return await DbContext.PdfDocuments
+            .AsNoTracking()
+            .AnyAsync(
+                p => p.Id == pdfDocumentId && p.SharedGameId == sharedGameId,
                 cancellationToken)
             .ConfigureAwait(false);
     }

@@ -36,7 +36,7 @@ public sealed record MechanicAnalysisStatusDto(
     int ClaimsCount,
     IReadOnlyList<MechanicSectionRunSummaryDto> SectionRuns,
     // #2807 (ME-FU-1): the "N/M sections produced claims" signal. SectionsWithClaims = number of
-    // distinct sections that yielded >=1 persisted claim; TotalSections = total expected (6).
+    // distinct sections that yielded >=1 persisted claim; TotalSections = total expected (9).
     // SectionsWithClaims < TotalSections means at least one section was dropped (e.g. failed the
     // well_formed check across all retries) and is silently absent from the review queue.
     int SectionsWithClaims,

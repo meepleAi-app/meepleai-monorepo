@@ -13,4 +13,10 @@ internal interface IPdfDocumentRepository : IRepository<PdfDocument, Guid>
     Task<IReadOnlyList<PdfDocument>> FindByUserIdAsync(Guid userId, CancellationToken cancellationToken = default); // Issue #2732: Quota queries
     Task<bool> ExistsByContentHashAsync(string contentHash, Guid? gameId, Guid? privateGameId, CancellationToken cancellationToken = default);
     Task<PdfDocument?> FindByContentHashAsync(string contentHash, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Finds a PDF by content hash scoped to a single user. Used for private-game
+    /// dedup, which is isolated per-user (unlike the catalog's global lookup).
+    /// </summary>
+    Task<PdfDocument?> FindByContentHashForUserAsync(string contentHash, Guid userId, CancellationToken cancellationToken = default);
 }

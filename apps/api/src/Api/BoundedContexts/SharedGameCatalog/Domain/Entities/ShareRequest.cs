@@ -42,6 +42,9 @@ public sealed class ShareRequest : AggregateRoot<Guid>
     private DateTime? _modifiedAt;
     private Guid _createdBy;
     private Guid? _modifiedBy;
+    private string? _pendingCoverR2Key;
+    private int? _coverPageIndex;
+    private Guid? _sourcePdfDocumentId;
 
     private readonly List<ShareRequestDocument> _attachedDocuments = new();
 
@@ -149,6 +152,27 @@ public sealed class ShareRequest : AggregateRoot<Guid>
     public IReadOnlyCollection<ShareRequestDocument> AttachedDocuments => _attachedDocuments.AsReadOnly();
 
     /// <summary>
+    /// Gets the R2 object key of the pending cover image materialized from a PDF page.
+    /// Null unless this is a CoverChange contribution.
+    /// Task 4: Game Cover-da-PDF.
+    /// </summary>
+    public string? PendingCoverR2Key => _pendingCoverR2Key;
+
+    /// <summary>
+    /// Gets the zero-based index of the PDF page the pending cover was rendered from.
+    /// Null unless this is a CoverChange contribution.
+    /// Task 4: Game Cover-da-PDF.
+    /// </summary>
+    public int? CoverPageIndex => _coverPageIndex;
+
+    /// <summary>
+    /// Gets the ID of the source PDF document the pending cover was rendered from.
+    /// Null unless this is a CoverChange contribution.
+    /// Task 4: Game Cover-da-PDF.
+    /// </summary>
+    public Guid? SourcePdfDocumentId => _sourcePdfDocumentId;
+
+    /// <summary>
     /// Navigation property to the source private game (for NewGameProposal contributions).
     /// Issue #3665: Added for Phase 4 - Proposal System.
     /// </summary>
@@ -193,7 +217,10 @@ public sealed class ShareRequest : AggregateRoot<Guid>
         Guid createdBy,
         Guid? modifiedBy,
         byte[]? rowVersion = null,
-        List<ShareRequestDocument>? attachedDocuments = null) : base(id)
+        List<ShareRequestDocument>? attachedDocuments = null,
+        string? pendingCoverR2Key = null,
+        int? coverPageIndex = null,
+        Guid? sourcePdfDocumentId = null) : base(id)
     {
         _id = id;
         _userId = userId;
@@ -214,6 +241,9 @@ public sealed class ShareRequest : AggregateRoot<Guid>
         _createdBy = createdBy;
         _modifiedBy = modifiedBy;
         RowVersion = rowVersion;
+        _pendingCoverR2Key = pendingCoverR2Key;
+        _coverPageIndex = coverPageIndex;
+        _sourcePdfDocumentId = sourcePdfDocumentId;
 
         if (attachedDocuments != null)
             _attachedDocuments.AddRange(attachedDocuments);
@@ -334,6 +364,45 @@ public sealed class ShareRequest : AggregateRoot<Guid>
         request.AddDomainEvent(new ShareRequestCreatedEvent(
             id, userId, privateGameId, ContributionType.NewGameProposal));
 
+        return request;
+    }
+
+    /// <summary>
+    /// Creates a new share request proposing a replacement cover image for an existing
+    /// shared game, rendered from a page of an already-indexed PDF document.
+    /// Task 4: Game Cover-da-PDF.
+    /// </summary>
+    /// <param name="userId">The ID of the user creating the proposal.</param>
+    /// <param name="targetSharedGameId">The ID of the shared game the cover applies to.</param>
+    /// <param name="sourcePdfDocumentId">The ID of the source PDF document the cover was rendered from.</param>
+    /// <param name="pendingCoverR2Key">The R2 object key of the materialized pending cover image.</param>
+    /// <param name="coverPageIndex">The zero-based index of the PDF page the cover was rendered from.</param>
+    /// <param name="userNotes">Optional notes from the user.</param>
+    /// <returns>A new ShareRequest instance for a cover change proposal.</returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when required parameters are invalid.
+    /// </exception>
+    public static ShareRequest CreateCoverChange(
+        Guid userId,
+        Guid targetSharedGameId,
+        Guid sourcePdfDocumentId,
+        string pendingCoverR2Key,
+        int coverPageIndex,
+        string? userNotes = null)
+    {
+        if (targetSharedGameId == Guid.Empty)
+            throw new ArgumentException("TargetSharedGameId required", nameof(targetSharedGameId));
+
+        if (string.IsNullOrWhiteSpace(pendingCoverR2Key))
+            throw new ArgumentException("Pending cover key required", nameof(pendingCoverR2Key));
+
+        if (coverPageIndex < 0)
+            throw new ArgumentException("Page index must be non-negative", nameof(coverPageIndex));
+
+        var request = Create(userId, sourceGameId: targetSharedGameId, ContributionType.CoverChange, userNotes, targetSharedGameId);
+        request._pendingCoverR2Key = pendingCoverR2Key;
+        request._coverPageIndex = coverPageIndex;
+        request._sourcePdfDocumentId = sourcePdfDocumentId;
         return request;
     }
 

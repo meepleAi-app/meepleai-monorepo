@@ -56,6 +56,11 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     // Nullable so pre-#1852 test constructors compile without adding a new mock param.
     private readonly IDomainEventCollector? _eventCollector;
 
+    // Issue #2947: deterministic R2 cover writes. Optional so pre-#2947 unit-test
+    // constructors compile; when null, cover generation is skipped like when
+    // _pdfCoverExtractor is null.
+    private readonly IPdfCoverUploadPipeline? _pdfCoverUploadPipeline;
+
     private readonly IPdfIndexingPipeline _indexingPipeline;
 
     public PdfProcessingPipelineService(
@@ -77,7 +82,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         IFeatureFlagService? featureFlagService = null,
         IRoleClassifierService? roleClassifier = null,
         IPdfCoverExtractor? pdfCoverExtractor = null,
-        IDomainEventCollector? eventCollector = null)
+        IDomainEventCollector? eventCollector = null,
+        IPdfCoverUploadPipeline? pdfCoverUploadPipeline = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _pdfClaimService = pdfClaimService ?? throw new ArgumentNullException(nameof(pdfClaimService));
@@ -101,6 +107,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         // to compile without updating every mock site. The Collect() call
         // in ExtractCoverImageAsync is guarded with a null-check.
         _eventCollector = eventCollector;
+        _pdfCoverUploadPipeline = pdfCoverUploadPipeline;
     }
 
     public async Task ProcessAsync(
@@ -519,9 +526,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         string filePath,
         CancellationToken cancellationToken)
     {
-        if (_pdfCoverExtractor is null)
+        if (_pdfCoverExtractor is null || _pdfCoverUploadPipeline is null)
         {
-            // Service not registered (unit-test scenarios) — leave default Pending.
+            // Cover services not registered (unit-test scenarios) — leave default Pending.
             return;
         }
 
@@ -539,43 +546,32 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             {
                 case PdfCoverExtractionOutcome.Generated:
                     {
-                        var resourceKey = $"pdf-cover-{pdfDoc.Id}";
+                        // Issue #2947: deterministic DB key; the pipeline writes the
+                        // physical R2 object "{dbKey}-preview.webp" that the resolver
+                        // reconstructs. Only the preview size is uploaded (the
+                        // resolver never reads the thumbnail size).
+                        var dbKey = $"covers/pdf/{pdfDoc.Id:D}/cover";
 
-                        // Upload thumb + preview as separate blobs. The CoverR2Key
-                        // we persist is the resourceKey prefix — the resolver
-                        // endpoint reconstructs `{prefix}/{size}.webp` at read time.
-                        using (var thumbStream = new MemoryStream(result.ThumbnailWebp!, writable: false))
-                        {
-                            await _blobStorageService.StoreAsync(
-                                thumbStream, "thumb.webp", BlobCategory.GameImage, resourceKey, cancellationToken)
-                                .ConfigureAwait(false);
-                        }
-                        using (var previewStream = new MemoryStream(result.PreviewWebp!, writable: false))
-                        {
-                            await _blobStorageService.StoreAsync(
-                                previewStream, "preview.webp", BlobCategory.GameImage, resourceKey, cancellationToken)
-                                .ConfigureAwait(false);
-                        }
+                        var persistedKey = await _pdfCoverUploadPipeline
+                            .UploadAsync(dbKey, result.PreviewWebp!, cancellationToken)
+                            .ConfigureAwait(false);
 
-                        pdfDoc.CoverR2Key = resourceKey;
+                        pdfDoc.CoverR2Key = persistedKey;
                         pdfDoc.CoverGenerationStatus = "Generated";
                         pdfDoc.CoverPageIndex = result.SelectedPageIndex;
                         pdfDoc.CoverGenerationError = null;
 
                         // Issue #1852 (Gap A): raise the propagation event so
                         // PdfCoverGeneratedEventHandler can populate SharedGame.PdfCoverR2Key.
-                        // Dispatched by MeepleAiDbContext.SaveChangesAsync (~line 154) after
-                        // the pipeline transitions to Chunking. Guard is present so existing
-                        // test constructors that omit eventCollector keep working.
                         _eventCollector?.Collect(new PdfCoverGeneratedEvent(
                             pdfDocumentId: pdfDoc.Id,
                             sharedGameId: pdfDoc.SharedGameId,
-                            coverR2Key: resourceKey,
+                            coverR2Key: persistedKey,
                             coverPageIndex: result.SelectedPageIndex ?? 0));
 
                         _logger.LogInformation(
-                            "[PdfPipeline] Cover image generated for PDF {PdfId} from page {PageIndex} (resourceKey={ResourceKey})",
-                            pdfDoc.Id, result.SelectedPageIndex, resourceKey);
+                            "[PdfPipeline] Cover image generated for PDF {PdfId} from page {PageIndex} (dbKey={DbKey})",
+                            pdfDoc.Id, result.SelectedPageIndex, persistedKey);
                         break;
                     }
                 case PdfCoverExtractionOutcome.Skipped:
@@ -1072,4 +1068,14 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         }
 #pragma warning restore CA1031
     }
+
+    /// <summary>
+    /// Issue #2947 test seam: exposes <see cref="ExtractCoverImageAsync"/> to the
+    /// unit-test assembly (InternalsVisibleTo Api.Tests) so the deterministic
+    /// cover-key behaviour can be asserted directly without driving the full
+    /// ProcessAsync pipeline.
+    /// </summary>
+    internal Task InvokeExtractCoverImageForTestAsync(
+        PdfDocumentEntity pdfDoc, string filePath, CancellationToken cancellationToken)
+        => ExtractCoverImageAsync(pdfDoc, filePath, cancellationToken);
 }

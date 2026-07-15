@@ -46,10 +46,10 @@ describe('ToggleSwitch', () => {
     expect(onCheckedChange).not.toHaveBeenCalled();
   });
 
-  it('active state sets backgroundColor inline via entity color', () => {
+  it('active state uses the bg-primary track', () => {
     render(<ToggleSwitch checked onCheckedChange={() => {}} entity="game" ariaLabel="T" />);
     const sw = screen.getByRole('switch');
-    expect(sw.getAttribute('style')).toMatch(/--e-game/);
+    expect(sw.className).toMatch(/bg-primary/);
   });
 
   it('default entity is "game"', () => {
@@ -57,10 +57,10 @@ describe('ToggleSwitch', () => {
     expect(screen.getByRole('switch')).toHaveAttribute('data-entity', 'game');
   });
 
-  it('kb entity maps to --e-document CSS var', () => {
+  it('kb entity sets data-entity="kb"', () => {
     render(<ToggleSwitch checked onCheckedChange={() => {}} entity="kb" ariaLabel="T" />);
     const sw = screen.getByRole('switch');
-    expect(sw.getAttribute('style')).toMatch(/--e-document/);
+    expect(sw).toHaveAttribute('data-entity', 'kb');
   });
 
   it('size "sm" uses smaller track dimensions', () => {

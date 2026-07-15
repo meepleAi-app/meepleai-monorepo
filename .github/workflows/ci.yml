@@ -398,33 +398,29 @@ jobs:
             audits/2026-06-14-bgg-mockup-violations.md
           retention-days: 14
 
-      # DS-17-8-v2 (mockup-to-app fidelity, 2026-06-10):
-      # Non-blocking Storybook snapshot scaffolding per Phase 2 pilot stories.
-      # Phase 2 ships scaffolding only (config + specs + scripts); baseline
-      # capture deferred to Phase 4 hardening — the pilot Client components
-      # call `useTranslation()` (react-intl) and the global `.storybook/preview.tsx`
-      # decorator stack does not yet wire IntlProvider, so the stories render
-      # an "intl object missing" error wall at snapshot time. Phase 4 fixes
-      # the preview decorator + captures real baselines. CI runs the suite
-      # with continue-on-error: true so the artifact + failure log are
-      # uploaded for debugging without blocking the build.
-      # Spec: docs/superpowers/specs/2026-06-09-ds-17-phase-2-design.md
-      # Sub-issue: #2095 · Umbrella: #2063
-      - name: Storybook snapshot scaffolding (DS-17-8-v2 non-blocking)
-        run: pnpm test:storybook:snapshots
-        continue-on-error: true
-        env:
-          NODE_OPTIONS: "--max-old-space-size=4096"
-
-      - name: Upload Storybook snapshot diff artifact
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: storybook-snapshots-${{ github.run_number }}
-          path: |
-            apps/web/test-results/**
-            apps/web/playwright-report/**
-          retention-days: 14
+      # DS-17 visual pixel-gate — DESCOPED FROM CI on 2026-07-15 (#2063).
+      #
+      # The Storybook snapshot suite (playwright.storybook.config.ts +
+      # e2e/storybook/*.snapshot.spec.ts) is retained as a LOCAL developer tool,
+      # not a CI gate. It is intentionally NOT run here. Rationale:
+      #
+      #   1. Platform mismatch: committed baselines are `*-win32.png` (captured on
+      #      Windows dev boxes), but CI runs on ubuntu-latest → Playwright looks for
+      #      `*-linux.png` that don't exist, so the step never produced a real signal
+      #      (it was continue-on-error the whole time — green theatre).
+      #   2. False-positive history: the previous full-page visual gate was REMOVED
+      #      on 2026-05-20 precisely for font/locale/render drift false positives.
+      #      A scoped pixel gate carries the same intrinsic fragility.
+      #   3. Structural anti-drift is already enforced by 5 BLOCKING gates above
+      #      (mockup-state-naming, tokens:mockups, mockup-annotations:audit,
+      #      lint:storybook-states, bgg-mockups). Those make drift *structurally*
+      #      detectable; the incremental value of a fragile pixel gate over them is low.
+      #
+      # Developers CAN still run it locally (Windows baselines valid there):
+      #   pnpm test:storybook:snapshots
+      # Re-introducing it as a CI gate requires Linux baselines (Docker/CI-generated)
+      # — see the descope note in docs/for-developers/frontend/page-mock-story-pattern.md.
+      # Sub-issue: #2095 (scaffolding) · Umbrella: #2063
 
   # Frontend Typecheck — fast-fail check (~1 min). Independent job for
   # parallel execution with lint.

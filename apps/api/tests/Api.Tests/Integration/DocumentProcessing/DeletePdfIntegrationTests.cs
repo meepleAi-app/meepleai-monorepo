@@ -518,6 +518,67 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task DeletePdf_CallerGameDiffersFromUploaderGame_RemovesCallerLinkNotUploaderLink()
+    {
+        // Arrange: PDF record's SharedGameId is pinned to the UPLOADER game (Game A) per
+        // catalog dedup semantics (Task 2 of #2943): when Game B later reuses the same PDF
+        // via dedup, the record.SharedGameId stays A even though Game B now also links it.
+        // A delete issued on behalf of Game B (e.g. RemoveRagFromSharedGame cleaning up
+        // Game B) must remove GAME B's link — NOT Game A's, which is uninvolved.
+        await ResetDatabaseAsync();
+        var pdfId = await CreateTestPdfAsync("DedupCrossGame.pdf", withVectorDoc: true);
+        var uploaderGameId = (await _dbContext!.SharedGames.FirstAsync(TestCancellationToken)).Id; // Game A == pdfDoc.SharedGameId
+        var uploaderUserId = (await _dbContext.Users.FirstAsync(TestCancellationToken)).Id;
+
+        // Game B: reused the PDF via dedup, does NOT own the record's SharedGameId.
+        var callerGameId = Guid.NewGuid();
+        _dbContext.SharedGames.Add(new SharedGameEntity
+        {
+            Id = callerGameId,
+            Title = "Caller Game (dedup reuser, not uploader)",
+            YearPublished = 2024,
+            MinPlayers = 2,
+            MaxPlayers = 4,
+            PlayingTimeMinutes = 60,
+            CreatedAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        // Two EntityLinks: Game A (uploader) -> KbCard/pdf AND Game B (caller) -> KbCard/pdf.
+        await SeedGameKbCardLinkAsync(uploaderGameId, pdfId, uploaderUserId);
+        await SeedGameKbCardLinkAsync(callerGameId, pdfId, uploaderUserId);
+
+        var handler = _serviceProvider!.GetRequiredService<DeletePdfCommandHandler>();
+        var command = new DeletePdfCommand(pdfId.ToString(), CallerGameId: callerGameId);
+
+        // Act: delete issued on behalf of Game B (the caller), not the uploader Game A.
+        var result = await handler.Handle(command, TestCancellationToken);
+
+        // Assert: success, record + vectors preserved (linkCount was 2).
+        result.Success.Should().BeTrue();
+
+        var pdfExists = await _dbContext.PdfDocuments.AnyAsync(p => p.Id == pdfId, TestCancellationToken);
+        pdfExists.Should().BeTrue("PDF is still referenced by the uploader game after Game B's link is removed");
+
+        var vectorExists = await _dbContext.VectorDocuments.AnyAsync(v => v.PdfDocumentId == pdfId, TestCancellationToken);
+        vectorExists.Should().BeTrue("vectors must survive while the PDF record survives");
+
+        // Game B's (the actual caller's) link must be removed.
+        var callerLinkExists = await _dbContext.EntityLinks.AnyAsync(
+            el => el.SourceEntityId == callerGameId && el.TargetEntityId == pdfId
+                  && el.TargetEntityType == MeepleEntityType.KbCard,
+            TestCancellationToken);
+        callerLinkExists.Should().BeFalse("Game B's link (the actual caller) should be removed");
+
+        // Game A's (uninvolved uploader) link must be PRESERVED.
+        var uploaderLinkExists = await _dbContext.EntityLinks.AnyAsync(
+            el => el.SourceEntityId == uploaderGameId && el.TargetEntityId == pdfId
+                  && el.TargetEntityType == MeepleEntityType.KbCard,
+            TestCancellationToken);
+        uploaderLinkExists.Should().BeTrue("Game A's link (uninvolved uploader) must be preserved — it was not the caller");
+    }
+
+    [Fact]
     public async Task DeletePdf_LastRemainingLink_DeletesRecordAndVectors()
     {
         // Arrange

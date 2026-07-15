@@ -70,11 +70,22 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
 
             if (linkCount > 1)
             {
-                await RemoveCallerLinkAsync(pdfGuid, pdfDoc.SharedGameId, cancellationToken).ConfigureAwait(false);
+                // Issue #2949 finding #1: catalog dedup is GLOBAL, so pdfDoc.SharedGameId
+                // stays pinned to the original uploader game even after other games link
+                // the same PDF via reuse. When the command carries an explicit caller game
+                // (e.g. RemoveRagFromSharedGameCommandHandler cleaning up that specific
+                // game), remove THAT game's link. Only fall back to SharedGameId for call
+                // sites where caller == uploader's game (no distinct game context exists).
+                var linkRemoved = await RemoveCallerLinkAsync(
+                    pdfGuid,
+                    command.CallerGameId ?? pdfDoc.SharedGameId,
+                    cancellationToken).ConfigureAwait(false);
+
+                var remainingLinks = linkRemoved ? linkCount - 1 : linkCount;
 
                 _logger.LogInformation(
                     "PDF {PdfId} still referenced by {RemainingLinks} game link(s) after unlink — record/blob/vectors preserved",
-                    pdfId, linkCount - 1);
+                    pdfId, remainingLinks);
 
                 return new PdfDeleteResult(true, "PDF unlinked from game (still referenced by other games)", storageGameIdForUnlink);
             }
@@ -160,13 +171,14 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
     /// handled by the destructive path in <see cref="Handle"/>). Used when other
     /// games still reference this PDF, so the record must survive.
     /// </summary>
-    private async Task RemoveCallerLinkAsync(Guid pdfGuid, Guid? callerGameId, CancellationToken cancellationToken)
+    /// <returns><c>true</c> if a matching link was found and removed; otherwise <c>false</c>.</returns>
+    private async Task<bool> RemoveCallerLinkAsync(Guid pdfGuid, Guid? callerGameId, CancellationToken cancellationToken)
     {
         if (callerGameId is null || callerGameId.Value == Guid.Empty)
         {
             // No owning-game link to remove for this call; the record survives
             // because other links exist (linkCount > 1 already established).
-            return;
+            return false;
         }
 
         var links = await _entityLinkRepository
@@ -183,11 +195,18 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
             l.TargetEntityType == MeepleEntityType.KbCard &&
             l.TargetEntityId == pdfGuid);
 
-        if (callerLink is not null)
+        if (callerLink is null)
         {
-            _entityLinkRepository.Remove(callerLink);
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            return false;
         }
+
+        // Follow-up: this hard-deletes the link (Remove) instead of the aggregate's
+        // soft-delete (link.Delete(userId)) used by DeleteEntityLinkCommandHandler.
+        // Harmless today because EntityLinkDeletedEvent has zero handlers, but if a
+        // handler is ever added, reconsider using the soft-delete command instead.
+        _entityLinkRepository.Remove(callerLink);
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return true;
     }
 
     /// <summary>

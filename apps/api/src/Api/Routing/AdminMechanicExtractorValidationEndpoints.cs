@@ -11,8 +11,7 @@ namespace Api.Routing;
 
 /// <summary>
 /// Admin endpoints for the AI Comprehension Validation pipeline (ADR-051 Sprint 1 / Task 32).
-/// Mounted under <c>/admin/mechanic-extractor</c> alongside the existing Variant C draft surface
-/// (see <see cref="AdminMechanicExtractorEndpoints"/>) — the new validation endpoints occupy
+/// Mounted under <c>/admin/mechanic-extractor</c>; the validation endpoints occupy
 /// disjoint sub-paths (<c>/golden/...</c>, <c>/analyses/.../metrics</c>,
 /// <c>/analyses/.../override-certification</c>, <c>/metrics/recalculate-all</c>,
 /// <c>/dashboard</c>, <c>/dashboard/{id}/trend</c>, <c>/thresholds</c>) so the two surfaces

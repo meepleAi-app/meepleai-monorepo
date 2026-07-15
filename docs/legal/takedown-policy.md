@@ -46,6 +46,8 @@ La richiesta (template del form) deve includere:
 3. **URL della card** contestata (`/games/{id}/card`).
 4. **Descrizione** del problema (violazione di copyright, inaccuratezza lesiva, altro).
 5. **Dichiarazione di buona fede** e di **accuratezza** delle informazioni fornite.
+6. **Dichiarazione di titolarità** dei diritti sul materiale (o di autorizzazione ad agire per conto
+   del titolare).
 
 ## 5. Processo interno
 
@@ -81,13 +83,37 @@ suppression da feedback utente è separata — vedi #534).
 | **Risoluzione** (rimozione o risposta motivata) | ≤ **10 giorni lavorativi** dalla presa in carico |
 | Casi di rischio evidente | Soppressione **precauzionale immediata**, valutazione a seguire |
 
-## 7. Ripristino e controversie
+## 7. Controdeduzione (counter-notice), ripristino e controversie
 
-Se una richiesta viene ritenuta infondata dopo una soppressione precauzionale, o l'editore ritira la
-richiesta, la card può essere ripristinata ripubblicando l'analisi (nuova versione). Le controversie
-sono gestite via `takedown@meepleai.app`. Rimane impregiudicato ogni diritto di legge delle parti.
+**Controdeduzione (counter-notice).** Chi ha caricato o pubblicato il contenuto rimosso può presentare
+una controdeduzione scrivendo a `takedown@meepleai.app`. La controdeduzione deve indicare: identità e
+contatti del mittente, identificazione della card rimossa (URL), le ragioni per cui la rimozione è
+ritenuta errata e una **dichiarazione di buona fede** circa la legittimità della pubblicazione.
 
-## 8. Fuori scope
+**Procedura di ripristino.** Se una richiesta di rimozione viene ritenuta infondata dopo una
+soppressione precauzionale, se l'editore ritira la richiesta, o se una controdeduzione risulta fondata,
+la card può essere **ripristinata** ripubblicando l'analisi (nuova versione). Il richiedente originario
+viene informato dell'esito. Le controversie sono gestite via `takedown@meepleai.app`. Rimane
+impregiudicato ogni diritto di legge delle parti.
+
+## 8. Governance, punto di contatto e conformità DSA
+
+**Punto di contatto unico.** Il canale `takedown@meepleai.app` è il **punto di contatto unico** per
+tutte le comunicazioni relative a rimozioni, controdeduzioni e ripristini, coerentemente con il ToS §5,
+la pagina `/legal/takedown` e ADR-051. Le richieste seguono una procedura **notice-and-action** (DSA):
+ricezione → presa in carico → valutazione → azione motivata → risposta al richiedente, nei **tempi
+indicati al §6 (SLA)**. La possibilità di contestazione è disciplinata al §7 (controdeduzione).
+
+**Referente copyright.** MeepleAI nomina un **referente copyright stabile** all'interno del team
+Trust & Legal, responsabile della gestione delle richieste, delle controdeduzioni e dei rapporti con
+gli editori.
+
+**Registro interno.** MeepleAI mantiene un **registro interno dei takedown** in cui sono annotate le
+richieste ricevute, le controdeduzioni, le decisioni assunte e le azioni eseguite (soppressione,
+ripristino, rifiuto motivato), con i relativi riferimenti temporali e di audit (colonne
+`suppressed_*` + audit log).
+
+## 9. Fuori scope
 
 - Setup dell'alias email `takedown@meepleai.app` (task infrastrutturale).
 - Review dei Terms of Service con IP legal counsel (gate M2, ADR-051).

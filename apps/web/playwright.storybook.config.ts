@@ -1,6 +1,14 @@
 /**
  * Playwright config for Storybook visual snapshot tests (DS-17-8-v2).
  *
+ * ⚠️ LOCAL DEVELOPER TOOL — DESCOPED FROM CI on 2026-07-15 (#2063).
+ * This suite is NOT a CI gate. Committed baselines are `*-win32.png` (Windows),
+ * but CI runs on ubuntu-latest, so it never produced a real signal. Run it
+ * locally on Windows to catch visual regressions during development:
+ *   pnpm test:storybook:snapshots
+ * Promoting it back to a CI gate requires Linux baselines (Docker/CI-generated).
+ * See docs/for-developers/frontend/page-mock-story-pattern.md § "Visual gate descope".
+ *
  * Builds the Storybook static artifact and serves it via http-server on port 6007
  * (avoids collision with `pnpm storybook` dev server on 6006). Runs snapshot
  * specs under `e2e/storybook/*.snapshot.spec.ts`.

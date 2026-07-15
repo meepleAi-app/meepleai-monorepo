@@ -20,6 +20,7 @@
 import { http, HttpResponse } from 'msw';
 
 export type Sp7DetailRsvpState =
+  | 'host-draft-tagged'
   | 'host-pending'
   | 'host-ready'
   | 'invitee-pending'
@@ -87,6 +88,10 @@ const RSVPS_INVITEE_CONFIRMED = RSVPS_HOST_PENDING.map(r =>
 
 function eventForState(state: Sp7DetailRsvpState) {
   switch (state) {
+    case 'host-draft-tagged':
+      // #2963 / invariant #16: Draft night → tagged players (no invite sent),
+      // host sees the "Invia inviti" (publish) CTA.
+      return { ...NIGHT_BASE, status: 'Draft' };
     case 'cancelled':
       return { ...NIGHT_BASE, status: 'Cancelled', cancellationReason: 'Conflitto reggia' };
     case 'in-progress':

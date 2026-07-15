@@ -12232,7 +12232,7 @@ namespace Api.Infrastructure.Migrations
 
                             t.HasCheckConstraint("ck_mechanic_section_runs_latency_non_negative", "latency_ms >= 0");
 
-                            t.HasCheckConstraint("ck_mechanic_section_runs_section_range", "section BETWEEN 0 AND 5");
+                            t.HasCheckConstraint("ck_mechanic_section_runs_section_range", "section BETWEEN 0 AND 8");
 
                             t.HasCheckConstraint("ck_mechanic_section_runs_status_range", "status BETWEEN 0 AND 3");
 
@@ -12576,165 +12576,10 @@ namespace Api.Infrastructure.Migrations
 
                             t.HasCheckConstraint("ck_mechanic_claims_rejection_note_when_rejected", "status <> 2 OR rejection_note IS NOT NULL");
 
-                            t.HasCheckConstraint("ck_mechanic_claims_section_range", "section BETWEEN 0 AND 5");
+                            t.HasCheckConstraint("ck_mechanic_claims_section_range", "section BETWEEN 0 AND 8");
 
                             t.HasCheckConstraint("ck_mechanic_claims_status_range", "status BETWEEN 0 AND 2");
                         });
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicDraftEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uuid")
-                        .HasColumnName("created_by");
-
-                    b.Property<decimal>("EstimatedCostUsd")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("numeric(12,6)")
-                        .HasDefaultValue(0m)
-                        .HasColumnName("estimated_cost_usd");
-
-                    b.Property<string>("GameTitle")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)")
-                        .HasColumnName("game_title");
-
-                    b.Property<DateTime>("LastModified")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_modified");
-
-                    b.Property<string>("MechanicsDraft")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("")
-                        .HasColumnName("mechanics_draft");
-
-                    b.Property<string>("MechanicsNotes")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("")
-                        .HasColumnName("mechanics_notes");
-
-                    b.Property<Guid>("PdfDocumentId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("pdf_document_id");
-
-                    b.Property<string>("PhasesDraft")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("")
-                        .HasColumnName("phases_draft");
-
-                    b.Property<string>("PhasesNotes")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("")
-                        .HasColumnName("phases_notes");
-
-                    b.Property<string>("QuestionsDraft")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("")
-                        .HasColumnName("questions_draft");
-
-                    b.Property<string>("QuestionsNotes")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("")
-                        .HasColumnName("questions_notes");
-
-                    b.Property<string>("ResourcesDraft")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("")
-                        .HasColumnName("resources_draft");
-
-                    b.Property<string>("ResourcesNotes")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("")
-                        .HasColumnName("resources_notes");
-
-                    b.Property<Guid>("SharedGameId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("shared_game_id");
-
-                    b.Property<int>("Status")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
-                        .HasColumnName("status");
-
-                    b.Property<string>("SummaryDraft")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("")
-                        .HasColumnName("summary_draft");
-
-                    b.Property<string>("SummaryNotes")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("")
-                        .HasColumnName("summary_notes");
-
-                    b.Property<int>("TotalTokensUsed")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
-                        .HasColumnName("total_tokens_used");
-
-                    b.Property<string>("VictoryDraft")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("")
-                        .HasColumnName("victory_draft");
-
-                    b.Property<string>("VictoryNotes")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("")
-                        .HasColumnName("victory_notes");
-
-                    b.Property<uint>("Xmin")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PdfDocumentId")
-                        .HasDatabaseName("ix_mechanic_drafts_pdf_document_id");
-
-                    b.HasIndex("SharedGameId")
-                        .HasDatabaseName("ix_mechanic_drafts_shared_game_id");
-
-                    b.HasIndex("SharedGameId", "PdfDocumentId", "Status")
-                        .HasDatabaseName("ix_mechanic_drafts_game_pdf_status");
-
-                    b.ToTable("mechanic_drafts", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicGoldenBggTagEntity", b =>
@@ -12856,7 +12701,7 @@ namespace Api.Infrastructure.Migrations
                         {
                             t.HasCheckConstraint("ck_mechanic_golden_claims_expected_page_positive", "expected_page > 0");
 
-                            t.HasCheckConstraint("ck_mechanic_golden_claims_section_range", "section BETWEEN 0 AND 5");
+                            t.HasCheckConstraint("ck_mechanic_golden_claims_section_range", "section BETWEEN 0 AND 8");
                         });
                 });
 
@@ -18454,17 +18299,6 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Analysis");
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicDraftEntity", b =>
-                {
-                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "SharedGame")
-                        .WithMany()
-                        .HasForeignKey("SharedGameId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("SharedGame");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicGoldenBggTagEntity", b =>

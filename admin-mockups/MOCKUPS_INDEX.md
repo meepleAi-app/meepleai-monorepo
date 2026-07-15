@@ -18,7 +18,6 @@
 | **component-mock** | Sub-view, overlay, drawer, or shared component used inside a page-mock. Not a standalone route. |
 | **dev-fixture** | Design-system reference, prototype, dataset, or token file. Not for production cloning. |
 
-> **Pairing rule**: most `*.html` files have a `*.jsx` twin (e.g. `sp3-join.html` ↔ `sp3-join.jsx`).
 > The two are equivalent: HTML for browser preview, JSX for codebase clone. The index lists the
 > HTML file as canonical when both exist.
 
@@ -60,59 +59,26 @@
 
 | File | Type | Mapped routes |
 |------|------|---------------|
-| `auth-flow.html` | page-mock | `/login`, `/register`, `/reset-password`, `/oauth-callback`, `/verify-email`, `/verification-pending`, `/verification-success`, `/invitation-expired` |
-| `onboarding.html` | page-mock | `/welcome`, `/onboarding`, `/setup`, `/setup-account` |
 | `notifications.html` | page-mock | _(SP1 legacy archive — superseded by `sp7-notifications-*`, #2028)_ |
-| `sp7-notifications-hub.html` | page-mock | `/notifications` |
-| `sp7-notifications-preferences.html` | page-mock | `/notifications/preferences` |
-| `public.html` | page-mock | `/` (landing) |
-| `settings.html` | page-mock | `/settings` + 7 sub-route (`/ai-consent`, `/api-keys`, `/notifications`, `/preferences`, `/profile`, `/security`, `/services`) |
 
 ## SP3 — Public surfaces & invitations
 
 | File | Type | Mapped routes |
 |------|------|---------------|
-| `sp3-accept-invite.html` | page-mock | `/accept-invite`, `/invites/[token]` |
-| `sp3-faq-enhanced.html` | page-mock | `/faq`, `/games/[id]/faqs` (reuse) |
-| `sp3-how-it-works.html` | page-mock | `/how-it-works` |
-| `sp3-join.html` | page-mock | `/join`, `/sessions/join` (reuse) |
-| `sp3-legal.html` | page-mock | `/privacy`, `/terms`, `/cookies`, `/cookie-settings` |
-| `sp3-library-public.html` | page-mock | `/library-public`, `/shared-games` (variant), `/library/shared/[token]` |
-| `sp3-shared-game-detail.html` | page-mock | `/shared-games/[id]` (Wave A.3, PR #600/605/612/630) |
-| `sp3-shared-games.html` | page-mock | `/shared-games` |
 
 ## SP4 — Authenticated core (Wave 1+2+3+4)
 
 | File | Type | Mapped routes |
 |------|------|---------------|
-| `sp4-add-game-pdf-dedup.html` | page-mock | `/library/private/add`, `/upload` (partial) |
-| `sp4-agent-detail.html` | page-mock | `/agents/[id]`, `/library/[gameId]/agent` |
-| `sp4-agents-index.html` | page-mock | `/agents`, `/editor/agent-proposals/*` (partial), `/chat/agents/create` (partial) |
 | `sp4-citation-pdf-viewer.html` | component-mock | Citation overlay used by `/chat/[threadId]` and game-chat tabs |
 | `sp4-dashboard.html` | page-mock (obsolete) | `/dashboard` — historical Pre-Stage-3 mockup, superseded by Asse C #1898 priority-driven design (4 priority sections replace 5 entity sections); tracking #2114 |
-| `sp4-discover.html` | page-mock | `/discover` |
 | `sp4-game-chat-tab.html` | component-mock | Chat tab embedded in `/library/[gameId]/agent`, `/games/[id]` |
-| `sp4-game-detail.html` | page-mock | `/games/[id]`, `/library/[gameId]`, `/private-games/[id]` |
 | `sp4-game-detail-tab-rules.html` | sub-tab placeholder (#2148) | `/games/[id]/rules` — AI placeholder, designer review required |
 | `sp4-game-detail-tab-reviews.html` | sub-tab placeholder (#2148) | `/games/[id]/reviews` — friend-first M1 variant, designer review required |
 | `sp4-game-detail-tab-strategies.html` | sub-tab placeholder (#2148) | `/games/[id]/strategies` — AI placeholder, designer review required |
 | `sp4-game-detail-tab-chat.html` | sub-tab placeholder (#2148) | `/games/[id]/chat` — standalone (was partial via composite), designer review required |
 | `sp4-game-detail-tab-faqs.html` | sub-tab placeholder (#2148) | `/games/[id]/faqs` — game-scoped variant of public FAQ, designer review required |
-| `sp4-game-nights-index.html` | page-mock | `/game-nights` |
-| `sp4-games-index.html` | page-mock | `/games` |
-| `sp4-kb-detail.html` | page-mock | `/knowledge-base/[id]` (deferred — G4 v3 pivot) |
-| `sp4-kb-global.html` | page-mock | `/knowledge-base/global` |
-| `sp4-kb-hub.html` | page-mock | `/knowledge-base` |
-| `sp4-library-desktop.html` | page-mock | `/library` (Wave B.3 done) |
-| `sp4-library-mobile.html` | page-mock | `/library` (mobile <768px variant, SP8 brief 2026-05-30, IA semplificata 3 tab + overflow) |
 | `sp4-parts-common.jsx` | component-mock | Shared mockup runtime — `window.MAI` (entity helpers, StateBlock/Shimmer/SseBanner, fake dataset). Re-derived for sessions consolidation (2026-05-31). Replace with codebase modules at integration time. |
-| `sp4-play-records-detail.html` | page-mock | `/play-records/[id]` |
-| `sp4-play-records-edit.html` | page-mock | `/play-records/[id]/edit` |
-| `sp4-play-records-index.html` | page-mock | `/play-records` |
-| `sp4-play-records-new.html` | page-mock | `/play-records/new` |
-| `sp4-play-records-stats.html` | page-mock | `/play-records/stats` |
-| `sp4-player-detail.html` | page-mock | `/players/[id]`, `/players/[id]/{achievements,games,sessions,stats}` |
-| `sp4-players-index.html` | page-mock | `/players` |
 | `sp4-session-catan-data.jsx` | component-mock | Catan-specific dataset (hex board 19-tiles, resources, settlements/cities/roads, dev cards). Premium #3/7. |
 | `sp4-session-catan-flavor.jsx` | component-mock | Catan flavor components — `HexBoard`, `RobberOverlay`, `DiceDisplay`, `TradePanel`, `DevCardsPanel`, `ResourceHandBar`. |
 | `sp4-session-catan-live.html` | page-mock | `/sessions/[id]/live` Catan demo (medium euro + trading, 3-4 players, ~75-90 min). Extends skeleton with Catan-specific panels. |
@@ -150,12 +116,8 @@
 | `sp4-session-puerto-rico-summary.html` | page-mock | `/sessions/[id]` Puerto Rico post-game (final VP breakdown: buildings + shipped goods + large building bonuses). Premium #2/7. |
 | `sp4-session-puerto-rico-summary.jsx` | component-mock | Root component for PR summary — hero + tabs (Scoreboard / Final Board / Round Recap / Stats). |
 | `sp4-session-skeleton-data.jsx` | component-mock | Demo datasets (Wingspan + Paleo) for the generic session skeleton — `window.SkelData`. Used only inside `sp4-session-skeleton-*` mockup to validate polymorphic rendering side-by-side. |
-| `sp4-session-skeleton-live.html` | page-mock | `/sessions/[id]/live` **generic skeleton** (universal renderer for any game). Consumes `AiToolkitSuggestionDto` polymorphically. Demo shows side-by-side Wingspan (Points+RoundRobin) vs Paleo (BinaryWin+Simultaneous). Closes #1750 (B19-4b). |
-| `sp4-session-skeleton-live.jsx` | component-mock | Root component for `sp4-session-skeleton-live.html` — wires top-bar + ChatAgent + `RightColumnTabs` polymorphic. |
 | `sp4-session-skeleton-parts.jsx` | component-mock | Shared building blocks for the skeleton (TopBar, ChatAgentPanel, ActionLog, RightColumnTabs container, DesktopFrame, PhoneShell side-by-side wrapper). Game-agnostic. |
 | `sp4-session-skeleton-renderers.jsx` | component-mock | **Polymorphic renderers** — `ScoringPanelRenderer` (switch on ScoreType: Points/Ranking/BinaryWin/Objectives), `TurnIndicatorRenderer` (switch on TurnOrderType: 7 variants), `WidgetRenderer` (6 WidgetType dispatch). Zero game-specific code. Mirrors FE renderers shipped in PR #1763 (B19-4a). |
-| `sp4-session-summary-skeleton.html` | page-mock | `/sessions/[id]` **generic post-game skeleton** (universal summary). Demo shows side-by-side Wingspan vs Paleo. Closes #1750 (B19-4b). |
-| `sp4-session-summary-skeleton.jsx` | component-mock | Root component for `sp4-session-summary-skeleton.html` — hero result + tabbed review (scoreboard / diary / photos / chat highlights / stats). Game-agnostic. |
 | `sp4-session-wingspan-live-parts.jsx` | component-mock | Sub-components of `/sessions/[id]/live` Wingspan demo — `window.LiveSessionParts1`. **Wingspan-specific** (scoring categories hard-coded). Generic skeleton tracked in B19. |
 | `sp4-session-wingspan-live-tabs.jsx` | component-mock | `window.LiveTabs` — 4 new consolidated tabs (scores · photos · agent · players) × 5 stati each (default · empty · loading · error · sse). **Wingspan-flavored content**. See consolidation ADR `claudedocs/2026-05-31-sessions-consolidation-adr.md` + spike `claudedocs/2026-05-31-spike-toolkit-ai-generation.md`. |
 | `sp4-session-wingspan-live.html` | page-mock | `/sessions/[id]/live` Wingspan demo + consolidated tabs `?tab=scores\|photos\|agent\|players\|chat\|tools\|notes` (was 4 separate sub-routes pre-2026-05-31, see ADR). Also reuses for `/sessions/live/[sessionId]/*`. **Wingspan-specific** — generic session skeleton in B19. |
@@ -170,16 +132,11 @@
 | `sp4-session-zombicide-parts.jsx` | component-mock | Shared parts for Zombicide — SectionCard accordion (16 utilizzi), helper `sec(id)` per accordion state machine across survivors/board/spawn panels. |
 | `sp4-session-zombicide-summary.html` | page-mock | `/sessions/[id]` Zombicide post-game (VICTORY/DEFEAT banner + mission objectives + survivors final state + XP totals + kill stats). Premium #5/7. |
 | `sp4-session-zombicide-summary.jsx` | component-mock | Root component for Zombicide summary — hero + tabs (Scoreboard / Survivors / Board final / Stats). |
-| `sp4-sessions-index.html` | page-mock | `/sessions`, `/games/[id]/sessions` (reuse) |
-| `sp4-toolkit-detail.html` | page-mock | `/toolkit` + sub-routes, `/library/[gameId]/toolbox`, `/library/[gameId]/toolkit`, `/library/private/[id]/toolkit/configure` |
-| `sp4-upload-wizard-extended.html` | page-mock | `/upload`, `/gamebook/upload` (partial) |
 
 ## SP5 — Admin & Profile settings
 
 | File | Type | Mapped routes |
 |------|------|---------------|
-| `sp5-profile-settings.html` | page-mock | `/profile?tab=settings`, `/profile?tab=settings&section=<security\|notifications\|preferences\|profile\|api-keys\|services>` (issue #1608, sblocca SP5 S3 cutover) |
-| `sp5-profile-settings.jsx` | component-mock | 8 sub-components per `/profile?tab=settings` consolidation: `ProfileTabBar`, `SettingsTab`, `SettingsSubNav`, `TwoFactorStatusCard`, `TwoFactorSetupModal`, `OTPInput6Slot`, `BackupCodesGrid`, `TwoFactorBottomSheet` |
 
 ## SP6 — Libro-game (Nanolith dogfood Iter 1+4)
 
@@ -197,47 +154,33 @@ below) and the `/gamebook` family pages render directly from those._
 
 | File | Type | Mapped routes |
 |------|------|---------------|
-| `sp7-game-night-new.html` | page-mock | `/game-nights/new` |
-| `sp7-game-night-detail-rsvp.html` | page-mock | `/game-nights/[id]` |
-| `sp7-game-night-live.html` | page-mock | `/game-nights/[id]/live` (issue #487 screen #4+#7) |
 | `sp7-game-night-transition.html` | component-mock | Modal opened from `/game-nights/[id]/live` (issue #487 screen #5) |
-| `sp7-game-night-summary.html` | page-mock | `/game-nights/[id]/summary` (issue #487 screen #6) |
 
 ## Chat
 
 | File | Type | Mapped routes |
 |------|------|---------------|
-| `chat-fullscreen.html` | page-mock | `/chat/[threadId]`, `/chat/new` (empty state) |
 
 ## Nanolith — Runthrough storyboard (Aaron Iter 1)
 
 | File | Type | Mapped routes |
 |------|------|---------------|
-| `librogame-game-night-storyboard.html` | page-mock | `/game-nights/[id]` (storyboard variant — was `nanolith-game-night-storyboard.html` pre-rename post-IA consolidation #871, sync inline 2026-06-08 #2025) |
+| `librogame-game-night-storyboard.html` | dev-fixture | Meta-storyboard: embeds the `librogame-runthrough-*` mockups via `<iframe>` as a pre-implementation validation timeline (was `nanolith-game-night-storyboard.html` pre-rename #871, sync inline 2026-06-08 #2025). Not a page render-surface — route `/game-nights/[id]` is covered by `game-night-detail-rsvp.stories.tsx`. Scoped out of `lint:storybook-states` per #2970 (Option B). |
 | `primitive-nav-bottom-mobile.html` | component-mock | Mobile bottom-nav primitive (global, was `nanolith-nav-bottom-mobile.html` pre-#2152) |
 | `primitive-nav-chat-panel.html` | component-mock | Chat slide-over panel (used globally via `useChatPanel`, was `nanolith-nav-chat-panel.html` pre-#2152) |
 | `primitive-nav-topbar.html` | component-mock | Top-bar primitive (global, was `nanolith-nav-topbar.html` pre-#2152) |
-| `librogame-runthrough-encounter-cheatsheet.html` | page-mock | `/library/[gameId]/play/[campaignId]/encounter` (gap-coverage 2026-05-12, PR #1056) |
 | `librogame-runthrough-error-states.html` | component-mock | Trasversale: chat (N1/N2) · translate (N3) · encounter — stream-timeout / OCR-fail / LLM-503 / segmentation-fail (PR #1056) |
-| `librogame-runthrough-game-detail.html` | page-mock | `/library/[gameId]` (libro variant, PR #1037) |
-| `librogame-runthrough-game-onboarding.html` | page-mock | `/library/[gameId]` (libro variant — prereq gate, gap-coverage 2026-05-12, PR #1056) |
 | `librogame-runthrough-glossary-editor.html` | component-mock | Glossary editor (canonical, SP6 jsx mirror eliminato in #2025) |
 | `librogame-runthrough-library-search.html` | component-mock | In-library search overlay (not page-level) |
-| `librogame-runthrough-play-session.html` | page-mock | `/library/[gameId]/play/[campaignId]` (4 stati v1 congelati + 3 stati SP8 companion: state-05 diary, state-06 paragrafi-drawer, state-07 end-campaign, brief 2026-05-30; jsx twin nuovo con 3 lab interattivi) |
 | `librogame-runthrough-quota-credits.html` | component-mock | Quota/credits overlay (global) |
-| `librogame-runthrough-resume-picker.html` | page-mock | `/library/[gameId]/play` |
-| `librogame-runthrough-session-end.html` | page-mock | `/sessions/[id]/live` (end-state) |
-| `librogame-runthrough-setup-chat.html` | page-mock | `/chat/new`, `/chat/[threadId]` (setup variant) |
-| `librogame-runthrough-setup-wizard.html` | page-mock | `/sessions/new`, `/library/[gameId]` campaign-setup drawer (PR #1037) |
-| `librogame-runthrough-translate-viewer.html` | page-mock | `/library/[gameId]/play/[campaignId]/translate` |
 
 ## Summary
 
 | Type | Count |
 |------|------:|
-| page-mock | 67 |
+| page-mock | 66 |
 | component-mock | 48 |
-| dev-fixture | 12 |
+| dev-fixture | 13 |
 | **Total** | **127** |
 
 > **Updated 2026-06-08** (#2025): 3 component-mock JSX Sara obsoleti eliminati

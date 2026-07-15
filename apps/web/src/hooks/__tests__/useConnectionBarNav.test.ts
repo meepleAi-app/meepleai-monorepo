@@ -46,7 +46,27 @@ describe('useConnectionBarNav', () => {
     expect(state.sourceEntityId).toBe('game-123');
   });
 
-  it('does nothing when isEmpty is true (create action — caller handles)', () => {
+  it('calls onCreateEntity with the entityType when isEmpty (create action)', () => {
+    const onCreateEntity = vi.fn();
+    const { result } = renderHook(() => useConnectionBarNav('game-123', onCreateEntity));
+    const pip = {
+      entityType: 'chat' as const,
+      count: 0,
+      label: 'Chat',
+      icon: vi.fn() as any,
+      isEmpty: true,
+    };
+    const rect = new DOMRect(100, 200, 50, 30);
+
+    act(() => result.current.handlePipClick(pip, rect));
+
+    expect(onCreateEntity).toHaveBeenCalledTimes(1);
+    expect(onCreateEntity).toHaveBeenCalledWith('chat');
+    // No DeckStack for the create action.
+    expect(useCascadeNavigationStore.getState().state).toBe('closed');
+  });
+
+  it('does nothing when isEmpty and no onCreateEntity provided (backward compatible)', () => {
     const { result } = renderHook(() => useConnectionBarNav('game-123'));
     const pip = {
       entityType: 'chat' as const,
@@ -59,7 +79,24 @@ describe('useConnectionBarNav', () => {
 
     act(() => result.current.handlePipClick(pip, rect));
 
-    const state = useCascadeNavigationStore.getState();
-    expect(state.state).toBe('closed'); // no action taken
+    expect(useCascadeNavigationStore.getState().state).toBe('closed'); // no action taken
+  });
+
+  it('does NOT call onCreateEntity when count >= 1 (opens DeckStack instead)', () => {
+    const onCreateEntity = vi.fn();
+    const { result } = renderHook(() => useConnectionBarNav('game-123', onCreateEntity));
+    const pip = {
+      entityType: 'agent' as const,
+      count: 2,
+      label: 'Agent',
+      icon: vi.fn() as any,
+      isEmpty: false,
+    };
+    const rect = new DOMRect(100, 200, 50, 30);
+
+    act(() => result.current.handlePipClick(pip, rect));
+
+    expect(onCreateEntity).not.toHaveBeenCalled();
+    expect(useCascadeNavigationStore.getState().state).toBe('deckStack');
   });
 });

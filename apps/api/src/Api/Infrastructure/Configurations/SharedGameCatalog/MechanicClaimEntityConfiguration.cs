@@ -20,9 +20,11 @@ internal sealed class MechanicClaimEntityConfiguration : IEntityTypeConfiguratio
                 "ck_mechanic_claims_status_range",
                 "status BETWEEN 0 AND 2");
 
+            // #2974: MechanicSection has 9 values (0-8). Keep in sync with the enum
+            // (MechanicSectionRangeConstraintTests guards against drift).
             t.HasCheckConstraint(
                 "ck_mechanic_claims_section_range",
-                "section BETWEEN 0 AND 5");
+                "section BETWEEN 0 AND 8");
 
             t.HasCheckConstraint(
                 "ck_mechanic_claims_display_order_non_negative",

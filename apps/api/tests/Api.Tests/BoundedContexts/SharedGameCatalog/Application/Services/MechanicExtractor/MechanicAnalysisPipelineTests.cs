@@ -182,6 +182,40 @@ public sealed class MechanicAnalysisPipelineTests
         result.Outcome.Should().Be(MechanicPipelineOutcome.AbortedCostCap);
     }
 
+    [Fact]
+    public async Task RunAsync_UsesMultiProviderFallbackPath_NotSingleShot()
+    {
+        // #2961: the ME pipeline must call the resilient multi-provider fallback completion
+        // (GenerateCompletionWithModelFallbackAsync), so a single provider outage (e.g. DeepSeek
+        // 402) can fall back instead of hard-aborting the analysis. Both LLM methods are mocked so
+        // the pipeline completes whichever it calls — the assertion is on WHICH one it called.
+        var llm = new Mock<ILlmService>();
+        var okResult = LlmCompletionResult.CreateSuccess(
+            WellFormedJson,
+            usage: new LlmUsage(10, 5, 15),
+            cost: new LlmCost { InputCost = 0.0001m, OutputCost = 0.0001m, ModelId = "test-model", Provider = "test-provider" });
+        llm
+            .Setup(s => s.GenerateCompletionWithModelAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<RequestSource>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(okResult);
+        llm
+            .Setup(s => s.GenerateCompletionWithModelFallbackAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<RequestSource>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(okResult);
+
+        var pipeline = BuildPipelineFrom(llm, MechanicValidationResult.Valid());
+
+        await pipeline.RunAsync(BuildRequest(MechanicSection.Summary), CancellationToken.None);
+
+        llm.Verify(
+            s => s.GenerateCompletionWithModelFallbackAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<RequestSource>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     // ---- fakes / builders -------------------------------------------------
 
     private static MechanicPipelineRequest BuildRequest(params MechanicSection[] sections) =>
@@ -216,12 +250,26 @@ public sealed class MechanicAnalysisPipelineTests
                     Provider = "test-provider"
                 });
 
+        // #2961: the pipeline now calls the fallback-enabled path; mock BOTH so behaviour tests
+        // are agnostic to which completion method the pipeline invokes.
         llm
             .Setup(s => s.GenerateCompletionWithModelAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<RequestSource>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(effectiveLlmResult);
+        llm
+            .Setup(s => s.GenerateCompletionWithModelFallbackAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<RequestSource>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(effectiveLlmResult);
 
+        return BuildPipelineFrom(llm, validation);
+    }
+
+    private static MechanicAnalysisPipeline BuildPipelineFrom(
+        Mock<ILlmService> llm,
+        MechanicValidationResult validation)
+    {
         var promptProvider = new Mock<IMechanicPromptProvider>();
         promptProvider.SetupGet(p => p.PromptVersion).Returns("v1.0.0");
         promptProvider.Setup(p => p.GetSystemPrompt()).Returns("system");

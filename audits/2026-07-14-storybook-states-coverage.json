@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-14T16:20:03.576Z",
+  "generatedAt": "2026-07-15T07:55:27.529Z",
   "generatedFrom": "admin-mockups/MOCKUPS_INDEX.md",
   "canonicalStates": [
     "default",
@@ -9,269 +9,19 @@
     "sse"
   ],
   "totalMappableEntries": 68,
-  "baselineMaxCoverageGaps": null,
+  "baselineMaxCoverageGaps": 3,
   "counts": {
-    "covered": 24,
-    "coverageGaps": 44,
+    "covered": 50,
+    "coverageGaps": 3,
     "contractViolations": 0,
-    "skippedObsolete": 0
+    "skippedObsolete": 1,
+    "skippedDeferred": 14
   },
   "coverageGaps": [
-    {
-      "mockup": "sp7-notifications-hub.html",
-      "routes": [
-        "/notifications"
-      ],
-      "reason": "no-story-path"
-    },
     {
       "mockup": "sp7-notifications-preferences.html",
       "routes": [
         "/notifications/preferences"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp3-accept-invite.html",
-      "routes": [
-        "/accept-invite",
-        "/invites/[token]"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp3-faq-enhanced.html",
-      "routes": [
-        "/faq",
-        "/games/[id]/faqs"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp3-how-it-works.html",
-      "routes": [
-        "/how-it-works"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp3-join.html",
-      "routes": [
-        "/join",
-        "/sessions/join"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp3-legal.html",
-      "routes": [
-        "/privacy",
-        "/terms",
-        "/cookies",
-        "/cookie-settings"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp3-shared-game-detail.html",
-      "routes": [
-        "/shared-games/[id]"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp3-shared-games.html",
-      "routes": [
-        "/shared-games"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-add-game-pdf-dedup.html",
-      "routes": [
-        "/library/private/add",
-        "/upload"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-agent-detail.html",
-      "routes": [
-        "/agents/[id]",
-        "/library/[gameId]/agent"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-agents-index.html",
-      "routes": [
-        "/agents",
-        "/editor/agent-proposals/*",
-        "/chat/agents/create"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-discover.html",
-      "routes": [
-        "/discover"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-game-detail.html",
-      "routes": [
-        "/games/[id]",
-        "/library/[gameId]",
-        "/private-games/[id]"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-game-nights-index.html",
-      "routes": [
-        "/game-nights"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-games-index.html",
-      "routes": [
-        "/games"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-kb-hub.html",
-      "routes": [
-        "/knowledge-base"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-library-desktop.html",
-      "routes": [
-        "/library"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-play-records-detail.html",
-      "routes": [
-        "/play-records/[id]"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-play-records-edit.html",
-      "routes": [
-        "/play-records/[id]/edit"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-play-records-index.html",
-      "routes": [
-        "/play-records"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-play-records-new.html",
-      "routes": [
-        "/play-records/new"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-play-records-stats.html",
-      "routes": [
-        "/play-records/stats"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-player-detail.html",
-      "routes": [
-        "/players/[id]",
-        "/players/[id]/{achievements"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-players-index.html",
-      "routes": [
-        "/players"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-session-catan-live.html",
-      "routes": [
-        "/sessions/[id]/live"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-session-catan-summary.html",
-      "routes": [
-        "/sessions/[id]"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-session-codenames-live.html",
-      "routes": [
-        "/sessions/[id]/live"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-session-codenames-summary.html",
-      "routes": [
-        "/sessions/[id]"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-session-paleo-live.html",
-      "routes": [
-        "/sessions/[id]/live"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-session-paleo-summary.html",
-      "routes": [
-        "/sessions/[id]"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-session-power-grid-live.html",
-      "routes": [
-        "/sessions/[id]/live"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-session-power-grid-summary.html",
-      "routes": [
-        "/sessions/[id]"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-session-puerto-rico-live.html",
-      "routes": [
-        "/sessions/[id]/live"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-session-puerto-rico-summary.html",
-      "routes": [
-        "/sessions/[id]"
       ],
       "reason": "no-story-path"
     },
@@ -283,60 +33,10 @@
       "reason": "no-story-path"
     },
     {
-      "mockup": "sp4-session-summary-skeleton.html",
-      "routes": [
-        "/sessions/[id]"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-session-wingspan-live.html",
-      "routes": [
-        "/sessions/[id]/live"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-session-wingspan-summary.html",
-      "routes": [
-        "/sessions/[id]"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-session-zombicide-live.html",
-      "routes": [
-        "/sessions/[id]/live"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-session-zombicide-summary.html",
-      "routes": [
-        "/sessions/[id]"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "sp4-sessions-index.html",
-      "routes": [
-        "/sessions",
-        "/games/[id]/sessions"
-      ],
-      "reason": "no-story-path"
-    },
-    {
       "mockup": "chat-fullscreen.html",
       "routes": [
         "/chat/[threadId]",
         "/chat/new"
-      ],
-      "reason": "no-story-path"
-    },
-    {
-      "mockup": "librogame-game-night-storyboard.html",
-      "routes": [
-        "/game-nights/[id]"
       ],
       "reason": "no-story-path"
     }

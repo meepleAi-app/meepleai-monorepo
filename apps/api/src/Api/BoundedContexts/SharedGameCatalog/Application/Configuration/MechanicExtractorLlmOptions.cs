@@ -6,11 +6,13 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Configuration;
 /// </summary>
 /// <remarks>
 /// Making the default config-driven (instead of a hardcoded <c>const</c>) lets an operator switch
-/// the provider without a redeploy when the wired default is unavailable — e.g. DeepSeek credit
-/// exhausted returns 402 on <c>chat/completions</c>, which the ME path surfaces as a hard abort
-/// (<c>Rejected</c>) with no automatic multi-provider fallback. Routing is by model name
-/// (<c>ILlmClient.SupportsModel</c>), so the model alone selects the provider. The defaults below
-/// preserve the pre-#2951 behaviour when the section is absent.
+/// the provider without a redeploy. Since #2961 the ME path also has automatic multi-provider
+/// fallback (<c>ILlmService.GenerateCompletionWithModelFallbackAsync</c>), so a transient failure
+/// of the wired default — e.g. DeepSeek credit exhausted returning 402 on <c>chat/completions</c> —
+/// retries the next provider in the DB-driven chain and only aborts (<c>AbortedLlmFailed</c>) if
+/// every provider fails. Routing is by model name (<c>ILlmClient.SupportsModel</c>), so the model
+/// alone selects the provider. The defaults below preserve the pre-#2951 behaviour when the section
+/// is absent.
 /// </remarks>
 public sealed class MechanicExtractorLlmOptions
 {

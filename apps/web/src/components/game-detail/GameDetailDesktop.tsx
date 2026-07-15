@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
+
+import { useRouter } from 'next/navigation';
 
 import { CustomCoverDialog } from '@/components/features/library/custom-cover/CustomCoverDialog';
 import { EditCoverOverlay } from '@/components/features/library/custom-cover/EditCoverOverlay';
@@ -9,11 +11,15 @@ import {
   ConnectionBar,
   buildGameConnectionPips,
 } from '@/components/ui/data-display/connection-bar';
-import type { MeepleCardMetadata } from '@/components/ui/data-display/meeple-card/types';
+import type {
+  MeepleCardMetadata,
+  MeepleEntityType,
+} from '@/components/ui/data-display/meeple-card/types';
 import { useGameSessionContributors } from '@/hooks/queries/useGameSessionContributors';
 import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
 import { useConnectionBarNav } from '@/hooks/useConnectionBarNav';
 
+import { getEntityCreateHref } from './entity-create-href';
 import { GameHero, type GameHeroMetaItem } from './GameHero';
 import { GameTabsPanel } from './GameTabsPanel';
 
@@ -47,7 +53,17 @@ export function GameDetailDesktop({
   isPrivateGame,
 }: GameDetailDesktopProps) {
   const { data: game, isLoading, isError } = useLibraryGameDetail(gameId);
-  const { handlePipClick } = useConnectionBarNav(gameId);
+  const router = useRouter();
+  // ConnectionBar "+" (empty pip) → create that entity. Per-entity target URLs
+  // live in the pure `getEntityCreateHref` helper (unit-tested in isolation).
+  const handleCreateEntity = useCallback(
+    (entityType: MeepleEntityType) => {
+      const href = getEntityCreateHref(entityType, gameId);
+      if (href) router.push(href);
+    },
+    [router, gameId]
+  );
+  const { handlePipClick } = useConnectionBarNav(gameId, handleCreateEntity);
   // #2036: Top session contributors strip. Public endpoint — runs even when
   // the user hasn't actually added the game to their library yet (the share
   // surfaces social proof before deciding to play). `enabled` gates on gameId

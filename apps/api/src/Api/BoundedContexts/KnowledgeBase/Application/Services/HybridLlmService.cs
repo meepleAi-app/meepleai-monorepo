@@ -430,6 +430,109 @@ internal class HybridLlmService : ILlmService
     }
 
     /// <inheritdoc/>
+    public async Task<LlmCompletionResult> GenerateCompletionWithModelFallbackAsync(
+        string preferredModel,
+        string systemPrompt,
+        string userPrompt,
+        RequestSource source = RequestSource.Manual,
+        int? maxTokens = null,
+        CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(preferredModel);
+        ArgumentException.ThrowIfNullOrWhiteSpace(systemPrompt);
+        ArgumentException.ThrowIfNullOrWhiteSpace(userPrompt);
+
+        var effectiveMaxTokens = maxTokens ?? DefaultMaxTokens;
+
+        // Issue #2961: the first attempt uses the explicit PREFERRED model (selects its provider
+        // via SupportsModel, like GenerateCompletionWithModelAsync). On a hard failure we then
+        // reuse the SAME DB-driven fallback engine as the tier path (ILlmProviderSelector.
+        // GetNextFallbackAsync) instead of duplicating the provider ordering — so a single
+        // provider outage (e.g. DeepSeek 402) does not abort the Mechanic Extractor pipeline.
+        var client = _clients.FirstOrDefault(c => c.SupportsModel(preferredModel));
+        if (client == null)
+        {
+            _logger.LogError("No client found supporting preferred model {Model}", preferredModel);
+            return LlmCompletionResult.CreateFailure($"No provider supports model: {preferredModel}");
+        }
+
+        var currentModel = preferredModel;
+        var attemptedProviders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        LlmCompletionResult? lastFailure = null;
+
+        while (client != null && attemptedProviders.Add(client.ProviderName))
+        {
+            // Review #2990: fail fast when the current provider's circuit is already OPEN, matching
+            // GenerateCompletionWithModelAsync. The first (preferred) client is selected via
+            // SupportsModel — bypassing the selector's circuit gating — so without this check a
+            // known-broken provider (e.g. DeepSeek tripped by sustained 402s) would incur a wasted
+            // live call on every section before falling back. Subsequent fallback hops are already
+            // circuit-gated by GetNextFallbackAsync, so this is a harmless recheck for them.
+            if (_circuitBreakerRegistry.GetState(client.ProviderName) == CircuitState.Open)
+            {
+                _logger.LogWarning(
+                    "Circuit breaker OPEN for {Provider}, skipping call and trying fallback", client.ProviderName);
+                lastFailure = LlmCompletionResult.CreateFailure($"Provider {client.ProviderName} circuit breaker open");
+            }
+            else
+            {
+                var stopwatch = Stopwatch.StartNew();
+                try
+                {
+                    _logger.LogInformation(
+                        "Generating completion with model {Model} via {Provider} (max_tokens={MaxTokens}, multi-provider fallback enabled)",
+                        currentModel, client.ProviderName, effectiveMaxTokens);
+
+                    var result = await client.GenerateCompletionAsync(
+                        currentModel, systemPrompt, userPrompt, DefaultTemperature, effectiveMaxTokens, ct)
+                        .ConfigureAwait(false);
+
+                    stopwatch.Stop();
+
+                    if (result.Success)
+                    {
+                        _providerSelector.RecordSuccess(client.ProviderName, currentModel, stopwatch.ElapsedMilliseconds, result);
+                        // Fire-and-forget cost logging (CancellationToken.None to survive request cancellation).
+                        _ = _costService.LogSuccessAsync(result, LlmUserContext.Anonymous, stopwatch.ElapsedMilliseconds, source, CancellationToken.None);
+                        return result;
+                    }
+
+                    _logger.LogWarning(
+                        "Model {Model} via {Provider} failed: {Error} — attempting provider fallback",
+                        currentModel, client.ProviderName, result.ErrorMessage);
+                    _providerSelector.RecordFailure(client.ProviderName, currentModel, stopwatch.ElapsedMilliseconds, result);
+                    lastFailure = result;
+                }
+                catch (Exception ex)
+                {
+                    stopwatch.Stop();
+                    _logger.LogError(ex, "Error generating completion with model {Model} via {Provider}", currentModel, client.ProviderName);
+                    _providerSelector.RecordFailure(client.ProviderName, currentModel, stopwatch.ElapsedMilliseconds);
+                    lastFailure = LlmCompletionResult.CreateFailure($"Error: {ex.Message}");
+                }
+            }
+
+            // Advance to the next available provider in the DB-driven fallback chain. The selector
+            // skips already-attempted providers and honours circuit-breaker/health/enabled state.
+            var nextSelection = await _providerSelector.GetNextFallbackAsync(client.ProviderName, attemptedProviders, ct)
+                .ConfigureAwait(false);
+            client = nextSelection.Client;
+            if (client != null)
+            {
+                currentModel = nextSelection.Decision.ModelId;
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "No additional fallback providers available after failures: {Providers}",
+                    string.Join(", ", attemptedProviders));
+            }
+        }
+
+        return lastFailure ?? LlmCompletionResult.CreateFailure("Provider error: No providers available");
+    }
+
+    /// <inheritdoc/>
     public async Task<LlmCompletionResult> GenerateMultimodalCompletionAsync(
         IReadOnlyList<LlmMessage> messages,
         RequestSource source = RequestSource.Manual,

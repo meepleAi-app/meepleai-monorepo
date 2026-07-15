@@ -96,7 +96,21 @@ URLs whereas global handlers use `${API_BASE}/api/v1/...`. Wildcard matches both
 | ✅ **Phase 2.5 hardening** | shipped + baselines captured Phase 4 prelude | 5% area | Desktop 1440x900 | continue-on-error | 12 (Library 9 + GameDetail 3) |
 | ✅ **Phase 4 prelude** (#2120) | shipped — wiring fix + baselines | 5% area | Desktop 1440x900 | continue-on-error | 12 |
 | ⏳ Phase 3 sweep (5 sub-issue) | post Phase 2.5 | 5% area | Desktop primary + Mobile opt-in | continue-on-error | ~470+ |
-| **Phase 4 hardening** | post Phase 3 | 5% area | Desktop + Mobile per opt-in | **blocking** after 14gg stable | Full matrix |
+| 🚫 **DESCOPED FROM CI (2026-07-15, #2063)** | local dev tool only | 5% area | Desktop 1440x900 | **removed from CI** | 12 win32 (local) |
+
+## Visual gate descope (2026-07-15, #2063)
+
+The Storybook visual pixel-gate was **removed from CI** and retained as a **local developer tool**. It never reached the planned `blocking` flip; here's why the trajectory stopped.
+
+**Root blocker — platform mismatch.** The committed baselines are `*-win32.png` (captured on Windows dev boxes via `pnpm test:storybook:snapshots`). CI runs on `ubuntu-latest`, where Playwright looks for `*-linux.png` that were never generated. So on CI the step could only ever find missing baselines — it produced no real signal and was `continue-on-error: true` the entire time (green theatre). Promoting it to blocking was structurally impossible without Linux baselines.
+
+**Reinforcing reasons.**
+- The previous full-page visual gate was **removed on 2026-05-20** precisely for font/locale/render-drift false positives. A scoped 5%-area pixel gate carries the same intrinsic fragility.
+- Structural anti-drift is already enforced by **5 blocking CI gates**: `lint:mockup-state-naming`, `lint:tokens:mockups`, `mockup-annotations:audit`, `lint:storybook-states`, `lint:bgg-mockups`. These make drift *structurally* detectable; the incremental value of a fragile pixel gate over them is low.
+
+**What is kept.** `playwright.storybook.config.ts` + `e2e/storybook/*.snapshot.spec.ts` + the 12 win32 baselines remain in-repo as a **local, opt-in** regression tool for Windows developers (`pnpm test:storybook:snapshots`).
+
+**To re-promote to a CI gate** (if ever): generate Linux baselines in a `mcr.microsoft.com/playwright` container (or a `workflow_dispatch` job running `--update-snapshots` on ubuntu that commits `*-linux.png`), rigenerate all 5 specs, then re-add the CI step without `continue-on-error`.
 
 ## Fix log — Phase 4 prelude IntlProvider hardening (#2120)
 

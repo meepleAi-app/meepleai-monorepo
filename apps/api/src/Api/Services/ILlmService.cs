@@ -97,6 +97,34 @@ internal interface ILlmService
         RequestSource source = RequestSource.Manual,
         int? maxTokens = null,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Issue #2961: Generate a completion with an explicit PREFERRED model and, on a hard
+    /// failure of that provider (e.g. a 402 credit-exhausted), automatically fall back to the
+    /// next available provider's default model via the DB-driven fallback chain, until one
+    /// succeeds or the chain is exhausted. Used by the Mechanic Extractor pipeline so a single
+    /// provider outage does not abort the whole analysis.
+    /// </summary>
+    /// <remarks>
+    /// Unlike <see cref="GenerateCompletionWithModelAsync"/> (single-shot, #4332 ensemble), this
+    /// retries across providers. The default interface implementation delegates to the single-shot
+    /// method (no fallback), preserving behaviour for mocks/fakes that do not override it;
+    /// <c>HybridLlmService</c> overrides it with the real multi-provider fallback loop.
+    /// </remarks>
+    /// <param name="preferredModel">Model ID tried first; selects the preferred provider via <c>SupportsModel</c>.</param>
+    /// <param name="systemPrompt">System-level instructions for the LLM.</param>
+    /// <param name="userPrompt">User's input prompt.</param>
+    /// <param name="source">Request source for cost tracking.</param>
+    /// <param name="maxTokens">Optional override for the provider's max_tokens cap.</param>
+    /// <param name="ct">Cancellation token.</param>
+    Task<LlmCompletionResult> GenerateCompletionWithModelFallbackAsync(
+        string preferredModel,
+        string systemPrompt,
+        string userPrompt,
+        RequestSource source = RequestSource.Manual,
+        int? maxTokens = null,
+        CancellationToken ct = default)
+        => GenerateCompletionWithModelAsync(preferredModel, systemPrompt, userPrompt, source, maxTokens, ct);
 }
 
 /// <summary>

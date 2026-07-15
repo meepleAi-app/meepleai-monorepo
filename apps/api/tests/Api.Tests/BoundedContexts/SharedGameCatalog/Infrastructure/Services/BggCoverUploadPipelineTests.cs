@@ -3,6 +3,8 @@ using Amazon.S3.Model;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Services.Pdf;
 using FluentAssertions;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Net;
@@ -156,5 +158,40 @@ public sealed class BggCoverUploadPipelineTests : IDisposable
     {
         Action act = () => new BggCoverUploadPipeline(_mockS3Client.Object, _options, null!);
         act.Should().Throw<ArgumentNullException>().WithParameterName("logger");
+    }
+}
+
+[Trait("Category", "Unit")]
+[Trait("BoundedContext", "SharedGameCatalog")]
+public sealed class BggCoverUploadPipelineDiTests
+{
+    [Fact]
+    public void AddSharedGameCatalogContext_RegistersBggCoverUploadPipeline()
+    {
+        var config = new Microsoft.Extensions.Configuration.ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["S3_ENDPOINT"] = "https://test.r2.cloudflarestorage.com",
+                ["S3_ACCESS_KEY"] = "ak",
+                ["S3_SECRET_KEY"] = "sk",
+                ["S3_BUCKET_NAME"] = "bucket",
+                ["S3_REGION"] = "auto",
+            })
+            .Build();
+
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        // The pipeline factory resolves IConfiguration from DI
+        // (sp.GetRequiredService<IConfiguration>()), so the built config MUST be
+        // registered on the same collection — otherwise resolution throws
+        // "No service for type 'IConfiguration'" instead of returning the pipeline.
+        services.AddSingleton<Microsoft.Extensions.Configuration.IConfiguration>(config);
+        Api.BoundedContexts.SharedGameCatalog.Infrastructure.DependencyInjection.SharedGameCatalogServiceExtensions
+            .RegisterBggCoverUploadPipelineForTests(services);
+
+        using var provider = services.BuildServiceProvider();
+        var pipeline = provider.GetService<Api.BoundedContexts.SharedGameCatalog.Application.Services.IBggCoverUploadPipeline>();
+
+        pipeline.Should().NotBeNull();
+        pipeline.Should().BeOfType<BggCoverUploadPipeline>();
     }
 }

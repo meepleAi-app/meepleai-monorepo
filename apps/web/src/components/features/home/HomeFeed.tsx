@@ -140,6 +140,7 @@ export function HomeFeed() {
                   eventId={night.id}
                   title={night.title}
                   inviterName={night.organizerName}
+                  disabled={rsvpMutation.isPending && rsvpMutation.variables?.id === night.id}
                   onConfirm={() => rsvpMutation.mutate({ id: night.id, response: 'Accepted' })}
                   onDecline={() => rsvpMutation.mutate({ id: night.id, response: 'Declined' })}
                 />

@@ -14,7 +14,7 @@ Priorità dei gap, dal più al meno critico:
 
 1. 🔴 **CRITICO — §5 dichiara il falso post-ADR-051.** Il testo attuale afferma: *«I contenuti vengono elaborati esclusivamente per il tuo uso personale e non vengono condivisi con altri utenti senza il tuo consenso.»* Ma le **comprehension card** derivate dal manuale sono **pubblicate e visibili ad altri utenti** (login-gated). La clausola è **fattualmente inesatta** per la feature live → rischio di dichiarazione contrattuale non veritiera. *(Nygard: "il documento descrive un sistema che non è più quello in produzione".)*
 2. 🔴 **CRITICO — nessuna clausola sulla generazione/pubblicazione di contenuti derivati.** Il ToS non disciplina che MeepleAI **produce e pubblica** contenuto derivato dal manuale (riformulazione + citazione). Manleva (§5) e disclaimer AI (§6) coprono *upload* e *risposte in chat*, **non** la pubblicazione delle card. *(Wiegers: "requisito non tracciato: la responsabilità del contenuto pubblicato da MeepleAI, non dall'utente".)*
-3. 🟡 **MAJOR — incoerenza canali takedown/DMCA.** ToS → `legal@meepleai.com`; pagina Takedown + ADR-051 → `takedown@meepleai.app`; **domini divergenti** (.com vs .app). Il ToS non rimanda alla pagina `/legal/takedown`. *(Hightower: "canale di contatto operativo non deve avere due indirizzi su due domini".)*
+3. ✅ **RISOLTO 2026-07-15 — incoerenza canali takedown/DMCA.** Il ToS §5 usava `legal@meepleai.com`; deciso operativamente il canale ufficiale **`takedown@meepleai.app`** (già in policy/ADR-051/pagina Takedown) e il ToS §5 (`it.json`/`en.json`) è stato allineato + rimanda a `/legal/takedown`. `abuse@meepleai.app` (User-Agent BGG, ADR-059) resta canale distinto. *(Hightower: "canale di contatto operativo non deve avere due indirizzi su due domini".)*
 4. 🟡 **MAJOR — disallineamento temporale + re-consenso.** ToS datato 2026-03-09, anteriore ad ADR-051 (2026-04-23): non menziona il Mechanic Extractor né le card. La modifica è **sostanziale** → valutare re-consenso versionato (già esiste il meccanismo per l'AI, §6).
 5. 🟢 **MINOR — refuso §7** («funzionalità e funzionalità») + **fair use assente** dal ToS (descritto solo nella pagina Takedown).
 6. 🟢 **MINOR — clausola "fonti pubblicamente disponibili"** richiesta da ADR-059 §8.5.6 (catalogo) — trattabile nella stessa revisione.
@@ -41,8 +41,9 @@ Priorità dei gap, dal più al meno critico:
 - **[DA VALIDARE — domanda 6]:** l'estensione (ii) è opponibile? La responsabilità per il contenuto *generato da MeepleAI* può essere manlevata dall'utente, o resta in capo a MeepleAI?
 
 **Conformità DMCA / takedown** — **unificare il canale:**
-> Le notifiche di rimozione per violazione del diritto d'autore possono essere inviate tramite la pagina [Richiesta di rimozione](/legal/takedown) o all'indirizzo **`[CANALE UFFICIALE — DA CONFERMARE]`**.
-- **[DA VALIDARE — domande 4 e 5]:** (a) quale mailbox/dominio è quello ufficiale (`takedown@meepleai.app` come da policy/ADR-051, oppure `legal@meepleai.com` come da resto del sito .com)? (b) La procedura notice-and-takedown attuale è sufficiente per DSA (UE) e DMCA §512 (US)? Servono counter-notice, agente designato, contenuti minimi della notifica?
+> Le notifiche di rimozione per violazione del diritto d'autore possono essere inviate tramite la pagina [Richiesta di rimozione](/legal/takedown) o all'indirizzo **takedown@meepleai.app**.
+- ✅ **DECISO 2026-07-15 (operativo):** canale ufficiale takedown = **`takedown@meepleai.app`**. Il ToS §5 (`it.json`/`en.json`) è **già stato allineato** (era `legal@meepleai.com`). `abuse@meepleai.app` resta un canale distinto (User-Agent BGG, ADR-059); il contatto generale §12 resta `legal@meepleai.com`.
+- **[DA VALIDARE — domanda 4]:** la procedura notice-and-takedown attuale (form `/legal/takedown` + email + SLA 3/10 gg + soppressione immediata) è sufficiente per DSA (UE) e DMCA §512 (US)? Servono counter-notice, agente designato, contenuti minimi della notifica?
 
 ---
 
@@ -115,7 +116,7 @@ Quando il consulente ha validato/corretto le clausole, l'implementazione tocca:
 |---|---|---|
 | §5 | trasferimento responsabilità via dichiarazione | 1 |
 | §5-bis | soglia citazione (25 parole sì/no nel ToS) | 2, 3 |
-| §5 | canale + sufficienza notice-and-takedown | 4, 5 |
+| §5 | canale (✅ deciso: `takedown@meepleai.app`, ToS allineato) + sufficienza notice-and-takedown | 4 |
 | §5 | estensione manleva alla pubblicazione | 6 |
 | §6/§8 | responsabilità contenuto AI pubblicato | 7 |
 | §5/§5-bis | re-consenso per modifica sostanziale | 8 |

@@ -305,6 +305,57 @@ describe('filterRows', () => {
   });
 });
 
+// ─── filterRows — date range edge cases (Task A7 prerequisite fix) ────────
+
+describe('filterRows date range edge cases', () => {
+  it('datePreset custom includes a session started later the same day as dateTo (end-of-day upper bound)', () => {
+    const sameDayLateRow = toHistoryRow(
+      makeDto({ id: 'same-day', startedAt: '2026-06-01T22:30:00Z' }),
+      GAME_NAME_MAP,
+      UNKNOWN_LABEL
+    );
+
+    const result = filterRows(
+      [sameDayLateRow],
+      baseFilterState({ datePreset: 'custom', dateFrom: '2026-05-01', dateTo: '2026-06-01' }),
+      NOW
+    );
+
+    expect(result.map(r => r.id)).toEqual(['same-day']);
+  });
+
+  it('datePreset custom excludes a session started the day after dateTo', () => {
+    const nextDayRow = toHistoryRow(
+      makeDto({ id: 'next-day', startedAt: '2026-06-02T00:30:00Z' }),
+      GAME_NAME_MAP,
+      UNKNOWN_LABEL
+    );
+
+    const result = filterRows(
+      [nextDayRow],
+      baseFilterState({ datePreset: 'custom', dateFrom: '2026-05-01', dateTo: '2026-06-01' }),
+      NOW
+    );
+
+    expect(result).toEqual([]);
+  });
+
+  it('datePreset last30 excludes a session with a future startedAt beyond now', () => {
+    // NOW = 2026-07-15T12:00:00Z; a session "started" 5 days in the future
+    // is within the last-30-days lower bound but must still be excluded by
+    // the (now) upper bound.
+    const futureRow = toHistoryRow(
+      makeDto({ id: 'future', startedAt: '2026-07-20T00:00:00Z' }),
+      GAME_NAME_MAP,
+      UNKNOWN_LABEL
+    );
+
+    const result = filterRows([futureRow], baseFilterState({ datePreset: 'last30' }), NOW);
+
+    expect(result).toEqual([]);
+  });
+});
+
 // ─── sortRows ───────────────────────────────────────────────────────────────
 
 describe('sortRows', () => {

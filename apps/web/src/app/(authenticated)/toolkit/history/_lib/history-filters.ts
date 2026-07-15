@@ -107,17 +107,32 @@ export function toHistoryRow(
   };
 }
 
-/** Resolves a `[start, end]` date bound (inclusive) for the given preset, or `[null, null]` when unbounded. */
+/**
+ * Resolves a `[start, end]` date bound (inclusive) for the given preset, or
+ * `[null, null]` when unbounded.
+ *
+ * Two fixes applied here (Issue #3006, Task A7 prerequisite):
+ *   1. Relative presets (`last30`/`last90`/`lastYear`) are capped at `now` —
+ *      without an upper bound, a future-dated session (e.g. a clock-skewed
+ *      or accidentally-future `startedAt`) would pass the filter.
+ *   2. A custom `dateTo` (a `YYYY-MM-DD` string) resolves to the END of that
+ *      day (`23:59:59.999`), not its start — otherwise `new Date(dateTo)`
+ *      parses to `00:00:00.000Z` and same-day sessions are excluded from
+ *      the range they were explicitly selected into.
+ */
 function resolveDateRange(f: HistoryFilterState, now: Date): [Date | null, Date | null] {
   switch (f.datePreset) {
     case 'last30':
-      return [new Date(now.getTime() - 30 * MS_PER_DAY), null];
+      return [new Date(now.getTime() - 30 * MS_PER_DAY), now];
     case 'last90':
-      return [new Date(now.getTime() - 90 * MS_PER_DAY), null];
+      return [new Date(now.getTime() - 90 * MS_PER_DAY), now];
     case 'lastYear':
-      return [new Date(now.getTime() - 365 * MS_PER_DAY), null];
+      return [new Date(now.getTime() - 365 * MS_PER_DAY), now];
     case 'custom':
-      return [f.dateFrom ? new Date(f.dateFrom) : null, f.dateTo ? new Date(f.dateTo) : null];
+      return [
+        f.dateFrom ? new Date(f.dateFrom) : null,
+        f.dateTo ? new Date(`${f.dateTo}T23:59:59.999Z`) : null,
+      ];
     case 'all':
     default:
       return [null, null];

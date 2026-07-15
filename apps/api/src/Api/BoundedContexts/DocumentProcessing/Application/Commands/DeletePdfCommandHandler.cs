@@ -1,6 +1,9 @@
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
+using Api.BoundedContexts.EntityRelationships.Domain.Aggregates;
+using Api.BoundedContexts.EntityRelationships.Domain.Enums;
+using Api.BoundedContexts.EntityRelationships.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Services;
 using Api.Services.Exceptions;
@@ -16,6 +19,7 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
     private readonly MeepleAiDbContext _db;
     private readonly IBlobStorageService _blobStorageService;
     private readonly IAiResponseCacheService _cacheService;
+    private readonly IEntityLinkRepository _entityLinkRepository;
     private readonly IMediator? _mediator;
     private readonly ILogger<DeletePdfCommandHandler> _logger;
 
@@ -24,11 +28,13 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
         IBlobStorageService blobStorageService,
         IAiResponseCacheService cacheService,
         ILogger<DeletePdfCommandHandler> logger,
+        IEntityLinkRepository entityLinkRepository,
         IMediator? mediator = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
         _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
+        _entityLinkRepository = entityLinkRepository ?? throw new ArgumentNullException(nameof(entityLinkRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _mediator = mediator;
     }
@@ -51,6 +57,27 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
 
             var gameId = pdfDoc.SharedGameId;
             var coverR2Key = pdfDoc.CoverR2Key;
+
+            var storageGameIdForUnlink = (pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId)?.ToString() ?? string.Empty;
+
+            // Issue #2949 (DEC-6): ref-counting delete. A PDF may be linked from
+            // multiple games (Task 2 of #2943 introduced dedup reuse via EntityLink).
+            // Deleting the record/blob/vectors while another game still links it would
+            // orphan those games' KB cards. Gate the destructive path on the last link.
+            var linkCount = await _entityLinkRepository
+                .GetCountForEntityAsync(MeepleEntityType.KbCard, pdfGuid, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (linkCount > 1)
+            {
+                await RemoveCallerLinkAsync(pdfGuid, pdfDoc.SharedGameId, cancellationToken).ConfigureAwait(false);
+
+                _logger.LogInformation(
+                    "PDF {PdfId} still referenced by {RemainingLinks} game link(s) after unlink — record/blob/vectors preserved",
+                    pdfId, linkCount - 1);
+
+                return new PdfDeleteResult(true, "PDF unlinked from game (still referenced by other games)", storageGameIdForUnlink);
+            }
 
             // Delete associated vector document and vectors from pgvector
             await DeleteVectorDocumentAsync(pdfGuid, pdfId, cancellationToken).ConfigureAwait(false);
@@ -126,6 +153,41 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
 
         _db.VectorDocuments.Remove(vectorDoc);
         _logger.LogInformation("Removed vector document for PDF {PdfId}", pdfId);
+    }
+
+    /// <summary>
+    /// Removes only the calling game's Game→KbCard link (the last-link case is
+    /// handled by the destructive path in <see cref="Handle"/>). Used when other
+    /// games still reference this PDF, so the record must survive.
+    /// </summary>
+    private async Task RemoveCallerLinkAsync(Guid pdfGuid, Guid? callerGameId, CancellationToken cancellationToken)
+    {
+        if (callerGameId is null || callerGameId.Value == Guid.Empty)
+        {
+            // No owning-game link to remove for this call; the record survives
+            // because other links exist (linkCount > 1 already established).
+            return;
+        }
+
+        var links = await _entityLinkRepository
+            .GetForEntityAsync(
+                MeepleEntityType.KbCard,
+                pdfGuid,
+                linkType: EntityLinkType.RelatedTo,
+                cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+
+        var callerLink = links.FirstOrDefault(l =>
+            l.SourceEntityType == MeepleEntityType.Game &&
+            l.SourceEntityId == callerGameId.Value &&
+            l.TargetEntityType == MeepleEntityType.KbCard &&
+            l.TargetEntityId == pdfGuid);
+
+        if (callerLink is not null)
+        {
+            _entityLinkRepository.Remove(callerLink);
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
     }
 
     /// <summary>

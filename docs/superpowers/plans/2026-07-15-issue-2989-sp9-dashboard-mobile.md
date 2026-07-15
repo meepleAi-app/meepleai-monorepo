@@ -412,7 +412,7 @@ git commit -m "feat(home): mount Recenti section + mobile-first container (#2989
 - ✅ **Task 1** — `PendingRsvpCard` (commit `4859045a9`, 3 test pass).
 - ✅ **Task 2** — `RecentSection` (commit `0dcba69fa`, 3 test pass).
 - ✅ **Task 3** — HomeFeed mobile-first + Recenti mounted (commit `89c591eaf`, typecheck pass). Test HomeFeed dedicato saltato (deviazione: RecentSection già testato in isolamento).
-- ⛔ **Task 4 — BLOCKED (backend gate)**: il DTO `upcoming` (`api.gameNights.getUpcoming` → `GameNightDto[]`) NON espone `viewerRsvpStatus` né `inviterName`. Servono prima: (1) BE — estendere la query/DTO upcoming con lo stato RSVP del viewer + nome invitante (CQRS: query → DTO → handler → test); (2) FE — schema zod + wire `PendingRsvpCard` nella sezione "Serate di Gioco". Tracciato come sotto-task backend separato. `PendingRsvpCard` è pronto e testato, riusabile appena il campo esiste.
+- ✅ **Task 4 — DONE (backend + FE, commit `33d58472d`)**: esteso il DTO `upcoming` con `ViewerRsvpStatus` — query +`Guid? UserId`, mapper +`viewerId` (`gameNight.GetRsvp(viewerId)?.Status`), endpoint estrae `httpContext.User.GetUserId()`. Mapper test 3/3 pass (`GameNightMapperHelperTests`). FE: schema zod +`viewerRsvpStatus`; HomeFeed rende `PendingRsvpCard` per le serate `viewerRsvpStatus === 'Pending'` (Conferma→`Accepted` / Declina→`Declined` via `useRsvpGameNight`). **Screen A end-to-end completo.** Follow-up minore: stato offline (disabled) del `PendingRsvpCard` non ancora wired in HomeFeed.
 
 ## Scope note
 

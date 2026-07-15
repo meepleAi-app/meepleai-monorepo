@@ -69,10 +69,8 @@ import {
   type RejectMechanicClaimRequest,
   type SuppressMechanicAnalysisRequest,
 } from '../../schemas/mechanic-analyses.schemas';
-import * as MechanicExtractorSchemas from '../../schemas/mechanic-extractor.schemas';
 
 import type { HttpClient } from '../../core/httpClient';
-import type * as MechanicExtractorTypes from '../../schemas/mechanic-extractor.schemas';
 
 // ========== Shared Game Documents Types (Issue #119) ==========
 
@@ -489,62 +487,6 @@ export function createAdminContentClient(http: HttpClient) {
         z.object({ html: z.string() })
       );
       return result.html;
-    },
-
-    // ========== Mechanic Extractor ==========
-
-    async getMechanicDraft(
-      sharedGameId: string,
-      pdfDocumentId: string
-    ): Promise<MechanicExtractorTypes.MechanicDraftDto | null> {
-      return http.get(
-        `/api/v1/admin/mechanic-extractor/draft?sharedGameId=${sharedGameId}&pdfDocumentId=${pdfDocumentId}`,
-        MechanicExtractorSchemas.MechanicDraftDtoSchema
-      );
-    },
-
-    async saveMechanicDraft(
-      request: MechanicExtractorTypes.SaveMechanicDraftRequest
-    ): Promise<MechanicExtractorTypes.MechanicDraftDto> {
-      const result = await http.post(
-        '/api/v1/admin/mechanic-extractor/draft',
-        request,
-        MechanicExtractorSchemas.MechanicDraftDtoSchema
-      );
-      if (!result) throw new Error('Failed to save mechanic draft');
-      return result;
-    },
-
-    async aiAssistMechanicDraft(
-      request: MechanicExtractorTypes.AiAssistRequest
-    ): Promise<MechanicExtractorTypes.AiAssistResultDto> {
-      const result = await http.post(
-        '/api/v1/admin/mechanic-extractor/ai-assist',
-        request,
-        MechanicExtractorSchemas.AiAssistResultDtoSchema
-      );
-      if (!result) throw new Error('AI assist failed');
-      return result;
-    },
-
-    async acceptMechanicDraft(
-      request: MechanicExtractorTypes.AcceptDraftRequest
-    ): Promise<MechanicExtractorTypes.MechanicDraftDto> {
-      const result = await http.post(
-        '/api/v1/admin/mechanic-extractor/accept-draft',
-        request,
-        MechanicExtractorSchemas.MechanicDraftDtoSchema
-      );
-      if (!result) throw new Error('Failed to accept draft');
-      return result;
-    },
-
-    async finalizeMechanicAnalysis(
-      request: MechanicExtractorTypes.FinalizeRequest
-    ): Promise<unknown> {
-      const result = await http.post('/api/v1/admin/mechanic-extractor/finalize', request);
-      if (!result) throw new Error('Failed to finalize mechanic analysis');
-      return result;
     },
 
     // ========== Mechanic Analyses (M1.2 async pipeline, ADR-051) ==========

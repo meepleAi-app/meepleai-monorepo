@@ -2,28 +2,11 @@
  * @vitest-environment jsdom
  */
 import { render, screen, within } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 import type { ValidationDashboardRowDto } from '@/lib/api/schemas/admin-mechanic-extractor-validation.schemas';
 
 import { DashboardTable } from '../DashboardTable';
-
-// Next.js Link — provide a minimal pass-through so href assertions work in jsdom.
-vi.mock('next/link', () => ({
-  __esModule: true,
-  default: ({
-    href,
-    children,
-    ...rest
-  }: {
-    href: string;
-    children: React.ReactNode;
-  } & React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
-    <a href={href} {...rest}>
-      {children}
-    </a>
-  ),
-}));
 
 function row(
   overrides: Partial<ValidationDashboardRowDto> &
@@ -121,24 +104,5 @@ describe('DashboardTable', () => {
     expect(rowTexts[1]).toContain('Mid');
     expect(rowTexts[2]).toContain('Low');
     expect(rowTexts[3]).toContain('NullScore');
-  });
-
-  it('renders a "View" link with href containing the sharedGameId query parameter', () => {
-    const rows: ValidationDashboardRowDto[] = [
-      row({
-        sharedGameId: '11111111-1111-1111-1111-111111111111',
-        name: 'Wingspan',
-        status: 'Certified',
-      }),
-    ];
-
-    render(<DashboardTable rows={rows} />);
-
-    const link = screen.getByTestId('dashboard-row-view-link') as HTMLAnchorElement;
-    expect(link).toHaveTextContent(/View/i);
-    expect(link.getAttribute('href')).toContain(
-      'sharedGameId=11111111-1111-1111-1111-111111111111'
-    );
-    expect(link.getAttribute('href')).toContain('/admin/knowledge-base/mechanic-extractor/review');
   });
 });

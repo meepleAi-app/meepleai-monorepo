@@ -8,7 +8,6 @@
  *
  * Usage:
  *   if (!isMechanicValidationEnabled()) notFound();
- *   <FeatureFlagGate>{...}</FeatureFlagGate>
  */
 export function isMechanicValidationEnabled(): boolean {
   return process.env.NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED === 'true';

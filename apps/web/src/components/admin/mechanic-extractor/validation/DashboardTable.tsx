@@ -10,14 +10,11 @@
  *  - status badge (color matches MetricsCard's cert→color mapping)
  *  - overallScore formatted `0%` (or `—` when null/NaN)
  *  - lastComputedAt formatted short date (or `—` when null)
- *  - "View" link to the review page
  */
 
 'use client';
 
 import { useMemo } from 'react';
-
-import Link from 'next/link';
 
 import { Badge } from '@/components/ui/data-display/badge';
 import {
@@ -28,7 +25,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/data-display/table';
-import { Button } from '@/components/ui/primitives/button';
 import type {
   CertificationStatus,
   ValidationDashboardRowDto,
@@ -94,12 +90,6 @@ function sortRows(rows: ReadonlyArray<ValidationDashboardRowDto>): ValidationDas
   });
 }
 
-function reviewHref(sharedGameId: string): string {
-  return `/admin/knowledge-base/mechanic-extractor/review?sharedGameId=${encodeURIComponent(
-    sharedGameId
-  )}`;
-}
-
 // ──────────────────────────────────────────────────────────────────────────
 // Component
 // ──────────────────────────────────────────────────────────────────────────
@@ -134,7 +124,6 @@ export function DashboardTable({ rows }: DashboardTableProps) {
             <TableHead>Status</TableHead>
             <TableHead>Overall</TableHead>
             <TableHead>Last computed</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -155,21 +144,6 @@ export function DashboardTable({ rows }: DashboardTableProps) {
               </TableCell>
               <TableCell data-testid="dashboard-row-last-computed">
                 {formatShortDate(row.lastComputedAt)}
-              </TableCell>
-              <TableCell className="text-right">
-                <Button
-                  asChild
-                  variant="link"
-                  className="h-auto p-0 text-amber-600 dark:text-amber-400"
-                >
-                  <Link
-                    data-testid="dashboard-row-view-link"
-                    href={reviewHref(row.sharedGameId)}
-                    aria-label={`View ${row.name}`}
-                  >
-                    View
-                  </Link>
-                </Button>
               </TableCell>
             </TableRow>
           ))}

@@ -1,0 +1,25 @@
+# Opt-in GPU overlay for the embedding-service (issue #539 — seed-index bake acceleration).
+#
+# Gives the embedding-service access to the host NVIDIA GPU so the
+# nomic/sentence-transformers embedding runs on the GPU instead of saturating CPU
+# cores (~6x faster `make seed-index` bake on a GPU host).
+#
+# This is a STANDALONE opt-in overlay: it is NOT referenced by the default compose
+# stack, so `make dev` is unaffected on machines without an NVIDIA GPU. A
+# `driver: nvidia` reservation would make `make dev` FAIL if merged into a shared
+# default compose file — that is why it lives here as a separate overlay you opt into.
+#
+# Apply it explicitly only when you have an NVIDIA GPU + container runtime:
+#
+#   docker compose -p meepleai \
+#     -f docker-compose.yml -f compose.dev.yml -f compose.gpu.local.yml \
+#     up -d --no-deps embedding-service
+services:
+  embedding-service:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

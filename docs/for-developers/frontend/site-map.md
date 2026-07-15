@@ -22,9 +22,9 @@ La webapp è un **Next.js App Router** (`apps/web/src/app`). Le route sono parti
 |---|---|---|---|---|
 | `(public)` | nessuno (root pubblici) | `PublicLayout` (UnifiedHeader + PublicFooter) | nessuna (accesso libero) | ~30 |
 | `(auth)` | nessuno | `<main>` + `AuthLayout` per-pagina (card centrata) | anonima (flussi di login/registrazione) | 10 |
-| `(authenticated)` | nessuno | `UserShellClient` → `DesktopShell` | client-side (auth richiesta) | ~90 |
-| `(chat)` | `/chat` | `UserShellClient` → `DesktopShell` (sibling di authenticated) | client-side (auth richiesta) | 4 |
-| `admin` → `(dashboard)` | `/admin` | `AdminShell` (tema scuro) | cookie view-mode + `RequireRole(['Admin'])` | ~90 |
+| `(authenticated)` | nessuno | `UserShellClient` → `DesktopShell` | **`proxy.ts` edge** (redirect unauth → `/login`) + client (`RequireRole`/`useAuth` per-pagina) | ~90 |
+| `(chat)` | `/chat` | `UserShellClient` → `DesktopShell` (sibling di authenticated) | **`proxy.ts` edge** (redirect unauth → `/login`) | 4 |
+| `admin` → `(dashboard)` | `/admin` | `AdminShell` (tema scuro) | **`proxy.ts` edge** (redirect non-admin → `/`) + cookie view-mode + `RequireRole(['Admin'])` | ~90 |
 | root | `/join/[token]`, `/offline` | proprio wrapper | variabile | 2 |
 
 ```mermaid
@@ -96,14 +96,20 @@ Chrome condiviso da `(authenticated)` e `(chat)`. Composizione e regole di visib
 
 ## 3. Modello di protezione delle route (guard)
 
-> ⚠️ **Fatto rilevante**: **non esiste `middleware.ts` di Next** in `apps/web`. La "Layer 1 middleware" citata nel docstring di `RequireRole` è **assente**. La protezione delle route è **interamente client-side**.
+> ℹ️ **Nota di convenzione**: il progetto usa **Next.js 16.2.6**, che ha rinominato la convenzione del middleware da `middleware.ts` a **`proxy.ts`**. Il file è **`apps/web/src/proxy.ts`** (esporta `proxy(request)` + `config.matcher`) — è il middleware edge a tutti gli effetti. Cercare `middleware.ts` dà esito negativo, ma la protezione server-side **esiste** ed è in `proxy.ts`. La "Layer 1 middleware" citata nel docstring di `RequireRole` è quindi **corretta**.
+
+La protezione è una **difesa a due livelli**:
 
 | Livello | Meccanismo | Comportamento |
 |---|---|---|
-| Gruppo `admin` | `admin/(dashboard)/layout.tsx` | (a) server: legge il cookie `meepleai_view_mode`; se `'user'` → `redirect('/')` (nessun flash); (b) client: `RequireRole allowedRoles={['Admin']}` |
-| `RequireRole` (`components/auth/RequireRole.tsx`) | client | `getCurrentUser()` → se non-auth `router.replace('/login?from=<path>')`; se ruolo errato `router.replace('/')`; spinner **"Verifica autorizzazioni..."** durante il check |
-| Pagine `(authenticated)` | `AuthProvider` / `useAuth` + redirect per-pagina | variabile per pagina (dettaglio nei cluster §8) |
-| Navbar | `filterNavItemsByRole` | filtra le voci (vedi §4) — non protegge la route, solo la sua *visibilità* nel menu |
+| **Layer 1 — edge/server** | `apps/web/src/proxy.ts` (`config.matcher` = tutto tranne `api`/`_next`/asset statici) | Valida il **session cookie** `meepleai_session` server-side chiamando `/api/v1/auth/me` (cache 2 min, timeout 5s). Poi: (a) **unauth su route protetta** → `redirect('/login?from=<path>')`; (b) **non-admin su route admin** → `redirect('/')`; (c) auth su `/login`\|`/register` → redirect a `/library` (o `/admin`); (d) home autenticata → `/library`\|`/admin`. Aggiunge gli header di sicurezza (CSP, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin`, …). |
+| **Layer 2 — client** | `RequireRole` (`components/auth/RequireRole.tsx`) | `getCurrentUser()` → se non-auth `router.replace('/login?from=<path>')`; se ruolo errato `router.replace('/')`; spinner **"Verifica autorizzazioni..."** durante il check. Usato dal layout `admin` e da singole pagine (es. `/dashboard`, `/upload` con `['Admin','Editor']`). |
+| Gruppo `admin` | `admin/(dashboard)/layout.tsx` | Oltre al Layer 1 (redirect non-admin): (a) server legge il cookie `meepleai_view_mode`; se `'user'` → `redirect('/')`; (b) client `RequireRole allowedRoles={['Admin']}`. |
+| Navbar | `filterNavItemsByRole` | filtra le voci (vedi §4) — non protegge la route, solo la sua *visibilità* nel menu. |
+
+**Set delle route protette**: `apps/web/src/lib/routing/protected-routes.ts` (`PROTECTED_ROUTES`, matching boundary-aware). Include tutti i top-level `(authenticated)` + `(chat)` + `/admin`; `ADMIN_ONLY_ROUTES = ['/admin']`; `PUBLIC_ROUTES` sottrae le share pubbliche (`/library/shared`, `/game-nights/shared`, `/play-records/shared`) così i guest le raggiungono.
+
+**Granularità dei ruoli**: il Layer 1 (`proxy.ts`) distingue solo **autenticato vs admin**. I ruoli più fini (es. **editor** su `/editor`) sono applicati **solo lato client** (`RequireRole minRole`/`filterNavItemsByRole`) e dal backend (403) — l'edge non li enforce.
 
 **Gerarchia ruoli**: `superadmin ⊇ admin ⊇ editor ⊇ user`. Il `SuperAdmin` eredita ogni permesso (Issue #372).
 
@@ -899,7 +905,7 @@ _Nota: `/verification-success` e `/welcome` instradano solo verso `/library` (es
 
 ## Area autenticata — `(authenticated)`
 
-Prodotto post-login. Shell: `UserShellClient → DesktopShell` (AppTopBar / MobileBottomBar / SideDrawer). Protezione client-side via `AuthProvider`/redirect per-pagina.
+Prodotto post-login. Shell: `UserShellClient → DesktopShell` (AppTopBar / MobileBottomBar / SideDrawer). Protezione a 2 livelli: `proxy.ts` (edge, redirect unauth → /login) + `RequireRole`/`useAuth` client per-pagina.
 
 ### Dashboard, discover, onboarding, profilo & notifiche
 _Route-group: `(authenticated)` · 9 pagine_
@@ -1131,7 +1137,7 @@ _Route-group: `(authenticated)` · 16 pagine_
 | Route | Shell | Guardie | Stati principali |
 |---|---|---|---|
 | `/library` | DesktopShell (via `(authenticated)/layout.tsx` → UserShellClient; NO `library/layout.tsx`, MiniNavSlot non registrato #2158) | `RequireRole ['User','Editor','Admin']` client-side (redirect `/login?from=/library` o `/`; superadmin bypassa) + Suspense `LibraryLoadingSkeleton` | loading · empty · filtered-empty · error · default · (tab games) loading/empty/filtered-empty/error/default · (rail) loading/empty/populated/error |
-| `/library/[gameId]` | DesktopShell + `LibraryGameDetailLayout` (solo `document.title` 3-stato, NO MiniNav) | Nessun `RequireRole` a livello pagina — protezione `(authenticated)` shell/AuthProvider (no middleware). Page `use client` | loading · error · not-found · default-libro · default-legacy (mobile/desktop; hero own vs community) |
+| `/library/[gameId]` | DesktopShell + `LibraryGameDetailLayout` (solo `document.title` 3-stato, NO MiniNav) | Nessun `RequireRole` a livello pagina — protezione `(authenticated)` shell/AuthProvider (gate edge via `proxy.ts`). Page `use client` | loading · error · not-found · default-libro · default-legacy (mobile/desktop; hero own vs community) |
 | `/library/[gameId]/agent` | N/A (server component: `redirect()` pre-render dentro DesktopShell) | — | — (redirect 307) |
 | `/library/[gameId]/kb` | DesktopShell + `LibraryGameDetailLayout` (server → `KbHubContent` client) | Nessun `RequireRole` — protezione `(authenticated)` shell | loading · error · empty · default · indexing-pending |
 | `/library/[gameId]/play` | DesktopShell + `[gameId]` layout — **IMMERSIVE** (`/library/[^/]+/play`: MobileBottomBar nascosta, padding bottom-bar droppato; AppTopBar resta desktop) | Nessun `RequireRole` — protezione `(authenticated)` shell (server passa gameId a `ResumePageContent`) | loading · error · first-time · single-resume · multi-campaign · stale-warning |
@@ -2470,7 +2476,7 @@ _Route-group: `(authenticated)` · 8 pagine_
 
 | Route | Shell | Guardie | Stati principali |
 |---|---|---|---|
-| `/toolkit` | DesktopShell (chrome AppTopBar/MobileTopBar + MiniNavSlot + MobileBottomBar; `HubLayout`) | Nessuna guardia di pagina né di layout (`'use client'` senza `useAuth`/redirect); nessun `middleware.ts`; protezione demandata alle API (401) | static-placeholder (nessun fetch, empty-state "🛠️ Toolkit in arrivo") |
+| `/toolkit` | DesktopShell (chrome AppTopBar/MobileTopBar + MiniNavSlot + MobileBottomBar; `HubLayout`) | Nessuna guardia di pagina né di layout (`'use client'` senza `useAuth`/redirect); gate auth all'edge via `proxy.ts` (`/toolkit` ∈ PROTECTED_ROUTES); ulteriore difesa API (401) | static-placeholder (nessun fetch, empty-state "🛠️ Toolkit in arrivo") |
 | `/toolkit/history` | DesktopShell + `HubPageContainer` (wrapper full-height gradient) | Server wrapper `export const dynamic = 'force-dynamic'`; nessuna guardia auth di pagina | loading (spinner) · empty ("No sessions found") · populated (griglia card) |
 | `/toolkit/play` | DesktopShell | Nessuna guardia auth; client autonomo, nessun fetch | single interactive state (nessun loading/empty/error) |
 | `/toolkit/stats` | DesktopShell | Server wrapper `export const dynamic = 'force-dynamic'`; nessuna guardia auth di pagina | loading (spinner) · empty/no-data · success (KPI + grafici) |
@@ -2635,7 +2641,7 @@ _Route-group: `(authenticated)` · 10 pagine_
 | `/knowledge-base/global` | `(authenticated)` → UserShell → DesktopShell; thin Suspense (fallback null) → KbGlobaleView (URL SSOT) | Nessuna; Suspense richiesto perché KbGlobaleView usa `useSearchParams()` | home (loading/empty-no-CTA/error/list) · results (loading/empty/error/list/loadingMore) · viewer overlay (ready-only) · ask drawer (idle/streaming/completed/empty/error) · editor overlay (owned-only) |
 | `/gamebook` | `(authenticated)` → UserShell → DesktopShell; thin Suspense (fallback PageFallback) → GamebookIndexView; HubPageContainer | Nessuna; metadata title 'I tuoi manuali \| MeepleAI' | loading · error · empty · default · quota-soft · quota-hard · fixture-override (dev/E2E) |
 | `/gamebook/upload` | `(authenticated)` → UserShell → DesktopShell; thin Suspense (fallback null) → GamebookUploadView; DetailPageContainer | Nessuna guardia di pagina; `showBggIntegration = isAdminOrAbove && !isAdminLoading` (BGG admin-only) | 14-cell FSM: step1-default/searching/no-results/bgg-loading · step2-ready/capturing/low-light/failed/denied · step3-progress/partial/complete/offline/cancel-modal · wizard-cancelled · fixture-mode |
-| `/upload` | `(authenticated)` → UserShell → DesktopShell; page client wrapper RequireRole → UploadClient (lazy `next/dynamic`); DetailPageContainer | RequireRole `['Admin','Editor']` (+superadmin inherit) client-side; `!auth`→`/login?from=`, ruolo insufficiente→`/`; NON esiste `middleware.ts` (difesa = RequireRole + backend 403) | auth-check · unauthorized→redirect · dynamic-loading · authLoading · step upload/parse/review/publish · error (upload/wizard) |
+| `/upload` | `(authenticated)` → UserShell → DesktopShell; page client wrapper RequireRole → UploadClient (lazy `next/dynamic`); DetailPageContainer | RequireRole `['Admin','Editor']` (+superadmin inherit) client-side; `!auth`→`/login?from=`, ruolo insufficiente→`/`; Layer 1 `proxy.ts` edge (`/upload` ∈ PROTECTED_ROUTES) + Layer 2 RequireRole client + backend 403 | auth-check · unauthorized→redirect · dynamic-loading · authLoading · step upload/parse/review/publish · error (upload/wizard) |
 | `/n8n` | `(authenticated)` → UserShell → DesktopShell; HubPageContainer | NESSUNA guardia client-side (no RequireRole) benché chiami endpoint admin `/admin/n8n`; autorizzazione delegata al backend (403→stato error) | loading · error · empty · list (config cards) · form (create/edit) |
 | `/pipeline-builder` | `(authenticated)` → UserShell → DesktopShell; server component Suspense (fallback PipelineBuilderSkeleton) → PipelineBuilder; `h-[calc(100vh-4rem)]` | Nessuna; metadata title 'Pipeline Builder \| MeepleAI' | skeleton · default-pipeline-created · node-selected (config) · edge-selected (config) · nessuna-selezione (placeholder) · test-tab · pannelli collassati/espansi |
 
@@ -2850,7 +2856,7 @@ _Route-group: `(chat)` · 4 pagine_
 
 | Route | Shell | Guardie | Stati principali |
 |---|---|---|---|
-| `/chat` | `(chat)/layout.tsx` → UserShellClient → DesktopShell (chrome autenticato completo; MobileBottomBar tab `chat` attivo; route non immersiva) | Nessuna guardia esplicita (nessun redirect in layout/shell, nessun `middleware.ts`); dati via React Query `enabled: !!userId` → senza utente empty-state, non redirect | loading (skeleton) · empty · error · success (griglia raggruppata in sidebar) |
+| `/chat` | `(chat)/layout.tsx` → UserShellClient → DesktopShell (chrome autenticato completo; MobileBottomBar tab `chat` attivo; route non immersiva) | Auth-gate all'edge via `proxy.ts` (`/chat` ∈ PROTECTED_ROUTES → `/login`); nessuna guardia esplicita in layout/shell; dati via React Query `enabled: !!userId` → senza utente empty-state, non redirect | loading (skeleton) · empty · error · success (griglia raggruppata in sidebar) |
 | `/chat/[threadId]` | `(chat)/layout.tsx` → UserShellClient → DesktopShell; vista `h-dvh` + `ChatNavigationContext` sticky | Nessun redirect; thread via `api.chat.getThreadById` → se null stato "Thread non trovato"; `ChatThreadView` è `dynamic(ssr:false)`, `ChatMobile` import client statico | loading · error/not-found · empty conversazione (mobile) · success (split desktop / full-screen mobile) · title-editing · sending/streaming · connection status |
 | `/chat/new` | `(chat)/layout.tsx` → UserShellClient → DesktopShell; `ChatEntryOrchestrator` (`min-h-dvh`) nel main | Nessun redirect; `NewChatView` è `dynamicImport(ssr:false)` in `<Suspense>`; legge `useSearchParams` (`?game/?gameId`, `?agent`, `?kbIds`) | loading · preparazione/auto-start · creazione · error · success (redirect a `/chat/{threadId}`) |
 | `/chat/agents/create` | `(chat)/layout.tsx` → UserShellClient → DesktopShell; wizard full-screen (`min-h-dvh`, gradient amber) nel main | Nessun redirect; `AgentCreationWizard` è `dynamic(ssr:false)` in `<Suspense>`; usa `useSearchParams` (`?gameId`, `?step`) | loading · wizard step 1–4 · submitting · submit error |
@@ -3563,7 +3569,7 @@ _Route-group: `admin` · 13 pagine_
 
 Tutte le pagine condividono la stessa **shell** e le stesse **guardie** (salvo dettagli extra sulla Explorer, riportati nella tabella):
 - **Shell**: `AdminShell` (`components/layout/AdminShell/AdminShell.tsx`) via `admin/(dashboard)/layout.tsx` — `div[data-admin-shell][data-theme=dark]`, `AppTopBar`+`MobileTopBar` (adminMode) · `AdminSidebar` (lg+) · `main#main-content` in `DashboardEngineProvider` · `AdminSideDrawer` (hamburger mobile). `PdfProcessingNotifier` è montato dal **layout** (fratello di `AdminShell`, dentro `RequireRole`), non da `AdminShell`.
-- **Guardie**: Server (`layout.tsx`) `readViewModeCookieServer()` → cookie `meepleai_view_mode==='user'` → `redirect('/')` prima del render (no flash). Client `RequireRole` `allowedRoles=['Admin']` → `getCurrentUser()`; !success → `router.replace('/login?from=…')`; authz = `isSuperAdmin || allowedRoles.some(lowercase===userRole)` (NO gerarchia: editor/user falliscono) altrimenti `router.replace('/')`. Nessun `middleware.ts`.
+- **Guardie**: Server (`layout.tsx`) `readViewModeCookieServer()` → cookie `meepleai_view_mode==='user'` → `redirect('/')` prima del render (no flash). Client `RequireRole` `allowedRoles=['Admin']` → `getCurrentUser()`; !success → `router.replace('/login?from=…')`; authz = `isSuperAdmin || allowedRoles.some(lowercase===userRole)` (NO gerarchia: editor/user falliscono) altrimenti `router.replace('/')`. Layer 1 = `proxy.ts` edge (Next 16 middleware): non-admin su `/admin` → `redirect('/')`.
 
 #### Tabella route
 
@@ -4036,7 +4042,7 @@ _Nota: `…/metrics` non ha edge di navigazione route-to-route interni al cluste
 ### Admin Content: shared games (catalogo community), import, seeding, RAG setup
 _Route-group: `admin` · 12 pagine_
 
-**Guardie standard** (comuni a tutte le route del cluster): Server `admin/(dashboard)/layout.tsx` → se cookie `meepleai_view_mode === 'user'` → `redirect('/')` pre-render (no flash); Client `RequireRole allowedRoles=['Admin']` (unauth → `/login?from=<path>`, ruolo errato → `/`, superadmin eredita, spinner "Verifica autorizzazioni…"); **nessun `middleware.ts` Next** (la "Layer 1 middleware" citata nel docstring di `RequireRole` è assente — protezione solo client + guard server nel layout).
+**Guardie standard** (comuni a tutte le route del cluster): Server `admin/(dashboard)/layout.tsx` → se cookie `meepleai_view_mode === 'user'` → `redirect('/')` pre-render (no flash); Client `RequireRole allowedRoles=['Admin']` (unauth → `/login?from=<path>`, ruolo errato → `/`, superadmin eredita, spinner "Verifica autorizzazioni…"); **Layer 1 = `proxy.ts` edge** (la "Layer 1 middleware" citata nel docstring di `RequireRole` è corretta: `proxy.ts` È il middleware Next 16 (edge); il layout server + `RequireRole` sono difese aggiuntive).
 
 #### Tabella route
 
@@ -4519,13 +4525,13 @@ flowchart LR
 ### Admin: utenti, ruoli, inviti, access-requests, config, tier, content, email
 _Route-group: `admin` · 12 pagine_
 
-Tutte le pagine sono avvolte da `admin/(dashboard)/layout.tsx` → **AdminShell** (`components/layout/AdminShell/AdminShell.tsx`, `data-theme=dark`: AppTopBar+MobileTopBar in `adminMode`, AdminSidebar su `lg+` / AdminSideDrawer da hamburger, `main#main-content` in DashboardEngineProvider) + `RequireRole['Admin']` + PdfProcessingNotifier. Guardia comune: **Server** `readViewModeCookieServer()` → se `meepleai_view_mode==='user'` `redirect('/')` prima del render (no flash); **Client** `RequireRole` (`getCurrentUser()`; se fallisce `router.replace('/login?from=…')`, se ruolo≠admin `router.replace('/')`; superadmin eredita ogni ruolo). Nota: **non esiste** `middleware.ts` di Next (la "Layer 1 middleware" del docstring di RequireRole è assente).
+Tutte le pagine sono avvolte da `admin/(dashboard)/layout.tsx` → **AdminShell** (`components/layout/AdminShell/AdminShell.tsx`, `data-theme=dark`: AppTopBar+MobileTopBar in `adminMode`, AdminSidebar su `lg+` / AdminSideDrawer da hamburger, `main#main-content` in DashboardEngineProvider) + `RequireRole['Admin']` + PdfProcessingNotifier. Guardia comune: **Server** `readViewModeCookieServer()` → se `meepleai_view_mode==='user'` `redirect('/')` prima del render (no flash); **Client** `RequireRole` (`getCurrentUser()`; se fallisce `router.replace('/login?from=…')`, se ruolo≠admin `router.replace('/')`; superadmin eredita ogni ruolo). Nota: il middleware edge è **`proxy.ts`** (Next 16 ha rinominato `middleware.ts`→`proxy.ts`) (la "Layer 1 middleware" del docstring di RequireRole è corretta).
 
 #### Tabella route
 
 | Route | Shell | Guardie | Stati principali |
 |---|---|---|---|
-| `/admin/users` | AdminShell (dark) | srv+cli comune; nessun middleware.ts | loading · populated · empty (testo varia per search) · refetching · paginated |
+| `/admin/users` | AdminShell (dark) | srv+cli comune; edge `proxy.ts` | loading · populated · empty (testo varia per search) · refetching · paginated |
 | `/admin/users/[id]` | AdminShell | srv+cli comune; query `getUserDetail` enabled solo se `!!userId` | loading (skeleton) · error/not-found · loaded (3 tab) · role-change pending/ok/err · role-history load/empty/pop · audit-log load/empty/paginated/riga-espansa |
 | `/admin/users/access-requests` | AdminShell | srv+cli comune | loading (skeleton+KPI skeleton) · empty · error · populated · selection/bulk-approve · paginated |
 | `/admin/users/activity` | AdminShell | srv+cli comune | loading · empty · error · populated · exporting (CSV) · paginated |
@@ -4765,7 +4771,7 @@ _Route-group: `admin` · 6 pagine_
 
 | Route | Shell | Guardie | Stati principali |
 |---|---|---|---|
-| `/admin/providers` | AdminShell (`data-theme="dark"`) + `DashboardEngineProvider`; server wrapper `div.space-y-5` che compone 5 sezioni client (nessun header extra) | view-mode cookie `user`→`redirect('/')`; RequireRole `Admin` (superadmin bypass); `PdfProcessingNotifier`; **nessun `middleware.ts`** (protezione solo client) | loading (per-query) · error (routing/circuit) · empty (routing/circuit) · success · unauthorized-partial (RotateKey disabled) |
+| `/admin/providers` | AdminShell (`data-theme="dark"`) + `DashboardEngineProvider`; server wrapper `div.space-y-5` che compone 5 sezioni client (nessun header extra) | view-mode cookie `user`→`redirect('/')`; RequireRole `Admin` (superadmin bypass); `PdfProcessingNotifier`; edge `proxy.ts`** (Layer 1) | loading (per-query) · error (routing/circuit) · empty (routing/circuit) · success · unauthorized-partial (RotateKey disabled) |
 | `/admin/providers/[name]` | AdminShell (dark); server async page valida `params` → client `ProviderDetail` (`div.space-y-6`) in main paddato | come cluster + `name` ∉ KNOWN_PROVIDERS → `notFound()`; `generateStaticParams()` pre-renderizza 1 route per provider | loading · error · notFound · empty/unsupported · unauthorized-partial (probe) · success |
 | `/admin/ui-library` | AdminShell (dark); client page (`use client`) con header proprio + `div.space-y-6.p-6` | come cluster (view-mode + RequireRole `Admin` + `PdfProcessingNotifier`) | default (tutti i componenti, promo Compositions visibile) · filtered · empty |
 | `/admin/ui-library/[id]` | AdminShell (dark); client page (`React.use(params)`) → `ComponentDetail` in `div.p-6` | come cluster + `getRegistryEntry(id)` undefined → `notFound()` | loading (Suspense Skeleton) · notFound · story-missing · success-interactive · success-static |

@@ -3,6 +3,13 @@
    Route: /game-nights/[id]
    Persona: misto host (Marco) + invitato (Davide)
    Coverage: US-31 Game Nights P1 — Sprint N+1
+
+   ⚠️ STALE vs runtime (invariante #16, 2026-07-15): questo mockup collassa
+   ancora "tagged" in RSVP pending ("In attesa") e non mostra il gate esplicito
+   "Invia inviti". Il comportamento CORRETTO (tagged Draft = "Da invitare" vs
+   invited Published = "In attesa" + CTA "Invia inviti") è realizzato nel
+   RUNTIME `GameNightDetailView.tsx` (PR #2969). Fonte di verità = runtime, non
+   questo file. Re-sync tracciato in #2979 prima di un eventuale demo replay.
    Pattern mobile : hero summary + 3 tab (Dettagli / Voting / Chat) +
                     bottom-sheet RSVP CTA sticky se invitato pending
    Pattern desktop: split-view 380px summary sidebar + main area tab content

@@ -68,7 +68,7 @@ Già documentato in [SP6 Capitolo 2](./SP6-libro-game.md#capitolo-2--iter-1-dogf
 | **E** | ~~`sp7-agent-builder-create`~~ — **già shipped** (admin) | `/admin/agents/definitions/create` (admin-only, ADR-085) | US-33 | Wizard admin (no tone-picker/confidence — fuori MVP) |
 | **F** | ~~`sp7-agent-builder-test`~~ — **già shipped** (admin) | `/admin/agents/definitions/playground` (admin-only, ADR-085) | US-33 | Playground chat (`PlaygroundChatCommand`) |
 | **G** | ~~`sp7-agent-builder-edit`~~ — **già shipped** (admin, no version-diff) | `/admin/agents/definitions/[id]/edit` (admin-only, ADR-085) | US-33 | Form edit (version-diff fuori MVP) |
-| **H** | `sp7-library-game-agent.{html,jsx}` | `/library/games/[gameId]/agent` | US-13/33 | Chat inline a livello game (full-screen mobile / split desktop) |
+| **H** | ~~`sp7-library-game-agent`~~ — **NOT COMMISSIONED** (già coperto) | `/library/[gameId]?tab=aiChat` (legacy `/library/games/[gameId]/agent` = redirect 307) | US-13/33 | Chat inline già shipped come tab `aiChat` — vedi banner sez. H |
 | **I** | `sp7-notifications-hub.{html,jsx}` | `/notifications` | US-41 | Timeline + grouping + bulk actions |
 | **J** | `sp7-notifications-preferences.{html,jsx}` | `/notifications/preferences` | US-41 | Preferences form + channel settings |
 
@@ -800,6 +800,15 @@ US-33: G33.6 (iterate prompt), G33.9 (rollback to previous version).
 
 ## H — Library Game Agent Inline (`sp7-library-game-agent`)
 
+> ## ⚠️ NOT COMMISSIONED 2026-07-15 — già coperto dal runtime (#1889)
+>
+> Verifica FE 2026-07-15: la funzionalità di H (chat inline user↔agente di un gioco) è **già shipped** e la route `/library/[gameId]/agent` è un **redirect 307 deliberato** verso il tab `aiChat` della game-detail unificata — la vista standalone fu ritirata di proposito (spec `docs/superpowers/specs/2026-04-09-library-to-game-epic-design.md §4.4 CR-I4`).
+> - **Runtime**: tab `aiChat` → `GameAiChatTab` → `GameChatTab` (barrel `@/components/features/game-chat/`: `ChatBubble`, `CitationChip`, `ConfidenceBadge`, `LowConfidenceDisclaimer`, `OutOfContextActions`, `SuggestedPrompts`, sidebar Tutor/Arbitro, fast-resume). Hook `useGameChat`.
+> - **Backend**: `POST /api/v1/agents/qa/stream` (SSE, user-facing non-admin, legato a `gameId`).
+> - **Mockup di riferimento già esistente**: `admin-mockups/design_files/sp4-game-chat-tab.html`.
+>
+> **Disposition**: H **non va commissionato** (analogo a D–G in ADR-085). Le sezioni sotto restano come spec storica del design-intent. Con questa disposizione l'intera wave agent-builder D–H è riconciliata al runtime shipped: **nessun mockup agent-builder da autorare**. Vedi [ADR-085](../../docs/for-claude/architecture/adr/adr-085-agent-builder-admin-backend-alignment.md).
+
 **File**: `sp7-library-game-agent.{html,jsx}`
 **Route**: `/library/games/[gameId]/agent`
 **Persona**: Marco al tavolo (mobile primario). Chat con agente specifico del gioco durante partita.
@@ -1021,7 +1030,7 @@ Buon lavoro. SP7 attiva 3 user story P1 dormant — post-merge si passa allo spr
 | 2 | E `sp7-agent-builder-create` | ⏳ pending | After D |
 | 2 | F `sp7-agent-builder-test` | ⏳ pending | After E |
 | 2 | G `sp7-agent-builder-edit` | ⏳ pending | After F |
-| 3 | H `sp7-library-game-agent` | ⏳ pending | First della wave 3 |
+| 3 | ~~H `sp7-library-game-agent`~~ | ✅ **NOT COMMISSIONED** (già coperto) | Chat già shipped come tab `aiChat` + `sp4-game-chat-tab.html` — vedi sez. H / ADR-085 |
 | 3 | I `sp7-notifications-hub` | ⏳ pending | After H |
 | 3 | J `sp7-notifications-preferences` | ⏳ pending | After I |
 

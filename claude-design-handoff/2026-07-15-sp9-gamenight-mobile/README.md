@@ -39,12 +39,16 @@ python -m http.server 8765
 | B index | 10 ✅ | `[INV-15]` |
 | C detail-RSVP | 12 ✅ | `[INV-15]` `[INV-16]` `[INV-17]` |
 
-### Fix MED da applicare (follow-up o turn correttivo)
+### Fix applicati e verificati (turn correttivo 2026-07-15)
 
-1. **768px tablet** assente in tutti e 3 (phone shell `width:392` fisso). Il DoD chiede 375+768; reso solo 375 (mobile-first canonical, ma la variante manca).
-2. **B — scrim hardcoded** `rgba(20,12,4,.42)` nel `dayDrawer` bottom-sheet (`line 231`): è la regressione SP8 A-09/B-04 che il DoD vietava → tokenizzare.
-3. **B — touch-target chrome <40px**: filter chip 34px (`line 134`), toggle Lista/Calendario 36px (`line 117`), nav mese + close drawer 36px. Sotto anche la soglia 40px SP8.
-4. **A — Conferma/Declina** della card pending-RSVP senza `[GAP-X]` né onClick (`lines 235-244`): è l'interazione core #17, va marcata per coerenza (le altre CTA hanno `[GAP-ROUTE]`).
+Workflow di re-validazione (3-agenti): **B verified (3/3)** · **C verified** · **zero regressioni**. A: 3/4 (marker parziale, nota sotto).
+
+1. ✅ **768px tablet** aggiunto a tutti e 3 (frame A-07 / B-09 / C-10 — stessa UI centrata in colonna più larga, mobile-first resta canonical).
+2. ✅ **B scrim tokenizzato** — introdotto token `--scrim` (light + dark), rimosso `rgba(20,12,4,.42)` dal `dayDrawer` (0 occorrenze residue).
+3. ✅ **B touch-target chrome ≥44px** — filter chip, toggle Lista|Calendario, nav mese ‹ ›, close × drawer.
+4. ⚠️ **A marker** — presente **un** `[GAP-STATE]` "Tap Conferma → card normale" a livello card (l'interazione core #17 è documentata); **non** un marker separato su Declina. Granularità minore, accettata.
+
+**CTA RSVP critiche invariate (52px)** · zero hex/scrim di prodotto (resta solo il bezel del device-frame decorativo, accettabile).
 
 ### Accettabile (non-fix)
 - Device-frame bezel `#1a1a1a` + `rgba(0,0,0,.28)` shadow: chrome del telefono nel mockup, non UI di prodotto (tutti i colori prodotto usano `hsl(var(--c-*))`).

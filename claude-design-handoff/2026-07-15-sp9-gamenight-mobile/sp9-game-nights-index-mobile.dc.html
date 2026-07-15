@@ -26,7 +26,7 @@
   --text:#2b1f12; --text-sec:#5a4a38; --text-muted:#9a8870;
   --border:rgba(180,130,80,.18); --border-light:rgba(180,130,80,.1); --border-strong:rgba(180,130,80,.32);
   --shadow-sm:0 2px 8px rgba(90,60,20,.08); --shadow-md:0 4px 16px rgba(90,60,20,.1); --shadow-lg:0 12px 36px rgba(90,60,20,.14);
-  --shadow-drawer:0 -8px 32px rgba(90,60,20,.12); --glass-bg:rgba(255,255,255,.88);
+  --shadow-drawer:0 -8px 32px rgba(90,60,20,.12); --glass-bg:rgba(255,255,255,.88); --scrim:hsl(28 40% 8% / .42);
   color-scheme:light;
 }
 [data-theme="dark"]{
@@ -34,7 +34,7 @@
   --text:#f0e4d2; --text-sec:#c8b896; --text-muted:#8a7860;
   --border:rgba(224,180,110,.14); --border-light:rgba(224,180,110,.08); --border-strong:rgba(224,180,110,.28);
   --shadow-sm:0 2px 8px rgba(0,0,0,.4); --shadow-md:0 4px 16px rgba(0,0,0,.5); --shadow-lg:0 12px 36px rgba(0,0,0,.6);
-  --shadow-drawer:0 -8px 32px rgba(0,0,0,.5); --glass-bg:rgba(30,22,14,.85);
+  --shadow-drawer:0 -8px 32px rgba(0,0,0,.5); --glass-bg:rgba(30,22,14,.85); --scrim:hsl(0 0% 0% / .55);
   --c-game:28 95% 58%; --c-player:262 75% 70%; --c-session:235 70% 70%; --c-agent:38 92% 62%;
   --c-kb:174 60% 55%; --c-chat:218 80% 68%; --c-event:350 85% 70%; --c-toolkit:142 60% 58%; --c-tool:195 75% 62%;
   --c-success:142 60% 55%; --c-warning:38 92% 62%; --c-danger:350 85% 70%; --c-info:220 80% 68%;
@@ -114,7 +114,7 @@ class Component extends DCLogic {
     const toggle = (id, label, icon) => {
       const active = view === id;
       return this.h('button',{ key:id, role:'tab', 'aria-selected':active, style:{
-        minHeight:36, minWidth:44, padding:'0 12px', display:'inline-flex', alignItems:'center', gap:5, border:'none', cursor:'pointer',
+        minHeight:44, minWidth:44, padding:'0 12px', display:'inline-flex', alignItems:'center', gap:5, border:'none', cursor:'pointer',
         borderRadius:'var(--r-md)', fontFamily:'var(--f-display)', fontSize:12.5, fontWeight:700,
         background: active?'var(--bg-card)':'transparent', color: active?this.ev():'var(--text-muted)',
         boxShadow: active?'var(--shadow-sm)':'none',
@@ -131,7 +131,7 @@ class Component extends DCLogic {
         filters.map((f,i) => {
           const active = i===0;
           return this.h('button',{ key:f, role:'radio', 'aria-checked':active, style:{
-            flexShrink:0, minHeight:34, padding:'0 13px', borderRadius:'var(--r-pill)', cursor:'pointer',
+            flexShrink:0, minHeight:44, padding:'0 13px', borderRadius:'var(--r-pill)', cursor:'pointer',
             fontFamily:'var(--f-display)', fontSize:12.5, fontWeight:700,
             background: active?this.ev():'var(--bg-card)', color: active?'#fff':'var(--text-sec)',
             border: active?'1px solid transparent':'1px solid var(--border)',
@@ -200,9 +200,9 @@ class Component extends DCLogic {
     const markColor = (m) => m==='progress'?this.se():m==='pending'?this.wa():m==='completed'?this.su():this.ev();
     return this.h('div',{ style:{ padding:'14px 12px', display:'flex', flexDirection:'column', gap:12 }},
       this.h('div',{key:'nav', style:{ display:'flex', alignItems:'center', gap:10, padding:'0 4px' }},
-        this.h('button',{key:'p','aria-label':'Mese precedente', style:{ width:36, height:36, borderRadius:'var(--r-md)', border:'1px solid var(--border)', background:'var(--bg-card)', color:'var(--text)', cursor:'pointer', fontSize:14 }},'‹'),
+        this.h('button',{key:'p','aria-label':'Mese precedente', style:{ width:44, height:44, borderRadius:'var(--r-md)', border:'1px solid var(--border)', background:'var(--bg-card)', color:'var(--text)', cursor:'pointer', fontSize:16 }},'‹'),
         this.h('div',{key:'m', style:{ flex:1, textAlign:'center', fontFamily:'var(--f-display)', fontWeight:700, fontSize:16, color:'var(--text)' }},'Marzo 2026'),
-        this.h('button',{key:'n','aria-label':'Mese successivo', style:{ width:36, height:36, borderRadius:'var(--r-md)', border:'1px solid var(--border)', background:'var(--bg-card)', color:'var(--text)', cursor:'pointer', fontSize:14 }},'›'),
+        this.h('button',{key:'n','aria-label':'Mese successivo', style:{ width:44, height:44, borderRadius:'var(--r-md)', border:'1px solid var(--border)', background:'var(--bg-card)', color:'var(--text)', cursor:'pointer', fontSize:16 }},'›'),
       ),
       this.h('div',{key:'dow', style:{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:4 }},
         days.map((d,i) => this.h('div',{ key:'dow'+i, style:{ textAlign:'center', fontFamily:'var(--f-mono)', fontSize:10, fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase' }}, d))),
@@ -228,7 +228,7 @@ class Component extends DCLogic {
 
   dayDrawer(){
     return this.h('div',{ style:{ position:'absolute', inset:0, zIndex:8 }},
-      this.h('div',{key:'sc', style:{ position:'absolute', inset:0, background:'rgba(20,12,4,.42)' }}),
+      this.h('div',{key:'sc', style:{ position:'absolute', inset:0, background:'var(--scrim)' }}),
       this.h('div',{key:'sheet', role:'dialog', 'aria-label':'Serate del 15 marzo', 'aria-modal':'true', style:{
         position:'absolute', left:0, right:0, bottom:0, background:'var(--bg-card)', borderRadius:'var(--r-2xl) var(--r-2xl) 0 0',
         boxShadow:'var(--shadow-drawer)', padding:'10px 16px 24px', maxHeight:'72%', display:'flex', flexDirection:'column', gap:12,
@@ -239,7 +239,7 @@ class Component extends DCLogic {
             this.h('div',{key:'a', style:{ fontFamily:'var(--f-display)', fontWeight:700, fontSize:17, color:'var(--text)' }},'Sabato 15 marzo'),
             this.h('div',{key:'b', style:{ fontFamily:'var(--f-mono)', fontSize:11, color:'var(--text-muted)', fontWeight:600 }},'1 serata'),
           ),
-          this.h('button',{key:'x','aria-label':'Chiudi', style:{ width:36, height:36, borderRadius:'var(--r-md)', border:'1px solid var(--border)', background:'var(--bg)', color:'var(--text-sec)', cursor:'pointer', fontSize:15 }},'✕'),
+          this.h('button',{key:'x','aria-label':'Chiudi', style:{ width:44, height:44, borderRadius:'var(--r-md)', border:'1px solid var(--border)', background:'var(--bg)', color:'var(--text-sec)', cursor:'pointer', fontSize:16 }},'✕'),
         ),
         this.listCard(this.listData()[0]),
         this.h('div',{key:'add', style:{ display:'flex', alignItems:'center', gap:8 }},
@@ -304,15 +304,16 @@ class Component extends DCLogic {
 
   // ── phone shell ──
   phone(cfg){
+    const tablet = cfg.tablet;
     const scrollKids = [ this.indexHeader(cfg.view || 'list') ];
     if (cfg.body) scrollKids.push(this.h('div',{key:'body'}, cfg.body));
     return this.h('div',{ 'data-theme': cfg.dark?'dark':undefined, style:{
-      width:392, height:748, borderRadius:44, border:'10px solid #1a1a1a', background:'var(--bg)', overflow:'hidden', position:'relative',
+      width: tablet?768:392, maxWidth:'100%', height:748, borderRadius: tablet?28:44, border:'10px solid #1a1a1a', background:'var(--bg)', overflow:'hidden', position:'relative',
       display:'flex', flexDirection:'column', boxShadow:'0 30px 70px rgba(0,0,0,.28), 0 0 0 2px #000', margin:'0 auto',
     }},
       this.statusBar(),
       cfg.offline ? this.offlineBanner() : null,
-      this.h('div',{ key:'scr', className:'sp9-scroll', 'aria-live': cfg.live||undefined, style:{ flex:1, overflowY:'auto', position:'relative', background:'var(--bg)', paddingBottom:76 }}, scrollKids),
+      this.h('div',{ key:'scr', className:'sp9-scroll', 'aria-live': cfg.live||undefined, style:{ flex:1, overflowY:'auto', position:'relative', background:'var(--bg)', paddingBottom:76 }}, (tablet ? this.h('div',{key:'wrap', style:{ maxWidth:680, margin:'0 auto' }}, scrollKids) : scrollKids)),
       cfg.fab ? this.fab() : null,
       cfg.drawer ? this.dayDrawer() : null,
       this.bottomBar(),
@@ -327,12 +328,13 @@ class Component extends DCLogic {
   }
 
   frame(cfg){
-    return this.h('div',{ key:cfg.id, style:{ display:'flex', flexDirection:'column', alignItems:'center', gap:12 }},
-      this.h('div',{key:'cap', style:{ width:392, display:'flex', flexDirection:'column', gap:6 }},
+    return this.h('div',{ key:cfg.id, style:{ gridColumn: cfg.tablet?'1 / -1':'auto', display:'flex', flexDirection:'column', alignItems:'center', gap:12 }},
+      this.h('div',{key:'cap', style:{ width: cfg.tablet?768:392, maxWidth:'100%', display:'flex', flexDirection:'column', gap:6 }},
         this.h('div',{key:'r', style:{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }},
           this.h('span',{key:'id', style:{ fontFamily:'var(--f-mono)', fontSize:10.5, fontWeight:700, color:this.ev(), background:this.ev(.12), border:`1px solid ${this.ev(.25)}`, padding:'3px 8px', borderRadius:'var(--r-pill)', letterSpacing:'.04em' }}, cfg.id),
           this.h('span',{key:'l', style:{ fontFamily:'var(--f-display)', fontSize:13, fontWeight:700, color:'var(--text)' }}, cfg.label),
           cfg.dark ? this.h('span',{key:'dk', style:{ fontFamily:'var(--f-mono)', fontSize:9, fontWeight:700, color:'var(--text-muted)', border:'1px solid var(--border)', borderRadius:'var(--r-pill)', padding:'2px 7px' }},'DARK') : null,
+          cfg.tablet ? this.h('span',{key:'tb', style:{ fontFamily:'var(--f-mono)', fontSize:9, fontWeight:700, color:this.ev(), border:'1px solid '+this.ev(.3), background:this.ev(.1), borderRadius:'var(--r-pill)', padding:'2px 7px' }},'768px') : null,
         ),
         cfg.desc ? this.h('p',{key:'d', style:{ fontSize:11.5, color:'var(--text-sec)', margin:0, lineHeight:1.5 }}, cfg.desc) : null,
       ),
@@ -360,6 +362,8 @@ class Component extends DCLogic {
         desc:'Errore di rete + retry. Chrome e bottom-bar visibili.' }),
       this.frame({ id:'B-08', label:'Offline', view:'list', fab:true, offline:true, body:this.listBody(),
         desc:'Banner offline + elenco in cache read-only.' }),
+      this.frame({ id:'B-09', label:'Lista · Tablet', view:'list', fab:true, tablet:true, body:this.listBody(),
+        desc:'Adaptation 768px: lista centrata in colonna più larga, spacing generoso. Mobile-first resta canonical.' }),
     ];
     return {
       frames,

@@ -243,6 +243,7 @@ class Component extends DCLogic {
             fontFamily:'var(--f-display)', fontWeight:700, fontSize:14, opacity: offline?0.7:1,
           }},'Declina'),
         ),
+        this.state.markers ? this.h('div',{key:'gs', style:{ marginTop:8, display:'flex', justifyContent:'flex-end' }}, this.chip('[GAP-STATE] Tap Conferma → card normale','gap')) : null,
         offline ? this.h('div',{key:'tip', style:{ marginTop:9, fontSize:11, color:'var(--text-muted)', fontStyle:'italic', display:'flex', alignItems:'center', gap:5 }}, this.h('span',{key:'i','aria-hidden':true},'⚡'),'Offline — RSVP disponibile alla riconnessione') : null,
       ),
     );
@@ -339,16 +340,16 @@ class Component extends DCLogic {
 
   // ── phone shell ──
   phone(body, opts={}){
-    const dark = opts.dark;
+    const dark = opts.dark, tablet = opts.tablet;
     return this.h('div',{ 'data-theme': dark? 'dark':undefined, style:{
-      width:392, height:748, borderRadius:44, border:'10px solid #1a1a1a', background:'var(--bg)',
+      width: tablet?768:392, maxWidth:'100%', height:748, borderRadius: tablet?28:44, border:'10px solid #1a1a1a', background:'var(--bg)',
       overflow:'hidden', position:'relative', display:'flex', flexDirection:'column',
       boxShadow:'0 30px 70px rgba(0,0,0,.28), 0 0 0 2px #000', margin:'0 auto',
     }},
       this.statusBar(),
       this.h('div',{ key:'scr', className:'sp9-scroll', 'aria-live': opts.live||undefined, style:{ flex:1, overflowY:'auto', position:'relative', background:'var(--bg)' }},
         this.topNav(),
-        this.h('div',{ key:'body', style:{ padding:'12px 12px 84px', display:'flex', flexDirection:'column', gap:16 }}, body),
+        this.h('div',{ key:'wrap', style:{ maxWidth: tablet?680:'none', margin:'0 auto', width:'100%' }}, this.h('div',{ key:'body', style:{ padding: tablet?'20px 28px 96px':'12px 12px 84px', display:'flex', flexDirection:'column', gap: tablet?20:16 }}, body)),
       ),
       this.bottomBar(),
     );
@@ -382,16 +383,17 @@ class Component extends DCLogic {
 
   // ── one framed state ──
   frame(cfg){
-    return this.h('div',{ key:cfg.id, style:{ display:'flex', flexDirection:'column', alignItems:'center', gap:12 }},
-      this.h('div',{key:'cap', style:{ width:392, display:'flex', flexDirection:'column', gap:6 }},
+    return this.h('div',{ key:cfg.id, style:{ gridColumn: cfg.tablet?'1 / -1':'auto', display:'flex', flexDirection:'column', alignItems:'center', gap:12 }},
+      this.h('div',{key:'cap', style:{ width: cfg.tablet?768:392, maxWidth:'100%', display:'flex', flexDirection:'column', gap:6 }},
         this.h('div',{key:'r', style:{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }},
           this.h('span',{key:'id', style:{ fontFamily:'var(--f-mono)', fontSize:10.5, fontWeight:700, color:this.ev(), background:this.ev(.12), border:`1px solid ${this.ev(.25)}`, padding:'3px 8px', borderRadius:'var(--r-pill)', letterSpacing:'.04em' }}, cfg.id),
           this.h('span',{key:'l', style:{ fontFamily:'var(--f-display)', fontSize:13, fontWeight:700, color:'var(--text)' }}, cfg.label),
           cfg.dark ? this.h('span',{key:'dk', style:{ fontFamily:'var(--f-mono)', fontSize:9, fontWeight:700, color:'var(--text-muted)', border:'1px solid var(--border)', borderRadius:'var(--r-pill)', padding:'2px 7px' }},'DARK') : null,
+          cfg.tablet ? this.h('span',{key:'tb', style:{ fontFamily:'var(--f-mono)', fontSize:9, fontWeight:700, color:this.ev(), border:'1px solid '+this.ev(.3), background:this.ev(.1), borderRadius:'var(--r-pill)', padding:'2px 7px' }},'768px') : null,
         ),
         cfg.desc ? this.h('p',{key:'d', style:{ fontSize:11.5, color:'var(--text-sec)', margin:0, lineHeight:1.5 }}, cfg.desc) : null,
       ),
-      this.phone(cfg.body, { dark: cfg.dark, live: cfg.live }),
+      this.phone(cfg.body, { dark: cfg.dark, live: cfg.live, tablet: cfg.tablet }),
     );
   }
 
@@ -411,6 +413,8 @@ class Component extends DCLogic {
         body:[ this.banner('error') ] }),
       this.frame({ id:'A-06', label:'Offline', desc:'Banner offline + card read-only. Conferma/Declina disabilitati con tip.',
         body:[ this.banner('offline'), this.prossimiFull({ offline:true }), this.recentiFull() ] }),
+      this.frame({ id:'A-07', label:'Default · Tablet', tablet:true, desc:'Adaptation 768px: stessa UI, contenuto centrato in colonna più larga con spacing generoso. Mobile-first resta canonical.',
+        body:[ this.prossimiFull(), this.recentiFull() ] }),
     ];
     return {
       frames,

@@ -316,36 +316,38 @@ class Component extends DCLogic {
 
   // ── phone shell ──
   phone(cfg){
+    const tablet = cfg.tablet;
     let scroll = [];
     if (cfg.kind === 'loading'){ scroll = [ this.skeleton() ]; }
     else if (cfg.kind === 'error'){ scroll = [ this.errorState() ]; }
     else {
       scroll.push(this.h('div',{key:'hero'}, this.hero(cfg)));
       const bodyPad = cfg.bottomBarH || 78;
-      scroll.push(this.h('div',{key:'body', style:{ padding:'14px 12px', paddingBottom: bodyPad+18, display:'flex', flexDirection:'column', gap:14 }},
+      scroll.push(this.h('div',{key:'body', style:{ padding: tablet?'18px 28px':'14px 12px', paddingBottom: bodyPad+18, display:'flex', flexDirection:'column', gap:14 }},
         this.rosterHeader(cfg.count, cfg.rosterCta),
         this.roster(cfg.rosterData),
         this.gamesRow(),
       ));
     }
     return this.h('div',{ 'data-theme': cfg.dark?'dark':undefined, style:{
-      width:392, height:748, borderRadius:44, border:'10px solid #1a1a1a', background:'var(--bg)', overflow:'hidden', position:'relative',
+      width: tablet?768:392, maxWidth:'100%', height:748, borderRadius: tablet?28:44, border:'10px solid #1a1a1a', background:'var(--bg)', overflow:'hidden', position:'relative',
       display:'flex', flexDirection:'column', boxShadow:'0 30px 70px rgba(0,0,0,.28), 0 0 0 2px #000', margin:'0 auto',
     }},
       this.statusBar(),
       cfg.offline ? this.offlineBanner() : null,
-      this.h('div',{ key:'scr', className:'sp9-scroll', 'aria-live': cfg.live||undefined, style:{ flex:1, overflowY:'auto', position:'relative', background:'var(--bg)' }}, scroll),
+      this.h('div',{ key:'scr', className:'sp9-scroll', 'aria-live': cfg.live||undefined, style:{ flex:1, overflowY:'auto', position:'relative', background:'var(--bg)' }}, (tablet ? this.h('div',{key:'wrap', style:{ maxWidth:680, margin:'0 auto' }}, scroll) : scroll)),
       cfg.footer || null,
     );
   }
 
   frame(cfg){
-    return this.h('div',{ key:cfg.id, style:{ display:'flex', flexDirection:'column', alignItems:'center', gap:12 }},
-      this.h('div',{key:'cap', style:{ width:392, display:'flex', flexDirection:'column', gap:6 }},
+    return this.h('div',{ key:cfg.id, style:{ gridColumn: cfg.tablet?'1 / -1':'auto', display:'flex', flexDirection:'column', alignItems:'center', gap:12 }},
+      this.h('div',{key:'cap', style:{ width: cfg.tablet?768:392, maxWidth:'100%', display:'flex', flexDirection:'column', gap:6 }},
         this.h('div',{key:'r', style:{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }},
           this.h('span',{key:'id', style:{ fontFamily:'var(--f-mono)', fontSize:10.5, fontWeight:700, color:this.ev(), background:this.ev(.12), border:`1px solid ${this.ev(.25)}`, padding:'3px 8px', borderRadius:'var(--r-pill)', letterSpacing:'.04em' }}, cfg.id),
           this.h('span',{key:'l', style:{ fontFamily:'var(--f-display)', fontSize:13, fontWeight:700, color:'var(--text)' }}, cfg.label),
           cfg.dark ? this.h('span',{key:'dk', style:{ fontFamily:'var(--f-mono)', fontSize:9, fontWeight:700, color:'var(--text-muted)', border:'1px solid var(--border)', borderRadius:'var(--r-pill)', padding:'2px 7px' }},'DARK') : null,
+          cfg.tablet ? this.h('span',{key:'tb', style:{ fontFamily:'var(--f-mono)', fontSize:9, fontWeight:700, color:this.ev(), border:'1px solid '+this.ev(.3), background:this.ev(.1), borderRadius:'var(--r-pill)', padding:'2px 7px' }},'768px') : null,
         ),
         cfg.desc ? this.h('p',{key:'d', style:{ fontSize:11.5, color:'var(--text-sec)', margin:0, lineHeight:1.5 }}, cfg.desc) : null,
       ),
@@ -393,6 +395,10 @@ class Component extends DCLogic {
         rosterData:this.rosterMix(),
         footer:this.rsvpBar({ offline:true }), bottomBarH:110,
         desc:'Banner offline + RSVP bar disabilitata con tip.' }),
+      this.frame({ id:'C-10', label:'Published · invitato · Tablet', status:'published', count:'5', tablet:true,
+        rosterData:this.rosterMix(),
+        footer:this.rsvpBar({}), bottomBarH:92,
+        desc:'Adaptation 768px: hero + roster centrati in colonna più larga; RSVP bar sticky full-width.' }),
     ];
     return {
       frames,

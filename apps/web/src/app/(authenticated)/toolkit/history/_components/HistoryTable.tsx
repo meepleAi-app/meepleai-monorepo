@@ -18,6 +18,8 @@ import { Button } from '@/components/ui/primitives/button';
 import { useTranslation } from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 
+import { getRelativeTimeParts } from '../_lib/relative-time';
+
 import type { HistoryRow, HistorySort } from '../_lib/history-filters';
 
 export interface HistoryTableProps {
@@ -46,26 +48,6 @@ function getInitials(name: string): string {
   const first = parts[0] as string;
   const last = parts[parts.length - 1] as string;
   return `${first[0]}${last[0]}`.toUpperCase();
-}
-
-/** Buckets an ISO timestamp relative to `now` into an `Intl.RelativeTimeFormat` value/unit pair. */
-function getRelativeTimeParts(
-  startedAt: string,
-  now: Date
-): { value: number; unit: Intl.RelativeTimeFormatUnit } {
-  const diffMinutes = (new Date(startedAt).getTime() - now.getTime()) / 60_000;
-  if (Math.abs(diffMinutes) < 60) return { value: Math.round(diffMinutes), unit: 'minute' };
-
-  const diffHours = diffMinutes / 60;
-  if (Math.abs(diffHours) < 24) return { value: Math.round(diffHours), unit: 'hour' };
-
-  const diffDays = diffHours / 24;
-  if (Math.abs(diffDays) < 30) return { value: Math.round(diffDays), unit: 'day' };
-
-  const diffMonths = diffDays / 30;
-  if (Math.abs(diffMonths) < 12) return { value: Math.round(diffMonths), unit: 'month' };
-
-  return { value: Math.round(diffMonths / 12), unit: 'year' };
 }
 
 interface SortableTableHeadProps {

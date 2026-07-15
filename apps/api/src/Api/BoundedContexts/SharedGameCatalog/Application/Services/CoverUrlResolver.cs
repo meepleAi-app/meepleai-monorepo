@@ -20,10 +20,11 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 /// rejects <c>/</c> and <c>.</c>) and then did categorized prefix discovery —
 /// neither of which matches these layers' raw, slash-containing key shape, so
 /// the call always threw internally and returned null (silent no-op: covers
-/// never resolved). L2.5 (BGG) is intentionally UNCHANGED: its physical key is
-/// non-deterministic (<c>StoreAsync</c> mints a random fileId), so it cannot be
-/// resolved from the DB-persisted key via a raw-key lookup; it stays on the
-/// legacy path (still a placeholder today) pending a follow-up.
+/// never resolved).
+/// L2.5 (BGG) now resolves via <see cref="IBlobStorageService.GetPresignedUrlForRawKeyAsync"/>
+/// using the full deterministic key written by
+/// <c>BggCoverUploadPipeline</c> (Issue #2947): <c>bgg-covers/{bggId}/cover{ext}</c>,
+/// with no suffix appended (BGG keeps its original image extension).
 ///
 /// Issue #2123 (BGG ToS compliance): every resolution outcome — including the
 /// terminal <c>null</c> path that triggers a placeholder render on the FE —
@@ -88,19 +89,17 @@ internal static class CoverUrlResolver
             }
         }
 
-        // L2.5 BGG re-uploaded cover (Gap G2)
-        // Asymmetry vs L4/L2: BGG cover is stored as a single asset under the raw
-        // resource key (set by BggCoverDownloader.DownloadAndUploadAsync), with no
-        // -preview.webp or .webp suffix. The blob service treats arg 1 as the literal
-        // storage object path; arg 3 is the cache identifier (same key here is fine
-        // because the storage object IS the cache target).
+        // L2.5 BGG re-uploaded cover (Gap G2 / Issue #2947)
+        // The DB key is the FULL deterministic physical object key composed by
+        // BggCoverUploadPipeline (bgg-covers/{bggId}/cover{ext}). Unlike L4/L2,
+        // NO suffix is appended: BGG keeps its original image extension, so the
+        // stored key IS the physical key. Resolved via the raw-key method (the
+        // legacy GetPresignedDownloadUrlAsync validated the key with
+        // PathSecurity.ValidateIdentifier, which rejects '/' and '.').
         if (!string.IsNullOrWhiteSpace(sharedGame.BggCoverR2Key))
         {
             var url = await blobStorage
-                .GetPresignedDownloadUrlAsync(
-                    sharedGame.BggCoverR2Key,
-                    BlobCategory.GameImage,
-                    sharedGame.BggCoverR2Key)
+                .GetPresignedUrlForRawKeyAsync(sharedGame.BggCoverR2Key)
                 .ConfigureAwait(false);
             if (url is not null)
             {

@@ -1,5 +1,4 @@
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
-using Api.Services.Pdf;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
@@ -7,16 +6,16 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 internal sealed class BggCoverDownloader : IBggCoverDownloader
 {
     private readonly HttpClient _httpClient;
-    private readonly IBlobStorageService _blobStorageService;
+    private readonly IBggCoverUploadPipeline _uploadPipeline;
     private readonly ILogger<BggCoverDownloader> _logger;
 
     public BggCoverDownloader(
         HttpClient httpClient,
-        IBlobStorageService blobStorageService,
+        IBggCoverUploadPipeline uploadPipeline,
         ILogger<BggCoverDownloader> logger)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-        _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
+        _uploadPipeline = uploadPipeline ?? throw new ArgumentNullException(nameof(uploadPipeline));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -31,8 +30,7 @@ internal sealed class BggCoverDownloader : IBggCoverDownloader
         }
 
         // SSRF guard (#2655 finding #10): only fetch HTTPS URLs that resolve to public IPs.
-        // Reuses the SharedGameCatalog SsrfSafeHttpClient validators (same bounded context). Fails
-        // closed — an invalid scheme or a private/reserved target aborts the download (returns null).
+        // Fails closed — an invalid scheme or a private/reserved target aborts the download.
         try
         {
             SsrfSafeHttpClient.ValidateUrlScheme(remoteImageUrl);
@@ -46,8 +44,6 @@ internal sealed class BggCoverDownloader : IBggCoverDownloader
                 bggId, remoteImageUrl);
             return null;
         }
-
-        var resourceKey = $"bgg-cover-{bggId}";
 
         try
         {
@@ -63,28 +59,25 @@ internal sealed class BggCoverDownloader : IBggCoverDownloader
                 return null;
             }
 
-            var imageStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-            await using var _ = imageStream.ConfigureAwait(false);
-
-            // Derive a safe filename from the URL path
-            var fileName = $"cover-{bggId}{GetExtension(remoteImageUrl)}";
-
-            var storageResult = await _blobStorageService
-                .StoreAsync(imageStream, fileName, BlobCategory.GameImage, resourceKey, cancellationToken)
-                .ConfigureAwait(false);
-
-            if (!storageResult.Success)
+            var imageBytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+            if (imageBytes.Length == 0)
             {
-                _logger.LogWarning(
-                    "BGG cover upload failed: BggId={BggId}, Error={Error}",
-                    bggId, storageResult.ErrorMessage);
+                _logger.LogWarning("BGG cover download returned empty body: BggId={BggId}", bggId);
                 return null;
             }
 
+            var extension = GetExtension(remoteImageUrl);
+
+            // Issue #2947: raw R2 PutObject to a deterministic key so
+            // CoverUrlResolver can reconstruct it via GetPresignedUrlForRawKeyAsync.
+            var r2Key = await _uploadPipeline
+                .UploadAsync(bggId, imageBytes, extension, cancellationToken)
+                .ConfigureAwait(false);
+
             _logger.LogInformation(
                 "BGG cover uploaded successfully: BggId={BggId}, R2Key={Key}",
-                bggId, resourceKey);
-            return resourceKey;
+                bggId, r2Key);
+            return r2Key;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

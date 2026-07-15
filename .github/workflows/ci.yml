@@ -343,11 +343,12 @@ jobs:
       # DEC-A5 (umbrella #2342): blocking gate — each page-mock story must
       # implement the canonical states its fidelity.json declares.
       # coverage-gaps whitelist-incremental (ratchet down); contract-violations always fail.
-      # Ratchet 44 -> 3 on 2026-07-15 (#2063): 26 gaps wired to existing stories,
-      # 14 per-game session mockups marked design_intent=deferred (#2234),
-      # 1 non-page storyboard scoped out (#2970). Residual 3 = real MIGRATE debt (#2971).
+      # Ratchet 44 -> 0 on 2026-07-15 (#2063): 26 gaps wired to existing stories,
+      # 3 residual MIGRATE stories authored (#2971), 14 per-game session mockups
+      # marked design_intent=deferred (#2234), 1 non-page storyboard scoped out (#2970).
+      # All page-mock stories render real content (render-verified, not just declared).
       - name: Storybook canonical-states coverage gate (DEC-A5 / #2342)
-        run: pnpm lint:storybook-states --strict --max-baseline 3
+        run: pnpm lint:storybook-states --strict --max-baseline 0
 
       - name: Upload storybook-states report
         if: always()

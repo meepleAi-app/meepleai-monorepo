@@ -42,8 +42,8 @@ const FIXTURE_GAME_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 
 /** LibraryGameDetail-compatible shape returned by /api/v1/library/games/:id */
 const mockLibraryGameDetail = {
-  libraryEntryId: 'entry-001',
-  userId: 'storybook-user',
+  id: 'b2c3d4e5-f6a7-8901-bcde-f01234567890',
+  userId: 'c3d4e5f6-a7b8-4901-8bcd-ef0123456789',
   gameId: FIXTURE_GAME_ID,
   addedAt: '2025-09-01T10:00:00Z',
   notes: 'Grande gioco da tavolo',
@@ -59,11 +59,11 @@ const mockLibraryGameDetail = {
   gameYearPublished: 2016,
   gameIconUrl: null,
   gameImageUrl: null,
-  description:
+  gameDescription:
     'Corporations compete to terraform Mars by raising the temperature, oxygen level, and ocean coverage. Players build infrastructure and accumulate victory points.',
   minPlayers: 1,
   maxPlayers: 5,
-  playingTimeMinutes: 120,
+  playTimeMinutes: 120,
   minAge: 12,
   complexityRating: 3.2,
   averageRating: 8.4,
@@ -79,12 +79,12 @@ const mockLibraryGameDetail = {
     { id: 'mec-1', name: 'Gestione mano', slug: 'gestione-mano' },
     { id: 'mec-2', name: 'Posizionamento tessere', slug: 'posizionamento-tessere' },
   ],
-  designers: [{ id: 'des-1', name: 'Jacob Fryxelius' }],
+  designers: ['Jacob Fryxelius'],
   publishers: [{ id: 'pub-1', name: 'FryxGames' }],
   bggId: null,
   recentSessions: [
     {
-      id: 'sess-1',
+      id: 'd4e5f6a7-b8c9-4012-9def-234567890123',
       playedAt: '2026-05-20T19:30:00Z',
       durationMinutes: 105,
       durationFormatted: '1h 45m',
@@ -106,7 +106,7 @@ const mockSharedGame = {
   yearPublished: 2016,
   thumbnailUrl: null,
   imageUrl: null,
-  description: mockLibraryGameDetail.description,
+  description: mockLibraryGameDetail.gameDescription,
   minPlayers: 1,
   maxPlayers: 5,
   playingTimeMinutes: 120,
@@ -171,7 +171,7 @@ const meta: Meta<typeof GameDetailPage> = {
       navigation: {
         pathname: `/games/${FIXTURE_GAME_ID}`,
         // useParams reads from the segment — storybook/nextjs resolves [id] from pathname
-        params: { id: FIXTURE_GAME_ID },
+        segments: [['id', FIXTURE_GAME_ID]],
       },
     },
     viewport: { defaultViewport: 'desktop' },

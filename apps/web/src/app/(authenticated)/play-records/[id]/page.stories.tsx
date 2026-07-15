@@ -28,7 +28,7 @@ const meta: Meta<typeof PlayRecordDetailPage> = {
       appDirectory: true,
       navigation: {
         pathname: `/play-records/${ID}`,
-        params: { id: ID },
+        segments: [['id', ID]],
       },
     },
     viewport: { defaultViewport: 'desktop' },
@@ -59,7 +59,7 @@ export const Empty: Story = {
       appDirectory: true,
       navigation: {
         pathname: '/play-records/pr-coop-1',
-        params: { id: 'pr-coop-1' },
+        segments: [['id', 'pr-coop-1']],
       },
     },
     msw: {

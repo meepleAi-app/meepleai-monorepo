@@ -31,7 +31,7 @@ const meta: Meta<typeof PlayRecordEditPage> = {
       appDirectory: true,
       navigation: {
         pathname: `/play-records/${ID}/edit`,
-        params: { id: ID },
+        segments: [['id', ID]],
       },
     },
     viewport: { defaultViewport: 'desktop' },
@@ -65,7 +65,7 @@ export const Empty: Story = {
       appDirectory: true,
       navigation: {
         pathname: '/play-records/pr-inprogress-1/edit',
-        params: { id: 'pr-inprogress-1' },
+        segments: [['id', 'pr-inprogress-1']],
       },
     },
     msw: {

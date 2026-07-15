@@ -17,7 +17,7 @@ const meta: Meta<typeof PlayerDetailPage> = {
     layout: 'fullscreen',
     nextjs: {
       appDirectory: true,
-      navigation: { pathname: '/players/sp4-fixture-id' },
+      navigation: { pathname: '/players/sp4-fixture-id', segments: [['id', 'sp4-fixture-id']] },
     },
     viewport: { defaultViewport: 'desktop' },
     docs: {

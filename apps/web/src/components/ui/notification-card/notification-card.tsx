@@ -1,21 +1,8 @@
-import type { CSSProperties, JSX, MouseEvent, ReactNode } from 'react';
+import type { JSX, MouseEvent, ReactNode } from 'react';
 
 import clsx from 'clsx';
 
 import type { EntityType } from '@/components/ui/entity-tokens';
-
-// Map EntityType -> CSS variable key (mirrors EntityCard/EntityPip: kb -> document)
-const ENTITY_CSS_VAR_KEY: Record<EntityType, string> = {
-  game: 'game',
-  player: 'player',
-  session: 'session',
-  agent: 'agent',
-  kb: 'document',
-  chat: 'chat',
-  event: 'event',
-  toolkit: 'toolkit',
-  tool: 'tool',
-};
 
 export interface NotificationCardProps {
   readonly entity: EntityType;
@@ -61,17 +48,12 @@ export function NotificationCard({
   dismissAriaLabel = 'Rimuovi notifica',
   className,
 }: NotificationCardProps): JSX.Element {
-  const cssKey = ENTITY_CSS_VAR_KEY[entity];
-  const entityColor = `hsl(var(--e-${cssKey}))`;
-
   const containerClasses = clsx(
     'group relative flex gap-3 rounded-xl border-l-4 bg-card p-4 text-foreground transition-colors',
     unread && 'bg-muted/20',
     onClick && 'w-full cursor-pointer text-left hover:bg-muted/40',
     className
   );
-
-  const style: CSSProperties = { borderLeftColor: entityColor };
 
   const titleClasses = clsx(
     'text-sm leading-tight',
@@ -92,8 +74,7 @@ export function NotificationCard({
             <span
               data-testid="unread-dot"
               aria-hidden="true"
-              className="inline-block h-2 w-2 flex-shrink-0 rounded-full"
-              style={{ backgroundColor: entityColor }}
+              className="inline-block h-2 w-2 flex-shrink-0 rounded-full bg-primary"
             />
           )}
           <span className={titleClasses}>{title}</span>
@@ -151,27 +132,20 @@ export function NotificationCard({
           onClick={onClick}
           onKeyDown={handleKeyDown}
           className={containerClasses}
-          style={style}
         >
           {content}
         </div>
       );
     }
     return (
-      <button
-        type="button"
-        data-entity={entity}
-        onClick={onClick}
-        className={containerClasses}
-        style={style}
-      >
+      <button type="button" data-entity={entity} onClick={onClick} className={containerClasses}>
         {content}
       </button>
     );
   }
 
   return (
-    <article data-entity={entity} className={containerClasses} style={style}>
+    <article data-entity={entity} className={containerClasses}>
       {content}
     </article>
   );

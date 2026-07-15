@@ -94,11 +94,9 @@ describe('SettingsRow', () => {
     expect(label.className).toMatch(/destructive/);
   });
 
-  it('applies entity color to icon wrapper via inline style', () => {
-    render(<SettingsRow label="KB" icon={<span>📚</span>} entity="kb" />);
-    const icon = screen.getByTestId('settings-row-icon');
-    // kb maps to --e-document
-    expect(icon.getAttribute('style')).toMatch(/--e-document/);
+  it('sets data-entity on the row wrapper for the given entity', () => {
+    const { container } = render(<SettingsRow label="KB" icon={<span>📚</span>} entity="kb" />);
+    expect(container.querySelector('li')).toHaveAttribute('data-entity', 'kb');
   });
 
   it('merges className on the li wrapper', () => {

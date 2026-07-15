@@ -1,23 +1,9 @@
-import type { CSSProperties, JSX, MouseEventHandler, ReactNode } from 'react';
+import type { JSX, MouseEventHandler, ReactNode } from 'react';
 
 import { Slot } from '@radix-ui/react-slot';
 import clsx from 'clsx';
 
 import type { EntityType } from '@/components/ui/entity-tokens';
-
-// Map EntityType -> CSS variable key. Mirrors entity-card mapping
-// so `kb` resolves to `--c-kb` (pre-existing naming from design tokens).
-const ENTITY_CSS_VAR_KEY: Record<EntityType, string> = {
-  game: 'game',
-  player: 'player',
-  session: 'session',
-  agent: 'agent',
-  kb: 'document',
-  chat: 'chat',
-  event: 'event',
-  toolkit: 'toolkit',
-  tool: 'tool',
-};
 
 export type BtnVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
 export type BtnSize = 'sm' | 'md' | 'lg';
@@ -103,19 +89,6 @@ export function Btn({
     className
   );
 
-  const style: CSSProperties | undefined = (() => {
-    if (!entity) return undefined;
-    const key = ENTITY_CSS_VAR_KEY[entity];
-    const color = `hsl(var(--e-${key}))`;
-    if (variant === 'primary') {
-      return { backgroundColor: color, color: 'white' };
-    }
-    if (variant === 'outline') {
-      return { borderColor: color, color };
-    }
-    return undefined;
-  })();
-
   const content = (
     <>
       {loading ? <Spinner /> : leftIcon}
@@ -129,8 +102,8 @@ export function Btn({
       <Slot
         id={id}
         data-testid={testId}
+        data-entity={entity || undefined}
         className={classes}
-        style={style}
         data-loading={loading || undefined}
         aria-busy={loading || undefined}
       >
@@ -144,8 +117,8 @@ export function Btn({
       type={type}
       id={id}
       data-testid={testId}
+      data-entity={entity || undefined}
       className={classes}
-      style={style}
       disabled={isDisabled}
       aria-busy={loading || undefined}
       onClick={onClick}

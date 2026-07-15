@@ -46,19 +46,20 @@ describe('NotificationCard', () => {
     expect(screen.getByTestId('n-icon')).toBeInTheDocument();
   });
 
-  it('entity=game sets border-left to --e-game', () => {
+  it('entity=game keeps the border-l-4 accent (no inline color)', () => {
     const { container } = render(<NotificationCard entity="game" title="x" timestamp="ora" />);
     const el = container.querySelector<HTMLElement>('[data-entity="game"]');
     expect(el?.className).toMatch(/border-l-4/);
-    expect(el?.style.borderLeftColor).toBe('hsl(var(--e-game))');
+    expect(el?.style.borderLeftColor).toBe('');
   });
 
-  it('entity=kb maps to --e-document css var', () => {
+  it('renders with data-entity="kb" and no inline border color', () => {
     const { container } = render(
       <NotificationCard entity="kb" title="Nuova regola" timestamp="ieri" />
     );
     const el = container.querySelector<HTMLElement>('[data-entity="kb"]');
-    expect(el?.style.borderLeftColor).toBe('hsl(var(--e-document))');
+    expect(el).toBeInTheDocument();
+    expect(el?.style.borderLeftColor).toBe('');
   });
 
   it('unread=true shows unread dot pip', () => {

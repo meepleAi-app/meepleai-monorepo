@@ -38,8 +38,6 @@ export function EntityPip({
   // Pill (with count) size classes
   const pillSize = size === 'sm' ? 'h-4 min-w-4 px-1 text-[10px]' : 'h-5 min-w-5 px-1.5 text-xs';
 
-  const tailwindKey = token.bg.replace('bg-entity-', '');
-
   const baseClasses = clsx(
     'inline-flex items-center justify-center rounded-full font-medium',
     token.bg,
@@ -48,11 +46,6 @@ export function EntityPip({
     isEmpty && 'opacity-40 cursor-default',
     className
   );
-
-  // Use entity color at 0.35 alpha for ring via CSS variable in globals.css
-  const ringStyle = active
-    ? { boxShadow: `0 0 0 2px hsl(var(--e-${tailwindKey}) / 0.35)` }
-    : undefined;
 
   const content = hasCount ? count : null;
 
@@ -65,7 +58,6 @@ export function EntityPip({
         onClick={onClick}
         disabled={isEmpty}
         className={baseClasses}
-        style={ringStyle}
       >
         {content}
       </button>
@@ -73,7 +65,7 @@ export function EntityPip({
   }
 
   return (
-    <span role="presentation" data-entity={entity} className={baseClasses} style={ringStyle}>
+    <span role="presentation" data-entity={entity} className={baseClasses}>
       {content}
     </span>
   );

@@ -46,6 +46,8 @@ export const GameNightDtoSchema = z.object({
   totalInvited: z.number(),
   createdAt: z.string(),
   updatedAt: z.string().nullable().optional(),
+  // #2989 inv#17: the viewer's RSVP status for this night (null if organizer/not-invited).
+  viewerRsvpStatus: RsvpStatusSchema.nullable().optional(),
 });
 export type GameNightDto = z.infer<typeof GameNightDtoSchema>;
 

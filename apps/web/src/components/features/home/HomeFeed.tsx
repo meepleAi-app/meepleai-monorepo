@@ -19,11 +19,12 @@ import { MeepleChatCard } from '@/components/chat-unified/MeepleChatCard';
 import { EmptyStateCard } from '@/components/features/common';
 import { SkeletonCardGrid } from '@/components/features/common';
 import { MeepleEventCard } from '@/components/game-night/MeepleEventCard';
+import { PendingRsvpCard } from '@/components/game-night/PendingRsvpCard';
 import { MeepleLibraryGameCard } from '@/components/library/MeepleLibraryGameCard';
 import { MeepleCard, entityHsl } from '@/components/ui/data-display/meeple-card';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
 import { useRecentChatSessions } from '@/hooks/queries/useChatSessions';
-import { useUpcomingGameNights } from '@/hooks/queries/useGameNights';
+import { useRsvpGameNight, useUpcomingGameNights } from '@/hooks/queries/useGameNights';
 import { useRecentlyAddedGames } from '@/hooks/queries/useLibrary';
 import { useNavigation } from '@/hooks/useNavigation';
 
@@ -32,6 +33,7 @@ import { RecentSection } from './RecentSection';
 export function HomeFeed() {
   const router = useRouter();
   const { openDetail } = useNavigation();
+  const rsvpMutation = useRsvpGameNight();
 
   const { data: activeSessions, isLoading: sessionsLoading } = useActiveSessions(5);
   const { data: recentGames, isLoading: gamesLoading } = useRecentlyAddedGames(6);
@@ -131,21 +133,32 @@ export function HomeFeed() {
           />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {nights.map(night => (
-              <MeepleEventCard
-                key={night.id}
-                event={{
-                  id: night.id,
-                  title: night.title,
-                  scheduledAt: night.scheduledAt,
-                  location: night.location ?? null,
-                  participantCount: 0,
-                  gameCount: 0,
-                }}
-                variant="list"
-                onClick={() => openDetail(night.id, 'event')}
-              />
-            ))}
+            {nights.map(night =>
+              night.viewerRsvpStatus === 'Pending' ? (
+                <PendingRsvpCard
+                  key={night.id}
+                  eventId={night.id}
+                  title={night.title}
+                  inviterName={night.organizerName}
+                  onConfirm={() => rsvpMutation.mutate({ id: night.id, response: 'Accepted' })}
+                  onDecline={() => rsvpMutation.mutate({ id: night.id, response: 'Declined' })}
+                />
+              ) : (
+                <MeepleEventCard
+                  key={night.id}
+                  event={{
+                    id: night.id,
+                    title: night.title,
+                    scheduledAt: night.scheduledAt,
+                    location: night.location ?? null,
+                    participantCount: 0,
+                    gameCount: 0,
+                  }}
+                  variant="list"
+                  onClick={() => openDetail(night.id, 'event')}
+                />
+              )
+            )}
           </div>
         )}
       </section>

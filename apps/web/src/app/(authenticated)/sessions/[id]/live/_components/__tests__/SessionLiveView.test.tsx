@@ -189,6 +189,16 @@ vi.mock('@/hooks/mutations/usePlayRecordPhotoUpload', () => ({
   }),
 }));
 
+// ─── useUpdateLiveGameState mock (#3033: CatanLiveFlavor's useCatanStateEditor
+// calls this via useMutation/useQueryClient) — same "avoid QueryClientProvider"
+// rationale as usePlayRecordPhotoUpload above.
+
+vi.mock('@/hooks/mutations/useUpdateLiveGameState', () => ({
+  useUpdateLiveGameState: () => ({
+    mutate: vi.fn(),
+  }),
+}));
+
 // ─── useCompleteLiveSession mock (#2503) ─────────────────────────────────────
 // Controllable: completeMutate captures the (undefined, { onSuccess }) call;
 // completeIsPending toggles the confirm-CTA disabled state.
@@ -410,11 +420,23 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.flavor.catan.roundTemplate': 'Round {n}',
   'pages.sessionLive.flavor.catan.activePlayerTemplate': 'Turno di {name}',
   'pages.sessionLive.flavor.catan.phaseTemplate': 'Fase: {name}',
-  'pages.sessionLive.flavor.catan.leaderboardHeading': 'Punti Vittoria',
-  'pages.sessionLive.flavor.catan.leaderBadgeLabel': 'In testa',
-  'pages.sessionLive.flavor.catan.scoreAriaTemplate': 'Punti di {name}: {score}',
-  'pages.sessionLive.flavor.catan.dimensionsHeading': 'Dettaglio punti',
-  'pages.sessionLive.flavor.catan.emptyLabel': 'In attesa dei dati della partita…',
+  'pages.sessionLive.flavor.catan.initBoardCta': 'Genera board Catan',
+  'pages.sessionLive.flavor.catan.viewerWaiting': 'In attesa dell’host',
+  'pages.sessionLive.flavor.catan.hexAriaTemplate': '{terrain} {number}',
+  'pages.sessionLive.flavor.catan.robberLabel': 'Ladro',
+  'pages.sessionLive.flavor.catan.diceLastLabel': 'Ultimo tiro',
+  'pages.sessionLive.flavor.catan.diceHistoryLabel': 'Cronologia',
+  'pages.sessionLive.flavor.catan.rollAriaTemplate': 'Registra tiro {n}',
+  'pages.sessionLive.flavor.catan.vpLabel': 'PV',
+  'pages.sessionLive.flavor.catan.handLabel': 'Mano',
+  'pages.sessionLive.flavor.catan.devLabel': 'Sviluppo',
+  'pages.sessionLive.flavor.catan.settlementsLabel': 'Insediamenti',
+  'pages.sessionLive.flavor.catan.citiesLabel': 'Città',
+  'pages.sessionLive.flavor.catan.roadsLabel': 'Strade',
+  'pages.sessionLive.flavor.catan.longestRoadLabel': 'Strada+',
+  'pages.sessionLive.flavor.catan.largestArmyLabel': 'Armata+',
+  'pages.sessionLive.flavor.catan.incAriaTemplate': '{field} +1',
+  'pages.sessionLive.flavor.catan.decAriaTemplate': '{field} -1',
   // ChatAgentPanel labels (G1 #2374 T3 — composite header)
   'pages.sessionLive.chatAgent.title': 'ChatAgent',
   'pages.sessionLive.chatAgent.agentNameAriaLabel': 'Nome agente {name}',

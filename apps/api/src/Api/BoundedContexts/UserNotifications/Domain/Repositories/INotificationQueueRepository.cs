@@ -8,6 +8,16 @@ internal interface INotificationQueueRepository
     Task AddAsync(NotificationQueueItem item, CancellationToken ct = default);
     Task AddRangeAsync(IEnumerable<NotificationQueueItem> items, CancellationToken ct = default);
     Task UpdateAsync(NotificationQueueItem item, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns the next batch of pending (or retry-due failed) items for the channel.
+    /// </summary>
+    /// <remarks>
+    /// NOT a pure read: a row whose payload cannot be materialized is dead-lettered as a
+    /// self-healing side-effect (best-effort, independently committed) so a single poison row
+    /// can never stall the whole batch (#3057). Intended for the drainer jobs — do NOT call from a
+    /// read-only path (metrics, preview, admin count) where silently mutating rows is undesirable.
+    /// </remarks>
     Task<IReadOnlyList<NotificationQueueItem>> GetPendingByChannelAsync(
         NotificationChannelType channelType, int batchSize, CancellationToken ct = default);
     Task<int> GetPendingCountAsync(CancellationToken ct = default);

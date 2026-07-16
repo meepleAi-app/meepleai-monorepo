@@ -41,7 +41,6 @@ export const PROTECTED_ROUTES = [
   '/pipeline-builder',
   '/play-records',
   '/players',
-  '/private-games',
   '/profile',
   '/sessions',
   '/settings',

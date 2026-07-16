@@ -6,7 +6,8 @@
 > 1. Parti dall'**Architettura** (§1–§7): la spina dorsale (route-group, shell, provider, guardie, regole di visibilità della navbar) che vale trasversalmente su *tutte* le pagine.
 > 2. Poi la **Mappa per cluster** (§8): 22 cluster funzionali che coprono ~180 route, ciascuno con tabella route, edge di navigazione, superfici condizionali `show/hide/enable` e componenti→file.
 > 3. L'**Indice componenti→file** (§9) è la vista inversa: da componente ai punti d'uso.
-> 4. Il **sitemap visuale navigabile** è pubblicato come Artifact web (link fornito in chat).
+> 4. La **Copertura design / handoff** (§11) mappa le route alle fonti di mockup/prototipo, segnalando route "morte" ancora descritte dal design, path divergenti e gap noti.
+> 5. Il **sitemap visuale navigabile** è pubblicato come Artifact web (link fornito in chat).
 >
 > _Generato via `/sc:spec-panel` con lente expert-panel (Cockburn = flussi/attori · Fowler = confini componenti · Nygard = stati/failure · Wiegers = completezza). Discovery esaustiva con verifica avversariale di completezza. Sorgente di verità = codice in `apps/web/src`._
 
@@ -5006,3 +5007,71 @@ _Sono elencati i **74 componenti condivisi** (usati in ≥2 route). I componenti
 - **Limiti noti**: le condizioni di visibilità dipendenti da dati runtime (feature flag DB, quota, ruolo utente) sono descritte come *regole*, non come stato osservato.
 
 _Documento generato il 2026-07-15 · workflow `wf_94e3ee0b-a9a` (66 agenti: 22 find + 22 verify avversariale + 22 synth · 0 errori · ~12M token subagent · ~31 min) · sorgente = `apps/web/src`._
+
+---
+
+## 11. Copertura design / handoff
+
+> **Cosa aggiunge questa sezione**: le §1–§10 mappano le route al **codice**. Questa sezione le mappa alle **fonti di design** (mockup HTML, prototipi React, brief, gap-report) sparse in `admin-mockups/` e `claude-design-handoff/`, per rispondere a: quale design alimenta una route, quali route sono ancora *descritte* da un mockup ma di fatto morte, dove il path nel mockup diverge dall'implementazione, e quali superfici di design non hanno (ancora) una route.
+>
+> **Fonte**: audit del 2026-07-16 → [`docs/for-developers/audits/2026-07-16-design-coverage-audit.md`](../audits/2026-07-16-design-coverage-audit.md) (workflow a 5 agenti read-only su `claude-design-handoff/` + sottocartelle `admin-mockups/{briefs,check,design_handoff,design_handoff_admin,standalone,mockup-meeplecard}`). Complementa l'audit `design_files/`-only del [2026-07-15](../audits/2026-07-15-mockup-implementation-gap-audit.md). Inventario mockup `design_files/`: [`admin-mockups/MOCKUPS_INDEX.md`](../../../admin-mockups/MOCKUPS_INDEX.md). Forma di fidelity moderna post-DS-17 = storie Storybook `*.stories.tsx` (vedi CLAUDE.md § "Mockup migration pattern").
+
+### 11.1 Fonti di design per superficie
+
+| Fonte | Route/superfici coperte | In site-map | Note |
+|---|---|---|---|
+| `claude-design-handoff/2026-06-04/` (prototipo React desktop) | dashboard, discover, agents, library, sessions, game-nights (+detail/live/wizard), game, auth | ✅ 13/13 | Fonte del redesign **Asse A/B/C/D** già shippato. `screen-dashboard.jsx` = prototipo dashboard priority-driven (Asse-C #1898). |
+| `claude-design-handoff/2026-06-30-sp6/` (librogame) | librogame play (`setup`/`chat`/reader/glossary/quota/session-end) | ⚠️ partial | Superficie del *play* di un librogame, **non** la route `/setup` generica. `glossary-editor`, `quota-credits`, `session-end` senza match univoco. |
+| `claude-design-handoff/2026-07-15-sp8-mobile/` + `sp9-gamenight-mobile/` | viste mobile dashboard/game-nights/detail | ⚠️ partial | Ridisegni mobile-specifici (touch-target ≥44px, CTA RSVP 52px) non riflessi nel site-map. |
+| `admin-mockups/design_handoff_admin/admin/` (SP5 admin, 31 mockup) | console admin (users, content, monitor, llm, knowledge-base, …) | ✅ 24 · ⚠️ 5 · ❌ 2 | Vedi §11.2 (route morte) e §11.3 (path divergenti). |
+| `admin-mockups/standalone/` + `mockup-meeplecard/` | MeepleCard variants, `dashboard-new-user` (empty-state), poster | component-showcase | Mostrano componenti, non route. `meeple-card-real-app--chat-card` rilevante per il rendering entità chat. |
+| `admin-mockups/briefs/` + `admin-mockups/design_handoff/` (brief + gap-report) | ~40 route via `SCREENS.md` | in gran parte ✅, con staleness | `SCREENS.md`/`MANIFEST.json` datati 2026-05-24 → vedi §11.5 (fonti stale). |
+
+### 11.2 Route "morte" ancora descritte da mockup vivi
+
+Route i cui mockup descrivono una pagina funzionante, mentre l'implementazione è un redirect/embedded/inesistente.
+
+| Superficie descritta dal mockup | Realtà implementativa | Fonte mockup |
+|---|---|---|
+| `/admin/agents/sandbox` come pagina | SSR-redirect immediato | mockup D2/D3 admin-agents |
+| `/admin/agents/debug-chat` come pagina | SSR-redirect immediato | mockup D2/D3 admin-agents |
+| `/admin/agents/ab-testing/{[id],new,results}` come pagine | SSR-redirect immediato | mockup D2/D3 admin-agents |
+| `/admin/secrets` come route standalone | `SecretsPanel` embedded in `/admin/monitor/services` | `sp5-admin-secrets.html` |
+| RAG index backup/restore come route dedicata | nessuna route; solo "seeding" coperto | `sp5-admin-rag-backup.html` |
+| Slack integration | zero occorrenze "Slack" nel site-map; ~½ mockup senza route | `sp5-admin-integrations.html` |
+
+### 11.3 Path divergenti mockup ↔ implementazione
+
+| Route reale | Path nel mockup | Fonte |
+|---|---|---|
+| `/admin/monitor/operations?tab=emergency` | `/admin/llm/emergency` | `sp5-admin-emergency.html` |
+| `/admin/monitor/services` (SecretsPanel embedded) | `/admin/secrets` | `sp5-admin-secrets.html` |
+| `/library/[gameId]` (variante libro) | `/gamebook` | brief `SP6-libro-game.md` |
+
+### 11.4 Gap noti (design senza route / drift aperto)
+
+| Gap | Route/area | Dettaglio |
+|---|---|---|
+| Drift 61.5% translate | `/library/[gameId]/play/[campaignId]/translate` | 8/13 stati previsti mancanti (skeleton, reader-mode toggle, modal multi-lang, manual-mode, wake-lock, banner low-confidence, badge lang-detection, CTA abort) — `design_handoff/translate-gap-report.md`. Debito UX aperto, da verificare puntualmente. |
+| Tab settings 2FA irraggiungibile | `/profile?tab=settings` | Issue **#1608 P0**: il valore `settings` potrebbe non essere nel tipo `Tab` → wizard 2FA non raggiungibile via UI. Da verificare sul codice corrente. |
+| Mobile SP8/SP9 | dashboard/game-nights/detail mobile | 3 mockup validati non riflessi nel site-map. |
+| MeepleCard drawer standalone | — | `meeple-card-drawer-tabs-mockup.html` pianificato ma mai generato (gap di processo). |
+| Duplicazione token CSS | — | `tokens.css`/`components.css` byte-identici tra `design_files/` (canonico, importato in prod) e `design_handoff/` (copia) → rischio drift. |
+
+### 11.5 Fonti stale — NON usare come source-of-truth
+
+Documenti di handoff datati 2026-05-24, superati dallo stato corrente del codice/site-map:
+
+- `design_handoff/SCREENS.md` + `MANIFEST.json` — elencano ancora `sp4-dashboard`/`sp4-hub-*` come attivi nonostante il ritiro (Pre-Stage-3, #2114).
+- `design_handoff/{CODEBASE_AUDIT,COMPONENTS_AUDIT,SCHEMA_DIFF,REVIEW_REPORT}.md` — superati.
+- `design_handoff_admin/ADMIN_AUDIT.md` — ~2 mesi più vecchio del site-map; verificare prima di fidarsi.
+
+### 11.6 Annotazioni per route
+
+- **`/dashboard`** — il redesign vivo deriva da `claude-design-handoff/2026-06-04/js/screen-dashboard.jsx` (Asse-C priority-driven #1898). Il mockup `admin-mockups/design_files/sp4-dashboard` è **obsoleto** (Pre-Stage-3, #2114) e in via di rimozione: non usarlo come riferimento. Restano attivi e distinti: `dashboard-new-user.html` (empty-state) e `sp9-dashboard-game-night-mobile.dc.html` (mobile).
+- **`/setup`** — route generica "Game Setup Guide" (AI). **Da non confondere** con il `setup-wizard`/`setup-chat` di `2026-06-30-sp6`, che è il *play* di un librogame (Tab "Setup"). Redesign SP6 valido e disgiunto (PR #3036).
+- **`/private-games/[id]`** — in **deprecazione** (redirect → `/library/private/:id`). I brief `briefs/SP5-admin-tools.md` e `design_handoff_admin/admin/sp5-private-games.html` descrivono una publish-checklist/index oggi inesistente sulla route reale: resi **moot** dalla deprecazione (nota di riconciliazione).
+- **`/library/[gameId]/play/[campaignId]/translate`** — drift 61.5% vs `translate-gap-report.md` (vedi §11.4). Verificare gli 8 stati mancanti prima di considerare la route completa.
+- **`/profile` (tab settings)** — issue **#1608 P0**: verificare che il tab `settings` sia raggiungibile via UI (wizard 2FA), vedi §11.4.
+
+_Sezione aggiunta il 2026-07-16 · audit `2026-07-16-design-coverage-audit.md` (workflow 5 agenti read-only · 0 errori)._

@@ -1061,4 +1061,18 @@ internal record CollectionStatsDto(
     string MemoryFormatted
 );
 
+/// <summary>
+/// Self-contained host/process resource metrics read via System.Diagnostics.
+/// Issue #3041: independent from Prometheus/exporters.
+/// </summary>
+internal record SystemResourcesDto(
+    long ProcessWorkingSetBytes,
+    long GcHeapBytes,
+    int ProcessorCount,
+    double ProcessCpuPercent,
+    double ProcessUptimeSeconds,
+    long HostMemoryTotalBytes,
+    DateTime MeasuredAt
+);
+
 // ADMIN-01: Prompt Management DTOs - See PromptManagementDto.cs for full definitions

@@ -618,34 +618,6 @@
     },
     "title": "Impostazioni"
   },
-  "setup": {
-    "aiConfidence": "Confidenza AI:",
-    "backToHome": "← Torna alla Home",
-    "closeButton": "Chiudi",
-    "closeReferences": "Chiudi finestra riferimenti",
-    "estimatedTime": "Tempo stimato di setup:",
-    "gameLabel": "Gioco:",
-    "generateButton": "Genera Guida Setup",
-    "generateForGame": "Genera guida di setup per il gioco selezionato",
-    "generating": "Generazione...",
-    "generatingMessage": "Generazione della guida di setup...",
-    "generatingSubMessage": "Potrebbe richiedere alcuni istanti",
-    "goToLogin": "Vai al Login",
-    "heading": "Guida Setup Gioco",
-    "loginRequired": "Accesso Richiesto",
-    "loginRequiredMessage": "Devi effettuare l'accesso per usare la guida di setup.",
-    "noGuideMessage": "Seleziona un gioco e clicca \"Genera Guida Setup\"",
-    "noGuideYet": "Nessuna Guida di Setup",
-    "optional": "OPZIONALE",
-    "progress": "Progresso:",
-    "readyToPlay": "Il tuo gioco è pronto per giocare",
-    "references": "Riferimenti",
-    "resetProgress": "Reimposta Progresso",
-    "selectGame": "Seleziona Gioco",
-    "selectGamePlaceholder": "Seleziona un gioco...",
-    "setupComplete": "Setup Completato!",
-    "viewButton": "Visualizza"
-  },
   "timeline": {
     "details": "Dettagli",
     "eventDetails": "Dettagli Evento",
@@ -2808,6 +2780,51 @@
       },
       "batchNote": "Mostrati i primi {n} risultati."
     },
+    "setup": {
+      "title": "Guida Setup Gioco",
+      "subtitle": "Genera una guida passo-passo per preparare la partita, con riferimenti al regolamento.",
+      "selectGame": "Seleziona Gioco",
+      "gameLabel": "Gioco:",
+      "selectGamePlaceholder": "Seleziona un gioco...",
+      "generateButton": "Genera Guida Setup",
+      "generating": "Generazione...",
+      "generateForGameAria": "Genera guida di setup per il gioco selezionato",
+      "errors": {
+        "noGameSelected": "Seleziona prima un gioco.",
+        "loadGames": "Errore nel caricamento dei giochi.",
+        "generateGuide": "Errore nella generazione della guida di setup. Riprova.",
+        "retry": "Riprova"
+      },
+      "loading": {
+        "title": "Generazione della guida di setup...",
+        "subtitle": "Potrebbe richiedere alcuni istanti mentre recuperiamo le istruzioni migliori dal regolamento."
+      },
+      "estimatedTime": "Tempo stimato di setup: {minutes} minuti",
+      "resetProgress": "Reimposta Progresso",
+      "resetConfirm": "Sei sicuro di voler reimpostare tutti i progressi?",
+      "progress": "Progresso: {done} / {total} passaggi",
+      "complete": {
+        "title": "Setup Completato!",
+        "body": "Il tuo gioco è pronto per giocare. Buon divertimento!"
+      },
+      "aiConfidence": "Confidenza AI: {percent}%",
+      "empty": {
+        "title": "Nessuna Guida di Setup",
+        "description": "Seleziona un gioco e clicca \"Genera Guida Setup\" per iniziare con istruzioni passo-passo."
+      },
+      "optional": "OPZIONALE",
+      "references": "Riferimenti",
+      "viewReferences": "{n, plural, one {Visualizza # riferimento} other {Visualizza # riferimenti}}",
+      "citation": {
+        "docLabel": "Doc {id}",
+        "pageLabel": "Pagina {n}",
+        "noPage": "Nessuna pagina"
+      },
+      "step": {
+        "markComplete": "Segna come completato",
+        "markIncomplete": "Segna come da completare"
+      }
+    },
     "sessions": {
       "metadata": {
         "title": "Le mie partite — MeepleAI",
@@ -3666,11 +3683,23 @@
           "roundTemplate": "Round {n}",
           "activePlayerTemplate": "Turno di {name}",
           "phaseTemplate": "Fase: {name}",
-          "leaderboardHeading": "Punti Vittoria",
-          "leaderBadgeLabel": "In testa",
-          "scoreAriaTemplate": "Punti di {name}: {score}",
-          "dimensionsHeading": "Dettaglio punti",
-          "emptyLabel": "In attesa dei dati della partita…"
+          "initBoardCta": "Genera board Catan",
+          "viewerWaiting": "In attesa dell'host…",
+          "hexAriaTemplate": "{terrain} {number}",
+          "robberLabel": "Ladro",
+          "diceLastLabel": "Ultimo tiro",
+          "diceHistoryLabel": "Cronologia",
+          "rollAriaTemplate": "Registra tiro {n}",
+          "vpLabel": "PV",
+          "handLabel": "Mano",
+          "devLabel": "Sviluppo",
+          "settlementsLabel": "Insediamenti",
+          "citiesLabel": "Città",
+          "roadsLabel": "Strade",
+          "longestRoadLabel": "Strada+",
+          "largestArmyLabel": "Armata+",
+          "incAriaTemplate": "{field} +1",
+          "decAriaTemplate": "{field} −1"
         }
       },
       "photosTab": {

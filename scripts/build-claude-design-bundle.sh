@@ -74,8 +74,6 @@ SP8_MOCKUPS=(
 # SP9 mobile-gamenight-social (#2989): GENERATION bundle — only existing reference mockups
 # (the sp9-* mobile mockups are the OUTPUT, generated in-session, not seeds).
 SP9_REFS=(
-  sp4-dashboard.html
-  sp4-dashboard.jsx
   sp7-game-night-transition.html
   sp7-game-night-transition.jsx
   primitive-nav-bottom-mobile.html

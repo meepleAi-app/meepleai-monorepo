@@ -71,7 +71,6 @@
 | File | Type | Mapped routes |
 |------|------|---------------|
 | `sp4-citation-pdf-viewer.html` | component-mock | Citation overlay used by game-chat tabs (`GameChatTab.tsx` → `CitationModal.tsx`), mounted in `/games/[id]` and `/library/[gameId]` (`?tab=aiChat`). NOT `/chat/[threadId]` — that route renders `PageViewerPanel.tsx`, a plain extracted-text side panel with no Snippet/PDF tabs or ownership gating. `/chat/[threadId]` full-screen has no page-mock (known gap, issue #491, see `docs/for-developers/audits/2026-05-22-mockup-gaps.md`). |
-| `sp4-dashboard.html` | page-mock (obsolete) | `/dashboard` — historical Pre-Stage-3 mockup, superseded by Asse C #1898 priority-driven design (4 priority sections replace 5 entity sections); tracking #2114 |
 | `sp4-game-chat-tab.html` | component-mock | Chat tab embedded in `/library/[gameId]/agent`, `/games/[id]` |
 | `sp4-game-detail-tab-rules.html` | sub-tab placeholder (#2148) | `/games/[id]/rules` — AI placeholder, designer review required |
 | `sp4-game-detail-tab-reviews.html` | sub-tab placeholder (#2148) | `/games/[id]/reviews` — friend-first M1 variant, designer review required |

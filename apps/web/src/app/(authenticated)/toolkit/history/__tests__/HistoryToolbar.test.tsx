@@ -224,29 +224,46 @@ describe('HistoryToolbar', () => {
     const { onChange } = renderToolbar({ state: baseState({ gameIds: ['game-1', 'game-2'] }) });
 
     await user.click(screen.getByRole('button', { name: 'pages.toolkitHistory.filters.games' }));
-    await user.click(screen.getByRole('button', { name: 'pages.toolkitHistory.filters.all' }));
+    const allButton = screen.getByRole('button', { name: 'pages.toolkitHistory.filters.all' });
+    // With games selected, "Tutti" is not the active state.
+    expect(allButton).toHaveAttribute('aria-pressed', 'false');
+
+    await user.click(allButton);
 
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ gameIds: [] }));
+  });
+
+  it('marks "Tutti" as pressed when no games are selected', async () => {
+    const user = userEvent.setup();
+    renderToolbar({ state: baseState({ gameIds: [] }) });
+
+    await user.click(screen.getByRole('button', { name: 'pages.toolkitHistory.filters.games' }));
+
+    expect(
+      screen.getByRole('button', { name: 'pages.toolkitHistory.filters.all' })
+    ).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('exposes the games filter popover as a valid ARIA group, not an invalid listbox', async () => {
     const user = userEvent.setup();
     renderToolbar();
 
-    // Before opening, only the always-mounted filter-cluster wrapper is a group.
+    // Before opening, the popover content isn't mounted yet, so no group with
+    // this name exists (the outer filter-cluster wrapper is a plain layout
+    // `<div>`, not a labeled group — avoids a redundant duplicate-name group).
     expect(
-      screen.getAllByRole('group', { name: 'pages.toolkitHistory.filters.filterByGame' })
-    ).toHaveLength(1);
+      screen.queryByRole('group', { name: 'pages.toolkitHistory.filters.filterByGame' })
+    ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'pages.toolkitHistory.filters.games' }));
 
     // A listbox may only contain "option" children; this popover mixes a
     // plain "Tutti" button with checkbox rows, so it must not be a listbox.
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
-    // The popover content itself is now a second, valid ARIA group.
+    // The popover content itself is the single, valid ARIA group.
     expect(
-      screen.getAllByRole('group', { name: 'pages.toolkitHistory.filters.filterByGame' })
-    ).toHaveLength(2);
+      screen.getByRole('group', { name: 'pages.toolkitHistory.filters.filterByGame' })
+    ).toBeInTheDocument();
     // "Tutti" is a plain button (no longer role="option", invalid outside a listbox).
     expect(
       screen.queryByRole('option', { name: 'pages.toolkitHistory.filters.all' })

@@ -5,6 +5,7 @@ import { type ComponentType, type ReactElement } from 'react';
 import dynamic from 'next/dynamic';
 
 import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
+import type { ParticipantRole } from '@/lib/session-live/participant-role';
 
 import { FlavorLoadingSkeleton } from './FlavorLoadingSkeleton';
 
@@ -42,6 +43,8 @@ export interface FlavorRendererProps {
   readonly view: FlavorView;
   readonly session: LiveSessionDto;
   readonly labels: CatanLiveFlavorLabels;
+  readonly viewerRole: ParticipantRole;
+  readonly sessionId: string;
   readonly className?: string;
   /** #2787: live SignalR points (playerId→points) forwarded to the flavor. */
   readonly livePoints?: ReadonlyMap<string, number> | null;
@@ -54,6 +57,8 @@ export function FlavorRenderer({
   view,
   session,
   labels,
+  viewerRole,
+  sessionId,
   className,
   livePoints,
   phaseName,
@@ -64,6 +69,8 @@ export function FlavorRenderer({
     <LazyFlavor
       session={session}
       labels={labels}
+      viewerRole={viewerRole}
+      sessionId={sessionId}
       className={className}
       livePoints={livePoints}
       phaseName={phaseName}

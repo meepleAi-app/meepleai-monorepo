@@ -72,10 +72,14 @@
   /* Gap #37 — warning shade dark for AA contrast on cream surfaces (4.5:1 text)
    * --c-warning (38 92% 50%) ≈ #f1a417 passes AA only as decorative/border on cream.
    * As TEXT on cream (#f7f3ee) it fails 4.5:1 (~2.6:1). Darker shade required.
-   *   --c-warning-ink  hsl(38 92% 32%) ≈ #ad5c00 vs #f7f3ee = ~5.2:1 ✅
-   * Refs: Claude Design demo 2026-06-04 baseline MAJ-9 gap #37
+   *   --c-warning-ink  hsl(38 92% 32%) vs --background (30 25% 97%) = ~4.57:1,
+   *                    vs literal mockup cream #f7f3ee = ~4.40:1 — dips BELOW
+   *                    AA on the mockup cream. Darkened further (#3010 FU2).
+   *   --c-warning-ink  hsl(38 92% 30%) ≈ #935f06 vs --background = ~5.07:1 ✅
+   *                    vs literal mockup cream #f7f3ee = ~4.89:1 ✅
+   * Refs: Claude Design demo 2026-06-04 baseline MAJ-9 gap #37; #3010 FU2 re-darken
    */
-  --c-warning-ink: 38 92% 32%;
+  --c-warning-ink: 38 92% 30%;
 
   /* Issue #3010 Task 9b — success shade dark for AA contrast on cream surfaces (4.5:1 text)
    * --c-success (142 70% 45%) ≈ #2fbf6b passes AA only as decorative/border on cream.

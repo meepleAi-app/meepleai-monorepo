@@ -109,6 +109,24 @@ export const MetricsTimeSeriesResponseSchema = z.object({
 
 export type MetricsTimeSeriesResponse = z.infer<typeof MetricsTimeSeriesResponseSchema>;
 
+// ========== System Resources (Issue #3041) ==========
+
+/**
+ * Response from GET /api/v1/resources/system — self-contained host/process
+ * metrics via System.Diagnostics (independent from Prometheus/exporters).
+ */
+export const SystemResourcesResponseSchema = z.object({
+  processWorkingSetBytes: z.number(),
+  gcHeapBytes: z.number(),
+  processorCount: z.number(),
+  processCpuPercent: z.number(),
+  processUptimeSeconds: z.number(),
+  hostMemoryTotalBytes: z.number(),
+  measuredAt: z.string().datetime({ offset: true }),
+});
+
+export type SystemResourcesResponse = z.infer<typeof SystemResourcesResponseSchema>;
+
 // ========== Infrastructure Resources (Issue #125) ==========
 
 export const DatabaseMetricsSchema = z.object({

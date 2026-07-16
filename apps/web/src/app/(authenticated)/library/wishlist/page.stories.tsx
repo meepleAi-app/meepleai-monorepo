@@ -13,6 +13,9 @@ const meta: Meta<typeof WishlistPage> = {
   component: WishlistPage,
   parameters: {
     layout: 'fullscreen',
+    // DS-17 #2342: single Default story renders the default state; declare it so the
+    // canonical-state coverage gate detects it (no quoted state literal to scan).
+    canonicalStates: ['default'],
     nextjs: { appDirectory: true },
     viewport: { defaultViewport: 'desktop' },
     docs: {

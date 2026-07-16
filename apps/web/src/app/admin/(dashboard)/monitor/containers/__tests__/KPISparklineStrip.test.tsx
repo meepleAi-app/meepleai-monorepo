@@ -73,6 +73,24 @@ describe('KPISparklineStrip', () => {
     expect(screen.getByText('/32 GB')).toBeInTheDocument();
   });
 
+  it('omits the denominator when memory.total is 0 (#3041 fallback, no "/0 GB")', () => {
+    useInfrastructureKpisMock.mockReturnValue(
+      makeKpis({
+        memory: {
+          value: 5,
+          total: 0,
+          series: [],
+          trend: 'flat' as const,
+          trendPct: 0,
+          loading: false,
+        },
+      })
+    );
+    render(<KPISparklineStrip />);
+    expect(screen.queryByText('/0 GB')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('RAM usata 5 GB')).toBeInTheDocument();
+  });
+
   it('shows batch jobs queued + running', () => {
     useInfrastructureKpisMock.mockReturnValue(makeKpis());
     render(<KPISparklineStrip />);

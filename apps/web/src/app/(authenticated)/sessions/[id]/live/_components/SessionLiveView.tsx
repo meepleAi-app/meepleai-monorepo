@@ -492,13 +492,17 @@ export function SessionLiveView(): ReactElement {
 
   // #3025 L1: mirror the opaque live game-state into the store — hydrate from the DTO,
   // then let the latest `session:game-state` SSE event win. L3 flavors read `s.gameState`.
+  // #3050: match the event's sessionId so a previous session's game-state (still in the
+  // accumulator for the frame before it clears) can never bleed into this session's store.
   useEffect(() => {
     const dtoState = sessionQuery.data?.gameState ?? null;
-    const latest = [...liveStream.events].reverse().find(e => e.type === 'session:game-state');
+    const latest = [...liveStream.events]
+      .reverse()
+      .find(e => e.type === 'session:game-state' && e.sessionId === sessionId);
     useLiveSessionStore
       .getState()
       .setGameState(latest && latest.type === 'session:game-state' ? latest.state : dtoState);
-  }, [sessionQuery.data?.gameState, liveStream.events]);
+  }, [sessionQuery.data?.gameState, liveStream.events, sessionId]);
 
   // #2483 Task 2: reactive selector for turnOrderType — must be declared before
   // turnRendererState useMemo (which appears in the i18n labels section below).
@@ -1141,13 +1145,29 @@ export function SessionLiveView(): ReactElement {
         'Turno di {name}',
       phaseTemplate:
         (intl.messages['pages.sessionLive.flavor.catan.phaseTemplate'] as string) ?? 'Fase: {name}',
-      leaderboardHeading: t('pages.sessionLive.flavor.catan.leaderboardHeading'),
-      leaderBadgeLabel: t('pages.sessionLive.flavor.catan.leaderBadgeLabel'),
-      scoreAriaTemplate:
-        (intl.messages['pages.sessionLive.flavor.catan.scoreAriaTemplate'] as string) ??
-        'Punti di {name}: {score}',
-      dimensionsHeading: t('pages.sessionLive.flavor.catan.dimensionsHeading'),
-      emptyLabel: t('pages.sessionLive.flavor.catan.emptyLabel'),
+      initBoardCta: t('pages.sessionLive.flavor.catan.initBoardCta'),
+      viewerWaiting: t('pages.sessionLive.flavor.catan.viewerWaiting'),
+      hexAriaTemplate:
+        (intl.messages['pages.sessionLive.flavor.catan.hexAriaTemplate'] as string) ??
+        '{terrain} {number}',
+      robberLabel: t('pages.sessionLive.flavor.catan.robberLabel'),
+      diceLastLabel: t('pages.sessionLive.flavor.catan.diceLastLabel'),
+      diceHistoryLabel: t('pages.sessionLive.flavor.catan.diceHistoryLabel'),
+      rollAriaTemplate:
+        (intl.messages['pages.sessionLive.flavor.catan.rollAriaTemplate'] as string) ??
+        'Registra tiro {n}',
+      vpLabel: t('pages.sessionLive.flavor.catan.vpLabel'),
+      handLabel: t('pages.sessionLive.flavor.catan.handLabel'),
+      devLabel: t('pages.sessionLive.flavor.catan.devLabel'),
+      settlementsLabel: t('pages.sessionLive.flavor.catan.settlementsLabel'),
+      citiesLabel: t('pages.sessionLive.flavor.catan.citiesLabel'),
+      roadsLabel: t('pages.sessionLive.flavor.catan.roadsLabel'),
+      longestRoadLabel: t('pages.sessionLive.flavor.catan.longestRoadLabel'),
+      largestArmyLabel: t('pages.sessionLive.flavor.catan.largestArmyLabel'),
+      incAriaTemplate:
+        (intl.messages['pages.sessionLive.flavor.catan.incAriaTemplate'] as string) ?? '{field} +1',
+      decAriaTemplate:
+        (intl.messages['pages.sessionLive.flavor.catan.decAriaTemplate'] as string) ?? '{field} -1',
     }),
     [t, intl.messages]
   );
@@ -1391,6 +1411,8 @@ export function SessionLiveView(): ReactElement {
             view="live"
             session={liveSessionDto}
             labels={catanFlavorLabels}
+            viewerRole={activeSession.viewerRole}
+            sessionId={liveSessionDto.id}
             livePoints={catanLivePoints}
             phaseName={catanPhaseName}
             className="p-3"
@@ -1615,6 +1637,8 @@ export function SessionLiveView(): ReactElement {
           view="live"
           session={liveSessionDto}
           labels={catanFlavorLabels}
+          viewerRole={activeSession.viewerRole}
+          sessionId={liveSessionDto.id}
           livePoints={catanLivePoints}
           phaseName={catanPhaseName}
           className="p-3"

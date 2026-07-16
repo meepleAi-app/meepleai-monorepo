@@ -140,6 +140,7 @@ function MultiSelectPopover({
         <button
           type="button"
           onClick={onClear}
+          aria-pressed={count === 0}
           className={cn(
             'flex w-full items-center rounded px-2 py-1.5 text-left text-sm hover:bg-muted',
             count === 0 && 'font-semibold text-foreground'
@@ -450,11 +451,7 @@ export function HistoryToolbar({
         </div>
 
         {/* filters */}
-        <div
-          className="flex flex-wrap items-center gap-2"
-          role="group"
-          aria-label={t('pages.toolkitHistory.filters.filterByGame')}
-        >
+        <div className="flex flex-wrap items-center gap-2">
           <MultiSelectPopover
             icon="🎲"
             triggerLabel={t('pages.toolkitHistory.filters.games')}

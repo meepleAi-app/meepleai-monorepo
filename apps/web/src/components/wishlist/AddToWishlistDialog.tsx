@@ -544,7 +544,13 @@ export function AddToWishlistDialog({
             >
               <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
               <span className="flex-1">{t('pages.library.wishlist.dialog.error')}</span>
-              <Button type="button" variant="outline" size="sm" onClick={submitWishlist}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={submitWishlist}
+                disabled={isPending}
+              >
                 {t('pages.library.wishlist.dialog.retry')}
               </Button>
             </div>

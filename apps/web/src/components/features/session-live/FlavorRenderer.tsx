@@ -1,0 +1,58 @@
+'use client';
+
+import { type ComponentType, type ReactElement } from 'react';
+
+import dynamic from 'next/dynamic';
+
+import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
+
+import { FlavorLoadingSkeleton } from './FlavorLoadingSkeleton';
+
+import type { CatanLiveFlavorLabels, CatanLiveFlavorProps } from './flavors/catan/CatanLiveFlavor';
+
+export type FlavorView = 'live';
+
+type FlavorComponent = ComponentType<CatanLiveFlavorProps>;
+
+// Lazy chunks are created at MODULE scope — NEVER inside render (that would
+// mint a new component identity every render → remount loop). The loader
+// returns `{ default }` to match the codebase precedent (editor/page.tsx,
+// KbGlobaleView.tsx) and satisfy next/dynamic's TS loader type.
+const CatanLiveFlavorLazy: FlavorComponent = dynamic(
+  () => import('./flavors/catan/CatanLiveFlavor').then(m => ({ default: m.CatanLiveFlavor })),
+  { ssr: false, loading: () => <FlavorLoadingSkeleton /> }
+);
+
+/**
+ * ADR-070 Option B — per-game flavor registry. Each value is a module-level
+ * lazy component (content-hashed chunk fetched ONLY when that game's live
+ * session is opened; verified by pnpm bundle:check). Summary entries arrive
+ * with G6a-2; other 6 games with G6b–g.
+ */
+const FLAVOR_MAP: Record<string, Partial<Record<FlavorView, FlavorComponent>>> = {
+  catan: { live: CatanLiveFlavorLazy },
+};
+
+export function hasFlavor(gameSlug: string | null | undefined): boolean {
+  return gameSlug != null && FLAVOR_MAP[gameSlug]?.live != null;
+}
+
+export interface FlavorRendererProps {
+  readonly gameSlug: string | null | undefined;
+  readonly view: FlavorView;
+  readonly session: LiveSessionDto;
+  readonly labels: CatanLiveFlavorLabels;
+  readonly className?: string;
+}
+
+export function FlavorRenderer({
+  gameSlug,
+  view,
+  session,
+  labels,
+  className,
+}: FlavorRendererProps): ReactElement | null {
+  const LazyFlavor = gameSlug != null ? FLAVOR_MAP[gameSlug]?.[view] : undefined;
+  if (LazyFlavor == null) return null;
+  return <LazyFlavor session={session} labels={labels} className={className} />;
+}

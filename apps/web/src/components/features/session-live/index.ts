@@ -143,6 +143,17 @@ export type {
   RightColumnTabsProps,
 } from '@/components/features/session-live/RightColumnTabs';
 
+// ─── G6a #2787 Catan flavor (ADR-070 lazy per-game modules) ───────────────────
+export { FlavorRenderer, hasFlavor } from '@/components/features/session-live/FlavorRenderer';
+export type {
+  FlavorRendererProps,
+  FlavorView,
+} from '@/components/features/session-live/FlavorRenderer';
+export type {
+  CatanLiveFlavorLabels,
+  CatanLiveFlavorProps,
+} from '@/components/features/session-live/flavors/catan/CatanLiveFlavor';
+
 export { SessionToolsRail } from '@/components/features/session-live/SessionToolsRail';
 export type {
   SessionToolsRailLabels,

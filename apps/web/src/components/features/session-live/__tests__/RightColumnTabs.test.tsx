@@ -27,6 +27,7 @@ import { RightColumnTabs } from '../RightColumnTabs';
 
 const LABELS: RightColumnTabsLabels = {
   tabsAriaLabel: 'Colonna destra',
+  tabFlavor: 'Catan',
   tabScore: 'Score',
   tabTurn: 'Turni',
   tabWidget: 'Widget',
@@ -275,5 +276,26 @@ describe('RightColumnTabs — keyboard navigation', () => {
     await user.keyboard('{End}');
 
     expect(screen.getByRole('tab', { name: 'Arbitro' })).toHaveAttribute('aria-selected', 'true');
+  });
+});
+
+describe('RightColumnTabs — conditional flavor tab (#2787)', () => {
+  it('does NOT render the flavor tab by default', () => {
+    renderTabs();
+    expect(screen.queryByRole('tab', { name: 'Catan' })).not.toBeInTheDocument();
+  });
+
+  it('renders the flavor tab FIRST when showFlavorTab is true', () => {
+    renderTabs({ showFlavorTab: true, activeTab: 'flavor' });
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs[0]).toHaveTextContent('Catan');
+    expect(screen.getByRole('tab', { name: 'Catan' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('fires onTabChange when the flavor tab is clicked', async () => {
+    const user = userEvent.setup();
+    const { onTabChange } = renderTabs({ showFlavorTab: true });
+    await user.click(screen.getByRole('tab', { name: 'Catan' }));
+    expect(onTabChange).toHaveBeenCalledWith('flavor');
   });
 });

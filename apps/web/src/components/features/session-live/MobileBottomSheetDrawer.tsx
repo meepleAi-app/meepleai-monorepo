@@ -42,6 +42,7 @@ export interface MobileBottomSheetDrawerLabels {
   readonly closeAriaLabel: string;
   /** aria-label for the role="tablist" tab strip. */
   readonly tabsAriaLabel: string;
+  readonly tabFlavor: string;
   readonly tabScore: string;
   readonly tabTurn: string;
   readonly tabWidget: string;
@@ -59,19 +60,24 @@ export interface MobileBottomSheetDrawerProps {
   readonly onTabChange: (next: LiveTab) => void;
   readonly children: ReactNode;
   readonly labels: MobileBottomSheetDrawerLabels;
+  /** #2787 — when true, prepend a game-conditional 'flavor' tab (default false). */
+  readonly showFlavorTab?: boolean;
 }
 
 // ─── Tab config ───────────────────────────────────────────────────────────────
 
-const ORDERED_TABS: ReadonlyArray<{ id: LiveTab; labelKey: keyof MobileBottomSheetDrawerLabels }> =
-  [
-    { id: 'score', labelKey: 'tabScore' },
-    { id: 'turn', labelKey: 'tabTurn' },
-    { id: 'widget', labelKey: 'tabWidget' },
-    { id: 'notes', labelKey: 'tabNotes' },
-    { id: 'photos', labelKey: 'tabPhotos' },
-    { id: 'agent', labelKey: 'tabAgent' },
-  ];
+type MobileTabConfig = { id: LiveTab; labelKey: keyof MobileBottomSheetDrawerLabels };
+
+const BASE_TABS: ReadonlyArray<MobileTabConfig> = [
+  { id: 'score', labelKey: 'tabScore' },
+  { id: 'turn', labelKey: 'tabTurn' },
+  { id: 'widget', labelKey: 'tabWidget' },
+  { id: 'notes', labelKey: 'tabNotes' },
+  { id: 'photos', labelKey: 'tabPhotos' },
+  { id: 'agent', labelKey: 'tabAgent' },
+];
+
+const FLAVOR_TAB: MobileTabConfig = { id: 'flavor', labelKey: 'tabFlavor' };
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -82,7 +88,9 @@ export function MobileBottomSheetDrawer({
   onTabChange,
   children,
   labels,
+  showFlavorTab = false,
 }: MobileBottomSheetDrawerProps): ReactElement {
+  const orderedTabs = showFlavorTab ? [FLAVOR_TAB, ...BASE_TABS] : BASE_TABS;
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetPortal>
@@ -144,7 +152,7 @@ export function MobileBottomSheetDrawer({
             className="flex shrink-0 gap-1 overflow-x-auto border-b border-border
               bg-muted/50 px-2 py-1.5"
           >
-            {ORDERED_TABS.map(tab => {
+            {orderedTabs.map(tab => {
               const isActive = activeTab === tab.id;
               const label = labels[tab.labelKey];
               return (

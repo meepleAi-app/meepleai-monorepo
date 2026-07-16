@@ -3545,6 +3545,7 @@
       },
       "rightColumn": {
         "tabsAriaLabel": "Session panels",
+        "tabFlavor": "Catan",
         "tabScore": "Score",
         "tabTurn": "Turn",
         "tabWidget": "Widget",
@@ -3553,6 +3554,19 @@
         "tabAgent": "Arbiter",
         "tabTools": "Tools",
         "tabChat": "Chat"
+      },
+      "flavor": {
+        "catan": {
+          "panelAriaLabel": "Catan panel",
+          "roundTemplate": "Round {n}",
+          "activePlayerTemplate": "{name}'s turn",
+          "phaseTemplate": "Phase: {name}",
+          "leaderboardHeading": "Victory Points",
+          "leaderBadgeLabel": "Leading",
+          "scoreAriaTemplate": "{name}'s points: {score}",
+          "dimensionsHeading": "Points breakdown",
+          "emptyLabel": "Waiting for game data…"
+        }
       },
       "photosTab": {
         "galleryHeading": "Match photo gallery",

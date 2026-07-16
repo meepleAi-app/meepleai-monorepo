@@ -99,9 +99,12 @@ import {
 } from '@/components/features/session-live';
 import {
   ConnectionLostBanner,
+  FlavorRenderer,
+  hasFlavor,
   LiveSessionNotes,
   RightColumnTabs,
   ToolkitRenderer,
+  type CatanLiveFlavorLabels,
   type ConnectionLostBannerLabels,
   type LiveAgentChatLabels,
   type LiveSessionNotesLabels,
@@ -117,6 +120,7 @@ import { useCompleteLiveSession } from '@/hooks/mutations/useCompleteLiveSession
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useLiveSession } from '@/hooks/queries/useLiveSession';
 import { useLiveSessionDiary } from '@/hooks/queries/useLiveSessionDiary';
+import { useLiveSessionPhases } from '@/hooks/queries/useLiveSessionPhases';
 import { useSessionAgentLaunch } from '@/hooks/queries/useSessionAgentLaunch';
 import type { ChatImagePreview } from '@/hooks/useChatImageAttachments';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -199,10 +203,11 @@ function resolveFixtureVariant(variantParam: string | null): LiveSessionFixture 
 //   - legacy ?tab=chat   → 'score'   (chat is no longer a tab; live in LEFT mainColumn)
 //   - legacy/missing     → 'score'   (new default)
 
-type LiveTab = 'score' | 'turn' | 'widget' | 'notes' | 'photos' | 'agent';
+type LiveTab = 'flavor' | 'score' | 'turn' | 'widget' | 'notes' | 'photos' | 'agent';
 
 function parseLiveTab(raw: string | null): LiveTab {
   if (
+    raw === 'flavor' ||
     raw === 'turn' ||
     raw === 'widget' ||
     raw === 'notes' ||
@@ -223,6 +228,7 @@ function parseLiveTab(raw: string | null): LiveTab {
 // Legacy ?mtab=log    → 'score'  (log always-visible in main column)
 function parseMobileTab(raw: string | null): LiveTab {
   if (
+    raw === 'flavor' ||
     raw === 'turn' ||
     raw === 'widget' ||
     raw === 'notes' ||
@@ -882,6 +888,7 @@ export function SessionLiveView(): ReactElement {
       closeSheetAriaLabel: t('pages.sessionLive.mobile.closeSheetAriaLabel'),
       drawerTitle: t('pages.sessionLive.mobile.drawerTitle'),
       tabsAriaLabel: t('pages.sessionLive.mobile.tabsAriaLabel'),
+      tabFlavor: t('pages.sessionLive.rightColumn.tabFlavor'),
       tabScore: t('pages.sessionLive.rightColumn.tabScore'),
       tabTurn: t('pages.sessionLive.rightColumn.tabTurn'),
       tabWidget: t('pages.sessionLive.rightColumn.tabWidget'),
@@ -909,6 +916,7 @@ export function SessionLiveView(): ReactElement {
   const rightColumnTabsLabels = useMemo<RightColumnTabsLabels>(
     (): RightColumnTabsLabels => ({
       tabsAriaLabel: t('pages.sessionLive.rightColumn.tabsAriaLabel'),
+      tabFlavor: t('pages.sessionLive.rightColumn.tabFlavor'),
       tabScore: t('pages.sessionLive.rightColumn.tabScore'),
       tabTurn: t('pages.sessionLive.rightColumn.tabTurn'),
       tabWidget: t('pages.sessionLive.rightColumn.tabWidget'),
@@ -1090,6 +1098,55 @@ export function SessionLiveView(): ReactElement {
       currentTurn: liveSessionDto.currentTurnIndex,
     };
   }, [liveSessionDto]);
+
+  // ── G6a #2787: per-game Catan flavor (conditional tab) ────────────────────
+  const showFlavorTab = hasFlavor(liveSessionDto?.gameSlug);
+
+  // #2787: live SignalR points (Points scoring) overlaid on the DTO leaderboard —
+  // the store's scoreData is fresher than the up-to-staletime LiveSessionDto.totalScore.
+  const catanLivePoints = useMemo<ReadonlyMap<string, number> | null>(() => {
+    if (endgameScoringType !== 'Points' || endgameScoreData == null) return null;
+    const scores = (
+      endgameScoreData as { scores: ReadonlyArray<{ playerId: string; points: number }> }
+    ).scores;
+    return new Map(scores.map(s => [s.playerId, s.points]));
+  }, [endgameScoringType, endgameScoreData]);
+
+  // #2787: current phase name for the flavor turn header. Fetched only when a flavor
+  // tab exists; TurnPhasesDto returns hasPhases:false/currentPhaseName:null → graceful.
+  const phasesQuery = useLiveSessionPhases(sessionId ?? '', showFlavorTab && sessionId != null);
+  const catanPhaseName = phasesQuery.data?.currentPhaseName ?? null;
+
+  // Placeholder-bearing templates ({n}/{name}/{score}) are read RAW from
+  // intl.messages so react-intl does NOT ICU-interpolate them — the flavor
+  // component does the runtime .replace. Same pattern as the toolkitRenderer
+  // aria templates above. Non-placeholder labels use t() normally.
+  const catanFlavorLabels = useMemo<CatanLiveFlavorLabels>(
+    () => ({
+      panelAriaLabel: t('pages.sessionLive.flavor.catan.panelAriaLabel'),
+      roundTemplate:
+        (intl.messages['pages.sessionLive.flavor.catan.roundTemplate'] as string) ?? 'Round {n}',
+      activePlayerTemplate:
+        (intl.messages['pages.sessionLive.flavor.catan.activePlayerTemplate'] as string) ??
+        'Turno di {name}',
+      phaseTemplate:
+        (intl.messages['pages.sessionLive.flavor.catan.phaseTemplate'] as string) ?? 'Fase: {name}',
+      leaderboardHeading: t('pages.sessionLive.flavor.catan.leaderboardHeading'),
+      leaderBadgeLabel: t('pages.sessionLive.flavor.catan.leaderBadgeLabel'),
+      scoreAriaTemplate:
+        (intl.messages['pages.sessionLive.flavor.catan.scoreAriaTemplate'] as string) ??
+        'Punti di {name}: {score}',
+      dimensionsHeading: t('pages.sessionLive.flavor.catan.dimensionsHeading'),
+      emptyLabel: t('pages.sessionLive.flavor.catan.emptyLabel'),
+    }),
+    [t, intl.messages]
+  );
+  // #2787: never strand the user on ?tab=flavor / ?mtab=flavor when the game has
+  // no flavor (e.g. a stale bookmark carried to a non-catan session) — the flavor
+  // tab button is hidden (showFlavorTab=false), so fall the panel back to 'score'.
+  const effectiveTab: LiveTab = tab === 'flavor' && !showFlavorTab ? 'score' : tab;
+  const effectiveMobileTab: LiveTab =
+    mobileTab === 'flavor' && !showFlavorTab ? 'score' : mobileTab;
 
   const agentChat = useSessionAgentChat(sessionId ?? '', agentSessionId, {
     persistHistory: !fixture,
@@ -1316,7 +1373,19 @@ export function SessionLiveView(): ReactElement {
   // Hosted inside MobileBottomSheetDrawer via MobileBody.sheetContent prop.
   const mobileSheetContent = useMemo<React.ReactNode>(() => {
     if (activeSession == null) return null;
-    switch (mobileTab) {
+    switch (effectiveMobileTab) {
+      case 'flavor':
+        return liveSessionDto != null ? (
+          <FlavorRenderer
+            gameSlug={liveSessionDto.gameSlug}
+            view="live"
+            session={liveSessionDto}
+            labels={catanFlavorLabels}
+            livePoints={catanLivePoints}
+            phaseName={catanPhaseName}
+            className="p-3"
+          />
+        ) : null;
       case 'turn':
         return (
           <div className="flex flex-col gap-4 p-3">
@@ -1391,8 +1460,12 @@ export function SessionLiveView(): ReactElement {
         );
     }
   }, [
-    mobileTab,
+    effectiveMobileTab,
     activeSession,
+    liveSessionDto,
+    catanFlavorLabels,
+    catanLivePoints,
+    catanPhaseName,
     sessionId,
     currentUser?.id,
     scoringPanelLabels,
@@ -1520,8 +1593,24 @@ export function SessionLiveView(): ReactElement {
   // Tab keys: 'score' | 'turn' | 'widget' | 'notes' (G1 §3 D-2).
   // G5a (#2375): ScoringPanelRenderer replaces hardcoded LiveScoringPanel Points-only view.
   const desktopRightColumn = (
-    <RightColumnTabs activeTab={tab} onTabChange={handleTabChange} labels={rightColumnTabsLabels}>
-      {tab === 'score' && (
+    <RightColumnTabs
+      activeTab={effectiveTab}
+      onTabChange={handleTabChange}
+      labels={rightColumnTabsLabels}
+      showFlavorTab={showFlavorTab}
+    >
+      {effectiveTab === 'flavor' && liveSessionDto != null && (
+        <FlavorRenderer
+          gameSlug={liveSessionDto.gameSlug}
+          view="live"
+          session={liveSessionDto}
+          labels={catanFlavorLabels}
+          livePoints={catanLivePoints}
+          phaseName={catanPhaseName}
+          className="p-3"
+        />
+      )}
+      {effectiveTab === 'score' && (
         <ScoreTabContent
           sessionId={sessionId ?? ''}
           viewerRole={activeSession.viewerRole}
@@ -1530,7 +1619,7 @@ export function SessionLiveView(): ReactElement {
           className="p-3"
         />
       )}
-      {tab === 'turn' && (
+      {effectiveTab === 'turn' && (
         <div className="flex flex-col gap-4 p-3">
           <TurnIndicatorRenderer
             state={turnRendererState}
@@ -1549,7 +1638,7 @@ export function SessionLiveView(): ReactElement {
           />
         </div>
       )}
-      {tab === 'widget' && (
+      {effectiveTab === 'widget' && (
         <ToolkitRenderer
           widgets={toolkitWidgets}
           openWidgetId={toolkitOpenId}
@@ -1559,7 +1648,7 @@ export function SessionLiveView(): ReactElement {
           labels={toolkitRendererLabels}
         />
       )}
-      {tab === 'notes' && (
+      {effectiveTab === 'notes' && (
         <LiveSessionNotes
           notes={noteEntries}
           viewerRole={activeSession.viewerRole}
@@ -1568,14 +1657,14 @@ export function SessionLiveView(): ReactElement {
           labels={notesLabels}
         />
       )}
-      {tab === 'photos' && (
+      {effectiveTab === 'photos' && (
         <PhotosTabContent
           sessionId={sessionId ?? ''}
           userId={currentUser?.id ?? ''}
           currentTurn={activeSession.currentTurn}
         />
       )}
-      {tab === 'agent' && (
+      {effectiveTab === 'agent' && (
         <AgentDisputeTabContent
           sessionId={sessionId ?? ''}
           players={activeSession.players.map(p => ({
@@ -1641,10 +1730,11 @@ export function SessionLiveView(): ReactElement {
         mainContent={mobileMainContent}
         sheetOpen={mobileSheetOpen}
         onSheetOpenChange={handleMobileSheetOpenChange}
-        sheetActiveTab={mobileTab}
+        sheetActiveTab={effectiveMobileTab}
         onSheetTabChange={handleMobileTabChange}
         sheetContent={mobileSheetContent}
         labels={mobileBodyLabels}
+        showFlavorTab={showFlavorTab}
       />
 
       {/* Lazy dialogs — mounted from ?dialog= URL param */}

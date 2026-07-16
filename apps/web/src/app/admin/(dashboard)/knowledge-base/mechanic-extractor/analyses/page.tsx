@@ -72,6 +72,8 @@ import {
   type SuppressionRequestSourceValue,
 } from '@/lib/api/schemas/mechanic-analyses.schemas';
 
+import { canSubmitAnalysisForReview, isPipelineRunning } from './lifecycle-guards';
+
 const httpClient = new HttpClient();
 const adminClient = createAdminClient({ httpClient });
 
@@ -124,18 +126,6 @@ function formatDate(iso: string | null | undefined): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleString();
-}
-
-function isPipelineRunning(status: MechanicAnalysisStatusDto | null | undefined): boolean {
-  if (!status) return false;
-  // Draft + 0 section runs = queued; Draft + incomplete runs = running.
-  // Once any terminal status is reached we stop polling:
-  //   - InReview / Published / Rejected: standard terminal states
-  //   - PartiallyExtracted: ADR-051 Sprint 2 salvage state (also terminal)
-  if (status.status !== MechanicAnalysisStatus.Draft) return false;
-  if (status.sectionRuns.length === 0) return true;
-  // All 9 sections should complete; stop when each has a completedAt (v1.1.0 added Setup/Components/Endgame).
-  return status.sectionRuns.length < 9;
 }
 
 export default function MechanicAnalysesPage() {
@@ -378,13 +368,7 @@ export default function MechanicAnalysesPage() {
   });
 
   // ========== Derived lifecycle guards ==========
-  const canSubmitReview =
-    !!status &&
-    !status.isSuppressed &&
-    (status.status === MechanicAnalysisStatus.Draft ||
-      status.status === MechanicAnalysisStatus.Rejected) &&
-    status.claimsCount > 0 &&
-    !isPipelineRunning(status);
+  const canSubmitReview = canSubmitAnalysisForReview(status);
 
   const canApprove =
     !!status && !status.isSuppressed && status.status === MechanicAnalysisStatus.InReview;

@@ -59,14 +59,34 @@ internal class ApiExceptionHandlerMiddleware
 
     private async Task HandleExceptionAsync(HttpContext context, Exception ex)
     {
-        // Log the exception with full details
         var sanitizedPath = LogSanitizer.SanitizePath(context.Request.Path);
+        var sanitizedMethod = LogSanitizer.Sanitize(context.Request.Method);
 
-        _logger.LogError(ex,
-            "Unhandled exception in API endpoint. Path: {Path}, Method: {Method}, TraceId: {TraceId}",
-            sanitizedPath,
-            LogSanitizer.Sanitize(context.Request.Method),
-            context.TraceIdentifier);
+        // #2953 (#6): classify severity up-front. Expected client errors (4xx, e.g. NotFound)
+        // log Warning and are NOT counted as unhandled, so they don't pollute error dashboards
+        // or mask real 500s. The branch-specific handlers below keep their own status + metrics;
+        // this generic mapping drives the shared log level and — on the generic path — the
+        // status/isUnhandled reused further down.
+        var (statusCode, errorType, message) = MapExceptionToResponse(ex);
+        var isServerError = statusCode >= 500;
+
+        if (isServerError)
+        {
+            _logger.LogError(ex,
+                "Unhandled exception in API endpoint. Path: {Path}, Method: {Method}, TraceId: {TraceId}",
+                sanitizedPath,
+                sanitizedMethod,
+                context.TraceIdentifier);
+        }
+        else
+        {
+            _logger.LogWarning(ex,
+                "Handled {StatusCode} client error in API endpoint. Path: {Path}, Method: {Method}, TraceId: {TraceId}",
+                statusCode,
+                sanitizedPath,
+                sanitizedMethod,
+                context.TraceIdentifier);
+        }
 
         // Special handling for FluentValidation exceptions (Issue #1449)
         if (ex is FluentValidation.ValidationException fluentValidationEx)
@@ -115,17 +135,17 @@ internal class ApiExceptionHandlerMiddleware
             return;
         }
 
-        // Determine status code and error type based on exception type
-        var (statusCode, errorType, message) = MapExceptionToResponse(ex);
-
-        // OPS-05: Record error metrics for monitoring and alerting
-        // Use route pattern for endpoint to avoid high cardinality (e.g., /api/v1/games instead of /api/v1/games/{id})
+        // OPS-05: Record error metrics for monitoring and alerting. Reuses the status computed
+        // above. Use route pattern for endpoint to avoid high cardinality (e.g., /api/v1/games
+        // instead of /api/v1/games/{id}).
+        // #2953 (#6): isUnhandled tracks genuine server errors only — an expected 4xx that reached
+        // here (e.g. NotFound) is handled-by-mapping, not an unhandled bug.
         var endpoint = GetRoutePattern(context) ?? context.Request.Path.ToString();
         MeepleAiMetrics.RecordApiError(
             exception: ex,
             httpStatusCode: statusCode,
             endpoint: endpoint,
-            isUnhandled: true); // This is unhandled since it reached middleware
+            isUnhandled: isServerError);
 
         context.Response.StatusCode = statusCode;
         context.Response.ContentType = "application/json";

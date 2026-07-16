@@ -19,6 +19,9 @@ export type Priority = 'high' | 'medium' | 'low';
 /** Sort rank per priority bucket — lower ranks first (high wins). */
 export const PRIORITY_RANK: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
 
+/** Canonical display/iteration order for the three priority buckets. */
+export const PRIORITY_ORDER: readonly Priority[] = ['high', 'medium', 'low'];
+
 export interface WishlistFilterState {
   search: string;
   priorities: Priority[];
@@ -31,27 +34,36 @@ export interface WishlistFilterState {
  * high/medium/low — the wishlist DTO only types `priority` as `z.string()`,
  * not an enum, so a genuinely malformed value is possible and must be
  * distinguishable from a real `'medium'`.
+ *
+ * Exported as the single source of truth for priority normalization —
+ * `MeepleWishlistCard` and `AddToWishlistDialog` previously each carried
+ * their own copy of this logic (Issue #3010, Task 6).
  */
-function matchPriority(value: string): Priority | undefined {
+export function matchPriority(value: string): Priority | undefined {
   const normalized = value.toLowerCase();
   if (normalized === 'high' || normalized === 'medium' || normalized === 'low') return normalized;
   return undefined;
 }
 
 /**
- * Normalizes a wishlist item's raw `priority` string (case-insensitive) into
- * a known `Priority` bucket, for ranking/filtering purposes. Falls back to
- * `'medium'` for unrecognized values so a stray/unexpected value never
- * crashes `sortItems('priority')` ranking or the priority-filter match in
- * `filterItems`.
+ * Normalizes a raw, possibly-undefined `priority` string (case-insensitive)
+ * into a known `Priority` bucket, falling back to `'medium'` for
+ * unrecognized/missing values. This is the fallback-bearing counterpart to
+ * `matchPriority` — use it anywhere a display/ranking value is needed and an
+ * unknown value should degrade to `'medium'` rather than being excluded.
  *
  * NOTE: `computeStats.priorityCounts` deliberately does NOT use this
  * fallback (it calls `matchPriority` directly) — an unrecognized value is
  * excluded from the displayed counts rather than silently inflating the
  * `medium` bucket.
  */
+export function normalizePriorityString(raw: string | undefined): Priority {
+  return matchPriority(raw ?? '') ?? 'medium';
+}
+
+/** Normalizes a wishlist item's raw `priority` field via `normalizePriorityString`. */
 function normalizePriority(item: WishlistItemDto): Priority {
-  return matchPriority(item.priority) ?? 'medium';
+  return normalizePriorityString(item.priority);
 }
 
 /**

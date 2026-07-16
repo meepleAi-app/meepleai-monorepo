@@ -15,6 +15,7 @@ import {
   computeStats,
   countActiveFilters,
   filterItems,
+  normalizePriorityString,
   sortItems,
   PRIORITY_RANK,
   type WishlistFilterState,
@@ -56,6 +57,26 @@ describe('PRIORITY_RANK', () => {
   it('ranks high < medium < low', () => {
     expect(PRIORITY_RANK.high).toBeLessThan(PRIORITY_RANK.medium);
     expect(PRIORITY_RANK.medium).toBeLessThan(PRIORITY_RANK.low);
+  });
+});
+
+// ─── normalizePriorityString ────────────────────────────────────────────────
+
+describe('normalizePriorityString', () => {
+  it('lowercases and matches a known priority value', () => {
+    expect(normalizePriorityString('HIGH')).toBe('high');
+  });
+
+  it('falls back to medium for an unrecognized value', () => {
+    expect(normalizePriorityString('urgent')).toBe('medium');
+  });
+
+  it('falls back to medium for undefined', () => {
+    expect(normalizePriorityString(undefined)).toBe('medium');
+  });
+
+  it('falls back to medium for an empty string', () => {
+    expect(normalizePriorityString('')).toBe('medium');
   });
 });
 

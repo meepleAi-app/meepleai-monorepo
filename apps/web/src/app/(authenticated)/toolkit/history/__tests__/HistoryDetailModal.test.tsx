@@ -147,6 +147,23 @@ describe('HistoryDetailModal', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it('does not render the dead footer actions (no backend command exists for them)', () => {
+    render(<HistoryDetailModal row={COMPLETE_ROW} onClose={vi.fn()} />);
+
+    expect(
+      screen.queryByRole('button', { name: 'pages.toolkitHistory.modal.gameStats' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'pages.toolkitHistory.modal.playAgain' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'pages.toolkitHistory.modal.editNotes' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'pages.toolkitHistory.modal.delete' })
+    ).not.toBeInTheDocument();
+  });
+
   it('renders the interpolated title and sub with the row data', () => {
     render(<HistoryDetailModal row={COMPLETE_ROW} onClose={vi.fn()} />);
 

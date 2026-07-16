@@ -20,8 +20,13 @@
 
 import React, { useMemo, useRef, useState } from 'react';
 
-import { X } from 'lucide-react';
+import { AlertCircle, X } from 'lucide-react';
 
+import {
+  normalizePriorityString,
+  PRIORITY_ORDER,
+  type Priority,
+} from '@/app/(authenticated)/library/wishlist/_lib/wishlist-filters';
 import { toast } from '@/components/layout/Toast';
 import {
   Dialog,
@@ -46,10 +51,6 @@ import { cn } from '@/lib/utils';
 // Types & constants
 // ============================================================================
 
-type Priority = 'high' | 'medium' | 'low';
-
-const PRIORITY_ORDER: readonly Priority[] = ['high', 'medium', 'low'];
-const KNOWN_PRIORITIES: readonly Priority[] = ['high', 'medium', 'low'];
 const NOTES_MAX = 200;
 const NOTES_NEAR_LIMIT = NOTES_MAX - 30;
 
@@ -76,12 +77,6 @@ interface AddToWishlistDialogProps {
 // ============================================================================
 // Helpers
 // ============================================================================
-
-/** Case-insensitively normalizes a raw `priority` string, defaulting to 'medium'. */
-function normalizePriority(raw: string | undefined): Priority {
-  const lower = (raw ?? '').toLowerCase();
-  return (KNOWN_PRIORITIES as readonly string[]).includes(lower) ? (lower as Priority) : 'medium';
-}
 
 function priorityChipClasses(key: Priority, isSelected: boolean): string {
   if (!isSelected) {
@@ -136,29 +131,50 @@ export function AddToWishlistDialog({
     return null;
   }
 
+  /**
+   * Add-mode default priority mirrors the mockup's "add from a specific game"
+   * prefilled state: pre-selecting a game (`prefillGameId`) implies urgency, so
+   * priority starts at 'high'. A blank add form (no prefill) still defaults to
+   * 'medium'. Edit mode always reflects the existing item's priority.
+   */
+  function initialPriority(): Priority {
+    if (isEdit && item) return normalizePriorityString(item.priority);
+    return prefillGameId ? 'high' : 'medium';
+  }
+
   const [selectedGame, setSelectedGame] = useState<SelectedGame | null>(buildInitialGame);
   const [query, setQuery] = useState('');
   const [comboOpen, setComboOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const comboContainerRef = useRef<HTMLDivElement | null>(null);
-  const [priority, setPriority] = useState<Priority>(
-    isEdit && item ? normalizePriority(item.priority) : 'medium'
-  );
+  const [priority, setPriority] = useState<Priority>(initialPriority);
   const [targetPrice, setTargetPrice] = useState(
     isEdit && item?.targetPrice != null ? String(item.targetPrice) : ''
   );
   const [notes, setNotes] = useState(isEdit ? (item?.notes ?? '') : '');
 
-  const { mutate: addToWishlist, isPending: isAdding } = useAddToWishlist();
-  const { mutate: updateWishlistItem, isPending: isUpdating } = useUpdateWishlistItem();
+  const {
+    mutate: addToWishlist,
+    isPending: isAdding,
+    isError: isAddError,
+    reset: resetAdd,
+  } = useAddToWishlist();
+  const {
+    mutate: updateWishlistItem,
+    isPending: isUpdating,
+    isError: isUpdateError,
+    reset: resetUpdate,
+  } = useUpdateWishlistItem();
   const isPending = isEdit ? isUpdating : isAdding;
+  const isError = isEdit ? isUpdateError : isAddError;
+  const resetActiveMutation = isEdit ? resetUpdate : resetAdd;
 
   function resetForm() {
     setSelectedGame(buildInitialGame());
     setQuery('');
     setComboOpen(false);
     setActiveIndex(-1);
-    setPriority(isEdit && item ? normalizePriority(item.priority) : 'medium');
+    setPriority(initialPriority());
     setTargetPrice(isEdit && item?.targetPrice != null ? String(item.targetPrice) : '');
     setNotes(isEdit ? (item?.notes ?? '') : '');
   }
@@ -167,6 +183,24 @@ export function AddToWishlistDialog({
     setOpen(value);
     if (value) {
       resetForm();
+    } else {
+      resetActiveMutation();
+    }
+  }
+
+  /**
+   * Radix's `DismissableLayer` listens for Escape on `document` with
+   * `{ capture: true }` — it runs before any bubble-phase `onKeyDown` on the
+   * combobox input, so `stopPropagation` there cannot stop it. The supported
+   * way to scope Escape to the combobox is this `onEscapeKeyDown` prop
+   * (forwarded to `DismissableLayer`): calling `preventDefault` here makes
+   * Radix skip its own dismiss for this keypress, so the first Escape closes
+   * only the listbox and a second Escape (listbox already closed) is left to
+   * close the dialog normally.
+   */
+  function handleContentEscapeKeyDown(event: KeyboardEvent) {
+    if (comboOpen) {
+      event.preventDefault();
     }
   }
 
@@ -193,7 +227,15 @@ export function AddToWishlistDialog({
    * ARIA combobox keyboard pattern (APG): ArrowDown/ArrowUp move the active
    * descendant (opening the listbox if needed), Enter commits the active
    * match, Escape closes the listbox. `preventDefault` on Enter is required
-   * so it doesn't trigger the form's implicit submission instead.
+   * so it doesn't trigger the form's implicit submission instead. Escape also
+   * calls `stopPropagation` for good hygiene (scopes the keypress to this
+   * input for any other bubble-phase listeners); the surrounding Radix
+   * `Dialog` is kept open on this first Escape via the `onEscapeKeyDown` prop
+   * on `DialogContent` below (see `handleContentEscapeKeyDown`) — Radix's own
+   * Escape handling runs in the capture phase on `document`, earlier than
+   * this bubble-phase handler, so `stopPropagation` here cannot reach it.
+   * Once the listbox is already closed, Escape is left to propagate normally
+   * so a second press closes the dialog.
    */
   function handleComboKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -219,6 +261,7 @@ export function AddToWishlistDialog({
     if (e.key === 'Escape') {
       if (!comboOpen) return;
       e.preventDefault();
+      e.stopPropagation();
       setComboOpen(false);
       setActiveIndex(-1);
     }
@@ -238,9 +281,10 @@ export function AddToWishlistDialog({
     setActiveIndex(-1);
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function submitWishlist() {
     if (!selectedGame || !canSubmit) return;
+
+    resetActiveMutation();
 
     const parsedPrice = targetPrice.trim() !== '' ? parseFloat(targetPrice) : null;
     const trimmedNotes = notes.trim();
@@ -288,7 +332,12 @@ export function AddToWishlistDialog({
     );
   }
 
-  const editSubPriority = isEdit && item ? normalizePriority(item.priority) : priority;
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    submitWishlist();
+  }
+
+  const editSubPriority = isEdit && item ? normalizePriorityString(item.priority) : priority;
   const editSubName = isEdit && item ? (item.gameName ?? selectedGame?.title ?? '') : '';
 
   return (
@@ -302,7 +351,7 @@ export function AddToWishlistDialog({
           </DialogTrigger>
         ))}
 
-      <DialogContent>
+      <DialogContent onEscapeKeyDown={handleContentEscapeKeyDown}>
         <DialogHeader>
           <DialogTitle>
             {isEdit
@@ -487,8 +536,22 @@ export function AddToWishlistDialog({
             />
           </div>
 
+          {/* Mutation error (add/update failed) */}
+          {isError && (
+            <div
+              role="alert"
+              className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+            >
+              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className="flex-1">{t('pages.library.wishlist.dialog.error')}</span>
+              <Button type="button" variant="outline" size="sm" onClick={submitWishlist}>
+                {t('pages.library.wishlist.dialog.retry')}
+              </Button>
+            </div>
+          )}
+
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
               {t('pages.library.wishlist.dialog.cancel')}
             </Button>
             <Button type="submit" disabled={!canSubmit}>

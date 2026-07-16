@@ -20,9 +20,21 @@
  * (`WishlistCard`, ~lines 54-109). The mockup's `MetaBox`
  * (category/players/duration/BGG) is intentionally omitted — `WishlistItemDto`
  * has none of those fields.
+ *
+ * Issue #3010 (Task 7). `onOpenGame` wires the game-name body to navigate to
+ * the game detail page — `MeepleCard`'s `list` variant (`ListCard`) honors
+ * `onClick` (not `href`) for its clickable root, so navigation is driven by
+ * the parent page's `router.push`. The accessible name comes from the
+ * `ariaLabel` passthrough added to `MeepleCardProps`/`ListCard` for this
+ * purpose (ListCard had no way to set an explicit `aria-label` on its
+ * `role="button"` root before). Edit/Remove/priority-badge actions call
+ * `e.stopPropagation()` so their clicks never reach the card body.
  */
 
-import type { Priority } from '@/app/(authenticated)/library/wishlist/_lib/wishlist-filters';
+import {
+  normalizePriorityString,
+  type Priority,
+} from '@/app/(authenticated)/library/wishlist/_lib/wishlist-filters';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -42,19 +54,19 @@ interface MeepleWishlistCardProps {
   onEdit?: (item: WishlistItemDto) => void;
   /** When omitted, the priority badge renders as a non-interactive `<span>`. */
   onFilterPriority?: (priority: Priority) => void;
+  /**
+   * Navigate to the game detail page. When provided, the card's game-name
+   * body becomes clickable (`role="button"`, keyboard-focusable) and exposes
+   * `pages.library.wishlist.card.openGameAria` as its accessible name. When
+   * omitted, the card body stays a plain, non-interactive display (backward
+   * compatible).
+   */
+  onOpenGame?: (gameId: string) => void;
 }
 
 // ============================================================================
 // Helpers
 // ============================================================================
-
-const KNOWN_PRIORITIES: readonly Priority[] = ['high', 'medium', 'low'];
-
-/** Case-insensitively normalizes a raw `priority` string, defaulting to 'medium' for unknown values. */
-function normalizePriority(raw: string): Priority {
-  const lower = raw.toLowerCase();
-  return (KNOWN_PRIORITIES as readonly string[]).includes(lower) ? (lower as Priority) : 'medium';
-}
 
 const MS_PER_MINUTE = 60_000;
 const MS_PER_HOUR = 60 * MS_PER_MINUTE;
@@ -98,10 +110,11 @@ export function MeepleWishlistCard({
   onRemove,
   onEdit,
   onFilterPriority,
+  onOpenGame,
 }: MeepleWishlistCardProps) {
   const { t, formatNumber, formatDate, formatRelativeTime } = useTranslation();
 
-  const priority = normalizePriority(item.priority);
+  const priority = normalizePriorityString(item.priority);
   const isHighPriority = priority === 'high';
   const priorityLabel = t(`pages.library.wishlist.priority.${priority}`);
   const resolvedGameName =
@@ -137,7 +150,10 @@ export function MeepleWishlistCard({
         {onFilterPriority ? (
           <button
             type="button"
-            onClick={() => onFilterPriority(priority)}
+            onClick={e => {
+              e.stopPropagation();
+              onFilterPriority(priority);
+            }}
             aria-label={t('pages.library.wishlist.priority.filterAria', { label: priorityLabel })}
             className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-foreground transition-colors hover:bg-muted/70"
           >
@@ -161,6 +177,12 @@ export function MeepleWishlistCard({
         metadata={metadata}
         headingLevel={2}
         data-testid="wishlist-card"
+        onClick={onOpenGame ? () => onOpenGame(item.gameId) : undefined}
+        ariaLabel={
+          onOpenGame
+            ? t('pages.library.wishlist.card.openGameAria', { name: resolvedGameName })
+            : undefined
+        }
       />
 
       <div className="flex items-center px-1 text-[11px] text-muted-foreground">
@@ -171,7 +193,10 @@ export function MeepleWishlistCard({
         {onEdit && (
           <button
             type="button"
-            onClick={() => onEdit(item)}
+            onClick={e => {
+              e.stopPropagation();
+              onEdit(item);
+            }}
             aria-label={t('pages.library.wishlist.card.editAria', { name: resolvedGameName })}
             className="rounded-md px-2 py-1 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
           >
@@ -180,7 +205,10 @@ export function MeepleWishlistCard({
         )}
         <button
           type="button"
-          onClick={() => onRemove(item.id)}
+          onClick={e => {
+            e.stopPropagation();
+            onRemove(item.id);
+          }}
           aria-label={t('pages.library.wishlist.card.removeAria', { name: resolvedGameName })}
           className="rounded-md px-2 py-1 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/10"
         >

@@ -17,6 +17,7 @@ import { useMemo, useState, type JSX } from 'react';
 
 import { AlertCircle, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import { HubPageContainer } from '@/components/layout/PageContainer';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
@@ -69,6 +70,7 @@ const LIBRARY_TABS: LibraryTab[] = [
 
 export default function WishlistPage(): JSX.Element {
   const { t } = useTranslation();
+  const router = useRouter();
 
   const [filterState, setFilterState] = useState<WishlistFilterState>(DEFAULT_FILTER_STATE);
   /** The item currently open in the edit dialog, or null when no edit dialog is open. */
@@ -113,7 +115,7 @@ export default function WishlistPage(): JSX.Element {
     <HubPageContainer className="flex flex-col gap-6">
       {/* breadcrumb */}
       <nav
-        aria-label={t('pages.library.wishlist.hero.breadcrumbWishlist')}
+        aria-label={t('pages.library.wishlist.hero.breadcrumbAria')}
         className="flex items-center gap-1.5 text-sm text-muted-foreground"
       >
         <Link href="/library" className="hover:text-foreground">
@@ -260,6 +262,7 @@ export default function WishlistPage(): JSX.Element {
               onRemove={id => removeItem(id)}
               onEdit={setEditingItem}
               onFilterPriority={handleFilterPriority}
+              onOpenGame={id => router.push(`/library/${id}`)}
             />
           ))}
         </div>

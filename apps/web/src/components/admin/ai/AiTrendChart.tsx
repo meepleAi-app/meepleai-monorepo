@@ -68,7 +68,7 @@ export function AiTrendChart({ data, range, rangeOptions, onRangeChange }: AiTre
           </p>
         </div>
         {!hasPercentileSeries && (
-          <span className="inline-flex items-center rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium text-warning">
+          <span className="inline-flex items-center rounded-full bg-[hsl(var(--c-warning)/0.15)] px-2 py-0.5 text-[10px] font-medium text-[hsl(var(--c-warning-ink))]">
             approx — p50/p95/error pending
           </span>
         )}

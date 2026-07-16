@@ -72,13 +72,15 @@ const BUTTONS: readonly ButtonConfig[] = [
     response: 'Accepted',
     icon: '✓',
     labelKey: 'accept',
-    selectedClass: 'border-success bg-success/10 text-success hover:bg-success/15',
+    selectedClass:
+      'border-[hsl(var(--c-success))] bg-[hsl(var(--c-success)/0.1)] text-[hsl(var(--c-success-ink))] hover:bg-[hsl(var(--c-success)/0.15)]',
   },
   {
     response: 'Maybe',
     icon: '?',
     labelKey: 'maybe',
-    selectedClass: 'border-warning bg-warning/10 text-warning hover:bg-warning/15',
+    selectedClass:
+      'border-[hsl(var(--c-warning))] bg-[hsl(var(--c-warning)/0.1)] text-[hsl(var(--c-warning-ink))] hover:bg-[hsl(var(--c-warning)/0.15)]',
   },
   {
     response: 'Declined',

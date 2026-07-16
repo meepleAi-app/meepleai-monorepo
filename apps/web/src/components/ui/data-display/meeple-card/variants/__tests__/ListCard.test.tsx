@@ -37,3 +37,16 @@ describe('ListCard headingLevel prop (#1842)', () => {
     expect(screen.getByText('X').className).toBe(h3Class);
   });
 });
+
+describe('ListCard ariaLabel passthrough (#3010 Task 7)', () => {
+  it('exposes ariaLabel as the accessible name when onClick is present', () => {
+    render(<ListCard entity="game" title="X" onClick={() => {}} ariaLabel="Open game detail X" />);
+    expect(screen.getByRole('button', { name: 'Open game detail X' })).toBeInTheDocument();
+  });
+
+  it('does not render aria-label when onClick is absent, even if ariaLabel is passed', () => {
+    render(<ListCard entity="game" title="X" ariaLabel="Open game detail X" />);
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.getByText('X').closest('div[data-entity]')).not.toHaveAttribute('aria-label');
+  });
+});

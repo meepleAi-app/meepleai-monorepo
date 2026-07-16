@@ -2176,6 +2176,7 @@
         "hero": {
           "breadcrumbLibrary": "Library",
           "breadcrumbWishlist": "Wishlist",
+          "breadcrumbAria": "Breadcrumb",
           "title": "Wishlist · Wanted games",
           "subtitle": "Track the games you want to buy or try.",
           "tabsAria": "Library sections",
@@ -2629,6 +2630,7 @@
       "hero": {
         "breadcrumbToolkit": "Toolkit",
         "breadcrumbHistory": "History",
+        "breadcrumbAria": "Breadcrumb",
         "title": "Session history",
         "subtitle": "All finalized games, filterable by game, date and winner.",
         "quickStat": "{sessions} sessions · {games} games · {winners} winners",
@@ -2751,11 +2753,7 @@
         "winnerScore": "Winner score",
         "variance": "Score variance",
         "highlights": "Highlights",
-        "noData": "—",
-        "gameStats": "Game stats",
-        "playAgain": "Play again",
-        "editNotes": "Edit notes",
-        "delete": "Delete"
+        "noData": "—"
       },
       "cards": {
         "coop": "Co-op"

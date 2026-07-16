@@ -61,11 +61,12 @@ namespace Api.Tests.BoundedContexts.GameManagement.Domain;
 public sealed class LiveGameSessionGameStateEventTests
 {
     [Fact]
-    public void UpdateGameState_RaisesLiveSessionGameStateEvent_WithSessionIdAndState()
+    public void UpdateGameState_RaisesLiveSessionGameStateEvent_WithSessionIdAndRawState()
     {
-        // Arrange: build an in-progress session via the same factory the other domain tests use.
-        var session = LiveGameSessionTestFactory.CreateInProgress(); // see note below
-        using var state = JsonDocument.Parse("""{"board":"opaque"}""");
+        // Arrange: build an in-progress session with the SAME inline helper the sibling
+        // domain tests use (see note below).
+        var session = CreateInProgressSession();
+        var state = JsonDocument.Parse("""{"board":"opaque"}"""); // ownership transferred to the aggregate
 
         // Act
         session.UpdateGameState(state);
@@ -74,11 +75,11 @@ public sealed class LiveGameSessionGameStateEventTests
         var evt = Assert.Single(session.DomainEvents, e => e is LiveSessionGameStateEvent);
         var gs = Assert.IsType<LiveSessionGameStateEvent>(evt);
         Assert.Equal(session.Id, gs.SessionId);
-        Assert.NotNull(gs.State);
+        Assert.Contains("\"board\"", gs.RawStateJson);
     }
 }
 ```
-> Reuse the existing test factory/helper the current `LiveGameSession` domain tests use to build an InProgress session (grep `LiveGameSession` under `tests/Api.Tests/.../GameManagement/Domain` for the builder; if none, construct via the public factory `LiveGameSession.Create(...)` + `Start(...)` as those tests do). `session.DomainEvents` is the `AggregateRoot` collection.
+> **No `LiveGameSessionTestFactory` exists.** Copy the inline `CreateInProgressSession()` helper from a sibling domain test (e.g. `tests/Api.Tests/.../GameManagement/Domain/LiveGameSession_DiaryTests.cs:31-43`): it does `var session = LiveGameSession.Create(id, creatorUserId, "Game", timeProvider); session.AddPlayer(...); session.Start(...);` (read that file for the exact `Create`/`AddPlayer`/`Start` signatures). `session.DomainEvents` is the `AggregateRoot` collection. Do NOT `using` the `JsonDocument` — `UpdateGameState` takes ownership + disposes it.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -87,28 +88,29 @@ Expected: FAIL — `LiveSessionGameStateEvent` does not exist / no event raised.
 
 - [ ] **Step 3: Create the event + raise it**
 
-`LiveSessionGameStateEvent.cs` (mirror `LiveSessionStartedEvent.cs` — same base type it uses; read that file for the exact base class name, e.g. `DomainEventBase` / `IDomainEvent`):
+`LiveSessionGameStateEvent.cs` (mirror `LiveSessionStartedEvent.cs` — same base type it uses; read that file for the exact base class name, e.g. `DomainEventBase` / `IDomainEvent`).
+**Carry the RAW JSON STRING, not the `JsonDocument`** — the aggregate disposes its `JsonDocument` on the next `UpdateGameState` (`LiveGameSession.cs:836-837`), so holding the object reference in a post-commit-dispatched event risks reading a disposed doc under concurrent updates. `GetRawText()` copies to an immutable string at raise time (safe):
 ```csharp
-using System.Text.Json;
-using Api.SharedKernel.Domain.Events; // adjust to LiveSessionStartedEvent's base namespace
-
 namespace Api.BoundedContexts.GameManagement.Domain.Events;
 
 /// <summary>
 /// Raised when a live session's free-form game-state is updated (#3025 L1).
-/// Forwarded to the SSE stream as "session:game-state". State is opaque JSON.
+/// Forwarded to the SSE stream as "session:game-state". RawStateJson is the opaque
+/// state serialized to a string (copied at raise time to avoid JsonDocument lifetime issues).
+/// NB: fires on EVERY UpdateGameState call — including snapshot-restore (plan risk #4);
+/// streaming a restored state to live clients is intentional/transparent.
 /// </summary>
-public sealed record LiveSessionGameStateEvent(Guid SessionId, JsonDocument? State)
+public sealed record LiveSessionGameStateEvent(Guid SessionId, string? RawStateJson)
     : DomainEventBase; // match LiveSessionStartedEvent's base exactly
 ```
 
-In `LiveGameSession.UpdateGameState` (after the assignment + `UpdatedAt`), add the raise:
+In `LiveGameSession.UpdateGameState` (after the assignment + `UpdatedAt`), add the raise (copy the raw text BEFORE the aggregate could dispose it later):
 ```csharp
         GameState?.Dispose();
         GameState = gameState;
         var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
         UpdatedAt = now;
-        AddDomainEvent(new LiveSessionGameStateEvent(Id, gameState)); // #3025 L1
+        AddDomainEvent(new LiveSessionGameStateEvent(Id, gameState?.RootElement.GetRawText())); // #3025 L1
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -159,15 +161,16 @@ public sealed class UpdateLiveGameStateCommandHandlerTests
 
     private UpdateLiveGameStateCommandHandler CreateSut() => new(_repo.Object, _uow.Object);
 
+    private static JsonElement State(string json) => JsonDocument.Parse(json).RootElement;
+
     [Fact]
     public async Task Handle_AuthorizedParticipant_UpdatesStateAndSaves()
     {
         var creator = Guid.NewGuid();
-        var session = LiveGameSessionTestFactory.CreateInProgress(creator); // creator authorized
+        var session = CreateInProgressSession(creator); // creator authorized — inline helper (Task 1 note)
         _repo.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>())).ReturnsAsync(session);
-        using var state = JsonDocument.Parse("""{"x":1}""");
 
-        await CreateSut().Handle(new UpdateLiveGameStateCommand(session.Id, creator, state), CancellationToken.None);
+        await CreateSut().Handle(new UpdateLiveGameStateCommand(session.Id, creator, State("""{"x":1}""")), CancellationToken.None);
 
         _repo.Verify(r => r.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
         _uow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -178,23 +181,22 @@ public sealed class UpdateLiveGameStateCommandHandlerTests
     {
         _repo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
              .ReturnsAsync((LiveGameSession?)null);
-        using var state = JsonDocument.Parse("{}");
         await Assert.ThrowsAsync<NotFoundException>(() =>
-            CreateSut().Handle(new UpdateLiveGameStateCommand(Guid.NewGuid(), Guid.NewGuid(), state), CancellationToken.None));
+            CreateSut().Handle(new UpdateLiveGameStateCommand(Guid.NewGuid(), Guid.NewGuid(), State("{}")), CancellationToken.None));
     }
 
     [Fact]
     public async Task Handle_NonParticipant_ThrowsForbidden()
     {
-        var session = LiveGameSessionTestFactory.CreateInProgress(Guid.NewGuid());
+        var session = CreateInProgressSession(Guid.NewGuid());
         _repo.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>())).ReturnsAsync(session);
-        using var state = JsonDocument.Parse("{}");
         await Assert.ThrowsAsync<ForbiddenException>(() =>
-            CreateSut().Handle(new UpdateLiveGameStateCommand(session.Id, Guid.NewGuid() /* stranger */, state), CancellationToken.None));
+            CreateSut().Handle(new UpdateLiveGameStateCommand(session.Id, Guid.NewGuid() /* stranger */, State("{}")), CancellationToken.None));
         _uow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 }
 ```
+> `CreateInProgressSession(Guid creator)` = the inline helper from Task 1's note. `System.Text.Json` `using` at the top.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -211,10 +213,12 @@ using Api.SharedKernel.Application.Interfaces; // ICommand<T> — match AddDiary
 namespace Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 
 /// <summary>Updates the free-form live game-state (#3025 L1). Host/participant only.</summary>
+/// <remarks>State is a JsonElement (binds cleanly from the request body; no JsonDocument
+/// disposal concern). The handler parses it into an owned JsonDocument for the aggregate.</remarks>
 public sealed record UpdateLiveGameStateCommand(
     Guid SessionId,
     Guid RequestedByUserId,
-    JsonDocument State) : ICommand<Unit>; // match AddDiaryEntryCommand's return-type convention
+    JsonElement State) : ICommand<Unit>; // match AddDiaryEntryCommand's return-type convention
 ```
 
 `UpdateLiveGameStateCommandValidator.cs` (mirror `AddDiaryEntryCommandValidator`):
@@ -226,13 +230,14 @@ namespace Api.BoundedContexts.GameManagement.Application.Validators.LiveSessions
 public sealed class UpdateLiveGameStateCommandValidator
     : AbstractValidator<Commands.LiveSessions.UpdateLiveGameStateCommand>
 {
-    // L1 opaque state: only guard non-empty ids + a size cap (reject > 256 KB serialized).
+    // L1 opaque state: only guard non-empty ids + a size cap (reject > 256 KB of UTF-8).
+    // GetRawText() is a UTF-16 .NET string — count UTF-8 BYTES for an accurate limit.
     public UpdateLiveGameStateCommandValidator()
     {
         RuleFor(x => x.SessionId).NotEmpty();
         RuleFor(x => x.RequestedByUserId).NotEmpty();
-        RuleFor(x => x.State).NotNull()
-            .Must(s => s.RootElement.GetRawText().Length <= 256 * 1024)
+        RuleFor(x => x.State)
+            .Must(s => System.Text.Encoding.UTF8.GetByteCount(s.GetRawText()) <= 256 * 1024)
             .WithMessage("Game state exceeds the 256 KB limit.");
     }
 }
@@ -270,8 +275,11 @@ internal sealed class UpdateLiveGameStateCommandHandler : ICommandHandler<Update
         if (!session.IsAuthorizedParticipant(command.RequestedByUserId))
             throw new ForbiddenException("Only the session creator or an active participant may update game state.");
 
+        // Parse the JsonElement into an OWNED JsonDocument. UpdateGameState takes ownership
+        // (stores it + disposes the prior). Do NOT wrap in `using` — the aggregate owns it now.
+        var doc = System.Text.Json.JsonDocument.Parse(command.State.GetRawText());
         // ConflictException (Completed session) propagates → HTTP 409. Domain raises LiveSessionGameStateEvent.
-        session.UpdateGameState(command.State);
+        session.UpdateGameState(doc);
 
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -312,27 +320,27 @@ Register (next to the other `MapPut` live-session routes):
             .WithSummary("Update the live game-state (host/participant only).");
 ```
 
-Handler (in the Command Handlers region — copy `HandleUpdateNotes`'s signature: how it reads `sessionId`, the authenticated user id, and `IMediator`):
+Handler (in the Command Handlers region — copy **`HandleAddDiaryEntry`** which DOES extract the user id via `httpContext.User.GetUserId()`; `HandleUpdateNotes` does NOT take an `HttpContext`, so it is the wrong template for an authz'd route):
 ```csharp
     private static async Task<IResult> HandleUpdateGameState(
         Guid sessionId,
-        UpdateGameStateRequest request,
+        [FromBody] UpdateGameStateRequest request,
         HttpContext httpContext,
         IMediator mediator,
         CancellationToken ct)
     {
-        var userId = httpContext.GetAuthenticatedUserId(); // MIRROR HandleUpdateNotes's user-id extraction
+        var userId = httpContext.User.GetUserId(); // MIRROR HandleAddDiaryEntry exactly
         await mediator.Send(new UpdateLiveGameStateCommand(sessionId, userId, request.State), ct);
         return Results.NoContent();
     }
 ```
 
-Request model (`#region Request Models`):
+Request model (`#region Request Models`) — **`JsonElement`** (binds cleanly from the body; no `JsonDocument` disposal concern):
 ```csharp
-    /// <summary>Body for PATCH/PUT /live-sessions/{id}/game-state. Opaque JSON (#3025 L1).</summary>
-    internal sealed record UpdateGameStateRequest(JsonDocument State);
+    /// <summary>Body for PUT /live-sessions/{id}/game-state. Opaque JSON (#3025 L1).</summary>
+    internal sealed record UpdateGameStateRequest(JsonElement State);
 ```
-> `using System.Text.Json;` at the top if not present. Confirm the exact user-id extraction helper by reading `HandleUpdateNotes` (it already does auth for a mutating live-session route) and copy it verbatim.
+> `using System.Text.Json;` + `using Microsoft.AspNetCore.Mvc;` (for `[FromBody]`) at the top if not present. Read `HandleAddDiaryEntry` (a mutating live-session route) for the exact `httpContext.User.GetUserId()` call + `IResult` return convention and copy it verbatim.
 
 - [ ] **Step 2: Build to verify it compiles**
 
@@ -381,9 +389,8 @@ public sealed class LiveSessionStreamForwarderGameStateTests
         var gateway = new Mock<ILiveSessionStreamGateway>();
         var sut = new LiveSessionStreamForwarder(gateway.Object, NullLogger<LiveSessionStreamForwarder>.Instance);
         var sessionId = Guid.NewGuid();
-        using var state = JsonDocument.Parse("""{"k":"v"}""");
 
-        await sut.Handle(new LiveSessionGameStateEvent(sessionId, state), CancellationToken.None);
+        await sut.Handle(new LiveSessionGameStateEvent(sessionId, """{"k":"v"}"""), CancellationToken.None);
 
         gateway.Verify(g => g.BroadcastAsync(
             sessionId,
@@ -405,22 +412,25 @@ In `LiveSessionStreamForwarder`, add `INotificationHandler<LiveSessionGameStateE
     public Task Handle(LiveSessionGameStateEvent notification, CancellationToken cancellationToken)
     {
         _logger.LogDebug("Broadcasting session:game-state for session {SessionId}", notification.SessionId);
+        // JsonDocument is NOT serializable by System.Text.Json (throws) AND the aggregate's
+        // doc may already be disposed. The event carries the raw JSON string; re-parse into a
+        // JsonNode (serializable, not disposable) so `state` serializes as a nested OBJECT
+        // (not an escaped string) for the FE.
+        var stateNode = notification.RawStateJson is null
+            ? null
+            : System.Text.Json.Nodes.JsonNode.Parse(notification.RawStateJson);
         return _gateway.BroadcastAsync(
             notification.SessionId,
-            new LiveSessionStreamEvent("session:game-state", new
-            {
-                // Opaque state forwarded as-is (L1). L3 flavors parse it per game.
-                state = notification.State,
-            }),
+            new LiveSessionStreamEvent("session:game-state", new { state = stateNode }),
             cancellationToken);
     }
 ```
 
-In `SseEventTypeMapper.EventTypeMap`, add (before the closing brace, next to `session:score`):
+In `SseEventTypeMapper.EventTypeMap`, add (before the closing brace, next to `session:score`) — the file already has a `using GameNightEvents = Api.BoundedContexts.GameManagement.Domain.Events;` alias, so reference the event through it (or add a direct `using`):
 ```csharp
-        [typeof(LiveSessionGameStateEvent)] = "session:game-state",
+        [typeof(GameNightEvents.LiveSessionGameStateEvent)] = "session:game-state",
 ```
-> Add `using Api.BoundedContexts.GameManagement.Domain.Events;` to the mapper if not present.
+> If you add a direct `using Api.BoundedContexts.GameManagement.Domain.Events;`, use `typeof(LiveSessionGameStateEvent)` instead. Match whichever import style the file already uses to avoid an ambiguity.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -445,19 +455,19 @@ git commit -m "feat(session-live): #3025 L1 stream session:game-state via forwar
 
 - [ ] **Step 1: Add the DTO field**
 
-In `LiveSessionDto` record, add after `string? Notes` (L28):
+In `LiveSessionDto` record, add after `string? Notes` (L28). Use **`JsonElement?`** (System.Text.Json serializes `JsonElement` reliably on the response; a raw `JsonDocument` can throw):
 ```csharp
     string? Notes,
-    System.Text.Json.JsonDocument? GameState,
+    System.Text.Json.JsonElement? GameState,
     IReadOnlyList<LiveSessionPlayerDto> Players,
 ```
 
 - [ ] **Step 2: Wire the mapper**
 
-In `QueryHandlers.cs` `MapToDto`, add `session.GameState,` in the `new LiveSessionDto(...)` call, positioned after `session.Notes,` and before `session.Players.Select(...)`:
+In `QueryHandlers.cs` `MapToDto`, add `session.GameState?.RootElement,` in the `new LiveSessionDto(...)` call (positional — after `session.Notes,`, before `session.Players.Select(...)`). `session.GameState` is `JsonDocument?`; `?.RootElement` yields the `JsonElement?` the DTO now expects:
 ```csharp
             session.Notes,
-            session.GameState,
+            session.GameState?.RootElement,
             session.Players.Select(/* …unchanged… */),
 ```
 
@@ -488,16 +498,44 @@ git commit -m "feat(session-live): #3025 L1 expose GameState in LiveSessionDto +
 [Trait("BoundedContext", "GameManagement")]
 [Trait("Dependency", "PostgreSQL")]
 [Collection("Integration-GroupC")]
-public sealed class LiveGameStateEndpointIntegrationTests
+public sealed class LiveGameStateEndpointIntegrationTests : /* extend the sibling base, e.g. */ IntegrationTestBase
 {
-    // Arrange: create a live session as the host (reuse the fixture's helper),
-    // PATCH /api/v1/live-sessions/{id}/game-state with { "state": { "k": 1 } } as the host,
-    // then GET /api/v1/sessions/{id}/live (or the live-session GET) and assert the returned
-    // gameState round-trips. Assert a non-participant PATCH → 403, and PATCH on a Completed
-    // session → 409. Follow the existing integration test's HttpClient + auth cookie pattern.
+    public LiveGameStateEndpointIntegrationTests(IntegrationTestFixture fixture) : base(fixture) { }
+
+    [Fact]
+    public async Task UpdateGameState_AsHost_PersistsAndIsReturnedByGet()
+    {
+        // Arrange: authenticate as a host + create a live session (copy the exact helpers a
+        // sibling live-session integration test uses — SeedUser/LoginClient/CreateLiveSession).
+        var (client, hostUserId) = await AuthenticateHostAsync();
+        var sessionId = await CreateLiveSessionAsync(client);
+
+        // Act: PATCH the game-state.
+        var patch = await client.PutAsJsonAsync(
+            $"/api/v1/live-sessions/{sessionId}/game-state",
+            new { state = new { k = 1 } });
+
+        // Assert: 204 + round-trips on GET.
+        Assert.Equal(HttpStatusCode.NoContent, patch.StatusCode);
+        var dto = await client.GetFromJsonAsync<JsonElement>($"/api/v1/live-sessions/{sessionId}");
+        Assert.Equal(1, dto.GetProperty("gameState").GetProperty("k").GetInt32());
+    }
+
+    [Fact]
+    public async Task UpdateGameState_AsNonParticipant_Returns403()
+    {
+        var (hostClient, _) = await AuthenticateHostAsync();
+        var sessionId = await CreateLiveSessionAsync(hostClient);
+        var strangerClient = await AuthenticateOtherUserAsync();
+
+        var patch = await strangerClient.PutAsJsonAsync(
+            $"/api/v1/live-sessions/{sessionId}/game-state", new { state = new { k = 1 } });
+
+        Assert.Equal(HttpStatusCode.Forbidden, patch.StatusCode);
+    }
 }
 ```
-> This is the end-to-end proof of the write→persist→expose path. Copy the fixture wiring from a sibling `[Collection("Integration-GroupC")]` live-session test verbatim; only the request/assertions are new.
+> This is the end-to-end proof of the write→persist→expose path. **Copy the base class, fixture ctor, and the `AuthenticateHostAsync`/`CreateLiveSessionAsync`/`AuthenticateOtherUserAsync` helpers verbatim from a sibling `[Collection("Integration-GroupC")]` live-session integration test** (grep for one that creates a live session over HTTP); only the two test bodies above are new. Confirm the GET route + the JSON casing (`gameState`) the API returns.
 
 - [ ] **Step 2: Run (requires Docker)**
 
@@ -668,9 +706,10 @@ In `sse-events.ts`: add `'session:game-state'` to `SESSION_EVENT_TYPES` and a va
 In `parse-sse-event.ts`, add the parser (mirror `parseScore` L76-95 — defensive, returns `null` on bad input) + the switch case (L443):
 ```ts
 function parseGameState(data: unknown, sessionId: string): Extract<SessionEvent, { type: 'session:game-state' }> | null {
-  if (typeof data !== 'object' || data === null) return null;
-  const state = (data as { state?: unknown }).state;
-  return { type: 'session:game-state', sessionId, state: state ?? null };
+  // Require a 'state' key — a malformed event (missing 'state') returns null (ignored),
+  // rather than silently masking it as null state.
+  if (typeof data !== 'object' || data === null || !('state' in data)) return null;
+  return { type: 'session:game-state', sessionId, state: (data as { state: unknown }).state };
 }
 // …in the switch:
     case 'session:game-state':
@@ -761,4 +800,4 @@ gh pr create --base main-dev --title "feat(session-live): #3025 L1 live game-sta
 3. **Endpoint user-id extraction** — copy verbatim from `HandleUpdateNotes` (a mutating live-session route already doing auth).
 4. **Raise-in-domain vs handler** — the event is raised in `UpdateGameState` (so restore-snapshot also streams a state change — acceptable; note it). If undesired, move the raise into the command handler after `UpdateGameState` via a dedicated domain method.
 5. **FE SSE routing shape** — confirm whether `liveStream.events` go through a central reducer (add a case) or need an effect (add one) in `SessionLiveView`.
-6. **`JsonDocument` lifetime in the event** — the event holds the same `JsonDocument` the aggregate keeps; the forwarder reads it during post-commit dispatch before any next update disposes it. Fine for L1; if flakiness appears, clone the raw text into the event instead.
+6. **`JsonDocument` handling — RESOLVED (plan review)**: the event carries the **raw JSON string** (`RootElement.GetRawText()`, copied at raise time) — not the disposable `JsonDocument` — so no disposed-doc race. The forwarder re-parses to a `JsonNode` (serializable, non-disposable) for the SSE payload; the read DTO exposes `JsonElement?` (serializable). The request binds `JsonElement`; the handler parses to an owned `JsonDocument` (ownership transferred to the aggregate — no `using`). This threads System.Text.Json's `JsonDocument`-not-serializable + lifetime pitfalls end-to-end.

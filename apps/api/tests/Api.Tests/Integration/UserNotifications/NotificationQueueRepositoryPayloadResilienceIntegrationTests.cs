@@ -127,6 +127,12 @@ public sealed class NotificationQueueRepositoryPayloadResilienceIntegrationTests
             .AsNoTracking()
             .FirstAsync(e => e.Id == poisonId, TestCancellationToken);
         poisonRow.Status.Should().Be("dead_letter");
+        poisonRow.LastError.Should().Contain("#3057");
+
+        // The poison row is now isolated: a second drain no longer re-queries it.
+        var secondPending = await _repository!.GetPendingByChannelAsync(
+            NotificationChannelType.Email, 10, TestCancellationToken);
+        secondPending.Should().NotContain(i => i.Id == poisonId);
     }
 
     private static string Serialize(INotificationPayload payload) =>

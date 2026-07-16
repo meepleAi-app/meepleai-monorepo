@@ -174,8 +174,11 @@ internal class NotificationQueueRepository : RepositoryBase, INotificationQueueR
 
     /// <summary>
     /// Best-effort dead-letters rows that could not be materialized, via a targeted UPDATE — the
-    /// domain aggregate cannot be reconstituted from an undeserializable payload, so this bypasses
-    /// the aggregate. Stops a poison row from being re-queried (and re-logged) every cycle. #3057.
+    /// domain aggregate cannot be reconstituted from an unmappable payload, so this bypasses the
+    /// aggregate. Stops a poison row from being re-queried (and re-logged) every cycle. #3057.
+    /// Genuinely best-effort: its own failure is swallowed so it can never discard the batch's
+    /// already-materialized deliverable items — the poison rows simply stay isolated (they never
+    /// re-enter the good set) and are re-attempted next cycle.
     /// </summary>
     private async Task DeadLetterUnmappableAsync(IReadOnlyCollection<Guid> poisonIds, CancellationToken ct)
     {
@@ -184,13 +187,26 @@ internal class NotificationQueueRepository : RepositoryBase, INotificationQueueR
             return;
         }
 
-        await DbContext.Set<NotificationQueueEntity>()
-            .Where(e => poisonIds.Contains(e.Id))
-            .ExecuteUpdateAsync(s => s
-                .SetProperty(e => e.Status, "dead_letter")
-                .SetProperty(e => e.LastError, "Payload could not be deserialized (isolated by #3057 guard)"),
-                ct)
-            .ConfigureAwait(false);
+        try
+        {
+            await DbContext.Set<NotificationQueueEntity>()
+                .Where(e => poisonIds.Contains(e.Id))
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(e => e.Status, "dead_letter")
+                    .SetProperty(e => e.NextRetryAt, (DateTime?)null)
+                    .SetProperty(e => e.LastError, "Row could not be materialized (unmappable payload); isolated by #3057 guard"),
+                    ct)
+                .ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // best-effort: dead-lettering must never discard the batch's deliverable items
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger.LogError(
+                ex,
+                "Failed to dead-letter {Count} unmappable notification_queue_items row(s); they stay isolated from the batch and are re-attempted next cycle",
+                poisonIds.Count);
+        }
     }
 
     private static NotificationQueueEntity MapToPersistence(NotificationQueueItem item)

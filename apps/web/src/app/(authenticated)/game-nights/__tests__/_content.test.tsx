@@ -6,7 +6,7 @@
  * their own unit tests; this suite verifies wiring + state branching.
  */
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { GameNightDto } from '@/lib/api/schemas/game-nights.schemas';
@@ -322,6 +322,41 @@ describe('GameNightsContent (orchestrator)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'gameNightsIndex.list.cta.decline' }));
     expect(rsvpMutateMock).toHaveBeenCalledWith({
       id: '99999999-9999-9999-9999-999999999999',
+      response: 'Declined',
+    });
+  });
+
+  // #2978 (invariante #17) M1: RSVP must also work from the calendar day-detail drawer.
+  it('wires the RSVP mutation from the day-detail drawer (calendar view)', () => {
+    const invited = makeDto({
+      id: '88888888-8888-8888-8888-888888888888',
+      organizerId: 'someone-else-id-00000000000000000000',
+      myRsvpStatus: 'Pending',
+      title: 'Serata drawer',
+    });
+    useUpcomingMock.mockReturnValue({
+      data: [invited],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useMineMock.mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() });
+
+    render(<GameNightsContent />);
+
+    // The fixture schedules the night "today", so today's cell carries the event.
+    const todayCell = screen
+      .getAllByTestId('game-nights-calendar-day-cell')
+      .find(c => c.hasAttribute('data-today'));
+    expect(todayCell).toBeDefined();
+    fireEvent.click(todayCell as HTMLElement);
+
+    const drawer = screen.getByTestId('game-nights-day-detail-drawer');
+    fireEvent.click(
+      within(drawer).getByRole('button', { name: 'gameNightsIndex.list.cta.decline' })
+    );
+    expect(rsvpMutateMock).toHaveBeenCalledWith({
+      id: '88888888-8888-8888-8888-888888888888',
       response: 'Declined',
     });
   });

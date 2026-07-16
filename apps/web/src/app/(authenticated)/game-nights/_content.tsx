@@ -128,18 +128,18 @@ export function GameNightsContent(): React.JSX.Element {
   const { data: viewer } = useCurrentUser();
   const upcoming = useUpcomingGameNights();
   const mine = useMyGameNights();
-  const rsvpMutation = useRsvpGameNight();
+  const { mutate: rsvpMutate } = useRsvpGameNight();
 
-  // #2978 (invariante #17): inline RSVP from the list card. Non-RSVP actions
-  // (edit/viewSummary/reschedule) are navigation concerns out of this issue's scope.
+  // #2978 (invariante #17): inline RSVP from the list card AND the calendar day-detail drawer.
+  // Non-RSVP actions (edit/viewSummary/reschedule) are navigation concerns out of scope here.
   const handleCardAction = useCallback(
     (id: string, action: GameNightListCardAction): void => {
       const response = RSVP_ACTION_TO_STATUS[action];
       if (response) {
-        rsvpMutation.mutate({ id, response });
+        rsvpMutate({ id, response });
       }
     },
-    [rsvpMutation]
+    [rsvpMutate]
   );
 
   // Merge + dedup by id; map to VMs.
@@ -379,6 +379,7 @@ export function GameNightsContent(): React.JSX.Element {
           day={drawerTarget.cell.day}
           events={dayEvents}
           labels={drawerLabels}
+          onCardAction={handleCardAction}
           onClose={() => setDrawerTarget(null)}
           onAddOnDay={() => router.push('/game-nights/new')}
         />

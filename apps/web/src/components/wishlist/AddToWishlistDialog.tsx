@@ -136,14 +136,23 @@ export function AddToWishlistDialog({
     return null;
   }
 
+  /**
+   * Add-mode default priority mirrors the mockup's "add from a specific game"
+   * prefilled state: pre-selecting a game (`prefillGameId`) implies urgency, so
+   * priority starts at 'high'. A blank add form (no prefill) still defaults to
+   * 'medium'. Edit mode always reflects the existing item's priority.
+   */
+  function initialPriority(): Priority {
+    if (isEdit && item) return normalizePriority(item.priority);
+    return prefillGameId ? 'high' : 'medium';
+  }
+
   const [selectedGame, setSelectedGame] = useState<SelectedGame | null>(buildInitialGame);
   const [query, setQuery] = useState('');
   const [comboOpen, setComboOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const comboContainerRef = useRef<HTMLDivElement | null>(null);
-  const [priority, setPriority] = useState<Priority>(
-    isEdit && item ? normalizePriority(item.priority) : 'medium'
-  );
+  const [priority, setPriority] = useState<Priority>(initialPriority);
   const [targetPrice, setTargetPrice] = useState(
     isEdit && item?.targetPrice != null ? String(item.targetPrice) : ''
   );
@@ -158,7 +167,7 @@ export function AddToWishlistDialog({
     setQuery('');
     setComboOpen(false);
     setActiveIndex(-1);
-    setPriority(isEdit && item ? normalizePriority(item.priority) : 'medium');
+    setPriority(initialPriority());
     setTargetPrice(isEdit && item?.targetPrice != null ? String(item.targetPrice) : '');
     setNotes(isEdit ? (item?.notes ?? '') : '');
   }
@@ -167,6 +176,22 @@ export function AddToWishlistDialog({
     setOpen(value);
     if (value) {
       resetForm();
+    }
+  }
+
+  /**
+   * Radix's `DismissableLayer` listens for Escape on `document` with
+   * `{ capture: true }` — it runs before any bubble-phase `onKeyDown` on the
+   * combobox input, so `stopPropagation` there cannot stop it. The supported
+   * way to scope Escape to the combobox is this `onEscapeKeyDown` prop
+   * (forwarded to `DismissableLayer`): calling `preventDefault` here makes
+   * Radix skip its own dismiss for this keypress, so the first Escape closes
+   * only the listbox and a second Escape (listbox already closed) is left to
+   * close the dialog normally.
+   */
+  function handleContentEscapeKeyDown(event: KeyboardEvent) {
+    if (comboOpen) {
+      event.preventDefault();
     }
   }
 
@@ -193,7 +218,15 @@ export function AddToWishlistDialog({
    * ARIA combobox keyboard pattern (APG): ArrowDown/ArrowUp move the active
    * descendant (opening the listbox if needed), Enter commits the active
    * match, Escape closes the listbox. `preventDefault` on Enter is required
-   * so it doesn't trigger the form's implicit submission instead.
+   * so it doesn't trigger the form's implicit submission instead. Escape also
+   * calls `stopPropagation` for good hygiene (scopes the keypress to this
+   * input for any other bubble-phase listeners); the surrounding Radix
+   * `Dialog` is kept open on this first Escape via the `onEscapeKeyDown` prop
+   * on `DialogContent` below (see `handleContentEscapeKeyDown`) — Radix's own
+   * Escape handling runs in the capture phase on `document`, earlier than
+   * this bubble-phase handler, so `stopPropagation` here cannot reach it.
+   * Once the listbox is already closed, Escape is left to propagate normally
+   * so a second press closes the dialog.
    */
   function handleComboKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -219,6 +252,7 @@ export function AddToWishlistDialog({
     if (e.key === 'Escape') {
       if (!comboOpen) return;
       e.preventDefault();
+      e.stopPropagation();
       setComboOpen(false);
       setActiveIndex(-1);
     }
@@ -302,7 +336,7 @@ export function AddToWishlistDialog({
           </DialogTrigger>
         ))}
 
-      <DialogContent>
+      <DialogContent onEscapeKeyDown={handleContentEscapeKeyDown}>
         <DialogHeader>
           <DialogTitle>
             {isEdit

@@ -70,7 +70,7 @@
 
 | File | Type | Mapped routes |
 |------|------|---------------|
-| `sp4-citation-pdf-viewer.html` | component-mock | Citation overlay used by `/chat/[threadId]` and game-chat tabs |
+| `sp4-citation-pdf-viewer.html` | component-mock | Citation overlay used by game-chat tabs (`GameChatTab.tsx` → `CitationModal.tsx`), mounted in `/games/[id]` and `/library/[gameId]` (`?tab=aiChat`). NOT `/chat/[threadId]` — that route renders `PageViewerPanel.tsx`, a plain extracted-text side panel with no Snippet/PDF tabs or ownership gating. `/chat/[threadId]` full-screen has no page-mock (known gap, issue #491, see `docs/for-developers/audits/2026-05-22-mockup-gaps.md`). |
 | `sp4-dashboard.html` | page-mock (obsolete) | `/dashboard` — historical Pre-Stage-3 mockup, superseded by Asse C #1898 priority-driven design (4 priority sections replace 5 entity sections); tracking #2114 |
 | `sp4-game-chat-tab.html` | component-mock | Chat tab embedded in `/library/[gameId]/agent`, `/games/[id]` |
 | `sp4-game-detail-tab-rules.html` | sub-tab placeholder (#2148) | `/games/[id]/rules` — AI placeholder, designer review required |
@@ -149,7 +149,12 @@
 
 _The `sp6-libro-game-*` family was retired by #2152 (#2025 cleanup completion).
 Canonical equivalents live under `librogame-runthrough-*` (Aaron Iter 1 cluster
-below) and the `/gamebook` family pages render directly from those._
+below). Only `librogame-runthrough-quota-credits.html` (checkout/quota overlay,
+`CheckoutModal.tsx` + `QuotaWidget`/`SoftWarningCredits`, issue #953) actually
+renders inside `/gamebook`. `librogame-runthrough-library-search.html` maps to
+`/library` instead — do NOT use it for `/gamebook`. The historic `/gamebook`
+index page-mock (`sp6-libro-game-index.jsx`) was deleted and never replaced:
+the `GamebookHero` + `GamebookCard` grid has no page-mock coverage (gap)._
 
 ## SP7 — Game nights
 
@@ -171,9 +176,9 @@ below) and the `/gamebook` family pages render directly from those._
 | `primitive-nav-chat-panel.html` | component-mock | Chat slide-over panel (used globally via `useChatPanel`, was `nanolith-nav-chat-panel.html` pre-#2152) |
 | `primitive-nav-topbar.html` | component-mock | Top-bar primitive (global, was `nanolith-nav-topbar.html` pre-#2152) |
 | `librogame-runthrough-error-states.html` | component-mock | Trasversale: chat (N1/N2) · translate (N3) · encounter — stream-timeout / OCR-fail / LLM-503 / segmentation-fail (PR #1056) |
-| `librogame-runthrough-glossary-editor.html` | component-mock | Glossary editor (canonical, SP6 jsx mirror eliminato in #2025) |
-| `librogame-runthrough-library-search.html` | component-mock | In-library search overlay (not page-level) |
-| `librogame-runthrough-quota-credits.html` | component-mock | Quota/credits overlay (global) |
+| `librogame-runthrough-glossary-editor.html` | component-mock | `GlossaryEditorModal.tsx` (issue #952) — designed to float over `TranslateViewer` on `/library/[gameId]/play/[campaignId]/translate`; component built but NOT mounted in any live route (only imported by its own story/tests). NOT the mockup for `.../encounter` — that route renders `EncounterCheatsheetView` + the read-only `GlossaryLookupModal`, which has no mockup coverage (gap). |
+| `librogame-runthrough-library-search.html` | component-mock | In-library game search overlay for `/library` (own header states "Route: /library"). NOT `/gamebook` — `GamebookIndexView.tsx` uses no such search / `MeepleCard`-grid pattern. |
+| `librogame-runthrough-quota-credits.html` | component-mock | Quota/credits + checkout overlay, shipped inside `/gamebook` (`GamebookIndexView.tsx` → `QuotaWidget`/`SoftWarningCredits`/`CheckoutModal.tsx`, SP6 Iter 1.B #953). File header's claimed migration to `/library/.../play` + `/account/checkout/success` (#871) was never built — no `/account` or `/checkout` route exists; treat that comment as stale. |
 
 ## Summary
 

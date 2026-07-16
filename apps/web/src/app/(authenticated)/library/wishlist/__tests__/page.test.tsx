@@ -109,6 +109,19 @@ const ITEM_2 = buildItem({
   priority: 'medium',
 });
 
+/**
+ * `Intl.NumberFormat`'s currency formatting inserts a non-breaking space
+ * (U+00A0) before the currency symbol. `toHaveTextContent`'s default
+ * whitespace normalization collapses runs of JS-`\s` whitespace (which
+ * includes NBSP) into a single regular space, but it only normalizes the
+ * *received* DOM text — the string passed in as the expected substring is
+ * matched as-is. Normalizing the expected substring here the same way keeps
+ * the comparison from failing on an NBSP-vs-regular-space mismatch.
+ */
+function normalizeNbsp(value: string): string {
+  return value.split(String.fromCharCode(160)).join(' ');
+}
+
 describe('WishlistPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -146,6 +159,54 @@ describe('WishlistPage', () => {
     expect(screen.getByText('Wingspan')).toBeInTheDocument();
     expect(screen.getByText('Catan')).toBeInTheDocument();
     expect(screen.getAllByTestId('wishlist-card')).toHaveLength(2);
+  });
+
+  it('renders WishlistStats with totals computed from all items', () => {
+    const statsItems = [
+      buildItem({
+        id: '00000000-0000-0000-0000-000000000010',
+        gameId: 'game-10',
+        gameName: 'Ark Nova',
+        priority: 'high',
+        targetPrice: 40,
+      }),
+      buildItem({
+        id: '00000000-0000-0000-0000-000000000011',
+        gameId: 'game-11',
+        gameName: 'Brass Birmingham',
+        priority: 'high',
+        targetPrice: 20,
+      }),
+      buildItem({
+        id: '00000000-0000-0000-0000-000000000012',
+        gameId: 'game-12',
+        gameName: 'Azul',
+        priority: 'low',
+        targetPrice: null,
+      }),
+    ];
+
+    mockUseWishlist.mockReturnValue({
+      data: statsItems,
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    renderPage(<WishlistPage />);
+
+    // total=3, highCount=2 (Ark Nova + Brass Birmingham), totalSpend=40+20=60
+    // (Azul's null targetPrice is excluded from the sum) — matches computeStats().
+    const stats = screen.getByTestId('wishlist-stats');
+    const formattedSpend = normalizeNbsp(
+      new Intl.NumberFormat('it', { style: 'currency', currency: 'EUR' }).format(60)
+    );
+
+    expect(stats).toHaveTextContent(WISHLIST_I18N.stats.games.replace('{count}', '3'));
+    expect(stats).toHaveTextContent(WISHLIST_I18N.stats.highPriority.replace('{count}', '2'));
+    expect(stats).toHaveTextContent(
+      WISHLIST_I18N.stats.estimatedSpend.replace('{amount}', formattedSpend)
+    );
   });
 
   it('shows the empty state when there are no wishlist items', () => {

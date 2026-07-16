@@ -93,6 +93,7 @@ describe('useInfrastructureKpis', () => {
     await waitFor(() => expect(result.current.containers.loading).toBe(false));
     await waitFor(() => expect(result.current.cpu.loading).toBe(false));
     await waitFor(() => expect(result.current.batchJobs.loading).toBe(false));
+    await waitFor(() => expect(result.current.memory.total).toBe(32));
 
     expect(result.current.containers).toMatchObject({ active: 2, total: 3, stopped: 1 });
     expect(result.current.cpu).toMatchObject({ value: 34, trend: 'up' });

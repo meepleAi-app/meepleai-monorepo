@@ -159,7 +159,11 @@ export function KPISparklineStrip() {
       ) : (
         <article
           data-testid="kpi-card"
-          aria-label={`RAM usata ${memory.value} di ${memory.total} GB`}
+          aria-label={
+            memory.total > 0
+              ? `RAM usata ${memory.value} di ${memory.total} GB`
+              : `RAM usata ${memory.value} GB`
+          }
           className="relative rounded-xl border border-border bg-card/60 p-4 min-h-[88px] border-l-4 border-l-entity-kb"
         >
           <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -167,7 +171,9 @@ export function KPISparklineStrip() {
           </p>
           <p className="mt-1 font-quicksand text-2xl font-bold text-foreground tabular-nums">
             {memory.value}
-            <span className="text-sm text-muted-foreground font-semibold">/{memory.total} GB</span>
+            <span className="text-sm text-muted-foreground font-semibold">
+              {memory.total > 0 ? `/${memory.total} GB` : ' GB'}
+            </span>
           </p>
           <p className="mt-1 font-mono text-[11px]">
             <TrendLabel trend={memory.trend} pct={memory.trendPct} suffix="ultimi 60m" />

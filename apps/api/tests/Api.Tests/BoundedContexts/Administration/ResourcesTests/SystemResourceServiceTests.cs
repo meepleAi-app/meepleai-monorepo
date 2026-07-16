@@ -32,13 +32,27 @@ public class SystemResourceServiceTests
     }
 
     [Fact]
-    public void GetSystemResources_SecondCall_ComputesCpuWithinBounds()
+    public void GetSystemResources_CpuPercent_IsBoundedLifetimeAverage()
     {
         var svc = new SystemResourceService();
 
-        _ = svc.GetSystemResources();       // primes the CPU snapshot
-        var dto = svc.GetSystemResources();  // delta path
+        // CPU% is the stateless lifetime average (TotalProcessorTime / (uptime × cores)),
+        // so it is always within [0, 100] with no priming/snapshot required.
+        var dto = svc.GetSystemResources();
 
         dto.ProcessCpuPercent.Should().BeInRange(0, 100);
+    }
+
+    [Fact]
+    public void GetSystemResources_HostMemoryTotal_IsStableAcrossCalls()
+    {
+        var svc = new SystemResourceService();
+
+        // Host memory total is read once and cached → identical across calls (no race).
+        var a = svc.GetSystemResources();
+        var b = svc.GetSystemResources();
+
+        a.HostMemoryTotalBytes.Should().Be(b.HostMemoryTotalBytes);
+        a.HostMemoryTotalBytes.Should().BeGreaterThan(0);
     }
 }

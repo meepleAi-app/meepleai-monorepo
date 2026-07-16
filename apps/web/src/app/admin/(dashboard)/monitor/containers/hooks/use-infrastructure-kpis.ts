@@ -115,13 +115,11 @@ export function useInfrastructureKpis(): InfrastructureKpis {
         setContainers({ active: 0, total: 0, stopped: 0, loading: false });
       });
 
-    // getSystemResources è tollerante al fallimento (→ null): total ricade a 0
-    // senza compromettere CPU/serie. La sorgente memoria è self-contained (#3041).
-    Promise.all([
-      api.admin.getMetricsTimeSeries('1h'),
-      api.admin.getSystemResources().catch(() => null),
-    ])
-      .then(([resp, sys]) => {
+    // CPU + serie memoria da /metrics/timeseries (node_exporter). Aggiorna value/series/trend
+    // ma NON `total` (functional update), così resta disaccoppiato dal fetch host-memory.
+    void api.admin
+      .getMetricsTimeSeries('1h')
+      .then(resp => {
         if (cancelled) return;
         const cpuSeries = resp?.cpu ?? [];
         const memSeries = resp?.memory ?? [];
@@ -129,7 +127,6 @@ export function useInfrastructureKpis(): InfrastructureKpis {
         const memValue = memSeries.length ? memSeries[memSeries.length - 1].value : 0;
         const cpuTrend = computeTrend(cpuSeries);
         const memTrend = computeTrend(memSeries);
-        const totalGb = sys ? Math.round(sys.hostMemoryTotalBytes / BYTES_PER_GB) : 0;
         setCpu({
           value: cpuValue,
           series: cpuSeries,
@@ -137,19 +134,39 @@ export function useInfrastructureKpis(): InfrastructureKpis {
           trendPct: cpuTrend.pct,
           loading: false,
         });
-        setMemory({
+        setMemory(m => ({
+          ...m,
           value: memValue,
           series: memSeries,
           trend: memTrend.trend,
           trendPct: memTrend.pct,
-          total: totalGb,
           loading: false,
-        });
+        }));
       })
       .catch(() => {
         if (cancelled) return;
         setCpu({ ...EMPTY_METRIC, loading: false });
-        setMemory({ ...EMPTY_MEMORY, loading: false });
+        setMemory(m => ({
+          ...m,
+          value: 0,
+          series: [],
+          trend: 'flat',
+          trendPct: 0,
+          loading: false,
+        }));
+      });
+
+    // memory.total = RAM host da /resources/system (self-contained, #3041). Fetch
+    // indipendente: non blocca il CPU KPI. Su fallimento total resta al default (0) e
+    // il KPI strip mostra un placeholder invece di un denominatore fittizio.
+    void api.admin
+      .getSystemResources()
+      .then(sys => {
+        if (cancelled || !sys) return;
+        setMemory(m => ({ ...m, total: Math.round(sys.hostMemoryTotalBytes / BYTES_PER_GB) }));
+      })
+      .catch(() => {
+        // total resta 0 → gestito dal guard di rendering nel KPI strip
       });
 
     Promise.all([

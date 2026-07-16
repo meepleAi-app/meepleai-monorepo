@@ -209,7 +209,7 @@ export default function ToolkitHistoryPage(): JSX.Element {
     <HubPageContainer className="flex flex-col gap-6">
       {/* breadcrumb */}
       <nav
-        aria-label={t('pages.toolkitHistory.hero.breadcrumbToolkit')}
+        aria-label={t('pages.toolkitHistory.hero.breadcrumbAria')}
         className="flex items-center gap-1.5 text-sm text-muted-foreground"
       >
         <span>{t('pages.toolkitHistory.hero.breadcrumbToolkit')}</span>

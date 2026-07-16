@@ -113,7 +113,7 @@ export default function WishlistPage(): JSX.Element {
     <HubPageContainer className="flex flex-col gap-6">
       {/* breadcrumb */}
       <nav
-        aria-label={t('pages.library.wishlist.hero.breadcrumbWishlist')}
+        aria-label={t('pages.library.wishlist.hero.breadcrumbAria')}
         className="flex items-center gap-1.5 text-sm text-muted-foreground"
       >
         <Link href="/library" className="hover:text-foreground">

@@ -146,6 +146,21 @@ describe('WishlistPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('names the breadcrumb landmark distinctly from the page label', () => {
+    mockUseWishlist.mockReturnValue({
+      data: [ITEM_1, ITEM_2],
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    renderPage(<WishlistPage />);
+
+    expect(
+      screen.getByRole('navigation', { name: WISHLIST_I18N.hero.breadcrumbAria })
+    ).toBeInTheDocument();
+  });
+
   it('renders a card for each fetched wishlist item', () => {
     mockUseWishlist.mockReturnValue({
       data: [ITEM_1, ITEM_2],

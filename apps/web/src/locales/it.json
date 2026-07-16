@@ -2224,6 +2224,7 @@
         "hero": {
           "breadcrumbLibrary": "Libreria",
           "breadcrumbWishlist": "Wishlist",
+          "breadcrumbAria": "Percorso",
           "title": "Wishlist · Giochi desiderati",
           "subtitle": "Tieni traccia dei giochi che vuoi comprare o provare.",
           "tabsAria": "Sezioni libreria",
@@ -2677,6 +2678,7 @@
       "hero": {
         "breadcrumbToolkit": "Toolkit",
         "breadcrumbHistory": "History",
+        "breadcrumbAria": "Percorso",
         "title": "Storico sessioni",
         "subtitle": "Tutte le partite finalizzate, filtrabili per gioco, data e vincitore.",
         "quickStat": "{sessions} sessioni · {games} giochi · {winners} vincitori",

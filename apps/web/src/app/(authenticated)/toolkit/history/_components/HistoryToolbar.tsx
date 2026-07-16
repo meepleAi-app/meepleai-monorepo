@@ -135,12 +135,10 @@ function MultiSelectPopover({
           {count > 0 && <span className="text-xs font-semibold">({count})</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-64 p-2" role="listbox" aria-label={ariaLabel}>
+      <PopoverContent align="start" className="w-64 p-2" role="group" aria-label={ariaLabel}>
         <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">{ariaLabel}</div>
         <button
           type="button"
-          role="option"
-          aria-selected={count === 0}
           onClick={onClear}
           className={cn(
             'flex w-full items-center rounded px-2 py-1.5 text-left text-sm hover:bg-muted',
@@ -258,7 +256,7 @@ function DateRangeFilterPopover({ state, onChange, t }: DateRangeFilterPopoverPr
       <PopoverContent
         align="start"
         className="w-72 p-3"
-        role="listbox"
+        role="group"
         aria-label={t('pages.toolkitHistory.filters.dateRange')}
       >
         <div className="mb-2 text-xs font-semibold text-muted-foreground">

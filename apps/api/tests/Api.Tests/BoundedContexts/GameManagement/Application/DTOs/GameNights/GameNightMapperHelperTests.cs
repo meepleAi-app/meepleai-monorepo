@@ -8,52 +8,52 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.GameManagement.Application.DTOs.GameNights;
 
 /// <summary>
-/// #2978 (invariante #17): the list/dashboard DTO must carry the viewer's own RSVP status
-/// (<c>MyRsvpStatus</c>) so the FE can render the pending-invitee card treatment. The mapper
-/// resolves it from the viewer id — null when the viewer is not an invitee (incl. the organizer,
-/// who has no RSVP).
+/// #2989 inv#17: the upcoming DTO must carry the viewer's RSVP status so the
+/// dashboard can render a pending-RSVP card ("Da confermare") for invitees.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "GameManagement")]
-public class GameNightMapperHelperTests
+public sealed class GameNightMapperHelperTests
 {
-    private static GameNightEvent PublishedEventWith(Guid organizerId, params Guid[] invitedUserIds)
+    private static GameNightEvent MakeNightWithPendingInvitee(Guid inviteeId)
     {
-        var evt = GameNightEvent.Create(
-            organizerId, "Serata", DateTimeOffset.UtcNow.AddHours(1), gameIds: [Guid.NewGuid()]);
-        evt.Publish(invitedUserIds.ToList());
-        return evt;
+        var night = GameNightEvent.Create(
+            organizerId: Guid.NewGuid(),
+            title: "Serata da Marco",
+            scheduledAt: DateTimeOffset.UtcNow.AddDays(1));
+        night.PreInvite(new List<Guid> { inviteeId });
+        return night;
     }
 
     [Fact]
-    public void MapToDto_ViewerIsPendingInvitee_SetsMyRsvpStatusToPending()
+    public void MapToDto_WithViewerHavingPendingRsvp_SetsViewerRsvpStatusToPending()
     {
-        var invitedUserId = Guid.NewGuid();
-        var evt = PublishedEventWith(Guid.NewGuid(), invitedUserId);
+        var viewerId = Guid.NewGuid();
+        var night = MakeNightWithPendingInvitee(viewerId);
 
-        var dto = GameNightMapperHelper.MapToDto(evt, "Org", invitedUserId);
+        var dto = GameNightMapperHelper.MapToDto(night, "Marco", viewerId);
 
-        dto.MyRsvpStatus.Should().Be(RsvpStatus.Pending);
+        dto.ViewerRsvpStatus.Should().Be(RsvpStatus.Pending);
     }
 
     [Fact]
-    public void MapToDto_ViewerNotInvited_SetsMyRsvpStatusToNull()
+    public void MapToDto_WithoutViewerId_LeavesViewerRsvpStatusNull()
     {
-        var evt = PublishedEventWith(Guid.NewGuid(), Guid.NewGuid());
+        var night = MakeNightWithPendingInvitee(Guid.NewGuid());
 
-        var dto = GameNightMapperHelper.MapToDto(evt, "Org", viewerUserId: Guid.NewGuid());
+        var dto = GameNightMapperHelper.MapToDto(night, "Marco");
 
-        dto.MyRsvpStatus.Should().BeNull();
+        dto.ViewerRsvpStatus.Should().BeNull();
     }
 
     [Fact]
-    public void MapToDto_ViewerIsOrganizer_SetsMyRsvpStatusToNull()
+    public void MapToDto_WithViewerNotInvited_LeavesViewerRsvpStatusNull()
     {
-        var organizerId = Guid.NewGuid();
-        var evt = PublishedEventWith(organizerId, Guid.NewGuid());
+        var night = MakeNightWithPendingInvitee(Guid.NewGuid());
+        var strangerId = Guid.NewGuid();
 
-        var dto = GameNightMapperHelper.MapToDto(evt, "Org", viewerUserId: organizerId);
+        var dto = GameNightMapperHelper.MapToDto(night, "Marco", strangerId);
 
-        dto.MyRsvpStatus.Should().BeNull();
+        dto.ViewerRsvpStatus.Should().BeNull();
     }
 }

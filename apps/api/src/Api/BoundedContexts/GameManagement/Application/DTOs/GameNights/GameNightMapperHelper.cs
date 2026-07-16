@@ -10,8 +10,7 @@ namespace Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
 /// </summary>
 internal static class GameNightMapperHelper
 {
-    public static GameNightDto MapToDto(
-        GameNightEvent gameNight, string organizerName, Guid? viewerUserId = null)
+    public static GameNightDto MapToDto(GameNightEvent gameNight, string organizerName, Guid? viewerId = null)
     {
         ArgumentNullException.ThrowIfNull(gameNight);
 
@@ -31,9 +30,7 @@ internal static class GameNightMapperHelper
             TotalInvited: gameNight.Rsvps.Count,
             CreatedAt: gameNight.CreatedAt,
             UpdatedAt: gameNight.UpdatedAt,
-            // #2978 (invariante #17): resolve the viewer's own RSVP from the aggregate (RSVPs are
-            // already eager-loaded); null when no viewer is supplied or the viewer is not invited.
-            MyRsvpStatus: viewerUserId is Guid viewer ? gameNight.GetRsvp(viewer)?.Status : null);
+            ViewerRsvpStatus: viewerId.HasValue ? gameNight.GetRsvp(viewerId.Value)?.Status : null);
     }
 
     public static GameNightRsvpDto MapToRsvpDto(GameNightRsvp rsvp, string userName)

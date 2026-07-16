@@ -49,7 +49,7 @@ function makeVM(
     playerIds: [],
     role,
     statusKey,
-    myRsvpStatus: null,
+    viewerRsvpStatus: null,
     ...overrides,
   };
 }
@@ -136,7 +136,7 @@ describe('GameNightListCard', () => {
       const onAction = vi.fn();
       render(
         <GameNightListCard
-          vm={makeVM('planned', 'invited', { myRsvpStatus: 'Pending' })}
+          vm={makeVM('planned', 'invited', { viewerRsvpStatus: 'Pending' })}
           labels={labels}
           onAction={onAction}
         />
@@ -155,7 +155,7 @@ describe('GameNightListCard', () => {
     it('shows the "Da confermare" badge when invited and RSVP is Pending', () => {
       render(
         <GameNightListCard
-          vm={makeVM('planned', 'invited', { myRsvpStatus: 'Pending' })}
+          vm={makeVM('planned', 'invited', { viewerRsvpStatus: 'Pending' })}
           labels={labels}
         />
       );
@@ -165,7 +165,7 @@ describe('GameNightListCard', () => {
     it('marks the card data-pending=true when invited and RSVP is Pending', () => {
       render(
         <GameNightListCard
-          vm={makeVM('planned', 'invited', { myRsvpStatus: 'Pending' })}
+          vm={makeVM('planned', 'invited', { viewerRsvpStatus: 'Pending' })}
           labels={labels}
         />
       );
@@ -175,7 +175,7 @@ describe('GameNightListCard', () => {
     it('drops the pending badge once the invitee has confirmed (Accepted)', () => {
       render(
         <GameNightListCard
-          vm={makeVM('planned', 'invited', { myRsvpStatus: 'Accepted' })}
+          vm={makeVM('planned', 'invited', { viewerRsvpStatus: 'Accepted' })}
           labels={labels}
         />
       );
@@ -186,7 +186,7 @@ describe('GameNightListCard', () => {
     it('marks the current RSVP response as selected', () => {
       render(
         <GameNightListCard
-          vm={makeVM('planned', 'invited', { myRsvpStatus: 'Accepted' })}
+          vm={makeVM('planned', 'invited', { viewerRsvpStatus: 'Accepted' })}
           labels={labels}
         />
       );
@@ -196,7 +196,7 @@ describe('GameNightListCard', () => {
       );
     });
 
-    it('shows no RSVP buttons for a non-invitee (myRsvpStatus null)', () => {
+    it('shows no RSVP buttons for a non-invitee (viewerRsvpStatus null)', () => {
       render(<GameNightListCard vm={makeVM('planned', 'invited')} labels={labels} />);
       expect(screen.queryByRole('button', { name: '✓ Partecipo' })).not.toBeInTheDocument();
     });

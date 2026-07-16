@@ -46,10 +46,10 @@ export const GameNightDtoSchema = z.object({
   totalInvited: z.number(),
   createdAt: z.string(),
   updatedAt: z.string().nullable().optional(),
-  // #2978 (invariante #17): the viewer's own RSVP status, or null when not an invitee (incl. the
-  // organizer). `.nullish()` tolerates legacy payloads/fixtures that omit the field; consumers
-  // normalize undefined → null (see toGameNightVM).
-  myRsvpStatus: RsvpStatusSchema.nullish(),
+  // #2989 inv#17: the viewer's RSVP status for this night (null if organizer/not-invited).
+  // Resilient parse (#2989 review): a Corrupted/unknown status degrades to null so the
+  // whole upcoming-list parse never throws — the card just falls back to MeepleEventCard.
+  viewerRsvpStatus: RsvpStatusSchema.nullable().catch(null).optional(),
 });
 export type GameNightDto = z.infer<typeof GameNightDtoSchema>;
 

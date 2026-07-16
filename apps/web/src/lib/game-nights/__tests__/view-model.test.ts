@@ -114,13 +114,13 @@ describe('toGameNightVM', () => {
 
   // #2978 (invariante #17): the viewer's own RSVP status must reach the VM so the list card can
   // render the pending-invitee treatment.
-  it('maps myRsvpStatus from the dto', () => {
-    const vm = toGameNightVM(buildDto({ myRsvpStatus: 'Pending' }), OTHER_ID);
-    expect(vm.myRsvpStatus).toBe('Pending');
+  it('maps viewerRsvpStatus from the dto', () => {
+    const vm = toGameNightVM(buildDto({ viewerRsvpStatus: 'Pending' }), OTHER_ID);
+    expect(vm.viewerRsvpStatus).toBe('Pending');
   });
 
-  it('normalizes an omitted myRsvpStatus to null', () => {
+  it('normalizes an omitted viewerRsvpStatus to null', () => {
     const vm = toGameNightVM(buildDto(), HOST_ID);
-    expect(vm.myRsvpStatus).toBeNull();
+    expect(vm.viewerRsvpStatus).toBeNull();
   });
 });

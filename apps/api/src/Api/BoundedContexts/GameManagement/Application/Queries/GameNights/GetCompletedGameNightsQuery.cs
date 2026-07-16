@@ -12,8 +12,4 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
 /// the dashboard slot's visible card budget without forcing the FE to
 /// page; trimmed further on the FE if needed.
 /// </param>
-/// <param name="CallerUserId">
-/// #2978 (invariante #17): the authenticated viewer, used to resolve their own RSVP status
-/// (<c>MyRsvpStatus</c>) on each returned DTO.
-/// </param>
-internal record GetCompletedGameNightsQuery(Guid CallerUserId, int Limit = 5) : IQuery<IReadOnlyList<GameNightDto>>;
+internal record GetCompletedGameNightsQuery(int Limit = 5) : IQuery<IReadOnlyList<GameNightDto>>;

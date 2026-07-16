@@ -150,7 +150,7 @@ describe('DashboardClient (Asse C priority cluster)', () => {
     expect(prossimi).not.toBeNull();
   });
 
-  // #2978 (invariante #17): the dashboard maps myRsvpStatus onto the Prossimi card and wires
+  // #2978 (invariante #17): the dashboard maps viewerRsvpStatus onto the Prossimi card and wires
   // the inline RSVP handler, so a pending invitee sees the treatment on /dashboard too.
   it('renders the pending-invitee RSVP treatment for an upcoming night', async () => {
     const useUpcomingMock = vi.mocked(
@@ -174,7 +174,7 @@ describe('DashboardClient (Asse C priority cluster)', () => {
           totalInvited: 3,
           createdAt: '2024-01-01T00:00:00Z',
           updatedAt: null,
-          myRsvpStatus: 'Pending' as const,
+          viewerRsvpStatus: 'Pending' as const,
         },
       ],
       isLoading: false,

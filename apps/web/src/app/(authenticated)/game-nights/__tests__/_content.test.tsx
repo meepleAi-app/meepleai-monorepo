@@ -306,7 +306,7 @@ describe('GameNightsContent (orchestrator)', () => {
     const invited = makeDto({
       id: '99999999-9999-9999-9999-999999999999',
       organizerId: 'someone-else-id-00000000000000000000',
-      myRsvpStatus: 'Pending',
+      viewerRsvpStatus: 'Pending',
       title: 'Serata su invito',
     });
     useUpcomingMock.mockReturnValue({
@@ -331,7 +331,7 @@ describe('GameNightsContent (orchestrator)', () => {
     const invited = makeDto({
       id: '88888888-8888-8888-8888-888888888888',
       organizerId: 'someone-else-id-00000000000000000000',
-      myRsvpStatus: 'Pending',
+      viewerRsvpStatus: 'Pending',
       title: 'Serata drawer',
     });
     useUpcomingMock.mockReturnValue({

@@ -1,221 +1,383 @@
 'use client';
 
-import React, { useState } from 'react';
+import type { JSX } from 'react';
+import { useState } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, Filter, Loader2, Trophy } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { HubPageContainer } from '@/components/layout/PageContainer';
-import { SessionDetailModal } from '@/components/session/SessionDetailModal';
-import type { Session } from '@/components/session/types';
-import { Badge } from '@/components/ui/data-display/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/overlays/select';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
-import { Input } from '@/components/ui/primitives/input';
-import { Label } from '@/components/ui/primitives/label';
+import { useLibrary } from '@/hooks/queries/useLibrary';
+import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
+import { downloadFile, rowsToCsv } from '@/lib/utils/csv';
+
+import { HistoryCards } from './_components/HistoryCards';
+import { HistoryDetailModal } from './_components/HistoryDetailModal';
+import { HistoryPagination } from './_components/HistoryPagination';
+import { HistoryTable } from './_components/HistoryTable';
+import { HistoryToolbar } from './_components/HistoryToolbar';
+import {
+  countActiveFilters,
+  filterRows,
+  NO_WINNER_FILTER_VALUE,
+  paginate,
+  sortRows,
+  toHistoryRow,
+  type HistoryFilterState,
+  type HistoryRow,
+  type HistorySort,
+} from './_lib/history-filters';
 
 /**
- * Toolkit History Page
+ * Toolkit History Page — orchestrator (Issue #3006, Task A9).
  *
- * Features:
- * - List finalized sessions
- * - Filters: game, date range, winner
- * - Pagination (20 items/page)
- * - Session detail modal
+ * Assembles the pure filter/sort/paginate pipeline (`_lib/history-filters`)
+ * with the presentational components built in A1-A8 into the full
+ * `/toolkit/history` experience. The backend history endpoint has no
+ * search/filter/sort support, so a single batch (`limit: 500`) is fetched
+ * once and the entire table experience — search, filters, sort, pagination,
+ * CSV export — runs client-side.
  */
-export default function ToolkitHistoryPage() {
+
+/** Batch size fetched from `GET /sessions/history` — see `_lib/history-filters.ts` header comment. */
+const HISTORY_BATCH_LIMIT = 500;
+
+/** Default page size, matching `HistoryPagination`'s `PAGE_SIZE_OPTIONS`. */
+const DEFAULT_PAGE_SIZE = 20;
+
+const DEFAULT_FILTER_STATE: HistoryFilterState = {
+  search: '',
+  gameIds: [],
+  winners: [],
+  datePreset: 'all',
+  sort: 'recent',
+};
+
+interface ToolkitTab {
+  id: 'stats' | 'history' | 'templates' | 'play';
+  href: string;
+  icon: string;
+}
+
+const TOOLKIT_TABS: ToolkitTab[] = [
+  { id: 'stats', href: '/toolkit/stats', icon: '📊' },
+  { id: 'history', href: '/toolkit/history', icon: '📜' },
+  { id: 'templates', href: '/toolkit/templates', icon: '🎨' },
+  { id: 'play', href: '/toolkit/play', icon: '🎮' },
+];
+
+/** Formats a session duration in minutes as `"{h}h {m}m"` — mirrors HistoryTable/HistoryCards/HistoryDetailModal. */
+function formatDuration(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${h}h ${m}m`;
+}
+
+export default function ToolkitHistoryPage(): JSX.Element {
   const router = useRouter();
+  const { t, formatDate, formatTime } = useTranslation();
 
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [filterState, setFilterState] = useState<HistoryFilterState>(DEFAULT_FILTER_STATE);
+  const [view, setView] = useState<'table' | 'cards'>('table');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [detailRow, setDetailRow] = useState<HistoryRow | null>(null);
 
-  // Filters
-  const [gameFilter, setGameFilter] = useState<string>('');
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
-
-  // Fetch session history from API
-  const { data: sessionsData, isLoading } = useQuery({
-    queryKey: ['session-history', gameFilter, startDate, endDate],
-    queryFn: () =>
-      api.sessions.getHistory({
-        gameId: gameFilter || undefined,
-        startDate: startDate || undefined,
-        endDate: endDate || undefined,
-        limit: 20,
-      }),
+  const historyQuery = useQuery({
+    queryKey: ['toolkit-history'],
+    queryFn: () => api.sessions.getHistory({ limit: HISTORY_BATCH_LIMIT }),
   });
-  const sessions: Session[] = (sessionsData?.sessions ?? []).map(s => ({
-    id: s.id,
-    sessionCode: s.id.slice(0, 6).toUpperCase(),
-    sessionType: s.gameId ? 'GameSpecific' : 'Generic',
-    gameId: s.gameId,
-    sessionDate: new Date(s.startedAt),
-    status: s.status === 'Completed' ? 'Finalized' : (s.status as Session['status']),
-    participantCount: s.playerCount,
-  }));
 
-  /**
-   * Handle view details
-   */
-  const handleViewDetails = (session: Session) => {
-    setSelectedSession(session);
-    setIsModalOpen(true);
+  // Full library page so every game a session references resolves to a real
+  // title — falls back to `unknownLabel` for sessions on games no longer in
+  // the user's library (e.g. removed private games).
+  const { data: libraryData } = useLibrary({ pageSize: HISTORY_BATCH_LIMIT });
+
+  const unknownLabel = t('pages.toolkitHistory.table.unknownGame');
+
+  const gameNameMap = new Map<string, string>();
+  for (const entry of libraryData?.items ?? []) {
+    gameNameMap.set(entry.gameId, entry.gameTitle);
+  }
+
+  const sessions = historyQuery.data?.sessions ?? [];
+  const allRows = sessions.map(dto => toHistoryRow(dto, gameNameMap, unknownLabel));
+
+  // Client-side pipeline: filter → sort → paginate. `now` is fresh per
+  // render — this is the orchestrator, not a pure helper, so determinism
+  // isn't required here (unlike `_lib/history-filters.ts`).
+  const now = new Date();
+  const filtered = sortRows(filterRows(allRows, filterState, now), filterState.sort);
+  const pageRows = paginate(filtered, page, pageSize);
+
+  const gameCounts = new Map<string, { label: string; count: number }>();
+  for (const row of allRows) {
+    const existing = gameCounts.get(row.gameId);
+    if (existing) existing.count += 1;
+    else gameCounts.set(row.gameId, { label: row.gameName, count: 1 });
+  }
+  const gameOptions = Array.from(gameCounts.entries())
+    .map(([id, { label, count }]) => ({ id, label, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const winnerCounts = new Map<string, number>();
+  let noWinnerCount = 0;
+  for (const row of allRows) {
+    if (row.winnerName == null) {
+      noWinnerCount += 1;
+      continue;
+    }
+    winnerCounts.set(row.winnerName, (winnerCounts.get(row.winnerName) ?? 0) + 1);
+  }
+  // Winner labels are the raw name — HistoryToolbar re-translates the
+  // NO_WINNER_FILTER_VALUE entry's label itself, so what we pass here for it
+  // is ignored.
+  const winnerOptions = [
+    ...Array.from(winnerCounts.entries()).map(([value, count]) => ({ value, label: value, count })),
+    { value: NO_WINNER_FILTER_VALUE, label: NO_WINNER_FILTER_VALUE, count: noWinnerCount },
+  ];
+
+  const totalGames = new Set(allRows.map(row => row.gameId)).size;
+  const totalWinners = winnerCounts.size;
+  const activeFilterCount = countActiveFilters(filterState);
+
+  const handleFilterChange = (next: HistoryFilterState) => {
+    setFilterState(next);
+    setPage(1);
   };
 
-  /**
-   * Reset filters
-   */
-  const handleResetFilters = () => {
-    setGameFilter('');
-    setStartDate('');
-    setEndDate('');
+  const handleSortChange = (sort: HistorySort) => {
+    handleFilterChange({ ...filterState, sort });
   };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setPage(1);
+  };
+
+  const handleClearAll = () => {
+    setFilterState(DEFAULT_FILTER_STATE);
+    setPage(1);
+  };
+
+  const handleOpenGameStats = (_gameId: string) => {
+    // No per-game stats route yet — send the user to the aggregate stats tab.
+    router.push('/toolkit/stats');
+  };
+
+  const handleExport = () => {
+    const headers = [
+      t('pages.toolkitHistory.table.date'),
+      t('pages.toolkitHistory.table.game'),
+      t('pages.toolkitHistory.table.duration'),
+      t('pages.toolkitHistory.table.players'),
+      t('pages.toolkitHistory.table.winner'),
+      t('pages.toolkitHistory.table.score'),
+      t('pages.toolkitHistory.table.notes'),
+    ];
+    const csvRows = filtered.map(row => {
+      const startedAtDate = new Date(row.startedAt);
+      const winner = row.isCoop
+        ? t('pages.toolkitHistory.table.coop')
+        : (row.winnerName ?? t('pages.toolkitHistory.table.noWinner'));
+      return [
+        `${formatDate(startedAtDate)} ${formatTime(startedAtDate)}`,
+        row.gameName,
+        formatDuration(row.durationMinutes),
+        row.playerNames.join(', '),
+        winner,
+        row.isCoop ? null : row.winScore,
+        row.notes,
+      ];
+    });
+    downloadFile(rowsToCsv(headers, csvRows), 'storico-sessioni.csv');
+  };
+
+  const isLoading = historyQuery.isLoading;
+  const isError = historyQuery.isError;
+  const hasRows = allRows.length > 0;
+  const noFilteredResults = hasRows && filtered.length === 0 && activeFilterCount > 0;
+  const showBatchNote = sessions.length === HISTORY_BATCH_LIMIT;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <HubPageContainer className="py-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 mb-4 rounded-full bg-purple-100 dark:bg-purple-900">
-            <Calendar className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-          </div>
-          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-            Session History
+    <HubPageContainer className="flex flex-col gap-6">
+      {/* breadcrumb */}
+      <nav
+        aria-label={t('pages.toolkitHistory.hero.breadcrumbToolkit')}
+        className="flex items-center gap-1.5 text-sm text-muted-foreground"
+      >
+        <span>{t('pages.toolkitHistory.hero.breadcrumbToolkit')}</span>
+        <span aria-hidden="true">›</span>
+        <span className="font-medium text-foreground">
+          {t('pages.toolkitHistory.hero.breadcrumbHistory')}
+        </span>
+      </nav>
+
+      {/* hero */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="font-quicksand text-2xl font-bold text-foreground sm:text-3xl">
+            {t('pages.toolkitHistory.hero.title')}
           </h1>
-          <p className="text-lg text-muted-foreground">Review past game sessions and statistics</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t('pages.toolkitHistory.hero.subtitle')}
+          </p>
         </div>
+        <p className="text-sm text-muted-foreground">
+          {t('pages.toolkitHistory.hero.quickStat', {
+            sessions: allRows.length,
+            games: totalGames,
+            winners: totalWinners,
+          })}
+        </p>
+      </div>
 
-        {/* Filters */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="w-5 h-5" />
-              Filters
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-4 gap-4">
-              <div>
-                <Label htmlFor="game-filter">Game</Label>
-                <Select value={gameFilter} onValueChange={setGameFilter}>
-                  <SelectTrigger id="game-filter">
-                    <SelectValue placeholder="All games" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All games</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+      {/* toolkit tabs */}
+      <nav
+        aria-label={t('pages.toolkitHistory.tabs.ariaLabel')}
+        className="flex gap-1 overflow-x-auto border-b border-border"
+      >
+        {TOOLKIT_TABS.map(tab => (
+          <Link
+            key={tab.id}
+            href={tab.href}
+            aria-current={tab.id === 'history' ? 'page' : undefined}
+            className={cn(
+              'flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition-colors',
+              tab.id === 'history'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <span aria-hidden="true">{tab.icon}</span>
+            {t(`pages.toolkitHistory.tabs.${tab.id}`)}
+          </Link>
+        ))}
+      </nav>
 
-              <div>
-                <Label htmlFor="start-date">Start Date</Label>
-                <Input
-                  id="start-date"
-                  type="date"
-                  value={startDate}
-                  onChange={e => setStartDate(e.target.value)}
-                />
-              </div>
+      {/* loading */}
+      {isLoading && (
+        <div
+          role="status"
+          aria-busy="true"
+          aria-label={t('pages.toolkitHistory.loading.ariaLabel')}
+          className="flex flex-col gap-3"
+        >
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+          ))}
+        </div>
+      )}
 
-              <div>
-                <Label htmlFor="end-date">End Date</Label>
-                <Input
-                  id="end-date"
-                  type="date"
-                  value={endDate}
-                  onChange={e => setEndDate(e.target.value)}
-                />
-              </div>
+      {/* error */}
+      {!isLoading && isError && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span className="flex-1">{t('pages.toolkitHistory.error.message')}</span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void historyQuery.refetch()}
+          >
+            {t('pages.toolkitHistory.error.retry')}
+          </Button>
+        </div>
+      )}
 
-              <div className="flex items-end">
-                <Button variant="outline" onClick={handleResetFilters} className="w-full">
-                  Reset
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* empty (no sessions at all) */}
+      {!isLoading && !isError && !hasRows && (
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-card px-6 py-16 text-center">
+          <span aria-hidden="true" className="text-4xl">
+            📜
+          </span>
+          <h2 className="text-lg font-semibold text-foreground">
+            {t('pages.toolkitHistory.empty.title')}
+          </h2>
+          <p className="max-w-md text-sm text-muted-foreground">
+            {t('pages.toolkitHistory.empty.body')}
+          </p>
+          <Button type="button" onClick={() => router.push('/toolkit')}>
+            {t('pages.toolkitHistory.empty.cta')}
+          </Button>
+        </div>
+      )}
 
-        {/* Session List */}
-        {isLoading ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-purple-600" />
-              <p className="text-muted-foreground">Loading sessions...</p>
-            </CardContent>
-          </Card>
-        ) : sessions.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Calendar className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground mb-4">No sessions found</p>
-              <Button onClick={() => router.push('/toolkit')}>Start Your First Session</Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {sessions.map(session => (
-              <Card key={session.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {session.gameIcon && <span className="text-2xl">{session.gameIcon}</span>}
-                      <div>
-                        <CardTitle className="text-base">
-                          {session.gameName || 'Generic Session'}
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground">{session.sessionCode}</p>
-                      </div>
-                    </div>
-                    <Badge variant={session.status === 'Finalized' ? 'default' : 'secondary'}>
-                      {session.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="w-4 h-4" />
-                    <span>{new Date(session.sessionDate).toLocaleDateString('it-IT')}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Trophy className="w-4 h-4" />
-                    <span>{session.participantCount} players</span>
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleViewDetails(session)}
-                    className="w-full"
-                  >
-                    View Details
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        {/* Session Detail Modal */}
-        {selectedSession && (
-          <SessionDetailModal
-            session={selectedSession}
-            open={isModalOpen}
-            onOpenChange={setIsModalOpen}
+      {/* toolbar + results */}
+      {!isLoading && !isError && hasRows && (
+        <div className="flex flex-col gap-4">
+          <HistoryToolbar
+            state={filterState}
+            onChange={handleFilterChange}
+            gameOptions={gameOptions}
+            winnerOptions={winnerOptions}
+            view={view}
+            onViewChange={setView}
+            totalCount={allRows.length}
+            resultCount={filtered.length}
+            onClearAll={handleClearAll}
+            onExport={handleExport}
           />
-        )}
-      </HubPageContainer>
-    </div>
+
+          {showBatchNote && (
+            <p className="text-xs text-muted-foreground">
+              {t('pages.toolkitHistory.batchNote', { n: HISTORY_BATCH_LIMIT })}
+            </p>
+          )}
+
+          {noFilteredResults ? (
+            <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-card px-6 py-16 text-center">
+              <span aria-hidden="true" className="text-4xl">
+                🔍
+              </span>
+              <h2 className="text-lg font-semibold text-foreground">
+                {t('pages.toolkitHistory.filteredEmpty.title')}
+              </h2>
+              <p className="max-w-md text-sm text-muted-foreground">
+                {t('pages.toolkitHistory.filteredEmpty.body')}
+              </p>
+              <Button type="button" variant="outline" onClick={handleClearAll}>
+                {t('pages.toolkitHistory.filteredEmpty.cta')}
+              </Button>
+            </div>
+          ) : (
+            <>
+              {view === 'table' ? (
+                <div className="overflow-x-auto rounded-lg border border-border">
+                  <HistoryTable
+                    rows={pageRows}
+                    sort={filterState.sort}
+                    onSortChange={handleSortChange}
+                    onOpenDetail={setDetailRow}
+                    onOpenGameStats={handleOpenGameStats}
+                  />
+                </div>
+              ) : (
+                <HistoryCards rows={pageRows} onOpenDetail={setDetailRow} />
+              )}
+
+              <HistoryPagination
+                page={page}
+                total={filtered.length}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={handlePageSizeChange}
+              />
+            </>
+          )}
+        </div>
+      )}
+
+      <HistoryDetailModal row={detailRow} onClose={() => setDetailRow(null)} />
+    </HubPageContainer>
   );
 }

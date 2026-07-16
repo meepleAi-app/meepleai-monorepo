@@ -41,7 +41,7 @@ export interface ProssimiGameNightCard {
   readonly rsvpTotalCount: number;
   // #2978 (invariante #17): the viewer's own RSVP status; when 'Pending' the card shows the
   // pending-invitee treatment (badge + inline RSVP). Omitted/null for non-invitees.
-  readonly myRsvpStatus?: RsvpStatus | null;
+  readonly viewerRsvpStatus?: RsvpStatus | null;
 }
 
 export type ProssimiSectionState = 'default' | 'empty' | 'loading' | 'error';
@@ -172,7 +172,7 @@ export function ProssimiSection({
           // #2978 (invariante #17): pending invitee → semitransparent card + "Da confermare"
           // badge + inline RSVP bar. The RSVP buttons live OUTSIDE the card <button> to avoid
           // nested interactive elements.
-          const isPending = gn.myRsvpStatus === 'Pending';
+          const isPending = gn.viewerRsvpStatus === 'Pending';
           return (
             <li key={gn.id}>
               <button

@@ -426,7 +426,7 @@ function ListView({
   return (
     <section
       data-testid="game-nights-list"
-      className="flex flex-col gap-4 px-4 pb-6 pt-3 md:px-8 md:pt-5 md:pb-8"
+      className="flex flex-col gap-4 px-4 pb-24 pt-3 md:px-8 md:pt-5 md:pb-8"
     >
       {groups.map(group => {
         const heading = monthLong(group.year, group.month);

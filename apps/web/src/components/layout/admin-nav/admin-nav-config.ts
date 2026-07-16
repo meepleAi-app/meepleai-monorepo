@@ -21,7 +21,6 @@ import {
   Wrench,
 } from 'lucide-react';
 
-import { isLegacyMechanicExtractorEnabled } from '@/lib/feature-flags/legacy-mechanic-extractor';
 import type { UserRole } from '@/types/auth';
 
 export interface AdminNavItem {
@@ -115,17 +114,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         href: '/admin/knowledge-base/mechanic-extractor/metrics',
         icon: BarChart2,
       },
-      // #537 ME-M4.2: the deprecated Variant C editor menu entry is hidden by default,
-      // shown only when NEXT_PUBLIC_SHOW_LEGACY_MECHANIC_EXTRACTOR=true (staging/debug override).
-      ...(isLegacyMechanicExtractorEnabled()
-        ? [
-            {
-              label: 'Mechanic Extractor (legacy)',
-              href: '/admin/knowledge-base/mechanic-extractor',
-              icon: Wrench,
-            },
-          ]
-        : []),
       { label: 'Agent Usage', href: '/admin/agents/usage', icon: BarChart2 },
     ],
   },

@@ -7,9 +7,13 @@
  * Client-side role-based access control component that works with E2E tests.
  * Uses getCurrentUser() action which is mockable by Playwright.
  *
- * Security Pattern:
- * - Layer 1: Middleware blocks unauthenticated users
- * - Layer 2: This component blocks unauthorized roles
+ * Security Pattern (defense in depth):
+ * - Layer 1: The edge middleware — `apps/web/src/proxy.ts` (Next.js 16 renamed
+ *   the `middleware.ts` convention to `proxy.ts`, so there is intentionally NO
+ *   `middleware.ts` file) — validates the session cookie server-side and
+ *   redirects unauthenticated users off protected routes and non-admins off
+ *   `/admin`. Route policy: `lib/routing/protected-routes.ts` (`PROTECTED_ROUTES`).
+ * - Layer 2: This component (client-side) blocks unauthorized roles.
  * - Works with E2E test mocks (client-side API calls)
  *
  * Usage:

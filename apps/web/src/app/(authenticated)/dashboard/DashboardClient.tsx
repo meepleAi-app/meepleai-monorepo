@@ -126,7 +126,7 @@ export function DashboardClient(): ReactElement {
           rsvpConfirmedCount: gn.acceptedCount,
           rsvpPendingCount: gn.pendingCount,
           rsvpTotalCount: gn.totalInvited,
-          myRsvpStatus: gn.myRsvpStatus ?? null,
+          viewerRsvpStatus: gn.viewerRsvpStatus ?? null,
         }))
     );
   }, [upcomingGNQuery.data]);

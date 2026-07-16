@@ -9,7 +9,7 @@
 # (00-system-prompt.md, 01-manifest.md, README.md) are NOT touched — recover them from
 # git history or from docs/for-developers/workflows/claude-design-demo-prompts.md.
 #
-# Usage:  scripts/build-claude-design-bundle.sh [sp6|sp7|sp8|all]   (default: all)
+# Usage:  scripts/build-claude-design-bundle.sh [sp6|sp7|sp8|sp9|all]   (default: all)
 #
 # Tracking issues: SP6 → #1888 (libro-game) · SP7 → #1889 (game-night agent-builder)
 #                  SP8 → #1890 (mobile parity + libro-game companion)
@@ -71,6 +71,17 @@ SP8_MOCKUPS=(
   librogame-runthrough-translate-viewer.html
 )
 
+# SP9 mobile-gamenight-social (#2989): GENERATION bundle — only existing reference mockups
+# (the sp9-* mobile mockups are the OUTPUT, generated in-session, not seeds).
+SP9_REFS=(
+  sp4-dashboard.html
+  sp4-dashboard.jsx
+  sp7-game-night-transition.html
+  sp7-game-night-transition.jsx
+  primitive-nav-bottom-mobile.html
+  mobile-app.jsx
+)
+
 # SP8 also ships the two design briefs (not in design_files/) so the demo has the DoD in-bundle.
 copy_sp8_briefs() {
   local dest="claude-design-bundle/sp8-mobile/briefs"
@@ -79,6 +90,14 @@ copy_sp8_briefs() {
      admin-mockups/briefs/SP8-mobile-parity.md \
      admin-mockups/briefs/SP8-libro-game-companion.md "$dest/"
   echo "[built] +3 briefs → $dest/"
+}
+
+copy_sp9_briefs() {
+  local dest="claude-design-bundle/sp9-gamenight-mobile/briefs"
+  mkdir -p "$dest"
+  cp admin-mockups/briefs/_common.md \
+     admin-mockups/briefs/SP9-mobile-gamenight-social.md "$dest/"
+  echo "[built] +2 briefs → $dest/"
 }
 
 build_bundle() {
@@ -108,10 +127,11 @@ case "$target" in
   sp6) build_bundle sp6-libro-game "${SP6_MOCKUPS[@]}" ;;
   sp7) build_bundle sp7-game-night "${SP7_MOCKUPS[@]}" ;;
   sp8) build_bundle sp8-mobile "${SP8_MOCKUPS[@]}"; copy_sp8_briefs ;;
+  sp9) build_bundle sp9-gamenight-mobile "${SP9_REFS[@]}"; copy_sp9_briefs ;;
   all)
     build_bundle sp6-libro-game "${SP6_MOCKUPS[@]}"
     build_bundle sp7-game-night "${SP7_MOCKUPS[@]}"
     build_bundle sp8-mobile "${SP8_MOCKUPS[@]}"; copy_sp8_briefs
     ;;
-  *) echo "usage: $0 [sp6|sp7|sp8|all]" >&2; exit 2 ;;
+  *) echo "usage: $0 [sp6|sp7|sp8|sp9|all]" >&2; exit 2 ;;
 esac

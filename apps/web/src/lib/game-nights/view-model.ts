@@ -33,7 +33,7 @@ export interface GameNightVM {
   readonly statusKey: StatusKey;
   // #2978 (invariante #17): the viewer's own RSVP status, or null when not an invitee (incl. the
   // organizer). Optional so legacy VM fixtures need no update; toGameNightVM always sets it.
-  readonly myRsvpStatus?: RsvpStatus | null;
+  readonly viewerRsvpStatus?: RsvpStatus | null;
 }
 
 // Mockup spec (sp4-game-nights-index): ≥3 accepted RSVPs promote a Published night to the "Confermata" status chip.
@@ -81,6 +81,6 @@ export function toGameNightVM(dto: GameNightDto, currentUserId: string | null): 
     playerIds: [],
     role,
     statusKey: deriveStatusKey(dto),
-    myRsvpStatus: dto.myRsvpStatus ?? null,
+    viewerRsvpStatus: dto.viewerRsvpStatus ?? null,
   };
 }

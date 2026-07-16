@@ -333,8 +333,8 @@ export function MeepleLibraryGameCard({
 
       {/* Add to Wishlist dialog */}
       <AddToWishlistDialog
-        gameId={game.gameId}
-        gameName={game.gameTitle}
+        mode="add"
+        prefillGameId={game.gameId}
         open={wishlistDialogOpen}
         onOpenChange={setWishlistDialogOpen}
       />

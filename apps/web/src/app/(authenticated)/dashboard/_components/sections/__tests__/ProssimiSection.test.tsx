@@ -151,7 +151,7 @@ describe('ProssimiSection', () => {
       rsvpConfirmedCount: 1,
       rsvpPendingCount: 2,
       rsvpTotalCount: 3,
-      myRsvpStatus: 'Pending',
+      viewerRsvpStatus: 'Pending',
     };
 
     it('renders the "Da confermare" badge for a pending invitee', () => {

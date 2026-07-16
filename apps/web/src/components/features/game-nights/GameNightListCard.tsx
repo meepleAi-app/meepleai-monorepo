@@ -61,7 +61,7 @@ export function GameNightListCard({
 }: GameNightListCardProps): React.JSX.Element {
   const isCancelled = vm.statusKey === 'cancelled';
   // #2978 (invariante #17): the viewer is an invitee who has not yet responded.
-  const isPendingInvitee = vm.role !== 'organizer' && vm.myRsvpStatus === 'Pending';
+  const isPendingInvitee = vm.role !== 'organizer' && vm.viewerRsvpStatus === 'Pending';
   const playerList = players ?? [];
   const participantCount = playerList.length > 0 ? playerList.length : vm.playerIds.length;
 
@@ -221,13 +221,13 @@ function CardCta({ vm, labels, onAction }: CardCtaProps): React.JSX.Element | nu
   }
   // #2978 (invariante #17): invited RSVP — 3 buttons (Conferma/Forse/Declina) with the current
   // response highlighted. A non-invitee (no RSVP row on the aggregate) gets no RSVP CTA.
-  if (vm.myRsvpStatus == null) {
+  if (vm.viewerRsvpStatus == null) {
     return null;
   }
   return (
     <div className="flex flex-wrap gap-1.5">
       {RSVP_BUTTONS.map(({ action, status, labelKey, selectedClass }) => {
-        const isSelected = vm.myRsvpStatus === status;
+        const isSelected = vm.viewerRsvpStatus === status;
         return (
           <button
             key={action}

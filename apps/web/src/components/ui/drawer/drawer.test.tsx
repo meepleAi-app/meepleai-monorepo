@@ -184,10 +184,13 @@ describe('Drawer (desktop / Radix)', () => {
     const dialog = screen.getByRole('dialog');
     const accent = dialog.querySelector('[data-drawer-accent="game"]');
     expect(accent).toBeInTheDocument();
-    expect(accent?.className).toContain('bg-primary');
+    // Issue #2955 Fase 1: the accent strip restores the per-entity color via the
+    // registered `bg-entity-*` utility instead of the flattened `bg-primary`.
+    expect(accent?.className).toContain('bg-entity-game');
+    expect(accent?.className).not.toContain('bg-primary');
   });
 
-  it('renders the desktop accent for kb entity', () => {
+  it('renders the desktop accent for kb entity using the registered -kb (teal) utility', () => {
     render(
       <Drawer open onOpenChange={() => {}} side="desktop-right" entity="kb">
         <DrawerContent>
@@ -199,7 +202,10 @@ describe('Drawer (desktop / Radix)', () => {
     );
     const accent = screen.getByRole('dialog').querySelector('[data-drawer-accent="kb"]');
     expect(accent).toBeInTheDocument();
-    expect(accent?.className).toContain('bg-primary');
+    // kb must use `-kb` (teal), never the unregistered `-document` (slate) token.
+    expect(accent?.className).toContain('bg-entity-kb');
+    expect(accent?.className).not.toContain('bg-entity-document');
+    expect(accent?.className).not.toContain('bg-primary');
   });
 
   it('has no a11y violations on desktop', async () => {
@@ -269,7 +275,9 @@ describe('Drawer (mobile / vaul)', () => {
     await screen.findByText('player drawer');
     const accent = document.querySelector('[data-drawer-accent="player"]');
     expect(accent).not.toBeNull();
-    expect(accent?.className).toContain('bg-primary');
+    // Issue #2955 Fase 1: mobile handle restores the per-entity color utility.
+    expect(accent?.className).toContain('bg-entity-player');
+    expect(accent?.className).not.toContain('bg-primary');
   });
 
   it('DrawerClose triggers onOpenChange(false) on mobile', async () => {

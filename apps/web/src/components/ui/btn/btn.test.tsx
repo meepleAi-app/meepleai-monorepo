@@ -53,7 +53,7 @@ describe('Btn', () => {
     expect(screen.getByRole('button')).toHaveClass('bg-transparent');
   });
 
-  it('entity prop sets data-entity and no inline color on primary variant', () => {
+  it('entity prop applies per-entity bg utility on primary variant (no inline color)', () => {
     render(
       <Btn variant="primary" entity="game">
         x
@@ -61,10 +61,17 @@ describe('Btn', () => {
     );
     const btn = screen.getByRole('button');
     expect(btn).toHaveAttribute('data-entity', 'game');
+    // Issue #2955 Fase 1: primary variant restores per-entity background via the
+    // registered `bg-entity-*` utility (not an inline style, not flat bg-primary).
+    expect(btn.className).toMatch(/bg-entity-game/);
+    // hover parity (#2955): entity primary dims its OWN hue on hover, it must not
+    // revert to theme `bg-primary/90` (which would flip a purple button to orange).
+    expect(btn.className).toMatch(/hover:bg-entity-game\/90/);
+    expect(btn.className).not.toMatch(/\bbg-primary\b/);
     expect(btn.style.backgroundColor).toBe('');
   });
 
-  it('entity=kb sets data-entity="kb"', () => {
+  it('entity=kb uses the registered -kb (teal) utility, not the unregistered document slate', () => {
     render(
       <Btn variant="primary" entity="kb">
         x
@@ -72,6 +79,15 @@ describe('Btn', () => {
     );
     const btn = screen.getByRole('button');
     expect(btn).toHaveAttribute('data-entity', 'kb');
+    expect(btn.className).toMatch(/bg-entity-kb/);
+    expect(btn.className).not.toMatch(/bg-entity-document/);
+  });
+
+  it('primary variant without entity keeps flat bg-primary', () => {
+    render(<Btn variant="primary">x</Btn>);
+    const btn = screen.getByRole('button');
+    expect(btn).toHaveClass('bg-primary');
+    expect(btn.className).not.toMatch(/bg-entity-/);
   });
 
   it('entity prop no longer inline-colors the outline variant', () => {

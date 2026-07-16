@@ -20,7 +20,7 @@
 
 import React, { useMemo, useRef, useState } from 'react';
 
-import { X } from 'lucide-react';
+import { AlertCircle, X } from 'lucide-react';
 
 import {
   normalizePriorityString,
@@ -153,9 +153,21 @@ export function AddToWishlistDialog({
   );
   const [notes, setNotes] = useState(isEdit ? (item?.notes ?? '') : '');
 
-  const { mutate: addToWishlist, isPending: isAdding } = useAddToWishlist();
-  const { mutate: updateWishlistItem, isPending: isUpdating } = useUpdateWishlistItem();
+  const {
+    mutate: addToWishlist,
+    isPending: isAdding,
+    isError: isAddError,
+    reset: resetAdd,
+  } = useAddToWishlist();
+  const {
+    mutate: updateWishlistItem,
+    isPending: isUpdating,
+    isError: isUpdateError,
+    reset: resetUpdate,
+  } = useUpdateWishlistItem();
   const isPending = isEdit ? isUpdating : isAdding;
+  const isError = isEdit ? isUpdateError : isAddError;
+  const resetActiveMutation = isEdit ? resetUpdate : resetAdd;
 
   function resetForm() {
     setSelectedGame(buildInitialGame());
@@ -171,6 +183,8 @@ export function AddToWishlistDialog({
     setOpen(value);
     if (value) {
       resetForm();
+    } else {
+      resetActiveMutation();
     }
   }
 
@@ -267,9 +281,10 @@ export function AddToWishlistDialog({
     setActiveIndex(-1);
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function submitWishlist() {
     if (!selectedGame || !canSubmit) return;
+
+    resetActiveMutation();
 
     const parsedPrice = targetPrice.trim() !== '' ? parseFloat(targetPrice) : null;
     const trimmedNotes = notes.trim();
@@ -315,6 +330,11 @@ export function AddToWishlistDialog({
       },
       { onSuccess: handleSuccess }
     );
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    submitWishlist();
   }
 
   const editSubPriority = isEdit && item ? normalizePriorityString(item.priority) : priority;
@@ -516,8 +536,22 @@ export function AddToWishlistDialog({
             />
           </div>
 
+          {/* Mutation error (add/update failed) */}
+          {isError && (
+            <div
+              role="alert"
+              className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+            >
+              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className="flex-1">{t('pages.library.wishlist.dialog.error')}</span>
+              <Button type="button" variant="outline" size="sm" onClick={submitWishlist}>
+                {t('pages.library.wishlist.dialog.retry')}
+              </Button>
+            </div>
+          )}
+
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
               {t('pages.library.wishlist.dialog.cancel')}
             </Button>
             <Button type="submit" disabled={!canSubmit}>

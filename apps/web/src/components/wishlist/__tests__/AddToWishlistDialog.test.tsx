@@ -24,10 +24,24 @@ const MESSAGES = flattenMessages(itMessages as unknown as Record<string, unknown
 const mockAddMutate = vi.fn();
 const mockUpdateMutate = vi.fn();
 const mockToastSuccess = vi.fn();
+const mockAddReset = vi.fn();
+const mockUpdateReset = vi.fn();
+let mockAddIsError = false;
+let mockUpdateIsError = false;
 
 vi.mock('@/hooks/queries/useWishlist', () => ({
-  useAddToWishlist: () => ({ mutate: mockAddMutate, isPending: false }),
-  useUpdateWishlistItem: () => ({ mutate: mockUpdateMutate, isPending: false }),
+  useAddToWishlist: () => ({
+    mutate: mockAddMutate,
+    isPending: false,
+    isError: mockAddIsError,
+    reset: mockAddReset,
+  }),
+  useUpdateWishlistItem: () => ({
+    mutate: mockUpdateMutate,
+    isPending: false,
+    isError: mockUpdateIsError,
+    reset: mockUpdateReset,
+  }),
 }));
 
 const LIBRARY_ITEMS = [
@@ -93,6 +107,10 @@ describe('AddToWishlistDialog', () => {
     mockAddMutate.mockReset();
     mockUpdateMutate.mockReset();
     mockToastSuccess.mockReset();
+    mockAddReset.mockReset();
+    mockUpdateReset.mockReset();
+    mockAddIsError = false;
+    mockUpdateIsError = false;
   });
 
   describe('mode=add', () => {
@@ -256,6 +274,75 @@ describe('AddToWishlistDialog', () => {
       expect(onOpenChange).toHaveBeenCalledWith(false);
       expect(onSuccess).toHaveBeenCalledTimes(1);
     });
+
+    it('shows an inline error banner with a retry button when the add mutation fails', () => {
+      mockAddIsError = true;
+      renderWithIntl(
+        <AddToWishlistDialog mode="add" open onOpenChange={() => {}} prefillGameId="game-catan" />
+      );
+
+      const alert = screen.getByRole('alert');
+      expect(alert).toHaveTextContent('Errore aggiungendo alla wishlist.');
+      expect(screen.getByRole('button', { name: 'Riprova' })).toBeInTheDocument();
+    });
+
+    it('does not show the error banner when the mutation has not failed', () => {
+      renderWithIntl(
+        <AddToWishlistDialog mode="add" open onOpenChange={() => {}} prefillGameId="game-catan" />
+      );
+
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('re-invokes the add mutation when the retry button is clicked', async () => {
+      const user = userEvent.setup();
+      mockAddIsError = true;
+      renderWithIntl(
+        <AddToWishlistDialog mode="add" open onOpenChange={() => {}} prefillGameId="game-catan" />
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Riprova' }));
+
+      expect(mockAddMutate).toHaveBeenCalledTimes(1);
+      expect(mockAddReset).toHaveBeenCalled();
+    });
+
+    it('calls reset on the active mutation when the dialog is cancelled (closed)', async () => {
+      const user = userEvent.setup();
+      const onOpenChange = vi.fn();
+      renderWithIntl(
+        <AddToWishlistDialog
+          mode="add"
+          open
+          onOpenChange={onOpenChange}
+          prefillGameId="game-catan"
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Annulla' }));
+
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+      expect(mockAddReset).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows no leftover error banner after closing and reopening the dialog', () => {
+      mockAddIsError = true;
+      const { rerender } = renderWithIntl(
+        <AddToWishlistDialog mode="add" open onOpenChange={() => {}} prefillGameId="game-catan" />
+      );
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+
+      // Simulate the mutation's own reset() clearing isError (as the real
+      // useMutation hook would after reset() is called on close), then reopen.
+      mockAddIsError = false;
+      rerender(
+        <IntlProvider locale="it" messages={MESSAGES}>
+          <AddToWishlistDialog mode="add" open onOpenChange={() => {}} prefillGameId="game-catan" />
+        </IntlProvider>
+      );
+
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
   });
 
   describe('mode=edit', () => {
@@ -349,6 +436,27 @@ describe('AddToWishlistDialog', () => {
       expect(mockToastSuccess).toHaveBeenCalledWith('Aggiunto');
       expect(onOpenChange).toHaveBeenCalledWith(false);
       expect(onSuccess).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows the error banner (from the update mutation, not add) when the update fails', () => {
+      mockUpdateIsError = true;
+      const item = buildItem();
+      renderWithIntl(<AddToWishlistDialog mode="edit" item={item} open onOpenChange={() => {}} />);
+
+      expect(screen.getByRole('alert')).toHaveTextContent('Errore aggiungendo alla wishlist.');
+    });
+
+    it('re-invokes the update mutation when the retry button is clicked', async () => {
+      const user = userEvent.setup();
+      mockUpdateIsError = true;
+      const item = buildItem();
+      renderWithIntl(<AddToWishlistDialog mode="edit" item={item} open onOpenChange={() => {}} />);
+
+      await user.click(screen.getByRole('button', { name: 'Riprova' }));
+
+      expect(mockUpdateMutate).toHaveBeenCalledTimes(1);
+      expect(mockAddMutate).not.toHaveBeenCalled();
+      expect(mockUpdateReset).toHaveBeenCalled();
     });
   });
 });

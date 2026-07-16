@@ -24,7 +24,9 @@ const TMP_DIR = resolve(tmpdir(), `mockup-fidelity-tests-${process.pid}`);
 
 // Mockup source file we reference in fidelity fixtures must actually exist.
 // Use a real file from admin-mockups/design_files/ for cross-reference success.
-const REAL_MOCKUP = 'admin-mockups/design_files/sp4-dashboard.html';
+// sp4-dashboard.html was deleted as obsolete (#2114, PR #3048) → repointed to
+// 00-hub.html (stable dev-fixture mockup), matching the Python inspector test.
+const REAL_MOCKUP = 'admin-mockups/design_files/00-hub.html';
 
 beforeAll(() => {
   if (!existsSync(TMP_DIR)) {

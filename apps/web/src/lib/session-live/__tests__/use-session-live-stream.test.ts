@@ -417,6 +417,61 @@ describe('useSessionLiveStream — sessionId change', () => {
     expect(MockEventSource.instances).toHaveLength(2);
     expect(MockEventSource.lastInstance()?.url).toContain('session-B');
   });
+
+  it('#3050: clears accumulated events on sessionId change (no cross-session bleed)', () => {
+    const { result, rerender } = renderHook(
+      ({ sessionId }) => useSessionLiveStream({ sessionId, enabled: true }),
+      { initialProps: { sessionId: 'session-A' } }
+    );
+
+    act(() => {
+      MockEventSource.lastInstance()!.triggerOpen();
+      MockEventSource.lastInstance()!.triggerEvent(
+        'session:score',
+        JSON.stringify({ participantId: 'p1', score: 5, sessionId: 'session-A' }),
+        'evt-A-1'
+      );
+    });
+    expect(result.current.events).toHaveLength(1);
+
+    // Navigating to another session must not carry session-A's events over.
+    act(() => {
+      rerender({ sessionId: 'session-B' });
+    });
+    expect(result.current.events).toHaveLength(0);
+    expect(result.current.lastEventId).toBeNull();
+
+    // A fresh session-B event accumulates onto the cleared array.
+    act(() => {
+      MockEventSource.lastInstance()!.triggerOpen();
+      MockEventSource.lastInstance()!.triggerEvent(
+        'session:score',
+        JSON.stringify({ participantId: 'p9', score: 3, sessionId: 'session-B' }),
+        'evt-B-1'
+      );
+    });
+    expect(result.current.events).toHaveLength(1);
+  });
+
+  it('#3050: does NOT clear events on a same-session reconnect (RESET preserves)', () => {
+    const { result } = makeHook({ sessionId: 'session-1' });
+
+    act(() => {
+      MockEventSource.lastInstance()!.triggerOpen();
+      MockEventSource.lastInstance()!.triggerEvent(
+        'session:score',
+        JSON.stringify({ participantId: 'p1', score: 5, sessionId: 'session-1' }),
+        'evt-1'
+      );
+    });
+    expect(result.current.events).toHaveLength(1);
+
+    // A manual reconnect (same session) must preserve accumulated events.
+    act(() => {
+      result.current.reconnect();
+    });
+    expect(result.current.events).toHaveLength(1);
+  });
 });
 
 describe('useSessionLiveStream — retryAt', () => {

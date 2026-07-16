@@ -1,10 +1,18 @@
 # ADR-076 — Quiet Hours Timezone Enforcement
 
-**Status**: Proposed
-**Date**: 2026-06-15
-**Deciders**: @badsworm (pending ratification at PR review)
+**Status**: Accepted — implemented (server-side enforcement + preferences UI) in #2994/#2995
+**Date**: 2026-06-15 (ratified/implemented 2026-07-16)
+**Deciders**: @badsworm
 **Tracking**: [#2363](https://github.com/meepleAi-app/meepleai-monorepo/issues/2363) Wave 4 — US-INT-5 (notifications & deep links)
 **Related**: [umbrella #2342](https://github.com/meepleAi-app/meepleai-monorepo/issues/2342) · `NotificationPreferences` aggregate · Resend email provider (issue #1632)
+
+> **Implementation note (2026-07-16, #2994/#2995).** Option C shipped: the server-side gate lives in
+> `NotificationDispatcher.DispatchAsync` (`preferences.IsQuietHoursActive(TimeProvider.GetUtcNow())` suppresses
+> the email + Slack DM enqueue; in-app is always created; the config-driven Slack **team** broadcast is not
+> user-scoped so it is not gated). The window is set via `UpdateQuietHoursCommand` (`PUT /api/v1/notifications/preferences/quiet-hours`)
+> and surfaced through `NotificationPreferencesDto` + the Preferences UI (`NotificationPreferences.tsx` "Ore di silenzio" section).
+> MVP is **suppression-only** (not deferral), exactly as decided below. The client-side toast-suppression hook
+> (Implementation Guidance §4) and the deferred-send queue remain future enhancements.
 
 ## Context
 

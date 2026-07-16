@@ -105,7 +105,7 @@ export function GameNightDateTimePicker({
         <div
           role="alert"
           data-slot="game-night-create-step1-conflict"
-          className="rounded-md border border-warning bg-warning/10 p-3 text-sm"
+          className="rounded-md border border-[hsl(var(--c-warning))] bg-[hsl(var(--c-warning)/0.1)] p-3 text-sm"
         >
           <p className="font-medium text-foreground">{labels.conflictWarningTitle}</p>
           <p className="mt-1 text-muted-foreground">

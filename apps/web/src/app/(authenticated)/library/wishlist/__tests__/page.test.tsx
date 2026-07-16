@@ -29,6 +29,7 @@ import type { ReactElement } from 'react';
 
 const MESSAGES = flattenMessages(itMessages as unknown as Record<string, unknown>);
 const WISHLIST_I18N = itMessages.pages.library.wishlist;
+const CARD_I18N = itMessages.pages.library.wishlist.card;
 
 // ============================================================================
 // Mocks
@@ -40,6 +41,7 @@ const mockUseAddToWishlist = vi.hoisted(() => vi.fn());
 const mockUseUpdateWishlistItem = vi.hoisted(() => vi.fn());
 const mockUseLibrary = vi.hoisted(() => vi.fn());
 const mockToastSuccess = vi.hoisted(() => vi.fn());
+const pushSpy = vi.hoisted(() => vi.fn());
 
 vi.mock('@/hooks/queries/useWishlist', () => ({
   useWishlist: mockUseWishlist,
@@ -50,6 +52,13 @@ vi.mock('@/hooks/queries/useWishlist', () => ({
 
 vi.mock('@/hooks/queries/useLibrary', () => ({
   useLibrary: mockUseLibrary,
+}));
+
+// #3010 Task 7 — the wishlist card's game-name body navigates via
+// `router.push`, mirroring the `next/navigation` mock pattern used by
+// `apps/web/src/app/(authenticated)/toolkit/history/__tests__/page.test.tsx`.
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: pushSpy }),
 }));
 
 vi.mock('@/components/layout/Toast', () => ({
@@ -146,6 +155,21 @@ describe('WishlistPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('names the breadcrumb landmark distinctly from the page label', () => {
+    mockUseWishlist.mockReturnValue({
+      data: [ITEM_1, ITEM_2],
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    renderPage(<WishlistPage />);
+
+    expect(
+      screen.getByRole('navigation', { name: WISHLIST_I18N.hero.breadcrumbAria })
+    ).toBeInTheDocument();
+  });
+
   it('renders a card for each fetched wishlist item', () => {
     mockUseWishlist.mockReturnValue({
       data: [ITEM_1, ITEM_2],
@@ -159,6 +183,24 @@ describe('WishlistPage', () => {
     expect(screen.getByText('Wingspan')).toBeInTheDocument();
     expect(screen.getByText('Catan')).toBeInTheDocument();
     expect(screen.getAllByTestId('wishlist-card')).toHaveLength(2);
+  });
+
+  it('navigates to the game detail page when a wishlist card body is clicked (#3010 Task 7)', async () => {
+    const user = userEvent.setup();
+    mockUseWishlist.mockReturnValue({
+      data: [ITEM_1, ITEM_2],
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    renderPage(<WishlistPage />);
+
+    await user.click(
+      screen.getByRole('button', { name: CARD_I18N.openGameAria.replace('{name}', 'Wingspan') })
+    );
+
+    expect(pushSpy).toHaveBeenCalledWith('/library/game-1');
   });
 
   it('renders WishlistStats with totals computed from all items', () => {

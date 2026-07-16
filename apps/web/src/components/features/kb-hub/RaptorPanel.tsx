@@ -83,14 +83,16 @@ export function RaptorPanel(props: RaptorPanelProps): ReactElement {
       data-tier={tier}
       className={clsx(
         'overflow-hidden rounded-2xl border bg-card shadow-sm',
-        locked ? 'border-border opacity-90' : 'border-warning/35',
+        locked ? 'border-border opacity-90' : 'border-[hsl(var(--c-warning)/0.35)]',
         className
       )}
     >
       <header
         className={clsx(
           'flex items-center gap-2.5 border-b px-5 pb-3 pt-4',
-          locked ? 'border-border bg-muted' : 'border-warning/18 bg-warning/6'
+          locked
+            ? 'border-border bg-muted'
+            : 'border-[hsl(var(--c-warning)/0.18)] bg-[hsl(var(--c-warning)/0.06)]'
         )}
       >
         <span aria-hidden="true" className="text-2xl">
@@ -106,8 +108,8 @@ export function RaptorPanel(props: RaptorPanelProps): ReactElement {
               className={clsx(
                 'rounded-full border px-2 py-0.5 font-mono text-[9px] font-extrabold uppercase tracking-wider',
                 locked
-                  ? 'border-warning/25 bg-warning/15 text-warning'
-                  : 'border-warning/0 bg-warning text-white'
+                  ? 'border-[hsl(var(--c-warning)/0.25)] bg-[hsl(var(--c-warning)/0.15)] text-[hsl(var(--c-warning-ink))]'
+                  : 'border-[hsl(var(--c-warning)/0)] bg-[hsl(var(--c-warning-ink))] text-white'
               )}
             >
               {locked ? labels.lockedBadge : labels.activeBadge}
@@ -125,7 +127,7 @@ export function RaptorPanel(props: RaptorPanelProps): ReactElement {
                 <div
                   className={clsx(
                     'font-mono text-sm font-bold',
-                    locked ? 'text-muted-foreground' : 'text-warning'
+                    locked ? 'text-muted-foreground' : 'text-[hsl(var(--c-warning-ink))]'
                   )}
                 >
                   {m.value}
@@ -161,7 +163,7 @@ export function RaptorPanel(props: RaptorPanelProps): ReactElement {
                   type="button"
                   onClick={onUpgrade}
                   data-slot="kb-hub-raptor-upgrade-link"
-                  className="text-xs font-semibold text-warning hover:underline"
+                  className="text-xs font-semibold text-[hsl(var(--c-warning-ink))] hover:underline"
                 >
                   {labels.upgradeLink} →
                 </button>
@@ -173,7 +175,7 @@ export function RaptorPanel(props: RaptorPanelProps): ReactElement {
             {showEstimate && (
               <div
                 data-slot="kb-hub-raptor-estimate"
-                className="mb-3.5 flex items-center justify-between rounded-md border border-warning/20 bg-warning/8 px-3.5 py-2.5"
+                className="mb-3.5 flex items-center justify-between rounded-md border border-[hsl(var(--c-warning)/0.2)] bg-[hsl(var(--c-warning)/0.08)] px-3.5 py-2.5"
               >
                 <div>
                   <div className="text-xs font-bold text-foreground">{labels.estimateLabel}</div>
@@ -186,7 +188,7 @@ export function RaptorPanel(props: RaptorPanelProps): ReactElement {
                 </div>
                 <div className="text-right">
                   {estimatedCost && (
-                    <div className="font-mono text-base font-extrabold text-warning">
+                    <div className="font-mono text-base font-extrabold text-[hsl(var(--c-warning-ink))]">
                       {estimatedCost}
                     </div>
                   )}
@@ -200,8 +202,7 @@ export function RaptorPanel(props: RaptorPanelProps): ReactElement {
               type="button"
               onClick={onRebuild}
               data-slot="kb-hub-raptor-rebuild-cta"
-              // eslint-disable-next-line local/no-hardcoded-color-utility -- text-white on bg-warning matches the mockup .e-bg pattern; bg-warning is a semantic token but not in the rule's exempt list (primary/secondary/accent only). Same pattern in line 108 above.
-              className="w-full rounded-md bg-warning px-4 py-2.5 font-display text-sm font-bold text-white shadow-md transition-colors hover:bg-warning/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warning focus-visible:ring-offset-2"
+              className="w-full rounded-md bg-[hsl(var(--c-warning-ink))] px-4 py-2.5 font-display text-sm font-bold text-white shadow-md transition-colors hover:bg-[hsl(var(--c-warning-ink)/0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--c-warning))] focus-visible:ring-offset-2"
             >
               {labels.rebuildCta}
             </button>

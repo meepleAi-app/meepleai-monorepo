@@ -95,7 +95,7 @@ describe('GameNightRsvpActionBar', () => {
     renderBar({ currentResponse: 'Accepted' });
     const acceptBtn = screen.getByTestId('rsvp-btn-accepted');
     // Entity tokens for selected state come from BUTTONS config — verify success palette applied.
-    expect(acceptBtn.className).toContain('bg-success');
+    expect(acceptBtn.className).toContain('border-[hsl(var(--c-success))]');
   });
 
   describe('mode prop (issue #1169)', () => {

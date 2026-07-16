@@ -30,12 +30,12 @@ export function PendingRsvpCard({
       data-event-id={eventId}
       title={disabled ? 'Offline — RSVP disponibile alla riconnessione' : undefined}
       className={clsx(
-        'rounded-lg border border-dashed border-warning/50 bg-warning/[0.06] p-4',
+        'rounded-lg border border-dashed border-[hsl(var(--c-warning)/0.5)] bg-[hsl(var(--c-warning)/0.06)] p-4',
         disabled && 'opacity-70',
         className
       )}
     >
-      <span className="inline-flex items-center rounded-full bg-warning/15 px-2 py-0.5 text-xs font-bold text-warning-ink">
+      <span className="inline-flex items-center rounded-full bg-[hsl(var(--c-warning)/0.15)] px-2 py-0.5 text-xs font-bold text-[hsl(var(--c-warning-ink))]">
         Da confermare
       </span>
       <h3 className="mt-2 font-quicksand font-bold text-base text-entity-event">{title}</h3>

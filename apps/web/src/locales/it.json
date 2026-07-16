@@ -2224,6 +2224,7 @@
         "hero": {
           "breadcrumbLibrary": "Libreria",
           "breadcrumbWishlist": "Wishlist",
+          "breadcrumbAria": "Percorso",
           "title": "Wishlist · Giochi desiderati",
           "subtitle": "Tieni traccia dei giochi che vuoi comprare o provare.",
           "tabsAria": "Sezioni libreria",
@@ -2677,6 +2678,7 @@
       "hero": {
         "breadcrumbToolkit": "Toolkit",
         "breadcrumbHistory": "History",
+        "breadcrumbAria": "Percorso",
         "title": "Storico sessioni",
         "subtitle": "Tutte le partite finalizzate, filtrabili per gioco, data e vincitore.",
         "quickStat": "{sessions} sessioni · {games} giochi · {winners} vincitori",
@@ -2799,11 +2801,7 @@
         "winnerScore": "Score vincitore",
         "variance": "Varianza score",
         "highlights": "Highlights",
-        "noData": "—",
-        "gameStats": "Stats gioco",
-        "playAgain": "Gioca di nuovo",
-        "editNotes": "Modifica note",
-        "delete": "Elimina"
+        "noData": "—"
       },
       "cards": {
         "coop": "Co-op"

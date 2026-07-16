@@ -224,9 +224,36 @@ describe('HistoryToolbar', () => {
     const { onChange } = renderToolbar({ state: baseState({ gameIds: ['game-1', 'game-2'] }) });
 
     await user.click(screen.getByRole('button', { name: 'pages.toolkitHistory.filters.games' }));
-    await user.click(screen.getByRole('option', { name: 'pages.toolkitHistory.filters.all' }));
+    await user.click(screen.getByRole('button', { name: 'pages.toolkitHistory.filters.all' }));
 
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ gameIds: [] }));
+  });
+
+  it('exposes the games filter popover as a valid ARIA group, not an invalid listbox', async () => {
+    const user = userEvent.setup();
+    renderToolbar();
+
+    // Before opening, only the always-mounted filter-cluster wrapper is a group.
+    expect(
+      screen.getAllByRole('group', { name: 'pages.toolkitHistory.filters.filterByGame' })
+    ).toHaveLength(1);
+
+    await user.click(screen.getByRole('button', { name: 'pages.toolkitHistory.filters.games' }));
+
+    // A listbox may only contain "option" children; this popover mixes a
+    // plain "Tutti" button with checkbox rows, so it must not be a listbox.
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    // The popover content itself is now a second, valid ARIA group.
+    expect(
+      screen.getAllByRole('group', { name: 'pages.toolkitHistory.filters.filterByGame' })
+    ).toHaveLength(2);
+    // "Tutti" is a plain button (no longer role="option", invalid outside a listbox).
+    expect(
+      screen.queryByRole('option', { name: 'pages.toolkitHistory.filters.all' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'pages.toolkitHistory.filters.all' })
+    ).toBeInTheDocument();
   });
 
   it('formats winner options as "{name} (won)" and the sentinel as "No winner", toggling winners on select', async () => {
@@ -261,7 +288,7 @@ describe('HistoryToolbar', () => {
 
     await user.click(screen.getByRole('button', { name: 'pages.toolkitHistory.filters.date' }));
     expect(
-      screen.getByRole('listbox', { name: 'pages.toolkitHistory.filters.dateRange' })
+      screen.getByRole('group', { name: 'pages.toolkitHistory.filters.dateRange' })
     ).toBeInTheDocument();
 
     await user.click(screen.getByText('pages.toolkitHistory.filters.dateOptions.last30'));
@@ -272,7 +299,7 @@ describe('HistoryToolbar', () => {
 
     await waitFor(() => {
       expect(
-        screen.queryByRole('listbox', { name: 'pages.toolkitHistory.filters.dateRange' })
+        screen.queryByRole('group', { name: 'pages.toolkitHistory.filters.dateRange' })
       ).not.toBeInTheDocument();
     });
   });
@@ -285,7 +312,7 @@ describe('HistoryToolbar', () => {
     await user.click(screen.getByText('pages.toolkitHistory.filters.dateOptions.custom'));
 
     expect(
-      screen.getByRole('listbox', { name: 'pages.toolkitHistory.filters.dateRange' })
+      screen.getByRole('group', { name: 'pages.toolkitHistory.filters.dateRange' })
     ).toBeInTheDocument();
 
     const applyButton = screen.getByRole('button', {
@@ -301,7 +328,7 @@ describe('HistoryToolbar', () => {
     expect(applyButton).not.toBeDisabled();
     // Still open while the user is filling in the custom range.
     expect(
-      screen.getByRole('listbox', { name: 'pages.toolkitHistory.filters.dateRange' })
+      screen.getByRole('group', { name: 'pages.toolkitHistory.filters.dateRange' })
     ).toBeInTheDocument();
 
     await user.click(applyButton);
@@ -316,7 +343,7 @@ describe('HistoryToolbar', () => {
 
     await waitFor(() => {
       expect(
-        screen.queryByRole('listbox', { name: 'pages.toolkitHistory.filters.dateRange' })
+        screen.queryByRole('group', { name: 'pages.toolkitHistory.filters.dateRange' })
       ).not.toBeInTheDocument();
     });
   });

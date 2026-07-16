@@ -238,4 +238,114 @@ describe('MeepleWishlistCard', () => {
       within(shell).getByRole('button', { name: CARD_I18N.removeAria.replace('{name}', 'Catan') })
     ).toBeInTheDocument();
   });
+
+  describe('onOpenGame navigation (#3010 Task 7)', () => {
+    it('calls onOpenGame with the item gameId when the card body is clicked', async () => {
+      const user = userEvent.setup();
+      const onOpenGame = vi.fn();
+      const item = buildItem({ gameName: 'Catan' });
+      renderWithIntl(
+        <MeepleWishlistCard
+          item={item}
+          onRemove={vi.fn()}
+          onEdit={vi.fn()}
+          onFilterPriority={vi.fn()}
+          onOpenGame={onOpenGame}
+        />
+      );
+
+      await user.click(
+        screen.getByRole('button', { name: CARD_I18N.openGameAria.replace('{name}', 'Catan') })
+      );
+      expect(onOpenGame).toHaveBeenCalledWith(item.gameId);
+    });
+
+    it('exposes the openGameAria accessible name on the clickable card when onOpenGame is provided', () => {
+      renderWithIntl(
+        <MeepleWishlistCard
+          item={buildItem({ gameName: 'Catan' })}
+          onRemove={vi.fn()}
+          onOpenGame={vi.fn()}
+        />
+      );
+
+      expect(
+        screen.getByRole('button', { name: CARD_I18N.openGameAria.replace('{name}', 'Catan') })
+      ).toBeInTheDocument();
+    });
+
+    it('does not render the card body as a button when onOpenGame is omitted (backward compatible)', () => {
+      renderWithIntl(
+        <MeepleWishlistCard
+          item={buildItem({ gameName: 'Catan' })}
+          onRemove={vi.fn()}
+          onEdit={vi.fn()}
+          onFilterPriority={vi.fn()}
+        />
+      );
+
+      const card = screen.getByTestId('wishlist-card');
+      expect(card).not.toHaveAttribute('role', 'button');
+      expect(card).not.toHaveAttribute('tabindex');
+    });
+
+    it('does not call onOpenGame when the Edit action is clicked', async () => {
+      const user = userEvent.setup();
+      const onOpenGame = vi.fn();
+      const onEdit = vi.fn();
+      const item = buildItem({ gameName: 'Catan' });
+      renderWithIntl(
+        <MeepleWishlistCard
+          item={item}
+          onRemove={vi.fn()}
+          onEdit={onEdit}
+          onFilterPriority={vi.fn()}
+          onOpenGame={onOpenGame}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: new RegExp(CARD_I18N.edit) }));
+      expect(onEdit).toHaveBeenCalledWith(item);
+      expect(onOpenGame).not.toHaveBeenCalled();
+    });
+
+    it('does not call onOpenGame when the Remove action is clicked', async () => {
+      const user = userEvent.setup();
+      const onOpenGame = vi.fn();
+      const onRemove = vi.fn();
+      const item = buildItem({ gameName: 'Catan' });
+      renderWithIntl(
+        <MeepleWishlistCard
+          item={item}
+          onRemove={onRemove}
+          onEdit={vi.fn()}
+          onFilterPriority={vi.fn()}
+          onOpenGame={onOpenGame}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: new RegExp(CARD_I18N.remove) }));
+      expect(onRemove).toHaveBeenCalledWith(item.id);
+      expect(onOpenGame).not.toHaveBeenCalled();
+    });
+
+    it('does not call onOpenGame when the priority badge is clicked', async () => {
+      const user = userEvent.setup();
+      const onOpenGame = vi.fn();
+      const onFilterPriority = vi.fn();
+      renderWithIntl(
+        <MeepleWishlistCard
+          item={buildItem({ priority: 'high', gameName: 'Catan' })}
+          onRemove={vi.fn()}
+          onEdit={vi.fn()}
+          onFilterPriority={onFilterPriority}
+          onOpenGame={onOpenGame}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: new RegExp(PRIORITY_I18N.high) }));
+      expect(onFilterPriority).toHaveBeenCalledWith('high');
+      expect(onOpenGame).not.toHaveBeenCalled();
+    });
+  });
 });

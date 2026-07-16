@@ -62,6 +62,25 @@ internal static class NotificationPreferencesEndpoints
         .RequireSession()
         .WithName("UpdateCardSuppressionEmailPreference");
 
+        // ADR-076 / issue #2995: dedicated quiet-hours window (timezone + start/end). Separate from the
+        // Document-preferences PUT so a partial FE save never resets it, mirroring the card-suppression pattern.
+        group.MapPut("/notifications/preferences/quiet-hours", async (
+            UpdateQuietHoursCommand command,
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
+
+            var updatedCommand = command with { UserId = session!.Principal!.Subject.Id };
+            await mediator.Send(updatedCommand, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        })
+        .RequireSession()
+        .Produces(204)
+        .WithName("UpdateQuietHours");
+
         // Issue #4416: Push notification subscription management
         group.MapPost("/notifications/push/subscribe", async (
             SubscribePushNotificationsCommand command,

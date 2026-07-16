@@ -106,6 +106,15 @@ describe('ToolkitHistoryPage', () => {
     expect(await screen.findByRole('heading', { name: 'Session history' })).toBeInTheDocument();
   });
 
+  it('names the breadcrumb landmark distinctly from the page label', async () => {
+    mockHistoryResponse([SESSION_1, SESSION_2]);
+    renderWithQuery(<ToolkitHistoryPage />);
+
+    await screen.findByRole('heading', { name: 'Session history' });
+
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument();
+  });
+
   it('renders a table row for each fetched session', async () => {
     mockHistoryResponse([SESSION_1, SESSION_2]);
     renderWithQuery(<ToolkitHistoryPage />);

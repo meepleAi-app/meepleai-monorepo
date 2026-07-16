@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { useTranslation } from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 
+import { formatDuration, getInitials, MAX_AVATARS } from '../_lib/history-format';
 import { getRelativeTimeParts } from '../_lib/relative-time';
 
 import type { HistoryRow, HistorySort } from '../_lib/history-filters';
@@ -28,26 +29,6 @@ export interface HistoryTableProps {
   onSortChange: (sort: HistorySort) => void;
   onOpenDetail: (row: HistoryRow) => void;
   onOpenGameStats: (gameId: string) => void;
-}
-
-/** Max number of player avatars shown before collapsing the rest into a "+N" pill. */
-const MAX_AVATARS = 3;
-
-/** Formats a session duration in minutes as `"{h}h {m}m"`. */
-function formatDuration(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return `${h}h ${m}m`;
-}
-
-/** Derives up to 2 uppercase initials from a player's display name. */
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return (parts[0] as string).slice(0, 2).toUpperCase();
-  const first = parts[0] as string;
-  const last = parts[parts.length - 1] as string;
-  return `${first[0]}${last[0]}`.toUpperCase();
 }
 
 interface SortableTableHeadProps {

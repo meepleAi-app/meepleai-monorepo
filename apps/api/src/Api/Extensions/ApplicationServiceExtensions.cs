@@ -201,6 +201,9 @@ internal static class ApplicationServiceExtensions
         // Issue #3694: Resource metrics service for extended KPIs
         services.AddScoped<IResourceMetricsService, ResourceMetricsService>();
 
+        // Issue #3041: Self-contained system resource metrics (Singleton — holds CPU delta snapshot)
+        services.AddSingleton<ISystemResourceService, SystemResourceService>();
+
         // Issue #2854: User dashboard service for aggregated dashboard data
         services.AddScoped<IUserDashboardService, UserDashboardService>();
 

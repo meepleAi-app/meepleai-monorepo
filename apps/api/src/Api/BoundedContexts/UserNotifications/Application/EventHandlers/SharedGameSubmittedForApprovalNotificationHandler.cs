@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.Infrastructure;
@@ -85,7 +86,7 @@ internal sealed class SharedGameSubmittedForApprovalNotificationHandler
                 Payload = new GenericPayload(
                     "New Game Submitted for Approval",
                     $"{submitter.DisplayName} submitted \"{game.Title}\" for approval."),
-                DeepLinkPath = $"/admin/approval-queue?gameId={domainEvent.GameId}",
+                DeepLinkPath = NotificationRoutes.AdminApprovalQueue(domainEvent.GameId),
                 // Issue #1937 / CF-1: propagate event id for dispatcher dedup
                 SourceEventId = domainEvent.EventId
             }, cancellationToken).ConfigureAwait(false);

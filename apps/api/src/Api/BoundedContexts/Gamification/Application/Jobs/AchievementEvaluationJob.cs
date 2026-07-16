@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Gamification.Application.Services;
 using Api.BoundedContexts.Gamification.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
@@ -182,7 +183,7 @@ internal sealed class AchievementEvaluationJob : IJob
             severity: NotificationSeverity.FromString("info"),
             title: $"Achievement Unlocked: {achievement.Name}!",
             message: $"You earned {achievement.Points} points! {achievement.Description}",
-            link: "/achievements",
+            link: NotificationRoutes.Achievements,
             metadata: System.Text.Json.JsonSerializer.Serialize(new
             {
                 achievementId = achievement.Id,

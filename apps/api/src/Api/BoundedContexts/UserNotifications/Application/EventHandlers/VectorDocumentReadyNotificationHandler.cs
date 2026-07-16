@@ -1,3 +1,4 @@
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.SharedKernel.Application.IntegrationEvents;
@@ -30,7 +31,7 @@ internal sealed class VectorDocumentReadyNotificationHandler
     {
         var userId = evt.UploadedByUserId;
         var fileName = evt.FileName;
-        var agentLink = $"/library/games/{evt.GameId}/agent";
+        var agentLink = NotificationRoutes.LibraryAgent(evt.GameId);
         var chunkCount = evt.ChunkCount;
 
         await _dispatcher.DispatchAsync(new NotificationMessage

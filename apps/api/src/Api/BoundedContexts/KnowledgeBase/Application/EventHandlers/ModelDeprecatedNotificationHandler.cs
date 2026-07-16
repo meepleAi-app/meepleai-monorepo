@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
@@ -87,7 +88,7 @@ internal sealed class ModelDeprecatedNotificationHandler
                     severity: NotificationSeverity.Warning,
                     title: title,
                     message: message,
-                    link: "/admin/agents/usage",
+                    link: NotificationRoutes.AdminAgentsUsage,
                     metadata: metadata))
                 .ToList();
 

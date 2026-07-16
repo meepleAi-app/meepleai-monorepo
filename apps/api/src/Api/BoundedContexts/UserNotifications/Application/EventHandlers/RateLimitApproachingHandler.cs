@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SystemConfiguration.Domain.Services;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using MediatR;
@@ -55,7 +56,7 @@ internal sealed class RateLimitApproachingHandler : INotificationHandler<ShareRe
                         "Approaching Monthly Limit",
                         $"You've used {status.CurrentMonthlyCount} of your {status.EffectiveMaxPerMonth} monthly share requests. " +
                         $"Your limit resets on {status.MonthResetAt:MMMM d}."),
-                    DeepLinkPath = "/contributions",
+                    DeepLinkPath = NotificationRoutes.Contributions,
                     // Issue #1937 / CF-1: propagate event id for dispatcher dedup
                     SourceEventId = notification.EventId
                 }, cancellationToken).ConfigureAwait(false);
@@ -79,7 +80,7 @@ internal sealed class RateLimitApproachingHandler : INotificationHandler<ShareRe
                         "Approaching Pending Limit",
                         $"You have {status.CurrentPendingCount} pending requests. " +
                         $"You can have up to {status.EffectiveMaxPending} pending at once."),
-                    DeepLinkPath = "/contributions/requests?status=pending",
+                    DeepLinkPath = NotificationRoutes.ContributionsPending,
                     // Issue #1937 / CF-1: propagate event id for dispatcher dedup
                     SourceEventId = notification.EventId
                 }, cancellationToken).ConfigureAwait(false);

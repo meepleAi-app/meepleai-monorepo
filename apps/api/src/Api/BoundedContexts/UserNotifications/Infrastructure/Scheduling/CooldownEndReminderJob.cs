@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.BoundedContexts.SystemConfiguration.Domain.Services;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
@@ -89,7 +90,7 @@ internal sealed class CooldownEndReminderJob : IJob
                         severity: NotificationSeverity.Success,
                         title: "Ready to Contribute Again! 🎉",
                         message: "Your cooldown period has ended. You can now submit new share requests.",
-                        link: "/library",
+                        link: NotificationRoutes.Library,
                         metadata: System.Text.Json.JsonSerializer.Serialize(new
                         {
                             cooldownEndedAt = status.CooldownEndsAt.Value,

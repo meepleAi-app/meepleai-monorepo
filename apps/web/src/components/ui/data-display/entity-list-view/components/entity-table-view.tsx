@@ -27,21 +27,53 @@ import type { TableColumnConfig } from '../entity-list-view.types';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 
 // ============================================================================
-// Entity color map for row accents
+// Entity color maps (canonical tokens — Issue #2955 Fase 2)
+//
+// Literal static maps (ESLint-friendly, no template literals / getEntityToken).
+// - Row accent border → `border-entity-<e>` base token (`--c-<e>`); borders
+//   only need 3:1, so the base — not the darker `-text` — is correct.
+// - Badge pill → soft tint `bg-entity-<e>/10` + AA label `text-entity-<e>-text`.
+// kb resolves to the registered TEAL `-kb` / `-kb-text`, NEVER `-document`.
+// gameNightEvent reuses the canonical `event` token (#1929 WP2).
 // ============================================================================
 
-const ENTITY_BORDER_COLORS: Record<MeepleEntityType, string> = {
-  game: 'border-l-[hsl(25,95%,45%)]',
-  player: 'border-l-[hsl(262,83%,58%)]',
-  session: 'border-l-[hsl(240,60%,55%)]',
-  agent: 'border-l-[hsl(38,92%,50%)]',
-  kb: 'border-l-[hsl(174,60%,40%)]',
-  chat: 'border-l-[hsl(220,80%,55%)]',
-  event: 'border-l-[hsl(350,89%,60%)]',
-  toolkit: 'border-l-[hsl(142,70%,45%)]',
-  tool: 'border-l-[hsl(195,80%,50%)]',
-  // #1929 WP2: GameNight reuses event/rose palette
-  gameNightEvent: 'border-l-[hsl(350,89%,60%)]',
+const ENTITY_BORDER: Record<MeepleEntityType, string> = {
+  game: 'border-entity-game',
+  player: 'border-entity-player',
+  session: 'border-entity-session',
+  agent: 'border-entity-agent',
+  kb: 'border-entity-kb',
+  chat: 'border-entity-chat',
+  event: 'border-entity-event',
+  toolkit: 'border-entity-toolkit',
+  tool: 'border-entity-tool',
+  gameNightEvent: 'border-entity-event',
+};
+
+const ENTITY_BADGE_BG: Record<MeepleEntityType, string> = {
+  game: 'bg-entity-game/10',
+  player: 'bg-entity-player/10',
+  session: 'bg-entity-session/10',
+  agent: 'bg-entity-agent/10',
+  kb: 'bg-entity-kb/10',
+  chat: 'bg-entity-chat/10',
+  event: 'bg-entity-event/10',
+  toolkit: 'bg-entity-toolkit/10',
+  tool: 'bg-entity-tool/10',
+  gameNightEvent: 'bg-entity-event/10',
+};
+
+const ENTITY_TEXT: Record<MeepleEntityType, string> = {
+  game: 'text-entity-game-text',
+  player: 'text-entity-player-text',
+  session: 'text-entity-session-text',
+  agent: 'text-entity-agent-text',
+  kb: 'text-entity-kb-text',
+  chat: 'text-entity-chat-text',
+  event: 'text-entity-event-text',
+  toolkit: 'text-entity-toolkit-text',
+  tool: 'text-entity-tool-text',
+  gameNightEvent: 'text-entity-event-text',
 };
 
 // ============================================================================
@@ -84,7 +116,8 @@ export interface EntityTableViewProps<T> {
 // Auto-generate columns from MeepleCardProps
 // ============================================================================
 
-function createDefaultColumns(): ColumnDef<TableRowData, unknown>[] {
+function createDefaultColumns(entity: MeepleEntityType): ColumnDef<TableRowData, unknown>[] {
+  const badgeClass = cn(ENTITY_BADGE_BG[entity], ENTITY_TEXT[entity]);
   return [
     {
       accessorKey: 'title',
@@ -104,7 +137,7 @@ function createDefaultColumns(): ColumnDef<TableRowData, unknown>[] {
               <span
                 className={cn(
                   'ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase',
-                  'bg-muted text-muted-foreground'
+                  badgeClass
                 )}
               >
                 {row.original.badge}
@@ -218,8 +251,8 @@ export function EntityTableView<T>({
     if (customColumns && customColumns.length > 0) {
       return createColumnsFromConfig(customColumns);
     }
-    return createDefaultColumns();
-  }, [customColumns]);
+    return createDefaultColumns(entity);
+  }, [customColumns, entity]);
 
   // Row click handler
   const handleRowClick = useMemo(() => {
@@ -230,8 +263,8 @@ export function EntityTableView<T>({
     };
   }, [onItemClick, displayItems]);
 
-  // Entity-colored row styling via CSS class override
-  const borderClass = ENTITY_BORDER_COLORS[entity] || '';
+  // Entity-colored row styling via canonical token class (#2955 Fase 2)
+  const borderClass = ENTITY_BORDER[entity] || '';
 
   return (
     <div

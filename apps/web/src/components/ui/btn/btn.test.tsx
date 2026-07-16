@@ -102,6 +102,46 @@ describe('Btn', () => {
     expect(btn.style.color).toBe('');
   });
 
+  it('outline variant restores per-entity border + AA -text label when entity is provided', () => {
+    render(
+      <Btn variant="outline" entity="agent">
+        x
+      </Btn>
+    );
+    const btn = screen.getByRole('button');
+    expect(btn).toHaveAttribute('data-entity', 'agent');
+    // Issue #2955 Fase 2: outline restores the entity-colored border + AA
+    // text-on-tint label via the registered `-entity-*` / `-text` utilities.
+    expect(btn.className).toMatch(/border-entity-agent/);
+    expect(btn.className).toMatch(/text-entity-agent-text/);
+    // still transparent fill with muted hover (outline affordance preserved)
+    expect(btn.className).toMatch(/bg-transparent/);
+    expect(btn.className).toMatch(/hover:bg-muted/);
+    // className-only — never inline styles
+    expect(btn.style.borderColor).toBe('');
+    expect(btn.style.color).toBe('');
+  });
+
+  it('outline entity=kb uses the registered -kb (teal) utilities, not the document slate', () => {
+    render(
+      <Btn variant="outline" entity="kb">
+        x
+      </Btn>
+    );
+    const btn = screen.getByRole('button');
+    expect(btn.className).toMatch(/border-entity-kb/);
+    expect(btn.className).toMatch(/text-entity-kb-text/);
+    expect(btn.className).not.toMatch(/entity-document/);
+  });
+
+  it('outline variant without entity keeps the neutral border token', () => {
+    render(<Btn variant="outline">x</Btn>);
+    const btn = screen.getByRole('button');
+    expect(btn.className).toMatch(/border-border/);
+    expect(btn.className).not.toMatch(/border-entity-/);
+    expect(btn.className).not.toMatch(/text-entity-/);
+  });
+
   it('entity prop has no inline style effect on ghost/secondary/destructive', () => {
     const { rerender } = render(
       <Btn variant="ghost" entity="game">

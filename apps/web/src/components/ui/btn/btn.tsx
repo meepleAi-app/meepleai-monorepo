@@ -77,6 +77,41 @@ const ENTITY_BG_HOVER: Record<EntityType, string> = {
   tool: 'hover:bg-entity-tool/90',
 };
 
+/**
+ * Per-entity border for the outline variant (issue #2955, Fase 2). Literal
+ * class strings for Tailwind's content scanner. `kb` maps to the registered
+ * `-kb` (teal) token, NOT `-document` (slate).
+ */
+const ENTITY_BORDER: Record<EntityType, string> = {
+  game: 'border-entity-game',
+  player: 'border-entity-player',
+  session: 'border-entity-session',
+  agent: 'border-entity-agent',
+  kb: 'border-entity-kb',
+  chat: 'border-entity-chat',
+  event: 'border-entity-event',
+  toolkit: 'border-entity-toolkit',
+  tool: 'border-entity-tool',
+};
+
+/**
+ * Per-entity AA text-on-tint label for the outline variant (issue #2955, Fase
+ * 2). The `-text` variant (verified >=4.5:1 in Fase 0) keeps the outline label
+ * readable on the transparent surface and the blocking axe AA gate green.
+ * Literal strings for Tailwind's content scanner; `kb` -> registered `-kb-text`.
+ */
+const ENTITY_TEXT: Record<EntityType, string> = {
+  game: 'text-entity-game-text',
+  player: 'text-entity-player-text',
+  session: 'text-entity-session-text',
+  agent: 'text-entity-agent-text',
+  kb: 'text-entity-kb-text',
+  chat: 'text-entity-chat-text',
+  event: 'text-entity-event-text',
+  toolkit: 'text-entity-toolkit-text',
+  tool: 'text-entity-tool-text',
+};
+
 function Spinner(): JSX.Element {
   return (
     <svg
@@ -117,12 +152,16 @@ export function Btn({
   const isDisabled = disabled || loading;
 
   // Fase 1 (#2955): the primary variant carries the per-entity background when an
-  // `entity` is supplied; the label stays on `text-primary-foreground`. Other
-  // variants are unaffected, and primary without an entity keeps the flat token.
+  // `entity` is supplied; the label stays on `text-primary-foreground`.
+  // Fase 2 (#2955): the outline variant carries the per-entity border + AA
+  // text-on-tint label. Both fall back to the flat token when no entity is set,
+  // and the other variants (secondary/ghost/destructive) are unaffected.
   const variantClasses =
     variant === 'primary' && entity
       ? clsx('text-primary-foreground', ENTITY_BG[entity], ENTITY_BG_HOVER[entity])
-      : VARIANT_CLASSES[variant];
+      : variant === 'outline' && entity
+        ? clsx('border bg-transparent hover:bg-muted', ENTITY_BORDER[entity], ENTITY_TEXT[entity])
+        : VARIANT_CLASSES[variant];
 
   const classes = clsx(
     'inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-colors',

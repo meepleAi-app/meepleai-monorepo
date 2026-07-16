@@ -104,4 +104,25 @@ describe('SettingsRow', () => {
     const li = container.querySelector('li');
     expect(li).toHaveClass('my-li');
   });
+
+  it('colors the leading icon with the AA -text entity variant when entity is provided', () => {
+    // Issue #2955 Fase 2: the leading icon adopts the per-entity AA text-on-tint
+    // shade (`text-entity-*-text`, verified >=4.5:1) rather than plain currentColor.
+    render(<SettingsRow label="Game" icon={<span>🎲</span>} entity="game" />);
+    const icon = screen.getByTestId('settings-row-icon');
+    expect(icon.className).toMatch(/text-entity-game-text/);
+  });
+
+  it('uses the registered -kb-text (teal) for entity=kb, never the -document slate', () => {
+    render(<SettingsRow label="KB" icon={<span>📚</span>} entity="kb" />);
+    const icon = screen.getByTestId('settings-row-icon');
+    expect(icon.className).toMatch(/text-entity-kb-text/);
+    expect(icon.className).not.toMatch(/entity-document/);
+  });
+
+  it('leaves the icon on currentColor when no entity is provided', () => {
+    render(<SettingsRow label="Plain" icon={<span>🎨</span>} />);
+    const icon = screen.getByTestId('settings-row-icon');
+    expect(icon.className).not.toMatch(/text-entity-/);
+  });
 });

@@ -18,7 +18,7 @@
  * the combobox only searches the user's own library.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 
 import { X } from 'lucide-react';
 
@@ -139,6 +139,8 @@ export function AddToWishlistDialog({
   const [selectedGame, setSelectedGame] = useState<SelectedGame | null>(buildInitialGame);
   const [query, setQuery] = useState('');
   const [comboOpen, setComboOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const comboContainerRef = useRef<HTMLDivElement | null>(null);
   const [priority, setPriority] = useState<Priority>(
     isEdit && item ? normalizePriority(item.priority) : 'medium'
   );
@@ -155,6 +157,7 @@ export function AddToWishlistDialog({
     setSelectedGame(buildInitialGame());
     setQuery('');
     setComboOpen(false);
+    setActiveIndex(-1);
     setPriority(isEdit && item ? normalizePriority(item.priority) : 'medium');
     setTargetPrice(isEdit && item?.targetPrice != null ? String(item.targetPrice) : '');
     setNotes(isEdit ? (item?.notes ?? '') : '');
@@ -179,6 +182,60 @@ export function AddToWishlistDialog({
     setSelectedGame(g);
     setQuery('');
     setComboOpen(false);
+    setActiveIndex(-1);
+  }
+
+  function comboOptionId(g: SelectedGame): string {
+    return `wishlist-game-option-${g.id}`;
+  }
+
+  /**
+   * ARIA combobox keyboard pattern (APG): ArrowDown/ArrowUp move the active
+   * descendant (opening the listbox if needed), Enter commits the active
+   * match, Escape closes the listbox. `preventDefault` on Enter is required
+   * so it doesn't trigger the form's implicit submission instead.
+   */
+  function handleComboKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      setComboOpen(true);
+      const direction = e.key === 'ArrowDown' ? 1 : -1;
+      setActiveIndex(i => {
+        if (matches.length === 0) return -1;
+        if (i < 0) return direction === 1 ? 0 : matches.length - 1;
+        return Math.min(Math.max(i + direction, 0), matches.length - 1);
+      });
+      return;
+    }
+    if (e.key === 'Enter') {
+      if (!comboOpen) return;
+      e.preventDefault();
+      const active = activeIndex >= 0 ? matches[activeIndex] : undefined;
+      if (active) {
+        pickGame(active);
+      }
+      return;
+    }
+    if (e.key === 'Escape') {
+      if (!comboOpen) return;
+      e.preventDefault();
+      setComboOpen(false);
+      setActiveIndex(-1);
+    }
+  }
+
+  /**
+   * Closes the listbox on blur only when focus left the combobox container
+   * entirely — keeps a keyboard user's Enter-select from racing a premature
+   * close, and mirrors the mousedown-preventDefault used for option clicks.
+   */
+  function handleComboBlur(e: React.FocusEvent<HTMLInputElement>) {
+    const next = e.relatedTarget as Node | null;
+    if (next && comboContainerRef.current?.contains(next)) {
+      return;
+    }
+    setComboOpen(false);
+    setActiveIndex(-1);
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -285,13 +342,18 @@ export function AddToWishlistDialog({
                 )}
               </div>
             ) : (
-              <div className="relative">
+              <div className="relative" ref={comboContainerRef}>
                 <Input
                   id="wishlist-game-combobox"
                   role="combobox"
                   aria-expanded={comboOpen}
                   aria-autocomplete="list"
                   aria-controls="wishlist-game-listbox"
+                  aria-activedescendant={
+                    comboOpen && activeIndex >= 0 && matches[activeIndex]
+                      ? comboOptionId(matches[activeIndex])
+                      : undefined
+                  }
                   aria-label={t('pages.library.wishlist.dialog.gameComboAria')}
                   placeholder={t('pages.library.wishlist.dialog.gameComboPlaceholder')}
                   value={query}
@@ -300,8 +362,10 @@ export function AddToWishlistDialog({
                   onChange={e => {
                     setQuery(e.target.value);
                     setComboOpen(true);
+                    setActiveIndex(-1);
                   }}
-                  onBlur={() => setComboOpen(false)}
+                  onKeyDown={handleComboKeyDown}
+                  onBlur={handleComboBlur}
                 />
                 {comboOpen && matches.length > 0 && (
                   <div
@@ -309,19 +373,28 @@ export function AddToWishlistDialog({
                     role="listbox"
                     className="absolute z-10 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-border bg-card shadow-md"
                   >
-                    {matches.map(g => (
-                      <button
-                        key={g.id}
-                        type="button"
-                        role="option"
-                        aria-selected={false}
-                        onMouseDown={e => e.preventDefault()}
-                        onClick={() => pickGame(g)}
-                        className="flex w-full items-center px-3 py-2 text-left text-sm text-foreground hover:bg-muted"
-                      >
-                        {g.title}
-                      </button>
-                    ))}
+                    {matches.map((g, idx) => {
+                      const isActive = idx === activeIndex;
+                      return (
+                        <button
+                          key={g.id}
+                          id={comboOptionId(g)}
+                          type="button"
+                          role="option"
+                          aria-selected={isActive}
+                          tabIndex={-1}
+                          onMouseDown={e => e.preventDefault()}
+                          onMouseEnter={() => setActiveIndex(idx)}
+                          onClick={() => pickGame(g)}
+                          className={cn(
+                            'flex w-full items-center px-3 py-2 text-left text-sm text-foreground hover:bg-muted',
+                            isActive && 'bg-muted'
+                          )}
+                        >
+                          {g.title}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>

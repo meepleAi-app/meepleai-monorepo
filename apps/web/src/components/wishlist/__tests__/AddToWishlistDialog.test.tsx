@@ -152,6 +152,70 @@ describe('AddToWishlistDialog', () => {
 
       expect(screen.getByText('5 / 200')).toBeInTheDocument();
     });
+
+    it('selects a game via ArrowDown + Enter (keyboard-only, no mouse)', async () => {
+      const user = userEvent.setup();
+      renderWithIntl(<AddToWishlistDialog mode="add" open onOpenChange={() => {}} />);
+
+      const combo = screen.getByRole('combobox', { name: GAME_COMBO_NAME });
+      await user.type(combo, 'Catan');
+
+      // Highlight the only match and commit it — no click involved.
+      await user.keyboard('{ArrowDown}');
+      const option = screen.getByRole('option', { name: 'Catan' });
+      expect(option).toHaveAttribute('aria-selected', 'true');
+      expect(combo).toHaveAttribute('aria-activedescendant', option.id);
+
+      await user.keyboard('{Enter}');
+
+      // Combobox is replaced by the locked/removable selected-game chip.
+      expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+      expect(screen.getByText('Catan')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Aggiungi' })).toBeEnabled();
+    });
+
+    it('closes the listbox on Escape without selecting a game', async () => {
+      const user = userEvent.setup();
+      renderWithIntl(<AddToWishlistDialog mode="add" open onOpenChange={() => {}} />);
+
+      const combo = screen.getByRole('combobox', { name: GAME_COMBO_NAME });
+      await user.type(combo, 'Catan');
+      await user.keyboard('{ArrowDown}');
+      expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+      await user.keyboard('{Escape}');
+
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Aggiungi' })).toBeDisabled();
+    });
+
+    it('shows a success toast and closes the dialog when the add mutation succeeds', () => {
+      const onOpenChange = vi.fn();
+      const onSuccess = vi.fn();
+      mockAddMutate.mockImplementation(
+        (_payload: unknown, options?: { onSuccess?: () => void }) => {
+          options?.onSuccess?.();
+        }
+      );
+
+      renderWithIntl(
+        <AddToWishlistDialog
+          mode="add"
+          open
+          onOpenChange={onOpenChange}
+          prefillGameId="game-catan"
+          onSuccess={onSuccess}
+        />
+      );
+
+      submitForm();
+
+      expect(mockAddMutate).toHaveBeenCalledTimes(1);
+      expect(mockToastSuccess).toHaveBeenCalledTimes(1);
+      expect(mockToastSuccess).toHaveBeenCalledWith('Aggiunto');
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+      expect(onSuccess).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('mode=edit', () => {
@@ -216,6 +280,35 @@ describe('AddToWishlistDialog', () => {
           clearNotes: true,
         },
       });
+    });
+
+    it('shows a success toast and closes the dialog when the update mutation succeeds', () => {
+      const onOpenChange = vi.fn();
+      const onSuccess = vi.fn();
+      const item = buildItem();
+      mockUpdateMutate.mockImplementation(
+        (_payload: unknown, options?: { onSuccess?: () => void }) => {
+          options?.onSuccess?.();
+        }
+      );
+
+      renderWithIntl(
+        <AddToWishlistDialog
+          mode="edit"
+          item={item}
+          open
+          onOpenChange={onOpenChange}
+          onSuccess={onSuccess}
+        />
+      );
+
+      submitForm();
+
+      expect(mockUpdateMutate).toHaveBeenCalledTimes(1);
+      expect(mockToastSuccess).toHaveBeenCalledTimes(1);
+      expect(mockToastSuccess).toHaveBeenCalledWith('Aggiunto');
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+      expect(onSuccess).toHaveBeenCalledTimes(1);
     });
   });
 });

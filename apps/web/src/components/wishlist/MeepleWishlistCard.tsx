@@ -27,8 +27,10 @@
  * the parent page's `router.push`. The accessible name comes from the
  * `ariaLabel` passthrough added to `MeepleCardProps`/`ListCard` for this
  * purpose (ListCard had no way to set an explicit `aria-label` on its
- * `role="button"` root before). Edit/Remove/priority-badge actions call
- * `e.stopPropagation()` so their clicks never reach the card body.
+ * `role="button"` root before). Edit/Remove/priority-badge are rendered as
+ * siblings of the clickable card, so their clicks don't reach the card body;
+ * the `e.stopPropagation()` calls on those actions are belt-and-suspenders
+ * guarding against a future refactor that nests them under the card root.
  */
 
 import {

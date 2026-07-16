@@ -28,17 +28,19 @@ const mockAddReset = vi.fn();
 const mockUpdateReset = vi.fn();
 let mockAddIsError = false;
 let mockUpdateIsError = false;
+let mockAddIsPending = false;
+let mockUpdateIsPending = false;
 
 vi.mock('@/hooks/queries/useWishlist', () => ({
   useAddToWishlist: () => ({
     mutate: mockAddMutate,
-    isPending: false,
+    isPending: mockAddIsPending,
     isError: mockAddIsError,
     reset: mockAddReset,
   }),
   useUpdateWishlistItem: () => ({
     mutate: mockUpdateMutate,
-    isPending: false,
+    isPending: mockUpdateIsPending,
     isError: mockUpdateIsError,
     reset: mockUpdateReset,
   }),
@@ -111,6 +113,8 @@ describe('AddToWishlistDialog', () => {
     mockUpdateReset.mockReset();
     mockAddIsError = false;
     mockUpdateIsError = false;
+    mockAddIsPending = false;
+    mockUpdateIsPending = false;
   });
 
   describe('mode=add', () => {
@@ -305,6 +309,16 @@ describe('AddToWishlistDialog', () => {
 
       expect(mockAddMutate).toHaveBeenCalledTimes(1);
       expect(mockAddReset).toHaveBeenCalled();
+    });
+
+    it('disables the retry button while the add mutation is pending', () => {
+      mockAddIsError = true;
+      mockAddIsPending = true;
+      renderWithIntl(
+        <AddToWishlistDialog mode="add" open onOpenChange={() => {}} prefillGameId="game-catan" />
+      );
+
+      expect(screen.getByRole('button', { name: 'Riprova' })).toBeDisabled();
     });
 
     it('calls reset on the active mutation when the dialog is cancelled (closed)', async () => {

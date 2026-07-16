@@ -38,8 +38,10 @@ interface MeepleWishlistCardProps {
   /** Resolved game name — falls back to item.gameName, then a localized placeholder. */
   gameName?: string;
   onRemove: (id: string) => void;
-  onEdit: (item: WishlistItemDto) => void;
-  onFilterPriority: (priority: Priority) => void;
+  /** When omitted, the Edit action is not rendered. */
+  onEdit?: (item: WishlistItemDto) => void;
+  /** When omitted, the priority badge renders as a non-interactive `<span>`. */
+  onFilterPriority?: (priority: Priority) => void;
 }
 
 // ============================================================================
@@ -132,14 +134,23 @@ export function MeepleWishlistCard({
     >
       <div className="flex items-center justify-between px-1">
         <span aria-hidden="true">❤️</span>
-        <button
-          type="button"
-          onClick={() => onFilterPriority(priority)}
-          aria-label={t('pages.library.wishlist.priority.filterAria', { label: priorityLabel })}
-          className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-foreground transition-colors hover:bg-muted/70"
-        >
-          {priorityLabel}
-        </button>
+        {onFilterPriority ? (
+          <button
+            type="button"
+            onClick={() => onFilterPriority(priority)}
+            aria-label={t('pages.library.wishlist.priority.filterAria', { label: priorityLabel })}
+            className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-foreground transition-colors hover:bg-muted/70"
+          >
+            {priorityLabel}
+          </button>
+        ) : (
+          <span
+            className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-foreground"
+            data-testid="wishlist-priority-badge-static"
+          >
+            {priorityLabel}
+          </span>
+        )}
       </div>
 
       <MeepleCard
@@ -157,14 +168,16 @@ export function MeepleWishlistCard({
       </div>
 
       <div className="flex items-center justify-end gap-2 px-1">
-        <button
-          type="button"
-          onClick={() => onEdit(item)}
-          aria-label={t('pages.library.wishlist.card.editAria', { name: resolvedGameName })}
-          className="rounded-md px-2 py-1 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
-        >
-          {t('pages.library.wishlist.card.edit')}
-        </button>
+        {onEdit && (
+          <button
+            type="button"
+            onClick={() => onEdit(item)}
+            aria-label={t('pages.library.wishlist.card.editAria', { name: resolvedGameName })}
+            className="rounded-md px-2 py-1 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+          >
+            {t('pages.library.wishlist.card.edit')}
+          </button>
+        )}
         <button
           type="button"
           onClick={() => onRemove(item.id)}

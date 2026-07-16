@@ -112,6 +112,19 @@ describe('MeepleWishlistCard', () => {
     expect(onFilterPriority).toHaveBeenCalledWith('high');
   });
 
+  it('renders the priority badge as a non-interactive element when onFilterPriority is omitted', () => {
+    renderWithIntl(
+      <MeepleWishlistCard item={buildItem({ priority: 'high' })} onRemove={vi.fn()} />
+    );
+
+    expect(
+      screen.queryByRole('button', { name: new RegExp(PRIORITY_I18N.high) })
+    ).not.toBeInTheDocument();
+    const badge = screen.getByTestId('wishlist-priority-badge-static');
+    expect(badge.tagName).toBe('SPAN');
+    expect(badge).toHaveTextContent(PRIORITY_I18N.high);
+  });
+
   it('calls onEdit with the item when the edit action is clicked', async () => {
     const user = userEvent.setup();
     const onEdit = vi.fn();

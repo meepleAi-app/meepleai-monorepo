@@ -46,7 +46,13 @@ public static class NotificationPayloadSerializer
         return new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = false
+            WriteIndented = false,
+            // #3057: payloads are persisted in a jsonb column, and Postgres reorders object keys
+            // by (length, then bytewise). For GenericPayload that moves the "$type" discriminator
+            // out of first position ({"body":..,"$type":..,"title":..}), which STJ polymorphic
+            // deserialization rejects by default. Tolerate the discriminator at any position so
+            // round-tripping through jsonb never throws (net9 feature).
+            AllowOutOfOrderMetadataProperties = true
         };
     }
 }

@@ -15,6 +15,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { axe, toHaveNoViolations } from 'jest-axe';
 
 import NotificationsPage from '../page';
 import type { NotificationDto } from '@/lib/api';
@@ -26,6 +27,8 @@ import { EMPTY } from '../../../../__tests__/fixtures/test-strings';
 import { renderWithIntl } from '../../../../__tests__/fixtures/common-fixtures';
 
 const render = renderWithIntl;
+
+expect.extend(toHaveNoViolations);
 
 // ============================================================================
 // Mocks
@@ -535,6 +538,67 @@ describe('NotificationsPage', () => {
           value: originalLocation,
         });
       }
+    });
+  });
+
+  // ── axe AA gate (#2955 Fase 3) ───────────────────────────────────
+  // The restored per-entity coloring puts several primitives on this
+  // consumer surface at once: the 5 entity-coloured filter `Btn` pills,
+  // one `NotificationCard` per entity, the CTA `Btn`, and (when opened)
+  // the per-entity detail `Drawer`. This guards the blocking axe AA gate
+  // against a regression when they all render together.
+  describe('axe AA gate (#2955 Fase 3)', () => {
+    const mixedEntityNotifications = () => [
+      createNotification({ title: 'Session ended', type: 'session_terminated', isRead: false }),
+      createNotification({ title: 'Agent ready', type: 'agent_ready', isRead: false }),
+      createNotification({ title: 'Night invite', type: 'game_night_invitation', isRead: true }),
+      createNotification({ title: 'PDF ready', type: 'document_ready', isRead: false }),
+      createNotification({ title: 'Badge earned', type: 'badge_earned', isRead: true }),
+      createNotification({ title: 'Rate limit', type: 'rate_limit_reached', isRead: false }),
+    ];
+
+    it('has no violations across the multi-entity NotificationCard list', async () => {
+      setupStore({ notifications: mixedEntityNotifications(), unreadCount: 4 });
+      const { container } = render(<NotificationsPage />);
+      // Scope to the per-entity NotificationCard list (all six sample
+      // notifications land in the "Oggi" group), which is the surface #2955
+      // recoloured — six entity-coloured cards rendered together.
+      // NOTE: a whole-page scan additionally trips a PRE-EXISTING, coloring-
+      // unrelated `aria-required-children` violation on the filter bar
+      // (`role="tablist"` holding <button> children, page.tsx:281). That is a
+      // real finding surfaced separately, not a regression from the restored
+      // coloring, and fixing it is a source change out of scope for this
+      // test-only Fase 3.
+      const cardList = container.querySelector('section[aria-labelledby="notif-group-oggi"]');
+      expect(cardList).not.toBeNull();
+      expect(await axe(cardList as HTMLElement)).toHaveNoViolations();
+    });
+
+    it('has no violations with the per-entity detail Drawer open', async () => {
+      const user = userEvent.setup();
+      setupStore({
+        notifications: [
+          createNotification({
+            title: 'Drawer target',
+            message: 'Detail body content',
+            type: 'agent_ready',
+            link: '/games/abc-123',
+            isRead: true,
+          }),
+        ],
+        unreadCount: 0,
+      });
+      render(<NotificationsPage />);
+
+      // The card renders as role=button when only onClick is wired; clicking
+      // opens the detail Drawer. "Apri" only exists inside the open drawer
+      // (link is truthy), so its presence confirms the per-entity Drawer +
+      // Btn are mounted before we scan.
+      await user.click(screen.getByRole('button', { name: /drawer target/i }));
+      await screen.findByRole('button', { name: /^apri$/i });
+
+      // The Drawer portals to document.body, so scan the whole document.
+      expect(await axe(document.body)).toHaveNoViolations();
     });
   });
 });

@@ -1,9 +1,12 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { axe, toHaveNoViolations } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import CookieSettingsPage from '../page';
 import { CONSENT_KEY, CONSENT_VERSION, type CookieConsent } from '@/lib/cookie-consent';
+
+expect.extend(toHaveNoViolations);
 
 // Toast is a visual side-effect; assert it was called, don't render it.
 vi.mock('sonner', () => ({
@@ -132,6 +135,16 @@ describe('CookieSettingsPage', () => {
     const parsed = JSON.parse(localStorage.getItem(CONSENT_KEY)!) as CookieConsent;
     expect(parsed.analytics).toBe(false);
     expect(parsed.functional).toBe(false);
+  });
+
+  // #2955 Fase 3: three default entity="game" ToggleSwitch primitives plus
+  // three Btns render together here; guard the blocking axe AA gate.
+  it('has no axe AA violations with the toggles + Btns rendered together', async () => {
+    let container!: HTMLElement;
+    await act(async () => {
+      ({ container } = render(<CookieSettingsPage />));
+    });
+    expect(await axe(container)).toHaveNoViolations();
   });
 
   it('essential toggle is always checked and disabled', async () => {

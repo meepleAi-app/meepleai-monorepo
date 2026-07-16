@@ -33,7 +33,12 @@ export default function SessionStatsPage() {
   return (
     <div className="space-y-8 p-6">
       <div>
-        <h1 className="font-quicksand text-2xl font-bold">Session Analytics</h1>
+        <div className="flex items-center gap-2">
+          <span aria-hidden="true" className="text-2xl">
+            🧰
+          </span>
+          <h1 className="font-quicksand text-2xl font-bold">Session Analytics</h1>
+        </div>
         <p className="text-sm text-muted-foreground">
           Your gaming activity over the last 12 months
         </p>

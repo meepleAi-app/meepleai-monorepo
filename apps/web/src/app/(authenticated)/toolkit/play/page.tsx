@@ -33,7 +33,12 @@ export default function ToolkitPlayPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-foreground">Toolkit</h1>
+        <div className="flex items-center gap-2">
+          <span aria-hidden="true" className="text-xl">
+            🎮
+          </span>
+          <h1 className="text-xl font-bold text-foreground">Toolkit</h1>
+        </div>
         <input
           type="text"
           value={actorLabel}
@@ -46,7 +51,9 @@ export default function ToolkitPlayPage() {
 
       {/* Dadi */}
       <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Dadi</h2>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Dadi
+        </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {DEFAULT_TOOLKIT.dice.map(config => (
             <DiceRoller

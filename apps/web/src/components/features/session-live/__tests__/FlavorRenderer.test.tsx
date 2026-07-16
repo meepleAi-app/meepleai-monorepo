@@ -10,6 +10,7 @@ const LABELS: CatanLiveFlavorLabels = {
   panelAriaLabel: 'Pannello Catan',
   roundTemplate: 'Round {n}',
   activePlayerTemplate: 'Turno di {name}',
+  phaseTemplate: 'Fase: {name}',
   leaderboardHeading: 'Punti Vittoria',
   leaderBadgeLabel: 'In testa',
   scoreAriaTemplate: 'Punti di {name}: {score}',

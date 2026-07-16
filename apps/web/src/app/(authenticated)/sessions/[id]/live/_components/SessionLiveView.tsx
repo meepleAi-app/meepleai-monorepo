@@ -120,6 +120,7 @@ import { useCompleteLiveSession } from '@/hooks/mutations/useCompleteLiveSession
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useLiveSession } from '@/hooks/queries/useLiveSession';
 import { useLiveSessionDiary } from '@/hooks/queries/useLiveSessionDiary';
+import { useLiveSessionPhases } from '@/hooks/queries/useLiveSessionPhases';
 import { useSessionAgentLaunch } from '@/hooks/queries/useSessionAgentLaunch';
 import type { ChatImagePreview } from '@/hooks/useChatImageAttachments';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -1100,6 +1101,22 @@ export function SessionLiveView(): ReactElement {
 
   // ── G6a #2787: per-game Catan flavor (conditional tab) ────────────────────
   const showFlavorTab = hasFlavor(liveSessionDto?.gameSlug);
+
+  // #2787: live SignalR points (Points scoring) overlaid on the DTO leaderboard —
+  // the store's scoreData is fresher than the up-to-staletime LiveSessionDto.totalScore.
+  const catanLivePoints = useMemo<ReadonlyMap<string, number> | null>(() => {
+    if (endgameScoringType !== 'Points' || endgameScoreData == null) return null;
+    const scores = (
+      endgameScoreData as { scores: ReadonlyArray<{ playerId: string; points: number }> }
+    ).scores;
+    return new Map(scores.map(s => [s.playerId, s.points]));
+  }, [endgameScoringType, endgameScoreData]);
+
+  // #2787: current phase name for the flavor turn header. Fetched only when a flavor
+  // tab exists; TurnPhasesDto returns hasPhases:false/currentPhaseName:null → graceful.
+  const phasesQuery = useLiveSessionPhases(sessionId ?? '', showFlavorTab && sessionId != null);
+  const catanPhaseName = phasesQuery.data?.currentPhaseName ?? null;
+
   // Placeholder-bearing templates ({n}/{name}/{score}) are read RAW from
   // intl.messages so react-intl does NOT ICU-interpolate them — the flavor
   // component does the runtime .replace. Same pattern as the toolkitRenderer
@@ -1112,6 +1129,8 @@ export function SessionLiveView(): ReactElement {
       activePlayerTemplate:
         (intl.messages['pages.sessionLive.flavor.catan.activePlayerTemplate'] as string) ??
         'Turno di {name}',
+      phaseTemplate:
+        (intl.messages['pages.sessionLive.flavor.catan.phaseTemplate'] as string) ?? 'Fase: {name}',
       leaderboardHeading: t('pages.sessionLive.flavor.catan.leaderboardHeading'),
       leaderBadgeLabel: t('pages.sessionLive.flavor.catan.leaderBadgeLabel'),
       scoreAriaTemplate:
@@ -1362,6 +1381,8 @@ export function SessionLiveView(): ReactElement {
             view="live"
             session={liveSessionDto}
             labels={catanFlavorLabels}
+            livePoints={catanLivePoints}
+            phaseName={catanPhaseName}
             className="p-3"
           />
         ) : null;
@@ -1443,6 +1464,8 @@ export function SessionLiveView(): ReactElement {
     activeSession,
     liveSessionDto,
     catanFlavorLabels,
+    catanLivePoints,
+    catanPhaseName,
     sessionId,
     currentUser?.id,
     scoringPanelLabels,
@@ -1582,6 +1605,8 @@ export function SessionLiveView(): ReactElement {
           view="live"
           session={liveSessionDto}
           labels={catanFlavorLabels}
+          livePoints={catanLivePoints}
+          phaseName={catanPhaseName}
           className="p-3"
         />
       )}

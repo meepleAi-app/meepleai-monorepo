@@ -43,6 +43,10 @@ export interface FlavorRendererProps {
   readonly session: LiveSessionDto;
   readonly labels: CatanLiveFlavorLabels;
   readonly className?: string;
+  /** #2787: live SignalR points (playerId→points) forwarded to the flavor. */
+  readonly livePoints?: ReadonlyMap<string, number> | null;
+  /** #2787: current phase name forwarded to the flavor. */
+  readonly phaseName?: string | null;
 }
 
 export function FlavorRenderer({
@@ -51,8 +55,18 @@ export function FlavorRenderer({
   session,
   labels,
   className,
+  livePoints,
+  phaseName,
 }: FlavorRendererProps): ReactElement | null {
   const LazyFlavor = gameSlug != null ? FLAVOR_MAP[gameSlug]?.[view] : undefined;
   if (LazyFlavor == null) return null;
-  return <LazyFlavor session={session} labels={labels} className={className} />;
+  return (
+    <LazyFlavor
+      session={session}
+      labels={labels}
+      className={className}
+      livePoints={livePoints}
+      phaseName={phaseName}
+    />
+  );
 }

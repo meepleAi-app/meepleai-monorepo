@@ -223,6 +223,13 @@ vi.mock('@/hooks/queries/useLiveSessionDiary', () => ({
   useLiveSessionDiary: () => ({ data: diaryQueryData }),
 }));
 
+// ─── useLiveSessionPhases mock (#2787: flavor turn/phase header) ─────────────
+let phasesQueryData: { currentPhaseName: string | null } | null = null;
+
+vi.mock('@/hooks/queries/useLiveSessionPhases', () => ({
+  useLiveSessionPhases: () => ({ data: phasesQueryData }),
+}));
+
 // ─── useResolvePlayRecord mock (#2503) ───────────────────────────────────────
 // Controllable status + playRecordId (read via getters per render) + start spy.
 
@@ -402,6 +409,7 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.flavor.catan.panelAriaLabel': 'Pannello Catan',
   'pages.sessionLive.flavor.catan.roundTemplate': 'Round {n}',
   'pages.sessionLive.flavor.catan.activePlayerTemplate': 'Turno di {name}',
+  'pages.sessionLive.flavor.catan.phaseTemplate': 'Fase: {name}',
   'pages.sessionLive.flavor.catan.leaderboardHeading': 'Punti Vittoria',
   'pages.sessionLive.flavor.catan.leaderBadgeLabel': 'In testa',
   'pages.sessionLive.flavor.catan.scoreAriaTemplate': 'Punti di {name}: {score}',

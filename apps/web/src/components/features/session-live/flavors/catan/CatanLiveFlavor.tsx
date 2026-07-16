@@ -10,6 +10,7 @@ export interface CatanLiveFlavorLabels {
   readonly panelAriaLabel: string;
   readonly roundTemplate: string; // "Round {n}"
   readonly activePlayerTemplate: string; // "Turno di {name}"
+  readonly phaseTemplate: string; // "Fase: {name}"
   readonly leaderboardHeading: string;
   readonly leaderBadgeLabel: string;
   readonly scoreAriaTemplate: string; // "Punti di {name}: {score}"
@@ -21,6 +22,10 @@ export interface CatanLiveFlavorProps {
   readonly session: LiveSessionDto;
   readonly labels: CatanLiveFlavorLabels;
   readonly className?: string;
+  /** #2787: live SignalR points (playerId→points) overlaid on session.players.totalScore. */
+  readonly livePoints?: ReadonlyMap<string, number> | null;
+  /** #2787: current phase name (TurnPhasesDto.currentPhaseName); null when none. */
+  readonly phaseName?: string | null;
 }
 
 function sumDimension(
@@ -37,8 +42,14 @@ export function CatanLiveFlavor({
   session,
   labels,
   className,
+  livePoints,
+  phaseName,
 }: CatanLiveFlavorProps): ReactElement {
   const { players, roundScores, scoringConfig, currentTurnIndex, currentTurnPlayerId } = session;
+
+  // #2787: live SignalR points win over the DTO's (staler) totalScore when present.
+  const scoreOf = (player: (typeof players)[number]): number =>
+    livePoints?.get(player.id) ?? player.totalScore;
 
   if (players.length === 0) {
     return (
@@ -53,10 +64,14 @@ export function CatanLiveFlavor({
     );
   }
 
-  const sorted = [...players].sort((a, b) => b.totalScore - a.totalScore);
-  const leadScore = sorted[0]?.totalScore;
+  const sorted = [...players].sort((a, b) => scoreOf(b) - scoreOf(a));
+  const leadScore = sorted[0] != null ? scoreOf(sorted[0]) : undefined;
   const activePlayer = players.find(p => p.id === currentTurnPlayerId) ?? null;
   const dimensions = scoringConfig.enabledDimensions;
+  const subHeaderParts = [
+    activePlayer ? labels.activePlayerTemplate.replace('{name}', activePlayer.displayName) : null,
+    phaseName ? labels.phaseTemplate.replace('{name}', phaseName) : null,
+  ].filter((s): s is string => s != null);
 
   return (
     <section
@@ -73,10 +88,8 @@ export function CatanLiveFlavor({
         <span className="text-sm font-semibold text-foreground">
           {labels.roundTemplate.replace('{n}', String(currentTurnIndex + 1))}
         </span>
-        {activePlayer && (
-          <span className="text-xs text-muted-foreground">
-            {labels.activePlayerTemplate.replace('{name}', activePlayer.displayName)}
-          </span>
+        {subHeaderParts.length > 0 && (
+          <span className="text-xs text-muted-foreground">{subHeaderParts.join(' · ')}</span>
         )}
       </header>
 
@@ -87,10 +100,11 @@ export function CatanLiveFlavor({
         </h3>
         <ul role="list" className="flex flex-col gap-1" aria-label={labels.leaderboardHeading}>
           {sorted.map((player, idx) => {
-            const isLeader = player.totalScore === leadScore && idx === 0;
+            const playerScore = scoreOf(player);
+            const isLeader = playerScore === leadScore && idx === 0;
             const scoreAria = labels.scoreAriaTemplate
               .replace('{name}', player.displayName)
-              .replace('{score}', String(player.totalScore));
+              .replace('{score}', String(playerScore));
             return (
               <li
                 key={player.id}
@@ -121,7 +135,7 @@ export function CatanLiveFlavor({
                     isLeader ? 'text-entity-session' : 'text-foreground',
                   ].join(' ')}
                 >
-                  {player.totalScore}
+                  {playerScore}
                 </span>
               </li>
             );

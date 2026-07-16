@@ -3320,6 +3320,7 @@
           "panelAriaLabel": "Catan panel",
           "roundTemplate": "Round {n}",
           "activePlayerTemplate": "{name}'s turn",
+          "phaseTemplate": "Phase: {name}",
           "leaderboardHeading": "Victory Points",
           "leaderBadgeLabel": "Leading",
           "scoreAriaTemplate": "{name}'s points: {score}",

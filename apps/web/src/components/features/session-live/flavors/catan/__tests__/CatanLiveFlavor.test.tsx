@@ -10,6 +10,7 @@ const LABELS: CatanLiveFlavorLabels = {
   panelAriaLabel: 'Pannello Catan',
   roundTemplate: 'Round {n}',
   activePlayerTemplate: 'Turno di {name}',
+  phaseTemplate: 'Fase: {name}',
   leaderboardHeading: 'Punti Vittoria',
   leaderBadgeLabel: 'In testa',
   scoreAriaTemplate: 'Punti di {name}: {score}',
@@ -140,6 +141,50 @@ describe('CatanLiveFlavor', () => {
     const p1Cell = dim.querySelector('[data-player="p1"]'); // robust: avoids ambiguous "4"
     expect(p1Cell).not.toBeNull();
     expect(p1Cell).toHaveTextContent('4');
+  });
+
+  it('overlays live SignalR points over the DTO totalScore (re-sorts + leader)', () => {
+    // DTO: Alice 8, Bruno 6. Live: Bruno 12, Alice 8 → Bruno now leads.
+    const livePoints = new Map<string, number>([
+      ['p1', 8],
+      ['p2', 12],
+    ]);
+    const { container } = render(
+      <CatanLiveFlavor session={makeSession()} labels={LABELS} livePoints={livePoints} />
+    );
+    const lb = container.querySelector('[data-slot="catan-flavor-leaderboard"]') as HTMLElement;
+    const rows = within(lb).getAllByRole('listitem');
+    expect(rows[0]).toHaveTextContent('Bruno'); // live 12 leads
+    expect(rows[0]).toHaveTextContent('12');
+    expect(rows[1]).toHaveTextContent('Alice');
+    expect(rows[1]).toHaveTextContent('8');
+  });
+
+  it('falls back to totalScore for players missing from livePoints', () => {
+    const livePoints = new Map<string, number>([['p2', 20]]); // only Bruno has a live entry
+    const { container } = render(
+      <CatanLiveFlavor session={makeSession()} labels={LABELS} livePoints={livePoints} />
+    );
+    const lb = container.querySelector('[data-slot="catan-flavor-leaderboard"]') as HTMLElement;
+    const rows = within(lb).getAllByRole('listitem');
+    expect(rows[0]).toHaveTextContent('Bruno'); // 20 (live)
+    expect(rows[0]).toHaveTextContent('20');
+    expect(rows[1]).toHaveTextContent('Alice'); // 8 (DTO fallback)
+  });
+
+  it('renders the phase name in the header when provided (joined with active player)', () => {
+    const { container } = render(
+      <CatanLiveFlavor session={makeSession()} labels={LABELS} phaseName="Costruisci" />
+    );
+    const header = container.querySelector('[data-slot="catan-flavor-turn"]');
+    expect(header).toHaveTextContent('Fase: Costruisci');
+    expect(header).toHaveTextContent('Turno di Bruno'); // active player still shown
+  });
+
+  it('omits the phase segment when phaseName is null/absent', () => {
+    const { container } = render(<CatanLiveFlavor session={makeSession()} labels={LABELS} />);
+    const header = container.querySelector('[data-slot="catan-flavor-turn"]');
+    expect(header).not.toHaveTextContent('Fase:');
   });
 });
 

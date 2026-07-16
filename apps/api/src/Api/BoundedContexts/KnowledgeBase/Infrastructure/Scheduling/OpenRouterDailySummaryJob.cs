@@ -1,5 +1,6 @@
 using System.Globalization;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
@@ -130,7 +131,7 @@ internal sealed class OpenRouterDailySummaryJob : IJob
                     severity: severity,
                     title: title,
                     message: message,
-                    link: "/admin/agents/usage",
+                    link: NotificationRoutes.AdminAgentsUsage,
                     metadata: metadata);
 
                 await _notificationRepo.AddAsync(n, ct).ConfigureAwait(false);

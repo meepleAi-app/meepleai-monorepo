@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.Infrastructure;
@@ -68,7 +69,7 @@ internal sealed class AgentLinkedNotificationEventHandler : INotificationHandler
                     Payload = new GenericPayload(
                         "Agent Linked",
                         $"Agent linked to '{gameTitle}'. Game is ready for AI chat."),
-                    DeepLinkPath = $"/admin/shared-games/{notification.GameId}",
+                    DeepLinkPath = NotificationRoutes.AdminSharedGame(notification.GameId),
                     // Issue #1937 / CF-1: propagate event id for dispatcher dedup
                     SourceEventId = notification.EventId
                 }, cancellationToken).ConfigureAwait(false);

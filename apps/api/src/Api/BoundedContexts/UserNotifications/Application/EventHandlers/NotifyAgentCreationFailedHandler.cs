@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using MediatR;
@@ -88,12 +89,12 @@ internal sealed class NotifyAgentCreationFailedHandler : INotificationHandler<Au
             "AGENT_SLOT_QUOTA_EXCEEDED" => (
                 "Limite agent raggiunto",
                 "Hai raggiunto il limite di agent del tuo piano. Esegui l'upgrade o elimina un agent esistente per crearne uno nuovo.",
-                "/settings/subscription"
+                NotificationRoutes.SettingsSubscription
             ),
             "TIER_FEATURE_LOCKED" => (
                 "Funzionalità non disponibile",
                 "La creazione di agent richiede un piano superiore.",
-                "/settings/subscription"
+                NotificationRoutes.SettingsSubscription
             ),
             // Fallback covers both the documented "AGENT_CREATION_FAILED" code and
             // any unknown ErrorCode value (defensive: don't crash on a value the
@@ -101,7 +102,7 @@ internal sealed class NotifyAgentCreationFailedHandler : INotificationHandler<Au
             _ => (
                 "Creazione agent fallita",
                 "Non siamo riusciti a creare automaticamente un agent per il PDF. Riprova manualmente dal toolkit del gioco o contatta il supporto.",
-                $"/library/private/{ev.GameId}/toolkit"
+                NotificationRoutes.PrivateToolkit(ev.GameId)
             )
         };
     }

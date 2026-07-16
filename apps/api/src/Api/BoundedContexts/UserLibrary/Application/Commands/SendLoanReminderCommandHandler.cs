@@ -1,6 +1,7 @@
 using Api.BoundedContexts.UserLibrary.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
@@ -74,7 +75,7 @@ internal class SendLoanReminderCommandHandler : ICommandHandler<SendLoanReminder
             severity: NotificationSeverity.Info,
             title: "Loan Reminder",
             message: message,
-            link: $"/games/{command.GameId}",
+            link: NotificationRoutes.Game(command.GameId),
             metadata: $"{{\"gameId\":\"{command.GameId}\",\"type\":\"loan-reminder\"}}"
         );
 

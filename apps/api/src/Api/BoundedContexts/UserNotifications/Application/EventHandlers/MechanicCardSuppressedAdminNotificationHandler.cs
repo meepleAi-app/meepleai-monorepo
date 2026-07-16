@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.Infrastructure;
@@ -21,7 +22,7 @@ internal sealed class MechanicCardSuppressedAdminNotificationHandler
 {
     // Metrics (#532) + re-process queue (#534) routes are not built yet; the dashboard is the closest
     // real target and links to per-game comprehension metrics.
-    private const string DeepLink = "/admin/knowledge-base/mechanic-extractor/dashboard";
+    private const string DeepLink = NotificationRoutes.AdminMechanicExtractorDashboard;
 
     private readonly INotificationDispatcher _dispatcher;
     private readonly IUserRepository _userRepository;

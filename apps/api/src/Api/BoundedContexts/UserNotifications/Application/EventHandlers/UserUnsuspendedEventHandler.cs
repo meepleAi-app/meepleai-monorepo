@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Authentication.Domain.Events;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.Infrastructure;
@@ -55,7 +56,7 @@ internal sealed class UserUnsuspendedEventHandler : INotificationHandler<UserUns
                 Payload = new GenericPayload(
                     "Account Reactivated",
                     "Your account has been reactivated. Welcome back!"),
-                DeepLinkPath = "/dashboard",
+                DeepLinkPath = NotificationRoutes.Dashboard,
                 // Issue #1937 / CF-1: propagate event id for dispatcher dedup
                 SourceEventId = notification.EventId
             }, cancellationToken).ConfigureAwait(false);

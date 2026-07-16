@@ -1,5 +1,6 @@
 using System.Globalization;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
@@ -190,7 +191,7 @@ internal sealed class OpenRouterBudgetAlertBackgroundService : BackgroundService
                 severity: severity,
                 title: title,
                 message: message,
-                link: "/admin/agents/usage",
+                link: NotificationRoutes.AdminAgentsUsage,
                 metadata: metadata);
 
             await notificationRepo.AddAsync(n, cancellationToken).ConfigureAwait(false);

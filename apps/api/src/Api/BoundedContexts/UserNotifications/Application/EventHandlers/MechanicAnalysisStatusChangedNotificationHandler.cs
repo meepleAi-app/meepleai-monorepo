@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.Infrastructure;
@@ -89,7 +90,7 @@ internal sealed class MechanicAnalysisStatusChangedNotificationHandler
             Type = notificationType,
             RecipientUserId = analysis.CreatedBy,
             Payload = new GenericPayload(title, body),
-            DeepLinkPath = $"/admin/mechanic-analyses/{domainEvent.AnalysisId}/review",
+            DeepLinkPath = NotificationRoutes.AdminMechanicAnalysisReview(domainEvent.AnalysisId),
             // Issue #1937 / CF-1: propagate event id for dispatcher dedup
             SourceEventId = domainEvent.EventId
         }, cancellationToken).ConfigureAwait(false);

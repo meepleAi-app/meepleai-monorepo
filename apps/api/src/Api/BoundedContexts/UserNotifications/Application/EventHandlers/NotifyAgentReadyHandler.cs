@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using MediatR;
@@ -34,7 +35,7 @@ internal sealed class NotifyAgentReadyHandler : INotificationHandler<AgentAutoCr
         try
         {
             var gameName = notification.GameName;
-            var deepLink = $"/library/private/{notification.PrivateGameId}/toolkit";
+            var deepLink = NotificationRoutes.PrivateToolkit(notification.PrivateGameId);
 
             await _dispatcher.DispatchAsync(new NotificationMessage
             {

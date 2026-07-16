@@ -52,16 +52,23 @@ internal class GetMetricsTimeSeriesQueryHandler : IRequestHandler<GetMetricsTime
 
         await Task.WhenAll(cpuTask, memoryTask, requestsTask).ConfigureAwait(false);
 
+        var cpu = await cpuTask.ConfigureAwait(false);
+        var memory = await memoryTask.ConfigureAwait(false);
+        var requests = await requestsTask.ConfigureAwait(false);
+
+        // The 3 queries hit the same Prometheus: if it is down they all throw.
+        // "source available" = at least one responded without exception (0 points = real zero,
+        // NOT a source outage — Issue #3045 requires the FE to distinguish the two).
+        var sourceAvailable = cpu.Succeeded || memory.Succeeded || requests.Succeeded;
+
         return new MetricsTimeSeriesResponse(
-            await cpuTask.ConfigureAwait(false),
-            await memoryTask.ConfigureAwait(false),
-            await requestsTask.ConfigureAwait(false));
+            cpu.Points, memory.Points, requests.Points, sourceAvailable);
     }
 
     /// <summary>
     /// Executes a PromQL query with graceful degradation (returns empty on failure).
     /// </summary>
-    private async Task<IReadOnlyCollection<MetricsTimeSeriesDataPoint>> QuerySafeAsync(
+    private async Task<(IReadOnlyCollection<MetricsTimeSeriesDataPoint> Points, bool Succeeded)> QuerySafeAsync(
         string query,
         DateTime start,
         DateTime end,
@@ -83,12 +90,12 @@ internal class GetMetricsTimeSeriesQueryHandler : IRequestHandler<GetMetricsTime
                 .ToList();
 
             _logger.LogDebug("{MetricName} query returned {Count} data points", metricName, dataPoints.Count);
-            return dataPoints;
+            return (dataPoints, true);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to query {MetricName} metrics, returning empty series", metricName);
-            return Array.Empty<MetricsTimeSeriesDataPoint>();
+            return (Array.Empty<MetricsTimeSeriesDataPoint>(), false);
         }
     }
 

@@ -33,7 +33,8 @@ internal record GetMetricsTimeSeriesQuery : IRequest<MetricsTimeSeriesResponse>
 internal record MetricsTimeSeriesResponse(
     IReadOnlyCollection<MetricsTimeSeriesDataPoint> Cpu,
     IReadOnlyCollection<MetricsTimeSeriesDataPoint> Memory,
-    IReadOnlyCollection<MetricsTimeSeriesDataPoint> Requests);
+    IReadOnlyCollection<MetricsTimeSeriesDataPoint> Requests,
+    bool SourceAvailable);
 
 /// <summary>
 /// A single data point in a metrics time series.

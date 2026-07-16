@@ -22,6 +22,11 @@ import React, { useMemo, useRef, useState } from 'react';
 
 import { X } from 'lucide-react';
 
+import {
+  normalizePriorityString,
+  PRIORITY_ORDER,
+  type Priority,
+} from '@/app/(authenticated)/library/wishlist/_lib/wishlist-filters';
 import { toast } from '@/components/layout/Toast';
 import {
   Dialog,
@@ -46,10 +51,6 @@ import { cn } from '@/lib/utils';
 // Types & constants
 // ============================================================================
 
-type Priority = 'high' | 'medium' | 'low';
-
-const PRIORITY_ORDER: readonly Priority[] = ['high', 'medium', 'low'];
-const KNOWN_PRIORITIES: readonly Priority[] = ['high', 'medium', 'low'];
 const NOTES_MAX = 200;
 const NOTES_NEAR_LIMIT = NOTES_MAX - 30;
 
@@ -76,12 +77,6 @@ interface AddToWishlistDialogProps {
 // ============================================================================
 // Helpers
 // ============================================================================
-
-/** Case-insensitively normalizes a raw `priority` string, defaulting to 'medium'. */
-function normalizePriority(raw: string | undefined): Priority {
-  const lower = (raw ?? '').toLowerCase();
-  return (KNOWN_PRIORITIES as readonly string[]).includes(lower) ? (lower as Priority) : 'medium';
-}
 
 function priorityChipClasses(key: Priority, isSelected: boolean): string {
   if (!isSelected) {
@@ -143,7 +138,7 @@ export function AddToWishlistDialog({
    * 'medium'. Edit mode always reflects the existing item's priority.
    */
   function initialPriority(): Priority {
-    if (isEdit && item) return normalizePriority(item.priority);
+    if (isEdit && item) return normalizePriorityString(item.priority);
     return prefillGameId ? 'high' : 'medium';
   }
 
@@ -322,7 +317,7 @@ export function AddToWishlistDialog({
     );
   }
 
-  const editSubPriority = isEdit && item ? normalizePriority(item.priority) : priority;
+  const editSubPriority = isEdit && item ? normalizePriorityString(item.priority) : priority;
   const editSubName = isEdit && item ? (item.gameName ?? selectedGame?.title ?? '') : '';
 
   return (

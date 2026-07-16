@@ -22,7 +22,10 @@
  * has none of those fields.
  */
 
-import type { Priority } from '@/app/(authenticated)/library/wishlist/_lib/wishlist-filters';
+import {
+  normalizePriorityString,
+  type Priority,
+} from '@/app/(authenticated)/library/wishlist/_lib/wishlist-filters';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -47,14 +50,6 @@ interface MeepleWishlistCardProps {
 // ============================================================================
 // Helpers
 // ============================================================================
-
-const KNOWN_PRIORITIES: readonly Priority[] = ['high', 'medium', 'low'];
-
-/** Case-insensitively normalizes a raw `priority` string, defaulting to 'medium' for unknown values. */
-function normalizePriority(raw: string): Priority {
-  const lower = raw.toLowerCase();
-  return (KNOWN_PRIORITIES as readonly string[]).includes(lower) ? (lower as Priority) : 'medium';
-}
 
 const MS_PER_MINUTE = 60_000;
 const MS_PER_HOUR = 60 * MS_PER_MINUTE;
@@ -101,7 +96,7 @@ export function MeepleWishlistCard({
 }: MeepleWishlistCardProps) {
   const { t, formatNumber, formatDate, formatRelativeTime } = useTranslation();
 
-  const priority = normalizePriority(item.priority);
+  const priority = normalizePriorityString(item.priority);
   const isHighPriority = priority === 'high';
   const priorityLabel = t(`pages.library.wishlist.priority.${priority}`);
   const resolvedGameName =

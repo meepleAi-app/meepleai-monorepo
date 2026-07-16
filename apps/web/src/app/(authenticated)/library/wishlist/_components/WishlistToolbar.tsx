@@ -28,6 +28,18 @@ const SEARCH_DEBOUNCE_MS = 400;
 
 const PRIORITY_ORDER: readonly Priority[] = ['high', 'medium', 'low'];
 
+/**
+ * Per-priority icon, matching `admin-mockups/design_files/sp4-library-wishlist.jsx`'s
+ * `PRIO` map (`high` → 🔥, `medium` → ⭐, `low` → ⬇️). Rendered as an
+ * `aria-hidden="true"` span before the label so it's decorative only — the
+ * accessible name still comes from `aria-label`.
+ */
+const PRIORITY_ICONS: Record<Priority, string> = {
+  high: '🔥',
+  medium: '⭐',
+  low: '⬇️',
+};
+
 const SORT_OPTIONS: readonly WishlistSort[] = ['priority', 'recent', 'oldest', 'alpha', 'price'];
 
 /**
@@ -220,6 +232,7 @@ export function WishlistToolbar({
                 onClick={() => togglePriority(priority)}
                 className={cn(CHIP_BASE_CLASSNAME, PRIORITY_CHIP_CLASSNAMES[priority])}
               >
+                <span aria-hidden="true">{PRIORITY_ICONS[priority]}</span>
                 {t(`pages.library.wishlist.priority.${priority}`)}
                 <span className="text-[10px] font-bold opacity-70">{priorityCounts[priority]}</span>
               </button>

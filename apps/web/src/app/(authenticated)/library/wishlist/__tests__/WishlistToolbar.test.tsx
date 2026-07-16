@@ -187,6 +187,14 @@ describe('WishlistToolbar', () => {
     expect(screen.getByRole('checkbox', { name: PRIORITY_I18N.low })).toHaveTextContent('3');
   });
 
+  it('shows the priority icon (mockup PRIO map) in each priority chip', () => {
+    renderToolbar();
+
+    expect(screen.getByRole('checkbox', { name: PRIORITY_I18N.high })).toHaveTextContent('🔥');
+    expect(screen.getByRole('checkbox', { name: PRIORITY_I18N.medium })).toHaveTextContent('⭐');
+    expect(screen.getByRole('checkbox', { name: PRIORITY_I18N.low })).toHaveTextContent('⬇️');
+  });
+
   it('calls onChange with the new sort when a sort option is selected', async () => {
     const user = userEvent.setup();
     const { onChange } = renderToolbar({ state: baseState({ sort: 'priority' }) });

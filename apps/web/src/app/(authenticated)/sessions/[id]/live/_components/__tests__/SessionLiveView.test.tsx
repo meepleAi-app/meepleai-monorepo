@@ -389,6 +389,7 @@ const MESSAGES: Record<string, string> = {
   // Interactions sub-PR labels
   'pages.sessionLive.rightColumn.tabsAriaLabel': 'Pannelli sessione',
   // G1 #2374 sess.46r canonical tab keys
+  'pages.sessionLive.rightColumn.tabFlavor': 'Catan',
   'pages.sessionLive.rightColumn.tabScore': 'Score',
   'pages.sessionLive.rightColumn.tabTurn': 'Turni',
   'pages.sessionLive.rightColumn.tabWidget': 'Widget',
@@ -398,6 +399,14 @@ const MESSAGES: Record<string, string> = {
   // Back-compat (legacy keys for older callers — not used by SessionLiveView post-T4)
   'pages.sessionLive.rightColumn.tabTools': 'Strumenti',
   'pages.sessionLive.rightColumn.tabChat': 'Chat',
+  'pages.sessionLive.flavor.catan.panelAriaLabel': 'Pannello Catan',
+  'pages.sessionLive.flavor.catan.roundTemplate': 'Round {n}',
+  'pages.sessionLive.flavor.catan.activePlayerTemplate': 'Turno di {name}',
+  'pages.sessionLive.flavor.catan.leaderboardHeading': 'Punti Vittoria',
+  'pages.sessionLive.flavor.catan.leaderBadgeLabel': 'In testa',
+  'pages.sessionLive.flavor.catan.scoreAriaTemplate': 'Punti di {name}: {score}',
+  'pages.sessionLive.flavor.catan.dimensionsHeading': 'Dettaglio punti',
+  'pages.sessionLive.flavor.catan.emptyLabel': 'In attesa dei dati della partita…',
   // ChatAgentPanel labels (G1 #2374 T3 — composite header)
   'pages.sessionLive.chatAgent.title': 'ChatAgent',
   'pages.sessionLive.chatAgent.agentNameAriaLabel': 'Nome agente {name}',
@@ -2602,5 +2611,42 @@ describe('SessionLiveView — #2588 A4: Arbitro tab + dispute SignalR hydration'
     searchParamsMap['tab'] = 'agent';
     const { container } = renderWithIntl(<SessionLiveView />);
     expect(container.querySelector('[data-slot="agent-dispute-tab-content"]')).toBeInTheDocument();
+  });
+});
+
+describe('SessionLiveView — Catan flavor tab (#2787)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
+    mockParamsId = 'session-abc-123';
+    IS_VISUAL_TEST_BUILD_MOCK = false;
+    useLiveSessionMock.mockReturnValue({
+      data: MOCK_SESSION_DTO,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+  });
+
+  it('shows the Catan flavor tab for a catan session (gameSlug=catan)', () => {
+    useLiveSessionMock.mockReturnValue({
+      data: { ...MOCK_SESSION_DTO, gameSlug: 'catan' } as unknown as LiveSessionDto,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+    renderWithIntl(<SessionLiveView />);
+    expect(screen.getByRole('tab', { name: 'Catan' })).toBeInTheDocument();
+  });
+
+  it('hides the flavor tab for a non-catan session (mage-knight default)', () => {
+    renderWithIntl(<SessionLiveView />);
+    expect(screen.getByRole('tab', { name: 'Score' })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Catan' })).not.toBeInTheDocument();
   });
 });

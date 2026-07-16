@@ -29,6 +29,7 @@ const LABELS: MobileBodyLabels = {
   closeSheetAriaLabel: 'Chiudi pannello',
   drawerTitle: 'Strumenti sessione',
   tabsAriaLabel: 'Tab strumenti',
+  tabFlavor: 'Catan',
   tabScore: 'Score',
   tabTurn: 'Turni',
   tabWidget: 'Widget',

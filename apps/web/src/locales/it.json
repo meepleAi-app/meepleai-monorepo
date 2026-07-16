@@ -3410,6 +3410,7 @@
       },
       "rightColumn": {
         "tabsAriaLabel": "Pannelli sessione",
+        "tabFlavor": "Catan",
         "tabScore": "Score",
         "tabTurn": "Turni",
         "tabWidget": "Widget",
@@ -3418,6 +3419,18 @@
         "tabAgent": "Arbitro",
         "tabTools": "Strumenti",
         "tabChat": "Chat"
+      },
+      "flavor": {
+        "catan": {
+          "panelAriaLabel": "Pannello Catan",
+          "roundTemplate": "Round {n}",
+          "activePlayerTemplate": "Turno di {name}",
+          "leaderboardHeading": "Punti Vittoria",
+          "leaderBadgeLabel": "In testa",
+          "scoreAriaTemplate": "Punti di {name}: {score}",
+          "dimensionsHeading": "Dettaglio punti",
+          "emptyLabel": "In attesa dei dati della partita…"
+        }
       },
       "photosTab": {
         "galleryHeading": "Galleria foto della partita",

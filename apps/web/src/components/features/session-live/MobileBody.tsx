@@ -41,6 +41,7 @@ export interface MobileBodyLabels {
   readonly drawerTitle: string;
   /** aria-label for the drawer's role="tablist". */
   readonly tabsAriaLabel: string;
+  readonly tabFlavor: string;
   readonly tabScore: string;
   readonly tabTurn: string;
   readonly tabWidget: string;
@@ -63,6 +64,8 @@ export interface MobileBodyProps {
   /** Tab body for the currently active drawer tab (parent owns the switch). */
   readonly sheetContent: ReactNode;
   readonly labels: MobileBodyLabels;
+  /** #2787 — when true, the drawer shows a game-conditional 'flavor' tab. */
+  readonly showFlavorTab?: boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -75,6 +78,7 @@ export function MobileBody({
   onSheetTabChange,
   sheetContent,
   labels,
+  showFlavorTab = false,
 }: MobileBodyProps): ReactElement {
   return (
     <div
@@ -123,10 +127,12 @@ export function MobileBody({
         onOpenChange={onSheetOpenChange}
         activeTab={sheetActiveTab}
         onTabChange={onSheetTabChange}
+        showFlavorTab={showFlavorTab}
         labels={{
           drawerTitle: labels.drawerTitle,
           closeAriaLabel: labels.closeSheetAriaLabel,
           tabsAriaLabel: labels.tabsAriaLabel,
+          tabFlavor: labels.tabFlavor,
           tabScore: labels.tabScore,
           tabTurn: labels.tabTurn,
           tabWidget: labels.tabWidget,

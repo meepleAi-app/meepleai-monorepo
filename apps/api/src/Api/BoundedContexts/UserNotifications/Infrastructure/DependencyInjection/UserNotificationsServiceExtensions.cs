@@ -1,6 +1,7 @@
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Configuration;
+using Api.BoundedContexts.UserNotifications.Infrastructure.Email;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Persistence;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Scheduling;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Services;
@@ -50,6 +51,11 @@ internal static class UserNotificationsServiceExtensions
         services.AddSingleton<ISlackMessageBuilder, BadgeSlackBuilder>();
         services.AddSingleton<ISlackMessageBuilder, AdminAlertSlackBuilder>();
         services.AddSingleton<SlackMessageBuilderFactory>();
+
+        // Email message builders (issue #3026). MVP ships only the generic fallback; register per-type
+        // IEmailMessageBuilder implementations here later — the factory resolves them automatically.
+        services.AddSingleton<GenericEmailBuilder>();
+        services.AddSingleton<EmailMessageBuilderFactory>();
 
         // Named HttpClient for Slack API with 10s timeout and circuit breaker.
         // Circuit breaker opens after 5 consecutive 5xx/timeout errors, stays open 2 minutes.
@@ -143,6 +149,23 @@ internal static class UserNotificationsServiceExtensions
                 .WithIdentity("slack-notification-processor-trigger", "notifications")
                 .WithCronSchedule("0/10 * * * * ?")
                 .WithDescription("Processes queued Slack notifications with rate limiting"));
+        });
+
+        // Issue #3026: Email notification processor job - every 30 seconds.
+        // Drains channel_type=email items from notification_queue_items (previously orphaned — nothing
+        // consumed that channel). 30s cadence matches the sibling email-delivery EmailProcessorJob:
+        // email is not latency-critical, and a slower tick keeps SMTP throughput/backoff sane.
+        services.AddQuartz(q =>
+        {
+            q.AddJob<EmailNotificationProcessorJob>(opts => opts
+                .WithIdentity("email-notification-processor-job", "notifications")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("email-notification-processor-job", "notifications")
+                .WithIdentity("email-notification-processor-trigger", "notifications")
+                .WithCronSchedule("0/30 * * * * ?")  // Every 30 seconds
+                .WithDescription("Processes queued email notifications (notification_queue_items, channel=email)"));
         });
 
         // ISSUE-40: Dead letter monitor job - hourly

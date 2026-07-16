@@ -157,7 +157,7 @@ Formalise a policy: **only notification deep link paths that are embedded in out
 
 ## Implementation Guidance
 
-1. **`NotificationRoutes` static class**: create `apps/web/src/lib/notifications/notification-routes.ts` with typed path constructors:
+1. **`NotificationRoutes` static class**: create `apps/web/src/lib/constants/notification-routes.ts` (the FE file MUST live under `lib/constants/` — this is what `scripts/lint-cross-lang-constants.sh` globs; `lib/notifications/` would make the drift gate silently no-op) with typed path constructors:
    ```typescript
    export const NotificationRoutes = {
      gameNight: (id: string) => `/game-nights/${id}`,
@@ -167,7 +167,7 @@ Formalise a policy: **only notification deep link paths that are embedded in out
      kbDetail: (id: string) => `/knowledge-base/${id}`,
    } as const;
    ```
-   C# equivalent in `apps/api/src/Api/BoundedContexts/UserNotifications/Application/Services/NotificationRoutes.cs`:
+   C# equivalent in `apps/api/src/Api/BoundedContexts/UserNotifications/Application/Constants/NotificationRoutes.cs` (BE file MUST live under `**/Constants/` for the same lint glob):
    ```csharp
    internal static class NotificationRoutes
    {

@@ -2,6 +2,9 @@
 
 import { type ReactElement } from 'react';
 
+import { useIntl } from 'react-intl';
+
+import { useTranslation } from '@/hooks/useTranslation';
 import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
 import { hasRequiredRole, type ParticipantRole } from '@/lib/session-live/participant-role';
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';
@@ -12,7 +15,8 @@ import { CatanHexBoard } from './CatanHexBoard';
 import { CatanPlayerCard, type CatanPlayerCardLabels } from './CatanPlayerCard';
 import { useCatanStateEditor } from './use-catan-state-editor';
 
-export interface CatanLiveFlavorLabels extends CatanPlayerCardLabels {
+/** Internal-only — no longer a component prop; the flavor self-builds it via i18n. */
+interface CatanLiveFlavorLabels extends CatanPlayerCardLabels {
   readonly panelAriaLabel: string;
   readonly roundTemplate: string; // "Round {n}"
   readonly activePlayerTemplate: string; // "Turno di {name}"
@@ -28,7 +32,6 @@ export interface CatanLiveFlavorLabels extends CatanPlayerCardLabels {
 
 export interface CatanLiveFlavorProps {
   readonly session: LiveSessionDto;
-  readonly labels: CatanLiveFlavorLabels;
   readonly viewerRole: ParticipantRole;
   readonly sessionId: string;
   readonly className?: string;
@@ -38,16 +41,55 @@ export interface CatanLiveFlavorProps {
 
 export function CatanLiveFlavor({
   session,
-  labels,
   viewerRole,
   sessionId,
   className,
   livePoints,
   phaseName,
 }: CatanLiveFlavorProps): ReactElement {
+  const { t } = useTranslation();
+  const intl = useIntl();
   const isHost = hasRequiredRole(viewerRole, 'Host');
   const playerIds = session.players.map(p => p.id);
   const editor = useCatanStateEditor(sessionId, playerIds);
+
+  // Placeholder-bearing templates ({n}/{name}/{score}) are read RAW from
+  // intl.messages so react-intl does NOT ICU-interpolate them — the flavor
+  // component does the runtime .replace. Same pattern as the toolkitRenderer
+  // aria templates. Non-placeholder labels use t() normally.
+  const labels: CatanLiveFlavorLabels = {
+    panelAriaLabel: t('pages.sessionLive.flavor.catan.panelAriaLabel'),
+    roundTemplate:
+      (intl.messages['pages.sessionLive.flavor.catan.roundTemplate'] as string) ?? 'Round {n}',
+    activePlayerTemplate:
+      (intl.messages['pages.sessionLive.flavor.catan.activePlayerTemplate'] as string) ??
+      'Turno di {name}',
+    phaseTemplate:
+      (intl.messages['pages.sessionLive.flavor.catan.phaseTemplate'] as string) ?? 'Fase: {name}',
+    initBoardCta: t('pages.sessionLive.flavor.catan.initBoardCta'),
+    viewerWaiting: t('pages.sessionLive.flavor.catan.viewerWaiting'),
+    hexAriaTemplate:
+      (intl.messages['pages.sessionLive.flavor.catan.hexAriaTemplate'] as string) ??
+      '{terrain} {number}',
+    robberLabel: t('pages.sessionLive.flavor.catan.robberLabel'),
+    diceLastLabel: t('pages.sessionLive.flavor.catan.diceLastLabel'),
+    diceHistoryLabel: t('pages.sessionLive.flavor.catan.diceHistoryLabel'),
+    rollAriaTemplate:
+      (intl.messages['pages.sessionLive.flavor.catan.rollAriaTemplate'] as string) ??
+      'Registra tiro {n}',
+    vpLabel: t('pages.sessionLive.flavor.catan.vpLabel'),
+    handLabel: t('pages.sessionLive.flavor.catan.handLabel'),
+    devLabel: t('pages.sessionLive.flavor.catan.devLabel'),
+    settlementsLabel: t('pages.sessionLive.flavor.catan.settlementsLabel'),
+    citiesLabel: t('pages.sessionLive.flavor.catan.citiesLabel'),
+    roadsLabel: t('pages.sessionLive.flavor.catan.roadsLabel'),
+    longestRoadLabel: t('pages.sessionLive.flavor.catan.longestRoadLabel'),
+    largestArmyLabel: t('pages.sessionLive.flavor.catan.largestArmyLabel'),
+    incAriaTemplate:
+      (intl.messages['pages.sessionLive.flavor.catan.incAriaTemplate'] as string) ?? '{field} +1',
+    decAriaTemplate:
+      (intl.messages['pages.sessionLive.flavor.catan.decAriaTemplate'] as string) ?? '{field} -1',
+  };
 
   const rawGameState = useLiveSessionStore(s => s.gameState);
   // Parse defensively; a non-catan gameState (or none) → empty view.

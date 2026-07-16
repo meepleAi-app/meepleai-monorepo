@@ -2219,6 +2219,111 @@
         "nextPage": "Pagina successiva",
         "lastPage": "Ultima pagina",
         "pageNumber": "Pagina {n}"
+      },
+      "wishlist": {
+        "hero": {
+          "breadcrumbLibrary": "Libreria",
+          "breadcrumbWishlist": "Wishlist",
+          "title": "Wishlist · Giochi desiderati",
+          "subtitle": "Tieni traccia dei giochi che vuoi comprare o provare.",
+          "tabsAria": "Sezioni libreria",
+          "tabLibrary": "Libreria",
+          "tabWishlist": "Wishlist",
+          "addCta": "Aggiungi alla wishlist",
+          "addCtaShort": "Aggiungi"
+        },
+        "stats": {
+          "games": "{count} giochi",
+          "highPriority": "{count} alta priorità",
+          "estimatedSpend": "spesa stimata {amount}"
+        },
+        "filters": {
+          "searchPlaceholder": "Cerca per nome gioco o note…",
+          "searchAriaLabel": "Cerca per nome gioco o note",
+          "searching": "Cercando…",
+          "clearSearch": "Cancella ricerca",
+          "priorityGroupAria": "Filtra per priorità (selezione multipla)",
+          "all": "Tutti",
+          "sort": "Ordina",
+          "sortBy": "Ordina per",
+          "sortAria": "Ordina wishlist",
+          "sortOptions": {
+            "priority": "Per priorità",
+            "recent": "Più recenti",
+            "oldest": "Più vecchi",
+            "alpha": "Alfabetico",
+            "price": "Prezzo target"
+          }
+        },
+        "summary": {
+          "activeFilters": "{n, plural, one {# filtro attivo} other {# filtri attivi}}",
+          "results": "{n, plural, one {# gioco} other {# giochi}} su {total}",
+          "clearAll": "Cancella filtri"
+        },
+        "priority": {
+          "high": "Alta",
+          "medium": "Media",
+          "low": "Bassa",
+          "filterAria": "Priorità {label} — filtra per questa priorità"
+        },
+        "card": {
+          "target": "Target",
+          "noNote": "Nessuna nota",
+          "addedAt": "Aggiunto {when}",
+          "addedTitle": "Aggiunto il {date}",
+          "edit": "Modifica",
+          "editAria": "Modifica wishlist item {name}",
+          "remove": "Rimuovi",
+          "removeAria": "Rimuovi {name} dalla wishlist",
+          "openGameAria": "Apri dettaglio gioco {name}",
+          "unknownGame": "Gioco senza nome",
+          "gridAria": "Wishlist giochi"
+        },
+        "dialog": {
+          "addTitle": "Aggiungi alla wishlist",
+          "editTitle": "Modifica wishlist",
+          "addSub": "Salva un gioco che vuoi comprare o provare",
+          "editSub": "{name} · priorità {priority}",
+          "close": "Chiudi",
+          "error": "Errore aggiungendo alla wishlist.",
+          "retry": "Riprova",
+          "gameLabel": "Gioco",
+          "gameComboPlaceholder": "Cerca per nome o incolla un game ID…",
+          "gameComboAria": "Cerca gioco da aggiungere",
+          "gameRemoveAria": "Rimuovi gioco selezionato",
+          "priorityLabel": "Priorità",
+          "priceLabel": "Target price (€)",
+          "pricePlaceholder": "65",
+          "priceHint": "Prezzo massimo che sei disposto a spendere — opzionale.",
+          "priceAria": "Prezzo massimo che sei disposto a spendere",
+          "notesLabel": "Note",
+          "notesPlaceholder": "es. acquisto entro Q3, voglio aspettare la nuova edizione, ecc.",
+          "notesCounter": "{len} / 200",
+          "cancel": "Annulla",
+          "submitting": "Aggiungo…",
+          "success": "Aggiunto",
+          "add": "Aggiungi",
+          "save": "Salva"
+        },
+        "empty": {
+          "noItems": {
+            "title": "Nessun gioco nella wishlist",
+            "body": "Aggiungi giochi che ti interessano per non perderli di vista — con priorità, prezzo target e note.",
+            "cta": "Aggiungi il primo"
+          },
+          "filtered": {
+            "title": "Nessun gioco corrisponde ai filtri",
+            "body": "Prova a cambiare priorità o a modificare la ricerca per nome o note.",
+            "cta": "Cancella filtri"
+          }
+        },
+        "loading": {
+          "ariaLabel": "Caricamento wishlist"
+        },
+        "error": {
+          "message": "Impossibile caricare la wishlist — riprova.",
+          "retry": "Riprova"
+        }
       }
     },
     "onboarding": {

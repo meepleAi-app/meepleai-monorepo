@@ -2171,6 +2171,111 @@
         "nextPage": "Next page",
         "lastPage": "Last page",
         "pageNumber": "Page {n}"
+      },
+      "wishlist": {
+        "hero": {
+          "breadcrumbLibrary": "Library",
+          "breadcrumbWishlist": "Wishlist",
+          "title": "Wishlist · Wanted games",
+          "subtitle": "Track the games you want to buy or try.",
+          "tabsAria": "Library sections",
+          "tabLibrary": "Library",
+          "tabWishlist": "Wishlist",
+          "addCta": "Add to wishlist",
+          "addCtaShort": "Add"
+        },
+        "stats": {
+          "games": "{count} games",
+          "highPriority": "{count} high priority",
+          "estimatedSpend": "estimated spend {amount}"
+        },
+        "filters": {
+          "searchPlaceholder": "Search by game name or notes…",
+          "searchAriaLabel": "Search by game name or notes",
+          "searching": "Searching…",
+          "clearSearch": "Clear search",
+          "priorityGroupAria": "Filter by priority (multi-select)",
+          "all": "All",
+          "sort": "Sort",
+          "sortBy": "Sort by",
+          "sortAria": "Sort wishlist",
+          "sortOptions": {
+            "priority": "By priority",
+            "recent": "Most recent",
+            "oldest": "Oldest",
+            "alpha": "Alphabetical",
+            "price": "Target price"
+          }
+        },
+        "summary": {
+          "activeFilters": "{n, plural, one {# active filter} other {# active filters}}",
+          "results": "{n, plural, one {# game} other {# games}} of {total}",
+          "clearAll": "Clear filters"
+        },
+        "priority": {
+          "high": "High",
+          "medium": "Medium",
+          "low": "Low",
+          "filterAria": "{label} priority — filter by this priority"
+        },
+        "card": {
+          "target": "Target",
+          "noNote": "No notes",
+          "addedAt": "Added {when}",
+          "addedTitle": "Added on {date}",
+          "edit": "Edit",
+          "editAria": "Edit wishlist item {name}",
+          "remove": "Remove",
+          "removeAria": "Remove {name} from wishlist",
+          "openGameAria": "Open game detail {name}",
+          "unknownGame": "Unnamed game",
+          "gridAria": "Wishlist games"
+        },
+        "dialog": {
+          "addTitle": "Add to wishlist",
+          "editTitle": "Edit wishlist",
+          "addSub": "Save a game you want to buy or try",
+          "editSub": "{name} · {priority} priority",
+          "close": "Close",
+          "error": "Error adding to wishlist.",
+          "retry": "Retry",
+          "gameLabel": "Game",
+          "gameComboPlaceholder": "Search by name or paste a game ID…",
+          "gameComboAria": "Search for a game to add",
+          "gameRemoveAria": "Remove selected game",
+          "priorityLabel": "Priority",
+          "priceLabel": "Target price (€)",
+          "pricePlaceholder": "65",
+          "priceHint": "Maximum price you're willing to spend — optional.",
+          "priceAria": "Maximum price you're willing to spend",
+          "notesLabel": "Notes",
+          "notesPlaceholder": "e.g. buy by Q3, waiting for the new edition, etc.",
+          "notesCounter": "{len} / 200",
+          "cancel": "Cancel",
+          "submitting": "Adding…",
+          "success": "Added",
+          "add": "Add",
+          "save": "Save"
+        },
+        "empty": {
+          "noItems": {
+            "title": "No games in your wishlist",
+            "body": "Add games you're interested in so you don't lose track of them — with priority, target price and notes.",
+            "cta": "Add your first"
+          },
+          "filtered": {
+            "title": "No games match the filters",
+            "body": "Try changing the priority or adjusting the name or notes search.",
+            "cta": "Clear filters"
+          }
+        },
+        "loading": {
+          "ariaLabel": "Loading wishlist"
+        },
+        "error": {
+          "message": "Unable to load the wishlist — please try again.",
+          "retry": "Retry"
+        }
       }
     },
     "onboarding": {

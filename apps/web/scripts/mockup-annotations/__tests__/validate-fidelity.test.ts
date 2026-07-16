@@ -12,7 +12,13 @@ import { writeFileSync, unlinkSync, mkdirSync, rmSync, existsSync } from 'node:f
 import { resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 
-import { validate, FidelitySchema } from '../validate-fidelity.mjs';
+import {
+  validate,
+  FidelitySchema,
+  checkApprovalStatus,
+  computeGateVerdict,
+  P250_WAIVER_TOKEN,
+} from '../validate-fidelity.mjs';
 
 const TMP_DIR = resolve(tmpdir(), `mockup-fidelity-tests-${process.pid}`);
 
@@ -201,5 +207,128 @@ describe('FidelitySchema design_intent + viewports (DEC-P3-1+2+4)', () => {
     const result = await validate(file);
     expect(result.ok).toBe(false);
     expect(result.errors.some(e => e.includes('obsolete_tracking_issue'))).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ADR-077 — Designer signoff attestation (Option D)
+// ---------------------------------------------------------------------------
+
+describe('checkApprovalStatus (ADR-077 signoff)', () => {
+  const withApprover = (design_intent: string, designer_approved_by: string) => ({
+    acceptance: { design_intent, designer_approved_by },
+  });
+
+  it('FAIL — design_intent="current" with empty designer_approved_by', () => {
+    const errors = checkApprovalStatus(withApprover('current', ''));
+    expect(errors.length).toBe(1);
+    expect(errors[0]).toContain('designer_approved_by');
+  });
+
+  it('FAIL — design_intent="current" with whitespace-only approver (trim)', () => {
+    const errors = checkApprovalStatus(withApprover('current', '   '));
+    expect(errors.length).toBe(1);
+  });
+
+  it('PASS — design_intent="current" with P250 self-waiver token', () => {
+    const errors = checkApprovalStatus(
+      withApprover('current', `user@meepleAi (${P250_WAIVER_TOKEN}, single-person team)`)
+    );
+    expect(errors).toEqual([]);
+  });
+
+  it('PASS — design_intent="current" with a real approver name', () => {
+    const errors = checkApprovalStatus(withApprover('current', 'Jane Designer'));
+    expect(errors).toEqual([]);
+  });
+
+  it('PASS (advisory) — non-current intents are not signoff-gated even when empty', () => {
+    expect(checkApprovalStatus(withApprover('forward-refactor', ''))).toEqual([]);
+    expect(checkApprovalStatus(withApprover('forward-refactor-obsolete', ''))).toEqual([]);
+    expect(checkApprovalStatus(withApprover('deferred', ''))).toEqual([]);
+  });
+
+  it('treats an absent design_intent as "current" (schema default parity)', () => {
+    const errors = checkApprovalStatus({ acceptance: { designer_approved_by: '' } });
+    expect(errors.length).toBe(1);
+  });
+});
+
+describe('validate() surfaces approvalErrors separately from structural ok', () => {
+  it('current + empty approver → structurally ok:true but approvalErrors populated', async () => {
+    const file = writeFixture('signoff-missing.fidelity.json', {
+      mockup: { source: REAL_MOCKUP, states: ['default'] },
+      acceptance: { states_covered: ['default'] }, // design_intent defaults current, approver empty
+    });
+    const result = await validate(file);
+    expect(result.ok).toBe(true); // structural validity unchanged (non-breaking)
+    expect(result.approvalErrors.length).toBe(1);
+  });
+
+  it('current + P250 waiver → ok:true, no approvalErrors', async () => {
+    const file = writeFixture('signoff-waiver.fidelity.json', {
+      mockup: { source: REAL_MOCKUP, states: ['default'] },
+      acceptance: {
+        states_covered: ['default'],
+        designer_approved_by: `dev@meepleAi (${P250_WAIVER_TOKEN}, single-person team)`,
+        designer_approved_on: '2026-06-15',
+      },
+    });
+    const result = await validate(file);
+    expect(result.ok).toBe(true);
+    expect(result.approvalErrors).toEqual([]);
+  });
+
+  it('forward-refactor + empty approver → ok:true, no approvalErrors (advisory)', async () => {
+    const file = writeFixture('fr-no-signoff.fidelity.json', {
+      mockup: { source: REAL_MOCKUP, states: ['default'] },
+      acceptance: {
+        states_covered: ['default'],
+        design_intent: 'forward-refactor',
+      },
+    });
+    const result = await validate(file);
+    expect(result.ok).toBe(true);
+    expect(result.approvalErrors).toEqual([]);
+  });
+});
+
+describe('computeGateVerdict (strict signoff + baselined structural)', () => {
+  const ok = () => ({ ok: true, approvalErrors: [] });
+  const structuralFail = () => ({ ok: false, errors: ['bad source'], approvalErrors: [] });
+  const signoffFail = () => ({ ok: true, approvalErrors: ['missing signoff'] });
+
+  it('all pass → pass:true', () => {
+    const v = computeGateVerdict([ok(), ok()], 0);
+    expect(v.pass).toBe(true);
+    expect(v.structuralFailCount).toBe(0);
+    expect(v.approvalFailCount).toBe(0);
+  });
+
+  it('structural failures within baseline, no signoff → pass:true', () => {
+    const v = computeGateVerdict([ok(), structuralFail(), structuralFail(), structuralFail()], 3);
+    expect(v.pass).toBe(true);
+    expect(v.structuralFailCount).toBe(3);
+    expect(v.overBaseline).toBe(false);
+  });
+
+  it('structural failures exceeding baseline → pass:false', () => {
+    const v = computeGateVerdict(
+      [structuralFail(), structuralFail(), structuralFail(), structuralFail()],
+      3
+    );
+    expect(v.pass).toBe(false);
+    expect(v.overBaseline).toBe(true);
+  });
+
+  it('signoff failure → pass:false regardless of baseline', () => {
+    const v = computeGateVerdict([ok(), signoffFail()], 100);
+    expect(v.pass).toBe(false);
+    expect(v.approvalFailCount).toBe(1);
+  });
+
+  it('signoff failure + structural within baseline → still pass:false', () => {
+    const v = computeGateVerdict([signoffFail(), structuralFail()], 3);
+    expect(v.pass).toBe(false);
   });
 });

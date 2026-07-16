@@ -12,11 +12,18 @@
  * Usage:
  *   node validate-fidelity.mjs <file.json|file.yml>
  *   node validate-fidelity.mjs --all                  # scan repo for *.fidelity.{json,yml}
+ *   node validate-fidelity.mjs --all --max-baseline N # tolerate N pre-existing structural failures
  *   node validate-fidelity.mjs --schema               # print zod schema as JSON Schema
  *
+ * Designer signoff (ADR-077, Option D): design_intent="current" fidelity files
+ * MUST carry a non-empty acceptance.designer_approved_by (the "self-waiver P250"
+ * token is accepted for solo-maintainer context). Signoff failures are strict
+ * and never baselined. Structural (schema/cross-ref) failures are whitelist-
+ * incremental via --max-baseline (mirrors lint:tokens:mockups / lint:bgg-mockups).
+ *
  * Exit codes:
- *   0  all validations passed
- *   1  schema mismatch or missing referenced file
+ *   0  all validations passed (structural failures within --max-baseline; signoff OK)
+ *   1  signoff missing on a 'current' surface, OR structural failures exceed baseline
  *   2  invocation error (missing arg, file not found)
  *
  * Refs:
@@ -170,44 +177,135 @@ function crossReferenceCheck(fidelity, fidelityFilePath) {
 }
 
 // ---------------------------------------------------------------------------
+// Designer signoff attestation (ADR-077, Option D)
+// ---------------------------------------------------------------------------
+
+// A fidelity file whose design_intent is "current" represents a live design
+// surface and MUST carry a non-empty acceptance.designer_approved_by. The
+// solo-maintainer P250 self-waiver (e.g.
+// "user@meepleAi (self-waiver P250, single-person team)") is an explicitly
+// accepted approval token — it documents the developer-is-designer exception
+// rather than bypassing a real review. forward-refactor / -obsolete / deferred
+// intents are speculative or not-yet-built surfaces and are NOT approval-gated
+// (advisory only). See docs/for-claude/architecture/adr/adr-077-designer-signoff-ci-gate.md
+export const P250_WAIVER_TOKEN = 'self-waiver P250';
+
+/**
+ * Returns approval errors for a parsed fidelity object. Empty array = signoff OK.
+ * Only `design_intent: "current"` surfaces are gated. Any non-empty
+ * designer_approved_by (including the P250 self-waiver) satisfies the gate.
+ */
+export function checkApprovalStatus(fidelity) {
+  const errors = [];
+  const acc = (fidelity && fidelity.acceptance) || {};
+  // Mirror the schema default: an absent design_intent is "current".
+  const intent = acc.design_intent ?? 'current';
+  if (intent !== 'current') {
+    return errors; // advisory intents are not approval-gated
+  }
+  const approver = String(acc.designer_approved_by ?? '').trim();
+  if (!approver) {
+    errors.push(
+      `acceptance.design_intent='current' requires a non-empty acceptance.designer_approved_by. ` +
+        `Fill in the designer signoff or use the '${P250_WAIVER_TOKEN}' token for solo-maintainer ` +
+        `context (e.g. "you@meepleAi (self-waiver P250, single-person team)"). See ADR-077.`
+    );
+  }
+  return errors;
+}
+
+/**
+ * Pure gate-verdict decision over an array of validate() results.
+ *
+ * Two failure classes with different severities (ADR-077 Option D):
+ *  - approval failures: `design_intent: current` missing signoff. ALWAYS hard —
+ *    never baselined (the attestation is a deliberate 5-second ceremony).
+ *  - structural failures: schema / cross-reference errors. Whitelist-incremental
+ *    via `maxBaseline` (mirrors lint:tokens:mockups / lint:bgg-mockups) so
+ *    pre-existing drift is tolerated while NEW drift fails.
+ */
+export function computeGateVerdict(results, maxBaseline = 0) {
+  const structural = results.filter((r) => !r.ok);
+  const approval = results.filter((r) => ((r.approvalErrors && r.approvalErrors.length) || 0) > 0);
+  const structuralFailCount = structural.length;
+  const approvalFailCount = approval.length;
+  const overBaseline = structuralFailCount > maxBaseline;
+  return {
+    pass: approvalFailCount === 0 && !overBaseline,
+    structural,
+    approval,
+    structuralFailCount,
+    approvalFailCount,
+    maxBaseline,
+    overBaseline,
+    baselinedCount: Math.min(structuralFailCount, maxBaseline),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Main validator
 // ---------------------------------------------------------------------------
 
 export async function validate(filePath) {
   if (!existsSync(filePath)) {
-    return { ok: false, file: filePath, errors: [`File not found: ${filePath}`] };
+    return { ok: false, file: filePath, errors: [`File not found: ${filePath}`], approvalErrors: [] };
   }
   if (statSync(filePath).isDirectory()) {
-    return { ok: false, file: filePath, errors: [`Path is a directory, not a file: ${filePath}`] };
+    return { ok: false, file: filePath, errors: [`Path is a directory, not a file: ${filePath}`], approvalErrors: [] };
   }
 
   let raw;
   try {
     raw = await parseFile(filePath);
   } catch (err) {
-    return { ok: false, file: filePath, errors: [`Parse error: ${err.message}`] };
+    return { ok: false, file: filePath, errors: [`Parse error: ${err.message}`], approvalErrors: [] };
   }
 
   const parsed = FidelitySchema.safeParse(raw);
   if (!parsed.success) {
     const errs = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
-    return { ok: false, file: filePath, errors: errs };
+    return { ok: false, file: filePath, errors: errs, approvalErrors: [] };
   }
+
+  // Designer signoff attestation is computed independently of structural
+  // validity so the CLI gate can treat it as a strict (never-baselined) class.
+  const approvalErrors = checkApprovalStatus(parsed.data);
 
   const crossErrors = crossReferenceCheck(parsed.data, filePath);
   if (crossErrors.length > 0) {
-    return { ok: false, file: filePath, errors: crossErrors };
+    return { ok: false, file: filePath, errors: crossErrors, approvalErrors, data: parsed.data };
   }
 
-  return { ok: true, file: filePath, data: parsed.data };
+  return { ok: true, file: filePath, data: parsed.data, errors: [], approvalErrors };
 }
 
 // ---------------------------------------------------------------------------
 // CLI entry
 // ---------------------------------------------------------------------------
 
+/**
+ * Parse `--max-baseline N` / `--max-baseline=N`. Default 0 (strict).
+ * Caps the number of tolerated PRE-EXISTING structural (schema/cross-ref)
+ * failures; does NOT relax the strict designer-signoff attestation.
+ */
+function parseMaxBaseline(args) {
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === '--max-baseline') {
+      const v = Number(args[i + 1]);
+      return Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0;
+    }
+    if (a.startsWith('--max-baseline=')) {
+      const v = Number(a.slice('--max-baseline='.length));
+      return Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0;
+    }
+  }
+  return 0;
+}
+
 async function main() {
   const args = process.argv.slice(2);
+  const maxBaseline = parseMaxBaseline(args);
 
   if (args.includes('--schema')) {
     // Print zod schema as a navigable shape (simplified — full JSON Schema conversion is out of scope)
@@ -220,7 +318,13 @@ async function main() {
   if (args.includes('--all')) {
     files = globSync('**/*.fidelity.{json,yml,yaml}', {
       cwd: REPO_ROOT,
-      ignore: ['**/node_modules/**', '**/.next/**', '**/.claude/**', '**/dist/**'],
+      // templates/** holds illustrative fidelity examples (ADR-077 surface
+      // definition: doc templates are not gated design surfaces). The canonical
+      // copy-me template (docs/.../templates/examples/sp4-library-desktop.fidelity.json,
+      // referenced in CLAUDE.md) intentionally ships with a blank
+      // designer_approved_by + placeholder mockup.source — excluded here so the
+      // signoff + cross-reference gate only scans real mockup surfaces.
+      ignore: ['**/node_modules/**', '**/.next/**', '**/.claude/**', '**/dist/**', '**/templates/**'],
       absolute: true,
     });
     if (files.length === 0) {
@@ -228,28 +332,65 @@ async function main() {
       process.exit(0);
     }
   } else if (args.length === 0 || args[0].startsWith('--')) {
-    console.error('Usage: validate-fidelity.mjs <file> | --all | --schema');
+    console.error('Usage: validate-fidelity.mjs <file> | --all [--max-baseline N] | --schema');
     process.exit(2);
   } else {
     files = [resolve(args[0])];
   }
 
-  let allOk = true;
+  const results = [];
   for (const f of files) {
     const result = await validate(f);
-    const rel = relative(REPO_ROOT, f);
-    if (result.ok) {
-      console.log(`PASS  ${rel}`);
-    } else {
-      allOk = false;
-      console.error(`FAIL  ${rel}`);
-      for (const err of result.errors) {
-        console.error(`      - ${err}`);
-      }
-    }
+    result.rel = relative(REPO_ROOT, f).split('\\').join('/');
+    results.push(result);
   }
 
-  process.exit(allOk ? 0 : 1);
+  for (const r of results) {
+    const hasApproval = ((r.approvalErrors && r.approvalErrors.length) || 0) > 0;
+    if (r.ok && !hasApproval) {
+      console.log(`PASS     ${r.rel}`);
+      continue;
+    }
+    if (r.ok && hasApproval) {
+      // Structurally valid but missing the designer signoff (hard failure).
+      console.error(`SIGNOFF  ${r.rel}`);
+      for (const err of r.approvalErrors) console.error(`         - ${err}`);
+      continue;
+    }
+    // Structural failure (schema / cross-reference); may also lack signoff.
+    console.error(`FAIL     ${r.rel}`);
+    for (const err of r.errors) console.error(`         - ${err}`);
+    if (hasApproval) for (const err of r.approvalErrors) console.error(`         - [signoff] ${err}`);
+  }
+
+  const verdict = computeGateVerdict(results, maxBaseline);
+
+  console.error('');
+  console.error(
+    `Fidelity gate: ${results.length - verdict.structuralFailCount} passed structural checks, ` +
+      `${verdict.structuralFailCount} structural failure(s) (baseline ${maxBaseline}), ` +
+      `${verdict.approvalFailCount} signoff failure(s).`
+  );
+  if (verdict.approvalFailCount > 0) {
+    console.error(
+      `ERROR: ${verdict.approvalFailCount} 'current' fidelity file(s) missing designer_approved_by. ` +
+        `Signoff is strict and never baselined (ADR-077).`
+    );
+  }
+  if (verdict.structuralFailCount > 0 && !verdict.overBaseline) {
+    console.error(
+      `NOTE: ${verdict.structuralFailCount} pre-existing structural drift file(s) tolerated ` +
+        `(<= baseline ${maxBaseline}). Reconcile the mockup.source references to ratchet the baseline down.`
+    );
+  }
+  if (verdict.overBaseline) {
+    console.error(
+      `ERROR: structural failures (${verdict.structuralFailCount}) exceed baseline (${maxBaseline}). ` +
+        `A NEW fidelity file with a broken schema/cross-reference was introduced — fix it or raise the baseline deliberately.`
+    );
+  }
+
+  process.exit(verdict.pass ? 0 : 1);
 }
 
 // CLI guard — only run main() when invoked directly (not when imported as module)

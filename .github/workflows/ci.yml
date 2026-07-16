@@ -360,6 +360,21 @@ jobs:
             audits/2026-07-14-storybook-states-coverage.md
           retention-days: 14
 
+      # ADR-077 (#2997): Designer signoff attestation gate. Every
+      # design_intent="current" fidelity file MUST carry a non-empty
+      # acceptance.designer_approved_by — the "self-waiver P250" solo-maintainer
+      # token is an accepted approval (developer-is-designer exception). Signoff
+      # failures are STRICT (never baselined). Pre-existing structural
+      # (mockup.source cross-reference) drift is whitelist-incremental via
+      # `--max-baseline 3` (3 orphaned fidelity files whose source mockups were
+      # deleted: sp4-play-records-data / scaffold / pr-form-core — reconcile to
+      # ratchet the baseline down). Doc template examples (templates/**) are
+      # excluded as non-surface illustrations. `pnpm lint:fidelity` scans the
+      # whole repo (REPO_ROOT resolved from __dirname) regardless of job cwd.
+      # ADR: docs/for-claude/architecture/adr/adr-077-designer-signoff-ci-gate.md
+      - name: Designer signoff + fidelity gate (ADR-077 / #2997)
+        run: pnpm lint:fidelity
+
       # Issue #2123 — BGG ToS compliance gate
       - name: BGG ToS compliance gate (#2123)
         run: pnpm lint:bgg

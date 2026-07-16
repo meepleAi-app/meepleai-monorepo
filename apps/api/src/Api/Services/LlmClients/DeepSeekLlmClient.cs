@@ -491,10 +491,28 @@ internal class DeepSeekLlmClient : ILlmClient
 
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, "models");
+            // #2953 (#5): GET /models returns 200 even when the account is out of credit — the
+            // 402 only surfaces on chat/completions, so /models is blind to exhaustion. Query
+            // /user/balance instead: is_available=false means the balance can't cover paid calls
+            // (credit exhausted), so the provider must be reported unhealthy. Zero token cost.
+            using var request = new HttpRequestMessage(HttpMethod.Get, "user/balance");
             ApplyAuthorization(request, apiKey);
             using var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
-            return response.IsSuccessStatusCode;
+            if (!response.IsSuccessStatusCode)
+            {
+                return false;
+            }
+
+            var body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            using var doc = JsonDocument.Parse(body);
+            if (doc.RootElement.TryGetProperty("is_available", out var isAvailable)
+                && isAvailable.ValueKind == JsonValueKind.False)
+            {
+                _logger.LogWarning("DeepSeek health check: account balance not available (credit exhausted).");
+                return false;
+            }
+
+            return true;
         }
         catch (Exception ex)
         {

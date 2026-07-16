@@ -274,7 +274,7 @@ export function PlayerInviteAutocomplete({
           </ul>
         )}
         {atLimit && (
-          <p role="alert" className="mt-2 text-xs text-warning">
+          <p role="alert" className="mt-2 text-xs text-[hsl(var(--c-warning))]">
             {labels.limitWarning(maxCombinedInvitees)}
           </p>
         )}

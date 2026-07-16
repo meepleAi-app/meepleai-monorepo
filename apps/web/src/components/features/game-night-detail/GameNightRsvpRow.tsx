@@ -56,16 +56,16 @@ interface StatusVisual {
 const STATUS_VISUALS: Record<RsvpStatus, StatusVisual> = {
   Accepted: {
     icon: '✓',
-    iconClass: 'text-success',
-    labelClass: 'text-success',
+    iconClass: 'text-[hsl(var(--c-success))]',
+    labelClass: 'text-[hsl(var(--c-success))]',
     lineThrough: false,
     dashedBorder: false,
     mutedRow: false,
   },
   Maybe: {
     icon: '?',
-    iconClass: 'text-warning',
-    labelClass: 'text-warning',
+    iconClass: 'text-[hsl(var(--c-warning))]',
+    labelClass: 'text-[hsl(var(--c-warning))]',
     lineThrough: false,
     dashedBorder: false,
     mutedRow: false,

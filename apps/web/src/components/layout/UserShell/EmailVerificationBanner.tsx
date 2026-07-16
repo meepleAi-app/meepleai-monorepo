@@ -66,9 +66,11 @@ export function EmailVerificationBanner() {
     <div
       data-testid="email-verification-banner"
       role="status"
-      className={cn('flex items-center gap-3 border-b border-warning/30 bg-warning/10 px-4 py-2')}
+      className={cn(
+        'flex items-center gap-3 border-b border-[hsl(var(--c-warning)/0.3)] bg-[hsl(var(--c-warning)/0.1)] px-4 py-2'
+      )}
     >
-      <Mail aria-hidden="true" className="h-4 w-4 shrink-0 text-warning" />
+      <Mail aria-hidden="true" className="h-4 w-4 shrink-0 text-[hsl(var(--c-warning))]" />
       <div className="min-w-0 flex-1">
         <p className="font-display text-[13px] font-bold text-foreground">
           {t('auth.emailVerification.banner.title')}
@@ -79,7 +81,7 @@ export function EmailVerificationBanner() {
       </div>
       <Link
         href="/email-verification"
-        className="rounded-md bg-warning px-3 py-1 text-xs font-bold text-warning-foreground hover:bg-warning/90"
+        className="rounded-md bg-[hsl(var(--c-warning))] px-3 py-1 text-xs font-bold text-white hover:bg-[hsl(var(--c-warning)/0.9)]"
         data-testid="email-verification-banner-cta"
       >
         {t('auth.emailVerification.banner.cta')}

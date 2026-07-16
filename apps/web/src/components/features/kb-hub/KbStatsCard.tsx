@@ -134,7 +134,7 @@ export function KbStatsCard(props: KbStatsCardProps): ReactElement {
             icon: '🦅',
             label: labels.raptorLabel,
             value: raptorLastRebuildRelative,
-            color: 'text-warning',
+            color: 'text-[hsl(var(--c-warning))]',
           },
         ]
       : []),
@@ -188,11 +188,13 @@ export function KbStatsCard(props: KbStatsCardProps): ReactElement {
           role="status"
           aria-live="polite"
           className={clsx(
-            'mb-3 rounded-md border border-warning/30 bg-warning/10 px-3 py-2',
+            'mb-3 rounded-md border border-[hsl(var(--c-warning)/0.3)] bg-[hsl(var(--c-warning)/0.1)] px-3 py-2',
             compact ? 'text-[11px]' : 'text-xs'
           )}
         >
-          <div className="font-display font-bold text-warning">{labels.indexingBadge}</div>
+          <div className="font-display font-bold text-[hsl(var(--c-warning))]">
+            {labels.indexingBadge}
+          </div>
           {labels.indexingDescription && (
             <div className="mt-1 text-muted-foreground">{labels.indexingDescription}</div>
           )}

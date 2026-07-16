@@ -196,7 +196,7 @@ export function PublicRsvpForm({
               data-pending={submittingAction === 'Accepted' ? 'true' : 'false'}
               disabled={allDisabled}
               onClick={handleClick('Accepted')}
-              className="flex-1 bg-success text-success-foreground hover:bg-success/90"
+              className="flex-1 bg-[hsl(var(--c-success))] text-white hover:bg-[hsl(var(--c-success)/0.9)]"
             >
               {submittingAction === 'Accepted' ? labels.submitting : labels.accept}
             </Button>

@@ -201,9 +201,11 @@ export function HubDefault(props: HubDefaultProps): ReactElement {
             data-slot="kb-hub-default-indexing-banner"
             role="status"
             aria-live="polite"
-            className="mb-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-xs"
+            className="mb-2 rounded-md border border-[hsl(var(--c-warning)/0.3)] bg-[hsl(var(--c-warning)/0.1)] px-3 py-2 text-xs"
           >
-            <div className="font-display font-bold text-warning">{labels.indexingBadge}</div>
+            <div className="font-display font-bold text-[hsl(var(--c-warning))]">
+              {labels.indexingBadge}
+            </div>
             {labels.indexingDescription && (
               <div className="mt-1 text-muted-foreground">{labels.indexingDescription}</div>
             )}

@@ -189,7 +189,7 @@ export function LlmConfigTab() {
         </div>
       )}
       {success && (
-        <div className="flex items-center gap-2 rounded-lg border border-success/40 bg-success/10 p-3 text-sm text-success">
+        <div className="flex items-center gap-2 rounded-lg border border-[hsl(var(--c-success)/0.4)] bg-[hsl(var(--c-success)/0.1)] p-3 text-sm text-[hsl(var(--c-success))]">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
           {success}
         </div>
@@ -199,7 +199,9 @@ export function LlmConfigTab() {
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <span
           className={`inline-block h-2 w-2 rounded-full ${
-            config.source === 'database' ? 'bg-success' : 'bg-warning'
+            config.source === 'database'
+              ? 'bg-[hsl(var(--c-success))]'
+              : 'bg-[hsl(var(--c-warning))]'
           }`}
         />
         Source: <span className="font-medium">{config.source}</span>
@@ -215,7 +217,7 @@ export function LlmConfigTab() {
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Layer 1: Database Config (editable) */}
         <ConfigSection
-          icon={<Database className="h-4 w-4 text-success" />}
+          icon={<Database className="h-4 w-4 text-[hsl(var(--c-success))]" />}
           title="Database Configuration"
           badge="Editable"
           badgeColor="emerald"
@@ -288,7 +290,7 @@ export function LlmConfigTab() {
 
         {/* Layer 2: appsettings (read-only) */}
         <ConfigSection
-          icon={<FileText className="h-4 w-4 text-warning" />}
+          icon={<FileText className="h-4 w-4 text-[hsl(var(--c-warning))]" />}
           title="appsettings.json"
           badge="Requires redeploy"
           badgeColor="amber"
@@ -393,8 +395,8 @@ function ConfigSection({
   children: React.ReactNode;
 }) {
   const badgeClasses: Record<string, string> = {
-    emerald: 'bg-success/15 text-success',
-    amber: 'bg-warning/15 text-warning',
+    emerald: 'bg-[hsl(var(--c-success)/0.15)] text-[hsl(var(--c-success))]',
+    amber: 'bg-[hsl(var(--c-warning)/0.15)] text-[hsl(var(--c-warning))]',
     blue: 'bg-entity-session/15 text-entity-session',
     rose: 'bg-entity-event/15 text-entity-event',
   };

@@ -89,11 +89,11 @@ export function TypologiesTab() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-medium text-foreground">{t.name}</p>
                     {t.isApproved ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-medium text-success">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--c-success)/0.15)] px-2 py-0.5 text-[10px] font-medium text-[hsl(var(--c-success))]">
                         <Check className="h-3 w-3" /> Approved
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium text-warning">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--c-warning)/0.15)] px-2 py-0.5 text-[10px] font-medium text-[hsl(var(--c-warning))]">
                         Pending
                       </span>
                     )}
@@ -109,7 +109,7 @@ export function TypologiesTab() {
                     onClick={() => handleApprove(t.id)}
                     aria-label="Approve"
                   >
-                    <Check className="h-4 w-4 text-success" />
+                    <Check className="h-4 w-4 text-[hsl(var(--c-success))]" />
                   </Button>
                 )}
                 <Button

@@ -108,8 +108,8 @@ export function RaptorPanel(props: RaptorPanelProps): ReactElement {
               className={clsx(
                 'rounded-full border px-2 py-0.5 font-mono text-[9px] font-extrabold uppercase tracking-wider',
                 locked
-                  ? 'border-[hsl(var(--c-warning)/0.25)] bg-[hsl(var(--c-warning)/0.15)] text-[hsl(var(--c-warning))]'
-                  : 'border-[hsl(var(--c-warning)/0)] bg-[hsl(var(--c-warning))] text-white'
+                  ? 'border-[hsl(var(--c-warning)/0.25)] bg-[hsl(var(--c-warning)/0.15)] text-[hsl(var(--c-warning-ink))]'
+                  : 'border-[hsl(var(--c-warning)/0)] bg-[hsl(var(--c-warning-ink))] text-white'
               )}
             >
               {locked ? labels.lockedBadge : labels.activeBadge}
@@ -127,7 +127,7 @@ export function RaptorPanel(props: RaptorPanelProps): ReactElement {
                 <div
                   className={clsx(
                     'font-mono text-sm font-bold',
-                    locked ? 'text-muted-foreground' : 'text-[hsl(var(--c-warning))]'
+                    locked ? 'text-muted-foreground' : 'text-[hsl(var(--c-warning-ink))]'
                   )}
                 >
                   {m.value}
@@ -163,7 +163,7 @@ export function RaptorPanel(props: RaptorPanelProps): ReactElement {
                   type="button"
                   onClick={onUpgrade}
                   data-slot="kb-hub-raptor-upgrade-link"
-                  className="text-xs font-semibold text-[hsl(var(--c-warning))] hover:underline"
+                  className="text-xs font-semibold text-[hsl(var(--c-warning-ink))] hover:underline"
                 >
                   {labels.upgradeLink} →
                 </button>
@@ -188,7 +188,7 @@ export function RaptorPanel(props: RaptorPanelProps): ReactElement {
                 </div>
                 <div className="text-right">
                   {estimatedCost && (
-                    <div className="font-mono text-base font-extrabold text-[hsl(var(--c-warning))]">
+                    <div className="font-mono text-base font-extrabold text-[hsl(var(--c-warning-ink))]">
                       {estimatedCost}
                     </div>
                   )}
@@ -202,7 +202,7 @@ export function RaptorPanel(props: RaptorPanelProps): ReactElement {
               type="button"
               onClick={onRebuild}
               data-slot="kb-hub-raptor-rebuild-cta"
-              className="w-full rounded-md bg-[hsl(var(--c-warning))] px-4 py-2.5 font-display text-sm font-bold text-white shadow-md transition-colors hover:bg-[hsl(var(--c-warning)/0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--c-warning))] focus-visible:ring-offset-2"
+              className="w-full rounded-md bg-[hsl(var(--c-warning-ink))] px-4 py-2.5 font-display text-sm font-bold text-white shadow-md transition-colors hover:bg-[hsl(var(--c-warning-ink)/0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--c-warning))] focus-visible:ring-offset-2"
             >
               {labels.rebuildCta}
             </button>

@@ -134,7 +134,7 @@ export function KbStatsCard(props: KbStatsCardProps): ReactElement {
             icon: '🦅',
             label: labels.raptorLabel,
             value: raptorLastRebuildRelative,
-            color: 'text-[hsl(var(--c-warning))]',
+            color: 'text-[hsl(var(--c-warning-ink))]',
           },
         ]
       : []),
@@ -192,7 +192,7 @@ export function KbStatsCard(props: KbStatsCardProps): ReactElement {
             compact ? 'text-[11px]' : 'text-xs'
           )}
         >
-          <div className="font-display font-bold text-[hsl(var(--c-warning))]">
+          <div className="font-display font-bold text-[hsl(var(--c-warning-ink))]">
             {labels.indexingBadge}
           </div>
           {labels.indexingDescription && (

@@ -333,7 +333,7 @@ function StatusBadge({ status }: { status: string }) {
       className={cn(
         'inline-block rounded-full px-2 py-0.5 text-[10px] font-medium',
         status === 'Success'
-          ? 'bg-[hsl(var(--c-success)/0.15)] text-[hsl(var(--c-success))]'
+          ? 'bg-[hsl(var(--c-success)/0.15)] text-[hsl(var(--c-success-ink))]'
           : 'bg-destructive/15 text-destructive'
       )}
     >

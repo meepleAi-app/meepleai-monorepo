@@ -203,7 +203,7 @@ export function HubDefault(props: HubDefaultProps): ReactElement {
             aria-live="polite"
             className="mb-2 rounded-md border border-[hsl(var(--c-warning)/0.3)] bg-[hsl(var(--c-warning)/0.1)] px-3 py-2 text-xs"
           >
-            <div className="font-display font-bold text-[hsl(var(--c-warning))]">
+            <div className="font-display font-bold text-[hsl(var(--c-warning-ink))]">
               {labels.indexingBadge}
             </div>
             {labels.indexingDescription && (

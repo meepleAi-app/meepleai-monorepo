@@ -73,14 +73,14 @@ const BUTTONS: readonly ButtonConfig[] = [
     icon: '✓',
     labelKey: 'accept',
     selectedClass:
-      'border-[hsl(var(--c-success))] bg-[hsl(var(--c-success)/0.1)] text-[hsl(var(--c-success))] hover:bg-[hsl(var(--c-success)/0.15)]',
+      'border-[hsl(var(--c-success))] bg-[hsl(var(--c-success)/0.1)] text-[hsl(var(--c-success-ink))] hover:bg-[hsl(var(--c-success)/0.15)]',
   },
   {
     response: 'Maybe',
     icon: '?',
     labelKey: 'maybe',
     selectedClass:
-      'border-[hsl(var(--c-warning))] bg-[hsl(var(--c-warning)/0.1)] text-[hsl(var(--c-warning))] hover:bg-[hsl(var(--c-warning)/0.15)]',
+      'border-[hsl(var(--c-warning))] bg-[hsl(var(--c-warning)/0.1)] text-[hsl(var(--c-warning-ink))] hover:bg-[hsl(var(--c-warning)/0.15)]',
   },
   {
     response: 'Declined',

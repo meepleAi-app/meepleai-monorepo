@@ -40,8 +40,8 @@ export function TwoFactorStatusCard({
             data-testid="2fa-status"
             className={
               enabled
-                ? 'inline-flex items-center gap-1.5 mt-1 text-xs font-mono font-bold uppercase tracking-wide bg-[hsl(var(--c-success)/0.15)] text-[hsl(var(--c-success))] px-2 py-0.5 rounded-sm'
-                : 'inline-flex items-center gap-1.5 mt-1 text-xs font-mono font-bold uppercase tracking-wide bg-[hsl(var(--c-warning)/0.15)] text-[hsl(var(--c-warning))] px-2 py-0.5 rounded-sm'
+                ? 'inline-flex items-center gap-1.5 mt-1 text-xs font-mono font-bold uppercase tracking-wide bg-[hsl(var(--c-success)/0.15)] text-[hsl(var(--c-success-ink))] px-2 py-0.5 rounded-sm'
+                : 'inline-flex items-center gap-1.5 mt-1 text-xs font-mono font-bold uppercase tracking-wide bg-[hsl(var(--c-warning)/0.15)] text-[hsl(var(--c-warning-ink))] px-2 py-0.5 rounded-sm'
             }
           >
             {enabled ? (

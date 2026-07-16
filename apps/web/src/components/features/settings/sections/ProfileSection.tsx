@@ -100,7 +100,7 @@ export function ProfileSection(): React.JSX.Element {
             role="alert"
             className={
               feedback.kind === 'ok'
-                ? 'flex items-center gap-2 p-2 rounded-md bg-[hsl(var(--c-success)/0.1)] text-[hsl(var(--c-success))] text-sm'
+                ? 'flex items-center gap-2 p-2 rounded-md bg-[hsl(var(--c-success)/0.1)] text-[hsl(var(--c-success-ink))] text-sm'
                 : 'flex items-center gap-2 p-2 rounded-md bg-destructive/10 text-destructive text-sm'
             }
           >

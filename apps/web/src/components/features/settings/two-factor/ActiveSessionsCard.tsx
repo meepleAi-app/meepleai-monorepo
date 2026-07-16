@@ -99,7 +99,7 @@ export function ActiveSessionsCard(): React.JSX.Element {
               <p className="font-quicksand font-bold text-sm text-foreground">
                 {parseDeviceLabel(row.userAgent)}
                 {row.isCurrent && (
-                  <span className="ml-2 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded-sm bg-[hsl(var(--c-success)/0.15)] text-[hsl(var(--c-success))]">
+                  <span className="ml-2 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded-sm bg-[hsl(var(--c-success)/0.15)] text-[hsl(var(--c-success-ink))]">
                     CURRENT
                   </span>
                 )}

@@ -32,7 +32,7 @@ export function SettingsSubNav({ active, onSelect, twoFactorEnabled }: Props): R
                 showBadge ? (
                   <span
                     data-testid="subnav-2fa-badge"
-                    className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded-sm bg-[hsl(var(--c-warning)/0.15)] text-[hsl(var(--c-warning))]"
+                    className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded-sm bg-[hsl(var(--c-warning)/0.15)] text-[hsl(var(--c-warning-ink))]"
                   >
                     ⚠ 2FA off
                   </span>

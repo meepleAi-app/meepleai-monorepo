@@ -63,7 +63,7 @@ export function QueryDrillPanel({
             </span>
             <StatusPill status={query.status} />
             {showLimitedBadge && (
-              <span className="ml-auto inline-flex items-center rounded-full bg-[hsl(var(--c-warning)/0.15)] px-2 py-0.5 text-[10px] font-medium text-[hsl(var(--c-warning))]">
+              <span className="ml-auto inline-flex items-center rounded-full bg-[hsl(var(--c-warning)/0.15)] px-2 py-0.5 text-[10px] font-medium text-[hsl(var(--c-warning-ink))]">
                 limited drill
               </span>
             )}
@@ -174,7 +174,7 @@ function Metric({ label, value }: { label: string; value: string }) {
 function StatusPill({ status }: { status: string }) {
   const tone =
     status === 'Success'
-      ? 'bg-[hsl(var(--c-success)/0.15)] text-[hsl(var(--c-success))]'
+      ? 'bg-[hsl(var(--c-success)/0.15)] text-[hsl(var(--c-success-ink))]'
       : 'bg-destructive/15 text-destructive';
   return (
     <span

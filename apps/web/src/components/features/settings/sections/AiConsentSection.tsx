@@ -196,7 +196,7 @@ export function AiConsentSection(): React.JSX.Element {
         <div className="flex items-start gap-4 mb-3">
           {/* amber → warning semantic token */}
           <div className="p-2 rounded-lg bg-[hsl(var(--c-warning)/0.1)]">
-            <Globe className="h-6 w-6 text-[hsl(var(--c-warning))]" />
+            <Globe className="h-6 w-6 text-[hsl(var(--c-warning-ink))]" />
           </div>
           <div className="flex-1">
             <h2 className="text-xl font-bold mb-1">External AI Providers</h2>

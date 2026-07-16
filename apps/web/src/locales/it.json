@@ -2582,7 +2582,8 @@
         "stats": "Stats",
         "history": "History",
         "templates": "Templates",
-        "play": "Play"
+        "play": "Play",
+        "ariaLabel": "Sezioni Toolkit"
       },
       "filters": {
         "searchPlaceholder": "Cerca per gioco o vincitore…",

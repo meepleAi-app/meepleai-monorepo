@@ -240,7 +240,7 @@ export default function ToolkitHistoryPage(): JSX.Element {
 
       {/* toolkit tabs */}
       <nav
-        aria-label={t('pages.toolkitHistory.hero.breadcrumbToolkit')}
+        aria-label={t('pages.toolkitHistory.tabs.ariaLabel')}
         className="flex gap-1 overflow-x-auto border-b border-border"
       >
         {TOOLKIT_TABS.map(tab => (

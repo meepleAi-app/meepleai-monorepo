@@ -2534,7 +2534,8 @@
         "stats": "Stats",
         "history": "History",
         "templates": "Templates",
-        "play": "Play"
+        "play": "Play",
+        "ariaLabel": "Toolkit sections"
       },
       "filters": {
         "searchPlaceholder": "Search by game or winner…",

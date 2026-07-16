@@ -10,7 +10,24 @@ describe('escapeCSVField', () => {
   it('passes through plain fields and stringifies numbers/null', () => {
     expect(escapeCSVField('plain')).toBe('plain');
     expect(escapeCSVField(42)).toBe('42');
+    expect(escapeCSVField(-5)).toBe('-5');
     expect(escapeCSVField(null)).toBe('');
+  });
+
+  it('quotes fields containing a bare carriage return', () => {
+    expect(escapeCSVField('a\rb')).toBe('"a\rb"');
+  });
+
+  it('prefixes formula-injection-prone strings with a single quote', () => {
+    expect(escapeCSVField('=1+1')).toBe("'=1+1");
+    expect(escapeCSVField('@cmd')).toBe("'@cmd");
+    expect(escapeCSVField('+x')).toBe("'+x");
+    expect(escapeCSVField('-x')).toBe("'-x");
+  });
+
+  it('does not treat a numeric -5 as formula-injection-prone', () => {
+    // A genuine numeric cell must not be corrupted by the string-only guard.
+    expect(escapeCSVField(-5)).toBe('-5');
   });
 });
 

@@ -15,7 +15,7 @@
 
 import { useMemo, useState, type JSX } from 'react';
 
-import { AlertCircle, PlusCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -130,9 +130,14 @@ export default function WishlistPage(): JSX.Element {
       {/* hero */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="font-quicksand text-2xl font-bold text-foreground sm:text-3xl">
-            {t('pages.library.wishlist.hero.title')}
-          </h1>
+          <div className="flex items-center gap-2">
+            <span aria-hidden="true" className="text-2xl sm:text-3xl">
+              ❤️
+            </span>
+            <h1 className="font-quicksand text-2xl font-bold text-foreground sm:text-3xl">
+              {t('pages.library.wishlist.hero.title')}
+            </h1>
+          </div>
           <p className="mt-1 text-sm text-muted-foreground">
             {t('pages.library.wishlist.hero.subtitle')}
           </p>
@@ -141,7 +146,7 @@ export default function WishlistPage(): JSX.Element {
           mode="add"
           trigger={
             <Button type="button" className="gap-1.5">
-              <PlusCircle className="h-4 w-4" aria-hidden="true" />
+              <span aria-hidden="true">❤️</span>
               {t('pages.library.wishlist.hero.addCta')}
             </Button>
           }
@@ -165,6 +170,7 @@ export default function WishlistPage(): JSX.Element {
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             )}
           >
+            <span aria-hidden="true">{tab.id === 'library' ? '📚' : '❤️'}</span>
             {t(`pages.library.wishlist.hero.tab${tab.id === 'library' ? 'Library' : 'Wishlist'}`)}
           </Link>
         ))}
@@ -225,7 +231,12 @@ export default function WishlistPage(): JSX.Element {
           </p>
           <AddToWishlistDialog
             mode="add"
-            trigger={<Button type="button">{t('pages.library.wishlist.empty.noItems.cta')}</Button>}
+            trigger={
+              <Button type="button" className="gap-1.5">
+                <span aria-hidden="true">❤️</span>
+                {t('pages.library.wishlist.empty.noItems.cta')}
+              </Button>
+            }
           />
         </div>
       )}

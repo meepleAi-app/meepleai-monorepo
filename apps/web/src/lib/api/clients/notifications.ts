@@ -19,6 +19,8 @@ import {
   type MarkNotificationReadResponse,
   type NotificationDto,
   type NotificationPreferences,
+  type QuietHoursInput,
+  type SlackPreferencesInput,
 } from '../schemas/notifications.schemas';
 
 import type { HttpClient } from '../core/httpClient';
@@ -35,6 +37,8 @@ export interface NotificationsClient {
   getPreferences(): Promise<NotificationPreferences>;
   updatePreferences(prefs: Omit<NotificationPreferences, 'userId'>): Promise<void>;
   updateCardSuppressionEmailPreference(enabled: boolean): Promise<void>;
+  updateSlackPreferences(prefs: SlackPreferencesInput): Promise<void>;
+  updateQuietHours(input: QuietHoursInput): Promise<void>;
 }
 
 export interface GetNotificationsParams {
@@ -142,6 +146,22 @@ export function createNotificationsClient({
       await httpClient.put('/api/v1/notifications/preferences/card-suppression', {
         emailOnCardSuppressed: enabled,
       });
+    },
+
+    /**
+     * Update Slack notification channel preferences (Issue #2994).
+     * Dedicated endpoint so the generic preferences save never resets Slack toggles.
+     */
+    async updateSlackPreferences(prefs: SlackPreferencesInput): Promise<void> {
+      await httpClient.put('/api/v1/notifications/preferences/slack', prefs);
+    },
+
+    /**
+     * Update the quiet-hours window (ADR-076 / Issue #2995). Pass null start + end to disable.
+     * Times are "HH:mm" strings; the server suppresses email + Slack DM during the window.
+     */
+    async updateQuietHours(input: QuietHoursInput): Promise<void> {
+      await httpClient.put('/api/v1/notifications/preferences/quiet-hours', input);
     },
   };
 }

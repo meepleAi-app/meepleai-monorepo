@@ -7,6 +7,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockGetPreferences = vi.hoisted(() => vi.fn());
 const mockUpdatePreferences = vi.hoisted(() => vi.fn());
 const mockUpdateCardSuppression = vi.hoisted(() => vi.fn());
+const mockUpdateSlackPreferences = vi.hoisted(() => vi.fn());
+const mockUpdateQuietHours = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/api', () => ({
   api: {
@@ -14,6 +16,8 @@ vi.mock('@/lib/api', () => ({
       getPreferences: mockGetPreferences,
       updatePreferences: mockUpdatePreferences,
       updateCardSuppressionEmailPreference: mockUpdateCardSuppression,
+      updateSlackPreferences: mockUpdateSlackPreferences,
+      updateQuietHours: mockUpdateQuietHours,
     },
   },
 }));
@@ -43,6 +47,18 @@ function fullPrefs(overrides: Record<string, unknown> = {}) {
     emailOnGameNightReminder: true,
     pushOnGameNightReminder: true,
     emailOnCardSuppressed: false,
+    timeZone: 'UTC',
+    quietHoursStart: null,
+    quietHoursEnd: null,
+    slackEnabled: true,
+    slackOnDocumentReady: true,
+    slackOnDocumentFailed: true,
+    slackOnRetryAvailable: false,
+    slackOnGameNightInvitation: true,
+    slackOnGameNightReminder: true,
+    slackOnShareRequestCreated: true,
+    slackOnShareRequestApproved: true,
+    slackOnBadgeEarned: true,
     ...overrides,
   };
 }
@@ -53,6 +69,8 @@ describe('NotificationPreferences — card-suppression email opt-in (#2832)', ()
     mockGetPreferences.mockResolvedValue(fullPrefs());
     mockUpdatePreferences.mockResolvedValue(undefined);
     mockUpdateCardSuppression.mockResolvedValue(undefined);
+    mockUpdateSlackPreferences.mockResolvedValue(undefined);
+    mockUpdateQuietHours.mockResolvedValue(undefined);
   });
 
   it('renders the card-suppression toggle reflecting the loaded (off) state', async () => {

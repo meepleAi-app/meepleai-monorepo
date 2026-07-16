@@ -94,8 +94,44 @@ export const NotificationPreferencesSchema = z.object({
   pushOnGameNightReminder: z.boolean().optional().default(true),
   // #535 / #2832: opt-in admin email when a mechanic card is suppressed (default off).
   emailOnCardSuppressed: z.boolean().optional().default(false),
+  // Quiet hours (ADR-076 / Issue #2995). Times are "HH:mm" strings; null when not configured.
+  // Server-side gating suppresses email + Slack DM during the window (in-app is never suppressed).
+  timeZone: z.string().optional().default('UTC'),
+  quietHoursStart: z.string().nullable().optional(),
+  quietHoursEnd: z.string().nullable().optional(),
+  // Slack channel preferences (Issue #2994) — persisted via PUT /notifications/preferences/slack.
+  slackEnabled: z.boolean().optional().default(true),
+  slackOnDocumentReady: z.boolean().optional().default(true),
+  slackOnDocumentFailed: z.boolean().optional().default(true),
+  slackOnRetryAvailable: z.boolean().optional().default(false),
+  slackOnGameNightInvitation: z.boolean().optional().default(true),
+  slackOnGameNightReminder: z.boolean().optional().default(true),
+  slackOnShareRequestCreated: z.boolean().optional().default(true),
+  slackOnShareRequestApproved: z.boolean().optional().default(true),
+  slackOnBadgeEarned: z.boolean().optional().default(true),
 });
 export type NotificationPreferences = z.infer<typeof NotificationPreferencesSchema>;
+
+// Issue #2994: dedicated payloads for the Slack + quiet-hours save endpoints.
+export const SlackPreferencesInputSchema = NotificationPreferencesSchema.pick({
+  slackEnabled: true,
+  slackOnDocumentReady: true,
+  slackOnDocumentFailed: true,
+  slackOnRetryAvailable: true,
+  slackOnGameNightInvitation: true,
+  slackOnGameNightReminder: true,
+  slackOnShareRequestCreated: true,
+  slackOnShareRequestApproved: true,
+  slackOnBadgeEarned: true,
+});
+export type SlackPreferencesInput = z.infer<typeof SlackPreferencesInputSchema>;
+
+export const QuietHoursInputSchema = z.object({
+  timeZone: z.string(),
+  quietHoursStart: z.string().nullable(),
+  quietHoursEnd: z.string().nullable(),
+});
+export type QuietHoursInput = z.infer<typeof QuietHoursInputSchema>;
 
 export const MarkNotificationReadResponseSchema = z.object({
   success: z.boolean(),

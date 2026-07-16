@@ -235,7 +235,9 @@ describe('CatanLiveFlavor', () => {
     const dim = screen.getByTestId('catan-flavor-dimensions');
     expect(dim).toHaveTextContent('Città');
     expect(dim).toHaveTextContent('Alice'); // p1 summed 2+2 = 4
-    expect(within(dim).getByText('4', { selector: '[data-player="p1"]' })).toBeInTheDocument();
+    const p1Cell = dim.querySelector('[data-player="p1"]'); // robust: avoids ambiguous "4"
+    expect(p1Cell).not.toBeNull();
+    expect(p1Cell).toHaveTextContent('4');
   });
 });
 ```
@@ -536,19 +538,24 @@ import { FlavorLoadingSkeleton } from './FlavorLoadingSkeleton';
 export type FlavorView = 'live';
 
 type FlavorComponent = ComponentType<CatanLiveFlavorProps>;
-type FlavorLoader = () => Promise<FlavorComponent>;
+
+// Lazy chunks are created at MODULE scope — NEVER inside render (that would
+// mint a new component identity every render → remount loop). The loader
+// returns `{ default }` to match the codebase precedent (editor/page.tsx L35,
+// KbGlobaleView.tsx L56) and satisfy next/dynamic's TS loader type.
+const CatanLiveFlavorLazy: FlavorComponent = dynamic(
+  () => import('./flavors/catan/CatanLiveFlavor').then(m => ({ default: m.CatanLiveFlavor })),
+  { ssr: false, loading: () => <FlavorLoadingSkeleton /> }
+);
 
 /**
- * ADR-070 Option B — per-game flavor registry. Each entry lazy-loads its own
- * content-hashed chunk via next/dynamic, so a game's flavor bundle is fetched
- * ONLY when that game's live session is opened (verified by pnpm bundle:check).
- * Summary loaders arrive with G6a-2; other 6 games with G6b–g.
+ * ADR-070 Option B — per-game flavor registry. Each value is a module-level
+ * lazy component (content-hashed chunk fetched ONLY when that game's live
+ * session is opened; verified by pnpm bundle:check). Summary entries arrive
+ * with G6a-2; other 6 games with G6b–g.
  */
-const FLAVOR_MAP: Record<string, Partial<Record<FlavorView, FlavorLoader>>> = {
-  catan: {
-    live: () =>
-      import('./flavors/catan/CatanLiveFlavor').then(m => m.CatanLiveFlavor),
-  },
+const FLAVOR_MAP: Record<string, Partial<Record<FlavorView, FlavorComponent>>> = {
+  catan: { live: CatanLiveFlavorLazy },
 };
 
 export function hasFlavor(gameSlug: string | null | undefined): boolean {
@@ -570,14 +577,8 @@ export function FlavorRenderer({
   labels,
   className,
 }: FlavorRendererProps): ReactElement | null {
-  const loader = gameSlug != null ? FLAVOR_MAP[gameSlug]?.[view] : undefined;
-  if (loader == null) return null;
-
-  const LazyFlavor = dynamic(loader, {
-    ssr: false,
-    loading: () => <FlavorLoadingSkeleton />,
-  });
-
+  const LazyFlavor = gameSlug != null ? FLAVOR_MAP[gameSlug]?.[view] : undefined;
+  if (LazyFlavor == null) return null;
   return <LazyFlavor session={session} labels={labels} className={className} />;
 }
 ```
@@ -683,7 +684,7 @@ Add `showFlavorTab` to `RightColumnTabsProps`:
 In the component body, before `useTablistKeyboardNav`, compute the order and labels:
 ```ts
   const orderedTabs = useMemo<ReadonlyArray<LiveTab>>(
-    () => (showFlavorTab ? (['flavor', ...BASE_TABS] as const) : BASE_TABS),
+    () => (showFlavorTab ? ['flavor', ...BASE_TABS] : BASE_TABS),
     [showFlavorTab]
   );
 
@@ -697,10 +698,18 @@ In the component body, before `useTablistKeyboardNav`, compute the order and lab
       photos: labels.tabPhotos,
       agent: labels.tabAgent,
     }),
-    [labels]
+    [
+      labels.tabFlavor,
+      labels.tabScore,
+      labels.tabTurn,
+      labels.tabWidget,
+      labels.tabNotes,
+      labels.tabPhotos,
+      labels.tabAgent,
+    ]
   );
 ```
-(Delete the old `tabLabels` memo with the per-key dep array; depend on `labels` object — it is a memoized object from the parent.)
+(Replace the old `tabLabels` memo; keep granular per-key deps as in the original — `labels` is memoized upstream, but granular deps preserve the original contract and avoid any refocus risk.)
 
 Point keyboard nav + render at `orderedTabs`:
 ```ts
@@ -914,21 +923,31 @@ and to `mobileBodyLabels` (L879 memo):
 4. After `const liveSessionDto = sessionQuery.data;` (L1083), add flavor gating + labels:
 ```ts
   const showFlavorTab = hasFlavor(liveSessionDto?.gameSlug);
+  // Placeholder-bearing templates ({n}/{name}/{score}) are read RAW from
+  // intl.messages so react-intl does NOT try to ICU-interpolate them — the
+  // component does the runtime .replace. This is the PRESCRIBED approach (not
+  // optional): it mirrors the toolkitRenderer aria templates at L933. Plain
+  // labels (no placeholders) use t() normally.
   const catanFlavorLabels = useMemo<CatanLiveFlavorLabels>(
     () => ({
       panelAriaLabel: t('pages.sessionLive.flavor.catan.panelAriaLabel'),
-      roundTemplate: t('pages.sessionLive.flavor.catan.roundTemplate'),
-      activePlayerTemplate: t('pages.sessionLive.flavor.catan.activePlayerTemplate'),
+      roundTemplate:
+        (intl.messages['pages.sessionLive.flavor.catan.roundTemplate'] as string) ?? 'Round {n}',
+      activePlayerTemplate:
+        (intl.messages['pages.sessionLive.flavor.catan.activePlayerTemplate'] as string) ??
+        'Turno di {name}',
       leaderboardHeading: t('pages.sessionLive.flavor.catan.leaderboardHeading'),
       leaderBadgeLabel: t('pages.sessionLive.flavor.catan.leaderBadgeLabel'),
-      scoreAriaTemplate: t('pages.sessionLive.flavor.catan.scoreAriaTemplate'),
+      scoreAriaTemplate:
+        (intl.messages['pages.sessionLive.flavor.catan.scoreAriaTemplate'] as string) ??
+        'Punti di {name}: {score}',
       dimensionsHeading: t('pages.sessionLive.flavor.catan.dimensionsHeading'),
       emptyLabel: t('pages.sessionLive.flavor.catan.emptyLabel'),
     }),
-    [t]
+    [t, intl.messages]
   );
 ```
-> Note: `t` uses ICU `{n}`/`{name}` as literal placeholders here (runtime `.replace` inside the component), so resolve these keys WITHOUT interpolation values — pass the raw template string. If `t()` strips unmatched `{...}`, read them via `intl.messages['...'] as string` like the `toolkitRenderer` aria templates do at L933.
+> `intl` is already in scope in `SessionLiveView` (used for the toolkitRenderer aria templates at L933). Templates keep their `{n}`/`{name}`/`{score}` tokens intact for the component's runtime `.replace`.
 
 5. Desktop mount — pass `showFlavorTab` to `RightColumnTabs` (L1523) and add the flavor branch as the FIRST child:
 ```tsx
@@ -1078,7 +1097,7 @@ Comment on #2787: LIVE shipped, SUMMARY deferred to a new G6a-2 sub-issue (open 
 
 ## Risks / adapt-points (implementer must confirm against the live file)
 
-1. **`t()` interpolation** — resolve flavor template keys WITHOUT values (raw `{n}`/`{name}` strings needed for runtime `.replace`); if `t()` mangles them, use `intl.messages['key'] as string` (pattern already in the file at L933).
+1. **`t()` interpolation** — RESOLVED (plan review): template keys (`roundTemplate`/`activePlayerTemplate`/`scoreAriaTemplate`) are read via `intl.messages['key'] as string` (raw, no ICU interpolation), per Task 6. Only confirm `intl` is the in-scope variable name in `SessionLiveView` (it is, at L933).
 2. **SessionLiveView test harness** — adapt the new tests to the file's real render helper + `useLiveSession` mock (parameterise `gameSlug`).
 3. **E2E fixture** — a rich Catan `LiveSessionDto` host-fixture may not exist; add one or `test.fixme()` with an explicit logged gap (never silent-skip).
 4. **`lint:fidelity` location** — root vs `apps/web` script; run where defined.

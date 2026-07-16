@@ -2649,4 +2649,28 @@ describe('SessionLiveView — Catan flavor tab (#2787)', () => {
     expect(screen.getByRole('tab', { name: 'Score' })).toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: 'Catan' })).not.toBeInTheDocument();
   });
+
+  it('falls back to the Score tab when ?tab=flavor lands on a non-catan session', () => {
+    // Stale bookmark: ?tab=flavor carried to a session with no flavor must not
+    // strand the user on an empty tab — the panel falls back to Score.
+    searchParamsMap['tab'] = 'flavor';
+    renderWithIntl(<SessionLiveView />); // default = mage-knight (no flavor)
+    expect(screen.queryByRole('tab', { name: 'Catan' })).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Score' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('renders CatanLiveFlavor when ?tab=flavor on a catan session', async () => {
+    searchParamsMap['tab'] = 'flavor';
+    useLiveSessionMock.mockReturnValue({
+      data: { ...MOCK_SESSION_DTO, gameSlug: 'catan' } as unknown as LiveSessionDto,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+    renderWithIntl(<SessionLiveView />);
+    // FlavorRenderer lazy-loads CatanLiveFlavor (<section aria-label> → role region).
+    expect(await screen.findByRole('region', { name: 'Pannello Catan' })).toBeInTheDocument();
+  });
 });

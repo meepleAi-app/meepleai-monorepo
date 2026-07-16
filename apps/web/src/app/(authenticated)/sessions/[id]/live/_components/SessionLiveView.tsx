@@ -1122,6 +1122,12 @@ export function SessionLiveView(): ReactElement {
     }),
     [t, intl.messages]
   );
+  // #2787: never strand the user on ?tab=flavor / ?mtab=flavor when the game has
+  // no flavor (e.g. a stale bookmark carried to a non-catan session) — the flavor
+  // tab button is hidden (showFlavorTab=false), so fall the panel back to 'score'.
+  const effectiveTab: LiveTab = tab === 'flavor' && !showFlavorTab ? 'score' : tab;
+  const effectiveMobileTab: LiveTab =
+    mobileTab === 'flavor' && !showFlavorTab ? 'score' : mobileTab;
 
   const agentChat = useSessionAgentChat(sessionId ?? '', agentSessionId, {
     persistHistory: !fixture,
@@ -1348,7 +1354,7 @@ export function SessionLiveView(): ReactElement {
   // Hosted inside MobileBottomSheetDrawer via MobileBody.sheetContent prop.
   const mobileSheetContent = useMemo<React.ReactNode>(() => {
     if (activeSession == null) return null;
-    switch (mobileTab) {
+    switch (effectiveMobileTab) {
       case 'flavor':
         return liveSessionDto != null ? (
           <FlavorRenderer
@@ -1433,7 +1439,7 @@ export function SessionLiveView(): ReactElement {
         );
     }
   }, [
-    mobileTab,
+    effectiveMobileTab,
     activeSession,
     liveSessionDto,
     catanFlavorLabels,
@@ -1565,12 +1571,12 @@ export function SessionLiveView(): ReactElement {
   // G5a (#2375): ScoringPanelRenderer replaces hardcoded LiveScoringPanel Points-only view.
   const desktopRightColumn = (
     <RightColumnTabs
-      activeTab={tab}
+      activeTab={effectiveTab}
       onTabChange={handleTabChange}
       labels={rightColumnTabsLabels}
       showFlavorTab={showFlavorTab}
     >
-      {tab === 'flavor' && liveSessionDto != null && (
+      {effectiveTab === 'flavor' && liveSessionDto != null && (
         <FlavorRenderer
           gameSlug={liveSessionDto.gameSlug}
           view="live"
@@ -1579,7 +1585,7 @@ export function SessionLiveView(): ReactElement {
           className="p-3"
         />
       )}
-      {tab === 'score' && (
+      {effectiveTab === 'score' && (
         <ScoreTabContent
           sessionId={sessionId ?? ''}
           viewerRole={activeSession.viewerRole}
@@ -1588,7 +1594,7 @@ export function SessionLiveView(): ReactElement {
           className="p-3"
         />
       )}
-      {tab === 'turn' && (
+      {effectiveTab === 'turn' && (
         <div className="flex flex-col gap-4 p-3">
           <TurnIndicatorRenderer
             state={turnRendererState}
@@ -1607,7 +1613,7 @@ export function SessionLiveView(): ReactElement {
           />
         </div>
       )}
-      {tab === 'widget' && (
+      {effectiveTab === 'widget' && (
         <ToolkitRenderer
           widgets={toolkitWidgets}
           openWidgetId={toolkitOpenId}
@@ -1617,7 +1623,7 @@ export function SessionLiveView(): ReactElement {
           labels={toolkitRendererLabels}
         />
       )}
-      {tab === 'notes' && (
+      {effectiveTab === 'notes' && (
         <LiveSessionNotes
           notes={noteEntries}
           viewerRole={activeSession.viewerRole}
@@ -1626,14 +1632,14 @@ export function SessionLiveView(): ReactElement {
           labels={notesLabels}
         />
       )}
-      {tab === 'photos' && (
+      {effectiveTab === 'photos' && (
         <PhotosTabContent
           sessionId={sessionId ?? ''}
           userId={currentUser?.id ?? ''}
           currentTurn={activeSession.currentTurn}
         />
       )}
-      {tab === 'agent' && (
+      {effectiveTab === 'agent' && (
         <AgentDisputeTabContent
           sessionId={sessionId ?? ''}
           players={activeSession.players.map(p => ({
@@ -1699,7 +1705,7 @@ export function SessionLiveView(): ReactElement {
         mainContent={mobileMainContent}
         sheetOpen={mobileSheetOpen}
         onSheetOpenChange={handleMobileSheetOpenChange}
-        sheetActiveTab={mobileTab}
+        sheetActiveTab={effectiveMobileTab}
         onSheetTabChange={handleMobileTabChange}
         sheetContent={mobileSheetContent}
         labels={mobileBodyLabels}

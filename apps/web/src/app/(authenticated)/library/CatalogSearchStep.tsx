@@ -121,9 +121,11 @@ function SelectableGameCard({
           <div
             data-testid={`catalog-card-${game.id}-in-library-badge`}
             // #2269 P0-4 — token canonical: bg-green-600 → arbitrary
-            // hsl(var(--c-success)). Arbitrary bg-[hsl(...)] is explicitly
+            // hsl(var(--c-success-ink)). Arbitrary bg-[hsl(...)] is explicitly
             // in the DS-15 .e-bg exemption list for `text-white`.
-            className="absolute top-1.5 right-1.5 bg-[hsl(var(--c-success))] text-white text-xs font-medium px-1.5 py-0.5 rounded"
+            // #3010 FU3 — --c-success (base) with text-white is ~2.4:1 (fails
+            // AA); swapped to --c-success-ink (dark) for ~6.12:1 white-on-ink.
+            className="absolute top-1.5 right-1.5 bg-[hsl(var(--c-success-ink))] text-white text-xs font-medium px-1.5 py-0.5 rounded"
           >
             {labels.inLibraryBadge}
           </div>

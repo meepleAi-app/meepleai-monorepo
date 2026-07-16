@@ -9,6 +9,8 @@
 
 import { logger } from '@/lib/logger';
 
+import { escapeCSVField, downloadFile } from './csv';
+
 /**
  * Testing metrics data structure for export
  */
@@ -283,33 +285,4 @@ export async function exportTestingMetricsToPDF(
     logger.error('PDF export failed:', error);
     throw new Error('Failed to generate PDF. Please try again.');
   }
-}
-
-/**
- * Escape CSV field to handle commas, quotes, and newlines
- */
-function escapeCSVField(field: string): string {
-  if (field.includes(',') || field.includes('"') || field.includes('\n')) {
-    return `"${field.replace(/"/g, '""')}"`;
-  }
-  return field;
-}
-
-/**
- * Trigger browser download for a file
- *
- * @param content - File content
- * @param filename - Filename for download
- * @param mimeType - MIME type of the file
- */
-function downloadFile(content: string, filename: string, mimeType: string): void {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
 }

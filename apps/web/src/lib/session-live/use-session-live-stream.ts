@@ -106,7 +106,8 @@ type StreamAction =
   | { type: 'RETRY'; retryCount: number; retryAt: Date }
   | { type: 'DEGRADED_POLLING' }
   | { type: 'FAILED' }
-  | { type: 'RESET' };
+  | { type: 'RESET' }
+  | { type: 'CLEAR' };
 
 const INITIAL_STATE: StreamState = {
   events: [],
@@ -168,6 +169,13 @@ function streamReducer(state: StreamState, action: StreamAction): StreamState {
         seenIds: state.seenIds,
         lastEventId: state.lastEventId,
       };
+
+    case 'CLEAR':
+      // #3050: full reset (events + seenIds + lastEventId) on a genuine sessionId
+      // change, so a previous session's accumulated events / Last-Event-ID never
+      // bleed into the new session's stream or the shared game-state store. Distinct
+      // from RESET, which deliberately preserves events across same-session reconnects.
+      return { ...INITIAL_STATE, seenIds: new Set<string>() };
 
     default:
       return state;
@@ -318,6 +326,10 @@ export function useSessionLiveStream(input: UseSessionLiveStreamInput): UseSessi
   // Keep connectRef stable for retry timer closures
   connectRef.current = connect;
 
+  // #3050: track the sessionId across renders to detect a genuine session change
+  // (vs. a same-session reconnect) so the accumulator can be fully cleared.
+  const prevSessionIdRef = useRef<string | null>(sessionId);
+
   // Manual reconnect — resets retry state
   const reconnect = useCallback(() => {
     retryCountRef.current = 0;
@@ -329,6 +341,16 @@ export function useSessionLiveStream(input: UseSessionLiveStreamInput): UseSessi
   // (Re)connect when sessionId/enabled changes
   useEffect(() => {
     isMountedRef.current = true;
+
+    // #3050: on a genuine sessionId change, clear the previous session's accumulated
+    // events/seenIds/lastEventId so they cannot bleed into this session (App Router
+    // reuses the /sessions/[id]/live component across navigations — no remount).
+    if (prevSessionIdRef.current !== sessionId) {
+      prevSessionIdRef.current = sessionId;
+      retryCountRef.current = 0;
+      receivedFirstMessageRef.current = false;
+      dispatch({ type: 'CLEAR' });
+    }
 
     if (sessionId && enabled) {
       connect();

@@ -7,6 +7,7 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
 // Import and re-export BGG types from games.schemas for convenience
 import {
   BggGameDetailsSchema,
@@ -126,7 +127,7 @@ export type GameErrata = z.infer<typeof GameErrataSchema>;
  */
 export const SharedGameDocumentSchema = z.object({
   id: z.string().uuid(),
-  sharedGameId: z.string().uuid(),
+  sharedGameId: GameIdString,
   pdfDocumentId: z.string().uuid(),
   documentType: SharedGameDocumentTypeNumericSchema,
   version: z.string().regex(/^\d+\.\d+$/),
@@ -195,7 +196,7 @@ export type SharedGameTranslationDto = z.infer<typeof SharedGameTranslationDtoSc
  * Shared game basic DTO (list view)
  */
 export const SharedGameSchema = z.object({
-  id: z.string().uuid(),
+  id: GameIdString,
   bggId: z.number().int().nullable(), // 0 is valid (no BGG match)
   title: z.string().min(1),
   yearPublished: z.number().int(),
@@ -303,7 +304,7 @@ export type PublishedKbPreview = z.infer<typeof PublishedKbPreviewSchema>;
  * Issue #2373 Phase 4: Extended with FAQs, Errata, Designers, Publishers, Categories, Mechanics
  */
 export const SharedGameDetailSchema = z.object({
-  id: z.string().uuid(),
+  id: GameIdString,
   bggId: z.number().int().nullable(), // 0 is valid (no BGG match)
   title: z.string().min(1),
   yearPublished: z.number().int(),
@@ -388,7 +389,7 @@ export type PagedSharedGames = z.infer<typeof PagedSharedGamesSchema>;
  */
 export const DeleteRequestSchema = z.object({
   id: z.string().uuid(),
-  sharedGameId: z.string().uuid(),
+  sharedGameId: GameIdString,
   gameTitle: z.string(),
   requestedBy: z.string().uuid(),
   reason: z.string(),
@@ -642,7 +643,7 @@ export const BulkImportResultSchema = z.object({
   successCount: z.number().int().nonnegative(),
   failureCount: z.number().int().nonnegative(),
   errors: z.array(z.string()),
-  importedGameIds: z.array(z.string().uuid()),
+  importedGameIds: z.array(GameIdString),
 });
 
 export type BulkImportResult = z.infer<typeof BulkImportResultSchema>;
@@ -671,7 +672,7 @@ export type BatchApprovalResult = z.infer<typeof BatchApprovalResultSchema>;
  */
 export const BggDuplicateCheckResultSchema = z.object({
   isDuplicate: z.boolean(),
-  existingGameId: z.string().uuid().nullable(),
+  existingGameId: GameIdString.nullable(),
   existingGame: SharedGameDetailSchema.nullable(),
   bggData: BggGameDetailsSchema.nullable(),
 });
@@ -776,7 +777,7 @@ export type GeneratedFaqDto = z.infer<typeof GeneratedFaqDtoSchema>;
  */
 export const RulebookAnalysisDtoSchema = z.object({
   id: z.string().uuid(),
-  sharedGameId: z.string().uuid(),
+  sharedGameId: GameIdString,
   pdfDocumentId: z.string().uuid(),
   gameTitle: z.string(),
   summary: z.string(),

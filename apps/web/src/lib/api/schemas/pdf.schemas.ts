@@ -7,11 +7,13 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 // ========== PDF Document ==========
 
 export const PdfDocumentDtoSchema = z.object({
   id: z.string().uuid(),
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   fileName: z.string().min(1),
   filePath: z.string().min(1),
   fileSizeBytes: z.number().int().nonnegative(),

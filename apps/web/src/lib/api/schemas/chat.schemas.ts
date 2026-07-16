@@ -7,6 +7,8 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 // ========== Chat Messages ==========
 
 export const ChatMessageResponseSchema = z.object({
@@ -35,7 +37,7 @@ export const ChatThreadMessageDtoSchema = z.object({
   timestamp: z.string().datetime({ offset: true }),
   backendMessageId: z.string().uuid().optional(),
   endpoint: z.string().optional(),
-  gameId: z.string().uuid().optional(),
+  gameId: GameIdString.optional(),
   // Note: Keep in sync with FEEDBACK_OUTCOMES in @/lib/constants/feedback
   feedback: z.enum(['helpful', 'not-helpful', 'incorrect']).nullable().optional(),
   // Populated by BE on assistant messages; null on user messages. R1 — Task 5-FE #2500.
@@ -46,7 +48,7 @@ export type ChatThreadMessageDto = z.infer<typeof ChatThreadMessageDtoSchema>;
 
 export const ChatThreadDtoSchema = z.object({
   id: z.string().uuid(),
-  gameId: z.string().uuid().nullable(),
+  gameId: GameIdString.nullable(),
   agentId: z.string().uuid().nullable().optional(),
   agentType: z.string().nullable().optional(),
   title: z.string().nullable(),
@@ -63,7 +65,7 @@ export type ChatThreadDto = z.infer<typeof ChatThreadDtoSchema>;
 export const RuleSpecCommentSchema: z.ZodType<RuleSpecComment> = z.lazy(() =>
   z.object({
     id: z.string().uuid(),
-    gameId: z.string().uuid(),
+    gameId: GameIdString,
     version: z.string().min(1),
     atomId: z.string().nullable(),
     lineNumber: z.number().int().nullable(),
@@ -105,7 +107,7 @@ export type RuleSpecComment = {
 };
 
 export const RuleSpecCommentsResponseSchema = z.object({
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   version: z.string().min(1),
   comments: z.array(RuleSpecCommentSchema),
   totalComments: z.number().int().nonnegative(),

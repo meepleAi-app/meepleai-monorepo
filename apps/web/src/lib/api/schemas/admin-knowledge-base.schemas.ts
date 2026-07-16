@@ -7,6 +7,8 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 // ========== Bulk Delete ==========
 
 export const BulkDeleteItemResultSchema = z.object({
@@ -336,7 +338,7 @@ export type RecentLlmRequestsDto = z.infer<typeof RecentLlmRequestsDtoSchema>;
 // ─── KB Games Status (Admin KB Dashboard) ────────────────────────────────────
 
 export const GameKbStatusItemSchema = z.object({
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   gameName: z.string(),
   kbStatus: z.enum(['complete', 'partial', 'none']),
   documentCount: z.number(),

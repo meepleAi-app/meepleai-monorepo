@@ -10,6 +10,8 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 /**
  * SearchMode enum for the search request.
  * Currently only "Semantic" is supported in v1.
@@ -28,7 +30,7 @@ export const GlobalKbSearchResultSchema = z.object({
   chunkId: z.string(),
   docId: z.string().uuid(),
   docTitle: z.string(),
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   gameName: z.string(),
   docType: z.string(),
   headingPath: z.string().nullable(),
@@ -52,7 +54,7 @@ export const GlobalKbSearchRequestSchema = z.object({
   cursor: z.string().nullable().optional(),
   mode: SearchModeSchema.optional(),
   docType: z.array(z.string()).optional(),
-  gameId: z.array(z.string().uuid()).optional(),
+  gameId: z.array(GameIdString).optional(),
   language: z.string().optional(),
 });
 

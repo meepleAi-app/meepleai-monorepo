@@ -73,8 +73,14 @@ describe('KB Globale Schemas', () => {
     expect(() => GlobalKbSearchResponseSchema.parse(envelope)).toThrow();
   });
 
-  it('rejects malformed gameId UUID', () => {
-    const result = { ...validResult, gameId: 'invalid-uuid' };
+  it('accepts non-RFC-UUID gameId (game ids are not guaranteed strict UUIDs, #2247)', () => {
+    const result = { ...validResult, gameId: '81cc97e4-f148-fb7b-db36-bf700d1f4561' };
+    const envelope = { results: [result], hasMore: false, nextCursor: null };
+    expect(() => GlobalKbSearchResponseSchema.parse(envelope)).not.toThrow();
+  });
+
+  it('rejects empty-string gameId', () => {
+    const result = { ...validResult, gameId: '' };
     const envelope = { results: [result], hasMore: false, nextCursor: null };
     expect(() => GlobalKbSearchResponseSchema.parse(envelope)).toThrow();
   });
@@ -157,10 +163,18 @@ describe('GlobalKbSearchRequestSchema — filters (Phase 3 #1737)', () => {
     expect(result.success).toBe(true);
   });
 
-  it('rejects gameId with non-uuid string', () => {
+  it('accepts gameId array with non-RFC-UUID game id (#2247)', () => {
     const result = GlobalKbSearchRequestSchema.safeParse({
       query: 'azul',
-      gameId: ['not-a-uuid'],
+      gameId: ['81cc97e4-f148-fb7b-db36-bf700d1f4561'],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects gameId array containing an empty string', () => {
+    const result = GlobalKbSearchRequestSchema.safeParse({
+      query: 'azul',
+      gameId: [''],
     });
     expect(result.success).toBe(false);
   });

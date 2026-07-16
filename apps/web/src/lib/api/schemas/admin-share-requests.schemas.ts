@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
 import { ShareRequestStatusSchema, ContributionTypeSchema } from './share-requests.schemas';
 
 // Re-export types from share-requests.schemas for convenience
@@ -121,7 +122,7 @@ export const AdminShareRequestDtoSchema = z.object({
   contributionType: ContributionTypeSchema,
 
   // Game preview
-  sourceGameId: z.string().uuid(),
+  sourceGameId: GameIdString,
   gameTitle: z.string(),
   gameThumbnailUrl: z.string().nullable(),
   bggId: z.number().int().positive().nullable(),
@@ -144,7 +145,7 @@ export const AdminShareRequestDtoSchema = z.object({
   reviewStartedAt: z.string().datetime({ offset: true }).nullable(),
 
   // For additional content
-  targetSharedGameId: z.string().uuid().nullable(),
+  targetSharedGameId: GameIdString.nullable(),
   targetSharedGameTitle: z.string().nullable(),
 });
 
@@ -185,7 +186,7 @@ export type ShareRequestDetailsDto = z.infer<typeof ShareRequestDetailsDtoSchema
 // Active Review DTO (for "My Reviews" page)
 export const ActiveReviewDtoSchema = z.object({
   shareRequestId: z.string().uuid(),
-  sourceGameId: z.string().uuid(),
+  sourceGameId: GameIdString,
   gameTitle: z.string(),
   contributorId: z.string().uuid(),
   contributorName: z.string(),

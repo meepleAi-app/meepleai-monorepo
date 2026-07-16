@@ -16,6 +16,7 @@
  */
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
 import { MechanicSectionSchema } from './mechanic-analyses.schemas';
 
 // Re-export for convenience so card consumers can import both from one module.
@@ -65,7 +66,7 @@ export type PublishedMechanicSectionDto = z.infer<typeof PublishedMechanicSectio
 
 export const PublishedMechanicCardDtoSchema = z.object({
   cardId: z.string().uuid(),
-  sharedGameId: z.string().uuid(),
+  sharedGameId: GameIdString,
   title: z.string(),
   version: z.number().int(),
   publishedAt: z.string(),

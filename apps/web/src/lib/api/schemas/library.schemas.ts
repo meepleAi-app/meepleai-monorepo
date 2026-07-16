@@ -11,6 +11,8 @@ import { z } from 'zod';
 
 import { logger } from '@/lib/logger';
 
+import { GameIdString } from './common.schemas';
+
 // Game state types for library filtering (Issue #2866)
 // Valid enum values - strict parsing
 const VALID_GAME_STATES = ['Nuovo', 'InPrestito', 'Wishlist', 'Owned'] as const;
@@ -32,7 +34,7 @@ export const GameStateTypeWithFallbackSchema = z.string().transform(val => {
 export const UserLibraryEntrySchema = z.object({
   id: z.string().uuid(),
   userId: z.string().uuid(),
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   gameTitle: z.string(),
   gamePublisher: z.string().nullable().optional(),
   gameYearPublished: z.number().nullable().optional(),
@@ -61,7 +63,7 @@ export const UserLibraryEntrySchema = z.object({
   timesPlayed: z.number().int().nonnegative().default(0),
   lastPlayed: z.string().datetime({ offset: true }).nullable().optional(),
   // Issue #3663: Private game distinction fields
-  privateGameId: z.string().uuid().nullable().optional(), // non-null when entry is a private/custom game
+  privateGameId: GameIdString.nullable().optional(), // non-null when entry is a private/custom game
   isPrivateGame: z.boolean().default(false), // computed flag from backend
   canProposeToCatalog: z.boolean().default(false), // whether private game can be proposed
 });
@@ -220,7 +222,7 @@ export type UpdateLibraryShareLinkRequest = z.infer<typeof UpdateLibraryShareLin
 
 // Shared library public view response
 export const SharedLibraryGameSchema = z.object({
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   title: z.string(),
   publisher: z.string().nullable(),
   yearPublished: z.number().nullable(),
@@ -287,7 +289,7 @@ export type LibraryCustomPdf = z.infer<typeof LibraryCustomPdfSchema>;
 export const GameDetailDtoSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().uuid(),
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
 
   // Game metadata
   gameTitle: z.string(),

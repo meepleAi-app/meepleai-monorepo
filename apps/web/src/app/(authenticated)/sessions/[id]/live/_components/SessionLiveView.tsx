@@ -490,6 +490,16 @@ export function SessionLiveView(): ReactElement {
     };
   }, [fixture, sessionQuery.data, liveStream.events, diaryQuery.data, currentUser?.id]);
 
+  // #3025 L1: mirror the opaque live game-state into the store — hydrate from the DTO,
+  // then let the latest `session:game-state` SSE event win. L3 flavors read `s.gameState`.
+  useEffect(() => {
+    const dtoState = sessionQuery.data?.gameState ?? null;
+    const latest = [...liveStream.events].reverse().find(e => e.type === 'session:game-state');
+    useLiveSessionStore
+      .getState()
+      .setGameState(latest && latest.type === 'session:game-state' ? latest.state : dtoState);
+  }, [sessionQuery.data?.gameState, liveStream.events]);
+
   // #2483 Task 2: reactive selector for turnOrderType — must be declared before
   // turnRendererState useMemo (which appears in the i18n labels section below).
   const storeTurnOrderType = useLiveSessionStore(s => s.turnOrderType);

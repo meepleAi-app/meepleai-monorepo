@@ -133,6 +133,8 @@ export const LiveSessionDtoSchema = z.object({
   teams: z.array(LiveSessionTeamDtoSchema),
   roundScores: z.array(LiveSessionRoundScoreDtoSchema),
   scoringConfig: LiveSessionScoringConfigDtoSchema,
+  // #3025 L1: opaque live game-state (per-game typing = L2). Optional for back-compat.
+  gameState: z.unknown().nullable().optional(),
 });
 
 export type LiveSessionDto = z.infer<typeof LiveSessionDtoSchema>;

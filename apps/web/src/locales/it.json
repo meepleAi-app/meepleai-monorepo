@@ -4391,8 +4391,10 @@
         "viewSummary": "Vedi summary →",
         "reschedule": "Riprogramma",
         "accept": "✓ Partecipo",
-        "maybe": "Forse"
-      }
+        "maybe": "Forse",
+        "decline": "Declina"
+      },
+      "pendingBadge": "Da confermare"
     },
     "drawer": {
       "title": "{day} {month} {year}",

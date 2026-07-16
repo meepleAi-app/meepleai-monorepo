@@ -4338,8 +4338,10 @@
         "viewSummary": "View summary →",
         "reschedule": "Reschedule",
         "accept": "✓ Attending",
-        "maybe": "Maybe"
-      }
+        "maybe": "Maybe",
+        "decline": "Decline"
+      },
+      "pendingBadge": "To confirm"
     },
     "drawer": {
       "title": "{day} {month} {year}",

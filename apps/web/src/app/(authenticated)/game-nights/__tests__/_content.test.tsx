@@ -6,7 +6,7 @@
  * their own unit tests; this suite verifies wiring + state branching.
  */
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { GameNightDto } from '@/lib/api/schemas/game-nights.schemas';
@@ -38,10 +38,12 @@ vi.mock('@/hooks/useTranslation', () => ({
 
 const useUpcomingMock = vi.fn();
 const useMineMock = vi.fn();
+const rsvpMutateMock = vi.fn();
 
 vi.mock('@/hooks/queries/useGameNights', () => ({
   useUpcomingGameNights: () => useUpcomingMock(),
   useMyGameNights: () => useMineMock(),
+  useRsvpGameNight: () => ({ mutate: rsvpMutateMock }),
 }));
 
 const useCurrentUserMock = vi.fn();
@@ -296,5 +298,66 @@ describe('GameNightsContent (orchestrator)', () => {
     expect(replaceMock).toHaveBeenCalled();
     const target = String(replaceMock.mock.calls[0]?.[0] ?? '');
     expect(target).toMatch(/filter=organizing/);
+  });
+
+  // #2978 (invariante #17): a pending invitee can RSVP inline from the list card.
+  it('wires the RSVP mutation when a pending invitee clicks Declina', () => {
+    searchParamsState.view = 'list';
+    const invited = makeDto({
+      id: '99999999-9999-9999-9999-999999999999',
+      organizerId: 'someone-else-id-00000000000000000000',
+      viewerRsvpStatus: 'Pending',
+      title: 'Serata su invito',
+    });
+    useUpcomingMock.mockReturnValue({
+      data: [invited],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useMineMock.mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() });
+
+    render(<GameNightsContent />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'gameNightsIndex.list.cta.decline' }));
+    expect(rsvpMutateMock).toHaveBeenCalledWith({
+      id: '99999999-9999-9999-9999-999999999999',
+      response: 'Declined',
+    });
+  });
+
+  // #2978 (invariante #17) M1: RSVP must also work from the calendar day-detail drawer.
+  it('wires the RSVP mutation from the day-detail drawer (calendar view)', () => {
+    const invited = makeDto({
+      id: '88888888-8888-8888-8888-888888888888',
+      organizerId: 'someone-else-id-00000000000000000000',
+      viewerRsvpStatus: 'Pending',
+      title: 'Serata drawer',
+    });
+    useUpcomingMock.mockReturnValue({
+      data: [invited],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useMineMock.mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() });
+
+    render(<GameNightsContent />);
+
+    // The fixture schedules the night "today", so today's cell carries the event.
+    const todayCell = screen
+      .getAllByTestId('game-nights-calendar-day-cell')
+      .find(c => c.hasAttribute('data-today'));
+    expect(todayCell).toBeDefined();
+    fireEvent.click(todayCell as HTMLElement);
+
+    const drawer = screen.getByTestId('game-nights-day-detail-drawer');
+    fireEvent.click(
+      within(drawer).getByRole('button', { name: 'gameNightsIndex.list.cta.decline' })
+    );
+    expect(rsvpMutateMock).toHaveBeenCalledWith({
+      id: '88888888-8888-8888-8888-888888888888',
+      response: 'Declined',
+    });
   });
 });

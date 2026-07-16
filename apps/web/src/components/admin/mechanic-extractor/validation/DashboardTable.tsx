@@ -37,8 +37,7 @@ import type {
 const STATUS_BADGE_CLASS: Record<CertificationStatus, string> = {
   Certified: 'border-green-300 bg-green-50 text-green-800 dark:bg-green-950/30 dark:text-green-300',
   NotCertified: 'border-rose-300 bg-rose-50 text-rose-800 dark:bg-rose-950/30 dark:text-rose-300',
-  NotEvaluated:
-    'border-border bg-muted text-foreground dark:bg-zinc-900/40 dark:text-zinc-300',
+  NotEvaluated: 'border-border bg-muted text-foreground dark:bg-zinc-900/40 dark:text-zinc-300',
 };
 
 const STATUS_LABEL: Record<CertificationStatus, string> = {

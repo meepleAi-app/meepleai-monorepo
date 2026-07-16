@@ -58,6 +58,8 @@ vi.mock('@/hooks/queries/useGameNights', () => ({
     isError: false,
     refetch: vi.fn(),
   })),
+  // #2978 (invariante #17): inline RSVP mutation from the pending-invitee card.
+  useRsvpGameNight: vi.fn(() => ({ mutate: vi.fn() })),
 }));
 
 vi.mock('@/hooks/queries/useLibrary', () => ({
@@ -146,6 +148,44 @@ describe('DashboardClient (Asse C priority cluster)', () => {
     // Empty state → Prossimi still renders (with EmptySection inside).
     const prossimi = container.querySelector('[data-section-id="prossimi"]');
     expect(prossimi).not.toBeNull();
+  });
+
+  // #2978 (invariante #17): the dashboard maps viewerRsvpStatus onto the Prossimi card and wires
+  // the inline RSVP handler, so a pending invitee sees the treatment on /dashboard too.
+  it('renders the pending-invitee RSVP treatment for an upcoming night', async () => {
+    const useUpcomingMock = vi.mocked(
+      await import('@/hooks/queries/useGameNights')
+    ).useUpcomingGameNights;
+    useUpcomingMock.mockReturnValueOnce({
+      data: [
+        {
+          id: '00000000-0000-0000-0000-000000000042',
+          organizerId: '00000000-0000-0000-0000-0000000000aa',
+          organizerName: 'Marco',
+          title: 'Serata su invito',
+          description: null,
+          scheduledAt: '2030-01-01T20:00:00Z',
+          location: null,
+          maxPlayers: null,
+          gameIds: [],
+          status: 'Published' as const,
+          acceptedCount: 1,
+          pendingCount: 2,
+          totalInvited: 3,
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: null,
+          viewerRsvpStatus: 'Pending' as const,
+        },
+      ],
+      isLoading: false,
+      isError: false,
+      refetch: refetchUpcoming,
+    } as unknown as ReturnType<typeof useUpcomingMock>);
+
+    render(<DashboardClient />);
+
+    expect(screen.getByText('Da confermare')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Conferma' })).toBeInTheDocument();
   });
 
   it('renders priority sections container with flex-column layout', () => {

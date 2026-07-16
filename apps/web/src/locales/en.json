@@ -3561,11 +3561,23 @@
           "roundTemplate": "Round {n}",
           "activePlayerTemplate": "{name}'s turn",
           "phaseTemplate": "Phase: {name}",
-          "leaderboardHeading": "Victory Points",
-          "leaderBadgeLabel": "Leading",
-          "scoreAriaTemplate": "{name}'s points: {score}",
-          "dimensionsHeading": "Points breakdown",
-          "emptyLabel": "Waiting for game data…"
+          "initBoardCta": "Generate Catan board",
+          "viewerWaiting": "Waiting for the host…",
+          "hexAriaTemplate": "{terrain} {number}",
+          "robberLabel": "Robber",
+          "diceLastLabel": "Last roll",
+          "diceHistoryLabel": "History",
+          "rollAriaTemplate": "Record roll {n}",
+          "vpLabel": "VP",
+          "handLabel": "Hand",
+          "devLabel": "Dev",
+          "settlementsLabel": "Settlements",
+          "citiesLabel": "Cities",
+          "roadsLabel": "Roads",
+          "longestRoadLabel": "Long. Road",
+          "largestArmyLabel": "Big Army",
+          "incAriaTemplate": "{field} +1",
+          "decAriaTemplate": "{field} -1"
         }
       },
       "photosTab": {

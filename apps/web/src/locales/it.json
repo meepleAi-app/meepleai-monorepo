@@ -3666,11 +3666,23 @@
           "roundTemplate": "Round {n}",
           "activePlayerTemplate": "Turno di {name}",
           "phaseTemplate": "Fase: {name}",
-          "leaderboardHeading": "Punti Vittoria",
-          "leaderBadgeLabel": "In testa",
-          "scoreAriaTemplate": "Punti di {name}: {score}",
-          "dimensionsHeading": "Dettaglio punti",
-          "emptyLabel": "In attesa dei dati della partita…"
+          "initBoardCta": "Genera board Catan",
+          "viewerWaiting": "In attesa dell'host…",
+          "hexAriaTemplate": "{terrain} {number}",
+          "robberLabel": "Ladro",
+          "diceLastLabel": "Ultimo tiro",
+          "diceHistoryLabel": "Cronologia",
+          "rollAriaTemplate": "Registra tiro {n}",
+          "vpLabel": "PV",
+          "handLabel": "Mano",
+          "devLabel": "Sviluppo",
+          "settlementsLabel": "Insediamenti",
+          "citiesLabel": "Città",
+          "roadsLabel": "Strade",
+          "longestRoadLabel": "Strada+",
+          "largestArmyLabel": "Armata+",
+          "incAriaTemplate": "{field} +1",
+          "decAriaTemplate": "{field} −1"
         }
       },
       "photosTab": {

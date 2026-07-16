@@ -49,13 +49,17 @@ export function CatanHexBoard({
   const width = PAD * 2 + R + 4 * COL_STEP + R;
   const height = PAD * 2 + MAX_H * ROW_STEP;
 
+  // axe `nested-interactive`: an svg[role="img"] must not contain focusable descendants.
+  // In editable (host) mode each hex is its own role="button" with its own aria-label,
+  // so the wrapper drops the image semantics; read-only mode keeps role="img" since
+  // there are no focusable descendants.
   return (
     <svg
       data-slot="catan-board"
       viewBox={`0 0 ${width.toFixed(0)} ${height.toFixed(0)}`}
       className="h-auto w-full max-w-md"
-      role="img"
-      aria-label="Catan board"
+      role={editable ? undefined : 'img'}
+      aria-label={editable ? undefined : 'Catan board'}
     >
       {board.hexes.map(hex => {
         const { cx, cy } = center(hex, colHeights[hex.col] ?? MAX_H);

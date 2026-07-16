@@ -26,7 +26,7 @@ python -m http.server 8765
 # Open http://localhost:8765/index.html
 ```
 
-`index.html` redirects to `sp4-dashboard.html`; from there click any sidebar item, hub card, CTA, or row to navigate. 100% of the 61 user-facing mockups are reachable from the entry point.
+`index.html` redirects to `00-hub.html`; from there click any sidebar item, hub card, CTA, or row to navigate. 100% of the 61 user-facing mockups are reachable from the entry point.
 
 ### Wiring toolchain
 

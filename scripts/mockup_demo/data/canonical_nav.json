@@ -1,7 +1,7 @@
 {
   "sidebar": {
-    "Dashboard": "sp4-dashboard.html",
-    "Home": "sp4-dashboard.html",
+    "Dashboard": "00-hub.html",
+    "Home": "00-hub.html",
     "Discover": "sp4-discover.html",
     "Esplora": "sp4-discover.html",
     "Library": "sp4-library-desktop.html",
@@ -20,7 +20,7 @@
     "Conoscenza": "sp4-kb-hub.html",
     "Toolkit": "sp4-toolkit-detail.html",
     "Toolkits": "sp4-toolkit-detail.html",
-    "Hub": "sp4-dashboard.html",
+    "Hub": "00-hub.html",
     "Notifications": "notifications.html",
     "Notifiche": "notifications.html",
     "Settings": "settings.html",

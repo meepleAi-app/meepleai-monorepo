@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.Infrastructure;
@@ -60,7 +61,7 @@ internal sealed class NewShareRequestAdminAlertHandler : INotificationHandler<Sh
                     Payload = new GenericPayload(
                         "New Share Request",
                         "A new share request is waiting for review."),
-                    DeepLinkPath = $"/admin/share-requests/{notification.ShareRequestId}",
+                    DeepLinkPath = NotificationRoutes.AdminShareRequest(notification.ShareRequestId),
                     // Issue #1937 / CF-1: propagate event id for dispatcher dedup
                     SourceEventId = notification.EventId
                 }, cancellationToken).ConfigureAwait(false);

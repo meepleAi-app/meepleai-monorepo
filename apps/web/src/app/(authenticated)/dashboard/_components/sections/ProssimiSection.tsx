@@ -16,8 +16,10 @@
 
 import type { JSX } from 'react';
 
+import clsx from 'clsx';
 import Link from 'next/link';
 
+import type { RsvpStatus } from '@/lib/api/schemas/game-nights.schemas';
 import { useCascadeNavigationStore } from '@/lib/stores/cascade-navigation-store';
 
 import { DashboardSection } from './DashboardSection';
@@ -37,6 +39,9 @@ export interface ProssimiGameNightCard {
   readonly rsvpConfirmedCount: number;
   readonly rsvpPendingCount: number;
   readonly rsvpTotalCount: number;
+  // #2978 (invariante #17): the viewer's own RSVP status; when 'Pending' the card shows the
+  // pending-invitee treatment (badge + inline RSVP). Omitted/null for non-invitees.
+  readonly viewerRsvpStatus?: RsvpStatus | null;
 }
 
 export type ProssimiSectionState = 'default' | 'empty' | 'loading' | 'error';
@@ -45,6 +50,8 @@ export interface ProssimiSectionProps {
   readonly state: ProssimiSectionState;
   readonly gameNights?: readonly ProssimiGameNightCard[];
   readonly onRetry?: () => void;
+  // #2978 (invariante #17): inline RSVP handler for pending-invitee cards.
+  readonly onRsvp?: (id: string, response: RsvpStatus) => void;
 }
 
 const STATUS_BADGE_LABEL: Record<ProssimiStatus, string> = {
@@ -58,7 +65,12 @@ const VIEW_ALL_HREF = '/game-nights';
 const VIEW_ALL_LABEL = 'Vedi tutte';
 const NEW_HREF = '/game-nights/new';
 
-export function ProssimiSection({ state, gameNights, onRetry }: ProssimiSectionProps): JSX.Element {
+export function ProssimiSection({
+  state,
+  gameNights,
+  onRetry,
+  onRsvp,
+}: ProssimiSectionProps): JSX.Element {
   const openDrawer = useCascadeNavigationStore(s => s.openDrawer);
 
   // Empty state — entity-tinted CTA card replaces the body.
@@ -156,39 +168,83 @@ export function ProssimiSection({ state, gameNights, onRetry }: ProssimiSectionP
       }
     >
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-testid="prossimi-cards">
-        {sortedItems.map(gn => (
-          <li key={gn.id}>
-            <button
-              type="button"
-              onClick={() => handleCardClick(gn.id)}
-              data-testid={`prossimi-card-${gn.id}`}
-              className="flex w-full flex-col gap-2 rounded-[10px] border border-border bg-background p-3 text-left transition-colors hover:border-border-strong"
-            >
-              <header className="flex items-start justify-between gap-2">
-                <time
-                  className="font-mono text-[10px] font-extrabold uppercase text-muted-foreground"
-                  dateTime={gn.date}
-                >
-                  {formatDateMicroLabel(gn.date)}
-                </time>
-                {gn.status === 'InProgress' && (
-                  <span
-                    data-testid={`prossimi-badge-${gn.id}`}
-                    className="rounded-full bg-[hsl(var(--c-danger))] px-2 py-0.5 font-mono text-[9px] font-extrabold uppercase text-[#fff]"
-                  >
-                    {STATUS_BADGE_LABEL.InProgress}
-                  </span>
+        {sortedItems.map(gn => {
+          // #2978 (invariante #17): pending invitee → semitransparent card + "Da confermare"
+          // badge + inline RSVP bar. The RSVP buttons live OUTSIDE the card <button> to avoid
+          // nested interactive elements.
+          const isPending = gn.viewerRsvpStatus === 'Pending';
+          return (
+            <li key={gn.id}>
+              <button
+                type="button"
+                onClick={() => handleCardClick(gn.id)}
+                data-testid={`prossimi-card-${gn.id}`}
+                className={clsx(
+                  'flex w-full flex-col gap-2 rounded-[10px] border border-border bg-background p-3 text-left transition-colors hover:border-border-strong',
+                  isPending && 'opacity-70'
                 )}
-              </header>
-              <h3 className="line-clamp-2 font-quicksand text-[13px] font-extrabold text-foreground">
-                {gn.title}
-              </h3>
-              <p className="font-mono text-[10px] font-semibold text-muted-foreground">
-                {formatRsvpSummary(gn)}
-              </p>
-            </button>
-          </li>
-        ))}
+              >
+                <header className="flex items-start justify-between gap-2">
+                  <time
+                    className="font-mono text-[10px] font-extrabold uppercase text-muted-foreground"
+                    dateTime={gn.date}
+                  >
+                    {formatDateMicroLabel(gn.date)}
+                  </time>
+                  <div className="flex items-center gap-1">
+                    {isPending && (
+                      <span
+                        data-testid={`prossimi-pending-${gn.id}`}
+                        className="rounded-full bg-warning px-2 py-0.5 font-mono text-[9px] font-extrabold uppercase text-[#fff]"
+                      >
+                        Da confermare
+                      </span>
+                    )}
+                    {gn.status === 'InProgress' && (
+                      <span
+                        data-testid={`prossimi-badge-${gn.id}`}
+                        className="rounded-full bg-[hsl(var(--c-danger))] px-2 py-0.5 font-mono text-[9px] font-extrabold uppercase text-[#fff]"
+                      >
+                        {STATUS_BADGE_LABEL.InProgress}
+                      </span>
+                    )}
+                  </div>
+                </header>
+                <h3 className="line-clamp-2 font-quicksand text-[13px] font-extrabold text-foreground">
+                  {gn.title}
+                </h3>
+                <p className="font-mono text-[10px] font-semibold text-muted-foreground">
+                  {formatRsvpSummary(gn)}
+                </p>
+              </button>
+              {isPending && onRsvp && (
+                <div data-testid={`prossimi-rsvp-${gn.id}`} className="mt-1.5 flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => onRsvp(gn.id, 'Accepted')}
+                    className="rounded-md bg-entity-toolkit px-2.5 py-1 font-quicksand text-[11px] font-extrabold text-[#fff]"
+                  >
+                    Conferma
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onRsvp(gn.id, 'Maybe')}
+                    className="rounded-md border border-border px-2.5 py-1 font-quicksand text-[11px] font-bold text-muted-foreground"
+                  >
+                    Forse
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onRsvp(gn.id, 'Declined')}
+                    className="rounded-md border border-border px-2.5 py-1 font-quicksand text-[11px] font-bold text-muted-foreground"
+                  >
+                    Declina
+                  </button>
+                </div>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </DashboardSection>
   );

@@ -55,6 +55,7 @@ export type SessionEventType =
   | 'session:chat'
   | 'session:tool-execution'
   | 'session:diary'
+  | 'session:game-state'
   | 'heartbeat';
 
 /**
@@ -74,6 +75,7 @@ export const SESSION_EVENT_TYPES: ReadonlyArray<SessionEventType> = [
   'session:chat',
   'session:tool-execution',
   'session:diary',
+  'session:game-state',
   'heartbeat',
 ];
 
@@ -189,6 +191,19 @@ export type SessionEvent =
       entryId: string;
       authorId: string;
       content: string;
+      timestamp: string;
+    }
+  | {
+      /**
+       * Opaque live game-state updated (#3025 L1). `state` is game-agnostic JSON —
+       * per-game typing is L2, rich rendering is L3. Forwarded from
+       * LiveSessionGameStateEvent as `{ state: <object|null> }`. `timestamp` keeps the
+       * variant uniform with every other SSE event (used only for chronological merge
+       * ordering; game-state is a store mirror, never rendered in the action log).
+       */
+      type: 'session:game-state';
+      sessionId: string;
+      state: unknown;
       timestamp: string;
     }
   | {

@@ -83,6 +83,25 @@ const MOBILE_CONTENT_CLS =
 const DESKTOP_CONTENT_CLS =
   'fixed inset-y-0 right-0 z-50 flex w-[480px] max-w-full flex-col rounded-l-2xl bg-card shadow-lg outline-none';
 
+/**
+ * Per-entity accent color (issue #2955, Fase 1) for the mobile handle and the
+ * desktop accent strip. Literal class strings so Tailwind's content scanner
+ * emits the utilities — a dynamic `bg-entity-${entity}` would not be generated.
+ * `kb` maps to the registered `-kb` (teal) token, NOT `-document` (slate), which
+ * lives only in `@layer tokens` and is absent from `@theme inline`.
+ */
+const ENTITY_BG: Record<EntityType, string> = {
+  game: 'bg-entity-game',
+  player: 'bg-entity-player',
+  session: 'bg-entity-session',
+  agent: 'bg-entity-agent',
+  kb: 'bg-entity-kb',
+  chat: 'bg-entity-chat',
+  event: 'bg-entity-event',
+  toolkit: 'bg-entity-toolkit',
+  tool: 'bg-entity-tool',
+};
+
 export interface DrawerContentProps extends HTMLAttributes<HTMLDivElement> {
   readonly children: ReactNode;
 }
@@ -102,7 +121,7 @@ export const DrawerContent = forwardRef<HTMLDivElement, DrawerContentProps>(func
             aria-hidden="true"
             className={clsx(
               'mx-auto mt-2 h-1 w-12 rounded-full',
-              entity ? 'bg-primary' : 'bg-border'
+              entity ? ENTITY_BG[entity] : 'bg-border'
             )}
           />
           {children}
@@ -118,7 +137,7 @@ export const DrawerContent = forwardRef<HTMLDivElement, DrawerContentProps>(func
           <div
             data-drawer-accent={entity}
             aria-hidden="true"
-            className="absolute inset-y-0 left-0 w-1 rounded-l-2xl bg-primary"
+            className={clsx('absolute inset-y-0 left-0 w-1 rounded-l-2xl', ENTITY_BG[entity])}
           />
         )}
         {children}

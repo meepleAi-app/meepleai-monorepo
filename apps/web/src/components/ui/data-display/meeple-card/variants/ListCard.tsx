@@ -21,6 +21,7 @@ export function ListCard(props: MeepleCardProps) {
     metadata = [],
     badge,
     onClick,
+    ariaLabel,
     className = '',
     headingLevel,
   } = props;
@@ -38,6 +39,7 @@ export function ListCard(props: MeepleCardProps) {
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
+      aria-label={onClick ? ariaLabel : undefined}
       data-entity={entity}
       data-testid={testId}
     >

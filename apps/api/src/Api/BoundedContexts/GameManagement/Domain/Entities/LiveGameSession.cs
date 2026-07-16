@@ -837,6 +837,9 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         GameState = gameState;
         var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
         UpdatedAt = now;
+        // #3025 L1: stream the change. Carry the raw JSON string (copied now) — NOT the
+        // JsonDocument, which this method disposes on the next call.
+        AddDomainEvent(new LiveSessionGameStateEvent(Id, gameState?.RootElement.GetRawText()));
     }
 
     /// <summary>

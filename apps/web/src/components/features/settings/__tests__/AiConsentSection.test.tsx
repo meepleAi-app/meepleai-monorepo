@@ -1,6 +1,9 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { axe, toHaveNoViolations } from 'jest-axe';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AiConsentSection } from '../sections/AiConsentSection';
+
+expect.extend(toHaveNoViolations);
 
 // useToast mock
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
@@ -29,6 +32,14 @@ describe('AiConsentSection', () => {
     render(<AiConsentSection />);
     await waitFor(() => expect(screen.getByTestId('ai-processing-toggle')).toBeInTheDocument());
     expect(screen.getByTestId('external-providers-toggle')).toBeInTheDocument();
+  });
+
+  // #2955 Fase 3: two entity="agent" ToggleSwitch primitives render together
+  // here; guard the blocking axe AA gate on this consumer surface.
+  it('has no axe AA violations with the entity="agent" consent toggles', async () => {
+    const { container } = render(<AiConsentSection />);
+    await waitFor(() => expect(screen.getByTestId('ai-processing-toggle')).toBeInTheDocument());
+    expect(await axe(container)).toHaveNoViolations();
   });
 
   it('saves via PUT to /api/v1/users/me/ai-consent', async () => {

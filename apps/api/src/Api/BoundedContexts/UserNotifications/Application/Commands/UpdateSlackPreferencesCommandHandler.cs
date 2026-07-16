@@ -34,8 +34,13 @@ internal class UpdateSlackPreferencesCommandHandler : ICommandHandler<UpdateSlac
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        var prefs = await _repository.GetByUserIdAsync(command.UserId, cancellationToken).ConfigureAwait(false)
-            ?? new NotificationPreferences(command.UserId);
+        // Capture the load result once. The previous double-read (a second GetByUserIdAsync to decide
+        // Add-vs-Update) is the TOCTOU pattern #2849/#2872 removed from the sibling handler: on a
+        // first-time save it could pick UpdateAsync against a freshly-generated Id, affecting 0 rows and
+        // throwing DbUpdateConcurrencyException (spurious 409). This PR makes the Slack save path live
+        // (FE now calls it on every save), so we apply the same one-read fix here.
+        var existing = await _repository.GetByUserIdAsync(command.UserId, cancellationToken).ConfigureAwait(false);
+        var prefs = existing ?? new NotificationPreferences(command.UserId);
 
         prefs.UpdateSlackPreferences(
             command.SlackEnabled,
@@ -48,7 +53,7 @@ internal class UpdateSlackPreferencesCommandHandler : ICommandHandler<UpdateSlac
             command.SlackOnShareRequestApproved,
             command.SlackOnBadgeEarned);
 
-        if (await _repository.GetByUserIdAsync(command.UserId, cancellationToken).ConfigureAwait(false) == null)
+        if (existing is null)
             await _repository.AddAsync(prefs, cancellationToken).ConfigureAwait(false);
         else
             await _repository.UpdateAsync(prefs, cancellationToken).ConfigureAwait(false);

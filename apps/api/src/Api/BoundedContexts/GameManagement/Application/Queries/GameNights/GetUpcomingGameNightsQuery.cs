@@ -7,4 +7,4 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
 /// Query to get upcoming published game nights.
 /// Issue #46: GameNight API endpoints.
 /// </summary>
-internal record GetUpcomingGameNightsQuery() : IQuery<IReadOnlyList<GameNightDto>>;
+internal record GetUpcomingGameNightsQuery(Guid? UserId = null) : IQuery<IReadOnlyList<GameNightDto>>;

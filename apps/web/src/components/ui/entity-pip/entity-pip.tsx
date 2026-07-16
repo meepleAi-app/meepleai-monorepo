@@ -2,7 +2,38 @@ import type { JSX } from 'react';
 
 import clsx from 'clsx';
 
-import { getEntityToken, type EntityType } from '@/components/ui/entity-tokens';
+import type { EntityType } from '@/components/ui/entity-tokens';
+
+/**
+ * Per-entity solid background (issue #2955). Literal class strings so Tailwind's
+ * content scanner emits the utilities (a dynamic `bg-entity-${entity}` would NOT be
+ * generated). `kb` uses the registered `-kb` (teal) token — NEVER `-document` (slate),
+ * which lives only in `@layer tokens` and is not exposed via `@theme inline`.
+ */
+const ENTITY_BG: Record<EntityType, string> = {
+  game: 'bg-entity-game',
+  player: 'bg-entity-player',
+  session: 'bg-entity-session',
+  agent: 'bg-entity-agent',
+  kb: 'bg-entity-kb',
+  chat: 'bg-entity-chat',
+  event: 'bg-entity-event',
+  toolkit: 'bg-entity-toolkit',
+  tool: 'bg-entity-tool',
+};
+
+/** Per-entity active/focus ring (issue #2955). Same literal-map discipline as ENTITY_BG. */
+const ENTITY_RING: Record<EntityType, string> = {
+  game: 'ring-entity-game',
+  player: 'ring-entity-player',
+  session: 'ring-entity-session',
+  agent: 'ring-entity-agent',
+  kb: 'ring-entity-kb',
+  chat: 'ring-entity-chat',
+  event: 'ring-entity-event',
+  toolkit: 'ring-entity-toolkit',
+  tool: 'ring-entity-tool',
+};
 
 export interface EntityPipProps {
   readonly entity: EntityType;
@@ -29,7 +60,6 @@ export function EntityPip({
     );
   }
 
-  const token = getEntityToken(entity);
   const hasCount = typeof count === 'number';
   const isEmpty = count === 0;
 
@@ -40,9 +70,10 @@ export function EntityPip({
 
   const baseClasses = clsx(
     'inline-flex items-center justify-center rounded-full font-medium',
-    token.bg,
+    ENTITY_BG[entity],
     hasCount ? `${pillSize} text-white tabular-nums` : dotSize,
     active && 'ring-2 ring-offset-1',
+    active && ENTITY_RING[entity],
     isEmpty && 'opacity-40 cursor-default',
     className
   );

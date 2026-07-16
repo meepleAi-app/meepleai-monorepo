@@ -1,10 +1,22 @@
 # ADR-075 — Deep Link Versioning and Backward Compatibility
 
-**Status**: Proposed
-**Date**: 2026-06-15
-**Deciders**: @badsworm (pending ratification at PR review)
+**Status**: Accepted — implemented (Option D `NotificationRoutes`) in #2996
+**Date**: 2026-06-15 (ratified/implemented 2026-07-16)
+**Deciders**: @badsworm
 **Tracking**: [#2363](https://github.com/meepleAi-app/meepleai-monorepo/issues/2363) Wave 4 — US-INT-5 (notifications & deep links)
 **Related**: [umbrella #2342](https://github.com/meepleAi-app/meepleai-monorepo/issues/2342) · `apps/web/next.config.js` (redirects block) · issue #897 (branch retirement + route consolidation)
+
+> **Implementation note (2026-07-16, #2996).** Option D shipped. The `NotificationRoutes` static class
+> lives at `apps/api/src/Api/BoundedContexts/UserNotifications/Application/Constants/NotificationRoutes.cs`
+> (note: `Constants/`, not `Application/Services/` as sketched in §Implementation Guidance — the
+> cross-language drift gate `scripts/lint-cross-lang-constants.sh` globs `**/Constants/*Routes.cs`), with
+> the FE twin at `apps/web/src/lib/constants/notification-routes.ts`. All notification deep-link literals
+> in the ~35 event handlers/jobs that populate `Notification.Link` were migrated to the constants (the two
+> genuinely dynamic sinks — admin manual notification and the n8n webhook — remain free-form by design).
+> The `*Template` constants carry a literal `{id}` token substituted by builder methods, producing output
+> byte-identical to the previous `$"…{guid}…"` interpolations. The short-term drift lint is now **active**
+> (was a no-op until the first `*Routes` pair landed) and green; BE/FE unit tests (`NotificationRoutesTests.cs`,
+> `notification-routes.test.ts`) pin each side to the same golden set.
 
 ## Context
 
@@ -145,7 +157,7 @@ Formalise a policy: **only notification deep link paths that are embedded in out
 
 ## Implementation Guidance
 
-1. **`NotificationRoutes` static class**: create `apps/web/src/lib/notifications/notification-routes.ts` with typed path constructors:
+1. **`NotificationRoutes` static class**: create `apps/web/src/lib/constants/notification-routes.ts` (the FE file MUST live under `lib/constants/` — this is what `scripts/lint-cross-lang-constants.sh` globs; `lib/notifications/` would make the drift gate silently no-op) with typed path constructors:
    ```typescript
    export const NotificationRoutes = {
      gameNight: (id: string) => `/game-nights/${id}`,
@@ -155,7 +167,7 @@ Formalise a policy: **only notification deep link paths that are embedded in out
      kbDetail: (id: string) => `/knowledge-base/${id}`,
    } as const;
    ```
-   C# equivalent in `apps/api/src/Api/BoundedContexts/UserNotifications/Application/Services/NotificationRoutes.cs`:
+   C# equivalent in `apps/api/src/Api/BoundedContexts/UserNotifications/Application/Constants/NotificationRoutes.cs` (BE file MUST live under `**/Constants/` for the same lint glob):
    ```csharp
    internal static class NotificationRoutes
    {

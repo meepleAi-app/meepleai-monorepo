@@ -20,6 +20,7 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
     private readonly INotificationPreferencesRepository _preferencesRepository;
     private readonly ISlackConnectionRepository _slackConnectionRepository;
     private readonly SlackNotificationConfiguration _slackConfig;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<NotificationDispatcher> _logger;
 
     public NotificationDispatcher(
@@ -28,6 +29,7 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
         INotificationPreferencesRepository preferencesRepository,
         ISlackConnectionRepository slackConnectionRepository,
         IOptions<SlackNotificationConfiguration> slackConfig,
+        TimeProvider timeProvider,
         ILogger<NotificationDispatcher> logger)
     {
         _notificationRepository = notificationRepository ?? throw new ArgumentNullException(nameof(notificationRepository));
@@ -35,6 +37,7 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
         _preferencesRepository = preferencesRepository ?? throw new ArgumentNullException(nameof(preferencesRepository));
         _slackConnectionRepository = slackConnectionRepository ?? throw new ArgumentNullException(nameof(slackConnectionRepository));
         _slackConfig = slackConfig?.Value ?? throw new ArgumentNullException(nameof(slackConfig));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -114,10 +117,22 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
         }
 #pragma warning restore CA1031
 
+        // ADR-076 / #2995 quiet hours: when the user is inside their configured window, suppress the
+        // time-sensitive channels (email + Slack DM). The in-app notification row is always created
+        // above; the config-driven Slack TEAM broadcast (step 5) is not user-scoped so it is not gated;
+        // push is delegated to device DND. MVP is suppression-only (not deferral) per ADR-076.
+        var inQuietHours = preferences?.IsQuietHoursActive(_timeProvider.GetUtcNow()) ?? false;
+        if (inQuietHours)
+        {
+            _logger.LogDebug(
+                "Quiet hours active for user {UserId}; suppressing email + Slack DM channels (in-app preserved)",
+                message.RecipientUserId);
+        }
+
         // 3. Check Email channel
         try
         {
-            if (preferences == null || IsEmailEnabledForType(preferences, message.Type))
+            if (!inQuietHours && (preferences == null || IsEmailEnabledForType(preferences, message.Type)))
             {
                 var emailItem = NotificationQueueItem.Create(
                     channelType: NotificationChannelType.Email,
@@ -143,7 +158,7 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
         // 4. Check Slack DM channel
         try
         {
-            if (preferences is { SlackEnabled: true } && IsSlackEnabledForType(preferences, message.Type))
+            if (!inQuietHours && preferences is { SlackEnabled: true } && IsSlackEnabledForType(preferences, message.Type))
             {
                 var slackConnection = await _slackConnectionRepository.GetActiveByUserIdAsync(message.RecipientUserId, ct).ConfigureAwait(false);
                 if (slackConnection is { IsActive: true })

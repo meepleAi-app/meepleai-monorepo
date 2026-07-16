@@ -13,9 +13,10 @@ import {
 } from '../sse-events';
 
 describe('SESSION_EVENT_TYPES array', () => {
-  it('contains exactly 13 event types', () => {
+  it('contains exactly 14 event types', () => {
     // T9 SP2 #2561: added session:phase → 13 total
-    expect(SESSION_EVENT_TYPES).toHaveLength(13);
+    // #3025 L1: added session:game-state → 14 total
+    expect(SESSION_EVENT_TYPES).toHaveLength(14);
   });
 
   it('includes all expected event type strings', () => {
@@ -32,6 +33,7 @@ describe('SESSION_EVENT_TYPES array', () => {
       'session:chat',
       'session:tool-execution',
       'session:diary',
+      'session:game-state',
       'heartbeat',
     ];
     for (const type of expected) {
@@ -39,11 +41,12 @@ describe('SESSION_EVENT_TYPES array', () => {
     }
   });
 
-  it('is typed as ReadonlyArray (array with 13 members)', () => {
+  it('is typed as ReadonlyArray (array with 14 members)', () => {
     // ReadonlyArray is a TypeScript type constraint, not a runtime frozen object.
     // T9 SP2 #2561: added session:phase → 13 total
+    // #3025 L1: added session:game-state → 14 total
     expect(Array.isArray(SESSION_EVENT_TYPES)).toBe(true);
-    expect(SESSION_EVENT_TYPES.length).toBe(13);
+    expect(SESSION_EVENT_TYPES.length).toBe(14);
   });
 
   it('contains no duplicates', () => {

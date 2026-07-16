@@ -538,14 +538,21 @@
   --color-entity-game:    hsl(var(--c-game));
   --color-entity-game-text: hsl(var(--c-game-text));  /* darker variant for AA when used as text on light bg (#1094 Real-C-B) */
   --color-entity-player:  hsl(var(--c-player));
+  --color-entity-player-text: hsl(var(--c-player-text));    /* #2955: AA text-on-tint */
   --color-entity-session: hsl(var(--c-session));
+  --color-entity-session-text: hsl(var(--c-session-text)); /* #2955: AA text-on-tint */
   --color-entity-agent:   hsl(var(--c-agent));
+  --color-entity-agent-text: hsl(var(--c-agent-text));     /* #2955: AA text-on-tint */
   --color-entity-kb:      hsl(var(--c-kb));
+  --color-entity-kb-text: hsl(var(--c-kb-text));           /* #2955: AA text-on-tint */
   --color-entity-chat:    hsl(var(--c-chat));
+  --color-entity-chat-text: hsl(var(--c-chat-text));       /* #2955: AA text-on-tint */
   --color-entity-event:   hsl(var(--c-event));
+  --color-entity-event-text: hsl(var(--c-event-text));     /* #2955: AA text-on-tint */
   --color-entity-toolkit: hsl(var(--c-toolkit));
   --color-entity-toolkit-text: hsl(var(--c-toolkit-text));  /* darker variant for AA when used as text on light bg (#1094 Real-C-E gamebook ready pill) */
   --color-entity-tool:    hsl(var(--c-tool));
+  --color-entity-tool-text: hsl(var(--c-tool-text));       /* #2955: AA text-on-tint */
 
   /* Font family utilities */
   --font-heading: var(--font-quicksand), system-ui, sans-serif;

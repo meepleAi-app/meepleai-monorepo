@@ -9,6 +9,8 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 // ========== Enums ==========
 
 export const LiveSessionStatusSchema = z.enum([
@@ -112,7 +114,7 @@ export type LiveSessionScoringConfigDto = z.infer<typeof LiveSessionScoringConfi
 export const LiveSessionDtoSchema = z.object({
   id: z.string().uuid(),
   sessionCode: z.string(),
-  gameId: z.string().uuid().nullable(),
+  gameId: GameIdString.nullable(),
   gameName: z.string(),
   gameSlug: z.string(),
   createdByUserId: z.string().uuid(),
@@ -133,6 +135,8 @@ export const LiveSessionDtoSchema = z.object({
   teams: z.array(LiveSessionTeamDtoSchema),
   roundScores: z.array(LiveSessionRoundScoreDtoSchema),
   scoringConfig: LiveSessionScoringConfigDtoSchema,
+  // #3025 L1: opaque live game-state (per-game typing = L2). Optional for back-compat.
+  gameState: z.unknown().nullable().optional(),
 });
 
 export type LiveSessionDto = z.infer<typeof LiveSessionDtoSchema>;
@@ -249,7 +253,7 @@ export type TurnPhasesDto = z.infer<typeof TurnPhasesDtoSchema>;
 
 export const CreateLiveSessionRequestSchema = z.object({
   gameName: z.string().min(1).optional(),
-  gameId: z.string().uuid().optional(),
+  gameId: GameIdString.optional(),
   visibility: PlayRecordVisibilitySchema.optional(),
   groupId: z.string().uuid().optional(),
   scoringDimensions: z.array(z.string()).optional(),

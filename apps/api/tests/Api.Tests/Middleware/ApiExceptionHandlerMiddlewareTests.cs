@@ -38,6 +38,52 @@ public class ApiExceptionHandlerMiddlewareTests
         _httpContext.Request.Method = "GET";
     }
 
+    private void VerifyLogLevel(LogLevel level, Times times)
+    {
+        _loggerMock.Verify(
+            x => x.Log(
+                level,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
+            times);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_NotFoundException_LogsWarningNotError()
+    {
+        // #2953 (#6): an expected 4xx (NotFound) must log Warning, not Error, so it doesn't
+        // pollute error dashboards or mask real 500s.
+        var middleware = new ApiExceptionHandlerMiddleware(
+            next: (context) => throw new NotFoundException("Game", "abc-123"),
+            _loggerMock.Object,
+            _environmentMock.Object);
+        _httpContext.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(_httpContext);
+
+        _httpContext.Response.StatusCode.Should().Be(404);
+        VerifyLogLevel(LogLevel.Warning, Times.AtLeastOnce());
+        VerifyLogLevel(LogLevel.Error, Times.Never());
+    }
+
+    [Fact]
+    public async Task InvokeAsync_UnhandledException_LogsError()
+    {
+        // #2953 (#6): a genuine 5xx (unmapped exception → 500) still logs Error.
+        var middleware = new ApiExceptionHandlerMiddleware(
+            next: (context) => throw new InvalidOperationException("boom"),
+            _loggerMock.Object,
+            _environmentMock.Object);
+        _httpContext.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(_httpContext);
+
+        _httpContext.Response.StatusCode.Should().Be(500);
+        VerifyLogLevel(LogLevel.Error, Times.AtLeastOnce());
+    }
+
     [Fact]
     public async Task InvokeAsync_NoException_PassesThrough()
     {

@@ -46,20 +46,38 @@ describe('NotificationCard', () => {
     expect(screen.getByTestId('n-icon')).toBeInTheDocument();
   });
 
-  it('entity=game keeps the border-l-4 accent (no inline color)', () => {
+  it('entity=game keeps the border-l-4 accent with the entity color (no inline color)', () => {
     const { container } = render(<NotificationCard entity="game" title="x" timestamp="ora" />);
     const el = container.querySelector<HTMLElement>('[data-entity="game"]');
     expect(el?.className).toMatch(/border-l-4/);
+    expect(el?.className).toMatch(/border-l-entity-game/);
     expect(el?.style.borderLeftColor).toBe('');
   });
 
-  it('renders with data-entity="kb" and no inline border color', () => {
+  it('uses the registered -kb (teal) left border for kb, not the unregistered -document slate', () => {
     const { container } = render(
       <NotificationCard entity="kb" title="Nuova regola" timestamp="ieri" />
     );
     const el = container.querySelector<HTMLElement>('[data-entity="kb"]');
     expect(el).toBeInTheDocument();
+    expect(el?.className).toMatch(/border-l-entity-kb/);
+    expect(el?.className).not.toMatch(/entity-document/);
     expect(el?.style.borderLeftColor).toBe('');
+  });
+
+  it('unread dot uses the entity color for game (not bg-primary)', () => {
+    render(<NotificationCard entity="game" title="x" timestamp="ora" unread />);
+    const dot = screen.getByTestId('unread-dot');
+    expect(dot.className).toMatch(/bg-entity-game/);
+    expect(dot.className).not.toMatch(/bg-primary/);
+  });
+
+  it('unread dot uses -kb (teal) for kb, not -document slate or bg-primary', () => {
+    render(<NotificationCard entity="kb" title="x" timestamp="ora" unread />);
+    const dot = screen.getByTestId('unread-dot');
+    expect(dot.className).toMatch(/bg-entity-kb/);
+    expect(dot.className).not.toMatch(/entity-document/);
+    expect(dot.className).not.toMatch(/bg-primary/);
   });
 
   it('unread=true shows unread dot pip', () => {

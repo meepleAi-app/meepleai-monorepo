@@ -11,6 +11,8 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 /**
  * The 8 raw enum values of `PdfProcessingState` projected as strings by BE-1.
  * @see apps/api/src/Api/BoundedContexts/DocumentProcessing/Domain/Enums/PdfProcessingState.cs
@@ -38,7 +40,7 @@ export type ProcessingState = z.infer<typeof ProcessingStateSchema>;
  */
 export const UserKbDocDtoSchema = z.object({
   id: z.string().uuid(),
-  gameId: z.string().uuid().nullable(),
+  gameId: GameIdString.nullable(),
   gameName: z.string().nullable(),
   fileName: z.string().min(1),
   processingState: ProcessingStateSchema,

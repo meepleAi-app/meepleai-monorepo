@@ -1,4 +1,5 @@
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace Api.BoundedContexts.UserNotifications.Infrastructure.HealthChecks;
@@ -31,7 +32,13 @@ internal class SlackQueueHealthCheck : IHealthCheck
         {
             using var scope = _scopeFactory.CreateScope();
             var repository = scope.ServiceProvider.GetRequiredService<INotificationQueueRepository>();
-            var pendingCount = await repository.GetPendingCountAsync(cancellationToken).ConfigureAwait(false);
+
+            // Scope the backlog count to the Slack channels only: an unrelated backlog on
+            // another channel (e.g. email) must not trip this Slack-specific health check
+            // and mis-attribute an aggregate /health 503 to Slack.
+            var pendingCount = await repository.GetPendingCountByChannelsAsync(
+                new[] { NotificationChannelType.SlackUser, NotificationChannelType.SlackTeam },
+                cancellationToken).ConfigureAwait(false);
 
             var data = new Dictionary<string, object>(StringComparer.Ordinal)
             {

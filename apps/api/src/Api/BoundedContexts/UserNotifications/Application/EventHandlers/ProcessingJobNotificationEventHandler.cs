@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using MediatR;
@@ -53,7 +54,7 @@ internal class ProcessingJobNotificationEventHandler :
                 evt.PdfDocumentId,
                 fileName,
                 $"Completed in {durationText}"),
-            DeepLinkPath = "/admin/knowledge-base/queue",
+            DeepLinkPath = NotificationRoutes.AdminKnowledgeBaseQueue,
             // Issue #1937 / CF-1: propagate event id for dispatcher dedup
             SourceEventId = evt.EventId
         }, cancellationToken).ConfigureAwait(false);
@@ -82,7 +83,7 @@ internal class ProcessingJobNotificationEventHandler :
                 evt.PdfDocumentId,
                 fileName,
                 $"Failed{stepText}: {evt.ErrorMessage}"),
-            DeepLinkPath = "/admin/knowledge-base/queue",
+            DeepLinkPath = NotificationRoutes.AdminKnowledgeBaseQueue,
             // Issue #1937 / CF-1: propagate event id for dispatcher dedup
             SourceEventId = evt.EventId
         }, cancellationToken).ConfigureAwait(false);
@@ -118,7 +119,7 @@ internal class ProcessingJobNotificationEventHandler :
                         Guid.Empty,
                         fileName,
                         $"Failed{stepText}: {errorMessage}"),
-                    DeepLinkPath = "/admin/knowledge-base/queue",
+                    DeepLinkPath = NotificationRoutes.AdminKnowledgeBaseQueue,
                     // Issue #1937 / CF-1: propagate event id for dispatcher dedup
                     SourceEventId = sourceEventId
                 }, cancellationToken).ConfigureAwait(false);

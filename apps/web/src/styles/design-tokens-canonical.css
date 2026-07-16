@@ -50,6 +50,11 @@
   --c-event-text: 350 89% 32%;   /* #2862 C5: ~5.2:1 on cream/white (from JS entityTextOverrides) */
   --c-agent-text: 38 92% 24%;    /* #2862 C5: ~5.7:1 on cream/white */
   --c-chat-text:  220 80% 38%;   /* #2862 C5: ~5.4:1 on cream/white */
+  /* #2955: player + tool text variants (were missing entirely). Darkened from the base
+   * --c-player/--c-tool per the ~13% pattern above for AA 4.5:1 as text on cream.
+   * Ratios computed via sRGB linearization + WCAG relative-luminance (conservative floor). */
+  --c-player-text: 262 83% 38%;  /* ≈ #4b10b1 vs cream #f7f3ee = 9.47:1 ✅ */
+  --c-tool-text:  195 80% 26%;   /* ≈ #0d5d77 vs cream #f7f3ee = 6.67:1 ✅ */
 
   /* AAA contrast token (#1561 J — Aaron CORE spec 2026-05-23 §1b)
    * Light: hsl(32 36% 4%) ≈ #0f0a05 vs cream #f7f3ee = 15.1:1 (AAA-large + AAA-normal)
@@ -71,6 +76,15 @@
    * Refs: Claude Design demo 2026-06-04 baseline MAJ-9 gap #37
    */
   --c-warning-ink: 38 92% 32%;
+
+  /* Issue #3010 Task 9b — success shade dark for AA contrast on cream surfaces (4.5:1 text)
+   * --c-success (142 70% 45%) ≈ #2fbf6b passes AA only as decorative/border on cream.
+   * As TEXT on cream it fails 4.5:1 (~2.1:1). Darker shade required, mirrors --c-warning-ink.
+   *   --c-success-ink  hsl(142 70% 26%) ≈ #147136 vs --background (30 25% 97%) = 5.74:1 ✅
+   *                    (≈ 5.54:1 vs literal mockup cream #f7f3ee) ✅
+   * Refs: #3010 Task 9 (bg-success/text-success dead-utility replacement) follow-up
+   */
+  --c-success-ink: 142 70% 26%;
 
   /* Gap #38 — overlay/scrim tokens (drawer/modal backdrop + hero gradient end)
    * --c-overlay-scrim uses built-in alpha channel pattern `H S% L% / 0.6`
@@ -245,6 +259,9 @@
   --c-event-text: 350 85% 78%;   /* #2862 C5: lighter for AA on dark card */
   --c-agent-text: 38 92% 72%;    /* #2862 C5: lighter for AA on dark card */
   --c-chat-text:  218 85% 80%;   /* #2862 C5: lighter for AA on dark card */
+  /* #2955: player + tool text variants — lighter for AA on dark surfaces (#14100a). */
+  --c-player-text: 262 85% 82%;  /* ≈ #c7aaf8 vs dark = 9.50:1 ✅ */
+  --c-tool-text:  195 75% 70%;   /* ≈ #79cfec vs dark = 10.78:1 ✅ */
 
   /* AAA contrast dark — see :root docblock */
   --c-text-high-contrast: 0 0% 100%;
@@ -253,6 +270,11 @@
    *   --c-warning-ink hsl(38 92% 60%) ≈ #f4b95a vs #14100a = ~10.4:1 ✅
    */
   --c-warning-ink: 38 92% 60%;
+
+  /* Issue #3010 Task 9b dark — success-ink lighter for AA contrast on dark surfaces
+   *   --c-success-ink hsl(142 65% 58%) ≈ #4eda81 vs #14100a = ~10.5:1 ✅
+   */
+  --c-success-ink: 142 65% 58%;
 
   /* Gap #38 dark — heavier scrim + lighter gradient end for dark theme */
   --c-overlay-scrim: 0 0% 0% / 0.75;

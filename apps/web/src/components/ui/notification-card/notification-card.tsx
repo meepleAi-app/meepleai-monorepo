@@ -4,6 +4,36 @@ import clsx from 'clsx';
 
 import type { EntityType } from '@/components/ui/entity-tokens';
 
+/**
+ * Per-entity color maps (issue #2955). Literal class strings so Tailwind's content
+ * scanner emits the utilities (a dynamic `border-l-entity-${entity}` would NOT be
+ * generated). `kb` uses the registered `-kb` (teal) token — NEVER `-document` (slate),
+ * which lives only in `@layer tokens` and is not exposed via `@theme inline`.
+ */
+const ENTITY_BORDER_L: Record<EntityType, string> = {
+  game: 'border-l-entity-game',
+  player: 'border-l-entity-player',
+  session: 'border-l-entity-session',
+  agent: 'border-l-entity-agent',
+  kb: 'border-l-entity-kb',
+  chat: 'border-l-entity-chat',
+  event: 'border-l-entity-event',
+  toolkit: 'border-l-entity-toolkit',
+  tool: 'border-l-entity-tool',
+};
+
+const ENTITY_BG: Record<EntityType, string> = {
+  game: 'bg-entity-game',
+  player: 'bg-entity-player',
+  session: 'bg-entity-session',
+  agent: 'bg-entity-agent',
+  kb: 'bg-entity-kb',
+  chat: 'bg-entity-chat',
+  event: 'bg-entity-event',
+  toolkit: 'bg-entity-toolkit',
+  tool: 'bg-entity-tool',
+};
+
 export interface NotificationCardProps {
   readonly entity: EntityType;
   readonly title: string;
@@ -50,6 +80,7 @@ export function NotificationCard({
 }: NotificationCardProps): JSX.Element {
   const containerClasses = clsx(
     'group relative flex gap-3 rounded-xl border-l-4 bg-card p-4 text-foreground transition-colors',
+    ENTITY_BORDER_L[entity],
     unread && 'bg-muted/20',
     onClick && 'w-full cursor-pointer text-left hover:bg-muted/40',
     className
@@ -74,7 +105,7 @@ export function NotificationCard({
             <span
               data-testid="unread-dot"
               aria-hidden="true"
-              className="inline-block h-2 w-2 flex-shrink-0 rounded-full bg-primary"
+              className={clsx('inline-block h-2 w-2 flex-shrink-0 rounded-full', ENTITY_BG[entity])}
             />
           )}
           <span className={titleClasses}>{title}</span>

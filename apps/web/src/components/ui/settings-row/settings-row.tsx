@@ -4,6 +4,26 @@ import clsx from 'clsx';
 
 import type { EntityType } from '@/components/ui/entity-tokens';
 
+/**
+ * Per-entity AA text-on-tint shade for the leading icon (issue #2955, Fase 2).
+ * Literal class strings so Tailwind's content scanner emits the utilities — a
+ * dynamic `text-entity-${entity}-text` would not be generated. The `-text`
+ * variant (verified >=4.5:1 in Fase 0) keeps the blocking axe AA gate green.
+ * `kb` maps to the registered `-kb-text` (teal), NOT `-document` (slate), which
+ * lives only in `@layer tokens` and would not render.
+ */
+const ENTITY_TEXT: Record<EntityType, string> = {
+  game: 'text-entity-game-text',
+  player: 'text-entity-player-text',
+  session: 'text-entity-session-text',
+  agent: 'text-entity-agent-text',
+  kb: 'text-entity-kb-text',
+  chat: 'text-entity-chat-text',
+  event: 'text-entity-event-text',
+  toolkit: 'text-entity-toolkit-text',
+  tool: 'text-entity-tool-text',
+};
+
 export interface SettingsRowProps {
   readonly icon?: ReactNode;
   readonly label: string;
@@ -72,7 +92,10 @@ export function SettingsRow({
   const body = (
     <>
       {icon !== undefined ? (
-        <span data-testid="settings-row-icon" className="flex-shrink-0 text-lg">
+        <span
+          data-testid="settings-row-icon"
+          className={clsx('flex-shrink-0 text-lg', entity && ENTITY_TEXT[entity])}
+        >
           {icon}
         </span>
       ) : null}

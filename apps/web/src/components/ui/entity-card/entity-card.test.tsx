@@ -33,10 +33,11 @@ describe('EntityCard', () => {
     );
     const el = container.querySelector<HTMLElement>('[data-entity="game"]');
     expect(el?.className).toMatch(/border-l-4/);
+    expect(el?.className).toMatch(/border-l-entity-game/);
     expect(el?.style.borderLeftColor).toBe('');
   });
 
-  it('renders with data-entity="kb" and no inline border color', () => {
+  it('uses the registered -kb (teal) utility for kb, not the unregistered document slate', () => {
     const { container } = render(
       <EntityCard entity="kb">
         <span>x</span>
@@ -44,6 +45,8 @@ describe('EntityCard', () => {
     );
     const el = container.querySelector<HTMLElement>('[data-entity="kb"]');
     expect(el).toBeInTheDocument();
+    expect(el?.className).toMatch(/border-l-entity-kb/);
+    expect(el?.className).not.toMatch(/border-l-entity-document/);
     expect(el?.style.borderLeftColor).toBe('');
   });
 

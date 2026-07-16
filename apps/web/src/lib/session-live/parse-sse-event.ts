@@ -437,6 +437,9 @@ export function parseSseEvent(
       case 'session:diary':
         event = parseDiary(data, resolvedSessionId);
         break;
+      case 'session:game-state':
+        event = parseGameState(data, resolvedSessionId);
+        break;
       case 'heartbeat':
         event = parseHeartbeat(data);
         break;
@@ -450,4 +453,18 @@ export function parseSseEvent(
   } catch {
     return null;
   }
+}
+
+/**
+ * #3025 L1: parse a `session:game-state` event. `state` is opaque (game-agnostic) JSON —
+ * per-game typing is L2. Returns null if the payload lacks a `state` key (malformed).
+ */
+function parseGameState(
+  data: Record<string, unknown>,
+  sessionId: string
+): Extract<SessionEvent, { type: 'session:game-state' }> | null {
+  if (!('state' in data)) return null;
+  const timestamp =
+    typeof data['timestamp'] === 'string' ? data['timestamp'] : new Date().toISOString();
+  return { type: 'session:game-state', sessionId, state: data['state'], timestamp };
 }

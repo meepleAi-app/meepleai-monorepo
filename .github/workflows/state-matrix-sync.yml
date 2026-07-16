@@ -1,0 +1,72 @@
+# State Matrix Sync + Enforcement (#2998, umbrella 2342/2993)
+#
+# Automates the previously-manual consistency check between
+# docs/for-developers/frontend/v2-migration-matrix.md and the codebase.
+# Runs the `scripts/v2_audit` Phase-A drift detector (matrix rows whose
+# component/mockup path no longer exists) and reports drift as GitHub
+# ::warning:: annotations + a step summary.
+#
+# Severity: WARNING / NON-BLOCKING by design (coherent with the pre-registered
+# `State Matrix Sync + Enforcement` entry in .github/release-gates.yml).
+#   - This workflow is NOT in branch-protection required checks.
+#   - The `--check` step exits 0 regardless of drift (pure report), so drift
+#     alone can never turn the check red. A red status can only come from the
+#     module self-tests (a regression in the gate's own code).
+#   - To promote drift to an enforced ceiling later, add `--max-baseline <N>`
+#     to the --check step (N = a drift count captured from a green CI run); the
+#     step then exits 1 when drift exceeds N. Left off intentionally for now.
+#
+# This workflow does NOT create GitHub issues (scripts/v2_audit/create_issues.py
+# is a separate, opt-in cron concern that WOULD require `issues: write` + the
+# ADR-078 `concurrency: group: monitor-<type>-...` convention). Keeping this a
+# read-only PR gate avoids those requirements.
+
+name: State Matrix Sync
+
+on:
+  pull_request:
+    branches: [main-dev, main-staging, main]
+    paths:
+      - 'docs/for-developers/frontend/v2-migration-matrix.md'
+      - 'apps/web/src/components/**'
+      - 'admin-mockups/design_files/**'
+      - 'scripts/v2_audit/**'
+      - '.github/workflows/state-matrix-sync.yml'
+  workflow_dispatch:
+
+# Cancel superseded runs for the same PR/branch (run hygiene; not the ADR-078
+# monitor-concurrency case — this workflow is PR-triggered and calls no Issues API).
+concurrency:
+  group: state-matrix-sync-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  state-matrix-sync:
+    name: State Matrix Sync + Enforcement
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install test deps
+        run: python -m pip install --disable-pip-version-check pytest
+
+      # Self-test the drift classifier + parser before trusting its output.
+      # A failure here means the gate's OWN code regressed — surfaces as a red
+      # (non-required, so non-blocking) check.
+      - name: v2_audit self-tests
+        run: python -m pytest scripts/v2_audit/tests -q
+
+      # State Matrix Sync: report v2-migration-matrix.md drift as non-blocking
+      # ::warning:: annotations + a step summary. Exits 0 (no --max-baseline).
+      - name: Matrix sync drift report (non-blocking)
+        run: python -m scripts.v2_audit.run --check

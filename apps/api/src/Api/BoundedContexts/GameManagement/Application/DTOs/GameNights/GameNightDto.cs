@@ -22,4 +22,5 @@ public sealed record GameNightDto(
     int PendingCount,
     int TotalInvited,
     DateTimeOffset CreatedAt,
-    DateTimeOffset? UpdatedAt);
+    DateTimeOffset? UpdatedAt,
+    RsvpStatus? ViewerRsvpStatus = null);

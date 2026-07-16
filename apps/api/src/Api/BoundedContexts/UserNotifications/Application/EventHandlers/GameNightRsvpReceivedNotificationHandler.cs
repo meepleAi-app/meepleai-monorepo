@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using MediatR;
@@ -50,7 +51,7 @@ internal sealed class GameNightRsvpReceivedNotificationHandler : INotificationHa
                 Payload = new GenericPayload(
                     "RSVP Received",
                     $"{respondingUserName} {statusText} your game night invitation"),
-                DeepLinkPath = $"/game-nights/{notification.GameNightEventId}",
+                DeepLinkPath = NotificationRoutes.GameNight(notification.GameNightEventId),
                 // Issue #1937 / CF-1: propagate event id for dispatcher dedup
                 SourceEventId = notification.EventId
             }, cancellationToken).ConfigureAwait(false);

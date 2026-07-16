@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
@@ -88,7 +89,7 @@ internal sealed class CircuitBreakerStateChangedEventHandler
                     severity: severity,
                     title: title,
                     message: notification.Reason,
-                    link: "/admin/agents/usage",
+                    link: NotificationRoutes.AdminAgentsUsage,
                     metadata: metadata))
                 .ToList();
 

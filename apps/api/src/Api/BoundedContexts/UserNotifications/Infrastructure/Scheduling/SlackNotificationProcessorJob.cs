@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
@@ -372,7 +373,7 @@ internal sealed class SlackNotificationProcessorJob : IJob
                     severity: NotificationSeverity.Warning,
                     title: "Slack Disconnected",
                     message: "Your Slack workspace connection has been revoked. Please reconnect to continue receiving Slack notifications.",
-                    link: "/settings/notifications");
+                    link: NotificationRoutes.SettingsNotifications);
 
                 await _notificationRepository.AddAsync(notification, ct).ConfigureAwait(false);
             }

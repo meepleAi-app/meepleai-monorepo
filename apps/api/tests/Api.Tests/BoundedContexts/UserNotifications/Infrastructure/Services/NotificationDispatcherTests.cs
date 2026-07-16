@@ -7,6 +7,7 @@ using Api.BoundedContexts.UserNotifications.Infrastructure.Services;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
 
@@ -22,6 +23,11 @@ public class NotificationDispatcherTests
     private readonly Mock<ISlackConnectionRepository> _slackConnRepoMock = new();
     private readonly Mock<ILogger<NotificationDispatcher>> _loggerMock = new();
     private readonly SlackNotificationConfiguration _slackConfig = new();
+
+    // Fixed default (midnight UTC) so existing tests — which never configure quiet hours — are
+    // deterministic and unaffected. Quiet-hours tests advance it via SetUtcNow(...) (FakeTimeProvider
+    // forbids moving backwards, so anchor at 00:00 to let every test set a same-day time forward).
+    private readonly FakeTimeProvider _timeProvider = new(new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero));
 
     public NotificationDispatcherTests()
     {
@@ -43,6 +49,7 @@ public class NotificationDispatcherTests
             _prefsRepoMock.Object,
             _slackConnRepoMock.Object,
             Options.Create(_slackConfig),
+            _timeProvider,
             _loggerMock.Object);
     }
 
@@ -140,6 +147,98 @@ public class NotificationDispatcherTests
                         i.SlackTeamId == "T01ABC")),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    // ADR-076 / #2995 quiet hours: email + Slack DM suppressed while active; in-app always kept.
+    [Fact]
+    public async Task DispatchAsync_QuietHoursActive_SuppressesEmailAndSlackDm_ButKeepsInApp()
+    {
+        // Arrange — cross-midnight window 22:00 -> 08:00, clock at 23:00 UTC (inside).
+        var userId = Guid.NewGuid();
+        var message = CreateMessage(type: NotificationType.ShareRequestCreated, recipientUserId: userId);
+
+        var prefs = new NotificationPreferences(userId);
+        prefs.UpdateQuietHours("UTC", new TimeOnly(22, 0), new TimeOnly(8, 0));
+        _prefsRepoMock.Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(prefs);
+
+        var slackConnection = SlackConnection.Create(
+            userId, "U01ABC", "T01ABC", "TestWorkspace", "xoxb-token", "D01ABC");
+        _slackConnRepoMock.Setup(r => r.GetActiveByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(slackConnection);
+
+        _timeProvider.SetUtcNow(new DateTimeOffset(2026, 1, 15, 23, 0, 0, TimeSpan.Zero));
+        var sut = CreateSut();
+
+        // Act
+        await sut.DispatchAsync(message);
+
+        // Assert — in-app notification is still created...
+        _notificationRepoMock.Verify(
+            r => r.AddAndCommitAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        // ...but no channel queue items are enqueued (email + Slack DM both suppressed, no team channels).
+        _queueRepoMock.Verify(
+            r => r.AddRangeAsync(It.IsAny<IEnumerable<NotificationQueueItem>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_QuietHoursInactive_EnqueuesEmailAndSlackDm()
+    {
+        // Arrange — same window, clock at noon UTC (outside 22:00 -> 08:00).
+        var userId = Guid.NewGuid();
+        var message = CreateMessage(type: NotificationType.ShareRequestCreated, recipientUserId: userId);
+
+        var prefs = new NotificationPreferences(userId);
+        prefs.UpdateQuietHours("UTC", new TimeOnly(22, 0), new TimeOnly(8, 0));
+        _prefsRepoMock.Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(prefs);
+
+        var slackConnection = SlackConnection.Create(
+            userId, "U01ABC", "T01ABC", "TestWorkspace", "xoxb-token", "D01ABC");
+        _slackConnRepoMock.Setup(r => r.GetActiveByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(slackConnection);
+
+        _timeProvider.SetUtcNow(new DateTimeOffset(2026, 1, 15, 12, 0, 0, TimeSpan.Zero));
+        var sut = CreateSut();
+
+        // Act
+        await sut.DispatchAsync(message);
+
+        // Assert — both email and Slack DM items are enqueued outside quiet hours.
+        _queueRepoMock.Verify(
+            r => r.AddRangeAsync(
+                It.Is<IEnumerable<NotificationQueueItem>>(items =>
+                    items.Any(i => i.ChannelType == NotificationChannelType.Email) &&
+                    items.Any(i => i.ChannelType == NotificationChannelType.SlackUser)),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_QuietHoursCrossMidnight_ActiveOvernight_Suppresses()
+    {
+        // Arrange — cross-midnight window 22:00 -> 08:00, clock at 02:00 UTC (inside the overnight span).
+        var userId = Guid.NewGuid();
+        var message = CreateMessage(type: NotificationType.ShareRequestCreated, recipientUserId: userId);
+
+        var prefs = new NotificationPreferences(userId);
+        prefs.UpdateQuietHours("UTC", new TimeOnly(22, 0), new TimeOnly(8, 0));
+        _prefsRepoMock.Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(prefs);
+
+        _timeProvider.SetUtcNow(new DateTimeOffset(2026, 1, 15, 2, 0, 0, TimeSpan.Zero));
+        var sut = CreateSut();
+
+        // Act
+        await sut.DispatchAsync(message);
+
+        // Assert — email suppressed overnight; no queue items enqueued.
+        _queueRepoMock.Verify(
+            r => r.AddRangeAsync(It.IsAny<IEnumerable<NotificationQueueItem>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]

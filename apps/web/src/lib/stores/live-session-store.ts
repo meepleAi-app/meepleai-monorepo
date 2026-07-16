@@ -60,6 +60,11 @@ interface LiveSessionState {
   scoringType: ScoreType | null;
   scoreData: ScoreDataByType[ScoreType] | null;
   /**
+   * #3025 L1: opaque live game-state (game-agnostic JSON). Hydrated from the REST DTO
+   * (`gameState`) + kept live by the `session:game-state` SSE event. Per-game typing is L2.
+   */
+  gameState: unknown | null;
+  /**
    * Turn order type for the session — populated from the REST DTO on initial load.
    * Static for the session lifecycle (path B, no SignalR event).
    * Null until the DTO is loaded (or if the session has no toolkit wired).
@@ -87,6 +92,8 @@ interface LiveSessionState {
     scoringType: T;
     scoreData: ScoreDataByType[T];
   }) => void;
+  /** #3025 L1: set the opaque live game-state (hydrate from DTO or a SSE update). */
+  setGameState: (next: unknown | null) => void;
   /** Sets the turn order type from the REST DTO. Issue #2483 Task 2. */
   setTurnOrderType: (type: TurnOrderType | null) => void;
   setRateLimitedUntil: (ts: number | null) => void;
@@ -102,6 +109,7 @@ const initialState: Omit<
   LiveSessionState,
   | 'setSession'
   | 'setScoringConfig'
+  | 'setGameState'
   | 'setTurnOrderType'
   | 'setRateLimitedUntil'
   | 'addProposal'
@@ -119,6 +127,7 @@ const initialState: Omit<
   players: [],
   scoringType: null,
   scoreData: null,
+  gameState: null,
   turnOrderType: null,
   rateLimitedUntil: null,
   pendingProposals: [],
@@ -137,6 +146,8 @@ export const useLiveSessionStore = create<LiveSessionState>()(
 
       setScoringConfig: ({ scoringType, scoreData }) =>
         set({ scoringType, scoreData }, false, 'setScoringConfig'),
+
+      setGameState: next => set({ gameState: next }, false, 'setGameState'),
 
       setTurnOrderType: type => set({ turnOrderType: type }, false, 'setTurnOrderType'),
 

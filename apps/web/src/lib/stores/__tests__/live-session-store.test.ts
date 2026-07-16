@@ -127,4 +127,33 @@ describe('useLiveSessionStore — Block A #2389 contract evolution', () => {
       expect(useLiveSessionStore.getState().turnOrderType).toBe(variant);
     }
   });
+
+  // #3025 L1 — opaque live game-state field
+  it('initial state — gameState is null', () => {
+    expect(useLiveSessionStore.getState().gameState).toBeNull();
+  });
+
+  it('setGameState writes an opaque object', () => {
+    const state = { round: 3, activePlayer: 'p1', dev: { catan: { longestRoad: 'p2' } } };
+    useLiveSessionStore.getState().setGameState(state);
+    expect(useLiveSessionStore.getState().gameState).toEqual(state);
+  });
+
+  it('setGameState(null) clears the value', () => {
+    useLiveSessionStore.getState().setGameState({ round: 1 });
+    useLiveSessionStore.getState().setGameState(null);
+    expect(useLiveSessionStore.getState().gameState).toBeNull();
+  });
+
+  it('setGameState replaces (not merges) the previous state', () => {
+    useLiveSessionStore.getState().setGameState({ a: 1, b: 2 });
+    useLiveSessionStore.getState().setGameState({ c: 3 });
+    expect(useLiveSessionStore.getState().gameState).toEqual({ c: 3 });
+  });
+
+  it('reset() clears gameState to null', () => {
+    useLiveSessionStore.getState().setGameState({ round: 5 });
+    useLiveSessionStore.getState().reset();
+    expect(useLiveSessionStore.getState().gameState).toBeNull();
+  });
 });

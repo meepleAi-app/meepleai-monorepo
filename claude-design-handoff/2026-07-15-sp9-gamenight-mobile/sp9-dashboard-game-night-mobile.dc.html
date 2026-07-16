@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --c-game:25 95% 38%; --c-player:262 83% 45%; --c-session:240 60% 35%;
+  --c-agent:38 92% 32%; --c-kb:174 60% 30%; --c-chat:220 80% 40%;
+  --c-event:350 89% 38%; --c-toolkit:142 70% 30%; --c-tool:195 80% 32%;
+  --c-success:142 70% 40%; --c-warning:38 92% 42%; --c-danger:350 89% 52%; --c-info:220 80% 50%;
+  --f-display:'Quicksand',system-ui,sans-serif; --f-body:'Nunito',system-ui,sans-serif; --f-mono:'JetBrains Mono',ui-monospace,monospace;
+  --r-xs:4px; --r-sm:6px; --r-md:10px; --r-lg:14px; --r-xl:18px; --r-2xl:24px; --r-pill:9999px;
+  --ease-out:cubic-bezier(.16,1,.3,1); --ease-spring:cubic-bezier(.34,1.56,.64,1);
+}
+:root, [data-theme="light"]{
+  --bg:#f7f3ee; --bg-card:#ffffff; --bg-muted:#efe6d9; --bg-sunken:#ede2d0; --bg-hover:rgba(180,130,80,.06);
+  --text:#2b1f12; --text-sec:#5a4a38; --text-muted:#9a8870;
+  --border:rgba(180,130,80,.18); --border-light:rgba(180,130,80,.1); --border-strong:rgba(180,130,80,.32);
+  --shadow-sm:0 2px 8px rgba(90,60,20,.08); --shadow-md:0 4px 16px rgba(90,60,20,.1); --shadow-lg:0 12px 36px rgba(90,60,20,.14);
+  --glass-bg:rgba(255,255,255,.88);
+  color-scheme:light;
+}
+[data-theme="dark"]{
+  --bg:#14100a; --bg-card:#1e1710; --bg-muted:#241c13; --bg-sunken:#0f0c08; --bg-hover:rgba(255,200,130,.05);
+  --text:#f0e4d2; --text-sec:#c8b896; --text-muted:#8a7860;
+  --border:rgba(224,180,110,.14); --border-light:rgba(224,180,110,.08); --border-strong:rgba(224,180,110,.28);
+  --shadow-sm:0 2px 8px rgba(0,0,0,.4); --shadow-md:0 4px 16px rgba(0,0,0,.5); --shadow-lg:0 12px 36px rgba(0,0,0,.6);
+  --glass-bg:rgba(30,22,14,.85);
+  --c-game:28 95% 58%; --c-player:262 75% 70%; --c-session:235 70% 70%; --c-agent:38 92% 62%;
+  --c-kb:174 60% 55%; --c-chat:218 80% 68%; --c-event:350 85% 70%; --c-toolkit:142 60% 58%; --c-tool:195 75% 62%;
+  --c-success:142 60% 55%; --c-warning:38 92% 62%; --c-danger:350 85% 70%; --c-info:220 80% 68%;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;}
+@keyframes sp9shimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
+@keyframes sp9pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.sp9-sk{background:linear-gradient(90deg,var(--bg-muted) 0%,var(--bg-hover) 50%,var(--bg-muted) 100%)!important;background-size:200% 100%!important;animation:sp9shimmer 1.5s linear infinite;}
+.sp9-scroll::-webkit-scrollbar{width:0;display:none;}
+button:focus-visible,a:focus-visible{outline:2px solid hsl(var(--c-event));outline-offset:2px;}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important;}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:var(--bg);color:var(--text);font-family:var(--f-body);padding:28px 24px 80px;">
+
+  <header style="max-width:1500px;margin:0 auto 8px;display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:260px;">
+      <div style="font-family:var(--f-mono);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;">SP9 · Turn A · Mobile GameNight Social · #2989</div>
+      <h1 style="font-family:var(--f-display);font-weight:700;font-size:32px;letter-spacing:-.02em;margin:0 0 8px;color:var(--text);">Dashboard GameNight — <span style="font-family:var(--f-mono);font-size:16px;color:var(--text-muted);font-weight:600;">/ &middot; &lt;768px</span></h1>
+      <p style="color:var(--text-sec);font-size:14px;line-height:1.55;max-width:680px;margin:0;">Sezioni <strong>Prossimi</strong> (planned + card pending-RSVP inline) e <strong>Recenti</strong> (completate DESC, gap-fill). Riusa <code style="font-family:var(--f-mono);font-size:12px;background:var(--bg-muted);padding:1px 5px;border-radius:4px;">HomeFeed</code> / <code style="font-family:var(--f-mono);font-size:12px;background:var(--bg-muted);padding:1px 5px;border-radius:4px;">GameNightListCard</code>. Card pending-RSVP + sezione Recenti = greenfield v2.</p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button type="button" onClick="{{ toggleMarkers }}" style="display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:var(--r-pill);background:var(--bg-card);border:1px solid var(--border);color:var(--text);font-family:var(--f-mono);font-size:12px;font-weight:600;cursor:pointer;">🏷️ {{ markersLabel }}</button>
+      <button type="button" onClick="{{ toggleTheme }}" style="display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:var(--r-pill);background:var(--bg-card);border:1px solid var(--border);color:var(--text);font-family:var(--f-mono);font-size:12px;font-weight:600;cursor:pointer;">{{ themeIcon }} {{ themeLabel }}</button>
+    </div>
+  </header>
+
+  <div style="max-width:1500px;margin:20px auto 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(392px,1fr));gap:36px 28px;align-items:start;">
+    {{ frames }}
+  </div>
+
+  <footer style="max-width:1500px;margin:56px auto 0;padding-top:24px;border-top:1px solid var(--border);color:var(--text-muted);font-size:12px;line-height:1.6;">
+    MeepleAI Design System v1 · SP9 mobile-gamenight-social · GameNight = <span style="color:hsl(var(--c-event));font-weight:700;">event</span> (rosa) · touch-target ≥44px · back-guard 1-livello · Italiano
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:880},&quot;defaultTheme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light' | 'dark'&quot;,&quot;section&quot;:&quot;Tema&quot;},&quot;showInvariantMarkers&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Annotazioni&quot;}}">
+class Component extends DCLogic {
+  state = { theme: 'light', markers: true };
+
+  componentDidMount(){
+    const t = this.props.defaultTheme || 'light';
+    this.setState({ theme: t });
+    document.documentElement.setAttribute('data-theme', t);
+    if (this.props.showInvariantMarkers === false) this.setState({ markers: false });
+  }
+
+  toggleTheme = () => {
+    const next = this.state.theme === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    this.setState({ theme: next });
+  };
+
+  toggleMarkers = () => this.setState(s => ({ markers: !s.markers }));
+
+  // ── palette helpers ──
+  ev(a){ return a==null ? 'hsl(var(--c-event))' : `hsl(var(--c-event) / ${a})`; }
+  se(a){ return a==null ? 'hsl(var(--c-session))' : `hsl(var(--c-session) / ${a})`; }
+  pl(a){ return a==null ? 'hsl(var(--c-player))' : `hsl(var(--c-player) / ${a})`; }
+  wa(a){ return a==null ? 'hsl(var(--c-warning))' : `hsl(var(--c-warning) / ${a})`; }
+  su(a){ return a==null ? 'hsl(var(--c-success))' : `hsl(var(--c-success) / ${a})`; }
+  da(a){ return a==null ? 'hsl(var(--c-danger))' : `hsl(var(--c-danger) / ${a})`; }
+
+  h = React.createElement;
+
+  // ── small building blocks ──
+  chip(text, kind){
+    // kind: 'inv' | 'gap'
+    if (!this.state.markers) return null;
+    const isInv = kind === 'inv';
+    return this.h('span', { key: text, style:{
+      display:'inline-flex', alignItems:'center', gap:3,
+      fontFamily:'var(--f-mono)', fontSize:9, fontWeight:700, letterSpacing:'.04em',
+      padding:'2px 6px', borderRadius:'var(--r-pill)',
+      color: isInv ? this.se() : this.wa(),
+      background: isInv ? this.se(.12) : this.wa(.12),
+      border:`1px solid ${isInv ? this.se(.3) : this.wa(.35)}`,
+      whiteSpace:'nowrap',
+    }}, text);
+  }
+
+  statusBar(){
+    return this.h('div', { style:{
+      height:34, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'space-between',
+      padding:'8px 22px 0', fontFamily:'var(--f-mono)', fontSize:12, fontWeight:700, color:'var(--text)',
+    }},
+      this.h('span',{key:'t'},'21:04'),
+      this.h('span',{key:'i', style:{letterSpacing:'2px'}}, '● ● ● 88%'),
+    );
+  }
+
+  topNav(){
+    const btn = (label, icon) => this.h('button',{ key:label, 'aria-label':label, style:{
+      width:38, height:38, borderRadius:'var(--r-md)', background:'transparent',
+      border:'1px solid var(--border)', color:'var(--text)', fontSize:16, cursor:'pointer',
+      display:'flex', alignItems:'center', justifyContent:'center',
+    }}, icon);
+    return this.h('div',{ style:{
+      display:'flex', alignItems:'center', gap:10, padding:'8px 14px',
+      borderBottom:'1px solid var(--border)', background:'var(--bg)', flexShrink:0,
+    }},
+      btn('Menu','☰'),
+      this.h('div',{key:'t', style:{ flex:1, fontFamily:'var(--f-display)', fontSize:16, fontWeight:700, textAlign:'center', color:'var(--text)' }},'Bacheca'),
+      this.h('div',{key:'n', style:{ position:'relative' }},
+        btn('Notifiche','🔔'),
+        this.h('span',{key:'b', style:{ position:'absolute', top:-2, right:-2, minWidth:16, height:16, padding:'0 4px', borderRadius:'var(--r-pill)', background:this.ev(), color:'#fff', fontFamily:'var(--f-mono)', fontSize:9, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' }},'1'),
+      ),
+    );
+  }
+
+  bottomBar(){
+    const tabs = [
+      { id:'dashboard', icon:'⌂', label:'Home', active:true },
+      { id:'library', icon:'📚', label:'Libreria' },
+      { id:'hub', icon:'🎲', label:'Hub' },
+      { id:'chat', icon:'💬', label:'Chat' },
+      { id:'profile', icon:'👤', label:'Profilo' },
+    ];
+    return this.h('nav',{ 'aria-label':'Navigazione principale', style:{
+      position:'absolute', bottom:0, left:0, right:0, display:'flex',
+      padding:'8px 8px 12px', background:'var(--glass-bg)', backdropFilter:'blur(14px)',
+      borderTop:'1px solid var(--border)', zIndex:5,
+    }},
+      tabs.map(t => this.h('button',{ key:t.id, 'aria-current': t.active?'page':undefined, style:{
+        flex:1, minHeight:44, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2,
+        background:'transparent', border:'none', cursor:'pointer',
+        color: t.active ? this.ev() : 'var(--text-muted)',
+        fontFamily:'var(--f-display)', fontSize:9.5, fontWeight:700,
+      }},
+        this.h('span',{key:'i','aria-hidden':true, style:{ fontSize:18, lineHeight:1 }}, t.icon),
+        this.h('span',{key:'l'}, t.label),
+      )),
+    );
+  }
+
+  sectionHead(title, meta, invChip){
+    return this.h('div',{ style:{ display:'flex', alignItems:'center', gap:8, padding:'2px 2px 0', margin:'4px 0 2px' }},
+      this.h('span',{key:'m', style:{ width:5, height:18, borderRadius:3, background:this.ev(), flexShrink:0 }}),
+      this.h('h2',{key:'t', style:{ fontFamily:'var(--f-display)', fontWeight:700, fontSize:15, color:'var(--text)', margin:0 }}, title),
+      meta ? this.h('span',{key:'me', style:{ fontFamily:'var(--f-mono)', fontSize:9.5, fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'.06em' }}, meta) : null,
+      this.h('span',{key:'sp', style:{ flex:1 }}),
+      invChip || null,
+    );
+  }
+
+  // ── cards ──
+  upcomingCard(opts={}){
+    const { offline } = opts;
+    return this.h('article',{ style:{
+      background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:'var(--r-xl)',
+      boxShadow:'var(--shadow-sm)', overflow:'hidden', opacity: offline?0.72:1,
+    }},
+      this.h('div',{key:'b', style:{ padding:'14px 14px 12px' }},
+        this.h('div',{key:'r1', style:{ display:'flex', alignItems:'flex-start', gap:11 }},
+          this.h('div',{key:'ic', 'aria-hidden':true, style:{ width:44, height:44, borderRadius:'var(--r-md)', background:this.ev(.12), color:this.ev(), display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, flexShrink:0 }},'🎉'),
+          this.h('div',{key:'tx', style:{ flex:1, minWidth:0 }},
+            this.h('div',{key:'t', style:{ fontFamily:'var(--f-display)', fontWeight:700, fontSize:15.5, color:'var(--text)', lineHeight:1.2 }},'Serata da Marco · Sabato'),
+            this.h('div',{key:'m', style:{ fontFamily:'var(--f-mono)', fontSize:11, color:'var(--text-sec)', fontWeight:600, marginTop:3 }},'Sab 15 Mar · 21:00'),
+          ),
+          this.h('span',{key:'st', style:{ display:'inline-flex', alignItems:'center', gap:4, padding:'3px 8px', borderRadius:'var(--r-pill)', background:this.ev(.12), color:this.ev(), fontFamily:'var(--f-mono)', fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:'.05em', flexShrink:0 }},'Organizzi'),
+        ),
+        this.h('div',{key:'r2', style:{ display:'flex', alignItems:'center', gap:12, margin:'12px 0 0', flexWrap:'wrap' }},
+          this.h('span',{key:'loc', style:{ display:'inline-flex', alignItems:'center', gap:5, fontSize:12.5, color:'var(--text-sec)', fontWeight:600 }}, this.h('span',{key:'e','aria-hidden':true},'📍'),'Casa Marco'),
+          this.h('span',{key:'pl', style:{ display:'inline-flex', alignItems:'center', gap:5, fontSize:12.5, color:'var(--text-sec)', fontWeight:600 }}, this.h('span',{key:'e','aria-hidden':true},'👥'),'4 player'),
+          this.h('span',{key:'gm', style:{ display:'inline-flex', alignItems:'center', gap:5, fontSize:12.5, color:'var(--text-sec)', fontWeight:600 }}, this.h('span',{key:'e','aria-hidden':true},'🎲'),'Azul, Wingspan'),
+        ),
+        this.h('div',{key:'r3', style:{ display:'flex', alignItems:'center', gap:8, marginTop:13 }},
+          this.h('button',{key:'ap', disabled: offline||undefined, style:{
+            flex:1, minHeight:44, borderRadius:'var(--r-md)', border:'none', cursor: offline?'default':'pointer',
+            background: this.ev(), color:'#fff', fontFamily:'var(--f-display)', fontWeight:700, fontSize:14,
+          }},'Apri'),
+          this.state.markers ? this.chip('[GAP-ROUTE] drawer cascade', 'gap') : null,
+        ),
+      ),
+    );
+  }
+
+  pendingCard(opts={}){
+    const { offline } = opts;
+    return this.h('article',{ 'aria-label':'Invito da confermare', style:{
+      background: this.wa(.06), border:`1.5px dashed ${this.wa(.5)}`, borderRadius:'var(--r-xl)', overflow:'hidden',
+    }},
+      this.h('div',{key:'b', style:{ padding:'12px 14px 13px' }},
+        this.h('div',{key:'bd', style:{ display:'flex', alignItems:'center', gap:8, marginBottom:10, flexWrap:'wrap' }},
+          this.h('span',{key:'pb', style:{ display:'inline-flex', alignItems:'center', gap:5, padding:'3px 9px', borderRadius:'var(--r-pill)', background:this.wa(.16), color:this.wa(), fontFamily:'var(--f-mono)', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.05em' }}, this.h('span',{key:'d', style:{ width:7, height:7, borderRadius:'50%', background:this.wa() }}),'Da confermare'),
+          this.chip('[INV-17]','inv'),
+        ),
+        this.h('div',{key:'r1', style:{ display:'flex', alignItems:'flex-start', gap:11 }},
+          this.h('div',{key:'ic','aria-hidden':true, style:{ width:40, height:40, borderRadius:'var(--r-md)', background:this.ev(.12), color:this.ev(), display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0 }},'🎉'),
+          this.h('div',{key:'tx', style:{ flex:1, minWidth:0 }},
+            this.h('div',{key:'t', style:{ fontFamily:'var(--f-display)', fontWeight:700, fontSize:15, color:'var(--text)', lineHeight:1.2 }},'Giovedì Wingspan'),
+            this.h('div',{key:'m', style:{ fontSize:12.5, color:'var(--text-sec)', marginTop:3 }}, this.h('span',{key:'a', style:{ fontWeight:700, color:this.pl() }},'Marco'),' ti ha invitato · Gio 20 Mar'),
+          ),
+        ),
+        this.h('div',{key:'r2', style:{ display:'flex', alignItems:'center', gap:8, marginTop:13 }},
+          this.h('button',{key:'ok', disabled: offline||undefined, style:{
+            flex:1, minHeight:44, borderRadius:'var(--r-md)', border:'none', cursor: offline?'not-allowed':'pointer',
+            background: offline? this.su(.35) : this.su(), color:'#fff', fontFamily:'var(--f-display)', fontWeight:700, fontSize:14,
+            display:'flex', alignItems:'center', justifyContent:'center', gap:6, opacity: offline?0.7:1,
+          }}, this.h('span',{key:'i','aria-hidden':true},'✓'),'Conferma'),
+          this.h('button',{key:'no', disabled: offline||undefined, style:{
+            flex:1, minHeight:44, borderRadius:'var(--r-md)', cursor: offline?'not-allowed':'pointer',
+            background:'transparent', border:'1px solid var(--border-strong)', color:'var(--text-sec)',
+            fontFamily:'var(--f-display)', fontWeight:700, fontSize:14, opacity: offline?0.7:1,
+          }},'Declina'),
+        ),
+        this.state.markers ? this.h('div',{key:'gs', style:{ marginTop:8, display:'flex', justifyContent:'flex-end' }}, this.chip('[GAP-STATE] Tap Conferma → card normale','gap')) : null,
+        offline ? this.h('div',{key:'tip', style:{ marginTop:9, fontSize:11, color:'var(--text-muted)', fontStyle:'italic', display:'flex', alignItems:'center', gap:5 }}, this.h('span',{key:'i','aria-hidden':true},'⚡'),'Offline — RSVP disponibile alla riconnessione') : null,
+      ),
+    );
+  }
+
+  recentCard(){
+    return this.h('article',{ style:{
+      background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:'var(--r-xl)',
+      boxShadow:'var(--shadow-sm)', overflow:'hidden',
+    }},
+      this.h('div',{key:'b', style:{ padding:'13px 14px' }},
+        this.h('div',{key:'r1', style:{ display:'flex', alignItems:'flex-start', gap:11 }},
+          this.h('div',{key:'ic','aria-hidden':true, style:{ width:40, height:40, borderRadius:'var(--r-md)', background:this.su(.14), color:this.su(), display:'flex', alignItems:'center', justifyContent:'center', fontSize:19, flexShrink:0 }},'✓'),
+          this.h('div',{key:'tx', style:{ flex:1, minWidth:0 }},
+            this.h('div',{key:'t', style:{ fontFamily:'var(--f-display)', fontWeight:700, fontSize:14.5, color:'var(--text)', lineHeight:1.2 }},'Giovedì scorso · Azul'),
+            this.h('div',{key:'m', style:{ fontFamily:'var(--f-mono)', fontSize:11, color:'var(--text-muted)', fontWeight:600, marginTop:3 }},'Gio 6 Mar · 5 player · 3 partite'),
+          ),
+        ),
+        this.h('div',{key:'r2', style:{ display:'flex', alignItems:'center', gap:8, marginTop:10 }},
+          this.h('span',{key:'mvp', style:{ display:'inline-flex', alignItems:'center', gap:5, padding:'3px 9px', borderRadius:'var(--r-pill)', background:this.pl(.12), color:this.pl(), fontFamily:'var(--f-mono)', fontSize:10, fontWeight:700 }}, this.h('span',{key:'i','aria-hidden':true},'🏆'),'MVP: Giulia'),
+          this.h('span',{key:'sc', style:{ fontFamily:'var(--f-mono)', fontSize:11, color:'var(--text-muted)', fontWeight:600 }},'89 pt'),
+        ),
+      ),
+    );
+  }
+
+  // ── section content variants ──
+  prossimiFull(opts={}){
+    return this.h('div',{ style:{ display:'flex', flexDirection:'column', gap:10 }},
+      this.sectionHead('Prossimi','ASC · data', this.chip('[INV-4]','inv')),
+      this.upcomingCard(opts),
+      this.pendingCard(opts),
+    );
+  }
+
+  prossimiEmpty(){
+    return this.h('div',{ style:{ display:'flex', flexDirection:'column', gap:10 }},
+      this.sectionHead('Prossimi','ASC · data', this.chip('[INV-4]','inv')),
+      this.h('div',{key:'e', style:{
+        display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center',
+        padding:'26px 18px', background:'var(--bg)', border:`1.5px dashed ${this.ev(.3)}`, borderRadius:'var(--r-xl)',
+      }},
+        this.h('div',{key:'ic','aria-hidden':true, style:{ width:52, height:52, borderRadius:'50%', background:this.ev(.12), color:this.ev(), display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, marginBottom:10 }},'🎉'),
+        this.h('p',{key:'m', style:{ fontSize:13, color:'var(--text-sec)', margin:'0 0 14px', maxWidth:230, lineHeight:1.45, fontWeight:600 }},'Nessuna serata pianificata — creane una!'),
+        this.h('div',{key:'w', style:{ display:'flex', alignItems:'center', gap:8 }},
+          this.h('button',{key:'c', style:{ minHeight:44, padding:'0 18px', borderRadius:'var(--r-md)', border:'none', background:this.ev(), color:'#fff', fontFamily:'var(--f-display)', fontWeight:700, fontSize:14, cursor:'pointer' }},'＋ Crea serata'),
+          this.chip('[GAP-ROUTE] /game-nights/new','gap'),
+        ),
+      ),
+    );
+  }
+
+  recentiFull(){
+    return this.h('div',{ style:{ display:'flex', flexDirection:'column', gap:10 }},
+      this.sectionHead('Recenti','DESC · completate', this.chip('[INV-4]','inv')),
+      this.recentCard(),
+      this.h('div',{key:'w', style:{ display:'flex', alignItems:'center', gap:8 }},
+        this.h('button',{key:'v', style:{ width:'100%', minHeight:44, borderRadius:'var(--r-md)', background:'transparent', border:'1px solid var(--border)', color:this.ev(), fontFamily:'var(--f-display)', fontWeight:700, fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }},'Vedi tutte le completate →'),
+      ),
+      this.state.markers ? this.h('div',{key:'g', style:{ marginTop:-4 }}, this.chip('[GAP-ROUTE] /game-nights?filter=completed','gap')) : null,
+    );
+  }
+
+  recentiEmpty(){
+    return this.h('div',{ style:{ display:'flex', flexDirection:'column', gap:10 }},
+      this.sectionHead('Recenti','DESC · completate', this.chip('[INV-4]','inv')),
+      this.h('div',{key:'e', style:{
+        display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center',
+        padding:'22px 18px', background:'var(--bg)', border:`1.5px dashed ${this.su(.3)}`, borderRadius:'var(--r-xl)',
+      }},
+        this.h('div',{key:'ic','aria-hidden':true, style:{ width:48, height:48, borderRadius:'50%', background:this.su(.12), color:this.su(), display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, marginBottom:9 }},'🎲'),
+        this.h('p',{key:'m', style:{ fontSize:13, color:'var(--text-muted)', margin:0, maxWidth:220, lineHeight:1.45, fontWeight:600 }},'Nessuna partita ancora'),
+      ),
+    );
+  }
+
+  skeletonSection(title){
+    const skCard = (k) => this.h('div',{ key:k, style:{ background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:'var(--r-xl)', padding:14, display:'flex', flexDirection:'column', gap:10 }},
+      this.h('div',{key:'r', style:{ display:'flex', alignItems:'center', gap:11 }},
+        this.h('div',{key:'i', className:'sp9-sk', style:{ width:44, height:44, borderRadius:'var(--r-md)', background:'var(--bg-muted)', flexShrink:0 }}),
+        this.h('div',{key:'t', style:{ flex:1, display:'flex', flexDirection:'column', gap:6 }},
+          this.h('div',{key:'a', className:'sp9-sk', style:{ height:12, width:'70%', borderRadius:4, background:'var(--bg-muted)' }}),
+          this.h('div',{key:'b', className:'sp9-sk', style:{ height:10, width:'45%', borderRadius:4, background:'var(--bg-muted)' }}),
+        ),
+      ),
+      this.h('div',{key:'c', className:'sp9-sk', style:{ height:40, borderRadius:'var(--r-md)', background:'var(--bg-muted)' }}),
+    );
+    return this.h('div',{ style:{ display:'flex', flexDirection:'column', gap:10 }},
+      this.sectionHead(title,'',null),
+      skCard('s1'),
+      skCard('s2'),
+    );
+  }
+
+  // ── phone shell ──
+  phone(body, opts={}){
+    const dark = opts.dark, tablet = opts.tablet;
+    return this.h('div',{ 'data-theme': dark? 'dark':undefined, style:{
+      width: tablet?768:392, maxWidth:'100%', height:748, borderRadius: tablet?28:44, border:'10px solid #1a1a1a', background:'var(--bg)',
+      overflow:'hidden', position:'relative', display:'flex', flexDirection:'column',
+      boxShadow:'0 30px 70px rgba(0,0,0,.28), 0 0 0 2px #000', margin:'0 auto',
+    }},
+      this.statusBar(),
+      this.h('div',{ key:'scr', className:'sp9-scroll', 'aria-live': opts.live||undefined, style:{ flex:1, overflowY:'auto', position:'relative', background:'var(--bg)' }},
+        this.topNav(),
+        this.h('div',{ key:'wrap', style:{ maxWidth: tablet?680:'none', margin:'0 auto', width:'100%' }}, this.h('div',{ key:'body', style:{ padding: tablet?'20px 28px 96px':'12px 12px 84px', display:'flex', flexDirection:'column', gap: tablet?20:16 }}, body)),
+      ),
+      this.bottomBar(),
+    );
+  }
+
+  // ── error / offline banners ──
+  banner(kind){
+    if (kind === 'error'){
+      return this.h('div',{ role:'alert', style:{
+        margin:'0 0 4px', padding:'14px', borderRadius:'var(--r-lg)', background:this.da(.08), border:`1px solid ${this.da(.3)}`,
+        display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center', gap:8,
+      }},
+        this.h('div',{key:'i','aria-hidden':true, style:{ width:44, height:44, borderRadius:'50%', background:this.da(.15), color:this.da(), display:'flex', alignItems:'center', justifyContent:'center', fontSize:22 }},'⚠'),
+        this.h('div',{key:'t', style:{ fontFamily:'var(--f-display)', fontWeight:700, fontSize:14.5, color:'var(--text)' }},'Impossibile caricare le serate'),
+        this.h('p',{key:'d', style:{ fontSize:12, color:'var(--text-muted)', margin:0, maxWidth:250, lineHeight:1.45 }},'Errore di rete. Verifica la connessione e riprova.'),
+        this.h('button',{key:'r', style:{ marginTop:4, minHeight:44, padding:'0 18px', borderRadius:'var(--r-md)', border:'none', background:this.da(), color:'#fff', fontFamily:'var(--f-display)', fontWeight:700, fontSize:13, cursor:'pointer' }},'↻ Riprova'),
+      );
+    }
+    // offline
+    return this.h('div',{ role:'status', style:{
+      margin:'0 0 2px', padding:'10px 12px', borderRadius:'var(--r-md)', background:this.wa(.1), border:`1px solid ${this.wa(.32)}`,
+      display:'flex', alignItems:'center', gap:9,
+    }},
+      this.h('span',{key:'i','aria-hidden':true, style:{ fontSize:16 }},'⚡'),
+      this.h('div',{key:'t', style:{ flex:1 }},
+        this.h('div',{key:'a', style:{ fontFamily:'var(--f-display)', fontWeight:700, fontSize:12.5, color:'var(--text)' }},'Sei offline'),
+        this.h('div',{key:'b', style:{ fontSize:11, color:'var(--text-sec)' }},'Serate in sola lettura · RSVP disabilitato'),
+      ),
+    );
+  }
+
+  // ── one framed state ──
+  frame(cfg){
+    return this.h('div',{ key:cfg.id, style:{ gridColumn: cfg.tablet?'1 / -1':'auto', display:'flex', flexDirection:'column', alignItems:'center', gap:12 }},
+      this.h('div',{key:'cap', style:{ width: cfg.tablet?768:392, maxWidth:'100%', display:'flex', flexDirection:'column', gap:6 }},
+        this.h('div',{key:'r', style:{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }},
+          this.h('span',{key:'id', style:{ fontFamily:'var(--f-mono)', fontSize:10.5, fontWeight:700, color:this.ev(), background:this.ev(.12), border:`1px solid ${this.ev(.25)}`, padding:'3px 8px', borderRadius:'var(--r-pill)', letterSpacing:'.04em' }}, cfg.id),
+          this.h('span',{key:'l', style:{ fontFamily:'var(--f-display)', fontSize:13, fontWeight:700, color:'var(--text)' }}, cfg.label),
+          cfg.dark ? this.h('span',{key:'dk', style:{ fontFamily:'var(--f-mono)', fontSize:9, fontWeight:700, color:'var(--text-muted)', border:'1px solid var(--border)', borderRadius:'var(--r-pill)', padding:'2px 7px' }},'DARK') : null,
+          cfg.tablet ? this.h('span',{key:'tb', style:{ fontFamily:'var(--f-mono)', fontSize:9, fontWeight:700, color:this.ev(), border:'1px solid '+this.ev(.3), background:this.ev(.1), borderRadius:'var(--r-pill)', padding:'2px 7px' }},'768px') : null,
+        ),
+        cfg.desc ? this.h('p',{key:'d', style:{ fontSize:11.5, color:'var(--text-sec)', margin:0, lineHeight:1.5 }}, cfg.desc) : null,
+      ),
+      this.phone(cfg.body, { dark: cfg.dark, live: cfg.live, tablet: cfg.tablet }),
+    );
+  }
+
+  renderVals(){
+    const frames = [
+      this.frame({ id:'A-01', label:'Default', desc:'Prossimi (planned "Organizzi" + card pending-RSVP di Anna) sopra Recenti (completata). Ordine fisso [INV-4].',
+        body:[ this.prossimiFull(), this.recentiFull() ] }),
+      this.frame({ id:'A-01d', label:'Default', dark:true, desc:'Stesso stato in dark theme — token warm dark, entity event schiarito per contrasto.',
+        body:[ this.prossimiFull(), this.recentiFull() ] }),
+      this.frame({ id:'A-02', label:'Empty · Prossimi', desc:'Nessuna serata pianificata: empty-state con CTA "Crea serata". Recenti resta popolata.',
+        body:[ this.prossimiEmpty(), this.recentiFull() ] }),
+      this.frame({ id:'A-03', label:'Empty · Recenti', desc:'Prima serata pianificata ma nessuna partita conclusa: Recenti mostra "Nessuna partita ancora".',
+        body:[ this.prossimiFull(), this.recentiEmpty() ] }),
+      this.frame({ id:'A-04', label:'Loading', live:'polite', desc:'Skeleton 2 card per sezione (shimmer, no spinner). Live-region announce skeleton→content.',
+        body:[ this.skeletonSection('Prossimi'), this.skeletonSection('Recenti') ] }),
+      this.frame({ id:'A-05', label:'Error', desc:'Banner danger inline + retry. Bottom-bar e chrome restano visibili.',
+        body:[ this.banner('error') ] }),
+      this.frame({ id:'A-06', label:'Offline', desc:'Banner offline + card read-only. Conferma/Declina disabilitati con tip.',
+        body:[ this.banner('offline'), this.prossimiFull({ offline:true }), this.recentiFull() ] }),
+      this.frame({ id:'A-07', label:'Default · Tablet', tablet:true, desc:'Adaptation 768px: stessa UI, contenuto centrato in colonna più larga con spacing generoso. Mobile-first resta canonical.',
+        body:[ this.prossimiFull(), this.recentiFull() ] }),
+    ];
+    return {
+      frames,
+      toggleTheme: this.toggleTheme,
+      toggleMarkers: this.toggleMarkers,
+      themeIcon: this.state.theme === 'dark' ? '🌙' : '☀️',
+      themeLabel: this.state.theme === 'dark' ? 'Dark' : 'Light',
+      markersLabel: this.state.markers ? 'Marker ON' : 'Marker OFF',
+    };
+  }
+}
+</script>
+</body>
+</html>

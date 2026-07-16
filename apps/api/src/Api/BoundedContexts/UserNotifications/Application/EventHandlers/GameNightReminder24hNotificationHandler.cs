@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using MediatR;
@@ -59,7 +60,7 @@ internal sealed class GameNightReminder24hNotificationHandler : INotificationHan
                             notification.Title,
                             notification.ScheduledAt.UtcDateTime,
                             string.Empty),
-                        DeepLinkPath = $"/game-nights/{notification.GameNightEventId}",
+                        DeepLinkPath = NotificationRoutes.GameNight(notification.GameNightEventId),
                         Metadata = new { hours_before = 24 },
                         // Issue #1937 / CF-1: propagate event id for dispatcher dedup
                         SourceEventId = notification.EventId

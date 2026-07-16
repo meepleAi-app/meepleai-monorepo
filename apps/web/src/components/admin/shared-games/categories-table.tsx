@@ -166,6 +166,7 @@ export function CategoriesTable() {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-foreground dark:text-zinc-300 uppercase tracking-wider w-12">
                   {/* Drag handle column */}
+                  <span className="sr-only">Reorder</span>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-foreground dark:text-zinc-300 uppercase tracking-wider">
                   Category Name

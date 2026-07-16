@@ -1,6 +1,4 @@
 using System.Globalization;
-using System.Net;
-using System.Net.Mail;
 using Api.Helpers;
 using Api.Infrastructure.Security;
 using Microsoft.Extensions.Options;
@@ -8,21 +6,29 @@ using Microsoft.Extensions.Options;
 namespace Api.Services;
 
 /// <summary>
-/// Email alert channel using SMTP.
+/// Email alert channel for health/monitoring alerts.
 /// OPS-07: Email notifications for alerts.
+/// Delivery is delegated to <see cref="IEmailService"/> — the shared, authenticated
+/// SMTP_* transport used by all other outbound mail — instead of a self-configured
+/// SmtpClient. The former channel-local SmtpClient was built from Alerting:Email:*
+/// (Username/Password/From), which is empty on staging, so alert mail went out
+/// unauthenticated and Gmail rejected it with "5.7.0 Authentication Required".
 /// </summary>
 internal class EmailAlertChannel : IAlertChannel
 {
     private readonly EmailConfiguration _config;
+    private readonly IEmailService _emailService;
     private readonly ILogger<EmailAlertChannel> _logger;
 
     public string ChannelName => "Email";
 
     public EmailAlertChannel(
         IOptions<AlertingConfiguration> config,
+        IEmailService emailService,
         ILogger<EmailAlertChannel> logger)
     {
         _config = config.Value.Email;
+        _emailService = emailService;
         _logger = logger;
     }
 
@@ -39,45 +45,32 @@ internal class EmailAlertChannel : IAlertChannel
             return false;
         }
 
-        if (string.IsNullOrEmpty(_config.SmtpHost) || _config.To.Count == 0)
+        if (_config.To.Count == 0)
         {
-            _logger.LogWarning("Email channel is not properly configured (missing SMTP host or recipients)");
+            _logger.LogWarning("Email channel is not properly configured (no recipients)");
             return false;
         }
 
+        var subject = severity.ToUpper(CultureInfo.InvariantCulture) switch
+        {
+            "CRITICAL" => $"🚨 [CRITICAL] {alertType} - MeepleAI",
+            "WARNING" => $"⚠️ [WARNING] {alertType} - MeepleAI",
+            _ => $"ℹ️ [INFO] {alertType} - MeepleAI"
+        };
+
+        var body = FormatEmailBody(alertType, severity, message, metadata);
+
         try
         {
-            using var client = new SmtpClient(_config.SmtpHost, _config.SmtpPort)
-            {
-                EnableSsl = _config.UseTls,
-                Credentials = !string.IsNullOrEmpty(_config.Username)
-                    ? new NetworkCredential(_config.Username, _config.Password)
-                    : null
-            };
-
-            var subject = severity.ToUpper(CultureInfo.InvariantCulture) switch
-            {
-                "CRITICAL" => $"🚨 [CRITICAL] {alertType} - MeepleAI",
-                "WARNING" => $"⚠️ [WARNING] {alertType} - MeepleAI",
-                _ => $"ℹ️ [INFO] {alertType} - MeepleAI"
-            };
-
-            var body = FormatEmailBody(alertType, severity, message, metadata);
-
-            using var mailMessage = new MailMessage
-            {
-                From = new MailAddress(_config.From),
-                Subject = subject,
-                Body = body,
-                IsBodyHtml = true
-            };
-
+            // Transport (SMTP auth, From address, TLS) is owned by EmailService, which uses
+            // the authenticated SMTP_* credentials. All-or-nothing: a throw on any recipient
+            // stops the loop and yields false, mirroring the original single-try semantics.
             foreach (var recipient in _config.To)
             {
-                mailMessage.To.Add(recipient);
+                await _emailService
+                    .SendRawEmailAsync(recipient, subject, body, cancellationToken)
+                    .ConfigureAwait(false);
             }
-
-            await client.SendMailAsync(mailMessage, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Email alert sent to {Recipients} for {AlertType}",
@@ -94,7 +87,8 @@ internal class EmailAlertChannel : IAlertChannel
             // Rationale: Alert channels implement IAlertChannel which requires returning success/
             // failure status. Throwing would prevent other channels from executing (Slack, PagerDuty).
             // Caller (AlertingService) tracks per-channel results for graceful degradation.
-            // Context: Email failures are typically external (SMTP down, authentication expired)
+            // Context: Email failures are typically external (SMTP down, authentication expired);
+            // EmailService.SendRawEmailAsync surfaces them as InvalidOperationException.
             _logger.LogError(ex, "Failed to send email alert for {AlertType}", LogSanitizer.Sanitize(alertType));
             return false;
         }

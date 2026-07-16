@@ -10,11 +10,13 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 export const LibraryActivityItemSchema = z.object({
   id: z.string().uuid(),
   type: z.enum(['added', 'state-changed', 'removed', 'session-recorded']),
   timestamp: z.string().datetime({ offset: true }),
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   gameTitle: z.string(),
   message: z.string(),
 });

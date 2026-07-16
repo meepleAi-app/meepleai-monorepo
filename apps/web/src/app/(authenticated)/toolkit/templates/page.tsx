@@ -104,10 +104,15 @@ export default function ToolkitTemplatesPage() {
   };
 
   return (
-    <div className="container max-w-6xl space-y-6 py-6">
+    <div className="container mx-auto max-w-[1440px] space-y-6 px-4 py-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Toolkit Templates</h1>
+          <div className="flex items-center gap-2">
+            <span aria-hidden="true" className="text-2xl">
+              🧰
+            </span>
+            <h1 className="text-2xl font-bold">Toolkit Templates</h1>
+          </div>
           <p className="text-sm text-muted-foreground">
             Browse approved templates and clone them for your games
           </p>
@@ -137,7 +142,7 @@ export default function ToolkitTemplatesPage() {
       )}
 
       <div
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         data-testid="templates-grid"
       >
         {templates?.map(t => (

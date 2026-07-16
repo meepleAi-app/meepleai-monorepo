@@ -28,6 +28,7 @@ const LABELS: MobileBottomSheetDrawerLabels = {
   drawerTitle: 'Strumenti sessione',
   closeAriaLabel: 'Chiudi pannello',
   tabsAriaLabel: 'Tab strumenti',
+  tabFlavor: 'Catan',
   tabScore: 'Score',
   tabTurn: 'Turni',
   tabWidget: 'Widget',
@@ -117,6 +118,21 @@ describe('MobileBottomSheetDrawer — tab strip', () => {
     const widgetTab = screen.getAllByRole('tab')[2];
     fireEvent.click(widgetTab!);
     expect(onTabChange).toHaveBeenCalledWith('widget');
+  });
+});
+
+describe('MobileBottomSheetDrawer — conditional flavor tab (#2787)', () => {
+  it('omits the flavor tab by default (showFlavorTab unset)', () => {
+    renderDrawer({ open: true });
+    expect(screen.queryByRole('tab', { name: LABELS.tabFlavor })).not.toBeInTheDocument();
+  });
+
+  it('renders the flavor tab first when showFlavorTab is set', () => {
+    renderDrawer({ open: true, showFlavorTab: true, activeTab: 'flavor' });
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs).toHaveLength(7);
+    expect(tabs[0]).toHaveTextContent(LABELS.tabFlavor);
+    expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
   });
 });
 

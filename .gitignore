@@ -120,6 +120,10 @@ CUsersUtente*
 
 # Docker
 .dockerignore
+# #2953 (#7): the ROOT .dockerignore trims the API build context (context=repo-root per
+# infra/docker-compose.yml). The unqualified pattern above would silently keep it out of git;
+# un-ignore just the root one (nested apps/*/.dockerignore stay ignored for new files).
+!/.dockerignore
 compose.override.yml
 
 # Data

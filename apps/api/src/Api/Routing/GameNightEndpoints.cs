@@ -840,9 +840,12 @@ internal static class GameNightEndpoints
 
     private static async Task<IResult> HandleGetUpcomingGameNights(
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var result = await mediator.Send(new GetUpcomingGameNightsQuery(), cancellationToken).ConfigureAwait(false);
+        // #2989 inv#17: pass the viewer so the DTO carries their RSVP status (pending-RSVP card).
+        var userId = httpContext.User.GetUserId();
+        var result = await mediator.Send(new GetUpcomingGameNightsQuery(userId), cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
 

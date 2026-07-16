@@ -933,3 +933,70 @@ describe('parseSseEvent — sessionId resolution', () => {
     }
   });
 });
+
+// ============================================================================
+// #3025 L1 — session:game-state (opaque game-agnostic state)
+// ============================================================================
+
+describe('parseSseEvent — session:game-state (#3025 L1)', () => {
+  it('parses an object state', () => {
+    const state = { round: 2, activePlayer: 'p1', dev: { catan: { longestRoad: 'p2' } } };
+    const result = parseSseEvent('session:game-state', makeJson({ state }), SESSION_ID);
+    expect(result).toMatchObject({ type: 'session:game-state', sessionId: SESSION_ID, state });
+    if (result?.type === 'session:game-state') {
+      expect(typeof result.timestamp).toBe('string');
+    }
+  });
+
+  it('parses a null state (state key present, value null)', () => {
+    const result = parseSseEvent('session:game-state', makeJson({ state: null }), SESSION_ID);
+    expect(result).toMatchObject({
+      type: 'session:game-state',
+      sessionId: SESSION_ID,
+      state: null,
+    });
+  });
+
+  it('carries a server-provided timestamp when present', () => {
+    const result = parseSseEvent(
+      'session:game-state',
+      makeJson({ state: { x: 1 }, timestamp: '2026-01-02T03:04:05Z' }),
+      SESSION_ID
+    );
+    if (result?.type === 'session:game-state') {
+      expect(result.timestamp).toBe('2026-01-02T03:04:05Z');
+    } else {
+      throw new Error('expected session:game-state');
+    }
+  });
+
+  it('preserves a primitive/array state verbatim (opaque at L1)', () => {
+    const result = parseSseEvent('session:game-state', makeJson({ state: [1, 2, 3] }), SESSION_ID);
+    if (result?.type === 'session:game-state') {
+      expect(result.state).toEqual([1, 2, 3]);
+    } else {
+      throw new Error('expected session:game-state');
+    }
+  });
+
+  it('returns null when the `state` key is absent', () => {
+    expect(parseSseEvent('session:game-state', makeJson({ round: 1 }), SESSION_ID)).toBeNull();
+  });
+
+  it('returns null for malformed JSON', () => {
+    expect(parseSseEvent('session:game-state', '{not-json}', SESSION_ID)).toBeNull();
+  });
+
+  it('resolves sessionId from data when the param is empty', () => {
+    const result = parseSseEvent(
+      'session:game-state',
+      makeJson({ state: { x: 1 }, sessionId: 'data-session' }),
+      ''
+    );
+    if (result?.type === 'session:game-state') {
+      expect(result.sessionId).toBe('data-session');
+    } else {
+      throw new Error('expected session:game-state');
+    }
+  });
+});

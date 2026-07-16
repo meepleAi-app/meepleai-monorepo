@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using MediatR;
@@ -49,7 +50,7 @@ internal class PdfNotificationEventHandler :
                 evt.PdfDocumentId,
                 pdfDoc.FileName.Value,
                 "Ready"),
-            DeepLinkPath = $"/documents/{evt.PdfDocumentId}",
+            DeepLinkPath = NotificationRoutes.Document(evt.PdfDocumentId),
             // Issue #1937 / CF-1: propagate event id for dispatcher dedup
             SourceEventId = evt.EventId
         }, cancellationToken).ConfigureAwait(false);
@@ -74,7 +75,7 @@ internal class PdfNotificationEventHandler :
                 evt.PdfDocumentId,
                 pdfDoc.FileName.Value,
                 $"Failed: {evt.ErrorMessage}"),
-            DeepLinkPath = $"/documents/{evt.PdfDocumentId}",
+            DeepLinkPath = NotificationRoutes.Document(evt.PdfDocumentId),
             // Issue #1937 / CF-1: propagate event id for dispatcher dedup
             SourceEventId = evt.EventId
         }, cancellationToken).ConfigureAwait(false);
@@ -99,7 +100,7 @@ internal class PdfNotificationEventHandler :
                 evt.PdfDocumentId,
                 pdfDoc.FileName.Value,
                 $"Retry #{evt.RetryCount}"),
-            DeepLinkPath = $"/documents/{evt.PdfDocumentId}",
+            DeepLinkPath = NotificationRoutes.Document(evt.PdfDocumentId),
             // Issue #1937 / CF-1: propagate event id for dispatcher dedup
             SourceEventId = evt.EventId
         }, cancellationToken).ConfigureAwait(false);

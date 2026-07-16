@@ -129,6 +129,14 @@ export interface MeepleCardProps {
   connectionsVariant?: 'footer' | 'inline' | 'auto';
   onClick?: () => void;
   /**
+   * Accessible name for the card root when `onClick` makes it interactive
+   * (`role="button"`). Overrides the implicit name derived from the
+   * rendered title/subtitle text — use when a screen-reader-only label
+   * ("Open game detail {name}") is clearer than the visible title alone.
+   * Currently honored by ListCard only; other variants ignore it.
+   */
+  ariaLabel?: string;
+  /**
    * Issue #2858 (C1) — when present, the card root renders as a Next.js
    * `<Link href prefetch>` instead of a `<div role="button">`, giving real
    * anchor semantics (prefetch, middle-click / open-in-new-tab, native

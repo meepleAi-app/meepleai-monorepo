@@ -165,11 +165,11 @@ function SimultaneousPlayersBadge({
 function RealtimeBanner() {
   return (
     <div
-      className="flex items-center gap-2 rounded-md bg-warning/10 px-3 py-2 text-xs"
+      className="flex items-center gap-2 rounded-md bg-[hsl(var(--c-warning)/0.1)] px-3 py-2 text-xs"
       data-testid="turn-realtime-banner"
     >
-      <Zap className="h-4 w-4 text-warning" aria-hidden="true" />
-      <span className="font-medium text-warning">Real-time play</span>
+      <Zap className="h-4 w-4 text-[hsl(var(--c-warning-ink))]" aria-hidden="true" />
+      <span className="font-medium text-[hsl(var(--c-warning-ink))]">Real-time play</span>
       <span className="text-muted-foreground">— no turns, react fast.</span>
     </div>
   );

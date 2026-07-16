@@ -23,11 +23,14 @@ describe('escapeCSVField', () => {
     expect(escapeCSVField('@cmd')).toBe("'@cmd");
     expect(escapeCSVField('+x')).toBe("'+x");
     expect(escapeCSVField('-x')).toBe("'-x");
+    expect(escapeCSVField('=')).toBe("'="); // only a guard char
   });
 
-  it('does not treat a numeric -5 as formula-injection-prone', () => {
-    // A genuine numeric cell must not be corrupted by the string-only guard.
+  it('discriminates numeric -5 from string "-5" (string-only guard)', () => {
+    // A genuine numeric cell must not be corrupted; a string that looks like a
+    // formula must be prefixed. This proves the typeof-based discrimination.
     expect(escapeCSVField(-5)).toBe('-5');
+    expect(escapeCSVField('-5')).toBe("'-5");
   });
 });
 

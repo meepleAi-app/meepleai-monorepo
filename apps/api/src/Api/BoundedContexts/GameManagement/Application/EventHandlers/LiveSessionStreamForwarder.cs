@@ -17,7 +17,8 @@ internal sealed class LiveSessionStreamForwarder :
     INotificationHandler<LiveSessionPausedEvent>,
     INotificationHandler<LiveSessionResumedEvent>,
     INotificationHandler<LiveSessionCompletedEvent>,
-    INotificationHandler<LiveSessionDiaryEntryAddedEvent>
+    INotificationHandler<LiveSessionDiaryEntryAddedEvent>,
+    INotificationHandler<LiveSessionGameStateEvent>
 {
     private readonly ILiveSessionStreamGateway _gateway;
     private readonly ILogger<LiveSessionStreamForwarder> _logger;
@@ -150,6 +151,21 @@ internal sealed class LiveSessionStreamForwarder :
                 content = notification.Text,
                 timestamp = notification.CreatedAt.ToString("o")
             }),
+            cancellationToken);
+    }
+
+    public Task Handle(LiveSessionGameStateEvent notification, CancellationToken cancellationToken)
+    {
+        _logger.LogDebug("Broadcasting session:game-state for session {SessionId}", notification.SessionId);
+        // The event carries the RAW JSON string (not the aggregate's disposable JsonDocument,
+        // which System.Text.Json cannot serialize). Re-parse into a JsonNode (serializable, not
+        // disposable) so `state` serializes as a nested OBJECT — not an escaped string.
+        var stateNode = notification.RawStateJson is null
+            ? null
+            : System.Text.Json.Nodes.JsonNode.Parse(notification.RawStateJson);
+        return _gateway.BroadcastAsync(
+            notification.SessionId,
+            new LiveSessionStreamEvent("session:game-state", new { state = stateNode }),
             cancellationToken);
     }
 }

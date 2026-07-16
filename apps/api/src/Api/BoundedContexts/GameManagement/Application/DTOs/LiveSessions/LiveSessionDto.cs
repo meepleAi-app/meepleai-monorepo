@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 
 namespace Api.BoundedContexts.GameManagement.Application.DTOs.LiveSessions;
@@ -26,6 +28,8 @@ internal record LiveSessionDto(
     Guid? CurrentTurnPlayerId,
     AgentSessionMode AgentMode,
     string? Notes,
+    // #3025 L1: opaque live game-state. JsonElement (serializable) — the domain holds a JsonDocument.
+    JsonElement? GameState,
     IReadOnlyList<LiveSessionPlayerDto> Players,
     IReadOnlyList<LiveSessionTeamDto> Teams,
     IReadOnlyList<LiveSessionRoundScoreDto> RoundScores,

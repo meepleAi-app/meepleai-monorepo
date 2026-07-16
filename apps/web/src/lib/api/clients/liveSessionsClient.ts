@@ -179,6 +179,9 @@ export interface LiveSessionsClient {
   /** Update session notes */
   updateNotes(sessionId: string, request: UpdateNotesRequest): Promise<void>;
 
+  /** #3025 L1: replace the opaque live game-state (host/participant only). */
+  updateGameState(sessionId: string, state: unknown): Promise<void>;
+
   // ========== Diary (SP3 #2570 / write-path #2575) ==========
 
   /** Append an immutable diary entry to the session. Returns the new entry id. */
@@ -438,6 +441,10 @@ export function createLiveSessionsClient({
 
     async editScore(sessionId, request) {
       await httpClient.put(`${BASE}/${encodeURIComponent(sessionId)}/scores`, request);
+    },
+
+    async updateGameState(sessionId, state) {
+      await httpClient.put(`${BASE}/${encodeURIComponent(sessionId)}/game-state`, { state });
     },
 
     // ========== Turns & Phases ==========

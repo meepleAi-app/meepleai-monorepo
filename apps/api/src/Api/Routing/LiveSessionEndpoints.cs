@@ -203,6 +203,16 @@ internal static class LiveSessionEndpoints
             .WithTags("LiveSessions")
             .WithSummary("Update session notes");
 
+        group.MapPut("/live-sessions/{sessionId}/game-state", HandleUpdateGameState)
+            .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
+            .Produces(204)
+            .Produces(403)
+            .Produces(404)
+            .Produces(409)
+            .WithTags("LiveSessions")
+            .WithSummary("Update the live game-state (#3025 L1)");
+
         group.MapPost("/live-sessions/{sessionId}/scores/parse", HandleParseScore)
             .RequireAuthenticatedUser()
             .RequireLiveSessionParticipant()
@@ -763,6 +773,27 @@ internal static class LiveSessionEndpoints
     }
 
     /// <summary>
+    /// PUT /api/v1/live-sessions/{sessionId}/game-state — #3025 L1.
+    /// Replaces the opaque live game-state. 204 on success; 403 non-participant;
+    /// 404 session not found; 409 if the session is Completed.
+    /// </summary>
+    private static async Task<IResult> HandleUpdateGameState(
+        Guid sessionId,
+        [FromBody] UpdateGameStateRequest request,
+        HttpContext httpContext,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+
+        await mediator.Send(
+            new UpdateLiveGameStateCommand(sessionId, userId, request.State),
+            cancellationToken).ConfigureAwait(false);
+
+        return Results.NoContent();
+    }
+
+    /// <summary>
     /// GET /api/v1/live-sessions/{sessionId}/diary — Issue #2570 SP3 T5.
     /// Returns all diary entries ordered by CreatedAt ascending. 404 if session not found.
     /// 403 if the caller is not the session creator or an active participant.
@@ -1173,6 +1204,9 @@ internal static class LiveSessionEndpoints
 
     // Diary (SP3) request model
     private sealed record AddDiaryEntryRequest(string Text);
+
+    /// <summary>Body for PUT /live-sessions/{id}/game-state. Opaque JSON (#3025 L1).</summary>
+    private sealed record UpdateGameStateRequest(System.Text.Json.JsonElement State);
 
     // Dispute v2 request models
     internal sealed record OpenDisputeRequest(

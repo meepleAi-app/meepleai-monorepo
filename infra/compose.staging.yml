@@ -91,6 +91,12 @@ services:
       Frontend__BaseUrl: "https://meepleai.app"
       Authentication__SessionCookie__Secure: "true"
       Authentication__SessionCookie__SameSite: "Lax"
+      # OPS-07: health/monitoring alert recipient — overrides the appsettings.json
+      # placeholder (ops@meepleai.dev). Not a secret, just the mailbox that receives
+      # alert emails. From/credentials are inherited from EmailService's SMTP_* config
+      # (email.secret); EmailAlertChannel no longer uses Alerting:Email:From/Username/
+      # Password. badsworm@gmail.com is the already allow-listed staging address (Gmail→Gmail).
+      Alerting__Email__To__0: badsworm@gmail.com
       # Ollama disabled in staging — all LLM traffic goes to OpenRouter
       AI__Providers__Ollama__Enabled: "false"
       # AI extraction services — URLs must be valid for startup validation.

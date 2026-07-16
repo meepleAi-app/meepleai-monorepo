@@ -141,4 +141,46 @@ describe('ProviderTable', () => {
     expect(orMark.className).toMatch(/bg-entity-chat/);
     expect(ollMark.className).toMatch(/bg-entity-kb/);
   });
+
+  it('shows "degraded" chip when quota fetch returns an errorCode (#3045)', async () => {
+    // deepseek quota fetch degraded (errorCode present, numerics null) → NOT "healthy".
+    getProviderQuota.mockImplementation((name: string) =>
+      Promise.resolve(
+        name === 'deepseek'
+          ? {
+              providerName: 'deepseek',
+              quotaSupported: true,
+              tokenConfigured: true,
+              usedUsd: null,
+              limitUsd: null,
+              remainingUsd: null,
+              resetAt: null,
+              errorCode: 'quota_fetch_failed',
+              errorMessage: 'upstream 502',
+              fetchedAt: '2026-06-02T10:00:00Z',
+              cacheTtlSeconds: 0,
+            }
+          : {
+              providerName: name,
+              quotaSupported: true,
+              tokenConfigured: true,
+              usedUsd: null,
+              limitUsd: null,
+              remainingUsd: 5.5,
+              resetAt: null,
+              errorCode: null,
+              errorMessage: null,
+              fetchedAt: '2026-06-02T10:00:00Z',
+              cacheTtlSeconds: 300,
+            }
+      )
+    );
+    renderWithQuery(<ProviderTable />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Token status: degraded')).toBeInTheDocument();
+    });
+    // The other providers with no errorCode stay "healthy" (regression guard).
+    expect(screen.getAllByLabelText('Token status: healthy').length).toBeGreaterThanOrEqual(1);
+  });
 });

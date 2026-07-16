@@ -38,6 +38,7 @@ interface MetricKpi {
   series: TimeSeriesPoint[];
   trend: Trend;
   trendPct: number;
+  sourceAvailable: boolean; // #3045: false = sorgente (Prometheus) non disponibile
   loading: boolean;
 }
 
@@ -76,6 +77,7 @@ const EMPTY_METRIC: MetricKpi = {
   series: [],
   trend: 'flat',
   trendPct: 0,
+  sourceAvailable: true, // durante loading non si mostra lo stato "non disponibile"
   loading: true,
 };
 const EMPTY_MEMORY: MemoryKpi = { ...EMPTY_METRIC, total: 0 };
@@ -127,11 +129,15 @@ export function useInfrastructureKpis(): InfrastructureKpis {
         const memValue = memSeries.length ? memSeries[memSeries.length - 1].value : 0;
         const cpuTrend = computeTrend(cpuSeries);
         const memTrend = computeTrend(memSeries);
+        // #3045: disponibilità per-metrica — un fallimento della query CPU non maschera la RAM.
+        const cpuAvailable = resp?.cpuAvailable ?? true;
+        const memoryAvailable = resp?.memoryAvailable ?? true;
         setCpu({
           value: cpuValue,
           series: cpuSeries,
           trend: cpuTrend.trend,
           trendPct: cpuTrend.pct,
+          sourceAvailable: cpuAvailable,
           loading: false,
         });
         setMemory(m => ({
@@ -140,18 +146,19 @@ export function useInfrastructureKpis(): InfrastructureKpis {
           series: memSeries,
           trend: memTrend.trend,
           trendPct: memTrend.pct,
+          sourceAvailable: memoryAvailable,
           loading: false,
         }));
       })
       .catch(() => {
         if (cancelled) return;
-        setCpu({ ...EMPTY_METRIC, loading: false });
+        // Un fallimento totale della richiesta è anch'esso "sorgente non disponibile" (#3045).
+        setCpu({ ...EMPTY_METRIC, sourceAvailable: false, loading: false });
+        // Preserva solo `total` (dal fetch /resources/system indipendente, #3041).
         setMemory(m => ({
-          ...m,
-          value: 0,
-          series: [],
-          trend: 'flat',
-          trendPct: 0,
+          ...EMPTY_MEMORY,
+          total: m.total,
+          sourceAvailable: false,
           loading: false,
         }));
       });

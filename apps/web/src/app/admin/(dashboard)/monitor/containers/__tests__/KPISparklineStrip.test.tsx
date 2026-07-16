@@ -20,6 +20,7 @@ function defaultKpis() {
       ],
       trend: 'up' as const,
       trendPct: 70,
+      sourceAvailable: true,
       loading: false,
     },
     memory: {
@@ -31,6 +32,7 @@ function defaultKpis() {
       ],
       trend: 'up' as const,
       trendPct: 8,
+      sourceAvailable: true,
       loading: false,
     },
     batchJobs: { queued: 4, running: 2, loading: false },
@@ -82,6 +84,7 @@ describe('KPISparklineStrip', () => {
           series: [],
           trend: 'flat' as const,
           trendPct: 0,
+          sourceAvailable: true,
           loading: false,
         },
       })
@@ -116,6 +119,7 @@ describe('KPISparklineStrip', () => {
           series: [],
           trend: 'flat',
           trendPct: 0,
+          sourceAvailable: true,
           loading: true,
         },
       })
@@ -139,6 +143,7 @@ describe('KPISparklineStrip', () => {
           series: [],
           trend: 'down',
           trendPct: 50,
+          sourceAvailable: true,
           loading: false,
         },
       })
@@ -155,6 +160,7 @@ describe('KPISparklineStrip', () => {
           series: [],
           trend: 'flat',
           trendPct: 0,
+          sourceAvailable: true,
           loading: false,
         },
       })
@@ -178,6 +184,7 @@ describe('KPISparklineStrip', () => {
           series: [{ timestamp: '2026-06-03T14:00:00Z', value: 34 }],
           trend: 'flat',
           trendPct: 0,
+          sourceAvailable: true,
           loading: false,
         },
       })
@@ -193,5 +200,44 @@ describe('KPISparklineStrip', () => {
     expect(screen.getByLabelText(/CPU media 34/)).toBeInTheDocument();
     expect(screen.getByLabelText(/RAM usata 18.4/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Batch job/)).toBeInTheDocument();
+  });
+
+  it('shows "Sorgente non disponibile" for CPU when sourceAvailable is false (#3045)', () => {
+    useInfrastructureKpisMock.mockReturnValue(
+      makeKpis({
+        cpu: {
+          value: 0,
+          series: [],
+          trend: 'flat',
+          trendPct: 0,
+          sourceAvailable: false,
+          loading: false,
+        },
+      })
+    );
+    render(<KPISparklineStrip />);
+    expect(screen.getByTestId('kpi-cpu-unavailable')).toBeInTheDocument();
+    expect(screen.queryByTestId('kpi-sparkline-cpu')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('CPU media: sorgente non disponibile')).toBeInTheDocument();
+  });
+
+  it('shows "Sorgente non disponibile" for RAM when sourceAvailable is false (#3045)', () => {
+    useInfrastructureKpisMock.mockReturnValue(
+      makeKpis({
+        memory: {
+          value: 0,
+          total: 0,
+          series: [],
+          trend: 'flat' as const,
+          trendPct: 0,
+          sourceAvailable: false,
+          loading: false,
+        },
+      })
+    );
+    render(<KPISparklineStrip />);
+    expect(screen.getByTestId('kpi-memory-unavailable')).toBeInTheDocument();
+    expect(screen.queryByTestId('kpi-sparkline-memory')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('RAM usata: sorgente non disponibile')).toBeInTheDocument();
   });
 });

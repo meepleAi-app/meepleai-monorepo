@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
+import { axe } from 'jest-axe';
 import { describe, expect, it } from 'vitest';
 
 import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
@@ -139,5 +140,32 @@ describe('CatanLiveFlavor', () => {
     const p1Cell = dim.querySelector('[data-player="p1"]'); // robust: avoids ambiguous "4"
     expect(p1Cell).not.toBeNull();
     expect(p1Cell).toHaveTextContent('4');
+  });
+});
+
+describe('CatanLiveFlavor — a11y (axe AA)', () => {
+  it('passes axe with players + active turn + dimensions', async () => {
+    const session = makeSession({
+      scoringConfig: { enabledDimensions: ['Città'], dimensionUnits: {} },
+      roundScores: [
+        {
+          playerId: 'p1',
+          round: 1,
+          dimension: 'Città',
+          value: 2,
+          unit: null,
+          recordedAt: '2026-07-16T10:10:00Z',
+        },
+      ],
+    });
+    const { container } = render(<CatanLiveFlavor session={session} labels={LABELS} />);
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('passes axe in the empty (no-players) state', async () => {
+    const { container } = render(
+      <CatanLiveFlavor session={makeSession({ players: [] })} labels={LABELS} />
+    );
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

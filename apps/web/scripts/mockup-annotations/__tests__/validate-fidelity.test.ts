@@ -291,12 +291,32 @@ describe('validate() surfaces approvalErrors separately from structural ok', () 
     expect(result.ok).toBe(true);
     expect(result.approvalErrors).toEqual([]);
   });
+
+  // Regression (PR #3012 review): a schema-INVALID current file with an empty
+  // approver must still surface a signoff failure — otherwise it is silently
+  // reclassified as baseline-tolerated structural drift, violating the strict
+  // "signoff is never baselined" invariant.
+  it('current + empty approver + schema-invalid → ok:false AND approvalErrors populated', async () => {
+    const file = writeFixture('signoff-plus-schema-fail.fidelity.json', {
+      mockup: { source: REAL_MOCKUP, states: ['typo-state'] }, // fails StateName enum
+      acceptance: { states_covered: ['default'], design_intent: 'current' }, // approver empty
+    });
+    const result = await validate(file);
+    expect(result.ok).toBe(false); // structural (schema) failure
+    expect(result.approvalErrors.length).toBe(1); // signoff still flagged
+  });
 });
 
 describe('computeGateVerdict (strict signoff + baselined structural)', () => {
   const ok = () => ({ ok: true, approvalErrors: [] });
   const structuralFail = () => ({ ok: false, errors: ['bad source'], approvalErrors: [] });
   const signoffFail = () => ({ ok: true, approvalErrors: ['missing signoff'] });
+  // Schema-invalid AND missing signoff (the PR #3012 review regression case).
+  const structuralAndSignoffFail = () => ({
+    ok: false,
+    errors: ['schema'],
+    approvalErrors: ['missing signoff'],
+  });
 
   it('all pass → pass:true', () => {
     const v = computeGateVerdict([ok(), ok()], 0);
@@ -329,6 +349,15 @@ describe('computeGateVerdict (strict signoff + baselined structural)', () => {
 
   it('signoff failure + structural within baseline → still pass:false', () => {
     const v = computeGateVerdict([signoffFail(), structuralFail()], 3);
+    expect(v.pass).toBe(false);
+  });
+
+  it('schema-invalid file that ALSO misses signoff fails even with generous baseline', () => {
+    // Structural budget has ample headroom (1 <= 100) but the signoff failure is
+    // strict → pass:false. Guards the "signoff never baselined" invariant.
+    const v = computeGateVerdict([structuralAndSignoffFail()], 100);
+    expect(v.overBaseline).toBe(false);
+    expect(v.approvalFailCount).toBe(1);
     expect(v.pass).toBe(false);
   });
 });

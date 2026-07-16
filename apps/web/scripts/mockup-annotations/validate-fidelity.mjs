@@ -264,7 +264,13 @@ export async function validate(filePath) {
   const parsed = FidelitySchema.safeParse(raw);
   if (!parsed.success) {
     const errs = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
-    return { ok: false, file: filePath, errors: errs, approvalErrors: [] };
+    // Signoff is STRICT and must not be reclassifiable as baseline-tolerated
+    // structural drift when the file ALSO fails schema validation. Compute it
+    // from the raw (pre-zod) input so a design_intent:"current" file with an
+    // empty designer_approved_by is still flagged as a signoff failure even when
+    // another field is malformed (e.g. an invalid state name). checkApprovalStatus
+    // defaults an absent design_intent to "current", matching the zod schema.
+    return { ok: false, file: filePath, errors: errs, approvalErrors: checkApprovalStatus(raw) };
   }
 
   // Designer signoff attestation is computed independently of structural

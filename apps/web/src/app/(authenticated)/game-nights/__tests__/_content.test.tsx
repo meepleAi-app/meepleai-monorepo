@@ -38,10 +38,12 @@ vi.mock('@/hooks/useTranslation', () => ({
 
 const useUpcomingMock = vi.fn();
 const useMineMock = vi.fn();
+const rsvpMutateMock = vi.fn();
 
 vi.mock('@/hooks/queries/useGameNights', () => ({
   useUpcomingGameNights: () => useUpcomingMock(),
   useMyGameNights: () => useMineMock(),
+  useRsvpGameNight: () => ({ mutate: rsvpMutateMock }),
 }));
 
 const useCurrentUserMock = vi.fn();
@@ -296,5 +298,31 @@ describe('GameNightsContent (orchestrator)', () => {
     expect(replaceMock).toHaveBeenCalled();
     const target = String(replaceMock.mock.calls[0]?.[0] ?? '');
     expect(target).toMatch(/filter=organizing/);
+  });
+
+  // #2978 (invariante #17): a pending invitee can RSVP inline from the list card.
+  it('wires the RSVP mutation when a pending invitee clicks Declina', () => {
+    searchParamsState.view = 'list';
+    const invited = makeDto({
+      id: '99999999-9999-9999-9999-999999999999',
+      organizerId: 'someone-else-id-00000000000000000000',
+      myRsvpStatus: 'Pending',
+      title: 'Serata su invito',
+    });
+    useUpcomingMock.mockReturnValue({
+      data: [invited],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useMineMock.mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() });
+
+    render(<GameNightsContent />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'gameNightsIndex.list.cta.decline' }));
+    expect(rsvpMutateMock).toHaveBeenCalledWith({
+      id: '99999999-9999-9999-9999-999999999999',
+      response: 'Declined',
+    });
   });
 });

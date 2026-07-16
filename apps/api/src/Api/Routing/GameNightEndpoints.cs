@@ -840,19 +840,27 @@ internal static class GameNightEndpoints
 
     private static async Task<IResult> HandleGetUpcomingGameNights(
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var result = await mediator.Send(new GetUpcomingGameNightsQuery(), cancellationToken).ConfigureAwait(false);
+        // #2978 (invariante #17): pass the caller so each DTO carries the viewer's own RSVP status.
+        var userId = httpContext.User.GetUserId();
+        var result = await mediator.Send(new GetUpcomingGameNightsQuery(userId), cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
 
     // F20 #1974 (audit 2026-06-07): dashboard "Recenti" slot.
     private static async Task<IResult> HandleGetCompletedGameNights(
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken,
         [FromQuery] int? limit = null)
     {
-        var query = limit.HasValue ? new GetCompletedGameNightsQuery(limit.Value) : new GetCompletedGameNightsQuery();
+        // #2978 (invariante #17): pass the caller so each DTO carries the viewer's own RSVP status.
+        var userId = httpContext.User.GetUserId();
+        var query = limit.HasValue
+            ? new GetCompletedGameNightsQuery(userId, limit.Value)
+            : new GetCompletedGameNightsQuery(userId);
         var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }

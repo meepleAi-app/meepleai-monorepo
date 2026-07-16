@@ -40,7 +40,11 @@ import { CascadeDrawerHost } from '@/components/dashboard/CascadeDrawerHost';
 import { HubPageContainer } from '@/components/layout/PageContainer';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
-import { useCompletedGameNights, useUpcomingGameNights } from '@/hooks/queries/useGameNights';
+import {
+  useCompletedGameNights,
+  useRsvpGameNight,
+  useUpcomingGameNights,
+} from '@/hooks/queries/useGameNights';
 import { useLibrary, useLibraryStats } from '@/hooks/queries/useLibrary';
 import { useFriendsActivity } from '@/hooks/use-friends-activity';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -82,6 +86,8 @@ export function DashboardClient(): ReactElement {
 
   // ── Data hooks (re-used from Stage 3 + asse-C additions) ─────────────────
   const upcomingGNQuery = useUpcomingGameNights();
+  // #2978 (invariante #17): inline RSVP for pending-invitee cards on the dashboard.
+  const rsvpMutation = useRsvpGameNight();
   // F20 #1974: dashboard "Recenti" slot — recently completed game nights.
   const completedGNQuery = useCompletedGameNights({ limit: 5 });
   const sessionsQuery = useActiveSessions(10);
@@ -120,6 +126,7 @@ export function DashboardClient(): ReactElement {
           rsvpConfirmedCount: gn.acceptedCount,
           rsvpPendingCount: gn.pendingCount,
           rsvpTotalCount: gn.totalInvited,
+          myRsvpStatus: gn.myRsvpStatus ?? null,
         }))
     );
   }, [upcomingGNQuery.data]);
@@ -274,6 +281,7 @@ export function DashboardClient(): ReactElement {
         <ProssimiSection
           state={prossimiState}
           gameNights={prossimiCards}
+          onRsvp={(id, response) => rsvpMutation.mutate({ id, response })}
           onRetry={() => {
             void upcomingGNQuery.refetch();
           }}

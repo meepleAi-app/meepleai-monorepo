@@ -15,7 +15,7 @@
 
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -28,14 +28,20 @@ import {
   type CalendarMonthGridLabels,
   type DayDetailDrawerLabels,
   type FilterPillBarLabels,
+  type GameNightListCardAction,
   type GameNightListCardLabels,
   type GameNightsHeaderLabels,
   type GameNightsView,
   type StatusPillLabels,
 } from '@/components/features/game-nights';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
-import { useMyGameNights, useUpcomingGameNights } from '@/hooks/queries/useGameNights';
+import {
+  useMyGameNights,
+  useRsvpGameNight,
+  useUpcomingGameNights,
+} from '@/hooks/queries/useGameNights';
 import { useTranslation, type TranslationFunction } from '@/hooks/useTranslation';
+import type { RsvpStatus } from '@/lib/api/schemas/game-nights.schemas';
 import type { MonthCell } from '@/lib/game-nights/calendar-grid';
 import { filterEvents, isFilterKey, type FilterKey } from '@/lib/game-nights/event-filter';
 import { groupByMonth } from '@/lib/game-nights/event-grouping';
@@ -72,10 +78,19 @@ function makeCardLabels(
       reschedule: t(`${K}.list.cta.reschedule`),
       accept: t(`${K}.list.cta.accept`),
       maybe: t(`${K}.list.cta.maybe`),
+      decline: t(`${K}.list.cta.decline`),
     },
+    pendingBadge: t(`${K}.list.pendingBadge`),
     monthAbbrev: monthAbbrev(vm.year, vm.month),
   };
 }
+
+// #2978 (invariante #17): map the list card's RSVP action to the wire RsvpStatus.
+const RSVP_ACTION_TO_STATUS: Partial<Record<GameNightListCardAction, RsvpStatus>> = {
+  accept: 'Accepted',
+  maybe: 'Maybe',
+  decline: 'Declined',
+};
 
 export function GameNightsContent(): React.JSX.Element {
   const { t } = useTranslation();
@@ -113,6 +128,19 @@ export function GameNightsContent(): React.JSX.Element {
   const { data: viewer } = useCurrentUser();
   const upcoming = useUpcomingGameNights();
   const mine = useMyGameNights();
+  const rsvpMutation = useRsvpGameNight();
+
+  // #2978 (invariante #17): inline RSVP from the list card. Non-RSVP actions
+  // (edit/viewSummary/reschedule) are navigation concerns out of this issue's scope.
+  const handleCardAction = useCallback(
+    (id: string, action: GameNightListCardAction): void => {
+      const response = RSVP_ACTION_TO_STATUS[action];
+      if (response) {
+        rsvpMutation.mutate({ id, response });
+      }
+    },
+    [rsvpMutation]
+  );
 
   // Merge + dedup by id; map to VMs.
   const allVms = useMemo<readonly GameNightVM[]>(() => {
@@ -313,7 +341,9 @@ export function GameNightsContent(): React.JSX.Element {
             reschedule: t(`${K}.list.cta.reschedule`),
             accept: t(`${K}.list.cta.accept`),
             maybe: t(`${K}.list.cta.maybe`),
+            decline: t(`${K}.list.cta.decline`),
           },
+          pendingBadge: t(`${K}.list.pendingBadge`),
           monthAbbrev: monthAbbrev(drawerTarget.gridYear, drawerTarget.gridMonth),
         },
         monthAbbrev: monthAbbrev(drawerTarget.gridYear, drawerTarget.gridMonth),
@@ -338,6 +368,7 @@ export function GameNightsContent(): React.JSX.Element {
           now={today}
           t={t}
           statusLabels={statusLabels}
+          onAction={handleCardAction}
           emptyTitle={t(`${K}.states.filteredEmpty.title`)}
           emptyBody={t(`${K}.states.filteredEmpty.body`)}
         />
@@ -363,6 +394,7 @@ interface ListViewProps {
   readonly now: Date;
   readonly t: TranslationFunction;
   readonly statusLabels: StatusPillLabels;
+  readonly onAction?: (id: string, action: GameNightListCardAction) => void;
   readonly emptyTitle: string;
   readonly emptyBody: string;
 }
@@ -372,6 +404,7 @@ function ListView({
   now,
   t,
   statusLabels,
+  onAction,
   emptyTitle,
   emptyBody,
 }: ListViewProps): React.JSX.Element {
@@ -412,6 +445,7 @@ function ListView({
                   key={vm.id}
                   vm={vm}
                   labels={makeCardLabels(t, statusLabels, vm)}
+                  onAction={onAction}
                 />
               ))}
             </div>

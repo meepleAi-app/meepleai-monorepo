@@ -24,7 +24,9 @@ const labels: GameNightListCardLabels = {
     reschedule: 'Riprogramma',
     accept: '✓ Partecipo',
     maybe: 'Forse',
+    decline: 'Declina',
   },
+  pendingBadge: 'Da confermare',
   monthAbbrev: 'Mar',
 };
 
@@ -47,6 +49,7 @@ function makeVM(
     playerIds: [],
     role,
     statusKey,
+    myRsvpStatus: null,
     ...overrides,
   };
 }
@@ -129,15 +132,78 @@ describe('GameNightListCard', () => {
       expect(onAction).toHaveBeenCalledWith('gn-1', 'edit');
     });
 
-    it('planned + invited → accept + maybe', () => {
+    it('invited with an RSVP → 3 RSVP buttons (accept/maybe/decline) all wired', () => {
       const onAction = vi.fn();
       render(
-        <GameNightListCard vm={makeVM('planned', 'invited')} labels={labels} onAction={onAction} />
+        <GameNightListCard
+          vm={makeVM('planned', 'invited', { myRsvpStatus: 'Pending' })}
+          labels={labels}
+          onAction={onAction}
+        />
       );
       fireEvent.click(screen.getByRole('button', { name: '✓ Partecipo' }));
       expect(onAction).toHaveBeenCalledWith('gn-1', 'accept');
       fireEvent.click(screen.getByRole('button', { name: 'Forse' }));
       expect(onAction).toHaveBeenCalledWith('gn-1', 'maybe');
+      fireEvent.click(screen.getByRole('button', { name: 'Declina' }));
+      expect(onAction).toHaveBeenCalledWith('gn-1', 'decline');
+    });
+  });
+
+  // #2978 (invariante #17): pending-invitee treatment + non-pending RSVP wiring.
+  describe('pending-invitee treatment (#2978)', () => {
+    it('shows the "Da confermare" badge when invited and RSVP is Pending', () => {
+      render(
+        <GameNightListCard
+          vm={makeVM('planned', 'invited', { myRsvpStatus: 'Pending' })}
+          labels={labels}
+        />
+      );
+      expect(screen.getByTestId('game-nights-pending-badge')).toHaveTextContent('Da confermare');
+    });
+
+    it('marks the card data-pending=true when invited and RSVP is Pending', () => {
+      render(
+        <GameNightListCard
+          vm={makeVM('planned', 'invited', { myRsvpStatus: 'Pending' })}
+          labels={labels}
+        />
+      );
+      expect(screen.getByTestId('game-nights-list-card')).toHaveAttribute('data-pending', 'true');
+    });
+
+    it('drops the pending badge once the invitee has confirmed (Accepted)', () => {
+      render(
+        <GameNightListCard
+          vm={makeVM('planned', 'invited', { myRsvpStatus: 'Accepted' })}
+          labels={labels}
+        />
+      );
+      expect(screen.queryByTestId('game-nights-pending-badge')).not.toBeInTheDocument();
+      expect(screen.getByTestId('game-nights-list-card')).toHaveAttribute('data-pending', 'false');
+    });
+
+    it('marks the current RSVP response as selected', () => {
+      render(
+        <GameNightListCard
+          vm={makeVM('planned', 'invited', { myRsvpStatus: 'Accepted' })}
+          labels={labels}
+        />
+      );
+      expect(screen.getByRole('button', { name: '✓ Partecipo' })).toHaveAttribute(
+        'data-selected',
+        'true'
+      );
+    });
+
+    it('shows no RSVP buttons for a non-invitee (myRsvpStatus null)', () => {
+      render(<GameNightListCard vm={makeVM('planned', 'invited')} labels={labels} />);
+      expect(screen.queryByRole('button', { name: '✓ Partecipo' })).not.toBeInTheDocument();
+    });
+
+    it('shows no pending treatment for the organizer', () => {
+      render(<GameNightListCard vm={makeVM('planned', 'organizer')} labels={labels} />);
+      expect(screen.queryByTestId('game-nights-pending-badge')).not.toBeInTheDocument();
     });
   });
 });

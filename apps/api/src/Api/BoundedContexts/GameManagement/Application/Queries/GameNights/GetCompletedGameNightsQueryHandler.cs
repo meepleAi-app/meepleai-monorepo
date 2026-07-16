@@ -36,7 +36,7 @@ internal sealed class GetCompletedGameNightsQueryHandler : IQueryHandler<GetComp
         var organizerNames = await GetUserDisplayNamesAsync(organizerIds, cancellationToken).ConfigureAwait(false);
 
         return events.Select(e => GameNightMapperHelper.MapToDto(
-            e, organizerNames.GetValueOrDefault(e.OrganizerId, "Unknown"))).ToList();
+            e, organizerNames.GetValueOrDefault(e.OrganizerId, "Unknown"), query.CallerUserId)).ToList();
     }
 
     private async Task<Dictionary<Guid, string>> GetUserDisplayNamesAsync(List<Guid> userIds, CancellationToken cancellationToken)

@@ -12,7 +12,7 @@
  *   `currentUserId` — the DTO does not carry viewer-specific flags.
  */
 
-import type { GameNightDto } from '@/lib/api/schemas/game-nights.schemas';
+import type { GameNightDto, RsvpStatus } from '@/lib/api/schemas/game-nights.schemas';
 
 export type StatusKey = 'confirmed' | 'planned' | 'cancelled' | 'completed';
 export type RoleKey = 'organizer' | 'invited';
@@ -31,6 +31,9 @@ export interface GameNightVM {
   readonly playerIds: readonly string[]; // empty — backend gap
   readonly role: RoleKey;
   readonly statusKey: StatusKey;
+  // #2978 (invariante #17): the viewer's own RSVP status, or null when not an invitee (incl. the
+  // organizer). Optional so legacy VM fixtures need no update; toGameNightVM always sets it.
+  readonly myRsvpStatus?: RsvpStatus | null;
 }
 
 // Mockup spec (sp4-game-nights-index): ≥3 accepted RSVPs promote a Published night to the "Confermata" status chip.
@@ -78,5 +81,6 @@ export function toGameNightVM(dto: GameNightDto, currentUserId: string | null): 
     playerIds: [],
     role,
     statusKey: deriveStatusKey(dto),
+    myRsvpStatus: dto.myRsvpStatus ?? null,
   };
 }

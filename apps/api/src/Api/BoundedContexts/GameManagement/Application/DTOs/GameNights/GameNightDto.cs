@@ -22,4 +22,7 @@ public sealed record GameNightDto(
     int PendingCount,
     int TotalInvited,
     DateTimeOffset CreatedAt,
-    DateTimeOffset? UpdatedAt);
+    DateTimeOffset? UpdatedAt,
+    // #2978 (invariante #17): the viewer's own RSVP status, or null when the caller is not an
+    // invitee (incl. the organizer, who has no RSVP). Drives the pending-invitee card treatment.
+    RsvpStatus? MyRsvpStatus);

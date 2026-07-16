@@ -92,6 +92,21 @@ internal class NotificationQueueRepository : RepositoryBase, INotificationQueueR
                 ct).ConfigureAwait(false);
     }
 
+    public async Task<int> GetPendingCountByChannelsAsync(
+        IReadOnlyCollection<NotificationChannelType> channels, CancellationToken ct = default)
+    {
+        var now = DateTime.UtcNow;
+        var channelValues = channels.Select(c => c.Value).ToArray();
+
+        return await DbContext.Set<NotificationQueueEntity>()
+            .AsNoTracking()
+            .CountAsync(e =>
+                channelValues.Contains(e.ChannelType) &&
+                ((e.Status == "pending") ||
+                 (e.Status == "failed" && e.NextRetryAt != null && e.NextRetryAt <= now)),
+                ct).ConfigureAwait(false);
+    }
+
     public async Task<int> GetDeadLetterCountAsync(CancellationToken ct = default)
     {
         return await DbContext.Set<NotificationQueueEntity>()

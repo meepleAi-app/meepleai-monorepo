@@ -7,11 +7,9 @@ import {
   DrawerClose,
   DrawerContent,
   DrawerDescription,
-  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer/drawer';
-import { Button } from '@/components/ui/primitives/button';
 import { useTranslation } from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 
@@ -55,8 +53,9 @@ function getInitials(name: string): string {
  *  - **Timeline eventi**: omitted entirely — the API exposes no session event log.
  *  - **Note**: readonly display of `row.notes`, or `modal.notesEmpty` when absent.
  *
- * Footer actions (stats gioco / gioca di nuovo / modifica note / elimina) are
- * unwired placeholders — no command exists yet for any of them.
+ * No footer actions are rendered: the mockup's stats/replay/edit-notes/delete
+ * buttons had no backing command, so they were removed as dead affordances
+ * (Issue #3010) rather than shipped unwired.
  */
 export function HistoryDetailModal({ row, onClose }: HistoryDetailModalProps): JSX.Element | null {
   const { t, formatDate, formatTime } = useTranslation();
@@ -198,26 +197,6 @@ export function HistoryDetailModal({ row, onClose }: HistoryDetailModalProps): J
             </div>
           </section>
         </div>
-
-        <DrawerFooter className="flex-wrap">
-          <Button type="button" variant="outline" size="sm">
-            <span aria-hidden="true">📊</span>
-            {t('pages.toolkitHistory.modal.gameStats')}
-          </Button>
-          <Button type="button" variant="outline" size="sm">
-            <span aria-hidden="true">🎮</span>
-            {t('pages.toolkitHistory.modal.playAgain')}
-          </Button>
-          <span className="flex-1" />
-          <Button type="button" variant="ghost" size="sm">
-            <span aria-hidden="true">📝</span>
-            {t('pages.toolkitHistory.modal.editNotes')}
-          </Button>
-          <Button type="button" variant="destructive" size="sm">
-            <span aria-hidden="true">🗑</span>
-            {t('pages.toolkitHistory.modal.delete')}
-          </Button>
-        </DrawerFooter>
       </DrawerContent>
     </Drawer>
   );

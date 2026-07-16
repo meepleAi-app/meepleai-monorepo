@@ -2799,11 +2799,7 @@
         "winnerScore": "Score vincitore",
         "variance": "Varianza score",
         "highlights": "Highlights",
-        "noData": "—",
-        "gameStats": "Stats gioco",
-        "playAgain": "Gioca di nuovo",
-        "editNotes": "Modifica note",
-        "delete": "Elimina"
+        "noData": "—"
       },
       "cards": {
         "coop": "Co-op"

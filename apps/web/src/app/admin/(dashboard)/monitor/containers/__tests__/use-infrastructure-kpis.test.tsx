@@ -100,6 +100,8 @@ describe('useInfrastructureKpis', () => {
     expect(result.current.cpu.series).toHaveLength(3);
     expect(result.current.memory).toMatchObject({ value: 18.4, trend: 'up', total: 32 });
     expect(result.current.batchJobs).toMatchObject({ queued: 4, running: 2 });
+    expect(result.current.cpu.sourceAvailable).toBe(true);
+    expect(result.current.memory.sourceAvailable).toBe(true);
   });
 
   it('handles failed fetches with safe fallback values', async () => {
@@ -117,6 +119,26 @@ describe('useInfrastructureKpis', () => {
     expect(result.current.cpu).toMatchObject({ value: 0, trend: 'flat' });
     expect(result.current.cpu.series).toEqual([]);
     expect(result.current.batchJobs).toMatchObject({ queued: 0, running: 0 });
+    expect(result.current.cpu.sourceAvailable).toBe(false);
+    expect(result.current.memory.sourceAvailable).toBe(false);
+  });
+
+  it('marks source unavailable when BE flag is false even with empty series (#3045)', async () => {
+    mockGetDockerContainers.mockResolvedValue([]);
+    mockGetAllBatchJobs.mockResolvedValue({ jobs: [], total: 0, page: 1, pageSize: 20 });
+    mockGetMetricsTimeSeries.mockResolvedValue({
+      cpu: [],
+      memory: [],
+      requests: [],
+      sourceAvailable: false,
+    });
+
+    const { result } = renderHook(() => useInfrastructureKpis());
+    await waitFor(() => expect(result.current.cpu.loading).toBe(false));
+
+    // 0 punti MA flag false = sorgente giù, non zero reale.
+    expect(result.current.cpu.sourceAvailable).toBe(false);
+    expect(result.current.memory.sourceAvailable).toBe(false);
   });
 
   it('computes trend "down" when last < first', async () => {

@@ -38,6 +38,7 @@ interface MetricKpi {
   series: TimeSeriesPoint[];
   trend: Trend;
   trendPct: number;
+  sourceAvailable: boolean; // #3045: false = sorgente (Prometheus) non disponibile
   loading: boolean;
 }
 
@@ -76,6 +77,7 @@ const EMPTY_METRIC: MetricKpi = {
   series: [],
   trend: 'flat',
   trendPct: 0,
+  sourceAvailable: true, // durante loading non si mostra lo stato "non disponibile"
   loading: true,
 };
 const EMPTY_MEMORY: MemoryKpi = { ...EMPTY_METRIC, total: 0 };
@@ -127,11 +129,14 @@ export function useInfrastructureKpis(): InfrastructureKpis {
         const memValue = memSeries.length ? memSeries[memSeries.length - 1].value : 0;
         const cpuTrend = computeTrend(cpuSeries);
         const memTrend = computeTrend(memSeries);
+        // #3045: sorgente disponibile a meno che il BE non segnali Prometheus down.
+        const sourceAvailable = resp?.sourceAvailable ?? true;
         setCpu({
           value: cpuValue,
           series: cpuSeries,
           trend: cpuTrend.trend,
           trendPct: cpuTrend.pct,
+          sourceAvailable,
           loading: false,
         });
         setMemory(m => ({
@@ -140,18 +145,21 @@ export function useInfrastructureKpis(): InfrastructureKpis {
           series: memSeries,
           trend: memTrend.trend,
           trendPct: memTrend.pct,
+          sourceAvailable,
           loading: false,
         }));
       })
       .catch(() => {
         if (cancelled) return;
-        setCpu({ ...EMPTY_METRIC, loading: false });
+        // Un fallimento totale della richiesta è anch'esso "sorgente non disponibile" (#3045).
+        setCpu({ ...EMPTY_METRIC, sourceAvailable: false, loading: false });
         setMemory(m => ({
           ...m,
           value: 0,
           series: [],
           trend: 'flat',
           trendPct: 0,
+          sourceAvailable: false,
           loading: false,
         }));
       });

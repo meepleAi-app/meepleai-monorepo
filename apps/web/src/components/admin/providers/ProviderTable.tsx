@@ -110,7 +110,7 @@ function ProviderRow({
   const display = PROVIDER_DISPLAY[name];
   const circuit = deriveCircuitState(breakers, name);
 
-  const tokenStatus: { label: string; cls: string } = (() => {
+  const tokenStatus: { label: string; cls: string; title?: string } = (() => {
     if (quotaQuery.isLoading)
       return { label: '…', cls: 'bg-zinc-500/10 text-zinc-500 border-zinc-500/30' };
     const q = quotaQuery.data;
@@ -124,6 +124,14 @@ function ProviderRow({
       return {
         label: 'healthy',
         cls: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+      };
+    // #3045: quota supportata + token configurato ma fetch degradato (errorCode presente,
+    // numerici null) → NON "healthy". Stato esplicito "degraded".
+    if (q.errorCode)
+      return {
+        label: 'degraded',
+        cls: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30',
+        title: q.errorMessage ?? q.errorCode,
       };
     return {
       label: 'healthy',
@@ -170,6 +178,7 @@ function ProviderRow({
         <span
           className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full border ${tokenStatus.cls}`}
           aria-label={`Token status: ${tokenStatus.label}`}
+          title={tokenStatus.title}
         >
           {tokenStatus.label}
         </span>

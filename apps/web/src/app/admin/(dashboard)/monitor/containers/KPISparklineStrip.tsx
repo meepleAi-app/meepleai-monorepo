@@ -137,20 +137,39 @@ export function KPISparklineStrip() {
       ) : (
         <article
           data-testid="kpi-card"
-          aria-label={`CPU media ${cpu.value}%, trend ${cpu.trend} ${cpu.trendPct}%`}
+          aria-label={
+            cpu.sourceAvailable
+              ? `CPU media ${cpu.value}%, trend ${cpu.trend} ${cpu.trendPct}%`
+              : 'CPU media: sorgente non disponibile'
+          }
           className="relative rounded-xl border border-border bg-card/60 p-4 min-h-[88px] border-l-4 border-l-entity-chat"
         >
           <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
             CPU media
           </p>
-          <p className="mt-1 font-quicksand text-2xl font-bold text-foreground tabular-nums">
-            {cpu.value}
-            <span className="text-sm text-muted-foreground font-semibold">%</span>
-          </p>
-          <p className="mt-1 font-mono text-[11px]">
-            <TrendLabel trend={cpu.trend} pct={cpu.trendPct} suffix="vs 1h fa" />
-          </p>
-          <Sparkline series={cpu.series} testId="kpi-sparkline-cpu" colorClass="text-entity-chat" />
+          {cpu.sourceAvailable ? (
+            <>
+              <p className="mt-1 font-quicksand text-2xl font-bold text-foreground tabular-nums">
+                {cpu.value}
+                <span className="text-sm text-muted-foreground font-semibold">%</span>
+              </p>
+              <p className="mt-1 font-mono text-[11px]">
+                <TrendLabel trend={cpu.trend} pct={cpu.trendPct} suffix="vs 1h fa" />
+              </p>
+              <Sparkline
+                series={cpu.series}
+                testId="kpi-sparkline-cpu"
+                colorClass="text-entity-chat"
+              />
+            </>
+          ) : (
+            <p
+              data-testid="kpi-cpu-unavailable"
+              className="mt-1 font-mono text-[13px] text-muted-foreground"
+            >
+              Sorgente non disponibile
+            </p>
+          )}
         </article>
       )}
 
@@ -160,29 +179,42 @@ export function KPISparklineStrip() {
         <article
           data-testid="kpi-card"
           aria-label={
-            memory.total > 0
-              ? `RAM usata ${memory.value} di ${memory.total} GB`
-              : `RAM usata ${memory.value} GB`
+            !memory.sourceAvailable
+              ? 'RAM usata: sorgente non disponibile'
+              : memory.total > 0
+                ? `RAM usata ${memory.value} di ${memory.total} GB`
+                : `RAM usata ${memory.value} GB`
           }
           className="relative rounded-xl border border-border bg-card/60 p-4 min-h-[88px] border-l-4 border-l-entity-kb"
         >
           <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
             RAM usata
           </p>
-          <p className="mt-1 font-quicksand text-2xl font-bold text-foreground tabular-nums">
-            {memory.value}
-            <span className="text-sm text-muted-foreground font-semibold">
-              {memory.total > 0 ? `/${memory.total} GB` : ' GB'}
-            </span>
-          </p>
-          <p className="mt-1 font-mono text-[11px]">
-            <TrendLabel trend={memory.trend} pct={memory.trendPct} suffix="ultimi 60m" />
-          </p>
-          <Sparkline
-            series={memory.series}
-            testId="kpi-sparkline-memory"
-            colorClass="text-entity-kb"
-          />
+          {memory.sourceAvailable ? (
+            <>
+              <p className="mt-1 font-quicksand text-2xl font-bold text-foreground tabular-nums">
+                {memory.value}
+                <span className="text-sm text-muted-foreground font-semibold">
+                  {memory.total > 0 ? `/${memory.total} GB` : ' GB'}
+                </span>
+              </p>
+              <p className="mt-1 font-mono text-[11px]">
+                <TrendLabel trend={memory.trend} pct={memory.trendPct} suffix="ultimi 60m" />
+              </p>
+              <Sparkline
+                series={memory.series}
+                testId="kpi-sparkline-memory"
+                colorClass="text-entity-kb"
+              />
+            </>
+          ) : (
+            <p
+              data-testid="kpi-memory-unavailable"
+              className="mt-1 font-mono text-[13px] text-muted-foreground"
+            >
+              Sorgente non disponibile
+            </p>
+          )}
         </article>
       )}
 

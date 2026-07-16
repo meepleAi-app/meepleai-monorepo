@@ -3700,6 +3700,28 @@
           "largestArmyLabel": "Armata+",
           "incAriaTemplate": "{field} +1",
           "decAriaTemplate": "{field} −1"
+        },
+        "wingspan": {
+          "panelAriaLabel": "Wingspan",
+          "leaderboardHeading": "Classifica",
+          "scoreAriaTemplate": "{name}: {score} PV",
+          "categoriesHeading": "Punti per categoria",
+          "roundHeading": "Round",
+          "roundTemplate": "Round {n}/4",
+          "turnBudgetTemplate": "{n} turni",
+          "goalsHeading": "Obiettivi di round",
+          "goalPlaceholderTemplate": "Obiettivo round {n}",
+          "advanceRoundLabel": "Avanza round",
+          "initRoundCta": "Inizia il round",
+          "viewerWaiting": "In attesa dell'host…",
+          "category": {
+            "birds": "Uccelli",
+            "bonusCards": "Carte bonus",
+            "endOfRoundGoals": "Obiettivi di fine round",
+            "eggs": "Uova",
+            "cachedFood": "Cibo accumulato",
+            "tuckedCards": "Carte infilate"
+          }
         }
       },
       "photosTab": {

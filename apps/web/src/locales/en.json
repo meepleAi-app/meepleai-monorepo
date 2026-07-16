@@ -3595,6 +3595,28 @@
           "largestArmyLabel": "Big Army",
           "incAriaTemplate": "{field} +1",
           "decAriaTemplate": "{field} -1"
+        },
+        "wingspan": {
+          "panelAriaLabel": "Wingspan",
+          "leaderboardHeading": "Standings",
+          "scoreAriaTemplate": "{name}: {score} PV",
+          "categoriesHeading": "Points by category",
+          "roundHeading": "Round",
+          "roundTemplate": "Round {n}/4",
+          "turnBudgetTemplate": "{n} turns",
+          "goalsHeading": "Round goals",
+          "goalPlaceholderTemplate": "Round {n} goal",
+          "advanceRoundLabel": "Advance round",
+          "initRoundCta": "Start the round",
+          "viewerWaiting": "Waiting for the host…",
+          "category": {
+            "birds": "Birds",
+            "bonusCards": "Bonus cards",
+            "endOfRoundGoals": "End-of-round goals",
+            "eggs": "Eggs",
+            "cachedFood": "Cached food",
+            "tuckedCards": "Tucked cards"
+          }
         }
       },
       "photosTab": {

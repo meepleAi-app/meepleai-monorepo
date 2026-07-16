@@ -26,17 +26,45 @@ export interface WishlistFilterState {
 }
 
 /**
- * Normalizes a wishlist item's raw `priority` string (case-insensitive) into
- * a known `Priority` bucket. Falls back to `'medium'` for unrecognized
- * values so a stray/unexpected value never crashes ranking or bucketing.
+ * Case-insensitively matches a raw `priority` string against a known
+ * `Priority` bucket. Returns `undefined` when the value isn't one of
+ * high/medium/low — the wishlist DTO only types `priority` as `z.string()`,
+ * not an enum, so a genuinely malformed value is possible and must be
+ * distinguishable from a real `'medium'`.
  */
-function normalizePriority(item: WishlistItemDto): Priority {
-  const value = item.priority.toLowerCase();
-  if (value === 'high' || value === 'medium' || value === 'low') return value;
-  return 'medium';
+function matchPriority(value: string): Priority | undefined {
+  const normalized = value.toLowerCase();
+  if (normalized === 'high' || normalized === 'medium' || normalized === 'low') return normalized;
+  return undefined;
 }
 
-/** Resolves the display name used for search matching and alpha sort. */
+/**
+ * Normalizes a wishlist item's raw `priority` string (case-insensitive) into
+ * a known `Priority` bucket, for ranking/filtering purposes. Falls back to
+ * `'medium'` for unrecognized values so a stray/unexpected value never
+ * crashes `sortItems('priority')` ranking or the priority-filter match in
+ * `filterItems`.
+ *
+ * NOTE: `computeStats.priorityCounts` deliberately does NOT use this
+ * fallback (it calls `matchPriority` directly) — an unrecognized value is
+ * excluded from the displayed counts rather than silently inflating the
+ * `medium` bucket.
+ */
+function normalizePriority(item: WishlistItemDto): Priority {
+  return matchPriority(item.priority) ?? 'medium';
+}
+
+/**
+ * Resolves the display name used for search matching in `filterItems`
+ * (falls back to the game catalog map when the wishlist item has no
+ * denormalized `gameName`).
+ *
+ * NOT used by `sortItems`'s `'alpha'` branch: that sorts on `item.gameName`
+ * directly and never consults `gameNameMap`, so an item with no
+ * denormalized name sorts as `''` there regardless of what this function
+ * would resolve. Callers that need alpha-sort to reflect catalog-resolved
+ * names must pre-resolve them before calling `sortItems`.
+ */
 function resolveGameName(item: WishlistItemDto, gameNameMap: Map<string, string>): string {
   return item.gameName ?? gameNameMap.get(item.gameId) ?? '';
 }
@@ -100,7 +128,15 @@ export function sortItems(items: WishlistItemDto[], sort: WishlistSort): Wishlis
   return sorted;
 }
 
-/** Header stats for the wishlist page: totals, high-priority count, sum of target prices, and per-bucket priority counts. */
+/**
+ * Header stats for the wishlist page: totals, high-priority count, sum of
+ * target prices, and per-bucket priority counts.
+ *
+ * A `priority` value that doesn't match high/medium/low (case-insensitive)
+ * is excluded from `priorityCounts`/`highCount` — it is NOT folded into
+ * `medium`. This keeps the displayed counts an honest reflection of known
+ * buckets; `total` still reflects every item regardless of its priority.
+ */
 export function computeStats(items: WishlistItemDto[]): {
   total: number;
   highCount: number;
@@ -111,7 +147,8 @@ export function computeStats(items: WishlistItemDto[]): {
   let totalSpend = 0;
 
   for (const item of items) {
-    priorityCounts[normalizePriority(item)] += 1;
+    const bucket = matchPriority(item.priority);
+    if (bucket) priorityCounts[bucket] += 1;
     if (item.targetPrice != null) totalSpend += item.targetPrice;
   }
 

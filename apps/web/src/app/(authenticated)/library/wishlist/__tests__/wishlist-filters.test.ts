@@ -159,6 +159,18 @@ describe('sortItems', () => {
     expect(result.map(i => i.id)).toEqual(['b', 'a']);
   });
 
+  it('ranks an unrecognized priority value as medium (never crashes)', () => {
+    const items = [
+      makeItem({ id: 'high', priority: 'high', addedAt: '2026-07-01T00:00:00Z' }),
+      makeItem({ id: 'unrecognized', priority: 'urgent', addedAt: '2026-07-01T00:00:00Z' }),
+      makeItem({ id: 'low', priority: 'low', addedAt: '2026-07-01T00:00:00Z' }),
+    ];
+    expect(() => sortItems(items, 'priority')).not.toThrow();
+    // 'urgent' falls back to the medium rank (1), so it sorts between high and low.
+    const result = sortItems(items, 'priority');
+    expect(result.map(i => i.id)).toEqual(['high', 'unrecognized', 'low']);
+  });
+
   it('sorts by recent (addedAt desc)', () => {
     const items = [
       makeItem({ id: 'a', addedAt: '2026-07-01T00:00:00Z' }),
@@ -208,6 +220,15 @@ describe('sortItems', () => {
     sortItems(items, 'recent');
     expect(items).toEqual(original);
   });
+
+  it('is stable (order-preserving) for two items that both have a null targetPrice', () => {
+    const items = [
+      makeItem({ id: 'first', targetPrice: null }),
+      makeItem({ id: 'second', targetPrice: null }),
+    ];
+    const result = sortItems(items, 'price');
+    expect(result.map(i => i.id)).toEqual(['first', 'second']);
+  });
 });
 
 // ─── computeStats ───────────────────────────────────────────────────────────
@@ -247,6 +268,32 @@ describe('computeStats', () => {
   it('normalizes a stray-cased priority when bucketing', () => {
     const items = [makeItem({ id: 'a', priority: 'HIGH' })];
     const stats = computeStats(items);
+    expect(stats.highCount).toBe(1);
+    expect(stats.priorityCounts).toEqual({ high: 1, medium: 0, low: 0 });
+  });
+
+  it('counts valid lowercase priority values correctly', () => {
+    const items = [
+      makeItem({ id: 'a', priority: 'high' }),
+      makeItem({ id: 'b', priority: 'medium' }),
+      makeItem({ id: 'c', priority: 'medium' }),
+      makeItem({ id: 'd', priority: 'low' }),
+    ];
+    const stats = computeStats(items);
+    expect(stats.priorityCounts).toEqual({ high: 1, medium: 2, low: 1 });
+  });
+
+  it('excludes an unrecognized priority value from priorityCounts/highCount instead of folding it into medium', () => {
+    const items = [
+      makeItem({ id: 'a', priority: 'high' }),
+      makeItem({ id: 'b', priority: 'urgent' }),
+      makeItem({ id: 'c', priority: '' }),
+    ];
+    const stats = computeStats(items);
+    // total still reflects every item, regardless of priority validity.
+    expect(stats.total).toBe(3);
+    // only the genuinely 'high' item is counted — 'urgent' and '' are excluded,
+    // not silently counted as 'medium'.
     expect(stats.highCount).toBe(1);
     expect(stats.priorityCounts).toEqual({ high: 1, medium: 0, low: 0 });
   });

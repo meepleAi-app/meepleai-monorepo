@@ -2,21 +2,24 @@ from pathlib import Path
 from scripts.v2_audit.mockup_inspector import inspect_mockup, MockupSnapshot
 
 # Anchor to repo root so the test is cwd-independent, and target a STABLE mockup.
-# (sp4-game-detail.html was deleted during mockup churn — #2998 fix.)
+# (sp4-game-detail.html was deleted during mockup churn — #2998 fix.
+# sp4-dashboard.html was deleted as obsolete — #2114 / chore/remove-sp4-dashboard-mockup.
+# 00-hub.html is the scaffold-level demo hub referenced by build-claude-design-bundle.sh
+# and is plain static HTML (no JSX-mounted body), so it is unlikely to churn.)
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-REAL_MOCKUP = _REPO_ROOT / "admin-mockups" / "design_files" / "sp4-dashboard.html"
+REAL_MOCKUP = _REPO_ROOT / "admin-mockups" / "design_files" / "00-hub.html"
 
 
 def test_inspect_real_mockup_landmarks():
     snap = inspect_mockup(REAL_MOCKUP)
-    # sp4-dashboard.html has HTML landmarks (header/section) and headings (h1..h3)
+    # 00-hub.html has HTML landmarks (nav/section/footer) and headings (h1, h3)
     assert len(snap.landmarks) >= 1
     assert snap.headings
 
 
 def test_inspect_extracts_link_destinations():
     snap = inspect_mockup(REAL_MOCKUP)
-    # sp4-dashboard has wired hrefs to actual .html mockups
+    # 00-hub.html has wired hrefs to actual .html mockups
     assert any(".html" in dest for dest in snap.link_destinations)
 
 

@@ -1141,13 +1141,29 @@ export function SessionLiveView(): ReactElement {
         'Turno di {name}',
       phaseTemplate:
         (intl.messages['pages.sessionLive.flavor.catan.phaseTemplate'] as string) ?? 'Fase: {name}',
-      leaderboardHeading: t('pages.sessionLive.flavor.catan.leaderboardHeading'),
-      leaderBadgeLabel: t('pages.sessionLive.flavor.catan.leaderBadgeLabel'),
-      scoreAriaTemplate:
-        (intl.messages['pages.sessionLive.flavor.catan.scoreAriaTemplate'] as string) ??
-        'Punti di {name}: {score}',
-      dimensionsHeading: t('pages.sessionLive.flavor.catan.dimensionsHeading'),
-      emptyLabel: t('pages.sessionLive.flavor.catan.emptyLabel'),
+      initBoardCta: t('pages.sessionLive.flavor.catan.initBoardCta'),
+      viewerWaiting: t('pages.sessionLive.flavor.catan.viewerWaiting'),
+      hexAriaTemplate:
+        (intl.messages['pages.sessionLive.flavor.catan.hexAriaTemplate'] as string) ??
+        '{terrain} {number}',
+      robberLabel: t('pages.sessionLive.flavor.catan.robberLabel'),
+      diceLastLabel: t('pages.sessionLive.flavor.catan.diceLastLabel'),
+      diceHistoryLabel: t('pages.sessionLive.flavor.catan.diceHistoryLabel'),
+      rollAriaTemplate:
+        (intl.messages['pages.sessionLive.flavor.catan.rollAriaTemplate'] as string) ??
+        'Registra tiro {n}',
+      vpLabel: t('pages.sessionLive.flavor.catan.vpLabel'),
+      handLabel: t('pages.sessionLive.flavor.catan.handLabel'),
+      devLabel: t('pages.sessionLive.flavor.catan.devLabel'),
+      settlementsLabel: t('pages.sessionLive.flavor.catan.settlementsLabel'),
+      citiesLabel: t('pages.sessionLive.flavor.catan.citiesLabel'),
+      roadsLabel: t('pages.sessionLive.flavor.catan.roadsLabel'),
+      longestRoadLabel: t('pages.sessionLive.flavor.catan.longestRoadLabel'),
+      largestArmyLabel: t('pages.sessionLive.flavor.catan.largestArmyLabel'),
+      incAriaTemplate:
+        (intl.messages['pages.sessionLive.flavor.catan.incAriaTemplate'] as string) ?? '{field} +1',
+      decAriaTemplate:
+        (intl.messages['pages.sessionLive.flavor.catan.decAriaTemplate'] as string) ?? '{field} -1',
     }),
     [t, intl.messages]
   );
@@ -1391,6 +1407,8 @@ export function SessionLiveView(): ReactElement {
             view="live"
             session={liveSessionDto}
             labels={catanFlavorLabels}
+            viewerRole={activeSession.viewerRole}
+            sessionId={liveSessionDto.id}
             livePoints={catanLivePoints}
             phaseName={catanPhaseName}
             className="p-3"
@@ -1615,6 +1633,8 @@ export function SessionLiveView(): ReactElement {
           view="live"
           session={liveSessionDto}
           labels={catanFlavorLabels}
+          viewerRole={activeSession.viewerRole}
+          sessionId={liveSessionDto.id}
           livePoints={catanLivePoints}
           phaseName={catanPhaseName}
           className="p-3"

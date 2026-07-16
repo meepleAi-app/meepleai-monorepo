@@ -6,6 +6,8 @@
  */
 import type { PlayerColor } from '@/lib/api/schemas/live-sessions.schemas';
 
+import type { CatanTerrain } from './catan-state';
+
 export const CATAN_NEUTRAL_HSL = 'hsl(0, 0%, 60%)';
 
 const PALETTE: Record<PlayerColor, string> = {
@@ -23,4 +25,17 @@ const PALETTE: Record<PlayerColor, string> = {
 
 export function catanPieceColor(color: PlayerColor | string): string {
   return PALETTE[color as PlayerColor] ?? CATAN_NEUTRAL_HSL;
+}
+
+export const CATAN_TERRAIN_HSL: Record<CatanTerrain, string> = {
+  wood: 'hsl(140, 40%, 40%)',
+  brick: 'hsl(8, 55%, 52%)',
+  sheep: 'hsl(80, 45%, 58%)',
+  wheat: 'hsl(42, 80%, 57%)',
+  ore: 'hsl(215, 12%, 58%)',
+  desert: 'hsl(43, 42%, 70%)',
+};
+
+export function catanTerrainColor(terrain: CatanTerrain): string {
+  return CATAN_TERRAIN_HSL[terrain];
 }

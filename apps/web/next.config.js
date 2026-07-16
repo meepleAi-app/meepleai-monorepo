@@ -337,6 +337,14 @@ const nextConfig = {
         destination: '/chat/new',
         permanent: true,
       },
+      // Consolidamento private-games: /private-games/[id] era una route orfana
+      // (zero link entranti) duplicata di /library/private/[id], il cui
+      // PrivateGameHub è un superset funzionale del vecchio PrivateGameDetailClient.
+      {
+        source: '/private-games/:id',
+        destination: '/library/private/:id',
+        permanent: true,
+      },
 
       // ── Issue #5055: Game detail sub-routes (KB, agents, chats) ────────────
       {

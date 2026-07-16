@@ -627,34 +627,6 @@
     },
     "title": "Settings"
   },
-  "setup": {
-    "aiConfidence": "AI Confidence:",
-    "backToHome": "← Back to Home",
-    "closeButton": "Close",
-    "closeReferences": "Close references modal",
-    "estimatedTime": "Estimated setup time:",
-    "gameLabel": "Game:",
-    "generateButton": "Generate Setup Guide",
-    "generateForGame": "Generate setup guide for selected game",
-    "generating": "Generating...",
-    "generatingMessage": "Generating your setup guide...",
-    "generatingSubMessage": "This may take a few moments",
-    "goToLogin": "Go to Login",
-    "heading": "Game Setup Guide",
-    "loginRequired": "Login Required",
-    "loginRequiredMessage": "You must be logged in to use the setup guide.",
-    "noGuideMessage": "Select a game and click \"Generate Setup Guide\"",
-    "noGuideYet": "No Setup Guide Yet",
-    "optional": "OPTIONAL",
-    "progress": "Progress:",
-    "readyToPlay": "Your game is ready to play",
-    "references": "References",
-    "resetProgress": "Reset Progress",
-    "selectGame": "Select Game",
-    "selectGamePlaceholder": "Select a game...",
-    "setupComplete": "Setup Complete!",
-    "viewButton": "View"
-  },
   "timeline": {
     "details": "Details",
     "eventDetails": "Event Details",
@@ -2759,6 +2731,51 @@
         "coop": "Co-op"
       },
       "batchNote": "Showing the first {n} results."
+    },
+    "setup": {
+      "title": "Game Setup Guide",
+      "subtitle": "Generate a step-by-step guide to prepare the game, with references to the rulebook.",
+      "selectGame": "Select Game",
+      "gameLabel": "Game:",
+      "selectGamePlaceholder": "Select a game...",
+      "generateButton": "Generate Setup Guide",
+      "generating": "Generating...",
+      "generateForGameAria": "Generate setup guide for selected game",
+      "errors": {
+        "noGameSelected": "Please select a game first.",
+        "loadGames": "Error loading games.",
+        "generateGuide": "Error generating setup guide. Please try again.",
+        "retry": "Retry"
+      },
+      "loading": {
+        "title": "Generating your setup guide...",
+        "subtitle": "This may take a few moments while we retrieve the best instructions from the rulebook."
+      },
+      "estimatedTime": "Estimated setup time: {minutes} minutes",
+      "resetProgress": "Reset Progress",
+      "resetConfirm": "Are you sure you want to reset all progress?",
+      "progress": "Progress: {done} / {total} steps",
+      "complete": {
+        "title": "Setup Complete!",
+        "body": "Your game is ready to play. Have fun!"
+      },
+      "aiConfidence": "AI Confidence: {percent}%",
+      "empty": {
+        "title": "No Setup Guide Yet",
+        "description": "Select a game and click \"Generate Setup Guide\" to get started with step-by-step instructions."
+      },
+      "optional": "OPTIONAL",
+      "references": "References",
+      "viewReferences": "{n, plural, one {View # reference} other {View # references}}",
+      "citation": {
+        "docLabel": "Doc {id}",
+        "pageLabel": "Page {n}",
+        "noPage": "No page"
+      },
+      "step": {
+        "markComplete": "Mark as complete",
+        "markIncomplete": "Mark as incomplete"
+      }
     },
     "sessions": {
       "metadata": {

@@ -44,11 +44,10 @@ services:
     #   export API_IMAGE=ghcr.io/meepleai-app/meepleai-monorepo/api:staging-<sha>
     image: ${API_IMAGE:?API_IMAGE env var required for staging — set to GHCR tag}
     pull_policy: always
-    # CF Tunnel exposure: bind 8080 on localhost (IPv4 + IPv6 dual-stack)
-    # cloudflared resolves localhost → ::1 first; without IPv6 binding it returns 502.
-    ports:
-      - "127.0.0.1:8080:8080"
-      - "::1:8080:8080"
+    # No host port publish (#2772 cutover, 2026-07-16): edge ingress reaches the
+    # API by container name (http://meepleai-api:8080) via the containerized
+    # cloudflared on the `meepleai` network. The old 127.0.0.1/::1:8080 publishes
+    # and their fragile host docker-proxy (root cause B of the 502s) are removed.
     env_file:
       - ./secrets/database.secret
       - ./secrets/jwt.secret
@@ -129,11 +128,9 @@ services:
     # Same rationale as api.image above — explicit GHCR image required.
     image: ${WEB_IMAGE:?WEB_IMAGE env var required for staging — set to GHCR tag}
     pull_policy: always
-    # CF Tunnel exposure: bind 3000 on localhost (IPv4 + IPv6 dual-stack)
-    # cloudflared resolves localhost → ::1 first; without IPv6 binding it returns 502.
-    ports:
-      - "127.0.0.1:3000:3000"
-      - "::1:3000:3000"
+    # No host port publish (#2772 cutover, 2026-07-16): edge ingress reaches the
+    # web app by container name (http://meepleai-web:3000) via the containerized
+    # cloudflared on the `meepleai` network. Old 127.0.0.1/::1:3000 publishes removed.
     build:
       args:
         NEXT_PUBLIC_API_BASE: "https://meepleai.app"
@@ -178,7 +175,7 @@ services:
   # Uses the SAME remotely-managed tunnel token as the VPS-native cloudflared.
   cloudflared:
     profiles: [cf-tunnel]
-    image: cloudflare/cloudflared:latest  # TODO(ops): pin to a specific version tag before cutover
+    image: cloudflare/cloudflared:2026.7.2  # pinned (#2772 cutover 2026-07-16); was :latest
     container_name: meepleai-cloudflared
     restart: always
     # Token supplied via TUNNEL_TOKEN (env_file) so it is not exposed in `ps`/command.

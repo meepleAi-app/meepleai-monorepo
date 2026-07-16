@@ -7,6 +7,8 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 // Migration action choices
 export const MigrationActionSchema = z.enum(['KeepPrivate', 'MigrateToShared']);
 export type MigrationAction = z.infer<typeof MigrationActionSchema>;
@@ -16,8 +18,8 @@ export const PendingMigrationDtoSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().uuid(),
   shareRequestId: z.string().uuid(),
-  privateGameId: z.string().uuid(),
-  sharedGameId: z.string().uuid(),
+  privateGameId: GameIdString,
+  sharedGameId: GameIdString,
   gameTitle: z.string(),
   approvedAt: z.string().datetime({ offset: true }),
   expiresAt: z.string().datetime({ offset: true }),

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 /**
  * Mirrors backend `KbDocConsumingAgentDto`
  * (BoundedContexts/KnowledgeBase/Application/DTOs/KbDocConsumingAgentDto.cs).
@@ -13,7 +15,7 @@ export const KbDocConsumingAgentSchema = z.object({
   status: z.enum(['Draft', 'Testing', 'Published']),
   isSystemDefined: z.boolean(),
   typologySlug: z.string().nullable(),
-  gameId: z.string().uuid().nullable(),
+  gameId: GameIdString.nullable(),
   gameName: z.string().nullable(),
   invocationCount: z.number().int().nonnegative(),
   lastInvokedAt: z.string().datetime({ offset: true }).nullable(),

@@ -13,6 +13,8 @@
  */
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 // ========== Enums ==========
 
 export const MechanicAnalysisStatus = {
@@ -187,7 +189,7 @@ export type MechanicSectionRunSummaryDto = z.infer<typeof MechanicSectionRunSumm
 
 export const MechanicAnalysisStatusDtoSchema = z.object({
   id: z.string().uuid(),
-  sharedGameId: z.string().uuid(),
+  sharedGameId: GameIdString,
   pdfDocumentId: z.string().uuid(),
   promptVersion: z.string(),
   status: MechanicAnalysisStatusSchema,
@@ -294,7 +296,7 @@ export const MechanicClaimsListSchema = z.array(MechanicClaimDtoSchema);
  */
 export const MechanicAnalysisListItemDtoSchema = z.object({
   id: z.string().uuid(),
-  sharedGameId: z.string().uuid(),
+  sharedGameId: GameIdString,
   gameTitle: z.string(),
   pdfDocumentId: z.string().uuid(),
   promptVersion: z.string(),

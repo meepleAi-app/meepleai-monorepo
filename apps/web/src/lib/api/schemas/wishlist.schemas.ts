@@ -4,10 +4,12 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 export const WishlistItemDtoSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().uuid(),
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   gameName: z.string().optional(),
   priority: z.string(),
   targetPrice: z.number().nullable(),
@@ -19,7 +21,7 @@ export const WishlistItemDtoSchema = z.object({
 export type WishlistItemDto = z.infer<typeof WishlistItemDtoSchema>;
 
 export const AddToWishlistRequestSchema = z.object({
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   priority: z.string(),
   targetPrice: z.number().nullable().optional(),
   notes: z.string().nullable().optional(),

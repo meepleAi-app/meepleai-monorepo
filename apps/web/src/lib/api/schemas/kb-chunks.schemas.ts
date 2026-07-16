@@ -20,6 +20,8 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 // ========== Wire vocabularies (PR #732 §6.3.1) ==========
 
 export const KbDocTypeSchema = z.enum(['rulebook', 'faq', 'errata', 'guide']);
@@ -34,7 +36,7 @@ export const KbDocDetailSchema = z.object({
   id: z.string().uuid(),
   title: z.string().min(1),
   docType: KbDocTypeSchema,
-  gameId: z.string().uuid().nullable(),
+  gameId: GameIdString.nullable(),
   gameName: z.string().nullable(),
   uploaderName: z.string().min(1),
   uploadedAt: z.string().datetime({ offset: true }),

@@ -7,13 +7,15 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 // Private game source enum
 export const PrivateGameSourceSchema = z.enum(['Manual', 'BoardGameGeek']);
 export type PrivateGameSource = z.infer<typeof PrivateGameSourceSchema>;
 
 // Private game DTO from backend
 export const PrivateGameDtoSchema = z.object({
-  id: z.string().uuid(),
+  id: GameIdString,
   ownerId: z.string().uuid(),
   source: PrivateGameSourceSchema,
   bggId: z.number().int().positive().nullable().optional(),

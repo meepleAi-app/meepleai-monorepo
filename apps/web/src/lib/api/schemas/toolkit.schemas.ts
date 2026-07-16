@@ -7,6 +7,8 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 // ============================================================================
 // Widget type enum
 // ============================================================================
@@ -38,7 +40,7 @@ export type ToolkitWidgetDto = z.infer<typeof ToolkitWidgetDtoSchema>;
 
 export const ToolkitDashboardDtoSchema = z.object({
   id: z.string().uuid(),
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   ownerUserId: z.string().uuid().nullable(),
   isDefault: z.boolean(),
   displayName: z.string().nullable(),
@@ -204,8 +206,8 @@ export type TemplateStatus = z.infer<typeof TemplateStatusSchema>;
 
 export const GameToolkitTemplateDtoSchema = z.object({
   id: z.string().uuid(),
-  gameId: z.string().uuid().nullable(),
-  privateGameId: z.string().uuid().nullable(),
+  gameId: GameIdString.nullable(),
+  privateGameId: GameIdString.nullable(),
   name: z.string(),
   version: z.number(),
   createdByUserId: z.string().uuid(),

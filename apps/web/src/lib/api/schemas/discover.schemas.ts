@@ -13,10 +13,12 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 // ========== /api/v1/catalog/games/new (PR #732 §4.3.2) ==========
 
 export const NewGameSchema = z.object({
-  id: z.string().uuid(),
+  id: GameIdString,
   name: z.string().min(1),
   publisher: z.string().nullable(),
   // Year is nullable because legacy SharedGame rows can have YearPublished == 0
@@ -38,7 +40,7 @@ export type NewGamesResponse = z.infer<typeof NewGamesResponseSchema>;
 export const PopularAgentSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1),
-  gameId: z.string().uuid().nullable(),
+  gameId: GameIdString.nullable(),
   gameName: z.string().nullable(),
   // Schema reality v1 carryover (Gate B): backend always returns 0 until
   // AgentInstallation tracking lands. The field is part of the wire contract
@@ -68,7 +70,7 @@ export type RecentKbDocType = z.infer<typeof RecentKbDocTypeSchema>;
 export const RecentKbDocSchema = z.object({
   id: z.string().uuid(),
   title: z.string(),
-  gameId: z.string().uuid().nullable(),
+  gameId: GameIdString.nullable(),
   gameName: z.string().nullable(),
   docType: RecentKbDocTypeSchema,
   lastIngestedAt: z.string().datetime({ offset: true }),

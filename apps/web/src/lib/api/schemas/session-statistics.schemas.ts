@@ -1,7 +1,9 @@
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 export const GamePlayFrequencySchema = z.object({
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   gameName: z.string(),
   playCount: z.number(),
 });
@@ -27,7 +29,7 @@ export const SessionStatisticsSchema = z.object({
 });
 
 export const GameStatisticsSchema = z.object({
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   gameName: z.string(),
   totalPlays: z.number(),
   wins: z.number(),

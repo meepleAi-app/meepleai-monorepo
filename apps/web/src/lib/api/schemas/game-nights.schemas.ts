@@ -5,6 +5,8 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 // SI-3 #2634: `InProgress` mirrors the BE `GameNightStatus` enum (a Published night is promoted
 // to InProgress when its first session starts, event-driven via SessionStartedHandler). It MUST be
 // listed so the live/detail read of a night mid-play parses instead of failing the whole payload.
@@ -39,7 +41,7 @@ export const GameNightDtoSchema = z.object({
   scheduledAt: z.string(),
   location: z.string().nullable(),
   maxPlayers: z.number().nullable(),
-  gameIds: z.array(z.string().uuid()),
+  gameIds: z.array(GameIdString),
   status: GameNightStatusSchema,
   acceptedCount: z.number(),
   pendingCount: z.number(),
@@ -71,7 +73,7 @@ export type GameNightSessionStatus = z.infer<typeof GameNightSessionStatusSchema
 
 export const GameNightSessionDtoSchema = z.object({
   sessionId: z.string().uuid(),
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   gameTitle: z.string(),
   playOrder: z.number().int(),
   status: GameNightSessionStatusSchema,
@@ -85,7 +87,7 @@ export const GameNightSessionDtoSchema = z.object({
 export type GameNightSessionDto = z.infer<typeof GameNightSessionDtoSchema>;
 
 export const GameNightLineupItemDtoSchema = z.object({
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   gameTitle: z.string(),
 });
 export type GameNightLineupItemDto = z.infer<typeof GameNightLineupItemDtoSchema>;
@@ -183,7 +185,7 @@ export const CreateGameNightInputSchema = z.object({
   scheduledAt: z.string(),
   location: z.string().max(500).optional(),
   maxPlayers: z.number().min(2).max(50).optional(),
-  gameIds: z.array(z.string().uuid()).max(20).optional(),
+  gameIds: z.array(GameIdString).max(20).optional(),
   invitedUserIds: z.array(z.string().uuid()).max(49).optional(),
   // Issue #950 W1-PR1: email invitees feeding the token-based
   // GameNightInvitation flow (#607 Wave A.5a).
@@ -224,7 +226,7 @@ export const UpdateGameNightInputSchema = z.object({
   scheduledAt: z.string(),
   location: z.string().max(500).optional(),
   maxPlayers: z.number().min(2).max(50).optional(),
-  gameIds: z.array(z.string().uuid()).max(20).optional(),
+  gameIds: z.array(GameIdString).max(20).optional(),
 });
 export type UpdateGameNightInput = z.infer<typeof UpdateGameNightInputSchema>;
 
@@ -233,7 +235,7 @@ export type UpdateGameNightInput = z.infer<typeof UpdateGameNightInputSchema>;
 // ──────────────────────────────────────────────────────────────────────
 
 export const GameNightCandidateTallyDtoSchema = z.object({
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   voteCount: z.number().int().nonnegative(),
   votedByMe: z.boolean(),
 });
@@ -242,8 +244,8 @@ export type GameNightCandidateTallyDto = z.infer<typeof GameNightCandidateTallyD
 export const GameNightVoteTallyDtoSchema = z.object({
   isVotingClosed: z.boolean(),
   isTie: z.boolean(),
-  winnerGameId: z.string().uuid().nullable(),
-  leadingCandidateGameIds: z.array(z.string().uuid()),
+  winnerGameId: GameIdString.nullable(),
+  leadingCandidateGameIds: z.array(GameIdString),
   candidates: z.array(GameNightCandidateTallyDtoSchema),
 });
 export type GameNightVoteTallyDto = z.infer<typeof GameNightVoteTallyDtoSchema>;
@@ -268,7 +270,7 @@ export type GameNightSummaryKpisDto = z.infer<typeof GameNightSummaryKpisDtoSche
 
 export const GameNightGameRecapDtoSchema = z.object({
   sessionId: z.string().uuid(),
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   gameTitle: z.string(),
   playOrder: z.number().int(),
   status: z.string(),

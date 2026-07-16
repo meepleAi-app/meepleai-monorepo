@@ -7,6 +7,8 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 // ========== Chat Message DTO for Shared Threads ==========
 
 /**
@@ -61,7 +63,7 @@ export const GetSharedThreadResponseSchema = z.object({
   title: z.string().nullable(),
   messages: z.array(ChatMessageDtoSchema),
   role: z.enum(['view', 'comment']),
-  gameId: z.string().uuid().nullable(),
+  gameId: GameIdString.nullable(),
   createdAt: z.string().datetime({ offset: true }),
   lastMessageAt: z.string().datetime({ offset: true }).nullable(),
 });

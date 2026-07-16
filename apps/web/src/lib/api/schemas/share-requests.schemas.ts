@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 /**
  * Share Request API Schemas
  * Issue #2743: Frontend - UI Condivisione da Libreria
@@ -37,7 +39,7 @@ export type RateLimitStatusDto = z.infer<typeof RateLimitStatusDtoSchema>;
 // User Share Request DTO
 export const UserShareRequestDtoSchema = z.object({
   id: z.string().uuid(),
-  sourceGameId: z.string().uuid(),
+  sourceGameId: GameIdString,
   gameTitle: z.string(),
   gameThumbnailUrl: z.string().nullable(),
   status: ShareRequestStatusSchema,
@@ -47,14 +49,14 @@ export const UserShareRequestDtoSchema = z.object({
   attachedDocumentCount: z.number().int().nonnegative(),
   createdAt: z.string().datetime({ offset: true }),
   resolvedAt: z.string().datetime({ offset: true }).nullable(),
-  resultingSharedGameId: z.string().uuid().nullable(),
+  resultingSharedGameId: GameIdString.nullable(),
 });
 
 export type UserShareRequestDto = z.infer<typeof UserShareRequestDtoSchema>;
 
 // Create Share Request Command (Request)
 export const CreateShareRequestCommandSchema = z.object({
-  sourceGameId: z.string().uuid(),
+  sourceGameId: GameIdString,
   notes: z.string().max(2000).nullable().optional(),
   attachedDocumentIds: z.array(z.string().uuid()).optional().default([]),
 });

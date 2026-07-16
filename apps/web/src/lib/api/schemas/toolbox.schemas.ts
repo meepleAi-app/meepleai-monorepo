@@ -7,6 +7,8 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 // ============================================================================
 // Value Objects
 // ============================================================================
@@ -63,7 +65,7 @@ export type PhaseDto = z.infer<typeof PhaseSchema>;
 export const ToolboxSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
-  gameId: z.string().uuid().nullable(),
+  gameId: GameIdString.nullable(),
   mode: z.enum(['Freeform', 'Phased']),
   sharedContext: SharedContextSchema,
   currentPhaseId: z.string().uuid().nullable(),
@@ -103,7 +105,7 @@ export type CardDrawResultDto = z.infer<typeof CardDrawResultSchema>;
 export const ToolboxTemplateSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
-  gameId: z.string().uuid().nullable(),
+  gameId: GameIdString.nullable(),
   mode: z.string(),
   source: z.string(),
   toolsJson: z.string(),

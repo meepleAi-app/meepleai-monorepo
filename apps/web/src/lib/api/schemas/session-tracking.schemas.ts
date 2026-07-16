@@ -9,6 +9,8 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 // ========== Core Session DTOs ==========
 
 export const ParticipantDtoSchema = z.object({
@@ -49,7 +51,7 @@ export type PlayerNoteDto = z.infer<typeof PlayerNoteDtoSchema>;
 export const SessionDtoSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().uuid(),
-  gameId: z.string().uuid().nullable(),
+  gameId: GameIdString.nullable(),
   sessionCode: z.string(),
   sessionType: z.string(),
   status: z.string(),
@@ -217,7 +219,7 @@ export type ShareableSessionDto = z.infer<typeof ShareableSessionDtoSchema>;
 // ========== Request DTOs ==========
 
 export const CreateSessionCommandSchema = z.object({
-  gameId: z.string().uuid().optional(),
+  gameId: GameIdString.optional(),
   gameName: z.string().optional(),
   sessionType: z.string().optional().default('Standard'),
   location: z.string().optional(),

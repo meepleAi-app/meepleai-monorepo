@@ -130,7 +130,8 @@ describe('useInfrastructureKpis', () => {
       cpu: [],
       memory: [],
       requests: [],
-      sourceAvailable: false,
+      cpuAvailable: false,
+      memoryAvailable: false,
     });
 
     const { result } = renderHook(() => useInfrastructureKpis());
@@ -139,6 +140,26 @@ describe('useInfrastructureKpis', () => {
     // 0 punti MA flag false = sorgente giù, non zero reale.
     expect(result.current.cpu.sourceAvailable).toBe(false);
     expect(result.current.memory.sourceAvailable).toBe(false);
+  });
+
+  it('marks CPU unavailable but memory available on a partial Prometheus failure (#3045)', async () => {
+    mockGetDockerContainers.mockResolvedValue([]);
+    mockGetAllBatchJobs.mockResolvedValue({ jobs: [], total: 0, page: 1, pageSize: 20 });
+    // CPU query failed (empty + cpuAvailable false) while memory succeeded.
+    mockGetMetricsTimeSeries.mockResolvedValue({
+      cpu: [],
+      memory: [{ timestamp: '2026-06-03T15:00:00Z', value: 12 }],
+      requests: [],
+      cpuAvailable: false,
+      memoryAvailable: true,
+    });
+
+    const { result } = renderHook(() => useInfrastructureKpis());
+    await waitFor(() => expect(result.current.cpu.loading).toBe(false));
+
+    expect(result.current.cpu.sourceAvailable).toBe(false);
+    expect(result.current.memory.sourceAvailable).toBe(true);
+    expect(result.current.memory.value).toBe(12);
   });
 
   it('computes trend "down" when last < first', async () => {

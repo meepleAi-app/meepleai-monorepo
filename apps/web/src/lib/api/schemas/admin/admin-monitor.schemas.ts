@@ -105,9 +105,11 @@ export const MetricsTimeSeriesResponseSchema = z.object({
   cpu: z.array(MetricsTimeSeriesDataPointSchema),
   memory: z.array(MetricsTimeSeriesDataPointSchema),
   requests: z.array(MetricsTimeSeriesDataPointSchema),
-  // #3045: false = Prometheus irraggiungibile (distinto da 0 reale). Optional+default
-  // per backward-compat con payload BE pre-deploy.
-  sourceAvailable: z.boolean().optional().default(true),
+  // #3045: disponibilità PER-METRICA (false = quella query Prometheus ha fallito, distinto
+  // da 0 reale). Un fallimento della sola query CPU non deve mascherare la RAM (e viceversa).
+  // Optional+default per backward-compat con payload BE pre-deploy.
+  cpuAvailable: z.boolean().optional().default(true),
+  memoryAvailable: z.boolean().optional().default(true),
 });
 
 export type MetricsTimeSeriesResponse = z.infer<typeof MetricsTimeSeriesResponseSchema>;

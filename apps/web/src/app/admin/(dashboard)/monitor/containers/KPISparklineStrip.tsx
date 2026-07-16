@@ -103,6 +103,17 @@ function KpiCardSkeleton({ testId }: { testId: string }) {
   );
 }
 
+// #3045: placeholder condiviso per lo stato "sorgente non disponibile" (CPU + RAM).
+const SOURCE_UNAVAILABLE_LABEL = 'Sorgente non disponibile';
+
+function MetricUnavailable({ testId }: { testId: string }) {
+  return (
+    <p data-testid={testId} className="mt-1 font-mono text-[13px] text-muted-foreground">
+      {SOURCE_UNAVAILABLE_LABEL}
+    </p>
+  );
+}
+
 export function KPISparklineStrip() {
   const { containers, cpu, memory, batchJobs } = useInfrastructureKpis();
 
@@ -163,12 +174,7 @@ export function KPISparklineStrip() {
               />
             </>
           ) : (
-            <p
-              data-testid="kpi-cpu-unavailable"
-              className="mt-1 font-mono text-[13px] text-muted-foreground"
-            >
-              Sorgente non disponibile
-            </p>
+            <MetricUnavailable testId="kpi-cpu-unavailable" />
           )}
         </article>
       )}
@@ -208,12 +214,7 @@ export function KPISparklineStrip() {
               />
             </>
           ) : (
-            <p
-              data-testid="kpi-memory-unavailable"
-              className="mt-1 font-mono text-[13px] text-muted-foreground"
-            >
-              Sorgente non disponibile
-            </p>
+            <MetricUnavailable testId="kpi-memory-unavailable" />
           )}
         </article>
       )}

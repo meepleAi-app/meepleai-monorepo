@@ -34,7 +34,8 @@ internal record MetricsTimeSeriesResponse(
     IReadOnlyCollection<MetricsTimeSeriesDataPoint> Cpu,
     IReadOnlyCollection<MetricsTimeSeriesDataPoint> Memory,
     IReadOnlyCollection<MetricsTimeSeriesDataPoint> Requests,
-    bool SourceAvailable);
+    bool CpuAvailable,
+    bool MemoryAvailable);
 
 /// <summary>
 /// A single data point in a metrics time series.

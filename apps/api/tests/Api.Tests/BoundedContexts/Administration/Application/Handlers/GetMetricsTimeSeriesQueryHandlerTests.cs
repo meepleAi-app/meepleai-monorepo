@@ -46,7 +46,8 @@ public class GetMetricsTimeSeriesQueryHandlerTests
         result.Cpu.Count.Should().Be(3);
         result.Memory.Count.Should().Be(3);
         result.Requests.Count.Should().Be(3);
-        result.SourceAvailable.Should().BeTrue();
+        result.CpuAvailable.Should().BeTrue();
+        result.MemoryAvailable.Should().BeTrue();
 
         // Verify all 3 queries were executed
         _mockPrometheusService.Verify(
@@ -130,7 +131,9 @@ public class GetMetricsTimeSeriesQueryHandlerTests
         result.Cpu.Should().BeEmpty();
         result.Memory.Should().ContainSingle();
         result.Requests.Should().ContainSingle();
-        result.SourceAvailable.Should().BeTrue();
+        // Per-metric (#3045): CPU query threw → CPU unavailable, but Memory is fine.
+        result.CpuAvailable.Should().BeFalse();
+        result.MemoryAvailable.Should().BeTrue();
     }
 
     [Fact]
@@ -157,7 +160,8 @@ public class GetMetricsTimeSeriesQueryHandlerTests
         result.Cpu.Should().BeEmpty();
         result.Memory.Should().BeEmpty();
         result.Requests.Should().BeEmpty();
-        result.SourceAvailable.Should().BeFalse();
+        result.CpuAvailable.Should().BeFalse();
+        result.MemoryAvailable.Should().BeFalse();
     }
 
     [Fact]
@@ -186,7 +190,9 @@ public class GetMetricsTimeSeriesQueryHandlerTests
         result.Cpu.Should().BeEmpty();
         result.Memory.Should().BeEmpty();
         result.Requests.Should().BeEmpty();
-        result.SourceAvailable.Should().BeTrue();
+        // Prometheus responded (0 points) → both metrics available (real zero).
+        result.CpuAvailable.Should().BeTrue();
+        result.MemoryAvailable.Should().BeTrue();
     }
 
     [Fact]

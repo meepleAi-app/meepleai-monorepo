@@ -56,13 +56,13 @@ internal class GetMetricsTimeSeriesQueryHandler : IRequestHandler<GetMetricsTime
         var memory = await memoryTask.ConfigureAwait(false);
         var requests = await requestsTask.ConfigureAwait(false);
 
-        // The 3 queries hit the same Prometheus: if it is down they all throw.
-        // "source available" = at least one responded without exception (0 points = real zero,
-        // NOT a source outage — Issue #3045 requires the FE to distinguish the two).
-        var sourceAvailable = cpu.Succeeded || memory.Succeeded || requests.Succeeded;
-
+        // Per-metric availability (#3045): the 3 queries are independent HTTP calls that can
+        // fail independently, so a per-query failure must NOT mask the other metrics. Each flag
+        // = "that metric's Prometheus query did not throw". An empty series with a reachable
+        // Prometheus stays Available=true (real zero, distinct from a source outage). The FE
+        // consumes cpu/memory only; the requests series is not surfaced in the monitor UI.
         return new MetricsTimeSeriesResponse(
-            cpu.Points, memory.Points, requests.Points, sourceAvailable);
+            cpu.Points, memory.Points, requests.Points, cpu.Succeeded, memory.Succeeded);
     }
 
     /// <summary>

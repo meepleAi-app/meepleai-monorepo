@@ -193,7 +193,7 @@ checks:
     owner: devops
     override_path: fix-forward
     pre_existing_in_main_dev: false
-    notes: "Verifies v2-migration-matrix.md consistency. Failure indicates row drift vs implementation."
+    notes: "Implemented #2998 via .github/workflows/state-matrix-sync.yml (scripts/v2_audit --check). Non-blocking: v2-migration-matrix.md row drift is reported as ::warning:: annotations (exit 0), so drift alone never reds this check — a red status means the v2_audit self-tests regressed. Reconcile drift fix-forward. Matrix sync is now automated (was manual)."
 
   - check_name: "codecov/patch"
     severity: warning

@@ -267,7 +267,7 @@ const renderRow = (item: TableRow) => ({ id: item.id, title: item.name, badge: i
 
 describe('EntityTableView — row border + badge pill (#2955 Fase 2)', () => {
   it.each(ENTITIES)(
-    '%s → border-entity row + bg-entity/10 + text-entity-*-text badge + no axe',
+    '%s → border-l-entity row (on <tr>) + bg-entity/10 + text-entity-*-text badge + no axe',
     async entity => {
       const { container } = render(
         <EntityTableView
@@ -278,7 +278,10 @@ describe('EntityTableView — row border + badge pill (#2955 Fase 2)', () => {
         />
       );
       const layout = screen.getByTestId('table-layout');
-      expect(layout.className).toMatch(token('border-entity-', entity));
+      // Color targets the <tr> via the `[&_tbody_tr]:` descendant variant (same
+      // element as `[&_tbody_tr]:border-l-4` width) — a plain `border-entity-*` on
+      // this wrapper would be a no-op (no border-width; color doesn't inherit).
+      expect(layout.className).toMatch(token('border-l-entity-', entity));
       const badge = screen.getByText('NEW');
       expect(badge.className).toMatch(new RegExp(`bg-entity-${entity}\\/10`));
       expect(badge.className).toMatch(new RegExp(`text-entity-${entity}-text`));

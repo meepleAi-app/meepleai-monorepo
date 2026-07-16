@@ -370,8 +370,10 @@ describe('NotificationsPage', () => {
 
     render(<NotificationsPage />);
 
-    // Claude Design v1: all | sessions | agents | events | system
-    const filterBar = screen.getByRole('tablist', { name: /categoria notifiche/i });
+    // Claude Design v1: all | sessions | agents | events | system.
+    // The filter bar is a labelled role="group" (not a tablist — its pills are
+    // buttons, not tabs; see page.tsx / axe aria-required-children fix).
+    const filterBar = screen.getByRole('group', { name: /categoria notifiche/i });
     expect(within(filterBar).getByRole('button', { name: /^tutte$/i })).toBeInTheDocument();
     expect(within(filterBar).getByRole('button', { name: /sessioni/i })).toBeInTheDocument();
     expect(within(filterBar).getByRole('button', { name: /agenti/i })).toBeInTheDocument();
@@ -563,15 +565,21 @@ describe('NotificationsPage', () => {
       // Scope to the per-entity NotificationCard list (all six sample
       // notifications land in the "Oggi" group), which is the surface #2955
       // recoloured — six entity-coloured cards rendered together.
-      // NOTE: a whole-page scan additionally trips a PRE-EXISTING, coloring-
-      // unrelated `aria-required-children` violation on the filter bar
-      // (`role="tablist"` holding <button> children, page.tsx:281). That is a
-      // real finding surfaced separately, not a regression from the restored
-      // coloring, and fixing it is a source change out of scope for this
-      // test-only Fase 3.
       const cardList = container.querySelector('section[aria-labelledby="notif-group-oggi"]');
       expect(cardList).not.toBeNull();
       expect(await axe(cardList as HTMLElement)).toHaveNoViolations();
+    });
+
+    // Whole-surface scan (no modal open): the category filter bar renders
+    // alongside the entity-coloured NotificationCard list. Guards the blocking
+    // axe AA gate against the `aria-required-children` finding on the filter
+    // bar — the row of category pills is a labelled `role="group"`, NOT a
+    // `role="tablist"` (its `Btn` pills expose role=button, not role=tab, so a
+    // tablist would be an invalid parent). See page.tsx filter bar.
+    it('has no violations across the full page surface including the filter bar', async () => {
+      setupStore({ notifications: mixedEntityNotifications(), unreadCount: 4 });
+      const { container } = render(<NotificationsPage />);
+      expect(await axe(container)).toHaveNoViolations();
     });
 
     it('has no violations with the per-entity detail Drawer open', async () => {

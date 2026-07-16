@@ -2,7 +2,7 @@
  * EntityTableView — per-entity coloring regression tests (Issue #2955 Fase 2)
  *
  * Asserts the design-sensitive primitive uses CANONICAL entity tokens:
- *   - Row accent border → `border-entity-<e>` (base token, borders need only 3:1)
+ *   - Row accent border → `border-l-entity-<e>` (base token, borders need only 3:1)
  *   - Badge pill → soft tint `bg-entity-<e>/10` + AA label `text-entity-<e>-text`
  *
  * Guards against regressions:
@@ -47,55 +47,55 @@ const CANONICAL: Array<{
 }> = [
   {
     entity: 'game',
-    border: /border-entity-game(?!-)/,
+    border: /border-l-entity-game(?!-)/,
     badgeBg: /bg-entity-game\/10/,
     text: /text-entity-game-text/,
   },
   {
     entity: 'player',
-    border: /border-entity-player(?!-)/,
+    border: /border-l-entity-player(?!-)/,
     badgeBg: /bg-entity-player\/10/,
     text: /text-entity-player-text/,
   },
   {
     entity: 'session',
-    border: /border-entity-session(?!-)/,
+    border: /border-l-entity-session(?!-)/,
     badgeBg: /bg-entity-session\/10/,
     text: /text-entity-session-text/,
   },
   {
     entity: 'agent',
-    border: /border-entity-agent(?!-)/,
+    border: /border-l-entity-agent(?!-)/,
     badgeBg: /bg-entity-agent\/10/,
     text: /text-entity-agent-text/,
   },
   {
     entity: 'kb',
-    border: /border-entity-kb(?!-)/,
+    border: /border-l-entity-kb(?!-)/,
     badgeBg: /bg-entity-kb\/10/,
     text: /text-entity-kb-text/,
   },
   {
     entity: 'chat',
-    border: /border-entity-chat(?!-)/,
+    border: /border-l-entity-chat(?!-)/,
     badgeBg: /bg-entity-chat\/10/,
     text: /text-entity-chat-text/,
   },
   {
     entity: 'event',
-    border: /border-entity-event(?!-)/,
+    border: /border-l-entity-event(?!-)/,
     badgeBg: /bg-entity-event\/10/,
     text: /text-entity-event-text/,
   },
   {
     entity: 'toolkit',
-    border: /border-entity-toolkit(?!-)/,
+    border: /border-l-entity-toolkit(?!-)/,
     badgeBg: /bg-entity-toolkit\/10/,
     text: /text-entity-toolkit-text/,
   },
   {
     entity: 'tool',
-    border: /border-entity-tool(?!-)/,
+    border: /border-l-entity-tool(?!-)/,
     badgeBg: /bg-entity-tool\/10/,
     text: /text-entity-tool-text/,
   },
@@ -103,7 +103,7 @@ const CANONICAL: Array<{
 
 describe('EntityTableView — canonical per-entity row border (#2955 Fase 2)', () => {
   it.each(CANONICAL)(
-    'row border uses canonical border-entity-$entity token',
+    'row border uses canonical border-l-entity-$entity token',
     ({ entity, border }) => {
       renderTable(entity);
       const layout = screen.getByTestId('table-layout');
@@ -144,7 +144,7 @@ describe('EntityTableView — kb uses registered teal token, never -document (#2
   it('kb row border resolves to -kb (teal), never -document, no inline HSL', () => {
     renderTable('kb');
     const layout = screen.getByTestId('table-layout');
-    expect(layout.className).toMatch(/border-entity-kb(?!-)/);
+    expect(layout.className).toMatch(/border-l-entity-kb(?!-)/);
     expect(layout.className).not.toMatch(/entity-document/);
     expect(layout.className).not.toMatch(/hsl\(/);
   });
@@ -162,7 +162,7 @@ describe('EntityTableView — gameNightEvent reuses canonical event token (#1929
   it('maps gameNightEvent border + badge to canonical event token', () => {
     renderTable('gameNightEvent');
     const layout = screen.getByTestId('table-layout');
-    expect(layout.className).toMatch(/border-entity-event(?!-)/);
+    expect(layout.className).toMatch(/border-l-entity-event(?!-)/);
     const badge = screen.getByText('NEW');
     expect(badge.className).toMatch(/bg-entity-event\/10/);
     expect(badge.className).toMatch(/text-entity-event-text/);

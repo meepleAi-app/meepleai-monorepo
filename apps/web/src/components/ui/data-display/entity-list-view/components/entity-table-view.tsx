@@ -37,17 +37,23 @@ import type { ColumnDef, SortingState } from '@tanstack/react-table';
 // gameNightEvent reuses the canonical `event` token (#1929 WP2).
 // ============================================================================
 
-const ENTITY_BORDER: Record<MeepleEntityType, string> = {
-  game: 'border-entity-game',
-  player: 'border-entity-player',
-  session: 'border-entity-session',
-  agent: 'border-entity-agent',
-  kb: 'border-entity-kb',
-  chat: 'border-entity-chat',
-  event: 'border-entity-event',
-  toolkit: 'border-entity-toolkit',
-  tool: 'border-entity-tool',
-  gameNightEvent: 'border-entity-event',
+// Entity-colored LEFT accent on each row (#2955 Fase 2). The color MUST target
+// the same element as the width — the `<tr>` — via the `[&_tbody_tr]:` descendant
+// variant. A plain `border-entity-*` on the wrapper div is a no-op: the wrapper
+// has no border-width, and `border-color` does not inherit to the rows (whose own
+// `border-border/50` would otherwise win). kb → registered `-kb` (teal), never
+// `-document`. Pairs with the `[&_tbody_tr]:border-l-4` width class on the wrapper.
+const ENTITY_ROW_BORDER: Record<MeepleEntityType, string> = {
+  game: '[&_tbody_tr]:border-l-entity-game',
+  player: '[&_tbody_tr]:border-l-entity-player',
+  session: '[&_tbody_tr]:border-l-entity-session',
+  agent: '[&_tbody_tr]:border-l-entity-agent',
+  kb: '[&_tbody_tr]:border-l-entity-kb',
+  chat: '[&_tbody_tr]:border-l-entity-chat',
+  event: '[&_tbody_tr]:border-l-entity-event',
+  toolkit: '[&_tbody_tr]:border-l-entity-toolkit',
+  tool: '[&_tbody_tr]:border-l-entity-tool',
+  gameNightEvent: '[&_tbody_tr]:border-l-entity-event',
 };
 
 const ENTITY_BADGE_BG: Record<MeepleEntityType, string> = {
@@ -264,7 +270,7 @@ export function EntityTableView<T>({
   }, [onItemClick, displayItems]);
 
   // Entity-colored row styling via canonical token class (#2955 Fase 2)
-  const borderClass = ENTITY_BORDER[entity] || '';
+  const borderClass = ENTITY_ROW_BORDER[entity] || '';
 
   return (
     <div

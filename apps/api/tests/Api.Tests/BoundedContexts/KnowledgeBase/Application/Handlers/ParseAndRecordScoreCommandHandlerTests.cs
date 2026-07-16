@@ -271,6 +271,7 @@ public class ParseAndRecordScoreCommandHandlerTests
             CurrentTurnPlayerId: null,
             AgentMode: AgentSessionMode.None,
             Notes: null,
+            GameState: null,
             Players: new List<LiveSessionPlayerDto>(),
             Teams: new List<LiveSessionTeamDto>(),
             RoundScores: new List<LiveSessionRoundScoreDto>(),

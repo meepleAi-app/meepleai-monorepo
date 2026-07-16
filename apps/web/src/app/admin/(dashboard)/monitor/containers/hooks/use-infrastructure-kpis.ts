@@ -4,13 +4,15 @@
  * useInfrastructureKpis — combina 3 endpoint admin in 4 KPI shapes
  * per il componente KPISparklineStrip (#1837 SP5 F4-C1).
  *
- * Endpoint riusati (zero modifiche BE):
+ * Endpoint riusati:
  *   - GET /api/v1/admin/docker/containers
  *   - GET /api/v1/admin/infrastructure/metrics/timeseries?range=1h
  *   - GET /api/v1/admin/operations/batch-jobs?status={queued|running}
+ *   - GET /api/v1/resources/system (Issue #3041)
  *
- * Memory.total è hardcoded a 32 GB perché BE non espone il limite del host;
- * follow-up: estendere /admin/infrastructure/details con `hostMemoryTotalGb`.
+ * Memory.total deriva da `hostMemoryTotalBytes` di /resources/system
+ * (self-contained via System.Diagnostics, indipendente da Prometheus).
+ * Issue #3041: rimosso il precedente hardcode a 32 GB.
  */
 
 import { useEffect, useState } from 'react';
@@ -57,7 +59,7 @@ export interface InfrastructureKpis {
 }
 
 const FLAT_THRESHOLD_PCT = 0.5;
-const HOST_MEMORY_TOTAL_GB = 32; // see file-level comment
+const BYTES_PER_GB = 1024 ** 3;
 
 function computeTrend(series: TimeSeriesPoint[]): { trend: Trend; pct: number } {
   if (series.length < 2) return { trend: 'flat', pct: 0 };
@@ -76,7 +78,7 @@ const EMPTY_METRIC: MetricKpi = {
   trendPct: 0,
   loading: true,
 };
-const EMPTY_MEMORY: MemoryKpi = { ...EMPTY_METRIC, total: HOST_MEMORY_TOTAL_GB };
+const EMPTY_MEMORY: MemoryKpi = { ...EMPTY_METRIC, total: 0 };
 
 export function useInfrastructureKpis(): InfrastructureKpis {
   const [containers, setContainers] = useState<ContainerKpi>({
@@ -113,6 +115,8 @@ export function useInfrastructureKpis(): InfrastructureKpis {
         setContainers({ active: 0, total: 0, stopped: 0, loading: false });
       });
 
+    // CPU + serie memoria da /metrics/timeseries (node_exporter). Aggiorna value/series/trend
+    // ma NON `total` (functional update), così resta disaccoppiato dal fetch host-memory.
     void api.admin
       .getMetricsTimeSeries('1h')
       .then(resp => {
@@ -130,19 +134,39 @@ export function useInfrastructureKpis(): InfrastructureKpis {
           trendPct: cpuTrend.pct,
           loading: false,
         });
-        setMemory({
+        setMemory(m => ({
+          ...m,
           value: memValue,
           series: memSeries,
           trend: memTrend.trend,
           trendPct: memTrend.pct,
-          total: HOST_MEMORY_TOTAL_GB,
           loading: false,
-        });
+        }));
       })
       .catch(() => {
         if (cancelled) return;
         setCpu({ ...EMPTY_METRIC, loading: false });
-        setMemory({ ...EMPTY_MEMORY, loading: false });
+        setMemory(m => ({
+          ...m,
+          value: 0,
+          series: [],
+          trend: 'flat',
+          trendPct: 0,
+          loading: false,
+        }));
+      });
+
+    // memory.total = RAM host da /resources/system (self-contained, #3041). Fetch
+    // indipendente: non blocca il CPU KPI. Su fallimento total resta al default (0) e
+    // il KPI strip mostra un placeholder invece di un denominatore fittizio.
+    void api.admin
+      .getSystemResources()
+      .then(sys => {
+        if (cancelled || !sys) return;
+        setMemory(m => ({ ...m, total: Math.round(sys.hostMemoryTotalBytes / BYTES_PER_GB) }));
+      })
+      .catch(() => {
+        // total resta 0 → gestito dal guard di rendering nel KPI strip
       });
 
     Promise.all([

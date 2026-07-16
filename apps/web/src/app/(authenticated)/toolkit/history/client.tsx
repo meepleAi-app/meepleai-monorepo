@@ -216,9 +216,14 @@ export default function ToolkitHistoryPage(): JSX.Element {
       {/* hero */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="font-quicksand text-2xl font-bold text-foreground sm:text-3xl">
-            {t('pages.toolkitHistory.hero.title')}
-          </h1>
+          <div className="flex items-center gap-2">
+            <span aria-hidden="true" className="text-2xl sm:text-3xl">
+              🧰
+            </span>
+            <h1 className="font-quicksand text-2xl font-bold text-foreground sm:text-3xl">
+              {t('pages.toolkitHistory.hero.title')}
+            </h1>
+          </div>
           <p className="mt-1 text-sm text-muted-foreground">
             {t('pages.toolkitHistory.hero.subtitle')}
           </p>

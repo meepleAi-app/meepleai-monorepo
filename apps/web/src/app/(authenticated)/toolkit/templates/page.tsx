@@ -107,7 +107,12 @@ export default function ToolkitTemplatesPage() {
     <div className="container max-w-6xl space-y-6 py-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Toolkit Templates</h1>
+          <div className="flex items-center gap-2">
+            <span aria-hidden="true" className="text-2xl">
+              🧰
+            </span>
+            <h1 className="text-2xl font-bold">Toolkit Templates</h1>
+          </div>
           <p className="text-sm text-muted-foreground">
             Browse approved templates and clone them for your games
           </p>

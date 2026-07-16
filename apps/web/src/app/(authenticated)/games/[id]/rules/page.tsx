@@ -101,9 +101,14 @@ export default function GameRulesPage() {
             <span aria-hidden="true">←</span>
             <span>Gioco</span>
           </Link>
-          <h1 className="mt-1 font-quicksand text-2xl font-bold tracking-tight text-foreground">
-            Regolamento
-          </h1>
+          <div className="mt-1 flex items-center gap-2">
+            <span aria-hidden="true" className="text-2xl">
+              🎲
+            </span>
+            <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
+              Regolamento
+            </h1>
+          </div>
         </header>
 
         {/* Loading */}

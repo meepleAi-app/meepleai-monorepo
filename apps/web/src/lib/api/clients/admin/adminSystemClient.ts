@@ -24,6 +24,7 @@ import {
   TableSizeSchema,
   CacheMetricsSchema,
   VectorStoreMetricsSchema,
+  SystemResourcesResponseSchema,
   type N8nConfigDto,
   type N8nTestResultDto,
   type WorkflowTemplate,
@@ -39,6 +40,7 @@ import {
   type TableSize,
   type CacheMetrics,
   type VectorStoreMetrics,
+  type SystemResourcesResponse,
 } from '../../schemas';
 
 import type { HttpClient } from '../../core/httpClient';
@@ -261,6 +263,11 @@ export function createAdminSystemClient(http: HttpClient) {
 
     async getResourceVectorMetrics(): Promise<VectorStoreMetrics | null> {
       return http.get('/api/v1/resources/vectors/metrics', VectorStoreMetricsSchema);
+    },
+
+    // System Resources (Issue #3041) — self-contained via System.Diagnostics
+    async getSystemResources(): Promise<SystemResourcesResponse | null> {
+      return http.get('/api/v1/resources/system', SystemResourcesResponseSchema);
     },
 
     async rebuildVectors(): Promise<void> {

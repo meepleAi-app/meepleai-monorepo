@@ -4,6 +4,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 const mockGetDockerContainers = vi.hoisted(() => vi.fn());
 const mockGetMetricsTimeSeries = vi.hoisted(() => vi.fn());
 const mockGetAllBatchJobs = vi.hoisted(() => vi.fn());
+const mockGetSystemResources = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/api', () => ({
   api: {
@@ -11,6 +12,7 @@ vi.mock('@/lib/api', () => ({
       getDockerContainers: mockGetDockerContainers,
       getMetricsTimeSeries: mockGetMetricsTimeSeries,
       getAllBatchJobs: mockGetAllBatchJobs,
+      getSystemResources: mockGetSystemResources,
     },
   },
 }));
@@ -20,6 +22,16 @@ import { useInfrastructureKpis } from '../hooks/use-infrastructure-kpis';
 describe('useInfrastructureKpis', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // default: 32 GiB host memory → memory.total = 32 GB (34359738368 / 1024**3)
+    mockGetSystemResources.mockResolvedValue({
+      processWorkingSetBytes: 1,
+      gcHeapBytes: 1,
+      processorCount: 8,
+      processCpuPercent: 0,
+      processUptimeSeconds: 1,
+      hostMemoryTotalBytes: 34359738368,
+      measuredAt: '2026-01-01T00:00:00Z',
+    });
   });
 
   it('combines 3 endpoints into 4 KPI shapes (happy path)', async () => {
@@ -144,5 +156,22 @@ describe('useInfrastructureKpis', () => {
     await waitFor(() => expect(result.current.cpu.loading).toBe(false));
 
     expect(result.current.cpu.trend).toBe('flat');
+  });
+
+  it('falls back to memory.total=0 when system resources fetch fails (#3041)', async () => {
+    mockGetDockerContainers.mockResolvedValue([]);
+    mockGetAllBatchJobs.mockResolvedValue({ jobs: [], total: 0, page: 1, pageSize: 20 });
+    mockGetMetricsTimeSeries.mockResolvedValue({
+      cpu: [{ timestamp: '2026-06-03T15:00:00Z', value: 10 }],
+      memory: [{ timestamp: '2026-06-03T15:00:00Z', value: 5 }],
+      requests: [],
+    });
+    mockGetSystemResources.mockRejectedValue(new Error('boom'));
+
+    const { result } = renderHook(() => useInfrastructureKpis());
+    await waitFor(() => expect(result.current.memory.loading).toBe(false));
+
+    expect(result.current.memory.total).toBe(0);
+    expect(result.current.memory.value).toBe(5);
   });
 });

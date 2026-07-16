@@ -33,6 +33,7 @@ import {
   type HistoryRow,
   type HistorySort,
 } from './_lib/history-filters';
+import { formatDuration } from './_lib/history-format';
 
 /**
  * Toolkit History Page — orchestrator (Issue #3006, Task A9).
@@ -71,13 +72,6 @@ const TOOLKIT_TABS: ToolkitTab[] = [
   { id: 'templates', href: '/toolkit/templates', icon: '🎨' },
   { id: 'play', href: '/toolkit/play', icon: '🎮' },
 ];
-
-/** Formats a session duration in minutes as `"{h}h {m}m"` — mirrors HistoryTable/HistoryCards/HistoryDetailModal. */
-function formatDuration(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return `${h}h ${m}m`;
-}
 
 export default function ToolkitHistoryPage(): JSX.Element {
   const router = useRouter();

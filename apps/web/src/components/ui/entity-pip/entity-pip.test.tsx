@@ -21,7 +21,7 @@ describe('EntityPip', () => {
 
   it('applies entity color class via background token', () => {
     const { container } = render(<EntityPip entity="session" count={2} />);
-    // bg-entity-<key> class from getEntityToken
+    // bg-entity-<key> class from the literal ENTITY_BG map
     expect(container.querySelector('.bg-entity-session')).toBeInTheDocument();
   });
 
@@ -70,6 +70,27 @@ describe('EntityPip', () => {
     const { container } = render(<EntityPip entity="kb" count={5} active />);
     const el = container.querySelector('[data-entity="kb"]');
     expect(el?.className).toMatch(/ring-2/);
+  });
+
+  it('applies the entity-colored active ring via a literal ring-entity-* utility', () => {
+    const { container } = render(<EntityPip entity="player" count={2} active />);
+    const el = container.querySelector('[data-entity="player"]');
+    expect(el?.className).toMatch(/ring-2/);
+    expect(el?.className).toMatch(/ring-entity-player/);
+  });
+
+  it('does not add an entity ring when not active', () => {
+    const { container } = render(<EntityPip entity="player" count={2} />);
+    const el = container.querySelector('[data-entity="player"]');
+    expect(el?.className).not.toMatch(/ring-entity-player/);
+  });
+
+  it('uses the registered -kb (teal) utilities for kb bg + active ring, not the unregistered document slate', () => {
+    const { container } = render(<EntityPip entity="kb" count={5} active />);
+    const el = container.querySelector('[data-entity="kb"]');
+    expect(el?.className).toMatch(/bg-entity-kb/);
+    expect(el?.className).toMatch(/ring-entity-kb/);
+    expect(el?.className).not.toMatch(/entity-document/);
   });
 
   it('applies opacity-40 when count === 0', () => {

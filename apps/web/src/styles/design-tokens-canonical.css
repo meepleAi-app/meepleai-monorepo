@@ -50,6 +50,11 @@
   --c-event-text: 350 89% 32%;   /* #2862 C5: ~5.2:1 on cream/white (from JS entityTextOverrides) */
   --c-agent-text: 38 92% 24%;    /* #2862 C5: ~5.7:1 on cream/white */
   --c-chat-text:  220 80% 38%;   /* #2862 C5: ~5.4:1 on cream/white */
+  /* #2955: player + tool text variants (were missing entirely). Darkened from the base
+   * --c-player/--c-tool per the ~13% pattern above for AA 4.5:1 as text on cream.
+   * Ratios computed via sRGB linearization + WCAG relative-luminance (conservative floor). */
+  --c-player-text: 262 83% 38%;  /* ≈ #4b10b1 vs cream #f7f3ee = 9.47:1 ✅ */
+  --c-tool-text:  195 80% 26%;   /* ≈ #0d5d77 vs cream #f7f3ee = 6.67:1 ✅ */
 
   /* AAA contrast token (#1561 J — Aaron CORE spec 2026-05-23 §1b)
    * Light: hsl(32 36% 4%) ≈ #0f0a05 vs cream #f7f3ee = 15.1:1 (AAA-large + AAA-normal)
@@ -254,6 +259,9 @@
   --c-event-text: 350 85% 78%;   /* #2862 C5: lighter for AA on dark card */
   --c-agent-text: 38 92% 72%;    /* #2862 C5: lighter for AA on dark card */
   --c-chat-text:  218 85% 80%;   /* #2862 C5: lighter for AA on dark card */
+  /* #2955: player + tool text variants — lighter for AA on dark surfaces (#14100a). */
+  --c-player-text: 262 85% 82%;  /* ≈ #c7aaf8 vs dark = 9.50:1 ✅ */
+  --c-tool-text:  195 75% 70%;   /* ≈ #79cfec vs dark = 10.78:1 ✅ */
 
   /* AAA contrast dark — see :root docblock */
   --c-text-high-contrast: 0 0% 100%;

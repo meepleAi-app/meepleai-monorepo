@@ -277,10 +277,13 @@ export default function NotificationsPage() {
         </Btn>
       </div>
 
-      {/* Filters bar (Claude Design v1: entity-colored outline pills) */}
+      {/* Filters bar (Claude Design v1: entity-colored outline pills).
+          A labelled `role="group"` — not a `tablist` — because the pills are
+          `Btn`s exposing role=button (not role=tab); a tablist would be an
+          invalid ARIA parent (aria-required-children). */}
       <div
         className="flex items-center gap-2 mb-4 flex-wrap"
-        role="tablist"
+        role="group"
         aria-label="Categoria notifiche"
       >
         {FILTERS.map(f => {

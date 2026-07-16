@@ -20,6 +20,38 @@ export interface Step {
   readonly status?: StepStatus;
 }
 
+/**
+ * Per-entity solid fill for completed/current circles + filled connectors (issue #2955).
+ * Literal class strings so Tailwind's content scanner emits the utilities (a dynamic
+ * `bg-entity-${entity}` would NOT be generated). `kb` uses the registered `-kb` (teal)
+ * token — NEVER `-document` (slate), which lives only in `@layer tokens` and is not
+ * exposed via `@theme inline`.
+ */
+const ENTITY_BG: Record<StepEntityKey, string> = {
+  game: 'bg-entity-game',
+  player: 'bg-entity-player',
+  session: 'bg-entity-session',
+  agent: 'bg-entity-agent',
+  kb: 'bg-entity-kb',
+  chat: 'bg-entity-chat',
+  event: 'bg-entity-event',
+  toolkit: 'bg-entity-toolkit',
+  tool: 'bg-entity-tool',
+};
+
+/** Per-entity focus ring for the current step (issue #2955). Same literal-map discipline. */
+const ENTITY_RING: Record<StepEntityKey, string> = {
+  game: 'ring-entity-game',
+  player: 'ring-entity-player',
+  session: 'ring-entity-session',
+  agent: 'ring-entity-agent',
+  kb: 'ring-entity-kb',
+  chat: 'ring-entity-chat',
+  event: 'ring-entity-event',
+  toolkit: 'ring-entity-toolkit',
+  tool: 'ring-entity-tool',
+};
+
 export interface StepProgressProps {
   readonly steps: Step[];
   readonly currentIndex: number;
@@ -67,9 +99,13 @@ export function StepProgress({
 
           const circleClasses = clsx(
             'flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition-transform',
-            status === 'completed' && 'bg-primary text-primary-foreground',
+            status === 'completed' && clsx(ENTITY_BG[entity], 'text-primary-foreground'),
             status === 'current' &&
-              'bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2 ring-offset-background scale-110',
+              clsx(
+                ENTITY_BG[entity],
+                ENTITY_RING[entity],
+                'text-primary-foreground ring-2 ring-offset-2 ring-offset-background scale-110'
+              ),
             status === 'pending' && 'bg-muted text-muted-foreground'
           );
 
@@ -105,7 +141,7 @@ export function StepProgress({
                     data-step-connector-filled={connectorFilled}
                     className={clsx(
                       'mx-2 h-0.5 flex-1 rounded-full',
-                      connectorFilled ? 'bg-primary' : 'bg-muted'
+                      connectorFilled ? ENTITY_BG[entity] : 'bg-muted'
                     )}
                     aria-hidden="true"
                   />

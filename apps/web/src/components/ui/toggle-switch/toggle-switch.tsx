@@ -6,6 +6,36 @@ import type { EntityType } from '@/components/ui/entity-tokens';
 
 export type ToggleSwitchSize = 'sm' | 'md';
 
+/**
+ * Per-entity color maps (issue #2955). Literal class strings so Tailwind's content
+ * scanner emits the utilities (a dynamic `bg-entity-${entity}` would NOT be generated).
+ * `kb` uses the registered `-kb` (teal) token — NEVER `-document` (slate), which lives
+ * only in `@layer tokens` and is not exposed via `@theme inline`.
+ */
+const ENTITY_BG: Record<EntityType, string> = {
+  game: 'bg-entity-game',
+  player: 'bg-entity-player',
+  session: 'bg-entity-session',
+  agent: 'bg-entity-agent',
+  kb: 'bg-entity-kb',
+  chat: 'bg-entity-chat',
+  event: 'bg-entity-event',
+  toolkit: 'bg-entity-toolkit',
+  tool: 'bg-entity-tool',
+};
+
+const ENTITY_RING: Record<EntityType, string> = {
+  game: 'ring-entity-game',
+  player: 'ring-entity-player',
+  session: 'ring-entity-session',
+  agent: 'ring-entity-agent',
+  kb: 'ring-entity-kb',
+  chat: 'ring-entity-chat',
+  event: 'ring-entity-event',
+  toolkit: 'ring-entity-toolkit',
+  tool: 'ring-entity-tool',
+};
+
 export interface ToggleSwitchProps {
   readonly checked: boolean;
   readonly onCheckedChange: (next: boolean) => void;
@@ -50,9 +80,10 @@ export function ToggleSwitch({
 
   const trackClasses = clsx(
     'relative inline-flex items-center rounded-full transition-colors',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+    ENTITY_RING[entity],
     TRACK_CLASSES[size],
-    checked ? 'bg-primary' : 'bg-muted',
+    checked ? ENTITY_BG[entity] : 'bg-muted',
     disabled && 'opacity-50 cursor-not-allowed',
     className
   );

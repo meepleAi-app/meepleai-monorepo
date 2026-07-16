@@ -78,6 +78,7 @@
 | `sp4-game-detail-tab-strategies.html` | sub-tab placeholder (#2148) | `/games/[id]/strategies` — AI placeholder, designer review required |
 | `sp4-game-detail-tab-chat.html` | sub-tab placeholder (#2148) | `/games/[id]/chat` — standalone (was partial via composite), designer review required |
 | `sp4-game-detail-tab-faqs.html` | sub-tab placeholder (#2148) | `/games/[id]/faqs` — game-scoped variant of public FAQ, designer review required |
+| `sp4-library-wishlist.html` | page-mock | `/library/wishlist` — personal wishlist (priority Alta/Media/Bassa, target price, notes); filters + sort + add/edit dialog. Issue #1491 |
 | `sp4-parts-common.jsx` | component-mock | Shared mockup runtime — `window.MAI` (entity helpers, StateBlock/Shimmer/SseBanner, fake dataset). Re-derived for sessions consolidation (2026-05-31). Replace with codebase modules at integration time. |
 | `sp4-session-catan-data.jsx` | component-mock | Catan-specific dataset (hex board 19-tiles, resources, settlements/cities/roads, dev cards). Premium #3/7. |
 | `sp4-session-catan-flavor.jsx` | component-mock | Catan flavor components — `HexBoard`, `RobberOverlay`, `DiceDisplay`, `TradePanel`, `DevCardsPanel`, `ResourceHandBar`. |
@@ -178,10 +179,10 @@ below) and the `/gamebook` family pages render directly from those._
 
 | Type | Count |
 |------|------:|
-| page-mock | 66 |
+| page-mock | 67 |
 | component-mock | 48 |
 | dev-fixture | 13 |
-| **Total** | **127** |
+| **Total** | **128** |
 
 > **Updated 2026-06-08** (#2025): 3 component-mock JSX Sara obsoleti eliminati
 > (`sp6-libro-game-{play-session,translation-viewer,glossary-editor}.jsx`).

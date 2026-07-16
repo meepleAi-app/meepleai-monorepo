@@ -118,7 +118,7 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
 #pragma warning restore CA1031
 
         // ADR-076 / #2995 quiet hours: when the user is inside their configured window, suppress the
-        // time-sensitive push channels (email + Slack DM). The in-app notification row is always created
+        // time-sensitive channels (email + Slack DM). The in-app notification row is always created
         // above; the config-driven Slack TEAM broadcast (step 5) is not user-scoped so it is not gated;
         // push is delegated to device DND. MVP is suppression-only (not deferral) per ADR-076.
         var inQuietHours = preferences?.IsQuietHoursActive(_timeProvider.GetUtcNow()) ?? false;

@@ -34,7 +34,6 @@ test.afterAll(() => {
 for (const pair of PAIRS) {
   test(`capture ${pair.id}`, async ({ page }) => {
     const viewport = pair.viewport ?? { width: 1920, height: 1080 };
-    await page.setViewportSize(viewport);
     const rec: CaptureRecord = {
       id: pair.id,
       label: pair.label,
@@ -43,6 +42,10 @@ for (const pair of PAIRS) {
       mockupPng: null,
       livePng: null,
     };
+    // Push SUBITO: la coppia deve apparire SEMPRE nel report (fail-visible),
+    // anche se una riga fuori dai try (es. setViewportSize) lancia.
+    records.push(rec);
+    await page.setViewportSize(viewport);
 
     // 1) MOCKUP statico via http-server. NB: molti page-mock caricano
     // React/ReactDOM/Babel da unpkg.com e transpilano JSX in-browser → serve
@@ -75,17 +78,24 @@ for (const pair of PAIRS) {
       await seedMockRoleCookies(page, pair.auth === 'admin' ? 'Admin' : 'User');
       await mockAuthEndpoints(page, { role: pair.auth === 'admin' ? 'admin' : 'user' });
       if (pair.mock) await pair.mock(page);
-      await page.goto(pair.route, { waitUntil: 'networkidle' });
+      // 'load' (non 'networkidle'): route con SSE/EventSource aperto non
+      // raggiungerebbero mai networkidle → hang fino al timeout.
+      await page.goto(pair.route, { waitUntil: 'load' });
       await page.waitForTimeout(1000);
-      const liveFile = `${pair.id}__live.png`;
-      await page.screenshot({ path: path.join(OUTPUT_DIR, liveFile), fullPage: true });
-      rec.livePng = liveFile;
+      // Guard: se il gate SSR ha reindirizzato a /login (server senza bypass),
+      // il capture sarebbe una login page fuorviante → segnala come liveError.
+      if (/(^|\/)login(\/|$)/.test(new URL(page.url()).pathname)) {
+        rec.liveError =
+          'redirected to /login (auth-bypass non ingaggiato — usa COMPARE_APP_PORT su una porta libera)';
+        console.log(`[compare] ${pair.id}: ${rec.liveError}`);
+      } else {
+        const liveFile = `${pair.id}__live.png`;
+        await page.screenshot({ path: path.join(OUTPUT_DIR, liveFile), fullPage: true });
+        rec.livePng = liveFile;
+      }
     } catch (err) {
       rec.liveError = (err as Error).message;
-
       console.log(`[compare] ${pair.id}: live capture failed — ${rec.liveError}`);
     }
-
-    records.push(rec);
   });
 }

@@ -38,8 +38,12 @@ function renderPair(e) {
         ${mockup}
         <div class="live-wrap" data-pair-id="${escapeHtml(e.id)}">${live}</div>
       </div>
+      <div class="sbs">
+        <figure><figcaption>mockup</figcaption>${mockup}</figure>
+        <figure><figcaption>live</figcaption>${live}</figure>
+      </div>
       ${slider}
-      <button class="toggle" data-pair-id="${escapeHtml(e.id)}">side-by-side ⇄ overlay</button>
+      <button class="toggle">side-by-side ⇄ overlay</button>
     </div>
   </section>`;
 }
@@ -59,6 +63,11 @@ export function buildReportHtml(entries) {
     .live-wrap { position: absolute; inset: 0; overflow: hidden; }
     .compare[data-mode="overlay"] .live-wrap { width: 50%; }
     .compare[data-mode="sbs"] .stage { display: none; }
+    .sbs { display: none; }
+    .compare[data-mode="sbs"] .sbs { display: flex; gap: 12px; max-width: 1200px; }
+    .sbs figure { flex: 1; margin: 0; border: 1px solid #bbb; }
+    .sbs figcaption { font-size: 11px; color: #666; padding: 2px 6px; }
+    .sbs .layer { position: static; }
     .slider { width: 100%; max-width: 1200px; margin: 8px 0; }
     .toggle { font: inherit; padding: 4px 10px; cursor: pointer; }
     .live-error { padding: 40px; text-align: center; color: #a00; background: #fdd; }

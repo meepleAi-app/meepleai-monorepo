@@ -58,4 +58,12 @@ describe('buildReportHtml', () => {
     expect(html).not.toContain('<script>x</script>');
     expect(html).toContain('&lt;script&gt;');
   });
+
+  it('renders a side-by-side (sbs) block so the toggle shows both images', () => {
+    const html = buildReportHtml([baseEntry]);
+    expect(html).toContain('class="sbs"');
+    // Entrambe le immagini compaiono 2 volte: overlay (stage) + side-by-side (sbs).
+    expect((html.match(/data:image\/png;base64,MOCKUP/g) ?? []).length).toBeGreaterThanOrEqual(2);
+    expect((html.match(/data:image\/png;base64,LIVE/g) ?? []).length).toBeGreaterThanOrEqual(2);
+  });
 });

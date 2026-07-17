@@ -31,7 +31,13 @@ function main() {
     );
     process.exit(1);
   }
-  const captures = JSON.parse(readFileSync(CAPTURES, 'utf8'));
+  let captures;
+  try {
+    captures = JSON.parse(readFileSync(CAPTURES, 'utf8'));
+  } catch {
+    console.error(`[compare] captures.json corrotto in ${OUTPUT_DIR} — riesegui la capture spec.`);
+    process.exit(1);
+  }
   const entries = captures.map((c) => ({
     id: c.id,
     label: c.label,
@@ -51,9 +57,14 @@ function main() {
   console.log(`[compare] ${entries.length} coppie (${failed} con cattura fallita)`);
 
   if (process.argv.includes('--open')) {
-    const opener =
-      process.platform === 'win32' ? 'start' : process.platform === 'darwin' ? 'open' : 'xdg-open';
-    spawn(opener, [out], { shell: true, stdio: 'ignore', detached: true }).unref();
+    // win32: `start "" "<path>"` — il primo arg quotato di start è il TITOLO
+    // finestra, quindi un path con spazi va passato come 2° arg con titolo vuoto.
+    if (process.platform === 'win32') {
+      spawn('cmd', ['/c', 'start', '', out], { stdio: 'ignore', detached: true }).unref();
+    } else {
+      const opener = process.platform === 'darwin' ? 'open' : 'xdg-open';
+      spawn(opener, [out], { stdio: 'ignore', detached: true }).unref();
+    }
   }
 }
 

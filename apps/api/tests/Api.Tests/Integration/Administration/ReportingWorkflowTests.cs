@@ -48,7 +48,13 @@ public sealed class ReportingWorkflowTests : IDisposable
         _executionRepository = new ReportExecutionRepository(_dbContext, eventCollector.Object);
 
         var loggerMock = new Mock<ILogger<ReportGeneratorService>>();
-        _reportGenerator = new ReportGeneratorService(_dbContext, loggerMock.Object);
+        var prometheusMock = new Mock<IPrometheusQueryService>();
+        prometheusMock
+            .Setup(p => p.QueryRangeAsync(
+                It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(),
+                It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PrometheusQueryResult("matrix", Array.Empty<PrometheusTimeSeries>()));
+        _reportGenerator = new ReportGeneratorService(_dbContext, loggerMock.Object, prometheusMock.Object);
 
         _schedulerFactory = new StdSchedulerFactory();
     }

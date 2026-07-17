@@ -98,12 +98,14 @@ Config Playwright dedicata `playwright.mockup-compare.config.ts` (deriva da quel
 
 ## 6. Scope MVP (YAGNI — slice verticale)
 
-Prima release su **3-4 coppie che hanno già fixture/pattern**, per provare l'harness end-to-end senza scrivere molte mock:
-- `/library` (fixture `mockup-pilots/library.ts`) ↔ `sp4-library-desktop.html`
-- `/games/[id]` (fixture `mockup-pilots/game-detail.ts`) ↔ mockup game-detail
-- `/admin` (pattern mock già in `admin-dashboard-visual.spec.ts`) ↔ mockup admin dashboard
+> **Correzione post-investigazione (2026-07-17)**: lo slice originariamente ipotizzato (`sp4-library-desktop` / game-detail / admin-dashboard) usava mockup **eliminati in #2988** (DS-17-16, migrati a story). Lo slice reale usa i page-mock HTML **superstiti** in `design_files/`.
 
-La capture spec **`log()`-a** le coppie del manifest ancora scoperte (nessun cap silenzioso). Estensione = aggiungere righe al manifest + fixture mock dove serve.
+Prima release su **1 coppia end-to-end reale** (l'harness resta generico, esteso via manifest):
+- **`/library/wishlist` ↔ `sp4-library-wishlist.html`** — mockup esistente; la route usa `useWishlist` → `GET /api/v1/wishlist`. Cattura live via:
+  - auth: `seedMockRoleCookies(page, 'User')` + mock `${apiBase}/api/v1/auth/me` (pattern `AdminHelper`, ma ruolo User);
+  - dati: `page.route('**/api/v1/wishlist', …)` → `WishlistItemDto[]` fixture + `page.route('**/api/v1/library**', …)` → `[]`.
+
+La capture spec **`log()`-a** le coppie del manifest ancora scoperte (nessun cap silenzioso). Estensione = aggiungere righe al manifest + mock `page.route` **oppure** il seam built-in `?fixture=default` (già supportato da `useLibrary`, vedi `useLibrary.ts:76`) dove disponibile. Candidati estensione: `/toolkit/history` (`sp4-toolkit-history.html`), session summary (`sp4-session-*-summary.html`).
 
 ## 7. Error handling
 - Route live fallisce load/auth → `liveError` nel record; gallery mostra mockup + placeholder rosso, gli altri pair non sono impattati.

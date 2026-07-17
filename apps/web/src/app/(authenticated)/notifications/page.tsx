@@ -81,7 +81,6 @@ const FILTERS: readonly FilterDef[] = [
     types: [
       'game_night_invitation',
       'game_night_rsvp_received',
-      'game_night_published',
       'game_night_cancelled',
       'game_night_reminder',
     ],

@@ -207,4 +207,17 @@ Runtime cablato end-to-end (`GameNightPublishedNotificationHandler` → `Notific
 
 ---
 
-*Prodotto da spec-panel critique statico (Opus 4.8) — 2026-07-15, addendum §6 stessa data. Nessun file di prodotto modificato oltre a questo audit + annotazione mockup.*
+## § 7 — Risoluzione #2979 (2026-07-17)
+
+Chiusura dei 4 residui di #2979. Verifica dello stato reale del repo (i mockup referenziati sono cambiati dopo il 2026-07-15):
+
+1. **Notifiche I/J vs #16/#17** (doc) — già coperto da §6.3: runtime cablato end-to-end, i mockup `notifications.jsx`/preferences sono demo statici non collegati. Nessuna azione di codice; annotazione qui è sufficiente.
+2. **Dead-entry `game_night_published`** (contract cleanup) — ✅ **RISOLTO**. Confermato che il BE (`NotificationType.cs`) definisce solo 4 tipi game-night (`invitation`, `rsvp_received`, `reminder`, `cancelled`) e **non emette mai** `game_night_published`. Rimosso dai 3 punti FE (`notifications.schemas.ts` `KNOWN_NOTIFICATION_TYPES`, `NotificationItem.tsx` `getTypeIcon`, `notifications/page.tsx` filtro `events`). Nessun test lo referenziava.
+3. **Tensione Auto-RSVP regulars** (domain question) — ⚪ **MOOT**. Il mockup `sp7-game-night-new.jsx` che conteneva il toggle "Auto-RSVP per i regular" è stato **eliminato** in `90f731b4f` (DS-17-16, PR #2988, "remove migrated page-mocks"). La stringa "Auto-RSVP"/"confermati automaticamente" **non esiste più in alcun artefatto live** (né runtime, né story/fixture migrate, né brief SP9). Nessuna superficie da correggere; l'invariante #16 (tag silente) resta la legge. Se una futura wave mobile game-night (SP9) reintroduce un affordance "auto-conferma al tag", deve onorare #16 (pre-check UI di selezione invito, **non** RSVP=confermato al tagging).
+4. **Re-sync `sp7-game-night-detail-rsvp.jsx`** (mockup) — ⚪ **MOOT**. Mockup **eliminato** nello stesso commit #2988 e migrato a story (`game-nights/[id]/game-night-detail-rsvp.stories.tsx`) che renderizza il componente runtime reale `GameNightDetailView` — il quale **ha già la CTA "Invia inviti"** (#16, PR #2969, con test `GameNightDetailView.inviteCta.test.tsx`). La story è in-sync per costruzione col runtime; il gap chiuso non può ri-emergere da un mockup statico che non esiste più.
+
+**Esito**: 1 fix di codice (item 2) + 3 item chiusi come già-coperti/moot. Issue #2979 chiudibile.
+
+---
+
+*Prodotto da spec-panel critique statico (Opus 4.8) — 2026-07-15, addendum §6 stessa data, §7 risoluzione 2026-07-17.*

@@ -34,7 +34,6 @@ export const KNOWN_NOTIFICATION_TYPES = [
   'agent_ready',
   'game_night_invitation',
   'game_night_rsvp_received',
-  'game_night_published',
   'game_night_cancelled',
   'game_night_reminder',
 ] as const;

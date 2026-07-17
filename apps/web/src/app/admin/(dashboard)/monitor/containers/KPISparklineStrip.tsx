@@ -138,7 +138,7 @@ export function KPISparklineStrip() {
             <span className="text-sm text-muted-foreground font-semibold">/{containers.total}</span>
           </p>
           <p className="mt-1 font-mono text-[11px] text-muted-foreground">
-            ▬ {containers.stopped} stopped · 0 crashed
+            ▬ {containers.stopped} stopped
           </p>
         </article>
       )}

@@ -61,6 +61,16 @@ describe('KPISparklineStrip', () => {
     expect(screen.getByText('/8')).toBeInTheDocument();
   });
 
+  it('shows the real stopped count and no fabricated "crashed" figure (#3092)', () => {
+    // defaultKpis has containers.stopped === 1; there is no data source for "crashed",
+    // so the card must never render a hardcoded crashed figure.
+    useInfrastructureKpisMock.mockReturnValue(makeKpis());
+    render(<KPISparklineStrip />);
+    const card = screen.getByLabelText(/Container attivi 7 su 8/);
+    expect(card).toHaveTextContent(/1 stopped/);
+    expect(card).not.toHaveTextContent(/crashed/i);
+  });
+
   it('shows CPU percentage with sparkline svg', () => {
     useInfrastructureKpisMock.mockReturnValue(makeKpis());
     render(<KPISparklineStrip />);

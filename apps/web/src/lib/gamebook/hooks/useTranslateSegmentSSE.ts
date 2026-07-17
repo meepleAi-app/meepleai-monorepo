@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { SourceLangCode } from '@/lib/gamebook/lang-codes';
 
@@ -36,6 +36,15 @@ export function useTranslateSegmentSSE() {
   const stop = useCallback(() => {
     sourceRef.current?.close();
     sourceRef.current = null;
+  }, []);
+
+  // #3101: close the EventSource on unmount to prevent a dangling connection and
+  // setState-after-unmount when the user navigates away mid-translate (browser
+  // back, route change). Mirrors the sibling useTranslateTextSSE (#1560).
+  useEffect(() => {
+    return () => {
+      sourceRef.current?.close();
+    };
   }, []);
 
   const start = useCallback(

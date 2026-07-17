@@ -55,6 +55,7 @@ describe('hasFlavor', () => {
     expect(hasFlavor('puerto-rico')).toBe(true);
     expect(hasFlavor('paleo')).toBe(true);
     expect(hasFlavor('power-grid')).toBe(true);
+    expect(hasFlavor('zombicide')).toBe(true);
     expect(hasFlavor('chess')).toBe(false);
     expect(hasFlavor(null)).toBe(false);
     expect(hasFlavor(undefined)).toBe(false);

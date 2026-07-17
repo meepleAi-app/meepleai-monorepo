@@ -71,6 +71,14 @@ const PowerGridLiveFlavorLazy: FlavorComponent = dynamic(
   { ssr: false, loading: () => <FlavorLoadingSkeleton /> }
 );
 
+const ZombicideLiveFlavorLazy: FlavorComponent = dynamic(
+  () =>
+    import('./flavors/zombicide/ZombicideLiveFlavor').then(m => ({
+      default: m.ZombicideLiveFlavor,
+    })),
+  { ssr: false, loading: () => <FlavorLoadingSkeleton /> }
+);
+
 /**
  * ADR-070 Option B — per-game flavor registry. Each value is a module-level
  * lazy component (content-hashed chunk fetched ONLY when that game's live
@@ -84,6 +92,7 @@ const FLAVOR_MAP: Record<string, Partial<Record<FlavorView, FlavorComponent>>> =
   'puerto-rico': { live: PuertoRicoLiveFlavorLazy },
   paleo: { live: PaleoLiveFlavorLazy },
   'power-grid': { live: PowerGridLiveFlavorLazy },
+  zombicide: { live: ZombicideLiveFlavorLazy },
 };
 
 export function hasFlavor(gameSlug: string | null | undefined): boolean {

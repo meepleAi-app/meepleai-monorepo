@@ -3700,6 +3700,27 @@
           "uranium": "Uranium",
           "incAria": "{field} +1",
           "decAria": "{field} -1"
+        },
+        "zombicide": {
+          "panelAriaLabel": "Zombicide",
+          "leaderboardHeading": "Standings",
+          "initBoardCta": "Start game",
+          "resetCta": "Reset state",
+          "viewerWaiting": "Waiting for the host…",
+          "hordeHeading": "Horde",
+          "walker": "Walker",
+          "runner": "Runner",
+          "fatty": "Fatty",
+          "berserker": "Berserker",
+          "abomination": "Abomination",
+          "necromancer": "Necromancer",
+          "survivorsHeading": "Survivors",
+          "healthy": "Healthy",
+          "wounded": "Wounded",
+          "down": "Down",
+          "incAria": "{field} +1",
+          "decAria": "{field} -1",
+          "cycleAria": "{name}: change wounds"
         }
       },
       "photosTab": {

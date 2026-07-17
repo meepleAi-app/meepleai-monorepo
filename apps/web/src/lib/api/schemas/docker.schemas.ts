@@ -13,6 +13,11 @@ export const ContainerInfoSchema = z.object({
   status: z.string(),
   created: z.string(),
   labels: z.record(z.string(), z.string()),
+  // Issue #3042: live per-container metrics. Null when the container is not
+  // running or the Docker /stats call fails/unreachable.
+  cpuPercent: z.number().nullable(),
+  memoryUsageBytes: z.number().nullable(),
+  memoryLimitBytes: z.number().nullable(),
 });
 
 export const ContainerLogsSchema = z.object({

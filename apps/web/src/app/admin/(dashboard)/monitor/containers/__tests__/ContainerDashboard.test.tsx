@@ -36,6 +36,10 @@ const mockContainers = [
     status: 'Up 2 hours',
     created: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
     labels: {},
+    // #3042: 476.8 MB / 1.0 GB, 40.0% (formatFileSize uses 1024 divisor)
+    cpuPercent: 40.0,
+    memoryUsageBytes: 500000000,
+    memoryLimitBytes: 1073741824,
   },
   {
     id: 'def456',
@@ -45,6 +49,9 @@ const mockContainers = [
     status: 'Up 5 hours',
     created: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
     labels: {},
+    cpuPercent: 12.5,
+    memoryUsageBytes: 250000000,
+    memoryLimitBytes: 1073741824,
   },
   {
     id: 'ghi789',
@@ -54,6 +61,10 @@ const mockContainers = [
     status: 'Exited (0) 1 hour ago',
     created: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
     labels: {},
+    // #3042: stopped container has no live metrics → em dash in the grid
+    cpuPercent: null,
+    memoryUsageBytes: null,
+    memoryLimitBytes: null,
   },
 ];
 
@@ -199,6 +210,38 @@ describe('ContainerDashboard', () => {
     const stoppedCard = screen.getByTestId('container-card-ghi789');
     const uptimeEl = stoppedCard.querySelector('[data-testid="container-uptime"]');
     expect(uptimeEl).toHaveTextContent('—');
+  });
+
+  /* ------------------------------------------------------------------ */
+  /*  #3042 — per-container CPU/Memory metrics                           */
+  /* ------------------------------------------------------------------ */
+
+  it('renders CPU% and memory for a running container', async () => {
+    mockGetDockerContainers.mockResolvedValue(mockContainers);
+    render(<ContainerDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('container-card-abc123')).toBeInTheDocument();
+    });
+
+    const card = screen.getByTestId('container-card-abc123');
+    expect(card.querySelector('[data-testid="container-cpu"]')).toHaveTextContent('40.0%');
+    expect(card.querySelector('[data-testid="container-memory"]')).toHaveTextContent(
+      '476.8 MB / 1.0 GB'
+    );
+  });
+
+  it('shows dash for CPU and memory of stopped containers', async () => {
+    mockGetDockerContainers.mockResolvedValue(mockContainers);
+    render(<ContainerDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('container-card-ghi789')).toBeInTheDocument();
+    });
+
+    const stoppedCard = screen.getByTestId('container-card-ghi789');
+    expect(stoppedCard.querySelector('[data-testid="container-cpu"]')).toHaveTextContent('—');
+    expect(stoppedCard.querySelector('[data-testid="container-memory"]')).toHaveTextContent('—');
   });
 
   it('manual refresh button fetches containers', async () => {

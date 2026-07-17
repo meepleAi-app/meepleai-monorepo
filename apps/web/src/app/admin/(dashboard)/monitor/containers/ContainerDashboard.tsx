@@ -33,6 +33,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { useToast } from '@/hooks/useToast';
 import { api } from '@/lib/api';
 import type { ContainerInfo } from '@/lib/api/schemas';
+import { formatFileSize } from '@/lib/format/file-size';
 import { cn } from '@/lib/utils';
 
 /* ------------------------------------------------------------------ */
@@ -83,6 +84,20 @@ function formatUptime(container: ContainerInfo): string {
   return `${minutes}m`;
 }
 
+// Issue #3042: live CPU%/memory. Null (em dash) when the container is stopped or
+// the Docker /stats call was unreachable — the grid stays populated regardless.
+function formatCpu(container: ContainerInfo): string {
+  return container.cpuPercent == null ? '—' : `${container.cpuPercent.toFixed(1)}%`;
+}
+
+function formatMemory(container: ContainerInfo): string {
+  if (container.memoryUsageBytes == null) return '—';
+  const used = formatFileSize(container.memoryUsageBytes);
+  return container.memoryLimitBytes == null
+    ? used
+    : `${used} / ${formatFileSize(container.memoryLimitBytes)}`;
+}
+
 interface ContainerCardProps {
   container: ContainerInfo;
 }
@@ -114,6 +129,18 @@ function ContainerCard({ container }: ContainerCardProps) {
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Uptime</p>
           <p className="text-xs font-medium" data-testid="container-uptime">
             {formatUptime(container)}
+          </p>
+        </div>
+        <div className="rounded-lg bg-muted/50 px-2.5 py-1.5">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">CPU</p>
+          <p className="text-xs font-medium" data-testid="container-cpu">
+            {formatCpu(container)}
+          </p>
+        </div>
+        <div className="rounded-lg bg-muted/50 px-2.5 py-1.5">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Memory</p>
+          <p className="text-xs font-medium" data-testid="container-memory">
+            {formatMemory(container)}
           </p>
         </div>
       </div>

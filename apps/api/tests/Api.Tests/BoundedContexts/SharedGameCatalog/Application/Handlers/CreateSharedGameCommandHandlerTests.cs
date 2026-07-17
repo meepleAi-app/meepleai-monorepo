@@ -2,6 +2,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
@@ -82,7 +83,7 @@ public class CreateSharedGameCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithDuplicateBggId_ThrowsInvalidOperationException()
+    public async Task Handle_WithDuplicateBggId_ThrowsConflictException()
     {
         // Arrange
         var command = new CreateSharedGameCommand(
@@ -108,7 +109,8 @@ public class CreateSharedGameCommandHandlerTests
         // Act & Assert
         var act = () =>
             _handler.Handle(command, TestContext.Current.CancellationToken);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<ConflictException>()
+            .WithMessage("*already exists in the catalog*");
 
         _repositoryMock.Verify(
             r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()),

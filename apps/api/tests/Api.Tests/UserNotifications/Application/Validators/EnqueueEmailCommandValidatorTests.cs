@@ -82,6 +82,7 @@ public sealed class EnqueueEmailCommandValidatorTests
     [InlineData("document_ready")]
     [InlineData("document_failed")]
     [InlineData("retry_available")]
+    [InlineData("admin_manual_notification")]
     public void Validate_ValidTemplateNames_Pass(string templateName)
     {
         var command = CreateValidCommand() with { TemplateName = templateName };

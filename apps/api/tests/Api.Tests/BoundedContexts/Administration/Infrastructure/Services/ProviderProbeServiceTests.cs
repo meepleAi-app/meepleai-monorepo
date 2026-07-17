@@ -115,6 +115,34 @@ public sealed class ProviderProbeServiceTests
     }
 
     [Fact]
+    [Trait("Issue", "3044")]
+    public async Task ProbeAsync_ResolverThrowsOther_WritesAuditAndReturnsCredentialErrorNot500()
+    {
+        var execMock = new Mock<IProviderProbeExecutor>();
+        execMock.SetupGet(e => e.ProviderName).Returns("openrouter");
+        execMock.SetupGet(e => e.ApiKeyEnvVar).Returns("OPENROUTER_API_KEY"); // requiresAuth=true
+
+        // e.g. CryptographicException (rotated DataProtection key-ring) — must degrade, NOT 500.
+        var resolver = new Mock<IProviderCredentialResolver>();
+        resolver.Setup(r => r.ResolveAsync("openrouter", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new System.Security.Cryptography.CryptographicException("bad key ring"));
+
+        var (svc, repo, _) = BuildSubject(execMock.Object, resolver: resolver);
+
+        var result = await svc.ProbeAsync("openrouter", Guid.NewGuid(), null, CancellationToken.None);
+
+        result.TokenConfigured.Should().BeFalse();
+        result.TokenAuthenticated.Should().BeFalse();
+        result.ErrorCode.Should().Be("credential_error");
+
+        repo.Verify(r => r.AddAsync(
+                It.Is<ProviderProbeAuditEntry>(e => e.Outcome == ProbeOutcome.UnknownError),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        execMock.Verify(e => e.ExecuteAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task ProbeAsync_OllamaNoAuthRequired_ProceedsWithoutKey()
     {
         var execMock = new Mock<IProviderProbeExecutor>();

@@ -2,6 +2,7 @@ using Api.BoundedContexts.Administration.Domain.Services;
 using Api.Models;
 using Api.Observability;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
@@ -27,6 +28,15 @@ public sealed class ProviderQuotaMetricsRegistrarTests
             FetchedAt: DateTime.UtcNow,
             CacheTtlSeconds: 300);
 
+    // #3044: the registrar now takes an IServiceScopeFactory and resolves IProviderQuotaService
+    // per scrape (it depends transitively on the scoped DbContext). Wrap the mock in a real DI scope.
+    private static IServiceScopeFactory ScopeFactoryFor(IProviderQuotaService svc)
+    {
+        var services = new ServiceCollection();
+        services.AddScoped(_ => svc);
+        return services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
+    }
+
     [Fact]
     public void ObserveRemainingUsd_QueriesAllSupportedProviders()
     {
@@ -36,7 +46,7 @@ public sealed class ProviderQuotaMetricsRegistrarTests
         svc.Setup(s => s.GetQuotaAsync("deepseek", It.IsAny<CancellationToken>()))
            .ReturnsAsync(BuildQuota("deepseek", null, 1.36m));
 
-        ProviderQuotaMetricsRegistrar.Initialize(svc.Object, NullLogger.Instance);
+        ProviderQuotaMetricsRegistrar.Initialize(ScopeFactoryFor(svc.Object), NullLogger.Instance);
 
         var measurements = ProviderQuotaMetricsRegistrar.ObserveRemainingUsd().ToList();
         var deepseek = measurements.FirstOrDefault(m =>
@@ -54,7 +64,7 @@ public sealed class ProviderQuotaMetricsRegistrarTests
         svc.Setup(s => s.GetQuotaAsync("deepseek", It.IsAny<CancellationToken>()))
            .ReturnsAsync(BuildQuota("deepseek", null, 1.36m));
 
-        ProviderQuotaMetricsRegistrar.Initialize(svc.Object, NullLogger.Instance);
+        ProviderQuotaMetricsRegistrar.Initialize(ScopeFactoryFor(svc.Object), NullLogger.Instance);
 
         var measurements = ProviderQuotaMetricsRegistrar.ObserveUsedUsd().ToList();
         var openrouter = measurements.FirstOrDefault(m =>
@@ -72,7 +82,7 @@ public sealed class ProviderQuotaMetricsRegistrarTests
         svc.Setup(s => s.GetQuotaAsync("deepseek", It.IsAny<CancellationToken>()))
            .ReturnsAsync(BuildQuota("deepseek", null, 1.36m, limit: null));
 
-        ProviderQuotaMetricsRegistrar.Initialize(svc.Object, NullLogger.Instance);
+        ProviderQuotaMetricsRegistrar.Initialize(ScopeFactoryFor(svc.Object), NullLogger.Instance);
 
         var measurements = ProviderQuotaMetricsRegistrar.ObserveLimitUsd().ToList();
 
@@ -88,7 +98,7 @@ public sealed class ProviderQuotaMetricsRegistrarTests
         svc.Setup(s => s.GetQuotaAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
            .ThrowsAsync(new InvalidOperationException("upstream timeout"));
 
-        ProviderQuotaMetricsRegistrar.Initialize(svc.Object, NullLogger.Instance);
+        ProviderQuotaMetricsRegistrar.Initialize(ScopeFactoryFor(svc.Object), NullLogger.Instance);
 
         var result = ProviderQuotaMetricsRegistrar.ObserveRemainingUsd().ToList();
 

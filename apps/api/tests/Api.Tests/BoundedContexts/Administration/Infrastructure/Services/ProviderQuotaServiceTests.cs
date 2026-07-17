@@ -77,6 +77,27 @@ public sealed class ProviderQuotaServiceTests
     }
 
     [Fact]
+    [Trait("Issue", "3044")]
+    public async Task GetQuotaAsync_ResolverThrowsOther_ReturnsCredentialErrorNot500()
+    {
+        var providerMock = new Mock<IProviderQuotaProvider>();
+        providerMock.SetupGet(p => p.ProviderName).Returns("openrouter");
+
+        // e.g. CryptographicException (rotated DataProtection key-ring) — must degrade, NOT 500.
+        var resolver = new Mock<IProviderCredentialResolver>();
+        resolver.Setup(r => r.ResolveAsync("openrouter", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new System.Security.Cryptography.CryptographicException("bad key ring"));
+
+        var svc = BuildSubject(providerMock.Object, resolver: resolver);
+
+        var result = await svc.GetQuotaAsync("openrouter", CancellationToken.None);
+
+        result.TokenConfigured.Should().BeFalse();
+        result.ErrorCode.Should().Be("credential_error");
+        providerMock.Verify(p => p.FetchAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task GetQuotaAsync_HappyPath_ReturnsRemainingUsd()
     {
         var providerMock = new Mock<IProviderQuotaProvider>();

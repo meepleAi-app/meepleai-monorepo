@@ -60,6 +60,25 @@ internal sealed class ProviderProbeService : IProviderProbeService
                     LatencyMs: 0,
                     ProbedAt: probedAt);
             }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // Any other resolver failure (DataProtection decrypt / rotated key-ring →
+                // CryptographicException, or an unmapped provider → ArgumentException) → graceful
+                // degraded result + audit, NOT a 500.
+                await _auditRepo.AddAsync(ProviderProbeAuditEntry.Create(
+                    providerName, actorId, null, ProbeOutcome.UnknownError, "credential_error", 0), cancellationToken).ConfigureAwait(false);
+                return new ProviderProbeResultDto(
+                    ProviderName: providerName,
+                    TokenConfigured: false,
+                    TokenAuthenticated: false,
+                    ModelAvailable: null,
+                    ExpectedModel: expectedModel,
+                    TokenFingerprint: null,
+                    ErrorCode: "credential_error",
+                    ErrorMessage: "Failed to resolve provider credential",
+                    LatencyMs: 0,
+                    ProbedAt: probedAt);
+            }
         }
 
         var fingerprint = TokenFingerprint.Compute(apiKey);

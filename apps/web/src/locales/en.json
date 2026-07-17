@@ -3245,6 +3245,42 @@
           "subtitle": "Something went wrong. Please try again in a moment.",
           "cta": "Retry"
         }
+      },
+      "stats": {
+        "winRate": "Win rate",
+        "timesPlayed": "Times played",
+        "lastPlayed": "Last played",
+        "lastPlayedNever": "Never",
+        "lastPlayedDaysAgoUnit": "d ago",
+        "leaderboardTitle": "Leaderboard",
+        "leaderboardPlays": "Plays",
+        "leaderboardAvg": "Avg score",
+        "leaderboardWins": "Wins",
+        "leaderboardEmpty": "No leaderboard data yet.",
+        "communityGateTitle": "Your stats",
+        "communityGateDescription": "Add this game to your library to unlock your play stats.",
+        "communityGateCta": "Add to library"
+      },
+      "chat": {
+        "title": "Chat with the assistant",
+        "empty": "No messages yet. Ask a question about the game's rules.",
+        "openCta": "Open chat",
+        "userPrefix": "You",
+        "assistantPrefix": "Assistant"
+      },
+      "houseRules": {
+        "title": "House rules",
+        "addCta": "Add rule",
+        "addPlaceholder": "Write a house rule...",
+        "addSubmit": "Add",
+        "editLabel": "Edit",
+        "editSubmit": "Save",
+        "cancel": "Cancel",
+        "deleteLabel": "Delete",
+        "deleteConfirmTitle": "Delete rule?",
+        "deleteConfirmMessage": "This house rule will be permanently deleted.",
+        "deleteConfirm": "Delete",
+        "empty": "No house rules yet. Add one to customize the game's rules."
       }
     },
     "sharedGames": {

@@ -3293,6 +3293,42 @@
           "subtitle": "Si è verificato un errore. Riprova tra qualche istante.",
           "cta": "Riprova"
         }
+      },
+      "stats": {
+        "winRate": "Percentuale vittorie",
+        "timesPlayed": "Partite giocate",
+        "lastPlayed": "Ultima partita",
+        "lastPlayedNever": "Mai",
+        "lastPlayedDaysAgoUnit": "g fa",
+        "leaderboardTitle": "Classifica",
+        "leaderboardPlays": "Partite",
+        "leaderboardAvg": "Punteggio medio",
+        "leaderboardWins": "Vittorie",
+        "leaderboardEmpty": "Ancora nessun dato in classifica.",
+        "communityGateTitle": "Le tue statistiche",
+        "communityGateDescription": "Aggiungi questo gioco alla tua libreria per sbloccare le tue statistiche di gioco.",
+        "communityGateCta": "Aggiungi alla libreria"
+      },
+      "chat": {
+        "title": "Chat con l'assistente",
+        "empty": "Nessun messaggio. Fai una domanda sulle regole del gioco.",
+        "openCta": "Apri la chat",
+        "userPrefix": "Tu",
+        "assistantPrefix": "Assistente"
+      },
+      "houseRules": {
+        "title": "Regole della casa",
+        "addCta": "Aggiungi regola",
+        "addPlaceholder": "Scrivi una regola della casa...",
+        "addSubmit": "Aggiungi",
+        "editLabel": "Modifica",
+        "editSubmit": "Salva",
+        "cancel": "Annulla",
+        "deleteLabel": "Elimina",
+        "deleteConfirmTitle": "Eliminare la regola?",
+        "deleteConfirmMessage": "Questa regola della casa verrà eliminata definitivamente.",
+        "deleteConfirm": "Elimina",
+        "empty": "Nessuna regola della casa. Aggiungine una per personalizzare le regole del gioco."
       }
     },
     "sharedGames": {

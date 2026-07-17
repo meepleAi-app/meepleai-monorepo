@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { PuertoRicoGalleonsPanel } from '../PuertoRicoGalleonsPanel';
@@ -12,6 +12,7 @@ const galleons = [
 const labels = {
   heading: 'Galeoni',
   emptyGood: '—',
+  goodAria: 'Merce nave {n}',
   loadedAria: 'Carica nave {n}',
   unloadAria: 'Scarica nave {n}',
   capTemplate: '{loaded}/{cap}',
@@ -62,5 +63,11 @@ describe('PuertoRicoGalleonsPanel', () => {
     ) as HTMLSelectElement;
     await userEvent.selectOptions(select, 'sugar');
     expect(onSetGood).toHaveBeenCalledWith(1, 'sugar');
+  });
+
+  it('host: each good select has an accessible name (per ship)', () => {
+    render(<PuertoRicoGalleonsPanel galleons={galleons} editable labels={labels} />);
+    expect(screen.getByRole('combobox', { name: 'Merce nave 1' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Merce nave 3' })).toBeInTheDocument();
   });
 });

@@ -17,6 +17,7 @@ export interface PuertoRicoGalleonsPanelProps {
   readonly labels: {
     heading: string;
     emptyGood: string;
+    goodAria: string;
     loadedAria: string;
     unloadAria: string;
     capTemplate: string;
@@ -56,6 +57,7 @@ export function PuertoRicoGalleonsPanel({
             )}
             {editable ? (
               <select
+                aria-label={labels.goodAria.replace('{n}', String(i + 1))}
                 value={g.good ?? ''}
                 onChange={e =>
                   onSetGood?.(i, e.target.value === '' ? null : (e.target.value as PuertoRicoGood))

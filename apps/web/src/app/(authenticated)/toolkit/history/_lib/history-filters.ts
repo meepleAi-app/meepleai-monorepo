@@ -50,10 +50,16 @@ export interface HistoryRow {
 
 /**
  * Parses the polymorphic `scoreData` JSON payload and returns the highest
- * numeric score found, or `null` when the payload is missing, invalid, or
- * has no numeric values. Supports two shapes:
+ * numeric score found (the "winner score"), or `null` when the payload is
+ * missing, invalid, or carries no single numeric score. Supported shapes:
+ *   - Points (backend `PointsScoringStrategy`, camelCase):
+ *     `{ "scores": [ { "playerId": "…", "points": N }, … ] }` — uses the max `points`
  *   - `Record<string, number>` (e.g. `{ "Alice": 42, "Bob": 30 }`) — uses the values
  *   - `number[]` (e.g. `[10, 20, 30]`)
+ *
+ * Non-Points scoring types (`BinaryWin` / `Objectives` / `Ranking`) have no
+ * single numeric "winner score", so their payloads fall through to `null` and
+ * render as `—` in the table / blank in the CSV export.
  */
 export function parseWinScore(dto: GameSessionDto): number | null {
   if (!dto.scoreData) return null;
@@ -63,6 +69,29 @@ export function parseWinScore(dto: GameSessionDto): number | null {
     parsed = JSON.parse(dto.scoreData);
   } catch {
     return null;
+  }
+
+  // Points shape: an object carrying a `scores` array of `{ points }` entries.
+  // Match it before the generic object branch, whose `Object.values` would see
+  // the array itself (not the nested numbers) and always yield null.
+  if (
+    parsed !== null &&
+    typeof parsed === 'object' &&
+    !Array.isArray(parsed) &&
+    'scores' in parsed
+  ) {
+    const scores = (parsed as { scores: unknown }).scores;
+    if (!Array.isArray(scores)) return null;
+    const points = scores
+      .map(entry =>
+        entry !== null &&
+        typeof entry === 'object' &&
+        typeof (entry as { points?: unknown }).points === 'number'
+          ? (entry as { points: number }).points
+          : null
+      )
+      .filter((v): v is number => v !== null);
+    return points.length > 0 ? Math.max(...points) : null;
   }
 
   let values: number[];

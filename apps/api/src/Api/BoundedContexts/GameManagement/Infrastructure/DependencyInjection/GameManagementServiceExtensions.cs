@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightPlaylist;
@@ -31,6 +32,8 @@ internal static class GameManagementServiceExtensions
         // Register repositories
         // NOTE: IGameRepository removed by #1320 (P2c) — Game aggregate deleted.
         services.AddScoped<IGameSessionRepository, GameSessionRepository>();
+        // #3080: cross-context read-model resolving polymorphic score for session history.
+        services.AddScoped<IHistorySessionScoreProvider, HistorySessionScoreProvider>();
         services.AddScoped<IGameSessionStateRepository, GameSessionStateRepository>(); // ISSUE-2403
         services.AddScoped<IPlayRecordRepository, PlayRecordRepository>(); // ISSUE-3889
         services.AddScoped<IPlayRecordVersionRepository, PlayRecordVersionRepository>(); // #2437-3: version history + restore

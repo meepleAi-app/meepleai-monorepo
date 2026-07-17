@@ -472,6 +472,114 @@ describe('useSessionLiveStream — sessionId change', () => {
     });
     expect(result.current.events).toHaveLength(1);
   });
+
+  it("#3055: session B first connect URL omits the previous session's lastEventId cursor", () => {
+    const { rerender } = renderHook(
+      ({ sessionId }) => useSessionLiveStream({ sessionId, enabled: true }),
+      { initialProps: { sessionId: 'session-A' } }
+    );
+
+    act(() => {
+      MockEventSource.lastInstance()!.triggerOpen();
+      MockEventSource.lastInstance()!.triggerEvent(
+        'session:score',
+        JSON.stringify({ participantId: 'p1', score: 5, sessionId: 'session-A' }),
+        'evt-A-9'
+      );
+    });
+
+    act(() => {
+      rerender({ sessionId: 'session-B' });
+    });
+
+    const bUrl = MockEventSource.lastInstance()!.url;
+    expect(bUrl).toContain('/api/v1/live-sessions/session-B/stream');
+    // Before the fix this opened as ?lastEventId=evt-A-9 (session A's cursor bleeding into B).
+    expect(bUrl).not.toContain('lastEventId');
+  });
+
+  it('#3055: same-session retry reconnect still sends the last cursor for replay', () => {
+    const { result } = makeHook({ sessionId: 'session-1' });
+
+    act(() => {
+      MockEventSource.lastInstance()!.triggerOpen();
+      MockEventSource.lastInstance()!.triggerEvent(
+        'session:score',
+        JSON.stringify({ participantId: 'p1', score: 5, sessionId: 'session-1' }),
+        'evt-1'
+      );
+    });
+
+    // Retryable error (not 429) → schedules a same-session reconnect at RETRY_BUDGET_MS[0].
+    act(() => {
+      MockEventSource.lastInstance()!.triggerError(false);
+    });
+    act(() => {
+      vi.advanceTimersByTime(1001);
+    });
+
+    // The reconnect MUST replay from the last cursor — the fix only strips it on session change.
+    expect(result.current).toBeDefined();
+    expect(MockEventSource.lastInstance()!.url).toContain('lastEventId=evt-1');
+  });
+
+  it('#3055: a retry AFTER a session change does not resurrect the previous session cursor', () => {
+    const { rerender } = renderHook(
+      ({ sessionId }) => useSessionLiveStream({ sessionId, enabled: true }),
+      { initialProps: { sessionId: 'session-A' } }
+    );
+
+    act(() => {
+      MockEventSource.lastInstance()!.triggerOpen();
+      MockEventSource.lastInstance()!.triggerEvent(
+        'session:score',
+        JSON.stringify({ participantId: 'p1', score: 5, sessionId: 'session-A' }),
+        'evt-A-9'
+      );
+    });
+
+    // Switch to B (first connect already omits A's cursor); then B errors before any B event.
+    act(() => {
+      rerender({ sessionId: 'session-B' });
+    });
+    act(() => {
+      MockEventSource.lastInstance()!.triggerError(false);
+    });
+    act(() => {
+      vi.advanceTimersByTime(1001);
+    });
+
+    // The retry reads the CLEARed (null) cursor, not A's evt-A-9 — the connect(false)-after-CLEAR branch.
+    const retryUrl = MockEventSource.lastInstance()!.url;
+    expect(retryUrl).toContain('/api/v1/live-sessions/session-B/stream');
+    expect(retryUrl).not.toContain('lastEventId');
+  });
+
+  it('#3055: toggling enabled false→true on the same session preserves the replay cursor', () => {
+    const { rerender } = renderHook(
+      ({ sessionId, enabled }) => useSessionLiveStream({ sessionId, enabled }),
+      { initialProps: { sessionId: 'session-1', enabled: true } }
+    );
+
+    act(() => {
+      MockEventSource.lastInstance()!.triggerOpen();
+      MockEventSource.lastInstance()!.triggerEvent(
+        'session:score',
+        JSON.stringify({ participantId: 'p1', score: 5, sessionId: 'session-1' }),
+        'evt-1'
+      );
+    });
+
+    // Disable (no CLEAR — same session) then re-enable: the reconnect must still replay from evt-1.
+    act(() => {
+      rerender({ sessionId: 'session-1', enabled: false });
+    });
+    act(() => {
+      rerender({ sessionId: 'session-1', enabled: true });
+    });
+
+    expect(MockEventSource.lastInstance()!.url).toContain('lastEventId=evt-1');
+  });
 });
 
 describe('useSessionLiveStream — retryAt', () => {

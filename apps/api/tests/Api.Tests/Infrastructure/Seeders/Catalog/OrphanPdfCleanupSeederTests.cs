@@ -59,6 +59,37 @@ public sealed class OrphanPdfCleanupSeederTests
         return pdfId;
     }
 
+    /// <summary>Seeds a legacy-scheme PDF (pre-migration <c>seed/…</c> FilePath) with no chunks.</summary>
+    private static Guid SeedLegacyShellPdf(MeepleAiDbContext db, Guid? sharedGameId)
+    {
+        var pdfId = Guid.NewGuid();
+        db.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = pdfId,
+            SharedGameId = sharedGameId,
+            FileName = "rulebook-legacy.pdf",
+            FilePath = "seed/badsworm/legacy/rulebook.pdf",
+            ContentHash = "hash",
+            UploadedByUserId = Guid.NewGuid(),
+            DocumentType = "base",
+            DocumentCategory = "Rulebook",
+            ProcessingState = nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Failed),
+        });
+        return pdfId;
+    }
+
+    private static void SeedChunk(MeepleAiDbContext db, Guid pdfId)
+    {
+        db.TextChunks.Add(new TextChunkEntity
+        {
+            Id = Guid.NewGuid(),
+            PdfDocumentId = pdfId,
+            Content = "chunk",
+            ChunkIndex = 0,
+            CharacterCount = 5,
+        });
+    }
+
     // ---- selection logic ----
 
     [Fact]
@@ -158,5 +189,78 @@ public sealed class OrphanPdfCleanupSeederTests
         await act.Should().NotThrowAsync();
         // The failed orphan does not abort the batch: the second orphan is still processed.
         _mediator.Verify(m => m.Send(It.Is<DeleteKbDocumentCommand>(c => c.Id == orphanPdfId2), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // ---- legacy empty-shell selection (#3075) ----
+
+    [Fact]
+    public async Task FindLegacyShellPdfIds_LegacyPathZeroChunks_ReturnsShell()
+    {
+        using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var gameId = SeedGame(db);
+        var shellId = SeedLegacyShellPdf(db, gameId); // valid parent, seed/ path, no chunks
+        await db.SaveChangesAsync();
+
+        var shells = await OrphanPdfCleanupSeeder.FindLegacyShellPdfIdsAsync(db, CancellationToken.None);
+
+        shells.Should().ContainSingle().Which.Should().Be(shellId);
+    }
+
+    [Fact]
+    public async Task FindLegacyShellPdfIds_LegacyPathWithChunks_NotReturned()
+    {
+        using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var gameId = SeedGame(db);
+        var shellId = SeedLegacyShellPdf(db, gameId);
+        SeedChunk(db, shellId); // still serving RAG → the 0-chunk guard must protect it
+        await db.SaveChangesAsync();
+
+        var shells = await OrphanPdfCleanupSeeder.FindLegacyShellPdfIdsAsync(db, CancellationToken.None);
+
+        shells.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task FindLegacyShellPdfIds_ModernPathZeroChunks_NotReturned()
+    {
+        using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var gameId = SeedGame(db);
+        SeedPdf(db, gameId); // modern pdfs/… path, 0 chunks → the path guard must protect it
+        await db.SaveChangesAsync();
+
+        var shells = await OrphanPdfCleanupSeeder.FindLegacyShellPdfIdsAsync(db, CancellationToken.None);
+
+        shells.Should().BeEmpty();
+    }
+
+    // ---- cleanup delegation for legacy shells ----
+
+    [Fact]
+    public async Task CleanupAsync_SendsDeleteForLegacyShell_NotForModernSibling()
+    {
+        using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var gameId = SeedGame(db);
+        var shellId = SeedLegacyShellPdf(db, gameId);   // legacy shell → delete
+        var modernSiblingId = SeedPdf(db, gameId);       // modern path, valid parent → keep
+        await db.SaveChangesAsync();
+
+        await OrphanPdfCleanupSeeder.CleanupAsync(db, _mediator.Object, _logger.Object, CancellationToken.None);
+
+        _mediator.Verify(m => m.Send(It.Is<DeleteKbDocumentCommand>(c => c.Id == shellId), It.IsAny<CancellationToken>()), Times.Once);
+        _mediator.Verify(m => m.Send(It.Is<DeleteKbDocumentCommand>(c => c.Id == modernSiblingId), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CleanupAsync_RowThatIsBothOrphanAndLegacyShell_DeletedExactlyOnce()
+    {
+        using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        // seed/ path + 0 chunks (legacy shell) AND SharedGameId pointing at a missing game (orphan).
+        var bothId = SeedLegacyShellPdf(db, Guid.NewGuid());
+        await db.SaveChangesAsync();
+
+        await OrphanPdfCleanupSeeder.CleanupAsync(db, _mediator.Object, _logger.Object, CancellationToken.None);
+
+        // Union dedupe: appears in both id sets but is deleted only once.
+        _mediator.Verify(m => m.Send(It.Is<DeleteKbDocumentCommand>(c => c.Id == bothId), It.IsAny<CancellationToken>()), Times.Once);
     }
 }

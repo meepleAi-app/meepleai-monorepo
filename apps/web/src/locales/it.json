@@ -3786,6 +3786,25 @@
           "incAria": "{field} +1",
           "decAria": "{field} -1",
           "cycleAria": "{name}: cambia stato"
+        },
+        "power-grid": {
+          "panelAriaLabel": "Power Grid",
+          "leaderboardHeading": "Classifica",
+          "initBoardCta": "Inizia partita",
+          "resetCta": "Reimposta stato",
+          "viewerWaiting": "In attesa dell'host…",
+          "plantsHeading": "Centrali",
+          "currentBank": "Attuali",
+          "futureBank": "Future",
+          "emptySlot": "—",
+          "slotAria": "{bank} slot {n}",
+          "resourcesHeading": "Mercato risorse",
+          "coal": "Carbone",
+          "oil": "Petrolio",
+          "garbage": "Rifiuti",
+          "uranium": "Uranio",
+          "incAria": "{field} +1",
+          "decAria": "{field} -1"
         }
       },
       "photosTab": {

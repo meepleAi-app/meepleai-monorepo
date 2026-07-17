@@ -3681,6 +3681,25 @@
           "incAria": "{field} +1",
           "decAria": "{field} -1",
           "cycleAria": "{name}: change status"
+        },
+        "power-grid": {
+          "panelAriaLabel": "Power Grid",
+          "leaderboardHeading": "Standings",
+          "initBoardCta": "Start game",
+          "resetCta": "Reset state",
+          "viewerWaiting": "Waiting for the host…",
+          "plantsHeading": "Power plants",
+          "currentBank": "Current",
+          "futureBank": "Future",
+          "emptySlot": "—",
+          "slotAria": "{bank} slot {n}",
+          "resourcesHeading": "Resource market",
+          "coal": "Coal",
+          "oil": "Oil",
+          "garbage": "Garbage",
+          "uranium": "Uranium",
+          "incAria": "{field} +1",
+          "decAria": "{field} -1"
         }
       },
       "photosTab": {

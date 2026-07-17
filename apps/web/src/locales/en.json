@@ -3662,6 +3662,25 @@
           "slotAria": "Slot {n}",
           "incAria": "{field} +1",
           "decAria": "{field} -1"
+        },
+        "paleo": {
+          "panelAriaLabel": "Paleo",
+          "leaderboardHeading": "Standings",
+          "initBoardCta": "Start game",
+          "resetCta": "Reset state",
+          "viewerWaiting": "Waiting for the host…",
+          "resourcesHeading": "Resources",
+          "wood": "Wood",
+          "stone": "Stone",
+          "food": "Food",
+          "knowledge": "Knowledge",
+          "tribeHeading": "Tribe",
+          "statusAlive": "Alive",
+          "statusWounded": "Wounded",
+          "statusDead": "Dead",
+          "incAria": "{field} +1",
+          "decAria": "{field} -1",
+          "cycleAria": "{name}: change status"
         }
       },
       "photosTab": {

@@ -3767,6 +3767,25 @@
           "slotAria": "Slot {n}",
           "incAria": "{field} +1",
           "decAria": "{field} -1"
+        },
+        "paleo": {
+          "panelAriaLabel": "Paleo",
+          "leaderboardHeading": "Classifica",
+          "initBoardCta": "Inizia partita",
+          "resetCta": "Reimposta stato",
+          "viewerWaiting": "In attesa dell'host…",
+          "resourcesHeading": "Risorse",
+          "wood": "Legno",
+          "stone": "Pietra",
+          "food": "Cibo",
+          "knowledge": "Conoscenza",
+          "tribeHeading": "Tribù",
+          "statusAlive": "Vivo",
+          "statusWounded": "Ferito",
+          "statusDead": "Morto",
+          "incAria": "{field} +1",
+          "decAria": "{field} -1",
+          "cycleAria": "{name}: cambia stato"
         }
       },
       "photosTab": {

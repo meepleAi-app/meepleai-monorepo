@@ -58,6 +58,11 @@ const PuertoRicoLiveFlavorLazy: FlavorComponent = dynamic(
   { ssr: false, loading: () => <FlavorLoadingSkeleton /> }
 );
 
+const PaleoLiveFlavorLazy: FlavorComponent = dynamic(
+  () => import('./flavors/paleo/PaleoLiveFlavor').then(m => ({ default: m.PaleoLiveFlavor })),
+  { ssr: false, loading: () => <FlavorLoadingSkeleton /> }
+);
+
 /**
  * ADR-070 Option B — per-game flavor registry. Each value is a module-level
  * lazy component (content-hashed chunk fetched ONLY when that game's live
@@ -69,6 +74,7 @@ const FLAVOR_MAP: Record<string, Partial<Record<FlavorView, FlavorComponent>>> =
   wingspan: { live: WingspanLiveFlavorLazy },
   codenames: { live: CodenamesLiveFlavorLazy },
   'puerto-rico': { live: PuertoRicoLiveFlavorLazy },
+  paleo: { live: PaleoLiveFlavorLazy },
 };
 
 export function hasFlavor(gameSlug: string | null | undefined): boolean {

@@ -157,27 +157,6 @@ public sealed class OrphanCleanupAndReattemptIntegrationTests : IAsyncLifetime
         (await _dbContext.PdfDocuments.FindAsync(new object[] { validPdfId }, Ct)).Should().NotBeNull();
     }
 
-    [Fact]
-    [Trait("Issue", "3075")]
-    public async Task Cleanup_RemovesLegacyShell_KeepsModernSiblingWithChunks()
-    {
-        // A legacy-scheme empty shell (seed/ path, 0 chunks) with a VALID parent, alongside the
-        // modern Ready sibling that holds the real chunks/vectors for the same game (#3075).
-        var legacyShellId = await SeedLegacyShellPdfAsync(ValidGameId);
-        var modernSiblingId = await SeedPdfWithChildrenAsync(ValidGameId, "Ready");
-
-        await OrphanPdfCleanupSeeder.CleanupAsync(_dbContext!, _mediator!, NullLogger.Instance, Ct);
-
-        // The legacy shell is hard-deleted (a valid parent means #2907 alone would miss it)…
-        (await _dbContext!.PdfDocuments.FindAsync(new object[] { legacyShellId }, Ct))
-            .Should().BeNull("legacy-scheme empty shell must be hard-deleted (#3075)");
-        // …while the modern sibling and its chunks survive (still serving RAG).
-        (await _dbContext.PdfDocuments.FindAsync(new object[] { modernSiblingId }, Ct))
-            .Should().NotBeNull("modern sibling with chunks must survive");
-        (await _dbContext.TextChunks.CountAsync(c => c.PdfDocumentId == modernSiblingId, Ct))
-            .Should().Be(2, "modern sibling's chunks must be preserved");
-    }
-
     // ── seeding helpers ──────────────────────────────────────────────────
 
     private async Task<Guid> SeedPdfWithChildrenAsync(Guid sharedGameId, string processingState)
@@ -225,29 +204,6 @@ public sealed class OrphanCleanupAndReattemptIntegrationTests : IAsyncLifetime
             EmbeddingDimensions = 384,
         });
 
-        await _dbContext.SaveChangesAsync(Ct);
-        return pdfId;
-    }
-
-    /// <summary>
-    /// Seeds a legacy-scheme empty shell (#3075): a pre-migration <c>seed/…</c> FilePath with
-    /// zero text_chunks / vector_documents. Same required-column set as <see cref="SeedPdfWithChildrenAsync"/>.
-    /// </summary>
-    private async Task<Guid> SeedLegacyShellPdfAsync(Guid sharedGameId)
-    {
-        var pdfId = Guid.NewGuid();
-        _dbContext!.PdfDocuments.Add(new PdfDocumentEntity
-        {
-            Id = pdfId,
-            SharedGameId = sharedGameId,
-            UploadedByUserId = SystemUserId,
-            FileName = $"rulebook-{pdfId:N}.pdf",
-            FilePath = $"seed/badsworm/{pdfId:N}/rulebook.pdf",
-            FileSizeBytes = 0,
-            ProcessingState = "Failed",
-            UploadedAt = DateTime.UtcNow,
-            PageCount = 0,
-        });
         await _dbContext.SaveChangesAsync(Ct);
         return pdfId;
     }

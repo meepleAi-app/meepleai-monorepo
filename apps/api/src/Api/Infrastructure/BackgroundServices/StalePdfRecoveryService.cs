@@ -190,6 +190,10 @@ internal sealed class StalePdfRecoveryService : BackgroundService
         var indexingState = nameof(PdfProcessingState.Indexing);
 
         return await db.PdfDocuments
+            // #3075: never recover demo mock placeholders (seed/ prefix, no real blob). They are
+            // seeded in deliberate non-Ready states for the dashboard demo; force-processing them
+            // would only fail on the missing blob and flip them to Failed (→ seed_state partial_failed).
+            .Where(p => !p.FilePath.StartsWith(PdfDocumentEntity.DemoMockFilePathPrefix))
             .Where(p =>
                 (p.ProcessingState == pendingState && p.UploadedAt < pendingCutoff) ||
                 ((p.ProcessingState == uploadingState ||

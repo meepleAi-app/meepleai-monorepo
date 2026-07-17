@@ -1,4 +1,5 @@
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
@@ -73,18 +74,25 @@ public sealed class SeedStateHealthCheck : IHealthCheck
     {
         try
         {
+            // #3075: exclude demo mock placeholders (seed/ prefix, no real blob/chunks) from the
+            // RAG-readiness counts. SeedBadswormPersonaCommandHandler seeds them in deliberate
+            // non-Ready states (Pending/Embedding) for the dashboard demo; they are not real corpus
+            // content, so counting them would wrongly pin seed_state to indexing/partial_failed.
             var pdfTotal = await _db.PdfDocuments
                 .AsNoTracking()
+                .Where(d => !d.FilePath.StartsWith(PdfDocumentEntity.DemoMockFilePathPrefix))
                 .CountAsync(cancellationToken)
                 .ConfigureAwait(false);
 
             var pdfReady = await _db.PdfDocuments
                 .AsNoTracking()
+                .Where(d => !d.FilePath.StartsWith(PdfDocumentEntity.DemoMockFilePathPrefix))
                 .CountAsync(d => d.ProcessingState == "Ready", cancellationToken)
                 .ConfigureAwait(false);
 
             var pdfFailed = await _db.PdfDocuments
                 .AsNoTracking()
+                .Where(d => !d.FilePath.StartsWith(PdfDocumentEntity.DemoMockFilePathPrefix))
                 .CountAsync(d => d.ProcessingState == "Failed", cancellationToken)
                 .ConfigureAwait(false);
 

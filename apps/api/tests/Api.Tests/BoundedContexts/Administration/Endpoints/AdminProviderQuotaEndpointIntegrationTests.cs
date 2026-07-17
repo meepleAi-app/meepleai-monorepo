@@ -2,25 +2,30 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.Infrastructure;
+using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.Administration.Endpoints;
 
 /// <summary>
-/// Integration tests for GET /api/v1/admin/providers/quota — Issue #3043.
-/// Aggregated quota across the quota-capable providers (SupportedProviderNames).
+/// Integration tests for GET /api/v1/admin/providers/quota — Issue #3043 (resolver migration #3044).
 ///
-/// Determinism: the API keys are cleared in InitializeAsync so each entry returns
-/// tokenConfigured:false with a 200 and NO upstream HTTP call — a deterministic array
-/// of the registered quota providers (openrouter, deepseek), no WireMock needed.
+/// Determinism + isolation: an <see cref="IProviderCredentialResolver"/> stub that throws
+/// <see cref="ProviderCredentialNotConfiguredException"/> is injected via ConfigureTestServices, so
+/// each entry returns not_configured (200, no upstream HTTP call). This deliberately avoids mutating
+/// the process-global OPENROUTER_API_KEY / DEEPSEEK_API_KEY env vars — other integration collections
+/// (e.g. the provider-probe tests) depend on those, and cross-collection env mutation is racy.
 /// </summary>
 [Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
@@ -36,8 +41,6 @@ public sealed class AdminProviderQuotaEndpointIntegrationTests : IAsyncLifetime
     private MeepleAiDbContext _dbContext = null!;
     private string _adminToken = null!;
     private string _editorToken = null!;
-    private string? _prevOpenRouterKey;
-    private string? _prevDeepSeekKey;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -53,14 +56,18 @@ public sealed class AdminProviderQuotaEndpointIntegrationTests : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        // Clear provider API keys → each entry returns not_configured (200, no upstream call).
-        _prevOpenRouterKey = Environment.GetEnvironmentVariable("OPENROUTER_API_KEY");
-        _prevDeepSeekKey = Environment.GetEnvironmentVariable("DEEPSEEK_API_KEY");
-        Environment.SetEnvironmentVariable("OPENROUTER_API_KEY", null);
-        Environment.SetEnvironmentVariable("DEEPSEEK_API_KEY", null);
-
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
+
+        // Stub the credential resolver to "not configured" so the aggregate returns not_configured
+        // entries deterministically, with no upstream call and WITHOUT touching global env vars.
+        _factory = IntegrationWebApplicationFactory.Create(connectionString)
+            .WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+            {
+                var resolver = new Mock<IProviderCredentialResolver>();
+                resolver.Setup(r => r.ResolveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                    .ThrowsAsync(new ProviderCredentialNotConfiguredException("test"));
+                services.AddScoped<IProviderCredentialResolver>(_ => resolver.Object);
+            }));
 
         using var scope = _factory.Services.CreateScope();
         _dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -77,8 +84,6 @@ public sealed class AdminProviderQuotaEndpointIntegrationTests : IAsyncLifetime
 
     public async ValueTask DisposeAsync()
     {
-        Environment.SetEnvironmentVariable("OPENROUTER_API_KEY", _prevOpenRouterKey);
-        Environment.SetEnvironmentVariable("DEEPSEEK_API_KEY", _prevDeepSeekKey);
         _adminClient?.Dispose();
         _editorClient?.Dispose();
         _factory?.Dispose();
@@ -107,7 +112,7 @@ public sealed class AdminProviderQuotaEndpointIntegrationTests : IAsyncLifetime
             .ToList();
         names.Should().BeEquivalentTo(new[] { "openrouter", "deepseek" });
 
-        // Keys cleared → every entry is quota-supported but not configured (no upstream call).
+        // Resolver stubbed to not_configured → every entry quota-supported but not configured.
         foreach (var e in arr.EnumerateArray())
         {
             e.GetProperty("quotaSupported").GetBoolean().Should().BeTrue();

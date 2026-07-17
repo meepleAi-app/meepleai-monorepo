@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Domain.Services;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Services;
 using Api.Services.Providers.Quota;
@@ -16,11 +17,16 @@ internal sealed class ProviderQuotaService : IProviderQuotaService
 
     private readonly IProviderQuotaProviderFactory _factory;
     private readonly IHybridCacheService _cache;
+    private readonly IProviderCredentialResolver _credentialResolver;
 
-    public ProviderQuotaService(IProviderQuotaProviderFactory factory, IHybridCacheService cache)
+    public ProviderQuotaService(
+        IProviderQuotaProviderFactory factory,
+        IHybridCacheService cache,
+        IProviderCredentialResolver credentialResolver)
     {
         _factory = factory;
         _cache = cache;
+        _credentialResolver = credentialResolver;
     }
 
     public async Task<ProviderQuotaDto> GetQuotaAsync(string providerName, CancellationToken cancellationToken)
@@ -43,9 +49,17 @@ internal sealed class ProviderQuotaService : IProviderQuotaService
                 CacheTtlSeconds: 0);
         }
 
-        var apiKey = Environment.GetEnvironmentVariable(provider.ApiKeyEnvVar) ?? string.Empty;
-        if (string.IsNullOrEmpty(apiKey))
+        // Issue #3044: resolve the key via IProviderCredentialResolver (DB active-row → env-var
+        // fallback) instead of reading the env var directly, so a rotated key (#1859) is honoured.
+        // Resolved BEFORE the HybridCache (as the env-read was) — the resolver has its own 5min cache.
+        string apiKey;
+        try
         {
+            apiKey = await _credentialResolver.ResolveAsync(providerName, cancellationToken).ConfigureAwait(false);
+        }
+        catch (ProviderCredentialNotConfiguredException)
+        {
+            // Neither a DB credential nor an env var configured → graceful not_configured (NOT 503).
             return new ProviderQuotaDto(
                 ProviderName: providerName,
                 QuotaSupported: true,
@@ -55,7 +69,7 @@ internal sealed class ProviderQuotaService : IProviderQuotaService
                 RemainingUsd: null,
                 ResetAt: null,
                 ErrorCode: "not_configured",
-                ErrorMessage: "API key environment variable not set",
+                ErrorMessage: "No active credential or env-var configured for provider",
                 FetchedAt: DateTime.UtcNow,
                 CacheTtlSeconds: 0);
         }

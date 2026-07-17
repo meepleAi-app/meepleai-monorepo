@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Infrastructure.Services;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.Services.Providers.Quota;
 using FluentAssertions;
@@ -29,18 +30,22 @@ public sealed class ProviderQuotaServiceTests
         public Task<HybridCacheStats> GetStatsAsync(CancellationToken ct = default) => Task.FromResult(new HybridCacheStats());
     }
 
-    private static ProviderQuotaService BuildSubject(IProviderQuotaProvider? provider, string providerName = "openrouter")
+    private static ProviderQuotaService BuildSubject(
+        IProviderQuotaProvider? provider,
+        string providerName = "openrouter",
+        Mock<IProviderCredentialResolver>? resolver = null)
     {
         var factory = new Mock<IProviderQuotaProviderFactory>();
         factory.Setup(f => f.GetProvider(providerName)).Returns(provider);
         factory.Setup(f => f.GetProvider(It.Is<string>(n => n != providerName))).Returns((IProviderQuotaProvider?)null);
-        return new ProviderQuotaService(factory.Object, new PassThroughCache());
+        resolver ??= new Mock<IProviderCredentialResolver>();
+        return new ProviderQuotaService(factory.Object, new PassThroughCache(), resolver.Object);
     }
 
     [Fact]
     public async Task GetQuotaAsync_UnknownProvider_ReturnsQuotaNotSupported()
     {
-        var svc = BuildSubject(provider: null);
+        var svc = BuildSubject(provider: null); // returns before the resolver is consulted
 
         var result = await svc.GetQuotaAsync("cohere", CancellationToken.None);
 
@@ -55,10 +60,13 @@ public sealed class ProviderQuotaServiceTests
     {
         var providerMock = new Mock<IProviderQuotaProvider>();
         providerMock.SetupGet(p => p.ProviderName).Returns("openrouter");
-        providerMock.SetupGet(p => p.ApiKeyEnvVar).Returns("__ABSENT_QUOTA_VAR_972__");
-        Environment.SetEnvironmentVariable("__ABSENT_QUOTA_VAR_972__", null);
 
-        var svc = BuildSubject(providerMock.Object);
+        // #3044: neither a DB credential nor an env var → resolver throws → graceful not_configured.
+        var resolver = new Mock<IProviderCredentialResolver>();
+        resolver.Setup(r => r.ResolveAsync("openrouter", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ProviderCredentialNotConfiguredException("openrouter"));
+
+        var svc = BuildSubject(providerMock.Object, resolver: resolver);
 
         var result = await svc.GetQuotaAsync("openrouter", CancellationToken.None);
 
@@ -71,72 +79,81 @@ public sealed class ProviderQuotaServiceTests
     [Fact]
     public async Task GetQuotaAsync_HappyPath_ReturnsRemainingUsd()
     {
-        const string envVar = "__OPENROUTER_QUOTA_TEST_972__";
-        Environment.SetEnvironmentVariable(envVar, "test-key-secret");
-
         var providerMock = new Mock<IProviderQuotaProvider>();
         providerMock.SetupGet(p => p.ProviderName).Returns("openrouter");
-        providerMock.SetupGet(p => p.ApiKeyEnvVar).Returns(envVar);
         providerMock.Setup(p => p.FetchAsync("test-key-secret", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new QuotaFetchResult(true, 12.5m, 50.0m, 37.5m, null, null, null));
 
-        try
-        {
-            var svc = BuildSubject(providerMock.Object);
+        var resolver = new Mock<IProviderCredentialResolver>();
+        resolver.Setup(r => r.ResolveAsync("openrouter", It.IsAny<CancellationToken>()))
+            .ReturnsAsync("test-key-secret");
 
-            var result = await svc.GetQuotaAsync("openrouter", CancellationToken.None);
+        var svc = BuildSubject(providerMock.Object, resolver: resolver);
 
-            result.QuotaSupported.Should().BeTrue();
-            result.TokenConfigured.Should().BeTrue();
-            result.UsedUsd.Should().Be(12.5m);
-            result.LimitUsd.Should().Be(50.0m);
-            result.RemainingUsd.Should().Be(37.5m);
-            result.CacheTtlSeconds.Should().Be(300);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable(envVar, null);
-        }
+        var result = await svc.GetQuotaAsync("openrouter", CancellationToken.None);
+
+        result.QuotaSupported.Should().BeTrue();
+        result.TokenConfigured.Should().BeTrue();
+        result.UsedUsd.Should().Be(12.5m);
+        result.LimitUsd.Should().Be(50.0m);
+        result.RemainingUsd.Should().Be(37.5m);
+        result.CacheTtlSeconds.Should().Be(300);
+    }
+
+    [Fact]
+    [Trait("Issue", "3044")]
+    public async Task GetQuotaAsync_UsesResolvedKey_AfterRotation()
+    {
+        // Coerenza post-rotazione (#1859/#3044): il resolver ritorna la key ruotata (DB active-row),
+        // che deve arrivare a FetchAsync — non una env-var stale letta con GetEnvironmentVariable.
+        var providerMock = new Mock<IProviderQuotaProvider>();
+        providerMock.SetupGet(p => p.ProviderName).Returns("openrouter");
+        providerMock.Setup(p => p.FetchAsync("rotated-key", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QuotaFetchResult(true, 0m, 100m, 100m, null, null, null));
+
+        var resolver = new Mock<IProviderCredentialResolver>();
+        resolver.Setup(r => r.ResolveAsync("openrouter", It.IsAny<CancellationToken>()))
+            .ReturnsAsync("rotated-key");
+
+        var svc = BuildSubject(providerMock.Object, resolver: resolver);
+
+        var result = await svc.GetQuotaAsync("openrouter", CancellationToken.None);
+
+        result.RemainingUsd.Should().Be(100m);
+        providerMock.Verify(p => p.FetchAsync("rotated-key", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     [Trait("Issue", "3043")]
     public async Task GetAllQuotasAsync_IteratesSupportedProviders_ReturnsOnePerName()
     {
-        const string orEnv = "__OR_QUOTA_ALL_3043__";
-        Environment.SetEnvironmentVariable(orEnv, "or-key");
-        Environment.SetEnvironmentVariable("__ABSENT_DS_3043__", null);
-        try
-        {
-            var orProvider = new Mock<IProviderQuotaProvider>();
-            orProvider.SetupGet(p => p.ProviderName).Returns("openrouter");
-            orProvider.SetupGet(p => p.ApiKeyEnvVar).Returns(orEnv);
-            orProvider.Setup(p => p.FetchAsync("or-key", It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new QuotaFetchResult(true, 10m, 40m, 30m, null, null, null));
+        var orProvider = new Mock<IProviderQuotaProvider>();
+        orProvider.SetupGet(p => p.ProviderName).Returns("openrouter");
+        orProvider.Setup(p => p.FetchAsync("or-key", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QuotaFetchResult(true, 10m, 40m, 30m, null, null, null));
 
-            var dsProvider = new Mock<IProviderQuotaProvider>();
-            dsProvider.SetupGet(p => p.ProviderName).Returns("deepseek");
-            dsProvider.SetupGet(p => p.ApiKeyEnvVar).Returns("__ABSENT_DS_3043__"); // no key → not_configured
+        var dsProvider = new Mock<IProviderQuotaProvider>();
+        dsProvider.SetupGet(p => p.ProviderName).Returns("deepseek");
 
-            var factory = new Mock<IProviderQuotaProviderFactory>();
-            factory.SetupGet(f => f.SupportedProviderNames).Returns(new[] { "openrouter", "deepseek" });
-            factory.Setup(f => f.GetProvider("openrouter")).Returns(orProvider.Object);
-            factory.Setup(f => f.GetProvider("deepseek")).Returns(dsProvider.Object);
-            var svc = new ProviderQuotaService(factory.Object, new PassThroughCache());
+        var resolver = new Mock<IProviderCredentialResolver>();
+        resolver.Setup(r => r.ResolveAsync("openrouter", It.IsAny<CancellationToken>())).ReturnsAsync("or-key");
+        resolver.Setup(r => r.ResolveAsync("deepseek", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ProviderCredentialNotConfiguredException("deepseek")); // → not_configured
 
-            var result = await svc.GetAllQuotasAsync(CancellationToken.None);
+        var factory = new Mock<IProviderQuotaProviderFactory>();
+        factory.SetupGet(f => f.SupportedProviderNames).Returns(new[] { "openrouter", "deepseek" });
+        factory.Setup(f => f.GetProvider("openrouter")).Returns(orProvider.Object);
+        factory.Setup(f => f.GetProvider("deepseek")).Returns(dsProvider.Object);
+        var svc = new ProviderQuotaService(factory.Object, new PassThroughCache(), resolver.Object);
 
-            result.Should().HaveCount(2);
-            result[0].ProviderName.Should().Be("openrouter");
-            result[0].RemainingUsd.Should().Be(30m);          // happy path isolated
-            result[1].ProviderName.Should().Be("deepseek");
-            result[1].TokenConfigured.Should().BeFalse();      // not_configured isolated
-            result[1].ErrorCode.Should().Be("not_configured");
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable(orEnv, null);
-        }
+        var result = await svc.GetAllQuotasAsync(CancellationToken.None);
+
+        result.Should().HaveCount(2);
+        result[0].ProviderName.Should().Be("openrouter");
+        result[0].RemainingUsd.Should().Be(30m);          // happy path isolated
+        result[1].ProviderName.Should().Be("deepseek");
+        result[1].TokenConfigured.Should().BeFalse();      // not_configured isolated
+        result[1].ErrorCode.Should().Be("not_configured");
     }
 
     [Fact]
@@ -145,7 +162,8 @@ public sealed class ProviderQuotaServiceTests
     {
         var factory = new Mock<IProviderQuotaProviderFactory>();
         factory.SetupGet(f => f.SupportedProviderNames).Returns(Array.Empty<string>());
-        var svc = new ProviderQuotaService(factory.Object, new PassThroughCache());
+        var svc = new ProviderQuotaService(
+            factory.Object, new PassThroughCache(), new Mock<IProviderCredentialResolver>().Object);
 
         var result = await svc.GetAllQuotasAsync(CancellationToken.None);
 
@@ -156,44 +174,34 @@ public sealed class ProviderQuotaServiceTests
     [Trait("Issue", "3043")]
     public async Task GetAllQuotasAsync_OneProviderThrows_DegradesOnlyThatEntry()
     {
-        const string orEnv = "__OR_QUOTA_THROW_3043__";
-        const string dsEnv = "__DS_QUOTA_OK_3043__";
-        Environment.SetEnvironmentVariable(orEnv, "or-key");
-        Environment.SetEnvironmentVariable(dsEnv, "ds-key");
-        try
-        {
-            var orProvider = new Mock<IProviderQuotaProvider>();
-            orProvider.SetupGet(p => p.ProviderName).Returns("openrouter");
-            orProvider.SetupGet(p => p.ApiKeyEnvVar).Returns(orEnv);
-            orProvider.Setup(p => p.FetchAsync("or-key", It.IsAny<CancellationToken>()))
-                .ThrowsAsync(new InvalidOperationException("boom")); // e.g. malformed upstream body
+        var orProvider = new Mock<IProviderQuotaProvider>();
+        orProvider.SetupGet(p => p.ProviderName).Returns("openrouter");
+        orProvider.Setup(p => p.FetchAsync("or-key", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("boom")); // e.g. malformed upstream body
 
-            var dsProvider = new Mock<IProviderQuotaProvider>();
-            dsProvider.SetupGet(p => p.ProviderName).Returns("deepseek");
-            dsProvider.SetupGet(p => p.ApiKeyEnvVar).Returns(dsEnv);
-            dsProvider.Setup(p => p.FetchAsync("ds-key", It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new QuotaFetchResult(true, 1m, 10m, 9m, null, null, null));
+        var dsProvider = new Mock<IProviderQuotaProvider>();
+        dsProvider.SetupGet(p => p.ProviderName).Returns("deepseek");
+        dsProvider.Setup(p => p.FetchAsync("ds-key", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QuotaFetchResult(true, 1m, 10m, 9m, null, null, null));
 
-            var factory = new Mock<IProviderQuotaProviderFactory>();
-            factory.SetupGet(f => f.SupportedProviderNames).Returns(new[] { "openrouter", "deepseek" });
-            factory.Setup(f => f.GetProvider("openrouter")).Returns(orProvider.Object);
-            factory.Setup(f => f.GetProvider("deepseek")).Returns(dsProvider.Object);
-            var svc = new ProviderQuotaService(factory.Object, new PassThroughCache());
+        var resolver = new Mock<IProviderCredentialResolver>();
+        resolver.Setup(r => r.ResolveAsync("openrouter", It.IsAny<CancellationToken>())).ReturnsAsync("or-key");
+        resolver.Setup(r => r.ResolveAsync("deepseek", It.IsAny<CancellationToken>())).ReturnsAsync("ds-key");
 
-            var result = await svc.GetAllQuotasAsync(CancellationToken.None);
+        var factory = new Mock<IProviderQuotaProviderFactory>();
+        factory.SetupGet(f => f.SupportedProviderNames).Returns(new[] { "openrouter", "deepseek" });
+        factory.Setup(f => f.GetProvider("openrouter")).Returns(orProvider.Object);
+        factory.Setup(f => f.GetProvider("deepseek")).Returns(dsProvider.Object);
+        var svc = new ProviderQuotaService(factory.Object, new PassThroughCache(), resolver.Object);
 
-            // Per-provider isolation: one throwing provider degrades to fetch_error, it does NOT
-            // fail the whole aggregate — the healthy provider is still returned.
-            result.Should().HaveCount(2);
-            result[0].ProviderName.Should().Be("openrouter");
-            result[0].ErrorCode.Should().Be("fetch_error");
-            result[1].ProviderName.Should().Be("deepseek");
-            result[1].RemainingUsd.Should().Be(9m);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable(orEnv, null);
-            Environment.SetEnvironmentVariable(dsEnv, null);
-        }
+        var result = await svc.GetAllQuotasAsync(CancellationToken.None);
+
+        // Per-provider isolation: one throwing provider degrades to fetch_error, it does NOT
+        // fail the whole aggregate — the healthy provider is still returned.
+        result.Should().HaveCount(2);
+        result[0].ProviderName.Should().Be("openrouter");
+        result[0].ErrorCode.Should().Be("fetch_error");
+        result[1].ProviderName.Should().Be("deepseek");
+        result[1].RemainingUsd.Should().Be(9m);
     }
 }

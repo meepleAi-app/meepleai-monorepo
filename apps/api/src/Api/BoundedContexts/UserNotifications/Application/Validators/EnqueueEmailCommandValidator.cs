@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.UserNotifications.Application.Validators;
 /// </summary>
 internal sealed class EnqueueEmailCommandValidator : AbstractValidator<EnqueueEmailCommand>
 {
-    private static readonly string[] ValidTemplates = ["document_ready", "document_failed", "retry_available"];
+    private static readonly string[] ValidTemplates = ["document_ready", "document_failed", "retry_available", "admin_manual_notification"];
 
     public EnqueueEmailCommandValidator()
     {
@@ -33,7 +33,7 @@ internal sealed class EnqueueEmailCommandValidator : AbstractValidator<EnqueueEm
             .NotEmpty()
             .WithMessage("TemplateName is required")
             .Must(t => ValidTemplates.Contains(t, StringComparer.Ordinal))
-            .WithMessage("TemplateName must be one of: document_ready, document_failed, retry_available");
+            .WithMessage("TemplateName must be one of: document_ready, document_failed, retry_available, admin_manual_notification");
 
         RuleFor(x => x.UserName)
             .NotEmpty()

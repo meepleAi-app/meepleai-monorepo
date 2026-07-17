@@ -1252,7 +1252,7 @@ export function PuertoRicoLiveFlavor({
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <PuertoRicoGalleonsPanel galleons={state.galleons} editable={isHost}
               onSetGood={editor.setGalleonGood} onBumpLoaded={editor.bumpGalleonLoaded}
-              labels={{ heading: t(`${K}.galleonsHeading`), emptyGood: t(`${K}.emptyGood`), loadedAria: tmpl('loadAria', 'Load ship {n}'), unloadAria: tmpl('unloadAria', 'Unload ship {n}'), capTemplate: tmpl('capTemplate', '{loaded}/{cap}') }} />
+              labels={{ heading: t(`${K}.galleonsHeading`), emptyGood: t(`${K}.emptyGood`), goodAria: tmpl('goodAria', 'Ship {n} good'), loadedAria: tmpl('loadAria', 'Load ship {n}'), unloadAria: tmpl('unloadAria', 'Unload ship {n}'), capTemplate: tmpl('capTemplate', '{loaded}/{cap}') }} />
             <PuertoRicoTradingHousePanel slots={state.tradingHouse.slots} editable={isHost}
               onSetSlot={editor.setTradingSlot}
               labels={{ heading: t(`${K}.tradingHeading`), emptyGood: t(`${K}.emptyGood`), slotAria: tmpl('slotAria', 'Slot {n}') }} />
@@ -1361,6 +1361,7 @@ In `src/locales/it.json`, under `pages.sessionLive.flavor`, add a `"puerto-rico"
   "supply": "Riserva",
   "emptyGood": "—",
   "capTemplate": "{loaded}/{cap}",
+  "goodAria": "Merce nave {n}",
   "loadAria": "Carica nave {n}",
   "unloadAria": "Scarica nave {n}",
   "slotAria": "Slot {n}",
@@ -1369,7 +1370,7 @@ In `src/locales/it.json`, under `pages.sessionLive.flavor`, add a `"puerto-rico"
 }
 ```
 
-Mirror in `src/locales/en.json` with English copy (`"leaderboardHeading": "Standings"`, `"initBoardCta": "Start game"`, `"resetCta": "Reset state"`, `"viewerWaiting": "Waiting for the host…"`, `"doubloons": "Doubloons"`, `"colonists": "Colonists"`, `"plantations": "Plantations"`, `"quarries": "Quarries"`, `"buildings": "Buildings"`, `"galleonsHeading": "Cargo ships"`, `"tradingHeading": "Trading house"`, `"colonistShipHeading": "Colonist ship"`, `"onShip": "On ship"`, `"supply": "Supply"`, `"loadAria": "Load ship {n}"`, `"unloadAria": "Unload ship {n}"`; `emptyGood`/`capTemplate`/`slotAria`/`incAria`/`decAria` identical). BOTH locales MUST have the identical key set.
+Mirror in `src/locales/en.json` with English copy (`"leaderboardHeading": "Standings"`, `"initBoardCta": "Start game"`, `"resetCta": "Reset state"`, `"viewerWaiting": "Waiting for the host…"`, `"doubloons": "Doubloons"`, `"colonists": "Colonists"`, `"plantations": "Plantations"`, `"quarries": "Quarries"`, `"buildings": "Buildings"`, `"galleonsHeading": "Cargo ships"`, `"tradingHeading": "Trading house"`, `"colonistShipHeading": "Colonist ship"`, `"onShip": "On ship"`, `"supply": "Supply"`, `"goodAria": "Ship {n} good"`, `"loadAria": "Load ship {n}"`, `"unloadAria": "Unload ship {n}"`; `emptyGood`/`capTemplate`/`slotAria`/`incAria`/`decAria` identical). BOTH locales MUST have the identical key set.
 
 - [ ] **Step 4: Typecheck + run affected suites + eslint**
 

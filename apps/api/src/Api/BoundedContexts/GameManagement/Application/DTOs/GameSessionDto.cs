@@ -16,7 +16,13 @@ internal record GameSessionDto(
     IReadOnlyList<SessionPlayerDto> Players,
     string? WinnerName,
     string? Notes,
-    int DurationMinutes
+    int DurationMinutes,
+    // #3080: polymorphic score surfaced in session history. Null when the session
+    // has no correlated live/tracking session (e.g. legacy or non-live sessions).
+    // ScoringType ∈ { "Points", "BinaryWin", "Objectives", "Ranking" };
+    // ScoreData is the raw JSON payload (shape varies by ScoringType).
+    string? ScoringType = null,
+    string? ScoreData = null
 );
 
 /// <summary>

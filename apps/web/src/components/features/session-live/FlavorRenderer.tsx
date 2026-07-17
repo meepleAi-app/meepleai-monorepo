@@ -63,6 +63,14 @@ const PaleoLiveFlavorLazy: FlavorComponent = dynamic(
   { ssr: false, loading: () => <FlavorLoadingSkeleton /> }
 );
 
+const PowerGridLiveFlavorLazy: FlavorComponent = dynamic(
+  () =>
+    import('./flavors/power-grid/PowerGridLiveFlavor').then(m => ({
+      default: m.PowerGridLiveFlavor,
+    })),
+  { ssr: false, loading: () => <FlavorLoadingSkeleton /> }
+);
+
 /**
  * ADR-070 Option B — per-game flavor registry. Each value is a module-level
  * lazy component (content-hashed chunk fetched ONLY when that game's live
@@ -75,6 +83,7 @@ const FLAVOR_MAP: Record<string, Partial<Record<FlavorView, FlavorComponent>>> =
   codenames: { live: CodenamesLiveFlavorLazy },
   'puerto-rico': { live: PuertoRicoLiveFlavorLazy },
   paleo: { live: PaleoLiveFlavorLazy },
+  'power-grid': { live: PowerGridLiveFlavorLazy },
 };
 
 export function hasFlavor(gameSlug: string | null | undefined): boolean {

@@ -472,6 +472,56 @@ describe('useSessionLiveStream — sessionId change', () => {
     });
     expect(result.current.events).toHaveLength(1);
   });
+
+  it("#3055: session B first connect URL omits the previous session's lastEventId cursor", () => {
+    const { rerender } = renderHook(
+      ({ sessionId }) => useSessionLiveStream({ sessionId, enabled: true }),
+      { initialProps: { sessionId: 'session-A' } }
+    );
+
+    act(() => {
+      MockEventSource.lastInstance()!.triggerOpen();
+      MockEventSource.lastInstance()!.triggerEvent(
+        'session:score',
+        JSON.stringify({ participantId: 'p1', score: 5, sessionId: 'session-A' }),
+        'evt-A-9'
+      );
+    });
+
+    act(() => {
+      rerender({ sessionId: 'session-B' });
+    });
+
+    const bUrl = MockEventSource.lastInstance()!.url;
+    expect(bUrl).toContain('/api/v1/live-sessions/session-B/stream');
+    // Before the fix this opened as ?lastEventId=evt-A-9 (session A's cursor bleeding into B).
+    expect(bUrl).not.toContain('lastEventId');
+  });
+
+  it('#3055: same-session retry reconnect still sends the last cursor for replay', () => {
+    const { result } = makeHook({ sessionId: 'session-1' });
+
+    act(() => {
+      MockEventSource.lastInstance()!.triggerOpen();
+      MockEventSource.lastInstance()!.triggerEvent(
+        'session:score',
+        JSON.stringify({ participantId: 'p1', score: 5, sessionId: 'session-1' }),
+        'evt-1'
+      );
+    });
+
+    // Retryable error (not 429) → schedules a same-session reconnect at RETRY_BUDGET_MS[0].
+    act(() => {
+      MockEventSource.lastInstance()!.triggerError(false);
+    });
+    act(() => {
+      vi.advanceTimersByTime(1001);
+    });
+
+    // The reconnect MUST replay from the last cursor — the fix only strips it on session change.
+    expect(result.current).toBeDefined();
+    expect(MockEventSource.lastInstance()!.url).toContain('lastEventId=evt-1');
+  });
 });
 
 describe('useSessionLiveStream — retryAt', () => {

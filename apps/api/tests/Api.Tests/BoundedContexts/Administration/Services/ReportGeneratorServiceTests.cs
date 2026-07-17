@@ -3,6 +3,7 @@ using Api.BoundedContexts.Administration.Domain.Services;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Events;
 using Api.Tests.TestHelpers;
@@ -141,6 +142,48 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         content.Should().ContainEquivalentOf("\"activeUsers\"");
         content.Should().ContainEquivalentOf("\"totalLogins\"");
     }
+
+    [Fact]
+    public async Task GenerateAsync_UserActivityReport_ActiveUsers_CountsDistinctSessionUsers_NotRegistrations()
+    {
+        // #3104: "active users" must be the count of DISTINCT users with >=1 session in the
+        // window, NOT the number of new registrations. Seed 3 sessions from 2 distinct users
+        // and ZERO registrations in the window: the old code reported activeUsers = registrations = 0;
+        // the correct value is 2.
+        var now = DateTime.UtcNow;
+        var startDate = now.AddDays(-30);
+        var endDate = now.AddDays(1);
+
+        var userA = Guid.NewGuid();
+        var userB = Guid.NewGuid();
+        _dbContext.UserSessions.AddRange(
+            NewSession(userA, now.AddDays(-5)),
+            NewSession(userA, now.AddDays(-3)),
+            NewSession(userB, now.AddDays(-2)));
+        await _dbContext.SaveChangesAsync();
+
+        var result = await _sut.GenerateAsync(
+            ReportTemplate.UserActivity,
+            ReportFormat.Json,
+            new Dictionary<string, object> { ["startDate"] = startDate, ["endDate"] = endDate },
+            CancellationToken.None);
+
+        var content = System.Text.Encoding.UTF8.GetString(result.Content);
+        using var doc = System.Text.Json.JsonDocument.Parse(content);
+        var metadata = doc.RootElement.GetProperty("metadata");
+        metadata.GetProperty("activeUsers").GetInt32().Should().Be(2);
+        metadata.GetProperty("totalRegistrations").GetInt32().Should().Be(0);
+    }
+
+    private static UserSessionEntity NewSession(Guid userId, DateTime createdAt) => new()
+    {
+        Id = Guid.NewGuid(),
+        UserId = userId,
+        TokenHash = Guid.NewGuid().ToString(),
+        CreatedAt = createdAt,
+        ExpiresAt = createdAt.AddHours(1),
+        User = null!
+    };
 
     [Fact]
     public async Task GenerateAsync_AIUsageReport_ContainsCostMetrics()

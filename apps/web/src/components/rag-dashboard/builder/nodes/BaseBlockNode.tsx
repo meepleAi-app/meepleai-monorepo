@@ -13,13 +13,7 @@
 import { memo, useCallback, type ReactNode } from 'react';
 
 import { Handle, Position, useReactFlow } from '@xyflow/react';
-import {
-  Settings,
-  Trash2,
-  AlertCircle,
-  CheckCircle,
-  Loader2,
-} from 'lucide-react';
+import { Settings, Trash2, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
 import {
@@ -31,13 +25,7 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
-import type {
-  RagNodeData,
-  ConnectionPort,
-  NodeStatus,
-  RagBlock,
-  NodeMetrics,
-} from '../types';
+import type { RagNodeData, ConnectionPort, NodeStatus, RagBlock, NodeMetrics } from '../types';
 
 // =============================================================================
 // Types
@@ -152,10 +140,7 @@ function PortHandle({ port, isConnectable }: PortHandleProps) {
             )}
           />
         </TooltipTrigger>
-        <TooltipContent
-          side={port.position === 'left' ? 'left' : 'right'}
-          className="text-xs"
-        >
+        <TooltipContent side={port.position === 'left' ? 'left' : 'right'} className="text-xs">
           <p className="font-medium">{port.name}</p>
           <p className="text-muted-foreground">{port.dataType}</p>
         </TooltipContent>
@@ -183,12 +168,15 @@ function BaseBlockNodeComponent({
   const { setNodes } = useReactFlow();
 
   const handleDelete = useCallback(() => {
-    setNodes((nodes) => nodes.filter((n) => n.id !== id));
+    setNodes(nodes => nodes.filter(n => n.id !== id));
   }, [id, setNodes]);
 
   const handleSettings = useCallback(() => {
-    onSettingsClick?.(id);
-  }, [id, onSettingsClick]);
+    // #3083: prefer the onConfigure callback threaded via node data (wired by
+    // PipelineCanvas to node selection → config panel). onSettingsClick is a
+    // legacy prop kept for direct/standalone use.
+    (data.onConfigure ?? onSettingsClick)?.(id);
+  }, [id, data, onSettingsClick]);
 
   return (
     <div
@@ -211,9 +199,7 @@ function BaseBlockNodeComponent({
           {block.icon}
         </span>
         <div className="flex-1 min-w-0">
-          {headerContent || (
-            <p className="text-sm font-medium truncate">{block.name}</p>
-          )}
+          {headerContent || <p className="text-sm font-medium truncate">{block.name}</p>}
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           <TooltipProvider>
@@ -223,7 +209,8 @@ function BaseBlockNodeComponent({
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
-                  onClick={(e) => {
+                  aria-label="Configure"
+                  onClick={e => {
                     e.stopPropagation();
                     handleSettings();
                   }}
@@ -241,7 +228,7 @@ function BaseBlockNodeComponent({
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6 text-destructive hover:text-destructive"
-                  onClick={(e) => {
+                  onClick={e => {
                     e.stopPropagation();
                     handleDelete();
                   }}
@@ -258,9 +245,7 @@ function BaseBlockNodeComponent({
       {/* Body */}
       <div className="px-3 py-2 space-y-2">
         {bodyContent || (
-          <p className="text-xs text-muted-foreground line-clamp-2">
-            {block.description}
-          </p>
+          <p className="text-xs text-muted-foreground line-clamp-2">{block.description}</p>
         )}
 
         {/* Metrics or Estimates */}
@@ -283,9 +268,7 @@ function BaseBlockNodeComponent({
       </div>
 
       {/* Footer */}
-      {footerContent && (
-        <div className="px-3 py-2 border-t bg-muted/30">{footerContent}</div>
-      )}
+      {footerContent && <div className="px-3 py-2 border-t bg-muted/30">{footerContent}</div>}
 
       {/* Input Ports */}
       {block.inputs.map((port: ConnectionPort) => (

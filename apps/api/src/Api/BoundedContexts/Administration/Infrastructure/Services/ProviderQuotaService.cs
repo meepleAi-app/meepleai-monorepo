@@ -83,4 +83,19 @@ internal sealed class ProviderQuotaService : IProviderQuotaService
             expiration: CacheTtl,
             ct: cancellationToken).ConfigureAwait(false);
     }
+
+    public async Task<IReadOnlyList<ProviderQuotaDto>> GetAllQuotasAsync(CancellationToken cancellationToken)
+    {
+        // Iterate the quota-capable providers (SupportedProviderNames = openrouter, deepseek).
+        // Each call delegates to GetQuotaAsync → the same per-provider HybridCache (5min) is
+        // reused, so the widget and the per-row table share one upstream fetch. Issue #3043.
+        // Sequential foreach: N is tiny and the service is scoped (no concurrent reuse).
+        var results = new List<ProviderQuotaDto>();
+        foreach (var name in _factory.SupportedProviderNames)
+        {
+            results.Add(await GetQuotaAsync(name, cancellationToken).ConfigureAwait(false));
+        }
+
+        return results;
+    }
 }

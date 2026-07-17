@@ -94,5 +94,16 @@ internal static class AdminProviderEndpoints
             })
             .RequireAuthorization("RequireAdminOrAbove")
             .WithOpenApi();
+
+        // GET /api/v1/admin/providers/quota — Issue #3043. Aggregated quota across all
+        // quota-capable providers (SupportedProviderNames = openrouter, deepseek). Admin-or-above.
+        // Reuses the per-provider HybridCache (5min). ollama-local excluded (no quota provider).
+        group.MapGet("/quota", async (IMediator mediator, CancellationToken ct) =>
+            {
+                var dtos = await mediator.Send(new GetAllProvidersQuotaQuery(), ct).ConfigureAwait(false);
+                return Results.Ok(dtos);
+            })
+            .RequireAuthorization("RequireAdminOrAbove")
+            .WithOpenApi();
     }
 }

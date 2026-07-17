@@ -14,9 +14,9 @@
  * LiveEventLog ricevono `events` / `isStreaming` come prop e condividono
  * una singola EventSource (no doppia connessione SSE).
  *
- * Resolved follow-ups: #1853 (SSE wiring) · #1854 (typed-confirm dialog).
+ * Resolved follow-ups: #1853 (SSE wiring) · #1854 (typed-confirm dialog) ·
+ *   #3042 (per-container CPU/Memory metrics via Docker /stats).
  * Open gap (out of scope, follow-up issue tracciato in spec):
- *   - Per-container CPU/Memory metrics (richiede estensione ContainerInfo BE)
  *   - Resources section (disco + memoria host breakdown)
  */
 

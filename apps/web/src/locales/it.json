@@ -3805,6 +3805,27 @@
           "uranium": "Uranio",
           "incAria": "{field} +1",
           "decAria": "{field} -1"
+        },
+        "zombicide": {
+          "panelAriaLabel": "Zombicide",
+          "leaderboardHeading": "Classifica",
+          "initBoardCta": "Inizia partita",
+          "resetCta": "Reimposta stato",
+          "viewerWaiting": "In attesa dell'host…",
+          "hordeHeading": "Orda",
+          "walker": "Camminatore",
+          "runner": "Corridore",
+          "fatty": "Grasso",
+          "berserker": "Berserker",
+          "abomination": "Abominio",
+          "necromancer": "Negromante",
+          "survivorsHeading": "Sopravvissuti",
+          "healthy": "Illeso",
+          "wounded": "Ferito",
+          "down": "A terra",
+          "incAria": "{field} +1",
+          "decAria": "{field} -1",
+          "cycleAria": "{name}: cambia ferite"
         }
       },
       "photosTab": {

@@ -40,10 +40,10 @@ export function CodenamesWordGrid({
           'data-revealed': cell.revealed ? 'true' : 'false',
           className: [
             'flex min-h-10 items-center justify-center rounded p-1 text-center text-[11px] font-semibold',
-            showKey ? 'text-white' : 'bg-card text-foreground',
+            showKey ? '' : 'bg-card text-foreground',
             cell.revealed ? 'opacity-90 ring-2 ring-border-strong' : '',
           ].join(' '),
-          style: bg ? { backgroundColor: bg } : undefined,
+          style: bg ? { backgroundColor: bg, color: 'hsl(0, 0%, 100%)' } : undefined,
         };
         const content = <span className="truncate">{cell.word}</span>;
 

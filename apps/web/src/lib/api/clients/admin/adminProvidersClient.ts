@@ -13,6 +13,7 @@
 import {
   ProviderProbeResultSchema,
   ProviderQuotaSchema,
+  ProviderQuotaListSchema,
   KNOWN_PROVIDERS,
   type ProviderProbeResult,
   type ProviderQuota,
@@ -32,6 +33,16 @@ export function createAdminProvidersClient(http: HttpClient) {
         `/api/v1/admin/providers/${encodeURIComponent(name)}/quota`,
         ProviderQuotaSchema
       );
+    },
+
+    /**
+     * GET /api/v1/admin/providers/quota — Admin or above. Issue #3043.
+     * Aggregated quota over quota-capable providers (openrouter, deepseek) in a single
+     * fetch; server cache 5min per provider. Does NOT include ollama-local (no quota API).
+     */
+    async getProvidersQuota(): Promise<ProviderQuota[]> {
+      const result = await http.get('/api/v1/admin/providers/quota', ProviderQuotaListSchema);
+      return result ?? [];
     },
 
     /**

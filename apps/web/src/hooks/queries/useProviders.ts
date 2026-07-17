@@ -24,6 +24,7 @@ import type { ProviderName, ProviderProbeResult, ProviderQuota } from '@/lib/api
 export const providerKeys = {
   all: ['admin', 'providers'] as const,
   quota: (name: ProviderName) => ['admin', 'providers', name, 'quota'] as const,
+  quotaAll: ['admin', 'providers', 'quota'] as const,
   circuitBreakers: ['admin', 'circuit-breakers'] as const,
   llmConfig: ['admin', 'llm', 'config'] as const,
 };
@@ -32,6 +33,19 @@ export function useProviderQuota(name: ProviderName, options?: { enabled?: boole
   return useQuery<ProviderQuota | null>({
     queryKey: providerKeys.quota(name),
     queryFn: () => api.admin.getProviderQuota(name),
+    staleTime: 4 * 60 * 1000,
+    enabled: options?.enabled ?? true,
+  });
+}
+
+/**
+ * Issue #3043 — aggregated quota (single fetch) for the credits summary widget.
+ * staleTime 4min, mirror of the per-provider hook (just under the 5min server TTL).
+ */
+export function useProvidersQuota(options?: { enabled?: boolean }) {
+  return useQuery<ProviderQuota[]>({
+    queryKey: providerKeys.quotaAll,
+    queryFn: () => api.admin.getProvidersQuota(),
     staleTime: 4 * 60 * 1000,
     enabled: options?.enabled ?? true,
   });

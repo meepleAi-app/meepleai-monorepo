@@ -40,6 +40,9 @@ export const ProviderQuotaSchema = z.object({
 
 export type ProviderQuota = z.infer<typeof ProviderQuotaSchema>;
 
+/** Issue #3043 — aggregated quota array (plural endpoint /admin/providers/quota). */
+export const ProviderQuotaListSchema = z.array(ProviderQuotaSchema);
+
 /**
  * Static list of provider names registered in backend DI.
  * Mirrors `InfrastructureServiceExtensions.cs` registration block.

@@ -19,7 +19,12 @@ groups:
   - name: meepleai_slack_delivery_alerts
     rules:
       - alert: SlackDeliveryFailureRateHigh
-        expr: (sum(rate(meepleai_slack_messages_failed_total[5m])) / (sum(rate(meepleai_slack_messages_sent_total[5m])) + sum(rate(meepleai_slack_messages_failed_total[5m])))) > 0.2
+        # `sent` and `failed` are separate lazily-created counters: on a cold-start
+        # all-failures deploy the `sent` series can be entirely absent. Guard the `sent`
+        # sub-term with `or vector(0)` so the denominator survives (else <empty>+<x> = empty
+        # vector and the alert silently never fires at 100% failure). The guard must wrap the
+        # sent term, NOT the outer ratio (the `> 0.2` comparison would filter a wrapped 0).
+        expr: (sum(rate(meepleai_slack_messages_failed_total[5m])) / ((sum(rate(meepleai_slack_messages_sent_total[5m])) or vector(0)) + sum(rate(meepleai_slack_messages_failed_total[5m])))) > 0.2
         for: 10m
         labels:
           severity: warning

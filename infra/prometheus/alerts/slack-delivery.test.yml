@@ -43,6 +43,25 @@ tests:
         alertname: SlackDeliveryFailureRateHigh
         exp_alerts: []
 
+  # Cold-start all-failures: ONLY the failed counter has a series (no sent series yet).
+  # The `or vector(0)` guard on the sent sub-term must keep the denominator non-empty so
+  # the alert still fires at 100% failure — regression guard for the silent-never-fires bug.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_slack_messages_failed_total{channel_type="slack_user",notification_type="game_night"}'
+        values: '0+1x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: SlackDeliveryFailureRateHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              subsystem: slack-delivery
+            exp_annotations:
+              summary: "Slack delivery failure rate above 20% (5m window, sustained 10m)"
+              description: "More than 20% of Slack notification deliveries are failing (meepleai_slack_messages_failed_total vs _sent_total). Users are missing Slack notifications. Check the Slack app token validity, per-workspace rate limits, and the SlackNotificationProcessorJob logs."
+              runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#slack-delivery-alerts-ops-02"
+
   # Idle: both counters flat at 0 (rate 0/0 = NaN) → no alert (never fire on no traffic).
   - interval: 1m
     input_series:

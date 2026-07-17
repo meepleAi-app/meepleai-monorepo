@@ -14,7 +14,9 @@
 - Il tool è un **dev-tool locale**, MAI un gate CI (immune al problema baseline win32↔linux di #2063). Nessuna baseline PNG committata.
 - Output dir `apps/web/mockup-compare-output/` è **gitignored** (mai committare screenshot).
 - Confronto **manuale** — il tool mostra, non giudica: niente pixel-diff, niente soglie.
-- Auth E2E via seam esistente: `seedMockRoleCookies(page, 'Admin'|'User')` (da `apps/web/e2e/_helpers/seedAuthSession`) + mock `${apiBase}/api/v1/auth/me`, con `apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080'`. Il webServer parte con `PLAYWRIGHT_AUTH_BYPASS=true`.
+- Auth E2E (host-agnostic): `seedMockRoleCookies(page, 'Admin'|'User')` (gate SSR di `proxy.ts`) **+** `mockAuthEndpoints(page, { role: 'admin'|'user' })` (client `/auth/me` + `/auth/session/status`, regex host-agnostica, `onboardingCompleted:true`) — entrambi da `apps/web/e2e/_helpers/seedAuthSession`. Webserver con `PLAYWRIGHT_AUTH_BYPASS=true`.
+- 🔴 **URL host-agnostici**: l'app usa URL RELATIVI nel browser (`getApiBase()`→`''`, `apps/web/src/lib/api/core/httpClient.ts:51-55`) → richieste a `localhost:3000/api/v1/...` via proxy Next. I mock `page.route` DEVONO usare glob `**/api/v1/...`, MAI URL assoluti `localhost:8080` (non intercettano). Verificato dalla review avversariale del piano (2026-07-17).
+- Il **mockup capture NON è offline**: molti page-mock caricano React/ReactDOM/Babel da `unpkg.com` e transpilano JSX in-browser → serve rete a unpkg + attesa del mount reale (`waitForFunction`, non timeout fisso).
 - Nessun cap silenzioso: coppie del manifest non catturabili → `console.log` esplicito + record con `liveError`.
 - Comandi eseguiti da `apps/web/`. `pnpm test` = Vitest; test file glob `**/__tests__/**/*.{test,spec}.{ts,tsx}`.
 - Mockup HTML sorgente: `admin-mockups/design_files/` (repo root, cioè `../../admin-mockups/design_files/` rispetto a `apps/web/`).
@@ -119,8 +121,6 @@ export const DESIGN_FILES_DIR = path.resolve(
 /** apps/web/mockup-compare-output (gitignored). */
 export const OUTPUT_DIR = path.resolve(process.cwd(), 'mockup-compare-output');
 
-const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
-
 /** Wishlist fixture — WishlistItemDto[] con gameName inline (no library map). */
 const WISHLIST_FIXTURE = [
   {
@@ -156,20 +156,23 @@ export const PAIRS: readonly MockupComparePair[] = [
     mockupHtml: 'sp4-library-wishlist.html',
     route: '/library/wishlist',
     auth: 'user',
+    // 🔴 Glob HOST-AGNOSTICI: l'app usa URL relativi nel browser
+    // (getApiBase()→'' , httpClient.ts:51-55) → richieste a localhost:3000/api/...
+    // via proxy Next. URL assoluti localhost:8080 NON intercetterebbero.
     mock: async (page) => {
-      await page.route(`${apiBase}/api/v1/wishlist`, (route) =>
+      await page.route('**/api/v1/wishlist', (route) =>
         route.fulfill({
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify(WISHLIST_FIXTURE),
         })
       );
-      await page.route(`${apiBase}/api/v1/wishlist/highlights`, (route) =>
+      await page.route('**/api/v1/wishlist/highlights', (route) =>
         route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
       );
       // La wishlist page usa useLibrary per la mappa gameId→title; i fixture
       // portano già gameName inline, quindi la library può essere vuota.
-      await page.route(`${apiBase}/api/v1/library**`, (route) =>
+      await page.route('**/api/v1/library**', (route) =>
         route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
       );
     },
@@ -249,6 +252,15 @@ describe('buildReportHtml', () => {
     expect(html).not.toContain('data:image/png;base64,LIVE');
   });
 
+  it('shows an error placeholder when mockup capture failed', () => {
+    const html = buildReportHtml([
+      { ...baseEntry, mockupDataUri: null, mockupError: 'unpkg unreachable' },
+    ]);
+    expect(html).toContain('mockup capture failed');
+    expect(html).toContain('unpkg unreachable');
+    expect(html).not.toContain('data:image/png;base64,MOCKUP');
+  });
+
   it('escapes HTML in labels and errors', () => {
     const html = buildReportHtml([
       { ...baseEntry, label: '<script>x</script>', liveError: '<b>bad</b>', liveDataUri: null },
@@ -285,10 +297,14 @@ export function escapeHtml(s) {
 function renderPair(e) {
   const vp = `${e.viewport.width}×${e.viewport.height}`;
   const intent = e.designIntent ? `<span class="intent">${escapeHtml(e.designIntent)}</span>` : '';
+  const mockup = e.mockupDataUri
+    ? `<img class="layer mockup" src="${e.mockupDataUri}" alt="mockup ${escapeHtml(e.id)}" />`
+    : `<div class="live-error">⚠ mockup capture failed<br /><code>${escapeHtml(e.mockupError ?? 'unknown')}</code></div>`;
   const live = e.liveDataUri
     ? `<img class="layer live" src="${e.liveDataUri}" alt="live ${escapeHtml(e.id)}" />`
     : `<div class="live-error">⚠ live capture failed<br /><code>${escapeHtml(e.liveError ?? 'unknown')}</code></div>`;
-  const slider = e.liveDataUri
+  // Slider ha senso solo se ENTRAMBE le catture esistono.
+  const slider = e.mockupDataUri && e.liveDataUri
     ? `<input type="range" min="0" max="100" value="50" class="slider"
          data-pair-id="${escapeHtml(e.id)}" aria-label="reveal live over mockup" />`
     : '';
@@ -300,7 +316,7 @@ function renderPair(e) {
     </header>
     <div class="compare" data-mode="overlay">
       <div class="stage">
-        <img class="layer mockup" src="${e.mockupDataUri ?? ''}" alt="mockup ${escapeHtml(e.id)}" />
+        ${mockup}
         <div class="live-wrap" data-pair-id="${escapeHtml(e.id)}">${live}</div>
       </div>
       ${slider}
@@ -365,7 +381,7 @@ ${body}
 - [ ] **Step 4: Esegui il test — deve passare**
 
 Run: `pnpm vitest run scripts/mockup-compare/__tests__/build-report.test.ts`
-Expected: PASS (5 test).
+Expected: PASS (6 test).
 
 - [ ] **Step 5: Commit**
 
@@ -428,6 +444,7 @@ function main() {
     route: c.route,
     viewport: c.viewport,
     mockupDataUri: pngToDataUri(c.mockupPng),
+    mockupError: c.mockupError,
     liveDataUri: pngToDataUri(c.livePng),
     liveError: c.liveError,
     designIntent: readDesignIntent(c.id),
@@ -566,12 +583,11 @@ import path from 'node:path';
 
 import { test } from '@playwright/test';
 
-import { seedMockRoleCookies } from '../_helpers/seedAuthSession';
+import { mockAuthEndpoints, seedMockRoleCookies } from '../_helpers/seedAuthSession';
 
 import { PAIRS, OUTPUT_DIR } from './manifest';
 
 const MOCKUP_PORT = 5175;
-const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 interface CaptureRecord {
   id: string;
@@ -579,6 +595,7 @@ interface CaptureRecord {
   route: string;
   viewport: { width: number; height: number };
   mockupPng: string | null;
+  mockupError?: string;
   livePng: string | null;
   liveError?: string;
 }
@@ -607,38 +624,35 @@ for (const pair of PAIRS) {
       livePng: null,
     };
 
-    // 1) MOCKUP statico via http-server
+    // 1) MOCKUP statico via http-server. NB: molti page-mock caricano
+    // React/ReactDOM/Babel da unpkg.com e transpilano JSX in-browser → serve
+    // RETE (unpkg) + attesa del MOUNT reale, non un timeout fisso.
     try {
       await page.goto(`http://127.0.0.1:${MOCKUP_PORT}/${pair.mockupHtml}`, {
         waitUntil: 'networkidle',
       });
-      await page.waitForTimeout(800);
+      await page.waitForFunction(
+        () => {
+          const root = document.querySelector('#root');
+          if (root) return root.childElementCount > 0;
+          return document.body.childElementCount > 0;
+        },
+        { timeout: 15_000 }
+      );
       const mockupFile = `${pair.id}__mockup.png`;
       await page.screenshot({ path: path.join(OUTPUT_DIR, mockupFile), fullPage: true });
       rec.mockupPng = mockupFile;
     } catch (err) {
-      console.log(`[compare] ${pair.id}: mockup capture failed — ${(err as Error).message}`);
+      rec.mockupError = (err as Error).message;
+      console.log(`[compare] ${pair.id}: mockup capture failed — ${rec.mockupError}`);
     }
 
-    // 2) LIVE route reale (auth-bypass + mock)
+    // 2) LIVE route reale. Auth = seed cookie (proxy SSR gate) + mockAuthEndpoints
+    // (client /auth/me + /auth/session/status, regex host-agnostico). Dati via
+    // pair.mock (glob host-agnostici). NESSUN mock auth hand-rolled.
     try {
       await seedMockRoleCookies(page, pair.auth === 'admin' ? 'Admin' : 'User');
-      const role = pair.auth === 'admin' ? 'Admin' : 'User';
-      await page.route(`${apiBase}/api/v1/auth/me`, (route) =>
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user: {
-              id: 'compare-user-id',
-              email: 'compare@meepleai.dev',
-              displayName: 'Compare User',
-              role,
-            },
-            expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
-          }),
-        })
-      );
+      await mockAuthEndpoints(page, { role: pair.auth === 'admin' ? 'admin' : 'user' });
       if (pair.mock) await pair.mock(page);
       await page.goto(pair.route, { waitUntil: 'networkidle' });
       await page.waitForTimeout(1000);
@@ -654,8 +668,6 @@ for (const pair of PAIRS) {
   });
 }
 ```
-
-> `new Date(Date.now() + …)` è ammesso qui: è codice di test Playwright, non uno script workflow.
 
 - [ ] **Step 2: Esegui la capture spec sullo slice MVP**
 
@@ -732,6 +744,16 @@ Aggiungi una riga a `e2e/mockup-compare/manifest.ts`:
 `manifest.ts` → `capture.spec.ts` (screenshot mockup via http-server :5175 +
 route live via app :3000 auth-bypass + mock) → `captures.json` →
 `scripts/mockup-compare/generate.mjs` → `gallery.html`.
+
+## Note / limiti
+
+- **Il mockup capture richiede rete** a `unpkg.com`: molti page-mock caricano
+  React/ReactDOM/Babel da CDN e transpilano JSX in-browser. La capture attende
+  il mount reale (`waitForFunction`); se unpkg è irraggiungibile la gallery
+  mostra un placeholder "mockup capture failed" invece di uno screenshot vuoto.
+- Alcuni page-mock `.html` sono standalone e possono divergere dalla sorgente
+  che l'implementazione ha effettivamente tracciato (es. `sp4-library-wishlist`
+  cita un `-ui.jsx`); un po' di drift è atteso e va giudicato manualmente.
 ```
 
 - [ ] **Step 4: Verifica finale (typecheck + lint + report builder test)**

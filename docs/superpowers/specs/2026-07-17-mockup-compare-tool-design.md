@@ -118,6 +118,7 @@ La capture spec **`log()`-a** le coppie del manifest ancora scoperte (nessun cap
 - **Manifest** = dati; un test minimale asserisce id univoci + path mockup esistenti.
 
 ## 9. Rischi / note
+- **Correzioni post-review avversariale del piano (2026-07-17)**: (a) l'app usa URL RELATIVI nel browser (`getApiBase()`→`''`) → i mock `page.route` usano glob host-agnostici `**/api/v1/...` (NON `localhost:8080`); (b) l'auth live usa `seedMockRoleCookies` + `mockAuthEndpoints` (helper esistenti), non un mock `/auth/me` hand-rolled; (c) il **mockup capture NON è offline** — i page-mock caricano React/Babel da `unpkg.com` → serve rete + `waitForFunction` sul mount (con `mockupError` se fallisce). La §3 D2 "offline" vale per il lato LIVE (mock), non per il lato mockup. Il builder è `scripts/mockup-compare/{build-report,generate}.mjs` (§4.3/§5 lo nominava diversamente — il piano è la fonte).
 - **Fedeltà mockup vs live**: molte route mostreranno drift legittimo (il tool serve proprio a evidenziarlo); la gallery non giudica, mostra.
 - **Full-page screenshot height**: mockup e live avranno altezze diverse → lo slider allinea in alto; nota nel template.
 - **Manutenzione manifest**: per non divergere da `MOCKUPS_INDEX.md`, un test asserisce che i `mockupHtml` del manifest esistano su disco.

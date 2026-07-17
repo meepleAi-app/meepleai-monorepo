@@ -139,19 +139,19 @@ export function DashboardClient(): ReactElement {
 
   // ── Slot #2: Recenti (completed GameNights) ──────────────────────────────
   // F20 #1974 (audit 2026-06-07): wires the BE `/game-nights/completed`
-  // endpoint shipped alongside this PR. Projection mirrors `prossimiCards`:
-  // map the BE `GameNightDto` to the `RecentiGameNightCard` contract that
-  // `RecentiSection` expects. `sessionCount` defaults to 0 until the BE
-  // surfaces it on the DTO; mini cover thumbnails are not yet exposed
-  // server-side so we pass an empty array (the card primitive already
-  // hides the cover stack in that case).
+  // endpoint. Projection mirrors `prossimiCards`: map the BE `GameNightDto` to
+  // the `RecentiGameNightCard` contract that `RecentiSection` expects.
+  // `sessionCount` now comes from the BE DTO (#3084 — a completed night has >= 1
+  // session, so the card no longer shows a misleading "0 partite"). Mini cover
+  // thumbnails are not yet exposed server-side so we pass an empty array (the
+  // card primitive already hides the cover stack in that case).
   const recentiCards = useMemo<ReadonlyArray<RecentiGameNightCard>>(() => {
     const data = completedGNQuery.data ?? [];
     return data.slice(0, 3).map<RecentiGameNightCard>(gn => ({
       id: gn.id,
       title: gn.title,
       date: gn.scheduledAt,
-      sessionCount: 0,
+      sessionCount: gn.sessionCount,
       gamePreviewThumbnails: [],
     }));
   }, [completedGNQuery.data]);

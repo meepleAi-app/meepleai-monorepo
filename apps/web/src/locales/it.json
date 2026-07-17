@@ -3742,6 +3742,31 @@
           "endTurn": "Fine turno",
           "regenerate": "Rigenera griglia",
           "winnerTemplate": "Vincono i {team}"
+        },
+        "puerto-rico": {
+          "panelAriaLabel": "Puerto Rico",
+          "leaderboardHeading": "Classifica",
+          "initBoardCta": "Inizia partita",
+          "resetCta": "Reimposta stato",
+          "viewerWaiting": "In attesa dell'host…",
+          "doubloons": "Dobloni",
+          "colonists": "Coloni",
+          "plantations": "Piantagioni",
+          "quarries": "Cave",
+          "buildings": "Edifici",
+          "galleonsHeading": "Galeoni",
+          "tradingHeading": "Casa commerciale",
+          "colonistShipHeading": "Nave coloni",
+          "onShip": "Sulla nave",
+          "supply": "Riserva",
+          "emptyGood": "—",
+          "capTemplate": "{loaded}/{cap}",
+          "goodAria": "Merce nave {n}",
+          "loadAria": "Carica nave {n}",
+          "unloadAria": "Scarica nave {n}",
+          "slotAria": "Slot {n}",
+          "incAria": "{field} +1",
+          "decAria": "{field} -1"
         }
       },
       "photosTab": {

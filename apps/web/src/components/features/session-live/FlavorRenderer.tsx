@@ -50,6 +50,14 @@ const CodenamesLiveFlavorLazy: FlavorComponent = dynamic(
   { ssr: false, loading: () => <FlavorLoadingSkeleton /> }
 );
 
+const PuertoRicoLiveFlavorLazy: FlavorComponent = dynamic(
+  () =>
+    import('./flavors/puerto-rico/PuertoRicoLiveFlavor').then(m => ({
+      default: m.PuertoRicoLiveFlavor,
+    })),
+  { ssr: false, loading: () => <FlavorLoadingSkeleton /> }
+);
+
 /**
  * ADR-070 Option B — per-game flavor registry. Each value is a module-level
  * lazy component (content-hashed chunk fetched ONLY when that game's live
@@ -60,6 +68,7 @@ const FLAVOR_MAP: Record<string, Partial<Record<FlavorView, FlavorComponent>>> =
   catan: { live: CatanLiveFlavorLazy },
   wingspan: { live: WingspanLiveFlavorLazy },
   codenames: { live: CodenamesLiveFlavorLazy },
+  'puerto-rico': { live: PuertoRicoLiveFlavorLazy },
 };
 
 export function hasFlavor(gameSlug: string | null | undefined): boolean {

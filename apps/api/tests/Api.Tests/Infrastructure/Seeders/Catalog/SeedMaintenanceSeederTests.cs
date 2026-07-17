@@ -193,4 +193,52 @@ public sealed class SeedMaintenanceSeederTests
                 .Should().Be(0, "the PDF now has an active Queued job");
         }
     }
+
+    [Fact]
+    [Trait("Issue", "3075")]
+    public async Task ReenqueueStalePendingPdfs_DemoMockPlaceholder_Skips()
+    {
+        // #3075: a Badsworm demo mock (seed/ prefix, no blob) seeded Pending must NOT be re-enqueued
+        // — processing it would fail on the missing blob and flip its intended demo state to Failed.
+        var dbName = $"seedmaint_reenqueue_mock_{Guid.NewGuid():N}";
+        var systemUserId = Guid.NewGuid();
+        Guid mockId;
+
+        using (var db = TestDbContextFactory.CreateInMemoryDbContext(dbName))
+        {
+            var game = NewGame("Valid", 3075);
+            db.SharedGames.Add(game);
+            var mock = NewMockPdf(game.Id);
+            mockId = mock.Id;
+            db.PdfDocuments.Add(mock);
+            await db.SaveChangesAsync();
+        }
+
+        using (var db = TestDbContextFactory.CreateInMemoryDbContext(dbName))
+        {
+            (await SeedMaintenanceSeeder.ReenqueueStalePendingPdfsAsync(
+                db, systemUserId, NullLogger.Instance, CancellationToken.None))
+                .Should().Be(0, "demo mocks (seed/ prefix) are excluded from re-enqueue (#3075)");
+        }
+
+        using (var db = TestDbContextFactory.CreateInMemoryDbContext(dbName))
+        {
+            (await db.Set<ProcessingJobEntity>().AnyAsync(j => j.PdfDocumentId == mockId))
+                .Should().BeFalse();
+        }
+    }
+
+    /// <summary>A Badsworm dogfood demo mock placeholder in Pending state: seed/ prefix, no blob (#3075).</summary>
+    private static PdfDocumentEntity NewMockPdf(Guid sharedGameId)
+        => new()
+        {
+            Id = Guid.NewGuid(),
+            SharedGameId = sharedGameId,
+            FileName = "rulebook-mock.pdf",
+            FilePath = $"{PdfDocumentEntity.DemoMockFilePathPrefix}badsworm/game/rulebook.pdf",
+            FileSizeBytes = 100,
+            UploadedByUserId = Guid.NewGuid(),
+            UploadedAt = DateTime.UtcNow,
+            ProcessingState = "Pending",
+        };
 }

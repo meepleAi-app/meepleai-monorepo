@@ -178,4 +178,40 @@ public sealed class ReattemptStalePendingPdfsSeederTests
 
         db.ProcessingJobs.Where(j => j.PdfDocumentId == pdfId).Should().HaveCount(1);
     }
+
+    [Fact]
+    [Trait("Issue", "3075")]
+    public async Task ReattemptAsync_PendingDemoMockPlaceholder_Skips()
+    {
+        // #3075: a Badsworm demo mock (seed/ prefix, no blob) seeded Pending for a valid game must
+        // NOT be re-enqueued — processing it would fail on the missing blob and flip its intended
+        // demo state to Failed.
+        using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var gameId = SeedGame(db);
+        var mockId = SeedMockPdf(db, gameId);
+        await db.SaveChangesAsync();
+
+        await ReattemptStalePendingPdfsSeeder.ReattemptAsync(db, _systemUserId, _logger.Object, CancellationToken.None);
+
+        db.ProcessingJobs.Where(j => j.PdfDocumentId == mockId).Should().BeEmpty();
+    }
+
+    /// <summary>A Badsworm dogfood demo mock placeholder in Pending state: seed/ prefix, no blob (#3075).</summary>
+    private static Guid SeedMockPdf(MeepleAiDbContext db, Guid gameId)
+    {
+        var pdfId = Guid.NewGuid();
+        db.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = pdfId,
+            SharedGameId = gameId,
+            FileName = $"rulebook-{pdfId:N}.pdf",
+            FilePath = $"{PdfDocumentEntity.DemoMockFilePathPrefix}badsworm/game-{pdfId:N}/rulebook.pdf",
+            ContentHash = "hash",
+            UploadedByUserId = Guid.NewGuid(),
+            DocumentType = "base",
+            DocumentCategory = "Rulebook",
+            ProcessingState = nameof(PdfProcessingState.Pending),
+        });
+        return pdfId;
+    }
 }

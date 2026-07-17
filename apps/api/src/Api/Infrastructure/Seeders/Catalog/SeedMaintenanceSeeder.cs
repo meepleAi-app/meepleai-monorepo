@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.DocumentProcessing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -98,7 +99,10 @@ internal static class SeedMaintenanceSeeder
             .ConfigureAwait(false)).ToHashSet();
 
         var pendingPdfs = await db.PdfDocuments
-            .Where(p => p.SharedGameId != null && p.ProcessingState == pending)
+            // #3075: exclude demo mock placeholders (seed/ prefix, no real blob) — re-enqueuing them
+            // would fail on the missing blob and flip their intended demo state to Failed.
+            .Where(p => p.SharedGameId != null && p.ProcessingState == pending
+                && !p.FilePath.StartsWith(PdfDocumentEntity.DemoMockFilePathPrefix))
             .Select(p => new { p.Id, SharedGameId = p.SharedGameId!.Value })
             .ToListAsync(ct)
             .ConfigureAwait(false);

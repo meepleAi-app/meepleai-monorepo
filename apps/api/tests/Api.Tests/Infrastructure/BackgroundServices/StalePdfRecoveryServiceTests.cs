@@ -334,6 +334,32 @@ public sealed class StalePdfRecoveryServiceTests
         Assert.Empty(stalePdfs);
     }
 
+    // ── FindStalePdfsAsync: demo mock placeholders are always excluded (#3075) ─
+
+    [Fact]
+    [Trait("Issue", "3075")]
+    public async Task FindStalePdfsAsync_DemoMockPlaceholder_IsNeverConsideredStale()
+    {
+        // #3075: Badsworm dogfood mocks (seed/ prefix, no real blob) are seeded in deliberate
+        // non-Ready states. Recovery must skip them — otherwise ProcessAsync fails on the missing
+        // blob and flips them to Failed, degrading seed_state to partial_failed.
+        var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var mock = BuildPdfEntity(
+            nameof(PdfProcessingState.Embedding),
+            DateTime.UtcNow - TimeSpan.FromHours(2), // well past the staleness threshold
+            filePath: $"{PdfDocumentEntity.DemoMockFilePathPrefix}badsworm/spirit-island/rulebook.pdf");
+        db.PdfDocuments.Add(mock);
+        await db.SaveChangesAsync();
+
+        var pipelineMock = new Mock<IPdfProcessingPipelineService>();
+        var (scopeFactory, _) = BuildScopeFactory(db, pipelineMock);
+        var sut = CreateService(scopeFactory);
+
+        var stalePdfs = await InvokeFindStalePdfsAsync(sut);
+
+        Assert.Empty(stalePdfs);
+    }
+
     // ── FindStalePdfsAsync: Empty database ───────────────────────────────────
 
     [Fact]

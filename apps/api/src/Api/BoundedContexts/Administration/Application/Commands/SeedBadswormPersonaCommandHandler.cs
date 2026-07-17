@@ -154,7 +154,9 @@ internal sealed class SeedBadswormPersonaCommandHandler : ICommandHandler<SeedBa
             {
                 Id = Guid.NewGuid(),
                 FileName = $"rulebook-{Slugify(spec.Title)}.pdf",
-                FilePath = $"seed/badsworm/{Slugify(spec.Title)}/rulebook.pdf",
+                // seed/ prefix marks this as a demo mock placeholder (no real blob): it is
+                // excluded from SeedStateHealthCheck + StalePdfRecoveryService (#3075).
+                FilePath = $"{PdfDocumentEntity.DemoMockFilePathPrefix}badsworm/{Slugify(spec.Title)}/rulebook.pdf",
                 FileSizeBytes = 250_000,
                 ContentType = "application/pdf",
                 UploadedByUserId = badsworm.Id,

@@ -229,6 +229,8 @@ services:
       - ./prometheus/alerts/wikidata-sse.yml:/etc/prometheus/wikidata-sse.yml:ro
       # Issue #3082 — BGG ToS-compliance SLO=0 alert.
       - ./prometheus/alerts/bgg-tos-compliance.yml:/etc/prometheus/bgg-tos-compliance.yml:ro
+      # Issue #3112 — OPS-02 Slack delivery observability alerts.
+      - ./prometheus/alerts/slack-delivery.yml:/etc/prometheus/slack-delivery.yml:ro
       - prometheus-prod:/prometheus
     deploy:
       resources:

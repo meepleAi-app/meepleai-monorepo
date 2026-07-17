@@ -132,6 +132,16 @@ internal sealed partial class ReportGeneratorService
         var totalRegistrations = registrations.Sum(r => r.Count);
         var totalLogins = logins.Sum(l => l.Count);
 
+        // Active users = distinct users with >=1 session (login) in the period — NOT the
+        // count of new registrations (the previous value was semantically wrong). UserSession.UserId
+        // is non-nullable, so every session maps to a user (#3104).
+        var activeUsers = await _dbContext.UserSessions
+            .Where(s => s.CreatedAt >= startDate && s.CreatedAt <= endDate)
+            .Select(s => s.UserId)
+            .Distinct()
+            .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
+
         return new ReportContent(
             Title: "User Activity Report",
             Description: $"User engagement from {startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}",
@@ -143,7 +153,7 @@ internal sealed partial class ReportGeneratorService
                 ["endDate"] = endDate,
                 ["totalRegistrations"] = totalRegistrations,
                 ["totalLogins"] = totalLogins,
-                ["activeUsers"] = totalRegistrations // Active users count (new registrations in period)
+                ["activeUsers"] = activeUsers
             },
             Sections: sections);
     }

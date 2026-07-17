@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -213,11 +214,45 @@ internal class GameBookSeeder
         //    Nanolith has bggId=null so PdfSeeder may not have processed any PDFs for it;
         //    we degrade gracefully if either is missing (the seed pipeline must not block
         //    on optional dogfood assets).
+        var (pressStartId, rulesId) = await ResolveGameBookPdfsAsync(db, nanolith.Id, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (pressStartId is null || rulesId is null)
+        {
+            // Warning level: this is an "AC-scoped seed prerequisite missing" signal
+            // (Nanolith is in catalog but its PDFs were not uploaded by PdfSeeder).
+            // Easy to miss in non-dev logs at Information level, so escalate.
+            _logger.LogWarning(
+                "[GameBookSeeder] Nanolith PDFs not ready (pressStart={HasPressStart}, rules={HasRules}) — skipping; re-run after PDF ingestion completes.",
+                pressStartId is not null, rulesId is not null);
+            return;
+        }
+
+        await SeedNanolithAsync(nanolith.Id, pressStartId.Value, rulesId.Value, adminUserId, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Resolves the Press Start + Rules PDFs for a game's GameBook by filename substring,
+    /// EXCLUDING demo mock placeholders (<see cref="PdfDocumentEntity.DemoMockFilePathPrefix"/>,
+    /// no real blob/chunks) so the aggregate is never wired to a content-less row (#3085).
+    /// Returns <c>(null, null)</c> for a missing match; the caller degrades gracefully.
+    /// Exposed <c>internal</c> for unit testing.
+    ///
+    /// FileName substring match (`press`, `start`, `rule`) is brittle to renames — a future PDF
+    /// named `start-here-guide.pdf` would steal a slot. Tracked for a manifest-driven lookup follow-up.
+    /// </summary>
+    internal static async Task<(Guid? PressStartId, Guid? RulesId)> ResolveGameBookPdfsAsync(
+        MeepleAiDbContext db,
+        Guid sharedGameId,
+        CancellationToken ct)
+    {
         var pdfs = await db.PdfDocuments
             .AsNoTracking()
-            .Where(p => p.SharedGameId == nanolith.Id)
+            .Where(p => p.SharedGameId == sharedGameId
+                && !p.FilePath.StartsWith(PdfDocumentEntity.DemoMockFilePathPrefix))
             .Select(p => new { p.Id, p.FileName })
-            .ToListAsync(cancellationToken)
+            .ToListAsync(ct)
             .ConfigureAwait(false);
 
         var pressStart = pdfs.FirstOrDefault(p =>
@@ -227,21 +262,6 @@ internal class GameBookSeeder
         var rules = pdfs.FirstOrDefault(p =>
             p.FileName?.Contains("rule", StringComparison.OrdinalIgnoreCase) == true);
 
-        if (pressStart is null || rules is null)
-        {
-            // Warning level: this is an "AC-scoped seed prerequisite missing" signal
-            // (Nanolith is in catalog but its PDFs were not uploaded by PdfSeeder).
-            // Easy to miss in non-dev logs at Information level, so escalate.
-            // FileName substring match (`press`, `start`, `rule`) is brittle to renames —
-            // future PDF named `start-here-guide.pdf` would steal a slot. Tracked for a
-            // manifest-driven lookup follow-up.
-            _logger.LogWarning(
-                "[GameBookSeeder] Nanolith PDFs not ready (pressStart={HasPressStart}, rules={HasRules}) — skipping; re-run after PDF ingestion completes.",
-                pressStart is not null, rules is not null);
-            return;
-        }
-
-        await SeedNanolithAsync(nanolith.Id, pressStart.Id, rules.Id, adminUserId, cancellationToken)
-            .ConfigureAwait(false);
+        return (pressStart?.Id, rules?.Id);
     }
 }

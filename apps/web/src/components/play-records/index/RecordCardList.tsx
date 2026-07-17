@@ -57,9 +57,9 @@ export function RecordCardList({ record }: RecordCardListProps) {
       ? 'planned'
       : record.outcomeType === 'none'
         ? 'cooperative'
-        : record.winnerPlayerIds?.length === 1
+        : record.winnerPlayerIds.length === 1
           ? 'won'
-          : record.winnerPlayerIds?.length === 2
+          : record.winnerPlayerIds.length === 2
             ? 'tie'
             : 'tie';
 

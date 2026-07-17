@@ -19,6 +19,8 @@ const base = {
   location: null,
   createdAt: '2026-06-21T10:00:00Z',
   updatedAt: '2026-06-21T10:00:00Z',
+  winnerPlayerIds: [],
+  outcomeType: 'none' as const,
 };
 
 describe('xmin schemas (#2437-1)', () => {

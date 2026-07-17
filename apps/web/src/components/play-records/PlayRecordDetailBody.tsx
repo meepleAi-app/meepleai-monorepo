@@ -171,13 +171,13 @@ export function PlayRecordDetailBody({
   const perspective = derivePerspective({
     currentUserId,
     players: record.players,
-    winnerPlayerIds: record.winnerPlayerIds ?? [],
+    winnerPlayerIds: record.winnerPlayerIds,
     outcomeType: record.outcomeType,
     status: record.status,
   });
 
   // ── Build variant for hero ──────────────────────────────────────────────────
-  let heroVariant = perspectiveToHeroVariant(perspective.kind, record.winnerPlayerIds?.length ?? 0);
+  let heroVariant = perspectiveToHeroVariant(perspective.kind, record.winnerPlayerIds.length);
   // Override pending → planned/inprogress based on actual status
   if (perspective.kind === 'pending') {
     heroVariant = record.status === 'Planned' ? 'planned' : 'inprogress';
@@ -207,8 +207,8 @@ export function PlayRecordDetailBody({
   };
 
   // ── Data derivatives ────────────────────────────────────────────────────────
-  const rankedScores = buildRankedScores(record.players, record.winnerPlayerIds ?? []);
-  const clasificaRows = buildClassificaRows(record.players, record.winnerPlayerIds ?? []);
+  const rankedScores = buildRankedScores(record.players, record.winnerPlayerIds);
+  const clasificaRows = buildClassificaRows(record.players, record.winnerPlayerIds);
   const breakdownRows = buildBreakdownRows(record.players);
   const { topScore, avgScore, spread } = computeKpis(record.players);
 
@@ -216,7 +216,7 @@ export function PlayRecordDetailBody({
   const formattedDate = formatRelativeDate(record.sessionDate);
 
   // #2437-1 MVP chip: derive from winnerPlayerIds — only when exactly 1 winner.
-  const winnerIds = record.winnerPlayerIds ?? [];
+  const winnerIds = record.winnerPlayerIds;
   const mvpName =
     winnerIds.length === 1
       ? (record.players.find(p => p.id === winnerIds[0])?.displayName ?? null)

@@ -522,6 +522,64 @@ describe('useSessionLiveStream — sessionId change', () => {
     expect(result.current).toBeDefined();
     expect(MockEventSource.lastInstance()!.url).toContain('lastEventId=evt-1');
   });
+
+  it('#3055: a retry AFTER a session change does not resurrect the previous session cursor', () => {
+    const { rerender } = renderHook(
+      ({ sessionId }) => useSessionLiveStream({ sessionId, enabled: true }),
+      { initialProps: { sessionId: 'session-A' } }
+    );
+
+    act(() => {
+      MockEventSource.lastInstance()!.triggerOpen();
+      MockEventSource.lastInstance()!.triggerEvent(
+        'session:score',
+        JSON.stringify({ participantId: 'p1', score: 5, sessionId: 'session-A' }),
+        'evt-A-9'
+      );
+    });
+
+    // Switch to B (first connect already omits A's cursor); then B errors before any B event.
+    act(() => {
+      rerender({ sessionId: 'session-B' });
+    });
+    act(() => {
+      MockEventSource.lastInstance()!.triggerError(false);
+    });
+    act(() => {
+      vi.advanceTimersByTime(1001);
+    });
+
+    // The retry reads the CLEARed (null) cursor, not A's evt-A-9 — the connect(false)-after-CLEAR branch.
+    const retryUrl = MockEventSource.lastInstance()!.url;
+    expect(retryUrl).toContain('/api/v1/live-sessions/session-B/stream');
+    expect(retryUrl).not.toContain('lastEventId');
+  });
+
+  it('#3055: toggling enabled false→true on the same session preserves the replay cursor', () => {
+    const { rerender } = renderHook(
+      ({ sessionId, enabled }) => useSessionLiveStream({ sessionId, enabled }),
+      { initialProps: { sessionId: 'session-1', enabled: true } }
+    );
+
+    act(() => {
+      MockEventSource.lastInstance()!.triggerOpen();
+      MockEventSource.lastInstance()!.triggerEvent(
+        'session:score',
+        JSON.stringify({ participantId: 'p1', score: 5, sessionId: 'session-1' }),
+        'evt-1'
+      );
+    });
+
+    // Disable (no CLEAR — same session) then re-enable: the reconnect must still replay from evt-1.
+    act(() => {
+      rerender({ sessionId: 'session-1', enabled: false });
+    });
+    act(() => {
+      rerender({ sessionId: 'session-1', enabled: true });
+    });
+
+    expect(MockEventSource.lastInstance()!.url).toContain('lastEventId=evt-1');
+  });
 });
 
 describe('useSessionLiveStream — retryAt', () => {

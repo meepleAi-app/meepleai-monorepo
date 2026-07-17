@@ -38,7 +38,11 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: `node --max-old-space-size=8192 ./node_modules/next/dist/bin/next dev -p ${APP_PORT}`,
+      // cross-env garantisce che PLAYWRIGHT_AUTH_BYPASS raggiunga il processo
+      // Next: il webServer.env di Playwright NON propaga in modo affidabile su
+      // Windows → il gate SSR di proxy.ts reindirizzava a /login. Con l'env nel
+      // comando, il bypass ingaggia e le route (authenticated) renderizzano.
+      command: `cross-env PLAYWRIGHT_AUTH_BYPASS=true node --max-old-space-size=8192 ./node_modules/next/dist/bin/next dev -p ${APP_PORT}`,
       url: APP_URL,
       reuseExistingServer: true,
       timeout: 180_000,

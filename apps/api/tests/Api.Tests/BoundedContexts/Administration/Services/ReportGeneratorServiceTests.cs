@@ -1,3 +1,4 @@
+using System.Net.Http;
 using Api.BoundedContexts.Administration.Domain.Services;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Api.BoundedContexts.Administration.Infrastructure.Services;
@@ -24,13 +25,22 @@ public sealed class ReportGeneratorServiceTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<ILogger<ReportGeneratorService>> _loggerMock;
+    private readonly Mock<IPrometheusQueryService> _prometheusMock;
     private readonly ReportGeneratorService _sut;
 
     public ReportGeneratorServiceTests()
     {
         _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
         _loggerMock = new Mock<ILogger<ReportGeneratorService>>();
-        _sut = new ReportGeneratorService(_dbContext, _loggerMock.Object);
+        _prometheusMock = new Mock<IPrometheusQueryService>();
+        // Default: Prometheus returns no data → health metrics are omitted from
+        // reports (unless a test sets up specific values).
+        _prometheusMock
+            .Setup(p => p.QueryRangeAsync(
+                It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(),
+                It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PrometheusQueryResult("matrix", Array.Empty<PrometheusTimeSeries>()));
+        _sut = new ReportGeneratorService(_dbContext, _loggerMock.Object, _prometheusMock.Object);
     }
 
     public void Dispose()
@@ -63,13 +73,12 @@ public sealed class ReportGeneratorServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GenerateAsync_SystemHealthReport_ContainsExpectedMetrics()
+    public async Task GenerateAsync_SystemHealthReport_WithPrometheusData_ContainsRealMetrics()
     {
-        var parameters = new Dictionary<string, object>
-        {
-            ["startDate"] = DateTime.UtcNow.AddDays(-7),
-            ["endDate"] = DateTime.UtcNow
-        };
+        // Prometheus reports a 5% error rate and 0.25s (250ms) average latency.
+        SetupPrometheusMetrics(errorRateRatio: 0.05, avgLatencySeconds: 0.25);
+
+        var parameters = new Dictionary<string, object> { ["hours"] = 24 };
 
         var result = await _sut.GenerateAsync(
             ReportTemplate.SystemHealth,
@@ -78,9 +87,39 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             CancellationToken.None);
 
         var content = System.Text.Encoding.UTF8.GetString(result.Content);
-        content.Should().ContainEquivalentOf("\"uptime\"");
         content.Should().ContainEquivalentOf("\"errorRate\"");
         content.Should().ContainEquivalentOf("\"responseTime\"");
+        // Real values, not the old hardcoded 0.0 placeholder.
+        content.Should().Contain("0.05");
+        content.Should().Contain("250");
+        // The fabricated "uptime" (which was just the window param) is gone.
+        content.Should().NotContainEquivalentOf("\"uptime\"");
+    }
+
+    [Fact]
+    public async Task GenerateAsync_SystemHealthReport_WhenPrometheusUnavailable_OmitsMetricsInsteadOfFabricatingZero()
+    {
+        _prometheusMock
+            .Setup(p => p.QueryRangeAsync(
+                It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(),
+                It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("prometheus unavailable"));
+
+        var parameters = new Dictionary<string, object> { ["hours"] = 24 };
+
+        var result = await _sut.GenerateAsync(
+            ReportTemplate.SystemHealth,
+            ReportFormat.Json,
+            parameters,
+            CancellationToken.None);
+
+        var content = System.Text.Encoding.UTF8.GetString(result.Content);
+        // No fabricated metric keys when Prometheus is unavailable — omit, don't zero.
+        content.Should().NotContainEquivalentOf("\"errorRate\"");
+        content.Should().NotContainEquivalentOf("\"responseTime\"");
+        content.Should().NotContainEquivalentOf("\"uptime\"");
+        // The report still renders with its real section data + window metadata.
+        content.Should().ContainEquivalentOf("\"hours\"");
     }
 
     [Fact]
@@ -338,6 +377,35 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             ["endDate"] = DateTime.UtcNow
         };
     }
+
+    /// <summary>
+    /// Wires the Prometheus mock so the error-rate query returns <paramref name="errorRateRatio"/>
+    /// and the latency query returns <paramref name="avgLatencySeconds"/> (seconds; the service
+    /// converts to ms). Queries are told apart by a substring of their PromQL.
+    /// </summary>
+    private void SetupPrometheusMetrics(double errorRateRatio, double avgLatencySeconds)
+    {
+        _prometheusMock
+            .Setup(p => p.QueryRangeAsync(
+                It.Is<string>(q => q.Contains("status=~", StringComparison.Ordinal)),
+                It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SingleValueResult(errorRateRatio));
+        _prometheusMock
+            .Setup(p => p.QueryRangeAsync(
+                It.Is<string>(q => q.Contains("http_request_duration_seconds", StringComparison.Ordinal)),
+                It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SingleValueResult(avgLatencySeconds));
+    }
+
+    private static PrometheusQueryResult SingleValueResult(double value) =>
+        new PrometheusQueryResult(
+            "matrix",
+            new[]
+            {
+                new PrometheusTimeSeries(
+                    new Dictionary<string, string>(StringComparer.Ordinal),
+                    new[] { new PrometheusDataPoint(DateTime.UtcNow, value) })
+            });
 
     #endregion
 }

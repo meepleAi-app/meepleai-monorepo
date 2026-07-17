@@ -63,6 +63,32 @@ describe('useWizardAutoSave', () => {
     expect(parsed.uploadedPdf.id).toBe('pdf-123');
   });
 
+  it('should keep the 30s auto-save timer stable across store re-renders (active editing)', () => {
+    // The mocked store returns a NEW object reference on every call, reproducing
+    // the real Zustand-without-selector behaviour: each set() (= each re-render)
+    // changes the store reference. With the buggy [store] effect dependency the
+    // 30s interval was cleared+recreated on every edit, so during continuous
+    // editing (edits < 30s apart) the 30s window never elapsed and the draft was
+    // never auto-saved. The fix keeps the interval stable.
+    const { rerender } = renderHook(() => useWizardAutoSave());
+
+    // Simulate frequent edits: re-render every 15s (< 30s apart).
+    act(() => {
+      vi.advanceTimersByTime(15000);
+    });
+    rerender();
+    act(() => {
+      vi.advanceTimersByTime(15000); // wall clock t=30s
+    });
+    rerender();
+    act(() => {
+      vi.advanceTimersByTime(15000); // wall clock t=45s
+    });
+
+    // With a stable interval the draft is saved by t=30s.
+    expect(localStorage.getItem('game_import_wizard_draft')).not.toBeNull();
+  });
+
   it('should restore draft on mount', async () => {
     // Create a draft first
     const draft = {

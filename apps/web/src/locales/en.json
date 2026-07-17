@@ -3637,6 +3637,31 @@
           "endTurn": "End turn",
           "regenerate": "Regenerate grid",
           "winnerTemplate": "{team} wins"
+        },
+        "puerto-rico": {
+          "panelAriaLabel": "Puerto Rico",
+          "leaderboardHeading": "Standings",
+          "initBoardCta": "Start game",
+          "resetCta": "Reset state",
+          "viewerWaiting": "Waiting for the host…",
+          "doubloons": "Doubloons",
+          "colonists": "Colonists",
+          "plantations": "Plantations",
+          "quarries": "Quarries",
+          "buildings": "Buildings",
+          "galleonsHeading": "Cargo ships",
+          "tradingHeading": "Trading house",
+          "colonistShipHeading": "Colonist ship",
+          "onShip": "On ship",
+          "supply": "Supply",
+          "emptyGood": "—",
+          "capTemplate": "{loaded}/{cap}",
+          "goodAria": "Ship {n} good",
+          "loadAria": "Load ship {n}",
+          "unloadAria": "Unload ship {n}",
+          "slotAria": "Slot {n}",
+          "incAria": "{field} +1",
+          "decAria": "{field} -1"
         }
       },
       "photosTab": {

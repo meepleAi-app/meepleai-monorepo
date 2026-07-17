@@ -52,6 +52,7 @@ describe('hasFlavor', () => {
     expect(hasFlavor('catan')).toBe(true);
     expect(hasFlavor('wingspan')).toBe(true);
     expect(hasFlavor('codenames')).toBe(true);
+    expect(hasFlavor('puerto-rico')).toBe(true);
     expect(hasFlavor('chess')).toBe(false);
     expect(hasFlavor(null)).toBe(false);
     expect(hasFlavor(undefined)).toBe(false);

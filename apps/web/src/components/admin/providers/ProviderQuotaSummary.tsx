@@ -3,14 +3,15 @@
 /**
  * Issue #3043 — ProviderQuotaSummary
  *
- * Widget riepilogo crediti aggregato per `/admin/providers`: mostra remaining/used/limit
- * per ciascun provider quota-capable (openrouter, deepseek) con UN SOLO fetch aggregato
- * (`useProvidersQuota`), eliminando l'N+1 per-riga della tabella. `ollama-local` è escluso
- * (nessuna quota API → non è in SupportedProviderNames). Itera l'array di risposta, MAI
- * `KNOWN_PROVIDERS`. Solo token semantici + entity utilities (AA-safe, no colori hardcoded).
+ * Widget riepilogo crediti su `/admin/providers`: mostra i NUMERI di credito
+ * (remaining/used/limit) per ciascun provider quota-capable (openrouter, deepseek) — numeri
+ * che la `ProviderTable` NON mostra (solo un chip di stato) — in un colpo d'occhio con un
+ * fetch aggregato (`useProvidersQuota`). La cache server (5min) è condivisa con la tabella
+ * per-provider, quindi non c'è fetch upstream aggiuntivo (il widget aggiunge una sola
+ * richiesta client verso l'endpoint plurale, servita dalla stessa cache). `ollama-local` è
+ * escluso (nessuna quota API). Itera l'array di risposta, MAI `KNOWN_PROVIDERS`. Solo entity
+ * utilities + token semantici (AA-safe, no colori hardcoded).
  */
-
-import { useMemo } from 'react';
 
 import { useProvidersQuota } from '@/hooks/queries/useProviders';
 import type { ProviderQuota } from '@/lib/api/schemas/providers';
@@ -19,15 +20,27 @@ function formatUsd(v: number | null): string {
   return v === null ? '—' : `$${v.toFixed(2)}`;
 }
 
-function quotaStatus(q: ProviderQuota): { label: string; showNumbers: boolean } {
-  if (!q.tokenConfigured) return { label: 'no token', showNumbers: false };
-  if (!q.quotaSupported) return { label: 'n/d', showNumbers: false };
-  if (q.errorCode) return { label: 'degraded', showNumbers: false };
-  return { label: 'ok', showNumbers: true };
+/** Un provider contribuisce al totale solo se ha un remaining numerico reale. */
+function isCountable(q: ProviderQuota): boolean {
+  return q.quotaSupported && q.tokenConfigured && q.errorCode === null && q.remainingUsd !== null;
+}
+
+/**
+ * Etichetta di stato. 'ok' SOLO quando i numeri sono mostrabili (allineato a isCountable):
+ * un provider healthy ma senza limite di spesa (pay-as-you-go → remainingUsd null) è
+ * etichettato 'nessun limite', non 'ok', così la card non mostra '—' accanto a uno stato ok.
+ */
+function quotaLabel(q: ProviderQuota): string {
+  if (!q.tokenConfigured) return 'no token';
+  if (!q.quotaSupported) return 'n/d';
+  if (q.errorCode) return 'degraded';
+  if (q.remainingUsd === null) return 'nessun limite';
+  return 'ok';
 }
 
 function QuotaCard({ quota }: { quota: ProviderQuota }) {
-  const { label, showNumbers } = quotaStatus(quota);
+  const label = quotaLabel(quota);
+  const showNumbers = isCountable(quota);
   return (
     <div
       className="rounded-lg border border-entity-tool/30 bg-entity-tool/5 p-4"
@@ -51,19 +64,8 @@ function QuotaCard({ quota }: { quota: ProviderQuota }) {
   );
 }
 
-function isCountable(q: ProviderQuota): boolean {
-  return q.quotaSupported && q.tokenConfigured && q.errorCode === null && q.remainingUsd !== null;
-}
-
 export function ProviderQuotaSummary() {
   const query = useProvidersQuota();
-
-  const list = useMemo(() => query.data ?? [], [query.data]);
-  const total = useMemo(
-    () => list.filter(isCountable).reduce((sum, q) => sum + (q.remainingUsd ?? 0), 0),
-    [list]
-  );
-  const hasNumbers = list.some(isCountable);
 
   if (query.isLoading) {
     return (
@@ -92,6 +94,11 @@ export function ProviderQuotaSummary() {
     );
   }
 
+  const list = query.data ?? [];
+  const countable = list.filter(isCountable);
+  const total = countable.reduce((sum, q) => sum + (q.remainingUsd ?? 0), 0);
+  const hasNumbers = countable.length > 0;
+
   return (
     <section
       aria-label="Crediti provider"
@@ -113,7 +120,7 @@ export function ProviderQuotaSummary() {
           {hasNumbers ? formatUsd(total) : '—'}
         </div>
         <div className="mt-1 font-mono text-[10px] text-muted-foreground">
-          {list.length} provider con quota
+          {countable.length} di {list.length} provider con credito
         </div>
       </div>
     </section>

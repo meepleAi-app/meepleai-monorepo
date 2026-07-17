@@ -86,16 +86,41 @@ internal sealed class ProviderQuotaService : IProviderQuotaService
 
     public async Task<IReadOnlyList<ProviderQuotaDto>> GetAllQuotasAsync(CancellationToken cancellationToken)
     {
-        // Iterate the quota-capable providers (SupportedProviderNames = openrouter, deepseek).
-        // Each call delegates to GetQuotaAsync → the same per-provider HybridCache (5min) is
-        // reused, so the widget and the per-row table share one upstream fetch. Issue #3043.
-        // Sequential foreach: N is tiny and the service is scoped (no concurrent reuse).
-        var results = new List<ProviderQuotaDto>();
-        foreach (var name in _factory.SupportedProviderNames)
-        {
-            results.Add(await GetQuotaAsync(name, cancellationToken).ConfigureAwait(false));
-        }
+        // Fetch each quota-capable provider (SupportedProviderNames = openrouter, deepseek) in
+        // parallel: the calls are independent, the service holds no mutable state and HybridCache
+        // is thread-safe, so worst-case latency is bounded by the slowest provider (not the sum).
+        // Each call delegates to GetQuotaAsync → the same per-provider HybridCache (5min) is reused.
+        // Per-provider exception isolation: a single provider failing (e.g. a malformed upstream
+        // body → JsonException, which FetchAsync does not catch) degrades only that entry, it does
+        // NOT fail the whole aggregate — the point of a "view all providers" endpoint. Issue #3043.
+        var tasks = _factory.SupportedProviderNames
+            .Select(name => GetQuotaSafeAsync(name, cancellationToken))
+            .ToArray();
 
-        return results;
+        return await Task.WhenAll(tasks).ConfigureAwait(false);
+    }
+
+    private async Task<ProviderQuotaDto> GetQuotaSafeAsync(string providerName, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await GetQuotaAsync(providerName, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Degrade this single provider to an error DTO; the aggregate still returns the rest.
+            return new ProviderQuotaDto(
+                ProviderName: providerName,
+                QuotaSupported: true,
+                TokenConfigured: true,
+                UsedUsd: null,
+                LimitUsd: null,
+                RemainingUsd: null,
+                ResetAt: null,
+                ErrorCode: "fetch_error",
+                ErrorMessage: ex.Message,
+                FetchedAt: DateTime.UtcNow,
+                CacheTtlSeconds: 0);
+        }
     }
 }

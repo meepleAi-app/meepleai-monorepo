@@ -57,6 +57,8 @@ export function useProbeProviderMutation(name: ProviderName) {
     mutationFn: input => api.admin.probeProvider(name, input?.model),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: providerKeys.quota(name) });
+      // #3043: also refresh the aggregated summary widget (shares the same server cache).
+      qc.invalidateQueries({ queryKey: providerKeys.quotaAll });
     },
   });
 }

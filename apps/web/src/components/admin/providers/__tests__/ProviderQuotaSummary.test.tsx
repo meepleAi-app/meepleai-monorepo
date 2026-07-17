@@ -87,4 +87,21 @@ describe('ProviderQuotaSummary', () => {
     // Somma = solo openrouter (30), deepseek escluso.
     expect(screen.getByTestId('provider-quota-summary-total')).toHaveTextContent('$30.00');
   });
+
+  it('labels a healthy provider without a spending cap "nessun limite" and excludes it from the total (#3043)', async () => {
+    getProvidersQuota.mockResolvedValue([
+      quota({ providerName: 'openrouter', usedUsd: 10, limitUsd: 40, remainingUsd: 30 }),
+      // pay-as-you-go: healthy, no error, but no remaining figure (limit null → remaining null).
+      quota({ providerName: 'deepseek', usedUsd: 3, limitUsd: null, remainingUsd: null }),
+    ]);
+
+    renderWithQuery(<ProviderQuotaSummary />);
+
+    await waitFor(() => expect(screen.getByTestId('quota-card-deepseek')).toBeInTheDocument());
+    // Non 'ok' contraddittorio: etichetta esplicita, numeri "—".
+    expect(screen.getByTestId('quota-card-deepseek')).toHaveTextContent('nessun limite');
+    // Totale = solo openrouter (30); deepseek escluso (nessun remaining). Footer coerente.
+    expect(screen.getByTestId('provider-quota-summary-total')).toHaveTextContent('$30.00');
+    expect(screen.getByTestId('provider-quota-summary-total')).toHaveTextContent('1 di 2 provider');
+  });
 });

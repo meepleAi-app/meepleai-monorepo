@@ -11,7 +11,7 @@ pydantic==2.9.2
 # (#1455): the Trainer-class RCE advisory. Service is inference-only (no Trainer).
 # sentence-transformers 3.3.0 pinned transformers<5; 5.6.0 supports transformers<6.
 sentence-transformers==5.6.0
-torch==2.12.1
+torch==2.13.0
 transformers==5.12.1
 
 # Utilities

@@ -120,10 +120,16 @@ internal sealed class DockerProxyService : IDockerProxyService
 
             return sample is null ? null : ComputeStats(sample);
         }
-        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or System.Text.Json.JsonException)
+        catch (Exception ex)
         {
-            // ct-driven cancellation surfaces as OperationCanceledException too; when the
-            // OUTER token is the one that fired we still return null (the caller stops anyway).
+            // Enriching with stats is best-effort: ANY failure reading one container's
+            // stats degrades to null metrics so the list still returns. We deliberately
+            // catch broadly — HttpRequestException, JsonException, the InvalidOperationException
+            // that ReadFromJsonAsync raises on a bad charset, the 3s per-call deadline, etc.
+            // The ONLY exception that must propagate is a genuine OUTER-token cancellation
+            // (the caller is being torn down); the 3s deadline fires on cts.Token, not ct,
+            // so ThrowIfCancellationRequested lets it fall through to the null return.
+            ct.ThrowIfCancellationRequested();
             _logger.LogDebug(ex, "Failed to read stats for container {ContainerId}", containerId);
             return null;
         }

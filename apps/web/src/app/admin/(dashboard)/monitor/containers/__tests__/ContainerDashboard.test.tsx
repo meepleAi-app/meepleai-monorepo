@@ -231,6 +231,27 @@ describe('ContainerDashboard', () => {
     );
   });
 
+  it('omits the memory denominator when the limit is 0 (absent from /stats)', async () => {
+    mockGetDockerContainers.mockResolvedValue([
+      {
+        ...mockContainers[0],
+        id: 'nolimit1',
+        memoryUsageBytes: 500000000,
+        memoryLimitBytes: 0,
+      },
+    ]);
+    render(<ContainerDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('container-card-nolimit1')).toBeInTheDocument();
+    });
+
+    const card = screen.getByTestId('container-card-nolimit1');
+    const mem = card.querySelector('[data-testid="container-memory"]');
+    expect(mem).toHaveTextContent('476.8 MB');
+    expect(mem).not.toHaveTextContent('/');
+  });
+
   it('shows dash for CPU and memory of stopped containers', async () => {
     mockGetDockerContainers.mockResolvedValue(mockContainers);
     render(<ContainerDashboard />);

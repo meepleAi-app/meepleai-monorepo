@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Text;
 using Api.BoundedContexts.Administration.Infrastructure.Services;
@@ -62,7 +63,9 @@ public sealed class DockerProxyServiceTests
     private sealed class DispatchHandler : HttpMessageHandler
     {
         private readonly Func<HttpRequestMessage, HttpResponseMessage> _dispatch;
-        public List<string> RequestedPaths { get; } = new();
+        // ConcurrentBag: the /stats fan-out issues up to 4 concurrent requests, so the
+        // recorder is mutated from multiple threads (a plain List<T>.Add would flake).
+        public ConcurrentBag<string> RequestedPaths { get; } = new();
 
         public DispatchHandler(Func<HttpRequestMessage, HttpResponseMessage> dispatch) => _dispatch = dispatch;
 
@@ -154,6 +157,24 @@ public sealed class DockerProxyServiceTests
             req.RequestUri!.AbsolutePath.Contains("/stats", StringComparison.Ordinal)
                 ? throw new HttpRequestException("connection refused")
                 : Json(ListJson(("cccccccccccc0000", "running"))));
+
+        var result = await svc.GetContainersAsync(CancellationToken.None);
+
+        result.Should().ContainSingle();
+        result[0].CpuPercent.Should().BeNull();
+        result[0].MemoryUsageBytes.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetContainersAsync_StatsThrowsNonHttpException_DegradesToNull_NoThrow()
+    {
+        // A non-allow-listed exception (e.g. InvalidOperationException from ReadFromJsonAsync
+        // on a bad charset) must NOT abort the fan-out and 500 the whole list — it degrades
+        // that one container to null metrics like any other stats failure.
+        var (svc, _) = BuildSubject(req =>
+            req.RequestUri!.AbsolutePath.Contains("/stats", StringComparison.Ordinal)
+                ? throw new InvalidOperationException("bad charset")
+                : Json(ListJson(("dddddddddddd0000", "running"))));
 
         var result = await svc.GetContainersAsync(CancellationToken.None);
 

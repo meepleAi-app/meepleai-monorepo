@@ -93,7 +93,9 @@ function formatCpu(container: ContainerInfo): string {
 function formatMemory(container: ContainerInfo): string {
   if (container.memoryUsageBytes == null) return '—';
   const used = formatFileSize(container.memoryUsageBytes);
-  return container.memoryLimitBytes == null
+  // Falsy (null/undefined/0) limit → no denominator: a successful /stats read can
+  // report limit=0 when memory_stats.limit is absent, and "476.8 MB / 0 B" is misleading.
+  return !container.memoryLimitBytes
     ? used
     : `${used} / ${formatFileSize(container.memoryLimitBytes)}`;
 }

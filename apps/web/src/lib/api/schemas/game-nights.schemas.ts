@@ -46,6 +46,10 @@ export const GameNightDtoSchema = z.object({
   acceptedCount: z.number(),
   pendingCount: z.number(),
   totalInvited: z.number(),
+  // #3084: number of sessions (games) played that night; drives the dashboard
+  // "Recenti" card ("N partite"). Defaults to 0 defensively so an older BE payload
+  // without the field never crashes the parse.
+  sessionCount: z.number().int().nonnegative().default(0),
   createdAt: z.string(),
   updatedAt: z.string().nullable().optional(),
   // #2989 inv#17: the viewer's RSVP status for this night (null if organizer/not-invited).

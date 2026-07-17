@@ -21,6 +21,10 @@ public sealed record GameNightDto(
     int AcceptedCount,
     int PendingCount,
     int TotalInvited,
+    // #3084: number of sessions (games) played that night. A completed GameNight
+    // has >= 1 session by invariant, so the dashboard "Recenti" card never shows
+    // a misleading "0 partite".
+    int SessionCount,
     DateTimeOffset CreatedAt,
     DateTimeOffset? UpdatedAt,
     RsvpStatus? ViewerRsvpStatus = null);

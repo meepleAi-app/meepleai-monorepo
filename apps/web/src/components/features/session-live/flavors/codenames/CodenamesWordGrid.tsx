@@ -24,7 +24,7 @@ export function CodenamesWordGrid({
   return (
     <div
       data-slot="codenames-board"
-      role="grid"
+      role="group"
       aria-label="Codenames"
       className="grid grid-cols-5 gap-1"
     >
@@ -61,7 +61,7 @@ export function CodenamesWordGrid({
           );
         }
         return (
-          <div key={i} role="gridcell" {...common}>
+          <div key={i} {...common}>
             {content}
           </div>
         );

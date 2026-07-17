@@ -25,6 +25,8 @@ rule_files:
   - '/etc/prometheus/runner-availability.yml'
   # Issue #2470 — Wikidata SSE plane starvation alerts.
   - '/etc/prometheus/wikidata-sse.yml'
+  # Issue #3082 — BGG ToS-compliance SLO=0 alert (any nonzero render attempt = P1).
+  - '/etc/prometheus/bgg-tos-compliance.yml'
 
 scrape_configs:
   - job_name: 'prometheus'

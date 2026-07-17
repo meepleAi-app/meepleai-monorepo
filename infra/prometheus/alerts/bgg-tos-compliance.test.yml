@@ -1,0 +1,42 @@
+# promtool unit tests for bgg-tos-compliance.yml (#3082).
+#
+# Run locally (Windows/Git Bash, from repo root):
+#   docker run --rm -v "$(pwd)/infra/prometheus/alerts:/work" prom/prometheus:v3.7.0 \
+#     promtool test rules /work/bgg-tos-compliance.test.yml
+#
+# There is no promtool CI gate in this repo (see recon in #3082); this file
+# documents + verifies the alert's SLO=0 behaviour on demand.
+rule_files:
+  - bgg-tos-compliance.yml
+
+evaluation_interval: 1m
+
+tests:
+  # A single render attempt (counter 0 -> 1) must fire the P1 alert with the
+  # offending FE route surfaced in the summary.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_bgg_url_attempted_render_total{path="/library"}'
+        values: '0 0 1 1 1 1'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: BggAssetRenderAttempted
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              subsystem: catalog-covers
+              path: "/library"
+            exp_annotations:
+              summary: "BGG ToS violation attempt on /library (SLO=0 P1)"
+              description: "meepleai_bgg_url_attempted_render_total incremented: a browser attempted to load an image from a banned BGG host. SLO for this metric is ZERO; any nonzero rate is a P1 ToS-compliance incident (#2123, ADR-059)."
+              runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#20-catalog-covers--bgg-tos-compliance-2123"
+
+  # No attempts (counter flat at 0) must NOT fire — SLO=0 holds, no page.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_bgg_url_attempted_render_total{path="/library"}'
+        values: '0 0 0 0 0 0'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: BggAssetRenderAttempted
+        exp_alerts: []

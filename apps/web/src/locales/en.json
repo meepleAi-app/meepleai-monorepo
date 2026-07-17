@@ -3617,6 +3617,26 @@
             "cachedFood": "Cached food",
             "tuckedCards": "Tucked cards"
           }
+        },
+        "codenames": {
+          "panelAriaLabel": "Codenames",
+          "leaderboardHeading": "Standings",
+          "initBoardCta": "Generate grid",
+          "viewerWaiting": "Waiting for the host…",
+          "redLabel": "Red",
+          "blueLabel": "Blue",
+          "turnLabel": "On turn",
+          "foundTemplate": "{found}/{total}",
+          "revealAriaTemplate": "Reveal {word}",
+          "perspectiveOperative": "View: Operative",
+          "perspectiveSpymaster": "View: Spymaster",
+          "noClue": "No active clue",
+          "cluePlaceholder": "Word",
+          "clueNumberAria": "Clue number",
+          "giveClue": "Give clue",
+          "endTurn": "End turn",
+          "regenerate": "Regenerate grid",
+          "winnerTemplate": "{team} wins"
         }
       },
       "photosTab": {

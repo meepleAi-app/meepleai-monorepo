@@ -3722,6 +3722,26 @@
             "cachedFood": "Cibo accumulato",
             "tuckedCards": "Carte infilate"
           }
+        },
+        "codenames": {
+          "panelAriaLabel": "Codenames",
+          "leaderboardHeading": "Classifica",
+          "initBoardCta": "Genera griglia",
+          "viewerWaiting": "In attesa dell'host…",
+          "redLabel": "Rossi",
+          "blueLabel": "Blu",
+          "turnLabel": "Al turno",
+          "foundTemplate": "{found}/{total}",
+          "revealAriaTemplate": "Rivela {word}",
+          "perspectiveOperative": "Vista: Agente",
+          "perspectiveSpymaster": "Vista: Spymaster",
+          "noClue": "Nessun indizio attivo",
+          "cluePlaceholder": "Parola",
+          "clueNumberAria": "Numero indizio",
+          "giveClue": "Dai indizio",
+          "endTurn": "Fine turno",
+          "regenerate": "Rigenera griglia",
+          "winnerTemplate": "Vincono i {team}"
         }
       },
       "photosTab": {

@@ -297,3 +297,6 @@ loc.png
 
 # Windows temp diff files accidentally created by harness tools
 C*UsersUtenteAppDataLocalTemp*-diff.txt
+
+# Mockup<->live compare tool output (#2999) - screenshots, mai committare
+apps/web/mockup-compare-output/

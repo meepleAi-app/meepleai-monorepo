@@ -57,16 +57,50 @@ describe('LiveMobileMetaStrip (#3146 Slice 1)', () => {
     ).toBe('Ora di inizio della sessione (derivata)');
   });
 
-  it('omits the elapsed chip when elapsedLabel is absent', () => {
+  it('omits the elapsed chip when elapsedLabel is absent (siblings survive)', () => {
     renderStrip({ elapsedLabel: undefined });
     expect(document.querySelector('[data-slot="live-mobile-meta-strip-elapsed"]')).toBeNull();
     // …but still renders the others.
-    expect(screen.getByText('Turno 3/8')).toBeInTheDocument();
+    expect(document.querySelector('[data-slot="live-mobile-meta-strip-turn"]')).not.toBeNull();
+    expect(
+      document.querySelector('[data-slot="live-mobile-meta-strip-started-at"]')
+    ).not.toBeNull();
   });
 
-  it('omits the turn chip when turnLabel is absent/empty', () => {
+  it('omits the turn chip when turnLabel is absent/empty (siblings survive)', () => {
     renderStrip({ turnLabel: '' });
     expect(document.querySelector('[data-slot="live-mobile-meta-strip-turn"]')).toBeNull();
+    expect(document.querySelector('[data-slot="live-mobile-meta-strip-elapsed"]')).not.toBeNull();
+    expect(
+      document.querySelector('[data-slot="live-mobile-meta-strip-started-at"]')
+    ).not.toBeNull();
+  });
+
+  it('omits the start-time chip when startedAtLabel is absent (siblings survive)', () => {
+    renderStrip({ startedAtLabel: undefined });
+    expect(document.querySelector('[data-slot="live-mobile-meta-strip-started-at"]')).toBeNull();
+    expect(document.querySelector('[data-slot="live-mobile-meta-strip-turn"]')).not.toBeNull();
+    expect(document.querySelector('[data-slot="live-mobile-meta-strip-elapsed"]')).not.toBeNull();
+  });
+
+  // Single-field renders — guard against an over-narrowed early-return that
+  // would blank a turn-only or start-time-only mobile session.
+  it('renders when turn is the only field', () => {
+    renderStrip({ turnLabel: 'Turno 1/2', elapsedLabel: undefined, startedAtLabel: undefined });
+    expect(document.querySelector('[data-slot="live-mobile-meta-strip"]')).not.toBeNull();
+    expect(screen.getByText('Turno 1/2')).toBeInTheDocument();
+  });
+
+  it('renders when the derived start-time is the only field', () => {
+    renderStrip({
+      turnLabel: '',
+      elapsedLabel: undefined,
+      startedAtLabel: '▶ Ora di inizio 5 lug, 20:35 · derivata',
+    });
+    expect(document.querySelector('[data-slot="live-mobile-meta-strip"]')).not.toBeNull();
+    expect(
+      document.querySelector('[data-slot="live-mobile-meta-strip-started-at"]')?.textContent
+    ).toBe('▶ Ora di inizio 5 lug, 20:35 · derivata');
   });
 
   it('renders nothing when all fields are absent (no empty chrome)', () => {

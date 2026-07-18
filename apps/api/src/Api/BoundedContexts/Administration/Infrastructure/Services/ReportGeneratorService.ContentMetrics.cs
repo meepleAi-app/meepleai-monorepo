@@ -73,7 +73,9 @@ internal sealed partial class ReportGeneratorService
                 ["totalPdfs"] = totalPdfs,
                 ["totalVectorDocs"] = totalVectorDocs,
                 ["totalDocuments"] = totalPdfs, // Total documents (PDFs)
-                ["vectorEmbeddings"] = totalVectorDocs // Vector embeddings count
+                ["vectorEmbeddings"] = totalVectorDocs, // Vector embeddings count
+                ["totalGames"] = gameMetrics?.TotalGames ?? 0,
+                ["activeGames"] = gameMetrics?.ActiveGames ?? 0 // #3123: AI-ready games (HasKnowledgeBase)
             },
             Sections: sections);
     }
@@ -126,7 +128,8 @@ internal sealed partial class ReportGeneratorService
             .GroupBy(g => 1)
             .Select(g => new GameMetric(
                 g.Count(),
-                g.Count(game => true) // Simplified, can add active criteria
+                // #3123: "active" = AI-ready (has an indexed knowledge base), not every game.
+                g.Count(game => game.HasKnowledgeBase)
             ))
             .FirstOrDefaultAsync(ct)
             .ConfigureAwait(false);
@@ -184,6 +187,10 @@ internal sealed partial class ReportGeneratorService
                     new(new Dictionary<string, object>(StringComparer.Ordinal) {
                         ["Metric"] = "Total Games",
                         ["Value"] = gameMetrics?.TotalGames ?? 0
+                    }),
+                    new(new Dictionary<string, object>(StringComparer.Ordinal) {
+                        ["Metric"] = "Active Games",
+                        ["Value"] = gameMetrics?.ActiveGames ?? 0
                     })
                 })
         };

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Exceptions;
 using FluentAssertions;
 using Xunit;
@@ -671,7 +672,7 @@ public sealed class GameSessionTests
     }
 
     [Fact]
-    public void AddPlayer_WhenCompleted_ThrowsInvalidOperationException()
+    public void AddPlayer_WhenCompleted_ThrowsConflictException()
     {
         // Arrange
         var session = CreateSetupSession();
@@ -683,12 +684,12 @@ public sealed class GameSessionTests
         var action = () => session.AddPlayer(newPlayer);
 
         // Assert
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Cannot add player to finished session*");
     }
 
     [Fact]
-    public void AddPlayer_WhenAbandoned_ThrowsInvalidOperationException()
+    public void AddPlayer_WhenAbandoned_ThrowsConflictException()
     {
         // Arrange
         var session = CreateSetupSession();
@@ -699,12 +700,12 @@ public sealed class GameSessionTests
         var action = () => session.AddPlayer(newPlayer);
 
         // Assert
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Cannot add player to finished session*");
     }
 
     [Fact]
-    public void AddPlayer_WhenAtMaxCapacity_ThrowsInvalidOperationException()
+    public void AddPlayer_WhenAtMaxCapacity_ThrowsConflictException()
     {
         // Arrange
         var maxPlayers = Enumerable.Range(1, 100)
@@ -717,12 +718,12 @@ public sealed class GameSessionTests
         var action = () => session.AddPlayer(newPlayer);
 
         // Assert
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Session cannot have more than 100 players*");
     }
 
     [Fact]
-    public void AddPlayer_WithDuplicateName_ThrowsInvalidOperationException()
+    public void AddPlayer_WithDuplicateName_ThrowsConflictException()
     {
         // Arrange
         var session = CreateSetupSession();
@@ -732,12 +733,12 @@ public sealed class GameSessionTests
         var action = () => session.AddPlayer(duplicatePlayer);
 
         // Assert
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Player 'Alice' is already in this session*");
     }
 
     [Fact]
-    public void AddPlayer_WithDuplicateNameDifferentCase_ThrowsInvalidOperationException()
+    public void AddPlayer_WithDuplicateNameDifferentCase_ThrowsConflictException()
     {
         // Arrange
         var session = CreateSetupSession();
@@ -747,7 +748,7 @@ public sealed class GameSessionTests
         var action = () => session.AddPlayer(duplicatePlayer);
 
         // Assert
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Player 'ALICE' is already in this session*");
     }
 

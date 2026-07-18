@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.Middleware.Exceptions;
 using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
@@ -330,7 +331,7 @@ public class GameSessionDomainTests
     }
 
     [Fact]
-    public void GameSession_AddPlayer_ToCompletedSession_ThrowsInvalidOperationException()
+    public void GameSession_AddPlayer_ToCompletedSession_ThrowsConflictException()
     {
         // Arrange
         var session = CreateDefaultSession();
@@ -340,12 +341,12 @@ public class GameSessionDomainTests
 
         // Act & Assert
         var act = () => session.AddPlayer(newPlayer);
-        var exception = act.Should().Throw<InvalidOperationException>().Which;
+        var exception = act.Should().Throw<ConflictException>().Which;
         exception.Message.Should().ContainEquivalentOf("Cannot add player to finished session");
     }
 
     [Fact]
-    public void GameSession_AddPlayer_ToAbandonedSession_ThrowsInvalidOperationException()
+    public void GameSession_AddPlayer_ToAbandonedSession_ThrowsConflictException()
     {
         // Arrange
         var session = CreateDefaultSession();
@@ -355,12 +356,12 @@ public class GameSessionDomainTests
 
         // Act & Assert
         var act = () => session.AddPlayer(newPlayer);
-        var exception = act.Should().Throw<InvalidOperationException>().Which;
+        var exception = act.Should().Throw<ConflictException>().Which;
         exception.Message.Should().Contain("Cannot add player to finished session");
     }
 
     [Fact]
-    public void GameSession_AddPlayer_DuplicateName_ThrowsInvalidOperationException()
+    public void GameSession_AddPlayer_DuplicateName_ThrowsConflictException()
     {
         // Arrange
         var session = CreateDefaultSession(); // Has "Alice" and "Bob"
@@ -368,13 +369,13 @@ public class GameSessionDomainTests
 
         // Act & Assert
         var act = () => session.AddPlayer(duplicatePlayer);
-        var exception = act.Should().Throw<InvalidOperationException>().Which;
+        var exception = act.Should().Throw<ConflictException>().Which;
         exception.Message.Should().ContainEquivalentOf("already in this session");
         exception.Message.Should().ContainEquivalentOf("Alice");
     }
 
     [Fact]
-    public void GameSession_AddPlayer_DuplicateNameCaseInsensitive_ThrowsInvalidOperationException()
+    public void GameSession_AddPlayer_DuplicateNameCaseInsensitive_ThrowsConflictException()
     {
         // Arrange
         var session = CreateDefaultSession(); // Has "Alice"
@@ -382,12 +383,12 @@ public class GameSessionDomainTests
 
         // Act & Assert
         var act = () => session.AddPlayer(duplicatePlayer);
-        var exception = act.Should().Throw<InvalidOperationException>().Which;
+        var exception = act.Should().Throw<ConflictException>().Which;
         exception.Message.Should().ContainEquivalentOf("already in this session");
     }
 
     [Fact]
-    public void GameSession_AddPlayer_Exceeds100Players_ThrowsInvalidOperationException()
+    public void GameSession_AddPlayer_Exceeds100Players_ThrowsConflictException()
     {
         // Arrange - Create session with 100 players
         var players = Enumerable.Range(1, 100)
@@ -399,7 +400,7 @@ public class GameSessionDomainTests
 
         // Act & Assert
         var act = () => session.AddPlayer(oneMorePlayer);
-        var exception = act.Should().Throw<InvalidOperationException>().Which;
+        var exception = act.Should().Throw<ConflictException>().Which;
         exception.Message.Should().ContainEquivalentOf("cannot have more than 100 players");
     }
 

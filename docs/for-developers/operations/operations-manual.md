@@ -3269,3 +3269,24 @@ metric series are absent, so the alerts do not fire on absence.
 4. **Broad failure with no token/limit cause** (`http_error`/`unknown`): check Slack API status and the processor logs for transport errors.
 
 Alert unit tests live in `infra/prometheus/alerts/slack-delivery.test.yml` (run `promtool test rules` per the header comment; there is no CI promtool gate, so run on demand).
+
+## Audit Outbox Alerts
+
+Defined in `infra/prometheus/alerts/audit-outbox.yml` (#3116). The three health gauges are
+emitted by `apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.AuditOutbox.cs` (registered
+via `RegisterAuditOutboxGauges` in `Program.cs`) and routed via `severity: warning` → the
+`warning-alerts` receiver in `alertmanager.yml` (throttled email). The gauges report `0` when
+the queue is idle, so the expressions never fire on an empty queue.
+
+| Alert | Trigger | Sustained | Meaning / first action |
+|---|---|---|---|
+| `AuditOutboxBacklogHigh` | `meepleai_audit_outbox_pending_count > 500` | 10m | The audit outbox processor is not draining Pending rows fast enough (or is stalled); audit events accumulate undelivered. Check the processor job logs and DB health. |
+| `AuditOutboxDrainStalled` | `meepleai_audit_outbox_pending_oldest_age_seconds > 60` | 5m | The oldest Pending row is aging past 60s (threshold from the metric source): drain is falling behind ingestion. Check processor cadence and DB latency. |
+| `AuditOutboxFailedMessages` | `meepleai_audit_outbox_failed_count > 0` | — | One or more rows are in Failed status (poison messages) needing operator intervention. Inspect the failed rows and their error payloads via the admin dashboard. |
+
+### Investigation steps
+
+1. **Backlog / drain lag** (`AuditOutboxBacklogHigh` / `AuditOutboxDrainStalled`): confirm the audit outbox processor is running and not throwing. A steadily-rising `pending_count` with a growing `oldest_age_seconds` indicates a stalled or under-provisioned drain — check DB connectivity and the processor job schedule.
+2. **Poison messages** (`AuditOutboxFailedMessages`): inspect the Failed rows via the admin dashboard; a Failed row is a message the processor could not deliver after its retry budget. Resolve the underlying cause, then requeue or discard per the audit-retention policy.
+
+Alert unit tests live in `infra/prometheus/alerts/audit-outbox.test.yml` (run `promtool test rules` per the header comment; there is no CI promtool gate, so run on demand).

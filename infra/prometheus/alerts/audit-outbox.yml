@@ -1,0 +1,54 @@
+# Issue #3116 — SP5 Admin Security audit_outbox health alerts.
+#
+# Metric source (apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.AuditOutbox.cs,
+# registered via RegisterAuditOutboxGauges in Program.cs). ObservableGauges; Prometheus
+# names = the C# dotted names with dots -> underscores and NO unit suffix (same convention
+# as the domain-event-outbox gauges meepleai_domain_event_outbox_pending_count /
+# _pending_oldest_age_seconds / _failed_count):
+#   - meepleai_audit_outbox_pending_count               (rows in Pending status)
+#   - meepleai_audit_outbox_pending_oldest_age_seconds  (age of oldest Pending row; 0 when empty)
+#   - meepleai_audit_outbox_failed_count                (rows in Failed status = poison messages)
+# The gauges are wired in prod but previously had NO alert rule — a stalled processor or a
+# poison message stayed invisible until the audit trail was already behind.
+#
+# Thresholds come from the "Suggested alerting" block in the metric source:
+#   oldest_age_seconds > 60 -> drain falling behind; failed_count > 0 -> poison message.
+# The Pending-count source note is qualitative ("steadily increasing -> processor stalled"),
+# so a sustained absolute backlog (>500 for 10m) is used as a stall proxy.
+#
+# Routing: severity=warning matches the `warning-alerts` route in alertmanager.yml (throttled
+# email), operational signals — not P1/paging like the BGG ToS alert. The gauges report 0 when
+# the queue is idle, so the expressions never fire on an empty/idle queue.
+groups:
+  - name: meepleai_audit_outbox_alerts
+    rules:
+      - alert: AuditOutboxBacklogHigh
+        expr: meepleai_audit_outbox_pending_count > 500
+        for: 10m
+        labels:
+          severity: warning
+          subsystem: audit-outbox
+        annotations:
+          summary: "audit_outbox pending backlog above 500 (sustained 10m)"
+          description: "meepleai_audit_outbox_pending_count has stayed above 500 for 10m: the audit outbox processor is not draining Pending rows fast enough (or is stalled). Audit events are accumulating undelivered. Check the audit outbox processor job logs and database health."
+          runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#audit-outbox-alerts"
+      - alert: AuditOutboxDrainStalled
+        expr: meepleai_audit_outbox_pending_oldest_age_seconds > 60
+        for: 5m
+        labels:
+          severity: warning
+          subsystem: audit-outbox
+        annotations:
+          summary: "Oldest Pending audit_outbox row older than 60s (sustained 5m)"
+          description: "meepleai_audit_outbox_pending_oldest_age_seconds has exceeded 60s for 5m: the audit outbox drain is falling behind ingestion (threshold from the metric source). Check the processor job cadence and database latency."
+          runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#audit-outbox-alerts"
+      - alert: AuditOutboxFailedMessages
+        expr: meepleai_audit_outbox_failed_count > 0
+        for: 0m
+        labels:
+          severity: warning
+          subsystem: audit-outbox
+        annotations:
+          summary: "audit_outbox has Failed (poison) rows"
+          description: "meepleai_audit_outbox_failed_count is above 0: one or more audit_outbox rows are in Failed status (poison messages) and require operator intervention via the admin dashboard. Inspect the failed rows and their error payloads."
+          runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#audit-outbox-alerts"

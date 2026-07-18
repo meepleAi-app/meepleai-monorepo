@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.PlayRecords;
 using Api.BoundedContexts.GameManagement.Application.Services;
+using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 using Api.Middleware.Exceptions;
@@ -15,13 +16,14 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.PlayRecords;
 /// Issue #2437-3: snapshot pre-edit state as a version before mutating, cap to 5 most-recent.
 /// Issue #2461: retry on version-number unique conflict (transparent server-side retry, no 500).
 /// </summary>
-internal class UpdatePlayRecordCommandHandler : ICommandHandler<UpdatePlayRecordCommand>
+internal class UpdatePlayRecordCommandHandler : ICommandHandler<UpdatePlayRecordCommand, UpdatePlayRecordResult>
 {
     private readonly IPlayRecordRepository _recordRepository;
     private readonly IPlayRecordVersionRepository _versionRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
     private readonly PlayRecordPermissionChecker _permissionChecker;
+    private readonly ILiveSessionRepository _liveSessionRepository;
     private readonly Func<DbUpdateException, bool> _isVersionConflict;
 
     public UpdatePlayRecordCommandHandler(
@@ -29,9 +31,10 @@ internal class UpdatePlayRecordCommandHandler : ICommandHandler<UpdatePlayRecord
         IPlayRecordVersionRepository versionRepository,
         IUnitOfWork unitOfWork,
         TimeProvider timeProvider,
-        PlayRecordPermissionChecker permissionChecker)
+        PlayRecordPermissionChecker permissionChecker,
+        ILiveSessionRepository liveSessionRepository)
         : this(recordRepository, versionRepository, unitOfWork, timeProvider, permissionChecker,
-               PlayRecordVersionRepository.IsVersionNumberConflict)
+               liveSessionRepository, PlayRecordVersionRepository.IsVersionNumberConflict)
     {
     }
 
@@ -46,6 +49,7 @@ internal class UpdatePlayRecordCommandHandler : ICommandHandler<UpdatePlayRecord
         IUnitOfWork unitOfWork,
         TimeProvider timeProvider,
         PlayRecordPermissionChecker permissionChecker,
+        ILiveSessionRepository liveSessionRepository,
         Func<DbUpdateException, bool> isVersionConflict)
     {
         _recordRepository = recordRepository ?? throw new ArgumentNullException(nameof(recordRepository));
@@ -53,6 +57,7 @@ internal class UpdatePlayRecordCommandHandler : ICommandHandler<UpdatePlayRecord
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _permissionChecker = permissionChecker ?? throw new ArgumentNullException(nameof(permissionChecker));
+        _liveSessionRepository = liveSessionRepository ?? throw new ArgumentNullException(nameof(liveSessionRepository));
         _isVersionConflict = isVersionConflict ?? throw new ArgumentNullException(nameof(isVersionConflict));
     }
 
@@ -63,7 +68,7 @@ internal class UpdatePlayRecordCommandHandler : ICommandHandler<UpdatePlayRecord
     /// </summary>
     private const int MaxVersionConflictRetries = 5;
 
-    public async Task Handle(UpdatePlayRecordCommand command, CancellationToken cancellationToken)
+    public async Task<UpdatePlayRecordResult> Handle(UpdatePlayRecordCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 
@@ -132,5 +137,18 @@ internal class UpdatePlayRecordCommandHandler : ICommandHandler<UpdatePlayRecord
             command.RecordId, PlayRecordVersionSnapshotter.MaxVersions, cancellationToken)
             .ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // #13 / Invariante 4: the save is non-blocking, but if the same user has ANOTHER
+        // session genuinely live (InProgress) right now, surface a non-blocking warning so
+        // they can double-check the games were recorded in the right order. Setup/Paused are
+        // "active" per the repository but not "live" — only InProgress counts.
+        var activeSessions = await _liveSessionRepository
+            .GetActiveByUserIdAsync(command.UserId, cancellationToken)
+            .ConfigureAwait(false);
+        var liveSession = activeSessions.FirstOrDefault(s => s.Status == LiveSessionStatus.InProgress);
+
+        return liveSession is null
+            ? new UpdatePlayRecordResult(false, null)
+            : new UpdatePlayRecordResult(true, liveSession.Id);
     }
 }

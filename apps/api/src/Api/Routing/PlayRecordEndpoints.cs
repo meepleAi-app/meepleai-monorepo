@@ -240,7 +240,20 @@ internal static class PlayRecordEndpoints
         CancellationToken cancellationToken)
     {
         var command = new UpdatePlayRecordCommand(recordId, httpContext.User.GetUserId(), request.SessionDate, request.Notes, request.Location, request.Xmin);
-        await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+
+        // #13 / Invariante 4: non-blocking warning when the save happened while the user has
+        // another session live (InProgress). The FE reads these headers on the 2xx and shows a
+        // 6s amber toast + a "go to live" deep-link built from X-Live-Session-Id.
+        if (result.SavedWhileLiveActive)
+        {
+            httpContext.Response.Headers["X-Warning-Code"] = "SAVED_WHILE_LIVE_ACTIVE";
+            if (result.LiveSessionId.HasValue)
+            {
+                httpContext.Response.Headers["X-Live-Session-Id"] = result.LiveSessionId.Value.ToString();
+            }
+        }
+
         return Results.NoContent();
     }
 

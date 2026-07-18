@@ -5000,6 +5000,10 @@
         "deleteToast": "Partita eliminata",
         "deleteToastDescription": "La partita è stata eliminata correttamente"
       },
+      "savedWhileLive": {
+        "toast": "Partita salvata mentre una session è live. Verifica di aver registrato le partite nell'ordine corretto.",
+        "goToLive": "Vai alla session live"
+      },
       "conflict": {
         "title": "Modifica concorrente",
         "description": "Qualcuno ha modificato questa partita mentre la stavi modificando. Ricarica i dati aggiornati o sovrascrivi con le tue modifiche.",

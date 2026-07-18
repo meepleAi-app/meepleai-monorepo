@@ -76,8 +76,8 @@ public sealed class CatalogSeedApprovedEventHandlerTests
               .ReturnsAsync((SharedGame?)null);
 
         SharedGame? added = null;
-        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()))
-              .Callback<SharedGame, CancellationToken>((g, _) => added = g)
+        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+              .Callback<SharedGame, IReadOnlyList<string>, IReadOnlyList<string>, CancellationToken>((g, _, _, _) => added = g)
               .Returns(Task.CompletedTask);
 
         await Handler().Handle(
@@ -199,8 +199,8 @@ public sealed class CatalogSeedApprovedEventHandlerTests
         _drafts.Setup(r => r.GetByIdAsync(draft.Id, It.IsAny<CancellationToken>())).ReturnsAsync(draft);
 
         SharedGame? added = null;
-        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()))
-              .Callback<SharedGame, CancellationToken>((g, _) => added = g)
+        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+              .Callback<SharedGame, IReadOnlyList<string>, IReadOnlyList<string>, CancellationToken>((g, _, _, _) => added = g)
               .Returns(Task.CompletedTask);
 
         await Handler().Handle(
@@ -230,8 +230,8 @@ public sealed class CatalogSeedApprovedEventHandlerTests
               .ReturnsAsync((SharedGame?)null);
 
         SharedGame? added = null;
-        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()))
-              .Callback<SharedGame, CancellationToken>((g, _) => added = g)
+        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+              .Callback<SharedGame, IReadOnlyList<string>, IReadOnlyList<string>, CancellationToken>((g, _, _, _) => added = g)
               .Returns(Task.CompletedTask);
 
         await Handler().Handle(
@@ -254,8 +254,8 @@ public sealed class CatalogSeedApprovedEventHandlerTests
               .ReturnsAsync((SharedGame?)null);
 
         SharedGame? added = null;
-        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()))
-              .Callback<SharedGame, CancellationToken>((g, _) => added = g)
+        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+              .Callback<SharedGame, IReadOnlyList<string>, IReadOnlyList<string>, CancellationToken>((g, _, _, _) => added = g)
               .Returns(Task.CompletedTask);
 
         await Handler().Handle(
@@ -356,15 +356,26 @@ public sealed class CatalogSeedApprovedEventHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ProvenanceWithProperties_EnrichesNewSkeleton()
+    public async Task Handle_ProvenanceWithProperties_EnrichesScalarsAndPassesDesignerPublisherNames()
     {
+        // #3153: scalars flow through EnrichFromProvenance; designer/publisher NAMES are
+        // passed RAW to the repo's get-or-create-by-name overload (NOT via the aggregate).
+        // Actual M:N join-row persistence is proven in the Testcontainers integration suite;
+        // a mocked repo cannot (that's how #3147 shipped the gap).
         var draft = SeedFetchedDraft(bggId: null, provenanceJson: RichProvenance("Catan"));
 
         _drafts.Setup(r => r.GetByIdAsync(draft.Id, It.IsAny<CancellationToken>())).ReturnsAsync(draft);
 
         SharedGame? added = null;
-        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()))
-              .Callback<SharedGame, CancellationToken>((g, _) => added = g)
+        IReadOnlyList<string>? designerNames = null;
+        IReadOnlyList<string>? publisherNames = null;
+        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+              .Callback<SharedGame, IReadOnlyList<string>, IReadOnlyList<string>, CancellationToken>((g, d, p, _) =>
+              {
+                  added = g;
+                  designerNames = d;
+                  publisherNames = p;
+              })
               .Returns(Task.CompletedTask);
 
         await Handler().Handle(
@@ -376,12 +387,32 @@ public sealed class CatalogSeedApprovedEventHandlerTests
         added.MinPlayers.Should().Be(3);
         added.MaxPlayers.Should().Be(4);
         added.PlayingTimeMinutes.Should().Be(90);
-        // #3154: RichProvenance carries designers ("Klaus Teuber") + publishers, but
-        // scalar-only enrichment intentionally does NOT apply them — the aggregate's
-        // M:N collections are read-only through SharedGameRepository (they'd be
-        // silently dropped on persist). Proper M:N persistence is tracked by #3153.
-        added.Designers.Should().BeEmpty("designers are excluded from scalar-only enrichment (#3154)");
-        added.Publishers.Should().BeEmpty("publishers are excluded from scalar-only enrichment (#3154)");
+
+        designerNames.Should().Contain("Klaus Teuber", "designer names are forwarded raw to the repo resolver");
+        publisherNames.Should().Contain("Kosmos", "publisher names are forwarded raw to the repo resolver");
+        added.Designers.Should().BeEmpty("names go to the repo resolver, not the aggregate (throwaway Guids)");
+        added.Publishers.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_DraftAlreadyMaterialised_ShortCircuitsIdempotently()
+    {
+        // #3153 (D7): a re-dispatch of the event for a draft whose ResultingSharedGameId
+        // already resolves to a real game must NOT create a second game — guards the
+        // pure-Wikidata (no-BggId) path that the BggId-only dedup misses.
+        var draft = SeedFetchedDraft(bggId: null);
+        var realGameId = draft.ResultingSharedGameId!.Value;
+
+        _drafts.Setup(r => r.GetByIdAsync(draft.Id, It.IsAny<CancellationToken>())).ReturnsAsync(draft);
+        _games.Setup(r => r.ExistsByIdAsync(realGameId, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+
+        await Handler().Handle(
+            new CatalogSeedApprovedEvent(draft.Id, realGameId, Guid.NewGuid()),
+            default);
+
+        _games.Verify(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()), Times.Never);
+        _games.Verify(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()), Times.Never);
+        _uow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -398,8 +429,8 @@ public sealed class CatalogSeedApprovedEventHandlerTests
         _drafts.Setup(r => r.GetByIdAsync(draft.Id, It.IsAny<CancellationToken>())).ReturnsAsync(draft);
 
         SharedGame? added = null;
-        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()))
-              .Callback<SharedGame, CancellationToken>((g, _) => added = g)
+        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+              .Callback<SharedGame, IReadOnlyList<string>, IReadOnlyList<string>, CancellationToken>((g, _, _, _) => added = g)
               .Returns(Task.CompletedTask);
 
         await Handler().Handle(

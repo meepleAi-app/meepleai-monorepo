@@ -606,12 +606,13 @@ public sealed class SharedGame : AggregateRoot<Guid>
     /// still complete it later. Audit fields are stamped only when something
     /// actually changed (mirrors <see cref="AssignWikidataQid"/>), so a no-op
     /// call (all fields absent / implausible) leaves the aggregate untouched.
-    /// <para>Scope: <b>scalars only</b>. Designers/publishers are intentionally
-    /// excluded — the <c>_designers</c>/<c>_publishers</c> aggregate collections
-    /// are read-only through <c>SharedGameRepository</c> (<c>MapToEntity</c> maps
-    /// no M:N navigation), so writing them here would be silently dropped on
-    /// persist. Persisting Wikidata designers/publishers (get-or-create by name +
-    /// join rows + integration coverage) is tracked by #3153.</para>
+    /// <para>Scope: <b>scalars only</b>, by design. Designers/publishers are NOT
+    /// applied here — the <c>_designers</c>/<c>_publishers</c> aggregate collections
+    /// are read-only through <c>SharedGameRepository</c> (<c>MapToEntity</c> maps no
+    /// M:N navigation) and carry throwaway Guids. Wikidata designers/publishers are
+    /// instead persisted as M:N links by the repository's get-or-create-by-name
+    /// resolver, fed RAW NAMES from the seed handler (#3153) — never routed through
+    /// this method or <c>AddDesigner</c>.</para>
     /// </remarks>
     /// <param name="yearPublished">Publication year (Wikidata P577); applied when in <c>1901..currentYear+1</c>.</param>
     /// <param name="minPlayers">Minimum player count (P1872).</param>

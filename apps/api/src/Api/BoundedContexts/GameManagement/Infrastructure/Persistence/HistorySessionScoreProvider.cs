@@ -61,4 +61,31 @@ internal sealed class HistorySessionScoreProvider : IHistorySessionScoreProvider
                     return new HistorySessionScore(latest.ScoringType, latest.ScoreData);
                 });
     }
+
+    public async Task<SessionScoreboard?> GetScoreboardAsync(
+        Guid gameSessionId,
+        CancellationToken cancellationToken)
+    {
+        // Bridge GameSession → LiveGameSession → SessionTracking.Session (owns score_data).
+        var scoreRow = await (
+            from live in _dbContext.LiveGameSessions.AsNoTracking()
+            where live.CorrelatedGameSessionId == gameSessionId
+            join track in _dbContext.SessionTrackingSessions.AsNoTracking()
+                on live.TrackingSessionId equals (Guid?)track.Id
+            orderby (track.UpdatedAt ?? track.CreatedAt) descending
+            select new { LiveId = live.Id, track.ScoringType, track.ScoreData }
+        ).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+        if (scoreRow is null)
+            return null;
+
+        // The SessionPlayers on that same LiveGameSession are the identity space of
+        // scoreData.scores[].playerId, and carry DisplayName + Color.
+        var players = await _dbContext.SessionPlayers.AsNoTracking()
+            .Where(p => p.LiveGameSessionId == scoreRow.LiveId)
+            .Select(p => new ScorePlayerReadModel(p.Id, p.DisplayName, p.Color))
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return new SessionScoreboard(scoreRow.ScoringType, scoreRow.ScoreData, players);
+    }
 }

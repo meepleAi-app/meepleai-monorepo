@@ -1,144 +1,122 @@
-# #3022 — Catan SUMMARY flavor: design
+# #3022 — Catan SUMMARY flavor: design (rev. 2 — scope VP reali / BE bridge)
 
 - **Issue**: [#3022](https://github.com/meepleAi-app/meepleai-monorepo/issues/3022) — `[#2377 G6a-2] feat(session-live): Catan flavor SUMMARY view (deferred from #2787)`
 - **Parent**: #2377 (G6 umbrella) · **Epic**: #2354 · **Enabler**: #3025 (per-game live game-state)
 - **Branch**: `feature/issue-3022-catan-summary-flavor` (parent `main-dev`)
-- **Data**: 2026-07-17
+- **Data**: 2026-07-18 (rev. 2)
+
+> **Rev. 2 changelog**: la rev. 1 assumeva "presentational FE-only con punteggi reali già sul summary DTO". Una review avversariale del piano l'ha smentita su due punti critici (§2). Scelta utente: **VP reali via BE bridge**. Questa revisione ridisegna il backend di conseguenza.
 
 ## 1. Contesto
 
-La vista LIVE di Catan è già in produzione (#2787 / PR #3021). La vista SUMMARY (recap fine partita su `/sessions/[id]`) fu **deliberatamente rinviata** in #3022 perché porta debito che la LIVE non ha: il suo data-path passa da un DTO diverso (`GameSessionDto`, non `LiveSessionDto`) che non conosce lo slug del gioco né il game-state per-partita.
+La vista LIVE di Catan è in produzione (#2787). La SUMMARY (recap su `/sessions/[id]`) fu rinviata in #3022. Scope confermato: **presentational core con punteggi reali** — Hero vincitore + final standings (VP reali per-player + colori) + KPI durata. Fuori scope: board snapshot, dice-chart, trade-bars, breakdown 5-categorie, badge longest-road/largest-army (richiedono `gameState` end-game non persistito). Il mockup `sp4-session-catan-summary.*` è `design_intent: "deferred"` → guida di layout, non pixel-gate.
 
-### Decisioni prese (brainstorming 2026-07-17)
+## 2. I due difetti critici che hanno ridisegnato il backend (verificati nel codice)
 
-| Decisione | Scelta | Conseguenza |
-|---|---|---|
-| **Scope MVP** | Presentational core | Hero vincitore + final standings (punteggi reali + colori) + KPI base (durata; turni/round se presenti). **Niente** board snapshot / dice-chart / trade-bars / breakdown 5-categorie / badge longest-road-largest-army. |
-| **Fonte `gameSlug`** | Backend | `GameSessionDto` arricchito con `GameSlug`/`GameName` (nullable). |
+1. **`GET /api/v1/sessions/{id}` non popola `scoreData`/`scoringType`.** Il `GetGameSessionByIdQueryHandler.MapToDto` costruisce il DTO senza score; l'enrichment esiste **solo** sul path history (`GetSessionHistoryQueryHandler.cs:51-61` via `IHistorySessionScoreProvider`). → sul summary `scoreData` è sempre `null`.
+2. **Identity mismatch dei player.** `scoreData.scores[].playerId` sono `SessionPlayerEntity.Id` (aggregato **LiveGameSession**, tabella `session_players`), mentre `GameSessionDto.Players` (`SessionPlayerDto`) espone solo `playerName/order/color` senza quell'id. → il join VP↔giocatore non ha chiave comune.
 
-Il mockup `admin-mockups/design_files/sp4-session-catan-summary.*` è marcato `design_intent: "deferred"` (fidelity.json, tracking #2234 — track Storybook già chiusa): vale come **guida di layout**, non come pixel-gate.
-
-## 2. Fatti verificati dalla discovery
-
-1. **I dati core del summary esistono già nel DTO, ma vengono scartati.** `GameSessionDto` (da `GET /api/v1/sessions/{id}`) espone `scoringType` + `scoreData` (punteggi reali per-player, JSON-encoded, formato #2389/#3080), `durationMinutes`, `players[].color`, `winnerName`. L'adapter `adaptGameSessionToDetails` (`SessionSummaryView.tsx:158-193`) li appiattisce a placeholder (`score = isWinner ? 1 : 0`, `duration = '—'`, `color` ignorato). Il summary flavor **bypassa** l'adapter e legge i campi grezzi.
-2. **Manca `gameSlug`/`gameName`** su `GameSessionDto` (solo `GameId` Guid). Serve per il dispatch del flavor.
-3. **Manca `gameState`** sul summary DTO: vive **solo** su `LiveSessionDto` (`live-sessions.schemas.ts:139`). → tutti gli elementi che richiedono lo stato per-partita sono fuori scope MVP.
-4. **`FlavorRenderer` è cablato sul solo LIVE**: `FlavorView = 'live'`, `FlavorProps.session: LiveSessionDto`, e `CatanLiveFlavor` legge lo stato da `useLiveSessionStore`/SignalR — nulla di ciò esiste in pagina summary. Il summary ha bisogno di **props proprie**.
-5. **Adapter riusabile già pronto**: `mapScoreDataToEndgameSummary(scoringType, scoreData, players)` (`lib/session-live/score-data-to-endgame-summary.ts`) → `FinalScoreEntry[]` (`{playerName, score, isWinner}`), gestisce i 4 `ScoreType`, ritorna `[]` su null, e mappa `players.map()` **preservando l'ordine** (output parallelo-per-indice all'input).
-6. **Pattern BE per lo slug**: il LIVE deriva `GameSlug = Slugifier.Slugify(GameName)` (`QueryHandlers.cs:44`); `SharedGame` non ha un campo `Slug`. `GameName` = `SharedGame.Title`, risolvibile da `GameId` col pattern esistente `_db.SharedGames.Where(g => g.Id == gameId).Select(g => g.Title)`.
+**Bridge risolto** (verificato end-to-end): i `playerId` in `scoreData` = `SessionPlayerEntity.Id`, che porta **anche** `DisplayName` e `Color`. Percorso: `GameSession.Id ← LiveGameSession.CorrelatedGameSessionId`; `LiveGameSession.Id = SessionPlayers.LiveGameSessionId`. Gli stessi `SessionPlayers` vivono sullo stesso `LiveGameSession` che il score-provider già attraversa → allineamento esatto, **nessun name-matching**.
 
 ## 3. Architettura
 
-### 3.1 Dispatcher summary gemello (non estensione del renderer live)
+### 3.1 Backend — read-model esteso (una sola chiamata provider)
 
-**Scelta**: un dispatcher parallelo e isolato, **non** una modifica a `FlavorRenderer`.
-
-- **Motivo**: `FlavorProps.session` è `LiveSessionDto` e i flavor live dipendono da `useLiveSessionStore`/SignalR. Il summary consuma `GameSessionDto` e non ha store live. Rendere `FlavorRenderer` generico sulle props per-view toccherebbe codice condiviso da 7 flavor live → rischio sproporzionato per un MVP.
-- **Componenti nuovi** (in `apps/web/src/components/features/session-live/`):
-  - `SummaryFlavorRenderer.tsx` — dispatcher lazy gemello di `FlavorRenderer`.
-  - `SummaryFlavorProps` — `{ session: GameSessionDto; className?: string }` (props proprie, disaccoppiate dal live).
-  - `SUMMARY_FLAVOR_MAP` — `Record<string, LazyExoticComponent<...>>`, inizialmente `{ catan: CatanSummaryFlavorLazy }`.
-  - `hasSummaryFlavor(slug: string | null | undefined): boolean` — per il mount condizionale.
-- `FlavorRenderer.tsx` e i 7 flavor live **restano invariati**.
-
-### 3.2 Data flow (FE, tutto sui campi grezzi del DTO)
-
-```
-GameSessionDto
- ├─ scoreData (JSON string) ──JSON.parse[try/catch → warn → null]──▶ oggetto polimorfico
- ├─ scoringType ──────────────────────────────────────────────────┐
- ├─ players[] (id, name, color) ──▶ AdapterPlayer[] ───────────────┤
- │                                                                  ▼
- │                                       mapScoreDataToEndgameSummary()
- │                                          → FinalScoreEntry[] (parallelo-per-indice a players)
- │                                                                  │
- │              zip color: standings[i].color = players[i].color ◀──┘
- │                                                                  ▼
- │                              standings ordinate (winner-first, poi score DESC)
- ├─ durationMinutes ──────────────────────────────────────────────▶ KPI durata
- └─ winnerName / playerCount ─────────────────────────────────────▶ hero + KPI
-```
-
-Lo zip per-indice è sicuro perché l'adapter costruisce l'output con `players.map(...)` senza riordinare (verificato, `score-data-to-endgame-summary.ts:49,67,78,97`).
-
-## 4. Backend
-
-### 4.1 `GameSessionDto`
-
-Aggiungere due campi **nullable** in coda al record (`GameSessionDto.cs`):
+Nuovo metodo sul provider esistente (`IHistorySessionScoreProvider`), che lascia `GetScoresAsync` (history list) **invariato**:
 
 ```csharp
-string? GameSlug = null,   // populated only on GET /api/v1/sessions/{id}
-string? GameName = null    // Title from the shared-game catalog; null on list/history paths
+Task<SessionScoreboard?> GetScoreboardAsync(Guid gameSessionId, CancellationToken ct);
+
+internal readonly record struct SessionScoreboard(
+    string ScoringType,
+    string ScoreData,
+    IReadOnlyList<ScorePlayerReadModel> Players);
+
+internal readonly record struct ScorePlayerReadModel(Guid Id, string DisplayName, string Color);
 ```
 
-Nullable perché il DTO è condiviso da molti endpoint (history, active, complete, abandon, pause, resume, end): solo il path a singola sessione li popola.
+Implementazione (mirror del join esistente `HistorySessionScoreProvider.cs:35-49`, + proiezione dei `SessionPlayers`):
+1. `LiveGameSessions.Where(CorrelatedGameSessionId == gameSessionId)` join `SessionTrackingSessions on TrackingSessionId == track.Id` → `(live.Id, track.ScoringType, track.ScoreData, updatedAt)`, prendi il più recente. Se nessuno → `null`.
+2. `SessionPlayers.Where(LiveGameSessionId == live.Id).Select(p => new ScorePlayerReadModel(p.Id, p.DisplayName, p.Color))`.
+3. `new SessionScoreboard(scoringType, scoreData, players)`.
 
-### 4.2 Popolamento (solo path GET singola sessione)
+### 3.2 Backend — DTO + handler
 
-`GetGameSessionByIdQueryHandler.MapToDto` risolve `GameName`/`GameSlug`:
-- Inietta accesso in lettura al catalogo `SharedGames` (via `DbContext` condiviso, come `UploadPdfCommandHandler.cs:141` — pattern già accettato nel codebase, oppure repository catalogo se disponibile — dettaglio del piano).
-- `gameName = SharedGames.Where(g => g.Id == session.GameId).Select(g => g.Title).FirstOrDefault()`.
-- `gameSlug = gameName is null ? null : Slugifier.Slugify(gameName)` (identico a `QueryHandlers.cs:44`).
-- Se il gioco non è nel catalogo → entrambi `null` → il FE cade sul layout generico.
+- `GameSessionDto` (record) += (tutti nullable, popolati **solo** su GET singola sessione):
+  - `string? GameSlug`, `string? GameName` (via `IGameCoreDataProvider` + `Slugifier.Slugify`).
+  - `IReadOnlyList<ScorePlayerDto>? ScorePlayers` con `internal record ScorePlayerDto(Guid Id, string DisplayName, string? Color)`.
+  - `ScoringType`/`ScoreData` **esistono già** (default null): ora popolati dal scoreboard.
+- `GetGameSessionByIdQueryHandler` inietta `IGameCoreDataProvider` + `IHistorySessionScoreProvider`. Dopo aver caricato la session: risolve slug/name; chiama `GetScoreboardAsync(session.Id, ct)`; se presente, popola `ScoringType`/`ScoreData`/`ScorePlayers`.
+- `GameSessionMapper.ToDto` (altri endpoint) **invariato**: i nuovi campi restano null.
 
-`GameSessionMapper.ToDto` (extension statico usato dagli **altri** endpoint) resta invariato: `GameSlug`/`GameName` restano `null` (nessun accesso al catalogo, nessun cambio di comportamento sugli altri path).
+### 3.3 Frontend — flavor
 
-### 4.3 Schema Zod FE
+- Zod `GameSessionDtoSchema` += `gameSlug`/`gameName` (nullable optional) + `scorePlayers: z.array(ScorePlayerDtoSchema).nullable().optional()`, con `ScorePlayerDtoSchema = { id: string, displayName: string, color: string|null }`.
+- Dispatcher summary **gemello** isolato (`SummaryFlavorRenderer`, props `{ session: GameSessionDto }`) — non tocca il `FlavorRenderer` live (tipizzato su `LiveSessionDto` + `useLiveSessionStore`).
+- `CatanSummaryFlavor` usa **`session.scorePlayers`** (id+displayName+color, allineati a scoreData) come master-list:
+  - `buildCatanSummaryStandings(scoringType, scoreData, scorePlayers)` → `mapScoreDataToEndgameSummary(scoringType, parsed, scorePlayers.map(p => ({id, name: displayName})))` + zip `color` per indice.
+  - **Winner hero**: preferisce `session.winnerName` (BE-autoritativo, coerente col resto del summary); fallback alla row `isWinner`; **nessun auto-crowning** quando né `winnerName` né una `isWinner` esistono.
+  - **Durata**: `session.durationMinutes`.
 
-`GameSessionDtoSchema` (`games.schemas.ts`) += `gameSlug: z.string().nullable().optional()`, `gameName: z.string().nullable().optional()`.
+### 3.4 Data flow
 
-## 5. Frontend — `CatanSummaryFlavor`
+```
+GET /sessions/{id}
+  handler → GetScoreboardAsync(session.Id)  ─┐
+          → IGameCoreDataProvider(gameId)    ─┤→ GameSessionDto {
+                                               │    scoringType, scoreData,        (from scoreboard)
+                                               │    scorePlayers[{id,displayName,color}],
+                                               │    gameSlug, gameName, winnerName, durationMinutes, players }
+FE SessionSummaryView (status==='Completed' && hasSummaryFlavor(gameSlug))
+  → SummaryFlavorRenderer → CatanSummaryFlavor(session)
+      buildCatanSummaryStandings(scoringType, scoreData, scorePlayers)
+        → mapScoreDataToEndgameSummary (join playerId↔scorePlayers[].id) → FinalScoreEntry[]
+        → zip color per indice → sort winner-first, score DESC
+      hero: winnerName ?? row.isWinner ?? (none)   standings: rows con color
+```
 
-- **Input**: `SummaryFlavorProps` (`session: GameSessionDto`).
-- **Parsing**: `JSON.parse(session.scoreData)` in `try/catch`; su errore `console.warn` + trattamento come `null`.
-- **Standings**: `mapScoreDataToEndgameSummary(session.scoringType, parsed, adapterPlayers)` + zip `color` per indice + ordinamento winner-first/score-DESC.
-- **Render**:
-  - **Hero**: avatar del vincitore (hue derivato da `player.color`), titolo `"{nome} vince!"`, punteggio del vincitore + `durationMinutes`.
-  - **Standings strip**: per riga → posizione, `PlayerDot` color-coded, nome, barra di progresso, punteggio. Riuso di palette/atomi del pattern `CatanLiveFlavor`.
-- **i18n**: label auto-costruite via `useIntl` (stesso pattern del flavor live).
-
-### 5.1 Wire in `SessionSummaryView`
-
-Additivo e a basso rischio: se `hasSummaryFlavor(session.gameSlug)` → monta `<SummaryFlavorRenderer session={dto} />` come **sezione** in cima al layout summary esistente; altrimenti la pagina resta invariata. L'MVP **non** rimuove il layout generico né introduce una nuova route (`/sessions/[id]/summary` con tab è fuori scope; il posizionamento fine è dettaglio del piano).
-
-## 6. Error / null handling
+## 4. Error / null handling
 
 | Condizione | Comportamento |
 |---|---|
-| `gameSlug` null / gioco senza flavor summary | `SummaryFlavorRenderer` → `null` → layout summary generico invariato |
-| `scoringType`/`scoreData` null | adapter → `[]` → empty state gentile del flavor |
+| `gameSlug` null / non-Catan | `SummaryFlavorRenderer` → `null` → layout generico invariato |
+| `status !== 'Completed'` (incl. `Abandoned`) | flavor **non montato** (no winner-hero su partite non concluse) |
+| `scoreData`/`scoringType`/`scorePlayers` null (nessuna live correlata) | adapter → `[]` → empty state gentile del flavor |
 | `scoreData` malformed JSON | `try/catch` + `console.warn` → trattato come null |
-| `player.color` null | `PlayerDot` con colore neutro di fallback |
-| catalogo non risolve il gioco | `gameName`/`gameSlug` null dal BE → come "gameSlug null" |
+| standings presenti ma nessun `isWinner` e `winnerName` null | standings senza hero-winner (nessun auto-crown) |
+| `player.color` null | `PlayerDot` colore neutro (`CATAN_NEUTRAL_HSL`) |
 
-## 7. i18n
+## 5. i18n
 
-Nuovo sottoalbero (naming da confermare nel piano, es. `features.sessionLive.catanSummary.*`) in `it.json` **e** `en.json`, coprendo hero/standings/KPI/empty. **Guard di parità** dedicato (stesso pattern di `i18n-gamedetail-keys.test.ts`, #3103).
+Sottoalbero `pages.sessionSummary.flavor.catan.{winnerTemplate,vpUnit,durationTemplate,standingsTitle,empty}` in `it.json` **e** `en.json`, con **guard di parità**. Template con placeholder usano l'interpolazione ICU nativa di `t(key, { name })` (non `.replace` manuale).
 
-## 8. Testing (TDD, RED-first)
+## 6. Testing (TDD, RED-first)
 
-- **FE unit `CatanSummaryFlavor`**: `scoreData` Points reale → hero mostra il vincitore, standings ordinate con colori; `scoreData` null → empty; JSON malformato → empty + `console.warn`.
-- **FE unit `SummaryFlavorRenderer`**: dispatch `catan` → componente montato; slug sconosciuto/null → `null`.
-- **FE `SessionSummaryView` wiring**: `gameSlug='catan'` → flavor montato; altro slug → non montato; nessuna regressione sul test esistente.
-- **BE unit `GetGameSessionByIdQueryHandler`**: popola `GameSlug`/`GameName` dal catalogo; gioco assente → null. Verifica che `GameSessionMapper.ToDto` (altri path) lasci null.
-- **Guard i18n**: nuove chiavi presenti e a parità IT/EN.
+- **BE unit `GetScoreboardAsync`** (provider): test integration (Testcontainers/InMemory) — seed `LiveGameSession`(CorrelatedGameSessionId)+`SessionTrackingSession`(scoreData)+`SessionPlayers` → asserisce `SessionScoreboard` con score + players allineati (id == scoreData playerId). Real pipeline, non fixture DTO.
+- **BE unit handler** (mock provider + core-data): popola scoringType/scoreData/scorePlayers/gameSlug/gameName; scoreboard null → campi null; gioco assente → slug/name null. Aggiornare i 6 test esistenti al nuovo ctor. + test `GameSessionMapper.ToDto` lascia i nuovi campi null (guard altri path).
+- **FE `buildCatanSummaryStandings`**: Points reale (join per id) → standings ordinate + color; scorePlayers vuoto → `[]`; scoreData null → `[]`; JSON malformato → `[]` + warn; tie a punteggio max → ordine deterministico; scoringType sconosciuto → `[]`.
+- **FE `CatanSummaryFlavor`**: hero da winnerName; nessun isWinner + winnerName null → nessun auto-crown; empty su standings vuote; color null → dot neutro.
+- **FE `SummaryFlavorRenderer`**: dispatch catan→component, unknown/null→null.
+- **FE wiring `SessionSummaryView`**: `gameSlug='catan'` + `status='Completed'` → montato; non-Catan → non montato; `status!='Completed'` → non montato; nessuna regressione. Harness IntlProvider con `onError={() => {}}` (precedente `FlavorRenderer.test.tsx:21`).
 
-## 9. Fuori scope MVP (deferred — richiedono `gameState` end-game persistito)
+## 7. Fuori scope MVP (deferred)
 
-Board snapshot (`HexBoard` finale), `DiceChart` (istogramma 2D6 storico), `TradeBars`, contatore mosse del ladro, "serie di produzione più lunga", "mano più grande", breakdown per le 5 categorie di scoring, badge `LongestRoad`/`LargestArmy` nelle standings. Nessuno di questi è alimentabile dal summary DTO attuale.
+Board snapshot, `DiceChart`, `TradeBars`, robber-move counter, longest-production-run, biggest-hand, breakdown 5-categorie, badge longest-road/largest-army. Tutti richiedono `gameState` end-game persistito, assente sul summary path.
 
-## 10. File toccati (checklist)
+## 8. File toccati (checklist)
 
 **Backend**
-- `GameSessionDto.cs` — +`GameSlug?`, +`GameName?`
-- `GetGameSessionByIdQueryHandler.cs` — DI catalogo + risoluzione slug/name
-- (test) `GetGameSessionByIdQueryHandler` test
+- `IHistorySessionScoreProvider.cs` — +`GetScoreboardAsync`, +`SessionScoreboard`, +`ScorePlayerReadModel`
+- `HistorySessionScoreProvider.cs` — impl `GetScoreboardAsync`
+- `GameSessionDto.cs` — +`GameSlug?`, +`GameName?`, +`ScorePlayers?`, +`record ScorePlayerDto`
+- `GetGameSessionByIdQueryHandler.cs` — +2 dipendenze, popolamento
+- (test) provider integration + handler unit + mapper guard
 
 **Frontend**
-- `components/features/session-live/SummaryFlavorRenderer.tsx` (nuovo: renderer + `SummaryFlavorProps` + `SUMMARY_FLAVOR_MAP` + `hasSummaryFlavor`)
-- `components/features/session-live/flavors/catan/CatanSummaryFlavor.tsx` (nuovo, + eventuali sub-componenti hero/standings)
-- `lib/api/**/games.schemas.ts` — Zod `gameSlug`/`gameName`
-- `app/(authenticated)/sessions/[id]/_components/SessionSummaryView.tsx` — wire condizionale
+- `lib/api/schemas/games.schemas.ts` — Zod `gameSlug`/`gameName`/`scorePlayers`
+- `components/features/session-live/SummaryFlavorRenderer.tsx` (nuovo)
+- `components/features/session-live/flavors/catan/catan-summary-standings.ts` (nuovo)
+- `components/features/session-live/flavors/catan/CatanSummaryFlavor.tsx` (nuovo)
+- `app/(authenticated)/sessions/[id]/_components/SessionSummaryView.tsx` — wire (status-gated)
 - `locales/it.json`, `locales/en.json` + guard i18n
-- test FE (flavor, renderer, wiring, guard)
+- test FE (builder, flavor, renderer, wiring, guard)

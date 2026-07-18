@@ -394,17 +394,23 @@ public class DeleteChatMessageCommandHandlerTests
 public class MediaQueryHandlerTests
 {
     private readonly Mock<ISessionMediaRepository> _mockMediaRepo;
+    private readonly Mock<ISessionRepository> _mockSessionRepo;
 
     public MediaQueryHandlerTests()
     {
         _mockMediaRepo = new Mock<ISessionMediaRepository>();
+        _mockSessionRepo = new Mock<ISessionRepository>();
     }
 
     [Fact]
-    public async Task GetSessionMedia_ReturnsMediaDtos()
+    public async Task GetSessionMedia_WhenOwner_ReturnsMediaDtos()
     {
         // Arrange
-        var sessionId = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+        var session = Session.Create(ownerId, Guid.NewGuid(), SessionType.Generic);
+        var sessionId = session.Id;
+        _mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
         var media1 = SessionMedia.Create(
             sessionId, Guid.NewGuid(), "f1", "a.jpg", "image/jpeg", 100, SessionMediaType.Photo);
         var media2 = SessionMedia.Create(
@@ -413,8 +419,8 @@ public class MediaQueryHandlerTests
         _mockMediaRepo.Setup(r => r.GetBySessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<SessionMedia> { media1, media2 });
 
-        var handler = new GetSessionMediaQueryHandler(_mockMediaRepo.Object);
-        var query = new Api.BoundedContexts.SessionTracking.Application.Queries.GetSessionMediaQuery(sessionId);
+        var handler = new GetSessionMediaQueryHandler(_mockMediaRepo.Object, _mockSessionRepo.Object);
+        var query = new GetSessionMediaQuery(sessionId, ownerId);
 
         // Act
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
@@ -423,6 +429,25 @@ public class MediaQueryHandlerTests
         result.Count.Should().Be(2);
         result[0].FileName.Should().Be("a.jpg");
         result[1].FileName.Should().Be("b.png");
+    }
+
+    [Fact]
+    public async Task GetSessionMedia_WhenNotOwnerOrParticipant_ThrowsForbidden()
+    {
+        // #3119 IDOR guard: a non-owner/non-participant must not read another user's session media.
+        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
+        _mockSessionRepo.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var handler = new GetSessionMediaQueryHandler(_mockMediaRepo.Object, _mockSessionRepo.Object);
+        var query = new GetSessionMediaQuery(session.Id, Guid.NewGuid());
+
+        var act = () => handler.Handle(query, TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+        _mockMediaRepo.Verify(
+            r => r.GetBySessionIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -454,17 +479,23 @@ public class MediaQueryHandlerTests
 public class ChatQueryHandlerTests
 {
     private readonly Mock<ISessionChatRepository> _mockChatRepo;
+    private readonly Mock<ISessionRepository> _mockSessionRepo;
 
     public ChatQueryHandlerTests()
     {
         _mockChatRepo = new Mock<ISessionChatRepository>();
+        _mockSessionRepo = new Mock<ISessionRepository>();
     }
 
     [Fact]
-    public async Task GetSessionChat_ReturnsMessagesAndTotalCount()
+    public async Task GetSessionChat_WhenOwner_ReturnsMessagesAndTotalCount()
     {
         // Arrange
-        var sessionId = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+        var session = Session.Create(ownerId, Guid.NewGuid(), SessionType.Generic);
+        var sessionId = session.Id;
+        _mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
         var msg1 = SessionChatMessage.CreateTextMessage(sessionId, Guid.NewGuid(), "Hi", 1);
         var msg2 = SessionChatMessage.CreateSystemEvent(sessionId, "Game started", 2);
 
@@ -473,8 +504,8 @@ public class ChatQueryHandlerTests
         _mockChatRepo.Setup(r => r.GetCountBySessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(2);
 
-        var handler = new GetSessionChatQueryHandler(_mockChatRepo.Object);
-        var query = new Api.BoundedContexts.SessionTracking.Application.Queries.GetSessionChatQuery(sessionId, 50, 0);
+        var handler = new GetSessionChatQueryHandler(_mockChatRepo.Object, _mockSessionRepo.Object);
+        var query = new GetSessionChatQuery(sessionId, 50, 0, ownerId);
 
         // Act
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
@@ -484,5 +515,24 @@ public class ChatQueryHandlerTests
         result.TotalCount.Should().Be(2);
         result.Messages[0].MessageType.Should().Be("Text");
         result.Messages[1].MessageType.Should().Be("SystemEvent");
+    }
+
+    [Fact]
+    public async Task GetSessionChat_WhenNotOwnerOrParticipant_ThrowsForbidden()
+    {
+        // #3119 IDOR guard: a non-owner/non-participant must not read another user's session chat.
+        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
+        _mockSessionRepo.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var handler = new GetSessionChatQueryHandler(_mockChatRepo.Object, _mockSessionRepo.Object);
+        var query = new GetSessionChatQuery(session.Id, 50, 0, Guid.NewGuid());
+
+        var act = () => handler.Handle(query, TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+        _mockChatRepo.Verify(
+            r => r.GetBySessionIdAsync(It.IsAny<Guid>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 }

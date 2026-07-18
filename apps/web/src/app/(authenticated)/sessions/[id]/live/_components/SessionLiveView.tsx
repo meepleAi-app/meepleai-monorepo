@@ -86,6 +86,7 @@ import {
   ActionLogTimeline,
   ChatAgentPanel,
   DesktopBody,
+  LiveMobileMetaStrip,
   LiveTopBar,
   MobileBody,
   PlayerRosterLive,
@@ -129,6 +130,7 @@ import { useSessionAgentChat } from '@/lib/domain-hooks/useSessionAgentChat';
 import { useSignalRSession } from '@/lib/domain-hooks/useSignalrSession';
 import { getNavigationLinks } from '@/lib/navigation';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
+import { formatElapsedTime } from '@/lib/session-live/format-elapsed-time';
 import { formatSessionStartedAt } from '@/lib/session-live/format-session-started-at';
 import { mapConnectionState } from '@/lib/session-live/map-connection-state';
 import { mapTurnDataToTurnState } from '@/lib/session-live/map-turn-data-to-turn-state';
@@ -1689,6 +1691,19 @@ export function SessionLiveView(): ReactElement {
         elapsedMs={elapsedMs}
         startedAtLabel={startedAtLabel}
         connectionState={connectionPipState}
+      />
+
+      {/* #3146 Slice 1 — mobile-only meta strip: surfaces the turn / elapsed /
+          derived-start chips that LiveTopBar hides below lg, so session state
+          stays visible at a glance on phones. */}
+      <LiveMobileMetaStrip
+        turnLabel={topBarLabels.turnLabelResolved}
+        elapsedLabel={elapsedMs != null ? formatElapsedTime(elapsedMs) : undefined}
+        startedAtLabel={startedAtLabel}
+        labels={{
+          elapsedAriaLabel: topBarLabels.elapsedTimeAriaLabel,
+          startedAtAriaLabel: topBarLabels.startedAtChipAriaLabel,
+        }}
       />
 
       {/* ConnectionLostBanner — SSE non-healthy states */}

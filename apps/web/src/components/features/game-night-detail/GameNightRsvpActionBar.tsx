@@ -133,7 +133,14 @@ export function GameNightRsvpActionBar({
               aria-pressed={isCurrent}
               disabled={allDisabled}
               onClick={() => onSelect(btn.response)}
-              className={clsx('flex-1 min-w-[120px]', isCurrent && !isPending && btn.selectedClass)}
+              className={clsx(
+                // #2989 Screen C: 44px touch-target floor on mobile (SP8 B-02
+                // regression guard). `size="sm"` renders h-9 (36px); min-height
+                // wins over the fixed height, lifting the tap area to 44px while
+                // keeping the compact sm width so 3 CTAs still fit at 375px.
+                'flex-1 min-w-[120px] min-h-[44px]',
+                isCurrent && !isPending && btn.selectedClass
+              )}
             >
               <span aria-hidden="true" className="mr-1 text-base leading-none">
                 {btn.icon}

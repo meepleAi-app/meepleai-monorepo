@@ -91,6 +91,17 @@ describe('GameNightRsvpActionBar', () => {
     expect(region).toBeInTheDocument();
   });
 
+  // #2989 Screen C mobile parity: RSVP CTAs must clear the 44px touch-target
+  // floor on mobile (SP8 gap B-02 regression guard — the 24px `.hy-goto` bug
+  // must not repeat). The button primitive `size="sm"` alone renders h-9 (36px),
+  // so a `min-h-[44px]` override is applied to every RSVP button.
+  it('renders RSVP buttons at the 44px touch-target floor (SP8 B-02 guard)', () => {
+    renderBar();
+    for (const testId of ['rsvp-btn-accepted', 'rsvp-btn-maybe', 'rsvp-btn-declined']) {
+      expect(screen.getByTestId(testId).className).toContain('min-h-[44px]');
+    }
+  });
+
   it('current response with no pending uses entity-toned selected styling', () => {
     renderBar({ currentResponse: 'Accepted' });
     const acceptBtn = screen.getByTestId('rsvp-btn-accepted');

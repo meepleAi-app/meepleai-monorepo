@@ -268,7 +268,7 @@ public class ConfirmStateChangeCommandHandlerTests
     #region Concurrency Tests
 
     [Fact]
-    public async Task Handle_WithConcurrencyConflict_ThrowsInvalidOperationException()
+    public async Task Handle_WithConcurrencyConflict_PropagatesDbUpdateConcurrencyException()
     {
         // Arrange
         var sessionId = Guid.NewGuid();
@@ -283,12 +283,12 @@ public class ConfirmStateChangeCommandHandlerTests
         var stateChanges = new Dictionary<string, object> { { "score", 10 } };
         var command = new ConfirmStateChangeCommand(sessionId, stateChanges, userId);
 
-        // Act & Assert
+        // Act & Assert — #3159: the handler must PROPAGATE DbUpdateConcurrencyException so the
+        // middleware (ApiExceptionHandlerMiddleware.HandleConcurrencyConflictAsync) maps it to
+        // HTTP 409 with header X-Warning-Code: concurrent-edit. Wrapping it as
+        // InvalidOperationException made the middleware return 500, hiding the "reload & retry" prompt.
         Func<Task> act = async () => await _handler.Handle(command, TestCancellationToken);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
-
-        exception.Message.Should().Contain("modified by another user");
-        exception.InnerException.Should().BeOfType<DbUpdateConcurrencyException>();
+        await act.Should().ThrowAsync<DbUpdateConcurrencyException>();
     }
 
     #endregion

@@ -95,9 +95,11 @@ internal sealed class ConfirmStateChangeCommandHandler
                 "Concurrency conflict for session {SessionId}. State was modified by another user.",
                 command.SessionId);
 
-            throw new InvalidOperationException(
-                "The game state was modified by another user. Please refresh and try again.",
-                ex);
+            // #3159: propagate the DbUpdateConcurrencyException so the middleware
+            // (ApiExceptionHandlerMiddleware.HandleConcurrencyConflictAsync) maps it to HTTP 409 with
+            // header X-Warning-Code: concurrent-edit, enabling the FE "reload & retry" prompt.
+            // Wrapping it as InvalidOperationException made the middleware return 500.
+            throw;
         }
 
         _logger.LogInformation(

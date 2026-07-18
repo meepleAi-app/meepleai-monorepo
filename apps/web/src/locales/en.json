@@ -3908,6 +3908,15 @@
       }
     },
     "sessionSummary": {
+      "flavor": {
+        "catan": {
+          "winnerTemplate": "{name} wins!",
+          "vpUnit": "VP",
+          "durationTemplate": "{minutes} min",
+          "standingsTitle": "Final standings",
+          "empty": "Summary not available"
+        }
+      },
       "hero": {
         "title": "Session summary",
         "podiumLabel": "Final podium",

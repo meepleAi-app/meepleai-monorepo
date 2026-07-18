@@ -66,4 +66,29 @@ public class HistorySessionScoreProviderScoreboardTests
 
         result.Should().BeNull();
     }
+
+    [Fact]
+    public async Task GetScoreboardAsync_MultipleCorrelated_ReturnsMostRecentTracking()
+    {
+        var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var gameSessionId = Guid.NewGuid();
+        var liveOld = Guid.NewGuid();
+        var liveNew = Guid.NewGuid();
+        var trackOld = Guid.NewGuid();
+        var trackNew = Guid.NewGuid();
+
+        db.LiveGameSessions.AddRange(
+            new LiveGameSessionEntity { Id = liveOld, SessionCode = "S1", GameName = "Catan", ScoringConfigJson = "{}", CorrelatedGameSessionId = gameSessionId, TrackingSessionId = trackOld },
+            new LiveGameSessionEntity { Id = liveNew, SessionCode = "S2", GameName = "Catan", ScoringConfigJson = "{}", CorrelatedGameSessionId = gameSessionId, TrackingSessionId = trackNew });
+        db.SessionTrackingSessions.AddRange(
+            new SessionEntity { Id = trackOld, GameId = Guid.NewGuid(), ScoringType = "Points", ScoreData = "{\"scores\":[]}", UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new SessionEntity { Id = trackNew, GameId = Guid.NewGuid(), ScoringType = "BinaryWin", ScoreData = "{\"results\":[]}", UpdatedAt = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc) });
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var sut = new HistorySessionScoreProvider(db);
+        var result = await sut.GetScoreboardAsync(gameSessionId, TestContext.Current.CancellationToken);
+
+        result.Should().NotBeNull();
+        result!.Value.ScoringType.Should().Be("BinaryWin");
+    }
 }

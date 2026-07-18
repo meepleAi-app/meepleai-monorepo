@@ -42,4 +42,29 @@ describe('buildCatanSummaryStandings', () => {
     expect(warn).toHaveBeenCalled();
     warn.mockRestore();
   });
+
+  const tieJson = JSON.stringify({
+    scores: [
+      { playerId: 'p1', points: 10 },
+      { playerId: 'p2', points: 10 },
+      { playerId: 'p3', points: 6 },
+    ],
+  });
+
+  it('deterministic order on a max-score tie with no winnerName (first-max crowned)', () => {
+    const rows = buildCatanSummaryStandings('Points', tieJson, players);
+    expect(rows.map(r => r.playerName)).toEqual(['Alice', 'Bob', 'Carol']);
+    expect(rows.filter(r => r.isWinner).map(r => r.playerName)).toEqual(['Alice']);
+  });
+
+  it('reconciles winnerName on a tie: declared winner sorts first and is the sole winner', () => {
+    const rows = buildCatanSummaryStandings('Points', tieJson, players, 'Bob');
+    expect(rows[0].playerName).toBe('Bob');
+    expect(rows.filter(r => r.isWinner).map(r => r.playerName)).toEqual(['Bob']);
+  });
+
+  it('trims winnerName before matching a row', () => {
+    const rows = buildCatanSummaryStandings('Points', pointsJson, players, '  Alice  ');
+    expect(rows[0]).toMatchObject({ playerName: 'Alice', isWinner: true });
+  });
 });

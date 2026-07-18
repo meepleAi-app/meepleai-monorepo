@@ -23,7 +23,8 @@ const SCORE_TYPES: readonly ScoreType[] = ['Points', 'BinaryWin', 'Objectives', 
 export function buildCatanSummaryStandings(
   scoringType: string | null | undefined,
   scoreDataJson: string | null | undefined,
-  scorePlayers: readonly ScorePlayerDto[] | null | undefined
+  scorePlayers: readonly ScorePlayerDto[] | null | undefined,
+  winnerName?: string | null
 ): CatanSummaryRow[] {
   if (
     scoringType == null ||
@@ -55,5 +56,15 @@ export function buildCatanSummaryStandings(
     color: scorePlayers[i]?.color ?? null,
   }));
 
-  return withColor.sort((a, b) => Number(b.isWinner) - Number(a.isWinner) || b.score - a.score);
+  // Reconcile with the BE-authoritative winnerName (trimmed, mirroring
+  // adaptGameSessionToDetails): when it matches a row, that row becomes the sole
+  // winner so the hero and the ordered standings agree — even on score ties where
+  // the adapter's first-max heuristic would otherwise crown a different player.
+  const trimmedWinner = winnerName?.trim() ? winnerName.trim() : null;
+  const winnerIdx =
+    trimmedWinner != null ? withColor.findIndex(r => r.playerName.trim() === trimmedWinner) : -1;
+  const reconciled =
+    winnerIdx >= 0 ? withColor.map((r, i) => ({ ...r, isWinner: i === winnerIdx })) : withColor;
+
+  return reconciled.sort((a, b) => Number(b.isWinner) - Number(a.isWinner) || b.score - a.score);
 }

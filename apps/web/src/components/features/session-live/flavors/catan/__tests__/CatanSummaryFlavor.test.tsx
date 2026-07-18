@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
 import type { ReactElement } from 'react';
 import { CatanSummaryFlavor } from '../CatanSummaryFlavor';
+import { CATAN_NEUTRAL_HSL } from '../catan-palette';
 import type { GameSessionDto } from '@/lib/api/schemas/games.schemas';
 
 const MESSAGES = {
@@ -77,5 +78,23 @@ describe('CatanSummaryFlavor', () => {
       <CatanSummaryFlavor session={{ ...base, scorePlayers: null, scoreData: null }} />
     );
     expect(screen.getByText('Riepilogo non disponibile')).toBeInTheDocument();
+  });
+
+  it('falls back to the scoreData isWinner row when winnerName is null', () => {
+    renderWithIntl(<CatanSummaryFlavor session={{ ...base, winnerName: null }} />);
+    expect(screen.getByText('Alice vince!')).toBeInTheDocument();
+  });
+
+  it('uses the neutral piece color for a null player color', () => {
+    const nullColor: GameSessionDto = {
+      ...base,
+      winnerName: null,
+      scorePlayers: [{ id: 'p1', displayName: 'Alice', color: null }],
+      scoreData: JSON.stringify({ scores: [{ playerId: 'p1', points: 10 }] }),
+    };
+    const { container } = renderWithIntl(<CatanSummaryFlavor session={nullColor} />);
+    const dot = container.querySelector('[data-slot="catan-summary-row"] span.rounded-full');
+    // jsdom normalises the inline hsl() to rgb(); toHaveStyle compares computed colors.
+    expect(dot).toHaveStyle({ backgroundColor: CATAN_NEUTRAL_HSL });
   });
 });

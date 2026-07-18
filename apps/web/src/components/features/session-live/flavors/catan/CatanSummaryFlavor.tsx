@@ -23,7 +23,8 @@ export function CatanSummaryFlavor({
   const rows = buildCatanSummaryStandings(
     session.scoringType,
     session.scoreData,
-    session.scorePlayers
+    session.scorePlayers,
+    session.winnerName
   );
 
   if (rows.length === 0) {
@@ -40,15 +41,12 @@ export function CatanSummaryFlavor({
   const standingsTitle = t('pages.sessionSummary.flavor.catan.standingsTitle');
   const vpUnit = t('pages.sessionSummary.flavor.catan.vpUnit');
 
-  // Winner precedence: BE-authoritative winnerName (matched to a row) → scoreData isWinner
-  // → none (never auto-crown when nobody won).
-  const heroRow =
-    (session.winnerName != null
-      ? rows.find(r => r.playerName === session.winnerName)
-      : undefined) ??
-    rows.find(r => r.isWinner) ??
-    null;
-  const heroName = heroRow?.playerName ?? session.winnerName ?? null;
+  // The builder reconciles winnerName into `isWinner`, so the hero is the single
+  // winning row. Fallback to the raw winnerName when it matches no row (BE/scorePlayers
+  // drift); null → no hero (never auto-crown when nobody won). Matching is by name —
+  // two guests sharing a display name is a known limitation (winnerName has no id).
+  const heroRow = rows.find(r => r.isWinner) ?? null;
+  const heroName = heroRow?.playerName ?? session.winnerName?.trim() ?? null;
   const maxScore = rows.reduce((m, r) => Math.max(m, r.score), 0);
 
   return (

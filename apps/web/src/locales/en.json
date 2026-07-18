@@ -4988,6 +4988,10 @@
         "deleteToast": "Record deleted",
         "deleteToastDescription": "The record was deleted successfully"
       },
+      "savedWhileLive": {
+        "toast": "Record saved while a session is live. Double-check you logged the games in the right order.",
+        "goToLive": "Go to the live session"
+      },
       "conflict": {
         "title": "Concurrent edit",
         "description": "Someone modified this game while you were editing. Reload the latest data or overwrite with your changes.",

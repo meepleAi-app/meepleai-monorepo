@@ -57,13 +57,29 @@ export default function EditPlayRecordPage() {
       location: data.location,
       xmin,
     });
-    await updateMutation.mutateAsync(validated);
+    const result = await updateMutation.mutateAsync(validated);
     queryClient.invalidateQueries({ queryKey: ['play-records', 'detail', recordId] });
     queryClient.invalidateQueries({ queryKey: ['play-records', 'history'] });
     queryClient.invalidateQueries({ queryKey: ['play-records', 'stats'] });
     toast.success(t('playRecords.edit.success.toast'), {
       description: t('playRecords.edit.success.toastDescription'),
     });
+    // #13 / Invariante 4: non-blocking amber warning when the save happened while the
+    // user had another session live. Additive to the success toast; the deep-link jumps
+    // to that live session so they can double-check the recording order.
+    if (result?.warningCode === 'SAVED_WHILE_LIVE_ACTIVE') {
+      toast.warning(t('playRecords.edit.savedWhileLive.toast'), {
+        duration: 6000,
+        ...(result.liveSessionId
+          ? {
+              action: {
+                label: t('playRecords.edit.savedWhileLive.goToLive'),
+                onClick: () => router.push(`/sessions/${result.liveSessionId}/live`),
+              },
+            }
+          : {}),
+      });
+    }
     router.push(`/play-records/${recordId}`);
   };
 

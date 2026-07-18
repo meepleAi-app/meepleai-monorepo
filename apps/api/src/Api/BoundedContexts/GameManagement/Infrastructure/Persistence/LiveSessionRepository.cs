@@ -86,6 +86,20 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
         return entities.Select(LiveGameSessionMapper.ToDomain).ToList();
     }
 
+    public async Task<Guid?> GetActiveInProgressSessionIdAsync(
+        Guid userId, CancellationToken cancellationToken = default)
+    {
+        // #3146: projection-only — no Includes, no domain mapping. Only genuinely LIVE
+        // (InProgress) counts (Setup/Paused excluded, unlike GetActiveByUserIdAsync).
+        return await DbContext.LiveGameSessions
+            .AsNoTracking()
+            .Where(e => e.CreatedByUserId == userId && e.Status == (int)LiveSessionStatus.InProgress)
+            .OrderByDescending(e => e.UpdatedAt)
+            .Select(e => (Guid?)e.Id)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task<IReadOnlyList<LiveGameSession>> GetAllActiveAsync(
         CancellationToken cancellationToken = default)
     {

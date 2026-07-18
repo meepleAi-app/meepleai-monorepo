@@ -30,6 +30,8 @@ rule_files:
   - '/etc/prometheus/runner-availability.yml'
   # Issue #2470 — Wikidata SSE plane starvation alerts.
   - '/etc/prometheus/wikidata-sse.yml'
+  # Issue #3117 — Wikidata enrichment pipeline-health alerts (dead-letter / queue depth).
+  - '/etc/prometheus/wikidata-enrichment.yml'
   # Issue #3082 — BGG ToS-compliance SLO=0 alert (any nonzero render attempt = P1).
   - '/etc/prometheus/bgg-tos-compliance.yml'
   # Issue #3112 — OPS-02 Slack delivery observability alerts.

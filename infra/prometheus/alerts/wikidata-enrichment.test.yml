@@ -1,0 +1,94 @@
+# promtool unit tests for wikidata-enrichment.yml (#3117).
+#
+# Run locally (Windows/Git Bash, from repo root):
+#   docker run --rm -v "$(pwd)/infra/prometheus/alerts:/work" prom/prometheus:v3.7.0 \
+#     promtool test rules /work/wikidata-enrichment.test.yml
+#
+# There is no promtool CI gate in this repo (see recon in #3082); this file documents +
+# verifies the alert behaviour on demand.
+rule_files:
+  - wikidata-enrichment.yml
+
+evaluation_interval: 1m
+
+tests:
+  # Dead-letter backlog above 100 sustained >1h -> WikidataDeadLetterHigh fires.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_wikidata_dead_letter_count'
+        values: '150x65'
+    alert_rule_test:
+      - eval_time: 62m
+        alertname: WikidataDeadLetterHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              subsystem: wikidata-enrichment
+            exp_annotations:
+              summary: "Wikidata dead-letter backlog above 100 (sustained 1h)"
+              description: "meepleai_wikidata_dead_letter_count has stayed above 100 for 1h: an operator triage backlog is building. Investigate via the M13 admin dead-letter page — likely a license-whitelist drift or SPARQL schema drift in the enrichment pipeline."
+              runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#wikidata-enrichment-alerts"
+
+  # Below threshold (50) -> no alert. Idle (0) is also below threshold.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_wikidata_dead_letter_count'
+        values: '50x65'
+    alert_rule_test:
+      - eval_time: 62m
+        alertname: WikidataDeadLetterHigh
+        exp_alerts: []
+
+  # A sharp jump (0 -> 300 over 5m, +60/min) -> WikidataDeadLetterSpike fires.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_wikidata_dead_letter_count'
+        values: '0+60x6'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: WikidataDeadLetterSpike
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              subsystem: wikidata-enrichment
+            exp_annotations:
+              summary: "Wikidata dead-letter count jumped by more than 50 in 5m"
+              description: "meepleai_wikidata_dead_letter_count rose by more than 50 within 5 minutes: a systemic upstream failure or a license-whitelist drift. Cross-check WikidataSparqlLatency p95 and the Wikidata/Commons endpoint health."
+              runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#wikidata-enrichment-alerts"
+
+  # Stable dead-letter count (no growth) -> delta ~0 -> WikidataDeadLetterSpike does not fire.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_wikidata_dead_letter_count'
+        values: '120x6'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: WikidataDeadLetterSpike
+        exp_alerts: []
+
+  # Queue depth above 5000 sustained >1h -> WikidataQueueBacklogHigh fires.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_wikidata_queue_depth'
+        values: '6000x65'
+    alert_rule_test:
+      - eval_time: 62m
+        alertname: WikidataQueueBacklogHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              subsystem: wikidata-enrichment
+            exp_annotations:
+              summary: "Wikidata enrichment queue depth above 5000 (sustained 1h)"
+              description: "meepleai_wikidata_queue_depth has stayed above 5000 for 1h: the enrichment backlog is building and the scheduler is under-provisioned relative to the enrichment rate. Consider tuning the batch size or the DEC-3e rate-limiter."
+              runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#wikidata-enrichment-alerts"
+
+  # Idle queue (0) -> no alert.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_wikidata_queue_depth'
+        values: '0x65'
+    alert_rule_test:
+      - eval_time: 62m
+        alertname: WikidataQueueBacklogHigh
+        exp_alerts: []

@@ -12,7 +12,11 @@
 # Usage:  scripts/build-claude-design-bundle.sh [sp6|sp7|sp8|sp9|all]   (default: all)
 #
 # Tracking issues: SP6 → #1888 (libro-game) · SP7 → #1889 (game-night agent-builder)
-#                  SP8 → #1890 (mobile parity + libro-game companion)
+#                  SP8 → #1890 (mobile parity + libro-game companion) · SP9 → #2989 (mobile gamenight)
+#
+# NOTE (#2988): the DS-17-16 cleanup migrated most SP6/SP7/SP8 page-mocks to Storybook and
+# deleted them from design_files/. Those bundles now build partially — missing mockups are
+# skipped with a warning (see build_bundle) rather than aborting. SP9 is unaffected.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -98,6 +102,11 @@ copy_sp9_briefs() {
   echo "[built] +2 briefs → $dest/"
 }
 
+# git ref holding the pre-#2988 mockups (parent of the DS-17-16 cleanup commit that
+# migrated many page-mocks to Storybook and deleted them from design_files/). Referenced
+# only in the skip hint below so a maintainer can recover an individual mockup on demand.
+MIGRATION_RECOVER_REF="90f731b4f^"
+
 build_bundle() {
   local name="$1"; shift
   local dest="claude-design-bundle/$name"
@@ -106,15 +115,29 @@ build_bundle() {
   for f in "${SCAFFOLD[@]}"; do
     cp "$SRC/$f" "$dest/$f"
   done
+  # Copy the requested mockups. Post-#2988 (DS-17-16 Storybook migration) many SP6/SP7/SP8
+  # page-mocks no longer live in design_files/. A missing mockup is skipped with a warning
+  # instead of aborting the build (set -e would otherwise kill it), so a bundle degrades
+  # gracefully to whatever still exists. SCAFFOLD stays strict — it is structural.
+  local total=$# copied=0 missing=()
   for f in "$@"; do
-    cp "$SRC/$f" "$dest/mockups/$f"
+    if [ -f "$SRC/$f" ]; then
+      cp "$SRC/$f" "$dest/mockups/$f"
+      copied=$((copied + 1))
+    else
+      missing+=("$f")
+    fi
   done
   # Mockups reference shared assets as siblings (href="tokens.css"), so mirror them into
   # mockups/ too — otherwise the relative refs break in the structured bundle (#1890 demo finding).
   for f in tokens.css components.css data.js; do
     cp "$SRC/$f" "$dest/mockups/$f"
   done
-  echo "[built] $dest — scaffold ${#SCAFFOLD[@]} + mockups $# (+3 mirrored assets in mockups/)"
+  echo "[built] $dest — scaffold ${#SCAFFOLD[@]} + mockups $copied/$total (+3 mirrored assets in mockups/)"
+  if [ "${#missing[@]}" -gt 0 ]; then
+    echo "  ⚠ ${#missing[@]} skipped (migrated to Storybook, #2988): ${missing[*]}"
+    echo "     recover: git show $MIGRATION_RECOVER_REF:$SRC/<file>"
+  fi
   for f in 00-system-prompt.md 01-manifest.md README.md; do
     [ -f "$dest/$f" ] || echo "  ⚠ companion missing: $dest/$f (restore from git / claude-design-demo-prompts.md)"
   done

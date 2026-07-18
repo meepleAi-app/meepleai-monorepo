@@ -378,6 +378,62 @@ public class SharedGameSkeletonTests
         act.Should().Throw<ArgumentException>();
     }
 
+    // Issue #3153 — designers/publishers are now ingested (persisted as M:N join rows
+    // by SharedGameRepository.AddAsync).
+
+    [Fact]
+    public void EnrichFromProvenance_WithDesignersAndPublishers_IngestsAndStampsAudit()
+    {
+        var game = SharedGame.CreateSkeleton("Catan", AdminUserId, TimeProvider);
+
+        game.EnrichFromProvenance(
+            yearPublished: null,
+            minPlayers: null, maxPlayers: null,
+            playingTimeMinutes: null,
+            modifiedBy: AdminUserId,
+            designers: new[] { "Klaus Teuber" },
+            publishers: new[] { "Kosmos" });
+
+        game.Designers.Select(d => d.Name).Should().ContainSingle().Which.Should().Be("Klaus Teuber");
+        game.Publishers.Select(p => p.Name).Should().ContainSingle().Which.Should().Be("Kosmos");
+        game.ModifiedBy.Should().Be(AdminUserId, "adding a designer/publisher counts as a change");
+    }
+
+    [Fact]
+    public void EnrichFromProvenance_DuplicateAndBlankAndOverlongNames_AreDeDupedAndSkippedLeniently()
+    {
+        var game = SharedGame.CreateSkeleton("Catan", AdminUserId, TimeProvider);
+
+        game.EnrichFromProvenance(
+            yearPublished: null,
+            minPlayers: null, maxPlayers: null,
+            playingTimeMinutes: null,
+            modifiedBy: AdminUserId,
+            designers: new[] { "Klaus Teuber", "  klaus teuber  ", "", "   ", new string('x', 201) },
+            publishers: null);
+
+        // trimmed + case-insensitive dedup → one entry; blank + >200-char skipped (no throw)
+        game.Designers.Select(d => d.Name).Should().ContainSingle().Which.Should().Be("Klaus Teuber");
+    }
+
+    [Fact]
+    public void EnrichFromProvenance_NullNameLists_LeaveCollectionsEmptyAndScalarsApplied()
+    {
+        var game = SharedGame.CreateSkeleton("Catan", AdminUserId, TimeProvider);
+
+        game.EnrichFromProvenance(
+            yearPublished: 1995,
+            minPlayers: 3, maxPlayers: 4,
+            playingTimeMinutes: 90,
+            modifiedBy: AdminUserId,
+            designers: null,
+            publishers: null);
+
+        game.Designers.Should().BeEmpty();
+        game.Publishers.Should().BeEmpty();
+        game.YearPublished.Should().Be(1995, "scalar enrichment is unaffected by null name lists");
+    }
+
     #endregion
 
     #region MarkDataComplete

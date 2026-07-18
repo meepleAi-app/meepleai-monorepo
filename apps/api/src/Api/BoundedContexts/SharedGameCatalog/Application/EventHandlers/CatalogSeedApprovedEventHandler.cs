@@ -109,14 +109,17 @@ internal sealed class CatalogSeedApprovedEventHandler : INotificationHandler<Cat
         // Issue #3147/#3154 — the sparse Wikidata-primary (BGG-fallback) SCALARS to
         // carry onto a freshly-materialised skeleton. `GetValue<T?>` yields null when
         // a field is absent; SharedGame.EnrichFromProvenance applies each only when
-        // present and internally consistent (see its leniency rules). Designers/
-        // publishers are deliberately NOT read here — the aggregate's M:N collections
-        // are read-only through SharedGameRepository, so they'd be dropped on persist
-        // (tracked by #3153).
+        // present and internally consistent (see its leniency rules).
         var provYear = provenance.GetValue<int?>("yearPublished");
         var provMinPlayers = provenance.GetValue<int?>("minPlayers");
         var provMaxPlayers = provenance.GetValue<int?>("maxPlayers");
         var provPlayingTime = provenance.GetValue<int?>("playingTimeMinutes");
+
+        // Issue #3153 — designer/publisher NAMES (Wikidata P178/P123, stored as
+        // List<string>). Ingested by EnrichFromProvenance and persisted as M:N join
+        // rows by SharedGameRepository.AddAsync (get-or-create by name).
+        var provDesigners = provenance.GetValue<List<string>>("designers");
+        var provPublishers = provenance.GetValue<List<string>>("publishers");
 
         // Idempotency: if a draft was approved twice, or if a SharedGame already
         // exists for the same BGG ID (collision with prior import path), reuse it.
@@ -180,7 +183,9 @@ internal sealed class CatalogSeedApprovedEventHandler : INotificationHandler<Cat
                 minPlayers: provMinPlayers,
                 maxPlayers: provMaxPlayers,
                 playingTimeMinutes: provPlayingTime,
-                modifiedBy: notification.ApprovedByUserId);
+                modifiedBy: notification.ApprovedByUserId,
+                designers: provDesigners,
+                publishers: provPublishers);
 
             await _games.AddAsync(skeleton, cancellationToken).ConfigureAwait(false);
             materialisedId = skeleton.Id;

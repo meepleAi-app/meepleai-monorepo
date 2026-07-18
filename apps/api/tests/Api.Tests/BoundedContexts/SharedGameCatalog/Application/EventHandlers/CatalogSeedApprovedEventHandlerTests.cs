@@ -376,12 +376,12 @@ public sealed class CatalogSeedApprovedEventHandlerTests
         added.MinPlayers.Should().Be(3);
         added.MaxPlayers.Should().Be(4);
         added.PlayingTimeMinutes.Should().Be(90);
-        // #3154: RichProvenance carries designers ("Klaus Teuber") + publishers, but
-        // scalar-only enrichment intentionally does NOT apply them — the aggregate's
-        // M:N collections are read-only through SharedGameRepository (they'd be
-        // silently dropped on persist). Proper M:N persistence is tracked by #3153.
-        added.Designers.Should().BeEmpty("designers are excluded from scalar-only enrichment (#3154)");
-        added.Publishers.Should().BeEmpty("publishers are excluded from scalar-only enrichment (#3154)");
+        // #3153: RichProvenance carries designers ("Klaus Teuber") + publishers ("Kosmos");
+        // EnrichFromProvenance now ingests them (via the FromJson → GetValue<List<string>>
+        // path) so they reach the aggregate and are persisted as M:N join rows by
+        // SharedGameRepository.AddAsync. (This mock captures the aggregate pre-persist.)
+        added.Designers.Select(d => d.Name).Should().ContainSingle().Which.Should().Be("Klaus Teuber");
+        added.Publishers.Select(p => p.Name).Should().ContainSingle().Which.Should().Be("Kosmos");
     }
 
     [Fact]

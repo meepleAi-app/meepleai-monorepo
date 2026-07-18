@@ -606,12 +606,12 @@ public sealed class SharedGame : AggregateRoot<Guid>
     /// still complete it later. Audit fields are stamped only when something
     /// actually changed (mirrors <see cref="AssignWikidataQid"/>), so a no-op
     /// call (all fields absent / implausible) leaves the aggregate untouched.
-    /// <para>Scope: <b>scalars only</b>. Designers/publishers are intentionally
-    /// excluded — the <c>_designers</c>/<c>_publishers</c> aggregate collections
-    /// are read-only through <c>SharedGameRepository</c> (<c>MapToEntity</c> maps
-    /// no M:N navigation), so writing them here would be silently dropped on
-    /// persist. Persisting Wikidata designers/publishers (get-or-create by name +
-    /// join rows + integration coverage) is tracked by #3153.</para>
+    /// <para>Designers/publishers (Wikidata P178/P123) are ingested from the
+    /// <paramref name="designers"/>/<paramref name="publishers"/> name lists: each
+    /// name is trimmed, blank / &gt;200-char values are skipped (leniently, like the
+    /// scalars), and duplicates are collapsed case-insensitively. Persistence as
+    /// M:N join rows (get-or-create by name) is handled by
+    /// <c>SharedGameRepository.AddAsync</c> (#3153).</para>
     /// </remarks>
     /// <param name="yearPublished">Publication year (Wikidata P577); applied when in <c>1901..currentYear+1</c>.</param>
     /// <param name="minPlayers">Minimum player count (P1872).</param>
@@ -622,13 +622,17 @@ public sealed class SharedGame : AggregateRoot<Guid>
     /// </param>
     /// <param name="playingTimeMinutes">Playing time in minutes (P2047); applied when &gt; 0.</param>
     /// <param name="modifiedBy">The actor (approving admin) performing the enrichment.</param>
+    /// <param name="designers">Designer names (Wikidata P178); trimmed, deduped case-insensitively, blank/&gt;200-char skipped. Null = no-op.</param>
+    /// <param name="publishers">Publisher names (Wikidata P123); same handling as <paramref name="designers"/>. Null = no-op.</param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="modifiedBy"/> is <see cref="Guid.Empty"/>.</exception>
     public void EnrichFromProvenance(
         int? yearPublished,
         int? minPlayers,
         int? maxPlayers,
         int? playingTimeMinutes,
-        Guid modifiedBy)
+        Guid modifiedBy,
+        IReadOnlyList<string>? designers = null,
+        IReadOnlyList<string>? publishers = null)
     {
         if (modifiedBy == Guid.Empty)
             throw new ArgumentException("ModifiedBy cannot be empty.", nameof(modifiedBy));
@@ -655,6 +659,35 @@ public sealed class SharedGame : AggregateRoot<Guid>
         {
             _playingTimeMinutes = playtime;
             changed = true;
+        }
+
+        // Designers/publishers (#3153) — lenient like the scalars: trim, skip blank /
+        // >200-char (avoids GameDesigner.Create throwing), dedup case-insensitively
+        // against what's already present. Persisted as M:N join rows by the repository.
+        if (designers is not null)
+        {
+            foreach (var name in designers)
+            {
+                if (string.IsNullOrWhiteSpace(name)) continue;
+                var trimmed = name.Trim();
+                if (trimmed.Length > 200) continue;
+                if (_designers.Any(d => string.Equals(d.Name, trimmed, StringComparison.OrdinalIgnoreCase))) continue;
+                _designers.Add(GameDesigner.Create(trimmed));
+                changed = true;
+            }
+        }
+
+        if (publishers is not null)
+        {
+            foreach (var name in publishers)
+            {
+                if (string.IsNullOrWhiteSpace(name)) continue;
+                var trimmed = name.Trim();
+                if (trimmed.Length > 200) continue;
+                if (_publishers.Any(p => string.Equals(p.Name, trimmed, StringComparison.OrdinalIgnoreCase))) continue;
+                _publishers.Add(GamePublisher.Create(trimmed));
+                changed = true;
+            }
         }
 
         if (changed)

@@ -2982,6 +2982,29 @@ Background metric contract:
 
 ---
 
+## Wikidata Enrichment Alerts
+
+Defined in `infra/prometheus/alerts/wikidata-enrichment.yml` (#3117). Distinct from the
+SSE-transport alert above (§22, `wikidata-sse.yml`): this covers the enrichment **pipeline**
+health. The gauges are emitted by `MeepleAiMetrics.WikidataEnrichment.cs` and routed via
+`severity: warning` → the `warning-alerts` receiver in `alertmanager.yml` (throttled email).
+Gauges report `0` when idle, so the expressions never fire on an idle queue.
+
+| Alert | Trigger | Sustained | Meaning / first action |
+|---|---|---|---|
+| `WikidataDeadLetterHigh` | `meepleai_wikidata_dead_letter_count > 100` | 1h | Operator triage backlog building. Investigate via the M13 admin dead-letter page — likely a license-whitelist or SPARQL schema drift. |
+| `WikidataDeadLetterSpike` | `delta(meepleai_wikidata_dead_letter_count[5m]) > 50` | — | A sudden burst of dead-letters: systemic upstream failure or license-whitelist drift. Cross-check `WikidataSparqlLatency` p95 and Wikidata/Commons endpoint health. |
+| `WikidataQueueBacklogHigh` | `meepleai_wikidata_queue_depth > 5000` | 1h | Enrichment backlog building; scheduler under-provisioned relative to enrichment rate. Consider tuning batch size or the DEC-3e rate-limiter. |
+
+### Investigation steps
+
+1. **Dead-letter accumulation** (`WikidataDeadLetterHigh` / `WikidataDeadLetterSpike`): open the M13 admin dead-letter page. A steady climb usually means a license-whitelist entry went stale or the SPARQL query drifted; a sharp spike points at a Wikidata/Commons outage. Cross-check the enrichment attempt outcomes (`meepleai_wikidata_enrichment_attempts_total{outcome="dead_letter"}`).
+2. **Queue not draining** (`WikidataQueueBacklogHigh`): the M9 scheduler is enqueuing faster than the enrichment runner drains. Check the Quartz job health and the DEC-3e rate-limiter; consider raising the batch size if the SPARQL endpoint has headroom.
+
+Alert unit tests live in `infra/prometheus/alerts/wikidata-enrichment.test.yml` (run `promtool test rules` per the header comment; there is no CI promtool gate, so run on demand).
+
+---
+
 ## Appendix A: Complete Command Reference
 
 ### Service Management

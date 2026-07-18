@@ -227,6 +227,7 @@ services:
       - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
       # Issue #2470 — Wikidata SSE plane starvation alert.
       - ./prometheus/alerts/wikidata-sse.yml:/etc/prometheus/wikidata-sse.yml:ro
+      - ./prometheus/alerts/wikidata-enrichment.yml:/etc/prometheus/wikidata-enrichment.yml:ro
       # Issue #3082 — BGG ToS-compliance SLO=0 alert.
       - ./prometheus/alerts/bgg-tos-compliance.yml:/etc/prometheus/bgg-tos-compliance.yml:ro
       # Issue #3112 — OPS-02 Slack delivery observability alerts.

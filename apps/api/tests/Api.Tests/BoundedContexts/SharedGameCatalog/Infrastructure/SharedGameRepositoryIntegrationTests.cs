@@ -282,4 +282,127 @@ public sealed class SharedGameRepositoryIntegrationTests : IAsyncLifetime
     }
 
     #endregion
+
+    #region Designer/Publisher M2M persistence (#3153)
+
+    [Fact]
+    public async Task AddAsync_WithNewDesignerAndPublisher_PersistsJoinRows()
+    {
+        var game = SharedGame.CreateSkeleton("Catan", TestUserId, TimeProvider.System);
+        game.AddDesigner("Klaus Teuber");
+        game.AddPublisher("Kosmos");
+
+        await _repository.AddAsync(game);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        (await _dbContext.GameDesigners.CountAsync(d => d.Name == "Klaus Teuber")).Should().Be(1);
+        (await _dbContext.GamePublishers.CountAsync(p => p.Name == "Kosmos")).Should().Be(1);
+
+        var reloaded = await _dbContext.SharedGames
+            .Include(g => g.Designers)
+            .Include(g => g.Publishers)
+            .AsSplitQuery()
+            .FirstAsync(g => g.Id == game.Id);
+        reloaded.Designers.Select(d => d.Name).Should().ContainSingle().Which.Should().Be("Klaus Teuber");
+        reloaded.Publishers.Select(p => p.Name).Should().ContainSingle().Which.Should().Be("Kosmos");
+    }
+
+    [Fact]
+    public async Task AddAsync_WithExistingDesignerName_ReusesRowNoDuplicate()
+    {
+        var first = SharedGame.CreateSkeleton("Catan", TestUserId, TimeProvider.System);
+        first.AddDesigner("Klaus Teuber");
+        await _repository.AddAsync(first);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        var second = SharedGame.CreateSkeleton("Catan: Seafarers", TestUserId, TimeProvider.System);
+        second.AddDesigner("Klaus Teuber");
+        await _repository.AddAsync(second);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        (await _dbContext.GameDesigners.CountAsync(d => d.Name == "Klaus Teuber")).Should().Be(1);
+        var designer = await _dbContext.GameDesigners
+            .Include(d => d.SharedGames)
+            .FirstAsync(d => d.Name == "Klaus Teuber");
+        designer.SharedGames.Select(g => g.Id).Should().BeEquivalentTo(new[] { first.Id, second.Id });
+    }
+
+    [Fact]
+    public async Task AddAsync_WithExistingPublisherName_ReusesRowNoDuplicate()
+    {
+        var first = SharedGame.CreateSkeleton("Catan", TestUserId, TimeProvider.System);
+        first.AddPublisher("Kosmos");
+        await _repository.AddAsync(first);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        var second = SharedGame.CreateSkeleton("Andor", TestUserId, TimeProvider.System);
+        second.AddPublisher("Kosmos");
+        await _repository.AddAsync(second);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        (await _dbContext.GamePublishers.CountAsync(p => p.Name == "Kosmos")).Should().Be(1);
+        var publisher = await _dbContext.GamePublishers
+            .Include(p => p.SharedGames)
+            .FirstAsync(p => p.Name == "Kosmos");
+        publisher.SharedGames.Select(g => g.Id).Should().BeEquivalentTo(new[] { first.Id, second.Id });
+    }
+
+    [Fact]
+    public async Task AddAsync_WithCaseInsensitiveDesignerName_ReusesRow()
+    {
+        var first = SharedGame.CreateSkeleton("A", TestUserId, TimeProvider.System);
+        first.AddDesigner("Kosmos");
+        await _repository.AddAsync(first);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        var second = SharedGame.CreateSkeleton("B", TestUserId, TimeProvider.System);
+        second.AddDesigner("kosmos"); // different casing → resolves to the same row via ILIKE
+        await _repository.AddAsync(second);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        (await _dbContext.GameDesigners.CountAsync(d => EF.Functions.ILike(d.Name, "kosmos"))).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task AddAsync_WithDuplicateDesignerNamesInOneCall_PersistsSingleRow()
+    {
+        // A single caller (e.g. CreateSharedGameCommand — up to 20 names, no de-dup)
+        // can supply the same designer twice; the resolver must collapse them to one row.
+        var game = SharedGame.CreateSkeleton("Catan", TestUserId, TimeProvider.System);
+        game.AddDesigner("Klaus Teuber");
+        game.AddDesigner("klaus teuber"); // duplicate (case-insensitive) in the SAME AddAsync
+
+        await _repository.AddAsync(game);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        (await _dbContext.GameDesigners.CountAsync(d => EF.Functions.ILike(d.Name, "klaus teuber"))).Should().Be(1);
+        var reloaded = await _dbContext.SharedGames
+            .Include(g => g.Designers)
+            .FirstAsync(g => g.Id == game.Id);
+        reloaded.Designers.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_HydratesPublishers()
+    {
+        var game = SharedGame.CreateSkeleton("Catan", TestUserId, TimeProvider.System);
+        game.AddPublisher("Kosmos");
+        await _repository.AddAsync(game);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        var reloaded = await _repository.GetByIdAsync(game.Id);
+        reloaded.Should().NotBeNull();
+        reloaded!.Publishers.Select(p => p.Name).Should().ContainSingle().Which.Should().Be("Kosmos");
+    }
+
+    #endregion
 }

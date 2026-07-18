@@ -26,17 +26,88 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
     {
         ArgumentNullException.ThrowIfNull(sharedGame);
         var entity = MapToEntity(sharedGame);
+        // Issue #3153 — persist the aggregate's designers/publishers as M:N join rows
+        // (get-or-create by name). MapToEntity only maps scalar columns, so without this
+        // the aggregate's designer/publisher membership was silently dropped on write.
+        await ResolveDesignersAsync(entity, sharedGame.Designers, cancellationToken).ConfigureAwait(false);
+        await ResolvePublishersAsync(entity, sharedGame.Publishers, cancellationToken).ConfigureAwait(false);
         await DbContext.Set<SharedGameEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
+    }
+
+    // Issue #3153 — get-or-create each designer by name against the unique game_designers
+    // table and attach the resolved row to the new SharedGameEntity so the caller's single
+    // SaveChanges inserts the join rows. Mirrors RelationshipSeeder.GetOrCreateDesignerAsync.
+    // No SaveChanges here — the caller (event handler / command handler) owns the flush.
+    private async Task ResolveDesignersAsync(
+        SharedGameEntity entity,
+        IReadOnlyCollection<GameDesigner> designers,
+        CancellationToken cancellationToken)
+    {
+        // De-dup by trimmed name (case-insensitive) so the same name supplied twice in one
+        // call cannot insert two rows (CreateSharedGameCommand accepts up to 20 names with
+        // no de-dup) → would otherwise violate the UNIQUE ix_game_designers_name.
+        foreach (var trimmed in designers
+            .Select(d => d.Name.Trim())
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            // ILIKE = case-insensitive equality (the trimmed name has no % or _, so it is not
+            // a wildcard match; a name literally containing LIKE metacharacters would
+            // over-match — accepted, mirroring the seeder's single-writer assumption).
+            var existing = await DbContext.GameDesigners
+                .FirstOrDefaultAsync(d => EF.Functions.ILike(d.Name, trimmed), cancellationToken)
+                .ConfigureAwait(false);
+
+            var resolved = existing
+                ?? DbContext.GameDesigners.Local.FirstOrDefault(
+                       d => string.Equals(d.Name, trimmed, StringComparison.OrdinalIgnoreCase))
+                ?? new GameDesignerEntity { Id = Guid.NewGuid(), Name = trimmed, CreatedAt = DateTime.UtcNow };
+
+            if (!entity.Designers.Any(d => d.Id == resolved.Id))
+            {
+                entity.Designers.Add(resolved);
+            }
+        }
+    }
+
+    // Issue #3153 — symmetric get-or-create for publishers against game_publishers.
+    private async Task ResolvePublishersAsync(
+        SharedGameEntity entity,
+        IReadOnlyCollection<GamePublisher> publishers,
+        CancellationToken cancellationToken)
+    {
+        foreach (var trimmed in publishers
+            .Select(p => p.Name.Trim())
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var existing = await DbContext.GamePublishers
+                .FirstOrDefaultAsync(p => EF.Functions.ILike(p.Name, trimmed), cancellationToken)
+                .ConfigureAwait(false);
+
+            var resolved = existing
+                ?? DbContext.GamePublishers.Local.FirstOrDefault(
+                       p => string.Equals(p.Name, trimmed, StringComparison.OrdinalIgnoreCase))
+                ?? new GamePublisherEntity { Id = Guid.NewGuid(), Name = trimmed, CreatedAt = DateTime.UtcNow };
+
+            if (!entity.Publishers.Any(p => p.Id == resolved.Id))
+            {
+                entity.Publishers.Add(resolved);
+            }
+        }
     }
 
     public async Task<SharedGame?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        // Issue #2035: Include Designers so MapToDomain can hydrate the aggregate's
-        // designer collection — required by GetGameDetailQueryHandler which surfaces
-        // designer names on the library detail DTO.
+        // Issue #2035 / #3153: Include Designers + Publishers so MapToDomain can hydrate the
+        // aggregate's M:N collections — designer names feed GetGameDetailQueryHandler's
+        // library detail DTO; publisher hydration keeps the write/read round-trip symmetric.
+        // AsSplitQuery avoids the cartesian product from the two collection includes.
         var entity = await DbContext.Set<SharedGameEntity>()
             .AsNoTracking()
             .Include(g => g.Designers)
+            .Include(g => g.Publishers)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(g => g.Id == id && !g.IsDeleted, cancellationToken)
             .ConfigureAwait(false);
 
@@ -174,6 +245,16 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             if (!string.IsNullOrWhiteSpace(designer.Name))
             {
                 sharedGame.AddDesigner(designer.Name);
+            }
+        }
+
+        // Issue #3153: hydrate publishers symmetrically with designers — only when the
+        // caller eager-loaded the navigation (GetByIdAsync), otherwise empty by default.
+        foreach (var publisher in entity.Publishers)
+        {
+            if (!string.IsNullOrWhiteSpace(publisher.Name))
+            {
+                sharedGame.AddPublisher(publisher.Name);
             }
         }
 

@@ -67,6 +67,10 @@ import { Suspense, useCallback, useEffect, useMemo, useState, type ReactElement 
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import {
+  SummaryFlavorRenderer,
+  hasSummaryFlavor,
+} from '@/components/features/session-live/SummaryFlavorRenderer';
+import {
   AchievementsCarousel,
   ChatHighlights,
   ConnectionBar,
@@ -892,6 +896,18 @@ export function SessionSummaryView({
       data-ui-state={fsmCell.kind}
       className="mx-auto max-w-[1200px] pb-12"
     >
+      {/* #3022: per-game summary flavor (Catan…), completed sessions only. */}
+      {sessionQuery.data != null &&
+        sessionQuery.data.status === 'Completed' &&
+        hasSummaryFlavor(sessionQuery.data.gameSlug) && (
+          <div className="px-4 pt-4 sm:px-6">
+            <SummaryFlavorRenderer
+              gameSlug={sessionQuery.data.gameSlug}
+              session={sessionQuery.data}
+            />
+          </div>
+        )}
+
       <SessionSummaryHero
         rankedParticipants={rankedParticipants}
         showConfetti={showConfetti}

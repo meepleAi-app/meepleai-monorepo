@@ -22,7 +22,12 @@ internal record GameSessionDto(
     // ScoringType ∈ { "Points", "BinaryWin", "Objectives", "Ranking" };
     // ScoreData is the raw JSON payload (shape varies by ScoringType).
     string? ScoringType = null,
-    string? ScoreData = null
+    string? ScoreData = null,
+    // #3022: identity + score-aligned players for the summary flavor. Populated ONLY on
+    // GET /api/v1/sessions/{id}; null on list/history paths (GameSessionMapper.ToDto).
+    string? GameSlug = null,
+    string? GameName = null,
+    IReadOnlyList<ScorePlayerDto>? ScorePlayers = null
 );
 
 /// <summary>
@@ -31,6 +36,16 @@ internal record GameSessionDto(
 internal record SessionPlayerDto(
     string PlayerName,
     int PlayerOrder,
+    string? Color
+);
+
+/// <summary>
+/// #3022: a player whose Id matches scoreData.scores[].playerId (LiveGameSession player),
+/// carrying the display name and color needed to render per-player scores in the summary.
+/// </summary>
+internal record ScorePlayerDto(
+    Guid Id,
+    string DisplayName,
     string? Color
 );
 

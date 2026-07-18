@@ -4013,6 +4013,15 @@
       }
     },
     "sessionSummary": {
+      "flavor": {
+        "catan": {
+          "winnerTemplate": "{name} vince!",
+          "vpUnit": "PV",
+          "durationTemplate": "{minutes} min",
+          "standingsTitle": "Classifica finale",
+          "empty": "Riepilogo non disponibile"
+        }
+      },
       "hero": {
         "title": "Riepilogo partita",
         "podiumLabel": "Podio finale",

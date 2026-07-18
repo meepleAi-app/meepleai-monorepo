@@ -15,7 +15,12 @@ internal class GameDesignerEntityConfiguration : IEntityTypeConfiguration<GameDe
         builder.Property(e => e.Name).HasColumnName("name").IsRequired().HasMaxLength(200);
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired().HasDefaultValueSql("NOW()");
 
-        builder.HasIndex(e => e.Name).IsUnique().HasDatabaseName("ix_game_designers_name");
+        // Issue #3153: uniqueness on name is enforced by a CASE-INSENSITIVE functional
+        // unique index `ix_game_designers_name_lower` (lower(name)), created by the
+        // AddLowerNameUniqueIndexToDesignersAndPublishers migration. EF cannot express a
+        // functional expression index via HasIndex, so it is hand-written in raw SQL and
+        // NOT model-tracked (the old case-sensitive `ix_game_designers_name` is dropped
+        // by that migration). Get-or-create lookups match on `lower(name)`.
 
         // Many-to-many with SharedGames
         builder.HasMany(d => d.SharedGames)

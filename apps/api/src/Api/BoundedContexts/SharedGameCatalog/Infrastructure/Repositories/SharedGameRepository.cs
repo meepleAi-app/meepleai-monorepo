@@ -29,6 +29,163 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
         await DbContext.Set<SharedGameEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Issue #3153 — persists a new <see cref="SharedGame"/> together with its
+    /// designer/publisher M:N links resolved get-or-create BY NAME from the raw
+    /// provenance names (NOT from the aggregate's throwaway-Guid collections).
+    /// <see cref="MapToEntity"/> stays pure/scalar-only; the resolvers attach
+    /// existing shared rows (case-insensitively, index-backed on <c>lower(name)</c>)
+    /// or create new ones, deferring persistence to the caller's unit of work.
+    /// </summary>
+    public async Task AddAsync(
+        SharedGame sharedGame,
+        IReadOnlyList<string> designerNames,
+        IReadOnlyList<string> publisherNames,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(sharedGame);
+
+        var entity = MapToEntity(sharedGame);
+
+        foreach (var designer in await ResolveDesignerEntitiesAsync(designerNames, cancellationToken).ConfigureAwait(false))
+        {
+            entity.Designers.Add(designer);
+        }
+
+        foreach (var publisher in await ResolvePublisherEntitiesAsync(publisherNames, cancellationToken).ConfigureAwait(false))
+        {
+            entity.Publishers.Add(publisher);
+        }
+
+        await DbContext.Set<SharedGameEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Get-or-create-by-name resolver for the designer M:N. Lenient (trims,
+    /// skips empty / &gt;200-char names — never throws), case-insensitive dedup
+    /// both within the incoming list and against the DB (via <c>lower(name)</c>,
+    /// served by <c>ix_game_designers_name_lower</c>). Reuses already-tracked
+    /// entities and attaches detached existing rows as <c>Unchanged</c> so EF does
+    /// not attempt a duplicate INSERT. Issues NO <c>SaveChanges</c>.
+    /// </summary>
+    private async Task<List<GameDesignerEntity>> ResolveDesignerEntitiesAsync(
+        IReadOnlyList<string>? names, CancellationToken cancellationToken)
+    {
+        var resolved = new List<GameDesignerEntity>();
+        if (names is null || names.Count == 0)
+            return resolved;
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var raw in names)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+                continue;
+
+            var name = raw.Trim();
+            if (name.Length > 200)
+                continue;
+
+            if (!seen.Add(name))
+                continue; // within-list case-insensitive dedup
+
+            // Already added/attached in this DbContext (batch / repeat safety).
+            var tracked = DbContext.ChangeTracker.Entries<GameDesignerEntity>()
+                .FirstOrDefault(e => string.Equals(e.Entity.Name, name, StringComparison.OrdinalIgnoreCase));
+            if (tracked is not null)
+            {
+                resolved.Add(tracked.Entity);
+                continue;
+            }
+
+            var normalized = name.ToLowerInvariant();
+#pragma warning disable CA1304, CA1311, CA1862, MA0011 // d.Name.ToLower() is EF-translated to SQL lower(name) (served by ix_game_designers_name_lower), never run in-process
+            var existing = await DbContext.GameDesigners
+                .AsNoTracking()
+                .FirstOrDefaultAsync(d => d.Name.ToLower() == normalized, cancellationToken)
+                .ConfigureAwait(false);
+#pragma warning restore CA1304, CA1311, CA1862, MA0011
+
+            if (existing is not null)
+            {
+                DbContext.Attach(existing);
+                resolved.Add(existing);
+                continue;
+            }
+
+            var created = new GameDesignerEntity
+            {
+                Id = Guid.NewGuid(),
+                Name = name,
+                CreatedAt = DateTime.UtcNow,
+            };
+            await DbContext.GameDesigners.AddAsync(created, cancellationToken).ConfigureAwait(false);
+            resolved.Add(created);
+        }
+
+        return resolved;
+    }
+
+    /// <summary>
+    /// Get-or-create-by-name resolver for the publisher M:N — identical semantics
+    /// to <see cref="ResolveDesignerEntitiesAsync"/> (index-backed on
+    /// <c>ix_game_publishers_name_lower</c>). Issue #3153.
+    /// </summary>
+    private async Task<List<GamePublisherEntity>> ResolvePublisherEntitiesAsync(
+        IReadOnlyList<string>? names, CancellationToken cancellationToken)
+    {
+        var resolved = new List<GamePublisherEntity>();
+        if (names is null || names.Count == 0)
+            return resolved;
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var raw in names)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+                continue;
+
+            var name = raw.Trim();
+            if (name.Length > 200)
+                continue;
+
+            if (!seen.Add(name))
+                continue;
+
+            var tracked = DbContext.ChangeTracker.Entries<GamePublisherEntity>()
+                .FirstOrDefault(e => string.Equals(e.Entity.Name, name, StringComparison.OrdinalIgnoreCase));
+            if (tracked is not null)
+            {
+                resolved.Add(tracked.Entity);
+                continue;
+            }
+
+            var normalized = name.ToLowerInvariant();
+#pragma warning disable CA1304, CA1311, CA1862, MA0011 // p.Name.ToLower() is EF-translated to SQL lower(name) (served by ix_game_publishers_name_lower), never run in-process
+            var existing = await DbContext.GamePublishers
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Name.ToLower() == normalized, cancellationToken)
+                .ConfigureAwait(false);
+#pragma warning restore CA1304, CA1311, CA1862, MA0011
+
+            if (existing is not null)
+            {
+                DbContext.Attach(existing);
+                resolved.Add(existing);
+                continue;
+            }
+
+            var created = new GamePublisherEntity
+            {
+                Id = Guid.NewGuid(),
+                Name = name,
+                CreatedAt = DateTime.UtcNow,
+            };
+            await DbContext.GamePublishers.AddAsync(created, cancellationToken).ConfigureAwait(false);
+            resolved.Add(created);
+        }
+
+        return resolved;
+    }
+
     public async Task<SharedGame?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         // Issue #2035: Include Designers so MapToDomain can hydrate the aggregate's

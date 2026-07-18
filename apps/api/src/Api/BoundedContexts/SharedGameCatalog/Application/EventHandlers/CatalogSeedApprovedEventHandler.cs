@@ -106,16 +106,17 @@ internal sealed class CatalogSeedApprovedEventHandler : INotificationHandler<Cat
             return;
         }
 
-        // Issue #3147 — the sparse Wikidata-primary (BGG-fallback) scalars/lists to
+        // Issue #3147/#3154 — the sparse Wikidata-primary (BGG-fallback) SCALARS to
         // carry onto a freshly-materialised skeleton. `GetValue<T?>` yields null when
         // a field is absent; SharedGame.EnrichFromProvenance applies each only when
-        // present and internally consistent (see its leniency rules).
+        // present and internally consistent (see its leniency rules). Designers/
+        // publishers are deliberately NOT read here — the aggregate's M:N collections
+        // are read-only through SharedGameRepository, so they'd be dropped on persist
+        // (tracked by #3153).
         var provYear = provenance.GetValue<int?>("yearPublished");
         var provMinPlayers = provenance.GetValue<int?>("minPlayers");
         var provMaxPlayers = provenance.GetValue<int?>("maxPlayers");
         var provPlayingTime = provenance.GetValue<int?>("playingTimeMinutes");
-        var provDesigners = provenance.GetValue<List<string>>("designers");
-        var provPublishers = provenance.GetValue<List<string>>("publishers");
 
         // Idempotency: if a draft was approved twice, or if a SharedGame already
         // exists for the same BGG ID (collision with prior import path), reuse it.
@@ -167,7 +168,7 @@ internal sealed class CatalogSeedApprovedEventHandler : INotificationHandler<Cat
                 skeleton.AssignWikidataQid(draft.WikidataQid, notification.ApprovedByUserId);
             }
 
-            // Issue #3147 — carry the Wikidata-primary properties onto the skeleton
+            // Issue #3147/#3154 — carry the Wikidata-primary scalars onto the skeleton
             // instead of dropping them (the M5 follow-up flagged in this handler's
             // remarks). Only the new-skeleton branch enriches: a BggId collision
             // (existing branch) is already covered by the BGG enrichment queue
@@ -179,8 +180,6 @@ internal sealed class CatalogSeedApprovedEventHandler : INotificationHandler<Cat
                 minPlayers: provMinPlayers,
                 maxPlayers: provMaxPlayers,
                 playingTimeMinutes: provPlayingTime,
-                designers: provDesigners,
-                publishers: provPublishers,
                 modifiedBy: notification.ApprovedByUserId);
 
             await _games.AddAsync(skeleton, cancellationToken).ConfigureAwait(false);

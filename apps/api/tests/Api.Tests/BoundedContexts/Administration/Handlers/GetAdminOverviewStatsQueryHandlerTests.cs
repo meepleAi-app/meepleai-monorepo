@@ -2,6 +2,7 @@ using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -84,6 +85,23 @@ public class GetAdminOverviewStatsQueryHandlerTests : IDisposable
         // Assert
         result.TotalGames.Should().Be(3);
         result.PublishedGames.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Handle_PendingApprovalGames_AreNotCountedAsPublished()
+    {
+        // Arrange - 2 Published + 3 PendingApproval; Status == PendingApproval (1) must NOT
+        // be counted as published (regression guard for #3121).
+        SeedGamesWithStatus(GameStatus.Published, count: 2);
+        SeedGamesWithStatus(GameStatus.PendingApproval, count: 3);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var result = await _handler.Handle(new GetAdminOverviewStatsQuery(), CancellationToken.None);
+
+        // Assert
+        result.TotalGames.Should().Be(5);
+        result.PublishedGames.Should().Be(2); // only Status == Published counts
     }
 
     [Fact]
@@ -197,7 +215,7 @@ public class GetAdminOverviewStatsQueryHandlerTests : IDisposable
             {
                 Id = Guid.NewGuid(),
                 Title = $"Published Game {i}",
-                Status = 1,
+                Status = (int)GameStatus.Published,
                 CreatedAt = DateTime.UtcNow
             });
         }
@@ -207,7 +225,21 @@ public class GetAdminOverviewStatsQueryHandlerTests : IDisposable
             {
                 Id = Guid.NewGuid(),
                 Title = $"Unpublished Game {i}",
-                Status = 0,
+                Status = (int)GameStatus.Draft,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+    }
+
+    private void SeedGamesWithStatus(GameStatus status, int count)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            _dbContext.SharedGames.Add(new SharedGameEntity
+            {
+                Id = Guid.NewGuid(),
+                Title = $"{status} Game {i}",
+                Status = (int)status,
                 CreatedAt = DateTime.UtcNow
             });
         }

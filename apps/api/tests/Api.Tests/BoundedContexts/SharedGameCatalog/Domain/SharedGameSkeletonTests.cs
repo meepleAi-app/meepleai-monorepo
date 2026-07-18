@@ -249,10 +249,15 @@ public class SharedGameSkeletonTests
 
     #endregion
 
-    #region EnrichFromProvenance (Issue #3147)
+    #region EnrichFromProvenance (Issues #3147, #3154)
+
+    // NOTE: scalars only — designers/publishers are intentionally excluded from
+    // EnrichFromProvenance (they are read-only through SharedGameRepository, so
+    // writing them would be silently dropped on persist). M:N persistence tracked
+    // by #3153.
 
     [Fact]
-    public void EnrichFromProvenance_AllFieldsPresent_AppliesAllAndStampsAudit()
+    public void EnrichFromProvenance_AllScalarsPresent_AppliesAllAndStampsAudit()
     {
         var game = SharedGame.CreateSkeleton("Catan", AdminUserId, TimeProvider);
         game.ModifiedBy.Should().BeNull("precondition: skeleton has no modifier");
@@ -261,16 +266,12 @@ public class SharedGameSkeletonTests
             yearPublished: 1995,
             minPlayers: 3, maxPlayers: 4,
             playingTimeMinutes: 90,
-            designers: new[] { "Klaus Teuber" },
-            publishers: new[] { "Kosmos" },
             modifiedBy: AdminUserId);
 
         game.YearPublished.Should().Be(1995);
         game.MinPlayers.Should().Be(3);
         game.MaxPlayers.Should().Be(4);
         game.PlayingTimeMinutes.Should().Be(90);
-        game.Designers.Should().ContainSingle(d => d.Name == "Klaus Teuber");
-        game.Publishers.Should().ContainSingle(p => p.Name == "Kosmos");
         game.ModifiedBy.Should().Be(AdminUserId, "a real change stamps the audit actor");
         game.GameDataStatus.Should().Be(GameDataStatus.Skeleton, "enrichment must NOT drive the state machine");
     }
@@ -284,16 +285,12 @@ public class SharedGameSkeletonTests
             yearPublished: null,
             minPlayers: null, maxPlayers: null,
             playingTimeMinutes: null,
-            designers: null,
-            publishers: null,
             modifiedBy: AdminUserId);
 
         game.YearPublished.Should().Be(0);
         game.MinPlayers.Should().Be(0);
         game.MaxPlayers.Should().Be(0);
         game.PlayingTimeMinutes.Should().Be(0);
-        game.Designers.Should().BeEmpty();
-        game.Publishers.Should().BeEmpty();
         game.ModifiedBy.Should().BeNull("a no-op must not stamp the audit actor");
     }
 
@@ -310,7 +307,6 @@ public class SharedGameSkeletonTests
             yearPublished: badYear,
             minPlayers: 2, maxPlayers: 5,
             playingTimeMinutes: null,
-            designers: null, publishers: null,
             modifiedBy: AdminUserId);
 
         game.YearPublished.Should().Be(0, "an implausible year is skipped, not applied");
@@ -327,7 +323,6 @@ public class SharedGameSkeletonTests
             yearPublished: DateTime.UtcNow.Year + 5,
             minPlayers: null, maxPlayers: null,
             playingTimeMinutes: null,
-            designers: null, publishers: null,
             modifiedBy: AdminUserId);
 
         game.YearPublished.Should().Be(0);
@@ -347,7 +342,6 @@ public class SharedGameSkeletonTests
             yearPublished: null,
             minPlayers: min, maxPlayers: max,
             playingTimeMinutes: null,
-            designers: null, publishers: null,
             modifiedBy: AdminUserId);
 
         game.MinPlayers.Should().Be(0, "player counts are applied only as a consistent pair");
@@ -364,48 +358,10 @@ public class SharedGameSkeletonTests
             yearPublished: null,
             minPlayers: null, maxPlayers: null,
             playingTimeMinutes: 0,
-            designers: null, publishers: null,
             modifiedBy: AdminUserId);
 
         game.PlayingTimeMinutes.Should().Be(0);
         game.ModifiedBy.Should().BeNull();
-    }
-
-    [Fact]
-    public void EnrichFromProvenance_Designers_DedupeCaseInsensitiveAndTrim()
-    {
-        var game = SharedGame.CreateSkeleton("Catan", AdminUserId, TimeProvider);
-        game.AddDesigner("Klaus Teuber");
-
-        game.EnrichFromProvenance(
-            yearPublished: null,
-            minPlayers: null, maxPlayers: null,
-            playingTimeMinutes: null,
-            designers: new[] { "klaus teuber", "  Alan R. Moon  ", "   ", "Alan R. Moon" },
-            publishers: null,
-            modifiedBy: AdminUserId);
-
-        game.Designers.Select(d => d.Name).Should().BeEquivalentTo(
-            new[] { "Klaus Teuber", "Alan R. Moon" },
-            "existing designers, whitespace, and case/exact duplicates are all de-duplicated; names are trimmed");
-    }
-
-    [Fact]
-    public void EnrichFromProvenance_OverlongName_IsSkippedNotThrown()
-    {
-        var game = SharedGame.CreateSkeleton("Catan", AdminUserId, TimeProvider);
-        var overlong = new string('x', 201);
-
-        var act = () => game.EnrichFromProvenance(
-            yearPublished: null,
-            minPlayers: null, maxPlayers: null,
-            playingTimeMinutes: null,
-            designers: new[] { overlong, "Alan R. Moon" },
-            publishers: null,
-            modifiedBy: AdminUserId);
-
-        act.Should().NotThrow("a single bad name must not abort the whole enrichment");
-        game.Designers.Select(d => d.Name).Should().ContainSingle().Which.Should().Be("Alan R. Moon");
     }
 
     [Fact]
@@ -417,7 +373,6 @@ public class SharedGameSkeletonTests
             yearPublished: 1995,
             minPlayers: 3, maxPlayers: 4,
             playingTimeMinutes: 90,
-            designers: null, publishers: null,
             modifiedBy: Guid.Empty);
 
         act.Should().Throw<ArgumentException>();

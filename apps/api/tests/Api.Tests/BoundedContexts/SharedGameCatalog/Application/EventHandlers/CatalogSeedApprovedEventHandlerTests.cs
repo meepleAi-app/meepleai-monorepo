@@ -376,8 +376,12 @@ public sealed class CatalogSeedApprovedEventHandlerTests
         added.MinPlayers.Should().Be(3);
         added.MaxPlayers.Should().Be(4);
         added.PlayingTimeMinutes.Should().Be(90);
-        added.Designers.Should().ContainSingle(d => d.Name == "Klaus Teuber");
-        added.Publishers.Should().ContainSingle(p => p.Name == "Kosmos");
+        // #3154: RichProvenance carries designers ("Klaus Teuber") + publishers, but
+        // scalar-only enrichment intentionally does NOT apply them — the aggregate's
+        // M:N collections are read-only through SharedGameRepository (they'd be
+        // silently dropped on persist). Proper M:N persistence is tracked by #3153.
+        added.Designers.Should().BeEmpty("designers are excluded from scalar-only enrichment (#3154)");
+        added.Publishers.Should().BeEmpty("publishers are excluded from scalar-only enrichment (#3154)");
     }
 
     [Fact]

@@ -180,11 +180,17 @@ internal static class ChatSessionEndpoints
     private static async Task<IResult> HandleGetUserGameSessions(
         [FromRoute] Guid userId,
         [FromRoute] Guid gameId,
+        HttpContext httpContext,
         [FromQuery] int skip = 0,
         [FromQuery] int take = 20,
         [FromServices] IMediator mediator = null!,
         CancellationToken cancellationToken = default)
     {
+        // Ownership check: caller can only list their own chat sessions (IDOR #3120).
+        var callerId = httpContext.User.GetUserId();
+        if (callerId != userId)
+            return Results.Forbid();
+
         var query = new GetUserGameChatSessionsQuery(
             UserId: userId,
             GameId: gameId,
@@ -199,10 +205,16 @@ internal static class ChatSessionEndpoints
 
     private static async Task<IResult> HandleGetRecentSessions(
         [FromRoute] Guid userId,
+        HttpContext httpContext,
         [FromQuery] int limit = 10,
         [FromServices] IMediator mediator = null!,
         CancellationToken cancellationToken = default)
     {
+        // Ownership check: caller can only list their own chat sessions (IDOR #3120).
+        var callerId = httpContext.User.GetUserId();
+        if (callerId != userId)
+            return Results.Forbid();
+
         var query = new GetRecentChatSessionsQuery(
             UserId: userId,
             Limit: limit

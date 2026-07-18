@@ -210,4 +210,68 @@ public sealed class GetRagDashboardOverviewQueryHandlerTests
             It.IsAny<string?>(),
             It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    // #3122: aggregate metrics must pool by sample count, not average the per-strategy
+    // averages/rates (mean-of-means over-weights low-volume strategies).
+
+    [Fact]
+    public async Task Handle_AggregatesLatency_SampleWeighted_NotMeanOfMeans()
+    {
+        // High-volume low-latency + low-volume high-latency strategy.
+        // Mean-of-means = (100 + 1000) / 2 = 550; sample-weighted ≈ 108.9.
+        SetupRepo(new List<StrategyAggregateMetrics>
+        {
+            CreateMetrics("HighVolume", queries: 1000, avgLatencyMs: 100.0),
+            CreateMetrics("LowVolume", queries: 10, avgLatencyMs: 1000.0)
+        });
+
+        var result = await _handler.Handle(new GetRagDashboardOverviewQuery(), TestContext.Current.CancellationToken);
+
+        // (100*1000 + 1000*10) / 1010 = 110000/1010 ≈ 108.91
+        result.AggregatedMetrics.AverageLatencyMs.Should().BeApproximately(110000.0 / 1010.0, 0.1);
+        result.AggregatedMetrics.AverageLatencyMs.Should().BeLessThan(200); // not the 550 mean-of-means
+    }
+
+    [Fact]
+    public async Task Handle_AggregatesCacheHitRate_PooledFromCounts_NotMeanOfRates()
+    {
+        // A: 1000 hits / 0 misses (rate 1.0); B: 0 hits / 10 misses (rate 0.0).
+        // Mean-of-rates = 0.5; pooled = 1000/1010 ≈ 0.990.
+        SetupRepo(new List<StrategyAggregateMetrics>
+        {
+            CreateMetrics("HighVolume", cacheHits: 1000, cacheMisses: 0),
+            CreateMetrics("LowVolume", cacheHits: 0, cacheMisses: 10)
+        });
+
+        var result = await _handler.Handle(new GetRagDashboardOverviewQuery(), TestContext.Current.CancellationToken);
+
+        result.AggregatedMetrics.CacheHitRate.Should().BeApproximately(1000.0 / 1010.0, 0.0001);
+        result.AggregatedMetrics.CacheHitRate.Should().BeGreaterThan(0.9); // not the 0.5 mean-of-rates
+    }
+
+    [Fact]
+    public async Task Handle_AggregatesCostPerQuery_PooledFromTotals_NotMeanOfMeans()
+    {
+        // A: 1000 queries @ 0.01; B: 10 queries @ 1.00.
+        // Mean-of-means = 0.505; pooled = (0.01*1000 + 1.00*10) / 1010 = 20/1010 ≈ 0.0198.
+        SetupRepo(new List<StrategyAggregateMetrics>
+        {
+            CreateMetrics("HighVolume", queries: 1000, costPerQuery: 0.01m),
+            CreateMetrics("LowVolume", queries: 10, costPerQuery: 1.00m)
+        });
+
+        var result = await _handler.Handle(new GetRagDashboardOverviewQuery(), TestContext.Current.CancellationToken);
+
+        result.AggregatedMetrics.AverageCostPerQuery.Should().BeApproximately(20.0 / 1010.0, 0.0001);
+        result.AggregatedMetrics.AverageCostPerQuery.Should().BeLessThan(0.1); // not the 0.505 mean-of-means
+    }
+
+    private void SetupRepo(List<StrategyAggregateMetrics> metrics) =>
+        _mockRepo
+            .Setup(r => r.GetAggregatedMetricsAsync(
+                It.IsAny<DateOnly?>(),
+                It.IsAny<DateOnly?>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(metrics);
 }

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -27,7 +28,7 @@ internal class GetCommentsForLineQueryHandler : IRequestHandler<GetCommentsForLi
     {
         if (query.LineNumber < 1)
         {
-            throw new InvalidOperationException("Line number must be positive");
+            throw new BadRequestException("Line number must be positive");
         }
 
         var comments = await _dbContext.RuleSpecComments

@@ -29,6 +29,8 @@ rule_files:
   - '/etc/prometheus/bgg-tos-compliance.yml'
   # Issue #3112 — OPS-02 Slack delivery observability alerts.
   - '/etc/prometheus/slack-delivery.yml'
+  # Issue #3116 — SP5 Admin Security audit_outbox health alerts.
+  - '/etc/prometheus/audit-outbox.yml'
 
 scrape_configs:
   - job_name: 'prometheus'

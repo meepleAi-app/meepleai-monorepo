@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.Mappers;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -54,7 +55,7 @@ internal partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyT
         var threadDepth = await CalculateThreadDepthAsync(command.ParentCommentId, cancellationToken).ConfigureAwait(false);
         if (threadDepth >= MaxThreadDepth - 1)
         {
-            throw new InvalidOperationException(
+            throw new ConflictException(
                 $"Maximum thread depth of {MaxThreadDepth} exceeded. Cannot reply to this comment.");
         }
 

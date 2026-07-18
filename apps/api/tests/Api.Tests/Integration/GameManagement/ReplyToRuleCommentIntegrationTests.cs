@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Services;
 using FluentAssertions;
 using Npgsql;
@@ -231,7 +232,7 @@ public sealed class ReplyToRuleCommentIntegrationTests : IAsyncLifetime
         result.LineNumber.Should().Be(42); // Inherited from parent
     }
     [Fact]
-    public async Task ReplyToComment_AtMaxDepth_ThrowsInvalidOperation()
+    public async Task ReplyToComment_AtMaxDepth_ThrowsConflict()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -254,7 +255,7 @@ public sealed class ReplyToRuleCommentIntegrationTests : IAsyncLifetime
         Func<Task> act = async () => await handler.Handle(command, TestCancellationToken);
 
         // Assert
-        await act.Should().ThrowAsync<InvalidOperationException>()
+        await act.Should().ThrowAsync<ConflictException>()
             .WithMessage("*Maximum thread depth*");
     }
 

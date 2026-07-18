@@ -417,3 +417,14 @@ git commit -m "feat(home): mount Recenti section + mobile-first container (#2989
 ## Scope note
 
 Screens **B (/game-nights index)** and **C (detail-RSVP)** are separate plans — their components mostly exist and need mobile adaptation (e.g. sticky-bottom RSVP bar), not greenfield. This plan (Screen A) produces working, testable software on its own: two new tested components + a mobile-first dashboard integration.
+
+## Execution status — Screen C detail-RSVP (2026-07-18)
+
+Branch `feature/issue-2989-screen-c-detail-rsvp-mobile` (fresh from `main-dev` — the original `feature/issue-2989-mobile-gamenight-social` was auto-deleted on the #3008 merge). Confirmed the discovery premise (§1 of next-steps): components exist, no greenfield — only concrete mobile-safe fixes.
+
+- ✅ **Gap 2 — RSVP CTA 44px touch-target** (commit `d8e51932f`): `GameNightRsvpActionBar` buttons gained `min-h-[44px]` (was `size="sm"` → h-9/36px), closing the SP8 B-02 regression. A11y-safe for the shared `PublicRsvpForm` (9/9 green).
+- ✅ **Gap 1+3 — mobile sticky bars** (commit `d306d5de6`): `MobileStickyBar` helper lifts the guest RSVP bar and the Draft host "Invia inviti" CTA above the fixed `MobileBottomBar` (`bottom-16 z-30`, safe-area padding) at `<md`, collapsing to inline at `md+`. Removed the decision-3c deferral. Published-host destructive Cancel deliberately kept inline. 5 TDD tests (`GameNightDetailView.mobileSticky.test.tsx`).
+- ✅ **Gap 4 — bottom-nav-safe padding** (commit `d306d5de6`): container reserves `pb-24 md:pb-4` only when a sticky bar is shown.
+- ⏳ **Gap 5 — offline-disabled sticky (follow-up minore)**: the mockup C offline "RSVP disabilitato" state (line 254) is NOT wired — needs a network-status source. Left as a documented follow-up alongside the Screen A `PendingRsvpCard` offline-disabled follow-up.
+
+Verification: 111/111 game-night-detail tests green, typecheck + eslint clean, no regression. **PR not yet opened** (awaiting go-ahead).

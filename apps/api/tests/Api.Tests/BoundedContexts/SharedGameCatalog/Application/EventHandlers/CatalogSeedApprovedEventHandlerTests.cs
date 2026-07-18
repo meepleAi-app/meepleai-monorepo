@@ -334,4 +334,104 @@ public sealed class CatalogSeedApprovedEventHandlerTests
             "M8.5 must NOT clobber a different QID already on the aggregate (admin / human curation wins)");
         _games.Verify(r => r.Update(It.IsAny<SharedGame>()), Times.Never);
     }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Issue #3147 — persist Wikidata-primary properties at draft → game
+    // ──────────────────────────────────────────────────────────────────────
+
+    private static string RichProvenance(string title = "Catan")
+    {
+        const string qidUrl = "https://www.wikidata.org/wiki/Q17271";
+        var fields = new Dictionary<string, FieldProvenance>(StringComparer.Ordinal)
+        {
+            ["title"] = new("wikidata", qidUrl, "labels.en", DateTime.UtcNow, title),
+            ["yearPublished"] = new("wikidata", qidUrl, "P577", DateTime.UtcNow, 1995),
+            ["minPlayers"] = new("wikidata", qidUrl, "P1872", DateTime.UtcNow, 3),
+            ["maxPlayers"] = new("wikidata", qidUrl, "P1873", DateTime.UtcNow, 4),
+            ["playingTimeMinutes"] = new("wikidata", qidUrl, "P2047", DateTime.UtcNow, 90),
+            ["designers"] = new("wikidata", qidUrl, "P178", DateTime.UtcNow, new List<string> { "Klaus Teuber" }),
+            ["publishers"] = new("wikidata", qidUrl, "P123", DateTime.UtcNow, new List<string> { "Kosmos" }),
+        };
+        return new CatalogSeedProvenance(fields).ToJson();
+    }
+
+    [Fact]
+    public async Task Handle_ProvenanceWithProperties_EnrichesNewSkeleton()
+    {
+        var draft = SeedFetchedDraft(bggId: null, provenanceJson: RichProvenance("Catan"));
+
+        _drafts.Setup(r => r.GetByIdAsync(draft.Id, It.IsAny<CancellationToken>())).ReturnsAsync(draft);
+
+        SharedGame? added = null;
+        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()))
+              .Callback<SharedGame, CancellationToken>((g, _) => added = g)
+              .Returns(Task.CompletedTask);
+
+        await Handler().Handle(
+            new CatalogSeedApprovedEvent(draft.Id, draft.ResultingSharedGameId!.Value, Guid.NewGuid()),
+            default);
+
+        added.Should().NotBeNull();
+        added!.YearPublished.Should().Be(1995, "the Wikidata scalars must be carried onto the skeleton, not dropped");
+        added.MinPlayers.Should().Be(3);
+        added.MaxPlayers.Should().Be(4);
+        added.PlayingTimeMinutes.Should().Be(90);
+        added.Designers.Should().ContainSingle(d => d.Name == "Klaus Teuber");
+        added.Publishers.Should().ContainSingle(p => p.Name == "Kosmos");
+    }
+
+    [Fact]
+    public async Task Handle_TitleOnlyProvenance_LeavesSkeletonScalarsEmpty()
+    {
+        // Pure-title provenance (the pre-#3147 minimum) must still materialise a
+        // valid skeleton — the enrichment is a lenient no-op here.
+        var titleOnly = new Dictionary<string, FieldProvenance>(StringComparer.Ordinal)
+        {
+            ["title"] = new("wikidata", "https://www.wikidata.org/wiki/Q42", "labels.en", DateTime.UtcNow, "Pandemic"),
+        };
+        var draft = SeedFetchedDraft(bggId: null, provenanceJson: new CatalogSeedProvenance(titleOnly).ToJson());
+
+        _drafts.Setup(r => r.GetByIdAsync(draft.Id, It.IsAny<CancellationToken>())).ReturnsAsync(draft);
+
+        SharedGame? added = null;
+        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()))
+              .Callback<SharedGame, CancellationToken>((g, _) => added = g)
+              .Returns(Task.CompletedTask);
+
+        await Handler().Handle(
+            new CatalogSeedApprovedEvent(draft.Id, draft.ResultingSharedGameId!.Value, Guid.NewGuid()),
+            default);
+
+        added.Should().NotBeNull();
+        added!.Title.Should().Be("Pandemic");
+        added.YearPublished.Should().Be(0);
+        added.MinPlayers.Should().Be(0);
+        added.MaxPlayers.Should().Be(0);
+        added.PlayingTimeMinutes.Should().Be(0);
+        added.Designers.Should().BeEmpty();
+        added.Publishers.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_ExistingGameCollision_DoesNotEnrichScalars()
+    {
+        // A BggId collision reuses the existing aggregate. The seed pipeline must
+        // NOT clobber it with sparse Wikidata scalars — the BGG enrichment queue
+        // (#1874) already owns completing an existing BggId-bearing skeleton.
+        var draft = SeedFetchedDraft(bggId: 12345, provenanceJson: RichProvenance("Catan"));
+        var existing = SharedGame.CreateSkeleton("Catan", Guid.NewGuid(), TimeProvider.System, bggId: 12345);
+
+        _drafts.Setup(r => r.GetByIdAsync(draft.Id, It.IsAny<CancellationToken>())).ReturnsAsync(draft);
+        _games.Setup(r => r.GetByBggIdAsync(12345, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+
+        await Handler().Handle(
+            new CatalogSeedApprovedEvent(draft.Id, draft.ResultingSharedGameId!.Value, Guid.NewGuid()),
+            default);
+
+        existing.YearPublished.Should().Be(0, "existing-game collisions are left to #1874, not enriched by the seed");
+        existing.MinPlayers.Should().Be(0);
+        existing.MaxPlayers.Should().Be(0);
+        existing.Designers.Should().BeEmpty();
+        _games.Verify(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
 }

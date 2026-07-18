@@ -6,6 +6,7 @@
 const IMMERSIVE_ROUTE_PATTERNS = [
   /^\/sessions\/[^/]+\/live(\/|$)/,
   /^\/library\/[^/]+\/play(\/|$)/,
+  /^\/game-nights\/[^/]+\/live(\/|$)/,
 ];
 
 export function isImmersiveRoute(pathname: string): boolean {

@@ -93,6 +93,19 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock, replace: replaceMock }),
 }));
 
+// WS-A (#3150): the view now reads viewport via useResponsive to pass `mobile` to NightLiveHub.
+// Default to desktop so the existing desktop-assuming assertions stay valid; mobile tests flip it.
+const responsiveState = vi.hoisted(() => ({ isDesktop: true }));
+vi.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () => ({
+    isDesktop: responsiveState.isDesktop,
+    isMobile: !responsiveState.isDesktop,
+    isTablet: false,
+    deviceType: responsiveState.isDesktop ? 'desktop' : 'mobile',
+    viewportWidth: responsiveState.isDesktop ? 1280 : 390,
+  }),
+}));
+
 const NIGHT_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const IN_PROGRESS_SESSION_ID = '33333333-3333-4333-8333-333333333333';
 
@@ -149,6 +162,7 @@ function mockQuery(over: Record<string, unknown>) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  responsiveState.isDesktop = true;
   startNextState.isPending = false;
   completeState.isPending = false;
   completeState.isError = false;
@@ -603,5 +617,32 @@ describe('NightLiveClientView — error taxonomy (LD-10)', () => {
     mockQuery({ isError: true, error: new NetworkError({ message: 'x' }) });
     render(<NightLiveClientView nightId={NIGHT_ID} />);
     expect(screen.getByRole('heading', { name: /Connessione persa/i })).toBeInTheDocument();
+  });
+});
+
+describe('NightLiveClientView — mobile activation', () => {
+  it('renders the hub mobile tab bar below lg (isDesktop false)', () => {
+    responsiveState.isDesktop = false;
+    mockQuery({ data: vm() });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    expect(screen.getByRole('tablist', { name: 'Hub mobile tabs' })).toBeInTheDocument();
+  });
+
+  it('does NOT render the mobile tab bar at lg+ (isDesktop true)', () => {
+    responsiveState.isDesktop = true;
+    mockQuery({ data: vm() });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    expect(screen.queryByRole('tablist', { name: 'Hub mobile tabs' })).toBeNull();
+  });
+
+  it('offsets the organizer CTA above the mobile tab bar (resets at lg)', () => {
+    responsiveState.isDesktop = false;
+    mockQuery({ data: vm({ isViewerOrganizer: true, status: 'transition', nextGame: NEXT_GAME }) });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    const cta = screen.getByRole('button', { name: /Avvia: Catan/ });
+    const bar = cta.closest('div');
+    expect(bar).not.toBeNull();
+    expect(bar?.className).toContain('lg:bottom-0');
+    expect(bar?.className).toContain('safe-area-inset-bottom');
   });
 });

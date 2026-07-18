@@ -23,6 +23,7 @@ import {
   WinnerPickerModal,
 } from '@/components/features/game-nights/live';
 import { useCompleteGameNight } from '@/hooks/queries/useSessionFlow';
+import { useResponsive } from '@/hooks/useResponsive';
 import {
   ConflictError,
   ForbiddenError,
@@ -39,8 +40,17 @@ export interface NightLiveClientViewProps {
   readonly nightId: string;
 }
 
+// WS-A (#3150): below lg the hub renders an in-flow 3-tab bar (~3.5rem) at the bottom; lift the
+// fixed organizer CTAs above it + iOS safe-area. At lg there is no tab bar → reset to bottom-0.
+const CTA_BAR_POSITION =
+  'fixed inset-x-0 z-40 p-4 bottom-[calc(3.5rem_+_env(safe-area-inset-bottom))] lg:bottom-0';
+
 export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
   const router = useRouter();
+  // WS-A (#3150): NightLiveHub already ships a mobile layout (3-tab bottom nav) — activate it
+  // below lg. useResponsive is SSR-safe (isDesktop=false until hydrated); the data-loading
+  // skeleton masks the pre-hydration mobile→desktop settle so there is no visible flash.
+  const { isDesktop } = useResponsive();
   const { data: vm, isLoading, isError, error } = useGameNightLive(nightId);
   // Slice C2: the diary is a SEPARATE participant-guarded read; composed with the live VM
   // below via mapDiary (panel D2). Its own error/loading is non-fatal — the hub renders an
@@ -197,6 +207,7 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
     <>
       <NightLiveHub
         readOnly
+        mobile={!isDesktop}
         night={vm.night}
         status={vm.status}
         current={vm.current}
@@ -214,7 +225,7 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
       />
 
       {showStartCta && nextGame ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center p-4">
+        <div className={`${CTA_BAR_POSITION} flex justify-center`}>
           <button
             type="button"
             onClick={() => handleStartNext(nextGame.gameId, nextGame.gameTitle)}
@@ -227,7 +238,7 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
       ) : null}
 
       {showCompleteCta ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center p-4">
+        <div className={`${CTA_BAR_POSITION} flex justify-center`}>
           <button
             type="button"
             onClick={() => {
@@ -243,7 +254,7 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
       ) : null}
 
       {showFinalizeCta ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 flex flex-col items-center gap-2 p-4">
+        <div className={`${CTA_BAR_POSITION} flex flex-col items-center gap-2`}>
           {finalizeErrorMessage ? (
             <p
               role="alert"

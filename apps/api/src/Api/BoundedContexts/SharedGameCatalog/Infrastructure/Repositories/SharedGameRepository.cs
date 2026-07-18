@@ -51,11 +51,12 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             .Where(name => !string.IsNullOrWhiteSpace(name))
             .Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            // ILIKE = case-insensitive equality (the trimmed name has no % or _, so it is not
-            // a wildcard match; a name literally containing LIKE metacharacters would
-            // over-match — accepted, mirroring the seeder's single-writer assumption).
+            // Case-insensitive match against the unique game_designers table. The %/_ LIKE
+            // metacharacters are escaped so a name that literally contains them (e.g. "50%")
+            // matches on its literal text instead of over-matching an unrelated row.
+            var pattern = EscapeLike(trimmed);
             var existing = await DbContext.GameDesigners
-                .FirstOrDefaultAsync(d => EF.Functions.ILike(d.Name, trimmed), cancellationToken)
+                .FirstOrDefaultAsync(d => EF.Functions.ILike(d.Name, pattern, LikeEscapeChar), cancellationToken)
                 .ConfigureAwait(false);
 
             var resolved = existing
@@ -81,8 +82,9 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             .Where(name => !string.IsNullOrWhiteSpace(name))
             .Distinct(StringComparer.OrdinalIgnoreCase))
         {
+            var pattern = EscapeLike(trimmed);
             var existing = await DbContext.GamePublishers
-                .FirstOrDefaultAsync(p => EF.Functions.ILike(p.Name, trimmed), cancellationToken)
+                .FirstOrDefaultAsync(p => EF.Functions.ILike(p.Name, pattern, LikeEscapeChar), cancellationToken)
                 .ConfigureAwait(false);
 
             var resolved = existing
@@ -96,6 +98,12 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             }
         }
     }
+
+    // Issue #3153 — escape LIKE metacharacters (\ % _) so an ILIKE pattern matches its
+    // argument as literal text (case-insensitively) rather than treating %/_ as wildcards.
+    private const string LikeEscapeChar = "\\";
+    private static string EscapeLike(string value) =>
+        value.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
 
     public async Task<SharedGame?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {

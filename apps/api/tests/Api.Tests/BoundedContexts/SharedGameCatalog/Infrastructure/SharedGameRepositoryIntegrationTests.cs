@@ -404,5 +404,27 @@ public sealed class SharedGameRepositoryIntegrationTests : IAsyncLifetime
         reloaded!.Publishers.Select(p => p.Name).Should().ContainSingle().Which.Should().Be("Kosmos");
     }
 
+    [Fact]
+    public async Task AddAsync_DesignerNameWithLikeWildcard_DoesNotOverMatchExistingRow()
+    {
+        // Existing designer literally named "500".
+        var first = SharedGame.CreateSkeleton("A", TestUserId, TimeProvider.System);
+        first.AddDesigner("500");
+        await _repository.AddAsync(first);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        // A new game with designer "50%" must NOT reuse "500": unescaped ILIKE would treat
+        // '%' as a wildcard and over-match. With metacharacters escaped, "50%" is literal.
+        var second = SharedGame.CreateSkeleton("B", TestUserId, TimeProvider.System);
+        second.AddDesigner("50%");
+        await _repository.AddAsync(second);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        (await _dbContext.GameDesigners.CountAsync(d => d.Name == "500")).Should().Be(1);
+        (await _dbContext.GameDesigners.CountAsync(d => d.Name == "50%")).Should().Be(1);
+    }
+
     #endregion
 }

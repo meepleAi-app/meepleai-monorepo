@@ -76,6 +76,17 @@ vi.mock('@/hooks/queries/useSessionSnapshots', () => ({
   useSessionVisionSnapshots: () => useSessionVisionSnapshotsMock(),
 }));
 
+// #3022: the flavor renderer is a lazy (next/dynamic) module tested on its own
+// (CatanSummaryFlavor.test + SummaryFlavorRenderer.test). Here we mock it with a
+// synchronous marker so this suite exercises the *wiring* (status/slug gate) without
+// the dynamic-import loading race.
+vi.mock('@/components/features/session-live/SummaryFlavorRenderer', () => ({
+  hasSummaryFlavor: (slug: string | null | undefined) => slug === 'catan',
+  SummaryFlavorRenderer: ({ gameSlug }: { gameSlug: string | null | undefined }) => (
+    <div data-testid="summary-flavor-mounted" data-slug={gameSlug ?? ''} />
+  ),
+}));
+
 // ─── visual-test-fixture mock (STATE_OVERRIDE_ENABLED stays true in test) ─
 
 // In test env (NODE_ENV=test), STATE_OVERRIDE_ENABLED = true → ?fixture= active.
@@ -144,6 +155,12 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionSummary.states.notFound.backToSessions': 'Torna alle sessioni',
   'common.errorTitle': 'Errore',
   'common.retry': 'Riprova',
+  // #3022 Catan summary flavor
+  'pages.sessionSummary.flavor.catan.winnerTemplate': '{name} vince!',
+  'pages.sessionSummary.flavor.catan.vpUnit': 'PV',
+  'pages.sessionSummary.flavor.catan.durationTemplate': '{minutes} min',
+  'pages.sessionSummary.flavor.catan.standingsTitle': 'Classifica finale',
+  'pages.sessionSummary.flavor.catan.empty': 'Riepilogo non disponibile',
 };
 
 // ─── Test renderer with IntlProvider ─────────────────────────────────────
@@ -599,5 +616,46 @@ describe('SessionSummaryView — handlers', () => {
     renderView();
     fireEvent.click(screen.getByText('Torna alle sessioni'));
     expect(routerPush).toHaveBeenCalledWith('/sessions');
+  });
+});
+
+// ─── #3022 Catan summary flavor wiring ─────────────────────────────────────
+
+describe('SessionSummaryView — Catan summary flavor (#3022)', () => {
+  const catanSession = (overrides: Partial<GameSessionDto> = {}): GameSessionDto =>
+    makeGameSession({
+      gameSlug: 'catan',
+      scoringType: 'Points',
+      scoreData: JSON.stringify({
+        scores: [
+          { playerId: 'p1', points: 10 },
+          { playerId: 'p2', points: 8 },
+        ],
+      }),
+      scorePlayers: [
+        { id: 'p1', displayName: 'Marco Rossi', color: 'Red' },
+        { id: 'p2', displayName: 'Anna Bianchi', color: 'Blue' },
+      ],
+      ...overrides,
+    });
+
+  it('mounts the summary flavor for a completed Catan session, forwarding the slug', () => {
+    setHookSuccess(catanSession());
+    renderView();
+    const mounted = screen.getByTestId('summary-flavor-mounted');
+    expect(mounted).toBeInTheDocument();
+    expect(mounted).toHaveAttribute('data-slug', 'catan');
+  });
+
+  it('does NOT mount for a non-Catan game', () => {
+    setHookSuccess(catanSession({ gameSlug: 'wingspan' }));
+    renderView();
+    expect(screen.queryByTestId('summary-flavor-mounted')).toBeNull();
+  });
+
+  it('does NOT mount for a non-completed (Abandoned) session', () => {
+    setHookSuccess(catanSession({ status: 'Abandoned' }));
+    renderView();
+    expect(screen.queryByTestId('summary-flavor-mounted')).toBeNull();
   });
 });

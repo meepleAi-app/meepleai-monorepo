@@ -147,6 +147,21 @@ describe('NightLiveHub', () => {
       expect(screen.getByLabelText('Current game')).toBeInTheDocument();
     });
 
+    // #3146 Slice 2 review (F3): the tab-nav is now reachable in production, so
+    // its ARIA tabs relationship must be complete — the active tab's
+    // aria-controls resolves to a role="tabpanel" element that points back via
+    // aria-labelledby (no dangling references).
+    it('exposes a complete tab ↔ tabpanel ARIA relationship', () => {
+      render(<NightLiveHub {...baseProps} mobile />);
+      const currentTab = screen.getByRole('tab', { name: /Current/ });
+      expect(currentTab.id).toBeTruthy();
+      const panelId = currentTab.getAttribute('aria-controls');
+      expect(panelId).toBeTruthy();
+      const panel = screen.getByRole('tabpanel');
+      expect(panel.id).toBe(panelId);
+      expect(panel.getAttribute('aria-labelledby')).toBe(currentTab.id);
+    });
+
     it('respects initialMobileTab prop', () => {
       render(<NightLiveHub {...baseProps} mobile initialMobileTab="planned" />);
       expect(screen.getByRole('tab', { name: /Planned/ })).toHaveAttribute('aria-selected', 'true');

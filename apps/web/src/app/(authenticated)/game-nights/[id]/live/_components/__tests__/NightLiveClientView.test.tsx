@@ -93,6 +93,20 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock, replace: replaceMock }),
 }));
 
+// #3146 Slice 2: NightLiveClientView drives NightLiveHub's `mobile` prop off the
+// viewport. Default to DESKTOP so the existing 3-pane assertions (planned games)
+// hold; individual tests flip to mobile.
+const responsiveState = vi.hoisted(() => ({
+  isMobile: false,
+  isTablet: false,
+  isDesktop: true,
+  deviceType: 'desktop' as 'mobile' | 'tablet' | 'desktop',
+  viewportWidth: 1280,
+}));
+vi.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () => responsiveState,
+}));
+
 const NIGHT_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const IN_PROGRESS_SESSION_ID = '33333333-3333-4333-8333-333333333333';
 
@@ -157,6 +171,11 @@ beforeEach(() => {
   finalizeNightState.isError = false;
   finalizeNightState.error = null;
   useNightLiveDiaryMock.mockReturnValue({ data: undefined });
+  responsiveState.isMobile = false;
+  responsiveState.isTablet = false;
+  responsiveState.isDesktop = true;
+  responsiveState.deviceType = 'desktop';
+  responsiveState.viewportWidth = 1280;
 });
 
 const NEXT_GAME = { gameId: '77777777-7777-4777-8777-777777777777', gameTitle: 'Catan' };
@@ -168,6 +187,28 @@ describe('NightLiveClientView — loading', () => {
     expect(screen.getByRole('status', { name: /Caricamento serata/i })).toBeInTheDocument();
     // the hub is NOT mounted with placeholder data
     expect(screen.queryByText('Serata Eldoria')).toBeNull();
+  });
+});
+
+describe('NightLiveClientView — responsive hub activation (#3146 Slice 2)', () => {
+  it('activates the mobile hub layout (data-mobile=true) below desktop', () => {
+    responsiveState.isDesktop = false;
+    responsiveState.isMobile = true;
+    responsiveState.deviceType = 'mobile';
+    responsiveState.viewportWidth = 375;
+    mockQuery({ data: vm() });
+    const { container } = render(<NightLiveClientView nightId={NIGHT_ID} />);
+    expect(container.querySelector('[data-mobile="true"]')).toBeInTheDocument();
+    // Mobile default tab is 'current' → planned-games pane not shown in the tab body.
+    expect(screen.queryByText('Wingspan')).toBeNull();
+  });
+
+  it('keeps the desktop 3-pane hub (data-mobile=false) at lg+', () => {
+    mockQuery({ data: vm() });
+    const { container } = render(<NightLiveClientView nightId={NIGHT_ID} />);
+    expect(container.querySelector('[data-mobile="false"]')).toBeInTheDocument();
+    // Desktop renders all planned games in the always-visible pane.
+    expect(screen.getByText('Wingspan')).toBeInTheDocument();
   });
 });
 
@@ -250,6 +291,17 @@ describe('NightLiveClientView — organizer interactive start (WS1 DEC-10)', () 
     mockQuery({ data: vm({ isViewerOrganizer: true, nextGame: NEXT_GAME, status: 'transition' }) });
     render(<NightLiveClientView nightId={NIGHT_ID} />);
     expect(screen.getByRole('button', { name: /Avvia: Catan/i })).toBeInTheDocument();
+  });
+
+  // #3146 Slice 2: on mobile the fixed CTA must clear the hub's own in-flow
+  // bottom tab-nav (this route is immersive → no global bottom bar), so it sits
+  // at bottom-16 below lg and returns to bottom-0 on the desktop 3-pane layout.
+  it('floats the start CTA above the mobile hub nav (bottom-16 lg:bottom-0)', () => {
+    mockQuery({ data: vm({ isViewerOrganizer: true, nextGame: NEXT_GAME, status: 'transition' }) });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    const container = screen.getByRole('button', { name: /Avvia: Catan/i }).closest('div');
+    expect(container?.className).toContain('bottom-16');
+    expect(container?.className).toContain('lg:bottom-0');
   });
 
   it('starts the next game with its id + title on click', async () => {
@@ -344,7 +396,26 @@ describe('NightLiveClientView — organizer Completa + winner picker (C4)', () =
   it('shows the "Completa partita" CTA for the organizer while a game is live', () => {
     mockQuery({ data: vm({ isViewerOrganizer: true, status: 'live', winnerCandidates: ROSTER }) });
     render(<NightLiveClientView nightId={NIGHT_ID} />);
-    expect(screen.getByRole('button', { name: /Completa partita/i })).toBeInTheDocument();
+    const cta = screen.getByRole('button', { name: /Completa partita/i });
+    expect(cta).toBeInTheDocument();
+    // #3146 Slice 2: floats above the mobile hub nav, inline on desktop.
+    expect(cta.closest('div')?.className).toContain('bottom-16');
+    expect(cta.closest('div')?.className).toContain('lg:bottom-0');
+  });
+
+  it('floats the "Concludi serata" finalize CTA above the mobile hub nav (#3146 Slice 2)', () => {
+    mockQuery({
+      data: vm({
+        isViewerOrganizer: true,
+        status: 'transition',
+        nextGame: null,
+        nightStatus: 'InProgress',
+      }),
+    });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    const cta = screen.getByRole('button', { name: /Concludi serata/i });
+    expect(cta.closest('div')?.className).toContain('bottom-16');
+    expect(cta.closest('div')?.className).toContain('lg:bottom-0');
   });
 
   it('does NOT show the Completa CTA for a non-organizer', () => {

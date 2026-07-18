@@ -191,4 +191,43 @@ public sealed class WikidataCatalogProviderTests
         result.Fields["maxPlayers"].Value.Should().Be(4);
         result.Fields["maxPlayers"].SourceField.Should().Be("P1873");
     }
+
+    [Fact]
+    public async Task FetchAsync_BuildsSparql_MapsDesignerToP178NotP3300()
+    {
+        // Issue #3142: P3300 = "musical conductor" (verified live) — NOT a game designer.
+        // The board-game designer is P178, the only candidate returning the correct designer
+        // for Catan/Carcassonne/Pandemic.
+        var (client, getCaptured) = MakeCapturingClient("""{"results":{"bindings":[]}}""");
+        var provider = new WikidataCatalogProvider(client, NullLogger<WikidataCatalogProvider>.Instance, Mock.Of<IWikimediaRateLimiter>());
+
+        await provider.FetchAsync(new CatalogProviderQuery(null, "Q17271", null), default);
+
+        var captured = getCaptured();
+        captured.Should().NotBeNull();
+        var sparql = System.Text.RegularExpressions.Regex.Replace(
+            Uri.UnescapeDataString(captured!.RequestUri!.Query), @"\s+", " ");
+
+        sparql.Should().Contain("wdt:P178 ?designerRaw");
+        sparql.Should().NotContain("wdt:P3300"); // the "musical conductor" property must be gone
+    }
+
+    [Fact]
+    public async Task FetchAsync_Designer_CarriesP178Provenance()
+    {
+        // Issue #3142: designer provenance must be P178, not P3300.
+        const string body = """
+        { "results": { "bindings": [{
+          "game":         {"value": "http://www.wikidata.org/entity/Q17271"},
+          "gameLabel":    {"value": "Catan"},
+          "designerLabel":{"value": "Klaus Teuber"}
+        }]}}
+        """;
+        var provider = new WikidataCatalogProvider(MakeClient(HttpStatusCode.OK, body), NullLogger<WikidataCatalogProvider>.Instance, Mock.Of<IWikimediaRateLimiter>());
+
+        var result = await provider.FetchAsync(new CatalogProviderQuery(null, "Q17271", null), default);
+
+        result.Fields["designers"].Value.Should().BeOfType<List<string>>().Which.Should().Contain("Klaus Teuber");
+        result.Fields["designers"].SourceField.Should().Be("P178");
+    }
 }

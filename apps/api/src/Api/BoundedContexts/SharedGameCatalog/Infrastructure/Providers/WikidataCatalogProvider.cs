@@ -289,7 +289,7 @@ WHERE {{
     WHERE {{
       {bind}
       OPTIONAL {{ ?game wdt:P577 ?yearRaw. }}
-      OPTIONAL {{ ?game wdt:P3300 ?designerRaw. }}
+      OPTIONAL {{ ?game wdt:P178 ?designerRaw. }}
       OPTIONAL {{ ?game wdt:P123 ?publisherRaw. }}
       OPTIONAL {{ ?game wdt:P1872 ?minRaw. }}
       OPTIONAL {{ ?game wdt:P1873 ?maxRaw. }}
@@ -349,7 +349,7 @@ LIMIT 1";
         var designer = Get("designerLabel");
         if (!string.IsNullOrWhiteSpace(designer))
         {
-            fields["designers"] = new FieldProvenance("wikidata", sourceUrl, "P3300", fetchedAt, new List<string> { designer });
+            fields["designers"] = new FieldProvenance("wikidata", sourceUrl, "P178", fetchedAt, new List<string> { designer });
         }
 
         var publisher = Get("publisherLabel");

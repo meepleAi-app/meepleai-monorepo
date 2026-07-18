@@ -396,7 +396,26 @@ describe('NightLiveClientView — organizer Completa + winner picker (C4)', () =
   it('shows the "Completa partita" CTA for the organizer while a game is live', () => {
     mockQuery({ data: vm({ isViewerOrganizer: true, status: 'live', winnerCandidates: ROSTER }) });
     render(<NightLiveClientView nightId={NIGHT_ID} />);
-    expect(screen.getByRole('button', { name: /Completa partita/i })).toBeInTheDocument();
+    const cta = screen.getByRole('button', { name: /Completa partita/i });
+    expect(cta).toBeInTheDocument();
+    // #3146 Slice 2: floats above the mobile hub nav, inline on desktop.
+    expect(cta.closest('div')?.className).toContain('bottom-16');
+    expect(cta.closest('div')?.className).toContain('lg:bottom-0');
+  });
+
+  it('floats the "Concludi serata" finalize CTA above the mobile hub nav (#3146 Slice 2)', () => {
+    mockQuery({
+      data: vm({
+        isViewerOrganizer: true,
+        status: 'transition',
+        nextGame: null,
+        nightStatus: 'InProgress',
+      }),
+    });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    const cta = screen.getByRole('button', { name: /Concludi serata/i });
+    expect(cta.closest('div')?.className).toContain('bottom-16');
+    expect(cta.closest('div')?.className).toContain('lg:bottom-0');
   });
 
   it('does NOT show the Completa CTA for a non-organizer', () => {

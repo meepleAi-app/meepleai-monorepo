@@ -139,22 +139,49 @@ describe('GameNightDetailView — mobile sticky action bars (#2989 Screen C)', (
   });
 
   // Gap 4: the fixed sticky bar overlays the bottom of the scroll region, so
-  // the page container reserves extra bottom padding on mobile so the last
-  // content (roster) is not occluded. Collapses to the default at md+.
-  it('reserves bottom-nav-safe padding when a mobile sticky bar is shown (guest Published)', () => {
+  // the container carries the clearance classes below md. NOTE: jsdom does not
+  // compute layout, so these assert the *class contract* (not pixel geometry):
+  // `pb-40` (base) + `sm:pb-40` (the latter specifically guards the 640–767px
+  // band, where the inherited `sm:py-8` from PADDING_DEFAULT would otherwise
+  // clobber the reservation to 32px while the bar is still fixed) + `md:pb-4`.
+  it('applies the sticky-bar clearance classes when a guest RSVP bar is shown (Published)', () => {
     mockDetail({ actor: { actor: 'guest' } });
     render(<GameNightDetailView id="gn-1" />);
 
     const container = screen.getByTestId('game-night-detail-container');
-    expect(container.className).toContain('pb-24');
+    expect(container.className).toContain('pb-40');
+    expect(container.className).toContain('sm:pb-40');
     expect(container.className).toContain('md:pb-4');
   });
 
-  it('does NOT reserve extra bottom padding when no sticky bar is shown (Completed)', () => {
+  it('applies the sticky-bar clearance classes on a Draft host night too', () => {
+    currentUserMock.mockReturnValue({ data: { id: 'org-1' } });
+    mockDetail({ event: { ...baseEvent, status: 'Draft' }, actor: { actor: 'host' } });
+    render(<GameNightDetailView id="gn-1" />);
+
+    const container = screen.getByTestId('game-night-detail-container');
+    expect(container.className).toContain('pb-40');
+    expect(container.className).toContain('sm:pb-40');
+  });
+
+  it('does NOT apply the clearance when no sticky bar is shown (Completed)', () => {
     mockDetail({ event: { ...baseEvent, status: 'Completed' }, actor: { actor: 'guest' } });
     render(<GameNightDetailView id="gn-1" />);
 
     const container = screen.getByTestId('game-night-detail-container');
-    expect(container.className).not.toContain('pb-24');
+    expect(container.className).not.toContain('pb-40');
+  });
+
+  // Gap (F3): the voting tab (showDetailsContent === false) must NOT render the
+  // RSVP sticky bar or reserve its clearance — otherwise the bar would overlap
+  // the voting UI. Guards against a regression that drops `&& showDetailsContent`.
+  it('does NOT render the RSVP sticky bar or clearance on the voting tab (guest Published)', () => {
+    getTabMock.mockReturnValue('voting');
+    mockDetail({ actor: { actor: 'guest' } });
+    render(<GameNightDetailView id="gn-1" />);
+
+    expect(screen.queryByTestId('rsvp-sticky-bar')).not.toBeInTheDocument();
+    const container = screen.getByTestId('game-night-detail-container');
+    expect(container.className).not.toContain('pb-40');
   });
 });

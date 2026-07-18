@@ -109,6 +109,42 @@ describe('GameNightRsvpActionBar', () => {
     expect(acceptBtn.className).toContain('border-[hsl(var(--c-success))]');
   });
 
+  // #2989 Screen C: `compact` sheds the card chrome + visible heading ONLY at
+  // <md (max-md: variants) so the control fits a mobile sticky bar, while the
+  // full card is preserved at md+. jsdom can't evaluate the media query, so we
+  // assert the class contract + that a11y (the region landmark) is unaffected.
+  describe('compact prop (#2989 Screen C)', () => {
+    it('keeps the full card chrome + heading by default (compact=false)', () => {
+      renderBar();
+      const region = screen.getByRole('region', { name: 'La tua risposta' });
+      expect(region).toHaveAttribute('data-compact', 'false');
+      expect(region.className).toContain('border');
+      expect(region.className).not.toContain('max-md:border-0');
+      // Heading is visible (no responsive hide class).
+      expect(screen.getByText('La tua risposta').className).not.toContain('max-md:hidden');
+    });
+
+    it('sheds card chrome + hides the heading below md when compact', () => {
+      renderBar({ compact: true });
+      const region = screen.getByRole('region', { name: 'La tua risposta' });
+      expect(region).toHaveAttribute('data-compact', 'true');
+      expect(region.className).toContain('max-md:border-0');
+      expect(region.className).toContain('max-md:bg-transparent');
+      expect(region.className).toContain('max-md:p-0');
+      // Heading still rendered (a11y) but visually hidden at <md.
+      expect(screen.getByText('La tua risposta').className).toContain('max-md:hidden');
+    });
+
+    it('preserves the labelled region landmark for screen readers when compact', () => {
+      renderBar({ compact: true });
+      expect(screen.getByRole('region', { name: 'La tua risposta' })).toBeInTheDocument();
+      // The three CTAs are still present + still meet the 44px floor.
+      for (const testId of ['rsvp-btn-accepted', 'rsvp-btn-maybe', 'rsvp-btn-declined']) {
+        expect(screen.getByTestId(testId).className).toContain('min-h-[44px]');
+      }
+    });
+  });
+
   describe('mode prop (issue #1169)', () => {
     it('defaults to authenticated mode (all three buttons + Maybe visible)', () => {
       renderBar();

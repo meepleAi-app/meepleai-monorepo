@@ -57,11 +57,11 @@ import { GameNightEditDrawer } from './GameNightEditDrawer';
 
 /**
  * Mobile-only sticky action bar (#2989 Screen C). Pins its children just above
- * the fixed MobileBottomBar (`bottom-16` ≈ the shell's `pb-16` clearance) at
- * <md and collapses to normal document flow at md+. `z-30` keeps it above page
- * content but below the `z-40` MobileBottomBar. The `safe-area-inset-bottom`
- * padding respects notched viewports. Callers pass a surface `className`
- * (glass / border) when the children are bare controls that need a backdrop.
+ * the fixed MobileBottomBar (`bottom-16` ≈ the shell's `pb-16` clearance, which
+ * also owns the screen-edge safe-area) at <md and collapses to normal document
+ * flow at md+. `z-30` keeps it above page content but below the `z-40`
+ * MobileBottomBar. Callers pass a surface `className` (glass / border) — the
+ * children may be bare controls that need a backdrop.
  */
 function MobileStickyBar({
   testId,
@@ -76,8 +76,8 @@ function MobileStickyBar({
     <div
       data-testid={testId}
       className={cn(
-        'fixed inset-x-0 bottom-16 z-30 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]',
-        'md:static md:inset-x-auto md:bottom-auto md:z-auto md:p-0 md:pb-0',
+        'fixed inset-x-0 bottom-16 z-30 p-3',
+        'md:static md:inset-x-auto md:bottom-auto md:z-auto md:p-0',
         className
       )}
     >
@@ -289,8 +289,14 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
 
   // #2989 Screen C: a mobile sticky action bar (guest RSVP or Draft host CTA)
   // is `fixed` and overlays the bottom of the scroll region, so the container
-  // reserves extra bottom padding at <md so the last content is not occluded.
+  // reserves extra bottom padding below md so the last content is not occluded.
+  // The reservation must exceed the compact bar's height (≈120px incl. 2-row
+  // button wrap) — pb-40 (160px). `sm:pb-40` is required because the container's
+  // inherited PADDING_DEFAULT (`sm:py-8`) is a distinct variant group that
+  // tailwind-merge keeps, and it would otherwise clobber the bottom padding to
+  // 32px in the 640–767px band where the bar is still fixed.
   const hasMobileStickyBar = (isGuest && isLive && showDetailsContent) || (isHost && isDraft);
+  const stickyBarClearance = 'pb-40 sm:pb-40 md:pb-4';
 
   // Sort roster: host first, then me, then by status priority.
   const sortedRsvps = rsvps
@@ -336,7 +342,7 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   return (
     <FormPageContainer
       data-testid="game-night-detail-container"
-      className={cn('space-y-6 p-4', hasMobileStickyBar && 'pb-24 md:pb-4')}
+      className={cn('space-y-6 p-4', hasMobileStickyBar && stickyBarClearance)}
     >
       <GameNightDetailHero
         title={event.title}
@@ -438,12 +444,16 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
           reach; the action bar's own opaque card is the surface, so the wrapper
           only handles positioning. Collapses to inline flow at md+. */}
       {isGuest && isLive && showDetailsContent && (
-        <MobileStickyBar testId="rsvp-sticky-bar">
+        <MobileStickyBar
+          testId="rsvp-sticky-bar"
+          className="border-t border-border bg-card/95 backdrop-blur md:border-0 md:bg-transparent md:backdrop-blur-none"
+        >
           <GameNightRsvpActionBar
             labels={rsvpLabels}
             currentResponse={currentResponse}
             pendingResponse={pendingResponse}
             onSelect={handleRsvp}
+            compact
           />
         </MobileStickyBar>
       )}

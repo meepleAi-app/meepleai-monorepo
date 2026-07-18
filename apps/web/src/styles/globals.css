@@ -545,6 +545,10 @@
   --color-entity-agent-text: hsl(var(--c-agent-text));     /* #2955: AA text-on-tint */
   --color-entity-kb:      hsl(var(--c-kb));
   --color-entity-kb-text: hsl(var(--c-kb-text));           /* #2955: AA text-on-tint */
+  /* #3161: `kb` maps to the tailwind class `document` (entity-tokens.ts). Alias it to the
+     kb color here so `entity-document` utilities actually emit in TW v4 (only @theme vars do). */
+  --color-entity-document:      hsl(var(--c-kb));
+  --color-entity-document-text: hsl(var(--c-kb-text));
   --color-entity-chat:    hsl(var(--c-chat));
   --color-entity-chat-text: hsl(var(--c-chat-text));       /* #2955: AA text-on-tint */
   --color-entity-event:   hsl(var(--c-event));

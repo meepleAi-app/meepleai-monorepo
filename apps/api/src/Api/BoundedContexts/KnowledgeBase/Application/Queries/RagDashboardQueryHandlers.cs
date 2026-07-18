@@ -231,26 +231,34 @@ internal sealed class GetRagDashboardOverviewQueryHandler : IQueryHandler<GetRag
 
         var strategyMetrics = rawMetrics.Select(RagDashboardMapping.MapToStrategyMetricsDto).ToList();
 
-        // Calculate aggregated metrics across all strategies
+        // Calculate aggregated metrics across all strategies.
+        // #3122: pool by sample count instead of a mean-of-means. Averaging per-strategy
+        // averages/rates over-weights low-volume strategies, so weight the per-strategy
+        // means by TotalQueries and derive rates from summed count components.
         var totalQueries = strategyMetrics.Sum(m => m.TotalQueries);
+        var totalCacheHits = strategyMetrics.Sum(m => m.CacheHits);
+        var totalCacheMisses = strategyMetrics.Sum(m => m.CacheMisses);
+        var totalCacheLookups = totalCacheHits + totalCacheMisses;
+        var totalErrorCount = strategyMetrics.Sum(m => m.ErrorCount);
+        var totalCost = strategyMetrics.Sum(m => m.TotalCost);
         var aggregated = new StrategyMetricsDto
         {
             StrategyId = "all",
             StrategyName = "All Strategies",
             TotalQueries = totalQueries,
-            AverageLatencyMs = strategyMetrics.Count > 0 ? strategyMetrics.Average(m => m.AverageLatencyMs) : 0,
+            AverageLatencyMs = totalQueries > 0 ? strategyMetrics.Sum(m => m.AverageLatencyMs * m.TotalQueries) / totalQueries : 0,
             P95LatencyMs = strategyMetrics.Count > 0 ? strategyMetrics.Max(m => m.P95LatencyMs) : 0,
             P99LatencyMs = strategyMetrics.Count > 0 ? strategyMetrics.Max(m => m.P99LatencyMs) : 0,
-            AverageRelevanceScore = strategyMetrics.Count > 0 ? strategyMetrics.Average(m => m.AverageRelevanceScore) : 0,
-            AverageConfidenceScore = strategyMetrics.Count > 0 ? strategyMetrics.Average(m => m.AverageConfidenceScore) : 0,
-            CacheHits = strategyMetrics.Sum(m => m.CacheHits),
-            CacheMisses = strategyMetrics.Sum(m => m.CacheMisses),
-            CacheHitRate = strategyMetrics.Count > 0 ? strategyMetrics.Average(m => m.CacheHitRate) : 0,
+            AverageRelevanceScore = totalQueries > 0 ? strategyMetrics.Sum(m => m.AverageRelevanceScore * m.TotalQueries) / totalQueries : 0,
+            AverageConfidenceScore = totalQueries > 0 ? strategyMetrics.Sum(m => m.AverageConfidenceScore * m.TotalQueries) / totalQueries : 0,
+            CacheHits = totalCacheHits,
+            CacheMisses = totalCacheMisses,
+            CacheHitRate = totalCacheLookups > 0 ? (double)totalCacheHits / totalCacheLookups : 0,
             TotalTokensUsed = strategyMetrics.Sum(m => m.TotalTokensUsed),
-            TotalCost = strategyMetrics.Sum(m => m.TotalCost),
-            AverageCostPerQuery = strategyMetrics.Count > 0 ? strategyMetrics.Average(m => m.AverageCostPerQuery) : 0,
-            ErrorCount = strategyMetrics.Sum(m => m.ErrorCount),
-            ErrorRate = strategyMetrics.Count > 0 ? strategyMetrics.Average(m => m.ErrorRate) : 0,
+            TotalCost = totalCost,
+            AverageCostPerQuery = totalQueries > 0 ? (double)(totalCost / totalQueries) : 0,
+            ErrorCount = totalErrorCount,
+            ErrorRate = totalQueries > 0 ? (double)totalErrorCount / totalQueries : 0,
             LastUpdated = DateTimeOffset.UtcNow
         };
 

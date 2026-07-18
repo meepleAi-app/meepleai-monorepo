@@ -10,8 +10,10 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Providers;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Middleware.Exceptions;
+using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using ImageMagick;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -408,6 +410,91 @@ public class EnrichCatalogCoverCommandHandlerTests
     }
 
     // ──────────────────────────────────────────────────────────────────────
+    // Issue #3138 — cover enrichment must invalidate the catalog read-model cache
+    // ──────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_SuccessfulEnrichment_InvalidatesSearchAndDetailCacheAcrossReplicas()
+    {
+        var harness = BuildHarness();
+        var game = BuildGame(qid: TestQid);
+
+        harness.RepoMock
+            .Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        harness.WikidataHandler.SparqlJson = BuildSparqlImageResponse(TestFilename);
+        harness.CommonsHandler.LicenseJson = BuildImageInfoResponse("CC BY-SA 4.0", artistHtml: "John Doe");
+        harness.CommonsHandler.ImageBytes = await CreateSolidImagePngAsync(800, 600);
+        harness.S3Mock
+            .Setup(s => s.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PutObjectResponse { HttpStatusCode = HttpStatusCode.OK });
+
+        var result = await harness.Sut.Handle(
+            new EnrichCatalogCoverCommand(game.Id),
+            CancellationToken.None);
+
+        result.Should().BeOfType<EnrichCatalogCoverResult.Success>();
+
+        // The cover columns changed -> evict the catalog list + this game's detail cache so
+        // /shared-games and /shared-games/{id} reflect the new coverUrl immediately (not after
+        // the 15min/1h TTL). Cross-replica eviction, via the retry policy.
+        harness.CacheMock.Verify(
+            c => c.RemoveByTagAcrossReplicasAsync("search-games", It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.CacheMock.Verify(
+            c => c.RemoveByTagAcrossReplicasAsync($"shared-game:{game.Id}", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_SkippedEnrichment_DoesNotInvalidateCache()
+    {
+        var harness = BuildHarness();
+        var game = BuildGame(qid: null); // qid-missing -> Skipped, cover columns unchanged
+
+        harness.RepoMock
+            .Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        var result = await harness.Sut.Handle(
+            new EnrichCatalogCoverCommand(game.Id),
+            CancellationToken.None);
+
+        result.Should().BeOfType<EnrichCatalogCoverResult.Skipped>();
+        harness.CacheMock.Verify(
+            c => c.RemoveByTagAcrossReplicasAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_FailedEnrichment_DoesNotInvalidateCache()
+    {
+        var harness = BuildHarness();
+        var game = BuildGame(qid: TestQid);
+
+        harness.RepoMock
+            .Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        harness.WikidataHandler.SparqlJson = BuildSparqlImageResponse(TestFilename);
+        harness.CommonsHandler.LicenseJson = BuildImageInfoResponse("CC0");
+        harness.CommonsHandler.ImageBytes = await CreateSolidImagePngAsync(400, 600);
+        harness.S3Mock
+            .Setup(s => s.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new AmazonS3Exception("simulated R2 outage"));
+
+        var result = await harness.Sut.Handle(
+            new EnrichCatalogCoverCommand(game.Id),
+            CancellationToken.None);
+
+        result.Should().BeOfType<EnrichCatalogCoverResult.Failed>();
+        harness.CacheMock.Verify(
+            c => c.RemoveByTagAcrossReplicasAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
     // Helpers — fixture builders + routing handlers
     // ──────────────────────────────────────────────────────────────────────
 
@@ -416,6 +503,7 @@ public class EnrichCatalogCoverCommandHandlerTests
         Mock<ISharedGameRepository> RepoMock,
         Mock<IUnitOfWork> UowMock,
         Mock<IAmazonS3> S3Mock,
+        Mock<IHybridCacheService> CacheMock,
         WikidataSparqlHandler WikidataHandler,
         CommonsRoutingHandler CommonsHandler,
         FakeTimeProvider TimeProvider);
@@ -469,6 +557,11 @@ public class EnrichCatalogCoverCommandHandlerTests
 
         var fakeTime = new FakeTimeProvider(new DateTimeOffset(FixedNowUtc, TimeSpan.Zero));
 
+        var cacheMock = new Mock<IHybridCacheService>();
+        cacheMock
+            .Setup(c => c.RemoveByTagAcrossReplicasAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
+
         var handler = new EnrichCatalogCoverCommandHandler(
             repo.Object,
             uow.Object,
@@ -477,9 +570,11 @@ public class EnrichCatalogCoverCommandHandlerTests
             webpGenerator,
             r2Pipeline,
             fakeTime,
+            cacheMock.Object,
+            new PassthroughRetryPolicy(),
             NullLogger<EnrichCatalogCoverCommandHandler>.Instance);
 
-        return new TestHarness(handler, repo, uow, s3Mock, sparqlHandler, commonsHandler, fakeTime);
+        return new TestHarness(handler, repo, uow, s3Mock, cacheMock, sparqlHandler, commonsHandler, fakeTime);
     }
 
     private static SharedGame BuildGame(

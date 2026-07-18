@@ -5,6 +5,7 @@ using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Resilience;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Middleware.Exceptions;
 using Api.Observability;
+using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
@@ -72,6 +73,8 @@ internal sealed class EnrichCatalogCoverCommandHandler
     private readonly IWebpVariantGenerator _webpGenerator;
     private readonly ICoverR2UploadPipeline _r2UploadPipeline;
     private readonly TimeProvider _timeProvider;
+    private readonly IHybridCacheService _cache;
+    private readonly ICacheInvalidationRetryPolicy _cacheRetryPolicy;
     private readonly ILogger<EnrichCatalogCoverCommandHandler> _logger;
 
     public EnrichCatalogCoverCommandHandler(
@@ -82,6 +85,8 @@ internal sealed class EnrichCatalogCoverCommandHandler
         IWebpVariantGenerator webpGenerator,
         ICoverR2UploadPipeline r2UploadPipeline,
         TimeProvider timeProvider,
+        IHybridCacheService cache,
+        ICacheInvalidationRetryPolicy cacheRetryPolicy,
         ILogger<EnrichCatalogCoverCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
@@ -91,6 +96,8 @@ internal sealed class EnrichCatalogCoverCommandHandler
         _webpGenerator = webpGenerator ?? throw new ArgumentNullException(nameof(webpGenerator));
         _r2UploadPipeline = r2UploadPipeline ?? throw new ArgumentNullException(nameof(r2UploadPipeline));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _cacheRetryPolicy = cacheRetryPolicy ?? throw new ArgumentNullException(nameof(cacheRetryPolicy));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -243,6 +250,23 @@ internal sealed class EnrichCatalogCoverCommandHandler
 
         _repository.Update(game);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Issue #3138: the cover columns changed — evict the SharedGameCatalog read-model
+        // caches so /shared-games (list) and /shared-games/{id} (detail) reflect the new
+        // coverUrl immediately instead of waiting for the 15min/1h TTL. Cross-replica L1+L2
+        // eviction via Redis Pub/Sub, mirroring VectorDocumentIndexedForKbFlagHandler (ADR-062).
+        // Runs only on this success path (every Skipped/Failed branch returns earlier), so no
+        // wasted eviction when the cover did not change; covers admin-single, admin-batch and
+        // cron since all three dispatch EnrichCatalogCoverCommand into this handler.
+        await _cacheRetryPolicy.ExecuteAsync(
+            token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync("search-games", token)),
+            "shared-games.list",
+            cancellationToken).ConfigureAwait(false);
+
+        await _cacheRetryPolicy.ExecuteAsync(
+            token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync($"shared-game:{game.Id}", token)),
+            "shared-games.detail",
+            cancellationToken).ConfigureAwait(false);
 
         // 10. Success metric + result.
         EmitOutcomeMetric(OutcomeSuccess);

@@ -97,6 +97,16 @@ export const SessionPlayerDtoSchema = z.object({
 
 export type SessionPlayerDto = z.infer<typeof SessionPlayerDtoSchema>;
 
+// #3022: player aligned to scoreData.playerId (LiveGameSession player), carrying the
+// display name + color needed to render per-player scores in the summary flavor.
+export const ScorePlayerDtoSchema = z.object({
+  id: z.string(),
+  displayName: z.string(),
+  color: z.string().nullable(),
+});
+
+export type ScorePlayerDto = z.infer<typeof ScorePlayerDtoSchema>;
+
 export const GameSessionDtoSchema = z.object({
   id: z.string().uuid(),
   gameId: GameIdString,
@@ -115,6 +125,10 @@ export const GameSessionDtoSchema = z.object({
   // #2483 Task 1 BE: turnOrderType derived from the game's toolkit (static for the session).
   // Null when the game has no toolkit wired. Path B: no SignalR event, populated from DTO.
   turnOrderType: z.string().nullable().optional(),
+  // #3022: summary flavor identity + score-aligned players (single-session GET only).
+  gameSlug: z.string().nullable().optional(),
+  gameName: z.string().nullable().optional(),
+  scorePlayers: z.array(ScorePlayerDtoSchema).nullable().optional(),
 });
 
 export type GameSessionDto = z.infer<typeof GameSessionDtoSchema>;

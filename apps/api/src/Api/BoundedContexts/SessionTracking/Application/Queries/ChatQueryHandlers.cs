@@ -1,6 +1,7 @@
 using MediatR;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
+using Api.Middleware.Exceptions;
 
 namespace Api.BoundedContexts.SessionTracking.Application.Queries;
 
@@ -11,14 +12,23 @@ namespace Api.BoundedContexts.SessionTracking.Application.Queries;
 public class GetSessionChatQueryHandler : IRequestHandler<GetSessionChatQuery, SessionChatResultDto>
 {
     private readonly ISessionChatRepository _chatRepository;
+    private readonly ISessionRepository _sessionRepository;
 
-    public GetSessionChatQueryHandler(ISessionChatRepository chatRepository)
+    public GetSessionChatQueryHandler(ISessionChatRepository chatRepository, ISessionRepository sessionRepository)
     {
         _chatRepository = chatRepository;
+        _sessionRepository = sessionRepository;
     }
 
     public async Task<SessionChatResultDto> Handle(GetSessionChatQuery request, CancellationToken cancellationToken)
     {
+        // #3119: session chat is owner/participant-only — enforce access before returning it.
+        var session = await _sessionRepository.GetByIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false);
+        if (session is null)
+            throw new NotFoundException($"Session {request.SessionId} not found.");
+        if (!session.IsAccessibleBy(request.RequestedBy))
+            throw new ForbiddenException("You do not have access to this session.");
+
         var messages = await _chatRepository.GetBySessionIdAsync(
             request.SessionId,
             request.Limit,

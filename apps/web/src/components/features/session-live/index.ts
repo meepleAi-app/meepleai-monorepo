@@ -38,6 +38,12 @@ export type {
 export { DesktopBody } from '@/components/features/session-live/DesktopBody';
 export type { DesktopBodyProps } from '@/components/features/session-live/DesktopBody';
 
+export { LiveMobileMetaStrip } from '@/components/features/session-live/LiveMobileMetaStrip';
+export type {
+  LiveMobileMetaStripLabels,
+  LiveMobileMetaStripProps,
+} from '@/components/features/session-live/LiveMobileMetaStrip';
+
 export { LiveScoringPanel } from '@/components/features/session-live/LiveScoringPanel';
 export type {
   LiveScoringPanelLabels,

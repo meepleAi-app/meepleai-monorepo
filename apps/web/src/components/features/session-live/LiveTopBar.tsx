@@ -134,8 +134,12 @@ export function LiveTopBar({
         >
           {statusLabel}
         </span>
+        {/* #3146 Slice 1: the turn/elapsed/start-time chips are gated `lg:inline`
+            — they belong to the desktop layer (lg+). Below lg they move to the
+            always-visible LiveMobileMetaStrip so the cramped h-14 topbar stays
+            legible on phones. */}
         {labels.turnLabelResolved && (
-          <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
+          <span className="hidden shrink-0 text-xs text-muted-foreground lg:inline">
             {labels.turnLabelResolved}
           </span>
         )}
@@ -146,7 +150,7 @@ export function LiveTopBar({
             data-slot="session-live-top-bar-timer"
             aria-label={labels.elapsedTimeAriaLabel}
             className="hidden shrink-0 rounded-md bg-card/60 px-2 py-0.5 font-mono text-xs
-              tabular-nums text-foreground/90 sm:inline"
+              tabular-nums text-foreground/90 lg:inline"
           >
             {elapsedFormatted}
           </span>
@@ -158,7 +162,7 @@ export function LiveTopBar({
             data-slot="session-live-top-bar-started-at"
             aria-label={labels.startedAtChipAriaLabel}
             className="hidden shrink-0 rounded-md bg-card/60 px-2 py-0.5 text-xs
-              text-muted-foreground md:inline"
+              text-muted-foreground lg:inline"
           >
             {startedAtLabel}
           </span>

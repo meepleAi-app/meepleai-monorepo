@@ -40,10 +40,12 @@ export interface NightLiveClientViewProps {
   readonly nightId: string;
 }
 
-// WS-A (#3150): below lg the hub renders an in-flow 3-tab bar (~3.5rem) at the bottom; lift the
-// fixed organizer CTAs above it + iOS safe-area. At lg there is no tab bar → reset to bottom-0.
+// WS-A (#3150): below lg the hub renders an in-flow 3-tab bar (~4rem: py-2.5 + border + icon/label)
+// at the bottom; lift the fixed organizer CTAs above it + iOS safe-area. 4rem errs slightly tall so
+// the CTA never overlaps the bar (a small gap is harmless). At lg there is no tab bar → reset to
+// bottom-0. Fine-tune via visual QA at 390px if needed.
 const CTA_BAR_POSITION =
-  'fixed inset-x-0 z-40 p-4 bottom-[calc(3.5rem_+_env(safe-area-inset-bottom))] lg:bottom-0';
+  'fixed inset-x-0 z-40 p-4 bottom-[calc(4rem_+_env(safe-area-inset-bottom))] lg:bottom-0';
 
 export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
   const router = useRouter();

@@ -39,13 +39,23 @@ The issue text says "make `MapToEntity` DB-aware (async)". Discovery showed a cl
 | D3 | Read-side symmetry | **Add `Publishers` hydration** (`MapToDomain` loop + `.Include(g => g.Publishers)` in `GetByIdAsync`), mirroring the existing `Designers` handling | Cheap; avoids persisting data nothing can read back; lets the integration test assert via the repo round-trip too. |
 | D4 | Matching semantics | **`EF.Functions.ILike`** case-insensitive (mirror seeder), not exact match | The issue explicitly points at `GetOrCreateDesignerAsync`. |
 | D5 | Scope | **New-skeleton (`AddAsync`) branch only** | Matches the current scalar-enrichment scoping; the existing-game branch does not enrich. |
-| D6 | `EnrichFromProvenance` signature | **Extend the single method** (add two name-list params before `modifiedBy`) rather than an overload | One clear domain contract; the only production caller is the handler; unit-test call-sites are updated mechanically as part of TDD. |
+| D6 | `EnrichFromProvenance` signature | **Extend the single method with two TRAILING OPTIONAL params** (`IReadOnlyList<string>? designers = null, publishers = null` after `modifiedBy`) | Non-breaking: the 7 existing `EnrichFromProvenance` unit-test call sites and the handler's current call compile unchanged (no compile-break TDD hazard). The single production caller (promotion handler) passes them explicitly. Revised from "required params before modifiedBy" after adversarial plan review flagged the compile-ordering break. |
+
+## 4a. Adversarial plan-review findings incorporated
+
+Two adversarial reviewers (EF/persistence correctness + test-design/DoD) reviewed the plan against the real code. Verified findings, all incorporated:
+
+- **`AddAsync` blast radius is NOT confined to the promotion path** (EF reviewer, verified). `SharedGameRepository.AddAsync` has ~7 `SharedGame`-aggregate callers, but only **`CreateSharedGameCommandHandler`** (`:80-88`) builds a designer/publisher-carrying aggregate before `AddAsync` — every other caller (`ImportGameFromBgg`, `ImportGamesFromExcel`, `ConfirmExcelImport`, `CreateSharedGameFromPdf`, `ApproveGameProposal`) passes an **empty**-designer aggregate → the resolver is a no-op → unaffected. `ImportGameFromBgg`/`UpdateSharedGame` persist designers via a **separate tracked-entity path** on an empty-designer aggregate → no double-persist. For `CreateSharedGameCommandHandler`, designers/publishers are **currently silently dropped** (the same latent bug class as #3153, different entry point) — this change **fixes** that too. Acknowledged, and pinned by a regression test (a duplicate-name-in-one-call test, which also guards `CreateSharedGameCommand`'s no-dedup 20-name payload).
+- **Duplicate-insert / UNIQUE-violation** (EF reviewer, verified MAJOR): the same new name supplied twice in ONE `AddAsync` (reachable from `CreateSharedGameCommand`, which caps count at 20 but does not de-dup) would insert two rows → `ix_game_designers_name` violation. **Fix**: the resolver de-dups its input case-insensitively (`.Distinct(StringComparer.OrdinalIgnoreCase)` over trimmed names). The `.Local` fallback additionally reuses a still-pending insert from an earlier `AddAsync` in the same `DbContext` (cross-call, tracked via the graph add).
+- **Existing test flips** (test reviewer, verified M1): `Handle_ProvenanceWithProperties_EnrichesNewSkeleton` currently asserts `Designers/Publishers.Should().BeEmpty()` — must be flipped to expect them populated (and its `#3154` comment updated); the existing `RichProvenance()` helper is reused. `Handle_ExistingGameCollision_...` keeps its `BeEmpty` assertion (existing-game branch never enriches — a valid D5 scope guard).
+- **Publisher reuse untested** (test reviewer, verified M3): `ResolvePublishersAsync` is a copy of `ResolveDesignersAsync`; a publisher-reuse integration test is added (publishers are more shared in practice — Kosmos, Hasbro — so the copy-paste reuse path is high-value to guard).
+- **MINOR**: `ILIKE` treats `%`/`_` in a name as wildcards (accepted, mirrors the seeder, documented in a code comment). `GetByIdAsync` gains a second collection `.Include` → add `.AsSplitQuery()` to avoid the cartesian product.
 
 ## 5. Design — changes per layer
 
 ### 5.1 Domain aggregate — `SharedGame.EnrichFromProvenance`
 
-Extend the signature (D6). New params are `IReadOnlyList<string>?` (nullable; a null/empty list is a lenient no-op, consistent with the method's existing skip-don't-throw contract for scalars):
+Extend the signature (D6) with two **trailing optional** params (`= null`) so all existing call sites compile unchanged. A null/empty list is a lenient no-op, consistent with the method's skip-don't-throw contract for scalars:
 
 ```csharp
 public void EnrichFromProvenance(
@@ -53,9 +63,9 @@ public void EnrichFromProvenance(
     int? minPlayers,
     int? maxPlayers,
     int? playingTimeMinutes,
-    IReadOnlyList<string>? designers,
-    IReadOnlyList<string>? publishers,
-    Guid modifiedBy)
+    Guid modifiedBy,
+    IReadOnlyList<string>? designers = null,
+    IReadOnlyList<string>? publishers = null)
 ```
 
 Body: after the scalar blocks, before the `if (changed)` audit stamp, add lenient de-duplicated ingestion for each collection:
@@ -112,37 +122,39 @@ public async Task AddAsync(SharedGame sharedGame, CancellationToken cancellation
 }
 ```
 
-Resolver (designers; publishers symmetric against `DbContext.GamePublishers`):
+Resolver (designers; publishers symmetric against `DbContext.GamePublishers`). Input is **de-duped case-insensitively** (fixes the duplicate-insert UNIQUE violation for a caller supplying the same name twice, e.g. `CreateSharedGameCommand`):
 
 ```csharp
 private async Task ResolveDesignersAsync(
     SharedGameEntity entity, IReadOnlyCollection<GameDesigner> designers, CancellationToken ct)
 {
-    foreach (var domainDesigner in designers)
+    foreach (var trimmed in designers
+        .Select(d => d.Name.Trim())
+        .Where(name => !string.IsNullOrWhiteSpace(name))
+        .Distinct(StringComparer.OrdinalIgnoreCase))                              // intra-call de-dup
     {
-        var trimmed = domainDesigner.Name.Trim();
-        if (string.IsNullOrWhiteSpace(trimmed)) continue;
-
+        // Get-or-create by name. ILIKE mirrors RelationshipSeeder (case-insensitive
+        // equality; a name literally containing % or _ would over-match — accepted).
         var existing = await DbContext.GameDesigners
-            .FirstOrDefaultAsync(d => EF.Functions.ILike(d.Name, trimmed), ct)   // get (ILIKE, mirror seeder)
+            .FirstOrDefaultAsync(d => EF.Functions.ILike(d.Name, trimmed), ct)
             .ConfigureAwait(false);
 
         var resolved = existing
-            ?? DbContext.GameDesigners.Local.FirstOrDefault(                     // in-flight dedup (defensive)
+            ?? DbContext.GameDesigners.Local.FirstOrDefault(                       // reuse a pending add (cross-call, same context)
                    d => string.Equals(d.Name, trimmed, StringComparison.OrdinalIgnoreCase))
-            ?? new GameDesignerEntity { Id = Guid.NewGuid(), Name = trimmed, CreatedAt = DateTime.UtcNow }; // create
+            ?? new GameDesignerEntity { Id = Guid.NewGuid(), Name = trimmed, CreatedAt = DateTime.UtcNow };
 
-        if (!entity.Designers.Any(d => ReferenceEquals(d, resolved) || d.Id == resolved.Id))  // link-row dedup
+        if (!entity.Designers.Any(d => d.Id == resolved.Id))
             entity.Designers.Add(resolved);
     }
 }
 ```
 
 - **`existing` found** → tracked `Unchanged`; adding to `entity.Designers` + `AddAsync(entity)` inserts only the join row.
-- **new** → inline `GameDesignerEntity`; becomes `Added` when `AddAsync` traverses the graph; both the designer row and the join row are inserted by the handler's single `SaveChanges`.
-- The `.Local` check and the link-row dedup are defensive belts (the aggregate is already de-duped in §5.1 and the promotion processes one game per event).
+- **new** → inline `GameDesignerEntity`; becomes `Added` when `AddAsync` traverses the graph; both the designer row and the join row are inserted by the handler's single `SaveChanges`. Cross-call reuse works because a prior game's `AddAsync(entity)` already tracked its new designers into `.Local`.
+- Input `.Distinct(OrdinalIgnoreCase)` guarantees no two identical names in one call (→ no duplicate insert). The `.Local` check + link-row guard are belts for the cross-call and existing-row cases.
 
-Read-side symmetry (D3): add a `Publishers` hydration loop in `MapToDomain` (mirror the existing `Designers` loop, guard non-blank `Name` → `sharedGame.AddPublisher(name)`) and add `.Include(g => g.Publishers)` next to the existing `.Include(g => g.Designers)` in `GetByIdAsync`.
+Read-side symmetry (D3): add a `Publishers` hydration loop in `MapToDomain` (mirror the existing `Designers` loop, guard non-blank `Name` → `sharedGame.AddPublisher(name)`) and add `.Include(g => g.Publishers)` next to the existing `.Include(g => g.Designers)` in `GetByIdAsync`, with `.AsSplitQuery()` (two collection includes → avoid the cartesian product).
 
 ## 6. No migration
 

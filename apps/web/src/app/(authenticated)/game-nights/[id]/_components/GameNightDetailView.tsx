@@ -12,8 +12,10 @@
  *                  RsvpRow + legacy GameNightActions/SessionsList/DiaryPanel under
  *                  the hero (decision 2a — orthogonal to RSVP flow).
  *
- * Mobile sticky CTA (mockup line 850) intentionally deferred — current inline
- * RsvpActionBar placement is functional; polish PR planned (decision 3c).
+ * Mobile sticky CTA (#2989 Screen C): on <md the guest RsvpActionBar and the
+ * Draft host "Invia inviti" CTA are lifted into a thumb-reachable sticky bottom
+ * bar (MobileStickyBar) pinned above the fixed MobileBottomBar; both collapse
+ * to inline document flow at md+. Supersedes the earlier decision-3c deferral.
  *
  * Error→toast mapping follows the rsvp-state-machine + HTTP-status keys defined
  * under `gameNightDetail.rsvp.errors.*` in the i18n bundle.
@@ -48,9 +50,41 @@ import { useSharedGames } from '@/hooks/queries/useSharedGames';
 import { useToast } from '@/hooks/useToast';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { RsvpResponse } from '@/lib/game-nights/rsvp-state-machine';
+import { cn } from '@/lib/utils';
 import { useGameNightStore } from '@/stores/game-night';
 
 import { GameNightEditDrawer } from './GameNightEditDrawer';
+
+/**
+ * Mobile-only sticky action bar (#2989 Screen C). Pins its children just above
+ * the fixed MobileBottomBar (`bottom-16` ≈ the shell's `pb-16` clearance) at
+ * <md and collapses to normal document flow at md+. `z-30` keeps it above page
+ * content but below the `z-40` MobileBottomBar. The `safe-area-inset-bottom`
+ * padding respects notched viewports. Callers pass a surface `className`
+ * (glass / border) when the children are bare controls that need a backdrop.
+ */
+function MobileStickyBar({
+  testId,
+  className,
+  children,
+}: {
+  testId: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      data-testid={testId}
+      className={cn(
+        'fixed inset-x-0 bottom-16 z-30 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]',
+        'md:static md:inset-x-auto md:bottom-auto md:z-auto md:p-0 md:pb-0',
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
 
 export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   const router = useRouter();
@@ -253,6 +287,11 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   const isHost = actor?.actor === 'host';
   const isGuest = actor?.actor === 'guest';
 
+  // #2989 Screen C: a mobile sticky action bar (guest RSVP or Draft host CTA)
+  // is `fixed` and overlays the bottom of the scroll region, so the container
+  // reserves extra bottom padding at <md so the last content is not occluded.
+  const hasMobileStickyBar = (isGuest && isLive && showDetailsContent) || (isHost && isDraft);
+
   // Sort roster: host first, then me, then by status priority.
   const sortedRsvps = rsvps
     ? rsvps.slice().sort((a, b) => {
@@ -295,7 +334,10 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   }
 
   return (
-    <FormPageContainer className="space-y-6 p-4">
+    <FormPageContainer
+      data-testid="game-night-detail-container"
+      className={cn('space-y-6 p-4', hasMobileStickyBar && 'pb-24 md:pb-4')}
+    >
       <GameNightDetailHero
         title={event.title}
         status={event.status}
@@ -304,39 +346,46 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
         organizerName={event.organizerName}
       />
 
-      {/* Host action row — kept compact + ungrouped with the hero. */}
-      {isHost && (isDraft || (!isCancelled && !isCompleted)) && (
+      {/* Draft host: Edit + "Invia inviti" — the primary publish CTA is lifted
+          into a mobile sticky bar (#2989 Screen C) so it stays thumb-reachable;
+          bare buttons get a glass surface. Collapses to the compact inline row
+          at md+. */}
+      {isHost && isDraft && (
+        <MobileStickyBar
+          testId="host-sticky-bar"
+          className="flex justify-end gap-2 border-t border-border bg-card/95 backdrop-blur md:border-0 md:bg-transparent md:backdrop-blur-none"
+        >
+          <Button size="sm" variant="outline" asChild>
+            <Link href={`/game-nights/${id}?action=edit`}>
+              <Edit className="mr-1 h-4 w-4" />
+              {t('gameNightDetail.actor.host.edit')}
+            </Link>
+          </Button>
+          <Button
+            size="sm"
+            data-testid="publish-game-night"
+            onClick={handlePublish}
+            disabled={publishMutation.isPending}
+          >
+            <Send className="mr-1 h-4 w-4" />
+            {t('gameNightDetail.actor.host.publish')}
+          </Button>
+        </MobileStickyBar>
+      )}
+
+      {/* Published host: destructive Cancel stays inline (top-right) — a
+          delete-style action is deliberately NOT promoted to a sticky CTA. */}
+      {isHost && !isDraft && !isCancelled && !isCompleted && (
         <div className="flex justify-end gap-2">
-          {isDraft && (
-            <>
-              <Button size="sm" variant="outline" asChild>
-                <Link href={`/game-nights/${id}?action=edit`}>
-                  <Edit className="mr-1 h-4 w-4" />
-                  {t('gameNightDetail.actor.host.edit')}
-                </Link>
-              </Button>
-              <Button
-                size="sm"
-                data-testid="publish-game-night"
-                onClick={handlePublish}
-                disabled={publishMutation.isPending}
-              >
-                <Send className="mr-1 h-4 w-4" />
-                {t('gameNightDetail.actor.host.publish')}
-              </Button>
-            </>
-          )}
-          {!isDraft && !isCancelled && !isCompleted && (
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={handleCancel}
-              disabled={cancelMutation.isPending}
-            >
-              <XCircle className="mr-1 h-4 w-4" />
-              {t('gameNightDetail.actor.host.cancel')}
-            </Button>
-          )}
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={handleCancel}
+            disabled={cancelMutation.isPending}
+          >
+            <XCircle className="mr-1 h-4 w-4" />
+            {t('gameNightDetail.actor.host.cancel')}
+          </Button>
         </div>
       )}
 
@@ -384,14 +433,19 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
         </nav>
       )}
 
-      {/* RSVP action bar — guests only, on Published events (details tab). */}
+      {/* RSVP action bar — guests only, on Published events (details tab).
+          #2989 Screen C: pinned to a mobile sticky bottom bar for one-thumb
+          reach; the action bar's own opaque card is the surface, so the wrapper
+          only handles positioning. Collapses to inline flow at md+. */}
       {isGuest && isLive && showDetailsContent && (
-        <GameNightRsvpActionBar
-          labels={rsvpLabels}
-          currentResponse={currentResponse}
-          pendingResponse={pendingResponse}
-          onSelect={handleRsvp}
-        />
+        <MobileStickyBar testId="rsvp-sticky-bar">
+          <GameNightRsvpActionBar
+            labels={rsvpLabels}
+            currentResponse={currentResponse}
+            pendingResponse={pendingResponse}
+            onSelect={handleRsvp}
+          />
+        </MobileStickyBar>
       )}
 
       {/* Candidate voting (approval model) — Issue #2700 / #2723 voting tab. */}

@@ -1,0 +1,160 @@
+import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { GameNightDetailView } from '../GameNightDetailView';
+
+// #2989 Screen C mobile parity: on <768px the guest RSVP action bar and the
+// host "Invia inviti" (Draft) CTA are lifted into a thumb-reachable sticky
+// bottom bar that clears the fixed MobileBottomBar (bottom-16), collapsing back
+// to inline flow at md+. This removes the decision-3c deferral documented in
+// GameNightDetailView (the previous inline placement).
+
+const detailMock = vi.fn();
+const getTabMock = vi.fn<(key: string) => string | null>();
+const currentUserMock = vi.fn();
+
+vi.mock('@/hooks/queries/useGameNightDetail', () => ({
+  useGameNightDetail: () => detailMock(),
+}));
+vi.mock('@/hooks/queries/useCurrentUser', () => ({
+  useCurrentUser: () => currentUserMock(),
+}));
+vi.mock('@/hooks/queries/useGameNights', () => ({
+  usePublishGameNight: () => ({ mutate: vi.fn(), isPending: false }),
+  useCancelGameNight: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+vi.mock('@/hooks/queries/useSharedGames', () => ({
+  useSharedGames: () => ({ data: { items: [] } }),
+}));
+vi.mock('@/stores/game-night', () => ({
+  useGameNightStore: () => ({
+    addPlayer: vi.fn(),
+    addGame: vi.fn(),
+    reset: vi.fn(),
+    activeSessions: [],
+  }),
+}));
+vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
+vi.mock('@/hooks/useTranslation', () => ({
+  useTranslation: () => ({ t: (k: string) => k, locale: 'it-IT' }),
+}));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useSearchParams: () => ({ get: getTabMock }),
+}));
+
+vi.mock('@/components/features/game-night-detail', () => ({
+  GameNightDetailHero: () => <div data-testid="hero" />,
+  GameNightCancelledBanner: () => null,
+  GameNightRsvpActionBar: () => <div data-testid="rsvp-action-bar" />,
+  GameNightRsvpRow: () => <div data-testid="rsvp-row" />,
+}));
+vi.mock('@/components/game-night/GameNightActions', () => ({
+  GameNightActions: () => <div data-testid="game-night-actions" />,
+}));
+vi.mock('@/components/game-night/GameNightSessionsList', () => ({
+  GameNightSessionsList: () => <div data-testid="sessions-list" />,
+}));
+vi.mock('@/components/game-night/GameNightDiaryPanel', () => ({
+  GameNightDiaryPanel: () => <div data-testid="diary-panel" />,
+}));
+vi.mock('@/components/game-night/planning/GameNightPlanningLayout', () => ({
+  GameNightPlanningLayout: () => null,
+}));
+vi.mock('../GameNightEditDrawer', () => ({ GameNightEditDrawer: () => null }));
+vi.mock('@/components/features/game-night-detail/voting/VotingPanel', () => ({
+  VotingPanel: () => <div data-testid="voting-panel" />,
+}));
+
+const baseEvent = {
+  id: 'gn-1',
+  organizerId: 'org-1',
+  organizerName: 'Marco',
+  title: 'Serata',
+  description: null,
+  scheduledAt: '2026-08-01T20:00:00.000Z',
+  location: null,
+  maxPlayers: null,
+  gameIds: [] as string[],
+  acceptedCount: 1,
+};
+
+function mockDetail(overrides: Record<string, unknown>) {
+  detailMock.mockReturnValue({
+    event: { ...baseEvent, status: 'Published' },
+    rsvps: [],
+    actor: { actor: 'guest' },
+    isLoading: false,
+    isError: false,
+    currentResponse: undefined,
+    pendingResponse: null,
+    submitRsvp: vi.fn(),
+    isSubmitting: false,
+    ...overrides,
+  });
+}
+
+// A mobile sticky bar is `position: fixed` above the MobileBottomBar on small
+// screens and collapses to normal flow at md+.
+function expectMobileSticky(el: HTMLElement) {
+  expect(el.className).toContain('fixed');
+  expect(el.className).toContain('bottom-16');
+  expect(el.className).toContain('md:static');
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  getTabMock.mockReturnValue(null);
+  currentUserMock.mockReturnValue({ data: { id: 'guest-1' } });
+});
+
+describe('GameNightDetailView — mobile sticky action bars (#2989 Screen C)', () => {
+  it('wraps the guest RSVP action bar in a mobile sticky bottom bar on a Published night', () => {
+    mockDetail({ actor: { actor: 'guest' } });
+    render(<GameNightDetailView id="gn-1" />);
+
+    const bar = screen.getByTestId('rsvp-sticky-bar');
+    expectMobileSticky(bar);
+    // The action bar itself lives inside the sticky wrapper.
+    expect(bar.querySelector('[data-testid="rsvp-action-bar"]')).not.toBeNull();
+  });
+
+  it('wraps the host "Invia inviti" CTA in a mobile sticky bottom bar on a Draft night', () => {
+    currentUserMock.mockReturnValue({ data: { id: 'org-1' } });
+    mockDetail({ event: { ...baseEvent, status: 'Draft' }, actor: { actor: 'host' } });
+    render(<GameNightDetailView id="gn-1" />);
+
+    const bar = screen.getByTestId('host-sticky-bar');
+    expectMobileSticky(bar);
+    // The publish CTA lives inside the sticky wrapper.
+    expect(bar.querySelector('[data-testid="publish-game-night"]')).not.toBeNull();
+  });
+
+  it('does NOT make the destructive Cancel a sticky bar on a Published host view', () => {
+    currentUserMock.mockReturnValue({ data: { id: 'org-1' } });
+    mockDetail({ event: { ...baseEvent, status: 'Published' }, actor: { actor: 'host' } });
+    render(<GameNightDetailView id="gn-1" />);
+
+    expect(screen.queryByTestId('host-sticky-bar')).not.toBeInTheDocument();
+  });
+
+  // Gap 4: the fixed sticky bar overlays the bottom of the scroll region, so
+  // the page container reserves extra bottom padding on mobile so the last
+  // content (roster) is not occluded. Collapses to the default at md+.
+  it('reserves bottom-nav-safe padding when a mobile sticky bar is shown (guest Published)', () => {
+    mockDetail({ actor: { actor: 'guest' } });
+    render(<GameNightDetailView id="gn-1" />);
+
+    const container = screen.getByTestId('game-night-detail-container');
+    expect(container.className).toContain('pb-24');
+    expect(container.className).toContain('md:pb-4');
+  });
+
+  it('does NOT reserve extra bottom padding when no sticky bar is shown (Completed)', () => {
+    mockDetail({ event: { ...baseEvent, status: 'Completed' }, actor: { actor: 'guest' } });
+    render(<GameNightDetailView id="gn-1" />);
+
+    const container = screen.getByTestId('game-night-detail-container');
+    expect(container.className).not.toContain('pb-24');
+  });
+});

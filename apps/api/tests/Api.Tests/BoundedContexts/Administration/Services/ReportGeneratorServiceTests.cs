@@ -4,6 +4,7 @@ using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Events;
 using Api.Tests.TestHelpers;
@@ -223,6 +224,79 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var content = System.Text.Encoding.UTF8.GetString(result.Content);
         content.Should().ContainEquivalentOf("\"totalDocuments\"");
         content.Should().ContainEquivalentOf("\"vectorEmbeddings\"");
+    }
+
+    [Fact]
+    public async Task GenerateAsync_ContentMetricsReport_ActiveGamesCountsOnlyAiReadyGames()
+    {
+        // #3123: "active" = AI-ready (HasKnowledgeBase). 3 AI-ready + 2 plain → Active=3, Total=5.
+        SeedSharedGame("AI-ready A", hasKnowledgeBase: true);
+        SeedSharedGame("AI-ready B", hasKnowledgeBase: true);
+        SeedSharedGame("AI-ready C", hasKnowledgeBase: true);
+        SeedSharedGame("Plain D", hasKnowledgeBase: false);
+        SeedSharedGame("Plain E", hasKnowledgeBase: false);
+        await _dbContext.SaveChangesAsync();
+
+        var parameters = new Dictionary<string, object>
+        {
+            ["startDate"] = DateTime.UtcNow.AddDays(-30),
+            ["endDate"] = DateTime.UtcNow
+        };
+
+        var result = await _sut.GenerateAsync(
+            ReportTemplate.ContentMetrics,
+            ReportFormat.Json,
+            parameters,
+            CancellationToken.None);
+
+        var content = System.Text.Encoding.UTF8.GetString(result.Content);
+        using var doc = System.Text.Json.JsonDocument.Parse(content);
+        var totalGames = FindNumber(doc.RootElement, "totalGames");
+        var activeGames = FindNumber(doc.RootElement, "activeGames");
+
+        totalGames.Should().Be(5);
+        activeGames.Should().Be(3);              // only AI-ready games, not all 5
+        activeGames.Should().NotBe(totalGames);  // regression guard: Active must not equal Total
+    }
+
+    private void SeedSharedGame(string title, bool hasKnowledgeBase)
+    {
+        _dbContext.SharedGames.Add(new SharedGameEntity
+        {
+            Id = Guid.NewGuid(),
+            Title = title,
+            HasKnowledgeBase = hasKnowledgeBase,
+            CreatedAt = DateTime.UtcNow
+        });
+    }
+
+    private static int? FindNumber(System.Text.Json.JsonElement element, string propertyName)
+    {
+        switch (element.ValueKind)
+        {
+            case System.Text.Json.JsonValueKind.Object:
+                foreach (var prop in element.EnumerateObject())
+                {
+                    if (string.Equals(prop.Name, propertyName, StringComparison.OrdinalIgnoreCase)
+                        && prop.Value.ValueKind == System.Text.Json.JsonValueKind.Number)
+                    {
+                        return prop.Value.GetInt32();
+                    }
+
+                    var nested = FindNumber(prop.Value, propertyName);
+                    if (nested.HasValue) return nested;
+                }
+                break;
+            case System.Text.Json.JsonValueKind.Array:
+                foreach (var item in element.EnumerateArray())
+                {
+                    var nested = FindNumber(item, propertyName);
+                    if (nested.HasValue) return nested;
+                }
+                break;
+        }
+
+        return null;
     }
 
     [Fact]

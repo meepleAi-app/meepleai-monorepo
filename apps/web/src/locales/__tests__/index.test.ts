@@ -2,7 +2,7 @@
  * Tests for i18n locales configuration and fallback logic
  */
 
-import { getMessages, messages, LOCALES, DEFAULT_LOCALE } from '../index';
+import { getMessages, messages, flattenMessages, LOCALES, DEFAULT_LOCALE } from '../index';
 
 describe('i18n locales', () => {
   it('should return Italian messages for Italian locale', () => {
@@ -38,4 +38,27 @@ describe('i18n locales', () => {
 
     expect(invalidMessages).toBe(defaultMessages);
   });
+
+  // Issue #3130: guard against it/en drift for the sections that were missing
+  // from en.json (KbStatusBadge / PdfProcessingStatus / NotificationCenter use
+  // a non-scoped `t`, so a missing en section leaves EN users without translations).
+  it.each(['pdfIndexing', 'kbStatus', 'notificationCenter'])(
+    'should have matching "%s" keys in the it and en catalogs',
+    section => {
+      const itCatalog = getMessages(LOCALES.IT) as Record<string, unknown>;
+      const enCatalog = getMessages(LOCALES.EN) as Record<string, unknown>;
+
+      expect(itCatalog[section], `it.json is missing "${section}"`).toBeDefined();
+      expect(enCatalog[section], `en.json is missing "${section}"`).toBeDefined();
+
+      const itKeys = Object.keys(
+        flattenMessages(itCatalog[section] as Record<string, unknown>)
+      ).sort();
+      const enKeys = Object.keys(
+        flattenMessages(enCatalog[section] as Record<string, unknown>)
+      ).sort();
+
+      expect(enKeys).toEqual(itKeys);
+    }
+  );
 });

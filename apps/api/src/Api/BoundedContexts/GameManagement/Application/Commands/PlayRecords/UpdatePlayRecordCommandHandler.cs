@@ -1,6 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.PlayRecords;
 using Api.BoundedContexts.GameManagement.Application.Services;
-using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 using Api.Middleware.Exceptions;
@@ -140,15 +139,14 @@ internal class UpdatePlayRecordCommandHandler : ICommandHandler<UpdatePlayRecord
 
         // #13 / Invariante 4: the save is non-blocking, but if the same user has ANOTHER
         // session genuinely live (InProgress) right now, surface a non-blocking warning so
-        // they can double-check the games were recorded in the right order. Setup/Paused are
-        // "active" per the repository but not "live" — only InProgress counts.
-        var activeSessions = await _liveSessionRepository
-            .GetActiveByUserIdAsync(command.UserId, cancellationToken)
+        // they can double-check the games were recorded in the right order. The repository
+        // projects only the id (Setup/Paused do not count as "live").
+        var liveSessionId = await _liveSessionRepository
+            .GetActiveInProgressSessionIdAsync(command.UserId, cancellationToken)
             .ConfigureAwait(false);
-        var liveSession = activeSessions.FirstOrDefault(s => s.Status == LiveSessionStatus.InProgress);
 
-        return liveSession is null
+        return liveSessionId is null
             ? new UpdatePlayRecordResult(false, null)
-            : new UpdatePlayRecordResult(true, liveSession.Id);
+            : new UpdatePlayRecordResult(true, liveSessionId.Value);
     }
 }

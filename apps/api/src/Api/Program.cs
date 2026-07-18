@@ -515,7 +515,10 @@ builder.Services.AddCors(options =>
             )
             .AllowAnyMethod()
             .AllowCredentials()
-            .WithExposedHeaders("X-Trace-Id", "X-Span-Id", "traceparent", "tracestate"); // Issue #1563 (P0-3): Expose trace headers for frontend correlation
+            // Issue #1563 (P0-3): trace headers for frontend correlation.
+            // #3146 / Invariante 4: X-Warning-Code + X-Live-Session-Id must be exposed so the
+            // cross-origin FE (dev/demo :3000→:8080) can read the non-blocking save warning.
+            .WithExposedHeaders("X-Trace-Id", "X-Span-Id", "traceparent", "tracestate", "X-Warning-Code", "X-Live-Session-Id");
     });
 });
 

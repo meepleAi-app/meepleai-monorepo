@@ -40,12 +40,12 @@ public class UpdatePlayRecordCommandHandlerTests
             PlayRecordVisibility.Private,
             SessionScoringConfig.CreateDefault());
 
-    /// <summary>Default live-session repo mock: the user has no active live session.</summary>
+    /// <summary>Default live-session repo mock: the user has no live (InProgress) session.</summary>
     private static Mock<ILiveSessionRepository> NoActiveLiveRepo()
     {
         var live = new Mock<ILiveSessionRepository>();
-        live.Setup(r => r.GetActiveByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<LiveGameSession>());
+        live.Setup(r => r.GetActiveInProgressSessionIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid?)null);
         return live;
     }
 
@@ -86,15 +86,6 @@ public class UpdatePlayRecordCommandHandlerTests
             isVersionConflict);
     }
 
-    /// <summary>Builds a genuinely-live (InProgress) session owned by <paramref name="userId"/>.</summary>
-    private static LiveGameSession MakeInProgressLive(Guid userId, Guid liveId)
-    {
-        var live = LiveGameSession.Create(liveId, userId, "Wingspan");
-        live.AddPlayer(userId, "Host", PlayerColor.Red);
-        live.Start();
-        return live;
-    }
-
     private static (Mock<IPlayRecordRepository>, Mock<IPlayRecordVersionRepository>, Mock<IUnitOfWork>) EditableRecordMocks(PlayRecord record)
     {
         var repo = new Mock<IPlayRecordRepository>();
@@ -115,8 +106,8 @@ public class UpdatePlayRecordCommandHandlerTests
         var (repo, versionRepo, uow) = EditableRecordMocks(record);
         var liveId = Guid.NewGuid();
         var liveRepo = new Mock<ILiveSessionRepository>();
-        liveRepo.Setup(r => r.GetActiveByUserIdAsync(CreatorId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[] { MakeInProgressLive(CreatorId, liveId) });
+        liveRepo.Setup(r => r.GetActiveInProgressSessionIdAsync(CreatorId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(liveId);
 
         var result = await CreateSut(repo, versionRepo, uow, liveRepo: liveRepo).Handle(
             new UpdatePlayRecordCommand(record.Id, CreatorId, Notes: "x"), CancellationToken.None);
@@ -136,22 +127,6 @@ public class UpdatePlayRecordCommandHandlerTests
 
         result.SavedWhileLiveActive.Should().BeFalse();
         result.LiveSessionId.Should().BeNull();
-    }
-
-    [Fact]
-    public async Task Handle_OnlyNonInProgressActive_DoesNotFlagWarning()
-    {
-        // A Created (not-yet-live) session must NOT trigger the warning — only InProgress counts.
-        var record = MakeRecord();
-        var (repo, versionRepo, uow) = EditableRecordMocks(record);
-        var liveRepo = new Mock<ILiveSessionRepository>();
-        liveRepo.Setup(r => r.GetActiveByUserIdAsync(CreatorId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[] { LiveGameSession.Create(Guid.NewGuid(), CreatorId, "Azul") });
-
-        var result = await CreateSut(repo, versionRepo, uow, liveRepo: liveRepo).Handle(
-            new UpdatePlayRecordCommand(record.Id, CreatorId, Notes: "x"), CancellationToken.None);
-
-        result.SavedWhileLiveActive.Should().BeFalse();
     }
 
     // -------------------------------------------------------------------------

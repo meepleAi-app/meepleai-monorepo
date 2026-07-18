@@ -453,6 +453,35 @@ describe('EditPlayRecordPage', () => {
     expect(mockRouterPush).toHaveBeenCalledWith('/sessions/live-1/live');
   });
 
+  it('#13: fires the warning toast WITHOUT an action when liveSessionId is missing', async () => {
+    const user = userEvent.setup();
+    mockUseUpdateRecord.mockReturnValue({
+      mutateAsync: vi
+        .fn()
+        .mockResolvedValue({ warningCode: 'SAVED_WHILE_LIVE_ACTIVE', liveSessionId: undefined }),
+      isPending: false,
+    });
+
+    const queryClient = new QueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <EditPlayRecordPage />
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('session-form')).toBeInTheDocument();
+    });
+    await user.click(screen.getByTestId('session-form').querySelector('button[type="submit"]')!);
+
+    await waitFor(() => {
+      expect(toast.warning).toHaveBeenCalledTimes(1);
+    });
+    const [, opts] = (toast.warning as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(opts).toMatchObject({ duration: 6000 });
+    expect(opts.action).toBeUndefined();
+  });
+
   it('#13: does NOT fire the warning toast on a normal save (no warning code)', async () => {
     const user = userEvent.setup();
     mockUseUpdateRecord.mockReturnValue({

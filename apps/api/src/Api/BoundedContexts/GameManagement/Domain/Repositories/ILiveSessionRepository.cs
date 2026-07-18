@@ -13,6 +13,13 @@ internal interface ILiveSessionRepository
     Task<LiveGameSession?> GetByCodeAsync(string sessionCode, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<LiveGameSession>> GetActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// #3146 / Invariante 4: projection-only lookup of the user's most-recent genuinely-LIVE
+    /// (InProgress) session id, or null. Avoids materializing the full aggregate graph on the
+    /// play-record save path where only the id is needed for the non-blocking warning deep-link.
+    /// </summary>
+    Task<Guid?> GetActiveInProgressSessionIdAsync(Guid userId, CancellationToken cancellationToken = default);
+
     /// <summary>Gets all active (in-progress) sessions across all users. Used by the auto-save background service.</summary>
     Task<IReadOnlyList<LiveGameSession>> GetAllActiveAsync(CancellationToken cancellationToken = default);
 

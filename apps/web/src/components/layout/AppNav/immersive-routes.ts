@@ -6,6 +6,10 @@
 const IMMERSIVE_ROUTE_PATTERNS = [
   /^\/sessions\/[^/]+\/live(\/|$)/,
   /^\/library\/[^/]+\/play(\/|$)/,
+  // #3146 Slice 2: the GameNight live hub renders its own mobile tab-nav
+  // (NightLiveHub MobileBody), so it hides the global bottom bar to avoid a
+  // double bottom-nav — like the session live view above.
+  /^\/game-nights\/[^/]+\/live(\/|$)/,
 ];
 
 export function isImmersiveRoute(pathname: string): boolean {

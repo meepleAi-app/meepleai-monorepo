@@ -75,9 +75,9 @@ The frontend `terms/page.tsx` keeps its display literal (`lastUpdated`), annotat
 ## 6. API surface (CQRS — endpoints use `IMediator` only)
 
 ### 6.1 `POST /api/v1/auth/register` — extended
-- Request DTO gains `termsAccepted: bool`; `RegisterCommand` gains `bool TermsAccepted = false`.
-- `RegisterCommandValidator`: `RuleFor(x => x.TermsAccepted).Equal(true)` → **server-side enforcement** (422 via the FluentValidation pipeline, matching the existing validator's behavior) — closes the cosmetic-checkbox gap.
-- `RegisterCommandHandler`: after the user+session `AddAsync`, also `_termsAcceptanceRepository.AddAsync(TermsAcceptance.Create(userId, TermsVersion.Current, Registration, command.IpAddress, command.UserAgent))` — committed in the **same** existing `_unitOfWork.SaveChangesAsync` (FK to the just-added user satisfied within one transaction). `AcceptedAt` from the handler's existing `TimeProvider`.
+- `RegisterPayload` gains `bool TermsAccepted`; `RegisterCommand` gains `bool TermsAccepted = false` (last positional param → existing named-arg call sites stay source-compatible).
+- **Endpoint enforcement** in `MapRegisterEndpoint`: `if (!payload.TermsAccepted) return Results.BadRequest(...)` (**400**, mirroring the existing email/password presence check). Chosen over a `RegisterCommandValidator.Equal(true)` rule to avoid a broad test blast radius across the whole `RegisterCommand` suite (validator/handler/integration); `/auth/register` is the single real entry path, and the endpoint already performs manual presence checks.
+- `RegisterCommandHandler`: after the user+session `AddAsync`, when `command.TermsAccepted` is true, `_termsAcceptanceRepository.AddAsync(TermsAcceptance.Create(userId, TermsVersion.Current, Registration, command.IpAddress, command.UserAgent))` — committed in the **same** existing `_unitOfWork.SaveChangesAsync` (FK to the just-added user satisfied within one transaction). `AcceptedAt` is stamped inside the factory (mirrors `UserAiConsent.Create`).
 
 ### 6.2 `POST /api/v1/users/me/terms/accept` — authenticated
 - `me`-scoped: userId from `session.Principal.Subject.Id` (never a route/body param) → no IDOR.
@@ -112,7 +112,7 @@ Endpoints registered via a `MapTermsConsentEndpoints` `RouteGroupBuilder` extens
 
 ## 9. Security
 
-- **Server-side terms enforcement** at registration (validator) — the checkbox is no longer bypassable via a direct API call.
+- **Server-side terms enforcement** at registration (endpoint check → 400) — the checkbox is no longer bypassable via a direct API call.
 - **Server-stamped `AcceptedAt`** — acceptance time is authoritative, not client-supplied.
 - **`me`-scoped** accept/status endpoints — userId derived from the session; add a cross-tenant test asserting the endpoint ignores any attempt to act on another user (no route/body userId exists).
 - Append-only record = tamper-evident audit trail (no in-place overwrite).
@@ -123,10 +123,9 @@ Endpoints registered via a `MapTermsConsentEndpoints` `RouteGroupBuilder` extens
 - `TermsAcceptance.Create` — happy path + throws on empty userId / blank version.
 - `RecordTermsAcceptanceCommandHandler` — appends a row; **no-op when latest accepted == Current** (idempotency); records `Context = ReConsent`.
 - `GetTermsConsentStatusQueryHandler` — `needsReAcceptance`: no rows → true; stale version → true; current → false; returns latest `acceptedAt`.
-- `RegisterCommandValidator` — `TermsAccepted == false` → validation failure.
 
 **Backend integration (Testcontainers Postgres):**
-- Registration writes exactly one `TermsAcceptance` row with `Current` version + `Registration` context + user's ip/ua.
+- `/auth/register` with `termsAccepted:false` (or absent) → **400** (endpoint enforcement); with `termsAccepted:true` writes exactly one `TermsAcceptance` row with `Current` version + `Registration` context + user's ip/ua.
 - Accept endpoint appends; second call with same current version is a no-op (still one row).
 - Status endpoint returns the correct DTO across the three `needsReAcceptance` states.
 - Append-only: a re-consent to a *new* version yields a second row (history preserved).

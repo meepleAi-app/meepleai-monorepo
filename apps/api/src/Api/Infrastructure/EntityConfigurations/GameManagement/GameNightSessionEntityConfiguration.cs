@@ -35,5 +35,15 @@ internal class GameNightSessionEntityConfiguration : IEntityTypeConfiguration<Ga
 
         builder.HasIndex(s => s.GameId)
             .HasDatabaseName("IX_game_night_sessions_game_id");
+
+        // Issue #3157 C1 — restore the "max 1 live session per GameNight" invariant as a
+        // DB constraint. The original raw-SQL partial unique index (T1 #365) was silently
+        // dropped by the #2875 migration flatten (ef migrations add Initial only reflects the
+        // model). Declaring it on the MODEL here makes it EF-tracked, so it survives future
+        // flattens — fixing the root cause, not just restoring the symptom.
+        builder.HasIndex(s => s.GameNightEventId)
+            .HasDatabaseName("ix_game_night_sessions_unique_active")
+            .IsUnique()
+            .HasFilter("status = 'InProgress'");
     }
 }

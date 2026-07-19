@@ -340,4 +340,72 @@ public sealed class PauseResumeSessionTests : IAsyncLifetime
             },
             GameNightEventId: gameNightEventId,
             GuestNames: null);
+
+    // Issue #3157 C1 — the restored ix_game_night_sessions_unique_active partial unique
+    // index must reject a second InProgress link in the same GameNight. session1's link is
+    // born InProgress and is NOT paused here, so directly seeding a second InProgress link
+    // for the same night violates the index.
+    [Fact]
+    public async Task RestoredUniqueIndex_RejectsSecondInProgressLinkInSameNight()
+    {
+        var (userId, gameId) = await _fixture.SeedUserWithLibraryGameAndIndexedKbAsync(_dbContext!, vectorCount: 2);
+        var first = await _createHandler!.Handle(BuildCreateCommand(userId, gameId), TestCancellationToken);
+        _dbContext!.ChangeTracker.Clear();
+
+        var act = async () => await SeedAdditionalActiveSessionInNightAsync(userId, gameId, first.GameNightEventId);
+
+        // Assert the specific partial-unique-index violation (23505) so a future constraint
+        // that trips first cannot produce a false green.
+        var ex = await act.Should().ThrowAsync<DbUpdateException>();
+        ex.Which.InnerException.Should().BeOfType<PostgresException>()
+            .Which.SqlState.Should().Be(PostgresErrorCodes.UniqueViolation);
+    }
+
+    // Issue #3157 C1 — finalizing a session must close its game_night_sessions link
+    // (InProgress -> Completed) so it does not leave an orphaned live slot that would block
+    // the restored unique index from admitting the next session in the same night.
+    [Fact]
+    public async Task Finalize_ClosesInProgressLink()
+    {
+        var (userId, gameId) = await _fixture.SeedUserWithLibraryGameAndIndexedKbAsync(_dbContext!, vectorCount: 2);
+        var created = await _createHandler!.Handle(BuildCreateCommand(userId, gameId), TestCancellationToken);
+        _dbContext!.ChangeTracker.Clear();
+
+        var ownerParticipantId = await _dbContext.Set<Api.Infrastructure.Entities.SessionTracking.ParticipantEntity>()
+            .AsNoTracking()
+            .Where(p => p.SessionId == created.SessionId)
+            .Select(p => p.Id)
+            .FirstAsync(TestCancellationToken);
+
+        var eventCollector = _serviceProvider!.GetRequiredService<IDomainEventCollector>();
+        var unitOfWork = _serviceProvider.GetRequiredService<IUnitOfWork>();
+        var sessionRepo = new SessionRepository(_dbContext, eventCollector);
+        // IScoreEntryRepository / ISessionSyncService are not registered by the integration
+        // service builder — mock them (this test targets the game_night_sessions link close,
+        // not scoring/SSE). The Session itself is the real persisted aggregate.
+        var scoreRepoMock = new Mock<IScoreEntryRepository>();
+        scoreRepoMock.Setup(r => r.GetBySessionIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<ScoreEntry>());
+        var syncMock = new Mock<ISessionSyncService>();
+        syncMock.Setup(s => s.PublishEventAsync(It.IsAny<Guid>(), It.IsAny<INotification>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        var finalizeHandler = new FinalizeSessionCommandHandler(
+            sessionRepo,
+            scoreRepoMock.Object,
+            unitOfWork,
+            syncMock.Object,
+            _dbContext,
+            TimeProvider.System,
+            new DiaryStreamService());
+
+        await finalizeHandler.Handle(
+            new FinalizeSessionCommand(created.SessionId, new Dictionary<Guid, int> { [ownerParticipantId] = 1 }),
+            TestCancellationToken);
+
+        _dbContext.ChangeTracker.Clear();
+        var link = await _dbContext.GameNightSessions
+            .AsNoTracking()
+            .FirstAsync(l => l.SessionId == created.SessionId, TestCancellationToken);
+        link.Status.Should().Be(nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightSessionStatus.Completed));
+    }
 }

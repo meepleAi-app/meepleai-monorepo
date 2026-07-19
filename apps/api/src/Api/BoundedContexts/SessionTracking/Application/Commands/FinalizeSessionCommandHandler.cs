@@ -7,6 +7,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
+using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SessionTracking;
 using Api.Infrastructure.Extensions;
@@ -148,6 +149,23 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
         // Resolve GameNightId via the link row (if any) so the diary entry is
         // correlated with the cross-game timeline.
         var gameNightId = await _db.ResolveGameNightIdAsync(session.Id, cancellationToken).ConfigureAwait(false);
+
+        // Issue #3157 C1 — close this session's game_night_sessions link so a finalized
+        // session does not leave an orphaned InProgress live-slot. Without this, once the
+        // restored ix_game_night_sessions_unique_active partial unique index is in place a
+        // NEW session in the same night (minting a fresh InProgress link) would hit a unique
+        // violation. Guarded on InProgress → idempotent and a no-op when Path B
+        // (CompleteGameNightSession) already closed the link.
+        var liveLink = await _db.GameNightSessions
+            .FirstOrDefaultAsync(
+                l => l.SessionId == session.Id && l.Status == nameof(GameNightSessionStatus.InProgress),
+                cancellationToken)
+            .ConfigureAwait(false);
+        if (liveLink is not null)
+        {
+            liveLink.Status = nameof(GameNightSessionStatus.Completed);
+            liveLink.CompletedAt = _timeProvider.GetUtcNow().UtcDateTime;
+        }
 
         var finalizedAt = session.FinalizedAt ?? _timeProvider.GetUtcNow().UtcDateTime;
         var durationSeconds = (int)(finalizedAt - session.SessionDate).TotalSeconds;

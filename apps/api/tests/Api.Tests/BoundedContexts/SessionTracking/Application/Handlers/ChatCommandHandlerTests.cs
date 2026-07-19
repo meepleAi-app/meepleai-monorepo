@@ -373,10 +373,12 @@ public class DeleteChatMessageCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_SystemEventMessage_ThrowsInvalidOperationException()
+    public async Task Handle_SystemEventMessage_ThrowsConflictException()
     {
         // Non-text messages are rejected by the type check, which runs before the
-        // ownership resolution — so no session lookup is needed here.
+        // ownership resolution — so no session lookup is needed here. Deleting a
+        // non-text message is a conflicting request on the resource state, so it must
+        // surface as 409 (ConflictException), not a 500 (InvalidOperationException). (#3173)
         var message = SessionChatMessage.CreateSystemEvent(Guid.NewGuid(), "event", 1);
 
         _mockChatRepo.Setup(r => r.GetByIdAsync(message.Id, It.IsAny<CancellationToken>()))
@@ -385,7 +387,8 @@ public class DeleteChatMessageCommandHandlerTests
         var command = new DeleteChatMessageCommand(message.Id, Guid.NewGuid());
 
         var act7 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        await act7.Should().ThrowAsync<InvalidOperationException>();
+        await act7.Should().ThrowAsync<ConflictException>()
+            .WithMessage("*text messages*");
     }
 }
 

@@ -61,8 +61,9 @@ public sealed class AuthenticationE2ETests : E2ETestBase
         // Clear cookies for second registration attempt
         ClearAuthentication();
 
-        // Act - Second registration with same email
-        var payload = new { email, password, displayName = "Another User" };
+        // Act - Second registration with same email (termsAccepted=true so the request
+        // reaches the email-uniqueness check rather than short-circuiting on the ToS guard).
+        var payload = new { email, password, displayName = "Another User", termsAccepted = true };
         var response = await Client.PostAsJsonAsync("/api/v1/auth/register", payload);
 
         // Assert - May return BadRequest or Conflict depending on validation order
@@ -75,8 +76,9 @@ public sealed class AuthenticationE2ETests : E2ETestBase
     [InlineData("valid@email.com", "short", "Password")]  // Changed to match actual API error
     public async Task Register_WithInvalidInput_ReturnsBadRequest(string email, string password, string expectedError)
     {
-        // Arrange
-        var payload = new { email, password };
+        // Arrange - termsAccepted=true so the request reaches the field validator (which
+        // produces the field-specific error) instead of the ToS-acceptance guard (400).
+        var payload = new { email, password, termsAccepted = true };
 
         // Act
         var response = await Client.PostAsJsonAsync("/api/v1/auth/register", payload);

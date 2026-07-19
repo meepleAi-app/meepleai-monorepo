@@ -1,8 +1,8 @@
 using System.Globalization;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries.Queue;
-using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.Filters;
 using MediatR;
@@ -36,16 +36,15 @@ internal static class AdminPipelineEndpoints
     }
 
     private static async Task<IResult> GetPipelineHealth(
-        IInfrastructureHealthService healthService,
-        IProcessingMetricsService metricsService,
         IHttpClientFactory httpClientFactory,
         IMediator mediator,
         ILogger<Program> logger,
         CancellationToken ct)
     {
-        // Run independent queries in parallel
-        var healthTask = healthService.GetAllServicesHealthAsync(ct);
-        var metricsTask = metricsService.GetAllStepStatisticsAsync(ct);
+        // Run independent queries in parallel. CQRS #3176: infrastructure health and step metrics
+        // are fetched via IMediator (pass-through queries) instead of injecting the services.
+        var healthTask = mediator.Send(new GetServiceHealthStatusesQuery(), ct);
+        var metricsTask = mediator.Send(new GetStepDurationStatsQuery(), ct);
         var storageTask = mediator.Send(new GetPdfStorageHealthQuery(), ct);
         var queueTask = mediator.Send(new GetProcessingQueueQuery(
             StatusFilter: null,

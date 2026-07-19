@@ -71,7 +71,7 @@ internal sealed class SubmitValidationFeedbackCommandHandler : IRequestHandler<S
         // Parse accuracy enum
         if (!Enum.TryParse<AccuracyAssessment>(request.Accuracy, ignoreCase: true, out var accuracy))
         {
-            throw new InvalidOperationException($"Invalid accuracy value: {request.Accuracy}");
+            throw new BadRequestException($"Invalid accuracy value: {request.Accuracy}");
         }
 
         // Create feedback entity

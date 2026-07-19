@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
 using Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 using Api.Infrastructure;
+using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,7 +27,7 @@ internal class CreateTierDefinitionCommandHandler
             .ConfigureAwait(false);
 
         if (existing)
-            throw new InvalidOperationException($"Tier '{request.Name}' already exists");
+            throw new ConflictException($"Tier '{request.Name}' already exists");
 
         var limits = request.Limits.ToValueObject();
         var tier = TierDefinition.Create(

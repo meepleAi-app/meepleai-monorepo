@@ -2,6 +2,7 @@ using Api.BoundedContexts.SystemConfiguration.Application.Commands.Tier;
 using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
 using Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
+using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -55,7 +56,7 @@ public sealed class CreateTierDefinitionCommandHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_WithDuplicateName_ThrowsInvalidOperationException()
+    public async Task Handle_WithDuplicateName_ThrowsConflictException()
     {
         // Arrange
         var existing = TierDefinition.Create("free", "Free Tier", TierLimits.FreeTier, "free");
@@ -68,8 +69,8 @@ public sealed class CreateTierDefinitionCommandHandlerTests : IDisposable
         // Act
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        // Assert
-        await act.Should().ThrowAsync<InvalidOperationException>()
+        // Assert — a duplicate name is a conflict (409), not a 500. #3190
+        await act.Should().ThrowAsync<ConflictException>()
             .WithMessage("*already exists*");
     }
 
@@ -88,7 +89,7 @@ public sealed class CreateTierDefinitionCommandHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_WithCaseDuplicateName_ThrowsInvalidOperationException()
+    public async Task Handle_WithCaseDuplicateName_ThrowsConflictException()
     {
         // Arrange — seed lowercase
         var existing = TierDefinition.Create("free", "Free Tier", TierLimits.FreeTier, "free");
@@ -102,8 +103,8 @@ public sealed class CreateTierDefinitionCommandHandlerTests : IDisposable
         // Act
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        // Assert
-        await act.Should().ThrowAsync<InvalidOperationException>()
+        // Assert — case-insensitive duplicate is also a conflict (409). #3190
+        await act.Should().ThrowAsync<ConflictException>()
             .WithMessage("*already exists*");
     }
 }

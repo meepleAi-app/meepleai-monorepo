@@ -1857,13 +1857,6 @@
           }
         }
       },
-      "selectionMode": {
-        "enter": "Seleziona",
-        "enterAriaLabel": "Attiva la modalità selezione multipla",
-        "exit": "Annulla",
-        "exitAriaLabel": "Esci dalla modalità selezione",
-        "selectedCount": "{count, plural, =0 {Nessun elemento selezionato} =1 {1 elemento selezionato} other {# elementi selezionati}}"
-      },
       "filters": {
         "search": {
           "placeholder": "Cerca in libreria... (premi /)",
@@ -1979,33 +1972,6 @@
         "grid": "Griglia",
         "list": "Lista",
         "compact": "Compatta"
-      },
-      "bulk": {
-        "counter": "{count, plural, =1 {selezionato} other {selezionati}}",
-        "counterCompact": "sel.",
-        "closeAriaLabel": "Annulla selezione",
-        "actions": {
-          "archive": "Archivia",
-          "archiveAriaLabel": "Archivia gli elementi selezionati",
-          "tag": "Tag",
-          "tagAriaLabel": "Aggiungi tag agli elementi selezionati",
-          "delete": "Elimina",
-          "deleteAriaLabel": "Elimina gli elementi selezionati",
-          "favorite": "Aggiungi ai preferiti",
-          "favoriteAriaLabel": "Segna come preferiti gli elementi selezionati",
-          "export": "Esporta",
-          "exportAriaLabel": "Esporta gli elementi selezionati",
-          "loan": "Segna come prestato",
-          "loanAriaLabel": "Segna come prestati gli elementi selezionati"
-        },
-        "confirm": {
-          "deleteTitle": "Eliminare {count, plural, =1 {1 gioco} other {# giochi}}?",
-          "deleteMessage": "Questa azione rimuoverà gli elementi selezionati dalla tua libreria. Non è reversibile.",
-          "confirmCta": "Elimina",
-          "cancelCta": "Annulla"
-        },
-        "clearSelection": "Deseleziona tutto",
-        "clearSelectionAriaLabel": "Deseleziona tutti gli elementi"
       },
       "activityRail": {
         "title": "Ultime modifiche",

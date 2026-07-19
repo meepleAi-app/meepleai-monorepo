@@ -7,12 +7,6 @@
  * spec mapping (docs/superpowers/specs/2026-04-30-v2-migration-wave-b-3-library.md).
  */
 
-export { BulkSelectionBar } from '@/components/features/library/BulkSelectionBar';
-export type {
-  BulkSelectionBarLabels,
-  BulkSelectionBarProps,
-} from '@/components/features/library/BulkSelectionBar';
-
 export { EmptyLibrary } from '@/components/features/library/EmptyLibrary';
 export type {
   EmptyLibraryCopy,
@@ -32,7 +26,6 @@ export type {
 export { LibraryHybridGrid } from '@/components/features/library/LibraryHybridGrid';
 export type {
   LibraryHybridGridProps,
-  LibrarySelectionMode,
   LibraryViewMode,
 } from '@/components/features/library/LibraryHybridGrid';
 

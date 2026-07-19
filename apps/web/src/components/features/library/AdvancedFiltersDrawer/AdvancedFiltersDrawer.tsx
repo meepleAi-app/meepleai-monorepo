@@ -36,6 +36,7 @@ import {
 import clsx from 'clsx';
 
 import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from '@/components/ui/drawer';
+import { useHistoryBackGuard } from '@/hooks/useHistoryBackGuard';
 import { useTranslation } from '@/hooks/useTranslation';
 
 import {
@@ -67,6 +68,10 @@ export function AdvancedFiltersDrawer({
   useEffect(() => {
     if (open) setDraft(activeFilters);
   }, [open, activeFilters]);
+
+  // Gap A-03 (#3197): 1-level Back guard — the hardware/browser Back button
+  // closes the drawer instead of navigating away from the /library route.
+  useHistoryBackGuard(open, () => onOpenChange(false));
 
   const handleApply = () => {
     onApply(draft);

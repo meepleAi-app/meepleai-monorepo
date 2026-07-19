@@ -61,7 +61,7 @@ export function TwoFactorDisable({
   onErrorDismiss,
   remainingBackupCodes,
 }: TwoFactorDisableProps) {
-  const { t } = useTranslation();
+  const { t, formatMessage } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Validation schema
@@ -103,10 +103,7 @@ export function TwoFactorDisable({
   );
 
   return (
-    <div
-      className="w-full max-w-md space-y-6"
-      data-testid="two-factor-disable"
-    >
+    <div className="w-full max-w-md space-y-6" data-testid="two-factor-disable">
       {/* Header */}
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-bold text-foreground">
@@ -136,9 +133,13 @@ export function TwoFactorDisable({
       {remainingBackupCodes !== undefined && remainingBackupCodes < 3 && (
         <Alert data-testid="low-backup-codes-warning">
           <AlertDescription>
-            {t(
-              'auth.2fa.lowBackupCodesWarning',
-              `You only have ${remainingBackupCodes} backup code${remainingBackupCodes !== 1 ? 's' : ''} remaining. Consider re-enabling 2FA after disabling to generate new backup codes.`
+            {formatMessage(
+              {
+                id: 'auth.2fa.lowBackupCodesWarning',
+                defaultMessage:
+                  'You only have {count} backup {count, plural, one {code} other {codes}} remaining. Consider re-enabling 2FA after disabling to generate new backup codes.',
+              },
+              { count: remainingBackupCodes }
             )}
           </AlertDescription>
         </Alert>
@@ -168,11 +169,7 @@ export function TwoFactorDisable({
             data-testid="disable-password-input"
           />
           {errors.password && (
-            <p
-              id="password-error"
-              className="text-sm text-destructive"
-              role="alert"
-            >
+            <p id="password-error" className="text-sm text-destructive" role="alert">
               {errors.password.message}
             </p>
           )}
@@ -196,11 +193,7 @@ export function TwoFactorDisable({
             data-testid="disable-code-input"
           />
           {errors.code && (
-            <p
-              id="code-error"
-              className="text-sm text-destructive"
-              role="alert"
-            >
+            <p id="code-error" className="text-sm text-destructive" role="alert">
               {errors.code.message}
             </p>
           )}

@@ -3,6 +3,7 @@ using Api.BoundedContexts.DatabaseSync.Domain.Interfaces;
 using Api.BoundedContexts.DatabaseSync.Domain.Models;
 using Api.BoundedContexts.DatabaseSync.Infrastructure;
 using Api.Infrastructure;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -33,8 +34,7 @@ internal class CompareTableDataHandler : IQueryHandler<CompareTableDataQuery, Da
 
         if (!await TableExistsAsync(localConn, query.TableName, cancellationToken).ConfigureAwait(false))
         {
-            throw new InvalidOperationException(
-                "Table does not exist on local database: " + query.TableName);
+            throw new NotFoundException("Table", query.TableName);
         }
 
         var remoteConn = await _remoteConnector.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
@@ -42,8 +42,7 @@ internal class CompareTableDataHandler : IQueryHandler<CompareTableDataQuery, Da
         {
             if (!await TableExistsAsync(remoteConn, query.TableName, cancellationToken).ConfigureAwait(false))
             {
-                throw new InvalidOperationException(
-                    "Table does not exist on staging database: " + query.TableName);
+                throw new NotFoundException("Table", query.TableName);
             }
 
             var localRowCount = await DataDiffEngine.GetEstimatedRowCountAsync(

@@ -27,6 +27,7 @@ import { useRecentChatSessions } from '@/hooks/queries/useChatSessions';
 import { useRsvpGameNight, useUpcomingGameNights } from '@/hooks/queries/useGameNights';
 import { useRecentlyAddedGames } from '@/hooks/queries/useLibrary';
 import { useNavigation } from '@/hooks/useNavigation';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 
 import { RecentSection } from './RecentSection';
 
@@ -34,6 +35,8 @@ export function HomeFeed() {
   const router = useRouter();
   const { openDetail } = useNavigation();
   const rsvpMutation = useRsvpGameNight();
+  // #2989 gap 5: pending-RSVP CTAs are disabled while offline (can't reach the server).
+  const { isOffline } = useNetworkStatus();
 
   const { data: activeSessions, isLoading: sessionsLoading } = useActiveSessions(5);
   const { data: recentGames, isLoading: gamesLoading } = useRecentlyAddedGames(6);
@@ -140,7 +143,9 @@ export function HomeFeed() {
                   eventId={night.id}
                   title={night.title}
                   inviterName={night.organizerName}
-                  disabled={rsvpMutation.isPending && rsvpMutation.variables?.id === night.id}
+                  disabled={
+                    isOffline || (rsvpMutation.isPending && rsvpMutation.variables?.id === night.id)
+                  }
                   onConfirm={() => rsvpMutation.mutate({ id: night.id, response: 'Accepted' })}
                   onDecline={() => rsvpMutation.mutate({ id: night.id, response: 'Declined' })}
                 />

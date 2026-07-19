@@ -47,6 +47,7 @@ import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useGameNightDetail } from '@/hooks/queries/useGameNightDetail';
 import { useCancelGameNight, usePublishGameNight } from '@/hooks/queries/useGameNights';
 import { useSharedGames } from '@/hooks/queries/useSharedGames';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useToast } from '@/hooks/useToast';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { RsvpResponse } from '@/lib/game-nights/rsvp-state-machine';
@@ -91,6 +92,8 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   const searchParams = useSearchParams();
   const { t, locale } = useTranslation();
   const { toast } = useToast();
+  // #2989 gap 5: RSVP CTAs are disabled while offline (can't reach the server).
+  const { isOffline } = useNetworkStatus();
 
   const { data: viewer } = useCurrentUser();
   const detail = useGameNightDetail(id, viewer?.id);
@@ -453,6 +456,7 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
             currentResponse={currentResponse}
             pendingResponse={pendingResponse}
             onSelect={handleRsvp}
+            disabled={isOffline}
             compact
           />
         </MobileStickyBar>

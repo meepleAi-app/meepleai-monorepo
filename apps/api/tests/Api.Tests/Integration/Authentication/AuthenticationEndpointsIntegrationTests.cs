@@ -114,8 +114,9 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         var payload1 = new { Email = email, Password = "UnusualPwd123!", DisplayName = "User 1", TermsAccepted = true };
         await _client.PostAsJsonAsync("/api/v1/auth/register", payload1);
 
-        // Act - Try to register same email
-        var payload2 = new { Email = email, Password = "UnusualPwd456!", DisplayName = "User 2" };
+        // Act - Try to register same email (TermsAccepted=true so the request reaches the
+        // email-uniqueness check rather than short-circuiting on the ToS-acceptance guard).
+        var payload2 = new { Email = email, Password = "UnusualPwd456!", DisplayName = "User 2", TermsAccepted = true };
         var response = await _client.PostAsJsonAsync("/api/v1/auth/register", payload2);
 
         // Assert - C5: the pre-flight email-existence check is removed; the DB
@@ -132,7 +133,8 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         {
             Email = $"test-{Guid.NewGuid():N}@test.com",
             Password = "weak",
-            DisplayName = "Test User"
+            DisplayName = "Test User",
+            TermsAccepted = true // reach the password validator (422), not the ToS guard (400)
         };
 
         // Act
@@ -150,7 +152,8 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         {
             Email = "not-an-email",
             Password = "SecureUnusualPwd123!",
-            DisplayName = "Test User"
+            DisplayName = "Test User",
+            TermsAccepted = true // reach the email validator (422), not the ToS guard (400)
         };
 
         // Act

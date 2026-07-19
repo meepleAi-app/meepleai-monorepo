@@ -352,6 +352,8 @@ services:
       # Issue #3112 — OPS-02 Slack delivery alerts (referenced from prometheus.yml rule_files).
       - ./prometheus/alerts/slack-delivery.yml:/etc/prometheus/slack-delivery.yml:ro
       - ./prometheus/alerts/audit-outbox.yml:/etc/prometheus/audit-outbox.yml:ro
+      # Issue #1965 — domain_event_outbox duplicate-publish trigger (referenced from prometheus.yml rule_files).
+      - ./prometheus/alerts/domain-event-outbox-duplicate-publish.yml:/etc/prometheus/domain-event-outbox-duplicate-publish.yml:ro
       - ./prometheus/alerts/wikidata-enrichment.yml:/etc/prometheus/wikidata-enrichment.yml:ro
       - prometheus_data:/prometheus
     healthcheck:

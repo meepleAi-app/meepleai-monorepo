@@ -1,0 +1,71 @@
+# promtool unit tests for domain-event-outbox-duplicate-publish.yml (#1965).
+#
+# Run locally (Windows/Git Bash, from repo root):
+#   docker run --rm -v "$(pwd)/infra/prometheus/alerts:/work" prom/prometheus:v3.7.0 \
+#     promtool test rules /work/domain-event-outbox-duplicate-publish.test.yml
+#
+# There is no promtool CI gate in this repo (see recon in #3082); this file documents +
+# verifies the alert behaviour on demand — same convention as audit-outbox.test.yml (#3116).
+rule_files:
+  - domain-event-outbox-duplicate-publish.yml
+
+evaluation_interval: 1m
+
+tests:
+  # Sustained duplicate-publish (dispatched rate 1.25x enqueued rate for >2h) fires the alert.
+  # This models the #1965 premise: >=2 API instances work-stealing the same Pending rows so
+  # each event is dispatched more than once.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_domain_event_outbox_enqueued_total'
+        values: '0+120x180'
+      - series: 'meepleai_domain_event_outbox_dispatched_total'
+        values: '0+150x180'
+    alert_rule_test:
+      - eval_time: 150m
+        alertname: DomainEventOutboxDuplicatePublish
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              team: platform
+              component: domain_event_outbox
+            exp_annotations:
+              summary: "Domain event outbox duplicate-publish ratio above 1.05 (#1965 reactivation trigger)"
+              description: "dispatched/enqueued ratio has stayed above 1.05 for 2h: domain events are being published more than once. The dominant cause is >=2 API instances SELECT-ing the same Pending outbox rows concurrently (the #1965 multi-instance work-stealing premise). Consumer idempotency keeps duplicates safe but not free. If the API is now running >=2 replicas, this is the gate to implement FOR UPDATE SKIP LOCKED per issue #1965; if it is still single-instance, investigate an abnormal crash-recovery re-publish loop."
+              runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#domain-event-outbox-alerts"
+
+  # Steady state (dispatched rate == enqueued rate, ratio ~1.0) -> no alert.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_domain_event_outbox_enqueued_total'
+        values: '0+120x180'
+      - series: 'meepleai_domain_event_outbox_dispatched_total'
+        values: '0+120x180'
+    alert_rule_test:
+      - eval_time: 150m
+        alertname: DomainEventOutboxDuplicatePublish
+        exp_alerts: []
+
+  # Mild excess below the 1.05 threshold (ratio ~1.033) -> no alert (guards the boundary).
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_domain_event_outbox_enqueued_total'
+        values: '0+120x180'
+      - series: 'meepleai_domain_event_outbox_dispatched_total'
+        values: '0+124x180'
+    alert_rule_test:
+      - eval_time: 150m
+        alertname: DomainEventOutboxDuplicatePublish
+        exp_alerts: []
+
+  # Idle queue (no enqueue/dispatch traffic -> 0/0 = NaN) -> no alert on empty queue.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_domain_event_outbox_enqueued_total'
+        values: '0x180'
+      - series: 'meepleai_domain_event_outbox_dispatched_total'
+        values: '0x180'
+    alert_rule_test:
+      - eval_time: 150m
+        alertname: DomainEventOutboxDuplicatePublish
+        exp_alerts: []

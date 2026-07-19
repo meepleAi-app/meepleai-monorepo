@@ -38,6 +38,8 @@ rule_files:
   - '/etc/prometheus/slack-delivery.yml'
   # Issue #3116 — SP5 Admin Security audit_outbox health alerts.
   - '/etc/prometheus/audit-outbox.yml'
+  # Issue #1965 — domain_event_outbox duplicate-publish trigger (dormant until API >=2 replicas).
+  - '/etc/prometheus/domain-event-outbox-duplicate-publish.yml'
 
 # Scrape configurations
 scrape_configs:

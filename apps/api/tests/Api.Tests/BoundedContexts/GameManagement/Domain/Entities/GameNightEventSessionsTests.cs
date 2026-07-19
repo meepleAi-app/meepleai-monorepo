@@ -35,6 +35,8 @@ public class GameNightEventSessionsTests
         Assert.Equal(2, evt.Sessions[1].PlayOrder);
     }
 
+    // Epic #3188 Slice 3 (D6): the cap counts only NON-TERMINAL links. Five freshly-added sessions
+    // are all Pending (non-terminal), so the 6th trips the cap.
     [Fact]
     public void AddSession_BeyondFive_Throws()
     {
@@ -43,6 +45,32 @@ public class GameNightEventSessionsTests
             evt.AddSession(Guid.NewGuid(), Guid.NewGuid(), $"Game{i}");
         Assert.Throws<InvalidOperationException>(() =>
             evt.AddSession(Guid.NewGuid(), Guid.NewGuid(), "Game6"));
+    }
+
+    // Epic #3188 Slice 3 (D6): terminal links (Completed/Skipped) do NOT consume the max-5 budget.
+    // A night that already finished five games can still host five more non-terminal sessions; the
+    // 6th non-terminal (11th overall) is the one that trips the cap.
+    [Fact]
+    public void AddSession_TerminalLinksDoNotConsumeBudget()
+    {
+        var evt = CreatePublishedEvent();
+
+        // Reconstitute 5 already-Completed (terminal) sessions from persistence.
+        var terminal = Enumerable.Range(1, 5).Select(i =>
+            GameNightSession.Reconstitute(
+                Guid.NewGuid(), evt.Id, Guid.NewGuid(), Guid.NewGuid(),
+                $"Done{i}", i, GameNightSessionStatus.Completed, Guid.NewGuid(),
+                DateTimeOffset.UtcNow.AddHours(-2), DateTimeOffset.UtcNow.AddHours(-1))).ToList();
+        evt.RestoreSessions(terminal);
+
+        // 5 fresh non-terminal sessions must all be accepted despite the 5 terminal ones present.
+        for (var i = 0; i < 5; i++)
+            evt.AddSession(Guid.NewGuid(), Guid.NewGuid(), $"Live{i}");
+        Assert.Equal(10, evt.Sessions.Count);
+
+        // The 6th NON-terminal now trips the cap.
+        Assert.Throws<InvalidOperationException>(() =>
+            evt.AddSession(Guid.NewGuid(), Guid.NewGuid(), "Over"));
     }
 
     [Fact]

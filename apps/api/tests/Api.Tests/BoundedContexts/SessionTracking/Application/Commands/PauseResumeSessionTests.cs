@@ -342,15 +342,22 @@ public sealed class PauseResumeSessionTests : IAsyncLifetime
             GuestNames: null);
 
     // Issue #3157 C1 — the restored ix_game_night_sessions_unique_active partial unique
-    // index must reject a second InProgress link in the same GameNight. session1's link is
-    // born InProgress and is NOT paused here, so directly seeding a second InProgress link
-    // for the same night violates the index.
+    // index must reject a second InProgress link in the same GameNight.
+    // Epic #3188 Slice 3: a direct create now yields a DRAFT (Pending link), so we first flip
+    // session1's link to InProgress to occupy the night's single live slot (as if it had gone
+    // live); seeding a second InProgress link then violates the index.
     [Fact]
     public async Task RestoredUniqueIndex_RejectsSecondInProgressLinkInSameNight()
     {
         var (userId, gameId) = await _fixture.SeedUserWithLibraryGameAndIndexedKbAsync(_dbContext!, vectorCount: 2);
         var first = await _createHandler!.Handle(BuildCreateCommand(userId, gameId), TestCancellationToken);
         _dbContext!.ChangeTracker.Clear();
+
+        var link1 = await _dbContext.GameNightSessions
+            .FirstAsync(l => l.SessionId == first.SessionId, TestCancellationToken);
+        link1.Status = nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightSessionStatus.InProgress);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        _dbContext.ChangeTracker.Clear();
 
         var act = async () => await SeedAdditionalActiveSessionInNightAsync(userId, gameId, first.GameNightEventId);
 
@@ -409,31 +416,45 @@ public sealed class PauseResumeSessionTests : IAsyncLifetime
         link.Status.Should().Be(nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightSessionStatus.Completed));
     }
 
-    // Issue #3157 C2a — the restored unique index (C1) turns a concurrent create-in-the-same-night
-    // race into a real 23505; the handler must map it to a clean 409 (ConflictException), not a 500.
-    // Reproduced deterministically: leave one InProgress link whose session is NOT Active (so the
-    // read-check guard passes), then create a second session in the same night → the 2nd InProgress
-    // link violates ix_game_night_sessions_unique_active.
+    // Issue #3157 C2a — RE-PURPOSED for epic #3188 Slice 3 (D1 / #19).
+    // Pre-Slice-3 premise (two direct-creates in one night race on the InProgress live-slot index →
+    // one 409) NO LONGER HOLDS: after the born-Pending flip, a direct create yields a DRAFT (Pending
+    // link, Session stays Active/not-live). Two direct-creates on the same night therefore BOTH make
+    // Pending links and BOTH succeed — drafts coexist per night. The partial-unique live-slot index
+    // only bites at go-live (an InProgress link), so the real max-1-live race is now covered by
+    // Slice 2's GoLiveSessionConcurrencyTests. This test pins the coexistence invariant end-to-end.
     [Fact]
-    public async Task CreateSession_LiveSlotIndexViolation_MapsTo409()
+    public async Task CreateSession_SecondDirectCreateInSameNight_CoexistsAsDraft_No409()
     {
         var (userId, gameId) = await _fixture.SeedUserWithLibraryGameAndIndexedKbAsync(_dbContext!, vectorCount: 2);
+
+        // First direct create → ad-hoc Published night + draft link 1 (Pending).
         var first = await _createHandler!.Handle(BuildCreateCommand(userId, gameId), TestCancellationToken);
-        await _pauseHandler!.Handle(new PauseSessionCommand(first.SessionId, userId), TestCancellationToken);
         _dbContext!.ChangeTracker.Clear();
 
-        // Re-flip the (now Pending) link back to InProgress while its session stays Paused: one
-        // InProgress link the Active-count read-check cannot see. Index still allows exactly 1.
-        var link0 = await _dbContext.GameNightSessions
-            .FirstAsync(l => l.SessionId == first.SessionId, TestCancellationToken);
-        link0.Status = nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightSessionStatus.InProgress);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        // Second direct create attached to the SAME night → must NOT 409 (drafts coexist, #19).
+        var second = await _createHandler.Handle(
+            BuildCreateCommand(userId, gameId, first.GameNightEventId), TestCancellationToken);
         _dbContext.ChangeTracker.Clear();
 
-        var act = async () => await _createHandler.Handle(
-            BuildCreateCommand(userId, gameId, first.GameNightEventId), TestCancellationToken);
+        second.GameNightEventId.Should().Be(first.GameNightEventId);
+        second.SessionId.Should().NotBe(first.SessionId);
 
-        (await act.Should().ThrowAsync<ConflictException>())
-            .Which.Message.Should().Contain("live session in progress");
+        // Both links exist and are Pending — neither create promoted a session to live.
+        var links = await _dbContext.GameNightSessions
+            .AsNoTracking()
+            .Where(l => l.GameNightEventId == first.GameNightEventId)
+            .ToListAsync(TestCancellationToken);
+        links.Should().HaveCount(2);
+        links.Should().OnlyContain(l =>
+            l.Status == nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightSessionStatus.Pending));
+        links.Should().OnlyContain(l => l.StartedAt == null);
+
+        // No InProgress link (the night's single live slot stays free) and the night stays Published.
+        var night = await _dbContext.GameNightEvents
+            .AsNoTracking()
+            .FirstAsync(e => e.Id == first.GameNightEventId, TestCancellationToken);
+        night.Status.Should().Be(
+            nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightStatus.Published));
     }
 }

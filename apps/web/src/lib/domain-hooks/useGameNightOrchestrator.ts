@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 
-import { createSession, finalizeSession } from '@/lib/api/clients/gameSessionsClient';
+import { createSession, finalizeSession, goLive } from '@/lib/api/clients/gameSessionsClient';
 import { ConflictError } from '@/lib/api/core/errors';
 import { useSessionStore } from '@/stores/session/store';
 import type { SessionParticipant } from '@/stores/session/types';
@@ -41,6 +41,8 @@ export function useGameNightOrchestrator(gameNightId: string): UseGameNightOrche
       setIsStarting(true);
       setError(null);
       try {
+        // Epic #3188 Slice 3 (D5): create now yields a DRAFT (Pending). startGame's intent is to
+        // START PLAYING, so promote the fresh draft to live via the explicit go-live sub-resource.
         const response = await createSession({
           gameNightId,
           gameId: payload.gameId,
@@ -50,6 +52,8 @@ export function useGameNightOrchestrator(gameNightId: string): UseGameNightOrche
             isGuest: p.isGuest,
           })),
         });
+
+        await goLive(response.sessionId);
 
         startSession({
           sessionId: response.sessionId,

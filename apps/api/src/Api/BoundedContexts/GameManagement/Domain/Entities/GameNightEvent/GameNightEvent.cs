@@ -613,7 +613,8 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
         ?? _sessions.FirstOrDefault(s => s.Status == GameNightSessionStatus.Pending);
 
     /// <summary>
-    /// Adds a game session to this game night. Max 5 sessions per event.
+    /// Adds a game session to this game night. Max 5 NON-TERMINAL sessions per event
+    /// (epic #3188 Slice 3 D6: Completed/Skipped/Corrupted links do not consume budget).
     ///
     /// <para>Allowed on <see cref="GameNightStatus.Published"/> (first sitting) and
     /// <see cref="GameNightStatus.InProgress"/> (SI-4 #2635: 2nd+ sitting resume — the night flips
@@ -636,7 +637,12 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
                 : $"Cannot add sessions to a {Status} game night.";
             throw new InvalidOperationException(message);
         }
-        if (_sessions.Count >= 5)
+        // Epic #3188 Slice 3 (D6): count only NON-TERMINAL links (Pending + InProgress). Terminal
+        // links (Completed / Skipped / Corrupted) do NOT consume budget, so a night that already
+        // played five games in sequence can still host a sixth draft. The value stays 5.
+        var nonTerminalCount = _sessions.Count(s =>
+            s.Status == GameNightSessionStatus.Pending || s.Status == GameNightSessionStatus.InProgress);
+        if (nonTerminalCount >= 5)
             throw new InvalidOperationException("A game night can have at most 5 sessions.");
 
         var playOrder = _sessions.Count + 1;

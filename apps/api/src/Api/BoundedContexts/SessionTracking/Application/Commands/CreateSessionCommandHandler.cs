@@ -180,11 +180,19 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                 // the session (breaking FindByLinkedSessionIdAsync).
                 if (!request.SkipGameNightEnvelope && nightEntity != null)
                 {
-                    // I2 fix: enforce max 5 sessions per GameNight (domain invariant bypass guard)
-                    var existingSessionCount = await _db.GameNightSessions
-                        .CountAsync(gns => gns.GameNightEventId == nightEntity.Id, cancellationToken)
+                    // I2 fix + epic #3188 Slice 3 (D6): enforce max 5 sessions per GameNight,
+                    // counting ONLY non-terminal links (Pending + InProgress). Terminal links
+                    // (Completed / Skipped / Corrupted) do NOT consume budget, so a night that
+                    // played five games in sequence can still host a sixth draft. The value stays 5.
+                    var pendingStatus = GameNightSessionStatus.Pending.ToString();
+                    var inProgressStatus = GameNightSessionStatus.InProgress.ToString();
+                    var nonTerminalSessionCount = await _db.GameNightSessions
+                        .CountAsync(
+                            gns => gns.GameNightEventId == nightEntity.Id
+                                && (gns.Status == pendingStatus || gns.Status == inProgressStatus),
+                            cancellationToken)
                         .ConfigureAwait(false);
-                    if (existingSessionCount >= 5)
+                    if (nonTerminalSessionCount >= 5)
                         throw new ConflictException("A game night cannot have more than 5 sessions.");
 
                     var playOrder = Math.Max(1, nightEntity.Sessions.Count + 1);
@@ -196,8 +204,12 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                         GameId = request.GameId,
                         GameTitle = gameTitle,
                         PlayOrder = playOrder,
-                        Status = GameNightSessionStatus.InProgress.ToString(),
-                        StartedAt = _timeProvider.GetUtcNow()
+                        // Epic #3188 Slice 3 (D1): a direct create yields a DRAFT — the link is born
+                        // Pending with no StartedAt, the tracking Session stays Active (no OpenLiveMode
+                        // here), and the night is NOT promoted to live. Going live is a separate explicit
+                        // step (POST /api/v1/sessions/{id}/go-live) that promotes Pending → InProgress.
+                        Status = GameNightSessionStatus.Pending.ToString(),
+                        StartedAt = null
                     };
 
                     // Session Flow v2.1 — T5 fix: when nightEntity is loaded (Unchanged) and the
@@ -303,11 +315,13 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
             }
             catch (DbUpdateException ex) when (IsGameNightLiveSlotViolation(ex))
             {
-                // Issue #3157 C2a — the restored ix_game_night_sessions_unique_active index (C1)
-                // makes a concurrent create-in-the-same-night race a real unique violation (the
-                // read-check guard in ResolveGameNightAsync is not atomic with the insert). Map it
-                // to a clean 409 instead of the raw DbUpdateException → 500. NOT retried: the live
-                // slot is genuinely taken by a sibling session.
+                // Defensive belt on the partial-unique ix_game_night_sessions_unique_active index.
+                // Epic #3188 Slice 3 (D1): a create now mints a Pending (draft) link, which the
+                // partial index (InProgress-only) never touches — so in normal operation this catch
+                // is unreachable from the create path (two concurrent creates both coexist as drafts,
+                // #19). It is kept only so that, should any path ever emit an InProgress link here, a
+                // live-slot violation surfaces as a clean 409 rather than a raw 500. The real max-1-live
+                // race is enforced at go-live (Slice 2 — GoLiveSessionCommandHandler).
                 throw new ConflictException(
                     "This game night already has a live session in progress. Only one live session per game night is allowed.");
             }
@@ -328,10 +342,12 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
         && string.Equals(pg.ConstraintName, GameNightSessionEntityConfiguration.UniqueActiveIndexName, StringComparison.Ordinal);
 
     /// <summary>
-    /// Session Flow v2.1 — T4.
-    /// Resolves an existing InProgress GameNightEvent (attaching the requested game to it)
-    /// or creates a new ad-hoc night envelope. Enforces the invariant that at most one Active
-    /// session may live inside a GameNightEvent at any given time.
+    /// Session Flow v2.1 — T4 (revised epic #3188 Slice 3).
+    /// Resolves an existing Published/InProgress GameNightEvent (attaching the requested game to it)
+    /// or creates a new ad-hoc night envelope born Published. A direct create yields a DRAFT (born
+    /// Pending link, Session stays Active/not-live), so multiple drafts may coexist per night (#19):
+    /// this no longer enforces a max-1-live guard at create — that invariant lives at go-live (Slice 2)
+    /// and the partial-unique ix_game_night_sessions_unique_active index on InProgress links.
     /// </summary>
     private async Task<(GameNightEventEntity NightEntity, bool GameNightWasCreated)> ResolveGameNightAsync(
         CreateSessionCommand request, CancellationToken cancellationToken)
@@ -349,33 +365,25 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                     $"GameNightEvent {request.GameNightEventId.Value} not found.");
             }
 
-            if (!string.Equals(existing.Status, nameof(GameNightStatus.InProgress), StringComparison.Ordinal))
+            // Epic #3188 Slice 3 (D1/#19): a draft-holding night is Published (born Published on
+            // ad-hoc create) and only flips to InProgress once a session goes live (invariante #15).
+            // Accept BOTH so a 2nd DRAFT can attach to a Published night — mirrors the guard in
+            // GameNightEvent.AddSession (Published || InProgress). Draft/Cancelled/Completed/Corrupted
+            // are rejected as a conflict.
+            if (!string.Equals(existing.Status, nameof(GameNightStatus.Published), StringComparison.Ordinal)
+                && !string.Equals(existing.Status, nameof(GameNightStatus.InProgress), StringComparison.Ordinal))
             {
                 throw new ConflictException(
-                    $"Cannot attach session to GameNight {existing.Id}: status is {existing.Status}, expected InProgress.");
+                    $"Cannot attach session to GameNight {existing.Id}: status is {existing.Status}, expected Published or InProgress.");
             }
 
-            // Invariant: at most one Active session per GameNight.
-            // Resolve by joining the link rows (game_night_sessions) with the actual
-            // SessionTracking sessions and checking their Status column.
-            var activeSessionCount = await _db.GameNightSessions
-                .Where(gns => gns.GameNightEventId == existing.Id)
-                .Join(
-                    _db.SessionTrackingSessions,
-                    gns => gns.SessionId,
-                    s => s.Id,
-                    (gns, s) => s.Status)
-                .CountAsync(status => status == nameof(SessionStatus.Active), cancellationToken)
-                .ConfigureAwait(false);
+            // Epic #3188 Slice 3 (#19): the create-time max-1-live guard is REMOVED. A create now
+            // produces a DRAFT (Pending link, Session stays Active/not-live), so multiple drafts may
+            // coexist per night (parallel-play retrospectives). Max-1-live is enforced only at go-live
+            // (Slice 2 — GameNightEvent.StartSession / EnsureCanStartSession) and by the partial-unique
+            // ix_game_night_sessions_unique_active index on InProgress links.
 
-            if (activeSessionCount > 0)
-            {
-                throw new ConflictException(
-                    $"GameNight {existing.Id} already has an active session. " +
-                    "Pause or finalize it before starting another game.");
-            }
-
-            // Attach new game to the existing in-progress night (domain rule).
+            // Attach new game to the existing night (domain rule).
             // We mutate the GameIdsJson list directly to avoid loading the full aggregate.
             var gameIds = string.IsNullOrEmpty(existing.GameIdsJson)
                 ? new List<Guid>()
@@ -393,6 +401,9 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
 
         // Ad-hoc night envelope — build directly at the persistence layer to stay in-scope
         // for a single SaveChanges call.
+        // Epic #3188 Slice 3 (D1): born Published (a valid draft-holding envelope), NOT InProgress.
+        // The night only flips to InProgress when a session goes live (invariante #15), so a
+        // one-click create leaves the night Published holding a single Pending draft.
         var title = $"Serata del {_timeProvider.GetUtcNow().UtcDateTime:yyyy-MM-dd HH:mm}";
         var now = _timeProvider.GetUtcNow();
         var newEntity = new GameNightEventEntity
@@ -402,7 +413,7 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
             Title = title,
             ScheduledAt = now,
             GameIdsJson = System.Text.Json.JsonSerializer.Serialize(new List<Guid> { request.GameId }),
-            Status = nameof(GameNightStatus.InProgress),
+            Status = nameof(GameNightStatus.Published),
             CreatedAt = now,
             UpdatedAt = now
         };

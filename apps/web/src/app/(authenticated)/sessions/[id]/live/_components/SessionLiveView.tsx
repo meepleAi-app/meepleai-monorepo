@@ -86,6 +86,7 @@ import {
   ActionLogTimeline,
   ChatAgentPanel,
   DesktopBody,
+  LiveMobileMetaStrip,
   LiveTopBar,
   MobileBody,
   PlayerRosterLive,
@@ -104,7 +105,6 @@ import {
   LiveSessionNotes,
   RightColumnTabs,
   ToolkitRenderer,
-  type CatanLiveFlavorLabels,
   type ConnectionLostBannerLabels,
   type LiveAgentChatLabels,
   type LiveSessionNotesLabels,
@@ -130,6 +130,7 @@ import { useSessionAgentChat } from '@/lib/domain-hooks/useSessionAgentChat';
 import { useSignalRSession } from '@/lib/domain-hooks/useSignalrSession';
 import { getNavigationLinks } from '@/lib/navigation';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
+import { formatElapsedTime } from '@/lib/session-live/format-elapsed-time';
 import { formatSessionStartedAt } from '@/lib/session-live/format-session-started-at';
 import { mapConnectionState } from '@/lib/session-live/map-connection-state';
 import { mapTurnDataToTurnState } from '@/lib/session-live/map-turn-data-to-turn-state';
@@ -1131,46 +1132,6 @@ export function SessionLiveView(): ReactElement {
   const phasesQuery = useLiveSessionPhases(sessionId ?? '', showFlavorTab && sessionId != null);
   const catanPhaseName = phasesQuery.data?.currentPhaseName ?? null;
 
-  // Placeholder-bearing templates ({n}/{name}/{score}) are read RAW from
-  // intl.messages so react-intl does NOT ICU-interpolate them — the flavor
-  // component does the runtime .replace. Same pattern as the toolkitRenderer
-  // aria templates above. Non-placeholder labels use t() normally.
-  const catanFlavorLabels = useMemo<CatanLiveFlavorLabels>(
-    () => ({
-      panelAriaLabel: t('pages.sessionLive.flavor.catan.panelAriaLabel'),
-      roundTemplate:
-        (intl.messages['pages.sessionLive.flavor.catan.roundTemplate'] as string) ?? 'Round {n}',
-      activePlayerTemplate:
-        (intl.messages['pages.sessionLive.flavor.catan.activePlayerTemplate'] as string) ??
-        'Turno di {name}',
-      phaseTemplate:
-        (intl.messages['pages.sessionLive.flavor.catan.phaseTemplate'] as string) ?? 'Fase: {name}',
-      initBoardCta: t('pages.sessionLive.flavor.catan.initBoardCta'),
-      viewerWaiting: t('pages.sessionLive.flavor.catan.viewerWaiting'),
-      hexAriaTemplate:
-        (intl.messages['pages.sessionLive.flavor.catan.hexAriaTemplate'] as string) ??
-        '{terrain} {number}',
-      robberLabel: t('pages.sessionLive.flavor.catan.robberLabel'),
-      diceLastLabel: t('pages.sessionLive.flavor.catan.diceLastLabel'),
-      diceHistoryLabel: t('pages.sessionLive.flavor.catan.diceHistoryLabel'),
-      rollAriaTemplate:
-        (intl.messages['pages.sessionLive.flavor.catan.rollAriaTemplate'] as string) ??
-        'Registra tiro {n}',
-      vpLabel: t('pages.sessionLive.flavor.catan.vpLabel'),
-      handLabel: t('pages.sessionLive.flavor.catan.handLabel'),
-      devLabel: t('pages.sessionLive.flavor.catan.devLabel'),
-      settlementsLabel: t('pages.sessionLive.flavor.catan.settlementsLabel'),
-      citiesLabel: t('pages.sessionLive.flavor.catan.citiesLabel'),
-      roadsLabel: t('pages.sessionLive.flavor.catan.roadsLabel'),
-      longestRoadLabel: t('pages.sessionLive.flavor.catan.longestRoadLabel'),
-      largestArmyLabel: t('pages.sessionLive.flavor.catan.largestArmyLabel'),
-      incAriaTemplate:
-        (intl.messages['pages.sessionLive.flavor.catan.incAriaTemplate'] as string) ?? '{field} +1',
-      decAriaTemplate:
-        (intl.messages['pages.sessionLive.flavor.catan.decAriaTemplate'] as string) ?? '{field} -1',
-    }),
-    [t, intl.messages]
-  );
   // #2787: never strand the user on ?tab=flavor / ?mtab=flavor when the game has
   // no flavor (e.g. a stale bookmark carried to a non-catan session) — the flavor
   // tab button is hidden (showFlavorTab=false), so fall the panel back to 'score'.
@@ -1410,7 +1371,6 @@ export function SessionLiveView(): ReactElement {
             gameSlug={liveSessionDto.gameSlug}
             view="live"
             session={liveSessionDto}
-            labels={catanFlavorLabels}
             viewerRole={activeSession.viewerRole}
             sessionId={liveSessionDto.id}
             livePoints={catanLivePoints}
@@ -1495,7 +1455,6 @@ export function SessionLiveView(): ReactElement {
     effectiveMobileTab,
     activeSession,
     liveSessionDto,
-    catanFlavorLabels,
     catanLivePoints,
     catanPhaseName,
     sessionId,
@@ -1636,7 +1595,6 @@ export function SessionLiveView(): ReactElement {
           gameSlug={liveSessionDto.gameSlug}
           view="live"
           session={liveSessionDto}
-          labels={catanFlavorLabels}
           viewerRole={activeSession.viewerRole}
           sessionId={liveSessionDto.id}
           livePoints={catanLivePoints}
@@ -1733,6 +1691,19 @@ export function SessionLiveView(): ReactElement {
         elapsedMs={elapsedMs}
         startedAtLabel={startedAtLabel}
         connectionState={connectionPipState}
+      />
+
+      {/* #3146 Slice 1 — mobile-only meta strip: surfaces the turn / elapsed /
+          derived-start chips that LiveTopBar hides below lg, so session state
+          stays visible at a glance on phones. */}
+      <LiveMobileMetaStrip
+        turnLabel={topBarLabels.turnLabelResolved}
+        elapsedLabel={elapsedMs != null ? formatElapsedTime(elapsedMs) : undefined}
+        startedAtLabel={startedAtLabel}
+        labels={{
+          elapsedAriaLabel: topBarLabels.elapsedTimeAriaLabel,
+          startedAtAriaLabel: topBarLabels.startedAtChipAriaLabel,
+        }}
       />
 
       {/* ConnectionLostBanner — SSE non-healthy states */}

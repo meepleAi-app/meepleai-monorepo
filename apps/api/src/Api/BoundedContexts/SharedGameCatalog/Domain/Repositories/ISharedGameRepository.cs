@@ -16,6 +16,23 @@ public interface ISharedGameRepository
     Task AddAsync(SharedGame sharedGame, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Issue #3153 — adds a new shared game together with its designer/publisher
+    /// M:N links, resolved get-or-create BY NAME (case-insensitively) from the raw
+    /// provenance names. Names are trimmed; empty / &gt;200-char entries are skipped
+    /// (never thrown); existing shared designer/publisher rows are reused. Persistence
+    /// is deferred to the caller's unit of work (no SaveChanges inside).
+    /// </summary>
+    /// <param name="sharedGame">The game to add (scalars only; its own designer/publisher collections are ignored).</param>
+    /// <param name="designerNames">Raw designer names to resolve get-or-create.</param>
+    /// <param name="publisherNames">Raw publisher names to resolve get-or-create.</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task AddAsync(
+        SharedGame sharedGame,
+        IReadOnlyList<string> designerNames,
+        IReadOnlyList<string> publisherNames,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets a shared game by its ID.
     /// </summary>
     /// <param name="id">The game ID</param>

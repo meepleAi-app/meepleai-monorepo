@@ -249,6 +249,137 @@ public class SharedGameSkeletonTests
 
     #endregion
 
+    #region EnrichFromProvenance (Issues #3147, #3154)
+
+    // NOTE: scalars only — designers/publishers are intentionally excluded from
+    // EnrichFromProvenance (they are read-only through SharedGameRepository, so
+    // writing them would be silently dropped on persist). M:N persistence tracked
+    // by #3153.
+
+    [Fact]
+    public void EnrichFromProvenance_AllScalarsPresent_AppliesAllAndStampsAudit()
+    {
+        var game = SharedGame.CreateSkeleton("Catan", AdminUserId, TimeProvider);
+        game.ModifiedBy.Should().BeNull("precondition: skeleton has no modifier");
+
+        game.EnrichFromProvenance(
+            yearPublished: 1995,
+            minPlayers: 3, maxPlayers: 4,
+            playingTimeMinutes: 90,
+            modifiedBy: AdminUserId);
+
+        game.YearPublished.Should().Be(1995);
+        game.MinPlayers.Should().Be(3);
+        game.MaxPlayers.Should().Be(4);
+        game.PlayingTimeMinutes.Should().Be(90);
+        game.ModifiedBy.Should().Be(AdminUserId, "a real change stamps the audit actor");
+        game.GameDataStatus.Should().Be(GameDataStatus.Skeleton, "enrichment must NOT drive the state machine");
+    }
+
+    [Fact]
+    public void EnrichFromProvenance_AllFieldsAbsent_IsNoOpAndLeavesAuditUntouched()
+    {
+        var game = SharedGame.CreateSkeleton("Catan", AdminUserId, TimeProvider);
+
+        game.EnrichFromProvenance(
+            yearPublished: null,
+            minPlayers: null, maxPlayers: null,
+            playingTimeMinutes: null,
+            modifiedBy: AdminUserId);
+
+        game.YearPublished.Should().Be(0);
+        game.MinPlayers.Should().Be(0);
+        game.MaxPlayers.Should().Be(0);
+        game.PlayingTimeMinutes.Should().Be(0);
+        game.ModifiedBy.Should().BeNull("a no-op must not stamp the audit actor");
+    }
+
+    [Theory]
+    [InlineData(1850)]                 // pre-1901 lower bound
+    [InlineData(0)]                    // skeleton default / missing sentinel value
+    public void EnrichFromProvenance_ImplausibleYear_IsSkipped(int badYear)
+    {
+        var game = SharedGame.CreateSkeleton("Catan", AdminUserId, TimeProvider);
+
+        // Players are valid → the call still "changes", proving the year was skipped
+        // in isolation rather than the whole call being rejected.
+        game.EnrichFromProvenance(
+            yearPublished: badYear,
+            minPlayers: 2, maxPlayers: 5,
+            playingTimeMinutes: null,
+            modifiedBy: AdminUserId);
+
+        game.YearPublished.Should().Be(0, "an implausible year is skipped, not applied");
+        game.MinPlayers.Should().Be(2, "a valid field is still applied alongside a skipped one");
+        game.ModifiedBy.Should().Be(AdminUserId);
+    }
+
+    [Fact]
+    public void EnrichFromProvenance_YearInFuture_IsSkipped()
+    {
+        var game = SharedGame.CreateSkeleton("Catan", AdminUserId, TimeProvider);
+
+        game.EnrichFromProvenance(
+            yearPublished: DateTime.UtcNow.Year + 5,
+            minPlayers: null, maxPlayers: null,
+            playingTimeMinutes: null,
+            modifiedBy: AdminUserId);
+
+        game.YearPublished.Should().Be(0);
+        game.ModifiedBy.Should().BeNull("nothing valid was applied");
+    }
+
+    [Theory]
+    [InlineData(3, null)]   // min without any max
+    [InlineData(null, 4)]   // max without any min
+    [InlineData(0, 4)]      // min not positive
+    [InlineData(3, 2)]      // max < min (inconsistent range)
+    public void EnrichFromProvenance_InconsistentPlayerPair_SkipsBoth(int? min, int? max)
+    {
+        var game = SharedGame.CreateSkeleton("Catan", AdminUserId, TimeProvider);
+
+        game.EnrichFromProvenance(
+            yearPublished: null,
+            minPlayers: min, maxPlayers: max,
+            playingTimeMinutes: null,
+            modifiedBy: AdminUserId);
+
+        game.MinPlayers.Should().Be(0, "player counts are applied only as a consistent pair");
+        game.MaxPlayers.Should().Be(0);
+        game.ModifiedBy.Should().BeNull("no consistent pair means no change");
+    }
+
+    [Fact]
+    public void EnrichFromProvenance_NonPositivePlayingTime_IsSkipped()
+    {
+        var game = SharedGame.CreateSkeleton("Catan", AdminUserId, TimeProvider);
+
+        game.EnrichFromProvenance(
+            yearPublished: null,
+            minPlayers: null, maxPlayers: null,
+            playingTimeMinutes: 0,
+            modifiedBy: AdminUserId);
+
+        game.PlayingTimeMinutes.Should().Be(0);
+        game.ModifiedBy.Should().BeNull();
+    }
+
+    [Fact]
+    public void EnrichFromProvenance_EmptyModifiedBy_Throws()
+    {
+        var game = SharedGame.CreateSkeleton("Catan", AdminUserId, TimeProvider);
+
+        var act = () => game.EnrichFromProvenance(
+            yearPublished: 1995,
+            minPlayers: 3, maxPlayers: 4,
+            playingTimeMinutes: 90,
+            modifiedBy: Guid.Empty);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    #endregion
+
     #region MarkDataComplete
 
     [Fact]

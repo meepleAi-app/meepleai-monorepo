@@ -200,6 +200,13 @@ public class Session : IDomainEventSource
     public IReadOnlyCollection<Participant> Participants => _participants.AsReadOnly();
 
     /// <summary>
+    /// Whether <paramref name="userId"/> may read this session: the owner or any
+    /// participant. Single source of truth for session read-access authorization (#3119).
+    /// </summary>
+    public bool IsAccessibleBy(Guid userId) =>
+        UserId == userId || _participants.Any(p => p.UserId == userId);
+
+    /// <summary>
     /// Private constructor for EF Core.
     /// </summary>
     private Session()

@@ -23,6 +23,7 @@ import {
   WinnerPickerModal,
 } from '@/components/features/game-nights/live';
 import { useCompleteGameNight } from '@/hooks/queries/useSessionFlow';
+import { useResponsive } from '@/hooks/useResponsive';
 import {
   ConflictError,
   ForbiddenError,
@@ -41,6 +42,11 @@ export interface NightLiveClientViewProps {
 
 export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
   const router = useRouter();
+  // #3146 Slice 2: below the desktop breakpoint the hub renders its own tab-based
+  // MobileBody (this route is immersive, so the global bottom bar is hidden and
+  // the hub nav is the sole bottom surface). useResponsive is SSR-safe (defaults
+  // mobile-first pre-hydration; the flip is masked by the live-load skeleton).
+  const { isDesktop } = useResponsive();
   const { data: vm, isLoading, isError, error } = useGameNightLive(nightId);
   // Slice C2: the diary is a SEPARATE participant-guarded read; composed with the live VM
   // below via mapDiary (panel D2). Its own error/loading is non-fatal — the hub renders an
@@ -197,6 +203,7 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
     <>
       <NightLiveHub
         readOnly
+        mobile={!isDesktop}
         night={vm.night}
         status={vm.status}
         current={vm.current}
@@ -214,7 +221,7 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
       />
 
       {showStartCta && nextGame ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center p-4">
+        <div className="fixed inset-x-0 bottom-16 z-40 flex lg:bottom-0 justify-center p-4">
           <button
             type="button"
             onClick={() => handleStartNext(nextGame.gameId, nextGame.gameTitle)}
@@ -227,7 +234,7 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
       ) : null}
 
       {showCompleteCta ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center p-4">
+        <div className="fixed inset-x-0 bottom-16 z-40 flex lg:bottom-0 justify-center p-4">
           <button
             type="button"
             onClick={() => {
@@ -243,7 +250,7 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
       ) : null}
 
       {showFinalizeCta ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 flex flex-col items-center gap-2 p-4">
+        <div className="fixed inset-x-0 bottom-16 z-40 flex lg:bottom-0 flex-col items-center gap-2 p-4">
           {finalizeErrorMessage ? (
             <p
               role="alert"

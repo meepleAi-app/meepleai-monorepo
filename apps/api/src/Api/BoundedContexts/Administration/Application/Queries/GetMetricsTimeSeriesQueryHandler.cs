@@ -52,16 +52,23 @@ internal class GetMetricsTimeSeriesQueryHandler : IRequestHandler<GetMetricsTime
 
         await Task.WhenAll(cpuTask, memoryTask, requestsTask).ConfigureAwait(false);
 
+        var cpu = await cpuTask.ConfigureAwait(false);
+        var memory = await memoryTask.ConfigureAwait(false);
+        var requests = await requestsTask.ConfigureAwait(false);
+
+        // Per-metric availability (#3045): the 3 queries are independent HTTP calls that can
+        // fail independently, so a per-query failure must NOT mask the other metrics. Each flag
+        // = "that metric's Prometheus query did not throw". An empty series with a reachable
+        // Prometheus stays Available=true (real zero, distinct from a source outage). The FE
+        // consumes cpu/memory only; the requests series is not surfaced in the monitor UI.
         return new MetricsTimeSeriesResponse(
-            await cpuTask.ConfigureAwait(false),
-            await memoryTask.ConfigureAwait(false),
-            await requestsTask.ConfigureAwait(false));
+            cpu.Points, memory.Points, requests.Points, cpu.Succeeded, memory.Succeeded);
     }
 
     /// <summary>
     /// Executes a PromQL query with graceful degradation (returns empty on failure).
     /// </summary>
-    private async Task<IReadOnlyCollection<MetricsTimeSeriesDataPoint>> QuerySafeAsync(
+    private async Task<(IReadOnlyCollection<MetricsTimeSeriesDataPoint> Points, bool Succeeded)> QuerySafeAsync(
         string query,
         DateTime start,
         DateTime end,
@@ -83,12 +90,12 @@ internal class GetMetricsTimeSeriesQueryHandler : IRequestHandler<GetMetricsTime
                 .ToList();
 
             _logger.LogDebug("{MetricName} query returned {Count} data points", metricName, dataPoints.Count);
-            return dataPoints;
+            return (dataPoints, true);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to query {MetricName} metrics, returning empty series", metricName);
-            return Array.Empty<MetricsTimeSeriesDataPoint>();
+            return (Array.Empty<MetricsTimeSeriesDataPoint>(), false);
         }
     }
 

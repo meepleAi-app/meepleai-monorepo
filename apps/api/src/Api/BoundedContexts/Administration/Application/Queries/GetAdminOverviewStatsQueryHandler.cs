@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Interfaces;
@@ -51,7 +52,7 @@ internal class GetAdminOverviewStatsQueryHandler : IQueryHandler<GetAdminOvervie
 
                 var publishedGames = await _dbContext.SharedGames
                     .AsNoTracking()
-                    .Where(g => g.Status == 1)
+                    .Where(g => g.Status == (int)GameStatus.Published)
                     .CountAsync(cancel).ConfigureAwait(false);
 
                 // User counts

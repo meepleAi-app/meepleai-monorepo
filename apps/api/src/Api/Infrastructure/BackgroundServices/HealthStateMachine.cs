@@ -20,11 +20,15 @@ public record ServiceHealthState(
 /// <summary>
 /// Pure-function state machine for health check status transitions.
 /// Implements hysteresis to prevent flapping:
-/// - Healthy → Degraded after DegradedThreshold failures (default: 1)
-/// - Degraded → Unhealthy after UnhealthyThreshold total failures (default: 3)
+/// - Healthy → Degraded after DegradedThreshold consecutive failures (default: 3)
+/// - Degraded → Unhealthy after UnhealthyThreshold total failures (default: 5)
 /// - Degraded → Healthy on any success
 /// - Unhealthy → Healthy after RecoveryThreshold consecutive successes (default: 2)
 /// - Unhealthy + failure resets consecutive success counter
+///
+/// The DegradedThreshold hysteresis-in absorbs transient single-poll blips
+/// (external API slow, ML cold-start, FTS latency spike) that would otherwise flap
+/// Healthy↔Degraded and spam warning alerts for non-critical services.
 /// </summary>
 internal static class HealthStateMachine
 {
@@ -42,19 +46,13 @@ internal static class HealthStateMachine
 
         return current.CurrentStatus switch
         {
-            "Healthy" when isFailure => current with
-            {
-                CurrentStatus = "Degraded",
-                PreviousStatus = "Healthy",
-                ConsecutiveFailures = 1,
-                ConsecutiveSuccesses = 0,
-                LastTransitionAt = now,
-                LastDescription = $"Health check returned {checkResult}"
-            },
+            "Healthy" when isFailure =>
+                HandleHealthyFailure(current, checkResult, options, now),
 
             "Healthy" => current with
             {
-                PreviousStatus = "Healthy"
+                PreviousStatus = "Healthy",
+                ConsecutiveFailures = 0
             },
 
             "Degraded" when isFailure =>
@@ -105,6 +103,37 @@ internal static class HealthStateMachine
 
         var elapsed = DateTime.UtcNow - state.LastNotifiedAt.Value;
         return elapsed.TotalMinutes > options.ReminderIntervalMinutes;
+    }
+
+    private static ServiceHealthState HandleHealthyFailure(
+        ServiceHealthState current, HealthStatus checkResult, HealthMonitorOptions options, DateTime now)
+    {
+        var newFailures = current.ConsecutiveFailures + 1;
+
+        // Hysteresis-in: only transition to Degraded (which fires an alert) once the
+        // failure streak reaches DegradedThreshold. Below it the service stays Healthy —
+        // no transition, so no alert — and we just accumulate the streak. A single
+        // success (below) resets it, so isolated transient blips never emit an alert.
+        if (newFailures >= options.DegradedThreshold)
+        {
+            return current with
+            {
+                CurrentStatus = "Degraded",
+                PreviousStatus = "Healthy",
+                ConsecutiveFailures = newFailures,
+                ConsecutiveSuccesses = 0,
+                LastTransitionAt = now,
+                LastDescription = $"Health check returned {checkResult}"
+            };
+        }
+
+        return current with
+        {
+            PreviousStatus = "Healthy",
+            ConsecutiveFailures = newFailures,
+            ConsecutiveSuccesses = 0,
+            LastDescription = $"Health check degraded ({newFailures}/{options.DegradedThreshold})"
+        };
     }
 
     private static ServiceHealthState HandleDegradedFailure(

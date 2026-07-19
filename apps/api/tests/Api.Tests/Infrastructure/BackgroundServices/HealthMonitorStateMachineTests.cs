@@ -23,6 +23,61 @@ public class HealthMonitorStateMachineTests
         ReminderIntervalMinutes = 30
     };
 
+    // Anti-flapping hysteresis: a non-critical service must degrade a few polls in a
+    // row before we transition (and alert). DegradedThreshold 3 means ~3 minutes of
+    // persistent degradation at the 60s poll interval.
+    private static readonly HealthMonitorOptions HysteresisOptions = new()
+    {
+        DegradedThreshold = 3,
+        UnhealthyThreshold = 5,
+        RecoveryThreshold = 2,
+        ReminderIntervalMinutes = 30
+    };
+
+    [Fact]
+    public void Healthy_stays_Healthy_before_degraded_threshold()
+    {
+        // Arrange — Healthy, DegradedThreshold 3, first transient failure
+        var state = CreateState("bggapi", "Healthy", consecutiveFailures: 0);
+
+        // Act — a single Degraded reading (e.g. BGG slow for one poll)
+        var result = HealthStateMachine.Evaluate(state, HealthStatus.Degraded, HysteresisOptions);
+
+        // Assert — no transition yet; the failure is merely counted
+        result.CurrentStatus.Should().Be("Healthy");
+        result.PreviousStatus.Should().Be("Healthy");
+        result.ConsecutiveFailures.Should().Be(1);
+    }
+
+    [Fact]
+    public void Healthy_transitions_to_Degraded_at_degraded_threshold()
+    {
+        // Arrange — Healthy with 2 prior failures accumulated (threshold 3)
+        var state = CreateState("bggapi", "Healthy", consecutiveFailures: 2);
+
+        // Act — the third consecutive failure crosses the threshold
+        var result = HealthStateMachine.Evaluate(state, HealthStatus.Degraded, HysteresisOptions);
+
+        // Assert — now (and only now) transition to Degraded
+        result.CurrentStatus.Should().Be("Degraded");
+        result.PreviousStatus.Should().Be("Healthy");
+        result.ConsecutiveFailures.Should().Be(3);
+    }
+
+    [Fact]
+    public void Healthy_failure_streak_resets_on_success_below_threshold()
+    {
+        // Arrange — Healthy accumulating failures but still below threshold
+        var state = CreateState("bggapi", "Healthy", consecutiveFailures: 2);
+
+        // Act — a success arrives before hitting the threshold (transient blip cleared)
+        var result = HealthStateMachine.Evaluate(state, HealthStatus.Healthy, HysteresisOptions);
+
+        // Assert — counter resets, no spurious Degraded transition ever emitted
+        result.CurrentStatus.Should().Be("Healthy");
+        result.ConsecutiveFailures.Should().Be(0);
+    }
+
     [Fact]
     public void Healthy_service_transitions_to_Degraded_after_one_failure()
     {

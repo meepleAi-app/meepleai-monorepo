@@ -9,7 +9,8 @@ namespace Api.BoundedContexts.SessionTracking.Application.Queries;
 public record GetSessionChatQuery(
     Guid SessionId,
     int? Limit,
-    int? Offset
+    int? Offset,
+    Guid RequestedBy
 ) : IRequest<SessionChatResultDto>;
 
 /// <summary>

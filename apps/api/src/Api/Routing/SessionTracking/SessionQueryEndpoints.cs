@@ -401,10 +401,17 @@ internal static class SessionQueryEndpoints
     {
         group.MapGet("/game-sessions/{sessionId:guid}/media", async (
             Guid sessionId,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
-            var query = new GetSessionMediaQuery(sessionId);
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetSessionMediaQuery(sessionId, userId);
             var result = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
@@ -413,7 +420,8 @@ internal static class SessionQueryEndpoints
         .WithTags("SessionTracking", "Media")
         .WithSummary("Get all media for a session")
         .Produces(200)
-        .Produces(401);
+        .Produces(401)
+        .Produces(403);
     }
 
     // ========== Chat Endpoints (Issue #4760) ==========
@@ -422,12 +430,19 @@ internal static class SessionQueryEndpoints
     {
         group.MapGet("/game-sessions/{sessionId:guid}/chat", async (
             Guid sessionId,
+            HttpContext httpContext,
             IMediator mediator,
             int? limit = null,
             int? offset = null,
             CancellationToken ct = default) =>
         {
-            var query = new GetSessionChatQuery(sessionId, limit, offset);
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetSessionChatQuery(sessionId, limit, offset, userId);
             var result = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
@@ -436,7 +451,8 @@ internal static class SessionQueryEndpoints
         .WithTags("SessionTracking", "Chat")
         .WithSummary("Get chat messages for a session (paginated)")
         .Produces(200)
-        .Produces(401);
+        .Produces(401)
+        .Produces(403);
     }
 
     // ========== Toolkit Session State Endpoints (Issue #5148 — Epic B5) ==========

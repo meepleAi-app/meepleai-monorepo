@@ -28,6 +28,9 @@ internal static class GameNightMapperHelper
             AcceptedCount: gameNight.AcceptedCount,
             PendingCount: gameNight.Rsvps.Count(r => r.Status == RsvpStatus.Pending),
             TotalInvited: gameNight.Rsvps.Count,
+            // #3084: the sessions collection is already eager-loaded on the read paths
+            // (e.g. GetCompletedAsync .Include(e => e.Sessions)), so this is in-memory.
+            SessionCount: gameNight.Sessions.Count,
             CreatedAt: gameNight.CreatedAt,
             UpdatedAt: gameNight.UpdatedAt,
             ViewerRsvpStatus: viewerId.HasValue ? gameNight.GetRsvp(viewerId.Value)?.Status : null);

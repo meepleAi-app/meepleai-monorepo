@@ -722,6 +722,19 @@ describe('SessionLiveView (Wave D.2 Foundation)', () => {
     expect(container.querySelector('[data-slot="mobile-body"]')).toBeInTheDocument();
   });
 
+  // #3146 Slice 1: the mobile meta strip is wired under the top bar and receives
+  // the resolved turn / elapsed / derived-start values. The default fixture has
+  // startedAt set (→ elapsed derived), so all three chips render. Guards against
+  // the wiring being dropped or fed an undefined elapsed label.
+  it('Cell 5: wires LiveMobileMetaStrip with turn + elapsed + derived-start chips', () => {
+    const { container } = renderWithIntl(<SessionLiveView />);
+    const strip = container.querySelector('[data-slot="live-mobile-meta-strip"]');
+    expect(strip).toBeInTheDocument();
+    expect(strip?.querySelector('[data-slot="live-mobile-meta-strip-turn"]')).not.toBeNull();
+    expect(strip?.querySelector('[data-slot="live-mobile-meta-strip-elapsed"]')).not.toBeNull();
+    expect(strip?.querySelector('[data-slot="live-mobile-meta-strip-started-at"]')).not.toBeNull();
+  });
+
   // ─── 3.7: Exit handler ─────────────────────────────────────────────────
 
   it('exit button navigates to /sessions/{sessionId}', () => {

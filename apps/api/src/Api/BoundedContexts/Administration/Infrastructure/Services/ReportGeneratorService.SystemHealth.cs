@@ -62,19 +62,80 @@ internal sealed partial class ReportGeneratorService
 
         var sections = CreateSystemHealthSections(hours, userMetrics, contentMetrics);
 
+        // Real health metrics from Prometheus (#3081). These were previously
+        // hardcoded to 0.0 placeholders (and a mislabeled "uptime" = window param)
+        // yet exported to admins as if real. When Prometheus is unavailable or has
+        // no data, the key is OMITTED rather than fabricating a misleading zero.
+        var metadata = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["hours"] = hours,
+            ["since"] = since,
+        };
+
+        var (errorRate, responseTimeMs) =
+            await GetSystemHealthMetricsAsync(cancellationToken).ConfigureAwait(false);
+        if (errorRate.HasValue)
+            metadata["errorRate"] = errorRate.Value;
+        if (responseTimeMs.HasValue)
+            metadata["responseTime"] = responseTimeMs.Value;
+
         return new ReportContent(
             Title: "System Health Report",
             Description: $"System health metrics for the last {hours} hours",
             GeneratedAt: DateTime.UtcNow,
-            Metadata: new Dictionary<string, object>(StringComparer.Ordinal)
-            {
-                ["hours"] = hours,
-                ["since"] = since,
-                ["uptime"] = hours, // System uptime in hours
-                ["errorRate"] = 0.0, // Error rate percentage (placeholder for future implementation)
-                ["responseTime"] = 0.0 // Average response time in ms (placeholder for future implementation)
-            },
+            Metadata: metadata,
             Sections: sections);
+    }
+
+    /// <summary>
+    /// Fetches the current error rate (ratio 0..1) and average response time (ms)
+    /// from Prometheus, using the same queries as <c>InfrastructureDetailsService</c>.
+    /// Returns null for a metric when Prometheus is unavailable or has no data, so
+    /// the caller can omit it rather than reporting a fabricated 0 (#3081).
+    /// </summary>
+    private async Task<(double? ErrorRate, double? ResponseTimeMs)> GetSystemHealthMetricsAsync(
+        CancellationToken cancellationToken)
+    {
+        var end = DateTime.UtcNow;
+        var start = end.AddHours(-1);
+
+        var errorRate = await QueryLatestPrometheusValueAsync(
+            "sum(rate(http_requests_total{status=~\"5..\"}[1h])) / sum(rate(http_requests_total[1h]))",
+            start, end, cancellationToken).ConfigureAwait(false);
+
+        var latencySeconds = await QueryLatestPrometheusValueAsync(
+            "avg(rate(http_request_duration_seconds_sum[1h]) / rate(http_request_duration_seconds_count[1h]))",
+            start, end, cancellationToken).ConfigureAwait(false);
+
+        return (errorRate, latencySeconds.HasValue ? latencySeconds.Value * 1000 : null);
+    }
+
+    /// <summary>
+    /// Runs a Prometheus range query and returns the most recent data point's value,
+    /// or null when there is no data or the query fails (honest degradation).
+    /// </summary>
+    private async Task<double?> QueryLatestPrometheusValueAsync(
+        string query, DateTime start, DateTime end, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _prometheusService
+                .QueryRangeAsync(query, start, end, "5m", cancellationToken)
+                .ConfigureAwait(false);
+
+            var latest = result.TimeSeries
+                .SelectMany(ts => ts.Values)
+                .OrderByDescending(v => v.Timestamp)
+                .FirstOrDefault();
+
+            return latest?.Value;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex, "Failed to query Prometheus for a system-health metric; omitting it from the report");
+            return null;
+        }
     }
 
     private async Task<UserMetrics> GetUserMetricsAsync(DateTime since, CancellationToken ct)

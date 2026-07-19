@@ -1,8 +1,9 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { IntlProvider } from 'react-intl';
 import { axe, toHaveNoViolations } from 'jest-axe';
 
-import { CatanLiveFlavor, type CatanLiveFlavorLabels } from '../CatanLiveFlavor';
+import { CatanLiveFlavor } from '../CatanLiveFlavor';
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';
 import { generateStandardBoard } from '../catan-board-preset';
 import { emptyCatanPlayerState } from '../catan-state';
@@ -13,29 +14,19 @@ vi.mock('@/hooks/mutations/useUpdateLiveGameState', () => ({
   useUpdateLiveGameState: () => ({ mutate: vi.fn() }),
 }));
 
-const labels: CatanLiveFlavorLabels = {
-  panelAriaLabel: 'Catan',
-  roundTemplate: 'Round {n}',
-  activePlayerTemplate: 'Turno di {name}',
-  phaseTemplate: 'Fase: {name}',
-  initBoardCta: 'Genera board Catan',
-  viewerWaiting: 'In attesa dell’host',
-  hexAriaTemplate: '{terrain} {number}',
-  robberLabel: 'Ladro',
-  diceLastLabel: 'Ultimo tiro',
-  diceHistoryLabel: 'Cronologia',
-  rollAriaTemplate: 'Registra tiro {n}',
-  vpLabel: 'PV',
-  handLabel: 'Mano',
-  devLabel: 'Sviluppo',
-  settlementsLabel: 'Insediamenti',
-  citiesLabel: 'Città',
-  roadsLabel: 'Strade',
-  longestRoadLabel: 'Strada+',
-  largestArmyLabel: 'Armata+',
-  incAriaTemplate: '{field} +1',
-  decAriaTemplate: '{field} -1',
-};
+// #2788: CatanLiveFlavor now self-builds its labels via useTranslation/useIntl,
+// so tests must supply the IntlProvider. `onError` swallows react-intl
+// MISSING_TRANSLATION noise (empty messages → t() returns the raw key).
+const CTA_KEY = 'pages.sessionLive.flavor.catan.initBoardCta';
+const WAITING_KEY = 'pages.sessionLive.flavor.catan.viewerWaiting';
+
+function renderFlavor(props: Parameters<typeof CatanLiveFlavor>[0]) {
+  return render(
+    <IntlProvider locale="en" messages={{}} onError={() => {}}>
+      <CatanLiveFlavor {...props} />
+    </IntlProvider>
+  );
+}
 
 const session = {
   id: 's1',
@@ -94,16 +85,14 @@ beforeEach(() => useLiveSessionStore.getState().reset());
 
 describe('CatanLiveFlavor', () => {
   it('empty state — host sees the "Genera board" CTA', () => {
-    render(<CatanLiveFlavor session={session} labels={labels} viewerRole="Host" sessionId="s1" />);
-    expect(screen.getByRole('button', { name: 'Genera board Catan' })).toBeInTheDocument();
+    renderFlavor({ session, viewerRole: 'Host', sessionId: 's1' });
+    expect(screen.getByRole('button', { name: CTA_KEY })).toBeInTheDocument();
   });
 
   it('empty state — non-host sees the waiting message, no CTA', () => {
-    render(
-      <CatanLiveFlavor session={session} labels={labels} viewerRole="Player" sessionId="s1" />
-    );
-    expect(screen.queryByRole('button', { name: 'Genera board Catan' })).toBeNull();
-    expect(screen.getByText('In attesa dell’host')).toBeInTheDocument();
+    renderFlavor({ session, viewerRole: 'Player', sessionId: 's1' });
+    expect(screen.queryByRole('button', { name: CTA_KEY })).toBeNull();
+    expect(screen.getByText(WAITING_KEY)).toBeInTheDocument();
   });
 
   it('populated — renders board + dice + one card per player', () => {
@@ -114,9 +103,7 @@ describe('CatanLiveFlavor', () => {
       dice: { last: 8, history: [8] },
       players: { p1: emptyCatanPlayerState(), p2: emptyCatanPlayerState() },
     });
-    const { container } = render(
-      <CatanLiveFlavor session={session} labels={labels} viewerRole="Player" sessionId="s1" />
-    );
+    const { container } = renderFlavor({ session, viewerRole: 'Player', sessionId: 's1' });
     expect(container.querySelector('[data-slot="catan-board"]')).not.toBeNull();
     expect(container.querySelector('[data-slot="catan-dice"]')).not.toBeNull();
     expect(container.querySelectorAll('[data-slot="catan-player-card"]')).toHaveLength(2);
@@ -130,9 +117,7 @@ describe('CatanLiveFlavor', () => {
       dice: { last: 8, history: [8] },
       players: { p1: emptyCatanPlayerState(), p2: emptyCatanPlayerState() },
     });
-    const { container } = render(
-      <CatanLiveFlavor session={session} labels={labels} viewerRole="Host" sessionId="s1" />
-    );
+    const { container } = renderFlavor({ session, viewerRole: 'Host', sessionId: 's1' });
     expect(await axe(container)).toHaveNoViolations();
   });
 });

@@ -43,7 +43,14 @@ export function ProviderDetail({ name }: { name: ProviderName }) {
           {data?.quotaSupported && !data.tokenConfigured && (
             <Badge variant="destructive">Token non configurato</Badge>
           )}
-          {data?.quotaSupported && data.tokenConfigured && (
+          {/* #3045: quota supportata + token ok ma fetch degradato → messaggio esplicito,
+              non un <dl> quasi-vuoto silenzioso. */}
+          {data?.quotaSupported && data.tokenConfigured && data.errorCode && (
+            <div className="text-destructive" data-testid="quota-degraded">
+              Sorgente non disponibile: {data.errorMessage ?? data.errorCode}
+            </div>
+          )}
+          {data?.quotaSupported && data.tokenConfigured && !data.errorCode && (
             <dl className="grid grid-cols-2 gap-3">
               {data.usedUsd !== null && (
                 <div>

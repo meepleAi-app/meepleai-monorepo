@@ -278,8 +278,10 @@ internal sealed class AnalyzeRulebookCommandHandler
                 "Analysis already in progress for game {GameId}, PDF {PdfId}",
                 sharedGameId, pdfDocumentId);
 
-            throw new InvalidOperationException(
-                $"Rulebook analysis already in progress. Please wait for completion.");
+            // #3163: a concurrent analysis (lock already held) is a conflict (409), not a server
+            // error (500). Mirror the ConflictException used for the timeout case above (:265).
+            throw new ConflictException(
+                "Rulebook analysis already in progress. Please wait for completion.");
         }
 
         return AnalyzeRulebookResultDto.CreateBackgroundTask(taskId);

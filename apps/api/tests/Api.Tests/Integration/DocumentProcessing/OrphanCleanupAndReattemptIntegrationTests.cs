@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.DocumentProcessing;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Seeders.Catalog;
 using Api.Services;
@@ -111,6 +112,9 @@ public sealed class OrphanCleanupAndReattemptIntegrationTests : IAsyncLifetime
     {
         // Arrange
         var orphanReadyPdfId = await SeedPdfWithChildrenAsync(SoftDeletedGameId, "Ready");
+        // #3086: give the orphan a ProcessingJob (+steps) so we can verify the retained
+        // OrphanPdfCleanupSeeder still removes them via the real processing_jobs FK cascade.
+        var orphanJobId = await SeedProcessingJobWithStepsAsync(orphanReadyPdfId);
         var orphanPendingPdfId = await SeedPdfWithChildrenAsync(SoftDeletedGameId, "Pending");
         var validPendingPdfId = await SeedPdfWithChildrenAsync(ValidGameId, "Pending");
         var validReadyPdfId = await SeedPdfWithChildrenAsync(ValidGameId, "Ready");
@@ -128,6 +132,15 @@ public sealed class OrphanCleanupAndReattemptIntegrationTests : IAsyncLifetime
             .Should().Be(0, "text chunks cascade-delete with the orphan PDF");
         (await _dbContext.VectorDocuments.CountAsync(v => v.PdfDocumentId == orphanReadyPdfId, Ct))
             .Should().Be(0, "vector document cascade-deletes with the orphan PDF");
+
+        // #3086 regression guard: OrphanPdfCleanupSeeder delegates to DeleteKbDocumentCommand, which
+        // does NOT delete processing_jobs explicitly — it relies on the FK cascade. Verify against
+        // real Postgres so a future FK change (e.g. to Restrict) can't silently leave zombie jobs/steps.
+        // (The deleted SeedMaintenanceSeeder used to delete jobs explicitly + test it; #3086.)
+        (await _dbContext.ProcessingJobs.CountAsync(j => j.PdfDocumentId == orphanReadyPdfId, Ct))
+            .Should().Be(0, "the orphan PDF's ProcessingJob must cascade-delete with it");
+        (await _dbContext.Set<ProcessingStepEntity>().CountAsync(s => s.ProcessingJobId == orphanJobId, Ct))
+            .Should().Be(0, "and its ProcessingSteps cascade-delete with the job");
 
         // Assert — valid PDFs untouched by cleanup
         (await _dbContext.PdfDocuments.FindAsync(new object[] { validPendingPdfId }, Ct))
@@ -206,6 +219,33 @@ public sealed class OrphanCleanupAndReattemptIntegrationTests : IAsyncLifetime
 
         await _dbContext.SaveChangesAsync(Ct);
         return pdfId;
+    }
+
+    /// <summary>
+    /// Seeds a Queued ProcessingJob + 2 steps for a PDF (same shape as PdfSeeder.EnqueueProcessingJob),
+    /// so a test can assert they cascade-delete with the PDF via the real processing_jobs FK (#3086).
+    /// </summary>
+    private async Task<Guid> SeedProcessingJobWithStepsAsync(Guid pdfId)
+    {
+        var jobId = Guid.NewGuid();
+        _dbContext!.Set<ProcessingJobEntity>().Add(new ProcessingJobEntity
+        {
+            Id = jobId,
+            PdfDocumentId = pdfId,
+            UserId = SystemUserId,
+            Status = "Queued",
+            Priority = 0,
+            CreatedAt = DateTimeOffset.UtcNow,
+            MaxRetries = 3,
+            RetryCount = 0,
+            Steps = new List<ProcessingStepEntity>
+            {
+                new() { Id = Guid.NewGuid(), ProcessingJobId = jobId, StepName = "Upload", Status = "Pending" },
+                new() { Id = Guid.NewGuid(), ProcessingJobId = jobId, StepName = "Extract", Status = "Pending" },
+            },
+        });
+        await _dbContext.SaveChangesAsync(Ct);
+        return jobId;
     }
 
     private async Task SeedBaseEntitiesAsync()

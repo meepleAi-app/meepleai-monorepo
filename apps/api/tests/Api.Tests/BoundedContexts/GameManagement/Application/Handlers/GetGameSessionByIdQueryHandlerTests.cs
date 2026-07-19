@@ -7,6 +7,9 @@ using Moq;
 using Xunit;
 using FluentAssertions;
 using Api.Tests.Constants;
+using Api.SharedKernel.Application;
+using Api.SharedKernel.Domain.ValueObjects;
+using Api.BoundedContexts.GameManagement.Application.Mappers;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -17,12 +20,71 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 public class GetGameSessionByIdQueryHandlerTests
 {
     private readonly Mock<IGameSessionRepository> _sessionRepositoryMock;
+    private readonly Mock<IGameCoreDataProvider> _gameCoreDataMock;
+    private readonly Mock<IHistorySessionScoreProvider> _scoreProviderMock;
     private readonly GetGameSessionByIdQueryHandler _handler;
 
     public GetGameSessionByIdQueryHandlerTests()
     {
         _sessionRepositoryMock = new Mock<IGameSessionRepository>();
-        _handler = new GetGameSessionByIdQueryHandler(_sessionRepositoryMock.Object);
+        _gameCoreDataMock = new Mock<IGameCoreDataProvider>();
+        _scoreProviderMock = new Mock<IHistorySessionScoreProvider>();
+        _handler = new GetGameSessionByIdQueryHandler(
+            _sessionRepositoryMock.Object, _gameCoreDataMock.Object, _scoreProviderMock.Object);
+    }
+
+    private static GameCoreData MakeCoreData(string title = "Catan") =>
+        GameCoreData.Create(title, 1995, 3, 4, 90, 10);
+
+    [Fact]
+    public async Task Handle_PopulatesSlugNameAndScoreboard()
+    {
+        var gameId = Guid.NewGuid();
+        var session = CreateSession(gameId);
+        var pid = Guid.NewGuid();
+        _sessionRepositoryMock.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>())).ReturnsAsync(session);
+        _gameCoreDataMock.Setup(p => p.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>())).ReturnsAsync(MakeCoreData("Catan"));
+        _scoreProviderMock.Setup(p => p.GetScoreboardAsync(session.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SessionScoreboard("Points", "{\"scores\":[]}",
+                new List<ScorePlayerReadModel> { new(pid, "Alice", "Red") }));
+
+        var result = await _handler.Handle(new GetGameSessionByIdQuery(session.Id), TestContext.Current.CancellationToken);
+
+        result.Should().NotBeNull();
+        result!.GameSlug.Should().Be("catan");
+        result.GameName.Should().Be("Catan");
+        result.ScoringType.Should().Be("Points");
+        result.ScorePlayers.Should().ContainSingle(sp => sp.Id == pid && sp.DisplayName == "Alice" && sp.Color == "Red");
+    }
+
+    [Fact]
+    public async Task Handle_NoScoreboard_LeavesScoreFieldsNull()
+    {
+        var gameId = Guid.NewGuid();
+        var session = CreateSession(gameId);
+        _sessionRepositoryMock.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>())).ReturnsAsync(session);
+        _gameCoreDataMock.Setup(p => p.GetCoreDataAsync(It.IsAny<GameRef>(), It.IsAny<CancellationToken>())).ReturnsAsync((GameCoreData?)null);
+        _scoreProviderMock.Setup(p => p.GetScoreboardAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync((SessionScoreboard?)null);
+
+        var result = await _handler.Handle(new GetGameSessionByIdQuery(session.Id), TestContext.Current.CancellationToken);
+
+        result.Should().NotBeNull();
+        result!.GameSlug.Should().BeNull();
+        result.GameName.Should().BeNull();
+        result.ScoringType.Should().BeNull();
+        result.ScorePlayers.Should().BeNull();
+    }
+
+    [Fact]
+    public void ToDto_LeavesSummaryOnlyFieldsNull()
+    {
+        var session = CreateSession(Guid.NewGuid());
+
+        var dto = session.ToDto();
+
+        dto.GameSlug.Should().BeNull();
+        dto.GameName.Should().BeNull();
+        dto.ScorePlayers.Should().BeNull();
     }
 
     [Fact]

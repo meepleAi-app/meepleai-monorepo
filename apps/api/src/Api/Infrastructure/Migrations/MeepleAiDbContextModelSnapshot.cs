@@ -5698,6 +5698,11 @@ namespace Api.Infrastructure.Migrations
                     b.HasIndex("GameId")
                         .HasDatabaseName("IX_game_night_sessions_game_id");
 
+                    b.HasIndex("GameNightEventId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_game_night_sessions_unique_active")
+                        .HasFilter("status = 'InProgress'");
+
                     b.HasIndex("SessionId")
                         .HasDatabaseName("IX_game_night_sessions_session_id");
 
@@ -11629,10 +11634,6 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Name")
-                        .IsUnique()
-                        .HasDatabaseName("ix_game_designers_name");
-
                     b.ToTable("game_designers", (string)null);
                 });
 
@@ -11793,10 +11794,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnName("name");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique()
-                        .HasDatabaseName("ix_game_publishers_name");
 
                     b.ToTable("game_publishers", (string)null);
                 });

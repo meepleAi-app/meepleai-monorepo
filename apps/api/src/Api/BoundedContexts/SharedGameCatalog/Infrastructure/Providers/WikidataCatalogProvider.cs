@@ -268,17 +268,35 @@ LIMIT 1";
                 ? $"BIND(wd:{q.WikidataQid} AS ?game)"
                 : $"?game rdfs:label \"{q.SearchTerm}\"@en.";
 
+        // Issue #3137: each scalar is aggregated independently inside a GROUP BY
+        // subquery so it can never be paired with a mismatched row of the cartesian
+        // product formed by multi-valued OPTIONALs (designer/publisher/edition).
+        // P1872 = "minimum number of players" -> ?minPlayers (MIN);
+        // P1873 = "maximum number of players" -> ?maxPlayers (MAX). These were
+        // previously bound to the wrong variables (swapped).
         return $@"
 SELECT ?game ?gameLabel ?yearPublished ?designerLabel ?publisherLabel
        ?minPlayers ?maxPlayers ?playingTimeMinutes
 WHERE {{
-  {bind}
-  OPTIONAL {{ ?game wdt:P577 ?yearPublished. }}
-  OPTIONAL {{ ?game wdt:P3300 ?designer. }}
-  OPTIONAL {{ ?game wdt:P123 ?publisher. }}
-  OPTIONAL {{ ?game wdt:P1873 ?minPlayers. }}
-  OPTIONAL {{ ?game wdt:P1872 ?maxPlayers. }}
-  OPTIONAL {{ ?game wdt:P2047 ?playingTimeMinutes. }}
+  {{
+    SELECT ?game
+           (MIN(?yearRaw) AS ?yearPublished)
+           (SAMPLE(?designerRaw) AS ?designer)
+           (SAMPLE(?publisherRaw) AS ?publisher)
+           (MIN(?minRaw) AS ?minPlayers)
+           (MAX(?maxRaw) AS ?maxPlayers)
+           (SAMPLE(?playingTimeRaw) AS ?playingTimeMinutes)
+    WHERE {{
+      {bind}
+      OPTIONAL {{ ?game wdt:P577 ?yearRaw. }}
+      OPTIONAL {{ ?game wdt:P178 ?designerRaw. }}
+      OPTIONAL {{ ?game wdt:P123 ?publisherRaw. }}
+      OPTIONAL {{ ?game wdt:P1872 ?minRaw. }}
+      OPTIONAL {{ ?game wdt:P1873 ?maxRaw. }}
+      OPTIONAL {{ ?game wdt:P2047 ?playingTimeRaw. }}
+    }}
+    GROUP BY ?game
+  }}
   SERVICE wikibase:label {{ bd:serviceParam wikibase:language ""en"". }}
 }}
 LIMIT 1";
@@ -331,7 +349,7 @@ LIMIT 1";
         var designer = Get("designerLabel");
         if (!string.IsNullOrWhiteSpace(designer))
         {
-            fields["designers"] = new FieldProvenance("wikidata", sourceUrl, "P3300", fetchedAt, new List<string> { designer });
+            fields["designers"] = new FieldProvenance("wikidata", sourceUrl, "P178", fetchedAt, new List<string> { designer });
         }
 
         var publisher = Get("publisherLabel");
@@ -342,11 +360,11 @@ LIMIT 1";
 
         if (int.TryParse(Get("minPlayers"), System.Globalization.CultureInfo.InvariantCulture, out var mn))
         {
-            fields["minPlayers"] = new FieldProvenance("wikidata", sourceUrl, "P1873", fetchedAt, mn);
+            fields["minPlayers"] = new FieldProvenance("wikidata", sourceUrl, "P1872", fetchedAt, mn);
         }
         if (int.TryParse(Get("maxPlayers"), System.Globalization.CultureInfo.InvariantCulture, out var mx))
         {
-            fields["maxPlayers"] = new FieldProvenance("wikidata", sourceUrl, "P1872", fetchedAt, mx);
+            fields["maxPlayers"] = new FieldProvenance("wikidata", sourceUrl, "P1873", fetchedAt, mx);
         }
         if (int.TryParse(Get("playingTimeMinutes"), System.Globalization.CultureInfo.InvariantCulture, out var pt))
         {

@@ -46,6 +46,8 @@ public class GetMetricsTimeSeriesQueryHandlerTests
         result.Cpu.Count.Should().Be(3);
         result.Memory.Count.Should().Be(3);
         result.Requests.Count.Should().Be(3);
+        result.CpuAvailable.Should().BeTrue();
+        result.MemoryAvailable.Should().BeTrue();
 
         // Verify all 3 queries were executed
         _mockPrometheusService.Verify(
@@ -123,11 +125,15 @@ public class GetMetricsTimeSeriesQueryHandlerTests
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert - graceful degradation: CPU empty, others have data
+        // Assert - graceful degradation: CPU empty, others have data.
+        // Partial failure = source still reachable (#3045).
         result.Should().NotBeNull();
         result.Cpu.Should().BeEmpty();
         result.Memory.Should().ContainSingle();
         result.Requests.Should().ContainSingle();
+        // Per-metric (#3045): CPU query threw → CPU unavailable, but Memory is fine.
+        result.CpuAvailable.Should().BeFalse();
+        result.MemoryAvailable.Should().BeTrue();
     }
 
     [Fact]
@@ -148,11 +154,14 @@ public class GetMetricsTimeSeriesQueryHandlerTests
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert - all empty, no exception thrown
+        // Assert - all empty, no exception thrown.
+        // All 3 queries threw = Prometheus unreachable (#3045: source NOT available).
         result.Should().NotBeNull();
         result.Cpu.Should().BeEmpty();
         result.Memory.Should().BeEmpty();
         result.Requests.Should().BeEmpty();
+        result.CpuAvailable.Should().BeFalse();
+        result.MemoryAvailable.Should().BeFalse();
     }
 
     [Fact]
@@ -175,11 +184,15 @@ public class GetMetricsTimeSeriesQueryHandlerTests
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
+        // Assert - Prometheus responded with 0 points = REAL zero, not an outage.
+        // #3045: source available stays true so the FE renders 0, not "unavailable".
         result.Should().NotBeNull();
         result.Cpu.Should().BeEmpty();
         result.Memory.Should().BeEmpty();
         result.Requests.Should().BeEmpty();
+        // Prometheus responded (0 points) → both metrics available (real zero).
+        result.CpuAvailable.Should().BeTrue();
+        result.MemoryAvailable.Should().BeTrue();
     }
 
     [Fact]

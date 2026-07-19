@@ -250,7 +250,9 @@ internal static class WebApplicationExtensions
                     )
                     .AllowAnyMethod()
                     .AllowCredentials()
-                    .WithExposedHeaders("X-Trace-Id", "X-Span-Id", "traceparent", "tracestate");
+                    // #3146 / Invariante 4: expose the non-blocking save-warning headers so the
+                    // cross-origin FE can read them (mirrors the Program.cs "web" policy).
+                    .WithExposedHeaders("X-Trace-Id", "X-Span-Id", "traceparent", "tracestate", "X-Warning-Code", "X-Live-Session-Id");
             });
         });
 

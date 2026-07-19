@@ -9,11 +9,21 @@ import type { ParticipantRole } from '@/lib/session-live/participant-role';
 
 import { FlavorLoadingSkeleton } from './FlavorLoadingSkeleton';
 
-import type { CatanLiveFlavorLabels, CatanLiveFlavorProps } from './flavors/catan/CatanLiveFlavor';
-
 export type FlavorView = 'live';
 
-type FlavorComponent = ComponentType<CatanLiveFlavorProps>;
+/** Game-agnostic props every per-game flavor component must accept. */
+export interface FlavorProps {
+  readonly session: LiveSessionDto;
+  readonly viewerRole: ParticipantRole;
+  readonly sessionId: string;
+  readonly className?: string;
+  /** #2787: live SignalR points (playerId→points) forwarded to the flavor. */
+  readonly livePoints?: ReadonlyMap<string, number> | null;
+  /** #2787: current phase name forwarded to the flavor. */
+  readonly phaseName?: string | null;
+}
+
+type FlavorComponent = ComponentType<FlavorProps>;
 
 // Lazy chunks are created at MODULE scope — NEVER inside render (that would
 // mint a new component identity every render → remount loop). The loader
@@ -21,6 +31,51 @@ type FlavorComponent = ComponentType<CatanLiveFlavorProps>;
 // KbGlobaleView.tsx) and satisfy next/dynamic's TS loader type.
 const CatanLiveFlavorLazy: FlavorComponent = dynamic(
   () => import('./flavors/catan/CatanLiveFlavor').then(m => ({ default: m.CatanLiveFlavor })),
+  { ssr: false, loading: () => <FlavorLoadingSkeleton /> }
+);
+
+const WingspanLiveFlavorLazy: FlavorComponent = dynamic(
+  () =>
+    import('./flavors/wingspan/WingspanLiveFlavor').then(m => ({
+      default: m.WingspanLiveFlavor,
+    })),
+  { ssr: false, loading: () => <FlavorLoadingSkeleton /> }
+);
+
+const CodenamesLiveFlavorLazy: FlavorComponent = dynamic(
+  () =>
+    import('./flavors/codenames/CodenamesLiveFlavor').then(m => ({
+      default: m.CodenamesLiveFlavor,
+    })),
+  { ssr: false, loading: () => <FlavorLoadingSkeleton /> }
+);
+
+const PuertoRicoLiveFlavorLazy: FlavorComponent = dynamic(
+  () =>
+    import('./flavors/puerto-rico/PuertoRicoLiveFlavor').then(m => ({
+      default: m.PuertoRicoLiveFlavor,
+    })),
+  { ssr: false, loading: () => <FlavorLoadingSkeleton /> }
+);
+
+const PaleoLiveFlavorLazy: FlavorComponent = dynamic(
+  () => import('./flavors/paleo/PaleoLiveFlavor').then(m => ({ default: m.PaleoLiveFlavor })),
+  { ssr: false, loading: () => <FlavorLoadingSkeleton /> }
+);
+
+const PowerGridLiveFlavorLazy: FlavorComponent = dynamic(
+  () =>
+    import('./flavors/power-grid/PowerGridLiveFlavor').then(m => ({
+      default: m.PowerGridLiveFlavor,
+    })),
+  { ssr: false, loading: () => <FlavorLoadingSkeleton /> }
+);
+
+const ZombicideLiveFlavorLazy: FlavorComponent = dynamic(
+  () =>
+    import('./flavors/zombicide/ZombicideLiveFlavor').then(m => ({
+      default: m.ZombicideLiveFlavor,
+    })),
   { ssr: false, loading: () => <FlavorLoadingSkeleton /> }
 );
 
@@ -32,31 +87,27 @@ const CatanLiveFlavorLazy: FlavorComponent = dynamic(
  */
 const FLAVOR_MAP: Record<string, Partial<Record<FlavorView, FlavorComponent>>> = {
   catan: { live: CatanLiveFlavorLazy },
+  wingspan: { live: WingspanLiveFlavorLazy },
+  codenames: { live: CodenamesLiveFlavorLazy },
+  'puerto-rico': { live: PuertoRicoLiveFlavorLazy },
+  paleo: { live: PaleoLiveFlavorLazy },
+  'power-grid': { live: PowerGridLiveFlavorLazy },
+  zombicide: { live: ZombicideLiveFlavorLazy },
 };
 
 export function hasFlavor(gameSlug: string | null | undefined): boolean {
   return gameSlug != null && FLAVOR_MAP[gameSlug]?.live != null;
 }
 
-export interface FlavorRendererProps {
+export interface FlavorRendererProps extends FlavorProps {
   readonly gameSlug: string | null | undefined;
   readonly view: FlavorView;
-  readonly session: LiveSessionDto;
-  readonly labels: CatanLiveFlavorLabels;
-  readonly viewerRole: ParticipantRole;
-  readonly sessionId: string;
-  readonly className?: string;
-  /** #2787: live SignalR points (playerId→points) forwarded to the flavor. */
-  readonly livePoints?: ReadonlyMap<string, number> | null;
-  /** #2787: current phase name forwarded to the flavor. */
-  readonly phaseName?: string | null;
 }
 
 export function FlavorRenderer({
   gameSlug,
   view,
   session,
-  labels,
   viewerRole,
   sessionId,
   className,
@@ -68,7 +119,6 @@ export function FlavorRenderer({
   return (
     <LazyFlavor
       session={session}
-      labels={labels}
       viewerRole={viewerRole}
       sessionId={sessionId}
       className={className}

@@ -45,6 +45,19 @@ internal class EmailAlertChannel : IAlertChannel
             return false;
         }
 
+        // Per-alert email suppression. The health monitor tags non-critical Degraded
+        // (warning) transitions with `_suppress_email` so they reach Slack/DB/dashboard
+        // but do NOT email — only Unhealthy (critical) health transitions email. This is
+        // scoped to the alert (via metadata), so budget/security/dead-letter warning
+        // emails are unaffected. Returns false (not routed) rather than throwing.
+        if (IsEmailSuppressed(metadata))
+        {
+            _logger.LogDebug(
+                "Email channel: alert {AlertType} flagged _suppress_email; skipping email delivery",
+                LogSanitizer.Sanitize(alertType));
+            return false;
+        }
+
         if (_config.To.Count == 0)
         {
             _logger.LogWarning("Email channel is not properly configured (no recipients)");
@@ -92,6 +105,28 @@ internal class EmailAlertChannel : IAlertChannel
             _logger.LogError(ex, "Failed to send email alert for {AlertType}", LogSanitizer.Sanitize(alertType));
             return false;
         }
+    }
+
+    /// <summary>
+    /// Metadata key set by the alert producer to route an alert to every channel
+    /// EXCEPT email. Used by the health monitor to keep non-critical Degraded (warning)
+    /// transitions off the mail channel while still surfacing them on Slack/dashboard.
+    /// </summary>
+    internal const string SuppressEmailMetadataKey = "_suppress_email";
+
+    private static bool IsEmailSuppressed(IDictionary<string, object>? metadata)
+    {
+        if (metadata is null || !metadata.TryGetValue(SuppressEmailMetadataKey, out var value) || value is null)
+        {
+            return false;
+        }
+
+        return value switch
+        {
+            bool b => b,
+            string s => bool.TryParse(s, out var parsed) && parsed,
+            _ => false
+        };
     }
 
     private static string FormatEmailBody(

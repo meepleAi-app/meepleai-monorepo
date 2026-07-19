@@ -105,6 +105,37 @@
     "title": "MeepleAI - Assistente AI per Regolamenti di Giochi da Tavolo"
   },
   "auth": {
+    "2fa": {
+      "setupTitle": "Configura l'autenticazione a due fattori",
+      "setupSubtitle": "Scansiona questo codice QR con la tua app di autenticazione (Google Authenticator, Authy, ecc.)",
+      "step1": "Passo 1: scansiona il codice QR",
+      "step2": "Passo 2: verifica e abilita",
+      "cantScan": "Non riesci a scansionare? Inserisci manualmente",
+      "secretKey": "Chiave segreta",
+      "enterCode": "Inserisci il codice a 6 cifre della tua app",
+      "verifyAndEnable": "Verifica e abilita",
+      "verifying": "Verifica in corso...",
+      "disableTitle": "Disabilita l'autenticazione a due fattori",
+      "disableSubtitle": "Inserisci la password e un codice per disabilitare la 2FA",
+      "disableWarningTitle": "Attenzione: il tuo account sarà meno sicuro",
+      "disableWarning": "La disabilitazione dell'autenticazione a due fattori rimuove un importante livello di sicurezza dal tuo account. Chiunque conosca la tua password potrà accedere al tuo account.",
+      "currentPassword": "Password attuale",
+      "enterPassword": "Inserisci la tua password",
+      "codeOrBackup": "Codice TOTP o codice di backup",
+      "enterCodeOrBackup": "000000 o XXXX-XXXX",
+      "codeInvalid": "Codice troppo lungo",
+      "codeRequired": "Inserisci un codice a 6 cifre o un codice di backup",
+      "disableButton": "Disabilita 2FA",
+      "disabling": "Disabilitazione in corso...",
+      "backupCodesTitle": "Salva i tuoi codici di backup",
+      "backupCodesWarningTitle": "Importante: salva subito questi codici!",
+      "backupCodesWarning": "Questi codici sono l'unico modo per accedere al tuo account se perdi il dispositivo di autenticazione. Ogni codice può essere usato una sola volta.",
+      "backupCodesList": "Codici di backup",
+      "copyCodes": "Copia codici",
+      "downloadCodes": "Scarica",
+      "savedCodes": "Ho salvato i miei codici",
+      "lowBackupCodesWarning": "Hai solo {count} {count, plural, one {codice di backup rimanente} other {codici di backup rimanenti}}. Valuta di riattivare la 2FA dopo la disattivazione per generare nuovi codici di backup."
+    },
     "login": {
       "emailLabel": "Email",
       "emailPlaceholder": "tu@esempio.com",
@@ -2992,6 +3023,31 @@
           "viewAll": "Vedi tutti",
           "viewAllAriaLabel": "Vedi tutti gli achievement di {playerName}",
           "empty": "Nessun achievement ancora"
+        },
+        "trend": {
+          "title": "Andamento",
+          "deltaUp": "↗ +{percent}%",
+          "deltaDown": "↘ {percent}%",
+          "deltaFlat": "→ 0%",
+          "deltaUpAriaLabel": "Percentuale di vittorie in aumento del {percent}%",
+          "deltaDownAriaLabel": "Percentuale di vittorie in calo del {percent}%",
+          "deltaFlatAriaLabel": "Percentuale di vittorie invariata",
+          "empty": "Dati insufficienti per mostrare l’andamento",
+          "trendSummaryAriaLabel": "Andamento della percentuale di vittorie dal {from}% al {to}% negli ultimi {count} mesi",
+          "monthsShort": {
+            "jan": "Gen",
+            "feb": "Feb",
+            "mar": "Mar",
+            "apr": "Apr",
+            "may": "Mag",
+            "jun": "Giu",
+            "jul": "Lug",
+            "aug": "Ago",
+            "sep": "Set",
+            "oct": "Ott",
+            "nov": "Nov",
+            "dec": "Dic"
+          }
         }
       },
       "states": {
@@ -3293,6 +3349,42 @@
           "subtitle": "Si è verificato un errore. Riprova tra qualche istante.",
           "cta": "Riprova"
         }
+      },
+      "stats": {
+        "winRate": "Percentuale vittorie",
+        "timesPlayed": "Partite giocate",
+        "lastPlayed": "Ultima partita",
+        "lastPlayedNever": "Mai",
+        "lastPlayedDaysAgoUnit": "g fa",
+        "leaderboardTitle": "Classifica",
+        "leaderboardPlays": "Partite",
+        "leaderboardAvg": "Punteggio medio",
+        "leaderboardWins": "Vittorie",
+        "leaderboardEmpty": "Ancora nessun dato in classifica.",
+        "communityGateTitle": "Le tue statistiche",
+        "communityGateDescription": "Aggiungi questo gioco alla tua libreria per sbloccare le tue statistiche di gioco.",
+        "communityGateCta": "Aggiungi alla libreria"
+      },
+      "chat": {
+        "title": "Chat con l'assistente",
+        "empty": "Nessun messaggio. Fai una domanda sulle regole del gioco.",
+        "openCta": "Apri la chat",
+        "userPrefix": "Tu",
+        "assistantPrefix": "Assistente"
+      },
+      "houseRules": {
+        "title": "Regole della casa",
+        "addCta": "Aggiungi regola",
+        "addPlaceholder": "Scrivi una regola della casa...",
+        "addSubmit": "Aggiungi",
+        "editLabel": "Modifica",
+        "editSubmit": "Salva",
+        "cancel": "Annulla",
+        "deleteLabel": "Elimina",
+        "deleteConfirmTitle": "Eliminare la regola?",
+        "deleteConfirmMessage": "Questa regola della casa verrà eliminata definitivamente.",
+        "deleteConfirm": "Elimina",
+        "empty": "Nessuna regola della casa. Aggiungine una per personalizzare le regole del gioco."
       }
     },
     "sharedGames": {
@@ -3700,6 +3792,132 @@
           "largestArmyLabel": "Armata+",
           "incAriaTemplate": "{field} +1",
           "decAriaTemplate": "{field} −1"
+        },
+        "wingspan": {
+          "panelAriaLabel": "Wingspan",
+          "leaderboardHeading": "Classifica",
+          "scoreAriaTemplate": "{name}: {score} PV",
+          "categoriesHeading": "Punti per categoria",
+          "roundHeading": "Round",
+          "roundTemplate": "Round {n}/4",
+          "turnBudgetTemplate": "{n} turni",
+          "goalsHeading": "Obiettivi di round",
+          "goalPlaceholderTemplate": "Obiettivo round {n}",
+          "advanceRoundLabel": "Avanza round",
+          "initRoundCta": "Inizia il round",
+          "viewerWaiting": "In attesa dell'host…",
+          "category": {
+            "birds": "Uccelli",
+            "bonusCards": "Carte bonus",
+            "endOfRoundGoals": "Obiettivi di fine round",
+            "eggs": "Uova",
+            "cachedFood": "Cibo accumulato",
+            "tuckedCards": "Carte infilate"
+          }
+        },
+        "codenames": {
+          "panelAriaLabel": "Codenames",
+          "leaderboardHeading": "Classifica",
+          "initBoardCta": "Genera griglia",
+          "viewerWaiting": "In attesa dell'host…",
+          "redLabel": "Rossi",
+          "blueLabel": "Blu",
+          "turnLabel": "Al turno",
+          "foundTemplate": "{found}/{total}",
+          "revealAriaTemplate": "Rivela {word}",
+          "perspectiveOperative": "Vista: Agente",
+          "perspectiveSpymaster": "Vista: Spymaster",
+          "noClue": "Nessun indizio attivo",
+          "cluePlaceholder": "Parola",
+          "clueNumberAria": "Numero indizio",
+          "giveClue": "Dai indizio",
+          "endTurn": "Fine turno",
+          "regenerate": "Rigenera griglia",
+          "winnerTemplate": "Vincono i {team}"
+        },
+        "puerto-rico": {
+          "panelAriaLabel": "Puerto Rico",
+          "leaderboardHeading": "Classifica",
+          "initBoardCta": "Inizia partita",
+          "resetCta": "Reimposta stato",
+          "viewerWaiting": "In attesa dell'host…",
+          "doubloons": "Dobloni",
+          "colonists": "Coloni",
+          "plantations": "Piantagioni",
+          "quarries": "Cave",
+          "buildings": "Edifici",
+          "galleonsHeading": "Galeoni",
+          "tradingHeading": "Casa commerciale",
+          "colonistShipHeading": "Nave coloni",
+          "onShip": "Sulla nave",
+          "supply": "Riserva",
+          "emptyGood": "—",
+          "capTemplate": "{loaded}/{cap}",
+          "goodAria": "Merce nave {n}",
+          "loadAria": "Carica nave {n}",
+          "unloadAria": "Scarica nave {n}",
+          "slotAria": "Slot {n}",
+          "incAria": "{field} +1",
+          "decAria": "{field} -1"
+        },
+        "paleo": {
+          "panelAriaLabel": "Paleo",
+          "leaderboardHeading": "Classifica",
+          "initBoardCta": "Inizia partita",
+          "resetCta": "Reimposta stato",
+          "viewerWaiting": "In attesa dell'host…",
+          "resourcesHeading": "Risorse",
+          "wood": "Legno",
+          "stone": "Pietra",
+          "food": "Cibo",
+          "knowledge": "Conoscenza",
+          "tribeHeading": "Tribù",
+          "statusAlive": "Vivo",
+          "statusWounded": "Ferito",
+          "statusDead": "Morto",
+          "incAria": "{field} +1",
+          "decAria": "{field} -1",
+          "cycleAria": "{name}: cambia stato"
+        },
+        "power-grid": {
+          "panelAriaLabel": "Power Grid",
+          "leaderboardHeading": "Classifica",
+          "initBoardCta": "Inizia partita",
+          "resetCta": "Reimposta stato",
+          "viewerWaiting": "In attesa dell'host…",
+          "plantsHeading": "Centrali",
+          "currentBank": "Attuali",
+          "futureBank": "Future",
+          "emptySlot": "—",
+          "slotAria": "{bank} slot {n}",
+          "resourcesHeading": "Mercato risorse",
+          "coal": "Carbone",
+          "oil": "Petrolio",
+          "garbage": "Rifiuti",
+          "uranium": "Uranio",
+          "incAria": "{field} +1",
+          "decAria": "{field} -1"
+        },
+        "zombicide": {
+          "panelAriaLabel": "Zombicide",
+          "leaderboardHeading": "Classifica",
+          "initBoardCta": "Inizia partita",
+          "resetCta": "Reimposta stato",
+          "viewerWaiting": "In attesa dell'host…",
+          "hordeHeading": "Orda",
+          "walker": "Camminatore",
+          "runner": "Corridore",
+          "fatty": "Grasso",
+          "berserker": "Berserker",
+          "abomination": "Abominio",
+          "necromancer": "Negromante",
+          "survivorsHeading": "Sopravvissuti",
+          "healthy": "Illeso",
+          "wounded": "Ferito",
+          "down": "A terra",
+          "incAria": "{field} +1",
+          "decAria": "{field} -1",
+          "cycleAria": "{name}: cambia ferite"
         }
       },
       "photosTab": {
@@ -3851,6 +4069,15 @@
       }
     },
     "sessionSummary": {
+      "flavor": {
+        "catan": {
+          "winnerTemplate": "{name} vince!",
+          "vpUnit": "PV",
+          "durationTemplate": "{minutes} min",
+          "standingsTitle": "Classifica finale",
+          "empty": "Riepilogo non disponibile"
+        }
+      },
       "hero": {
         "title": "Riepilogo partita",
         "podiumLabel": "Podio finale",
@@ -4829,6 +5056,10 @@
         "deleteToast": "Partita eliminata",
         "deleteToastDescription": "La partita è stata eliminata correttamente"
       },
+      "savedWhileLive": {
+        "toast": "Partita salvata mentre una session è live. Verifica di aver registrato le partite nell'ordine corretto.",
+        "goToLive": "Vai alla session live"
+      },
       "conflict": {
         "title": "Modifica concorrente",
         "description": "Qualcuno ha modificato questa partita mentre la stavi modificando. Ricarica i dati aggiornati o sovrascrivi con le tue modifiche.",
@@ -4839,19 +5070,77 @@
       "error": {
         "loadFailed": "Impossibile caricare la partita",
         "updateFailed": "Aggiornamento non riuscito",
-        "deleteFailed": "Eliminazione non riuscita"
+        "deleteFailed": "Eliminazione non riuscita",
+        "saveFailed": "Salvataggio non riuscito",
+        "saveFailedDescription": "Impossibile salvare la partita. Riprova fra un momento.",
+        "retry": "↻ Riprova salvataggio"
       },
       "a11y": {
         "formLabel": "Modulo modifica partita",
         "readonlyFieldsLabel": "Campi non modificabili",
-        "ariaReadonly": "Questo campo non è modificabile"
+        "ariaReadonly": "Questo campo non è modificabile",
+        "wizardLabel": "Wizard registrazione partita",
+        "stepIndicatorLabel": "Avanzamento registrazione",
+        "backButton": "Torna al passo precedente",
+        "closeButton": "Chiudi",
+        "previewLabel": "Anteprima live record partita",
+        "backToList": "Torna alle partite"
       },
       "actions": {
         "save": "Salva modifiche",
         "saving": "Salvataggio…",
         "delete": "Elimina",
         "cancel": "Annulla",
-        "back": "← Indietro"
+        "back": "← Indietro",
+        "next": "Avanti →",
+        "draft": "Bozza"
+      },
+      "stepIndicatorLabel": "Step {current} di 3",
+      "step1Label": "Gioco",
+      "step2Label": "Quando",
+      "step3Label": "Punteggi",
+      "step1": {
+        "title": "Quale gioco avete giocato?",
+        "subtitle": "Scegli dalla tua libreria. Il punteggio e i giocatori si adattano al gioco.",
+        "searchPlaceholder": "Cerca nella libreria…",
+        "emptyLibraryHint": "↑ Seleziona un gioco per continuare",
+        "freeformLabel": "Nome gioco (testo libero)",
+        "freeformPlaceholder": "Es. Catan, Puerto Rico…",
+        "freeformHint": "Inserisci il nome del gioco se non è in catalogo"
+      },
+      "step2": {
+        "title": "Quando l'avete giocata?",
+        "subtitle": "Data, ora di inizio e durata. La durata è opzionale.",
+        "dateLabel": "Data",
+        "timeLabel": "Ora di inizio",
+        "durationLabel": "Durata (opzionale)",
+        "locationLabel": "Luogo (opzionale)",
+        "locationPlaceholder": "Es. Casa di Marco",
+        "notesLabel": "Note (opzionale)",
+        "notesPlaceholder": "Aggiungi un commento sulla partita…",
+        "durationHint": "Approssimativa — usa per le statistiche ore"
+      },
+      "step3": {
+        "title": "Chi ha giocato e con che punteggio?",
+        "subtitle": "Inserisci i punteggi: il vincitore è calcolato automaticamente dal punteggio più alto.",
+        "playersLabel": "Giocatori e punteggi ({count})",
+        "addPlayerPlaceholder": "Nome giocatore…",
+        "addPlayerButton": "Aggiungi giocatore",
+        "winnerBadge": "Vincitore",
+        "noPlayersHint": "Aggiungi almeno un giocatore per salvare la partita"
+      },
+      "preview": {
+        "sectionLabel": "Anteprima live · Record partita",
+        "noGameSelected": "Seleziona un gioco",
+        "rankingLabel": "Classifica · {count} giocatori",
+        "tip": "Il vincitore è calcolato dal punteggio più alto. Si aggiorna in tempo reale mentre compili."
+      },
+      "draft": {
+        "saving": "Salvataggio…",
+        "saved": "Bozza salvata {time}"
+      },
+      "loading": {
+        "library": "Caricamento libreria…"
       }
     },
     "share": {

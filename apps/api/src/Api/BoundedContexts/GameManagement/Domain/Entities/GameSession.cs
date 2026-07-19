@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Entities;
 using Api.SharedKernel.Domain.Exceptions;
 
@@ -168,13 +169,13 @@ internal sealed class GameSession : AggregateRoot<Guid>
         ArgumentNullException.ThrowIfNull(player);
 
         if (Status.IsFinished)
-            throw new InvalidOperationException($"Cannot add player to finished session (status: {Status})");
+            throw new ConflictException($"Cannot add player to finished session (status: {Status})");
 
         if (_players.Count >= 100)
-            throw new InvalidOperationException("Session cannot have more than 100 players");
+            throw new ConflictException("Session cannot have more than 100 players");
 
         if (HasPlayer(player.PlayerName))
-            throw new InvalidOperationException($"Player '{player.PlayerName}' is already in this session");
+            throw new ConflictException($"Player '{player.PlayerName}' is already in this session");
 
         _players.Add(player);
 

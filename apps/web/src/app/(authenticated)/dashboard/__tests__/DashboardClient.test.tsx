@@ -188,6 +188,43 @@ describe('DashboardClient (Asse C priority cluster)', () => {
     expect(screen.getByRole('button', { name: 'Conferma' })).toBeInTheDocument();
   });
 
+  // #3084: the Recenti card shows the real per-night session count, not a hardcoded 0.
+  it('renders the real session count on a completed GameNight ("N partite")', async () => {
+    const useCompletedMock = vi.mocked(
+      await import('@/hooks/queries/useGameNights')
+    ).useCompletedGameNights;
+    useCompletedMock.mockReturnValue({
+      data: [
+        {
+          id: '00000000-0000-0000-0000-000000000077',
+          organizerId: '00000000-0000-0000-0000-0000000000aa',
+          organizerName: 'Marco',
+          title: 'Serata conclusa',
+          description: null,
+          scheduledAt: '2024-01-01T20:00:00Z',
+          location: null,
+          maxPlayers: null,
+          gameIds: [],
+          status: 'Completed' as const,
+          acceptedCount: 3,
+          pendingCount: 0,
+          totalInvited: 3,
+          sessionCount: 3,
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: null,
+          viewerRsvpStatus: null,
+        },
+      ],
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useCompletedMock>);
+
+    render(<DashboardClient />);
+
+    expect(screen.getByText('3 partite')).toBeInTheDocument();
+  });
+
   it('renders priority sections container with flex-column layout', () => {
     const { container } = render(<DashboardClient />);
     const grid = container.querySelector('[data-slot="dashboard-priority-sections"]');

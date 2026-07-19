@@ -15,14 +15,17 @@ internal sealed partial class ReportGeneratorService : IReportGeneratorService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<ReportGeneratorService> _logger;
+    private readonly IPrometheusQueryService _prometheusService;
     private readonly Dictionary<ReportFormat, IReportFormatter> _formatters;
 
     public ReportGeneratorService(
         MeepleAiDbContext dbContext,
-        ILogger<ReportGeneratorService> logger)
+        ILogger<ReportGeneratorService> logger,
+        IPrometheusQueryService prometheusService)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _prometheusService = prometheusService ?? throw new ArgumentNullException(nameof(prometheusService));
 
         // Initialize formatters
         _formatters = new Dictionary<ReportFormat, IReportFormatter>

@@ -2982,6 +2982,29 @@ Background metric contract:
 
 ---
 
+## Wikidata Enrichment Alerts
+
+Defined in `infra/prometheus/alerts/wikidata-enrichment.yml` (#3117). Distinct from the
+SSE-transport alert above (§22, `wikidata-sse.yml`): this covers the enrichment **pipeline**
+health. The gauges are emitted by `MeepleAiMetrics.WikidataEnrichment.cs` and routed via
+`severity: warning` → the `warning-alerts` receiver in `alertmanager.yml` (throttled email).
+Gauges report `0` when idle, so the expressions never fire on an idle queue.
+
+| Alert | Trigger | Sustained | Meaning / first action |
+|---|---|---|---|
+| `WikidataDeadLetterHigh` | `meepleai_wikidata_dead_letter_count > 100` | 1h | Operator triage backlog building. Investigate via the M13 admin dead-letter page — likely a license-whitelist or SPARQL schema drift. |
+| `WikidataDeadLetterSpike` | `delta(meepleai_wikidata_dead_letter_count[5m]) > 50` | — | A sudden burst of dead-letters: systemic upstream failure or license-whitelist drift. Cross-check `WikidataSparqlLatency` p95 and Wikidata/Commons endpoint health. |
+| `WikidataQueueBacklogHigh` | `meepleai_wikidata_queue_depth > 5000` | 1h | Enrichment backlog building; scheduler under-provisioned relative to enrichment rate. Consider tuning batch size or the DEC-3e rate-limiter. |
+
+### Investigation steps
+
+1. **Dead-letter accumulation** (`WikidataDeadLetterHigh` / `WikidataDeadLetterSpike`): open the M13 admin dead-letter page. A steady climb usually means a license-whitelist entry went stale or the SPARQL query drifted; a sharp spike points at a Wikidata/Commons outage. Cross-check the enrichment attempt outcomes (`meepleai_wikidata_enrichment_attempts_total{outcome="dead_letter"}`).
+2. **Queue not draining** (`WikidataQueueBacklogHigh`): the M9 scheduler is enqueuing faster than the enrichment runner drains. Check the Quartz job health and the DEC-3e rate-limiter; consider raising the batch size if the SPARQL endpoint has headroom.
+
+Alert unit tests live in `infra/prometheus/alerts/wikidata-enrichment.test.yml` (run `promtool test rules` per the header comment; there is no CI promtool gate, so run on demand).
+
+---
+
 ## Appendix A: Complete Command Reference
 
 ### Service Management
@@ -3240,3 +3263,53 @@ After ≥1 week of production data:
 1. Review `meepleai:slo:live_rag_ttft:p95:5m` distribution. If p95 is reliably < 800ms, lower `target` label to `"800"` and add error-ratio burn-rate rules mirroring `SloRagTtftFastBurn`/`SloRagTtftSlowBurn`.
 2. Review `LiveRagRetrievalEmptyHigh` baseline fraction. Adjust threshold from 5% to an appropriate level; remove `provisional` comment.
 3. Remove `provisional: "true"` label from the recording rule once thresholds are validated.
+
+---
+
+## Slack Delivery Alerts (OPS-02)
+
+Defined in `infra/prometheus/alerts/slack-delivery.yml` (#3112). Metrics are emitted by
+`apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.Slack.cs` and routed via
+`severity: warning` → the `warning-alerts` receiver in `alertmanager.yml` (email to
+`ALERT_EMAIL_TO`, throttled). All expressions are idle-safe: with no Slack traffic the
+metric series are absent, so the alerts do not fire on absence.
+
+| Alert | Trigger | Sustained | Meaning / first action |
+|---|---|---|---|
+| `SlackDeliveryFailureRateHigh` | `failed / (sent + failed) > 20%` over 5m | 10m | A large share of Slack notifications are failing; users miss notifications. Check the Slack app token, per-workspace rate limits, and `SlackNotificationProcessorJob` logs. |
+| `SlackTokenRevoked` | `increase(meepleai_slack_token_revocations_total[1h]) > 0` | — | A workspace token was deactivated (`invalid_auth`/`token_revoked`/`account_inactive`); affected users stop receiving Slack notifications until they reconnect. Confirm whether the disconnect is expected. |
+| `SlackRateLimitedSustained` | `rate(meepleai_slack_rate_limited_total[5m]) > 0` | 15m | Sustained Slack 429s delaying delivery. Check send volume and per-workspace throttling; consider backoff/queue tuning. |
+
+### Investigation steps
+
+1. **Scope the failure** in Grafana (or via `/metrics`):
+   ```promql
+   sum by (error_type) (rate(meepleai_slack_messages_failed_total[15m]))
+   ```
+   `error_type` is one of `rate_limit | token_revoked | http_error | unknown` — this tells you which path to follow.
+2. **Token revocations** (`SlackTokenRevoked`): the affected workspace must re-authorise the Slack app. Until then delivery to that team fails by design; silence the alert only after confirming the disconnect is intended.
+3. **Rate limiting** (`SlackRateLimitedSustained`): sustained 429s mean send volume exceeds Slack's per-workspace limits. Verify the notification processor honours `Retry-After` backoff and is not hot-looping.
+4. **Broad failure with no token/limit cause** (`http_error`/`unknown`): check Slack API status and the processor logs for transport errors.
+
+Alert unit tests live in `infra/prometheus/alerts/slack-delivery.test.yml` (run `promtool test rules` per the header comment; there is no CI promtool gate, so run on demand).
+
+## Audit Outbox Alerts
+
+Defined in `infra/prometheus/alerts/audit-outbox.yml` (#3116). The three health gauges are
+emitted by `apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.AuditOutbox.cs` (registered
+via `RegisterAuditOutboxGauges` in `Program.cs`) and routed via `severity: warning` → the
+`warning-alerts` receiver in `alertmanager.yml` (throttled email). The gauges report `0` when
+the queue is idle, so the expressions never fire on an empty queue.
+
+| Alert | Trigger | Sustained | Meaning / first action |
+|---|---|---|---|
+| `AuditOutboxBacklogHigh` | `meepleai_audit_outbox_pending_count > 500` | 10m | The audit outbox processor is not draining Pending rows fast enough (or is stalled); audit events accumulate undelivered. Check the processor job logs and DB health. |
+| `AuditOutboxDrainStalled` | `meepleai_audit_outbox_pending_oldest_age_seconds > 60` | 5m | The oldest Pending row is aging past 60s (threshold from the metric source): drain is falling behind ingestion. Check processor cadence and DB latency. |
+| `AuditOutboxFailedMessages` | `meepleai_audit_outbox_failed_count > 0` | — | One or more rows are in Failed status (poison messages) needing operator intervention. Inspect the failed rows and their error payloads via the admin dashboard. |
+
+### Investigation steps
+
+1. **Backlog / drain lag** (`AuditOutboxBacklogHigh` / `AuditOutboxDrainStalled`): confirm the audit outbox processor is running and not throwing. A steadily-rising `pending_count` with a growing `oldest_age_seconds` indicates a stalled or under-provisioned drain — check DB connectivity and the processor job schedule.
+2. **Poison messages** (`AuditOutboxFailedMessages`): inspect the Failed rows via the admin dashboard; a Failed row is a message the processor could not deliver after its retry budget. Resolve the underlying cause, then requeue or discard per the audit-retention policy.
+
+Alert unit tests live in `infra/prometheus/alerts/audit-outbox.test.yml` (run `promtool test rules` per the header comment; there is no CI promtool gate, so run on demand).

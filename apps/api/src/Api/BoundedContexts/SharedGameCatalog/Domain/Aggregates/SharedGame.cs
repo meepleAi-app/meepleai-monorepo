@@ -592,6 +592,80 @@ public sealed class SharedGame : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Partially enriches this aggregate from sparse catalog-seed provenance
+    /// (Wikidata-primary, BGG fallback) at draft → game promotion. Issues #3147, #3154.
+    /// </summary>
+    /// <remarks>
+    /// Unlike <see cref="EnrichFromBgg"/>, this is <b>lenient and stateless</b>:
+    /// each scalar is applied only when present AND internally consistent;
+    /// missing / implausible values are skipped rather than throwing, because
+    /// catalog-seed provenance is frequently partial (a Wikidata entity may
+    /// expose player counts but no year, a year but no playtime, etc.). It does
+    /// <b>not</b> drive the <see cref="GameDataStatus"/> state machine — the
+    /// aggregate stays a <c>Skeleton</c> so the BGG enrichment queue (#1874) can
+    /// still complete it later. Audit fields are stamped only when something
+    /// actually changed (mirrors <see cref="AssignWikidataQid"/>), so a no-op
+    /// call (all fields absent / implausible) leaves the aggregate untouched.
+    /// <para>Scope: <b>scalars only</b>, by design. Designers/publishers are NOT
+    /// applied here — the <c>_designers</c>/<c>_publishers</c> aggregate collections
+    /// are read-only through <c>SharedGameRepository</c> (<c>MapToEntity</c> maps no
+    /// M:N navigation) and carry throwaway Guids. Wikidata designers/publishers are
+    /// instead persisted as M:N links by the repository's get-or-create-by-name
+    /// resolver, fed RAW NAMES from the seed handler (#3153) — never routed through
+    /// this method or <c>AddDesigner</c>.</para>
+    /// </remarks>
+    /// <param name="yearPublished">Publication year (Wikidata P577); applied when in <c>1901..currentYear+1</c>.</param>
+    /// <param name="minPlayers">Minimum player count (P1872).</param>
+    /// <param name="maxPlayers">
+    /// Maximum player count (P1873). The pair is applied together only when
+    /// <c>min &gt; 0 &amp;&amp; max &gt;= min</c> — we never persist a nonsensical
+    /// range such as "3–0 players" from a lone <paramref name="minPlayers"/>.
+    /// </param>
+    /// <param name="playingTimeMinutes">Playing time in minutes (P2047); applied when &gt; 0.</param>
+    /// <param name="modifiedBy">The actor (approving admin) performing the enrichment.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="modifiedBy"/> is <see cref="Guid.Empty"/>.</exception>
+    public void EnrichFromProvenance(
+        int? yearPublished,
+        int? minPlayers,
+        int? maxPlayers,
+        int? playingTimeMinutes,
+        Guid modifiedBy)
+    {
+        if (modifiedBy == Guid.Empty)
+            throw new ArgumentException("ModifiedBy cannot be empty.", nameof(modifiedBy));
+
+        var changed = false;
+
+        // Year — plausibility mirrors ValidateYear bounds but SKIPS instead of throwing.
+        if (yearPublished is int year && year > 1900 && year <= DateTime.UtcNow.Year + 1)
+        {
+            _yearPublished = year;
+            changed = true;
+        }
+
+        // Player counts — applied as a consistent PAIR only (never a min without a
+        // max >= min), so a partial Wikidata entity can't persist a broken range.
+        if (minPlayers is int min && maxPlayers is int max && min > 0 && max >= min)
+        {
+            _minPlayers = min;
+            _maxPlayers = max;
+            changed = true;
+        }
+
+        if (playingTimeMinutes is int playtime && playtime > 0)
+        {
+            _playingTimeMinutes = playtime;
+            changed = true;
+        }
+
+        if (changed)
+        {
+            _modifiedBy = modifiedBy;
+            _modifiedAt = DateTime.UtcNow;
+        }
+    }
+
+    /// <summary>
     /// Marks this game as complete (no PDF needed or PDF already handled).
     /// Must be in Enriched state.
     /// </summary>

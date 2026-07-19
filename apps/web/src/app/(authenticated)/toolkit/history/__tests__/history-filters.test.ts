@@ -105,6 +105,50 @@ describe('parseWinScore', () => {
     const dto = makeDto({ scoreData: JSON.stringify({ Alice: 42, Bob: 'DNF' }) });
     expect(parseWinScore(dto)).toBe(42);
   });
+
+  // The real shape produced by the backend PointsScoringStrategy (camelCase):
+  // { "scores": [ { "playerId": "...", "points": N }, ... ] }.
+  it('returns the max points from the nested Points scoreData shape {scores:[{playerId,points}]}', () => {
+    const dto = makeDto({
+      scoringType: 'Points',
+      scoreData: JSON.stringify({
+        scores: [
+          { playerId: '11111111-1111-1111-1111-111111111111', points: 42 },
+          { playerId: '22222222-2222-2222-2222-222222222222', points: 30 },
+        ],
+      }),
+    });
+    expect(parseWinScore(dto)).toBe(42);
+  });
+
+  it('returns null for a Points payload with an empty scores array', () => {
+    expect(parseWinScore(makeDto({ scoreData: JSON.stringify({ scores: [] }) }))).toBeNull();
+  });
+
+  it('ignores non-numeric points entries in the nested Points shape', () => {
+    const dto = makeDto({
+      scoreData: JSON.stringify({
+        scores: [
+          { playerId: '11111111-1111-1111-1111-111111111111', points: 'DNF' },
+          { playerId: '22222222-2222-2222-2222-222222222222', points: 15 },
+        ],
+      }),
+    });
+    expect(parseWinScore(dto)).toBe(15);
+  });
+
+  it('returns null for a non-Points shape with no numeric leaf (BinaryWin results)', () => {
+    const dto = makeDto({
+      scoringType: 'BinaryWin',
+      scoreData: JSON.stringify({
+        results: [
+          { playerId: '11111111-1111-1111-1111-111111111111', isWinner: true },
+          { playerId: '22222222-2222-2222-2222-222222222222', isWinner: false },
+        ],
+      }),
+    });
+    expect(parseWinScore(dto)).toBeNull();
+  });
 });
 
 // ─── toHistoryRow ───────────────────────────────────────────────────────────

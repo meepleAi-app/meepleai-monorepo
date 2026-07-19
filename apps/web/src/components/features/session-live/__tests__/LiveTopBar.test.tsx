@@ -95,6 +95,34 @@ describe('LiveTopBar — SI-4 start-time chip', () => {
   });
 });
 
+// ─── #3146 Slice 1 — chips are desktop-only (lg+) ──────────────────────────────
+
+describe('LiveTopBar — session-state chips are desktop-only (lg+, #3146)', () => {
+  // Below lg the chips move to LiveMobileMetaStrip (the mobile always-visible
+  // counterpart), so the topbar chips are gated `lg:inline` — they belong to
+  // the desktop layer (which itself switches on lg via DesktopBody/MobileBody).
+  it('gates the start-time chip to lg (not md/sm)', () => {
+    renderTopBar({ startedAtLabel: '▶ Ora di inizio 5 lug, 20:35 · derivata' });
+    const chip = document.querySelector('[data-slot="session-live-top-bar-started-at"]');
+    expect(chip?.className).toContain('lg:inline');
+    expect(chip?.className).not.toContain('md:inline');
+  });
+
+  it('gates the elapsed timer chip to lg (not sm)', () => {
+    renderTopBar({ elapsedMs: 60_000 });
+    const chip = document.querySelector('[data-slot="session-live-top-bar-timer"]');
+    expect(chip?.className).toContain('lg:inline');
+    expect(chip?.className).not.toContain('sm:inline');
+  });
+
+  it('gates the turn label to lg (not sm)', () => {
+    renderTopBar();
+    const turn = screen.getByText('Turno 3/8');
+    expect(turn.className).toContain('lg:inline');
+    expect(turn.className).not.toContain('sm:inline');
+  });
+});
+
 // ─── G4 — Elapsed timer chip ──────────────────────────────────────────────────
 
 describe('LiveTopBar — G4 elapsed timer chip', () => {

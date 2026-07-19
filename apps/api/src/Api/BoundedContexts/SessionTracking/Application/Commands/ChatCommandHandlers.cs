@@ -289,7 +289,7 @@ public class DeleteChatMessageCommandHandler : IRequestHandler<DeleteChatMessage
             ?? throw new NotFoundException($"Message {request.MessageId} not found");
 
         if (message.MessageType != SessionChatMessageType.Text)
-            throw new InvalidOperationException("Only text messages can be deleted.");
+            throw new ConflictException("Only text messages can be deleted.");
 
         // #2655 IDOR guard: resolve the sending participant server-side from the
         // authenticated caller — never trust a client-supplied requester id. Only

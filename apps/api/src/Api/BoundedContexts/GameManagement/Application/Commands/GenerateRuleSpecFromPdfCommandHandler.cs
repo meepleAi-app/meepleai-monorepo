@@ -60,13 +60,24 @@ internal class GenerateRuleSpecFromPdfCommandHandler : ICommandHandler<GenerateR
             atoms.Add(_parsingService.CreateRuleAtom(rules[index], index + 1));
         }
 
+        // A RuleSpec is always game-scoped. When the PDF is not linked to any game
+        // (both PrivateGameId and SharedGameId are null) we must not fabricate a
+        // Guid.Empty GameId — surface a 409 so the caller links the PDF to a game
+        // before generating a RuleSpec (#3096).
+        var gameId = pdf.PrivateGameId ?? pdf.SharedGameId;
+        if (gameId is null)
+        {
+            throw new ConflictException(
+                $"PDF document {command.PdfDocumentId} is not linked to a game; link it to a game before generating a RuleSpec.");
+        }
+
         // Generate version
         var timestamp = _timeProvider.GetUtcNow().UtcDateTime;
         var version = $"ingest-{timestamp:yyyyMMddHHmmss}";
 
         return new RuleSpecDto(
             Id: Guid.NewGuid(), // Temporary - will be assigned by DB
-            GameId: pdf.PrivateGameId ?? pdf.SharedGameId ?? Guid.Empty,
+            GameId: gameId.Value,
             Version: version,
             CreatedAt: timestamp,
             CreatedByUserId: null,

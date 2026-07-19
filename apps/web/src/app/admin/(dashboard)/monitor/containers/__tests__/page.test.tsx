@@ -18,6 +18,7 @@ const mockGetDockerContainers = vi.hoisted(() => vi.fn());
 const mockRestartService = vi.hoisted(() => vi.fn());
 const mockGetMetricsTimeSeries = vi.hoisted(() => vi.fn());
 const mockGetAllBatchJobs = vi.hoisted(() => vi.fn());
+const mockGetSystemResources = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/api', () => ({
   api: {
@@ -26,6 +27,7 @@ vi.mock('@/lib/api', () => ({
       restartService: mockRestartService,
       getMetricsTimeSeries: mockGetMetricsTimeSeries,
       getAllBatchJobs: mockGetAllBatchJobs,
+      getSystemResources: mockGetSystemResources,
     },
   },
 }));
@@ -56,6 +58,7 @@ describe('ContainerDashboardPage', () => {
     mockGetDockerContainers.mockReturnValue(new Promise(() => {}));
     mockGetMetricsTimeSeries.mockReturnValue(new Promise(() => {}));
     mockGetAllBatchJobs.mockReturnValue(new Promise(() => {}));
+    mockGetSystemResources.mockReturnValue(new Promise(() => {}));
   });
 
   it('renders page with title', () => {

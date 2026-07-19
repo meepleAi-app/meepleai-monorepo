@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -26,7 +27,11 @@ internal static class ReattemptStalePendingPdfsSeeder
     {
         var validGameIds = db.SharedGames.Select(g => g.Id);
         return db.PdfDocuments
-            .Where(p => p.ProcessingState == nameof(PdfProcessingState.Pending)
+            // #3075: never re-enqueue demo mock placeholders (seed/ prefix, no real blob) — they are
+            // seeded Pending for the dashboard demo; re-enqueuing would only fail on the missing blob
+            // and flip them to Failed, breaking their intended demo state.
+            .Where(p => !p.FilePath.StartsWith(PdfDocumentEntity.DemoMockFilePathPrefix)
+                && p.ProcessingState == nameof(PdfProcessingState.Pending)
                 && p.SharedGameId != null
                 && validGameIds.Contains(p.SharedGameId.Value)
                 && !db.ProcessingJobs.Any(j => j.PdfDocumentId == p.Id

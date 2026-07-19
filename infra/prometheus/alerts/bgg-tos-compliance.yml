@@ -1,0 +1,25 @@
+# Issue #3082 — BGG ToS-compliance SLO=0 alert.
+#
+# Metric source (apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.CatalogCovers.cs):
+#   - meepleai_bgg_url_attempted_render_total (Counter<long>, label: path)
+#     SLO=0: any nonzero increment means a browser attempted to render a
+#     BGG-hosted asset (hard ban #2123 / ADR-059 §5). Every increment is a P1
+#     ToS-violation attempt; the metric is beaconed by the FE image safe-loader
+#     (apps/web/src/lib/images/safe-loader.ts) to POST /metrics/bgg-attempt.
+#
+# Routing: severity=critical hits the page-grade `critical-alerts` route in
+# alertmanager.yml (0s group_wait, immediate email rendering runbook_url).
+# `severity: P1` is NOT a routing key in this repo, so `critical` is used to page.
+groups:
+  - name: meepleai_bgg_tos_compliance_alerts
+    rules:
+      - alert: BggAssetRenderAttempted
+        expr: rate(meepleai_bgg_url_attempted_render_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          subsystem: catalog-covers
+        annotations:
+          summary: "BGG ToS violation attempt on {{ $labels.path }} (SLO=0 P1)"
+          description: "meepleai_bgg_url_attempted_render_total incremented: a browser attempted to load an image from a banned BGG host. SLO for this metric is ZERO; any nonzero rate is a P1 ToS-compliance incident (#2123, ADR-059)."
+          runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#20-catalog-covers--bgg-tos-compliance-2123"

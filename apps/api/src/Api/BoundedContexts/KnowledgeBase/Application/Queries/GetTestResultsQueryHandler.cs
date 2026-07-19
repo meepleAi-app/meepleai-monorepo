@@ -47,7 +47,9 @@ internal sealed class GetTestResultsQueryHandler : IRequestHandler<GetTestResult
                 request.Skip,
                 request.Take,
                 cancellationToken).ConfigureAwait(false);
-            totalCount = results.Count; // Simplified for now
+            totalCount = await _testResultRepository.GetSavedCountAsync(
+                request.ExecutedBy,
+                cancellationToken).ConfigureAwait(false);
         }
         else if (request.TypologyId.HasValue)
         {
@@ -67,7 +69,9 @@ internal sealed class GetTestResultsQueryHandler : IRequestHandler<GetTestResult
                 request.Skip,
                 request.Take,
                 cancellationToken).ConfigureAwait(false);
-            totalCount = results.Count; // Simplified for now
+            totalCount = await _testResultRepository.GetCountByExecutedByAsync(
+                request.ExecutedBy.Value,
+                cancellationToken).ConfigureAwait(false);
         }
         else if (request.From.HasValue && request.To.HasValue)
         {
@@ -77,7 +81,10 @@ internal sealed class GetTestResultsQueryHandler : IRequestHandler<GetTestResult
                 request.Skip,
                 request.Take,
                 cancellationToken).ConfigureAwait(false);
-            totalCount = results.Count; // Simplified for now
+            totalCount = await _testResultRepository.GetCountByDateRangeAsync(
+                request.From.Value,
+                request.To.Value,
+                cancellationToken).ConfigureAwait(false);
         }
         else
         {

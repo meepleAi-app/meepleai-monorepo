@@ -12,10 +12,14 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries;
 internal class GetSessionHistoryQueryHandler : IQueryHandler<GetSessionHistoryQuery, List<GameSessionDto>>
 {
     private readonly IGameSessionRepository _sessionRepository;
+    private readonly IHistorySessionScoreProvider _scoreProvider;
 
-    public GetSessionHistoryQueryHandler(IGameSessionRepository sessionRepository)
+    public GetSessionHistoryQueryHandler(
+        IGameSessionRepository sessionRepository,
+        IHistorySessionScoreProvider scoreProvider)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _scoreProvider = scoreProvider ?? throw new ArgumentNullException(nameof(scoreProvider));
     }
 
     public async Task<List<GameSessionDto>> Handle(GetSessionHistoryQuery query, CancellationToken cancellationToken)
@@ -37,6 +41,23 @@ internal class GetSessionHistoryQueryHandler : IQueryHandler<GetSessionHistoryQu
             cancellationToken: cancellationToken
         ).ConfigureAwait(false);
 
-        return sessions.Select(s => s.ToDto()).ToList();
+        var dtos = sessions.Select(s => s.ToDto()).ToList();
+        if (dtos.Count == 0)
+            return dtos;
+
+        // Enrich with the polymorphic score, which lives in the SessionTracking
+        // context and is bridged only via LiveGameSession (#3080). Sessions with no
+        // resolvable score are left with null ScoringType/ScoreData.
+        var scores = await _scoreProvider
+            .GetScoresAsync(dtos.Select(d => d.Id).ToList(), cancellationToken)
+            .ConfigureAwait(false);
+        if (scores.Count == 0)
+            return dtos;
+
+        return dtos
+            .Select(d => scores.TryGetValue(d.Id, out var score)
+                ? d with { ScoringType = score.ScoringType, ScoreData = score.ScoreData }
+                : d)
+            .ToList();
     }
 }

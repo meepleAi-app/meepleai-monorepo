@@ -85,13 +85,17 @@ internal sealed class GetAgentStatsQueryHandler : IQueryHandler<GetAgentStatsQue
                     .OrderByDescending(a => a.ExecutionCount)
                     .ToList();
 
+                var totalExecutions = agents.Sum(a => a.ExecutionCount);
                 var totals = new AgentAggregateStats
                 {
                     TotalAgents = AgentMetadataMap.Count,
                     ActiveAgents = agents.Count(a => a.IsActive),
-                    TotalExecutions = agents.Sum(a => a.ExecutionCount),
+                    TotalExecutions = totalExecutions,
                     TotalTokens = agents.Sum(a => a.TotalTokens),
-                    AverageLatency = agents.Count > 0 ? agents.Average(a => a.AverageLatencyMs) : 0
+                    // #3122: sample-weighted mean; a mean-of-means over-weights low-volume agents.
+                    AverageLatency = totalExecutions > 0
+                        ? agents.Sum(a => a.AverageLatencyMs * a.ExecutionCount) / totalExecutions
+                        : 0
                 };
 
                 return new AgentStatsResult { Agents = agents, Totals = totals };

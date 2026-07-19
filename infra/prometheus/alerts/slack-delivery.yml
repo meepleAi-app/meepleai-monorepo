@@ -1,0 +1,55 @@
+# Issue #3112 — OPS-02 Slack delivery observability alerts.
+#
+# Metric source (apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.Slack.cs).
+# Prometheus names = the C# dotted names with dots -> underscores and NO unit suffix
+# (naming verified against #3082's meepleai_bgg_url_attempted_render_total, whose C#
+# name is meepleai.bgg.url.attempted_render.total):
+#   - meepleai_slack_messages_sent_total     (Counter, labels: channel_type, notification_type)
+#   - meepleai_slack_messages_failed_total   (Counter, labels: channel_type, notification_type, error_type)
+#   - meepleai_slack_rate_limited_total      (Counter, label: team_id)
+#   - meepleai_slack_token_revocations_total (Counter)
+# Emitted end-to-end (RecordSlackMessage*/RecordSlackRateLimited/RecordSlackTokenRevocation)
+# but previously had NO alert rule — a delivery outage or token revocation was invisible.
+#
+# Routing: severity=warning matches the `warning-alerts` route in alertmanager.yml
+# (email to ALERT_EMAIL_TO, throttled). These are operational signals, not P1/paging
+# like the BGG ToS alert. Idle-safe: when a metric has no series (no Slack traffic yet)
+# the expressions return no samples, so the alerts never fire on absence.
+groups:
+  - name: meepleai_slack_delivery_alerts
+    rules:
+      - alert: SlackDeliveryFailureRateHigh
+        # `sent` and `failed` are separate lazily-created counters: on a cold-start
+        # all-failures deploy the `sent` series can be entirely absent. Guard the `sent`
+        # sub-term with `or vector(0)` so the denominator survives (else <empty>+<x> = empty
+        # vector and the alert silently never fires at 100% failure). The guard must wrap the
+        # sent term, NOT the outer ratio (the `> 0.2` comparison would filter a wrapped 0).
+        expr: (sum(rate(meepleai_slack_messages_failed_total[5m])) / ((sum(rate(meepleai_slack_messages_sent_total[5m])) or vector(0)) + sum(rate(meepleai_slack_messages_failed_total[5m])))) > 0.2
+        for: 10m
+        labels:
+          severity: warning
+          subsystem: slack-delivery
+        annotations:
+          summary: "Slack delivery failure rate above 20% (5m window, sustained 10m)"
+          description: "More than 20% of Slack notification deliveries are failing (meepleai_slack_messages_failed_total vs _sent_total). Users are missing Slack notifications. Check the Slack app token validity, per-workspace rate limits, and the SlackNotificationProcessorJob logs."
+          runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#slack-delivery-alerts-ops-02"
+      - alert: SlackTokenRevoked
+        expr: increase(meepleai_slack_token_revocations_total[1h]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          subsystem: slack-delivery
+        annotations:
+          summary: "Slack OAuth token revoked in the last 1h"
+          description: "meepleai_slack_token_revocations_total incremented: a Slack workspace token was deactivated (invalid_auth/token_revoked/account_inactive). The affected users stop receiving Slack notifications until they reconnect the workspace. Confirm whether this is an expected disconnect."
+          runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#slack-delivery-alerts-ops-02"
+      - alert: SlackRateLimitedSustained
+        expr: sum(rate(meepleai_slack_rate_limited_total[5m])) > 0
+        for: 15m
+        labels:
+          severity: warning
+          subsystem: slack-delivery
+        annotations:
+          summary: "Slack API rate-limiting sustained for 15m"
+          description: "meepleai_slack_rate_limited_total has been incrementing for 15m: Slack is returning 429s and delaying notification delivery. Check send volume and per-workspace throttling; consider backoff/queue tuning."
+          runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#slack-delivery-alerts-ops-02"

@@ -186,7 +186,9 @@ internal static class MonitoringEndpoints
             {
                 cpu = result.Cpu.Select(p => new { timestamp = p.Timestamp, value = p.Value }),
                 memory = result.Memory.Select(p => new { timestamp = p.Timestamp, value = p.Value }),
-                requests = result.Requests.Select(p => new { timestamp = p.Timestamp, value = p.Value })
+                requests = result.Requests.Select(p => new { timestamp = p.Timestamp, value = p.Value }),
+                cpuAvailable = result.CpuAvailable,
+                memoryAvailable = result.MemoryAvailable
             });
         })
         .WithName("GetMetricsTimeSeries")

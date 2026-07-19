@@ -20,10 +20,9 @@
 
 'use client';
 
-import clsx from 'clsx';
-
 import { Button } from '@/components/ui/primitives/button';
 import type { RsvpStatus } from '@/lib/api/schemas/game-nights.schemas';
+import { cn } from '@/lib/utils';
 
 type RsvpResponse = Exclude<RsvpStatus, 'Pending'>;
 
@@ -53,6 +52,16 @@ export interface GameNightRsvpActionBarProps {
    * `POST /api/v1/game-nights/invitations/{token}/respond` validator.
    */
   readonly mode?: 'authenticated' | 'public';
+  /**
+   * Compact rendering below `md` (#2989 Screen C). When true, the outer card
+   * chrome (border / surface / padding) and the visible heading are dropped
+   * *only at <md* so the control can sit directly inside a mobile sticky bar
+   * that already supplies the surface — keeping the pinned bar short enough to
+   * clear with a modest scroll reservation. At md+ the full card is preserved
+   * (desktop is unchanged). The section keeps its `aria-label` landmark, so the
+   * heading is only visually hidden on mobile, never removed for assistive tech.
+   */
+  readonly compact?: boolean;
   readonly className?: string;
 }
 
@@ -97,6 +106,7 @@ export function GameNightRsvpActionBar({
   disabled = false,
   onSelect,
   mode = 'authenticated',
+  compact = false,
   className,
 }: GameNightRsvpActionBarProps): React.JSX.Element {
   const anyPending = pendingResponse !== null;
@@ -110,10 +120,25 @@ export function GameNightRsvpActionBar({
     <section
       data-testid="game-night-rsvp-action-bar"
       data-mode={mode}
+      data-compact={compact ? 'true' : 'false'}
       aria-label={labels.sectionTitle}
-      className={clsx('rounded-lg border border-border bg-card p-4', className)}
+      className={cn(
+        'rounded-lg border border-border bg-card p-4',
+        // Compact (<md only): shed the card chrome so the mobile sticky wrapper
+        // is the sole surface; the full card returns at md+. tailwind-merge lets
+        // these max-md overrides win over the base above at <md.
+        compact && 'max-md:rounded-none max-md:border-0 max-md:bg-transparent max-md:p-0',
+        className
+      )}
     >
-      <h2 className="mb-3 font-display text-base font-extrabold text-foreground">
+      <h2
+        className={cn(
+          'mb-3 font-display text-base font-extrabold text-foreground',
+          // Hidden on mobile in compact mode (the sticky bar needs no heading;
+          // the section aria-label keeps the landmark named for a11y).
+          compact && 'max-md:hidden'
+        )}
+      >
         {labels.sectionTitle}
       </h2>
 
@@ -133,7 +158,15 @@ export function GameNightRsvpActionBar({
               aria-pressed={isCurrent}
               disabled={allDisabled}
               onClick={() => onSelect(btn.response)}
-              className={clsx('flex-1 min-w-[120px]', isCurrent && !isPending && btn.selectedClass)}
+              className={cn(
+                // #2989 Screen C: 44px touch-target floor on mobile (SP8 B-02
+                // regression guard). `size="sm"` renders h-9 (36px); min-height
+                // wins over the fixed height, lifting the tap area to 44px. At
+                // ≤~380px the three min-w-[120px] CTAs wrap to two rows — the
+                // sticky-bar clearance in GameNightDetailView accounts for that.
+                'flex-1 min-w-[120px] min-h-[44px]',
+                isCurrent && !isPending && btn.selectedClass
+              )}
             >
               <span aria-hidden="true" className="mr-1 text-base leading-none">
                 {btn.icon}

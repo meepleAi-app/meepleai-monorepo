@@ -7,6 +7,17 @@ namespace Api.Infrastructure.Entities;
 
 public class PdfDocumentEntity
 {
+    /// <summary>
+    /// FilePath prefix that marks a demo/dogfood mock placeholder row (no real blob, no
+    /// text_chunks), seeded by <c>SeedBadswormPersonaCommandHandler</c> as
+    /// <c>seed/badsworm/&lt;game&gt;/rulebook.pdf</c>. Real content always lives under
+    /// <c>pdfs/{id}/…</c>. Rows with this prefix are excluded from the RAG readiness signal
+    /// (<c>SeedStateHealthCheck</c>) and from <c>StalePdfRecoveryService</c>, so their deliberate
+    /// non-Ready demo states neither degrade <c>seed_state</c> nor get force-processed into
+    /// <c>Failed</c> on the missing blob. Single source of truth for the marker (#3075).
+    /// </summary>
+    public const string DemoMockFilePathPrefix = "seed/";
+
     // DDD-PHASE2: Converted to Guid for domain alignment
     public Guid Id { get; set; } = Guid.NewGuid();
     public string FileName { get; set; } = default!;

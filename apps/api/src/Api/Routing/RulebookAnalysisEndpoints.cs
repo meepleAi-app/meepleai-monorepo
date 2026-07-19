@@ -22,7 +22,8 @@ internal static class RulebookAnalysisEndpoints
             .Produces<AnalyzeRulebookResultDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status404NotFound);
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict); // #3163: analysis already in progress / non-analyzable category
 
         // GET /api/v1/documents/{documentId}/analysis
         group.MapGet("/documents/{documentId:guid}/analysis", HandleGetActiveAnalysis)

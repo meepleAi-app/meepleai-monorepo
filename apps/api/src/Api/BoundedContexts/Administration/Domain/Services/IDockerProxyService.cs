@@ -24,7 +24,12 @@ public record ContainerInfoDto(
     string State,
     string Status,
     DateTime Created,
-    IReadOnlyDictionary<string, string> Labels);
+    IReadOnlyDictionary<string, string> Labels,
+    // Issue #3042: live per-container metrics from the Docker /stats endpoint.
+    // Null when the container is not running or the stats call fails/unreachable.
+    double? CpuPercent = null,
+    long? MemoryUsageBytes = null,
+    long? MemoryLimitBytes = null);
 
 public record ContainerDetailDto(
     string Id,

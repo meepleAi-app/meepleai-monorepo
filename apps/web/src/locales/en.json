@@ -114,6 +114,37 @@
     "title": "MeepleAI - AI Board Game Rules Assistant"
   },
   "auth": {
+    "2fa": {
+      "setupTitle": "Set Up Two-Factor Authentication",
+      "setupSubtitle": "Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)",
+      "step1": "Step 1: Scan QR Code",
+      "step2": "Step 2: Verify & Enable",
+      "cantScan": "Can't scan? Enter manually",
+      "secretKey": "Secret Key",
+      "enterCode": "Enter the 6-digit code from your app",
+      "verifyAndEnable": "Verify & Enable",
+      "verifying": "Verifying...",
+      "disableTitle": "Disable Two-Factor Authentication",
+      "disableSubtitle": "Enter your password and a code to disable 2FA",
+      "disableWarningTitle": "Warning: Your account will be less secure",
+      "disableWarning": "Disabling two-factor authentication removes an important security layer from your account. Anyone with your password will be able to access your account.",
+      "currentPassword": "Current Password",
+      "enterPassword": "Enter your password",
+      "codeOrBackup": "TOTP Code or Backup Code",
+      "enterCodeOrBackup": "000000 or XXXX-XXXX",
+      "codeInvalid": "Code is too long",
+      "codeRequired": "Please enter a 6-digit code or backup code",
+      "disableButton": "Disable 2FA",
+      "disabling": "Disabling...",
+      "backupCodesTitle": "Save Your Backup Codes",
+      "backupCodesWarningTitle": "Important: Save these codes now!",
+      "backupCodesWarning": "These codes are your only way to access your account if you lose your authenticator device. Each code can only be used once.",
+      "backupCodesList": "Backup codes",
+      "copyCodes": "Copy Codes",
+      "downloadCodes": "Download",
+      "savedCodes": "I've Saved My Codes",
+      "lowBackupCodesWarning": "You only have {count} backup {count, plural, one {code} other {codes}} remaining. Consider re-enabling 2FA after disabling to generate new backup codes."
+    },
     "login": {
       "emailLabel": "Email",
       "emailPlaceholder": "you@example.com",
@@ -697,6 +728,47 @@
       "upload": "Upload"
     },
     "title": "PDF Import Wizard"
+  },
+  "pdfIndexing": {
+    "pending": "Awaiting processing",
+    "processing": "Processing...",
+    "indexed": "Knowledge Base ready!",
+    "failed": "Indexing failed",
+    "progress": "{progress}%",
+    "chunksCount": "{count} chunks indexed",
+    "backgroundNote": "You can keep going — indexing will finish in the background.",
+    "continueToAgent": "Continue: configure agent",
+    "stageCompleted": "completed",
+    "stageActive": "in progress...",
+    "stageFailed": "error",
+    "stagePending": "pending",
+    "steps": {
+      "uploading": "Uploading file",
+      "extracting": "Extracting text",
+      "chunking": "Semantic chunking",
+      "indexing": "Vector indexing"
+    }
+  },
+  "kbStatus": {
+    "pending": "Pending",
+    "processing": "Processing",
+    "indexed": "Knowledge Base ready",
+    "failed": "Indexing failed",
+    "createAgent": "Create agent",
+    "retry": "Retry"
+  },
+  "notificationCenter": {
+    "title": "Notifications",
+    "newSection": "NEW",
+    "previousSection": "EARLIER",
+    "markAllRead": "Mark all as read",
+    "empty": "No notifications",
+    "emptySubtext": "Your notifications will appear here",
+    "viewAll": "View all",
+    "loading": "Loading notifications...",
+    "kbReady": {
+      "cta": "→ Create your agent"
+    }
   },
   "legal": {
     "tableOfContents": "Table of Contents",
@@ -2944,6 +3016,31 @@
           "viewAll": "View all",
           "viewAllAriaLabel": "View all achievements for {playerName}",
           "empty": "No achievements yet"
+        },
+        "trend": {
+          "title": "Trend",
+          "deltaUp": "↗ +{percent}%",
+          "deltaDown": "↘ {percent}%",
+          "deltaFlat": "→ 0%",
+          "deltaUpAriaLabel": "Win rate up by {percent}%",
+          "deltaDownAriaLabel": "Win rate down by {percent}%",
+          "deltaFlatAriaLabel": "Win rate unchanged",
+          "empty": "Not enough data to show a trend",
+          "trendSummaryAriaLabel": "Win rate trend from {from}% to {to}% over the last {count} months",
+          "monthsShort": {
+            "jan": "Jan",
+            "feb": "Feb",
+            "mar": "Mar",
+            "apr": "Apr",
+            "may": "May",
+            "jun": "Jun",
+            "jul": "Jul",
+            "aug": "Aug",
+            "sep": "Sep",
+            "oct": "Oct",
+            "nov": "Nov",
+            "dec": "Dec"
+          }
         }
       },
       "states": {
@@ -3245,6 +3342,42 @@
           "subtitle": "Something went wrong. Please try again in a moment.",
           "cta": "Retry"
         }
+      },
+      "stats": {
+        "winRate": "Win rate",
+        "timesPlayed": "Times played",
+        "lastPlayed": "Last played",
+        "lastPlayedNever": "Never",
+        "lastPlayedDaysAgoUnit": "d ago",
+        "leaderboardTitle": "Leaderboard",
+        "leaderboardPlays": "Plays",
+        "leaderboardAvg": "Avg score",
+        "leaderboardWins": "Wins",
+        "leaderboardEmpty": "No leaderboard data yet.",
+        "communityGateTitle": "Your stats",
+        "communityGateDescription": "Add this game to your library to unlock your play stats.",
+        "communityGateCta": "Add to library"
+      },
+      "chat": {
+        "title": "Chat with the assistant",
+        "empty": "No messages yet. Ask a question about the game's rules.",
+        "openCta": "Open chat",
+        "userPrefix": "You",
+        "assistantPrefix": "Assistant"
+      },
+      "houseRules": {
+        "title": "House rules",
+        "addCta": "Add rule",
+        "addPlaceholder": "Write a house rule...",
+        "addSubmit": "Add",
+        "editLabel": "Edit",
+        "editSubmit": "Save",
+        "cancel": "Cancel",
+        "deleteLabel": "Delete",
+        "deleteConfirmTitle": "Delete rule?",
+        "deleteConfirmMessage": "This house rule will be permanently deleted.",
+        "deleteConfirm": "Delete",
+        "empty": "No house rules yet. Add one to customize the game's rules."
       }
     },
     "sharedGames": {
@@ -3595,6 +3728,132 @@
           "largestArmyLabel": "Big Army",
           "incAriaTemplate": "{field} +1",
           "decAriaTemplate": "{field} -1"
+        },
+        "wingspan": {
+          "panelAriaLabel": "Wingspan",
+          "leaderboardHeading": "Standings",
+          "scoreAriaTemplate": "{name}: {score} PV",
+          "categoriesHeading": "Points by category",
+          "roundHeading": "Round",
+          "roundTemplate": "Round {n}/4",
+          "turnBudgetTemplate": "{n} turns",
+          "goalsHeading": "Round goals",
+          "goalPlaceholderTemplate": "Round {n} goal",
+          "advanceRoundLabel": "Advance round",
+          "initRoundCta": "Start the round",
+          "viewerWaiting": "Waiting for the host…",
+          "category": {
+            "birds": "Birds",
+            "bonusCards": "Bonus cards",
+            "endOfRoundGoals": "End-of-round goals",
+            "eggs": "Eggs",
+            "cachedFood": "Cached food",
+            "tuckedCards": "Tucked cards"
+          }
+        },
+        "codenames": {
+          "panelAriaLabel": "Codenames",
+          "leaderboardHeading": "Standings",
+          "initBoardCta": "Generate grid",
+          "viewerWaiting": "Waiting for the host…",
+          "redLabel": "Red",
+          "blueLabel": "Blue",
+          "turnLabel": "On turn",
+          "foundTemplate": "{found}/{total}",
+          "revealAriaTemplate": "Reveal {word}",
+          "perspectiveOperative": "View: Operative",
+          "perspectiveSpymaster": "View: Spymaster",
+          "noClue": "No active clue",
+          "cluePlaceholder": "Word",
+          "clueNumberAria": "Clue number",
+          "giveClue": "Give clue",
+          "endTurn": "End turn",
+          "regenerate": "Regenerate grid",
+          "winnerTemplate": "{team} wins"
+        },
+        "puerto-rico": {
+          "panelAriaLabel": "Puerto Rico",
+          "leaderboardHeading": "Standings",
+          "initBoardCta": "Start game",
+          "resetCta": "Reset state",
+          "viewerWaiting": "Waiting for the host…",
+          "doubloons": "Doubloons",
+          "colonists": "Colonists",
+          "plantations": "Plantations",
+          "quarries": "Quarries",
+          "buildings": "Buildings",
+          "galleonsHeading": "Cargo ships",
+          "tradingHeading": "Trading house",
+          "colonistShipHeading": "Colonist ship",
+          "onShip": "On ship",
+          "supply": "Supply",
+          "emptyGood": "—",
+          "capTemplate": "{loaded}/{cap}",
+          "goodAria": "Ship {n} good",
+          "loadAria": "Load ship {n}",
+          "unloadAria": "Unload ship {n}",
+          "slotAria": "Slot {n}",
+          "incAria": "{field} +1",
+          "decAria": "{field} -1"
+        },
+        "paleo": {
+          "panelAriaLabel": "Paleo",
+          "leaderboardHeading": "Standings",
+          "initBoardCta": "Start game",
+          "resetCta": "Reset state",
+          "viewerWaiting": "Waiting for the host…",
+          "resourcesHeading": "Resources",
+          "wood": "Wood",
+          "stone": "Stone",
+          "food": "Food",
+          "knowledge": "Knowledge",
+          "tribeHeading": "Tribe",
+          "statusAlive": "Alive",
+          "statusWounded": "Wounded",
+          "statusDead": "Dead",
+          "incAria": "{field} +1",
+          "decAria": "{field} -1",
+          "cycleAria": "{name}: change status"
+        },
+        "power-grid": {
+          "panelAriaLabel": "Power Grid",
+          "leaderboardHeading": "Standings",
+          "initBoardCta": "Start game",
+          "resetCta": "Reset state",
+          "viewerWaiting": "Waiting for the host…",
+          "plantsHeading": "Power plants",
+          "currentBank": "Current",
+          "futureBank": "Future",
+          "emptySlot": "—",
+          "slotAria": "{bank} slot {n}",
+          "resourcesHeading": "Resource market",
+          "coal": "Coal",
+          "oil": "Oil",
+          "garbage": "Garbage",
+          "uranium": "Uranium",
+          "incAria": "{field} +1",
+          "decAria": "{field} -1"
+        },
+        "zombicide": {
+          "panelAriaLabel": "Zombicide",
+          "leaderboardHeading": "Standings",
+          "initBoardCta": "Start game",
+          "resetCta": "Reset state",
+          "viewerWaiting": "Waiting for the host…",
+          "hordeHeading": "Horde",
+          "walker": "Walker",
+          "runner": "Runner",
+          "fatty": "Fatty",
+          "berserker": "Berserker",
+          "abomination": "Abomination",
+          "necromancer": "Necromancer",
+          "survivorsHeading": "Survivors",
+          "healthy": "Healthy",
+          "wounded": "Wounded",
+          "down": "Down",
+          "incAria": "{field} +1",
+          "decAria": "{field} -1",
+          "cycleAria": "{name}: change wounds"
         }
       },
       "photosTab": {
@@ -3746,6 +4005,15 @@
       }
     },
     "sessionSummary": {
+      "flavor": {
+        "catan": {
+          "winnerTemplate": "{name} wins!",
+          "vpUnit": "VP",
+          "durationTemplate": "{minutes} min",
+          "standingsTitle": "Final standings",
+          "empty": "Summary not available"
+        }
+      },
       "hero": {
         "title": "Session summary",
         "podiumLabel": "Final podium",
@@ -4776,6 +5044,10 @@
         "deleteToast": "Record deleted",
         "deleteToastDescription": "The record was deleted successfully"
       },
+      "savedWhileLive": {
+        "toast": "Record saved while a session is live. Double-check you logged the games in the right order.",
+        "goToLive": "Go to the live session"
+      },
       "conflict": {
         "title": "Concurrent edit",
         "description": "Someone modified this game while you were editing. Reload the latest data or overwrite with your changes.",
@@ -4786,19 +5058,77 @@
       "error": {
         "loadFailed": "Could not load the record",
         "updateFailed": "Update failed",
-        "deleteFailed": "Delete failed"
+        "deleteFailed": "Delete failed",
+        "saveFailed": "Save failed",
+        "saveFailedDescription": "Unable to save the game. Please try again.",
+        "retry": "↻ Retry save"
       },
       "a11y": {
         "formLabel": "Edit play record form",
         "readonlyFieldsLabel": "Non-editable fields",
-        "ariaReadonly": "This field is not editable"
+        "ariaReadonly": "This field is not editable",
+        "wizardLabel": "Game recording wizard",
+        "stepIndicatorLabel": "Recording progress",
+        "backButton": "Go back to previous step",
+        "closeButton": "Close",
+        "previewLabel": "Live preview play record",
+        "backToList": "Back to play records"
       },
       "actions": {
         "save": "Save changes",
         "saving": "Saving…",
         "delete": "Delete",
         "cancel": "Cancel",
-        "back": "← Back"
+        "back": "← Back",
+        "next": "Next →",
+        "draft": "Draft"
+      },
+      "stepIndicatorLabel": "Step {current} of 3",
+      "step1Label": "Game",
+      "step2Label": "When",
+      "step3Label": "Scores",
+      "step1": {
+        "title": "Which game did you play?",
+        "subtitle": "Choose from your library. Scoring and players adapt to the game.",
+        "searchPlaceholder": "Search your library…",
+        "emptyLibraryHint": "↑ Select a game to continue",
+        "freeformLabel": "Game name (free text)",
+        "freeformPlaceholder": "e.g. Catan, Puerto Rico…",
+        "freeformHint": "Enter the game name if it's not in the catalog"
+      },
+      "step2": {
+        "title": "When did you play?",
+        "subtitle": "Date, start time and duration. Duration is optional.",
+        "dateLabel": "Date",
+        "timeLabel": "Start time",
+        "durationLabel": "Duration (optional)",
+        "locationLabel": "Location (optional)",
+        "locationPlaceholder": "e.g. Marco's place",
+        "notesLabel": "Notes (optional)",
+        "notesPlaceholder": "Add a comment about the session…",
+        "durationHint": "Approximate — used for total hours statistics"
+      },
+      "step3": {
+        "title": "Who played and what were the scores?",
+        "subtitle": "Enter scores: the winner is automatically the highest scorer.",
+        "playersLabel": "Players and scores ({count})",
+        "addPlayerPlaceholder": "Player name…",
+        "addPlayerButton": "Add player",
+        "winnerBadge": "Winner",
+        "noPlayersHint": "Add at least one player to save the game"
+      },
+      "preview": {
+        "sectionLabel": "Live preview · Play record",
+        "noGameSelected": "Select a game",
+        "rankingLabel": "Ranking · {count} players",
+        "tip": "The winner is determined by the highest score. Updates in real time as you fill in the form."
+      },
+      "draft": {
+        "saving": "Saving…",
+        "saved": "Draft saved {time}"
+      },
+      "loading": {
+        "library": "Loading library…"
       }
     },
     "share": {

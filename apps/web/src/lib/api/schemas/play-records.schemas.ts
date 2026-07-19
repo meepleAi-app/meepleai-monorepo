@@ -105,9 +105,9 @@ export const PlayRecordDtoSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   // #1663 Phase 1: derived on-read (winner = players with "wins" dimension > 0).
-  // Optional during BE rollout; tighten once the BE ships the fields.
-  winnerPlayerIds: z.array(z.string().uuid()).optional(),
-  outcomeType: PlayRecordOutcomeTypeSchema.optional(),
+  // BE always emits these (PlayRecordDtoMapper -> PlayRecordOutcomeCalculator); required (#3087).
+  winnerPlayerIds: z.array(z.string().uuid()),
+  outcomeType: PlayRecordOutcomeTypeSchema,
   // #2436 PR-C: photos exposed on read. Optional during BE rollout; tighten later.
   photos: z.array(PlayRecordPhotoSchema).optional(),
   // #2437-1: Postgres xmin optimistic-concurrency token (uint). Optional during rollout.
@@ -125,10 +125,11 @@ export const PlayRecordSummarySchema = z.object({
   status: PlayRecordStatusSchema,
   playerCount: z.number().int().nonnegative(),
   // #1663 Phase 1: enable cover/deep-link + outcome badge in the list view.
-  // Optional during BE rollout; tighten once the BE ships the fields.
-  gameId: GameIdString.nullable().optional(),
-  winnerPlayerIds: z.array(z.string().uuid()).optional(),
-  outcomeType: PlayRecordOutcomeTypeSchema.optional(),
+  // BE always emits these (PlayRecordSummaryDto non-nullable); required (#3087).
+  // gameId stays nullable (freeform records) but is always present, matching the detail schema.
+  gameId: GameIdString.nullable(),
+  winnerPlayerIds: z.array(z.string().uuid()),
+  outcomeType: PlayRecordOutcomeTypeSchema,
 });
 export type PlayRecordSummary = z.infer<typeof PlayRecordSummarySchema>;
 

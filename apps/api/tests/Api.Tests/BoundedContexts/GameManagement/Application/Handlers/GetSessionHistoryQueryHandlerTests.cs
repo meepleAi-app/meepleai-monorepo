@@ -18,12 +18,18 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 public class GetSessionHistoryQueryHandlerTests
 {
     private readonly Mock<IGameSessionRepository> _sessionRepositoryMock;
+    private readonly Mock<IHistorySessionScoreProvider> _scoreProviderMock;
     private readonly GetSessionHistoryQueryHandler _handler;
 
     public GetSessionHistoryQueryHandlerTests()
     {
         _sessionRepositoryMock = new Mock<IGameSessionRepository>();
-        _handler = new GetSessionHistoryQueryHandler(_sessionRepositoryMock.Object);
+        _scoreProviderMock = new Mock<IHistorySessionScoreProvider>();
+        // Default: no scores resolved — history DTOs keep null score unless a test says otherwise.
+        _scoreProviderMock
+            .Setup(p => p.GetScoresAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, HistorySessionScore>());
+        _handler = new GetSessionHistoryQueryHandler(_sessionRepositoryMock.Object, _scoreProviderMock.Object);
     }
     [Fact]
     public async Task Handle_WithNoFilters_ReturnsAllHistoricalSessions()
@@ -340,6 +346,61 @@ public class GetSessionHistoryQueryHandlerTests
         dto.WinnerName.Should().Be("Alice");
         dto.PlayerCount.Should().Be(session.Players.Count);
         dto.Players.Count.Should().Be(session.Players.Count);
+    }
+
+    [Fact]
+    public async Task Handle_EnrichesDtosWithPolymorphicScore_WhenProviderResolvesScore()
+    {
+        // Arrange
+        var session = new GameSessionBuilder()
+            .WithCompletedStatus()
+            .WithWinner("Alice")
+            .Build();
+
+        _sessionRepositoryMock
+            .Setup(r => r.FindHistoryAsync(
+                null, null, null, null, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<GameSession> { session });
+
+        const string scoreData =
+            "{\"scores\":[{\"playerId\":\"11111111-1111-1111-1111-111111111111\",\"points\":42}]}";
+        _scoreProviderMock
+            .Setup(p => p.GetScoresAsync(
+                It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, HistorySessionScore>
+            {
+                [session.Id] = new HistorySessionScore("Points", scoreData)
+            });
+
+        // Act
+        var result = await _handler.Handle(
+            new GetSessionHistoryQuery(), TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Should().ContainSingle();
+        result[0].ScoringType.Should().Be("Points");
+        result[0].ScoreData.Should().Be(scoreData);
+    }
+
+    [Fact]
+    public async Task Handle_LeavesScoreNull_WhenProviderHasNoScoreForSession()
+    {
+        // Arrange
+        var session = new GameSessionBuilder().WithCompletedStatus().Build();
+        _sessionRepositoryMock
+            .Setup(r => r.FindHistoryAsync(
+                null, null, null, null, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<GameSession> { session });
+        // Provider default (ctor) resolves no scores.
+
+        // Act
+        var result = await _handler.Handle(
+            new GetSessionHistoryQuery(), TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Should().ContainSingle();
+        result[0].ScoringType.Should().BeNull();
+        result[0].ScoreData.Should().BeNull();
     }
 }
 

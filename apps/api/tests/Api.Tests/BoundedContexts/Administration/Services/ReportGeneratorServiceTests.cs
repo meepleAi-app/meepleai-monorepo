@@ -1,7 +1,10 @@
+using System.Net.Http;
 using Api.BoundedContexts.Administration.Domain.Services;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Events;
 using Api.Tests.TestHelpers;
@@ -24,13 +27,22 @@ public sealed class ReportGeneratorServiceTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<ILogger<ReportGeneratorService>> _loggerMock;
+    private readonly Mock<IPrometheusQueryService> _prometheusMock;
     private readonly ReportGeneratorService _sut;
 
     public ReportGeneratorServiceTests()
     {
         _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
         _loggerMock = new Mock<ILogger<ReportGeneratorService>>();
-        _sut = new ReportGeneratorService(_dbContext, _loggerMock.Object);
+        _prometheusMock = new Mock<IPrometheusQueryService>();
+        // Default: Prometheus returns no data → health metrics are omitted from
+        // reports (unless a test sets up specific values).
+        _prometheusMock
+            .Setup(p => p.QueryRangeAsync(
+                It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(),
+                It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PrometheusQueryResult("matrix", Array.Empty<PrometheusTimeSeries>()));
+        _sut = new ReportGeneratorService(_dbContext, _loggerMock.Object, _prometheusMock.Object);
     }
 
     public void Dispose()
@@ -63,13 +75,12 @@ public sealed class ReportGeneratorServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GenerateAsync_SystemHealthReport_ContainsExpectedMetrics()
+    public async Task GenerateAsync_SystemHealthReport_WithPrometheusData_ContainsRealMetrics()
     {
-        var parameters = new Dictionary<string, object>
-        {
-            ["startDate"] = DateTime.UtcNow.AddDays(-7),
-            ["endDate"] = DateTime.UtcNow
-        };
+        // Prometheus reports a 5% error rate and 0.25s (250ms) average latency.
+        SetupPrometheusMetrics(errorRateRatio: 0.05, avgLatencySeconds: 0.25);
+
+        var parameters = new Dictionary<string, object> { ["hours"] = 24 };
 
         var result = await _sut.GenerateAsync(
             ReportTemplate.SystemHealth,
@@ -78,9 +89,39 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             CancellationToken.None);
 
         var content = System.Text.Encoding.UTF8.GetString(result.Content);
-        content.Should().ContainEquivalentOf("\"uptime\"");
         content.Should().ContainEquivalentOf("\"errorRate\"");
         content.Should().ContainEquivalentOf("\"responseTime\"");
+        // Real values, not the old hardcoded 0.0 placeholder.
+        content.Should().Contain("0.05");
+        content.Should().Contain("250");
+        // The fabricated "uptime" (which was just the window param) is gone.
+        content.Should().NotContainEquivalentOf("\"uptime\"");
+    }
+
+    [Fact]
+    public async Task GenerateAsync_SystemHealthReport_WhenPrometheusUnavailable_OmitsMetricsInsteadOfFabricatingZero()
+    {
+        _prometheusMock
+            .Setup(p => p.QueryRangeAsync(
+                It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(),
+                It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("prometheus unavailable"));
+
+        var parameters = new Dictionary<string, object> { ["hours"] = 24 };
+
+        var result = await _sut.GenerateAsync(
+            ReportTemplate.SystemHealth,
+            ReportFormat.Json,
+            parameters,
+            CancellationToken.None);
+
+        var content = System.Text.Encoding.UTF8.GetString(result.Content);
+        // No fabricated metric keys when Prometheus is unavailable — omit, don't zero.
+        content.Should().NotContainEquivalentOf("\"errorRate\"");
+        content.Should().NotContainEquivalentOf("\"responseTime\"");
+        content.Should().NotContainEquivalentOf("\"uptime\"");
+        // The report still renders with its real section data + window metadata.
+        content.Should().ContainEquivalentOf("\"hours\"");
     }
 
     [Fact]
@@ -102,6 +143,48 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         content.Should().ContainEquivalentOf("\"activeUsers\"");
         content.Should().ContainEquivalentOf("\"totalLogins\"");
     }
+
+    [Fact]
+    public async Task GenerateAsync_UserActivityReport_ActiveUsers_CountsDistinctSessionUsers_NotRegistrations()
+    {
+        // #3104: "active users" must be the count of DISTINCT users with >=1 session in the
+        // window, NOT the number of new registrations. Seed 3 sessions from 2 distinct users
+        // and ZERO registrations in the window: the old code reported activeUsers = registrations = 0;
+        // the correct value is 2.
+        var now = DateTime.UtcNow;
+        var startDate = now.AddDays(-30);
+        var endDate = now.AddDays(1);
+
+        var userA = Guid.NewGuid();
+        var userB = Guid.NewGuid();
+        _dbContext.UserSessions.AddRange(
+            NewSession(userA, now.AddDays(-5)),
+            NewSession(userA, now.AddDays(-3)),
+            NewSession(userB, now.AddDays(-2)));
+        await _dbContext.SaveChangesAsync();
+
+        var result = await _sut.GenerateAsync(
+            ReportTemplate.UserActivity,
+            ReportFormat.Json,
+            new Dictionary<string, object> { ["startDate"] = startDate, ["endDate"] = endDate },
+            CancellationToken.None);
+
+        var content = System.Text.Encoding.UTF8.GetString(result.Content);
+        using var doc = System.Text.Json.JsonDocument.Parse(content);
+        var metadata = doc.RootElement.GetProperty("metadata");
+        metadata.GetProperty("activeUsers").GetInt32().Should().Be(2);
+        metadata.GetProperty("totalRegistrations").GetInt32().Should().Be(0);
+    }
+
+    private static UserSessionEntity NewSession(Guid userId, DateTime createdAt) => new()
+    {
+        Id = Guid.NewGuid(),
+        UserId = userId,
+        TokenHash = Guid.NewGuid().ToString(),
+        CreatedAt = createdAt,
+        ExpiresAt = createdAt.AddHours(1),
+        User = null!
+    };
 
     [Fact]
     public async Task GenerateAsync_AIUsageReport_ContainsCostMetrics()
@@ -141,6 +224,79 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var content = System.Text.Encoding.UTF8.GetString(result.Content);
         content.Should().ContainEquivalentOf("\"totalDocuments\"");
         content.Should().ContainEquivalentOf("\"vectorEmbeddings\"");
+    }
+
+    [Fact]
+    public async Task GenerateAsync_ContentMetricsReport_ActiveGamesCountsOnlyAiReadyGames()
+    {
+        // #3123: "active" = AI-ready (HasKnowledgeBase). 3 AI-ready + 2 plain → Active=3, Total=5.
+        SeedSharedGame("AI-ready A", hasKnowledgeBase: true);
+        SeedSharedGame("AI-ready B", hasKnowledgeBase: true);
+        SeedSharedGame("AI-ready C", hasKnowledgeBase: true);
+        SeedSharedGame("Plain D", hasKnowledgeBase: false);
+        SeedSharedGame("Plain E", hasKnowledgeBase: false);
+        await _dbContext.SaveChangesAsync();
+
+        var parameters = new Dictionary<string, object>
+        {
+            ["startDate"] = DateTime.UtcNow.AddDays(-30),
+            ["endDate"] = DateTime.UtcNow
+        };
+
+        var result = await _sut.GenerateAsync(
+            ReportTemplate.ContentMetrics,
+            ReportFormat.Json,
+            parameters,
+            CancellationToken.None);
+
+        var content = System.Text.Encoding.UTF8.GetString(result.Content);
+        using var doc = System.Text.Json.JsonDocument.Parse(content);
+        var totalGames = FindNumber(doc.RootElement, "totalGames");
+        var activeGames = FindNumber(doc.RootElement, "activeGames");
+
+        totalGames.Should().Be(5);
+        activeGames.Should().Be(3);              // only AI-ready games, not all 5
+        activeGames.Should().NotBe(totalGames);  // regression guard: Active must not equal Total
+    }
+
+    private void SeedSharedGame(string title, bool hasKnowledgeBase)
+    {
+        _dbContext.SharedGames.Add(new SharedGameEntity
+        {
+            Id = Guid.NewGuid(),
+            Title = title,
+            HasKnowledgeBase = hasKnowledgeBase,
+            CreatedAt = DateTime.UtcNow
+        });
+    }
+
+    private static int? FindNumber(System.Text.Json.JsonElement element, string propertyName)
+    {
+        switch (element.ValueKind)
+        {
+            case System.Text.Json.JsonValueKind.Object:
+                foreach (var prop in element.EnumerateObject())
+                {
+                    if (string.Equals(prop.Name, propertyName, StringComparison.OrdinalIgnoreCase)
+                        && prop.Value.ValueKind == System.Text.Json.JsonValueKind.Number)
+                    {
+                        return prop.Value.GetInt32();
+                    }
+
+                    var nested = FindNumber(prop.Value, propertyName);
+                    if (nested.HasValue) return nested;
+                }
+                break;
+            case System.Text.Json.JsonValueKind.Array:
+                foreach (var item in element.EnumerateArray())
+                {
+                    var nested = FindNumber(item, propertyName);
+                    if (nested.HasValue) return nested;
+                }
+                break;
+        }
+
+        return null;
     }
 
     [Fact]
@@ -338,6 +494,35 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             ["endDate"] = DateTime.UtcNow
         };
     }
+
+    /// <summary>
+    /// Wires the Prometheus mock so the error-rate query returns <paramref name="errorRateRatio"/>
+    /// and the latency query returns <paramref name="avgLatencySeconds"/> (seconds; the service
+    /// converts to ms). Queries are told apart by a substring of their PromQL.
+    /// </summary>
+    private void SetupPrometheusMetrics(double errorRateRatio, double avgLatencySeconds)
+    {
+        _prometheusMock
+            .Setup(p => p.QueryRangeAsync(
+                It.Is<string>(q => q.Contains("status=~", StringComparison.Ordinal)),
+                It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SingleValueResult(errorRateRatio));
+        _prometheusMock
+            .Setup(p => p.QueryRangeAsync(
+                It.Is<string>(q => q.Contains("http_request_duration_seconds", StringComparison.Ordinal)),
+                It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SingleValueResult(avgLatencySeconds));
+    }
+
+    private static PrometheusQueryResult SingleValueResult(double value) =>
+        new PrometheusQueryResult(
+            "matrix",
+            new[]
+            {
+                new PrometheusTimeSeries(
+                    new Dictionary<string, string>(StringComparer.Ordinal),
+                    new[] { new PrometheusDataPoint(DateTime.UtcNow, value) })
+            });
 
     #endregion
 }

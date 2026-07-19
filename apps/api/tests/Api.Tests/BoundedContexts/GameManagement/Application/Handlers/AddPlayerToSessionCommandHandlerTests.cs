@@ -8,6 +8,7 @@ using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Moq;
 using Xunit;
 using FluentAssertions;
+using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -250,7 +251,7 @@ public class AddPlayerToSessionCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_CompletedSession_ThrowsInvalidOperationException()
+    public async Task Handle_CompletedSession_ThrowsConflictException()
     {
         // Arrange - Cannot add players to finished session
         var sessionId = Guid.NewGuid();
@@ -271,13 +272,13 @@ public class AddPlayerToSessionCommandHandlerTests
         // Act & Assert
         var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var exception = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
         exception.Message.Should().ContainEquivalentOf("Cannot add player to finished session");
     }
 
     [Fact]
-    public async Task Handle_AbandonedSession_ThrowsInvalidOperationException()
+    public async Task Handle_AbandonedSession_ThrowsConflictException()
     {
         // Arrange - Cannot add players to abandoned session
         var sessionId = Guid.NewGuid();
@@ -300,13 +301,13 @@ public class AddPlayerToSessionCommandHandlerTests
         // Act & Assert
         var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var exception = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
         exception.Message.Should().ContainEquivalentOf("Cannot add player to finished session");
     }
 
     [Fact]
-    public async Task Handle_DuplicatePlayerName_ThrowsInvalidOperationException()
+    public async Task Handle_DuplicatePlayerName_ThrowsConflictException()
     {
         // Arrange - Player already exists
         var sessionId = Guid.NewGuid();
@@ -327,13 +328,13 @@ public class AddPlayerToSessionCommandHandlerTests
         // Act & Assert
         var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var exception = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
         exception.Message.Should().ContainEquivalentOf("Player 'Alice' is already in this session");
     }
 
     [Fact]
-    public async Task Handle_DuplicatePlayerNameCaseInsensitive_ThrowsInvalidOperationException()
+    public async Task Handle_DuplicatePlayerNameCaseInsensitive_ThrowsConflictException()
     {
         // Arrange - Player name check is case-insensitive
         var sessionId = Guid.NewGuid();
@@ -354,7 +355,7 @@ public class AddPlayerToSessionCommandHandlerTests
         // Act & Assert
         var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var exception = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
         exception.Message.Should().ContainEquivalentOf("already in this session");
     }

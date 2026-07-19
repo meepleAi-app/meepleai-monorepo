@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.Helpers;
 using Api.Infrastructure;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System.IO.Compression;
@@ -42,24 +43,23 @@ internal class ExportRuleSpecsCommandHandler : ICommandHandler<ExportRuleSpecsCo
             throw new ArgumentException("Cannot export more than 100 rule specs at once", nameof(command));
         }
 
-        // Fetch all rule specs with their latest versions
-        // Note: Include must come AFTER GroupBy projection to materialize navigation properties
-        var latestSpecIds = await _dbContext.RuleSpecs
-            .AsNoTracking()
-            .Where(rs => command.GameIds.Contains(rs.GameId))
-            .GroupBy(rs => rs.GameId)
-            .Select(g => g.MaxBy(rs => rs.CreatedAt)!.Id)
-            .ToListAsync(cancellationToken).ConfigureAwait(false);
-
-        var ruleSpecs = await _dbContext.RuleSpecs
+        // Fetch the candidate rule specs (with atoms) for the requested games, then pick the
+        // latest version per game client-side. EF Core cannot translate GroupBy + MaxBy to SQL
+        // ("The LINQ expression could not be translated"), so the grouping must run in memory.
+        var candidateSpecs = await _dbContext.RuleSpecs
             .AsNoTracking()
             .Include(rs => rs.Atoms)
-            .Where(rs => latestSpecIds.Contains(rs.Id))
+            .Where(rs => command.GameIds.Contains(rs.GameId))
             .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        var ruleSpecs = candidateSpecs
+            .GroupBy(rs => rs.GameId)
+            .Select(g => g.MaxBy(rs => rs.CreatedAt)!)
+            .ToList();
 
         if (ruleSpecs.Count == 0)
         {
-            throw new InvalidOperationException("No rule specs found for the provided game IDs");
+            throw new NotFoundException("No rule specs found for the provided game IDs");
         }
 
         // Create ZIP archive in memory

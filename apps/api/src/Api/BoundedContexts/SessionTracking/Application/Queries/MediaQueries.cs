@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.SessionTracking.Application.Queries;
 /// Query to get all media for a session.
 /// Issue #4760
 /// </summary>
-public record GetSessionMediaQuery(Guid SessionId) : IRequest<IReadOnlyList<SessionMediaDto>>;
+public record GetSessionMediaQuery(Guid SessionId, Guid RequestedBy) : IRequest<IReadOnlyList<SessionMediaDto>>;
 
 /// <summary>
 /// Query to get media by snapshot.

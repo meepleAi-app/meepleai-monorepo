@@ -20,6 +20,7 @@ function defaultKpis() {
       ],
       trend: 'up' as const,
       trendPct: 70,
+      sourceAvailable: true,
       loading: false,
     },
     memory: {
@@ -31,6 +32,7 @@ function defaultKpis() {
       ],
       trend: 'up' as const,
       trendPct: 8,
+      sourceAvailable: true,
       loading: false,
     },
     batchJobs: { queued: 4, running: 2, loading: false },
@@ -59,6 +61,16 @@ describe('KPISparklineStrip', () => {
     expect(screen.getByText('/8')).toBeInTheDocument();
   });
 
+  it('shows the real stopped count and no fabricated "crashed" figure (#3092)', () => {
+    // defaultKpis has containers.stopped === 1; there is no data source for "crashed",
+    // so the card must never render a hardcoded crashed figure.
+    useInfrastructureKpisMock.mockReturnValue(makeKpis());
+    render(<KPISparklineStrip />);
+    const card = screen.getByLabelText(/Container attivi 7 su 8/);
+    expect(card).toHaveTextContent(/1 stopped/);
+    expect(card).not.toHaveTextContent(/crashed/i);
+  });
+
   it('shows CPU percentage with sparkline svg', () => {
     useInfrastructureKpisMock.mockReturnValue(makeKpis());
     render(<KPISparklineStrip />);
@@ -82,6 +94,7 @@ describe('KPISparklineStrip', () => {
           series: [],
           trend: 'flat' as const,
           trendPct: 0,
+          sourceAvailable: true,
           loading: false,
         },
       })
@@ -116,6 +129,7 @@ describe('KPISparklineStrip', () => {
           series: [],
           trend: 'flat',
           trendPct: 0,
+          sourceAvailable: true,
           loading: true,
         },
       })
@@ -139,6 +153,7 @@ describe('KPISparklineStrip', () => {
           series: [],
           trend: 'down',
           trendPct: 50,
+          sourceAvailable: true,
           loading: false,
         },
       })
@@ -155,6 +170,7 @@ describe('KPISparklineStrip', () => {
           series: [],
           trend: 'flat',
           trendPct: 0,
+          sourceAvailable: true,
           loading: false,
         },
       })
@@ -178,6 +194,7 @@ describe('KPISparklineStrip', () => {
           series: [{ timestamp: '2026-06-03T14:00:00Z', value: 34 }],
           trend: 'flat',
           trendPct: 0,
+          sourceAvailable: true,
           loading: false,
         },
       })
@@ -193,5 +210,44 @@ describe('KPISparklineStrip', () => {
     expect(screen.getByLabelText(/CPU media 34/)).toBeInTheDocument();
     expect(screen.getByLabelText(/RAM usata 18.4/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Batch job/)).toBeInTheDocument();
+  });
+
+  it('shows "Sorgente non disponibile" for CPU when sourceAvailable is false (#3045)', () => {
+    useInfrastructureKpisMock.mockReturnValue(
+      makeKpis({
+        cpu: {
+          value: 0,
+          series: [],
+          trend: 'flat',
+          trendPct: 0,
+          sourceAvailable: false,
+          loading: false,
+        },
+      })
+    );
+    render(<KPISparklineStrip />);
+    expect(screen.getByTestId('kpi-cpu-unavailable')).toBeInTheDocument();
+    expect(screen.queryByTestId('kpi-sparkline-cpu')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('CPU media: sorgente non disponibile')).toBeInTheDocument();
+  });
+
+  it('shows "Sorgente non disponibile" for RAM when sourceAvailable is false (#3045)', () => {
+    useInfrastructureKpisMock.mockReturnValue(
+      makeKpis({
+        memory: {
+          value: 0,
+          total: 0,
+          series: [],
+          trend: 'flat' as const,
+          trendPct: 0,
+          sourceAvailable: false,
+          loading: false,
+        },
+      })
+    );
+    render(<KPISparklineStrip />);
+    expect(screen.getByTestId('kpi-memory-unavailable')).toBeInTheDocument();
+    expect(screen.queryByTestId('kpi-sparkline-memory')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('RAM usata: sorgente non disponibile')).toBeInTheDocument();
   });
 });

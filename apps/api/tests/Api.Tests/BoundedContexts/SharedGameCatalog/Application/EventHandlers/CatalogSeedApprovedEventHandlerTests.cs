@@ -76,8 +76,8 @@ public sealed class CatalogSeedApprovedEventHandlerTests
               .ReturnsAsync((SharedGame?)null);
 
         SharedGame? added = null;
-        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()))
-              .Callback<SharedGame, CancellationToken>((g, _) => added = g)
+        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+              .Callback<SharedGame, IReadOnlyList<string>, IReadOnlyList<string>, CancellationToken>((g, _, _, _) => added = g)
               .Returns(Task.CompletedTask);
 
         await Handler().Handle(
@@ -199,8 +199,8 @@ public sealed class CatalogSeedApprovedEventHandlerTests
         _drafts.Setup(r => r.GetByIdAsync(draft.Id, It.IsAny<CancellationToken>())).ReturnsAsync(draft);
 
         SharedGame? added = null;
-        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()))
-              .Callback<SharedGame, CancellationToken>((g, _) => added = g)
+        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+              .Callback<SharedGame, IReadOnlyList<string>, IReadOnlyList<string>, CancellationToken>((g, _, _, _) => added = g)
               .Returns(Task.CompletedTask);
 
         await Handler().Handle(
@@ -230,8 +230,8 @@ public sealed class CatalogSeedApprovedEventHandlerTests
               .ReturnsAsync((SharedGame?)null);
 
         SharedGame? added = null;
-        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()))
-              .Callback<SharedGame, CancellationToken>((g, _) => added = g)
+        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+              .Callback<SharedGame, IReadOnlyList<string>, IReadOnlyList<string>, CancellationToken>((g, _, _, _) => added = g)
               .Returns(Task.CompletedTask);
 
         await Handler().Handle(
@@ -254,8 +254,8 @@ public sealed class CatalogSeedApprovedEventHandlerTests
               .ReturnsAsync((SharedGame?)null);
 
         SharedGame? added = null;
-        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()))
-              .Callback<SharedGame, CancellationToken>((g, _) => added = g)
+        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+              .Callback<SharedGame, IReadOnlyList<string>, IReadOnlyList<string>, CancellationToken>((g, _, _, _) => added = g)
               .Returns(Task.CompletedTask);
 
         await Handler().Handle(
@@ -333,5 +333,140 @@ public sealed class CatalogSeedApprovedEventHandlerTests
         existing.WikidataQid.Should().Be("Q42",
             "M8.5 must NOT clobber a different QID already on the aggregate (admin / human curation wins)");
         _games.Verify(r => r.Update(It.IsAny<SharedGame>()), Times.Never);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Issue #3147 — persist Wikidata-primary properties at draft → game
+    // ──────────────────────────────────────────────────────────────────────
+
+    private static string RichProvenance(string title = "Catan")
+    {
+        const string qidUrl = "https://www.wikidata.org/wiki/Q17271";
+        var fields = new Dictionary<string, FieldProvenance>(StringComparer.Ordinal)
+        {
+            ["title"] = new("wikidata", qidUrl, "labels.en", DateTime.UtcNow, title),
+            ["yearPublished"] = new("wikidata", qidUrl, "P577", DateTime.UtcNow, 1995),
+            ["minPlayers"] = new("wikidata", qidUrl, "P1872", DateTime.UtcNow, 3),
+            ["maxPlayers"] = new("wikidata", qidUrl, "P1873", DateTime.UtcNow, 4),
+            ["playingTimeMinutes"] = new("wikidata", qidUrl, "P2047", DateTime.UtcNow, 90),
+            ["designers"] = new("wikidata", qidUrl, "P178", DateTime.UtcNow, new List<string> { "Klaus Teuber" }),
+            ["publishers"] = new("wikidata", qidUrl, "P123", DateTime.UtcNow, new List<string> { "Kosmos" }),
+        };
+        return new CatalogSeedProvenance(fields).ToJson();
+    }
+
+    [Fact]
+    public async Task Handle_ProvenanceWithProperties_EnrichesScalarsAndPassesDesignerPublisherNames()
+    {
+        // #3153: scalars flow through EnrichFromProvenance; designer/publisher NAMES are
+        // passed RAW to the repo's get-or-create-by-name overload (NOT via the aggregate).
+        // Actual M:N join-row persistence is proven in the Testcontainers integration suite;
+        // a mocked repo cannot (that's how #3147 shipped the gap).
+        var draft = SeedFetchedDraft(bggId: null, provenanceJson: RichProvenance("Catan"));
+
+        _drafts.Setup(r => r.GetByIdAsync(draft.Id, It.IsAny<CancellationToken>())).ReturnsAsync(draft);
+
+        SharedGame? added = null;
+        IReadOnlyList<string>? designerNames = null;
+        IReadOnlyList<string>? publisherNames = null;
+        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+              .Callback<SharedGame, IReadOnlyList<string>, IReadOnlyList<string>, CancellationToken>((g, d, p, _) =>
+              {
+                  added = g;
+                  designerNames = d;
+                  publisherNames = p;
+              })
+              .Returns(Task.CompletedTask);
+
+        await Handler().Handle(
+            new CatalogSeedApprovedEvent(draft.Id, draft.ResultingSharedGameId!.Value, Guid.NewGuid()),
+            default);
+
+        added.Should().NotBeNull();
+        added!.YearPublished.Should().Be(1995, "the Wikidata scalars must be carried onto the skeleton, not dropped");
+        added.MinPlayers.Should().Be(3);
+        added.MaxPlayers.Should().Be(4);
+        added.PlayingTimeMinutes.Should().Be(90);
+
+        designerNames.Should().Contain("Klaus Teuber", "designer names are forwarded raw to the repo resolver");
+        publisherNames.Should().Contain("Kosmos", "publisher names are forwarded raw to the repo resolver");
+        added.Designers.Should().BeEmpty("names go to the repo resolver, not the aggregate (throwaway Guids)");
+        added.Publishers.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_DraftAlreadyMaterialised_ShortCircuitsIdempotently()
+    {
+        // #3153 (D7): a re-dispatch of the event for a draft whose ResultingSharedGameId
+        // already resolves to a real game must NOT create a second game — guards the
+        // pure-Wikidata (no-BggId) path that the BggId-only dedup misses.
+        var draft = SeedFetchedDraft(bggId: null);
+        var realGameId = draft.ResultingSharedGameId!.Value;
+
+        _drafts.Setup(r => r.GetByIdAsync(draft.Id, It.IsAny<CancellationToken>())).ReturnsAsync(draft);
+        _games.Setup(r => r.ExistsByIdAsync(realGameId, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+
+        await Handler().Handle(
+            new CatalogSeedApprovedEvent(draft.Id, realGameId, Guid.NewGuid()),
+            default);
+
+        _games.Verify(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()), Times.Never);
+        _games.Verify(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()), Times.Never);
+        _uow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_TitleOnlyProvenance_LeavesSkeletonScalarsEmpty()
+    {
+        // Pure-title provenance (the pre-#3147 minimum) must still materialise a
+        // valid skeleton — the enrichment is a lenient no-op here.
+        var titleOnly = new Dictionary<string, FieldProvenance>(StringComparer.Ordinal)
+        {
+            ["title"] = new("wikidata", "https://www.wikidata.org/wiki/Q42", "labels.en", DateTime.UtcNow, "Pandemic"),
+        };
+        var draft = SeedFetchedDraft(bggId: null, provenanceJson: new CatalogSeedProvenance(titleOnly).ToJson());
+
+        _drafts.Setup(r => r.GetByIdAsync(draft.Id, It.IsAny<CancellationToken>())).ReturnsAsync(draft);
+
+        SharedGame? added = null;
+        _games.Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+              .Callback<SharedGame, IReadOnlyList<string>, IReadOnlyList<string>, CancellationToken>((g, _, _, _) => added = g)
+              .Returns(Task.CompletedTask);
+
+        await Handler().Handle(
+            new CatalogSeedApprovedEvent(draft.Id, draft.ResultingSharedGameId!.Value, Guid.NewGuid()),
+            default);
+
+        added.Should().NotBeNull();
+        added!.Title.Should().Be("Pandemic");
+        added.YearPublished.Should().Be(0);
+        added.MinPlayers.Should().Be(0);
+        added.MaxPlayers.Should().Be(0);
+        added.PlayingTimeMinutes.Should().Be(0);
+        added.Designers.Should().BeEmpty();
+        added.Publishers.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_ExistingGameCollision_DoesNotEnrichScalars()
+    {
+        // A BggId collision reuses the existing aggregate. The seed pipeline must
+        // NOT clobber it with sparse Wikidata scalars — the BGG enrichment queue
+        // (#1874) already owns completing an existing BggId-bearing skeleton.
+        var draft = SeedFetchedDraft(bggId: 12345, provenanceJson: RichProvenance("Catan"));
+        var existing = SharedGame.CreateSkeleton("Catan", Guid.NewGuid(), TimeProvider.System, bggId: 12345);
+
+        _drafts.Setup(r => r.GetByIdAsync(draft.Id, It.IsAny<CancellationToken>())).ReturnsAsync(draft);
+        _games.Setup(r => r.GetByBggIdAsync(12345, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+
+        await Handler().Handle(
+            new CatalogSeedApprovedEvent(draft.Id, draft.ResultingSharedGameId!.Value, Guid.NewGuid()),
+            default);
+
+        existing.YearPublished.Should().Be(0, "existing-game collisions are left to #1874, not enriched by the seed");
+        existing.MinPlayers.Should().Be(0);
+        existing.MaxPlayers.Should().Be(0);
+        existing.Designers.Should().BeEmpty();
+        _games.Verify(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

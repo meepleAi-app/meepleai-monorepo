@@ -347,6 +347,12 @@ services:
       # Issue #2019 — additional rule file for self-hosted GitHub Actions
       # runner availability (referenced from prometheus.yml + prometheus.staging.yml).
       - ./prometheus/alerts/runner-availability.yml:/etc/prometheus/runner-availability.yml:ro
+      # Issue #3082 — BGG ToS-compliance SLO=0 alert (referenced from prometheus.yml rule_files).
+      - ./prometheus/alerts/bgg-tos-compliance.yml:/etc/prometheus/bgg-tos-compliance.yml:ro
+      # Issue #3112 — OPS-02 Slack delivery alerts (referenced from prometheus.yml rule_files).
+      - ./prometheus/alerts/slack-delivery.yml:/etc/prometheus/slack-delivery.yml:ro
+      - ./prometheus/alerts/audit-outbox.yml:/etc/prometheus/audit-outbox.yml:ro
+      - ./prometheus/alerts/wikidata-enrichment.yml:/etc/prometheus/wikidata-enrichment.yml:ro
       - prometheus_data:/prometheus
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
@@ -480,7 +486,12 @@ services:
     image: gcr.io/cadvisor/cadvisor:v0.49.1
     container_name: meepleai-cadvisor
     restart: unless-stopped
-    profiles: [monitoring]
+    # #3039: also in monitoring-essential so per-container metrics reach the
+    # single-tester staging deploy (CI uses --profile monitoring-essential).
+    # Mirrors node-exporter; Prometheus already has a `cadvisor:8080` scrape job
+    # + the Grafana infra dashboard already has container_* panels — both were
+    # DOWN/empty on staging until now. Footprint: 512M limit / 256M reservation.
+    profiles: [monitoring, monitoring-essential]
     devices:
       - /dev/kmsg:/dev/kmsg
     volumes:

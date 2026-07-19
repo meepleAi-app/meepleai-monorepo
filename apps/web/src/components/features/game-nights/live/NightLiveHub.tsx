@@ -519,7 +519,12 @@ function MobileBody({
 
   return (
     <>
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-background">
+      <div
+        role="tabpanel"
+        id={`night-live-pane-${tab}`}
+        aria-labelledby={`night-live-tab-${tab}`}
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-background"
+      >
         {tab === 'current' ? (
           <CurrentGameCard game={currentGame} onJumpToSession={onJumpToSession} compact />
         ) : null}
@@ -560,6 +565,7 @@ function MobileBody({
           return (
             <button
               key={t.id}
+              id={`night-live-tab-${t.id}`}
               type="button"
               role="tab"
               aria-selected={active}

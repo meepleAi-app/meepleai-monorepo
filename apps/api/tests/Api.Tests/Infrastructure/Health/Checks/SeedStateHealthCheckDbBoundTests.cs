@@ -72,6 +72,18 @@ public sealed class SeedStateHealthCheckDbBoundTests
         CreatedAt = DateTime.UtcNow,
     };
 
+    /// <summary>A Badsworm dogfood demo mock placeholder: seed/ prefix, no blob, no chunks (#3075).</summary>
+    private static PdfDocumentEntity MockPdf(Guid id, string state) => new()
+    {
+        Id = id,
+        FileName = $"rulebook-{id:N}.pdf",
+        FilePath = $"{PdfDocumentEntity.DemoMockFilePathPrefix}badsworm/game-{id:N}/rulebook.pdf",
+        UploadedByUserId = Guid.NewGuid(),
+        UploadedAt = DateTime.UtcNow,
+        ProcessingState = state,
+        Language = "en",
+    };
+
     private static async Task<HealthCheckResult> RunAsync(MeepleAiDbContext db)
     {
         var check = new SeedStateHealthCheck(db, Mock.Of<ILogger<SeedStateHealthCheck>>());
@@ -124,5 +136,28 @@ public sealed class SeedStateHealthCheckDbBoundTests
         result.Data["seed_state"].Should().Be(SeedStateHealthCheck.SeedStates.PartialFailed);
         result.Data["chunk_count"].Should().Be(3);
         result.Data["embedding_count"].Should().Be(2);
+    }
+
+    [Fact]
+    [Trait("Issue", "3075")]
+    public async Task CheckHealthAsync_DemoMockInFailedState_IsExcluded_StaysReady()
+    {
+        // #3075: Badsworm dogfood mock placeholders (seed/ prefix, 0 chunks) are not real corpus
+        // content. A mock flipped to Failed must NOT drag seed_state to partial_failed.
+        await using var db = CreateInMemoryDb(nameof(CheckHealthAsync_DemoMockInFailedState_IsExcluded_StaysReady));
+
+        var realPdf = Guid.NewGuid();
+        db.PdfDocuments.Add(ReadyPdf(realPdf));
+        db.VectorDocuments.Add(IndexedDoc(realPdf, chunkCount: 2));
+        db.TextChunks.AddRange(Chunk(realPdf, 0), Chunk(realPdf, 1));
+        db.PdfDocuments.Add(MockPdf(Guid.NewGuid(), "Failed")); // demo mock — must be ignored
+        await db.SaveChangesAsync();
+
+        var result = await RunAsync(db);
+
+        result.Status.Should().Be(HealthStatus.Healthy);
+        result.Data["seed_state"].Should().Be(SeedStateHealthCheck.SeedStates.Ready);
+        result.Data["pdf_total"].Should().Be(1, because: "demo mocks are excluded from the seed-state counts");
+        result.Data["pdf_failed"].Should().Be(0, because: "a Failed demo mock must not degrade seed_state (#3075)");
     }
 }

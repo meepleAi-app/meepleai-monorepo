@@ -51,9 +51,8 @@ export type RagBlockType =
   | 'query-rewriting'
   | 'query-decomposition'
   | 'hyde'
-  | 'rag-fusion'
+  | 'rag-fusion';
   // Control (0 dedicated - uses built-in ReactFlow)
-  ;
 
 /** User tier requirements for block access */
 export type UserTier = 'User' | 'Editor' | 'Admin';
@@ -148,13 +147,13 @@ export interface ConnectionPort {
 
 /** Data types that can flow between blocks */
 export type PortDataType =
-  | 'query'      // User query string
-  | 'documents'  // Retrieved documents array
+  | 'query' // User query string
+  | 'documents' // Retrieved documents array
   | 'embeddings' // Vector embeddings
-  | 'scores'     // Relevance/confidence scores
-  | 'response'   // Generated response
+  | 'scores' // Relevance/confidence scores
+  | 'response' // Generated response
   | 'evaluation' // Evaluation result (pass/fail)
-  | 'any';       // Any type (for flexible connections)
+  | 'any'; // Any type (for flexible connections)
 
 // =============================================================================
 // Code Reference Types
@@ -247,18 +246,18 @@ export interface RagNodeData {
   params: Record<string, unknown>;
   status: NodeStatus;
   metrics?: NodeMetrics;
+  /**
+   * #3083: injected into each node's data by PipelineCanvas so a node's
+   * "Configure" gear can open the config panel (resolves to node selection →
+   * setSelectedNodeId → BlockConfigPanel). Undefined in read-only/detached use.
+   */
+  onConfigure?: (nodeId: string) => void;
   // Index signature for ReactFlow compatibility
   [key: string]: unknown;
 }
 
 /** Node execution status */
-export type NodeStatus =
-  | 'idle'
-  | 'running'
-  | 'success'
-  | 'error'
-  | 'warning'
-  | 'disabled';
+export type NodeStatus = 'idle' | 'running' | 'success' | 'error' | 'warning' | 'disabled';
 
 /** Runtime metrics for a node */
 export interface NodeMetrics {
@@ -369,9 +368,9 @@ export interface SelectionState {
 
 /** Canvas interaction mode */
 export type CanvasMode =
-  | 'select'    // Default selection mode
-  | 'pan'       // Pan only (space + drag)
-  | 'connect'   // Drawing connections
+  | 'select' // Default selection mode
+  | 'pan' // Pan only (space + drag)
+  | 'connect' // Drawing connections
   | 'readonly'; // View only
 
 /** Complete canvas state */

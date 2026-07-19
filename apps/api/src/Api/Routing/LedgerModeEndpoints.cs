@@ -105,6 +105,7 @@ internal static class LedgerModeEndpoints
         .Produces(400)
         .Produces(401)
         .Produces(404)
+        .Produces(409) // #3159: optimistic-concurrency conflict → X-Warning-Code: concurrent-edit
         .Produces(500);
     }
 

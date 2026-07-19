@@ -26,7 +26,11 @@ public class BggApiHealthCheck : IHealthCheck
         {
             var client = _httpClientFactory.CreateClient("BggApi");
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(TimeSpan.FromSeconds(5));
+            // BGG's XML API is an external, frequently-slow/rate-limited third party.
+            // 5s tripped Degraded on routine latency spikes; 8s tolerates them (the client
+            // itself allows 30s). Registration timeout in HealthCheckServiceExtensions is
+            // 10s, above this, so this cts is the effective bound.
+            cts.CancelAfter(TimeSpan.FromSeconds(8));
 
             // Simple connectivity test with BGG API
             var response = await client.GetAsync("/xmlapi2/search?query=test&type=boardgame", cts.Token).ConfigureAwait(false);
@@ -37,7 +41,7 @@ public class BggApiHealthCheck : IHealthCheck
         }
         catch (OperationCanceledException ex)
         {
-            _logger.LogWarning(ex, "BGG API health check timeout (>5s)");
+            _logger.LogWarning(ex, "BGG API health check timeout (>8s)");
             return HealthCheckResult.Degraded("Timeout checking BGG API connectivity");
         }
         catch (HttpRequestException ex)

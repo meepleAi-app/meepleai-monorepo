@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Domain.Constants;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Enums;
@@ -78,7 +79,15 @@ public sealed class TermsAcceptanceIntegrationTests : IAsyncLifetime
             await dbContext.Database.MigrateAsync();
         }
 
-        _client = _factory.CreateClient();
+        // HandleCookies=false: TestServer's CookieContainer is unreliable at carrying the
+        // session cookie to subsequent authenticated requests (see the lenient asserts in
+        // AuthenticationFlowTests). RegisterUserAsync attaches the Set-Cookie manually — the
+        // deterministic pattern used by AdminUserFactory.
+        _client = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            HandleCookies = false,
+        });
     }
 
     public async ValueTask DisposeAsync()
@@ -133,6 +142,114 @@ public sealed class TermsAcceptanceIntegrationTests : IAsyncLifetime
         }
     }
 
+    // ---- Task 4: registration records acceptance ----------------------------
+
+    [Fact]
+    public async Task Register_WithTermsAccepted_WritesExactlyOneRegistrationRow()
+    {
+        var userId = await RegisterUserAsync(termsAccepted: true);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var rows = await db.Set<TermsAcceptance>()
+            .AsNoTracking()
+            .Where(t => t.UserId == userId)
+            .ToListAsync();
+
+        rows.Should().HaveCount(1);
+        rows[0].TermsVersion.Should().Be(TermsVersion.Current);
+        rows[0].Context.Should().Be(TermsAcceptanceContext.Registration);
+    }
+
+    [Fact]
+    public async Task Register_WithoutTermsAccepted_Returns400()
+    {
+        var response = await _client.PostAsJsonAsync(RegisterEndpoint, new
+        {
+            email = $"noterms-{Guid.NewGuid():N}@test.local",
+            password = "ValidUnusualPwd123!",
+            displayName = "No Terms",
+            // termsAccepted omitted → defaults false
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    // ---- Task 5: accept + status endpoints ----------------------------------
+
+    [Fact]
+    public async Task Status_AfterRegister_ReturnsCurrentAccepted()
+    {
+        await RegisterUserAsync(termsAccepted: true); // _client is now authenticated
+
+        var status = await _client.GetFromJsonAsync<TermsConsentStatusDto>(StatusEndpoint);
+
+        status.Should().NotBeNull();
+        status!.CurrentVersion.Should().Be(TermsVersion.Current);
+        status.AcceptedVersion.Should().Be(TermsVersion.Current);
+        status.NeedsReAcceptance.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Status_Unauthenticated_Returns401()
+    {
+        // No registration/login on this fresh client → no session cookie.
+        var response = await _client.GetAsync(StatusEndpoint);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Accept_WhenAlreadyCurrent_IsIdempotent()
+    {
+        var userId = await RegisterUserAsync(termsAccepted: true); // 1 Current row
+
+        var accept = await _client.PostAsync(AcceptEndpoint, content: null);
+        accept.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var currentRows = await db.Set<TermsAcceptance>()
+            .AsNoTracking()
+            .CountAsync(t => t.UserId == userId && t.TermsVersion == TermsVersion.Current);
+        currentRows.Should().Be(1, "accepting the already-current version must not append a second row");
+    }
+
+    [Fact]
+    public async Task StaleAcceptance_Accept_TransitionsToCurrent()
+    {
+        var userId = await RegisterUserAsync(termsAccepted: true);
+
+        // Force the registration row stale (older version + older timestamp).
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            await db.Set<TermsAcceptance>()
+                .Where(t => t.UserId == userId)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(t => t.TermsVersion, "2026-03-09")
+                    .SetProperty(t => t.AcceptedAt, new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
+        }
+
+        var before = await _client.GetFromJsonAsync<TermsConsentStatusDto>(StatusEndpoint);
+        before!.NeedsReAcceptance.Should().BeTrue();
+        before.AcceptedVersion.Should().Be("2026-03-09");
+
+        var accept = await _client.PostAsync(AcceptEndpoint, content: null);
+        accept.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var after = await _client.GetFromJsonAsync<TermsConsentStatusDto>(StatusEndpoint);
+        after!.NeedsReAcceptance.Should().BeFalse();
+        after.AcceptedVersion.Should().Be(TermsVersion.Current);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var total = await db.Set<TermsAcceptance>().CountAsync(t => t.UserId == userId);
+            total.Should().Be(2, "append-only: the stale row is preserved and a new current row is added");
+        }
+    }
+
     // ---- Helpers ------------------------------------------------------------
 
     /// <summary>
@@ -150,6 +267,15 @@ public sealed class TermsAcceptanceIntegrationTests : IAsyncLifetime
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK, "registration should succeed for the happy path");
+
+        // Attach the session cookie manually so subsequent authenticated requests
+        // (GET /status, POST /accept) carry it deterministically.
+        if (response.Headers.TryGetValues("Set-Cookie", out var setCookies))
+        {
+            var cookieHeader = string.Join("; ", setCookies.Select(c => c.Split(';')[0]));
+            _client.DefaultRequestHeaders.Remove("Cookie");
+            _client.DefaultRequestHeaders.Add("Cookie", cookieHeader);
+        }
 
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         var idString = body.GetProperty("user").GetProperty("id").GetString();

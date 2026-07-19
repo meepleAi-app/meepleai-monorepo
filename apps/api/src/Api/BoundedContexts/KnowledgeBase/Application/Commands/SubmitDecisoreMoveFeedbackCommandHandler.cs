@@ -52,10 +52,10 @@ internal sealed class SubmitDecisoreMoveFeedbackCommandHandler : IRequestHandler
             throw new ConflictException($"Feedback already submitted for suggestion {request.SuggestionId}");
 
         if (!Enum.TryParse<MoveQualityAssessment>(request.Quality, ignoreCase: true, out var quality))
-            throw new InvalidOperationException($"Invalid quality value: {request.Quality}");
+            throw new BadRequestException($"Invalid quality value: {request.Quality}");
 
         if (!Enum.TryParse<GameOutcome>(request.Outcome, ignoreCase: true, out var outcome))
-            throw new InvalidOperationException($"Invalid outcome value: {request.Outcome}");
+            throw new BadRequestException($"Invalid outcome value: {request.Outcome}");
 
         var feedback = DecisoreMoveFeedback.Create(
             suggestionId: request.SuggestionId,

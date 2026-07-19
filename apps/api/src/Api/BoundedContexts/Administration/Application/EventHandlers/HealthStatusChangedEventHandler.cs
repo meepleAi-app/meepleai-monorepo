@@ -72,6 +72,15 @@ internal sealed class HealthStatusChangedEventHandler
             ["_slack_category"] = category
         };
 
+        // Non-critical health transitions (Degraded=warning, recovery=info) are routed to
+        // Slack/DB/dashboard but kept OFF email — only Unhealthy (critical) transitions
+        // email. The flag is scoped to THIS alert, so budget/security/dead-letter warning
+        // emails from other producers are unaffected. See EmailAlertChannel.IsEmailSuppressed.
+        if (ShouldSuppressEmail(severity))
+        {
+            metadata[EmailAlertChannel.SuppressEmailMetadataKey] = true;
+        }
+
         try
         {
             await alertingService.SendAlertAsync(alertType, severity, message, metadata, cancellationToken)
@@ -125,6 +134,15 @@ internal sealed class HealthStatusChangedEventHandler
         "Degraded" => "warning",
         _ => "info"
     };
+
+    /// <summary>
+    /// Whether a health alert of the given severity should be kept off the email channel.
+    /// Only "critical" (an Unhealthy transition) emails; "warning" (Degraded) and "info"
+    /// (recovery) are suppressed to avoid flapping-mail alert fatigue for non-critical
+    /// services. Other channels (Slack, DB) are unaffected.
+    /// </summary>
+    internal static bool ShouldSuppressEmail(string severity) =>
+        !string.Equals(severity, "critical", StringComparison.OrdinalIgnoreCase);
 
     private static string TruncateAlertType(string alertType) =>
         alertType.Length > 100 ? alertType[..100] : alertType;

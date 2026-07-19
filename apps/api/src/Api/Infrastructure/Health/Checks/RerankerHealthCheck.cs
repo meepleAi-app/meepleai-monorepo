@@ -36,7 +36,10 @@ public class RerankerHealthCheck : IHealthCheck
             using var client = _httpClientFactory.CreateClient();
             client.BaseAddress = new Uri(rerankerUrl);
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(TimeSpan.FromSeconds(5));
+            // Python ML microservice: model load / GC pauses / cold-start make 5s too
+            // tight and trip Degraded on healthy-but-busy nodes. 10s absorbs those blips.
+            // Registration timeout (HealthCheckServiceExtensions) is 12s, above this.
+            cts.CancelAfter(TimeSpan.FromSeconds(10));
 
             var response = await client.GetAsync("/health", cts.Token).ConfigureAwait(false);
 
@@ -46,7 +49,7 @@ public class RerankerHealthCheck : IHealthCheck
         }
         catch (OperationCanceledException ex)
         {
-            _logger.LogWarning(ex, "Reranker service health check timeout (>5s)");
+            _logger.LogWarning(ex, "Reranker service health check timeout (>10s)");
             return HealthCheckResult.Degraded("Timeout checking reranker service");
         }
         catch (HttpRequestException ex)

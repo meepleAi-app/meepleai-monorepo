@@ -11,15 +11,15 @@ namespace Api.Infrastructure.HealthChecks;
 /// and enrichment queue depth monitoring.
 ///
 /// Validates:
-/// - PostgreSQL FTS index (ix_shared_games_fts) usage
-/// - Search query performance (P95 target less than 200ms)
+/// - Search query performance against the FTS query
 /// - Category/Mechanic taxonomy data availability
 /// - Enrichment queue depth (Degraded if greater than 500 pending items)
 ///
-/// Health Status:
-/// - Healthy: P95 less than 200ms (target met) and queue depth less than or equal to 500
-/// - Degraded: P95 200-500ms OR queue depth greater than 500
-/// - Unhealthy: P95 greater than 500ms OR query failure
+/// Health Status (health-alert bands; the product P95 target stays under 200ms and is
+/// tracked separately via Prometheus — these coarser bands exist to avoid alert flapping):
+/// - Healthy: latency less than 400ms and queue depth less than or equal to 500
+/// - Degraded: latency 400-800ms OR queue depth greater than 500
+/// - Unhealthy: latency greater than or equal to 800ms OR query failure
 /// </summary>
 internal sealed class SharedGameCatalogHealthCheck : IHealthCheck
 {
@@ -89,13 +89,20 @@ internal sealed class SharedGameCatalogHealthCheck : IHealthCheck
                     enrichmentQueueDepth, queueDegradedThreshold);
             }
 
+            // FTS alert bands — raised from 200/500ms to 400/800ms so transient latency
+            // spikes (staging FTS is normally ~60ms) don't flap Degraded and spam alerts.
+            // The product P95 target stays <200ms (tracked via Prometheus); these coarser
+            // bands are for health-alert status only.
+            const double degradedLatencyMs = 400;
+            const double unhealthyLatencyMs = 800;
+
             // Determine health status based on performance and queue depth
-            if (ftsLatencyMs < 200 && !queueDegraded)
+            if (ftsLatencyMs < degradedLatencyMs && !queueDegraded)
             {
-                // Healthy: Target met (P95 < 200ms) and queue within bounds
+                // Healthy: latency within the alert band and queue within bounds
                 return HealthCheckResult.Healthy(
                     $"SharedGameCatalog FTS operational. " +
-                    $"Latency: {ftsLatencyMs:F2}ms (target: <200ms). " +
+                    $"Latency: {ftsLatencyMs:F2}ms (alert ≥ {degradedLatencyMs:F0}ms). " +
                     $"Games: {publishedGamesCount}, Categories: {categoriesCount}, Mechanics: {mechanicsCount}. " +
                     $"Enrichment queue: {enrichmentQueueDepth}",
                     new Dictionary<string, object>(StringComparer.Ordinal)
@@ -108,12 +115,12 @@ internal sealed class SharedGameCatalogHealthCheck : IHealthCheck
                         ["performance_status"] = "optimal"
                     });
             }
-            else if (ftsLatencyMs < 500)
+            else if (ftsLatencyMs < unhealthyLatencyMs)
             {
-                // Degraded: FTS suboptimal (200-500ms) or queue depth exceeded
+                // Degraded: FTS in the 400-800ms alert band or queue depth exceeded
                 var reasons = new List<string>();
-                if (ftsLatencyMs >= 200)
-                    reasons.Add($"FTS latency {ftsLatencyMs:F2}ms (target: <200ms)");
+                if (ftsLatencyMs >= degradedLatencyMs)
+                    reasons.Add($"FTS latency {ftsLatencyMs:F2}ms (alert ≥ {degradedLatencyMs:F0}ms)");
                 if (queueDegraded)
                     reasons.Add($"Enrichment queue depth {enrichmentQueueDepth} (threshold: {queueDegradedThreshold})");
 
@@ -135,14 +142,14 @@ internal sealed class SharedGameCatalogHealthCheck : IHealthCheck
             }
             else
             {
-                // Unhealthy: Severe performance degradation (> 500ms)
+                // Unhealthy: severe performance degradation (≥ 800ms alert band)
                 _logger.LogError(
-                    "SharedGameCatalog FTS unhealthy: {Latency}ms (target: <200ms)",
-                    ftsLatencyMs);
+                    "SharedGameCatalog FTS unhealthy: {Latency}ms (alert ≥ {Threshold}ms)",
+                    ftsLatencyMs, unhealthyLatencyMs);
 
                 return HealthCheckResult.Unhealthy(
                     $"SharedGameCatalog FTS performance critical. " +
-                    $"Latency: {ftsLatencyMs:F2}ms (target: <200ms). " +
+                    $"Latency: {ftsLatencyMs:F2}ms (alert ≥ {unhealthyLatencyMs:F0}ms). " +
                     $"Enrichment queue: {enrichmentQueueDepth}. " +
                     $"Immediate database maintenance required.",
                     data: new Dictionary<string, object>(StringComparer.Ordinal)

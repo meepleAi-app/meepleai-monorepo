@@ -41,6 +41,28 @@ public class GetGameNightLiveQueryHandlerTests : IDisposable
         GC.SuppressFinalize(this);
     }
 
+    // #3188 Slice 6 (D4): seed a tracking Session row (session_tracking_sessions) so the handler's
+    // canonical liveness read (Session.IsLive = started_at != null && finalized_at == null) has a
+    // row to resolve. A live session sets startedAt with finalizedAt == null.
+    private async Task SeedTrackingSessionAsync(Guid sessionId, DateTime? startedAt, DateTime? finalizedAt = null)
+    {
+        _db.SessionTrackingSessions.Add(new Api.Infrastructure.Entities.SessionTracking.SessionEntity
+        {
+            Id = sessionId,
+            UserId = Guid.NewGuid(),
+            GameId = Guid.NewGuid(),
+            SessionCode = sessionId.ToString("N")[..6],
+            SessionType = "Standard",
+            Status = "Active",
+            SessionDate = DateTime.UtcNow,
+            StartedAt = startedAt,
+            FinalizedAt = finalizedAt,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = Guid.NewGuid(),
+        });
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+    }
+
     [Fact]
     public async Task Handle_ProjectsSessions_OrderedByPlayOrderWithStatuses()
     {
@@ -242,6 +264,9 @@ public class GetGameNightLiveQueryHandlerTests : IDisposable
             Id = p2, SessionId = liveSessionId, DisplayName = "Guest Gina", UserId = null, JoinOrder = 2
         });
         await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        // #3188 Slice 6 (D4): the roster's live session is now resolved via the canonical
+        // Session.IsLive — seed the tracking Session as live (started, not finalized).
+        await SeedTrackingSessionAsync(liveSessionId, startedAt: DateTime.UtcNow);
 
         var evt = GameNightEvent.Create(
             organizerId, "Serata", DateTimeOffset.UtcNow.AddHours(1), gameIds: [Guid.NewGuid()]);
@@ -256,6 +281,7 @@ public class GetGameNightLiveQueryHandlerTests : IDisposable
         result.CurrentSessionRoster.Should().HaveCount(2);
         result.CurrentSessionRoster.Should().Contain(m => m.ParticipantId == p1 && m.DisplayName == "Host");
         result.CurrentSessionRoster.Should().Contain(m => m.ParticipantId == p2 && m.DisplayName == "Guest Gina");
+        result.Sessions.Should().ContainSingle(s => s.SessionId == liveSessionId && s.IsLive);
     }
 
     [Fact]
@@ -328,6 +354,10 @@ public class GetGameNightLiveQueryHandlerTests : IDisposable
             Id = pendingP, SessionId = pendingSessionId, DisplayName = "Not Yet", UserId = null, JoinOrder = 1
         });
         await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        // #3188 Slice 6 (D4): only the live sitting has a live tracking Session; the still-Pending
+        // one is either absent or not-started, so it can never be the canonical live session.
+        await SeedTrackingSessionAsync(liveSessionId, startedAt: DateTime.UtcNow);
+        await SeedTrackingSessionAsync(pendingSessionId, startedAt: null);
 
         var evt = GameNightEvent.Create(
             organizerId, "Serata", DateTimeOffset.UtcNow.AddHours(1),
@@ -347,5 +377,95 @@ public class GetGameNightLiveQueryHandlerTests : IDisposable
         // sanity: the InProgress + Pending mix is faithfully reflected in the projection.
         result.Sessions.Should().Contain(s => s.SessionId == liveSessionId && s.Status == GameNightSessionStatus.InProgress);
         result.Sessions.Should().Contain(s => s.SessionId == pendingSessionId && s.Status == GameNightSessionStatus.Pending);
+        // #3188 Slice 6 (D4): canonical liveness — only the started tracking Session is live.
+        result.Sessions.Should().Contain(s => s.SessionId == liveSessionId && s.IsLive);
+        result.Sessions.Should().Contain(s => s.SessionId == pendingSessionId && !s.IsLive);
+    }
+
+    // #3188 Slice 6 (D4): the canonical liveness signal is the tracking Session's live state
+    // (Session.IsLive = started_at != null && finalized_at == null). A session whose tracking
+    // Session is live surfaces IsLive == true on the DTO AND is the winner-picker's live session.
+    [Fact]
+    public async Task Handle_TrackingSessionLive_SessionIsLiveTrue_AndSurfacesRoster()
+    {
+        var organizerId = Guid.NewGuid();
+        var liveSessionId = Guid.NewGuid();
+        var participantId = Guid.NewGuid();
+        _db.SessionTrackingParticipants.Add(new Api.Infrastructure.Entities.SessionTracking.ParticipantEntity
+        {
+            Id = participantId, SessionId = liveSessionId, DisplayName = "Host", UserId = organizerId, IsOwner = true, JoinOrder = 1
+        });
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        await SeedTrackingSessionAsync(liveSessionId, startedAt: DateTime.UtcNow); // started, not finalized → live
+
+        var evt = GameNightEvent.Create(
+            organizerId, "Serata", DateTimeOffset.UtcNow.AddHours(1), gameIds: [Guid.NewGuid()]);
+        evt.Publish([]);
+        evt.AddSession(liveSessionId, evt.GameIds[0], "Catan");
+        evt.StartCurrentSession();
+        _repo.Setup(r => r.GetByIdAsync(evt.Id, It.IsAny<CancellationToken>())).ReturnsAsync(evt);
+
+        var result = await _handler.Handle(
+            new GetGameNightLiveQuery(evt.Id, organizerId), TestContext.Current.CancellationToken);
+
+        result.Sessions.Should().ContainSingle(s => s.SessionId == liveSessionId && s.IsLive);
+        result.CurrentSessionRoster.Should().ContainSingle(m => m.ParticipantId == participantId);
+    }
+
+    // #3188 Slice 6 (D4): a Pending draft — the tracking Session exists but has never started
+    // (started_at == null) — is NOT live: IsLive == false, empty roster.
+    [Fact]
+    public async Task Handle_TrackingSessionNotStarted_SessionIsLiveFalse()
+    {
+        var organizerId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+        await SeedTrackingSessionAsync(sessionId, startedAt: null); // draft: created but never started
+
+        var evt = GameNightEvent.Create(
+            organizerId, "Serata bozza", DateTimeOffset.UtcNow.AddHours(1), gameIds: [Guid.NewGuid()]);
+        evt.Publish([]);
+        evt.AddSession(sessionId, evt.GameIds[0], "Catan"); // link stays Pending (never started)
+        _repo.Setup(r => r.GetByIdAsync(evt.Id, It.IsAny<CancellationToken>())).ReturnsAsync(evt);
+
+        var result = await _handler.Handle(
+            new GetGameNightLiveQuery(evt.Id, organizerId), TestContext.Current.CancellationToken);
+
+        result.Sessions.Should().ContainSingle(s => s.SessionId == sessionId && !s.IsLive);
+        result.CurrentSessionRoster.Should().BeEmpty();
+    }
+
+    // #3188 Slice 6 (D4): split-brain — the game_night_sessions link is InProgress but its tracking
+    // Session never went live (started_at == null). The CANONICAL Session.IsLive wins: IsLive ==
+    // false and the session is NOT treated as the live one, so its participants never leak into the
+    // winner-picker roster. Proves the read no longer trusts the raw link Status.
+    [Fact]
+    public async Task Handle_SplitBrainLinkInProgressButTrackingNotStarted_CanonicalIsLiveWins()
+    {
+        var organizerId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+        var participantId = Guid.NewGuid();
+        _db.SessionTrackingParticipants.Add(new Api.Infrastructure.Entities.SessionTracking.ParticipantEntity
+        {
+            Id = participantId, SessionId = sessionId, DisplayName = "Host", UserId = organizerId, IsOwner = true, JoinOrder = 1
+        });
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        // Tracking Session exists but was never started → not canonically live, despite the link.
+        await SeedTrackingSessionAsync(sessionId, startedAt: null);
+
+        var evt = GameNightEvent.Create(
+            organizerId, "Serata", DateTimeOffset.UtcNow.AddHours(1), gameIds: [Guid.NewGuid()]);
+        evt.Publish([]);
+        evt.AddSession(sessionId, evt.GameIds[0], "Catan");
+        evt.StartCurrentSession(); // link → InProgress (the split-brain: link says live, tracking does not)
+        _repo.Setup(r => r.GetByIdAsync(evt.Id, It.IsAny<CancellationToken>())).ReturnsAsync(evt);
+
+        var result = await _handler.Handle(
+            new GetGameNightLiveQuery(evt.Id, organizerId), TestContext.Current.CancellationToken);
+
+        // The link is InProgress...
+        result.Sessions.Should().ContainSingle(s => s.SessionId == sessionId && s.Status == GameNightSessionStatus.InProgress);
+        // ...but the canonical signal says NOT live, and the roster stays empty (canonical wins).
+        result.Sessions.Should().OnlyContain(s => !s.IsLive);
+        result.CurrentSessionRoster.Should().BeEmpty();
     }
 }

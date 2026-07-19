@@ -107,6 +107,17 @@ export function toPlannedGameStatus(status: GameNightSessionStatus): PlannedGame
   }
 }
 
+/**
+ * #3188 Slice 6 (decision D4): canonical per-session liveness. The BE emits `isLive` sourced from
+ * the tracking Session (started_at != null && finalized_at == null), owned by SessionTracking — the
+ * unified liveness signal. Prefer it; fall back to the raw link `status === 'InProgress'` only for a
+ * pre-#3188 BE payload that omits the field (Nygard graceful-degradation). A split-brain row
+ * (isLive:false on an InProgress status) resolves to NOT live — the canonical signal wins.
+ */
+function isSessionLive(session: GameNightSessionDto): boolean {
+  return session.isLive ?? session.status === 'InProgress';
+}
+
 /** LD-9: deterministic 2-stop cover gradient from the game id (BGG-ban compliant). */
 function coverFromGameId(gameId: string): readonly [string, string] {
   const h1 = hashToHue(gameId);
@@ -177,12 +188,14 @@ export function mapNightLiveToViewModel(dto: GameNightLiveDto, now: Date): Night
 
   const total = sessions.length;
 
-  // LD-6: current = PlayOrder of the (lowest, if racy) InProgress session;
-  // if none InProgress, the count of terminal sessions. Clamped, never throws.
-  const inProgress = sessions.filter(s => s.status === 'InProgress');
+  // LD-6 + #3188 Slice 6 (D4): the "live" sessions are the canonically-live ones (Session.IsLive via
+  // the BE `isLive` field, with a `status === 'InProgress'` fallback), NOT raw status. current =
+  // PlayOrder of the (lowest, if racy) live session; if none live, the count of terminal sessions.
+  // Clamped, never throws.
+  const liveSessions = sessions.filter(isSessionLive);
   const rawCurrent =
-    inProgress.length > 0
-      ? Math.min(...inProgress.map(s => s.playOrder))
+    liveSessions.length > 0
+      ? Math.min(...liveSessions.map(s => s.playOrder))
       : sessions.filter(s => TERMINAL.has(s.status)).length;
   const current = Math.max(0, Math.min(rawCurrent, total));
 
@@ -193,13 +206,13 @@ export function mapNightLiveToViewModel(dto: GameNightLiveDto, now: Date): Night
     .map(v => new Date(v).getTime());
   const elapsed = startTimes.length > 0 ? formatElapsed(Math.min(...startTimes), nowMs) : '0h 0m';
 
-  // LD-8: 'live' iff a session is running; no 'paused' signal from the BE.
-  const status: NightLiveStatus = inProgress.length > 0 ? 'live' : 'transition';
+  // LD-8 + #3188 Slice 6: 'live' iff a session is canonically live; no 'paused' signal from the BE.
+  const status: NightLiveStatus = liveSessions.length > 0 ? 'live' : 'transition';
 
-  // Slice C1: currentGame is the InProgress session (lowest PlayOrder if racy).
-  // `inProgress` preserves the play-order sort, so [0] is the lowest. emoji/score
-  // stay undefined (fixture-only, D-SCORE/TIME); the diary is Slice C2/C4.
-  const currentSession = inProgress[0];
+  // Slice C1 + #3188 Slice 6: currentGame is the live session (lowest PlayOrder if racy).
+  // `liveSessions` preserves the play-order sort, so [0] is the lowest. emoji/score stay
+  // undefined (fixture-only, D-SCORE/TIME); the diary is Slice C2/C4.
+  const currentSession = liveSessions[0];
   const currentGame: NightLiveHubCurrentGame | null = currentSession
     ? {
         id: currentSession.gameId,

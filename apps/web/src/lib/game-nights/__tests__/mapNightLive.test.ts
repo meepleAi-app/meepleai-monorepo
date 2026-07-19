@@ -438,3 +438,64 @@ describe('mapNightLiveToViewModel — draft night, all Pending (#3188 Slice 1)',
     expect(vm.current).toBe(0);
   });
 });
+
+describe('mapNightLiveToViewModel — canonical liveness via isLive (#3188 Slice 6, D4)', () => {
+  it('a session with isLive:true maps to a live viewmodel with a currentGame', () => {
+    const dto = live({
+      sessions: [
+        session({
+          sessionId: S1,
+          gameId: G1,
+          gameTitle: 'Spirit Island',
+          playOrder: 1,
+          status: 'InProgress',
+          isLive: true,
+          startedAt: '2026-07-04T22:00:00Z',
+        }),
+      ],
+    });
+    const vm = mapNightLiveToViewModel(dto, NOW);
+    expect(vm.status).toBe('live');
+    expect(vm.currentGame).not.toBeNull();
+    expect(vm.currentGame?.sessionId).toBe(S1);
+    expect(vm.currentGame?.id).toBe(G1);
+    expect(vm.current).toBe(1); // PlayOrder of the live session
+  });
+
+  it('isLive:false on an InProgress-status session (split-brain) is NOT live — canonical wins', () => {
+    const dto = live({
+      sessions: [
+        session({
+          sessionId: S1,
+          playOrder: 1,
+          status: 'InProgress', // raw link says live...
+          isLive: false, // ...but the canonical signal says otherwise
+          startedAt: '2026-07-04T22:00:00Z',
+        }),
+      ],
+    });
+    const vm = mapNightLiveToViewModel(dto, NOW);
+    expect(vm.status).toBe('transition');
+    expect(vm.currentGame).toBeNull();
+    expect(vm.current).toBe(0); // not live, no terminal sessions
+  });
+
+  it('a session WITHOUT isLive falls back to status === "InProgress" (backward-compat)', () => {
+    // The `session()` helper omits `isLive`, so this is the pre-#3188 payload shape.
+    const dto = live({
+      sessions: [
+        session({
+          sessionId: S1,
+          gameId: G1,
+          playOrder: 1,
+          status: 'InProgress',
+          startedAt: '2026-07-04T22:00:00Z',
+        }),
+      ],
+    });
+    expect('isLive' in dto.sessions[0]).toBe(false);
+    const vm = mapNightLiveToViewModel(dto, NOW);
+    expect(vm.status).toBe('live');
+    expect(vm.currentGame?.sessionId).toBe(S1);
+  });
+});

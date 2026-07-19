@@ -108,6 +108,22 @@ describe('GameNightLiveDtoSchema', () => {
     expect(parsed.currentSessionRoster).toEqual([]);
   });
 
+  // #3188 Slice 6 (D4): the additive `isLive` liveness field parses when present.
+  it('parses a session DTO that carries the additive isLive field', () => {
+    const withIsLive = { ...LIVE, sessions: [{ ...SESSION, isLive: true }] };
+    const parsed = GameNightLiveDtoSchema.parse(withIsLive);
+    expect(parsed.sessions[0].isLive).toBe(true);
+  });
+
+  // #3188 Slice 6 (D4): backward-compat — a pre-#3188 BE payload that OMITS `isLive` still parses
+  // (the field is optional); consumers fall back to `status === 'InProgress'` in mapNightLive.
+  it('parses a session DTO WITHOUT isLive (backward-compat, optional field)', () => {
+    // SESSION intentionally has no `isLive` key.
+    expect('isLive' in SESSION).toBe(false);
+    const parsed = GameNightLiveDtoSchema.parse(LIVE);
+    expect(parsed.sessions[0].isLive).toBeUndefined();
+  });
+
   // #2634 C4: round-trip the winner name + the live roster.
   it('round-trips winnerName + currentSessionRoster (C4)', () => {
     const withWinner = {

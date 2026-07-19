@@ -1,6 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
-using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -60,6 +59,24 @@ internal sealed class GetGameNightLiveQueryHandler : IQueryHandler<GetGameNightL
                     .FirstOrDefault()
                 : null;
 
+        // #3188 Slice 6 (decision D4): the canonical liveness signal is the tracking Session's live
+        // state (Session.IsLive = started_at != null && finalized_at == null), owned by
+        // SessionTracking — NOT the raw game_night_sessions link Status. Batch-load each linked
+        // tracking Session's live flag (mirrors the participants read above: one query, AsNoTracking,
+        // scoped to this night's sessionIds). A session with no tracking row — or a not-yet-started
+        // one — is NOT live, so a split-brain link (stuck InProgress but tracking never started)
+        // fails closed to not-live.
+        var liveStates = sessionIds.Count == 0
+            ? new Dictionary<Guid, bool>()
+            : await _db.SessionTrackingSessions.AsNoTracking()
+                .Where(ts => sessionIds.Contains(ts.Id))
+                .Select(ts => new { ts.Id, IsLive = ts.StartedAt != null && ts.FinalizedAt == null })
+                .ToDictionaryAsync(x => x.Id, x => x.IsLive, cancellationToken)
+                .ConfigureAwait(false);
+
+        bool IsLiveFor(GameNightSession s) =>
+            liveStates.TryGetValue(s.SessionId, out var live) && live;
+
         var sessions = gameNight.Sessions
             .OrderBy(s => s.PlayOrder)
             .Select(s => new GameNightSessionDto(
@@ -68,15 +85,21 @@ internal sealed class GetGameNightLiveQueryHandler : IQueryHandler<GetGameNightL
                 s.GameTitle,
                 s.PlayOrder,
                 s.Status,
+                IsLiveFor(s),
                 s.WinnerId,
                 WinnerNameFor(s),
                 s.StartedAt,
                 s.CompletedAt))
             .ToList();
 
-        // The winner picker candidates = the participants of the (single) in-progress session.
+        // The winner picker candidates = the participants of the (single) live session, where "live"
+        // is the canonical Session.IsLive (D4) rather than the raw link Status==InProgress. On the
+        // go-live path both agree; using IsLive unifies the two read paths and wins any split-brain.
+        // Lowest PlayOrder disambiguates a racy >1-live read deterministically.
         var inProgressSessionId = gameNight.Sessions
-            .FirstOrDefault(s => s.Status == GameNightSessionStatus.InProgress)?.SessionId;
+            .Where(IsLiveFor)
+            .OrderBy(s => s.PlayOrder)
+            .FirstOrDefault()?.SessionId;
         var currentSessionRoster = inProgressSessionId is { } liveId
             ? participants
                 .Where(p => p.SessionId == liveId)

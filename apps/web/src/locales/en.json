@@ -2985,6 +2985,31 @@
           "viewAll": "View all",
           "viewAllAriaLabel": "View all achievements for {playerName}",
           "empty": "No achievements yet"
+        },
+        "trend": {
+          "title": "Trend",
+          "deltaUp": "↗ +{percent}%",
+          "deltaDown": "↘ {percent}%",
+          "deltaFlat": "→ 0%",
+          "deltaUpAriaLabel": "Win rate up by {percent}%",
+          "deltaDownAriaLabel": "Win rate down by {percent}%",
+          "deltaFlatAriaLabel": "Win rate unchanged",
+          "empty": "Not enough data to show a trend",
+          "trendSummaryAriaLabel": "Win rate trend from {from}% to {to}% over the last {count} months",
+          "monthsShort": {
+            "jan": "Jan",
+            "feb": "Feb",
+            "mar": "Mar",
+            "apr": "Apr",
+            "may": "May",
+            "jun": "Jun",
+            "jul": "Jul",
+            "aug": "Aug",
+            "sep": "Sep",
+            "oct": "Oct",
+            "nov": "Nov",
+            "dec": "Dec"
+          }
         }
       },
       "states": {

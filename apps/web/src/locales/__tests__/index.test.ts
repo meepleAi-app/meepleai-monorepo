@@ -61,4 +61,50 @@ describe('i18n locales', () => {
       expect(enKeys).toEqual(itKeys);
     }
   );
+
+  // Issue #3166: PlayerDetailView builds trendLabels via a non-scoped
+  // t('pages.playerDetail.sections.trend.*') with no defaultMessage, so a missing section
+  // makes PlayerTrendCard render raw ids (title, deltas, aria-labels, 12 month labels).
+  describe('pages.playerDetail.sections.trend (Issue #3166)', () => {
+    const EXPECTED_KEYS = [
+      'title',
+      'deltaUp',
+      'deltaDown',
+      'deltaFlat',
+      'deltaUpAriaLabel',
+      'deltaDownAriaLabel',
+      'deltaFlatAriaLabel',
+      'empty',
+      'trendSummaryAriaLabel',
+      'monthsShort.jan',
+      'monthsShort.feb',
+      'monthsShort.mar',
+      'monthsShort.apr',
+      'monthsShort.may',
+      'monthsShort.jun',
+      'monthsShort.jul',
+      'monthsShort.aug',
+      'monthsShort.sep',
+      'monthsShort.oct',
+      'monthsShort.nov',
+      'monthsShort.dec',
+    ].sort();
+
+    const navigateToTrend = (catalog: Record<string, unknown>): unknown =>
+      ['pages', 'playerDetail', 'sections', 'trend'].reduce<unknown>(
+        (acc, key) => (acc as Record<string, unknown> | undefined)?.[key],
+        catalog
+      );
+
+    it.each([
+      ['it', LOCALES.IT],
+      ['en', LOCALES.EN],
+    ])('has the full trend section in the %s catalog', (name, locale) => {
+      const section = navigateToTrend(getMessages(locale) as Record<string, unknown>);
+      expect(section, `${name}.json is missing pages.playerDetail.sections.trend`).toBeDefined();
+
+      const keys = Object.keys(flattenMessages(section as Record<string, unknown>)).sort();
+      expect(keys).toEqual(EXPECTED_KEYS);
+    });
+  });
 });

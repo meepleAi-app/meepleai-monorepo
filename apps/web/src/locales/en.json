@@ -5027,19 +5027,77 @@
       "error": {
         "loadFailed": "Could not load the record",
         "updateFailed": "Update failed",
-        "deleteFailed": "Delete failed"
+        "deleteFailed": "Delete failed",
+        "saveFailed": "Save failed",
+        "saveFailedDescription": "Unable to save the game. Please try again.",
+        "retry": "↻ Retry save"
       },
       "a11y": {
         "formLabel": "Edit play record form",
         "readonlyFieldsLabel": "Non-editable fields",
-        "ariaReadonly": "This field is not editable"
+        "ariaReadonly": "This field is not editable",
+        "wizardLabel": "Game recording wizard",
+        "stepIndicatorLabel": "Recording progress",
+        "backButton": "Go back to previous step",
+        "closeButton": "Close",
+        "previewLabel": "Live preview play record",
+        "backToList": "Back to play records"
       },
       "actions": {
         "save": "Save changes",
         "saving": "Saving…",
         "delete": "Delete",
         "cancel": "Cancel",
-        "back": "← Back"
+        "back": "← Back",
+        "next": "Next →",
+        "draft": "Draft"
+      },
+      "stepIndicatorLabel": "Step {current} of 3",
+      "step1Label": "Game",
+      "step2Label": "When",
+      "step3Label": "Scores",
+      "step1": {
+        "title": "Which game did you play?",
+        "subtitle": "Choose from your library. Scoring and players adapt to the game.",
+        "searchPlaceholder": "Search your library…",
+        "emptyLibraryHint": "↑ Select a game to continue",
+        "freeformLabel": "Game name (free text)",
+        "freeformPlaceholder": "e.g. Catan, Puerto Rico…",
+        "freeformHint": "Enter the game name if it's not in the catalog"
+      },
+      "step2": {
+        "title": "When did you play?",
+        "subtitle": "Date, start time and duration. Duration is optional.",
+        "dateLabel": "Date",
+        "timeLabel": "Start time",
+        "durationLabel": "Duration (optional)",
+        "locationLabel": "Location (optional)",
+        "locationPlaceholder": "e.g. Marco's place",
+        "notesLabel": "Notes (optional)",
+        "notesPlaceholder": "Add a comment about the session…",
+        "durationHint": "Approximate — used for total hours statistics"
+      },
+      "step3": {
+        "title": "Who played and what were the scores?",
+        "subtitle": "Enter scores: the winner is automatically the highest scorer.",
+        "playersLabel": "Players and scores ({count})",
+        "addPlayerPlaceholder": "Player name…",
+        "addPlayerButton": "Add player",
+        "winnerBadge": "Winner",
+        "noPlayersHint": "Add at least one player to save the game"
+      },
+      "preview": {
+        "sectionLabel": "Live preview · Play record",
+        "noGameSelected": "Select a game",
+        "rankingLabel": "Ranking · {count} players",
+        "tip": "The winner is determined by the highest score. Updates in real time as you fill in the form."
+      },
+      "draft": {
+        "saving": "Saving…",
+        "saved": "Draft saved {time}"
+      },
+      "loading": {
+        "library": "Loading library…"
       }
     },
     "share": {

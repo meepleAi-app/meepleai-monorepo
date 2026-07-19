@@ -5039,19 +5039,77 @@
       "error": {
         "loadFailed": "Impossibile caricare la partita",
         "updateFailed": "Aggiornamento non riuscito",
-        "deleteFailed": "Eliminazione non riuscita"
+        "deleteFailed": "Eliminazione non riuscita",
+        "saveFailed": "Salvataggio non riuscito",
+        "saveFailedDescription": "Impossibile salvare la partita. Riprova fra un momento.",
+        "retry": "↻ Riprova salvataggio"
       },
       "a11y": {
         "formLabel": "Modulo modifica partita",
         "readonlyFieldsLabel": "Campi non modificabili",
-        "ariaReadonly": "Questo campo non è modificabile"
+        "ariaReadonly": "Questo campo non è modificabile",
+        "wizardLabel": "Wizard registrazione partita",
+        "stepIndicatorLabel": "Avanzamento registrazione",
+        "backButton": "Torna al passo precedente",
+        "closeButton": "Chiudi",
+        "previewLabel": "Anteprima live record partita",
+        "backToList": "Torna alle partite"
       },
       "actions": {
         "save": "Salva modifiche",
         "saving": "Salvataggio…",
         "delete": "Elimina",
         "cancel": "Annulla",
-        "back": "← Indietro"
+        "back": "← Indietro",
+        "next": "Avanti →",
+        "draft": "Bozza"
+      },
+      "stepIndicatorLabel": "Step {current} di 3",
+      "step1Label": "Gioco",
+      "step2Label": "Quando",
+      "step3Label": "Punteggi",
+      "step1": {
+        "title": "Quale gioco avete giocato?",
+        "subtitle": "Scegli dalla tua libreria. Il punteggio e i giocatori si adattano al gioco.",
+        "searchPlaceholder": "Cerca nella libreria…",
+        "emptyLibraryHint": "↑ Seleziona un gioco per continuare",
+        "freeformLabel": "Nome gioco (testo libero)",
+        "freeformPlaceholder": "Es. Catan, Puerto Rico…",
+        "freeformHint": "Inserisci il nome del gioco se non è in catalogo"
+      },
+      "step2": {
+        "title": "Quando l'avete giocata?",
+        "subtitle": "Data, ora di inizio e durata. La durata è opzionale.",
+        "dateLabel": "Data",
+        "timeLabel": "Ora di inizio",
+        "durationLabel": "Durata (opzionale)",
+        "locationLabel": "Luogo (opzionale)",
+        "locationPlaceholder": "Es. Casa di Marco",
+        "notesLabel": "Note (opzionale)",
+        "notesPlaceholder": "Aggiungi un commento sulla partita…",
+        "durationHint": "Approssimativa — usa per le statistiche ore"
+      },
+      "step3": {
+        "title": "Chi ha giocato e con che punteggio?",
+        "subtitle": "Inserisci i punteggi: il vincitore è calcolato automaticamente dal punteggio più alto.",
+        "playersLabel": "Giocatori e punteggi ({count})",
+        "addPlayerPlaceholder": "Nome giocatore…",
+        "addPlayerButton": "Aggiungi giocatore",
+        "winnerBadge": "Vincitore",
+        "noPlayersHint": "Aggiungi almeno un giocatore per salvare la partita"
+      },
+      "preview": {
+        "sectionLabel": "Anteprima live · Record partita",
+        "noGameSelected": "Seleziona un gioco",
+        "rankingLabel": "Classifica · {count} giocatori",
+        "tip": "Il vincitore è calcolato dal punteggio più alto. Si aggiorna in tempo reale mentre compili."
+      },
+      "draft": {
+        "saving": "Salvataggio…",
+        "saved": "Bozza salvata {time}"
+      },
+      "loading": {
+        "library": "Caricamento libreria…"
       }
     },
     "share": {

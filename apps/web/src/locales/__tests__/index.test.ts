@@ -107,4 +107,28 @@ describe('i18n locales', () => {
       expect(keys).toEqual(EXPECTED_KEYS);
     });
   });
+
+  // Issue #3168: /play-records/[id]/edit reuses SessionCreateForm with the scoped translator
+  // ns='playRecords.edit'. Every wizard-chrome key the form resolves in create mode
+  // (playRecords.new.*) must therefore also exist under playRecords.edit, otherwise edit mode
+  // renders raw ids (step1.title, step2.dateLabel, actions.next, aria-labels, ...).
+  describe('playRecords.edit ⊇ playRecords.new (Issue #3168)', () => {
+    it.each([
+      ['it', LOCALES.IT],
+      ['en', LOCALES.EN],
+    ])('playRecords.edit contains every playRecords.new key in the %s catalog', (name, locale) => {
+      const catalog = getMessages(locale) as Record<string, unknown>;
+      const playRecords = (catalog.playRecords ?? {}) as Record<string, unknown>;
+
+      const newKeys = Object.keys(
+        flattenMessages((playRecords.new ?? {}) as Record<string, unknown>)
+      );
+      const editKeys = new Set(
+        Object.keys(flattenMessages((playRecords.edit ?? {}) as Record<string, unknown>))
+      );
+
+      const missing = newKeys.filter(key => !editKeys.has(key)).sort();
+      expect(missing, `${name}.json playRecords.edit is missing wizard-chrome keys`).toEqual([]);
+    });
+  });
 });

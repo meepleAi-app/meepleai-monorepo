@@ -325,6 +325,32 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                 throw new ConflictException(
                     "This game night already has a live session in progress. Only one live session per game night is allowed.");
             }
+            catch (DbUpdateException ex) when (IsGameNightPlayOrderViolation(ex))
+            {
+                // Epic #3188 post-review (HIGH): two concurrent draft creates on the SAME existing
+                // night each read an identical nightEntity.Sessions.Count snapshot (line above) and
+                // compute the SAME PlayOrder, so the 2nd INSERT violates the per-night play-order
+                // unique index (IX_game_night_sessions_event_play_order). Invariante #19 makes this a
+                // benign ordering race (drafts are meant to coexist), so map it to a retryable 409 —
+                // never a raw 500 (project rule #2568).
+                //
+                // Chosen approach: 409 fallback rather than in-place auto-retry. An auto-retry would
+                // have to re-invoke SaveChangesAsync on this same UnitOfWork after a failed save, but
+                // MeepleAiDbContext.SaveChangesAsyncCore maps the collected domain events (session.created)
+                // into durable domain_event_logs + outbox rows on EVERY call via a NON-destructive
+                // PeekEvents() and only drains the collector on success — so a second save would
+                // double-insert those rows (duplicate EventId). Safely auto-retrying would require
+                // detaching the failed attempt's tracked log/outbox entities and clearing the collector
+                // between attempts, i.e. reaching into event-sourcing internals well outside this fix's
+                // scope. The 409 is fully client-retryable: the retry re-reads Sessions.Count against the
+                // now-committed first draft and gets the next PlayOrder, so a single retry resolves it.
+                _logger.LogDebug(
+                    ex,
+                    "Concurrent same-night PlayOrder collision on create (GameNight={GameNightId}); mapping to 409",
+                    nightEntity?.Id);
+                throw new ConflictException(
+                    "Another session was added to this game night at the same time. Please retry.");
+            }
             catch (InvalidOperationException ex) when (attempt < maxRetries - 1)
             {
                 _logger.LogDebug(ex, "Session code collision on attempt {Attempt}, retrying", attempt + 1);
@@ -340,6 +366,14 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
         ex.InnerException is Npgsql.PostgresException pg
         && string.Equals(pg.SqlState, Npgsql.PostgresErrorCodes.UniqueViolation, StringComparison.Ordinal)
         && string.Equals(pg.ConstraintName, GameNightSessionEntityConfiguration.UniqueActiveIndexName, StringComparison.Ordinal);
+
+    // Epic #3188 post-review — true iff the DbUpdateException is the unique-index violation on the
+    // per-night play-order index (game_night_sessions (event_id, play_order)), raised when two
+    // concurrent draft creates compute the same PlayOrder. Distinct from the live-slot index above.
+    private static bool IsGameNightPlayOrderViolation(DbUpdateException ex) =>
+        ex.InnerException is Npgsql.PostgresException pg
+        && string.Equals(pg.SqlState, Npgsql.PostgresErrorCodes.UniqueViolation, StringComparison.Ordinal)
+        && string.Equals(pg.ConstraintName, GameNightSessionEntityConfiguration.PlayOrderIndexName, StringComparison.Ordinal);
 
     /// <summary>
     /// Session Flow v2.1 — T4 (revised epic #3188 Slice 3).

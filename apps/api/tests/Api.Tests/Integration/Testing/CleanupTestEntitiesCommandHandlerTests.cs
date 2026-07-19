@@ -126,7 +126,10 @@ public sealed class CleanupTestEntitiesCommandHandlerTests : IAsyncLifetime
         response.DeletedUsers.Should().BeGreaterThanOrEqualTo(1);
         // Issue #1929 Macro 3a — library cascade assertions
         response.DeletedLibraryEntries.Should().Be(1);
-        response.DeletedSharedGames.Should().Be(1);
+        // Epic #3188 FIX 2 — SeedFullScopeAsync seeds an IsLive session, which now materializes its
+        // own TestRunId-stamped SharedGame (for the live tracking Session FK) in addition to the
+        // library game, so 2 shared games are cascade-deleted.
+        response.DeletedSharedGames.Should().Be(2);
         // Issue #1929 Macro 4 (DEC-C-10 REVISION) — UserGameSessions not seeded in SeedFullScopeAsync
         response.DeletedUserGameSessions.Should().Be(0);
 

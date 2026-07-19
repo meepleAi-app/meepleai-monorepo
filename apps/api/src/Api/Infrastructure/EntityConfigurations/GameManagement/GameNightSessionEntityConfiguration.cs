@@ -20,6 +20,16 @@ internal class GameNightSessionEntityConfiguration : IEntityTypeConfiguration<Ga
     /// </summary>
     public const string UniqueActiveIndexName = "ix_game_night_sessions_unique_active";
 
+    /// <summary>
+    /// Name of the per-night play-order unique index on <c>(GameNightEventId, PlayOrder)</c>.
+    /// Single source of truth: referenced by the index declaration below AND by the Postgres 23505
+    /// unique-violation catch in <c>CreateSessionCommandHandler</c> that maps a concurrent same-night
+    /// draft PlayOrder collision (invariante #19 — drafts coexist) to a retryable HTTP 409 rather than
+    /// letting it surface as a raw 500 (epic #3188 post-review, project rule #2568). Keeping the literal
+    /// in one place prevents the catch from drifting away from the index name.
+    /// </summary>
+    public const string PlayOrderIndexName = "IX_game_night_sessions_event_play_order";
+
     public void Configure(EntityTypeBuilder<GameNightSessionEntity> builder)
     {
         builder.ToTable("game_night_sessions");
@@ -37,7 +47,7 @@ internal class GameNightSessionEntityConfiguration : IEntityTypeConfiguration<Ga
         builder.Property(s => s.CompletedAt).HasColumnName("completed_at");
 
         builder.HasIndex(s => new { s.GameNightEventId, s.PlayOrder })
-            .HasDatabaseName("IX_game_night_sessions_event_play_order")
+            .HasDatabaseName(PlayOrderIndexName)
             .IsUnique();
 
         builder.HasIndex(s => s.SessionId)

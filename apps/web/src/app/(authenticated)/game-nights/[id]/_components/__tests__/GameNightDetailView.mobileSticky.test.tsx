@@ -12,6 +12,7 @@ import { GameNightDetailView } from '../GameNightDetailView';
 const detailMock = vi.fn();
 const getTabMock = vi.fn<(key: string) => string | null>();
 const currentUserMock = vi.fn();
+const networkStatusMock = vi.fn<() => { isOffline: boolean }>();
 
 vi.mock('@/hooks/queries/useGameNightDetail', () => ({
   useGameNightDetail: () => detailMock(),
@@ -38,6 +39,10 @@ vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
 vi.mock('@/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (k: string) => k, locale: 'it-IT' }),
 }));
+// #2989 gap 5: RSVP CTAs are offline-disabled from useNetworkStatus.
+vi.mock('@/hooks/useNetworkStatus', () => ({
+  useNetworkStatus: () => networkStatusMock(),
+}));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   useSearchParams: () => ({ get: getTabMock }),
@@ -46,7 +51,9 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/components/features/game-night-detail', () => ({
   GameNightDetailHero: () => <div data-testid="hero" />,
   GameNightCancelledBanner: () => null,
-  GameNightRsvpActionBar: () => <div data-testid="rsvp-action-bar" />,
+  GameNightRsvpActionBar: (props: { disabled?: boolean }) => (
+    <div data-testid="rsvp-action-bar" data-disabled={String(Boolean(props.disabled))} />
+  ),
   GameNightRsvpRow: () => <div data-testid="rsvp-row" />,
 }));
 vi.mock('@/components/game-night/GameNightActions', () => ({
@@ -106,6 +113,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   getTabMock.mockReturnValue(null);
   currentUserMock.mockReturnValue({ data: { id: 'guest-1' } });
+  networkStatusMock.mockReturnValue({ isOffline: false });
 });
 
 describe('GameNightDetailView — mobile sticky action bars (#2989 Screen C)', () => {
@@ -117,6 +125,24 @@ describe('GameNightDetailView — mobile sticky action bars (#2989 Screen C)', (
     expectMobileSticky(bar);
     // The action bar itself lives inside the sticky wrapper.
     expect(bar.querySelector('[data-testid="rsvp-action-bar"]')).not.toBeNull();
+  });
+
+  // #2989 gap 5: while offline the guest RSVP CTAs must be disabled (they can't
+  // reach the server) and re-enable on reconnect.
+  it('disables the guest RSVP action bar while offline', () => {
+    networkStatusMock.mockReturnValue({ isOffline: true });
+    mockDetail({ actor: { actor: 'guest' } });
+    render(<GameNightDetailView id="gn-1" />);
+
+    expect(screen.getByTestId('rsvp-action-bar').getAttribute('data-disabled')).toBe('true');
+  });
+
+  it('leaves the guest RSVP action bar enabled while online', () => {
+    networkStatusMock.mockReturnValue({ isOffline: false });
+    mockDetail({ actor: { actor: 'guest' } });
+    render(<GameNightDetailView id="gn-1" />);
+
+    expect(screen.getByTestId('rsvp-action-bar').getAttribute('data-disabled')).toBe('false');
   });
 
   it('wraps the host "Invia inviti" CTA in a mobile sticky bottom bar on a Draft night', () => {

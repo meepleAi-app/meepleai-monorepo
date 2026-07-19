@@ -10,6 +10,16 @@ namespace Api.Infrastructure.EntityConfigurations.GameManagement;
 /// </summary>
 internal class GameNightSessionEntityConfiguration : IEntityTypeConfiguration<GameNightSessionEntity>
 {
+    /// <summary>
+    /// Name of the partial-unique index enforcing "max 1 live (InProgress) session per GameNight"
+    /// (invariante #10, Issue #3157 C1). Single source of truth: referenced by the index declaration
+    /// below AND by every Postgres 23505 unique-violation catch that maps this constraint to HTTP 409
+    /// (create-path <c>CreateSessionCommandHandler</c> + go-live-path <c>GoLiveSessionCommandHandler</c>).
+    /// Keeping the literal in one place prevents the catch from silently drifting away from the index
+    /// name and turning a real 409 into an uncaught 500.
+    /// </summary>
+    public const string UniqueActiveIndexName = "ix_game_night_sessions_unique_active";
+
     public void Configure(EntityTypeBuilder<GameNightSessionEntity> builder)
     {
         builder.ToTable("game_night_sessions");
@@ -42,7 +52,7 @@ internal class GameNightSessionEntityConfiguration : IEntityTypeConfiguration<Ga
         // model). Declaring it on the MODEL here makes it EF-tracked, so it survives future
         // flattens — fixing the root cause, not just restoring the symptom.
         builder.HasIndex(s => s.GameNightEventId)
-            .HasDatabaseName("ix_game_night_sessions_unique_active")
+            .HasDatabaseName(UniqueActiveIndexName)
             .IsUnique()
             .HasFilter("status = 'InProgress'");
     }

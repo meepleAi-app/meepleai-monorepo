@@ -1,5 +1,7 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
+using Api.BoundedContexts.GameManagement.Domain.Exceptions;
+using Api.Middleware.Exceptions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain.Entities;
@@ -133,6 +135,83 @@ public class GameNightEventSessionsTests
         evt.AddSession(Guid.NewGuid(), evt.GameIds[1], "Dixit");
         evt.StartCurrentSession();
         Assert.Equal(GameNightSessionStatus.InProgress, evt.Sessions[0].Status);
+        Assert.Equal(GameNightSessionStatus.Pending, evt.Sessions[1].Status);
+    }
+
+    // ── StartSession(sessionId) — targeted go-live promotion (epic #3188 Slice 2) ──────────
+
+    [Fact]
+    public void StartSession_PromotesExactlyTheTargetedSession_NotLowestPlayOrder()
+    {
+        // Two pending drafts; go live on the SECOND (play order 2). Only it must flip to InProgress —
+        // StartCurrentSession would have promoted the FIRST, so this proves the targeting.
+        var evt = CreatePublishedEvent();
+        var firstSessionId = Guid.NewGuid();
+        var secondSessionId = Guid.NewGuid();
+        evt.AddSession(firstSessionId, evt.GameIds[0], "Catan");
+        evt.AddSession(secondSessionId, evt.GameIds[1], "Dixit");
+
+        evt.StartSession(secondSessionId);
+
+        Assert.Equal(GameNightSessionStatus.Pending, evt.Sessions[0].Status);
+        Assert.Equal(GameNightSessionStatus.InProgress, evt.Sessions[1].Status);
+        Assert.Equal(secondSessionId, evt.Sessions[1].SessionId);
+        Assert.NotNull(evt.Sessions[1].StartedAt);
+    }
+
+    [Fact]
+    public void StartSession_RaisesNoDomainEvent_ParityWithStartCurrentSession()
+    {
+        // Parity contract: like StartCurrentSession, the aggregate promotion raises NO domain event.
+        // The live-mode transition (and invariante #15 night promotion) is driven separately by
+        // Session.OpenLiveMode()'s SessionStartedDomainEvent — dispatched by the go-live handler.
+        var evt = CreatePublishedEvent();
+        var sessionId = Guid.NewGuid();
+        evt.AddSession(sessionId, evt.GameIds[0], "Catan");
+        evt.ClearDomainEvents(); // drop the GameNightPublished + GameStartedInNight events
+
+        evt.StartSession(sessionId);
+
+        Assert.Empty(evt.DomainEvents);
+        Assert.Equal(GameNightSessionStatus.InProgress, evt.Sessions[0].Status);
+    }
+
+    [Fact]
+    public void StartSession_UnknownSessionId_ThrowsNotFound()
+    {
+        var evt = CreatePublishedEvent();
+        evt.AddSession(Guid.NewGuid(), evt.GameIds[0], "Catan");
+
+        Assert.Throws<NotFoundException>(() => evt.StartSession(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public void StartSession_OnNonPendingSession_Throws()
+    {
+        // A completed session cannot be taken live again.
+        var evt = CreatePublishedEvent();
+        var sessionId = Guid.NewGuid();
+        evt.AddSession(sessionId, evt.GameIds[0], "Catan");
+        evt.StartCurrentSession();
+        evt.CompleteCurrentSession(winnerId: null); // now Completed
+
+        Assert.Throws<InvalidOperationException>(() => evt.StartSession(sessionId));
+    }
+
+    [Fact]
+    public void StartSession_WhenAnotherSessionIsInProgress_ThrowsMaxLiveSessionsExceeded()
+    {
+        // First draft is already live; going live on the second must be rejected by the max-1-live
+        // guard (invariante #10) — same guard StartCurrentSession uses.
+        var evt = CreatePublishedEvent();
+        var firstSessionId = Guid.NewGuid();
+        var secondSessionId = Guid.NewGuid();
+        evt.AddSession(firstSessionId, evt.GameIds[0], "Catan");
+        evt.AddSession(secondSessionId, evt.GameIds[1], "Dixit");
+        evt.StartSession(firstSessionId); // first goes live
+
+        Assert.Throws<MaxLiveSessionsExceededException>(() => evt.StartSession(secondSessionId));
+        // The blocked target must stay Pending — the guard runs before any promotion.
         Assert.Equal(GameNightSessionStatus.Pending, evt.Sessions[1].Status);
     }
 

@@ -13,6 +13,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.BoundedContexts.SessionTracking.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
+using Api.Infrastructure.EntityConfigurations.GameManagement;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
@@ -324,7 +325,7 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
     private static bool IsGameNightLiveSlotViolation(DbUpdateException ex) =>
         ex.InnerException is Npgsql.PostgresException pg
         && string.Equals(pg.SqlState, Npgsql.PostgresErrorCodes.UniqueViolation, StringComparison.Ordinal)
-        && string.Equals(pg.ConstraintName, "ix_game_night_sessions_unique_active", StringComparison.Ordinal);
+        && string.Equals(pg.ConstraintName, GameNightSessionEntityConfiguration.UniqueActiveIndexName, StringComparison.Ordinal);
 
     /// <summary>
     /// Session Flow v2.1 — T4.

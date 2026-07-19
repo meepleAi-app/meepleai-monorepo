@@ -689,6 +689,48 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Promotes a SPECIFIC pending draft session (identified by its tracking-<paramref name="sessionId"/>)
+    /// to InProgress. Unlike <see cref="StartCurrentSession"/> — which promotes the first pending session
+    /// by play order — this targets the exact session the caller went live on (Slice 2 of the explicit
+    /// go-live sub-resource, epic #3188).
+    ///
+    /// <para>Enforces the same guards as <see cref="StartCurrentSession"/>:
+    /// <list type="bullet">
+    ///   <item>Corruption guard (<see cref="ThrowIfCorrupted"/>).</item>
+    ///   <item>Invariante #10 (max 1 live) via <see cref="EnsureCanStartSession"/> — checked BEFORE the
+    ///         promotion so a night that already has a live session is rejected without mutating state.</item>
+    ///   <item>Pending → InProgress transition guard via <see cref="GameNightSession.Start"/>.</item>
+    /// </list></para>
+    ///
+    /// <para>Raises NO domain event — parity with <see cref="StartCurrentSession"/>. The live-mode
+    /// transition (and the invariante #15 night promotion Published → InProgress) is driven separately by
+    /// <c>Session.OpenLiveMode()</c>'s <c>SessionStartedDomainEvent</c>, dispatched by the go-live handler
+    /// as its LAST step. Emitting an extra aggregate event here would double-signal that flow.</para>
+    /// </summary>
+    /// <param name="sessionId">The tracking-Session id of the draft to promote.</param>
+    /// <exception cref="Api.Middleware.Exceptions.NotFoundException">
+    /// Thrown (mapped to HTTP 404) when no child session matches <paramref name="sessionId"/>.</exception>
+    /// <exception cref="MaxLiveSessionsExceededException">
+    /// Thrown (mapped to HTTP 409) when another session on this night is already InProgress.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the targeted session is not in Pending status (non-Pending is a conflict; the command
+    /// handler maps it to HTTP 409).</exception>
+    public void StartSession(Guid sessionId)
+    {
+        ThrowIfCorrupted();
+
+        var session = _sessions.FirstOrDefault(s => s.SessionId == sessionId)
+            ?? throw new NotFoundException("GameNightSession", sessionId.ToString());
+
+        // Invariante #10 — reject a 2nd live BEFORE promoting, so the guard sees the pre-promotion
+        // state (same order StartCurrentSession relies on).
+        EnsureCanStartSession();
+
+        session.Start(); // Pending → InProgress guard (throws InvalidOperationException otherwise)
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
     /// Completes the in-progress session, optionally recording a winner.
     /// </summary>
     public void CompleteCurrentSession(Guid? winnerId)

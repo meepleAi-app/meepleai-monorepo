@@ -7,6 +7,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Infrastructure.Persistence;
 
 using MediatR;
 
@@ -91,15 +92,18 @@ public sealed class GenerateInviteTokenCommandHandler : IRequestHandler<Generate
 #pragma warning restore S1075
 
     private readonly ISessionRepository _sessionRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IConfiguration _configuration;
     private readonly ILogger<GenerateInviteTokenCommandHandler> _logger;
 
     public GenerateInviteTokenCommandHandler(
         ISessionRepository sessionRepository,
+        IUnitOfWork unitOfWork,
         IConfiguration configuration,
         ILogger<GenerateInviteTokenCommandHandler> logger)
     {
         _sessionRepository = sessionRepository;
+        _unitOfWork = unitOfWork;
         _configuration = configuration;
         _logger = logger;
     }
@@ -122,8 +126,11 @@ public sealed class GenerateInviteTokenCommandHandler : IRequestHandler<Generate
         // Generate the invite token
         var token = session.GenerateInviteToken(request.ExpiresInHours);
 
-        // Save the session with new invite token
+        // Save the session with new invite token. SessionRepository.UpdateAsync is stage-only
+        // (it mutates the tracked entity without SaveChanges), so the token is only persisted
+        // once the unit of work is committed here.
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         var baseUrl = _configuration["App:BaseUrl"] ?? DefaultBaseUrl;
         var inviteUrl = $"{baseUrl}/sessions/join/{token}";
@@ -176,13 +183,16 @@ public sealed class GenerateInviteTokenCommandHandler : IRequestHandler<Generate
 public sealed class JoinSessionByInviteCommandHandler : IRequestHandler<JoinSessionByInviteCommand, JoinSessionResponse>
 {
     private readonly ISessionRepository _sessionRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<JoinSessionByInviteCommandHandler> _logger;
 
     public JoinSessionByInviteCommandHandler(
         ISessionRepository sessionRepository,
+        IUnitOfWork unitOfWork,
         ILogger<JoinSessionByInviteCommandHandler> logger)
     {
         _sessionRepository = sessionRepository;
+        _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
@@ -233,8 +243,11 @@ public sealed class JoinSessionByInviteCommandHandler : IRequestHandler<JoinSess
 
         session.AddParticipant(participantInfo, request.UserId);
 
-        // Save changes
+        // Save changes. SessionRepository.UpdateAsync is stage-only (it mutates the tracked
+        // entity without SaveChanges), so the new participant is only persisted once the
+        // unit of work is committed here.
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         var newParticipant = session.Participants.Last();
 

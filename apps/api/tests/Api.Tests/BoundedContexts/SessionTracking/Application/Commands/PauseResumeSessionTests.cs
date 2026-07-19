@@ -408,4 +408,32 @@ public sealed class PauseResumeSessionTests : IAsyncLifetime
             .FirstAsync(l => l.SessionId == created.SessionId, TestCancellationToken);
         link.Status.Should().Be(nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightSessionStatus.Completed));
     }
+
+    // Issue #3157 C2a — the restored unique index (C1) turns a concurrent create-in-the-same-night
+    // race into a real 23505; the handler must map it to a clean 409 (ConflictException), not a 500.
+    // Reproduced deterministically: leave one InProgress link whose session is NOT Active (so the
+    // read-check guard passes), then create a second session in the same night → the 2nd InProgress
+    // link violates ix_game_night_sessions_unique_active.
+    [Fact]
+    public async Task CreateSession_LiveSlotIndexViolation_MapsTo409()
+    {
+        var (userId, gameId) = await _fixture.SeedUserWithLibraryGameAndIndexedKbAsync(_dbContext!, vectorCount: 2);
+        var first = await _createHandler!.Handle(BuildCreateCommand(userId, gameId), TestCancellationToken);
+        await _pauseHandler!.Handle(new PauseSessionCommand(first.SessionId, userId), TestCancellationToken);
+        _dbContext!.ChangeTracker.Clear();
+
+        // Re-flip the (now Pending) link back to InProgress while its session stays Paused: one
+        // InProgress link the Active-count read-check cannot see. Index still allows exactly 1.
+        var link0 = await _dbContext.GameNightSessions
+            .FirstAsync(l => l.SessionId == first.SessionId, TestCancellationToken);
+        link0.Status = nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightSessionStatus.InProgress);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        _dbContext.ChangeTracker.Clear();
+
+        var act = async () => await _createHandler.Handle(
+            BuildCreateCommand(userId, gameId, first.GameNightEventId), TestCancellationToken);
+
+        (await act.Should().ThrowAsync<ConflictException>())
+            .Which.Message.Should().Contain("live session in progress");
+    }
 }

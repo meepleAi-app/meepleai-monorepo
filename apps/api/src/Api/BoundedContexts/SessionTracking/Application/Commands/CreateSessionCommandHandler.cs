@@ -300,6 +300,16 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                     AgentDefinitionId: agentDefinitionId,
                     ToolkitId: toolkitId);
             }
+            catch (DbUpdateException ex) when (IsGameNightLiveSlotViolation(ex))
+            {
+                // Issue #3157 C2a — the restored ix_game_night_sessions_unique_active index (C1)
+                // makes a concurrent create-in-the-same-night race a real unique violation (the
+                // read-check guard in ResolveGameNightAsync is not atomic with the insert). Map it
+                // to a clean 409 instead of the raw DbUpdateException → 500. NOT retried: the live
+                // slot is genuinely taken by a sibling session.
+                throw new ConflictException(
+                    "This game night already has a live session in progress. Only one live session per game night is allowed.");
+            }
             catch (InvalidOperationException ex) when (attempt < maxRetries - 1)
             {
                 _logger.LogDebug(ex, "Session code collision on attempt {Attempt}, retrying", attempt + 1);
@@ -308,6 +318,13 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
 
         throw new ConflictException("Unable to generate unique session code after retries");
     }
+
+    // Issue #3157 C2a — true iff the DbUpdateException is the partial-unique-index violation on
+    // the GameNight live slot (game_night_sessions InProgress per event), not some other constraint.
+    private static bool IsGameNightLiveSlotViolation(DbUpdateException ex) =>
+        ex.InnerException is Npgsql.PostgresException pg
+        && string.Equals(pg.SqlState, Npgsql.PostgresErrorCodes.UniqueViolation, StringComparison.Ordinal)
+        && string.Equals(pg.ConstraintName, "ix_game_night_sessions_unique_active", StringComparison.Ordinal);
 
     /// <summary>
     /// Session Flow v2.1 — T4.

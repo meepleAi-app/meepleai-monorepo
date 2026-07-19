@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.AbTest;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Queries.AbTest;
@@ -47,7 +48,7 @@ internal sealed class RevealAbTestQueryHandler : IQueryHandler<RevealAbTestQuery
             return null;
 
         if (session.Status != AbTestStatus.Evaluated)
-            throw new InvalidOperationException("Cannot reveal models before evaluation is complete");
+            throw new ConflictException("Cannot reveal models before evaluation is complete");
 
         return AbTestMapper.ToRevealedDto(session);
     }

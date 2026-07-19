@@ -70,7 +70,7 @@ public class GenerateToolkitFromKbHandlerTests
     }
 
     [Fact]
-    public async Task Handle_NoAccessibleKbCards_ThrowsInvalidOperationException()
+    public async Task Handle_NoAccessibleKbCards_ThrowsConflictException()
     {
         SetupGameCoreData("Catan");
         _ragAccessMock
@@ -80,7 +80,8 @@ public class GenerateToolkitFromKbHandlerTests
         var command = new GenerateToolkitFromKbCommand(GameId, UserId);
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        await act.Should().ThrowAsync<InvalidOperationException>()
+        // Issue #3210: empty KB is a state conflict (409), not a 500.
+        await act.Should().ThrowAsync<Api.Middleware.Exceptions.ConflictException>()
             .WithMessage("*knowledge base*");
     }
 

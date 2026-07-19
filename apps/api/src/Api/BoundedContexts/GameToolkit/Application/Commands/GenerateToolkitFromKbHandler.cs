@@ -121,7 +121,7 @@ internal class GenerateToolkitFromKbHandler
             .ConfigureAwait(false);
 
         if (accessibleCardIds.Count == 0)
-            throw new InvalidOperationException(
+            throw new ConflictException(
                 $"No documents found in knowledge base for game {command.GameId}. Upload and index PDF rulebooks first.");
 
         // 3. Fan-out hybrid search across extraction query categories

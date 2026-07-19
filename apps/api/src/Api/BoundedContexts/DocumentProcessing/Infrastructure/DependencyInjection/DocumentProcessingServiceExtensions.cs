@@ -75,7 +75,6 @@ internal static class DocumentProcessingServiceExtensions
 
         // Issue #2732: Share request document services
         services.AddScoped<IShareRequestDocumentService, ShareRequestDocumentService>();
-        services.AddScoped<IStorageQuotaService, StorageQuotaService>();
 
         // Issue #4212: Processing metrics and ETA calculation service
         services.AddScoped<IProcessingMetricsService, ProcessingMetricsService>();

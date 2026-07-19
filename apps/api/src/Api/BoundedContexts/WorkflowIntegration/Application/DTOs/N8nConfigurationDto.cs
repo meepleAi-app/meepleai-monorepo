@@ -21,13 +21,3 @@ internal record CreateN8NConfigRequest(
     string ApiKey,
     string? WebhookUrl = null
 );
-
-internal record WorkflowErrorLogDto(
-    Guid Id,
-    string WorkflowId,
-    string ExecutionId,
-    string ErrorMessage,
-    string? NodeName,
-    int RetryCount,
-    DateTime CreatedAt
-);

@@ -42,18 +42,6 @@ internal sealed class ToolkitPublishedEvent : DomainEventBase
     }
 }
 
-internal sealed class TimerExpiredEvent : DomainEventBase
-{
-    public Guid ToolkitId { get; }
-    public string TimerName { get; }
-
-    public TimerExpiredEvent(Guid toolkitId, string timerName)
-    {
-        ToolkitId = toolkitId;
-        TimerName = timerName;
-    }
-}
-
 /// <summary>
 /// Raised when a new <c>ToolkitVersion</c> is published for a <c>GameToolkit</c>.
 /// Consumers invalidate <c>toolkit:{id}</c>, <c>toolkits:{id}:versions</c>,

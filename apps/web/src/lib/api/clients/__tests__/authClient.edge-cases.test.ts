@@ -66,6 +66,24 @@ describe('authClient - Edge Cases (Issue #2309)', () => {
       ).rejects.toThrow('Email already exists');
     });
 
+    it('should include termsAccepted in the register POST body (#2954 F1)', async () => {
+      mockHttpClient.post.mockResolvedValueOnce({
+        user: { id: '1', email: 'a@b.com', role: 'user' },
+      });
+
+      await authClient.register({
+        email: 'a@b.com',
+        password: 'ValidUnusualPwd123!',
+        termsAccepted: true,
+      });
+
+      expect(mockHttpClient.post).toHaveBeenCalledWith(
+        '/api/v1/auth/register',
+        expect.objectContaining({ termsAccepted: true }),
+        expect.anything()
+      );
+    });
+
     it('should propagate errors from updateProfile', async () => {
       mockHttpClient.put.mockRejectedValueOnce(new Error('Profile update failed'));
 

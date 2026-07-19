@@ -205,6 +205,9 @@ export function AuthModal({
         const user = await register({
           email: data.email,
           password: data.password,
+          // #2954 F1: RegisterForm gates submission on the required ToS checkbox, so
+          // acceptance is always true here. The backend records + stamps it server-side.
+          termsAccepted: true,
         });
         trackSignUp({ method: 'email' });
         onSuccess?.(user);

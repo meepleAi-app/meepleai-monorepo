@@ -49,6 +49,8 @@ export default function TermsPage() {
       pageKey="terms"
       sections={TERMS_SECTIONS}
       defaultOpenSection="acceptance"
+      // #2954 F1: keep this date in sync with the backend TermsVersion.Current constant
+      // (apps/api/src/Api/BoundedContexts/Authentication/Domain/Constants/TermsVersion.cs).
       lastUpdated={new Date('2026-07-15')}
       prevLink={{
         href: '/privacy',

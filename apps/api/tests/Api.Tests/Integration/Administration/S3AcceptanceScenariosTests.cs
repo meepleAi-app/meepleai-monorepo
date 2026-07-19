@@ -123,7 +123,7 @@ public sealed class S3AcceptanceScenariosTests : IAsyncLifetime
     private async Task<(Guid UserId, Guid SessionId)> SeedAdminAsync(string email, string password, string role = "admin")
     {
         var registerResponse = await _client.PostAsJsonAsync("/api/v1/auth/register",
-            new { Email = email, Password = password, DisplayName = email.Split('@')[0] });
+            new { Email = email, Password = password, DisplayName = email.Split('@')[0], TermsAccepted = true });
         registerResponse.StatusCode.Should().Be(HttpStatusCode.OK,
             $"the test fixture expects a clean registration; got {await registerResponse.Content.ReadAsStringAsync()}");
 

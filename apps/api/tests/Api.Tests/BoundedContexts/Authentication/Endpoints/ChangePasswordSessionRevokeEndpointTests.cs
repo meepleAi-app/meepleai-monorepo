@@ -152,6 +152,7 @@ public sealed class ChangePasswordSessionRevokeEndpointTests : IAsyncLifetime
             Email = email,
             Password = password,
             DisplayName = "C7 Revoke Test",
+            TermsAccepted = true,
         });
         response.EnsureSuccessStatusCode();
         return ExtractSessionCookie(response)

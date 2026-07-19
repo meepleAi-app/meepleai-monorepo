@@ -27,6 +27,7 @@ internal static class AuthenticationServiceExtensions
         services.AddScoped<IInvitationTokenRepository, InvitationTokenRepository>(); // ISSUE-124
         services.AddScoped<IAccessRequestRepository, AccessRequestRepository>(); // ISSUE-124: Access request management
         services.AddScoped<IWaitlistEntryRepository, WaitlistEntryRepository>(); // ISSUE-589: Public Alpha waitlist (Wave A.2)
+        services.AddScoped<ITermsAcceptanceRepository, TermsAcceptanceRepository>(); // #2954 F1: ToS acceptance record
 
         // Register Unit of Work
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();

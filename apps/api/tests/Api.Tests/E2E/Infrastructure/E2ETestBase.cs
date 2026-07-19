@@ -135,7 +135,8 @@ public abstract class E2ETestBase : IAsyncLifetime
         {
             email,
             password,
-            displayName = displayName ?? email.Split('@')[0]
+            displayName = displayName ?? email.Split('@')[0],
+            termsAccepted = true
         };
 
         var response = await Client.PostAsJsonAsync("/api/v1/auth/register", payload);

@@ -30,6 +30,8 @@ import { AuthUser } from '@/types';
 export interface RegisterData {
   email: string;
   password: string;
+  // #2954 F1: user's ToS acceptance, forwarded to the register API.
+  termsAccepted?: boolean;
   displayName?: string;
   role?: string;
 }

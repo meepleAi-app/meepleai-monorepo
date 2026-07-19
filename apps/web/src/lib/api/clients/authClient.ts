@@ -76,6 +76,10 @@ export interface RegisterRequest {
   password: string;
   displayName?: string;
   role?: string;
+  // #2954 F1: user's ToS acceptance. Optional in the type (multiple register call
+  // paths), but the backend rejects registration without it (400) — the register
+  // form always sends `true`.
+  termsAccepted?: boolean;
 }
 
 export interface UpdateProfileRequest {

@@ -87,6 +87,9 @@ export function RegisterPageContent({ oauthDisabled = false }: RegisterPageConte
         await register({
           email: data.email,
           password: data.password,
+          // #2954 F1: the form only submits when the required ToS checkbox is checked,
+          // so acceptance is always true here. The backend records + stamps it server-side.
+          termsAccepted: true,
         });
         trackSignUp({ method: 'email' });
 

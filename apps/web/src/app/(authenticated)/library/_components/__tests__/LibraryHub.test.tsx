@@ -153,7 +153,7 @@ const MESSAGES: Record<string, string> = {
   'pages.library.hero.stats.docs': 'Documenti',
   'pages.library.hero.stats.chats': 'Chat',
   'pages.library.hubTabs.all': 'Tutti',
-  'pages.library.hubTabs.games': 'Giochi',
+  'pages.library.hubTabs.games': 'I miei giochi',
   'pages.library.hubTabs.agents': 'Agenti',
   'pages.library.hubTabs.kb': 'KB',
   'pages.library.hubTabs.sessions': 'Sessioni',

@@ -197,7 +197,7 @@ export function NotificationCenter({ open, onOpenChange }: NotificationCenterPro
                 onClick={() => onOpenChange(false)}
                 className="flex items-center gap-1 p-2 text-sm text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-accent"
                 data-testid="notification-center-preferences"
-                aria-label={t('notificationCenter.preferences') || 'Preferenze notifiche'}
+                aria-label={t('notificationCenter.preferences')}
               >
                 <Settings className="h-4 w-4" />
               </Link>

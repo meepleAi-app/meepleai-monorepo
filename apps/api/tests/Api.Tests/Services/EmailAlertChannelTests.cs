@@ -64,6 +64,52 @@ public class EmailAlertChannelTests
     }
 
     [Fact]
+    public async Task SendAsync_WhenSuppressEmailMetadataSet_SkipsTransport_ReturnsFalse()
+    {
+        // Arrange — a Degraded (warning) health alert tagged for email suppression.
+        // Non-critical health warnings must NOT email (they still reach Slack/DB); only
+        // Unhealthy (critical) transitions email. This kills the flapping warning-mail
+        // spam from bggapi/reranker/embedding/shared-catalog-fts.
+        var channel = CreateChannel(EnabledConfig("ops@example.com"));
+        var metadata = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["_suppress_email"] = true
+        };
+
+        // Act
+        var result = await channel.SendAsync("health.bggapi", "warning", "BGG degraded", metadata);
+
+        // Assert — not emailed, but not treated as a transport failure either
+        result.Should().BeFalse();
+        _emailService.Verify(s => s.SendRawEmailAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task SendAsync_WhenSuppressEmailMetadataAbsent_StillSends()
+    {
+        // Arrange — a critical (Unhealthy) health alert carries no suppression flag
+        var channel = CreateChannel(EnabledConfig("ops@example.com"));
+        var metadata = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["service"] = "bggapi"
+        };
+
+        // Act
+        var result = await channel.SendAsync("health.bggapi", "critical", "BGG down", metadata);
+
+        // Assert — normal delivery is unaffected by the suppression path
+        result.Should().BeTrue();
+        _emailService.Verify(s => s.SendRawEmailAsync(
+            "ops@example.com",
+            It.Is<string>(sub => sub.Contains("CRITICAL", StringComparison.Ordinal)),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task SendAsync_WhenTransportThrows_ReturnsFalse_AndDoesNotPropagate()
     {
         // Arrange

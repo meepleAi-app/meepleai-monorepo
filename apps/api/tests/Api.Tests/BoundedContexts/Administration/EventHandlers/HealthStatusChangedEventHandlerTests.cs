@@ -127,6 +127,34 @@ public class HealthStatusChangedEventHandlerTests
         severity.Should().Be("info");
     }
 
+    // ── Email suppression tests ────────────────────────────────────────
+    // Non-critical health transitions (Degraded=warning, recovery=info) must reach
+    // Slack/DB/dashboard but NOT email; only Unhealthy (critical) transitions email.
+
+    [Fact]
+    public void Warning_severity_suppresses_email()
+    {
+        HealthStatusChangedEventHandler.ShouldSuppressEmail("warning").Should().BeTrue();
+    }
+
+    [Fact]
+    public void Info_severity_suppresses_email()
+    {
+        HealthStatusChangedEventHandler.ShouldSuppressEmail("info").Should().BeTrue();
+    }
+
+    [Fact]
+    public void Critical_severity_does_not_suppress_email()
+    {
+        HealthStatusChangedEventHandler.ShouldSuppressEmail("critical").Should().BeFalse();
+    }
+
+    [Fact]
+    public void ShouldSuppressEmail_is_case_insensitive()
+    {
+        HealthStatusChangedEventHandler.ShouldSuppressEmail("CRITICAL").Should().BeFalse();
+    }
+
     // ── AlertType format tests ─────────────────────────────────────────
 
     [Fact]

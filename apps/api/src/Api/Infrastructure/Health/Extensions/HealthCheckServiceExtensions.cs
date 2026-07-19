@@ -44,7 +44,9 @@ public static class HealthCheckServiceExtensions
             "embedding",
             HealthStatus.Degraded,
             tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
-            timeout: TimeSpan.FromSeconds(5));
+            // ML microservice: 12s registration ceiling above the check's 10s internal
+            // cts, so model-load / cold-start latency does not flap Degraded.
+            timeout: TimeSpan.FromSeconds(12));
 
         // Embedding dimension validation — catches provider/schema mismatch at startup.
         // Uses factory registration because IEmbeddingService is internal (CS0051 prevents
@@ -62,7 +64,9 @@ public static class HealthCheckServiceExtensions
             "reranker",
             HealthStatus.Degraded,
             tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
-            timeout: TimeSpan.FromSeconds(5));
+            // ML microservice: 12s registration ceiling above the check's 10s internal
+            // cts, so model-load / cold-start latency does not flap Degraded.
+            timeout: TimeSpan.FromSeconds(12));
 
         // Conditional: PDF extractor providers — only register the check when the
         // provider is actually in use. The "Orchestrator" provider routes to both
@@ -117,7 +121,9 @@ public static class HealthCheckServiceExtensions
             "bggapi",
             HealthStatus.Degraded,
             tags: new[] { HealthCheckTags.External, HealthCheckTags.NonCritical },
-            timeout: TimeSpan.FromSeconds(5));
+            // External third-party API: 10s registration ceiling above the check's 8s
+            // internal cts, so routine BGG latency/rate-limiting does not flap Degraded.
+            timeout: TimeSpan.FromSeconds(10));
 
         builder.AddCheck<OAuthProvidersHealthCheck>(
             "oauth",

@@ -2992,6 +2992,31 @@
           "viewAll": "Vedi tutti",
           "viewAllAriaLabel": "Vedi tutti gli achievement di {playerName}",
           "empty": "Nessun achievement ancora"
+        },
+        "trend": {
+          "title": "Andamento",
+          "deltaUp": "↗ +{percent}%",
+          "deltaDown": "↘ {percent}%",
+          "deltaFlat": "→ 0%",
+          "deltaUpAriaLabel": "Percentuale di vittorie in aumento del {percent}%",
+          "deltaDownAriaLabel": "Percentuale di vittorie in calo del {percent}%",
+          "deltaFlatAriaLabel": "Percentuale di vittorie invariata",
+          "empty": "Dati insufficienti per mostrare l’andamento",
+          "trendSummaryAriaLabel": "Andamento della percentuale di vittorie dal {from}% al {to}% negli ultimi {count} mesi",
+          "monthsShort": {
+            "jan": "Gen",
+            "feb": "Feb",
+            "mar": "Mar",
+            "apr": "Apr",
+            "may": "Mag",
+            "jun": "Giu",
+            "jul": "Lug",
+            "aug": "Ago",
+            "sep": "Set",
+            "oct": "Ott",
+            "nov": "Nov",
+            "dec": "Dic"
+          }
         }
       },
       "states": {

@@ -1,6 +1,6 @@
 # Decision: Slice-0 — decouple create from go-live on the direct-create path (#3188)
 
-**Status**: Accepted (core decisions) — 2 sub-decisions *pending final product confirmation*
+**Status**: Accepted — tutte le decisioni (D1-D6) confermate 2026-07-19 (D5/D6 grounded via ricognizione codice)
 **Created**: 2026-07-19
 **Decider**: Product Owner (badsworm) via /sc:spec-panel, su raccomandazione ragionata del panel (Cockburn+Newman weighted)
 **Epic**: [#3188](https://github.com/meepleAi-app/meepleai-monorepo/issues/3188) (parent #3157 C2b/C2c)
@@ -43,21 +43,24 @@ La liveness canonica è `Session.StartedAt != null && FinalizedAt == null` (owne
 
 ---
 
-## Sub-decisions (recommended — pending final product confirmation)
+## Sub-decisions — Accepted (grounded 2026-07-19)
 
-### D5 — Backward-compat del flip default → draft *(RACCOMANDATO, da confermare)*
+### D5 — Backward-compat del flip default → draft: **flip coordinato in-repo, NESSUNA deprecation window**
 
-Oggi il DTO pubblico `CreateSessionRequest` strippa `SkipGameNightEnvelope` (`SessionCommandEndpoints.cs:34-67`, #2920), quindi **ogni** POST client-visibile ottiene live-on-create; il passaggio a draft-default è **breaking**.
+**Evidenza (ricognizione codice):** `POST /api/v1/game-sessions` è consumato **solo dal FE Next.js in-repo**:
+- Unico caller live: `apps/web/src/lib/api/clients/gameSessionsClient.ts:30` → `useGameNightOrchestrator.ts:44` (non ancora wired a un componente di produzione); l'altro metodo client sul path (`sessionTrackingClient.ts:274-276`) ha **zero caller**. La creazione sessione usata in prod passa da un endpoint diverso (`/api/v1/live-sessions`).
+- Auth **cookie-only** (`RequireAuthenticatedUser` → `TryGetAuthenticatedUser` legge solo il cookie; nessun path API-key/bearer/M2M — il doc-comment che promette "session OR API key" è disallineato dall'impl).
+- Nessun consumer esterno: Scalar/OpenAPI gated a `IsDevelopment` (`WebApplicationExtensions.cs:57`); nessun SDK/mobile/`packages/`; n8n non tocca `game-sessions`. DTO pubblico strippa già i flag interni.
 
-**Raccomandazione**: poiché l'unico consumer noto è il FE in-repo (deploy coordinato BE+FE), gestire come **migrazione coordinata in-repo** — nella Slice 3 aggiornare i call-site FE che intendono "live" a chiamare esplicitamente il go-live (D2), spedendo BE+FE nello stesso release train. Nessuna deprecation window RFC 8594 (assunto: nessun consumer API esterno).
-**Da confermare**: esistono consumer dell'API esterni al monorepo? Se sì → serve `Deprecation`/`Sunset` header (precedente in `SessionCommandEndpoints.cs:124-162`).
+**Decisione:** flip del default → draft in **un solo release train** FE+BE; nella Slice 3 aggiornare il singolo call-site FE che intende "live" a chiamare il go-live esplicito (D2). **Nessun** header RFC 8594.
+**Caveat da monitorare:** se in futuro venisse aggiunto un middleware API-key per onorare i doc-comment esistenti, la conclusione va rivalutata (external-consumer risk).
 
-### D6 — Semantica del cap max-5-per-night *(RACCOMANDATO, da confermare)*
+### D6 — Semantica del cap max-5-per-night: **conta solo i NON-TERMINALI (Pending+InProgress), valore 5**
 
-`CreateSessionCommandHandler.cs:183-187` conta oggi **tutti** i `GameNightSessions` a prescindere dallo status → con N draft coesistenti (D1) un utente che logga 5 draft blocca il 6° con zero live.
+**Evidenza (ricognizione codice):** oggi il cap è un `5` **hardcoded status-agnostic** che conta *tutti* i `GameNightSessions` (`CreateSessionCommandHandler.cs:182-187` → `ConflictException`/409), **senza test diretto** sul guard handler. Esiste un **secondo cap gemello** sull'aggregato `GameNightEvent.cs:639` (`_sessions.Count >= 5` → `InvalidOperationException`), questo **sì** testato (`GameNightEventSessionsTests.cs:37-44`, 5 ok/6° throw). Il dominio modella 1..N sessioni/serata come storia totale e limita solo il max-1-live (#10); draft multipli ammessi (#13/#19).
 
-**Raccomandazione**: il cap conta le sessioni **non-terminali** (`Pending` + `InProgress`), escludendo `Completed`/`Skipped`/`Corrupted`. Preserva un limite sano sul WIP concorrente senza bloccare la storia completa di una night attiva. Boundary test sul 6° draft non-terminale.
-**Da confermare**: il cap di 5 rappresenta "WIP concorrente" (→ non-terminale) o "totale partite loggate per serata" (→ totale)?
+**Decisione:** il cap conta solo i link **non-terminali** (`Pending`+`InProgress`), escludendo `Completed`/`Skipped`/`Corrupted`; valore **5** invariato. Non blocca una serata multi-draft/retrospettiva legittima (giochi finalizzati man mano rotolano via) mantenendo il freno anti-runaway sul WIP concorrente non finalizzato.
+**Enforcement (Slice 3):** allineare **entrambi** i guard — l'handler `CreateSessionCommandHandler.cs:182-187` (aggiungere il filtro status + il test diretto oggi mancante) **e** il gemello aggregato `GameNightEvent.cs:639` + aggiornare `GameNightEventSessionsTests.cs:37-44` (boundary con mix di terminali/non-terminali).
 
 ---
 
@@ -74,8 +77,8 @@ Oggi il DTO pubblico `CreateSessionRequest` strippa `SkipGameNightEnvelope` (`Se
 - [x] Superficie go-live → **D2 sub-resource**
 - [x] Selezione draft → **D3 sessionId esplicito**
 - [x] Canonical liveness owner → **D4 Session.IsLive**
-- [ ] D5 backward-compat confermata (consumer esterni?)
-- [ ] D6 semantica cap max-5 confermata
+- [x] D5 backward-compat → **flip coordinato in-repo, no window** (FE-only, cookie-only, grounded)
+- [x] D6 semantica cap max-5 → **non-terminali (Pending+InProgress)**, allineare handler + aggregato + test
 - [ ] Direct-create draft nasce `Pending`; go-live promuove via `StartSession(sessionId)` three-phase (max-1-live enforced su indice + `EnsureCanStartSession`)
 - [ ] Multi-draft coesistono per night; live view / winner-picker / Complete lavorano off `Session.IsLive`
 - [ ] Righe legacy riconciliate (Slice 5, idempotente)

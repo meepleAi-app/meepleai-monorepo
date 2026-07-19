@@ -272,4 +272,80 @@ public class GetGameNightLiveQueryHandlerTests : IDisposable
 
         result.CurrentSessionRoster.Should().BeEmpty();
     }
+
+    // #3188 Slice 1 (deploy-first forward-compat guard): a night whose session links are ALL Pending
+    // — with no InProgress sibling — is a valid *draft* night. The live read must return 200 (project
+    // the sessions, empty roster, night status passed through) instead of erroring. This pins the
+    // tolerance as a baseline so later slices (3/6, which flip the direct-create path to be born
+    // Pending) cannot silently regress it.
+    [Fact]
+    public async Task Handle_AllPendingLinks_ReturnsDraftNightWithoutError()
+    {
+        var evt = GameNightEvent.Create(
+            Guid.NewGuid(), "Serata bozza", DateTimeOffset.UtcNow.AddHours(1),
+            gameIds: [Guid.NewGuid(), Guid.NewGuid()]);
+        evt.Publish([]);
+        var s1 = Guid.NewGuid();
+        var s2 = Guid.NewGuid();
+        evt.AddSession(s1, evt.GameIds[0], "Brass: Birmingham"); // Pending
+        evt.AddSession(s2, evt.GameIds[1], "Spirit Island"); // Pending — none started, no InProgress sibling
+        _repo.Setup(r => r.GetByIdAsync(evt.Id, It.IsAny<CancellationToken>())).ReturnsAsync(evt);
+
+        var act = () => _handler.Handle(
+            new GetGameNightLiveQuery(evt.Id, evt.OrganizerId), TestContext.Current.CancellationToken);
+
+        var dto = (await act.Should().NotThrowAsync()).Subject;
+        dto.Status.Should().Be(GameNightStatus.Published); // night status passed through unchanged
+        dto.Sessions.Should().HaveCount(2);
+        dto.Sessions.Should().OnlyContain(s => s.Status == GameNightSessionStatus.Pending);
+        dto.CurrentSessionRoster.Should().BeEmpty();
+    }
+
+    // #3188 Slice 1: with a mixed night (some Pending + exactly one InProgress) the winner-picker
+    // roster must be isolated to the single live session — a Pending session's participants never
+    // leak in.
+    [Fact]
+    public async Task Handle_MixedPendingAndInProgress_RosterIsolatedToLiveSession()
+    {
+        var organizerId = Guid.NewGuid();
+        var liveSessionId = Guid.NewGuid();
+        var pendingSessionId = Guid.NewGuid();
+        var liveP1 = Guid.NewGuid();
+        var liveP2 = Guid.NewGuid();
+        var pendingP = Guid.NewGuid();
+
+        // Participants split across the live and the still-Pending session; only the live roster surfaces.
+        _db.SessionTrackingParticipants.Add(new Api.Infrastructure.Entities.SessionTracking.ParticipantEntity
+        {
+            Id = liveP1, SessionId = liveSessionId, DisplayName = "Host", UserId = organizerId, IsOwner = true, JoinOrder = 1
+        });
+        _db.SessionTrackingParticipants.Add(new Api.Infrastructure.Entities.SessionTracking.ParticipantEntity
+        {
+            Id = liveP2, SessionId = liveSessionId, DisplayName = "Guest Gina", UserId = null, JoinOrder = 2
+        });
+        _db.SessionTrackingParticipants.Add(new Api.Infrastructure.Entities.SessionTracking.ParticipantEntity
+        {
+            Id = pendingP, SessionId = pendingSessionId, DisplayName = "Not Yet", UserId = null, JoinOrder = 1
+        });
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var evt = GameNightEvent.Create(
+            organizerId, "Serata", DateTimeOffset.UtcNow.AddHours(1),
+            gameIds: [Guid.NewGuid(), Guid.NewGuid()]);
+        evt.Publish([]);
+        evt.AddSession(liveSessionId, evt.GameIds[0], "Catan"); // PlayOrder 1
+        evt.AddSession(pendingSessionId, evt.GameIds[1], "Azul"); // PlayOrder 2 — stays Pending
+        evt.StartCurrentSession(); // lowest PlayOrder (liveSessionId) → InProgress
+        _repo.Setup(r => r.GetByIdAsync(evt.Id, It.IsAny<CancellationToken>())).ReturnsAsync(evt);
+
+        var result = await _handler.Handle(
+            new GetGameNightLiveQuery(evt.Id, organizerId), TestContext.Current.CancellationToken);
+
+        result.CurrentSessionRoster.Should().HaveCount(2);
+        result.CurrentSessionRoster.Should().OnlyContain(m => m.ParticipantId == liveP1 || m.ParticipantId == liveP2);
+        result.CurrentSessionRoster.Should().NotContain(m => m.ParticipantId == pendingP);
+        // sanity: the InProgress + Pending mix is faithfully reflected in the projection.
+        result.Sessions.Should().Contain(s => s.SessionId == liveSessionId && s.Status == GameNightSessionStatus.InProgress);
+        result.Sessions.Should().Contain(s => s.SessionId == pendingSessionId && s.Status == GameNightSessionStatus.Pending);
+    }
 }

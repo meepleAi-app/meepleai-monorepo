@@ -404,3 +404,37 @@ describe('mapNightLiveToViewModel — empty night (LD-11) + Slice-C seam (LD-3)'
     expect(vm.totalPlayers).toBeUndefined();
   });
 });
+
+describe('mapNightLiveToViewModel — draft night, all Pending (#3188 Slice 1)', () => {
+  // Deploy-first forward-compat guard: a night whose sessions are ALL Pending (no InProgress
+  // sibling) is a valid *draft* night — it must render as 'transition', every planned game
+  // 'upcoming', no current game. Pins the tolerance before later slices flip direct-create to
+  // be born Pending, so the draft path can never silently regress into a crash/live misrender.
+  it("all-Pending sessions map to a 'transition' draft with no current game", () => {
+    const draft = live({
+      sessions: [
+        session({ sessionId: S1, gameId: G1, gameTitle: 'Brass', playOrder: 1, status: 'Pending' }),
+        session({
+          sessionId: S2,
+          gameId: G2,
+          gameTitle: 'Spirit Island',
+          playOrder: 2,
+          status: 'Pending',
+        }),
+        session({
+          sessionId: S3,
+          gameId: G3,
+          gameTitle: 'Wingspan',
+          playOrder: 3,
+          status: 'Pending',
+        }),
+      ],
+    });
+    const vm = mapNightLiveToViewModel(draft, NOW);
+    expect(vm.status).toBe('transition');
+    expect(vm.plannedGames).toHaveLength(3);
+    expect(vm.plannedGames.every(g => g.status === 'upcoming')).toBe(true);
+    expect(vm.currentGame).toBeNull();
+    expect(vm.current).toBe(0);
+  });
+});

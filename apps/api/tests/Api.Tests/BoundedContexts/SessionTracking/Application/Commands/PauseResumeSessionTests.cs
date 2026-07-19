@@ -354,7 +354,11 @@ public sealed class PauseResumeSessionTests : IAsyncLifetime
 
         var act = async () => await SeedAdditionalActiveSessionInNightAsync(userId, gameId, first.GameNightEventId);
 
-        await act.Should().ThrowAsync<DbUpdateException>();
+        // Assert the specific partial-unique-index violation (23505) so a future constraint
+        // that trips first cannot produce a false green.
+        var ex = await act.Should().ThrowAsync<DbUpdateException>();
+        ex.Which.InnerException.Should().BeOfType<PostgresException>()
+            .Which.SqlState.Should().Be(PostgresErrorCodes.UniqueViolation);
     }
 
     // Issue #3157 C1 — finalizing a session must close its game_night_sessions link

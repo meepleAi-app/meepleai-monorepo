@@ -114,7 +114,8 @@ public sealed class RegisterRaceConditionEndpointTests : IAsyncLifetime
             {
                 Email = email,
                 Password = "ValidUnusualPwd123!",
-                DisplayName = $"Racer {i}"
+                DisplayName = $"Racer {i}",
+                TermsAccepted = true
             }))).ToArray();
 
         var responses = await Task.WhenAll(tasks);
@@ -153,7 +154,8 @@ public sealed class RegisterRaceConditionEndpointTests : IAsyncLifetime
             Email = email,
             Password = "ValidUnusualPwd123!",
             DisplayName = "First Admin",
-            BootstrapToken
+            BootstrapToken,
+            TermsAccepted = true
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -171,7 +173,8 @@ public sealed class RegisterRaceConditionEndpointTests : IAsyncLifetime
         {
             Email = email,
             Password = "ValidUnusualPwd123!",
-            DisplayName = "Plain User"
+            DisplayName = "Plain User",
+            TermsAccepted = true
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -188,7 +191,8 @@ public sealed class RegisterRaceConditionEndpointTests : IAsyncLifetime
             Email = email,
             Password = "ValidUnusualPwd123!",
             DisplayName = "Wrong Token",
-            BootstrapToken = BootstrapToken + "-tampered"
+            BootstrapToken = BootstrapToken + "-tampered",
+            TermsAccepted = true
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -209,7 +213,8 @@ public sealed class RegisterRaceConditionEndpointTests : IAsyncLifetime
         {
             Email = email,
             Password = "ValidUnusualPwd123!",
-            DisplayName = "First User No Token"
+            DisplayName = "First User No Token",
+            TermsAccepted = true
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -235,7 +240,8 @@ public sealed class RegisterRaceConditionEndpointTests : IAsyncLifetime
                 Email = $"bootstrap-race-{i}-{Guid.NewGuid():N}@test.local",
                 Password = "ValidUnusualPwd123!",
                 DisplayName = $"Bootstrap Racer {i}",
-                BootstrapToken
+                BootstrapToken,
+                TermsAccepted = true
             }))).ToArray();
 
         var responses = await Task.WhenAll(tasks);
@@ -286,7 +292,8 @@ public sealed class RegisterRaceConditionEndpointTests : IAsyncLifetime
                 Email = $"timing-match-{Guid.NewGuid():N}@test.local",
                 Password = "ValidUnusualPwd123!",
                 DisplayName = $"Match {i}",
-                BootstrapToken
+                BootstrapToken,
+                TermsAccepted = true
             });
             sw.Stop();
             matchTimings.Add(sw.ElapsedMilliseconds);
@@ -297,7 +304,8 @@ public sealed class RegisterRaceConditionEndpointTests : IAsyncLifetime
                 Email = $"timing-miss-{Guid.NewGuid():N}@test.local",
                 Password = "ValidUnusualPwd123!",
                 DisplayName = $"Miss {i}",
-                BootstrapToken = nearMiss
+                BootstrapToken = nearMiss,
+                TermsAccepted = true
             });
             sw.Stop();
             missTimings.Add(sw.ElapsedMilliseconds);

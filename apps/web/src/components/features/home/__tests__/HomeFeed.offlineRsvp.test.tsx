@@ -8,12 +8,13 @@ import { HomeFeed } from '../HomeFeed';
 
 const networkStatusMock = vi.fn<() => { isOffline: boolean }>();
 const upcomingNightsMock = vi.fn();
+const rsvpMutationMock = vi.fn();
 
 vi.mock('@/hooks/useNetworkStatus', () => ({
   useNetworkStatus: () => networkStatusMock(),
 }));
 vi.mock('@/hooks/queries/useGameNights', () => ({
-  useRsvpGameNight: () => ({ mutate: vi.fn(), isPending: false, variables: undefined }),
+  useRsvpGameNight: () => rsvpMutationMock(),
   useUpcomingGameNights: () => upcomingNightsMock(),
 }));
 vi.mock('@/hooks/queries/useActiveSessions', () => ({
@@ -60,6 +61,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   networkStatusMock.mockReturnValue({ isOffline: false });
   upcomingNightsMock.mockReturnValue({ data: [pendingNight], isLoading: false });
+  rsvpMutationMock.mockReturnValue({ mutate: vi.fn(), isPending: false, variables: undefined });
 });
 
 describe('HomeFeed — offline-disabled pending RSVP (#2989 gap 5)', () => {
@@ -72,6 +74,34 @@ describe('HomeFeed — offline-disabled pending RSVP (#2989 gap 5)', () => {
 
   it('leaves the pending-RSVP card enabled while online', () => {
     networkStatusMock.mockReturnValue({ isOffline: false });
+    render(<HomeFeed />);
+
+    expect(screen.getByTestId('pending-rsvp-card').getAttribute('data-disabled')).toBe('false');
+  });
+
+  // Guards the other half of `isOffline || (isPending && variables?.id === night.id)`:
+  // an in-flight RSVP for THIS night disables its card even while online, so the
+  // double-submit guard survives a regression to the correlation check.
+  it('disables the pending-RSVP card while its own RSVP mutation is in flight (online)', () => {
+    networkStatusMock.mockReturnValue({ isOffline: false });
+    rsvpMutationMock.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: true,
+      variables: { id: 'gn-1' },
+    });
+    render(<HomeFeed />);
+
+    expect(screen.getByTestId('pending-rsvp-card').getAttribute('data-disabled')).toBe('true');
+  });
+
+  // Correlation guard: an in-flight RSVP for a DIFFERENT night must NOT disable this card.
+  it("keeps the card enabled when a different night's RSVP is in flight (online)", () => {
+    networkStatusMock.mockReturnValue({ isOffline: false });
+    rsvpMutationMock.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: true,
+      variables: { id: 'other-night' },
+    });
     render(<HomeFeed />);
 
     expect(screen.getByTestId('pending-rsvp-card').getAttribute('data-disabled')).toBe('false');

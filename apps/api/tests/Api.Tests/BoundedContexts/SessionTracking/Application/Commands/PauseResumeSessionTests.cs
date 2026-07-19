@@ -368,9 +368,19 @@ public sealed class PauseResumeSessionTests : IAsyncLifetime
             .Which.SqlState.Should().Be(PostgresErrorCodes.UniqueViolation);
     }
 
-    // Issue #3157 C1 — finalizing a session must close its game_night_sessions link
-    // (InProgress -> Completed) so it does not leave an orphaned live slot that would block
-    // the restored unique index from admitting the next session in the same night.
+    // Issue #3157 C1 — finalizing a session must close its game_night_sessions link so it does not
+    // leave an orphaned open live slot that would block the restored unique index from admitting the
+    // next session in the same night.
+    //
+    // Epic #3188 Slice 4 — RE-PURPOSED as the never-promoted DRAFT path. Post-Slice-3 a direct create
+    // is born a DRAFT: the link is Pending (NOT InProgress) and the Session stays Active without ever
+    // going live. This test pins that finalizing such a Session transitions its Pending draft link →
+    // Completed (not orphaned Pending). The complementary live path (InProgress → Completed) is pinned
+    // by Finalize_ClosesInProgressLiveLink_AfterGoLive below.
+    //
+    // Which guard fires: the FinalizeSessionCommandHandler up-front link-close WHERE clause (now
+    // matching Pending || InProgress) governs — the tracking-Session finalize itself is status-driven
+    // on Active/Paused (Session.Finalize), independent of the link status.
     [Fact]
     public async Task Finalize_ClosesInProgressLink()
     {
@@ -378,32 +388,21 @@ public sealed class PauseResumeSessionTests : IAsyncLifetime
         var created = await _createHandler!.Handle(BuildCreateCommand(userId, gameId), TestCancellationToken);
         _dbContext!.ChangeTracker.Clear();
 
+        // Precondition: the born link is a Pending DRAFT (never promoted to InProgress). This is the
+        // Slice 3 born-status change that re-purposes this test onto the draft path.
+        var draftLink = await _dbContext.GameNightSessions
+            .AsNoTracking()
+            .FirstAsync(l => l.SessionId == created.SessionId, TestCancellationToken);
+        draftLink.Status.Should().Be(
+            nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightSessionStatus.Pending));
+
         var ownerParticipantId = await _dbContext.Set<Api.Infrastructure.Entities.SessionTracking.ParticipantEntity>()
             .AsNoTracking()
             .Where(p => p.SessionId == created.SessionId)
             .Select(p => p.Id)
             .FirstAsync(TestCancellationToken);
 
-        var eventCollector = _serviceProvider!.GetRequiredService<IDomainEventCollector>();
-        var unitOfWork = _serviceProvider.GetRequiredService<IUnitOfWork>();
-        var sessionRepo = new SessionRepository(_dbContext, eventCollector);
-        // IScoreEntryRepository / ISessionSyncService are not registered by the integration
-        // service builder — mock them (this test targets the game_night_sessions link close,
-        // not scoring/SSE). The Session itself is the real persisted aggregate.
-        var scoreRepoMock = new Mock<IScoreEntryRepository>();
-        scoreRepoMock.Setup(r => r.GetBySessionIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<ScoreEntry>());
-        var syncMock = new Mock<ISessionSyncService>();
-        syncMock.Setup(s => s.PublishEventAsync(It.IsAny<Guid>(), It.IsAny<INotification>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-        var finalizeHandler = new FinalizeSessionCommandHandler(
-            sessionRepo,
-            scoreRepoMock.Object,
-            unitOfWork,
-            syncMock.Object,
-            _dbContext,
-            TimeProvider.System,
-            new DiaryStreamService());
+        var finalizeHandler = BuildFinalizeHandler();
 
         await finalizeHandler.Handle(
             new FinalizeSessionCommand(created.SessionId, new Dictionary<Guid, int> { [ownerParticipantId] = 1 }),
@@ -414,6 +413,72 @@ public sealed class PauseResumeSessionTests : IAsyncLifetime
             .AsNoTracking()
             .FirstAsync(l => l.SessionId == created.SessionId, TestCancellationToken);
         link.Status.Should().Be(nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightSessionStatus.Completed));
+    }
+
+    // Epic #3188 Slice 4 — the complementary LIVE path: a session that went live (Slice 2 go-live
+    // promotes the link Pending → InProgress) must still close InProgress → Completed on finalize.
+    // We simulate go-live by flipping the link to InProgress directly (the go-live handler lives in a
+    // separate slice), so this keeps explicit regression coverage of the original C1 behaviour now that
+    // a direct create no longer yields an InProgress link.
+    [Fact]
+    public async Task Finalize_ClosesInProgressLiveLink_AfterGoLive()
+    {
+        var (userId, gameId) = await _fixture.SeedUserWithLibraryGameAndIndexedKbAsync(_dbContext!, vectorCount: 2);
+        var created = await _createHandler!.Handle(BuildCreateCommand(userId, gameId), TestCancellationToken);
+        _dbContext!.ChangeTracker.Clear();
+
+        // Simulate go-live: promote the draft link Pending → InProgress.
+        var link0 = await _dbContext.GameNightSessions
+            .FirstAsync(l => l.SessionId == created.SessionId, TestCancellationToken);
+        link0.Status = nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightSessionStatus.InProgress);
+        link0.StartedAt = DateTimeOffset.UtcNow;
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        _dbContext.ChangeTracker.Clear();
+
+        var ownerParticipantId = await _dbContext.Set<Api.Infrastructure.Entities.SessionTracking.ParticipantEntity>()
+            .AsNoTracking()
+            .Where(p => p.SessionId == created.SessionId)
+            .Select(p => p.Id)
+            .FirstAsync(TestCancellationToken);
+
+        var finalizeHandler = BuildFinalizeHandler();
+
+        await finalizeHandler.Handle(
+            new FinalizeSessionCommand(created.SessionId, new Dictionary<Guid, int> { [ownerParticipantId] = 1 }),
+            TestCancellationToken);
+
+        _dbContext.ChangeTracker.Clear();
+        var link = await _dbContext.GameNightSessions
+            .AsNoTracking()
+            .FirstAsync(l => l.SessionId == created.SessionId, TestCancellationToken);
+        link.Status.Should().Be(nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightSessionStatus.Completed));
+    }
+
+    /// <summary>
+    /// Builds a real <see cref="FinalizeSessionCommandHandler"/> over the integration DbContext.
+    /// IScoreEntryRepository / ISessionSyncService are not registered by the integration service
+    /// builder — mock them (these tests target the game_night_sessions link close, not scoring/SSE).
+    /// The Session itself is the real persisted aggregate.
+    /// </summary>
+    private FinalizeSessionCommandHandler BuildFinalizeHandler()
+    {
+        var eventCollector = _serviceProvider!.GetRequiredService<IDomainEventCollector>();
+        var unitOfWork = _serviceProvider.GetRequiredService<IUnitOfWork>();
+        var sessionRepo = new SessionRepository(_dbContext!, eventCollector);
+        var scoreRepoMock = new Mock<IScoreEntryRepository>();
+        scoreRepoMock.Setup(r => r.GetBySessionIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<ScoreEntry>());
+        var syncMock = new Mock<ISessionSyncService>();
+        syncMock.Setup(s => s.PublishEventAsync(It.IsAny<Guid>(), It.IsAny<INotification>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        return new FinalizeSessionCommandHandler(
+            sessionRepo,
+            scoreRepoMock.Object,
+            unitOfWork,
+            syncMock.Object,
+            _dbContext!,
+            TimeProvider.System,
+            new DiaryStreamService());
     }
 
     // Issue #3157 C2a — RE-PURPOSED for epic #3188 Slice 3 (D1 / #19).

@@ -49,20 +49,18 @@ internal class UserDashboardService : IUserDashboardService
             {
                 _logger.LogInformation("Cache miss for user dashboard {UserId}, generating fresh data", userId);
 
-                // Parallel execution of independent queries for performance (Issue #2854)
-                var recentGamesTask = GetRecentGamesAsync(userId, cancel);
-                var activeSessionsTask = GetActiveSessionsAsync(userId, cancel);
-                var recentChatsTask = GetRecentChatsAsync(userId, cancel);
-                var libraryQuotaTask = GetLibraryQuotaAsync(userId, cancel);
-
-                await Task.WhenAll(recentGamesTask, activeSessionsTask, recentChatsTask, libraryQuotaTask)
-                    .ConfigureAwait(false);
+                // Issue #3228: await sequentially — these queries share one scoped DbContext, which
+                // cannot run queries in parallel (Task.WhenAll trips EF's ConcurrencyDetector).
+                var recentGames = await GetRecentGamesAsync(userId, cancel).ConfigureAwait(false);
+                var activeSessions = await GetActiveSessionsAsync(userId, cancel).ConfigureAwait(false);
+                var recentChats = await GetRecentChatsAsync(userId, cancel).ConfigureAwait(false);
+                var libraryQuota = await GetLibraryQuotaAsync(userId, cancel).ConfigureAwait(false);
 
                 return new UserDashboardDto(
-                    RecentGames: await recentGamesTask.ConfigureAwait(false),
-                    ActiveSessions: await activeSessionsTask.ConfigureAwait(false),
-                    RecentChats: await recentChatsTask.ConfigureAwait(false),
-                    LibraryQuota: await libraryQuotaTask.ConfigureAwait(false)
+                    RecentGames: recentGames,
+                    ActiveSessions: activeSessions,
+                    RecentChats: recentChats,
+                    LibraryQuota: libraryQuota
                 );
             },
             new HybridCacheEntryOptions

@@ -20,40 +20,41 @@ internal sealed class GetDistinctMetadataQueryHandler : IRequestHandler<GetDisti
 
     public async Task<DistinctMetadataDto> Handle(GetDistinctMetadataQuery query, CancellationToken cancellationToken)
     {
-        var categoriesTask = _context.Set<GameCategoryEntity>()
+        // Issue #3228: await sequentially — a single scoped DbContext cannot run queries
+        // concurrently (EF's ConcurrencyDetector throws), so the parallelism was illusory and
+        // these Distinct lookups are cheap.
+        var categories = await _context.Set<GameCategoryEntity>()
             .AsNoTracking()
             .Select(c => c.Name)
             .Distinct()
             .OrderBy(n => n)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
 
-        var mechanicsTask = _context.Set<GameMechanicEntity>()
+        var mechanics = await _context.Set<GameMechanicEntity>()
             .AsNoTracking()
             .Select(m => m.Name)
             .Distinct()
             .OrderBy(n => n)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
 
-        var designersTask = _context.Set<GameDesignerEntity>()
+        var designers = await _context.Set<GameDesignerEntity>()
             .AsNoTracking()
             .Select(d => d.Name)
             .Distinct()
             .OrderBy(n => n)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
 
-        var publishersTask = _context.Set<GamePublisherEntity>()
+        var publishers = await _context.Set<GamePublisherEntity>()
             .AsNoTracking()
             .Select(p => p.Name)
             .Distinct()
             .OrderBy(n => n)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
 
-        await Task.WhenAll(categoriesTask, mechanicsTask, designersTask, publishersTask).ConfigureAwait(false);
-
-        return new DistinctMetadataDto(
-            categoriesTask.Result,
-            mechanicsTask.Result,
-            designersTask.Result,
-            publishersTask.Result);
+        return new DistinctMetadataDto(categories, mechanics, designers, publishers);
     }
 }

@@ -68,16 +68,19 @@ public class GetPdfTextQueryHandlerTests
         act.Should().Throw<ArgumentNullException>();
     }
     [Fact]
-    public void Query_HasCorrectPdfIdProperty()
+    public void Query_HasCorrectProperties()
     {
         // Arrange
         var pdfId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
 
         // Act
-        var query = new GetPdfTextQuery(pdfId);
+        var query = new GetPdfTextQuery(pdfId, userId, IsAdmin: true);
 
         // Assert
         query.PdfId.Should().Be(pdfId);
+        query.UserId.Should().Be(userId);
+        query.IsAdmin.Should().BeTrue();
     }
     [Fact]
     public void PdfTextResult_ConstructsCorrectly()

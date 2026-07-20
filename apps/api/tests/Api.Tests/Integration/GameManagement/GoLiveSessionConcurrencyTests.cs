@@ -25,10 +25,15 @@ namespace Api.Tests.Integration.GameManagement;
 /// exception (via the max-1-live guard, the aggregate xmin race, or the partial-unique live-slot
 /// index). No 500, no orphaned second live session.
 ///
+/// <para>Also covers the #3218 self-healing retry: when a prior go-live committed phase 2 (link
+/// promoted <c>Pending → InProgress</c>) but never finished phase 3 (the tracking Session stayed
+/// not-live — a split-brain), a retry must self-heal the Session live instead of 409-ing.</para>
+///
 /// <para>Mirrors the Testcontainers + full-DI factory pattern of <c>CorrelatedGameSessionOnStartTests</c>.
 /// The <c>DomainEventOutboxProcessor</c> BackgroundService is not running in the test host, so the
 /// invariante #15 night promotion (Published → InProgress) is not asserted here — the contract under
-/// test is the single-live-slot arbitration on <c>game_night_sessions</c>.</para>
+/// test is the single-live-slot arbitration on <c>game_night_sessions</c> plus the self-heal of the
+/// tracking Session's live state.</para>
 /// </summary>
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
@@ -156,6 +161,84 @@ public sealed class GoLiveSessionConcurrencyTests : IAsyncLifetime
             .Should().Be(1, "no more than one session may be live in a game night at a time (invariante #10)");
         links.Count(s => s.Status == nameof(GameNightSessionStatus.Pending))
             .Should().Be(1, "the blocked draft must remain Pending — its promotion rolled back");
+    }
+
+    [Fact(DisplayName = "Go-live retry after a phase-2-only commit self-heals the Session live (no 409)")]
+    public async Task GoLiveRetry_AfterInProgressLinkButNotLiveSession_SelfHealsSessionLive()
+    {
+        // ── Arrange — simulate a #3218 split-brain ──────────────────────────────
+        // Phase 2 committed (the night link is InProgress) but phase 3 never ran (the tracking Session
+        // is still not live). Before #3218 a retry threw a 409 because GameNightEvent.StartSession()
+        // rejects an already-InProgress link; now the retry must SELF-HEAL by (re)opening live mode.
+        Guid userId;
+        Guid gameId;
+        await using (var seedScope = _factory.Services.CreateAsyncScope())
+        {
+            var db = seedScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            userId = await SeedUserAsync(db);
+            gameId = await SeedSharedGameAsync(db);
+        }
+
+        // A real standalone tracking Session that is NOT live yet (StartedAt == null).
+        var sessionId = await CreateStandaloneSessionAsync(userId, gameId);
+
+        var nightId = Guid.NewGuid();
+        await using (var seedScope = _factory.Services.CreateAsyncScope())
+        {
+            var db = seedScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var now = DateTimeOffset.UtcNow;
+            // Night stays Published: the phase-2 commit promotes only the LINK; the night's
+            // Published → InProgress promotion (invariante #15) is a phase-3 side effect that
+            // never ran in this split-brain.
+            db.GameNightEvents.Add(new GameNightEventEntity
+            {
+                Id = nightId,
+                OrganizerId = userId,
+                Title = "Self-Heal Night",
+                ScheduledAt = now,
+                GameIdsJson = System.Text.Json.JsonSerializer.Serialize(new List<Guid> { gameId }),
+                Status = nameof(GameNightStatus.Published),
+                CreatedAt = now,
+                UpdatedAt = now,
+            });
+            db.GameNightSessions.Add(new GameNightSessionEntity
+            {
+                Id = Guid.NewGuid(),
+                GameNightEventId = nightId,
+                SessionId = sessionId,
+                GameId = gameId,
+                GameTitle = "Catan",
+                PlayOrder = 1,
+                Status = nameof(GameNightSessionStatus.InProgress), // link stuck InProgress (phase-3 never ran)
+                StartedAt = now,
+            });
+            await db.SaveChangesAsync();
+        }
+
+        // ── Act — retry go-live on the already-promoted link ─────────────────────
+        var (_, exception) = await GoLiveAsync(sessionId, userId);
+
+        // ── Assert ──────────────────────────────────────────────────────────────
+        exception.Should().BeNull("the retry must self-heal the split-brain, not return a 409");
+
+        await using var verifyScope = _factory.Services.CreateAsyncScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        // The tracking Session is now live — phase 3 (OpenLiveMode) ran on retry and healed it.
+        var session = await verifyDb.SessionTrackingSessions
+            .AsNoTracking()
+            .SingleAsync(s => s.Id == sessionId);
+        session.StartedAt.Should().NotBeNull(
+            "the idempotent OpenSessionLiveModeCommand must open live mode on retry, healing the Session");
+        session.FinalizedAt.Should().BeNull("the healed Session is live, not finalized");
+
+        // The link stays a single InProgress — no double-promotion, no rollback to Pending.
+        var links = await verifyDb.GameNightSessions
+            .AsNoTracking()
+            .Where(s => s.GameNightEventId == nightId)
+            .ToListAsync();
+        links.Count(s => s.Status == nameof(GameNightSessionStatus.InProgress))
+            .Should().Be(1, "the already-promoted link stays InProgress; self-heal never touches the aggregate");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

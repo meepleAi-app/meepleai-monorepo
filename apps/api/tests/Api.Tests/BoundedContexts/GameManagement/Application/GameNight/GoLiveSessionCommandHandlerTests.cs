@@ -144,14 +144,15 @@ public class GoLiveSessionCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_TargetedSessionNotPending_ThrowsConflict()
+    public async Task Handle_TargetedSessionTerminal_ThrowsConflict()
     {
-        // Arrange — the targeted session was already completed; a non-Pending promotion is a conflict
-        // (InvalidOperationException from GameNightSession.Start() → ConflictException 409).
+        // Arrange — the targeted link is terminal (Completed): a finished session cannot go live.
+        // The #3218 status branch maps a terminal target link straight to a ConflictException 409,
+        // BEFORE any promotion, aggregate write, or live-mode dispatch.
         var sessionId = Guid.NewGuid();
         var gameNight = CreatePublishedEventWithDraft(sessionId, out _);
         gameNight.StartSession(sessionId);
-        gameNight.CompleteCurrentSession(winnerId: null); // now Completed
+        gameNight.CompleteCurrentSession(winnerId: null); // now Completed (terminal)
 
         _mockRepository.Setup(r => r.GetByLinkedSessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(gameNight);
@@ -160,8 +161,82 @@ public class GoLiveSessionCommandHandlerTests
         await Assert.ThrowsAsync<ConflictException>(
             () => _handler.Handle(new GoLiveSessionCommand(sessionId, gameNight.OrganizerId), CancellationToken.None));
 
+        // A terminal link short-circuits: no promotion write, no live-mode dispatch.
+        _mockRepository.Verify(r => r.UpdateAsync(
+            It.IsAny<Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent.GameNightEvent>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         _mockMediator.Verify(m => m.Send(It.IsAny<OpenSessionLiveModeCommand>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_TargetLinkAlreadyInProgress_SelfHeals_DispatchesOpenLive_WithoutAggregateWrite()
+    {
+        // Arrange — SPLIT-BRAIN (#3218): a prior go-live already committed phase 2 (link promoted
+        // Pending → InProgress) but a phase-3 failure left the tracking Session not-yet-live. A retry
+        // must NOT 409 (the old behavior, because StartSession throws on an already-InProgress link).
+        // Instead the handler SKIPS the promotion + aggregate write and dispatches
+        // OpenSessionLiveModeCommand (idempotent) to heal the Session.
+        var sessionId = Guid.NewGuid();
+        var gameNight = CreatePublishedEventWithDraft(sessionId, out _);
+        gameNight.StartSession(sessionId); // link is InProgress — a prior attempt's phase 2 committed
+
+        _mockRepository.Setup(r => r.GetByLinkedSessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _mockMediator.Setup(m => m.Send(It.IsAny<OpenSessionLiveModeCommand>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Act — must not throw
+        var result = await _handler.Handle(
+            new GoLiveSessionCommand(sessionId, gameNight.OrganizerId), CancellationToken.None);
+
+        // Assert — returns the already-promoted InProgress state
+        Assert.Equal(sessionId, result.SessionId);
+        Assert.Equal(gameNight.Id, result.GameNightId);
+        Assert.Equal(nameof(GameNightSessionStatus.InProgress), result.Status);
+        Assert.Equal(GameNightSessionStatus.InProgress, gameNight.Sessions[0].Status);
+
+        // Self-heal does NO aggregate write — only OpenSessionLiveModeCommand is dispatched (once).
+        _mockRepository.Verify(r => r.UpdateAsync(
+            It.IsAny<Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent.GameNightEvent>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _mockMediator.Verify(m => m.Send(
+            It.Is<OpenSessionLiveModeCommand>(c => c.SessionId == sessionId), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_TargetLinkInProgress_SessionAlreadyLive_IsIdempotentNoOp()
+    {
+        // Arrange — plain retry of a go-live that already fully succeeded: the link is InProgress AND
+        // the tracking Session is already live. The handler does not special-case an already-live
+        // Session — it still delegates idempotency to OpenSessionLiveModeCommandHandler (which no-ops
+        // on `session.IsLive`). Here the mocked mediator stands in for that no-op. No 409 surfaces.
+        var sessionId = Guid.NewGuid();
+        var gameNight = CreatePublishedEventWithDraft(sessionId, out _);
+        gameNight.StartSession(sessionId); // link InProgress
+
+        _mockRepository.Setup(r => r.GetByLinkedSessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        // OpenLive no-ops on an already-live Session — modelled as a completed task.
+        _mockMediator.Setup(m => m.Send(It.IsAny<OpenSessionLiveModeCommand>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Act — must not throw
+        var result = await _handler.Handle(
+            new GoLiveSessionCommand(sessionId, gameNight.OrganizerId), CancellationToken.None);
+
+        // Assert — success no-op, InProgress result, OpenLive still dispatched (idempotency delegated).
+        Assert.Equal(nameof(GameNightSessionStatus.InProgress), result.Status);
+        _mockRepository.Verify(r => r.UpdateAsync(
+            It.IsAny<Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent.GameNightEvent>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _mockMediator.Verify(m => m.Send(
+            It.Is<OpenSessionLiveModeCommand>(c => c.SessionId == sessionId), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]

@@ -201,9 +201,7 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
         }
 
         // Follow-up: this hard-deletes the link (Remove) instead of the aggregate's
-        // soft-delete (link.Delete(userId)) used by DeleteEntityLinkCommandHandler.
-        // Harmless today because EntityLinkDeletedEvent has zero handlers, but if a
-        // handler is ever added, reconsider using the soft-delete command instead.
+        // soft-delete (link.Delete()) used by DeleteEntityLinkCommandHandler.
         _entityLinkRepository.Remove(callerLink);
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return true;

@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.EntityRelationships.Application.Commands;
 /// - Not-found check (EntityLinkNotFoundException)
 /// - Ownership / admin authorization (UnauthorizedEntityLinkAccessException)
 /// - BGG-import protection: only admins may delete BGG-imported links
-/// - Soft-delete via EntityLink.Delete(deletedByUserId)
+/// - Soft-delete via EntityLink.Delete()
 /// </summary>
 internal sealed class DeleteEntityLinkCommandHandler : ICommandHandler<DeleteEntityLinkCommand>
 {
@@ -63,7 +63,7 @@ internal sealed class DeleteEntityLinkCommandHandler : ICommandHandler<DeleteEnt
             }
         }
 
-        link.Delete(command.RequestingUserId);
+        link.Delete();
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(

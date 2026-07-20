@@ -117,6 +117,99 @@ public sealed class HybridSearchServiceRoleBoostTests
     }
 
     // -----------------------------------------------------------------------------------------
+    // RAG answer-quality: legend-chunk demotion in RRF fusion.
+    // -----------------------------------------------------------------------------------------
+
+    [Fact]
+    public void ComputeLegendPenaltyFactor_PlainContent_ReturnsZero()
+    {
+        // Arrange: real actionable setup content with no cross-reference pointers.
+        var content = "Per preparare la partita, ogni giocatore riceve una plancia e le risorse iniziali.";
+
+        // Act & Assert
+        HybridSearchService.ComputeLegendPenaltyFactor(content).Should().Be(0f);
+    }
+
+    [Fact]
+    public void ComputeLegendPenaltyFactor_CrossReferenceLegend_ReturnsStrongDemotion()
+    {
+        // Arrange: the Terraforming Mars legend chunk that outranked the real setup section.
+        var legend = "8. Progetti Standard: possono essere usati da qualunque giocatore (vedi pag. 10). "
+                   + "9. Milestone/Ricompense: sono una buona fonte di PV extra (vedi pag. 10 e 11).";
+
+        // Act
+        var factor = HybridSearchService.ComputeLegendPenaltyFactor(legend);
+
+        // Assert: a short chunk dense with "vedi pag." pointers is strongly demoted.
+        factor.Should().BeGreaterThan(0.2f);
+    }
+
+    [Fact]
+    public void ComputeLegendPenaltyFactor_LongContentWithSinglePageRef_ReturnsMildDemotion()
+    {
+        // Arrange: a long, substantive chunk that happens to reference a page once.
+        var content = new string('a', 1400) + " (vedi pag. 12)";
+
+        // Act
+        var factor = HybridSearchService.ComputeLegendPenaltyFactor(content);
+
+        // Assert: one incidental pointer in a long chunk is not treated as a legend.
+        factor.Should().BeLessThan(0.2f);
+    }
+
+    [Fact]
+    public void ComputeLegendPenaltyFactor_DemotesLegendBelowRealContentAtSameBaseScore()
+    {
+        // Arrange: a legend and a real chunk with identical base RRF score.
+        const float baseScore = 0.011f; // representative collapsed-RRF magnitude from the repro
+        var legendFactor = HybridSearchService.ComputeLegendPenaltyFactor(
+            "8. Progetti Standard (vedi pag. 10). 9. Milestone (vedi pag. 10 e 11).");
+        var realFactor = HybridSearchService.ComputeLegendPenaltyFactor(
+            "Preparazione: disponi le tessere oceano e assegna le risorse iniziali ai giocatori.");
+
+        // Act
+        var legendScore = baseScore * (1f - legendFactor);
+        var realScore = baseScore * (1f - realFactor);
+
+        // Assert: the real setup chunk now outranks the legend.
+        realScore.Should().BeGreaterThan(legendScore);
+    }
+
+    [Fact]
+    public void LegendDemotion_KeepsRoleBoostAdditive()
+    {
+        // The legend penalty scales only the RRF fusion components; the role-match boost (#1391)
+        // stays additive so its ~0.15 calibration is preserved even when a legend shares a role tag.
+        const float baseRrf = 0.011f;
+        var legendFactor = HybridSearchService.ComputeLegendPenaltyFactor(
+            "8. Progetti Standard (vedi pag. 10). 9. Milestone (vedi pag. 10 e 11).");
+        var roleBoost = HybridSearchService.RoleMatchBoost;
+
+        // Mirror FuseSearchResults: (rrf * (1 - factor)) + roleBoost
+        var withRole = (baseRrf * (1f - legendFactor)) + roleBoost;
+        var withoutRole = (baseRrf * (1f - legendFactor)) + 0f;
+
+        // The additive boost is preserved intact, not shrunk by the legend factor.
+        legendFactor.Should().BeGreaterThan(0f, "the sample is a legend and must still be demoted");
+        (withRole - withoutRole).Should().Be(roleBoost);
+    }
+
+    [Fact]
+    public void ComputeLegendPenaltyFactor_LongContentWithManyReferences_IsNotOverDemoted()
+    {
+        // Arrange: a long, substantive section that legitimately cites several pages. Density is
+        // low, so it must NOT be treated as a legend (guards against raw-count over-demotion).
+        var content = new string('a', 4000)
+            + " vedi pag. 1 vedi pag. 2 vedi pag. 3 vedi pag. 4 vedi pag. 5";
+
+        // Act
+        var factor = HybridSearchService.ComputeLegendPenaltyFactor(content);
+
+        // Assert
+        factor.Should().BeLessThan(0.2f);
+    }
+
+    // -----------------------------------------------------------------------------------------
     // Issue #1391: semantic-mode boost end-to-end via HybridSearchService.SearchAsync.
     // pgvector now stores role_tags (denormalized from text_chunks) so SearchSemanticOnlyAsync
     // can apply the same RoleMatchBoost the keyword path already had.

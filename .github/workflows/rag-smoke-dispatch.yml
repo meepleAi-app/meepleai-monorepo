@@ -112,7 +112,7 @@ jobs:
       # update` on the host before pg_restore --data-only, so the consume flow needs
       # the .NET SDK + dotnet-ef tool present (#2480).
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '9.0.x'
 

@@ -1,6 +1,5 @@
 using Api.BoundedContexts.EntityRelationships.Domain.Constants;
 using Api.BoundedContexts.EntityRelationships.Domain.Enums;
-using Api.BoundedContexts.EntityRelationships.Domain.Events;
 
 namespace Api.BoundedContexts.EntityRelationships.Domain.Aggregates;
 
@@ -16,8 +15,6 @@ namespace Api.BoundedContexts.EntityRelationships.Domain.Aggregates;
 /// </summary>
 public sealed class EntityLink
 {
-    private readonly List<object> _domainEvents = [];
-
     public Guid Id { get; private set; }
 
     /// <summary>Type of the source entity (e.g. Game, Agent).</summary>
@@ -100,9 +97,6 @@ public sealed class EntityLink
             UpdatedAt = DateTime.UtcNow
         };
 
-        link._domainEvents.Add(new EntityLinkCreatedEvent(
-            link.Id, sourceEntityType, sourceEntityId, targetEntityType, targetEntityId, linkType, ownerUserId));
-
         return link;
     }
 
@@ -122,20 +116,11 @@ public sealed class EntityLink
         UpdatedAt = DateTime.UtcNow;
     }
 
-    /// <summary>Soft-deletes the link and records a deletion domain event.</summary>
-    public void Delete(Guid deletedByUserId)
+    /// <summary>Soft-deletes the link.</summary>
+    public void Delete()
     {
         IsDeleted = true;
         DeletedAt = DateTime.UtcNow;
-        _domainEvents.Add(new EntityLinkDeletedEvent(Id, deletedByUserId));
         UpdatedAt = DateTime.UtcNow;
-    }
-
-    /// <summary>Returns and clears pending domain events.</summary>
-    public IReadOnlyList<object> PopDomainEvents()
-    {
-        var events = _domainEvents.ToList();
-        _domainEvents.Clear();
-        return events;
     }
 }

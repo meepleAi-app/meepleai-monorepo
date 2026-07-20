@@ -1,6 +1,5 @@
 using Api.BoundedContexts.EntityRelationships.Domain.Aggregates;
 using Api.BoundedContexts.EntityRelationships.Domain.Enums;
-using Api.BoundedContexts.EntityRelationships.Domain.Events;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Xunit;
@@ -75,39 +74,6 @@ public class EntityLinkDomainTests
 
         link.IsAdminApproved.Should().BeTrue();
         link.IsBggImported.Should().BeTrue();
-    }
-
-    [Fact]
-    public void Create_RaisesEntityLinkCreatedEvent()
-    {
-        var link = EntityLink.Create(
-            MeepleEntityType.Game, _sourceId,
-            MeepleEntityType.Agent, _targetId,
-            EntityLinkType.CollaboratesWith,
-            EntityLinkScope.User, _ownerId);
-
-        var events = link.PopDomainEvents();
-        events.Should().ContainSingle();
-        events[0].Should().BeOfType<EntityLinkCreatedEvent>();
-        var evt = (EntityLinkCreatedEvent)events[0];
-        evt.EntityLinkId.Should().Be(link.Id);
-        evt.LinkType.Should().Be(EntityLinkType.CollaboratesWith);
-        evt.OwnerUserId.Should().Be(_ownerId);
-    }
-
-    [Fact]
-    public void PopDomainEvents_ClearsEvents()
-    {
-        var link = EntityLink.Create(
-            MeepleEntityType.Game, _sourceId,
-            MeepleEntityType.Game, _targetId,
-            EntityLinkType.ExpansionOf,
-            EntityLinkScope.User, _ownerId);
-
-        link.PopDomainEvents(); // first call clears
-        var events = link.PopDomainEvents(); // second call should be empty
-
-        events.Should().BeEmpty();
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -190,7 +156,7 @@ public class EntityLinkDomainTests
     // ──────────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public void Delete_RaisesEntityLinkDeletedEvent()
+    public void Delete_SoftDeletesLink()
     {
         var link = EntityLink.Create(
             MeepleEntityType.Game, _sourceId,
@@ -198,16 +164,11 @@ public class EntityLinkDomainTests
             EntityLinkType.ExpansionOf,
             EntityLinkScope.User, _ownerId);
 
-        link.PopDomainEvents(); // clear creation event
-        var adminId = Guid.NewGuid();
-        link.Delete(adminId);
+        link.IsDeleted.Should().BeFalse();
+        link.Delete();
 
-        var events = link.PopDomainEvents();
-        events.Should().ContainSingle();
-        events[0].Should().BeOfType<EntityLinkDeletedEvent>();
-        var evt = (EntityLinkDeletedEvent)events[0];
-        evt.EntityLinkId.Should().Be(link.Id);
-        evt.DeletedByUserId.Should().Be(adminId);
+        link.IsDeleted.Should().BeTrue();
+        link.DeletedAt.Should().NotBeNull();
     }
 
     // ──────────────────────────────────────────────────────────────────────────

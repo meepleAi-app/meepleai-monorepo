@@ -46,10 +46,12 @@ services:
       ASPNETCORE_URLS: http://+:8080
       SkipMigrations: "true"
       POSTGRES_HOST: host.docker.internal
-      POSTGRES_PORT: "15432"
+      # Ports MUST match the forwards in scripts/integration-tunnel.sh (25432/26379),
+      # not 15432/16379 (stale — the tunnel never binds those).
+      POSTGRES_PORT: "25432"
       POSTGRES_SSL_MODE: Disable
       REDIS_HOST: host.docker.internal
-      REDIS_PORT: "16379"
+      REDIS_PORT: "26379"
       # AI services via meepleai.app
       EMBEDDING_PROVIDER: external
       Embedding__Provider: External
@@ -70,4 +72,10 @@ services:
     extra_hosts: ["host.docker.internal:host-gateway"]
     environment:
       NODE_ENV: development
+      # Server-side proxy (src/proxy.ts, src/app/api/v1/[...path]/route.ts) forwards ALL
+      # browser API calls to the backend. It reads API_BASE_URL first; without it the
+      # fallback is NEXT_PUBLIC_API_BASE=localhost:8080 = the web container itself →
+      # undici "fetch failed" (ECONNREFUSED) on login and every API call. api:8080 is the
+      # backend on the docker network (matches compose.dev/prod/staging/test.yml).
+      API_BASE_URL: http://api:8080
       NEXT_PUBLIC_API_BASE: http://localhost:8080

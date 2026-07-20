@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
@@ -441,7 +442,6 @@ internal class HybridSearchService : IHybridSearchService
                 ? keywordItem.Result.RoleTags
                 : GameBookRole.None;
             var roleBoost = ComputeRoleMatchBoost(queryRoleHint, chunkRoleTags);
-            var hybridScore = vectorRrfScore + keywordRrfScore + roleBoost;
 
             // Use data from whichever result has it (prefer vector for metadata consistency)
             var matchedTerms = hasKeyword && keywordItem != null
@@ -452,6 +452,14 @@ internal class HybridSearchService : IHybridSearchService
             var content = hasVector && vectorItem != null
                 ? vectorItem.Result.Text
                 : (keywordItem?.Result.Content ?? string.Empty);
+
+            // RAG answer-quality fix: demote cross-reference "legend" chunks (dense with
+            // "vedi pag."/"see p." pointers, e.g. the Terraforming Mars component list
+            // "8. Progetti Standard ... vedi pag. 10 ... 9. Milestone ... vedi pag. 10 e 11")
+            // which carry no actionable answer yet score in the same RRF band as real content.
+            // Multiplicative so it demotes regardless of the absolute RRF magnitude.
+            var legendFactor = ComputeLegendPenaltyFactor(content);
+            var hybridScore = (vectorRrfScore + keywordRrfScore + roleBoost) * (1f - legendFactor);
 
             var pdfDocumentId = hasVector && vectorItem != null
                 ? vectorItem.Result.PdfId
@@ -506,6 +514,38 @@ internal class HybridSearchService : IHybridSearchService
         }
 
         return (chunkRoleTags & queryRoleHint) != GameBookRole.None ? RoleMatchBoost : 0f;
+    }
+
+    // Matches cross-reference pointers like "vedi pag. 10", "see p. 11", "cfr. pagg. 4-5".
+    private static readonly Regex CrossReferencePointer = new(
+        @"(?i)\b(?:vedi|see|cfr|cf)\.?\s+(?:pagg|pag|pp|p|pages|page)\b\.?",
+        RegexOptions.Compiled,
+        TimeSpan.FromSeconds(1));
+
+    /// <summary>
+    /// RAG answer-quality fix: computes a multiplicative demotion factor in [0, 0.5] for chunks
+    /// that are cross-reference "legends" (dense with "vedi pag."/"see p." pointers, e.g. a
+    /// component list that only points elsewhere). Such chunks carry no actionable content but
+    /// score in the same RRF band as real answers. Pure function — exposed <c>internal static</c>
+    /// for direct unit testing.
+    /// </summary>
+    internal static float ComputeLegendPenaltyFactor(string? content)
+    {
+        if (string.IsNullOrEmpty(content))
+        {
+            return 0f;
+        }
+
+        var pointers = CrossReferencePointer.Matches(content).Count;
+        if (pointers == 0)
+        {
+            return 0f;
+        }
+
+        // Density of cross-reference pointers per 1000 chars: a short chunk dominated by pointers
+        // is a legend; a long chunk with one incidental page reference is not.
+        var density = pointers * 1000.0 / content.Length;
+        return (float)Math.Min(0.5, (0.10 * pointers) + (0.03 * density));
     }
 }
 

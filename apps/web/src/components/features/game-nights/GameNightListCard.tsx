@@ -49,6 +49,9 @@ export interface GameNightListCardProps {
   readonly onAction?: (id: string, action: GameNightListCardAction) => void;
   readonly gameTitle?: string;
   readonly players?: readonly AvatarPlayer[];
+  // #3191: disable the inline RSVP CTAs (offline / in-flight). Gates ONLY the 3 RSVP
+  // buttons — navigation branches (edit/viewSummary/reschedule) stay interactive.
+  readonly ctaDisabled?: boolean;
 }
 
 export function GameNightListCard({
@@ -58,6 +61,7 @@ export function GameNightListCard({
   onAction,
   gameTitle,
   players,
+  ctaDisabled,
 }: GameNightListCardProps): React.JSX.Element {
   const isCancelled = vm.statusKey === 'cancelled';
   // #2978 (invariante #17): the viewer is an invitee who has not yet responded.
@@ -149,7 +153,7 @@ export function GameNightListCard({
             {labels.participants(participantCount)}
           </span>
           <div className="flex-1" />
-          <CardCta vm={vm} labels={labels.cta} onAction={dispatch} />
+          <CardCta vm={vm} labels={labels.cta} onAction={dispatch} rsvpDisabled={ctaDisabled} />
         </div>
       </div>
     </article>
@@ -160,6 +164,8 @@ interface CardCtaProps {
   readonly vm: GameNightVM;
   readonly labels: GameNightListCardCtaLabels;
   readonly onAction: (action: GameNightListCardAction) => void;
+  // #3191: disable the 3 RSVP buttons (offline / in-flight). Nav branches are unaffected.
+  readonly rsvpDisabled?: boolean;
 }
 
 // #2978 (invariante #17): the 3 RSVP actions, mapped to their RsvpStatus + selected-state style.
@@ -184,7 +190,7 @@ const RSVP_BUTTONS = [
   },
 ] as const;
 
-function CardCta({ vm, labels, onAction }: CardCtaProps): React.JSX.Element | null {
+function CardCta({ vm, labels, onAction, rsvpDisabled }: CardCtaProps): React.JSX.Element | null {
   if (vm.statusKey === 'completed') {
     return (
       <button
@@ -233,10 +239,13 @@ function CardCta({ vm, labels, onAction }: CardCtaProps): React.JSX.Element | nu
             key={action}
             type="button"
             onClick={() => onAction(action)}
+            disabled={rsvpDisabled}
+            data-disabled={rsvpDisabled ? 'true' : 'false'}
             data-selected={isSelected ? 'true' : 'false'}
             aria-pressed={isSelected}
             className={clsx(
               'rounded-md border px-3 py-1.5 font-display text-xs font-extrabold',
+              'disabled:cursor-not-allowed disabled:opacity-50',
               isSelected ? selectedClass : 'border-border text-muted-foreground'
             )}
           >

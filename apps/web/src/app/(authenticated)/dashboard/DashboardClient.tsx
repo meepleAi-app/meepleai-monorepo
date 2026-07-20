@@ -47,6 +47,7 @@ import {
 } from '@/hooks/queries/useGameNights';
 import { useLibrary, useLibraryStats } from '@/hooks/queries/useLibrary';
 import { useFriendsActivity } from '@/hooks/use-friends-activity';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useTranslation } from '@/hooks/useTranslation';
 
 import { DashboardHero, type DashboardHeroKpi } from './_components/DashboardHero';
@@ -88,6 +89,8 @@ export function DashboardClient(): ReactElement {
   const upcomingGNQuery = useUpcomingGameNights();
   // #2978 (invariante #17): inline RSVP for pending-invitee cards on the dashboard.
   const rsvpMutation = useRsvpGameNight();
+  // #3191: offline state gates the inline RSVP CTAs (parity with HomeFeed / PR #3189).
+  const { isOffline } = useNetworkStatus();
   // F20 #1974: dashboard "Recenti" slot — recently completed game nights.
   const completedGNQuery = useCompletedGameNights({ limit: 5 });
   const sessionsQuery = useActiveSessions(10);
@@ -281,6 +284,10 @@ export function DashboardClient(): ReactElement {
         <ProssimiSection
           state={prossimiState}
           gameNights={prossimiCards}
+          isOffline={isOffline}
+          // #3191: derive the in-flight night id so the card can lock its own CTAs
+          // (anti-double-submit) without freezing sibling cards.
+          pendingRsvpId={rsvpMutation.isPending ? (rsvpMutation.variables?.id ?? null) : null}
           onRsvp={(id, response) => rsvpMutation.mutate({ id, response })}
           onRetry={() => {
             void upcomingGNQuery.refetch();

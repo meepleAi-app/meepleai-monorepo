@@ -40,6 +40,7 @@ import {
   useRsvpGameNight,
   useUpcomingGameNights,
 } from '@/hooks/queries/useGameNights';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useTranslation, type TranslationFunction } from '@/hooks/useTranslation';
 import type { RsvpStatus } from '@/lib/api/schemas/game-nights.schemas';
 import type { MonthCell } from '@/lib/game-nights/calendar-grid';
@@ -128,18 +129,33 @@ export function GameNightsContent(): React.JSX.Element {
   const { data: viewer } = useCurrentUser();
   const upcoming = useUpcomingGameNights();
   const mine = useMyGameNights();
-  const { mutate: rsvpMutate } = useRsvpGameNight();
+  const {
+    mutate: rsvpMutate,
+    isPending: rsvpPending,
+    variables: rsvpVariables,
+  } = useRsvpGameNight();
+  // #3191: offline state gates the inline RSVP CTAs (parity with HomeFeed / PR #3189).
+  const { isOffline } = useNetworkStatus();
+
+  // #3191: an RSVP CTA is disabled when offline, or while THIS night's RSVP is already in
+  // flight (double-submit). Correlate by id so a sibling card's in-flight RSVP doesn't freeze
+  // the others (the day drawer can list several nights).
+  const isRsvpDisabled = useCallback(
+    (id: string): boolean => isOffline || (rsvpPending && rsvpVariables?.id === id),
+    [isOffline, rsvpPending, rsvpVariables]
+  );
 
   // #2978 (invariante #17): inline RSVP from the list card AND the calendar day-detail drawer.
   // Non-RSVP actions (edit/viewSummary/reschedule) are navigation concerns out of scope here.
   const handleCardAction = useCallback(
     (id: string, action: GameNightListCardAction): void => {
       const response = RSVP_ACTION_TO_STATUS[action];
-      if (response) {
-        rsvpMutate({ id, response });
-      }
+      if (!response) return;
+      // #3191: block the RSVP when offline or already submitting for this night.
+      if (isRsvpDisabled(id)) return;
+      rsvpMutate({ id, response });
     },
-    [rsvpMutate]
+    [rsvpMutate, isRsvpDisabled]
   );
 
   // Merge + dedup by id; map to VMs.
@@ -369,6 +385,7 @@ export function GameNightsContent(): React.JSX.Element {
           t={t}
           statusLabels={statusLabels}
           onAction={handleCardAction}
+          resolveCtaDisabled={isRsvpDisabled}
           emptyTitle={t(`${K}.states.filteredEmpty.title`)}
           emptyBody={t(`${K}.states.filteredEmpty.body`)}
         />
@@ -380,6 +397,7 @@ export function GameNightsContent(): React.JSX.Element {
           events={dayEvents}
           labels={drawerLabels}
           onCardAction={handleCardAction}
+          resolveCtaDisabled={vm => isRsvpDisabled(vm.id)}
           onClose={() => setDrawerTarget(null)}
           onAddOnDay={() => router.push('/game-nights/new')}
         />
@@ -396,6 +414,8 @@ interface ListViewProps {
   readonly t: TranslationFunction;
   readonly statusLabels: StatusPillLabels;
   readonly onAction?: (id: string, action: GameNightListCardAction) => void;
+  // #3191: per-card disabled resolver for the RSVP CTAs (offline / in-flight).
+  readonly resolveCtaDisabled?: (id: string) => boolean;
   readonly emptyTitle: string;
   readonly emptyBody: string;
 }
@@ -406,6 +426,7 @@ function ListView({
   t,
   statusLabels,
   onAction,
+  resolveCtaDisabled,
   emptyTitle,
   emptyBody,
 }: ListViewProps): React.JSX.Element {
@@ -447,6 +468,7 @@ function ListView({
                   vm={vm}
                   labels={makeCardLabels(t, statusLabels, vm)}
                   onAction={onAction}
+                  ctaDisabled={resolveCtaDisabled?.(vm.id)}
                 />
               ))}
             </div>

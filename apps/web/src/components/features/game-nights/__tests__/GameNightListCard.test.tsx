@@ -206,4 +206,45 @@ describe('GameNightListCard', () => {
       expect(screen.queryByTestId('game-nights-pending-badge')).not.toBeInTheDocument();
     });
   });
+
+  // #3191: offline / in-flight disable of ONLY the inline RSVP CTAs.
+  describe('ctaDisabled RSVP guard (#3191)', () => {
+    const rsvpNames = ['✓ Partecipo', 'Forse', 'Declina'];
+
+    it('disables all 3 RSVP buttons + marks data-disabled when ctaDisabled', () => {
+      render(
+        <GameNightListCard
+          vm={makeVM('planned', 'invited', { viewerRsvpStatus: 'Pending' })}
+          labels={labels}
+          ctaDisabled
+        />
+      );
+      for (const name of rsvpNames) {
+        const btn = screen.getByRole('button', { name });
+        expect(btn).toBeDisabled();
+        expect(btn).toHaveAttribute('data-disabled', 'true');
+      }
+    });
+
+    it('keeps the RSVP buttons enabled by default (ctaDisabled omitted)', () => {
+      render(
+        <GameNightListCard
+          vm={makeVM('planned', 'invited', { viewerRsvpStatus: 'Pending' })}
+          labels={labels}
+        />
+      );
+      for (const name of rsvpNames) {
+        const btn = screen.getByRole('button', { name });
+        expect(btn).not.toBeDisabled();
+        expect(btn).toHaveAttribute('data-disabled', 'false');
+      }
+    });
+
+    it('does NOT disable the organizer edit CTA (navigation branch, out of scope)', () => {
+      render(
+        <GameNightListCard vm={makeVM('confirmed', 'organizer')} labels={labels} ctaDisabled />
+      );
+      expect(screen.getByRole('button', { name: 'Modifica' })).not.toBeDisabled();
+    });
+  });
 });

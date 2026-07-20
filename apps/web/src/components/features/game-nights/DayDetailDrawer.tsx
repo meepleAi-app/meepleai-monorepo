@@ -46,6 +46,8 @@ export interface DayDetailDrawerProps {
   readonly onCardAction?: (id: string, action: GameNightListCardAction) => void;
   readonly resolvePlayers?: (vm: GameNightVM) => readonly AvatarPlayer[];
   readonly resolveGameTitle?: (vm: GameNightVM) => string | undefined;
+  // #3191: per-card disabled resolver for the RSVP CTAs (offline / in-flight).
+  readonly resolveCtaDisabled?: (vm: GameNightVM) => boolean;
 }
 
 export function DayDetailDrawer({
@@ -59,6 +61,7 @@ export function DayDetailDrawer({
   onCardAction,
   resolvePlayers,
   resolveGameTitle,
+  resolveCtaDisabled,
 }: DayDetailDrawerProps): React.JSX.Element | null {
   const headingId = useId();
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -148,6 +151,7 @@ export function DayDetailDrawer({
               onAction={onCardAction}
               gameTitle={resolveGameTitle?.(vm)}
               players={resolvePlayers?.(vm)}
+              ctaDisabled={resolveCtaDisabled?.(vm)}
             />
           ))}
           {onAddOnDay && (

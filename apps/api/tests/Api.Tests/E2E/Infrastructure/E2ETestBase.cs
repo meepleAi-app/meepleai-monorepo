@@ -527,6 +527,9 @@ internal sealed class E2EWebApplicationFactory : WebApplicationFactory<Program>
                 ["Jwt:Secret"] = "test-secret-key-for-e2e-tests-minimum-32-characters-long",
                 ["Jwt:Issuer"] = "MeepleAI-Test",
                 ["Jwt:Audience"] = "MeepleAI-Test",
+                // OpenRouter:BaseUrl is IGNORED by OpenRouterLlmClient (hardcoded openrouter.ai,
+                // OpenRouterLlmClient.cs:67), so it does NOT prevent a real paid call. Real safeguards
+                // are PaidAiHostGuard + TestFailingLlmService, registered below. REQ-AI-TEST-001.
                 ["OpenRouter:ApiKey"] = "test-key",
                 ["OpenRouter:BaseUrl"] = "https://test.local",
                 ["BoardGameGeek:Enabled"] = "false",
@@ -590,6 +593,11 @@ internal sealed class E2EWebApplicationFactory : WebApplicationFactory<Program>
             });
 
             services.AddScoped<IDbContextMigrator, TestDbContextMigrator>();
+
+            // REQ-AI-TEST-001: automated tests must not consume AI tokens. Fail-closed at two layers:
+            // (1) PaidAiHostGuard blocks paid AI hosts at the HTTP layer; (2) TestFailingLlmService
+            // replaces the real LLM service with a network-free deterministic fake.
+            Api.Tests.Infrastructure.PaidAiHostGuardExtensions.AddFailClosedAiTestDoubles(services);
         });
     }
 }

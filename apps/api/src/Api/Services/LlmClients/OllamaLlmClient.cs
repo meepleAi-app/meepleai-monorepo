@@ -56,10 +56,11 @@ internal class OllamaLlmClient : ILlmClient
 
     // Bare model-id prefixes that belong to cloud providers Ollama never serves.
     // Ambiguous names that also exist as local Ollama models (llama, mistral, qwen,
-    // phi, gemma, ...) are intentionally NOT listed.
+    // phi, gemma, gpt-oss, ...) are intentionally NOT listed — hence "gpt-3/4/5" rather
+    // than a bare "gpt" (which would wrongly reject the local "gpt-oss:20b/120b").
     private static readonly string[] CloudOnlyModelPrefixes =
     {
-        "claude", "gpt", "chatgpt", "gemini", "grok", "o1-", "o3-", "o4-",
+        "claude", "gpt-3", "gpt-4", "gpt-5", "chatgpt", "gemini", "grok", "o1-", "o3-", "o4-",
     };
 
     /// <inheritdoc/>

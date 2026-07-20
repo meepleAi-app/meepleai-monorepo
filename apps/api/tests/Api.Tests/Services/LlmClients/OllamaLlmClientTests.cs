@@ -60,6 +60,18 @@ public class OllamaLlmClientTests
     }
 
     [Fact]
+    public void SupportsModel_LocalGptOssModel_ReturnsTrue()
+    {
+        // Arrange
+        var client = CreateClient();
+
+        // Act & Assert: gpt-oss is OpenAI's open-weight model served locally by Ollama —
+        // it must stay routable and NOT be caught by the cloud-id rejection (gpt-3/4/5 only).
+        client.SupportsModel("gpt-oss:20b").Should().BeTrue();
+        client.SupportsModel("gpt-oss:120b").Should().BeTrue();
+    }
+
+    [Fact]
     public void ProviderName_ReturnsOllama()
     {
         // Arrange & Act

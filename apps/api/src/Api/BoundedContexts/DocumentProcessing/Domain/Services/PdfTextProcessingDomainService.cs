@@ -67,7 +67,7 @@ internal class PdfTextProcessingDomainService
         // word-break marker and rejoin the fragments.
 #pragma warning disable MA0023 // Add RegexOptions.ExplicitCapture - disabled because we need $1 and $2 substitution
         // (a) letter + break-marker + optional spaces/newline + letter -> join (drop the hyphen)
-        text = Regex.Replace(text, "(\\p{L})[­‐‑￾-]\\s*\\n\\s*(\\p{L})", "$1$2", RegexOptions.None, TimeSpan.FromSeconds(1));
+        text = Regex.Replace(text, "(\\p{L})[­‐‑￾-][ \\t]*\\n[ \\t]*(\\p{L})", "$1$2", RegexOptions.None, TimeSpan.FromSeconds(1));
         // (b) letter + soft-hyphen/noncharacter (newline already collapsed by extractor) + letter -> join
         text = Regex.Replace(text, "(\\p{L})[­￾](\\p{L})", "$1$2", RegexOptions.None, TimeSpan.FromSeconds(1));
 #pragma warning restore MA0023
@@ -166,7 +166,7 @@ internal class PdfTextProcessingDomainService
     }
 
     /// <summary>
-    /// Removes zero-width characters that can interfere with text processing
+    /// Removes zero-width characters and Unicode noncharacters (U+FFFE/U+FFFF) that can interfere with text processing
     /// </summary>
     private static string RemoveZeroWidthCharacters(string text)
     {

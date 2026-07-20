@@ -368,4 +368,20 @@ public class PdfTextProcessingDomainServiceTests
         result.Should().NotContain("\uFFFE");
         result.Should().Contain("Progetti Standard");
     }
+
+    [Fact]
+    public void NormalizeText_DoesNotJoinHyphenAcrossParagraphBreak()
+    {
+        // Arrange: a word ending in a hyphen right before a REAL paragraph break (blank line)
+        // must NOT be glued to the next paragraph. The de-hyphenation only joins a single
+        // line wrap, never a paragraph boundary.
+        var rawText = "fine del primo-\n\nInizio del secondo paragrafo";
+
+        // Act
+        var result = PdfTextProcessingDomainService.NormalizeText(rawText);
+
+        // Assert: the two paragraphs stay separate.
+        result.Should().NotContain("primoInizio");
+        result.Should().Contain("Inizio del secondo");
+    }
 }

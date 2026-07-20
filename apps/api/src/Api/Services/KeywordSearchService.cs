@@ -18,14 +18,13 @@ internal class KeywordSearchService : IKeywordSearchService
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<KeywordSearchService> _logger;
 
-    // PostgreSQL full-text search configuration.
-    // #2569: keyword FTS is 'english' to match the content (PdfDocument.Language defaults to
-    // "en"), the pgvector path (PgVectorStoreAdapter uses 'english'), and — critically — the
-    // GENERATED search_vector column on text_chunks/pdf_documents (also 'english'). Query config
-    // and column config MUST agree or the @@ operator silently returns nothing. There is NO
-    // per-language mapping on purpose: the column is single-config, so an 'italian' query would
-    // never match. A multilingual mapping returns only when a multilingual column exists
-    // (ADR-016 follow-up). See ResolveFtsConfig.
+    // Default PostgreSQL FTS configuration when a language is unknown/unspecified.
+    // #2569 background: the GENERATED search_vector column on text_chunks/pdf_documents is built
+    // with 'english', so a divergent query config against THAT column silently returns nothing.
+    // This service now honours per-game language (see ResolveGameFtsConfigAsync): English keeps
+    // using the indexed 'english' search_vector column, while non-english languages are matched
+    // against a query-time to_tsvector(cfg, Content) so the query config and vector config always
+    // agree (sidestepping the #2569 footgun without a multilingual column). See ResolveFtsConfig.
     private const string DefaultTextSearchConfig = "english";
     private const int DefaultNormalization = 1; // ts_rank_cd normalization method (1 = divide by document length)
 
@@ -64,8 +63,10 @@ internal class KeywordSearchService : IKeywordSearchService
 
         var gameIdString = gameId.ToString();
 
-        // ADR-016 Phase 3: Resolve language to FTS configuration
-        var textSearchConfig = ResolveFtsConfig(language);
+        // #2569 follow-up: detect the game's dominant language so Italian content is stemmed with
+        // 'italian' instead of the caller's default 'en'. English keeps the indexed search_vector
+        // column; non-english uses a query-time to_tsvector with the SAME config (see tsvectorExpr).
+        var textSearchConfig = await ResolveGameFtsConfigAsync(gameId, language, cancellationToken).ConfigureAwait(false);
 
         try
         {
@@ -76,13 +77,21 @@ internal class KeywordSearchService : IKeywordSearchService
                 "Keyword search: query='{Query}', gameId={GameId}, phraseSearch={PhraseSearch}, boostTerms={BoostTerms}, limit={Limit}, ftsConfig={FtsConfig}",
                 query, gameId, phraseSearch, boostTerms?.Count ?? 0, limit, textSearchConfig);
 
+            // English uses the indexed english 'search_vector' GENERATED column (hot path). Non-english
+            // computes the tsvector at query time with the resolved config so the query config always
+            // matches the vector config (#2569). tsvectorExpr is one of two fixed internal literals
+            // (never user input), so interpolating it into the SQL is injection-safe.
+            var tsvectorExpr = string.Equals(textSearchConfig, "english", StringComparison.Ordinal)
+                ? "search_vector"
+                : "to_tsvector(@textSearchConfig::regconfig, \"Content\")";
+
             // Execute PostgreSQL full-text search with ts_rank_cd scoring
             // Using FromSqlRaw for complex tsvector queries (EF Core limitation with tsvector operators)
             // Issue #423: Add minScore filter to exclude low-relevance keyword matches (e.g., ToC entries)
             // Perf: subquery avoids double ts_rank_cd evaluation (computed once in inner SELECT, filtered in outer WHERE)
             // Phase D (D6): include role_tags in the projection so the hybrid re-ranker can
             // apply a role-match boost without an extra round-trip.
-            var sql = @"
+            var sql = $@"
                 SELECT * FROM (
                     SELECT
                         ""Id"",
@@ -92,11 +101,11 @@ internal class KeywordSearchService : IKeywordSearchService
                         ""ChunkIndex"",
                         ""PageNumber"",
                         role_tags AS ""RoleTags"",
-                        ts_rank_cd(search_vector, to_tsquery(@textSearchConfig::regconfig, @tsQuery), @normalization) AS ""RelevanceScore""
+                        ts_rank_cd({tsvectorExpr}, to_tsquery(@textSearchConfig::regconfig, @tsQuery), @normalization) AS ""RelevanceScore""
                     FROM text_chunks
                     WHERE
                         ""GameId"" = @gameId::uuid
-                        AND search_vector @@ to_tsquery(@textSearchConfig::regconfig, @tsQuery)
+                        AND {tsvectorExpr} @@ to_tsquery(@textSearchConfig::regconfig, @tsQuery)
                 ) ranked
                 WHERE ""RelevanceScore"" >= @minScore
                 ORDER BY ""RelevanceScore"" DESC
@@ -267,8 +276,11 @@ internal class KeywordSearchService : IKeywordSearchService
             return string.Join(" | ", weightedTerms); // OR operator for multiple terms
         }
 
-        // Default: simple AND query (all terms must match)
-        return sanitizedQuery.Replace(" ", " & ");
+        // Default: OR query (any term may match). #3196 RAG fix: strict AND (" & ") returned 0
+        // hits for natural-language questions like "setup per N giocatori" whenever the four
+        // surface tokens don't co-occur in one chunk, collapsing hybrid search to vector-only.
+        // OR keeps recall; ranking (ts_rank_cd + RRF fusion + reranker) sorts the candidates.
+        return sanitizedQuery.Replace(" ", " | ");
     }
 
     /// <summary>
@@ -304,18 +316,74 @@ internal class KeywordSearchService : IKeywordSearchService
     }
 
     /// <summary>
-    /// Resolves the PostgreSQL FTS configuration for keyword search.
-    /// #2569 footgun guard: ALWAYS returns <see cref="DefaultTextSearchConfig"/> ('english'),
-    /// ignoring <paramref name="language"/>. The <c>search_vector</c> column is a single-config
-    /// GENERATED column built with 'english'; a divergent query config (e.g. 'italian') would
-    /// make the <c>@@</c> operator silently return nothing. True per-query / multilingual FTS
-    /// requires a multilingual <c>search_vector</c> column (ADR-016 follow-up); until that
-    /// exists the query config is pinned to the column's config. The parameter is retained for
-    /// forward-compatibility (and so existing call sites need no change).
+    /// Maps a document/query language to a PostgreSQL FTS configuration.
+    /// <para>
+    /// English resolves to <c>'english'</c> so the query can keep using the indexed english
+    /// <c>search_vector</c> GENERATED column (the common case). Non-english languages resolve to
+    /// their snowball config and are matched against a query-time <c>to_tsvector(cfg, Content)</c>
+    /// (see the SQL in <see cref="SearchAsync"/>), so the query config and the vector config
+    /// always agree — this sidesteps the #2569 footgun (an <c>'italian'</c> query against the
+    /// <c>'english'</c> column silently returns nothing) without needing a multilingual column.
+    /// Unknown languages resolve to <c>'simple'</c> (tokenize, no stemming) which is safe under
+    /// the same "query-time to_tsvector with the same config" rule.
+    /// </para>
     /// </summary>
-    /// <param name="language">Reserved; currently ignored — keyword FTS is english-only (#2569).</param>
-    /// <returns>The PostgreSQL text search configuration ('english').</returns>
-    internal static string ResolveFtsConfig(string language) => DefaultTextSearchConfig;
+    internal static string ResolveFtsConfig(string? language)
+    {
+        if (string.IsNullOrWhiteSpace(language))
+        {
+            return DefaultTextSearchConfig;
+        }
+
+        return language.Trim().ToLowerInvariant() switch
+        {
+            "en" or "eng" or "english" => "english",
+            "it" or "ita" or "italian" or "italiano" => "italian",
+            "de" or "deu" or "ger" or "german" or "deutsch" => "german",
+            "fr" or "fra" or "french" or "francais" or "français" => "french",
+            "es" or "spa" or "spanish" or "espanol" or "español" => "spanish",
+            "pt" or "por" or "portuguese" or "portugues" or "português" => "portuguese",
+            "nl" or "dut" or "nld" or "dutch" => "dutch",
+            _ => "simple",
+        };
+    }
+
+    /// <summary>
+    /// Detects the dominant document language for a game (from <c>pdf_documents.Language</c>,
+    /// joined via the game's chunks) and resolves it to an FTS config. Keyword-retrieval callers
+    /// do not thread a per-game language, so it is detected here rather than pinned to english.
+    /// Falls back to <paramref name="requestedLanguage"/> (then english) when unknown/unavailable.
+    /// </summary>
+    private async Task<string> ResolveGameFtsConfigAsync(Guid gameId, string requestedLanguage, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var previousTimeout = _dbContext.Database.GetCommandTimeout();
+            _dbContext.Database.SetCommandTimeout(3);
+            var dominant = await _dbContext.Database
+                .SqlQueryRaw<string>(@"
+                    SELECT pd.""Language"" AS ""Value""
+                    FROM text_chunks tc
+                    JOIN pdf_documents pd ON pd.""Id"" = tc.""PdfDocumentId""
+                    WHERE tc.""GameId"" = @gameId::uuid AND pd.""Language"" IS NOT NULL AND pd.""Language"" <> ''
+                    GROUP BY pd.""Language""
+                    ORDER BY count(*) DESC
+                    LIMIT 1",
+                    new NpgsqlParameter("@gameId", gameId.ToString()))
+                .AsNoTracking()
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+            _dbContext.Database.SetCommandTimeout(previousTimeout);
+
+            return ResolveFtsConfig(string.IsNullOrWhiteSpace(dominant) ? requestedLanguage : dominant);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types - language detection is best-effort
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Game FTS language detection failed for {GameId}; falling back to requested language", gameId);
+            return ResolveFtsConfig(requestedLanguage);
+        }
+#pragma warning restore CA1031
+    }
 
     /// <summary>
     /// Extracts matched terms from query for frontend highlighting.

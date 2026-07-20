@@ -93,6 +93,11 @@ services:
       Frontend__BaseUrl: "https://${PROD_DOMAIN}"
       Authentication__SessionCookie__Secure: "true"
       Authentication__SessionCookie__SameSite: "Lax"
+      # OPS-07 / #3250: health/monitoring alert recipient — overrides the appsettings.json
+      # placeholder (ops@meepleai.app). Without this, prod alerts go to an unowned mailbox
+      # and are lost. From/transport are owned by EmailService (Resend via prod/email.secret).
+      # Not a secret, just the mailbox that receives alert emails.
+      Alerting__Email__To__0: badsworm@gmail.com
     logging:
       driver: "json-file"
       options: { max-size: "50m", max-file: "10" }

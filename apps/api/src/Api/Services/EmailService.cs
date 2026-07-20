@@ -118,7 +118,12 @@ internal partial class EmailService : IEmailService
         await smtpClient.SendMailAsync(message, cancellationToken).ConfigureAwait(false);
     }
 
-    // ISSUE-4417: Raw email sending for queue processor
+    // ISSUE-4417: Raw email sending for queue processor.
+    // #3250: delegate to SendViaTransportAsync so this honors the configured IEmailSender
+    // (Resend/SMTP via EMAIL_PROVIDER) instead of a hardcoded SmtpClient. Previously it
+    // always sent over SMTP, so on a Resend-only prod, alert (EmailAlertChannel) and queued
+    // emails failed silently while templated emails succeeded via Resend. The direct-SMTP
+    // fallback is preserved inside SendViaTransportAsync for the legacy ctor / unit tests.
     public async Task SendRawEmailAsync(
         string toEmail,
         string subject,
@@ -127,22 +132,7 @@ internal partial class EmailService : IEmailService
     {
         try
         {
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail));
-            message.Subject = subject;
-            message.Body = htmlBody;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, htmlBody, ct).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Raw email sent successfully to {Email}",

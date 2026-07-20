@@ -99,4 +99,13 @@ describe('BinaryWinEditor', () => {
       ],
     });
   });
+
+  // #3196: mobile touch-target on the Win/Lose rows.
+  it('gives each Win/Lose row a 44px touch target', () => {
+    render(<BinaryWinEditor players={PLAYERS} onChange={vi.fn()} />);
+    const winLabel = screen.getByTestId('binary-win-p1').closest('label');
+    const loseLabel = screen.getByTestId('binary-lose-p1').closest('label');
+    expect(winLabel).toHaveClass('min-h-[44px]');
+    expect(loseLabel).toHaveClass('min-h-[44px]');
+  });
 });

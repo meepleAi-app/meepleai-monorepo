@@ -12,6 +12,8 @@ namespace Api.Tests.TestHelpers;
 /// of whether an <c>OPENROUTER_API_KEY</c> happens to be present in the environment. It returns a
 /// graceful failure — the same observable outcome as today's "provider not configured" path — so
 /// endpoints degrade exactly as they do now (tests that tolerate/skip on failure keep passing).
+/// Streaming methods yield an empty stream, mirroring the real HybridLlmService's yield-break on
+/// non-completion (StreamChunk has no error channel by design).
 ///
 /// Tests that need a positive LLM response override this with their own mock via
 /// <c>WithWebHostBuilder(b =&gt; b.ConfigureTestServices(...))</c>, which runs after the factory and

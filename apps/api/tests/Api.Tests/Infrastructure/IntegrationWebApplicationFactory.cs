@@ -207,9 +207,7 @@ internal static class IntegrationWebApplicationFactory
                     // service with a network-free deterministic fake. A test needing a positive LLM
                     // response overrides ILlmService in its own WithWebHostBuilder(...).ConfigureTestServices,
                     // which runs after this and therefore wins (e.g. GlobalKbAskStreamEndpointTests).
-                    services.AddPaidAiHostGuard();
-                    services.RemoveAll(typeof(Api.Services.ILlmService));
-                    services.AddScoped<Api.Services.ILlmService, Api.Tests.TestHelpers.TestFailingLlmService>();
+                    services.AddFailClosedAiTestDoubles();
                 });
             });
     }

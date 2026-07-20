@@ -40,6 +40,9 @@ internal sealed class PaidAiHostGuardHandler : DelegatingHandler
 
     private static bool IsPaidAiHost(string host)
     {
+        // Normalize a trailing-dot absolute FQDN ("openrouter.ai.") so it cannot bypass the match.
+        host = host.TrimEnd('.');
+
         foreach (var suffix in PaidAiHostSuffixes)
         {
             if (host.Equals(suffix, StringComparison.OrdinalIgnoreCase) ||

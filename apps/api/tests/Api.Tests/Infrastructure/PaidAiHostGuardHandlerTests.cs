@@ -39,6 +39,8 @@ public class PaidAiHostGuardHandlerTests
     [Trait("Category", "Unit")]
     [InlineData("https://sub.openrouter.ai/api/v1/chat/completions")]
     [InlineData("https://openrouter.ai:443/api/v1/chat/completions")]
+    [InlineData("https://openrouter.ai./api/v1/chat/completions")] // trailing-dot FQDN
+    [InlineData("https://OPENROUTER.AI/api/v1/chat/completions")]  // uppercase
     public async Task SendAsync_ToPaidAiSubdomainOrPort_Throws(string url)
     {
         var inner = new RecordingInnerHandler(HttpStatusCode.OK);

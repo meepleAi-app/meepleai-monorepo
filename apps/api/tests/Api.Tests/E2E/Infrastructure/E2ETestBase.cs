@@ -597,9 +597,7 @@ internal sealed class E2EWebApplicationFactory : WebApplicationFactory<Program>
             // REQ-AI-TEST-001: automated tests must not consume AI tokens. Fail-closed at two layers:
             // (1) PaidAiHostGuard blocks paid AI hosts at the HTTP layer; (2) TestFailingLlmService
             // replaces the real LLM service with a network-free deterministic fake.
-            Api.Tests.Infrastructure.PaidAiHostGuardExtensions.AddPaidAiHostGuard(services);
-            services.RemoveAll(typeof(Api.Services.ILlmService));
-            services.AddScoped<Api.Services.ILlmService, Api.Tests.TestHelpers.TestFailingLlmService>();
+            Api.Tests.Infrastructure.PaidAiHostGuardExtensions.AddFailClosedAiTestDoubles(services);
         });
     }
 }

@@ -133,8 +133,17 @@ export function useUpdateGameState(gameId: string) {
 
       return { previousData };
     },
-    // TODO: Re-implement error handling with React Query v5 patterns
-    // onError removed - use mutation.error in component
+    onError: (error, _payload, context) => {
+      // Roll back the optimistic cache + store update and release the loading
+      // flag. Without this, a failed update leaves the cache on the optimistic
+      // value and isUpdatingState stuck at true.
+      if (context?.previousData) {
+        queryClient.setQueryData<GameDetail>(GAME_DETAIL_QUERY_KEY(gameId), context.previousData);
+        setCurrentState(context.previousData.currentState);
+      }
+      setIsUpdatingState(false);
+      setError(error instanceof Error ? error.message : 'Failed to update game state');
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: GAME_DETAIL_QUERY_KEY(gameId) });
       setIsUpdatingState(false);

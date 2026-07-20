@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
@@ -29,6 +30,11 @@ internal class ReopenThreadCommandHandler : ICommandHandler<ReopenThreadCommand,
         var thread = await _threadRepository.GetByIdAsync(command.ThreadId, cancellationToken).ConfigureAwait(false);
         if (thread == null)
             throw new InvalidOperationException($"Thread with ID {command.ThreadId} not found");
+
+        // Issue #3224: pre-check state so an already-active thread maps to 409 (not 500); the
+        // domain guard in ReopenThread() stays as defense-in-depth.
+        if (thread.Status.IsActive)
+            throw new ConflictException("Thread is already active");
 
         // Reopen thread (domain logic validates state)
         thread.ReopenThread();

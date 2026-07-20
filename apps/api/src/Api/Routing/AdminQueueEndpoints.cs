@@ -339,10 +339,15 @@ internal static class AdminQueueEndpoints
 
     private static async Task<IResult> HandleGetExtractedText(
         Guid pdfDocumentId,
+        HttpContext context,
         IMediator mediator,
         CancellationToken ct)
     {
-        var result = await mediator.Send(new GetPdfTextQuery(pdfDocumentId), ct).ConfigureAwait(false);
+        // Issue #3222: admin-only queue tool (group is admin-gated) that must read the extracted
+        // text of any PDF, so it authorizes as admin.
+        var (_, session, _) = context.RequireAdminSession();
+        var userId = session.Principal!.Subject.Id;
+        var result = await mediator.Send(new GetPdfTextQuery(pdfDocumentId, userId, IsAdmin: true), ct).ConfigureAwait(false);
         return result is null ? Results.NotFound() : Results.Ok(result);
     }
 

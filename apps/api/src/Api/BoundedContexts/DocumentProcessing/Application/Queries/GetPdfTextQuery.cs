@@ -8,7 +8,9 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Queries;
 /// Returns full text content for display/download.
 /// </summary>
 internal sealed record GetPdfTextQuery(
-    Guid PdfId
+    Guid PdfId,
+    Guid UserId,
+    bool IsAdmin
 ) : IQuery<PdfTextResult?>;
 
 /// <summary>

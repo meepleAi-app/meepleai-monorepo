@@ -184,10 +184,14 @@ internal class SharedGameEntityConfiguration : IEntityTypeConfiguration<SharedGa
             .OnDelete(DeleteBehavior.SetNull);
 
         // Indexes
+        // Issue #3236 — partial on is_deleted so a soft-deleted game does not permanently
+        // reserve its BGG id (mirrors ix_private_games_owner_bgg). Without "AND is_deleted =
+        // false", the unfiltered index blocks any new active game from reusing a bgg_id that a
+        // soft-deleted (app-invisible) row still holds.
         builder.HasIndex(e => e.BggId)
             .IsUnique()
             .HasDatabaseName("ix_shared_games_bgg_id")
-            .HasFilter("bgg_id IS NOT NULL");
+            .HasFilter("bgg_id IS NOT NULL AND is_deleted = false");
 
         builder.HasIndex(e => e.Status)
             .HasDatabaseName("ix_shared_games_status")

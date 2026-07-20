@@ -307,4 +307,81 @@ public class PdfTextProcessingDomainServiceTests
         result.Should().Contain("Night");
         result.Should().NotContain("\uFFFD");
     }
+
+    // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    // De-hyphenation + Unicode noncharacter repair (RAG answer-quality fix)
+    // Some PDF extractors emit the noncharacter U+FFFE at a discretionary
+    // line-break hyphen, splitting words (e.g. "giocatore" -> "gio<U+FFFE>catore").
+    // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+
+    [Fact]
+    public void NormalizeText_RejoinsWordSplitByNoncharacterAtLineBreak()
+    {
+        // Arrange: U+FFFE emitted at a line-break hyphenation of "giocatore"
+        var rawText = "qualunque gio\uFFFE\ncatore, indipendentemente";
+
+        // Act
+        var result = PdfTextProcessingDomainService.NormalizeText(rawText);
+
+        // Assert
+        result.Should().Contain("giocatore");
+        result.Should().NotContain("\uFFFE");
+    }
+
+    [Fact]
+    public void NormalizeText_RejoinsWordWithInlineNoncharacter()
+    {
+        // Arrange: newline already collapsed by the extractor, leaving it inline
+        var rawText = "qualunque gio\uFFFEcatore, indipendentemente";
+
+        // Act
+        var result = PdfTextProcessingDomainService.NormalizeText(rawText);
+
+        // Assert
+        result.Should().Contain("giocatore");
+        result.Should().NotContain("\uFFFE");
+    }
+
+    [Fact]
+    public void NormalizeText_DeHyphenatesWordSplitAcrossLines()
+    {
+        // Arrange: hyphenated line break of "universit\u00E0" (accented Italian word)
+        var rawText = "una grande univer-\nsit\u00E0 marziana";
+
+        // Act
+        var result = PdfTextProcessingDomainService.NormalizeText(rawText);
+
+        // Assert
+        result.Should().Contain("universit\u00E0");
+    }
+
+    [Fact]
+    public void NormalizeText_StripsStandaloneNoncharacter()
+    {
+        // Arrange: a stray noncharacter not adjacent to two letters
+        var rawText = "Progetti Standard\uFFFE punto 8";
+
+        // Act
+        var result = PdfTextProcessingDomainService.NormalizeText(rawText);
+
+        // Assert
+        result.Should().NotContain("\uFFFE");
+        result.Should().Contain("Progetti Standard");
+    }
+
+    [Fact]
+    public void NormalizeText_DoesNotJoinHyphenAcrossParagraphBreak()
+    {
+        // Arrange: a word ending in a hyphen right before a REAL paragraph break (blank line)
+        // must NOT be glued to the next paragraph. The de-hyphenation only joins a single
+        // line wrap, never a paragraph boundary.
+        var rawText = "fine del primo-\n\nInizio del secondo paragrafo";
+
+        // Act
+        var result = PdfTextProcessingDomainService.NormalizeText(rawText);
+
+        // Assert: the two paragraphs stay separate.
+        result.Should().NotContain("primoInizio");
+        result.Should().Contain("Inizio del secondo");
+    }
 }

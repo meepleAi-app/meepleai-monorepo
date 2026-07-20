@@ -75,7 +75,11 @@ internal static class IntegrationWebApplicationFactory
                         ["Jwt:Secret"] = "test-secret-key-for-integration-tests-minimum-32-characters-long",
                         ["Jwt:Issuer"] = "MeepleAI-Test",
                         ["Jwt:Audience"] = "MeepleAI-Test",
-                        // OpenRouter
+                        // OpenRouter — NOTE: OpenRouterLlmClient HARDCODES its base address
+                        // (https://openrouter.ai/api/v1/, OpenRouterLlmClient.cs:67) and IGNORES
+                        // OpenRouter:BaseUrl, so this value does NOT prevent a real paid call. The
+                        // real safeguards are PaidAiHostGuard (HTTP layer) + TestFailingLlmService
+                        // (service layer), both registered in ConfigureTestServices. REQ-AI-TEST-001.
                         ["OpenRouter:ApiKey"] = "test-key",
                         ["OpenRouter:BaseUrl"] = "https://test.local",
                         // Disable external services
@@ -196,6 +200,14 @@ internal static class IntegrationWebApplicationFactory
                     // Mock HybridCache — use pass-through implementation that executes factory directly
                     services.RemoveAll(typeof(Api.Services.IHybridCacheService));
                     services.AddScoped<Api.Services.IHybridCacheService, TestHybridCacheService>();
+
+                    // REQ-AI-TEST-001: automated tests must not consume AI tokens. Fail-closed at
+                    // two layers: (1) PaidAiHostGuard blocks paid AI hosts at the HTTP layer (covers
+                    // translation and any HTTP path); (2) TestFailingLlmService replaces the real LLM
+                    // service with a network-free deterministic fake. A test needing a positive LLM
+                    // response overrides ILlmService in its own WithWebHostBuilder(...).ConfigureTestServices,
+                    // which runs after this and therefore wins (e.g. GlobalKbAskStreamEndpointTests).
+                    services.AddFailClosedAiTestDoubles();
                 });
             });
     }

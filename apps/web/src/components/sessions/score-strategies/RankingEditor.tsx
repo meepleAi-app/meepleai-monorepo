@@ -56,10 +56,23 @@ interface RankableItemProps {
   id: string;
   displayName: string;
   position: number;
+  isFirst: boolean;
+  isLast: boolean;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
   disabled?: boolean;
 }
 
-function RankableItem({ id, displayName, position, disabled }: RankableItemProps) {
+function RankableItem({
+  id,
+  displayName,
+  position,
+  isFirst,
+  isLast,
+  onMoveUp,
+  onMoveDown,
+  disabled,
+}: RankableItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
     disabled,
@@ -90,10 +103,33 @@ function RankableItem({ id, displayName, position, disabled }: RankableItemProps
         disabled={disabled}
         aria-label={`Trascina ${displayName}`}
         data-testid={`ranking-handle-${id}`}
-        className="cursor-grab disabled:cursor-not-allowed"
+        className="inline-flex min-h-[44px] min-w-[44px] cursor-grab items-center justify-center disabled:cursor-not-allowed md:min-h-0 md:min-w-0"
       >
         ⋮⋮
       </button>
+      {/* #3196: touch-friendly reorder — mobile-only; drag stays the desktop path. */}
+      <div className="flex gap-1 md:hidden">
+        <button
+          type="button"
+          onClick={onMoveUp}
+          disabled={disabled || isFirst}
+          aria-label={`Sposta ${displayName} su`}
+          data-testid={`ranking-up-${id}`}
+          className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-border disabled:opacity-40"
+        >
+          ▲
+        </button>
+        <button
+          type="button"
+          onClick={onMoveDown}
+          disabled={disabled || isLast}
+          aria-label={`Sposta ${displayName} giù`}
+          data-testid={`ranking-down-${id}`}
+          className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-border disabled:opacity-40"
+        >
+          ▼
+        </button>
+      </div>
     </li>
   );
 }
@@ -123,6 +159,15 @@ export function RankingEditor({ players, initialData, onChange, disabled }: Rank
     });
   };
 
+  // #3196: mobile arrow reorder — shares the same arrayMove path as drag.
+  const move = (index: number, dir: -1 | 1) => {
+    setIds(prev => {
+      const target = index + dir;
+      if (target < 0 || target >= prev.length) return prev;
+      return arrayMove(prev, index, target);
+    });
+  };
+
   const playerMap = new Map(players.map(p => [p.id, p]));
 
   return (
@@ -138,6 +183,10 @@ export function RankingEditor({ players, initialData, onChange, disabled }: Rank
                 id={id}
                 displayName={player.displayName}
                 position={idx + 1}
+                isFirst={idx === 0}
+                isLast={idx === ids.length - 1}
+                onMoveUp={() => move(idx, -1)}
+                onMoveDown={() => move(idx, 1)}
                 disabled={disabled}
               />
             );

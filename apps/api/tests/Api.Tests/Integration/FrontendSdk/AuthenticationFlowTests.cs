@@ -93,7 +93,8 @@ public class AuthenticationFlowTests : IAsyncLifetime
         {
             email,
             password = "SecureP@ssw0rd123!",
-            displayName = "Test User"
+            displayName = "Test User",
+            termsAccepted = true
         };
 
         // Act
@@ -124,7 +125,8 @@ public class AuthenticationFlowTests : IAsyncLifetime
         {
             email,
             password = "SecureP@ssw0rd123!",
-            displayName = "First User"
+            displayName = "First User",
+            termsAccepted = true
         };
         await _client.PostAsJsonAsync("/api/v1/auth/register", firstRequest);
 
@@ -176,7 +178,8 @@ public class AuthenticationFlowTests : IAsyncLifetime
         {
             email,
             password,
-            displayName = "Login Test User"
+            displayName = "Login Test User",
+            termsAccepted = true
         });
 
         // Act - Login
@@ -229,7 +232,8 @@ public class AuthenticationFlowTests : IAsyncLifetime
         {
             email,
             password,
-            displayName = "Me Test User"
+            displayName = "Me Test User",
+            termsAccepted = true
         });
 
         await _client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
@@ -261,7 +265,7 @@ public class AuthenticationFlowTests : IAsyncLifetime
         var email = $"logout-test-{Guid.NewGuid()}@example.com";
         var password = "SecureP@ssw0rd123!";
 
-        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "Logout Test" });
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "Logout Test", termsAccepted = true });
         await _client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
 
         // Act - Logout
@@ -284,7 +288,7 @@ public class AuthenticationFlowTests : IAsyncLifetime
         var password = "SecureP@ssw0rd123!";
 
         // Register and login
-        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "API Key Test" });
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "API Key Test", termsAccepted = true });
         await _client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
 
         // Create API key
@@ -329,7 +333,7 @@ public class AuthenticationFlowTests : IAsyncLifetime
         var email = $"concurrent-session-{Guid.NewGuid()}@example.com";
         var password = "SecureP@ssw0rd123!";
 
-        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "Concurrent Test" });
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "Concurrent Test", termsAccepted = true });
         var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
 
         // Extract session cookie for concurrent requests
@@ -373,7 +377,7 @@ public class AuthenticationFlowTests : IAsyncLifetime
         var email = $"sessions-list-{Guid.NewGuid()}@example.com";
         var password = "SecureP@ssw0rd123!";
 
-        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "Sessions Test" });
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "Sessions Test", termsAccepted = true });
         await _client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
 
         // Act
@@ -429,7 +433,7 @@ public class AuthenticationFlowTests : IAsyncLifetime
         var email = $"security-headers-{Guid.NewGuid()}@example.com";
         var password = "SecureP@ssw0rd123!";
 
-        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "Security Test" });
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "Security Test", termsAccepted = true });
 
         // Act
         var response = await _client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });

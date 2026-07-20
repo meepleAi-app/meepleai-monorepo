@@ -399,7 +399,8 @@ public sealed class ShareRequestE2ETests : E2ETestBase
             {
                 email = "admin@test.local",
                 password = "TestUnusualAdm123!",
-                displayName = "Test Admin"
+                displayName = "Test Admin",
+                termsAccepted = true
             };
 
             var registerResponse = await Client.PostAsJsonAsync("/api/v1/auth/register", registerPayload);

@@ -218,7 +218,7 @@ public sealed class EntityLinkRepositoryIntegrationTests : IAsyncLifetime
 
         // Soft-delete the first link via domain method
         var link = links[0];
-        link.Delete(_userId1);
+        link.Delete();
         await _dbContext.SaveChangesAsync();
         _dbContext.ChangeTracker.Clear();
 
@@ -235,7 +235,7 @@ public sealed class EntityLinkRepositoryIntegrationTests : IAsyncLifetime
         var links = await _repository.GetForEntityAsync(
             MeepleEntityType.Game, _gameId1, cancellationToken: TestContext.Current.CancellationToken);
         var link = links[0];
-        link.Delete(_userId1);
+        link.Delete();
         await _dbContext.SaveChangesAsync();
         _dbContext.ChangeTracker.Clear();
 

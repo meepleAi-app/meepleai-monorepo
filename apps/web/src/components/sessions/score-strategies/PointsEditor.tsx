@@ -64,12 +64,13 @@ export function PointsEditor({ players, initialData, onChange, disabled }: Point
           <input
             id={`points-${player.id}`}
             type="number"
+            inputMode="numeric"
             min={0}
             value={scores[player.id] ?? 0}
             onChange={e => handleChange(player.id, e.target.value)}
             disabled={disabled}
             data-testid={`points-input-${player.id}`}
-            className="w-24 rounded-md border border-border bg-background px-3 py-1 text-right tabular-nums"
+            className="w-24 min-h-[44px] rounded-md border border-border bg-background px-3 py-1 text-right tabular-nums md:min-h-0"
           />
         </div>
       ))}

@@ -52,6 +52,13 @@ export interface ProssimiSectionProps {
   readonly onRetry?: () => void;
   // #2978 (invariante #17): inline RSVP handler for pending-invitee cards.
   readonly onRsvp?: (id: string, response: RsvpStatus) => void;
+  // #3191: disable the inline RSVP CTAs when the viewer is offline
+  // (mirrors HomeFeed / PR #3189 — a doomed request against an unreachable server).
+  readonly isOffline?: boolean;
+  // #3191: id of the game night whose RSVP mutation is currently in flight
+  // (anti-double-submit), or null/undefined when idle. Threaded from DashboardClient,
+  // which owns the `useRsvpGameNight` mutation.
+  readonly pendingRsvpId?: string | null;
 }
 
 const STATUS_BADGE_LABEL: Record<ProssimiStatus, string> = {
@@ -70,6 +77,8 @@ export function ProssimiSection({
   gameNights,
   onRetry,
   onRsvp,
+  isOffline,
+  pendingRsvpId,
 }: ProssimiSectionProps): JSX.Element {
   const openDrawer = useCascadeNavigationStore(s => s.openDrawer);
 
@@ -173,6 +182,10 @@ export function ProssimiSection({
           // badge + inline RSVP bar. The RSVP buttons live OUTSIDE the card <button> to avoid
           // nested interactive elements.
           const isPending = gn.viewerRsvpStatus === 'Pending';
+          // #3191: block the RSVP CTAs when offline, or while THIS card's RSVP is in
+          // flight (double-submit). Correlate by id so a sibling card's in-flight RSVP
+          // does not freeze the others.
+          const rsvpDisabled = Boolean(isOffline) || pendingRsvpId === gn.id;
           return (
             <li key={gn.id}>
               <button
@@ -218,25 +231,32 @@ export function ProssimiSection({
                 </p>
               </button>
               {isPending && onRsvp && (
-                <div data-testid={`prossimi-rsvp-${gn.id}`} className="mt-1.5 flex gap-1.5">
+                <div
+                  data-testid={`prossimi-rsvp-${gn.id}`}
+                  className="mt-1.5 flex gap-1.5"
+                  title={isOffline ? 'Offline — RSVP disponibile alla riconnessione' : undefined}
+                >
                   <button
                     type="button"
                     onClick={() => onRsvp(gn.id, 'Accepted')}
-                    className="rounded-md bg-entity-toolkit px-2.5 py-1 font-quicksand text-[11px] font-extrabold text-[#fff]"
+                    disabled={rsvpDisabled}
+                    className="rounded-md bg-entity-toolkit px-2.5 py-1 font-quicksand text-[11px] font-extrabold text-[#fff] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Conferma
                   </button>
                   <button
                     type="button"
                     onClick={() => onRsvp(gn.id, 'Maybe')}
-                    className="rounded-md border border-border px-2.5 py-1 font-quicksand text-[11px] font-bold text-muted-foreground"
+                    disabled={rsvpDisabled}
+                    className="rounded-md border border-border px-2.5 py-1 font-quicksand text-[11px] font-bold text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Forse
                   </button>
                   <button
                     type="button"
                     onClick={() => onRsvp(gn.id, 'Declined')}
-                    className="rounded-md border border-border px-2.5 py-1 font-quicksand text-[11px] font-bold text-muted-foreground"
+                    disabled={rsvpDisabled}
+                    className="rounded-md border border-border px-2.5 py-1 font-quicksand text-[11px] font-bold text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Declina
                   </button>

@@ -1,9 +1,11 @@
+using Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
 using Api.BoundedContexts.Testing.Application.Commands;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
+using MediatR;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -90,6 +92,49 @@ public sealed class SeedTestSessionCommandHandlerTests : IAsyncLifetime
         session.CompletedAt.Should().BeNull();
         session.TestRunId.Should().Be(testRunId);
         session.Status.Should().Be("InProgress");
+
+        // Epic #3188 FIX 2: the link being InProgress is not enough — under D4, GetGameNightLive
+        // derives IsLive from the tracking Session. Assert the seeded tracking Session is live
+        // (started_at != null && finalized_at == null) so the fixture is truthful.
+        var trackingSession = await db.SessionTrackingSessions.AsNoTracking()
+            .SingleAsync(s => s.Id == response.SessionId, TestCancellationToken);
+        trackingSession.StartedAt.Should().NotBeNull();
+        trackingSession.FinalizedAt.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Handle_IsLiveTrue_GetGameNightLive_ReportsSessionIsLive()
+    {
+        using var scope = _factory!.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var testRunId = "e2e-livequery1234-1717603200000";
+
+        // Seed the parent night and keep the organizer id — the D4 live read is participant-guarded.
+        var gnHandler = new SeedTestGameNightCommandHandler(db, NullLogger<SeedTestGameNightCommandHandler>.Instance);
+        var gn = await gnHandler.Handle(new SeedTestGameNightCommand
+        {
+            TestRunId = testRunId,
+            Status = "Published",
+            OwnerEmail = $"owner-{testRunId[..16]}@e2e.test",
+        }, TestCancellationToken);
+
+        var handler = new SeedTestSessionCommandHandler(db, NullLogger<SeedTestSessionCommandHandler>.Instance);
+        var response = await handler.Handle(new SeedTestSessionCommand
+        {
+            TestRunId = testRunId,
+            GameNightId = gn.GameNightId,
+            IsLive = true,
+        }, TestCancellationToken);
+
+        // Resolve the read model end-to-end via a fresh scope + mediator (full DI) and assert it
+        // reports the seeded session as live — the D4 truthfulness contract this fix restores.
+        using var readScope = _factory.Services.CreateScope();
+        var mediator = readScope.ServiceProvider.GetRequiredService<IMediator>();
+        var live = await mediator.Send(
+            new GetGameNightLiveQuery(gn.GameNightId, gn.OwnerId), TestCancellationToken);
+
+        live.Sessions.Should().ContainSingle(s => s.SessionId == response.SessionId)
+            .Which.IsLive.Should().BeTrue();
     }
 
     [Fact]

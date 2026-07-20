@@ -11,13 +11,8 @@
  *     them, no crash).
  *   - View modes: `grid` / `list` / `compact` → distinct layout classes +
  *     MeepleCard variant prop pass-through.
- *   - Selection mode FSM:
- *       browse  → no aria-pressed, native click; data-selection-mode="browse".
- *       select  → aria-pressed reflects selected Set membership;
- *                 data-selection-mode="select"; check overlay slot rendered
- *                 only when selected.has(item.id).
- *   - Click dispatch single-handler contract: orchestrator decides toggle vs
- *     drill-into; component just calls onCardClick(item.id).
+ *   - Click dispatch single-handler contract: the component just calls
+ *     onCardClick(item.id); the orchestrator (LibraryHub) pushes the route.
  *
  * MeepleCard is mocked to keep this a focused wrapper-logic unit test
  * (MeepleCard has its own 100+ tests). The mock surfaces `entity`,
@@ -25,7 +20,7 @@
  * on a `<div data-slot="meeple-card-mock">` for assertion.
  */
 
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { LibraryHybridGrid, type LibraryHybridGridProps } from '../LibraryHybridGrid';
@@ -98,14 +93,7 @@ const items: HybridHubItem[] = [
 function renderGrid(overrides: Partial<LibraryHybridGridProps> = {}) {
   const onCardClick = vi.fn();
   const utils = render(
-    <LibraryHybridGrid
-      items={items}
-      view="grid"
-      selectionMode="browse"
-      selected={new Set()}
-      onCardClick={onCardClick}
-      {...overrides}
-    />
+    <LibraryHybridGrid items={items} view="grid" onCardClick={onCardClick} {...overrides} />
   );
   return { ...utils, onCardClick };
 }
@@ -228,80 +216,13 @@ describe('LibraryHybridGrid (Phase 2a hybrid items)', () => {
     });
   });
 
-  describe('selectionMode="browse"', () => {
-    it('does NOT set aria-pressed on cards', () => {
-      const { container } = renderGrid({ selectionMode: 'browse' });
-      const cards = container.querySelectorAll('[data-slot="library-grid-card"]');
-      cards.forEach(c => expect(c).not.toHaveAttribute('aria-pressed'));
-    });
-
-    it('sets data-selection-mode="browse" on each card', () => {
-      const { container } = renderGrid({ selectionMode: 'browse' });
-      const cards = container.querySelectorAll('[data-slot="library-grid-card"]');
-      cards.forEach(c => expect(c).toHaveAttribute('data-selection-mode', 'browse'));
-    });
-
-    it('click → onCardClick(item.id)', () => {
-      const { container, onCardClick } = renderGrid({ selectionMode: 'browse' });
+  describe('click dispatch', () => {
+    it('click → onCardClick(item.id) (orchestrator pushes the route)', () => {
+      const { container, onCardClick } = renderGrid();
       const cards = container.querySelectorAll('[data-slot="library-grid-card"]');
       fireEvent.click(cards[1]);
       expect(onCardClick).toHaveBeenCalledTimes(1);
       expect(onCardClick).toHaveBeenCalledWith('s1');
-    });
-
-    it('does NOT render check overlay in browse mode (even if id in selected Set)', () => {
-      const { container } = renderGrid({
-        selectionMode: 'browse',
-        selected: new Set(['g1']),
-      });
-      const cards = container.querySelectorAll('[data-slot="library-grid-card"]');
-      const overlay = within(cards[0] as HTMLElement).queryByTestId('library-grid-card-check');
-      expect(overlay).toBeNull();
-    });
-  });
-
-  describe('selectionMode="select"', () => {
-    it('sets aria-pressed on EVERY card (toggle button pattern)', () => {
-      const { container } = renderGrid({
-        selectionMode: 'select',
-        selected: new Set(['s1']),
-      });
-      const cards = container.querySelectorAll('[data-slot="library-grid-card"]');
-      expect(cards[0]).toHaveAttribute('aria-pressed', 'false');
-      expect(cards[1]).toHaveAttribute('aria-pressed', 'true');
-      expect(cards[2]).toHaveAttribute('aria-pressed', 'false');
-    });
-
-    it('sets data-selection-mode="select" on each card', () => {
-      const { container } = renderGrid({ selectionMode: 'select' });
-      const cards = container.querySelectorAll('[data-slot="library-grid-card"]');
-      cards.forEach(c => expect(c).toHaveAttribute('data-selection-mode', 'select'));
-    });
-
-    it('renders check overlay only on selected cards', () => {
-      const { container } = renderGrid({
-        selectionMode: 'select',
-        selected: new Set(['g1', 'c1']),
-      });
-      const cards = container.querySelectorAll('[data-slot="library-grid-card"]');
-      expect(
-        within(cards[0] as HTMLElement).queryByTestId('library-grid-card-check')
-      ).not.toBeNull();
-      expect(within(cards[1] as HTMLElement).queryByTestId('library-grid-card-check')).toBeNull();
-      expect(
-        within(cards[2] as HTMLElement).queryByTestId('library-grid-card-check')
-      ).not.toBeNull();
-    });
-
-    it('click → onCardClick(item.id) (orchestrator decides toggle)', () => {
-      const { container, onCardClick } = renderGrid({
-        selectionMode: 'select',
-        selected: new Set(['g1']),
-      });
-      const cards = container.querySelectorAll('[data-slot="library-grid-card"]');
-      fireEvent.click(cards[2]);
-      expect(onCardClick).toHaveBeenCalledTimes(1);
-      expect(onCardClick).toHaveBeenCalledWith('c1');
     });
   });
 });

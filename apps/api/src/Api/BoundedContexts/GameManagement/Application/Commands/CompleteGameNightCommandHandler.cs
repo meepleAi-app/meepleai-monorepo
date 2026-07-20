@@ -53,9 +53,19 @@ internal sealed class CompleteGameNightCommandHandler
         if (nightEntity.OrganizerId != request.UserId)
             throw new ForbiddenException("Only the night organizer can complete it.");
 
-        if (!string.Equals(nightEntity.Status, "InProgress", StringComparison.Ordinal))
+        // Epic #3188 Slice 4 — accept BOTH Published and InProgress as completable.
+        //   • InProgress — the classic case: a session already went live (invariante #15 flipped the
+        //                  night Published → InProgress on first go-live).
+        //   • Published  — a DRAFT-ONLY night (Slice 3: an ad-hoc envelope is born Published and stays
+        //                  Published while it holds only never-promoted Pending drafts). Completing it
+        //                  cascade-finalizes those drafts below and closes their links — otherwise a
+        //                  night whose sessions never went live could never be completed.
+        // Draft / Cancelled / Completed / Corrupted stay rejected (409) — mirrors the Published||InProgress
+        // guard on GameNightEvent.FinalizeNight and ResolveGameNightAsync's attach guard.
+        if (!string.Equals(nightEntity.Status, "InProgress", StringComparison.Ordinal)
+            && !string.Equals(nightEntity.Status, "Published", StringComparison.Ordinal))
             throw new ConflictException(
-                $"GameNightEvent is in status '{nightEntity.Status}', cannot complete ad-hoc.");
+                $"GameNightEvent is in status '{nightEntity.Status}', cannot complete.");
 
         // ── 2. Discover sessions linked to this night ──────────────────
         var links = await _db.GameNightSessions

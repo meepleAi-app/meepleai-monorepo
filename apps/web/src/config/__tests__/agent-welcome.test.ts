@@ -58,6 +58,13 @@ describe('agent-welcome config', () => {
       expect(message).not.toContain('{game}');
     });
 
+    it('inserts a game title containing $ sequences verbatim', () => {
+      // #3226 regression: gameName was passed as the replacement string, so $$ / $& were interpreted.
+      const message = buildWelcomeMessage('Tutor', 'A$$B $& Co');
+      expect(message).toContain('A$$B $& Co');
+      expect(message).not.toContain('{game}');
+    });
+
     it('includes capabilities list', () => {
       const message = buildWelcomeMessage('Tutor', 'Catan');
       expect(message).toContain('Cosa posso fare');
@@ -99,6 +106,15 @@ describe('agent-welcome config', () => {
         expect(q).not.toContain('{game}');
       }
       expect(questions.some(q => q.includes('Catan'))).toBe(true);
+    });
+
+    it('inserts a game title containing $ sequences verbatim', () => {
+      // #3226 regression.
+      const questions = getWelcomeFollowUpQuestions('Tutor', 'A$$B $& Co');
+      for (const q of questions) {
+        expect(q).not.toContain('{game}');
+      }
+      expect(questions.some(q => q.includes('A$$B $& Co'))).toBe(true);
     });
 
     it('returns default questions for null typology', () => {

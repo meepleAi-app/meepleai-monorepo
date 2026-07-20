@@ -99,7 +99,9 @@ setInterval(() => {
 // ============================================================================
 
 function buildSystemPrompt(gameContext: ChatProxyRequest['gameContext']): string {
-  let prompt = DEFAULT_SYSTEM_PROMPT.replace(/{gameName}/g, gameContext.gameName);
+  // #3226: replacer function inserts gameName verbatim (a title with $&/$$ would otherwise be
+  // interpreted as a replacement pattern and corrupt the system prompt).
+  let prompt = DEFAULT_SYSTEM_PROMPT.replace(/{gameName}/g, () => gameContext.gameName);
 
   if (gameContext.ragContext) {
     prompt += `\n\nContesto dalla knowledge base:\n${gameContext.ragContext}`;

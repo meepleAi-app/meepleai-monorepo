@@ -97,6 +97,13 @@ internal static class AuthenticationEndpoints
                 return Results.BadRequest(new { error = "Email and password are required" });
             }
 
+            // #2954 F1: server-side enforcement of ToS acceptance. The register form's
+            // checkbox is client-cosmetic; reject a direct API call that omits acceptance.
+            if (!payload.TermsAccepted)
+            {
+                return Results.BadRequest(new { error = "You must accept the Terms of Service to register" });
+            }
+
             // R3 (auth security fixes): generate a random "Player-{ShortGuid}"
             // when the client doesn't supply a display name. The legacy
             // fallback used the email-prefix (e.g. "alice" from
@@ -116,7 +123,8 @@ internal static class AuthenticationEndpoints
                 Role: null,
                 IpAddress: context.Connection.RemoteIpAddress?.ToString(),
                 UserAgent: context.Request.Headers.UserAgent.ToString(),
-                BootstrapToken: payload.BootstrapToken);
+                BootstrapToken: payload.BootstrapToken,
+                TermsAccepted: payload.TermsAccepted);
 
             logger.LogInformation("User registration attempt for {Email}", DataMasking.MaskEmail(payload.Email));
             var result = await mediator.Send(command, ct).ConfigureAwait(false);

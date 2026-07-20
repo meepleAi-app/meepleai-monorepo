@@ -6,27 +6,33 @@ using Xunit;
 namespace Api.Tests.Services;
 
 /// <summary>
-/// #2569 footgun guard: the <c>search_vector</c> column on text_chunks/pdf_documents is a
-/// single-config GENERATED column built with the <c>'english'</c> FTS config. The keyword FTS
-/// query config MUST therefore be <c>'english'</c> regardless of any requested language —
-/// otherwise an explicit <c>language: "it"</c> would issue <c>to_tsquery('italian', …)</c>
-/// against the 'english' column and the <c>@@</c> operator would silently return nothing
-/// (the exact bug class fixed in #2569). Per-query language FTS is not supported until a
-/// multilingual column exists (ADR-016 follow-up); until then the config is pinned to english.
+/// #2569 follow-up (RAG answer-quality): keyword FTS now honours per-game language.
+/// <see cref="KeywordSearchService.ResolveFtsConfig"/> maps a language code to a PostgreSQL FTS
+/// config. English keeps using the indexed 'english' search_vector column; non-english is matched
+/// against a query-time to_tsvector with the SAME config, so the query/vector configs always agree
+/// (sidestepping the #2569 footgun without a multilingual column). Unknown -> 'simple'.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class KeywordSearchServiceTests
 {
     [Theory]
-    [InlineData("it")]
-    [InlineData("italian")]
-    [InlineData("en")]
-    [InlineData("english")]
-    [InlineData("")]
-    [InlineData("xx")]
-    public void ResolveFtsConfig_AlwaysReturnsEnglish_RegardlessOfLanguage(string language)
+    [InlineData("en", "english")]
+    [InlineData("eng", "english")]
+    [InlineData("English", "english")]
+    [InlineData("it", "italian")]
+    [InlineData("ita", "italian")]
+    [InlineData("italian", "italian")]
+    [InlineData("italiano", "italian")]
+    [InlineData("de", "german")]
+    [InlineData("fr", "french")]
+    [InlineData("es", "spanish")]
+    [InlineData("pt", "portuguese")]
+    [InlineData("nl", "dutch")]
+    [InlineData("", "english")]   // empty/unspecified -> default english
+    [InlineData("xx", "simple")]  // unknown language -> simple (safe under query-time to_tsvector)
+    public void ResolveFtsConfig_MapsLanguageToPostgresConfig(string language, string expected)
     {
-        KeywordSearchService.ResolveFtsConfig(language).Should().Be("english");
+        KeywordSearchService.ResolveFtsConfig(language).Should().Be(expected);
     }
 }

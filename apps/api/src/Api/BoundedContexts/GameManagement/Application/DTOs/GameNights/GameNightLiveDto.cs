@@ -48,6 +48,12 @@ public sealed record GameNightSessionDto(
     string GameTitle,
     int PlayOrder,
     GameNightSessionStatus Status,
+    // #3188 Slice 6 (decision D4): the canonical liveness signal — sourced from the tracking
+    // Session's live state (Session.IsLive = started_at != null && finalized_at == null), owned by
+    // SessionTracking. ADDITIVE to <see cref="Status"/>, which stays the derived link projection:
+    // on the canonical go-live path both agree, but IsLive unifies the two read paths and wins any
+    // residual split-brain (a link stuck at InProgress whose tracking Session never went live).
+    bool IsLive,
     Guid? WinnerId,
     // #2634 C4: the WinnerId (a tracking-Session Participant.Id) resolved to a display name,
     // scoped by (SessionId, WinnerId) so a stray/foreign id fails closed to null. null when the

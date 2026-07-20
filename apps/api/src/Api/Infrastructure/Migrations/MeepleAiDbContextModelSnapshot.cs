@@ -884,6 +884,47 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("player_memories", (string)null);
                 });
 
+            modelBuilder.Entity("Api.BoundedContexts.Authentication.Domain.Entities.TermsAcceptance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Context")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)");
+
+                    b.Property<string>("TermsVersion")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "AcceptedAt")
+                        .HasDatabaseName("ix_user_terms_acceptances_user_accepted");
+
+                    b.ToTable("user_terms_acceptances", (string)null);
+                });
+
             modelBuilder.Entity("Api.BoundedContexts.BusinessSimulations.Domain.Entities.CostScenario", b =>
                 {
                     b.Property<Guid>("Id")
@@ -13598,7 +13639,7 @@ namespace Api.Infrastructure.Migrations
                     b.HasIndex("BggId")
                         .IsUnique()
                         .HasDatabaseName("ix_shared_games_bgg_id")
-                        .HasFilter("bgg_id IS NOT NULL");
+                        .HasFilter("bgg_id IS NOT NULL AND is_deleted = false");
 
                     b.HasIndex("HasKnowledgeBase")
                         .HasDatabaseName("ix_shared_games_has_knowledge_base")
@@ -16471,6 +16512,15 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Pricing")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.Authentication.Domain.Entities.TermsAcceptance", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 

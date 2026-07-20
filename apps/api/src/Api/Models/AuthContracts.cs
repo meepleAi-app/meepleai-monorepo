@@ -32,6 +32,13 @@ internal class RegisterPayload
     /// fall back to User role. Accepts both casing variants.
     /// </summary>
     public string? BootstrapToken { get; set; }
+
+    /// <summary>
+    /// #2954 F1: whether the user checked the required "I accept the Terms of Service"
+    /// box. Enforced server-side at the endpoint (400 when false/absent). Accepts both
+    /// "termsAccepted" (camelCase) and "TermsAccepted" (PascalCase).
+    /// </summary>
+    public bool TermsAccepted { get; set; }
 }
 
 /// <summary>

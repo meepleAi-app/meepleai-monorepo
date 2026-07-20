@@ -114,6 +114,14 @@
     "title": "MeepleAI - AI Board Game Rules Assistant"
   },
   "auth": {
+    "requestAccess": {
+      "successTitle": "Request submitted!",
+      "successMessage": "If your email is eligible, you'll receive an invitation shortly.",
+      "email": "Email address",
+      "emailPlaceholder": "you@example.com",
+      "submitting": "Submitting...",
+      "submit": "Request Access"
+    },
     "2fa": {
       "setupTitle": "Set Up Two-Factor Authentication",
       "setupSubtitle": "Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)",
@@ -377,13 +385,16 @@
     "close": "Close",
     "confirm": "Confirm",
     "copy": "Copy",
+    "copied": "Copied!",
     "cut": "Cut",
     "delete": "Delete",
     "deselect": "Deselect",
     "deselectAll": "Deselect all",
     "download": "Download",
+    "downloaded": "Downloaded!",
     "edit": "Edit",
     "error": "Error",
+    "errorTitle": "Error",
     "export": "Export",
     "filter": "Filter",
     "import": "Import",
@@ -399,10 +410,12 @@
     "previous": "Previous",
     "refresh": "Refresh",
     "reset": "Reset",
+    "retry": "Retry",
     "save": "Save",
     "search": "Search",
     "select": "Select",
     "selectAll": "Select all",
+    "selected": "Selected",
     "submit": "Submit",
     "success": "Success",
     "upload": "Upload",
@@ -708,6 +721,7 @@
     "passwordMatch": "Passwords do not match",
     "passwordMax": "Password must not exceed 128 characters",
     "passwordMin": "Password must be at least 12 characters",
+    "passwordRequired": "Password is required",
     "required": "This field is required"
   },
   "wizard": {
@@ -765,6 +779,7 @@
     "empty": "No notifications",
     "emptySubtext": "Your notifications will appear here",
     "viewAll": "View all",
+    "preferences": "Notification preferences",
     "loading": "Loading notifications...",
     "kbReady": {
       "cta": "→ Create your agent"
@@ -1777,7 +1792,7 @@
       },
       "hubTabs": {
         "all": "All",
-        "games": "Games",
+        "games": "My games",
         "agents": "Agents",
         "kb": "KB",
         "sessions": "Sessions",
@@ -1834,13 +1849,6 @@
             "cta": "Retry"
           }
         }
-      },
-      "selectionMode": {
-        "enter": "Select",
-        "enterAriaLabel": "Enter multi-select mode",
-        "exit": "Cancel",
-        "exitAriaLabel": "Exit selection mode",
-        "selectedCount": "{count, plural, =0 {Nothing selected} =1 {1 item selected} other {# items selected}}"
       },
       "filters": {
         "search": {
@@ -1957,33 +1965,6 @@
         "grid": "Grid",
         "list": "List",
         "compact": "Compact"
-      },
-      "bulk": {
-        "counter": "selected",
-        "counterCompact": "sel.",
-        "closeAriaLabel": "Cancel selection",
-        "actions": {
-          "archive": "Archive",
-          "archiveAriaLabel": "Archive the selected items",
-          "tag": "Tag",
-          "tagAriaLabel": "Add tags to the selected items",
-          "delete": "Delete",
-          "deleteAriaLabel": "Delete the selected items",
-          "favorite": "Mark favorite",
-          "favoriteAriaLabel": "Mark the selected items as favorite",
-          "export": "Export",
-          "exportAriaLabel": "Export the selected items",
-          "loan": "Mark on loan",
-          "loanAriaLabel": "Mark the selected items as on loan"
-        },
-        "confirm": {
-          "deleteTitle": "Delete {count, plural, =1 {1 game} other {# games}}?",
-          "deleteMessage": "This will remove the selected items from your library. This action cannot be undone.",
-          "confirmCta": "Delete",
-          "cancelCta": "Cancel"
-        },
-        "clearSelection": "Clear selection",
-        "clearSelectionAriaLabel": "Deselect all items"
       },
       "activityRail": {
         "title": "Recent activity",

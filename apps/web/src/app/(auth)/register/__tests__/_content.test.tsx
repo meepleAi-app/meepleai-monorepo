@@ -188,6 +188,7 @@ describe('RegisterPageContent (v2 AuthCard)', () => {
         expect(mockAuth.register).toHaveBeenCalledWith({
           email: 'new@example.com',
           password: 'StrongPassword1',
+          termsAccepted: true,
         });
       });
 

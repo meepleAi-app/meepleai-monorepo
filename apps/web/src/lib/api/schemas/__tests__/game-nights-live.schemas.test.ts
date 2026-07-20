@@ -71,6 +71,59 @@ describe('GameNightLiveDtoSchema', () => {
     expect(() => GameNightLiveDtoSchema.parse(poison)).toThrow();
   });
 
+  // #3188 Slice 1: enum-coverage guard — the wire enum surface is EXACTLY the 5 documented
+  // statuses (guards against a silent drop/rename that would fail-closed a whole payload).
+  it('accepts every documented GameNightSessionStatus value and nothing else', () => {
+    const documented = ['Pending', 'InProgress', 'Completed', 'Skipped', 'Corrupted'] as const;
+    expect([...GameNightSessionStatusSchema.options].sort()).toEqual([...documented].sort());
+    for (const value of documented) {
+      expect(GameNightSessionStatusSchema.parse(value)).toBe(value);
+    }
+  });
+
+  // #3188 Slice 1 (deploy-first forward-compat guard): a night whose sessions are ALL Pending
+  // (no InProgress sibling) is a valid draft night and MUST parse successfully.
+  it('parses a GameNightLiveDto whose sessions are ALL Pending (draft night)', () => {
+    const draft = {
+      ...LIVE,
+      sessions: [
+        {
+          ...SESSION,
+          sessionId: 'aaaa1111-1111-4111-8111-111111111111',
+          status: 'Pending',
+          startedAt: null,
+        },
+        {
+          ...SESSION,
+          sessionId: 'aaaa2222-2222-4222-8222-222222222222',
+          status: 'Pending',
+          startedAt: null,
+        },
+      ],
+      currentSessionRoster: [],
+    };
+    const parsed = GameNightLiveDtoSchema.parse(draft);
+    expect(parsed.sessions).toHaveLength(2);
+    expect(parsed.sessions.every(s => s.status === 'Pending')).toBe(true);
+    expect(parsed.currentSessionRoster).toEqual([]);
+  });
+
+  // #3188 Slice 6 (D4): the additive `isLive` liveness field parses when present.
+  it('parses a session DTO that carries the additive isLive field', () => {
+    const withIsLive = { ...LIVE, sessions: [{ ...SESSION, isLive: true }] };
+    const parsed = GameNightLiveDtoSchema.parse(withIsLive);
+    expect(parsed.sessions[0].isLive).toBe(true);
+  });
+
+  // #3188 Slice 6 (D4): backward-compat — a pre-#3188 BE payload that OMITS `isLive` still parses
+  // (the field is optional); consumers fall back to `status === 'InProgress'` in mapNightLive.
+  it('parses a session DTO WITHOUT isLive (backward-compat, optional field)', () => {
+    // SESSION intentionally has no `isLive` key.
+    expect('isLive' in SESSION).toBe(false);
+    const parsed = GameNightLiveDtoSchema.parse(LIVE);
+    expect(parsed.sessions[0].isLive).toBeUndefined();
+  });
+
   // #2634 C4: round-trip the winner name + the live roster.
   it('round-trips winnerName + currentSessionRoster (C4)', () => {
     const withWinner = {

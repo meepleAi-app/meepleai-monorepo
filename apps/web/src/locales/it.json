@@ -105,6 +105,14 @@
     "title": "MeepleAI - Assistente AI per Regolamenti di Giochi da Tavolo"
   },
   "auth": {
+    "requestAccess": {
+      "successTitle": "Richiesta inviata!",
+      "successMessage": "Se la tua email è idonea, riceverai a breve un invito.",
+      "email": "Indirizzo email",
+      "emailPlaceholder": "tu@esempio.com",
+      "submitting": "Invio in corso...",
+      "submit": "Richiedi accesso"
+    },
     "2fa": {
       "setupTitle": "Configura l'autenticazione a due fattori",
       "setupSubtitle": "Scansiona questo codice QR con la tua app di autenticazione (Google Authenticator, Authy, ecc.)",
@@ -368,13 +376,16 @@
     "close": "Chiudi",
     "confirm": "Conferma",
     "copy": "Copia",
+    "copied": "Copiato!",
     "cut": "Taglia",
     "delete": "Elimina",
     "deselect": "Deseleziona",
     "deselectAll": "Deseleziona tutto",
     "download": "Scarica",
+    "downloaded": "Scaricato!",
     "edit": "Modifica",
     "error": "Errore",
+    "errorTitle": "Errore",
     "export": "Esporta",
     "filter": "Filtra",
     "import": "Importa",
@@ -390,10 +401,12 @@
     "previous": "Precedente",
     "refresh": "Aggiorna",
     "reset": "Reimposta",
+    "retry": "Riprova",
     "save": "Salva",
     "search": "Cerca",
     "select": "Seleziona",
     "selectAll": "Seleziona tutto",
+    "selected": "Selezionato",
     "submit": "Invia",
     "success": "Successo",
     "upload": "Carica",
@@ -699,6 +712,7 @@
     "passwordMatch": "Le password non coincidono",
     "passwordMax": "La password non può superare 128 caratteri",
     "passwordMin": "La password deve essere di almeno 12 caratteri",
+    "passwordRequired": "Password obbligatoria",
     "required": "Questo campo è obbligatorio"
   },
   "privateGames": {
@@ -821,6 +835,7 @@
     "empty": "Nessuna notifica",
     "emptySubtext": "Le tue notifiche appariranno qui",
     "viewAll": "Vedi tutte",
+    "preferences": "Preferenze notifiche",
     "loading": "Caricamento notifiche...",
     "kbReady": {
       "cta": "→ Crea il tuo agente"
@@ -1784,7 +1799,7 @@
       },
       "hubTabs": {
         "all": "Tutti",
-        "games": "Giochi",
+        "games": "I miei giochi",
         "agents": "Agenti",
         "kb": "KB",
         "sessions": "Sessioni",
@@ -1841,13 +1856,6 @@
             "cta": "Riprova"
           }
         }
-      },
-      "selectionMode": {
-        "enter": "Seleziona",
-        "enterAriaLabel": "Attiva la modalità selezione multipla",
-        "exit": "Annulla",
-        "exitAriaLabel": "Esci dalla modalità selezione",
-        "selectedCount": "{count, plural, =0 {Nessun elemento selezionato} =1 {1 elemento selezionato} other {# elementi selezionati}}"
       },
       "filters": {
         "search": {
@@ -1964,33 +1972,6 @@
         "grid": "Griglia",
         "list": "Lista",
         "compact": "Compatta"
-      },
-      "bulk": {
-        "counter": "{count, plural, =1 {selezionato} other {selezionati}}",
-        "counterCompact": "sel.",
-        "closeAriaLabel": "Annulla selezione",
-        "actions": {
-          "archive": "Archivia",
-          "archiveAriaLabel": "Archivia gli elementi selezionati",
-          "tag": "Tag",
-          "tagAriaLabel": "Aggiungi tag agli elementi selezionati",
-          "delete": "Elimina",
-          "deleteAriaLabel": "Elimina gli elementi selezionati",
-          "favorite": "Aggiungi ai preferiti",
-          "favoriteAriaLabel": "Segna come preferiti gli elementi selezionati",
-          "export": "Esporta",
-          "exportAriaLabel": "Esporta gli elementi selezionati",
-          "loan": "Segna come prestato",
-          "loanAriaLabel": "Segna come prestati gli elementi selezionati"
-        },
-        "confirm": {
-          "deleteTitle": "Eliminare {count, plural, =1 {1 gioco} other {# giochi}}?",
-          "deleteMessage": "Questa azione rimuoverà gli elementi selezionati dalla tua libreria. Non è reversibile.",
-          "confirmCta": "Elimina",
-          "cancelCta": "Annulla"
-        },
-        "clearSelection": "Deseleziona tutto",
-        "clearSelectionAriaLabel": "Deseleziona tutti gli elementi"
       },
       "activityRail": {
         "title": "Ultime modifiche",

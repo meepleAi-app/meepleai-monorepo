@@ -61,7 +61,7 @@ export function BinaryWinEditor({
             <span className="flex-1 font-medium">{player.displayName}</span>
             <fieldset className="flex gap-3" disabled={disabled}>
               <legend className="sr-only">{`Risultato per ${player.displayName}`}</legend>
-              <label className="flex items-center gap-1">
+              <label className="flex min-h-[44px] items-center gap-2 rounded-md border border-border px-3 md:min-h-0 md:gap-1 md:rounded-none md:border-0 md:px-0">
                 <input
                   type="radio"
                   name={`binary-${player.id}`}
@@ -71,7 +71,7 @@ export function BinaryWinEditor({
                 />
                 <span>Win</span>
               </label>
-              <label className="flex items-center gap-1">
+              <label className="flex min-h-[44px] items-center gap-2 rounded-md border border-border px-3 md:min-h-0 md:gap-1 md:rounded-none md:border-0 md:px-0">
                 <input
                   type="radio"
                   name={`binary-${player.id}`}

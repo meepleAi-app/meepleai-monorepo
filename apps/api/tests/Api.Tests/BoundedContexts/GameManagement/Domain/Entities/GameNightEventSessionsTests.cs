@@ -1,5 +1,7 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
+using Api.BoundedContexts.GameManagement.Domain.Exceptions;
+using Api.Middleware.Exceptions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain.Entities;
@@ -33,6 +35,8 @@ public class GameNightEventSessionsTests
         Assert.Equal(2, evt.Sessions[1].PlayOrder);
     }
 
+    // Epic #3188 Slice 3 (D6): the cap counts only NON-TERMINAL links. Five freshly-added sessions
+    // are all Pending (non-terminal), so the 6th trips the cap.
     [Fact]
     public void AddSession_BeyondFive_Throws()
     {
@@ -41,6 +45,32 @@ public class GameNightEventSessionsTests
             evt.AddSession(Guid.NewGuid(), Guid.NewGuid(), $"Game{i}");
         Assert.Throws<InvalidOperationException>(() =>
             evt.AddSession(Guid.NewGuid(), Guid.NewGuid(), "Game6"));
+    }
+
+    // Epic #3188 Slice 3 (D6): terminal links (Completed/Skipped) do NOT consume the max-5 budget.
+    // A night that already finished five games can still host five more non-terminal sessions; the
+    // 6th non-terminal (11th overall) is the one that trips the cap.
+    [Fact]
+    public void AddSession_TerminalLinksDoNotConsumeBudget()
+    {
+        var evt = CreatePublishedEvent();
+
+        // Reconstitute 5 already-Completed (terminal) sessions from persistence.
+        var terminal = Enumerable.Range(1, 5).Select(i =>
+            GameNightSession.Reconstitute(
+                Guid.NewGuid(), evt.Id, Guid.NewGuid(), Guid.NewGuid(),
+                $"Done{i}", i, GameNightSessionStatus.Completed, Guid.NewGuid(),
+                DateTimeOffset.UtcNow.AddHours(-2), DateTimeOffset.UtcNow.AddHours(-1))).ToList();
+        evt.RestoreSessions(terminal);
+
+        // 5 fresh non-terminal sessions must all be accepted despite the 5 terminal ones present.
+        for (var i = 0; i < 5; i++)
+            evt.AddSession(Guid.NewGuid(), Guid.NewGuid(), $"Live{i}");
+        Assert.Equal(10, evt.Sessions.Count);
+
+        // The 6th NON-terminal now trips the cap.
+        Assert.Throws<InvalidOperationException>(() =>
+            evt.AddSession(Guid.NewGuid(), Guid.NewGuid(), "Over"));
     }
 
     [Fact]
@@ -133,6 +163,83 @@ public class GameNightEventSessionsTests
         evt.AddSession(Guid.NewGuid(), evt.GameIds[1], "Dixit");
         evt.StartCurrentSession();
         Assert.Equal(GameNightSessionStatus.InProgress, evt.Sessions[0].Status);
+        Assert.Equal(GameNightSessionStatus.Pending, evt.Sessions[1].Status);
+    }
+
+    // ── StartSession(sessionId) — targeted go-live promotion (epic #3188 Slice 2) ──────────
+
+    [Fact]
+    public void StartSession_PromotesExactlyTheTargetedSession_NotLowestPlayOrder()
+    {
+        // Two pending drafts; go live on the SECOND (play order 2). Only it must flip to InProgress —
+        // StartCurrentSession would have promoted the FIRST, so this proves the targeting.
+        var evt = CreatePublishedEvent();
+        var firstSessionId = Guid.NewGuid();
+        var secondSessionId = Guid.NewGuid();
+        evt.AddSession(firstSessionId, evt.GameIds[0], "Catan");
+        evt.AddSession(secondSessionId, evt.GameIds[1], "Dixit");
+
+        evt.StartSession(secondSessionId);
+
+        Assert.Equal(GameNightSessionStatus.Pending, evt.Sessions[0].Status);
+        Assert.Equal(GameNightSessionStatus.InProgress, evt.Sessions[1].Status);
+        Assert.Equal(secondSessionId, evt.Sessions[1].SessionId);
+        Assert.NotNull(evt.Sessions[1].StartedAt);
+    }
+
+    [Fact]
+    public void StartSession_RaisesNoDomainEvent_ParityWithStartCurrentSession()
+    {
+        // Parity contract: like StartCurrentSession, the aggregate promotion raises NO domain event.
+        // The live-mode transition (and invariante #15 night promotion) is driven separately by
+        // Session.OpenLiveMode()'s SessionStartedDomainEvent — dispatched by the go-live handler.
+        var evt = CreatePublishedEvent();
+        var sessionId = Guid.NewGuid();
+        evt.AddSession(sessionId, evt.GameIds[0], "Catan");
+        evt.ClearDomainEvents(); // drop the GameNightPublished + GameStartedInNight events
+
+        evt.StartSession(sessionId);
+
+        Assert.Empty(evt.DomainEvents);
+        Assert.Equal(GameNightSessionStatus.InProgress, evt.Sessions[0].Status);
+    }
+
+    [Fact]
+    public void StartSession_UnknownSessionId_ThrowsNotFound()
+    {
+        var evt = CreatePublishedEvent();
+        evt.AddSession(Guid.NewGuid(), evt.GameIds[0], "Catan");
+
+        Assert.Throws<NotFoundException>(() => evt.StartSession(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public void StartSession_OnNonPendingSession_Throws()
+    {
+        // A completed session cannot be taken live again.
+        var evt = CreatePublishedEvent();
+        var sessionId = Guid.NewGuid();
+        evt.AddSession(sessionId, evt.GameIds[0], "Catan");
+        evt.StartCurrentSession();
+        evt.CompleteCurrentSession(winnerId: null); // now Completed
+
+        Assert.Throws<InvalidOperationException>(() => evt.StartSession(sessionId));
+    }
+
+    [Fact]
+    public void StartSession_WhenAnotherSessionIsInProgress_ThrowsMaxLiveSessionsExceeded()
+    {
+        // First draft is already live; going live on the second must be rejected by the max-1-live
+        // guard (invariante #10) — same guard StartCurrentSession uses.
+        var evt = CreatePublishedEvent();
+        var firstSessionId = Guid.NewGuid();
+        var secondSessionId = Guid.NewGuid();
+        evt.AddSession(firstSessionId, evt.GameIds[0], "Catan");
+        evt.AddSession(secondSessionId, evt.GameIds[1], "Dixit");
+        evt.StartSession(firstSessionId); // first goes live
+
+        Assert.Throws<MaxLiveSessionsExceededException>(() => evt.StartSession(secondSessionId));
+        // The blocked target must stay Pending — the guard runs before any promotion.
         Assert.Equal(GameNightSessionStatus.Pending, evt.Sessions[1].Status);
     }
 

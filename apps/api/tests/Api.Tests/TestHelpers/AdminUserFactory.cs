@@ -70,7 +70,8 @@ internal static class AdminUserFactory
         {
             Email = adminEmail,
             Password = adminPassword,
-            DisplayName = adminDisplayName
+            DisplayName = adminDisplayName,
+            TermsAccepted = true
         });
 
         registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);

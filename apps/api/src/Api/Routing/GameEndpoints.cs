@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Application;
 using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.DTOs.Leaderboard;
 using Api.BoundedContexts.GameManagement.Application.Queries;
@@ -207,6 +208,19 @@ internal static class GameEndpoints
         .WithTags("Sessions")
         .WithSummary("End a game session")
         .WithDescription("Ends a game session (alias for complete). Requires active user session.");
+
+        // Go live: promote an existing DRAFT game-night session (Pending link) to InProgress.
+        // Epic #3188 Slice 2 — explicit go-live sub-resource, distinct from create.
+        group.MapPost("/sessions/{id}/go-live", HandleGoLiveSession)
+        .RequireAuthenticatedUser() // Issue #1446: Dual authentication (session OR API key)
+        .Produces<GoLiveSessionResult>(200)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404)
+        .Produces(409)
+        .WithTags("Sessions")
+        .WithSummary("Take a draft game-night session live")
+        .WithDescription("Promotes an existing draft game-night session (Pending) to live (InProgress). Organizer-only. Enforces at most one live session per game night; a concurrent go-live loses with 409. Requires authentication.");
     }
 
     private static void MapSessionQueryEndpoints(RouteGroupBuilder group)
@@ -543,6 +557,27 @@ internal static class GameEndpoints
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    /// <summary>
+    /// Takes an existing draft game-night session live (Pending → InProgress).
+    /// Epic #3188 Slice 2. Organizer-only (403 otherwise), not-found → 404, max-1-live /
+    /// concurrent go-live → 409 (all mapped from domain exceptions by the API exception middleware).
+    /// </summary>
+    private static async Task<IResult> HandleGoLiveSession(
+        Guid id,
+        HttpContext httpContext,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var userId = httpContext.User.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
+        var result = await mediator.Send(new GoLiveSessionCommand(id, userId), ct).ConfigureAwait(false);
         return Results.Ok(result);
     }
 

@@ -3313,3 +3313,31 @@ the queue is idle, so the expressions never fire on an empty queue.
 2. **Poison messages** (`AuditOutboxFailedMessages`): inspect the Failed rows via the admin dashboard; a Failed row is a message the processor could not deliver after its retry budget. Resolve the underlying cause, then requeue or discard per the audit-retention policy.
 
 Alert unit tests live in `infra/prometheus/alerts/audit-outbox.test.yml` (run `promtool test rules` per the header comment; there is no CI promtool gate, so run on demand).
+
+## Domain Event Outbox Alerts
+
+Defined in `infra/prometheus/alerts/domain-event-outbox-duplicate-publish.yml` (#1965). This is the
+**companion trigger observability** for the dormant multi-instance work-stealing follow-up
+(`FOR UPDATE SKIP LOCKED`) — NOT its implementation. It makes issue #1965's reactivation condition
+self-detecting instead of relying on a manual dashboard check. The counters are emitted by
+`apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.DomainEventOutbox.cs` (#1535 T6) and routed
+via `severity: warning` → the `warning-alerts` receiver in `alertmanager.yml` (throttled email).
+
+> **Dormant by design.** With a single API instance (the current staging + prod topology — no
+> `deploy.replicas` in `infra/compose.{staging,prod}.yml`) the `dispatched/enqueued` ratio is
+> structurally ~1.0, so this alert cannot fire. It self-fires only once **(a)** the API scales to
+> **≥2 replicas** AND **(b)** the duplicate rate breaches **>1.05** — exactly the #1965 refined
+> reactivation condition. The `enqueued rate > 0` guard suppresses the `0/0=NaN` idle case.
+
+| Rule | Type | Trigger | Sustained | Meaning / first action |
+|---|---|---|---|---|
+| `meepleai_domain_event_outbox:dispatch_enqueue_ratio1h` | recording | — | — | Materialised dispatched/enqueued ratio (1h window) for dashboards + manual gate inspection. |
+| `DomainEventOutboxDuplicatePublish` | alert | `ratio > 1.05 and enqueued rate > 0` | 2h | Domain events are being published more than once. Dominant cause: ≥2 API instances SELECT-ing the same Pending rows concurrently (#1965 premise). |
+
+### Investigation steps
+
+1. **Confirm the topology.** Check whether the API is now running ≥2 replicas. If yes, this is the gate to implement `FOR UPDATE SKIP LOCKED` per issue #1965 (move the Pending `SELECT` inside the batch transaction — see the #1965 audit comment for the spec corrections). If the API is still single-instance, the alert should not have fired: investigate an abnormal crash-recovery re-publish loop instead.
+2. **Duplicate publishing is safe but not free.** Dispatch is at-least-once and consumer idempotency (audited in `docs/for-developers/architecture/domain-events-post-commit-contract.md`) keeps duplicates correct; the concern is wasted downstream I/O (Redis/SSE/email), not data corruption. Do NOT weaken the consumer idempotency contract in response to this alert.
+3. The `2h` window absorbs transient duplicates from crash-recovery re-publish and rolling-deploy windows (old pods do not honour new pods' row-locks); a sustained breach past 2h is the real signal.
+
+Alert unit tests live in `infra/prometheus/alerts/domain-event-outbox-duplicate-publish.test.yml` (run `promtool test rules` per the header comment; there is no CI promtool gate, so run on demand).

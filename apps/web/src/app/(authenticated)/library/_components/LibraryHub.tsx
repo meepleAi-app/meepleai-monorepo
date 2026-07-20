@@ -14,7 +14,7 @@
 
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
+import { useCallback, useMemo, useState, type ReactElement } from 'react';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
@@ -32,7 +32,6 @@ import {
 } from '@/components/features/games';
 import {
   AdvancedFiltersDrawer,
-  BulkSelectionBar,
   CrossEntityFilters,
   EmptyLibrary,
   LibraryHeroDesktop,
@@ -41,19 +40,17 @@ import {
   RecentActivityRail,
   countActiveFilters,
   type ActivityItem,
-  type BulkSelectionBarLabels,
   type EmptyLibraryLabels,
   type GameStateFilter,
   type LibraryFilters,
   type LibraryHeroDesktopLabels,
   type LibraryHeroStat,
-  type LibrarySelectionMode,
   type LibraryTabConfig,
   type LibraryViewMode,
 } from '@/components/features/library';
 import { HubPageContainer } from '@/components/layout/PageContainer';
 import { useHybridHubItems } from '@/hooks/queries/useHybridHubItems';
-import { useLibrary, useRemoveGameFromLibrary } from '@/hooks/queries/useLibrary';
+import { useLibrary } from '@/hooks/queries/useLibrary';
 import { useActivityFeed } from '@/hooks/useActivityFeed';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
@@ -115,8 +112,6 @@ export function LibraryHub(): ReactElement {
   const searchParams = useSearchParams();
 
   const [tab, setTab] = useState<HybridHubTab>('all');
-  const [selectionMode, setSelectionMode] = useState<LibrarySelectionMode>('browse');
-  const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   const [query, setQuery] = useState('');
   // SORT chip is currently a non-interactive visual stub (mockup admin-mockups/
   // design_files/sp4-library-desktop.jsx:213). Until the chip-popover lands
@@ -176,16 +171,7 @@ export function LibraryHub(): ReactElement {
   const gamesEffectiveKind: GamesEmptyKind | 'default' =
     (stateOverride as GamesEmptyKind | null) ?? gamesKind;
 
-  const removeMutation = useRemoveGameFromLibrary();
   const activityQuery = useActivityFeed(20);
-
-  // Selection mode is game-scoped — force browse when leaving the games tab.
-  useEffect(() => {
-    if (tab !== 'games' && selectionMode === 'select') {
-      setSelectionMode('browse');
-      setSelected(new Set());
-    }
-  }, [tab, selectionMode]);
 
   // Apply game-state filters (ex-loaned/kb tabs) to the games source before merge.
   const filteredSources = useMemo<HybridHubSources>(() => {
@@ -308,23 +294,6 @@ export function LibraryHub(): ReactElement {
     [t]
   );
 
-  const bulkLabels = useMemo<BulkSelectionBarLabels>(() => {
-    const count = selected.size;
-    return {
-      regionLabel: t('pages.library.selectionMode.selectedCount', { count }),
-      counter: t('pages.library.bulk.counter', { count }),
-      counterCompact: t('pages.library.bulk.counterCompact'),
-      closeAriaLabel: t('pages.library.bulk.closeAriaLabel'),
-      archive: t('pages.library.bulk.actions.archive'),
-      tag: t('pages.library.bulk.actions.tag'),
-      exportLabel: t('pages.library.bulk.actions.export'),
-      confirmTitle: t('pages.library.bulk.confirm.deleteTitle', { count }),
-      confirmDescription: t('pages.library.bulk.confirm.deleteMessage'),
-      confirmCta: t('pages.library.bulk.confirm.confirmCta'),
-      cancelCta: t('pages.library.bulk.confirm.cancelCta'),
-    };
-  }, [t, selected]);
-
   const gamesFiltersLabels = useMemo<GamesFiltersInlineLabels>(
     () => ({
       search: {
@@ -400,49 +369,11 @@ export function LibraryHub(): ReactElement {
 
   const handleCardClick = useCallback(
     (itemId: string) => {
-      if (selectionMode === 'select') {
-        setSelected(prev => {
-          const n = new Set(prev);
-          if (n.has(itemId)) n.delete(itemId);
-          else n.add(itemId);
-          return n;
-        });
-        return;
-      }
       const item = merged.find(i => i.id === itemId);
       if (item) router.push(item.href);
     },
-    [router, selectionMode, merged]
+    [router, merged]
   );
-
-  const handleEnterSelectMode = useCallback(
-    (itemId?: string) => {
-      if (tab !== 'games') return; // game-scoped guard
-      setSelectionMode('select');
-      if (itemId)
-        setSelected(prev => {
-          const n = new Set(prev);
-          n.add(itemId);
-          return n;
-        });
-    },
-    [tab]
-  );
-
-  const handleExitSelectMode = useCallback(() => {
-    setSelectionMode('browse');
-    setSelected(new Set());
-  }, []);
-
-  // #1566: retained for re-wiring (spec §3.5) — unreachable until enter-select-mode is restored.
-  const handleBulkDelete = useCallback(async () => {
-    const ids = Array.from(selected);
-    if (ids.length === 0) return;
-    // ids are HybridHubItem ids in the games tab; the games source id IS the library entry id.
-    await Promise.allSettled(ids.map(id => removeMutation.mutateAsync(id)));
-    setSelected(new Set());
-    setSelectionMode('browse');
-  }, [selected, removeMutation]);
 
   const handleRetry = useCallback(() => {
     /* per-source refetch handled by TanStack; no-op surfaces retry CTA */
@@ -522,10 +453,7 @@ export function LibraryHub(): ReactElement {
                 <LibraryHybridGrid
                   items={merged}
                   view={view as LibraryViewMode}
-                  selectionMode={selectionMode}
-                  selected={selected}
                   onCardClick={handleCardClick}
-                  onLongPressEnter={handleEnterSelectMode}
                 />
               ) : (
                 <EmptyLibrary
@@ -545,15 +473,6 @@ export function LibraryHub(): ReactElement {
           error={activityQuery.error}
         />
       </div>
-      {tab === 'games' && selectionMode === 'select' ? (
-        <BulkSelectionBar
-          selectedCount={selected.size}
-          labels={bulkLabels}
-          onExitSelectMode={handleExitSelectMode}
-          onArchive={handleBulkDelete}
-          disabled={selected.size === 0 || removeMutation.isPending}
-        />
-      ) : null}
       <AdvancedFiltersDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}

@@ -15,9 +15,12 @@ namespace Api.BoundedContexts.Testing.Application.Commands;
 /// (DEC-C-8) + Issue #1929 Task C Macro 4 (DEC-C-10 REVISION) — Handler for
 /// <see cref="CleanupTestEntitiesCommand"/>. Cascade-delete by explicit TestRunId
 /// column on 8 persistence entities. FK dependency order:
-/// UserGameSessions → GameNightSessions → Rsvps → Invitations → GameNightEvents →
+/// UserGameSessions → session_tracking_sessions (epic #3188 FIX 2, scoped via the seeded
+/// game_night_sessions links) → GameNightSessions → Rsvps → Invitations → GameNightEvents →
 /// UserLibraryEntries → SharedGames → Users.
 /// UserGameSession must be deleted BEFORE UserLibraryEntries (FK child).
+/// Live tracking Sessions must be deleted before their game_night_sessions join source AND before
+/// SharedGames + Users (session_tracking_sessions has Restrict FKs on game_id + user_id).
 /// UserLibraryEntry must be deleted before SharedGame (FK constraint);
 /// SharedGame must be deleted before User (FK CreatedBy).
 /// </summary>
@@ -47,6 +50,21 @@ internal sealed class CleanupTestEntitiesCommandHandler
         // (FK child of UserLibraryEntries via UserLibraryEntryId).
         var deletedUserGameSessions = await _db.Set<UserGameSessionEntity>()
             .Where(s => s.TestRunId == request.TestRunId)
+            .ExecuteDeleteAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        // Epic #3188 post-review (FIX 2): SeedTestSessionCommandHandler now materializes a live
+        // tracking Session (session_tracking_sessions) for IsLive fixtures so GetGameNightLive reports
+        // isLive:true under D4. That row has no TestRunId column of its own, so scope it via the seeded
+        // game_night_sessions links (which DO carry TestRunId). It MUST be deleted BEFORE the
+        // game_night_sessions delete (the join source) AND before the users + shared_games deletes,
+        // because session_tracking_sessions has Restrict FKs on user_id → users and game_id →
+        // shared_games. Non-live fixtures seed no tracking Session, so this is a no-op for them.
+        var seededTrackedSessionIds = _db.GameNightSessions
+            .Where(s => s.TestRunId == request.TestRunId)
+            .Select(s => s.SessionId);
+        await _db.SessionTrackingSessions
+            .Where(ts => seededTrackedSessionIds.Contains(ts.Id))
             .ExecuteDeleteAsync(cancellationToken)
             .ConfigureAwait(false);
 

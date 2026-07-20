@@ -151,20 +151,31 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
         var gameNightId = await _db.ResolveGameNightIdAsync(session.Id, cancellationToken).ConfigureAwait(false);
 
         // Issue #3157 C1 — close this session's game_night_sessions link so a finalized
-        // session does not leave an orphaned InProgress live-slot. Without this, once the
+        // session does not leave an orphaned open live-slot. Without this, once the
         // restored ix_game_night_sessions_unique_active partial unique index is in place a
         // NEW session in the same night (minting a fresh InProgress link) would hit a unique
-        // violation. Guarded on InProgress → idempotent and a no-op when Path B
-        // (CompleteGameNightSession) already closed the link.
-        var liveLink = await _db.GameNightSessions
+        // violation.
+        //
+        // Epic #3188 Slice 4 — broaden the close to BOTH non-terminal link states:
+        //   • InProgress — a session that went live (Slice 2 go-live promoted Pending → InProgress).
+        //   • Pending    — a never-promoted DRAFT link (Slice 3: a direct create is born Pending and
+        //                  the Session stays Active without ever going live). Finalizing such a Session
+        //                  must not leave its draft link orphaned as Pending; it becomes Completed too
+        //                  (parity with the live path — a finalized session's link is terminal).
+        // Guarded on the two non-terminal statuses → idempotent, and a no-op when Path B
+        // (CompleteGameNightSession) or the CompleteGameNight cascade already closed the link to a
+        // terminal state (Completed / Skipped).
+        var openLink = await _db.GameNightSessions
             .FirstOrDefaultAsync(
-                l => l.SessionId == session.Id && l.Status == nameof(GameNightSessionStatus.InProgress),
+                l => l.SessionId == session.Id
+                    && (l.Status == nameof(GameNightSessionStatus.InProgress)
+                        || l.Status == nameof(GameNightSessionStatus.Pending)),
                 cancellationToken)
             .ConfigureAwait(false);
-        if (liveLink is not null)
+        if (openLink is not null)
         {
-            liveLink.Status = nameof(GameNightSessionStatus.Completed);
-            liveLink.CompletedAt = _timeProvider.GetUtcNow().UtcDateTime;
+            openLink.Status = nameof(GameNightSessionStatus.Completed);
+            openLink.CompletedAt = _timeProvider.GetUtcNow().UtcDateTime;
         }
 
         var finalizedAt = session.FinalizedAt ?? _timeProvider.GetUtcNow().UtcDateTime;

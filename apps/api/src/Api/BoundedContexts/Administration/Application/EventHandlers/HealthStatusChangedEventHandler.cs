@@ -72,11 +72,13 @@ internal sealed class HealthStatusChangedEventHandler
             ["_slack_category"] = category
         };
 
-        // Non-critical health transitions (Degraded=warning, recovery=info) are routed to
-        // Slack/DB/dashboard but kept OFF email — only Unhealthy (critical) transitions
-        // email. The flag is scoped to THIS alert, so budget/security/dead-letter warning
-        // emails from other producers are unaffected. See EmailAlertChannel.IsEmailSuppressed.
-        if (ShouldSuppressEmail(severity))
+        // Email is reserved for critical outages of CORE infrastructure only. Warning/info
+        // transitions — and critical transitions of monitoring/non-critical/optional services
+        // (grafana, prometheus, ollama, embedding…) — are routed to Slack/DB/dashboard but kept
+        // OFF email to avoid alert fatigue. See ShouldSuppressEmail (#3245). The flag is scoped
+        // to THIS alert, so budget/security/dead-letter warning emails from other producers are
+        // unaffected. See EmailAlertChannel.IsEmailSuppressed.
+        if (ShouldSuppressEmail(severity, evt.Tags))
         {
             metadata[EmailAlertChannel.SuppressEmailMetadataKey] = true;
         }
@@ -136,13 +138,46 @@ internal sealed class HealthStatusChangedEventHandler
     };
 
     /// <summary>
-    /// Whether a health alert of the given severity should be kept off the email channel.
-    /// Only "critical" (an Unhealthy transition) emails; "warning" (Degraded) and "info"
-    /// (recovery) are suppressed to avoid flapping-mail alert fatigue for non-critical
-    /// services. Other channels (Slack, DB) are unaffected.
+    /// Whether a health alert should be kept off the email channel. Two gates (#3245):
+    /// <list type="number">
+    /// <item>Only "critical" (an Unhealthy transition) is ever eligible for email;
+    /// "warning" (Degraded) and "info" (recovery) are always suppressed.</item>
+    /// <item>Among critical transitions, only genuinely critical infrastructure —
+    /// services tagged <see cref="HealthCheckTags.Core"/> or <see cref="HealthCheckTags.Critical"/>
+    /// (postgres, redis, pgvector) — emails. Monitoring, non-critical and optional services
+    /// (grafana, prometheus, ollama, embedding, reranker…) route to Slack + DB + dashboard
+    /// but NOT email, to avoid alert fatigue from outages that are not user-facing
+    /// emergencies.</item>
+    /// </list>
+    /// An explicit <see cref="HealthCheckTags.NonCritical"/> tag takes precedence over
+    /// <see cref="HealthCheckTags.Core"/>: <c>core</c> is a <c>/health/core</c> grouping tag,
+    /// not an alert-escalation signal, so a service tagged both (e.g. live_sessions_persistence,
+    /// redis-rate-limiting) stays OFF email. Other channels (Slack, DB) are unaffected regardless.
     /// </summary>
-    internal static bool ShouldSuppressEmail(string severity) =>
-        !string.Equals(severity, "critical", StringComparison.OrdinalIgnoreCase);
+    internal static bool ShouldSuppressEmail(string severity, string[] tags)
+    {
+        if (!string.Equals(severity, "critical", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (tags is null)
+        {
+            return true;
+        }
+
+        // Explicit non-critical wins over the `core` grouping tag when both are present.
+        if (tags.Contains(HealthCheckTags.NonCritical, StringComparer.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var isCriticalInfrastructure =
+            tags.Contains(HealthCheckTags.Core, StringComparer.OrdinalIgnoreCase)
+            || tags.Contains(HealthCheckTags.Critical, StringComparer.OrdinalIgnoreCase);
+
+        return !isCriticalInfrastructure;
+    }
 
     private static string TruncateAlertType(string alertType) =>
         alertType.Length > 100 ? alertType[..100] : alertType;

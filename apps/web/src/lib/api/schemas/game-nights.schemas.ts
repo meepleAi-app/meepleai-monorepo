@@ -81,6 +81,12 @@ export const GameNightSessionDtoSchema = z.object({
   gameTitle: z.string(),
   playOrder: z.number().int(),
   status: GameNightSessionStatusSchema,
+  // #3188 Slice 6 (decision D4): the canonical liveness signal, sourced BE-side from the tracking
+  // Session's live state (started_at != null && finalized_at == null), owned by SessionTracking.
+  // ADDITIVE + OPTIONAL for forward/backward compatibility (Nygard graceful-degradation): an older
+  // BE payload that omits the field still parses, and consumers fall back to `status ===
+  // 'InProgress'`. Does NOT overload/rename the `status` enum (which stays the per-game badge).
+  isLive: z.boolean().optional(),
   winnerId: z.string().uuid().nullable(),
   // #2634 C4: the winner's display name, BE-resolved from winnerId (a Participant.Id), scoped by
   // session and guest-capable. null when there is no winner (or it could not be resolved).

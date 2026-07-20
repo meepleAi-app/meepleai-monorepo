@@ -319,4 +319,70 @@ public sealed class CompleteGameNightCommandTests : IAsyncLifetime
 
         await act.Should().ThrowAsync<NotFoundException>();
     }
+
+    // Epic #3188 Slice 4 — a DRAFT-ONLY night must be completable. Post-Slice-3 a direct create is
+    // born a draft: the ad-hoc night is Published (NOT InProgress) and its link is Pending — no session
+    // ever went live. This test pins the PRE-state (night Published + all links Pending) explicitly,
+    // then completes and asserts the draft session was cascade-finalized, its link closed, the night
+    // transitioned to Completed, and a single gamenight_completed diary event was emitted.
+    //
+    // Which guard fires: the CompleteGameNightCommandHandler up-front night-status guard (now accepting
+    // Published || InProgress) governs — a Published draft-only night passes it instead of 409-ing.
+    [Fact]
+    public async Task Complete_PublishedDraftOnlyNight_FinalizesDraftsAndEmitsCompleted()
+    {
+        // Arrange — direct create → ad-hoc Published night holding a single Pending draft.
+        var (userId, gameId) = await _fixture.SeedUserWithLibraryGameAndIndexedKbAsync(_dbContext!, vectorCount: 2);
+        var createResult = await _createHandler!.Handle(
+            BuildCreateCommand(userId, gameId),
+            TestCancellationToken);
+        var nightId = createResult.GameNightEventId;
+        _dbContext!.ChangeTracker.Clear();
+
+        // Precondition — the night is Published (draft-holding, never went live) and its link is Pending.
+        var nightBefore = await _dbContext.GameNightEvents
+            .AsNoTracking()
+            .FirstAsync(n => n.Id == nightId, TestCancellationToken);
+        nightBefore.Status.Should().Be(
+            nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightStatus.Published));
+        var linkBefore = await _dbContext.GameNightSessions
+            .AsNoTracking()
+            .FirstAsync(l => l.GameNightEventId == nightId, TestCancellationToken);
+        linkBefore.Status.Should().Be(
+            nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightSessionStatus.Pending));
+        linkBefore.StartedAt.Should().BeNull();
+
+        // Act — complete the draft-only night (must NOT 409 on the Published status).
+        var result = await _completeNightHandler!.Handle(
+            new CompleteGameNightCommand(nightId, userId),
+            TestCancellationToken);
+
+        // Assert — the draft session was finalized.
+        result.SessionCount.Should().Be(1);
+        result.FinalizedSessionCount.Should().Be(1);
+
+        _dbContext.ChangeTracker.Clear();
+        var session = await _dbContext.SessionTrackingSessions
+            .AsNoTracking()
+            .FirstAsync(s => s.Id == createResult.SessionId, TestCancellationToken);
+        session.Status.Should().Be("Finalized");
+
+        // Assert — night Completed, link closed.
+        var night = await _dbContext.GameNightEvents
+            .AsNoTracking()
+            .FirstAsync(n => n.Id == nightId, TestCancellationToken);
+        night.Status.Should().Be("Completed");
+        var link = await _dbContext.GameNightSessions
+            .AsNoTracking()
+            .FirstAsync(l => l.GameNightEventId == nightId, TestCancellationToken);
+        link.Status.Should().Be(
+            nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightSessionStatus.Completed));
+
+        // Assert — exactly one gamenight_completed diary event.
+        var gnCompleted = await _dbContext.SessionEvents
+            .AsNoTracking()
+            .Where(e => e.GameNightId == nightId && e.EventType == "gamenight_completed")
+            .ToListAsync(TestCancellationToken);
+        gnCompleted.Should().HaveCount(1);
+    }
 }

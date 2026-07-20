@@ -199,6 +199,26 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
         return entity != null ? MapToDomain(entity) : null;
     }
 
+    public async Task<GameNightEvent?> GetByLinkedSessionIdAsync(
+        Guid sessionId, CancellationToken cancellationToken = default)
+    {
+        // AsNoTracking — the go-live orchestrator (GoLiveSessionCommandHandler) mutates the
+        // returned aggregate and persists via the detached UpdateAsync full-remap + .Update()
+        // pattern (mirrors GetByIdAsync feeding StartGameNightSessionCommandHandler). Loading it
+        // tracked (as FindByLinkedSessionIdAsync does) would collide with that fresh-entity Update.
+        var entity = await DbContext.GameNightEvents
+            .AsNoTracking()
+            .Include(e => e.Rsvps)
+            .Include(e => e.Sessions)
+            .Include(e => e.Votes)
+            .FirstOrDefaultAsync(
+                e => e.Sessions.Any(s => s.SessionId == sessionId),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return entity != null ? MapToDomain(entity) : null;
+    }
+
     public async Task<GameNightEvent?> GetByShareTokenAsync(
         string shareToken, CancellationToken cancellationToken = default)
     {

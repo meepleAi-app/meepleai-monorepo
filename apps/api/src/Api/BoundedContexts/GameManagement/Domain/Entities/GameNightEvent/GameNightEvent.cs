@@ -613,7 +613,8 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
         ?? _sessions.FirstOrDefault(s => s.Status == GameNightSessionStatus.Pending);
 
     /// <summary>
-    /// Adds a game session to this game night. Max 5 sessions per event.
+    /// Adds a game session to this game night. Max 5 NON-TERMINAL sessions per event
+    /// (epic #3188 Slice 3 D6: Completed/Skipped/Corrupted links do not consume budget).
     ///
     /// <para>Allowed on <see cref="GameNightStatus.Published"/> (first sitting) and
     /// <see cref="GameNightStatus.InProgress"/> (SI-4 #2635: 2nd+ sitting resume — the night flips
@@ -636,7 +637,12 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
                 : $"Cannot add sessions to a {Status} game night.";
             throw new InvalidOperationException(message);
         }
-        if (_sessions.Count >= 5)
+        // Epic #3188 Slice 3 (D6): count only NON-TERMINAL links (Pending + InProgress). Terminal
+        // links (Completed / Skipped / Corrupted) do NOT consume budget, so a night that already
+        // played five games in sequence can still host a sixth draft. The value stays 5.
+        var nonTerminalCount = _sessions.Count(s =>
+            s.Status == GameNightSessionStatus.Pending || s.Status == GameNightSessionStatus.InProgress);
+        if (nonTerminalCount >= 5)
             throw new InvalidOperationException("A game night can have at most 5 sessions.");
 
         var playOrder = _sessions.Count + 1;
@@ -685,6 +691,48 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
         var session = _sessions.FirstOrDefault(s => s.Status == GameNightSessionStatus.Pending)
             ?? throw new InvalidOperationException("No pending session to start.");
         session.Start();
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Promotes a SPECIFIC pending draft session (identified by its tracking-<paramref name="sessionId"/>)
+    /// to InProgress. Unlike <see cref="StartCurrentSession"/> — which promotes the first pending session
+    /// by play order — this targets the exact session the caller went live on (Slice 2 of the explicit
+    /// go-live sub-resource, epic #3188).
+    ///
+    /// <para>Enforces the same guards as <see cref="StartCurrentSession"/>:
+    /// <list type="bullet">
+    ///   <item>Corruption guard (<see cref="ThrowIfCorrupted"/>).</item>
+    ///   <item>Invariante #10 (max 1 live) via <see cref="EnsureCanStartSession"/> — checked BEFORE the
+    ///         promotion so a night that already has a live session is rejected without mutating state.</item>
+    ///   <item>Pending → InProgress transition guard via <see cref="GameNightSession.Start"/>.</item>
+    /// </list></para>
+    ///
+    /// <para>Raises NO domain event — parity with <see cref="StartCurrentSession"/>. The live-mode
+    /// transition (and the invariante #15 night promotion Published → InProgress) is driven separately by
+    /// <c>Session.OpenLiveMode()</c>'s <c>SessionStartedDomainEvent</c>, dispatched by the go-live handler
+    /// as its LAST step. Emitting an extra aggregate event here would double-signal that flow.</para>
+    /// </summary>
+    /// <param name="sessionId">The tracking-Session id of the draft to promote.</param>
+    /// <exception cref="Api.Middleware.Exceptions.NotFoundException">
+    /// Thrown (mapped to HTTP 404) when no child session matches <paramref name="sessionId"/>.</exception>
+    /// <exception cref="MaxLiveSessionsExceededException">
+    /// Thrown (mapped to HTTP 409) when another session on this night is already InProgress.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the targeted session is not in Pending status (non-Pending is a conflict; the command
+    /// handler maps it to HTTP 409).</exception>
+    public void StartSession(Guid sessionId)
+    {
+        ThrowIfCorrupted();
+
+        var session = _sessions.FirstOrDefault(s => s.SessionId == sessionId)
+            ?? throw new NotFoundException("GameNightSession", sessionId.ToString());
+
+        // Invariante #10 — reject a 2nd live BEFORE promoting, so the guard sees the pre-promotion
+        // state (same order StartCurrentSession relies on).
+        EnsureCanStartSession();
+
+        session.Start(); // Pending → InProgress guard (throws InvalidOperationException otherwise)
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 

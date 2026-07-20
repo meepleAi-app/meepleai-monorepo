@@ -47,6 +47,21 @@ internal interface IGameNightEventRepository : IRepository<GameNightEvent, Guid>
     /// </remarks>
     Task<GameNightEvent?> FindByLinkedSessionIdAsync(Guid sessionId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Finds the GameNightEvent aggregate that owns a linked Session
+    /// (matched via <c>GameNightSession.SessionId</c>), loaded <b>detached</b> (AsNoTracking).
+    /// Returns null if the Session is not linked to any GameNight.
+    /// </summary>
+    /// <remarks>
+    /// Distinct from <see cref="FindByLinkedSessionIdAsync"/> (which loads TRACKED for the
+    /// invariante #15 mutate-in-place flow): the go-live orchestrator
+    /// (<c>GoLiveSessionCommandHandler</c>, epic #3188 Slice 2) mutates the aggregate and persists
+    /// via the detached <c>UpdateAsync</c> full-remap + <c>.Update()</c> pattern (same as
+    /// <c>GetByIdAsync</c> feeding <c>StartGameNightSessionCommandHandler</c>). A tracked load
+    /// would collide with that fresh-entity <c>.Update()</c> on the same key.
+    /// </remarks>
+    Task<GameNightEvent?> GetByLinkedSessionIdAsync(Guid sessionId, CancellationToken cancellationToken = default);
+
     // ── Candidate voting (approval model) — Issue #2700 ──────────────────────
     // Votes are immutable append/remove children persisted with tracked Add/Remove.
     // They deliberately bypass the aggregate's detached-Update full-remap: EF's

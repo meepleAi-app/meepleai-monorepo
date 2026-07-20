@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
@@ -29,6 +30,11 @@ internal class CloseThreadCommandHandler : ICommandHandler<CloseThreadCommand, C
         var thread = await _threadRepository.GetByIdAsync(command.ThreadId, cancellationToken).ConfigureAwait(false);
         if (thread == null)
             throw new InvalidOperationException($"Thread with ID {command.ThreadId} not found");
+
+        // Issue #3224: pre-check state so an already-closed thread maps to 409 (not 500); the
+        // domain guard in CloseThread() stays as defense-in-depth.
+        if (thread.Status.IsClosed)
+            throw new ConflictException("Thread is already closed");
 
         // Close thread (domain logic validates state)
         thread.CloseThread();

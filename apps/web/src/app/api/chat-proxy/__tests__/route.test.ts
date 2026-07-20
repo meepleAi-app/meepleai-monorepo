@@ -243,6 +243,20 @@ describe('POST /api/chat-proxy', () => {
       expect(completeEvents).toHaveLength(1);
     });
 
+    it('injects the game name into the system prompt verbatim even with $ sequences', async () => {
+      // #3226 regression: gameName was the replacement string in buildSystemPrompt.
+      const { fetchCall } = await callProxyAndConsume(
+        fetchMock,
+        createValidBody({ gameContext: { gameName: 'A$$B $& Co', agentTypology: 'Tutor' } })
+      );
+      const sentBody = JSON.parse((fetchCall[1] as RequestInit).body as string);
+      const systemMsg = (sentBody.messages as Array<{ role: string; content: string }>).find(
+        m => m.role === 'system'
+      );
+      expect(systemMsg?.content).toContain('A$$B $& Co');
+      expect(systemMsg?.content).not.toContain('{gameName}');
+    });
+
     it('sends StateUpdate event at stream start', async () => {
       const { events } = await callProxyAndConsume(fetchMock, createValidBody());
 

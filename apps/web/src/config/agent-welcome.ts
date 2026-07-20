@@ -71,15 +71,15 @@ const WELCOME_CONFIGS: Record<string, AgentWelcomeConfig> = {
   },
   Narratore: {
     greeting:
-      'Benvenuto nel mondo di {game}! Lascia che ti racconti la storia e l\'ambientazione di questo gioco straordinario.',
+      "Benvenuto nel mondo di {game}! Lascia che ti racconti la storia e l'ambientazione di questo gioco straordinario.",
     capabilities: [
-      'Raccontare la lore e l\'ambientazione del gioco',
+      "Raccontare la lore e l'ambientazione del gioco",
       'Creare atmosfera durante le partite',
       'Descrivere scenari e personaggi',
-      'Rendere l\'esperienza di gioco più immersiva',
+      "Rendere l'esperienza di gioco più immersiva",
     ],
     followUpQuestions: [
-      'Raccontami l\'ambientazione di {game}',
+      "Raccontami l'ambientazione di {game}",
       'Chi sono i personaggi principali?',
       'Qual è la storia dietro questo gioco?',
     ],
@@ -118,15 +118,12 @@ export function getAgentWelcome(typology: string | null | undefined): AgentWelco
 /**
  * Build a complete welcome message string with capabilities list.
  */
-export function buildWelcomeMessage(
-  typology: string | null | undefined,
-  gameName: string
-): string {
+export function buildWelcomeMessage(typology: string | null | undefined, gameName: string): string {
   const config = getAgentWelcome(typology);
-  const greeting = config.greeting.replace(/{game}/g, gameName);
-  const capabilities = config.capabilities
-    .map(c => `• ${c}`)
-    .join('\n');
+  // #3226: replacer function inserts gameName verbatim (a title with $&/$$ would otherwise be
+  // interpreted as a replacement pattern and corrupt the text).
+  const greeting = config.greeting.replace(/{game}/g, () => gameName);
+  const capabilities = config.capabilities.map(c => `• ${c}`).join('\n');
 
   return `${greeting}\n\n**Cosa posso fare:**\n${capabilities}`;
 }
@@ -139,5 +136,6 @@ export function getWelcomeFollowUpQuestions(
   gameName: string
 ): string[] {
   const config = getAgentWelcome(typology);
-  return config.followUpQuestions.map(q => q.replace(/{game}/g, gameName));
+  // #3226: replacer function inserts gameName verbatim (see buildWelcomeMessage).
+  return config.followUpQuestions.map(q => q.replace(/{game}/g, () => gameName));
 }

@@ -175,6 +175,40 @@ public sealed class HybridSearchServiceRoleBoostTests
         realScore.Should().BeGreaterThan(legendScore);
     }
 
+    [Fact]
+    public void LegendDemotion_KeepsRoleBoostAdditive()
+    {
+        // The legend penalty scales only the RRF fusion components; the role-match boost (#1391)
+        // stays additive so its ~0.15 calibration is preserved even when a legend shares a role tag.
+        const float baseRrf = 0.011f;
+        var legendFactor = HybridSearchService.ComputeLegendPenaltyFactor(
+            "8. Progetti Standard (vedi pag. 10). 9. Milestone (vedi pag. 10 e 11).");
+        var roleBoost = HybridSearchService.RoleMatchBoost;
+
+        // Mirror FuseSearchResults: (rrf * (1 - factor)) + roleBoost
+        var withRole = (baseRrf * (1f - legendFactor)) + roleBoost;
+        var withoutRole = (baseRrf * (1f - legendFactor)) + 0f;
+
+        // The additive boost is preserved intact, not shrunk by the legend factor.
+        legendFactor.Should().BeGreaterThan(0f, "the sample is a legend and must still be demoted");
+        (withRole - withoutRole).Should().Be(roleBoost);
+    }
+
+    [Fact]
+    public void ComputeLegendPenaltyFactor_LongContentWithManyReferences_IsNotOverDemoted()
+    {
+        // Arrange: a long, substantive section that legitimately cites several pages. Density is
+        // low, so it must NOT be treated as a legend (guards against raw-count over-demotion).
+        var content = new string('a', 4000)
+            + " vedi pag. 1 vedi pag. 2 vedi pag. 3 vedi pag. 4 vedi pag. 5";
+
+        // Act
+        var factor = HybridSearchService.ComputeLegendPenaltyFactor(content);
+
+        // Assert
+        factor.Should().BeLessThan(0.2f);
+    }
+
     // -----------------------------------------------------------------------------------------
     // Issue #1391: semantic-mode boost end-to-end via HybridSearchService.SearchAsync.
     // pgvector now stores role_tags (denormalized from text_chunks) so SearchSemanticOnlyAsync

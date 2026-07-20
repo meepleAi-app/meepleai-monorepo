@@ -457,9 +457,10 @@ internal class HybridSearchService : IHybridSearchService
             // "vedi pag."/"see p." pointers, e.g. the Terraforming Mars component list
             // "8. Progetti Standard ... vedi pag. 10 ... 9. Milestone ... vedi pag. 10 e 11")
             // which carry no actionable answer yet score in the same RRF band as real content.
-            // Multiplicative so it demotes regardless of the absolute RRF magnitude.
+            // The demotion scales the RRF fusion components only; the role-match boost (#1391)
+            // stays strictly additive on top so its deliberate ~0.15 calibration is not scaled away.
             var legendFactor = ComputeLegendPenaltyFactor(content);
-            var hybridScore = (vectorRrfScore + keywordRrfScore + roleBoost) * (1f - legendFactor);
+            var hybridScore = ((vectorRrfScore + keywordRrfScore) * (1f - legendFactor)) + roleBoost;
 
             var pdfDocumentId = hasVector && vectorItem != null
                 ? vectorItem.Result.PdfId
@@ -516,9 +517,10 @@ internal class HybridSearchService : IHybridSearchService
         return (chunkRoleTags & queryRoleHint) != GameBookRole.None ? RoleMatchBoost : 0f;
     }
 
-    // Matches cross-reference pointers like "vedi pag. 10", "see p. 11", "cfr. pagg. 4-5".
+    // Matches cross-reference pointers like "vedi pag. 10", "vedi anche pagina 5", "see p. 11",
+    // "cfr. pagg. 4-5". Allows an optional connector word ("anche"/"a") and spelled-out "pagina".
     private static readonly Regex CrossReferencePointer = new(
-        @"(?i)\b(?:vedi|see|cfr|cf)\.?\s+(?:pagg|pag|pp|p|pages|page)\b\.?",
+        @"(?i)\b(?:vedi|see|cfr|cf)\b\.?\s+(?:anche\s+|a\s+)?(?:pagine|pagina|pagg|pag|pages|page|pp|p)\b\.?",
         RegexOptions.Compiled,
         TimeSpan.FromSeconds(1));
 
@@ -537,15 +539,18 @@ internal class HybridSearchService : IHybridSearchService
         }
 
         var pointers = CrossReferencePointer.Matches(content).Count;
-        if (pointers == 0)
+        // A legend is a LIST of pointers; a single incidental page reference is not one.
+        if (pointers < 2)
         {
             return 0f;
         }
 
-        // Density of cross-reference pointers per 1000 chars: a short chunk dominated by pointers
-        // is a legend; a long chunk with one incidental page reference is not.
+        // Density-driven ONLY (pointers per 1000 chars), never the raw count: a short chunk that
+        // is mostly pointers (a legend) has high density and is capped at 0.5, while a long,
+        // substantive section that legitimately cites several pages has low density and is barely
+        // touched. Using the raw count would over-demote long real content with many references.
         var density = pointers * 1000.0 / content.Length;
-        return (float)Math.Min(0.5, (0.10 * pointers) + (0.03 * density));
+        return (float)Math.Min(0.5, 0.05 * density);
     }
 }
 

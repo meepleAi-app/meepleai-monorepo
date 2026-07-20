@@ -5,8 +5,8 @@
 #   bash infra/scripts/integration-tunnel.sh [start|stop|status]
 #
 # Opens SSH tunnels to staging server (meepleai.app) for:
-#   - PostgreSQL  :15432 -> staging container (dynamic IP)
-#   - Redis       :16379 -> staging container (dynamic IP)
+#   - PostgreSQL  :25432 -> staging container (dynamic IP)
+#   - Redis       :26379 -> staging container (dynamic IP)
 #   - AI/monitoring services -> staging host ports
 #
 # Then run:

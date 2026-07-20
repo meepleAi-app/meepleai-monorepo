@@ -72,8 +72,9 @@ internal class KeywordSearchService : IKeywordSearchService
 
         try
         {
-            // Build tsquery for full-text search
-            var tsQuery = BuildTsQuery(query, phraseSearch, boostTerms);
+            // Build tsquery for full-text search (Slice A: synonym expansion is language-aware,
+            // so the resolved per-game FTS config is threaded through to BuildTsQuery).
+            var tsQuery = BuildTsQuery(query, phraseSearch, boostTerms, textSearchConfig);
 
             _logger.LogInformation(
                 "Keyword search: query='{Query}', gameId={GameId}, phraseSearch={PhraseSearch}, boostTerms={BoostTerms}, limit={Limit}, ftsConfig={FtsConfig}",
@@ -194,7 +195,8 @@ internal class KeywordSearchService : IKeywordSearchService
 
         try
         {
-            var tsQuery = BuildTsQuery(query, phraseSearch: false, boostTerms: null);
+            // English-pinned (DefaultTextSearchConfig) → no synonym expansion, by design.
+            var tsQuery = BuildTsQuery(query, phraseSearch: false, boostTerms: null, DefaultTextSearchConfig);
 
             // Security: Set query timeout
             var previousTimeout = _dbContext.Database.GetCommandTimeout();
@@ -256,7 +258,7 @@ internal class KeywordSearchService : IKeywordSearchService
     /// - Phrase: "en passant" with phraseSearch=true returns "en passant" with proximity operator
     /// - Boost: "check" with boostTerms=["check", "checkmate"] returns boosted query
     /// </remarks>
-    private string BuildTsQuery(string query, bool phraseSearch, List<string>? boostTerms)
+    private string BuildTsQuery(string query, bool phraseSearch, List<string>? boostTerms, string ftsConfig)
     {
         // Sanitize query to prevent SQL injection and tsquery syntax errors
         var sanitizedQuery = SanitizeQuery(query);
@@ -287,7 +289,92 @@ internal class KeywordSearchService : IKeywordSearchService
         // giocatori" whenever the four
         // surface tokens don't co-occur in one chunk, collapsing hybrid search to vector-only.
         // OR keeps recall; ranking (ts_rank_cd + RRF fusion + reranker) sorts the candidates.
-        return sanitizedQuery.Replace(" ", " | ");
+        // Slice A: additionally expand curated per-language intent synonyms on the keyword arm
+        // (e.g. setup -> preparazione/allestimento) so the query also matches the native rulebook
+        // lexemes. No-op for non-tabled configs, so English recall is unchanged.
+        return ExpandTermsToTsQuery(sanitizedQuery, ftsConfig);
+    }
+
+    /// <summary>
+    /// Curated, language-keyed intent synonym tables for keyword-arm expansion. Keyed by the
+    /// resolved PostgreSQL FTS config (<see cref="ResolveFtsConfig"/>); only languages with a
+    /// curated table are expanded. Kept deliberately small and high-signal (divergent-stem intent
+    /// synonyms) to avoid recall noise. Head-token lookup is case-insensitive.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, IReadOnlyList<string>>> SynonymTablesByConfig =
+        new Dictionary<string, IReadOnlyDictionary<string, IReadOnlyList<string>>>(StringComparer.Ordinal)
+        {
+            ["italian"] = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                // Setup intent — "setup" is an English loanword whose 'italian' stem diverges from
+                // the native rulebook terms; many Italian rulebooks also use "Setup" as a section
+                // title, so the mapping is kept symmetric (query in either lexeme matches both).
+                ["setup"] = new[] { "preparazione", "allestimento" },
+                ["preparazione"] = new[] { "setup", "allestimento" },
+                ["allestimento"] = new[] { "setup", "preparazione" },
+                // Player-count intent — "per N giocatori" <-> "numero (di) giocatori".
+                ["giocatori"] = new[] { "numero giocatori" },
+                ["giocatore"] = new[] { "numero giocatori" },
+            },
+        };
+
+    /// <summary>
+    /// Expands keyword-arm query terms with curated, language-keyed intent synonyms, emitting a
+    /// valid <c>to_tsquery</c> OR-fragment.
+    /// <para>
+    /// The failing "Setup per N giocatori" query missed the Italian rulebook lexemes
+    /// ("preparazione"/"allestimento") because the English loanword "setup" stems to a different
+    /// lexeme under the 'italian' FTS config. Expansion runs ONLY on the keyword arm (never the
+    /// embedding vector, which is produced by a separate call in <c>HybridSearchService</c>), so it
+    /// cannot dilute semantic search. Non-tabled configs (english/simple/…) reproduce the plain OR
+    /// join verbatim — zero recall/precision drift outside the curated table.
+    /// </para>
+    /// <para>
+    /// A token with a synonym entry becomes a grouped alternation <c>(head | syn1 | syn2)</c>;
+    /// multi-word synonyms are joined with the proximity operator <c>&lt;-&gt;</c> (a bare space is
+    /// a to_tsquery syntax error). <paramref name="sanitizedQuery"/> is already operator/paren
+    /// stripped by <see cref="SanitizeQuery"/>, and the injected grouping characters come only from
+    /// this controlled table, so the fragment is injection-safe.
+    /// </para>
+    /// </summary>
+    internal static string ExpandTermsToTsQuery(string sanitizedQuery, string ftsConfig)
+    {
+        if (string.IsNullOrWhiteSpace(sanitizedQuery))
+        {
+            return string.Empty;
+        }
+
+        var tokens = sanitizedQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        if (!SynonymTablesByConfig.TryGetValue(ftsConfig, out var synonyms))
+        {
+            // No curated table for this language → preserve the pre-slice OR join verbatim.
+            return string.Join(" | ", tokens);
+        }
+
+        var groups = tokens.Select(token =>
+        {
+            if (!synonyms.TryGetValue(token, out var alternatives) || alternatives.Count == 0)
+            {
+                return token; // no synonyms → bare token (never an empty group)
+            }
+
+            var members = new List<string>(alternatives.Count + 1) { token };
+            members.AddRange(alternatives.Select(ToTsQueryPhrase));
+            return $"({string.Join(" | ", members)})";
+        });
+
+        return string.Join(" | ", groups);
+    }
+
+    /// <summary>
+    /// Renders a (possibly multi-word) synonym value as a to_tsquery term: single words pass
+    /// through; multi-word values are joined with the <c>&lt;-&gt;</c> proximity operator.
+    /// </summary>
+    private static string ToTsQueryPhrase(string synonym)
+    {
+        var words = synonym.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return words.Length == 1 ? words[0] : string.Join(" <-> ", words);
     }
 
     /// <summary>

@@ -1,0 +1,84 @@
+# promtool unit tests for copyright-enforcement.yml (#3248, epic #448 C5).
+#
+# Run locally (Windows/Git Bash, from repo root):
+#   docker run --rm -v "$(pwd)/infra/prometheus/alerts:/work" prom/prometheus:v3.7.0 \
+#     promtool test rules /work/copyright-enforcement.test.yml
+#
+# There is no promtool CI gate in this repo (see recon in #3082); this file
+# documents + verifies the two alerts (scan-error-rate critical, detection-rate
+# warning) that page ops per epic #448 C5.
+rule_files:
+  - copyright-enforcement.yml
+
+evaluation_interval: 1m
+
+tests:
+  # 1. scan_errors sustained at 2% of scan attempts (2 err / 100 scans per min)
+  #    must fire the CRITICAL alert once the 15m `for` window elapses — the
+  #    leak guard is failing open silently on >1% of protected-chunk queries.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_rag_copyright_guard_scan_errors_total'
+        values: '0+2x30'
+      - series: 'meepleai_rag_copyright_guard_scan_duration_count'
+        values: '0+98x30'
+    alert_rule_test:
+      - eval_time: 25m
+        alertname: CopyrightScanErrorRateHigh
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              service: meepleai-api
+              category: copyright
+            exp_annotations:
+              summary: "Copyright leak guard is failing open (>1% scan errors)"
+              description: "Copyright leak guard scan-error rate exceeded the 1% threshold of protected-chunk queries; the guard fails open, so verbatim leaks may reach clients undetected. Check LLM latency, scan timeout budget, and the error_type breakdown."
+              runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-claude/architecture/copyright-tier-rag.md"
+              dashboard_url: "http://localhost:3001/d/copyright-enforcement"
+
+  # 2. Zero scan errors (guard healthy) must NOT fire — no page on green.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_rag_copyright_guard_scan_errors_total'
+        values: '0+0x30'
+      - series: 'meepleai_rag_copyright_guard_scan_duration_count'
+        values: '0+100x30'
+    alert_rule_test:
+      - eval_time: 25m
+        alertname: CopyrightScanErrorRateHigh
+        exp_alerts: []
+
+  # 3. Detection rate at 30% (30 verbatim runs / 100 protected-chunk queries)
+  #    must fire the WARNING alert after the 30m `for` window — the LLM is
+  #    ignoring the prompt-gate paraphrase instruction at scale.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_rag_copyright_verbatim_run_detected_total'
+        values: '0+30x45'
+      - series: 'meepleai_rag_copyright_instruction_injected_total{has_protected="true"}'
+        values: '0+100x45'
+    alert_rule_test:
+      - eval_time: 40m
+        alertname: CopyrightDetectionRateHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              service: meepleai-api
+              category: copyright
+            exp_annotations:
+              summary: "Copyright verbatim-detection rate is high (>20%)"
+              description: "Verbatim-run detections exceeded the 20% threshold of protected-chunk queries; the LLM is not following the copyright paraphrase instruction. Review prompt-gate wording and recent model/routing changes."
+              runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-claude/architecture/copyright-tier-rag.md"
+              dashboard_url: "http://localhost:3001/d/copyright-enforcement"
+
+  # 4. Detection rate at 10% (below the 20% threshold) must NOT fire.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_rag_copyright_verbatim_run_detected_total'
+        values: '0+10x45'
+      - series: 'meepleai_rag_copyright_instruction_injected_total{has_protected="true"}'
+        values: '0+100x45'
+    alert_rule_test:
+      - eval_time: 40m
+        alertname: CopyrightDetectionRateHigh
+        exp_alerts: []

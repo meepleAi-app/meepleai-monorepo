@@ -59,18 +59,20 @@ const mockGameDetail: GameDetail = {
   checklist: [],
 };
 
+// Stable store mocks (hoisted) so tests can assert calls — the selector must
+// return the SAME function instances across renders, otherwise toHaveBeenCalled
+// asserts against a throwaway spy.
+const storeMocks = vi.hoisted(() => ({
+  setGameId: vi.fn(),
+  setCurrentState: vi.fn(),
+  setIsUpdatingState: vi.fn(),
+  setError: vi.fn(),
+  setIsRecordingSession: vi.fn(),
+  setOptimisticSessionId: vi.fn(),
+}));
+
 vi.mock('@/lib/stores/game-detail-store', () => ({
-  useGameDetailStore: vi.fn(selector => {
-    const mockStore = {
-      setGameId: vi.fn(),
-      setCurrentState: vi.fn(),
-      setIsUpdatingState: vi.fn(),
-      setError: vi.fn(),
-      setIsRecordingSession: vi.fn(),
-      setOptimisticSessionId: vi.fn(),
-    };
-    return selector ? selector(mockStore) : mockStore;
-  }),
+  useGameDetailStore: vi.fn(selector => (selector ? selector(storeMocks) : storeMocks)),
 }));
 
 describe('useGameDetail', () => {
@@ -177,6 +179,53 @@ describe('useUpdateGameState', () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
 
     expect(result.current.error?.message).toBe('Failed to update game state');
+  });
+
+  it('rolls back the optimistic cache update on error', async () => {
+    // Seed the cache with the pre-mutation state (currentState: 'Owned').
+    queryClient.setQueryData<GameDetail>(GAME_DETAIL_QUERY_KEY('game-456'), mockGameDetail);
+
+    vi.mocked(global.fetch).mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+    } as Response);
+
+    const { result } = renderHook(() => useUpdateGameState('game-456'), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({ newState: 'Wishlist' });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    // Cache must be restored to the previous snapshot, not left on the
+    // optimistic 'Wishlist' value.
+    const cached = queryClient.getQueryData<GameDetail>(GAME_DETAIL_QUERY_KEY('game-456'));
+    expect(cached?.currentState).toBe('Owned');
+  });
+
+  it('clears the updating flag and records the error on failure', async () => {
+    queryClient.setQueryData<GameDetail>(GAME_DETAIL_QUERY_KEY('game-456'), mockGameDetail);
+
+    vi.mocked(global.fetch).mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+    } as Response);
+
+    const { result } = renderHook(() => useUpdateGameState('game-456'), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({ newState: 'Wishlist' });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    // Loading flag must be released (was stuck at true without onError).
+    expect(storeMocks.setIsUpdatingState).toHaveBeenLastCalledWith(false);
+    // Store currentState must be reverted to the previous value.
+    expect(storeMocks.setCurrentState).toHaveBeenLastCalledWith('Owned');
+    // Error must be surfaced to the store.
+    expect(storeMocks.setError).toHaveBeenCalledWith('Failed to update game state');
   });
 });
 

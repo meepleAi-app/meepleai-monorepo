@@ -186,6 +186,17 @@ public class HealthStatusChangedEventHandlerTests
     }
 
     [Fact]
+    public void Critical_severity_when_noncritical_coexists_with_core_grouping_tag_suppresses_email()
+    {
+        // #3245 review finding: `core` is a /health/core grouping tag, NOT an alert-escalation
+        // signal. An explicit `non-critical` tag must win over `core` so services grouped under
+        // core-but-documented-non-critical don't email. Real case: live_sessions_persistence
+        // ({ core, non-critical, live-sessions }) returns Unhealthy on DB error.
+        var tags = new[] { HealthCheckTags.Core, HealthCheckTags.NonCritical, "live-sessions" };
+        HealthStatusChangedEventHandler.ShouldSuppressEmail("critical", tags).Should().BeTrue();
+    }
+
+    [Fact]
     public void Critical_severity_with_no_tags_suppresses_email()
     {
         HealthStatusChangedEventHandler.ShouldSuppressEmail("critical", System.Array.Empty<string>()).Should().BeTrue();

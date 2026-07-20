@@ -149,7 +149,10 @@ internal sealed class HealthStatusChangedEventHandler
     /// but NOT email, to avoid alert fatigue from outages that are not user-facing
     /// emergencies.</item>
     /// </list>
-    /// Other channels (Slack, DB) are unaffected regardless.
+    /// An explicit <see cref="HealthCheckTags.NonCritical"/> tag takes precedence over
+    /// <see cref="HealthCheckTags.Core"/>: <c>core</c> is a <c>/health/core</c> grouping tag,
+    /// not an alert-escalation signal, so a service tagged both (e.g. live_sessions_persistence,
+    /// redis-rate-limiting) stays OFF email. Other channels (Slack, DB) are unaffected regardless.
     /// </summary>
     internal static bool ShouldSuppressEmail(string severity, string[] tags)
     {
@@ -158,10 +161,20 @@ internal sealed class HealthStatusChangedEventHandler
             return true;
         }
 
+        if (tags is null)
+        {
+            return true;
+        }
+
+        // Explicit non-critical wins over the `core` grouping tag when both are present.
+        if (tags.Contains(HealthCheckTags.NonCritical, StringComparer.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
         var isCriticalInfrastructure =
-            tags is not null
-            && (tags.Contains(HealthCheckTags.Core, StringComparer.OrdinalIgnoreCase)
-                || tags.Contains(HealthCheckTags.Critical, StringComparer.OrdinalIgnoreCase));
+            tags.Contains(HealthCheckTags.Core, StringComparer.OrdinalIgnoreCase)
+            || tags.Contains(HealthCheckTags.Critical, StringComparer.OrdinalIgnoreCase);
 
         return !isCriticalInfrastructure;
     }

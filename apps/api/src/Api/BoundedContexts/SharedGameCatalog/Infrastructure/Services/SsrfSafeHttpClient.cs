@@ -30,13 +30,19 @@ internal sealed class SsrfSafeHttpClient
         ValidateUrlScheme(url);
         await ValidateResolvedIpAsync(url, ct).ConfigureAwait(false);
 
-        var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
+        // Dispose the response on every exit path: with ResponseHeadersRead it holds the live
+        // connection open until disposed. Disposing the response also disposes its content and
+        // the stream returned by ReadAsStreamAsync (the content owns that stream), so the source
+        // is fully released once this scope exits. The validated payload is copied into an
+        // independent MemoryStream before this method returns, so scope-exit disposal is safe.
+        using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
         // Validate size from Content-Length header if available
         if (response.Content.Headers.ContentLength > MaxPdfSizeBytes)
             throw new InvalidOperationException($"PDF exceeds maximum size of {MaxPdfSizeBytes / (1024 * 1024)}MB");
 
+        // Owned by `response`; disposed together with it at scope exit (see comment above).
         var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
 
         // Validate PDF magic bytes (%PDF)

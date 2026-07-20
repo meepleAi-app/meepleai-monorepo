@@ -106,4 +106,66 @@ public class SsrfSafeHttpClientTests
     }
 
     #endregion
+
+    #region DownloadPdfAsync Disposal Tests (Issue #3239)
+
+    [Fact]
+    public async Task DownloadPdfAsync_DisposesResponseContentStream()
+    {
+        // %PDF magic bytes so the download passes the PDF-signature validation.
+        var pdfBytes = System.Text.Encoding.ASCII.GetBytes("%PDF-1.4\nfake-content");
+        var sourceStream = new DisposeTrackingStream(pdfBytes);
+        using var handler = new StubHttpMessageHandler(() => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StreamContent(sourceStream),
+        });
+        using var httpClient = new HttpClient(handler);
+        var sut = new SsrfSafeHttpClient(httpClient);
+
+        // Host is a public IP literal: Dns.GetHostAddressesAsync short-circuits (no network call),
+        // and IsPrivateOrReserved(8.8.8.8) is false, so the SSRF guard passes hermetically.
+        var result = await sut.DownloadPdfAsync("https://8.8.8.8/rules.pdf", CancellationToken.None);
+
+        // The full payload is copied into an independent stream returned to the caller...
+        using var reader = new StreamReader(result);
+        (await reader.ReadToEndAsync()).Should().Be("%PDF-1.4\nfake-content");
+
+        // ...and the source HttpResponseMessage content stream must be disposed (it was leaked before the fix).
+        sourceStream.Disposed.Should().BeTrue(
+            "DownloadPdfAsync must dispose the HttpResponseMessage and its content stream");
+    }
+
+    private sealed class StubHttpMessageHandler : HttpMessageHandler
+    {
+        private readonly Func<HttpResponseMessage> _responder;
+
+        public StubHttpMessageHandler(Func<HttpResponseMessage> responder) => _responder = responder;
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken) => Task.FromResult(_responder());
+    }
+
+    private sealed class DisposeTrackingStream : MemoryStream
+    {
+        public DisposeTrackingStream(byte[] buffer) : base(buffer, writable: false)
+        {
+        }
+
+        public bool Disposed { get; private set; }
+
+        protected override void Dispose(bool disposing)
+        {
+            Disposed = true;
+            base.Dispose(disposing);
+        }
+
+        public override ValueTask DisposeAsync()
+        {
+            Disposed = true;
+            return base.DisposeAsync();
+        }
+    }
+
+    #endregion
 }

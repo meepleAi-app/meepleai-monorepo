@@ -235,6 +235,8 @@ services:
       - ./prometheus/alerts/audit-outbox.yml:/etc/prometheus/audit-outbox.yml:ro
       # Issue #1965 — domain_event_outbox duplicate-publish trigger (referenced from prometheus.prod.yml rule_files).
       - ./prometheus/alerts/domain-event-outbox-duplicate-publish.yml:/etc/prometheus/domain-event-outbox-duplicate-publish.yml:ro
+      # Issue #3248 (epic #448 C5) — copyright enforcement observability alerts.
+      - ./prometheus/alerts/copyright-enforcement.yml:/etc/prometheus/copyright-enforcement.yml:ro
       - prometheus-prod:/prometheus
     deploy:
       resources:

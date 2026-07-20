@@ -538,7 +538,7 @@ internal class HybridSearchService : IHybridSearchService
             return 0f;
         }
 
-        var pointers = CrossReferencePointer.Matches(content).Count;
+        var pointers = CrossReferencePointer.Count(content);
         // A legend is a LIST of pointers; a single incidental page reference is not one.
         if (pointers < 2)
         {

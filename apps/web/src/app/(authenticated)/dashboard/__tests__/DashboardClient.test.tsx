@@ -59,7 +59,14 @@ vi.mock('@/hooks/queries/useGameNights', () => ({
     refetch: vi.fn(),
   })),
   // #2978 (invariante #17): inline RSVP mutation from the pending-invitee card.
-  useRsvpGameNight: vi.fn(() => ({ mutate: vi.fn() })),
+  // #3191: expose isPending/variables so DashboardClient can derive `pendingRsvpId`.
+  useRsvpGameNight: vi.fn(() => ({ mutate: vi.fn(), isPending: false, variables: undefined })),
+}));
+
+// #3191: control offline state for the RSVP-guard wiring tests. Default online (set in beforeEach).
+const networkStatusMock = vi.fn<() => { isOffline: boolean }>();
+vi.mock('@/hooks/useNetworkStatus', () => ({
+  useNetworkStatus: () => networkStatusMock(),
 }));
 
 vi.mock('@/hooks/queries/useLibrary', () => ({
@@ -125,9 +132,32 @@ vi.mock('@/lib/stores/cascade-navigation-store', () => ({
 
 import { DashboardClient } from '../DashboardClient';
 
+// #3191: shared fixture — a Published upcoming night where the viewer is a pending invitee,
+// so the Prossimi card renders the inline RSVP CTAs that the offline/double-submit guard targets.
+const PENDING_UPCOMING_NIGHT = {
+  id: '00000000-0000-0000-0000-000000000042',
+  organizerId: '00000000-0000-0000-0000-0000000000aa',
+  organizerName: 'Marco',
+  title: 'Serata su invito',
+  description: null,
+  scheduledAt: '2030-01-01T20:00:00Z',
+  location: null,
+  maxPlayers: null,
+  gameIds: [],
+  status: 'Published' as const,
+  acceptedCount: 1,
+  pendingCount: 2,
+  totalInvited: 3,
+  createdAt: '2024-01-01T00:00:00Z',
+  updatedAt: null,
+  viewerRsvpStatus: 'Pending' as const,
+};
+
 describe('DashboardClient (Asse C priority cluster)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // #3191: default to online; individual tests flip to offline.
+    networkStatusMock.mockReturnValue({ isOffline: false });
   });
 
   it('renders the dashboard hero with greeting + user name', () => {
@@ -186,6 +216,48 @@ describe('DashboardClient (Asse C priority cluster)', () => {
 
     expect(screen.getByText('Da confermare')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Conferma' })).toBeInTheDocument();
+  });
+
+  // #3191: the dashboard forwards `isOffline` to ProssimiSection so the inline RSVP
+  // CTAs are disabled while offline (parity with HomeFeed / PR #3189).
+  it('disables the pending-invitee RSVP CTAs when offline', async () => {
+    networkStatusMock.mockReturnValue({ isOffline: true });
+    const useUpcomingMock = vi.mocked(
+      await import('@/hooks/queries/useGameNights')
+    ).useUpcomingGameNights;
+    useUpcomingMock.mockReturnValueOnce({
+      data: [PENDING_UPCOMING_NIGHT],
+      isLoading: false,
+      isError: false,
+      refetch: refetchUpcoming,
+    } as unknown as ReturnType<typeof useUpcomingMock>);
+
+    render(<DashboardClient />);
+
+    expect(screen.getByRole('button', { name: 'Conferma' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Forse' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Declina' })).toBeDisabled();
+  });
+
+  // #3191: the dashboard derives `pendingRsvpId` from the in-flight mutation and forwards it,
+  // so the CTAs lock during an in-flight RSVP for that same night (anti-double-submit).
+  it('disables the RSVP CTAs while that night RSVP mutation is in flight', async () => {
+    const gameNights = vi.mocked(await import('@/hooks/queries/useGameNights'));
+    gameNights.useUpcomingGameNights.mockReturnValueOnce({
+      data: [PENDING_UPCOMING_NIGHT],
+      isLoading: false,
+      isError: false,
+      refetch: refetchUpcoming,
+    } as unknown as ReturnType<typeof gameNights.useUpcomingGameNights>);
+    gameNights.useRsvpGameNight.mockReturnValueOnce({
+      mutate: vi.fn(),
+      isPending: true,
+      variables: { id: PENDING_UPCOMING_NIGHT.id },
+    } as unknown as ReturnType<typeof gameNights.useRsvpGameNight>);
+
+    render(<DashboardClient />);
+
+    expect(screen.getByRole('button', { name: 'Conferma' })).toBeDisabled();
   });
 
   // #3084: the Recenti card shows the real per-night session count, not a hardcoded 0.

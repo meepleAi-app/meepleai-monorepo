@@ -182,4 +182,73 @@ describe('ProssimiSection', () => {
       expect(openDrawerMock).toHaveBeenCalledWith('gameNightEvent', 'gn-3');
     });
   });
+
+  // #3191: extend the offline-disabled RSVP pattern (PR #3189, HomeFeed) to the
+  // dashboard "Prossimi" inline CTAs, plus the anti-double-submit guard that this
+  // surface never had. Props are threaded from DashboardClient (parent owns the mutation).
+  describe('offline + double-submit guard (#3191)', () => {
+    const pendingCard: ProssimiGameNightCard = {
+      id: 'gn-3',
+      title: 'Casa Luca',
+      date: TOMORROW,
+      status: 'Published',
+      rsvpConfirmedCount: 1,
+      rsvpPendingCount: 2,
+      rsvpTotalCount: 3,
+      viewerRsvpStatus: 'Pending',
+    };
+
+    const rsvpButtonNames = ['Conferma', 'Forse', 'Declina'] as const;
+
+    it('disables all RSVP buttons when offline', () => {
+      render(
+        <ProssimiSection state="default" gameNights={[pendingCard]} onRsvp={vi.fn()} isOffline />
+      );
+      for (const name of rsvpButtonNames) {
+        expect(screen.getByRole('button', { name })).toBeDisabled();
+      }
+    });
+
+    it('keeps RSVP buttons enabled when online and idle', () => {
+      render(
+        <ProssimiSection
+          state="default"
+          gameNights={[pendingCard]}
+          onRsvp={vi.fn()}
+          isOffline={false}
+        />
+      );
+      for (const name of rsvpButtonNames) {
+        expect(screen.getByRole('button', { name })).not.toBeDisabled();
+      }
+    });
+
+    it('disables RSVP buttons while this card is submitting (double-submit guard)', () => {
+      render(
+        <ProssimiSection
+          state="default"
+          gameNights={[pendingCard]}
+          onRsvp={vi.fn()}
+          pendingRsvpId="gn-3"
+        />
+      );
+      for (const name of rsvpButtonNames) {
+        expect(screen.getByRole('button', { name })).toBeDisabled();
+      }
+    });
+
+    it('keeps RSVP buttons enabled while a different card is submitting', () => {
+      render(
+        <ProssimiSection
+          state="default"
+          gameNights={[pendingCard]}
+          onRsvp={vi.fn()}
+          pendingRsvpId="other-night"
+        />
+      );
+      for (const name of rsvpButtonNames) {
+        expect(screen.getByRole('button', { name })).not.toBeDisabled();
+      }
+    });
+  });
 });

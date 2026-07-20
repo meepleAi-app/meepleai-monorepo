@@ -31,9 +31,14 @@ vi.mock('@/hooks/useGameNightInvitation', () => ({
 vi.mock('@/hooks/useRespondToInvitation', () => ({
   useRespondToInvitation: vi.fn(),
 }));
+// #3191: control offline state to gate the public RSVP CTAs.
+vi.mock('@/hooks/useNetworkStatus', () => ({
+  useNetworkStatus: vi.fn(),
+}));
 
 const { useGameNightInvitation } = await import('@/hooks/useGameNightInvitation');
 const { useRespondToInvitation } = await import('@/hooks/useRespondToInvitation');
+const { useNetworkStatus } = await import('@/hooks/useNetworkStatus');
 
 // Local provider stack — the global renderWithProviders pulls in
 // ChatStoreProvider via a stale path, and this orchestrator only needs
@@ -125,6 +130,10 @@ function mockRespondHook(
 describe('PublicJoinEventView (issue #1169)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // #3191: default online; the offline test overrides.
+    vi.mocked(useNetworkStatus).mockReturnValue({
+      isOffline: false,
+    } as unknown as ReturnType<typeof useNetworkStatus>);
   });
 
   describe('surface routing', () => {
@@ -221,6 +230,32 @@ describe('PublicJoinEventView (issue #1169)', () => {
       // Form rendered with Accept / Decline CTAs.
       expect(screen.getByRole('button', { name: /I'm in/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Can't make it/i })).toBeInTheDocument();
+    });
+
+    // #3191: the public invite RSVP surface is the highest-offline-probability one
+    // (anonymous link opened from email/SMS on mobile). Gate its CTAs like the
+    // authenticated surfaces (parity with HomeFeed / PR #3189).
+    it('disables the Accept + Decline CTAs when offline', () => {
+      vi.mocked(useNetworkStatus).mockReturnValue({
+        isOffline: true,
+      } as unknown as ReturnType<typeof useNetworkStatus>);
+      vi.mocked(useGameNightInvitation).mockReturnValue(mockInvitationHook());
+      vi.mocked(useRespondToInvitation).mockReturnValue(mockRespondHook());
+
+      renderWithIntl(<PublicJoinEventView code="tok-1169" />);
+
+      expect(screen.getByRole('button', { name: /I'm in/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /Can't make it/i })).toBeDisabled();
+    });
+
+    it('keeps the Accept + Decline CTAs enabled when online', () => {
+      vi.mocked(useGameNightInvitation).mockReturnValue(mockInvitationHook());
+      vi.mocked(useRespondToInvitation).mockReturnValue(mockRespondHook());
+
+      renderWithIntl(<PublicJoinEventView code="tok-1169" />);
+
+      expect(screen.getByRole('button', { name: /I'm in/i })).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: /Can't make it/i })).not.toBeDisabled();
     });
 
     it('routes to token-cancelled when invitation.status === "Cancelled"', () => {

@@ -35,6 +35,7 @@ import {
   type PublicRsvpFormLabels,
 } from '@/components/features/game-night-detail';
 import { useGameNightInvitation } from '@/hooks/useGameNightInvitation';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useRespondToInvitation } from '@/hooks/useRespondToInvitation';
 import { useTranslation } from '@/hooks/useTranslation';
 import {
@@ -68,6 +69,9 @@ export function PublicJoinEventView({ code }: PublicJoinEventViewProps): JSX.Ele
 
   const invitationQuery = useGameNightInvitation({ token: code });
   const respond = useRespondToInvitation({ token: code });
+  // #3191: the anonymous invite link is the highest-offline-probability RSVP surface
+  // (opened from email/SMS on mobile) — gate its CTAs like the authenticated surfaces.
+  const { isOffline } = useNetworkStatus();
 
   const invitation = invitationQuery.data;
 
@@ -227,6 +231,7 @@ export function PublicJoinEventView({ code }: PublicJoinEventViewProps): JSX.Ele
             formatMessage={formatMessage}
             submittingAction={respond.state === 'submitting' ? lastSubmittedAction(respond) : null}
             onSubmit={handleSubmit}
+            isOffline={isOffline}
             errorBanner={
               respond.state === 'error'
                 ? t('pages.gameNightJoin.error.generic.body')
@@ -282,6 +287,8 @@ interface RsvpSurfaceProps {
   readonly formatMessage: ReturnType<typeof useTranslation>['formatMessage'];
   readonly submittingAction: RsvpAction | null;
   readonly onSubmit: (action: RsvpAction, displayName: string | null) => void;
+  // #3191: disable the RSVP CTAs while offline.
+  readonly isOffline: boolean;
   readonly errorBanner: string | null;
 }
 
@@ -293,6 +300,7 @@ function RsvpSurface({
   formatMessage,
   submittingAction,
   onSubmit,
+  isOffline,
   errorBanner,
 }: RsvpSurfaceProps): JSX.Element {
   // Map backend DTO `status` (covers Expired/Cancelled too) onto the union
@@ -394,6 +402,7 @@ function RsvpSurface({
           currentResponse={currentResponse}
           initialDisplayName={respondedByName}
           submittingAction={submittingAction}
+          disabled={isOffline}
           onSubmit={onSubmit}
         />
       </div>

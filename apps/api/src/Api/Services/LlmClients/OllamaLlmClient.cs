@@ -54,6 +54,14 @@ internal class OllamaLlmClient : ILlmClient
         _logger.LogInformation("OllamaLlmClient initialized with endpoint: {OllamaUrl} (zero cost - self-hosted)", ollamaUrl);
     }
 
+    // Bare model-id prefixes that belong to cloud providers Ollama never serves.
+    // Ambiguous names that also exist as local Ollama models (llama, mistral, qwen,
+    // phi, gemma, ...) are intentionally NOT listed.
+    private static readonly string[] CloudOnlyModelPrefixes =
+    {
+        "claude", "gpt", "chatgpt", "gemini", "grok", "o1-", "o3-", "o4-",
+    };
+
     /// <inheritdoc/>
     public bool SupportsModel(string modelId)
     {
@@ -68,6 +76,18 @@ internal class OllamaLlmClient : ILlmClient
         if (modelId.StartsWith("deepseek-", StringComparison.OrdinalIgnoreCase))
         {
             return false;
+        }
+        // Reject bare cloud-provider model ids (e.g. "claude-haiku-4-5-20251001", "gpt-4o").
+        // Without this, an agent misconfigured with an unprefixed Anthropic/OpenAI model id
+        // silently routes here (catch-all) and returns an empty completion, so the caller
+        // falls back to dumping raw retrieved chunks. Rejecting makes GetClientForModel raise
+        // a loud "no client supports model" error that surfaces the misconfiguration instead.
+        foreach (var prefix in CloudOnlyModelPrefixes)
+        {
+            if (modelId.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
         }
         return true;
     }

@@ -46,6 +46,20 @@ public class OllamaLlmClientTests
     }
 
     [Fact]
+    public void SupportsModel_BareCloudModelId_ReturnsFalse()
+    {
+        // Arrange
+        var client = CreateClient();
+
+        // Act & Assert: bare (unprefixed) cloud model ids must NOT route to Ollama.
+        // They are agent misconfigurations that should surface a loud routing error
+        // instead of a silent empty completion (RAG answer-quality regression).
+        client.SupportsModel("claude-haiku-4-5-20251001").Should().BeFalse();
+        client.SupportsModel("gpt-4o").Should().BeFalse();
+        client.SupportsModel("gemini-1.5-pro").Should().BeFalse();
+    }
+
+    [Fact]
     public void ProviderName_ReturnsOllama()
     {
         // Arrange & Act

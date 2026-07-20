@@ -259,7 +259,24 @@ export function createAdminMonitorClient(http: HttpClient) {
       const AlertHistoryItemSchema = z.object({
         id: z.string(),
         alertType: z.string(),
-        severity: z.enum(['Critical', 'Warning', 'Info']),
+        // #3231: the API emits lowercase severities ('critical'/'warning'/'error'/'info'); normalize
+        // to canonical Title-Case (never throw) instead of a strict PascalCase enum that rejected
+        // nearly every real alert. 'error' maps to 'Critical' (the badge/filter have no Error case).
+        severity: z.preprocess(
+          v => {
+            const s = typeof v === 'string' ? v.trim().toLowerCase() : '';
+            switch (s) {
+              case 'critical':
+              case 'error':
+                return 'Critical';
+              case 'warning':
+                return 'Warning';
+              default:
+                return 'Info';
+            }
+          },
+          z.enum(['Critical', 'Warning', 'Info'])
+        ),
         message: z.string(),
         metadata: z.record(z.string(), z.unknown()).nullable(),
         triggeredAt: z.string(),

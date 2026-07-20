@@ -59,6 +59,19 @@ internal class PdfTextProcessingDomainService
         // FIX MA0023: Add ExplicitCapture to prevent capturing unneeded groups
         text = Regex.Replace(text, @"[ \t]+", " ", RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
 
+        // Step 2.5: De-hyphenate words split across a line break and repair
+        // Unicode-noncharacter break markers. Some PDF extractors emit U+FFFE (a
+        // noncharacter) where a discretionary line-break hyphen was, so a word like
+        // "giocatore" becomes "gio<U+FFFE>catore" (or "gio<U+FFFE>\ncatore"). Treat a
+        // hyphen glyph, soft hyphen, Unicode hyphens or U+FFFE between two letters as a
+        // word-break marker and rejoin the fragments.
+#pragma warning disable MA0023 // Add RegexOptions.ExplicitCapture - disabled because we need $1 and $2 substitution
+        // (a) letter + break-marker + optional spaces/newline + letter -> join (drop the hyphen)
+        text = Regex.Replace(text, "(\\p{L})[­‐‑￾-][ \\t]*\\n[ \\t]*(\\p{L})", "$1$2", RegexOptions.None, TimeSpan.FromSeconds(1));
+        // (b) letter + soft-hyphen/noncharacter (newline already collapsed by extractor) + letter -> join
+        text = Regex.Replace(text, "(\\p{L})[­￾](\\p{L})", "$1$2", RegexOptions.None, TimeSpan.FromSeconds(1));
+#pragma warning restore MA0023
+
         // Step 3: Fix broken paragraphs (lines that end mid-word)
         // If a line ends with a letter (mid-word) and next line starts with a letter, merge them
         // Note: ExplicitCapture intentionally NOT used here - we need capture groups for replacement
@@ -153,7 +166,7 @@ internal class PdfTextProcessingDomainService
     }
 
     /// <summary>
-    /// Removes zero-width characters that can interfere with text processing
+    /// Removes zero-width characters and Unicode noncharacters (U+FFFE/U+FFFF) that can interfere with text processing
     /// </summary>
     private static string RemoveZeroWidthCharacters(string text)
     {
@@ -163,7 +176,9 @@ internal class PdfTextProcessingDomainService
             .Replace("\u200B", string.Empty) // zero-width space
             .Replace("\u200C", string.Empty) // zero-width non-joiner
             .Replace("\u200D", string.Empty) // zero-width joiner
-            .Replace("\uFEFF", string.Empty); // byte order mark (BOM)
+            .Replace("\uFEFF", string.Empty) // byte order mark (BOM)
+            .Replace("\uFFFE", string.Empty) // U+FFFE noncharacter (emitted by some PDF extractors)
+            .Replace("\uFFFF", string.Empty); // U+FFFF noncharacter
     }
 }
 

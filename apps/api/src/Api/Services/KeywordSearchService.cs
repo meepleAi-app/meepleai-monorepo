@@ -21,10 +21,12 @@ internal class KeywordSearchService : IKeywordSearchService
     // Default PostgreSQL FTS configuration when a language is unknown/unspecified.
     // #2569 background: the GENERATED search_vector column on text_chunks/pdf_documents is built
     // with 'english', so a divergent query config against THAT column silently returns nothing.
-    // This service now honours per-game language (see ResolveGameFtsConfigAsync): English keeps
-    // using the indexed 'english' search_vector column, while non-english languages are matched
-    // against a query-time to_tsvector(cfg, Content) so the query config and vector config always
-    // agree (sidestepping the #2569 footgun without a multilingual column). See ResolveFtsConfig.
+    // The chunk search (SearchAsync) now honours per-game language (see ResolveGameFtsConfigAsync):
+    // English keeps using the indexed 'english' search_vector column, while non-english languages
+    // are matched against a query-time to_tsvector(cfg, Content) so the query config and vector
+    // config always agree (sidestepping the #2569 footgun without a multilingual column). The
+    // document search (SearchDocumentsAsync) stays english-pinned — see its own note. See
+    // ResolveFtsConfig.
     private const string DefaultTextSearchConfig = "english";
     private const int DefaultNormalization = 1; // ts_rank_cd normalization method (1 = divide by document length)
 
@@ -183,8 +185,12 @@ internal class KeywordSearchService : IKeywordSearchService
 
         var gameIdString = gameId.ToString();
 
-        // ADR-016 Phase 3: Resolve language to FTS configuration
-        var textSearchConfig = ResolveFtsConfig(language);
+        // Document-level keyword search stays pinned to the english 'search_vector' column.
+        // Unlike SearchAsync it does NOT use a query-time to_tsvector, so a non-english config
+        // here would reintroduce the #2569 footgun (e.g. an 'italian' query against the english
+        // column silently returns 0 rows). This path has no callers today (only SearchAsync is
+        // used), so pinning to english keeps it correct and footgun-free.
+        var textSearchConfig = DefaultTextSearchConfig;
 
         try
         {
@@ -276,8 +282,9 @@ internal class KeywordSearchService : IKeywordSearchService
             return string.Join(" | ", weightedTerms); // OR operator for multiple terms
         }
 
-        // Default: OR query (any term may match). #3196 RAG fix: strict AND (" & ") returned 0
-        // hits for natural-language questions like "setup per N giocatori" whenever the four
+        // Default: OR query (any term may match). RAG retrieval fix (follow-up to #3241):
+        // strict AND (" & ") returned 0 hits for natural-language questions like "setup per N
+        // giocatori" whenever the four
         // surface tokens don't co-occur in one chunk, collapsing hybrid search to vector-only.
         // OR keeps recall; ranking (ts_rank_cd + RRF fusion + reranker) sorts the candidates.
         return sanitizedQuery.Replace(" ", " | ");
@@ -356,9 +363,9 @@ internal class KeywordSearchService : IKeywordSearchService
     /// </summary>
     private async Task<string> ResolveGameFtsConfigAsync(Guid gameId, string requestedLanguage, CancellationToken cancellationToken)
     {
+        var previousTimeout = _dbContext.Database.GetCommandTimeout();
         try
         {
-            var previousTimeout = _dbContext.Database.GetCommandTimeout();
             _dbContext.Database.SetCommandTimeout(3);
             var dominant = await _dbContext.Database
                 .SqlQueryRaw<string>(@"
@@ -372,7 +379,6 @@ internal class KeywordSearchService : IKeywordSearchService
                     new NpgsqlParameter("@gameId", gameId.ToString()))
                 .AsNoTracking()
                 .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
-            _dbContext.Database.SetCommandTimeout(previousTimeout);
 
             return ResolveFtsConfig(string.IsNullOrWhiteSpace(dominant) ? requestedLanguage : dominant);
         }
@@ -383,6 +389,12 @@ internal class KeywordSearchService : IKeywordSearchService
             return ResolveFtsConfig(requestedLanguage);
         }
 #pragma warning restore CA1031
+        finally
+        {
+            // Restore even on exception (incl. the 3s timeout above) — the request-scoped
+            // DbContext is reused by SearchAsync; leaking the 3s cap would throttle the request.
+            _dbContext.Database.SetCommandTimeout(previousTimeout);
+        }
     }
 
     /// <summary>

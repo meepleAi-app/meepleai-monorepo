@@ -113,4 +113,13 @@ describe('ObjectivesEditor', () => {
     );
     OBJECTIVES.forEach(o => expect(screen.getByTestId(`obj-p1-${o}`)).toBeDisabled());
   });
+
+  // #3196: mobile touch-target on the objective chips.
+  it('gives each objective chip a 44px touch target', () => {
+    render(
+      <ObjectivesEditor players={PLAYERS} availableObjectives={OBJECTIVES} onChange={vi.fn()} />
+    );
+    const chip = screen.getByTestId(`obj-p1-${OBJECTIVES[0]}`).closest('label');
+    expect(chip).toHaveClass('min-h-[44px]');
+  });
 });

@@ -98,13 +98,14 @@ export function ObjectivesEditor({
                 return (
                   <label
                     key={objective}
-                    className="inline-flex items-center gap-1 rounded-md border border-border-strong px-2 py-1 text-sm"
+                    className="inline-flex min-h-[44px] items-center gap-2 rounded-md border border-border-strong px-3 py-2 text-sm md:min-h-0 md:gap-1 md:px-2 md:py-1"
                   >
                     <input
                       type="checkbox"
                       checked={checked}
                       onChange={() => toggle(player.id, objective)}
                       data-testid={testId}
+                      className="size-5 md:size-4"
                     />
                     <span>{objective}</span>
                   </label>

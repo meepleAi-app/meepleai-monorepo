@@ -82,4 +82,12 @@ describe('PointsEditor', () => {
       ],
     });
   });
+
+  // #3196: mobile touch-target.
+  it('sizes the input for touch (min-h-[44px]) with a numeric keypad', () => {
+    render(<PointsEditor players={PLAYERS} onChange={vi.fn()} />);
+    const input = screen.getByTestId('points-input-p1');
+    expect(input).toHaveClass('min-h-[44px]');
+    expect(input).toHaveAttribute('inputmode', 'numeric');
+  });
 });

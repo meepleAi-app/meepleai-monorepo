@@ -88,7 +88,11 @@ function CooldownBar({ trippedAtIso, cooldownSec }: CooldownBarProps) {
   useEffect(() => {
     if (remaining <= 0) return;
     const id = setInterval(() => {
-      setRemaining(computeRemaining());
+      const next = computeRemaining();
+      setRemaining(next);
+      // #3231: stop the interval once the countdown hits zero — the effect deps don't include
+      // `remaining`, so without this the timer would tick at 1 Hz forever.
+      if (next <= 0) clearInterval(id);
     }, 1000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps

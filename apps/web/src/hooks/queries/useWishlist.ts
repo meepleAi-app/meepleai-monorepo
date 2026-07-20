@@ -4,6 +4,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { toast } from '@/components/layout/Toast';
 import { api } from '@/lib/api';
 import type {
   AddToWishlistRequest,
@@ -57,6 +58,10 @@ export function useRemoveFromWishlist() {
     mutationFn: (id: string) => api.wishlist.remove(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: wishlistKeys.all });
+    },
+    // #3231: surface removal failures — the action failed silently before.
+    onError: () => {
+      toast.error('Impossibile rimuovere il gioco dalla wishlist.');
     },
   });
 }

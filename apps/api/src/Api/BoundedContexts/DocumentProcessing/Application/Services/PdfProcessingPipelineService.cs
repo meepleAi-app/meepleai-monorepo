@@ -493,6 +493,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 .Select(pc => pc.Text));
 
             pdfDoc.ExtractedText = fullText;
+            pdfDoc.StructuredElementsJson = extractResult.StructuredElements is null
+                ? null
+                : JsonSerializer.Serialize(extractResult.StructuredElements);
             pdfDoc.PageCount = extractResult.TotalPages;
             pdfDoc.CharacterCount = extractResult.TotalCharacters;
             try

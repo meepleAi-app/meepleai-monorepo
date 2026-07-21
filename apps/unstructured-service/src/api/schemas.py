@@ -26,6 +26,16 @@ class TextChunkSchema(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
 
+class ElementSchema(BaseModel):
+    """Raw partition element (pre-chunking), preserving its structural category."""
+
+    text: str = Field(description="Element text content")
+    page_number: int = Field(description="Page number (1-indexed)", ge=1)
+    category: Optional[str] = Field(
+        default=None, description="Raw Unstructured category (Title, NarrativeText, Table, …)"
+    )
+
+
 class QualityBreakdownSchema(BaseModel):
     """Quality score breakdown"""
 
@@ -40,6 +50,9 @@ class PdfExtractionResponse(BaseModel):
 
     text: str = Field(description="Full extracted text")
     chunks: List[TextChunkSchema] = Field(description="Semantic text chunks")
+    elements: List[ElementSchema] = Field(
+        default_factory=list, description="Raw partition elements with structural category"
+    )
     quality_score: float = Field(description="Overall quality score (0.0-1.0)", ge=0.0, le=1.0)
     page_count: int = Field(description="Number of pages", ge=1)
     metadata: Dict[str, Any] = Field(description="Extraction metadata")

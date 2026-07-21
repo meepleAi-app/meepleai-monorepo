@@ -15,6 +15,7 @@ from .application import PdfExtractionService
 from .api.schemas import (
     PdfExtractionResponse,
     TextChunkSchema,
+    ElementSchema,
     ErrorDetail,
     ErrorResponse,
     HealthCheckResponse,
@@ -212,6 +213,15 @@ async def extract_pdf(
                     metadata=chunk.metadata or {},
                 )
                 for chunk in result.chunks
+            ],
+            elements=[
+                ElementSchema(
+                    text=el.text,
+                    page_number=getattr(getattr(el, "metadata", None), "page_number", 1) or 1,
+                    category=getattr(el, "category", None),
+                )
+                for el in result.elements
+                if getattr(el, "text", None)
             ],
             quality_score=result.quality_score.total_score,
             page_count=result.page_count,

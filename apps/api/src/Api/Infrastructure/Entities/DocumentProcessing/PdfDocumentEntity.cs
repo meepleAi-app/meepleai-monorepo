@@ -53,6 +53,10 @@ public class PdfDocumentEntity
     public int? DiagramCount { get; set; }
     public int? AtomicRuleCount { get; set; }
 
+    // SP2 (#3268): raw extraction elements (versioned JSON) so IndexPdf can rebuild the
+    // ExtractedDocument for heading-aware chunking. Invariant: co-written or nulled with ExtractedText.
+    public string? StructuredElementsJson { get; set; }
+
     // PDF-08: Progress tracking
     public string? ProcessingProgressJson { get; set; }
 

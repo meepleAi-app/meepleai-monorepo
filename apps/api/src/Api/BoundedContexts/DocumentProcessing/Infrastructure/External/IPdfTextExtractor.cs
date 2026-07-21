@@ -85,13 +85,15 @@ internal record PagedTextExtractionResult(
     int TotalPages,
     int TotalCharacters,
     bool OcrTriggered,
-    string? ErrorMessage = null)
+    string? ErrorMessage = null,
+    IReadOnlyList<ExtractedElement>? StructuredElements = null)
 {
     public static PagedTextExtractionResult CreateSuccess(
         IList<PageTextChunk> pageChunks,
         int totalPages,
         int totalCharacters,
-        bool ocrTriggered)
+        bool ocrTriggered,
+        IReadOnlyList<ExtractedElement>? structuredElements = null)
     {
         return new PagedTextExtractionResult(
             Success: true,
@@ -99,7 +101,8 @@ internal record PagedTextExtractionResult(
             TotalPages: totalPages,
             TotalCharacters: totalCharacters,
             OcrTriggered: ocrTriggered,
-            ErrorMessage: null);
+            ErrorMessage: null,
+            StructuredElements: structuredElements);
     }
 
     public static PagedTextExtractionResult CreateFailure(string errorMessage)

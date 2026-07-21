@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using AgentDefinitionEntity = Api.BoundedContexts.KnowledgeBase.Domain.Entities.AgentDefinition;
 using Api.Models;
@@ -31,6 +32,7 @@ public sealed class PlaygroundChatCommandHandlerTests
     private readonly Mock<ILlmCostCalculator> _mockCostCalculator;
     private readonly Mock<ILlmCostLogRepository> _mockCostLogRepository;
     private readonly Mock<IRagExecutionRepository> _mockRagExecutionRepository;
+    private readonly Mock<ICrossEncoderReranker> _mockReranker;
     private readonly Mock<ILogger<PlaygroundChatCommandHandler>> _mockLogger;
     private readonly PlaygroundChatCommandHandler _handler;
 
@@ -49,6 +51,8 @@ public sealed class PlaygroundChatCommandHandlerTests
         _mockCostCalculator = new Mock<ILlmCostCalculator>();
         _mockCostLogRepository = new Mock<ILlmCostLogRepository>();
         _mockRagExecutionRepository = new Mock<IRagExecutionRepository>();
+        _mockReranker = new Mock<ICrossEncoderReranker>();
+        SetupPassthroughReranker(_mockReranker);
         _mockLogger = new Mock<ILogger<PlaygroundChatCommandHandler>>();
 
         // Set up cost calculator to return valid result (avoids NRE in cost logging)
@@ -63,8 +67,24 @@ public sealed class PlaygroundChatCommandHandlerTests
             _mockCostCalculator.Object,
             _mockCostLogRepository.Object,
             _mockRagExecutionRepository.Object,
+            _mockReranker.Object,
             _mockLogger.Object
         );
+    }
+
+    /// <summary>
+    /// Default reranker mock: preserves input order and returns the top-K (Issue #2708 wiring).
+    /// </summary>
+    private static void SetupPassthroughReranker(Mock<ICrossEncoderReranker> mock)
+    {
+        mock
+            .Setup(r => r.RerankAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<RerankChunk>>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string _, IReadOnlyList<RerankChunk> chunks, int? topK, CancellationToken _) =>
+                new RerankResult(
+                    chunks.Take(topK ?? chunks.Count)
+                        .Select((c, i) => new RerankedChunk(c.Id, c.Content, c.OriginalScore, 0.9 - (i * 0.1)))
+                        .ToList(),
+                    "test-model", 1.0));
     }
 
     [Fact]
@@ -448,9 +468,10 @@ public sealed class PlaygroundChatCommandHandlerTests
             .Setup(r => r.GetByIdAsync(agentDefId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(agentDef);
 
+        // limit is now the wider rerank candidate pool (20), not the final top-K (Issue #2708).
         _mockHybridSearchService
             .Setup(s => s.SearchAsync(
-                It.IsAny<string>(), gameId, SearchMode.Hybrid, 5,
+                It.IsAny<string>(), gameId, SearchMode.Hybrid, 20,
                 null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>
             {
@@ -488,6 +509,74 @@ public sealed class PlaygroundChatCommandHandlerTests
         var complete = completeEvent.Data.Should().BeOfType<PlaygroundStreamingComplete>().Which;
         complete.confidence.Should().NotBeNull();
         (complete.confidence > 0).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Should_Rerank_CandidatePool_To_FinalTopK_PreservingChunkIndex()
+    {
+        // Arrange — a 20-chunk candidate pool that the cross-encoder narrows to the final top-5.
+        var agentDefId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var agentDef = CreateActiveAgentDefinition(agentDefId, "RAG Agent");
+        var command = new PlaygroundChatCommand(agentDefId, "How do I set up the game?", gameId);
+
+        _mockAgentDefinitionRepository
+            .Setup(r => r.GetByIdAsync(agentDefId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(agentDef);
+
+        var pool = Enumerable.Range(0, 20)
+            .Select(i => new HybridSearchResult
+            {
+                ChunkId = $"chunk-{i}",
+                Content = $"passage {i}",
+                PdfDocumentId = Guid.NewGuid().ToString(),
+                GameId = gameId,
+                ChunkIndex = i,
+                PageNumber = 1,
+                HybridScore = 0.90f - (i * 0.01f),
+                Mode = SearchMode.Hybrid
+            })
+            .ToList();
+
+        _mockHybridSearchService
+            .Setup(s => s.SearchAsync(
+                It.IsAny<string>(), gameId, SearchMode.Hybrid, 20,
+                null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(pool);
+
+        // Reranker REVERSES the pool and returns the top-5 — proves the final order follows the
+        // cross-encoder, not the raw RRF order, and that the pool was actually narrowed.
+        _mockReranker
+            .Setup(r => r.RerankAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<RerankChunk>>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string _, IReadOnlyList<RerankChunk> chunks, int? topK, CancellationToken _) =>
+                new RerankResult(
+                    chunks.Reverse().Take(topK ?? chunks.Count)
+                        .Select((c, i) => new RerankedChunk(c.Id, c.Content, c.OriginalScore, 1.0 - (i * 0.1)))
+                        .ToList(),
+                    "test-model", 1.0));
+
+        SetupLlmClientStream(new[] { new StreamChunk("ok") });
+
+        // Act
+        var events = new List<RagStreamingEvent>();
+        await foreach (var @event in _handler.Handle(command, CancellationToken.None))
+        {
+            events.Add(@event);
+        }
+
+        // Assert — 20-chunk pool reranked and narrowed to the final top-5, in reranker order.
+        var citations = events.First(e => e.Type == StreamingEventType.Citations)
+            .Data.Should().BeOfType<StreamingCitations>().Which.citations;
+        citations.Should().HaveCount(5);
+        citations.Select(c => c.text).Should().Equal("passage 19", "passage 18", "passage 17", "passage 16", "passage 15");
+        // Snippet.line == HybridSearchResult.ChunkIndex — survives the rerank (a SearchResultDto
+        // conversion would have dropped it).
+        citations.Select(c => c.line).Should().Equal(19, 18, 17, 16, 15);
+
+        // The reranker was invoked once with the final top-K (5), not the pool size.
+        _mockReranker.Verify(
+            r => r.RerankAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<RerankChunk>>(), It.Is<int?>(k => k == 5), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]

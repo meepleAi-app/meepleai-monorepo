@@ -438,10 +438,14 @@ internal class HybridSearchService : IHybridSearchService
                 keywordRrfScore = keywordItem != null ? keywordWeight / (rrfK + keywordItem.Rank) : 0f;
             }
 
-            // Phase D (D6) + Slice C: role-match boost. Both arms denormalize the same
-            // text_chunks.role_tags (keyword from text_chunks, vector from pgvector_embeddings.role_tags),
-            // so union the two — a chunk surfacing via EITHER arm carries its role. When the chunk
-            // overlaps the user's classified intent, apply an additive boost on top of the fused RRF.
+            // Phase D (D6) + Slice C: role-match boost. Take the role tags from whichever arm
+            // surfaced the chunk (both denormalize the same text_chunks.role_tags — keyword from
+            // text_chunks, vector from pgvector_embeddings.role_tags). The union is defensive: with
+            // the current fusion keying the two arms never share a key (vector = "{VectorDocumentId}
+            // _{ChunkIndex}", keyword = raw text_chunks.Id), so each entry is single-arm and the OR
+            // reduces to the present arm — a genuine both-arm merge awaits the fusion-key alignment
+            // follow-up. When the chunk overlaps the user's classified intent, apply an additive
+            // boost on top of the fused RRF.
             var vectorRoleTags = hasVector && vectorItem != null
                 ? vectorItem.Result.RoleTags
                 : GameBookRole.None;

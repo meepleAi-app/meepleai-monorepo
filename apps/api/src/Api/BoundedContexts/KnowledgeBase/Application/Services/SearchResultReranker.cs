@@ -2,6 +2,7 @@ using System.Globalization;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.Observability;
+using Api.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
@@ -21,11 +22,51 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 /// </summary>
 internal static class SearchResultReranker
 {
-    public static async Task<List<SearchResultDto>> RerankAsync(
+    /// <summary>
+    /// Reranks <see cref="SearchResultDto"/> results (the /agents/qa[/stream] path).
+    /// </summary>
+    public static Task<List<SearchResultDto>> RerankAsync(
         ICrossEncoderReranker reranker,
         string query,
         IReadOnlyList<SearchResultDto> results,
         int topK,
+        ILogger logger,
+        CancellationToken cancellationToken)
+        => RerankByIndexAsync(
+            reranker, query, results, topK,
+            static r => r.TextContent, static r => r.RelevanceScore,
+            logger, cancellationToken);
+
+    /// <summary>
+    /// Reranks <see cref="HybridSearchResult"/> results (Slice B: the playground path). Uses the
+    /// same index-keyed core so it returns the ORIGINAL objects reordered/trimmed — every field
+    /// (notably <c>ChunkIndex</c>, which a <see cref="SearchResultDto"/> conversion would drop)
+    /// survives untouched.
+    /// </summary>
+    public static Task<List<HybridSearchResult>> RerankAsync(
+        ICrossEncoderReranker reranker,
+        string query,
+        IReadOnlyList<HybridSearchResult> results,
+        int topK,
+        ILogger logger,
+        CancellationToken cancellationToken)
+        => RerankByIndexAsync(
+            reranker, query, results, topK,
+            static r => r.Content, static r => (double)r.HybridScore,
+            logger, cancellationToken);
+
+    /// <summary>
+    /// Index-keyed reranking core shared by both public overloads. The list index is the stable key
+    /// that maps a <see cref="RerankChunk"/> back to its original element, so the reranker only needs
+    /// a text + score projection and all other fields pass through opaquely.
+    /// </summary>
+    private static async Task<List<T>> RerankByIndexAsync<T>(
+        ICrossEncoderReranker reranker,
+        string query,
+        IReadOnlyList<T> results,
+        int topK,
+        Func<T, string> contentSelector,
+        Func<T, double> scoreSelector,
         ILogger logger,
         CancellationToken cancellationToken)
     {
@@ -39,12 +80,11 @@ internal static class SearchResultReranker
             return results.Take(topK).ToList();
         }
 
-        // The list index is the stable key mapping a RerankChunk back to its SearchResultDto.
         var rerankChunks = results
             .Select((r, i) => new RerankChunk(
                 Id: i.ToString(CultureInfo.InvariantCulture),
-                Content: r.TextContent,
-                OriginalScore: r.RelevanceScore))
+                Content: contentSelector(r),
+                OriginalScore: scoreSelector(r)))
             .ToList();
 
         try
@@ -53,14 +93,7 @@ internal static class SearchResultReranker
                 .RerankAsync(query, rerankChunks, topK, cancellationToken)
                 .ConfigureAwait(false);
 
-            var reranked = rerankResult.Chunks
-                .Select(c => int.TryParse(c.Id, NumberStyles.Integer, CultureInfo.InvariantCulture, out var idx) ? idx : -1)
-                .Where(idx => idx >= 0 && idx < results.Count)
-                .Select(idx => results[idx])
-                .ToList();
-
-            // Defensive: a reranker that returns no mappable chunks must not blank the context.
-            return reranked.Count > 0 ? reranked : results.Take(topK).ToList();
+            return MapRerankedIndices(results, rerankResult.Chunks, topK);
         }
         catch (Exception ex)
         {
@@ -68,5 +101,28 @@ internal static class SearchResultReranker
             MeepleAiMetrics.RecordRetrievalFallback(MeepleAiMetrics.RagFallbackTypes.Reranker);
             return results.Take(topK).ToList();
         }
+    }
+
+    /// <summary>
+    /// Pure index-mapping: maps each reranked chunk's list-index id back to its original element,
+    /// dropping unparseable/out-of-range ids. If nothing maps (a reranker that renamed/dropped all
+    /// ids), falls back to the raw top-K so the context is never blanked.
+    /// </summary>
+    internal static List<T> MapRerankedIndices<T>(
+        IReadOnlyList<T> results,
+        IReadOnlyList<RerankedChunk> reranked,
+        int topK)
+    {
+        ArgumentNullException.ThrowIfNull(results);
+        ArgumentNullException.ThrowIfNull(reranked);
+
+        var mapped = reranked
+            .Select(c => int.TryParse(c.Id, NumberStyles.Integer, CultureInfo.InvariantCulture, out var idx) ? idx : -1)
+            .Where(idx => idx >= 0 && idx < results.Count)
+            .Select(idx => results[idx])
+            .ToList();
+
+        // Defensive: a reranker that returns no mappable chunks must not blank the context.
+        return mapped.Count > 0 ? mapped : results.Take(topK).ToList();
     }
 }

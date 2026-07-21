@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Configuration;
 using Api.Infrastructure;
@@ -228,6 +229,75 @@ public class IndexPdfCommandHandlerTests
     {
         // Assert
         Enum.IsDefined(typeof(PdfIndexingErrorCode), errorCode).Should().BeTrue();
+    }
+
+    // role_tags index-population (review #1555): handler-driven test that the classified role
+    // reaches BOTH persisted sinks — pgvector_embeddings.role_tags AND text_chunks.role_tags — in
+    // sync, per chunk. Without a classifier this is invisible (roles default to None), so this is
+    // the only test that actually observes the fix.
+    [Fact]
+    public async Task Handle_WithRoleClassifier_PopulatesRoleTagsOnBothSinksInSync()
+    {
+        // Arrange
+        using var context = CreateFreshDbContext();
+        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+        var pdf = CreatePdfDocument(pdfId, gameId, "completed", GenerateExtractedText(120));
+        await context.PdfDocuments.AddAsync(pdf);
+        await context.SaveChangesAsync();
+
+        var textChunks = GenerateTextChunks(4);
+        chunkingServiceMock
+            .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+            .Returns(textChunks);
+        embeddingServiceMock
+            .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((List<string> texts, CancellationToken ct) =>
+                new EmbeddingResult { Success = true, Embeddings = texts.Select(_ => GenerateRandomEmbedding(3072)).ToList() });
+        embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
+        embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
+
+        // Distinct role per chunk proves per-chunk alignment (not a uniform value).
+        var expectedRoles = new[] { GameBookRole.Setup, GameBookRole.RulesReference, GameBookRole.Lore, GameBookRole.Setup };
+        var classifierMock = new Mock<IRoleClassifierService>();
+        classifierMock
+            .Setup(x => x.ClassifyAsync(It.IsAny<IReadOnlyList<ChunkInput>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedRoles);
+
+        var handler = new IndexPdfCommandHandler(
+            context,
+            chunkingServiceMock.Object,
+            embeddingServiceMock.Object,
+            loggerMock.Object,
+            indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>(),
+            timeProvider: null,
+            roleClassifier: classifierMock.Object);
+
+        // Act
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeTrue();
+
+        var vectorRoleTags = await context.PgVectorEmbeddings
+            .OrderBy(e => e.ChunkIndex)
+            .Select(e => e.RoleTags)
+            .ToListAsync();
+        var textChunkRoleTags = await context.TextChunks
+            .Where(tc => tc.PdfDocumentId == pdfId)
+            .OrderBy(tc => tc.ChunkIndex)
+            .Select(tc => tc.RoleTags)
+            .ToListAsync();
+
+        var expectedInts = expectedRoles.Select(r => (int)r).ToList();
+        // pgvector_embeddings.role_tags is now populated (was always 0) and matches per chunk...
+        vectorRoleTags.Should().Equal(expectedInts);
+        // ...and text_chunks.role_tags is the SAME per chunk (single classification, two sinks).
+        textChunkRoleTags.Should().Equal(expectedRoles);
     }
 
     // ISSUE-3197: Batch processing tests for memory optimization

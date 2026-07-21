@@ -139,8 +139,13 @@ del repo: KB → solo `DocumentProcessing.Domain`, [M5/M6]), il tipo vive nel **
 public record ExtractedElement(
     string Text,
     int PageNumber,       // 1-indexed
-    string ElementType);  // category normalizzata, MAI null (vedi §6.4)
+    string ElementType);  // category GREZZA da Unstructured (Title|NarrativeText|Table|…),
+                          // coalesced null/whitespace → "NarrativeText" (MAI null). Vedi §6.4.
 ```
+
+`ElementType` porta la category **grezza** perché il grouping (§6.1) confronta `== "Title"`. La
+normalizzazione al vocabolario `DocumentSection` (`{heading,table,list,text}`) avviene **solo** nel
+factory, sul valore scritto in `DocumentSection.ElementType` (§6.4).
 
 `PagedTextExtractionResult` (`IPdfTextExtractor.cs:82`) riceve un campo opzionale
 `IReadOnlyList<ExtractedElement>? StructuredElements = null` (`null` = stage senza struttura).

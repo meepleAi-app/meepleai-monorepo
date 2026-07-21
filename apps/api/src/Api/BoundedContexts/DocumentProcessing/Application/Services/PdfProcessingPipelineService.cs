@@ -493,6 +493,14 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 .Where(pc => !pc.IsEmpty)
                 .Select(pc => pc.Text));
 
+            // SP2 #3268: this persists ExtractedText/StructuredElementsJson correctly ONLY
+            // because pdfDoc is a tracked entity whose ProcessingState is mutated directly
+            // (never routed through IPdfDocumentRepository). If this handler is ever migrated
+            // to repository-routed state transitions — as UploadPdf was in #2284 —
+            // MapToPersistence's full-row Update() will silently null these columns and this
+            // write will regress with NO safety net. UploadPdf needed the dedicated post-Ready
+            // tracked re-write (see UploadPdfCommandHandler.Processing.cs FinalizeProcessingAsync)
+            // for exactly this reason; add the equivalent here before any such refactor.
             pdfDoc.ExtractedText = fullText;
             pdfDoc.StructuredElementsJson = StructuredElementsPayload.Serialize(extractResult.StructuredElements);
             pdfDoc.PageCount = extractResult.TotalPages;

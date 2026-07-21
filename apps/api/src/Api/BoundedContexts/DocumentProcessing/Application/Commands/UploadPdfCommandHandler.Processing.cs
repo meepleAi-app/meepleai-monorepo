@@ -907,6 +907,16 @@ internal partial class UploadPdfCommandHandler
 
         try
         {
+            // SP2 #3268 WARNING: this Ready save raises KbDocIndexedEvent + PdfStateChangedEvent
+            // (dispatched synchronously during SaveChangesAsync), but ExtractedText/
+            // StructuredElementsJson are still NULL in the DB at this point — the tracked
+            // re-write that restores them runs AFTER this block (see below). No Ready/
+            // KbDocIndexed handler may read ExtractedText or re-index from StructuredElementsJson,
+            // or it will silently see null and produce flat, heading-less chunks. RAG data is
+            // already correct here because text_chunks + pgvector were persisted earlier in
+            // IndexInVectorStoreAsync. The write must stay after Ready because the repository's
+            // MapToPersistence full-row Update() clobbers these unmapped columns on every
+            // transition; the durable long-term fix is to make MapToPersistence carry them.
             pdfDomain.TransitionTo(PdfProcessingState.Ready);
             pdfDomain.MarkProcessed(_timeProvider.GetUtcNow().UtcDateTime);
             await pdfRepo.UpdateAsync(pdfDomain, cancellationToken).ConfigureAwait(false);

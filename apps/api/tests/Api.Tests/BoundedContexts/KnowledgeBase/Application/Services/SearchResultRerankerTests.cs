@@ -208,6 +208,64 @@ public class SearchResultRerankerTests
     }
 
     // ---------------------------------------------------------------------
+    // Projection guards: the reranker must receive the CONTENT + score of each
+    // result (a real cross-encoder reranks on text). MapRerankedIndices reorders
+    // by list-index and rebuilds from the originals, so a wrong contentSelector
+    // (e.g. projecting ChunkId instead of Content) would otherwise ship green.
+    // ---------------------------------------------------------------------
+
+    private static Mock<ICrossEncoderReranker> CapturingReranker(out Func<IReadOnlyList<RerankChunk>?> captured)
+    {
+        IReadOnlyList<RerankChunk>? seen = null;
+        captured = () => seen;
+        var mock = new Mock<ICrossEncoderReranker>();
+        mock
+            .Setup(r => r.RerankAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<RerankChunk>>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .Callback((string _, IReadOnlyList<RerankChunk> chunks, int? _, CancellationToken _) => seen = chunks)
+            .ReturnsAsync((string _, IReadOnlyList<RerankChunk> chunks, int? topK, CancellationToken _) =>
+                new RerankResult(
+                    chunks.Take(topK ?? chunks.Count).Select(c => new RerankedChunk(c.Id, c.Content, c.OriginalScore, 0.9)).ToList(),
+                    "test-model", 1.0));
+        return mock;
+    }
+
+    [Fact]
+    public async Task RerankAsync_HybridResults_FeedsContentAndHybridScoreToReranker()
+    {
+        var results = new List<HybridSearchResult>
+        {
+            Hybrid("chunk-a", "Pawns move forward.", 0.80f, 5),
+            Hybrid("chunk-b", "Knights move in an L.", 0.78f, 6),
+        };
+        var reranker = CapturingReranker(out var captured);
+
+        await SearchResultReranker.RerankAsync(
+            reranker.Object, "how do pawns move", results, topK: 2, _loggerMock.Object, CancellationToken.None);
+
+        captured().Should().NotBeNull();
+        captured()!.Select(c => c.Content).Should().Equal("Pawns move forward.", "Knights move in an L.");
+        captured()!.Select(c => c.OriginalScore).Should().Equal(results.Select(r => (double)r.HybridScore));
+    }
+
+    [Fact]
+    public async Task RerankAsync_DtoResults_FeedsTextContentAndRelevanceScoreToReranker()
+    {
+        var results = new List<SearchResultDto>
+        {
+            Dto("doc-a", "text alpha", 0.80),
+            Dto("doc-b", "text beta", 0.78),
+        };
+        var reranker = CapturingReranker(out var captured);
+
+        await SearchResultReranker.RerankAsync(
+            reranker.Object, "query", results, topK: 2, _loggerMock.Object, CancellationToken.None);
+
+        captured().Should().NotBeNull();
+        captured()!.Select(c => c.Content).Should().Equal("text alpha", "text beta");
+        captured()!.Select(c => c.OriginalScore).Should().Equal(0.80, 0.78);
+    }
+
+    // ---------------------------------------------------------------------
     // Pure index-mapping seam shared by both overloads (no infra/mocks).
     // ---------------------------------------------------------------------
 

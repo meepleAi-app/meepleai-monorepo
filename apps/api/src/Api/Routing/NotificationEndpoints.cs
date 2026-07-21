@@ -176,6 +176,10 @@ internal static class NotificationEndpoints
             await response.Body.FlushAsync(ct).ConfigureAwait(false);
 
             using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            // #3263: the heartbeat task and the main loop below both write to the same
+            // response body; Kestrel forbids concurrent response-body writes, so all
+            // frames go through this single-writer gate.
+            using var writeGate = new SemaphoreSlim(1, 1);
 
             var heartbeatTask = Task.Run(async () =>
             {
@@ -184,8 +188,7 @@ internal static class NotificationEndpoints
                     try
                     {
                         await Task.Delay(TimeSpan.FromSeconds(30), heartbeatCts.Token).ConfigureAwait(false);
-                        await response.WriteAsync(": heartbeat\n\n", heartbeatCts.Token).ConfigureAwait(false);
-                        await response.Body.FlushAsync(heartbeatCts.Token).ConfigureAwait(false);
+                        await Sse.SseFrameWriter.WriteFrameAsync(response, writeGate, ": heartbeat\n\n", heartbeatCts.Token).ConfigureAwait(false);
                     }
                     catch (OperationCanceledException)
                     {
@@ -199,8 +202,7 @@ internal static class NotificationEndpoints
                 await foreach (var notification in broadcaster.SubscribeAsync(userId, ct).ConfigureAwait(false))
                 {
                     var json = JsonSerializer.Serialize(notification, SseJsonOptions);
-                    await response.WriteAsync($"event: notification\ndata: {json}\n\n", ct).ConfigureAwait(false);
-                    await response.Body.FlushAsync(ct).ConfigureAwait(false);
+                    await Sse.SseFrameWriter.WriteFrameAsync(response, writeGate, $"event: notification\ndata: {json}\n\n", ct).ConfigureAwait(false);
                 }
             }
             finally

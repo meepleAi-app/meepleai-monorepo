@@ -259,6 +259,10 @@ internal static class SessionQueryEndpoints
 
             // Create heartbeat task for keep-alive
             using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            // #3263: the heartbeat task and the main loop below both write to the same
+            // response body; Kestrel forbids concurrent response-body writes, so all
+            // frames go through this single-writer gate.
+            using var writeGate = new SemaphoreSlim(1, 1);
             var heartbeatTask = Task.Run(async () =>
             {
                 while (!heartbeatCts.Token.IsCancellationRequested)
@@ -266,9 +270,11 @@ internal static class SessionQueryEndpoints
                     try
                     {
                         await Task.Delay(TimeSpan.FromSeconds(30), heartbeatCts.Token).ConfigureAwait(false);
-                        await context.Response.WriteAsync("event: heartbeat\n", heartbeatCts.Token).ConfigureAwait(false);
-                        await context.Response.WriteAsync($"data: {{\"timestamp\":\"{DateTime.UtcNow:O}\"}}\n\n", heartbeatCts.Token).ConfigureAwait(false);
-                        await context.Response.Body.FlushAsync(heartbeatCts.Token).ConfigureAwait(false);
+                        await Sse.SseFrameWriter.WriteFrameAsync(
+                            context.Response,
+                            writeGate,
+                            $"event: heartbeat\ndata: {{\"timestamp\":\"{DateTime.UtcNow:O}\"}}\n\n",
+                            heartbeatCts.Token).ConfigureAwait(false);
                     }
                     catch (OperationCanceledException)
                     {
@@ -285,9 +291,11 @@ internal static class SessionQueryEndpoints
                     var eventType = evt.GetType().Name;
                     var json = JsonSerializer.Serialize(evt, JsonOptions);
 
-                    await context.Response.WriteAsync($"event: {eventType}\n", ct).ConfigureAwait(false);
-                    await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
-                    await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+                    await Sse.SseFrameWriter.WriteFrameAsync(
+                        context.Response,
+                        writeGate,
+                        $"event: {eventType}\ndata: {json}\n\n",
+                        ct).ConfigureAwait(false);
                 }
             }
             finally

@@ -1621,18 +1621,17 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             $"ExtractedTextLen={pdfDoc.ExtractedText?.Length.ToString() ?? "null"}, PageCount={pdfDoc.PageCount}.\n--- LOG TAIL ---\n{logTail}\n--- END ---";
         pdfDoc.ProcessingState.Should().Be("Ready", $"the full pipeline must reach Ready for chunks to be persisted.\n{diagnostics}");
 
-        // NOTE: pdfDoc.StructuredElementsJson is NOT re-asserted here after the Ready re-read —
-        // ExtractPdfContentAsync's `pdfDoc` parameter is fetched AsNoTracking() by
-        // ValidateAndPrepareProcessingAsync, and TransitionStateAsync(Extracting) runs between
-        // that fetch and ExtractPdfContentAsync's mutation, detaching/replacing whatever the
-        // DbContext was tracking for this Id. The subsequent `db.SaveChangesAsync()` in
-        // ExtractPdfContentAsync therefore has no pending changes to write for this entity — a
-        // PRE-EXISTING gap that already affected `pdfDoc.ExtractedText = fullText` before this
-        // task (unrelated to the chunker wiring). See task-4-report.md for detail; out of scope
-        // to fix here since Task 4 only asked to co-locate the StructuredElementsJson write next
-        // to the existing (equally-affected) ExtractedText write. The chunking pipeline itself
-        // does NOT depend on the persisted column — HeadingAwareChunker consumes
-        // extractResult.StructuredElements directly from the in-memory extraction result.
+        // SP2 Task 4b (#3268): ExtractPdfContentAsync's `pdfDoc` parameter is fetched
+        // AsNoTracking() by ValidateAndPrepareProcessingAsync, and every subsequent state
+        // transition routes through IPdfDocumentRepository.UpdateAsync (MapToPersistence
+        // omits these columns), clobbering them back to NULL. FinalizeProcessingAsync now
+        // does a dedicated tracked re-write of the extraction output AFTER the Ready
+        // transition so it survives the full pipeline — verify via a fresh re-query.
+        var persisted = await testDbContext.PdfDocuments
+            .AsNoTracking()
+            .FirstAsync(p => p.Id == pdfGuid, TestCancellationToken);
+        persisted.ExtractedText.Should().NotBeNullOrEmpty(diagnostics);
+        persisted.StructuredElementsJson.Should().NotBeNull(diagnostics); // versioned JSON round-trips for IndexPdf
 
         var chunks = await testDbContext.TextChunks
             .Where(c => c.PdfDocumentId == pdfGuid)

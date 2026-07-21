@@ -923,6 +923,38 @@ internal partial class UploadPdfCommandHandler
             return;
         }
 
+        // SP2 #3268: the pipeline's working pdfDoc is AsNoTracking and state transitions route
+        // through the repository (MapToPersistence omits these columns), so extraction output
+        // written during ExtractPdfContentAsync/ExtractStructuredContentAsync never persists.
+        // Re-persist it here on a freshly TRACKED entity AFTER the final Ready transition,
+        // mirroring ExtractPdfTextCommandHandler's tracked-write pattern, so no later
+        // transition can clobber it.
+        var tracked = await db.PdfDocuments.AsTracking()
+            .FirstOrDefaultAsync(p => p.Id == pdfGuid, cancellationToken).ConfigureAwait(false);
+        if (tracked != null)
+        {
+            tracked.ExtractedText = pdfDoc.ExtractedText;
+            tracked.StructuredElementsJson = pdfDoc.StructuredElementsJson;
+            tracked.PageCount = pdfDoc.PageCount;
+            tracked.CharacterCount = pdfDoc.CharacterCount;
+            tracked.ExtractedTables = pdfDoc.ExtractedTables;
+            tracked.ExtractedDiagrams = pdfDoc.ExtractedDiagrams;
+            tracked.AtomicRules = pdfDoc.AtomicRules;
+            tracked.TableCount = pdfDoc.TableCount;
+            tracked.DiagramCount = pdfDoc.DiagramCount;
+            tracked.AtomicRuleCount = pdfDoc.AtomicRuleCount;
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                _logger.LogWarning(ex,
+                    "Concurrency conflict persisting extraction output for PDF {PdfId} — admin mutation wins",
+                    pdfId);
+            }
+        }
+
         // #2284 PR C: tactical scopedMediator.Publish(PdfStateChangedEvent) deleted.
         // PdfDocument.TransitionTo(Ready) raises BOTH PdfStateChangedEvent AND
         // KbDocIndexedEvent structurally; the repository's UpdateAsync collects them via

@@ -134,9 +134,12 @@ internal class HybridSearchService : IHybridSearchService
             var roleBoost = ComputeRoleMatchBoost(queryRoleHint, chunkRoleTags);
             return new HybridSearchResult
             {
-                ChunkId = $"{embedding.VectorDocumentId}_{embedding.ChunkIndex}",
+                // RRF fusion-key fix: key on the resolved PdfDocumentId (now populated by the scored
+                // pgvector search) so Semantic-mode results share the Hybrid/keyword identity and
+                // surface the real pdf id in citations + the global-KB-search enrichment join.
+                ChunkId = $"{embedding.PdfDocumentId}_{embedding.ChunkIndex}",
                 Content = embedding.TextContent,
-                PdfDocumentId = embedding.VectorDocumentId.ToString(),
+                PdfDocumentId = embedding.PdfDocumentId.ToString(),
                 GameId = gameId,
                 ChunkIndex = embedding.ChunkIndex,
                 PageNumber = embedding.PageNumber,
@@ -410,9 +413,13 @@ internal class HybridSearchService : IHybridSearchService
         // RRF fusion-key fix: key the keyword arm on the SAME {PdfDocumentId}_{ChunkIndex} composite
         // as the vector arm (was the raw text_chunks.Id, which never matched the vector key — so a
         // doubly-retrieved chunk was emitted as two half-strength duplicates instead of being fused).
+        // The composite is backed by a NON-unique index, so GroupBy (keep the best-ranked row —
+        // keyword results are relevance-DESC, so the first) instead of ToDictionary, which would
+        // throw on an abnormal duplicate (PdfDocumentId, ChunkIndex) and 500 the whole search.
         var keywordLookup = keywordResults
             .Select((r, index) => new { ChunkId = $"{r.PdfDocumentId}_{r.ChunkIndex}", Result = r, Rank = index + 1 })
-            .ToDictionary(x => x.ChunkId, StringComparer.Ordinal);
+            .GroupBy(x => x.ChunkId, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
 
         // Collect all unique chunk IDs from both result sets
         var allChunkIds = vectorLookup.Keys
@@ -445,14 +452,14 @@ internal class HybridSearchService : IHybridSearchService
                 keywordRrfScore = keywordItem != null ? keywordWeight / (rrfK + keywordItem.Rank) : 0f;
             }
 
-            // Phase D (D6) + Slice C: role-match boost. Take the role tags from whichever arm
-            // surfaced the chunk (both denormalize the same text_chunks.role_tags — keyword from
-            // text_chunks, vector from pgvector_embeddings.role_tags). The union is defensive: with
-            // the current fusion keying the two arms never share a key (vector = "{VectorDocumentId}
-            // _{ChunkIndex}", keyword = raw text_chunks.Id), so each entry is single-arm and the OR
-            // reduces to the present arm — a genuine both-arm merge awaits the fusion-key alignment
-            // follow-up. When the chunk overlaps the user's classified intent, apply an additive
-            // boost on top of the fused RRF.
+            // Phase D (D6) + Slice C + RRF fusion-key fix: role-match boost. Both arms now key on
+            // {PdfDocumentId}_{ChunkIndex}, so a chunk retrieved by BOTH arms is a single fused entry
+            // and chunkRoleTags is a genuine cross-arm union. Both denormalize the same
+            // text_chunks.role_tags (keyword from text_chunks, vector from pgvector_embeddings.role_tags);
+            // for a single-arm chunk the OR selects the present arm, and for a both-arm chunk it takes
+            // whichever is populated (pgvector role_tags is currently un-backfilled → keyword wins).
+            // When the chunk overlaps the user's classified intent, apply an additive boost on top of
+            // the fused RRF.
             var vectorRoleTags = hasVector && vectorItem != null
                 ? vectorItem.Result.RoleTags
                 : GameBookRole.None;

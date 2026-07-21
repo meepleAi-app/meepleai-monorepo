@@ -556,4 +556,64 @@ public sealed class HybridSearchServiceRoleBoostTests
         // HybridScore = vectorRrf + keywordRrf = (0.7 + 0.3)/(60+1) = 1/61.
         results[0].HybridScore.Should().BeApproximately(1f / 61f, 0.0001f);
     }
+
+    [Fact]
+    public async Task SearchAsync_SemanticMode_UsesPdfDocumentId_NotVectorDocumentId()
+    {
+        // Review follow-up: the Semantic path must surface the real PdfDocumentId (now resolved by
+        // the scored pgvector search), not VectorDocumentId — otherwise Semantic-mode citations and
+        // the global-KB-search enrichment join (which matches on pdf_documents.Id) break.
+        var pdfId = Guid.NewGuid();
+        var vectorStore = new Mock<IVectorStoreAdapter>();
+        vectorStore
+            .Setup(v => v.SearchWithScoresAsync(
+                It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(),
+                It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Scored(BuildEmbedding(chunkIndex: 3, GameBookRole.None, pdfDocumentId: pdfId)));
+
+        var sut = BuildSut(vectorStore, BuildEmbeddingMock());
+
+        var results = await sut.SearchAsync(
+            "anything", Guid.NewGuid(), SearchMode.Semantic,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        results.Should().HaveCount(1);
+        results[0].PdfDocumentId.Should().Be(pdfId.ToString());
+    }
+
+    [Fact]
+    public async Task SearchAsync_HybridMode_KeywordDuplicateChunkKeys_DoesNotThrow_AndDedupes()
+    {
+        // Review follow-up: the keyword fusion key is now the composite {PdfDocumentId}_{ChunkIndex}
+        // over a NON-unique index. Two keyword rows sharing that key must NOT crash the fusion
+        // (ToDictionary would throw) — degrade gracefully to a single entry.
+        var pdfId = Guid.NewGuid();
+        var vectorStore = new Mock<IVectorStoreAdapter>();
+        vectorStore
+            .Setup(v => v.SearchWithScoresAsync(
+                It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(),
+                It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ScoredEmbedding>());
+
+        var keywordMock = new Mock<IKeywordSearchService>();
+        keywordMock
+            .Setup(k => k.SearchAsync(
+                It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<bool>(),
+                It.IsAny<List<string>?>(), It.IsAny<string>(), It.IsAny<double>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<KeywordSearchResult>
+            {
+                new() { ChunkId = Guid.NewGuid().ToString(), Content = "a", PdfDocumentId = pdfId.ToString(), GameId = Guid.NewGuid(), ChunkIndex = 7, RelevanceScore = 0.9f, RoleTags = GameBookRole.None },
+                new() { ChunkId = Guid.NewGuid().ToString(), Content = "b", PdfDocumentId = pdfId.ToString(), GameId = Guid.NewGuid(), ChunkIndex = 7, RelevanceScore = 0.8f, RoleTags = GameBookRole.None },
+            });
+
+        var sut = BuildSut(vectorStore, BuildEmbeddingMock(), keywordMock);
+
+        var act = async () => await sut.SearchAsync(
+            "anything", Guid.NewGuid(), SearchMode.Hybrid,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        var results = await act.Should().NotThrowAsync();
+        results.Which.Should().HaveCount(1);
+    }
 }

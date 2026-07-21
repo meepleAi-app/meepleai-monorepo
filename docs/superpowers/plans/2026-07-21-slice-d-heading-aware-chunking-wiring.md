@@ -8,6 +8,15 @@
 
 **Tech Stack:** .NET 9, EF Core (PostgreSQL 16 + pgvector), MediatR, xUnit + Moq (unit) + Testcontainers (integration). Python unstructured-service unchanged.
 
+## Status (2026-07-21) — SHIPPED (partial) + DESCOPED
+
+**Heading-aware chunking is LIVE on the re-index path.** `IndexPdfCommandHandler` routes chunking through `HeadingAwareChunker.BuildAsync` → `AdvancedChunkingService` (Level-0 parent sections + Level-2 child sentences), populating `text_chunks.Heading`/`Level`/`ParentChunkId`/`ElementType`. Latent until a corpus re-index (~2x corpus). The re-index reaches this handler via `KbReindexProcessorService` / `ReindexDocumentCommand` (admin) / `ProcessPendingPdfsCommandHandler`.
+
+- **Shipped:** Task 1 (stable chunk `Id`), Task 2 (`HierarchicalChunkMapper`), Task 3 (`HeadingAwareChunker`), Task 4 (`PdfDocumentEntity.StructuredElementsJson` jsonb), Task 5 (`IndexPdfCommandHandler` wiring + handler-driven test), **Task G** (embedding-input cap `ChunkingConstants.MaxEmbeddingChars=1800` so oversized parent chunks never fail a re-index; full text still persisted).
+- **DESCOPED → follow-up [#3281](https://github.com/meepleAi-app/meepleai-monorepo/issues/3281):** Task 6 (fresh-upload parity — `PdfProcessingPipelineService` / `UploadPdfCommandHandler.Processing` / `CompleteChunkedUploadCommandHandler`, whose PRIMARY chunker is `PrepareForEmbedding`, not the `.ChunkText` fallback this plan assumed — replacing it is a broad fresh-ingestion behaviour change) + the translation-field copy + the Testcontainers HeadingPath CTE round-trip (needs reviving the excluded/stale `IndexPdfIntegrationTests.cs`). Repo rule #1555 is satisfied for the re-index path by Task 5's in-memory handler-driven test.
+
+Tasks 6–7 below are retained for the follow-up's reference; they are NOT part of the shipped branch.
+
 ## Global Constraints
 
 - Backend test path: `apps/api/tests/Api.Tests` (NOT `tests/Api.Tests`).

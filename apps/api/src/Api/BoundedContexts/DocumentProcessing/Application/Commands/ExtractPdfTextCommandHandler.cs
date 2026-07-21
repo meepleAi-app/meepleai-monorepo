@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
+using Api.BoundedContexts.DocumentProcessing.Application.Services.Chunking;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Infrastructure;
@@ -132,6 +133,7 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
                 pdfId, extractResult.TotalCharacters, extractResult.TotalPages);
 
             pdf.ExtractedText = fullText;
+            pdf.StructuredElementsJson = StructuredElementsPayload.Serialize(extractResult.StructuredElements);
             pdf.PageCount = extractResult.TotalPages;
             pdf.CharacterCount = extractResult.TotalCharacters;
             pdf.ProcessingState = nameof(PdfProcessingState.Ready);

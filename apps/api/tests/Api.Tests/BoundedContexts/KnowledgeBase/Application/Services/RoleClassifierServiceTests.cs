@@ -151,6 +151,69 @@ public class RoleClassifierServiceTests
     }
 
     [Fact]
+    public async Task ClassifyAsync_HeadingMatchesRule_ResolvesDeterministicallyAndNeverInvokesLlm()
+    {
+        // SP2 task 8 (#3268) role-fast-path regression: a heading that matches a
+        // HeadingRule (here "Setup", HeadingRule 1 → Tutorial|Setup) must resolve
+        // via the rule table alone. The batch contains ONLY rule-matched chunks, so
+        // the ambiguous list stays empty and the LLM fallback must never be reached —
+        // guards against a regression that always calls the LLM regardless of match.
+        var classifier = CreateSut();
+        var chunk = new ChunkInput("Setup", "Place the board in the middle of the table.");
+
+        var result = await classifier.ClassifyAsync(new[] { chunk }, TestContext.Current.CancellationToken);
+
+        result.Should().HaveCount(1);
+        result[0].Should().NotBe(GameBookRole.None);
+        result[0].HasFlag(GameBookRole.Tutorial).Should().BeTrue();
+        result[0].HasFlag(GameBookRole.Setup).Should().BeTrue();
+        _llmServiceMock.Verify(
+            x => x.GenerateJsonAsync<string[][]>(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<RequestSource>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        _llmServiceMock.Verify(
+            x => x.GenerateCompletionAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<RequestSource>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ClassifyAsync_HeadingMatchesNoRule_RoutesToLlmFallback()
+    {
+        // Companion to the fast-path test above: a heading that matches NO HeadingRule
+        // (SP2 reduces, but does not eliminate, the LLM fallback) must still route
+        // through ClassifyViaLlmAsync exactly once.
+        _llmServiceMock
+            .Setup(x => x.GenerateJsonAsync<string[][]>(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                RequestSource.RagClassification,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { new[] { "lore" } });
+
+        var classifier = CreateSut();
+        var chunk = new ChunkInput("Zzz Random", "Some body text that matches no heading rule.");
+
+        var result = await classifier.ClassifyAsync(new[] { chunk }, TestContext.Current.CancellationToken);
+
+        result.Should().HaveCount(1);
+        result[0].HasFlag(GameBookRole.Lore).Should().BeTrue();
+        _llmServiceMock.Verify(
+            x => x.GenerateJsonAsync<string[][]>(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                RequestSource.RagClassification,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task ClassifyAsync_AmbiguousChunk_LlmReturnsFewerArrays_PadsRemainingWithRulesReference()
     {
         // Issue #1395: parity with legacy ParseLlmResponse fallback path —

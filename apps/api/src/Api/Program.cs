@@ -575,6 +575,20 @@ using (var scope = app.Services.CreateScope())
             provider, model, embeddingDimensions);
     }
 
+    // Slice E: surface a misconfigured OPENROUTER_DEFAULT_MODEL at boot (loud) instead of as a
+    // chat-time 500. AgentDefaults.DefaultModel feeds the seeded system agent + routing fallbacks
+    // unguarded (only user-supplied models hit the AgentDefinition validators), so a bare
+    // cloud-provider id here routes to no LLM client.
+    if (Api.Services.LlmClients.LlmModelRouting.IsUnroutableBareCloudId(
+        Api.BoundedContexts.KnowledgeBase.Domain.AgentDefaults.DefaultModel))
+    {
+        app.Logger.LogError(
+            "OPENROUTER_DEFAULT_MODEL='{Model}' is a bare cloud-provider id that routes to no LLM client — " +
+            "seeded agents and routing fallbacks will fail at chat time. Use a 'provider/model' OpenRouter " +
+            "slug (e.g. 'anthropic/claude-3.5-haiku'), a 'deepseek-*' id, or a local Ollama model.",
+            Api.BoundedContexts.KnowledgeBase.Domain.AgentDefaults.DefaultModel);
+    }
+
     // Create read-only projection views for bounded context entity decomposition.
     // Each BC gets its own view of the "users" table to avoid EF Core conflicts
     // when multiple entities map to the same underlying table/view.

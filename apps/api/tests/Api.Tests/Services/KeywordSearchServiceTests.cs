@@ -92,6 +92,22 @@ public sealed class KeywordSearchServiceTests
             .Should().Be("(preparazione | setup | allestimento)");
     }
 
+    [Fact]
+    public void ExpandTermsToTsQuery_Italian_SetupClusterIsFullySymmetric()
+    {
+        // Completes the setup/preparazione/allestimento symmetric cluster.
+        KeywordSearchService.ExpandTermsToTsQuery("allestimento", "italian")
+            .Should().Be("(allestimento | setup | preparazione)");
+    }
+
+    [Fact]
+    public void ExpandTermsToTsQuery_Italian_SingularPlayerHeadAlsoExpands()
+    {
+        // Singular "giocatore" head expands identically to the plural entry.
+        KeywordSearchService.ExpandTermsToTsQuery("giocatore", "italian")
+            .Should().Be("(giocatore | numero <-> giocatori)");
+    }
+
     [Theory]
     [InlineData("english")]
     [InlineData("simple")]

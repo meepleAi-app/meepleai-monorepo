@@ -183,7 +183,13 @@ const MESSAGES: Record<string, string> = {
   'pages.agentDetail.hero.activeBadge': 'Attivo',
   'pages.agentDetail.hero.draftBadge': 'In setup',
   'pages.agentDetail.hero.archivedBadge': 'Archiviato',
+  'pages.agentDetail.hero.metaType': 'Tipo: {type}',
+  'pages.agentDetail.hero.metaModel': 'Modello: {model}',
+  'pages.agentDetail.hero.metaCreated': 'Creato il {date}',
+  'pages.agentDetail.hero.metaLastUsed': 'Ultimo utilizzo: {date}',
   'pages.agentDetail.hero.metaLastUsedNever': 'Mai utilizzato',
+  'pages.agentDetail.hero.metaInvocations':
+    '{count, plural, =0 {Nessuna invocazione} =1 {1 invocazione} other {# invocazioni}}',
   'pages.agentDetail.hero.metaGameNone': 'Agente standalone',
   'pages.agentDetail.hero.ctaPlay': 'Avvia chat',
   'pages.agentDetail.hero.ctaSetup': 'Continua setup',
@@ -1248,5 +1254,40 @@ describe('AgentDetailView — FSM integration tests (Phase 0.5 contract, Wave C.
     expect(heroEl).toHaveAttribute('data-variant', 'active');
 
     assertKbDocsNeverCalledWithBadGameId();
+  });
+
+  // ─── #3263 discovery: hero meta labels must localize, not hardcode Italian ──
+  describe('hero meta i18n', () => {
+    const EN_META_MESSAGES: Record<string, string> = {
+      ...MESSAGES,
+      'pages.agentDetail.hero.metaType': 'Type: {type}',
+      'pages.agentDetail.hero.metaCreated': 'Created on {date}',
+      'pages.agentDetail.hero.metaLastUsed': 'Last used: {date}',
+      'pages.agentDetail.hero.metaInvocations':
+        '{count, plural, =0 {No invocations} =1 {1 invocation} other {# invocations}}',
+    };
+
+    it('renders the invocation meta in the active locale, not a hardcoded Italian literal', () => {
+      useAgentSpy.mockImplementation(() => ({
+        data: makeAgent(),
+        isLoading: false,
+        isError: false,
+        isSuccess: true,
+        refetch: vi.fn(),
+      }));
+
+      render(
+        <IntlProvider locale="en" messages={EN_META_MESSAGES}>
+          <AgentDetailView agentId={VALID_AGENT_ID} />
+        </IntlProvider>
+      );
+
+      // Scope to the hero so the unrelated performance-panel counter does not interfere.
+      const hero = document.querySelector('[data-slot="agent-detail-hero"]');
+      // invocationCount is 42 → English ICU plural "42 invocations".
+      expect(hero?.textContent).toMatch(/42 invocations/i);
+      // The hardcoded Italian literal must NOT leak into an English render.
+      expect(hero?.textContent).not.toMatch(/invocazioni/i);
+    });
   });
 });

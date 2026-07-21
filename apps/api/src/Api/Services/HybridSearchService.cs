@@ -281,7 +281,11 @@ internal class HybridSearchService : IHybridSearchService
         {
             Score = (float)se.Score,
             Text = se.Embedding.TextContent,
-            PdfId = se.Embedding.VectorDocumentId.ToString(),
+            // RRF fusion-key fix: key on the owning PdfDocumentId (resolved by the scored pgvector
+            // search) so a chunk found by BOTH arms fuses on the same {PdfDocumentId}_{ChunkIndex}
+            // identity the keyword arm uses. (Was VectorDocumentId, which also wrongly surfaced as
+            // HybridSearchResult.PdfDocumentId for vector-only citations.)
+            PdfId = se.Embedding.PdfDocumentId.ToString(),
             ChunkIndex = se.Embedding.ChunkIndex,
             Page = se.Embedding.PageNumber,
             // Slice C: carry role_tags through so vector-only chunks get the role-match boost in
@@ -403,8 +407,11 @@ internal class HybridSearchService : IHybridSearchService
             })
             .ToDictionary(x => x.ChunkId, StringComparer.Ordinal);
 
+        // RRF fusion-key fix: key the keyword arm on the SAME {PdfDocumentId}_{ChunkIndex} composite
+        // as the vector arm (was the raw text_chunks.Id, which never matched the vector key — so a
+        // doubly-retrieved chunk was emitted as two half-strength duplicates instead of being fused).
         var keywordLookup = keywordResults
-            .Select((r, index) => new { ChunkId = r.ChunkId, Result = r, Rank = index + 1 })
+            .Select((r, index) => new { ChunkId = $"{r.PdfDocumentId}_{r.ChunkIndex}", Result = r, Rank = index + 1 })
             .ToDictionary(x => x.ChunkId, StringComparer.Ordinal);
 
         // Collect all unique chunk IDs from both result sets

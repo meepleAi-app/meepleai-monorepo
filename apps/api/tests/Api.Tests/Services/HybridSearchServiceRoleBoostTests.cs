@@ -253,7 +253,7 @@ public sealed class HybridSearchServiceRoleBoostTests
     private static List<ScoredEmbedding> Scored(params Embedding[] embeddings)
         => embeddings.Select((e, i) => new ScoredEmbedding(e, 0.9 - i * 0.1)).ToList();
 
-    private static Embedding BuildEmbedding(int chunkIndex, GameBookRole roleTags)
+    private static Embedding BuildEmbedding(int chunkIndex, GameBookRole roleTags, Guid? pdfDocumentId = null)
     {
         var vector = Vector.CreatePlaceholder(8);
         return new Embedding(
@@ -264,7 +264,10 @@ public sealed class HybridSearchServiceRoleBoostTests
             model: "test-model",
             chunkIndex: chunkIndex,
             pageNumber: 1,
-            roleTags: (int)roleTags);
+            roleTags: (int)roleTags,
+            // Default a UNIQUE pdf per embedding so fusion keys don't collide across chunks; the
+            // fusion test passes an explicit shared id to make a chunk appear in both arms.
+            pdfDocumentId: pdfDocumentId ?? Guid.NewGuid());
     }
 
     private static Mock<IEmbeddingService> BuildEmbeddingMock()
@@ -493,5 +496,64 @@ public sealed class HybridSearchServiceRoleBoostTests
         // means no boost.
         results[0].RoleTags.Should().Be(GameBookRole.RulesReference);
         results[0].HybridScore.Should().BeApproximately(0.7f / 61f, 0.0001f);
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // RRF fusion-key fix: a chunk retrieved by BOTH arms must fuse into ONE result whose RRF
+    // score SUMS the vector + keyword contributions (the point of Reciprocal Rank Fusion). This
+    // requires both arms to key on the same identity {PdfDocumentId}_{ChunkIndex}. Previously the
+    // vector arm keyed on {VectorDocumentId}_{ChunkIndex} and the keyword arm on the raw
+    // text_chunks.Id, so the keys never matched and the chunk was emitted as two half-strength
+    // duplicates.
+    // -----------------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task SearchAsync_HybridMode_ChunkInBothArms_FusesToSingleResult_WithSummedRrf()
+    {
+        var pdfId = Guid.NewGuid();
+        const int chunkIndex = 5;
+
+        var vectorStore = new Mock<IVectorStoreAdapter>();
+        vectorStore
+            .Setup(v => v.SearchWithScoresAsync(
+                It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(),
+                It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Scored(BuildEmbedding(chunkIndex, GameBookRole.None, pdfDocumentId: pdfId)));
+
+        // Keyword arm returns the SAME chunk (same PdfDocumentId + ChunkIndex).
+        var keywordMock = new Mock<IKeywordSearchService>();
+        keywordMock
+            .Setup(k => k.SearchAsync(
+                It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<bool>(),
+                It.IsAny<List<string>?>(), It.IsAny<string>(), It.IsAny<double>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<KeywordSearchResult>
+            {
+                new()
+                {
+                    ChunkId = Guid.NewGuid().ToString(),
+                    Content = $"chunk-{chunkIndex}",
+                    PdfDocumentId = pdfId.ToString(),
+                    GameId = Guid.NewGuid(),
+                    ChunkIndex = chunkIndex,
+                    RelevanceScore = 0.9f,
+                    RoleTags = GameBookRole.None,
+                },
+            });
+
+        var sut = BuildSut(vectorStore, BuildEmbeddingMock(), keywordMock);
+
+        var results = await sut.SearchAsync(
+            "anything", Guid.NewGuid(), SearchMode.Hybrid,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        // Fused into ONE result (not two half-strength duplicates).
+        results.Should().HaveCount(1);
+        results[0].VectorScore.Should().NotBeNull();
+        results[0].KeywordScore.Should().NotBeNull();
+        results[0].VectorRank.Should().Be(1);
+        results[0].KeywordRank.Should().Be(1);
+        // HybridScore = vectorRrf + keywordRrf = (0.7 + 0.3)/(60+1) = 1/61.
+        results[0].HybridScore.Should().BeApproximately(1f / 61f, 0.0001f);
     }
 }

@@ -7,6 +7,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 using Api.Configuration;
+using Api.Constants;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -393,6 +394,74 @@ public class IndexPdfCommandHandlerTests
         // Both parent and child levels are embedded and persisted to pgvector.
         var vectorCount = await context.PgVectorEmbeddings.CountAsync();
         vectorCount.Should().Be(savedChunks.Count);
+    }
+
+    // Slice D robustness guard: HeadingAwareChunker can emit a Level-0 parent chunk whose Text is
+    // a full document section (no ~512-char cap like the old flat chunker). EmbeddingService does
+    // not truncate, so an oversized chunk risks failing the whole re-index if the embedding
+    // provider rejects long input. The handler must cap ONLY the text sent to the embedding
+    // service, while persisting the FULL text to text_chunks/pgvector for retrieval.
+    [Fact]
+    [Trait("Category", TestCategories.Unit)]
+    [Trait("BoundedContext", "DocumentProcessing")]
+    public async Task Handle_WithOversizedChunk_CapsEmbeddingInputButPersistsFullText()
+    {
+        // Arrange
+        using var context = CreateFreshDbContext();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+        var oversizedText = new string('a', 2500);
+        var pdf = CreatePdfDocument(pdfId, gameId, "completed", oversizedText);
+        await context.PdfDocuments.AddAsync(pdf);
+        await context.SaveChangesAsync();
+
+        var parentMetadata = new ChunkMetadata { Heading = "Setup", Page = 1, ElementType = "NarrativeText" };
+        var oversizedParent = HierarchicalChunk.CreateParent(oversizedText, parentMetadata);
+
+        var hierarchicalChunks = new List<HierarchicalChunk> { oversizedParent };
+        advancedChunkingServiceMock
+            .Setup(x => x.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(hierarchicalChunks);
+
+        List<string>? capturedTexts = null;
+        embeddingServiceMock
+            .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((List<string> texts, CancellationToken ct) =>
+            {
+                capturedTexts = texts;
+                return new EmbeddingResult { Success = true, Embeddings = texts.Select(_ => GenerateRandomEmbedding(3072)).ToList() };
+            });
+        embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
+        embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
+
+        var handler = new IndexPdfCommandHandler(
+            context,
+            advancedChunkingServiceMock.Object,
+            embeddingServiceMock.Object,
+            loggerMock.Object,
+            indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
+
+        // Act
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeTrue();
+
+        // 1) The embedding service received the CAPPED text, not the full 2500-char text.
+        capturedTexts.Should().NotBeNull();
+        capturedTexts.Should().ContainSingle();
+        capturedTexts![0].Length.Should().Be(ChunkingConstants.MaxEmbeddingChars);
+
+        // 2) The persisted text_chunks row keeps the FULL, uncapped text for retrieval.
+        var savedChunk = await context.TextChunks
+            .Where(tc => tc.PdfDocumentId == pdfId)
+            .SingleAsync();
+        savedChunk.Content.Length.Should().Be(2500);
+        savedChunk.Content.Should().Be(oversizedText);
     }
 
     // ISSUE-3197: Batch processing tests for memory optimization

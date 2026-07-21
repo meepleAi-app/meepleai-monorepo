@@ -7,6 +7,7 @@ using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 using Api.Configuration;
+using Api.Constants;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.KnowledgeBase;
@@ -366,6 +367,24 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         var embeddingBatchSize = _indexingSettings.EmbeddingBatchSize;
         var documentChunks = new List<DocumentChunk>(chunks.Count);
 
+        // Slice D robustness guard: HeadingAwareChunker (unlike the old flat chunker) can emit a
+        // Level-0 parent chunk whose Text is an entire document section — EmbeddingService does
+        // not truncate, so an oversized chunk could fail the whole re-index. Cap ONLY the text
+        // sent to the embedding provider; the persisted DocumentChunk/text_chunks/pgvector row
+        // keeps the FULL Text for retrieval.
+        var cappedChunkCount = 0;
+
+        string CapTextForEmbedding(string text)
+        {
+            if (text.Length <= ChunkingConstants.MaxEmbeddingChars)
+            {
+                return text;
+            }
+
+            cappedChunkCount++;
+            return text[..ChunkingConstants.MaxEmbeddingChars];
+        }
+
         _logger.LogInformation("Generating embeddings for {ChunkCount} chunks in batches of {BatchSize}",
             chunks.Count, embeddingBatchSize);
 
@@ -379,7 +398,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                 batchSize);
 
             var batchChunks = chunks.Skip(i).Take(batchSize).ToList();
-            var texts = batchChunks.Select(c => c.Text).ToList();
+            var texts = batchChunks.Select(c => CapTextForEmbedding(c.Text)).ToList();
             var embeddingResult = await _embeddingService.GenerateEmbeddingsAsync(texts, cancellationToken).ConfigureAwait(false);
 
             if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
@@ -406,6 +425,13 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
 
             _logger.LogDebug("Completed batch {BatchNumber}, total chunks processed: {ProcessedCount}/{TotalCount}",
                 (i / embeddingBatchSize) + 1, documentChunks.Count, chunks.Count);
+        }
+
+        if (cappedChunkCount > 0)
+        {
+            _logger.LogWarning(
+                "Capped {CappedChunkCount} of {ChunkCount} oversized chunk(s) to {MaxEmbeddingChars} characters before embedding for PDF {PdfId}; full chunk text is still persisted",
+                cappedChunkCount, chunks.Count, ChunkingConstants.MaxEmbeddingChars, pdfId);
         }
 
         return (true, documentChunks, null, null);

@@ -159,9 +159,11 @@ public class GenerateSetupChecklistCommandHandlerTests
     // === Session without GameId ===
 
     [Fact]
-    public async Task Handle_SessionWithoutGameId_ThrowsInvalidOperationException()
+    public async Task Handle_SessionWithoutGameId_ThrowsConflictException()
     {
-        // Arrange
+        // Arrange — a free-form session (no GameId) cannot generate a setup
+        // checklist. This is a precondition conflict (409), not an unhandled
+        // InvalidOperationException (500).
         SetupFeatureFlagEnabled();
         var session = CreateSessionWithoutGameId();
         SetupRepoGetById(DefaultSessionId, session);
@@ -170,7 +172,7 @@ public class GenerateSetupChecklistCommandHandlerTests
         // Act & Assert
         var act =
             () => _handler.Handle(command, CancellationToken.None);
-        var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var ex = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
         ex.Message.Should().Be("Session has no associated game");
     }

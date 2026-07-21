@@ -435,12 +435,20 @@ export function AgentDetailView({ agentId }: AgentDetailViewProps): ReactElement
     activeBadge: t('pages.agentDetail.hero.activeBadge'),
     draftBadge: t('pages.agentDetail.hero.draftBadge'),
     archivedBadge: t('pages.agentDetail.hero.archivedBadge'),
-    metaType: 'Tipo: {type}',
-    metaModel: 'Modello: {model}',
-    metaCreated: 'Creato il {date}',
-    metaLastUsed: 'Ultimo utilizzo: {date}',
+    // #3263 discovery: these were hardcoded Italian literals (EN users saw
+    // Italian) and metaInvocations broke the ICU plural. Resolve them via t()
+    // with values here; AgentHero's .replace('{…}') on the already-resolved
+    // strings is then a no-op. safeAgent is in scope (defined above).
+    metaType: t('pages.agentDetail.hero.metaType', { type: safeAgent.type }),
+    metaModel: t('pages.agentDetail.hero.metaModel', { model: '' }),
+    metaCreated: t('pages.agentDetail.hero.metaCreated', { date: safeAgent.createdAt }),
+    metaLastUsed: t('pages.agentDetail.hero.metaLastUsed', {
+      date: safeAgent.lastInvokedAt ?? '',
+    }),
     metaLastUsedNever: t('pages.agentDetail.hero.metaLastUsedNever'),
-    metaInvocations: '{count} invocazioni',
+    metaInvocations: t('pages.agentDetail.hero.metaInvocations', {
+      count: safeAgent.invocationCount,
+    }),
     metaGameNone: t('pages.agentDetail.hero.metaGameNone'),
     ctaPlay: t('pages.agentDetail.hero.ctaPlay'),
     ctaSetup: t('pages.agentDetail.hero.ctaSetup'),

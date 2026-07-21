@@ -50,6 +50,7 @@ import { useSharedGames } from '@/hooks/queries/useSharedGames';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useToast } from '@/hooks/useToast';
 import { useTranslation } from '@/hooks/useTranslation';
+import type { GameNightStatus } from '@/lib/api/schemas/game-nights.schemas';
 import type { RsvpResponse } from '@/lib/game-nights/rsvp-state-machine';
 import { cn } from '@/lib/utils';
 import { useGameNightStore } from '@/stores/game-night';
@@ -252,8 +253,18 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   const showDetailsContent = !votingTabActive;
   const hasActiveSession = activeSessions.some(s => s.status === 'in_progress');
 
-  const statusKey = event.status.toLowerCase() as 'draft' | 'published' | 'completed' | 'cancelled';
-  const statusLabel = t(`gameNightDetail.status.${statusKey}`);
+  // Explicit status → i18n key map. Deriving the key via toLowerCase() produced
+  // 'inprogress' for the 'InProgress' status, which did not match the camelCase
+  // locale key 'inProgress' and leaked the raw key to the badge (#3263 discovery).
+  // Record<GameNightStatus, …> makes a future enum addition fail to compile.
+  const statusLabelKey: Record<GameNightStatus, string> = {
+    Draft: 'draft',
+    Published: 'published',
+    InProgress: 'inProgress',
+    Completed: 'completed',
+    Cancelled: 'cancelled',
+  };
+  const statusLabel = t(`gameNightDetail.status.${statusLabelKey[event.status]}`);
 
   const scheduledLine = dateFormatter.format(new Date(event.scheduledAt));
   const organizedByLine = t('gameNightDetail.hero.organizedBy', { name: event.organizerName });

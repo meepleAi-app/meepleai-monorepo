@@ -1,6 +1,8 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
+using Api.BoundedContexts.DocumentProcessing.Application.Services.Chunking;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
@@ -66,7 +68,7 @@ internal partial class UploadPdfCommandHandler
             // Step 2: Chunk text with page tracking (40-60%)
             _logger.LogInformation("✂️ [PDF-DEBUG] Step 2: Starting ChunkExtractedTextAsync for {PdfId}", pdfId);
             var allDocumentChunks = await ChunkExtractedTextAsync(
-                pdfId, fullText!, extractResult!, db, scope, startTime, cancellationToken).ConfigureAwait(false);
+                pdfId, fullText!, extractResult!, pdfDoc, db, scope, startTime, cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("✅ [PDF-DEBUG] Chunking SUCCESS: {ChunkCount} chunks created", allDocumentChunks.Count);
 
             await TransitionStateAsync(scope, db, pdfGuid, PdfProcessingState.Embedding, cancellationToken).ConfigureAwait(false);
@@ -338,6 +340,7 @@ internal partial class UploadPdfCommandHandler
         string pdfId,
         string fullText,
         PagedTextExtractionResult extractResult,
+        PdfDocumentEntity pdfDoc,
         MeepleAiDbContext db,
         IServiceScope scope,
         DateTime startTime,
@@ -350,33 +353,50 @@ internal partial class UploadPdfCommandHandler
         const int chunkSize = 512;
         const int chunkOverlap = 50;
 
-        var allDocumentChunks = chunkingService.PrepareForEmbedding(fullText, chunkSize, chunkOverlap)
-            ?.Where(chunk => chunk != null && !string.IsNullOrWhiteSpace(chunk.Text))
-            .Select(chunk => new DocumentChunkInput
-            {
-                Text = chunk.Text,
-                Page = chunk.Page,
-                CharStart = chunk.CharStart,
-                CharEnd = chunk.CharEnd
-            })
-            .ToList()
-            ?? new List<DocumentChunkInput>();
-
-        if (allDocumentChunks.Count == 0)
+        // Issue #3281: heading-aware production when AdvancedChunkingService is available in scope.
+        var advancedChunking = scope.ServiceProvider.GetService<IAdvancedChunkingService>();
+        List<DocumentChunkInput> allDocumentChunks;
+        if (advancedChunking != null)
         {
-            foreach (var pageChunk in extractResult.PageChunks.Where(pc => !pc.IsEmpty))
-            {
-                var pageTextChunks = chunkingService.ChunkText(pageChunk.Text, chunkSize, chunkOverlap);
-
-                foreach (var textChunk in pageTextChunks.Where(t => !string.IsNullOrWhiteSpace(t.Text)))
+            var hierarchical = await HeadingAwareChunker.BuildAsync(
+                extractResult.StructuredElements,
+                fullText,
+                pdfDoc.Id,
+                pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId,
+                advancedChunking,
+                cancellationToken).ConfigureAwait(false);
+            allDocumentChunks = HeadingAwareChunkAdapter.ToChunkInputs(hierarchical);
+        }
+        else
+        {
+            allDocumentChunks = chunkingService.PrepareForEmbedding(fullText, chunkSize, chunkOverlap)
+                ?.Where(chunk => chunk != null && !string.IsNullOrWhiteSpace(chunk.Text))
+                .Select(chunk => new DocumentChunkInput
                 {
-                    allDocumentChunks.Add(new DocumentChunkInput
+                    Text = chunk.Text,
+                    Page = chunk.Page,
+                    CharStart = chunk.CharStart,
+                    CharEnd = chunk.CharEnd
+                })
+                .ToList()
+                ?? new List<DocumentChunkInput>();
+
+            if (allDocumentChunks.Count == 0)
+            {
+                foreach (var pageChunk in extractResult.PageChunks.Where(pc => !pc.IsEmpty))
+                {
+                    var pageTextChunks = chunkingService.ChunkText(pageChunk.Text, chunkSize, chunkOverlap);
+
+                    foreach (var textChunk in pageTextChunks.Where(t => !string.IsNullOrWhiteSpace(t.Text)))
                     {
-                        Text = textChunk.Text,
-                        Page = pageChunk.PageNumber,
-                        CharStart = textChunk.CharStart,
-                        CharEnd = textChunk.CharEnd
-                    });
+                        allDocumentChunks.Add(new DocumentChunkInput
+                        {
+                            Text = textChunk.Text,
+                            Page = pageChunk.PageNumber,
+                            CharStart = textChunk.CharStart,
+                            CharEnd = textChunk.CharEnd
+                        });
+                    }
                 }
             }
         }
@@ -426,7 +446,7 @@ internal partial class UploadPdfCommandHandler
         {
             var skip = batchIndex * BATCH_SIZE;
             var batchChunks = allDocumentChunks.Skip(skip).Take(BATCH_SIZE).ToList();
-            var batchTexts = batchChunks.Select(c => c.Text).ToList();
+            var batchTexts = batchChunks.Select(c => HeadingAwareChunkAdapter.CapForEmbedding(c.Text)).ToList();
 
             _logger.LogInformation("📦 [BATCH-EMBED] Processing batch {Current}/{Total}: {ChunkCount} chunks",
                 batchIndex + 1, batchCount, batchTexts.Count);

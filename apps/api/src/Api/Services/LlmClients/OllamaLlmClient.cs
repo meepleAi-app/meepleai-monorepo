@@ -54,15 +54,6 @@ internal class OllamaLlmClient : ILlmClient
         _logger.LogInformation("OllamaLlmClient initialized with endpoint: {OllamaUrl} (zero cost - self-hosted)", ollamaUrl);
     }
 
-    // Bare model-id prefixes that belong to cloud providers Ollama never serves.
-    // Ambiguous names that also exist as local Ollama models (llama, mistral, qwen,
-    // phi, gemma, gpt-oss, ...) are intentionally NOT listed — hence "gpt-3/4/5" rather
-    // than a bare "gpt" (which would wrongly reject the local "gpt-oss:20b/120b").
-    private static readonly string[] CloudOnlyModelPrefixes =
-    {
-        "claude", "gpt-3", "gpt-4", "gpt-5", "chatgpt", "gemini", "grok", "o1-", "o3-", "o4-",
-    };
-
     /// <inheritdoc/>
     public bool SupportsModel(string modelId)
     {
@@ -83,7 +74,8 @@ internal class OllamaLlmClient : ILlmClient
         // silently routes here (catch-all) and returns an empty completion, so the caller
         // falls back to dumping raw retrieved chunks. Rejecting makes GetClientForModel raise
         // a loud "no client supports model" error that surfaces the misconfiguration instead.
-        foreach (var prefix in CloudOnlyModelPrefixes)
+        // Shared with the agent-definition validators so routing rules cannot drift.
+        foreach (var prefix in LlmModelRouting.BareCloudProviderPrefixes)
         {
             if (modelId.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             {

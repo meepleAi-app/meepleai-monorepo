@@ -260,6 +260,14 @@ internal partial class UploadPdfCommandHandler
                 .Select(pc => pc.Text));
 
             pdfDoc.ExtractedText = fullText;
+            // Issue #3281: keep StructuredElementsJson in-memory on the (AsNoTracking) pdfDoc so the
+            // tracked re-write in FinalizeProcessingAsync can copy it after the Ready transition. This
+            // assignment + the SaveChangesAsync below are a no-op on the DB for this column (see the
+            // FinalizeProcessingAsync comment for why), but the in-memory value must be set here since
+            // extractResult is not in scope at finalize time.
+            pdfDoc.StructuredElementsJson = extractResult.StructuredElements is null
+                ? null
+                : System.Text.Json.JsonSerializer.Serialize(extractResult.StructuredElements);
             pdfDoc.PageCount = extractResult.TotalPages;
             pdfDoc.CharacterCount = extractResult.TotalCharacters;
             try
@@ -933,6 +941,46 @@ internal partial class UploadPdfCommandHandler
                 "Concurrency conflict on PdfDocument {PdfId} (TransitionTo Ready) in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
                 pdfId, nameof(UploadPdfCommandHandler));
             return;
+        }
+
+        // Issue #3281 / pre-existing AsNoTracking bug: the pipeline's working pdfDoc is AsNoTracking
+        // and state transitions route through IPdfDocumentRepository (MapToPersistence omits + clobbers
+        // ExtractedText/StructuredElementsJson/content columns), so extraction output written during
+        // ExtractPdfContentAsync/ExtractStructuredContentAsync never persists. Re-persist it here on a
+        // freshly TRACKED entity AFTER the final Ready transition (mirrors ExtractPdfTextCommandHandler),
+        // so no later repository transition can clobber it. Needed for re-index parity: IndexPdf reads
+        // StructuredElementsJson and requires non-null ExtractedText.
+        // 🟡 Use CancellationToken.None (NOT cancellationToken): the PDF is already Ready+indexed at
+        // this point, so this persist MUST complete regardless of pipeline cancellation. Mirrors
+        // ConfirmQuotaAsync's post-Ready CancellationToken.None convention. If cancellation were
+        // threaded here, an OperationCanceledException would escape this DbUpdateConcurrencyException-only
+        // catch → ProcessPdfAsync's cancellation handler → TransitionToFailedAsync → MarkAsFailed on a
+        // Ready aggregate → InvalidOperationException("Cannot transition from Ready state"), AND the
+        // extraction output would be silently lost.
+        var tracked = await db.PdfDocuments.AsTracking()
+            .FirstOrDefaultAsync(p => p.Id == pdfGuid, CancellationToken.None).ConfigureAwait(false);
+        if (tracked != null)
+        {
+            tracked.ExtractedText = pdfDoc.ExtractedText;
+            tracked.StructuredElementsJson = pdfDoc.StructuredElementsJson;
+            tracked.PageCount = pdfDoc.PageCount;
+            tracked.CharacterCount = pdfDoc.CharacterCount;
+            tracked.ExtractedTables = pdfDoc.ExtractedTables;
+            tracked.ExtractedDiagrams = pdfDoc.ExtractedDiagrams;
+            tracked.AtomicRules = pdfDoc.AtomicRules;
+            tracked.TableCount = pdfDoc.TableCount;
+            tracked.DiagramCount = pdfDoc.DiagramCount;
+            tracked.AtomicRuleCount = pdfDoc.AtomicRuleCount;
+            try
+            {
+                await db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                _logger.LogWarning(ex,
+                    "Concurrency conflict persisting extraction output for PDF {PdfId} — admin mutation wins",
+                    pdfId);
+            }
         }
 
         // #2284 PR C: tactical scopedMediator.Publish(PdfStateChangedEvent) deleted.

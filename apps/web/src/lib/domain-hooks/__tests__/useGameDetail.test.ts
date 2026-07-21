@@ -285,4 +285,30 @@ describe('useRecordGameSession', () => {
 
     expect(result.current.error?.message).toBe('Failed to record session');
   });
+
+  it('clears the recording flag and the optimistic id and records the error on failure', async () => {
+    const { api } = await import('@/lib/api');
+    vi.mocked(api.library.recordGameSession).mockRejectedValueOnce(
+      new Error('Failed to record session')
+    );
+
+    const { result } = renderHook(() => useRecordGameSession('game-456'), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({
+      playedAt: new Date(),
+      durationMinutes: 90,
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    // Loading flag must be released (was stuck at true without onError).
+    expect(storeMocks.setIsRecordingSession).toHaveBeenLastCalledWith(false);
+    // The optimistic session id must be cleared, not left pointing at a
+    // session that was never created.
+    expect(storeMocks.setOptimisticSessionId).toHaveBeenLastCalledWith(null);
+    // Error must be surfaced to the store.
+    expect(storeMocks.setError).toHaveBeenCalledWith('Failed to record session');
+  });
 });

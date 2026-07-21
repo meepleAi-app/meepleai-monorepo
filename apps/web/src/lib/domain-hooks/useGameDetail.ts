@@ -180,6 +180,15 @@ export function useRecordGameSession(gameId: string) {
 
       return { optimisticId };
     },
+    onError: error => {
+      // Release the recording flag and clear the dangling optimistic session
+      // id. Without this, a failed record leaves isRecordingSession stuck at
+      // true and optimisticSessionId pointing at a session that was never
+      // created.
+      setIsRecordingSession(false);
+      setOptimisticSessionId(null);
+      setError(error instanceof Error ? error.message : 'Failed to record session');
+    },
     onSuccess: sessionId => {
       // Invalidate to refetch with updated stats
       queryClient.invalidateQueries({ queryKey: GAME_DETAIL_QUERY_KEY(gameId) });

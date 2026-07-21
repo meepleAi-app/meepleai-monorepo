@@ -48,4 +48,25 @@ describe('ChatInputBar', () => {
     await user.type(textarea, 'hello{Shift>}{Enter}{/Shift}');
     expect(onSend).not.toHaveBeenCalled();
   });
+
+  // #3263 discovery: the 📎 "Allega PDF" and 🎤 "Dettatura" buttons had an
+  // actionable aria-label but no handler — dead affordances (WCAG 4.1.2). The
+  // features are not implemented, so they must present as unavailable, not dead.
+  describe('placeholder controls (a11y)', () => {
+    it('disables the not-yet-implemented Allega PDF button', () => {
+      render(<ChatInputBar onSend={() => {}} />);
+      expect(screen.getByRole('button', { name: /allega pdf/i })).toBeDisabled();
+    });
+
+    it('disables the not-yet-implemented Dettatura button', () => {
+      render(<ChatInputBar onSend={() => {}} />);
+      expect(screen.getByRole('button', { name: /dettatura/i })).toBeDisabled();
+    });
+
+    it('keeps the working image + send buttons interactive', () => {
+      render(<ChatInputBar onSend={() => {}} onSendWithImages={() => {}} />);
+      expect(screen.getByRole('button', { name: /allega immagine/i })).toBeEnabled();
+      expect(screen.getByRole('button', { name: /invia/i })).toBeEnabled();
+    });
+  });
 });

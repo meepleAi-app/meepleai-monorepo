@@ -100,7 +100,9 @@ export function ChatInputBar({
           <button
             type="button"
             aria-label="Allega PDF"
-            className="flex h-9 w-9 items-center justify-center rounded-[10px] text-[var(--text-muted)] transition-all hover:bg-[var(--bg)] hover:text-[var(--text)]"
+            title="Prossimamente"
+            disabled
+            className="flex h-9 w-9 items-center justify-center rounded-[10px] text-[var(--text-muted)] transition-all hover:bg-[var(--bg)] hover:text-[var(--text)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
           >
             📎
           </button>
@@ -116,7 +118,9 @@ export function ChatInputBar({
           <button
             type="button"
             aria-label="Dettatura"
-            className="flex h-9 w-9 items-center justify-center rounded-[10px] text-[var(--text-muted)] transition-all hover:bg-[var(--bg)] hover:text-[var(--text)]"
+            title="Prossimamente"
+            disabled
+            className="flex h-9 w-9 items-center justify-center rounded-[10px] text-[var(--text-muted)] transition-all hover:bg-[var(--bg)] hover:text-[var(--text)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
           >
             🎤
           </button>

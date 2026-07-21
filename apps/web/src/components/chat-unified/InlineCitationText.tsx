@@ -24,6 +24,15 @@ interface InlineCitationTextProps {
 export function InlineCitationText({ text, citations, snippets }: InlineCitationTextProps) {
   const [expandedCitations, setExpandedCitations] = useState<Set<number>>(new Set());
 
+  const toggleCitation = (index: number) => {
+    setExpandedCitations(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
+
   if (citations.length === 0) {
     return <p className="whitespace-pre-wrap break-words">{text}</p>;
   }
@@ -44,17 +53,22 @@ export function InlineCitationText({ text, citations, snippets }: InlineCitation
     segments.push(
       <React.Fragment key={`cite-${idx}`}>
         <span
+          role="button"
+          tabIndex={0}
+          aria-expanded={isExpanded}
           className={cn(
             'bg-amber-500/10 border-l-2 border-amber-500 px-1 cursor-pointer',
-            'hover:bg-amber-500/20 transition-colors inline'
+            'hover:bg-amber-500/20 transition-colors inline',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500'
           )}
-          onClick={() => {
-            setExpandedCitations(prev => {
-              const next = new Set(prev);
-              if (next.has(idx)) next.delete(idx);
-              else next.add(idx);
-              return next;
-            });
+          onClick={() => toggleCitation(idx)}
+          onKeyDown={e => {
+            // Keyboard-operable disclosure (#3263 discovery): Enter/Space toggle
+            // the inline snippet; preventDefault on Space avoids page scroll.
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              toggleCitation(idx);
+            }
           }}
           title={`Pagina ${citation.pageNumber}`}
           data-testid={`citation-highlight-${idx}`}

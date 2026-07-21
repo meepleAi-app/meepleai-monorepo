@@ -1,6 +1,8 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
+using Api.BoundedContexts.DocumentProcessing.Application.Services.Chunking;
+using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Configuration;
 using Api.Infrastructure;
@@ -246,8 +248,8 @@ public class IndexPdfCommandHandlerTests
 
         var textChunks = GenerateTextChunks(250);
         chunkingServiceMock
-            .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-            .Returns(textChunks);
+            .Setup(x => x.PrepareForEmbedding(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+            .Returns(ToChunkInputs(textChunks));
 
         var embeddingCallCount = 0;
         embeddingServiceMock
@@ -312,8 +314,8 @@ public class IndexPdfCommandHandlerTests
 
         var textChunks = GenerateTextChunks(1200);
         chunkingServiceMock
-            .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-            .Returns(textChunks);
+            .Setup(x => x.PrepareForEmbedding(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+            .Returns(ToChunkInputs(textChunks));
 
         embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
@@ -366,8 +368,8 @@ public class IndexPdfCommandHandlerTests
 
         var textChunks = GenerateTextChunks(200);
         chunkingServiceMock
-            .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-            .Returns(textChunks);
+            .Setup(x => x.PrepareForEmbedding(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+            .Returns(ToChunkInputs(textChunks));
 
         var callCount = 0;
         embeddingServiceMock
@@ -452,7 +454,7 @@ public class IndexPdfCommandHandlerTests
 
         // Verify: No chunking or embedding calls
         chunkingServiceMock.Verify(
-            x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()),
+            x => x.PrepareForEmbedding(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()),
             Times.Never
         );
         embeddingServiceMock.Verify(
@@ -477,8 +479,8 @@ public class IndexPdfCommandHandlerTests
 
         var textChunks = GenerateTextChunks(10);
         chunkingServiceMock
-            .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-            .Returns(textChunks);
+            .Setup(x => x.PrepareForEmbedding(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+            .Returns(ToChunkInputs(textChunks));
 
         embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
@@ -522,8 +524,8 @@ public class IndexPdfCommandHandlerTests
 
         // Chunking returns empty list → triggers embedding failure path
         chunkingServiceMock
-            .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-            .Returns(new List<TextChunk>());
+            .Setup(x => x.PrepareForEmbedding(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+            .Returns(new List<DocumentChunkInput>());
 
         embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
         embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
@@ -559,7 +561,7 @@ public class IndexPdfCommandHandlerTests
 
         // Chunking throws an unexpected exception (not a handled failure result)
         chunkingServiceMock
-            .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+            .Setup(x => x.PrepareForEmbedding(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
             .Throws(new InvalidOperationException("Unexpected chunking crash"));
 
         embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
@@ -620,6 +622,19 @@ public class IndexPdfCommandHandlerTests
             .ToList();
     }
 
+    /// <summary>
+    /// SP2 task 7: since the flat path now calls <c>ITextChunkingService.PrepareForEmbedding</c>
+    /// (not <c>ChunkText</c>), tests that previously stubbed <c>ChunkText</c> must stub
+    /// <c>PrepareForEmbedding</c> instead. This converts the same <see cref="TextChunk"/> fixtures
+    /// into <see cref="DocumentChunkInput"/> so existing test data can be reused.
+    /// </summary>
+    private static List<DocumentChunkInput> ToChunkInputs(List<TextChunk> textChunks)
+    {
+        return textChunks
+            .Select(c => new DocumentChunkInput { Text = c.Text, Page = c.Page, CharStart = c.CharStart, CharEnd = c.CharEnd })
+            .ToList();
+    }
+
     private static float[] GenerateRandomEmbedding(int dimensions)
     {
 #pragma warning disable CA5394 // Random is sufficient for test data generation
@@ -644,8 +659,8 @@ public class IndexPdfCommandHandlerTests
 
         var textChunks = GenerateTextChunks(10);
         chunkingServiceMock
-            .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-            .Returns(textChunks);
+            .Setup(x => x.PrepareForEmbedding(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+            .Returns(ToChunkInputs(textChunks));
 
         embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
@@ -731,8 +746,8 @@ public class IndexPdfCommandHandlerTests
 
         var textChunks = GenerateTextChunks(5);
         chunkingServiceMock
-            .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-            .Returns(textChunks);
+            .Setup(x => x.PrepareForEmbedding(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+            .Returns(ToChunkInputs(textChunks));
 
         embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
@@ -787,6 +802,141 @@ public class IndexPdfCommandHandlerTests
                 It.IsAny<CancellationToken>()),
             Times.Once,
             "SharedGame PDF indexing MUST pass sharedGameId and the resolved gameId through to the pipeline");
+    }
+
+    // SP2 task 7 (#3268): IndexPdfCommandHandler reads the persisted StructuredElementsJson
+    // (there is no in-memory ExtractedElement list available on the bulk-reindex path — only
+    // the flat pdf.ExtractedText) so it can rebuild heading-aware chunks via IHeadingAwareChunker.
+    [Fact]
+    [Trait("Category", TestCategories.Unit)]
+    [Trait("BoundedContext", "DocumentProcessing")]
+    public async Task Handle_WithHeadingAwareChunkerAndStructuredElementsJson_PersistsHeadingOnChunks()
+    {
+        // Arrange
+        using var context = CreateFreshDbContext();
+        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+        var structuredElements = new List<ExtractedElement>
+        {
+            new("Setup", 1, "Title"),
+            new("Place the board in the middle of the table.", 1, "NarrativeText")
+        };
+
+        var pdf = CreatePdfDocument(pdfId, gameId, "completed", GenerateExtractedText(5));
+        pdf.StructuredElementsJson = StructuredElementsPayload.Serialize(structuredElements);
+        await context.PdfDocuments.AddAsync(pdf);
+        await context.SaveChangesAsync();
+
+        var headingChunkerMock = new Mock<IHeadingAwareChunker>();
+        headingChunkerMock
+            .Setup(c => c.ChunkAsync(
+                pdfId,
+                It.IsAny<Guid?>(),
+                It.IsAny<IReadOnlyList<ExtractedElement>?>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DocumentChunkInput>
+            {
+                new()
+                {
+                    Text = "Place the board in the middle of the table.",
+                    Page = 1,
+                    CharStart = 6,
+                    CharEnd = 48,
+                    Heading = "Setup",
+                    Level = 1,
+                    ElementType = "NarrativeText"
+                }
+            });
+
+        embeddingServiceMock
+            .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((List<string> texts, CancellationToken ct) =>
+            {
+                var embeddings = texts.Select(_ => GenerateRandomEmbedding(3072)).ToList();
+                return new EmbeddingResult { Success = true, Embeddings = embeddings };
+            });
+        embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
+        embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
+
+        var handler = new IndexPdfCommandHandler(
+            context, chunkingServiceMock.Object, embeddingServiceMock.Object,
+            loggerMock.Object, indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>(),
+            headingAwareChunker: headingChunkerMock.Object);
+
+        // Act
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeTrue();
+
+        var persistedChunks = await context.TextChunks
+            .Where(tc => tc.PdfDocumentId == pdfId)
+            .ToListAsync();
+        persistedChunks.Should().HaveCount(1);
+        persistedChunks[0].Heading.Should().Be("Setup");
+
+        // The flat fallback must NOT run when the heading-aware chunker produced usable chunks.
+        chunkingServiceMock.Verify(
+            x => x.PrepareForEmbedding(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()),
+            Times.Never,
+            "heading-aware chunker produced usable chunks; flat fallback must not run");
+    }
+
+    [Fact]
+    [Trait("Category", TestCategories.Unit)]
+    [Trait("BoundedContext", "DocumentProcessing")]
+    public async Task Handle_WithMalformedStructuredElementsJson_FallsBackToFlatChunkingWithoutThrowing()
+    {
+        // Arrange
+        using var context = CreateFreshDbContext();
+        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+        var pdf = CreatePdfDocument(pdfId, gameId, "completed", GenerateExtractedText(5));
+        pdf.StructuredElementsJson = "{malformed"; // malformed JSON must not throw — degrades to flat path
+        await context.PdfDocuments.AddAsync(pdf);
+        await context.SaveChangesAsync();
+
+        var chunkInputs = ToChunkInputs(GenerateTextChunks(5));
+        chunkingServiceMock
+            .Setup(x => x.PrepareForEmbedding(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+            .Returns(chunkInputs);
+
+        embeddingServiceMock
+            .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((List<string> texts, CancellationToken ct) =>
+            {
+                var embeddings = texts.Select(_ => GenerateRandomEmbedding(3072)).ToList();
+                return new EmbeddingResult { Success = true, Embeddings = embeddings };
+            });
+        embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
+        embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
+
+        // No IHeadingAwareChunker passed — defaults to null, exercising the pure flat path.
+        var handler = new IndexPdfCommandHandler(
+            context, chunkingServiceMock.Object, embeddingServiceMock.Object,
+            loggerMock.Object, indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
+
+        // Act
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
+
+        // Assert — succeeds via the flat path, no exception surfaced as UnexpectedError
+        result.Success.Should().BeTrue();
+        result.ErrorCode.Should().BeNull();
+
+        var persistedChunks = await context.TextChunks
+            .Where(tc => tc.PdfDocumentId == pdfId)
+            .ToListAsync();
+        persistedChunks.Should().HaveCount(5);
+        persistedChunks.Should().AllSatisfy(c => c.Heading.Should().BeNull());
     }
 
     // NOTE: Full workflow tests (text chunking, embedding generation, pgvector indexing)

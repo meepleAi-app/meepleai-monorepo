@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
+using Api.BoundedContexts.DocumentProcessing.Application.Services.Chunking;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Configuration;
@@ -39,6 +40,11 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
     // Optional so unit tests that pre-date Phase D continue to compile without updates.
     private readonly IRoleClassifierService? _roleClassifier;
     private readonly IPdfIndexingPipeline _pipeline;
+    // SP2 task 7 (#3268): optional heading-aware chunker. IndexPdf only has the flat
+    // pdf.ExtractedText — StructuredElementsJson (persisted at extraction time) is
+    // rehydrated into ExtractedElements so hierarchy-aware chunking can run here too.
+    // Optional so unit tests that pre-date SP2 continue to compile without updates.
+    private readonly IHeadingAwareChunker? _headingAwareChunker;
 
     public IndexPdfCommandHandler(
         MeepleAiDbContext db,
@@ -49,7 +55,8 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         ISemanticResponseCache semanticCache,
         IPdfIndexingPipeline pipeline,
         TimeProvider? timeProvider = null,
-        IRoleClassifierService? roleClassifier = null)
+        IRoleClassifierService? roleClassifier = null,
+        IHeadingAwareChunker? headingAwareChunker = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _chunkingService = chunkingService ?? throw new ArgumentNullException(nameof(chunkingService));
@@ -60,6 +67,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
         _timeProvider = timeProvider ?? TimeProvider.System;
         _roleClassifier = roleClassifier;
+        _headingAwareChunker = headingAwareChunker;
     }
 
     public async Task<IndexingResultDto> Handle(IndexPdfCommand command, CancellationToken cancellationToken)
@@ -98,7 +106,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
 
             // Step 2: Chunk text and generate embeddings
             var (chunkingSuccess, documentChunks, chunkingError, chunkErrorCode) = await ChunkAndEmbedTextAsync(
-                pdfId, pdf.ExtractedText!, cancellationToken).ConfigureAwait(false);
+                pdfId, pdf, cancellationToken).ConfigureAwait(false);
             if (!chunkingSuccess)
             {
                 pdf.ProcessingState = nameof(PdfProcessingState.Failed);
@@ -322,40 +330,54 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
     /// </summary>
     private async Task<(bool success, List<DocumentChunk>? documentChunks, string? errorMessage, PdfIndexingErrorCode? errorCode)> ChunkAndEmbedTextAsync(
         string pdfId,
-        string extractedText,
-                CancellationToken cancellationToken)
+        PdfDocumentEntity pdf,
+        CancellationToken cancellationToken)
     {
+        var extractedText = pdf.ExtractedText!;
+
         // Chunk the text
         _logger.LogInformation("Chunking text for PDF {PdfId} ({CharCount} characters)",
             pdfId, extractedText.Length);
 
-        var textChunks = _chunkingService.ChunkText(extractedText);
+        // SP2 task 7 (#3268): IndexPdf only has the flat ExtractedText — rehydrate the
+        // persisted StructuredElementsJson (written at extraction time) so the heading-aware
+        // chunker can rebuild hierarchy-aware chunks. Malformed/legacy JSON degrades to null
+        // (TryDeserialize never throws), which falls through to the flat path below.
+        var structured = StructuredElementsPayload.TryDeserialize(pdf.StructuredElementsJson);
+        List<DocumentChunkInput> chunkInputs =
+            (_headingAwareChunker != null
+                ? await _headingAwareChunker.ChunkAsync(Guid.Parse(pdfId), pdf.PrivateGameId ?? pdf.SharedGameId, structured, extractedText, cancellationToken).ConfigureAwait(false)
+                : null) is { Count: > 0 } hc
+            ? hc
+            : (_chunkingService.PrepareForEmbedding(extractedText) ?? new List<DocumentChunkInput>());
 
-        if (textChunks.Count == 0)
+        chunkInputs = chunkInputs.Where(c => c != null && !string.IsNullOrWhiteSpace(c.Text)).ToList();
+
+        if (chunkInputs.Count == 0)
         {
             _logger.LogWarning("No chunks created for PDF {PdfId}", pdfId);
             return (false, null, "No chunks created from text", PdfIndexingErrorCode.ChunkingFailed);
         }
 
-        _logger.LogInformation("Created {ChunkCount} chunks for PDF {PdfId}", textChunks.Count, pdfId);
+        _logger.LogInformation("Created {ChunkCount} chunks for PDF {PdfId}", chunkInputs.Count, pdfId);
 
         // Generate embeddings in batches to reduce memory footprint
         var embeddingBatchSize = _indexingSettings.EmbeddingBatchSize;
-        var documentChunks = new List<DocumentChunk>(textChunks.Count);
+        var documentChunks = new List<DocumentChunk>(chunkInputs.Count);
 
         _logger.LogInformation("Generating embeddings for {ChunkCount} chunks in batches of {BatchSize}",
-            textChunks.Count, embeddingBatchSize);
+            chunkInputs.Count, embeddingBatchSize);
 
-        for (int i = 0; i < textChunks.Count; i += embeddingBatchSize)
+        for (int i = 0; i < chunkInputs.Count; i += embeddingBatchSize)
         {
-            var batchSize = Math.Min(embeddingBatchSize, textChunks.Count - i);
+            var batchSize = Math.Min(embeddingBatchSize, chunkInputs.Count - i);
 
             _logger.LogDebug("Processing embedding batch {BatchNumber}/{TotalBatches} ({BatchSize} chunks)",
                 (i / embeddingBatchSize) + 1,
-                (int)Math.Ceiling((double)textChunks.Count / embeddingBatchSize),
+                (int)Math.Ceiling((double)chunkInputs.Count / embeddingBatchSize),
                 batchSize);
 
-            var texts = textChunks.Skip(i).Take(batchSize).Select(c => c.Text).ToList();
+            var texts = chunkInputs.Skip(i).Take(batchSize).Select(c => c.Text).ToList();
             var embeddingResult = await _embeddingService.GenerateEmbeddingsAsync(texts, cancellationToken).ConfigureAwait(false);
 
             if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
@@ -372,25 +394,28 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                 return (false, null, "Embedding count mismatch", PdfIndexingErrorCode.EmbeddingFailed);
             }
 
-            // Issue #730 / spec §5.3 forward-wiring: hierarchy fields (Heading, Level, ParentChunkId, ElementType)
-            // are intentionally not mapped here because the basic ITextChunkingService.ChunkText path does not
-            // produce them. When AdvancedChunkingService is integrated upstream, propagate from the source TextChunk.
-            // Prepare document chunks with embeddings
-            var batchChunks = textChunks.Skip(i).Take(batchSize)
+            // Issue #730 / SP2 task 7: hierarchy fields (Heading, Level, ParentChunkId, ElementType) are
+            // carried from DocumentChunkInput for both paths — the heading-aware chunker populates them,
+            // the flat PrepareForEmbedding path leaves them at their DocumentChunkInput defaults (null/1/null/"NarrativeText").
+            var batchChunks = chunkInputs.Skip(i).Take(batchSize)
                 .Select((chunk, index) => new DocumentChunk
                 {
                     Text = chunk.Text,
                     Embedding = embeddingResult.Embeddings[index],
                     Page = chunk.Page,
                     CharStart = chunk.CharStart,
-                    CharEnd = chunk.CharEnd
+                    CharEnd = chunk.CharEnd,
+                    Heading = chunk.Heading,
+                    Level = chunk.Level,
+                    ParentChunkId = chunk.ParentChunkId,
+                    ElementType = chunk.ElementType,
                 })
                 .ToList();
 
             documentChunks.AddRange(batchChunks);
 
             _logger.LogDebug("Completed batch {BatchNumber}, total chunks processed: {ProcessedCount}/{TotalCount}",
-                (i / embeddingBatchSize) + 1, documentChunks.Count, textChunks.Count);
+                (i / embeddingBatchSize) + 1, documentChunks.Count, chunkInputs.Count);
         }
 
         return (true, documentChunks, null, null);

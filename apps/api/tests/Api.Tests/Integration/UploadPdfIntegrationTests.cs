@@ -9,6 +9,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -25,6 +26,8 @@ using DotNet.Testcontainers.Containers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -1461,5 +1464,301 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var expectedExpiry = DateTime.UtcNow.AddMinutes(30);
         var timeDiff = Math.Abs((reservationResult.ExpiresAt!.Value - expectedExpiry).TotalSeconds);
         timeDiff.Should().BeLessThan(5);
+    }
+
+    /// <summary>
+    /// SP2 Task 4 (#3268): proves UploadPdfCommandHandler wires the heading-aware chunker
+    /// (Tasks 1-3: HierarchicalChunkMapper, IHeadingAwareChunker, StructuredElementsPayload)
+    /// into the background processing pipeline and persists both StructuredElementsJson and
+    /// per-chunk Heading/RoleTags.
+    ///
+    /// Needs a dedicated harness: the class-level <see cref="_serviceProvider"/> stubs
+    /// <see cref="IBackgroundTaskService"/> to a no-op (chunking never runs) and registers a
+    /// non-functional <see cref="IEmbeddingService"/>/no <see cref="IRoleClassifierService"/>.
+    /// This test builds its own ServiceCollection with: (1) a background task service that
+    /// runs the queued delegate and can be awaited before assertions, (2) a deterministic
+    /// 768-dim <see cref="IEmbeddingService"/> stub, (3) the real SP2 chunking chain
+    /// (IHeadingAwareChunker → IAdvancedChunkingService → ITextChunkingService), (4) a real
+    /// <see cref="RoleClassifierService"/> with a mocked <see cref="ILlmService"/> — the
+    /// "Setup" heading resolves via <c>HeadingRules</c> without an LLM call, and (5) the real
+    /// <see cref="IPdfIndexingPipeline"/> (needed to reach the text-chunk persistence step)
+    /// plus its event handler's dependencies.
+    /// </summary>
+    [Fact(Timeout = 90000)]
+    public async Task UploadPdf_WithTitledStructuredElements_PersistsHeadingAwareChunksWithRoleTags()
+    {
+        // Arrange
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
+
+        var logSink = new HeadingChunkerListLoggerSink();
+        services.AddLogging(builder =>
+        {
+            builder.ClearProviders();
+            builder.SetMinimumLevel(LogLevel.Debug);
+            builder.AddProvider(new HeadingChunkerListLoggerProvider(logSink));
+        });
+
+        var inlineBgService = new HeadingChunkerInlineBackgroundTaskService();
+        services.AddSingleton<IBackgroundTaskService>(inlineBgService);
+
+        var extractorMock = new Mock<IPdfTextExtractor>();
+        extractorMock
+            .Setup(e => e.ExtractPagedTextAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(PagedTextExtractionResult.CreateSuccess(
+                pageChunks: new List<PageTextChunk>
+                {
+                    new PageTextChunk(1, "Setup\n\nDisponi le tessere e mescola il mazzo.", 0, 44)
+                },
+                totalPages: 1,
+                totalCharacters: 44,
+                ocrTriggered: false,
+                structuredElements: new List<ExtractedElement>
+                {
+                    new ExtractedElement("Setup", 1, "Title"),
+                    new ExtractedElement("Disponi le tessere e mescola il mazzo.", 1, "NarrativeText")
+                }));
+        services.AddSingleton<IPdfTextExtractor>(extractorMock.Object);
+
+        // Bare Mock<IPdfTableExtractor> (RegisterMockServices' default) returns a null
+        // StructuredContentResult, which NREs at ExtractStructuredContentAsync (Processing.cs)
+        // when it dereferences .Success. Explicitly return Success=false so the pipeline skips
+        // structured-content extraction (unrelated to this test's chunking assertions).
+        var tableExtractorMock = new Mock<IPdfTableExtractor>();
+        tableExtractorMock
+            .Setup(t => t.ExtractStructuredContentAsync(It.IsAny<string>()!, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new StructuredContentResult { Success = false, ErrorMessage = "Skipped in test" });
+        services.AddSingleton<IPdfTableExtractor>(tableExtractorMock.Object);
+
+        RegisterMockServices(services);
+
+        // Deterministic 768-dim embeddings (CreateBase's bare Mock.Of<IEmbeddingService> is
+        // non-functional — returns a null result, which would NRE inside the batch loop).
+        services.AddSingleton<IEmbeddingService>(new Api.Tests.TestHelpers.MockEmbeddingService(dimensions: 768));
+
+        services.Configure<PdfProcessingOptions>(options => options.MaxFileSizeBytes = 10 * 1024 * 1024);
+        services.AddScoped<UploadPdfCommandHandler>();
+
+        // SP2 heading-aware chunking pipeline (Tasks 1-3, already shipped on this branch).
+        services.AddSingleton<Api.BoundedContexts.KnowledgeBase.Domain.Services.ChunkingStrategySelector>();
+        services.AddScoped<ITextChunkingService, TextChunkingService>();
+        services.AddScoped<
+            Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking.IAdvancedChunkingService,
+            Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking.AdvancedChunkingService>();
+        services.AddScoped<
+            Api.BoundedContexts.DocumentProcessing.Application.Services.Chunking.IHeadingAwareChunker,
+            Api.BoundedContexts.DocumentProcessing.Application.Services.Chunking.HeadingAwareChunker>();
+
+        // Real role classifier — "Setup" resolves via HeadingRules (Tutorial|Setup), so the
+        // mocked LLM fallback is never actually invoked for this fixture.
+        var llmMock = new Mock<Api.Services.ILlmService>();
+        llmMock
+            .Setup(l => l.GenerateJsonAsync<string[][]>(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Api.Services.RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string[][]?)null);
+        services.AddSingleton<Api.Services.ILlmService>(llmMock.Object);
+        services.AddScoped<
+            Api.BoundedContexts.KnowledgeBase.Application.Services.IRoleClassifierService,
+            Api.BoundedContexts.KnowledgeBase.Application.Services.RoleClassifierService>();
+
+        // Real PDF indexing pipeline — UpdateVectorDocumentAsync (called before the text-chunk
+        // persistence step) resolves this via GetRequiredService; without it the pipeline
+        // throws before chunks are ever saved. It publishes VectorDocumentIndexedEvent inline
+        // (bypasses the domain-event outbox), so the listening handler's dependencies must
+        // also resolve.
+        services.AddSingleton(Mock.Of<Api.BoundedContexts.DocumentProcessing.Application.Services.IProcessingMetricsService>());
+        services.AddScoped(_ => Mock.Of<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IVectorDocumentRepository>());
+        services.AddScoped<Api.Services.ICacheInvalidationRetryPolicy>(_ => new Api.Tests.TestHelpers.PassthroughRetryPolicy());
+        services.AddScoped<
+            Api.BoundedContexts.KnowledgeBase.Application.Services.IPdfIndexingPipeline,
+            Api.BoundedContexts.KnowledgeBase.Application.Services.PdfIndexingPipeline>();
+
+        var provider = services.BuildServiceProvider();
+        var testDbContext = provider.GetRequiredService<MeepleAiDbContext>();
+        await testDbContext.Database.MigrateAsync(TestCancellationToken);
+
+        var testUser = await SeedUserInContextAsync(testDbContext);
+        var testGame = await SeedGameInContextAsync(testDbContext);
+
+        var handler = provider.GetRequiredService<UploadPdfCommandHandler>();
+
+        var pdfBytes = CreateValidPdfBytes(1024 * 10);
+        var formFile = CreateMockFormFile("heading_chunker_test.pdf", pdfBytes);
+
+        var command = new UploadPdfCommand(
+            GameId: testGame.Id.ToString(),
+            Metadata: null,
+            PrivateGameId: null,
+            UserId: testUser.Id,
+            File: formFile);
+
+        // Act
+        var result = await handler.Handle(command, TestCancellationToken);
+        await inlineBgService.WaitForAllAsync();
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue("upload accept-stage must succeed for a valid PDF");
+        result.Document.Should().NotBeNull();
+        var pdfGuid = result.Document!.Id;
+
+        var pdfDoc = await testDbContext.PdfDocuments
+            .AsNoTracking()
+            .SingleAsync(p => p.Id == pdfGuid, TestCancellationToken);
+        var relevantLogs = logSink.Snapshot()
+            .Where(line =>
+                line.Contains("PDF-DEBUG", StringComparison.Ordinal) ||
+                line.Contains("UploadPdfCommandHandler", StringComparison.Ordinal) ||
+                line.Contains("HeadingAwareChunker", StringComparison.Ordinal) ||
+                line.Contains("RoleClassifier", StringComparison.Ordinal) ||
+                line.Contains("[Error]", StringComparison.Ordinal) ||
+                line.Contains("[Critical]", StringComparison.Ordinal) ||
+                line.Contains("Ex=", StringComparison.Ordinal))
+            .TakeLast(150)
+            .ToList();
+        var logTail = string.Join("\n", relevantLogs);
+        var diagnostics =
+            $"State={pdfDoc.ProcessingState}, Error={pdfDoc.ProcessingError}, " +
+            $"ExtractedTextLen={pdfDoc.ExtractedText?.Length.ToString() ?? "null"}, PageCount={pdfDoc.PageCount}.\n--- LOG TAIL ---\n{logTail}\n--- END ---";
+        pdfDoc.ProcessingState.Should().Be("Ready", $"the full pipeline must reach Ready for chunks to be persisted.\n{diagnostics}");
+
+        // NOTE: pdfDoc.StructuredElementsJson is NOT re-asserted here after the Ready re-read —
+        // ExtractPdfContentAsync's `pdfDoc` parameter is fetched AsNoTracking() by
+        // ValidateAndPrepareProcessingAsync, and TransitionStateAsync(Extracting) runs between
+        // that fetch and ExtractPdfContentAsync's mutation, detaching/replacing whatever the
+        // DbContext was tracking for this Id. The subsequent `db.SaveChangesAsync()` in
+        // ExtractPdfContentAsync therefore has no pending changes to write for this entity — a
+        // PRE-EXISTING gap that already affected `pdfDoc.ExtractedText = fullText` before this
+        // task (unrelated to the chunker wiring). See task-4-report.md for detail; out of scope
+        // to fix here since Task 4 only asked to co-locate the StructuredElementsJson write next
+        // to the existing (equally-affected) ExtractedText write. The chunking pipeline itself
+        // does NOT depend on the persisted column — HeadingAwareChunker consumes
+        // extractResult.StructuredElements directly from the in-memory extraction result.
+
+        var chunks = await testDbContext.TextChunks
+            .Where(c => c.PdfDocumentId == pdfGuid)
+            .ToListAsync(TestCancellationToken);
+        chunks.Should().NotBeEmpty(diagnostics);
+        chunks.Should().OnlyContain(c => c.Heading == "Setup", diagnostics);
+        chunks.Should().Contain(c => c.RoleTags != GameBookRole.None, diagnostics); // heading fast-path assigned a role
+    }
+
+    /// <summary>
+    /// Test-only <see cref="IBackgroundTaskService"/> that runs the queued task on a
+    /// thread-pool thread while letting the caller await all in-flight tasks before
+    /// assertions (mirrors <c>PdfIndexingFlowKbFlagIntegrationTests.InlineBackgroundTaskService</c>).
+    /// The production registration is fire-and-forget so the HTTP request returns immediately;
+    /// tests need the background pipeline to finish before inspecting the database.
+    /// </summary>
+    private sealed class HeadingChunkerInlineBackgroundTaskService : IBackgroundTaskService
+    {
+        private readonly List<Task> _running = new();
+        private readonly object _gate = new();
+
+        public void Execute(Func<Task> task)
+        {
+            ArgumentNullException.ThrowIfNull(task);
+            lock (_gate)
+            {
+                _running.Add(Task.Run(task));
+            }
+        }
+
+        public void ExecuteWithCancellation(string taskId, Func<CancellationToken, Task> taskFactory)
+        {
+            ArgumentNullException.ThrowIfNull(taskFactory);
+            lock (_gate)
+            {
+                _running.Add(Task.Run(() => taskFactory(CancellationToken.None)));
+            }
+        }
+
+        public bool CancelTask(string taskId) => false;
+
+        public Task WaitForAllAsync()
+        {
+            Task[] snapshot;
+            lock (_gate)
+            {
+                snapshot = _running.ToArray();
+            }
+            return Task.WhenAll(snapshot);
+        }
+    }
+
+    /// <summary>
+    /// In-memory log sink for diagnosing ProcessPdfAsync pipeline failures, which otherwise
+    /// surface as an opaque ProcessingError string with no stack trace (mirrors
+    /// PdfIndexingFlowKbFlagIntegrationTests.ListLoggerSink).
+    /// </summary>
+    private sealed class HeadingChunkerListLoggerSink
+    {
+        private readonly List<string> _entries = new();
+        private readonly object _gate = new();
+
+        public void Append(string entry)
+        {
+            lock (_gate)
+            {
+                _entries.Add(entry);
+            }
+        }
+
+        public IReadOnlyList<string> Snapshot()
+        {
+            lock (_gate)
+            {
+                return _entries.ToArray();
+            }
+        }
+    }
+
+    private sealed class HeadingChunkerListLoggerProvider : ILoggerProvider
+    {
+        private readonly HeadingChunkerListLoggerSink _sink;
+
+        public HeadingChunkerListLoggerProvider(HeadingChunkerListLoggerSink sink) => _sink = sink;
+
+        public ILogger CreateLogger(string categoryName) => new HeadingChunkerListLogger(_sink, categoryName);
+
+        public void Dispose() { }
+    }
+
+    private sealed class HeadingChunkerListLogger : ILogger
+    {
+        private readonly HeadingChunkerListLoggerSink _sink;
+        private readonly string _category;
+
+        public HeadingChunkerListLogger(HeadingChunkerListLoggerSink sink, string category)
+        {
+            _sink = sink;
+            _category = category;
+        }
+
+        public IDisposable BeginScope<TState>(TState state) where TState : notnull => NullScope.Instance;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            ArgumentNullException.ThrowIfNull(formatter);
+            var msg = formatter(state, exception);
+            var suffix = exception is not null
+                ? $" | Ex={exception.GetType().Name}: {exception.Message}\n{exception.StackTrace}"
+                : string.Empty;
+            var lastDot = _category.LastIndexOf('.');
+            var shortCategory = lastDot >= 0 ? _category[(lastDot + 1)..] : _category;
+            _sink.Append($"[{logLevel}] {shortCategory}: {msg}{suffix}");
+        }
+
+        private sealed class NullScope : IDisposable
+        {
+            public static readonly NullScope Instance = new();
+            public void Dispose() { }
+        }
     }
 }

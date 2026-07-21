@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
+using Api.BoundedContexts.DocumentProcessing.Application.Services.Chunking;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
@@ -66,7 +67,8 @@ internal partial class UploadPdfCommandHandler
             // Step 2: Chunk text with page tracking (40-60%)
             _logger.LogInformation("✂️ [PDF-DEBUG] Step 2: Starting ChunkExtractedTextAsync for {PdfId}", pdfId);
             var allDocumentChunks = await ChunkExtractedTextAsync(
-                pdfId, fullText!, extractResult!, db, scope, startTime, cancellationToken).ConfigureAwait(false);
+                pdfId, fullText!, extractResult!, pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId,
+                db, scope, startTime, cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("✅ [PDF-DEBUG] Chunking SUCCESS: {ChunkCount} chunks created", allDocumentChunks.Count);
 
             await TransitionStateAsync(scope, db, pdfGuid, PdfProcessingState.Embedding, cancellationToken).ConfigureAwait(false);
@@ -258,6 +260,7 @@ internal partial class UploadPdfCommandHandler
                 .Select(pc => pc.Text));
 
             pdfDoc.ExtractedText = fullText;
+            pdfDoc.StructuredElementsJson = StructuredElementsPayload.Serialize(extractResult.StructuredElements);
             pdfDoc.PageCount = extractResult.TotalPages;
             pdfDoc.CharacterCount = extractResult.TotalCharacters;
             try
@@ -338,6 +341,7 @@ internal partial class UploadPdfCommandHandler
         string pdfId,
         string fullText,
         PagedTextExtractionResult extractResult,
+        Guid? gameId,
         MeepleAiDbContext db,
         IServiceScope scope,
         DateTime startTime,
@@ -346,37 +350,41 @@ internal partial class UploadPdfCommandHandler
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Chunking, 0, extractResult.TotalPages, startTime, null, cancellationToken).ConfigureAwait(false);
 
         var chunkingStopwatch = Stopwatch.StartNew();
-        var chunkingService = scope.ServiceProvider.GetRequiredService<ITextChunkingService>();
-        const int chunkSize = 512;
-        const int chunkOverlap = 50;
+        var headingAwareChunker = scope.ServiceProvider.GetService<IHeadingAwareChunker>();
 
-        var allDocumentChunks = chunkingService.PrepareForEmbedding(fullText, chunkSize, chunkOverlap)
-            ?.Where(chunk => chunk != null && !string.IsNullOrWhiteSpace(chunk.Text))
-            .Select(chunk => new DocumentChunkInput
-            {
-                Text = chunk.Text,
-                Page = chunk.Page,
-                CharStart = chunk.CharStart,
-                CharEnd = chunk.CharEnd
-            })
-            .ToList()
-            ?? new List<DocumentChunkInput>();
-
-        if (allDocumentChunks.Count == 0)
+        List<DocumentChunkInput> allDocumentChunks;
+        if (headingAwareChunker != null)
         {
-            foreach (var pageChunk in extractResult.PageChunks.Where(pc => !pc.IsEmpty))
-            {
-                var pageTextChunks = chunkingService.ChunkText(pageChunk.Text, chunkSize, chunkOverlap);
+            allDocumentChunks = await headingAwareChunker.ChunkAsync(
+                Guid.Parse(pdfId), gameId, extractResult.StructuredElements, fullText, cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            var chunkingService = scope.ServiceProvider.GetRequiredService<ITextChunkingService>();
+            const int chunkSize = 512;
+            const int chunkOverlap = 50;
+            allDocumentChunks = chunkingService.PrepareForEmbedding(fullText, chunkSize, chunkOverlap)
+                ?.Where(chunk => chunk != null && !string.IsNullOrWhiteSpace(chunk.Text))
+                .Select(chunk => new DocumentChunkInput { Text = chunk.Text, Page = chunk.Page, CharStart = chunk.CharStart, CharEnd = chunk.CharEnd })
+                .ToList()
+                ?? new List<DocumentChunkInput>();
 
-                foreach (var textChunk in pageTextChunks.Where(t => !string.IsNullOrWhiteSpace(t.Text)))
+            if (allDocumentChunks.Count == 0)
+            {
+                foreach (var pageChunk in extractResult.PageChunks.Where(pc => !pc.IsEmpty))
                 {
-                    allDocumentChunks.Add(new DocumentChunkInput
+                    var pageTextChunks = chunkingService.ChunkText(pageChunk.Text, chunkSize, chunkOverlap);
+
+                    foreach (var textChunk in pageTextChunks.Where(t => !string.IsNullOrWhiteSpace(t.Text)))
                     {
-                        Text = textChunk.Text,
-                        Page = pageChunk.PageNumber,
-                        CharStart = textChunk.CharStart,
-                        CharEnd = textChunk.CharEnd
-                    });
+                        allDocumentChunks.Add(new DocumentChunkInput
+                        {
+                            Text = textChunk.Text,
+                            Page = pageChunk.PageNumber,
+                            CharStart = textChunk.CharStart,
+                            CharEnd = textChunk.CharEnd
+                        });
+                    }
                 }
             }
         }

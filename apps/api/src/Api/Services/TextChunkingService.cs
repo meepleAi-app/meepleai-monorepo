@@ -390,6 +390,10 @@ internal record TextChunk
 /// </summary>
 internal record DocumentChunkInput
 {
+    // Slice D: stable identity so a child chunk's ParentChunkId can reference
+    // its parent's persisted TextChunkEntity.Id. Guid.Empty (default) means
+    // "not yet assigned" — save sites fall back to a fresh Guid in that case.
+    public Guid Id { get; init; }
     public string Text { get; init; } = string.Empty;
     public int Page { get; init; }
     public int CharStart { get; init; }

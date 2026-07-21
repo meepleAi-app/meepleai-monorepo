@@ -520,7 +520,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         var textChunkEntities = documentChunks
             .Select((chunk, index) => new TextChunkEntity
             {
-                Id = Guid.NewGuid(),
+                Id = chunk.Id == Guid.Empty ? Guid.NewGuid() : chunk.Id,
                 GameId = gameId,
                 SharedGameId = sharedGameId,
                 PdfDocumentId = pdfGuid,

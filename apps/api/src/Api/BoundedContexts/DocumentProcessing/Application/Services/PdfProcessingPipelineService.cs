@@ -872,7 +872,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         var textChunkEntities = chunks
             .Select((chunk, index) => new TextChunkEntity
             {
-                Id = Guid.NewGuid(),
+                Id = chunk.Id == Guid.Empty ? Guid.NewGuid() : chunk.Id,
                 GameId = resolvedGameId,
                 SharedGameId = pdfDoc.SharedGameId,
                 PdfDocumentId = pdfDoc.Id,

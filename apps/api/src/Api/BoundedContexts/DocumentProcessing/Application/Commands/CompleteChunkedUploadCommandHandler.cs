@@ -872,7 +872,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         var textChunkEntities = allDocumentChunks
             .Select((chunk, index) => new TextChunkEntity
             {
-                Id = Guid.NewGuid(),
+                Id = chunk.Id == Guid.Empty ? Guid.NewGuid() : chunk.Id,
                 GameId = pdfDoc.SharedGameId,
                 PdfDocumentId = pdfGuid,
                 ChunkIndex = index,

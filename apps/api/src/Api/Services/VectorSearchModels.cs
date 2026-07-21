@@ -8,6 +8,10 @@ namespace Api.Services;
 /// </summary>
 internal record DocumentChunk
 {
+    // Slice D: stable identity so a child chunk's ParentChunkId can reference
+    // its parent's persisted TextChunkEntity.Id. Guid.Empty (default) means
+    // "not yet assigned" — save sites fall back to a fresh Guid in that case.
+    public Guid Id { get; init; }
     public string Text { get; init; } = string.Empty;
     public float[] Embedding { get; init; } = Array.Empty<float>();
     public int Page { get; init; }

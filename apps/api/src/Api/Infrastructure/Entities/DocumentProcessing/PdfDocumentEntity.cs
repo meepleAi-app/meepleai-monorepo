@@ -32,6 +32,11 @@ public class PdfDocumentEntity
     // PDF-02: Text extraction fields
     public string? ExtractedText { get; set; }
 
+    // Slice D: heading-aware re-index — persisted structured elements (JSON array
+    // of ExtractedElement) captured at extraction time so a later re-index can
+    // rebuild the heading-aware document without re-running the extractor.
+    public string? StructuredElementsJson { get; set; }
+
     // Issue #4215: Granular 7-state tracking
     public string ProcessingState { get; set; } = "Pending"; // Enum stored as string: Pending, Uploading, Extracting, Chunking, Embedding, Indexing, Ready, Failed
 

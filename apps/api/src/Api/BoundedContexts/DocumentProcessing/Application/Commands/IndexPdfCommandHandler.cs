@@ -2,9 +2,12 @@ using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 using Api.Configuration;
+using Api.Constants;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.KnowledgeBase;
@@ -30,7 +33,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingResultDto>
 {
     private readonly MeepleAiDbContext _db;
-    private readonly ITextChunkingService _chunkingService;
+    private readonly IAdvancedChunkingService _advancedChunkingService;
     private readonly IEmbeddingService _embeddingService;
     private readonly IndexingSettings _indexingSettings;
     private readonly ILogger<IndexPdfCommandHandler> _logger;
@@ -43,7 +46,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
 
     public IndexPdfCommandHandler(
         MeepleAiDbContext db,
-        ITextChunkingService chunkingService,
+        IAdvancedChunkingService advancedChunkingService,
         IEmbeddingService embeddingService,
         ILogger<IndexPdfCommandHandler> logger,
         IOptions<IndexingSettings> indexingSettings,
@@ -53,7 +56,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         IRoleClassifierService? roleClassifier = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
-        _chunkingService = chunkingService ?? throw new ArgumentNullException(nameof(chunkingService));
+        _advancedChunkingService = advancedChunkingService ?? throw new ArgumentNullException(nameof(advancedChunkingService));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _indexingSettings = indexingSettings?.Value ?? throw new ArgumentNullException(nameof(indexingSettings));
@@ -99,7 +102,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
 
             // Step 2: Chunk text and generate embeddings
             var (chunkingSuccess, documentChunks, chunkingError, chunkErrorCode) = await ChunkAndEmbedTextAsync(
-                pdfId, pdf.ExtractedText!, cancellationToken).ConfigureAwait(false);
+                pdfId, pdf, cancellationToken).ConfigureAwait(false);
             if (!chunkingSuccess)
             {
                 pdf.ProcessingState = nameof(PdfProcessingState.Failed);
@@ -326,45 +329,76 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
     }
 
     /// <summary>
-    /// Chunks PDF text and generates embeddings.
+    /// Chunks PDF text (heading-aware, Slice D) and generates embeddings.
     /// Returns (success, documentChunks, errorMessage, errorCode).
     /// </summary>
     private async Task<(bool success, List<DocumentChunk>? documentChunks, string? errorMessage, PdfIndexingErrorCode? errorCode)> ChunkAndEmbedTextAsync(
         string pdfId,
-        string extractedText,
-                CancellationToken cancellationToken)
+        PdfDocumentEntity pdf,
+        CancellationToken cancellationToken)
     {
+        var extractedText = pdf.ExtractedText!;
+
         // Chunk the text
         _logger.LogInformation("Chunking text for PDF {PdfId} ({CharCount} characters)",
             pdfId, extractedText.Length);
 
-        var textChunks = _chunkingService.ChunkText(extractedText);
+        List<ExtractedElement>? structuredElements = string.IsNullOrWhiteSpace(pdf.StructuredElementsJson)
+            ? null
+            : System.Text.Json.JsonSerializer.Deserialize<List<ExtractedElement>>(pdf.StructuredElementsJson);
 
-        if (textChunks.Count == 0)
+        var chunks = await HeadingAwareChunker.BuildAsync(
+            structuredElements,
+            extractedText,
+            Guid.Parse(pdfId),
+            pdf.PrivateGameId ?? pdf.SharedGameId,
+            _advancedChunkingService,
+            cancellationToken).ConfigureAwait(false);
+
+        if (chunks.Count == 0)
         {
             _logger.LogWarning("No chunks created for PDF {PdfId}", pdfId);
             return (false, null, "No chunks created from text", PdfIndexingErrorCode.ChunkingFailed);
         }
 
-        _logger.LogInformation("Created {ChunkCount} chunks for PDF {PdfId}", textChunks.Count, pdfId);
+        _logger.LogInformation("Created {ChunkCount} chunks for PDF {PdfId}", chunks.Count, pdfId);
 
         // Generate embeddings in batches to reduce memory footprint
         var embeddingBatchSize = _indexingSettings.EmbeddingBatchSize;
-        var documentChunks = new List<DocumentChunk>(textChunks.Count);
+        var documentChunks = new List<DocumentChunk>(chunks.Count);
+
+        // Slice D robustness guard: HeadingAwareChunker (unlike the old flat chunker) can emit a
+        // Level-0 parent chunk whose Text is an entire document section — EmbeddingService does
+        // not truncate, so an oversized chunk could fail the whole re-index. Cap ONLY the text
+        // sent to the embedding provider; the persisted DocumentChunk/text_chunks/pgvector row
+        // keeps the FULL Text for retrieval.
+        var cappedChunkCount = 0;
+
+        string CapTextForEmbedding(string text)
+        {
+            if (text.Length <= ChunkingConstants.MaxEmbeddingChars)
+            {
+                return text;
+            }
+
+            cappedChunkCount++;
+            return text[..ChunkingConstants.MaxEmbeddingChars];
+        }
 
         _logger.LogInformation("Generating embeddings for {ChunkCount} chunks in batches of {BatchSize}",
-            textChunks.Count, embeddingBatchSize);
+            chunks.Count, embeddingBatchSize);
 
-        for (int i = 0; i < textChunks.Count; i += embeddingBatchSize)
+        for (int i = 0; i < chunks.Count; i += embeddingBatchSize)
         {
-            var batchSize = Math.Min(embeddingBatchSize, textChunks.Count - i);
+            var batchSize = Math.Min(embeddingBatchSize, chunks.Count - i);
 
             _logger.LogDebug("Processing embedding batch {BatchNumber}/{TotalBatches} ({BatchSize} chunks)",
                 (i / embeddingBatchSize) + 1,
-                (int)Math.Ceiling((double)textChunks.Count / embeddingBatchSize),
+                (int)Math.Ceiling((double)chunks.Count / embeddingBatchSize),
                 batchSize);
 
-            var texts = textChunks.Skip(i).Take(batchSize).Select(c => c.Text).ToList();
+            var batchChunks = chunks.Skip(i).Take(batchSize).ToList();
+            var texts = batchChunks.Select(c => CapTextForEmbedding(c.Text)).ToList();
             var embeddingResult = await _embeddingService.GenerateEmbeddingsAsync(texts, cancellationToken).ConfigureAwait(false);
 
             if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
@@ -381,25 +415,23 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                 return (false, null, "Embedding count mismatch", PdfIndexingErrorCode.EmbeddingFailed);
             }
 
-            // Issue #730 / spec §5.3 forward-wiring: hierarchy fields (Heading, Level, ParentChunkId, ElementType)
-            // are intentionally not mapped here because the basic ITextChunkingService.ChunkText path does not
-            // produce them. When AdvancedChunkingService is integrated upstream, propagate from the source TextChunk.
-            // Prepare document chunks with embeddings
-            var batchChunks = textChunks.Skip(i).Take(batchSize)
-                .Select((chunk, index) => new DocumentChunk
-                {
-                    Text = chunk.Text,
-                    Embedding = embeddingResult.Embeddings[index],
-                    Page = chunk.Page,
-                    CharStart = chunk.CharStart,
-                    CharEnd = chunk.CharEnd
-                })
-                .ToList();
-
-            documentChunks.AddRange(batchChunks);
+            // DocumentChunk is an init-only record: set the batch-computed Embedding via a
+            // `with` clone rather than in-place mutation, preserving the Id/Heading/Level/
+            // ParentChunkId/ElementType assigned upstream by HeadingAwareChunker.BuildAsync.
+            for (var index = 0; index < batchChunks.Count; index++)
+            {
+                documentChunks.Add(batchChunks[index] with { Embedding = embeddingResult.Embeddings[index] });
+            }
 
             _logger.LogDebug("Completed batch {BatchNumber}, total chunks processed: {ProcessedCount}/{TotalCount}",
-                (i / embeddingBatchSize) + 1, documentChunks.Count, textChunks.Count);
+                (i / embeddingBatchSize) + 1, documentChunks.Count, chunks.Count);
+        }
+
+        if (cappedChunkCount > 0)
+        {
+            _logger.LogWarning(
+                "Capped {CappedChunkCount} of {ChunkCount} oversized chunk(s) to {MaxEmbeddingChars} characters before embedding for PDF {PdfId}; full chunk text is still persisted",
+                cappedChunkCount, chunks.Count, ChunkingConstants.MaxEmbeddingChars, pdfId);
         }
 
         return (true, documentChunks, null, null);
@@ -520,7 +552,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         var textChunkEntities = documentChunks
             .Select((chunk, index) => new TextChunkEntity
             {
-                Id = Guid.NewGuid(),
+                Id = chunk.Id == Guid.Empty ? Guid.NewGuid() : chunk.Id,
                 GameId = gameId,
                 SharedGameId = sharedGameId,
                 PdfDocumentId = pdfGuid,

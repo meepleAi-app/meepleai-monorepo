@@ -132,6 +132,9 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
                 pdfId, extractResult.TotalCharacters, extractResult.TotalPages);
 
             pdf.ExtractedText = fullText;
+            pdf.StructuredElementsJson = extractResult.StructuredElements is null
+                ? null
+                : System.Text.Json.JsonSerializer.Serialize(extractResult.StructuredElements);
             pdf.PageCount = extractResult.TotalPages;
             pdf.CharacterCount = extractResult.TotalCharacters;
             pdf.ProcessingState = nameof(PdfProcessingState.Ready);

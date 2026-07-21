@@ -493,6 +493,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 .Select(pc => pc.Text));
 
             pdfDoc.ExtractedText = fullText;
+            pdfDoc.StructuredElementsJson = extractResult.StructuredElements is null
+                ? null
+                : JsonSerializer.Serialize(extractResult.StructuredElements);
             pdfDoc.PageCount = extractResult.TotalPages;
             pdfDoc.CharacterCount = extractResult.TotalCharacters;
             try
@@ -872,7 +875,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         var textChunkEntities = chunks
             .Select((chunk, index) => new TextChunkEntity
             {
-                Id = Guid.NewGuid(),
+                Id = chunk.Id == Guid.Empty ? Guid.NewGuid() : chunk.Id,
                 GameId = resolvedGameId,
                 SharedGameId = pdfDoc.SharedGameId,
                 PdfDocumentId = pdfDoc.Id,

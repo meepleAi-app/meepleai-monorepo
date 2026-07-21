@@ -36,6 +36,14 @@ internal class GetGameDetailsQueryHandler : IQueryHandler<GetGameDetailsQuery, G
     {
         ArgumentNullException.ThrowIfNull(query);
 
+        // Guid.Empty short-circuits to null (→ HTTP 404) instead of letting
+        // GameRef.Shared(Guid.Empty) throw ArgumentException (→ HTTP 400), matching
+        // the sibling GetGameByIdQueryHandler + the endpoint's 404 contract. (#3263)
+        if (query.GameId == Guid.Empty)
+        {
+            return null;
+        }
+
         var coreData = await _gameCoreData
             .GetCoreDataAsync(GameRef.Shared(query.GameId), cancellationToken)
             .ConfigureAwait(false);

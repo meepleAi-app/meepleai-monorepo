@@ -283,7 +283,10 @@ internal class HybridSearchService : IHybridSearchService
             Text = se.Embedding.TextContent,
             PdfId = se.Embedding.VectorDocumentId.ToString(),
             ChunkIndex = se.Embedding.ChunkIndex,
-            Page = se.Embedding.PageNumber
+            Page = se.Embedding.PageNumber,
+            // Slice C: carry role_tags through so vector-only chunks get the role-match boost in
+            // fusion (same cast as the semantic-only path). pgvector already SELECTs role_tags.
+            RoleTags = (GameBookRole)se.Embedding.RoleTags
         }).ToArray();
 
         _logger.LogInformation(
@@ -435,12 +438,17 @@ internal class HybridSearchService : IHybridSearchService
                 keywordRrfScore = keywordItem != null ? keywordWeight / (rrfK + keywordItem.Rank) : 0f;
             }
 
-            // Phase D (D6): role-match boost — only the keyword side currently carries RoleTags
-            // (pgvector_embeddings table does not store role_tags). When the chunk overlaps the
-            // user's classified intent, apply an additive boost on top of the fused RRF score.
-            var chunkRoleTags = hasKeyword && keywordItem != null
+            // Phase D (D6) + Slice C: role-match boost. Both arms denormalize the same
+            // text_chunks.role_tags (keyword from text_chunks, vector from pgvector_embeddings.role_tags),
+            // so union the two — a chunk surfacing via EITHER arm carries its role. When the chunk
+            // overlaps the user's classified intent, apply an additive boost on top of the fused RRF.
+            var vectorRoleTags = hasVector && vectorItem != null
+                ? vectorItem.Result.RoleTags
+                : GameBookRole.None;
+            var keywordRoleTags = hasKeyword && keywordItem != null
                 ? keywordItem.Result.RoleTags
                 : GameBookRole.None;
+            var chunkRoleTags = vectorRoleTags | keywordRoleTags;
             var roleBoost = ComputeRoleMatchBoost(queryRoleHint, chunkRoleTags);
 
             // Use data from whichever result has it (prefer vector for metadata consistency)

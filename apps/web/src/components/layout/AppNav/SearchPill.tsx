@@ -53,7 +53,7 @@ export function SearchPill({ className }: SearchPillProps) {
       <span
         aria-hidden="true"
         className={cn(
-          'hidden items-center gap-0.5 rounded border border-border bg-background px-1 py-0.5 font-mono text-[10px] font-semibold opacity-70 lg:inline-flex'
+          'hidden items-center gap-0.5 rounded border border-border bg-background px-1 py-0.5 font-mono text-[10px] font-semibold text-muted-foreground lg:inline-flex'
         )}
       >
         {modKey}K

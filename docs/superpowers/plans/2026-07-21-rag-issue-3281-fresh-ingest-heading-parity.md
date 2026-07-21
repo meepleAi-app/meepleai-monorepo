@@ -189,18 +189,20 @@ The stale-recovery/shared-game path. `pdfDoc` is a **tracked** entity (`FindAsyn
 
 - [ ] **Step 1: Write the failing test**
 
-Model it on the existing pipeline unit tests in the same folder (look for `PdfProcessingPipeline*Tests.cs` — reuse their fixture/mocks). The test builds a `PdfProcessingPipelineService` with a mocked `IAdvancedChunkingService` whose `ChunkDocumentAsync` returns a parent (`Level 0`, `Heading "Setup"`) + child (`Level 2`, `ParentChunkId = parent`), drives `ProcessAsync` (or calls the now-`internal` `ChunkTextAsync` via `InternalsVisibleTo`-exposed access if the class exposes it — otherwise assert through the persisted `text_chunks` in an in-memory `MeepleAiDbContext`), and asserts the produced chunk inputs carry `Heading == "Setup"` and a non-null `ParentChunkId` on the child.
+**⚠️ Fixture guidance (verified):** the `PdfProcessingPipeline*Tests.cs` in this folder is only the *Cover* test, which mocks `IPdfClaimService` so `TryClaimPendingAsync` returns false → `ProcessAsync` early-returns before chunking and can NOT exercise this path. Model instead on **`apps/api/tests/Api.Tests/BoundedContexts/KnowledgeBase/Unit/RaptorPipelineIntegrationTests.cs`** — a full `ProcessAsync`-driving harness (constructs the service at ~:285 with a real `InMemoryPdfClaimService(_db)` so claim=true, an extractor returning `StructuredElements`, and embeddings with matching counts, then calls `ProcessAsync` at ~:94). Add the new trailing `IAdvancedChunkingService` mock to that construction. Assert on the persisted `text_chunks` in the in-memory `MeepleAiDbContext` after `ProcessAsync`.
+
+Write **two** tests:
 
 ```csharp
-// Skeleton — adapt mocks to the existing pipeline test fixture in this folder.
-[Fact]
-public async Task ChunkTextAsync_WithAdvancedChunking_ProducesHeadingBearingChunks()
-{
-    // Arrange: mock IAdvancedChunkingService.ChunkDocumentAsync → [parent Level0 "Setup", child Level2]
-    // Build PdfProcessingPipelineService with that mock in the new trailing ctor slot.
-    // Act: invoke the chunk production for a doc whose extractResult.StructuredElements is non-empty.
-    // Assert: result has a chunk with Heading "Setup"; a child chunk with ParentChunkId != null and Level 2.
-}
+// Test A — English (no translation): mock IAdvancedChunkingService.ChunkDocumentAsync →
+// [parent Level0 "Setup", child Level2 ParentChunkId=parent]; drive ProcessAsync;
+// assert persisted text_chunks contain Heading == "Setup" and a child row with ParentChunkId != null, Level 2.
+
+// Test B — NON-ENGLISH (translation branch) REGRESSION for the PK-collision fix:
+// language detector → non-English (so the translate branch at ProcessAsync runs), same chunker mock;
+// assert ProcessAsync completes WITHOUT the PDF being marked Failed, and that the original + translated
+// text_chunks rows have DISTINCT Ids (no primary-key collision). This test MUST fail if a future edit
+// re-introduces `Id = origChunk.Id` on the translated chunk.
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -271,13 +273,14 @@ Replace `ChunkText` (line 658) with:
 
 Call site (line 191): `var chunks = await ChunkTextAsync(fullText, extractResult, pdfDoc.Id, pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId, cancellationToken).ConfigureAwait(false);`
 
-Translation branch (lines 224-238) — copy hierarchy fields + remove the stale `// Issue #730 / spec §5.3 forward-wiring` TODO comment (now done):
+Translation branch (lines 224-238) — copy hierarchy fields + remove the stale `// Issue #730 / spec §5.3 forward-wiring` TODO comment (now done). **🔴 CRITICAL: do NOT copy `Id`.** After the producer swap, `origChunk.Id` is a non-empty stable Guid (from `HierarchicalChunkMapper`). A translation is a SEPARATE persisted `text_chunks` row; copying the Id would give the original and its EN translation the SAME primary key → `db.TextChunks.AddRange` throws an EF identity-map `InvalidOperationException` (NOT caught by the `DbUpdateConcurrencyException`-only handler → PDF marked Failed) for **every non-English document**. Leave `Id` at its default (`Guid.Empty`) so `SaveTextChunksAsync` mints a fresh Guid. `ParentChunkId` still references the original-language parent row (a valid persisted row; `ParentChunkId` has no FK — index-only), which is acceptable.
 ```csharp
         var origChunk = chunks[t.OriginalIndex];
         translatedChunks.Add((
             new DocumentChunkInput
             {
-                Id = origChunk.Id,
+                // Id intentionally omitted → defaults to Guid.Empty → fresh Guid at persist.
+                // Copying origChunk.Id here duplicates a primary key and fails non-English PDFs.
                 Text = t.TranslatedText,
                 Page = origChunk.Page,
                 CharStart = origChunk.CharStart,
@@ -346,24 +349,13 @@ Expected: FAIL (flat chunks, `Heading` null).
 
 Add usings: `using Api.BoundedContexts.DocumentProcessing.Application.Services.Chunking;` and `using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;`.
 
-`ChunkExtractedTextAsync` (line 337) — add `PdfDocumentEntity pdfDoc` param (place it before `db`), and replace the primary production:
+`ChunkExtractedTextAsync` (line 337) — add `PdfDocumentEntity pdfDoc` param (place it before `db`). **🟢 Do a LOCALIZED change, do NOT hoist or drop existing locals.** The method has a `chunkingStopwatch` (declared ~line 348, used at the metric ~388-389), plus `UpdateProgressAsync`/`RecordPipelineMetricSafely` calls. Keep the entire prologue and epilogue VERBATIM; change ONLY the chunk-production expression, and reuse the method's *existing* `chunkingService`/`chunkSize`/`chunkOverlap` locals (do not re-declare them). Concretely:
+- Add the `PdfDocumentEntity pdfDoc` param to the signature.
+- Where the method currently does `var allDocumentChunks = chunkingService.PrepareForEmbedding(...)...` (the primary production + its `if (allDocumentChunks.Count == 0) { …fallback… }`), change the declaration to a bare `List<DocumentChunkInput> allDocumentChunks;` and wrap the production like this:
 ```csharp
-    private async Task<List<DocumentChunkInput>> ChunkExtractedTextAsync(
-        string pdfId,
-        string fullText,
-        PagedTextExtractionResult extractResult,
-        PdfDocumentEntity pdfDoc,
-        MeepleAiDbContext db,
-        IServiceScope scope,
-        DateTime startTime,
-        CancellationToken cancellationToken)
-    {
-        var chunkingService = scope.ServiceProvider.GetRequiredService<ITextChunkingService>();
-        const int chunkSize = 512;
-        const int chunkOverlap = 50;
-
         // Issue #3281: heading-aware production when AdvancedChunkingService is available in scope.
         var advancedChunking = scope.ServiceProvider.GetService<IAdvancedChunkingService>();
+        List<DocumentChunkInput> allDocumentChunks;
         if (advancedChunking != null)
         {
             var hierarchical = await HeadingAwareChunker.BuildAsync(
@@ -373,15 +365,23 @@ Add usings: `using Api.BoundedContexts.DocumentProcessing.Application.Services.C
                 pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId,
                 advancedChunking,
                 cancellationToken).ConfigureAwait(false);
-            return HeadingAwareChunkAdapter.ToChunkInputs(hierarchical);
+            allDocumentChunks = HeadingAwareChunkAdapter.ToChunkInputs(hierarchical);
         }
-
-        // Fallback: existing flat production (primary PrepareForEmbedding + per-page ChunkText fallback).
-        // ... KEEP the existing body from `var allDocumentChunks = chunkingService.PrepareForEmbedding(...)`
-        //     through the fallback loop and return, unchanged ...
-    }
+        else
+        {
+            // EXISTING flat body verbatim, but ASSIGN (no `var`) to the already-declared allDocumentChunks:
+            allDocumentChunks = chunkingService.PrepareForEmbedding(fullText, chunkSize, chunkOverlap)
+                ?.Where(chunk => chunk != null && !string.IsNullOrWhiteSpace(chunk.Text))
+                .Select(chunk => new DocumentChunkInput { Text = chunk.Text, Page = chunk.Page, CharStart = chunk.CharStart, CharEnd = chunk.CharEnd })
+                .ToList()
+                ?? new List<DocumentChunkInput>();
+            if (allDocumentChunks.Count == 0)
+            {
+                // ... existing per-page ChunkText fallback loop, unchanged (still assigning into allDocumentChunks) ...
+            }
+        }
 ```
-(Preserve the existing flat body verbatim under the fallback — do not delete it.)
+Everything before (`chunkingStopwatch`, `UpdateProgressAsync`, `chunkingService`/consts) and after (metric, `return allDocumentChunks`) stays exactly as-is. This avoids CS0103 (dropped `chunkingStopwatch`) / CS0128 (re-declared locals) and keeps progress + metric on both paths.
 
 Call site (line 68): `var allDocumentChunks = await ChunkExtractedTextAsync(pdfId, fullText!, extractResult!, pdfDoc, db, scope, startTime, cancellationToken).ConfigureAwait(false);`
 
@@ -451,8 +451,15 @@ In `FinalizeProcessingAsync`, AFTER the Ready transition's `try { … Transition
         // freshly TRACKED entity AFTER the final Ready transition (mirrors ExtractPdfTextCommandHandler),
         // so no later repository transition can clobber it. Needed for re-index parity: IndexPdf reads
         // StructuredElementsJson and requires non-null ExtractedText.
+        // 🟡 Use CancellationToken.None (NOT cancellationToken): the PDF is already Ready+indexed at
+        // this point, so this persist MUST complete regardless of pipeline cancellation. Mirrors
+        // ConfirmQuotaAsync's post-Ready CancellationToken.None convention. If cancellation were
+        // threaded here, an OperationCanceledException would escape this DbUpdateConcurrencyException-only
+        // catch → ProcessPdfAsync's cancellation handler → TransitionToFailedAsync → MarkAsFailed on a
+        // Ready aggregate → InvalidOperationException("Cannot transition from Ready state"), AND the
+        // extraction output would be silently lost.
         var tracked = await db.PdfDocuments.AsTracking()
-            .FirstOrDefaultAsync(p => p.Id == pdfGuid, cancellationToken).ConfigureAwait(false);
+            .FirstOrDefaultAsync(p => p.Id == pdfGuid, CancellationToken.None).ConfigureAwait(false);
         if (tracked != null)
         {
             tracked.ExtractedText = pdfDoc.ExtractedText;
@@ -467,7 +474,7 @@ In `FinalizeProcessingAsync`, AFTER the Ready transition's `try { … Transition
             tracked.AtomicRuleCount = pdfDoc.AtomicRuleCount;
             try
             {
-                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                await db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
             }
             catch (DbUpdateConcurrencyException ex)
             {
@@ -477,7 +484,7 @@ In `FinalizeProcessingAsync`, AFTER the Ready transition's `try { … Transition
             }
         }
 ```
-Verify the in-scope names (`pdfGuid`, `db`, `pdfDoc`, `cancellationToken`, `_logger`, `pdfId`) against the actual `FinalizeProcessingAsync` signature; thread/resolve `db` from `scope` if not already a param.
+Verify the in-scope names (`pdfGuid`, `db`, `pdfDoc`, `_logger`, `pdfId`) against the actual `FinalizeProcessingAsync` signature; thread/resolve `db` from `scope` if not already a param. (Use `CancellationToken.None` for both the query and the save as shown — do NOT thread the pipeline `cancellationToken` into this post-Ready re-write.)
 
 - [ ] **Step 4: Run tests**
 
@@ -495,11 +502,13 @@ git commit -m "fix(pdf): persist ExtractedText/StructuredElementsJson after Read
 
 ### Task 5: Wire `CompleteChunkedUploadCommandHandler` + carry StructuredElements
 
-`ChunkTextContentAsync` (line 682) takes neither `pdfDoc` nor `extractResult`, and `ExtractPdfTextAsync` (line 565) **discards** `PagedTextExtractionResult`/`StructuredElements` (returns `(bool, string?, int)`). Widen the tuple to carry structured elements, persist `StructuredElementsJson` on the tracked `pdfDoc` (this handler mutates state directly — no AsNoTracking bug), thread `pdfDoc` + structured elements into the chunker, and cap embedding input.
+`ChunkTextContentAsync` (line 682) takes neither `pdfDoc` nor `extractResult`, and `ExtractPdfTextAsync` (line 565) **discards** `PagedTextExtractionResult`/`StructuredElements` (returns `(bool, string?, int)`). Widen the tuple to carry structured elements, persist `StructuredElementsJson`, thread `pdfDoc` + structured elements into the chunker, and cap embedding input.
+
+**🔴 CRITICAL — the `pdfDoc` here is NOT tracked.** It comes from `db.PdfDocuments.FindAsync(...)` (~line 472) on a fresh background scope/DbContext whose default is `QueryTrackingBehavior.NoTracking` (`InfrastructureServiceExtensions.cs:178`, PERF-06) — so under production DI it is **detached**, and the existing `pdfDoc.ExtractedText = …` write + its `SaveChanges` are silently dropped (same anti-pattern the codebase fixes with `.AsTracking()` — see `UploadPdfCommandHandler.Processing.cs:153-156`, `InvitationTokenRepository.cs:63-67`). Do NOT assume state mutations persist. Persist the extraction columns via an explicit tracked write: after setting the fields on `pdfDoc`, call `db.PdfDocuments.Update(pdfDoc);` immediately before the `SaveChangesAsync` (marks the detached entity Modified so all columns persist). The Task 5 **test MUST re-query from a FRESH `MeepleAiDbContext`/scope** (or Testcontainers) to actually exercise the detached path — an InMemory test that `Add()`s the entity into a singleton context pre-tracks it and would falsely pass (`CompleteChunkedUploadCommandHandlerZeroChunkTests.cs:55` is exactly this masking pattern).
 
 **Files:**
 - Modify: `apps/api/src/Api/BoundedContexts/DocumentProcessing/Application/Commands/CompleteChunkedUploadCommandHandler.cs`
-  - `ExtractPdfTextAsync` (line 565): widen return to `(bool success, string? fullText, int totalPages, IReadOnlyList<ExtractedElement>? structuredElements)`; at the extraction write (lines 609-611) also set `pdfDoc.StructuredElementsJson`; update ALL return sites.
+  - `ExtractPdfTextAsync` (line 565): widen return to `(bool success, string? fullText, int totalPages, IReadOnlyList<ExtractedElement>? structuredElements)`; at the extraction write (lines 609-611) also set `pdfDoc.StructuredElementsJson`, then `db.PdfDocuments.Update(pdfDoc);` before its `SaveChangesAsync`; update ALL return sites.
   - `ChunkTextContentAsync` (line 682): add `PdfDocumentEntity pdfDoc, IReadOnlyList<ExtractedElement>? structuredElements`; resolve `IAdvancedChunkingService?`; `BuildAsync` when non-null else flat.
   - call sites (line 487 for the extract tuple, line 487-488 for chunk) updated.
   - `GenerateEmbeddingsAsync` (line 720): cap texts.
@@ -511,7 +520,7 @@ git commit -m "fix(pdf): persist ExtractedText/StructuredElementsJson after Read
 
 - [ ] **Step 1: Write the failing test**
 
-Follow the existing `CompleteChunkedUploadCommandHandler` tests. Register a mocked `IAdvancedChunkingService` (parent+child) in the scope; assert persisted `text_chunks` carry `Heading` + child `ParentChunkId`, and `pdf_documents.StructuredElementsJson` is non-null after completion.
+Follow the existing `CompleteChunkedUploadCommandHandler` tests. Register a mocked `IAdvancedChunkingService` (parent+child) in the scope; assert persisted `text_chunks` carry `Heading` + child `ParentChunkId`, and `pdf_documents.StructuredElementsJson` is non-null after completion. **The assertion re-query MUST use a FRESH `MeepleAiDbContext` (new scope), not the one that `Add()`ed the seed entity** — otherwise the change-tracker pre-tracks `pdfDoc` and masks the detached-write bug this task fixes.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -526,7 +535,7 @@ Add usings (`…Application.Services.Chunking`, `…KnowledgeBase.Application.Se
 ```csharp
     private async Task<(bool success, string? fullText, int totalPages, IReadOnlyList<ExtractedElement>? structuredElements)> ExtractPdfTextAsync(
 ```
-At the extraction write (lines 609-611):
+At the extraction write (lines 609-611) — add the `StructuredElementsJson` set AND an explicit `db.PdfDocuments.Update(pdfDoc)` (the entity is detached, per the Critical note above):
 ```csharp
         pdfDoc.ExtractedText = fullText;
         pdfDoc.StructuredElementsJson = extractResult.StructuredElements is null
@@ -534,12 +543,15 @@ At the extraction write (lines 609-611):
             : System.Text.Json.JsonSerializer.Serialize(extractResult.StructuredElements);
         pdfDoc.PageCount = extractResult.TotalPages;
         pdfDoc.CharacterCount = extractResult.TotalCharacters;
+        // 🔴 pdfDoc came from a bare FindAsync under the NoTracking default → detached.
+        // Mark it Modified so these columns actually persist (the pre-existing SaveChanges was a no-op).
+        db.PdfDocuments.Update(pdfDoc);
 ```
-Update every `return` in this method to include the 4th element (success returns `extractResult.StructuredElements`; failure/early returns `null`).
+(`db` is the handler's `MeepleAiDbContext` — confirm it is in scope at this write site; it is the same context `pdfDoc` was `FindAsync`'d from.) Update every `return` in this method to include the 4th element (success returns `extractResult.StructuredElements`; failure/early returns `null`).
 
 Call site (line 487): destructure the 4-tuple; pass `structuredElements` + `pdfDoc` to `ChunkTextContentAsync`.
 
-`ChunkTextContentAsync` (line 682):
+`ChunkTextContentAsync` (line 682) — **🟢 localized change** (this method has a `chunkingStopwatch` ~line 689 + metric; do NOT hoist/drop it). Add the two params + resolve `advancedChunking`, then assign `allDocumentChunks` from the heading-aware branch or the existing flat body (change `var allDocumentChunks =` to `allDocumentChunks =`, no re-declare), keeping the stopwatch/metric prologue+epilogue verbatim:
 ```csharp
     private async Task<List<DocumentChunkInput>> ChunkTextContentAsync(
         string pdfId,
@@ -548,11 +560,9 @@ Call site (line 487): destructure the 4-tuple; pass `structuredElements` + `pdfD
         IReadOnlyList<ExtractedElement>? structuredElements,
         IServiceScope scope)
     {
-        var chunkingService = scope.ServiceProvider.GetRequiredService<ITextChunkingService>();
-        const int chunkSize = 512;
-        const int chunkOverlap = 50;
-
+        // ... keep existing prologue verbatim (chunkingStopwatch, chunkingService, consts) ...
         var advancedChunking = scope.ServiceProvider.GetService<IAdvancedChunkingService>();
+        List<DocumentChunkInput> allDocumentChunks;
         if (advancedChunking != null)
         {
             var hierarchical = await HeadingAwareChunker.BuildAsync(
@@ -562,11 +572,18 @@ Call site (line 487): destructure the 4-tuple; pass `structuredElements` + `pdfD
                 pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId,
                 advancedChunking,
                 CancellationToken.None).ConfigureAwait(false);
-            return HeadingAwareChunkAdapter.ToChunkInputs(hierarchical);
+            allDocumentChunks = HeadingAwareChunkAdapter.ToChunkInputs(hierarchical);
         }
-
-        // Fallback: existing flat PrepareForEmbedding body, unchanged.
-        // ... keep existing body ...
+        else
+        {
+            // EXISTING flat PrepareForEmbedding body, verbatim, ASSIGNED (no `var`) to allDocumentChunks.
+            allDocumentChunks = chunkingService.PrepareForEmbedding(fullText, chunkSize, chunkOverlap)
+                ?.Where(chunk => chunk != null && !string.IsNullOrWhiteSpace(chunk.Text))
+                .Select(chunk => new DocumentChunkInput { Text = chunk.Text, Page = chunk.Page, CharStart = chunk.CharStart, CharEnd = chunk.CharEnd })
+                .ToList()
+                ?? new List<DocumentChunkInput>();
+        }
+        // ... keep existing epilogue verbatim (stopwatch stop, metric, return allDocumentChunks) ...
     }
 ```
 
@@ -588,46 +605,52 @@ git commit -m "feat(chunking): heading-aware chunking + StructuredElements persi
 
 ### Task 6: Revive `IndexPdfIntegrationTests` + HeadingPath CTE round-trip (Testcontainers)
 
-Repo rule #1555 wants a real-Postgres round-trip proving the recursive `HeadingPath` CTE resolves. The stale `IndexPdfIntegrationTests.cs` is `<Compile Remove>`-excluded and references a pre-`ISemanticResponseCache`/`IPdfIndexingPipeline` ctor + a removed `PdfDocumentEntity.GameId`. Fix those, un-exclude it, and add a heading-aware assertion via `GetKbChunksHandler`.
+Repo rule #1555 wants a real-Postgres round-trip proving the recursive `HeadingPath` CTE resolves. The stale `IndexPdfIntegrationTests.cs` is `<Compile Remove>`-excluded and references a pre-`ISemanticResponseCache`/`IPdfIndexingPipeline` ctor + a removed `PdfDocumentEntity.GameId`.
+
+**⚠️ This is a mock-infrastructure REWRITE, not a 2-line fix** (verified). There are TWO ctor call sites AND the test SP is missing three registrations. Budget accordingly.
 
 **Files:**
 - Modify: `apps/api/tests/Api.Tests/Api.Tests.csproj:107` — remove the `<Compile Remove="Integration\DocumentProcessing\IndexPdfIntegrationTests.cs" />` line.
-- Modify: `apps/api/tests/Api.Tests/Integration/DocumentProcessing/IndexPdfIntegrationTests.cs` — fix the stale ctor + `PdfDocumentEntity.GameId`; add a heading-aware round-trip assertion.
+- Modify: `apps/api/tests/Api.Tests/Integration/DocumentProcessing/IndexPdfIntegrationTests.cs` — fix BOTH ctor sites + the test-SP registrations + `PdfDocumentEntity.GameId`; add a heading-aware round-trip assertion.
 
 **Interfaces:**
-- Consumes: current `IndexPdfCommandHandler` ctor `(MeepleAiDbContext, IAdvancedChunkingService, IEmbeddingService, ILogger<IndexPdfCommandHandler>, IOptions<IndexingSettings>, ISemanticResponseCache, IPdfIndexingPipeline, TimeProvider?, IRoleClassifierService?)`; `GetKbChunksHandler` → `KbChunksListResponse` (`KbChunkSummaryDto.HeadingPath`).
+- Consumes: current `IndexPdfCommandHandler` ctor `(MeepleAiDbContext, IAdvancedChunkingService, IEmbeddingService, ILogger<IndexPdfCommandHandler>, IOptions<IndexingSettings>, ISemanticResponseCache, IPdfIndexingPipeline, TimeProvider?, IRoleClassifierService?)`; `GetKbChunksHandler` → `KbChunksListResponse` exposing **`.Items`** (`KbChunkSummaryDto.HeadingPath`, `IReadOnlyList<string>`). `GetKbChunksQuery(Guid DocumentId, Guid RequestingUserId, string? Cursor, int Limit, bool UserIsAdmin)`.
 
-- [ ] **Step 1: Un-exclude + build to surface all drift**
+- [ ] **Step 1: Un-exclude + fix BOTH ctor sites + register the 3 missing services**
 
-Remove the `<Compile Remove>` line for `IndexPdfIntegrationTests.cs`. Run `dotnet build ../../tests/Api.Tests` and collect every compile error (the 2 known + any further drift). Fix each:
-- Constructor: supply `_serviceProvider.GetRequiredService<IAdvancedChunkingService>()` as arg 2 (NOT `ITextChunkingService`), add `ISemanticResponseCache` + `IPdfIndexingPipeline` (real from the container SP, or `Mock.Of<>()`).
-- Remove the `GameId = gameId` initializer on the `PdfDocumentEntity` (line ~285); set `SharedGameId`/`PrivateGameId` as the other tests do. Leave `VectorDocumentEntity.GameId` (still valid).
-- Remove/replace the `ITextChunkingService.ChunkText` mock setup (handler now calls `IAdvancedChunkingService`) — register the real `AddChunkingAndRerankingServices` set instead.
+Remove the `<Compile Remove>` line. Then:
+- **Direct-`new` ctor site (~line 440):** it passes 5 args with arg2 = `GetRequiredService<ITextChunkingService>()`. Fix to the current 7-required-arg ctor: arg2 → `GetRequiredService<IAdvancedChunkingService>()`, and add `GetRequiredService<ISemanticResponseCache>()` + `GetRequiredService<IPdfIndexingPipeline>()`.
+- **DI-resolved handler (~line 107, `services.AddScoped<IndexPdfCommandHandler>()`, used by ~9 of the tests):** the test SP registers NONE of `IAdvancedChunkingService` / `ISemanticResponseCache` / `IPdfIndexingPipeline`. `AddChunkingAndRerankingServices` (`KnowledgeBaseServiceExtensions.cs:542`) supplies ONLY `IAdvancedChunkingService`; `IPdfIndexingPipeline` (registered ~`:498`) and `ISemanticResponseCache` (in `AddCachingServices` ~`:600`) are separate. Register all three in the test SP (real from the container SP, or `Mock.Of<>()` where a real isn't needed) — otherwise all DI-resolved scenarios throw at resolution.
+- Remove the `GameId = gameId` initializer on the `PdfDocumentEntity` (~line 285); set `SharedGameId`/`PrivateGameId` as the other tests do. Leave `VectorDocumentEntity.GameId` (still valid).
+- Remove the `ITextChunkingService.ChunkText` mock setup (handler now calls `IAdvancedChunkingService`).
 
-- [ ] **Step 2: Run to verify it compiles + runs (may be RED on the new assertion)**
+- [ ] **Step 2: Build + run — re-baseline any ChunkCount assertions against the real chunker**
 
-Run: `dotnet test ../../tests/Api.Tests --filter "FullyQualifiedName~IndexPdfIntegrationTests" -v minimal`
-Expected: compiles; existing scenarios pass; the new heading assertion (Step 3) not yet added.
+Run: `dotnet build ../../tests/Api.Tests` then `dotnet test ../../tests/Api.Tests --filter "FullyQualifiedName~IndexPdfIntegrationTests" -v minimal`.
+Fix any remaining compile drift. Existing internal-consistency assertions (`Be(result.ChunkCount)`) hold regardless of chunker; relative thresholds (`> 10`, `> 100`) on large seed texts survive a real ~512-char chunker — only re-baseline if a specific count assertion breaks against real-chunker output (do NOT weaken assertions to force green; adjust the expected number).
 
-- [ ] **Step 3: Add the heading-aware round-trip assertion**
+- [ ] **Step 3: Add the heading-aware round-trip assertion (with the HybridCache passthrough fix)**
 
-Add a test that seeds a `pdf_documents` row with non-empty `StructuredElementsJson` (a titled document), runs `IndexPdfCommandHandler`, then:
+**🟡 `GetKbChunksHandler.Handle` wraps its work in `_cache.GetOrCreateAsync`.** The default test SP registers `Mock.Of<IHybridCacheService>()` which returns null WITHOUT invoking the factory → the CTE never runs and the assertion silently observes null. Build this test's SP with **`CreateBase(connectionString, useHybridCachePassthrough: true)`** (or instantiate `GetKbChunksHandler` directly with a passthrough cache). Seed a `pdf_documents` row with non-empty `StructuredElementsJson` (a titled document), run `IndexPdfCommandHandler`, then:
 ```csharp
-// direct column check (EF InMemory can't do the CTE, but this is real Postgres):
+// direct column check (real Postgres):
 var chunks = await dbContext.TextChunks.AsNoTracking()
     .Where(t => t.PdfDocumentId == pdfGuid).ToListAsync(ct);
 chunks.Should().Contain(c => c.Heading != null);
 chunks.Should().Contain(c => c.ParentChunkId != null);
 
-// CTE via retrieval handler:
-var resp = await mediator.Send(new GetKbChunksQuery(/* kb doc id */), ct);
-resp.Chunks.Should().Contain(c => c.HeadingPath.Count > 0);
+// CTE via retrieval handler — note .Items (NOT .Chunks) and the 5-arg query with owner/admin so
+// the access-control check passes (else ForbiddenException):
+var resp = await mediator.Send(
+    new GetKbChunksQuery(DocumentId: kbDocId, RequestingUserId: ownerUserId, Cursor: null, Limit: 100, UserIsAdmin: true),
+    ct);
+resp.Items.Should().Contain(c => c.HeadingPath.Count > 0);
 ```
 
 - [ ] **Step 4: Run tests**
 
 Run: `dotnet test ../../tests/Api.Tests --filter "FullyQualifiedName~IndexPdfIntegrationTests" -v minimal`
-Expected: PASS. If drift beyond the 2 known issues is unexpectedly large, report it (do not silently rewrite unrelated scenarios).
+Expected: PASS. If drift beyond the above is unexpectedly large, report it (do not silently rewrite unrelated scenarios).
 
 - [ ] **Step 5: Commit**
 

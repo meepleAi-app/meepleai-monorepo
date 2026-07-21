@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Application.Services.Chunking;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
@@ -63,6 +64,11 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
     private readonly IPdfIndexingPipeline _indexingPipeline;
 
+    // SP2 (#3268 task 5): optional heading-aware chunker — prefers hierarchical chunking
+    // (heading-scoped sections → child chunks) over the flat fallback below. Nullable so
+    // pre-SP2 unit-test constructors continue to compile without adding a new mock param.
+    private readonly IHeadingAwareChunker? _headingAwareChunker;
+
     public PdfProcessingPipelineService(
         MeepleAiDbContext db,
         IPdfClaimService pdfClaimService,
@@ -83,7 +89,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         IRoleClassifierService? roleClassifier = null,
         IPdfCoverExtractor? pdfCoverExtractor = null,
         IDomainEventCollector? eventCollector = null,
-        IPdfCoverUploadPipeline? pdfCoverUploadPipeline = null)
+        IPdfCoverUploadPipeline? pdfCoverUploadPipeline = null,
+        IHeadingAwareChunker? headingAwareChunker = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _pdfClaimService = pdfClaimService ?? throw new ArgumentNullException(nameof(pdfClaimService));
@@ -108,6 +115,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         // in ExtractCoverImageAsync is guarded with a null-check.
         _eventCollector = eventCollector;
         _pdfCoverUploadPipeline = pdfCoverUploadPipeline;
+        _headingAwareChunker = headingAwareChunker;
     }
 
     public async Task ProcessAsync(
@@ -188,7 +196,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
             // Step 3: Chunk text
             _logger.LogInformation("[PdfPipeline] Step 3/4: Chunking text for {PdfId} ({CharCount} chars)", pdfId, fullText.Length);
-            var chunks = ChunkText(fullText, extractResult);
+            var chunks = await ChunkTextAsync(fullText, extractResult, pdfDoc.Id, pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId, cancellationToken).ConfigureAwait(false);
 
             if (chunks.Count == 0)
             {
@@ -222,17 +230,10 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                         if (!string.IsNullOrWhiteSpace(t.TranslatedText))
                         {
                             var origChunk = chunks[t.OriginalIndex];
-                            // Issue #730 / spec §5.3 forward-wiring: hierarchy fields are not yet propagated from origChunk
-                            // to the translated chunk because the upstream chunking pipeline does not currently populate them.
-                            // Once AdvancedChunkingService is wired, copy origChunk.Heading/Level/ParentChunkId/ElementType here.
+                            // Issue #730 resolved (SP2 task 5): TranslatedChunkMapper preserves
+                            // Heading/Level/ParentChunkId/ElementType from origChunk on the EN translation.
                             translatedChunks.Add((
-                                new DocumentChunkInput
-                                {
-                                    Text = t.TranslatedText,
-                                    Page = origChunk.Page,
-                                    CharStart = origChunk.CharStart,
-                                    CharEnd = origChunk.CharEnd
-                                },
+                                TranslatedChunkMapper.ForTranslation(origChunk, t.TranslatedText),
                                 "en",
                                 true));
                         }
@@ -493,6 +494,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 .Select(pc => pc.Text));
 
             pdfDoc.ExtractedText = fullText;
+            pdfDoc.StructuredElementsJson = StructuredElementsPayload.Serialize(extractResult.StructuredElements);
             pdfDoc.PageCount = extractResult.TotalPages;
             pdfDoc.CharacterCount = extractResult.TotalCharacters;
             try
@@ -652,29 +654,29 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 #pragma warning restore CA1031
     }
 
-    private List<DocumentChunkInput> ChunkText(string fullText, PagedTextExtractionResult extractResult)
+    private async Task<List<DocumentChunkInput>> ChunkTextAsync(string fullText, PagedTextExtractionResult extractResult, Guid documentId, Guid? gameId, CancellationToken ct)
     {
+        if (_headingAwareChunker != null)
+        {
+            var hc = await _headingAwareChunker.ChunkAsync(documentId, gameId, extractResult.StructuredElements, fullText, ct).ConfigureAwait(false);
+            var filtered = hc.Where(c => c != null && !string.IsNullOrWhiteSpace(c.Text)).ToList();
+            if (filtered.Count > 0) return filtered;
+        }
+
+        // Flat fallback (unchanged from the original ChunkText body: PrepareForEmbedding 1024/150 + page fallback).
         var chunks = _chunkingService.PrepareForEmbedding(fullText, ChunkSize, ChunkOverlap)
             ?.Where(c => c != null && !string.IsNullOrWhiteSpace(c.Text))
             .ToList()
             ?? [];
 
-        // Fallback: page-by-page chunking if whole-text chunking produced nothing
         if (chunks.Count == 0)
         {
             foreach (var pageChunk in extractResult.PageChunks.Where(pc => !pc.IsEmpty))
             {
                 var pageTextChunks = _chunkingService.ChunkText(pageChunk.Text, ChunkSize, ChunkOverlap);
-
                 foreach (var textChunk in pageTextChunks.Where(t => !string.IsNullOrWhiteSpace(t.Text)))
                 {
-                    chunks.Add(new DocumentChunkInput
-                    {
-                        Text = textChunk.Text,
-                        Page = pageChunk.PageNumber,
-                        CharStart = textChunk.CharStart,
-                        CharEnd = textChunk.CharEnd
-                    });
+                    chunks.Add(new DocumentChunkInput { Text = textChunk.Text, Page = pageChunk.PageNumber, CharStart = textChunk.CharStart, CharEnd = textChunk.CharEnd });
                 }
             }
         }

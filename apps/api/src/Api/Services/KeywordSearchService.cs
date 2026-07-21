@@ -74,7 +74,7 @@ internal class KeywordSearchService : IKeywordSearchService
         {
             // Build tsquery for full-text search (Slice A: synonym expansion is language-aware,
             // so the resolved per-game FTS config is threaded through to BuildTsQuery).
-            var tsQuery = BuildTsQuery(query, phraseSearch, boostTerms, textSearchConfig);
+            var tsQuery = BuildTsQuery(query, phraseSearch, textSearchConfig);
 
             _logger.LogInformation(
                 "Keyword search: query='{Query}', gameId={GameId}, phraseSearch={PhraseSearch}, boostTerms={BoostTerms}, limit={Limit}, ftsConfig={FtsConfig}",
@@ -196,7 +196,7 @@ internal class KeywordSearchService : IKeywordSearchService
         try
         {
             // English-pinned (DefaultTextSearchConfig) → no synonym expansion, by design.
-            var tsQuery = BuildTsQuery(query, phraseSearch: false, boostTerms: null, DefaultTextSearchConfig);
+            var tsQuery = BuildTsQuery(query, phraseSearch: false, DefaultTextSearchConfig);
 
             // Security: Set query timeout
             var previousTimeout = _dbContext.Database.GetCommandTimeout();
@@ -250,15 +250,17 @@ internal class KeywordSearchService : IKeywordSearchService
     }
 
     /// <summary>
-    /// Builds a PostgreSQL tsquery from a search query with phrase search and boost support.
+    /// Builds a PostgreSQL tsquery from a search query. Non-phrase queries become a recall-first OR
+    /// query with curated per-language intent-synonym expansion (see <see cref="ExpandTermsToTsQuery"/>);
+    /// phrase queries (quoted) become an exact <c>&lt;-&gt;</c> proximity match.
     /// </summary>
     /// <remarks>
     /// Examples:
-    /// - Simple: "castling" returns "castling"
-    /// - Phrase: "en passant" with phraseSearch=true returns "en passant" with proximity operator
-    /// - Boost: "check" with boostTerms=["check", "checkmate"] returns boosted query
+    /// - Simple (english): "castling" returns "castling"
+    /// - Phrase: "en passant" with phraseSearch=true returns "en &lt;-&gt; passant"
+    /// - Synonym (italian): "setup" returns "(setup | preparazione | allestimento)"
     /// </remarks>
-    private string BuildTsQuery(string query, bool phraseSearch, List<string>? boostTerms, string ftsConfig)
+    internal static string BuildTsQuery(string query, bool phraseSearch, string ftsConfig)
     {
         // Sanitize query to prevent SQL injection and tsquery syntax errors
         var sanitizedQuery = SanitizeQuery(query);
@@ -271,27 +273,22 @@ internal class KeywordSearchService : IKeywordSearchService
             return string.Join(" <-> ", words);
         }
 
-        // Build query with boost terms (weight :A for boosted terms, :B for others)
-        if (boostTerms != null && boostTerms.Count > 0)
-        {
-            var queryTerms = sanitizedQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var weightedTerms = queryTerms.Select(term =>
-            {
-                var isBoosted = boostTerms.Any(bt => bt.Equals(term, StringComparison.OrdinalIgnoreCase));
-                return isBoosted ? $"{term}:A" : $"{term}:B";
-            });
-
-            return string.Join(" | ", weightedTerms); // OR operator for multiple terms
-        }
-
-        // Default: OR query (any term may match). RAG retrieval fix (follow-up to #3241):
-        // strict AND (" & ") returned 0 hits for natural-language questions like "setup per N
-        // giocatori" whenever the four
-        // surface tokens don't co-occur in one chunk, collapsing hybrid search to vector-only.
-        // OR keeps recall; ranking (ts_rank_cd + RRF fusion + reranker) sorts the candidates.
-        // Slice A: additionally expand curated per-language intent synonyms on the keyword arm
-        // (e.g. setup -> preparazione/allestimento) so the query also matches the native rulebook
-        // lexemes. No-op for non-tabled configs, so English recall is unchanged.
+        // Default: recall-first OR query. A #3241 follow-up switched strict AND to OR because
+        // natural-language questions like "setup per N giocatori" returned 0 hits when the surface
+        // tokens didn't co-occur in one chunk (collapsing hybrid to vector-only). Ranking
+        // (ts_rank_cd + RRF fusion + reranker + legend-demotion) sorts the candidates.
+        //
+        // Slice A: also expand curated per-language intent synonyms (e.g. setup ->
+        // preparazione/allestimento) so the query matches native rulebook lexemes. No-op for
+        // non-tabled configs, so English recall is unchanged.
+        //
+        // NOTE: the previous ":A"/":B" boost-weighting branch was REMOVED here. Those query weight
+        // labels only match lexemes carrying the same weight in the tsvector, but the generated
+        // search_vector is a plain to_tsvector('english', Content) with NO setweight (all lexemes
+        // are weight D), so ":A"/":B" matched *nothing* — silently killing the keyword arm (and
+        // shadowing this expansion) for every real query on the production hybrid path, which
+        // always passes a non-empty BoostTerms list. Re-introducing boost ranking requires
+        // setweight on the tsvector (a migration + re-index), tracked separately.
         return ExpandTermsToTsQuery(sanitizedQuery, ftsConfig);
     }
 
@@ -381,7 +378,7 @@ internal class KeywordSearchService : IKeywordSearchService
     /// Sanitizes user query to prevent tsquery syntax errors and SQL injection.
     /// Removes special PostgreSQL full-text search operators and dangerous characters.
     /// </summary>
-    private string SanitizeQuery(string query)
+    private static string SanitizeQuery(string query)
     {
         if (string.IsNullOrWhiteSpace(query))
         {

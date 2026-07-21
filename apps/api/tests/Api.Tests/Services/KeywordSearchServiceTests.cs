@@ -119,4 +119,49 @@ public sealed class KeywordSearchServiceTests
         KeywordSearchService.ExpandTermsToTsQuery(input, "italian")
             .Should().BeEmpty();
     }
+
+    // ---------------------------------------------------------------------
+    // Slice A regression (found in code review): BuildTsQuery routing.
+    // The production hybrid path always passes a non-empty BoostTerms list
+    // (appsettings HybridSearch:BoostTerms), which used to route into a
+    // ":A"/":B" weighted branch that BOTH (a) shadowed synonym expansion and
+    // (b) matched nothing (the search_vector has no setweight, so all lexemes
+    // are weight D and ":A"/":B" query labels match zero rows). These tests
+    // pin that the non-phrase path always expands and NEVER emits weight
+    // labels, regardless of any BoostTerms configuration.
+    // ---------------------------------------------------------------------
+
+    [Fact]
+    public void BuildTsQuery_ItalianNonPhrase_ExpandsSynonyms()
+    {
+        // Head-token case is preserved verbatim ("Setup"); to_tsquery lowercases lexemes at match
+        // time, so casing does not affect retrieval.
+        KeywordSearchService.BuildTsQuery("Setup per giocatori", phraseSearch: false, "italian")
+            .Should().Be("(Setup | preparazione | allestimento) | per | (giocatori | numero <-> giocatori)");
+    }
+
+    [Fact]
+    public void BuildTsQuery_NonPhrase_NeverEmitsBrokenWeightLabels()
+    {
+        // ":A"/":B" match nothing on the un-weighted search_vector — they must
+        // never appear in a generated tsquery.
+        var result = KeywordSearchService.BuildTsQuery("Setup per giocatori", phraseSearch: false, "italian");
+        result.Should().NotContain(":A");
+        result.Should().NotContain(":B");
+    }
+
+    [Fact]
+    public void BuildTsQuery_EnglishNonPhrase_PlainOrJoin()
+    {
+        KeywordSearchService.BuildTsQuery("board setup rules", phraseSearch: false, "english")
+            .Should().Be("board | setup | rules");
+    }
+
+    [Fact]
+    public void BuildTsQuery_PhraseSearch_UsesProximityOperator_NoExpansion()
+    {
+        // Phrase search (quoted query) stays an exact proximity match, unchanged by Slice A.
+        KeywordSearchService.BuildTsQuery("en passant", phraseSearch: true, "english")
+            .Should().Be("en <-> passant");
+    }
 }

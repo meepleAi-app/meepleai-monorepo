@@ -1973,6 +1973,7 @@
         "viewAll": "View all",
         "viewAllAriaLabel": "Open the full activity history",
         "collapseAriaLabel": "Collapse panel",
+        "expandAriaLabel": "Expand panel",
         "error": "Failed to load activity.",
         "fallback": {
           "agent": "New agent created",

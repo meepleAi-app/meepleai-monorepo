@@ -1980,6 +1980,7 @@
         "viewAll": "Vedi tutto",
         "viewAllAriaLabel": "Vai allo storico completo dell'attività",
         "collapseAriaLabel": "Comprimi pannello",
+        "expandAriaLabel": "Espandi pannello",
         "error": "Impossibile caricare l'attività.",
         "fallback": {
           "agent": "Nuovo agent creato",

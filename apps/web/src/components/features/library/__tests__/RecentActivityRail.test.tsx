@@ -15,7 +15,7 @@
  */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
 import { describe, expect, it } from 'vitest';
 
@@ -27,6 +27,7 @@ const messages: Record<string, string> = {
   'pages.library.activityRail.empty': 'Nessuna attività recente.',
   'pages.library.activityRail.error': "Impossibile caricare l'attività.",
   'pages.library.activityRail.collapseAriaLabel': 'Comprimi pannello',
+  'pages.library.activityRail.expandAriaLabel': 'Espandi pannello',
   'pages.library.activityRail.shortcuts.heading': 'Shortcuts',
   'pages.library.activityRail.shortcuts.focusSearch': 'focus search',
   'pages.library.activityRail.shortcuts.advancedFilters': 'filtri avanzati',
@@ -194,6 +195,42 @@ describe('RecentActivityRail (Wave B.3)', () => {
         screen.getByRole('heading', { level: 3, name: /Ultime modifiche/i })
       ).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Comprimi pannello/i })).toBeInTheDocument();
+    });
+  });
+
+  describe('Collapse toggle (#564)', () => {
+    it('exposes the toggle as an expanded disclosure by default', () => {
+      renderRail();
+      const toggle = screen.getByRole('button', { name: /Comprimi pannello/i });
+      expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    });
+
+    it('collapses the rail and swaps the toggle to an expand affordance on click', () => {
+      renderRail();
+      // Expanded by default: the always-rendered shortcuts box is visible.
+      expect(screen.getByText(/Shortcuts/i)).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /Comprimi pannello/i }));
+
+      // Collapsed: body content (shortcuts box + empty copy) is gone, and the
+      // toggle is now a working expand button reflecting the collapsed state.
+      expect(screen.queryByText(/Shortcuts/i)).not.toBeInTheDocument();
+      expect(screen.queryByTestId('library-activity-empty-text')).not.toBeInTheDocument();
+      const expandToggle = screen.getByRole('button', { name: /Espandi pannello/i });
+      expect(expandToggle).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('re-expands the rail when the expand button is clicked', () => {
+      renderRail();
+      fireEvent.click(screen.getByRole('button', { name: /Comprimi pannello/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Espandi pannello/i }));
+
+      // Back to the expanded layout: body content and collapse affordance return.
+      expect(screen.getByText(/Shortcuts/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Comprimi pannello/i })).toHaveAttribute(
+        'aria-expanded',
+        'true'
+      );
     });
   });
 });

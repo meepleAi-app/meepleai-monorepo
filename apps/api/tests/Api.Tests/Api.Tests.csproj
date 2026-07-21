@@ -104,7 +104,6 @@
     <ProjectReference Include="..\..\src\Api\Api.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Remove="Integration\DocumentProcessing\IndexPdfIntegrationTests.cs" />
     <Compile Remove="Integration\DocumentProcessing\PrivatePdfUploadIntegrationTests.cs" />
   </ItemGroup>
   <!--

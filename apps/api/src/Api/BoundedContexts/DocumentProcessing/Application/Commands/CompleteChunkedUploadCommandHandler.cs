@@ -1,14 +1,17 @@
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
+using Api.BoundedContexts.DocumentProcessing.Application.Services.Chunking;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.EntityRelationships.Application.Commands;
 using Api.BoundedContexts.EntityRelationships.Domain.Enums;
 using Api.BoundedContexts.EntityRelationships.Domain.Exceptions;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Security;
@@ -479,13 +482,13 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
             _logger.LogInformation("Starting PDF processing for chunked upload: {PdfId}", pdfId);
 
             // Step 1: Extract PDF text and structured content
-            var (extractSuccess, fullText, totalPages) = await ExtractPdfTextAsync(
+            var (extractSuccess, fullText, totalPages, structuredElements) = await ExtractPdfTextAsync(
                 pdfId, filePath, pdfDoc, db, scope, cancellationToken).ConfigureAwait(false);
             if (!extractSuccess) return;
 
             // Step 2: Chunk text for embedding
             var allDocumentChunks = await ChunkTextContentAsync(
-                pdfId, fullText!, scope).ConfigureAwait(false);
+                pdfId, fullText!, pdfDoc, structuredElements, scope).ConfigureAwait(false);
 
             // Guard: zero usable chunks → mark Failed. Mirrors PdfProcessingPipelineService
             // (the non-chunked Quartz path) which fails on chunks.Count == 0. Without this,
@@ -562,7 +565,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
     /// <summary>
     /// Extracts text and structured content from PDF file.
     /// </summary>
-    private async Task<(bool success, string? fullText, int totalPages)> ExtractPdfTextAsync(
+    private async Task<(bool success, string? fullText, int totalPages, IReadOnlyList<ExtractedElement>? structuredElements)> ExtractPdfTextAsync(
         string pdfId,
         string filePath,
         PdfDocumentEntity pdfDoc,
@@ -596,10 +599,10 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                     _logger.LogWarning(ex,
                         "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
                         pdfId, nameof(CompleteChunkedUploadCommandHandler));
-                    return (false, null, 0);
+                    return (false, null, 0, null);
                 }
                 _logger.LogError("Text extraction failed for {PdfId}: {Error}", pdfId, extractResult.ErrorMessage);
-                return (false, null, 0);
+                return (false, null, 0, null);
             }
 
             var fullText = string.Join("\n\n", extractResult.PageChunks
@@ -607,8 +610,15 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 .Select(pc => pc.Text));
 
             pdfDoc.ExtractedText = fullText;
+            pdfDoc.StructuredElementsJson = extractResult.StructuredElements is null
+                ? null
+                : System.Text.Json.JsonSerializer.Serialize(extractResult.StructuredElements);
             pdfDoc.PageCount = extractResult.TotalPages;
             pdfDoc.CharacterCount = extractResult.TotalCharacters;
+            // 🔴 pdfDoc came from a bare FindAsync under the NoTracking default → detached.
+            // Mark it Modified so these columns actually persist (the pre-existing SaveChanges
+            // was a silent no-op).
+            db.PdfDocuments.Update(pdfDoc);
             try
             {
                 await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -621,13 +631,13 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 _logger.LogWarning(ex,
                     "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
                     pdfId, nameof(CompleteChunkedUploadCommandHandler));
-                return (true, fullText, extractResult.TotalPages);
+                return (true, fullText, extractResult.TotalPages, extractResult.StructuredElements);
             }
 
             // Extract structured content (tables, diagrams)
             await ExtractStructuredContentAsync(filePath, pdfDoc, db, scope, cancellationToken).ConfigureAwait(false);
 
-            return (true, fullText, extractResult.TotalPages);
+            return (true, fullText, extractResult.TotalPages, extractResult.StructuredElements);
         }
     }
 
@@ -682,26 +692,43 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
     private async Task<List<DocumentChunkInput>> ChunkTextContentAsync(
         string pdfId,
         string fullText,
-                IServiceScope scope
-        )
-
+        PdfDocumentEntity pdfDoc,
+        IReadOnlyList<ExtractedElement>? structuredElements,
+        IServiceScope scope)
     {
         var chunkingStopwatch = Stopwatch.StartNew();
         var chunkingService = scope.ServiceProvider.GetRequiredService<ITextChunkingService>();
         const int chunkSize = 512;
         const int chunkOverlap = 50;
 
-        var allDocumentChunks = chunkingService.PrepareForEmbedding(fullText, chunkSize, chunkOverlap)
-            ?.Where(chunk => chunk != null && !string.IsNullOrWhiteSpace(chunk.Text))
-            .Select(chunk => new DocumentChunkInput
-            {
-                Text = chunk.Text,
-                Page = chunk.Page,
-                CharStart = chunk.CharStart,
-                CharEnd = chunk.CharEnd
-            })
-            .ToList()
-            ?? new List<DocumentChunkInput>();
+        // Issue #3281: heading-aware production when AdvancedChunkingService is available in scope.
+        var advancedChunking = scope.ServiceProvider.GetService<IAdvancedChunkingService>();
+        List<DocumentChunkInput> allDocumentChunks;
+        if (advancedChunking != null)
+        {
+            var hierarchical = await HeadingAwareChunker.BuildAsync(
+                structuredElements,
+                fullText,
+                pdfDoc.Id,
+                pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId,
+                advancedChunking,
+                CancellationToken.None).ConfigureAwait(false);
+            allDocumentChunks = HeadingAwareChunkAdapter.ToChunkInputs(hierarchical);
+        }
+        else
+        {
+            allDocumentChunks = chunkingService.PrepareForEmbedding(fullText, chunkSize, chunkOverlap)
+                ?.Where(chunk => chunk != null && !string.IsNullOrWhiteSpace(chunk.Text))
+                .Select(chunk => new DocumentChunkInput
+                {
+                    Text = chunk.Text,
+                    Page = chunk.Page,
+                    CharStart = chunk.CharStart,
+                    CharEnd = chunk.CharEnd
+                })
+                .ToList()
+                ?? new List<DocumentChunkInput>();
+        }
 
         allDocumentChunks = allDocumentChunks
             .Where(chunk => chunk != null && !string.IsNullOrWhiteSpace(chunk.Text))
@@ -727,7 +754,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
     {
         var embeddingStopwatch = Stopwatch.StartNew();
         var embeddingService = scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
-        var texts = allDocumentChunks.Select(c => c.Text).ToList();
+        var texts = allDocumentChunks.Select(c => HeadingAwareChunkAdapter.CapForEmbedding(c.Text)).ToList();
         var embeddingResult = await embeddingService.GenerateEmbeddingsAsync(texts).ConfigureAwait(false);
         embeddingStopwatch.Stop();
 

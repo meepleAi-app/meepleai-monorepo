@@ -1,8 +1,10 @@
+using Api.BoundedContexts.DocumentProcessing.Application.Services.Chunking;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
@@ -63,6 +65,10 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
     private readonly IPdfIndexingPipeline _indexingPipeline;
 
+    // Issue #3281: optional so pre-existing test constructors compile. When null,
+    // chunk production falls back to the flat ITextChunkingService path (pre-Slice-D behaviour).
+    private readonly IAdvancedChunkingService? _advancedChunking;
+
     public PdfProcessingPipelineService(
         MeepleAiDbContext db,
         IPdfClaimService pdfClaimService,
@@ -83,7 +89,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         IRoleClassifierService? roleClassifier = null,
         IPdfCoverExtractor? pdfCoverExtractor = null,
         IDomainEventCollector? eventCollector = null,
-        IPdfCoverUploadPipeline? pdfCoverUploadPipeline = null)
+        IPdfCoverUploadPipeline? pdfCoverUploadPipeline = null,
+        IAdvancedChunkingService? advancedChunking = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _pdfClaimService = pdfClaimService ?? throw new ArgumentNullException(nameof(pdfClaimService));
@@ -108,6 +115,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         // in ExtractCoverImageAsync is guarded with a null-check.
         _eventCollector = eventCollector;
         _pdfCoverUploadPipeline = pdfCoverUploadPipeline;
+        _advancedChunking = advancedChunking;
     }
 
     public async Task ProcessAsync(
@@ -188,7 +196,12 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
             // Step 3: Chunk text
             _logger.LogInformation("[PdfPipeline] Step 3/4: Chunking text for {PdfId} ({CharCount} chars)", pdfId, fullText.Length);
-            var chunks = ChunkText(fullText, extractResult);
+            var chunks = await ChunkTextAsync(
+                fullText,
+                extractResult,
+                pdfDoc.Id,
+                pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId,
+                cancellationToken).ConfigureAwait(false);
 
             if (chunks.Count == 0)
             {
@@ -222,16 +235,19 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                         if (!string.IsNullOrWhiteSpace(t.TranslatedText))
                         {
                             var origChunk = chunks[t.OriginalIndex];
-                            // Issue #730 / spec §5.3 forward-wiring: hierarchy fields are not yet propagated from origChunk
-                            // to the translated chunk because the upstream chunking pipeline does not currently populate them.
-                            // Once AdvancedChunkingService is wired, copy origChunk.Heading/Level/ParentChunkId/ElementType here.
                             translatedChunks.Add((
                                 new DocumentChunkInput
                                 {
+                                    // Id intentionally omitted → defaults to Guid.Empty → fresh Guid at persist.
+                                    // Copying origChunk.Id here duplicates a primary key and fails non-English PDFs.
                                     Text = t.TranslatedText,
                                     Page = origChunk.Page,
                                     CharStart = origChunk.CharStart,
-                                    CharEnd = origChunk.CharEnd
+                                    CharEnd = origChunk.CharEnd,
+                                    Heading = origChunk.Heading,
+                                    Level = origChunk.Level,
+                                    ParentChunkId = origChunk.ParentChunkId,
+                                    ElementType = origChunk.ElementType
                                 },
                                 "en",
                                 true));
@@ -655,8 +671,27 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 #pragma warning restore CA1031
     }
 
-    private List<DocumentChunkInput> ChunkText(string fullText, PagedTextExtractionResult extractResult)
+    private async Task<List<DocumentChunkInput>> ChunkTextAsync(
+        string fullText,
+        PagedTextExtractionResult extractResult,
+        Guid documentId,
+        Guid? gameId,
+        CancellationToken cancellationToken)
     {
+        // Issue #3281: heading-aware production when AdvancedChunkingService is available.
+        if (_advancedChunking != null)
+        {
+            var hierarchical = await HeadingAwareChunker.BuildAsync(
+                extractResult.StructuredElements,
+                fullText,
+                documentId,
+                gameId,
+                _advancedChunking,
+                cancellationToken).ConfigureAwait(false);
+            return HeadingAwareChunkAdapter.ToChunkInputs(hierarchical);
+        }
+
+        // Fallback: flat production (pre-Slice-D behaviour) when the chunker is unavailable.
         var chunks = _chunkingService.PrepareForEmbedding(fullText, ChunkSize, ChunkOverlap)
             ?.Where(c => c != null && !string.IsNullOrWhiteSpace(c.Text))
             .ToList()
@@ -698,7 +733,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             cancellationToken.ThrowIfCancellationRequested();
 
             var skip = batchIndex * EmbeddingBatchSize;
-            var batchTexts = chunks.Skip(skip).Take(EmbeddingBatchSize).Select(c => c.Text).ToList();
+            var batchTexts = chunks.Skip(skip).Take(EmbeddingBatchSize)
+                .Select(c => HeadingAwareChunkAdapter.CapForEmbedding(c.Text))
+                .ToList();
 
             _logger.LogInformation("[PdfPipeline] Embedding batch {Current}/{Total} ({Count} texts)",
                 batchIndex + 1, batchCount, batchTexts.Count);

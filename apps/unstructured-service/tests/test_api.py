@@ -58,6 +58,35 @@ class TestExtractEndpoint:
         assert data["page_count"] == 1
         assert "extraction_duration_ms" in data["metadata"]
 
+    @patch("src.main.pdf_service.extract")
+    def test_extract_serializes_raw_elements(
+        self, mock_extract, client, mock_pdf_content, mock_unstructured_elements
+    ):
+        """Response must expose raw partition elements (with Title category)."""
+        mock_extract.return_value = ExtractionResult(
+            full_text="Title of Document\n\nThis is a paragraph.",
+            chunks=[TextChunk(text="composite", page_number=1, element_type="CompositeElement")],
+            page_count=2,
+            elements=mock_unstructured_elements,
+            tables=[],
+            detected_structures=["Title", "Paragraph", "Table"],
+            extraction_duration_ms=1200,
+            quality_score=QualityScore(0.85, 0.40, 0.18, 0.15, 0.12),
+        )
+
+        response = client.post(
+            "/api/v1/extract",
+            files={"file": ("test.pdf", mock_pdf_content, "application/pdf")},
+            data={"strategy": "fast", "language": "ita"},
+        )
+
+        assert response.status_code == 200
+        elements = response.json()["elements"]
+        assert [e["category"] for e in elements] == ["Title", "Paragraph", "Table"]
+        assert elements[0]["text"] == "Title of Document"
+        assert elements[0]["page_number"] == 1
+        assert elements[2]["page_number"] == 2
+
     def test_extract_missing_file(self, client):
         """Test extraction without file returns 422"""
         # Act

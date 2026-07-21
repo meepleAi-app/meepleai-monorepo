@@ -225,26 +225,77 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
         bool enableOcrFallback = true,
         CancellationToken cancellationToken = default)
     {
-        // Note: Unstructured returns semantic chunks, not strict page-by-page text
-        // For now, we extract full text and then attempt to map chunks to pages
+        string requestId = Guid.NewGuid().ToString("N");
+        var client = _httpClientFactory.CreateClient("UnstructuredService");
+        var configuredTimeout = client.Timeout;
 
-        var extractionResult = await ExtractTextAsync(pdfStream, enableOcrFallback, cancellationToken).ConfigureAwait(false);
-
-        if (!extractionResult.Success)
+        try
         {
-            return PagedTextExtractionResult.CreateFailure(extractionResult.ErrorMessage ?? "Extraction failed");
+            using var content = PrepareMultipartContent(pdfStream);
+            using var response = await CallUnstructuredServiceAsync(client, content, cancellationToken).ConfigureAwait(false);
+            var extractionResponse = await ParseExtractionResponseAsync(response, cancellationToken).ConfigureAwait(false);
+            if (extractionResponse == null)
+            {
+                return PagedTextExtractionResult.CreateFailure("Invalid response from Unstructured service");
+            }
+
+            var normalizedText = PdfTextProcessingDomainService.NormalizeText(extractionResponse.Text);
+            var pageChunks = CreatePageChunksFromText(normalizedText, extractionResponse.PageCount);
+            var structuredElements = MapStructuredElements(extractionResponse.Elements);
+
+            return PagedTextExtractionResult.CreateSuccess(
+                pageChunks,
+                extractionResponse.PageCount,
+                normalizedText.Length,
+                ocrTriggered: false,
+                structuredElements: structuredElements);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP request to Unstructured service (paged) failed. RequestId: {RequestId}", requestId);
+            return PagedTextExtractionResult.CreateFailure($"Failed to connect to Unstructured service: {ex.Message}");
+        }
+        catch (TaskCanceledException ex) when (ex.CancellationToken == cancellationToken)
+        {
+            throw;
+        }
+        catch (TaskCanceledException)
+        {
+            return PagedTextExtractionResult.CreateFailure($"Unstructured service timeout after {configuredTimeout.TotalSeconds}s");
+        }
+        catch (JsonException)
+        {
+            return PagedTextExtractionResult.CreateFailure("Invalid JSON response from Unstructured service");
+        }
+#pragma warning disable CA1031
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error during paged Unstructured extraction. RequestId: {RequestId}", requestId);
+            return PagedTextExtractionResult.CreateFailure($"Unexpected error during PDF extraction: {ex.Message}");
+        }
+#pragma warning restore CA1031
+    }
+
+    /// <summary>
+    /// Maps raw Unstructured elements to the published <see cref="ExtractedElement"/> contract,
+    /// coalescing null/whitespace categories to "NarrativeText" and skipping empty-text elements.
+    /// </summary>
+    private static IReadOnlyList<ExtractedElement>? MapStructuredElements(List<UnstructuredElement>? elements)
+    {
+        if (elements is null || elements.Count == 0)
+        {
+            return null;
         }
 
-        // Create simple page chunks (split by estimated page boundaries)
-        var pageChunks = CreatePageChunksFromText(
-            extractionResult.ExtractedText,
-            extractionResult.PageCount);
+        var mapped = elements
+            .Where(e => !string.IsNullOrWhiteSpace(e.Text))
+            .Select(e => new ExtractedElement(
+                Text: e.Text!,
+                PageNumber: e.PageNumber > 0 ? e.PageNumber : 1,
+                ElementType: string.IsNullOrWhiteSpace(e.Category) ? "NarrativeText" : e.Category!))
+            .ToList();
 
-        return PagedTextExtractionResult.CreateSuccess(
-            pageChunks,
-            extractionResult.PageCount,
-            extractionResult.CharacterCount,
-            extractionResult.OcrTriggered);
+        return mapped.Count > 0 ? mapped : null;
     }
 
     /// <summary>
@@ -304,6 +355,7 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
 internal record UnstructuredExtractionResponse(
     [property: JsonPropertyName("text")] string Text,
     [property: JsonPropertyName("chunks")] List<UnstructuredChunk> Chunks,
+    [property: JsonPropertyName("elements")] List<UnstructuredElement>? Elements,
     [property: JsonPropertyName("quality_score")] double QualityScore,
     [property: JsonPropertyName("page_count")] int PageCount,
     [property: JsonPropertyName("metadata")] UnstructuredMetadata? Metadata);
@@ -313,6 +365,11 @@ internal record UnstructuredChunk(
     [property: JsonPropertyName("page_number")] int PageNumber,
     [property: JsonPropertyName("element_type")] string? ElementType,
     [property: JsonPropertyName("metadata")] Dictionary<string, object>? Metadata);
+
+internal record UnstructuredElement(
+    [property: JsonPropertyName("text")] string? Text,
+    [property: JsonPropertyName("page_number")] int PageNumber,
+    [property: JsonPropertyName("category")] string? Category);
 
 internal record UnstructuredMetadata(
     [property: JsonPropertyName("extraction_duration_ms")] int? ExtractionDurationMs,

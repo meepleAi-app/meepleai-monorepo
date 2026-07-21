@@ -60,7 +60,8 @@ internal class OrchestratedPdfTextExtractor : IPdfTextExtractor
             TotalPages: enhancedResult.TotalPages,
             TotalCharacters: enhancedResult.TotalCharacters,
             OcrTriggered: enhancedResult.OcrTriggered,
-            ErrorMessage: enhancedResult.ErrorMessage);
+            ErrorMessage: enhancedResult.ErrorMessage,
+            StructuredElements: enhancedResult.StructuredElements);
     }
 }
 

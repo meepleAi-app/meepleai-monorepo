@@ -124,5 +124,7 @@
     <None Include="runtimeconfig.template.json" CopyToOutputDirectory="PreserveNewest" />
     <!-- Copy n8n templates for integration tests -->
     <None Include="..\..\..\..\infra\n8n\templates\**\*.json" Link="infra\n8n\templates\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <!-- SP1 de-risk gate: real captured Unstructured service responses used as test fixtures -->
+    <None Update="TestData\**\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

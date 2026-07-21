@@ -18,6 +18,7 @@ def _fake_result():
     r = types.SimpleNamespace()
     r.full_text = "ok"
     r.chunks = []
+    r.elements = []
     r.quality_score = types.SimpleNamespace(total_score=1.0, to_dict=lambda: {})
     r.page_count = 1
     r.table_count = 0

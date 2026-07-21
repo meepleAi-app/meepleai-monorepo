@@ -439,4 +439,59 @@ public sealed class HybridSearchServiceRoleBoostTests
         results.Should().HaveCount(1);
         results[0].VectorScore.Should().BeApproximately((float)cosine, 0.0001f);
     }
+
+    // -----------------------------------------------------------------------------------------
+    // Slice C: role-match boost on the VECTOR arm of HYBRID fusion. The pgvector query already
+    // SELECTs role_tags (Embedding.RoleTags), but the SearchResultItem projection used to drop it,
+    // so a chunk surfacing ONLY via the vector arm got no boost even when its role matched the
+    // query intent. These pin that vector-only chunks now receive the boost.
+    // Default config: VectorWeight=0.7, RrfK=60 -> single vector-only chunk RRF = 0.7/61.
+    // -----------------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task SearchAsync_HybridMode_VectorOnlyChunk_RoleMatchesHint_HybridScoreIncludesBoost()
+    {
+        var vectorStore = new Mock<IVectorStoreAdapter>();
+        vectorStore
+            .Setup(v => v.SearchWithScoresAsync(
+                It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(),
+                It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Scored(BuildEmbedding(chunkIndex: 0, GameBookRole.Tutorial)));
+
+        // Empty keyword arm → the chunk is vector-only.
+        var sut = BuildSut(vectorStore, BuildEmbeddingMock(), BuildEmptyKeywordMock());
+
+        var results = await sut.SearchAsync(
+            "anything", Guid.NewGuid(), SearchMode.Hybrid,
+            queryRoleHint: GameBookRole.Tutorial,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        results.Should().HaveCount(1);
+        results[0].RoleTags.Should().Be(GameBookRole.Tutorial);
+        results[0].HybridScore.Should().BeApproximately((0.7f / 61f) + HybridSearchService.RoleMatchBoost, 0.0001f);
+    }
+
+    [Fact]
+    public async Task SearchAsync_HybridMode_VectorOnlyChunk_RoleDisjoint_NoBoost()
+    {
+        var vectorStore = new Mock<IVectorStoreAdapter>();
+        vectorStore
+            .Setup(v => v.SearchWithScoresAsync(
+                It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(),
+                It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Scored(BuildEmbedding(chunkIndex: 0, GameBookRole.RulesReference)));
+
+        var sut = BuildSut(vectorStore, BuildEmbeddingMock(), BuildEmptyKeywordMock());
+
+        var results = await sut.SearchAsync(
+            "anything", Guid.NewGuid(), SearchMode.Hybrid,
+            queryRoleHint: GameBookRole.Tutorial,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        results.Should().HaveCount(1);
+        // RoleTags still flows through (proves the projection carries it), but a disjoint role
+        // means no boost.
+        results[0].RoleTags.Should().Be(GameBookRole.RulesReference);
+        results[0].HybridScore.Should().BeApproximately(0.7f / 61f, 0.0001f);
+    }
 }

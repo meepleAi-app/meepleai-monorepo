@@ -117,8 +117,9 @@ internal record HybridSearchResult
 
     /// <summary>
     /// Phase D (D6): role classification of the underlying text chunk (multi-label bitflag).
-    /// Sourced from text_chunks.role_tags. <see cref="GameBookRole.None"/> when unclassified
-    /// or when the result came from the vector path (pgvector_embeddings table lacks role_tags).
+    /// Sourced from text_chunks.role_tags (keyword arm) and the denormalized
+    /// pgvector_embeddings.role_tags (vector arm); the two are unioned in fusion (Slice C).
+    /// <see cref="GameBookRole.None"/> when the chunk is unclassified.
     /// </summary>
     public GameBookRole RoleTags { get; init; } = GameBookRole.None;
 }

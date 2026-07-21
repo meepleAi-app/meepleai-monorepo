@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
+using Api.BoundedContexts.DocumentProcessing.Application.Services.Chunking;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
@@ -87,6 +88,12 @@ internal static class DocumentProcessingServiceExtensions
 
         // RAG translation: LLM-based chunk translation for cross-language retrieval
         services.AddScoped<IChunkTranslationService, ChunkTranslationService>();
+
+        // SP2 (#3268 task 2): shared heading-aware chunking pipeline (ExtractedDocumentFactory →
+        // AdvancedChunkingService → HierarchicalChunkMapper → oversize post-split). Depends on
+        // IAdvancedChunkingService/ITextChunkingService already registered by the KnowledgeBase
+        // context DI (Application layer) — this context only wires the consumer.
+        services.AddScoped<IHeadingAwareChunker, HeadingAwareChunker>();
 
         // Infrastructure Adapters (scoped - may use file I/O)
         services.AddScoped<IPdfTableExtractor, ITextPdfTableExtractor>();

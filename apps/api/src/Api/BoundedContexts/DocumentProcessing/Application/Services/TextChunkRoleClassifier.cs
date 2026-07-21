@@ -54,6 +54,34 @@ internal static class TextChunkRoleClassifier
             return;
         }
 
+        var roles = await ClassifyRolesAsync(classifier, sources, logger, cancellationToken).ConfigureAwait(false);
+        ApplyRoles(textChunks, roles);
+    }
+
+    /// <summary>
+    /// Classifies each source chunk into a <see cref="GameBookRole"/> WITHOUT mutating any entity,
+    /// so the caller can apply the result to multiple sinks (text_chunks AND pgvector_embeddings).
+    /// This is the seam that fixes the vector-arm role_tags gap: classification used to run only
+    /// after pgvector ingestion, leaving <c>pgvector_embeddings.role_tags</c> at 0.
+    ///
+    /// Returns an all-<see cref="GameBookRole.None"/> list (sized to <paramref name="sources"/>) when
+    /// the classifier is null/absent, faults (must NOT block ingestion), or returns a mismatched count.
+    /// </summary>
+    public static async Task<IReadOnlyList<GameBookRole>> ClassifyRolesAsync(
+        IRoleClassifierService? classifier,
+        IReadOnlyList<DocumentChunkInput> sources,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(sources);
+        ArgumentNullException.ThrowIfNull(logger);
+
+        var none = new GameBookRole[sources.Count]; // default(GameBookRole) == None
+        if (classifier is null || sources.Count == 0)
+        {
+            return none;
+        }
+
         var classifierInputs = new ChunkInput[sources.Count];
         for (var i = 0; i < sources.Count; i++)
         {
@@ -78,15 +106,62 @@ internal static class TextChunkRoleClassifier
             logger.LogWarning(
                 ex,
                 "[RoleClassifier] classification failed for {Count} chunks; leaving role_tags at None",
-                textChunks.Count);
-            return;
+                sources.Count);
+            return none;
         }
 
-        if (roles.Count != textChunks.Count)
+        if (roles.Count != sources.Count)
         {
             logger.LogWarning(
                 "[RoleClassifier] classifier returned {ResultCount} results for {ExpectedCount} chunks; leaving role_tags at None",
-                roles.Count, textChunks.Count);
+                roles.Count, sources.Count);
+            return none;
+        }
+
+        return roles;
+    }
+
+    /// <summary>
+    /// <see cref="DocumentChunk"/> convenience overload of <see cref="ClassifyRolesAsync(IRoleClassifierService?, IReadOnlyList{DocumentChunkInput}, ILogger, CancellationToken)"/>.
+    /// </summary>
+    public static async Task<IReadOnlyList<GameBookRole>> ClassifyRolesAsync(
+        IRoleClassifierService? classifier,
+        IReadOnlyList<DocumentChunk> sources,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(sources);
+
+        var inputs = new DocumentChunkInput[sources.Count];
+        for (var i = 0; i < sources.Count; i++)
+        {
+            inputs[i] = new DocumentChunkInput
+            {
+                Text = sources[i].Text,
+                Page = sources[i].Page,
+                CharStart = sources[i].CharStart,
+                CharEnd = sources[i].CharEnd,
+                Heading = sources[i].Heading,
+                Level = sources[i].Level,
+                ParentChunkId = sources[i].ParentChunkId,
+                ElementType = sources[i].ElementType,
+            };
+        }
+
+        return await ClassifyRolesAsync(classifier, inputs, logger, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Applies pre-computed <paramref name="roles"/> to <paramref name="textChunks"/> in index order.
+    /// No-op on a count mismatch (defensive — the caller aligns the two lists by construction).
+    /// </summary>
+    public static void ApplyRoles(IReadOnlyList<TextChunkEntity> textChunks, IReadOnlyList<GameBookRole> roles)
+    {
+        ArgumentNullException.ThrowIfNull(textChunks);
+        ArgumentNullException.ThrowIfNull(roles);
+
+        if (textChunks.Count != roles.Count)
+        {
             return;
         }
 

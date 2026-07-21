@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Configuration;
 using Api.Infrastructure;
@@ -105,12 +106,20 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                 return await MarkIndexingFailedAsync(vectorDoc!, chunkingError!, chunkErrorCode!.Value, cancellationToken).ConfigureAwait(false);
             }
 
+            // Classify chunk roles ONCE, before pgvector ingestion, so BOTH sinks get role_tags.
+            // Previously classification ran only in SaveTextChunksToPostgresAsync (after the vector
+            // COPY), leaving pgvector_embeddings.role_tags at 0 — so the vector-arm role-match boost
+            // (hybrid + semantic) had no data. Classifier faults degrade to None per chunk.
+            var chunkRoles = await TextChunkRoleClassifier
+                .ClassifyRolesAsync(_roleClassifier, documentChunks!, _logger, cancellationToken)
+                .ConfigureAwait(false);
+
             // Step 3: Update VectorDocument status
             // For private PDFs GameId is null — fall back to PrivateGameId so vectors are scoped
             // to the correct private game rather than collapsed under Guid.Empty.
             var effectiveGameId = pdf.PrivateGameId ?? pdf.SharedGameId ?? Guid.Empty;
             var indexingSuccess = await IndexChunksInVectorStoreAsync(
-                pdfId, effectiveGameId.ToString(), pdf.ExtractedText!, documentChunks!, vectorDoc!, cancellationToken).ConfigureAwait(false);
+                pdfId, effectiveGameId.ToString(), pdf.ExtractedText!, documentChunks!, chunkRoles, vectorDoc!, cancellationToken).ConfigureAwait(false);
             if (!indexingSuccess)
             {
                 pdf.ProcessingState = nameof(PdfProcessingState.Failed);
@@ -133,7 +142,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             // Step 4: Save text chunks to PostgreSQL for hybrid search
             // text_chunks.GameId is FK to games.Id (NOT shared_games.id) — resolve via PdfGameIdResolver.
             var chunkGameId = await PdfGameIdResolver.ResolveAsync(_db, pdf, cancellationToken).ConfigureAwait(false);
-            await SaveTextChunksToPostgresAsync(pdfId, chunkGameId, pdf.SharedGameId, documentChunks!, cancellationToken).ConfigureAwait(false);
+            await SaveTextChunksToPostgresAsync(pdfId, chunkGameId, pdf.SharedGameId, documentChunks!, chunkRoles, cancellationToken).ConfigureAwait(false);
 
             // Mark processing complete
             pdf.ProcessingState = nameof(PdfProcessingState.Ready);
@@ -404,6 +413,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         string gameId,
         string extractedText,
         List<DocumentChunk> documentChunks,
+        IReadOnlyList<GameBookRole> roles,
         VectorDocumentEntity vectorDoc,
         CancellationToken cancellationToken)
     {
@@ -435,18 +445,26 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         for (var batchIdx = 0; batchIdx < batchCount; batchIdx++)
         {
             var batchChunks = documentChunks.Skip(batchIdx * saveBatchSize).Take(saveBatchSize).ToList();
-            var entities = batchChunks.Select((chunk, i) => new PgVectorEmbeddingEntity
+            var entities = batchChunks.Select((chunk, i) =>
             {
-                Id = Guid.NewGuid(),
-                VectorDocumentId = vectorDoc.Id,
-                GameId = gameGuid,
-                TextContent = chunk.Text,
-                Vector = new Pgvector.Vector(chunk.Embedding),
-                Model = modelName,
-                ChunkIndex = batchIdx * saveBatchSize + i,
-                PageNumber = Math.Max(1, chunk.Page),
-                Lang = language,
-                CreatedAt = DateTimeOffset.UtcNow
+                var globalIndex = batchIdx * saveBatchSize + i;
+                return new PgVectorEmbeddingEntity
+                {
+                    Id = Guid.NewGuid(),
+                    VectorDocumentId = vectorDoc.Id,
+                    GameId = gameGuid,
+                    TextContent = chunk.Text,
+                    Vector = new Pgvector.Vector(chunk.Embedding),
+                    Model = modelName,
+                    ChunkIndex = globalIndex,
+                    PageNumber = Math.Max(1, chunk.Page),
+                    Lang = language,
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    // role_tags population: denormalize the pre-computed role so the vector-arm
+                    // role-match boost has data (was always 0 — classification used to run only
+                    // after this COPY). Guarded against a None/mismatched roles list.
+                    RoleTags = globalIndex < roles.Count ? (int)roles[globalIndex] : 0,
+                };
             }).ToList();
 
             await _db.PgVectorEmbeddings.AddRangeAsync(entities, cancellationToken).ConfigureAwait(false);
@@ -484,6 +502,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         Guid? gameId,
         Guid? sharedGameId,
         List<DocumentChunk> documentChunks,
+        IReadOnlyList<GameBookRole> roles,
         CancellationToken cancellationToken)
     {
         var pdfGuid = Guid.Parse(pdfId);
@@ -518,11 +537,9 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             })
             .ToList();
 
-        // Phase D4: classify chunks by GameBookRole before persistence so
-        // text_chunks.role_tags is populated on insert.
-        await TextChunkRoleClassifier.AssignRoleTagsAsync(
-            _roleClassifier, textChunkEntities, documentChunks, _logger, cancellationToken)
-            .ConfigureAwait(false);
+        // Phase D4: apply the roles classified once up-front (Handle) so text_chunks.role_tags
+        // matches the pgvector_embeddings.role_tags written for the same chunks (single classify).
+        TextChunkRoleClassifier.ApplyRoles(textChunkEntities, roles);
 
         _db.TextChunks.AddRange(textChunkEntities);
         _logger.LogInformation("Saved {ChunkCount} text chunks to PostgreSQL for hybrid search (PDF {PdfId})",

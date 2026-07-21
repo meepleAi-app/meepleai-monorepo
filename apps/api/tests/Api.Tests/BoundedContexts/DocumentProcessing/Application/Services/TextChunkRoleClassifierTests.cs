@@ -111,6 +111,109 @@ public class TextChunkRoleClassifierTests
         classifierMock.VerifyAll();
     }
 
+    // ---------------------------------------------------------------------
+    // role_tags index-population: ClassifyRolesAsync computes the roles ONCE
+    // (from DocumentChunk sources) so the caller can apply them to BOTH
+    // text_chunks AND pgvector_embeddings — the vector arm previously got 0
+    // because classification ran after pgvector ingestion. ApplyRoles is the
+    // sync assignment half.
+    // ---------------------------------------------------------------------
+
+    private static DocumentChunk DocChunk(string text, string? heading = null) =>
+        new() { Text = text, Heading = heading };
+
+    [Fact]
+    public async Task ClassifyRolesAsync_HappyPath_ReturnsRolesInOrder()
+    {
+        var sources = new List<DocumentChunk>
+        {
+            DocChunk("Place pieces on the board.", "Setup > Components"),
+            DocChunk("The wizard rolls 1d6 for damage.", "Combat > Magic"),
+        };
+        var returnedRoles = new[] { GameBookRole.Setup, GameBookRole.RulesReference };
+
+        var classifierMock = new Mock<IRoleClassifierService>();
+        classifierMock
+            .Setup(x => x.ClassifyAsync(
+                It.Is<IReadOnlyList<ChunkInput>>(i =>
+                    i.Count == 2 && i[0].HeadingPath == "Setup > Components" && i[0].BodyText == "Place pieces on the board."),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(returnedRoles);
+
+        var roles = await TextChunkRoleClassifier.ClassifyRolesAsync(
+            classifierMock.Object, sources, Logger, TestContext.Current.CancellationToken);
+
+        roles.Should().Equal(GameBookRole.Setup, GameBookRole.RulesReference);
+    }
+
+    [Fact]
+    public async Task ClassifyRolesAsync_NullClassifier_ReturnsAllNone()
+    {
+        var sources = new List<DocumentChunk> { DocChunk("a"), DocChunk("b") };
+
+        var roles = await TextChunkRoleClassifier.ClassifyRolesAsync(
+            classifier: null, sources, Logger, TestContext.Current.CancellationToken);
+
+        roles.Should().Equal(GameBookRole.None, GameBookRole.None);
+    }
+
+    [Fact]
+    public async Task ClassifyRolesAsync_ClassifierThrows_ReturnsAllNone_DoesNotBlockIngest()
+    {
+        var sources = new List<DocumentChunk> { DocChunk("a"), DocChunk("b") };
+        var classifierMock = new Mock<IRoleClassifierService>();
+        classifierMock
+            .Setup(x => x.ClassifyAsync(It.IsAny<IReadOnlyList<ChunkInput>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("classifier down"));
+
+        var roles = await TextChunkRoleClassifier.ClassifyRolesAsync(
+            classifierMock.Object, sources, Logger, TestContext.Current.CancellationToken);
+
+        roles.Should().Equal(GameBookRole.None, GameBookRole.None);
+    }
+
+    [Fact]
+    public async Task ClassifyRolesAsync_CountMismatch_ReturnsAllNone()
+    {
+        var sources = new List<DocumentChunk> { DocChunk("a"), DocChunk("b") };
+        var classifierMock = new Mock<IRoleClassifierService>();
+        classifierMock
+            .Setup(x => x.ClassifyAsync(It.IsAny<IReadOnlyList<ChunkInput>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { GameBookRole.Setup }); // 1 role for 2 chunks
+
+        var roles = await TextChunkRoleClassifier.ClassifyRolesAsync(
+            classifierMock.Object, sources, Logger, TestContext.Current.CancellationToken);
+
+        roles.Should().Equal(GameBookRole.None, GameBookRole.None);
+    }
+
+    [Fact]
+    public void ApplyRoles_AssignsInOrder()
+    {
+        var chunks = new[]
+        {
+            new TextChunkEntity { Id = Guid.NewGuid(), Content = "a" },
+            new TextChunkEntity { Id = Guid.NewGuid(), Content = "b" },
+        };
+        var roles = new[] { GameBookRole.Setup, GameBookRole.RulesReference };
+
+        TextChunkRoleClassifier.ApplyRoles(chunks, roles);
+
+        chunks[0].RoleTags.Should().Be(GameBookRole.Setup);
+        chunks[1].RoleTags.Should().Be(GameBookRole.RulesReference);
+    }
+
+    [Fact]
+    public void ApplyRoles_CountMismatch_NoOp()
+    {
+        var chunks = new[] { new TextChunkEntity { Id = Guid.NewGuid(), Content = "a" } };
+        var roles = new[] { GameBookRole.Setup, GameBookRole.RulesReference };
+
+        TextChunkRoleClassifier.ApplyRoles(chunks, roles);
+
+        chunks[0].RoleTags.Should().Be(GameBookRole.None);
+    }
+
     [Fact]
     public async Task AssignRoleTagsAsync_NullSourceFields_PassesEmptyStringToClassifier()
     {

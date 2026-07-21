@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.AgentDefinition;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.Services.LlmClients;
 using FluentValidation;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Validators.AgentDefinition;
@@ -40,7 +41,9 @@ internal sealed class CreateAgentDefinitionCommandValidator : AbstractValidator<
 
         RuleFor(x => x.Model)
             .NotEmpty().WithMessage("Model is required")
-            .MaximumLength(200).WithMessage("Model must not exceed 200 characters");
+            .MaximumLength(200).WithMessage("Model must not exceed 200 characters")
+            .Must(m => !LlmModelRouting.IsUnroutableBareCloudId(m))
+            .WithMessage("Model is not routable: a bare cloud-provider id (e.g. 'claude-haiku-4-5-...') routes to no LLM client. Use a 'provider/model' OpenRouter slug (e.g. 'anthropic/claude-3.5-haiku'), a 'deepseek-*' id, or a local Ollama model.");
 
         RuleFor(x => x.MaxTokens)
             .InclusiveBetween(100, 32000).WithMessage("MaxTokens must be between 100 and 32000");

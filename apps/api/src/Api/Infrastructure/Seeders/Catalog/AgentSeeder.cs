@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
@@ -34,7 +35,10 @@ internal static class AgentSeeder
             description: "Specialized agent for board game rules interpretation and clarification.",
             type: AgentType.Custom("RAG", "Rules retrieval-augmented generation"),
             config: AgentDefinitionConfig.Create(
-                model: "claude-haiku-4-5-20251001",
+                // Use the configured default (env-overridable, guaranteed routable). The previous
+                // hardcoded "claude-haiku-4-5-20251001" is a BARE Anthropic id that no LlmClient
+                // routes (OpenRouter needs a "provider/model" slug) → chat 500. See LlmModelRouting.
+                model: AgentDefaults.DefaultModel,
                 maxTokens: 500,
                 temperature: 0.3f),
             typologySlug: "rules-expert",

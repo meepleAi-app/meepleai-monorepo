@@ -2,138 +2,151 @@
 
 **Date**: 2026-07-22 · **Epic**: RAG retrieval heading-aware answer-quality (#3266) · **Relates to**: SP4 (#3270 ranking)
 
+> Revised after adversarial spec review (10 findings applied): the core is a merge-and-score primitive; each adapter re-joins its own arm by key for type-specific output fields; `Domain.Entities.SearchResult` gains `PdfDocumentId`+`ChunkIndex`+`RoleTags`; the primary path preserves the #2712 cosine relevance and the #2051 documentIds/phrase filters.
+
 ## Problem
 
 MeepleAI's RAG retrieval has **two divergent hybrid-fusion implementations**, and the signal-rich one runs in an admin tool while the signal-poor one serves real users.
 
-- **`RrfFusionDomainService.FuseResults`** (`Domain/Services/VectorSearch/RrfFusionDomainService.cs:22-92`) — **UNWEIGHTED** RRF (both arms `1.0/(rrfK+rank)`, k=60), **no legend-demotion, no role-boost, no heading**. Sole caller: `SearchQueryHandler.cs:212`, which is the **user-facing chat path** (`/agents/qa` and `/agents/qa/stream`).
+- **`RrfFusionDomainService.FuseResults`** (`Domain/Services/VectorSearch/RrfFusionDomainService.cs:22-92`) — **UNWEIGHTED** RRF (both arms `1.0/(rrfK+rank)`, k=60), **no legend-demotion, no role-boost, no heading**. Sole caller: `SearchQueryHandler.cs:212`, which is the **user-facing chat path** (`/agents/qa` and `/agents/qa/stream`). It deliberately preserves the source **cosine** as `RelevanceScore` (RRF drives order only) — issue #2712, `RrfFusionDomainService.cs:81-85`.
 - **`HybridSearchService.FuseSearchResults`** (`Services/HybridSearchService.cs:394-527`) — **WEIGHTED** RRF (0.7 vector / 0.3 keyword, per-call params), **legend-demotion** (`ComputeLegendPenaltyFactor`, `:488`) + **role-boost** (`ComputeRoleMatchBoost`, additive 0.15, `:470,:489`). Reached only via `SearchAsync(SearchMode.Hybrid)`, whose primary consumer is the **admin playground** (`PlaygroundChatCommandHandler`) plus 6 other Hybrid-mode callers.
 
 Consequences (verified against source):
-1. **Legend-demotion (#3243, "retrieval epic 2/3") never reaches production chat.** `ComputeLegendPenaltyFactor` has exactly one production call site — `HybridSearchService.cs:488` — unreachable from `/agents/qa[/stream]`. PR #3243 framed it as a general answer-quality fix and its author appears to have assumed `FuseSearchResults` was *the* fusion path; there is no ADR or comment scoping it to the playground. This is an **oversight, not a deliberate design decision**.
-2. **Role-boost is inconsistent on the primary path.** `/agents/qa` gets role-boost only via a side effect: its keyword sub-call (`SearchAsync(SearchMode.Keyword, roleHint)`) applies the boost inside `SearchKeywordOnlyAsync` and re-sorts, so the boost rides in on the keyword rank fed to RRF — **keyword-arm only, not the vector arm**. `/agents/qa/stream` gets **no** role-boost at all because `StreamQaQueryHandler.cs:284-292` never sets `QueryRoleHint` (defaults to `GameBookRole.None`).
-3. The primary path's vector arm **already fetches `role_tags`** (the scored pgvector SQL selects them → `Embedding.RoleTags`, `PgVectorStoreAdapter.cs:141-149`), and the keyword arm fetches them too (`KeywordSearchService.cs:106` → `KeywordSearchResult.RoleTags`), but **both are silently dropped** because `Domain.Entities.SearchResult` has no `RoleTags` field. So the data is present; only the plumbing is missing.
+1. **Legend-demotion (#3243, "retrieval epic 2/3") never reaches production chat.** `ComputeLegendPenaltyFactor` has exactly one production call site — `HybridSearchService.cs:488` — unreachable from `/agents/qa[/stream]`. PR #3243's author appears to have assumed `FuseSearchResults` was *the* fusion path; no ADR/comment scopes it to the playground. **Oversight, not design.**
+2. **Role-boost inconsistent on the primary path.** `/agents/qa` gets role-boost only as a side effect of its keyword sub-call (`SearchAsync(SearchMode.Keyword, roleHint)` applies the boost + re-sorts inside `SearchKeywordOnlyAsync`), so it rides in on the keyword rank — **keyword-arm only, not the vector arm**. `/agents/qa/stream` gets **no** role-boost (`StreamQaQueryHandler.cs:284-292` never sets `QueryRoleHint`).
+3. The primary path's vector arm **already fetches `role_tags`** (scored pgvector SQL → `Embedding.RoleTags`, `PgVectorStoreAdapter.cs:141-149`) and its keyword arm too (`KeywordSearchService.cs:106` → `KeywordSearchResult.RoleTags`), but both are dropped because `Domain.Entities.SearchResult` has no `RoleTags` field.
 
 ## Goal
 
-Replace the two fusion implementations with **one canonical fusion core** that applies weighted RRF + legend-demotion + role-boost consistently, so the user-facing chat path receives the same ranking signals as the admin playground. Standardize on the **weighted 0.7/0.3** behavior (per-call configurable) everywhere.
+Replace the two fusion implementations with **one canonical fusion core** applying weighted RRF + legend-demotion + role-boost consistently, so the user-facing chat path receives the same ranking signals as the admin playground. Standardize on **weighted 0.7/0.3** (per-call configurable) everywhere.
 
-**Non-goal / explicitly out of scope**: heading-based boost (SP4's other remaining item — `SearchResult`/`HybridSearchResult` don't carry `Heading`; deferred), the actual corpus re-index that materializes headings/role_tags on existing rows (SP3, #3269), and the EN/IT retrieval non-regression suite (SP3). This spec unifies the fusion CODE and its signal set; it does not build the corpus-level quality gate.
+**Out of scope**: heading-based boost (SP4's other item — types don't carry `Heading`; deferred), the corpus re-index that materializes headings/role_tags on existing rows (SP3, #3269), and the EN/IT non-regression suite (SP3).
 
 ## Design
 
 ### 1. `HybridFusionCore` — the single canonical fusion
 
-New pure/static Domain component under `Domain/Services/VectorSearch/`. One implementation of the fusion formula, extracted verbatim from `HybridSearchService.FuseSearchResults` (`:447-489`):
+New pure/static Domain component (`Domain/Services/VectorSearch/HybridFusionCore.cs`). It **owns the arm merge + scoring + ordering**; it does NOT know the caller's I/O types. Each adapter maps its arm items into the neutral input and re-joins its own arm items for type-specific output fields (see §3/§4).
 
-```
-vectorRrf  = vectorWeight  / (rrfK + vectorRank)
-keywordRrf = keywordWeight / (rrfK + keywordRank)
-legendFactor = ComputeLegendPenaltyFactor(content)            // [0, 0.5], 0 for <2 cross-ref pointers
-roleBoost    = ComputeRoleMatchBoost(queryRoleHint, roleTags) // additive 0.15 when (hint & tags) != None
-hybridScore  = ((vectorRrf + keywordRrf) * (1 - legendFactor)) + roleBoost   // role stays additive on top
-```
-
-**Input contract** — a neutral per-arm candidate carrying exactly what the formula needs, so both call sites can adapt into it:
-
+**Input** — per arm, a neutral candidate with only what scoring needs:
 ```csharp
 internal readonly record struct FusionCandidate(
-    string Key,               // stable identity: {PdfDocumentId}_{ChunkIndex} (matches the #3262 RRF key fix)
-    string Content,           // for the legend regex
-    GameBookRole RoleTags,    // for the role boost
-    Guid PdfDocumentId,
-    int ChunkIndex,
-    int? PageNumber,
-    int Rank,                 // 1-based rank within this arm
-    float SourceScore);       // arm-native score (cosine for vector, ts_rank_cd for keyword) — carried through, not fused
+    string Key,             // stable identity "{PdfDocumentId}_{ChunkIndex}" (the #3262 RRF key); built by the adapter
+    string Content,         // for the legend regex
+    GameBookRole RoleTags,  // for the role boost
+    int Rank,               // 1-based rank within THIS arm (source order: cosine desc / ts_rank_cd desc)
+    float SourceScore);     // arm-native score (cosine or ts_rank_cd) — carried to output, not fused
 
 internal sealed record FusionOptions(
-    float VectorWeight = 0.7f,
-    float KeywordWeight = 0.3f,
-    int RrfK = 60,
+    float VectorWeight = 0.7f, float KeywordWeight = 0.3f, int RrfK = 60,
     GameBookRole QueryRoleHint = GameBookRole.None);
 ```
 
-**Output** — one fused, ranked list carrying every field the two current outputs need (superset), so each adapter can project its own return type:
+**Method** `static IReadOnlyList<FusedCandidate> Fuse(IReadOnlyList<FusionCandidate> vectorArm, IReadOnlyList<FusionCandidate> keywordArm, FusionOptions options)`. **Merge + score semantics (specified verbatim from the current `FuseSearchResults`, `:404-505`):**
+- **Dedup within an arm**: group by `Key`, keep the **best (lowest) rank** occurrence (matches the current keyword-arm `GroupBy(Key).First()` at `:419-422`; apply the same to the vector arm rather than the current throw-on-duplicate `ToDictionary` so the core is total).
+- **Cross-arm union**: a chunk may appear in one or both arms. `vectorRrf = present ? VectorWeight/(RrfK + vectorRank) : 0`; `keywordRrf` likewise. `rrfSum = vectorRrf + keywordRrf`.
+- **Merged content**: **prefer the vector arm's** content when the chunk is in both (`:478-480`) — this is load-bearing because `legendFactor` is computed from it.
+- **Merged RoleTags**: `vectorRoleTags | keywordRoleTags` (OR-union, `:469`).
+- **Score**: `legendFactor = FusionSignals.ComputeLegendPenaltyFactor(mergedContent)` (`[0,0.5]`, 0 for <2 cross-ref pointers); `roleBoost = FusionSignals.ComputeRoleMatchBoost(options.QueryRoleHint, mergedRoleTags)` (additive 0.15); `hybridScore = (rrfSum * (1 - legendFactor)) + roleBoost` (role stays additive on top — `:486-489`).
+- **Order**: by `hybridScore` **desc**, with a **deterministic secondary tie-break by `Key` (ordinal)** so results are reproducible (the current code returns HashSet-enumeration order then the caller sorts, `:436/SearchHybridAsync:314`; the core makes the sort explicit and deterministic).
 
+**Output** — the scoring result keyed by `Key`; adapters re-join their arm items for everything else:
 ```csharp
 internal readonly record struct FusedCandidate(
-    string Key, string Content, Guid PdfDocumentId, int ChunkIndex, int? PageNumber,
-    GameBookRole RoleTags,
+    string Key, string Content, GameBookRole RoleTags,
     float HybridScore, float? VectorScore, float? KeywordScore, int? VectorRank, int? KeywordRank,
-    int Rank);            // 1-based rank in the fused order
+    int Rank);          // 1-based rank in the fused order
 ```
+`VectorScore`/`KeywordScore` carry the arm-native `SourceScore` (cosine / ts_rank_cd); `VectorRank`/`KeywordRank` the arm ranks (needed by `MultiGameHybridSearchService`'s cross-game tie-break). Pure — no logging, no injected state.
 
-**Method**: `static IReadOnlyList<FusedCandidate> Fuse(IReadOnlyList<FusionCandidate> vectorArm, IReadOnlyList<FusionCandidate> keywordArm, FusionOptions options)`. It keys both arms on `Key`, sums the weighted RRF contributions, applies legend + role per candidate, orders by `HybridScore` desc, and preserves `VectorScore`/`KeywordScore`/`VectorRank`/`KeywordRank` (needed by `MultiGameHybridSearchService`'s cross-game tie-break). Pure — no logging, no injected state.
+### 2. Shared signal helpers → `FusionSignals`
 
-### 2. Shared signal helpers → Domain
+Move `ComputeLegendPenaltyFactor`, `ComputeRoleMatchBoost`, the `CrossReferencePointer` legend regex, and `RoleMatchBoost = 0.15f` / `DefaultRrfK = 60` out of `HybridSearchService.cs` (`:35,:29,:536-544,:548-551,:560-580`) into a `FusionSignals` static (Domain, sibling of `HybridFusionCore`). They are already `internal static`, pure, zero injected state; only cross-BC ref is `GameBookRole` (KB Domain already references it). **Move + repoint every reference, don't delete**:
+- `HybridSearchService.SearchKeywordOnlyAsync` (`:206/:215`) also calls `ComputeRoleMatchBoost` → repoint to `FusionSignals.ComputeRoleMatchBoost`.
+- **`apps/api/tests/Api.Tests/Services/HybridSearchServiceRoleBoostTests.cs`** references `HybridSearchService.ComputeRoleMatchBoost` / `.ComputeLegendPenaltyFactor` / `.RoleMatchBoost` directly in 10+ places (`:36,50,65,80,94,108,109,130,141,154,165,167,184,206`) — repoint all to `FusionSignals.*` (or keep thin `internal static` forwarders on `HybridSearchService`; prefer repointing the tests).
 
-Move `ComputeLegendPenaltyFactor`, `ComputeRoleMatchBoost`, the `CrossReferencePointer` legend regex, and the `RoleMatchBoost = 0.15f` / `DefaultRrfK = 60` constants out of `HybridSearchService.cs` (`:35,:29,:536-544,:548-551,:560-580`) into a `FusionSignals` static (sibling of `HybridFusionCore` in Domain). They are already `internal static` and pure with zero injected state; the only cross-BC reference is `GameBookRole`, which KB Domain already references. **Move, don't delete** — `ComputeRoleMatchBoost` has a second caller inside `HybridSearchService.SearchKeywordOnlyAsync` (`:206/:215`, the `SearchMode.Keyword` role re-sort); repoint that reference (and any other) to `FusionSignals.ComputeRoleMatchBoost` so no behavior changes for the standalone Keyword mode. `FuseSearchResults`'s three `_logger.LogDebug` calls (`:429-431`) are dropped so the core stays pure.
+### 3. `HybridSearchService.FuseSearchResults` → thin adapter (behavior-preserving)
 
-### 3. `HybridSearchService.FuseSearchResults` → thin adapter (pure refactor)
+Rewrite the private `FuseSearchResults` (`:394-527`) to:
+1. Map its `SearchResultItem` vector + keyword arms → `FusionCandidate` (Key `"{PdfId}_{ChunkIndex}"`, Content=`Text`, RoleTags, Rank, SourceScore=`Score`).
+2. Call `HybridFusionCore.Fuse` with the per-call `vectorWeight`/`keywordWeight`/`rrfK` it already receives.
+3. **Re-join by `Key`** to recover the type-specific fields the core doesn't carry, then build each `HybridSearchResult`:
+   - `MatchedTerms` = keyword arm item's `MatchedTerms` (`:473-475,520`) — **must be preserved** (consumed by `HybridSearchEngine.cs:215` + `MultiGameHybridSearchService.cs:203`).
+   - `GameId` = keyword arm's `GameId` else the query `gameId` (`:495-497`).
+   - `PdfDocumentId` = **string** (keep as-is end-to-end; do NOT round-trip through Guid); `ChunkIndex`, `PageNumber` **coalesced to 0** when keyword-only null (`:505`); `Mode = SearchMode.Hybrid`; `VectorScore`/`KeywordScore`/`VectorRank`/`KeywordRank`/`HybridScore` from `FusedCandidate`.
 
-Rewrite the private `FuseSearchResults` (`:394-527`) to: map its `SearchResultItem` vector + keyword arms → `FusionCandidate`, call `HybridFusionCore.Fuse` with the same per-call `vectorWeight`/`keywordWeight`/`rrfK` it already receives, and map `FusedCandidate` → `HybridSearchResult`. **Behavior must be byte-identical to today** — same weights, same formula, same output fields. Guarded by a **parity test** (below). Because `FuseSearchResults` is a private method with a single internal caller (`SearchHybridAsync`, `:305`) and `SearchAsync`'s public signature + `List<HybridSearchResult>` return are unchanged, **all Hybrid-mode callers are unaffected**:
-
-`PlaygroundChatCommandHandler`, `AskArbiterCommandHandler`, `GenerateToolkitFromKbHandler`, `HybridSearchEngine` (passes A/B-variant weights 0.8/0.2, 0.5/0.5, 0.3/0.7 — **so weights MUST stay per-call inputs**), `ResilientRetrievalService`, `MultiGameHybridSearchService` (depends on `HybridScore` ordering + `VectorScore`/`KeywordScore` tie-break), `RagService.ExecuteHybridRetrievalAsync`, and indirectly `CrossGameStreamQaQueryHandler` + `PromptEvaluationService`.
+**Behavior must be observably identical to today** — same weights, same formula, same output fields including `MatchedTerms`/`GameId`/`PageNumber`. Guarded by the parity test (§Risk). `FuseSearchResults` is private with one internal caller (`SearchHybridAsync`, `:305`); `SearchAsync`'s public signature + `List<HybridSearchResult>` return are unchanged → **all Hybrid-mode callers unaffected**: `PlaygroundChatCommandHandler`, `AskArbiterCommandHandler`, `GenerateToolkitFromKbHandler`, `HybridSearchEngine` (A/B weights 0.8/0.2, 0.5/0.5, 0.3/0.7 — **weights MUST stay per-call inputs**), `ResilientRetrievalService`, `MultiGameHybridSearchService` (HybridScore order + VectorScore/KeywordScore tie-break), `RagService.ExecuteHybridRetrievalAsync`, and indirectly `CrossGameStreamQaQueryHandler` + `PromptEvaluationService`.
 
 ### 4. `RrfFusionDomainService.FuseResults` → adapter for the primary path (behavioral change)
 
-Rewrite it to map its `Domain.Entities.SearchResult` vector + keyword arms → `FusionCandidate`, call `HybridFusionCore.Fuse` with `FusionOptions(0.7f, 0.3f, 60, queryRoleHint)`, and map `FusedCandidate` back to `Domain.Entities.SearchResult`. This is where the **primary chat path changes**: unweighted → weighted 0.7/0.3, and it gains legend-demotion + role-boost on both arms. The method signature gains a `GameBookRole queryRoleHint` parameter (default `None` for backward-compatible callers/tests).
+Rewrite it to: map its `Domain.Entities.SearchResult` vector + keyword arms → `FusionCandidate`, call `HybridFusionCore.Fuse` with `FusionOptions(0.7f, 0.3f, 60, queryRoleHint)`, re-join by `Key` to the original `SearchResult`s, and map `FusedCandidate` back to `Domain.Entities.SearchResult` in fused order. The signature gains a `GameBookRole queryRoleHint = GameBookRole.None` param (default keeps existing callers/tests compiling).
 
-### 5. `Domain.Entities.SearchResult` gains `RoleTags`
+**#2712 preservation (mandatory)**: `SearchResult.RelevanceScore` = the carried **cosine**, i.e. `new Confidence(FusedCandidate.VectorScore ?? FusedCandidate.KeywordScore)` — **NOT** `HybridScore`. `HybridScore` drives **order only**. (Feeding the RRF/hybrid score into confidence made it degenerate ~0.53 and hid grounded answers behind the "Non sono certo" card — `RrfFusionDomainService.cs:81-84`.) A primary-path test asserts a both-arm result keeps its cosine, not the RRF score.
 
-Add a `GameBookRole RoleTags` property (default `None`) to `Domain.Entities.SearchResult` (`SearchResult.cs:10-55`) + ctor param. Populate it at the two primary-path arm sites where the data already arrives but is dropped:
-- **Vector arm**: `SearchQueryHandler.PerformVectorSearchAsync` (`:159-167`) — set from `(GameBookRole)scored.Embedding.RoleTags`.
-- **Keyword arm**: the new `KeywordSearchResult` → `SearchResult` mapper (per §6) — set from `KeywordSearchResult.RoleTags`.
+This is where the **primary chat path changes**: unweighted → weighted 0.7/0.3, and it gains legend-demotion + role-boost on both arms (order only; confidence unchanged).
 
-(`Content`/`TextContent` is already present for the legend regex.) Note: the existing `KnowledgeBaseMappers.ToDomainSearchResult` (`HybridSearchResult` → `SearchResult`, `:64-83`) is no longer on the primary keyword path once §6 switches to `IKeywordSearchService` direct; leave it in place for any other consumers but it need not carry `RoleTags`.
+### 5. `Domain.Entities.SearchResult` gains `PdfDocumentId` + `ChunkIndex` + `RoleTags`
 
-### 6. Primary path arm sourcing — avoid double role-boost
+`Domain.Entities.SearchResult` (`SearchResult.cs:10-55`) today carries `VectorDocumentId`, `TextContent`, `PageNumber`, `RelevanceScore`, `Rank`, `SearchMethod` — **no PdfDocumentId, no ChunkIndex, no RoleTags**. The canonical `Key = "{PdfDocumentId}_{ChunkIndex}"` (the #3262 intersecting key) needs the first two; role-boost needs the third. Add all three as properties + **defaulted ctor params** (so the ~8 existing construction sites keep compiling). Populate at the two primary-path arm sources where the data already arrives but is dropped:
+- **Vector arm** — `SearchQueryHandler.PerformVectorSearchAsync` (`:159-167`): set `PdfDocumentId = scored.Embedding.PdfDocumentId`, `ChunkIndex = scored.Embedding.ChunkIndex`, `RoleTags = (GameBookRole)scored.Embedding.RoleTags`.
+- **Keyword arm** — the new `KeywordSearchResult` → `SearchResult` mapper (§6): set `PdfDocumentId = Guid.Parse(kr.PdfDocumentId)`, `ChunkIndex = kr.ChunkIndex`, `RoleTags = kr.RoleTags`.
 
-Today `SearchQueryHandler.PerformHybridSearchAsync` (`:177-213`) sources its keyword arm via `HybridSearchService.SearchAsync(SearchMode.Keyword, roleHint)`, which **already applies role-boost internally** (`SearchKeywordOnlyAsync`, `:215`) and re-sorts. If the canonical core ALSO applies role-boost, the keyword arm is boosted twice. Fix: the primary path must feed the core **raw (unboosted) arm rankings** and let the core apply legend + role exactly once. Concretely:
-- Keyword arm: obtain a **raw** keyword ranking (ts_rank_cd order) that still carries `RoleTags` + content, WITHOUT the in-service role re-sort. **Chosen approach**: call `IKeywordSearchService` directly (it returns `KeywordSearchResult` with `RoleTags` + `Content`, in raw ts_rank_cd order — no role re-sort), instead of routing through `HybridSearchService.SearchAsync(SearchMode.Keyword)` which boosts. The plan verifies `IKeywordSearchService` is injectable into `SearchQueryHandler` and reconciles the `keywordMinScore=0.01` filter (currently applied by the Keyword-mode path at `SearchQueryHandler.cs:196-204`) so it is preserved. Map `KeywordSearchResult` → `Domain.Entities.SearchResult` carrying `RoleTags` (a new mapper, sibling to `ToDomainSearchResult`).
-- Vector arm: already raw (cosine order); §5 threads its `RoleTags`.
-- `SearchQueryHandler.PerformHybridSearchAsync` passes the classified `queryRoleHint` into `RrfFusionDomainService.FuseResults(..., queryRoleHint)`.
+(`Content`/`TextContent` already present for the legend regex.)
+
+### 6. Primary path arm sourcing — raw keyword arm, filter parity, no double-boost
+
+Today `SearchQueryHandler.PerformHybridSearchAsync` (`:177-213`) sources its keyword arm via `HybridSearchService.SearchAsync(SearchMode.Keyword, roleHint)`, which **already role-boosts + re-sorts** (`SearchKeywordOnlyAsync`, `:215`). Feeding that into a core that ALSO applies role-boost double-counts it. Fix: source a **raw** keyword ranking and let the core apply legend + role exactly once.
+
+**Chosen approach**: call `IKeywordSearchService` **directly** (returns `KeywordSearchResult` in raw ts_rank_cd order with `RoleTags` + `Content` + `PdfDocumentId` + `ChunkIndex`), map via the new §5 mapper. **But `SearchAsync(SearchMode.Keyword)` also applies three things `IKeywordSearchService.SearchAsync` does not — all MUST be reproduced in `SearchQueryHandler` to avoid a scope/behavior regression**:
+- **`keywordMinScore = 0.01`** filter (drops ToC noise) — currently passed at `SearchQueryHandler.cs:196-204`.
+- **`documentIds` filter** (Issue #2051, `HybridSearchService.cs:195-197`) — document-scoped retrieval; `IKeywordSearchService.SearchAsync` has **no** `documentIds` parameter, so the filter must be applied in `SearchQueryHandler` (with the correct `VectorDocument.Id → PdfDocumentId` id basis). If `SearchQuery` carries no documentIds today on this path, confirm and preserve current behavior.
+- **`phraseSearch`** = `query.Contains('"')` (`HybridSearchService.cs:189/:263`) — pass through to `IKeywordSearchService` if it supports it, else preserve the current phrase behavior.
+
+Then `PerformHybridSearchAsync` passes the classified `queryRoleHint` into `RrfFusionDomainService.FuseResults(..., queryRoleHint)`. The plan verifies `IKeywordSearchService` is injectable into `SearchQueryHandler` and adds a documentIds-filter primary-path test.
 
 ### 7. `StreamQaQueryHandler` role-hint parity
 
-`StreamQaQueryHandler` (`:278-347`) must classify intent and set `QueryRoleHint` on its `SearchQuery` (mirroring `AskQuestionQueryHandler.cs:429-443`), so the stream path gets role-boost parity with non-stream. Small, isolated handler change with its own test.
+`StreamQaQueryHandler` (`:278-347`) must classify intent and set `QueryRoleHint` on its `SearchQuery` (mirroring `AskQuestionQueryHandler.cs:429-443`), so the stream path gets role-boost parity. Small isolated change with its own test.
 
 ### Data flow (primary path, after)
 
 ```
 query → IntentClassifier → roleHint
-      → [ vector arm: raw pgvector cosine ranking + RoleTags ]
-      → [ keyword arm: raw ts_rank_cd ranking + RoleTags ]
-      → HybridFusionCore.Fuse(vectorWeight 0.7, keywordWeight 0.3, rrfK 60, roleHint)   // weighted RRF + legend + role
+      → [ vector arm: raw pgvector cosine ranking + PdfDocumentId/ChunkIndex/RoleTags ]
+      → [ keyword arm: raw ts_rank_cd ranking (IKeywordSearchService) + PdfDocumentId/ChunkIndex/RoleTags, minScore+documentIds+phrase preserved ]
+      → HybridFusionCore.Fuse(0.7, 0.3, 60, roleHint)      // weighted RRF + legend + role, order only
+      → RelevanceScore = cosine (#2712)                     // confidence unchanged
       → cross-encoder reranker (unchanged)
       → answer
 ```
 
 ## Risk & validation
 
-**This changes production chat ranking** (`/agents/qa` + `/stream`): unweighted → weighted 0.7/0.3, plus legend-demotion and two-arm role-boost. There is **no EN/IT retrieval non-regression suite** yet (that is SP3's deliverable), so real-data ranking quality cannot be fully gated here. Mitigation:
+**This changes production chat ranking** (`/agents/qa` + `/stream`): unweighted → weighted 0.7/0.3 + legend + two-arm role-boost (order only; confidence still cosine). No EN/IT retrieval non-regression suite exists yet (SP3), so real-data quality can't be fully gated here. Mitigation:
 
-1. **Parity test (mandatory)**: prove `HybridSearchService.FuseSearchResults` produces identical output before/after the extraction — the Hybrid path is a pure refactor and must not drift. Table-drive representative inputs; assert order + `HybridScore`/`VectorScore`/`KeywordScore` equality.
-2. **Core unit tests**: weighted RRF math (incl. A/B weights 0.8/0.2, 0.5/0.5, 0.3/0.7), legend-demotion (a ≥2-pointer legend chunk demotes below real content), role-boost (matching-role chunk rises; additive-on-top semantics preserved), stable-key fusion, empty-arm handling.
-3. **Primary-path integration test**: an `AskQuestion`/`SearchQueryHandler`-level test proving legend-demotion + role-boost now reach the primary path (the signals that were previously absent), and a `StreamQa` test proving the role hint is now set.
-4. **TM "setup per N giocatori" regression intent**: document the original #3243 repro as the qualitative check; note it can only be fully validated after SP3 re-index materializes headings/role_tags on the corpus.
-5. **No new SQL / no migration** — role_tags are already fetched; heading is out of scope. `dotnet ef migrations has-pending-model-changes` must stay clean.
+1. **Parity test (mandatory)** — prove `HybridSearchService.FuseSearchResults` is observably identical before/after, asserting **post-sort order + HybridScore + VectorScore + KeywordScore + `MatchedTerms` + `GameId` + `PdfDocumentId` (string form) + `PageNumber` (null→0)**. Cases: both-arm, vector-only, keyword-only, duplicate-key, keyword-only-null-page, tie-break-by-Key.
+2. **Core unit tests** (`HybridFusionCoreTests`) — weighted RRF math (incl. A/B weights 0.8/0.2, 0.5/0.5, 0.3/0.7), content-prefer-vector, RoleTags OR-union, legend-demotion (≥2-pointer chunk demotes below real content), role-boost (matching-role rises; additive-on-top), deterministic tie-break, empty-arm handling.
+3. **Primary-path integration test** — legend-demotion + role-boost now reach `/agents/qa`; `RelevanceScore` equals cosine (#2712, not RRF); a `documentIds`-scoped query still excludes out-of-scope chunks (#2051); `StreamQa` sets the role hint.
+4. **`FusionSignals` helper tests** — the moved `HybridSearchServiceRoleBoostTests` assertions still pass against `FusionSignals.*`.
+5. **TM "setup per N giocatori" (#3243) repro** — qualitative check; fully validatable only after SP3 re-index materializes headings/role_tags on the corpus. Documented, not automated here.
+6. **No new SQL / no migration** — role_tags already fetched, heading out of scope; `dotnet ef migrations has-pending-model-changes` stays clean.
 
 ## File map
 
 **Create**:
-- `Domain/Services/VectorSearch/HybridFusionCore.cs` — the canonical fusion + `FusionCandidate`/`FusionOptions`/`FusedCandidate` + the moved signal helpers/constants.
-- Tests: `HybridFusionCoreTests.cs` (core math + signals), a `FuseSearchResults` parity test, primary-path handler tests, `StreamQaQueryHandler` role-hint test.
+- `Domain/Services/VectorSearch/HybridFusionCore.cs` — `Fuse` + `FusionCandidate`/`FusionOptions`/`FusedCandidate`.
+- `Domain/Services/VectorSearch/FusionSignals.cs` — moved `ComputeLegendPenaltyFactor`/`ComputeRoleMatchBoost`/regex/constants.
+- Tests: `HybridFusionCoreTests.cs`, a `FuseSearchResults` parity test, primary-path signal-reach + #2712 + #2051 handler tests, `StreamQaQueryHandler` role-hint test.
 
 **Modify**:
-- `Services/HybridSearchService.cs` — `FuseSearchResults` → adapter; delete the moved helpers/constants.
-- `Domain/Services/VectorSearch/RrfFusionDomainService.cs` — → adapter + `queryRoleHint` param.
-- `Domain/Entities/SearchResult.cs` — add `RoleTags`.
-- `Application/Queries/SearchQueryHandler.cs` — raw keyword arm via `IKeywordSearchService` (preserve `keywordMinScore`), thread `RoleTags` (vector arm) + `queryRoleHint` into `FuseResults`.
-- `Application/Mappers/KnowledgeBaseMappers.cs` — add a `KeywordSearchResult` → `Domain.Entities.SearchResult` mapper carrying `RoleTags` (sibling to `ToDomainSearchResult`).
+- `Services/HybridSearchService.cs` — `FuseSearchResults` → adapter (re-join by Key for MatchedTerms/GameId/page/PdfId string); repoint `SearchKeywordOnlyAsync`'s `ComputeRoleMatchBoost` to `FusionSignals`; remove the moved members.
+- `Domain/Services/VectorSearch/RrfFusionDomainService.cs` — → adapter + `queryRoleHint` param + **RelevanceScore = cosine (#2712)**.
+- `Domain/Entities/SearchResult.cs` — add `PdfDocumentId` (Guid) + `ChunkIndex` (int) + `RoleTags` (GameBookRole), defaulted ctor params.
+- `Application/Queries/SearchQueryHandler.cs` — raw keyword arm via `IKeywordSearchService` (preserve `keywordMinScore` + `documentIds` #2051 + `phraseSearch`); thread vector-arm PdfId/ChunkIndex/RoleTags + `queryRoleHint` into `FuseResults`.
+- `Application/Mappers/KnowledgeBaseMappers.cs` — add `KeywordSearchResult` → `SearchResult` mapper carrying PdfId/ChunkIndex/RoleTags (sibling to `ToDomainSearchResult`).
 - `Application/Queries/StreamQaQueryHandler.cs` — classify intent + set `QueryRoleHint`.
+- `apps/api/tests/Api.Tests/Services/HybridSearchServiceRoleBoostTests.cs` — repoint helper references to `FusionSignals.*`.
 
 ## Testing
 
-Backend xUnit + Moq + FluentAssertions. Core + parity + helper tests are pure unit (no infra). Primary-path signal-reach tests are handler-level (InMemory or mocked search services). `dotnet build` 0 warnings (`TreatWarningsAsErrors`). No Testcontainers required for the fusion itself (the arms are mocked); the existing hybrid integration tests must stay green.
+Backend xUnit + Moq + FluentAssertions. Core + parity + `FusionSignals` tests are pure unit (no infra). Primary-path signal-reach / #2712 / #2051 tests are handler-level (mocked search services). `dotnet build` 0 warnings (`TreatWarningsAsErrors`). No Testcontainers for the fusion itself (arms mocked); existing hybrid integration tests stay green.

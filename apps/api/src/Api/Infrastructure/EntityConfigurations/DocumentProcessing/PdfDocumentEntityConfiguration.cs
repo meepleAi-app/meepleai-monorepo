@@ -29,6 +29,12 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
 
         builder.Property(e => e.ProcessingError).HasMaxLength(1024);
 
+        // Slice D: heading-aware re-index — persisted structured elements (jsonb).
+        builder.Property(e => e.StructuredElementsJson)
+            .HasColumnName("structured_elements_json")
+            .HasColumnType("jsonb")
+            .IsRequired(false);
+
         // Issue #4216: Retry tracking configuration
         builder.Property(e => e.RetryCount)
             .IsRequired()

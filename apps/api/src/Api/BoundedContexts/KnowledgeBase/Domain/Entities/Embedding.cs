@@ -30,6 +30,14 @@ internal sealed class Embedding : Entity<Guid>
     public int RoleTags { get; private set; }
 
     /// <summary>
+    /// The owning PDF document id (via <c>vector_documents.PdfDocumentId</c>). Resolved by the
+    /// scored pgvector search so hybrid fusion can key vector results on the SAME
+    /// <c>{PdfDocumentId}_{ChunkIndex}</c> identity the keyword arm uses. <see cref="Guid.Empty"/>
+    /// on paths that don't need it (only the hybrid-search read populates it).
+    /// </summary>
+    public Guid PdfDocumentId { get; private set; }
+
+    /// <summary>
     /// Private constructor for EF Core.
     /// </summary>
 #pragma warning disable CS8618
@@ -52,7 +60,8 @@ internal sealed class Embedding : Entity<Guid>
         string language = "en",
         Guid? sourceChunkId = null,
         bool isTranslation = false,
-        int roleTags = 0) : base(id)
+        int roleTags = 0,
+        Guid pdfDocumentId = default) : base(id)
     {
         if (string.IsNullOrWhiteSpace(textContent))
             throw new ArgumentException("Text content cannot be empty", nameof(textContent));
@@ -77,6 +86,7 @@ internal sealed class Embedding : Entity<Guid>
         SourceChunkId = sourceChunkId;
         IsTranslation = isTranslation;
         RoleTags = roleTags;
+        PdfDocumentId = pdfDocumentId;
     }
 
     /// <summary>

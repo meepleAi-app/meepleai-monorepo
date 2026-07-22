@@ -1,6 +1,8 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
+using Api.BoundedContexts.DocumentProcessing.Application.Services.Chunking;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
@@ -66,7 +68,7 @@ internal partial class UploadPdfCommandHandler
             // Step 2: Chunk text with page tracking (40-60%)
             _logger.LogInformation("✂️ [PDF-DEBUG] Step 2: Starting ChunkExtractedTextAsync for {PdfId}", pdfId);
             var allDocumentChunks = await ChunkExtractedTextAsync(
-                pdfId, fullText!, extractResult!, db, scope, startTime, cancellationToken).ConfigureAwait(false);
+                pdfId, fullText!, extractResult!, pdfDoc, db, scope, startTime, cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("✅ [PDF-DEBUG] Chunking SUCCESS: {ChunkCount} chunks created", allDocumentChunks.Count);
 
             await TransitionStateAsync(scope, db, pdfGuid, PdfProcessingState.Embedding, cancellationToken).ConfigureAwait(false);
@@ -258,6 +260,14 @@ internal partial class UploadPdfCommandHandler
                 .Select(pc => pc.Text));
 
             pdfDoc.ExtractedText = fullText;
+            // Issue #3281: keep StructuredElementsJson in-memory on the (AsNoTracking) pdfDoc so the
+            // tracked re-write in FinalizeProcessingAsync can copy it after the Ready transition. This
+            // assignment + the SaveChangesAsync below are a no-op on the DB for this column (see the
+            // FinalizeProcessingAsync comment for why), but the in-memory value must be set here since
+            // extractResult is not in scope at finalize time.
+            pdfDoc.StructuredElementsJson = extractResult.StructuredElements is null
+                ? null
+                : System.Text.Json.JsonSerializer.Serialize(extractResult.StructuredElements);
             pdfDoc.PageCount = extractResult.TotalPages;
             pdfDoc.CharacterCount = extractResult.TotalCharacters;
             try
@@ -338,6 +348,7 @@ internal partial class UploadPdfCommandHandler
         string pdfId,
         string fullText,
         PagedTextExtractionResult extractResult,
+        PdfDocumentEntity pdfDoc,
         MeepleAiDbContext db,
         IServiceScope scope,
         DateTime startTime,
@@ -350,33 +361,50 @@ internal partial class UploadPdfCommandHandler
         const int chunkSize = 512;
         const int chunkOverlap = 50;
 
-        var allDocumentChunks = chunkingService.PrepareForEmbedding(fullText, chunkSize, chunkOverlap)
-            ?.Where(chunk => chunk != null && !string.IsNullOrWhiteSpace(chunk.Text))
-            .Select(chunk => new DocumentChunkInput
-            {
-                Text = chunk.Text,
-                Page = chunk.Page,
-                CharStart = chunk.CharStart,
-                CharEnd = chunk.CharEnd
-            })
-            .ToList()
-            ?? new List<DocumentChunkInput>();
-
-        if (allDocumentChunks.Count == 0)
+        // Issue #3281: heading-aware production when AdvancedChunkingService is available in scope.
+        var advancedChunking = scope.ServiceProvider.GetService<IAdvancedChunkingService>();
+        List<DocumentChunkInput> allDocumentChunks;
+        if (advancedChunking != null)
         {
-            foreach (var pageChunk in extractResult.PageChunks.Where(pc => !pc.IsEmpty))
-            {
-                var pageTextChunks = chunkingService.ChunkText(pageChunk.Text, chunkSize, chunkOverlap);
-
-                foreach (var textChunk in pageTextChunks.Where(t => !string.IsNullOrWhiteSpace(t.Text)))
+            var hierarchical = await HeadingAwareChunker.BuildAsync(
+                extractResult.StructuredElements,
+                fullText,
+                pdfDoc.Id,
+                pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId,
+                advancedChunking,
+                cancellationToken).ConfigureAwait(false);
+            allDocumentChunks = HeadingAwareChunkAdapter.ToChunkInputs(hierarchical);
+        }
+        else
+        {
+            allDocumentChunks = chunkingService.PrepareForEmbedding(fullText, chunkSize, chunkOverlap)
+                ?.Where(chunk => chunk != null && !string.IsNullOrWhiteSpace(chunk.Text))
+                .Select(chunk => new DocumentChunkInput
                 {
-                    allDocumentChunks.Add(new DocumentChunkInput
+                    Text = chunk.Text,
+                    Page = chunk.Page,
+                    CharStart = chunk.CharStart,
+                    CharEnd = chunk.CharEnd
+                })
+                .ToList()
+                ?? new List<DocumentChunkInput>();
+
+            if (allDocumentChunks.Count == 0)
+            {
+                foreach (var pageChunk in extractResult.PageChunks.Where(pc => !pc.IsEmpty))
+                {
+                    var pageTextChunks = chunkingService.ChunkText(pageChunk.Text, chunkSize, chunkOverlap);
+
+                    foreach (var textChunk in pageTextChunks.Where(t => !string.IsNullOrWhiteSpace(t.Text)))
                     {
-                        Text = textChunk.Text,
-                        Page = pageChunk.PageNumber,
-                        CharStart = textChunk.CharStart,
-                        CharEnd = textChunk.CharEnd
-                    });
+                        allDocumentChunks.Add(new DocumentChunkInput
+                        {
+                            Text = textChunk.Text,
+                            Page = pageChunk.PageNumber,
+                            CharStart = textChunk.CharStart,
+                            CharEnd = textChunk.CharEnd
+                        });
+                    }
                 }
             }
         }
@@ -426,7 +454,7 @@ internal partial class UploadPdfCommandHandler
         {
             var skip = batchIndex * BATCH_SIZE;
             var batchChunks = allDocumentChunks.Skip(skip).Take(BATCH_SIZE).ToList();
-            var batchTexts = batchChunks.Select(c => c.Text).ToList();
+            var batchTexts = batchChunks.Select(c => HeadingAwareChunkAdapter.CapForEmbedding(c.Text)).ToList();
 
             _logger.LogInformation("📦 [BATCH-EMBED] Processing batch {Current}/{Total}: {ChunkCount} chunks",
                 batchIndex + 1, batchCount, batchTexts.Count);
@@ -624,7 +652,7 @@ internal partial class UploadPdfCommandHandler
         var textChunkEntities = allDocumentChunks
             .Select((chunk, index) => new TextChunkEntity
             {
-                Id = Guid.NewGuid(),
+                Id = chunk.Id == Guid.Empty ? Guid.NewGuid() : chunk.Id,
                 GameId = textChunkGameId,
                 SharedGameId = pdfDoc.SharedGameId,
                 PdfDocumentId = pdfGuid,
@@ -913,6 +941,46 @@ internal partial class UploadPdfCommandHandler
                 "Concurrency conflict on PdfDocument {PdfId} (TransitionTo Ready) in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
                 pdfId, nameof(UploadPdfCommandHandler));
             return;
+        }
+
+        // Issue #3281 / pre-existing AsNoTracking bug: the pipeline's working pdfDoc is AsNoTracking
+        // and state transitions route through IPdfDocumentRepository (MapToPersistence omits + clobbers
+        // ExtractedText/StructuredElementsJson/content columns), so extraction output written during
+        // ExtractPdfContentAsync/ExtractStructuredContentAsync never persists. Re-persist it here on a
+        // freshly TRACKED entity AFTER the final Ready transition (mirrors ExtractPdfTextCommandHandler),
+        // so no later repository transition can clobber it. Needed for re-index parity: IndexPdf reads
+        // StructuredElementsJson and requires non-null ExtractedText.
+        // 🟡 Use CancellationToken.None (NOT cancellationToken): the PDF is already Ready+indexed at
+        // this point, so this persist MUST complete regardless of pipeline cancellation. Mirrors
+        // ConfirmQuotaAsync's post-Ready CancellationToken.None convention. If cancellation were
+        // threaded here, an OperationCanceledException would escape this DbUpdateConcurrencyException-only
+        // catch → ProcessPdfAsync's cancellation handler → TransitionToFailedAsync → MarkAsFailed on a
+        // Ready aggregate → InvalidOperationException("Cannot transition from Ready state"), AND the
+        // extraction output would be silently lost.
+        var tracked = await db.PdfDocuments.AsTracking()
+            .FirstOrDefaultAsync(p => p.Id == pdfGuid, CancellationToken.None).ConfigureAwait(false);
+        if (tracked != null)
+        {
+            tracked.ExtractedText = pdfDoc.ExtractedText;
+            tracked.StructuredElementsJson = pdfDoc.StructuredElementsJson;
+            tracked.PageCount = pdfDoc.PageCount;
+            tracked.CharacterCount = pdfDoc.CharacterCount;
+            tracked.ExtractedTables = pdfDoc.ExtractedTables;
+            tracked.ExtractedDiagrams = pdfDoc.ExtractedDiagrams;
+            tracked.AtomicRules = pdfDoc.AtomicRules;
+            tracked.TableCount = pdfDoc.TableCount;
+            tracked.DiagramCount = pdfDoc.DiagramCount;
+            tracked.AtomicRuleCount = pdfDoc.AtomicRuleCount;
+            try
+            {
+                await db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                _logger.LogWarning(ex,
+                    "Concurrency conflict persisting extraction output for PDF {PdfId} — admin mutation wins",
+                    pdfId);
+            }
         }
 
         // #2284 PR C: tactical scopedMediator.Publish(PdfStateChangedEvent) deleted.

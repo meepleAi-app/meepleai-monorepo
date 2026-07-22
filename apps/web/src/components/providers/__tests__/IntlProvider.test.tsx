@@ -116,4 +116,35 @@ describe('IntlProvider', () => {
       consoleSpy.mockRestore();
     });
   });
+
+  describe('Browser-locale detection deferral (#3263)', () => {
+    it('uses the default locale on first render and adopts the browser locale after mount', () => {
+      // Bypass the test-env short-circuit in getBrowserLocale so navigator.language wins.
+      process.env.NODE_ENV = 'production';
+      Object.defineProperty(window.navigator, 'language', {
+        value: 'en-US',
+        configurable: true,
+      });
+
+      const renders: string[] = [];
+      function LocaleRecorder() {
+        const { locale } = useTranslation();
+        renders.push(locale);
+        return null;
+      }
+
+      render(
+        <IntlProvider>
+          <LocaleRecorder />
+        </IntlProvider>
+      );
+
+      // First (SSR-matching) render must use the default locale — browser-locale
+      // detection is deferred to a post-mount effect, so a non-Italian browser no
+      // longer produces a server/client hydration mismatch.
+      expect(renders[0]).toBe('it');
+      // After mount the effect adopts the real browser locale.
+      expect(renders[renders.length - 1]).toBe('en');
+    });
+  });
 });

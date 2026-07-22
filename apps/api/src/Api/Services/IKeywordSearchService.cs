@@ -17,7 +17,7 @@ internal interface IKeywordSearchService
     /// <param name="gameId">Game ID to filter results</param>
     /// <param name="limit">Maximum number of results to return</param>
     /// <param name="phraseSearch">Enable exact phrase matching with proximity operators</param>
-    /// <param name="boostTerms">Optional list of terms to boost in ranking (e.g., game-specific terminology)</param>
+    /// <param name="boostTerms">Retained for observability/forward-compat only; NOT currently applied to the tsquery. In-query ":A"/":B" weighting was removed because it matched nothing on the un-weighted search_vector (all lexemes are weight D). Re-introducing boost ranking requires setweight on the tsvector (migration + re-index).</param>
     /// <param name="language">Language code for FTS configuration: "en" → english, "it" → italian (default: "en", #2569 — matches content + pgvector path)</param>
     /// <param name="minScore">Minimum ts_rank_cd score threshold to filter low-relevance results (default: 0.0, no filtering)</param>
     /// <param name="cancellationToken">Cancellation token</param>

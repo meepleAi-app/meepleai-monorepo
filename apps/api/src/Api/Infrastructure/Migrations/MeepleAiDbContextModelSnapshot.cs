@@ -9566,6 +9566,10 @@ namespace Api.Infrastructure.Migrations
                     b.Property<Guid?>("SourceDocumentId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("StructuredElementsJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("structured_elements_json");
+
                     b.Property<int?>("TableCount")
                         .HasColumnType("integer");
 

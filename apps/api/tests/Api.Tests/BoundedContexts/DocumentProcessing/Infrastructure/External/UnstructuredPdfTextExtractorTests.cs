@@ -96,6 +96,63 @@ public class UnstructuredPdfTextExtractorTests
         });
     }
 
+    private string CreateResponseWithElements()
+    {
+        var response = new
+        {
+            text = "Preparazione\n\nDisponi le tessere.",
+            chunks = new[] { new { text = "composite", page_number = 1, element_type = "CompositeElement", metadata = new Dictionary<string, object>() } },
+            elements = new object[]
+            {
+                new { text = "Preparazione", page_number = 1, category = "Title" },
+                new { text = "Disponi le tessere.", page_number = 1, category = "NarrativeText" },
+                new { text = "", page_number = 2, category = "PageBreak" }
+            },
+            quality_score = 0.85,
+            page_count = 1,
+            metadata = new { extraction_duration_ms = 10, strategy_used = "fast", language = "ita", detected_tables = 0, detected_structures = new[] { "Title" }, quality_breakdown = new { text_coverage_score = 0.4, structure_detection_score = 0.2, table_detection_score = 0.0, page_coverage_score = 0.2 } }
+        };
+        return JsonSerializer.Serialize(response, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
+    }
+
+    [Fact]
+    public async Task ExtractPagedTextAsync_PopulatesStructuredElements_SkippingEmpty()
+    {
+        var extractor = CreateExtractor();
+        var pdfStream = CreateTestPdfStream();
+        _mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage { StatusCode = HttpStatusCode.OK, Content = new StringContent(CreateResponseWithElements()) });
+
+        var result = await extractor.ExtractPagedTextAsync(pdfStream, cancellationToken: TestCancellationToken);
+
+        result.Success.Should().BeTrue();
+        result.StructuredElements.Should().NotBeNull();
+        result.StructuredElements!.Select(e => e.ElementType).Should().Equal("Title", "NarrativeText");
+        result.StructuredElements![0].Text.Should().Be("Preparazione");
+        result.StructuredElements![0].PageNumber.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ExtractPagedTextAsync_NoElements_LeavesStructuredElementsNull_AndPageChunksIntact()
+    {
+        var extractor = CreateExtractor();
+        var pdfStream = CreateTestPdfStream();
+        _mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage { StatusCode = HttpStatusCode.OK, Content = new StringContent(CreateSuccessResponse()) });
+
+        var result = await extractor.ExtractPagedTextAsync(pdfStream, cancellationToken: TestCancellationToken);
+
+        result.Success.Should().BeTrue();
+        result.StructuredElements.Should().BeNull();
+        // regression pin: the ExtractPagedTextAsync rewrite must not change chunking.
+        // CreateSuccessResponse() has pageCount=1 → exactly one page chunk starting at offset 0.
+        result.PageChunks.Should().HaveCount(1);
+        result.PageChunks[0].CharStartIndex.Should().Be(0);
+        result.PageChunks[0].Text.Should().NotBeEmpty();
+    }
+
     [Fact]
     public async Task ExtractTextAsync_SuccessfulExtraction_ReturnsSuccessResult()
     {

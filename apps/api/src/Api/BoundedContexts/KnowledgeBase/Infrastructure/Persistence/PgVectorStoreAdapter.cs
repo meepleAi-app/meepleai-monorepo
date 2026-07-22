@@ -135,23 +135,27 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         var connection = _context.Database.GetDbConnection();
         await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
 
-        // Identical SQL to SearchAsync — similarity column is at index 7 and is now surfaced.
+        // RRF fusion-key fix: JOIN vector_documents to resolve the owning PdfDocumentId so hybrid
+        // fusion can key vector results on {PdfDocumentId}_{ChunkIndex} (matching the keyword arm).
+        // PdfDocumentId is column 7, similarity column 8.
         var sql = $"""
-            SELECT id, vector_document_id, text_content, model, chunk_index, page_number, role_tags,
-                   1 - (vector <=> @queryVector) AS similarity
-            FROM {TableName}
-            WHERE game_id = @gameId
-              AND 1 - (vector <=> @queryVector) >= @minScore
+            SELECT e.id, e.vector_document_id, e.text_content, e.model, e.chunk_index, e.page_number, e.role_tags,
+                   vd."PdfDocumentId",
+                   1 - (e.vector <=> @queryVector) AS similarity
+            FROM {TableName} e
+            JOIN vector_documents vd ON vd."Id" = e.vector_document_id
+            WHERE e.game_id = @gameId
+              AND 1 - (e.vector <=> @queryVector) >= @minScore
             """;
 
         if (documentIds is { Count: > 0 })
         {
-            sql += "\n  AND vector_document_id = ANY(@documentIds)";
+            sql += "\n  AND e.vector_document_id = ANY(@documentIds)";
         }
 
         sql += $"""
 
-            ORDER BY vector <=> @queryVector
+            ORDER BY e.vector <=> @queryVector
             LIMIT @topK
             """;
 
@@ -185,8 +189,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                     var chunkIndex = reader.GetInt32(4);
                     var pageNumber = reader.GetInt32(5);
                     var roleTags = reader.GetInt32(6);
-                    // Column 7: similarity = 1 - (vector <=> @queryVector)
-                    var score = reader.GetDouble(7);
+                    var pdfDocumentId = reader.GetGuid(7);
+                    // Column 8: similarity = 1 - (vector <=> @queryVector)
+                    var score = reader.GetDouble(8);
 
                     var placeholderVector = DomainVector.CreatePlaceholder(queryVector.Dimensions);
                     var embedding = new Embedding(
@@ -197,7 +202,8 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                         model: model,
                         chunkIndex: chunkIndex,
                         pageNumber: Math.Max(1, pageNumber),
-                        roleTags: roleTags);
+                        roleTags: roleTags,
+                        pdfDocumentId: pdfDocumentId);
 
                     results.Add(new ScoredEmbedding(embedding, score));
                 }

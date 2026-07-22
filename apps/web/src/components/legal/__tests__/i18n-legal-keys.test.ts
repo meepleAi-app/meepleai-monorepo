@@ -63,6 +63,9 @@ const COOKIE_SECTIONS = [
 // #529 ME-M1.7 — takedown policy page sections
 const TAKEDOWN_SECTIONS = ['overview', 'whoCanFile', 'whatToInclude', 'howWeRespond', 'contact'];
 
+// #564 — legal hub landing page sections
+const HUB_SECTIONS = ['documents'];
+
 type LegalSections = Record<string, { title: string; content: string }>;
 
 describe('Legal i18n key validation', () => {
@@ -158,6 +161,29 @@ describe('Legal i18n key validation', () => {
     });
   });
 
+  describe('Legal hub sections', () => {
+    const itSections = (
+      itMessages as Record<string, unknown> & { legal: { hub: { sections: LegalSections } } }
+    ).legal.hub.sections;
+    const enSections = (
+      enMessages as Record<string, unknown> & { legal: { hub: { sections: LegalSections } } }
+    ).legal.hub.sections;
+
+    it.each(HUB_SECTIONS)('IT: hub section "%s" exists with title and content', key => {
+      const section = itSections[key];
+      expect(section).toBeDefined();
+      expect(section?.title).toBeTruthy();
+      expect(section?.content).toBeTruthy();
+    });
+
+    it.each(HUB_SECTIONS)('EN: hub section "%s" exists with title and content', key => {
+      const section = enSections[key];
+      expect(section).toBeDefined();
+      expect(section?.title).toBeTruthy();
+      expect(section?.content).toBeTruthy();
+    });
+  });
+
   describe('Takedown form keys', () => {
     const FORM_KEYS = [
       'heading',
@@ -229,7 +255,7 @@ describe('Legal i18n key validation', () => {
   });
 
   describe('Page metadata keys', () => {
-    const pages = ['privacy', 'terms', 'cookies', 'takedown'] as const;
+    const pages = ['privacy', 'terms', 'cookies', 'takedown', 'hub'] as const;
 
     it.each(pages)('IT: "%s" has title and description', page => {
       const legal = (

@@ -1,6 +1,8 @@
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
+using Api.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
@@ -110,5 +112,192 @@ public class SearchResultRerankerTests
         reranker.Verify(
             r => r.RerankAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<RerankChunk>>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    // ---------------------------------------------------------------------
+    // Slice B: HybridSearchResult overload — lets the PLAYGROUND path rerank
+    // its List<HybridSearchResult> WITHOUT a lossy conversion to SearchResultDto
+    // (which lacks ChunkIndex and would need a throwing Guid.Parse). The overload
+    // returns the ORIGINAL objects reordered/trimmed, so every field survives.
+    // ---------------------------------------------------------------------
+
+    private static HybridSearchResult Hybrid(string chunkId, string content, float score, int chunkIndex)
+        => new()
+        {
+            ChunkId = chunkId,
+            Content = content,
+            PdfDocumentId = "pdf-1",
+            GameId = Guid.Empty,
+            ChunkIndex = chunkIndex,
+            PageNumber = 3,
+            HybridScore = score,
+            Mode = SearchMode.Hybrid,
+            MatchedTerms = new List<string>(),
+            RoleTags = GameBookRole.None,
+        };
+
+    [Fact]
+    public async Task RerankAsync_HybridResults_ReordersBySemanticRelevance()
+    {
+        var results = new List<HybridSearchResult>
+        {
+            Hybrid("chunk-a", "Pawns move forward.", 0.80f, 0),
+            Hybrid("chunk-b", "Knights move in an L.", 0.78f, 1),
+            Hybrid("chunk-c", "Castling rules.", 0.76f, 2),
+        };
+        var reranker = ReverseReranker();
+
+        var reranked = await SearchResultReranker.RerankAsync(
+            reranker.Object, "how do pawns move", results, topK: 3, _loggerMock.Object, CancellationToken.None);
+
+        reranked.Select(r => r.ChunkId).Should().Equal("chunk-c", "chunk-b", "chunk-a");
+    }
+
+    [Fact]
+    public async Task RerankAsync_HybridResults_SelectsTopKFromLargerPool_PreservingChunkIndex()
+    {
+        // 20 candidates in, top 5 out — mirrors the playground retrieve-wide/rerank-narrow wiring.
+        var results = Enumerable.Range(0, 20)
+            .Select(i => Hybrid($"chunk-{i}", $"content {i}", 0.90f - (i * 0.01f), chunkIndex: i * 10))
+            .ToList();
+        var reranker = ReverseReranker();
+
+        var reranked = await SearchResultReranker.RerankAsync(
+            reranker.Object, "query", results, topK: 5, _loggerMock.Object, CancellationToken.None);
+
+        reranked.Should().HaveCount(5);
+        // ChunkIndex (dropped by any SearchResultDto conversion) must survive intact.
+        reranked.Select(r => r.ChunkIndex).Should().Equal(190, 180, 170, 160, 150);
+        reranked.Select(r => r.ChunkId).Should().Equal("chunk-19", "chunk-18", "chunk-17", "chunk-16", "chunk-15");
+    }
+
+    [Fact]
+    public async Task RerankAsync_HybridResults_WhenRerankerThrows_FallsBackToRawTopK()
+    {
+        var results = new List<HybridSearchResult>
+        {
+            Hybrid("chunk-a", "x", 0.80f, 0),
+            Hybrid("chunk-b", "y", 0.78f, 1),
+            Hybrid("chunk-c", "z", 0.76f, 2),
+        };
+        var reranker = new Mock<ICrossEncoderReranker>();
+        reranker
+            .Setup(r => r.RerankAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<RerankChunk>>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("reranker service down"));
+
+        var reranked = await SearchResultReranker.RerankAsync(
+            reranker.Object, "query", results, topK: 2, _loggerMock.Object, CancellationToken.None);
+
+        reranked.Should().HaveCount(2);
+        reranked.Select(r => r.ChunkId).Should().Equal("chunk-a", "chunk-b");
+    }
+
+    [Fact]
+    public async Task RerankAsync_HybridResults_SingleResult_SkipsRerankerCall()
+    {
+        var results = new List<HybridSearchResult> { Hybrid("chunk-a", "only chunk", 0.80f, 0) };
+        var reranker = new Mock<ICrossEncoderReranker>();
+
+        var reranked = await SearchResultReranker.RerankAsync(
+            reranker.Object, "query", results, topK: 5, _loggerMock.Object, CancellationToken.None);
+
+        reranked.Should().ContainSingle().Which.ChunkId.Should().Be("chunk-a");
+        reranker.Verify(
+            r => r.RerankAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<RerankChunk>>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    // ---------------------------------------------------------------------
+    // Projection guards: the reranker must receive the CONTENT + score of each
+    // result (a real cross-encoder reranks on text). MapRerankedIndices reorders
+    // by list-index and rebuilds from the originals, so a wrong contentSelector
+    // (e.g. projecting ChunkId instead of Content) would otherwise ship green.
+    // ---------------------------------------------------------------------
+
+    private static Mock<ICrossEncoderReranker> CapturingReranker(out Func<IReadOnlyList<RerankChunk>?> captured)
+    {
+        IReadOnlyList<RerankChunk>? seen = null;
+        captured = () => seen;
+        var mock = new Mock<ICrossEncoderReranker>();
+        mock
+            .Setup(r => r.RerankAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<RerankChunk>>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .Callback((string _, IReadOnlyList<RerankChunk> chunks, int? _, CancellationToken _) => seen = chunks)
+            .ReturnsAsync((string _, IReadOnlyList<RerankChunk> chunks, int? topK, CancellationToken _) =>
+                new RerankResult(
+                    chunks.Take(topK ?? chunks.Count).Select(c => new RerankedChunk(c.Id, c.Content, c.OriginalScore, 0.9)).ToList(),
+                    "test-model", 1.0));
+        return mock;
+    }
+
+    [Fact]
+    public async Task RerankAsync_HybridResults_FeedsContentAndHybridScoreToReranker()
+    {
+        var results = new List<HybridSearchResult>
+        {
+            Hybrid("chunk-a", "Pawns move forward.", 0.80f, 5),
+            Hybrid("chunk-b", "Knights move in an L.", 0.78f, 6),
+        };
+        var reranker = CapturingReranker(out var captured);
+
+        await SearchResultReranker.RerankAsync(
+            reranker.Object, "how do pawns move", results, topK: 2, _loggerMock.Object, CancellationToken.None);
+
+        captured().Should().NotBeNull();
+        captured()!.Select(c => c.Content).Should().Equal("Pawns move forward.", "Knights move in an L.");
+        captured()!.Select(c => c.OriginalScore).Should().Equal(results.Select(r => (double)r.HybridScore));
+    }
+
+    [Fact]
+    public async Task RerankAsync_DtoResults_FeedsTextContentAndRelevanceScoreToReranker()
+    {
+        var results = new List<SearchResultDto>
+        {
+            Dto("doc-a", "text alpha", 0.80),
+            Dto("doc-b", "text beta", 0.78),
+        };
+        var reranker = CapturingReranker(out var captured);
+
+        await SearchResultReranker.RerankAsync(
+            reranker.Object, "query", results, topK: 2, _loggerMock.Object, CancellationToken.None);
+
+        captured().Should().NotBeNull();
+        captured()!.Select(c => c.Content).Should().Equal("text alpha", "text beta");
+        captured()!.Select(c => c.OriginalScore).Should().Equal(0.80, 0.78);
+    }
+
+    // ---------------------------------------------------------------------
+    // Pure index-mapping seam shared by both overloads (no infra/mocks).
+    // ---------------------------------------------------------------------
+
+    private static RerankedChunk Ranked(string id) => new(id, "c", 0.5, 0.9);
+
+    [Fact]
+    public void MapRerankedIndices_MapsIdsBackToOriginalsInOrder()
+    {
+        var results = new List<string> { "a", "b", "c" };
+        var reranked = new List<RerankedChunk> { Ranked("2"), Ranked("0") };
+
+        SearchResultReranker.MapRerankedIndices(results, reranked, topK: 3)
+            .Should().Equal("c", "a");
+    }
+
+    [Fact]
+    public void MapRerankedIndices_FiltersUnparseableAndOutOfRangeIds()
+    {
+        var results = new List<string> { "a", "b", "c" };
+        var reranked = new List<RerankedChunk> { Ranked("5"), Ranked("x"), Ranked("1") };
+
+        SearchResultReranker.MapRerankedIndices(results, reranked, topK: 3)
+            .Should().Equal("b");
+    }
+
+    [Fact]
+    public void MapRerankedIndices_NoMappableChunks_FallsBackToRawTopK()
+    {
+        var results = new List<string> { "a", "b", "c" };
+        var reranked = new List<RerankedChunk> { Ranked("9"), Ranked("bad") };
+
+        SearchResultReranker.MapRerankedIndices(results, reranked, topK: 2)
+            .Should().Equal("a", "b");
     }
 }

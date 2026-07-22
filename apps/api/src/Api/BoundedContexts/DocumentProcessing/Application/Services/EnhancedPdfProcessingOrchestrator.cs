@@ -686,7 +686,8 @@ internal class EnhancedPdfProcessingOrchestrator
             StageUsed: stageUsed,
             StageName: stageName,
             TotalDurationMs: (int)totalDuration.TotalMilliseconds,
-            ErrorMessage: pagedResult.ErrorMessage);
+            ErrorMessage: pagedResult.ErrorMessage,
+            StructuredElements: pagedResult.StructuredElements);
     }
 
     /// <summary>
@@ -883,7 +884,8 @@ internal record EnhancedPagedExtractionResult(
     int StageUsed,
     string StageName,
     int TotalDurationMs,
-    string? ErrorMessage = null)
+    string? ErrorMessage = null,
+    IReadOnlyList<ExtractedElement>? StructuredElements = null)
 {
     /// <summary>
     /// Creates success result from stage extraction
@@ -903,7 +905,8 @@ internal record EnhancedPagedExtractionResult(
             StageUsed: stageUsed,
             StageName: stageName,
             TotalDurationMs: totalDurationMs,
-            ErrorMessage: result.ErrorMessage);
+            ErrorMessage: result.ErrorMessage,
+            StructuredElements: result.StructuredElements);
     }
 }
 

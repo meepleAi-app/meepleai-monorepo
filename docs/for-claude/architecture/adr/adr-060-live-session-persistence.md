@@ -184,7 +184,7 @@ L'intuizione iniziale dell'utente (Opzione D Hybrid) è stata **sovrascritta** d
 ## Open questions for follow-up
 
 - Q1: Per le retention policy (cancellare/archiviare session completed >90gg), serve ADR separato. Tracking issue da aprire.
-- Q2: SignalR push update mid-session a multi-device clients — design separato. Vedi `useSessionSignalR` (hub `/hubs/gamestate` esistente).
+- Q2: SignalR push update mid-session a multi-device clients — design separato. Hub backend `/hubs/gamestate` esistente; il session-live corrente usa `useSignalrSession`. (Il prototipo orfano `useSessionSignalR`, mai cablato, è stato rimosso — vedi #564.)
 - ~~Q3: Concorrenza policy~~ → **RISOLTO in AC-4**: optimistic concurrency via RowVersion → 409 on conflict (already configured in `LiveGameSessionEntityConfiguration`).
 
 ## References

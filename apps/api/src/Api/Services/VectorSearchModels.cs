@@ -1,3 +1,5 @@
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+
 namespace Api.Services;
 
 /// <summary>
@@ -6,6 +8,10 @@ namespace Api.Services;
 /// </summary>
 internal record DocumentChunk
 {
+    // Slice D: stable identity so a child chunk's ParentChunkId can reference
+    // its parent's persisted TextChunkEntity.Id. Guid.Empty (default) means
+    // "not yet assigned" — save sites fall back to a fresh Guid in that case.
+    public Guid Id { get; init; }
     public string Text { get; init; } = string.Empty;
     public float[] Embedding { get; init; } = Array.Empty<float>();
     public int Page { get; init; }
@@ -56,6 +62,13 @@ internal record SearchResultItem
     public string PdfId { get; init; } = string.Empty;
     public int Page { get; init; }
     public int ChunkIndex { get; init; }
+
+    /// <summary>
+    /// Role classification of the underlying chunk (multi-label bitflag from text_chunks.role_tags,
+    /// denormalized onto pgvector_embeddings.role_tags). Carried through the vector-arm projection so
+    /// HYBRID fusion can apply the role-match boost to vector-only chunks (Slice C).
+    /// </summary>
+    public GameBookRole RoleTags { get; init; } = GameBookRole.None;
 }
 
 /// <summary>

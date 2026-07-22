@@ -141,7 +141,7 @@ export function ChatAgentPanel({
         </span>
         <span
           aria-label={labels.latencyAriaLabel}
-          className="text-xs font-medium text-muted-foreground"
+          className="text-xs font-medium text-foreground/70"
         >
           {latencyMs}ms
         </span>

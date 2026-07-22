@@ -842,6 +842,16 @@
     }
   },
   "legal": {
+    "hub": {
+      "title": "Note Legali",
+      "description": "Tutti i documenti legali e le policy di MeepleAI in un unico posto.",
+      "sections": {
+        "documents": {
+          "title": "Documenti legali",
+          "content": "- [Termini e Condizioni](/terms) — Le condizioni d'uso di MeepleAI, incluse le policy su intelligenza artificiale, copyright e contenuti degli utenti.\n- [Informativa sulla Privacy](/privacy) — Come raccogliamo, utilizziamo e proteggiamo i tuoi dati personali, in conformità al GDPR.\n- [Cookie Policy](/cookies) — I cookie che utilizziamo e come gestire le tue preferenze.\n- [Richiesta di rimozione](/legal/takedown) — Come segnalare contenuti che ritieni violino il tuo copyright."
+        }
+      }
+    },
     "tableOfContents": "Indice",
     "lastUpdated": "Ultimo aggiornamento: {date}",
     "cookieBanner": {
@@ -1980,6 +1990,7 @@
         "viewAll": "Vedi tutto",
         "viewAllAriaLabel": "Vai allo storico completo dell'attività",
         "collapseAriaLabel": "Comprimi pannello",
+        "expandAriaLabel": "Espandi pannello",
         "error": "Impossibile caricare l'attività.",
         "fallback": {
           "agent": "Nuovo agent creato",

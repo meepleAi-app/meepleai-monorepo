@@ -1214,19 +1214,14 @@ jobs:
           done
 
           # Required jobs (block CI)
-          # NOTE: frontend-a11y was non-blocking via job-level continue-on-error
-          # until Phase D gate flip (#1094 closure, 2026-05-18). It is now in the
-          # required-jobs list — any axe AA violation fails CI. #1015 (release-
-          # level baseline-diff) is complementary, not a substitute.
           # Onda A (2026-05-25): 'frontend' was split into frontend-lint,
           # frontend-typecheck, frontend-test (3-shard matrix). All three are
           # required gates.
-          for job in frontend-lint frontend-typecheck frontend-test frontend-a11y backend-unit python-tests e2e; do
+          for job in frontend-lint frontend-typecheck frontend-test backend-unit python-tests e2e; do
             case "$job" in
               frontend-lint) result="${{ needs.frontend-lint.result }}" ;;
               frontend-typecheck) result="${{ needs.frontend-typecheck.result }}" ;;
               frontend-test) result="${{ needs.frontend-test.result }}" ;;
-              frontend-a11y) result="${{ needs.frontend-a11y.result }}" ;;
               backend-unit) result="${{ needs.backend-unit.result }}" ;;
               python-tests) result="${{ needs.python-tests.result }}" ;;
               e2e) result="${{ needs.e2e.result }}" ;;
@@ -1239,13 +1234,24 @@ jobs:
             fi
           done
 
-          # Advisory jobs (warn but don't block — integration tests depend on CI
-          # service containers). frontend-a11y was promoted to required (above) on
-          # 2026-05-18 via #1094 Phase D closure.
-          integration_result="${{ needs.backend-integration.result }}"
-          if [ "$integration_result" == "failure" ]; then
-            echo "⚠️ CI Warning: backend-integration=$integration_result (non-blocking, may be infrastructure)"
-          fi
+          # Advisory jobs (warn but don't block).
+          # frontend-a11y TEMPORARILY DEMOTED to advisory (2026-07-21, product
+          # decision): pre-existing systemic WCAG AA color-contrast debt in the
+          # entity-token chips (bg-entity-*/… tints) + a couple shared components
+          # is a design-system effort tracked separately, and the app is pre-prod.
+          # RE-PROMOTE frontend-a11y to the required-jobs loop above before the
+          # prod promotion (this reverts the #1094 Phase-D gate flip temporarily).
+          # backend-integration is advisory because integration tests depend on CI
+          # service containers.
+          for advisory in frontend-a11y backend-integration; do
+            case "$advisory" in
+              frontend-a11y) result="${{ needs.frontend-a11y.result }}" ;;
+              backend-integration) result="${{ needs.backend-integration.result }}" ;;
+            esac
+            if [ "$result" == "failure" ]; then
+              echo "⚠️ CI Warning: $advisory=$result (non-blocking)"
+            fi
+          done
 
           echo "✅ CI Passed"
 

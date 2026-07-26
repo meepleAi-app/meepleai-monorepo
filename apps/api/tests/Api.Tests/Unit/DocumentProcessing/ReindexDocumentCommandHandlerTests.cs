@@ -68,7 +68,9 @@ public sealed class ReindexDocumentCommandHandlerTests : IAsyncLifetime
         await handler.Handle(new ReindexDocumentCommand(pdf.Id), CancellationToken.None);
 
         var reloaded = await _db.PdfDocuments.FirstAsync(p => p.Id == pdf.Id);
-        reloaded.IndexerVersion.Should().Be("v1.0");
+        // Asserted dynamically against Current so the SP3 #3269 bump (v1.0 -> v1.1) — and any
+        // future bump — keeps this "uses Current" test honest instead of pinning a stale literal.
+        reloaded.IndexerVersion.Should().Be(IndexerVersionRegistry.Current.Version);
     }
 
     [Fact]

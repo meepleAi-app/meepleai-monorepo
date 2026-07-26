@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
+using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
@@ -151,6 +152,10 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             pdf.ProcessingState = nameof(PdfProcessingState.Ready);
             pdf.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
             pdf.IsActiveForRag = true; // Auto-enable after successful indexing so vectors are searchable
+            // Issue #3269 (SP3): stamp the current indexer version so `IndexerVersion == null`
+            // means only true pre-versioning legacy (bulk re-index selector correctness).
+            // Null-coalescing preserves an explicit version already stamped by a reindex reset.
+            pdf.IndexerVersion ??= IndexerVersionRegistry.Current.Version;
 
             try
             {

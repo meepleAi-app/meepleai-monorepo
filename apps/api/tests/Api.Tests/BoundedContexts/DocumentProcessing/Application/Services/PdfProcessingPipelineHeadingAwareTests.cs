@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
+using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
@@ -134,6 +135,28 @@ public sealed class PdfProcessingPipelineHeadingAwareTests : IDisposable
 
         // Translated rows still carry the hierarchy fields copied from origChunk.
         savedChunks.Should().Contain(c => c.Heading == "Setup" && c.Level == 2 && c.ParentChunkId == parentId);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_OnReady_StampsCurrentIndexerVersion()
+    {
+        // Finding 2 (#3269 review): a freshly-processed PDF must end Ready stamped with the
+        // current indexer version, so that `IndexerVersion == null` denotes only true
+        // pre-versioning legacy — otherwise the bulk re-index selector redundantly
+        // re-processes fresh (already heading-aware) documents on every run.
+        SeedPdfDocument();
+        SetupExtractorToReturn("chunk1. chunk2.", 2);
+        SetupBlobStorageToReturn();
+        SetupHierarchicalChunking(out _);
+        SetupEmbeddingsToReturn(2);
+
+        var sut = CreatePipelineService(languageCode: "en");
+
+        await sut.ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
+        doc!.ProcessingState.Should().Be("Ready");
+        doc.IndexerVersion.Should().Be(IndexerVersionRegistry.Current.Version);
     }
 
     private PdfProcessingPipelineService CreatePipelineService(string languageCode)

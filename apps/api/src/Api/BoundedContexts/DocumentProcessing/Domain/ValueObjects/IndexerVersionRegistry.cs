@@ -29,13 +29,21 @@ internal static class IndexerVersionRegistry
         new("v0", "v0 (legacy pre-versioning)", IsSelectable: false);
 
     /// <summary>
+    /// Pipeline flat (pre heading-aware). Non più <see cref="Current"/> dopo l'epic #3266,
+    /// ma resta nel registry per la deprecation policy (≥18 mesi) e selezionabile da `/reindex`.
+    /// </summary>
+    public static readonly IndexerVersion V1_0 =
+        new("v1.0", "v1.0 — flat chunking pipeline", IsSelectable: true);
+
+    /// <summary>
     /// Versione corrente della pipeline. Equivale al comportamento di default quando
     /// `reindexDocument` viene chiamato senza `IndexerVersion` esplicito.
+    /// SP3 #3269 (epic #3266): pipeline heading-aware (SP1/SP2 già deployati).
     /// </summary>
     public static readonly IndexerVersion Current =
-        new("v1.0", "v1.0 — current pipeline", IsSelectable: true);
+        new("v1.1", "v1.1 — heading-aware chunking", IsSelectable: true);
 
-    public static IReadOnlyList<IndexerVersion> All { get; } = [Legacy, Current];
+    public static IReadOnlyList<IndexerVersion> All { get; } = [Legacy, V1_0, Current];
 
     /// <summary>
     /// Restituisce la lista delle versioni effettivamente invocabili da `/reindex`.

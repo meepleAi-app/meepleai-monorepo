@@ -136,7 +136,7 @@ function PanelBody({
         <div className="flex flex-wrap items-center gap-2">
           <Badge
             variant="outline"
-            className="border-entity-game/40 bg-entity-game/10 text-entity-game"
+            className="border-entity-game/40 bg-entity-game/10 text-entity-game-text"
           >
             AI-generated, human-reviewed
           </Badge>

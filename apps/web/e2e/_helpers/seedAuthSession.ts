@@ -194,3 +194,76 @@ export async function mockAuthEndpoints(
     await route.continue();
   });
 }
+
+/**
+ * Mocks the four "sibling" data sources that the `/library` hybrid hub
+ * (`useHybridHubItems`) fans out to besides the games source (Issue #3289).
+ *
+ * **Why this is needed** (root cause):
+ *   `useHybridHubItems` computes `isLoading` as the OR of 5 query sources
+ *   (games / sessions / chat / agents / kb). The a11y specs use `?fixture=default`
+ *   (or `?state=…`) which short-circuits ONLY the games source (`useLibrary`)
+ *   client-side. The other 4 sources always issue REAL network calls:
+ *     - `useActiveSessions(20)`      → GET /api/v1/sessions/active
+ *     - `useRecentChatSessions(50)`  → GET /api/v1/users/{id}/chat-sessions/recent
+ *     - `useAgents({scope})`         → GET /api/v1/agents?scope=my-library
+ *     - `useUserKbDocs()`            → GET /api/v1/kb-docs
+ *   In the visual-test prod build there is no backend; those 4 requests hang
+ *   through TanStack retry backoff, so `isLoading` never settles, the hub FSM
+ *   stays stuck in 'loading', `LibraryHybridGrid` never mounts, and the specs
+ *   time out waiting for the first `[data-slot="library-grid-card"]`.
+ *
+ * **Schema-valid EMPTY payloads are mandatory**: a 200 that fails the source's
+ * Zod schema throws a `SchemaValidationError` in `httpClient.validateResponse`
+ * → TanStack retries → the query stays pending past the 5s timeout → still red.
+ * Each payload below therefore includes every required field (empty arrays +
+ * `total`/`page`/`pageSize`), matching the exact response envelope each fetcher
+ * validates. Note `page`/`pageSize` MUST be positive integers, and the chat
+ * source returns a BARE array (not an envelope) per `ChatSessionArraySchema`.
+ *
+ * Host-agnostic regexes (no `^` anchor, `(\?.*)?$` tail) match both the relative
+ * URLs the browser `httpClient` issues (proxied via localhost:3000) and any
+ * absolute `:8080` form, tolerant of trailing query strings — same pattern as
+ * `mockAuthEndpoints`. Non-GET methods fall through via `route.continue()`.
+ *
+ * Call AFTER `mockAuthEndpoints` and BEFORE the first `page.goto`.
+ */
+export async function mockLibraryHubSiblingSources(page: Page): Promise<void> {
+  const fulfillGet = (body: unknown) => async (route: Route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(body),
+      });
+      return;
+    }
+    await route.continue();
+  };
+
+  // sessions — PaginatedSessionsResponse { sessions, total, page(>0), pageSize(>0) }
+  await page
+    .context()
+    .route(
+      /\/api\/v1\/sessions\/active(\?.*)?$/,
+      fulfillGet({ sessions: [], total: 0, page: 1, pageSize: 20 })
+    );
+
+  // chat — ChatSessionArraySchema is a BARE array of ChatSessionSummaryDto
+  await page
+    .context()
+    .route(/\/api\/v1\/users\/[^/]+\/chat-sessions\/recent(\?.*)?$/, fulfillGet([]));
+
+  // agents — GetAllAgentsResponse { success, agents, count }
+  await page
+    .context()
+    .route(/\/api\/v1\/agents(\?.*)?$/, fulfillGet({ success: true, agents: [], count: 0 }));
+
+  // kb — KbDocsListResponse (STRICT) { items, total, page(>0), pageSize(>0) }
+  await page
+    .context()
+    .route(
+      /\/api\/v1\/kb-docs(\?.*)?$/,
+      fulfillGet({ items: [], total: 0, page: 1, pageSize: 20 })
+    );
+}

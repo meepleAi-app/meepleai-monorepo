@@ -129,7 +129,7 @@ export function MechanicCitationBadge({
             onMouseLeave={handleMouseLeave}
             aria-label={`Citazione regolamento, pagina ${citation.pdfPage}`}
             className={cn(
-              'inline-flex items-center rounded-md border border-entity-game/40 bg-entity-game/10 px-1.5 py-0.5 align-middle text-[11px] font-semibold text-entity-game transition-colors',
+              'inline-flex items-center rounded-md border border-entity-game/40 bg-entity-game/10 px-1.5 py-0.5 align-middle text-[11px] font-semibold text-entity-game-text transition-colors',
               'hover:bg-entity-game/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               'print:border-border print:bg-transparent print:text-foreground'
             )}

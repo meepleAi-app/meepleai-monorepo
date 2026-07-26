@@ -92,40 +92,49 @@ export function PauseOverlay({
     };
   }, []);
 
-  // ESC key handler: closes dialog
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLDivElement>) => {
+  // ESC dismissal via a document-level listener so it works regardless of where
+  // focus currently sits. The React `onKeyDown` on the dialog div below only
+  // fires when focus is inside the dialog; a click on the dialog chrome (or the
+  // backdrop) moves focus out, after which ESC was silently swallowed (#3289 —
+  // e2e "PauseOverlay ESC closes dialog"). Keydown bubbles to document, so this
+  // fires in both jsdom and real browsers. ESC handling lives ONLY here (removed
+  // from handleKeyDown) to avoid a double onClose.
+  useEffect(() => {
+    function onDocumentKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         e.preventDefault();
         onClose();
-        return;
       }
+    }
+    document.addEventListener('keydown', onDocumentKeyDown);
+    return () => document.removeEventListener('keydown', onDocumentKeyDown);
+  }, [onClose]);
 
-      // Focus trap: Tab cycles within focusables
-      if (e.key === 'Tab' && dialogRef.current) {
-        const focusables = getFocusables(dialogRef.current);
-        if (focusables.length === 0) return;
+  // Tab focus-trap handler (ESC is handled by the document listener above).
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    // Focus trap: Tab cycles within focusables
+    if (e.key === 'Tab' && dialogRef.current) {
+      const focusables = getFocusables(dialogRef.current);
+      if (focusables.length === 0) return;
 
-        const firstEl = focusables[0];
-        const lastEl = focusables[focusables.length - 1];
+      const firstEl = focusables[0];
+      const lastEl = focusables[focusables.length - 1];
 
-        if (e.shiftKey) {
-          // Shift+Tab: if first → wrap to last
-          if (document.activeElement === firstEl) {
-            e.preventDefault();
-            lastEl.focus();
-          }
-        } else {
-          // Tab: if last → wrap to first
-          if (document.activeElement === lastEl) {
-            e.preventDefault();
-            firstEl.focus();
-          }
+      if (e.shiftKey) {
+        // Shift+Tab: if first → wrap to last
+        if (document.activeElement === firstEl) {
+          e.preventDefault();
+          lastEl.focus();
+        }
+      } else {
+        // Tab: if last → wrap to first
+        if (document.activeElement === lastEl) {
+          e.preventDefault();
+          firstEl.focus();
         }
       }
-    },
-    [onClose]
-  );
+    }
+  }, []);
 
   return (
     /* Backdrop */

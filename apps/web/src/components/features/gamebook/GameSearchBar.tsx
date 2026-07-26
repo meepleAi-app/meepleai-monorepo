@@ -108,7 +108,7 @@ export function GameSearchBar({
         {
           key: 'bgg',
           label: labels.tabsBgg,
-          activeCls: 'border-entity-document text-entity-document',
+          activeCls: 'border-entity-document text-entity-document-text',
         },
       ]
     : [

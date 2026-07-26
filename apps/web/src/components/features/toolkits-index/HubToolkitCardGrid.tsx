@@ -175,7 +175,7 @@ export function HubToolkitCardGrid({
           </div>
         )}
         {toolkit.gameName ? (
-          <div className="inline-flex items-center gap-1 font-mono text-[10px] font-bold text-entity-game">
+          <div className="inline-flex items-center gap-1 font-mono text-[10px] font-bold text-entity-game-text">
             <span aria-hidden="true">🎲</span>
             <span className="truncate">{toolkit.gameName}</span>
           </div>

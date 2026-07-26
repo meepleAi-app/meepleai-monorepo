@@ -78,7 +78,7 @@ export default function GameComprehensionPage(): JSX.Element {
         }}
       >
         <div className="mx-auto max-w-3xl text-center">
-          <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-entity-game/30 bg-entity-game/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-entity-game">
+          <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-entity-game/30 bg-entity-game/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-entity-game-text">
             {t('pages.gameComprehension.eyebrow')}
           </p>
           <h1
@@ -120,7 +120,7 @@ export default function GameComprehensionPage(): JSX.Element {
               className="relative flex break-inside-avoid flex-col items-center text-center lg:px-3"
             >
               {/* Numbered node — the anchor point on the thread. */}
-              <span className="relative z-10 flex h-12 w-12 items-center justify-center rounded-full border border-entity-game/30 bg-card text-lg font-bold text-entity-game shadow-sm">
+              <span className="relative z-10 flex h-12 w-12 items-center justify-center rounded-full border border-entity-game/30 bg-card text-lg font-bold text-entity-game-text shadow-sm">
                 <span className="sr-only">{`${idx + 1}. `}</span>
                 {idx + 1}
               </span>
@@ -159,7 +159,7 @@ export default function GameComprehensionPage(): JSX.Element {
           {/* A representative snippet of a published card. */}
           <figure className="mx-auto mt-10 max-w-xl rounded-2xl border border-border bg-card p-6 shadow-sm">
             <figcaption className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
-              <span className="text-sm font-semibold text-entity-game">
+              <span className="text-sm font-semibold text-entity-game-text">
                 {t('pages.gameComprehension.demoGameName')}
               </span>
               <span className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -180,7 +180,7 @@ export default function GameComprehensionPage(): JSX.Element {
                 data-testid="game-comprehension-demo-panel"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="inline-flex items-center rounded-md border border-entity-game/40 bg-entity-game/10 px-2 py-0.5 text-xs font-semibold text-entity-game">
+                  <span className="inline-flex items-center rounded-md border border-entity-game/40 bg-entity-game/10 px-2 py-0.5 text-xs font-semibold text-entity-game-text">
                     {t('pages.gameComprehension.demoReviewedBadge')}
                   </span>
                   <span className="text-xs uppercase tracking-wide text-muted-foreground">

@@ -46,6 +46,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
     private readonly IAiResponseCacheService _cache;
     private readonly IPromptTemplateService _promptTemplateService;
     private readonly InlineCitationMatcherService _citationMatcher;
+    private readonly IIntentClassifierService _intentClassifier;
     private readonly ILogger<StreamQaQueryHandler> _logger;
     private readonly TimeProvider _timeProvider;
 
@@ -61,6 +62,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         IAiResponseCacheService cache,
         IPromptTemplateService promptTemplateService,
         InlineCitationMatcherService citationMatcher,
+        IIntentClassifierService intentClassifier,
         ILogger<StreamQaQueryHandler> logger,
         TimeProvider? timeProvider = null)
     {
@@ -75,6 +77,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _promptTemplateService = promptTemplateService ?? throw new ArgumentNullException(nameof(promptTemplateService));
         _citationMatcher = citationMatcher ?? throw new ArgumentNullException(nameof(citationMatcher));
+        _intentClassifier = intentClassifier ?? throw new ArgumentNullException(nameof(intentClassifier));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -281,6 +284,14 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         IReadOnlyList<Guid>? documentIds,
         CancellationToken cancellationToken)
     {
+        // Issue #3270 (Task 7): classify user intent into GameBookRole tag(s) so the hybrid
+        // re-ranker can boost chunks whose role_tags overlap (parity with AskQuestionQueryHandler).
+        // The classifier is rule-based, sync, and cheap (~µs); failure modes default to RulesReference.
+        var queryRoleHint = _intentClassifier.ClassifyIntent(queryText);
+        _logger.LogDebug(
+            "[StreamQaHandler] Intent classification: Query={Query}, RoleHint={RoleHint}",
+            queryText, queryRoleHint);
+
         var searchQuery = new SearchQuery(
             GameId: Guid.Parse(gameId),
             Query: queryText,
@@ -288,7 +299,8 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
             MinScore: 0.55,
             SearchMode: "hybrid",
             Language: "en",
-            DocumentIds: documentIds // Issue #2051
+            DocumentIds: documentIds, // Issue #2051
+            QueryRoleHint: queryRoleHint // Issue #3270: bias re-ranker toward role-matching chunks
         );
 
         var searchResults = await _searchQueryHandler.Handle(searchQuery, cancellationToken).ConfigureAwait(false);

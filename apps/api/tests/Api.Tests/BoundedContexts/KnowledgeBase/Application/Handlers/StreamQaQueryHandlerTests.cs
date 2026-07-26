@@ -46,6 +46,7 @@ public class StreamQaQueryHandlerTests
     private readonly Mock<ILlmService> _llmServiceMock;
     private readonly Mock<IAiResponseCacheService> _cacheMock;
     private readonly Mock<IPromptTemplateService> _promptTemplateServiceMock;
+    private readonly Mock<IIntentClassifierService> _intentClassifierMock;
     private readonly Mock<ILogger<StreamQaQueryHandler>> _loggerMock;
     private readonly FakeTimeProvider _fakeTimeProvider;
     private readonly StreamQaQueryHandler _handler;
@@ -90,6 +91,10 @@ public class StreamQaQueryHandlerTests
         _llmServiceMock = new Mock<ILlmService>();
         _cacheMock = new Mock<IAiResponseCacheService>();
         _promptTemplateServiceMock = new Mock<IPromptTemplateService>();
+        _intentClassifierMock = new Mock<IIntentClassifierService>();
+        _intentClassifierMock
+            .Setup(x => x.ClassifyIntent(It.IsAny<string>()))
+            .Returns(GameBookRole.None);
         _loggerMock = new Mock<ILogger<StreamQaQueryHandler>>();
         _fakeTimeProvider = new FakeTimeProvider();
         _fakeTimeProvider.SetUtcNow(new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero));
@@ -114,6 +119,7 @@ public class StreamQaQueryHandlerTests
             _cacheMock.Object,
             _promptTemplateServiceMock.Object,
             new InlineCitationMatcherService(),
+            _intentClassifierMock.Object,
             _loggerMock.Object,
             _fakeTimeProvider
         );
@@ -902,6 +908,67 @@ public class StreamQaQueryHandlerTests
         completeEvent.Should().NotBeNull();
 
         // Verify no errors
+        var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
+        errorEvent.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task StreamQa_SetsQueryRoleHint_FromIntentClassifier()
+    {
+        // Issue #3270 (Task 7): StreamQa must classify intent and forward QueryRoleHint through
+        // SearchQuery so the hybrid re-ranker can apply the role-match boost (parity with
+        // AskQuestionQueryHandler). Verified indirectly via the GameBookRole argument that
+        // SearchQueryHandler forwards from SearchQuery.QueryRoleHint into RrfFusionDomainService.FuseResults.
+
+        // Arrange
+        var gameId = Guid.NewGuid().ToString();
+        var userQuery = "How do I set up the game?";
+        var query = new StreamQaQuery(gameId, userQuery, null);
+
+        _cacheMock
+            .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((QaResponse?)null);
+
+        SetupSearchMocks(gameId, userQuery);
+        SetupPromptMocks(QuestionType.General);
+        SetupLlmStreamingMock(new[] { "Setup", " answer" });
+        SetupQualityTrackingMocks();
+
+        _intentClassifierMock
+            .Setup(x => x.ClassifyIntent(It.IsAny<string>()))
+            .Returns(GameBookRole.Setup);
+
+        GameBookRole? capturedRoleHint = null;
+        var fusedResult = new DomainSearchResult(
+            id: Guid.NewGuid(),
+            vectorDocumentId: Guid.NewGuid(),
+            textContent: "Setup rule text",
+            pageNumber: 1,
+            relevanceScore: new Confidence(0.9),
+            rank: 1,
+            searchMethod: "hybrid");
+
+        _rrfFusionServiceMock
+            .Setup(x => x.FuseResults(
+                It.IsAny<List<DomainSearchResult>>(),
+                It.IsAny<List<DomainSearchResult>>(),
+                It.IsAny<int>(),
+                It.IsAny<GameBookRole>()))
+            .Callback<List<DomainSearchResult>, List<DomainSearchResult>, int, GameBookRole>(
+                (_, _, _, roleHint) => capturedRoleHint = roleHint)
+            .Returns(new List<DomainSearchResult> { fusedResult });
+
+        // Act
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
+        {
+            events.Add(evt);
+        }
+
+        // Assert
+        _intentClassifierMock.Verify(x => x.ClassifyIntent(userQuery), Times.Once);
+        capturedRoleHint.Should().Be(GameBookRole.Setup);
+
         var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
         errorEvent.Should().BeNull();
     }

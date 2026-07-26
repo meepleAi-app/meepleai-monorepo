@@ -118,50 +118,6 @@ internal static class KnowledgeBaseMappers
     }
 
     /// <summary>
-    /// Creates domain Embedding from pgvector search result data.
-    /// Note: This is a simplified mapping - real pgvector results would need proper deserialization.
-    /// </summary>
-    public static Embedding CreateEmbeddingFromQdrant(
-        Guid embeddingId,
-        Guid vectorDocumentId,
-        string textContent,
-        int pageNumber,
-        float[] vectorArray,
-        string model,
-        int chunkIndex)
-    {
-        var vector = new Vector(vectorArray);
-        return new Embedding(
-            id: embeddingId,
-            vectorDocumentId: vectorDocumentId,
-            textContent: textContent,
-            vector: vector,
-            model: model,
-            chunkIndex: chunkIndex,
-            pageNumber: Math.Max(1, pageNumber)
-        );
-    }
-
-    /// <summary>
-    /// Converts domain Embedding to pgvector point format.
-    /// Returns tuple with data needed for pgvector indexing.
-    /// </summary>
-    public static (Guid id, float[] vector, Dictionary<string, object> payload) ToQdrantPoint(
-        this Embedding embedding)
-    {
-        var payload = new Dictionary<string, object>
-(StringComparer.Ordinal)
-        {
-            ["vector_document_id"] = embedding.VectorDocumentId.ToString(),
-            ["text_content"] = embedding.TextContent,
-            ["page_number"] = embedding.PageNumber,
-            ["chunk_index"] = embedding.ChunkIndex
-        };
-
-        return (embedding.Id, embedding.Vector.Values.ToArray(), payload);
-    }
-
-    /// <summary>
     /// Maps persistence AgentSessionEntity to domain AgentSession.
     /// Issue #3184 (AGT-010): Session-Based Agent Lifecycle.
     /// </summary>

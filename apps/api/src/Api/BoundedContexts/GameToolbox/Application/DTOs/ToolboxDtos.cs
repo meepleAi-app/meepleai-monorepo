@@ -101,10 +101,6 @@ internal record CardEntryRequest(
     string? Suit = null,
     Dictionary<string, string>? CustomProperties = null);
 
-internal record CreateToolboxTemplateRequest(
-    string Name,
-    Guid? GameId = null);
-
 internal record ApplyToolboxTemplateRequest(
     Guid TemplateId,
     Guid? GameId = null);

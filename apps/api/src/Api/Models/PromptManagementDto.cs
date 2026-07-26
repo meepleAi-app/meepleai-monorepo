@@ -218,22 +218,6 @@ internal class CreatePromptTemplateRequest
 }
 
 /// <summary>
-/// Response containing a newly created prompt template.
-/// </summary>
-internal class CreatePromptTemplateResponse
-{
-    /// <summary>
-    /// The newly created template.
-    /// </summary>
-    required public PromptTemplateDto Template { get; init; }
-
-    /// <summary>
-    /// The initial version (version 1).
-    /// </summary>
-    required public PromptVersionDto InitialVersion { get; init; }
-}
-
-/// <summary>
 /// Request to create a new version of a prompt template.
 /// </summary>
 internal class CreatePromptVersionRequest

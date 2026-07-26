@@ -144,27 +144,6 @@ public class NgramCopyrightLeakGuardScenarios
             () => guard.ScanAsync(longText, new[] { chunk }, cts.Token));
     }
 
-    [Trait("Category", TestCategories.Performance)]
-    [Fact(Skip = "Issue #892: replaced by NgramCopyrightLeakGuardBenchmark (BenchmarkDotNet) — the xUnit time-based assertion tracked CI environment noise, not algorithm behavior. See apps/api/tests/Api.Tests/Benchmarks/NgramCopyrightLeakGuardBenchmark.cs.")]
-    public async Task Given_5ChunksOf1500Words_WhenScanned_ThenCompletesUnder50ms()
-    {
-        var guard = CreateGuard(threshold: 12);
-        var chunks = Enumerable.Range(0, 5).Select(i =>
-            MakeProtectedChunk(
-                string.Join(' ', Enumerable.Range(0, 1500).Select(j => $"word{i}_{j}")))).ToArray();
-        var body = string.Join(' ', Enumerable.Range(0, 500).Select(i => $"bodytok{i}"));
-
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        var result = await guard.ScanAsync(body, chunks, CancellationToken.None);
-        sw.Stop();
-
-        Assert.False(result.HasLeak);
-        // Local-only sanity bound — the authoritative perf signal is the BenchmarkDotNet
-        // run referenced in the Skip reason above.
-        Assert.True(sw.ElapsedMilliseconds < 1000,
-            $"Scan took {sw.ElapsedMilliseconds}ms, expected <1000ms on CI (target <50ms local)");
-    }
-
     [Fact]
     public async Task Given_NonEmptyBodyAndEmptyCitations_WhenScanned_ThenReturnsNoLeak()
     {

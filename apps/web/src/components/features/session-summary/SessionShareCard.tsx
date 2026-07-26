@@ -197,9 +197,16 @@ export function SessionShareCard({
           })}
         </div>
       </div>
-      {/* Preview surface — theme-driven inline styles to keep page-theme isolated */}
+      {/* Preview surface — carries data-theme so its OWN entity-token colors
+          (winner score var(--color-entity-toolkit), medallion + card borders,
+          border-entity-session) resolve to the PREVIEWED theme. The surface
+          paints an opaque bg (#0f0c1e dark / #fff light), so this dark scope
+          does NOT overhang the light page chrome — that was the #3289 B2 leak:
+          data-theme lived on the transparent <section>, putting a dark
+          --foreground on the light shell (#ece6df on #f7f3ee = 1.12:1). */}
       <div
         data-slot="share-preview"
+        data-theme={theme}
         data-preview-theme={theme}
         className="relative mx-auto w-full max-w-xl overflow-hidden rounded-lg border-2 border-entity-session/30 aspect-[4/3]"
         style={{

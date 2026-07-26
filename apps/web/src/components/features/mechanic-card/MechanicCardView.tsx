@@ -213,7 +213,7 @@ function SectionBlock({
             chapter numeral encodes real order rather than decorating. */}
         <span
           aria-hidden="true"
-          className="font-display text-sm font-bold tabular-nums text-entity-game-text"
+          className="font-display text-sm font-bold tabular-nums text-entity-game"
         >
           {String(index + 1).padStart(2, '0')}
         </span>

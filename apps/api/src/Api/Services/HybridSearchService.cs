@@ -1,5 +1,5 @@
-using System.Text.RegularExpressions;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Helpers;
@@ -22,17 +22,6 @@ internal class HybridSearchService : IHybridSearchService
     private readonly IVectorStoreAdapter _vectorStore;
     private readonly ILogger<HybridSearchService> _logger;
     private readonly HybridSearchConfiguration _config;
-
-    // RRF constant k (standard value from research papers: Cormack et al. 2009)
-    // Formula: RRF_score = sum(1 / (k + rank_i))
-    // Higher k gives less weight to rank differences, k=60 is empirically optimal
-    private const int DefaultRrfK = 60;
-
-    // Phase D (D6): additive boost applied to chunks whose RoleTags overlap with the user
-    // intent's QueryRoleHint. Chosen ~10x the smallest expected RRF contribution (≈ 0.7/(60+10) ≈ 0.01)
-    // so a single matching tag clearly outranks a non-matching peer at the same retrieval rank,
-    // but does not steamroll strong vector+keyword agreement at the top.
-    internal const float RoleMatchBoost = 0.15f;
 
     public HybridSearchService(
         IKeywordSearchService keywordSearchService,
@@ -131,7 +120,7 @@ internal class HybridSearchService : IHybridSearchService
             var embedding = r.Embedding;
             var chunkRoleTags = (GameBookRole)embedding.RoleTags;
             var baseScore = 1.0f / (index + 1); // normalized rank score
-            var roleBoost = ComputeRoleMatchBoost(queryRoleHint, chunkRoleTags);
+            var roleBoost = FusionSignals.ComputeRoleMatchBoost(queryRoleHint, chunkRoleTags);
             return new HybridSearchResult
             {
                 // RRF fusion-key fix: key on the resolved PdfDocumentId (now populated by the scored
@@ -203,7 +192,7 @@ internal class HybridSearchService : IHybridSearchService
         // Phase D (D6): build hybrid results then re-rank by role-boosted score.
         var hybridResults = filteredResults.Select((r, index) =>
         {
-            var roleBoost = ComputeRoleMatchBoost(queryRoleHint, r.RoleTags);
+            var roleBoost = FusionSignals.ComputeRoleMatchBoost(queryRoleHint, r.RoleTags);
             return new HybridSearchResult
             {
                 ChunkId = r.ChunkId,
@@ -308,7 +297,7 @@ internal class HybridSearchService : IHybridSearchService
             gameId,
             vectorWeight,
             keywordWeight,
-            _config.RrfConstant ?? DefaultRrfK,
+            _config.RrfConstant ?? FusionSignals.DefaultRrfK,
             queryRoleHint);
 
         var topResults = fusedResults
@@ -467,7 +456,7 @@ internal class HybridSearchService : IHybridSearchService
                 ? keywordItem.Result.RoleTags
                 : GameBookRole.None;
             var chunkRoleTags = vectorRoleTags | keywordRoleTags;
-            var roleBoost = ComputeRoleMatchBoost(queryRoleHint, chunkRoleTags);
+            var roleBoost = FusionSignals.ComputeRoleMatchBoost(queryRoleHint, chunkRoleTags);
 
             // Use data from whichever result has it (prefer vector for metadata consistency)
             var matchedTerms = hasKeyword && keywordItem != null
@@ -485,7 +474,7 @@ internal class HybridSearchService : IHybridSearchService
             // which carry no actionable answer yet score in the same RRF band as real content.
             // The demotion scales the RRF fusion components only; the role-match boost (#1391)
             // stays strictly additive on top so its deliberate ~0.15 calibration is not scaled away.
-            var legendFactor = ComputeLegendPenaltyFactor(content);
+            var legendFactor = FusionSignals.ComputeLegendPenaltyFactor(content);
             var hybridScore = ((vectorRrfScore + keywordRrfScore) * (1f - legendFactor)) + roleBoost;
 
             var pdfDocumentId = hasVector && vectorItem != null
@@ -524,59 +513,6 @@ internal class HybridSearchService : IHybridSearchService
         }
 
         return fusedResults;
-    }
-
-    /// <summary>
-    /// Phase D (D6): computes the additive RRF score boost for a chunk based on role overlap.
-    /// Returns <see cref="RoleMatchBoost"/> when <paramref name="queryRoleHint"/> intersects
-    /// <paramref name="chunkRoleTags"/> (both being non-<see cref="GameBookRole.None"/>); otherwise 0.
-    /// Pure function — exposed as <c>internal static</c> for direct unit testing of the re-ranker
-    /// without spinning up pgvector + PostgreSQL FTS infrastructure.
-    /// </summary>
-    internal static float ComputeRoleMatchBoost(GameBookRole queryRoleHint, GameBookRole chunkRoleTags)
-    {
-        if (queryRoleHint == GameBookRole.None || chunkRoleTags == GameBookRole.None)
-        {
-            return 0f;
-        }
-
-        return (chunkRoleTags & queryRoleHint) != GameBookRole.None ? RoleMatchBoost : 0f;
-    }
-
-    // Matches cross-reference pointers like "vedi pag. 10", "vedi anche pagina 5", "see p. 11",
-    // "cfr. pagg. 4-5". Allows an optional connector word ("anche"/"a") and spelled-out "pagina".
-    private static readonly Regex CrossReferencePointer = new(
-        @"(?i)\b(?:vedi|see|cfr|cf)\b\.?\s+(?:anche\s+|a\s+)?(?:pagine|pagina|pagg|pag|pages|page|pp|p)\b\.?",
-        RegexOptions.Compiled,
-        TimeSpan.FromSeconds(1));
-
-    /// <summary>
-    /// RAG answer-quality fix: computes a multiplicative demotion factor in [0, 0.5] for chunks
-    /// that are cross-reference "legends" (dense with "vedi pag."/"see p." pointers, e.g. a
-    /// component list that only points elsewhere). Such chunks carry no actionable content but
-    /// score in the same RRF band as real answers. Pure function — exposed <c>internal static</c>
-    /// for direct unit testing.
-    /// </summary>
-    internal static float ComputeLegendPenaltyFactor(string? content)
-    {
-        if (string.IsNullOrEmpty(content))
-        {
-            return 0f;
-        }
-
-        var pointers = CrossReferencePointer.Count(content);
-        // A legend is a LIST of pointers; a single incidental page reference is not one.
-        if (pointers < 2)
-        {
-            return 0f;
-        }
-
-        // Density-driven ONLY (pointers per 1000 chars), never the raw count: a short chunk that
-        // is mostly pointers (a legend) has high density and is capped at 0.5, while a long,
-        // substantive section that legitimately cites several pages has low density and is barely
-        // touched. Using the raw count would over-demote long real content with many references.
-        var density = pointers * 1000.0 / content.Length;
-        return (float)Math.Min(0.5, 0.05 * density);
     }
 }
 

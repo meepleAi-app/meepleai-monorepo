@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Services;
@@ -15,7 +16,7 @@ namespace Api.Tests.Services;
 /// <summary>
 /// Unit tests for the Phase D (D6) role-match re-ranker boost in <see cref="HybridSearchService"/>.
 ///
-/// Exercises the pure-function helper <see cref="HybridSearchService.ComputeRoleMatchBoost"/> in
+/// Exercises the pure-function helper <see cref="FusionSignals.ComputeRoleMatchBoost"/> in
 /// isolation — no pgvector, no PostgreSQL FTS, no DI graph. This is intentional: the boost
 /// computation is the only new logic introduced by D6 and the rest of <c>FuseSearchResults</c>
 /// is unchanged. Integration coverage of the full hybrid pipeline lives elsewhere
@@ -33,10 +34,10 @@ public sealed class HybridSearchServiceRoleBoostTests
         var chunkTags = GameBookRole.Tutorial;
 
         // Act
-        var boost = HybridSearchService.ComputeRoleMatchBoost(queryHint, chunkTags);
+        var boost = FusionSignals.ComputeRoleMatchBoost(queryHint, chunkTags);
 
         // Assert: positive intersection ⇒ full boost.
-        boost.Should().Be(HybridSearchService.RoleMatchBoost);
+        boost.Should().Be(FusionSignals.RoleMatchBoost);
     }
 
     [Fact]
@@ -47,7 +48,7 @@ public sealed class HybridSearchServiceRoleBoostTests
         var chunkTags = GameBookRole.RulesReference;
 
         // Act
-        var boost = HybridSearchService.ComputeRoleMatchBoost(queryHint, chunkTags);
+        var boost = FusionSignals.ComputeRoleMatchBoost(queryHint, chunkTags);
 
         // Assert: no overlap ⇒ no boost.
         boost.Should().Be(0f);
@@ -62,7 +63,7 @@ public sealed class HybridSearchServiceRoleBoostTests
         var chunkTags = GameBookRole.Tutorial | GameBookRole.Narrative;
 
         // Act
-        var boost = HybridSearchService.ComputeRoleMatchBoost(queryHint, chunkTags);
+        var boost = FusionSignals.ComputeRoleMatchBoost(queryHint, chunkTags);
 
         // Assert
         boost.Should().Be(0f);
@@ -77,7 +78,7 @@ public sealed class HybridSearchServiceRoleBoostTests
         var chunkTags = GameBookRole.None;
 
         // Act
-        var boost = HybridSearchService.ComputeRoleMatchBoost(queryHint, chunkTags);
+        var boost = FusionSignals.ComputeRoleMatchBoost(queryHint, chunkTags);
 
         // Assert
         boost.Should().Be(0f);
@@ -91,10 +92,10 @@ public sealed class HybridSearchServiceRoleBoostTests
         var chunkTags = GameBookRole.Tutorial | GameBookRole.Setup;
 
         // Act
-        var boost = HybridSearchService.ComputeRoleMatchBoost(queryHint, chunkTags);
+        var boost = FusionSignals.ComputeRoleMatchBoost(queryHint, chunkTags);
 
         // Assert: single overlapping flag is enough.
-        boost.Should().Be(HybridSearchService.RoleMatchBoost);
+        boost.Should().Be(FusionSignals.RoleMatchBoost);
     }
 
     [Fact]
@@ -105,15 +106,15 @@ public sealed class HybridSearchServiceRoleBoostTests
         const float baseScore = 0.01f; // representative RRF magnitude (≈ 0.7/(60+10))
         var queryHint = GameBookRole.Tutorial;
 
-        var matchingBoost = HybridSearchService.ComputeRoleMatchBoost(queryHint, GameBookRole.Tutorial);
-        var nonMatchingBoost = HybridSearchService.ComputeRoleMatchBoost(queryHint, GameBookRole.RulesReference);
+        var matchingBoost = FusionSignals.ComputeRoleMatchBoost(queryHint, GameBookRole.Tutorial);
+        var nonMatchingBoost = FusionSignals.ComputeRoleMatchBoost(queryHint, GameBookRole.RulesReference);
 
         var matchingFinalScore = baseScore + matchingBoost;
         var nonMatchingFinalScore = baseScore + nonMatchingBoost;
 
         // Assert: positional re-ranking effect is observable, not a tie.
         matchingFinalScore.Should().BeGreaterThan(nonMatchingFinalScore);
-        (matchingFinalScore - nonMatchingFinalScore).Should().Be(HybridSearchService.RoleMatchBoost);
+        (matchingFinalScore - nonMatchingFinalScore).Should().Be(FusionSignals.RoleMatchBoost);
     }
 
     // -----------------------------------------------------------------------------------------
@@ -127,7 +128,7 @@ public sealed class HybridSearchServiceRoleBoostTests
         var content = "Per preparare la partita, ogni giocatore riceve una plancia e le risorse iniziali.";
 
         // Act & Assert
-        HybridSearchService.ComputeLegendPenaltyFactor(content).Should().Be(0f);
+        FusionSignals.ComputeLegendPenaltyFactor(content).Should().Be(0f);
     }
 
     [Fact]
@@ -138,7 +139,7 @@ public sealed class HybridSearchServiceRoleBoostTests
                    + "9. Milestone/Ricompense: sono una buona fonte di PV extra (vedi pag. 10 e 11).";
 
         // Act
-        var factor = HybridSearchService.ComputeLegendPenaltyFactor(legend);
+        var factor = FusionSignals.ComputeLegendPenaltyFactor(legend);
 
         // Assert: a short chunk dense with "vedi pag." pointers is strongly demoted.
         factor.Should().BeGreaterThan(0.2f);
@@ -151,7 +152,7 @@ public sealed class HybridSearchServiceRoleBoostTests
         var content = new string('a', 1400) + " (vedi pag. 12)";
 
         // Act
-        var factor = HybridSearchService.ComputeLegendPenaltyFactor(content);
+        var factor = FusionSignals.ComputeLegendPenaltyFactor(content);
 
         // Assert: one incidental pointer in a long chunk is not treated as a legend.
         factor.Should().BeLessThan(0.2f);
@@ -162,9 +163,9 @@ public sealed class HybridSearchServiceRoleBoostTests
     {
         // Arrange: a legend and a real chunk with identical base RRF score.
         const float baseScore = 0.011f; // representative collapsed-RRF magnitude from the repro
-        var legendFactor = HybridSearchService.ComputeLegendPenaltyFactor(
+        var legendFactor = FusionSignals.ComputeLegendPenaltyFactor(
             "8. Progetti Standard (vedi pag. 10). 9. Milestone (vedi pag. 10 e 11).");
-        var realFactor = HybridSearchService.ComputeLegendPenaltyFactor(
+        var realFactor = FusionSignals.ComputeLegendPenaltyFactor(
             "Preparazione: disponi le tessere oceano e assegna le risorse iniziali ai giocatori.");
 
         // Act
@@ -181,9 +182,9 @@ public sealed class HybridSearchServiceRoleBoostTests
         // The legend penalty scales only the RRF fusion components; the role-match boost (#1391)
         // stays additive so its ~0.15 calibration is preserved even when a legend shares a role tag.
         const float baseRrf = 0.011f;
-        var legendFactor = HybridSearchService.ComputeLegendPenaltyFactor(
+        var legendFactor = FusionSignals.ComputeLegendPenaltyFactor(
             "8. Progetti Standard (vedi pag. 10). 9. Milestone (vedi pag. 10 e 11).");
-        var roleBoost = HybridSearchService.RoleMatchBoost;
+        var roleBoost = FusionSignals.RoleMatchBoost;
 
         // Mirror FuseSearchResults: (rrf * (1 - factor)) + roleBoost
         var withRole = (baseRrf * (1f - legendFactor)) + roleBoost;
@@ -203,7 +204,7 @@ public sealed class HybridSearchServiceRoleBoostTests
             + " vedi pag. 1 vedi pag. 2 vedi pag. 3 vedi pag. 4 vedi pag. 5";
 
         // Act
-        var factor = HybridSearchService.ComputeLegendPenaltyFactor(content);
+        var factor = FusionSignals.ComputeLegendPenaltyFactor(content);
 
         // Assert
         factor.Should().BeLessThan(0.2f);
@@ -306,7 +307,7 @@ public sealed class HybridSearchServiceRoleBoostTests
         // Assert: HybridScore = baseRank(1.0) + RoleMatchBoost(0.15) = 1.15.
         results.Should().HaveCount(1);
         results[0].RoleTags.Should().Be(GameBookRole.Tutorial);
-        results[0].HybridScore.Should().BeApproximately(1.0f + HybridSearchService.RoleMatchBoost, 0.0001f);
+        results[0].HybridScore.Should().BeApproximately(1.0f + FusionSignals.RoleMatchBoost, 0.0001f);
         // #2568: VectorScore now carries the raw cosine (0.9 from Scored()), not a constant 1.0.
         results[0].VectorScore.Should().BeApproximately(0.9f, 0.0001f);
     }
@@ -399,7 +400,7 @@ public sealed class HybridSearchServiceRoleBoostTests
         results[1].ChunkIndex.Should().Be(1);
         // Boosted rank-3 (Tutorial) now beats rank-2 (RulesReference).
         results[2].ChunkIndex.Should().Be(3);
-        results[2].HybridScore.Should().BeApproximately(0.25f + HybridSearchService.RoleMatchBoost, 0.0001f);
+        results[2].HybridScore.Should().BeApproximately(0.25f + FusionSignals.RoleMatchBoost, 0.0001f);
         results[3].ChunkIndex.Should().Be(2);
     }
 
@@ -471,7 +472,7 @@ public sealed class HybridSearchServiceRoleBoostTests
 
         results.Should().HaveCount(1);
         results[0].RoleTags.Should().Be(GameBookRole.Tutorial);
-        results[0].HybridScore.Should().BeApproximately((0.7f / 61f) + HybridSearchService.RoleMatchBoost, 0.0001f);
+        results[0].HybridScore.Should().BeApproximately((0.7f / 61f) + FusionSignals.RoleMatchBoost, 0.0001f);
     }
 
     [Fact]

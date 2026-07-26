@@ -425,6 +425,7 @@ internal static class DocumentProcessingServiceExtensions
             .AddServiceCallLogging("UnstructuredService");
 
         services.AddScoped<UnstructuredPdfTextExtractor>();
+        services.AddScoped<IPdfExtractorHealthProbe, UnstructuredExtractorHealthProbe>();
     }
 
     /// <summary>

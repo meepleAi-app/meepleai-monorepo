@@ -4,6 +4,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Middleware.Exceptions;
@@ -33,6 +34,7 @@ public sealed class BulkReindexReadyCommandHandlerTests : IAsyncLifetime
     private MeepleAiDbContext _db = default!;
     private Mock<IMediator> _mediator = default!;
     private Mock<IProcessingJobRepository> _jobRepo = default!;
+    private Mock<IPdfExtractorHealthProbe> _healthProbe = default!;
 
     public ValueTask InitializeAsync()
     {
@@ -49,6 +51,13 @@ public sealed class BulkReindexReadyCommandHandlerTests : IAsyncLifetime
             .Setup(r => r.CountByStatusAsync(JobStatus.Queued, It.IsAny<CancellationToken>()))
             .ReturnsAsync(0);
 
+        // Default: extractor is healthy so all existing scenarios exercise the selector/pacing
+        // logic unimpeded. The unhealthy-gate scenario overrides this per-test.
+        _healthProbe = new Mock<IPdfExtractorHealthProbe>();
+        _healthProbe
+            .Setup(p => p.IsHealthyAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
         return ValueTask.CompletedTask;
     }
 
@@ -59,7 +68,7 @@ public sealed class BulkReindexReadyCommandHandlerTests : IAsyncLifetime
     }
 
     private BulkReindexReadyCommandHandler CreateHandler() =>
-        new(_db, _mediator.Object, _jobRepo.Object,
+        new(_db, _mediator.Object, _jobRepo.Object, _healthProbe.Object,
             NullLogger<BulkReindexReadyCommandHandler>.Instance);
 
     private async Task<PdfDocumentEntity> SeedPdfAsync(
@@ -237,5 +246,31 @@ public sealed class BulkReindexReadyCommandHandlerTests : IAsyncLifetime
         _mediator.Verify(
             m => m.Send(It.Is<ReindexDocumentCommand>(c => c.PdfId == pdfC.Id), It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_UnhealthyExtractor_ThrowsConflictAndSkipsSelectionEntirely()
+    {
+        // Even with a perfectly valid Ready/mismatched-version candidate in the DB, an unhealthy
+        // extractor must short-circuit BEFORE any candidate selection or fan-out — refusing to
+        // silently re-index the whole corpus into flat, headingless chunks (#3269 C2 gate).
+        await SeedPdfAsync(indexerVersion: "v1.0");
+        _healthProbe
+            .Setup(p => p.IsHealthyAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var handler = CreateHandler();
+
+        var act = () => handler.Handle(new BulkReindexReadyCommand(Guid.NewGuid()), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ConflictException>()
+            .WithMessage("*unstructured extractor unhealthy*");
+
+        _mediator.Verify(
+            m => m.Send(It.IsAny<ReindexDocumentCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _jobRepo.Verify(
+            r => r.CountByStatusAsync(It.IsAny<JobStatus>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 }

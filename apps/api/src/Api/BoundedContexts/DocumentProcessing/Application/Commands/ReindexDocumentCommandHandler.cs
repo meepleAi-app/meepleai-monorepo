@@ -53,6 +53,7 @@ internal sealed class ReindexDocumentCommandHandler : ICommandHandler<ReindexDoc
         ArgumentNullException.ThrowIfNull(command);
 
         var pdf = await _dbContext.PdfDocuments
+            .AsTracking()
             .FirstOrDefaultAsync(p => p.Id == command.PdfId, cancellationToken)
             .ConfigureAwait(false);
 

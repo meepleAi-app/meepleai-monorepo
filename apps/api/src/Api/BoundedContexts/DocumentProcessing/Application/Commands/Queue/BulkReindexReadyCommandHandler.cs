@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -23,17 +24,20 @@ internal sealed class BulkReindexReadyCommandHandler
     private readonly MeepleAiDbContext _dbContext;
     private readonly IMediator _mediator;
     private readonly IProcessingJobRepository _jobRepository;
+    private readonly IPdfExtractorHealthProbe _healthProbe;
     private readonly ILogger<BulkReindexReadyCommandHandler> _logger;
 
     public BulkReindexReadyCommandHandler(
         MeepleAiDbContext dbContext,
         IMediator mediator,
         IProcessingJobRepository jobRepository,
+        IPdfExtractorHealthProbe healthProbe,
         ILogger<BulkReindexReadyCommandHandler> logger)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _jobRepository = jobRepository ?? throw new ArgumentNullException(nameof(jobRepository));
+        _healthProbe = healthProbe ?? throw new ArgumentNullException(nameof(healthProbe));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -41,6 +45,15 @@ internal sealed class BulkReindexReadyCommandHandler
         BulkReindexReadyCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
+
+        // C2 gate: refuse to run the bulk re-index against a stale/misconfigured extractor. A
+        // silent flat-chunking regression would otherwise re-index the whole corpus into
+        // headingless chunks with no error signal (#3269 safety hardening).
+        if (!await _healthProbe.IsHealthyAsync(cancellationToken).ConfigureAwait(false))
+        {
+            throw new ConflictException(
+                "unstructured extractor unhealthy — refusing bulk reindex (would produce flat chunks)");
+        }
 
         var targetVersion = string.IsNullOrWhiteSpace(command.TargetVersion)
             ? IndexerVersionRegistry.Current.Version

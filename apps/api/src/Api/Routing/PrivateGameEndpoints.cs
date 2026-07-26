@@ -462,12 +462,3 @@ internal record UpdatePrivateGameRequest(
     int? MinAge,
     decimal? ComplexityRating
 );
-
-/// <summary>
-/// Request DTO for proposing a private game to catalog.
-/// Issue #3665: Phase 4 - Proposal System.
-/// </summary>
-internal record ProposePrivateGameRequest(
-    string? Notes = null,
-    List<Guid>? AttachedDocumentIds = null
-);

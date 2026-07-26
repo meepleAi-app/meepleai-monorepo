@@ -28,25 +28,3 @@ internal record VersionNodeDto
     public int ChangeCount { get; init; }
     public bool IsCurrentVersion { get; init; }
 }
-
-/// <summary>
-/// Timeline filter parameters
-/// </summary>
-internal record VersionTimelineFilters
-{
-    public DateTime? StartDate { get; init; }
-    public DateTime? EndDate { get; init; }
-    public string? Author { get; init; }
-    public string? SearchQuery { get; init; }
-}
-
-/// <summary>
-/// Timeline response with versions
-/// </summary>
-internal record VersionTimelineResponse
-{
-    public string GameId { get; init; } = string.Empty;
-    public IList<VersionNodeDto> Versions { get; init; } = new List<VersionNodeDto>();
-    public int TotalVersions { get; init; }
-    public IList<string> Authors { get; init; } = new List<string>();
-}

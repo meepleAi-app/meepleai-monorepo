@@ -40,7 +40,6 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
     private readonly Mock<IHybridSearchService> _hybridSearchServiceMock;
     private readonly Mock<ILlmService> _llmServiceMock;
     private readonly Mock<IPromptTemplateService> _promptTemplateServiceMock;
-    private readonly Mock<IQueryExpansionService> _queryExpansionServiceMock;
     private readonly Mock<ISearchResultReranker> _rerankerMock;
     private readonly Mock<IRagConfigurationProvider> _configProviderMock;
 
@@ -57,7 +56,6 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
         _hybridSearchServiceMock = new Mock<IHybridSearchService>();
         _llmServiceMock = new Mock<ILlmService>();
         _promptTemplateServiceMock = new Mock<IPromptTemplateService>();
-        _queryExpansionServiceMock = new Mock<IQueryExpansionService>();
         _rerankerMock = new Mock<ISearchResultReranker>();
         _configProviderMock = new Mock<IRagConfigurationProvider>();
     }
@@ -151,11 +149,6 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
         _configProviderMock
             .Setup(x => x.GetRagConfigAsync("TopK", It.IsAny<int>()))
             .ReturnsAsync(5);
-
-        // Query expansion returns original query
-        _queryExpansionServiceMock
-            .Setup(x => x.GenerateQueryVariationsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string query, string lang, CancellationToken ct) => new List<string> { query });
 
         // Prompt template mocks
         _promptTemplateServiceMock
@@ -610,11 +603,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
         result.answer.Should().Be("Not specified");
         result.snippets.Should().BeEmpty();
 
-        // Verify query expansion and reranker are NOT called (vector retrieval skipped)
-        _queryExpansionServiceMock.Verify(
-            x => x.GenerateQueryVariationsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never
-        );
+        // Verify reranker is NOT called (vector retrieval skipped)
         _rerankerMock.Verify(
             x => x.FuseSearchResultsAsync(It.IsAny<List<SearchResult>>()),
             Times.Never

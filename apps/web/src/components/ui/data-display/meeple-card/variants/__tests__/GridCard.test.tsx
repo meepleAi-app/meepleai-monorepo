@@ -85,7 +85,7 @@ describe('GridCard SP4 mockup conformance (#1856)', () => {
   it('renders MenuPlaceholder button with aria-label="Azioni"', () => {
     const { container } = render(<GridCard entity="game" title="Catan" />);
     // MenuPlaceholder is aria-hidden (#3289) → absent from the a11y tree; query by DOM.
-    expect(container.querySelector('button[aria-label="Azioni"]')).not.toBeNull();
+    expect(container.querySelector('[data-slot="menu-placeholder"]')).not.toBeNull();
   });
 
   it('renders CardFooter with status when status prop is set', () => {
@@ -151,7 +151,7 @@ describe('GridCard SP4 mockup conformance (#1856)', () => {
     // MenuPlaceholder is suppressed because QuickActions occupies the same top-right slot.
     // Query the DOM — MenuPlaceholder is aria-hidden (#3289) → absent from the a11y tree,
     // so a DOM query is the meaningful check for true absence.
-    expect(container.querySelector('button[aria-label="Azioni"]')).toBeNull();
+    expect(container.querySelector('[data-slot="menu-placeholder"]')).toBeNull();
   });
 
   it('DOES render MenuPlaceholder when showQuickActions is true but actions array is empty', () => {
@@ -159,7 +159,7 @@ describe('GridCard SP4 mockup conformance (#1856)', () => {
       <GridCard entity="game" title="Catan" showQuickActions actions={[]} />
     );
     // Empty actions → QuickActions does not render → MenuPlaceholder remains.
-    expect(container.querySelector('button[aria-label="Azioni"]')).not.toBeNull();
+    expect(container.querySelector('[data-slot="menu-placeholder"]')).not.toBeNull();
   });
 });
 

@@ -50,7 +50,7 @@ public class AskQuestionQueryHandlerPhase2Tests
         var mockVectorSearchService = new Mock<VectorSearchDomainService>();
         _mockRrfService = new Mock<RrfFusionDomainService>();
         var mockSearchEmbeddingService = new Mock<IEmbeddingService>();
-        var mockHybridSearchService = new Mock<IHybridSearchService>();
+        var mockKeywordSearchService = new Mock<IKeywordSearchService>();
         var mockSearchLogger = new Mock<ILogger<SearchQueryHandler>>();
 
         mockSearchEmbeddingService
@@ -78,19 +78,19 @@ public class AskQuestionQueryHandlerPhase2Tests
             .Returns(new List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>());
 
         _mockRrfService
-            .Setup(r => r.FuseResults(It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<int>()))
+            .Setup(r => r.FuseResults(It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<int>(), It.IsAny<GameBookRole>()))
             .Returns(new List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>());
 
-        mockHybridSearchService
-            .Setup(h => h.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(), It.IsAny<int>(), It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<HybridSearchResult>());
+        mockKeywordSearchService
+            .Setup(h => h.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<List<string>?>(), It.IsAny<string>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<KeywordSearchResult>());
 
         _searchHandler = new SearchQueryHandler(
             mockEmbeddingRepo.Object,
             mockVectorSearchService.Object,
             _mockRrfService.Object,
             mockSearchEmbeddingService.Object,
-            mockHybridSearchService.Object,
+            mockKeywordSearchService.Object,
             CreatePermissiveRagAccessServiceMock(),
             mockSearchLogger.Object);
 
@@ -605,7 +605,8 @@ public class AskQuestionQueryHandlerPhase2Tests
             .Setup(r => r.FuseResults(
                 It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(),
                 It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(),
-                It.IsAny<int>()))
+                It.IsAny<int>(),
+                It.IsAny<GameBookRole>()))
             .Returns(oneResult);
 
         _mockLlmService

@@ -25,11 +25,16 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Queries;
 /// <summary>
 /// Phase D (D7) tests for <see cref="AskQuestionQueryHandler"/>: verifies the intent
 /// classifier is invoked with the user question and the resulting <see cref="GameBookRole"/>
-/// hint is threaded into the downstream <see cref="IHybridSearchService.SearchAsync"/> call.
+/// hint is threaded into the downstream fusion step.
 ///
 /// Test strategy: spy on the <see cref="IIntentClassifierService"/> and on
-/// <see cref="IHybridSearchService"/> to assert (a) the classifier was called with the question
-/// text and (b) the boosted SearchQuery flowed the classifier output through to retrieval.
+/// <see cref="RrfFusionDomainService.FuseResults"/> to assert (a) the classifier was called with
+/// the question text and (b) the boosted SearchQuery flowed the classifier output through to
+/// retrieval. Issue #3270 (Task 6): the primary chat path no longer calls
+/// <c>IHybridSearchService.SearchAsync</c> — the RAW keyword arm comes from
+/// <see cref="IKeywordSearchService"/> (which carries no role-hint parameter) and the
+/// <see cref="GameBookRole"/> hint is applied downstream by <c>RrfFusionDomainService</c>
+/// (via <c>HybridFusionCore</c>'s role-match boost), so the spy point moved there.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
@@ -50,26 +55,7 @@ public sealed class AskQuestionQueryHandlerIntentRoutingTests
             .Setup(c => c.ClassifyIntent(It.IsAny<string>()))
             .Returns(expectedRoleHint);
 
-        // Spy on IHybridSearchService to capture the GameBookRole passed in by the downstream chain.
-        GameBookRole capturedRoleHint = GameBookRole.None;
-        var hybridSearchMock = new Mock<IHybridSearchService>();
-        hybridSearchMock
-            .Setup(h => h.SearchAsync(
-                It.IsAny<string>(),
-                It.IsAny<Guid>(),
-                It.IsAny<SearchMode>(),
-                It.IsAny<int>(),
-                It.IsAny<List<Guid>?>(),
-                It.IsAny<float>(),
-                It.IsAny<float>(),
-                It.IsAny<double>(),
-                It.IsAny<GameBookRole>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<string, Guid, SearchMode, int, List<Guid>?, float, float, double, GameBookRole, CancellationToken>(
-                (q, g, m, l, d, vw, kw, ms, rh, ct) => capturedRoleHint = rh)
-            .ReturnsAsync(new List<HybridSearchResult>());
-
-        var handler = BuildHandler(intentClassifierMock.Object, hybridSearchMock.Object);
+        var (handler, getCapturedRoleHint) = BuildHandler(intentClassifierMock.Object);
 
         // Act
         var query = new AskQuestionQuery(
@@ -85,8 +71,8 @@ public sealed class AskQuestionQueryHandlerIntentRoutingTests
         // 1. Classifier received the raw question text.
         intentClassifierMock.Verify(c => c.ClassifyIntent(question), Times.AtLeastOnce);
 
-        // 2. The role hint emitted by the classifier reached the hybrid search re-ranker.
-        capturedRoleHint.Should().Be(expectedRoleHint);
+        // 2. The role hint emitted by the classifier reached the RRF fusion step.
+        getCapturedRoleHint().Should().Be(expectedRoleHint);
     }
 
     [Fact]
@@ -103,25 +89,7 @@ public sealed class AskQuestionQueryHandlerIntentRoutingTests
             .Setup(c => c.ClassifyIntent(question))
             .Returns(GameBookRole.None);
 
-        GameBookRole capturedRoleHint = GameBookRole.RulesReference; // sentinel != None
-        var hybridSearchMock = new Mock<IHybridSearchService>();
-        hybridSearchMock
-            .Setup(h => h.SearchAsync(
-                It.IsAny<string>(),
-                It.IsAny<Guid>(),
-                It.IsAny<SearchMode>(),
-                It.IsAny<int>(),
-                It.IsAny<List<Guid>?>(),
-                It.IsAny<float>(),
-                It.IsAny<float>(),
-                It.IsAny<double>(),
-                It.IsAny<GameBookRole>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<string, Guid, SearchMode, int, List<Guid>?, float, float, double, GameBookRole, CancellationToken>(
-                (q, g, m, l, d, vw, kw, ms, rh, ct) => capturedRoleHint = rh)
-            .ReturnsAsync(new List<HybridSearchResult>());
-
-        var handler = BuildHandler(intentClassifierMock.Object, hybridSearchMock.Object);
+        var (handler, getCapturedRoleHint) = BuildHandler(intentClassifierMock.Object);
 
         // Act
         var query = new AskQuestionQuery(
@@ -133,15 +101,14 @@ public sealed class AskQuestionQueryHandlerIntentRoutingTests
         await handler.Handle(query, TestCancellationToken);
 
         // Assert: None is faithfully propagated (the boost will be a no-op in D6).
-        capturedRoleHint.Should().Be(GameBookRole.None);
+        getCapturedRoleHint().Should().Be(GameBookRole.None);
     }
 
-    private static AskQuestionQueryHandler BuildHandler(
-        IIntentClassifierService intentClassifier,
-        IHybridSearchService hybridSearchService)
+    private static (AskQuestionQueryHandler Handler, Func<GameBookRole> GetCapturedRoleHint) BuildHandler(
+        IIntentClassifierService intentClassifier)
     {
         // Build a real (lightweight) SearchQueryHandler with mocked dependencies so the
-        // SearchQuery.QueryRoleHint actually flows through to the hybrid search spy.
+        // SearchQuery.QueryRoleHint actually flows through to the RRF fusion spy.
         var embeddingRepoMock = new Mock<IEmbeddingRepository>();
         embeddingRepoMock
             .Setup(r => r.SearchByVectorAsync(
@@ -160,6 +127,34 @@ public sealed class AskQuestionQueryHandlerIntentRoutingTests
             .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult { Success = true, Embeddings = new List<float[]> { new float[768] } });
 
+        // Issue #3270 (Task 6): raw keyword arm — no role-hint parameter on this interface.
+        var keywordSearchMock = new Mock<IKeywordSearchService>();
+        keywordSearchMock
+            .Setup(k => k.SearchAsync(
+                It.IsAny<string>(),
+                It.IsAny<Guid>(),
+                It.IsAny<int>(),
+                It.IsAny<bool>(),
+                It.IsAny<List<string>?>(),
+                It.IsAny<string>(),
+                It.IsAny<double>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<KeywordSearchResult>());
+
+        // Spy on RrfFusionDomainService.FuseResults to capture the GameBookRole passed by the
+        // downstream chain (this is where the role hint is now consumed — issue #3270 Task 6).
+        GameBookRole capturedRoleHint = GameBookRole.None;
+        var rrfFusionMock = new Mock<RrfFusionDomainService>();
+        rrfFusionMock
+            .Setup(r => r.FuseResults(
+                It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(),
+                It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(),
+                It.IsAny<int>(),
+                It.IsAny<GameBookRole>()))
+            .Callback<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>, List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>, int, GameBookRole>(
+                (v, k, rk, rh) => capturedRoleHint = rh)
+            .Returns(new List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>());
+
         var ragAccessMock = new Mock<IRagAccessService>();
         ragAccessMock
             .Setup(r => r.CanAccessRagAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<UserRole>(), It.IsAny<CancellationToken>()))
@@ -168,9 +163,9 @@ public sealed class AskQuestionQueryHandlerIntentRoutingTests
         var searchHandler = new SearchQueryHandler(
             embeddingRepoMock.Object,
             new VectorSearchDomainService(),
-            new RrfFusionDomainService(),
+            rrfFusionMock.Object,
             searchEmbeddingServiceMock.Object,
-            hybridSearchService,
+            keywordSearchMock.Object,
             ragAccessMock.Object,
             new Mock<ILogger<SearchQueryHandler>>().Object);
 
@@ -193,7 +188,7 @@ public sealed class AskQuestionQueryHandlerIntentRoutingTests
         var routingMonitorMock = new Mock<IOptionsMonitor<LlmQueryComplexityRoutingOptions>>();
         routingMonitorMock.Setup(m => m.CurrentValue).Returns(new LlmQueryComplexityRoutingOptions());
 
-        return new AskQuestionQueryHandler(
+        var handler = new AskQuestionQueryHandler(
             searchHandler,
             CreatePassthroughReranker(),
             new QualityTrackingDomainService(),
@@ -214,6 +209,8 @@ public sealed class AskQuestionQueryHandlerIntentRoutingTests
             intentClassifier,
             routingMonitorMock.Object,
             new Mock<ILogger<AskQuestionQueryHandler>>().Object);
+
+        return (handler, () => capturedRoleHint);
     }
 
     private static ICrossEncoderReranker CreatePassthroughReranker()

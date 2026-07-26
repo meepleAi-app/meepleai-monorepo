@@ -41,7 +41,7 @@ public class AskQuestionQueryHandlerSecurityTests
     private readonly Mock<IPromptTemplateService> _mockPromptTemplateService;
     private readonly Mock<IRagValidationPipelineService> _mockValidationPipeline;
     private readonly Mock<ILogger<AskQuestionQueryHandler>> _mockLogger;
-    private readonly Mock<IHybridSearchService> _mockHybridSearchService;
+    private readonly Mock<IKeywordSearchService> _mockKeywordSearchService;
     private readonly Mock<RrfFusionDomainService> _mockRrfService;
     private readonly Mock<ISemanticResponseCache> _mockResponseCache;
     private readonly Mock<IEmbeddingService> _mockAskEmbeddingService;
@@ -54,7 +54,7 @@ public class AskQuestionQueryHandlerSecurityTests
         var mockVectorSearchService = new Mock<VectorSearchDomainService>();
         _mockRrfService = new Mock<RrfFusionDomainService>();
         var mockEmbeddingService = new Mock<IEmbeddingService>();
-        _mockHybridSearchService = new Mock<IHybridSearchService>();
+        _mockKeywordSearchService = new Mock<IKeywordSearchService>();
         var mockSearchLogger = new Mock<ILogger<SearchQueryHandler>>();
 
         // Setup IEmbeddingService to return valid EmbeddingResult
@@ -102,30 +102,28 @@ public class AskQuestionQueryHandlerSecurityTests
 
         // Setup RRF Fusion domain service (default: empty results)
         _mockRrfService
-            .Setup(r => r.FuseResults(It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<int>()))
+            .Setup(r => r.FuseResults(It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<int>(), It.IsAny<GameBookRole>()))
             .Returns(new List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>()); // Return empty list
 
-        // Setup IHybridSearchService to return empty results by default
-        _mockHybridSearchService
+        // Setup IKeywordSearchService to return empty results by default
+        _mockKeywordSearchService
             .Setup(h => h.SearchAsync(
                 It.IsAny<string>(),
                 It.IsAny<Guid>(),
-                It.IsAny<SearchMode>(),
                 It.IsAny<int>(),
-                It.IsAny<List<Guid>?>(),
-                It.IsAny<float>(),
-                It.IsAny<float>(),
+                It.IsAny<bool>(),
+                It.IsAny<List<string>?>(),
+                It.IsAny<string>(),
                 It.IsAny<double>(),
-                It.IsAny<GameBookRole>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<HybridSearchResult>());
+            .ReturnsAsync(new List<KeywordSearchResult>());
 
         _searchHandler = new SearchQueryHandler(
             mockEmbeddingRepo.Object,
             mockVectorSearchService.Object,
             _mockRrfService.Object,
             mockEmbeddingService.Object,
-            _mockHybridSearchService.Object,
+            _mockKeywordSearchService.Object,
             CreatePermissiveRagAccessServiceMock(),
             mockSearchLogger.Object);
 
@@ -552,7 +550,8 @@ public class AskQuestionQueryHandlerSecurityTests
             .Setup(r => r.FuseResults(
                 It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(),
                 It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(),
-                It.IsAny<int>()))
+                It.IsAny<int>(),
+                It.IsAny<GameBookRole>()))
             .Returns(oneResult);
     }
 

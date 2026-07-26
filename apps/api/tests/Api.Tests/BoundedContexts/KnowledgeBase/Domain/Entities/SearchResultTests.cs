@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using FluentAssertions;
@@ -289,6 +290,41 @@ public sealed class SearchResultTests
         // Act & Assert
         perfectResult.MeetsThreshold(1.0).Should().BeTrue();
         almostPerfectResult.MeetsThreshold(1.0).Should().BeFalse();
+    }
+
+    #endregion
+
+    #region Fusion Identity Tests
+
+    [Fact]
+    public void SearchResult_CarriesFusionIdentity_WhenProvided()
+    {
+        var pdf = Guid.NewGuid();
+        var r = new Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult(
+            id: Guid.NewGuid(),
+            vectorDocumentId: Guid.NewGuid(),
+            textContent: "text",
+            pageNumber: 1,
+            relevanceScore: new Confidence(0.9),
+            rank: 1,
+            searchMethod: "vector",
+            pdfDocumentId: pdf,
+            chunkIndex: 7,
+            roleTags: GameBookRole.Setup);
+
+        r.PdfDocumentId.Should().Be(pdf);
+        r.ChunkIndex.Should().Be(7);
+        r.RoleTags.Should().Be(GameBookRole.Setup);
+    }
+
+    [Fact]
+    public void SearchResult_FusionIdentity_DefaultsAreEmpty()
+    {
+        var r = new Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult(
+            Guid.NewGuid(), Guid.NewGuid(), "text", 1, new Confidence(0.5), 1);
+        r.PdfDocumentId.Should().Be(Guid.Empty);
+        r.ChunkIndex.Should().Be(0);
+        r.RoleTags.Should().Be(GameBookRole.None);
     }
 
     #endregion

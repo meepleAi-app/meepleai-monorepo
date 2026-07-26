@@ -23,7 +23,7 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
     private readonly VectorSearchDomainService _vectorSearchService;
     private readonly RrfFusionDomainService _rrfFusionService;
     private readonly IEmbeddingService _embeddingService;
-    private readonly IHybridSearchService _hybridSearchService;
+    private readonly IKeywordSearchService _keywordSearchService;
     private readonly IRagAccessService _ragAccessService;
     private readonly ILogger<SearchQueryHandler> _logger;
 
@@ -32,7 +32,7 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         VectorSearchDomainService vectorSearchService,
         RrfFusionDomainService rrfFusionService,
         IEmbeddingService embeddingService,
-        IHybridSearchService hybridSearchService,
+        IKeywordSearchService keywordSearchService,
         IRagAccessService ragAccessService,
         ILogger<SearchQueryHandler> logger)
     {
@@ -40,7 +40,7 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         _vectorSearchService = vectorSearchService ?? throw new ArgumentNullException(nameof(vectorSearchService));
         _rrfFusionService = rrfFusionService ?? throw new ArgumentNullException(nameof(rrfFusionService));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
-        _hybridSearchService = hybridSearchService ?? throw new ArgumentNullException(nameof(hybridSearchService));
+        _keywordSearchService = keywordSearchService ?? throw new ArgumentNullException(nameof(keywordSearchService));
         _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -163,7 +163,10 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
                 pageNumber: scored.Embedding.PageNumber,
                 relevanceScore: new Confidence(cosine),
                 rank: index + 1,
-                searchMethod: "vector"
+                searchMethod: "vector",
+                pdfDocumentId: scored.Embedding.PdfDocumentId,                       // real (JOIN-resolved)
+                chunkIndex: scored.Embedding.ChunkIndex,
+                roleTags: (GameBookRole)scored.Embedding.RoleTags                    // int → enum
             );
         }).ToList();
 
@@ -188,27 +191,32 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         var vectorResults = await PerformVectorSearchAsync(
             gameId, queryVector, topK, minScore, documentIds, cancellationToken).ConfigureAwait(false);
 
-        // Keyword search (use HybridSearchService with Keyword mode)
-        // Issue #423: Pass keywordMinScore to filter low-relevance keyword matches (e.g., ToC entries)
-        // ts_rank_cd scores are typically 0-0.3; threshold of 0.01 filters noise while keeping real matches
-        // Phase D (D6): queryRoleHint enables role-match boost in the re-ranker.
+        // Issue #423: ts_rank_cd scores ~0-0.3; 0.01 filters ToC noise.
         const double KeywordMinScore = 0.01;
-        var hybridSearchResults = await _hybridSearchService.SearchAsync(
+
+        // Spec §6: RAW keyword arm sourced directly from IKeywordSearchService (un-boosted, raw ts_rank_cd
+        // order) so HybridFusionCore applies role-boost + legend exactly once.
+        var rawKeyword = await _keywordSearchService.SearchAsync(
             query,
             gameId,
-            SearchMode.Keyword,
             topK,
-            documentIds?.ToList(), // Issue #2051: Pass document filter
-            keywordMinScore: KeywordMinScore,
-            queryRoleHint: queryRoleHint,
+            phraseSearch: query.Contains('"'),            // reproduce HybridSearchService.cs:189 derivation
+            boostTerms: null,                             // was _config.BoostTerms — a no-op on the tsquery
+            minScore: KeywordMinScore,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        // Map keyword results to domain entities
-        var keywordResults = hybridSearchResults
+        // Issue #2051: reproduce the documentIds post-filter that SearchAsync(Keyword) applied internally.
+        var filteredKeyword = documentIds is null
+            ? (IReadOnlyList<KeywordSearchResult>)rawKeyword
+            : rawKeyword
+                .Where(r => documentIds.Any(id => string.Equals(id.ToString(), r.PdfDocumentId, StringComparison.Ordinal)))
+                .ToList();
+
+        var keywordResults = filteredKeyword
             .Select((kr, index) => kr.ToDomainSearchResult(index + 1))
             .ToList();
 
         // Use RRF fusion domain service
-        return _rrfFusionService.FuseResults(vectorResults, keywordResults);
+        return _rrfFusionService.FuseResults(vectorResults, keywordResults, queryRoleHint: queryRoleHint);
     }
 }

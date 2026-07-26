@@ -213,7 +213,7 @@ function SectionBlock({
             chapter numeral encodes real order rather than decorating. */}
         <span
           aria-hidden="true"
-          className="font-display text-sm font-bold tabular-nums text-entity-game"
+          className="font-display text-sm font-bold tabular-nums text-entity-game-text"
         >
           {String(index + 1).padStart(2, '0')}
         </span>
@@ -366,7 +366,7 @@ export function MechanicCardView({ gameId }: MechanicCardViewProps): ReactElemen
             <Badge
               variant="outline"
               data-slot="mechanic-card-ai-badge"
-              className="border-entity-game/40 bg-entity-game/10 text-entity-game print:border-border print:bg-transparent print:text-foreground"
+              className="border-entity-game/40 bg-entity-game/10 text-entity-game-text print:border-border print:bg-transparent print:text-foreground"
             >
               <Link
                 href={HOW_IT_WORKS_HREF}

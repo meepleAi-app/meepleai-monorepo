@@ -77,9 +77,9 @@ export interface LibraryTabsProps<K extends string = LibraryEntityKey> {
  * here so the same classnames are also visible to the test grep + lint inventory.
  */
 const ACTIVE_CONTAINER_BG: Record<LibraryTabEntity, string> = {
-  game: 'bg-entity-game/10 text-entity-game',
+  game: 'bg-entity-game/10 text-entity-game-text',
   agent: 'bg-entity-agent/10 text-entity-agent',
-  kb: 'bg-entity-kb/10 text-entity-kb',
+  kb: 'bg-entity-kb/10 text-entity-kb-text',
   session: 'bg-entity-session/10 text-entity-session',
   chat: 'bg-entity-chat/10 text-entity-chat',
 };

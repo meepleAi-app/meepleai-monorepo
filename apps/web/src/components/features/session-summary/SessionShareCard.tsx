@@ -153,11 +153,7 @@ export function SessionShareCard({
   })();
 
   return (
-    <section
-      data-slot="session-share-card"
-      data-theme={theme}
-      className={clsx('flex flex-col gap-3', className)}
-    >
+    <section data-slot="session-share-card" className={clsx('flex flex-col gap-3', className)}>
       <div className="flex items-baseline justify-between">
         <h3 className="font-display text-base font-extrabold text-foreground">
           <span aria-hidden="true" className="mr-1.5">

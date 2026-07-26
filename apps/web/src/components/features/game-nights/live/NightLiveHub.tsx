@@ -556,7 +556,7 @@ function MobileBody({
                 : 'border-t-transparent text-muted-foreground'
               : t.tone === 'game'
                 ? active
-                  ? 'bg-entity-game/[0.08] border-t-entity-game text-entity-game'
+                  ? 'bg-entity-game/[0.08] border-t-entity-game text-entity-game-text'
                   : 'border-t-transparent text-muted-foreground'
                 : active
                   ? 'bg-entity-event/[0.08] border-t-entity-event text-entity-event'

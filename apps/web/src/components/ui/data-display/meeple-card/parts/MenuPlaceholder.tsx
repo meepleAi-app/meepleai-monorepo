@@ -14,12 +14,23 @@
  * button on every one of the 72 consumer card surfaces. Restore to default
  * (`tabIndex={0}`) when a real `onActionsMenu` handler prop is added.
  *
- * See #1856 DEC-4.
+ * `aria-hidden` removes this decorative-only placeholder from the accessibility
+ * tree so axe stops color-contrast auditing it in its `opacity-0` resting state
+ * (opacity:0 does NOT exempt a node from axe — only aria-hidden/display:none/
+ * visibility:hidden do). The semi-transparent `bg-white/85` glass composited
+ * over varying card covers + theme-reactive `text-foreground` yielded an
+ * unreliable/sub-AA glyph contrast on ~15 nodes per grid (issue #3289).
+ * Safe here because the button is non-functional and already `tabIndex={-1}`
+ * (no aria-hidden-focus conflict). Drop `aria-hidden` + restore focusability
+ * together when a real `onActionsMenu` handler is wired.
+ *
+ * See #1856 DEC-4, #3289.
  */
 export function MenuPlaceholder() {
   return (
     <button
       type="button"
+      aria-hidden="true"
       aria-label="Azioni"
       tabIndex={-1}
       onClick={e => e.stopPropagation()}

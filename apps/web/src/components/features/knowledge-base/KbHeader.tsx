@@ -53,7 +53,7 @@ export function KbHeader({ document, className }: KbHeaderProps): ReactElement {
         <h1 className="font-display text-lg font-extrabold text-entity-kb">{document.title}</h1>
         <span
           aria-label={`Tipo documento ${document.docType}`}
-          className="rounded-md bg-entity-kb/15 px-2 py-0.5 font-mono text-[11px] font-bold uppercase text-entity-kb"
+          className="rounded-md bg-entity-kb/15 px-2 py-0.5 font-mono text-[11px] font-bold uppercase text-entity-kb-text"
         >
           {document.docType}
         </span>

@@ -83,16 +83,20 @@ describe('SessionShareCard', () => {
     expect(screen.getByText('23 apr 2026 · 1h 24min · 4 giocatori')).toBeTruthy();
   });
 
-  it('marks data-theme="light" by default', () => {
+  it('marks data-preview-theme="light" by default', () => {
     render(<SessionShareCard {...DEFAULT_PROPS} />);
-    const root = document.querySelector('[data-slot="session-share-card"]')!;
-    expect(root.getAttribute('data-theme')).toBe('light');
+    // #3289: the theme marker moved off the <section> (its data-theme leaked a
+    // dark token scope onto the light-page card chrome → #ece6df-on-#f7f3ee
+    // 1.12:1). Theme now scopes ONLY to the self-contained preview surface,
+    // which carries data-preview-theme + inline styles.
+    const preview = document.querySelector('[data-slot="share-preview"]')!;
+    expect(preview.getAttribute('data-preview-theme')).toBe('light');
   });
 
-  it('marks data-theme="dark" when theme prop is dark', () => {
+  it('marks data-preview-theme="dark" when theme prop is dark', () => {
     render(<SessionShareCard {...DEFAULT_PROPS} theme="dark" />);
-    const root = document.querySelector('[data-slot="session-share-card"]')!;
-    expect(root.getAttribute('data-theme')).toBe('dark');
+    const preview = document.querySelector('[data-slot="share-preview"]')!;
+    expect(preview.getAttribute('data-preview-theme')).toBe('dark');
   });
 
   it('renders theme toggle radiogroup with 2 options', () => {

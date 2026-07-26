@@ -83,6 +83,28 @@ internal static class KnowledgeBaseMappers
     }
 
     /// <summary>
+    /// Maps a RAW keyword-search result (issue #3270 §6) to a domain SearchResult, carrying the
+    /// {PdfDocumentId}_{ChunkIndex} fusion identity + RoleTags. RelevanceScore is the raw ts_rank_cd
+    /// (clamped to Confidence's [0,1]); HybridFusionCore applies role-boost/legend downstream.
+    /// </summary>
+    public static Domain.Entities.SearchResult ToDomainSearchResult(this KeywordSearchResult result, int rank)
+    {
+        var pdfDocId = Guid.Parse(result.PdfDocumentId);
+        var score = Math.Clamp((double)result.RelevanceScore, 0.0, 1.0);
+        return new Domain.Entities.SearchResult(
+            id: Guid.NewGuid(),
+            vectorDocumentId: pdfDocId,          // same convention the HybridSearchResult mapper uses
+            textContent: result.Content,
+            pageNumber: result.PageNumber ?? 1,
+            relevanceScore: new Confidence(score),
+            rank: rank,
+            searchMethod: "keyword",
+            pdfDocumentId: pdfDocId,
+            chunkIndex: result.ChunkIndex,
+            roleTags: result.RoleTags);
+    }
+
+    /// <summary>
     /// Extracts float[] from EmbeddingResult.
     /// EmbeddingResult contains List&lt;float[]&gt;, we take the first one for single text queries.
     /// </summary>

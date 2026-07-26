@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Services.Chunking;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
+using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
@@ -434,6 +435,12 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             // Issue #4215: Mark as Ready (final state)
             pdfDoc.ProcessingState = nameof(PdfProcessingState.Ready);
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
+            // Issue #3269 (SP3): stamp the current indexer version so a completed fresh ingest is
+            // v1.1 (heading-aware) and `IndexerVersion == null` means only true pre-versioning
+            // legacy — keeps the bulk re-index selector from redundantly re-processing fresh docs.
+            // Null-coalescing (not overwrite): a reindex path already stamped its chosen version at
+            // reset (ReindexDocumentCommandHandler), so we preserve that explicit choice here.
+            pdfDoc.IndexerVersion ??= IndexerVersionRegistry.Current.Version;
             try
             {
                 await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

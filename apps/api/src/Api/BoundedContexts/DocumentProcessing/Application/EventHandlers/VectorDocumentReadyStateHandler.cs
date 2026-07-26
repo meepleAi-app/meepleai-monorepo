@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Observability;
 using Api.SharedKernel.Application.IntegrationEvents;
@@ -46,6 +47,10 @@ internal sealed class VectorDocumentReadyStateHandler
         if (pdfEntity != null)
         {
             pdfEntity.ProcessingState = nameof(PdfProcessingState.Ready);
+            // Issue #3269 (SP3): stamp the current indexer version on the compensating Ready
+            // transition too, so vector-indexed docs aren't left with a null (legacy) marker.
+            // Null-coalescing preserves an explicit version already stamped by a reindex reset.
+            pdfEntity.IndexerVersion ??= IndexerVersionRegistry.Current.Version;
             try
             {
                 await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

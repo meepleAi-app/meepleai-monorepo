@@ -74,7 +74,7 @@
     <PackageReference Include="itext7.bouncy-castle-adapter" Version="9.4.0" />
     <!-- Magick.NET-Q8-AnyCPU (Apache 2.0): replaces SixLabors.ImageSharp 3.x (Split License,
          requires commercial paid). DEC-3d-1 LOCKED 2026-06-20, issue #2055 Phase G AC-G2. -->
-    <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="14.14.0" />
+    <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="14.15.0" />
     <PackageReference Include="MediatR" Version="14.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.11" />
     <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="10.0.8" />

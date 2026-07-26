@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Tests.Constants;
@@ -146,10 +147,16 @@ public sealed class BulkReindexReadySelectorIntegrationTests : IAsyncLifetime
             .Setup(r => r.CountByStatusAsync(JobStatus.Queued, It.IsAny<CancellationToken>()))
             .ReturnsAsync(0);
 
+        var healthProbeMock = new Mock<IPdfExtractorHealthProbe>();
+        healthProbeMock
+            .Setup(p => p.IsHealthyAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
         var handler = new BulkReindexReadyCommandHandler(
             _dbContext!,
             mediatorMock.Object,
             jobRepoMock.Object,
+            healthProbeMock.Object,
             NullLogger<BulkReindexReadyCommandHandler>.Instance);
 
         var result = await handler.Handle(

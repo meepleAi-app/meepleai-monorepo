@@ -38,7 +38,7 @@
     <PackageReference Include="FluentValidation" Version="12.1.1" />
     <!-- Mirror DEC-3d-1 (ADR-2026-06-09): Magick.NET-Q8-AnyCPU replaces SixLabors.ImageSharp.
          Test fixtures rely on the same image library used by production code. -->
-    <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="14.14.0" />
+    <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="14.15.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.11" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.0.0" />
     <PackageReference Include="Moq" Version="4.20.72" />

@@ -425,6 +425,27 @@ game-reset-verify: ## Run verification gates after EF migration applied (ENV=dev
 game-reset-rollback-rehearse: ## Run disposable docker rollback rehearsal
 	../tests/scripts/game-reset/rehearse-rollback.sh
 
+# === Corpus re-index orchestration (issue #3269 SP3 Slice 3 / D4) ===
+# Script lives in infra/scripts/reindex-corpus/. Wraps POST /admin/queue/reindex-ready
+# in a drain loop until the whole Ready corpus is re-indexed to heading-aware v1.1.
+
+reindex-corpus-help: ## Show corpus re-index (SP3 #3269) workflow help
+	@echo "Corpus big-bang re-index (SP3 #3269 D4) — usage:"
+	@echo "  make reindex-corpus ENV=staging EXTRA=--dry-run   # 1. preview (verifies auth, prints plan, NO enqueue)"
+	@echo "  make reindex-corpus ENV=staging                   # 2. real run: loop reindex-ready until corpus drained"
+	@echo ""
+	@echo "For prod, pass IMEANIT=--i-mean-it (production safety guard) — always dry-run first:"
+	@echo "  make reindex-corpus ENV=prod EXTRA=--dry-run IMEANIT=--i-mean-it"
+	@echo "  make reindex-corpus ENV=prod IMEANIT=--i-mean-it"
+	@echo ""
+	@echo "Per env, create infra/scripts/reindex-corpus/.env.<ENV> from .env.example (NEVER commit filled files)."
+	@echo "Full runbook: docs/for-developers/operations/2026-07-26-corpus-reindex-runbook.md"
+
+reindex-corpus: ## Big-bang re-index Ready PDFs to heading-aware v1.1 (ENV=staging|prod|dev; EXTRA=--dry-run for preview; prod needs IMEANIT=--i-mean-it)
+	@test -n "$(ENV)" || (echo "ENV required: make reindex-corpus ENV=staging" && exit 64)
+	@test -f scripts/reindex-corpus/.env.$(ENV) || (echo "Missing scripts/reindex-corpus/.env.$(ENV) — copy from .env.example" && exit 66)
+	./scripts/reindex-corpus/reindex-corpus.sh scripts/reindex-corpus/.env.$(ENV) $(EXTRA) $(IMEANIT)
+
 .PHONY: dev dev-core dev-down \
         tunnel tunnel-stop tunnel-status integration-check integration \
         integration-down work work-stop smoke smoke-staging smoke-pg-readback staging staging-minimal staging-with-tutor staging-tutor-down staging-core staging-down prod prod-down \
@@ -436,4 +457,5 @@ game-reset-rollback-rehearse: ## Run disposable docker rollback rehearsal
         sec-scan sec-pentest security-audit test-e2e test-visual test-perf validate-workflows \
         backup backup-verify backup-restore-test backup-status backup-cron-install backup-cron-show \
         db-snapshot db-snapshot-sanitized db-reset-migrations db-restore-snapshot db-rollback-safetynet \
-        game-reset-help game-reset-backup game-reset-mapping game-reset-relink game-reset-verify game-reset-rollback-rehearse
+        game-reset-help game-reset-backup game-reset-mapping game-reset-relink game-reset-verify game-reset-rollback-rehearse \
+        reindex-corpus reindex-corpus-help

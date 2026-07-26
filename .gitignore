@@ -288,6 +288,10 @@ infra/backups/*.txt
 infra/scripts/game-reset/.env.*
 !infra/scripts/game-reset/.env.example
 
+# Per-environment config for corpus re-index scripts (#3269; never commit actual values)
+infra/scripts/reindex-corpus/.env.*
+!infra/scripts/reindex-corpus/.env.example
+
 # Claude Design source bundle (derived folder linked to claude.ai/design, regenerated on demand via cp script)
 # Note: claude-design-handoff/ is intentionally NOT gitignored — exported prototypes are committed
 # so they're shareable across terminals and reviewable via PR (see folder README)

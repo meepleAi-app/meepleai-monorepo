@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -77,6 +78,53 @@ public sealed class RrfFusionDomainServiceTests
         result.Should().HaveCount(1);
         result.First().RelevanceScore.Value.Should().BeApproximately(0.87, 0.0001,
             "the real cosine must survive fusion, not be overwritten by the ~0.49 rank-based RRF score");
+    }
+
+    [Fact]
+    public void FuseResults_BothArms_KeepsCosineInRelevanceScore_NotHybridScore()
+    {
+        // Issue #3270 Task 5 / #2712: RrfFusionDomainService now delegates to HybridFusionCore for
+        // scoring, but RelevanceScore must still be the carried cosine, never the hybrid/RRF score.
+        var pdf = Guid.NewGuid();
+        var vector = new List<SearchResult>
+        {
+            new(Guid.NewGuid(), Guid.NewGuid(), "content", 1, new Confidence(0.91), 1, "vector",
+                pdfDocumentId: pdf, chunkIndex: 0, roleTags: GameBookRole.None)
+        };
+        var keyword = new List<SearchResult>
+        {
+            new(Guid.NewGuid(), Guid.NewGuid(), "content", 1, new Confidence(0.20), 1, "keyword",
+                pdfDocumentId: pdf, chunkIndex: 0, roleTags: GameBookRole.None)
+        };
+
+        var fused = _service.FuseResults(vector, keyword);
+
+        fused.Should().HaveCount(1);
+        // #2712: RelevanceScore is the carried cosine (0.91), NOT an RRF/hybrid value.
+        fused[0].RelevanceScore.Value.Should().BeApproximately(0.91, 1e-6);
+        fused[0].SearchMethod.Should().Be("hybrid");
+    }
+
+    [Fact]
+    public void FuseResults_RoleHint_ReordersByRoleBoost_OrderOnly()
+    {
+        // Issue #3270 Task 5: the new trailing queryRoleHint param routes through to
+        // HybridFusionCore's role-boost, reordering results while leaving RelevanceScore untouched.
+        var setupPdf = Guid.NewGuid();
+        var plainPdf = Guid.NewGuid();
+        var vector = new List<SearchResult>
+        {
+            new(Guid.NewGuid(), Guid.NewGuid(), "plain", 1, new Confidence(0.90), 1, "vector",
+                pdfDocumentId: plainPdf, chunkIndex: 0, roleTags: GameBookRole.None),
+            new(Guid.NewGuid(), Guid.NewGuid(), "setup", 1, new Confidence(0.80), 2, "vector",
+                pdfDocumentId: setupPdf, chunkIndex: 0, roleTags: GameBookRole.Setup)
+        };
+        var keyword = new List<SearchResult>();
+
+        var fused = _service.FuseResults(vector, keyword, queryRoleHint: GameBookRole.Setup);
+
+        fused[0].TextContent.Should().Be("setup");            // role-boost lifted it
+        fused[0].RelevanceScore.Value.Should().BeApproximately(0.80, 1e-6); // cosine preserved
     }
 
     [Fact]
@@ -341,6 +389,11 @@ public sealed class RrfFusionDomainServiceTests
 
     private static SearchResult CreateSearchResult(Guid documentId, int rank, string method)
     {
+        // #3270 Task 5: GetChunkKey is now "{PdfDocumentId}_{ChunkIndex}" (unified identity across
+        // vector/keyword arms). Reuse documentId as PdfDocumentId (chunkIndex fixed at 0) so the key
+        // stays as distinct/overlapping as it was under the old VectorDocumentId-based key: distinct
+        // documentId values across calls -> distinct chunks; the SAME documentId reused across a
+        // vector+keyword pair -> same chunk, fusing together as each test's arrange already implies.
         return new SearchResult(
             id: Guid.NewGuid(),
             vectorDocumentId: documentId,
@@ -348,7 +401,9 @@ public sealed class RrfFusionDomainServiceTests
             pageNumber: 1,
             relevanceScore: new Confidence(0.8),
             rank: rank,
-            searchMethod: method);
+            searchMethod: method,
+            pdfDocumentId: documentId,
+            chunkIndex: 0);
     }
 
     #endregion

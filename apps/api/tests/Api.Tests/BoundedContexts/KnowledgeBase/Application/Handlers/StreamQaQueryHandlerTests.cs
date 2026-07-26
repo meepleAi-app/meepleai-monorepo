@@ -645,7 +645,7 @@ public class StreamQaQueryHandlerTests
             .ReturnsAsync(new List<HybridSearchResult>());
 
         _rrfFusionServiceMock
-            .Setup(x => x.FuseResults(It.IsAny<List<DomainSearchResult>>(), It.IsAny<List<DomainSearchResult>>(), It.IsAny<int>()))
+            .Setup(x => x.FuseResults(It.IsAny<List<DomainSearchResult>>(), It.IsAny<List<DomainSearchResult>>(), It.IsAny<int>(), It.IsAny<GameBookRole>()))
             .Returns(new List<DomainSearchResult> { lowScoreResult });
 
         SetupPromptMocks(QuestionType.General);
@@ -750,7 +750,7 @@ public class StreamQaQueryHandlerTests
             .ReturnsAsync(new List<HybridSearchResult>());
 
         _rrfFusionServiceMock
-            .Setup(x => x.FuseResults(It.IsAny<List<DomainSearchResult>>(), It.IsAny<List<DomainSearchResult>>(), It.IsAny<int>()))
+            .Setup(x => x.FuseResults(It.IsAny<List<DomainSearchResult>>(), It.IsAny<List<DomainSearchResult>>(), It.IsAny<int>(), It.IsAny<GameBookRole>()))
             .Returns(highQualityResults);
 
         SetupPromptMocks(QuestionType.General);
@@ -1045,7 +1045,8 @@ public class StreamQaQueryHandlerTests
             .Setup(x => x.FuseResults(
                 It.IsAny<List<DomainSearchResult>>(),
                 It.IsAny<List<DomainSearchResult>>(),
-                It.IsAny<int>()))  // rrfK parameter
+                It.IsAny<int>(),  // rrfK parameter
+                It.IsAny<GameBookRole>()))
             .Returns(new List<DomainSearchResult> { fusedResult });
     }
 

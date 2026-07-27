@@ -75,11 +75,12 @@ internal sealed class BulkReindexReadyCommandHandler
 
         // Pace against the queue cap: ReindexDocumentCommand fans out to EnqueuePdfCommand →
         // ProcessingJob.Create, whose guard rejects when Queued + Processing >= MaxQueueSize and
-        // throws a plain InvalidOperationException that ReindexDocumentCommandHandler swallows
-        // AFTER already resetting the PDF to Pending — a phantom success that leaves the doc broken.
-        // We MUST mirror EnqueuePdfCommandHandler's EXACT capacity computation (Queued + Processing)
-        // so we never dispatch beyond the real cap. Remaining docs are skipped with a retryable
-        // error so the admin can re-run to drain the rest as the queue empties.
+        // throws a ConflictException. ReindexDocumentCommandHandler now rolls back its destructive
+        // reset on that failure (issue #3269 B10) instead of leaving a phantom success, but we still
+        // pace here so we don't dispatch reindexes that would only be rolled back. We MUST mirror
+        // EnqueuePdfCommandHandler's EXACT capacity computation (Queued + Processing) so we never
+        // dispatch beyond the real cap. Remaining docs are skipped with a retryable error so the
+        // admin can re-run to drain the rest as the queue empties.
         var queuedCount = await _jobRepository
             .CountByStatusAsync(JobStatus.Queued, cancellationToken)
             .ConfigureAwait(false);

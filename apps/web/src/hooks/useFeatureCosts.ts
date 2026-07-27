@@ -14,7 +14,7 @@ import type {
   CostBreakdownRange,
 } from '@/lib/api/schemas/business-cost.schemas';
 
-export const FEATURE_COSTS_QUERY_KEY = (range: CostBreakdownRange) =>
+const FEATURE_COSTS_QUERY_KEY = (range: CostBreakdownRange) =>
   ['admin', 'business', 'per-feature', range] as const;
 
 export function useFeatureCosts(range: CostBreakdownRange) {

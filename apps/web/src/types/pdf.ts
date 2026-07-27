@@ -110,13 +110,6 @@ export function getPdfStateLabel(state: PdfState): string {
 }
 
 /**
- * Helper to check if PdfState is terminal (no more processing)
- */
-export function isPdfStateTerminal(state: PdfState): boolean {
-  return state === 'ready' || state === 'failed';
-}
-
-/**
  * Helper to get PdfState order (for progress visualization)
  */
 export function getPdfStateOrder(state: PdfState): number {

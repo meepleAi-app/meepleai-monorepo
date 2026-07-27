@@ -43,7 +43,3 @@ export function useFeatureFlag(key: string): boolean {
   const { isEnabled } = useContext(FeatureFlagContext);
   return isEnabled(key);
 }
-
-export function useFeatureFlagContext() {
-  return useContext(FeatureFlagContext);
-}

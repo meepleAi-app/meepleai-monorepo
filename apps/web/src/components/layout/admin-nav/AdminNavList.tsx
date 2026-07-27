@@ -14,7 +14,7 @@ const GROUP_ICON_COLOR: Record<AdminNavGroup['id'], string> = {
   D: 'text-entity-agent', // AI Tooling & Data Quality (amber)
 };
 
-export function isPathActive(pathname: string, href: string): boolean {
+function isPathActive(pathname: string, href: string): boolean {
   const hrefPath = href.split('?')[0];
   return pathname === hrefPath || pathname.startsWith(hrefPath + '/');
 }

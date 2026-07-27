@@ -14,13 +14,13 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import type { RegularDto } from '@/lib/api/schemas/game-nights.schemas';
 
-export const regularsKeys = {
+const regularsKeys = {
   all: ['game-nights', 'wizard', 'regulars'] as const,
   list: (limit: number) => [...regularsKeys.all, { limit }] as const,
 };
 
-export const REGULARS_DEFAULT_LIMIT = 10;
-export const REGULARS_MAX_LIMIT = 30;
+const REGULARS_DEFAULT_LIMIT = 10;
+const REGULARS_MAX_LIMIT = 30;
 
 export interface UseRegularsForUserOptions {
   limit?: number;

@@ -13,28 +13,11 @@
  */
 export const FEEDBACK_OUTCOMES = {
   HELPFUL: 'helpful',
-  NOT_HELPFUL: 'not-helpful',  // Note: hyphen, not underscore
-  INCORRECT: 'incorrect'
+  NOT_HELPFUL: 'not-helpful', // Note: hyphen, not underscore
+  INCORRECT: 'incorrect',
 } as const;
 
 /**
  * Type for feedback outcome values
  */
-export type FeedbackOutcome = typeof FEEDBACK_OUTCOMES[keyof typeof FEEDBACK_OUTCOMES];
-
-/**
- * Type guard to check if a value is a valid feedback outcome
- */
-export function isValidFeedbackOutcome(value: unknown): value is FeedbackOutcome {
-  return typeof value === 'string' &&
-    Object.values(FEEDBACK_OUTCOMES).includes(value as FeedbackOutcome);
-}
-
-/**
- * User-facing labels for feedback outcomes (for UI display)
- */
-export const FEEDBACK_OUTCOME_LABELS: Record<FeedbackOutcome, string> = {
-  [FEEDBACK_OUTCOMES.HELPFUL]: 'Helpful',
-  [FEEDBACK_OUTCOMES.NOT_HELPFUL]: 'Not Helpful',
-  [FEEDBACK_OUTCOMES.INCORRECT]: 'Incorrect'
-};
+export type FeedbackOutcome = (typeof FEEDBACK_OUTCOMES)[keyof typeof FEEDBACK_OUTCOMES];

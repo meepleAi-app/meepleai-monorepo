@@ -46,7 +46,7 @@ import {
 // expectedPage/sourceQuote only).
 // ──────────────────────────────────────────────────────────────────────────
 
-export const GoldenClaimFormSchema = z.object({
+const GoldenClaimFormSchema = z.object({
   section: MechanicSectionSchema,
   statement: z
     .string()

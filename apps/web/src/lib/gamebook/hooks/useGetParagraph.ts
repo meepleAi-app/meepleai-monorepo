@@ -68,7 +68,7 @@ export interface UseGetParagraphLegacyOptions {
  * URL paths differ on the wire too, so this is a defensive guarantee, not
  * an optimisation.
  */
-export const paragraphKeys = {
+const paragraphKeys = {
   byPage: (batchId: string, pageNumber: number, hint?: string) =>
     ['gamebook', 'paragraph', 'byPage', batchId, pageNumber, hint ?? ''] as const,
   byParagraph: (batchId: string, paragraphNumber: number, hint?: string) =>

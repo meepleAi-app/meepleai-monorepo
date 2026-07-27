@@ -66,7 +66,7 @@ export interface ModelPricing {
   pricingSource?: string;
 }
 
-export const DEFAULT_MODEL_PRICING: ModelPricing[] = [
+const DEFAULT_MODEL_PRICING: ModelPricing[] = [
   // Anthropic Claude
   {
     modelId: 'claude-opus-4.5',
@@ -208,7 +208,7 @@ export interface ConfigurableStrategyConfig {
   primaryModels: string[];
 }
 
-export const DEFAULT_CONFIGURABLE_STRATEGIES: Record<RagStrategy, ConfigurableStrategyConfig> = {
+const DEFAULT_CONFIGURABLE_STRATEGIES: Record<RagStrategy, ConfigurableStrategyConfig> = {
   FAST: {
     name: 'FAST',
     displayName: 'FAST',
@@ -358,7 +358,7 @@ export interface ConfigurableLayerConfig {
   dependencies: string[];
 }
 
-export const DEFAULT_CONFIGURABLE_LAYERS: ConfigurableLayerConfig[] = [
+const DEFAULT_CONFIGURABLE_LAYERS: ConfigurableLayerConfig[] = [
   {
     id: 'routing',
     name: 'Intelligent Routing',
@@ -489,7 +489,7 @@ export interface RagGlobalConfig {
   };
 }
 
-export const DEFAULT_GLOBAL_CONFIG: RagGlobalConfig = {
+const DEFAULT_GLOBAL_CONFIG: RagGlobalConfig = {
   tokenDistribution: {
     inputRatio: { estimated: 0.7 },
     outputRatio: { estimated: 0.3 },

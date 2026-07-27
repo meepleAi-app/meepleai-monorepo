@@ -5,12 +5,11 @@
  * Issue #3892: Play Records Frontend UI
  */
 
-import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { playRecordsApi } from '@/lib/api/play-records.api';
 import type {
   PlayRecordDto,
-  PlayHistoryResponse,
   CreatePlayRecordRequest,
   AddPlayerRequest,
   RecordScoreRequest,
@@ -77,33 +76,6 @@ export function usePlayHistory(params: {
     queryKey: playRecordsKeys.list(params),
     queryFn: () => playRecordsApi.getUserHistory(params),
     retry: false,
-  });
-}
-
-/**
- * Infinite query for play history (scroll pagination)
- */
-export function useInfinitePlayHistory(params: {
-  pageSize?: number;
-  gameId?: string;
-  status?: string;
-  dateFrom?: string;
-  dateTo?: string;
-}) {
-  return useInfiniteQuery({
-    queryKey: playRecordsKeys.list(params),
-    queryFn: ({ pageParam = 1 }) =>
-      playRecordsApi.getUserHistory({
-        ...params,
-        page: pageParam,
-      }),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage: PlayHistoryResponse) => {
-      if (lastPage.page < lastPage.totalPages) {
-        return lastPage.page + 1;
-      }
-      return undefined;
-    },
   });
 }
 
@@ -196,37 +168,6 @@ export function useRecordScore(recordId: string) {
     mutationFn: (score: RecordScoreRequest) => playRecordsApi.recordScore(recordId, score),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: playRecordsKeys.detail(recordId) });
-      queryClient.invalidateQueries({ queryKey: playRecordsKeys.statisticsAll() });
-    },
-  });
-}
-
-/**
- * Start a play record (mark as InProgress)
- */
-export function useStartRecord(recordId: string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: () => playRecordsApi.startRecord(recordId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: playRecordsKeys.detail(recordId) });
-      queryClient.invalidateQueries({ queryKey: playRecordsKeys.lists() });
-    },
-  });
-}
-
-/**
- * Complete a play record
- */
-export function useCompleteRecord(recordId: string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: () => playRecordsApi.completeRecord(recordId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: playRecordsKeys.detail(recordId) });
-      queryClient.invalidateQueries({ queryKey: playRecordsKeys.lists() });
       queryClient.invalidateQueries({ queryKey: playRecordsKeys.statisticsAll() });
     },
   });

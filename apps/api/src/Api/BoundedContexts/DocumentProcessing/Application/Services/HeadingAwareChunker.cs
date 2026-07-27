@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
+using Api.Constants;
 using Api.Services;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Services;
@@ -36,6 +37,48 @@ internal static class HeadingAwareChunker
             .ChunkDocumentAsync(extractedDocument, config: null, cancellationToken)
             .ConfigureAwait(false);
 
-        return HierarchicalChunkMapper.ToDocumentChunks(hierarchicalChunks);
+        var chunks = HierarchicalChunkMapper.ToDocumentChunks(hierarchicalChunks);
+
+        // #3269 fragment filter: drop decorative/vertical-text artefacts ("A N", "N",
+        // "I L E X Y R F") that unstructured emits as bogus Title elements on complex-layout PDFs.
+        // They pollute retrieval — a query token like "N" ("N giocatori") matches such micro-chunks
+        // with a very high ts_rank (short chunk => high normalized rank), burying the real section
+        // chunk. Keep only chunks whose Text carries a real word (a run of >= MinSubstantiveLetterRun
+        // consecutive letters). The criterion is absolute and monotone across the parent⊇child
+        // hierarchy (a parent concatenates its children), so filtering never orphans a child.
+        return chunks.Where(IsSubstantial).ToList();
+    }
+
+    /// <summary>
+    /// True when <paramref name="chunk"/> carries at least one run of
+    /// <see cref="ChunkingConstants.MinSubstantiveLetterRun"/> consecutive Unicode letters — i.e. one
+    /// real word. Decorative fragments ("A N", "I L E X Y R F", digit/symbol-only runs) have none and
+    /// are dropped. Single scan (no regex) — allocation-free and DoS-safe.
+    /// </summary>
+    internal static bool IsSubstantial(DocumentChunk chunk)
+    {
+        var text = chunk.Text;
+        if (string.IsNullOrEmpty(text))
+        {
+            return false;
+        }
+
+        var run = 0;
+        foreach (var ch in text)
+        {
+            if (char.IsLetter(ch))
+            {
+                if (++run >= ChunkingConstants.MinSubstantiveLetterRun)
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                run = 0;
+            }
+        }
+
+        return false;
     }
 }

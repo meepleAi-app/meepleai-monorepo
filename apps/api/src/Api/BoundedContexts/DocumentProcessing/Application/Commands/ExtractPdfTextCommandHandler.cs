@@ -137,9 +137,13 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
                 : System.Text.Json.JsonSerializer.Serialize(extractResult.StructuredElements);
             pdf.PageCount = extractResult.TotalPages;
             pdf.CharacterCount = extractResult.TotalCharacters;
-            pdf.ProcessingState = nameof(PdfProcessingState.Ready);
+            // B13: text-only extraction must NOT stamp a terminal Ready state (no chunk/embed/index
+            // has run, so the document is unsearchable). The domain state machine forbids
+            // Extracting → Ready — Ready only follows Indexing. Leave the document in Extracting
+            // (set earlier at the top of this try block); in the happy path the batch callers
+            // immediately send IndexPdfCommand which advances Extracting → Indexing → Ready.
+            // Clearing ProcessingError on a successful extract remains correct.
             pdf.ProcessingError = null;
-            pdf.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
 
             _logger.LogInformation("💾 [EXTRACT-DEBUG] Calling SaveChangesAsync for PDF {PdfId}", pdfId);
             int changeCount;

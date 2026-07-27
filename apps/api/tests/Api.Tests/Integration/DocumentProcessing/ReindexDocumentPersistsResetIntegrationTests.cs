@@ -1,10 +1,14 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.DocumentProcessing;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
@@ -239,5 +243,88 @@ public sealed class ReindexDocumentPersistsResetIntegrationTests : IAsyncLifetim
             .Where(tc => tc.PdfDocumentId == pdfId)
             .ToListAsync(TestCancellationToken);
         remainingChunks.Should().BeEmpty("all TextChunks for the document must be deleted on reindex");
+    }
+
+    /// <summary>
+    /// Fills the processing queue to <see cref="ProcessingJob.MaxQueueSize"/> with Queued jobs (all
+    /// pointing at one throwaway PDF) so the next <c>EnqueuePdfCommand → ProcessingJob.Create</c>
+    /// hits the capacity guard and throws <see cref="ConflictException"/>. Seeded via an isolated
+    /// scope so the rows are committed before the reindex runs.
+    /// </summary>
+    private async Task SaturateQueueAsync()
+    {
+        using var seedScope = _serviceProvider!.CreateScope();
+        var seedDb = seedScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var fillerPdfId = Guid.NewGuid();
+        seedDb.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = fillerPdfId,
+            SharedGameId = TestSharedGameId,
+            UploadedByUserId = TestUserId,
+            FileName = $"filler-{fillerPdfId:N}.pdf",
+            FilePath = $"/tmp/{fillerPdfId:N}.pdf",
+            FileSizeBytes = 1024,
+            ContentType = "application/pdf",
+            ProcessingState = "Pending",
+            UploadedAt = DateTime.UtcNow,
+        });
+
+        for (var i = 0; i < ProcessingJob.MaxQueueSize; i++)
+        {
+            seedDb.Set<ProcessingJobEntity>().Add(new ProcessingJobEntity
+            {
+                Id = Guid.NewGuid(),
+                PdfDocumentId = fillerPdfId,
+                UserId = TestUserId,
+                Status = nameof(JobStatus.Queued),
+                Priority = (int)ProcessingPriority.Normal,
+                CreatedAt = DateTimeOffset.UtcNow,
+                RetryCount = 0,
+                MaxRetries = 3,
+            });
+        }
+
+        await seedDb.SaveChangesAsync(TestCancellationToken);
+    }
+
+    [Fact]
+    public async Task Reindex_WhenQueueFull_RollsBackReset_NoPhantomStrand()
+    {
+        var pdfId = await SeedReadyPdfWithChunksAsync(); // Ready, IndexerVersion "v1.0", 2 chunks
+        await SaturateQueueAsync();                      // queue at MaxQueueSize → enqueue will fail
+
+        var act = () => _mediator!.Send(
+            new ReindexDocumentCommand(pdfId, IndexerVersionRegistry.Current.Version),
+            TestCancellationToken);
+
+        // (a) The failed enqueue surfaces as a retryable conflict — never a phantom success.
+        await act.Should().ThrowAsync<ConflictException>();
+
+        // Verify from a fresh scope: the destructive reset was ROLLED BACK.
+        using var verifyScope = _serviceProvider!.CreateScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var reloaded = await verifyDb.PdfDocuments
+            .AsNoTracking()
+            .FirstAsync(p => p.Id == pdfId, TestCancellationToken);
+        // (b) PDF untouched: still Ready, still v1.0 (B4 — NOT stamped to the target, so recovery
+        // selectors still see it), chunks intact.
+        reloaded.ProcessingState.Should().Be(
+            "Ready", "the destructive reset must roll back when the enqueue fails (no phantom strand)");
+        reloaded.IndexerVersion.Should().Be(
+            "v1.0", "IndexerVersion must NOT be stamped to the target on a rolled-back reindex (B4)");
+
+        var chunks = await verifyDb.TextChunks
+            .AsNoTracking()
+            .Where(tc => tc.PdfDocumentId == pdfId)
+            .ToListAsync(TestCancellationToken);
+        chunks.Should().HaveCount(2, "the chunk delete must roll back with the reset — no data loss");
+
+        // (c) No ProcessingJob was created for the target PDF (the fan-out left no strand).
+        var jobForPdf = await verifyDb.Set<ProcessingJobEntity>()
+            .AsNoTracking()
+            .AnyAsync(j => j.PdfDocumentId == pdfId, TestCancellationToken);
+        jobForPdf.Should().BeFalse("a rolled-back reindex must not leave an orphan job for the PDF");
     }
 }

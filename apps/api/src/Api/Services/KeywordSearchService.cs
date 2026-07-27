@@ -138,10 +138,10 @@ internal class KeywordSearchService : IKeywordSearchService
 
             var keywordResults = results.Select(r => new KeywordSearchResult
             {
-                ChunkId = r.Id,
+                ChunkId = r.Id.ToString(),
                 Content = r.Content,
-                PdfDocumentId = r.PdfDocumentId,
-                GameId = Guid.Parse(r.GameId),
+                PdfDocumentId = r.PdfDocumentId.ToString(),
+                GameId = r.GameId,
                 ChunkIndex = r.ChunkIndex,
                 PageNumber = r.PageNumber,
                 RelevanceScore = r.RelevanceScore,
@@ -232,9 +232,9 @@ internal class KeywordSearchService : IKeywordSearchService
 
             return results.Select(r => new KeywordDocumentResult
             {
-                DocumentId = r.Id,
+                DocumentId = r.Id.ToString(),
                 FileName = r.FileName,
-                GameId = Guid.Parse(r.GameId),
+                GameId = r.GameId,
                 RelevanceScore = r.RelevanceScore,
                 PageCount = r.PageCount
             }).ToList();
@@ -505,10 +505,14 @@ internal class KeywordSearchService : IKeywordSearchService
 /// </summary>
 internal class KeywordSearchRawResult
 {
-    public string Id { get; set; } = default!;
+    // text_chunks."Id"/"PdfDocumentId"/"GameId" are Postgres `uuid` columns. Npgsql refuses to read
+    // a uuid field into a `string` (InvalidCastException), so these MUST be typed as Guid — projecting
+    // them as string silently broke every keyword search that returned rows (uncovered by #3269's FTS
+    // integration test, since only the pure helpers had unit coverage).
+    public Guid Id { get; set; }
     public string Content { get; set; } = default!;
-    public string PdfDocumentId { get; set; } = default!;
-    public string GameId { get; set; } = default!;
+    public Guid PdfDocumentId { get; set; }
+    public Guid GameId { get; set; }
     public int ChunkIndex { get; set; }
     public int? PageNumber { get; set; }
     public float RelevanceScore { get; set; }
@@ -525,9 +529,11 @@ internal class KeywordSearchRawResult
 /// </summary>
 internal class KeywordDocumentRawResult
 {
-    public string Id { get; set; } = default!;
+    // pdf_documents."Id"/"GameId" are Postgres `uuid` columns — same Npgsql uuid→string cast trap as
+    // KeywordSearchRawResult (they must be Guid, not string).
+    public Guid Id { get; set; }
     public string FileName { get; set; } = default!;
-    public string GameId { get; set; } = default!;
+    public Guid GameId { get; set; }
     public int? PageCount { get; set; }
     public float RelevanceScore { get; set; }
 }

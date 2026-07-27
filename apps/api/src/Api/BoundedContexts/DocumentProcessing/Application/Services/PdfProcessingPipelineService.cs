@@ -427,10 +427,17 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 return; // CRITICAL: do not throw — Quartz must see job as successful
             }
 
-            // Step 4b: Index in pgvector
+            // Step 4b: Index in pgvector.
+            // Order matters: SaveTextChunksAsync MUST run BEFORE IndexInVectorStoreAsync.
+            // IndexInVectorStoreAsync denormalizes role_tags + source_chunk_id onto the pgvector
+            // rows by reading the freshly-saved (and freshly-classified) text_chunks keyed by
+            // ChunkIndex. Both consume the same `translatedChunks`/`allChunkInputs` order, so the
+            // join by ChunkIndex is stable. If indexing ran first the lookup would be empty and every
+            // pgvector row would be born with role_tags=0 / source_chunk_id=null (silent corpus-wide
+            // role-boost loss — see FusionSignals.ComputeRoleMatchBoost).
             _logger.LogInformation("[PdfPipeline] Step 4b/5: Indexing {ChunkCount} chunks for {PdfId}", allChunkInputs.Count, pdfId);
-            await IndexInVectorStoreAsync(pdfDoc, translatedChunks, embeddings, cancellationToken).ConfigureAwait(false);
             await SaveTextChunksAsync(pdfDoc, allChunkInputs, cancellationToken).ConfigureAwait(false);
+            await IndexInVectorStoreAsync(pdfDoc, translatedChunks, embeddings, cancellationToken).ConfigureAwait(false);
 
             // Issue #4215: Mark as Ready (final state)
             pdfDoc.ProcessingState = nameof(PdfProcessingState.Ready);
@@ -866,6 +873,17 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 .Select(tc => new { tc.Id, tc.ChunkIndex, tc.RoleTags })
                 .ToDictionaryAsync(tc => tc.ChunkIndex, cancellationToken)
                 .ConfigureAwait(false);
+
+            // Tripwire: SaveTextChunksAsync must have run earlier in ProcessAsync so this lookup is
+            // populated. If it is empty while we have chunks to index, the pgvector rows would be
+            // denormalized with role_tags=0 / source_chunk_id=null (the ordering bug this method's
+            // precondition guards against). Surface it rather than silently degrading RAG quality.
+            if (textChunkLookup.Count == 0 && translatedChunks.Count > 0)
+            {
+                _logger.LogWarning(
+                    "[PdfPipeline] text_chunks lookup empty for PDF {PdfId} while indexing {ChunkCount} chunks — role_tags/source_chunk_id will not be denormalized onto pgvector rows. Was SaveTextChunksAsync run before IndexInVectorStoreAsync?",
+                    pdfDoc.Id, translatedChunks.Count);
+            }
 
             var modelName = _embeddingService.GetModelName();
             var embeddingEntities = translatedChunks.Select((item, i) =>

@@ -7,6 +7,7 @@ internal readonly record struct FusionCandidate(
     string Key,
     string Content,
     GameBookRole RoleTags,
+    string? Heading,   // #3270: chunk heading-path label (nullable) for the heading-match boost
     int Rank,          // 1-based within THIS arm (cosine desc / ts_rank_cd desc)
     float SourceScore);
 
@@ -14,13 +15,15 @@ internal sealed record FusionOptions(
     float VectorWeight = 0.7f,
     float KeywordWeight = 0.3f,
     int RrfK = FusionSignals.DefaultRrfK,
-    GameBookRole QueryRoleHint = GameBookRole.None);
+    GameBookRole QueryRoleHint = GameBookRole.None,
+    IReadOnlyList<string>? QueryTerms = null); // #3270: normalized query terms for the heading boost
 
 /// <summary>Scoring result keyed by Key; adapters re-join their arm items for I/O-specific fields.</summary>
 internal readonly record struct FusedCandidate(
     string Key,
     string Content,
     GameBookRole RoleTags,
+    string? Heading,   // #3270: merged heading (prefers vector arm)
     float HybridScore,
     float? VectorScore,
     float? KeywordScore,
@@ -56,15 +59,19 @@ internal static class HybridFusionCore
             // Prefer vector arm content (load-bearing: legend factor is computed from it).
             string content = hasV ? v.Content : k.Content;
             GameBookRole roleTags = (hasV ? v.RoleTags : GameBookRole.None) | (hasK ? k.RoleTags : GameBookRole.None);
+            // #3270: prefer vector-arm heading; fall back to keyword arm when vector had none.
+            string? heading = (hasV ? v.Heading : null) ?? (hasK ? k.Heading : null);
 
             float legendFactor = FusionSignals.ComputeLegendPenaltyFactor(content);
             float roleBoost = FusionSignals.ComputeRoleMatchBoost(options.QueryRoleHint, roleTags);
-            float hybridScore = (rrfSum * (1f - legendFactor)) + roleBoost;
+            float headingBoost = FusionSignals.ComputeHeadingMatchBoost(options.QueryTerms, heading);
+            float hybridScore = (rrfSum * (1f - legendFactor)) + roleBoost + headingBoost;
 
             scored.Add(new FusedCandidate(
                 Key: key,
                 Content: content,
                 RoleTags: roleTags,
+                Heading: heading,
                 HybridScore: hybridScore,
                 VectorScore: hasV ? v.SourceScore : (float?)null,
                 KeywordScore: hasK ? k.SourceScore : (float?)null,

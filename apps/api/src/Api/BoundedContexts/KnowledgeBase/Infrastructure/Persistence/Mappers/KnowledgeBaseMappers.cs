@@ -101,7 +101,8 @@ internal static class KnowledgeBaseMappers
             searchMethod: "keyword",
             pdfDocumentId: pdfDocId,
             chunkIndex: result.ChunkIndex,
-            roleTags: result.RoleTags);
+            roleTags: result.RoleTags,
+            heading: result.Heading); // #3270
     }
 
     /// <summary>

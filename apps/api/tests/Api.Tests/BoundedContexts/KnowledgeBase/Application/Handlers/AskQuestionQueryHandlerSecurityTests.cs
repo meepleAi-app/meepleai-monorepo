@@ -102,7 +102,7 @@ public class AskQuestionQueryHandlerSecurityTests
 
         // Setup RRF Fusion domain service (default: empty results)
         _mockRrfService
-            .Setup(r => r.FuseResults(It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<int>(), It.IsAny<GameBookRole>()))
+            .Setup(r => r.FuseResults(It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<int>(), It.IsAny<GameBookRole>(), It.IsAny<IReadOnlyList<string>?>()))
             .Returns(new List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>()); // Return empty list
 
         // Setup IKeywordSearchService to return empty results by default
@@ -551,7 +551,8 @@ public class AskQuestionQueryHandlerSecurityTests
                 It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(),
                 It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(),
                 It.IsAny<int>(),
-                It.IsAny<GameBookRole>()))
+                It.IsAny<GameBookRole>(),
+                It.IsAny<IReadOnlyList<string>?>()))
             .Returns(oneResult);
     }
 

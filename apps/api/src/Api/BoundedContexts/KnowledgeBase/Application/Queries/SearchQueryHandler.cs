@@ -166,7 +166,8 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
                 searchMethod: "vector",
                 pdfDocumentId: scored.Embedding.PdfDocumentId,                       // real (JOIN-resolved)
                 chunkIndex: scored.Embedding.ChunkIndex,
-                roleTags: (GameBookRole)scored.Embedding.RoleTags                    // int → enum
+                roleTags: (GameBookRole)scored.Embedding.RoleTags,                   // int → enum
+                heading: scored.Embedding.Heading                                     // #3270
             );
         }).ToList();
 
@@ -216,7 +217,12 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
             .Select((kr, index) => kr.ToDomainSearchResult(index + 1))
             .ToList();
 
-        // Use RRF fusion domain service
-        return _rrfFusionService.FuseResults(vectorResults, keywordResults, queryRoleHint: queryRoleHint);
+        // Use RRF fusion domain service. #3270: derive heading-match query terms from the raw query
+        // (the same string used for the keyword arm) and forward them so the heading boost can fire.
+        return _rrfFusionService.FuseResults(
+            vectorResults,
+            keywordResults,
+            queryRoleHint: queryRoleHint,
+            queryTerms: FusionSignals.ExtractHeadingMatchTerms(query));
     }
 }

@@ -104,6 +104,7 @@ internal class KeywordSearchService : IKeywordSearchService
                         ""ChunkIndex"",
                         ""PageNumber"",
                         role_tags AS ""RoleTags"",
+                        ""Heading"",
                         ts_rank_cd({tsvectorExpr}, to_tsquery(@textSearchConfig::regconfig, @tsQuery), @normalization) AS ""RelevanceScore""
                     FROM text_chunks
                     WHERE
@@ -147,7 +148,9 @@ internal class KeywordSearchService : IKeywordSearchService
                 RelevanceScore = r.RelevanceScore,
                 MatchedTerms = matchedTerms,
                 // Phase D (D6): SQL projects role_tags as int; cast to flag enum.
-                RoleTags = (GameBookRole)r.RoleTags
+                RoleTags = (GameBookRole)r.RoleTags,
+                // #3270: carry the chunk heading for the heading-match boost.
+                Heading = r.Heading
             }).ToList();
 
             _logger.LogInformation(
@@ -522,6 +525,9 @@ internal class KeywordSearchRawResult
     /// Defaults to 0 (None) when the chunk has not been classified.
     /// </summary>
     public int RoleTags { get; set; }
+
+    /// <summary>#3270: heading-path label from text_chunks."Heading" (nullable).</summary>
+    public string? Heading { get; set; }
 }
 
 /// <summary>

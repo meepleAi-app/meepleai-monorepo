@@ -78,6 +78,9 @@ internal record KeywordSearchResult
     /// <see cref="GameBookRole.None"/> when the chunk has not been classified.
     /// </summary>
     public GameBookRole RoleTags { get; init; } = GameBookRole.None;
+
+    /// <summary>#3270: chunk heading-path label for the heading-match boost (nullable).</summary>
+    public string? Heading { get; init; }
 }
 
 /// <summary>

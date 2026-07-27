@@ -12,7 +12,8 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// </summary>
 /// <param name="GameId">The ID of the game whose KB should be re-indexed.</param>
 /// <param name="UserId">The ID of the user triggering the re-index (for authorization).</param>
-internal record ReindexGameKbCommand(Guid GameId, Guid UserId)
+/// <param name="UserRole">Bug B6: the user's role (string), parsed for per-game RAG access (admin bypass).</param>
+internal record ReindexGameKbCommand(Guid GameId, Guid UserId, string? UserRole = null)
     : ICommand<KbJobResponse>;
 
 /// <summary>

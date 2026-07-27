@@ -8,6 +8,8 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Helpers;
+using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Observability;
 using Api.Services;
@@ -47,6 +49,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
     private readonly IPromptTemplateService _promptTemplateService;
     private readonly InlineCitationMatcherService _citationMatcher;
     private readonly IIntentClassifierService _intentClassifier;
+    private readonly IRagAccessService _ragAccessService;
     private readonly ILogger<StreamQaQueryHandler> _logger;
     private readonly TimeProvider _timeProvider;
 
@@ -63,6 +66,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         IPromptTemplateService promptTemplateService,
         InlineCitationMatcherService citationMatcher,
         IIntentClassifierService intentClassifier,
+        IRagAccessService ragAccessService,
         ILogger<StreamQaQueryHandler> logger,
         TimeProvider? timeProvider = null)
     {
@@ -78,6 +82,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         _promptTemplateService = promptTemplateService ?? throw new ArgumentNullException(nameof(promptTemplateService));
         _citationMatcher = citationMatcher ?? throw new ArgumentNullException(nameof(citationMatcher));
         _intentClassifier = intentClassifier ?? throw new ArgumentNullException(nameof(intentClassifier));
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -86,6 +91,20 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         StreamQaQuery query,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        // Bug B5: streaming QA must enforce per-game RAG access before any retrieval/LLM work
+        // (mirror AskQuestionQueryHandler). Without this, any authenticated user could stream-QA
+        // a non-public game's KB. Enforced only when the endpoint threads the authenticated
+        // identity (UserId present) and the game id is a valid Guid.
+        if (query.UserId.HasValue && Guid.TryParse(query.GameId, out var accessGameId))
+        {
+            var userRole = Enum.TryParse<UserRole>(query.UserRole, ignoreCase: true, out var parsedRole)
+                ? parsedRole : UserRole.User;
+            var canAccess = await _ragAccessService.CanAccessRagAsync(
+                query.UserId.Value, accessGameId, userRole, cancellationToken).ConfigureAwait(false);
+            if (!canAccess)
+                throw new ForbiddenException("Accesso RAG non autorizzato");
+        }
+
         // Issue #1445: Use centralized query validation
         // Skip query validation for continuation requests (query may be empty)
         if (string.IsNullOrWhiteSpace(query.ContinuationContext))

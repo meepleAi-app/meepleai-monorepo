@@ -10,6 +10,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Services;
 using Microsoft.Extensions.Logging;
@@ -120,10 +121,101 @@ public class StreamQaQueryHandlerTests
             _promptTemplateServiceMock.Object,
             new InlineCitationMatcherService(),
             _intentClassifierMock.Object,
+            CreatePermissiveRagAccessServiceMock(),
             _loggerMock.Object,
             _fakeTimeProvider
         );
     }
+    // ─── Bug B5: streaming QA per-game RAG access enforcement (IDOR + KB confidentiality) ───
+
+    [Fact]
+    public async Task Handle_AuthenticatedNonOwner_ThrowsForbidden_AndSkipsRetrievalAndLlm()
+    {
+        // Arrange — an authenticated user with NO RAG access to this (non-public) game.
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var query = new StreamQaQuery(
+            gameId.ToString(), "How do I win?", ThreadId: null,
+            DocumentIds: null, ResponseStyle: null, ContinuationContext: null,
+            UserId: userId, UserRole: "User");
+
+        var denyRagAccess = new Mock<IRagAccessService>();
+        denyRagAccess
+            .Setup(s => s.CanAccessRagAsync(userId, gameId, It.IsAny<UserRole>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var handler = CreateHandlerWith(denyRagAccess.Object);
+
+        // Configure the full happy path so that, WERE the guard missing, retrieval + LLM would run —
+        // making a RED failure unambiguous.
+        SetupHappyPathMocks(gameId.ToString(), query.Query);
+
+        // Act
+        Func<Task> act = async () =>
+        {
+            await foreach (var _ in handler.Handle(query, TestContext.Current.CancellationToken))
+            {
+            }
+        };
+
+        // Assert — denial surfaces as ForbiddenException (mirrors non-stream AskQuestion) and NO
+        // retrieval or LLM work happens.
+        await act.Should().ThrowAsync<ForbiddenException>();
+
+        denyRagAccess.Verify(
+            s => s.CanAccessRagAsync(userId, gameId, It.IsAny<UserRole>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _llmServiceMock.Verify(
+            x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "no LLM call must happen when RAG access is denied");
+
+        _keywordSearchServiceMock.Verify(
+            x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<List<string>?>(), It.IsAny<string>(), It.IsAny<double>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "no KB retrieval must happen when RAG access is denied");
+
+        _cacheMock.Verify(
+            x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "not even the cache should be consulted when RAG access is denied");
+    }
+
+    [Fact]
+    public async Task Handle_AuthenticatedOwner_AllowsStreaming()
+    {
+        // Arrange — an authenticated user WITH RAG access proceeds normally.
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var query = new StreamQaQuery(
+            gameId.ToString(), "How do I win?", ThreadId: null,
+            DocumentIds: null, ResponseStyle: null, ContinuationContext: null,
+            UserId: userId, UserRole: "User");
+
+        var allowRagAccess = new Mock<IRagAccessService>();
+        allowRagAccess
+            .Setup(s => s.CanAccessRagAsync(userId, gameId, It.IsAny<UserRole>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var handler = CreateHandlerWith(allowRagAccess.Object);
+        SetupHappyPathMocks(gameId.ToString(), query.Query);
+
+        // Act
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in handler.Handle(query, TestContext.Current.CancellationToken))
+        {
+            events.Add(evt);
+        }
+
+        // Assert — the stream completes with no ForbiddenException / error event.
+        allowRagAccess.Verify(
+            s => s.CanAccessRagAsync(userId, gameId, It.IsAny<UserRole>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        events.Should().Contain(e => e.Type == StreamingEventType.Complete);
+        events.Should().NotContain(e => e.Type == StreamingEventType.Error);
+    }
+
     [Fact]
     public async Task Handle_ValidQuery_StreamsCorrectEvents()
     {
@@ -1250,5 +1342,29 @@ public class StreamQaQueryHandlerTests
         var mock = new Mock<IRagAccessService>();
         mock.Setup(s => s.CanAccessRagAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<UserRole>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
         return mock.Object;
+    }
+
+    /// <summary>
+    /// Builds a StreamQaQueryHandler reusing the shared field mocks but with a caller-supplied
+    /// IRagAccessService — used by the Bug B5 access-enforcement tests.
+    /// </summary>
+    private StreamQaQueryHandler CreateHandlerWith(IRagAccessService ragAccessService)
+    {
+        return new StreamQaQueryHandler(
+            _searchQueryHandler,
+            _rerankerMock.Object,
+            _qualityTrackingServiceMock.Object,
+            _chatContextServiceMock.Object,
+            _chatThreadRepositoryMock.Object,
+            _pdfDocumentRepositoryMock.Object,
+            _vectorDocumentRepositoryMock.Object,
+            _llmServiceMock.Object,
+            _cacheMock.Object,
+            _promptTemplateServiceMock.Object,
+            new InlineCitationMatcherService(),
+            _intentClassifierMock.Object,
+            ragAccessService,
+            _loggerMock.Object,
+            _fakeTimeProvider);
     }
 }

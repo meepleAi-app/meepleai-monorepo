@@ -61,6 +61,13 @@ public sealed class KeywordSearchServiceItalianFtsIntegrationTests : IAsyncLifet
     private const string NoiseChunkContent =
         "Titoli di coda e ringraziamenti. Il gioco e stato progettato e illustrato dallo studio.";
 
+    // English setup section carrying the literal token "setup" — used to positively exercise the
+    // ENGLISH hot path (the GENERATED search_vector column), the code path the mislabelled test does
+    // NOT prove works.
+    private const string EnglishSetupChunkContent =
+        "Game setup for two players: place the main board at the center of the table and deal the " +
+        "starting tiles and resources to each player before beginning the first round.";
+
     public KeywordSearchServiceItalianFtsIntegrationTests(SharedTestcontainersFixture fixture)
     {
         _fixture = fixture;
@@ -108,7 +115,7 @@ public sealed class KeywordSearchServiceItalianFtsIntegrationTests : IAsyncLifet
     public async Task SearchAsync_ItalianDocument_SetupLoanwordQuery_OverridesToItalianAndFindsPreparazioneChunk()
     {
         // Arrange: an Italian-labelled document whose setup section only uses "Preparazione".
-        var (gameId, setupChunkId, _) = await SeedGameWithChunksAsync(pdfLanguage: "it");
+        var (gameId, setupChunkId, noiseChunkId) = await SeedGameWithChunksAsync(pdfLanguage: "it");
         var service = new KeywordSearchService(_dbContext!, NullLogger<KeywordSearchService>.Instance);
 
         // Act: caller passes the default English language; the service must detect the document's
@@ -119,9 +126,11 @@ public sealed class KeywordSearchServiceItalianFtsIntegrationTests : IAsyncLifet
             language: "en",
             cancellationToken: TestCancellationToken);
 
-        // Assert: the Italian setup chunk is retrieved (would return 0 under the pre-#3242 behaviour).
+        // Assert: the Italian setup chunk is retrieved (would return 0 under the pre-#3242 behaviour),
+        // and the synonym expansion of the loanword stays selective (does not drag in the noise chunk).
         results.Should().NotBeEmpty("the Italian document language must override the caller's default 'en' config");
         results.Should().Contain(r => Guid.Parse(r.ChunkId) == setupChunkId);
+        results.Should().NotContain(r => Guid.Parse(r.ChunkId) == noiseChunkId);
         results.Should().OnlyContain(r => r.RelevanceScore > 0);
     }
 
@@ -165,6 +174,30 @@ public sealed class KeywordSearchServiceItalianFtsIntegrationTests : IAsyncLifet
         results.Should().BeEmpty("an 'english'-configured query cannot stem or synonym-expand into the Italian lexeme");
     }
 
+    [Fact]
+    public async Task SearchAsync_EnglishDocument_EnglishQuery_MatchesViaGeneratedSearchVectorColumn()
+    {
+        // Positive coverage of the ENGLISH hot path: an 'english'-resolved config matches against the
+        // GENERATED search_vector column (KeywordSearchService.cs:87-88), NOT the query-time
+        // to_tsvector the Italian tests exercise. This proves that code path genuinely works, so the
+        // mislabelled test's BeEmpty isolates the language cause rather than a silently-broken english
+        // branch (an empty/missing search_vector would also make this test fail, surfacing the problem).
+        var (gameId, setupChunkId, _) = await SeedGameWithChunksAsync(
+            pdfLanguage: "en", setupContent: EnglishSetupChunkContent);
+        var service = new KeywordSearchService(_dbContext!, NullLogger<KeywordSearchService>.Instance);
+
+        // Act: "setup" is a literal token in the English content and resolves to the 'english' config.
+        var results = await service.SearchAsync(
+            query: "setup",
+            gameId: gameId,
+            language: "en",
+            cancellationToken: TestCancellationToken);
+
+        results.Should().Contain(
+            r => Guid.Parse(r.ChunkId) == setupChunkId,
+            "the generated english search_vector column must match the literal 'setup' token in the content");
+    }
+
     // ─── Seed helper ───────────────────────────────────────────────────────────
 
     /// <summary>
@@ -173,8 +206,12 @@ public sealed class KeywordSearchServiceItalianFtsIntegrationTests : IAsyncLifet
     /// <c>SearchAsync(gameId)</c> argument are the shared-game id (the corpus keys chunks by GameId).
     /// The generated <c>search_vector</c> column is left unset — Postgres computes it on insert.
     /// </summary>
-    private async Task<(Guid GameId, Guid SetupChunkId, Guid NoiseChunkId)> SeedGameWithChunksAsync(string pdfLanguage)
+    private async Task<(Guid GameId, Guid SetupChunkId, Guid NoiseChunkId)> SeedGameWithChunksAsync(
+        string pdfLanguage, string? setupContent = null, string? noiseContent = null)
     {
+        var setup = setupContent ?? SetupChunkContent;
+        var noise = noiseContent ?? NoiseChunkContent;
+
         var userId = Guid.NewGuid();
         _dbContext!.Users.Add(new UserEntity
         {
@@ -228,8 +265,8 @@ public sealed class KeywordSearchServiceItalianFtsIntegrationTests : IAsyncLifet
             SharedGameId = sharedGame.Id,
             ChunkIndex = 0,
             PageNumber = 1,
-            Content = SetupChunkContent,
-            CharacterCount = SetupChunkContent.Length,
+            Content = setup,
+            CharacterCount = setup.Length,
             CreatedAt = DateTime.UtcNow
         });
         _dbContext.TextChunks.Add(new TextChunkEntity
@@ -240,8 +277,8 @@ public sealed class KeywordSearchServiceItalianFtsIntegrationTests : IAsyncLifet
             SharedGameId = sharedGame.Id,
             ChunkIndex = 1,
             PageNumber = 2,
-            Content = NoiseChunkContent,
-            CharacterCount = NoiseChunkContent.Length,
+            Content = noise,
+            CharacterCount = noise.Length,
             CreatedAt = DateTime.UtcNow
         });
 

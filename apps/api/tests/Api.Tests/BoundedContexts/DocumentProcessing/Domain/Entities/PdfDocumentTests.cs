@@ -298,9 +298,28 @@ public class PdfDocumentTests
 
         // Assert
         document.RetryCount.Should().Be(1);
-        document.ProcessingState.Should().Be(PdfProcessingState.Extracting);
+        document.ProcessingState.Should().Be(PdfProcessingState.Pending);
         document.ProcessingError.Should().BeNull();
         document.ProcessedAt.Should().BeNull();
+    }
+
+    [Fact]
+    public void Retry_AlwaysResetsToPending_RegardlessOfFailedAtState()
+    {
+        // B11 (#3269): retry must reset the document to Pending — the only state the pipeline's
+        // atomic claim (IPdfClaimService.TryClaimPendingAsync) can pick up — NOT to FailedAtState.
+        // The old "resume from FailedAtState ?? Extracting" left the doc in a non-claimable state
+        // that no runtime rail resumed, so retries never actually reprocessed.
+        var document = CreateTestDocument(LanguageCode.English);
+        document.MarkAsFailed("Chunking blew up", ErrorCategory.Parsing, PdfProcessingState.Chunking);
+
+        document.Retry();
+
+        document.ProcessingState.Should().Be(
+            PdfProcessingState.Pending,
+            "retry resets to Pending regardless of the FailedAtState (here Chunking)");
+        document.RetryCount.Should().Be(1);
+        document.DomainEvents.Should().ContainSingle(e => e is PdfRetryInitiatedEvent);
     }
 
     [Fact]
@@ -335,20 +354,6 @@ public class PdfDocumentTests
         var exception = ((Action)(() => document.Retry())).Should().Throw<InvalidOperationException>().Which;
         exception.Message.Should().Contain("Cannot retry");
         exception.Message.Should().Contain("State=Pending");
-    }
-
-    [Fact]
-    public void Retry_ResumesFromFailedAtState()
-    {
-        // Arrange
-        var document = CreateTestDocument(LanguageCode.English);
-        document.MarkAsFailed("Chunking failed", ErrorCategory.Parsing, PdfProcessingState.Chunking);
-
-        // Act
-        document.Retry();
-
-        // Assert - Should resume from Chunking, not restart from beginning
-        document.ProcessingState.Should().Be(PdfProcessingState.Chunking);
     }
 
     // #2284 follow-up: TD1 — MarkProcessed domain method
@@ -469,22 +474,25 @@ public class PdfDocumentTests
         document.CanRetry().Should().BeTrue();
         document.RetryCount.Should().Be(0);
 
-        // First retry
+        // First retry — resets to Pending (retry restarts the pipeline from the top; B11)
         document.Retry();
         document.RetryCount.Should().Be(1);
-        document.ProcessingState.Should().Be(PdfProcessingState.Extracting);
+        document.ProcessingState.Should().Be(PdfProcessingState.Pending);
         document.ProcessingError.Should().BeNull();
 
         // Second failure
         document.MarkAsFailed("Parsing error", ErrorCategory.Parsing, PdfProcessingState.Chunking);
         document.CanRetry().Should().BeTrue();
 
-        // Second retry
+        // Second retry — again resets to Pending regardless of FailedAtState
         document.Retry();
         document.RetryCount.Should().Be(2);
-        document.ProcessingState.Should().Be(PdfProcessingState.Chunking);
+        document.ProcessingState.Should().Be(PdfProcessingState.Pending);
 
-        // Success path - complete processing through state machine
+        // Success path - the pipeline re-runs from the start (Pending → … → Ready)
+        document.TransitionTo(PdfProcessingState.Uploading);
+        document.TransitionTo(PdfProcessingState.Extracting);
+        document.TransitionTo(PdfProcessingState.Chunking);
         document.TransitionTo(PdfProcessingState.Embedding);
         document.TransitionTo(PdfProcessingState.Indexing);
         document.MarkAsCompleted(10);

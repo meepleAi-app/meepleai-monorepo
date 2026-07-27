@@ -98,7 +98,7 @@ public sealed class EnqueuePdfCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_QueueFull_ThrowsInvalidOperationException()
+    public async Task Handle_QueueFull_ThrowsConflictException()
     {
         // Arrange
         var command = new EnqueuePdfCommand(Guid.NewGuid(), Guid.NewGuid());
@@ -116,9 +116,9 @@ public sealed class EnqueuePdfCommandHandlerTests
             .Setup(r => r.CountByStatusAsync(JobStatus.Processing, It.IsAny<CancellationToken>()))
             .ReturnsAsync(10);
 
-        // Act & Assert
+        // Act & Assert — a full-queue state is a conflict (HTTP 409), not a 500 (#2568).
         await FluentActions.Invoking(() => _handler.Handle(command, CancellationToken.None))
-            .Should().ThrowAsync<InvalidOperationException>()
+            .Should().ThrowAsync<ConflictException>()
             .WithMessage("*Queue is full*");
     }
 }

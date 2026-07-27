@@ -2,8 +2,10 @@ using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.Infrastructure;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Moq;
 using Xunit;
@@ -15,13 +17,15 @@ public sealed class BulkReindexFailedCommandHandlerTests
 {
     private readonly Mock<IProcessingJobRepository> _jobRepoMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
+    private readonly MeepleAiDbContext _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
     private readonly BulkReindexFailedCommandHandler _handler;
 
     public BulkReindexFailedCommandHandlerTests()
     {
         _handler = new BulkReindexFailedCommandHandler(
             _jobRepoMock.Object,
-            _unitOfWorkMock.Object);
+            _unitOfWorkMock.Object,
+            _dbContext);
     }
 
     [Fact]

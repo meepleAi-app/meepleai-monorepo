@@ -145,11 +145,3 @@ export class SSEParser {
     return this.buffer;
   }
 }
-
-/**
- * Create a new SSE parser instance
- * Factory function for convenience
- */
-export function createSSEParser(): SSEParser {
-  return new SSEParser();
-}

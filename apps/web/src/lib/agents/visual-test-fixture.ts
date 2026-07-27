@@ -29,13 +29,6 @@
 import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
 
 /**
- * Deterministic UUIDv4-shaped sentinel encoding issue #634 in the last group
- * for human-debuggability. The orchestrator pivots on `IS_VISUAL_TEST_BUILD`,
- * not on this id, so its only role is documentation for triage runs.
- */
-export const VISUAL_TEST_FIXTURE_AGENTS_ID = '00000000-0000-4000-8000-000000000634' as const;
-
-/**
  * True only when the build was produced by the visual-regression CI workflow
  * (sets `NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1` before `pnpm build`).
  *

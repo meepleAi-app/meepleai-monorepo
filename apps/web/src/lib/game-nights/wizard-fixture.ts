@@ -38,11 +38,6 @@ import { initialWizardState } from './wizard-reducer';
 import type { Invitee, WizardState } from './wizard-types';
 
 /**
- * Deterministic UUIDv4-shaped sentinel encoding issue #950.
- */
-export const VISUAL_TEST_FIXTURE_WIZARD_ID = '00000000-0000-4000-8000-000000000950' as const;
-
-/**
  * True only when the build was produced by the visual-regression CI workflow.
  * `NEXT_PUBLIC_*` env vars are inlined at build time → in production deploys
  * this is the literal `false`, allowing the bundler to dead-code-eliminate

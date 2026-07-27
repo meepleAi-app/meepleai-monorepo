@@ -110,12 +110,3 @@ export const PLAYER_COLORS = [
   '#1ABC9C', // teal
   '#E84393', // pink
 ] as const;
-
-/** Built-in dice presets available to all users */
-export const UNIVERSAL_DICE_PRESETS: DicePreset[] = [
-  { name: '1d6', formula: '1d6', source: 'universal' },
-  { name: '2d6', formula: '2d6', source: 'universal' },
-  { name: '1d20', formula: '1d20', source: 'universal' },
-  { name: '3d6', formula: '3d6', source: 'universal' },
-  { name: '1d100', formula: '1d100', source: 'universal' },
-];

@@ -45,7 +45,7 @@ export type PromptTemplate = z.infer<typeof PromptTemplateSchema>;
 /**
  * Tool configuration for agent
  */
-export const ToolConfigSchema = z.object({
+const ToolConfigSchema = z.object({
   name: z.string().min(1),
   settings: z.record(z.string(), z.unknown()).optional(),
 });
@@ -55,7 +55,7 @@ export type ToolConfig = z.infer<typeof ToolConfigSchema>;
 /**
  * Strategy parameters (dynamic based on strategy type)
  */
-export const StrategyParametersSchema = z.record(z.string(), z.unknown()).optional();
+const StrategyParametersSchema = z.record(z.string(), z.unknown()).optional();
 
 /**
  * Agent form data (for builder UI)
@@ -78,7 +78,7 @@ export type AgentForm = z.infer<typeof AgentFormSchema>;
 /**
  * Create agent definition request (API payload)
  */
-export const CreateAgentDefinitionRequestSchema = z.object({
+const CreateAgentDefinitionRequestSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(1000).optional(),
   type: z.string(), // Sent as string to backend

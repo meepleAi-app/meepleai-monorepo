@@ -9,7 +9,7 @@ import {
   type CatalogSyncStatusResponse,
 } from '../lib/catalog-ingestion-api';
 
-export const CATALOG_SYNC_STATUS_KEY = ['catalog-sync-status'] as const;
+const CATALOG_SYNC_STATUS_KEY = ['catalog-sync-status'] as const;
 export const CATALOG_SYNC_RUNS_KEY = ['catalog-sync-runs'] as const;
 
 export function useCatalogSyncStatus() {

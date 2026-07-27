@@ -5,7 +5,7 @@
  * and provides default test data for preview rendering.
  */
 
-export const TEMPLATE_PLACEHOLDERS: Record<string, string[]> = {
+const TEMPLATE_PLACEHOLDERS: Record<string, string[]> = {
   // Common (available for all templates)
   _common: ['userName', 'appUrl', 'unsubscribeUrl'],
   // PDF
@@ -26,7 +26,7 @@ export const TEMPLATE_PLACEHOLDERS: Record<string, string[]> = {
   badge_earned: ['badgeName', 'badgeDescription'],
 };
 
-export const DEFAULT_TEST_DATA: Record<string, Record<string, string>> = {
+const DEFAULT_TEST_DATA: Record<string, Record<string, string>> = {
   _common: {
     userName: 'Mario Rossi',
     appUrl: 'https://meepleai.app',

@@ -12,7 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { prometheusMetricsApi } from '@/lib/api/prometheus-metrics.api';
 import type { PrometheusMetricLabelsResponse } from '@/lib/api/schemas/prometheus-metrics.schemas';
 
-export const PROMETHEUS_LABELS_QUERY_KEY = ['admin', 'prometheus', 'metric-labels'] as const;
+const PROMETHEUS_LABELS_QUERY_KEY = ['admin', 'prometheus', 'metric-labels'] as const;
 
 export function usePrometheusMetricLabels() {
   return useQuery<PrometheusMetricLabelsResponse>({

@@ -5,7 +5,7 @@
  * Follows project principle: no hardcoded values.
  */
 
-export const infrastructurei18n = {
+const infrastructurei18n = {
   it: {
     // Service names
     services: {

@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils';
 
 export type FlagCategory = 'all' | 'features' | 'ai' | 'integrations' | 'security';
 
-export const FLAG_CATEGORIES: readonly FlagCategory[] = [
+const FLAG_CATEGORIES: readonly FlagCategory[] = [
   'all',
   'features',
   'ai',

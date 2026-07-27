@@ -19,7 +19,7 @@ const POLL_INTERVAL_MS = 2_000;
  * Query key factory for gamebook batch status.
  * Exported so test files can invalidate or prime the cache.
  */
-export const photoBatchStatusKeys = {
+const photoBatchStatusKeys = {
   byBatch: (gameId: string, batchId: string) =>
     ['gamebook', 'photoBatch', 'status', gameId, batchId] as const,
 };

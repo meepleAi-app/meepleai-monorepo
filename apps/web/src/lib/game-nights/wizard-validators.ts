@@ -25,9 +25,9 @@ import { WIZARD_DRAFT_SCHEMA_VERSION, type LocationKind, type WizardState } from
 export const MAX_COMBINED_INVITEES = 49;
 export const MAX_EMAIL_LENGTH = 200;
 export const MAX_TITLE_LENGTH = 200;
-export const MAX_DESCRIPTION_LENGTH = 2000;
-export const MAX_LOCATION_DETAILS_LENGTH = 500;
-export const MAX_GAMES = 20;
+const MAX_DESCRIPTION_LENGTH = 2000;
+const MAX_LOCATION_DETAILS_LENGTH = 500;
+const MAX_GAMES = 20;
 export const SCHEDULED_AT_MIN_HOURS_AHEAD = 1;
 
 // Pragmatic RFC 5321 gate. Identical pattern to the BE
@@ -68,7 +68,7 @@ const LOCATION_KINDS = [
  * so this step is implicitly complete. We still validate `details` length to
  * fail loudly if the user types a 600-char address.
  */
-export const step2LocationSchema = z
+const step2LocationSchema = z
   .object({
     kind: z.enum(LOCATION_KINDS),
     details: z

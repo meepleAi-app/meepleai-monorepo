@@ -40,7 +40,13 @@ internal sealed class VectorDocumentReadyStateHandler
             return;
         }
 
+        // .AsTracking() overrides the global QueryTrackingBehavior.NoTracking default (PERF-06,
+        // InfrastructureServiceExtensions.cs). Without it the entity is detached and the
+        // ProcessingState=Ready + IndexerVersion writes below are a silent no-op at SaveChangesAsync,
+        // making this compensating handler dead. Mirrors ExtractPdfTextCommandHandler /
+        // IndexPdfCommandHandler (#3288-class fix).
         var pdfEntity = await _dbContext.PdfDocuments
+            .AsTracking()
             .FirstOrDefaultAsync(p => p.Id == evt.PdfDocumentId, cancellationToken)
             .ConfigureAwait(false);
 

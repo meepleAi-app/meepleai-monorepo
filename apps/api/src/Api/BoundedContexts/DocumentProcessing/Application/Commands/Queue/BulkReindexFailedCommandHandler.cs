@@ -37,9 +37,14 @@ internal sealed class BulkReindexFailedCommandHandler
 
         // Fix: check available capacity before re-enqueuing to avoid exceeding MaxQueueSize.
         // ProcessingJob.Create() enforces the cap but Retry() does not, so we enforce it here.
+        // The real cap is (Queued + Processing < MaxQueueSize), so BOTH in-flight statuses must
+        // be subtracted — otherwise with Processing jobs present we over-enqueue past the cap.
+        // Mirrors BulkReindexReadyCommandHandler's exact (Queued + Processing) computation.
         var currentQueuedCount = await _jobRepository.CountByStatusAsync(
             JobStatus.Queued, cancellationToken).ConfigureAwait(false);
-        var availableSlots = ProcessingJob.MaxQueueSize - currentQueuedCount;
+        var currentProcessingCount = await _jobRepository.CountByStatusAsync(
+            JobStatus.Processing, cancellationToken).ConfigureAwait(false);
+        var availableSlots = ProcessingJob.MaxQueueSize - (currentQueuedCount + currentProcessingCount);
 
         var enqueued = 0;
         var skipped = 0;

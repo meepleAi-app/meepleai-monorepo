@@ -1,7 +1,9 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Channels;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -28,6 +30,7 @@ internal sealed class ReindexGameKbCommandHandler : ICommandHandler<ReindexGameK
     private readonly IKbReindexJobRepository _jobRepository;
     private readonly KbReindexChannel _channel;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IRagAccessService _ragAccessService;
     private readonly ILogger<ReindexGameKbCommandHandler> _logger;
 
     public ReindexGameKbCommandHandler(
@@ -35,18 +38,30 @@ internal sealed class ReindexGameKbCommandHandler : ICommandHandler<ReindexGameK
         IKbReindexJobRepository jobRepository,
         KbReindexChannel channel,
         IUnitOfWork unitOfWork,
+        IRagAccessService ragAccessService,
         ILogger<ReindexGameKbCommandHandler> logger)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _jobRepository = jobRepository ?? throw new ArgumentNullException(nameof(jobRepository));
         _channel = channel ?? throw new ArgumentNullException(nameof(channel));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<KbJobResponse> Handle(ReindexGameKbCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
+
+        // Bug B6: user-facing reindex must enforce per-game RAG access (owner/admin/public only).
+        // Without this, any authenticated user could trigger an LLM-cost reindex on — and mutate —
+        // another user's KB (incl. PrivateGameId cross-user). Mirror AskArbiter/TutorQuery handlers.
+        var userRole = Enum.TryParse<UserRole>(command.UserRole, ignoreCase: true, out var parsedRole)
+            ? parsedRole : UserRole.User;
+        var canAccess = await _ragAccessService.CanAccessRagAsync(
+            command.UserId, command.GameId, userRole, cancellationToken).ConfigureAwait(false);
+        if (!canAccess)
+            throw new ForbiddenException("Accesso RAG non autorizzato");
 
         // 1. Count indexable PDFs.
         var pdfCount = await _db.PdfDocuments

@@ -1,5 +1,7 @@
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -31,17 +33,20 @@ internal sealed class RebuildRaptorCommandHandler : ICommandHandler<RebuildRapto
 {
     private readonly MeepleAiDbContext _db;
     private readonly ITierEnforcementService _tierEnforcement;
+    private readonly IRagAccessService _ragAccessService;
     private readonly IRaptorIndexer? _raptorIndexer;
     private readonly ILogger<RebuildRaptorCommandHandler> _logger;
 
     public RebuildRaptorCommandHandler(
         MeepleAiDbContext db,
         ITierEnforcementService tierEnforcement,
+        IRagAccessService ragAccessService,
         ILogger<RebuildRaptorCommandHandler> logger,
         IRaptorIndexer? raptorIndexer = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _tierEnforcement = tierEnforcement ?? throw new ArgumentNullException(nameof(tierEnforcement));
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _raptorIndexer = raptorIndexer;
     }
@@ -49,6 +54,16 @@ internal sealed class RebuildRaptorCommandHandler : ICommandHandler<RebuildRapto
     public async Task<KbJobResponse> Handle(RebuildRaptorCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
+
+        // Bug B6: user-facing RAPTOR rebuild must enforce per-game RAG access (owner/admin/public only)
+        // BEFORE the tier gate. Without this, any authenticated user could trigger LLM-cost rebuilds on
+        // another user's KB. Mirror AskArbiter/TutorQuery handlers.
+        var userRole = Enum.TryParse<UserRole>(command.UserRole, ignoreCase: true, out var parsedRole)
+            ? parsedRole : UserRole.User;
+        var canAccess = await _ragAccessService.CanAccessRagAsync(
+            command.UserId, command.GameId, userRole, cancellationToken).ConfigureAwait(false);
+        if (!canAccess)
+            throw new ForbiddenException("Accesso RAG non autorizzato");
 
         // === Tier gate ===
         var canRebuild = await _tierEnforcement

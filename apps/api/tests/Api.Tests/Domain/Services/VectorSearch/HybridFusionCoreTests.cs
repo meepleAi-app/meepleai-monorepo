@@ -7,8 +7,8 @@ namespace Api.Tests.Domain.Services.VectorSearch;
 
 public class HybridFusionCoreTests
 {
-    private static FusionCandidate V(string key, int rank, float score, string content = "content", GameBookRole roles = GameBookRole.None)
-        => new(key, content, roles, rank, score);
+    private static FusionCandidate V(string key, int rank, float score, string content = "content", GameBookRole roles = GameBookRole.None, string? heading = null)
+        => new(key, content, roles, heading, rank, score);
 
     [Fact]
     public void Fuse_BothArms_WeightedRrf_OrdersByHybridScore()
@@ -95,6 +95,38 @@ public class HybridFusionCoreTests
     {
         HybridFusionCore.Fuse(System.Array.Empty<FusionCandidate>(), System.Array.Empty<FusionCandidate>(), new FusionOptions())
             .Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Fuse_HeadingBoost_LiftsMatchingChunkOverBetterRankedPeer()
+    {
+        // kPlain has the better raw rank; only the heading boost can reorder them.
+        var vec = new[] { V("kPlain", 1, 0.9f, heading: "Scoring"), V("kSetup", 2, 0.8f, heading: "Setup") };
+        var opts = new FusionOptions(0.7f, 0.3f, 60, GameBookRole.None, new[] { "setup" });
+        var fused = HybridFusionCore.Fuse(vec, System.Array.Empty<FusionCandidate>(), opts);
+        // 'kSetup' gets +0.15 additive from the heading match → overtakes 'kPlain'
+        fused[0].Key.Should().Be("kSetup");
+        fused[0].Heading.Should().Be("Setup"); // heading carried onto FusedCandidate
+    }
+
+    [Fact]
+    public void Fuse_NoQueryTerms_HeadingBoostIsNoOp()
+    {
+        var vec = new[] { V("kPlain", 1, 0.9f, heading: "Scoring"), V("kSetup", 2, 0.8f, heading: "Setup") };
+        // Default options → QueryTerms null → heading boost never fires; pure RRF (rank 1 wins).
+        var fused = HybridFusionCore.Fuse(vec, System.Array.Empty<FusionCandidate>(), new FusionOptions());
+        fused[0].Key.Should().Be("kPlain");
+    }
+
+    [Fact]
+    public void Fuse_Heading_PrefersVectorArm_ThenFallsBackToKeyword()
+    {
+        var vec = new[] { V("a", 1, 0.9f, heading: "VectorHeading") };
+        var kw = new[] { V("a", 1, 0.3f, heading: "KeywordHeading") };
+        HybridFusionCore.Fuse(vec, kw, new FusionOptions()).Single().Heading.Should().Be("VectorHeading");
+
+        var vecNoHeading = new[] { V("a", 1, 0.9f, heading: null) };
+        HybridFusionCore.Fuse(vecNoHeading, kw, new FusionOptions()).Single().Heading.Should().Be("KeywordHeading");
     }
 
     [Theory]

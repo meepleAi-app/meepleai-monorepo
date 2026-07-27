@@ -282,7 +282,9 @@ internal class HybridSearchService : IHybridSearchService
             Page = se.Embedding.PageNumber,
             // Slice C: carry role_tags through so vector-only chunks get the role-match boost in
             // fusion (same cast as the semantic-only path). pgvector already SELECTs role_tags.
-            RoleTags = (GameBookRole)se.Embedding.RoleTags
+            RoleTags = (GameBookRole)se.Embedding.RoleTags,
+            // #3270: carry the chunk heading (JOIN-resolved) so vector-arm chunks get the heading boost.
+            Heading = se.Embedding.Heading
         }).ToArray();
 
         _logger.LogInformation(
@@ -298,7 +300,8 @@ internal class HybridSearchService : IHybridSearchService
             vectorWeight,
             keywordWeight,
             _config.RrfConstant ?? FusionSignals.DefaultRrfK,
-            queryRoleHint);
+            queryRoleHint,
+            FusionSignals.ExtractHeadingMatchTerms(query)); // #3270
 
         var topResults = fusedResults
             .OrderByDescending(r => r.HybridScore)
@@ -392,20 +395,21 @@ internal class HybridSearchService : IHybridSearchService
         float vectorWeight,
         float keywordWeight,
         int rrfK,
-        GameBookRole queryRoleHint)
+        GameBookRole queryRoleHint,
+        IReadOnlyList<string>? queryTerms)
     {
         static string VectorKeyOf(SearchResultItem r) => $"{r.PdfId}_{r.ChunkIndex}";
         static string KeywordKeyOf(KeywordSearchResult r) => $"{r.PdfDocumentId}_{r.ChunkIndex}";
 
         var vectorArm = vectorResults
-            .Select((r, index) => new FusionCandidate(VectorKeyOf(r), r.Text, r.RoleTags, index + 1, r.Score))
+            .Select((r, index) => new FusionCandidate(VectorKeyOf(r), r.Text, r.RoleTags, r.Heading, index + 1, r.Score))
             .ToList();
 
         // RRF fusion-key fix: key the keyword arm on the SAME {PdfDocumentId}_{ChunkIndex} composite
         // as the vector arm (was the raw text_chunks.Id, which never matched the vector key — so a
         // doubly-retrieved chunk was emitted as two half-strength duplicates instead of being fused).
         var keywordArm = keywordResults
-            .Select((r, index) => new FusionCandidate(KeywordKeyOf(r), r.Content, r.RoleTags, index + 1, r.RelevanceScore))
+            .Select((r, index) => new FusionCandidate(KeywordKeyOf(r), r.Content, r.RoleTags, r.Heading, index + 1, r.RelevanceScore))
             .ToList();
 
         _logger.LogDebug(
@@ -415,7 +419,7 @@ internal class HybridSearchService : IHybridSearchService
         var fused = HybridFusionCore.Fuse(
             vectorArm,
             keywordArm,
-            new FusionOptions(vectorWeight, keywordWeight, rrfK, queryRoleHint));
+            new FusionOptions(vectorWeight, keywordWeight, rrfK, queryRoleHint, queryTerms));
 
         // Re-join by composite key to recover the I/O-specific fields the core doesn't carry.
         // The composite key is backed by a NON-unique index on the keyword side, so use
@@ -453,7 +457,8 @@ internal class HybridSearchService : IHybridSearchService
                 KeywordRank = f.KeywordRank,
                 MatchedTerms = matchedTerms,
                 Mode = SearchMode.Hybrid,
-                RoleTags = f.RoleTags
+                RoleTags = f.RoleTags,
+                Heading = f.Heading
             });
         }
 

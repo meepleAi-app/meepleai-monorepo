@@ -24,24 +24,26 @@ internal class RrfFusionDomainService
     /// <param name="keywordResults">Results from keyword search</param>
     /// <param name="rrfK">RRF constant (default 60)</param>
     /// <param name="queryRoleHint">Optional role hint used to boost matching chunks (default None)</param>
+    /// <param name="queryTerms">#3270: normalized query terms (lowercased, len≥3) for the heading-match boost (default null = no-op)</param>
     /// <returns>Fused and re-ranked results</returns>
     public virtual List<SearchResult> FuseResults(
         List<SearchResult> vectorResults,
         List<SearchResult> keywordResults,
         int rrfK = DefaultRrfK,
-        GameBookRole queryRoleHint = GameBookRole.None)
+        GameBookRole queryRoleHint = GameBookRole.None,
+        IReadOnlyList<string>? queryTerms = null)
     {
         if (rrfK <= 0)
             throw new ArgumentException("RRF K must be positive", nameof(rrfK));
 
         var vectorArm = vectorResults
-            .Select((r, i) => new FusionCandidate(GetChunkKey(r), r.TextContent, r.RoleTags, i + 1, (float)r.RelevanceScore.Value))
+            .Select((r, i) => new FusionCandidate(GetChunkKey(r), r.TextContent, r.RoleTags, r.Heading, i + 1, (float)r.RelevanceScore.Value))
             .ToList();
         var keywordArm = keywordResults
-            .Select((r, i) => new FusionCandidate(GetChunkKey(r), r.TextContent, r.RoleTags, i + 1, (float)r.RelevanceScore.Value))
+            .Select((r, i) => new FusionCandidate(GetChunkKey(r), r.TextContent, r.RoleTags, r.Heading, i + 1, (float)r.RelevanceScore.Value))
             .ToList();
 
-        var fused = HybridFusionCore.Fuse(vectorArm, keywordArm, new FusionOptions(0.7f, 0.3f, rrfK, queryRoleHint));
+        var fused = HybridFusionCore.Fuse(vectorArm, keywordArm, new FusionOptions(0.7f, 0.3f, rrfK, queryRoleHint, queryTerms));
 
         var vByKey = vectorResults.ToLookup(GetChunkKey, StringComparer.Ordinal);
         var kByKey = keywordResults.ToLookup(GetChunkKey, StringComparer.Ordinal);
@@ -66,7 +68,8 @@ internal class RrfFusionDomainService
                     searchMethod: "hybrid",
                     pdfDocumentId: original.PdfDocumentId,
                     chunkIndex: original.ChunkIndex,
-                    roleTags: f.RoleTags);
+                    roleTags: f.RoleTags,
+                    heading: f.Heading);
             })
             .ToList();
     }

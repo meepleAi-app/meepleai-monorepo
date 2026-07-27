@@ -20,6 +20,9 @@ internal sealed class SearchResult : Entity<Guid>
     public int ChunkIndex { get; private set; }
     public GameBookRole RoleTags { get; private set; }
 
+    /// <summary>#3270: chunk heading-path label for the heading-match boost (nullable).</summary>
+    public string? Heading { get; private set; }
+
     /// <summary>
     /// Private constructor for EF Core.
     /// </summary>
@@ -42,7 +45,8 @@ internal sealed class SearchResult : Entity<Guid>
         string? searchMethod = null,
         Guid pdfDocumentId = default,
         int chunkIndex = 0,
-        GameBookRole roleTags = GameBookRole.None) : base(id)
+        GameBookRole roleTags = GameBookRole.None,
+        string? heading = null) : base(id)
     {
         if (string.IsNullOrWhiteSpace(textContent))
             throw new ArgumentException("Text content cannot be empty", nameof(textContent));
@@ -62,6 +66,7 @@ internal sealed class SearchResult : Entity<Guid>
         PdfDocumentId = pdfDocumentId;
         ChunkIndex = chunkIndex;
         RoleTags = roleTags;
+        Heading = heading;
     }
 
     /// <summary>

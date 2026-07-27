@@ -38,6 +38,14 @@ internal sealed class Embedding : Entity<Guid>
     public Guid PdfDocumentId { get; private set; }
 
     /// <summary>
+    /// #3270: chunk heading-path label (from <c>text_chunks."Heading"</c> via a JOIN on
+    /// <c>source_chunk_id</c> in the scored pgvector read) so hybrid fusion can apply the
+    /// heading-match boost to vector-arm chunks. Null when the chunk has no heading or the read
+    /// path did not project it.
+    /// </summary>
+    public string? Heading { get; private set; }
+
+    /// <summary>
     /// Private constructor for EF Core.
     /// </summary>
 #pragma warning disable CS8618
@@ -61,7 +69,8 @@ internal sealed class Embedding : Entity<Guid>
         Guid? sourceChunkId = null,
         bool isTranslation = false,
         int roleTags = 0,
-        Guid pdfDocumentId = default) : base(id)
+        Guid pdfDocumentId = default,
+        string? heading = null) : base(id)
     {
         if (string.IsNullOrWhiteSpace(textContent))
             throw new ArgumentException("Text content cannot be empty", nameof(textContent));
@@ -87,6 +96,7 @@ internal sealed class Embedding : Entity<Guid>
         IsTranslation = isTranslation;
         RoleTags = roleTags;
         PdfDocumentId = pdfDocumentId;
+        Heading = heading;
     }
 
     /// <summary>

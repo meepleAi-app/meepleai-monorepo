@@ -128,6 +128,50 @@ public sealed class RrfFusionDomainServiceTests
     }
 
     [Fact]
+    public void FuseResults_QueryTermMatchesHeading_ReordersByHeadingBoost_OrderOnly()
+    {
+        // Issue #3270: query terms matching a chunk's heading route through HybridFusionCore's
+        // heading-boost, lifting the matching chunk over a better-ranked peer while leaving
+        // RelevanceScore (the carried cosine) untouched.
+        var setupPdf = Guid.NewGuid();
+        var plainPdf = Guid.NewGuid();
+        var vector = new List<SearchResult>
+        {
+            // plain has the better raw rank (1); only the heading boost can reorder them.
+            new(Guid.NewGuid(), Guid.NewGuid(), "plain", 1, new Confidence(0.90), 1, "vector",
+                pdfDocumentId: plainPdf, chunkIndex: 0, roleTags: GameBookRole.None, heading: "Scoring"),
+            new(Guid.NewGuid(), Guid.NewGuid(), "setup rules", 1, new Confidence(0.80), 2, "vector",
+                pdfDocumentId: setupPdf, chunkIndex: 0, roleTags: GameBookRole.None, heading: "Setup")
+        };
+        var keyword = new List<SearchResult>();
+
+        var fused = _service.FuseResults(vector, keyword, queryTerms: new[] { "setup" });
+
+        fused[0].TextContent.Should().Be("setup rules");      // heading-boost lifted it
+        fused[0].Heading.Should().Be("Setup");                // heading carried through fusion
+        fused[0].RelevanceScore.Value.Should().BeApproximately(0.80, 1e-6); // cosine preserved
+    }
+
+    [Fact]
+    public void FuseResults_NoQueryTerms_HeadingBoostIsNoOp()
+    {
+        var plainPdf = Guid.NewGuid();
+        var setupPdf = Guid.NewGuid();
+        var vector = new List<SearchResult>
+        {
+            new(Guid.NewGuid(), Guid.NewGuid(), "plain", 1, new Confidence(0.90), 1, "vector",
+                pdfDocumentId: plainPdf, chunkIndex: 0, roleTags: GameBookRole.None, heading: "Scoring"),
+            new(Guid.NewGuid(), Guid.NewGuid(), "setup", 1, new Confidence(0.80), 2, "vector",
+                pdfDocumentId: setupPdf, chunkIndex: 0, roleTags: GameBookRole.None, heading: "Setup")
+        };
+
+        // No queryTerms → heading boost never fires → pure RRF (rank 1 wins).
+        var fused = _service.FuseResults(vector, new List<SearchResult>());
+
+        fused[0].TextContent.Should().Be("plain");
+    }
+
+    [Fact]
     public void FuseResults_WithOverlappingDocuments_CombinesScores()
     {
         // Arrange

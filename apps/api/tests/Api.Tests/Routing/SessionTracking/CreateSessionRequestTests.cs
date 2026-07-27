@@ -18,14 +18,13 @@ public sealed class CreateSessionRequestTests
     public void ToCommand_LeavesInternalFlagsAtSafeDefaults()
     {
         var request = new SessionCommandEndpoints.CreateSessionRequest(
-            UserId: Guid.NewGuid(),
             GameId: Guid.NewGuid(),
             SessionType: "Standard",
             SessionDate: null,
             Location: null,
             Participants: new List<ParticipantDto>());
 
-        var command = request.ToCommand();
+        var command = request.ToCommand(Guid.NewGuid());
 
         // The internal-only flags are NOT part of the request DTO, so they are structurally
         // unforgeable and must always land on their safe defaults.
@@ -43,7 +42,6 @@ public sealed class CreateSessionRequestTests
         var participants = new List<ParticipantDto> { new() { DisplayName = "Alice", IsOwner = true } };
 
         var request = new SessionCommandEndpoints.CreateSessionRequest(
-            UserId: userId,
             GameId: gameId,
             SessionType: "GameSpecific",
             SessionDate: null,
@@ -52,7 +50,7 @@ public sealed class CreateSessionRequestTests
             GameNightEventId: nightId,
             GuestNames: new[] { "Bob" });
 
-        var command = request.ToCommand();
+        var command = request.ToCommand(userId);
 
         command.UserId.Should().Be(userId);
         command.GameId.Should().Be(gameId);

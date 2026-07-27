@@ -56,7 +56,7 @@ internal class ProcessingJobRepository : RepositoryBase, IProcessingJobRepositor
         await DbContext.ProcessingJobs.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
-    public Task UpdateAsync(ProcessingJob job, CancellationToken cancellationToken = default)
+    public async Task UpdateAsync(ProcessingJob job, CancellationToken cancellationToken = default)
     {
         CollectDomainEvents(job);
         var entity = MapToPersistence(job);
@@ -76,8 +76,50 @@ internal class ProcessingJobRepository : RepositoryBase, IProcessingJobRepositor
                 trackedStep.State = EntityState.Detached;
         }
 
+        // Reconcile the owned Steps collection against what is actually persisted.
+        // ProcessingJob.Retry() REPLACES the whole step collection with fresh-Id ProcessingStep
+        // instances; every other mutation (BumpPriority/Cancel/Reorder/Degrade) preserves the Ids
+        // loaded via GetByIdAsync. A blind DbSet.Update(entity) marks EVERY incoming step Modified,
+        // so the fresh-Id steps become `UPDATE processing_steps WHERE Id = @newId`, which matches
+        // 0 rows and throws DbUpdateConcurrencyException — aborting the whole re-queue. This
+        // silently broke RetryJob and BulkReindexFailed for any job that has steps (i.e. every real
+        // job, since ProcessingJob.Create() always seeds 5). Diff against the persisted step Ids so
+        // removed steps are DELETEd and brand-new steps are INSERTed instead of UPDATEd.
+        var existingStepIds = (await DbContext.ProcessingSteps
+            .AsNoTracking()
+            .Where(s => s.ProcessingJobId == entity.Id)
+            .Select(s => s.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false))
+            .ToHashSet();
+
+        var incomingStepIds = entity.Steps.Select(s => s.Id).ToHashSet();
+        var removedStepIds = existingStepIds.Where(id => !incomingStepIds.Contains(id)).ToList();
+        if (removedStepIds.Count > 0)
+        {
+            // Attach lightweight stubs and mark Deleted; the DB-level ON DELETE CASCADE on the
+            // step → log-entries FK removes their log rows. Staged in the same SaveChanges batch,
+            // so the delete is transactional with the job update.
+            var stubsToRemove = removedStepIds
+                .Select(id => new ProcessingStepEntity { Id = id })
+                .ToList();
+            DbContext.ProcessingSteps.AttachRange(stubsToRemove);
+            DbContext.ProcessingSteps.RemoveRange(stubsToRemove);
+        }
+
         DbContext.ProcessingJobs.Update(entity);
-        return Task.CompletedTask;
+
+        // Update() marked every incoming step Modified. Flip the brand-new steps (and their log
+        // entries) to Added so EF INSERTs them rather than UPDATE-ing rows that do not exist.
+        foreach (var stepEntity in entity.Steps)
+        {
+            if (existingStepIds.Contains(stepEntity.Id))
+                continue;
+
+            DbContext.Entry(stepEntity).State = EntityState.Added;
+            foreach (var log in stepEntity.LogEntries)
+                DbContext.Entry(log).State = EntityState.Added;
+        }
     }
 
     public Task DeleteAsync(ProcessingJob job, CancellationToken cancellationToken = default)

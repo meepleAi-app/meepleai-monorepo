@@ -264,8 +264,14 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         }
 
         // Check if already indexed (for idempotency)
+        // .AsTracking() overrides the global QueryTrackingBehavior.NoTracking default (mirrors the
+        // tracked `pdf` load above). Without it this existing VectorDocument is detached, so the
+        // "reset to processing" write below AND the terminal MarkIndexingFailedAsync write are silent
+        // no-ops — a failed re-index would leave the VectorDocument 'completed' with stale embeddings
+        // while the PDF is Failed (divergent tables).
         var pdfGuid = Guid.Parse(pdfId);
         var existingVectorDoc = await _db.Set<VectorDocumentEntity>()
+            .AsTracking()
             .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, cancellationToken).ConfigureAwait(false);
 
         if (existingVectorDoc != null)

@@ -65,7 +65,7 @@ public sealed class SetPriorityCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ProcessingJob_ThrowsInvalidOperation()
+    public async Task Handle_ProcessingJob_ThrowsConflictException()
     {
         // Arrange: Create a job and start it so it's Processing
         var job = ProcessingJob.Create(Guid.NewGuid(), Guid.NewGuid(), (int)ProcessingPriority.Normal, 0);
@@ -76,8 +76,8 @@ public sealed class SetPriorityCommandHandlerTests
             .Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
 
-        // Act & Assert — can only bump queued jobs
+        // Act & Assert — can only bump queued jobs; a non-Queued job is a conflict (409), not 500 (#2568).
         await FluentActions.Invoking(() => _handler.Handle(command, CancellationToken.None))
-            .Should().ThrowAsync<InvalidOperationException>();
+            .Should().ThrowAsync<ConflictException>();
     }
 }

@@ -73,7 +73,7 @@ public sealed class ProcessingJob : AggregateRoot<Guid>
         if (userId == Guid.Empty)
             throw new ArgumentException("UserId is required.", nameof(userId));
         if (currentQueueSize >= MaxQueueSize)
-            throw new InvalidOperationException($"Queue is full. Maximum {MaxQueueSize} jobs allowed.");
+            throw new ConflictException($"Queue is full. Maximum {MaxQueueSize} jobs allowed.");
 
         var now = (timeProvider ?? TimeProvider.System).GetUtcNow();
         return new ProcessingJob(pdfDocumentId, userId, priority, now);
@@ -174,7 +174,7 @@ public sealed class ProcessingJob : AggregateRoot<Guid>
     public void Cancel(TimeProvider? timeProvider = null)
     {
         if (Status != JobStatus.Queued && Status != JobStatus.Processing)
-            throw new InvalidOperationException($"Cannot cancel job with status '{Status}'.");
+            throw new ConflictException($"Cannot cancel job with status '{Status}'.");
 
         var now = (timeProvider ?? TimeProvider.System).GetUtcNow();
         Status = JobStatus.Cancelled;
@@ -217,7 +217,7 @@ public sealed class ProcessingJob : AggregateRoot<Guid>
     public void UpdatePriority(int newPriority)
     {
         if (Status != JobStatus.Queued)
-            throw new InvalidOperationException($"Cannot change priority of job with status '{Status}'. Only Queued jobs can be reordered.");
+            throw new ConflictException($"Cannot change priority of job with status '{Status}'. Only Queued jobs can be reordered.");
 
         var oldPriority = Priority;
         Priority = newPriority;

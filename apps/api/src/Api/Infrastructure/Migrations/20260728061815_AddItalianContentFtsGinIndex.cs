@@ -27,6 +27,13 @@ namespace Api.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // The 'italian' config literal MUST stay in lockstep with KeywordSearchService.ResolveFtsConfig
+            // ("it"/"ita"/"italian" -> "italian"): the planner only uses this index when the query's
+            // to_tsvector config matches the index's exactly. If ResolveFtsConfig ever emits a different
+            // config for Italian, this index must be re-created to match (guarded by
+            // ItalianContentFtsIndexIntegrationTests). Non-concurrent CREATE INDEX takes a brief build-time
+            // lock on text_chunks — acceptable here (small table, ~seconds on 22k rows, matches the
+            // RestoreSearchVectorColumns precedent; run migrations on a quiesced table).
             migrationBuilder.Sql(@"
                 CREATE INDEX IF NOT EXISTS ix_text_chunks_content_tsv_italian
                     ON public.text_chunks

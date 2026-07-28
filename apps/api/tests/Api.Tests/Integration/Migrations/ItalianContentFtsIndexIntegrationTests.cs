@@ -122,8 +122,12 @@ public sealed class ItalianContentFtsIndexIntegrationTests : IAsyncLifetime
         // italian to_tsvector of the Content column. An english/other-config index would not be
         // used by the italian query, silently regressing back to the seq-scan.
         Assert.Contains("gin", indexDef!, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("italian", indexDef!, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("to_tsvector", indexDef!, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Content", indexDef!, StringComparison.Ordinal);
+        // Couple the index to the EXACT config KeywordSearchService.ResolveFtsConfig("it") emits
+        // ("italian") — asserted as the contiguous `to_tsvector('italian'` expression, not loose
+        // substrings. If the index config ever drifts from what the service emits (e.g. a future
+        // custom 'meepleai_italian' config), the planner stops using this index and Italian keyword
+        // search silently regresses to the per-row seq-scan; this assertion fails loudly instead.
+        Assert.Contains("to_tsvector('italian'", indexDef!, StringComparison.Ordinal);
     }
 }

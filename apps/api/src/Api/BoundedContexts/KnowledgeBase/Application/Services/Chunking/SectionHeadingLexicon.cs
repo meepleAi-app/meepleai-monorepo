@@ -57,9 +57,4 @@ internal static class SectionHeadingLexicon
         "OVERVIEW",
         "WINNING THE GAME",
     }.ToFrozenSet(StringComparer.Ordinal);
-
-    /// <summary>
-    /// The longest entry's length in characters — the scan window a candidate match may span.
-    /// </summary>
-    public static readonly int MaxTitleLength = Titles.Max(t => t.Length);
 }

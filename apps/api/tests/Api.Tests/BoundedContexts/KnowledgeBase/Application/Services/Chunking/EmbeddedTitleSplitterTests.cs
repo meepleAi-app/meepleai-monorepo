@@ -83,15 +83,16 @@ public class EmbeddedTitleSplitterTests
     [Fact]
     public void Split_MultipleEmbeddedTitles_SplitsOnlyTheLeftmost_NonRecursive()
     {
-        // Only ONE split per element: the leftmost qualifying title is promoted; the second stays in the tail.
-        var el = Body("Contesto: AZIONI eseguibili dal giocatore in ogni turno. PUNTEGGIO finale del gioco calcolato.");
+        // Two page-number-boundary headings; only ONE split per element — the leftmost qualifying title
+        // is promoted, the second stays inline in the tail.
+        var el = Body("Riepilogo. 5 PREPARAZIONE inizia disponendo le tessere sul tabellone. 8 AZIONI disponibili nel turno.");
 
         var result = EmbeddedTitleSplitter.Split(new[] { el });
 
         result.Should().HaveCount(3);
         result[1].ElementType.Should().Be("Title");
-        result[1].Text.Should().Be("AZIONI");
-        result[2].Text.Should().Contain("PUNTEGGIO"); // untouched, remains inline in the tail
+        result[1].Text.Should().Be("PREPARAZIONE");
+        result[2].Text.Should().Contain("AZIONI"); // untouched, remains inline in the tail
         result[2].ElementType.Should().Be("NarrativeText");
     }
 
@@ -144,14 +145,44 @@ public class EmbeddedTitleSplitterTests
     }
 
     [Theory]
-    [InlineData("Fine del paragrafo. SETUP the board using the components listed above now.", "SETUP")]     // '.' boundary
-    [InlineData("Step 3) SETUP the board using the components listed on the reference card.", "SETUP")]      // ')' boundary
-    [InlineData("Preparation: SETUP the board using the components listed in the manual here.", "SETUP")]    // ':' boundary
-    public void Split_HeadingBoundaryVariants_PromoteTitle(string text, string expectedTitle)
+    [InlineData("Fine del paragrafo. SETUP the board using the components listed above now.", "SETUP")]        // sentence terminator
+    [InlineData("Leggi il testo a lato. 6 SETUP the board using the components listed on the card.", "SETUP")]  // page number at a clause boundary
+    [InlineData("Testo della sezione precedente\nSETUP the board using the components in the manual.", "SETUP")] // line break
+    public void Split_StrongHeadingBoundaryVariants_PromoteTitle(string text, string expectedTitle)
     {
         var result = EmbeddedTitleSplitter.Split(new[] { Body(text) });
 
         result.Should().Contain(e => e.ElementType == "Title" && e.Text == expectedTitle);
+    }
+
+    [Theory]
+    [InlineData("Nel tuo turno esegui 2 AZIONI a tua scelta dal tabellone principale adesso qui.")]    // digit is a quantifier, not a page number
+    [InlineData("Alla fine ricevi 3 PUNTEGGIO bonus per ogni generazione completata nel gioco.")]      // digit quantifier
+    [InlineData("Contesto del gioco: AZIONI eseguibili dal giocatore in ogni singolo turno corrente.")] // colon is inline, not a heading boundary
+    public void Split_InlineAllCapsAfterQuantifierOrColon_DoesNotFalseSplit(string text)
+    {
+        // Precision guard (review #3347): common Italian prose "quantifier/label + ALL-CAPS defined term
+        // + lowercase" must NOT fabricate a bogus section heading corpus-wide.
+        var result = EmbeddedTitleSplitter.Split(new[] { Body(text) });
+
+        result.Should().ContainSingle();
+        result[0].ElementType.Should().Be("NarrativeText");
+    }
+
+    [Theory]
+    [InlineData("Table")]
+    [InlineData("ListItem")]
+    [InlineData("Title")]
+    public void Split_NonProseElementType_IsNotSplit(string elementType)
+    {
+        // Only prose (NarrativeText/UncategorizedText) is split — never a Table row or a ListItem, which
+        // would be torn across a synthetic heading.
+        var el = new ExtractedElement("Riepilogo. 6 PREPARAZIONE Di seguito i passi di preparazione del gioco.", 1, elementType);
+
+        var result = EmbeddedTitleSplitter.Split(new[] { el });
+
+        result.Should().ContainSingle();
+        result[0].Should().Be(el);
     }
 
     [Fact]

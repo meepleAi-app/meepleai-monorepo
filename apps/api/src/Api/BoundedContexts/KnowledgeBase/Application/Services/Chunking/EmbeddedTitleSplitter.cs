@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
@@ -26,6 +27,15 @@ internal static class EmbeddedTitleSplitter
 
     /// <summary>Characters after the token scanned for the lowercase-prose confirmation (guard iii).</summary>
     private const int TrailingProseWindow = 60;
+
+    /// <summary>
+    /// Only prose element types are split. Restricting to these (rather than merely excluding "Title")
+    /// prevents tearing a Table row or a ListItem across a synthetic heading — the split target is
+    /// running body prose, where unstructured glues a missed section title. <see cref="ExtractedElement"/>
+    /// coalesces null/blank categories to "NarrativeText".
+    /// </summary>
+    private static readonly FrozenSet<string> SplittableTypes =
+        new[] { "NarrativeText", "UncategorizedText" }.ToFrozenSet(StringComparer.Ordinal);
 
     public static IReadOnlyList<ExtractedElement> Split(IReadOnlyList<ExtractedElement> elements)
     {
@@ -60,8 +70,8 @@ internal static class EmbeddedTitleSplitter
     }
 
     private static bool IsSplittable(ExtractedElement el) =>
-        !string.Equals(el.ElementType, TitleCategory, StringComparison.Ordinal)
-        && !string.IsNullOrEmpty(el.Text);
+        !string.IsNullOrEmpty(el.Text)
+        && SplittableTypes.Contains(el.ElementType);
 
     /// <summary>
     /// Finds the LEFTMOST qualifying lexicon title embedded in <paramref name="text"/> (longest entry
@@ -113,22 +123,35 @@ internal static class EmbeddedTitleSplitter
             return false;
         }
 
-        // (ii) the preceding non-space char must be a heading boundary — a digit (page-number/number
-        //      artifact, the TM discriminator), a sentence terminator, a close paren, or a line break;
-        //      or the token is at the start of the element. A preceding LETTER means it is inline prose
-        //      (e.g. "la PREPARAZIONE del gioco") — reject.
+        // (ii) the token must sit at a STRONG heading boundary: the start of the element, a line break,
+        //      the end of the previous sentence (. ! ?), or a page-number token — a digit run isolated
+        //      at a clause boundary, the TM "…parentesi. 6 PREPARAZIONE" pattern. A bare preceding digit
+        //      is NOT enough: a prose quantifier ("esegui 2 AZIONI a tua scelta") would otherwise
+        //      fabricate a bogus "AZIONI" heading corpus-wide. Colons/parens/commas/letters are inline
+        //      and rejected.
         var p = i - 1;
         while (p >= 0 && (text[p] == ' ' || text[p] == '\t'))
         {
             p--;
         }
-        if (p >= 0)
+        if (p >= 0 && !IsStrongBoundary(text[p]))
         {
-            var prev = text[p];
-            var isBoundary = char.IsDigit(prev)
-                || prev == '.' || prev == ':' || prev == ')' || prev == ';'
-                || prev == '\n' || prev == '\r';
-            if (!isBoundary)
+            if (!char.IsDigit(text[p]))
+            {
+                return false;
+            }
+
+            // Preceding char is a digit: qualify ONLY if the whole digit run is itself at a clause
+            // boundary (a page number), not a quantifier embedded after a word.
+            while (p >= 0 && char.IsDigit(text[p]))
+            {
+                p--;
+            }
+            while (p >= 0 && (text[p] == ' ' || text[p] == '\t'))
+            {
+                p--;
+            }
+            if (p >= 0 && !IsStrongBoundary(text[p]))
             {
                 return false;
             }
@@ -147,4 +170,8 @@ internal static class EmbeddedTitleSplitter
 
         return false;
     }
+
+    /// <summary>A line break or a sentence terminator — the marks that end the previous section's text.</summary>
+    private static bool IsStrongBoundary(char c) =>
+        c == '\n' || c == '\r' || c == '.' || c == '!' || c == '?';
 }

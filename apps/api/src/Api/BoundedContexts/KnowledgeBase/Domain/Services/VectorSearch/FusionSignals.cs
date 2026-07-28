@@ -23,6 +23,13 @@ internal static class FusionSignals
     /// <summary>Default reciprocal-rank-fusion constant.</summary>
     internal const int DefaultRrfK = 60;
 
+    /// <summary>
+    /// Token-count threshold for the number-noise length taper (#3338 WP1b): a fragment of this many
+    /// content tokens or fewer is treated as "short" (full demotion); beyond it the factor tapers so a
+    /// long, legitimately number-dense table is demoted less.
+    /// </summary>
+    private const int TokenNoiseTaperThreshold = 12;
+
     // Matches cross-reference pointers like "vedi pag. 10", "vedi anche pagina 5", "see p. 11",
     // "cfr. pagg. 4-5". Allows an optional connector word ("anche"/"a") and spelled-out "pagina".
     private static readonly Regex CrossReferencePointer = new(
@@ -120,15 +127,20 @@ internal static class FusionSignals
         // even though it is digit-heavy; the target is space-separated number runs ("CARTE 2 5 6 4 3").
         var numberChars = 0;
         var alnum = 0;
+        var tokenCount = 0;
         var tokDigits = 0;
         var tokHasLetter = false;
         var tokHasDigit = false;
 
         void FlushToken()
         {
-            if (tokHasDigit && !tokHasLetter)
+            if (tokHasDigit || tokHasLetter)
             {
-                numberChars += tokDigits;
+                tokenCount++;
+                if (tokHasDigit && !tokHasLetter)
+                {
+                    numberChars += tokDigits;
+                }
             }
             tokDigits = 0;
             tokHasLetter = false;
@@ -170,10 +182,12 @@ internal static class FusionSignals
             return 0f;
         }
 
-        // Taper by length: 1.0 up to ~200 chars (MinChunkSize), shrinking beyond so a long number table
-        // (legit content) is not over-demoted the way a short fragment is.
-        var lengthTaper = Math.Min(1.0, 200.0 / content.Length);
-        return (float)Math.Min(0.5, numberRatio * lengthTaper);
+        // Taper by CONTENT VOLUME (token count), not raw content.Length: a long, legitimately
+        // number-dense section (many tokens) is demoted less than a short fragment, while whitespace
+        // padding no longer weakens the demotion — the target class is whitespace-heavy table fragments
+        // unstructured emits, which have few real tokens but wide inter-cell gaps.
+        var volumeTaper = Math.Min(1.0, TokenNoiseTaperThreshold / (double)tokenCount);
+        return (float)Math.Min(0.5, numberRatio * volumeTaper);
     }
 
     /// <summary>

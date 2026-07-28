@@ -241,6 +241,13 @@ internal class HybridSearchService : IHybridSearchService
     {
         var fetchLimit = Math.Max(limit * 2, 20);
 
+        // #3338 WP1c: resolve the per-game FTS config for the heading-term synonym expansion below.
+        // SearchAsync resolves the same config internally (one accepted extra GameId-indexed query per
+        // hybrid search); threading it in would churn ~15 keyword-mock setups for a non-blocking finding.
+        var ftsConfig = await _keywordSearchService
+            .ResolveFtsConfigAsync(gameId, cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+
         // Run vector and keyword searches in parallel
         var vectorTask = ExecuteVectorSearchAsync(
             query, gameId, fetchLimit, documentIds, cancellationToken);
@@ -295,9 +302,7 @@ internal class HybridSearchService : IHybridSearchService
         // Phase D (D6): queryRoleHint enables role-match boost during fusion.
         // #3338 WP1c: expand the #3270 heading-match terms with the game's FTS-language intent synonyms
         // (setup -> preparazione/allestimento) so an English-loanword query boosts a native-lexeme heading.
-        var ftsConfig = await _keywordSearchService
-            .ResolveFtsConfigAsync(gameId, cancellationToken: cancellationToken)
-            .ConfigureAwait(false);
+        // Reuses the ftsConfig resolved once at the top of this method.
         var headingTerms = KeywordSearchService.ExpandHeadingMatchTerms(
             FusionSignals.ExtractHeadingMatchTerms(query), ftsConfig);
 

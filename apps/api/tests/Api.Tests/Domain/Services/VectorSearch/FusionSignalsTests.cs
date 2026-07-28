@@ -70,6 +70,19 @@ public class FusionSignalsTests
     }
 
     [Fact]
+    public void ComputeNumberNoiseFactor_WhitespacePadding_DoesNotWeakenDemotion()
+    {
+        // Review #3347: the taper is token-count based, so a whitespace-heavy table fragment (the exact
+        // WP1b target class) is demoted the SAME as its compact form — whitespace no longer inflates the
+        // length denominator and under-demotes the fragment.
+        var compact = FusionSignals.ComputeNumberNoiseFactor("CARTE 2 5 6 4 3");
+        var padded = FusionSignals.ComputeNumberNoiseFactor("CARTE     2     5     6     4     3");
+
+        padded.Should().BeApproximately(compact, 1e-6f);
+        padded.Should().BeGreaterThan(0.3f);
+    }
+
+    [Fact]
     public void ComputeNumberNoiseFactor_LongNumberDenseTable_IsTaperedBelowShortFragment()
     {
         // A long, legitimately number-dense section (e.g. a scoring table) is tapered by length so it

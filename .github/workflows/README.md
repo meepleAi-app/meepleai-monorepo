@@ -153,39 +153,36 @@ PRs targeting `main-staging` receive an automated comment showing:
 
 ## Self-Hosted ARM64 Runner
 
-Workflows use a tiered runner selection strategy to balance cost and concurrency:
+> **⚠️ Reality note (2026-07-28, #3331)** — this section had drifted from the
+> deployed setup:
+> - `ci.yml` runs **entirely on GitHub-hosted `ubuntu-latest`** — its
+>   `select-runner` step hardcodes cloud (`ci.yml:74`). **CI does not use the
+>   self-hosted runner.**
+> - The self-hosted runner is **co-located on the Hetzner staging VPS
+>   (~8GB ARM64)**, sharing the box with the app containers — **not** a dedicated
+>   24GB Oracle VM. Today it runs only the deploy-staging orchestration (SSH),
+>   rollback, e2e, and ops one-offs.
+> - The co-location is being unwound (a build OOM already broke a deploy). See
+>   [ADR-044 § Update 2026-07-28](../../docs/for-claude/architecture/adr/adr-044-self-hosted-arm64-runner.md)
+>   and the #3331 spec. **Do not add build-heavy steps to the self-hosted runner.**
 
-| Branch target | Runner | Rationale |
-|--------------|--------|-----------|
-| `main-dev` | `ubuntu-latest` | High PR concurrency, no queue |
-| `main-staging`, `main` | Self-hosted (ARM64) | Low frequency, saves GH Actions minutes |
-| Deploy workflows | Self-hosted (ARM64) | Always staging/prod, free compute |
-
-**CI (`ci.yml`)** uses dynamic selection via the `changes` job output:
+Workflows that still use the self-hosted runner select it via the static toggle:
 ```yaml
-# In changes job:
-runner: ${{ steps.select-runner.outputs.runner }}
-
-# In downstream jobs:
-runs-on: ${{ needs.changes.outputs.runner }}
+runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
 ```
+- **`vars.RUNNER` set** → self-hosted (co-located staging VPS, label `self-hosted,linux,ARM64`)
+- **`vars.RUNNER` unset** → GitHub-hosted `ubuntu-latest`
 
-**Other workflows** use the static toggle pattern:
-```yaml
-runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
-```
+**Architecture Decision**: [ADR-044](../../docs/for-claude/architecture/adr/adr-044-self-hosted-arm64-runner.md) — read the **2026-07-28 Update** for the current (drift-corrected) reality.
 
-**Architecture Decision**: [ADR-044](../../docs/architecture/adr/adr-044-self-hosted-arm64-runner.md)
-
-### Runner Specs
+### Runner Specs (actual, 2026-07-28)
 
 | Resource | Value |
 |----------|-------|
-| Provider | Oracle Cloud Free Tier |
-| CPU | Ampere A1, 4 OCPUs (ARM64) |
-| Memory | 24 GB |
-| Disk | 200 GB |
-| Max concurrent jobs | 2 (recommended) |
+| Host | Hetzner staging VPS (~8GB ARM64), **co-located with app containers** |
+| Runner dir | `/home/deploy/actions-runner` (user `deploy`) |
+| Memory | `MemoryMax=3G` cgroup cap (systemd override, #2019) |
+| Jobs | deploy-staging orchestration, rollback, e2e, ops one-offs (**not** `ci.yml`) |
 
 ### ARM64 Exclusions
 

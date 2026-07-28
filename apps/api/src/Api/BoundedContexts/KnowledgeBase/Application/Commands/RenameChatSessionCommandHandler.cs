@@ -34,6 +34,11 @@ internal sealed class RenameChatSessionCommandHandler : ICommandHandler<RenameCh
         if (session == null)
             throw new NotFoundException("ChatSession", command.SessionId.ToString());
 
+        // Ownership check (IDOR): a non-owner gets the same 404 as a non-existent
+        // session, so renaming another user's chat is impossible and undetectable.
+        if (session.UserId != command.UserId)
+            throw new NotFoundException("ChatSession", command.SessionId.ToString());
+
         // Update title (domain validates max 200 chars, non-empty, trim)
         session.SetTitle(command.Title);
 

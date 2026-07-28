@@ -2786,6 +2786,16 @@ Either failure blocks merge. Bypassing requires an explicit lift comment from
 
 ## 21. Self-Hosted Runner Recovery
 
+> **⚠️ OBSOLETE (2026-07-28, #3331)** — the self-hosted runner was **retired** (Option E):
+> the `RUNNER` repo variable was removed, all workflows now run on GitHub-hosted, and the
+> runner was deregistered + decommissioned on the VPS. The scripts referenced below
+> (`apply-memory-overrides.sh`, `10-memory-limits.conf`, `maintenance.sh`, `monitor.sh`)
+> and the babysitting workflows (`runner-health-check`, `runner-maintenance`,
+> `monitor-runner-queue`) were deleted in #3348. This section is kept as historical
+> reference and as the operational guide **if** a dedicated runner is ever re-introduced
+> (Option D fallback, provisioned from `infra/runner/cloud-init.yml` + `setup-*.sh`). See
+> the [migration plan](../../superpowers/plans/2026-07-28-issue-3331-eliminate-self-hosted-runner.md).
+
 ### Background
 
 A GitHub Actions self-hosted runner (`meepleai-staging`, ARM64, Hetzner CX31)

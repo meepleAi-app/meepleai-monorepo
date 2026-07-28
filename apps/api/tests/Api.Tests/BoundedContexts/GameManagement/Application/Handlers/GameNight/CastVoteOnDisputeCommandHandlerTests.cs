@@ -106,7 +106,7 @@ disputeId,
     }
 
     [Fact]
-    public async Task CastVote_FeatureDisabled_ThrowsInvalidOperationException()
+    public async Task CastVote_FeatureDisabled_ThrowsConflict()
     {
         // Arrange
         SetupFeatureFlagEnabled(false);
@@ -120,7 +120,7 @@ Guid.NewGuid(),
         // Act & Assert
         var act =
             () => _handler.Handle(command, CancellationToken.None);
-        var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var ex = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
         ex.Message.Should().Contain("disabled");
     }

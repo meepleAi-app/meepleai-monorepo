@@ -52,7 +52,7 @@ internal class GenerateSetupChecklistCommandHandler
 
         if (!isEnabled)
         {
-            throw new InvalidOperationException("Feature SetupWizard.Enabled is disabled");
+            throw new ConflictException("Feature SetupWizard.Enabled is disabled");
         }
 
         // 2. Get session

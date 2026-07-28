@@ -153,7 +153,7 @@ public sealed class RenameChatSessionIntegrationTests : IAsyncLifetime
     {
         // Arrange
         var mediator = _serviceProvider!.GetRequiredService<IMediator>();
-        var command = new RenameChatSessionCommand(SessionId: TestSessionId, Title: "Renamed Title SG4");
+        var command = new RenameChatSessionCommand(SessionId: TestSessionId, UserId: TestUserId, Title: "Renamed Title SG4");
 
         // Act
         var dto = await mediator.Send(command, TestCancellationToken);
@@ -170,6 +170,28 @@ public sealed class RenameChatSessionIntegrationTests : IAsyncLifetime
 
         persisted.Should().NotBeNull();
         persisted!.Title.Should().Be("Renamed Title SG4");
+    }
+
+    /// <summary>
+    /// IDOR: a non-owner renaming another user's session gets the same 404 as an unknown id,
+    /// and the title is left untouched.
+    /// </summary>
+    [Fact]
+    public async Task RenameChatSession_ByNonOwner_ThrowsNotFoundAndLeavesTitleUntouched()
+    {
+        // Arrange — session is owned by TestUserId; a different caller must be rejected.
+        var mediator = _serviceProvider!.GetRequiredService<IMediator>();
+        var attackerId = Guid.NewGuid();
+        var command = new RenameChatSessionCommand(SessionId: TestSessionId, UserId: attackerId, Title: "Hacked title");
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => mediator.Send(command, TestCancellationToken));
+
+        var persisted = await _dbContext!.ChatSessions
+            .AsNoTracking()
+            .FirstAsync(s => s.Id == TestSessionId, TestCancellationToken);
+        persisted.Title.Should().Be("Original Title");
     }
 
     /// <summary>
@@ -213,7 +235,7 @@ public sealed class RenameChatSessionIntegrationTests : IAsyncLifetime
     {
         // Arrange
         var mediator = _serviceProvider!.GetRequiredService<IMediator>();
-        var command = new RenameChatSessionCommand(SessionId: TestUnknownId, Title: "Irrelevant Title");
+        var command = new RenameChatSessionCommand(SessionId: TestUnknownId, UserId: TestUserId, Title: "Irrelevant Title");
 
         // Act & Assert — handler throws NotFoundException (maps to 404 at endpoint level)
         await Assert.ThrowsAsync<NotFoundException>(

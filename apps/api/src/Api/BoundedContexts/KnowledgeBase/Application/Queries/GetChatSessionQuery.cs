@@ -9,6 +9,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// </summary>
 internal record GetChatSessionQuery(
     Guid SessionId,
+    Guid UserId,
     int MessageSkip = 0,
     int MessageTake = 50
 ) : IRequest<ChatSessionDto?>;

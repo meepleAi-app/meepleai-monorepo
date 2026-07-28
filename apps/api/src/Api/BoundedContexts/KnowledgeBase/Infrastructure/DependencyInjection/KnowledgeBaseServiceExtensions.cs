@@ -553,9 +553,13 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddHttpClient<ICrossEncoderReranker, CrossEncoderRerankerClient>((sp, client) =>
         {
             var config = sp.GetRequiredService<IConfiguration>();
-            var baseUrl = config["Reranking:BaseUrl"] ?? "http://localhost:8003";
-            client.BaseAddress = new Uri(baseUrl);
-            client.Timeout = TimeSpan.FromSeconds(10);
+            client.BaseAddress = new Uri(ResolveRerankerBaseUrl(config));
+            // Timeout is governed per-request by RerankerClientOptions.TimeoutMs (each call in
+            // CrossEncoderRerankerClient wraps a CancellationTokenSource.CancelAfter(TimeoutMs);
+            // IsHealthyAsync uses its own 5s CTS). The previous hardcoded 10s HttpClient.Timeout
+            // silently capped that option — raising Reranking:TimeoutMs above 10s had no effect —
+            // so defer entirely to the per-request token.
+            client.Timeout = System.Threading.Timeout.InfiniteTimeSpan;
         });
 
         // Options configuration - use provided configuration or defer to runtime resolution
@@ -576,6 +580,22 @@ internal static class KnowledgeBaseServiceExtensions
         // Application Services - Resilient Retrieval with Reranking
         services.AddScoped<IRerankedRetrievalService, ResilientRetrievalService>();
     }
+
+    /// <summary>
+    /// Resolves the reranker service base URL. Prefers the <c>Reranking:BaseUrl</c> config key, then
+    /// falls back to the <c>RERANKER_URL</c> env var that every compose file sets
+    /// (compose.{dev,staging,prod}.yml), and finally to localhost for local <c>dotnet run</c>.
+    /// <para>
+    /// Before the <c>RERANKER_URL</c> fallback existed the client targeted <c>localhost:8003</c> in
+    /// every deployed environment (which set <c>RERANKER_URL</c>, not <c>Reranking:BaseUrl</c>), so
+    /// cross-encoder reranking silently failed and every RAG query degraded to the vector-dominated
+    /// fusion fallback.
+    /// </para>
+    /// </summary>
+    internal static string ResolveRerankerBaseUrl(IConfiguration config) =>
+        config["Reranking:BaseUrl"]
+        ?? config["RERANKER_URL"]
+        ?? "http://localhost:8003";
 
     private static void AddCachingServices(IServiceCollection services, IConfiguration? configuration)
     {

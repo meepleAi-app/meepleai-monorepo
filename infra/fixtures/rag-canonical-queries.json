@@ -59,6 +59,13 @@
       "game": "7 Wonders",
       "language": "it",
       "query": "Come si risolve il conflitto militare alla fine di ogni età in 7 Wonders?"
+    },
+    {
+      "queryId": "tmars-setup-it",
+      "game": "Terraforming Mars",
+      "language": "it",
+      "_comment": "Epic #3338 WP2/WP3 motivating case ('Setup per N giocatori'). Pins that TM's PREPARAZIONE setup section — recovered by the WP1 heading-repair (Header promotion) after the re-chunk — stays retrievable. SKIPs until its baseline is captured via --update-baseline on staging.",
+      "query": "Come funziona la preparazione (setup) di Terraforming Mars per il numero di giocatori?"
     }
   ]
 }

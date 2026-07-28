@@ -99,11 +99,21 @@ public static class HealthCheckServiceExtensions
                 timeout: TimeSpan.FromSeconds(5));
         }
 
-        builder.AddCheck<OrchestrationHealthCheck>(
-            "orchestrator",
-            HealthStatus.Degraded,
-            tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
-            timeout: TimeSpan.FromSeconds(5));
+        // Conditional: orchestration (LangGraph) is opt-in — it runs only under the
+        // `tutor-agents` compose profile, not the standard deploy profile. Register the
+        // health check only when ORCHESTRATION_SERVICE_URL is set (mirrors the Ollama
+        // pattern below), so /health does not 503 for an intentionally-not-deployed
+        // service (#3339). Environments that DO run orchestration (dev/prod) set
+        // ORCHESTRATION_SERVICE_URL on the api service.
+        var orchestrationUrl = configuration["ORCHESTRATION_SERVICE_URL"];
+        if (!string.IsNullOrWhiteSpace(orchestrationUrl))
+        {
+            builder.AddCheck<OrchestrationHealthCheck>(
+                "orchestrator",
+                HealthStatus.Degraded,
+                tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical, HealthCheckTags.Optional },
+                timeout: TimeSpan.FromSeconds(5));
+        }
 
         // Conditional: Ollama is opt-in — register only when OLLAMA_URL is set.
         var ollamaUrl = configuration["OLLAMA_URL"];

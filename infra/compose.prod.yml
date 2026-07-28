@@ -86,6 +86,9 @@ services:
       LOCAL_EMBEDDING_URL: http://embedding-service:8000
       Embedding__LocalServiceUrl: http://embedding-service:8000
       RERANKER_URL: http://reranker-service:8003
+      # #3339: prod runs orchestration under `--profile ai`; set the URL so the
+      # orchestration health check is registered and monitored.
+      ORCHESTRATION_SERVICE_URL: http://orchestration-service:8004
       EMBEDDING_MODEL: intfloat/multilingual-e5-base
       Embedding__Model: intfloat/multilingual-e5-base
       Embedding__Dimensions: 768

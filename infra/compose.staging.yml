@@ -331,10 +331,6 @@ services:
     volumes:
       - ./prometheus.staging.yml:/etc/prometheus/prometheus.yml:ro  # staging-specific labels
       - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
-      # Issue #2019 — runner availability alerts (referenced from staging
-      # config rule_files; mount kept in parity with docker-compose.yml so
-      # Prometheus startup does not log a missing-rule-file warning).
-      - ./prometheus/alerts/runner-availability.yml:/etc/prometheus/runner-availability.yml:ro
       # Issue #2470 — Wikidata SSE plane starvation alert.
       - ./prometheus/alerts/wikidata-sse.yml:/etc/prometheus/wikidata-sse.yml:ro
       - ./prometheus/alerts/wikidata-enrichment.yml:/etc/prometheus/wikidata-enrichment.yml:ro

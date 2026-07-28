@@ -21,8 +21,6 @@ alerting:
 
 rule_files:
   - '/etc/prometheus/prometheus-rules.yml'
-  # Issue #2019 — self-hosted GitHub Actions runner availability alerts.
-  - '/etc/prometheus/runner-availability.yml'
   # Issue #2470 — Wikidata SSE plane starvation alerts.
   - '/etc/prometheus/wikidata-sse.yml'
   # Issue #3117 — Wikidata enrichment pipeline-health alerts (dead-letter / queue depth).

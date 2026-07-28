@@ -348,9 +348,6 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
-      # Issue #2019 — additional rule file for self-hosted GitHub Actions
-      # runner availability (referenced from prometheus.yml + prometheus.staging.yml).
-      - ./prometheus/alerts/runner-availability.yml:/etc/prometheus/runner-availability.yml:ro
       # Issue #3082 — BGG ToS-compliance SLO=0 alert (referenced from prometheus.yml rule_files).
       - ./prometheus/alerts/bgg-tos-compliance.yml:/etc/prometheus/bgg-tos-compliance.yml:ro
       # Issue #3112 — OPS-02 Slack delivery alerts (referenced from prometheus.yml rule_files).

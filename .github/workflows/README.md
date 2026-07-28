@@ -190,13 +190,6 @@ runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
 |----------|-----|--------|
 | `security-scan.yml` | `codeql` | CodeQL CLI has no linux/arm64 binary |
 
-### Operational Workflows
-
-| Workflow | Schedule | Purpose |
-|----------|----------|---------|
-| `runner-health-check.yml` | Every 15 min | Docker, disk, memory monitoring |
-| `runner-maintenance.yml` | Weekly Sun 3 AM | Docker prune, temp cleanup, disk alerts |
-
 ### Rollback Procedure
 
 **Full rollback** (all workflows revert to GitHub-hosted):
@@ -254,10 +247,15 @@ act -W .github/workflows/ci.yml --dryrun
 3. Verify secrets are configured
 
 ### Runner Issues
-1. Check runner status: GitHub → Settings → Actions → Runners
-2. Check health: Review latest `runner-health-check.yml` run
-3. Check disk: Review latest `runner-maintenance.yml` run or trigger manually
-4. Full rollback: Clear `vars.RUNNER` variable (see Rollback Procedure above)
+> The self-hosted runner is being retired (Option E, #3331): `vars.RUNNER` has been
+> cleared and all workflows run on GitHub-hosted. The `runner-health-check` /
+> `runner-maintenance` / `monitor-runner-queue` workflows were removed. To
+> re-introduce a self-hosted runner (Option D fallback), provision it from
+> `infra/runner/cloud-init.yml` + `setup-vm.sh` + `setup-runner.sh` and re-add the
+> `RUNNER` repo variable.
+
+1. Check runner status (if any registered): GitHub → Settings → Actions → Runners
+2. Full rollback to self-hosted: re-create the `RUNNER` variable (see Rollback Procedure above)
 
 ### Performance Issues
 1. Check K6/Lighthouse reports in artifacts

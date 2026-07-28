@@ -32,8 +32,15 @@ The residual 28 % (garbage `Title` elements unstructured emits — `I L E X Y R 
 
 **Decision:** WP4 is deferred/descope-able. Re-evaluate if a broader IT cohort — once re-chunked with WP1 (the 12 other IT docs + the 65 currently-`Failed` PDFs, both pending a re-index) — shows a **red** cohort whose retrieval actually regresses. Until then WP1 (+ the number-noise demotion) is sufficient.
 
-## Remaining WP3 (follow-up)
+## Remaining WP3 (follow-up) — SHIPPED
 
-- Corpus `title-health` admin endpoint + persistence (so the metric is queryable, not just computed offline).
-- Wire the metric into a CI gate that **fails if a previously-green English game's health drops** after a WP1/WP4 change (the regression guard) — alongside the retrieval regression guard (`rag-smoke-assert.sh`).
-- Capture the `tmars-setup-it` rag-smoke baseline on staging (`--update-baseline`) so the added canonical query asserts instead of SKIPs.
+- **Corpus `title-health` admin endpoint** — `GET /api/v1/admin/kb/title-health` (`AdminKnowledgeBaseEndpoints`, admin-scoped). Computes `TitleHealthMetric` per shared game over its distinct `text_chunks.Heading` values, returning `GameTitleHealthDto[]` (band, plausibleFraction, canonicalCoverage, distinctHeadings, dominant language). Query/handler: `KnowledgeBase/Application/Queries/GetCorpusTitleHealth`. Handler EF translation (nullable-`GameId` join → `shared_games`/`pdf_documents`, `LanguageOverride ?? Language`, server-side `Distinct`) is covered by a Testcontainers integration test.
+- **CI regression guard** — `infra/scripts/title-health-assert.sh` + committed baseline `infra/fixtures/title-health-baseline.json`, wired into `.github/workflows/rag-smoke-dispatch.yml` (shares the one snapshot boot with the retrieval smoke). Assert mode FAILs on a **band downgrade** (green→yellow/red, yellow→red), a **plausible-fraction drop** beyond `fractionRegressionTolerance` (0.05), or a **baselined game vanishing** from the corpus. A new (unbaselined) game is a NOTICE, never a FAIL. It opens a deduped `title-health-regression` issue on failure (ADR-078 one-per-open-label).
+
+### Capture step (required to arm the gate)
+
+The baseline ships with an EMPTY `games` map, so the gate is **dormant (SKIP)** until captured — mirroring the rag-smoke unbaselined-query SKIP (no green theatre; the SKIP is a visible NOTICE). Arm it by capturing against the **published seed snapshot** (the corpus the CI gate asserts against — NOT staging): dispatch `rag-smoke-dispatch.yml` with `update_baseline=true`, then download the `title-health-baseline-<run_id>` artifact and commit `infra/fixtures/title-health-baseline.json`. Re-capture after any re-bake/re-chunk that intentionally changes headings (same procedure as the golden retrieval baseline).
+
+### Still open (unchanged)
+
+- Capture the `tmars-setup-it` rag-smoke baseline (`--update-baseline`) so the added canonical query asserts instead of SKIPs.

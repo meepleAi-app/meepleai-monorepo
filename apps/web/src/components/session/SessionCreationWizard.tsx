@@ -195,7 +195,12 @@ function ConfigureScoringStep({
           className="w-24"
           onKeyDown={e => e.key === 'Enter' && addDimension()}
         />
-        <Button variant="outline" size="icon" onClick={addDimension}>
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label="Aggiungi dimensione"
+          onClick={addDimension}
+        >
           <Plus className="h-4 w-4" />
         </Button>
       </div>

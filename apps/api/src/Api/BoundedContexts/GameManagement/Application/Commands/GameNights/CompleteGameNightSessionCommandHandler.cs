@@ -85,7 +85,11 @@ internal sealed class CompleteGameNightSessionCommandHandler : ICommandHandler<C
             // (_diaryStream.Publish + _syncService.PublishEventAsync) fire before CommitTransactionAsync,
             // so a rare commit failure leaves phantom broadcasts — clients self-correct on the next
             // poll. See must-fix #5 in the C4 spec (2026-07-05-issue-2634-c4-winner-completa-design.md).
-            await _mediator.Send(new FinalizeSessionCommand(trackingSessionId, finalRanks), cancellationToken).ConfigureAwait(false);
+            // RequestedBy = session.UserId: this is a trusted internal orchestration path. The caller's
+            // authority was already enforced above (organizer check, line 49) — the FinalizeSessionCommand
+            // IDOR guard targets direct HTTP callers, so we finalize on behalf of the tracking session's
+            // owner to avoid spuriously blocking a legitimate game-night completion.
+            await _mediator.Send(new FinalizeSessionCommand(trackingSessionId, finalRanks, session.UserId), cancellationToken).ConfigureAwait(false);
 
             commitStarted = true;
             await _unitOfWork.CommitTransactionAsync(cancellationToken).ConfigureAwait(false);

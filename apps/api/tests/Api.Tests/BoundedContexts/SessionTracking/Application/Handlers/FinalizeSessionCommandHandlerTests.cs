@@ -52,7 +52,7 @@ public class FinalizeSessionCommandHandlerTests
         _sessionRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Session?)null);
 
-        var command = new FinalizeSessionCommand(Guid.NewGuid(), new Dictionary<Guid, int>());
+        var command = new FinalizeSessionCommand(Guid.NewGuid(), new Dictionary<Guid, int>(), Guid.NewGuid());
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(
@@ -63,13 +63,14 @@ public class FinalizeSessionCommandHandlerTests
     public async Task Handle_AlreadyFinalized_ThrowsConflictException()
     {
         // Arrange
-        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
+        var userId = Guid.NewGuid();
+        var session = Session.Create(userId, Guid.NewGuid(), SessionType.Generic);
         session.Finalize();
 
         _sessionRepoMock.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new FinalizeSessionCommand(session.Id, new Dictionary<Guid, int>());
+        var command = new FinalizeSessionCommand(session.Id, new Dictionary<Guid, int>(), userId);
 
         // Act & Assert
         await Assert.ThrowsAsync<ConflictException>(
@@ -91,7 +92,7 @@ public class FinalizeSessionCommandHandlerTests
             .ReturnsAsync(Enumerable.Empty<ScoreEntry>());
 
         var ranks = new Dictionary<Guid, int> { { participantId, 1 } };
-        var command = new FinalizeSessionCommand(session.Id, ranks);
+        var command = new FinalizeSessionCommand(session.Id, ranks, userId);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -100,6 +101,30 @@ public class FinalizeSessionCommandHandlerTests
         Assert.NotNull(result);
         _sessionRepoMock.Verify(r => r.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_CallerNotOwnerOrParticipant_ThrowsForbiddenException()
+    {
+        // Arrange — session owned by someone else; the caller is neither owner nor participant (IDOR).
+        var ownerId = Guid.NewGuid();
+        var attackerId = Guid.NewGuid();
+        var session = Session.Create(ownerId, Guid.NewGuid(), SessionType.Generic);
+        var participantId = session.Participants.First().Id;
+
+        _sessionRepoMock.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var command = new FinalizeSessionCommand(
+            session.Id,
+            new Dictionary<Guid, int> { { participantId, 1 } },
+            attackerId);
+
+        // Act & Assert — IDOR guard rejects before any state mutation.
+        await Assert.ThrowsAsync<ForbiddenException>(
+            () => _handler.Handle(command, CancellationToken.None));
+        _sessionRepoMock.Verify(r => r.UpdateAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     // ── Invariante #13 (#1896 WP2 T4) — LiveActiveWarning ─────────────────────
@@ -168,7 +193,7 @@ public class FinalizeSessionCommandHandlerTests
             .ReturnsAsync(Enumerable.Empty<ScoreEntry>());
 
         var ranks = new Dictionary<Guid, int> { { participantId, 1 } };
-        var command = new FinalizeSessionCommand(sessionBeingFinalized.Id, ranks);
+        var command = new FinalizeSessionCommand(sessionBeingFinalized.Id, ranks, userId);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -212,7 +237,7 @@ public class FinalizeSessionCommandHandlerTests
             .ReturnsAsync(Enumerable.Empty<ScoreEntry>());
 
         var ranks = new Dictionary<Guid, int> { { participantId, 1 } };
-        var command = new FinalizeSessionCommand(sessionBeingFinalized.Id, ranks);
+        var command = new FinalizeSessionCommand(sessionBeingFinalized.Id, ranks, userId);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);

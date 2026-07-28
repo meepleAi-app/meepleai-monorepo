@@ -8,7 +8,8 @@ public record UpdateScoreCommand(
     Guid ParticipantId,
     int? RoundNumber,
     string? Category,
-    decimal ScoreValue
+    decimal ScoreValue,
+    Guid RequestedBy // IDOR guard: authenticated caller — must be the session owner or a participant.
 ) : IRequest<UpdateScoreResult>;
 
 public record UpdateScoreResult(

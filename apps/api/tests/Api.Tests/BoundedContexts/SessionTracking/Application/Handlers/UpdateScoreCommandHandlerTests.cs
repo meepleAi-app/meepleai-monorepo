@@ -34,7 +34,7 @@ public class UpdateScoreCommandHandlerTests
         _sessionRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Session?)null);
 
-        var command = new UpdateScoreCommand(Guid.NewGuid(), Guid.NewGuid(), 1, null, 10m);
+        var command = new UpdateScoreCommand(Guid.NewGuid(), Guid.NewGuid(), 1, null, 10m, Guid.NewGuid());
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(
@@ -45,13 +45,14 @@ public class UpdateScoreCommandHandlerTests
     public async Task Handle_FinalizedSession_ThrowsConflictException()
     {
         // Arrange
-        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
+        var userId = Guid.NewGuid();
+        var session = Session.Create(userId, Guid.NewGuid(), SessionType.Generic);
         session.Finalize();
 
         _sessionRepoMock.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new UpdateScoreCommand(session.Id, session.Participants.First().Id, 1, null, 10m);
+        var command = new UpdateScoreCommand(session.Id, session.Participants.First().Id, 1, null, 10m, userId);
 
         // Act & Assert
         await Assert.ThrowsAsync<ConflictException>(
@@ -62,14 +63,35 @@ public class UpdateScoreCommandHandlerTests
     public async Task Handle_ParticipantNotInSession_ThrowsNotFoundException()
     {
         // Arrange
-        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
+        var userId = Guid.NewGuid();
+        var session = Session.Create(userId, Guid.NewGuid(), SessionType.Generic);
         _sessionRepoMock.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new UpdateScoreCommand(session.Id, Guid.NewGuid(), 1, null, 10m);
+        var command = new UpdateScoreCommand(session.Id, Guid.NewGuid(), 1, null, 10m, userId);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(
             () => _handler.Handle(command, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Handle_CallerNotOwnerOrParticipant_ThrowsForbiddenException()
+    {
+        // Arrange — session owned by someone else; caller is neither owner nor participant (IDOR).
+        var ownerId = Guid.NewGuid();
+        var attackerId = Guid.NewGuid();
+        var session = Session.Create(ownerId, Guid.NewGuid(), SessionType.Generic);
+
+        _sessionRepoMock.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var command = new UpdateScoreCommand(
+            session.Id, session.Participants.First().Id, 1, null, 10m, attackerId);
+
+        // Act & Assert — IDOR guard rejects before any score is persisted.
+        await Assert.ThrowsAsync<ForbiddenException>(
+            () => _handler.Handle(command, CancellationToken.None));
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 }

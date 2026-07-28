@@ -51,6 +51,17 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
         var session = await _sessionRepository.GetByIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Session {request.SessionId} not found");
 
+        // IDOR guard (security review high-priority): only the session owner or a registered
+        // (User-linked) participant may finalize. Finalizing destroys the live session and triggers
+        // the KB cleanup + game-night link-close cascade, so this must run before any state mutation.
+        // Mirrors UpdateSessionScoresCommandHandler.
+        if (session.UserId != request.RequestedBy &&
+            !session.Participants.Any(p => p.UserId == request.RequestedBy))
+        {
+            throw new ForbiddenException(
+                $"User {request.RequestedBy} is not authorized to finalize session {request.SessionId}.");
+        }
+
         if (session.Status != SessionStatus.Active && session.Status != SessionStatus.Paused)
         {
             throw new ConflictException($"Cannot finalize session with status {session.Status}");

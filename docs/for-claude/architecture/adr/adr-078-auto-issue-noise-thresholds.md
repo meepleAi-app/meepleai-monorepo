@@ -18,7 +18,7 @@ MeepleAI's CI/CD infrastructure includes several automated workflows that create
 
 3. **`ci-minutes-digest.yml`**: Presumably creates or updates a digest issue with CI minute consumption.
 
-4. **`runner-health-check.yml`** and **`monitor-runner-queue.yml`**: Runner health monitoring — likely emit issues or Slack alerts on runner anomalies.
+4. ~~**`runner-health-check.yml`** and **`monitor-runner-queue.yml`**~~ — **removed 2026-07-28 (#3331 / #3348)**: the self-hosted runner was retired (Option E; all workflows now run on GitHub-hosted), so these runner-health monitors were deleted. Kept here for historical context of the convention.
 
 5. **`validate-secrets.yml`**: Validates secrets configuration — could emit issues on secret drift.
 
@@ -29,7 +29,7 @@ MeepleAI's CI/CD infrastructure includes several automated workflows that create
 - The `dev-auto-revert.yml` uses a failure-mode classification with threshold logic ("would-revert only after 30min continuous red") before taking action — a noise-reduction strategy.
 - The `spec-debt-false-positive-allowlist.json` is an explicit allowlist pattern for suppressing known-false-positive auto-issues.
 
-**Problem space**: as the number of automated monitors grows (security scans, dependency drift, spec debt, seed snapshot freshness, runner health), each generating potential issues, the GitHub issue tracker can be polluted with:
+**Problem space**: as the number of automated monitors grows (security scans, dependency drift, spec debt, seed snapshot freshness), each generating potential issues, the GitHub issue tracker can be polluted with:
 - **Noise issues** (same condition detected on consecutive scans, creating N identical issues).
 - **Burst issues** (a single root cause — e.g. a network blip — causing 10 simultaneous "health check failed" issues across 10 monitors).
 - **Stale issues** (a condition that auto-resolved but the issue remains open, accumulating false backlog).

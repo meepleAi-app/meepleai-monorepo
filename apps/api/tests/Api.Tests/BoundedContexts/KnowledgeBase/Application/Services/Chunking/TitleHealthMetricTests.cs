@@ -89,9 +89,31 @@ public class TitleHealthMetricTests
     [Fact]
     public void Compute_CanonicalCoverage_CountsLexiconSectionsPresent()
     {
-        // "PANORAMICA DEL GIOCO" contains PANORAMICA; PREPARAZIONE + AZIONI are direct lexicon entries.
+        // PREPARAZIONE + AZIONI are direct lexicon entries; "PANORAMICA DEL GIOCO" carries PANORAMICA;
+        // "Random Section" is plausible but not canonical → 3 canonical headings.
         var r = TitleHealthMetric.Compute(new[] { "PREPARAZIONE", "AZIONI", "PANORAMICA DEL GIOCO", "Random Section" });
 
-        r.CanonicalCoverage.Should().BeGreaterThanOrEqualTo(3);
+        r.CanonicalCoverage.Should().Be(3);
+    }
+
+    [Fact]
+    public void Compute_CanonicalCoverage_CountsHeadingOnce_ForOverlappingLexiconEntries()
+    {
+        // "SVOLGIMENTO DEL GIOCO" matches both "SVOLGIMENTO" and "SVOLGIMENTO DEL GIOCO" — per-heading
+        // counting credits it once (review: no double-count).
+        var r = TitleHealthMetric.Compute(new[] { "SVOLGIMENTO DEL GIOCO" });
+
+        r.CanonicalCoverage.Should().Be(1);
+    }
+
+    [Fact]
+    public void Compute_CanonicalCoverage_ExcludesGarbageHeadingCarryingLexiconToken()
+    {
+        // A garbage heading that embeds a lexicon word but is NOT plausible (letter fraction < 0.6) must
+        // not credit coverage (review: gate canonical on plausibility so the sub-signals cannot contradict).
+        var r = TitleHealthMetric.Compute(new[] { "3 4 SETUP 9%" });
+
+        TitleHealthMetric.IsPlausibleHeading("3 4 SETUP 9%").Should().BeFalse();
+        r.CanonicalCoverage.Should().Be(0);
     }
 }

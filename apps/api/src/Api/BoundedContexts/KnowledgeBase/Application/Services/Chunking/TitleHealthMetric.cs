@@ -30,7 +30,7 @@ internal static class TitleHealthMetric
     /// <param name="DistinctHeadings">Distinct non-blank headings across the game's chunks.</param>
     /// <param name="PlausibleHeadings">How many of those look like real section titles.</param>
     /// <param name="PlausibleFraction">PlausibleHeadings / DistinctHeadings (0 when there are none).</param>
-    /// <param name="CanonicalCoverage">How many curated <see cref="SectionHeadingLexicon"/> section types appear.</param>
+    /// <param name="CanonicalCoverage">Distinct PLAUSIBLE headings that match a curated <see cref="SectionHeadingLexicon"/> section word (counted per-heading, so a heading is credited once regardless of how many overlapping lexicon entries it matches).</param>
     /// <param name="Band">green ≥ 0.80 · yellow ≥ 0.50 · red otherwise — the WP4 go/no-go band.</param>
     public readonly record struct TitleHealthResult(
         int DistinctHeadings,
@@ -51,7 +51,12 @@ internal static class TitleHealthMetric
 
         var plausible = distinct.Count(IsPlausibleHeading);
         var fraction = distinct.Count == 0 ? 0.0 : (double)plausible / distinct.Count;
-        var canonical = CountCanonicalCoverage(distinct);
+        // Per-heading (not per-lexicon-entry) and gated on plausibility: a heading is a "canonical
+        // section" once when it is a plausible title carrying a lexicon word — so an overlapping entry
+        // ("SVOLGIMENTO" ⊂ "SVOLGIMENTO DEL GIOCO") is not double-counted, and a garbage heading that
+        // merely embeds a lexicon token ("3 4 SETUP 9%") does not credit coverage.
+        var canonical = distinct.Count(h =>
+            IsPlausibleHeading(h) && EmbeddedTitleSplitter.ContainsLexiconTitle(h.ToUpperInvariant()));
         var band = fraction >= GreenThreshold ? "green"
             : fraction >= YellowThreshold ? "yellow"
             : "red";
@@ -60,7 +65,7 @@ internal static class TitleHealthMetric
     }
 
     /// <summary>
-    /// True when a heading looks like a real section title: 2–80 chars, carrying a real word (a run of
+    /// True when a heading looks like a real section title: 2–40 chars, carrying a real word (a run of
     /// ≥ <see cref="ChunkingConstants.MinSubstantiveLetterRun"/> consecutive letters, so "D", "S U",
     /// "I L E X Y R F" are rejected) and dominantly letters (≥ 60 % of non-space chars, so "(14%), Oceani"
     /// and "© 2016 FryxGames" are rejected). Measures title-LIKENESS, not section-correctness — a real
@@ -105,36 +110,5 @@ internal static class TitleHealthMetric
         }
 
         return hasWord && nonSpace > 0 && (double)letters / nonSpace >= MinLetterFraction;
-    }
-
-    private static int CountCanonicalCoverage(IEnumerable<string> headings)
-    {
-        var upperHeadings = headings.Select(h => h.ToUpperInvariant()).ToList();
-        var covered = 0;
-        foreach (var title in SectionHeadingLexicon.Titles)
-        {
-            if (upperHeadings.Any(h => ContainsWholeWord(h, title)))
-            {
-                covered++;
-            }
-        }
-        return covered;
-    }
-
-    private static bool ContainsWholeWord(string text, string word)
-    {
-        var i = text.IndexOf(word, StringComparison.Ordinal);
-        while (i >= 0)
-        {
-            var leftOk = i == 0 || !char.IsLetter(text[i - 1]);
-            var end = i + word.Length;
-            var rightOk = end >= text.Length || !char.IsLetter(text[end]);
-            if (leftOk && rightOk)
-            {
-                return true;
-            }
-            i = text.IndexOf(word, i + 1, StringComparison.Ordinal);
-        }
-        return false;
     }
 }

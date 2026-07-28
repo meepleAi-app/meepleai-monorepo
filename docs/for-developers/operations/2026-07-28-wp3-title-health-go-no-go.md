@@ -17,14 +17,16 @@ Computed over the real staging headings of 6 games. **Only Terraforming Mars was
 | Game | lang | distinct | plausible % | canonical | band |
 |---|---|---|---|---|---|
 | Wingspan | en | 102 | 90 % | 0 | 🟢 green |
-| Catan | en | 104 | 87 % | 1 | 🟢 green |
+| Catan | en | 104 | 87 % | 2 | 🟢 green |
 | Dominion | en | 121 | 85 % | 0 | 🟢 green |
-| Ark Nova | en | 107 | 79 % | 3 | 🟡 yellow |
-| **Terraforming Mars** | it | 68 | **72 %** | **9** | 🟡 **yellow** |
+| Ark Nova | en | 107 | 79 % | 4 | 🟡 yellow |
+| **Terraforming Mars** | it | 68 | **72 %** | **11** | 🟡 **yellow** |
+
+(`canonical` = distinct plausible headings matching a curated lexicon section word.)
 
 ## WP4 go/no-go decision — **DEFERRED / descope-able**
 
-Terraforming Mars — the epic's motivating case — is **yellow (72 %)** after WP1, with the **highest canonical coverage (9)**: the WP1 heading-repair (embedded-title splitter + `Header`→`Title` promotion + synonym-aware boost) recovered the real section headings. The `Setup per N giocatori` query now works end-to-end (WP2: the `PREPARAZIONE` chunk is retrieved rank #1 and the answer is grounded).
+Terraforming Mars — the epic's motivating case — is **yellow (72 %)** after WP1, with the **highest canonical coverage (11)**: the WP1 heading-repair (embedded-title splitter + `Header`→`Title` promotion + synonym-aware boost) recovered the real section headings. The `Setup per N giocatori` query now works end-to-end (WP2: the `PREPARAZIONE` chunk is retrieved rank #1 and the answer is grounded).
 
 The residual 28 % (garbage `Title` elements unstructured emits — `I L E X Y R F`, `D`, `(14%), Oceani`) is **demoted by WP1b (number-noise) and does not block retrieval**. WP4 (hi_res IT extraction) would push TM yellow → green by fixing the extraction at the geometry level, but its cost is real and load-bearing (per epic WP4: HttpClient 35 s timeout + retry storm, yolox weights not baked into the image, hi_res >90 s on CPU) and is **not justified to go yellow → green when the functional goal is already met**.
 

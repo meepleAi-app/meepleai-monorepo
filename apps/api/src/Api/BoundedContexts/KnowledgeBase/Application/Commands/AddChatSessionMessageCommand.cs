@@ -8,6 +8,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// </summary>
 internal record AddChatSessionMessageCommand(
     Guid SessionId,
+    Guid UserId,
     string Role,
     string Content,
     Dictionary<string, object>? Metadata = null

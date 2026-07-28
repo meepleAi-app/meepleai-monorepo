@@ -48,6 +48,13 @@ internal sealed class GetChatSessionQueryHandler : IRequestHandler<GetChatSessio
             return null;
         }
 
+        // Ownership check (IDOR): a non-owner sees the same null → 404 as a
+        // non-existent session, so the endpoint discloses nothing about it.
+        if (session.UserId != request.UserId)
+        {
+            return null;
+        }
+
         var messageDtos = session.Messages
             .Select(m => new ChatSessionMessageDto(
                 Id: m.Id,

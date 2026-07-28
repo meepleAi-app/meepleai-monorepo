@@ -30,6 +30,7 @@ public class AddChatSessionMessageCommandValidatorTests
         // Arrange
         var command = new AddChatSessionMessageCommand(
             SessionId: Guid.NewGuid(),
+            UserId: Guid.NewGuid(),
             Role: role,
             Content: "Valid message content");
 
@@ -46,6 +47,7 @@ public class AddChatSessionMessageCommandValidatorTests
         // Arrange
         var command = new AddChatSessionMessageCommand(
             SessionId: Guid.Empty,
+            UserId: Guid.NewGuid(),
             Role: "user",
             Content: "Valid content");
 
@@ -65,6 +67,7 @@ public class AddChatSessionMessageCommandValidatorTests
         // Arrange
         var command = new AddChatSessionMessageCommand(
             SessionId: Guid.NewGuid(),
+            UserId: Guid.NewGuid(),
             Role: role,
             Content: "Valid content");
 
@@ -87,6 +90,7 @@ public class AddChatSessionMessageCommandValidatorTests
         // Arrange
         var command = new AddChatSessionMessageCommand(
             SessionId: Guid.NewGuid(),
+            UserId: Guid.NewGuid(),
             Role: role,
             Content: "Valid content");
 
@@ -106,6 +110,7 @@ public class AddChatSessionMessageCommandValidatorTests
         // Arrange
         var command = new AddChatSessionMessageCommand(
             SessionId: Guid.NewGuid(),
+            UserId: Guid.NewGuid(),
             Role: "user",
             Content: content);
 
@@ -123,6 +128,7 @@ public class AddChatSessionMessageCommandValidatorTests
         // Arrange
         var command = new AddChatSessionMessageCommand(
             SessionId: Guid.NewGuid(),
+            UserId: Guid.NewGuid(),
             Role: "user",
             Content: new string('a', 50000));
 
@@ -139,6 +145,7 @@ public class AddChatSessionMessageCommandValidatorTests
         // Arrange
         var command = new AddChatSessionMessageCommand(
             SessionId: Guid.NewGuid(),
+            UserId: Guid.NewGuid(),
             Role: "user",
             Content: new string('a', 50001));
 
@@ -156,6 +163,7 @@ public class AddChatSessionMessageCommandValidatorTests
         // Arrange
         var command = new AddChatSessionMessageCommand(
             SessionId: Guid.Empty,
+            UserId: Guid.NewGuid(),
             Role: "invalid",
             Content: "");
 
@@ -181,6 +189,7 @@ public class AddChatSessionMessageCommandValidatorTests
         // Arrange
         var command = new AddChatSessionMessageCommand(
             SessionId: Guid.NewGuid(),
+            UserId: Guid.NewGuid(),
             Role: "user",
             Content: new string('a', length));
 

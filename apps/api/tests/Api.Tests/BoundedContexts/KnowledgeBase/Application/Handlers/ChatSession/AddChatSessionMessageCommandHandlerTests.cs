@@ -19,6 +19,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.ChatSessi
 [Trait("Category", TestCategories.Unit)]
 public class AddChatSessionMessageCommandHandlerTests
 {
+    private static readonly Guid TestUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private readonly Mock<IChatSessionRepository> _mockRepository;
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
     private readonly Mock<ILogger<AddChatSessionMessageCommandHandler>> _mockLogger;
@@ -48,6 +49,7 @@ public class AddChatSessionMessageCommandHandlerTests
 
         var command = new AddChatSessionMessageCommand(
             SessionId: sessionId,
+            UserId: TestUserId,
             Role: SessionChatMessage.UserRole,
             Content: "Hello, I need help with the rules");
 
@@ -78,6 +80,7 @@ public class AddChatSessionMessageCommandHandlerTests
 
         var command = new AddChatSessionMessageCommand(
             SessionId: sessionId,
+            UserId: TestUserId,
             Role: SessionChatMessage.AssistantRole,
             Content: "I can help you with that!");
 
@@ -103,6 +106,7 @@ public class AddChatSessionMessageCommandHandlerTests
 
         var command = new AddChatSessionMessageCommand(
             SessionId: sessionId,
+            UserId: TestUserId,
             Role: SessionChatMessage.SystemRole,
             Content: "You are a helpful assistant");
 
@@ -133,6 +137,7 @@ public class AddChatSessionMessageCommandHandlerTests
 
         var command = new AddChatSessionMessageCommand(
             SessionId: sessionId,
+            UserId: TestUserId,
             Role: SessionChatMessage.UserRole,
             Content: "Test message",
             Metadata: metadata);
@@ -155,6 +160,7 @@ public class AddChatSessionMessageCommandHandlerTests
 
         var command = new AddChatSessionMessageCommand(
             SessionId: sessionId,
+            UserId: TestUserId,
             Role: SessionChatMessage.UserRole,
             Content: "Test message");
 
@@ -178,12 +184,12 @@ public class AddChatSessionMessageCommandHandlerTests
 
         // Add first message
         await _handler.Handle(
-            new AddChatSessionMessageCommand(sessionId, SessionChatMessage.UserRole, "Message 1"),
+            new AddChatSessionMessageCommand(sessionId, TestUserId, SessionChatMessage.UserRole, "Message 1"),
             TestContext.Current.CancellationToken);
 
         // Add second message
         await _handler.Handle(
-            new AddChatSessionMessageCommand(sessionId, SessionChatMessage.AssistantRole, "Message 2"),
+            new AddChatSessionMessageCommand(sessionId, TestUserId, SessionChatMessage.AssistantRole, "Message 2"),
             TestContext.Current.CancellationToken);
 
         // Assert
@@ -213,6 +219,7 @@ public class AddChatSessionMessageCommandHandlerTests
 
         var command = new AddChatSessionMessageCommand(
             SessionId: sessionId,
+            UserId: TestUserId,
             Role: SessionChatMessage.UserRole,
             Content: "Test");
 
@@ -270,11 +277,40 @@ public class AddChatSessionMessageCommandHandlerTests
         act.Should().Throw<ArgumentNullException>();
     }
 
+    [Fact]
+    public async Task Handle_WhenCallerIsNotOwner_ThrowsNotFoundAndDoesNotPersist()
+    {
+        // Arrange — session owned by someone else; a non-owner must get 404, no write.
+        var sessionId = Guid.NewGuid();
+        var attackerId = Guid.NewGuid();
+        var session = CreateTestSession(sessionId); // owned by TestUserId
+
+        _mockRepository
+            .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var command = new AddChatSessionMessageCommand(
+            SessionId: sessionId,
+            UserId: attackerId,
+            Role: SessionChatMessage.UserRole,
+            Content: "injected");
+
+        // Act & Assert
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
+
+        session.MessageCount.Should().Be(0);
+        _mockRepository.Verify(
+            r => r.UpdateAsync(It.IsAny<Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatSession>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     private static Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatSession CreateTestSession(Guid sessionId)
     {
         return new Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatSession(
             id: sessionId,
-            userId: Guid.NewGuid(),
+            userId: TestUserId,
             gameId: Guid.NewGuid(),
             title: "Test Session");
     }

@@ -140,10 +140,12 @@ internal static class ChatSessionEndpoints
         [FromRoute] Guid sessionId,
         [FromBody] AddChatSessionMessageRequest request,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
         var command = new AddChatSessionMessageCommand(
             SessionId: sessionId,
+            UserId: httpContext.User.GetUserId(),
             Role: request.Role,
             Content: request.Content,
             Metadata: request.Metadata
@@ -156,6 +158,7 @@ internal static class ChatSessionEndpoints
 
     private static async Task<IResult> HandleGetSession(
         [FromRoute] Guid sessionId,
+        HttpContext httpContext,
         [FromQuery] int skip = 0,
         [FromQuery] int take = 50,
         [FromServices] IMediator mediator = null!,
@@ -163,6 +166,7 @@ internal static class ChatSessionEndpoints
     {
         var query = new GetChatSessionQuery(
             SessionId: sessionId,
+            UserId: httpContext.User.GetUserId(),
             MessageSkip: skip,
             MessageTake: take
         );
@@ -263,9 +267,10 @@ internal static class ChatSessionEndpoints
     private static async Task<IResult> HandleDeleteSession(
         [FromRoute] Guid sessionId,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var command = new DeleteChatSessionCommand(SessionId: sessionId);
+        var command = new DeleteChatSessionCommand(SessionId: sessionId, UserId: httpContext.User.GetUserId());
 
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
 
@@ -278,6 +283,7 @@ internal static class ChatSessionEndpoints
         [FromServices] IMediator mediator,
         [FromServices] IChatSessionRepository sessionRepository,
         [FromServices] IChatThreadRepository threadRepository,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
         // Naming disambiguation: detect if caller passed a ChatThread UUID to a ChatSession endpoint
@@ -297,7 +303,7 @@ internal static class ChatSessionEndpoints
             return Results.NotFound();
         }
 
-        var command = new RenameChatSessionCommand(SessionId: sessionId, Title: body.Title);
+        var command = new RenameChatSessionCommand(SessionId: sessionId, UserId: httpContext.User.GetUserId(), Title: body.Title);
 
         try
         {

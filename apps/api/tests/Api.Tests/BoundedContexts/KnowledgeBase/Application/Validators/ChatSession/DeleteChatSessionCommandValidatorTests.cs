@@ -25,7 +25,8 @@ public class DeleteChatSessionCommandValidatorTests
     {
         // Arrange
         var command = new DeleteChatSessionCommand(
-            SessionId: Guid.NewGuid());
+            SessionId: Guid.NewGuid(),
+            UserId: Guid.NewGuid());
 
         // Act
         var result = _validator.TestValidate(command);
@@ -39,7 +40,8 @@ public class DeleteChatSessionCommandValidatorTests
     {
         // Arrange
         var command = new DeleteChatSessionCommand(
-            SessionId: Guid.Empty);
+            SessionId: Guid.Empty,
+            UserId: Guid.NewGuid());
 
         // Act
         var result = _validator.TestValidate(command);
@@ -54,7 +56,7 @@ public class DeleteChatSessionCommandValidatorTests
     public void Validate_WithVariousValidGuids_ShouldNotHaveValidationErrors(Guid sessionId)
     {
         // Arrange
-        var command = new DeleteChatSessionCommand(SessionId: sessionId);
+        var command = new DeleteChatSessionCommand(SessionId: sessionId, UserId: Guid.NewGuid());
 
         // Act
         var result = _validator.TestValidate(command);

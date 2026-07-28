@@ -124,51 +124,70 @@ export function useSessionSync(options: UseSessionSyncOptions): SessionSyncState
   const maxReconnectAttempts = 5;
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Keep the latest callbacks in refs so the SSE connection is NOT torn down and
+  // re-established when a consumer passes fresh inline callbacks on every render
+  // (e.g. toolkit/[sessionId]/_content.tsx). Without this, `handleEvent` → `connect`
+  // → the mount effect all get new identities each render, closing and re-opening
+  // the EventSource in a self-sustaining loop that drops in-flight events and
+  // flickers `isConnected`. Mirrors the ref pattern in useTurnOrder.
+  const onScoreUpdateRef = useRef(onScoreUpdate);
+  const onPausedRef = useRef(onPaused);
+  const onResumedRef = useRef(onResumed);
+  const onFinalizedRef = useRef(onFinalized);
+  const onErrorRef = useRef(onError);
+  const onTurnAdvancedRef = useRef(onTurnAdvanced);
+
+  useEffect(() => {
+    onScoreUpdateRef.current = onScoreUpdate;
+    onPausedRef.current = onPaused;
+    onResumedRef.current = onResumed;
+    onFinalizedRef.current = onFinalized;
+    onErrorRef.current = onError;
+    onTurnAdvancedRef.current = onTurnAdvanced;
+  });
+
   /**
    * Handle SSE event
    */
-  const handleEvent = useCallback(
-    (event: MessageEvent<string>) => {
-      try {
-        const parsedEvent: SessionEvent = JSON.parse(event.data);
+  const handleEvent = useCallback((event: MessageEvent<string>) => {
+    try {
+      const parsedEvent: SessionEvent = JSON.parse(event.data);
 
-        switch (parsedEvent.type) {
-          case SessionEventType.ScoreUpdatedEvent: {
-            const data = parsedEvent.data as ScoreUpdatedEventData;
-            const scoreEntry = {
-              ...data.scoreEntry,
-              timestamp: new Date(data.scoreEntry.timestamp),
-            };
+      switch (parsedEvent.type) {
+        case SessionEventType.ScoreUpdatedEvent: {
+          const data = parsedEvent.data as ScoreUpdatedEventData;
+          const scoreEntry = {
+            ...data.scoreEntry,
+            timestamp: new Date(data.scoreEntry.timestamp),
+          };
 
-            setScores(prev => [...prev, scoreEntry]);
-            onScoreUpdate?.(scoreEntry);
-            break;
-          }
-
-          case SessionEventType.SessionPausedEvent: {
-            onPaused?.();
-            break;
-          }
-
-          case SessionEventType.SessionResumedEvent: {
-            onResumed?.();
-            break;
-          }
-
-          case SessionEventType.SessionFinalizedEvent: {
-            onFinalized?.();
-            break;
-          }
+          setScores(prev => [...prev, scoreEntry]);
+          onScoreUpdateRef.current?.(scoreEntry);
+          break;
         }
-      } catch (err) {
-        logger.error(
-          `[useSessionSync] Event parsing error: ${event.data}`,
-          err instanceof Error ? err : undefined
-        );
+
+        case SessionEventType.SessionPausedEvent: {
+          onPausedRef.current?.();
+          break;
+        }
+
+        case SessionEventType.SessionResumedEvent: {
+          onResumedRef.current?.();
+          break;
+        }
+
+        case SessionEventType.SessionFinalizedEvent: {
+          onFinalizedRef.current?.();
+          break;
+        }
       }
-    },
-    [onScoreUpdate, onPaused, onResumed, onFinalized]
-  );
+    } catch (err) {
+      logger.error(
+        `[useSessionSync] Event parsing error: ${event.data}`,
+        err instanceof Error ? err : undefined
+      );
+    }
+  }, []);
 
   /**
    * Connect to SSE stream
@@ -195,7 +214,7 @@ export function useSessionSync(options: UseSessionSyncOptions): SessionSyncState
 
         const errorObj = new Error('SSE connection failed');
         setError(errorObj);
-        onError?.(errorObj);
+        onErrorRef.current?.(errorObj);
 
         // Auto-reconnect with exponential backoff
         if (reconnectAttemptsRef.current < maxReconnectAttempts) {
@@ -221,26 +240,25 @@ export function useSessionSync(options: UseSessionSyncOptions): SessionSyncState
         eventSource.addEventListener(eventType, handleEvent);
       });
 
-      // Listen to turn-order toolkit events (Issue #4975)
-      if (onTurnAdvanced) {
-        eventSource.addEventListener('session:toolkit', (event: MessageEvent<string>) => {
-          try {
-            const payload = JSON.parse(event.data) as TurnAdvancedPayload;
-            onTurnAdvanced(payload);
-          } catch (err) {
-            logger.error('[useSessionSync] session:toolkit parse error:', err);
-          }
-        });
-      }
+      // Listen to turn-order toolkit events (Issue #4975). Always registered; the
+      // callback is invoked through a ref so `connect` stays stable across renders.
+      eventSource.addEventListener('session:toolkit', (event: MessageEvent<string>) => {
+        try {
+          const payload = JSON.parse(event.data) as TurnAdvancedPayload;
+          onTurnAdvancedRef.current?.(payload);
+        } catch (err) {
+          logger.error('[useSessionSync] session:toolkit parse error:', err);
+        }
+      });
 
       eventSourceRef.current = eventSource;
     } catch (err) {
       const errorObj = err instanceof Error ? err : new Error('Failed to create EventSource');
       setError(errorObj);
       setIsConnected(false);
-      onError?.(errorObj);
+      onErrorRef.current?.(errorObj);
     }
-  }, [sessionId, apiBaseUrl, handleEvent, onError, onTurnAdvanced]);
+  }, [sessionId, apiBaseUrl, handleEvent]);
 
   /**
    * Disconnect SSE stream

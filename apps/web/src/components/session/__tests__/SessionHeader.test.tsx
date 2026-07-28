@@ -94,4 +94,10 @@ describe('SessionHeader', () => {
     render(<SessionHeader session={finalizedSession} />);
     expect(screen.getByText('Finalized')).toBeInTheDocument();
   });
+
+  it('should expose an accessible name on the actions menu trigger', () => {
+    // The icon-only DropdownMenuTrigger must have an accessible name (axe button-name / WCAG 4.1.2).
+    render(<SessionHeader session={mockSession} />);
+    expect(screen.getByRole('button', { name: /session actions/i })).toBeInTheDocument();
+  });
 });

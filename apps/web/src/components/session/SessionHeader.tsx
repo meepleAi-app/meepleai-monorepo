@@ -71,7 +71,7 @@ export function SessionHeader({ session, onPause, onFinalize, onShare }: Session
                     month: 'short',
                     day: 'numeric',
                     hour: '2-digit',
-                    minute: '2-digit'
+                    minute: '2-digit',
                   })}
                 </time>
                 <span className="flex items-center gap-1">
@@ -111,6 +111,7 @@ export function SessionHeader({ session, onPause, onFinalize, onShare }: Session
                 <Button
                   variant="outline"
                   size="icon"
+                  aria-label="Session actions"
                   className="h-9 w-9 border-amber-900/20 bg-card/80 dark:bg-card hover:bg-card hover:border-amber-600/40 active:scale-95 transition-all"
                 >
                   <MoreVertical className="h-4 w-4 text-muted-foreground" />
@@ -139,7 +140,10 @@ export function SessionHeader({ session, onPause, onFinalize, onShare }: Session
                   </DropdownMenuItem>
                 )}
                 {session.status === 'Active' && onFinalize && (
-                  <DropdownMenuItem onClick={onFinalize} className="gap-2 text-amber-700 dark:text-amber-400">
+                  <DropdownMenuItem
+                    onClick={onFinalize}
+                    className="gap-2 text-amber-700 dark:text-amber-400"
+                  >
                     <Flag className="h-4 w-4" />
                     Finalize Session
                   </DropdownMenuItem>

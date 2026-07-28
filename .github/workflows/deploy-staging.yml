@@ -372,23 +372,22 @@ jobs:
       # Con questa rimozione la superficie di build .NET sull'host di deploy è 0
       # (Opzione 3 completa): tutta la compilazione .NET è sul cloud.
 
-      - name: Setup Frontend
-        if: needs.detect-changes.outputs.deploy_web == 'true'
-        uses: ./.github/actions/setup-frontend
-        with:
-          working-directory: apps/web
-          frozen-lockfile: 'true'
-
-      - name: Frontend build check
-        if: needs.detect-changes.outputs.deploy_web == 'true'
-        run: |
-          echo "🔨 Verifying frontend compiles..."
-          cd apps/web
-          pnpm build
-          echo "✅ Frontend builds successfully"
-        env:
-          NEXT_PUBLIC_API_BASE: http://localhost:8080
-          NODE_OPTIONS: '--max-old-space-size=4096'
+      # Issue #3331: il "Frontend build check" (pnpm build sull'host) è stato
+      # RIMOSSO — stesso trattamento del Backend build check (#2650, sopra).
+      # Compilare il frontend sul runner self-hosted co-locato (cap
+      # MemoryMax=3G, box staging ~8GB condiviso coi container) va in OOM:
+      # `next build` girava con NODE_OPTIONS=--max-old-space-size=4096 (heap 4GB)
+      # e il worker TypeScript sfondava il cap cgroup 3G → SIGKILL (deploy run
+      # 30334115340, 2026-07-28). La verifica di compilazione frontend è già
+      # coperta, senza toccare l'host di deploy:
+      #   - ci.yml `Build Frontend` (ubuntu-latest) esegue `pnpm build` sul CLOUD
+      #     nella PR verso main-dev: se non compila, la PR non arriva a main-staging;
+      #   - il job `build` sotto (sempre ubuntu-latest) builda l'immagine web reale
+      #     sul cloud: se `next build` fallisce, quel job fallisce e blocca il deploy;
+      #   - lo step "Verify CI passed on this commit" sopra conferma la CI autoritativa.
+      # Con questa rimozione la superficie di build sull'host di deploy è 0
+      # (backend #2650 + frontend #3331): tutta la compilazione è sul cloud.
+      # Vedi ADR-044 (Update 2026-07-28) e docs/superpowers/specs/2026-07-28-spec-panel-3331-cicd-runner.md.
 
   # Build and push Docker images (only changed components).
   # ALWAYS runs on ubuntu-latest (cloud) — never on self-hosted runner.

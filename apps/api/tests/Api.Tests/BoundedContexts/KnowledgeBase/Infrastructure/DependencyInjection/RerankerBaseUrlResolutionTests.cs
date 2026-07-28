@@ -104,35 +104,39 @@ public class RerankerBaseUrlResolutionTests
     }
 
     [Fact]
-    public void AppsettingsJson_DoesNotDefineRerankingBaseUrl_SoRerankerUrlFallbackFires()
+    public void NoAppsettingsFile_DefinesRerankingBaseUrl_SoRerankerUrlFallbackFiresInEveryEnvironment()
     {
         // Regression guard for #3334: the original fix was defeated because appsettings.json defined
         // Reranking:BaseUrl="http://localhost:8003", which is loaded in every environment and shadowed
         // the RERANKER_URL fallback (config["Reranking:BaseUrl"] was never null → the ?? branch was dead
-        // code → the reranker kept targeting localhost in staging/prod). This asserts the real
-        // appsettings.json does NOT reintroduce that shadowing default, and that with it layered under a
-        // RERANKER_URL env value the resolution correctly returns the env value.
-        var appsettingsPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
-        if (!File.Exists(appsettingsPath))
+        // code → the reranker kept targeting localhost). A sweep also found the SAME shadow in
+        // appsettings.Integration.json. This guard scans ALL appsettings*.json shipped next to the Api
+        // assembly and asserts none reintroduces a shadowing Reranking:BaseUrl, in any environment.
+        var appsettingsFiles = Directory
+            .GetFiles(AppContext.BaseDirectory, "appsettings*.json", SearchOption.TopDirectoryOnly);
+
+        // Api's appsettings*.json are copied next to Api.dll and flow into the test output. If the build
+        // layout ever changes, fail loudly rather than silently skip — this guard is the whole point.
+        appsettingsFiles.Should().NotBeEmpty(
+            $"appsettings*.json must be present in {AppContext.BaseDirectory}; the regression guard cannot run without them.");
+
+        foreach (var file in appsettingsFiles)
         {
-            // Api's appsettings.json is copied next to Api.dll and flows into the test output. If the
-            // build layout ever changes, fail loudly rather than silently skip — this guard is the whole
-            // point of the test.
-            Assert.Fail($"appsettings.json not found at {appsettingsPath}; the regression guard cannot run.");
+            var config = new ConfigurationBuilder().AddJsonFile(file, optional: false).Build();
+            string.IsNullOrWhiteSpace(config["Reranking:BaseUrl"]).Should().BeTrue(
+                $"{Path.GetFileName(file)} must not define Reranking:BaseUrl — a non-blank value shadows the "
+                + "RERANKER_URL env fallback in that environment (#3334).");
         }
 
+        // End-to-end: the base appsettings.json layered under a RERANKER_URL env value must resolve to
+        // the env value, exactly as staging/prod do.
         var layered = new ConfigurationBuilder()
-            .AddJsonFile(appsettingsPath, optional: false)
+            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.json"), optional: false)
             .AddInMemoryCollection(new Dictionary<string, string?>(StringComparer.Ordinal)
             {
                 ["RERANKER_URL"] = "http://reranker-service:8003",
             })
             .Build();
-
-        // The appsettings layer must not supply a shadowing default...
-        string.IsNullOrWhiteSpace(layered["Reranking:BaseUrl"]).Should().BeTrue(
-            "appsettings.json must not define Reranking:BaseUrl or it shadows the RERANKER_URL env fallback (#3334)");
-        // ...so the RERANKER_URL env value wins end-to-end, as it does in staging/prod.
         KnowledgeBaseServiceExtensions.ResolveRerankerBaseUrl(layered)
             .Should().Be("http://reranker-service:8003");
     }

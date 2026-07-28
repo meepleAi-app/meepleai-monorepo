@@ -170,7 +170,7 @@ export function HeroSearch(props: HeroSearchProps): JSX.Element {
               className={`px-4 py-2 rounded-md text-sm font-semibold transition-colors ${
                 mode === modeValue
                   ? 'bg-entity-kb text-white'
-                  : 'bg-entity-kb/10 text-entity-kb border border-entity-kb/20 hover:bg-entity-kb/20'
+                  : 'bg-entity-kb/10 text-entity-kb-text border border-entity-kb/20 hover:bg-entity-kb/20'
               }`}
             >
               {modeLabel}

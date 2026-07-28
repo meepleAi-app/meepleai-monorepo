@@ -71,7 +71,7 @@ export function KbDocViewerMobile({
         <div className="flex-1 min-w-0">
           <div className="font-display font-bold text-sm truncate">📄 {doc.title}</div>
         </div>
-        <div className="px-2.5 py-1 rounded-full bg-entity-kb/10 text-entity-kb font-mono text-xs font-bold">
+        <div className="px-2.5 py-1 rounded-full bg-entity-kb/10 text-entity-kb-text font-mono text-xs font-bold">
           {labels.pageOfTotal(activePage, doc.pageCount)}
         </div>
       </div>

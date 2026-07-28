@@ -14,7 +14,7 @@ import type { PhotoUploadItem } from './schemas';
  *   const b64 = await fileToBase64(file);
  *   // => "iVBORw0KGgo..."
  */
-export function fileToBase64(file: File): Promise<string> {
+function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 

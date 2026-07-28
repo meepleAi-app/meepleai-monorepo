@@ -94,9 +94,9 @@ const STAT_BORDER_CLASS: Record<EntityType, string> = {
 };
 
 const STAT_TEXT_CLASS: Record<EntityType, string> = {
-  game: 'text-entity-game',
+  game: 'text-entity-game-text',
   agent: 'text-entity-agent',
-  kb: 'text-entity-kb',
+  kb: 'text-entity-kb-text',
   chat: 'text-entity-chat',
   session: 'text-entity-session',
   event: 'text-entity-event',

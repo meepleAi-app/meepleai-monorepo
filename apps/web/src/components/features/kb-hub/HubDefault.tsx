@@ -178,7 +178,7 @@ export function HubDefault(props: HubDefaultProps): ReactElement {
               type="button"
               onClick={onUpload}
               data-slot="kb-hub-default-upload-cta"
-              className="rounded-md border border-entity-kb/25 bg-entity-kb/10 px-3.5 py-2 font-display text-xs font-bold text-entity-kb transition-colors hover:bg-entity-kb/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-entity-kb focus-visible:ring-offset-2"
+              className="rounded-md border border-entity-kb/25 bg-entity-kb/10 px-3.5 py-2 font-display text-xs font-bold text-entity-kb-text transition-colors hover:bg-entity-kb/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-entity-kb focus-visible:ring-offset-2"
             >
               {labels.uploadCta}
             </button>
@@ -279,7 +279,7 @@ export function HubDefault(props: HubDefaultProps): ReactElement {
           type="button"
           onClick={onUpload}
           data-slot="kb-hub-default-drop-zone"
-          className="m-4 flex w-[calc(100%-2rem)] items-center justify-center gap-2 rounded-md border-2 border-dashed border-entity-kb/30 bg-entity-kb/4 px-4 py-5 text-sm font-bold text-entity-kb transition-colors hover:border-entity-kb/55 hover:bg-entity-kb/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-entity-kb focus-visible:ring-offset-2"
+          className="m-4 flex w-[calc(100%-2rem)] items-center justify-center gap-2 rounded-md border-2 border-dashed border-entity-kb/30 bg-entity-kb/4 px-4 py-5 text-sm font-bold text-entity-kb-text transition-colors hover:border-entity-kb/55 hover:bg-entity-kb/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-entity-kb focus-visible:ring-offset-2"
         >
           <span aria-hidden="true" className="text-base">
             ⬆

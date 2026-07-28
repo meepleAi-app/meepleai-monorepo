@@ -35,12 +35,10 @@ describe('GridCard href (Issue #2858)', () => {
   it('keeps role=button + onClick when href is absent and onClick is provided', () => {
     const onClick = vi.fn();
     render(<GridCard entity="game" variant="grid" title="Catan" onClick={onClick} />);
-    // Card root has no accessible name; disambiguate from the always-rendered
-    // "Azioni" MenuPlaceholder button (unrelated to this href/onClick prop).
-    const rootButton = screen
-      .getAllByRole('button')
-      .find(button => button.getAttribute('aria-label') !== 'Azioni');
-    fireEvent.click(rootButton as HTMLElement);
+    // The card root is the only <button> — MenuPlaceholder is now a decorative
+    // <div> (#3289), not a nested button, so getByRole('button') is unambiguous.
+    const rootButton = screen.getByRole('button');
+    fireEvent.click(rootButton);
     expect(onClick).toHaveBeenCalledOnce();
   });
 

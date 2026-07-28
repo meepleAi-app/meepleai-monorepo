@@ -216,18 +216,18 @@ describe('LibraryTabs (Wave B.3)', () => {
       expect(container.querySelector('[data-slot="library-tabs-indicator"]')).toBeInTheDocument();
     });
 
-    it('applies bg-entity-kb/10 + text-entity-kb on the active "kb" tab', () => {
+    it('applies bg-entity-kb/10 + text-entity-kb-text on the active "kb" tab', () => {
       render(<ControlledLibraryTabs initial="kb" />);
       const kbTab = screen.getByRole('tab', { name: /Con KB/, selected: true });
       expect(kbTab.className).toMatch(/bg-entity-kb\/10/);
-      expect(kbTab.className).toMatch(/text-entity-kb\b/);
+      expect(kbTab.className).toMatch(/text-entity-kb-text\b/);
     });
 
-    it('falls back to game accent (bg-entity-game/10 + text-entity-game) on active "all" tab', () => {
+    it('falls back to game accent (bg-entity-game/10 + text-entity-game-text) on active "all" tab', () => {
       render(<ControlledLibraryTabs initial="all" />);
       const allTab = screen.getByRole('tab', { name: /Tutti/, selected: true });
       expect(allTab.className).toMatch(/bg-entity-game\/10/);
-      expect(allTab.className).toMatch(/text-entity-game\b/);
+      expect(allTab.className).toMatch(/text-entity-game-text\b/);
     });
   });
 });

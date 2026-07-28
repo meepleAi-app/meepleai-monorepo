@@ -14,7 +14,7 @@ import { z } from 'zod';
 // Upload command — request body sent to POST /api/v1/gamebook/{gameId}/photos
 // ============================================================================
 
-export const PhotoUploadItemSchema = z.object({
+const PhotoUploadItemSchema = z.object({
   /** Base64-encoded image data (without data URI prefix) */
   base64Data: z.string().min(1),
   /** Original file name (e.g. "page-01.jpg") */

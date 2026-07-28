@@ -17,7 +17,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { listGameBooks, type GameBookDto, type GameRef } from '@/lib/api/gamebook';
 
-export const gameBookKeys = {
+const gameBookKeys = {
   all: ['gameBooks'] as const,
   list: (gameRef: GameRef | null) =>
     gameRef === null

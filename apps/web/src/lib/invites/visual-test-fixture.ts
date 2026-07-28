@@ -35,7 +35,7 @@ import type { PublicGameNightInvitation } from '@/lib/api/game-night-invitations
  * minted tokens; this fixture is a constant string, NOT cryptographically
  * meaningful).
  */
-export const VISUAL_TEST_FIXTURE_TOKEN = 'visualTestFixt0000611A' as const;
+const VISUAL_TEST_FIXTURE_TOKEN = 'visualTestFixt0000611A' as const;
 
 /**
  * True only when the build was produced by the visual-regression CI workflow

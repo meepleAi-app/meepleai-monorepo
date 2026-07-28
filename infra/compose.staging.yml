@@ -322,8 +322,11 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=60d'
-      - '--storage.tsdb.retention.size=5GB'
+      # Staging is a non-public pre-prod env: 2 weeks of metrics is plenty for
+      # debugging and keeps the TSDB volume small (~5GB → ~1.5GB). Whichever
+      # limit triggers first wins. Prod (compose.prod.yml) keeps 90d/50GB.
+      - '--storage.tsdb.retention.time=15d'
+      - '--storage.tsdb.retention.size=1536MB'
       - '--web.enable-lifecycle'
     volumes:
       - ./prometheus.staging.yml:/etc/prometheus/prometheus.yml:ro  # staging-specific labels

@@ -7,7 +7,12 @@
  * @module test-utils/locale-queries
  */
 
-import { screen, within as rtlWithin, type ByRoleMatcher, type ByRoleOptions } from '@testing-library/react';
+import {
+  screen,
+  within as rtlWithin,
+  type ByRoleMatcher,
+  type ByRoleOptions,
+} from '@testing-library/react';
 
 /**
  * Queries for an element containing a localized number.
@@ -35,10 +40,7 @@ import { screen, within as rtlWithin, type ByRoleMatcher, type ByRoleOptions } f
  * // ✅ Works in all environments:
  * expect(getByLocalizedNumber(document.body, 1000)).toBeInTheDocument();
  */
-export function getByLocalizedNumber(
-  container: HTMLElement,
-  value: number
-): HTMLElement {
+export function getByLocalizedNumber(container: HTMLElement, value: number): HTMLElement {
   // Create regex that matches both "1,000", "1000", and "1.000"
   // The ,? makes the comma optional, .? makes the period optional
   const stringValue = value.toString();
@@ -146,10 +148,7 @@ export function queryByTextInDialog(text: string | RegExp): HTMLElement | null {
  * const confirmButton = getByRoleInDialog('button', { name: 'Confirm' });
  * await user.click(confirmButton);
  */
-export function getByRoleInDialog(
-  role: ByRoleMatcher,
-  options?: ByRoleOptions
-): HTMLElement {
+export function getByRoleInDialog(role: ByRoleMatcher, options?: ByRoleOptions): HTMLElement {
   const dialog = screen.getByRole('dialog');
   return rtlWithin(dialog).getByRole(role, options);
 }
@@ -215,59 +214,6 @@ export function getMenuItem(name: string | RegExp): HTMLElement {
 }
 
 /**
- * Queries for a menu item by name pattern, returning null if not found.
- *
- * @param name - Text or regex pattern to match the menu item name
- * @returns The menu item element, or null if not found
- */
-export function queryMenuItem(name: string | RegExp): HTMLElement | null {
-  return screen.queryByRole('menuitem', { name });
-}
-
-/**
- * Queries for a dialog heading by name pattern.
- *
- * Use this for dialog/modal titles instead of getByText.
- *
- * @param name - Text or regex pattern to match the heading
- * @returns The heading element within the dialog
- * @throws {Error} If dialog or heading not found
- *
- * @example
- * // ❌ May match multiple elements:
- * expect(screen.getByText('Rimuovi dalla Libreria?')).toBeInTheDocument();
- *
- * // ✅ Scoped to dialog heading:
- * expect(getDialogHeading(/rimuovi dalla libreria/i)).toBeInTheDocument();
- */
-export function getDialogHeading(name: string | RegExp): HTMLElement {
-  const dialog = screen.getByRole('dialog');
-  return rtlWithin(dialog).getByRole('heading', { name });
-}
-
-/**
- * Queries for a dialog heading by name pattern, returning null if not found.
- *
- * Non-throwing version of getDialogHeading for negative assertions or optional queries.
- *
- * @param name - Text or regex pattern to match the heading
- * @returns The heading element, or null if dialog or heading not found
- *
- * @example
- * // Check dialog is NOT rendered
- * expect(queryDialogHeading(/share chat thread/i)).not.toBeInTheDocument();
- */
-export function queryDialogHeading(name: string | RegExp): HTMLElement | null {
-  try {
-    const dialog = screen.queryByRole('dialog');
-    if (!dialog) return null;
-    return rtlWithin(dialog).queryByRole('heading', { name });
-  } catch {
-    return null;
-  }
-}
-
-/**
  * Queries for an alert dialog heading by name pattern.
  *
  * Use this for destructive/confirmation dialogs that use alertdialog role.
@@ -299,48 +245,4 @@ export function queryAlertDialogHeading(name: string | RegExp): HTMLElement | nu
   } catch {
     return null;
   }
-}
-
-/**
- * Queries for a button within an alert dialog by name pattern.
- *
- * Useful for finding confirm/cancel buttons in destructive dialogs.
- *
- * @param name - Text or regex pattern to match the button
- * @returns The button element within the alert dialog
- * @throws {Error} If alert dialog or button not found
- *
- * @example
- * const confirmButton = getAlertDialogButton(/rimuovi/i);
- * await user.click(confirmButton);
- */
-export function getAlertDialogButton(name: string | RegExp): HTMLElement {
-  const dialog = screen.getByRole('alertdialog');
-  return rtlWithin(dialog).getByRole('button', { name });
-}
-
-/**
- * Queries for status messages (loading indicators, progress, etc.)
- *
- * @returns The status element
- * @throws {Error} If no status element found
- *
- * @example
- * // ❌ Fragile - breaks on text changes:
- * expect(screen.getByText('Caricamento...')).toBeInTheDocument();
- *
- * // ✅ Semantic:
- * expect(getStatusMessage()).toBeInTheDocument();
- */
-export function getStatusMessage(): HTMLElement {
-  return screen.getByRole('status');
-}
-
-/**
- * Queries for status message, returning null if not found.
- *
- * @returns The status element, or null if not found
- */
-export function queryStatusMessage(): HTMLElement | null {
-  return screen.queryByRole('status');
 }

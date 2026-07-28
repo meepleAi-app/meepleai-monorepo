@@ -11,3 +11,6 @@ e2e/.memory-log.json
 e2e/.memory-log.json.tmp
 # Transient typecheck logs
 tsc_out.txt
+
+# a11y e2e generated report (local runs)
+playwright-report-a11y/

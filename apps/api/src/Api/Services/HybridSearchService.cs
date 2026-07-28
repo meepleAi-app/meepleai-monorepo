@@ -1,5 +1,5 @@
-using System.Text.RegularExpressions;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Helpers;
@@ -22,17 +22,6 @@ internal class HybridSearchService : IHybridSearchService
     private readonly IVectorStoreAdapter _vectorStore;
     private readonly ILogger<HybridSearchService> _logger;
     private readonly HybridSearchConfiguration _config;
-
-    // RRF constant k (standard value from research papers: Cormack et al. 2009)
-    // Formula: RRF_score = sum(1 / (k + rank_i))
-    // Higher k gives less weight to rank differences, k=60 is empirically optimal
-    private const int DefaultRrfK = 60;
-
-    // Phase D (D6): additive boost applied to chunks whose RoleTags overlap with the user
-    // intent's QueryRoleHint. Chosen ~10x the smallest expected RRF contribution (≈ 0.7/(60+10) ≈ 0.01)
-    // so a single matching tag clearly outranks a non-matching peer at the same retrieval rank,
-    // but does not steamroll strong vector+keyword agreement at the top.
-    internal const float RoleMatchBoost = 0.15f;
 
     public HybridSearchService(
         IKeywordSearchService keywordSearchService,
@@ -131,7 +120,7 @@ internal class HybridSearchService : IHybridSearchService
             var embedding = r.Embedding;
             var chunkRoleTags = (GameBookRole)embedding.RoleTags;
             var baseScore = 1.0f / (index + 1); // normalized rank score
-            var roleBoost = ComputeRoleMatchBoost(queryRoleHint, chunkRoleTags);
+            var roleBoost = FusionSignals.ComputeRoleMatchBoost(queryRoleHint, chunkRoleTags);
             return new HybridSearchResult
             {
                 // RRF fusion-key fix: key on the resolved PdfDocumentId (now populated by the scored
@@ -203,7 +192,7 @@ internal class HybridSearchService : IHybridSearchService
         // Phase D (D6): build hybrid results then re-rank by role-boosted score.
         var hybridResults = filteredResults.Select((r, index) =>
         {
-            var roleBoost = ComputeRoleMatchBoost(queryRoleHint, r.RoleTags);
+            var roleBoost = FusionSignals.ComputeRoleMatchBoost(queryRoleHint, r.RoleTags);
             return new HybridSearchResult
             {
                 ChunkId = r.ChunkId,
@@ -293,7 +282,9 @@ internal class HybridSearchService : IHybridSearchService
             Page = se.Embedding.PageNumber,
             // Slice C: carry role_tags through so vector-only chunks get the role-match boost in
             // fusion (same cast as the semantic-only path). pgvector already SELECTs role_tags.
-            RoleTags = (GameBookRole)se.Embedding.RoleTags
+            RoleTags = (GameBookRole)se.Embedding.RoleTags,
+            // #3270: carry the chunk heading (JOIN-resolved) so vector-arm chunks get the heading boost.
+            Heading = se.Embedding.Heading
         }).ToArray();
 
         _logger.LogInformation(
@@ -308,8 +299,9 @@ internal class HybridSearchService : IHybridSearchService
             gameId,
             vectorWeight,
             keywordWeight,
-            _config.RrfConstant ?? DefaultRrfK,
-            queryRoleHint);
+            _config.RrfConstant ?? FusionSignals.DefaultRrfK,
+            queryRoleHint,
+            FusionSignals.ExtractHeadingMatchTerms(query)); // #3270
 
         var topResults = fusedResults
             .OrderByDescending(r => r.HybridScore)
@@ -381,10 +373,15 @@ internal class HybridSearchService : IHybridSearchService
 
     /// <summary>
     /// Fuses vector and keyword search results using Reciprocal Rank Fusion (RRF).
-    /// RRF formula: score = sum_over_all_rankings(weight / (k + rank))
-    /// where k=60 (empirically optimal constant), rank is 1-based position.
+    /// Thin adapter (#3270 Task 3): maps each arm's I/O-specific items into the neutral
+    /// <see cref="FusionCandidate"/> shape, delegates the actual RRF + legend-demotion +
+    /// role-boost scoring to <see cref="HybridFusionCore.Fuse"/> (the single canonical
+    /// implementation shared with the primary chat path), then re-joins by composite key
+    /// to rebuild <see cref="HybridSearchResult"/> with all its I/O-specific fields
+    /// (MatchedTerms, GameId, PdfDocumentId, ChunkIndex, PageNumber).
     /// </summary>
     /// <remarks>
+    /// RRF formula: score = sum_over_all_rankings(weight / (k + rank)), rank is 1-based position.
     /// RRF advantages:
     /// - No score normalization needed (works with heterogeneous scoring systems)
     /// - Emphasizes top-ranked results from both systems
@@ -398,185 +395,74 @@ internal class HybridSearchService : IHybridSearchService
         float vectorWeight,
         float keywordWeight,
         int rrfK,
-        GameBookRole queryRoleHint)
+        GameBookRole queryRoleHint,
+        IReadOnlyList<string>? queryTerms)
     {
-        // Build lookup dictionaries for O(1) access by composite chunk ID (PdfId_ChunkIndex)
-        var vectorLookup = vectorResults
-            .Select((r, index) => new
-            {
-                ChunkId = $"{r.PdfId}_{r.ChunkIndex}", // Composite key
-                Result = r,
-                Rank = index + 1 // 1-based ranking
-            })
-            .ToDictionary(x => x.ChunkId, StringComparer.Ordinal);
+        static string VectorKeyOf(SearchResultItem r) => $"{r.PdfId}_{r.ChunkIndex}";
+        static string KeywordKeyOf(KeywordSearchResult r) => $"{r.PdfDocumentId}_{r.ChunkIndex}";
+
+        var vectorArm = vectorResults
+            .Select((r, index) => new FusionCandidate(VectorKeyOf(r), r.Text, r.RoleTags, r.Heading, index + 1, r.Score))
+            .ToList();
 
         // RRF fusion-key fix: key the keyword arm on the SAME {PdfDocumentId}_{ChunkIndex} composite
         // as the vector arm (was the raw text_chunks.Id, which never matched the vector key — so a
         // doubly-retrieved chunk was emitted as two half-strength duplicates instead of being fused).
-        // The composite is backed by a NON-unique index, so GroupBy (keep the best-ranked row —
-        // keyword results are relevance-DESC, so the first) instead of ToDictionary, which would
-        // throw on an abnormal duplicate (PdfDocumentId, ChunkIndex) and 500 the whole search.
-        var keywordLookup = keywordResults
-            .Select((r, index) => new { ChunkId = $"{r.PdfDocumentId}_{r.ChunkIndex}", Result = r, Rank = index + 1 })
-            .GroupBy(x => x.ChunkId, StringComparer.Ordinal)
-            .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
-
-        // Collect all unique chunk IDs from both result sets
-        var allChunkIds = vectorLookup.Keys
-            .Union(keywordLookup.Keys, StringComparer.Ordinal)
-            .ToHashSet(StringComparer.Ordinal);
+        var keywordArm = keywordResults
+            .Select((r, index) => new FusionCandidate(KeywordKeyOf(r), r.Content, r.RoleTags, r.Heading, index + 1, r.RelevanceScore))
+            .ToList();
 
         _logger.LogDebug(
-            "Fusing results: {VectorCount} vector, {KeywordCount} keyword, {UniqueCount} unique chunks",
-            vectorResults.Count, keywordResults.Count, allChunkIds.Count);
+            "Fusing results: {VectorCount} vector, {KeywordCount} keyword",
+            vectorResults.Count, keywordResults.Count);
 
-        // Calculate RRF score for each chunk
-        var fusedResults = new List<HybridSearchResult>();
+        var fused = HybridFusionCore.Fuse(
+            vectorArm,
+            keywordArm,
+            new FusionOptions(vectorWeight, keywordWeight, rrfK, queryRoleHint, queryTerms));
 
-        foreach (var chunkId in allChunkIds)
+        // Re-join by composite key to recover the I/O-specific fields the core doesn't carry.
+        // The composite key is backed by a NON-unique index on the keyword side, so use
+        // ToLookup + FirstOrDefault (keep the best-ranked/first row) instead of a Dictionary,
+        // which would throw on an abnormal duplicate (PdfDocumentId, ChunkIndex).
+        var vLookup = vectorResults.ToLookup(VectorKeyOf, StringComparer.Ordinal);
+        var kLookup = keywordResults.ToLookup(KeywordKeyOf, StringComparer.Ordinal);
+
+        var fusedResults = new List<HybridSearchResult>(fused.Count);
+
+        foreach (var f in fused)
         {
-            var hasVector = vectorLookup.TryGetValue(chunkId, out var vectorItem);
-            var hasKeyword = keywordLookup.TryGetValue(chunkId, out var keywordItem);
-
-            // Calculate RRF score components
-            float vectorRrfScore = 0f;
-            float keywordRrfScore = 0f;
-
-            if (hasVector)
-            {
-                vectorRrfScore = vectorItem != null ? vectorWeight / (rrfK + vectorItem.Rank) : 0f;
-            }
-
-            if (hasKeyword)
-            {
-                keywordRrfScore = keywordItem != null ? keywordWeight / (rrfK + keywordItem.Rank) : 0f;
-            }
-
-            // Phase D (D6) + Slice C + RRF fusion-key fix: role-match boost. Both arms now key on
-            // {PdfDocumentId}_{ChunkIndex}, so a chunk retrieved by BOTH arms is a single fused entry
-            // and chunkRoleTags is a genuine cross-arm union. Both denormalize the same
-            // text_chunks.role_tags (keyword from text_chunks, vector from pgvector_embeddings.role_tags);
-            // for a single-arm chunk the OR selects the present arm, and for a both-arm chunk it takes
-            // whichever is populated (pgvector role_tags is currently un-backfilled → keyword wins).
-            // When the chunk overlaps the user's classified intent, apply an additive boost on top of
-            // the fused RRF.
-            var vectorRoleTags = hasVector && vectorItem != null
-                ? vectorItem.Result.RoleTags
-                : GameBookRole.None;
-            var keywordRoleTags = hasKeyword && keywordItem != null
-                ? keywordItem.Result.RoleTags
-                : GameBookRole.None;
-            var chunkRoleTags = vectorRoleTags | keywordRoleTags;
-            var roleBoost = ComputeRoleMatchBoost(queryRoleHint, chunkRoleTags);
+            var v = vLookup[f.Key].FirstOrDefault();
+            var k = kLookup[f.Key].FirstOrDefault();
 
             // Use data from whichever result has it (prefer vector for metadata consistency)
-            var matchedTerms = hasKeyword && keywordItem != null
-                ? keywordItem.Result.MatchedTerms
-                : new List<string>();
-
-            // At least one of vectorItem or keywordItem must exist since we got the chunkId from their union
-            var content = hasVector && vectorItem != null
-                ? vectorItem.Result.Text
-                : (keywordItem?.Result.Content ?? string.Empty);
-
-            // RAG answer-quality fix: demote cross-reference "legend" chunks (dense with
-            // "vedi pag."/"see p." pointers, e.g. the Terraforming Mars component list
-            // "8. Progetti Standard ... vedi pag. 10 ... 9. Milestone ... vedi pag. 10 e 11")
-            // which carry no actionable answer yet score in the same RRF band as real content.
-            // The demotion scales the RRF fusion components only; the role-match boost (#1391)
-            // stays strictly additive on top so its deliberate ~0.15 calibration is not scaled away.
-            var legendFactor = ComputeLegendPenaltyFactor(content);
-            var hybridScore = ((vectorRrfScore + keywordRrfScore) * (1f - legendFactor)) + roleBoost;
-
-            var pdfDocumentId = hasVector && vectorItem != null
-                ? vectorItem.Result.PdfId
-                : (keywordItem?.Result.PdfDocumentId ?? string.Empty);
-
-            var chunkGameId = hasKeyword && keywordItem != null
-                ? keywordItem.Result.GameId
-                : gameId; // Use from keyword or fall back to query gameId
-
-            var chunkIndex = hasVector && vectorItem != null
-                ? vectorItem.Result.ChunkIndex
-                : (keywordItem?.Result.ChunkIndex ?? 0);
-
-            var pageNumber = hasVector && vectorItem != null
-                ? vectorItem.Result.Page
-                : (keywordItem?.Result.PageNumber ?? 0);
+            var matchedTerms = k != null ? k.MatchedTerms : new List<string>();
+            var pdfDocumentId = v != null ? v.PdfId : (k?.PdfDocumentId ?? string.Empty);
+            var chunkGameId = k != null ? k.GameId : gameId; // keyword arm else fall back to query gameId
+            var chunkIndex = v != null ? v.ChunkIndex : (k?.ChunkIndex ?? 0);
+            var pageNumber = v != null ? v.Page : (k?.PageNumber ?? 0);
 
             fusedResults.Add(new HybridSearchResult
             {
-                ChunkId = chunkId,
-                Content = content,
+                ChunkId = f.Key,
+                Content = f.Content,
                 PdfDocumentId = pdfDocumentId,
                 GameId = chunkGameId,
                 ChunkIndex = chunkIndex,
                 PageNumber = pageNumber,
-                HybridScore = hybridScore,
-                VectorScore = hasVector && vectorItem != null ? vectorItem.Result.Score : null,
-                KeywordScore = hasKeyword && keywordItem != null ? keywordItem.Result.RelevanceScore : null,
-                VectorRank = hasVector && vectorItem != null ? vectorItem.Rank : null,
-                KeywordRank = hasKeyword && keywordItem != null ? keywordItem.Rank : null,
+                HybridScore = f.HybridScore,
+                VectorScore = f.VectorScore,
+                KeywordScore = f.KeywordScore,
+                VectorRank = f.VectorRank,
+                KeywordRank = f.KeywordRank,
                 MatchedTerms = matchedTerms,
                 Mode = SearchMode.Hybrid,
-                RoleTags = chunkRoleTags
+                RoleTags = f.RoleTags,
+                Heading = f.Heading
             });
         }
 
         return fusedResults;
-    }
-
-    /// <summary>
-    /// Phase D (D6): computes the additive RRF score boost for a chunk based on role overlap.
-    /// Returns <see cref="RoleMatchBoost"/> when <paramref name="queryRoleHint"/> intersects
-    /// <paramref name="chunkRoleTags"/> (both being non-<see cref="GameBookRole.None"/>); otherwise 0.
-    /// Pure function — exposed as <c>internal static</c> for direct unit testing of the re-ranker
-    /// without spinning up pgvector + PostgreSQL FTS infrastructure.
-    /// </summary>
-    internal static float ComputeRoleMatchBoost(GameBookRole queryRoleHint, GameBookRole chunkRoleTags)
-    {
-        if (queryRoleHint == GameBookRole.None || chunkRoleTags == GameBookRole.None)
-        {
-            return 0f;
-        }
-
-        return (chunkRoleTags & queryRoleHint) != GameBookRole.None ? RoleMatchBoost : 0f;
-    }
-
-    // Matches cross-reference pointers like "vedi pag. 10", "vedi anche pagina 5", "see p. 11",
-    // "cfr. pagg. 4-5". Allows an optional connector word ("anche"/"a") and spelled-out "pagina".
-    private static readonly Regex CrossReferencePointer = new(
-        @"(?i)\b(?:vedi|see|cfr|cf)\b\.?\s+(?:anche\s+|a\s+)?(?:pagine|pagina|pagg|pag|pages|page|pp|p)\b\.?",
-        RegexOptions.Compiled,
-        TimeSpan.FromSeconds(1));
-
-    /// <summary>
-    /// RAG answer-quality fix: computes a multiplicative demotion factor in [0, 0.5] for chunks
-    /// that are cross-reference "legends" (dense with "vedi pag."/"see p." pointers, e.g. a
-    /// component list that only points elsewhere). Such chunks carry no actionable content but
-    /// score in the same RRF band as real answers. Pure function — exposed <c>internal static</c>
-    /// for direct unit testing.
-    /// </summary>
-    internal static float ComputeLegendPenaltyFactor(string? content)
-    {
-        if (string.IsNullOrEmpty(content))
-        {
-            return 0f;
-        }
-
-        var pointers = CrossReferencePointer.Count(content);
-        // A legend is a LIST of pointers; a single incidental page reference is not one.
-        if (pointers < 2)
-        {
-            return 0f;
-        }
-
-        // Density-driven ONLY (pointers per 1000 chars), never the raw count: a short chunk that
-        // is mostly pointers (a legend) has high density and is capped at 0.5, while a long,
-        // substantive section that legitimately cites several pages has low density and is barely
-        // touched. Using the raw count would over-demote long real content with many references.
-        var density = pointers * 1000.0 / content.Length;
-        return (float)Math.Min(0.5, 0.05 * density);
     }
 }
 

@@ -83,6 +83,29 @@ internal static class KnowledgeBaseMappers
     }
 
     /// <summary>
+    /// Maps a RAW keyword-search result (issue #3270 §6) to a domain SearchResult, carrying the
+    /// {PdfDocumentId}_{ChunkIndex} fusion identity + RoleTags. RelevanceScore is the raw ts_rank_cd
+    /// (clamped to Confidence's [0,1]); HybridFusionCore applies role-boost/legend downstream.
+    /// </summary>
+    public static Domain.Entities.SearchResult ToDomainSearchResult(this KeywordSearchResult result, int rank)
+    {
+        var pdfDocId = Guid.Parse(result.PdfDocumentId);
+        var score = Math.Clamp((double)result.RelevanceScore, 0.0, 1.0);
+        return new Domain.Entities.SearchResult(
+            id: Guid.NewGuid(),
+            vectorDocumentId: pdfDocId,          // same convention the HybridSearchResult mapper uses
+            textContent: result.Content,
+            pageNumber: result.PageNumber ?? 1,
+            relevanceScore: new Confidence(score),
+            rank: rank,
+            searchMethod: "keyword",
+            pdfDocumentId: pdfDocId,
+            chunkIndex: result.ChunkIndex,
+            roleTags: result.RoleTags,
+            heading: result.Heading); // #3270
+    }
+
+    /// <summary>
     /// Extracts float[] from EmbeddingResult.
     /// EmbeddingResult contains List&lt;float[]&gt;, we take the first one for single text queries.
     /// </summary>
@@ -93,50 +116,6 @@ internal static class KnowledgeBaseMappers
                 $"Cannot extract embedding: {embeddingResult.ErrorMessage ?? "No embeddings generated"}");
 
         return embeddingResult.Embeddings[0];
-    }
-
-    /// <summary>
-    /// Creates domain Embedding from pgvector search result data.
-    /// Note: This is a simplified mapping - real pgvector results would need proper deserialization.
-    /// </summary>
-    public static Embedding CreateEmbeddingFromQdrant(
-        Guid embeddingId,
-        Guid vectorDocumentId,
-        string textContent,
-        int pageNumber,
-        float[] vectorArray,
-        string model,
-        int chunkIndex)
-    {
-        var vector = new Vector(vectorArray);
-        return new Embedding(
-            id: embeddingId,
-            vectorDocumentId: vectorDocumentId,
-            textContent: textContent,
-            vector: vector,
-            model: model,
-            chunkIndex: chunkIndex,
-            pageNumber: Math.Max(1, pageNumber)
-        );
-    }
-
-    /// <summary>
-    /// Converts domain Embedding to pgvector point format.
-    /// Returns tuple with data needed for pgvector indexing.
-    /// </summary>
-    public static (Guid id, float[] vector, Dictionary<string, object> payload) ToQdrantPoint(
-        this Embedding embedding)
-    {
-        var payload = new Dictionary<string, object>
-(StringComparer.Ordinal)
-        {
-            ["vector_document_id"] = embedding.VectorDocumentId.ToString(),
-            ["text_content"] = embedding.TextContent,
-            ["page_number"] = embedding.PageNumber,
-            ["chunk_index"] = embedding.ChunkIndex
-        };
-
-        return (embedding.Id, embedding.Vector.Values.ToArray(), payload);
     }
 
     /// <summary>

@@ -29,7 +29,7 @@ import type { SharedGameDetail, TopContributor } from '@/lib/api/shared-games';
  * for human-debuggability. Recognized by `loadInitialData` only when the
  * fixture flag is enabled at build time.
  */
-export const VISUAL_TEST_FIXTURE_ID = '00000000-0000-4000-8000-000000000603' as const;
+const VISUAL_TEST_FIXTURE_ID = '00000000-0000-4000-8000-000000000603' as const;
 
 /**
  * True only when the build was produced by the visual-regression CI workflow

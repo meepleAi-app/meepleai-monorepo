@@ -44,8 +44,6 @@ internal record Snippet(string text, string source, int page, int line, float sc
     public int? chunkPosition { get; init; }
 }
 
-internal record IngestPdfResponse(string jobId);
-internal record SeedRequest(string gameId);
 /// <summary>
 /// Issue #3352: AI Response Feedback System - includes optional comment for detailed feedback
 /// </summary>
@@ -143,15 +141,8 @@ internal record CitationDto(
     string? ParaphrasedSnippet = null,
     bool IsPublic = false);
 internal record StreamingError(string errorMessage, string? errorCode = null);
-internal record StreamingHeartbeat(string message = "keep-alive");
 internal record StreamingToken(string token); // CHAT-01: Individual LLM token
 internal record StreamingSetupStep(SetupGuideStep step); // AI-03: Individual setup step
-internal record StreamingModelDowngrade(
-    string OriginalModel,
-    string FallbackModel,
-    string Reason,
-    bool IsLocalFallback,
-    string? UpgradeMessage);
 
 // #447: Copyright leak guard sanitization event
 internal record StreamingCopyrightSanitized(
@@ -202,13 +193,6 @@ internal record DebugRetrievalItem(
     double Score,
     int PageNumber,
     string? SearchMethod = null);
-
-internal record DebugPluginExecutionData(
-    string PluginId,
-    string PluginName,
-    string? Category,
-    string Phase,
-    double DurationMs);
 
 internal record DebugValidationLayerData(
     int LayerNumber,
@@ -312,16 +296,6 @@ internal record StreamingFollowUpQuestions(
 /// </summary>
 internal record FollowUpQuestionsDto(
     [property: JsonPropertyName("questions")] IList<string> Questions
-);
-
-/// <summary>
-/// Analytics event for tracking follow-up question clicks.
-/// </summary>
-internal record FollowUpQuestionClickEvent(
-    [property: JsonPropertyName("chatId")] Guid chatId,
-    [property: JsonPropertyName("originalQuestion")] string originalQuestion,
-    [property: JsonPropertyName("followUpQuestion")] string followUpQuestion,
-    [property: JsonPropertyName("questionIndex")] int questionIndex
 );
 
 // AI-03: RAG Setup Guide models
@@ -437,27 +411,6 @@ public record ValidateTemplateResponse(
 );
 
 // UI-01: Chat management models
-internal record ChatDto(
-    Guid Id,
-    string GameId,
-    string GameName,
-    string AgentId,
-    string AgentName,
-    DateTime StartedAt,
-    DateTime? LastMessageAt
-);
-
-internal record ChatWithHistoryDto(
-    Guid Id,
-    string GameId,
-    string GameName,
-    string AgentId,
-    string AgentName,
-    DateTime StartedAt,
-    DateTime? LastMessageAt,
-    IReadOnlyList<ChatMessageDto> Messages
-);
-
 internal record ChatMessageDto(
     Guid Id,
     string Level,
@@ -531,12 +484,6 @@ internal record SuggestedMove(
 );
 
 // CHAT-05: Chat Export models
-internal record ExportChatRequest(
-    string Format,
-    DateTime? DateFrom = null,
-    DateTime? DateTo = null
-);
-
 internal class ExportResult
 {
     public bool Success { get; init; }
@@ -913,11 +860,6 @@ public record BggGameDetailsDto(
     IList<string> Publishers
 );
 
-public record BggSearchRequest(
-    [Required][MinLength(1)] string Query,
-    bool Exact = false
-);
-
 // N8N-05: Workflow Error Logging models
 internal record LogWorkflowErrorRequest(
     [Required][MaxLength(255)] string WorkflowId,
@@ -1023,16 +965,6 @@ internal record CacheMetricsDto(
     long EvictedKeys,
     long ExpiredKeys,
     DateTime MeasuredAt
-);
-
-/// <summary>
-/// Hot key identification for cache optimization
-/// </summary>
-internal record HotKeyDto(
-    string KeyPattern,
-    long AccessCount,
-    long MemoryBytes,
-    string MemoryFormatted
 );
 
 /// <summary>

@@ -47,11 +47,6 @@ internal sealed record QueueStreamEvent(
 internal sealed record StepCompletedData(string Step, double DurationSeconds, string? Metadata);
 
 /// <summary>
-/// Data payload for log-entry events.
-/// </summary>
-internal sealed record LogEntryData(string Level, string Message);
-
-/// <summary>
 /// Data payload for job-completed events.
 /// Enriched with game info at the SSE stream handler layer.
 /// </summary>

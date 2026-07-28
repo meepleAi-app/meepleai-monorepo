@@ -83,7 +83,6 @@ internal static class ApplicationServiceExtensions
         services.AddScoped<IAiResponseCacheService, AiResponseCacheService>();
 
         // SOLID Phase 3: RAG sub-services (specialized services extracted from RagService)
-        services.AddScoped<IQueryExpansionService, QueryExpansionService>();
         services.AddScoped<ISearchResultReranker, SearchResultReranker>();
         services.AddScoped<ICitationExtractorService, CitationExtractorService>();
         services.AddScoped<IRagConfigurationProvider, RagConfigurationProvider>(); // Issue #1441: RAG configuration provider

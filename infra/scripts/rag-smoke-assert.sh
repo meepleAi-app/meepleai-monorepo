@@ -59,22 +59,26 @@ else
 fi
 
 # Extract the top-K {source,page} from the first Citations SSE event (type=1).
+# $2 = per-query language override; falls back to the global $LANG default.
 fetch_top_chunks() {
   local query="$1"
+  local lang="${2:-$LANG}"
   curl -sN -b "$COOKIE" -X POST "$BASE_URL$ENDPOINT" \
     -H 'Content-Type: application/json' \
-    -d "$(jq -n --arg q "$query" --arg l "$LANG" --argjson k "$TOPK" '{query:$q, language:$l, topK:$k}')" 2>/dev/null \
+    -d "$(jq -n --arg q "$query" --arg l "$lang" --argjson k "$TOPK" '{query:$q, language:$l, topK:$k}')" 2>/dev/null \
     | grep '^data: ' | sed 's/^data: //' \
     | jq -c 'select(.type==1) | .data.citations' 2>/dev/null | head -1 \
     | jq -c "if . == null then [] else (sort_by(-.score, .source, .page) | .[0:$TOPK] | map({source, page})) end" 2>/dev/null
 }
 
-PASS=0; FAIL=0
+PASS=0; FAIL=0; SKIPPED=0
 TMP_BASELINE=$(mktemp); echo '{}' > "$TMP_BASELINE"
 
 while IFS= read -r qid; do
   query=$(jq -r --arg id "$qid" '.queries[] | select(.queryId==$id) | .query' "$QUERIES")
-  top=$(fetch_top_chunks "$query")
+  # Per-query language: use the query's own `language`, else the top-level default ($LANG).
+  qlang=$(jq -r --arg id "$qid" --arg def "$LANG" '.queries[] | select(.queryId==$id) | (.language // $def)' "$QUERIES")
+  top=$(fetch_top_chunks "$query" "$qlang")
 
   if [ -z "$top" ] || [ "$top" = "[]" ]; then
     echo "FAIL  $qid — no citations (type=1 empty/absent: cold index, auth failure, or non-SSE error body). Check login + that the snapshot is loaded."
@@ -84,14 +88,17 @@ while IFS= read -r qid; do
   if [ "$UPDATE_BASELINE" = true ]; then
     jq --arg id "$qid" --argjson v "$top" '.[$id]=$v' "$TMP_BASELINE" > "$TMP_BASELINE.2" \
       && mv "$TMP_BASELINE.2" "$TMP_BASELINE"
-    log "captured $qid → $top"
+    log "captured $qid ($qlang) → $top"
     continue
   fi
 
   expected=$(jq -c --arg id "$qid" '.baseline[$id] // empty' "$BASELINE")
   if [ -z "$expected" ]; then
-    echo "FAIL  $qid — no golden baseline entry (run with --update-baseline first)"
-    FAIL=$((FAIL+1)); continue
+    # A newly-added query without a baseline is a SKIP, not a FAIL: adding queries
+    # (e.g. the IT set, #3269) before the ops --update-baseline capture must NOT red
+    # the weekly gate. Real drift / no-citations still FAIL below.
+    echo "::notice:: SKIP $qid — no baseline yet (pending --update-baseline capture)"
+    SKIPPED=$((SKIPPED+1)); continue
   fi
 
   # Ordered comparison: both sides come from the same sort_by(-.score, .source, .page)
@@ -121,5 +128,6 @@ if [ "$UPDATE_BASELINE" = true ]; then
   exit 0
 fi
 
-log "result: $PASS passed, $FAIL failed"
+log "result: $PASS passed, $FAIL failed, $SKIPPED skipped (pending baseline)"
+# Exit non-zero ONLY on a real FAIL (drift / no-citations). SKIP (missing baseline) never fails the gate.
 [ "$FAIL" -eq 0 ]

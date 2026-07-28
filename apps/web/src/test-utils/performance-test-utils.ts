@@ -221,37 +221,6 @@ export async function measureHookPerformance<TProps, TResult>(
 }
 
 // ============================================================================
-// Re-render Counter
-// ============================================================================
-
-/**
- * Count re-renders for a component over a series of state updates
- *
- * @param renderFn - Function that renders and updates the component
- * @returns Number of renders that occurred
- *
- * @example
- * ```ts
- * const rerenderCount = await countRerenders((rerender) => {
- *   const { rerender: rerenderComponent } = render(<MyComponent count={0} />);
- *   rerenderComponent(<MyComponent count={1} />);
- *   rerenderComponent(<MyComponent count={2} />);
- * });
- * expect(rerenderCount).toBeLessThanOrEqual(3);
- * ```
- */
-export async function countRerenders(renderFn: (rerender: () => void) => void): Promise<number> {
-  let renderCount = 0;
-  const rerender = () => {
-    renderCount++;
-  };
-
-  renderFn(rerender);
-
-  return renderCount;
-}
-
-// ============================================================================
 // Performance Assertion Helpers
 // ============================================================================
 

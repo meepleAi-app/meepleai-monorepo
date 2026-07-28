@@ -105,6 +105,13 @@ internal static class AdminQueueEndpoints
             .Produces<BulkReindexResult>(200)
             .WithSummary("Re-queue all failed documents as Low priority");
 
+        // Issue #3269 (SP3 RAG bulk re-index): re-index all Ready documents whose indexer
+        // version differs from the target (heading-aware v1.1).
+        group.MapPost("/reindex-ready", HandleBulkReindexReady)
+            .WithName("BulkReindexReady")
+            .Produces<BulkReindexResult>(200)
+            .WithSummary("Re-index all Ready documents whose indexer version differs from the target (heading-aware v1.1)");
+
         // Issue #5456: Extracted text preview
         group.MapGet("/documents/{pdfDocumentId:guid}/extracted-text", HandleGetExtractedText)
             .WithName("GetExtractedText")
@@ -337,6 +344,20 @@ internal static class AdminQueueEndpoints
         return Results.Ok(result);
     }
 
+    private static async Task<IResult> HandleBulkReindexReady(
+        BulkReindexReadyRequest? request,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (_, session, _) = context.RequireAdminSession();
+        var userId = session.Principal!.Subject.Id;
+
+        var result = await mediator.Send(
+            new BulkReindexReadyCommand(userId, request?.TargetVersion), ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
     private static async Task<IResult> HandleGetExtractedText(
         Guid pdfDocumentId,
         HttpContext context,
@@ -391,3 +412,4 @@ internal record ReorderQueueRequest(List<Guid> OrderedJobIds);
 internal record EnqueuePdfResponse(Guid JobId);
 internal record SetPriorityRequest(ProcessingPriority NewPriority);
 internal record UpdateQueueConfigRequest(bool? IsPaused = null, int? MaxConcurrentWorkers = null);
+internal record BulkReindexReadyRequest(string? TargetVersion = null);

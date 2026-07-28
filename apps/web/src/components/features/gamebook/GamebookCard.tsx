@@ -165,7 +165,7 @@ function PipStrip({
           key: 'chunks',
           icon: '📄',
           label: chunksLabel,
-          cls: 'bg-entity-document/12 text-entity-document',
+          cls: 'bg-entity-document/12 text-entity-document-text',
         }
       : null,
     qaCount > 0

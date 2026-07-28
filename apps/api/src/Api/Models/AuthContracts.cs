@@ -70,12 +70,6 @@ internal record AuthUser(
     [property: JsonPropertyName("displayName")] string? DisplayName,
     [property: JsonPropertyName("role")] string Role);
 
-internal record AuthResult(AuthUser User, string SessionToken, DateTime ExpiresAt);
-
-internal record AuthResponse(
-    [property: JsonPropertyName("user")] AuthUser User,
-    [property: JsonPropertyName("expiresAt")] DateTime? ExpiresAt);
-
 internal record SessionInfo(
     string Id,
     string UserId,
@@ -121,13 +115,6 @@ internal record PasswordResetConfirmPayload(string Token, string NewPassword);
 internal record OAuthAccountDto(
     string Provider,
     DateTime CreatedAt);
-
-/// <summary>
-/// Internal result from OAuth callback processing
-/// </summary>
-internal record OAuthCallbackResult(
-    AuthUser User,
-    bool IsNewUser);
 
 /// <summary>
 /// OAuth provider configuration

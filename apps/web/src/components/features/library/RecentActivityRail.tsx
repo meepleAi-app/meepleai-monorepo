@@ -104,9 +104,9 @@ const ENTITY_CIRCLE_CLASS: Record<EntitySlot, string> = {
 };
 
 const ENTITY_ANCHOR_CLASS: Record<EntitySlot, string> = {
-  game: 'text-entity-game',
+  game: 'text-entity-game-text',
   agent: 'text-entity-agent',
-  kb: 'text-entity-kb',
+  kb: 'text-entity-kb-text',
   session: 'text-entity-session',
   chat: 'text-entity-chat',
 };

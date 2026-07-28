@@ -42,9 +42,9 @@ export interface AlertKpis {
   channelsByType: Record<AlertChannelType, number>;
 }
 
-export const ALERT_KPIS_RULES_QUERY_KEY = ['admin', 'alert-rules'] as const;
-export const ALERT_KPIS_HISTORY_QUERY_KEY = ['admin', 'alerts', 'history'] as const;
-export const ALERT_KPIS_CHANNELS_QUERY_KEY = ['admin', 'alert-channels'] as const;
+const ALERT_KPIS_RULES_QUERY_KEY = ['admin', 'alert-rules'] as const;
+const ALERT_KPIS_HISTORY_QUERY_KEY = ['admin', 'alerts', 'history'] as const;
+const ALERT_KPIS_CHANNELS_QUERY_KEY = ['admin', 'alert-channels'] as const;
 
 function isToday(iso: string | null): boolean {
   if (!iso) return false;

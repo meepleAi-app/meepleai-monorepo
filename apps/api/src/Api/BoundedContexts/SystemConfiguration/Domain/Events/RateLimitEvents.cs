@@ -80,36 +80,3 @@ internal sealed class UserRateLimitOverrideRemovedEvent : DomainEventBase
         AdminId = adminId;
     }
 }
-
-/// <summary>
-/// Event raised when a user reaches their rate limit.
-/// Can be used to trigger notifications.
-/// </summary>
-internal sealed class UserRateLimitReachedEvent : DomainEventBase
-{
-    /// <summary>
-    /// Gets the user who reached the limit.
-    /// </summary>
-    public Guid UserId { get; }
-
-    /// <summary>
-    /// Gets the type of limit reached (e.g., "pending", "monthly").
-    /// </summary>
-    public string LimitType { get; }
-
-    /// <summary>
-    /// Limit type for maximum pending requests reached.
-    /// </summary>
-    public const string PendingLimit = "pending";
-
-    /// <summary>
-    /// Limit type for maximum monthly requests reached.
-    /// </summary>
-    public const string MonthlyLimit = "monthly";
-
-    public UserRateLimitReachedEvent(Guid userId, string limitType)
-    {
-        UserId = userId;
-        LimitType = limitType;
-    }
-}

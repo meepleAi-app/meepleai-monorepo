@@ -68,12 +68,3 @@ internal record RuleSpecVersion(
     int RuleCount,
     string? CreatedBy = null
 );
-
-/// <summary>
-/// Represents the history of changes to a RuleSpec
-/// </summary>
-internal record RuleSpecHistory(
-    string GameId,
-    IReadOnlyList<RuleSpecVersion> Versions,
-    int TotalVersions
-);

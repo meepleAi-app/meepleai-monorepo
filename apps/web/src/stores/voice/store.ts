@@ -110,8 +110,4 @@ export const useVoicePreferencesStore = create<VoicePreferencesState>()(
 // Selectors
 // ============================================================================
 
-export const selectTtsEnabled = (state: VoicePreferencesState) => state.ttsEnabled;
-export const selectAutoSend = (state: VoicePreferencesState) => state.autoSend;
 export const selectLanguage = (state: VoicePreferencesState) => state.language;
-export const selectVoiceURI = (state: VoicePreferencesState) => state.voiceURI;
-export const selectRate = (state: VoicePreferencesState) => state.rate;

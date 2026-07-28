@@ -101,13 +101,13 @@ public sealed class ProcessingJobTests
     }
 
     [Fact]
-    public void Create_WhenQueueIsFull_ThrowsInvalidOperationException()
+    public void Create_WhenQueueIsFull_ThrowsConflictException()
     {
         // Act
         var action = () => ProcessingJob.Create(Guid.NewGuid(), Guid.NewGuid(), 0, ProcessingJob.MaxQueueSize, _timeProvider);
 
-        // Assert
-        action.Should().Throw<InvalidOperationException>()
+        // Assert — a full-queue state is a conflict (HTTP 409), not a 500 (#2568).
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Queue is full*");
     }
 
@@ -428,7 +428,7 @@ public sealed class ProcessingJobTests
     }
 
     [Fact]
-    public void Cancel_WhenCompleted_ThrowsInvalidOperationException()
+    public void Cancel_WhenCompleted_ThrowsConflictException()
     {
         // Arrange
         var job = CreateProcessingJob();
@@ -438,13 +438,13 @@ public sealed class ProcessingJobTests
         // Act
         var action = () => job.Cancel(_timeProvider);
 
-        // Assert
-        action.Should().Throw<InvalidOperationException>()
+        // Assert — cancelling a terminal job is a conflict (HTTP 409), not a 500 (#2568).
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Cannot cancel job*");
     }
 
     [Fact]
-    public void Cancel_WhenFailed_ThrowsInvalidOperationException()
+    public void Cancel_WhenFailed_ThrowsConflictException()
     {
         // Arrange
         var job = CreateProcessingJob();
@@ -454,8 +454,8 @@ public sealed class ProcessingJobTests
         // Act
         var action = () => job.Cancel(_timeProvider);
 
-        // Assert
-        action.Should().Throw<InvalidOperationException>()
+        // Assert — cancelling a terminal job is a conflict (HTTP 409), not a 500 (#2568).
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Cannot cancel job*");
     }
 
@@ -585,7 +585,7 @@ public sealed class ProcessingJobTests
     }
 
     [Fact]
-    public void UpdatePriority_WhenNotQueued_ThrowsInvalidOperationException()
+    public void UpdatePriority_WhenNotQueued_ThrowsConflictException()
     {
         // Arrange
         var job = CreateProcessingJob();
@@ -593,8 +593,8 @@ public sealed class ProcessingJobTests
         // Act
         var action = () => job.UpdatePriority(10);
 
-        // Assert
-        action.Should().Throw<InvalidOperationException>()
+        // Assert — reordering a non-Queued job is a conflict (HTTP 409), not a 500 (#2568).
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Cannot change priority*");
     }
 

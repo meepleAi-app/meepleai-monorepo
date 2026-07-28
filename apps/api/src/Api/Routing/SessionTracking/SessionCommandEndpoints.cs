@@ -37,9 +37,13 @@ internal static class SessionCommandEndpoints
     /// Those are set only by internal MediatR orchestrators (StartGameNight / AttachGamebookCampaign
     /// / the standalone gamebook handler). Binding the command directly let a client send e.g.
     /// <c>skipKbReadinessGate: true</c> to bypass the KB-readiness gate.
+    ///
+    /// <para>Also EXCLUDES <c>UserId</c>: the session owner is derived from the authenticated
+    /// principal in the endpoint, never from the request body. Binding a body-supplied UserId
+    /// was an IDOR (owner spoofing + victim concurrent-session-quota exhaustion) — any authenticated
+    /// caller could create a session owned by an arbitrary victim.</para>
     /// </summary>
     public record CreateSessionRequest(
-        Guid UserId,
         Guid GameId,
         string SessionType,
         DateTime? SessionDate,
@@ -50,12 +54,13 @@ internal static class SessionCommandEndpoints
         GameStateTier StateTier = GameStateTier.Minimal)
     {
         /// <summary>
-        /// Maps to <see cref="CreateSessionCommand"/>, leaving the internal-only flags
+        /// Maps to <see cref="CreateSessionCommand"/> for the given server-derived owner
+        /// <paramref name="userId"/> (the authenticated principal), leaving the internal-only flags
         /// (<c>GamebookCampaignId</c>, <c>SkipGameNightEnvelope</c>, <c>SkipKbReadinessGate</c>)
         /// at their safe defaults (<c>null</c>/<c>false</c>/<c>false</c>).
         /// </summary>
-        public CreateSessionCommand ToCommand() => new(
-            UserId,
+        public CreateSessionCommand ToCommand(Guid userId) => new(
+            userId,
             GameId,
             SessionType,
             SessionDate,
@@ -70,10 +75,20 @@ internal static class SessionCommandEndpoints
     {
         group.MapPost("/game-sessions", async (
             CreateSessionRequest request,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
-            var result = await mediator.Send(request.ToCommand(), ct).ConfigureAwait(false);
+            // IDOR guard: derive the session owner from the authenticated principal,
+            // never from the request body — a client must not be able to create a
+            // session owned by (or consume the concurrent-session quota of) another user.
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await mediator.Send(request.ToCommand(userId), ct).ConfigureAwait(false);
             return Results.Created($"/api/v1/game-sessions/{result.SessionId}", result);
         })
         .RequireAuthenticatedUser()

@@ -184,64 +184,6 @@ public sealed class TransactionScenarioTests : IAsyncLifetime
 
     #endregion
 
-    #region Optimistic Concurrency Conflict
-
-    /// <summary>
-    /// Issue #2709: This test requires RowVersion property on SharedGameEntity for optimistic locking.
-    /// SharedGameEntity currently doesn't have [Timestamp] RowVersion, so EF Core cannot detect
-    /// concurrent modifications. Skip until RowVersion is added in a future migration.
-    /// </summary>
-    [Fact(Skip = "Requires RowVersion concurrency token on GameEntity - see Issue #2709")]
-    public async Task ConcurrentUpdate_OptimisticLocking_ShouldThrowDbUpdateConcurrencyException()
-    {
-        // Arrange - Create a game that will be updated concurrently
-        var gameId = Guid.NewGuid();
-        var game = new SharedGameEntity
-        {
-            Id = gameId,
-            Title = "Original Title",
-            MinPlayers = 2,
-            MaxPlayers = 4,
-            YearPublished = 2020
-        };
-
-        _dbContext!.SharedGames.Add(game);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
-        _dbContext.ChangeTracker.Clear();
-
-        // Act - Simulate concurrent updates (two separate contexts)
-        var scope1 = _serviceProvider!.CreateScope();
-        var context1 = scope1.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-
-        var scope2 = _serviceProvider.CreateScope();
-        var context2 = scope2.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-
-        // Context1 loads game
-        var game1 = await context1.SharedGames.FindAsync(new object[] { gameId }, TestCancellationToken);
-        game1!.Title = "Updated by Context 1";
-
-        // Context2 loads same game
-        var game2 = await context2.SharedGames.FindAsync(new object[] { gameId }, TestCancellationToken);
-        game2!.Title = "Updated by Context 2";
-
-        // Context1 saves first (succeeds)
-        await context1.SaveChangesAsync(TestCancellationToken);
-
-        // Context2 tries to save (should fail with concurrency exception)
-        var act = async () => await context2.SaveChangesAsync(TestCancellationToken);
-
-        // Assert
-        await act.Should().ThrowAsync<DbUpdateConcurrencyException>();
-
-        // Cleanup
-        await context1.DisposeAsync();
-        await context2.DisposeAsync();
-        scope1.Dispose();
-        scope2.Dispose();
-    }
-
-    #endregion
-
     #region Deadlock with Retry
 
     [Fact]

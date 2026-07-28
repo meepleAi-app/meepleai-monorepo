@@ -98,14 +98,14 @@ function FilterChip({ label, value, hasValue = false, onClick }: FilterChipProps
       className={clsx(
         'inline-flex flex-shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 font-display text-[12px] font-bold',
         hasValue
-          ? 'border border-entity-game/30 bg-entity-game/10 text-entity-game'
+          ? 'border border-entity-game/30 bg-entity-game/10 text-entity-game-text'
           : 'border border-border bg-card text-muted-foreground'
       )}
     >
       <span
         className={clsx(
           'font-mono text-[9px] font-extrabold uppercase tracking-[0.06em]',
-          hasValue ? 'text-entity-game' : 'text-muted-foreground'
+          hasValue ? 'text-entity-game-text' : 'text-muted-foreground'
         )}
       >
         {label}

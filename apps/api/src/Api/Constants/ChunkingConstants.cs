@@ -47,4 +47,16 @@ internal static class ChunkingConstants
     /// E5-base supports 512 tokens * ~4 chars/token = 2048, with a safety buffer applied.
     /// </summary>
     public const int MaxEmbeddingChars = 1800;
+
+    /// <summary>
+    /// Minimum run of consecutive Unicode letters a chunk's text must contain to be indexed (3).
+    /// #3269 fragment filter: heading-aware chunking over noisy <c>unstructured</c> extraction
+    /// (complex PDF layouts with vertical/decorative text) emits bogus micro-chunks such as
+    /// <c>"A N"</c>, <c>"N"</c>, <c>"I L E X Y R F"</c>. A query token like <c>"N"</c> matches these
+    /// with a very high ts_rank (short chunk =&gt; high normalized rank), burying the real section
+    /// chunk. A chunk with no run of this many consecutive letters carries no real word and is
+    /// dropped. The criterion is absolute/monotone across the parent⊇child hierarchy, so filtering
+    /// never orphans a child.
+    /// </summary>
+    public const int MinSubstantiveLetterRun = 3;
 }

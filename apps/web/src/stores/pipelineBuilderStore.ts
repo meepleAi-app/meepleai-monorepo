@@ -822,7 +822,6 @@ function extractDefaultConfig(schema: PluginNodeData['configSchema']): Record<st
 // Selectors
 // =============================================================================
 
-export const selectPipeline = (state: PipelineBuilderStore) => state.pipeline;
 export const selectSelectedNode = (state: PipelineBuilderStore) => {
   if (!state.pipeline || !state.selectedNodeId) return null;
   return state.pipeline.nodes.find(n => n.id === state.selectedNodeId) || null;
@@ -831,5 +830,4 @@ export const selectSelectedEdge = (state: PipelineBuilderStore) => {
   if (!state.pipeline || !state.selectedEdgeId) return null;
   return state.pipeline.edges.find(e => e.id === state.selectedEdgeId) || null;
 };
-export const selectIsExecuting = (state: PipelineBuilderStore) => state.isExecuting;
 export const selectExecutionTrace = (state: PipelineBuilderStore) => state.executionTrace;

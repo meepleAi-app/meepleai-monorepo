@@ -112,7 +112,7 @@ export function PdfRow(props: PdfRowProps): ReactElement {
         aria-label={ariaLabel}
         onClick={() => onActionClick(pdf.id)}
         data-slot="kb-hub-pdf-action"
-        className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-entity-kb/20 bg-entity-kb/8 px-3 py-1.5 font-display text-xs font-bold text-entity-kb transition-colors hover:bg-entity-kb/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-entity-kb focus-visible:ring-offset-2"
+        className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-entity-kb/20 bg-entity-kb/8 px-3 py-1.5 font-display text-xs font-bold text-entity-kb-text transition-colors hover:bg-entity-kb/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-entity-kb focus-visible:ring-offset-2"
       >
         {labels.openCta} →
       </button>

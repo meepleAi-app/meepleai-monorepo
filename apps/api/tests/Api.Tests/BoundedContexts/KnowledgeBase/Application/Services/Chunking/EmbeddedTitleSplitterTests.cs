@@ -202,4 +202,56 @@ public class EmbeddedTitleSplitterTests
     {
         EmbeddedTitleSplitter.Split(System.Array.Empty<ExtractedElement>()).Should().BeEmpty();
     }
+
+    // --- Header promotion (review dry-run finding: TM's "PREPARAZIONE" is a "Header" element,
+    //     not a title glued into body; GroupByTitle ignores "Header", so re-tag lexicon Headers to Title) ---
+
+    private static ExtractedElement Header(string text, int page = 1) => new(text, page, "Header");
+
+    [Fact]
+    public void Split_HeaderWithLexiconTitle_IsRetaggedAsTitle_WholeElement()
+    {
+        // The exact TM case: a clean "PREPARAZIONE" section title unstructured emitted as Header, not Title.
+        var elements = new[]
+        {
+            Header("PREPARAZIONE"),
+            Body("Di seguito viene descritta la preparazione per il gioco da 2 a 5 giocatori."),
+        };
+
+        var result = EmbeddedTitleSplitter.Split(elements);
+
+        result.Should().HaveCount(2);
+        result[0].ElementType.Should().Be("Title");
+        result[0].Text.Should().Be("PREPARAZIONE"); // whole element re-tagged, not split
+        result[1].ElementType.Should().Be("NarrativeText");
+    }
+
+    [Fact]
+    public void Split_MultiWordHeaderContainingLexiconWord_IsPromoted_TextPreserved()
+    {
+        // "PANORAMICA DEL GIOCO" contains the lexicon word "PANORAMICA"; promote the WHOLE header text.
+        var result = EmbeddedTitleSplitter.Split(new[] { Header("PANORAMICA DEL GIOCO") });
+
+        result.Should().ContainSingle();
+        result[0].ElementType.Should().Be("Title");
+        result[0].Text.Should().Be("PANORAMICA DEL GIOCO");
+    }
+
+    [Theory]
+    [InlineData("4")]
+    [InlineData("*")]
+    [InlineData("London")]
+    [InlineData("DominionRules2021.qxp_WideDominion 8/17/21")]
+    [InlineData("TESSERE")] // a real section header, but not in the curated lexicon → deliberately not promoted (recall gap, no false positive)
+    public void Split_HeaderWithoutLexiconTitle_IsNotPromoted(string headerText)
+    {
+        // "Header" is dominantly running page-header noise corpus-wide (page numbers, symbols, filenames,
+        // city names); only lexicon-carrying headers are promoted so noise never fabricates a section.
+        var el = Header(headerText);
+
+        var result = EmbeddedTitleSplitter.Split(new[] { el });
+
+        result.Should().ContainSingle();
+        result[0].Should().Be(el); // unchanged, still a Header
+    }
 }

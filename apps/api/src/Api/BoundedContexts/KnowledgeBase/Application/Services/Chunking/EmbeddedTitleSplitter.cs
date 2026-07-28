@@ -13,6 +13,12 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 /// the downstream <see cref="ExtractedDocumentFactory.GroupByTitle"/> opens a real section and the
 /// #3270 heading-match boost + the RoleClassifier Setup fast-path stop being starved.
 /// <para>
+/// Also promotes a standalone <c>Header</c> element to <c>Title</c> when its text carries a curated
+/// section word (the TM "PREPARAZIONE" case: unstructured emitted it as a <c>Header</c>, which
+/// <see cref="ExtractedDocumentFactory.GroupByTitle"/> ignores, so it was absorbed into the previous
+/// section's chunk). Gated on the lexicon because <c>Header</c> is dominantly running page-header noise.
+/// </para>
+/// <para>
 /// Runs at the ELEMENT layer (before <see cref="ExtractedDocumentFactory.FromExtraction"/>), so it
 /// needs no character-offset recompute — the factory derives offsets from its own StringBuilder.
 /// Detection is deliberately conservative to protect the well-extracted English corpus: an entry is
@@ -24,6 +30,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 internal static class EmbeddedTitleSplitter
 {
     private const string TitleCategory = "Title";
+    private const string HeaderCategory = "Header";
 
     /// <summary>Characters after the token scanned for the lowercase-prose confirmation (guard iii).</summary>
     private const int TrailingProseWindow = 60;
@@ -60,6 +67,15 @@ internal static class EmbeddedTitleSplitter
                     result.Add(el with { Text = tail });
                 }
             }
+            else if (IsPromotableHeader(el))
+            {
+                // A section title unstructured emitted as a standalone "Header" (not "Title") — the TM
+                // "PREPARAZIONE" case. GroupByTitle opens sections only on "Title", so re-tag the WHOLE
+                // element as Title. Gated on a lexicon match because "Header" is dominantly running
+                // page-header noise ("4", "*", filenames, city names — up to 825 per doc corpus-wide);
+                // only a Header carrying a curated section word is promoted, so noise is left untouched.
+                result.Add(el with { ElementType = TitleCategory });
+            }
             else
             {
                 result.Add(el);
@@ -72,6 +88,36 @@ internal static class EmbeddedTitleSplitter
     private static bool IsSplittable(ExtractedElement el) =>
         !string.IsNullOrEmpty(el.Text)
         && SplittableTypes.Contains(el.ElementType);
+
+    /// <summary>
+    /// True when the element is a <c>Header</c> whose text carries a curated section title (whole-word,
+    /// exact UPPERCASE) — a real section heading unstructured miscategorised as a running header. Not a
+    /// split (a Header IS the heading); the whole element is re-tagged Title by the caller.
+    /// </summary>
+    private static bool IsPromotableHeader(ExtractedElement el) =>
+        string.Equals(el.ElementType, HeaderCategory, StringComparison.Ordinal)
+        && !string.IsNullOrEmpty(el.Text)
+        && ContainsLexiconTitle(el.Text);
+
+    private static bool ContainsLexiconTitle(string text)
+    {
+        foreach (var title in SectionHeadingLexicon.Titles)
+        {
+            var i = text.IndexOf(title, StringComparison.Ordinal);
+            while (i >= 0)
+            {
+                var wholeWordLeft = i == 0 || !char.IsLetter(text[i - 1]);
+                var afterIdx = i + title.Length;
+                var wholeWordRight = afterIdx >= text.Length || !char.IsLetter(text[afterIdx]);
+                if (wholeWordLeft && wholeWordRight)
+                {
+                    return true;
+                }
+                i = text.IndexOf(title, i + 1, StringComparison.Ordinal);
+            }
+        }
+        return false;
+    }
 
     /// <summary>
     /// Finds the LEFTMOST qualifying lexicon title embedded in <paramref name="text"/> (longest entry

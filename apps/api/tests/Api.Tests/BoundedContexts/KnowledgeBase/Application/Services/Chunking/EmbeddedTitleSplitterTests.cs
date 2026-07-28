@@ -1,0 +1,174 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
+using Api.Tests.Constants;
+using FluentAssertions;
+using Xunit;
+
+namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
+
+/// <summary>
+/// Epic #3338 WP1a unit tests for <see cref="EmbeddedTitleSplitter"/>: recovering section titles that
+/// unstructured's 'fast' strategy glued into body elements (the Terraforming Mars "PREPARAZIONE"
+/// case), while NOT false-splitting well-extracted English prose.
+/// </summary>
+[Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "KnowledgeBase")]
+public class EmbeddedTitleSplitterTests
+{
+    private static ExtractedElement Body(string text, int page = 1) => new(text, page, "NarrativeText");
+    private static ExtractedElement Title(string text, int page = 1) => new(text, page, "Title");
+
+    [Fact]
+    public void Split_TmCase_PromotesEmbeddedPreparazioneToSyntheticTitle()
+    {
+        // The exact shape observed on staging: the setup title is glued between a page-number artifact
+        // ("6") and lowercase running prose, inside a body element whose neighbouring heading is "CARTE".
+        var el = Body("7 4 8 Se non sei sicuro del funzionamento di una carta, leggi il testo tra "
+            + "parentesi. 6 PREPARAZIONE Di seguito viene descritta la preparazione per il gioco da 2 a 5 giocatori.");
+
+        var result = EmbeddedTitleSplitter.Split(new[] { el });
+
+        result.Should().HaveCount(3);
+        result[0].ElementType.Should().Be("NarrativeText");
+        result[0].Text.Should().EndWith("6");   // head keeps the page-number artifact (goes to prior section)
+        result[1].ElementType.Should().Be("Title");
+        result[1].Text.Should().Be("PREPARAZIONE");
+        result[2].ElementType.Should().Be("NarrativeText");
+        result[2].Text.Should().StartWith("Di seguito viene descritta");
+        result.Should().OnlyContain(e => e.PageNumber == 1);
+    }
+
+    [Fact]
+    public void Split_TitleAtStartOfElement_OmitsEmptyHead()
+    {
+        var el = Body("PREPARAZIONE Di seguito viene descritta la preparazione del gioco.");
+
+        var result = EmbeddedTitleSplitter.Split(new[] { el });
+
+        result.Should().HaveCount(2);
+        result[0].ElementType.Should().Be("Title");
+        result[0].Text.Should().Be("PREPARAZIONE");
+        result[1].Text.Should().StartWith("Di seguito");
+    }
+
+    [Fact]
+    public void Split_ExistingTitleElement_PassesThroughUnchanged()
+    {
+        var el = Title("PREPARAZIONE");
+
+        var result = EmbeddedTitleSplitter.Split(new[] { el });
+
+        result.Should().ContainSingle();
+        result[0].Should().Be(el);
+    }
+
+    [Fact]
+    public void Split_PreservesOrderAndSplitsOnlyTheMatchingElement()
+    {
+        var a = Title("CONTESTO");
+        var b = Body("Testo del contesto senza titoli incorporati, tutto minuscolo qui.");
+        var c = Body("Riepilogo finale. 6 PREPARAZIONE Di seguito trovi i passi di preparazione.");
+
+        var result = EmbeddedTitleSplitter.Split(new[] { a, b, c });
+
+        result.Should().HaveCount(5); // a, b, [head c, Title, tail c]
+        result[0].Should().Be(a);
+        result[1].Should().Be(b);
+        result[2].Text.Should().EndWith("6");
+        result[3].ElementType.Should().Be("Title");
+        result[3].Text.Should().Be("PREPARAZIONE");
+        result[4].Text.Should().StartWith("Di seguito");
+    }
+
+    [Fact]
+    public void Split_MultipleEmbeddedTitles_SplitsOnlyTheLeftmost_NonRecursive()
+    {
+        // Only ONE split per element: the leftmost qualifying title is promoted; the second stays in the tail.
+        var el = Body("Contesto: AZIONI eseguibili dal giocatore in ogni turno. PUNTEGGIO finale del gioco calcolato.");
+
+        var result = EmbeddedTitleSplitter.Split(new[] { el });
+
+        result.Should().HaveCount(3);
+        result[1].ElementType.Should().Be("Title");
+        result[1].Text.Should().Be("AZIONI");
+        result[2].Text.Should().Contain("PUNTEGGIO"); // untouched, remains inline in the tail
+        result[2].ElementType.Should().Be("NarrativeText");
+    }
+
+    // --- English non-regression: must NOT false-split well-extracted prose ---
+
+    [Fact]
+    public void Split_LowercaseSectionWordInProse_DoesNotSplit()
+    {
+        var el = Body("During setup you may draw a card, and at the end you score points for each tile.");
+
+        var result = EmbeddedTitleSplitter.Split(new[] { el });
+
+        result.Should().ContainSingle();
+        result[0].Should().Be(el);
+    }
+
+    [Fact]
+    public void Split_UppercaseWordPrecededByLetter_TreatedAsInlineProse_DoesNotSplit()
+    {
+        // Preceding non-space char is a letter ("the ") → inline emphasis, not a heading boundary.
+        var el = Body("Follow the SETUP steps carefully before you begin the first round of play.");
+
+        var result = EmbeddedTitleSplitter.Split(new[] { el });
+
+        result.Should().ContainSingle();
+        result[0].Should().Be(el);
+    }
+
+    [Theory]
+    [InlineData("IMPREPARAZIONE del turno adesso descritta in dettaglio qui sotto.")] // glued left
+    [InlineData("6 PREPARAZIONER del gioco viene ora descritta nel dettaglio seguente.")] // glued right
+    public void Split_NotAWholeWordMatch_DoesNotSplit(string text)
+    {
+        var result = EmbeddedTitleSplitter.Split(new[] { Body(text) });
+
+        result.Should().ContainSingle();
+    }
+
+    [Fact]
+    public void Split_UppercaseTitleWithNoTrailingLowercaseProse_DoesNotSplit()
+    {
+        // A lone ALL-CAPS token or a run of adjacent all-caps headings (no lowercase body within the
+        // window) is ambiguous — the conservative guard leaves it alone.
+        var el = Body("6 PREPARAZIONE AZIONI GENERAZIONI");
+
+        var result = EmbeddedTitleSplitter.Split(new[] { el });
+
+        result.Should().ContainSingle();
+        result[0].Should().Be(el);
+    }
+
+    [Theory]
+    [InlineData("Fine del paragrafo. SETUP the board using the components listed above now.", "SETUP")]     // '.' boundary
+    [InlineData("Step 3) SETUP the board using the components listed on the reference card.", "SETUP")]      // ')' boundary
+    [InlineData("Preparation: SETUP the board using the components listed in the manual here.", "SETUP")]    // ':' boundary
+    public void Split_HeadingBoundaryVariants_PromoteTitle(string text, string expectedTitle)
+    {
+        var result = EmbeddedTitleSplitter.Split(new[] { Body(text) });
+
+        result.Should().Contain(e => e.ElementType == "Title" && e.Text == expectedTitle);
+    }
+
+    [Fact]
+    public void Split_MultiWordTitle_PrefersLongestAtSamePosition()
+    {
+        // "GAME SETUP" and "SETUP" both start-of-string; the longest wins so the whole heading is captured.
+        var el = Body("GAME SETUP arrange the board and deal starting cards to every player now.");
+
+        var result = EmbeddedTitleSplitter.Split(new[] { el });
+
+        result.Should().Contain(e => e.ElementType == "Title" && e.Text == "GAME SETUP");
+        result.Should().NotContain(e => e.ElementType == "Title" && e.Text == "SETUP");
+    }
+
+    [Fact]
+    public void Split_EmptyList_ReturnsEmpty()
+    {
+        EmbeddedTitleSplitter.Split(System.Array.Empty<ExtractedElement>()).Should().BeEmpty();
+    }
+}

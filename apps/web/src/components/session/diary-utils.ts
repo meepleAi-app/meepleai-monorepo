@@ -65,7 +65,7 @@ export const EVENT_META: Record<string, EventMeta> = {
   gamenight_completed: { icon: Flag, color: 'text-primary', label: 'Serata completata' },
 };
 
-export const FALLBACK_META: EventMeta = {
+const FALLBACK_META: EventMeta = {
   icon: BookOpen,
   color: 'text-muted-foreground',
   label: 'Evento',

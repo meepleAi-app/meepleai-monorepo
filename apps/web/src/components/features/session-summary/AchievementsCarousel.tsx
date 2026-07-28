@@ -16,7 +16,8 @@
  * `useSessionAchievements` hook returning deterministic fixture.
  *
  * MeepleCard divergence (Gate C): emoji-first card with locked/unlocked
- * variant inversion (locked → muted, dashed border, opacity 0.45). MeepleCard's
+ * variant inversion (locked → muted, dashed border; no opacity dimming so the
+ * muted text stays WCAG AA — #3289). MeepleCard's
  * subject avatar/title/subtitle pattern doesn't fit the locked-overlay
  * inverted state. DIVERGE.
  *
@@ -135,7 +136,12 @@ export function AchievementsCarousel({
                 '[scroll-snap-align:start]',
                 unlocked
                   ? 'border border-entity-toolkit/30 bg-entity-toolkit/[0.06]'
-                  : 'border border-dashed border-border bg-muted/40 opacity-60'
+                  : // #3289: no `opacity-60` on the whole card — axe composites it
+                    // onto the muted text, dropping SC 1.4.3 contrast to 2.53:1.
+                    // The locked look stays via the dashed border + muted bg + 🔒
+                    // icon; the muted text keeps AA contrast (muted-foreground on
+                    // the light bg-muted/40 tint is ≥ 4.5:1 without the opacity).
+                    'border border-dashed border-border bg-muted/40'
               )}
             >
               <div

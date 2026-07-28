@@ -15,11 +15,15 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// <param name="DocumentIds">Optional document IDs to filter sources (null = all documents)</param>
 /// <param name="ResponseStyle">Response style: "concise" (default), "detailed", or "continuation"</param>
 /// <param name="ContinuationContext">Partial answer text from a previous truncated response</param>
+/// <param name="UserId">Bug B5: authenticated user id — when present, per-game RAG access is enforced</param>
+/// <param name="UserRole">Bug B5: authenticated user role (string) — parsed for RAG access (admin bypass)</param>
 internal record StreamQaQuery(
     string GameId,
     string Query,
     Guid? ThreadId = null,
     IReadOnlyList<Guid>? DocumentIds = null,
     string? ResponseStyle = null,
-    string? ContinuationContext = null
+    string? ContinuationContext = null,
+    Guid? UserId = null,
+    string? UserRole = null
 ) : IStreamingQuery<RagStreamingEvent>;

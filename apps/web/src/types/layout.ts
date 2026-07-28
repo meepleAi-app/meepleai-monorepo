@@ -246,21 +246,6 @@ export interface Breakpoints {
 }
 
 /**
- * Context domains for organizing LayoutContext values into logical groups.
- * The flat LayoutContext type is kept for backward compatibility;
- * domains are organizational metadata for documentation and tooling.
- */
-export const CONTEXT_DOMAINS = {
-  core: ['default', 'dashboard'],
-  library: ['library', 'library_empty', 'library_selection'],
-  game: ['game_detail', 'game_detail_not_owned', 'catalog'],
-  session: ['session_setup', 'session_active', 'session_end'],
-  communication: ['chat'],
-  content: ['document_viewer', 'search'],
-  user: ['profile', 'settings', 'wishlist', 'notifications'],
-} as const;
-
-/**
  * Default breakpoint values matching Tailwind defaults
  */
 export const BREAKPOINTS: Breakpoints = {

@@ -69,6 +69,13 @@ public sealed class KbReindexIntegrationTests : IAsyncLifetime
             Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.KbReindexJobRepository>();
         services.AddSingleton<Api.BoundedContexts.KnowledgeBase.Application.Channels.KbReindexChannel>();
 
+        // Bug B6: ReindexGameKb/RebuildRaptor handlers now enforce per-game RAG access via
+        // IRagAccessService. The base builder omits KnowledgeBase infra, so register it here
+        // (RagAccessService only needs MeepleAiDbContext, already provided by CreateBase).
+        services.AddScoped<
+            Api.BoundedContexts.KnowledgeBase.Application.Services.IRagAccessService,
+            Api.BoundedContexts.KnowledgeBase.Infrastructure.Services.RagAccessService>();
+
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
@@ -99,6 +106,10 @@ public sealed class KbReindexIntegrationTests : IAsyncLifetime
             Id = TestGameId,
             Title = "SG2 KB Reindex Test Game",
             CreatedAt = DateTime.UtcNow,
+            // Bug B6: these smoke tests exercise tier gating / cascade / idempotency, not authz.
+            // Mark the game RAG-public so the (non-owner) test user passes the new access gate,
+            // isolating each test to its intended behavior.
+            IsRagPublic = true,
         });
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }
@@ -187,6 +198,11 @@ public sealed class KbReindexIntegrationTests : IAsyncLifetime
             .ReturnsAsync(TierLimits.FreeTier);
 
         services.AddScoped<ITierEnforcementService>(_ => freeTierMock.Object);
+
+        // Bug B6: RebuildRaptorCommandHandler now depends on IRagAccessService (see InitializeAsync).
+        services.AddScoped<
+            Api.BoundedContexts.KnowledgeBase.Application.Services.IRagAccessService,
+            Api.BoundedContexts.KnowledgeBase.Infrastructure.Services.RagAccessService>();
 
         var freeTierProvider = services.BuildServiceProvider();
         var mediator = freeTierProvider.GetRequiredService<IMediator>();

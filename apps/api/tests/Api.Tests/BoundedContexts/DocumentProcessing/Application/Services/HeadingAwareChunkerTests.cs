@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
+using Api.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Moq;
@@ -157,5 +158,59 @@ public class HeadingAwareChunkerTests
         capturedDocument.GameId.Should().Be(GameId);
         capturedDocument.Sections.Should().ContainSingle();
         capturedDocument.Sections[0].Heading.Should().Be("Preparazione");
+    }
+
+    [Fact]
+    public async Task BuildAsync_DropsFragmentChunks_KeepsSubstantiveOnes()
+    {
+        // #3269 fragment filter: decorative/vertical-text artefacts unstructured emits as bogus Title
+        // elements ("A N", "N", "I L E X Y R F", digit-only) must be dropped — a query token like "N"
+        // matches such micro-chunks with a high ts_rank and buries the real section chunk.
+        var substantive = HierarchicalChunk.CreateParent(
+            "6 PREPARAZIONE Di seguito viene descritta la preparazione per il gioco da 2 a 5 giocatori.",
+            Metadata(heading: "Preparazione"));
+        var fragAN = HierarchicalChunk.CreateParent("A N", Metadata(heading: "A N"));
+        var fragN = HierarchicalChunk.CreateParent("N", Metadata(heading: "N"));
+        var fragVertical = HierarchicalChunk.CreateParent("I L E X Y R F", Metadata(heading: null));
+        var fragDigits = HierarchicalChunk.CreateParent("12 34 56 78", Metadata(heading: null));
+
+        var advancedChunkingMock = new Mock<IAdvancedChunkingService>();
+        advancedChunkingMock
+            .Setup(s => s.ChunkDocumentAsync(
+                It.IsAny<ExtractedDocument>(),
+                It.IsAny<ChunkingConfiguration?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<HierarchicalChunk> { substantive, fragAN, fragN, fragVertical, fragDigits });
+
+        // Act
+        var result = await HeadingAwareChunker.BuildAsync(
+            new List<ExtractedElement> { new("Preparazione", 1, "Title") },
+            "flat text",
+            DocumentId,
+            GameId,
+            advancedChunkingMock.Object,
+            CancellationToken.None);
+
+        // Assert — only the substantive chunk survives.
+        result.Should().ContainSingle();
+        result[0].Text.Should().Contain("PREPARAZIONE");
+    }
+
+    [Theory]
+    [InlineData("A N", false)]
+    [InlineData("N", false)]
+    [InlineData("I L E X Y R F", false)]
+    [InlineData("12 34 56 78", false)]
+    [InlineData("", false)]
+    [InlineData("   ", false)]
+    [InlineData("A. B. C.", false)]   // single letters + punctuation, no 3-letter run
+    [InlineData("AZIONI", true)]
+    [InlineData("Preparazione", true)]
+    [InlineData("Da 2 a 5 giocatori", true)]
+    [InlineData("6 PREPARAZIONE Di seguito", true)]
+    public void IsSubstantial_ClassifiesFragmentsVsRealWords(string text, bool expected)
+    {
+        var chunk = new DocumentChunk { Id = Guid.NewGuid(), Text = text };
+        HeadingAwareChunker.IsSubstantial(chunk).Should().Be(expected);
     }
 }

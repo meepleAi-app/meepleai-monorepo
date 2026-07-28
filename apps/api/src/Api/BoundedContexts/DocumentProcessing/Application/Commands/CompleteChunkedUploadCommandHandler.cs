@@ -472,7 +472,16 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 return;
             }
 
-            var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfGuid }, cancellationToken).ConfigureAwait(false);
+            // AsTracking required: DbContext default is NoTracking (PERF-06), and FindAsync
+            // does not override the per-DbContext default — the entity would otherwise be
+            // returned untracked and every ProcessingState/extraction write below would be
+            // silently dropped at SaveChangesAsync (#3288). Mirrors the sibling
+            // UploadPdfCommandHandler.Processing.cs. The catch-all HandleProcessingFailureAsync
+            // reuses this same db scope, so its FindAsync resolves the now-tracked instance.
+            var pdfDoc = await db.PdfDocuments
+                .AsTracking()
+                .FirstOrDefaultAsync(p => p.Id == pdfGuid, cancellationToken)
+                .ConfigureAwait(false);
             if (pdfDoc == null)
             {
                 _logger.LogError("PDF document {PdfId} not found for processing", pdfId);
@@ -615,10 +624,10 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 : System.Text.Json.JsonSerializer.Serialize(extractResult.StructuredElements);
             pdfDoc.PageCount = extractResult.TotalPages;
             pdfDoc.CharacterCount = extractResult.TotalCharacters;
-            // 🔴 pdfDoc came from a bare FindAsync under the NoTracking default → detached.
-            // Mark it Modified so these columns actually persist (the pre-existing SaveChanges
-            // was a silent no-op).
-            db.PdfDocuments.Update(pdfDoc);
+            // pdfDoc is tracked (loaded with .AsTracking() at the top of TriggerPdfProcessingAsync,
+            // #3288), so these scalar writes are picked up by change detection — no manual Update()
+            // needed. The previous db.Update() workaround was a partial patch for the NoTracking
+            // silent no-op and is now redundant given the root-cause fix.
             try
             {
                 await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

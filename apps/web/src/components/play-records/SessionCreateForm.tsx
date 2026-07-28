@@ -408,7 +408,7 @@ function Step1Gioco({ form, isSubmitting, t, isReadonly }: Step1Props) {
       {gameType === 'catalog' && !form.watch('gameId') && (
         <div
           role="status"
-          className="rounded-lg border border-dashed border-entity-game/30 bg-entity-game/6 px-3 py-2.5 font-mono text-xs font-bold text-entity-game"
+          className="rounded-lg border border-dashed border-entity-game/30 bg-entity-game/6 px-3 py-2.5 font-mono text-xs font-bold text-entity-game-text"
         >
           {t('step1.emptyLibraryHint')}
         </div>

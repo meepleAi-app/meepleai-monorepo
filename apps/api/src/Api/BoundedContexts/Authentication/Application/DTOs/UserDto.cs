@@ -25,34 +25,6 @@ internal record UserDto(
 );
 
 /// <summary>
-/// DTO for user registration.
-/// </summary>
-internal record RegisterUserRequest(
-    string Email,
-    string Password,
-    string DisplayName,
-    string Role = "user"
-);
-
-/// <summary>
-/// DTO for user registration response.
-/// </summary>
-internal record RegisterUserResponse(
-    Guid UserId,
-    string Email,
-    string DisplayName,
-    string Role
-);
-
-/// <summary>
-/// DTO for login request.
-/// </summary>
-internal record LoginRequest(
-    string Email,
-    string Password
-);
-
-/// <summary>
 /// DTO for login response.
 ///
 /// I2 / F5 (auth security fixes): <see cref="ExpiresAt"/> is the canonical
@@ -75,20 +47,4 @@ internal record LoginResponse(
     UserDto? User,
     string? SessionToken,
     DateTime ExpiresAt
-);
-
-/// <summary>
-/// DTO for 2FA verification request.
-/// </summary>
-internal record Verify2FARequest(
-    string TempSessionToken,
-    string Code
-);
-
-/// <summary>
-/// DTO for 2FA verification response.
-/// </summary>
-internal record Verify2FAResponse(
-    UserDto User,
-    string SessionToken
 );

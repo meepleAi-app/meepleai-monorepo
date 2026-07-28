@@ -423,15 +423,20 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
 
         RetryCount++;
 
-        // Resume from failed state or restart from Extracting
-        var resumeState = FailedAtState ?? PdfProcessingState.Extracting;
-        TransitionTo(resumeState);
+        // Reset to Pending so the pipeline re-claims and re-runs the document from the start.
+        // The pipeline has NO true mid-pipeline resume (ProcessAsync always restarts from Extract),
+        // and only a Pending PDF is claimable by IPdfClaimService.TryClaimPendingAsync. The old
+        // "resume from FailedAtState ?? Extracting" left the document in a non-Pending state that
+        // no runtime rail could claim, so a retry never actually reprocessed (bug-hunt B11, #3269).
+        // Failed → Pending is permitted by ValidateStateTransition (Failed → any recovery state).
+        TransitionTo(PdfProcessingState.Pending);
 
         // Clear error state
         ProcessingError = null;
         ProcessedAt = null;
 
-        // Emit event to trigger pipeline resumption
+        // Emit event to trigger the retry notification. The actual pipeline resumption is driven by
+        // the EnqueuePdfCommand dispatched by RetryPdfProcessingCommandHandler after this returns.
         AddDomainEvent(new PdfRetryInitiatedEvent(Id, RetryCount, UploadedByUserId));
     }
 

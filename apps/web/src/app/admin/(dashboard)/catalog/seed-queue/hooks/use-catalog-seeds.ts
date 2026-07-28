@@ -13,8 +13,8 @@ import type { BulkEnqueueRequest, EnqueueCatalogSeedRequest } from '../lib/catal
  * `['catalog-seeds']` namespace so any list filter / detail view consuming the
  * data is refreshed in a single broadcast.
  */
-export const CATALOG_SEEDS_KEY = ['catalog-seeds'] as const;
-export const CATALOG_SEED_DETAIL_KEY = ['catalog-seed-detail'] as const;
+const CATALOG_SEEDS_KEY = ['catalog-seeds'] as const;
+const CATALOG_SEED_DETAIL_KEY = ['catalog-seed-detail'] as const;
 
 // ─── Queries ─────────────────────────────────────────────────────────────────
 

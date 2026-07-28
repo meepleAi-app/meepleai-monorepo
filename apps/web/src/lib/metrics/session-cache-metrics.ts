@@ -60,7 +60,8 @@ export function getMetrics() {
   const totalRequests = cacheHitCount + cacheMissCount;
   const cacheHitRate = totalRequests > 0 ? cacheHitCount / totalRequests : 0;
   const totalValidations = validationSuccessCount + validationFailureCount + validationTimeoutCount;
-  const validationSuccessRate = totalValidations > 0 ? validationSuccessCount / totalValidations : 0;
+  const validationSuccessRate =
+    totalValidations > 0 ? validationSuccessCount / totalValidations : 0;
   const uptimeSeconds = Math.floor((Date.now() - startTime) / 1000);
 
   return {
@@ -124,15 +125,4 @@ nextjs_middleware_uptime_seconds ${metrics.uptime_seconds}
 # TYPE nextjs_middleware_total_requests counter
 nextjs_middleware_total_requests ${metrics.total_requests}
 `;
-}
-
-/**
- * Reset all metrics (for testing purposes)
- */
-export function resetMetrics(): void {
-  cacheHitCount = 0;
-  cacheMissCount = 0;
-  validationSuccessCount = 0;
-  validationFailureCount = 0;
-  validationTimeoutCount = 0;
 }

@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
 
@@ -15,6 +16,12 @@ internal sealed class SearchResult : Entity<Guid>
     public Confidence RelevanceScore { get; private set; }
     public int Rank { get; private set; }
     public string? SearchMethod { get; private set; } // "vector", "keyword", "hybrid"
+    public Guid PdfDocumentId { get; private set; }
+    public int ChunkIndex { get; private set; }
+    public GameBookRole RoleTags { get; private set; }
+
+    /// <summary>#3270: chunk heading-path label for the heading-match boost (nullable).</summary>
+    public string? Heading { get; private set; }
 
     /// <summary>
     /// Private constructor for EF Core.
@@ -35,7 +42,11 @@ internal sealed class SearchResult : Entity<Guid>
         int pageNumber,
         Confidence relevanceScore,
         int rank,
-        string? searchMethod = null) : base(id)
+        string? searchMethod = null,
+        Guid pdfDocumentId = default,
+        int chunkIndex = 0,
+        GameBookRole roleTags = GameBookRole.None,
+        string? heading = null) : base(id)
     {
         if (string.IsNullOrWhiteSpace(textContent))
             throw new ArgumentException("Text content cannot be empty", nameof(textContent));
@@ -52,6 +63,10 @@ internal sealed class SearchResult : Entity<Guid>
         RelevanceScore = relevanceScore ?? throw new ArgumentNullException(nameof(relevanceScore));
         Rank = rank;
         SearchMethod = searchMethod;
+        PdfDocumentId = pdfDocumentId;
+        ChunkIndex = chunkIndex;
+        RoleTags = roleTags;
+        Heading = heading;
     }
 
     /// <summary>

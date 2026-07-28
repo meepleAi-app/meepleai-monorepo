@@ -137,13 +137,19 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
 
         // RRF fusion-key fix: JOIN vector_documents to resolve the owning PdfDocumentId so hybrid
         // fusion can key vector results on {PdfDocumentId}_{ChunkIndex} (matching the keyword arm).
-        // PdfDocumentId is column 7, similarity column 8.
+        // PdfDocumentId is column 7, similarity column 8, heading column 9.
+        // #3270: LEFT JOIN text_chunks on source_chunk_id to carry the chunk heading for the
+        // heading-match boost — LEFT (not INNER) so a pre-SP2 embedding with a null source_chunk_id
+        // still returns its row with heading=null instead of being dropped. text_chunks."Id" is the
+        // PK, so the join is 1:0-or-1 (no row fan-out).
         var sql = $"""
             SELECT e.id, e.vector_document_id, e.text_content, e.model, e.chunk_index, e.page_number, e.role_tags,
                    vd."PdfDocumentId",
-                   1 - (e.vector <=> @queryVector) AS similarity
+                   1 - (e.vector <=> @queryVector) AS similarity,
+                   tc."Heading"
             FROM {TableName} e
             JOIN vector_documents vd ON vd."Id" = e.vector_document_id
+            LEFT JOIN text_chunks tc ON tc."Id" = e.source_chunk_id
             WHERE e.game_id = @gameId
               AND 1 - (e.vector <=> @queryVector) >= @minScore
             """;
@@ -192,6 +198,10 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                     var pdfDocumentId = reader.GetGuid(7);
                     // Column 8: similarity = 1 - (vector <=> @queryVector)
                     var score = reader.GetDouble(8);
+                    // #3270 Column 9: chunk heading via LEFT JOIN text_chunks on source_chunk_id (nullable).
+                    var heading = await reader.IsDBNullAsync(9, cancellationToken).ConfigureAwait(false)
+                        ? null
+                        : reader.GetString(9);
 
                     var placeholderVector = DomainVector.CreatePlaceholder(queryVector.Dimensions);
                     var embedding = new Embedding(
@@ -203,7 +213,8 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                         chunkIndex: chunkIndex,
                         pageNumber: Math.Max(1, pageNumber),
                         roleTags: roleTags,
-                        pdfDocumentId: pdfDocumentId);
+                        pdfDocumentId: pdfDocumentId,
+                        heading: heading);
 
                     results.Add(new ScoredEmbedding(embedding, score));
                 }

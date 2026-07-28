@@ -48,7 +48,10 @@ internal static class KbManagementEndpoints
             var (authenticated, session, error) = httpContext.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var command = new ReindexGameKbCommand(GameId: gameId, UserId: session.Principal!.Subject.Id);
+            var command = new ReindexGameKbCommand(
+                GameId: gameId,
+                UserId: session.Principal!.Subject.Id,
+                UserRole: session.Principal!.EffectiveActor.Role); // Bug B6: enforce per-game RAG access (admin bypass)
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             return Results.Accepted(
@@ -129,7 +132,10 @@ internal static class KbManagementEndpoints
 
             try
             {
-                var command = new RebuildRaptorCommand(GameId: gameId, UserId: session.Principal!.Subject.Id);
+                var command = new RebuildRaptorCommand(
+                    GameId: gameId,
+                    UserId: session.Principal!.Subject.Id,
+                    UserRole: session.Principal!.EffectiveActor.Role); // Bug B6: enforce per-game RAG access (admin bypass)
                 var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
                 return Results.Accepted(

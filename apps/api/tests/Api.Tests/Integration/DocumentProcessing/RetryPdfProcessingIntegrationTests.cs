@@ -6,6 +6,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.DocumentProcessing;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -53,6 +54,9 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         // Register repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
+        // Required by EnqueuePdfCommandHandler, which the retry handler now dispatches to resume
+        // the pipeline (B11).
+        services.AddScoped<IProcessingJobRepository, ProcessingJobRepository>();
 
         // Register IProcessingMetricsService (required by PdfStateChangedMetricsEventHandler picked up by MediatR assembly scan)
         var mockMetricsService = new Moq.Mock<Api.BoundedContexts.DocumentProcessing.Application.Services.IProcessingMetricsService>();
@@ -178,16 +182,31 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         // Assert
         result.Success.Should().BeTrue($"Expected success but got: {result.Message}");
         result.RetryCount.Should().Be(1);
-        result.CurrentState.Should().Be(PdfProcessingState.Extracting.ToString());
+        result.CurrentState.Should().Be(
+            PdfProcessingState.Pending.ToString(),
+            "retry resets the document to Pending — the only state the pipeline's atomic claim can "
+            + "pick up — not to FailedAtState/Extracting (which no runtime rail could claim; B11)");
 
         // Verify database was updated
         var updatedPdf = await _dbContext.PdfDocuments
+            .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == pdfId, TestCancellationToken);
 
         updatedPdf.Should().NotBeNull();
         updatedPdf.RetryCount.Should().Be(1);
-        updatedPdf.ProcessingState.Should().Be(PdfProcessingState.Extracting.ToString());
+        updatedPdf.ProcessingState.Should().Be(PdfProcessingState.Pending.ToString());
         updatedPdf.ProcessingError.Should().BeNull();
+
+        // The crux of B11: the retry must actually enqueue a job so the pipeline reprocesses.
+        // Before the fix nothing was enqueued and the document stalled forever.
+        var enqueuedJob = await _dbContext.Set<ProcessingJobEntity>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                j => j.PdfDocumentId == pdfId && j.Status == JobStatus.Queued.ToString(),
+                TestCancellationToken);
+        enqueuedJob.Should().NotBeNull(
+            "RetryPdfProcessingCommandHandler must dispatch EnqueuePdfCommand so the pipeline "
+            + "reprocesses the now-Pending document");
     }
 
     [Fact]
@@ -378,7 +397,10 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         var command1 = new RetryPdfProcessingCommand(pdfId, userId);
         var result1 = await mediator.Send(command1, TestCancellationToken);
 
-        // Simulate another failure
+        // Simulate the pipeline failing again after the first retry (in production the enqueued
+        // job would run and re-fail). Reset to Failed so the second retry is eligible (CanRetry
+        // requires Failed). The job enqueued by retry #1 stays Queued, so retry #2's enqueue will
+        // hit the idempotent "already queued" ConflictException (tolerated by the handler).
         var pdf = await _dbContext.PdfDocuments.FindAsync(new object[] { pdfId }, TestCancellationToken);
         pdf!.ProcessingState = PdfProcessingState.Failed.ToString();
         pdf.ProcessingError = "Error 2";
@@ -397,9 +419,9 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         result2.Success.Should().BeTrue();
         result2.RetryCount.Should().Be(2);
 
-        // Verify final state
+        // Verify final state: retry always resets to Pending (never FailedAtState/Chunking; B11).
         var finalPdf = await _dbContext.PdfDocuments.FindAsync(new object[] { pdfId }, TestCancellationToken);
         finalPdf!.RetryCount.Should().Be(2);
-        finalPdf.ProcessingState.Should().Be(PdfProcessingState.Chunking.ToString());
+        finalPdf.ProcessingState.Should().Be(PdfProcessingState.Pending.ToString());
     }
 }

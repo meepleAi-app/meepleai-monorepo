@@ -122,4 +122,7 @@ internal record HybridSearchResult
     /// <see cref="GameBookRole.None"/> when the chunk is unclassified.
     /// </summary>
     public GameBookRole RoleTags { get; init; } = GameBookRole.None;
+
+    /// <summary>#3270: merged chunk heading (prefers vector arm) for the heading-match boost (nullable).</summary>
+    public string? Heading { get; init; }
 }

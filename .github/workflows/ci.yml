@@ -1217,11 +1217,12 @@ jobs:
           # Onda A (2026-05-25): 'frontend' was split into frontend-lint,
           # frontend-typecheck, frontend-test (3-shard matrix). All three are
           # required gates.
-          for job in frontend-lint frontend-typecheck frontend-test backend-unit python-tests e2e; do
+          for job in frontend-lint frontend-typecheck frontend-test frontend-a11y backend-unit python-tests e2e; do
             case "$job" in
               frontend-lint) result="${{ needs.frontend-lint.result }}" ;;
               frontend-typecheck) result="${{ needs.frontend-typecheck.result }}" ;;
               frontend-test) result="${{ needs.frontend-test.result }}" ;;
+              frontend-a11y) result="${{ needs.frontend-a11y.result }}" ;;
               backend-unit) result="${{ needs.backend-unit.result }}" ;;
               python-tests) result="${{ needs.python-tests.result }}" ;;
               e2e) result="${{ needs.e2e.result }}" ;;
@@ -1235,17 +1236,16 @@ jobs:
           done
 
           # Advisory jobs (warn but don't block).
-          # frontend-a11y TEMPORARILY DEMOTED to advisory (2026-07-21, product
-          # decision): pre-existing systemic WCAG AA color-contrast debt in the
-          # entity-token chips (bg-entity-*/… tints) + a couple shared components
-          # is a design-system effort tracked separately, and the app is pre-prod.
-          # RE-PROMOTE frontend-a11y to the required-jobs loop above before the
-          # prod promotion (this reverts the #1094 Phase-D gate flip temporarily).
-          # backend-integration is advisory because integration tests depend on CI
-          # service containers.
-          for advisory in frontend-a11y backend-integration; do
+          # frontend-a11y was RE-PROMOTED to the required-jobs loop above on
+          # 2026-07-26 (#3289) after clearing the systemic WCAG AA color-contrast
+          # debt (entity-token game/kb/document chips swapped to the AA `-text`
+          # variants) plus the shared-component (MenuPlaceholder, PauseOverlay,
+          # SessionShareCard) + session-live/library a11y spec fixes. This restores
+          # the #1094 Phase-D gate flip that #3290 had temporarily reverted
+          # (2026-07-21). backend-integration remains advisory because integration
+          # tests depend on CI service containers.
+          for advisory in backend-integration; do
             case "$advisory" in
-              frontend-a11y) result="${{ needs.frontend-a11y.result }}" ;;
               backend-integration) result="${{ needs.backend-integration.result }}" ;;
             esac
             if [ "$result" == "failure" ]; then

@@ -135,7 +135,7 @@ export function GameNightListCard({
               <span aria-hidden="true" className="opacity-40">
                 ·
               </span>
-              <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-entity-game/22 bg-entity-game/12 px-2 py-0.5 font-display text-[10px] font-extrabold text-entity-game">
+              <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-entity-game/22 bg-entity-game/12 px-2 py-0.5 font-display text-[10px] font-extrabold text-entity-game-text">
                 {gameTitle}
               </span>
             </>

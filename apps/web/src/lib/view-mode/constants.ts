@@ -17,9 +17,6 @@ export type ViewMode = 'admin' | 'user';
 /** All valid view modes (for runtime validation) */
 export const VIEW_MODES: readonly ViewMode[] = ['admin', 'user'] as const;
 
-/** Cookie max-age: undefined = session cookie (cleared when browser closes) */
-export const VIEW_MODE_COOKIE_MAX_AGE: number | undefined = undefined;
-
 /** SameSite attribute — lax allows top-level navigation redirects */
 export const VIEW_MODE_COOKIE_SAMESITE = 'lax' as const;
 

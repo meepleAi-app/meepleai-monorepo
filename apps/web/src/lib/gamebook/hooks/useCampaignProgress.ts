@@ -11,7 +11,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { getCampaignProgress, type SessionBookProgressRow } from '@/lib/api/gamebook-campaigns';
 
-export const campaignProgressKeys = {
+const campaignProgressKeys = {
   byCampaign: (campaignId: string) => ['gamebook', 'campaigns', campaignId, 'progress'] as const,
 };
 

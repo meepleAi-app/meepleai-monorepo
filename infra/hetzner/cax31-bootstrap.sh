@@ -30,6 +30,28 @@ echo "==> Install Docker (ARM64)"
 curl -fsSL https://get.docker.com | sh
 systemctl enable --now docker
 
+echo "==> Docker daemon: json-file log rotation (prevent unbounded container logs)"
+# Without a global log-opts default, per-container JSON logs under
+# /var/lib/docker/containers grow unbounded: only api/web/cloudflared set an
+# explicit `logging:` block in compose, so postgres/redis/grafana/prometheus/
+# embedding/reranker/etc. had no cap (disk-full incident #1575). This caps every
+# container at max 3×10MB. Applies to newly created/recreated containers only, so
+# a deploy (--force-recreate) picks it up; existing containers keep their current
+# logs until recreated. Idempotent: leaves an existing daemon.json untouched.
+mkdir -p /etc/docker
+if [ ! -f /etc/docker/daemon.json ]; then
+  cat > /etc/docker/daemon.json <<'DOCKERD_EOF'
+{
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  }
+}
+DOCKERD_EOF
+  systemctl restart docker
+fi
+
 echo "==> Install Docker Compose plugin"
 mkdir -p ~/.docker/cli-plugins
 curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64 \

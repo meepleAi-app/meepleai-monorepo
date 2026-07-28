@@ -39,7 +39,6 @@ public sealed class RagServiceIntegrationTests : IDisposable
     private readonly Mock<IAiResponseCacheService> _mockCache;
     private readonly Mock<IPromptTemplateService> _mockPromptTemplateService;
     private readonly Mock<ILogger<RagService>> _mockLogger;
-    private readonly Mock<IQueryExpansionService> _mockQueryExpansion;
     private readonly Mock<ISearchResultReranker> _mockReranker;
     private readonly Mock<IRagConfigurationProvider> _mockConfigProvider;
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
@@ -61,7 +60,6 @@ public sealed class RagServiceIntegrationTests : IDisposable
         _mockCache = new Mock<IAiResponseCacheService>();
         _mockPromptTemplateService = new Mock<IPromptTemplateService>();
         _mockLogger = new Mock<ILogger<RagService>>();
-        _mockQueryExpansion = new Mock<IQueryExpansionService>();
         _mockReranker = new Mock<ISearchResultReranker>();
 
 
@@ -90,9 +88,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
         SetupEmbeddingServiceMock();
 
         SetupCacheMock(); // Cache miss
-        SetupPromptTemplateMock();
-        SetupQueryExpansionMock(query);
-        SetupRerankerMock();
+        SetupPromptTemplateMock();        SetupRerankerMock();
 
         // Act
         var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
@@ -205,8 +201,6 @@ public sealed class RagServiceIntegrationTests : IDisposable
         // Setup mocks
         SetupFailedEmbeddingServiceMock();
         SetupCacheMock();
-        SetupQueryExpansionMock(query);
-
         // Act
         var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
 
@@ -419,23 +413,6 @@ public sealed class RagServiceIntegrationTests : IDisposable
             .Returns((PromptTemplate t, string ctx, string q) => $"Context: {ctx}\n\nQuestion: {q}");
     }
 
-    private void SetupQueryExpansionMock(string originalQuery)
-    {
-        var variations = new List<string>
-        {
-            originalQuery,
-            $"{originalQuery} rules",
-            $"How to {originalQuery}"
-        };
-
-        _mockQueryExpansion
-            .Setup(s => s.GenerateQueryVariationsAsync(
-                originalQuery,
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(variations);
-    }
-
     private void SetupRerankerMock()
     {
         _mockReranker
@@ -466,9 +443,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
         SetupEmbeddingServiceMock();
 
         SetupCacheMock();
-        SetupPromptTemplateMock();
-        SetupQueryExpansionMock(query);
-        SetupRerankerMock();
+        SetupPromptTemplateMock();        SetupRerankerMock();
 
         // Act
         await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
@@ -492,9 +467,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
         SetupEmbeddingServiceMock();
 
         SetupCacheMock();
-        SetupPromptTemplateMock();
-        SetupQueryExpansionMock(query);
-        SetupRerankerMock();
+        SetupPromptTemplateMock();        SetupRerankerMock();
 
         // Act
         var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
@@ -524,9 +497,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
         SetupEmbeddingServiceMock();
 
         SetupCacheMock();
-        SetupPromptTemplateMock();
-        SetupQueryExpansionMock(query);
-        SetupRerankerMock();
+        SetupPromptTemplateMock();        SetupRerankerMock();
 
         // Act
         var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
@@ -559,9 +530,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
         SetupEmbeddingServiceMock();
 
         SetupCacheMock();
-        SetupPromptTemplateMock();
-        SetupQueryExpansionMock(query);
-        SetupRerankerMock();
+        SetupPromptTemplateMock();        SetupRerankerMock();
 
         // Act
         var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
@@ -593,9 +562,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
         SetupEmbeddingServiceMock();
 
         SetupCacheMock();
-        SetupPromptTemplateMock();
-        SetupQueryExpansionMock(query);
-        SetupRerankerMock();
+        SetupPromptTemplateMock();        SetupRerankerMock();
 
         // Act
         var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
@@ -628,9 +595,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
         SetupEmbeddingServiceMock();
 
         SetupCacheMock();
-        SetupPromptTemplateMock();
-        SetupQueryExpansionMock(query);
-        SetupRerankerMock();
+        SetupPromptTemplateMock();        SetupRerankerMock();
 
         // Act - Service should handle clamped values gracefully
         var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
@@ -668,9 +633,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
         SetupEmbeddingServiceMock();
 
         SetupCacheMock();
-        SetupPromptTemplateMock();
-        SetupQueryExpansionMock(query);
-        SetupRerankerMock();
+        SetupPromptTemplateMock();        SetupRerankerMock();
 
         // Act
         var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
@@ -706,9 +669,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
         SetupEmbeddingServiceMock();
 
         SetupCacheMock();
-        SetupPromptTemplateMock();
-        SetupQueryExpansionMock(query);
-        SetupRerankerMock();
+        SetupPromptTemplateMock();        SetupRerankerMock();
 
         // Act
         var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
@@ -740,9 +701,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
         SetupEmbeddingServiceMock();
 
         SetupCacheMock();
-        SetupPromptTemplateMock();
-        SetupQueryExpansionMock(query);
-        SetupRerankerMock();
+        SetupPromptTemplateMock();        SetupRerankerMock();
 
         // Act
         await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);

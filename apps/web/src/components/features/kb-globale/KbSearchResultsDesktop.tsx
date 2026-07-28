@@ -197,7 +197,7 @@ function ResultRow({
           className={cn(
             'inline-flex items-center gap-1',
             'rounded-full px-2 py-0.5',
-            'bg-entity-kb/10 text-entity-kb',
+            'bg-entity-kb/10 text-entity-kb-text',
             'border border-entity-kb/20',
             'text-xs font-semibold',
             'whitespace-nowrap'

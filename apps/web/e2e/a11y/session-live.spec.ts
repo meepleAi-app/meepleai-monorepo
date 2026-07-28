@@ -202,29 +202,38 @@ test.describe('Session live — accessibility @a11y', () => {
     await expect(asideLandmark).toBeVisible();
   });
 
-  test('G1 RightColumnTabs — 4 tab buttons (score/turn/widget/notes) in mockup order', async ({
+  test('G1 RightColumnTabs — 6 tab buttons (score/turn/widget/notes/photos/agent) in mockup order', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await gotoSessionLive(page, '?fixture=host');
 
+    // #2588 A1+A4 extended the shared BASE_TABS to 6 (added photos/Foto + agent/
+    // Arbitro after the original G1 score/turn/widget/notes four). The generic
+    // host fixture keeps showFlavorTab=false, so the optional 7th flavor tab is
+    // absent → stable count of 6 (mirrors RightColumnTabs.test.tsx:80).
     const tabs = page.locator('[data-slot="right-column-tabs"] [role="tab"]');
-    await expect(tabs).toHaveCount(4);
+    await expect(tabs).toHaveCount(6);
 
-    // Order assertion: Score → Turni/Turn → Widget → Note/Notes (mockup canonical).
-    // Locale is 'it' by default — see jsdoc viewport note above. We accept both
-    // it/en strings to keep the test resilient if the harness flips locales.
+    // Order assertion: Score → Turni/Turn → Widget → Note/Notes → Foto/Photos →
+    // Arbitro/Arbiter (mockup canonical). Locale is 'it' by default — see jsdoc
+    // viewport note above. We accept both it/en strings to keep the test
+    // resilient if the harness flips locales.
     const labels = await tabs.allTextContents();
     expect(labels[0]).toMatch(/^Score$/);
     expect(labels[1]).toMatch(/^Turn[i]?$/);
     expect(labels[2]).toMatch(/^Widget$/);
     expect(labels[3]).toMatch(/^Note[s]?$/);
+    expect(labels[4]).toMatch(/^(Foto|Photos)$/);
+    expect(labels[5]).toMatch(/^(Arbitro|Arbiter)$/);
 
     // First tab (score) is the default-selected per parseLiveTab fallback.
     await expect(tabs.nth(0)).toHaveAttribute('aria-selected', 'true');
     await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'false');
     await expect(tabs.nth(2)).toHaveAttribute('aria-selected', 'false');
     await expect(tabs.nth(3)).toHaveAttribute('aria-selected', 'false');
+    await expect(tabs.nth(4)).toHaveAttribute('aria-selected', 'false');
+    await expect(tabs.nth(5)).toHaveAttribute('aria-selected', 'false');
   });
 
   test('G1 keyboard traversal — Tab order reaches LEFT column (chat) before RIGHT column tabs', async ({
@@ -233,10 +242,14 @@ test.describe('Session live — accessibility @a11y', () => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await gotoSessionLive(page, '?fixture=host');
 
-    // Wait for the LEFT-column primitives to mount.
-    await expect(page.locator('[data-slot="chat-agent-panel"]')).toBeVisible();
-    await expect(page.locator('[data-slot="action-log-timeline"]')).toBeVisible();
-    await expect(page.locator('[data-slot="right-column-tabs"]')).toBeVisible();
+    // Wait for the LEFT-column primitives to mount. Scope to :visible — the shell
+    // mounts a desktop ChatAgentPanel (in <main>) AND a mobile one (in the
+    // bottom-sheet) so a bare [data-slot="chat-agent-panel"] resolves to 2 nodes
+    // and trips Playwright strict mode; at 1280px only the desktop copy is
+    // visible (the mobile body is display:none), so :visible narrows to 1 (#3289).
+    await expect(page.locator('[data-slot="chat-agent-panel"]:visible')).toBeVisible();
+    await expect(page.locator('[data-slot="action-log-timeline"]:visible')).toBeVisible();
+    await expect(page.locator('[data-slot="right-column-tabs"]:visible')).toBeVisible();
 
     // Walk focus through the document and collect the *highest* data-slot
     // ancestor seen for each step (LEFT-column-side OR RIGHT-column-side).
@@ -353,7 +366,7 @@ test.describe('Session live — accessibility @a11y', () => {
     await expect(page.locator('[data-slot="mobile-body-tab"]')).toHaveCount(0);
   });
 
-  test('WAI-ARIA: mobile FAB opens bottom-sheet drawer with 4 polymorphic tabs', async ({
+  test('WAI-ARIA: mobile FAB opens bottom-sheet drawer with 6 polymorphic tabs', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 375, height: 812 });
@@ -371,19 +384,23 @@ test.describe('Session live — accessibility @a11y', () => {
     await expect(drawer).toHaveAttribute('role', 'dialog');
     await expect(drawer).toHaveAttribute('aria-modal', 'true');
 
-    // Tab strip = role="tablist" with 4 tabs: Score / Turn / Widget / Notes.
+    // Tab strip = role="tablist" with 6 tabs: Score / Turn / Widget / Notes /
+    // Photos / Agent (MobileBottomSheetDrawer BASE_TABS mirrors the desktop set;
+    // #2588 A1+A4 added photos + agent).
     const tablist = drawer.locator('[role="tablist"]');
     await expect(tablist).toBeVisible();
     await expect(tablist).toHaveAttribute('aria-orientation', 'horizontal');
 
     const tabs = drawer.locator('[role="tab"]');
-    await expect(tabs).toHaveCount(4);
+    await expect(tabs).toHaveCount(6);
 
     // Default active tab = score (1st in order).
     await expect(tabs.nth(0)).toHaveAttribute('aria-selected', 'true');
     await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'false');
     await expect(tabs.nth(2)).toHaveAttribute('aria-selected', 'false');
     await expect(tabs.nth(3)).toHaveAttribute('aria-selected', 'false');
+    await expect(tabs.nth(4)).toHaveAttribute('aria-selected', 'false');
+    await expect(tabs.nth(5)).toHaveAttribute('aria-selected', 'false');
   });
 
   test('axe-core: no WCAG 2.1 AA violations on mobile bottom-sheet open state', async ({

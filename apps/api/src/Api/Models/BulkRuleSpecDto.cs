@@ -15,28 +15,6 @@ internal record BulkExportRequest
 }
 
 /// <summary>
-/// Request to delete multiple rule specs
-/// </summary>
-internal record BulkDeleteRequest
-{
-    /// <summary>
-    /// List of rule spec IDs to delete (gameId format)
-    /// </summary>
-    public required IList<string> RuleSpecIds { get; init; }
-}
-
-/// <summary>
-/// Request to duplicate multiple rule specs
-/// </summary>
-internal record BulkDuplicateRequest
-{
-    /// <summary>
-    /// List of rule spec IDs to duplicate (gameId format)
-    /// </summary>
-    public required IList<string> RuleSpecIds { get; init; }
-}
-
-/// <summary>
 /// Result of a bulk import operation
 /// </summary>
 internal record BulkImportResult
@@ -87,20 +65,4 @@ internal record BulkDeleteResult
     /// Number of rule specs successfully deleted
     /// </summary>
     public required int Deleted { get; init; }
-}
-
-/// <summary>
-/// Result of a bulk duplicate operation
-/// </summary>
-internal record BulkDuplicateResult
-{
-    /// <summary>
-    /// Number of rule specs successfully duplicated
-    /// </summary>
-    public required int Duplicated { get; init; }
-
-    /// <summary>
-    /// List of newly created rule spec IDs
-    /// </summary>
-    public required IList<string> NewRuleSpecIds { get; init; }
 }

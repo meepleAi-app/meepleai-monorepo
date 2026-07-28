@@ -96,6 +96,16 @@ internal static class DocumentProcessingServiceExtensions
         // BGAI-086/087: Configure PDF text extractor based on provider setting
         var extractorProvider = configuration["PdfProcessing:Extractor:Provider"] ?? "Orchestrator";
 
+        // #3269 fix: the bulk re-index C2 gate (BulkReindexReadyCommandHandler) injects
+        // IPdfExtractorHealthProbe UNCONDITIONALLY, so it must be registered regardless of the selected
+        // extractor provider. Previously it was only registered inside RegisterUnstructuredExtractor
+        // (Orchestrator/Unstructured providers), so on Docnet/SmolDocling/fallback the reindex-ready
+        // endpoint 500'd on DI activation. The probe depends only on IHttpClientFactory (always
+        // registered); when the "UnstructuredService" named client is absent (non-Unstructured
+        // providers) the probe degrades to "unhealthy" at runtime, so the gate throws a clear
+        // ConflictException (409) instead of a 500.
+        services.AddScoped<IPdfExtractorHealthProbe, UnstructuredExtractorHealthProbe>();
+
         if (extractorProvider.Equals("Orchestrator", StringComparison.OrdinalIgnoreCase))
         {
             // BGAI-087 + ISSUE-1174: Register all extractors for orchestrator using keyed services
@@ -425,6 +435,8 @@ internal static class DocumentProcessingServiceExtensions
             .AddServiceCallLogging("UnstructuredService");
 
         services.AddScoped<UnstructuredPdfTextExtractor>();
+        // IPdfExtractorHealthProbe is now registered unconditionally in AddDocumentProcessingContext
+        // (see the #3269 note there) so the bulk re-index gate resolves under every provider.
     }
 
     /// <summary>

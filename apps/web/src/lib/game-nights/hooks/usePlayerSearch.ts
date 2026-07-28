@@ -21,7 +21,7 @@ import type { UserSearchResult } from '@/lib/api/schemas/auth.schemas';
 /**
  * Internal: react-query key namespace for player search results.
  */
-export const playerSearchKeys = {
+const playerSearchKeys = {
   all: ['game-nights', 'wizard', 'player-search'] as const,
   query: (q: string, limit: number) => [...playerSearchKeys.all, { q, limit }] as const,
 };
@@ -37,11 +37,11 @@ export interface UsePlayerSearchOptions {
  * Client-side minimum query length. Matches the BE
  * `SearchUsersQueryHandler` minLength=2 gate.
  */
-export const PLAYER_SEARCH_MIN_QUERY_LENGTH = 2;
+const PLAYER_SEARCH_MIN_QUERY_LENGTH = 2;
 
-export const PLAYER_SEARCH_DEFAULT_DEBOUNCE_MS = 250;
+const PLAYER_SEARCH_DEFAULT_DEBOUNCE_MS = 250;
 
-export const PLAYER_SEARCH_DEFAULT_LIMIT = 20;
+const PLAYER_SEARCH_DEFAULT_LIMIT = 20;
 
 /**
  * Hard ceiling honored by `GET /api/v1/users/search` (PR #1294 W1-PR2
@@ -49,7 +49,7 @@ export const PLAYER_SEARCH_DEFAULT_LIMIT = 20;
  * client-side keeps the React Query cache key stable and prevents the
  * UI from silently displaying fewer results than the user requested.
  */
-export const PLAYER_SEARCH_MAX_LIMIT = 50;
+const PLAYER_SEARCH_MAX_LIMIT = 50;
 
 function useDebouncedValue<T>(value: T, ms: number): T {
   const [debounced, setDebounced] = useState(value);

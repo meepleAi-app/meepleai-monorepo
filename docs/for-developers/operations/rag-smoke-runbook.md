@@ -4,9 +4,19 @@ Tier 3 D8 quality gate of [#2126](https://github.com/meepleAi-app/meepleai-monor
 
 ## What it does
 
-`infra/scripts/rag-smoke-assert.sh` runs the 5 canonical queries in `infra/fixtures/rag-canonical-queries.json` against `POST /api/v1/knowledge-base/ask/global` (SSE) and asserts the **top-3 retrieved chunks** per query match `infra/fixtures/rag-golden-baseline.json`.
+`infra/scripts/rag-smoke-assert.sh` runs the canonical queries in `infra/fixtures/rag-canonical-queries.json` against `POST /api/v1/knowledge-base/ask/global` (SSE) and asserts the **top-3 retrieved chunks** per query match `infra/fixtures/rag-golden-baseline.json`.
+
+The suite covers **EN + IT** (10 queries: 5 EN + 5 IT, added for [#3269](https://github.com/meepleAi-app/meepleai-monorepo/issues/3269)). The corpus is English rulebooks; `multilingual-e5-base` does **cross-lingual retrieval**, so each `-it` query pins the IT→EN retrieval behavior. This is the concrete implementation of the epic [#3266](https://github.com/meepleAi-app/meepleai-monorepo/issues/3266) LOCKED safety-net: *"EN+IT non-regression suite on staging before prod"*. Motivating case: `catan-setup-it` ("Setup per N giocatori" style IT query) must still retrieve the right EN chunks.
 
 It reads the **Citations SSE event (`type: 1`)**, which the vector search emits *before* the LLM streams tokens — so the assertion is independent of OpenRouter/LLM availability. Each chunk is keyed by `{source, page}`; `score` is advisory (not asserted, to tolerate minor embedding/search float drift).
+
+### Per-query `language`
+
+The fixture top-level `language` (`"en"`) is the **default**. Each query MAY set a per-query `"language"` override — the IT queries carry `"language": "it"`, the 5 EN queries omit it and inherit the default. The harness resolves `(.language) // <top-level default>` per query and sends it as the request-body `language`, so retrieval ranking is deterministic per query.
+
+### SKIP for un-baselined queries
+
+A query with **no golden-baseline entry** reports `SKIP` (via a `::notice::`), not `FAIL`, and does **not** fail the gate. This lets new queries (e.g. the IT set) land *before* the ops `--update-baseline` capture without redding the weekly cron. Real drift and no-citations still `FAIL`. The summary reports `N passed, N failed, N skipped (pending baseline)`; exit is non-zero only on a real `FAIL`.
 
 ## Capturing / updating the golden baseline
 
@@ -29,6 +39,26 @@ The baseline must be captured against a **fresh, compatible snapshot** (`snapsho
 
 **Regenerate the baseline after any intentional re-index**: embedding model change, chunker change, or a `seed-schema.version` bump (which forces a snapshot rebuild). An *unintentional* drift is exactly what this gate is meant to flag — investigate before regenerating.
 
+### Capturing the EN + IT baseline via CI dispatch (preferred)
+
+The IT queries ship with **no baseline entries** — they `SKIP` until captured. To capture the full EN + IT baseline against the current published snapshot without a local boot:
+
+1. Dispatch `.github/workflows/rag-smoke-dispatch.yml` with `update_baseline=true` (runs against the published snapshot the workflow fetches).
+2. Download the `rag-golden-baseline-<run_id>` artifact from that run.
+3. Commit the artifact's `infra/fixtures/rag-golden-baseline.json` (now containing all 10 EN + IT entries).
+
+After the commit, the weekly assert run covers EN + IT with zero `SKIP`s.
+
+### 🔴 SP3 #3269 critical note — capture the EN + IT baseline BEFORE the big-bang re-index
+
+The SP3 big-bang re-index (**Slice 3**) changes retrieval ranking, so a baseline captured *after* it would silently absorb any pre-existing IT regression. Sequence:
+
+1. **Pre-SP3**: capture the EN + IT baseline on the *current* published snapshot (via the CI dispatch above) and commit it. This freezes the known-good IT→EN behavior.
+2. Run the Slice 3 big-bang re-index + publish the new snapshot.
+3. **Post-SP3**: re-capture the EN + IT baseline on the new snapshot and commit it — then diff against the pre-SP3 baseline to review the intentional ranking change.
+
+Skipping step 1 forfeits the non-regression signal the epic #3266 safety-net exists to provide.
+
 ## Asserting (CI / local)
 
 ```bash
@@ -50,12 +80,17 @@ The golden baseline was first committed for snapshot `meepleai_seed_20260628T211
 
 ## Canonical queries
 
-| queryId | game | targets |
-|---|---|---|
-| `catan-setup` | Catan | board setup, initial settlements/roads |
-| `wingspan-round-goals` | Wingspan | end-of-round goal scoring |
-| `dominion-buy-phase` | Dominion | buy phase, coins |
-| `ark-nova-conservation` | Ark Nova | conservation projects, reputation |
-| `seven-wonders-military` | 7 Wonders | military conflict per age |
+| queryId | game | language | targets |
+|---|---|---|---|
+| `catan-setup` | Catan | en (default) | board setup, initial settlements/roads |
+| `wingspan-round-goals` | Wingspan | en (default) | end-of-round goal scoring |
+| `dominion-buy-phase` | Dominion | en (default) | buy phase, coins |
+| `ark-nova-conservation` | Ark Nova | en (default) | conservation projects, reputation |
+| `seven-wonders-military` | 7 Wonders | en (default) | military conflict per age |
+| `catan-setup-it` | Catan | it | board setup, initial settlements/roads (IT→EN cross-lingual) |
+| `wingspan-round-goals-it` | Wingspan | it | end-of-round goal scoring (IT→EN cross-lingual) |
+| `dominion-buy-phase-it` | Dominion | it | buy phase, coins (IT→EN cross-lingual) |
+| `ark-nova-conservation-it` | Ark Nova | it | conservation projects, reputation (IT→EN cross-lingual) |
+| `seven-wonders-military-it` | 7 Wonders | it | military conflict per age (IT→EN cross-lingual) |
 
-All pinned to `language: en` for deterministic ranking. All 5 games are indexed in the `dev.yml` seed manifest.
+The 5 EN queries omit `language` and inherit the top-level default (`en`); the 5 IT queries (#3269) set `"language": "it"`. All 5 games are indexed in the `dev.yml` seed manifest. The IT queries report `SKIP` until their baseline is captured (see *Capturing the EN + IT baseline via CI dispatch* above).

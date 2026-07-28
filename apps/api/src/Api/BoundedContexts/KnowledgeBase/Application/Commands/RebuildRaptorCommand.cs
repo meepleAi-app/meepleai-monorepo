@@ -17,5 +17,6 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// </summary>
 /// <param name="GameId">The ID of the game whose RAPTOR tree should be rebuilt.</param>
 /// <param name="UserId">The ID of the user triggering the rebuild (used for tier check).</param>
-internal record RebuildRaptorCommand(Guid GameId, Guid UserId)
+/// <param name="UserRole">Bug B6: the user's role (string), parsed for per-game RAG access (admin bypass).</param>
+internal record RebuildRaptorCommand(Guid GameId, Guid UserId, string? UserRole = null)
     : ICommand<KbJobResponse>;

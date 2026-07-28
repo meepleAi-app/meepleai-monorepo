@@ -109,13 +109,3 @@ export const useSessionStore = create<SessionState>()(
     { name: 'session-store' }
   )
 );
-
-// Selectors
-export const selectStatus = (s: SessionState) => s.status;
-export const selectEvents = (s: SessionState) => s.events;
-export const selectScores = (s: SessionState) => s.scores;
-export const selectCurrentTurn = (s: SessionState) => s.currentTurn;
-export const selectIsPaused = (s: SessionState) => s.isPaused;
-export const selectIsLive = (s: SessionState) => s.status === 'live' || s.status === 'paused';
-export const selectParticipants = (s: SessionState) => s.participants;
-export const selectGameTitle = (s: SessionState) => s.gameTitle;

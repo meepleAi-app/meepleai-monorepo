@@ -150,7 +150,12 @@ internal static class EmbeddedTitleSplitter
         return hasLetter;
     }
 
-    private static bool ContainsLexiconTitle(string text)
+    /// <summary>
+    /// True when <paramref name="text"/> contains a curated <see cref="SectionHeadingLexicon"/> section
+    /// title as an exact UPPERCASE whole word. Shared with <see cref="TitleHealthMetric"/> (WP3 canonical
+    /// coverage) so the "is this a known section type" predicate has a single definition.
+    /// </summary>
+    internal static bool ContainsLexiconTitle(string text)
     {
         foreach (var title in SectionHeadingLexicon.Titles)
         {

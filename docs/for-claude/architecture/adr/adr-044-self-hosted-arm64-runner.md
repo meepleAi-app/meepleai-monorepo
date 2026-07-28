@@ -1,6 +1,6 @@
 # ADR-044: Migrate CI/CD to Self-Hosted ARM64 Runner
 
-**Status**: Accepted (2026-03-09) — **partially superseded / drifted**, see [Update 2026-07-28](#update-2026-07-28--drift-correction--direction-3331)
+**Status**: **Superseded by Option E** (#3331, 2026-07-28) — see [Update 2026-07-28](#update-2026-07-28--drift-correction--direction-3331). The original decision (a self-hosted ARM64 runner) below is historical.
 **Date**: 2026-03-09
 **Issue**: #2970 (Epic #2967)
 **Decision Makers**: Engineering Lead
@@ -104,6 +104,8 @@ runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
 ## Update 2026-07-28 — Drift correction & direction (#3331)
 
 The runner topology drifted from this ADR's original design. Recorded here so future decisions start from reality, not the 2026-03 plan.
+
+**Migration status (Option E, #3331):** Phase 1 (SSH disk-gate, PR #3346) merged; **Phase 2 cutover done** — the `RUNNER` repo variable was removed, so all workflows now run on GitHub-hosted; **Phase 3 (the PR carrying this update)** deletes the runner-babysitting apparatus (3 workflows, the Prometheus runner alerts, the `infra/runner/` pet-care scripts). The `cloud-init.yml`/`setup-vm.sh`/`setup-runner.sh` IaC is kept for the D fallback. The final manual step is deregistering the runner on the VPS. Plan: [`docs/superpowers/plans/2026-07-28-issue-3331-eliminate-self-hosted-runner.md`](../../../superpowers/plans/2026-07-28-issue-3331-eliminate-self-hosted-runner.md).
 
 **Reality vs the original decision:**
 - The active runner is **NOT** the dedicated Oracle Cloud 24GB VM this ADR assumed. It is **co-located on the Hetzner staging VPS (~8GB ARM64)**, sharing the box with the app containers (`/home/deploy/actions-runner`, user `deploy`). The `infra/runner/cloud-init.yml` Oracle recipe was never the live deploy runner.

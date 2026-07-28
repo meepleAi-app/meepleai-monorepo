@@ -41,6 +41,61 @@ public class FusionSignalsTests
         factor.Should().BeGreaterThan(0f);
     }
 
+    // --- #3338 WP1b: number-noise demotion ---
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("Disponi le tessere sul tabellone e mescola il mazzo delle carte.")] // prose, no digits
+    public void ComputeNumberNoiseFactor_NoDigits_ReturnsZero(string? content)
+    {
+        FusionSignals.ComputeNumberNoiseFactor(content).Should().Be(0f);
+    }
+
+    [Fact]
+    public void ComputeNumberNoiseFactor_ProseCitingAFewNumbers_ReturnsZero()
+    {
+        // Letters-majority text (a few incidental numbers) is real prose — must not be demoted.
+        var prose = "Di seguito viene descritta la preparazione per il gioco da 2 a 5 giocatori.";
+        FusionSignals.ComputeNumberNoiseFactor(prose).Should().Be(0f);
+    }
+
+    [Fact]
+    public void ComputeNumberNoiseFactor_ShortDigitDominatedFragment_ReturnsStrongDemotion()
+    {
+        // The exact TM garbage chunk that out-ranked the real setup prose under ts_rank_cd.
+        var factor = FusionSignals.ComputeNumberNoiseFactor("CARTE 2 5 6 4 3");
+        factor.Should().BeInRange(0f, 0.5f);
+        factor.Should().BeGreaterThan(0.3f);
+    }
+
+    [Fact]
+    public void ComputeNumberNoiseFactor_WhitespacePadding_DoesNotWeakenDemotion()
+    {
+        // Review #3347: the taper is token-count based, so a whitespace-heavy table fragment (the exact
+        // WP1b target class) is demoted the SAME as its compact form — whitespace no longer inflates the
+        // length denominator and under-demotes the fragment.
+        var compact = FusionSignals.ComputeNumberNoiseFactor("CARTE 2 5 6 4 3");
+        var padded = FusionSignals.ComputeNumberNoiseFactor("CARTE     2     5     6     4     3");
+
+        padded.Should().BeApproximately(compact, 1e-6f);
+        padded.Should().BeGreaterThan(0.3f);
+    }
+
+    [Fact]
+    public void ComputeNumberNoiseFactor_LongNumberDenseTable_IsTaperedBelowShortFragment()
+    {
+        // A long, legitimately number-dense section (e.g. a scoring table) is tapered by length so it
+        // is demoted far less than a short mostly-digits fragment of the same ratio.
+        var shortFrag = "AB 1 2 3 4 5 6 7 8"; // ~digitRatio 0.5, short
+        var longTable = "Punteggi finali giocatori " + string.Concat(Enumerable.Repeat("12 34 56 78 90 ", 30));
+        var shortFactor = FusionSignals.ComputeNumberNoiseFactor(shortFrag);
+        var longFactor = FusionSignals.ComputeNumberNoiseFactor(longTable);
+
+        longFactor.Should().BeLessThan(shortFactor);
+        longFactor.Should().BeInRange(0f, 0.5f);
+    }
+
     // --- #3270: heading-match boost ---
 
     [Fact]

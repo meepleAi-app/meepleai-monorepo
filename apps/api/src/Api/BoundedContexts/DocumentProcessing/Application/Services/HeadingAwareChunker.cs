@@ -27,10 +27,19 @@ internal static class HeadingAwareChunker
     {
         ArgumentNullException.ThrowIfNull(advancedChunking);
 
+        // Epic #3338 WP1a: recover section titles that unstructured's 'fast' strategy glued into a
+        // body element instead of emitting as a standalone Title (the TM "PREPARAZIONE" case). Runs
+        // BEFORE FromExtraction so GroupByTitle sees the promoted synthetic Title and opens a real
+        // section — otherwise the setup content stays under the previous section's heading ("CARTE")
+        // and the #3270 heading boost + RoleClassifier Setup fast-path never fire.
+        var elements = structuredElements is null
+            ? null
+            : EmbeddedTitleSplitter.Split(structuredElements);
+
         var extractedDocument = ExtractedDocumentFactory.FromExtraction(
             documentId,
             gameId,
-            structuredElements,
+            elements,
             flatText);
 
         var hierarchicalChunks = await advancedChunking

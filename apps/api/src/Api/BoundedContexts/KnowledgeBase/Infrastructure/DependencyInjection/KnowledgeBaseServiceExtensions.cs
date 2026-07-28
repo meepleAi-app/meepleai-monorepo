@@ -582,20 +582,36 @@ internal static class KnowledgeBaseServiceExtensions
     }
 
     /// <summary>
-    /// Resolves the reranker service base URL. Prefers the <c>Reranking:BaseUrl</c> config key, then
-    /// falls back to the <c>RERANKER_URL</c> env var that every compose file sets
+    /// Resolves the reranker service base URL. Prefers an explicit <c>Reranking:BaseUrl</c> config key,
+    /// then falls back to the <c>RERANKER_URL</c> env var that every compose file sets
     /// (compose.{dev,staging,prod}.yml), and finally to localhost for local <c>dotnet run</c>.
     /// <para>
     /// Before the <c>RERANKER_URL</c> fallback existed the client targeted <c>localhost:8003</c> in
     /// every deployed environment (which set <c>RERANKER_URL</c>, not <c>Reranking:BaseUrl</c>), so
     /// cross-encoder reranking silently failed and every RAG query degraded to the vector-dominated
-    /// fusion fallback.
+    /// fusion fallback. NOTE: for the <c>RERANKER_URL</c> fallback to fire, <c>appsettings.json</c>
+    /// MUST NOT define a <c>Reranking:BaseUrl</c> default — a non-empty default there would shadow the
+    /// env var in every environment (issue #3334). Empty/whitespace values are treated as absent so a
+    /// blank override (<c>RERANKER_URL=</c> or <c>Reranking__BaseUrl=</c>) falls through instead of
+    /// producing <c>new Uri("")</c>.
     /// </para>
     /// </summary>
-    internal static string ResolveRerankerBaseUrl(IConfiguration config) =>
-        config["Reranking:BaseUrl"]
-        ?? config["RERANKER_URL"]
-        ?? "http://localhost:8003";
+    internal static string ResolveRerankerBaseUrl(IConfiguration config)
+    {
+        var explicitBaseUrl = config["Reranking:BaseUrl"];
+        if (!string.IsNullOrWhiteSpace(explicitBaseUrl))
+        {
+            return explicitBaseUrl;
+        }
+
+        var rerankerUrl = config["RERANKER_URL"];
+        if (!string.IsNullOrWhiteSpace(rerankerUrl))
+        {
+            return rerankerUrl;
+        }
+
+        return "http://localhost:8003";
+    }
 
     private static void AddCachingServices(IServiceCollection services, IConfiguration? configuration)
     {

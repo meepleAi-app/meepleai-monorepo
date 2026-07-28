@@ -8,7 +8,8 @@ public record AddNoteCommand(
     string NoteType, // 'Private' | 'Shared' | 'Template'
     string? TemplateKey,
     string Content,
-    bool IsHidden
+    bool IsHidden,
+    Guid RequestedBy // IDOR guard: authenticated caller — must be the session owner or a participant.
 ) : IRequest<AddNoteResult>;
 
 public record AddNoteResult(

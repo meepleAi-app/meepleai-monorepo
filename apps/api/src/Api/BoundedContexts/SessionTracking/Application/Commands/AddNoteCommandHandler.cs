@@ -36,6 +36,15 @@ public class AddNoteCommandHandler : IRequestHandler<AddNoteCommand, AddNoteResu
         var session = await _sessionRepository.GetByIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Session {request.SessionId} not found");
 
+        // IDOR guard (security review high-priority): only the session owner or a registered
+        // (User-linked) participant may add notes. Mirrors UpdateSessionScoresCommandHandler.
+        if (session.UserId != request.RequestedBy &&
+            !session.Participants.Any(p => p.UserId == request.RequestedBy))
+        {
+            throw new ForbiddenException(
+                $"User {request.RequestedBy} is not authorized to add notes to session {request.SessionId}.");
+        }
+
         // Verify participant exists in session
         _ = session.Participants.FirstOrDefault(p => p.Id == request.ParticipantId)
             ?? throw new NotFoundException($"Participant {request.ParticipantId} not found in session");

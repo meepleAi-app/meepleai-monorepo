@@ -38,6 +38,15 @@ public class RollDiceCommandHandler : IRequestHandler<RollDiceCommand, RollDiceR
         var session = await _sessionRepository.GetByIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Session {request.SessionId} not found");
 
+        // IDOR guard (security review high-priority): only the session owner or a registered
+        // (User-linked) participant may roll dice. Mirrors UpdateSessionScoresCommandHandler.
+        if (session.UserId != request.RequestedBy &&
+            !session.Participants.Any(p => p.UserId == request.RequestedBy))
+        {
+            throw new ForbiddenException(
+                $"User {request.RequestedBy} is not authorized to roll dice in session {request.SessionId}.");
+        }
+
         if (session.Status != SessionStatus.Active)
         {
             throw new ConflictException($"Cannot roll dice in session with status {session.Status}");

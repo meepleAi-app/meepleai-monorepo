@@ -96,6 +96,87 @@ internal static class FusionSignals
     }
 
     /// <summary>
+    /// Number-noise demotion factor in [0, 0.5] (epic #3338 WP1b). Demotes SHORT, digit-dominated
+    /// chunks that unstructured emits from tables / cross-column number fragments (the Terraforming
+    /// Mars <c>"CARTE 2 5 6 4 3"</c> chunk that out-ranked the real setup prose under ts_rank_cd).
+    /// <para>
+    /// Multiplicative and capped at 0.5, mirroring <see cref="ComputeLegendPenaltyFactor"/>. The factor
+    /// rises with the digit ratio (digits / letters+digits) but tapers with length, so a long,
+    /// legitimately number-dense section (a scoring table, a component list) is barely touched while a
+    /// short mostly-digits fragment is halved. Prose that merely cites a few numbers
+    /// (<c>"da 2 a 5 giocatori"</c>) has a low digit ratio and is not demoted at all.
+    /// </para>
+    /// </summary>
+    internal static float ComputeNumberNoiseFactor(string? content)
+    {
+        if (string.IsNullOrEmpty(content))
+        {
+            return 0f;
+        }
+
+        // Ratio is over digits belonging to PURELY-NUMERIC whitespace-delimited tokens ("2", "56)",
+        // "3.") only — NOT digits embedded in an alphanumeric token. A GUID/id like
+        // "vector-content-a1b2c3d4-2" is one letter-bearing token, so it contributes zero number-noise
+        // even though it is digit-heavy; the target is space-separated number runs ("CARTE 2 5 6 4 3").
+        var numberChars = 0;
+        var alnum = 0;
+        var tokDigits = 0;
+        var tokHasLetter = false;
+        var tokHasDigit = false;
+
+        void FlushToken()
+        {
+            if (tokHasDigit && !tokHasLetter)
+            {
+                numberChars += tokDigits;
+            }
+            tokDigits = 0;
+            tokHasLetter = false;
+            tokHasDigit = false;
+        }
+
+        foreach (var ch in content)
+        {
+            if (char.IsWhiteSpace(ch))
+            {
+                FlushToken();
+                continue;
+            }
+
+            if (char.IsDigit(ch))
+            {
+                tokDigits++;
+                tokHasDigit = true;
+                alnum++;
+            }
+            else if (char.IsLetter(ch))
+            {
+                tokHasLetter = true;
+                alnum++;
+            }
+            // punctuation inside a token (".", ")", "-") is ignored: "56)" stays a number token
+        }
+        FlushToken();
+
+        if (numberChars == 0 || alnum == 0)
+        {
+            return 0f;
+        }
+
+        var numberRatio = (double)numberChars / alnum;
+        // Letters-majority text is real prose (a paragraph citing a few numbers), not number-noise.
+        if (numberRatio < 0.30)
+        {
+            return 0f;
+        }
+
+        // Taper by length: 1.0 up to ~200 chars (MinChunkSize), shrinking beyond so a long number table
+        // (legit content) is not over-demoted the way a short fragment is.
+        var lengthTaper = Math.Min(1.0, 200.0 / content.Length);
+        return (float)Math.Min(0.5, numberRatio * lengthTaper);
+    }
+
+    /// <summary>
     /// Legend-demotion factor in [0, 0.5] (verbatim move of :560-580).
     /// </summary>
     internal static float ComputeLegendPenaltyFactor(string? content)

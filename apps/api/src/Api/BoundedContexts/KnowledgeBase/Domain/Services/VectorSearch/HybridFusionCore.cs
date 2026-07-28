@@ -63,9 +63,12 @@ internal static class HybridFusionCore
             string? heading = (hasV ? v.Heading : null) ?? (hasK ? k.Heading : null);
 
             float legendFactor = FusionSignals.ComputeLegendPenaltyFactor(content);
+            // #3338 WP1b: demote short digit-dominated table/number-fragment chunks that otherwise
+            // out-rank real section prose. Multiplicative with the legend factor.
+            float numberNoiseFactor = FusionSignals.ComputeNumberNoiseFactor(content);
             float roleBoost = FusionSignals.ComputeRoleMatchBoost(options.QueryRoleHint, roleTags);
             float headingBoost = FusionSignals.ComputeHeadingMatchBoost(options.QueryTerms, heading);
-            float hybridScore = (rrfSum * (1f - legendFactor)) + roleBoost + headingBoost;
+            float hybridScore = (rrfSum * (1f - legendFactor) * (1f - numberNoiseFactor)) + roleBoost + headingBoost;
 
             scored.Add(new FusedCandidate(
                 Key: key,

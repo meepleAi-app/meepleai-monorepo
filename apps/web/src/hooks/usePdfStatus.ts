@@ -405,6 +405,14 @@ export function usePdfStatus(
 
     if (!documentId) return;
 
+    // Reset per-document connection state when documentId changes without a remount.
+    // Otherwise the new document inherits the previous one's reconnect count (dropping the
+    // first transient error straight to polling) and its last emitted state (suppressing the
+    // new document's first onStateChange). The in-stream reconnect path calls startSSE via
+    // setTimeout without re-running this effect, so backoff counting is preserved.
+    reconnectAttemptsRef.current = 0;
+    previousStateRef.current = null;
+
     // Check network type - auto-fallback to polling for slow-2g
     const usePolling = !enableSSE || shouldUsePollingForNetwork();
 

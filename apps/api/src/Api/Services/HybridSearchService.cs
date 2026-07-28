@@ -293,6 +293,14 @@ internal class HybridSearchService : IHybridSearchService
 
         // RRF fusion with both vector AND keyword results
         // Phase D (D6): queryRoleHint enables role-match boost during fusion.
+        // #3338 WP1c: expand the #3270 heading-match terms with the game's FTS-language intent synonyms
+        // (setup -> preparazione/allestimento) so an English-loanword query boosts a native-lexeme heading.
+        var ftsConfig = await _keywordSearchService
+            .ResolveFtsConfigAsync(gameId, cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+        var headingTerms = KeywordSearchService.ExpandHeadingMatchTerms(
+            FusionSignals.ExtractHeadingMatchTerms(query), ftsConfig);
+
         var fusedResults = FuseSearchResults(
             vectorItems,
             filteredKeywordResults,
@@ -301,7 +309,7 @@ internal class HybridSearchService : IHybridSearchService
             keywordWeight,
             _config.RrfConstant ?? FusionSignals.DefaultRrfK,
             queryRoleHint,
-            FusionSignals.ExtractHeadingMatchTerms(query)); // #3270
+            headingTerms);
 
         var topResults = fusedResults
             .OrderByDescending(r => r.HybridScore)

@@ -219,10 +219,18 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
 
         // Use RRF fusion domain service. #3270: derive heading-match query terms from the raw query
         // (the same string used for the keyword arm) and forward them so the heading boost can fire.
+        // #3338 WP1c: expand those terms with the game's FTS-language intent synonyms (setup ->
+        // preparazione/allestimento) so an English-loanword query boosts a native-lexeme heading.
+        var ftsConfig = await _keywordSearchService
+            .ResolveFtsConfigAsync(gameId, cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+        var headingTerms = KeywordSearchService.ExpandHeadingMatchTerms(
+            FusionSignals.ExtractHeadingMatchTerms(query), ftsConfig);
+
         return _rrfFusionService.FuseResults(
             vectorResults,
             keywordResults,
             queryRoleHint: queryRoleHint,
-            queryTerms: FusionSignals.ExtractHeadingMatchTerms(query));
+            queryTerms: headingTerms);
     }
 }

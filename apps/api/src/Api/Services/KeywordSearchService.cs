@@ -319,6 +319,50 @@ internal class KeywordSearchService : IKeywordSearchService
         };
 
     /// <summary>
+    /// #3338 WP1c: expands heading-match query terms with the SAME per-language intent synonyms the
+    /// keyword arm uses (<see cref="SynonymTablesByConfig"/>), so a query lexeme like "setup" fires the
+    /// #3270 heading-match boost on a chunk whose heading is the native rulebook term ("preparazione").
+    /// Returns the original terms plus synonyms — lowercased, length ≥ 3, order-preserving,
+    /// de-duplicated. No-op for a null/blank config or a config without a curated table
+    /// (english/simple/…), so English retrieval is byte-identical.
+    /// </summary>
+    internal static IReadOnlyList<string> ExpandHeadingMatchTerms(IReadOnlyList<string>? terms, string? ftsConfig)
+    {
+        if (terms is null || terms.Count == 0
+            || string.IsNullOrEmpty(ftsConfig)
+            || !SynonymTablesByConfig.TryGetValue(ftsConfig, out var synonyms))
+        {
+            return terms ?? Array.Empty<string>();
+        }
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var expanded = new List<string>(terms.Count);
+
+        void Add(string candidate)
+        {
+            var lower = candidate.ToLowerInvariant();
+            if (lower.Length >= 3 && seen.Add(lower))
+            {
+                expanded.Add(lower);
+            }
+        }
+
+        foreach (var term in terms)
+        {
+            Add(term);
+            if (synonyms.TryGetValue(term, out var syns))
+            {
+                foreach (var s in syns)
+                {
+                    Add(s);
+                }
+            }
+        }
+
+        return expanded;
+    }
+
+    /// <summary>
     /// Expands keyword-arm query terms with curated, language-keyed intent synonyms, emitting a
     /// valid <c>to_tsquery</c> OR-fragment.
     /// <para>
@@ -441,6 +485,10 @@ internal class KeywordSearchService : IKeywordSearchService
             _ => "simple",
         };
     }
+
+    /// <inheritdoc />
+    public Task<string> ResolveFtsConfigAsync(Guid gameId, string language = "en", CancellationToken cancellationToken = default)
+        => ResolveGameFtsConfigAsync(gameId, language, cancellationToken);
 
     /// <summary>
     /// Detects the dominant document language for a game (from <c>pdf_documents.Language</c>,

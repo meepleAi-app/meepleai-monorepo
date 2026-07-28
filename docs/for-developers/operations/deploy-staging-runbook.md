@@ -27,26 +27,40 @@ Il workflow `.github/workflows/deploy-staging.yml` deploya `https://meepleai.app
 
 ## Promote main-dev → main-staging
 
+> **⚠️ Policy**: the `validate-source-branch` check
+> (`.github/workflows/auto-branch-policy.yml`) enforces that `main-staging` can
+> **only** be updated from `main-dev` directly (`head == main-dev`). A
+> `release/*` branch is **rejected** by that check. The release PR is therefore
+> `main-dev → main-staging` directly — do **not** create an intermediate
+> `release/*` branch. Note: `validate-source-branch` is not a *required* status
+> check on main-staging, so the merge is technically possible even when it is
+> red — but a red result means the branch flow is wrong; fix it, don't override.
+
 ```bash
-# 1. Verify CI is green on main-dev (manual check)
+# 1. Verify CI is green on main-dev (manual check — main-staging has NO required
+#    status checks, so the push auto-triggers deploy regardless; this gate is
+#    disciplinary).
 gh pr checks <latest-merged-pr-number>
 
-# 2. Create release PR
-git checkout main-staging
-git pull --ff-only origin main-staging
-git checkout -b release/main-dev-YYYY-MM-DD
-git merge --no-ff origin/main-dev -m "chore(release): merge main-dev into main-staging"
-git push -u origin release/main-dev-YYYY-MM-DD
-
-# 3. Create + merge PR
-gh pr create --base main-staging --head release/main-dev-YYYY-MM-DD \
-  --title "chore(release): main-dev → main-staging" \
+# 2. Create the release PR DIRECTLY from main-dev (head=main-dev, base=main-staging).
+gh pr create --base main-staging --head main-dev \
+  --title "chore(release): main-dev → main-staging (YYYY-MM-DD)" \
   --body "Promote latest main-dev for staging deployment"
-gh pr merge <PR_NUM> --merge --delete-branch
 
-# 4. Watch deploy
+# 3. Merge — preserves the 3-way merge history of the 44+ commits.
+#    Do NOT pass --delete-branch: the head is `main-dev`, a permanent branch.
+gh pr merge <PR_NUM> --merge
+
+# 4. Watch deploy (push to main-staging auto-triggers "Deploy to Staging")
 gh run watch $(gh run list --workflow "Deploy to Staging" --limit 1 --json databaseId --jq '.[0].databaseId')
 ```
+
+> **Tip**: if the self-hosted runner OOMs on the `Pre-deploy Validation`
+> "Frontend build check" (the build runs on the co-located staging runner and
+> competes for RAM — see issue #3331), re-run via
+> `gh workflow run deploy-staging.yml --ref main-staging -f skip_tests=true`.
+> That skips the redundant pre-deploy build (already validated by CI on the PR)
+> and lets the deploy proceed; a dispatch also force-recreates the AI services.
 
 ## Smoke testing meepleai.app dietro CF Access
 

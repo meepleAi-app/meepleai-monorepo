@@ -133,6 +133,7 @@ internal static class SessionCommandEndpoints
         .Produces(200)
         .Produces(400)
         .Produces(401)
+        .Produces(403)
         .Produces(404);
     }
 
@@ -150,6 +151,7 @@ internal static class SessionCommandEndpoints
     private static async Task<IResult> HandleUpdateScoreLegacy(
         Guid sessionId,
         UpdateScoreCommand command,
+        HttpContext httpContext,
         IMediator mediator,
         HttpResponse response,
         CancellationToken ct)
@@ -160,7 +162,16 @@ internal static class SessionCommandEndpoints
             return Results.BadRequest(new { error = "Session ID mismatch" });
         }
 
-        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        // IDOR guard: derive the caller identity from the authenticated principal and
+        // authoritatively override any body-supplied RequestedBy. The handler verifies the
+        // caller is the session owner or a registered participant.
+        var userId = httpContext.User.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
+        var result = await mediator.Send(command with { RequestedBy = userId }, ct).ConfigureAwait(false);
 
         // RFC 8594 deprecation signalling — set AFTER the command succeeds so the
         // headers do not leak onto error responses produced by exception middleware.
@@ -224,6 +235,7 @@ internal static class SessionCommandEndpoints
         group.MapPost("/game-sessions/{sessionId:guid}/participants", async (
             Guid sessionId,
             AddParticipantCommand command,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
@@ -232,7 +244,16 @@ internal static class SessionCommandEndpoints
                 return Results.BadRequest(new { error = "Session ID mismatch" });
             }
 
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            // IDOR guard: derive the caller identity from the authenticated principal and
+            // authoritatively override any body-supplied RequestedBy. The handler verifies the
+            // caller is the session owner or a registered participant.
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await mediator.Send(command with { RequestedBy = userId }, ct).ConfigureAwait(false);
             return Results.Created($"/api/v1/sessions/{sessionId}/participants/{result.ParticipantId}", result);
         })
         .RequireAuthenticatedUser()
@@ -242,6 +263,7 @@ internal static class SessionCommandEndpoints
         .Produces(201)
         .Produces(400)
         .Produces(401)
+        .Produces(403)
         .Produces(404);
     }
 
@@ -250,6 +272,7 @@ internal static class SessionCommandEndpoints
         group.MapPost("/game-sessions/{sessionId:guid}/notes", async (
             Guid sessionId,
             AddNoteCommand command,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
@@ -258,7 +281,16 @@ internal static class SessionCommandEndpoints
                 return Results.BadRequest(new { error = "Session ID mismatch" });
             }
 
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            // IDOR guard: derive the caller identity from the authenticated principal and
+            // authoritatively override any body-supplied RequestedBy. The handler verifies the
+            // caller is the session owner or a registered participant.
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await mediator.Send(command with { RequestedBy = userId }, ct).ConfigureAwait(false);
             return Results.Created($"/api/v1/sessions/{sessionId}/notes/{result.NoteId}", result);
         })
         .RequireAuthenticatedUser()
@@ -268,6 +300,7 @@ internal static class SessionCommandEndpoints
         .Produces(201)
         .Produces(400)
         .Produces(401)
+        .Produces(403)
         .Produces(404);
     }
 
@@ -276,6 +309,7 @@ internal static class SessionCommandEndpoints
         group.MapPost("/game-sessions/{sessionId:guid}/finalize", async (
             Guid sessionId,
             FinalizeSessionCommand command,
+            HttpContext httpContext,
             IMediator mediator,
             HttpResponse response,
             CancellationToken ct) =>
@@ -285,7 +319,16 @@ internal static class SessionCommandEndpoints
                 return Results.BadRequest(new { error = "Session ID mismatch" });
             }
 
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            // IDOR guard: derive the caller identity from the authenticated principal and
+            // authoritatively override any body-supplied RequestedBy. The handler verifies the
+            // caller is the session owner or a registered participant.
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await mediator.Send(command with { RequestedBy = userId }, ct).ConfigureAwait(false);
 
             // Invariante #13 (#1896 WP2 T4): non-blocking warning header for FE toast when
             // a draft+live session coexist in the same GameNightEvent. The operation itself
@@ -304,6 +347,7 @@ internal static class SessionCommandEndpoints
         .Produces(200)
         .Produces(400)
         .Produces(401)
+        .Produces(403)
         .Produces(404);
     }
 
@@ -312,6 +356,7 @@ internal static class SessionCommandEndpoints
         group.MapPost("/game-sessions/{sessionId:guid}/dice", async (
             Guid sessionId,
             RollDiceCommand command,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
@@ -320,7 +365,16 @@ internal static class SessionCommandEndpoints
                 return Results.BadRequest(new { error = "Session ID mismatch" });
             }
 
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            // IDOR guard: derive the caller identity from the authenticated principal and
+            // authoritatively override any body-supplied RequestedBy. The handler verifies the
+            // caller is the session owner or a registered participant.
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await mediator.Send(command with { RequestedBy = userId }, ct).ConfigureAwait(false);
             return Results.Created($"/api/v1/game-sessions/{sessionId}/dice/{result.DiceRollId}", result);
         })
         .RequireAuthenticatedUser()
@@ -331,6 +385,7 @@ internal static class SessionCommandEndpoints
         .Produces(201)
         .Produces(400)
         .Produces(401)
+        .Produces(403)
         .Produces(404)
         .Produces(409);
     }

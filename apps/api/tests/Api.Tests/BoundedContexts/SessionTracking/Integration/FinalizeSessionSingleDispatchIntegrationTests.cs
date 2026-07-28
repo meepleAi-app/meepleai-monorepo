@@ -130,7 +130,7 @@ public sealed class FinalizeSessionSingleDispatchIntegrationTests : IAsyncLifeti
         var finalRanks = new Dictionary<Guid, int> { [participantId] = 1 };
 
         // Act
-        var result = await mediator.Send(new FinalizeSessionCommand(sessionId, finalRanks), TestCancellationToken);
+        var result = await mediator.Send(new FinalizeSessionCommand(sessionId, finalRanks, userId), TestCancellationToken);
 
         // Assert — single dispatch
         result.Should().NotBeNull();
@@ -160,7 +160,7 @@ public sealed class FinalizeSessionSingleDispatchIntegrationTests : IAsyncLifeti
         var finalRanks = new Dictionary<Guid, int> { [participantId] = 1 };
 
         // Act
-        await mediator.Send(new FinalizeSessionCommand(sessionId, finalRanks), TestCancellationToken);
+        await mediator.Send(new FinalizeSessionCommand(sessionId, finalRanks, userId), TestCancellationToken);
 
         // Assert — full payload
         captured.Should().NotBeNull("spy handler must have been called");

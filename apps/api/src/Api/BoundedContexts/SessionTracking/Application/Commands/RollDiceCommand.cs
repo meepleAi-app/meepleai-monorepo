@@ -9,7 +9,8 @@ public record RollDiceCommand(
     Guid SessionId,
     Guid ParticipantId,
     string Formula,
-    string? Label = null
+    string? Label,
+    Guid RequestedBy // IDOR guard: authenticated caller — must be the session owner or a participant.
 ) : IRequest<RollDiceResult>;
 
 /// <summary>

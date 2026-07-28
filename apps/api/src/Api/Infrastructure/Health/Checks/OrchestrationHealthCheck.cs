@@ -7,10 +7,6 @@ namespace Api.Infrastructure.Health.Checks;
 /// </summary>
 public class OrchestrationHealthCheck : IHealthCheck
 {
-#pragma warning disable S1075 // URI should not be hardcoded — default for Docker internal service discovery
-    private const string DefaultOrchestrationUrl = "http://orchestration-service:8004";
-#pragma warning restore S1075
-
     private readonly IConfiguration _configuration;
     private readonly ILogger<OrchestrationHealthCheck> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -30,10 +26,13 @@ public class OrchestrationHealthCheck : IHealthCheck
         CancellationToken cancellationToken = default)
     {
         var orchestratorUrl = _configuration["ORCHESTRATION_SERVICE_URL"]
-            ?? Environment.GetEnvironmentVariable("ORCHESTRATION_SERVICE_URL")
-            ?? DefaultOrchestrationUrl;
+            ?? Environment.GetEnvironmentVariable("ORCHESTRATION_SERVICE_URL");
         if (string.IsNullOrWhiteSpace(orchestratorUrl))
         {
+            // Registration is gated on ORCHESTRATION_SERVICE_URL (see
+            // HealthCheckServiceExtensions), so this branch is only hit under config
+            // drift. Return Degraded (never Unhealthy) — orchestration is a
+            // NonCritical/Optional service and must not 503 the aggregate /health (#3339).
             return HealthCheckResult.Degraded("Orchestration service not configured");
         }
 
@@ -57,13 +56,17 @@ public class OrchestrationHealthCheck : IHealthCheck
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "Orchestration service health check failed - HTTP request error");
-            return HealthCheckResult.Unhealthy("Orchestration service unavailable", ex);
+            // #3339: orchestration is NonCritical/Optional (compose profile `tutor-agents`,
+            // not the standard deploy). A connection failure must NOT 503 the aggregate
+            // /health — return Degraded, consistent with the timeout branch above and the
+            // Degraded failureStatus/NonCritical registration.
+            _logger.LogWarning(ex, "Orchestration service health check failed - HTTP request error");
+            return HealthCheckResult.Degraded("Orchestration service unavailable", ex);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Orchestration service health check failed - unexpected error");
-            return HealthCheckResult.Unhealthy("Orchestration service check failed", ex);
+            _logger.LogWarning(ex, "Orchestration service health check failed - unexpected error");
+            return HealthCheckResult.Degraded("Orchestration service check failed", ex);
         }
     }
 }

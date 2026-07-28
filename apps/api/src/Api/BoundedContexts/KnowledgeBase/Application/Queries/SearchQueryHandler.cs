@@ -195,6 +195,14 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         // Issue #423: ts_rank_cd scores ~0-0.3; 0.01 filters ToC noise.
         const double KeywordMinScore = 0.01;
 
+        // #3338 WP1c: resolve the per-game FTS config for the heading-term synonym expansion below.
+        // NOTE: SearchAsync resolves the same config internally, so this is one extra (fast, GameId-
+        // indexed) language-detection query per hybrid search — an accepted minor cost; threading it
+        // into SearchAsync would churn ~15 keyword-mock setups for a non-blocking perf finding.
+        var ftsConfig = await _keywordSearchService
+            .ResolveFtsConfigAsync(gameId, cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+
         // Spec §6: RAW keyword arm sourced directly from IKeywordSearchService (un-boosted, raw ts_rank_cd
         // order) so HybridFusionCore applies role-boost + legend exactly once.
         var rawKeyword = await _keywordSearchService.SearchAsync(
@@ -219,10 +227,15 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
 
         // Use RRF fusion domain service. #3270: derive heading-match query terms from the raw query
         // (the same string used for the keyword arm) and forward them so the heading boost can fire.
+        // #3338 WP1c: expand those terms with the game's FTS-language intent synonyms (setup ->
+        // preparazione/allestimento) so an English-loanword query boosts a native-lexeme heading.
+        var headingTerms = KeywordSearchService.ExpandHeadingMatchTerms(
+            FusionSignals.ExtractHeadingMatchTerms(query), ftsConfig);
+
         return _rrfFusionService.FuseResults(
             vectorResults,
             keywordResults,
             queryRoleHint: queryRoleHint,
-            queryTerms: FusionSignals.ExtractHeadingMatchTerms(query));
+            queryTerms: headingTerms);
     }
 }

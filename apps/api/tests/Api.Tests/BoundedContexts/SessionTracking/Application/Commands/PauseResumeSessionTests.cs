@@ -405,7 +405,7 @@ public sealed class PauseResumeSessionTests : IAsyncLifetime
         var finalizeHandler = BuildFinalizeHandler();
 
         await finalizeHandler.Handle(
-            new FinalizeSessionCommand(created.SessionId, new Dictionary<Guid, int> { [ownerParticipantId] = 1 }),
+            new FinalizeSessionCommand(created.SessionId, new Dictionary<Guid, int> { [ownerParticipantId] = 1 }, userId),
             TestCancellationToken);
 
         _dbContext.ChangeTracker.Clear();
@@ -444,7 +444,7 @@ public sealed class PauseResumeSessionTests : IAsyncLifetime
         var finalizeHandler = BuildFinalizeHandler();
 
         await finalizeHandler.Handle(
-            new FinalizeSessionCommand(created.SessionId, new Dictionary<Guid, int> { [ownerParticipantId] = 1 }),
+            new FinalizeSessionCommand(created.SessionId, new Dictionary<Guid, int> { [ownerParticipantId] = 1 }, userId),
             TestCancellationToken);
 
         _dbContext.ChangeTracker.Clear();

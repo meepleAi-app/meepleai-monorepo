@@ -33,6 +33,17 @@ internal interface IKeywordSearchService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// #3338 WP1c: resolves the PostgreSQL FTS config (english/italian/…) the keyword arm uses for a
+    /// game — detected from the game's dominant <c>pdf_documents.Language</c>, falling back to
+    /// <paramref name="language"/>. Exposed so hybrid callers can expand heading-match terms with the
+    /// same language's intent-synonym table (a "setup" query boosting a "preparazione" heading).
+    /// </summary>
+    Task<string> ResolveFtsConfigAsync(
+        Guid gameId,
+        string language = "en",
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Searches PDF documents using PostgreSQL full-text search.
     /// Useful for document-level keyword matching.
     /// </summary>

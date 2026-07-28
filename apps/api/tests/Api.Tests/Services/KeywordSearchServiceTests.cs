@@ -180,4 +180,50 @@ public sealed class KeywordSearchServiceTests
         KeywordSearchService.BuildTsQuery("en passant", phraseSearch: true, "english")
             .Should().Be("en <-> passant");
     }
+
+    // --- #3338 WP1c: synonym-aware heading-match term expansion ---
+
+    [Fact]
+    public void ExpandHeadingMatchTerms_Italian_AddsSetupSynonyms_SoSetupQueryMatchesPreparazioneHeading()
+    {
+        var result = KeywordSearchService.ExpandHeadingMatchTerms(new[] { "setup", "giocatori" }, "italian");
+
+        result.Should().Contain("setup");
+        result.Should().Contain("preparazione"); // native rulebook lexeme → matches heading "Preparazione"
+        result.Should().Contain("allestimento");
+    }
+
+    [Fact]
+    public void ExpandHeadingMatchTerms_NonTabledConfig_ReturnsTermsUnchanged()
+    {
+        var terms = new[] { "setup", "scoring" };
+
+        KeywordSearchService.ExpandHeadingMatchTerms(terms, "english")
+            .Should().BeEquivalentTo(terms, o => o.WithStrictOrdering());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void ExpandHeadingMatchTerms_NullOrBlankConfig_ReturnsTermsUnchanged(string? config)
+    {
+        // A loose mock of ResolveFtsConfigAsync returns default(string) = null; expansion must be a
+        // safe no-op rather than throwing on Dictionary.TryGetValue(null).
+        var terms = new[] { "setup" };
+
+        KeywordSearchService.ExpandHeadingMatchTerms(terms, config)
+            .Should().BeEquivalentTo(terms);
+    }
+
+    [Fact]
+    public void ExpandHeadingMatchTerms_DeduplicatesAndKeepsLengthAtLeastThree()
+    {
+        // "preparazione" already present + its synonym set includes "setup"; no dupes, and any <3-char
+        // token is dropped (the ComputeHeadingMatchBoost contract).
+        var result = KeywordSearchService.ExpandHeadingMatchTerms(new[] { "setup", "preparazione", "di" }, "italian");
+
+        result.Should().OnlyHaveUniqueItems();
+        result.Should().NotContain("di");
+        result.Should().Contain(new[] { "setup", "preparazione", "allestimento" });
+    }
 }

@@ -35,6 +35,15 @@ public class UpdateScoreCommandHandler : IRequestHandler<UpdateScoreCommand, Upd
         var session = await _sessionRepository.GetByIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Session {request.SessionId} not found");
 
+        // IDOR guard (security review high-priority): only the session owner or a registered
+        // (User-linked) participant may update scores. Mirrors UpdateSessionScoresCommandHandler.
+        if (session.UserId != request.RequestedBy &&
+            !session.Participants.Any(p => p.UserId == request.RequestedBy))
+        {
+            throw new ForbiddenException(
+                $"User {request.RequestedBy} is not authorized to update scores for session {request.SessionId}.");
+        }
+
         if (session.Status != SessionStatus.Active)
         {
             throw new ConflictException($"Cannot update score for session with status {session.Status}");

@@ -24,7 +24,8 @@ public class FinalizeSessionCommandValidatorTests
 
         var command = new FinalizeSessionCommand(
             SessionId: Guid.NewGuid(),
-            FinalRanks: ranks
+            FinalRanks: ranks,
+            RequestedBy: Guid.NewGuid()
         );
 
         // Act
@@ -47,7 +48,8 @@ public class FinalizeSessionCommandValidatorTests
 
         var command = new FinalizeSessionCommand(
             SessionId: Guid.NewGuid(),
-            FinalRanks: ranks
+            FinalRanks: ranks,
+            RequestedBy: Guid.NewGuid()
         );
 
         // Act
@@ -71,7 +73,8 @@ public class FinalizeSessionCommandValidatorTests
 
         var command = new FinalizeSessionCommand(
             SessionId: Guid.NewGuid(),
-            FinalRanks: ranks
+            FinalRanks: ranks,
+            RequestedBy: Guid.NewGuid()
         );
 
         // Act
@@ -88,7 +91,8 @@ public class FinalizeSessionCommandValidatorTests
         // Arrange
         var command = new FinalizeSessionCommand(
             SessionId: Guid.NewGuid(),
-            FinalRanks: new Dictionary<Guid, int>()
+            FinalRanks: new Dictionary<Guid, int>(),
+            RequestedBy: Guid.NewGuid()
         );
 
         // Act

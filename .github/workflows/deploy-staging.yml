@@ -284,36 +284,51 @@ jobs:
           sparse-checkout-cone-mode: true
 
       # Pre-deploy disk headroom guard (issue #1575 follow-up).
-      # The pre-deploy-check job runs on the self-hosted runner that lives on
-      # the staging VPS — `df /` here reflects the same filesystem the deploy
-      # will write to. Fail fast BEFORE Build Images (~1.5 GB pull) and
-      # Database Migration (creates schema/WAL artefacts) so we never leave
-      # the DB schema migrated while the deploy itself aborts later on
-      # disk-full (the exact failure mode from 2026-05-26 incident).
+      # #3331 Phase 1: read the VPS root filesystem over SSH instead of a local
+      # `df /`. pre-deploy-check now runs on a cloud runner (Option E), where a
+      # local `df /` would measure the GitHub runner, not staging — so the gate
+      # SSHes into STAGING_HOST (reusing the snapshot-baseline SSH pattern below).
+      # It also works before the cutover (a self-hosted runner SSHing to itself).
+      # Gated on the SSH deploy method (like every other server-touching step),
+      # NOT on vars.RUNNER. Fail fast BEFORE Build Images (~1.5 GB pull) and
+      # Database Migration so we never leave the DB schema migrated while the
+      # deploy itself aborts on disk-full (2026-05-26 incident).
       #
-      # Threshold: 10 GB. Rationale on a 75 GB disk:
-      #   - Image pull (api+web) reserves ~1.5 GB.
-      #   - Migration WAL + temp objects reserves ~0.5–1 GB.
-      #   - Safety margin against per-job runner _diag growth: ~3 GB.
-      #   - Below 10 GB free we are within 5 GB of the disk-full reproduction
-      #     window (#1348). Better to fail the deploy than corrupt staging.
-      #
-      # Override: set repo variable DEPLOY_DISK_GATE_GB to a different
-      # threshold (e.g. "0" disables the gate for emergencies).
+      # Threshold: 10 GB. Override: set repo variable DEPLOY_DISK_GATE_GB
+      # (e.g. "0" disables the gate for emergencies).
       - name: Verify VPS disk headroom
-        if: vars.RUNNER  # only runs on self-hosted (skipped on ubuntu-latest)
+        if: vars.DEPLOY_METHOD == 'ssh'
         env:
+          SSH_HOST: ${{ secrets.STAGING_HOST }}
+          SSH_USER: ${{ secrets.STAGING_USER }}
+          SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
           DEPLOY_DISK_GATE_GB: ${{ vars.DEPLOY_DISK_GATE_GB || '10' }}
         run: |
           THRESHOLD_GB="$DEPLOY_DISK_GATE_GB"
-          FREE_GB=$(df -BG / | awk 'NR==2 {gsub(/G/,"",$4); print $4}')
-          USAGE_PCT=$(df -h / | awk 'NR==2 {gsub(/%/,"",$5); print $5}')
-          echo "VPS disk: ${FREE_GB} GB free (usage ${USAGE_PCT}%) — gate threshold ${THRESHOLD_GB} GB"
 
           if [ "$THRESHOLD_GB" -eq 0 ]; then
             echo "⚠️ Disk gate disabled (DEPLOY_DISK_GATE_GB=0)"
             exit 0
           fi
+
+          # Read the VPS root filesystem over SSH (same pattern as snapshot-baseline).
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          DF_OUT=$(ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            "$SSH_USER@$SSH_HOST" 'df -BG /' 2>/dev/null) || true
+          rm -f ~/.ssh/deploy_key
+
+          FREE_GB=$(echo "$DF_OUT" | awk 'NR==2 {gsub(/G/,"",$4); print $4}')
+          USAGE_PCT=$(echo "$DF_OUT" | awk 'NR==2 {gsub(/%/,"",$5); print $5}')
+
+          if [ -z "$FREE_GB" ]; then
+            echo "::warning::Could not read VPS disk over SSH — skipping the gate (deploy continues)."
+            exit 0
+          fi
+
+          echo "VPS disk: ${FREE_GB} GB free (usage ${USAGE_PCT}%) — gate threshold ${THRESHOLD_GB} GB"
 
           if [ "$FREE_GB" -lt "$THRESHOLD_GB" ]; then
             echo "::error::Insufficient disk on staging VPS: ${FREE_GB} GB free < ${THRESHOLD_GB} GB threshold"
@@ -322,15 +337,8 @@ jobs:
             echo "   (Incident 2026-05-26 left the DB migrated while the Deploy job was orphaned;"
             echo "    see issue #1573, audit audits/2026-05-26-disk-cleanup-1575.md.)"
             echo ""
-            echo "Top consumers — run on the VPS:"
-            echo "  sudo du -h --max-depth=2 /home/deploy /var/lib/docker /var/log | sort -rh | head"
-            echo ""
-            echo "Manual cleanup options (safest first):"
-            echo "  1. bash /opt/meepleai/repo/infra/scripts/daily-disk-prune.sh"
-            echo "  2. docker rmi \$(docker images --format '{{.Repository}}:{{.Tag}}' | grep 'staging-' | grep -v \$(docker inspect meepleai-api --format '{{.Config.Image}}'))"
-            echo "  3. find /home/deploy/actions-runner/_diag/blocks -type f -mtime +1 -delete"
-            echo ""
-            echo "Emergency override (use sparingly): set repo variable DEPLOY_DISK_GATE_GB to a lower value or 0 to disable."
+            echo "Manual cleanup (safest first): bash /opt/meepleai/repo/infra/scripts/daily-disk-prune.sh"
+            echo "Emergency override: set repo variable DEPLOY_DISK_GATE_GB to a lower value or 0 to disable."
             exit 1
           fi
 
@@ -372,23 +380,22 @@ jobs:
       # Con questa rimozione la superficie di build .NET sull'host di deploy è 0
       # (Opzione 3 completa): tutta la compilazione .NET è sul cloud.
 
-      - name: Setup Frontend
-        if: needs.detect-changes.outputs.deploy_web == 'true'
-        uses: ./.github/actions/setup-frontend
-        with:
-          working-directory: apps/web
-          frozen-lockfile: 'true'
-
-      - name: Frontend build check
-        if: needs.detect-changes.outputs.deploy_web == 'true'
-        run: |
-          echo "🔨 Verifying frontend compiles..."
-          cd apps/web
-          pnpm build
-          echo "✅ Frontend builds successfully"
-        env:
-          NEXT_PUBLIC_API_BASE: http://localhost:8080
-          NODE_OPTIONS: '--max-old-space-size=4096'
+      # Issue #3331: il "Frontend build check" (pnpm build sull'host) è stato
+      # RIMOSSO — stesso trattamento del Backend build check (#2650, sopra).
+      # Compilare il frontend sul runner self-hosted co-locato (cap
+      # MemoryMax=3G, box staging ~8GB condiviso coi container) va in OOM:
+      # `next build` girava con NODE_OPTIONS=--max-old-space-size=4096 (heap 4GB)
+      # e il worker TypeScript sfondava il cap cgroup 3G → SIGKILL (deploy run
+      # 30334115340, 2026-07-28). La verifica di compilazione frontend è già
+      # coperta, senza toccare l'host di deploy:
+      #   - ci.yml `Build Frontend` (ubuntu-latest) esegue `pnpm build` sul CLOUD
+      #     nella PR verso main-dev: se non compila, la PR non arriva a main-staging;
+      #   - il job `build` sotto (sempre ubuntu-latest) builda l'immagine web reale
+      #     sul cloud: se `next build` fallisce, quel job fallisce e blocca il deploy;
+      #   - lo step "Verify CI passed on this commit" sopra conferma la CI autoritativa.
+      # Con questa rimozione la superficie di build sull'host di deploy è 0
+      # (backend #2650 + frontend #3331): tutta la compilazione è sul cloud.
+      # Vedi ADR-044 (Update 2026-07-28) e docs/superpowers/specs/2026-07-28-spec-panel-3331-cicd-runner.md.
 
   # Build and push Docker images (only changed components).
   # ALWAYS runs on ubuntu-latest (cloud) — never on self-hosted runner.

@@ -105,22 +105,45 @@ public sealed class HealthCheckServiceExtensionsTests
         registrations.Any(r => r.Name == "ollama").Should().Be(expected);
     }
 
+    // #3339: orchestration (LangGraph) runs only under the `tutor-agents` compose
+    // profile, not the standard deploy. Its health check must be registered ONLY when
+    // ORCHESTRATION_SERVICE_URL is set (mirrors the Ollama pattern), so an
+    // intentionally-not-deployed orchestration never 503s the aggregate /health.
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData("", false)]
+    [InlineData("   ", false)]
+    [InlineData("http://orchestration-service:8004", true)]
+    public void Orchestration_Is_Registered_Only_When_Url_Is_Set(string? url, bool expected)
+    {
+        var registrations = RegisterAndCollect(new()
+        {
+            ["ORCHESTRATION_SERVICE_URL"] = url,
+            ["PdfProcessing:Extractor:Provider"] = "Docnet" // isolate from PDF provider noise
+        });
+
+        registrations.Any(r => r.Name == "orchestrator").Should().Be(expected);
+    }
+
     [Fact]
     public void Optional_Tag_Is_Applied_To_Conditionally_Registered_Checks()
     {
         var registrations = RegisterAndCollect(new()
         {
             ["PdfProcessing:Extractor:Provider"] = "Orchestrator",
-            ["OLLAMA_URL"] = "http://ollama:11434"
+            ["OLLAMA_URL"] = "http://ollama:11434",
+            ["ORCHESTRATION_SERVICE_URL"] = "http://orchestration-service:8004"
         });
 
         var unstructured = registrations.Single(r => r.Name == "unstructured");
         var smoldocling = registrations.Single(r => r.Name == "smoldocling");
         var ollama = registrations.Single(r => r.Name == "ollama");
+        var orchestrator = registrations.Single(r => r.Name == "orchestrator");
 
         unstructured.Tags.Should().Contain(HealthCheckTags.Optional);
         smoldocling.Tags.Should().Contain(HealthCheckTags.Optional);
         ollama.Tags.Should().Contain(HealthCheckTags.Optional);
+        orchestrator.Tags.Should().Contain(HealthCheckTags.Optional);
     }
 
     [Fact]
@@ -137,10 +160,12 @@ public sealed class HealthCheckServiceExtensionsTests
 
         names.Should().Contain(new[]
         {
-            "openrouter", "embedding", "embedding-dimensions", "reranker", "orchestrator",
+            "openrouter", "embedding", "embedding-dimensions", "reranker",
             "bggapi", "oauth", "smtp", "grafana", "prometheus", "redis-rate-limiting",
             "s3storage", "slack_api", "slack_queue"
         });
-        names.Should().NotContain(new[] { "unstructured", "smoldocling", "ollama" });
+        // #3339: orchestrator is now conditional on ORCHESTRATION_SERVICE_URL (like ollama),
+        // so with the URL unset it must NOT be registered.
+        names.Should().NotContain(new[] { "unstructured", "smoldocling", "ollama", "orchestrator" });
     }
 }

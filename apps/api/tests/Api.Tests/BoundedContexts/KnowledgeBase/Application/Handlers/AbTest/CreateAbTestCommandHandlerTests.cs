@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands.AbTest;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
@@ -94,7 +95,7 @@ public sealed class CreateAbTestCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenBudgetExhausted_ThrowsInvalidOperation()
+    public async Task Handle_WhenBudgetExhausted_ThrowsConflict()
     {
         _budgetServiceMock.Setup(b => b.HasBudgetRemainingAsync(It.IsAny<CancellationToken>())).ReturnsAsync(false);
 
@@ -103,11 +104,12 @@ public sealed class CreateAbTestCommandHandlerTests
 
         Func<Task> act = () =>
             sut.Handle(command, CancellationToken.None);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        // Budget exhausted is a conflict with server state (409), not an unhandled 500.
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
-    public async Task Handle_WhenRateLimitReached_ThrowsInvalidOperation()
+    public async Task Handle_WhenRateLimitReached_ThrowsTooManyRequests()
     {
         _budgetServiceMock.Setup(b => b.HasRateLimitRemainingAsync(UserId, It.IsAny<bool>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
 
@@ -116,7 +118,8 @@ public sealed class CreateAbTestCommandHandlerTests
 
         Func<Task> act = () =>
             sut.Handle(command, CancellationToken.None);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        // Rate limit reached maps to 429, not an unhandled 500.
+        await act.Should().ThrowAsync<TooManyRequestsException>();
     }
 
     [Fact]

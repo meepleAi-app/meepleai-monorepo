@@ -126,7 +126,7 @@ public class GenerateSetupChecklistCommandHandlerTests
     // === Feature flag disabled ===
 
     [Fact]
-    public async Task Handle_FeatureDisabled_ThrowsInvalidOperationException()
+    public async Task Handle_FeatureDisabled_ThrowsConflict()
     {
         // Arrange
         SetupFeatureFlagEnabled(false);
@@ -135,7 +135,7 @@ public class GenerateSetupChecklistCommandHandlerTests
         // Act & Assert
         var act =
             () => _handler.Handle(command, CancellationToken.None);
-        var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var ex = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
         ex.Message.Should().Be("Feature SetupWizard.Enabled is disabled");
     }

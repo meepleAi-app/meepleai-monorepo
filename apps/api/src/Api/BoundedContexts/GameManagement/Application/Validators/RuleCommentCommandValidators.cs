@@ -72,6 +72,10 @@ internal sealed class CreateRuleCommentCommandValidator : AbstractValidator<Crea
 
         RuleFor(x => x.UserId)
             .NotEmpty().WithMessage("User ID is required");
+
+        RuleFor(x => x.LineNumber)
+            .Must(lineNumber => lineNumber is null or >= 1)
+            .WithMessage("Line number must be positive");
     }
 }
 

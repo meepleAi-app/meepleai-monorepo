@@ -53,7 +53,9 @@ internal static class AdminAbTestEndpoints
         .Produces<AbTestSessionDto>(StatusCodes.Status201Created)
         .ProducesProblem(StatusCodes.Status400BadRequest)
         .ProducesProblem(StatusCodes.Status401Unauthorized)
-        .ProducesProblem(StatusCodes.Status403Forbidden);
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status409Conflict)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         // GET /api/v1/admin/ab-tests
         // List A/B test sessions (paginated)

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using FluentValidation;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Validators;
@@ -24,6 +25,9 @@ internal sealed class AddMessageCommandValidator : AbstractValidator<AddMessageC
             .NotEmpty()
             .WithMessage("Role is required")
             .MaximumLength(50)
-            .WithMessage("Role cannot exceed 50 characters");
+            .WithMessage("Role cannot exceed 50 characters")
+            .Must(role => string.Equals(role, ChatMessage.UserRole, StringComparison.Ordinal)
+                       || string.Equals(role, ChatMessage.AssistantRole, StringComparison.Ordinal))
+            .WithMessage("Role must be 'user' or 'assistant'");
     }
 }

@@ -50,7 +50,7 @@ internal sealed class OpenStructuredDisputeCommandHandler
 
         if (!isEnabled)
         {
-            throw new InvalidOperationException("Feature Arbitro.StructuredDisputes is disabled");
+            throw new ConflictException("Feature Arbitro.StructuredDisputes is disabled");
         }
 
         // 2. Get session

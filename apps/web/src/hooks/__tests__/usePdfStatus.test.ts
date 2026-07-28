@@ -634,4 +634,90 @@ describe('usePdfStatus', () => {
       expect(result.current.connectionMetrics.fallbackTriggers).toBe(1);
     });
   });
+
+  // ==========================================================================
+  // documentId change without remount — ref hygiene
+  // ==========================================================================
+
+  describe('documentId change (ref hygiene)', () => {
+    it('resets reconnect attempts when documentId changes so the new doc can reconnect', async () => {
+      mockGetProgress.mockResolvedValue({
+        currentStep: 'Uploading',
+        percentComplete: 0,
+        estimatedTimeRemaining: '5m',
+        errorMessage: null,
+      });
+
+      const { result, rerender } = renderHook(
+        ({ id }) => usePdfStatus(id, { enableSSE: true, maxReconnectAttempts: 2 }),
+        { initialProps: { id: 'doc-A' } }
+      );
+
+      // Exhaust doc-A's reconnect budget up to the max (2 errors + their backoffs),
+      // WITHOUT firing the terminal 3rd error that would drop to polling.
+      await act(async () => {
+        getLatestES().simulateError(); // attempt 1
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2000);
+      });
+      await act(async () => {
+        getLatestES().simulateError(); // attempt 2 (== max)
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(4000);
+      });
+
+      // Switch documents without unmounting.
+      await act(async () => {
+        rerender({ id: 'doc-B' });
+      });
+
+      // The first transient error on doc-B must retry (reconnecting), NOT drop straight to
+      // polling — which it would if reconnectAttemptsRef still held doc-A's exhausted count.
+      await act(async () => {
+        getLatestES().simulateError();
+      });
+
+      expect(result.current.connectionState).toBe('reconnecting');
+      expect(result.current.isPolling).toBe(false);
+    });
+
+    it('re-emits the same PDF state for a new documentId (previousState is reset)', async () => {
+      const onStateChange = vi.fn();
+
+      const { rerender } = renderHook(
+        ({ id }) => usePdfStatus(id, { enableSSE: true, onStateChange }),
+        { initialProps: { id: 'doc-A' } }
+      );
+
+      await act(async () => {
+        getLatestES().simulateOpen();
+      });
+      await act(async () => {
+        getLatestES().simulateMessage(
+          JSON.stringify({ state: 'extracting', progress: 10, timestamp: '2026-01-01T00:00:00Z' })
+        );
+      });
+      expect(onStateChange).toHaveBeenCalledWith('extracting');
+      onStateChange.mockClear();
+
+      // New document whose first emitted state equals doc-A's last state.
+      await act(async () => {
+        rerender({ id: 'doc-B' });
+      });
+      await act(async () => {
+        getLatestES().simulateOpen();
+      });
+      await act(async () => {
+        getLatestES().simulateMessage(
+          JSON.stringify({ state: 'extracting', progress: 20, timestamp: '2026-01-01T00:01:00Z' })
+        );
+      });
+
+      // Without the reset, previousStateRef would still hold 'extracting' from doc-A and
+      // suppress the callback for doc-B.
+      expect(onStateChange).toHaveBeenCalledWith('extracting');
+    });
+  });
 });

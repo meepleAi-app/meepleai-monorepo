@@ -139,7 +139,7 @@ public class OpenStructuredDisputeCommandHandlerTests
     }
 
     [Fact]
-    public async Task OpenStructuredDispute_FeatureDisabled_ThrowsInvalidOperationException()
+    public async Task OpenStructuredDispute_FeatureDisabled_ThrowsConflict()
     {
         // Arrange
         SetupFeatureFlagEnabled(false);
@@ -152,7 +152,7 @@ public class OpenStructuredDisputeCommandHandlerTests
         // Act & Assert
         var act =
             () => _openHandler.Handle(command, CancellationToken.None);
-        var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var ex = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
         ex.Message.Should().Contain("disabled");
     }

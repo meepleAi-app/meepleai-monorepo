@@ -44,7 +44,7 @@ internal sealed class CastVoteOnDisputeCommandHandler
 
         if (!isEnabled)
         {
-            throw new InvalidOperationException("Feature Arbitro.DemocraticOverride is disabled");
+            throw new ConflictException("Feature Arbitro.DemocraticOverride is disabled");
         }
 
         // 2. Get dispute

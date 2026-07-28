@@ -263,7 +263,11 @@ jobs:
       - name: Open issue on retrieval drift
         # Only on actual retrieval drift (the smoke step failed), NOT on an infra
         # failure like the broken R2 snapshot fetch in "Boot from published snapshot".
-        if: ${{ steps.ragsmoke.outcome == 'failure' && github.event.inputs.update_baseline != 'true' }}
+        # always() is required: without a status function GitHub ANDs an implicit success()
+        # into the condition, so after ragsmoke fails the job is failed → success() is false
+        # → this step is skipped and the issue is never opened. The outcome check still scopes
+        # it to a real drift (skipped/successful ragsmoke → not 'failure').
+        if: ${{ always() && steps.ragsmoke.outcome == 'failure' && github.event.inputs.update_baseline != 'true' }}
         uses: actions/github-script@v7
         with:
           script: |
@@ -283,7 +287,10 @@ jobs:
       - name: Open issue on title-health regression
         # Only on an actual extraction-quality regression (the guard step failed), NOT on an
         # infra failure in "Boot from published snapshot". Epic #3338 WP3.
-        if: ${{ steps.titlehealth.outcome == 'failure' && github.event.inputs.update_baseline != 'true' }}
+        # always() is required: without a status function the implicit success() would skip this
+        # after titlehealth fails (same gotcha as the retrieval-drift step above). The outcome
+        # check scopes it to a real regression; the guard step is skipped on boot failure.
+        if: ${{ always() && steps.titlehealth.outcome == 'failure' && github.event.inputs.update_baseline != 'true' }}
         uses: actions/github-script@v7
         with:
           script: |

@@ -5,7 +5,7 @@
 # Fetches the per-game title-health metric from GET /api/v1/admin/kb/title-health
 # (TitleHealthMetric over each shared game's distinct text_chunks.Heading values) and
 # asserts no game REGRESSED versus the committed baseline in
-# fixtures/title-health-baseline.json:
+# fixtures/title-health-baseline.json (keyed by the unique gameId, not the non-unique title):
 #   - a band DOWNGRADE (green→yellow/red, yellow→red) FAILs — the acceptance guard
 #     ("a previously-green English game's health must not drop after a chunking change");
 #   - a plausible-fraction drop beyond `fractionRegressionTolerance` FAILs even within
@@ -65,21 +65,24 @@ CURRENT=$(mktemp)
 code=$(curl -s -o "$CURRENT" -w '%{http_code}' -b "$COOKIE" "$BASE_URL$ENDPOINT") || true
 [ "$code" = "200" ] || fail "GET $ENDPOINT failed (HTTP ${code:-000}) — admin session/deploy issue"
 jq -e 'type == "array"' "$CURRENT" >/dev/null 2>&1 || fail "unexpected response (not a JSON array): $(head -c 200 "$CURRENT")"
-COUNT=$(jq 'length' "$CURRENT")
+COUNT=$(jq 'length' "$CURRENT"); COUNT=${COUNT%$'\r'}
 log "fetched $COUNT game(s) from the corpus"
 
 # --- capture mode ---
+# Keyed by gameId (stable, unique) — gameTitle is NOT unique in the community catalog, so keying
+# on it would let two same-titled games clobber/mask each other. gameTitle is stored as a value for
+# readable failure messages.
 if [ "$UPDATE_BASELINE" = true ]; then
   [ "$COUNT" -gt 0 ] || fail "corpus returned 0 games — baseline NOT written (index cold / wrong env?)"
   ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  games=$(jq 'map({key: .gameTitle, value: {gameId, language, band, plausibleFraction, canonicalCoverage, distinctHeadings}}) | from_entries' "$CURRENT")
+  games=$(jq 'map({key: .gameId, value: {gameTitle, language, band, plausibleFraction, canonicalCoverage, distinctHeadings}}) | from_entries' "$CURRENT")
   jq --argjson g "$games" --arg ts "$ts" '.games=$g | .capturedAt=$ts' "$BASELINE" > "$BASELINE.2" && mv "$BASELINE.2" "$BASELINE"
   log "baseline updated → $BASELINE ($COUNT games, capturedAt=$ts)"
   exit 0
 fi
 
 # --- assert mode ---
-BASELINE_N=$(jq '.games | length' "$BASELINE")
+BASELINE_N=$(jq '.games | length' "$BASELINE"); BASELINE_N=${BASELINE_N%$'\r'}
 if [ "$BASELINE_N" -eq 0 ]; then
   # An empty baseline is a wired-but-dormant gate (the endpoint ships in this PR; the baseline is
   # captured on staging post-deploy via --update-baseline). Report a visible NOTICE, never green theatre.
@@ -88,17 +91,24 @@ if [ "$BASELINE_N" -eq 0 ]; then
   exit 0
 fi
 
+# A non-empty baseline but an empty corpus is an INFRA/config fault (cold index, wrong DB), not N
+# simultaneous regressions — fail loudly instead of reporting every baselined game as "vanished"
+# (which would otherwise open a false regression issue).
+[ "$COUNT" -gt 0 ] || fail "corpus returned 0 games but baseline has $BASELINE_N — cold index / wrong env, NOT a regression"
+
 # band ordinal: red < yellow < green. A current ordinal below the baseline ordinal is a downgrade.
 ORD='{"red":0,"yellow":1,"green":2}'
 
 PASS=0; FAIL=0; NEW=0
-while IFS= read -r title; do
-  title=${title%$'\r'}
-  base=$(jq -c --arg t "$title" '.games[$t]' "$BASELINE")
-  cur=$(jq -c --arg t "$title" '.[] | select(.gameTitle==$t)' "$CURRENT" | head -1)
+# Iterate baselined game IDs (unique keys). gameTitle comes from the baseline value for display.
+while IFS= read -r id; do
+  id=${id%$'\r'}
+  base=$(jq -c --arg i "$id" '.games[$i]' "$BASELINE")
+  name=$(jq -r --arg i "$id" '.games[$i].gameTitle // $i' "$BASELINE"); name=${name%$'\r'}
+  cur=$(jq -c --arg i "$id" '.[] | select(.gameId==$i)' "$CURRENT" | head -1)
 
   if [ -z "$cur" ] || [ "$cur" = "null" ]; then
-    echo "FAIL  $title — baselined game absent from the current corpus (chunks/headings vanished)"
+    echo "FAIL  $name — baselined game absent from the current corpus (chunks/headings vanished)"
     FAIL=$((FAIL+1)); continue
   fi
 
@@ -111,20 +121,20 @@ while IFS= read -r title; do
   verdict=${verdict//\"/}
 
   if [ "$verdict" = "OK" ]; then
-    echo "PASS  $title — $(jq -r '.band' <<<"$cur") $(jq -r '.plausibleFraction' <<<"$cur")"
+    echo "PASS  $name — $(jq -r '.band' <<<"$cur") $(jq -r '.plausibleFraction' <<<"$cur")"
     PASS=$((PASS+1))
   else
-    echo "FAIL  $title — regressed: $verdict"
+    echo "FAIL  $name — regressed: $verdict"
     FAIL=$((FAIL+1))
   fi
 done < <(jq -r '.games | keys[]' "$BASELINE")
 
-# New (unbaselined) games: informational only.
-while IFS= read -r title; do
-  title=${title%$'\r'}
-  echo "::notice:: NEW $title — not in baseline (newly-indexed; capture with --update-baseline to guard it)"
+# New (unbaselined) games: informational only. Matched by gameId (the baseline key).
+while IFS= read -r name; do
+  name=${name%$'\r'}
+  echo "::notice:: NEW $name — not in baseline (newly-indexed; capture with --update-baseline to guard it)"
   NEW=$((NEW+1))
-done < <(jq -r --slurpfile b "$BASELINE" '.[] | select((.gameTitle) as $t | ($b[0].games | has($t)) | not) | .gameTitle' "$CURRENT")
+done < <(jq -r --slurpfile b "$BASELINE" '.[] | select((.gameId) as $i | ($b[0].games | has($i)) | not) | .gameTitle' "$CURRENT")
 
 log "result: $PASS passed, $FAIL regressed, $NEW new (unguarded)"
 [ "$FAIL" -eq 0 ]

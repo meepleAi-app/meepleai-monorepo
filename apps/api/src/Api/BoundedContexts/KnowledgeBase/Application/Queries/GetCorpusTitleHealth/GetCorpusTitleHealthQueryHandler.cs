@@ -62,7 +62,9 @@ internal sealed class GetCorpusTitleHealthQueryHandler
             {
                 var health = TitleHealthMetric.Compute(g.Select(x => x.Heading));
 
-                // Dominant effective language across the game's docs; ordinal tiebreak keeps it stable.
+                // The effective language labelling the MOST distinct headings for this game (rows are
+                // already Distinct on (game,lang,heading), so this weights the retrieval surface, not the
+                // PDF count); ordinal tiebreak keeps a tie stable.
                 var language = g
                     .GroupBy(x => x.Language, StringComparer.Ordinal)
                     .OrderByDescending(lg => lg.Count())

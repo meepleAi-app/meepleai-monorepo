@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries.GetCorpusTitleHe
 /// </summary>
 /// <param name="GameId">The <c>shared_games.id</c> the chunks are scoped to.</param>
 /// <param name="GameTitle">The shared game's title (for the read-out / baseline label).</param>
-/// <param name="Language">The dominant effective language (<c>LanguageOverride ?? Language</c>) across the game's PDFs.</param>
+/// <param name="Language">The effective language (<c>LanguageOverride ?? Language</c>) labelling the most distinct headings for this game (retrieval-surface-weighted majority, not the per-PDF count).</param>
 /// <param name="DistinctHeadings">Distinct non-blank headings across the game's chunks.</param>
 /// <param name="PlausibleHeadings">How many of those look like real section titles.</param>
 /// <param name="PlausibleFraction">PlausibleHeadings / DistinctHeadings, rounded to 4 dp for a stable baseline (0 when there are none).</param>

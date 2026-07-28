@@ -39,13 +39,14 @@ public class DeleteChatSessionCommandHandlerTests
     {
         // Arrange
         var sessionId = Guid.NewGuid();
-        var session = CreateTestSession(sessionId);
+        var userId = Guid.NewGuid();
+        var session = CreateTestSession(sessionId, userId);
 
         _mockRepository
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new DeleteChatSessionCommand(SessionId: sessionId);
+        var command = new DeleteChatSessionCommand(SessionId: sessionId, UserId: userId);
 
         // Act
         await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -69,7 +70,7 @@ public class DeleteChatSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatSession?)null);
 
-        var command = new DeleteChatSessionCommand(SessionId: sessionId);
+        var command = new DeleteChatSessionCommand(SessionId: sessionId, UserId: Guid.NewGuid());
 
         // Act & Assert
         Func<Task> act = () =>
@@ -83,7 +84,8 @@ public class DeleteChatSessionCommandHandlerTests
     {
         // Arrange
         var sessionId = Guid.NewGuid();
-        var session = CreateTestSession(sessionId);
+        var userId = Guid.NewGuid();
+        var session = CreateTestSession(sessionId, userId);
         var callOrder = new List<string>();
 
         _mockRepository
@@ -96,7 +98,7 @@ public class DeleteChatSessionCommandHandlerTests
             .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Callback(() => callOrder.Add("UnitOfWork.SaveChangesAsync"));
 
-        var command = new DeleteChatSessionCommand(SessionId: sessionId);
+        var command = new DeleteChatSessionCommand(SessionId: sessionId, UserId: userId);
 
         // Act
         await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -152,11 +154,36 @@ public class DeleteChatSessionCommandHandlerTests
         act.Should().Throw<ArgumentNullException>();
     }
 
-    private static Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatSession CreateTestSession(Guid sessionId)
+    [Fact]
+    public async Task Handle_WhenCallerIsNotOwner_ThrowsNotFoundAndDoesNotDelete()
+    {
+        // Arrange — session owned by someone else; a non-owner must get 404, no delete.
+        var sessionId = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+        var attackerId = Guid.NewGuid();
+        var session = CreateTestSession(sessionId, ownerId);
+
+        _mockRepository
+            .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var command = new DeleteChatSessionCommand(SessionId: sessionId, UserId: attackerId);
+
+        // Act & Assert
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
+
+        _mockRepository.Verify(
+            r => r.DeleteAsync(It.IsAny<Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatSession>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private static Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatSession CreateTestSession(Guid sessionId, Guid? userId = null)
     {
         return new Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatSession(
             id: sessionId,
-            userId: Guid.NewGuid(),
+            userId: userId ?? Guid.NewGuid(),
             gameId: Guid.NewGuid(),
             title: "Test Session");
     }

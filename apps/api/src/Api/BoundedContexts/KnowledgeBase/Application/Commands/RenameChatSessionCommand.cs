@@ -9,5 +9,6 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// </summary>
 internal record RenameChatSessionCommand(
     Guid SessionId,
+    Guid UserId,
     string Title
 ) : ICommand<ChatSessionDto>;

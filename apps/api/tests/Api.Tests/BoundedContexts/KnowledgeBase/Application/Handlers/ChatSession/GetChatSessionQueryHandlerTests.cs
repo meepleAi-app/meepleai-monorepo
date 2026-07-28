@@ -42,7 +42,7 @@ public class GetChatSessionQueryHandlerTests
             .Setup(r => r.GetByIdWithPaginatedMessagesAsync(sessionId, 0, 50, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var query = new GetChatSessionQuery(SessionId: sessionId);
+        var query = new GetChatSessionQuery(SessionId: sessionId, UserId: userId);
 
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
@@ -64,7 +64,7 @@ public class GetChatSessionQueryHandlerTests
             .Setup(r => r.GetByIdWithPaginatedMessagesAsync(sessionId, 0, 50, It.IsAny<CancellationToken>()))
             .ReturnsAsync((Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatSession?)null);
 
-        var query = new GetChatSessionQuery(SessionId: sessionId);
+        var query = new GetChatSessionQuery(SessionId: sessionId, UserId: Guid.NewGuid());
 
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
@@ -78,7 +78,8 @@ public class GetChatSessionQueryHandlerTests
     {
         // Arrange
         var sessionId = Guid.NewGuid();
-        var session = CreateTestSession(sessionId, Guid.NewGuid(), Guid.NewGuid());
+        var userId = Guid.NewGuid();
+        var session = CreateTestSession(sessionId, userId, Guid.NewGuid());
         session.AddUserMessage("Hello");
         session.AddAssistantMessage("Hi there!");
 
@@ -86,7 +87,7 @@ public class GetChatSessionQueryHandlerTests
             .Setup(r => r.GetByIdWithPaginatedMessagesAsync(sessionId, 0, 50, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var query = new GetChatSessionQuery(SessionId: sessionId);
+        var query = new GetChatSessionQuery(SessionId: sessionId, UserId: userId);
 
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
@@ -106,7 +107,8 @@ public class GetChatSessionQueryHandlerTests
     {
         // Arrange
         var sessionId = Guid.NewGuid();
-        var session = CreateTestSession(sessionId, Guid.NewGuid(), Guid.NewGuid());
+        var userId = Guid.NewGuid();
+        var session = CreateTestSession(sessionId, userId, Guid.NewGuid());
 
         _mockRepository
             .Setup(r => r.GetByIdWithPaginatedMessagesAsync(sessionId, 10, 25, It.IsAny<CancellationToken>()))
@@ -114,6 +116,7 @@ public class GetChatSessionQueryHandlerTests
 
         var query = new GetChatSessionQuery(
             SessionId: sessionId,
+            UserId: userId,
             MessageSkip: 10,
             MessageTake: 25);
 
@@ -151,7 +154,7 @@ public class GetChatSessionQueryHandlerTests
             .Setup(r => r.GetByIdWithPaginatedMessagesAsync(sessionId, 0, 50, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var query = new GetChatSessionQuery(SessionId: sessionId);
+        var query = new GetChatSessionQuery(SessionId: sessionId, UserId: userId);
 
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
@@ -197,6 +200,28 @@ public class GetChatSessionQueryHandlerTests
                 _mockRepository.Object,
                 null!);
         act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public async Task Handle_WhenCallerIsNotOwner_ReturnsNull()
+    {
+        // Arrange — session owned by someone else; a non-owner must see the same null → 404.
+        var sessionId = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+        var attackerId = Guid.NewGuid();
+        var session = CreateTestSession(sessionId, ownerId, Guid.NewGuid());
+
+        _mockRepository
+            .Setup(r => r.GetByIdWithPaginatedMessagesAsync(sessionId, 0, 50, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var query = new GetChatSessionQuery(SessionId: sessionId, UserId: attackerId);
+
+        // Act
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Should().BeNull("a non-owner must not read another user's chat session");
     }
 
     private static Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatSession CreateTestSession(

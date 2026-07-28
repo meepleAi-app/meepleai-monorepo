@@ -7,5 +7,6 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// Issue #3483: Chat Session Persistence Service.
 /// </summary>
 internal record DeleteChatSessionCommand(
-    Guid SessionId
+    Guid SessionId,
+    Guid UserId
 ) : IRequest;

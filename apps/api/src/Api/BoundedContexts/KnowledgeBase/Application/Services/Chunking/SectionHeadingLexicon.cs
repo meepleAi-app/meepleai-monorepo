@@ -43,6 +43,11 @@ internal static class SectionHeadingLexicon
         "PANORAMICA",
         "SCOPO DEL GIOCO",
         "OBIETTIVO",
+        // Component sections (observed as TM "Header" elements in the WP2 dry-run; noise-free additions).
+        "TESSERE",
+        "SEGNALINI",
+        "PLANCIA DI GIOCO",
+        "PLANCE DEI GIOCATORI",
 
         // --- English ---
         "SETUP",

@@ -271,8 +271,12 @@ services:
     container_name: meepleai-reranker
     restart: unless-stopped
     profiles: [ai, ai-essential]
-    volumes:
-      - reranker_models:/home/reranker/.cache/huggingface
+    # No model volume: the reranker model (BAAI/bge-reranker-v2-m3) is baked into
+    # the image at build time under HF_HOME=/home/reranker/.cache/huggingface
+    # (see apps/reranker-service/Dockerfile). A named volume on that same path
+    # only shadowed the baked cache and duplicated ~2.3GB on disk with no benefit
+    # (the model is never fetched at runtime). embedding-service already runs
+    # volume-less for the same reason.
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
       interval: 30s
@@ -628,7 +632,8 @@ volumes:
   # ML Service Model Caches
   ollama_data:
   smoldocling_models:
-  reranker_models:
+  # reranker_models removed: the reranker model is baked into the image, so the
+  # volume only duplicated it on disk (see reranker-service above).
 
   # Temporary Processing Directories
   unstructured_temp:

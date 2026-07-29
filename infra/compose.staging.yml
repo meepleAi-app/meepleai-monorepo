@@ -249,13 +249,20 @@ services:
   unstructured-service:
     profiles: [pdf-cloud-extractors]
     restart: always
+    # mem_limit (v2 syntax) is the ONLY memory cap `docker compose up` honors — the deploy.resources
+    # block below is ignored outside swarm/`--compatibility`, so the earlier 1G bump had no effect and
+    # the OOM recurred. 3G bounds a single 'fast' extraction; with the re-index run at concurrency=1 the
+    # host (7.5G total) stays clear. If a PDF needs >3G the container is killed (restart: always) and
+    # only that PDF fails — the host never OOMs.
+    mem_limit: 3g
+    mem_reservation: 512m
     deploy:
       resources:
         limits:
           cpus: '1.0'
-          # 1G was OOM-killed under the SP3 bulk re-index (2026-07-28): 63/135 PDFs failed with
-          # "Resource temporarily unavailable" because the service died mid-run. 'fast' strategy on
-          # large multi-column PDFs (up to ~62 MB) exceeds 1G. Bumped to 3G (server has ~4.9G free).
+          # NB: deploy.resources.limits is swarm-only (ignored by `docker compose up`) — kept for
+          # documentation / future swarm. The effective cap is `mem_limit` above. 1G here OOM-killed
+          # the SP3 bulk re-index (2026-07-28): 63/135 PDFs failed "Resource temporarily unavailable".
           memory: 3G
         reservations:
           cpus: '0.5'

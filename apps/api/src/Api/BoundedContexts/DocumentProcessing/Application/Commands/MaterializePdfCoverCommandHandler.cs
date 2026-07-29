@@ -69,8 +69,11 @@ internal sealed class MaterializePdfCoverCommandHandler : ICommandHandler<Materi
             throw new CoverMaterializationException("Rendering pagina PDF non disponibile.", ex);
         }
 
+        // The upload pipeline stores this under the {DbKey}-preview.webp physical key that
+        // CoverUrlResolver serves as the L4 preview (600x900). Encode at preview dimensions
+        // so a manually-materialized cover is not a 200x300 thumbnail stretched as a preview.
         var webpBytes = await _webpVariantGenerator
-            .GenerateWebpAsync(jpeg, PdfCoverExtractor.ThumbnailWidth, PdfCoverExtractor.ThumbnailHeight, cancellationToken)
+            .GenerateWebpAsync(jpeg, PdfCoverExtractor.PreviewWidth, PdfCoverExtractor.PreviewHeight, cancellationToken)
             .ConfigureAwait(false);
 
         // Non-null here: the guard at the top of Handle() throws when _uploadPipeline is null.

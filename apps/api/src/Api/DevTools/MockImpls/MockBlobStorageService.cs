@@ -116,4 +116,15 @@ internal sealed class MockBlobStorageService : IBlobStorageService
         // Return true for the same "everything is present" mock semantics as DeleteAsync.
         return Task.FromResult(true);
     }
+
+    /// <inheritdoc />
+    public async Task<bool> StoreRawKeyAsync(string rawKey, Stream stream, string contentType, CancellationToken ct = default)
+    {
+        _ = (contentType);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms, ct).ConfigureAwait(false);
+        _store[rawKey] = ms.ToArray();
+        // "Everything succeeds" mock semantics (mirrors StoreAsync).
+        return true;
+    }
 }

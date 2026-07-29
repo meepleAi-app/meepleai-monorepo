@@ -73,15 +73,20 @@ jobs:
             "${STAGING_USER}@${STAGING_HOST}" 'bash -s' > raw.out <<'REMOTE'
           set -euo pipefail
           set -a; . /opt/meepleai/repo/infra/secrets/admin.secret; set +a
-          C=$(mktemp)
-          body=$(jq -n --arg e "$ADMIN_EMAIL" --arg p "$ADMIN_PASSWORD" '{email:$e, password:$p}')
-          lc=$(curl -sS -o /dev/null -w '%{http_code}' -c "$C" -X POST http://localhost:8080/api/v1/auth/login \
-            -H 'Content-Type: application/json' -d "$body")
-          [ "$lc" = "200" ] || { echo "staging admin login failed (HTTP $lc)" >&2; exit 1; }
-          echo "===TH_JSON_BEGIN==="
-          curl -sS -b "$C" http://localhost:8080/api/v1/admin/kb/title-health
-          printf '\n===TH_JSON_END===\n'
-          rm -f "$C"
+          # The API runs in a container fronted by Traefik — localhost:8080 does NOT resolve on the
+          # host (no port map), only INSIDE the api container. Run login + GET via `docker exec`
+          # (curl is present in the image). Build the login body on the host and pass it in via -e.
+          BODY=$(printf '{"email":"%s","password":"%s"}' "$ADMIN_EMAIL" "$ADMIN_PASSWORD")
+          docker exec -e BODY="$BODY" meepleai-api sh -c '
+            C=/tmp/th_cookie.$$
+            lc=$(curl -sS -o /dev/null -w "%{http_code}" -c "$C" -X POST http://localhost:8080/api/v1/auth/login \
+              -H "Content-Type: application/json" -d "$BODY")
+            [ "$lc" = "200" ] || { echo "staging admin login failed (HTTP $lc)" >&2; rm -f "$C"; exit 1; }
+            echo "===TH_JSON_BEGIN==="
+            curl -sS -b "$C" http://localhost:8080/api/v1/admin/kb/title-health
+            printf "\n===TH_JSON_END===\n"
+            rm -f "$C"
+          '
           REMOTE
           rm -f "$KEY"
           # Extract only the JSON between the sentinels (drops any MOTD/banner the channel prepended).

@@ -108,7 +108,9 @@ public class WikidataCoverEnrichmentRunnerTests
 
         recorded!.Outcome.Should().Be(WikidataCoverEnrichmentOutcome.Failed);
         recorded.RetryCount.Should().Be(1);
-        recorded.NextRetryAt.Should().Be(FixedNow.AddMinutes(1));
+        // Real policy layers additive [0,30]s anti-herd jitter (#3371) on the 1m base backoff.
+        recorded.NextRetryAt.Should().BeOnOrAfter(FixedNow.AddMinutes(1))
+            .And.BeOnOrBefore(FixedNow.AddMinutes(1).AddSeconds(WikidataCoverEnrichmentRetryPolicy.MaxJitterSeconds));
     }
 
     [Fact]

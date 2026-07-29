@@ -3,6 +3,7 @@ using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Domain.Covers;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 
@@ -32,11 +33,6 @@ internal sealed class UploadCustomCoverCommandHandler : ICommandHandler<UploadCu
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    /// <summary>
-    /// Centralizes the .webp extension to prevent hardcoding it in multiple places.
-    /// </summary>
-    private static string ToObjectKey(string resourceKey) => $"{resourceKey}.webp";
-
     public async Task<CustomCoverUploadResult> Handle(UploadCustomCoverCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
@@ -47,8 +43,11 @@ internal sealed class UploadCustomCoverCommandHandler : ICommandHandler<UploadCu
             .ConfigureAwait(false)
             ?? throw new ForbiddenException($"Game {command.GameId} is not in user library");
 
-        var resourceKey = $"user-covers/{command.UserId}/{command.GameId}/cover";
-        var objectKey = ToObjectKey(resourceKey);
+        // #3384 D5-A: the single CoverKeyBuilder owns the ".webp" suffix convention
+        // (DbKey stored, PhysicalKey written) so writer and resolver never drift.
+        var coverKey = CoverKeyBuilder.ForUser(command.UserId, command.GameId);
+        var resourceKey = coverKey.DbKey;
+        var objectKey = coverKey.PhysicalKey;
 
         // Best-effort delete old cover so stale R2 objects don't accumulate
         if (entry.HasCustomCover)
@@ -56,7 +55,7 @@ internal sealed class UploadCustomCoverCommandHandler : ICommandHandler<UploadCu
             try
             {
                 await _blobStorage.DeleteAsync(
-                    ToObjectKey(entry.CustomCoverR2Key!),
+                    CoverKeyBuilder.PhysicalKeyFor(CoverKind.User, entry.CustomCoverR2Key!),
                     BlobCategory.GameImage,
                     entry.CustomCoverR2Key!,
                     cancellationToken
@@ -90,7 +89,7 @@ internal sealed class UploadCustomCoverCommandHandler : ICommandHandler<UploadCu
 
         // Return presigned URL valid for 1 hour (3600 seconds)
         var presignedUrl = await _blobStorage.GetPresignedDownloadUrlAsync(
-            ToObjectKey(resourceKey),
+            objectKey,
             BlobCategory.GameImage,
             resourceKey,
             expirySeconds: 3600

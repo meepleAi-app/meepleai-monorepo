@@ -2,8 +2,8 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.Services.Pdf;
+using Api.SharedKernel.Domain.Covers;
 using Microsoft.Extensions.Logging;
-using System.Globalization;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 
@@ -19,7 +19,6 @@ internal sealed class BggCoverUploadPipeline : IBggCoverUploadPipeline
     // Cover assets are immutable for 1 year; re-uploads reuse the same key so
     // Cloudflare CDN cache stays warm (mirrors CoverR2UploadPipeline).
     private const string ImmutableCacheControl = "public, max-age=31536000, immutable";
-    private const string DefaultExtension = ".jpg";
 
     private readonly IAmazonS3 _s3Client;
     private readonly S3StorageOptions _options;
@@ -42,10 +41,13 @@ internal sealed class BggCoverUploadPipeline : IBggCoverUploadPipeline
             throw new ArgumentException("imageBytes must be non-null and non-empty.", nameof(imageBytes));
         }
 
-        var ext = NormalizeExtension(extension);
+        // #3384 D5-A: the single CoverKeyBuilder owns the key shape + extension
+        // normalization; ContentType is derived from the SAME normalized extension.
+        // For BGG the physical key == DB key (the extension is embedded, no suffix).
+        var ext = CoverKeyBuilder.NormalizeBggExtension(extension);
         var contentType = ContentTypeFor(ext);
-        // Deterministic physical key = DB key (resolver appends NO suffix for L2.5).
-        var objectKey = $"bgg-covers/{bggId.ToString(CultureInfo.InvariantCulture)}/cover{ext}";
+        var coverKey = CoverKeyBuilder.ForBgg(bggId, ext);
+        var objectKey = coverKey.PhysicalKey;
 
         using var stream = new MemoryStream(imageBytes, writable: false);
         var request = new PutObjectRequest
@@ -68,7 +70,7 @@ internal sealed class BggCoverUploadPipeline : IBggCoverUploadPipeline
             _logger.LogInformation(
                 "Uploaded BGG cover to R2: BggId={BggId}, Key={Key}, Size={Size} bytes, ETag={ETag}",
                 bggId, objectKey, imageBytes.Length, response.ETag);
-            return objectKey;
+            return coverKey.DbKey;
         }
         catch (AmazonS3Exception ex)
         {
@@ -78,22 +80,6 @@ internal sealed class BggCoverUploadPipeline : IBggCoverUploadPipeline
                 bggId, objectKey, ex.StatusCode, ex.ErrorCode);
             throw;
         }
-    }
-
-    private static string NormalizeExtension(string extension)
-    {
-        if (string.IsNullOrWhiteSpace(extension))
-        {
-            return DefaultExtension;
-        }
-
-        var ext = extension.StartsWith('.') ? extension : "." + extension;
-        ext = ext.ToLowerInvariant();
-        return ext switch
-        {
-            ".jpg" or ".jpeg" or ".png" or ".gif" or ".webp" => ext,
-            _ => DefaultExtension,
-        };
     }
 
     private static string ContentTypeFor(string normalizedExtension) => normalizedExtension switch

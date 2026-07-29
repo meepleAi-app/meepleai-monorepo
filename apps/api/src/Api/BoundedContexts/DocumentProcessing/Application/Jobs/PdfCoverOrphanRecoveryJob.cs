@@ -128,6 +128,11 @@ public sealed class PdfCoverOrphanRecoveryJob : IJob
                     pdf.CoverR2Key = null;
                     pdf.CoverGenerationError = null;
                     pdf.CoverPageIndex = null;
+                    // #3373 D1: the re-opened generation cycle must start with a clean retry budget,
+                    // mirroring ReconcileFailedOrphansAsync — otherwise a Generated cover that had
+                    // succeeded after 1-2 transient retries would carry the residual count and could
+                    // go terminal on the very first failure of the new cycle.
+                    pdf.CoverGenerationAttempts = 0;
                     pdf.UpdatedAt = DateTime.UtcNow;
                     orphanCount++;
                 }

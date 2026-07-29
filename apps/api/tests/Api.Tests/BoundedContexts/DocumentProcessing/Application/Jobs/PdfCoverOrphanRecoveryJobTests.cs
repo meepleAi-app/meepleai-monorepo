@@ -105,8 +105,11 @@ public sealed class PdfCoverOrphanRecoveryJobTests : IDisposable
     [Fact]
     public async Task RunBatchAsync_OrphanDetected_ResetsToPending()
     {
-        // 1 PDF with key, raw-key check returns null (object absent) → orphan → reset all 4 fields
-        var orphan = SeedPdf(coverR2Key: "pdf-cover-missing");
+        // 1 PDF with key, raw-key check returns null (object absent) → orphan → reset all fields.
+        // Seed a NON-zero attempt count (the cover succeeded after 2 transient retries, then its blob
+        // vanished): the re-opened generation cycle must start with a clean retry budget, else the very
+        // first transient failure of the new cycle would go immediately terminal (#3373 D1).
+        var orphan = SeedPdf(coverR2Key: "pdf-cover-missing", coverAttempts: PdfCoverRetryPolicy.MaxAttempts);
         orphan.CoverGenerationError = "stale-error";
         orphan.CoverPageIndex = 2;
         _db.SaveChanges();
@@ -121,6 +124,8 @@ public sealed class PdfCoverOrphanRecoveryJobTests : IDisposable
         reset.CoverR2Key.Should().BeNull();
         reset.CoverGenerationError.Should().BeNull();
         reset.CoverPageIndex.Should().BeNull();
+        reset.CoverGenerationAttempts.Should().Be(0,
+            "the retry budget resets so regeneration of the re-opened cycle is not immediately terminal");
     }
 
     [Fact]

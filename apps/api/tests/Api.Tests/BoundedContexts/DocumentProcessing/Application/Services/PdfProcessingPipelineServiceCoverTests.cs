@@ -129,4 +129,93 @@ public sealed class PdfProcessingPipelineServiceCoverTests : IDisposable
         pdf.CoverR2Key.Should().BeNull();
         _collected.Should().BeEmpty();
     }
+
+    // #3373 D1: an exception thrown during extract/upload/save is an INFRA failure (R2/DB) — TRANSIENT.
+    // The cover step must return the PDF to Pending (retry-eligible via BackfillPdfCoversJob) while the
+    // attempt budget has room, then terminal Failed once it is exhausted. These two tests give this
+    // call-site the same coverage BackfillPdfCoversJob already has for its transient paths.
+
+    [Fact]
+    public async Task ExtractCoverImageAsync_UploadThrows_TransientRetryPendingAndIncrementsAttempts()
+    {
+        var pdf = new PdfDocumentEntity
+        {
+            Id = Guid.NewGuid(),
+            FileName = "rules.pdf",
+            FilePath = "/tmp/rules.pdf",
+            FileSizeBytes = 1,
+            ContentType = "application/pdf",
+            UploadedByUserId = Guid.NewGuid(),
+            UploadedAt = DateTime.UtcNow,
+            ProcessingState = "Extracting",
+            CoverGenerationStatus = "Pending",
+            CoverGenerationAttempts = 0,
+            SharedGameId = Guid.NewGuid(),
+        };
+
+        _blob.Setup(b => b.RetrieveAsync(It.IsAny<string>(), BlobCategory.Pdf, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+             .ReturnsAsync(() => new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 }));
+        _coverExtractor.Setup(e => e.ExtractAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
+                       .ReturnsAsync(new PdfCoverExtractionResult
+                       {
+                           Outcome = PdfCoverExtractionOutcome.Generated,
+                           ThumbnailWebp = new byte[] { 1 },
+                           PreviewWebp = new byte[] { 9, 9, 9 },
+                           SelectedPageIndex = 0,
+                       });
+        // R2 upload throws — the realistic transient infra failure the catch protects against.
+        _coverPipeline.Setup(p => p.UploadAsync(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
+                      .ThrowsAsync(new InvalidOperationException("R2 upload transient failure"));
+
+        var sut = PdfProcessingPipelineServiceCoverTestFactory.Create(
+            _db, _blob.Object, _coverExtractor.Object, _coverPipeline.Object, _eventCollector.Object);
+
+        var act = () => sut.InvokeExtractCoverImageForTestAsync(pdf, "/tmp/rules.pdf", CancellationToken.None);
+
+        await act.Should().NotThrowAsync("a transient cover failure must not abort PDF ingestion");
+        pdf.CoverGenerationStatus.Should().Be("Pending", "the failure is retry-eligible while budget remains");
+        pdf.CoverGenerationAttempts.Should().Be(1, "the attempt counter advances on each transient failure");
+        pdf.CoverR2Key.Should().BeNull();
+        _collected.Should().BeEmpty("no propagation event on a failed generation");
+    }
+
+    [Fact]
+    public async Task ExtractCoverImageAsync_UploadThrowsAtLastAttempt_TerminalFailed()
+    {
+        var pdf = new PdfDocumentEntity
+        {
+            Id = Guid.NewGuid(),
+            FileName = "rules.pdf",
+            FilePath = "/tmp/rules.pdf",
+            FileSizeBytes = 1,
+            ContentType = "application/pdf",
+            UploadedByUserId = Guid.NewGuid(),
+            UploadedAt = DateTime.UtcNow,
+            ProcessingState = "Extracting",
+            CoverGenerationStatus = "Pending",
+            CoverGenerationAttempts = PdfCoverRetryPolicy.MaxAttempts - 1,
+            SharedGameId = Guid.NewGuid(),
+        };
+
+        _blob.Setup(b => b.RetrieveAsync(It.IsAny<string>(), BlobCategory.Pdf, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+             .ReturnsAsync(() => new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 }));
+        _coverExtractor.Setup(e => e.ExtractAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
+                       .ReturnsAsync(new PdfCoverExtractionResult
+                       {
+                           Outcome = PdfCoverExtractionOutcome.Generated,
+                           ThumbnailWebp = new byte[] { 1 },
+                           PreviewWebp = new byte[] { 9, 9, 9 },
+                           SelectedPageIndex = 0,
+                       });
+        _coverPipeline.Setup(p => p.UploadAsync(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
+                      .ThrowsAsync(new InvalidOperationException("R2 upload transient failure"));
+
+        var sut = PdfProcessingPipelineServiceCoverTestFactory.Create(
+            _db, _blob.Object, _coverExtractor.Object, _coverPipeline.Object, _eventCollector.Object);
+
+        await sut.InvokeExtractCoverImageForTestAsync(pdf, "/tmp/rules.pdf", CancellationToken.None);
+
+        pdf.CoverGenerationStatus.Should().Be("Failed", "the retry budget is exhausted — the failure is now terminal");
+        pdf.CoverGenerationAttempts.Should().Be(PdfCoverRetryPolicy.MaxAttempts);
+    }
 }

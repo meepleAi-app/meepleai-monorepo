@@ -593,6 +593,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                         pdfDoc.CoverGenerationStatus = "Generated";
                         pdfDoc.CoverPageIndex = result.SelectedPageIndex;
                         pdfDoc.CoverGenerationError = null;
+                        // #3373 D1: a successful generation closes the retry cycle — reset the budget
+                        // so a later orphan-reset (Generated→Pending) starts fresh, not pre-exhausted.
+                        pdfDoc.CoverGenerationAttempts = 0;
                         MeepleAiMetrics.RecordPdfCoverGeneration(MeepleAiMetrics.CoverGenerationOutcomeGenerated);
 
                         // Issue #1852 (Gap A): raise the propagation event so
@@ -639,7 +642,10 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             pdfDoc.CoverGenerationStatus = retryStatus.ToString();
             pdfDoc.CoverGenerationAttempts = retryAttempts;
             pdfDoc.CoverGenerationError = ex.Message.Length > 500 ? ex.Message[..500] : ex.Message;
-            MeepleAiMetrics.RecordPdfCoverGeneration(MeepleAiMetrics.CoverGenerationOutcomeFailed);
+            // #3373 D1/D5-C: tag terminal vs still-retrying so the failed-ratio alert stays diagnostic.
+            MeepleAiMetrics.RecordPdfCoverGeneration(retryAttempts >= PdfCoverRetryPolicy.MaxAttempts
+                ? MeepleAiMetrics.CoverGenerationOutcomeFailed
+                : MeepleAiMetrics.CoverGenerationOutcomeRetrying);
             _logger.LogWarning(ex,
                 "[PdfPipeline] Cover extraction threw for PDF {PdfId} — continuing pipeline without cover",
                 pdfDoc.Id);

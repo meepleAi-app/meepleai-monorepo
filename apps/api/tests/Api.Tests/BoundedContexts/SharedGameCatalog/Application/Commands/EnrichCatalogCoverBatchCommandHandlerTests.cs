@@ -220,6 +220,40 @@ public sealed class EnrichCatalogCoverBatchCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_TreatsBrokenCircuitExceptionAsFailed_RecordsCircuitOpen()
+    {
+        // Issue #2157 + #3369: when the M10 circuit breaker is OPEN the runner
+        // leaks a Polly BrokenCircuitException. This is the most frequent failure
+        // during a prolonged Wikimedia outage — exactly the scenario a 200-item
+        // batch hits — so it must map to a per-game Failed("circuit-open") entry
+        // (detected via reflection by CircuitBreakerExceptionDetector), NOT the
+        // generic "unhandled-exception" bucket, and must not abort the batch.
+        var ok = Guid.NewGuid();
+        var breakerOpen = Guid.NewGuid();
+        _runner
+            .Setup(r => r.EnrichAndRecordAsync(ok, It.IsAny<bool>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EnrichCatalogCoverResult.Success("k", "CC0", null, "https://w/Q"));
+        _runner
+            .Setup(r => r.EnrichAndRecordAsync(breakerOpen, It.IsAny<bool>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Polly.CircuitBreaker.BrokenCircuitException("circuit OPEN"));
+
+        var result = await CreateHandler().Handle(
+            new EnrichCatalogCoverBatchCommand(new[] { ok, breakerOpen }), CancellationToken.None);
+
+        result.TotalRequested.Should().Be(2);
+        result.SuccessCount.Should().Be(1);
+        result.FailedCount.Should().Be(1);
+        var entry = result.PerGame.Single(p => p.GameId == breakerOpen);
+        entry.Outcome.Should().Be("failed");
+        entry.Reason.Should().Be("circuit-open");
+
+        result.FailedDetails.Should().NotBeNull();
+        result.FailedDetails!.Should().ContainSingle(d => d.GameId == breakerOpen);
+        var detail = result.FailedDetails!.Single(d => d.GameId == breakerOpen);
+        detail.ExceptionType.Should().Be("BrokenCircuitException");
+    }
+
+    [Fact]
     public async Task Handle_FailedDetailsIsNull_WhenNoFailuresOccur()
     {
         // Backward-compat: existing callers MUST observe FailedDetails == null

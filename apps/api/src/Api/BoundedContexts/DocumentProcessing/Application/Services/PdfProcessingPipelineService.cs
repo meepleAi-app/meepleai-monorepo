@@ -593,6 +593,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                         pdfDoc.CoverGenerationStatus = "Generated";
                         pdfDoc.CoverPageIndex = result.SelectedPageIndex;
                         pdfDoc.CoverGenerationError = null;
+                        MeepleAiMetrics.RecordPdfCoverGeneration(MeepleAiMetrics.CoverGenerationOutcomeGenerated);
 
                         // Issue #1852 (Gap A): raise the propagation event so
                         // PdfCoverGeneratedEventHandler can populate SharedGame.PdfCoverR2Key.
@@ -610,6 +611,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 case PdfCoverExtractionOutcome.Skipped:
                     pdfDoc.CoverGenerationStatus = "Skipped";
                     pdfDoc.CoverPageIndex = result.SelectedPageIndex;
+                    MeepleAiMetrics.RecordPdfCoverGeneration(MeepleAiMetrics.CoverGenerationOutcomeSkipped);
                     _logger.LogInformation(
                         "[PdfPipeline] Cover extraction skipped for PDF {PdfId} (heuristic rejected first 3 pages)",
                         pdfDoc.Id);
@@ -617,6 +619,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 case PdfCoverExtractionOutcome.Failed:
                     pdfDoc.CoverGenerationStatus = "Failed";
                     pdfDoc.CoverGenerationError = result.ErrorMessage;
+                    MeepleAiMetrics.RecordPdfCoverGeneration(MeepleAiMetrics.CoverGenerationOutcomeFailed);
                     _logger.LogWarning(
                         "[PdfPipeline] Cover extraction failed for PDF {PdfId}: {Error}",
                         pdfDoc.Id, result.ErrorMessage);
@@ -631,6 +634,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         {
             pdfDoc.CoverGenerationStatus = "Failed";
             pdfDoc.CoverGenerationError = ex.Message.Length > 500 ? ex.Message[..500] : ex.Message;
+            MeepleAiMetrics.RecordPdfCoverGeneration(MeepleAiMetrics.CoverGenerationOutcomeFailed);
             _logger.LogWarning(ex,
                 "[PdfPipeline] Cover extraction threw for PDF {PdfId} — continuing pipeline without cover",
                 pdfDoc.Id);

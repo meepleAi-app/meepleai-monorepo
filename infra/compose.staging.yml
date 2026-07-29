@@ -34,6 +34,10 @@ services:
   # Application Services
   # ===========================================================================
 
+  # DO NOT scale to >1 replica — single-instance BY CONTRACT (ADR-087 / DEC-3e, #3373 D4):
+  # the enrichment tier's in-process Wikimedia rate-limiter (5 RPS) + dead-letter gauge are
+  # correct only at one instance. The `MultipleApiInstances` Prometheus tripwire alerts on a
+  # second scraped instance; promote to the distributed rate-limiter+gauge before scaling.
   api:
     restart: always
     # Staging must NEVER fall back to the local `meepleai-api:latest` image

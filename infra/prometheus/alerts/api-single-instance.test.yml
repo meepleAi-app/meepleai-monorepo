@@ -1,0 +1,65 @@
+# promtool unit tests for api-single-instance.yml (#3373 D4 / ADR-087).
+#
+# Run locally (Windows PowerShell, from repo root — the image entrypoint is `prometheus`,
+# so promtool MUST be selected via --entrypoint):
+#   docker run --rm --entrypoint promtool -v "${PWD}\infra\prometheus\alerts:/work" \
+#     prom/prometheus:v3.7.0 test rules /work/api-single-instance.test.yml
+#
+# count(up{...}) strips the instance label, so the firing alert carries only the
+# rule's own labels (severity, subsystem).
+rule_files:
+  - api-single-instance.yml
+
+evaluation_interval: 1m
+
+tests:
+  # Two scraped api instances (both up) sustained >5m -> MultipleApiInstances fires.
+  - interval: 1m
+    input_series:
+      - series: 'up{job="meepleai-api", instance="api-1:8080"}'
+        values: '1x6'
+      - series: 'up{job="meepleai-api", instance="api-2:8080"}'
+        values: '1x6'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: MultipleApiInstances
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              subsystem: wikidata-enrichment
+            exp_annotations:
+              summary: "More than one meepleai-api instance scraped (sustained 5m) — DEC-3e single-pod contract violated"
+              description: "count(up{job=\"meepleai-api\"}) has stayed above 1 for 5m. The enrichment tier is single-instance by contract (ADR-087 / DEC-3e): the in-process Wikimedia rate-limiter (5 RPS) and the dead-letter gauge are correct only at one instance. Two instances double the request rate to Wikidata/Commons (ToS violation) and skew the dead-letter metric, silently. Scale the meepleai-api service back to one replica, or promote the enrichment rate-limiter + gauge to the distributed variant (Redis lease + DB-COUNT gauge) BEFORE running multiple instances."
+              runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#wikidata-enrichment-alerts"
+
+  # A single instance -> count = 1 -> no alert.
+  - interval: 1m
+    input_series:
+      - series: 'up{job="meepleai-api", instance="api-1:8080"}'
+        values: '1x6'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: MultipleApiInstances
+        exp_alerts: []
+
+  # A single instance that is DOWN (up=0) still contributes one series -> count = 1 -> no alert.
+  - interval: 1m
+    input_series:
+      - series: 'up{job="meepleai-api", instance="api-1:8080"}'
+        values: '0x6'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: MultipleApiInstances
+        exp_alerts: []
+
+  # Two instances but only for 3m (rolling-redeploy overlap) -> below the 5m `for` -> no alert.
+  - interval: 1m
+    input_series:
+      - series: 'up{job="meepleai-api", instance="api-1:8080"}'
+        values: '1 1 1 1'
+      - series: 'up{job="meepleai-api", instance="api-2:8080"}'
+        values: '1 1 1 _'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: MultipleApiInstances
+        exp_alerts: []

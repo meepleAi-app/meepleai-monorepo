@@ -73,12 +73,13 @@ Finding tracciati come issue: **#3388** (P1), **#3389** (P2), **#3390** (epic).
 | **3 — Unificazione strutturale** | Turno multimodale attraverso il retrieval (vision=stato, testo=query→citazioni); `SessionTracking`→consumer | L | **#3390** (epic) |
 | **Prerequisito enhancement** | Eval set golden (recall@k + citation-accuracy) su 3-5 regolamenti prima di attivare enhancement; **disabilitare CRAG web-fallback** | L | (in #3390) |
 
-### Finding minori (non ancora tracciati come issue)
+### Finding minori (tracciati come issue)
 
-- **C8** — cablare l'endpoint REST dispute-history esistente nel tab Arbitro (fix banale, alto valore).
-- **C6/C7/C9** — rimuovere/cablare le opzionalità "fantasma" (note-visibility solo-FE, `SelectedDocumentIds` non persistito, mock "online"/42ms).
-- **C3** — mapper esplicito + test ai confini per i due enum ruolo; valutare rinomina del terzo enum omonimo.
-- **C1/C10** — ADR che dichiara l'SSOT tra i due modelli di sessione e i due sistemi di scoring.
+- **C8** → [#3391](https://github.com/meepleAi-app/meepleai-monorepo/issues/3391) — cablare l'endpoint REST dispute-history esistente nel tab Arbitro (fix banale, alto valore).
+- **C3** → [#3392](https://github.com/meepleAi-app/meepleai-monorepo/issues/3392) — mapper esplicito + rinomina del terzo enum ruolo omonimo.
+- **C6 + C9** → [#3393](https://github.com/meepleAi-app/meepleai-monorepo/issues/3393) — rimuovere/cablare le affordance decorative (note-visibility solo-FE, mock "online"/42ms).
+- **C7** → [#3394](https://github.com/meepleAi-app/meepleai-monorepo/issues/3394) — KB linking: `SelectedDocumentIds` accettato ma non persistito (deferral non più tracciato dopo la chiusura di #657/#658).
+- **C1 / C10** → [#3395](https://github.com/meepleAi-app/meepleai-monorepo/issues/3395) — ADR che dichiara l'SSOT tra i due modelli di sessione e i due sistemi di scoring.
 
 ---
 

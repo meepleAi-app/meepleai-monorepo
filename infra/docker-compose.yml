@@ -57,6 +57,11 @@ services:
           cpus: '0.5'
           memory: 512M
 
+  # Single-instance BY CONTRACT (ADR-087 / DEC-3e, #3373 D4): the enrichment tier's
+  # in-process Wikimedia rate-limiter (5 RPS) + dead-letter gauge are correct ONLY at one
+  # instance. Do NOT add `replicas:` / scale this service without first promoting the
+  # rate-limiter + gauge to the distributed variant (Redis lease + DB-COUNT gauge). The
+  # `MultipleApiInstances` Prometheus tripwire alerts if a second instance is ever scraped.
   api:
     build:
       context: ..

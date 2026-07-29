@@ -67,7 +67,14 @@ public sealed class BackfillPdfCoversJob : IJob
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var extractor = scope.ServiceProvider.GetRequiredService<IPdfCoverExtractor>();
         var blob = scope.ServiceProvider.GetRequiredService<IBlobStorageService>();
-        var coverUploadPipeline = scope.ServiceProvider.GetRequiredService<IPdfCoverUploadPipeline>();
+        var coverUploadPipeline = scope.ServiceProvider.GetService<IPdfCoverUploadPipeline>();
+        if (coverUploadPipeline is null)
+        {
+            // Issue #3363: the R2 cover-upload pipeline is registered only when STORAGE_PROVIDER=s3.
+            // In local-storage mode there is nowhere to upload L4 covers, so the backfill is a no-op.
+            _logger.LogDebug("BackfillPdfCoversJob skipped: cover-upload pipeline unavailable (local storage).");
+            return;
+        }
         var eventCollector = scope.ServiceProvider.GetService<IDomainEventCollector>();
 
         await RunBatchAsync(db, extractor, blob, coverUploadPipeline, eventCollector, ct).ConfigureAwait(false);

@@ -20,26 +20,37 @@ internal sealed class MaterializePdfCoverCommandHandler : ICommandHandler<Materi
     private readonly IPdfDocumentRepository _repository;
     private readonly IMediator _mediator;
     private readonly IWebpVariantGenerator _webpVariantGenerator;
-    private readonly IPdfCoverUploadPipeline _uploadPipeline;
+    private readonly IPdfCoverUploadPipeline? _uploadPipeline;
     private readonly IUnitOfWork _unitOfWork;
 
     public MaterializePdfCoverCommandHandler(
         IPdfDocumentRepository repository,
         IMediator mediator,
         IWebpVariantGenerator webpVariantGenerator,
-        IPdfCoverUploadPipeline uploadPipeline,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        // Issue #3363: optional — the R2 upload pipeline is registered only when STORAGE_PROVIDER=s3.
+        // In local-storage mode it is null and Handle() fails fast with a clear domain error instead of
+        // an opaque DI resolution failure.
+        IPdfCoverUploadPipeline? uploadPipeline = null)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _webpVariantGenerator = webpVariantGenerator ?? throw new ArgumentNullException(nameof(webpVariantGenerator));
-        _uploadPipeline = uploadPipeline ?? throw new ArgumentNullException(nameof(uploadPipeline));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _uploadPipeline = uploadPipeline;
     }
 
     public async Task<string> Handle(MaterializePdfCoverCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
+
+        // Issue #3363: on-demand cover materialization needs the R2 upload pipeline, registered only
+        // when STORAGE_PROVIDER=s3. Fail fast with a clear domain error in local-storage mode.
+        if (_uploadPipeline is null)
+        {
+            throw new CoverMaterializationException(
+                "Materializzazione cover PDF non disponibile: richiede storage S3/R2 (STORAGE_PROVIDER=s3).");
+        }
 
         var pdf = await _repository.GetByIdAsync(command.PdfDocumentId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("PdfDocument", command.PdfDocumentId.ToString());
@@ -62,7 +73,8 @@ internal sealed class MaterializePdfCoverCommandHandler : ICommandHandler<Materi
             .GenerateWebpAsync(jpeg, PdfCoverExtractor.ThumbnailWidth, PdfCoverExtractor.ThumbnailHeight, cancellationToken)
             .ConfigureAwait(false);
 
-        var dbKey = await _uploadPipeline.UploadAsync(command.DbKey, webpBytes, cancellationToken).ConfigureAwait(false);
+        // Non-null here: the guard at the top of Handle() throws when _uploadPipeline is null.
+        var dbKey = await _uploadPipeline!.UploadAsync(command.DbKey, webpBytes, cancellationToken).ConfigureAwait(false);
 
         // C1 fix: command.PageNumber is 1-based (render/query contract); PdfDocument.CoverPageIndex
         // is documented and persisted as 0-based (see PdfProcessingPipelineService.cs and

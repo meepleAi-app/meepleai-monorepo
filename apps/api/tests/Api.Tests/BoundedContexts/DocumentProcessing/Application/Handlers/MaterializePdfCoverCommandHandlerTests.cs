@@ -36,7 +36,7 @@ public class MaterializePdfCoverCommandHandlerTests
                 .ReturnsAsync((string k, byte[] _, CancellationToken _) => k);
         var uow = new Mock<IUnitOfWork>();
 
-        var handler = new MaterializePdfCoverCommandHandler(repo.Object, mediator.Object, webp.Object, pipeline.Object, uow.Object);
+        var handler = new MaterializePdfCoverCommandHandler(repo.Object, mediator.Object, webp.Object, uow.Object, pipeline.Object);
         // PageNumber is 1-based (user-facing / render contract); CoverPageIndex must be
         // stored 0-based to match PdfDocument.CoverPageIndex's documented convention and
         // the two existing writers (PdfProcessingPipelineService, BackfillPdfCoversJob),
@@ -75,7 +75,7 @@ public class MaterializePdfCoverCommandHandlerTests
                 .ReturnsAsync((string k, byte[] _, CancellationToken _) => k);
         var uow = new Mock<IUnitOfWork>();
 
-        var handler = new MaterializePdfCoverCommandHandler(repo.Object, mediator.Object, webp.Object, pipeline.Object, uow.Object);
+        var handler = new MaterializePdfCoverCommandHandler(repo.Object, mediator.Object, webp.Object, uow.Object, pipeline.Object);
         var cmd = new MaterializePdfCoverCommand(pdfId, PageNumber: 5, DbKey: "covers/g/pdf-cover");
 
         await handler.Handle(cmd, CancellationToken.None);
@@ -99,11 +99,35 @@ public class MaterializePdfCoverCommandHandlerTests
         mediator.Setup(m => m.Send(It.IsAny<GetPdfPageImageQuery>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new HttpRequestException("503"));
         var handler = new MaterializePdfCoverCommandHandler(repo.Object, mediator.Object,
-            Mock.Of<IWebpVariantGenerator>(), Mock.Of<IPdfCoverUploadPipeline>(), Mock.Of<IUnitOfWork>());
+            Mock.Of<IWebpVariantGenerator>(), Mock.Of<IUnitOfWork>(), Mock.Of<IPdfCoverUploadPipeline>());
 
         var act = () => handler.Handle(new MaterializePdfCoverCommand(pdfId, 3, "k"), CancellationToken.None);
 
         await act.Should().ThrowAsync<CoverMaterializationException>();
         pdf.CoverGenerationStatus.Should().Be(PdfCoverGenerationStatus.Pending); // non toccato
+    }
+
+    /// <summary>
+    /// Issue #3363: in local-storage mode the R2 upload pipeline is unregistered, so the optional
+    /// ctor param is null. Handle() must fail fast with a clear domain error (not an opaque DI/NRE),
+    /// and must NOT render the page or touch the PdfDocument.
+    /// </summary>
+    [Fact]
+    public async Task Handle_LocalStorageNoUploadPipeline_ThrowsCoverMaterializationException()
+    {
+        var pdfId = Guid.NewGuid();
+        var repo = new Mock<IPdfDocumentRepository>();
+        var mediator = new Mock<IMediator>();
+
+        var handler = new MaterializePdfCoverCommandHandler(
+            repo.Object, mediator.Object, Mock.Of<IWebpVariantGenerator>(), Mock.Of<IUnitOfWork>(),
+            uploadPipeline: null);
+
+        var act = () => handler.Handle(new MaterializePdfCoverCommand(pdfId, 3, "k"), CancellationToken.None);
+
+        await act.Should().ThrowAsync<CoverMaterializationException>();
+        // Fails before any rendering / repository read.
+        mediator.Verify(m => m.Send(It.IsAny<GetPdfPageImageQuery>(), It.IsAny<CancellationToken>()), Times.Never);
+        repo.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

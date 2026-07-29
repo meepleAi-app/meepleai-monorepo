@@ -93,12 +93,8 @@ public sealed class PdfCoverOrphanRecoveryJob : IJob
             .ToListAsync(ct)
             .ConfigureAwait(false);
 
-        if (batch.Count == 0)
-        {
-            _logger.LogDebug("PdfCoverOrphanRecoveryJob: no eligible PDFs to check");
-            return;
-        }
-
+        // NOTE: do NOT early-return when the Generated batch is empty — the D3
+        // reconcile scan below (Failed-without-key) must still run.
         _logger.LogDebug(
             "PdfCoverOrphanRecoveryJob: checking {Count} Generated PDFs for orphan covers",
             batch.Count);
@@ -158,16 +154,87 @@ public sealed class PdfCoverOrphanRecoveryJob : IJob
             }
         }
 
-        if (orphanCount > 0)
+        // #3373 D3: reconcile the INVERSE orphan — a Failed row WITHOUT a CoverR2Key whose
+        // deterministic preview blob exists in R2 (the upload succeeded but the DB save failed,
+        // per the BackfillPdfCoversJob save-failure comment). Reset it to Pending so
+        // BackfillPdfCoversJob regenerates it: the re-upload overwrites the orphan and raises the
+        // propagation event. A Failed row with no orphan blob is a genuine failure, left as-is.
+        var reconciledCount = await ReconcileFailedOrphansAsync(db, blob, ct).ConfigureAwait(false);
+
+        if (orphanCount > 0 || reconciledCount > 0)
         {
             await db.SaveChangesAsync(ct).ConfigureAwait(false);
             _logger.LogInformation(
-                "PdfCoverOrphanRecoveryJob: reset {Count} orphan cover(s) to Pending for re-generation",
-                orphanCount);
+                "PdfCoverOrphanRecoveryJob: reset {OrphanCount} orphan Generated cover(s) + reconciled " +
+                "{ReconciledCount} Failed-with-orphan cover(s) to Pending",
+                orphanCount, reconciledCount);
         }
         else
         {
             _logger.LogDebug("PdfCoverOrphanRecoveryJob: no orphan covers found in this batch");
         }
+    }
+
+    /// <summary>
+    /// #3373 D3: scans Failed rows with no <c>CoverR2Key</c> and, when the deterministic preview
+    /// blob exists in R2 (an orphan from a save-failure-after-upload), resets them to Pending with
+    /// a cleared attempt budget so <see cref="BackfillPdfCoversJob"/> regenerates them. Returns the
+    /// number reconciled.
+    /// </summary>
+    private async Task<int> ReconcileFailedOrphansAsync(
+        MeepleAiDbContext db,
+        IBlobStorageService blob,
+        CancellationToken ct)
+    {
+        var failedStatus = nameof(PdfCoverGenerationStatus.Failed);
+        var batch = await db.PdfDocuments
+            .AsTracking()
+            .Where(p => p.CoverGenerationStatus == failedStatus && p.CoverR2Key == null)
+            .OrderBy(p => p.UpdatedAt)
+            .Take(BatchSize)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        var reconciled = 0;
+        for (var i = 0; i < batch.Count; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+            var pdf = batch[i];
+            try
+            {
+                var previewRawKey = $"covers/pdf/{pdf.Id:D}/cover-preview.webp";
+                var orphanExists = await blob.GetPresignedUrlForRawKeyAsync(previewRawKey).ConfigureAwait(false) is not null;
+                if (orphanExists)
+                {
+                    _logger.LogWarning(
+                        "PdfCoverOrphanRecoveryJob: orphan preview exists for Failed PDF {Id} (key {Key}) — " +
+                        "resetting to Pending for regeneration (the re-upload overwrites the orphan)",
+                        pdf.Id, previewRawKey);
+                    pdf.CoverGenerationStatus = nameof(PdfCoverGenerationStatus.Pending);
+                    pdf.CoverGenerationAttempts = 0;
+                    pdf.CoverGenerationError = null;
+                    pdf.UpdatedAt = DateTime.UtcNow;
+                    reconciled++;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+#pragma warning disable CA1031 // Do not catch general exception types
+            catch (Exception ex)
+#pragma warning restore CA1031
+            {
+                _logger.LogWarning(ex,
+                    "PdfCoverOrphanRecoveryJob: failed reconcile check for Failed PDF {Id}; skipping", pdf.Id);
+            }
+
+            if (i < batch.Count - 1)
+            {
+                await Task.Delay(DelayBetweenItemsMs, ct).ConfigureAwait(false);
+            }
+        }
+
+        return reconciled;
     }
 }

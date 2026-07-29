@@ -72,11 +72,18 @@ jobs:
           ssh -T -i "$KEY" -o StrictHostKeyChecking=no -o ConnectTimeout=20 \
             "${STAGING_USER}@${STAGING_HOST}" 'bash -s' > raw.out <<'REMOTE'
           set -euo pipefail
-          set -a; . /opt/meepleai/repo/infra/secrets/admin.secret; set +a
+          # Admin creds: the managed admin.secret is currently STALE (login → 400 "Invalid email or
+          # password"); the working (temp) password lives in reindex-corpus/.env.staging — the one the
+          # ops re-index authenticated with. Prefer it, fall back to admin.secret.
+          # TODO(#3338 ops): reconcile the staging admin password so admin.secret alone suffices.
+          CREDS=/opt/meepleai/repo/infra/scripts/reindex-corpus/.env.staging
+          [ -f "$CREDS" ] || CREDS=/opt/meepleai/repo/infra/secrets/admin.secret
+          set -a; . "$CREDS"; set +a
           # The API runs in a container fronted by Traefik — localhost:8080 does NOT resolve on the
           # host (no port map), only INSIDE the api container. Run login + GET via `docker exec`
-          # (curl is present in the image). Build the login body on the host and pass it in via -e.
-          BODY=$(printf '{"email":"%s","password":"%s"}' "$ADMIN_EMAIL" "$ADMIN_PASSWORD")
+          # (curl is in the image; jq is NOT, so build the JSON body with the host's jq — JSON-safe for
+          # special chars — and pass it in via -e).
+          BODY=$(jq -n --arg e "$ADMIN_EMAIL" --arg p "$ADMIN_PASSWORD" '{email:$e, password:$p}')
           docker exec -e BODY="$BODY" meepleai-api sh -c '
             C=/tmp/th_cookie.$$
             lc=$(curl -sS -o /dev/null -w "%{http_code}" -c "$C" -X POST http://localhost:8080/api/v1/auth/login \

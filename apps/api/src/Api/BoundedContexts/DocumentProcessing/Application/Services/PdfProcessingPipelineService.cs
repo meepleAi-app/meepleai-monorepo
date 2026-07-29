@@ -15,6 +15,7 @@ using Api.Observability;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Domain.Covers;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using KbEntities = Api.BoundedContexts.KnowledgeBase.Domain.Entities;
@@ -583,7 +584,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                         // physical R2 object "{dbKey}-preview.webp" that the resolver
                         // reconstructs. Only the preview size is uploaded (the
                         // resolver never reads the thumbnail size).
-                        var dbKey = $"covers/pdf/{pdfDoc.Id:D}/cover";
+                        // #3384 D5-A: DB key comes from the single CoverKeyBuilder.
+                        var dbKey = CoverKeyBuilder.ForPdf(pdfDoc.Id).DbKey;
 
                         var persistedKey = await _pdfCoverUploadPipeline
                             .UploadAsync(dbKey, result.PreviewWebp!, cancellationToken)

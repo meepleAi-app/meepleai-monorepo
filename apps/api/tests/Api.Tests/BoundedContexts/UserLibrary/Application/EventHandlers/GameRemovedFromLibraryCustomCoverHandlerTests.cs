@@ -32,17 +32,15 @@ public sealed class GameRemovedFromLibraryCustomCoverHandlerTests
         var expectedObjectKey = $"{resourceKey}.webp";
 
         var evt = new GameRemovedFromLibraryEvent(Guid.NewGuid(), userId, gameId, resourceKey);
-        _blob.Setup(b => b.DeleteAsync(expectedObjectKey, BlobCategory.GameImage, resourceKey, It.IsAny<CancellationToken>()))
+        _blob.Setup(b => b.DeleteRawKeyAsync(expectedObjectKey, It.IsAny<CancellationToken>()))
              .ReturnsAsync(true);
 
         // Act
         await Handler().Handle(evt, default);
 
-        // Assert — DeleteAsync called exactly once with ToObjectKey(resourceKey), GameImage, resourceKey
-        _blob.Verify(b => b.DeleteAsync(
+        // Assert — raw-key delete of the exact physical object (#3384)
+        _blob.Verify(b => b.DeleteRawKeyAsync(
             expectedObjectKey,
-            BlobCategory.GameImage,
-            resourceKey,
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -58,7 +56,7 @@ public sealed class GameRemovedFromLibraryCustomCoverHandlerTests
 
         // Assert — DeleteAsync must never be called
         _blob.Verify(
-            b => b.DeleteAsync(It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            b => b.DeleteRawKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -73,7 +71,7 @@ public sealed class GameRemovedFromLibraryCustomCoverHandlerTests
 
         // Assert
         _blob.Verify(
-            b => b.DeleteAsync(It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            b => b.DeleteRawKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -84,7 +82,7 @@ public sealed class GameRemovedFromLibraryCustomCoverHandlerTests
         // Arrange
         var resourceKey = $"user-covers/{Guid.NewGuid()}/{Guid.NewGuid()}/cover";
         var evt = MakeEvent(resourceKey);
-        _blob.Setup(b => b.DeleteAsync(It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _blob.Setup(b => b.DeleteRawKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
              .ThrowsAsync(new InvalidOperationException("S3 endpoint unreachable"));
 
         // Act
@@ -114,7 +112,7 @@ public sealed class GameRemovedFromLibraryCustomCoverHandlerTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        _blob.Setup(b => b.DeleteAsync(It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), cts.Token))
+        _blob.Setup(b => b.DeleteRawKeyAsync(It.IsAny<string>(), cts.Token))
              .ThrowsAsync(new OperationCanceledException(cts.Token));
 
         // Act

@@ -1,8 +1,8 @@
 using Amazon.S3;
 using Amazon.S3.Model;
 using Api.Services.Pdf;
+using Api.SharedKernel.Domain.Covers;
 using Microsoft.Extensions.Logging;
-using System.Globalization;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 
@@ -41,13 +41,12 @@ internal sealed class CoverR2UploadPipeline : ICoverR2UploadPipeline
                 nameof(webpBytes));
         }
 
-        var gameIdSegment = gameId.ToString("D", CultureInfo.InvariantCulture);
-        // Physical R2 object key — INCLUDES .webp suffix (matches Content-Type).
-        var objectKey = $"covers/{gameIdSegment}/cover.webp";
-        // DB-safe key — EXCLUDES .webp suffix. CoverUrlResolver.cs:73-79 will
-        // append ".webp" when minting presigned URLs; storing the suffix here
-        // would yield "covers/.../cover.webp.webp" → 404.
-        var dbKey = $"covers/{gameIdSegment}/cover";
+        // #3384 D5-A: the single CoverKeyBuilder owns the suffix convention, so the
+        // physical key here and CoverUrlResolver's read key coincide by construction
+        // (no more "covers/.../cover.webp.webp" → 404 drift).
+        var coverKey = CoverKeyBuilder.ForWikidata(gameId);
+        var objectKey = coverKey.PhysicalKey;
+        var dbKey = coverKey.DbKey;
 
         using var stream = new MemoryStream(webpBytes, writable: false);
         var request = new PutObjectRequest

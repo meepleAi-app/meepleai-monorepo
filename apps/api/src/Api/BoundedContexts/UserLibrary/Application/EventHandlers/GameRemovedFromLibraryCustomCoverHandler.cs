@@ -1,5 +1,6 @@
 using Api.BoundedContexts.UserLibrary.Domain.Events;
 using Api.Services.Pdf;
+using Api.SharedKernel.Domain.Covers;
 using MediatR;
 
 namespace Api.BoundedContexts.UserLibrary.Application.EventHandlers;
@@ -37,10 +38,10 @@ internal sealed class GameRemovedFromLibraryCustomCoverHandler : INotificationHa
 
         try
         {
-            await _blobStorage.DeleteAsync(
-                ToObjectKey(resourceKey),
-                BlobCategory.GameImage,
-                resourceKey,
+            // #3384: raw-key delete (the categorized DeleteAsync rejects the '/' in the
+            // deterministic key). Mirrors CoverUrlResolver's raw-key reads.
+            await _blobStorage.DeleteRawKeyAsync(
+                CoverKeyBuilder.PhysicalKeyFor(CoverKind.User, resourceKey),
                 cancellationToken
             ).ConfigureAwait(false);
         }
@@ -65,10 +66,4 @@ internal sealed class GameRemovedFromLibraryCustomCoverHandler : INotificationHa
                 notification.GameId);
         }
     }
-
-    /// <summary>
-    /// Derives the R2 object key from the resource key.
-    /// Mirrors the upload convention in <c>UploadCustomCoverCommandHandler</c>.
-    /// </summary>
-    private static string ToObjectKey(string resourceKey) => $"{resourceKey}.webp";
 }

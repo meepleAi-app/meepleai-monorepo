@@ -2,6 +2,7 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.Services.Pdf;
+using Api.SharedKernel.Domain.Covers;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
@@ -45,10 +46,9 @@ internal sealed class PdfCoverUploadPipeline : IPdfCoverUploadPipeline
             throw new ArgumentException("WebP bytes must be non-null and non-empty.", nameof(webpBytes));
         }
 
-        // The resolver (CoverUrlResolver.ResolvePublicAsync) appends -preview.webp
-        // to the DB-stored key to derive the physical R2 object — this is the
-        // write side of that convention.
-        var objectKey = $"{dbKey}-preview.webp";
+        // #3384 D5-A: the single CoverKeyBuilder owns the "-preview.webp" suffix, so
+        // this write key and CoverUrlResolver's read key coincide by construction.
+        var objectKey = CoverKeyBuilder.PhysicalKeyFor(CoverKind.Pdf, dbKey);
 
         using var stream = new MemoryStream(webpBytes, writable: false);
         var request = new PutObjectRequest

@@ -2,6 +2,7 @@ using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Domain.Covers;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 
@@ -31,11 +32,6 @@ internal sealed class RemoveCustomCoverCommandHandler : ICommandHandler<RemoveCu
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    /// <summary>
-    /// Centralizes the .webp extension to prevent hardcoding it in multiple places.
-    /// </summary>
-    private static string ToObjectKey(string resourceKey) => $"{resourceKey}.webp";
-
     public async Task Handle(RemoveCustomCoverCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
@@ -53,13 +49,12 @@ internal sealed class RemoveCustomCoverCommandHandler : ICommandHandler<RemoveCu
 
         var keyToDelete = entry.CustomCoverR2Key;
 
-        // Best-effort R2 cleanup
+        // Best-effort R2 cleanup via the RAW-KEY delete (#3384): the categorized
+        // DeleteAsync rejects the slash-containing deterministic key.
         try
         {
-            await _blobStorage.DeleteAsync(
-                ToObjectKey(keyToDelete),
-                BlobCategory.GameImage,
-                keyToDelete,
+            await _blobStorage.DeleteRawKeyAsync(
+                CoverKeyBuilder.PhysicalKeyFor(CoverKind.User, keyToDelete),
                 cancellationToken
             ).ConfigureAwait(false);
         }

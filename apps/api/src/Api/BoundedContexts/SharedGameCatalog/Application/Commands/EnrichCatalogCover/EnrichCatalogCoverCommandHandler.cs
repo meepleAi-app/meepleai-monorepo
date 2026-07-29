@@ -8,6 +8,7 @@ using Api.Observability;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatalogCover;
@@ -58,6 +59,10 @@ internal sealed class EnrichCatalogCoverCommandHandler
     public const string SkipReasonImageNotAvailable = "image-not-available-p18";
     public const string SkipReasonLicenseNotWhitelisted = "license-not-whitelisted";
     public const string SkipReasonImageBytesNotAvailable = "image-bytes-not-available";
+
+    /// <summary>#3373 D3: the game was soft-deleted concurrently between the enrichment
+    /// load and a retry after a <see cref="DbUpdateConcurrencyException"/> — nothing to persist.</summary>
+    public const string SkipReasonConcurrentDelete = "concurrent-delete";
     public const string FailReasonImageProcessing = "image-processing-error";
     public const string FailReasonR2Upload = "r2-upload-error";
     /// <summary>Issue #1823 Wave 3 M13 (M10 follow-up): Polly circuit OPEN — short-circuit retry until breaker recovers.</summary>
@@ -249,7 +254,41 @@ internal sealed class EnrichCatalogCoverCommandHandler
             nowUtc);
 
         _repository.Update(game);
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            // #3373 D3 (ADR-087): M9 cron and admin force-refresh can write the same game
+            // concurrently. The enrichment is idempotent (deterministic R2 key + same
+            // license/attribution), so reload the fresh aggregate, re-apply the cover, and
+            // save once more — last-writer-wins is benign by design.
+            var fresh = await _repository
+                .GetByIdAsync(request.GameId, cancellationToken)
+                .ConfigureAwait(false);
+            if (fresh is null)
+            {
+                // Game soft-deleted concurrently — nothing to persist. The R2 object becomes
+                // an orphan the cover-cleanup path reconciles.
+                _logger.LogWarning(
+                    ex,
+                    "SharedGame {GameId} was deleted concurrently during cover enrichment; skipping persistence.",
+                    request.GameId);
+                EmitOutcomeMetric(OutcomeSkipped, SkipReasonConcurrentDelete);
+                return new EnrichCatalogCoverResult.Skipped(SkipReasonConcurrentDelete);
+            }
+
+            fresh.SetWikidataCover(
+                r2Key,
+                licenseResult.RawLicense,
+                licenseResult.Attribution,
+                coverImage.SourceUrl,
+                nowUtc);
+            _repository.Update(fresh);
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            game = fresh;
+        }
 
         // Issue #3138: the cover columns changed — evict the SharedGameCatalog read-model
         // caches so /shared-games (list) and /shared-games/{id} (detail) reflect the new

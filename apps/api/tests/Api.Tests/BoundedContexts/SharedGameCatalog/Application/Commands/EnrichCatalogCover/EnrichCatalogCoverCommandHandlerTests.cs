@@ -16,6 +16,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
 using ImageMagick;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
@@ -93,6 +94,79 @@ public class EnrichCatalogCoverCommandHandlerTests
         capturedRequest.Should().NotBeNull();
         capturedRequest!.Key.Should().Be($"covers/{game.Id}/cover.webp",
             "physical R2 object key INCLUDES .webp suffix");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // #3373 D3 — concurrency: M9 cron vs admin force-refresh on the same game
+    // ──────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_ConcurrencyConflictOnSave_ReloadsReappliesAndRetriesOnce()
+    {
+        // The enrichment is idempotent (deterministic R2 key + same license), so a
+        // DbUpdateConcurrencyException on the first save must be handled by reloading the
+        // fresh aggregate, re-applying the cover, and saving once more — last-writer-wins
+        // is benign by design (ADR-087 D3).
+        var harness = BuildHarness();
+        var game = BuildGame(qid: TestQid);
+
+        harness.RepoMock
+            .Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        harness.WikidataHandler.SparqlJson = BuildSparqlImageResponse(TestFilename);
+        harness.CommonsHandler.LicenseJson = BuildImageInfoResponse("CC BY-SA 4.0", artistHtml: "John Doe");
+        harness.CommonsHandler.ImageBytes = await CreateSolidImagePngAsync(800, 600);
+        harness.S3Mock
+            .Setup(s => s.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PutObjectResponse { HttpStatusCode = HttpStatusCode.OK });
+
+        harness.UowMock
+            .SetupSequence(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateConcurrencyException())
+            .ReturnsAsync(1);
+
+        var result = await harness.Sut.Handle(
+            new EnrichCatalogCoverCommand(game.Id), CancellationToken.None);
+
+        result.Should().BeOfType<EnrichCatalogCoverResult.Success>();
+        harness.UowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(2),
+            "the first save conflicts; the reload+re-apply save is the second");
+        harness.RepoMock.Verify(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>()), Times.Exactly(2),
+            "initial load + one reload after the concurrency conflict");
+    }
+
+    [Fact]
+    public async Task Handle_ConcurrencyConflictThenGameDeleted_ReturnsSkippedConcurrentDelete()
+    {
+        // If the reload after a concurrency conflict finds the game gone (soft-deleted
+        // concurrently), there is nothing to persist — return Skipped rather than crash.
+        var harness = BuildHarness();
+        var game = BuildGame(qid: TestQid);
+
+        harness.RepoMock
+            .SetupSequence(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game)
+            .ReturnsAsync((SharedGame?)null);
+
+        harness.WikidataHandler.SparqlJson = BuildSparqlImageResponse(TestFilename);
+        harness.CommonsHandler.LicenseJson = BuildImageInfoResponse("CC BY-SA 4.0", artistHtml: "John Doe");
+        harness.CommonsHandler.ImageBytes = await CreateSolidImagePngAsync(800, 600);
+        harness.S3Mock
+            .Setup(s => s.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PutObjectResponse { HttpStatusCode = HttpStatusCode.OK });
+
+        harness.UowMock
+            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateConcurrencyException());
+
+        var result = await harness.Sut.Handle(
+            new EnrichCatalogCoverCommand(game.Id), CancellationToken.None);
+
+        result.Should().BeOfType<EnrichCatalogCoverResult.Skipped>();
+        ((EnrichCatalogCoverResult.Skipped)result).Reason.Should().Be("concurrent-delete");
+        harness.UowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once,
+            "only the first (conflicting) save is attempted; the reload finds no game to re-save");
     }
 
     // ──────────────────────────────────────────────────────────────────────

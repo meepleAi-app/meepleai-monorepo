@@ -181,7 +181,7 @@ internal static class DocumentProcessingServiceExtensions
         // SharedGameCatalogServiceExtensions.AddSharedGameCatalogContext (same
         // DI container in Program.cs) — not re-registered here to avoid a
         // duplicate registration for the same concrete type.
-        RegisterPdfCoverUploadPipeline(services);
+        RegisterPdfCoverUploadPipeline(services, configuration);
 
         // Shared PDF processing pipeline (used by recovery job and future handler consolidation)
         services.AddScoped<IPdfProcessingPipelineService, PdfProcessingPipelineService>();
@@ -223,8 +223,22 @@ internal static class DocumentProcessingServiceExtensions
     /// two R2 cover pipelines don't drift on endpoint/credentials. Singleton
     /// lifetime matches the long-lived AWS SDK client (thread-safe + connection pool).
     /// </summary>
-    private static void RegisterPdfCoverUploadPipeline(IServiceCollection services)
+    private static void RegisterPdfCoverUploadPipeline(IServiceCollection services, IConfiguration configuration)
     {
+        // Issue #3363: the R2 cover-upload pipeline is a cloud-only, best-effort enrichment. Register it
+        // ONLY when STORAGE_PROVIDER=s3 (mirrors BlobStorageServiceFactory). In local-storage mode the
+        // service stays unregistered, so PdfProcessingPipelineService's optional IPdfCoverUploadPipeline?
+        // resolves to null and cover generation is skipped gracefully (see :562). The previous
+        // unconditional registration threw "S3_ENDPOINT is required" at DI resolution — which happens
+        // when PdfProcessingPipelineService is constructed, BEFORE the best-effort try/catch could skip
+        // the cover — so every PDF upload failed at the Upload step in any local-storage environment
+        // (the CI seed-snapshot bake + `make dev` locally).
+        var storageProvider = configuration["STORAGE_PROVIDER"]?.ToLowerInvariant() ?? "local";
+        if (!string.Equals(storageProvider, "s3", StringComparison.Ordinal))
+        {
+            return;
+        }
+
         services.AddSingleton<IPdfCoverUploadPipeline>(sp =>
         {
             var config = sp.GetRequiredService<IConfiguration>();

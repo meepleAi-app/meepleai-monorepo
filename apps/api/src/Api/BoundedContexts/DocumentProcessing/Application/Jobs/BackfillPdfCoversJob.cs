@@ -142,7 +142,11 @@ public sealed class BackfillPdfCoversJob : IJob
             var pdfBytes = await LoadPdfBytesAsync(pdf, blob, ct).ConfigureAwait(false);
             if (pdfBytes is null)
             {
-                pdf.CoverGenerationStatus = nameof(PdfCoverGenerationStatus.Failed);
+                // #3373 D1: a missing binary can be a transient storage blip — TRANSIENT,
+                // retry-eligible until PdfCoverRetryPolicy.MaxAttempts, then terminal Failed.
+                var (missStatus, missAttempts) = PdfCoverRetryPolicy.NextAfterTransientFailure(pdf.CoverGenerationAttempts);
+                pdf.CoverGenerationStatus = missStatus.ToString();
+                pdf.CoverGenerationAttempts = missAttempts;
                 pdf.CoverGenerationError = "PDF binary not found in blob storage";
                 MeepleAiMetrics.RecordPdfCoverGeneration(MeepleAiMetrics.CoverGenerationOutcomeFailed);
                 _logger.LogWarning(
@@ -228,7 +232,11 @@ public sealed class BackfillPdfCoversJob : IJob
                 "BackfillPdfCoversJob: unexpected error processing PDF {PdfId}; marking Failed. " +
                 "Inspect R2 key {OrphanKey} for an orphan preview blob and clean up manually if present.",
                 pdf.Id, orphanPhysicalKey);
-            pdf.CoverGenerationStatus = nameof(PdfCoverGenerationStatus.Failed);
+            // #3373 D1: an unexpected exception here is infra (R2/DB) — TRANSIENT, retry-eligible
+            // until PdfCoverRetryPolicy.MaxAttempts, then terminal Failed.
+            var (catchStatus, catchAttempts) = PdfCoverRetryPolicy.NextAfterTransientFailure(pdf.CoverGenerationAttempts);
+            pdf.CoverGenerationStatus = catchStatus.ToString();
+            pdf.CoverGenerationAttempts = catchAttempts;
             var detail = ex.GetType().Name + ": orphan-check-key=" + orphanPhysicalKey;
             pdf.CoverGenerationError = detail.Length > 500 ? detail[..500] : detail;
             MeepleAiMetrics.RecordPdfCoverGeneration(MeepleAiMetrics.CoverGenerationOutcomeFailed);

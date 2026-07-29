@@ -632,7 +632,12 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         }
         catch (Exception ex)
         {
-            pdfDoc.CoverGenerationStatus = "Failed";
+            // #3373 D1: an exception here is an infra failure (R2 upload / DB) — TRANSIENT.
+            // Return to Pending (retry-eligible via BackfillPdfCoversJob) until
+            // PdfCoverRetryPolicy.MaxAttempts, then terminal Failed.
+            var (retryStatus, retryAttempts) = PdfCoverRetryPolicy.NextAfterTransientFailure(pdfDoc.CoverGenerationAttempts);
+            pdfDoc.CoverGenerationStatus = retryStatus.ToString();
+            pdfDoc.CoverGenerationAttempts = retryAttempts;
             pdfDoc.CoverGenerationError = ex.Message.Length > 500 ? ex.Message[..500] : ex.Message;
             MeepleAiMetrics.RecordPdfCoverGeneration(MeepleAiMetrics.CoverGenerationOutcomeFailed);
             _logger.LogWarning(ex,

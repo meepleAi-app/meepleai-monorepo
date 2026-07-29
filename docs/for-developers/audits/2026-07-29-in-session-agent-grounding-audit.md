@@ -16,7 +16,7 @@ Il difetto dominante, confermato da verifica avversariale e da consenso 5/5 del 
 
 **Verdict: fondamenta solide, contratto di affidabilità assente.** La base tecnica è di alta qualità, ma manca il prerequisito che il prodotto vende — la garanzia che una risposta non-grounded sia etichettata come tale.
 
-Finding tracciati come issue: **#3388** (P1), **#3389** (P2), **#3390** (epic).
+Programma di lavoro completo: issue-ombrello **#3397** (raggruppa e sequenzia gli 8 finding). Critici: **#3388** (P1), **#3389** (P2), **#3390** (epic).
 
 ---
 

@@ -9,6 +9,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Services;
 using Api.SharedKernel.Application.Services;
@@ -381,7 +382,7 @@ public sealed class CreateSharedGameFromPdfCommandHandlerTests : IDisposable
     #region Error Scenarios
 
     [Fact]
-    public async Task Handle_WithPdfNotFound_ThrowsInvalidOperationException()
+    public async Task Handle_WithPdfNotFound_ThrowsNotFoundException()
     {
         // Arrange
         var pdfId = Guid.NewGuid();
@@ -393,7 +394,7 @@ public sealed class CreateSharedGameFromPdfCommandHandlerTests : IDisposable
 
         // Act & Assert
         var act = () => _handler.Handle(command, CancellationToken.None);
-        await act.Should().ThrowAsync<InvalidOperationException>()
+        await act.Should().ThrowAsync<NotFoundException>()
             .WithMessage($"*{pdfId}*");
     }
 

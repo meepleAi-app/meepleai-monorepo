@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
@@ -42,7 +43,7 @@ internal sealed class UpdateGameStateTemplateCommandHandler
 
         if (template is null)
         {
-            throw new InvalidOperationException($"Game state template with ID {command.TemplateId} not found");
+            throw new NotFoundException("GameStateTemplate", command.TemplateId.ToString());
         }
 
         // Update name if provided

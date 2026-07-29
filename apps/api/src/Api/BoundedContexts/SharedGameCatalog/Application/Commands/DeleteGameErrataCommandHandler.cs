@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
@@ -38,7 +39,7 @@ internal sealed class DeleteGameErrataCommandHandler : ICommandHandler<DeleteGam
         var game = await _repository.GetGameByErrataIdAsync(command.ErrataId, cancellationToken).ConfigureAwait(false);
         if (game is null)
         {
-            throw new InvalidOperationException($"Erratum with ID {command.ErrataId} not found");
+            throw new NotFoundException("Erratum", command.ErrataId.ToString());
         }
 
         // Remove the erratum from the game via domain method

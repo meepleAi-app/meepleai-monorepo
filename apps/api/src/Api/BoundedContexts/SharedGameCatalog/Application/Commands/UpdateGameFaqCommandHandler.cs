@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
@@ -33,7 +34,7 @@ internal sealed class UpdateGameFaqCommandHandler : ICommandHandler<UpdateGameFa
             command.FaqId, command.Question, command.Order);
 
         var game = await _repository.GetGameByFaqIdAsync(command.FaqId, cancellationToken).ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"Game containing FAQ with ID {command.FaqId} not found");
+            ?? throw new NotFoundException("Faq", command.FaqId.ToString());
 
         game.UpdateFaq(command.FaqId, command.Question, command.Answer, command.Order);
 

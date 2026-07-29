@@ -3,6 +3,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Services;
 using Api.Infrastructure;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
@@ -53,7 +54,7 @@ internal sealed class AddDocumentToSharedGameCommandHandler : ICommandHandler<Ad
         var game = await _gameRepository.GetByIdAsync(command.SharedGameId, cancellationToken).ConfigureAwait(false);
         if (game is null)
         {
-            throw new InvalidOperationException($"Shared game with ID {command.SharedGameId} not found");
+            throw new NotFoundException("SharedGame", command.SharedGameId.ToString());
         }
 
         // Verify PDF document exists
@@ -63,7 +64,7 @@ internal sealed class AddDocumentToSharedGameCommandHandler : ICommandHandler<Ad
 
         if (!pdfExists)
         {
-            throw new InvalidOperationException($"PDF document with ID {command.PdfDocumentId} not found");
+            throw new NotFoundException("PdfDocument", command.PdfDocumentId.ToString());
         }
 
         // Validate version doesn't already exist

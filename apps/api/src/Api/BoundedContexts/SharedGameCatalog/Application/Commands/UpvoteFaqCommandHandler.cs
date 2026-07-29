@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
@@ -31,7 +32,7 @@ internal sealed class UpvoteFaqCommandHandler : ICommandHandler<UpvoteFaqCommand
         _logger.LogInformation("Upvoting FAQ: {FaqId}", command.FaqId);
 
         var game = await _repository.GetGameByFaqIdAsync(command.FaqId, cancellationToken).ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"FAQ with ID {command.FaqId} not found");
+            ?? throw new NotFoundException("Faq", command.FaqId.ToString());
 
         var newUpvoteCount = game.UpvoteFaq(command.FaqId);
 

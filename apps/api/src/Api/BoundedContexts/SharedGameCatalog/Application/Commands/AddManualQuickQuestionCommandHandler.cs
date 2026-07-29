@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
@@ -33,7 +34,7 @@ internal sealed class AddManualQuickQuestionCommandHandler : ICommandHandler<Add
         // Fetch aggregate
         var game = await _gameRepository.GetByIdAsync(command.SharedGameId, cancellationToken)
             .ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"Shared game with ID {command.SharedGameId} not found");
+            ?? throw new NotFoundException("SharedGame", command.SharedGameId.ToString());
 
         // Create domain entity
         var question = QuickQuestion.CreateManual(

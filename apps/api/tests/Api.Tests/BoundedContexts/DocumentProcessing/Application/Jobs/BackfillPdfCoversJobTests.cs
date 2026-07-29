@@ -53,7 +53,8 @@ public sealed class BackfillPdfCoversJobTests : IDisposable
         string coverStatus = "Pending",
         string processingState = "Ready",
         DateTime? uploadedAt = null,
-        Guid? sharedGameId = null)
+        Guid? sharedGameId = null,
+        int coverAttempts = 0)
     {
         var pdf = new PdfDocumentEntity
         {
@@ -66,6 +67,7 @@ public sealed class BackfillPdfCoversJobTests : IDisposable
             UploadedAt = uploadedAt ?? DateTime.UtcNow,
             ProcessingState = processingState,
             CoverGenerationStatus = coverStatus,
+            CoverGenerationAttempts = coverAttempts,
             SharedGameId = sharedGameId,
         };
         _db.PdfDocuments.Add(pdf);
@@ -106,9 +108,9 @@ public sealed class BackfillPdfCoversJobTests : IDisposable
     }
 
     [Fact]
-    public async Task RunBatchAsync_PdfBytesNullFromBlob_MarksFailedWithoutCallingExtractor()
+    public async Task RunBatchAsync_PdfBytesNullFromBlob_TransientRetry_MarksPendingWithIncrementedAttempt()
     {
-        var pdf = SeedPdf();
+        var pdf = SeedPdf(); // attempts = 0
 
         _blob.Setup(b => b.RetrieveAsync(It.IsAny<string>(), BlobCategory.Pdf, It.IsAny<string>(), It.IsAny<CancellationToken>()))
              .ReturnsAsync((Stream?)null);
@@ -118,8 +120,27 @@ public sealed class BackfillPdfCoversJobTests : IDisposable
         _extractor.Verify(e => e.ExtractAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()), Times.Never);
 
         var refreshed = _db.PdfDocuments.AsNoTracking().Single(p => p.Id == pdf.Id);
-        refreshed.CoverGenerationStatus.Should().Be(nameof(PdfCoverGenerationStatus.Failed));
+        refreshed.CoverGenerationStatus.Should().Be(nameof(PdfCoverGenerationStatus.Pending),
+            "#3373 D1: a missing binary is a transient storage failure — retry-eligible, not immediately terminal");
+        refreshed.CoverGenerationAttempts.Should().Be(1);
         refreshed.CoverGenerationError.Should().Contain("not found");
+    }
+
+    [Fact]
+    public async Task RunBatchAsync_PdfBytesNull_AtMaxAttempts_MarksTerminalFailed()
+    {
+        // attempts already at Max-1: this transient failure exhausts the budget → terminal Failed.
+        var pdf = SeedPdf(coverAttempts: PdfCoverRetryPolicy.MaxAttempts - 1);
+
+        _blob.Setup(b => b.RetrieveAsync(It.IsAny<string>(), BlobCategory.Pdf, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+             .ReturnsAsync((Stream?)null);
+
+        await CreateJob().RunBatchAsync(_db, _extractor.Object, _blob.Object, _coverPipeline.Object, _eventCollector.Object, default);
+
+        var refreshed = _db.PdfDocuments.AsNoTracking().Single(p => p.Id == pdf.Id);
+        refreshed.CoverGenerationStatus.Should().Be(nameof(PdfCoverGenerationStatus.Failed),
+            "at MaxAttempts the transient retry budget is exhausted → terminal");
+        refreshed.CoverGenerationAttempts.Should().Be(PdfCoverRetryPolicy.MaxAttempts);
     }
 
     [Fact]
@@ -211,7 +232,7 @@ public sealed class BackfillPdfCoversJobTests : IDisposable
     }
 
     [Fact]
-    public async Task RunBatchAsync_ExtractorThrows_MarksFailedAndContinuesNextItem()
+    public async Task RunBatchAsync_ExtractorThrows_TransientRetry_MarksPendingAndContinuesNextItem()
     {
         var first = SeedPdf(uploadedAt: DateTime.UtcNow.AddMinutes(-10));
         var second = SeedPdf(uploadedAt: DateTime.UtcNow);
@@ -230,7 +251,9 @@ public sealed class BackfillPdfCoversJobTests : IDisposable
         await CreateJob().RunBatchAsync(_db, _extractor.Object, _blob.Object, _coverPipeline.Object, _eventCollector.Object, default);
 
         var refreshedFirst = _db.PdfDocuments.AsNoTracking().Single(p => p.Id == first.Id);
-        refreshedFirst.CoverGenerationStatus.Should().Be(nameof(PdfCoverGenerationStatus.Failed));
+        refreshedFirst.CoverGenerationStatus.Should().Be(nameof(PdfCoverGenerationStatus.Pending),
+            "#3373 D1: an unexpected exception is transient infra — retry-eligible, not terminal");
+        refreshedFirst.CoverGenerationAttempts.Should().Be(1);
         // Error message encodes the orphan-check hint (#1873 review fix H2): contains the
         // exception type name and the resourceKey operators must inspect for orphan blobs.
         refreshedFirst.CoverGenerationError.Should().Contain(nameof(InvalidOperationException));

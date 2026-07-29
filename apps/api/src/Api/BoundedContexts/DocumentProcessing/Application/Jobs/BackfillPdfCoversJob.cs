@@ -142,9 +142,16 @@ public sealed class BackfillPdfCoversJob : IJob
             var pdfBytes = await LoadPdfBytesAsync(pdf, blob, ct).ConfigureAwait(false);
             if (pdfBytes is null)
             {
-                pdf.CoverGenerationStatus = nameof(PdfCoverGenerationStatus.Failed);
+                // #3373 D1: a missing binary can be a transient storage blip — TRANSIENT,
+                // retry-eligible until PdfCoverRetryPolicy.MaxAttempts, then terminal Failed.
+                var (missStatus, missAttempts) = PdfCoverRetryPolicy.NextAfterTransientFailure(pdf.CoverGenerationAttempts);
+                pdf.CoverGenerationStatus = missStatus.ToString();
+                pdf.CoverGenerationAttempts = missAttempts;
                 pdf.CoverGenerationError = "PDF binary not found in blob storage";
-                MeepleAiMetrics.RecordPdfCoverGeneration(MeepleAiMetrics.CoverGenerationOutcomeFailed);
+                // #3373 D1/D5-C: tag terminal vs still-retrying so the failed-ratio alert stays diagnostic.
+                MeepleAiMetrics.RecordPdfCoverGeneration(missAttempts >= PdfCoverRetryPolicy.MaxAttempts
+                    ? MeepleAiMetrics.CoverGenerationOutcomeFailed
+                    : MeepleAiMetrics.CoverGenerationOutcomeRetrying);
                 _logger.LogWarning(
                     "BackfillPdfCoversJob: PDF {PdfId} binary missing from blob storage; marking Failed",
                     pdf.Id);
@@ -172,6 +179,9 @@ public sealed class BackfillPdfCoversJob : IJob
                         pdf.CoverGenerationStatus = nameof(PdfCoverGenerationStatus.Generated);
                         pdf.CoverPageIndex = result.SelectedPageIndex;
                         pdf.CoverGenerationError = null;
+                        // #3373 D1: a successful generation closes the retry cycle — reset the budget
+                        // so a later orphan-reset (Generated→Pending) starts fresh, not pre-exhausted.
+                        pdf.CoverGenerationAttempts = 0;
                         MeepleAiMetrics.RecordPdfCoverGeneration(MeepleAiMetrics.CoverGenerationOutcomeGenerated);
 
                         eventCollector?.Collect(new PdfCoverGeneratedEvent(
@@ -228,10 +238,17 @@ public sealed class BackfillPdfCoversJob : IJob
                 "BackfillPdfCoversJob: unexpected error processing PDF {PdfId}; marking Failed. " +
                 "Inspect R2 key {OrphanKey} for an orphan preview blob and clean up manually if present.",
                 pdf.Id, orphanPhysicalKey);
-            pdf.CoverGenerationStatus = nameof(PdfCoverGenerationStatus.Failed);
+            // #3373 D1: an unexpected exception here is infra (R2/DB) — TRANSIENT, retry-eligible
+            // until PdfCoverRetryPolicy.MaxAttempts, then terminal Failed.
+            var (catchStatus, catchAttempts) = PdfCoverRetryPolicy.NextAfterTransientFailure(pdf.CoverGenerationAttempts);
+            pdf.CoverGenerationStatus = catchStatus.ToString();
+            pdf.CoverGenerationAttempts = catchAttempts;
             var detail = ex.GetType().Name + ": orphan-check-key=" + orphanPhysicalKey;
             pdf.CoverGenerationError = detail.Length > 500 ? detail[..500] : detail;
-            MeepleAiMetrics.RecordPdfCoverGeneration(MeepleAiMetrics.CoverGenerationOutcomeFailed);
+            // #3373 D1/D5-C: tag terminal vs still-retrying so the failed-ratio alert stays diagnostic.
+            MeepleAiMetrics.RecordPdfCoverGeneration(catchAttempts >= PdfCoverRetryPolicy.MaxAttempts
+                ? MeepleAiMetrics.CoverGenerationOutcomeFailed
+                : MeepleAiMetrics.CoverGenerationOutcomeRetrying);
             try
             {
                 await db.SaveChangesAsync(ct).ConfigureAwait(false);

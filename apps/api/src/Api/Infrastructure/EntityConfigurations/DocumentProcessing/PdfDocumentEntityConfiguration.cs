@@ -275,6 +275,12 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
             .HasColumnName("cover_generation_error")
             .IsRequired(false);
 
+        // #3373 D1: bounded-retry counter for transient cover-generation failures.
+        builder.Property(e => e.CoverGenerationAttempts)
+            .IsRequired()
+            .HasColumnName("cover_generation_attempts")
+            .HasDefaultValue(0);
+
         builder.HasIndex(e => e.CoverGenerationStatus)
             .HasDatabaseName("ix_pdf_documents_cover_generation_status");
     }

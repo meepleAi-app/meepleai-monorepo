@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
@@ -31,7 +32,7 @@ internal sealed class DeleteGameFaqCommandHandler : ICommandHandler<DeleteGameFa
         _logger.LogInformation("Deleting FAQ: {FaqId}", command.FaqId);
 
         var game = await _repository.GetGameByFaqIdAsync(command.FaqId, cancellationToken).ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"Game containing FAQ with ID {command.FaqId} not found");
+            ?? throw new NotFoundException("Faq", command.FaqId.ToString());
 
         game.RemoveFaq(command.FaqId);
 

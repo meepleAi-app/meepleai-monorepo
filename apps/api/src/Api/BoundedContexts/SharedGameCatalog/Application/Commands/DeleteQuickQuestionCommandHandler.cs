@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
@@ -40,12 +41,12 @@ internal sealed class DeleteQuickQuestionCommandHandler : ICommandHandler<Delete
             .AsNoTracking()
             .FirstOrDefaultAsync(q => q.Id == command.QuestionId, cancellationToken)
             .ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"Quick question with ID {command.QuestionId} not found");
+            ?? throw new NotFoundException("QuickQuestion", command.QuestionId.ToString());
 
         // Fetch aggregate to maintain domain invariants
         var game = await _gameRepository.GetByIdAsync(questionEntity.SharedGameId, cancellationToken)
             .ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"Shared game with ID {questionEntity.SharedGameId} not found");
+            ?? throw new NotFoundException("SharedGame", questionEntity.SharedGameId.ToString());
 
         // Remove via aggregate method
         game.RemoveQuickQuestion(command.QuestionId);

@@ -76,7 +76,7 @@ internal sealed class AnalyzeRulebookCommandHandler
 
         if (game is null)
         {
-            throw new InvalidOperationException($"Shared game with ID {command.SharedGameId} not found");
+            throw new NotFoundException("SharedGame", command.SharedGameId.ToString());
         }
 
         // Issue #5443: Gate - only analyzable document categories enter the pipeline

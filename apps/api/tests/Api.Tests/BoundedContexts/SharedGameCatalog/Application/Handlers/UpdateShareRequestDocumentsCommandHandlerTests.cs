@@ -5,6 +5,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
@@ -93,7 +94,7 @@ public class UpdateShareRequestDocumentsCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithNonExistentRequest_ThrowsInvalidOperationException()
+    public async Task Handle_WithNonExistentRequest_ThrowsNotFoundException()
     {
         // Arrange
         var command = new UpdateShareRequestDocumentsCommand(
@@ -107,7 +108,7 @@ public class UpdateShareRequestDocumentsCommandHandlerTests
 
         // Act & Assert
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]

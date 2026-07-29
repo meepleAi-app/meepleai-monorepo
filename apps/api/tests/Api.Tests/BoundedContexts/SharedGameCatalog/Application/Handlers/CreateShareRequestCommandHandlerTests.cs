@@ -8,6 +8,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
@@ -169,7 +170,7 @@ public class CreateShareRequestCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithNullLibraryEntry_ThrowsInvalidOperationException()
+    public async Task Handle_WithNullLibraryEntry_ThrowsNotFoundException()
     {
         // Arrange
         var command = new CreateShareRequestCommand(
@@ -182,7 +183,7 @@ public class CreateShareRequestCommandHandlerTests
 
         // Act & Assert
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<NotFoundException>();
 
         _shareRequestRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<ShareRequest>(), It.IsAny<CancellationToken>()),
@@ -190,7 +191,7 @@ public class CreateShareRequestCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithNullSharedGame_ThrowsInvalidOperationException()
+    public async Task Handle_WithNullSharedGame_ThrowsNotFoundException()
     {
         // Arrange
         var command = new CreateShareRequestCommand(
@@ -209,7 +210,7 @@ public class CreateShareRequestCommandHandlerTests
 
         // Act & Assert
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<NotFoundException>();
 
         _shareRequestRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<ShareRequest>(), It.IsAny<CancellationToken>()),

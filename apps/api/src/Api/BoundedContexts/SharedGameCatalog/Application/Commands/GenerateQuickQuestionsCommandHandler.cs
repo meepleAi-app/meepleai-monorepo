@@ -4,6 +4,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -56,7 +57,7 @@ internal sealed class GenerateQuickQuestionsCommandHandler
 
         if (game is null)
         {
-            throw new InvalidOperationException($"Shared game with ID {command.SharedGameId} not found");
+            throw new NotFoundException("SharedGame", command.SharedGameId.ToString());
         }
 
         // 2. Get the active rulebook document

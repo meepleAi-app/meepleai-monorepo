@@ -2,6 +2,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -83,7 +84,7 @@ public class RequestDeleteSharedGameCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithNonExistentGame_ThrowsInvalidOperationException()
+    public async Task Handle_WithNonExistentGame_ThrowsNotFoundException()
     {
         // Arrange
         var gameId = Guid.NewGuid();
@@ -99,7 +100,7 @@ public class RequestDeleteSharedGameCommandHandlerTests
         // Act & Assert
         var act = () =>
             _handler.Handle(command, TestContext.Current.CancellationToken);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<NotFoundException>();
 
         _deleteRequestRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<SharedGameDeleteRequest>(), It.IsAny<CancellationToken>()),

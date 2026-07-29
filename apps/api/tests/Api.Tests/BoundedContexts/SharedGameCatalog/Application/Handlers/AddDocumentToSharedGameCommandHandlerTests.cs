@@ -6,6 +6,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -144,7 +145,7 @@ public class AddDocumentToSharedGameCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithNonExistentGame_ThrowsException()
+    public async Task Handle_WithNonExistentGame_ThrowsNotFoundException()
     {
         // Arrange
         var command = new AddDocumentToSharedGameCommand(
@@ -162,7 +163,7 @@ public class AddDocumentToSharedGameCommandHandlerTests
 
         // Act & Assert
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]

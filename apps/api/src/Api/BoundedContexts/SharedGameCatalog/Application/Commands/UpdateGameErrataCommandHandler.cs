@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
@@ -38,14 +39,14 @@ internal sealed class UpdateGameErrataCommandHandler : ICommandHandler<UpdateGam
         var game = await _repository.GetGameByErrataIdAsync(command.ErrataId, cancellationToken).ConfigureAwait(false);
         if (game is null)
         {
-            throw new InvalidOperationException($"Erratum with ID {command.ErrataId} not found");
+            throw new NotFoundException("Erratum", command.ErrataId.ToString());
         }
 
         // Find the erratum in the game's collection
         var errata = game.Erratas.FirstOrDefault(e => e.Id == command.ErrataId);
         if (errata is null)
         {
-            throw new InvalidOperationException($"Erratum with ID {command.ErrataId} not found in game");
+            throw new NotFoundException("Erratum", command.ErrataId.ToString());
         }
 
         // Update the erratum properties via domain method

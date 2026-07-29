@@ -176,4 +176,9 @@ public class PdfDocumentEntity
 
     // Last error string when CoverGenerationStatus = Failed; for diagnostics + retry.
     public string? CoverGenerationError { get; set; }
+
+    // #3373 D1: bounded-retry counter. Incremented on each TRANSIENT cover-generation
+    // failure (R2/DB infra); at PdfCoverRetryPolicy.MaxAttempts the status becomes terminal
+    // Failed instead of returning to Pending. 0 for never-failed / permanently-failed rows.
+    public int CoverGenerationAttempts { get; set; }
 }

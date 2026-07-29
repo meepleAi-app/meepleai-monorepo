@@ -1,4 +1,5 @@
 // Issue #2123 — BGG ToS compliance: catalog cover observability metrics.
+using System.Collections.Generic;
 using System.Diagnostics.Metrics;
 
 namespace Api.Observability;
@@ -54,4 +55,56 @@ internal static partial class MeepleAiMetrics
         name: "meepleai.bgg.url.attempted_render.total",
         unit: "attempts",
         description: "SLO=0: browser attempts to render a BGG-hosted asset (#2123)");
+
+    /// <summary>Wire value for the <c>outcome</c> tag: cover generated successfully.</summary>
+    public const string CoverGenerationOutcomeGenerated = "generated";
+
+    /// <summary>Wire value for the <c>outcome</c> tag: generation skipped (heuristic rejected pages).</summary>
+    public const string CoverGenerationOutcomeSkipped = "skipped";
+
+    /// <summary>Wire value for the <c>outcome</c> tag: generation failed TERMINALLY (retry budget exhausted, or a permanent extractor failure).</summary>
+    public const string CoverGenerationOutcomeFailed = "failed";
+
+    /// <summary>
+    /// Wire value for the <c>outcome</c> tag: a TRANSIENT generation failure that stays retry-eligible
+    /// (returned to <c>Pending</c> with attempts still below <c>PdfCoverRetryPolicy.MaxAttempts</c>; #3373 D1).
+    /// Kept distinct from <see cref="CoverGenerationOutcomeFailed"/> so the degradation alert on
+    /// <c>outcome="failed"</c> tracks only terminal failures — a self-healing infra blip must not inflate it.
+    /// </summary>
+    public const string CoverGenerationOutcomeRetrying = "retrying";
+
+    /// <summary>
+    /// Counter of PDF cover-GENERATION outcomes (as opposed to <see cref="CoverResolution"/>,
+    /// which is read-time). Emitted by the three PDF cover producers —
+    /// <c>PdfProcessingPipelineService</c> (inline ingest), <c>BackfillPdfCoversJob</c> and
+    /// <c>MaterializePdfCoverCommandHandler</c> — so ops can see generation health
+    /// (generated/skipped/failed rate) directly instead of waiting for the lagging
+    /// read-time <c>placeholder&gt;80%</c> signal. Tags: <c>source</c> (currently <c>pdf</c>),
+    /// <c>outcome</c> (<c>generated</c>|<c>skipped</c>|<c>failed</c>|<c>retrying</c>). Decision D5-C, umbrella #3373.
+    ///
+    /// Suggested alerting:
+    /// <list type="bullet">
+    ///   <item><c>rate(meepleai_cover_generation_total{outcome="failed"}[15m]) / rate(meepleai_cover_generation_total[15m]) &gt; 0.20</c>
+    ///     sustained → PDF cover generation is degrading (extraction, R2 upload or DB save
+    ///     failing); investigate before the read-time placeholder&gt;80% alert fires.
+    ///     Post-#3373 D1 <c>outcome="failed"</c> counts only TERMINAL failures; a transient
+    ///     blip that self-heals within the retry budget is tagged <c>retrying</c> instead, so
+    ///     this ratio stays diagnostic rather than firing on recoverable infra hiccups.</item>
+    /// </list>
+    /// </summary>
+    public static readonly Counter<long> CoverGeneration = Meter.CreateCounter<long>(
+        name: "meepleai.cover.generation.total",
+        unit: "generations",
+        description: "PDF cover generation outcomes grouped by source + outcome (#3373 D5-C)");
+
+    /// <summary>
+    /// Records one PDF cover-generation outcome. <paramref name="outcome"/> must be one of
+    /// <see cref="CoverGenerationOutcomeGenerated"/> / <see cref="CoverGenerationOutcomeSkipped"/> /
+    /// <see cref="CoverGenerationOutcomeFailed"/> / <see cref="CoverGenerationOutcomeRetrying"/>.
+    /// </summary>
+    public static void RecordPdfCoverGeneration(string outcome) =>
+        CoverGeneration.Add(
+            1,
+            new KeyValuePair<string, object?>("source", "pdf"),
+            new KeyValuePair<string, object?>("outcome", outcome));
 }

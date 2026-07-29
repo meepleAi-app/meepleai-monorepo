@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
@@ -41,7 +42,7 @@ internal sealed class WithdrawShareRequestCommandHandler : ICommandHandler<Withd
 
         if (shareRequest == null)
         {
-            throw new InvalidOperationException($"Share request {command.ShareRequestId} not found");
+            throw new NotFoundException("ShareRequest", command.ShareRequestId.ToString());
         }
 
         // 2. Verify user owns the request

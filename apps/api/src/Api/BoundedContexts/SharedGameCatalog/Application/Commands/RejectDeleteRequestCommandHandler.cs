@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
@@ -34,7 +35,7 @@ internal sealed class RejectDeleteRequestCommandHandler : ICommandHandler<Reject
             command.RequestId, command.RejectedBy);
 
         var deleteRequest = await _deleteRequestRepository.GetByIdAsync(command.RequestId, cancellationToken).ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"Delete request with ID {command.RequestId} not found");
+            ?? throw new NotFoundException("DeleteRequest", command.RequestId.ToString());
 
         // Call domain method to reject
         deleteRequest.Reject(command.RejectedBy, command.Reason);

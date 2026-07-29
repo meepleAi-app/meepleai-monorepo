@@ -7,6 +7,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Models;
 using Api.Services;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -59,7 +60,7 @@ internal sealed class CreateSharedGameFromPdfCommandHandler : ICommandHandler<Cr
         var pdfDocument = await _pdfRepository.GetByIdAsync(command.PdfDocumentId, cancellationToken).ConfigureAwait(false);
         if (pdfDocument is null)
         {
-            throw new InvalidOperationException($"PDF document with ID {command.PdfDocumentId} not found");
+            throw new NotFoundException("PdfDocument", command.PdfDocumentId.ToString());
         }
 
         // Validate quality threshold (≥0.50 required)

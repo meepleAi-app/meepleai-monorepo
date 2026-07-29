@@ -133,7 +133,7 @@ public class AnalyzeRulebookCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithNonExistentGame_ThrowsInvalidOperationException()
+    public async Task Handle_WithNonExistentGame_ThrowsNotFoundException()
     {
         // Arrange
         var gameId = Guid.NewGuid();
@@ -148,7 +148,7 @@ public class AnalyzeRulebookCommandHandlerTests
         // Act & Assert
         var act = () =>
             _handler.Handle(command, TestContext.Current.CancellationToken);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<NotFoundException>();
 
         _analysisRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<RulebookAnalysis>(), It.IsAny<CancellationToken>()),

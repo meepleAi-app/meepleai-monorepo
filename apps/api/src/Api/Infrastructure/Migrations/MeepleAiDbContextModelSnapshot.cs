@@ -9389,6 +9389,12 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("copyright_disclaimer_accepted_by");
 
+                    b.Property<int>("CoverGenerationAttempts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("cover_generation_attempts");
+
                     b.Property<string>("CoverGenerationError")
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)")
@@ -14401,7 +14407,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(500)");
 
                     b.Property<short>("Level")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("smallint")
                         .HasDefaultValue((short)1);
 

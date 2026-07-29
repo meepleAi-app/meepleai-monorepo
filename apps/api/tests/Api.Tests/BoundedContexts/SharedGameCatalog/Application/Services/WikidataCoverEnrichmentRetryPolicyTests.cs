@@ -71,9 +71,51 @@ public class WikidataCoverEnrichmentRetryPolicyTests
         var decision = _sut.Classify(result, currentRetryCount, FixedNow);
 
         decision.Should().BeOfType<WikidataCoverEnrichmentRetryDecision.ScheduleRetry>();
-        ((WikidataCoverEnrichmentRetryDecision.ScheduleRetry)decision).NextRetryAt
-            .Should().Be(FixedNow.AddMinutes(expectedBackoffMinutes),
-                $"DEC-3j exponential backoff: retry #{currentRetryCount + 1} fires at +{expectedBackoffMinutes}m");
+        var nextRetryAt = ((WikidataCoverEnrichmentRetryDecision.ScheduleRetry)decision).NextRetryAt;
+        nextRetryAt.Should().BeOnOrAfter(FixedNow.AddMinutes(expectedBackoffMinutes),
+            $"DEC-3j exponential backoff floor: retry #{currentRetryCount + 1} fires no earlier than +{expectedBackoffMinutes}m");
+        nextRetryAt.Should().BeOnOrBefore(
+            FixedNow.AddMinutes(expectedBackoffMinutes).AddSeconds(WikidataCoverEnrichmentRetryPolicy.MaxJitterSeconds),
+            "additive anti-herd jitter is bounded at MaxJitterSeconds above the base backoff");
+    }
+
+    [Fact]
+    public void Classify_FailedR2Upload_AppliesJitterSpreadingRetriesInsteadOfSchedulingThemAtTheSameInstant()
+    {
+        // A batch of games that all hit the same transient r2-upload-error must NOT
+        // be rescheduled to the identical NextRetryAt, or they stampede Wikimedia in
+        // lockstep on the next scheduler tick. Additive jitter spreads them.
+        var result = new EnrichCatalogCoverResult.Failed(
+            EnrichCatalogCoverCommandHandler.FailReasonR2Upload,
+            "503 service unavailable");
+
+        var scheduledTimes = new HashSet<DateTime>();
+        for (var i = 0; i < 200; i++)
+        {
+            var decision = _sut.Classify(result, currentRetryCount: 0, FixedNow);
+            scheduledTimes.Add(((WikidataCoverEnrichmentRetryDecision.ScheduleRetry)decision).NextRetryAt);
+        }
+
+        scheduledTimes.Count.Should().BeGreaterThan(1,
+            "additive jitter must spread simultaneously-failed retries across a band, not schedule them all at one instant");
+    }
+
+    [Fact]
+    public void Classify_FailedR2Upload_JitterStaysWithinAdditiveBandAboveTheBaseBackoff()
+    {
+        var result = new EnrichCatalogCoverResult.Failed(
+            EnrichCatalogCoverCommandHandler.FailReasonR2Upload,
+            "503 service unavailable");
+        var floor = FixedNow.AddMinutes(1);
+        var ceiling = floor.AddSeconds(WikidataCoverEnrichmentRetryPolicy.MaxJitterSeconds);
+
+        for (var i = 0; i < 200; i++)
+        {
+            var decision = _sut.Classify(result, currentRetryCount: 0, FixedNow);
+            var nextRetryAt = ((WikidataCoverEnrichmentRetryDecision.ScheduleRetry)decision).NextRetryAt;
+            nextRetryAt.Should().BeOnOrAfter(floor, "jitter is additive — it never fires before the base backoff")
+                .And.BeOnOrBefore(ceiling, "jitter never exceeds MaxJitterSeconds above the base backoff");
+        }
     }
 
     [Fact]
@@ -120,8 +162,11 @@ public class WikidataCoverEnrichmentRetryPolicyTests
 
         decision.Should().BeOfType<WikidataCoverEnrichmentRetryDecision.ScheduleRetry>(
             "circuit-open is an upstream-infra signal — schedule a single retry past the 5min DEC-3f BreakDuration");
-        ((WikidataCoverEnrichmentRetryDecision.ScheduleRetry)decision).NextRetryAt
-            .Should().Be(FixedNow.Add(WikidataCoverEnrichmentRetryPolicy.CircuitOpenBackoff));
+        var nextRetryAt = ((WikidataCoverEnrichmentRetryDecision.ScheduleRetry)decision).NextRetryAt;
+        nextRetryAt.Should().BeOnOrAfter(FixedNow.Add(WikidataCoverEnrichmentRetryPolicy.CircuitOpenBackoff),
+            "the retry must still land past the 5min BreakDuration even with jitter");
+        nextRetryAt.Should().BeOnOrBefore(
+            FixedNow.Add(WikidataCoverEnrichmentRetryPolicy.CircuitOpenBackoff).AddSeconds(WikidataCoverEnrichmentRetryPolicy.MaxJitterSeconds));
     }
 
     [Theory]

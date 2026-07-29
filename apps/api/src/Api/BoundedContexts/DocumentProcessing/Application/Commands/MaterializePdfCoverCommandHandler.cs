@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Middleware.Exceptions;
+using Api.Observability;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
@@ -69,8 +70,11 @@ internal sealed class MaterializePdfCoverCommandHandler : ICommandHandler<Materi
             throw new CoverMaterializationException("Rendering pagina PDF non disponibile.", ex);
         }
 
+        // The upload pipeline stores this under the {DbKey}-preview.webp physical key that
+        // CoverUrlResolver serves as the L4 preview (600x900). Encode at preview dimensions
+        // so a manually-materialized cover is not a 200x300 thumbnail stretched as a preview.
         var webpBytes = await _webpVariantGenerator
-            .GenerateWebpAsync(jpeg, PdfCoverExtractor.ThumbnailWidth, PdfCoverExtractor.ThumbnailHeight, cancellationToken)
+            .GenerateWebpAsync(jpeg, PdfCoverExtractor.PreviewWidth, PdfCoverExtractor.PreviewHeight, cancellationToken)
             .ConfigureAwait(false);
 
         // Non-null here: the guard at the top of Handle() throws when _uploadPipeline is null.
@@ -81,6 +85,7 @@ internal sealed class MaterializePdfCoverCommandHandler : ICommandHandler<Materi
         // BackfillPdfCoversJob.cs, which both store result.SelectedPageIndex, a 0-based value).
         // Only the stored index changes here — the GetPdfPageImageQuery call above stays 1-based.
         pdf.MarkCoverGenerated(dbKey, command.PageNumber - 1);
+        MeepleAiMetrics.RecordPdfCoverGeneration(MeepleAiMetrics.CoverGenerationOutcomeGenerated);
 
         await _repository.UpdateAsync(pdf, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

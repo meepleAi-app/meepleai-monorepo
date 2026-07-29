@@ -59,7 +59,7 @@ internal sealed class ImportGameFromBggCommandHandler : ICommandHandler<ImportGa
         var bggDetails = await _bggApiService.GetGameDetailsAsync(command.BggId, cancellationToken).ConfigureAwait(false);
         if (bggDetails is null)
         {
-            throw new InvalidOperationException($"Game with BGG ID {command.BggId} not found on BoardGameGeek");
+            throw new NotFoundException("Game", command.BggId.ToString(System.Globalization.CultureInfo.InvariantCulture));
         }
 
         _logger.LogInformation(

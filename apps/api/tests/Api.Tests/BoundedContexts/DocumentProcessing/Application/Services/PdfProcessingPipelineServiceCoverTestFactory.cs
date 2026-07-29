@@ -22,7 +22,7 @@ internal static class PdfProcessingPipelineServiceCoverTestFactory
         MeepleAiDbContext db,
         IBlobStorageService blob,
         IPdfCoverExtractor coverExtractor,
-        IPdfCoverUploadPipeline coverUploadPipeline,
+        IPdfCoverUploadPipeline? coverUploadPipeline,
         IDomainEventCollector eventCollector)
     {
         return new PdfProcessingPipelineService(

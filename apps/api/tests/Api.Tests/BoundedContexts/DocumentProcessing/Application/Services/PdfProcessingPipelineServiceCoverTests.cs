@@ -91,4 +91,42 @@ public sealed class PdfProcessingPipelineServiceCoverTests : IDisposable
             .Which.Should().BeOfType<PdfCoverGeneratedEvent>()
             .Which.CoverR2Key.Should().Be(expectedKey);
     }
+
+    /// <summary>
+    /// Issue #3363: in local-storage mode <see cref="IPdfCoverUploadPipeline"/> is unregistered → the
+    /// optional ctor param resolves to null while <see cref="IPdfCoverExtractor"/> stays registered.
+    /// This is the exact production shape the fix protects: the cover step must early-return BEFORE
+    /// touching the extractor (so no wasted render + no NPE on the null pipeline) and leave the PDF's
+    /// cover state untouched, so PDF ingestion completes instead of failing at Upload.
+    /// </summary>
+    [Fact]
+    public async Task ExtractCoverImageAsync_LocalStorageNullUploadPipeline_SkipsWithoutExtracting()
+    {
+        var pdf = new PdfDocumentEntity
+        {
+            Id = Guid.NewGuid(),
+            FileName = "rules.pdf",
+            FilePath = "/tmp/rules.pdf",
+            FileSizeBytes = 1,
+            ContentType = "application/pdf",
+            UploadedByUserId = Guid.NewGuid(),
+            UploadedAt = DateTime.UtcNow,
+            ProcessingState = "Extracting",
+            CoverGenerationStatus = "Pending",
+            SharedGameId = Guid.NewGuid(),
+        };
+
+        // Non-null extractor, NULL upload pipeline — the local-storage production combination.
+        var sut = PdfProcessingPipelineServiceCoverTestFactory.Create(
+            _db, _blob.Object, _coverExtractor.Object, coverUploadPipeline: null, _eventCollector.Object);
+
+        var act = () => sut.InvokeExtractCoverImageForTestAsync(pdf, "/tmp/rules.pdf", CancellationToken.None);
+
+        await act.Should().NotThrowAsync();
+        _coverExtractor.Verify(e => e.ExtractAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()), Times.Never,
+            "with the upload pipeline null the cover step must short-circuit before rendering");
+        pdf.CoverGenerationStatus.Should().Be("Pending", "cover state is left untouched when skipped");
+        pdf.CoverR2Key.Should().BeNull();
+        _collected.Should().BeEmpty();
+    }
 }

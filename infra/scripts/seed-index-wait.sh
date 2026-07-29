@@ -52,11 +52,14 @@ log "termine: $completed/$total OK, $fail_count falliti (${fail_pct}%)"
 
 if [ "$fail_pct" -gt "$FAILURE_THRESHOLD_PCT" ] && [ "$ALLOW_PARTIAL" != "true" ]; then
     log "fail rate ${fail_pct}% > soglia ${FAILURE_THRESHOLD_PCT}%"
+    # NB: pdf_documents.Id/FileName + processing_jobs.Id are PascalCase (EF default, must be quoted);
+    # pdf_document_id/status/error_message/current_step are snake_case. The error text lives on
+    # processing_jobs.error_message — processing_steps has NO error_message column, so the old
+    # 4-column query failed with "column p.id does not exist" and silently swallowed the real cause.
     docker exec meepleai-postgres psql -U "$PG_USER" -d "$PG_DB" -c \
-      "SELECT j.id, p.file_name, s.error_message
+      "SELECT j.\"Id\", p.\"FileName\", j.current_step, j.error_message
        FROM processing_jobs j
-       JOIN pdf_documents p ON p.id = j.pdf_document_id
-       LEFT JOIN processing_steps s ON s.processing_job_id = j.id AND s.status='Failed'
+       JOIN pdf_documents p ON p.\"Id\" = j.pdf_document_id
        WHERE j.status IN ('Failed','DeadLettered')
        LIMIT 50;" >&2 || true
     fail "aborting — usa SEED_INDEX_ALLOW_PARTIAL=true per procedere comunque"

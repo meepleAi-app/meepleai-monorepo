@@ -69,6 +69,10 @@ export const MechanicSection = {
   Resources: 3,
   Phases: 4,
   Faq: 5,
+  // v1.1.0 (#2930): Setup / Components / EndgameScoring appended to the C# enum.
+  Setup: 6,
+  Components: 7,
+  EndgameScoring: 8,
 } as const;
 export type MechanicSectionValue = (typeof MechanicSection)[keyof typeof MechanicSection];
 
@@ -147,6 +151,10 @@ const MECHANIC_SECTION_NAME_TO_NUM: Record<string, MechanicSectionValue> = {
   FAQ: MechanicSection.Faq,
   // Some older C# emit aliases used "Questions" — keep tolerant.
   Questions: MechanicSection.Faq,
+  // v1.1.0 (#2930): Setup / Components / EndgameScoring.
+  Setup: MechanicSection.Setup,
+  Components: MechanicSection.Components,
+  EndgameScoring: MechanicSection.EndgameScoring,
 };
 
 export const MechanicSectionSchema = z.preprocess(v => {

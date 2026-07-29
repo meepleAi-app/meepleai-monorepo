@@ -259,7 +259,14 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             title: entity.Title, // Issue #1687
             tags: entity.Tags, // Issue #1687
             updatedAt: entity.UpdatedAt, // Issue #1687
-            updatedBy: entity.UpdatedBy // Issue #1687
+            updatedBy: entity.UpdatedBy, // Issue #1687
+            // Issue #3401: cover state round-trip — without these the read path defaults
+            // cover fields (null / Pending) and UpdateAsync then zeroes the DB row.
+            coverR2Key: entity.CoverR2Key,
+            coverGenerationStatus: entity.CoverGenerationStatus,
+            coverPageIndex: entity.CoverPageIndex,
+            coverGenerationError: entity.CoverGenerationError,
+            coverGenerationAttempts: entity.CoverGenerationAttempts
         );
     }
 
@@ -307,7 +314,15 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             Title = domain.Title, // Issue #1687
             Tags = domain.Tags.ToList(), // Issue #1687
             UpdatedAt = domain.UpdatedAt, // Issue #1687
-            UpdatedBy = domain.UpdatedBy // Issue #1687
+            UpdatedBy = domain.UpdatedBy, // Issue #1687
+            // Issue #3401: cover state round-trip. UpdateAsync rebuilds the entity and
+            // calls DbSet.Update (all columns modified), so omitting these silently
+            // zeroed the persisted cover key/status/attempts (broke MaterializePdfCover).
+            CoverR2Key = domain.CoverR2Key,
+            CoverGenerationStatus = domain.CoverGenerationStatus.ToString(),
+            CoverPageIndex = domain.CoverPageIndex,
+            CoverGenerationError = domain.CoverGenerationError,
+            CoverGenerationAttempts = domain.CoverGenerationAttempts
         };
     }
 }

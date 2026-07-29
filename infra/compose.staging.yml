@@ -107,6 +107,13 @@ services:
       # Services may not be running in minimal profile, but URLs must pass validation.
       PdfProcessing__Extractor__SmolDocling__ApiUrl: "http://smoldocling-service:8002"
       PdfProcessing__Extractor__Unstructured__ApiUrl: "http://unstructured-service:8001"
+      # Staging uses the heading-aware Unstructured extractor (appsettings default is "Docnet",
+      # which produces flat, headingless chunks — see epic 3338). This env pins staging to
+      # Unstructured for RAG-quality re-indexing. DEPLOY PRECONDITION: the deploying command MUST
+      # bring up the `pdf-cloud-extractors` profile (unstructured-service), otherwise every PDF
+      # ingest fails with "Failed to connect to Unstructured service". Coordinate the merge+deploy
+      # of this line with the WP2 corpus re-index (do not deploy while unstructured-service is down).
+      PdfProcessing__Extractor__Provider: "Unstructured"
     volumes:
       - ./secrets:/app/infra/secrets:ro
       # F4: persisted DataProtection key ring (see DATAPROTECTION__KEYSPATH above).
@@ -246,11 +253,21 @@ services:
   unstructured-service:
     profiles: [pdf-cloud-extractors]
     restart: always
+    # mem_limit (v2 syntax) is the ONLY memory cap `docker compose up` honors — the deploy.resources
+    # block below is ignored outside swarm/`--compatibility`, so the earlier 1G bump had no effect and
+    # the OOM recurred. 3G bounds a single 'fast' extraction; with the re-index run at concurrency=1 the
+    # host (7.5G total) stays clear. If a PDF needs >3G the container is killed (restart: always) and
+    # only that PDF fails — the host never OOMs.
+    mem_limit: 3g
+    mem_reservation: 512m
     deploy:
       resources:
         limits:
           cpus: '1.0'
-          memory: 1G
+          # NB: deploy.resources.limits is swarm-only (ignored by `docker compose up`) — kept for
+          # documentation / future swarm. The effective cap is `mem_limit` above. 1G here OOM-killed
+          # the SP3 bulk re-index (2026-07-28): 63/135 PDFs failed "Resource temporarily unavailable".
+          memory: 3G
         reservations:
           cpus: '0.5'
           memory: 512M

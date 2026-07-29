@@ -1,0 +1,125 @@
+name: Title-Health (staging extraction-quality regression guard)
+
+# Epic #3338 WP3 — title-health regression guard, re-architected to run against STAGING.
+#
+# Why staging and not the CI seed snapshot: title-health measures the QUALITY of the section
+# headings a game's chunks carry (text_chunks.Heading). The CI seed snapshot is baked with the
+# Docnet extractor (plain text, zero Title structure) → headingless corpus → the metric has
+# nothing to measure. Baking the snapshot with Unstructured (which produces headings) overruns the
+# 6h GitHub-hosted job limit (~3x slower + one PDF stalls the poller). Staging, however, carries the
+# real heading-aware re-indexed corpus (WP2), so the guard asserts against it.
+#
+# Mechanism: SSH into the staging server (it is inside the Cloudflare Access boundary and can reach
+# the API on localhost), log in as the admin user (creds live in the server's admin.secret), and
+# curl GET /api/v1/admin/kb/title-health. The JSON is compared on the runner against the committed
+# baseline infra/fixtures/title-health-baseline.json by scripts/title-health-assert.sh --current-file.
+#
+# Runs weekly (schedule) in ASSERT mode, and can be dispatched manually to re-capture the baseline
+# (update_baseline=true) after a staging re-index. Because the staging corpus is not version-pinned
+# (unlike the seed snapshot), re-capture whenever a deliberate re-index changes headings — the guard
+# still catches an unintended band DOWNGRADE / plausible-fraction drop between captures.
+
+on:
+  schedule:
+    # Weekly, Wednesday 05:43 UTC. Off-peak + offset from the rag-smoke cron (Mon 05:37) and
+    # top-of-hour (ADR-078: stay under the API/runner budget). Asserts only.
+    - cron: '43 5 * * 3'
+  workflow_dispatch:
+    inputs:
+      update_baseline:
+        description: 'Capture/overwrite the title-health baseline from staging (instead of asserting)'
+        required: false
+        default: 'false'
+        type: boolean
+
+# ADR-078: monitor/probe workflows serialize per ref to stay under the API/runner budget.
+concurrency:
+  group: title-health-staging-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  title-health-staging:
+    name: Title-health vs staging corpus
+    runs-on: ubuntu-latest
+    # Only where staging SSH deploy is configured (mirrors check-role-case.yml).
+    if: vars.DEPLOY_METHOD == 'ssh'
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Fetch title-health from staging (SSH → admin login → GET endpoint)
+        id: fetch
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_HOST }}
+          STAGING_USER: ${{ secrets.STAGING_USER }}
+          STAGING_SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          KEY=$(mktemp); printf '%s\n' "$STAGING_SSH_KEY" > "$KEY"; chmod 600 "$KEY"
+          # Remote: log in as the admin user (creds in the server's admin.secret), then GET the
+          # admin-only endpoint on localhost. Emit ONLY the JSON array on stdout (login body → /dev/null).
+          ssh -i "$KEY" -o StrictHostKeyChecking=no -o ConnectTimeout=20 \
+            "${STAGING_USER}@${STAGING_HOST}" 'bash -s' > title-health.json <<'REMOTE'
+          set -euo pipefail
+          ADMIN_SECRET=/opt/meepleai/repo/infra/secrets/admin.secret
+          E=$(grep '^ADMIN_EMAIL=' "$ADMIN_SECRET" | cut -d= -f2-)
+          P=$(grep '^ADMIN_PASSWORD=' "$ADMIN_SECRET" | cut -d= -f2-)
+          C=$(mktemp)
+          body=$(jq -n --arg e "$E" --arg p "$P" '{email:$e, password:$p}')
+          curl -sS -c "$C" -X POST http://localhost:8080/api/v1/auth/login \
+            -H 'Content-Type: application/json' -d "$body" -o /dev/null
+          curl -sS -b "$C" http://localhost:8080/api/v1/admin/kb/title-health
+          rm -f "$C"
+          REMOTE
+          rm -f "$KEY"
+          # Fail loudly if the fetch produced no JSON array (SSH/auth/endpoint problem).
+          jq -e 'type == "array"' title-health.json >/dev/null 2>&1 \
+            || { echo "::error:: staging title-health fetch returned no JSON array: $(head -c 200 title-health.json)"; exit 1; }
+          echo "games=$(jq 'length' title-health.json)" >> "$GITHUB_OUTPUT"
+          echo "::notice:: fetched $(jq 'length' title-health.json) game(s) from staging"
+
+      - name: Assert / capture title-health baseline
+        id: guard
+        run: |
+          if [ "${{ github.event.inputs.update_baseline }}" = "true" ]; then
+            bash infra/scripts/title-health-assert.sh --current-file="$PWD/title-health.json" --update-baseline
+            echo "::notice:: title-health baseline updated — download the artifact and commit infra/fixtures/title-health-baseline.json"
+          else
+            bash infra/scripts/title-health-assert.sh --current-file="$PWD/title-health.json"
+          fi
+
+      - name: Upload updated title-health baseline (when --update-baseline)
+        if: ${{ always() && github.event.inputs.update_baseline == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: title-health-baseline-${{ github.run_id }}
+          path: infra/fixtures/title-health-baseline.json
+          retention-days: 14
+
+      - name: Open issue on title-health regression
+        # always() is required: without a status function the implicit success() skips this after the
+        # guard fails. Only fire on a real regression (guard failed) in assert mode.
+        if: ${{ always() && steps.guard.outcome == 'failure' && github.event.inputs.update_baseline != 'true' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              labels: 'title-health-regression', state: 'open'
+            });
+            if (existing.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title: `[TITLE-HEALTH] staging extraction-quality regression — ${new Date().toISOString().slice(0,10)}`,
+                labels: ['bug', 'title-health-regression'],
+                body: `A staging game's title-health band downgraded or its plausible-heading fraction dropped vs infra/fixtures/title-health-baseline.json (a chunking / extraction change buried section headings). See run ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}.\n\nIf a deliberate re-index changed the corpus, re-capture via workflow_dispatch (update_baseline=true) per docs/for-developers/operations/2026-07-28-wp3-title-health-go-no-go.md.`
+              });
+            }

@@ -27,6 +27,7 @@ BASE_URL="${API_BASE_URL:-http://localhost:8080}"
 EMAIL="${SMOKE_EMAIL:-${TEST_EMAIL:-}}"
 PASSWORD="${SMOKE_PASSWORD:-${TEST_PASSWORD:-}}"
 UPDATE_BASELINE=false
+CURRENT_FILE=""   # --current-file <path>: use a pre-fetched JSON array instead of login+GET
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"   # infra/
 BASELINE="$DIR/fixtures/title-health-baseline.json"
@@ -36,6 +37,7 @@ for arg in "$@"; do
   case "$arg" in
     --update-baseline) UPDATE_BASELINE=true ;;
     --base-url=*) BASE_URL="${arg#*=}" ;;
+    --current-file=*) CURRENT_FILE="${arg#*=}" ;;
     *) echo "::error:: unknown arg: $arg" >&2; exit 2 ;;
   esac
 done
@@ -51,19 +53,28 @@ TOLERANCE=$(jq -r '.fractionRegressionTolerance // 0.05' "$BASELINE")
 TOLERANCE=${TOLERANCE%$'\r'}   # native Windows jq.exe emits CRLF; strip the CR so --arg/comparisons are clean
 
 COOKIE=$(mktemp); trap 'rm -f "$COOKIE" "${CURRENT:-}"' EXIT
-
-# --- login (admin required: the endpoint is behind RequireAdminSessionFilter) ---
-[ -n "$EMAIL" ] && [ -n "$PASSWORD" ] || fail "SMOKE_EMAIL/SMOKE_PASSWORD (admin creds) are required for the admin endpoint"
-code=$(curl -s -o /dev/null -w '%{http_code}' -c "$COOKIE" -X POST "$BASE_URL/api/v1/auth/login" \
-  -H 'Content-Type: application/json' \
-  -d "$(jq -n --arg e "$EMAIL" --arg p "$PASSWORD" '{email:$e, password:$p}')") || true
-[ "$code" = "200" ] || fail "login failed (HTTP ${code:-000})"
-log "login OK ($EMAIL)"
-
-# --- fetch current corpus title-health (array of GameTitleHealthDto) ---
 CURRENT=$(mktemp)
-code=$(curl -s -o "$CURRENT" -w '%{http_code}' -b "$COOKIE" "$BASE_URL$ENDPOINT") || true
-[ "$code" = "200" ] || fail "GET $ENDPOINT failed (HTTP ${code:-000}) — admin session/deploy issue"
+
+if [ -n "$CURRENT_FILE" ]; then
+  # Pre-fetched mode: the caller already obtained the title-health JSON (e.g. the staging probe
+  # SSHes into the server, logs in as admin, and curls localhost:8080). We only compare/capture.
+  [ -f "$CURRENT_FILE" ] || fail "--current-file $CURRENT_FILE not found"
+  cp "$CURRENT_FILE" "$CURRENT"
+  log "using pre-fetched title-health from $CURRENT_FILE"
+else
+  # --- login (admin required: the endpoint is behind RequireAdminSessionFilter) ---
+  [ -n "$EMAIL" ] && [ -n "$PASSWORD" ] || fail "SMOKE_EMAIL/SMOKE_PASSWORD (admin creds) are required for the admin endpoint"
+  code=$(curl -s -o /dev/null -w '%{http_code}' -c "$COOKIE" -X POST "$BASE_URL/api/v1/auth/login" \
+    -H 'Content-Type: application/json' \
+    -d "$(jq -n --arg e "$EMAIL" --arg p "$PASSWORD" '{email:$e, password:$p}')") || true
+  [ "$code" = "200" ] || fail "login failed (HTTP ${code:-000})"
+  log "login OK ($EMAIL)"
+
+  # --- fetch current corpus title-health (array of GameTitleHealthDto) ---
+  code=$(curl -s -o "$CURRENT" -w '%{http_code}' -b "$COOKIE" "$BASE_URL$ENDPOINT") || true
+  [ "$code" = "200" ] || fail "GET $ENDPOINT failed (HTTP ${code:-000}) — admin session/deploy issue"
+fi
+
 jq -e 'type == "array"' "$CURRENT" >/dev/null 2>&1 || fail "unexpected response (not a JSON array): $(head -c 200 "$CURRENT")"
 COUNT=$(jq 'length' "$CURRENT"); COUNT=${COUNT%$'\r'}
 log "fetched $COUNT game(s) from the corpus"

@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Observability;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Services;
 using Microsoft.EntityFrameworkCore;
@@ -143,6 +144,7 @@ public sealed class BackfillPdfCoversJob : IJob
             {
                 pdf.CoverGenerationStatus = nameof(PdfCoverGenerationStatus.Failed);
                 pdf.CoverGenerationError = "PDF binary not found in blob storage";
+                MeepleAiMetrics.RecordPdfCoverGeneration(MeepleAiMetrics.CoverGenerationOutcomeFailed);
                 _logger.LogWarning(
                     "BackfillPdfCoversJob: PDF {PdfId} binary missing from blob storage; marking Failed",
                     pdf.Id);
@@ -170,6 +172,7 @@ public sealed class BackfillPdfCoversJob : IJob
                         pdf.CoverGenerationStatus = nameof(PdfCoverGenerationStatus.Generated);
                         pdf.CoverPageIndex = result.SelectedPageIndex;
                         pdf.CoverGenerationError = null;
+                        MeepleAiMetrics.RecordPdfCoverGeneration(MeepleAiMetrics.CoverGenerationOutcomeGenerated);
 
                         eventCollector?.Collect(new PdfCoverGeneratedEvent(
                             pdfDocumentId: pdf.Id,
@@ -185,6 +188,7 @@ public sealed class BackfillPdfCoversJob : IJob
                 case PdfCoverExtractionOutcome.Skipped:
                     pdf.CoverGenerationStatus = nameof(PdfCoverGenerationStatus.Skipped);
                     pdf.CoverPageIndex = result.SelectedPageIndex;
+                    MeepleAiMetrics.RecordPdfCoverGeneration(MeepleAiMetrics.CoverGenerationOutcomeSkipped);
                     _logger.LogInformation(
                         "BackfillPdfCoversJob: cover skipped for PDF {PdfId} (heuristic rejected all candidate pages)",
                         pdf.Id);
@@ -192,6 +196,7 @@ public sealed class BackfillPdfCoversJob : IJob
                 case PdfCoverExtractionOutcome.Failed:
                     pdf.CoverGenerationStatus = nameof(PdfCoverGenerationStatus.Failed);
                     pdf.CoverGenerationError = result.ErrorMessage;
+                    MeepleAiMetrics.RecordPdfCoverGeneration(MeepleAiMetrics.CoverGenerationOutcomeFailed);
                     _logger.LogWarning(
                         "BackfillPdfCoversJob: cover extraction failed for PDF {PdfId}: {Error}",
                         pdf.Id, result.ErrorMessage);
@@ -226,6 +231,7 @@ public sealed class BackfillPdfCoversJob : IJob
             pdf.CoverGenerationStatus = nameof(PdfCoverGenerationStatus.Failed);
             var detail = ex.GetType().Name + ": orphan-check-key=" + orphanPhysicalKey;
             pdf.CoverGenerationError = detail.Length > 500 ? detail[..500] : detail;
+            MeepleAiMetrics.RecordPdfCoverGeneration(MeepleAiMetrics.CoverGenerationOutcomeFailed);
             try
             {
                 await db.SaveChangesAsync(ct).ConfigureAwait(false);

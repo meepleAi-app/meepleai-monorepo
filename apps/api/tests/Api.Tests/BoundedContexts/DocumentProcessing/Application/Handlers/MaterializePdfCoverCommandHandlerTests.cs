@@ -1,3 +1,4 @@
+using System.Diagnostics.Metrics;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
@@ -51,6 +52,58 @@ public class MaterializePdfCoverCommandHandlerTests
         pdf.CoverGenerationStatus.Should().Be(PdfCoverGenerationStatus.Generated);
         repo.Verify(r => r.UpdateAsync(pdf, It.IsAny<CancellationToken>()), Times.Once);
         uow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_EmitsCoverGenerationMetric_WithGeneratedOutcome()
+    {
+        // #3373 D5-C: a successful on-demand materialization must emit
+        // meepleai.cover.generation.total{source=pdf,outcome=generated}.
+        var pdfId = Guid.NewGuid();
+        var pdf = new PdfDocumentBuilder().WithId(pdfId).ThatIsCompleted().Build();
+        var repo = new Mock<IPdfDocumentRepository>();
+        repo.Setup(r => r.GetByIdAsync(pdfId, It.IsAny<CancellationToken>())).ReturnsAsync(pdf);
+        var mediator = new Mock<IMediator>();
+        mediator.Setup(m => m.Send(It.IsAny<GetPdfPageImageQuery>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new byte[] { 0xFF, 0xD8 });
+        var webp = new Mock<IWebpVariantGenerator>();
+        webp.Setup(w => w.GenerateWebpAsync(It.IsAny<byte[]>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new byte[] { 0x52, 0x49, 0x46, 0x46 });
+        var pipeline = new Mock<IPdfCoverUploadPipeline>();
+        pipeline.Setup(p => p.UploadAsync(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string k, byte[] _, CancellationToken _) => k);
+        var uow = new Mock<IUnitOfWork>();
+        var handler = new MaterializePdfCoverCommandHandler(repo.Object, mediator.Object, webp.Object, uow.Object, pipeline.Object);
+
+        var outcomes = new List<string?>();
+        using var listener = new MeterListener
+        {
+            InstrumentPublished = (instrument, l) =>
+            {
+                if (instrument.Name == "meepleai.cover.generation.total")
+                {
+                    l.EnableMeasurementEvents(instrument);
+                }
+            },
+        };
+        listener.SetMeasurementEventCallback<long>((_, _, tags, _) =>
+        {
+            foreach (var tag in tags)
+            {
+                if (tag.Key == "outcome")
+                {
+                    outcomes.Add(tag.Value as string);
+                }
+            }
+        });
+        listener.Start();
+
+        await handler.Handle(
+            new MaterializePdfCoverCommand(pdfId, PageNumber: 1, DbKey: "covers/g/pdf-cover"),
+            CancellationToken.None);
+
+        outcomes.Should().Contain("generated",
+            "a successful materialization must emit meepleai.cover.generation.total{outcome=generated}");
     }
 
     [Fact]

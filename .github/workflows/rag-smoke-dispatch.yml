@@ -129,7 +129,6 @@ jobs:
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
       - name: Boot from published snapshot
-        id: boot
         working-directory: infra
         env:
           # Canonical out-dir (repo root, gitignored) so fetch/verify/restore use

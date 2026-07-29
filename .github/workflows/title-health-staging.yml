@@ -64,25 +64,31 @@ jobs:
         run: |
           set -euo pipefail
           KEY=$(mktemp); printf '%s\n' "$STAGING_SSH_KEY" > "$KEY"; chmod 600 "$KEY"
-          # Remote: log in as the admin user (creds in the server's admin.secret), then GET the
-          # admin-only endpoint on localhost. Emit ONLY the JSON array on stdout (login body → /dev/null).
-          ssh -i "$KEY" -o StrictHostKeyChecking=no -o ConnectTimeout=20 \
-            "${STAGING_USER}@${STAGING_HOST}" 'bash -s' > title-health.json <<'REMOTE'
+          # Remote: SOURCE the admin creds (shell parsing strips inline `# comment`s correctly, unlike
+          # grep|cut — mirrors check-role-case.yml sourcing database.secret), log in and ASSERT HTTP 200
+          # (a bad login must fail loudly, not silently GET the endpoint unauthenticated), then GET the
+          # admin-only endpoint. The JSON is wrapped in sentinels so a server MOTD / login banner on the
+          # ssh stdout channel cannot pollute it — the runner extracts strictly between the markers.
+          ssh -T -i "$KEY" -o StrictHostKeyChecking=no -o ConnectTimeout=20 \
+            "${STAGING_USER}@${STAGING_HOST}" 'bash -s' > raw.out <<'REMOTE'
           set -euo pipefail
-          ADMIN_SECRET=/opt/meepleai/repo/infra/secrets/admin.secret
-          E=$(grep '^ADMIN_EMAIL=' "$ADMIN_SECRET" | cut -d= -f2-)
-          P=$(grep '^ADMIN_PASSWORD=' "$ADMIN_SECRET" | cut -d= -f2-)
+          set -a; . /opt/meepleai/repo/infra/secrets/admin.secret; set +a
           C=$(mktemp)
-          body=$(jq -n --arg e "$E" --arg p "$P" '{email:$e, password:$p}')
-          curl -sS -c "$C" -X POST http://localhost:8080/api/v1/auth/login \
-            -H 'Content-Type: application/json' -d "$body" -o /dev/null
+          body=$(jq -n --arg e "$ADMIN_EMAIL" --arg p "$ADMIN_PASSWORD" '{email:$e, password:$p}')
+          lc=$(curl -sS -o /dev/null -w '%{http_code}' -c "$C" -X POST http://localhost:8080/api/v1/auth/login \
+            -H 'Content-Type: application/json' -d "$body")
+          [ "$lc" = "200" ] || { echo "staging admin login failed (HTTP $lc)" >&2; exit 1; }
+          echo "===TH_JSON_BEGIN==="
           curl -sS -b "$C" http://localhost:8080/api/v1/admin/kb/title-health
+          printf '\n===TH_JSON_END===\n'
           rm -f "$C"
           REMOTE
           rm -f "$KEY"
-          # Fail loudly if the fetch produced no JSON array (SSH/auth/endpoint problem).
+          # Extract only the JSON between the sentinels (drops any MOTD/banner the channel prepended).
+          sed -n '/^===TH_JSON_BEGIN===$/,/^===TH_JSON_END===$/p' raw.out | sed '1d;$d' > title-health.json
+          # Fail loudly if the fetch produced no JSON array (SSH/auth/endpoint problem — remote stderr above).
           jq -e 'type == "array"' title-health.json >/dev/null 2>&1 \
-            || { echo "::error:: staging title-health fetch returned no JSON array: $(head -c 200 title-health.json)"; exit 1; }
+            || { echo "::error:: staging title-health fetch returned no JSON array (see remote stderr): $(head -c 200 title-health.json)"; exit 1; }
           echo "games=$(jq 'length' title-health.json)" >> "$GITHUB_OUTPUT"
           echo "::notice:: fetched $(jq 'length' title-health.json) game(s) from staging"
 

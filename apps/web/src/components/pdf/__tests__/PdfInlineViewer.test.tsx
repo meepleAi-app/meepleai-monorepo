@@ -227,4 +227,16 @@ describe('PdfInlineViewer', () => {
     expect(screen.getByTestId('pdf-page')).toHaveAttribute('data-has-custom-renderer', 'true');
     expect(screen.queryByTestId('pdf-bbox-rect')).not.toBeInTheDocument();
   });
+
+  // Geometry contract (SP-D #3408): the bbox overlay is a child of <Page> and anchors to its
+  // box, so that box MUST shrink-wrap the canvas. The canvas renders at scale×pageWidth (A4
+  // denominator) and is left-aligned; if the Page div filled the full container width the
+  // %-based rects would misalign for pages narrower than A4. A `justify-center` flex wrapper
+  // shrinks the Page ancestor to the canvas (mirrors PdfPageModal). Guard against its removal.
+  it('renders the PDF page inside a centering wrapper so the overlay anchors to the canvas', async () => {
+    render(<PdfInlineViewer documentId="doc-1" initialPage={1} />);
+    await waitFor(() => expect(screen.getByTestId('pdf-document')).toBeInTheDocument());
+    const wrapper = screen.getByTestId('pdf-document').parentElement;
+    expect(wrapper?.className).toContain('justify-center');
+  });
 });

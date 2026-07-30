@@ -36,6 +36,11 @@ public class TextChunkEntity
     public int? CharStart { get; set; }
     public int? CharEnd { get; set; }
 
+    // SP-B (#3406): normalized region(s) of the chunk as JSON array [{page,x,y,width,height}]
+    // ([0,1] top-left). Nullable — NULL for chunks without coordinates (SmolDocling/Docnet path,
+    // or pre-coordinate corpus backfilled by SP-E re-extraction).
+    public string? BoundingBoxesJson { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Issue #730: Chunk hierarchy fields (heading_path derivation)

@@ -27,6 +27,7 @@ internal static class HeadingAwareChunkAdapter
                 Level = c.Level,
                 ParentChunkId = c.ParentChunkId,
                 ElementType = c.ElementType,
+                BBox = c.BBox,  // SP-B (#3406): propagate the region to persistence
             })
             .ToList();
     }

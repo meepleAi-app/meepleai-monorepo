@@ -40,6 +40,7 @@ internal static class HierarchicalChunkMapper
                 Page = chunk.Metadata.Page,
                 CharStart = chunk.Metadata.CharStart,
                 CharEnd = chunk.Metadata.CharEnd,
+                BBox = chunk.Metadata.BBox,  // SP-B (#3406): carry the region to the sink
                 Embedding = Array.Empty<float>()
             });
         }

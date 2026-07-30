@@ -21,6 +21,7 @@ import clsx from 'clsx';
 
 import { CitationOwnershipUpsell } from '@/components/features/game-chat/CitationOwnershipUpsell';
 import { PdfInlineViewer } from '@/components/pdf/PdfInlineViewer';
+import { PdfQuoteViewer } from '@/components/pdf/PdfQuoteViewer';
 import { useCanViewPdf } from '@/hooks/queries/useCanViewPdf';
 
 export interface CitationPdfTabProps {
@@ -28,6 +29,13 @@ export interface CitationPdfTabProps {
   readonly gameId?: string;
   readonly initialPage: number;
   readonly isPublic?: boolean;
+  /**
+   * SP0 (#3404): quote verbatim da evidenziare nel PDF (highlight della regione
+   * citata + banner fallback via {@link PdfQuoteViewer}). Deve essere passato SOLO
+   * per citazioni tier "full" — il chiamante (CitationModal) fa il gating copyright.
+   * Se assente/vuoto si ripiega sul viewer semplice (solo pagina).
+   */
+  readonly quote?: string;
   readonly className?: string;
 }
 
@@ -36,6 +44,7 @@ export function CitationPdfTab({
   gameId,
   initialPage,
   isPublic = false,
+  quote,
   className,
 }: CitationPdfTabProps): ReactElement {
   const ownership = useCanViewPdf({
@@ -70,6 +79,19 @@ export function CitationPdfTab({
 
   if (showUpsell) {
     return <CitationOwnershipUpsell gameId={gameId} className={className} />;
+  }
+
+  const trimmedQuote = quote?.trim();
+  if (trimmedQuote) {
+    return (
+      <PdfQuoteViewer
+        documentId={documentId}
+        page={initialPage}
+        quote={trimmedQuote}
+        features={{ antiLeak: true }}
+        className={className}
+      />
+    );
   }
 
   return (

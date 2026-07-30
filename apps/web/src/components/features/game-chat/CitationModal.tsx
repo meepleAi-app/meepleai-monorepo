@@ -70,6 +70,11 @@ export function CitationModal({
       ? citation.paraphrasedSnippet
       : citation.snippet;
 
+  // SP0 (#3404): highlight della regione citata SOLO per tier "full" (verbatim).
+  // Per "protected" nessun highlight verbatim (coerenza copyright ADR-059/#447):
+  // il tab PDF apre la pagina senza evidenziare il testo.
+  const highlightQuote = citation.copyrightTier === 'protected' ? undefined : citation.snippet;
+
   return (
     <div
       role="dialog"
@@ -141,6 +146,7 @@ export function CitationModal({
               gameId={gameId}
               initialPage={citation.pageNumber}
               isPublic={citation.isPublic}
+              quote={highlightQuote}
             />
           )}
         </div>

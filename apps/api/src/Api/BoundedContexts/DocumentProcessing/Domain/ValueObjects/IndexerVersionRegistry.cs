@@ -36,14 +36,24 @@ internal static class IndexerVersionRegistry
         new("v1.0", "v1.0 — flat chunking pipeline", IsSelectable: true);
 
     /// <summary>
-    /// Versione corrente della pipeline. Equivale al comportamento di default quando
-    /// `reindexDocument` viene chiamato senza `IndexerVersion` esplicito.
-    /// SP3 #3269 (epic #3266): pipeline heading-aware (SP1/SP2 già deployati).
+    /// Pipeline heading-aware (pre coordinate-aware). Non più <see cref="Current"/> dopo l'epic
+    /// #3403 SP-E, ma resta nel registry per la deprecation policy (≥18 mesi) e selezionabile da `/reindex`.
+    /// SP3 #3269 (epic #3266): SP1/SP2 heading-aware.
     /// </summary>
-    public static readonly IndexerVersion Current =
+    public static readonly IndexerVersion V1_1 =
         new("v1.1", "v1.1 — heading-aware chunking", IsSelectable: true);
 
-    public static IReadOnlyList<IndexerVersion> All { get; } = [Legacy, V1_0, Current];
+    /// <summary>
+    /// Versione corrente della pipeline. Equivale al comportamento di default quando
+    /// `reindexDocument` viene chiamato senza `IndexerVersion` esplicito.
+    /// SP-E #3409 (epic #3403): pipeline coordinate-aware — l'estrazione Unstructured emette le bbox
+    /// normalizzate (SP-B) persistite in <c>bounding_boxes_json</c> per il region grounding. Un
+    /// re-extract del corpus a questa versione ri-popola le coordinate (le regions oggi sono null).
+    /// </summary>
+    public static readonly IndexerVersion Current =
+        new("v1.2", "v1.2 — coordinate-aware (region grounding)", IsSelectable: true);
+
+    public static IReadOnlyList<IndexerVersion> All { get; } = [Legacy, V1_0, V1_1, Current];
 
     /// <summary>
     /// Restituisce la lista delle versioni effettivamente invocabili da `/reindex`.

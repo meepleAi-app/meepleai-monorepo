@@ -427,7 +427,10 @@ game-reset-rollback-rehearse: ## Run disposable docker rollback rehearsal
 
 # === Corpus re-index orchestration (issue #3269 SP3 Slice 3 / D4) ===
 # Script lives in infra/scripts/reindex-corpus/. Wraps POST /admin/queue/reindex-ready
-# in a drain loop until the whole Ready corpus is re-indexed to heading-aware v1.1.
+# in a drain loop until the whole Ready corpus is re-indexed to the server's current
+# IndexerVersion — now coordinate-aware v1.2 (region grounding, #3409 SP-E / epic #3403).
+# 🔴 Precondition: the `unstructured` container MUST be the SP-B coordinate-aware build,
+# else the re-extract silently produces bbox-less chunks (regions stay null).
 
 reindex-corpus-help: ## Show corpus re-index (SP3 #3269) workflow help
 	@echo "Corpus big-bang re-index (SP3 #3269 D4) — usage:"
@@ -441,7 +444,7 @@ reindex-corpus-help: ## Show corpus re-index (SP3 #3269) workflow help
 	@echo "Per env, create infra/scripts/reindex-corpus/.env.<ENV> from .env.example (NEVER commit filled files)."
 	@echo "Full runbook: docs/for-developers/operations/2026-07-26-corpus-reindex-runbook.md"
 
-reindex-corpus: ## Big-bang re-index Ready PDFs to heading-aware v1.1 (ENV=staging|prod|dev; EXTRA=--dry-run for preview; prod needs IMEANIT=--i-mean-it)
+reindex-corpus: ## Big-bang re-index Ready PDFs to coordinate-aware v1.2 (ENV=staging|prod|dev; EXTRA=--dry-run for preview; prod needs IMEANIT=--i-mean-it)
 	@test -n "$(ENV)" || (echo "ENV required: make reindex-corpus ENV=staging" && exit 64)
 	@test -f scripts/reindex-corpus/.env.$(ENV) || (echo "Missing scripts/reindex-corpus/.env.$(ENV) — copy from .env.example" && exit 66)
 	./scripts/reindex-corpus/reindex-corpus.sh scripts/reindex-corpus/.env.$(ENV) $(EXTRA) $(IMEANIT)

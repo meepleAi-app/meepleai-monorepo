@@ -10,6 +10,39 @@ corpus**. Sub-project 3/4 of epic [#3266](https://github.com/meepleAi-app/meeple
 - **Slice 3 (this runbook)**: `make reindex-corpus ENV=…` — loops the Slice 1 endpoint until
   the corpus is drained + ADR [adr-086](../../for-claude/architecture/adr/adr-086-corpus-reindex-orchestration.md).
 
+> ### 🎯 SP-E addendum — coordinate-aware v1.2 (region grounding, #3409 / epic #3403)
+>
+> The same orchestration now also activates **PDF region grounding** (epic
+> [#3403](https://github.com/meepleAi-app/meepleai-monorepo/issues/3403)). The server's current
+> `IndexerVersion` was bumped **v1.1 → v1.2 (coordinate-aware)** in #3409, so `make reindex-corpus
+> ENV=…` re-extracts every Ready PDF and repopulates the normalized bounding boxes (SP-B #3406)
+> into `text_chunks.bounding_boxes_json`. The FE overlay (SP-D #3408) then renders the cited region
+> on real documents. Deltas vs the v1.1 procedure below:
+>
+> - **Target version** is now `v1.2` (not `v1.1`). The selector, drain loop, and idempotency are
+>   unchanged — `reindex-ready` picks every Ready PDF whose `IndexerVersion != v1.2`.
+> - **§1 precondition** is stronger: the `unstructured` container must be the **coordinate-aware
+>   (SP-B #3406) build**, not merely SP1. A stale (pre-SP-B) container extracts **without**
+>   coordinates → `bounding_boxes_json` stays NULL silently (the run still stamps v1.2, so it looks
+>   done but grounds nothing). Rebuild + verify the container emits a `bbox` field per element
+>   before running. Region grounding is **Unstructured-only** — SmolDocling/Docnet branches leave
+>   `bounding_boxes_json` NULL (expected; FE falls back to Pattern A).
+> - **§4 post-reindex assertion** additionally checks bbox coverage:
+>   ```sql
+>   -- Unstructured-branch Ready PDFs should have non-null bbox after the v1.2 reindex.
+>   SELECT COUNT(*) FILTER (WHERE bounding_boxes_json IS NOT NULL) AS with_bbox,
+>          COUNT(*) AS total
+>   FROM text_chunks tc
+>   JOIN pdf_documents pd ON pd.id = tc.pdf_document_id
+>   WHERE pd.processing_state = 'Ready' AND pd.indexer_version = 'v1.2';
+>   ```
+> - **§5 baseline**: re-capture the `rag-smoke` golden baseline after the reindex (the snapshot id +
+>   `indexer_version` change), per the [rag-smoke runbook](./rag-smoke-runbook.md).
+> - **Scope (DC-3)**: validate on **staging first**; the prod decision is taken separately after the
+>   staging FE-overlay check. **Extraction strategy (DC-2)** stays `fast` for this rollout — `fast`
+>   already emits coordinates; `hi_res` for table-heavy PDFs is a tracked follow-up
+>   ([#3419](https://github.com/meepleAi-app/meepleai-monorepo/issues/3419)), not required for the AC.
+
 ## Why a big-bang is needed
 
 The heading-aware pipeline is **latent**: it only runs on fresh ingests. The already-indexed

@@ -105,12 +105,13 @@ internal static class AdminQueueEndpoints
             .Produces<BulkReindexResult>(200)
             .WithSummary("Re-queue all failed documents as Low priority");
 
-        // Issue #3269 (SP3 RAG bulk re-index): re-index all Ready documents whose indexer
-        // version differs from the target (heading-aware v1.1).
+        // Issue #3269 (SP3 RAG bulk re-index) → target bumped to coordinate-aware v1.2 by
+        // #3409 (SP-E, epic #3403): re-index all Ready documents whose indexer version differs
+        // from the current target.
         group.MapPost("/reindex-ready", HandleBulkReindexReady)
             .WithName("BulkReindexReady")
             .Produces<BulkReindexResult>(200)
-            .WithSummary("Re-index all Ready documents whose indexer version differs from the target (heading-aware v1.1)");
+            .WithSummary("Re-index all Ready documents whose indexer version differs from the target (coordinate-aware v1.2)");
 
         // Issue #5456: Extracted text preview
         group.MapGet("/documents/{pdfDocumentId:guid}/extracted-text", HandleGetExtractedText)

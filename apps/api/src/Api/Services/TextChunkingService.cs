@@ -1,4 +1,5 @@
 using Api.Constants;
+using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Service with Configuration classes
 namespace Api.Services;
@@ -403,4 +404,6 @@ internal record DocumentChunkInput
     public short Level { get; init; } = 1;
     public Guid? ParentChunkId { get; init; }
     public string ElementType { get; init; } = "NarrativeText";
+    // SP-B (#3406): normalized region [0,1] top-left; null when unavailable.
+    public BoundingBox? BBox { get; init; }
 }

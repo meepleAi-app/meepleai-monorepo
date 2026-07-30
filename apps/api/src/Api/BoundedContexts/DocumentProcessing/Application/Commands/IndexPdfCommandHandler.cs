@@ -579,7 +579,9 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                 ElementType = chunk.ElementType,
                 // SP-A (#3405): persist char offsets for citation grounding
                 CharStart = chunk.CharStart,
-                CharEnd = chunk.CharEnd
+                CharEnd = chunk.CharEnd,
+                // SP-B (#3406): persist the normalized region for citation grounding
+                BoundingBoxesJson = ChunkBoundingBoxJson.Serialize(chunk.BBox, chunk.Page)
             })
             .ToList();
 

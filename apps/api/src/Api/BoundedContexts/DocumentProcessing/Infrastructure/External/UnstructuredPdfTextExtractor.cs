@@ -292,7 +292,10 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
             .Select(e => new ExtractedElement(
                 Text: e.Text!,
                 PageNumber: e.PageNumber > 0 ? e.PageNumber : 1,
-                ElementType: string.IsNullOrWhiteSpace(e.Category) ? "NarrativeText" : e.Category!))
+                ElementType: string.IsNullOrWhiteSpace(e.Category) ? "NarrativeText" : e.Category!,
+                BoundingBox: e.Bbox is null
+                    ? null
+                    : new ElementBoundingBox(e.Bbox.X, e.Bbox.Y, e.Bbox.Width, e.Bbox.Height)))
             .ToList();
 
         return mapped.Count > 0 ? mapped : null;
@@ -369,7 +372,15 @@ internal record UnstructuredChunk(
 internal record UnstructuredElement(
     [property: JsonPropertyName("text")] string? Text,
     [property: JsonPropertyName("page_number")] int PageNumber,
-    [property: JsonPropertyName("category")] string? Category);
+    [property: JsonPropertyName("category")] string? Category,
+    [property: JsonPropertyName("bbox")] UnstructuredBbox? Bbox = null);
+
+/// <summary>SP-B (#3406): normalized [0,1] bounding box emitted by the Python service.</summary>
+internal record UnstructuredBbox(
+    [property: JsonPropertyName("x")] float X,
+    [property: JsonPropertyName("y")] float Y,
+    [property: JsonPropertyName("width")] float Width,
+    [property: JsonPropertyName("height")] float Height);
 
 internal record UnstructuredMetadata(
     [property: JsonPropertyName("extraction_duration_ms")] int? ExtractionDurationMs,

@@ -10,6 +10,8 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 public class ExtractedDocumentFactoryTests
 {
     private static ExtractedElement El(string text, string type, int page = 1) => new(text, page, type);
+    private static ExtractedElement ElBox(string text, string type, int page, float x, float y, float w, float h) =>
+        new(text, page, type, new ElementBoundingBox(x, y, w, h));
     private static readonly Guid Doc = Guid.NewGuid();
 
     [Fact]
@@ -22,6 +24,49 @@ public class ExtractedDocumentFactoryTests
         doc.Sections[0].Heading.Should().Be("Preparazione");
         doc.Sections[0].ElementType.Should().Be("heading");
         doc.Sections[0].Content.Should().Be("Preparazione\n\nDisponi le tessere.");
+    }
+
+    // ── SP-B #3406: section bounding-box union ─────────────────────────────────
+
+    [Fact]
+    public void SectionBBox_IsUnionOfElementBoxesOnStartPage()
+    {
+        var doc = ExtractedDocumentFactory.FromExtraction(Doc, null, new[]
+        {
+            ElBox("Setup", "Title", 1, 0.1f, 0.1f, 0.2f, 0.05f),
+            ElBox("body", "NarrativeText", 1, 0.1f, 0.2f, 0.6f, 0.1f),
+        }, "x");
+
+        var bbox = doc.Sections[0].BBox;
+        bbox.Should().NotBeNull();
+        bbox!.X.Should().BeApproximately(0.1f, 1e-4f);
+        bbox.Y.Should().BeApproximately(0.1f, 1e-4f);
+        bbox.Width.Should().BeApproximately(0.6f, 1e-4f); // maxX=max(0.3,0.7)=0.7 → 0.7-0.1
+        bbox.Height.Should().BeApproximately(0.2f, 1e-4f); // maxY=max(0.15,0.3)=0.3 → 0.3-0.1
+    }
+
+    [Fact]
+    public void SectionBBox_IsNullWhenNoElementHasCoordinates()
+    {
+        var doc = ExtractedDocumentFactory.FromExtraction(Doc, null,
+            new[] { El("Setup", "Title"), El("body", "NarrativeText") }, "x");
+
+        doc.Sections[0].BBox.Should().BeNull();
+    }
+
+    [Fact]
+    public void SectionBBox_SkipsElementsNotOnStartPage()
+    {
+        var doc = ExtractedDocumentFactory.FromExtraction(Doc, null, new[]
+        {
+            ElBox("Setup", "Title", 1, 0.1f, 0.1f, 0.2f, 0.05f),
+            ElBox("later", "NarrativeText", 2, 0.9f, 0.9f, 0.1f, 0.1f), // page 2 → ignored
+        }, "x");
+
+        var bbox = doc.Sections[0].BBox;
+        bbox.Should().NotBeNull();
+        bbox!.X.Should().BeApproximately(0.1f, 1e-4f);
+        bbox.Width.Should().BeApproximately(0.2f, 1e-4f); // only the start-page box counts
     }
 
     [Fact]

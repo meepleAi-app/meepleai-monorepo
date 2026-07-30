@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 
 namespace Api.Services;
 
@@ -22,6 +23,9 @@ internal record DocumentChunk
     public short Level { get; init; } = 1;
     public Guid? ParentChunkId { get; init; }
     public string ElementType { get; init; } = "NarrativeText";
+    // SP-B (#3406): normalized region [0,1] top-left (union of the section's element boxes on
+    // the start page); null when the extractor emitted no coordinates.
+    public BoundingBox? BBox { get; init; }
 }
 
 /// <summary>

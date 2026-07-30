@@ -72,7 +72,7 @@ internal static class EmbeddedTitleSplitter
                 {
                     result.Add(el with { Text = head });
                 }
-                result.Add(new ExtractedElement(token, el.PageNumber, TitleCategory));
+                result.Add(new ExtractedElement(token, el.PageNumber, TitleCategory, el.BoundingBox));
                 if (tail.Length > 0)
                 {
                     result.Add(el with { Text = tail });

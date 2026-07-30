@@ -209,6 +209,8 @@ public sealed class AskQuestionQueryHandlerIntentRoutingTests
             new Mock<IGenericTranslationService>().Object,
             intentClassifier,
             routingMonitorMock.Object,
+            Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
+            Mock.Of<Api.Services.IFeatureFlagService>(),
             new Mock<ILogger<AskQuestionQueryHandler>>().Object);
 
         return (handler, () => capturedRoleHint);

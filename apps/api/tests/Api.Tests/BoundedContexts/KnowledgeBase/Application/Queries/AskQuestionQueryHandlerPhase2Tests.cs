@@ -3,7 +3,9 @@ using Api.Infrastructure.Entities;
 using Api.Infrastructure.Translation;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
@@ -490,9 +492,120 @@ public class AskQuestionQueryHandlerPhase2Tests
     // Helpers
     // ─────────────────────────────────────────────────────────────────────────
 
+    // ── R1 (issue #3416, ADR-088): MechanicCard claim injection ─────────────────────────────────
+    // This class's _searchHandler is wired to always return EMPTY results, so it exercises the exact
+    // retrieval-miss case R1 targets (e.g. TM "Setup per N"): flag off → sentinel; flag on + card →
+    // the claim block is injected above the no-results early-exit and the LLM is invoked.
+
+    private const string NoContextSentinel = "This information is not available in the provided rulebook.";
+
+    private static PublishedMechanicCardDto CardWithSetupClaim(Guid gameId, Guid pdfId) => new(
+        CardId: Guid.NewGuid(),
+        SharedGameId: gameId,
+        Title: "T",
+        Version: 1,
+        PublishedAt: DateTime.UtcNow,
+        GameName: "Terraforming Mars",
+        Publisher: null,
+        Language: "it",
+        Sections: new[]
+        {
+            new PublishedMechanicCardSectionDto("Setup", new[]
+            {
+                new PublishedMechanicCardClaimDto(
+                    Guid.NewGuid(),
+                    "In una partita a 3 giocatori si usa la plancia standard.",
+                    new[] { new PublishedMechanicCardCitationDto(pdfId, 3, "3-player uses the standard board") }),
+            }),
+        },
+        SourceAnalysisId: Guid.NewGuid(),
+        PublicationYear: null,
+        DocumentName: null);
+
+    private void SetupSuccessfulLlm(out System.Collections.Generic.List<string> capturedUserPrompts)
+    {
+        var captured = new System.Collections.Generic.List<string>();
+        capturedUserPrompts = captured;
+        _mockLlmService
+            .Setup(s => s.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, RequestSource, CancellationToken>((_, user, _, _) => captured.Add(user))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(
+                response: "In una partita a 3 si usa la plancia standard. [Page 3]",
+                usage: new LlmUsage(1, 1, 2),
+                cost: new LlmCost { InputCost = 0m, OutputCost = 0m, ModelId = "test", Provider = "test" }));
+        _mockPricingEngine
+            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        // QualityTrackingDomainService is mocked in this class → its virtual confidence methods return
+        // null by default; the handler dereferences .Value on each. Return Zero for the full LLM path.
+        _mockQualityService
+            .Setup(q => q.CalculateSearchConfidence(It.IsAny<System.Collections.Generic.List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>()))
+            .Returns(Confidence.Zero);
+        _mockQualityService
+            .Setup(q => q.CalculateLlmConfidence(It.IsAny<string>(), It.IsAny<System.Collections.Generic.List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>()))
+            .Returns(Confidence.Zero);
+        _mockQualityService
+            .Setup(q => q.CalculateOverallConfidence(It.IsAny<Confidence>(), It.IsAny<Confidence>()))
+            .Returns(Confidence.Zero);
+    }
+
+    [Fact]
+    public async Task Handle_FlagOnWithCard_InjectsVerifiedRulesBlock_WhenRetrievalEmpty()
+    {
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+        SetupSuccessfulLlm(out var capturedPrompts);
+
+        var providerMock = new Mock<IMechanicCardProvider>();
+        providerMock
+            .Setup(p => p.GetActiveCardAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CardWithSetupClaim(gameId, pdfId));
+
+        var flagMock = new Mock<IFeatureFlagService>();
+        flagMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlagConstants.MechanicCardInjectionKey, It.IsAny<UserRole?>()))
+            .ReturnsAsync(true);
+
+        var handler = BuildHandler(mechanicCardProvider: providerMock.Object, featureFlags: flagMock.Object);
+        var query = new AskQuestionQuery(GameId: gameId, Question: "Setup per 3 giocatori", UserId: Guid.NewGuid(), UserRole: "User");
+
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
+
+        // Bypassed the no-results early-exit — the LLM ran and received the authoritative block.
+        result.Answer.Should().NotBe(NoContextSentinel);
+        capturedPrompts.Should().ContainSingle();
+        capturedPrompts[0].Should().Contain("[Verified Rules — human-approved]");
+        capturedPrompts[0].Should().Contain("## Setup");
+        capturedPrompts[0].Should().Contain("In una partita a 3 giocatori si usa la plancia standard.");
+        // Verbatim quote must NOT be in the prompt body (copyright rule §7.2).
+        capturedPrompts[0].Should().NotContain("3-player uses the standard board");
+        // Claim citation surfaced (PdfPage + verbatim Quote).
+        result.Citations.Should().Contain(c => c.PageNumber == 3 && c.Snippet == "3-player uses the standard board");
+    }
+
+    [Fact]
+    public async Task Handle_FlagOff_ReturnsSentinel_WhenRetrievalEmpty()
+    {
+        var gameId = Guid.NewGuid();
+        SetupSuccessfulLlm(out _);
+
+        // BuildHandler's default feature-flag mock returns false → no injection.
+        var handler = BuildHandler();
+        var query = new AskQuestionQuery(GameId: gameId, Question: "Setup per 3 giocatori", UserId: Guid.NewGuid(), UserRole: "User");
+
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
+
+        result.Answer.Should().Be(NoContextSentinel);
+        _mockLlmService.Verify(
+            s => s.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     private AskQuestionQueryHandler BuildHandler(
         Api.Configuration.LlmQueryComplexityRoutingOptions? routingOverrides = null,
-        IRagAccessService? ragAccessService = null) =>
+        IRagAccessService? ragAccessService = null,
+        Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider? mechanicCardProvider = null,
+        Api.Services.IFeatureFlagService? featureFlags = null) =>
         new(
             _searchHandler,
             CreatePassthroughReranker(),
@@ -514,6 +627,8 @@ public class AskQuestionQueryHandlerPhase2Tests
             // D7: use the real classifier (pure, stateless, no dependencies).
             new IntentClassifierService(),
             BuildRoutingMonitor(routingOverrides ?? new Api.Configuration.LlmQueryComplexityRoutingOptions()),
+            mechanicCardProvider ?? Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
+            featureFlags ?? Mock.Of<Api.Services.IFeatureFlagService>(),
             _mockLogger.Object);
 
     private static Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking.ICrossEncoderReranker CreatePassthroughReranker()

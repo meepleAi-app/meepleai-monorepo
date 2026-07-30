@@ -15,6 +15,8 @@ internal sealed record VerifiedRuleCitation(int Marker, Guid PdfId, int PdfPage,
 internal sealed record VerifiedRulesBlock(string PromptText, IReadOnlyList<VerifiedRuleCitation> Citations)
 {
     public bool IsEmpty => PromptText.Length == 0;
+
+    public static VerifiedRulesBlock Empty { get; } = new(string.Empty, Array.Empty<VerifiedRuleCitation>());
 }
 
 /// <summary>
@@ -27,9 +29,6 @@ internal static class VerifiedRulesRenderer
 {
     public const string Header = "[Verified Rules — human-approved]";
 
-    private static readonly VerifiedRulesBlock Empty =
-        new(string.Empty, Array.Empty<VerifiedRuleCitation>());
-
     public static VerifiedRulesBlock Render(
         PublishedMechanicCardDto card,
         IReadOnlyList<MechanicSection> sections,
@@ -37,7 +36,7 @@ internal static class VerifiedRulesRenderer
     {
         if (card?.Sections is null || sections is null || sections.Count == 0 || maxClaimsPerSection <= 0)
         {
-            return Empty;
+            return VerifiedRulesBlock.Empty;
         }
 
         var sb = new StringBuilder();
@@ -79,6 +78,6 @@ internal static class VerifiedRulesRenderer
             }
         }
 
-        return sb.Length == 0 ? Empty : new VerifiedRulesBlock(sb.ToString(), citations);
+        return sb.Length == 0 ? VerifiedRulesBlock.Empty : new VerifiedRulesBlock(sb.ToString(), citations);
     }
 }

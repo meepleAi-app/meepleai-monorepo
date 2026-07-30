@@ -195,6 +195,43 @@ public class RagPromptAssemblyServiceTests
         result.SystemPrompt.Should().Contain("Pawns move forward");
     }
 
+    [Fact]
+    public async Task AssemblePrompt_VectorChunkWithBoundingBoxes_PropagatesToCitation()
+    {
+        // SP-C (#3407): bbox + char offsets on the vector-arm Embedding must survive BOTH the
+        // vector→SearchResultItem map AND the hybrid-fusion GroupBy rebuild (a drop site) into the
+        // ChunkCitation, so the handler boundary can parse + Full-gate them into regions[].
+        const string bbox = "[{\"page\":2,\"x\":0.1,\"y\":0.2,\"width\":0.3,\"height\":0.4}]";
+        SetupSuccessfulEmbedding();
+        var scored = new List<ScoredEmbedding>
+        {
+            new(new Embedding(
+                    Guid.NewGuid(), Guid.NewGuid(), "Pawns move forward one square.",
+                    new Vector(TestEmbedding), "test-model", chunkIndex: 0, pageNumber: 2,
+                    boundingBoxesJson: bbox, charStart: 100, charEnd: 250),
+                0.85)
+        };
+        _embeddingRepositoryMock
+            .Setup(r => r.SearchByVectorWithScoresAsync(
+                It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(scored);
+        SetupTextSearchResults(); // no FTS — the vector chunk alone flows through hybrid fusion
+        SetupRerankerPassthrough();
+        var service = CreateService();
+
+        // Act
+        var result = await service.AssemblePromptAsync(
+            "tutor", "Chess", null, "How do pawns move?",
+            TestGameId, null, null, "it", CancellationToken.None);
+
+        // Assert — the (only) coordinate-bearing citation kept its bbox + char offsets end-to-end.
+        var cited = result.Citations.Should().ContainSingle(c => c.BoundingBoxesJson != null).Which;
+        cited.BoundingBoxesJson.Should().Be(bbox);
+        cited.CharStart.Should().Be(100);
+        cited.CharEnd.Should().Be(250);
+    }
+
     #endregion
 
     #region AssemblePromptAsync - With Chunks (FTS-only post pgvector migration)

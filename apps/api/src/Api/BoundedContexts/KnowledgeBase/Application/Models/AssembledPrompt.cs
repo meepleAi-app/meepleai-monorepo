@@ -51,4 +51,23 @@ internal sealed record ChunkCitation(
     /// best-effort no-op.
     /// </summary>
     public int? ChunkIndex { get; init; }
+
+    /// <summary>
+    /// SP-C (#3407): raw bounding-box JSON of the cited chunk (<c>text_chunks.bounding_boxes_json</c>),
+    /// carried from the vector arm. <see cref="JsonIgnoreAttribute"/> like <see cref="FullText"/>:
+    /// transient per-request retrieval metadata that MUST NOT persist in <c>CitationsJson</c>. Raw bbox
+    /// is verbatim-equivalent (highlights the exact cited text), so persisting it ungated would leak on
+    /// history reload for Protected content (DA-4). The live path parses + Full-gates it into
+    /// <c>CitationDto.Regions</c> at the handler boundary; reloaded citations fall back to the text-quote
+    /// highlight (SP0 Pattern A).
+    /// </summary>
+    [JsonIgnore]
+    public string? BoundingBoxesJson { get; init; }
+
+    /// <summary>SP-C (#3407): chunk char offsets in the source PDF text. Transient ([JsonIgnore]) — see <see cref="BoundingBoxesJson"/>.</summary>
+    [JsonIgnore]
+    public int? CharStart { get; init; }
+
+    [JsonIgnore]
+    public int? CharEnd { get; init; }
 }

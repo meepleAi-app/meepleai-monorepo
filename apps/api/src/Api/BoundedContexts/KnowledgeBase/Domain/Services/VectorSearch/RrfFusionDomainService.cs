@@ -69,7 +69,12 @@ internal class RrfFusionDomainService
                     pdfDocumentId: original.PdfDocumentId,
                     chunkIndex: original.ChunkIndex,
                     roleTags: f.RoleTags,
-                    heading: f.Heading);
+                    heading: f.Heading,
+                    // SP-C (#3407): carry the region-grounding primitives from the (vector-preferred)
+                    // original, else the fused result drops the bbox/char offsets before the citation.
+                    boundingBoxesJson: original.BoundingBoxesJson,
+                    charStart: original.CharStart,
+                    charEnd: original.CharEnd);
             })
             .ToList();
     }

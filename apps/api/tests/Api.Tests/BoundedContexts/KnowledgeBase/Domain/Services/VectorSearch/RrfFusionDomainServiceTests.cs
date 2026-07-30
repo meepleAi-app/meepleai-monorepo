@@ -172,6 +172,29 @@ public sealed class RrfFusionDomainServiceTests
     }
 
     [Fact]
+    public void FuseResults_CarriesBoundingBoxesAndCharOffsets_FromVectorArm()
+    {
+        // SP-C (#3407): the FuseResults rebuild (new SearchResult from `original`) is a known DROP
+        // SITE — region-grounding carriers must survive fusion. Vector arm carries bbox + char
+        // offsets; the fused result must keep them (preferring the vector-arm original).
+        const string bbox = "[{\"page\":2,\"x\":0.1,\"y\":0.2,\"width\":0.3,\"height\":0.4}]";
+        var pdf = Guid.NewGuid();
+        var vector = new List<SearchResult>
+        {
+            new(Guid.NewGuid(), Guid.NewGuid(), "cited chunk", 1, new Confidence(0.90), 1, "vector",
+                pdfDocumentId: pdf, chunkIndex: 0, roleTags: GameBookRole.None, heading: null,
+                boundingBoxesJson: bbox, charStart: 100, charEnd: 250)
+        };
+
+        var fused = _service.FuseResults(vector, new List<SearchResult>());
+
+        fused.Should().HaveCount(1);
+        fused[0].BoundingBoxesJson.Should().Be(bbox);
+        fused[0].CharStart.Should().Be(100);
+        fused[0].CharEnd.Should().Be(250);
+    }
+
+    [Fact]
     public void FuseResults_WithOverlappingDocuments_CombinesScores()
     {
         // Arrange

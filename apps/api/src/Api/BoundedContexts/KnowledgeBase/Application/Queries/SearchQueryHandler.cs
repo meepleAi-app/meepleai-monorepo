@@ -120,7 +120,10 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
             PageNumber: sr.PageNumber,
             RelevanceScore: sr.RelevanceScore.Value,
             Rank: sr.Rank,
-            SearchMethod: sr.SearchMethod
+            SearchMethod: sr.SearchMethod,
+            BoundingBoxesJson: sr.BoundingBoxesJson,   // SP-C (#3407)
+            CharStart: sr.CharStart,
+            CharEnd: sr.CharEnd
         )).ToList();
 
         _logger.LogInformation(
@@ -167,7 +170,10 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
                 pdfDocumentId: scored.Embedding.PdfDocumentId,                       // real (JOIN-resolved)
                 chunkIndex: scored.Embedding.ChunkIndex,
                 roleTags: (GameBookRole)scored.Embedding.RoleTags,                   // int → enum
-                heading: scored.Embedding.Heading                                     // #3270
+                heading: scored.Embedding.Heading,                                    // #3270
+                boundingBoxesJson: scored.Embedding.BoundingBoxesJson,               // SP-C (#3407)
+                charStart: scored.Embedding.CharStart,
+                charEnd: scored.Embedding.CharEnd
             );
         }).ToList();
 

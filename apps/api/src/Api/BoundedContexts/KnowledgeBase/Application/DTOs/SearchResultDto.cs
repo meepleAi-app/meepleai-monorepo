@@ -12,7 +12,12 @@ internal record SearchResultDto(
     int PageNumber,
     double RelevanceScore,
     int Rank,
-    string? SearchMethod
+    string? SearchMethod,
+    // SP-C (#3407): region-grounding carriers (primitives, no layer dep). Null for the keyword arm /
+    // pre-coordinate corpus. Parsed to CitationRegion + Full-gated at the StreamQa handler boundary.
+    string? BoundingBoxesJson = null,
+    int? CharStart = null,
+    int? CharEnd = null
 )
 {
     /// <summary>
@@ -28,7 +33,10 @@ internal record SearchResultDto(
             PageNumber: searchResult.PageNumber,
             RelevanceScore: searchResult.RelevanceScore.Value,
             Rank: searchResult.Rank,
-            SearchMethod: searchResult.SearchMethod
+            SearchMethod: searchResult.SearchMethod,
+            BoundingBoxesJson: searchResult.BoundingBoxesJson,
+            CharStart: searchResult.CharStart,
+            CharEnd: searchResult.CharEnd
         );
     }
 };

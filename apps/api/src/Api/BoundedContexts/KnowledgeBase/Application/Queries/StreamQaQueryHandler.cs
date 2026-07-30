@@ -544,10 +544,14 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
             searchConfidence,
             llmConfidence);
 
-        // Build and cache response
+        // Build and cache response — SP-C (#3407): NEVER cache the Full-gated regions/char offsets.
+        // The cache key is (game, query) only (not user/tier), so caching gated data risks a
+        // cross-tier replay leak (DA-4). Fresh, correctly-gated regions are emitted per-request on a
+        // cache MISS; cache hits fall back to the text-quote highlight. (StripRegions on the read path
+        // stays as defense-in-depth for any entry cached before this line shipped.)
         var response = new QaResponse(
             answer,
-            snippets,
+            StripRegions(snippets),
             0,
             tokenCount,
             tokenCount,

@@ -138,9 +138,13 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
             yield return CreateEvent(StreamingEventType.StateUpdate,
                 new StreamingStateUpdate("Retrieved from cache"));
 
-            // Emit citations
+            // Emit citations — SP-C (#3407): STRIP regions/char offsets from cache-served snippets.
+            // The QA cache key is (game, query) only, NOT user/tier (AiResponseCacheService), so a
+            // Full-tier user's cached Full-gated regions must NOT be replayed to a later Protected-tier
+            // user (DA-4). Regions are transient per-request data; fresh, correctly-gated regions are
+            // emitted only on a cache MISS. Cache hits gracefully fall back to the text-quote highlight.
             yield return CreateEvent(StreamingEventType.Citations,
-                new StreamingCitations(cachedResponse.snippets));
+                new StreamingCitations(StripRegions(cachedResponse.snippets)));
 
             // Emit answer as tokens (simulate streaming for consistency)
             var words = cachedResponse.answer.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -395,8 +399,13 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         {
             var isFull = c.CopyrightTier == CopyrightTier.Full;
             return new Snippet(
-                // Redact the verbatim excerpt for non-Full tiers (parity with the session-agent gate).
-                isFull ? c.SnippetPreview : string.Empty,
+                // Verbatim text is preserved for ALL tiers on purpose: this SAME snippets list grounds
+                // the LLM prompt (BuildLlmPromptsAsync) and feeds the inline-citation matcher, so
+                // redacting it here would starve the model of retrieved context. Only the NEW SP-C
+                // region-grounding surface is Full-gated. (The pre-existing verbatim-text-to-FE
+                // behavior is intentionally unchanged; closing that #447 gap needs a separate
+                // LLM-prompt/FE-citation source split — out of SP-C scope.)
+                c.SnippetPreview,
                 $"PDF:{c.DocumentId}",
                 c.PageNumber,
                 0,
@@ -412,6 +421,15 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
 
         return (true, snippets, domainSearchResults, searchConfidence);
     }
+
+    /// <summary>
+    /// SP-C (#3407): returns a copy of <paramref name="snippets"/> with the Full-gated region-grounding
+    /// fields (regions/charStart/charEnd) removed. Used on the cache-hit path because the QA cache is
+    /// keyed only by (game, query) — not by user/tier — so cached regions must never be replayed across
+    /// tiers (DA-4). Verbatim text is left intact (its cross-tier caching is pre-existing behavior).
+    /// </summary>
+    private static IReadOnlyList<Snippet> StripRegions(IReadOnlyList<Snippet> snippets) =>
+        snippets.Select(s => s with { regions = null, charStart = null, charEnd = null }).ToList();
 
     /// <summary>
     /// Loads chat thread context if ThreadId provided.

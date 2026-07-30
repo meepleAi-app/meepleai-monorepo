@@ -358,7 +358,19 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                         filteredChunks = filteredChunks
                             .Concat(expandedChunks)
                             .GroupBy(c => $"{c.PdfId}:{c.ChunkIndex}", StringComparer.Ordinal)
-                            .Select(g => g.OrderByDescending(c => c.Score).First())
+                            .Select(g =>
+                            {
+                                var best = g.OrderByDescending(c => c.Score).First();
+                                // SP-C (#3407): this GroupBy is a DROP SITE (mirrors the hybrid-fusion
+                                // merge). The expanded arm is FTS-only (no bbox); coalesce the region
+                                // carriers across the group so the original vector chunk's bbox survives.
+                                return best with
+                                {
+                                    BoundingBoxesJson = g.Select(c => c.BoundingBoxesJson).FirstOrDefault(b => b != null),
+                                    CharStart = g.Select(c => c.CharStart).FirstOrDefault(v => v != null),
+                                    CharEnd = g.Select(c => c.CharEnd).FirstOrDefault(v => v != null),
+                                };
+                            })
                             .OrderByDescending(c => c.Score)
                             .Take(profile.TopK * 2)
                             .ToList();

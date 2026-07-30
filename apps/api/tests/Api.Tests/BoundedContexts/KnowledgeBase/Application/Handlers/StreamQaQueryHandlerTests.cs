@@ -296,7 +296,7 @@ public class StreamQaQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ProtectedTierCitation_NullsRegions_AndRedactsText()
+    public async Task Handle_ProtectedTierCitation_NullsRegions_ButKeepsVerbatimTextForGrounding()
     {
         // Arrange: same bbox-carrying result, but the resolver resolves to Protected.
         var gameId = Guid.NewGuid().ToString();
@@ -311,11 +311,50 @@ public class StreamQaQueryHandlerTests
         // Act
         var snippet = FirstCitation(await CollectEventsAsync(query));
 
-        // Assert: no verbatim region highlight nor verbatim excerpt for Protected content (DA-4 / #447).
+        // Assert: the verbatim region highlight is withheld for Protected content (DA-4)...
         snippet.regions.Should().BeNull();
         snippet.charStart.Should().BeNull();
         snippet.charEnd.Should().BeNull();
-        snippet.text.Should().BeEmpty();
+        // ...but the verbatim snippet text is PRESERVED — the same list grounds the LLM prompt, so
+        // redacting it would starve the model of retrieved context (SP-C review regression guard).
+        snippet.text.Should().Be("Sample rule text");
+    }
+
+    [Fact]
+    public async Task Handle_CachedResponseWithRegions_StripsRegionsOnReplay()
+    {
+        // SP-C review (DA-4): the QA cache key is (game, query) only — NOT user/tier. A Full-tier
+        // user's cached regions must NOT be replayed to a later Protected-tier user on a cache hit,
+        // so cache-served citations strip regions/char offsets (fallback to the text-quote highlight).
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "cached with regions?", null);
+        var cachedResponse = new QaResponse(
+            answer: "cached answer",
+            snippets: new List<Snippet>
+            {
+                new Snippet("verbatim rule text", "PDF:doc-1", 2, 0, 0.9f)
+                {
+                    regions = new[] { new CitationRegion(2, 0.1, 0.2, 0.3, 0.4) },
+                    charStart = 100,
+                    charEnd = 250,
+                },
+            },
+            promptTokens: 10, completionTokens: 5, totalTokens: 15, confidence: 0.85, metadata: null);
+
+        _cacheMock
+            .Setup(x => x.GenerateQaCacheKey(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns("test-cache-key");
+        _cacheMock
+            .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cachedResponse);
+
+        var snippet = FirstCitation(await CollectEventsAsync(query));
+
+        // Text is still served from cache (pre-existing behavior); regions are stripped (no cross-tier leak).
+        snippet.text.Should().Be("verbatim rule text");
+        snippet.regions.Should().BeNull();
+        snippet.charStart.Should().BeNull();
+        snippet.charEnd.Should().BeNull();
     }
 
     private void SetupFusedResultWithRegion()

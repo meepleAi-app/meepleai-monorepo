@@ -35,8 +35,10 @@ import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
 import { api } from '@/lib/api';
+import type { CitationRegion } from '@/types';
 
 import { makeQuoteTextRenderer } from './pdf-quote-highlight';
+import { PdfBBoxOverlay } from './PdfBBoxOverlay';
 
 // Worker setup — T0 spike confirmed idempotent (multi-module assignment safe).
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -61,6 +63,12 @@ export interface PdfInlineViewerProps {
   readonly renderTextLayer?: boolean;
   readonly highlightQuote?: string;
   readonly onQuoteMatch?: (found: boolean) => void;
+  /**
+   * SP-D (#3408): normalized [0,1] top-left region boxes to draw as a precise overlay
+   * (Pattern B). When present (any page), the quote text-layer highlight (Pattern A) is
+   * suppressed — bbox grounding takes precedence. Rects are filtered to the visible page.
+   */
+  readonly highlightRects?: readonly CitationRegion[];
 }
 
 type ZoomState = 'fit-width' | number;
@@ -78,6 +86,7 @@ export function PdfInlineViewer({
   renderTextLayer = false,
   highlightQuote,
   onQuoteMatch,
+  highlightRects,
 }: PdfInlineViewerProps): ReactElement {
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(initialPage);
@@ -91,9 +100,17 @@ export function PdfInlineViewer({
 
   const downloadUrl = api.pdf.getPdfDownloadUrl(documentId);
 
+  // SP-D (#3408): Pattern B (bbox overlay) takes precedence over Pattern A (quote text-layer).
+  // Once any region exists for this citation we are in bbox mode → skip the quote renderer.
+  const hasRects = (highlightRects?.length ?? 0) > 0;
+  const pageRects = useMemo(
+    () => (highlightRects ?? []).filter(r => r.page === currentPage),
+    [highlightRects, currentPage]
+  );
+
   const quoteRenderer = useMemo(
-    () => (highlightQuote ? makeQuoteTextRenderer(highlightQuote) : null),
-    [highlightQuote]
+    () => (highlightQuote && !hasRects ? makeQuoteTextRenderer(highlightQuote) : null),
+    [highlightQuote, hasRects]
   );
 
   const onDocumentLoadSuccess = useCallback(({ numPages: n }: { numPages: number }) => {
@@ -294,28 +311,36 @@ export function PdfInlineViewer({
           </div>
         )}
         {pdfBlob && !loadError && (
-          <Document
-            file={pdfBlob}
-            onLoadSuccess={onDocumentLoadSuccess}
-            onLoadError={onDocumentLoadError}
-            loading={null}
-            error={null}
-          >
-            <Page
-              pageNumber={currentPage}
-              scale={scale}
-              renderAnnotationLayer={false}
-              renderTextLayer={renderTextLayer || !!highlightQuote}
-              customTextRenderer={
-                quoteRenderer ? ({ str }) => quoteRenderer.render({ str }) : undefined
-              }
-              onRenderTextLayerSuccess={
-                quoteRenderer && onQuoteMatch
-                  ? () => onQuoteMatch(quoteRenderer.matched())
-                  : undefined
-              }
-            />
-          </Document>
+          // SP-D (#3408): center + shrink-wrap the page so the react-pdf `.react-pdf__Page`
+          // ancestor hugs the canvas (not the full container width). Otherwise the block Page div
+          // fills the container and the %-based bbox overlay (its child) misaligns for pages
+          // narrower than A4. Mirrors the proven PdfPageModal `flex justify-center` layout.
+          <div className="flex justify-center">
+            <Document
+              file={pdfBlob}
+              onLoadSuccess={onDocumentLoadSuccess}
+              onLoadError={onDocumentLoadError}
+              loading={null}
+              error={null}
+            >
+              <Page
+                pageNumber={currentPage}
+                scale={scale}
+                renderAnnotationLayer={false}
+                renderTextLayer={renderTextLayer || (!!highlightQuote && !hasRects)}
+                customTextRenderer={
+                  quoteRenderer ? ({ str }) => quoteRenderer.render({ str }) : undefined
+                }
+                onRenderTextLayerSuccess={
+                  quoteRenderer && onQuoteMatch
+                    ? () => onQuoteMatch(quoteRenderer.matched())
+                    : undefined
+                }
+              >
+                {pageRects.length > 0 ? <PdfBBoxOverlay rects={pageRects} /> : null}
+              </Page>
+            </Document>
+          </div>
         )}
       </div>
     </div>

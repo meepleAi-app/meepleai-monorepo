@@ -36,7 +36,7 @@ vi.mock('react-pdf', () => {
   return {
     Document: ({ children }: any) =>
       React.createElement('div', { 'data-testid': 'pdf-document' }, children),
-    Page: ({ pageNumber, renderTextLayer, customTextRenderer }: any) =>
+    Page: ({ pageNumber, renderTextLayer, customTextRenderer, children }: any) =>
       React.createElement(
         'div',
         {
@@ -45,7 +45,8 @@ vi.mock('react-pdf', () => {
           'data-render-text-layer': String(!!renderTextLayer),
           'data-has-custom-renderer': String(!!customTextRenderer),
         },
-        `Page ${pageNumber}`
+        `Page ${pageNumber}`,
+        children
       ),
     pdfjs: { GlobalWorkerOptions: { workerSrc: '' }, version: '4.0.0' },
   };
@@ -166,5 +167,54 @@ describe('PdfPageModal', () => {
     );
     const page = screen.getByTestId('pdf-page');
     expect(page).toHaveAttribute('data-has-custom-renderer', 'false');
+  });
+
+  // ── SP-D #3408: region overlay (Pattern B) on the cited page ──────────────────
+
+  it('draws the region overlay on the cited page for tier "full"', () => {
+    render(
+      <PdfPageModal
+        citation={makeCitation({
+          pageNumber: 5,
+          copyrightTier: 'full',
+          regions: [{ page: 5, x: 0.1, y: 0.2, width: 0.3, height: 0.05 }],
+        })}
+        open
+        onClose={onClose}
+      />
+    );
+    expect(screen.getByTestId('pdf-bbox-rect')).toBeInTheDocument();
+    // Pattern B suppresses the Pattern A quote text-layer.
+    expect(screen.getByTestId('pdf-page')).toHaveAttribute('data-has-custom-renderer', 'false');
+  });
+
+  it('does NOT draw the region overlay for tier "protected"', () => {
+    render(
+      <PdfPageModal
+        citation={makeCitation({
+          pageNumber: 5,
+          copyrightTier: 'protected',
+          regions: [{ page: 5, x: 0.1, y: 0.2, width: 0.3, height: 0.05 }],
+        })}
+        open
+        onClose={onClose}
+      />
+    );
+    expect(screen.queryByTestId('pdf-bbox-rect')).not.toBeInTheDocument();
+  });
+
+  it('does not draw overlay rects that belong to another page', () => {
+    render(
+      <PdfPageModal
+        citation={makeCitation({
+          pageNumber: 5,
+          copyrightTier: 'full',
+          regions: [{ page: 9, x: 0.1, y: 0.2, width: 0.3, height: 0.05 }],
+        })}
+        open
+        onClose={onClose}
+      />
+    );
+    expect(screen.queryByTestId('pdf-bbox-rect')).not.toBeInTheDocument();
   });
 });

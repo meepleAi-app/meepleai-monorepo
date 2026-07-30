@@ -13,9 +13,10 @@ vi.mock('react-pdf', () => ({
     setTimeout(() => onLoadSuccess?.({ numPages: 24 }), 0);
     return <div data-testid="pdf-document">{children}</div>;
   },
-  Page: ({ pageNumber }: { pageNumber: number }) => (
+  Page: ({ pageNumber, children }: { pageNumber: number; children?: unknown }) => (
     <div data-testid="pdf-page" data-page-number={pageNumber}>
       Page {pageNumber}
+      {children as never}
     </div>
   ),
   pdfjs: { GlobalWorkerOptions: { workerSrc: '' } },
@@ -144,5 +145,57 @@ describe('CitationPdfTab', () => {
     );
     await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
     expect(container.querySelector('[data-slot="pdf-quote-viewer"]')).not.toBeInTheDocument();
+  });
+
+  // ── SP-D #3408: region overlay (Pattern B) via regions ──────────────────────
+
+  it('renders the region overlay (Pattern B) when regions are provided', async () => {
+    const { container } = render(
+      <CitationPdfTab
+        documentId="pdf-public-1"
+        gameId="game-1"
+        initialPage={12}
+        isPublic
+        regions={[{ page: 12, x: 0.1, y: 0.2, width: 0.3, height: 0.05 }]}
+      />,
+      { wrapper }
+    );
+    await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
+    expect(screen.getByTestId('pdf-bbox-rect')).toBeInTheDocument();
+    expect(container.querySelector('[data-slot="pdf-quote-viewer"]')).not.toBeInTheDocument();
+  });
+
+  it('prefers the region overlay over the quote highlight when both are present', async () => {
+    const { container } = render(
+      <CitationPdfTab
+        documentId="pdf-public-1"
+        gameId="game-1"
+        initialPage={12}
+        isPublic
+        quote="regola X"
+        regions={[{ page: 12, x: 0.1, y: 0.2, width: 0.3, height: 0.05 }]}
+      />,
+      { wrapper }
+    );
+    await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
+    expect(screen.getByTestId('pdf-bbox-rect')).toBeInTheDocument();
+    expect(container.querySelector('[data-slot="pdf-quote-viewer"]')).not.toBeInTheDocument();
+  });
+
+  it('falls back to the quote viewer (Pattern A) when regions is empty', async () => {
+    const { container } = render(
+      <CitationPdfTab
+        documentId="pdf-public-1"
+        gameId="game-1"
+        initialPage={7}
+        isPublic
+        quote="regola X"
+        regions={[]}
+      />,
+      { wrapper }
+    );
+    await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
+    expect(container.querySelector('[data-slot="pdf-quote-viewer"]')).toBeInTheDocument();
+    expect(screen.queryByTestId('pdf-bbox-rect')).not.toBeInTheDocument();
   });
 });

@@ -14,9 +14,16 @@ vi.mock('react-pdf', () => ({
     setTimeout(() => onLoadSuccess?.({ numPages: 5 }), 0);
     return <div data-testid="pdf-document">{children}</div>;
   },
-  Page: ({ pageNumber, scale }: { pageNumber: number; scale?: number }) => (
-    <div data-testid="pdf-page" data-page-number={pageNumber} data-scale={scale ?? 1}>
+  Page: ({ pageNumber, scale, renderTextLayer, customTextRenderer, children }: any) => (
+    <div
+      data-testid="pdf-page"
+      data-page-number={pageNumber}
+      data-scale={scale ?? 1}
+      data-render-text-layer={String(!!renderTextLayer)}
+      data-has-custom-renderer={String(!!customTextRenderer)}
+    >
       Page {pageNumber}
+      {children}
     </div>
   ),
   pdfjs: { GlobalWorkerOptions: { workerSrc: '' } },
@@ -170,5 +177,66 @@ describe('PdfInlineViewer', () => {
     render(<PdfInlineViewer documentId="doc-1" />);
     await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
     expect(screen.queryByRole('combobox', { name: /zoom/i })).not.toBeInTheDocument();
+  });
+
+  // ── SP-D #3408: region overlay (Pattern B) via highlightRects ────────────────
+
+  it('renders the bbox overlay for highlightRects on the current page', async () => {
+    render(
+      <PdfInlineViewer
+        documentId="doc-1"
+        initialPage={3}
+        highlightRects={[{ page: 3, x: 0.1, y: 0.2, width: 0.3, height: 0.05 }]}
+      />
+    );
+    await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
+    expect(screen.getByTestId('pdf-bbox-rect')).toBeInTheDocument();
+  });
+
+  it('does not render overlay rects that belong to another page', async () => {
+    render(
+      <PdfInlineViewer
+        documentId="doc-1"
+        initialPage={3}
+        highlightRects={[{ page: 7, x: 0.1, y: 0.2, width: 0.3, height: 0.05 }]}
+      />
+    );
+    await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
+    expect(screen.queryByTestId('pdf-bbox-rect')).not.toBeInTheDocument();
+  });
+
+  it('suppresses the quote text layer when highlightRects are present (Pattern B over A)', async () => {
+    render(
+      <PdfInlineViewer
+        documentId="doc-1"
+        initialPage={3}
+        highlightQuote="regola X"
+        highlightRects={[{ page: 3, x: 0.1, y: 0.2, width: 0.3, height: 0.05 }]}
+      />
+    );
+    await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
+    expect(screen.getByTestId('pdf-page')).toHaveAttribute('data-render-text-layer', 'false');
+    expect(screen.getByTestId('pdf-page')).toHaveAttribute('data-has-custom-renderer', 'false');
+    expect(screen.getByTestId('pdf-bbox-rect')).toBeInTheDocument();
+  });
+
+  it('keeps the quote text layer active when only highlightQuote is provided (Pattern A)', async () => {
+    render(<PdfInlineViewer documentId="doc-1" initialPage={3} highlightQuote="regola X" />);
+    await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
+    expect(screen.getByTestId('pdf-page')).toHaveAttribute('data-render-text-layer', 'true');
+    expect(screen.getByTestId('pdf-page')).toHaveAttribute('data-has-custom-renderer', 'true');
+    expect(screen.queryByTestId('pdf-bbox-rect')).not.toBeInTheDocument();
+  });
+
+  // Geometry contract (SP-D #3408): the bbox overlay is a child of <Page> and anchors to its
+  // box, so that box MUST shrink-wrap the canvas. The canvas renders at scale×pageWidth (A4
+  // denominator) and is left-aligned; if the Page div filled the full container width the
+  // %-based rects would misalign for pages narrower than A4. A `justify-center` flex wrapper
+  // shrinks the Page ancestor to the canvas (mirrors PdfPageModal). Guard against its removal.
+  it('renders the PDF page inside a centering wrapper so the overlay anchors to the canvas', async () => {
+    render(<PdfInlineViewer documentId="doc-1" initialPage={1} />);
+    await waitFor(() => expect(screen.getByTestId('pdf-document')).toBeInTheDocument());
+    const wrapper = screen.getByTestId('pdf-document').parentElement;
+    expect(wrapper?.className).toContain('justify-center');
   });
 });

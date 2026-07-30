@@ -12,6 +12,7 @@ vi.mock('../CitationPdfTab', () => ({
       data-game-id={props.gameId}
       data-initial-page={props.initialPage}
       data-quote={props.quote ?? ''}
+      data-regions-count={props.regions?.length ?? 0}
     >
       PDF tab mock
     </div>
@@ -99,5 +100,39 @@ describe('CitationModal', () => {
     render(<CitationModal citation={protectedCitation} open onClose={vi.fn()} gameId="wingspan" />);
     fireEvent.click(screen.getByRole('tab', { name: /pdf originale/i }));
     expect(screen.getByTestId('citation-pdf-tab-mounted')).toHaveAttribute('data-quote', '');
+  });
+
+  // ── SP-D #3408: region overlay passed through, gated on copyright tier ────────
+
+  it('passes Full-tier regions to CitationPdfTab', () => {
+    const citationWithRegions: Citation = {
+      ...sampleCitation,
+      regions: [{ page: 12, x: 0.1, y: 0.2, width: 0.3, height: 0.05 }],
+    };
+    render(
+      <CitationModal citation={citationWithRegions} open onClose={vi.fn()} gameId="wingspan" />
+    );
+    fireEvent.click(screen.getByRole('tab', { name: /pdf originale/i }));
+    expect(screen.getByTestId('citation-pdf-tab-mounted')).toHaveAttribute(
+      'data-regions-count',
+      '1'
+    );
+  });
+
+  it('does NOT pass regions for tier "protected" (no verbatim region overlay)', () => {
+    const protectedWithRegions: Citation = {
+      ...sampleCitation,
+      copyrightTier: 'protected',
+      paraphrasedSnippet: 'parafrasi non verbatim',
+      regions: [{ page: 12, x: 0.1, y: 0.2, width: 0.3, height: 0.05 }],
+    };
+    render(
+      <CitationModal citation={protectedWithRegions} open onClose={vi.fn()} gameId="wingspan" />
+    );
+    fireEvent.click(screen.getByRole('tab', { name: /pdf originale/i }));
+    expect(screen.getByTestId('citation-pdf-tab-mounted')).toHaveAttribute(
+      'data-regions-count',
+      '0'
+    );
   });
 });

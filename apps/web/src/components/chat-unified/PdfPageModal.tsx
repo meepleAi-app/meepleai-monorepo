@@ -1,10 +1,12 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import 'react-pdf/dist/Page/TextLayer.css';
 
+import { makeQuoteTextRenderer } from '@/components/pdf/pdf-quote-highlight';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
@@ -56,6 +58,17 @@ export function PdfPageModal({ citation, open, onClose }: PdfPageModalProps) {
 
   // Reset state when citation changes (different document/page)
   const pdfUrl = api.pdf.getPdfDownloadUrl(citation.documentId);
+
+  // SP0 (#3404) follow-up: highlight della regione citata sulla PAGINA citata.
+  // Gating copyright: highlight verbatim SOLO per tier "full" (ADR-059/#447);
+  // per "protected" nessun highlight (lo snippet parafrasato non è verbatim).
+  const highlightQuote =
+    citation.copyrightTier === 'protected' ? undefined : citation.snippet || undefined;
+  const isCitedPage = currentPage === citation.pageNumber;
+  const quoteRenderer = useMemo(
+    () => (highlightQuote && isCitedPage ? makeQuoteTextRenderer(highlightQuote) : null),
+    [highlightQuote, isCitedPage]
+  );
 
   const handleDocumentLoad = useCallback(({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -123,8 +136,11 @@ export function PdfPageModal({ citation, open, onClose }: PdfPageModalProps) {
                     620,
                     typeof window !== 'undefined' ? window.innerWidth - 80 : 620
                   )}
-                  renderTextLayer={false}
+                  renderTextLayer={!!quoteRenderer}
                   renderAnnotationLayer={false}
+                  customTextRenderer={
+                    quoteRenderer ? ({ str }) => quoteRenderer.render({ str }) : undefined
+                  }
                 />
               </PdfDocument>
             </div>

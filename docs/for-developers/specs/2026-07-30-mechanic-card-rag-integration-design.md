@@ -2,7 +2,8 @@
 
 **Data**: 2026-07-30
 **Origine**: spec-panel discussion (panel Fowler / Newman / Hohpe / Adzic / Nygard / Wiegers) + review adversariale multi-agente (4 reviewer: facts / consistency / conventions / completeness) applicata 2026-07-30.
-**Stato**: proposto — barra di qualità **decisa** (gate `Published`; trust-flag `certified` **deferito**, D5). Decisioni architetturali D1–D3 da ratificare (candidato ADR-088; il numero è libero, ultimo su disco = adr-087).
+**Stato**: proposto — barra di qualità **decisa** (gate `Published`; trust-flag `certified` **deferito**, D5). Decisioni architetturali D1–D3 in [ADR-088](../../for-claude/architecture/adr/adr-088-mechanic-cards-as-rag-retrieval-source.md) (Proposed).
+**Tracker**: [tracking issue](https://github.com/meepleAi-app/meepleai-monorepo/issues/3416) (implementazione R1).
 **Scope**: BC `SharedGameCatalog` (produttore, [ADR-051](../../for-claude/architecture/adr/adr-051-mechanic-extractor-ip-policy.md)) → BC `KnowledgeBase` (consumatore, agente Q&A `/agents/qa` + `/agents/qa/stream`).
 **Decisione governante**: [ADR-051](../../for-claude/architecture/adr/adr-051-mechanic-extractor-ip-policy.md) (IP policy + pipeline AI-first), [ADR-084](../../for-claude/architecture/adr/adr-084-mechanic-validation-canonical-shape.md) (validation shape della card).
 
@@ -355,4 +356,4 @@ Ogni AC mappa a un tipo di test + path (`apps/api/tests/Api.Tests`), con **almen
 
 ---
 
-> **Prossimo passo suggerito**: aprire una issue di tracking; valutare la ratifica di D1–D3 in **ADR-088 — "Mechanic Cards as RAG Retrieval Source"** (numero libero verificato). Se ADR-088 viene creato, aggiungerne la riga in `docs/for-claude/architecture/adr/README.md` nello stesso PR (la README-indice è stale — evitare di propagarne il drift).
+> **Prossimo passo**: implementazione R1 tracciata dalla [tracking issue](https://github.com/meepleAi-app/meepleai-monorepo/issues/3416), dietro feature flag (default off). Decisioni D1–D3 in [ADR-088](../../for-claude/architecture/adr/adr-088-mechanic-cards-as-rag-retrieval-source.md) (Proposed). Coordinare **SP-A** dell'epic citazioni prima di R1 (§7.5).

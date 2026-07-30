@@ -866,3 +866,18 @@
 .pdf-quote-highlight {
   background-color: rgba(255, 235, 59, 0.4);
 }
+
+/* ============================================================================
+ * PdfBBoxOverlay — region grounding overlay (SP-D #3408)
+ * Precise %-based rectangle drawn over the react-pdf <Page> for a citation's
+ * source region (Pattern B). Semantic --c-warning token (decorative fill +
+ * border), static (no animation) → no motion concern. Full-gated at the wire.
+ * ============================================================================ */
+
+.pdf-bbox-highlight {
+  position: absolute;
+  background-color: hsl(var(--c-warning) / 0.2);
+  border: 1px solid hsl(var(--c-warning));
+  border-radius: 2px;
+  pointer-events: none;
+}

@@ -23,6 +23,7 @@ import { CitationOwnershipUpsell } from '@/components/features/game-chat/Citatio
 import { PdfInlineViewer } from '@/components/pdf/PdfInlineViewer';
 import { PdfQuoteViewer } from '@/components/pdf/PdfQuoteViewer';
 import { useCanViewPdf } from '@/hooks/queries/useCanViewPdf';
+import type { CitationRegion } from '@/types';
 
 export interface CitationPdfTabProps {
   readonly documentId: string;
@@ -36,6 +37,12 @@ export interface CitationPdfTabProps {
    * Se assente/vuoto si ripiega sul viewer semplice (solo pagina).
    */
   readonly quote?: string;
+  /**
+   * SP-D (#3408): normalized [0,1] region boxes for a precise PDF overlay (Pattern B).
+   * When non-empty, the overlay takes precedence over the {@link quote} highlight (Pattern A).
+   * Already Full-gated by the BE and by {@link CitationModal} (never passed for Protected tier).
+   */
+  readonly regions?: readonly CitationRegion[] | null;
   readonly className?: string;
 }
 
@@ -45,6 +52,7 @@ export function CitationPdfTab({
   initialPage,
   isPublic = false,
   quote,
+  regions,
   className,
 }: CitationPdfTabProps): ReactElement {
   const ownership = useCanViewPdf({
@@ -79,6 +87,20 @@ export function CitationPdfTab({
 
   if (showUpsell) {
     return <CitationOwnershipUpsell gameId={gameId} className={className} />;
+  }
+
+  // SP-D (#3408): Pattern B (bbox overlay) takes precedence over Pattern A (quote highlight).
+  const hasRects = !!regions && regions.length > 0;
+  if (hasRects) {
+    return (
+      <PdfInlineViewer
+        documentId={documentId}
+        initialPage={initialPage}
+        highlightRects={regions}
+        features={{ antiLeak: true }}
+        className={className}
+      />
+    );
   }
 
   const trimmedQuote = quote?.trim();

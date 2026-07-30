@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic';
 import 'react-pdf/dist/Page/TextLayer.css';
 
 import { makeQuoteTextRenderer } from '@/components/pdf/pdf-quote-highlight';
+import { PdfBBoxOverlay } from '@/components/pdf/PdfBBoxOverlay';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
@@ -65,9 +66,23 @@ export function PdfPageModal({ citation, open, onClose }: PdfPageModalProps) {
   const highlightQuote =
     citation.copyrightTier === 'protected' ? undefined : citation.snippet || undefined;
   const isCitedPage = currentPage === citation.pageNumber;
+
+  // SP-D (#3408): overlay bbox della regione (Pattern B), gated su copyright come l'highlight
+  // verbatim. Le regions sono già Full-gated dal BE; qui belt-and-suspenders per "protected".
+  const regions =
+    citation.copyrightTier === 'protected' ? undefined : (citation.regions ?? undefined);
+  const hasRects = (regions?.length ?? 0) > 0;
+  const pageRects = useMemo(
+    () => (regions ?? []).filter(r => r.page === currentPage),
+    [regions, currentPage]
+  );
+
+  // Pattern B (overlay) ha precedenza su Pattern A (quote text-layer): se ci sono regions,
+  // niente customTextRenderer.
   const quoteRenderer = useMemo(
-    () => (highlightQuote && isCitedPage ? makeQuoteTextRenderer(highlightQuote) : null),
-    [highlightQuote, isCitedPage]
+    () =>
+      highlightQuote && isCitedPage && !hasRects ? makeQuoteTextRenderer(highlightQuote) : null,
+    [highlightQuote, isCitedPage, hasRects]
   );
 
   const handleDocumentLoad = useCallback(({ numPages }: { numPages: number }) => {
@@ -141,7 +156,9 @@ export function PdfPageModal({ citation, open, onClose }: PdfPageModalProps) {
                   customTextRenderer={
                     quoteRenderer ? ({ str }) => quoteRenderer.render({ str }) : undefined
                   }
-                />
+                >
+                  {pageRects.length > 0 ? <PdfBBoxOverlay rects={pageRects} /> : null}
+                </PdfPage>
               </PdfDocument>
             </div>
           )}

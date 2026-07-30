@@ -75,6 +75,11 @@ export function CitationModal({
   // il tab PDF apre la pagina senza evidenziare il testo.
   const highlightQuote = citation.copyrightTier === 'protected' ? undefined : citation.snippet;
 
+  // SP-D (#3408): overlay bbox della regione (Pattern B). Gated su copyright come l'highlight
+  // verbatim: le regions sono già Full-gated dal BE, qui belt-and-suspenders per "protected".
+  const regions =
+    citation.copyrightTier === 'protected' ? undefined : (citation.regions ?? undefined);
+
   return (
     <div
       role="dialog"
@@ -147,6 +152,7 @@ export function CitationModal({
               initialPage={citation.pageNumber}
               isPublic={citation.isPublic}
               quote={highlightQuote}
+              regions={regions}
             />
           )}
         </div>

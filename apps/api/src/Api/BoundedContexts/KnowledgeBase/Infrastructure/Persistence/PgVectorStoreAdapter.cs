@@ -142,11 +142,15 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         // heading-match boost — LEFT (not INNER) so a pre-SP2 embedding with a null source_chunk_id
         // still returns its row with heading=null instead of being dropped. text_chunks."Id" is the
         // PK, so the join is 1:0-or-1 (no row fan-out).
+        // SP-C (#3407): reuse the SAME LEFT JOIN to carry the chunk's char offsets and normalized
+        // bounding boxes (columns 10/11/12) for citation region grounding. NOTE these are snake_case
+        // columns (HasColumnName) → UNQUOTED, unlike the default-PascalCase tc."Heading".
         var sql = $"""
             SELECT e.id, e.vector_document_id, e.text_content, e.model, e.chunk_index, e.page_number, e.role_tags,
                    vd."PdfDocumentId",
                    1 - (e.vector <=> @queryVector) AS similarity,
-                   tc."Heading"
+                   tc."Heading",
+                   tc.char_start, tc.char_end, tc.bounding_boxes_json
             FROM {TableName} e
             JOIN vector_documents vd ON vd."Id" = e.vector_document_id
             LEFT JOIN text_chunks tc ON tc."Id" = e.source_chunk_id
@@ -202,6 +206,18 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                     var heading = await reader.IsDBNullAsync(9, cancellationToken).ConfigureAwait(false)
                         ? null
                         : reader.GetString(9);
+                    // SP-C (#3407) Columns 10/11/12: chunk char offsets + normalized bounding boxes
+                    // via the same LEFT JOIN (all nullable — null for the pre-coordinate corpus or a
+                    // null source_chunk_id). bounding_boxes_json is jsonb → read as string.
+                    var charStart = await reader.IsDBNullAsync(10, cancellationToken).ConfigureAwait(false)
+                        ? (int?)null
+                        : reader.GetInt32(10);
+                    var charEnd = await reader.IsDBNullAsync(11, cancellationToken).ConfigureAwait(false)
+                        ? (int?)null
+                        : reader.GetInt32(11);
+                    var boundingBoxesJson = await reader.IsDBNullAsync(12, cancellationToken).ConfigureAwait(false)
+                        ? null
+                        : reader.GetString(12);
 
                     var placeholderVector = DomainVector.CreatePlaceholder(queryVector.Dimensions);
                     var embedding = new Embedding(
@@ -214,7 +230,10 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                         pageNumber: Math.Max(1, pageNumber),
                         roleTags: roleTags,
                         pdfDocumentId: pdfDocumentId,
-                        heading: heading);
+                        heading: heading,
+                        boundingBoxesJson: boundingBoxesJson,
+                        charStart: charStart,
+                        charEnd: charEnd);
 
                     results.Add(new ScoredEmbedding(embedding, score));
                 }

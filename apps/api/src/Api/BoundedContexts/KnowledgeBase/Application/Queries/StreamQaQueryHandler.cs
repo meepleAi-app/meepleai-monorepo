@@ -1,8 +1,10 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
@@ -50,6 +52,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
     private readonly InlineCitationMatcherService _citationMatcher;
     private readonly IIntentClassifierService _intentClassifier;
     private readonly IRagAccessService _ragAccessService;
+    private readonly ICopyrightTierResolver _copyrightTierResolver;
     private readonly ILogger<StreamQaQueryHandler> _logger;
     private readonly TimeProvider _timeProvider;
 
@@ -67,6 +70,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         InlineCitationMatcherService citationMatcher,
         IIntentClassifierService intentClassifier,
         IRagAccessService ragAccessService,
+        ICopyrightTierResolver copyrightTierResolver,
         ILogger<StreamQaQueryHandler> logger,
         TimeProvider? timeProvider = null)
     {
@@ -83,6 +87,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         _citationMatcher = citationMatcher ?? throw new ArgumentNullException(nameof(citationMatcher));
         _intentClassifier = intentClassifier ?? throw new ArgumentNullException(nameof(intentClassifier));
         _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
+        _copyrightTierResolver = copyrightTierResolver ?? throw new ArgumentNullException(nameof(copyrightTierResolver));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -133,9 +138,13 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
             yield return CreateEvent(StreamingEventType.StateUpdate,
                 new StreamingStateUpdate("Retrieved from cache"));
 
-            // Emit citations
+            // Emit citations — SP-C (#3407): STRIP regions/char offsets from cache-served snippets.
+            // The QA cache key is (game, query) only, NOT user/tier (AiResponseCacheService), so a
+            // Full-tier user's cached Full-gated regions must NOT be replayed to a later Protected-tier
+            // user (DA-4). Regions are transient per-request data; fresh, correctly-gated regions are
+            // emitted only on a cache MISS. Cache hits gracefully fall back to the text-quote highlight.
             yield return CreateEvent(StreamingEventType.Citations,
-                new StreamingCitations(cachedResponse.snippets));
+                new StreamingCitations(StripRegions(cachedResponse.snippets)));
 
             // Emit answer as tokens (simulate streaming for consistency)
             var words = cachedResponse.answer.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -200,7 +209,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
             new StreamingStateUpdate("Searching knowledge base..."));
 
         var (searchSuccess, snippets, domainSearchResults, searchConfidence) = await PerformSearchAndBuildCitationsAsync(
-            query.GameId, query.Query, query.DocumentIds, cancellationToken).ConfigureAwait(false);
+            query.GameId, query.Query, query.DocumentIds, query.UserId ?? Guid.Empty, cancellationToken).ConfigureAwait(false);
 
         if (!searchSuccess)
         {
@@ -301,6 +310,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         string gameId,
         string queryText,
         IReadOnlyList<Guid>? documentIds,
+        Guid userId,
         CancellationToken cancellationToken)
     {
         // Issue #3270 (Task 7): classify user intent into GameBookRole tag(s) so the hybrid
@@ -358,7 +368,11 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
             .GetByGameIdAsync(Guid.Parse(gameId), cancellationToken).ConfigureAwait(false);
         var pdfIdByVectorId = vectorDocs.ToDictionary(v => v.Id, v => v.PdfDocumentId);
 
-        var snippets = searchResults.Select(r =>
+        // SP-C (#3407): resolve the copyright tier per citation and gate BOTH the verbatim excerpt and
+        // the region overlay to Full — StreamQa previously emitted verbatim text with NO gate (a leak,
+        // #447/DA-4). The resolver keys on ChunkCitation.DocumentId = the resolved pdf id string (NOT
+        // the vector id, NOT the "PDF:"-prefixed source), matching the session-agent chain.
+        var rawCitations = searchResults.Select(r =>
         {
             // Fall back to the vector id if resolution fails (keeps a stable source string).
             var citationDocId =
@@ -366,16 +380,56 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
                 && pdfIdByVectorId.TryGetValue(vecId, out var pdfId)
                     ? pdfId.ToString()
                     : r.VectorDocumentId;
+            return new ChunkCitation(
+                DocumentId: citationDocId,
+                PageNumber: r.PageNumber,
+                RelevanceScore: (float)r.RelevanceScore,
+                SnippetPreview: r.TextContent)
+            {
+                BoundingBoxesJson = r.BoundingBoxesJson,
+                CharStart = r.CharStart,
+                CharEnd = r.CharEnd,
+            };
+        }).ToList();
+
+        var resolvedCitations = await _copyrightTierResolver
+            .ResolveAsync(rawCitations, userId, cancellationToken).ConfigureAwait(false);
+
+        var snippets = resolvedCitations.Select(c =>
+        {
+            var isFull = c.CopyrightTier == CopyrightTier.Full;
             return new Snippet(
-                r.TextContent,
-                $"PDF:{citationDocId}",
-                r.PageNumber,
+                // Verbatim text is preserved for ALL tiers on purpose: this SAME snippets list grounds
+                // the LLM prompt (BuildLlmPromptsAsync) and feeds the inline-citation matcher, so
+                // redacting it here would starve the model of retrieved context. Only the NEW SP-C
+                // region-grounding surface is Full-gated. (The pre-existing verbatim-text-to-FE
+                // behavior is intentionally unchanged; closing that #447 gap needs a separate
+                // LLM-prompt/FE-citation source split — out of SP-C scope.)
+                c.SnippetPreview,
+                $"PDF:{c.DocumentId}",
+                c.PageNumber,
                 0,
-                (float)r.RelevanceScore);
+                c.RelevanceScore)
+            {
+                // Region overlay + char offsets are Full-gated: drawing the verbatim region on a
+                // Protected doc would leak (DA-4). Null → key omitted (additive-only wire, D-4).
+                regions = isFull ? CitationRegion.Parse(c.BoundingBoxesJson) : null,
+                charStart = isFull ? c.CharStart : null,
+                charEnd = isFull ? c.CharEnd : null,
+            };
         }).ToList();
 
         return (true, snippets, domainSearchResults, searchConfidence);
     }
+
+    /// <summary>
+    /// SP-C (#3407): returns a copy of <paramref name="snippets"/> with the Full-gated region-grounding
+    /// fields (regions/charStart/charEnd) removed. Used on the cache-hit path because the QA cache is
+    /// keyed only by (game, query) — not by user/tier — so cached regions must never be replayed across
+    /// tiers (DA-4). Verbatim text is left intact (its cross-tier caching is pre-existing behavior).
+    /// </summary>
+    private static IReadOnlyList<Snippet> StripRegions(IReadOnlyList<Snippet> snippets) =>
+        snippets.Select(s => s with { regions = null, charStart = null, charEnd = null }).ToList();
 
     /// <summary>
     /// Loads chat thread context if ThreadId provided.
@@ -490,10 +544,14 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
             searchConfidence,
             llmConfidence);
 
-        // Build and cache response
+        // Build and cache response — SP-C (#3407): NEVER cache the Full-gated regions/char offsets.
+        // The cache key is (game, query) only (not user/tier), so caching gated data risks a
+        // cross-tier replay leak (DA-4). Fresh, correctly-gated regions are emitted per-request on a
+        // cache MISS; cache hits fall back to the text-quote highlight. (StripRegions on the read path
+        // stays as defense-in-depth for any entry cached before this line shipped.)
         var response = new QaResponse(
             answer,
-            snippets,
+            StripRegions(snippets),
             0,
             tokenCount,
             tokenCount,

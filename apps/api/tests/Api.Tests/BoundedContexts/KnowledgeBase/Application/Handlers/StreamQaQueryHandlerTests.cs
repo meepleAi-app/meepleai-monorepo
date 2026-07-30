@@ -5,7 +5,9 @@ using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
@@ -48,6 +50,7 @@ public class StreamQaQueryHandlerTests
     private readonly Mock<IAiResponseCacheService> _cacheMock;
     private readonly Mock<IPromptTemplateService> _promptTemplateServiceMock;
     private readonly Mock<IIntentClassifierService> _intentClassifierMock;
+    private readonly Mock<ICopyrightTierResolver> _copyrightTierResolverMock;
     private readonly Mock<ILogger<StreamQaQueryHandler>> _loggerMock;
     private readonly FakeTimeProvider _fakeTimeProvider;
     private readonly StreamQaQueryHandler _handler;
@@ -96,6 +99,14 @@ public class StreamQaQueryHandlerTests
         _intentClassifierMock
             .Setup(x => x.ClassifyIntent(It.IsAny<string>()))
             .Returns(GameBookRole.None);
+        // SP-C (#3407): default permissive resolver — echoes citations resolved to Full so existing
+        // tests keep their verbatim snippet text (pre-SP-C behavior = no gate = everything verbatim).
+        // Gate tests override this with a Protected-tier resolver.
+        _copyrightTierResolverMock = new Mock<ICopyrightTierResolver>();
+        _copyrightTierResolverMock
+            .Setup(x => x.ResolveAsync(It.IsAny<IReadOnlyList<ChunkCitation>>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<ChunkCitation> cits, Guid _, CancellationToken _) =>
+                cits.Select(c => c with { CopyrightTier = CopyrightTier.Full }).ToList());
         _loggerMock = new Mock<ILogger<StreamQaQueryHandler>>();
         _fakeTimeProvider = new FakeTimeProvider();
         _fakeTimeProvider.SetUtcNow(new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero));
@@ -122,6 +133,7 @@ public class StreamQaQueryHandlerTests
             new InlineCitationMatcherService(),
             _intentClassifierMock.Object,
             CreatePermissiveRagAccessServiceMock(),
+            _copyrightTierResolverMock.Object,
             _loggerMock.Object,
             _fakeTimeProvider
         );
@@ -257,6 +269,134 @@ public class StreamQaQueryHandlerTests
         var complete = completeEvent.Data.Should().BeOfType<StreamingComplete>().Which;
         (complete.totalTokens > 0).Should().BeTrue();
         complete.confidence.HasValue.Should().BeTrue();
+    }
+
+    // ─── SP-C (#3407): citation region grounding + copyright gate ───
+
+    [Fact]
+    public async Task Handle_FullTierCitation_EmitsRegions_AndVerbatimText()
+    {
+        // Arrange: fused result carries a bbox + char offsets; default resolver resolves to Full.
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "how do I score?", null);
+        SetupHappyPathMocks(gameId, query.Query);
+        SetupFusedResultWithRegion();
+
+        // Act
+        var snippet = FirstCitation(await CollectEventsAsync(query));
+
+        // Assert: region overlay + verbatim snippet are surfaced for Full-tier content.
+        snippet.regions.Should().NotBeNull();
+        snippet.regions!.Should().ContainSingle();
+        snippet.regions![0].Page.Should().Be(2);
+        snippet.regions![0].X.Should().BeApproximately(0.1, 1e-9);
+        snippet.charStart.Should().Be(100);
+        snippet.charEnd.Should().Be(250);
+        snippet.text.Should().Be("Sample rule text");
+    }
+
+    [Fact]
+    public async Task Handle_ProtectedTierCitation_NullsRegions_ButKeepsVerbatimTextForGrounding()
+    {
+        // Arrange: same bbox-carrying result, but the resolver resolves to Protected.
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "how do I score?", null);
+        SetupHappyPathMocks(gameId, query.Query);
+        SetupFusedResultWithRegion();
+        _copyrightTierResolverMock
+            .Setup(x => x.ResolveAsync(It.IsAny<IReadOnlyList<ChunkCitation>>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<ChunkCitation> cits, Guid _, CancellationToken _) =>
+                cits.Select(c => c with { CopyrightTier = CopyrightTier.Protected }).ToList());
+
+        // Act
+        var snippet = FirstCitation(await CollectEventsAsync(query));
+
+        // Assert: the verbatim region highlight is withheld for Protected content (DA-4)...
+        snippet.regions.Should().BeNull();
+        snippet.charStart.Should().BeNull();
+        snippet.charEnd.Should().BeNull();
+        // ...but the verbatim snippet text is PRESERVED — the same list grounds the LLM prompt, so
+        // redacting it would starve the model of retrieved context (SP-C review regression guard).
+        snippet.text.Should().Be("Sample rule text");
+    }
+
+    [Fact]
+    public async Task Handle_CachedResponseWithRegions_StripsRegionsOnReplay()
+    {
+        // SP-C review (DA-4): the QA cache key is (game, query) only — NOT user/tier. A Full-tier
+        // user's cached regions must NOT be replayed to a later Protected-tier user on a cache hit,
+        // so cache-served citations strip regions/char offsets (fallback to the text-quote highlight).
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "cached with regions?", null);
+        var cachedResponse = new QaResponse(
+            answer: "cached answer",
+            snippets: new List<Snippet>
+            {
+                new Snippet("verbatim rule text", "PDF:doc-1", 2, 0, 0.9f)
+                {
+                    regions = new[] { new CitationRegion(2, 0.1, 0.2, 0.3, 0.4) },
+                    charStart = 100,
+                    charEnd = 250,
+                },
+            },
+            promptTokens: 10, completionTokens: 5, totalTokens: 15, confidence: 0.85, metadata: null);
+
+        _cacheMock
+            .Setup(x => x.GenerateQaCacheKey(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns("test-cache-key");
+        _cacheMock
+            .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cachedResponse);
+
+        var snippet = FirstCitation(await CollectEventsAsync(query));
+
+        // Text is still served from cache (pre-existing behavior); regions are stripped (no cross-tier leak).
+        snippet.text.Should().Be("verbatim rule text");
+        snippet.regions.Should().BeNull();
+        snippet.charStart.Should().BeNull();
+        snippet.charEnd.Should().BeNull();
+    }
+
+    private void SetupFusedResultWithRegion()
+    {
+        var fusedResult = new DomainSearchResult(
+            id: Guid.NewGuid(),
+            vectorDocumentId: Guid.NewGuid(),
+            textContent: "Sample rule text",
+            pageNumber: 2,
+            relevanceScore: new Confidence(0.9),
+            rank: 1,
+            searchMethod: "hybrid",
+            boundingBoxesJson: "[{\"page\":2,\"x\":0.1,\"y\":0.2,\"width\":0.3,\"height\":0.4}]",
+            charStart: 100,
+            charEnd: 250);
+
+        _rrfFusionServiceMock
+            .Setup(x => x.FuseResults(
+                It.IsAny<List<DomainSearchResult>>(),
+                It.IsAny<List<DomainSearchResult>>(),
+                It.IsAny<int>(),
+                It.IsAny<GameBookRole>(),
+                It.IsAny<IReadOnlyList<string>?>()))
+            .Returns(new List<DomainSearchResult> { fusedResult });
+    }
+
+    private async Task<List<RagStreamingEvent>> CollectEventsAsync(StreamQaQuery query)
+    {
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
+        {
+            events.Add(evt);
+        }
+        return events;
+    }
+
+    private static Snippet FirstCitation(List<RagStreamingEvent> events)
+    {
+        var citationsEvent = events.First(e => e.Type == StreamingEventType.Citations);
+        var citations = citationsEvent.Data.Should().BeOfType<StreamingCitations>().Which;
+        citations.citations.Should().NotBeEmpty();
+        return citations.citations[0];
     }
 
     [Fact]
@@ -1367,6 +1507,7 @@ public class StreamQaQueryHandlerTests
             new InlineCitationMatcherService(),
             _intentClassifierMock.Object,
             ragAccessService,
+            _copyrightTierResolverMock.Object,
             _loggerMock.Object,
             _fakeTimeProvider);
     }

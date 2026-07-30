@@ -66,6 +66,23 @@ export const CitationSchema = z.object({
   copyrightTier: z.enum(['full', 'protected']).default('full'), // Default 'full' for backward compat
   paraphrasedSnippet: z.string().optional().nullable(),
   isPublic: z.boolean().optional().default(false),
+  // SP-C (#3407): Full-gated region grounding. `regions` are normalized [0,1] top-left bounding
+  // boxes for the PDF overlay (SP-D); BE emits them only for Full-tier citations. Additive/nullable
+  // so the current wire (no region fields) keeps safeParse-ing.
+  regions: z
+    .array(
+      z.object({
+        page: z.number(),
+        x: z.number(),
+        y: z.number(),
+        width: z.number(),
+        height: z.number(),
+      })
+    )
+    .optional()
+    .nullable(),
+  charStart: z.number().optional().nullable(),
+  charEnd: z.number().optional().nullable(),
 });
 
 export type Citation = z.infer<typeof CitationSchema>;

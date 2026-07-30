@@ -127,6 +127,93 @@ public class ChatSessionAgentBroadcastTests
     }
 
     // -----------------------------------------------------------------------
+    // SP-C (#3407): region overlay is Full-gated (same as SnippetPreview)
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task Chat_WithLiveSession_FullTierCitation_BroadcastsRegions()
+    {
+        // Arrange — Full-tier citation carrying a bounding box.
+        var liveSessionId = Guid.NewGuid();
+        var liveSession = BuildLiveSession(liveSessionId);
+
+        var citation = new ChunkCitation(
+            DocumentId: "doc-1",
+            PageNumber: 2,
+            RelevanceScore: 0.95f,
+            SnippetPreview: "verbatim rule text",
+            CopyrightTier: CopyrightTier.Full,
+            IsPublic: true)
+        {
+            BoundingBoxesJson = "[{\"page\":2,\"x\":0.1,\"y\":0.2,\"width\":0.3,\"height\":0.4}]",
+            CharStart = 100,
+            CharEnd = 250,
+        };
+
+        var gateway = new Mock<ILiveSessionStreamGateway>();
+        var handler = BuildHandler(
+            liveSession: liveSession,
+            resolvedCitations: new List<ChunkCitation> { citation },
+            gateway: gateway.Object);
+        var command = BuildCommand();
+
+        // Act
+        await foreach (var _ in handler.Handle(command, CancellationToken.None)) { }
+
+        // Assert — the region overlay is surfaced for Full-tier content.
+        gateway.Verify(
+            g => g.BroadcastAsync(
+                liveSessionId,
+                It.Is<LiveSessionStreamEvent>(e =>
+                    e.Type == "session:chat" &&
+                    HasRegions(e.Data)),
+                It.IsAny<CancellationToken>()),
+            Times.Once,
+            "Full tier: broadcast citation must carry parsed regions[]");
+    }
+
+    [Fact]
+    public async Task Chat_WithLiveSession_ProtectedTierCitation_BroadcastsWithNullRegions()
+    {
+        // Arrange — same bounding box, but Protected tier → regions MUST be withheld (DA-4).
+        var liveSessionId = Guid.NewGuid();
+        var liveSession = BuildLiveSession(liveSessionId);
+
+        var citation = new ChunkCitation(
+            DocumentId: "doc-2",
+            PageNumber: 1,
+            RelevanceScore: 0.80f,
+            SnippetPreview: "this should be suppressed",
+            CopyrightTier: CopyrightTier.Protected)
+        {
+            BoundingBoxesJson = "[{\"page\":1,\"x\":0.1,\"y\":0.2,\"width\":0.3,\"height\":0.4}]",
+            CharStart = 100,
+            CharEnd = 250,
+        };
+
+        var gateway = new Mock<ILiveSessionStreamGateway>();
+        var handler = BuildHandler(
+            liveSession: liveSession,
+            resolvedCitations: new List<ChunkCitation> { citation },
+            gateway: gateway.Object);
+        var command = BuildCommand();
+
+        // Act
+        await foreach (var _ in handler.Handle(command, CancellationToken.None)) { }
+
+        // Assert — no verbatim region highlight for Protected content.
+        gateway.Verify(
+            g => g.BroadcastAsync(
+                liveSessionId,
+                It.Is<LiveSessionStreamEvent>(e =>
+                    e.Type == "session:chat" &&
+                    NoRegions(e.Data)),
+                It.IsAny<CancellationToken>()),
+            Times.Once,
+            "Protected tier: regions must be null on the broadcast payload (no verbatim highlight leak)");
+    }
+
+    // -----------------------------------------------------------------------
     // AC-CHAT-3: Non-grounded / no citations → still broadcasts with citations == []
     // -----------------------------------------------------------------------
 
@@ -458,6 +545,33 @@ public class ChatSessionAgentBroadcastTests
         var doc = ToJsonDocument(data);
         if (!doc.RootElement.TryGetProperty("citations", out var citations)) return true;
         return citations.GetArrayLength() == 0;
+    }
+
+    private static bool HasRegions(object data)
+    {
+        var doc = ToJsonDocument(data);
+        if (!doc.RootElement.TryGetProperty("citations", out var citations)) return false;
+        if (citations.GetArrayLength() == 0) return false;
+        var first = citations[0];
+        return first.TryGetProperty("regions", out var regions) &&
+               regions.ValueKind == JsonValueKind.Array &&
+               regions.GetArrayLength() > 0;
+    }
+
+    private static bool NoRegions(object data)
+    {
+        var doc = ToJsonDocument(data);
+        if (!doc.RootElement.TryGetProperty("citations", out var citations)) return true;
+        foreach (var item in citations.EnumerateArray())
+        {
+            if (item.TryGetProperty("regions", out var regions) &&
+                regions.ValueKind == JsonValueKind.Array &&
+                regions.GetArrayLength() > 0)
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static JsonDocument ToJsonDocument(object data)

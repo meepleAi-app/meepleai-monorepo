@@ -24,6 +24,14 @@ internal sealed class SearchResult : Entity<Guid>
     public string? Heading { get; private set; }
 
     /// <summary>
+    /// SP-C (#3407): raw bounding-box JSON + char offsets carried from the vector arm to the citation
+    /// surface (parsed + Full-gated at the API boundary). Null for the keyword arm / pre-coordinate corpus.
+    /// </summary>
+    public string? BoundingBoxesJson { get; private set; }
+    public int? CharStart { get; private set; }
+    public int? CharEnd { get; private set; }
+
+    /// <summary>
     /// Private constructor for EF Core.
     /// </summary>
 #pragma warning disable CS8618
@@ -46,7 +54,10 @@ internal sealed class SearchResult : Entity<Guid>
         Guid pdfDocumentId = default,
         int chunkIndex = 0,
         GameBookRole roleTags = GameBookRole.None,
-        string? heading = null) : base(id)
+        string? heading = null,
+        string? boundingBoxesJson = null,
+        int? charStart = null,
+        int? charEnd = null) : base(id)
     {
         if (string.IsNullOrWhiteSpace(textContent))
             throw new ArgumentException("Text content cannot be empty", nameof(textContent));
@@ -67,6 +78,9 @@ internal sealed class SearchResult : Entity<Guid>
         ChunkIndex = chunkIndex;
         RoleTags = roleTags;
         Heading = heading;
+        BoundingBoxesJson = boundingBoxesJson;
+        CharStart = charStart;
+        CharEnd = charEnd;
     }
 
     /// <summary>

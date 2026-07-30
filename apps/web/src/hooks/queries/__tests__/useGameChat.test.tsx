@@ -170,6 +170,41 @@ describe('useGameChat', () => {
     expect(agent.outOfContext).toBe(false);
   });
 
+  it('surfaces SP-C region grounding fields (regions/charStart/charEnd) from the type-1 event (#3407)', async () => {
+    // The BE Snippet now Full-gates + emits regions[]/charStart/charEnd on the type-1 CITATIONS
+    // event; mapSseCitation must forward them to the FE Citation so SP-D can draw the overlay.
+    const sseEvents = [
+      { type: 7, data: { token: 'Answer.' } },
+      {
+        type: 1,
+        data: {
+          citations: [
+            {
+              text: 'verbatim rule text',
+              source: 'PDF:doc-1',
+              page: 2,
+              line: 0,
+              score: 0.9,
+              regions: [{ page: 2, x: 0.1, y: 0.2, width: 0.3, height: 0.4 }],
+              charStart: 100,
+              charEnd: 250,
+            },
+          ],
+        },
+      },
+      { type: 4, data: { confidence: 0.8, citations: null } },
+    ];
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(sseEvents) as any);
+    const { result } = renderHook(() => useGameChat('azul'));
+    await act(async () => {
+      await result.current.ask('come si calcolano i punti?');
+    });
+    const cite = result.current.messages[1].citations?.[0];
+    expect(cite?.regions).toEqual([{ page: 2, x: 0.1, y: 0.2, width: 0.3, height: 0.4 }]);
+    expect(cite?.charStart).toBe(100);
+    expect(cite?.charEnd).toBe(250);
+  });
+
   it('derives outOfContext=true when no citations + confidence < 0.30', async () => {
     const oocEvents = [
       { type: 7, data: 'Non ho informazioni.' },

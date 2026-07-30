@@ -28,8 +28,28 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
-// react-pdf is already mocked in vitest.setup.tsx
-// (Document renders data-testid="pdf-document", Page renders data-testid="pdf-page")
+// Local react-pdf mock (overrides vitest.setup.tsx for this file) so the Page can
+// expose renderTextLayer / customTextRenderer as data-attributes — required to
+// assert the SP0 quote-highlight wiring. Mirrors the global mock otherwise.
+vi.mock('react-pdf', () => {
+  const React = require('react');
+  return {
+    Document: ({ children }: any) =>
+      React.createElement('div', { 'data-testid': 'pdf-document' }, children),
+    Page: ({ pageNumber, renderTextLayer, customTextRenderer }: any) =>
+      React.createElement(
+        'div',
+        {
+          'data-testid': 'pdf-page',
+          'data-page': pageNumber,
+          'data-render-text-layer': String(!!renderTextLayer),
+          'data-has-custom-renderer': String(!!customTextRenderer),
+        },
+        `Page ${pageNumber}`
+      ),
+    pdfjs: { GlobalWorkerOptions: { workerSrc: '' }, version: '4.0.0' },
+  };
+});
 
 import { PdfPageModal } from '../PdfPageModal';
 import type { Citation } from '@/types';
@@ -115,5 +135,36 @@ describe('PdfPageModal', () => {
     );
     const prevBtn = screen.getByRole('button', { name: /pagina precedente/i });
     expect(prevBtn).toBeDisabled();
+  });
+
+  // ── SP0 #3404 follow-up: highlight della regione citata (chat-unified) ────────
+
+  it('highlights the verbatim quote on the cited page for tier "full"', () => {
+    render(
+      <PdfPageModal
+        citation={makeCitation({
+          pageNumber: 5,
+          snippet: 'most points wins',
+          copyrightTier: 'full',
+        })}
+        open
+        onClose={onClose}
+      />
+    );
+    const page = screen.getByTestId('pdf-page');
+    expect(page).toHaveAttribute('data-render-text-layer', 'true');
+    expect(page).toHaveAttribute('data-has-custom-renderer', 'true');
+  });
+
+  it('does NOT highlight for tier "protected" (no verbatim highlight)', () => {
+    render(
+      <PdfPageModal
+        citation={makeCitation({ copyrightTier: 'protected', snippet: 'segreto verbatim' })}
+        open
+        onClose={onClose}
+      />
+    );
+    const page = screen.getByTestId('pdf-page');
+    expect(page).toHaveAttribute('data-has-custom-renderer', 'false');
   });
 });

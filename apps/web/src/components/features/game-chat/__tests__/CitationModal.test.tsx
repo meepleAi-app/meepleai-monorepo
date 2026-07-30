@@ -11,6 +11,7 @@ vi.mock('../CitationPdfTab', () => ({
       data-document-id={props.documentId}
       data-game-id={props.gameId}
       data-initial-page={props.initialPage}
+      data-quote={props.quote ?? ''}
     >
       PDF tab mock
     </div>
@@ -76,5 +77,27 @@ describe('CitationModal', () => {
     expect(tab).toHaveAttribute('data-document-id', sampleCitation.documentId);
     expect(tab).toHaveAttribute('data-game-id', 'wingspan');
     expect(tab).toHaveAttribute('data-initial-page', String(sampleCitation.pageNumber));
+  });
+
+  // ── SP0 #3404: quote per l'highlight, gated su copyright ─────────────────────
+
+  it('passes the verbatim snippet as quote for tier "full"', () => {
+    render(<CitationModal citation={sampleCitation} open onClose={vi.fn()} gameId="wingspan" />);
+    fireEvent.click(screen.getByRole('tab', { name: /pdf originale/i }));
+    expect(screen.getByTestId('citation-pdf-tab-mounted')).toHaveAttribute(
+      'data-quote',
+      sampleCitation.snippet
+    );
+  });
+
+  it('does NOT pass a verbatim quote for tier "protected" (no verbatim highlight)', () => {
+    const protectedCitation: Citation = {
+      ...sampleCitation,
+      copyrightTier: 'protected',
+      paraphrasedSnippet: 'parafrasi non verbatim',
+    };
+    render(<CitationModal citation={protectedCitation} open onClose={vi.fn()} gameId="wingspan" />);
+    fireEvent.click(screen.getByRole('tab', { name: /pdf originale/i }));
+    expect(screen.getByTestId('citation-pdf-tab-mounted')).toHaveAttribute('data-quote', '');
   });
 });

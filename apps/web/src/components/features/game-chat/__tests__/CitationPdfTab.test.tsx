@@ -118,4 +118,31 @@ describe('CitationPdfTab', () => {
       expect(screen.getByText(/PDF originale protetto da copyright/i)).toBeInTheDocument()
     );
   });
+
+  // ── SP0 #3404: highlight della regione citata nel percorso chat ──────────────
+
+  it('mounts the quote viewer (highlight + fallback) when a quote is provided', async () => {
+    const { container } = render(
+      <CitationPdfTab
+        documentId="pdf-public-1"
+        gameId="game-1"
+        initialPage={7}
+        isPublic
+        quote="regola X"
+      />,
+      { wrapper }
+    );
+    await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
+    expect(container.querySelector('[data-slot="pdf-quote-viewer"]')).toBeInTheDocument();
+    expect(screen.getByTestId('pdf-page')).toHaveAttribute('data-page-number', '7');
+  });
+
+  it('mounts the plain viewer (no quote viewer) when no quote is provided', async () => {
+    const { container } = render(
+      <CitationPdfTab documentId="pdf-public-1" gameId="game-1" initialPage={7} isPublic />,
+      { wrapper }
+    );
+    await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
+    expect(container.querySelector('[data-slot="pdf-quote-viewer"]')).not.toBeInTheDocument();
+  });
 });

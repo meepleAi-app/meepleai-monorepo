@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { Citation } from '@/types/domain';
+import type { Citation, CitationRegion } from '@/types/domain';
 
 describe('Citation type', () => {
   it('accepts full tier citation', () => {
@@ -60,5 +60,37 @@ describe('Citation type', () => {
     };
     expect(citation.paraphrasedSnippet).toBeUndefined();
     expect(citation.isPublic).toBeUndefined();
+  });
+
+  // SP-C (#3407): Full-gated region grounding fields.
+  it('accepts full-tier citation carrying regions and char offsets', () => {
+    const regions: CitationRegion[] = [{ page: 2, x: 0.1, y: 0.2, width: 0.3, height: 0.4 }];
+    const citation: Citation = {
+      documentId: 'doc-4',
+      pageNumber: 2,
+      snippet: 'Original text',
+      relevanceScore: 0.9,
+      copyrightTier: 'full',
+      regions,
+      charStart: 100,
+      charEnd: 250,
+    };
+    expect(citation.regions).toHaveLength(1);
+    expect(citation.regions?.[0]).toEqual({ page: 2, x: 0.1, y: 0.2, width: 0.3, height: 0.4 });
+    expect(citation.charStart).toBe(100);
+    expect(citation.charEnd).toBe(250);
+  });
+
+  it('regions/charStart/charEnd are optional (backward compat)', () => {
+    const citation: Citation = {
+      documentId: 'doc-5',
+      pageNumber: 1,
+      snippet: 'text',
+      relevanceScore: 0.5,
+      copyrightTier: 'protected',
+    };
+    expect(citation.regions).toBeUndefined();
+    expect(citation.charStart).toBeUndefined();
+    expect(citation.charEnd).toBeUndefined();
   });
 });

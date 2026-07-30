@@ -24,6 +24,7 @@ export type {
   RuleSpecComment,
   Snippet,
   Citation,
+  CitationRegion,
   Message,
   QaResponse,
 } from './domain';

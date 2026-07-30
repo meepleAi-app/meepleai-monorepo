@@ -129,6 +129,19 @@ export interface Snippet {
 }
 
 /**
+ * SP-C (#3407): a normalized [0,1] top-left bounding box of a citation on its source PDF page.
+ * Page-relative coordinates enable a scale/DPR-independent %-based overlay (SP-D). Emitted by the
+ * BE only for Full-tier citations (DA-4 — drawing the verbatim region on a Protected doc would leak).
+ */
+export interface CitationRegion {
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
  * Citation from RAG response with relevance scoring (Issue #859, BGAI-074)
  */
 export interface Citation {
@@ -142,6 +155,15 @@ export interface Citation {
   paraphrasedSnippet?: string;
   /** Whether the game is publicly available (affects upsell CTA copy) */
   isPublic?: boolean;
+  /**
+   * SP-C (#3407): Full-gated PDF region overlay boxes (SP-D). Null/absent for the pre-coordinate
+   * corpus, the non-Unstructured branch, or Protected-tier citations.
+   */
+  regions?: CitationRegion[] | null;
+  /** SP-C (#3407): char offset (inclusive) of the chunk in the source PDF text. Full-gated. */
+  charStart?: number | null;
+  /** SP-C (#3407): char offset (exclusive) of the chunk in the source PDF text. Full-gated. */
+  charEnd?: number | null;
 }
 
 /**

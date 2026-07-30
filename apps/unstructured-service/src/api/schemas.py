@@ -26,6 +26,19 @@ class TextChunkSchema(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
 
+class BBoxSchema(BaseModel):
+    """Normalized bounding box of an element (SP-B #3406, epic #3403).
+
+    Fractions in [0,1] of the page layout, top-left origin (y grows downward), so
+    the value is independent of strategy (fast vs hi_res), DPI, and viewer zoom.
+    """
+
+    x: float = Field(description="Left edge, normalized 0..1")
+    y: float = Field(description="Top edge, normalized 0..1 (top-left origin)")
+    width: float = Field(description="Width, normalized 0..1")
+    height: float = Field(description="Height, normalized 0..1")
+
+
 class ElementSchema(BaseModel):
     """Raw partition element (pre-chunking), preserving its structural category."""
 
@@ -33,6 +46,10 @@ class ElementSchema(BaseModel):
     page_number: int = Field(description="Page number (1-indexed)", ge=1)
     category: Optional[str] = Field(
         default=None, description="Raw Unstructured category (Title, NarrativeText, Table, …)"
+    )
+    bbox: Optional[BBoxSchema] = Field(
+        default=None,
+        description="Normalized bounding box [0,1] top-left; None if the extractor emitted no coordinates",
     )
 
 

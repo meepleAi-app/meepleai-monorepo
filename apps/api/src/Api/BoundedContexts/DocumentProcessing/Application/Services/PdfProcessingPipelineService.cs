@@ -967,7 +967,10 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 Heading = chunk.Heading,
                 Level = chunk.Level,
                 ParentChunkId = chunk.ParentChunkId,
-                ElementType = chunk.ElementType
+                ElementType = chunk.ElementType,
+                // SP-A (#3405): persist char offsets for citation grounding
+                CharStart = chunk.CharStart,
+                CharEnd = chunk.CharEnd
             })
             .ToList();
 

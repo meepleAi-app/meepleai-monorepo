@@ -444,8 +444,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             pdfDoc.ProcessingState = nameof(PdfProcessingState.Ready);
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
             // Issue #3269 (SP3): stamp the current indexer version so a completed fresh ingest is
-            // v1.1 (heading-aware) and `IndexerVersion == null` means only true pre-versioning
-            // legacy — keeps the bulk re-index selector from redundantly re-processing fresh docs.
+            // the current pipeline version (v1.2 coordinate-aware after #3409/SP-E) and
+            // `IndexerVersion == null` means only true pre-versioning legacy — keeps the bulk
+            // re-index selector from redundantly re-processing fresh docs.
             // Null-coalescing (not overwrite): a reindex path already stamped its chosen version at
             // reset (ReindexDocumentCommandHandler), so we preserve that explicit choice here.
             pdfDoc.IndexerVersion ??= IndexerVersionRegistry.Current.Version;

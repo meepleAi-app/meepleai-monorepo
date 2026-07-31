@@ -245,6 +245,8 @@ public class AskQuestionQueryHandlerSecurityTests
             // D7: use the real classifier (pure, stateless, no dependencies).
             new IntentClassifierService(),
             routingOptionsMonitor.Object,
+            Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
+            Mock.Of<Api.Services.IFeatureFlagService>(),
             _mockLogger.Object);
     }
 

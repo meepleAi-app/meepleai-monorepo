@@ -507,6 +507,11 @@ internal static class KnowledgeBaseServiceExtensions
         // Agent Memory context builder — injects house rules, group preferences into RAG prompts
         services.AddScoped<IAgentMemoryContextBuilder, AgentMemoryContextBuilder>();
 
+        // R1 (issue #3416, ADR-088): read-time provider for approved mechanic-card claim injection into RAG.
+        services.AddScoped<
+            Application.Services.MechanicClaimInjection.IMechanicCardProvider,
+            Application.Services.MechanicClaimInjection.MechanicCardProvider>();
+
         // RAG Copyright KB Cards: per-chunk copyright tier resolution
         services.AddScoped<ICopyrightTierResolver, CopyrightTierResolver>();
 

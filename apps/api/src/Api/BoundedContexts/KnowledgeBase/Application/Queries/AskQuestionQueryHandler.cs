@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
@@ -56,6 +57,8 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     private readonly IGenericTranslationService _genericTranslationService;
     private readonly IIntentClassifierService _intentClassifier;
     private readonly IOptionsMonitor<LlmQueryComplexityRoutingOptions> _routingOptions;
+    private readonly IMechanicCardProvider _mechanicCardProvider;
+    private readonly IFeatureFlagService _featureFlags;
     private readonly ILogger<AskQuestionQueryHandler> _logger;
 
     // Issue #2708: retrieve a wider candidate pool, then let the cross-encoder narrow it to the
@@ -83,6 +86,8 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         IGenericTranslationService genericTranslationService,
         IIntentClassifierService intentClassifier,
         IOptionsMonitor<LlmQueryComplexityRoutingOptions> routingOptions,
+        IMechanicCardProvider mechanicCardProvider,
+        IFeatureFlagService featureFlags,
         ILogger<AskQuestionQueryHandler> logger)
     {
         _searchQueryHandler = searchQueryHandler ?? throw new ArgumentNullException(nameof(searchQueryHandler));
@@ -104,6 +109,8 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _genericTranslationService = genericTranslationService ?? throw new ArgumentNullException(nameof(genericTranslationService));
         _intentClassifier = intentClassifier ?? throw new ArgumentNullException(nameof(intentClassifier));
         _routingOptions = routingOptions ?? throw new ArgumentNullException(nameof(routingOptions));
+        _mechanicCardProvider = mechanicCardProvider ?? throw new ArgumentNullException(nameof(mechanicCardProvider));
+        _featureFlags = featureFlags ?? throw new ArgumentNullException(nameof(featureFlags));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -177,11 +184,38 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         if (!quotaAllowed)
             throw new ForbiddenException("Quota giornaliera esaurita. Acquista crediti per continuare.");
 
+        // R1 (issue #3416, ADR-088): fetch approved mechanic-card claims to inject as authoritative
+        // context. Feature-flag gated (default off), best-effort, and computed HERE — above the semantic
+        // cache and the no-results early-exit — so the claim block still fires when retrieval is empty
+        // (spec §6.1). The card read runs AFTER CanAccessRag (§9) and adds no LLM call (quota-neutral).
+        var verifiedBlock = VerifiedRulesBlock.Empty;
+        var flagRole = Enum.TryParse<UserRole>(query.UserRole, ignoreCase: true, out var parsedFlagRole)
+            ? parsedFlagRole : (UserRole?)null;
+        if (await _featureFlags.IsEnabledAsync(FeatureFlagConstants.MechanicCardInjectionKey, flagRole)
+                .ConfigureAwait(false))
+        {
+            var claimSections = MechanicSectionRouter.Route(_intentClassifier.ClassifyIntent(query.Question));
+            if (claimSections.Count > 0)
+            {
+                var card = await _mechanicCardProvider.GetActiveCardAsync(query.GameId, cancellationToken)
+                    .ConfigureAwait(false);
+                if (card is not null)
+                {
+                    verifiedBlock = VerifiedRulesRenderer.Render(card, claimSections);
+                }
+            }
+        }
+        var injectClaims = !verifiedBlock.IsEmpty;
+
         // P1-5: Semantic cache lookup — generate query vector and check for a cached response.
         // Issue #563: The vector produced here is now also forwarded to SearchQueryHandler via
         // SearchQuery.QueryVector to eliminate the duplicate embedding call (~50-200ms saved per cache miss).
         float[]? queryVector = null;
-        if (!query.BypassCache)
+        // R1: when claims are injected, bypass the semantic response cache entirely (both read and write).
+        // The cache is keyed on (GameId, queryVector) with no card fingerprint, so a cached no-card answer
+        // must not shadow a claim-injected one, and a claim answer must not be replayed after suppression
+        // (spec §6.2). Claim-injected answers are simply not cached in v1 (bounded, documented trade-off).
+        if (!query.BypassCache && !injectClaims)
         {
             try
             {
@@ -267,8 +301,11 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _logger.LogInformation("[AskQuestionHandler] Step 1 DONE: Vector search completed in {ElapsedMs}ms - {ResultCount} results, confidence: {Confidence}",
             sw1.ElapsedMilliseconds, searchResults.Count, searchConfidence.Value);
 
-        // No-context early exit: skip LLM call when vector search returned no results
-        if (searchResults.Count == 0)
+        // No-context early exit: skip LLM call when vector search returned no results.
+        // R1 (spec §6.1): but NOT when an approved-claim block is present — the claims are the answer
+        // source in the retrieval-miss case (e.g. TM "Setup per N"), so proceed to the LLM with a
+        // claims-only prompt instead of the "not available" sentinel.
+        if (searchResults.Count == 0 && verifiedBlock.IsEmpty)
         {
             _logger.LogInformation("[AskQuestionHandler] No search results found, returning early without LLM call");
             var noContextMetrics = new RagQueryMetrics(
@@ -308,6 +345,14 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _logger.LogDebug("[AskQuestionHandler] Step 3: Building LLM prompts...");
         var systemPrompt = await _promptTemplateService.GetActivePromptAsync("rag-system-prompt")
             .ConfigureAwait(false) ?? DefaultSystemPrompt;
+        if (injectClaims)
+        {
+            // Grounding (spec §7.1): authorize the [Verified Rules] block as valid provided context so the
+            // "answer ONLY from context" constraint does not reject it when the RAG context is empty.
+            systemPrompt += " A section titled '[Verified Rules — human-approved]' may precede the Context; "
+                + "it is human-approved rulebook content and counts as provided context — you MAY answer "
+                + "from it and cite its [Page N].";
+        }
         var context = string.Join("\n\n", searchResults.Select(sr =>
             $"[Page {sr.PageNumber}] {sr.TextContent}"));
 
@@ -318,7 +363,10 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
             ? $"[House Rule for this group]\n{houseRuleMatch}\n\n"
             : string.Empty;
 
-        var baseQuestion = $"{houseRulePrefix}Question: {query.Question}\n\nContext:\n{context}";
+        // R1 (spec §7.1/D8): approved claims rank between house rules and raw RAG context.
+        var verifiedPrefix = injectClaims ? $"{verifiedBlock.PromptText}\n\n" : string.Empty;
+
+        var baseQuestion = $"{houseRulePrefix}{verifiedPrefix}Question: {query.Question}\n\nContext:\n{context}";
         var userPrompt = !string.IsNullOrWhiteSpace(chatHistoryContext)
             ? _chatContextService.EnrichPromptWithHistory(baseQuestion, chatHistoryContext)
             : baseQuestion;
@@ -344,13 +392,28 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _logger.LogInformation("[AskQuestionHandler] Step 5 DONE: Response validation completed in {ElapsedMs}ms",
             sw5.ElapsedMilliseconds);
 
+        // R1 (spec §7.4): emit claim-derived citations (PdfId/PdfPage + verbatim Quote) alongside the RAG
+        // citations. Provenance is carried by the inline [Vk] marker in the answer, not a DTO field —
+        // the shared CitationDto is left unchanged (coordination with the citation epic, spec §7.5).
+        if (injectClaims && verifiedBlock.Citations.Count > 0)
+        {
+            var claimCitations = verifiedBlock.Citations.Select(vc => new CitationDto(
+                DocumentId: vc.PdfId.ToString(),
+                PageNumber: vc.PdfPage,
+                Snippet: vc.Quote,
+                RelevanceScore: 1.0)).ToList();
+            var existingCitations = response.Citations ?? (IReadOnlyList<CitationDto>)Array.Empty<CitationDto>();
+            response = response with { Citations = [.. existingCitations, .. claimCitations] };
+        }
+
         _logger.LogInformation(
             "[AskQuestionHandler] COMPLETE - AskQuestionQuery completed: OverallConfidence={Confidence}, IsLowQuality={IsLowQuality}",
             response.OverallConfidence, response.IsLowQuality);
 
         // P1-5: Store successful response in semantic cache for future queries
-        // Don't cache low-quality or no-context responses to avoid polluting the cache
-        if (!query.BypassCache && queryVector != null && !IsLowQualityResponse(response))
+        // Don't cache low-quality or no-context responses to avoid polluting the cache.
+        // R1: never cache a claim-injected answer (no card fingerprint in the key — spec §6.2).
+        if (!query.BypassCache && queryVector != null && !injectClaims && !IsLowQualityResponse(response))
         {
             var citationTexts = response.Citations?
                 .Select(c => c.Snippet)
@@ -373,7 +436,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
             ChunksRetrieved: searchResults.Count,
             ChunksUsed: searchResults.Count, // currently equal to ChunksRetrieved — all retrieved chunks are passed to LLM context
             CitationsCount: response.Citations?.Count ?? 0,
-            Strategy: $"{query.SearchMode ?? "hybrid"}|tier:{queryRoutingTier}",
+            Strategy: $"{query.SearchMode ?? "hybrid"}|tier:{queryRoutingTier}|claims:{(injectClaims ? "injected" : "none")}",
             ModelUsed: llmResult.Cost.ModelId ?? "unknown",
             LatencyMs: (int)(DateTime.UtcNow - startTime).TotalMilliseconds,
             CacheHit: false,

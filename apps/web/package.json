@@ -70,7 +70,6 @@
     "chromatic": "chromatic",
     "chromatic:ci": "chromatic --exit-zero-on-changes --exit-once-uploaded",
     "test:visual": "chromatic --exit-zero-on-changes",
-    "test:visual:ci": "chromatic --exit-zero-on-changes --exit-once-uploaded",
     "test:visual:debug": "chromatic --debug",
     "test:visual-docs": "dotenv -e .env.test -- playwright test --config=playwright.visual-docs.config.ts",
     "test:visual-docs:ui": "dotenv -e .env.test -- playwright test --config=playwright.visual-docs.config.ts --ui",

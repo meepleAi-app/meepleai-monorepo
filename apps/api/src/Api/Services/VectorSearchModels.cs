@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 
 namespace Api.Services;
 
@@ -22,6 +23,9 @@ internal record DocumentChunk
     public short Level { get; init; } = 1;
     public Guid? ParentChunkId { get; init; }
     public string ElementType { get; init; } = "NarrativeText";
+    // SP-B (#3406): normalized region [0,1] top-left (union of the section's element boxes on
+    // the start page); null when the extractor emitted no coordinates.
+    public BoundingBox? BBox { get; init; }
 }
 
 /// <summary>
@@ -72,6 +76,17 @@ internal record SearchResultItem
 
     /// <summary>#3270: chunk heading-path label for the heading-match boost (nullable).</summary>
     public string? Heading { get; init; }
+
+    /// <summary>
+    /// SP-C (#3407): raw bounding-box JSON carried from the vector arm (<c>Embedding.BoundingBoxesJson</c>).
+    /// Primitive string (no layer dep); parsed + Full-gated at the API handler boundary. Null for the
+    /// keyword/FTS/RAPTOR arms and the pre-coordinate corpus.
+    /// </summary>
+    public string? BoundingBoxesJson { get; init; }
+
+    /// <summary>SP-C (#3407): chunk char offsets in the source PDF text (nullable).</summary>
+    public int? CharStart { get; init; }
+    public int? CharEnd { get; init; }
 }
 
 /// <summary>

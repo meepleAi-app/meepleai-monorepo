@@ -465,6 +465,77 @@ internal sealed class S3BlobStorageService : IBlobStorageService
 #pragma warning restore CA1031 // Do not catch general exception types
     }
 
+    /// <summary>
+    /// #3384 — writes an object to an EXACT physical key (write-side counterpart of
+    /// <see cref="GetPresignedUrlForRawKeyAsync"/>). No <c>ValidateIdentifier</c>, no
+    /// category folder, no random file-id segment: the key is written verbatim so the
+    /// resolver's raw-key read reconstructs it deterministically. Mirrors the cover
+    /// upload pipelines' <c>DisablePayloadSigning</c> requirement for S3-compatible
+    /// providers (R2/MinIO) that don't support the streaming payload trailer.
+    /// </summary>
+    public async Task<bool> StoreRawKeyAsync(string rawKey, Stream stream, string contentType, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(rawKey) || stream is null)
+        {
+            return false;
+        }
+
+        MemoryStream? buffered = null;
+        try
+        {
+            // Pre-buffer non-seekable streams so PutObject can declare a length (#2271).
+            Stream uploadStream;
+            if (stream.CanSeek)
+            {
+                uploadStream = stream;
+            }
+            else
+            {
+                buffered = new MemoryStream();
+                await stream.CopyToAsync(buffered, ct).ConfigureAwait(false);
+                buffered.Position = 0;
+                uploadStream = buffered;
+            }
+
+            var request = new PutObjectRequest
+            {
+                BucketName = _options.BucketName,
+                Key = rawKey,
+                InputStream = uploadStream,
+                ContentType = contentType,
+                AutoCloseStream = false,
+                DisablePayloadSigning = true,
+            };
+
+            await _s3Client.PutObjectAsync(request, ct).ConfigureAwait(false);
+            _logger.LogInformation("Stored file in S3 (raw key): {Key}", rawKey);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (AmazonS3Exception ex)
+        {
+            _logger.LogWarning(ex, "S3 error storing raw key {Key}: {ErrorCode}", rawKey, ex.ErrorCode);
+            return false;
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Unexpected error storing raw key {Key}", rawKey);
+            return false;
+        }
+#pragma warning restore CA1031 // Do not catch general exception types
+        finally
+        {
+            if (buffered is not null)
+            {
+                await buffered.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+    }
+
     private static string SanitizeFileName(string fileName)
     {
         return StringHelper.SanitizeFilename(fileName, maxLength: 200, fallbackName: "file");

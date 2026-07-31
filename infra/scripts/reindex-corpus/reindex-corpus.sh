@@ -4,12 +4,12 @@
 #
 # Wraps the admin endpoint `POST /api/v1/admin/queue/reindex-ready` (Slice 1, #3269)
 # in a drain loop. That endpoint enqueues Ready PDFs whose IndexerVersion differs from
-# the target (heading-aware v1.1) but is capped by the processing queue (MaxQueueSize),
+# the target (coordinate-aware v1.2) but is capped by the processing queue (MaxQueueSize),
 # so a large corpus needs REPEATED calls. This script loops until EnqueuedCount == 0
 # (corpus drained), pacing between iterations so the Quartz rail can process the queue
 # before the next batch is enqueued.
 #
-# The selector skips already-v1.1 docs (IndexerVersion == target), so the loop is
+# The selector skips already-current docs (IndexerVersion == target), so the loop is
 # idempotent / resumable — a crash mid-run is safe to re-run: already-re-indexed PDFs
 # are not touched again.
 #
@@ -67,7 +67,7 @@ fi
 : "${API_BASE_URL:?API_BASE_URL must be set in $ENV_FILE}"
 : "${ADMIN_EMAIL:?ADMIN_EMAIL must be set in $ENV_FILE}"
 : "${ADMIN_PASSWORD:?ADMIN_PASSWORD must be set in $ENV_FILE}"
-TARGET_VERSION="${TARGET_VERSION:-}"      # empty → server resolves Current (v1.1)
+TARGET_VERSION="${TARGET_VERSION:-}"      # empty → server resolves Current (v1.2)
 PACING_SECONDS="${PACING_SECONDS:-5}"
 MAX_ITERATIONS="${MAX_ITERATIONS:-200}"
 
@@ -94,7 +94,7 @@ LOGIN_ENDPOINT="$API_BASE_URL/api/v1/auth/login"
 if [ -n "$TARGET_VERSION" ]; then
   BODY=$(jq -n --arg v "$TARGET_VERSION" '{targetVersion:$v}')
 else
-  BODY='{}'   # omit targetVersion → server uses Current (heading-aware v1.1)
+  BODY='{}'   # omit targetVersion → server uses Current (coordinate-aware v1.2)
 fi
 
 COOKIE=$(mktemp)
@@ -119,7 +119,7 @@ if [ "$DRY_RUN" = true ]; then
   log_info "DRY-RUN plan:"
   log_info "  Environment : $ENV_NAME"
   log_info "  Endpoint    : POST $REINDEX_ENDPOINT"
-  log_info "  Target ver  : ${TARGET_VERSION:-<server Current — heading-aware v1.1>}"
+  log_info "  Target ver  : ${TARGET_VERSION:-<server Current — coordinate-aware v1.2>}"
   log_info "  Pacing      : ${PACING_SECONDS}s between iterations"
   log_info "  Max iters   : $MAX_ITERATIONS (safety cap)"
   log_info "  Plan        : loop POST reindex-ready until EnqueuedCount==0 (corpus drained)."
@@ -131,7 +131,7 @@ fi
 # --- real run: login then drain-loop ---
 login
 
-log_info "Starting big-bang corpus re-index for ENV=$ENV_NAME (target=${TARGET_VERSION:-<server Current v1.1>})"
+log_info "Starting big-bang corpus re-index for ENV=$ENV_NAME (target=${TARGET_VERSION:-<server Current v1.2>})"
 total_enqueued=0
 iteration=0
 
@@ -179,7 +179,7 @@ while [ "$iteration" -lt "$MAX_ITERATIONS" ]; do
 done
 
 log_error "MAX_ITERATIONS ($MAX_ITERATIONS) exceeded without draining (EnqueuedCount never reached 0)."
-log_error "This signals a STUCK queue: PDFs are re-enqueued but not progressing to $([ -n "$TARGET_VERSION" ] && echo "$TARGET_VERSION" || echo 'v1.1'). Check:"
+log_error "This signals a STUCK queue: PDFs are re-enqueued but not progressing to $([ -n "$TARGET_VERSION" ] && echo "$TARGET_VERSION" || echo 'v1.2'). Check:"
 log_error "  - the 'unstructured' Docker container is rebuilt with SP1 code (stale → 0 elements → no version bump)"
 log_error "  - the Quartz processing rail is running and the queue is not paused"
 log_error "  - raise MAX_ITERATIONS only after confirming the queue is actually progressing"

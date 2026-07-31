@@ -108,8 +108,8 @@ public sealed class BulkReindexReadyCommandHandlerTests : IAsyncLifetime
                     c.PdfId == pdf.Id && c.IndexerVersion == IndexerVersionRegistry.Current.Version),
                 It.IsAny<CancellationToken>()),
             Times.Once);
-        // The current pipeline version is v1.1 (SP3 #3269). Assert the literal explicitly.
-        IndexerVersionRegistry.Current.Version.Should().Be("v1.1");
+        // The current pipeline version is v1.2 (SP-E #3409, coordinate-aware). Assert the literal explicitly.
+        IndexerVersionRegistry.Current.Version.Should().Be("v1.2");
         result.EnqueuedCount.Should().Be(1);
         result.SkippedCount.Should().Be(0);
         result.Errors.Should().BeEmpty();

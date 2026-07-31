@@ -169,6 +169,25 @@ internal interface IBlobStorageService
     /// <param name="ct">Cancellation token.</param>
     /// <returns>True if the delete request was issued successfully (best-effort; local storage returns false as it does not host raw keys).</returns>
     Task<bool> DeleteRawKeyAsync(string rawKey, CancellationToken ct = default);
+
+    /// <summary>
+    /// Stores an object at an EXACT physical storage key — the write-side counterpart
+    /// of <see cref="GetPresignedUrlForRawKeyAsync"/> / <see cref="DeleteRawKeyAsync"/>.
+    /// Unlike <see cref="StoreAsync"/>, this does NOT run
+    /// <c>PathSecurity.ValidateIdentifier</c> and does NOT prepend a category folder
+    /// or a random file-id segment — the object is written verbatim to
+    /// <paramref name="rawKey"/> (slashes and dots allowed). Required by the
+    /// deterministic cover keys (#3384) so the write key and the resolver's raw-key
+    /// read coincide by construction; the categorized <see cref="StoreAsync"/> would
+    /// reject the slash-containing cover key AND generate a random-id key the resolver
+    /// cannot reconstruct.
+    /// </summary>
+    /// <param name="rawKey">The exact physical storage object key to write.</param>
+    /// <param name="stream">The content to store.</param>
+    /// <param name="contentType">MIME content type of the stored object.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>True if the object was written successfully; false on failure or when the backend does not host raw keys (local storage).</returns>
+    Task<bool> StoreRawKeyAsync(string rawKey, Stream stream, string contentType, CancellationToken ct = default);
 }
 
 /// <summary>

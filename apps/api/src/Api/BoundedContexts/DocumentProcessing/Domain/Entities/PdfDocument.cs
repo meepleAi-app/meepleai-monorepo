@@ -102,6 +102,15 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     public int? CoverPageIndex { get; private set; }
     public string? CoverGenerationError { get; private set; }
 
+    /// <summary>
+    /// #3373 D1 / #3401: transient-failure retry budget counter, mirrored from
+    /// <c>PdfDocumentEntity.CoverGenerationAttempts</c>. Managed by the cover jobs
+    /// directly on the entity; carried on the aggregate purely so the repository
+    /// round-trip (<c>UpdateAsync</c> rebuilds + <c>DbSet.Update</c> the whole row)
+    /// does not silently zero it.
+    /// </summary>
+    public int CoverGenerationAttempts { get; private set; }
+
     // Issue #4219: Per-state timing tracking for metrics and ETA
     public DateTime? UploadingStartedAt { get; private set; }
     public DateTime? ExtractingStartedAt { get; private set; }
@@ -220,7 +229,8 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         string? coverR2Key = null,
         string? coverGenerationStatus = null,
         int? coverPageIndex = null,
-        string? coverGenerationError = null)
+        string? coverGenerationError = null,
+        int coverGenerationAttempts = 0)
     {
         var document = new PdfDocument
         {
@@ -294,7 +304,8 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
                 ? PdfCoverGenerationStatus.Pending
                 : Enum.Parse<PdfCoverGenerationStatus>(coverGenerationStatus, ignoreCase: true),
             CoverPageIndex = coverPageIndex,
-            CoverGenerationError = coverGenerationError
+            CoverGenerationError = coverGenerationError,
+            CoverGenerationAttempts = coverGenerationAttempts
         };
 
         if (tags is { Count: > 0 })

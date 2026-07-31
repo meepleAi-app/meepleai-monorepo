@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 
-import { PdfInlineViewer } from './PdfInlineViewer';
+import { PdfInlineViewer, type PdfInlineViewerFeatures } from './PdfInlineViewer';
 
 export interface PdfQuoteViewerProps {
   readonly documentId: string;
@@ -14,6 +14,12 @@ export interface PdfQuoteViewerProps {
    * same citation re-arms the fallback banner.
    */
   readonly resetKey?: unknown;
+  /**
+   * Toolbar/behaviour surface forwarded to {@link PdfInlineViewer}. Defaults to
+   * `{ jumpToPage: true, zoom: true }` (mechanic-card / admin usage). The chat
+   * citation path (CitationPdfTab) passes `{ antiLeak: true }` instead.
+   */
+  readonly features?: PdfInlineViewerFeatures;
   readonly className?: string;
 }
 
@@ -35,6 +41,7 @@ export function PdfQuoteViewer({
   page,
   quote,
   resetKey,
+  features = { jumpToPage: true, zoom: true },
   className,
 }: PdfQuoteViewerProps): React.JSX.Element {
   const [matched, setMatched] = useState<boolean | null>(null);
@@ -68,7 +75,7 @@ export function PdfQuoteViewer({
         initialPage={page}
         highlightQuote={quote}
         onQuoteMatch={setMatched}
-        features={{ jumpToPage: true, zoom: true }}
+        features={features}
       />
     </div>
   );

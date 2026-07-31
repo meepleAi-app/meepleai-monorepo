@@ -2,6 +2,7 @@ using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.UserLibrary;
 using Api.Observability;
 using Api.Services.Pdf;
+using Api.SharedKernel.Domain.Covers;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 
@@ -50,7 +51,8 @@ internal static class CoverUrlResolver
         if (!string.IsNullOrWhiteSpace(userEntry?.CustomCoverR2Key))
         {
             var url = await blobStorage
-                .GetPresignedUrlForRawKeyAsync($"{userEntry.CustomCoverR2Key}.webp")
+                .GetPresignedUrlForRawKeyAsync(
+                    CoverKeyBuilder.PhysicalKeyFor(CoverKind.User, userEntry.CustomCoverR2Key))
                 .ConfigureAwait(false);
             if (url is not null)
             {
@@ -80,7 +82,8 @@ internal static class CoverUrlResolver
         if (!string.IsNullOrWhiteSpace(sharedGame.PdfCoverR2Key))
         {
             var url = await blobStorage
-                .GetPresignedUrlForRawKeyAsync($"{sharedGame.PdfCoverR2Key}-preview.webp")
+                .GetPresignedUrlForRawKeyAsync(
+                    CoverKeyBuilder.PhysicalKeyFor(CoverKind.Pdf, sharedGame.PdfCoverR2Key))
                 .ConfigureAwait(false);
             if (url is not null)
             {
@@ -99,7 +102,8 @@ internal static class CoverUrlResolver
         if (!string.IsNullOrWhiteSpace(sharedGame.BggCoverR2Key))
         {
             var url = await blobStorage
-                .GetPresignedUrlForRawKeyAsync(sharedGame.BggCoverR2Key)
+                .GetPresignedUrlForRawKeyAsync(
+                    CoverKeyBuilder.PhysicalKeyFor(CoverKind.Bgg, sharedGame.BggCoverR2Key))
                 .ConfigureAwait(false);
             if (url is not null)
             {
@@ -112,7 +116,8 @@ internal static class CoverUrlResolver
         if (!string.IsNullOrWhiteSpace(sharedGame.WikidataCoverR2Key))
         {
             var url = await blobStorage
-                .GetPresignedUrlForRawKeyAsync($"{sharedGame.WikidataCoverR2Key}.webp")
+                .GetPresignedUrlForRawKeyAsync(
+                    CoverKeyBuilder.PhysicalKeyFor(CoverKind.Wikidata, sharedGame.WikidataCoverR2Key))
                 .ConfigureAwait(false);
             if (url is not null)
             {

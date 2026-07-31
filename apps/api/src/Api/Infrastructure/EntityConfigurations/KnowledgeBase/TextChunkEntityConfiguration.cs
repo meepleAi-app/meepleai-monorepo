@@ -20,6 +20,17 @@ internal class TextChunkEntityConfiguration : IEntityTypeConfiguration<TextChunk
         builder.Property(e => e.ChunkIndex).IsRequired();
         builder.Property(e => e.PageNumber);
         builder.Property(e => e.CharacterCount).IsRequired();
+
+        // SP-A (#3405): char offsets nullable (backfill via re-index; NULL per righe pre-esistenti)
+        builder.Property(e => e.CharStart).HasColumnName("char_start").IsRequired(false);
+        builder.Property(e => e.CharEnd).HasColumnName("char_end").IsRequired(false);
+
+        // SP-B (#3406): normalized region(s) as jsonb (nullable; NULL when no coordinates)
+        builder.Property(e => e.BoundingBoxesJson)
+               .HasColumnName("bounding_boxes_json")
+               .HasColumnType("jsonb")
+               .IsRequired(false);
+
         builder.Property(e => e.CreatedAt).IsRequired();
 
         // Issue #730: Chunk hierarchy fields

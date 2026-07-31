@@ -116,7 +116,7 @@ public sealed class RemoveCustomCoverCommandHandlerTests
             .ReturnsAsync(entry);
 
         _mockBlobStorage
-            .Setup(b => b.DeleteAsync(It.IsAny<string>(), BlobCategory.GameImage, coverKey, It.IsAny<CancellationToken>()))
+            .Setup(b => b.DeleteRawKeyAsync($"{coverKey}.webp", It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         var command = CreateCommand(userId, gameId);
@@ -124,13 +124,9 @@ public sealed class RemoveCustomCoverCommandHandlerTests
         // Act
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        // Assert
+        // Assert — raw-key delete of the exact physical object (#3384)
         _mockBlobStorage.Verify(
-            b => b.DeleteAsync(
-                $"{coverKey}.webp",
-                BlobCategory.GameImage,
-                coverKey,
-                It.IsAny<CancellationToken>()),
+            b => b.DeleteRawKeyAsync($"{coverKey}.webp", It.IsAny<CancellationToken>()),
             Times.Once);
 
         // Verify SetCustomCoverR2Key was called with null
@@ -162,7 +158,7 @@ public sealed class RemoveCustomCoverCommandHandlerTests
 
         var deleteException = new InvalidOperationException("R2 service unavailable");
         _mockBlobStorage
-            .Setup(b => b.DeleteAsync(It.IsAny<string>(), BlobCategory.GameImage, coverKey, It.IsAny<CancellationToken>()))
+            .Setup(b => b.DeleteRawKeyAsync($"{coverKey}.webp", It.IsAny<CancellationToken>()))
             .ThrowsAsync(deleteException);
 
         var command = CreateCommand(userId, gameId);
@@ -172,11 +168,7 @@ public sealed class RemoveCustomCoverCommandHandlerTests
 
         // Assert: handler should NOT propagate exception
         _mockBlobStorage.Verify(
-            b => b.DeleteAsync(
-                $"{coverKey}.webp",
-                BlobCategory.GameImage,
-                coverKey,
-                It.IsAny<CancellationToken>()),
+            b => b.DeleteRawKeyAsync($"{coverKey}.webp", It.IsAny<CancellationToken>()),
             Times.Once);
 
         // DB should still be updated despite R2 failure

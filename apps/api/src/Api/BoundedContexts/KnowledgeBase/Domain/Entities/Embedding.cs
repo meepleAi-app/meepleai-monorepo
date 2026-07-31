@@ -46,6 +46,20 @@ internal sealed class Embedding : Entity<Guid>
     public string? Heading { get; private set; }
 
     /// <summary>
+    /// SP-C (#3407): raw bounding-box JSON (<c>text_chunks.bounding_boxes_json</c>) resolved via the
+    /// same <c>source_chunk_id</c> JOIN as <see cref="Heading"/>. Carried as a primitive string (no
+    /// layer dep) — parsed to <c>CitationRegion</c> and Full-gated only at the API handler boundary.
+    /// Null for the pre-coordinate corpus / non-Unstructured branch / reads that don't project it.
+    /// </summary>
+    public string? BoundingBoxesJson { get; private set; }
+
+    /// <summary>SP-C (#3407): char offset (inclusive) of the chunk in the source PDF text (<c>text_chunks.char_start</c>). Null when unavailable.</summary>
+    public int? CharStart { get; private set; }
+
+    /// <summary>SP-C (#3407): char offset (exclusive) of the chunk in the source PDF text (<c>text_chunks.char_end</c>). Null when unavailable.</summary>
+    public int? CharEnd { get; private set; }
+
+    /// <summary>
     /// Private constructor for EF Core.
     /// </summary>
 #pragma warning disable CS8618
@@ -70,7 +84,10 @@ internal sealed class Embedding : Entity<Guid>
         bool isTranslation = false,
         int roleTags = 0,
         Guid pdfDocumentId = default,
-        string? heading = null) : base(id)
+        string? heading = null,
+        string? boundingBoxesJson = null,
+        int? charStart = null,
+        int? charEnd = null) : base(id)
     {
         if (string.IsNullOrWhiteSpace(textContent))
             throw new ArgumentException("Text content cannot be empty", nameof(textContent));
@@ -97,6 +114,9 @@ internal sealed class Embedding : Entity<Guid>
         RoleTags = roleTags;
         PdfDocumentId = pdfDocumentId;
         Heading = heading;
+        BoundingBoxesJson = boundingBoxesJson;
+        CharStart = charStart;
+        CharEnd = charEnd;
     }
 
     /// <summary>

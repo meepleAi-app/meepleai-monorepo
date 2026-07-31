@@ -285,7 +285,11 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                         Text = scored.Embedding.TextContent,
                         PdfId = scored.Embedding.VectorDocumentId.ToString(),
                         Page = scored.Embedding.PageNumber,
-                        ChunkIndex = scored.Embedding.ChunkIndex
+                        ChunkIndex = scored.Embedding.ChunkIndex,
+                        // SP-C (#3407): carry region-grounding primitives from the vector arm.
+                        BoundingBoxesJson = scored.Embedding.BoundingBoxesJson,
+                        CharStart = scored.Embedding.CharStart,
+                        CharEnd = scored.Embedding.CharEnd,
                     });
                 }
             }
@@ -354,7 +358,19 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                         filteredChunks = filteredChunks
                             .Concat(expandedChunks)
                             .GroupBy(c => $"{c.PdfId}:{c.ChunkIndex}", StringComparer.Ordinal)
-                            .Select(g => g.OrderByDescending(c => c.Score).First())
+                            .Select(g =>
+                            {
+                                var best = g.OrderByDescending(c => c.Score).First();
+                                // SP-C (#3407): this GroupBy is a DROP SITE (mirrors the hybrid-fusion
+                                // merge). The expanded arm is FTS-only (no bbox); coalesce the region
+                                // carriers across the group so the original vector chunk's bbox survives.
+                                return best with
+                                {
+                                    BoundingBoxesJson = g.Select(c => c.BoundingBoxesJson).FirstOrDefault(b => b != null),
+                                    CharStart = g.Select(c => c.CharStart).FirstOrDefault(v => v != null),
+                                    CharEnd = g.Select(c => c.CharEnd).FirstOrDefault(v => v != null),
+                                };
+                            })
                             .OrderByDescending(c => c.Score)
                             .Take(profile.TopK * 2)
                             .ToList();
@@ -444,6 +460,11 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                 {
                     FullText = chunk.Text,  // #447: preserve full text for copyright leak guard
                     ChunkIndex = chunk.ChunkIndex,
+                    // SP-C (#3407): raw region carriers (transient, [JsonIgnore]) — parsed + Full-gated
+                    // into CitationDto.Regions at the handler boundary.
+                    BoundingBoxesJson = chunk.BoundingBoxesJson,
+                    CharStart = chunk.CharStart,
+                    CharEnd = chunk.CharEnd,
                 };
 
                 citations.Add(citation);
@@ -610,7 +631,13 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                         Text = best.Text,
                         PdfId = best.PdfId,
                         Page = best.Page,
-                        ChunkIndex = best.ChunkIndex
+                        ChunkIndex = best.ChunkIndex,
+                        // SP-C (#3407): this GroupBy rebuild is a DROP SITE. Coalesce the region
+                        // carriers across the group (the vector arm has them; the FTS arm never
+                        // does) so bbox survives even when the FTS copy wins `best` on score.
+                        BoundingBoxesJson = g.Select(c => c.BoundingBoxesJson).FirstOrDefault(b => b != null),
+                        CharStart = g.Select(c => c.CharStart).FirstOrDefault(v => v != null),
+                        CharEnd = g.Select(c => c.CharEnd).FirstOrDefault(v => v != null),
                     };
                 })
                 .ToList();

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure;
 using Api.Services.Pdf;
+using Api.SharedKernel.Domain.Covers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -113,7 +114,7 @@ public sealed class PdfCoverOrphanRecoveryJob : IJob
                 // via the RAW-KEY primitive (mirrors CoverUrlResolver): CoverR2Key
                 // is a deterministic key containing '/' (e.g. "covers/pdf/{id:D}/cover"),
                 // which the categorized ExistsAsync cannot validate/resolve.
-                var previewRawKey = $"{pdf.CoverR2Key}-preview.webp";
+                var previewRawKey = CoverKeyBuilder.PhysicalKeyFor(CoverKind.Pdf, pdf.CoverR2Key!);
                 var exists = await blob.GetPresignedUrlForRawKeyAsync(previewRawKey)
                     .ConfigureAwait(false) is not null;
 
@@ -207,7 +208,7 @@ public sealed class PdfCoverOrphanRecoveryJob : IJob
             var pdf = batch[i];
             try
             {
-                var previewRawKey = $"covers/pdf/{pdf.Id:D}/cover-preview.webp";
+                var previewRawKey = CoverKeyBuilder.ForPdf(pdf.Id).PhysicalKey;
                 var orphanExists = await blob.GetPresignedUrlForRawKeyAsync(previewRawKey).ConfigureAwait(false) is not null;
                 if (orphanExists)
                 {

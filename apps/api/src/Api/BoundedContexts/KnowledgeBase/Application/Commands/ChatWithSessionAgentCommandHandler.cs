@@ -650,7 +650,12 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             c.CopyrightTier == CopyrightTier.Full ? c.SnippetPreview : null,
             c.CopyrightTier.ToString().ToLowerInvariant(),
             c.ParaphrasedSnippet,
-            c.IsPublic)).ToList();
+            c.IsPublic,
+            // SP-C (#3407): region overlay + char offsets are Full-gated (same rule as SnippetPreview) —
+            // parsed from the raw bbox JSON only for Full-tier citations (DA-4: no verbatim highlight leak).
+            Regions: c.CopyrightTier == CopyrightTier.Full ? CitationRegion.Parse(c.BoundingBoxesJson) : null,
+            CharStart: c.CopyrightTier == CopyrightTier.Full ? c.CharStart : null,
+            CharEnd: c.CopyrightTier == CopyrightTier.Full ? c.CharEnd : null)).ToList();
 
         // SP5-b T2: record citations-per-answer ONCE, post-stream, using citationDtos.Count
         // (the broadcast-authoritative list — NOT the earlier assembled.Citations or resolvedCitations).

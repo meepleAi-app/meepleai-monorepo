@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -42,6 +43,30 @@ internal record Snippet(string text, string source, int page, int line, float sc
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? chunkPosition { get; init; }
+
+    /// <summary>
+    /// SP-C (#3407): normalized [0,1] top-left bounding boxes of the cited chunk, for the
+    /// FE PDF region overlay. Full-gated: populated ONLY when CopyrightTier=Full (drawing
+    /// the verbatim region on a Protected doc would leak, DA-4). Null for the pre-coordinate
+    /// corpus / non-Unstructured branch / Protected tier → key omitted (additive-only, D-4).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<CitationRegion>? regions { get; init; }
+
+    /// <summary>
+    /// SP-C (#3407): char offset (inclusive) of the chunk within the source PDF text.
+    /// Full-gated; null when unavailable. NOT to be confused with InlineCitationMatch
+    /// offsets, which index into the ANSWER text.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? charStart { get; init; }
+
+    /// <summary>
+    /// SP-C (#3407): char offset (exclusive) of the chunk within the source PDF text.
+    /// Full-gated; null when unavailable.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? charEnd { get; init; }
 }
 
 /// <summary>
@@ -139,7 +164,51 @@ internal record CitationDto(
     string? SnippetPreview,
     string CopyrightTier,
     string? ParaphrasedSnippet = null,
-    bool IsPublic = false);
+    bool IsPublic = false,
+    IReadOnlyList<CitationRegion>? Regions = null,
+    int? CharStart = null,
+    int? CharEnd = null);
+
+/// <summary>
+/// SP-C (#3407): FE-facing, Full-gated region of a citation on the source PDF.
+/// Coordinates are normalized to [0,1] top-left (page-relative), enabling a
+/// scale/DPR-independent %-based overlay (SP-D). Parsed at the handler boundary from
+/// the persisted <c>text_chunks.bounding_boxes_json</c> array; never carried through the
+/// domain/application layers (those hold the raw JSON string only — no layer deps).
+/// </summary>
+internal record CitationRegion(int Page, double X, double Y, double Width, double Height)
+{
+    /// <summary>
+    /// Parses the persisted bounding-box JSON (<c>[{page,x,y,width,height}]</c>, lowercase
+    /// keys) into regions. Returns null for null/blank/empty/malformed input — never throws,
+    /// so a corrupt column can never break a citation response.
+    /// </summary>
+    public static IReadOnlyList<CitationRegion>? Parse(string? boundingBoxesJson)
+    {
+        if (string.IsNullOrWhiteSpace(boundingBoxesJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            var regions = JsonSerializer.Deserialize<List<CitationRegion>>(
+                boundingBoxesJson, RegionParseOptions);
+            return regions is { Count: > 0 } ? regions : null;
+        }
+        catch (JsonException)
+        {
+            // Defensive: a corrupt/unexpected column must never break a citation response.
+            return null;
+        }
+    }
+
+    private static readonly JsonSerializerOptions RegionParseOptions = new()
+    {
+        // Persisted keys are lowercase (page/x/y/width/height) — the record members are PascalCase.
+        PropertyNameCaseInsensitive = true,
+    };
+}
 internal record StreamingError(string errorMessage, string? errorCode = null);
 internal record StreamingToken(string token); // CHAT-01: Individual LLM token
 internal record StreamingSetupStep(SetupGuideStep step); // AI-03: Individual setup step

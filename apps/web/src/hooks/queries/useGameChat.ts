@@ -85,11 +85,23 @@ interface ErrorPayload {
 // page, score }, while the type-4 COMPLETE payload carries citations:null in
 // production. Map that shape to the FE Citation type so the chat renders
 // CitationChip and can open the source PDF at the cited page.
+interface SseRegion {
+  readonly page: number;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
 interface SseCitation {
   readonly text?: string;
   readonly source?: string;
   readonly page?: number;
   readonly score?: number;
+  // SP-C (#3407): Full-gated region grounding emitted by the BE Snippet (camelCase wire).
+  readonly regions?: ReadonlyArray<SseRegion> | null;
+  readonly charStart?: number | null;
+  readonly charEnd?: number | null;
 }
 
 function mapSseCitation(c: SseCitation): Citation {
@@ -99,6 +111,12 @@ function mapSseCitation(c: SseCitation): Citation {
     snippet: c.text ?? '',
     relevanceScore: c.score ?? 0,
     copyrightTier: 'full',
+    // SP-C (#3407): surface the region overlay + char offsets (already Full-gated by the BE).
+    regions: c.regions
+      ? c.regions.map(r => ({ page: r.page, x: r.x, y: r.y, width: r.width, height: r.height }))
+      : null,
+    charStart: c.charStart ?? null,
+    charEnd: c.charEnd ?? null,
   };
 }
 

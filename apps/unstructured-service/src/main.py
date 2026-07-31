@@ -20,6 +20,7 @@ from .api.schemas import (
     ErrorResponse,
     HealthCheckResponse,
 )
+from .api.coordinates import normalized_bbox
 
 # Configure logging
 logging.basicConfig(
@@ -219,6 +220,7 @@ async def extract_pdf(
                     text=el.text,
                     page_number=getattr(getattr(el, "metadata", None), "page_number", 1) or 1,
                     category=getattr(el, "category", None),
+                    bbox=normalized_bbox(el),  # SP-B (#3406): normalized [0,1] bbox, None if absent
                 )
                 for el in result.elements
                 if getattr(el, "text", None)

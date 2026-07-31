@@ -22,7 +22,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// real PostgreSQL instance (Testcontainers). Issue #3269 (SP3 RAG bulk re-index).
 /// <para>
 /// Proves the mandatory Postgres null-comparison guard on the selector: a plain
-/// <c>indexer_version &lt;&gt; 'v1.1'</c> predicate silently drops rows where
+/// <c>indexer_version &lt;&gt; 'v1.2'</c> predicate silently drops rows where
 /// <c>indexer_version IS NULL</c> (three-valued logic), so the handler MUST use
 /// <c>IndexerVersion == null || IndexerVersion != target</c>. This test seeds a NULL-version
 /// Ready row and asserts it IS selected — it fails against Npgsql SQL semantics if the
@@ -130,7 +130,7 @@ public sealed class BulkReindexReadySelectorIntegrationTests : IAsyncLifetime
     {
         // PDF-A: Ready + IndexerVersion = NULL  → MUST be selected (null-comparison guard).
         var pdfA = await SeedPdfAsync("Ready", indexerVersion: null);
-        // PDF-B: Ready + already at target v1.1 → excluded (idempotent).
+        // PDF-B: Ready + already at the current target (v1.2) → excluded (idempotent).
         await SeedPdfAsync("Ready", indexerVersion: IndexerVersionRegistry.Current.Version);
         // PDF-C: Failed + NULL                 → excluded (non-Ready).
         await SeedPdfAsync("Failed", indexerVersion: null);

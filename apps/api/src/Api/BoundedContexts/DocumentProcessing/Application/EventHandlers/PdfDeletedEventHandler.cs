@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.Services.Pdf;
+using Api.SharedKernel.Domain.Covers;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -44,7 +45,7 @@ internal sealed class PdfDeletedEventHandler : INotificationHandler<PdfDeletedDo
         // The categorized DeleteAsync cannot be used because it runs
         // PathSecurity.ValidateIdentifier, which rejects '/' and '.'; delete via
         // the raw-key primitive instead (mirrors CoverUrlResolver's raw-key reads).
-        var rawKey = $"{notification.CoverR2Key}-preview.webp";
+        var rawKey = CoverKeyBuilder.PhysicalKeyFor(CoverKind.Pdf, notification.CoverR2Key);
         await TryDeleteRawKeyAsync(rawKey, notification.PdfDocumentId, cancellationToken).ConfigureAwait(false);
     }
 

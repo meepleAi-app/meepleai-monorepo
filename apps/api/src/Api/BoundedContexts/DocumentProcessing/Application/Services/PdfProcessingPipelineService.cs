@@ -15,6 +15,7 @@ using Api.Observability;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Domain.Covers;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using KbEntities = Api.BoundedContexts.KnowledgeBase.Domain.Entities;
@@ -443,8 +444,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             pdfDoc.ProcessingState = nameof(PdfProcessingState.Ready);
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
             // Issue #3269 (SP3): stamp the current indexer version so a completed fresh ingest is
-            // v1.1 (heading-aware) and `IndexerVersion == null` means only true pre-versioning
-            // legacy — keeps the bulk re-index selector from redundantly re-processing fresh docs.
+            // the current pipeline version (v1.2 coordinate-aware after #3409/SP-E) and
+            // `IndexerVersion == null` means only true pre-versioning legacy — keeps the bulk
+            // re-index selector from redundantly re-processing fresh docs.
             // Null-coalescing (not overwrite): a reindex path already stamped its chosen version at
             // reset (ReindexDocumentCommandHandler), so we preserve that explicit choice here.
             pdfDoc.IndexerVersion ??= IndexerVersionRegistry.Current.Version;
@@ -583,7 +585,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                         // physical R2 object "{dbKey}-preview.webp" that the resolver
                         // reconstructs. Only the preview size is uploaded (the
                         // resolver never reads the thumbnail size).
-                        var dbKey = $"covers/pdf/{pdfDoc.Id:D}/cover";
+                        // #3384 D5-A: DB key comes from the single CoverKeyBuilder.
+                        var dbKey = CoverKeyBuilder.ForPdf(pdfDoc.Id).DbKey;
 
                         var persistedKey = await _pdfCoverUploadPipeline
                             .UploadAsync(dbKey, result.PreviewWebp!, cancellationToken)
@@ -965,7 +968,12 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 Heading = chunk.Heading,
                 Level = chunk.Level,
                 ParentChunkId = chunk.ParentChunkId,
-                ElementType = chunk.ElementType
+                ElementType = chunk.ElementType,
+                // SP-A (#3405): persist char offsets for citation grounding
+                CharStart = chunk.CharStart,
+                CharEnd = chunk.CharEnd,
+                // SP-B (#3406): persist the normalized region for citation grounding
+                BoundingBoxesJson = ChunkBoundingBoxJson.Serialize(chunk.BBox, chunk.Page)
             })
             .ToList();
 

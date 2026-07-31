@@ -72,6 +72,9 @@ public sealed class GameNightPhotoUploadTests : IAsyncLifetime
             => Task.FromResult<string?>(null);
         public Task<bool> DeleteRawKeyAsync(string rawKey, CancellationToken ct = default)
             => Task.FromResult(true);
+
+        public Task<bool> StoreRawKeyAsync(string rawKey, Stream stream, string contentType, CancellationToken ct = default)
+            => Task.FromResult(true);
     }
 
     public async ValueTask InitializeAsync()

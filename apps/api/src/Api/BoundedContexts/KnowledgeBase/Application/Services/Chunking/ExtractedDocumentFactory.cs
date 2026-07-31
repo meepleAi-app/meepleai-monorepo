@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 
@@ -48,6 +49,7 @@ internal static class ExtractedDocumentFactory
                 ElementType = NormalizeElementType(group.Elements[0].ElementType),
                 CharStart = sectionStart,
                 CharEnd = sectionEnd,
+                BBox = ComputeSectionBBox(group.Elements),
             });
 
             // Inter-section separator: lands in the GAP between this section's CharEnd and the
@@ -127,4 +129,33 @@ internal static class ExtractedDocumentFactory
         "ListItem" => "list",
         _ => "text",
     };
+
+    /// <summary>
+    /// SP-B (#3406): the section's region = union (min/max) of its elements' normalized boxes on the
+    /// section start page. Elements without coordinates — or on later pages of a multi-page section —
+    /// are skipped; returns null when none carry a box. Single box per section (MVP): multi-page
+    /// sections are anchored to the start page. Maps the DocumentProcessing ElementBoundingBox to the
+    /// KnowledgeBase BoundingBox VO (dependency arrow KB → DocumentProcessing).
+    /// </summary>
+    private static BoundingBox? ComputeSectionBBox(IReadOnlyList<ExtractedElement> elements)
+    {
+        var startPage = elements[0].PageNumber;
+        float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
+        var found = false;
+        foreach (var el in elements)
+        {
+            if (el.PageNumber != startPage || el.BoundingBox is null)
+            {
+                continue;
+            }
+            var b = el.BoundingBox;
+            found = true;
+            if (b.X < minX) minX = b.X;
+            if (b.Y < minY) minY = b.Y;
+            if (b.X + b.Width > maxX) maxX = b.X + b.Width;
+            if (b.Y + b.Height > maxY) maxY = b.Y + b.Height;
+        }
+
+        return found ? BoundingBox.FromCoordinates(minX, minY, maxX - minX, maxY - minY) : null;
+    }
 }

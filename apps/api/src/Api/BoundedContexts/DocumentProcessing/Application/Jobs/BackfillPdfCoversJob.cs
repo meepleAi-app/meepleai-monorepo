@@ -6,6 +6,7 @@ using Api.Infrastructure.Entities;
 using Api.Observability;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Domain.Covers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -169,7 +170,8 @@ public sealed class BackfillPdfCoversJob : IJob
                         // physical R2 object "{dbKey}-preview.webp" that the resolver
                         // reconstructs. Only the preview size is uploaded (the
                         // resolver never reads the thumbnail size).
-                        var dbKey = $"covers/pdf/{pdf.Id:D}/cover";
+                        // #3384 D5-A: DB key comes from the single CoverKeyBuilder.
+                        var dbKey = CoverKeyBuilder.ForPdf(pdf.Id).DbKey;
 
                         var persistedKey = await coverUploadPipeline
                             .UploadAsync(dbKey, result.PreviewWebp!, ct)
@@ -233,7 +235,7 @@ public sealed class BackfillPdfCoversJob : IJob
             // R2 will contain an orphan preview under the deterministic key. The
             // entity ends up Failed without a CoverR2Key so cleanup can't reach it.
             // Embed the prospective physical key so operators can grep the bucket.
-            var orphanPhysicalKey = $"covers/pdf/{pdf.Id:D}/cover-preview.webp";
+            var orphanPhysicalKey = CoverKeyBuilder.ForPdf(pdf.Id).PhysicalKey;
             _logger.LogWarning(ex,
                 "BackfillPdfCoversJob: unexpected error processing PDF {PdfId}; marking Failed. " +
                 "Inspect R2 key {OrphanKey} for an orphan preview blob and clean up manually if present.",

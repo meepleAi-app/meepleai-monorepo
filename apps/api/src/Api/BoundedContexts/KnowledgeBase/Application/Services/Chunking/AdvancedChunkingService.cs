@@ -121,6 +121,7 @@ internal sealed class AdvancedChunkingService : IAdvancedChunkingService
                 section.Page,
                 section.Heading,
                 section.CharStart,
+                section.BBox,
                 config);
 
             // Link children to parent
@@ -199,7 +200,8 @@ internal sealed class AdvancedChunkingService : IAdvancedChunkingService
                     parentMetadata.Page,
                     heading: null,
                     parentMetadata.CharStart,
-                    config);
+                    baseBBox: null,
+                    config: config);
 
                 foreach (var child in childChunks)
                 {
@@ -226,6 +228,7 @@ internal sealed class AdvancedChunkingService : IAdvancedChunkingService
         int basePage,
         string? heading,
         int baseCharStart,
+        BoundingBox? baseBBox,
         ChunkingConfiguration config)
     {
         var childChunks = new List<HierarchicalChunk>();
@@ -246,7 +249,8 @@ internal sealed class AdvancedChunkingService : IAdvancedChunkingService
                 GameId = gameId,
                 DocumentId = documentId,
                 CharStart = baseCharStart + textChunk.CharStart,
-                CharEnd = baseCharStart + textChunk.CharEnd
+                CharEnd = baseCharStart + textChunk.CharEnd,
+                BBox = baseBBox  // SP-B (#3406): children inherit the parent section's region
             };
 
             var childChunk = HierarchicalChunk.CreateChild(

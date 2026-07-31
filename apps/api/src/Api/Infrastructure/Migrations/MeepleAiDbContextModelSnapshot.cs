@@ -14378,6 +14378,18 @@ namespace Api.Infrastructure.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("uuid");
 
+                    b.Property<string>("BoundingBoxesJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("bounding_boxes_json");
+
+                    b.Property<int?>("CharEnd")
+                        .HasColumnType("integer")
+                        .HasColumnName("char_end");
+
+                    b.Property<int?>("CharStart")
+                        .HasColumnType("integer")
+                        .HasColumnName("char_start");
+
                     b.Property<int>("CharacterCount")
                         .HasColumnType("integer");
 

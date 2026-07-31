@@ -5,6 +5,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using MediatR;
@@ -68,12 +69,16 @@ internal sealed class BulkReindexReadyCommandHandler
         var candidateIds = await _dbContext.PdfDocuments
             .Where(p => p.ProcessingState == nameof(PdfProcessingState.Ready))
             .Where(p => p.IndexerVersion == null || p.IndexerVersion != targetVersion)
-            // #3425: skip import-only docs that have no source PDF. ImportRagData creates Ready
-            // documents from pre-computed external embeddings with FilePath = "" (and no versioning
-            // stamp). ReindexDocumentCommand re-extracts from the source PDF, so re-indexing such a
-            // doc would fail. Excluding empty FilePath here keeps them out of the bulk selection even
-            // as Current advances (which would otherwise re-select them on every version bump).
+            // #3425: skip docs with no real source blob to re-extract. ReindexDocumentCommand
+            // deletes chunks + resets Ready->Pending, then extraction fetches the blob and fails
+            // (-> Failed) when there is none. Two source-less, IndexerVersion==null, Ready classes
+            // would otherwise be selected and destructively re-processed on every version bump:
+            //  1. ImportRagData docs: external pre-computed embeddings, FilePath = "".
+            //  2. Demo-mock dogfood placeholders (seed/ prefix): FilePath is non-empty but points
+            //     at no blob — same sibling guard used by ProcessPendingPdfs / StalePdfRecovery /
+            //     SeedStateHealthCheck (PdfDocumentEntity.DemoMockFilePathPrefix, #3075).
             .Where(p => !string.IsNullOrEmpty(p.FilePath))
+            .Where(p => !p.FilePath.StartsWith(PdfDocumentEntity.DemoMockFilePathPrefix))
             .OrderBy(p => p.UploadedAt)
             .Select(p => p.Id)
             .ToListAsync(cancellationToken)

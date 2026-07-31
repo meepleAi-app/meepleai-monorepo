@@ -154,6 +154,31 @@ public sealed class BulkReindexReadyCommandHandlerTests : IAsyncLifetime
         result.Errors.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task Handle_ReadyDemoMockDoc_IsNotSelected()
+    {
+        // #3425 (code review): demo-mock dogfood placeholders (SeedBadswormPersonaCommandHandler)
+        // are seeded Ready with IndexerVersion=null and FilePath="seed/badsworm/.../rulebook.pdf"
+        // — a NON-empty prefix but with NO real blob. They must NOT be bulk-reindexed:
+        // ReindexDocumentCommand would delete their chunks, reset Ready->Pending, and the extraction
+        // would then fail on the missing blob (Failed), destroying active fixtures. Mirrors the
+        // sibling guard used by ProcessPendingPdfs / StalePdfRecovery / SeedStateHealthCheck.
+        await SeedPdfAsync(
+            indexerVersion: null,
+            filePath: $"{PdfDocumentEntity.DemoMockFilePathPrefix}badsworm/badsworm/rulebook.pdf");
+        var handler = CreateHandler();
+
+        var result = await handler.Handle(
+            new BulkReindexReadyCommand(Guid.NewGuid()), CancellationToken.None);
+
+        _mediator.Verify(
+            m => m.Send(It.IsAny<ReindexDocumentCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        result.EnqueuedCount.Should().Be(0);
+        result.SkippedCount.Should().Be(0);
+        result.Errors.Should().BeEmpty();
+    }
+
     [Theory]
     [InlineData("Pending")]
     [InlineData("Failed")]

@@ -439,7 +439,10 @@ internal static class DocumentProcessingServiceExtensions
                              ?? "http://unstructured-service:8001";
                 client.BaseAddress = new Uri(apiUrl);
 
-                var timeoutSeconds = configuration.GetValue<int?>("PdfProcessing:Extractor:Unstructured:TimeoutSeconds") ?? 35;
+                // 120s (was 35s): large rulebooks with coordinate-aware extraction (epic #3403)
+                // legitimately exceed 35s; the staging re-index timed out on ~5 PDFs. appsettings
+                // sets 120 explicitly; this is the fallback when config is absent.
+                var timeoutSeconds = configuration.GetValue<int?>("PdfProcessing:Extractor:Unstructured:TimeoutSeconds") ?? 120;
                 client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
 
                 client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI-Backend/1.0");

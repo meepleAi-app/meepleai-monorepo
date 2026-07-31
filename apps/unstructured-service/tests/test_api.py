@@ -114,18 +114,32 @@ class TestExtractEndpoint:
         assert "detail" in data and "error" in data["detail"]
         assert data["detail"]["error"]["code"] == "UNSUPPORTED_MEDIA_TYPE"
 
+    def test_settings_default_max_file_size_is_100mb(self):
+        """The default max_file_size must match the API's PdfProcessing:MaxFileSizeBytes (100MB).
+
+        A lower Python-side cap silently 413s large rulebooks the API already accepted, so the
+        two limits MUST stay aligned (staging re-index #3403 hit this: 55-65MB PDFs rejected).
+        """
+        from src.config.settings import Settings
+
+        assert Settings().max_file_size == 104857600  # 100 MB
+
     @patch("src.main.pdf_service.extract")
     def test_extract_file_too_large(self, mock_extract, client):
-        """Test extraction with file exceeding size limit returns 413"""
-        # Arrange
-        large_content = BytesIO(b"A" * (60 * 1024 * 1024))  # 60MB (exceeds 50MB limit)
+        """A file exceeding the configured size limit returns 413.
 
-        # Act
-        response = client.post(
-            "/api/v1/extract",
-            files={"file": ("large.pdf", large_content, "application/pdf")},
-            data={"strategy": "fast"},
-        )
+        The limit is patched to a small value so the test stays fast + independent of the default.
+        """
+        from src.config.settings import settings
+
+        # Arrange — cap at 1MB, upload 2MB
+        with patch.object(settings, "max_file_size", 1 * 1024 * 1024):
+            large_content = BytesIO(b"A" * (2 * 1024 * 1024))
+            response = client.post(
+                "/api/v1/extract",
+                files={"file": ("large.pdf", large_content, "application/pdf")},
+                data={"strategy": "fast"},
+            )
 
         # Assert
         assert response.status_code == 413

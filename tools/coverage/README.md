@@ -97,7 +97,7 @@ cd apps/web && pnpm test:watch
 
 ---
 
-### 📊 **coverage-trends.sh** & **coverage-trends.ps1**
+### 📊 **coverage-trends.sh**
 **Purpose:** Track code coverage over time and detect regressions
 
 **What it does:**
@@ -109,11 +109,8 @@ cd apps/web && pnpm test:watch
 
 **Usage:**
 ```bash
-# Track backend coverage trend
+# Track backend coverage trend (cross-platform via Git Bash su Windows)
 bash tools/coverage/coverage-trends.sh
-
-# PowerShell version (Windows)
-.\tools\coverage\coverage-trends.ps1
 ```
 
 **Output:**

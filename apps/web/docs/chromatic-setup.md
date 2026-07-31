@@ -16,7 +16,7 @@ pnpm build-storybook        # Build static Storybook
 
 # Visual regression
 pnpm test:visual            # Run Chromatic with exit-zero-on-changes
-pnpm test:visual:ci         # CI mode with upload
+pnpm chromatic:ci           # CI mode with upload
 ```
 
 **What it tests**:

@@ -154,7 +154,7 @@ Vedi `docs/code-coverage.md` per dettagli completi.
 
 ### 5. Cleanup Cache
 
-**File**: `cleanup-caches.sh` (bash) / `cleanup-caches.ps1` (PowerShell)
+**File**: `cleanup-caches.sh` (bash — cross-platform via Git Bash su Windows)
 
 Script per pulire periodicamente le directory di cache accumulate durante lo sviluppo.
 
@@ -182,25 +182,6 @@ bash tools/cleanup-caches.sh --skip-build
 
 # Output dettagliato
 bash tools/cleanup-caches.sh --verbose
-```
-
-**Uso (Windows PowerShell)**:
-
-```powershell
-# Dry run (mostra cosa verrebbe eliminato)
-pwsh tools/cleanup-caches.ps1 -DryRun
-
-# Esegui pulizia con conferma
-pwsh tools/cleanup-caches.ps1
-
-# Esegui senza conferma
-pwsh tools/cleanup-caches.ps1 -Yes
-
-# Pulisci solo cache (salta build artifacts)
-pwsh tools/cleanup-caches.ps1 -SkipBuild
-
-# Output dettagliato
-pwsh tools/cleanup-caches.ps1 -Verbose
 ```
 
 **Output**:
@@ -384,11 +365,8 @@ Traccia trend di code coverage nel tempo.
 **Uso**:
 
 ```bash
-# Bash (Linux/Mac)
+# Cross-platform (Git Bash su Windows + Linux/Mac)
 bash tools/coverage-trends.sh
-
-# PowerShell (Windows)
-pwsh tools/coverage-trends.ps1
 ```
 
 **Output**: Appende metriche a `coverage-history.json`
@@ -409,18 +387,15 @@ pwsh tools/migrate-to-private.ps1
 
 ### 16. Dual VS Code Launcher
 
-**File**: `open-dual-vscode.{ps1,sh}`
+**File**: `open-dual-vscode.sh`
 
 Apre due istanze VS Code per sviluppo API + Web.
 
 **Uso**:
 
 ```bash
-# Bash
+# Cross-platform (Git Bash su Windows + Linux/Mac)
 bash tools/open-dual-vscode.sh
-
-# PowerShell
-pwsh tools/open-dual-vscode.ps1
 ```
 
 ## Sviluppo

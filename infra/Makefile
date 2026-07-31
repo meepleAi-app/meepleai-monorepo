@@ -423,7 +423,7 @@ game-reset-verify: ## Run verification gates after EF migration applied (ENV=dev
 	./scripts/game-reset/04-verify-gates.sh scripts/game-reset/.env.$(ENV)
 
 game-reset-rollback-rehearse: ## Run disposable docker rollback rehearsal
-	../tests/scripts/game-reset/rehearse-rollback.sh
+	./scripts/game-reset/rehearse-rollback.sh
 
 # === Corpus re-index orchestration (issue #3269 SP3 Slice 3 / D4) ===
 # Script lives in infra/scripts/reindex-corpus/. Wraps POST /admin/queue/reindex-ready

@@ -3,7 +3,7 @@
 > **Source of truth** for the Claude Design demo INPUT bundles. The bundles themselves
 > (`claude-design-bundle/`) are **gitignored** (regenerable seeds uploaded to claude.ai/design),
 > so this committed file is the durable home of the reconstructed system prompts. It closes the
-> dangling "system prompt / cp script" references in `claude-design-handoff/` READMEs.
+> dangling "system prompt / cp script" references in `admin-mockups/claude-design-handoff/` READMEs.
 
 ## What this is
 
@@ -30,7 +30,7 @@ ambiguities. Baseline run: 2026-06-04 (38 gaps, `docs/for-developers/audits/2026
 3. **Turns 1–5** — drive the build per the `01-manifest.md` T1..T5 grouping; screenshot each turn.
 4. **Socratic loop** — answer the probing questions; each answer becomes a locked invariant.
 5. **Turn 6** — request the gap report (5 sections); diff vs the 2026-06-04 baseline.
-6. **Export + commit** — handoff `.zip` into `claude-design-handoff/<date>-<run>/`; gap report into
+6. **Export + commit** — handoff `.zip` into `admin-mockups/claude-design-handoff/<date>-<run>/`; gap report into
    `docs/for-developers/audits/<date>-claude-design-gap-report-<run>.md`; new invariants into the
    appendix of `docs/for-developers/specs/2026-06-04-gamenight-session-domain-model.md`.
 

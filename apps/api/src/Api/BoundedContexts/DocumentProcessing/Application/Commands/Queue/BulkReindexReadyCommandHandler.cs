@@ -68,6 +68,12 @@ internal sealed class BulkReindexReadyCommandHandler
         var candidateIds = await _dbContext.PdfDocuments
             .Where(p => p.ProcessingState == nameof(PdfProcessingState.Ready))
             .Where(p => p.IndexerVersion == null || p.IndexerVersion != targetVersion)
+            // #3425: skip import-only docs that have no source PDF. ImportRagData creates Ready
+            // documents from pre-computed external embeddings with FilePath = "" (and no versioning
+            // stamp). ReindexDocumentCommand re-extracts from the source PDF, so re-indexing such a
+            // doc would fail. Excluding empty FilePath here keeps them out of the bulk selection even
+            // as Current advances (which would otherwise re-select them on every version bump).
+            .Where(p => !string.IsNullOrEmpty(p.FilePath))
             .OrderBy(p => p.UploadedAt)
             .Select(p => p.Id)
             .ToListAsync(cancellationToken)

@@ -537,6 +537,12 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
             // Mark as completed
             pdfDoc.ProcessingState = nameof(PdfProcessingState.Ready);
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
+            // #3425 / #3269 (SP3): stamp the current indexer version on the completed fresh ingest
+            // (mirrors PdfProcessingPipelineService, the Quartz path). Null-coalescing so an explicit
+            // reindex-chosen version survives; IndexerVersion == null then means only true
+            // pre-versioning legacy, keeping the bulk re-index selector from redundantly re-processing
+            // fresh docs. pdfDoc is tracked (AsTracking at load), so this write persists.
+            pdfDoc.IndexerVersion ??= IndexerVersionRegistry.Current.Version;
             try
             {
                 await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

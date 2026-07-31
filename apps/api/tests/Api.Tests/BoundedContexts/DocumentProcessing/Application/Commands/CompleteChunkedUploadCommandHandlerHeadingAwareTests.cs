@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
+using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
@@ -204,6 +205,116 @@ public class CompleteChunkedUploadCommandHandlerHeadingAwareTests
             childEntity.Heading.Should().Be("Setup");
             childEntity.Level.Should().Be((short)2);
             childEntity.ParentChunkId.Should().Be(parentEntity.Id);
+        }
+        finally
+        {
+            File.Delete(tmp);
+        }
+    }
+
+    [Fact]
+    public async Task TriggerPdfProcessing_FreshIngestReachingReady_StampsCurrentIndexerVersion()
+    {
+        // #3425: a chunked-upload fresh ingest that completes to Ready must stamp the current
+        // indexer version (mirrors PdfProcessingPipelineService, the Quartz path). Otherwise the
+        // doc keeps IndexerVersion == null and the bulk re-index selector re-processes it as
+        // legacy on every run. Same NoTracking + fresh-context assertion discipline as above.
+        var dbName = $"complete_chunked_indexerversion_{Guid.NewGuid():N}";
+        var pdfId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+
+        await using (var seedDb = CreateNoTrackingInMemoryDbContext(dbName))
+        {
+            seedDb.PdfDocuments.Add(new PdfDocumentEntity
+            {
+                Id = pdfId,
+                SharedGameId = gameId,
+                UploadedByUserId = Guid.NewGuid(),
+                FileName = "test.pdf",
+                FilePath = "/test/test.pdf",
+                FileSizeBytes = 1024,
+                ContentType = "application/pdf",
+                UploadedAt = DateTime.UtcNow,
+                ProcessingState = nameof(PdfProcessingState.Extracting)
+            });
+            await seedDb.SaveChangesAsync();
+        }
+
+        var tmp = Path.GetTempFileName();
+        await File.WriteAllTextAsync(tmp, "dummy pdf bytes");
+
+        try
+        {
+            var structuredElements = new List<ExtractedElement>
+            {
+                new("Setup", 1, "Title"),
+                new("Place the board in the middle of the table.", 1, "NarrativeText")
+            };
+
+            var extractorMock = new Mock<IPdfTextExtractor>();
+            extractorMock
+                .Setup(e => e.ExtractPagedTextAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(PagedTextExtractionResult.CreateSuccess(
+                    new[] { new PageTextChunk(1, "Setup\n\nPlace the board in the middle of the table.", 0, 50) },
+                    totalPages: 1,
+                    totalCharacters: 50,
+                    ocrTriggered: false,
+                    structuredElements: structuredElements));
+
+            var tableExtractorMock = new Mock<IPdfTableExtractor>();
+            tableExtractorMock
+                .Setup(t => t.ExtractStructuredContentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(StructuredContentResult.CreateFailure("no structured content in test"));
+
+            var parentMetadata = new ChunkMetadata { Heading = "Setup", Page = 1, ElementType = "Title" };
+            var parent = HierarchicalChunk.CreateParent("Setup section", parentMetadata);
+            var childMetadata = new ChunkMetadata { Heading = "Setup", Page = 1, ElementType = "NarrativeText" };
+            var child = HierarchicalChunk.CreateChild("Place the board in the middle of the table.", 2, childMetadata, parent.Id);
+
+            var advancedChunkingMock = new Mock<IAdvancedChunkingService>();
+            advancedChunkingMock
+                .Setup(x => x.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<HierarchicalChunk> { parent, child });
+
+            var chunkingServiceMock = new Mock<ITextChunkingService>();
+
+            var embeddingMock = new Mock<IEmbeddingService>();
+            embeddingMock
+                .Setup(e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((List<string> texts, CancellationToken _) =>
+                    EmbeddingResult.CreateSuccess(texts.Select(t => new float[] { 0.1f, 0.2f, 0.3f }).ToList()));
+
+            var sc = new ServiceCollection();
+            sc.AddScoped<MeepleAiDbContext>(_ => CreateNoTrackingInMemoryDbContext(dbName));
+            sc.AddScoped(_ => chunkingServiceMock.Object);
+            sc.AddScoped(_ => advancedChunkingMock.Object);
+            sc.AddScoped(_ => embeddingMock.Object);
+            sc.AddScoped(_ => Mock.Of<IPdfIndexingPipeline>());
+            var provider = sc.BuildServiceProvider();
+            var scopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
+
+            var handler = new CompleteChunkedUploadCommandHandler(
+                Mock.Of<IChunkedUploadSessionRepository>(),
+                CreateNoTrackingInMemoryDbContext(dbName),
+                Mock.Of<IBlobStorageService>(),
+                Mock.Of<IBackgroundTaskService>(),
+                NullLogger<CompleteChunkedUploadCommandHandler>.Instance,
+                scopeFactory,
+                extractorMock.Object,
+                tableExtractorMock.Object,
+                Mock.Of<IMediator>(),
+                Mock.Of<IPdfDeduplicationService>(),
+                TimeProvider.System);
+
+            await handler.TriggerPdfProcessingAsync(pdfId.ToString(), tmp, CancellationToken.None);
+
+            await using var assertDb = CreateNoTrackingInMemoryDbContext(dbName);
+            var updatedPdf = await assertDb.PdfDocuments.FirstOrDefaultAsync(p => p.Id == pdfId);
+            updatedPdf.Should().NotBeNull();
+            updatedPdf!.ProcessingState.Should().Be(nameof(PdfProcessingState.Ready));
+            updatedPdf.IndexerVersion.Should().Be(IndexerVersionRegistry.Current.Version,
+                "a completed fresh ingest must carry the current pipeline version so the bulk " +
+                "re-index selector does not treat it as legacy (null)");
         }
         finally
         {

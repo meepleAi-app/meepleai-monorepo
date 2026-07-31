@@ -74,13 +74,14 @@ public sealed class BulkReindexReadyCommandHandlerTests : IAsyncLifetime
     private async Task<PdfDocumentEntity> SeedPdfAsync(
         string state = "Ready",
         string? indexerVersion = null,
-        DateTime? uploadedAt = null)
+        DateTime? uploadedAt = null,
+        string filePath = "/tmp/test.pdf")
     {
         var pdf = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
             FileName = "test.pdf",
-            FilePath = "/tmp/test.pdf",
+            FilePath = filePath,
             FileSizeBytes = 1024,
             ContentType = "application/pdf",
             UploadedByUserId = Guid.NewGuid(),
@@ -119,6 +120,27 @@ public sealed class BulkReindexReadyCommandHandlerTests : IAsyncLifetime
     public async Task Handle_ReadyPdfAlreadyAtTargetVersion_IsIdempotentSkip()
     {
         await SeedPdfAsync(indexerVersion: IndexerVersionRegistry.Current.Version);
+        var handler = CreateHandler();
+
+        var result = await handler.Handle(
+            new BulkReindexReadyCommand(Guid.NewGuid()), CancellationToken.None);
+
+        _mediator.Verify(
+            m => m.Send(It.IsAny<ReindexDocumentCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        result.EnqueuedCount.Should().Be(0);
+        result.SkippedCount.Should().Be(0);
+        result.Errors.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_ReadyPdfWithEmptyFilePath_IsNotSelected()
+    {
+        // #3425: ImportRagData creates Ready docs with FilePath="" (external pre-computed
+        // embeddings, no source PDF) and IndexerVersion=null. The bulk re-index fans out
+        // ReindexDocumentCommand, which re-extracts from the source PDF — a doc with no file
+        // would fail. Such non-reprocessable docs must be skipped by the selector, not enqueued.
+        await SeedPdfAsync(indexerVersion: null, filePath: string.Empty);
         var handler = CreateHandler();
 
         var result = await handler.Handle(

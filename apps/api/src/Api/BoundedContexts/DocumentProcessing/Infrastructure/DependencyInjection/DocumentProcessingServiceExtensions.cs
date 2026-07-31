@@ -106,6 +106,12 @@ internal static class DocumentProcessingServiceExtensions
         // ConflictException (409) instead of a 500.
         services.AddScoped<IPdfExtractorHealthProbe, UnstructuredExtractorHealthProbe>();
 
+        // DC-2 (#3419): scoped per-request extraction strategy selector. PdfProcessingPipelineService
+        // sets it per PDF and UnstructuredPdfTextExtractor — resolved in the SAME DI scope via the
+        // orchestrator's ctor graph — reads it. Registered unconditionally: harmless under
+        // non-Unstructured providers (the extractor that reads it simply isn't constructed).
+        services.AddScoped<IExtractionStrategySelector, ExtractionStrategySelector>();
+
         if (extractorProvider.Equals("Orchestrator", StringComparison.OrdinalIgnoreCase))
         {
             // BGAI-087 + ISSUE-1174: Register all extractors for orchestrator using keyed services

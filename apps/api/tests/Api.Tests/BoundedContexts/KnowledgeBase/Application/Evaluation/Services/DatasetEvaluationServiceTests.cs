@@ -324,6 +324,7 @@ public class DatasetEvaluationServiceTests
                 SampleId = "1",
                 Question = "Q1",
                 ExpectedAnswer = "A1",
+                RelevantChunkIds = new[] { "chunk-1" },
                 HitAt5 = true,
                 HitAt10 = true,
                 ReciprocalRank = 1.0,
@@ -337,6 +338,7 @@ public class DatasetEvaluationServiceTests
                 SampleId = "2",
                 Question = "Q2",
                 ExpectedAnswer = "A2",
+                RelevantChunkIds = new[] { "chunk-2" },
                 HitAt5 = false,
                 HitAt10 = true,
                 ReciprocalRank = 0.5,
@@ -614,5 +616,39 @@ public class DatasetEvaluationServiceTests
         Func<Task> act = () =>
             _service.EvaluateDatasetAsync(dataset, null!);
         await act.Should().ThrowAsync<ArgumentNullException>();
+    }
+
+    [Fact]
+    public async Task EvaluateDataset_WithMixedLabeledAndUnlabeled_ReportsCoverageAndCleanRetrievalMetrics()
+    {
+        // Arrange
+        var dataset = EvaluationDataset.Create("Test", "Test dataset");
+        dataset.AddSample(CreateSample("labeled-1", relevantChunkIds: new[] { "s1" }));
+        dataset.AddSample(CreateSample("unlabeled-1"));
+
+        var snippets = new List<Snippet>
+        {
+            new("Snippet text", "s1", 1, 1, 0.9f)
+        };
+
+        // Note: AskAsync signature is (gameId, query, language, bypassCache, cancellationToken)
+        _mockRagService
+            .Setup(r => r.AskAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string?>(),
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateQaResponse(snippets: snippets));
+
+        var options = new EvaluationOptions { Configuration = "baseline" };
+
+        // Act
+        var result = await _service.EvaluateDatasetAsync(dataset, options);
+
+        // Assert
+        result.Metrics.LabeledSampleCount.Should().Be(1);
+        result.Metrics.UnlabeledSampleCount.Should().Be(1);
+        result.Metrics.RecallAt5.Should().Be(1.0); // Labeled sample's hit only; unlabeled doesn't drag it to 0.5
     }
 }

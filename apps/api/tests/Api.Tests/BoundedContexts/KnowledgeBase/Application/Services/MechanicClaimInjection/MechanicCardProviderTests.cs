@@ -85,6 +85,21 @@ public class MechanicCardProviderTests
     }
 
     [Fact]
+    public async Task GetActiveCardAsync_PropagatesCancellation_NotSwallowedAsFailOpen()
+    {
+        // Best-effort catch must still honour caller cancellation (repo rule): a genuine cancel must
+        // NOT be logged as a failed read and converted into a fail-open "no card" result.
+        _mediator.Setup(m => m.Send(It.IsAny<GetPublishedMechanicCardByGameQuery>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException());
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        Func<Task> act = () => Build().GetActiveCardAsync(Guid.NewGuid(), cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
     public async Task GetActiveCardAsync_ReturnsNull_ForEmptyGuid_WithoutQuerying()
     {
         var result = await Build().GetActiveCardAsync(Guid.Empty, CancellationToken.None);

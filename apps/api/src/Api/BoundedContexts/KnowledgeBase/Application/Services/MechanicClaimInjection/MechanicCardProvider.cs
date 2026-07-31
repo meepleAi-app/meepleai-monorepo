@@ -55,7 +55,9 @@ internal sealed class MechanicCardProvider : IMechanicCardProvider
         }
         catch (Exception ex)
         {
-            // Best-effort / fail-open (spec §9, D7): a cross-BC read fault must never abort the RAG path.
+            // A genuine caller cancellation must propagate, not be swallowed as a fail-open "no card"
+            // (repo rule for best-effort catches). Only real read faults fall open below (spec §9, D7).
+            cancellationToken.ThrowIfCancellationRequested();
             _logger.LogWarning(ex, "[MechanicCardProvider] Best-effort read failed for game {GameId}", sharedGameId);
             return null;
         }

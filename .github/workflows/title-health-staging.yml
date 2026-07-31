@@ -45,7 +45,7 @@ jobs:
   title-health-staging:
     name: Title-health vs staging corpus
     runs-on: ubuntu-latest
-    # Only where staging SSH deploy is configured (mirrors check-role-case.yml).
+    # Only where staging SSH deploy is configured.
     if: vars.DEPLOY_METHOD == 'ssh'
     timeout-minutes: 10
     steps:
@@ -65,7 +65,7 @@ jobs:
           set -euo pipefail
           KEY=$(mktemp); printf '%s\n' "$STAGING_SSH_KEY" > "$KEY"; chmod 600 "$KEY"
           # Remote: SOURCE the admin creds (shell parsing strips inline `# comment`s correctly, unlike
-          # grep|cut — mirrors check-role-case.yml sourcing database.secret), log in and ASSERT HTTP 200
+          # grep|cut — sources database.secret the same way), log in and ASSERT HTTP 200
           # (a bad login must fail loudly, not silently GET the endpoint unauthenticated), then GET the
           # admin-only endpoint. The JSON is wrapped in sentinels so a server MOTD / login banner on the
           # ssh stdout channel cannot pollute it — the runner extracts strictly between the markers.

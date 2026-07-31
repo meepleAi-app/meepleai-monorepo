@@ -275,21 +275,7 @@ pwsh tools/setup-n8n-service-account.ps1
 pwsh tools/register-n8n-webhook.ps1 -WebhookUrl "http://localhost:5678/webhook/xxx"
 ```
 
-### 9. Configurazione Ollama
-
-**File**: `setup-ollama.ps1`
-
-Configura Ollama per modelli LLM locali.
-
-**Uso**:
-
-```powershell
-pwsh tools/setup-ollama.ps1
-```
-
-**Output**: Scarica e configura modelli LLM per sviluppo locale
-
-### 10. Generazione Issue Admin Console
+### 9. Generazione Issue Admin Console
 
 **File**: `create-admin-console-issues.{js,ps1,sh}`
 

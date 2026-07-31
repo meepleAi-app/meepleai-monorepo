@@ -75,6 +75,10 @@ public sealed class ExtractPdfTextCommandHandlerTests : IDisposable
         reloaded.PageCount.Should().Be(extraction.totalPages);
         reloaded.CharacterCount.Should().Be(extraction.totalCharacters);
         reloaded.ProcessingError.Should().BeNull("a successful extraction clears any prior error");
+        reloaded.IndexerVersion.Should().BeNull(
+            "#3425: text-only extraction must NOT stamp an indexer version — the document is not yet " +
+            "indexed (still Extracting). IndexPdfCommand stamps the current version on the " +
+            "Extracting → Indexing → Ready path; stamping here would mark an unindexed doc as current.");
         result.CharacterCount.Should().Be(extraction.totalCharacters);
         result.PageCount.Should().Be(extraction.totalPages);
     }

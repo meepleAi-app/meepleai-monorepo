@@ -107,13 +107,14 @@ public sealed class BulkReindexReadySelectorIntegrationTests : IAsyncLifetime
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }
 
-    private async Task<PdfDocumentEntity> SeedPdfAsync(string state, string? indexerVersion)
+    private async Task<PdfDocumentEntity> SeedPdfAsync(
+        string state, string? indexerVersion, string filePath = "/tmp/bulk-reindex.pdf")
     {
         var pdf = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
             FileName = "bulk-reindex.pdf",
-            FilePath = "/tmp/bulk-reindex.pdf",
+            FilePath = filePath,
             FileSizeBytes = 1024,
             ContentType = "application/pdf",
             UploadedByUserId = TestUserId,
@@ -126,7 +127,7 @@ public sealed class BulkReindexReadySelectorIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Handle_SelectsNullVersionReadyRow_ExcludesTargetVersionAndNonReady()
+    public async Task Handle_SelectsNullVersionReadyRow_ExcludesTargetVersionNonReadyAndSourceless()
     {
         // PDF-A: Ready + IndexerVersion = NULL  → MUST be selected (null-comparison guard).
         var pdfA = await SeedPdfAsync("Ready", indexerVersion: null);
@@ -134,6 +135,13 @@ public sealed class BulkReindexReadySelectorIntegrationTests : IAsyncLifetime
         await SeedPdfAsync("Ready", indexerVersion: IndexerVersionRegistry.Current.Version);
         // PDF-C: Failed + NULL                 → excluded (non-Ready).
         await SeedPdfAsync("Failed", indexerVersion: null);
+        // #3425 — source-less Ready + NULL docs must be excluded on REAL Npgsql (StartsWith → LIKE,
+        // IsNullOrEmpty → IS NULL OR = ''), not just InMemory:
+        // PDF-D: Ready + NULL + FilePath = ""              → excluded (ImportRagData import doc).
+        await SeedPdfAsync("Ready", indexerVersion: null, filePath: string.Empty);
+        // PDF-E: Ready + NULL + FilePath = "seed/…"        → excluded (demo-mock dogfood placeholder).
+        await SeedPdfAsync("Ready", indexerVersion: null,
+            filePath: $"{PdfDocumentEntity.DemoMockFilePathPrefix}badsworm/badsworm/rulebook.pdf");
 
         var sentIds = new List<Guid>();
         var mediatorMock = new Mock<IMediator>();
@@ -162,8 +170,9 @@ public sealed class BulkReindexReadySelectorIntegrationTests : IAsyncLifetime
         var result = await handler.Handle(
             new BulkReindexReadyCommand(TestUserId), TestCancellationToken);
 
-        // Exactly one reindex, for the NULL-version Ready row. This is the assertion that fails
-        // against real Npgsql if the selector drops the `IndexerVersion == null ||` clause.
+        // Exactly one reindex, for the NULL-version Ready row (PDF-A). Fails against real Npgsql if
+        // the selector drops the `IndexerVersion == null ||` clause (PDF-A vanishes) OR either
+        // source-less guard (PDF-D/PDF-E would leak in, breaking ContainSingle).
         sentIds.Should().ContainSingle().Which.Should().Be(pdfA.Id);
         result.EnqueuedCount.Should().Be(1);
         result.SkippedCount.Should().Be(0);

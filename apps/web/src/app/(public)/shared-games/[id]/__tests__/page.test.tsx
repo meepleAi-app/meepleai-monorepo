@@ -253,6 +253,17 @@ describe('SharedGameDetailPage (Wave A.4 — Issue #616)', () => {
       expect(meta.openGraph?.images).toEqual([{ url: SAMPLE_DETAIL.imageUrl }]);
     });
 
+    it('prefers the resolved coverUrl over the imageUrl tombstone for OG image (#3452)', async () => {
+      const coverUrl = 'https://r2.example.test/covers/33333333/cover.webp';
+      mockGetDetail.mockResolvedValue({ ...SAMPLE_DETAIL, coverUrl, imageUrl: '' });
+
+      const meta = await generateMetadata({
+        params: Promise.resolve({ id: SAMPLE_ID }),
+      });
+
+      expect(meta.openGraph?.images).toEqual([{ url: coverUrl }]);
+    });
+
     it('truncates description to 200 chars', async () => {
       const longDescription = 'x'.repeat(300);
       mockGetDetail.mockResolvedValue({ ...SAMPLE_DETAIL, description: longDescription });

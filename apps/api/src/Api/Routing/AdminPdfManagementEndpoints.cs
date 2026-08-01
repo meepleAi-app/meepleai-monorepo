@@ -32,6 +32,11 @@ internal static class AdminPdfManagementEndpoints
             .WithName("ReindexDocument")
             .WithSummary("Reindex a PDF document (delete chunks, reset to Pending)");
 
+        // #3447 slice: seed image-table regions from a raw Unstructured hi_res JSON body
+        group.MapPost("/{pdfId:guid}/seed-image-regions", SeedImageRegions)
+            .WithName("SeedPdfImageRegions")
+            .WithSummary("Seed image-table regions from a raw Unstructured hi_res JSON body (#3447 slice)");
+
         group.MapPost("/maintenance/purge-stale", PurgeStale)
             .WithName("PurgeStaleDocuments")
             .WithSummary("Mark documents stuck in processing (>24h) as failed");
@@ -66,6 +71,18 @@ internal static class AdminPdfManagementEndpoints
             new ReindexDocumentCommand(pdfId, request?.IndexerVersion),
             cancellationToken).ConfigureAwait(false);
         return Results.Ok(new { success = true, message = "Document queued for reindexing" });
+    }
+
+    private static async Task<IResult> SeedImageRegions(
+        Guid pdfId,
+        SeedImageRegionsRequest request,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var count = await mediator.Send(
+            new SeedPdfImageRegionsCommand(pdfId, request.HiResJson),
+            cancellationToken).ConfigureAwait(false);
+        return Results.Ok(new { success = true, seeded = count });
     }
 
     private static async Task<IResult> PurgeStale(
@@ -107,3 +124,4 @@ internal static class AdminPdfManagementEndpoints
 
 internal record BulkDeletePdfsRequest(List<Guid> PdfIds);
 internal record ReindexDocumentRequest(string? IndexerVersion);
+internal record SeedImageRegionsRequest(string HiResJson);

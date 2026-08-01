@@ -90,6 +90,14 @@ internal static class PdfRetrievalEndpoints
             .Produces(401)
             .Produces(403)
             .Produces(404);
+
+        // #3447 slice: hi_res image-table regions for the viewer overlay (region-only, no VLM).
+        group.MapGet("/pdf/{pdfId:guid}/image-regions", HandleGetImageRegions)
+            .RequireSession()
+            .WithName("GetPdfImageRegions")
+            .WithTags("PDF")
+            .WithSummary("Persisted hi_res Image/FigureCaption regions for the PDF (viewer overlay)")
+            .Produces(401);
     }
 
     private static void MapPdfLanguageEndpoints(RouteGroupBuilder group)
@@ -172,6 +180,14 @@ internal static class PdfRetrievalEndpoints
         }
 
         return Results.Json(pdf);
+    }
+
+    // #3447 slice: RequireSession enforces a logged-in caller; the handler needs no session data
+    // (per-user authz/copyright gating deferred — slice spec S-4).
+    private static async Task<IResult> HandleGetImageRegions(Guid pdfId, IMediator mediator, CancellationToken ct)
+    {
+        var regions = await mediator.Send(new GetPdfImageRegionsQuery(pdfId), ct).ConfigureAwait(false);
+        return Results.Json(new { regions });
     }
 
     private static async Task<IResult> HandleGetPageText(

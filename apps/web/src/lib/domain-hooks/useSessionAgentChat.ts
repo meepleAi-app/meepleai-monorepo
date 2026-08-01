@@ -28,9 +28,18 @@ export interface ChatMessage {
   timestamp: string;
   citations?: ChatCitation[];
   /**
+   * Task 3 (#3388): server-authoritative grounding contract, read verbatim from the
+   * SSE `Complete` event's `data.groundingStatus` (string, PascalCase — see
+   * `Api.SharedKernel.Domain.Enums.GroundingStatus`). Absent on user messages and on
+   * history-hydrated messages (the thread DTO does not carry this field).
+   */
+  groundingStatus?: 'Grounded' | 'Partial' | 'Ungrounded';
+  /**
    * AC-CHAT-3: true only when this is a genuine RAG assistant response with zero citations
    * (i.e., the agent answered but found no grounding in the rulebook).
    * Never set on user messages or system status messages injected by SessionLiveView.
+   * Derived from `groundingStatus` when present (Task 3 #3388); falls back to the
+   * citations heuristic when the server did not send `groundingStatus`.
    */
   isNonGrounded?: boolean;
 }
@@ -120,6 +129,9 @@ export function useSessionAgentChat(
   const [streamingContent, setStreamingContent] = useState('');
   const threadIdRef = useRef<string | undefined>(undefined);
   const citationsRef = useRef<ChatCitation[]>([]);
+  // Task 3 (#3388): server-authoritative groundingStatus captured from the SSE
+  // Complete event, consumed when building the assistant message below.
+  const groundingStatusRef = useRef<ChatMessage['groundingStatus']>(undefined);
   const abortRef = useRef<AbortController | null>(null);
   // Ref-based guard prevents double-submit race regardless of stale closure timing
   const isLoadingRef = useRef(false);
@@ -208,6 +220,7 @@ export function useSessionAgentChat(
       setError(null);
       setStreamingContent('');
       citationsRef.current = [];
+      groundingStatusRef.current = undefined;
 
       const userMsg: ChatMessage = {
         id: crypto.randomUUID(),
@@ -320,6 +333,7 @@ export function useSessionAgentChat(
                     const d = event.data as {
                       chatThreadId?: string;
                       citations?: unknown[];
+                      groundingStatus?: string;
                     };
                     if (d.chatThreadId) {
                       threadIdRef.current = d.chatThreadId;
@@ -334,6 +348,14 @@ export function useSessionAgentChat(
                       )
                         .map(mapCitationToChatCitation)
                         .filter((x): x is ChatCitation => x !== null);
+                    }
+                    // Task 3 (#3388): server-authoritative grounding contract.
+                    if (
+                      d.groundingStatus === 'Grounded' ||
+                      d.groundingStatus === 'Partial' ||
+                      d.groundingStatus === 'Ungrounded'
+                    ) {
+                      groundingStatusRef.current = d.groundingStatus;
                     }
                   } else if (event.type === SSE_ERROR) {
                     const d = event.data as { errorMessage?: string; errorCode?: string };
@@ -351,15 +373,24 @@ export function useSessionAgentChat(
           reader.releaseLock();
         }
 
-        // AC-CHAT-3: if the RAG response produced zero citations, flag as non-grounded.
+        // Task 3 (#3388): prefer the server-authoritative groundingStatus; fall back to
+        // the citations heuristic (AC-CHAT-3) only when the server did not send it.
         const hasCitations = citationsRef.current.length > 0;
+        const groundingStatus = groundingStatusRef.current;
+        const isNonGrounded =
+          groundingStatus !== undefined
+            ? groundingStatus === 'Ungrounded'
+            : hasCitations
+              ? undefined
+              : true;
         const assistantMsg: ChatMessage = {
           id: crypto.randomUUID(),
           role: 'assistant',
           content: accumulated,
           timestamp: new Date().toISOString(),
           citations: hasCitations ? citationsRef.current : undefined,
-          isNonGrounded: hasCitations ? undefined : true,
+          groundingStatus,
+          isNonGrounded,
         };
         setMessages(prev => [...prev, assistantMsg]);
         setStreamingContent('');

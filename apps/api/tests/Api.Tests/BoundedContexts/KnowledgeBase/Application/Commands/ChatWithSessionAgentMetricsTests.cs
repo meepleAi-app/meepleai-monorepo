@@ -141,13 +141,50 @@ public sealed class ChatWithSessionAgentMetricsTests
         var command = BuildCommand();
 
         // Act
-        await foreach (var _ in handler.Handle(command, CancellationToken.None)) { }
+        var complete = await DrainAndCaptureCompleteAsync(handler, command);
 
         // Assert
         observations.Should().ContainSingle(
             "citations-per-answer must be recorded exactly once even when there are no citations");
         observations[0].Should().Be(0L,
             "grounded-but-uncited signal: le=0 bucket must be populated");
+
+        // #3388 (Task 2): mode-parity signal — the SSE RAG path must emit a non-nullable
+        // grounding string on StreamingComplete, mirroring Task 1's REST-path assertion
+        // (AskSessionAgentResult.GroundingStatus) so both in-session agent paths carry the
+        // same grounding contract for a zero-citation answer.
+        complete.Should().NotBeNull();
+        complete!.GroundingStatus.Should().Be("Ungrounded");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // T2-AC-3b (#3388): with-citations case emits GroundingStatus="Grounded"
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact(DisplayName = "T2-AC-3b (#3388): with-citations case emits GroundingStatus=\"Grounded\" on StreamingComplete")]
+    public async Task Handle_StreamedChatWithCitations_EmitsGroundedStatus()
+    {
+        // Arrange — one Full-tier citation
+        var citations = new List<ChunkCitation>
+        {
+            new ChunkCitation(
+                DocumentId: "doc-1",
+                PageNumber: 1,
+                RelevanceScore: 0.9f,
+                SnippetPreview: "snippet A",
+                CopyrightTier: CopyrightTier.Full,
+                IsPublic: true),
+        };
+
+        var handler = BuildHandler(resolvedCitations: citations, tokenContent: "Answer with citation");
+        var command = BuildCommand();
+
+        // Act
+        var complete = await DrainAndCaptureCompleteAsync(handler, command);
+
+        // Assert — mode-parity signal (see zero-citation test comment above)
+        complete.Should().NotBeNull();
+        complete!.GroundingStatus.Should().Be("Grounded");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -195,6 +232,26 @@ public sealed class ChatWithSessionAgentMetricsTests
         listener.SetMeasurementEventCallback<T>((_, value, _, _) => observations.Add(value));
         listener.Start();
         return listener;
+    }
+
+    /// <summary>
+    /// Drains the handler's streamed events and returns the <see cref="StreamingComplete"/>
+    /// payload carried by the terminal <see cref="StreamingEventType.Complete"/> event.
+    /// </summary>
+    private static async Task<StreamingComplete?> DrainAndCaptureCompleteAsync(
+        ChatWithSessionAgentCommandHandler handler,
+        ChatWithSessionAgentCommand command)
+    {
+        StreamingComplete? complete = null;
+        await foreach (var evt in handler.Handle(command, CancellationToken.None))
+        {
+            if (evt.Type == StreamingEventType.Complete)
+            {
+                complete = evt.Data as StreamingComplete;
+            }
+        }
+
+        return complete;
     }
 
     private static ChatWithSessionAgentCommand BuildCommand() =>

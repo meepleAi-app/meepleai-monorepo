@@ -133,7 +133,8 @@ internal class StreamDebugQaQueryHandler : IStreamingQueryHandler<StreamDebugQaQ
 
             yield return CreateEvent(StreamingEventType.Complete,
                 new StreamingComplete(0, cachedResponse.promptTokens, cachedResponse.completionTokens,
-                    cachedResponse.totalTokens, cachedResponse.confidence));
+                    cachedResponse.totalTokens, cachedResponse.confidence,
+                    GroundingStatus: cachedResponse.snippets.Count > 0 ? "Grounded" : "Ungrounded"));
             yield break;
         }
 
@@ -372,7 +373,8 @@ internal class StreamDebugQaQueryHandler : IStreamingQueryHandler<StreamDebugQaQ
 
         yield return CreateEvent(StreamingEventType.Complete,
             new StreamingComplete(0, llmUsage?.PromptTokens ?? 0, tokenCount,
-                llmUsage?.TotalTokens ?? tokenCount, confidence));
+                llmUsage?.TotalTokens ?? tokenCount, confidence,
+                GroundingStatus: snippets.Count > 0 ? "Grounded" : "Ungrounded"));
 
         // ── Step 13: Validation pipeline (async, best-effort) ────────────
         if (_validationPipelineService != null)

@@ -155,7 +155,15 @@ internal record StreamingComplete(
     double? routingLatencyMs = null,
     string? strategyTier = null,
     Guid? executionId = null,
-    IReadOnlyList<CitationDto>? Citations = null);
+    IReadOnlyList<CitationDto>? Citations = null,
+    // #3388: grounding-contract invariant. Every producer below explicitly passes this
+    // (derived from its own citation count: Grounded iff count>0, else Ungrounded) rather
+    // than relying on the default — the default only exists because C# requires optional
+    // positional params to trail required ones, and this must stay the LAST param per the
+    // plan. Wire value is the enum NAME string ("Grounded"/"Partial"/"Ungrounded"), NOT the
+    // GroundingStatus enum — SSE serializes C# enums numerically, so a string keeps this
+    // path wire-consistent with the REST path's JsonStringEnumConverter output.
+    string GroundingStatus = "Ungrounded");
 
 internal record CitationDto(
     string DocumentId,

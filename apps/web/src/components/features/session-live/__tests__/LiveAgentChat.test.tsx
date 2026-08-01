@@ -31,6 +31,8 @@ const INTL_MESSAGES = {
   'pages.sessionLive.chat.newMessagesToast':
     '{count, plural, one {# nuovo messaggio} other {# nuovi messaggi}}',
   'pages.sessionLive.chatAgent.nonGroundedDisclaimer': 'Risposta non basata sul regolamento',
+  'pages.sessionLive.chatAgent.nonGroundedDisclaimerImage':
+    'Ho risposto dalla foto e dalla mia conoscenza del gioco, non dal regolamento ufficiale — verifica sul manuale',
   'pages.sessionLive.chat.removeImageAriaLabel': 'Rimuovi immagine {n}',
 };
 
@@ -391,6 +393,59 @@ describe('#2500 AC-CHAT-3 — non-grounded disclaimer', () => {
     expect(
       container.querySelector('[data-slot="chat-nongrounded-disclaimer"]')
     ).not.toBeInTheDocument();
+  });
+
+  it('messaggio assistant isNonGrounded:true + modality:"image" -> disclaimer copy immagine', () => {
+    const msgNonGroundedImage: ChatMessage = {
+      id: 'msg-ng-image',
+      senderId: 'agent',
+      senderName: 'MeepleAI',
+      content: 'Risposta dalla foto.',
+      visibility: 'shared',
+      timestamp: '2026-06-23T10:00:00Z',
+      isNonGrounded: true,
+      modality: 'image',
+    };
+    const { container } = renderChat({ messages: [msgNonGroundedImage] });
+    const disclaimer = container.querySelector('[data-slot="chat-nongrounded-disclaimer"]');
+    expect(disclaimer).toBeInTheDocument();
+    expect(disclaimer?.textContent).toContain(
+      'Ho risposto dalla foto e dalla mia conoscenza del gioco, non dal regolamento ufficiale'
+    );
+    expect(disclaimer?.textContent).not.toContain('Risposta non basata sul regolamento');
+  });
+
+  it('messaggio assistant isNonGrounded:true + modality:"text" -> disclaimer copy testo esistente', () => {
+    const msgNonGroundedText: ChatMessage = {
+      id: 'msg-ng-text',
+      senderId: 'agent',
+      senderName: 'MeepleAI',
+      content: 'Risposta senza fonti.',
+      visibility: 'shared',
+      timestamp: '2026-06-23T10:00:00Z',
+      isNonGrounded: true,
+      modality: 'text',
+    };
+    const { container } = renderChat({ messages: [msgNonGroundedText] });
+    const disclaimer = container.querySelector('[data-slot="chat-nongrounded-disclaimer"]');
+    expect(disclaimer).toBeInTheDocument();
+    expect(disclaimer?.textContent).toContain('Risposta non basata sul regolamento');
+  });
+
+  it('messaggio assistant isNonGrounded:true + modality assente -> disclaimer copy testo esistente (default)', () => {
+    const msgNonGroundedDefault: ChatMessage = {
+      id: 'msg-ng-default',
+      senderId: 'agent',
+      senderName: 'MeepleAI',
+      content: 'Risposta senza fonti.',
+      visibility: 'shared',
+      timestamp: '2026-06-23T10:00:00Z',
+      isNonGrounded: true,
+    };
+    const { container } = renderChat({ messages: [msgNonGroundedDefault] });
+    const disclaimer = container.querySelector('[data-slot="chat-nongrounded-disclaimer"]');
+    expect(disclaimer).toBeInTheDocument();
+    expect(disclaimer?.textContent).toContain('Risposta non basata sul regolamento');
   });
 });
 

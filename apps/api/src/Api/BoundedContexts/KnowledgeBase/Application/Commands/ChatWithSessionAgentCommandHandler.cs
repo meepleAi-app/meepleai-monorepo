@@ -716,7 +716,8 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
                 totalTokens: totalTokens,
                 confidence: RagPromptAssemblyService.ComputeConfidence(assembled.Citations, responseText),
                 chatThreadId: thread.Id,
-                Citations: citationDtos));
+                Citations: citationDtos,
+                GroundingStatus: citationDtos.Count > 0 ? "Grounded" : "Ungrounded"));
     }
 
     private async Task GenerateConversationSummaryAsync(Guid threadId)

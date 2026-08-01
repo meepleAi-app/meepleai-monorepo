@@ -50,11 +50,24 @@ export interface ChatMessage {
   readonly timestamp: string;
   readonly citations?: readonly ChatCitation[];
   /**
+   * Task 3 (#3388): server-authoritative grounding contract, propagated verbatim from
+   * `useSessionAgentChat.ChatMessage.groundingStatus` (SSE path) or set directly from
+   * the `/chat/ask-agent` JSON response (image path). Absent on system status messages.
+   */
+  readonly groundingStatus?: 'Grounded' | 'Partial' | 'Ungrounded';
+  /**
    * AC-CHAT-3: when true, the agent answered without any grounding citations.
    * Shows a discrete disclaimer below the bubble. NEVER true on system status messages
    * (those are injected by SessionLiveView without this flag).
    */
   readonly isNonGrounded?: boolean;
+  /**
+   * Task 4 (#3388): source modality of the answer, used to pick the per-modality
+   * non-grounded disclaimer copy. Absent/'text' → text-RAG SSE path copy;
+   * 'image' → multimodal /ask-agent JSON path copy (SessionLiveView sets this on
+   * the image-branch agent message).
+   */
+  readonly modality?: 'text' | 'image';
 }
 
 // ─── Labels ───────────────────────────────────────────────────────────────────
@@ -236,7 +249,9 @@ export function LiveAgentChat({
                 )}
                 {/* AC-CHAT-3: non-grounded disclaimer — only for agent messages with
                     zero citations and explicit isNonGrounded flag.
-                    NEVER shown on system status messages (those lack the flag). */}
+                    NEVER shown on system status messages (those lack the flag).
+                    Task 4 (#3388): copy varies by modality — image path answers are
+                    derived from the photo + model knowledge, not the rulebook. */}
                 {msg.isNonGrounded === true && !isOwn && (
                   <p
                     data-slot="chat-nongrounded-disclaimer"
@@ -244,7 +259,10 @@ export function LiveAgentChat({
                   >
                     <span aria-hidden="true">⚠️</span>
                     {intl.formatMessage({
-                      id: 'pages.sessionLive.chatAgent.nonGroundedDisclaimer',
+                      id:
+                        msg.modality === 'image'
+                          ? 'pages.sessionLive.chatAgent.nonGroundedDisclaimerImage'
+                          : 'pages.sessionLive.chatAgent.nonGroundedDisclaimer',
                     })}
                   </p>
                 )}

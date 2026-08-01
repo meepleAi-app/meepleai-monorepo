@@ -1174,8 +1174,10 @@ export function SessionLiveView(): ReactElement {
       visibility: 'shared' as const,
       timestamp: m.timestamp,
       citations: m.citations,
-      // AC-CHAT-3: propagate isNonGrounded ONLY from hook messages.
-      // System status messages (prepended below) do NOT get this flag → no disclaimer.
+      // Task 3 (#3388): propagate the server-authoritative groundingStatus alongside
+      // isNonGrounded — ONLY from hook messages (system status messages prepended
+      // below never carry either field, so they never show the disclaimer).
+      groundingStatus: m.groundingStatus,
       isNonGrounded: m.isNonGrounded,
     }));
 
@@ -1253,7 +1255,13 @@ export function SessionLiveView(): ReactElement {
             body: fd,
           });
           if (!res.ok) throw new Error(`ask-agent ${res.status}`);
-          const json = (await res.json()) as { answer?: string; confidence?: number };
+          // Task 3 (#3388): the multipart JSON response now carries a top-level
+          // groundingStatus (string, PascalCase — same wire contract as the SSE path).
+          const json = (await res.json()) as {
+            answer?: string;
+            confidence?: number;
+            groundingStatus?: string;
+          };
           setImageMessages(prev => [
             ...prev,
             {
@@ -1265,6 +1273,15 @@ export function SessionLiveView(): ReactElement {
                 intl.formatMessage({ id: 'pages.sessionLive.chatAgent.imageAsk.fallbackResponse' }),
               visibility: 'shared' as const,
               timestamp: new Date().toISOString(),
+              groundingStatus: json.groundingStatus as
+                | 'Grounded'
+                | 'Partial'
+                | 'Ungrounded'
+                | undefined,
+              isNonGrounded: json.groundingStatus === 'Ungrounded',
+              // Task 4 (#3388): tag as image-modality so the disclaimer copy reflects
+              // that the answer came from the photo, not the rulebook.
+              modality: 'image',
             },
           ]);
         } catch {

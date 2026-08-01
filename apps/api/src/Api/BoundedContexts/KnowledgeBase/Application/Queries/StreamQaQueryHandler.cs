@@ -185,7 +185,8 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
                     cachedResponse.promptTokens,
                     cachedResponse.completionTokens,
                     cachedResponse.totalTokens,
-                    cachedResponse.confidence));
+                    cachedResponse.confidence,
+                    GroundingStatus: cachedResponse.snippets.Count > 0 ? "Grounded" : "Ungrounded"));
 
             yield break;
         }
@@ -311,7 +312,8 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
             tokenCount, cacheKey, llmUsage, llmCost, injectClaims, cancellationToken).ConfigureAwait(false);
 
         yield return CreateEvent(StreamingEventType.Complete,
-            new StreamingComplete(0, 0, tokenCount, tokenCount, overallConfidence.Value));
+            new StreamingComplete(0, 0, tokenCount, tokenCount, overallConfidence.Value,
+                GroundingStatus: allSnippets.Count > 0 ? "Grounded" : "Ungrounded"));
 
         // Emit inline citation matches (over RAG + claim citations, so [Vk] claim markers can match too)
         var inlineCitations = _citationMatcher.Match(answerBuilder.ToString(), allSnippets);

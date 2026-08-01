@@ -1958,6 +1958,34 @@ describe('SessionLiveView — #2588 A3: dual-path image/text send handler', () =
     expect((init as RequestInit).method).toBe('POST');
     expect((init as RequestInit).body).toBeInstanceOf(FormData);
   });
+
+  it('A3-3 (Task 3 #3388): image response groundingStatus="Ungrounded" flags the agent message non-grounded', async () => {
+    fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ answer: 'Risposta immagine.', groundingStatus: 'Ungrounded' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { container } = renderWithIntl(<SessionLiveView />);
+
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(fileInput).not.toBeNull();
+
+    const file = new File(['x'], 'board.jpg', { type: 'image/jpeg' });
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [file] } });
+    });
+
+    const sendBtn = screen.getAllByRole('button', { name: 'Invia messaggio' })[0];
+    await act(async () => {
+      fireEvent.click(sendBtn);
+    });
+
+    expect(
+      container.querySelector('[data-slot="chat-nongrounded-disclaimer"]')
+    ).toBeInTheDocument();
+  });
 });
 
 // ─── #2505 — viewerRole derivation + AddPlayerDialog wiring ──────────────────

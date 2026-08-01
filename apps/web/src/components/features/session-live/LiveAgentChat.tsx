@@ -50,6 +50,12 @@ export interface ChatMessage {
   readonly timestamp: string;
   readonly citations?: readonly ChatCitation[];
   /**
+   * Task 3 (#3388): server-authoritative grounding contract, propagated verbatim from
+   * `useSessionAgentChat.ChatMessage.groundingStatus` (SSE path) or set directly from
+   * the `/chat/ask-agent` JSON response (image path). Absent on system status messages.
+   */
+  readonly groundingStatus?: 'Grounded' | 'Partial' | 'Ungrounded';
+  /**
    * AC-CHAT-3: when true, the agent answered without any grounding citations.
    * Shows a discrete disclaimer below the bubble. NEVER true on system status messages
    * (those are injected by SessionLiveView without this flag).

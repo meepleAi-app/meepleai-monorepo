@@ -20,7 +20,7 @@ Sono **tre** aggregati su **due** bounded context, su tre prefissi di route dist
 
 | Aggregato | Tabella | BC | Route | Concorrenza | "Vivo" quando | Scoring |
 |---|---|---|---|---|---|---|
-| `GameSession` | `game_sessions` | GameManagement | `/api/v1/sessions/*` | — | lifecycle 4-state | **nessuno** (shadow) |
+| `GameSession` | `GameSessions` | GameManagement | `/api/v1/sessions/*` | — | lifecycle 4-state | **nessuno** (shadow) |
 | `Session` | `session_tracking_sessions` | SessionTracking | `/api/v1/game-sessions/*` | `RowVersion` (`byte[]`, `[Timestamp]`) | `StartedAt≠null && FinalizedAt==null` | **polimorfico** (JSON) **+** `ScoreEntry` (righe) |
 | `LiveGameSession` | `live_game_sessions` | GameManagement | `/api/v1/live-sessions/*` | `Xmin` (Postgres, ADR-060) | `Status ∈ {Setup,InProgress,Paused}` | **round-based** (dimensioni × round) |
 
@@ -28,6 +28,7 @@ Sono **tre** aggregati su **due** bounded context, su tre prefissi di route dist
 - `SessionTracking/Domain/Entities/Session.cs:113` (`IsLive`), `:120` (`ScoringType`), `:127` (`ScoreData` JSONB), `:174` (`RowVersion`), `:471` (`SetScores`).
 - `GameManagement/Domain/Entities/LiveGameSession.cs:62` (`ScoringConfig`), `:87` (`Xmin`), `:104` (`IsActive`), `:561` (`RecordScore`), `:984` (`RecalculatePlayerScores`), `:73` (`TrackingSessionId`), `:85` (`CorrelatedGameSessionId`).
 - `GameSession` come shadow (no scoring autoritativo): ADR-083 Update 2026-06-30 (#2587).
+- ⚠️ Naming fisico: il `GameSession` di GameManagement persiste su tabella **`GameSessions`** (PascalCase, `Infrastructure/EntityConfigurations/GameManagement/GameSessionEntityConfiguration.cs:15`; porta l'indice quota #3070 `IX_GameSessions_CreatedByUserId_Status`, query `GameSessionRepository.CountActiveByUserIdAsync`/`FindHistoryAsync`). Da **non** confondere con `game_sessions` (snake_case) = `UserLibrary.UserGameSessionEntity` (play-record, `EntityConfigurations/UserLibrary/GameSessionEntityConfiguration.cs:15`), BC e schema distinti.
 
 > Nota terminologica: la tabella dell'issue #3395 elenca **due** aggregati ("`SessionTracking.Session`" vs "`GameManagement.LiveGameSession`"). Il terzo — `GameManagement.GameSession`, il guscio di lifecycle/quota/history — è l'aggregato *dietro* i link di correlazione e va incluso per completezza (ADR-083). L'issue è corretta nella sostanza; questo ADR estende la mappa a tre per non lasciare zone grigie.
 
@@ -40,7 +41,7 @@ Contrariamente al framing "due sistemi", il codice reale espone **tre store di p
 | 1 | Round-based | `LiveGameSession.RoundScores` / `live_session_round_scores` | matrice `player × round × dimension`, validata contro `ScoringConfig.HasDimension` | `RecordScore` (`LiveGameSession.cs:561`) |
 | 2a | Polimorfico | `Session.ScoringType` + `Session.ScoreData` (JSONB sull'aggregato) | discriminated-union JSON per `ScoreType` (Points/BinaryWin/Objectives/Ranking) via `IScoringStrategy` | `UpdateSessionScoresCommand` → `SetScores` |
 | 2b | Storico righe | `ScoreEntry` / `session_tracking_score_entries` | righe `(participant, round?, category?, value)` | `UpdateScoreCommand` (#4765), `UpdatePlayerScoreCommand` (#4765, `RowVersion`), `UpsertScoreWithDiaryCommand` (Session Flow v2.1 T8, + diary event) |
-| 3 | Play-record storico | `UserLibrary.GameSession` / PlayRecord | derivato a fine partita | `RecordGameSessionCommandHandler` su `LiveSessionCompletedEvent` (da `LiveGameSession`) |
+| 3 | Play-record storico | `UserLibrary.GameSession`/`game_sessions` (path manuale) · `PlayRecord`/`play_records` (path event-derived) | derivato a fine partita | manuale: `RecordGameSessionCommandHandler` ← `RecordGameSessionCommand` (endpoint `UserLibraryCoreEndpoints.cs:861`) · event-derived: `LiveSessionCompletedEventHandler` (#4748) su `LiveSessionCompletedEvent` → `IPlayRecordRepository`/`play_records` |
 
 **Osservazione chiave**: lo store #2a e lo store #2b vivono **entrambi** dentro SessionTracking ma su modelli dati incompatibili (JSON sull'aggregato vs righe normalizzate). Il commento di `UpdateSessionScoresCommand.cs:9-13` lo dichiara esplicitamente: *"Distinct from `UpdateScoreCommand` … this command replaces the session's polymorphic `ScoringType` + `ScoreData` payload atomically"*. Sono due code-path che **non si riconciliano tra loro**, prima ancora di considerare il cross-BC.
 

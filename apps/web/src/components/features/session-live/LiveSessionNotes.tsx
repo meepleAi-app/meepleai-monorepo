@@ -7,7 +7,11 @@
  *
  * Role variants:
  *   Spectator: read-only notes list, add-note form hidden entirely.
- *   Player+Host: full form with visibility toggle (private/shared).
+ *   Player+Host: full form (plain text-only note input).
+ *
+ * #3393 (finding C6): the private/shared visibility toggle and the "private"
+ * badge were removed — the SP3 diary endpoint is text-only, so visibility was a
+ * FE-only affordance promising a persistence behaviour the backend never had.
  *
  * Gate C: DIVERGES from MeepleCard — notes panel, not a card pattern.
  *
@@ -28,7 +32,6 @@ export interface NoteEntry {
   readonly authorId: string;
   readonly authorName: string;
   readonly content: string;
-  readonly visibility: 'private' | 'shared';
   readonly timestamp: string;
 }
 
@@ -38,8 +41,6 @@ export interface LiveSessionNotesLabels {
   readonly title: string;
   readonly inputAriaLabel: string;
   readonly addAriaLabel: string;
-  readonly visibilityPrivate: string;
-  readonly visibilityShared: string;
   readonly emptyMessage: string;
 }
 
@@ -49,7 +50,7 @@ export interface LiveSessionNotesProps {
   readonly notes: ReadonlyArray<NoteEntry>;
   readonly viewerRole: ParticipantRole;
   readonly viewerId: string;
-  readonly onAddNote: (content: string, visibility: 'private' | 'shared') => void;
+  readonly onAddNote: (content: string) => void;
   readonly labels: LiveSessionNotesLabels;
   readonly className?: string;
 }
@@ -65,7 +66,6 @@ export function LiveSessionNotes({
   className,
 }: LiveSessionNotesProps): ReactElement {
   const [inputValue, setInputValue] = useState('');
-  const [visibility, setVisibility] = useState<'private' | 'shared'>('shared');
 
   const isSpectator = viewerRole === 'Spectator';
 
@@ -73,7 +73,7 @@ export function LiveSessionNotes({
     e.preventDefault();
     const trimmed = inputValue.trim();
     if (!trimmed) return;
-    onAddNote(trimmed, visibility);
+    onAddNote(trimmed);
     setInputValue('');
   };
 
@@ -95,27 +95,18 @@ export function LiveSessionNotes({
         ) : (
           notes.map(note => {
             const isOwn = note.authorId === viewerId;
-            const isPrivate = note.visibility === 'private';
             return (
               <article
                 key={note.id}
                 data-note-id={note.id}
-                data-visibility={note.visibility}
-                className={`rounded-lg border p-3 text-sm ${
-                  isPrivate
-                    ? 'border-amber-700/30 bg-amber-900/10'
-                    : 'border-border/40 bg-card'
-                }`}
+                className="rounded-lg border border-border/40 bg-card p-3 text-sm"
               >
-                <header className="mb-1 flex items-center justify-between gap-2">
+                <header className="mb-1 flex items-center gap-2">
                   <span
                     className={`text-xs font-medium ${isOwn ? 'text-foreground' : 'text-muted-foreground'}`}
                   >
                     {note.authorName}
                   </span>
-                  {isPrivate && (
-                    <span className="text-xs text-amber-400/70">{labels.visibilityPrivate}</span>
-                  )}
                 </header>
                 <p className="text-foreground">{note.content}</p>
               </article>
@@ -127,34 +118,6 @@ export function LiveSessionNotes({
       {/* Add note form — hidden for Spectator */}
       {!isSpectator && (
         <form onSubmit={handleSubmit} className="flex shrink-0 flex-col gap-2">
-          {/* Visibility toggle */}
-          <div className="flex gap-2" role="group" aria-label="Visibilità nota">
-            <button
-              type="button"
-              aria-pressed={visibility === 'shared'}
-              onClick={() => setVisibility('shared')}
-              className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
-                visibility === 'shared'
-                  ? 'bg-muted text-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {labels.visibilityShared}
-            </button>
-            <button
-              type="button"
-              aria-pressed={visibility === 'private'}
-              onClick={() => setVisibility('private')}
-              className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
-                visibility === 'private'
-                  ? 'bg-amber-700/60 text-amber-100'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {labels.visibilityPrivate}
-            </button>
-          </div>
-
           <div className="flex gap-2">
             <textarea
               value={inputValue}

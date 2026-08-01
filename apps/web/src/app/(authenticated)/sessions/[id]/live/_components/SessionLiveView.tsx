@@ -693,9 +693,10 @@ export function SessionLiveView(): ReactElement {
 
   const handleAddNote = useCallback(
     // #2575: repointed off the legacy raw fetch to /game-sessions/{id}/diary onto the SP3
-    // text-only endpoint via useAddDiaryEntry. `visibility` stays a FE-only affordance (the SP3
-    // command is text-only) — the onAddNote(content, visibility) signature is kept unchanged.
-    async (content: string, _visibility: 'private' | 'shared'): Promise<void> => {
+    // text-only endpoint via useAddDiaryEntry.
+    // #3393 (finding C6): the visibility param was dropped — the SP3 diary command is
+    // text-only, so the private/shared distinction was a FE-only decorative affordance.
+    async (content: string): Promise<void> => {
       if (sessionId == null) return;
 
       try {
@@ -1030,8 +1031,6 @@ export function SessionLiveView(): ReactElement {
     (): ChatAgentPanelLabels => ({
       title: t('pages.sessionLive.chatAgent.title'),
       agentNameAriaLabel: t('pages.sessionLive.chatAgent.agentNameAriaLabel', { name: 'MeepleAI' }),
-      onlineLabel: t('pages.sessionLive.chatAgent.onlineLabel'),
-      latencyAriaLabel: t('pages.sessionLive.chatAgent.latencyAriaLabel', { ms: 42 }),
       chatPanelLabels: chatLabels,
     }),
     [t, chatLabels]
@@ -1042,8 +1041,6 @@ export function SessionLiveView(): ReactElement {
       title: t('pages.sessionLive.notes.title'),
       inputAriaLabel: t('pages.sessionLive.notes.inputAriaLabel'),
       addAriaLabel: t('pages.sessionLive.notes.addAriaLabel'),
-      visibilityPrivate: t('pages.sessionLive.notes.visibilityPrivate'),
-      visibilityShared: t('pages.sessionLive.notes.visibilityShared'),
       emptyMessage: t('pages.sessionLive.notes.emptyMessage'),
     }),
     [t]
@@ -1320,7 +1317,6 @@ export function SessionLiveView(): ReactElement {
         authorId: e.authorName,
         authorName: e.authorName,
         content: e.content,
-        visibility: 'shared' as const,
         timestamp: e.timestamp,
       }));
   }, [activeSession]);
@@ -1356,7 +1352,6 @@ export function SessionLiveView(): ReactElement {
           onSendMessage={handleAgentSendMessage}
           agentName="MeepleAI"
           agentEmoji="🤖"
-          latencyMs={42}
           collapsed={mobileChatCollapsed}
           onHeaderClick={handleMobileChatHeaderClick}
           labels={chatAgentLabels}
@@ -1588,7 +1583,6 @@ export function SessionLiveView(): ReactElement {
         onSendMessage={handleAgentSendMessage}
         agentName="MeepleAI"
         agentEmoji="🤖"
-        latencyMs={42}
         collapsed={chatCollapsed}
         onHeaderClick={handleChatHeaderClick}
         labels={chatAgentLabels}

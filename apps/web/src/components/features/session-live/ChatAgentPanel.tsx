@@ -5,8 +5,12 @@
  * Extended by Issue #2588 A3: forwards optional images param from LiveAgentChat.
  *
  * Wrapper primitive around `LiveAgentChat` that adds the mockup's
- * "magnet" header (emoji avatar + Online pip + agent name + latency +
- * ChatAgent pill) and an accordion-style collapsed semantic.
+ * "magnet" header (emoji avatar + agent name + ChatAgent pill) and an
+ * accordion-style collapsed semantic.
+ *
+ * #3393 (finding C9a/C9b): the fabricated "42ms" latency indicator and the
+ * static "Online" pip were removed — the AI agent has no real online/offline
+ * state and latency was never measured. Decorative-only affordances go.
  *
  * Body delegates to `<LiveAgentChat />` — no duplication of chat logic.
  *
@@ -45,10 +49,6 @@ export interface ChatAgentPanelLabels {
   readonly title: string;
   /** Pre-resolved (Gate A): aria-label for the agent name span. */
   readonly agentNameAriaLabel: string;
-  /** Label for the Online pulse pip — typically "Online". */
-  readonly onlineLabel: string;
-  /** Pre-resolved (Gate A): aria-label for latency indicator. e.g. "Latenza 42ms". */
-  readonly latencyAriaLabel: string;
   /** Labels forwarded to the inner `<LiveAgentChat />`. */
   readonly chatPanelLabels: LiveAgentChatLabels;
 }
@@ -74,7 +74,6 @@ export interface ChatAgentPanelProps {
   readonly agentName: string;
   /** Default '🤖'. */
   readonly agentEmoji?: string;
-  readonly latencyMs: number;
   /** Default false; G3 controls. When true, body unmounts. */
   readonly collapsed?: boolean;
   /** G3 wires the accordion FSM. When provided, header becomes a button. */
@@ -94,7 +93,6 @@ export function ChatAgentPanel({
   onSendMessage,
   agentName,
   agentEmoji = '🤖',
-  latencyMs,
   collapsed = false,
   onHeaderClick,
   compact = false,
@@ -115,35 +113,22 @@ export function ChatAgentPanel({
   // ─── Header content (identical for both <button> and <div> wrappers) ──────
   const headerContent = (
     <>
-      {/* Emoji avatar with pulse pip */}
+      {/* Emoji avatar */}
       <span
         aria-hidden="true"
-        className="relative flex h-9 w-9 shrink-0 items-center justify-center
+        className="flex h-9 w-9 shrink-0 items-center justify-center
           rounded-full bg-entity-agent/20 text-base"
       >
         {agentEmoji}
-        {/* Online pulse pip — aria-label exposes "Online" text to AT */}
-        <span
-          aria-label={labels.onlineLabel}
-          role="status"
-          className="absolute -bottom-0.5 -right-0.5 inline-block h-2.5 w-2.5
-            rounded-full border-2 border-card bg-emerald-500 animate-pulse"
-        />
       </span>
 
-      {/* Agent name + latency */}
+      {/* Agent name */}
       <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-left">
         <span
           aria-label={labels.agentNameAriaLabel}
           className="truncate text-sm font-semibold text-foreground"
         >
           {agentName}
-        </span>
-        <span
-          aria-label={labels.latencyAriaLabel}
-          className="text-xs font-medium text-foreground/70"
-        >
-          {latencyMs}ms
         </span>
       </span>
 

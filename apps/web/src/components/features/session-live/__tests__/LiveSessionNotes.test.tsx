@@ -4,9 +4,9 @@
  * Coverage:
  * - Render shape (data-slot, notes list, empty state)
  * - Role variant: Spectator = read-only (no add form)
- * - Player+Host: add form visible with visibility toggle
- * - onAddNote fires with correct content + visibility
- * - aria-pressed on visibility toggle buttons
+ * - Player+Host: text-only add form (no visibility toggle — #3393)
+ * - onAddNote fires with content only
+ * - #3393: no private/shared visibility toggle, no "private" badge
  */
 
 import { render, screen } from '@testing-library/react';
@@ -22,8 +22,6 @@ const LABELS: LiveSessionNotesLabels = {
   title: 'Note di Sessione',
   inputAriaLabel: 'Scrivi una nota',
   addAriaLabel: 'Aggiungi nota',
-  visibilityPrivate: 'Privata',
-  visibilityShared: 'Condivisa',
   emptyMessage: 'Nessuna nota',
 };
 
@@ -33,7 +31,6 @@ const NOTES: ReadonlyArray<NoteEntry> = [
     authorId: 'user-a',
     authorName: 'Alice',
     content: 'Prima nota',
-    visibility: 'shared',
     timestamp: '2026-05-06T10:00:00Z',
   },
   {
@@ -41,7 +38,6 @@ const NOTES: ReadonlyArray<NoteEntry> = [
     authorId: 'viewer-id',
     authorName: 'Me',
     content: 'Nota privata',
-    visibility: 'private',
     timestamp: '2026-05-06T10:01:00Z',
   },
 ];
@@ -117,15 +113,19 @@ describe('LiveSessionNotes — role variant: Player + Host', () => {
     expect(screen.getByRole('button', { name: 'Aggiungi nota' })).toBeInTheDocument();
   });
 
-  it.each(['Player', 'Host'] as const)('shows visibility toggle for %s', role => {
-    renderNotes({ viewerRole: role });
-    expect(screen.getByRole('button', { name: /Privata/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Condivisa/i })).toBeInTheDocument();
-  });
+  it.each(['Player', 'Host'] as const)(
+    'does NOT show a private/shared visibility toggle for %s (#3393)',
+    role => {
+      renderNotes({ viewerRole: role });
+      expect(screen.queryByRole('button', { name: /Privata/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Condivisa/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('group', { name: /Visibilità/i })).not.toBeInTheDocument();
+    }
+  );
 });
 
 describe('LiveSessionNotes — onAddNote', () => {
-  it('calls onAddNote with content and "shared"', async () => {
+  it('calls onAddNote with content only (no visibility arg — #3393)', async () => {
     const user = userEvent.setup();
     const { onAddNote } = renderNotes({ viewerRole: 'Player' });
 
@@ -133,18 +133,7 @@ describe('LiveSessionNotes — onAddNote', () => {
     await user.click(screen.getByRole('button', { name: 'Aggiungi nota' }));
 
     expect(onAddNote).toHaveBeenCalledOnce();
-    expect(onAddNote).toHaveBeenCalledWith('My note', 'shared');
-  });
-
-  it('calls onAddNote with "private" when switched', async () => {
-    const user = userEvent.setup();
-    const { onAddNote } = renderNotes({ viewerRole: 'Player' });
-
-    await user.click(screen.getByRole('button', { name: /Privata/i }));
-    await user.type(screen.getByRole('textbox', { name: 'Scrivi una nota' }), 'Private note');
-    await user.click(screen.getByRole('button', { name: 'Aggiungi nota' }));
-
-    expect(onAddNote).toHaveBeenCalledWith('Private note', 'private');
+    expect(onAddNote).toHaveBeenCalledWith('My note');
   });
 
   it('does not call onAddNote when input is empty', async () => {
@@ -167,19 +156,13 @@ describe('LiveSessionNotes — onAddNote', () => {
   });
 });
 
-describe('LiveSessionNotes — aria', () => {
-  it('aria-pressed reflects current visibility selection', async () => {
-    const user = userEvent.setup();
-    renderNotes({ viewerRole: 'Player' });
-
-    const sharedBtn = screen.getByRole('button', { name: /Condivisa/i });
-    expect(sharedBtn).toHaveAttribute('aria-pressed', 'true');
-
-    await user.click(screen.getByRole('button', { name: /Privata/i }));
-    expect(screen.getByRole('button', { name: /Privata/i })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
-    expect(sharedBtn).toHaveAttribute('aria-pressed', 'false');
+describe('LiveSessionNotes — #3393 removed affordances', () => {
+  it('does not render a "private" visibility badge on notes', () => {
+    renderNotes({ notes: NOTES });
+    // Note content still renders, but no decorative private/shared badge appears.
+    expect(screen.getByText('Prima nota')).toBeInTheDocument();
+    expect(screen.getByText('Nota privata')).toBeInTheDocument();
+    expect(screen.queryByText('Privata')).not.toBeInTheDocument();
+    expect(screen.queryByText('Condivisa')).not.toBeInTheDocument();
   });
 });

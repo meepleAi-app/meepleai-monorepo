@@ -254,4 +254,43 @@ public class EvaluationMetricsTests
         metrics.Mrr.Should().Be(value);
         metrics.AnswerCorrectness.Should().Be(value);
     }
+
+    [Fact]
+    public void Compute_ExcludesUnlabeledFromRetrievalMetrics_ButCountsThem()
+    {
+        // Arrange
+        var results = new List<EvaluationSampleResult>
+        {
+            new()
+            {
+                SampleId = "s-001",
+                Question = "Q1?",
+                ExpectedAnswer = "A1",
+                RelevantChunkIds = new[] { "c1" },
+                HitAt5 = true,
+                HitAt10 = true,
+                ReciprocalRank = 1.0
+            },
+            new()
+            {
+                SampleId = "s-002",
+                Question = "Q2?",
+                ExpectedAnswer = "A2",
+                RelevantChunkIds = [],
+                HitAt5 = false,
+                HitAt10 = false,
+                ReciprocalRank = 0.0
+            }
+        };
+
+        // Act
+        var metrics = EvaluationMetrics.Compute(results);
+
+        // Assert
+        metrics.RecallAt5.Should().Be(1.0); // Only the labeled sample counts, not (1+0)/2 = 0.5
+        metrics.Mrr.Should().Be(1.0); // Labeled only (ReciprocalRank 1.0); unlabeled's 0.0 would fail this if not excluded
+        metrics.LabeledSampleCount.Should().Be(1);
+        metrics.UnlabeledSampleCount.Should().Be(1);
+        metrics.SampleCount.Should().Be(2);
+    }
 }

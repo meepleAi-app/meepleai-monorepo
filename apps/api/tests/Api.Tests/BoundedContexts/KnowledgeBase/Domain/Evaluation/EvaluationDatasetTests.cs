@@ -450,6 +450,36 @@ public class EvaluationDatasetTests
     }
 
     [Fact]
+    public void FromJson_ReadsLanguageField_RoundTrips()
+    {
+        // Arrange
+        var json = """
+        {
+            "name": "Test Dataset",
+            "description": "Test",
+            "samples": [
+                {
+                    "id": "sample-1",
+                    "question": "Q1",
+                    "expected_answer": "A1",
+                    "language": "it"
+                }
+            ]
+        }
+        """;
+
+        // Act
+        var dataset = EvaluationDataset.FromJson(json);
+
+        // Assert
+        dataset.Samples[0].Language.Should().Be("it");
+
+        // Round-trip
+        var roundTripped = EvaluationDataset.FromJson(dataset.ToJson());
+        roundTripped.Samples[0].Language.Should().Be("it");
+    }
+
+    [Fact]
     public void Count_ReflectsNumberOfSamples()
     {
         // Arrange

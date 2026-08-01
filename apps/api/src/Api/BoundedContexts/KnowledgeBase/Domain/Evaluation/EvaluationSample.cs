@@ -68,6 +68,11 @@ internal sealed record EvaluationSample
     public string DatasetSource { get; init; } = "meepleai_custom";
 
     /// <summary>
+    /// ISO language code of the sample (e.g. "en", "it"). Null when unspecified.
+    /// </summary>
+    public string? Language { get; init; }
+
+    /// <summary>
     /// Creates a sample for Mozilla Structured QA format.
     /// </summary>
     public static EvaluationSample FromMozilla(

@@ -449,6 +449,26 @@ reindex-corpus: ## Big-bang re-index Ready PDFs to coordinate-aware v1.2 (ENV=st
 	@test -f scripts/reindex-corpus/.env.$(ENV) || (echo "Missing scripts/reindex-corpus/.env.$(ENV) — copy from .env.example" && exit 66)
 	./scripts/reindex-corpus/reindex-corpus.sh scripts/reindex-corpus/.env.$(ENV) $(EXTRA) $(IMEANIT)
 
+# === RAG evaluation admin runner (issue #3433, Task 6) ===
+# Wraps POST /api/v1/admin/eval/retrieval (admin-gated). Retrieved chunk ids only make sense
+# against the coordinate-aware v1.2 corpus, so a real run against staging is deferred until
+# the #3427 re-index completes — for now this target is for local ad-hoc smoke only.
+
+eval-retrieval: ## Run RAG retrieval evaluation via admin endpoint (DATASET=path required; MAX_SAMPLES optional int; BASE_URL default localhost:8080; ADMIN_EMAIL/ADMIN_PASSWORD to auto-login). Deferred until #3427 corpus re-index completes.
+	@test -n "$(DATASET)" || (echo "DATASET required: make eval-retrieval DATASET=../tests/evaluation-datasets/meepleai-en-seed.json" && exit 64)
+	@cookie=$$(mktemp); trap 'rm -f "$$cookie"' EXIT; \
+	base="$(BASE_URL)"; [ -n "$$base" ] || base="http://localhost:8080"; \
+	max="$(MAX_SAMPLES)"; [ -n "$$max" ] || max="null"; \
+	if [ -n "$(ADMIN_EMAIL)" ] && [ -n "$(ADMIN_PASSWORD)" ]; then \
+		curl -s -o /dev/null -c "$$cookie" -X POST "$$base/api/v1/auth/login" \
+			-H 'Content-Type: application/json' \
+			-d "{\"email\":\"$(ADMIN_EMAIL)\",\"password\":\"$(ADMIN_PASSWORD)\"}"; \
+	fi; \
+	curl -s -b "$$cookie" -X POST "$$base/api/v1/admin/eval/retrieval" \
+		-H 'Content-Type: application/json' \
+		-d "{\"datasetPath\":\"$(DATASET)\",\"maxSamples\":$$max}" \
+		| (command -v jq >/dev/null 2>&1 && jq . || cat)
+
 .PHONY: dev dev-core dev-down \
         tunnel tunnel-stop tunnel-status integration-check integration \
         integration-down work work-stop smoke smoke-staging smoke-pg-readback staging staging-minimal staging-with-tutor staging-tutor-down staging-core staging-down prod prod-down \
@@ -461,4 +481,5 @@ reindex-corpus: ## Big-bang re-index Ready PDFs to coordinate-aware v1.2 (ENV=st
         backup backup-verify backup-restore-test backup-status backup-cron-install backup-cron-show \
         db-snapshot db-snapshot-sanitized db-reset-migrations db-restore-snapshot db-rollback-safetynet \
         game-reset-help game-reset-backup game-reset-mapping game-reset-relink game-reset-verify game-reset-rollback-rehearse \
-        reindex-corpus reindex-corpus-help
+        reindex-corpus reindex-corpus-help \
+        eval-retrieval

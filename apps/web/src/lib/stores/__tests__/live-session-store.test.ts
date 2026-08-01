@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 
-import { useLiveSessionStore } from '@/lib/stores/live-session-store';
+import { useLiveSessionStore, type RuleDispute } from '@/lib/stores/live-session-store';
 import type { TurnOrderType } from '@/lib/session-live/turn-state';
 
 describe('useLiveSessionStore — Block A #2389 contract evolution', () => {
@@ -155,5 +155,60 @@ describe('useLiveSessionStore — Block A #2389 contract evolution', () => {
     useLiveSessionStore.getState().setGameState({ round: 5 });
     useLiveSessionStore.getState().reset();
     expect(useLiveSessionStore.getState().gameState).toBeNull();
+  });
+
+  // #3391 (finding C8) — setDisputes bulk-hydration for REST reload of the Arbitro tab
+  it('initial state — disputes is empty', () => {
+    expect(useLiveSessionStore.getState().disputes).toEqual([]);
+  });
+
+  it('setDisputes replaces the dispute list (bulk hydration on reload)', () => {
+    // A stale SignalR-appended dispute should be replaced by the authoritative REST snapshot.
+    useLiveSessionStore.getState().addDispute({
+      id: 'stale',
+      description: 'stale',
+      verdict: 'x',
+      ruleReferences: [],
+      raisedByPlayerName: 'X',
+      timestamp: '2020-01-01T00:00:00Z',
+    });
+
+    const hydrated: RuleDispute[] = [
+      {
+        id: 'd1',
+        description: 'Can I play two cards?',
+        verdict: 'No — one per turn.',
+        ruleReferences: ['p.12'],
+        raisedByPlayerName: 'Alice',
+        timestamp: '2026-01-01T00:00:00Z',
+      },
+      {
+        id: 'd2',
+        description: 'Does a tie break by score?',
+        verdict: 'Yes.',
+        ruleReferences: ['p.4', 'p.5'],
+        raisedByPlayerName: 'Bob',
+        timestamp: '2026-01-01T00:05:00Z',
+      },
+    ];
+
+    useLiveSessionStore.getState().setDisputes(hydrated);
+
+    expect(useLiveSessionStore.getState().disputes).toEqual(hydrated);
+  });
+
+  it('reset() clears disputes to an empty list', () => {
+    useLiveSessionStore.getState().setDisputes([
+      {
+        id: 'd1',
+        description: 'x',
+        verdict: 'y',
+        ruleReferences: [],
+        raisedByPlayerName: 'A',
+        timestamp: '2026-01-01T00:00:00Z',
+      },
+    ]);
+    useLiveSessionStore.getState().reset();
+    expect(useLiveSessionStore.getState().disputes).toEqual([]);
   });
 });

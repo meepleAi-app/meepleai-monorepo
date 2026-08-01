@@ -12,7 +12,9 @@ import { z } from 'zod';
 import {
   RuleDisputeResponseSchema,
   CreatePauseSnapshotResponseSchema,
+  SessionDisputesResultSchema,
   type RuleDisputeResponse,
+  type RuleDisputeDto,
   type CreatePauseSnapshotResponse,
 } from '../schemas/improvvisata.schemas';
 import {
@@ -190,6 +192,12 @@ export interface LiveSessionsClient {
   /** Get all diary entries for the session, ordered by createdAt ascending. */
   getDiary(sessionId: string): Promise<LiveSessionDiaryEntryDto[]>;
 
+  /**
+   * Get all rule disputes for the session, ordered by timestamp ascending (#3391).
+   * Powers the Arbitro tab's REST hydration on reload (SignalR keeps it live thereafter).
+   */
+  getDisputes(sessionId: string): Promise<RuleDisputeDto[]>;
+
   // ========== AI Score Tracking (Issue #121) ==========
 
   /** Parse a natural language message for score data, optionally auto-record */
@@ -344,6 +352,14 @@ export function createLiveSessionsClient({
         `${BASE}/${encodeURIComponent(sessionId)}/diary`
       );
       return z.array(LiveSessionDiaryEntryDtoSchema).parse(response ?? []);
+    },
+
+    async getDisputes(sessionId) {
+      const response = await httpClient.get<unknown>(
+        `${BASE}/${encodeURIComponent(sessionId)}/disputes`
+      );
+      if (!response) return [];
+      return SessionDisputesResultSchema.parse(response).disputes;
     },
 
     async getPlayers(sessionId) {

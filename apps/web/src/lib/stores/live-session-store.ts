@@ -100,6 +100,12 @@ interface LiveSessionState {
   addProposal: (proposal: ScoreProposal) => void;
   resolveProposal: (proposalId: string, accepted: boolean) => void;
   addDispute: (dispute: RuleDispute) => void;
+  /**
+   * #3391 (finding C8): bulk-hydrate the dispute list from the REST snapshot on reload.
+   * Replaces (not appends) so the authoritative server history supersedes SignalR-appended
+   * entries when the Arbitro tab remounts. `addDispute` remains the live SignalR append path.
+   */
+  setDisputes: (disputes: RuleDispute[]) => void;
   setConnected: (connected: boolean) => void;
   setOffline: (offline: boolean) => void;
   reset: () => void;
@@ -115,6 +121,7 @@ const initialState: Omit<
   | 'addProposal'
   | 'resolveProposal'
   | 'addDispute'
+  | 'setDisputes'
   | 'setConnected'
   | 'setOffline'
   | 'reset'
@@ -189,6 +196,8 @@ export const useLiveSessionStore = create<LiveSessionState>()(
           false,
           'addDispute'
         ),
+
+      setDisputes: disputes => set({ disputes: [...disputes] }, false, 'setDisputes'),
 
       setConnected: connected => set({ isConnected: connected }, false, 'setConnected'),
 

@@ -17,7 +17,7 @@ public class SessionParticipantEntity
     public string? RegisteredDisplayName { get; set; }
 
     // Role & Access
-    public string Role { get; set; } = default!; // ParticipantRole enum stored as string
+    public string Role { get; set; } = default!; // SessionParticipantRole enum stored as string
     public bool AgentAccessEnabled { get; set; }
     public string ConnectionToken { get; set; } = default!; // 6-char PIN
 

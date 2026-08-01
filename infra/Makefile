@@ -366,11 +366,6 @@ test-e2e: ## Playwright E2E tests (requires make dev + api + web running) — mi
 	cd $(WEB) && pnpm test:e2e
 	@echo "✅ E2E tests passed"
 
-test-visual: ## Visual regression tests — mirrors test-visual.yml
-	@echo "🔵 Visual regression tests..."
-	cd $(WEB) && pnpm build && pnpm test:e2e:visual --project=desktop-chrome
-	@echo "✅ Visual tests passed"
-
 test-perf: ## K6 smoke performance tests (requires api running) — mirrors test-performance.yml
 	@echo "🔵 Performance smoke tests..."
 	@which k6 > /dev/null 2>&1 || (echo "❌ k6 not installed: https://k6.io/docs/get-started/installation/" && exit 1)
@@ -457,7 +452,7 @@ reindex-corpus: ## Big-bang re-index Ready PDFs to coordinate-aware v1.2 (ENV=st
         snapshot restore-staging restore-local seed-games \
         logs logging logging-down logs-ui ps build clean help \
         ci ci-fe ci-be-unit ci-be-integration ci-be-e2e ci-all \
-        sec-scan sec-pentest security-audit test-e2e test-visual test-perf validate-workflows \
+        sec-scan sec-pentest security-audit test-e2e test-perf validate-workflows \
         backup backup-verify backup-restore-test backup-status backup-cron-install backup-cron-show \
         db-snapshot db-snapshot-sanitized db-reset-migrations db-restore-snapshot db-rollback-safetynet \
         game-reset-help game-reset-backup game-reset-mapping game-reset-relink game-reset-verify game-reset-rollback-rehearse \

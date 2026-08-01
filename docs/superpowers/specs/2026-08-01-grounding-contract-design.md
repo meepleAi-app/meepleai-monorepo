@@ -20,7 +20,7 @@ Lo scenario di punta ("scatto una foto del tavolo e chiedo una regola") restitui
 ## Componenti
 
 ### BE-1 — enum condiviso
-`Api.SharedKernel/.../GroundingStatus.cs`: `enum GroundingStatus { Grounded, Partial, Ungrounded }`. Serializzato come stringa camelCase nel JSON di risposta (coerente con il resto delle API).
+`Api.SharedKernel/.../GroundingStatus.cs`: `enum GroundingStatus { Grounded, Partial, Ungrounded }`. Sul wire il **valore** è il nome dell'enum in **PascalCase** (`"Grounded"`/`"Ungrounded"`) — via `JsonStringEnumConverter` sul path REST e come stringa letterale sul path SSE (che serializza gli enum numericamente); la **chiave** JSON è camelCase (`groundingStatus`). Il FE confronta `=== 'Ungrounded'`.
 
 ### BE-2 — path immagine/text-only (`AskSessionAgentCommandHandler`, BC SessionTracking)
 - Rimuovere `confidence=0.85f` (`ChatCommandHandlers.cs:201`, `:224`) → `confidence=null`.

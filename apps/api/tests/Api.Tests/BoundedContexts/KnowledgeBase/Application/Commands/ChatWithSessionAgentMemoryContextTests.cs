@@ -182,7 +182,7 @@ public class ChatWithSessionAgentMemoryContextTests
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GameState?>(),
                 It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<ChatThread?>(),
                 It.IsAny<SharedUserTier?>(), It.IsAny<string>(), It.IsAny<CancellationToken>(),
-                It.IsAny<IRagDebugEventCollector?>(), It.IsAny<RetrievalProfile?>()))
+                It.IsAny<IRagDebugEventCollector?>(), It.IsAny<RetrievalProfile?>(), It.IsAny<RetrievalPolicy?>()))
             .ReturnsAsync(assembled);
 
         // --- Copyright tier resolver → returns citations as-is (empty) ---

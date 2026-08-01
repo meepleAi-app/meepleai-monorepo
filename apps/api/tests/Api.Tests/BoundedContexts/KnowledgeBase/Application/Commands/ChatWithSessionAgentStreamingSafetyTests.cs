@@ -356,7 +356,7 @@ public sealed class ChatWithSessionAgentStreamingSafetyTests
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GameState?>(),
                 It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<ChatThread?>(),
                 It.IsAny<SharedUserTier?>(), It.IsAny<string>(), It.IsAny<CancellationToken>(),
-                It.IsAny<IRagDebugEventCollector?>(), It.IsAny<RetrievalProfile?>()))
+                It.IsAny<IRagDebugEventCollector?>(), It.IsAny<RetrievalProfile?>(), It.IsAny<RetrievalPolicy?>()))
             .ReturnsAsync(assembled);
 
         var tierResolver = new Mock<ICopyrightTierResolver>();

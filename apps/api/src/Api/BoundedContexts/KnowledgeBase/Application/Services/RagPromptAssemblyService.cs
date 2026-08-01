@@ -102,7 +102,8 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         string agentLanguage,
         CancellationToken ct,
         IRagDebugEventCollector? debugCollector = null,
-        RetrievalProfile? profileOverride = null)
+        RetrievalProfile? profileOverride = null,
+        RetrievalPolicy? retrievalPolicy = null)
     {
         ArgumentNullException.ThrowIfNull(agentTypology);
         ArgumentNullException.ThrowIfNull(gameTitle);
@@ -115,7 +116,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         var hasExpansions = expansionGameIds.Count > 0;
 
         // Step 1: Retrieve RAG context (includes expansion boost), passing pre-resolved expansion IDs
-        var (ragContext, citations) = await RetrieveRagContextAsync(userQuestion, gameId, expansionGameIds, userTier, ct, debugCollector, profileOverride).ConfigureAwait(false);
+        var (ragContext, citations) = await RetrieveRagContextAsync(userQuestion, gameId, expansionGameIds, userTier, ct, debugCollector, profileOverride, retrievalPolicy).ConfigureAwait(false);
 
         // Step 2: Build system prompt (persona + RAG chunks + expansion priority + copyright instruction)
         var hasProtectedCitations = citations.Any(c => c.CopyrightTier == CopyrightTier.Protected);
@@ -165,16 +166,23 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
     private async Task<(string ragContext, List<ChunkCitation> citations)> RetrieveRagContextAsync(
         string userQuestion, Guid gameId, IReadOnlyList<Guid> expansionGameIds, UserTier? userTier, CancellationToken ct,
         IRagDebugEventCollector? debugCollector = null,
-        RetrievalProfile? profileOverride = null)
+        RetrievalProfile? profileOverride = null,
+        RetrievalPolicy? retrievalPolicy = null)
     {
         var citations = new List<ChunkCitation>();
 
         try
         {
             // === ADAPTIVE RAG ===
-            var profile = RetrievalProfile.Default;
+            // #3389: an explicit RetrievalPolicy decouples the base profile AND the enhancement gating
+            // from the user tier. A null policy preserves legacy behaviour (Default profile, enhancements
+            // gated only by tier presence). The in-session live path passes RetrievalPolicy.LiveSession so
+            // a null tier no longer silently means "Default profile + all enhancements off": the profile is
+            // an explicit named choice and enhancements are explicitly gated off (wiring deferred to #3390).
+            var profile = retrievalPolicy?.BaseProfile ?? RetrievalProfile.Default;
+            var enhancementsAllowed = retrievalPolicy?.EnhancementsEnabled ?? true;
             var activeEnhancements = RagEnhancement.None;
-            if (userTier != null)
+            if (enhancementsAllowed && userTier != null)
             {
                 activeEnhancements = await _ragEnhancementService
                     .GetActiveEnhancementsAsync(userTier, ct).ConfigureAwait(false);

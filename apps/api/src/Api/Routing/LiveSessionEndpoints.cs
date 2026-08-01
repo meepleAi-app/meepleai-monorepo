@@ -340,6 +340,17 @@ internal static class LiveSessionEndpoints
             .WithSummary("Tally dispute votes")
             .WithDescription("Tallies all cast votes on a dispute and determines the final outcome.");
 
+        group.MapGet("/live-sessions/{sessionId}/disputes", HandleGetSessionDisputes)
+            .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
+            .Produces<GetSessionDisputesResult>(200)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Get the dispute history for a live session")
+            .WithDescription("Returns all rule disputes recorded in a single live session, ordered by timestamp ascending. Powers the Arbitro tab's REST hydration on reload (#3391).");
+
         group.MapGet("/games/{gameId}/dispute-history", HandleGetDisputeHistory)
             .RequireAuthenticatedUser()
             .Produces<GetGameDisputeHistoryResult>(200)
@@ -884,6 +895,16 @@ internal static class LiveSessionEndpoints
     {
         var result = await mediator.Send(
             new GetGameDisputeHistoryQuery(gameId), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetSessionDisputes(
+        Guid sessionId,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(
+            new GetSessionDisputesQuery(sessionId), cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
 

@@ -114,7 +114,8 @@ internal class StreamExplainQueryHandler : IStreamingQueryHandler<StreamExplainQ
         var maxConfidence = searchResults!.Max(r => r.Score);
 
         yield return CreateEvent(StreamingEventType.Complete,
-            new StreamingComplete(estimatedMinutes, 0, 0, 0, maxConfidence));
+            new StreamingComplete(estimatedMinutes, 0, 0, 0, maxConfidence,
+                GroundingStatus: citations.Count > 0 ? "Grounded" : "Ungrounded"));
 
         _logger.LogInformation("Streaming explain completed for game {GameId}, topic: {Topic}",
             query.GameId, query.Topic);

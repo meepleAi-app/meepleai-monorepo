@@ -263,6 +263,16 @@ describe('getSharedGameDetail', () => {
     expect(result.kbs).toEqual([]);
   });
 
+  it('parses the R2-resolved coverUrl through schema (#3449)', async () => {
+    const withCover = {
+      ...SAMPLE_DETAIL,
+      coverUrl: 'https://r2.example.test/covers/pdf/33333333/cover-preview.webp',
+    };
+    fetchSpy.mockResolvedValueOnce(makeJsonResponse(withCover));
+    const result = await getSharedGameDetail(withCover.id);
+    expect(result.coverUrl).toBe(withCover.coverUrl);
+  });
+
   it('parses populated nested arrays through schema', async () => {
     const populated = {
       ...SAMPLE_DETAIL,

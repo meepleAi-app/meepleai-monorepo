@@ -27,6 +27,8 @@ internal interface IRagPromptAssemblyService
     /// <param name="ct">Cancellation token</param>
     /// <param name="debugCollector">Optional collector for RAG debug events (null = no debug emission)</param>
     /// <param name="profileOverride">Optional retrieval profile override for debug/admin scenarios (null = use adaptive routing)</param>
+    /// <param name="retrievalPolicy">Optional explicit retrieval policy (base profile + enhancement gating) that
+    /// decouples retrieval from user tier for the in-session live path (#3389); null = legacy tier-gated behaviour.</param>
     /// <returns>Assembled prompt ready for LLM consumption</returns>
     Task<AssembledPrompt> AssemblePromptAsync(
         string agentTypology,
@@ -39,7 +41,8 @@ internal interface IRagPromptAssemblyService
         string agentLanguage,
         CancellationToken ct,
         IRagDebugEventCollector? debugCollector = null,
-        RetrievalProfile? profileOverride = null);
+        RetrievalProfile? profileOverride = null,
+        RetrievalPolicy? retrievalPolicy = null);
 
     /// <summary>
     /// Assembles a complete prompt from a pre-retrieved cross-game chunk list,

@@ -289,6 +289,8 @@ tests/                    # Api.Tests, k6, api-smoke, llm-eval, fixtures — see
 
 **Live-session scoring** (epic #2354): polymorphic ScoreType (Points/BinaryWin/Objectives/Ranking) is the current pattern; write scores via `useUpdateSessionScores`, never the store directly (ESLint `local/no-store-scores-direct` = **error**). Shipped-implementation diaries (Asse A–D, Session-live G1/G5a): [claude-md-history.md](./docs/for-claude/claude-md-history.md#gamenight--session-asse-ad--shipped-implementation-diaries).
 
+**🔴 SSOT sessione + scoring** ([ADR-089](./docs/for-claude/architecture/adr/adr-089-session-scoring-ssot.md), #3395): tre aggregati (`GameSession` = lifecycle/quota/history · `LiveGameSession` = runtime in-play + **scoring in-play SSOT** round-based · `SessionTracking.Session` = companion chat/note/media). I link `TrackingSessionId`/`CorrelatedGameSessionId` (Saga, ADR-083) portano **solo id** per lifecycle/quota/companion — **NON** sincronizzano lo scoring: `RoundScores` ↔ `ScoreData`/`ScoreEntry` non si parlano e non vanno ponticellati. Scegli l'SSOT per contesto, non riconciliare i modelli.
+
 ### Known Pitfalls (Issues)
 
 | Issue | Rule |

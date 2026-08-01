@@ -129,6 +129,11 @@ export async function generateMetadata({ params }: SharedGameDetailPageProps): P
       ? detail.description.slice(0, 200)
       : SSR_METADATA.descriptionFallback;
 
+  // #3452 — prefer the R2-resolved coverUrl; imageUrl is a #2123 tombstone
+  // (always empty in prod) and is kept only as a defensive fallback.
+  const ogImage =
+    detail?.coverUrl ?? (detail?.imageUrl && detail.imageUrl.length > 0 ? detail.imageUrl : null);
+
   return {
     title: fullTitle,
     description,
@@ -137,8 +142,7 @@ export async function generateMetadata({ params }: SharedGameDetailPageProps): P
       title: fullTitle,
       description,
       type: 'website',
-      images:
-        detail?.imageUrl && detail.imageUrl.length > 0 ? [{ url: detail.imageUrl }] : undefined,
+      images: ogImage ? [{ url: ogImage }] : undefined,
     },
   };
 }

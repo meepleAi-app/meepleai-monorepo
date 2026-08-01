@@ -71,7 +71,7 @@ public sealed class ChatWithSessionAgentMetricsTests
         var observations = new List<double>();
         using var listener = BuildHistogramListener<double>(FirstTokenLatencyName, observations);
 
-        var handler = BuildHandler(resolvedCitations: new List<ChunkCitation>(), tokenContent: "Hello world");
+        var handler = BuildHandler(resolvedCitations: new List<ChunkCitation>(), ragPromptMock: out _, tokenContent: "Hello world");
         var command = BuildCommand();
 
         // Act — drain to completion
@@ -113,7 +113,7 @@ public sealed class ChatWithSessionAgentMetricsTests
         var observations = new List<long>();
         using var listener = BuildHistogramListener<long>(CitationsPerAnswerName, observations);
 
-        var handler = BuildHandler(resolvedCitations: citations, tokenContent: "Answer with citations");
+        var handler = BuildHandler(resolvedCitations: citations, ragPromptMock: out _, tokenContent: "Answer with citations");
         var command = BuildCommand();
 
         // Act
@@ -137,17 +137,54 @@ public sealed class ChatWithSessionAgentMetricsTests
         var observations = new List<long>();
         using var listener = BuildHistogramListener<long>(CitationsPerAnswerName, observations);
 
-        var handler = BuildHandler(resolvedCitations: new List<ChunkCitation>(), tokenContent: "Grounded but uncited");
+        var handler = BuildHandler(resolvedCitations: new List<ChunkCitation>(), ragPromptMock: out _, tokenContent: "Grounded but uncited");
         var command = BuildCommand();
 
         // Act
-        await foreach (var _ in handler.Handle(command, CancellationToken.None)) { }
+        var complete = await DrainAndCaptureCompleteAsync(handler, command);
 
         // Assert
         observations.Should().ContainSingle(
             "citations-per-answer must be recorded exactly once even when there are no citations");
         observations[0].Should().Be(0L,
             "grounded-but-uncited signal: le=0 bucket must be populated");
+
+        // #3388 (Task 2): mode-parity signal — the SSE RAG path must emit a non-nullable
+        // grounding string on StreamingComplete, mirroring Task 1's REST-path assertion
+        // (AskSessionAgentResult.GroundingStatus) so both in-session agent paths carry the
+        // same grounding contract for a zero-citation answer.
+        complete.Should().NotBeNull();
+        complete!.GroundingStatus.Should().Be("Ungrounded");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // T2-AC-3b (#3388): with-citations case emits GroundingStatus="Grounded"
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact(DisplayName = "T2-AC-3b (#3388): with-citations case emits GroundingStatus=\"Grounded\" on StreamingComplete")]
+    public async Task Handle_StreamedChatWithCitations_EmitsGroundedStatus()
+    {
+        // Arrange — one Full-tier citation
+        var citations = new List<ChunkCitation>
+        {
+            new ChunkCitation(
+                DocumentId: "doc-1",
+                PageNumber: 1,
+                RelevanceScore: 0.9f,
+                SnippetPreview: "snippet A",
+                CopyrightTier: CopyrightTier.Full,
+                IsPublic: true),
+        };
+
+        var handler = BuildHandler(resolvedCitations: citations, ragPromptMock: out _, tokenContent: "Answer with citation");
+        var command = BuildCommand();
+
+        // Act
+        var complete = await DrainAndCaptureCompleteAsync(handler, command);
+
+        // Assert — mode-parity signal (see zero-citation test comment above)
+        complete.Should().NotBeNull();
+        complete!.GroundingStatus.Should().Be("Grounded");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -163,7 +200,7 @@ public sealed class ChatWithSessionAgentMetricsTests
         using var latencyListener = BuildHistogramListener<double>(FirstTokenLatencyName, latencyObs);
         using var citationsListener = BuildHistogramListener<long>(CitationsPerAnswerName, citationsObs);
 
-        var handler = BuildHandler(resolvedCitations: new List<ChunkCitation>(), tokenContent: "Token");
+        var handler = BuildHandler(resolvedCitations: new List<ChunkCitation>(), ragPromptMock: out _, tokenContent: "Token");
         var command = BuildCommand();
 
         // Act
@@ -197,6 +234,26 @@ public sealed class ChatWithSessionAgentMetricsTests
         return listener;
     }
 
+    /// <summary>
+    /// Drains the handler's streamed events and returns the <see cref="StreamingComplete"/>
+    /// payload carried by the terminal <see cref="StreamingEventType.Complete"/> event.
+    /// </summary>
+    private static async Task<StreamingComplete?> DrainAndCaptureCompleteAsync(
+        ChatWithSessionAgentCommandHandler handler,
+        ChatWithSessionAgentCommand command)
+    {
+        StreamingComplete? complete = null;
+        await foreach (var evt in handler.Handle(command, CancellationToken.None))
+        {
+            if (evt.Type == StreamingEventType.Complete)
+            {
+                complete = evt.Data as StreamingComplete;
+            }
+        }
+
+        return complete;
+    }
+
     private static ChatWithSessionAgentCommand BuildCommand() =>
         new ChatWithSessionAgentCommand(
             AgentSessionId: Guid.NewGuid(),
@@ -208,8 +265,37 @@ public sealed class ChatWithSessionAgentMetricsTests
     /// <paramref name="resolvedCitations"/> controls the citation list returned by the
     /// copyright resolver. <paramref name="tokenContent"/> controls what the LLM emits.
     /// </summary>
+    // ──────────────────────────────────────────────────────────────────────────
+    // #3389: live path passes an explicit RetrievalPolicy.LiveSession
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact(DisplayName = "#3389: in-session live path passes RetrievalPolicy.LiveSession (decoupled from tier, not silent Default)")]
+    public async Task Handle_LivePath_PassesLiveSessionRetrievalPolicy()
+    {
+        // Arrange
+        var handler = BuildHandler(
+            resolvedCitations: new List<ChunkCitation>(),
+            ragPromptMock: out var ragPromptMock,
+            tokenContent: "Answer");
+        var command = BuildCommand();
+
+        // Act — drain to completion
+        await foreach (var _ in handler.Handle(command, CancellationToken.None)) { }
+
+        // Assert — the live path assembled the prompt with the explicit LiveSession policy,
+        // so retrieval is decoupled from tier and never silently falls back to Default (#3389).
+        ragPromptMock.Verify(r => r.AssemblePromptAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GameState?>(),
+            It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<ChatThread?>(),
+            It.IsAny<SharedUserTier?>(), It.IsAny<string>(), It.IsAny<CancellationToken>(),
+            It.IsAny<IRagDebugEventCollector?>(), It.IsAny<RetrievalProfile?>(),
+            It.Is<RetrievalPolicy?>(p => p == RetrievalPolicy.LiveSession)),
+            Times.Once);
+    }
+
     private static ChatWithSessionAgentCommandHandler BuildHandler(
         IReadOnlyList<ChunkCitation> resolvedCitations,
+        out Mock<IRagPromptAssemblyService> ragPromptMock,
         string tokenContent = "Hello world")
     {
         // --- AgentSession repo ---
@@ -289,8 +375,9 @@ public sealed class ChatWithSessionAgentMetricsTests
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GameState?>(),
                 It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<ChatThread?>(),
                 It.IsAny<SharedUserTier?>(), It.IsAny<string>(), It.IsAny<CancellationToken>(),
-                It.IsAny<IRagDebugEventCollector?>(), It.IsAny<RetrievalProfile?>()))
+                It.IsAny<IRagDebugEventCollector?>(), It.IsAny<RetrievalProfile?>(), It.IsAny<RetrievalPolicy?>()))
             .ReturnsAsync(assembled);
+        ragPromptMock = ragPromptService;
 
         // --- Copyright tier resolver → pass-through ---
         var tierResolver = new Mock<ICopyrightTierResolver>();

@@ -12,7 +12,7 @@ public class SessionParticipant
     public Guid SessionId { get; private set; }
     public Guid? UserId { get; private set; }
     public string? GuestName { get; private set; }
-    public ParticipantRole Role { get; private set; }
+    public SessionParticipantRole Role { get; private set; }
     public bool AgentAccessEnabled { get; private set; }
     public string ConnectionToken { get; private set; } = null!;
     public DateTime JoinedAt { get; private set; }
@@ -28,7 +28,7 @@ public class SessionParticipant
     /// <summary>
     /// Creates a guest participant (no registered user account).
     /// </summary>
-    public static SessionParticipant CreateGuest(Guid sessionId, string guestName, ParticipantRole role)
+    public static SessionParticipant CreateGuest(Guid sessionId, string guestName, SessionParticipantRole role)
     {
         if (string.IsNullOrWhiteSpace(guestName))
             throw new ArgumentException("Guest name is required", nameof(guestName));
@@ -49,7 +49,7 @@ public class SessionParticipant
     /// Creates a registered user participant.
     /// Hosts automatically get agent access enabled.
     /// </summary>
-    public static SessionParticipant CreateRegistered(Guid sessionId, Guid userId, ParticipantRole role, string? displayName = null)
+    public static SessionParticipant CreateRegistered(Guid sessionId, Guid userId, SessionParticipantRole role, string? displayName = null)
     {
         return new SessionParticipant
         {
@@ -58,7 +58,7 @@ public class SessionParticipant
             UserId = userId,
             RegisteredDisplayName = displayName,
             Role = role,
-            AgentAccessEnabled = role == ParticipantRole.Host,
+            AgentAccessEnabled = role == SessionParticipantRole.Host,
             ConnectionToken = GeneratePin(),
             JoinedAt = DateTime.UtcNow
         };

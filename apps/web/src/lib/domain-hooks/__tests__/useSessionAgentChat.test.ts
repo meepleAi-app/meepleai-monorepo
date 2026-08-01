@@ -41,10 +41,20 @@ function sseToken(token: string): string {
   return `data: ${JSON.stringify({ type: 7, data: { token }, timestamp: new Date().toISOString() })}\n\n`;
 }
 
-function sseComplete(chatThreadId: string, citations?: unknown[]): string {
+function sseComplete(
+  chatThreadId: string,
+  citations?: unknown[],
+  groundingStatus?: string
+): string {
   return `data: ${JSON.stringify({
     type: 4,
-    data: { chatThreadId, citations: citations ?? [], totalTokens: 10, confidence: 0.9 },
+    data: {
+      chatThreadId,
+      citations: citations ?? [],
+      totalTokens: 10,
+      confidence: 0.9,
+      groundingStatus,
+    },
     timestamp: new Date().toISOString(),
   })}\n\n`;
 }
@@ -552,6 +562,59 @@ describe('useSessionAgentChat', () => {
 
       const lastMsg = result.current.messages[result.current.messages.length - 1];
       expect(lastMsg.role).toBe('assistant');
+      expect(lastMsg.isNonGrounded).toBeFalsy();
+    });
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Task 3 (#3388): server-authoritative groundingStatus on the SSE Complete
+    // event now drives isNonGrounded instead of the citations heuristic.
+    // ─────────────────────────────────────────────────────────────────────
+
+    it('SSE complete groundingStatus="Ungrounded" → message carries groundingStatus + isNonGrounded:true', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          body: makeReadableStream([
+            sseToken('Risposta.'),
+            sseComplete('t-gs-ungrounded', [], 'Ungrounded'),
+          ]),
+        } as unknown as Response)
+      );
+
+      const { result } = renderHook(() => useSessionAgentChat('game-sess-gs-1', 'agent-gs-1'));
+
+      await act(async () => {
+        await result.current.ask('Domanda');
+      });
+
+      const lastMsg = result.current.messages[result.current.messages.length - 1];
+      expect(lastMsg.role).toBe('assistant');
+      expect(lastMsg.groundingStatus).toBe('Ungrounded');
+      expect(lastMsg.isNonGrounded).toBe(true);
+    });
+
+    it('SSE complete groundingStatus="Grounded" (with citations) → groundingStatus set + isNonGrounded falsy', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          body: makeReadableStream([
+            sseToken('Risposta.'),
+            sseComplete('t-gs-grounded', [makeCitationDto()], 'Grounded'),
+          ]),
+        } as unknown as Response)
+      );
+
+      const { result } = renderHook(() => useSessionAgentChat('game-sess-gs-2', 'agent-gs-2'));
+
+      await act(async () => {
+        await result.current.ask('Domanda');
+      });
+
+      const lastMsg = result.current.messages[result.current.messages.length - 1];
+      expect(lastMsg.role).toBe('assistant');
+      expect(lastMsg.groundingStatus).toBe('Grounded');
       expect(lastMsg.isNonGrounded).toBeFalsy();
     });
 

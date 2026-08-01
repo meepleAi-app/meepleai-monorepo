@@ -57,9 +57,16 @@ RUN --mount=type=cache,target=/root/.nuget/packages \
 FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
 
-# Install curl for healthcheck, create non-root user, prepare directories — single layer
+# Install curl for healthcheck + SkiaSharp native runtime deps, create non-root
+# user, prepare directories — single layer.
+#
+# libfontconfig1 + libfreetype6: required by SkiaSharp's libSkiaSharp.so on Linux.
+# Without them the `SKObject` static initializer throws
+# "The type initializer for 'SkiaSharp.SKObject' threw an exception", which
+# broke PDF cover generation on staging (Debian 12 arm64 image shipped
+# libSkiaSharp.so but not its fontconfig/freetype deps) — see #3454.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
+    && apt-get install -y --no-install-recommends curl libfontconfig1 libfreetype6 \
     && rm -rf /var/lib/apt/lists/* \
     && adduser --disabled-password --gecos '' --uid 1001 apiuser \
     && mkdir -p /app/pdf_uploads

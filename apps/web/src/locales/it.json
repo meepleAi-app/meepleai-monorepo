@@ -3957,6 +3957,7 @@
         "errorMessage": "Impossibile avviare l'assistente. Riprova più tardi.",
         "statusAriaLabel": "Stato assistente",
         "nonGroundedDisclaimer": "Risposta non basata sul regolamento",
+        "nonGroundedDisclaimerImage": "Ho risposto dalla foto e dalla mia conoscenza del gioco, non dal regolamento ufficiale — verifica sul manuale",
         "imageAsk": {
           "defaultQuestion": "Analizza questa immagine",
           "fallbackResponse": "Risposta non disponibile.",

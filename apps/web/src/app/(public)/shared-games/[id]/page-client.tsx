@@ -339,7 +339,7 @@ export function SharedGameDetailPageClient({
       <div className="mx-auto flex max-w-[1024px] flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
         <Hero
           title={resolvedTitle}
-          coverUrl={game.imageUrl && game.imageUrl.length > 0 ? game.imageUrl : null}
+          coverUrl={game.coverUrl ?? null}
           year={game.yearPublished > 0 ? game.yearPublished : null}
           minPlayers={game.minPlayers > 0 ? game.minPlayers : null}
           maxPlayers={game.maxPlayers > 0 ? game.maxPlayers : null}

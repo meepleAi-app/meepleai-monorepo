@@ -90,6 +90,14 @@ internal static class PdfRetrievalEndpoints
             .Produces(401)
             .Produces(403)
             .Produces(404);
+
+        // #3447 slice: hi_res image-table regions for the viewer overlay (region-only, no VLM).
+        group.MapGet("/pdf/{pdfId:guid}/image-regions", HandleGetImageRegions)
+            .RequireSession()
+            .WithName("GetPdfImageRegions")
+            .WithTags("PDF")
+            .WithSummary("Persisted hi_res Image/FigureCaption regions for the PDF (viewer overlay)")
+            .Produces(401);
     }
 
     private static void MapPdfLanguageEndpoints(RouteGroupBuilder group)
@@ -172,6 +180,18 @@ internal static class PdfRetrievalEndpoints
         }
 
         return Results.Json(pdf);
+    }
+
+    // #3447 slice: owner-or-shared-game scoping (mirror HandleGetPdfText #3222); admins bypass.
+    // The handler returns an empty list (no existence leak) for missing/unauthorized PDFs.
+    private static async Task<IResult> HandleGetImageRegions(Guid pdfId, HttpContext context, IMediator mediator, CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session!.Principal!.Subject.Id;
+        bool isAdmin = string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+
+        var regions = await mediator.Send(new GetPdfImageRegionsQuery(pdfId, userId, isAdmin), ct).ConfigureAwait(false);
+        return Results.Json(new { regions });
     }
 
     private static async Task<IResult> HandleGetPageText(

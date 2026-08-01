@@ -11,6 +11,8 @@ import {
   type ProcessingProgress,
   PdfMetricsSchema,
   type PdfMetrics,
+  ImageRegionsResponseSchema,
+  type ImageRegion,
 } from '../schemas';
 import {
   IndexerVersionListSchema,
@@ -425,6 +427,20 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
         {}
       );
       return result ?? { orphanedChunks: 0, orphanedVectors: 0 };
+    },
+
+    // ========== Image-Table Regions (#3447 slice) ==========
+
+    /**
+     * Get persisted hi_res image-table regions for a PDF (viewer overlay).
+     * GET /api/v1/pdf/{pdfId}/image-regions
+     */
+    async getImageRegions(pdfId: string): Promise<ImageRegion[] | null> {
+      const res = await httpClient.get(
+        `/api/v1/pdf/${encodeURIComponent(pdfId)}/image-regions`,
+        ImageRegionsResponseSchema
+      );
+      return res?.regions ?? null;
     },
   };
 }

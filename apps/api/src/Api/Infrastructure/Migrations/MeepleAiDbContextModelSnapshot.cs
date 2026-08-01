@@ -9659,6 +9659,54 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("pdf_documents", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.PdfImageRegionEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("ElementType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("element_type");
+
+                    b.Property<double>("Height")
+                        .HasColumnType("double precision")
+                        .HasColumnName("height");
+
+                    b.Property<int>("PageNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("page_number");
+
+                    b.Property<Guid>("PdfDocumentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pdf_document_id");
+
+                    b.Property<double>("Width")
+                        .HasColumnType("double precision")
+                        .HasColumnName("width");
+
+                    b.Property<double>("X")
+                        .HasColumnType("double precision")
+                        .HasColumnName("x");
+
+                    b.Property<double>("Y")
+                        .HasColumnType("double precision")
+                        .HasColumnName("y");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PdfDocumentId")
+                        .HasDatabaseName("ix_pdf_image_regions_pdf_document_id");
+
+                    b.ToTable("pdf_image_regions", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.PromptAuditLogEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -17811,6 +17859,17 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("Collection");
 
                     b.Navigation("UploadedBy");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.PdfImageRegionEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.PdfDocumentEntity", "PdfDocument")
+                        .WithMany()
+                        .HasForeignKey("PdfDocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PdfDocument");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.PromptAuditLogEntity", b =>

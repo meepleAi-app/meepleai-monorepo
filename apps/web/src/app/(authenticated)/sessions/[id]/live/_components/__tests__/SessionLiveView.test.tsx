@@ -55,6 +55,19 @@ vi.mock('@/lib/domain-hooks/useSignalrSession', () => ({
   useSignalRSession: (...args: unknown[]) => useSignalRSessionMock(...args),
 }));
 
+// #3391: AgentDisputeTabContent now mounts useLiveSessionDisputes (REST hydration via useQuery).
+// Mock it to a no-op so these tests need neither a QueryClientProvider nor an
+// api.liveSessions.getDisputes mock — REST hydration is covered in
+// AgentDisputeTabContent.hydration.test.tsx.
+vi.mock('@/hooks/queries/useLiveSessionDisputes', () => ({
+  useLiveSessionDisputes: vi.fn(() => ({
+    data: [],
+    isLoading: false,
+    isSuccess: true,
+    isError: false,
+  })),
+}));
+
 // ─── next/navigation mocks ────────────────────────────────────────────────
 
 const searchParamsMap: Record<string, string> = {};
@@ -1957,6 +1970,34 @@ describe('SessionLiveView — #2588 A3: dual-path image/text send handler', () =
     const [, init] = askAgentCalls[0];
     expect((init as RequestInit).method).toBe('POST');
     expect((init as RequestInit).body).toBeInstanceOf(FormData);
+  });
+
+  it('A3-3 (Task 3 #3388): image response groundingStatus="Ungrounded" flags the agent message non-grounded', async () => {
+    fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ answer: 'Risposta immagine.', groundingStatus: 'Ungrounded' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { container } = renderWithIntl(<SessionLiveView />);
+
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(fileInput).not.toBeNull();
+
+    const file = new File(['x'], 'board.jpg', { type: 'image/jpeg' });
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [file] } });
+    });
+
+    const sendBtn = screen.getAllByRole('button', { name: 'Invia messaggio' })[0];
+    await act(async () => {
+      fireEvent.click(sendBtn);
+    });
+
+    expect(
+      container.querySelector('[data-slot="chat-nongrounded-disclaimer"]')
+    ).toBeInTheDocument();
   });
 });
 

@@ -10,6 +10,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
@@ -251,7 +252,11 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             thread,
             userTier: null,
             agentLanguage: agentLanguage,
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken,
+            // #3389: explicit LiveSession policy decouples retrieval from tier — the null tier above no
+            // longer silently means "Default profile + enhancements off". Enhancements stay off by policy
+            // (EnhancementsEnabled=false) until a golden eval set exists (#3390).
+            retrievalPolicy: RetrievalPolicy.LiveSession).ConfigureAwait(false);
 
         _logger.LogDebug(
             "Prompt assembled: {EstimatedTokens} tokens, {CitationCount} citations",
@@ -716,7 +721,8 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
                 totalTokens: totalTokens,
                 confidence: RagPromptAssemblyService.ComputeConfidence(assembled.Citations, responseText),
                 chatThreadId: thread.Id,
-                Citations: citationDtos));
+                Citations: citationDtos,
+                GroundingStatus: citationDtos.Count > 0 ? "Grounded" : "Ungrounded"));
     }
 
     private async Task GenerateConversationSummaryAsync(Guid threadId)

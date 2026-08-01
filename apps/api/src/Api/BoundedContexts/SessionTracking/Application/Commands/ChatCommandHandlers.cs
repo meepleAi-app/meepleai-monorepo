@@ -8,6 +8,7 @@ using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.Services.ImageProcessing;
 using Api.Services.LlmClients;
+using Api.SharedKernel.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.SessionTracking.Application.Commands;
@@ -198,7 +199,7 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
                 if (result.Success)
                 {
                     answer = result.Response;
-                    confidence = 0.85f;
+                    confidence = null; // #3388: no fabricated confidence — vision path is not grounded in retrieval
                 }
                 else
                 {
@@ -221,7 +222,7 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
                 if (result.Success)
                 {
                     answer = result.Response;
-                    confidence = 0.85f;
+                    confidence = null; // #3388: no fabricated confidence — text-only path is not grounded in retrieval
                 }
                 else
                 {
@@ -263,7 +264,8 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
             TurnNumber = request.TurnNumber,
         }, cancellationToken).ConfigureAwait(false);
 
-        return new AskSessionAgentResult(agentMessage.Id, answer, agentType, agentMessage.Confidence, null);
+        // This path never produces citations (no retrieval grounding), so it is always Ungrounded (#3388).
+        return new AskSessionAgentResult(agentMessage.Id, answer, agentType, agentMessage.Confidence, null, GroundingStatus.Ungrounded);
     }
 }
 

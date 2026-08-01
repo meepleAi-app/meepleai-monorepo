@@ -881,3 +881,12 @@
   border-radius: 2px;
   pointer-events: none;
 }
+
+/* #3447 slice: table-image region — dashed to distinguish from the solid citation highlight. */
+.pdf-image-region-highlight {
+  position: absolute;
+  background-color: hsl(var(--c-warning) / 0.08);
+  border: 2px dashed hsl(var(--c-warning) / 0.9);
+  border-radius: 2px;
+  pointer-events: none;
+}

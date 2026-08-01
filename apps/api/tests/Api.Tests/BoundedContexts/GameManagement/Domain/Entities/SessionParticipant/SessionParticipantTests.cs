@@ -19,13 +19,13 @@ public class SessionParticipantTests
     public void CreateGuest_ShouldSetGuestNameAndNullUserId()
     {
         var participant = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateGuest(
-            _sessionId, ValidGuestName, ParticipantRole.Player);
+            _sessionId, ValidGuestName, SessionParticipantRole.Player);
 
         participant.Id.Should().NotBe(Guid.Empty);
         participant.SessionId.Should().Be(_sessionId);
         participant.UserId.Should().BeNull();
         participant.GuestName.Should().Be(ValidGuestName);
-        participant.Role.Should().Be(ParticipantRole.Player);
+        participant.Role.Should().Be(SessionParticipantRole.Player);
         (participant.AgentAccessEnabled).Should().BeFalse();
         (participant.JoinedAt <= DateTime.UtcNow).Should().BeTrue();
         participant.LeftAt.Should().BeNull();
@@ -39,7 +39,7 @@ public class SessionParticipantTests
     {
         var act = () =>
             Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateGuest(
-                _sessionId, guestName!, ParticipantRole.Player);
+                _sessionId, guestName!, SessionParticipantRole.Player);
         act.Should().Throw<ArgumentException>();
     }
 
@@ -47,7 +47,7 @@ public class SessionParticipantTests
     public void CreateGuest_ShouldTrimGuestName()
     {
         var participant = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateGuest(
-            _sessionId, "  Alice  ", ParticipantRole.Player);
+            _sessionId, "  Alice  ", SessionParticipantRole.Player);
 
         participant.GuestName.Should().Be("Alice");
     }
@@ -60,13 +60,13 @@ public class SessionParticipantTests
     public void CreateRegistered_ShouldSetUserIdAndNullGuestName()
     {
         var participant = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateRegistered(
-            _sessionId, _userId, ParticipantRole.Player);
+            _sessionId, _userId, SessionParticipantRole.Player);
 
         participant.Id.Should().NotBe(Guid.Empty);
         participant.SessionId.Should().Be(_sessionId);
         participant.UserId.Should().Be(_userId);
         participant.GuestName.Should().BeNull();
-        participant.Role.Should().Be(ParticipantRole.Player);
+        participant.Role.Should().Be(SessionParticipantRole.Player);
         (participant.JoinedAt <= DateTime.UtcNow).Should().BeTrue();
         participant.LeftAt.Should().BeNull();
     }
@@ -75,7 +75,7 @@ public class SessionParticipantTests
     public void CreateRegistered_AsHost_ShouldEnableAgentAccess()
     {
         var participant = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateRegistered(
-            _sessionId, _userId, ParticipantRole.Host);
+            _sessionId, _userId, SessionParticipantRole.Host);
 
         (participant.AgentAccessEnabled).Should().BeTrue();
     }
@@ -84,7 +84,7 @@ public class SessionParticipantTests
     public void CreateRegistered_AsPlayer_ShouldDisableAgentAccess()
     {
         var participant = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateRegistered(
-            _sessionId, _userId, ParticipantRole.Player);
+            _sessionId, _userId, SessionParticipantRole.Player);
 
         (participant.AgentAccessEnabled).Should().BeFalse();
     }
@@ -93,7 +93,7 @@ public class SessionParticipantTests
     public void CreateRegistered_AsSpectator_ShouldDisableAgentAccess()
     {
         var participant = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateRegistered(
-            _sessionId, _userId, ParticipantRole.Spectator);
+            _sessionId, _userId, SessionParticipantRole.Spectator);
 
         (participant.AgentAccessEnabled).Should().BeFalse();
     }
@@ -106,7 +106,7 @@ public class SessionParticipantTests
     public void ToggleAgentAccess_ShouldFlip()
     {
         var participant = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateGuest(
-            _sessionId, ValidGuestName, ParticipantRole.Player);
+            _sessionId, ValidGuestName, SessionParticipantRole.Player);
 
         (participant.AgentAccessEnabled).Should().BeFalse();
 
@@ -125,7 +125,7 @@ public class SessionParticipantTests
     public void Leave_ShouldSetLeftAt()
     {
         var participant = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateGuest(
-            _sessionId, ValidGuestName, ParticipantRole.Player);
+            _sessionId, ValidGuestName, SessionParticipantRole.Player);
 
         (participant.IsActive).Should().BeTrue();
 
@@ -144,7 +144,7 @@ public class SessionParticipantTests
     public void ConnectionToken_ShouldBe6Chars()
     {
         var participant = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateGuest(
-            _sessionId, ValidGuestName, ParticipantRole.Player);
+            _sessionId, ValidGuestName, SessionParticipantRole.Player);
 
         participant.ConnectionToken.Length.Should().Be(6);
     }
@@ -156,7 +156,7 @@ public class SessionParticipantTests
         for (var i = 0; i < 50; i++)
         {
             var participant = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateGuest(
-                _sessionId, ValidGuestName, ParticipantRole.Player);
+                _sessionId, ValidGuestName, SessionParticipantRole.Player);
 
             participant.ConnectionToken.Should().NotContain("O");
             participant.ConnectionToken.Should().NotContain("0");
@@ -171,7 +171,7 @@ public class SessionParticipantTests
     {
         var tokens = Enumerable.Range(0, 20)
             .Select(_ => Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateGuest(
-                _sessionId, ValidGuestName, ParticipantRole.Player).ConnectionToken)
+                _sessionId, ValidGuestName, SessionParticipantRole.Player).ConnectionToken)
             .ToHashSet();
 
         // With 6 chars from 32-char alphabet, collisions in 20 tokens are extremely unlikely
@@ -186,7 +186,7 @@ public class SessionParticipantTests
     public void DisplayName_Guest_ShouldReturnGuestName()
     {
         var participant = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateGuest(
-            _sessionId, ValidGuestName, ParticipantRole.Player);
+            _sessionId, ValidGuestName, SessionParticipantRole.Player);
 
         participant.DisplayName.Should().Be(ValidGuestName);
     }
@@ -195,7 +195,7 @@ public class SessionParticipantTests
     public void DisplayName_RegisteredUser_ShouldReturnUserFallback()
     {
         var participant = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateRegistered(
-            _sessionId, _userId, ParticipantRole.Player);
+            _sessionId, _userId, SessionParticipantRole.Player);
 
         participant.DisplayName.Should().Be("User");
     }
@@ -208,9 +208,9 @@ public class SessionParticipantTests
     public void IsRegisteredUser_ShouldReflectUserId()
     {
         var guest = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateGuest(
-            _sessionId, ValidGuestName, ParticipantRole.Player);
+            _sessionId, ValidGuestName, SessionParticipantRole.Player);
         var registered = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateRegistered(
-            _sessionId, _userId, ParticipantRole.Player);
+            _sessionId, _userId, SessionParticipantRole.Player);
 
         (guest.IsRegisteredUser).Should().BeFalse();
         (registered.IsRegisteredUser).Should().BeTrue();

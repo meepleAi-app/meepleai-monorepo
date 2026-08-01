@@ -6,6 +6,7 @@ using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.Services.ImageProcessing;
+using Api.SharedKernel.Domain.Enums;
 using Api.Tests.Constants;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -239,7 +240,8 @@ public class AskSessionAgentCommandHandlerTests
 
         // Assert
         result.MessageId.Should().NotBe(Guid.Empty);
-        result.Confidence.Should().Be(0.85f); // LLM success returns 0.85 confidence
+        result.Confidence.Should().BeNull(); // #3388: no fabricated confidence on the REST path
+        result.GroundingStatus.Should().Be(GroundingStatus.Ungrounded); // #3388: REST path never has citations
         result.AgentType.Should().Be("tutor");
         saveCalledAfterFirstAdd.Should().BeTrue("SaveChangesAsync should be called after the first AddAsync (user message) to prevent sequence number race condition");
         _mockChatRepo.Verify(r => r.AddAsync(It.IsAny<SessionChatMessage>(), It.IsAny<CancellationToken>()), Times.Exactly(2));

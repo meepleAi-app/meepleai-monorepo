@@ -1,3 +1,4 @@
+using Api.SharedKernel.Domain.Enums;
 using MediatR;
 
 namespace Api.BoundedContexts.SessionTracking.Application.Commands;
@@ -47,7 +48,8 @@ public record AskSessionAgentResult(
     string Answer,
     string AgentType,
     float? Confidence,
-    string? CitationsJson
+    string? CitationsJson,
+    GroundingStatus GroundingStatus
 );
 
 /// <summary>

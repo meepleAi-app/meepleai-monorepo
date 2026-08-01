@@ -3893,6 +3893,7 @@
         "errorMessage": "Could not start the assistant. Try again later.",
         "statusAriaLabel": "Assistant status",
         "nonGroundedDisclaimer": "Answer not grounded in the rulebook",
+        "nonGroundedDisclaimerImage": "I answered from the photo and my game knowledge, not the official rulebook — check the manual",
         "imageAsk": {
           "defaultQuestion": "Analyse this image",
           "fallbackResponse": "Response not available.",

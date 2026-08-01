@@ -1279,6 +1279,9 @@ export function SessionLiveView(): ReactElement {
                 | 'Ungrounded'
                 | undefined,
               isNonGrounded: json.groundingStatus === 'Ungrounded',
+              // Task 4 (#3388): tag as image-modality so the disclaimer copy reflects
+              // that the answer came from the photo, not the rulebook.
+              modality: 'image',
             },
           ]);
         } catch {

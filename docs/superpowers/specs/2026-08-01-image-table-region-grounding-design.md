@@ -4,13 +4,16 @@
 **Tipo**: design — follow-up investigazione #3419
 **Epic**: #3435 — "Image-table extraction & grounding" (il *Livello 2* rinviato dall'epic #3403)
 **Branch previsto**: feature branch per sub-progetto (parent `main-dev`)
-**Stato**: **design v1.1** — v1 (spec-panel) + **spike Fase-0 parzialmente risolti (2026-08-01)**
+**Stato**: **design v1.2** — v1.1 (spike) + **reframe "Metà C = batch, non servizio" + alternative a costo zero (§5bis)**
 > Panel: Fowler/Nygard/Newman/Wiegers/Adzic/Crispin/Hightower. v1 chiude: retrievability Metà R (§2), Fase-0 spike
 > (§5), IA-6 (§7), job VLM (§8), contratto SmolDocling (DC-G), golden-set (§10), NFR (§4), esempio worked (§12).
 > **v1.1** registra gli esiti spike: **DC-A ✅NO** (fast dà bbox testo ma non le regioni-immagine → serve hi_res async),
 > **DC-G ✅SÌ** (VLM image-native → thin endpoint `/extract-image` → Opzione B viabile), **DC-E ✅BLOCCATO** (il box
 > staging 8GB non può ospitare SmolDocling — 172 MiB liberi, 2.6 GiB già in swap → benchmark off-box + prerequisito
 > infra). Restano DC-C (dipende dal benchmark off-box), DC-B, DC-F.
+> **v1.2** riformula: la Metà C è un **batch di arricchimento una-tantum**, non un servizio always-on → **il vincolo
+> infra si applica solo all'ingestion CONTINUA**, non alla validazione né al corpus attuale (che si estraggono con
+> un batch locale/off-box a **costo zero** — §5bis). MVP a costo zero propeso dall'owner = **Opzione E** (region-only via hi_res).
 
 > **Origine**: investigazione di attivazione di DC-2 #3419 su staging (2026-08-01). Il wiring hi_res-per-tabelle
 > è corretto e mergiato ma **inerte sul corpus reale**: né `fast` né `hi_res` producono elementi `Table`,
@@ -136,10 +139,32 @@ Non-goal:
 
 **Output di Fase 0**: una decisione documentata A/B/C con effort stimato. Solo allora partono gli SP §7.
 
-> **⚠️ Prerequisito infra (v1.1, Hightower/Nygard, CRITICAL)**: la Metà C (SmolDocling VLM) **non è deployabile
-> sull'infra staging attuale** senza resize/nodo dedicato — il box 8GB è già saturo (172 MiB liberi, swap 65%).
-> Questo è un rischio di prima classe: la Metà C ha un **costo infra** non azzerabile. Il benchmark DC-C/DC-E va
-> eseguito **fuori dal box condiviso** per non OOM-killare i servizi live.
+> **⚠️ Prerequisito infra (v1.1→v1.2, Hightower/Nygard)**: la Metà C **sempre-attiva** (SmolDocling VLM come servizio)
+> non è deployabile sul box 8GB saturo (172 MiB liberi, swap 65%). **MA** (v1.2) questo vincolo si applica **solo
+> all'ingestion continua** di PDF nuovi: la validazione e l'estrazione del **corpus attuale** sono un **batch**
+> eseguibile off-box a costo zero (§5bis). L'infra a pagamento serve **solo** se/quando si vuole l'estrazione VLM
+> real-time su ogni upload futuro — decisione da rimandare a feature-provata.
+
+---
+
+## 5bis. Metà C = batch, non servizio → alternative a costo zero (v1.2)
+
+**Reframe**: l'estrazione del contenuto-tabella è un **job di arricchimento una-tantum** (batch), non un servizio
+always-on. Il VLM gira, produce contenuto+bbox, si salvano in DB, e **il VLM non serve più**. Quindi il "deploy
+SmolDocling su staging" (DC-E) era un over-engineering: il batch può girare **ovunque** e solo i risultati vanno in DB.
+
+| # | Alternativa | Spesa | Trade-off |
+|---|---|---|---|
+| **A** | **Batch locale** — SmolDocling gira sulla dev machine (rulebook già in `data/rulebook/`; `docker compose --profile ai up smoldocling-service`). Estrai offline (una-tantum, ~ore), importi i risultati in staging | **€0** | Dev machine 16+ GiB → il VLM 2-3 GiB ci sta. Chiude DC-C + numeri. Solo corpus attuale |
+| **B** | **Batch su staging in finestra di manutenzione** — fermi i non-essenziali (monitoring + reranker/embedding) + buff/cache reclaimable → RAM per un batch time-boxed, poi ripristini | **€0** | Downtime breve staging (accettabile). Più rischioso di A |
+| **C** | **OCR leggero (Tesseract, ~150 MiB)** sui crop-tabella di hi_res → testo retrievabile + regione, senza VLM | **€0** | Niente struttura tabellare, qualità più bassa; footprint minimo, può stare always-on sul box attuale |
+| **D** | **Riusare l'LLM che già paghi** (se il provider fa vision) — mandi i crop all'API esistente | pay-per-call | Spesa marginale, non zero. Solo con budget headroom |
+| **E** ⭐ | **Solo Metà R via hi_res** — nessun VLM: hi_res (già su `unstructured`) dà la bbox della tabella-immagine → il FE evidenzia la regione, l'utente la legge da sé | **€0** | Valore parziale (grounding visivo, no answerability). Rinvia la Metà C. **Quick-win MVP a costo zero (propeso dall'owner)** |
+
+**Percorso a costo zero raccomandato**:
+1. **Ora, MVP**: **Opzione E** — grounding visivo delle regioni-tabella via hi_res (async job, nessun VLM, nessuna spesa). L'utente vede la tabella evidenziata anche senza contenuto estratto.
+2. **Validazione Metà C, gratis**: **Opzione A** (batch locale) su 1-2 rulebook → chiude DC-C + numeri qualità/latenza, senza toccare staging.
+3. **Infra a pagamento**: **solo dopo** che la feature ha dimostrato valore E si vuole l'ingestion continua real-time.
 
 ---
 
@@ -171,12 +196,13 @@ location (se DC-C=sì) → contenuto+regione in un colpo.
 **Raccomandazione (aggiornata v1.1 con esiti spike)**:
 - **Opzione A** indebolita: DC-A=no → nessuna regione-immagine economica via `fast`; A darebbe solo grounding del
   testo circostante (già in #3403). Quick-win marginale.
-- **Opzione B** confermata **fattibile** (DC-G=sì, thin endpoint crop) — **ma** richiede la Metà C, quindi
-  **SmolDocling deployato**, che è **bloccato dall'infra** (DC-E): serve resize/nodo dedicato.
-- **Opzione C** resta contingente a DC-C (DocTags location), risolvibile solo col benchmark off-box.
-- **Percorso raccomandato v1.1**: (1) **benchmark off-box** di SmolDocling → chiude DC-C + numeri qualità/latenza/RAM;
-  (2) **decisione infra** (resize 16 GiB o nodo VLM dedicato); (3) poi scegliere B (DC-C=no) vs C (DC-C=sì). Senza il
-  passo infra, la Metà C non parte — è il gate reale, non la scelta A/B/C.
+- **Opzione B** confermata **fattibile** (DC-G=sì, thin endpoint crop) — richiede la Metà C, ma (v1.2) come **batch**
+  off-box, **non** un servizio always-on: nessun deploy persistente né spesa infra per il corpus attuale (§5bis).
+- **Opzione C** resta contingente a DC-C (DocTags location), risolvibile col benchmark **locale** (§5bis Opzione A).
+- **Percorso raccomandato v1.2** (a costo zero, vedi §5bis): (1) **MVP = Opzione E** (region-only via hi_res async,
+  nessun VLM) per il grounding visivo immediato; (2) **validare Metà C** con un **batch locale** di SmolDocling
+  (chiude DC-C + numeri); (3) decidere B vs C e l'infra a pagamento **solo dopo** feature-provata, e solo per
+  l'ingestion continua real-time. Il gate non è più "infra o niente" — l'MVP a costo zero è E.
 
 ---
 

@@ -9,6 +9,7 @@
  *   - DisputeHistory shows verdicts from useLiveSessionStore.disputes
  */
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -17,11 +18,13 @@ import { AgentDisputeTabContent } from '../AgentDisputeTabContent';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
-// Mock the api (ArbitroModal calls api.liveSessions.submitDispute)
+// Mock the api. ArbitroModal calls submitDispute; AgentDisputeTabContent now also mounts
+// useLiveSessionDisputes → api.liveSessions.getDisputes (#3391), so it must exist on the mock.
 vi.mock('@/lib/api', () => ({
   api: {
     liveSessions: {
       submitDispute: vi.fn(),
+      getDisputes: vi.fn(() => Promise.resolve([])),
     },
   },
 }));
@@ -36,11 +39,16 @@ let mockDisputes: Array<{
   timestamp: string;
 }> = [];
 
-vi.mock('@/lib/stores/live-session-store', () => ({
-  useLiveSessionStore: (
-    selector: (s: { disputes: typeof mockDisputes; addDispute: () => void }) => unknown
-  ) => selector({ disputes: mockDisputes, addDispute: vi.fn() }),
-}));
+vi.mock('@/lib/stores/live-session-store', () => {
+  const state = () => ({ disputes: mockDisputes, addDispute: vi.fn(), setDisputes: vi.fn() });
+  // useLiveSessionDisputes reads useLiveSessionStore.getState().disputes (merge on hydration),
+  // so the mock must expose getState in addition to the selector-call form.
+  const useLiveSessionStore = Object.assign(
+    (selector: (s: ReturnType<typeof state>) => unknown) => selector(state()),
+    { getState: state }
+  );
+  return { useLiveSessionStore };
+});
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -50,7 +58,12 @@ const PLAYERS = [
 ];
 
 function renderContent(sessionId = 'sess-001') {
-  return render(<AgentDisputeTabContent sessionId={sessionId} players={PLAYERS} />);
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <AgentDisputeTabContent sessionId={sessionId} players={PLAYERS} />
+    </QueryClientProvider>
+  );
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────

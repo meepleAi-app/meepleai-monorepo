@@ -7,4 +7,4 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// Idempotent (replace-by-pdf). Invoked by an admin endpoint; the productionized async trigger
 /// that runs hi_res on its own is the full feature (deferred, #3435). Returns the count inserted.
 /// </summary>
-internal sealed record SeedPdfImageRegionsCommand(Guid PdfId, string HiResJson) : ICommand<int>;
+internal sealed record SeedPdfImageRegionsCommand(Guid PdfId, string HiResJson, double? MinAreaFraction = null) : ICommand<int>;

@@ -23,6 +23,12 @@ public sealed class SeedPdfImageRegionsCommandHandlerTests
     ]}
     """;
 
+    private const string TinyRegionJson = """
+    {"elements":[
+      {"text":"","page_number":2,"category":"Image","bbox":{"x":0.1,"y":0.1,"width":0.10,"height":0.20}}
+    ]}
+    """;
+
     private static void SeedPdf(MeepleAiDbContext db, Guid pdfId)
     {
         db.PdfDocuments.Add(new PdfDocumentEntity
@@ -66,5 +72,32 @@ public sealed class SeedPdfImageRegionsCommandHandlerTests
 
         // Guards the FK: a non-existent PDF is a clean 404, not a SaveChanges FK 500.
         await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task Handle_DefaultThreshold_DropsTinyRegion()
+    {
+        using var db = TestDbContextFactory.CreateInMemoryDbContext($"seedimg_{Guid.NewGuid():N}");
+        var pdfId = Guid.NewGuid();
+        SeedPdf(db, pdfId);
+        await db.SaveChangesAsync();
+        var handler = new SeedPdfImageRegionsCommandHandler(db, NullLogger<SeedPdfImageRegionsCommandHandler>.Instance);
+
+        // 0.10*0.20 = 0.02 (2%) < default 3% → nothing seeded
+        var count = await handler.Handle(new SeedPdfImageRegionsCommand(pdfId, TinyRegionJson), CancellationToken.None);
+        count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Handle_CustomThresholdZero_KeepsTinyRegion()
+    {
+        using var db = TestDbContextFactory.CreateInMemoryDbContext($"seedimg_{Guid.NewGuid():N}");
+        var pdfId = Guid.NewGuid();
+        SeedPdf(db, pdfId);
+        await db.SaveChangesAsync();
+        var handler = new SeedPdfImageRegionsCommandHandler(db, NullLogger<SeedPdfImageRegionsCommandHandler>.Instance);
+
+        var count = await handler.Handle(new SeedPdfImageRegionsCommand(pdfId, TinyRegionJson, MinAreaFraction: 0.0), CancellationToken.None);
+        count.Should().Be(1);
     }
 }

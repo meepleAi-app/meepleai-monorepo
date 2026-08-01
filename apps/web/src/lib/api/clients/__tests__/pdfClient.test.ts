@@ -9,6 +9,7 @@ import type { Mock } from 'vitest';
 import { createPdfClient } from '../pdfClient';
 import { HttpClient } from '../../core/httpClient';
 import { getApiBase } from '../../core/httpClient';
+import { ImageRegionsResponseSchema } from '../../schemas';
 
 vi.mock('../../core/httpClient', async () => ({
   ...(await vi.importActual('../../core/httpClient')),
@@ -35,6 +36,40 @@ describe('createPdfClient', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe('getImageRegions', () => {
+    it('fetches and unwraps image regions', async () => {
+      const regions = [{ page: 4, x: 0.1, y: 0.5, width: 0.8, height: 0.3, elementType: 'Image' }];
+      mockHttpClient.get.mockResolvedValueOnce({ regions });
+
+      const result = await pdfClient.getImageRegions('pdf-123');
+
+      expect(mockHttpClient.get).toHaveBeenCalledWith(
+        '/api/v1/pdf/pdf-123/image-regions',
+        ImageRegionsResponseSchema
+      );
+      expect(result).toEqual(regions);
+    });
+
+    it('encodes the pdf id in the request path', async () => {
+      mockHttpClient.get.mockResolvedValueOnce({ regions: [] });
+
+      await pdfClient.getImageRegions('pdf/with spaces');
+
+      expect(mockHttpClient.get).toHaveBeenCalledWith(
+        '/api/v1/pdf/pdf%2Fwith%20spaces/image-regions',
+        ImageRegionsResponseSchema
+      );
+    });
+
+    it('returns null when the endpoint returns null', async () => {
+      mockHttpClient.get.mockResolvedValueOnce(null);
+
+      const result = await pdfClient.getImageRegions('pdf-123');
+
+      expect(result).toBeNull();
+    });
   });
 
   describe('getProcessingProgress', () => {

@@ -35,10 +35,12 @@ import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
 import { api } from '@/lib/api';
+import type { ImageRegion } from '@/lib/api/schemas';
 import type { CitationRegion } from '@/types';
 
 import { makeQuoteTextRenderer } from './pdf-quote-highlight';
 import { PdfBBoxOverlay } from './PdfBBoxOverlay';
+import { PdfImageRegionOverlay } from './PdfImageRegionOverlay';
 
 // Worker setup — T0 spike confirmed idempotent (multi-module assignment safe).
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -96,6 +98,7 @@ export function PdfInlineViewer({
   const [zoom, setZoom] = useState<ZoomState>(defaultZoom);
   const [containerWidth, setContainerWidth] = useState<number>(800);
   const [jumpInput, setJumpInput] = useState<string>(String(initialPage));
+  const [imageRegions, setImageRegions] = useState<readonly ImageRegion[]>([]); // #3447 slice
   const containerRef = useRef<HTMLDivElement>(null);
 
   const downloadUrl = api.pdf.getPdfDownloadUrl(documentId);
@@ -106,6 +109,12 @@ export function PdfInlineViewer({
   const pageRects = useMemo(
     () => (highlightRects ?? []).filter(r => r.page === currentPage),
     [highlightRects, currentPage]
+  );
+
+  // #3447 slice: table-image regions for the current page (fetched on open, below).
+  const pageImageRegions = useMemo(
+    () => imageRegions.filter(r => r.page === currentPage),
+    [imageRegions, currentPage]
   );
 
   const quoteRenderer = useMemo(
@@ -149,6 +158,22 @@ export function PdfInlineViewer({
 
     return () => controller.abort();
   }, [downloadUrl, initialPage]);
+
+  // #3447 slice: fetch persisted image-table regions on open (independent of the blob fetch).
+  useEffect(() => {
+    let cancelled = false;
+    api.pdf
+      .getImageRegions(documentId)
+      .then(regions => {
+        if (!cancelled) setImageRegions(regions ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setImageRegions([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [documentId]);
 
   // ResizeObserver for fit-width scale recompute.
   useEffect(() => {
@@ -338,6 +363,9 @@ export function PdfInlineViewer({
                 }
               >
                 {pageRects.length > 0 ? <PdfBBoxOverlay rects={pageRects} /> : null}
+                {pageImageRegions.length > 0 ? (
+                  <PdfImageRegionOverlay rects={pageImageRegions} />
+                ) : null}
               </Page>
             </Document>
           </div>

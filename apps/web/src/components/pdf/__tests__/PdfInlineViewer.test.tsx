@@ -31,7 +31,11 @@ vi.mock('react-pdf', () => ({
 
 vi.mock('@/lib/api', () => ({
   api: {
-    pdf: { getPdfDownloadUrl: (id: string) => `http://test/api/v1/pdfs/${id}/download` },
+    pdf: {
+      getPdfDownloadUrl: (id: string) => `http://test/api/v1/pdfs/${id}/download`,
+      // #3447 slice: default no regions so existing tests are unaffected; specific tests override.
+      getImageRegions: vi.fn().mockResolvedValue([]),
+    },
   },
 }));
 
@@ -39,6 +43,7 @@ const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
 import { PdfInlineViewer } from '../PdfInlineViewer';
+import { api } from '@/lib/api';
 
 function mockBlobSuccess() {
   mockFetch.mockResolvedValue({
@@ -67,6 +72,24 @@ describe('PdfInlineViewer', () => {
     await waitFor(() => {
       expect(screen.getByTestId('pdf-page')).toHaveAttribute('data-page-number', '3');
     });
+  });
+
+  it('draws the image-region overlay for the current page (#3447)', async () => {
+    vi.mocked(api.pdf.getImageRegions).mockResolvedValueOnce([
+      { page: 1, x: 0.1, y: 0.2, width: 0.3, height: 0.1, elementType: 'Image' },
+    ]);
+    render(<PdfInlineViewer documentId="doc-1" initialPage={1} />);
+    await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('pdf-image-region-rect')).toBeInTheDocument());
+  });
+
+  it('does not draw image regions belonging to other pages (#3447)', async () => {
+    vi.mocked(api.pdf.getImageRegions).mockResolvedValueOnce([
+      { page: 3, x: 0.1, y: 0.2, width: 0.3, height: 0.1, elementType: 'Image' },
+    ]);
+    render(<PdfInlineViewer documentId="doc-1" initialPage={1} />);
+    await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
+    expect(screen.queryByTestId('pdf-image-region-rect')).not.toBeInTheDocument();
   });
 
   it('shows error banner on fetch HTTP 500', async () => {

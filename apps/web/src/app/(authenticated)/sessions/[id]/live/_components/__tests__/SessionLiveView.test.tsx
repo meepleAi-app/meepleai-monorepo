@@ -55,6 +55,19 @@ vi.mock('@/lib/domain-hooks/useSignalrSession', () => ({
   useSignalRSession: (...args: unknown[]) => useSignalRSessionMock(...args),
 }));
 
+// #3391: AgentDisputeTabContent now mounts useLiveSessionDisputes (REST hydration via useQuery).
+// Mock it to a no-op so these tests need neither a QueryClientProvider nor an
+// api.liveSessions.getDisputes mock — REST hydration is covered in
+// AgentDisputeTabContent.hydration.test.tsx.
+vi.mock('@/hooks/queries/useLiveSessionDisputes', () => ({
+  useLiveSessionDisputes: vi.fn(() => ({
+    data: [],
+    isLoading: false,
+    isSuccess: true,
+    isError: false,
+  })),
+}));
+
 // ─── next/navigation mocks ────────────────────────────────────────────────
 
 const searchParamsMap: Record<string, string> = {};

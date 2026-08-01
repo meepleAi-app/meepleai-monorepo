@@ -317,6 +317,12 @@ export const SharedGameDetailSchema = z.object({
   averageRating: z.number().nullable(),
   imageUrl: z.string().catch(''), // coerce null/missing to empty string
   thumbnailUrl: z.string().catch(''), // coerce null/missing to empty string
+  // Issue #2123 / #3449 — R2-resolved cover URL. Preferred over imageUrl/thumbnailUrl,
+  // which are kept as legacy tombstones. Backend SharedGameDetailDto already returns it
+  // (GetSharedGameByIdQueryHandler, resolved via CoverUrlResolver); null when no cover
+  // has been generated yet — consumers MUST fall back to the deterministic placeholder
+  // via `lib/games/cover-utils.ts`.
+  coverUrl: z.string().url().nullable().optional(),
   rules: GameRulesSchema.nullable(),
   status: GameStatusSchema, // Now string enum with JsonStringEnumConverter
   createdBy: z.string().uuid(),

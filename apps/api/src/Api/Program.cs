@@ -14,6 +14,7 @@ using Api.Routing.Admin;
 using Api.Routing.AdministrationDiscover;
 using Api.Routing.GameManagement;
 using Api.Routing.GameToolkit;
+using Api.Routing.KnowledgeBase;
 using Api.BoundedContexts.GameManagement.Routing; // Issue #4273
 using Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.AgentMemory.Infrastructure.DependencyInjection;
@@ -941,6 +942,7 @@ v1Api.MapAdminPdfStorageEndpoints();   // PDF Storage Management Hub: Storage he
 v1Api.MapAdminPdfManagementEndpoints(); // PDF Storage Management Hub: Bulk ops, maintenance, analytics
 v1Api.MapAdminIndexerEndpoints();       // Issue #1673: indexer version registry endpoint
 v1Api.MapAdminQueueEndpoints();         // Issue #4731: Processing queue management
+v1Api.MapAdminEvalEndpoints();          // Issue #3433: RAG evaluation suite (retrieval + labeling-assist)
 v1Api.MapAdminStorageMigrationEndpoints(); // S3 storage migration (local → S3)
 v1Api.MapAdminRagBackupEndpoints();        // RAG data backup & import
 v1Api.MapAdminEmailEndpoints();        // Issue #4430: Email queue dashboard monitoring

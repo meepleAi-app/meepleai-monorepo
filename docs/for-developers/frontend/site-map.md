@@ -5012,7 +5012,7 @@ _Documento generato il 2026-07-15 · workflow `wf_94e3ee0b-a9a` (66 agenti: 22 f
 
 ## 11. Copertura design / handoff
 
-> **Cosa aggiunge questa sezione**: le §1–§10 mappano le route al **codice**. Questa sezione le mappa alle **fonti di design** (mockup HTML, prototipi React, brief, gap-report) sparse in `admin-mockups/` e `claude-design-handoff/`, per rispondere a: quale design alimenta una route, quali route sono ancora *descritte* da un mockup ma di fatto morte, dove il path nel mockup diverge dall'implementazione, e quali superfici di design non hanno (ancora) una route.
+> **Cosa aggiunge questa sezione**: le §1–§10 mappano le route al **codice**. Questa sezione le mappa alle **fonti di design** (mockup HTML, prototipi React, brief, gap-report) sparse in `admin-mockups/` (incl. `admin-mockups/claude-design-handoff/`), per rispondere a: quale design alimenta una route, quali route sono ancora *descritte* da un mockup ma di fatto morte, dove il path nel mockup diverge dall'implementazione, e quali superfici di design non hanno (ancora) una route.
 >
 > **Fonte**: audit del 2026-07-16 → [`docs/for-developers/audits/2026-07-16-design-coverage-audit.md`](../audits/2026-07-16-design-coverage-audit.md) (workflow a 5 agenti read-only su `claude-design-handoff/` + sottocartelle `admin-mockups/{briefs,check,design_handoff,design_handoff_admin,standalone,mockup-meeplecard}`). Complementa l'audit `design_files/`-only del [2026-07-15](../audits/2026-07-15-mockup-implementation-gap-audit.md). Inventario mockup `design_files/`: [`admin-mockups/MOCKUPS_INDEX.md`](../../../admin-mockups/MOCKUPS_INDEX.md). Forma di fidelity moderna post-DS-17 = storie Storybook `*.stories.tsx` (vedi CLAUDE.md § "Mockup migration pattern").
 
@@ -5020,9 +5020,9 @@ _Documento generato il 2026-07-15 · workflow `wf_94e3ee0b-a9a` (66 agenti: 22 f
 
 | Fonte | Route/superfici coperte | In site-map | Note |
 |---|---|---|---|
-| `claude-design-handoff/2026-06-04/` (prototipo React desktop) | dashboard, discover, agents, library, sessions, game-nights (+detail/live/wizard), game, auth | ✅ 13/13 | Fonte del redesign **Asse A/B/C/D** già shippato. `screen-dashboard.jsx` = prototipo dashboard priority-driven (Asse-C #1898). |
-| `claude-design-handoff/2026-06-30-sp6/` (librogame) | librogame play (`setup`/`chat`/reader/glossary/quota/session-end) | ⚠️ partial | Superficie del *play* di un librogame, **non** la route `/setup` generica. `glossary-editor`, `quota-credits`, `session-end` senza match univoco. |
-| `claude-design-handoff/2026-07-15-sp8-mobile/` + `sp9-gamenight-mobile/` | viste mobile dashboard/game-nights/detail | ⚠️ partial | Ridisegni mobile-specifici (touch-target ≥44px, CTA RSVP 52px) non riflessi nel site-map. |
+| `admin-mockups/claude-design-handoff/2026-06-04/` (prototipo React desktop) | dashboard, discover, agents, library, sessions, game-nights (+detail/live/wizard), game, auth | ✅ 13/13 | Fonte del redesign **Asse A/B/C/D** già shippato. `screen-dashboard.jsx` = prototipo dashboard priority-driven (Asse-C #1898). |
+| `admin-mockups/claude-design-handoff/2026-06-30-sp6/` (librogame) | librogame play (`setup`/`chat`/reader/glossary/quota/session-end) | ⚠️ partial | Superficie del *play* di un librogame, **non** la route `/setup` generica. `glossary-editor`, `quota-credits`, `session-end` senza match univoco. |
+| `admin-mockups/claude-design-handoff/2026-07-15-sp8-mobile/` + `sp9-gamenight-mobile/` | viste mobile dashboard/game-nights/detail | ⚠️ partial | Ridisegni mobile-specifici (touch-target ≥44px, CTA RSVP 52px) non riflessi nel site-map. |
 | `admin-mockups/design_handoff_admin/admin/` (SP5 admin, 31 mockup) | console admin (users, content, monitor, llm, knowledge-base, …) | ✅ 24 · ⚠️ 5 · ❌ 2 | Vedi §11.2 (route morte) e §11.3 (path divergenti). |
 | `admin-mockups/standalone/` + `mockup-meeplecard/` | MeepleCard variants, `dashboard-new-user` (empty-state), poster | component-showcase | Mostrano componenti, non route. `meeple-card-real-app--chat-card` rilevante per il rendering entità chat. |
 | `admin-mockups/briefs/` + `admin-mockups/design_handoff/` (brief + gap-report) | ~40 route via `SCREENS.md` | in gran parte ✅, con staleness | `SCREENS.md`/`MANIFEST.json` datati 2026-05-24 → vedi §11.5 (fonti stale). |
@@ -5068,7 +5068,7 @@ Documenti di handoff datati 2026-05-24, superati dallo stato corrente del codice
 
 ### 11.6 Annotazioni per route
 
-- **`/dashboard`** — il redesign vivo deriva da `claude-design-handoff/2026-06-04/js/screen-dashboard.jsx` (Asse-C priority-driven #1898). Il mockup `admin-mockups/design_files/sp4-dashboard` è **obsoleto** (Pre-Stage-3, #2114) e in via di rimozione: non usarlo come riferimento. Restano attivi e distinti: `dashboard-new-user.html` (empty-state) e `sp9-dashboard-game-night-mobile.dc.html` (mobile).
+- **`/dashboard`** — il redesign vivo deriva da `admin-mockups/claude-design-handoff/2026-06-04/js/screen-dashboard.jsx` (Asse-C priority-driven #1898). Il mockup `admin-mockups/design_files/sp4-dashboard` è **obsoleto** (Pre-Stage-3, #2114) e in via di rimozione: non usarlo come riferimento. Restano attivi e distinti: `dashboard-new-user.html` (empty-state) e `sp9-dashboard-game-night-mobile.dc.html` (mobile).
 - **`/setup`** — route generica "Game Setup Guide" (AI). **Da non confondere** con il `setup-wizard`/`setup-chat` di `2026-06-30-sp6`, che è il *play* di un librogame (Tab "Setup"). Redesign SP6 valido e disgiunto (PR #3036).
 - **`/private-games/[id]`** — in **deprecazione** (redirect → `/library/private/:id`). I brief `briefs/SP5-admin-tools.md` e `design_handoff_admin/admin/sp5-private-games.html` descrivono una publish-checklist/index oggi inesistente sulla route reale: resi **moot** dalla deprecazione (nota di riconciliazione).
 - **`/library/[gameId]/play/[campaignId]/translate`** — drift 61.5% vs `translate-gap-report.md` (vedi §11.4). Verificare gli 8 stati mancanti prima di considerare la route completa.

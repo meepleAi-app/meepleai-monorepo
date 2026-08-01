@@ -4,7 +4,7 @@ Scripts for improving developer experience and productivity.
 
 ## Scripts
 
-### 💻 **open-dual-vscode.{sh,ps1}**
+### 💻 **open-dual-vscode.sh**
 **Purpose:** Open VS Code with backend and frontend workspaces side-by-side
 
 **What it does:**
@@ -14,11 +14,8 @@ Scripts for improving developer experience and productivity.
 
 **Usage:**
 ```bash
-# Bash (Linux/macOS)
+# Cross-platform (Git Bash su Windows + Linux/macOS)
 bash tools/development/open-dual-vscode.sh
-
-# PowerShell (Windows)
-.\tools\development\open-dual-vscode.ps1
 ```
 
 **Who:** Full-stack developers working on both backend and frontend

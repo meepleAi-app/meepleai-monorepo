@@ -115,6 +115,18 @@ Non-goal:
   già disponibili), `hi_res` solo on-demand per scansioni.
 - **DC-3** — Big-bang re-extract dell'intero corpus vs lazy on-next-reindex. Raccomandato:
   big-bang per-env (pattern SP3 #3269), staging prima di prod.
+- **DC-4** — **Sorgente citazioni non-retrieval** (coordinamento con lo spec pari-data
+  `docs/for-developers/specs/2026-07-30-mechanic-card-rag-integration-design.md` §7.4–§7.5). Quello spec
+  inietta claim approvati del Mechanic Extractor nel prompt Q&A ed emette citazioni **non provenienti dal
+  retrieval** attraverso questo stesso canale (`CitationDto`/`Snippet`/`InlineCitationMatch`). Conseguenze
+  da assorbire nella shape DTO di questa epic: (a) le citazioni acquisiscono un discriminatore di
+  **provenienza** (`Source`: `retrieval | claim`) — additivo, di proprietà di questa epic; (b)
+  `InlineCitationMatcherService` deve matchare anche marker di citazioni non-retrieval (oggi opera solo
+  sugli snippet da `searchResults`); (c) le citazioni claim portano già `PdfId` diretto → risolvono
+  **DC-1** per la loro sotto-classe, e la loro `Quote` verbatim (≤25 parole, ADR-051 T1) è input ideale
+  per Pattern-A/**SP0**; (d) l'highlight geometrico `regions[]` del claim resta gated `CopyrightTier=Full`
+  (R3/DA-4) come ogni altra citazione. Raccomandato: far atterrare **SP-A** (shape DTO) prima dell'R1 di
+  quello spec.
 
 ---
 

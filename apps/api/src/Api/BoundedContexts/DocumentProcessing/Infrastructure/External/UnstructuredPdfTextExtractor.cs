@@ -14,14 +14,19 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<UnstructuredPdfTextExtractor> _logger;
+    private readonly IExtractionStrategySelector? _strategySelector;
     private readonly JsonSerializerOptions _jsonOptions;
 
     public UnstructuredPdfTextExtractor(
         IHttpClientFactory httpClientFactory,
-        ILogger<UnstructuredPdfTextExtractor> logger)
+        ILogger<UnstructuredPdfTextExtractor> logger,
+        IExtractionStrategySelector? strategySelector = null)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
+        // DC-2 (#3419): optional so DevTools + integration tests can construct without the scoped
+        // selector; production DI always injects it. Null → fall back to the historical "fast".
+        _strategySelector = strategySelector;
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
@@ -112,7 +117,7 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
     /// <summary>
     /// Prepares multipart form data content for Unstructured API request.
     /// </summary>
-    private static MultipartFormDataContent PrepareMultipartContent(Stream pdfStream)
+    private MultipartFormDataContent PrepareMultipartContent(Stream pdfStream)
     {
         var content = new MultipartFormDataContent();
 #pragma warning disable CA2000 // Dispose objects before losing scope
@@ -120,13 +125,16 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
         // OWNERSHIP TRANSFER: MultipartFormDataContent takes ownership of added content and disposes them when it is disposed
 #pragma warning restore S125
         var streamContent = new StreamContent(pdfStream);
-        var strategyContent = new StringContent("fast");
+        // DC-2 (#3419): route table-heavy PDFs to hi_res per the pipeline's per-request decision on
+        // the scoped selector. Null selector (DevTools/integration/fresh ingest) → historical "fast".
+        var strategyContent = new StringContent(
+            (_strategySelector?.Current ?? ExtractionStrategy.Fast).ToWireString());
         var languageContent = new StringContent("ita");
 #pragma warning restore CA2000
 
         streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
         content.Add(streamContent, "file", "document.pdf");
-        content.Add(strategyContent, "strategy");  // Use fast strategy for <2s target
+        content.Add(strategyContent, "strategy");
         content.Add(languageContent, "language");
 
         return content;

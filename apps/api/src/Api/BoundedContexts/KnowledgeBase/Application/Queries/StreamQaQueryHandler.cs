@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -53,6 +54,8 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
     private readonly IIntentClassifierService _intentClassifier;
     private readonly IRagAccessService _ragAccessService;
     private readonly ICopyrightTierResolver _copyrightTierResolver;
+    private readonly IMechanicCardProvider _mechanicCardProvider;
+    private readonly IFeatureFlagService _featureFlags;
     private readonly ILogger<StreamQaQueryHandler> _logger;
     private readonly TimeProvider _timeProvider;
 
@@ -71,6 +74,8 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         IIntentClassifierService intentClassifier,
         IRagAccessService ragAccessService,
         ICopyrightTierResolver copyrightTierResolver,
+        IMechanicCardProvider mechanicCardProvider,
+        IFeatureFlagService featureFlags,
         ILogger<StreamQaQueryHandler> logger,
         TimeProvider? timeProvider = null)
     {
@@ -88,6 +93,8 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         _intentClassifier = intentClassifier ?? throw new ArgumentNullException(nameof(intentClassifier));
         _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _copyrightTierResolver = copyrightTierResolver ?? throw new ArgumentNullException(nameof(copyrightTierResolver));
+        _mechanicCardProvider = mechanicCardProvider ?? throw new ArgumentNullException(nameof(mechanicCardProvider));
+        _featureFlags = featureFlags ?? throw new ArgumentNullException(nameof(featureFlags));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -126,9 +133,19 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         _logger.LogInformation("Starting streaming QA for game {GameId}, query: {Query}",
             query.GameId, query.Query);
 
-        // Check cache first - if cached, return it as streaming events
+        // R1 (issue #3416, ADR-088): resolve approved mechanic-card claims to inject as authoritative
+        // context. Feature-flag gated (default off), best-effort. Computed here — above the cache and
+        // the NO_RESULTS exit — so the claim block still answers when retrieval is empty (spec §6.1).
+        var verifiedBlock = await ResolveVerifiedRulesBlockAsync(query, cancellationToken).ConfigureAwait(false);
+        var injectClaims = !verifiedBlock.IsEmpty;
+
+        // Check cache first - if cached, return it as streaming events.
+        // R1: skip the semantic cache when injecting (the (game,query) key carries no card fingerprint,
+        // so a cached no-card answer must not shadow, nor a claim answer replay after suppression — §6.2).
         var cacheKey = _cache.GenerateQaCacheKey(query.GameId, query.Query);
-        var cachedResponse = await _cache.GetAsync<QaResponse>(cacheKey, cancellationToken).ConfigureAwait(false);
+        var cachedResponse = injectClaims
+            ? null
+            : await _cache.GetAsync<QaResponse>(cacheKey, cancellationToken).ConfigureAwait(false);
 
         if (cachedResponse != null)
         {
@@ -174,7 +191,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         }
 
         // Stream fresh QA response
-        await foreach (var evt in AskStreamInternalAsync(query, cancellationToken).ConfigureAwait(false))
+        await foreach (var evt in AskStreamInternalAsync(query, verifiedBlock, cancellationToken).ConfigureAwait(false))
         {
             yield return evt;
         }
@@ -182,8 +199,10 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
 
     private async IAsyncEnumerable<RagStreamingEvent> AskStreamInternalAsync(
         StreamQaQuery query,
+        VerifiedRulesBlock verifiedBlock,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        var injectClaims = !verifiedBlock.IsEmpty;
         var startTime = _timeProvider.GetUtcNow();
         var cacheKey = _cache.GenerateQaCacheKey(query.GameId, query.Query);
 
@@ -211,15 +230,28 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         var (searchSuccess, snippets, domainSearchResults, searchConfidence) = await PerformSearchAndBuildCitationsAsync(
             query.GameId, query.Query, query.DocumentIds, query.UserId ?? Guid.Empty, cancellationToken).ConfigureAwait(false);
 
-        if (!searchSuccess)
+        // R1 (spec §6.1): the NO_RESULTS exit is skipped when an approved-claim block is present — the
+        // claims become the answer source in the retrieval-miss case (e.g. Catan/TM "Setup per N").
+        if (!searchSuccess && !injectClaims)
         {
             yield return CreateEvent(StreamingEventType.Error,
                 new StreamingError("No relevant information found in the rulebook.", "NO_RESULTS"));
             yield break;
         }
 
+        // Normalize retrieval outputs for the claims-only path (empty search but claims present).
+        var ragSnippets = snippets ?? new List<Snippet>();
+        var confidence = searchConfidence ?? Confidence.Zero;
+        var domainResults = domainSearchResults ?? new List<Domain.Entities.SearchResult>();
+
+        // R1 (spec §7.4): claim citations (PdfId/PdfPage + verbatim Quote) ride the same citation channel,
+        // emitted for display but NOT fed to the LLM context (the prompt uses the reformulated Claim via
+        // verifiedBlock, never the Quote — §7.2 copyright). Claim snippets carry no regions (not Full-gated).
+        var claimSnippets = injectClaims ? BuildClaimSnippets(verifiedBlock) : new List<Snippet>();
+        var allSnippets = claimSnippets.Count == 0 ? ragSnippets : ragSnippets.Concat(claimSnippets).ToList();
+
         yield return CreateEvent(StreamingEventType.Citations,
-            new StreamingCitations(snippets!));
+            new StreamingCitations(allSnippets));
 
         // Step 2: Load chat thread context if ThreadId provided
         var chatHistoryContext = await LoadChatThreadContextAsync(
@@ -230,8 +262,8 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
             new StreamingStateUpdate("Generating answer..."));
 
         var (systemPrompt, userPrompt) = await BuildLlmPromptsAsync(
-            query.GameId, query.Query, snippets!, chatHistoryContext,
-            query.ResponseStyle, query.ContinuationContext).ConfigureAwait(false);
+            query.GameId, query.Query, ragSnippets, chatHistoryContext,
+            query.ResponseStyle, query.ContinuationContext, verifiedBlock).ConfigureAwait(false);
 
         // Step 4: Stream tokens from LLM
         var answerBuilder = new StringBuilder();
@@ -272,16 +304,17 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
 
         var answer = answerBuilder.ToString().Trim();
 
-        // Step 5: Calculate quality metrics, cache response, emit completion
+        // Step 5: Calculate quality metrics, cache response, emit completion.
+        // R1: never cache a claim-injected answer (the (game,query) key carries no card fingerprint, §6.2).
         var overallConfidence = await CalculateAndCacheResponseAsync(
-            answer, snippets!, domainSearchResults!, searchConfidence ?? Confidence.Parse(0.5),
-            tokenCount, cacheKey, llmUsage, llmCost, cancellationToken).ConfigureAwait(false);
+            answer, ragSnippets, domainResults, confidence,
+            tokenCount, cacheKey, llmUsage, llmCost, injectClaims, cancellationToken).ConfigureAwait(false);
 
         yield return CreateEvent(StreamingEventType.Complete,
             new StreamingComplete(0, 0, tokenCount, tokenCount, overallConfidence.Value));
 
-        // Emit inline citation matches
-        var inlineCitations = _citationMatcher.Match(answerBuilder.ToString(), snippets!);
+        // Emit inline citation matches (over RAG + claim citations, so [Vk] claim markers can match too)
+        var inlineCitations = _citationMatcher.Match(answerBuilder.ToString(), allSnippets);
         if (inlineCitations.Count > 0)
             yield return CreateEvent(StreamingEventType.InlineCitation, new StreamingInlineCitations(inlineCitations));
 
@@ -476,10 +509,19 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         List<Snippet> snippets,
         string chatHistoryContext,
         string? responseStyle = null,
-        string? continuationContext = null)
+        string? continuationContext = null,
+        VerifiedRulesBlock? verifiedBlock = null)
     {
         var context = string.Join("\n\n", snippets.Select(s =>
             $"[Page {s.page}] {s.text}"));
+
+        // R1 (spec §7.1/D8): approved claims rank above raw RAG context (the stream path has no house rules).
+        if (verifiedBlock is { IsEmpty: false })
+        {
+            context = context.Length > 0
+                ? $"{verifiedBlock.PromptText}\n\n{context}"
+                : verifiedBlock.PromptText;
+        }
 
         // Use PromptTemplateService for advanced prompt engineering
         var questionType = _promptTemplateService.ClassifyQuestion(queryText);
@@ -490,6 +532,15 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
 
         // Append response style instruction
         systemPrompt += PromptTemplateService.GetResponseStyleInstruction(responseStyle ?? "concise");
+
+        // R1 (spec §7.1): authorize the [Verified Rules] block as valid provided context so the grounding
+        // constraint does not reject it when the RAG context is empty.
+        if (verifiedBlock is { IsEmpty: false })
+        {
+            systemPrompt += " A section titled '[Verified Rules — human-approved]' may precede the Context; "
+                + "it is human-approved rulebook content and counts as provided context — you MAY answer "
+                + "from it and cite its [Page N].";
+        }
 
         var baseUserPrompt = _promptTemplateService.RenderUserPrompt(template, context, queryText);
 
@@ -523,6 +574,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         string cacheKey,
         LlmUsage? llmUsage,
         LlmCost? llmCost,
+        bool skipCache,
         CancellationToken cancellationToken)
     {
         // ISSUE-1725: Record LLM token usage with OpenTelemetry GenAI semantic conventions
@@ -558,10 +610,46 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
             overallConfidence.Value,
             null);
 
-        await _cache.SetAsync(cacheKey, response, 86400, cancellationToken).ConfigureAwait(false);
+        // R1 (spec §6.2): claim-injected answers are never cached ((game,query) key has no card fingerprint).
+        if (!skipCache)
+        {
+            await _cache.SetAsync(cacheKey, response, 86400, cancellationToken).ConfigureAwait(false);
+        }
 
         return overallConfidence;
     }
+
+    /// <summary>
+    /// R1 (spec §6.1/§8): resolves the approved-claim block to inject for this query, gated by the
+    /// feature flag (default off) and best-effort. Returns Empty when disabled, no section matches the
+    /// intent, the game id is malformed, or no active card exists (fail-open to raw RAG).
+    /// </summary>
+    private async Task<VerifiedRulesBlock> ResolveVerifiedRulesBlockAsync(
+        StreamQaQuery query, CancellationToken cancellationToken)
+    {
+        var flagRole = Enum.TryParse<UserRole>(query.UserRole, ignoreCase: true, out var parsedRole)
+            ? parsedRole : (UserRole?)null;
+        if (!await _featureFlags.IsEnabledAsync(FeatureFlagConstants.MechanicCardInjectionKey, flagRole)
+                .ConfigureAwait(false))
+        {
+            return VerifiedRulesBlock.Empty;
+        }
+
+        var sections = MechanicSectionRouter.Route(_intentClassifier.ClassifyIntent(query.Query));
+        if (sections.Count == 0 || !Guid.TryParse(query.GameId, out var gameGuid))
+        {
+            return VerifiedRulesBlock.Empty;
+        }
+
+        var card = await _mechanicCardProvider.GetActiveCardAsync(gameGuid, cancellationToken).ConfigureAwait(false);
+        return card is null ? VerifiedRulesBlock.Empty : VerifiedRulesRenderer.Render(card, sections);
+    }
+
+    /// <summary>R1 (spec §7.4): claim citations as Snippets — verbatim Quote text, no region overlay.</summary>
+    private static List<Snippet> BuildClaimSnippets(VerifiedRulesBlock verifiedBlock) =>
+        verifiedBlock.Citations
+            .Select(vc => new Snippet(vc.Quote, $"PDF:{vc.PdfId}", vc.PdfPage, 0, 1.0f))
+            .ToList();
 
     private async Task<(bool allReady, int processing, int total)> CheckDocumentsReadyAsync(
         Guid gameId, List<Guid>? documentIds, CancellationToken ct)

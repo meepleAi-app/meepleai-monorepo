@@ -2,8 +2,10 @@ using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
@@ -134,6 +136,8 @@ public class StreamQaQueryHandlerTests
             _intentClassifierMock.Object,
             CreatePermissiveRagAccessServiceMock(),
             _copyrightTierResolverMock.Object,
+            Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
+            Mock.Of<Api.Services.IFeatureFlagService>(),
             _loggerMock.Object,
             _fakeTimeProvider
         );
@@ -1274,6 +1278,109 @@ public class StreamQaQueryHandlerTests
             "Cache should not store partial responses after errors"
         );
     }
+    // ─── R1 (issue #3416, ADR-088): MechanicCard claim injection into the streaming path ───
+
+    private static PublishedMechanicCardDto CardWithSetupClaim(Guid gameId, Guid pdfId) =>
+        new(
+            CardId: Guid.NewGuid(), SharedGameId: gameId, Title: "T", Version: 1, PublishedAt: DateTime.UtcNow,
+            GameName: "Terraforming Mars", Publisher: null, Language: "it",
+            Sections: new[]
+            {
+                new PublishedMechanicCardSectionDto("Setup", new[]
+                {
+                    new PublishedMechanicCardClaimDto(
+                        Guid.NewGuid(),
+                        "In una partita a 3 giocatori si usa la plancia standard.",
+                        new[] { new PublishedMechanicCardCitationDto(pdfId, 3, "3-player uses the standard board") }),
+                }),
+            },
+            SourceAnalysisId: Guid.NewGuid(), PublicationYear: null, DocumentName: null);
+
+    private void ForceEmptyRetrieval() =>
+        _rrfFusionServiceMock
+            .Setup(x => x.FuseResults(
+                It.IsAny<List<DomainSearchResult>>(), It.IsAny<List<DomainSearchResult>>(),
+                It.IsAny<int>(), It.IsAny<GameBookRole>(), It.IsAny<IReadOnlyList<string>?>()))
+            .Returns(new List<DomainSearchResult>());
+
+    [Fact]
+    public async Task Handle_FlagOnWithCard_InjectsVerifiedRules_WhenRetrievalEmpty()
+    {
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var query = new StreamQaQuery(gameId.ToString(), "Setup per 3 giocatori", ThreadId: null,
+            DocumentIds: null, ResponseStyle: null, ContinuationContext: null, UserId: userId, UserRole: "User");
+
+        SetupHappyPathMocks(gameId.ToString(), query.Query);
+        ForceEmptyRetrieval(); // the retrieval-miss case R1 targets (e.g. Catan/TM "Setup per N")
+        // This class uses a MOCKED intent classifier (unlike Phase2Tests' real one) → configure it.
+        _intentClassifierMock.Setup(x => x.ClassifyIntent(It.IsAny<string>()))
+            .Returns(GameBookRole.Tutorial | GameBookRole.Setup);
+        // SetupPromptMocks stubs RenderUserPrompt to a fixed string that DISCARDS the context; echo the
+        // context instead so the injected [Verified Rules] block (prepended to context) is observable.
+        _promptTemplateServiceMock
+            .Setup(x => x.RenderUserPrompt(It.IsAny<PromptTemplate>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns((PromptTemplate _, string context, string q) => $"Question: {q}\n\nContext:\n{context}");
+
+        string? capturedUserPrompt = null;
+        _llmServiceMock
+            .Setup(x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, RequestSource, CancellationToken>((_, user, _, _) => capturedUserPrompt = user)
+            .Returns(StreamTokensAsync(new[] { "In", " una", " partita", " a", " 3." }));
+
+        var provider = new Mock<IMechanicCardProvider>();
+        provider.Setup(p => p.GetActiveCardAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CardWithSetupClaim(gameId, Guid.NewGuid()));
+        var flag = new Mock<IFeatureFlagService>();
+        flag.Setup(f => f.IsEnabledAsync(FeatureFlagConstants.MechanicCardInjectionKey, It.IsAny<UserRole?>()))
+            .ReturnsAsync(true);
+
+        var handler = CreateHandlerWith(CreatePermissiveRagAccessServiceMock(), provider.Object, flag.Object);
+
+        var events = new List<RagStreamingEvent>();
+        await foreach (var e in handler.Handle(query, TestContext.Current.CancellationToken))
+            events.Add(e);
+
+        // The NO_RESULTS exit was bypassed → the LLM ran, with the injected block in its prompt.
+        _llmServiceMock.Verify(
+            x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        capturedUserPrompt.Should().NotBeNull();
+        capturedUserPrompt.Should().Contain("[Verified Rules — human-approved]");
+        capturedUserPrompt.Should().Contain("## Setup");
+        // Verbatim Quote must NOT be in the prompt body (copyright §7.2).
+        capturedUserPrompt.Should().NotContain("3-player uses the standard board");
+    }
+
+    [Fact]
+    public async Task Handle_FlagOff_EmitsNoResults_WhenRetrievalEmpty()
+    {
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var query = new StreamQaQuery(gameId.ToString(), "Setup per 3 giocatori", ThreadId: null,
+            DocumentIds: null, ResponseStyle: null, ContinuationContext: null, UserId: userId, UserRole: "User");
+
+        SetupHappyPathMocks(gameId.ToString(), query.Query);
+        ForceEmptyRetrieval();
+        _intentClassifierMock.Setup(x => x.ClassifyIntent(It.IsAny<string>()))
+            .Returns(GameBookRole.Tutorial | GameBookRole.Setup);
+
+        // A card IS available and the intent DOES map to Setup — the ONLY thing withholding injection is
+        // the disabled flag (CreateHandlerWith's default feature-flag mock returns false). Proves the gate.
+        var provider = new Mock<IMechanicCardProvider>();
+        provider.Setup(p => p.GetActiveCardAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CardWithSetupClaim(gameId, Guid.NewGuid()));
+        var handler = CreateHandlerWith(CreatePermissiveRagAccessServiceMock(), provider.Object);
+
+        var events = new List<RagStreamingEvent>();
+        await foreach (var e in handler.Handle(query, TestContext.Current.CancellationToken))
+            events.Add(e);
+
+        _llmServiceMock.Verify(
+            x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     private void SetupHappyPathMocks(string gameId, string userQuery)
     {
         _cacheMock
@@ -1491,7 +1598,10 @@ public class StreamQaQueryHandlerTests
     /// Builds a StreamQaQueryHandler reusing the shared field mocks but with a caller-supplied
     /// IRagAccessService — used by the Bug B5 access-enforcement tests.
     /// </summary>
-    private StreamQaQueryHandler CreateHandlerWith(IRagAccessService ragAccessService)
+    private StreamQaQueryHandler CreateHandlerWith(
+        IRagAccessService ragAccessService,
+        Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider? mechanicCardProvider = null,
+        Api.Services.IFeatureFlagService? featureFlags = null)
     {
         return new StreamQaQueryHandler(
             _searchQueryHandler,
@@ -1508,6 +1618,8 @@ public class StreamQaQueryHandlerTests
             _intentClassifierMock.Object,
             ragAccessService,
             _copyrightTierResolverMock.Object,
+            mechanicCardProvider ?? Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
+            featureFlags ?? Mock.Of<Api.Services.IFeatureFlagService>(),
             _loggerMock.Object,
             _fakeTimeProvider);
     }

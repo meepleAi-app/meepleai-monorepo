@@ -61,7 +61,10 @@ Without the flag, scripts abort with exit 77.
 Before running any reset against staging or prod, rehearse the rollback against a disposable docker postgres:
 
 ```bash
-./tests/scripts/game-reset/rehearse-rollback.sh
+# from infra/ (recommended):
+make game-reset-rollback-rehearse
+# or directly, from this directory:
+./rehearse-rollback.sh
 ```
 
 This script:

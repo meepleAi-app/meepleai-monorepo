@@ -11,7 +11,10 @@ class Settings(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
     # File Processing
-    max_file_size: int = 52428800  # 50MB in bytes
+    # 100MB — aligned with the API's PdfProcessing:MaxFileSizeBytes (104857600). A lower cap here
+    # silently 413s large rulebooks the API already accepted (staging region-grounding re-index
+    # #3403 hit this on 55-65MB PDFs). Override per-env with MAX_FILE_SIZE.
+    max_file_size: int = 104857600  # 100MB in bytes
     timeout: int = 30  # seconds
     temp_dir: Path = Path("/tmp/pdf-extraction")
 

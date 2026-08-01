@@ -197,38 +197,7 @@ internal sealed record EvaluationResult
 
     private static EvaluationMetrics CalculateMetrics(IReadOnlyList<EvaluationSampleResult> results)
     {
-        if (results.Count == 0)
-        {
-            return EvaluationMetrics.Empty;
-        }
-
-        var successfulResults = results.Where(r => r.IsSuccess).ToList();
-
-        if (successfulResults.Count == 0)
-        {
-            return EvaluationMetrics.Empty;
-        }
-
-        var recallAt5 = successfulResults.Average(r => r.HitAt5 ? 1.0 : 0.0);
-        var recallAt10 = successfulResults.Average(r => r.HitAt10 ? 1.0 : 0.0);
-        var ndcgAt10 = successfulResults.Average(r => r.NdcgAt10);
-        var mrr = successfulResults.Average(r => r.ReciprocalRank);
-        var answerCorrectness = successfulResults.Average(r => r.AnswerCorrectness);
-
-        // Calculate P95 latency
-        var latencies = successfulResults.Select(r => r.LatencyMs).OrderBy(l => l).ToList();
-        var p95Index = (int)Math.Ceiling(latencies.Count * 0.95) - 1;
-        var p95Latency = latencies.Count > 0 ? latencies[Math.Max(0, p95Index)] : 0.0;
-
-        return EvaluationMetrics.Create(
-            recallAt5: recallAt5,
-            recallAt10: recallAt10,
-            ndcgAt10: ndcgAt10,
-            mrr: mrr,
-            p95LatencyMs: p95Latency,
-            answerCorrectness: answerCorrectness,
-            sampleCount: successfulResults.Count
-        );
+        return EvaluationMetrics.Compute(results);
     }
 
     private static Dictionary<string, EvaluationMetrics> CalculateMetricsByGroup(

@@ -30,7 +30,7 @@ public class UnstructuredPdfTextExtractorTests
         _mockHttpMessageHandler = new Mock<HttpMessageHandler>();
     }
 
-    private UnstructuredPdfTextExtractor CreateExtractor()
+    private UnstructuredPdfTextExtractor CreateExtractor(IExtractionStrategySelector? strategySelector = null)
     {
         var httpClient = new HttpClient(_mockHttpMessageHandler.Object)
         {
@@ -43,7 +43,62 @@ public class UnstructuredPdfTextExtractorTests
 
         return new UnstructuredPdfTextExtractor(
             _mockHttpClientFactory.Object,
-            _mockLogger.Object);
+            _mockLogger.Object,
+            strategySelector);
+    }
+
+    /// <summary>
+    /// DC-2 (#3419): builds an extractor whose HTTP handler reads the <c>strategy</c> multipart form
+    /// field posted to the Unstructured service, so a test can assert the exact value without fragile
+    /// raw-body parsing. The handler returns a canned success response.
+    /// </summary>
+    private (UnstructuredPdfTextExtractor extractor, Func<string?> capturedStrategy) CreateExtractorCapturingStrategy(
+        IExtractionStrategySelector? strategySelector)
+    {
+        string? strategy = null;
+        var httpClient = new HttpClient(_mockHttpMessageHandler.Object)
+        {
+            BaseAddress = new Uri("http://test-unstructured:8001")
+        };
+
+        _mockHttpClientFactory
+            .Setup(x => x.CreateClient("UnstructuredService"))
+            .Returns(httpClient);
+
+        _mockHttpMessageHandler
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Returns<HttpRequestMessage, CancellationToken>(async (req, ct) =>
+            {
+                if (req.Content is MultipartFormDataContent multipart)
+                {
+                    foreach (var part in multipart)
+                    {
+                        if (string.Equals(
+                                part.Headers.ContentDisposition?.Name?.Trim('"'),
+                                "strategy",
+                                StringComparison.Ordinal))
+                        {
+                            strategy = await part.ReadAsStringAsync(ct).ConfigureAwait(false);
+                        }
+                    }
+                }
+
+                return new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent(CreateSuccessResponse())
+                };
+            });
+
+        var extractor = new UnstructuredPdfTextExtractor(
+            _mockHttpClientFactory.Object,
+            _mockLogger.Object,
+            strategySelector);
+        return (extractor, () => strategy);
     }
 
     private Stream CreateTestPdfStream()
@@ -113,6 +168,44 @@ public class UnstructuredPdfTextExtractorTests
             metadata = new { extraction_duration_ms = 10, strategy_used = "fast", language = "ita", detected_tables = 0, detected_structures = new[] { "Title" }, quality_breakdown = new { text_coverage_score = 0.4, structure_detection_score = 0.2, table_detection_score = 0.0, page_coverage_score = 0.2 } }
         };
         return JsonSerializer.Serialize(response, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
+    }
+
+    [Fact]
+    [Trait("Issue", "3419")]
+    public async Task ExtractPagedTextAsync_WhenSelectorHiRes_SendsHiResStrategyField()
+    {
+        // DC-2 (#3419): a table-heavy PDF routed to hi_res must post strategy=hi_res.
+        var (extractor, capturedStrategy) = CreateExtractorCapturingStrategy(
+            new ExtractionStrategySelector { Current = ExtractionStrategy.HiRes });
+
+        await extractor.ExtractPagedTextAsync(CreateTestPdfStream(), cancellationToken: TestCancellationToken);
+
+        capturedStrategy().Should().Be("hi_res");
+    }
+
+    [Fact]
+    [Trait("Issue", "3419")]
+    public async Task ExtractPagedTextAsync_WhenSelectorFast_SendsFastStrategyField()
+    {
+        var (extractor, capturedStrategy) = CreateExtractorCapturingStrategy(
+            new ExtractionStrategySelector { Current = ExtractionStrategy.Fast });
+
+        await extractor.ExtractPagedTextAsync(CreateTestPdfStream(), cancellationToken: TestCancellationToken);
+
+        capturedStrategy().Should().Be("fast");
+    }
+
+    [Fact]
+    [Trait("Issue", "3419")]
+    public async Task ExtractTextAsync_WhenNoSelector_DefaultsToFastStrategyField()
+    {
+        // Backward-compat: manual construction (DevTools + integration tests) passes no selector →
+        // the extractor must fall back to the historical hard-coded "fast".
+        var (extractor, capturedStrategy) = CreateExtractorCapturingStrategy(strategySelector: null);
+
+        await extractor.ExtractTextAsync(CreateTestPdfStream(), cancellationToken: TestCancellationToken);
+
+        capturedStrategy().Should().Be("fast");
     }
 
     [Fact]

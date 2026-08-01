@@ -203,6 +203,8 @@ jobs:
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v6
+      - name: "Guard: no SixLabors.ImageSharp reference (license, ADR DEC-3d-1)"
+        run: bash infra/scripts/lint-deps-imagesharp.sh
       - uses: ./.github/actions/setup-backend
         with:
           dotnet-version: '9.0.x'
@@ -239,7 +241,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '9.0.x'
 

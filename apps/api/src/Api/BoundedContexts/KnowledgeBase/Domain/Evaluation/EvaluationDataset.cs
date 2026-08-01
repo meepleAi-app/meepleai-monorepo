@@ -226,7 +226,8 @@ internal sealed class EvaluationDataset
                 GameId = s.GameId,
                 ExpectedKeywords = s.ExpectedKeywords.ToList(),
                 RelevantChunkIds = s.RelevantChunkIds.ToList(),
-                DatasetSource = s.DatasetSource
+                DatasetSource = s.DatasetSource,
+                Language = s.Language
             }).ToList()
         };
 
@@ -265,7 +266,8 @@ internal sealed class EvaluationDataset
                 GameId = sampleDto.GameId,
                 ExpectedKeywords = sampleDto.ExpectedKeywords ?? [],
                 RelevantChunkIds = sampleDto.RelevantChunkIds ?? [],
-                DatasetSource = sampleDto.DatasetSource ?? "unknown"
+                DatasetSource = sampleDto.DatasetSource ?? "unknown",
+                Language = sampleDto.Language
             };
             dataset._samples.Add(sample);
         }
@@ -297,5 +299,6 @@ internal sealed class EvaluationDataset
         public List<string>? ExpectedKeywords { get; set; }
         public List<string>? RelevantChunkIds { get; set; }
         public string? DatasetSource { get; set; }
+        public string? Language { get; set; }
     }
 }

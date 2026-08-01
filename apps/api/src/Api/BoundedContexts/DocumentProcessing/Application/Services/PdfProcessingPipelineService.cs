@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Services.Chunking;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
+using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
@@ -71,6 +72,11 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     // chunk production falls back to the flat ITextChunkingService path (pre-Slice-D behaviour).
     private readonly IAdvancedChunkingService? _advancedChunking;
 
+    // DC-2 (#3419): scoped strategy selector — set per PDF before extraction so the same-scope
+    // UnstructuredPdfTextExtractor routes table-heavy PDFs to hi_res. Optional/nullable so the
+    // pre-#3419 test constructors compile unchanged; production DI always provides it.
+    private readonly IExtractionStrategySelector? _extractionStrategySelector;
+
     public PdfProcessingPipelineService(
         MeepleAiDbContext db,
         IPdfClaimService pdfClaimService,
@@ -92,7 +98,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         IPdfCoverExtractor? pdfCoverExtractor = null,
         IDomainEventCollector? eventCollector = null,
         IPdfCoverUploadPipeline? pdfCoverUploadPipeline = null,
-        IAdvancedChunkingService? advancedChunking = null)
+        IAdvancedChunkingService? advancedChunking = null,
+        IExtractionStrategySelector? extractionStrategySelector = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _pdfClaimService = pdfClaimService ?? throw new ArgumentNullException(nameof(pdfClaimService));
@@ -118,6 +125,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         _eventCollector = eventCollector;
         _pdfCoverUploadPipeline = pdfCoverUploadPipeline;
         _advancedChunking = advancedChunking;
+        _extractionStrategySelector = extractionStrategySelector;
     }
 
     public async Task ProcessAsync(
@@ -510,6 +518,25 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
         await using (fileStream.ConfigureAwait(false))
         {
+            // DC-2 (#3419): route table-heavy PDFs to hi_res, decided from the PRIOR
+            // StructuredElementsJson (overwritten ~20 lines below with the fresh result). Published
+            // on the scoped selector, which the same-scope Unstructured extractor reads when building
+            // the multipart. Null selector (unit tests that don't exercise strategy) → no-op; the
+            // production DI graph always provides it.
+            if (_extractionStrategySelector is not null)
+            {
+                var strategy = ExtractionStrategyDecider.FromStructuredElements(pdfDoc.StructuredElementsJson);
+                _extractionStrategySelector.Current = strategy;
+                if (strategy == ExtractionStrategy.HiRes)
+                {
+                    // The feature is dark until a table-heavy PDF is re-extracted, so log the minority
+                    // hi_res case to let ops confirm activation on staging (epic #3403 grounding).
+                    _logger.LogInformation(
+                        "[PdfPipeline] DC-2: routing PDF {PdfId} to hi_res extraction (prior extraction detected a table)",
+                        pdfDoc.Id);
+                }
+            }
+
             var extractResult = await _pdfTextExtractor
                 .ExtractPagedTextAsync(fileStream, enableOcrFallback: true, cancellationToken)
                 .ConfigureAwait(false);

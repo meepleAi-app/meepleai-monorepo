@@ -366,11 +366,6 @@ test-e2e: ## Playwright E2E tests (requires make dev + api + web running) — mi
 	cd $(WEB) && pnpm test:e2e
 	@echo "✅ E2E tests passed"
 
-test-visual: ## Visual regression tests — mirrors test-visual.yml
-	@echo "🔵 Visual regression tests..."
-	cd $(WEB) && pnpm build && pnpm test:e2e:visual --project=desktop-chrome
-	@echo "✅ Visual tests passed"
-
 test-perf: ## K6 smoke performance tests (requires api running) — mirrors test-performance.yml
 	@echo "🔵 Performance smoke tests..."
 	@which k6 > /dev/null 2>&1 || (echo "❌ k6 not installed: https://k6.io/docs/get-started/installation/" && exit 1)
@@ -423,7 +418,7 @@ game-reset-verify: ## Run verification gates after EF migration applied (ENV=dev
 	./scripts/game-reset/04-verify-gates.sh scripts/game-reset/.env.$(ENV)
 
 game-reset-rollback-rehearse: ## Run disposable docker rollback rehearsal
-	../tests/scripts/game-reset/rehearse-rollback.sh
+	./scripts/game-reset/rehearse-rollback.sh
 
 # === Corpus re-index orchestration (issue #3269 SP3 Slice 3 / D4) ===
 # Script lives in infra/scripts/reindex-corpus/. Wraps POST /admin/queue/reindex-ready
@@ -449,6 +444,26 @@ reindex-corpus: ## Big-bang re-index Ready PDFs to coordinate-aware v1.2 (ENV=st
 	@test -f scripts/reindex-corpus/.env.$(ENV) || (echo "Missing scripts/reindex-corpus/.env.$(ENV) — copy from .env.example" && exit 66)
 	./scripts/reindex-corpus/reindex-corpus.sh scripts/reindex-corpus/.env.$(ENV) $(EXTRA) $(IMEANIT)
 
+# === RAG evaluation admin runner (issue #3433, Task 6) ===
+# Wraps POST /api/v1/admin/eval/retrieval (admin-gated). Retrieved chunk ids only make sense
+# against the coordinate-aware v1.2 corpus, so a real run against staging is deferred until
+# the #3427 re-index completes — for now this target is for local ad-hoc smoke only.
+
+eval-retrieval: ## Run RAG retrieval evaluation via admin endpoint (DATASET=path required; MAX_SAMPLES optional int; BASE_URL default localhost:8080; ADMIN_EMAIL/ADMIN_PASSWORD to auto-login). Deferred until #3427 corpus re-index completes.
+	@test -n "$(DATASET)" || (echo "DATASET required: make eval-retrieval DATASET=../tests/evaluation-datasets/meepleai-en-seed.json" && exit 64)
+	@cookie=$$(mktemp); trap 'rm -f "$$cookie"' EXIT; \
+	base="$(BASE_URL)"; [ -n "$$base" ] || base="http://localhost:8080"; \
+	max="$(MAX_SAMPLES)"; [ -n "$$max" ] || max="null"; \
+	if [ -n "$(ADMIN_EMAIL)" ] && [ -n "$(ADMIN_PASSWORD)" ]; then \
+		curl -s -o /dev/null -c "$$cookie" -X POST "$$base/api/v1/auth/login" \
+			-H 'Content-Type: application/json' \
+			-d "{\"email\":\"$(ADMIN_EMAIL)\",\"password\":\"$(ADMIN_PASSWORD)\"}"; \
+	fi; \
+	curl -s -b "$$cookie" -X POST "$$base/api/v1/admin/eval/retrieval" \
+		-H 'Content-Type: application/json' \
+		-d "{\"datasetPath\":\"$(DATASET)\",\"maxSamples\":$$max}" \
+		| (command -v jq >/dev/null 2>&1 && jq . || cat)
+
 .PHONY: dev dev-core dev-down \
         tunnel tunnel-stop tunnel-status integration-check integration \
         integration-down work work-stop smoke smoke-staging smoke-pg-readback staging staging-minimal staging-with-tutor staging-tutor-down staging-core staging-down prod prod-down \
@@ -457,8 +472,9 @@ reindex-corpus: ## Big-bang re-index Ready PDFs to coordinate-aware v1.2 (ENV=st
         snapshot restore-staging restore-local seed-games \
         logs logging logging-down logs-ui ps build clean help \
         ci ci-fe ci-be-unit ci-be-integration ci-be-e2e ci-all \
-        sec-scan sec-pentest security-audit test-e2e test-visual test-perf validate-workflows \
+        sec-scan sec-pentest security-audit test-e2e test-perf validate-workflows \
         backup backup-verify backup-restore-test backup-status backup-cron-install backup-cron-show \
         db-snapshot db-snapshot-sanitized db-reset-migrations db-restore-snapshot db-rollback-safetynet \
         game-reset-help game-reset-backup game-reset-mapping game-reset-relink game-reset-verify game-reset-rollback-rehearse \
-        reindex-corpus reindex-corpus-help
+        reindex-corpus reindex-corpus-help \
+        eval-retrieval

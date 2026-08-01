@@ -168,6 +168,13 @@ public class StreamSetupGuideQueryHandlerTests
                 It.IsAny<RequestSource>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+
+        // #3388: grounding-contract — parsed steps carry the retrieved rulebook
+        // reference, so the terminal Complete event must report "Grounded".
+        var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
+        completeEvent.Should().NotBeNull();
+        var complete = completeEvent!.Data.Should().BeOfType<StreamingComplete>().Which;
+        complete.GroundingStatus.Should().Be("Grounded");
     }
 
     [Fact]
@@ -227,6 +234,11 @@ public class StreamSetupGuideQueryHandlerTests
         completeEvent.Should().NotBeNull();
         var complete = completeEvent.Data.Should().BeOfType<StreamingComplete>().Which;
         complete.totalTokens.Should().Be(0); // No LLM call, so 0 tokens
+
+        // #3388: grounding-contract — default fallback steps carry no rulebook
+        // references (CreateDefaultSetupStepsStatic), so the terminal Complete event
+        // must report "Ungrounded".
+        complete.GroundingStatus.Should().Be("Ungrounded");
     }
 
     [Fact]

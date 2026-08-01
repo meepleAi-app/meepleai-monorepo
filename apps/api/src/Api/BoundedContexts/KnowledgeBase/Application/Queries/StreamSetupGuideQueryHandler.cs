@@ -354,9 +354,16 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
             steps.Count, estimatedTime);
 
         // Emit final complete event
-        // #3388: this handler never surfaces a citations list to the caller (no
-        // StreamingCitations event is emitted anywhere in this flow), so there is no
-        // per-request citation count to derive grounding from — default to Ungrounded.
+        // #3388: derive grounding status from whether any streamed step actually
+        // carries retrieved rulebook references (each StreamingSetupStep embeds its
+        // own `references`, so this reflects what the caller receives even though no
+        // separate StreamingCitations event is emitted). Mirrors the sibling handlers'
+        // `snippets.Count > 0 ? "Grounded" : "Ungrounded"` pattern (StreamQaQueryHandler,
+        // StreamExplainQueryHandler, ChatWithSessionAgentCommandHandler). Default/fallback
+        // steps always carry empty reference lists (CreateDefaultSetupStepsStatic), so
+        // that path stays Ungrounded.
+        var hasGroundedReferences = steps.Any(s => s.references.Count > 0);
+
         yield return CreateEvent(StreamingEventType.Complete,
             new StreamingComplete(
                 estimatedTime,
@@ -364,7 +371,7 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
                 completionTokens,
                 totalTokens,
                 confidence,
-                GroundingStatus: "Ungrounded"));
+                GroundingStatus: hasGroundedReferences ? "Grounded" : "Ungrounded"));
     }
     /// <summary>
     /// Parse LLM-generated steps response into structured SetupGuideStep objects

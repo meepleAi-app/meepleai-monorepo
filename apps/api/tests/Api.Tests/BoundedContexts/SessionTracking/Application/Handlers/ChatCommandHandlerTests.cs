@@ -13,6 +13,8 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using FluentAssertions;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Application.Handlers;
 
@@ -539,5 +541,45 @@ public class ChatQueryHandlerTests
         _mockChatRepo.Verify(
             r => r.GetBySessionIdAsync(It.IsAny<Guid>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+}
+
+/// <summary>
+/// #3388: guards the wire casing of <see cref="AskSessionAgentResult.GroundingStatus"/>.
+/// The FE image-path disclaimer keys off the exact serialized value
+/// <c>"groundingStatus":"Ungrounded"</c> (camelCase property name, PascalCase enum
+/// value) produced by the global JSON options configured in
+/// <c>Program.cs</c> (<c>ConfigureHttpJsonOptions</c>: camelCase naming policy +
+/// <see cref="JsonStringEnumConverter"/>). This test mirrors those two settings so a
+/// regression to numeric enum serialization or snake/Pascal-case property naming
+/// fails fast here instead of silently breaking the FE contract.
+/// </summary>
+[Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "SessionTracking")]
+public class AskSessionAgentResultSerializationTests
+{
+    private static readonly JsonSerializerOptions WireOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Converters = { new JsonStringEnumConverter() }
+    };
+
+    [Fact]
+    public void Serialize_UngroundedResult_ProducesCamelCasePropertyWithPascalCaseEnumValue()
+    {
+        // Arrange
+        var result = new AskSessionAgentResult(
+            MessageId: Guid.NewGuid(),
+            Answer: "The rulebook does not cover this.",
+            AgentType: "qa",
+            Confidence: null,
+            CitationsJson: null,
+            GroundingStatus: GroundingStatus.Ungrounded);
+
+        // Act
+        var json = JsonSerializer.Serialize(result, WireOptions);
+
+        // Assert
+        json.Should().Contain("\"groundingStatus\":\"Ungrounded\"");
     }
 }

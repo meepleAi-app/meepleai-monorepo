@@ -120,6 +120,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ChatThreadEntity> ChatThreads => Set<ChatThreadEntity>(); // DDD-PHASE3: KnowledgeBase ChatThread aggregate
     public DbSet<ChatLogEntity> ChatLogs => Set<ChatLogEntity>();
     public DbSet<PdfDocumentEntity> PdfDocuments => Set<PdfDocumentEntity>();
+    public DbSet<PdfImageRegionEntity> PdfImageRegions => Set<PdfImageRegionEntity>(); // #3447: image-table regions
     public DbSet<ProcessingMetricEntity> ProcessingMetrics => Set<ProcessingMetricEntity>(); // ISSUE-4212: Historical metrics storage
     public DbSet<ProcessingJobEntity> ProcessingJobs => Set<ProcessingJobEntity>(); // ISSUE-4730: Processing queue management
     public DbSet<ProcessingStepEntity> ProcessingSteps => Set<ProcessingStepEntity>(); // ISSUE-4730: Processing queue steps

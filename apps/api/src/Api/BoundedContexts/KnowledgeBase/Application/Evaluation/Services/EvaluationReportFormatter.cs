@@ -33,10 +33,15 @@ internal static class EvaluationReportFormatter
         ArgumentNullException.ThrowIfNull(result);
         ArgumentNullException.ThrowIfNull(dataset);
 
-        var languageBySampleId = dataset.Samples.ToDictionary(
-            s => s.Id,
-            s => string.IsNullOrEmpty(s.Language) ? "unknown" : s.Language,
-            StringComparer.Ordinal);
+        // GroupBy + First (rather than ToDictionary directly) tolerates dataset files with
+        // duplicate sample ids (EvaluationDataset.FromJson does not dedup on load) instead of
+        // throwing ArgumentException on the second occurrence.
+        var languageBySampleId = dataset.Samples
+            .GroupBy(s => s.Id, StringComparer.Ordinal)
+            .ToDictionary(
+                g => g.Key,
+                g => string.IsNullOrEmpty(g.First().Language) ? "unknown" : g.First().Language,
+                StringComparer.Ordinal);
 
         var byLanguage = new Dictionary<string, EvaluationMetrics>(StringComparer.Ordinal);
 

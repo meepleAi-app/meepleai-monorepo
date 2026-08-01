@@ -156,4 +156,39 @@ public class EvaluationReportFormatterTests
         byLanguage["it"].SampleCount.Should().Be(1);
         byLanguage["unknown"].SampleCount.Should().Be(1);
     }
+
+    [Fact]
+    public void MetricsByLanguage_WithDuplicateSampleIds_DoesNotThrow()
+    {
+        // Arrange: EvaluationDataset.FromJson does not dedup by id (only Dataset.AddSample
+        // enforces uniqueness), so a dataset loaded from a hand-crafted or externally-produced
+        // JSON file can contain duplicate ids. MetricsByLanguage must tolerate that (dedup-safe
+        // GroupBy + First) instead of crashing via ToDictionary's duplicate-key ArgumentException.
+        const string json = """
+        {
+          "name": "dup-dataset",
+          "description": "duplicate id regression",
+          "version": "1.0.0",
+          "source_type": "meepleai_custom",
+          "created_at": "2026-01-01T00:00:00Z",
+          "samples": [
+            { "id": "dup-1", "question": "Q1?", "expected_answer": "A1", "language": "en" },
+            { "id": "dup-1", "question": "Q1 dup?", "expected_answer": "A1 dup", "language": "it" }
+          ]
+        }
+        """;
+
+        var dataset = EvaluationDataset.FromJson(json);
+        var sampleResults = new List<EvaluationSampleResult>
+        {
+            CreateSampleResult("dup-1")
+        };
+        var result = CreateResult(sampleResults);
+
+        // Act
+        var act = () => EvaluationReportFormatter.MetricsByLanguage(result, dataset);
+
+        // Assert
+        act.Should().NotThrow();
+    }
 }

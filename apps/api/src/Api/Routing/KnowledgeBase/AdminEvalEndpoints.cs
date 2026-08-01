@@ -37,6 +37,15 @@ internal static class AdminEvalEndpoints
         IMediator mediator,
         CancellationToken ct)
     {
+        // NOTE: this only rejects a missing/non-existent datasetPath with a 4xx before
+        // dispatching any command. Full path sandboxing (restricting datasetPath to an
+        // allowlisted root directory) is tracked in issue #3438.
+        var pathError = ValidateDatasetPath(request.DatasetPath);
+        if (pathError is not null)
+        {
+            return pathError;
+        }
+
         var dataset = await mediator.Send(
             new LoadDatasetCommand { FilePath = request.DatasetPath }, ct).ConfigureAwait(false);
 
@@ -55,11 +64,35 @@ internal static class AdminEvalEndpoints
         IMediator mediator,
         CancellationToken ct)
     {
+        // NOTE: this only rejects a missing/non-existent datasetPath with a 4xx before
+        // dispatching any command. Full path sandboxing (restricting datasetPath to an
+        // allowlisted root directory) is tracked in issue #3438.
+        var pathError = ValidateDatasetPath(request.DatasetPath);
+        if (pathError is not null)
+        {
+            return pathError;
+        }
+
         var review = await mediator.Send(
             new GenerateLabelingCandidatesCommand(request.DatasetPath, request.TopN ?? 10),
             ct).ConfigureAwait(false);
 
         return Results.Ok(review);
+    }
+
+    private static IResult? ValidateDatasetPath(string? datasetPath)
+    {
+        if (string.IsNullOrWhiteSpace(datasetPath))
+        {
+            return Results.BadRequest(new { error = "datasetPath is required" });
+        }
+
+        if (!File.Exists(datasetPath))
+        {
+            return Results.NotFound(new { error = $"dataset not found: {datasetPath}" });
+        }
+
+        return null;
     }
 }
 

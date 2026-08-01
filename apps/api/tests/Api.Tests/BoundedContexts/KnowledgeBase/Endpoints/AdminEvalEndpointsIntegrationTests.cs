@@ -144,6 +144,24 @@ public sealed class AdminEvalEndpointsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task RunRetrievalEvaluation_WithNonExistentDatasetPath_Returns404()
+    {
+        // Arrange
+        var missingDatasetPath = Path.Combine(Path.GetTempPath(), $"missing-dataset-{Guid.NewGuid():N}.json");
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            RetrievalEndpoint,
+            _adminSessionToken,
+            new { datasetPath = missingDatasetPath });
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
     public async Task RunRetrievalEvaluation_WithRegularUserAuth_Returns403()
     {
         // Arrange

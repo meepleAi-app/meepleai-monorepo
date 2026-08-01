@@ -279,7 +279,7 @@ public class EvaluationMetricsTests
                 RelevantChunkIds = [],
                 HitAt5 = false,
                 HitAt10 = false,
-                ReciprocalRank = 1.0
+                ReciprocalRank = 0.0
             }
         };
 
@@ -288,7 +288,7 @@ public class EvaluationMetricsTests
 
         // Assert
         metrics.RecallAt5.Should().Be(1.0); // Only the labeled sample counts, not (1+0)/2 = 0.5
-        metrics.Mrr.Should().Be(1.0); // Labeled only, not polluted by the unlabeled sample
+        metrics.Mrr.Should().Be(1.0); // Labeled only (ReciprocalRank 1.0); unlabeled's 0.0 would fail this if not excluded
         metrics.LabeledSampleCount.Should().Be(1);
         metrics.UnlabeledSampleCount.Should().Be(1);
         metrics.SampleCount.Should().Be(2);

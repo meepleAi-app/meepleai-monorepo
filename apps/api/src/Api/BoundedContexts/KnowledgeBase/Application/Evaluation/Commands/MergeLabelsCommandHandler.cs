@@ -27,13 +27,17 @@ internal sealed class MergeLabelsCommandHandler : IRequestHandler<MergeLabelsCom
         var json = await File.ReadAllTextAsync(request.DatasetPath, cancellationToken).ConfigureAwait(false);
         var dataset = EvaluationDataset.FromJson(json);
 
-        var relevantChunkIdsBySampleId = request.Review.Items.ToDictionary(
-            item => item.SampleId,
-            item => (IReadOnlyList<string>)item.Candidates
-                .Where(c => c.Relevant == true)
-                .Select(c => c.ChunkId)
-                .ToList(),
-            StringComparer.Ordinal);
+        // GroupBy + First (rather than ToDictionary directly) tolerates a review payload with
+        // duplicate sample ids instead of throwing ArgumentException on the second occurrence.
+        var relevantChunkIdsBySampleId = request.Review.Items
+            .GroupBy(item => item.SampleId, StringComparer.Ordinal)
+            .ToDictionary(
+                g => g.Key,
+                g => (IReadOnlyList<string>)g.First().Candidates
+                    .Where(c => c.Relevant == true)
+                    .Select(c => c.ChunkId)
+                    .ToList(),
+                StringComparer.Ordinal);
 
         var merged = EvaluationDataset.Create(dataset.Name, dataset.Description, dataset.SourceType);
 

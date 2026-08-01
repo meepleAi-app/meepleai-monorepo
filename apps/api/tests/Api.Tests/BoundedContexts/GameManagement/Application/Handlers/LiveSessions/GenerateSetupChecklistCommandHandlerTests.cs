@@ -101,7 +101,7 @@ public class GenerateSetupChecklistCommandHandlerTests
             new(StreamingEventType.SetupStep, new StreamingSetupStep(steps[0]), DateTime.UtcNow),
             new(StreamingEventType.SetupStep, new StreamingSetupStep(steps[1]), DateTime.UtcNow),
             new(StreamingEventType.SetupStep, new StreamingSetupStep(steps[2]), DateTime.UtcNow),
-            new(StreamingEventType.Complete, new StreamingComplete(10, 100, 50, 150, 0.85), DateTime.UtcNow)
+            new(StreamingEventType.Complete, new StreamingComplete(10, 100, 50, 150, 0.85, GroundingStatus: "Grounded"), DateTime.UtcNow)
         };
 
         _mediatorMock

@@ -354,13 +354,17 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
             steps.Count, estimatedTime);
 
         // Emit final complete event
+        // #3388: this handler never surfaces a citations list to the caller (no
+        // StreamingCitations event is emitted anywhere in this flow), so there is no
+        // per-request citation count to derive grounding from — default to Ungrounded.
         yield return CreateEvent(StreamingEventType.Complete,
             new StreamingComplete(
                 estimatedTime,
                 promptTokens,
                 completionTokens,
                 totalTokens,
-                confidence));
+                confidence,
+                GroundingStatus: "Ungrounded"));
     }
     /// <summary>
     /// Parse LLM-generated steps response into structured SetupGuideStep objects

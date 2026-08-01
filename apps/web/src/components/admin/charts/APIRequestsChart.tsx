@@ -17,10 +17,10 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 
 // Issue #2850: MeepleAI color palette
 const MEEPLE_COLORS = {
-  primary: '#d2691e',    // Orange
-  secondary: '#8b5cf6',  // Purple
-  success: '#16a34a',    // Green
-  danger: '#dc2626',     // Red
+  primary: '#d2691e', // Orange
+  secondary: '#8b5cf6', // Purple
+  success: '#16a34a', // Green
+  danger: '#dc2626', // Red
   grid: 'rgba(139, 90, 60, 0.1)',
   text: '#2d2d2d',
   border: '#e8e4d8',
@@ -54,13 +54,15 @@ function calculateTrend(data: ApiRequestByDay[]): { total: number; trend: number
   return { total, trend };
 }
 
-export function APIRequestsChart({ data, isLoading }: APIRequestsChartProps){
+export function APIRequestsChart({ data, isLoading }: APIRequestsChartProps) {
   if (isLoading) {
     return <ChartSkeleton />;
   }
 
   if (data.length === 0) {
-    return <div className="p-12 text-center text-muted-foreground">No API request data available</div>;
+    return (
+      <div className="p-12 text-center text-muted-foreground">No API request data available</div>
+    );
   }
 
   const { total, trend } = calculateTrend(data);
@@ -84,12 +86,16 @@ export function APIRequestsChart({ data, isLoading }: APIRequestsChartProps){
               </linearGradient>
             </defs>
             {/* Issue #2850: Grid lines rgba(139, 90, 60, 0.1) */}
-            <CartesianGrid strokeDasharray="3 3" stroke={MEEPLE_COLORS.grid} className="dark:stroke-gray-700" />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke={MEEPLE_COLORS.grid}
+              className="dark:stroke-gray-700"
+            />
             <XAxis
               dataKey="date"
               stroke="#666"
               className="dark:stroke-gray-400"
-              tickFormatter={(value) => {
+              tickFormatter={value => {
                 const date = new Date(value);
                 return date.toLocaleDateString('en-US', { weekday: 'short' });
               }}
@@ -102,11 +108,13 @@ export function APIRequestsChart({ data, isLoading }: APIRequestsChartProps){
                 borderRadius: '0.75rem',
                 boxShadow: '0 4px 12px rgba(139, 90, 60, 0.1)',
               }}
-              labelFormatter={(label) => new Date(label).toLocaleDateString('en-US', {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric'
-              })}
+              labelFormatter={label =>
+                new Date(label as string).toLocaleDateString('en-US', {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                })
+              }
             />
             <Bar
               dataKey="count"
@@ -135,8 +143,11 @@ export function APIRequestsChart({ data, isLoading }: APIRequestsChartProps){
           )}
           <div>
             <p className="text-sm text-muted-foreground">vs last week</p>
-            <p className={`text-lg font-bold ${isPositiveTrend ? 'text-[#16a34a]' : 'text-[#dc2626]'}`}>
-              {isPositiveTrend ? '+' : ''}{trend.toFixed(1)}%
+            <p
+              className={`text-lg font-bold ${isPositiveTrend ? 'text-[#16a34a]' : 'text-[#dc2626]'}`}
+            >
+              {isPositiveTrend ? '+' : ''}
+              {trend.toFixed(1)}%
             </p>
           </div>
         </div>

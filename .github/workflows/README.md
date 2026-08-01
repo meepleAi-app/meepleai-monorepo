@@ -14,7 +14,6 @@ Workflows are organized by category with consistent naming prefixes:
 ├── # Testing (test- prefix)
 ├── test-e2e.yml              # Full E2E suite (6-shard parallel)
 ├── test-performance.yml      # K6 + Lighthouse performance
-├── test-visual.yml           # Playwright + Chromatic visual
 │
 ├── # Security (security- prefix)
 ├── security-scan.yml         # CodeQL + dependency scan + secrets
@@ -61,11 +60,6 @@ Workflows are organized by category with consistent naming prefixes:
 - **Jobs**: K6 load tests, Lighthouse CI
 - **Features**: Smoke/load/stress test types, Core Web Vitals, failure notifications
 
-### test-visual.yml - Visual Regression
-- **Triggers**: Push/PR with web changes
-- **Jobs**: Playwright snapshots, Chromatic Storybook review
-- **Features**: Visual diff detection, PR comments with review links
-
 ## Security Workflows
 
 ### security-scan.yml - Security Scanning
@@ -109,7 +103,6 @@ Workflows are organized by category with consistent naming prefixes:
 | ci.yml (E2E) | 3-5 min | Critical paths only |
 | test-e2e.yml | 10-15 min | Full 6-shard suite |
 | test-performance.yml | 15-20 min | K6 + Lighthouse |
-| test-visual.yml | 5-10 min | Playwright + Chromatic |
 | security-scan.yml | 8-12 min | Full security suite |
 
 ## Configuration
@@ -206,17 +199,6 @@ runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
 **Per-job rollback** (single job within a workflow):
 1. Override only the specific job's `runs-on` to `ubuntu-latest`
 2. Other jobs in the same workflow continue using the self-hosted runner
-
-### Visual Test Baselines
-
-When switching runner architecture (x86 ↔ ARM64), Playwright visual test baselines must be regenerated:
-
-```bash
-cd apps/web
-pnpm test:e2e:visual --update-snapshots --project=desktop-chrome
-```
-
-Font rendering differs between architectures, causing false-positive visual diffs.
 
 ### Performance Notes
 

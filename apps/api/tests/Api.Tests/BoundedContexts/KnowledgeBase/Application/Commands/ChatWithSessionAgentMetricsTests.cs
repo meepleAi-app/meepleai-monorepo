@@ -71,7 +71,7 @@ public sealed class ChatWithSessionAgentMetricsTests
         var observations = new List<double>();
         using var listener = BuildHistogramListener<double>(FirstTokenLatencyName, observations);
 
-        var handler = BuildHandler(resolvedCitations: new List<ChunkCitation>(), tokenContent: "Hello world");
+        var handler = BuildHandler(resolvedCitations: new List<ChunkCitation>(), ragPromptMock: out _, tokenContent: "Hello world");
         var command = BuildCommand();
 
         // Act — drain to completion
@@ -113,7 +113,7 @@ public sealed class ChatWithSessionAgentMetricsTests
         var observations = new List<long>();
         using var listener = BuildHistogramListener<long>(CitationsPerAnswerName, observations);
 
-        var handler = BuildHandler(resolvedCitations: citations, tokenContent: "Answer with citations");
+        var handler = BuildHandler(resolvedCitations: citations, ragPromptMock: out _, tokenContent: "Answer with citations");
         var command = BuildCommand();
 
         // Act
@@ -137,7 +137,7 @@ public sealed class ChatWithSessionAgentMetricsTests
         var observations = new List<long>();
         using var listener = BuildHistogramListener<long>(CitationsPerAnswerName, observations);
 
-        var handler = BuildHandler(resolvedCitations: new List<ChunkCitation>(), tokenContent: "Grounded but uncited");
+        var handler = BuildHandler(resolvedCitations: new List<ChunkCitation>(), ragPromptMock: out _, tokenContent: "Grounded but uncited");
         var command = BuildCommand();
 
         // Act
@@ -176,7 +176,7 @@ public sealed class ChatWithSessionAgentMetricsTests
                 IsPublic: true),
         };
 
-        var handler = BuildHandler(resolvedCitations: citations, tokenContent: "Answer with citation");
+        var handler = BuildHandler(resolvedCitations: citations, ragPromptMock: out _, tokenContent: "Answer with citation");
         var command = BuildCommand();
 
         // Act
@@ -200,7 +200,7 @@ public sealed class ChatWithSessionAgentMetricsTests
         using var latencyListener = BuildHistogramListener<double>(FirstTokenLatencyName, latencyObs);
         using var citationsListener = BuildHistogramListener<long>(CitationsPerAnswerName, citationsObs);
 
-        var handler = BuildHandler(resolvedCitations: new List<ChunkCitation>(), tokenContent: "Token");
+        var handler = BuildHandler(resolvedCitations: new List<ChunkCitation>(), ragPromptMock: out _, tokenContent: "Token");
         var command = BuildCommand();
 
         // Act
@@ -265,8 +265,37 @@ public sealed class ChatWithSessionAgentMetricsTests
     /// <paramref name="resolvedCitations"/> controls the citation list returned by the
     /// copyright resolver. <paramref name="tokenContent"/> controls what the LLM emits.
     /// </summary>
+    // ──────────────────────────────────────────────────────────────────────────
+    // #3389: live path passes an explicit RetrievalPolicy.LiveSession
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact(DisplayName = "#3389: in-session live path passes RetrievalPolicy.LiveSession (decoupled from tier, not silent Default)")]
+    public async Task Handle_LivePath_PassesLiveSessionRetrievalPolicy()
+    {
+        // Arrange
+        var handler = BuildHandler(
+            resolvedCitations: new List<ChunkCitation>(),
+            ragPromptMock: out var ragPromptMock,
+            tokenContent: "Answer");
+        var command = BuildCommand();
+
+        // Act — drain to completion
+        await foreach (var _ in handler.Handle(command, CancellationToken.None)) { }
+
+        // Assert — the live path assembled the prompt with the explicit LiveSession policy,
+        // so retrieval is decoupled from tier and never silently falls back to Default (#3389).
+        ragPromptMock.Verify(r => r.AssemblePromptAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GameState?>(),
+            It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<ChatThread?>(),
+            It.IsAny<SharedUserTier?>(), It.IsAny<string>(), It.IsAny<CancellationToken>(),
+            It.IsAny<IRagDebugEventCollector?>(), It.IsAny<RetrievalProfile?>(),
+            It.Is<RetrievalPolicy?>(p => p == RetrievalPolicy.LiveSession)),
+            Times.Once);
+    }
+
     private static ChatWithSessionAgentCommandHandler BuildHandler(
         IReadOnlyList<ChunkCitation> resolvedCitations,
+        out Mock<IRagPromptAssemblyService> ragPromptMock,
         string tokenContent = "Hello world")
     {
         // --- AgentSession repo ---
@@ -346,8 +375,9 @@ public sealed class ChatWithSessionAgentMetricsTests
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GameState?>(),
                 It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<ChatThread?>(),
                 It.IsAny<SharedUserTier?>(), It.IsAny<string>(), It.IsAny<CancellationToken>(),
-                It.IsAny<IRagDebugEventCollector?>(), It.IsAny<RetrievalProfile?>()))
+                It.IsAny<IRagDebugEventCollector?>(), It.IsAny<RetrievalProfile?>(), It.IsAny<RetrievalPolicy?>()))
             .ReturnsAsync(assembled);
+        ragPromptMock = ragPromptService;
 
         // --- Copyright tier resolver → pass-through ---
         var tierResolver = new Mock<ICopyrightTierResolver>();

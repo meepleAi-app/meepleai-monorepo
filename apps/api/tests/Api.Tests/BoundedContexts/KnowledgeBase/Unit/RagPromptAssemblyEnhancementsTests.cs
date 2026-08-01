@@ -430,5 +430,35 @@ public class RagPromptAssemblyEnhancementsTests
             Times.AtLeastOnce);
     }
 
+    [Fact]
+    public async Task WhenLiveSessionPolicy_SkipsEnhancementsEvenWithTier()
+    {
+        // #3389: the in-session live path is explicitly decoupled from tier. Even with a tier present
+        // (which WOULD activate enhancements), RetrievalPolicy.LiveSession (EnhancementsEnabled=false)
+        // must NOT look up tier-derived enhancements — gating is an explicit capability, not a
+        // side-effect of the tier being null/non-null.
+        var tier = UserTier.Premium;
+        _ragEnhancementMock
+            .Setup(r => r.GetActiveEnhancementsAsync(tier, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(RagEnhancement.AdaptiveRouting);
+        SetupTextSearchResults(CreateChunk("doc1", 0, 0.90f, "Pawns move forward."));
+        SetupRerankerPassthrough();
+        var service = CreateService();
+
+        // Act — explicit LiveSession policy alongside a tier that WOULD otherwise enable enhancements
+        await service.AssemblePromptAsync(
+            "tutor", "Chess", null, "How do pawns move?",
+            TestGameId, null, tier, "it", CancellationToken.None,
+            retrievalPolicy: RetrievalPolicy.LiveSession);
+
+        // Assert — enhancements gated off explicitly: no tier lookup, no adaptive routing
+        _ragEnhancementMock.Verify(
+            r => r.GetActiveEnhancementsAsync(It.IsAny<UserTier>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _complexityClassifierMock.Verify(
+            c => c.ClassifyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     #endregion
 }
